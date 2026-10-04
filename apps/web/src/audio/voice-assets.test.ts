@@ -84,15 +84,21 @@ function writeJson(path: string, value: unknown): void {
 const CATALOG = readJson(CATALOG_PATH) as Record<string, { type?: unknown }>;
 
 /** A play and a death line per Unit (tokens included), one cast line per everything else. */
-const EXPECTED_KEYS: readonly string[] = Object.entries(CATALOG).flatMap(([id, card]) =>
+const EXPECTED_CARD_KEYS: readonly string[] = Object.entries(CATALOG).flatMap(([id, card]) =>
   card.type === "Unit" ? [`${id}-play`, `${id}-death`] : [`${id}-cast`],
 );
+const LINES = readJson(LINES_PATH);
+/** R644: the emotes table's five issue-§3 lines per portrait, keyed `emote-<portrait>-<line>`. */
+const EMOTE_LINES = ["greetings", "wellPlayed", "oops", "thanks", "threaten"] as const;
+const EXPECTED_EMOTE_KEYS: readonly string[] = Object.keys(
+  isRecord(LINES.emotes) ? LINES.emotes : {},
+).flatMap((portrait) => EMOTE_LINES.map((line) => `emote-${portrait}-${line}`));
+const EXPECTED_KEYS: readonly string[] = [...EXPECTED_CARD_KEYS, ...EXPECTED_EMOTE_KEYS];
 const EXPECTED_FILES: readonly string[] = EXPECTED_KEYS.map((key) => `${key}.m4a`);
 /** Core's own count (44 units, 67 spells and traps) plus whatever the other sets bring. */
 const EXPECTED_FILE_COUNT = EXPECTED_KEYS.length;
 const CORE_FILE_COUNT = 155;
 
-const LINES = readJson(LINES_PATH);
 const MANIFEST = readJson(MANIFEST_PATH);
 const MANIFEST_FILES: Json = isRecord(MANIFEST.files) ? MANIFEST.files : {};
 
@@ -123,8 +129,10 @@ function sapiHash(input: { voice: unknown; rate: unknown; semitones: unknown; fi
 function expectedHash(key: string, lines: Json = LINES): string | null {
   const { defId, line } = splitKey(key);
   const cards = isRecord(lines.cards) ? lines.cards : {};
+  const emotes = isRecord(lines.emotes) ? lines.emotes : {};
   const personas = isRecord(lines.personas) ? lines.personas : {};
-  const entry = cards[defId];
+  // `emote-<portrait>` defIds resolve through the emotes table (voiceData.ts `emoteLineFor`).
+  const entry = defId.startsWith("emote-") ? emotes[defId.slice("emote-".length)] : cards[defId];
   if (!isRecord(entry)) return null;
   const personaName = entry.persona;
   if (typeof personaName !== "string") return null;
@@ -278,6 +286,14 @@ describe("the committed voice files (B35)", () => {
   it("B35 expects a play and a death line per unit and one cast line per spell and trap, Core's 155 among them", () => {
     expect(new Set(EXPECTED_KEYS).size, "no key twice").toBe(EXPECTED_FILE_COUNT);
     expect(EXPECTED_KEYS.filter((key) => key.startsWith("core-")), "Core's own lines").toHaveLength(CORE_FILE_COUNT);
+  });
+
+  it("R644 renders all five voice emotes of every portrait, on disk and in the manifest", () => {
+    expect(EXPECTED_EMOTE_KEYS).toHaveLength(30);
+    const missing = EXPECTED_EMOTE_KEYS.filter(
+      (key) => !existsSync(voicePath(key)) || MANIFEST_FILES[key] === undefined,
+    );
+    expect(missing, "emote keys with no file or no manifest entry").toEqual([]);
   });
 
   it("B35 leaves no expected voice file missing from public/audio/voice", () => {

@@ -51,11 +51,18 @@ describe("R388 the /patch-notes route", () => {
     expect(await screen.findByTestId(patchTestid.screen, undefined, SLOW)).toBeInTheDocument();
     const entries = await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
 <<<<<<< HEAD
+<<<<<<< HEAD
     expect(entries[0]?.dataset.version).toBe("v0.2.2");
 =======
     // The newest patch — patches.json's last entry — opens the page.
     const shipped = await realPatchSource.patches();
     expect(entries[0]?.dataset.version).toBe(shipped.at(-1)?.version);
+>>>>>>> origin/main
+=======
+    // The newest patch — patches.json's last entry — opens the page (today v0.2.10, issue #113).
+    const shipped = await realPatchSource.patches();
+    expect(entries[0]?.dataset.version).toBe(shipped.at(-1)?.version);
+    expect(shipped.at(-1)?.version).toBe("v0.2.10");
 >>>>>>> origin/main
     expect(document.title).toBe("Patch notes · JackiOh");
     // Nothing asked the server who is signed in: the page is not behind the gate.

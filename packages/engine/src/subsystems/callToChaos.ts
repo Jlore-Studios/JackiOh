@@ -19,7 +19,7 @@
 // roll a pause interrupted is rebuilt from the part's memo and is not announced a second time.
 
 import type { CatalogQuery, Tag } from "@jackioh/shared";
-import { defByIndex, query } from "../catalog";
+import { defByIndex, pickGenerated, query } from "../catalog";
 import { CALL_TO_CHAOS_CHAIN_CAP, CALL_TO_CHAOS_RADIANT_EFFECTS } from "../config";
 import {
   addRandomFromCatalog,
@@ -244,7 +244,7 @@ export function castRandomCallToChaos(): Effect {
       const depth = chaosChainOf(ctx.self);
       if (chaosChainCapReached(depth)) return;
 
-      const def = ctx.rng.pick(query({ tags: [CHAOS_TAG] }));
+      const def = pickGenerated(ctx.rng, query({ tags: [CHAOS_TAG] }));
       if (def === undefined) return;
 
       const card = newInstance(ctx.state, def.id, ctx.controller, {

@@ -189,9 +189,10 @@ compare them game by game.
 
 `gate-perf.test.ts` is the fourth gate file: every decision of the first ai-vs-greedy gate game (six
 under `pnpm ai:gate`), decided again at `AI_BUDGET`, must stay within the node budget and take under
-`AI_GATE.maxDecisionMs` (the fastest of `AI_GATE.perfRepeats` runs counts). So must one decision on
-each of two hand-built wide boards (five units a side, a hand of X-cost and targeted spells, at
-Hard's and at Easy's mana), because ordinary games seldom reach the worst case.
+`AI_GATE.maxDecisionMs` (the fastest of up to `AI_GATE.perfRepeats` runs counts, and the runs stop at
+the first one under it). So must one decision on each of two hand-built wide boards (five units a
+side, a hand of X-cost and targeted spells, at Hard's and at Easy's mana), because ordinary games
+seldom reach the worst case.
 
 ```
 pnpm vitest run --project ai    # every AI test, gates at AI_GATE.smokeSeeds per matchup

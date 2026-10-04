@@ -20,6 +20,7 @@ import { describe, expect, it } from "vitest";
 import { hashState, reduce, stepParam, type GameState } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
+import { expectAnimated } from "../_animated";
 import { base, def, radiant } from "../../src/scripts/classic/004-palantir";
 
 const PALANTIR = "classic-004";
@@ -421,5 +422,32 @@ describe("C #4 Palantir", () => {
       expect(count(s.events, "countered")).toBe(0);
       expect(drawsBy(s.events, "p1")).toBe(2);
     });
+  });
+});
+
+describe("C #4 Palantir: Animated (patch v0.2.10)", () => {
+  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 0/3 Unit; with none open it stays a Field Spell", () => {
+    expectAnimated({ def: "classic-004", stats: { attack: 0, health: 3 } });
+  });
+
+  it("R383 radiant: a 0/6 Unit", () => {
+    expectAnimated({ def: "classic-004", radiant: true, stats: { attack: 0, health: 6 } });
+  });
+
+  it("R383 played, it keeps its Aura as a Unit: after the opponent's start-of-turn draw, their next draws do not happen", () => {
+    const s = scenario({
+      p1: { hand: [PALANTIR, TIMMY], library: [VANILLA, VANILLA] },
+      p2: { hand: [STOCKPILE, VANILLA], library: [...DECK] },
+    });
+
+    s.play(PALANTIR, { zone: 3 });
+    expect(s.unit("p1", 3)?.defId).toBe(PALANTIR);
+    s.endTurn();
+    expect(drawsBy(s.lastEvents, "p2")).toBe(1);
+    s.play(STOCKPILE);
+
+    expect(drawsBy(s.lastEvents, "p2")).toBe(0);
+    expect(count(s.lastEvents, "drawLimited")).toBeGreaterThan(0);
+    expect(s.pile("p2", "library")).toHaveLength(DECK.length - 1);
   });
 });

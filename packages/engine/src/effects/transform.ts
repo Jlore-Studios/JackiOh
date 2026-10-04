@@ -6,12 +6,12 @@
 
 import type { CardDef, CardType, PlayerId, Row } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
-import { defOf, excludingDefId, query, type CatalogQueryArgs } from "../catalog";
+import { defOf, excludingDefId, pickGenerated, query, type CatalogQueryArgs } from "../catalog";
 import { cardTypeOf } from "../faces";
 import { unitHas } from "../layers";
 import type { Effect, EffectContext } from "../script";
 import { newInstance, type CardInstance } from "../state";
-import { ceaseToExist, moveToZone, pileAt, replaceInZone, slotOf, zoneOf, type OffFieldZone } from "../zones";
+import { ceaseToExist, isCarried, moveToZone, pileAt, replaceInZone, slotOf, zoneOf, type OffFieldZone } from "../zones";
 import { cloneOf } from "./summon";
 import { instanceOnItsStay, resolveTarget, type TargetSpec } from "./targets";
 
@@ -48,7 +48,8 @@ function rowFor(type: CardType): Row | null {
 function replaceOnField(ctx: EffectContext, old: CardInstance, def: CardDef, radiant: boolean): CardInstance | null {
   const at = slotOf(ctx.state, old);
   if (at === null) return null;
-  if (rowFor(def.type) !== at.row) return null;
+  // R446: a Unit a carrier holds stands in a backrow zone as a Unit, and a Unit may take its place there.
+  if (rowFor(def.type) !== (isCarried(ctx.state, old) ? "units" : at.row)) return null;
 
   const replacement = newInstance(ctx.state, def.id, old.owner, zoneOf(at));
   replacement.radiant = radiant;
@@ -218,7 +219,7 @@ export function transformRandom(
       const pool = query(excludingDefId(args.query ?? {}, ctx.self?.defId ?? ctx.defId)).filter((def) =>
         canReplace(old, def),
       );
-      const def = ctx.rng.pick(pool);
+      const def = pickGenerated(ctx.rng, pool);
       if (def === undefined) return;
       const radiant = args.radiant === "keep" ? old.radiant : args.radiant === true;
       const replacement = replaceCard(ctx, old, def, radiant);

@@ -533,7 +533,7 @@ still be read.
   (issue #40: Classic, Classic+, the new keywords, Core's pools across sets and the Core card patches
   below). Everything before v0.1.1 was rebuilt from `git log --follow packages/cards/catalog.json` on a
   full clone (a shallow one stops early).
-- **The version is the patch.** `CATALOG_VERSION` is the latest patch's version, `v0.2.0`, and a test
+- **The version is the patch.** `CATALOG_VERSION` is the latest patch's version, `v0.2.10`, and a test
   holds `catalog.json` equal to the latest snapshot and `CATALOG_VERSION` equal to its version. A
   patch bumps it everywhere the string lives: `src/catalog-data.ts`; the server's env
   (`apps/server/.env.example`, `render.yaml`); the client's `VITE_CATALOG_VERSION`; and the database,

@@ -193,6 +193,7 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Jlockeed",
       "Book",
       "Pancake",
+      "Plague",
     ]);
     // Only the ten AI tokens carry "AI", and the pool never offers a Token.
     expect(FILTER_TAGS).not.toContain("AI");

@@ -1,15 +1,15 @@
 // Stat and keyword layers (SPEC §10.4). Always computed on read, never stored.
 
-import type { Keyword, PlayerId } from "@jackioh/shared";
+import type { Keyword } from "@jackioh/shared";
 import { PLAYER_IDS, armorOf, hasKeyword } from "@jackioh/shared";
 import { activeBrittleCount } from "./brittleCount";
 import { defOf } from "./catalog";
-import { RADIANT_FALLBACK_FACTOR } from "./config";
+import { BACKROW_ZONES, RADIANT_FALLBACK_FACTOR } from "./config";
 import { scriptOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
 import type { StatMod } from "./script";
 import { tunedKeywords, xOf } from "./tuning";
-import { activeUnitsOf, slotsOf, cardAt } from "./zones";
+import { activeUnitsOf, cardAt } from "./zones";
 
 export type UnitView = {
   attack: number;
@@ -117,13 +117,17 @@ function isDormant(state: GameState, instance: CardInstance): boolean {
 
 /** Every permanent whose aura is in play, in lane order per side (§10.4 layer 5). */
 function auraSources(state: GameState): CardInstance[] {
-  return PLAYER_IDS.flatMap((player: PlayerId) => [
-    ...activeUnitsOf(state, player),
-    ...slotsOf(player, "backrow").flatMap((ref) => {
-      const card = cardAt(state, ref);
-      return card === null ? [] : [card];
-    }),
-  ]);
+  // Every unit read walks this list, so it is built with plain loops (#188).
+  const sources: CardInstance[] = [];
+  for (const player of PLAYER_IDS) {
+    sources.push(...activeUnitsOf(state, player));
+    const backrow = state.players[player].backrow;
+    for (let lane = 1; lane <= BACKROW_ZONES; lane += 1) {
+      const card = backrow[lane - 1] ?? null;
+      if (card !== null) sources.push(card);
+    }
+  }
+  return sources;
 }
 
 /**

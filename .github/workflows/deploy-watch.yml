@@ -4,16 +4,23 @@
 # one serving, so a failure is silent from GitHub's side. The 0013 outage was exactly that: main
 # moved to catalog v0.2.0 while the live server, unable to migrate, stayed on core-1. This polls
 # the live server's one unauthenticated route, GET /api/catalog (R163), until it serves the catalog
-# version render.yaml names, and opens an issue, or comments on the open one, if it never does.
+# version render.yaml names AND reports running the pushed commit (its `x-deployed-commit` header,
+# Render's RENDER_GIT_COMMIT), and opens an issue, or comments on the open one, if it never does.
+# The commit is what catches a push that leaves the catalog as it was: when Render stops receiving
+# pushes (the repository moved or was renamed, the GitHub app lost access, Auto-Deploy is off) the
+# live server keeps serving the same version, and the version alone cannot tell. It also catches a
+# start command that is not render.yaml's: the new commit is live but serves another catalog version.
+# The issue says which of those it is, and the run that finds the server live closes it again.
 #
 # The wait is up to WINDOWS × WINDOW_SECONDS (about 18 minutes: Render's build and boot, plus a
 # free instance waking), split into windows that each run as a job of their own, every one under
 # CI's five-minute budget (#73). A window runs only when the one before it saw no deploy yet.
 #
-# What it can see: the server is down, or it serves another catalog version than main's. What it
-# cannot: a failed deploy that leaves the old server on the same version, for which Render's own
-# deploy-failure notifications (dashboard, Settings, Notifications) are the alarm. The pre-merge
-# half is CI's `pnpm test:deploy`, which rehearses the deploy and fails before a bad one merges.
+# What it can see: the server is down, serves another catalog version than main's, or runs another
+# commit than the push. What it cannot: a deploy that went live but is broken in a way /api/catalog
+# does not show, for which Render's own deploy-failure notifications (dashboard, Settings,
+# Notifications) are the alarm. The pre-merge half is CI's `pnpm test:deploy`, which rehearses the
+# deploy and fails before a bad one merges.
 name: deploy watch
 
 on:
@@ -43,6 +50,8 @@ jobs:
       expected: ${{ steps.expected.outputs.version }}
       live: ${{ steps.poll.outputs.live }}
       served: ${{ steps.poll.outputs.served }}
+      served_version: ${{ steps.poll.outputs.served_version }}
+      served_commit: ${{ steps.poll.outputs.served_commit }}
     steps:
       - uses: actions/checkout@v4
       - id: expected
@@ -55,6 +64,7 @@ jobs:
         with:
           server: ${{ env.SERVER_URL }}
           expected: ${{ steps.expected.outputs.version }}
+          commit: ${{ github.sha }}
           seconds: ${{ env.WINDOW_SECONDS }}
 
   window-2:
@@ -66,6 +76,8 @@ jobs:
     outputs:
       live: ${{ steps.poll.outputs.live }}
       served: ${{ steps.poll.outputs.served }}
+      served_version: ${{ steps.poll.outputs.served_version }}
+      served_commit: ${{ steps.poll.outputs.served_commit }}
     steps:
       - uses: actions/checkout@v4
       - id: poll
@@ -73,6 +85,7 @@ jobs:
         with:
           server: ${{ env.SERVER_URL }}
           expected: ${{ needs.window-1.outputs.expected }}
+          commit: ${{ github.sha }}
           seconds: ${{ env.WINDOW_SECONDS }}
 
   window-3:
@@ -84,6 +97,8 @@ jobs:
     outputs:
       live: ${{ steps.poll.outputs.live }}
       served: ${{ steps.poll.outputs.served }}
+      served_version: ${{ steps.poll.outputs.served_version }}
+      served_commit: ${{ steps.poll.outputs.served_commit }}
     steps:
       - uses: actions/checkout@v4
       - id: poll
@@ -91,6 +106,7 @@ jobs:
         with:
           server: ${{ env.SERVER_URL }}
           expected: ${{ needs.window-1.outputs.expected }}
+          commit: ${{ github.sha }}
           seconds: ${{ env.WINDOW_SECONDS }}
 
   window-4:
@@ -102,6 +118,8 @@ jobs:
     outputs:
       live: ${{ steps.poll.outputs.live }}
       served: ${{ steps.poll.outputs.served }}
+      served_version: ${{ steps.poll.outputs.served_version }}
+      served_commit: ${{ steps.poll.outputs.served_commit }}
     steps:
       - uses: actions/checkout@v4
       - id: poll
@@ -109,6 +127,7 @@ jobs:
         with:
           server: ${{ env.SERVER_URL }}
           expected: ${{ needs.window-1.outputs.expected }}
+          commit: ${{ github.sha }}
           seconds: ${{ env.WINDOW_SECONDS }}
 
   # Runs when the last window ran and still saw no deploy, or a window itself failed.
@@ -128,14 +147,25 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           EXPECTED: ${{ needs.window-1.outputs.expected }}
-          SERVED: ${{ needs.window-4.outputs.served || needs.window-3.outputs.served || needs.window-2.outputs.served || needs.window-1.outputs.served }}
+          SERVED: ${{ needs.window-4.outputs.served_version || needs.window-3.outputs.served_version || needs.window-2.outputs.served_version || needs.window-1.outputs.served_version }}
+          SERVED_COMMIT: ${{ needs.window-4.outputs.served_commit || needs.window-3.outputs.served_commit || needs.window-2.outputs.served_commit || needs.window-1.outputs.served_commit }}
           SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          if [ -n "$SERVED_COMMIT" ] && [ "$SERVED_COMMIT" = "$SHA" ]; then
+            diagnosis="Render deployed this commit but serves another catalog version than render.yaml names. The start command takes the version from the newest entry of packages/cards/patches/patches.json (scripts/catalog-version.mjs), so either render.yaml's \`CATALOG_VERSION\` and that list disagree (the patch command writes both, and R388's test holds them equal), or the service is not running render.yaml's start command: open jackioh-server, Settings, Build & Deploy, and Blueprints."
+          elif [ -n "$SERVED_COMMIT" ]; then
+            diagnosis="Render is still running \`${SERVED_COMMIT:0:7}\`, not this push. Open jackioh-server, Events: no \"Deploy started\" for \`${SHA:0:7}\` means Render is not receiving pushes (the repository was moved or renamed, the GitHub app lost access to it, or Auto-Deploy is off: Settings, Build & Deploy; a Blueprint's own repository is under Blueprints). A deploy marked failed names its step in its log: the build, the \`release\` step's migrations or reseed, or the boot."
+          else
+            diagnosis="The server reported no commit. Either it predates this check and Render has not deployed since (jackioh-server, Events shows whether pushes start deploys, and Settings, Build & Deploy shows the repository, branch and Auto-Deploy), or \`RENDER_GIT_COMMIT\` is not set where it runs."
+          fi
+          if [ -n "$SERVED_COMMIT" ]; then shown_commit="\`${SERVED_COMMIT:0:7}\`"; else shown_commit="(none reported)"; fi
           body=$(printf '%s\n' \
-            "After the push of \`${SHA:0:7}\` to main, \`$SERVER_URL/api/catalog\` served **${SERVED:-(unknown)}** for the whole wait, not render.yaml's **$EXPECTED** ([run]($RUN_URL))." \
+            "After the push of \`${SHA:0:7}\` to main, \`$SERVER_URL/api/catalog\` served catalog **${SERVED:-(unknown)}** on commit **$shown_commit** for the whole wait, not render.yaml's **$EXPECTED** on \`${SHA:0:7}\` ([run]($RUN_URL))." \
             "" \
-            "Render most likely failed the deploy and kept the previous one serving. Its deploy log (dashboard, jackioh-server, Events) names the step: the build, the \`release\` step's migrations or reseed, or the boot. \`pnpm test:deploy\` rehearses all three locally." \
+            "$diagnosis" \
+            "" \
+            "\`pnpm test:deploy\` rehearses the build, the \`release\` step and the boot locally. The run that finds the server live closes this issue." \
             "" \
             "---" \
             "_Posted by \`.github/workflows/deploy-watch.yml\`._")
@@ -146,5 +176,33 @@ jobs:
           else
             gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$body"
           fi
-          echo "::error::the live server never served catalog $EXPECTED"
+          echo "::error::the live server never served catalog $EXPECTED on commit $SHA"
           exit 1
+
+  # Runs when any window saw the server live: the deploy this issue was opened for has arrived.
+  recovered:
+    name: close the issue once the server is live
+    needs: [window-1, window-2, window-3, window-4]
+    if: >-
+      !cancelled() && (
+        needs.window-1.outputs.live == 'true' || needs.window-2.outputs.live == 'true' ||
+        needs.window-3.outputs.live == 'true' || needs.window-4.outputs.live == 'true'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: close the open issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED: ${{ needs.window-1.outputs.expected }}
+          SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" \
+            --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          if [ -z "$open" ]; then
+            echo "The server is live on catalog $EXPECTED and no issue is open."
+            exit 0
+          fi
+          gh issue close "$open" --repo "$GITHUB_REPOSITORY" --reason completed \
+            --comment "After the push of \`${SHA:0:7}\` to main, \`$SERVER_URL/api/catalog\` served catalog **$EXPECTED** on that commit ([run]($RUN_URL)). Closing. A later push that Render does not deploy opens it again."

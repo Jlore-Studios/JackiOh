@@ -85,9 +85,15 @@ describe("R388 the patch source", () => {
       readFileSync(resolve(REPO, "packages/cards/patches/patches.json"), "utf8"),
     ) as { version: string }[];
     expect(patches.map((patch) => patch.version)).toEqual(shipped.map((patch) => patch.version));
+<<<<<<< HEAD
+>>>>>>> origin/main
+=======
+    expect(shipped.map((patch) => patch.version)).toEqual(
+      expect.arrayContaining(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4", "v0.2.10"]),
+    );
 >>>>>>> origin/main
     const index = await realPatchSource.index();
-    expect(index["core-065"]).toEqual(["v0.1.0", "v0.1.0d", "v0.1.1", "v0.2.0"]);
+    expect(index["core-065"]).toEqual(["v0.1.0", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.10"]);
     for (const patch of patches) {
       const snapshot = await realPatchSource.snapshot(patch.version);
       expect(snapshot, patch.version).not.toBeNull();
