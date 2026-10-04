@@ -60,6 +60,8 @@ export type SeatSummary = {
   drawn: string[];
   /** Every card it played from its hand, in order: a cast (§2.4, R70) is not a play from hand. */
   played: string[];
+  /** Turn number (1-indexed) each card in `played` was played on. */
+  playedTurns?: number[];
 };
 
 /** R376: a finished game, read off its replay by the engine's `summarizeGame`. */
@@ -375,12 +377,22 @@ function text(value: unknown, where: string): string {
 
 function seatSummary(value: unknown, where: string): SeatSummary {
   if (!isRecord(value)) throw new Error(`${where} is not a seat summary`);
-  return {
+  const summary: SeatSummary = {
     deck: ids(value["deck"], `${where}.deck`),
     opening: ids(value["opening"], `${where}.opening`),
     drawn: ids(value["drawn"], `${where}.drawn`),
     played: ids(value["played"], `${where}.played`),
   };
+  const turns = value["playedTurns"];
+  if (Array.isArray(turns)) {
+    summary.playedTurns = turns.map((t, idx) => {
+      if (typeof t !== "number" || !Number.isInteger(t) || t < 1) {
+        throw new Error(`${where}.playedTurns[${String(idx)}] is not a positive whole number`);
+      }
+      return t;
+    });
+  }
+  return summary;
 }
 
 /** A record read back from JSON, checked field by field. Throws an error naming the first bad field. */

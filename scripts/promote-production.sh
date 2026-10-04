@@ -43,11 +43,19 @@
 # When production moves it writes `promoted=true` to GITHUB_OUTPUT, which is what starts the workflow's
 # `deploy` job (GitHub Actions builds and deploys production; Cloudflare builds nothing).
 #
-# It talks to GitHub through `gh` (GH_TOKEN) and to git through the checkout's own credentials: the
-# workflow checks out main with its whole history. A push or a merge made with GITHUB_TOKEN starts no
-# workflow (so this cannot loop), but GitHub still sends it to Cloudflare's app, which builds
-# production. Needs GNU or BSD coreutils only for `date +%s`; the clock arithmetic is plain seconds
-# and jq does the formatting.
+# It talks to GitHub through `gh` and to git through the checkout's own credentials: the workflow
+# checks out main with its whole history. Two tokens. What moves production (the push of the
+# promote branch, its pull request, the merge, the branch's deletion) goes out as PROMOTE_TOKEN, and
+# the checkout pushes with the same one: whenever main changed a file under .github/workflows since
+# production, GitHub refuses that ref update from the Actions token ("refusing to allow a GitHub App
+# to create or update workflow ... without `workflows` permission"), and no `permissions:` entry can
+# grant it. The workflow passes BOT_GITHUB_TOKEN, which has the `workflow` scope (bot/README.md).
+# Everything else (the countdown issue, its comments, reactions and the label) stays on GH_TOKEN, the
+# Actions token, whose writes start no workflow, so the night bot never sees the issue. The bot's
+# pull request starts no loop either: CI runs on it as on any pull request, but a pull request's CI
+# never starts promote-production.yml (only a push to main's does), the push of a promote branch or
+# of production starts nothing, and the bot's harness ignores its own events. Needs GNU or BSD
+# coreutils only for `date +%s`; the clock arithmetic is plain seconds and jq does the formatting.
 
 # The backticks in the printf formats below are Markdown for GitHub, not command substitutions.
 # shellcheck disable=SC2016
@@ -68,6 +76,7 @@ trap 'echo "::error::scripts/promote-production.sh line $LINENO: \`$BASH_COMMAND
 : "${LISTED_COMMITS:=100}"
 : "${MERGE_ATTEMPTS:=4}"
 : "${MERGE_RETRY_SECONDS:=5}"
+: "${PROMOTE_TOKEN:=${GH_TOKEN:-}}"
 REPO=$GITHUB_REPOSITORY
 SUMMARY=${GITHUB_STEP_SUMMARY:-/dev/null}
 
@@ -80,7 +89,9 @@ try() {
   local err rc
   err=$(mktemp)
   if "$@" 2>"$err"; then rm -f "$err"; return 0; else rc=$?; fi
-  fail "\`$1 $2\` failed (exit $rc): $(tr '\n' ' ' <"$err" | cut -c1-600)"
+  local what="$1 $2"
+  [ "$1" != promoter ] || what="gh $2"
+  fail "\`$what\` failed (exit $rc): $(tr '\n' ' ' <"$err" | cut -c1-600)"
 }
 run_link() { [ -n "${GITHUB_RUN_ID:-}" ] && echo "([run](${GITHUB_SERVER_URL:-https://github.com}/$REPO/actions/runs/$GITHUB_RUN_ID))" || true; }
 
@@ -91,6 +102,15 @@ catalog() {
     k == "CATALOG_VERSION" && $1 == "value:" { gsub(/"/, "", $2); print $2; exit }' || true
 }
 has_production() { git rev-parse --verify -q origin/production >/dev/null; }
+# What moves production goes out as PROMOTE_TOKEN (the header says why); the git push uses the
+# checkout's credentials, which the workflow sets to the same token.
+promoter() { GH_TOKEN=$PROMOTE_TOKEN gh "$@"; }
+push_ref() {
+  local err
+  err=$(mktemp)
+  if git push origin "$1" 2>"$err"; then rm -f "$err"; return 0; fi
+  fail "Could not push $1: $(tr '\n' ' ' <"$err" | cut -c1-600). When main has changed .github/workflows since production, only a token with the workflow scope may move it: the BOT_GITHUB_TOKEN secret (bot/README.md, 'Setting it up'), which promote-production.yml checks out with."
+}
 # production moved: the workflow's `deploy` job builds it and puts it on Cloudflare only then.
 moved() { echo "promoted=true" >> "${GITHUB_OUTPUT:-/dev/null}"; }
 
@@ -111,12 +131,15 @@ vet() {
   echo "$c"
 }
 
-# GitHub refuses a push made with the workflow's token (it has no `workflows` permission) when the
-# pushed commit's .github/workflows differ from the default branch's. That is the case while main's
-# newest commit changes a workflow and its CI is still running, so the newest green commit is older:
-# the push of promote/<sha> was refused on 2026-10-04 for exactly that. True (and RESULT=waiting) when
-# commit $1 is such a commit: wait for that CI run, whose workflow_run then merges main's newest commit.
+# Only when production is moved with the Actions token (no BOT_GITHUB_TOKEN secret): GitHub refuses
+# that token a push whose .github/workflows differ from the default branch's, which is the case while
+# main's newest commit changes a workflow and its CI is still running, so the newest green commit is
+# older. The push of promote/<sha> was refused on 2026-10-04 for exactly that. True (and
+# RESULT=waiting) when commit $1 is such a commit: wait for that CI run, whose workflow_run then
+# merges main's newest commit, whose workflows are main's. The bot's token has the workflow scope
+# and never waits.
 must_wait() {
+  [ "$PROMOTE_TOKEN" = "${GH_TOKEN:-}" ] || return 1
   git diff --quiet "$1" origin/main -- .github/workflows && return 1
   RESULT=waiting
   echo "::notice::Not merging ${1:0:12} yet: main has changed .github/workflows since it (newest $(git rev-parse --short origin/main)), and GitHub refuses this token a push of workflow files that differ from main's. When CI passes on main's newest commit, that run merges it."
@@ -131,7 +154,7 @@ promote() {
 
   if ! has_production; then
     must_wait "$cand" && return 0
-    try git push origin "$cand:refs/heads/production"
+    push_ref "$cand:refs/heads/production"
     RESULT=created
     moved
     echo "production did not exist; it is now ${cand:0:12}."
@@ -168,10 +191,10 @@ promote() {
   } > "$body"
 
   ensure_label
-  try git push origin "$cand:refs/heads/$branch"
-  pr=$(try gh pr list --base production --head "$branch" --state open --json number --jq '.[0].number // empty')
+  push_ref "$cand:refs/heads/$branch"
+  pr=$(try promoter pr list --base production --head "$branch" --state open --json number --jq '.[0].number // empty')
   if [ -z "$pr" ]; then
-    url=$(try gh pr create --base production --head "$branch" --label "$RELEASE_LABEL" \
+    url=$(try promoter pr create --base production --head "$branch" --label "$RELEASE_LABEL" \
       --label "$HUMAN_LABEL" --assignee "$ASSIGNEES" \
       --title "Promote main to production: $COUNT commit(s) up to ${cand:0:7}" --body-file "$body")
     pr=${url##*/}
@@ -182,12 +205,12 @@ promote() {
   # attempt right after `create` can be refused for a moment.
   said=$(mktemp)
   for attempt in $(seq 1 "$MERGE_ATTEMPTS"); do
-    if gh pr merge "$pr" --merge --match-head-commit "$cand" 2>"$said"; then break; fi
+    if promoter pr merge "$pr" --merge --match-head-commit "$cand" 2>"$said"; then break; fi
     [ "$attempt" -lt "$MERGE_ATTEMPTS" ] || fail "Pull request #$pr could not be merged into production; it stays open. GitHub said: $(tr '\n' ' ' <"$said" | cut -c1-600)"
     sleep "$MERGE_RETRY_SECONDS"
   done
   rm -f "$said"
-  gh api -X DELETE "repos/$REPO/git/refs/heads/$branch" --silent || true
+  promoter api -X DELETE "repos/$REPO/git/refs/heads/$branch" --silent || true
 
   git fetch -q origin production
   git diff --quiet "$cand" origin/production \

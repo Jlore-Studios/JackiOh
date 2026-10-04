@@ -26,10 +26,13 @@ is forced, under its limits):
   the plan and the build share one run; otherwise the planning is a run of its own, and the item
   goes back to the queue to build from the plan. Such a planning run is short and starts before
   any long run, so a planner plans Devin's next item before it builds one of its own.
-- **review** in the run: the run's own strongest seat of at least medium (strong for a hard item);
-  a weak seat never reviews, so a run with none hands the change to a review run.
-- **a review run** (`bot:cross-review`): a strong seat whenever one is free, otherwise a medium
-  one of a family that has not approved the head yet; a hard item waits for a strong one.
+- **review** in the run: the run's own strongest seat of at least medium; a run with none (Devin's,
+  which checks itself instead) hands the change to a review run.
+- **a review run** (`bot:cross-review`): a strong seat whenever one is free, otherwise a medium one
+  (a family that has not approved the head yet first, but the same model may review it twice),
+  otherwise, for an easy item that has no weak approval yet, a weak one. What counts is the
+  review rule (`review_rule.py`): one strong approval, or two medium ones, or for an easy item one
+  weak and one medium.
 
 An item labelled `human` is never queued (`candidates`), nor a build that waits for another
 issue (`queue.waits_for`: a "Blocked by #n" line, GitHub's own blocked-by link, or an earlier
@@ -44,7 +47,7 @@ from datetime import timedelta
 from itertools import islice
 from typing import Any, Iterator
 
-from harness import asks, issueplan, threads
+from harness import asks, issueplan, review_rule, threads
 from harness import providers as providers_mod
 from harness.clock import iso, parse_iso
 from harness.config import (DIFFICULTIES, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
@@ -332,25 +335,28 @@ def can_plan(pool: Pool, provider: Provider) -> bool:
 
 
 def run_reviewer(pool: Pool, provider: Provider, difficulty: str) -> Seat | None:
-    """A build or revise run's own adversarial reviewer: its strongest seat of at least medium
-    (strong for a hard item), or None, and the change goes to a review run."""
+    """A build or revise run's own adversarial reviewer: its strongest seat of at least medium,
+    or None, and the change goes to a review run. (`difficulty` does not change it: a hard item's
+    builder is strong, so its own reviewer is too.)"""
     if "review" not in provider.roles:
         return None
-    return pool.best_seat(provider, "strong" if difficulty == "hard" else "medium")
+    return pool.best_seat(provider, "medium")
 
 
 def review_seat(pool: Pool, providers: list[Provider], candidate: Candidate) -> Seat | None:
-    """A review run's reviewer: strong whenever one is free; otherwise medium, of a family whose
-    approval the head does not have yet. Weak never reviews; a hard item takes strong only."""
+    """A review run's reviewer: strong whenever one is free; otherwise medium, a family that has
+    not approved the head yet before one that has (the same model may review it twice);
+    otherwise weak, only where a weak approval helps (`review_rule.helps`: an easy item with no
+    weak approval yet)."""
     seats = [seat for provider in providers for seat in pool.seats(provider)]
-    strong = ranked(pool, [seat for seat in seats if seat.tier == "strong"])
-    if strong:
-        return strong[0]
-    if candidate.difficulty == "hard":
-        return None
-    medium = ranked(pool, [seat for seat in seats if seat.tier == "medium"
-                           and seat.family not in candidate.approved])
-    return medium[0] if medium else None
+    for tier in ("strong", "medium", "weak"):
+        if not review_rule.helps(candidate.approval_tiers, tier, candidate.difficulty):
+            continue
+        found = ranked(pool, [seat for seat in seats if seat.tier == tier])
+        found.sort(key=lambda seat: seat.family in candidate.approved)  # stable: keeps the order
+        if found:
+            return found[0]
+    return None
 
 
 def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lanes, *,
@@ -827,8 +833,8 @@ def _start_message(assignment: Assignment, cfg: Any) -> str:
                      f"to {cfg.max_review_cycles} rounds")
         end = "Only an approved change becomes a pull request."
     else:
-        end = ("No weak model reviews, so the pull request then waits for a review run: one "
-               "strong model, or two medium ones of different families.")
+        end = ("No model here reviews it, so the pull request then waits for a review run, until "
+               f"{review_rule.SUMMARY} approved it.")
     return f"I {', '.join(steps[:-1])} and {steps[-1]}. {end}"
 
 
@@ -903,8 +909,7 @@ def claim(ctx: Context, candidate: Candidate,
             }
             message = (f"Starting a review now{run_link(cfg)}, on "
                        f"{assignment.review.describe()}. `{builder}` built the change; it merges "
-                       "once one strong model, or two medium ones of different families, approve "
-                       "the same commit.")
+                       f"once {review_rule.SUMMARY} approved the same commit.")
         else:
             source = str(record.get("source") or "request")
             feedback = threads.pull_feedback(ctx.gh, ctx.trust, number, cfg.bot_login,
