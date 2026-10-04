@@ -38,7 +38,7 @@ function flip(onTails: boolean): Script["endOfTurn"] {
 export const base: Script = { endOfTurn: flip(false), triggers: [fire] };
 
 /**
- * The Radiant face is Revealed regardless of the coin flip (balance patch 1, R645): the end of turn
+ * The Radiant face is Revealed regardless of the coin flip (balance patch 1, R658): the end of turn
  * shows its face to both players first, then flips as usual. Revealed is not face-up, so a tails
  * that recruits without firing leaves the trap armed and still answering.
  */

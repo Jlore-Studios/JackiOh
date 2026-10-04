@@ -20,7 +20,7 @@ export function rowSize(row: Row): number {
 
 /**
  * §3.1, Classic #22: the midlane lanes of a board `lanes` wide — the center lane of an odd count,
- * both center lanes of an even one (R644). Locks never matter to it. The caller reads the count off
+ * both center lanes of an even one (R657). Locks never matter to it. The caller reads the count off
  * the board (a side's unit row length), never off `MID_LANE`, which no longer exists.
  */
 export function midlaneLanes(lanes: number): number[] {
@@ -28,8 +28,21 @@ export function midlaneLanes(lanes: number): number[] {
   return lanes % 2 === 1 ? [(lanes + 1) / 2] : [lanes / 2, lanes / 2 + 1];
 }
 
+/**
+ * R657: the midlane lanes of a player's own board, read off its unit row length. Card scripts
+ * read the midlane through this (never `state.players[…]` themselves, M3-T1).
+ */
+export function midlaneLanesOf(state: GameState, player: PlayerId): number[] {
+  return midlaneLanes(state.players[player].units.length);
+}
+
 export function slotsOf(player: PlayerId, row: Row): ZoneSlot[] {
-  return Array.from({ length: rowSize(row) }, (_, i) => ({ player, row, lane: i + 1 }));
+  // A loop, not `Array.from({ length })`: every unit read asks for slots through the layers, and
+  // Array.from's generic path was a fifth of a long AI gate game's time (#188).
+  const size = rowSize(row);
+  const slots: ZoneSlot[] = [];
+  for (let lane = 1; lane <= size; lane += 1) slots.push({ player, row, lane });
+  return slots;
 }
 
 /** §3.1: lane N-1 and N+1 on the same side and row, never across sides. */
@@ -73,7 +86,7 @@ export function lockZone(state: GameState, ref: ZoneSlot): void {
   state.players[ref.player].locks[ref.row][ref.lane - 1] = true;
 }
 
-/** B5 E20: clear the flag. Its occupant, if any, is unaffected. R647: summons and moves enter Locked zones, so Unlock only re-opens the zone for plays. */
+/** B5 E20: clear the flag. Its occupant, if any, is unaffected. R660: summons and moves enter Locked zones, so Unlock only re-opens the zone for plays. */
 export function unlockZone(state: GameState, ref: ZoneSlot): void {
   state.players[ref.player].locks[ref.row][ref.lane - 1] = false;
 }
@@ -114,12 +127,26 @@ export function carriedAt(state: GameState, ref: ZoneSlot): CardInstance | null 
 }
 
 /**
- * B5 E21, R446: a backrow card whose text lets a Unit be played on top of it (Classic+ #33 Ivory
- * Tower's `staticFlags.carrier`). The flag is the card's text, so a Vanilla carrier carries nothing
- * more (§6.3, R115: `flagsOf` reads nothing off a Vanilla instance).
+ * B5 E21, R446: a backrow card whose text lets a Unit be played on top of it (`staticFlags.carrier`,
+ * or Classic+ #33 Ivory Tower's `fusesCarried`, R653). The flag is the card's text, so a Vanilla
+ * carrier carries nothing more (§6.3, R115: `flagsOf` reads nothing off a Vanilla instance).
  */
 export function isCarrier(card: CardInstance): boolean {
-  return flagsOf(card).carrier === true;
+  const flags = flagsOf(card);
+  return flags.carrier === true || flags.fusesCarried === true;
+}
+
+/**
+ * R653: where a carrier that fuses its Unit (`fusesCarried`) notes the Unit stacked onto it, by id, for
+ * the rest of its stay. Memory, so R78 clears it when the card leaves the field, and a Fuse that keeps
+ * the carrier keeps it (R77: it is the engine's entry, not a text's).
+ */
+const STACKED_KEY = "__stacked";
+
+/** R653: the id of the Unit stacked onto this `fusesCarried` carrier on this stay, or null if none yet. */
+export function stackedOnto(card: CardInstance): string | null {
+  const id = card.memory[STACKED_KEY];
+  return typeof id === "string" ? id : null;
 }
 
 /** R446: whether this card is a Unit standing on a carrier in a backrow zone. */
@@ -150,6 +177,7 @@ export function whyCannotCarry(state: GameState, ref: ZoneSlot): string | null {
   const top = cardAt(state, ref);
   if (top === null || !isCarrier(top)) return "that zone holds no card a Unit may be played on top of";
   if (carriedAt(state, ref) !== null) return "that card already carries a Unit";
+  if (flagsOf(top).fusesCarried === true && stackedOnto(top) !== null) return "that card has taken its one Unit";
   if (isLocked(state, ref)) return "that zone is Locked";
   if (isReserved(state, ref)) return "that zone is held for a card's return";
   return null;
@@ -159,7 +187,7 @@ export function whyCannotCarry(state: GameState, ref: ZoneSlot): string | null {
  * §3.2, B5 E21: a zone a Stack card may enter although it is occupied. Occupancy is exactly what
  * Stack lifts, so what is left is what occupancy never covered — a zone held for a card's return
  * (R64, B3.1 rule 6) takes no Stack card either — plus, in a backrow zone, a carrier's Unit: a zone
- * carrying one takes nothing more (R446). A play's Stack entry still honors a Lock (R647: only plays
+ * carrying one takes nothing more (R446). A play's Stack entry still honors a Lock (R660: only plays
  * are refused one); a move's does not, via `{ move: true }`.
  */
 export function acceptsStackCard(state: GameState, ref: ZoneSlot, options: { move?: boolean } = {}): boolean {
@@ -211,14 +239,14 @@ function isUnitFace(state: GameState, instance: CardInstance): boolean {
 }
 
 /**
- * A zone a play, or a summon with no named zone, may take: empty and unlocked (§3.2). R647: a named
+ * A zone a play, or a summon with no named zone, may take: empty and unlocked (§3.2). R660: a named
  * summon or a move may enter a Locked zone instead (`takesMove`, `placeOnField`); only plays refuse one.
  */
 export function isOpen(state: GameState, ref: ZoneSlot): boolean {
   return isEmpty(state, ref) && !isLocked(state, ref) && !isReserved(state, ref);
 }
 
-/** R647: a zone a move may enter — empty and unreserved. Locked zones take moves; only plays refuse one. */
+/** R660: a zone a move may enter — empty and unreserved. Locked zones take moves; only plays refuse one. */
 export function takesMove(state: GameState, ref: ZoneSlot): boolean {
   return isEmpty(state, ref) && !isReserved(state, ref);
 }
@@ -294,7 +322,7 @@ export function placeOnField(
   ref: ZoneSlot,
   options: { stack?: boolean } = {},
 ): boolean {
-  // R647: a Lock refuses plays, never placements — summons, moves, rotations and restores all land.
+  // R660: a Lock refuses plays, never placements — summons, moves, rotations and restores all land.
   // Plays never reach here unvetted (`playChoices` offers and `playSteps` assigns unlocked zones only).
   if (isReserved(state, ref)) return false;
   const side = state.players[ref.player];
@@ -311,6 +339,8 @@ export function placeOnField(
     if (top === null || carriedAt(state, ref) !== null) return false;
     if (!isCarrier(top) && options.stack !== true) return false;
     setCarried(side, ref.lane, instance);
+    // R653: the first Unit to stand on a carrier that fuses its Unit is the one it takes this stay.
+    if (flagsOf(top).fusesCarried === true && stackedOnto(top) === null) top.memory[STACKED_KEY] = instance.id;
   } else {
     // B5 E21: a Stack card may top an occupied backrow zone as it may a unit zone; the card beneath
     // goes dormant (§3.2). A zone carrying a Unit takes nothing more (R446).
@@ -729,11 +759,16 @@ export function moveToZone(
  * Units its carriers hold, in backrow lane order — a carried Unit is a Unit for every rule (R446).
  */
 export function activeUnitsOf(state: GameState, player: PlayerId): CardInstance[] {
-  const tops = slotsOf(player, "units").flatMap((ref) => {
-    const card = cardAt(state, ref);
-    return card === null ? [] : [card];
-  });
-  return [...tops, ...carriedUnitsOf(state, player)];
+  // Read straight off the rows, not through `slotsOf` and `cardAt`: the auras ask for this on every
+  // unit read (`layers.auraSources`), so it builds nothing it does not return (#188).
+  const side = state.players[player];
+  const units: CardInstance[] = [];
+  for (let lane = 1; lane <= UNIT_ZONES; lane += 1) {
+    const top = side.units[lane - 1]?.[0] ?? null;
+    if (top !== null) units.push(top);
+  }
+  for (const card of side.carried ?? []) if (card !== null) units.push(card);
+  return units;
 }
 
 export function dormantUnitsOf(state: GameState, player: PlayerId): CardInstance[] {
@@ -797,7 +832,7 @@ export function stepIntoUnitZone(state: GameState, card: CardInstance, to: ZoneS
 /**
  * B3.1 rule 6: move a card acting in a unit zone into a backrow zone of its side, without leaving the
  * field. `to` must take it: not held for another card, and empty — or, for a card that
- * has Stack, a zone a Stack card may top (B5 E21). A Lock never stops a move (R647). The caller releases the card's own home first. False,
+ * has Stack, a zone a Stack card may top (B5 E21). A Lock never stops a move (R660). The caller releases the card's own home first. False,
  * changing nothing, when it cannot go.
  */
 export function stepIntoBackrow(state: GameState, card: CardInstance, to: ZoneSlot, options: { stack?: boolean } = {}): boolean {

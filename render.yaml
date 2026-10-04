@@ -31,7 +31,13 @@ services:
     # with nothing new costs one ledger read and one upsert of the catalog. If either fails, this
     # instance never passes its health check and Render keeps the previous one serving. It is not
     # a `preDeployCommand` because free instances cannot run one.
-    startCommand: pnpm --filter @jackioh/server release && pnpm --filter @jackioh/server start
+    #
+    # CATALOG_VERSION is exported first, from the newest entry of packages/cards/patches/patches.json
+    # (scripts/catalog-version.mjs), so what a deploy stamps on the database and serves comes from the
+    # code it deployed. A value left in the dashboard, or an old one Render never synced, is
+    # overwritten here and cannot be served; the bump of the line below is the same patch commit's.
+    # The assignment is its own command, not `export X=$(...)`, so a failure stops the chain.
+    startCommand: CATALOG_VERSION=$(node scripts/catalog-version.mjs) && export CATALOG_VERSION && pnpm --filter @jackioh/server release && pnpm --filter @jackioh/server start
     # R163 makes /api/catalog the one unauthenticated route, so it is the honest readiness probe:
     # a 200 means the catalog really did register, not merely that a port is open.
     healthCheckPath: /api/catalog
@@ -43,9 +49,12 @@ services:
         value: "0"
       - key: NODE_ENV
         value: production
-      # R105's Core-set version. Must equal what db:seed-catalog stamped on public.cards.
+      # R105's catalog version, as the patch command last wrote it. The start command above derives
+      # the live value from patches.json, so this line is not what the server serves: it is what
+      # deploy-watch.yml, promote-production.yml and `pnpm test:deploy` read as the version main
+      # should serve, and R388's test holds it equal to patches.json.
       - key: CATALOG_VERSION
-        value: v0.2.0
+        value: v0.2.11
       # SPEC §11 R190: how many X-Forwarded-For entries this deployment's own proxies append; the
       # per-IP limits key on the entry that many places from the right, never on what the caller
       # wrote to its left. The server's default is 0 (no proxy), so this must be set. 1 is a safe

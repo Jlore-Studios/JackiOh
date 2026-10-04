@@ -1,4 +1,4 @@
-// Plague Tokens, extended (docs/classic-sets.md B5 E19, R471, R648): "Place N Plague Tokens" as N
+// Plague Tokens, extended (docs/classic-sets.md B5 E19, R471, R661): "Place N Plague Tokens" as N
 // placements all on the one permanent a single prompt names, "Place N on X" as one placement,
 // placement multipliers, the "placed on this" trigger, stats per token through the layers, removal,
 // and what each player sees.
@@ -65,8 +65,8 @@ function heroHealth(state: GameState, player: "p1" | "p2"): number {
   return state.players[player].hero.health;
 }
 
-describe("E19 Place N Plague Tokens: one prompt naming the single target (R471, R648)", () => {
-  it("R648 places every token on the one permanent the single prompt names, over every permanent on either side, face-down included", () => {
+describe("E19 Place N Plague Tokens: one prompt naming the single target (R471, R661)", () => {
+  it("R661 places every token on the one permanent the single prompt names, over every permanent on either side, face-down included", () => {
     const { run: start, mine, theirs, trap } = board("plague-prompts");
     const book = handCard(start.state, plagueBook.id);
     let run = frozen(start);
@@ -96,7 +96,7 @@ describe("E19 Place N Plague Tokens: one prompt naming the single target (R471, 
     ]);
   });
 
-  it("R648 a Radiant face's larger count lands on the one pick, and the paused prompt survives JSON and replays", () => {
+  it("R661 a Radiant face's larger count lands on the one pick, and the paused prompt survives JSON and replays", () => {
     const { run: start, theirs } = board("plague-json");
     const book = handCard(start.state, plagueBook.id);
     book.radiant = true;
@@ -161,7 +161,7 @@ describe("E19 Place N Plague Tokens: one prompt naming the single target (R471, 
     expect(trapOption).toEqual({ key: `instance:${trap.id}`, label: HIDDEN_OPTION_LABEL, instanceId: trap.id });
     expect(JSON.stringify(mine)).not.toContain(quietTrap.id);
 
-    // The one answer lands both placements on the trap (R648).
+    // The one answer lands both placements on the trap (R661).
     run = answer(run, pick(trap));
     // The event names the trap to its controller and hides it from the placer (R97); the count on the
     // card's back is public to both (R471).
@@ -259,7 +259,7 @@ describe("E19 one placement, multipliers and the placed trigger (R471)", () => {
     run = act(run, { type: "play", instanceId: spell.id, targets: [pick(worm)], playerId: "p1" });
     expect(heroHealth(run.state, "p2")).toBe(before - 1);
 
-    // Two placements on it: one answer (R648); all three triggers still wait for the whole effect and
+    // Two placements on it: one answer (R661); all three triggers still wait for the whole effect and
     // the Spell (R59, R68), so the health lands where two answers put it.
     run = act(run, { type: "play", instanceId: book.id, playerId: "p1" });
     run = answer(run, pick(worm));
@@ -371,7 +371,7 @@ describe("E19 placements over a scope, at random, and removals", () => {
 });
 
 describe("E19 stats per token (auras and self layers)", () => {
-  it("R471 R648 an aura reading each unit's tokens buffs its side and shrinks the other: both placements land on the one pick", () => {
+  it("R471 R661 an aura reading each unit's tokens buffs its side and shrinks the other: both placements land on the one pick", () => {
     const { run: start, mine, theirs } = board("plague-aura");
     const state = start.state;
     put(state, toxins.id, slot("p1", "backrow", 1));
@@ -389,7 +389,7 @@ describe("E19 stats per token (auras and self layers)", () => {
     expect(unitView(run.state, enemy)).toMatchObject({ attack: 3, maxHealth: 5 });
   });
 
-  it("R648 a −X/−X from the placements kills at the state check after the whole effect", () => {
+  it("R661 a −X/−X from the placements kills at the state check after the whole effect", () => {
     const { run: start } = board("plague-aura-death");
     const state = start.state;
     put(state, toxins.id, slot("p1", "backrow", 1));

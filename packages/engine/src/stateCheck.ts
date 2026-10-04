@@ -286,7 +286,7 @@ function oweDeaths(sink: EngineSink, pass: DeathPass, step: PausedStep | null): 
 
 /**
  * §4.5 step 4: each collected unit that had Reborn returns to its reserved zone (Locked since or
- * not, R647: the return is no play) at 1 health without Reborn, as a reset instance (R78); its Cry
+ * not, R660: the return is no play) at 1 health without Reborn, as a reset instance (R78); its Cry
  * does not fire, and because it has entered the field again it is summoning sick for the rest of
  * that turn (R83).
  */
@@ -357,7 +357,7 @@ function rebornToken(snapshot: CardInstance): CardInstance {
 
 /**
  * A card that came straight back through Reborn never stayed in the graveyard, so only the ones
- * still there are reported (R647: a Locked zone takes the return, so no Reborn body stays for it).
+ * still there are reported (R660: a Locked zone takes the return, so no Reborn body stays for it).
  */
 function graveyardStep(sink: EngineSink, pass: DeathPass): void {
   for (const entry of pass.collected) {

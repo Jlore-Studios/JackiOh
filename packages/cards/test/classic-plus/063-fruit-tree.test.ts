@@ -7,6 +7,7 @@ import { defOf, stepParam, type GameState } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
+import { expectAnimated } from "../_animated";
 import { base, def, radiant } from "../../src/scripts/classic-plus/063-fruit-tree";
 
 const TREE = "classicplus-063";
@@ -192,5 +193,31 @@ describe("C+ #63 Fruit Tree", () => {
       const revived = JSON.parse(JSON.stringify(a.state)) as GameState;
       expect(revived).toEqual(a.state);
     });
+  });
+});
+
+describe("C+ #63 Fruit Tree: Animated (patch v0.2.10)", () => {
+  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 1/4 Unit; with none open it stays a Field Spell", () => {
+    expectAnimated({ def: "classicplus-063", stats: { attack: 1, health: 4 } });
+  });
+
+  it("R383 radiant: a 2/8 Unit", () => {
+    expectAnimated({ def: "classicplus-063", radiant: true, stats: { attack: 2, health: 8 } });
+  });
+
+  it("R383 played, it keeps its text as a Unit: the start of your next turn adds a Fruit that costs (0)", () => {
+    const s = scenario({
+      seed: "fruit-tree-animated",
+      p1: { hand: [TREE, FILLER], library: [FILLER, FILLER, FILLER] },
+      p2: { hand: [FILLER], library: [FILLER, FILLER, FILLER] },
+    });
+
+    s.play(TREE, { zone: 3 });
+    expect(s.unit("p1", 3)?.defId).toBe(TREE);
+    s.endTurn().endTurn();
+
+    const added = fruitsAdded(s);
+    expect(added).toHaveLength(1);
+    expect(s.card(added[0]?.instanceId ?? "").costOverride).toBe(0);
   });
 });

@@ -1,11 +1,14 @@
-// Saved decks, saved trios and the Best-of-1 deck check (SPEC §9.4, R250–R253).
+// Saved decks, saved trios and the Best-of-1 deck check (SPEC §9.4, R250–R253, R641).
 //
-// A saved deck or trio is a draft: the save checks only its structure (D1–D4, T1–T3), and the
+// A saved deck or trio is a draft: the save checks only its structure (D1–D5, T1–T3), and the
 // legality rules run when it is queued — L2, L3, L5 and L6 for a Best-of-1 deck, L1–L6 for a trio.
 // The limits a caller passes (`nameMaxLength`) come from its own config in the apps; the tests pass
-// a value of their own so this package states no server number.
+// a value of their own so this package states no server number. The portrait roster D5 checks
+// against is the caller's too — `@jackioh/shared`'s `isPortraitId`, which the server and the
+// deckbuilder both pass.
 
 import { describe, expect, it } from "vitest";
+import { PORTRAIT_IDS, isPortraitId } from "@jackioh/shared";
 import { DECK_SIZE, MAX_COPIES } from "../src/config";
 import {
   TRIO_DECKS,
@@ -112,6 +115,54 @@ describe("R250 — a saved deck is a draft: D1–D4 are all a save checks", () =
 
   it("R250 normalizes a name the way it is stored: trimmed, inner whitespace one space", () => {
     expect(normalizeName("  My   first\tdeck ")).toBe("My first deck");
+  });
+});
+
+describe("R641 — D5: a saved deck's portrait is null or a known portrait id", () => {
+  /** A draft carrying `portrait`, D5-checked against the shared roster as the caller passes it. */
+  const portraitDraft = (
+    portrait: string | null | undefined,
+    isPortrait?: (portrait: string) => boolean,
+  ) =>
+    checkDeckDraft({
+      name: "Aggro",
+      cards: [],
+      isDeckable,
+      nameMaxLength: NAME_MAX,
+      portrait,
+      isPortrait,
+    });
+
+  it("R641 saves a deck whose portrait is null and one carrying every roster id", () => {
+    expect(portraitDraft(null, isPortraitId)).toEqual([]);
+    for (const id of PORTRAIT_IDS) {
+      expect(portraitDraft(id, isPortraitId), id).toEqual([]);
+    }
+  });
+
+  it("R641 fails an unknown portrait id, naming the field, beside the other draft issues", () => {
+    expect(portraitDraft("not-a-portrait", isPortraitId)).toEqual([
+      { rule: "D5", message: '"portrait" is not a known portrait id.' },
+    ]);
+    // D5 is collected with the other rules' failures, not instead of them.
+    expect(
+      checkDeckDraft({
+        name: "",
+        cards: [],
+        isDeckable,
+        nameMaxLength: NAME_MAX,
+        portrait: "not-a-portrait",
+        isPortrait: isPortraitId,
+      }).map((issue) => issue.rule),
+    ).toEqual(["D1", "D5"]);
+  });
+
+  it("R641 checks nothing when no portrait is given or the caller knows no roster", () => {
+    // `portrait` absent or undefined: nothing for D5 to read.
+    expect(draft([])).toEqual([]);
+    expect(portraitDraft(undefined, isPortraitId)).toEqual([]);
+    // `isPortrait` absent — a caller that predates portraits: the field is taken as given.
+    expect(portraitDraft("not-a-portrait")).toEqual([]);
   });
 });
 

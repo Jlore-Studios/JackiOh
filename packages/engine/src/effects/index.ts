@@ -223,7 +223,7 @@ export type { AnimateArgs } from "./animate";
 export { flicker, flickerCard } from "./flicker";
 // The Lock variants and Unlock (B5 E20; §3.2 Lock). The single-zone `unlock` sits with `lock`.
 export { unlock } from "./counters";
-// Reveal (R645): show a backrow Trap or Field Trap to both players while it stays armed.
+// Reveal (R658): show a backrow Trap or Field Trap to both players while it stays armed.
 export { reveal } from "./reveal";
 export { lockLane, lockOwnZone, lockPlayedZone, lockRandomZone, unlockAll } from "./locks";
 export type { LaneSpec, ZoneScope } from "./locks";
@@ -373,7 +373,8 @@ export {
 
 // B5 E34, R416: R29's scorer choosing a whole hand (C+ #27 Zephrys Zealotism).
 export { replaceHandWithPerfect } from "../subsystems/perfectHand";
-// R59: rounds of damage, each with its own state check, until a Unit dies (C+ #32.3 Blade Storm).
-export { damageRoundsUntilDeath } from "./rounds";
+// R59: rounds of damage, each with its own state check, until a Unit dies (C+ #32.3 Blade Storm);
+// R652: rounds that cast instead (its base face's Whirlwinds).
+export { castRoundsUntilDeath, damageRoundsUntilDeath } from "./rounds";
 // B5 E29, R419: return the board, or one side of it, to a snapshot of the last few turns (C+ #35 Rollback).
 export { rollBack } from "../subsystems/boardHistory";

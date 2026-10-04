@@ -1,6 +1,6 @@
 // C #89 Paul Allen's Ghost — SPEC §8.6 row 89, BUILD M9 Classic row C 89: "Divine Shield; targeting it
 // with anything but an attack costs the targeting player two random discards from their other hand
-// cards (R641: no "of your choice"), paid at once with the price; with fewer than 2 other cards it is
+// cards (R654: no "of your choice"), paid at once with the price; with fewer than 2 other cards it is
 // not a legal target, absent from `legalActions` and from the prompt's options; both players are bound,
 // its controller too; attacks, random picks and "all" effects cost nothing; the discards are discards
 // (C #64 sees them); radiant 10/12 Divine Shield, Reborn; its tuned number (discard) reads through
@@ -70,7 +70,7 @@ describe("C #89 Paul Allen's Ghost", () => {
       expect(s.stats(GHOST).keywords.map((keyword) => keyword.kind)).toEqual(["Divine Shield"]);
     });
 
-    it("B5 E5 R641 a declared target naming it lists one play carrying no discards", () => {
+    it("B5 E5 R654 a declared target naming it lists one play carrying no discards", () => {
       const s = scenario({ p1: { hand: [WILDFIRE, SPARE, SPARE, SPARE] }, p2: { field: [GHOST] } });
       const ghost = s.card(GHOST);
       const atGhost = wildfirePlays(s, "p1").filter((play) => play.targets?.[0]?.pick === "instance" && play.targets[0].instanceId === ghost.id);
@@ -80,7 +80,7 @@ describe("C #89 Paul Allen's Ghost", () => {
       expect(atHero.every((play) => !("discards" in play))).toBe(true);
     });
 
-    it("B5 E5 R641 the play pays two random others: two spares go, never the card played, and the hit meets its Divine Shield", () => {
+    it("B5 E5 R654 the play pays two random others: two spares go, never the card played, and the hit meets its Divine Shield", () => {
       const s = scenario({ p1: { hand: [WILDFIRE, SPARE, SPARE, SPARE] }, p2: { field: [GHOST] } });
       const spareIds = spares(s, "p1");
       const ghost = s.card(GHOST);
@@ -126,7 +126,7 @@ describe("C #89 Paul Allen's Ghost", () => {
       expect(own.every((play) => !("discards" in play))).toBe(true);
     });
 
-    it("B5 E5 R641 a prompt answer naming it pays the 2 random cards at once, with no follow-up prompt", () => {
+    it("B5 E5 R654 a prompt answer naming it pays the 2 random cards at once, with no follow-up prompt", () => {
       const s = scenario({
         p1: { hand: [{ def: ECHO, radiant: true }, WILDFIRE, SPARE, SPARE] },
         p2: { field: [GHOST, MENACE] },
@@ -156,7 +156,7 @@ describe("C #89 Paul Allen's Ghost", () => {
       expect(picks).not.toContainEqual(at(s.card(GHOST)));
     });
 
-    it("B5 E5 R641 an activation's declared target naming it pays 2 random cards too: C #78 Mutate Spell", () => {
+    it("B5 E5 R654 an activation's declared target naming it pays 2 random cards too: C #78 Mutate Spell", () => {
       const s = scenario({
         p1: { hand: [SPARE, SPARE, SPARE], backrow: [MUTATE] },
         p2: { hand: [FILLER], field: [{ def: GHOST, counters: { plague: 1 } }] },
@@ -167,7 +167,7 @@ describe("C #89 Paul Allen's Ghost", () => {
       const offered = legalActions(s.state, "p1").filter(
         (action): action is Extract<ActionBody, { type: "activate" }> => action.type === "activate" && action.instanceId === mutate,
       );
-      // R641: one action, carrying no discards.
+      // R654: one action, carrying no discards.
       expect(offered).toHaveLength(1);
       expect(offered.every((action) => !("discards" in action))).toBe(true);
       const result = send(s.state, "p1", { type: "activate", instanceId: mutate, targets: [at(ghost)] });

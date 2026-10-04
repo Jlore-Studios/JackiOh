@@ -54,7 +54,8 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
-import type { ActionBody, PlayerId, PlayerView, PromptKind } from "@jackioh/shared";
+import type { ActionBody, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind } from "@jackioh/shared";
+import { isEmoteId, isPortraitId } from "@jackioh/shared";
 
 import { matchSocketUrl } from "../net/api.ts";
 
@@ -215,7 +216,11 @@ export type ServerFrame =
   | { type: "ack"; nonce: string; seq: number }
   | { type: "error"; code: string; message: string; nonce?: string }
   | { type: "prompt"; prompt: PromptFrame }
-  | { type: "clock"; now: number; clocks: MatchClocks };
+  | { type: "clock"; now: number; clocks: MatchClocks }
+  /** R642: both seats' hero portraits, on join and on reconnect. */
+  | { type: "portraits"; p1: PortraitId; p2: PortraitId }
+  /** R643: an emote the opponent sent, relayed by the actor. */
+  | { type: "emote"; from: PlayerId; emote: EmoteId };
 
 /**
  * Parse one text frame. Returns null for anything this client does not understand, which is not an
@@ -285,6 +290,16 @@ export function parseServerFrame(text: string): ServerFrame | null {
       if (clocks === null || typeof parsed.now !== "number") return null;
       return { type: "clock", now: parsed.now, clocks };
     }
+    case "portraits": {
+      if (!isPortraitId(parsed.p1) || !isPortraitId(parsed.p2)) return null;
+      return { type: "portraits", p1: parsed.p1, p2: parsed.p2 };
+    }
+    case "emote": {
+      if (!isEmoteId(parsed.emote)) return null;
+      const from = parsed.from;
+      if (from !== "p1" && from !== "p2") return null;
+      return { type: "emote", from, emote: parsed.emote };
+    }
     default:
       return null;
   }
@@ -342,6 +357,13 @@ export type MatchSnapshot = {
   prompt: PromptFrame | null;
   /** The last `ack`: the nonce the actor accepted and the log seq it wrote it at. */
   ack: { nonce: string; seq: number } | null;
+  /** R642: both seats' portraits, null until the first `portraits` frame arrives. */
+  portraits: { p1: PortraitId; p2: PortraitId } | null;
+  /**
+   * R643: the last emote the opponent sent, with a `seq` that bumps on every relay so the same
+   * emote twice in a row still notifies.
+   */
+  emote: { from: PlayerId; emote: EmoteId; seq: number } | null;
 };
 
 export type MatchClient = {
@@ -351,6 +373,11 @@ export type MatchClient = {
   connect: () => void;
   /** Send one action. The nonce is minted here; `playerId` is never sent (the actor stamps it). */
   send: (body: ActionBody) => void;
+  /**
+   * R643: send one emote. No nonce and no ack — a rate-limited emote is the server's silent drop,
+   * so there is nothing to wait for; the board shows it locally at once.
+   */
+  sendEmote: (emote: EmoteId) => void;
   /** Close for good: no reconnect until `connect()` is called again. */
   close: () => void;
   /** The URL the next socket will open, for a diagnostic panel. */
@@ -388,6 +415,8 @@ const INITIAL: MatchSnapshot = {
   clock: null,
   prompt: null,
   ack: null,
+  portraits: null,
+  emote: null,
 };
 
 /**
@@ -423,6 +452,8 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   let pendingRetry: unknown = null;
   /** Set by `close()`; cleared by `connect()`. Keeps a deliberate close from reconnecting. */
   let stopped = false;
+  /** R643: bumps on every relayed emote, so two identical ones in a row still notify. */
+  let emoteSeq = 0;
 
   function emit(): void {
     for (const listener of [...listeners]) listener();
@@ -476,6 +507,13 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         return;
       case "clock":
         patch({ clock: { now: frame.now, clocks: frame.clocks, receivedAt: monotonic() } });
+        return;
+      case "portraits":
+        patch({ portraits: { p1: frame.p1, p2: frame.p2 } });
+        return;
+      case "emote":
+        emoteSeq += 1;
+        patch({ emote: { from: frame.from, emote: frame.emote, seq: emoteSeq } });
         return;
     }
   }
@@ -572,6 +610,17 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         live.send(frame);
       } catch (cause) {
         patch({ error: cause instanceof Error ? cause.message : String(cause), errorCode: "transport" });
+      }
+    },
+    sendEmote: (emote) => {
+      const live = socket;
+      // Cosmetic chatter is never worth an error banner: a dead socket just drops the emote, the
+      // way the server drops a rate-limited one (R643).
+      if (live === null || live.readyState !== OPEN) return;
+      try {
+        live.send(JSON.stringify({ type: "emote", emote }));
+      } catch {
+        // Gone between the check and the send; `onclose` reports the connection, not the emote.
       }
     },
     close: () => {
@@ -701,6 +750,8 @@ export type UseMatchOptions = {
 export type UseMatchResult = MatchSnapshot & {
   /** Send one action to the actor. */
   send: (body: ActionBody) => void;
+  /** R643: send one emote; the local board shows it at once and the server relays it on. */
+  sendEmote: (emote: EmoteId) => void;
   /** The handshake URL, for the diagnostic line on the match route. */
   url: string;
 };
@@ -748,5 +799,5 @@ export function useMatch(options: UseMatchOptions): UseMatchResult {
 
   const snapshot = useSyncExternalStore(client.subscribe, client.snapshot, client.snapshot);
 
-  return { ...snapshot, send: client.send, url: client.url() };
+  return { ...snapshot, send: client.send, sendEmote: client.sendEmote, url: client.url() };
 }

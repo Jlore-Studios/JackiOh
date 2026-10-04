@@ -12,9 +12,11 @@
 // bounced. `applies` reads instance data only and never calls back into `unitView`, or the layers
 // would recurse.
 //
-// "Your units": the controller's units on the field, in the `units` row. The Field Spell itself sits
-// in the backrow, so the row test also keeps the aura off its own card, and a unit the opponent
-// steals stops matching because `controller` is what is compared (R78 resets it on the way out).
+// "Your units": the controller's units on the field, in the `units` row. Animated since patch v0.2.10,
+// the card itself stands in the units row once it has animated, so its own aura reaches it (§8 #14,
+// R383); only left in its backrow zone, with no unit zone open, does the row test keep the aura off
+// its own card. A unit the opponent steals stops matching because `controller` is what is compared
+// (R78 resets it on the way out).
 // Rush from this aura is what R83's "a Reborn body the board has granted Rush may attack again"
 // refers to; granting the keyword is all this card does about it.
 

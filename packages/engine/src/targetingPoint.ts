@@ -3,13 +3,14 @@
 //
 // Two things answer a targeting, in this order:
 //   1. A targeting cost (Classic #89 Paul Allen's Ghost: "to target this with anything but an attack,
-//      a player must also discard N cards"). The discards are random at pay time (R641); §10.5 step
+//      a player must also discard N cards"). The discards are random at pay time (R654); §10.5 step
 //      2 pays them (`payTargetingDiscards`), and a prompt answer naming such a card pays them before
 //      it goes on. It binds both players. With fewer cards than the cost in hand the card is not a
 //      legal target at all (`targeting.canPayToTarget`), so it is never offered.
 //   2. An interception (Classic #33 Joro: "While this is in your hand: when your opponent targets one
-//      of your Units, summon this and make it the new target"). The first card in the targeted
-//      unit's controller's hand whose `replacements` declare `{ on: "targeted", where: "hand" }` is
+//      of your Units with a Spell, summon this and make it the new target"). The first card in the
+//      targeted unit's controller's hand whose `replacements` declare `{ on: "targeted", where:
+//      "hand" }` and answer this source (`by: "spell"` needs a Spell, R651) is
 //      summoned (R64's leftmost open unit zone; with none, nothing happens), with no Cry and
 //      summoning sick, and the pick moves to it — `redirected` "target". One interceptor answers one targeting: a play naming several of
 //      that player's units redirects the first. A declared pick moves only when the interceptor is
@@ -24,7 +25,7 @@
 // prompts) and through the play pipeline's own answerer (`playSteps.answerPlayPrompt`), which owns its
 // prompts (R122).
 
-import type { PlayerId, Selection } from "@jackioh/shared";
+import type { CardType, PlayerId, Selection } from "@jackioh/shared";
 import { discardFromHand } from "./effects/move";
 import { summon } from "./effects/summon";
 import { registerTargetingHooks, type OpenPromptArgs } from "./prompts";
@@ -46,6 +47,8 @@ export type InterceptArgs = {
   /** Whether the interceptor may stand as pick `index` (a declaration's filter); always when absent. */
   accepts?: (interceptor: CardInstance, index: number) => boolean;
   what?: RedirectKind;
+  /** The targeting card's type; an attack carries none, so a `by: "spell"` card never answers it (R651). */
+  source?: CardType;
 };
 
 /**
@@ -61,7 +64,7 @@ export function interceptTargeting(sink: EngineSink, args: InterceptArgs): Selec
     if (pick?.pick !== "instance") continue;
     const targeted = findInstance(sink.state, pick.instanceId);
     if (targeted === undefined) continue;
-    const interceptor = interceptorFor(sink.state, args.chooser, targeted);
+    const interceptor = interceptorFor(sink.state, args.chooser, targeted, args.source);
     if (interceptor === null) continue;
     if (args.accepts !== undefined && !args.accepts(interceptor, index)) continue;
 
@@ -83,7 +86,7 @@ export function interceptTargeting(sink: EngineSink, args: InterceptArgs): Selec
 }
 
 /**
- * R450, R641, §6.3 Discard: pay a targeting cost of `count` discards — random cards from the
+ * R450, R654, §6.3 Discard: pay a targeting cost of `count` discards — random cards from the
  * player's hand outside `keep`, drawn through the match rng. Fewer cards than the cost ends it; a
  * cost nobody can pay is never listed or offered (`canPayToTarget`, `whyTargetingDiscardsUnpayable`),
  * so the keep is what the refusal kept: the card a play is taking out of that hand, and any hand
@@ -120,7 +123,17 @@ export function whyTargetAnswerRefused(state: GameState, pending: PendingChoice,
 }
 
 /**
- * R450, R641: the targeting point of a `target` prompt's answer, which the caller has validated and
+ * R651: the targeting card's type behind a `target` prompt — the card whose prompt it is
+ * (`resume.instanceId`), read as the pick is answered. Undefined when the prompt names no card.
+ */
+function sourceOf(state: GameState, instanceId: string | undefined): CardType | undefined {
+  if (instanceId === undefined) return undefined;
+  const source = findInstance(state, instanceId);
+  return source === undefined ? undefined : cardTypeOf(state, source);
+}
+
+/**
+ * R450, R654: the targeting point of a `target` prompt's answer, which the caller has validated and
  * closed. A costly answer pays its random discards first, then the interception answers.
  */
 export function targetAnswer(sink: EngineSink, pending: PendingChoice, picks: readonly Selection[]): Selection[] {
@@ -128,9 +141,13 @@ export function targetAnswer(sink: EngineSink, pending: PendingChoice, picks: re
   const chooser = pending.playerId;
   const cost = targetingDiscardsFor(sink.state, picks);
   if (cost > 0) payTargetingDiscards(sink, chooser, cost);
-  return interceptTargeting(sink, { chooser, picks, what: "target" });
+  return interceptTargeting(sink, {
+    chooser,
+    picks,
+    what: "target",
+    source: sourceOf(sink.state, pending.resume.instanceId),
+  });
 }
-
 /**
  * R450, E35: the options a `target` prompt may offer its chooser — none they could not pay to target,
  * and none Immune to Spells when a Spell asks. Every other prompt keeps its options.

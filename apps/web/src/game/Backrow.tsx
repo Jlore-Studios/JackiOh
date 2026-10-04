@@ -27,6 +27,8 @@ export type BackrowProps = {
   entry: BackrowView;
   side: Side;
   lane: number;
+  /** #165: what a touch hold on the card opens (contract.ts's `touchHoldMode`). */
+  touchHold?: "sheet" | "preview";
   highlight?: Highlight;
   animating?: AnimatingMap;
   onClick?: (target: ClickTarget) => void;
@@ -51,6 +53,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
         <Card
           card={null}
           className="card-backrow"
+          touchHold={props.touchHold}
           faceDown={{
             at: `${props.side}-${String(props.lane)}`,
             ...(cost === undefined ? {} : { cost }),
@@ -75,6 +78,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
         unrevealed={entry.unrevealed === true}
         backrowVanilla={entry.vanilla === true}
         className="card-backrow"
+        touchHold={props.touchHold}
         target={{ on: "backrow", instanceId: entry.instanceId, side: props.side, lane: props.lane }}
         highlight={props.highlight}
         animating={props.animating}

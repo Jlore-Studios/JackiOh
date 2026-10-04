@@ -25,7 +25,7 @@
 // R81: zone, X, embiggen, Tribute and a card's declared targets and modes are NOT prompts. They
 // travel inside the `play` action, and `legalActions` enumerates them; so does a play's new payment,
 // the Plague Tokens that pay part of a graveyard play's price (`plague`, Classic #74) — while a
-// targeting cost's discards (Classic #89) are random at pay time (R641) and travel nowhere. R384: an
+// targeting cost's discards (Classic #89) are random at pay time (R654) and travel nowhere. R384: an
 // activation is built the same way — its targets, modes and Tribute travel in the `activate`
 // action — so a play and an activation are one "build" here (`BuildBody`), narrowed by one set of
 // functions. Everything chosen during resolution — Discover, chained steps, Echo repeats, casts,

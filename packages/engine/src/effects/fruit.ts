@@ -7,11 +7,9 @@
 // here, beside the effects library they are written in, and nowhere else.
 
 import type { PlayerId } from "@jackioh/shared";
-import { excludingDefId, query, type CatalogQueryArgs } from "../catalog";
-import { GRAPE_ODDS } from "../config";
+import { excludingDefId, pickGenerated, query, rollGrape, type CatalogQueryArgs } from "../catalog";
 import { drawOne, type DrawOutcome } from "../draw";
 import { numberedKeywordsOn } from "../numbers";
-import type { Rng } from "../rng";
 import type { Effect, EffectContext } from "../script";
 import { findInstance, type CardInstance } from "../state";
 import { moveToZone, reportGraveyardLanding } from "../zones";
@@ -21,33 +19,13 @@ import { damage } from "./damage";
 import { heal } from "./heal";
 import { playerOf, type PlayerSpec } from "./targets";
 
+// `rollGrape` lives beside `query` in `../catalog` now (R382's generic re-roll reads it there too);
+// still exported here, so `@jackioh/engine/effects` keeps one name for it.
+export { rollGrape } from "../catalog";
+
 // ---------------------------------------------------------------------------------------------
 // Grapes (C+ #65, #66)
 // ---------------------------------------------------------------------------------------------
-
-/**
- * R382, BUILD §2: one Grape, rolled by `GRAPE_ODDS` — one draw of the match rng over the percents'
- * sum, walked in the table's order. `lucky` extra rolls (§6.1 Lucky X) keep the best, and the best is
- * the later entry, since the table runs from worst to best (Rotten < Normal < Large < Golden < Mythic).
- * Returns the Grape's def id.
- */
-export function rollGrape(rng: Rng, lucky = 0): string {
-  const roll = (): number => {
-    const total = GRAPE_ODDS.reduce((sum, grape) => sum + grape.percent, 0);
-    let at = rng.int(total);
-    for (let i = 0; i < GRAPE_ODDS.length; i += 1) {
-      const grape = GRAPE_ODDS[i];
-      if (grape === undefined) break;
-      if (at < grape.percent) return i;
-      at -= grape.percent;
-    }
-    return GRAPE_ODDS.length - 1;
-  };
-  const extra = Math.max(0, Math.trunc(lucky));
-  const index = extra === 0 ? roll() : rng.lucky(extra, roll, (a, b) => Math.max(a, b));
-  const grape = GRAPE_ODDS[index] ?? GRAPE_ODDS[GRAPE_ODDS.length - 1];
-  return grape?.defId ?? "";
-}
 
 /**
  * §6.1: the Lucky X the card running the script has now — its running face's printed Lucky, as a
@@ -202,7 +180,7 @@ export function replaceHandWithRandom(args: {
       if (pool.length === 0) return;
       for (let i = 0; i < replaced.length; i += 1) {
         if (ctx.state.result !== null) return;
-        const def = ctx.rng.pick(pool);
+        const def = pickGenerated(ctx.rng, pool);
         if (def === undefined) return;
         addToHand({
           defId: def.id,

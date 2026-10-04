@@ -130,7 +130,7 @@ class PriorityTests(unittest.TestCase):
         gh.add_labels(5, [HIGH])
         self.assertEqual(plan_mod.make(ctx)["number"], 5)
 
-    def test_with_no_priority_labels_the_order_is_forced_harder_reviews_revisions_builds(self):
+    def test_with_no_priority_labels_the_order_is_forced_reviews_revisions_harder_builds(self):
         gh = FakeGitHub()
         ctx = ctx_for(gh)
         for number in (3, 4, 5, 6):
@@ -148,9 +148,9 @@ class PriorityTests(unittest.TestCase):
         queue = queue_mod.candidates(ctx, state)
         order = [c.number for c, _ in plan_mod.pairs(ctx, state, queue, plan_mod.Lanes(3),
                                                      force=False, quiet_ok=plan_mod.ANY_QUIET)]
-        # Forced first, then the hard one (only the strongest can take it), then the review,
-        # the revision, and the builds oldest first.
-        self.assertEqual(order, [6, 7, 10, 9, 8, 4, 5, 3])
+        # Forced first, then the review and the revision (work already begun), then the builds:
+        # the hard one first (only the strongest can take it), the rest oldest first.
+        self.assertEqual(order, [6, 10, 9, 7, 8, 4, 5, 3])
 
 
 class HumanTests(unittest.TestCase):
@@ -180,13 +180,34 @@ class HumanTests(unittest.TestCase):
         self.assertEqual(picks(ctx, gh), [3])
         self.assertIn("#9 skipped: labelled `human`", plan_mod.peek(ctx).skipped[0])
 
+    def test_human_is_never_queued_planned_labelled_or_built(self):
+        """`human`: people do it. A request to build it gets a reply and nothing else, and it is
+        never a candidate, nor given a stage label, nor revised when it conflicts."""
+        gh = FakeGitHub()
+        ctx = make_ctx(gh, at=NIGHT, cfg=make_config(env=ALL, machine=MACHINE, plan_lanes=None))
+        gh.add_issue(5, labels=(LABEL_BUILD, "Human", HIGH))
+        gh.add_issue(6, labels=("human",))
+        gh.add_issue(3, labels=(LABEL_BUILD,))
+        reply = queue_mod.queue_build(ctx, 6, by="MaxGoetzmann")
+        self.assertIn("#6 is labelled `human`: people do it, so I leave it alone", reply)
+        self.assertEqual(gh.label_names(6), {"human"})
+        planned = plan_mod.make(ctx, force=True)
+        self.assertEqual(planned["number"], 3)
+        self.assertIn("#5 skipped: labelled `human`", planned["skipped"][0])
+        self.assertEqual(gh.label_names(5), {LABEL_BUILD, "Human", HIGH})  # no bot:needs-plan
+        pull = gh.add_pull(9, "bot/issue-1", labels=(LABEL_PR, "human"))
+        pull["mergeable_state"] = "dirty"
+        plan_mod.housekeeping(ctx, ctx.store.load())
+        self.assertNotIn(LABEL_REVISE, gh.label_names(9))
+        self.assertIn("labelled `human`", queue_mod.queue_revise(ctx, 9, by="MaxGoetzmann"))
+
     def test_the_reply_says_what_the_label_changes(self):
         gh = FakeGitHub()
         ctx = ctx_for(gh)
         gh.add_issue(5, labels=("human",))
         gh.add_issue(7, labels=("Difficulty:Hard",))
         gh.add_issue(8)
-        self.assertIn("labelled `human`, though, so no model takes it",
+        self.assertIn("#5 is labelled `human`: people do it, so I leave it alone",
                       queue_mod.queue_build(ctx, 5, by="MaxGoetzmann"))
         self.assertIn("labelled `difficulty:hard`, so only Opus plans, builds and reviews it",
                       queue_mod.queue_build(ctx, 7, by="MaxGoetzmann"))
@@ -195,7 +216,8 @@ class HumanTests(unittest.TestCase):
 
 class LabelsTests(unittest.TestCase):
     def test_setup_creates_the_new_labels(self):
-        self.assertEqual(LABELS["human"][1], "A human will do this. Night bot skips it.")
+        self.assertEqual(LABELS["human"][1],
+                         "People do this: the night bot never queues, plans, builds or labels it")
         self.assertNotIn("shitter", LABELS)
         self.assertNotIn("difficult", LABELS)
         self.assertEqual({name: LABELS[name][0] for name in (HIGH, MEDIUM, LOW)},

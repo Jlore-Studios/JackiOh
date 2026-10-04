@@ -18,6 +18,7 @@ from harness.state import item as state_item
 
 from tests.fakes import OPERATOR, STRANGER, FakeGitHub
 from tests.support import NIGHT, make_config, make_ctx
+from tests.test_cross import ALL
 
 
 def opened(gh: FakeGitHub) -> list[int]:
@@ -76,32 +77,48 @@ class DashboardTests(unittest.TestCase):
                                                                   "difficulty:hard"))
         self.gh.runs["200"] = {"id": 200, "status": "completed", "conclusion": "success",
                                "event": "schedule", "created_at": ago(30), "run_number": 812,
+                               "run_started_at": ago(30), "updated_at": ago(26),
                                "html_url": "https://github.com/x/y/actions/runs/200"}
         body = dashboard.render(self.ctx)
-        # What each lane is doing, with a link to the run doing it.
+        # What each lane is doing, the longest-running first. The start time is a clock time
+        # that links to the run; hovering it says how long it had run when this was written.
         runs = "https://github.com/jgoetzmann/JackiOh/actions/runs"
-        self.assertIn("| Item | Title | Doing | Subscription | For | Run |", body)
-        self.assertIn(f"| #37 | An issue | building | `claude-1` `opus` (GitHub) | 47m "
-                      f"| [run 101]({runs}/101) |", body)
-        self.assertIn(f"| #49 | An issue | revising | `muse` `muse-spark-1.3-contributor` "
-                      f"(machine) | 2h 03m | [run 102]({runs}/102) |", body)
+        self.assertIn("| Item | Title | Doing | Subscription | Started (Central) |", body)
+        muse_row = (f"| #49 | An issue | revising | `muse` `muse-spark-1.3-contributor` (machine) "
+                    f"| [19:57]({runs}/102 \"running 2h 03m when this was written at 22:00\") |")
+        claude_row = (f"| #37 | An issue | building | `claude-1` `opus` (GitHub) "
+                      f"| [21:13]({runs}/101 \"running 47m when this was written at 22:00\") |")
+        self.assertIn(muse_row, body)
+        self.assertIn(claude_row, body)
+        self.assertLess(body.index(muse_row), body.index(claude_row))
         self.assertIn("by `bot-status`, which rewrites this issue every ten minutes", body)
-        # A timeline of the runs going now, by subscription and where each runs.
-        self.assertIn("```mermaid\ngantt", body)
-        self.assertIn("    section claude-1 (GitHub)\n    item 37 build :active, ", body)
-        self.assertIn("    section muse (machine)\n    item 49 revise :active, ", body)
-        self.assertEqual(body.count("section "), 2)
-        # The lanes in use.
-        self.assertIn('pie showData title Lanes (10, at most 6 on the machine)', body)
-        self.assertIn('    "On the machine" : 1\n    "On GitHub\'s runners" : 1\n    "Free" : 8',
+        # A timeline of the runs going now: GitHub's runners, then the machine.
+        self.assertIn("```mermaid\ngantt\n    title Runs going now, as of 22:00 (Central time)",
                       body)
+        self.assertIn("    tickInterval 30minute\n    todayMarker off", body)
+        self.assertIn("    section GitHub's runners\n    claude-1 · building 37 · 47m :active, "
+                      "2026-09-29 21:13, 2026-09-29 22:00", body)
+        self.assertIn("    section The machine\n    muse · revising 49 · 2h 03m :active, ", body)
+        gantt = body.split("```mermaid\ngantt")[1].split("```")[0]
+        self.assertNotIn("#", gantt)  # a gantt chart reads `#` as a comment
+        # The lanes as boxes: each Claude account, then each slot on the machine.
+        self.assertIn('subgraph hosted["Claude accounts, on GitHub\'s runners: 1 of 4 working"]',
+                      body)
+        self.assertIn('h0["<b>claude-1</b><br/>🟢 building #37<br/>since 21:13"]:::busy', body)
+        self.assertIn('subgraph machine["The machine: 1 of 6 slots in use"]', body)
+        self.assertIn('m0["<b>muse</b><br/>revising #49<br/>since 19:57"]:::busy', body)
+        self.assertIn('m5["free"]:::free', body)
+        self.assertIn("m0 ~~~ m1 ~~~ m2 ~~~ m3 ~~~ m4 ~~~ m5", body)
+        self.assertIn("Lanes: 2 of 10 in use", body)
+        self.assertNotIn("pie", body)
         # Each subscription, with its usage as a bar.
         self.assertIn("| `claude-1` |", body)
         self.assertIn("🟢 #37", body)
         self.assertIn("▰▰▰▱▱▱▱▱▱▱ 30%", body)
         # The queue and the last runs.
         self.assertIn("| #9 | revise | hard | — | Make it so |", body)
-        self.assertIn("| schedule | ✅ | [812](https://github.com/x/y/actions/runs/200) |", body)
+        self.assertIn('| <span title="took 4m">Tue 21:30</span> | schedule | ✅ '
+                      '| [812](https://github.com/x/y/actions/runs/200) |', body)
         # The full status, folded.
         self.assertIn("<details><summary>The full status</summary>", body)
         self.assertIn("**Night bot status**", body)
@@ -109,7 +126,8 @@ class DashboardTests(unittest.TestCase):
     def test_nothing_running(self):
         body = dashboard.render(self.ctx)
         self.assertIn("Nothing is running right now.", body)
-        self.assertIn('    "Free" : 10', body)
+        self.assertIn("The machine: 0 of 6 slots in use", body)
+        self.assertIn("Lanes: 0 of 10 in use", body)
         self.assertIn("Nothing is queued.", body)
 
     def test_the_loop_rewrites_it_every_ten_minutes_and_outlives_a_bad_tick(self):
@@ -172,6 +190,35 @@ class DashboardTests(unittest.TestCase):
                                  ("sweep", 600.0), ("rewrite", 600.0)])
         self.assertIn("::warning::the sweep failed: rate limited", out.getvalue())
         self.assertIn("sweep: started a night run", out.getvalue())
+
+    def test_each_idle_account_says_why_in_its_box(self):
+        """A Claude account with no run: open, at a cap, outside its hours, resting after a run
+        that could not work, or off, each with the time it changes."""
+        later = iso(NIGHT + timedelta(minutes=70))
+        self.ctx = make_ctx(self.gh, at=NIGHT, cfg=make_config(env=ALL))  # every secret set
+
+        def seed(state):
+            state["providers"]["claude-2"] = {"usage": {"five_hour": {"utilization": 0.95,
+                                                                      "resets_at": later}}}
+            state["providers"]["claude-3"] = {"infra": {"at": iso(NIGHT - timedelta(minutes=10)),
+                                                        "reason": "401", "streak": 2}}
+        self.ctx.store.update(seed, "seed")
+        state = self.ctx.store.load()
+        pool = self.ctx.cfg.pool
+        self.assertEqual(dashboard._account(self.ctx, state, pool.get("claude-1")),
+                         ("open", "⚪ open"))
+        self.assertEqual(dashboard._account(self.ctx, state, pool.get("claude-2")),
+                         ("paused", "⏸️ 5-hour 95%, cap 90%<br/>resets 23:10"))
+        self.assertEqual(dashboard._account(self.ctx, state, pool.get("claude-3")),
+                         ("broken", "⛔ last run could not work<br/>tries again 23:50"))
+        day = make_ctx(self.gh, at=NIGHT + timedelta(hours=12), cfg=self.ctx.cfg)
+        self.assertEqual(dashboard._account(day, day.store.load(), pool.get("claude-1"))[0],
+                         "closed")
+        self.assertIn("🌙 opens 21:00", dashboard._account(day, day.store.load(),
+                                                          pool.get("claude-1"))[1])
+        unset = make_ctx(self.gh, at=NIGHT, cfg=make_config(env={"HARNESS_SECRETS_SET": ""}))
+        self.assertEqual(dashboard._account(unset, state, unset.cfg.pool.get("claude-4")),
+                         ("off", "⚫ off: no secret set"))
 
     def test_a_cell_stays_one_line_without_pipes(self):
         self.assertEqual(dashboard._cell("a | b\nc"), "a \\| b c")

@@ -553,7 +553,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 0,
-    "loc": 15,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Cast on draw: Your opponent has 1 less mana next turn. Discard 1."
@@ -1746,7 +1746,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
-    "loc": 18,
+    "loc": 17,
     "base": {
       "attack": 1,
       "health": 2,
@@ -2976,7 +2976,7 @@
         "min": 1
       }
     ],
-    "loc": 43,
+    "loc": 57,
     "base": {
       "keywords": [],
       "text": "Aura: Your opponent can't draw more than {drawLimit|card|cards} each turn.\nWhen your opponent plays a Book, you may Tribute this to steal it."
@@ -3144,7 +3144,7 @@
         "min": 1
       }
     ],
-    "loc": 84,
+    "loc": 97,
     "base": {
       "keywords": [],
       "text": "Your opponent chooses {choices|time|times}: they discard {discard|card|cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw|card|cards}."
@@ -3482,7 +3482,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
-    "loc": 33,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Choose a number. Exile every card on the field, in hands and in decks that costs that much."
@@ -3574,7 +3574,7 @@
         "min": 1
       }
     ],
-    "loc": 40,
+    "loc": 44,
     "base": {
       "keywords": [],
       "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|card|cards}; or choose a Unit, which is destroyed at the start of your next turn."
@@ -3648,7 +3648,7 @@
         "min": 1
       }
     ],
-    "loc": 33,
+    "loc": 29,
     "base": {
       "attack": 2,
       "health": 1,
@@ -3685,7 +3685,7 @@
         "min": 1
       }
     ],
-    "loc": 30,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Cry: Discard {discards|card|cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
@@ -3747,7 +3747,7 @@
         "min": 1
       }
     ],
-    "loc": 24,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Exile every card on the field, in hands and in decks that costs ({threshold}) or less."
@@ -3785,7 +3785,7 @@
         "min": 1
       }
     ],
-    "loc": 13,
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Draw {draw}. Then discard {discard|card|cards}."
@@ -4039,7 +4039,7 @@
         "min": 1
       }
     ],
-    "loc": 8,
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Return {cards|card|cards} from your graveyard to your hand."
@@ -5041,7 +5041,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "loc": 24,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "End of turn: Discard 2 cards.\nWhenever you discard cards, draw that many."
@@ -5071,7 +5071,7 @@
         "min": 1
       }
     ],
-    "loc": 22,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "End of your turn: Flip a coin. On heads, this activates: Recruit {recruits|card|cards}."
@@ -5372,7 +5372,7 @@
         "min": 1
       }
     ],
-    "loc": 12,
+    "loc": 6,
     "base": {
       "keywords": [],
       "text": "Cry: Place {tokens|Plague Token|Plague Tokens} on this.\nYou may play Units from your graveyard, paying with Plague Tokens from this: each token pays (1), and each such play spends at least 1 token."
@@ -5876,7 +5876,7 @@
         "min": 1
       }
     ],
-    "loc": 17,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Aura: Enemy Units have −X Attack, where X is {multiplier}× the number of Units your opponent controls.\nWhen your opponent controls no Units, Tribute this."
@@ -6660,7 +6660,7 @@
         "min": 1
       }
     ],
-    "loc": 9,
+    "loc": 10,
     "base": {
       "keywords": [],
       "text": "The next Spell you play gains \"After this resolves, return it to your hand. This can't cost less than ({floor}).\""
@@ -6812,7 +6812,7 @@
       "classicplus-019-4",
       "classicplus-019-5"
     ],
-    "loc": 31,
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Summon the five-stack: Top Loser, Jungle Loser, Mid Loser, Support Loser and Bot Loser, into your unit zones 1 to 5 in that order. An occupied or Locked zone is skipped."
@@ -7721,7 +7721,7 @@
         "min": 1
       }
     ],
-    "loc": 9,
+    "loc": 10,
     "base": {
       "attack": 3,
       "health": 2,
@@ -7934,7 +7934,7 @@
         "min": 1
       }
     ],
-    "loc": 11,
+    "loc": 12,
     "base": {
       "keywords": [],
       "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Book, a random KY card, a random Legendary card and a random (4) Cost card to your hand. They cost (0)."
@@ -8048,7 +8048,7 @@
         "min": 1
       }
     ],
-    "loc": 26,
+    "loc": 27,
     "base": {
       "attack": 4,
       "health": 4,
@@ -8366,7 +8366,7 @@
         "min": 1
       }
     ],
-    "loc": 14,
+    "loc": 7,
     "base": {
       "keywords": [],
       "text": "Summon {tokens|Rush Token|Rush Tokens}."
@@ -8462,7 +8462,7 @@
         "min": 1
       }
     ],
-    "loc": 5,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Your opponent discards {discards|card|cards}."
@@ -8602,7 +8602,7 @@
         "min": 1
       }
     ],
-    "loc": 13,
+    "loc": 8,
     "base": {
       "keywords": [],
       "text": "Cry and start of turn: Add {apples|All Purpose Apple|All Purpose Apples} to your hand."
@@ -8692,7 +8692,7 @@
         "min": 1
       }
     ],
-    "loc": 16,
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Start of turn: Add {fruits|random Fruit|random Fruits} to your hand. Each costs (0)."
@@ -9229,7 +9229,7 @@
     "printedRarity": "Legendary",
     "token": true,
     "cost": 4,
-    "loc": 20,
+    "loc": 11,
     "base": {
       "attack": 10,
       "health": 10,
@@ -9512,7 +9512,7 @@
         "min": 1
       }
     ],
-    "loc": 13,
+    "loc": 12,
     "base": {
       "keywords": [],
       "text": "End of turn: Add {cards|random AI generated card|random AI generated cards} to your hand. Each costs (0)."

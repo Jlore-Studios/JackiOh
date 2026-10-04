@@ -132,7 +132,8 @@ describe("C+ #39 Book Worm", () => {
       expect(s.view("p2").opponent.units[0]?.counters?.plague).toBe(1);
       const inHand = s.view("p1").you.hand;
       if (!Array.isArray(inHand)) throw new Error("own hand in full");
-      expect(inHand.find((card) => card.defId === WORM)?.counters?.plague).toBeUndefined();
+      const wormInHand = inHand.find((card) => card.defId === WORM);
+      expect(wormInHand === undefined || !("counters" in wormInHand)).toBe(true);
       // The text names what the counters are.
       expect(defOf(s.state, WORM).base.text).toContain("Plague Token");
       // What the counters say is what the Death then adds.

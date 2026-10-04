@@ -6,14 +6,15 @@
 // Everything here reads a `PlayerView` or a defId and nothing else (CLAUDE.md rule 7, R203): a
 // redacted card carries `HIDDEN_DEF_ID`, which is never in the table, so it never yields a line.
 
-import type { PlayerView } from "@jackioh/shared";
+import type { PlayerView, PortraitId, VoiceEmoteId } from "@jackioh/shared";
 
 import { HIDDEN_DEF_ID } from "./constants.ts";
 import type {
+  EmoteLineEntry,
   Persona,
+  PlayableLineKind,
   VoiceKey,
   VoiceLineEntry,
-  VoiceLineKind,
   VoiceLineTable,
   VoiceManifest,
 } from "./types.ts";
@@ -121,6 +122,26 @@ function parseEntry(raw: unknown, path: string, personas: Record<string, Persona
   return fail(`${path}.kind`, 'must be "unit", "spell" or "trap"');
 }
 
+/** The `emotes` table's one entry shape (R644): a persona and the five issue-§3 lines. */
+function parseEmoteEntry(raw: unknown, path: string, personas: Record<string, Persona>): EmoteLineEntry {
+  const o = record(raw, path);
+  const persona = text(o.persona, `${path}.persona`);
+  if (!Object.hasOwn(personas, persona)) fail(`${path}.persona`, `unknown persona "${persona}"`);
+  const overrides: { rate?: number; pbas?: number; pmod?: number } = {};
+  if (o.rate !== undefined) overrides.rate = numberIn(o.rate, `${path}.rate`, ...RATE_RANGE);
+  if (o.pbas !== undefined) overrides.pbas = numberIn(o.pbas, `${path}.pbas`, ...PITCH_BASE_RANGE);
+  if (o.pmod !== undefined) overrides.pmod = numberIn(o.pmod, `${path}.pmod`, ...PITCH_MOD_RANGE);
+  return {
+    persona,
+    greetings: text(o.greetings, `${path}.greetings`),
+    wellPlayed: text(o.wellPlayed, `${path}.wellPlayed`),
+    oops: text(o.oops, `${path}.oops`),
+    thanks: text(o.thanks, `${path}.thanks`),
+    threaten: text(o.threaten, `${path}.threaten`),
+    ...overrides,
+  };
+}
+
 /** Throws Error("voice-lines.json: <path>: <problem>") on a shape error. Does NOT check word limits (tests do). */
 export function parseVoiceLines(raw: unknown): VoiceLineTable {
   const root = record(raw, "(root)");
@@ -136,7 +157,11 @@ export function parseVoiceLines(raw: unknown): VoiceLineTable {
     if (defId === HIDDEN_DEF_ID) fail(`cards.${defId}`, "the hidden sentinel cannot have lines");
     cards[defId] = parseEntry(value, `cards.${defId}`, personas);
   }
-  return { version: 1, personas, cards };
+  const emotes: Record<string, EmoteLineEntry> = {};
+  for (const [portrait, value] of Object.entries(record(root.emotes ?? {}, "emotes"))) {
+    emotes[portrait] = parseEmoteEntry(value, `emotes.${portrait}`, personas);
+  }
+  return { version: 1, personas, cards, emotes };
 }
 
 export const VOICE_LINES: VoiceLineTable = parseVoiceLines(rawLines);
@@ -147,7 +172,7 @@ export const VOICE_MANIFEST = rawManifest as VoiceManifest;
  * Lookups
  * ------------------------------------------------------------------------------------------- */
 
-export function voiceKey(defId: string, line: VoiceLineKind): VoiceKey {
+export function voiceKey(defId: string, line: PlayableLineKind): VoiceKey {
   return `${defId}-${line}`;
 }
 
@@ -169,8 +194,13 @@ export function entryFor(lines: VoiceLineTable, defId: string): VoiceLineEntry |
 export function lineFor(
   lines: VoiceLineTable,
   defId: string,
-  line: VoiceLineKind,
+  line: PlayableLineKind,
 ): { text: string; persona: Persona } | null {
+  // R644: `emote-<portrait>` defIds resolve through the emotes table, the way a card's resolve
+  // through `cards` — which is what lets `playVoice` carry them unchanged (engine.ts).
+  if (line !== "play" && line !== "death" && line !== "cast") {
+    return emoteLineFor(lines, emotePortraitOf(defId), line);
+  }
   const entry = entryFor(lines, defId);
   if (entry === null) return null;
   let spoken: string | null = null;
@@ -189,6 +219,36 @@ export function lineFor(
       ? base
       : { ...base, rate: entry.rate ?? base.rate, pbas: entry.pbas ?? base.pbas, pmod: entry.pmod ?? base.pmod };
   return { text: spoken, persona };
+}
+
+/** `emote-vanilla` -> `vanilla`; anything else -> itself (only emote keys carry the prefix). */
+function emotePortraitOf(defId: string): string {
+  return defId.startsWith("emote-") ? defId.slice("emote-".length) : defId;
+}
+
+/**
+ * A portrait's bubble text and emote persona for one issue-§3 line, or null. `portrait` is the
+ * portrait id (`vanilla`, …); passing the `emote-<portrait>` wire defId also works.
+ */
+export function emoteLineFor(
+  lines: VoiceLineTable,
+  portrait: string,
+  line: VoiceEmoteId,
+): { text: string; persona: Persona } | null {
+  const entry = lines.emotes[emotePortraitOf(portrait)];
+  if (entry === undefined) return null;
+  const base = lines.personas[entry.persona];
+  if (base === undefined) return null;
+  const persona: Persona =
+    base.backend === "sapi"
+      ? base
+      : { ...base, rate: entry.rate ?? base.rate, pbas: entry.pbas ?? base.pbas, pmod: entry.pmod ?? base.pmod };
+  return { text: entry[line], persona };
+}
+
+/** The `playVoice` defId that resolves a portrait's lines: `emote-vanilla` etc. */
+export function emoteVoiceDef(portrait: PortraitId): string {
+  return `emote-${portrait}`;
 }
 
 /** Keys worth preloading for a view, deduped, in this order: the viewer's hand (unit → play, spell → cast;

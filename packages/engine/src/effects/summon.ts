@@ -9,7 +9,7 @@
 
 import type { CardType, PlayerId, Row, Tag } from "@jackioh/shared";
 import { animateOnEntry } from "../animated";
-import { defOf, excludingDefId, query, type CatalogQueryArgs } from "../catalog";
+import { defOf, excludingDefId, pickGenerated, query, type CatalogQueryArgs } from "../catalog";
 import { unitedEnchantments } from "../enchantments";
 import { cardTypeOf } from "../faces";
 import { effectiveCost, isXCost } from "../mana";
@@ -82,7 +82,7 @@ function isPermanentType(type: CardType): boolean {
 }
 
 /**
- * What `placeOnField` will accept, checked before the card leaves the zone it is in (§3.2). R647: a
+ * What `placeOnField` will accept, checked before the card leaves the zone it is in (§3.2). R660: a
  * named summon enters a Locked zone — only plays refuse one — so this checks the reservation alone.
  */
 function canPlace(ctx: EffectContext, ref: ZoneSlot, stack: boolean): boolean {
@@ -343,7 +343,7 @@ export function summonRandom(
       }));
       if (![...rows].some((row) => zoneFor(ctx, player, row, args) !== null)) return;
 
-      const def = ctx.rng.pick(pool);
+      const def = pickGenerated(ctx.rng, pool);
       if (def === undefined) return;
       summonFresh(ctx, def.id, player, args);
     },
@@ -414,7 +414,7 @@ function recruitable(ctx: EffectContext, card: CardInstance, filter: RecruitFilt
 }
 
 /**
- * R649: of the valid targets a scan may take, an (X)-cost card comes last — recruited, never played,
+ * R662: of the valid targets a scan may take, an (X)-cost card comes last — recruited, never played,
  * it would arrive with no X behind it, so a scan takes the first valid target that is not (X)-cost
  * and only when nothing else is valid takes the first (X)-cost one.
  */
@@ -448,7 +448,7 @@ function announceRadiant(ctx: EffectContext, recruited: CardInstance | null, rad
  * (Classic #31 Radiant, #65 Radiant): N scans, one after another, each the whole of a single Recruit,
  * so a scan whose card finds no zone fizzles and the next scan finds that card again (Core #69's
  * "three top-down scans; stops when the board is full"). Every scan skips (X)-cost cards unless they
- * are the only valid targets (R649).
+ * are the only valid targets (R662).
  */
 export function recruit(
   args: {
@@ -490,7 +490,7 @@ export function recruit(
  * is summoned in turn while its row has an open zone — a Unit to the unit row, the rest to the backrow,
  * a Trap face-down (§3.2) — and passed over, staying where it is, once that row is full; a Spell or a
  * unit-token card stays (§6.3, R218). (X)-cost cards stay too unless they are the only valid targets
- * (R649). Each summon is its own step of a part (`resolve.lazyPart`) whose
+ * (R662). Each summon is its own step of a part (`resolve.lazyPart`) whose
  * card list is kept as its memo, so a question a summoned card asks as it arrives (R151) pauses the
  * rest, which resumes over the same cards in the same order (R113).
  */

@@ -17,7 +17,7 @@ import catalogJson from "../catalog.json";
 export const CATALOG: CardDefs = catalogJson as unknown as CardDefs;
 
 /** §9.4: the catalog version the engine registers, bumped when card data changes. */
-export const CATALOG_VERSION = "v0.2.0";
+export const CATALOG_VERSION = "v0.2.11";
 
 /** Every catalog id, in catalog.json order (`core-001` … `core-t-bread`). */
 export const CATALOG_IDS: readonly string[] = Object.keys(CATALOG);

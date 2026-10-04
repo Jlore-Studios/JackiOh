@@ -1,7 +1,7 @@
 // C+ #19 League of Losers (SPEC §8.7 row 19): summons the five Losers into unit zones 1–5, each aimed at
 // its own zone (Radiant: all Radiant); the Mid Loser it summons has its Cry triggered (R411).
 // An occupied or Locked zone is skipped: occupancy fizzles in the engine, and the Lock is this
-// card's own override of R647, so the script skips a Locked lane itself.
+// card's own override of R660, so the script skips a Locked lane itself.
 
 import { cardAt, isLocked, summonedSoFar, type Effect, type EffectContext, type Script } from "@jackioh/engine";
 import { forEachCard, summon, triggerCry } from "@jackioh/engine/effects";
@@ -36,7 +36,7 @@ function league(radiant: boolean): Script {
     cry: (ctx) =>
       FIVE_STACK.flatMap((defId, at) => {
         const lane = at + 1;
-        // R647's card-specific override: a Locked lane is skipped (§8.7 row 19).
+        // R660's card-specific override: a Locked lane is skipped (§8.7 row 19).
         if (isLocked(ctx.state, { player: ctx.controller, row: "units", lane })) return [];
         const summoned = summon({ defId, lane, radiant });
         return defId === MID_LOSER ? [summoned, midLoserCry(lane)] : [summoned];

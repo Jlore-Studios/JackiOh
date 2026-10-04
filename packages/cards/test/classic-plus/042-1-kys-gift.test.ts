@@ -1,4 +1,4 @@
-// C+ #42.1 KY's Gift — SPEC §8.7 row 42.1, R641, R62, R97, R177, R380, R386, BUILD M9 row C+ 42.1.
+// C+ #42.1 KY's Gift — SPEC §8.7 row 42.1, R654, R62, R97, R177, R380, R386, BUILD M9 row C+ 42.1.
 // p2 is active in each scenario, so its `endTurn()` starts p1's turn, where the Gift fires.
 
 import { HERO_HEALTH, MAX_MANA, queryCost, stepParam } from "@jackioh/engine";
@@ -61,7 +61,7 @@ describe("C+ #42.1 KY's Gift", () => {
       const s = gift().endTurn();
       expect(s.state.active).toBe("p1");
       s.expectMana("p1", MAX_MANA + 1);
-      // R641: no prompt opens — the random discard landed and the rest followed.
+      // R654: no prompt opens — the random discard landed and the rest followed.
       expect(s.state.pending).toBeNull();
       expect(s.hand("p2")).toHaveLength(1);
       expect(s.pile("p2", "graveyard")).toHaveLength(1);
@@ -69,7 +69,7 @@ describe("C+ #42.1 KY's Gift", () => {
       expectTheFour(added(s), false);
     });
 
-    it("R641 the opponent discards 1 at random; then your hero heals 5, past 30, and the four cards arrive at (0)", () => {
+    it("R654 the opponent discards 1 at random; then your hero heals 5, past 30, and the four cards arrive at (0)", () => {
       const s = gift().endTurn();
       const grave = s.pile("p2", "graveyard").map((card) => card.defId);
       expect(grave).toHaveLength(1);
@@ -110,7 +110,7 @@ describe("C+ #42.1 KY's Gift", () => {
       s.expectHealth("p1", health);
     });
 
-    it("R177 R641 no prompt opens: the opponent's remaining hand stays hidden, the discard is public, the four cards hidden (R97)", () => {
+    it("R177 R654 no prompt opens: the opponent's remaining hand stays hidden, the discard is public, the four cards hidden (R97)", () => {
       const s = gift().endTurn();
       expect(s.state.pending).toBeNull();
       expect(s.view("p1").pending).toBeNull();
@@ -130,7 +130,7 @@ describe("C+ #42.1 KY's Gift", () => {
       for (const event of adds) expect(event.type === "addedToHand" ? event.defId : "").toBe("hidden");
     });
 
-    it("R641 the random discard comes from the match rng: the same game discards the same card", () => {
+    it("R654 the random discard comes from the match rng: the same game discards the same card", () => {
       const first = gift().endTurn();
       const second = gift().endTurn();
       const ids = (s: Scenario): string[] =>
@@ -174,7 +174,7 @@ describe("C+ #42.1 KY's Gift", () => {
       expectTheFour(added(s), true);
     });
 
-    it("R641 fewer cards than asked: the opponent discards all they have", () => {
+    it("R654 fewer cards than asked: the opponent discards all they have", () => {
       const s = gift({ radiant: true, p2: { hand: [TIMMY], library: [FILLER] } }).endTurn();
       expect(s.state.pending).toBeNull();
       expect(s.hand("p2")).toHaveLength(0);

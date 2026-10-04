@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SITE_ORIGIN, paths } from "../net/navigate.ts";
 import { PatchSourceProvider } from "../patches/context.tsx";
 import { fixtureSource } from "../patches/fixtures.ts";
+import { realPatchSource } from "../patches/source.ts";
 import { patchTestid } from "../patches/testids.ts";
 import LandingRoute from "./landing.tsx";
 import LoginRoute from "./login.tsx";
@@ -49,7 +50,10 @@ describe("R388 the /patch-notes route", () => {
     render(<App />);
     expect(await screen.findByTestId(patchTestid.screen, undefined, SLOW)).toBeInTheDocument();
     const entries = await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
-    expect(entries[0]?.dataset.version).toBe("v0.2.0");
+    // The newest patch — patches.json's last entry — opens the page (today v0.2.10, issue #113).
+    const shipped = await realPatchSource.patches();
+    expect(entries[0]?.dataset.version).toBe(shipped.at(-1)?.version);
+    expect(shipped.at(-1)?.version).toBe("v0.2.10");
     expect(document.title).toBe("Patch notes · JackiOh");
     // Nothing asked the server who is signed in: the page is not behind the gate.
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes("/api/auth/me"))).toBe(false);

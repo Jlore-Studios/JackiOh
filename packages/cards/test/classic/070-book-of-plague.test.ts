@@ -1,5 +1,5 @@
 // C #70 Book of Plague — SPEC §8.6 row 70, BUILD M9 Classic row C 70: "Five placements of one Plague
-// Token, all on the one permanent a single prompt names (R648), on any permanent either side,
+// Token, all on the one permanent a single prompt names (R661), on any permanent either side,
 // face-down ones included; with no permanent on the field it places nothing; each placement is still
 // its own for "whenever tokens are placed" (C #53 draws five times) and C #27 doubles its share;
 // a face-down option carries only its id (R177); tagged Book, so C #4 answers it; radiant: ten; its
@@ -48,7 +48,7 @@ function drawsBy(events: readonly GameEvent[], player: PlayerId): number {
   return events.filter((event) => event.type === "drawn" && event.player === player).length;
 }
 
-/** Answer the one placement prompt on `card`: every placement lands there (R648). */
+/** Answer the one placement prompt on `card`: every placement lands there (R661). */
 function placeAll(s: Scenario, card: CardInstance): void {
   s.answer(card.id);
 }
@@ -61,10 +61,10 @@ function board(radiantFace = false): Scenario {
 }
 
 describe("C #70 Book of Plague", () => {
-  it("is a Spell tagged Book with one number, and one script on both faces", () => {
+  it("is a Spell tagged Book and Plague with one number, and one script on both faces", () => {
     expect(def.id).toBe(BOOK);
     expect(def.type).toBe("Spell");
-    expect(def.tags).toEqual(["Book"]);
+    expect(def.tags).toEqual(["Book", "Plague"]);
     expect(def.params).toEqual([{ key: "tokens", base: 5, radiant: 10, better: "up", step: 1, min: 1 }]);
     expect(radiant).toBe(base);
   });
@@ -90,7 +90,7 @@ describe("C #70 Book of Plague", () => {
       s.expectInZone(BOOK, "graveyard");
     });
 
-    it("R648 the counters cannot be spread: the whole effect lands on the one pick", () => {
+    it("R661 the counters cannot be spread: the whole effect lands on the one pick", () => {
       const s = board();
       s.play(BOOK);
       placeAll(s, s.card(MENACE));

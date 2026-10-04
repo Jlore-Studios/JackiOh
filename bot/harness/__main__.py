@@ -19,6 +19,7 @@ from typing import Any
 from harness import config as config_mod
 from harness import context as context_mod
 from harness import dashboard as dashboard_mod
+from harness import stats as stats_mod
 from harness import deliver as deliver_mod
 from harness import events as events_mod
 from harness import logins as logins_mod
@@ -155,6 +156,12 @@ def make_probe(ctx: context_mod.Context, number: int | None,
                provider: providers_mod.Provider | None = None):
     provider = provider or ctx.cfg.pool.ordered()[0]
 
+    def closed(thread: int) -> bool:
+        try:
+            return ctx.gh.get_issue(thread).get("state") == "closed"
+        except GitHubError:
+            return False  # GitHub could not say: carry on, as before this check
+
     def probe(last_usage: dict | None):
         if ctx.repo_halted():
             return ("halted by .harness/HALT on main", "halt")
@@ -165,6 +172,9 @@ def make_probe(ctx: context_mod.Context, number: int | None,
             record = state["items"].get(str(number), {})
             if record.get("stop_requested"):
                 return (f"stopped by @{record.get('stopped_by', 'someone')}", "stop")
+            if closed(number):
+                # Deliver drops a closed thread's work anyway, so stop spending on it now.
+                return (f"#{number} was closed", "stop")
         providers_mod.note_usage(state, provider.id, last_usage, None, ctx.now())
         refusal = providers_mod.refusal(provider, providers_mod.peek_record(state, provider.id),
                                         ctx.now(), ctx.cfg.timezone)
@@ -209,15 +219,20 @@ def cmd_work(cfg: Config, args: argparse.Namespace) -> int:
             out.mkdir(parents=True, exist_ok=True)
             (out / "vault.enc").write_text(sealed + "\n", encoding="utf-8")
 
+    runner = get_runner(cfg, provider, login)
     worker = Worker(
-        cfg, planned, get_runner(cfg, provider, login), cfg.root, Path(args.work_dir), out,
+        cfg, planned, runner, cfg.root, Path(args.work_dir), out,
         probe=make_probe(ctx, int(number) if number else None, provider), after_call=keep_login,
     )
-    if cfg.backend != "fake" and provider.cli == "claude" and provider.limits.stops:
+    if cfg.backend != "fake" and provider.limits.stops:
         # A fresh reading before any model work: the stored one is the last run's, and none at
-        # all once its window reset. One Haiku turn, signed in as this subscription.
-        worker.start_usage = ping_usage(cfg.claude_bin, cfg.quiet.ping_model,
-                                        token=secret if provider.login == "secret" else "")
+        # all once its window reset. Claude: one Haiku turn, signed in as this subscription; agy
+        # and Muse: their own `/usage`, no model call.
+        if provider.cli == "claude":
+            worker.start_usage = ping_usage(cfg.claude_bin, cfg.quiet.ping_model,
+                                            token=secret if provider.login == "secret" else "")
+        elif getattr(runner, "polls_usage", False):
+            worker.start_usage = runner.read_usage(provider.model)
     result = worker.run()
     keep_login()
     _summary(f"### Work: {result.get('status')}\n\n{result.get('reason', '')}\n")
@@ -288,9 +303,21 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
             print(redact(f"dashboard: {note}"), flush=True)
         except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
             print(redact(f"::warning::the status issue was not updated: {exc}"), flush=True)
+        if getattr(args, "stats", False):
+            try:
+                print(redact(stats_mod.update(_ctx(cfg))), flush=True)
+            except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
+                print(redact(f"::warning::the statistics issue was not updated: {exc}"),
+                      flush=True)
         if not every or time.monotonic() + every > deadline:
             return 0
         time.sleep(every)
+
+
+def cmd_stats(cfg: Config, args: argparse.Namespace) -> int:
+    """The pinned "Night bot statistics" issue (stats.py): rewritten when due, or now with --force."""
+    print(redact(stats_mod.update(_ctx(cfg), force=bool(getattr(args, "force", False)))))
+    return 0
 
 
 def cmd_halt(cfg: Config, args: argparse.Namespace) -> int:
@@ -451,12 +478,20 @@ def cmd_setup(cfg: Config, args: argparse.Namespace) -> int:
 
 
 def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
-    """Triage a new issue or pull request (`triage.py`). Every step skips quietly on failure:
-    triage is a convenience, never a reason for a red run."""
+    """Triage a new issue or pull request, or one a person called it on (`triage.py`). Every step
+    skips quietly on failure: triage is a convenience, never a reason for a red run."""
     if args.step == "gate":
         payload = json.loads(Path(args.payload).read_text(encoding="utf-8"))
+        asked = str((payload.get("inputs") or {}).get("number") or "").strip().lstrip("#")
+        if asked:  # `workflow_dispatch`: a person called triage on this thread
+            try:
+                payload = {"issue": _ctx(cfg, write=False).gh.get_issue(int(asked))}
+            except (GitHubError, ValueError) as exc:
+                _output({"go": "false", "number": ""})
+                print(redact(f"triage: skip: #{asked} could not be read: {exc}"))
+                return 0
         go, why = triage_mod.gate(payload, Trust.load(cfg.root / TRUST_PATH), cfg.bot_login,
-                                  cfg.root, clock_now(), cfg.timezone)
+                                  cfg.root, clock_now(), cfg.timezone, asked=bool(asked))
         thread, _ = triage_mod.thread_of(payload)
         _output({"go": str(go).lower(), "number": thread.get("number") or ""})
         print(f"triage: {'go' if go else 'skip'}: {why}")
@@ -469,7 +504,8 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
             thread = ctx.gh.get_issue(number)
             text = triage_mod.prompt(thread, "pull_request" in thread, ctx.gh.list_labels(),
                                      triage_mod.conventions_text(cfg.root),
-                                     triage_mod.issue_types(ctx.gh))
+                                     triage_mod.issue_types(ctx.gh),
+                                     ctx.gh.list_issues(state="open", limit=300))
             answer = triage_mod.run_devin(cfg.bin("devin"), triage_mod.devin_model(cfg.root), text)
             verdict = triage_mod.parse(answer)
         except Exception as exc:  # noqa: BLE001 - any failure skips
@@ -482,18 +518,30 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
     try:
         written = json.loads(out.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        print(f"triage: nothing to apply to #{number}")
-        return 0
+        # No answer from Devin: the links the issue's own text and title give are still made.
+        written = {"number": number, "verdict": None}
     if int(written.get("number") or 0) != number:
         print(f"triage: the answer is for #{written.get('number')}, not #{number}")
         return 0
     try:
         ctx = _ctx(cfg)
         thread = ctx.gh.get_issue(number)
+        is_pr = "pull_request" in thread
         repo_labels = {str(label.get("name")) for label in ctx.gh.list_labels()}
-        plan = triage_mod.decide(written.get("verdict"), thread, "pull_request" in thread,
-                                 repo_labels, cfg.bot_login, triage_mod.issue_types(ctx.gh))
-        done = triage_mod.apply(ctx.gh, number, plan)
+        open_issues: dict[int, dict] | None = None
+        linked: dict[str, Any] = {}
+        if not is_pr:
+            open_issues = {int(i["number"]): i for i in ctx.gh.list_issues(state="open", limit=300)
+                           if "pull_request" not in i}
+            linked = {"blocked_by": {int(i["number"]) for i in ctx.gh.blocked_by(number)},
+                      "blocking": {int(i["number"]) for i in ctx.gh.blocking(number)},
+                      "parent": triage_mod.parent_number(thread)}
+        plan = triage_mod.decide(written.get("verdict"), thread, is_pr, repo_labels,
+                                 cfg.bot_login, triage_mod.issue_types(ctx.gh), open_issues,
+                                 linked)
+        ids = {n: int(i.get("id") or 0) for n, i in (open_issues or {}).items()}
+        ids[number] = int(thread.get("id") or 0)
+        done = triage_mod.apply(ctx.gh, number, plan, ids)
     except GitHubError as exc:
         print(redact(f"triage: could not triage #{number}: {exc}"))
         return 0
@@ -552,6 +600,10 @@ def parser() -> argparse.ArgumentParser:
                            help="how long to keep rewriting it, in seconds")
     dashboard.add_argument("--sweep", action="store_true",
                            help="sweep before each rewrite, as the ten-minute sweep does")
+    dashboard.add_argument("--stats", action="store_true",
+                           help="also rewrite the pinned statistics issue, every hour")
+    p = sub.add_parser("stats", help="rewrite the pinned statistics issue now")
+    p.add_argument("--force", action="store_true", help="even if it was rewritten under an hour ago")
     p = sub.add_parser("halt", help="stop all model work")
     p.add_argument("reason", nargs="*")
     sub.add_parser("start", help="lift a halt")
@@ -568,7 +620,8 @@ def parser() -> argparse.ArgumentParser:
     p = sub.add_parser("setup", help="create labels and the state branch")
     p.add_argument("--repo-settings", action="store_true",
                    help="also allow auto-merge and protect the default branch (needs admin)")
-    p = sub.add_parser("triage", help="label, assign and title a new issue or pull request")
+    p = sub.add_parser("triage", help="label, assign, title and link a new issue or pull "
+                       "request, or one a person called it on")
     p.add_argument("step", choices=("gate", "classify", "apply"))
     p.add_argument("--payload", default="", help="gate: the event's payload file")
     p.add_argument("--number", default="0", help="classify, apply: the issue or pull request")
@@ -588,6 +641,7 @@ COMMANDS = {
     "sweep": cmd_sweep,
     "status": cmd_status,
     "dashboard": cmd_dashboard,
+    "stats": cmd_stats,
     "halt": cmd_halt,
     "start": cmd_start,
     "dispatch": cmd_dispatch,

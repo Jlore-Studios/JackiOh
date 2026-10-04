@@ -42,6 +42,7 @@ const TAGS = [
   "Book",
   "Pancake",
   "AI",
+  "Plague",
   "Token",
 ] as const satisfies readonly Tag[];
 const RARITIES = ["Common", "Rare", "Epic", "Legendary", "Mythic", "Token"] as const satisfies readonly Rarity[];
@@ -150,6 +151,7 @@ const EXPECTED_TAG_COUNTS: Readonly<Record<(typeof TAGS)[number], number>> = {
   Book: 14,
   Pancake: 10,
   AI: 10,
+  Plague: 17,
   Token: 49,
 };
 

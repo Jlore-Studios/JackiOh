@@ -307,7 +307,7 @@ describe("B3.1 Animated Field Spells and 'Animated on your turn' (R383)", () => 
     expect(eventsOfType(sink.events, "animated")).toEqual([]);
   });
 
-  it("R647 rule 6: a Lock on its home since no longer stops the return — the return is a move, not a play", () => {
+  it("R660 rule 6: a Lock on its home since no longer stops the return — the return is a move, not a play", () => {
     const state = playing("animated-home-locked");
     const card = put(state, spatula.id, slot("p1", "backrow", 3));
     const sink = sinkFor(state);

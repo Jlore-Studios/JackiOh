@@ -9,9 +9,10 @@
 // text that makes a card harder to target (Classic #89) or answers its targeting (Classic #33, from a
 // hand) is read from there.
 
-import type { PlayerId, Selection } from "@jackioh/shared";
+import type { CardType, PlayerId, Selection } from "@jackioh/shared";
 import { opponentOf } from "@jackioh/shared";
 import { fusedIdParts } from "./catalog";
+import type { TargetedReplacement } from "./replacements";
 import { spellCannotReach } from "./restrictions";
 import type { Script } from "./script";
 import { scriptOf, scriptsFor } from "./scripts";
@@ -88,17 +89,33 @@ export function interposesFromHand(card: CardInstance): boolean {
 }
 
 /**
- * Classic #33 Joro, R450: the card that answers `chooser` targeting `targeted` — the first card in
- * the targeted unit's controller's hand that `interposesFromHand`, when the targeted card is a unit
- * of the chooser's opponent acting on the field and that player has an open unit zone to summon it
- * into (with none, nothing happens). Null when nothing answers.
+ * R651: whether the card's "targeted" replacement answers a targeting from this source — a `by:
+ * "spell"` replacement (Classic #33 Joro) answers only a Spell's targeting.
  */
-export function interceptorFor(state: GameState, chooser: PlayerId, targeted: CardInstance): CardInstance | null {
+function answersSource(card: CardInstance, source: CardType | undefined): boolean {
+  const defs = (scriptOf(card).replacements ?? []).filter(
+    (entry): entry is TargetedReplacement => entry.on === "targeted" && entry.where === "hand",
+  );
+  return defs.some((def) => def.by === undefined || source === "Spell");
+}
+
+/**
+ * Classic #33 Joro, R450: the card that answers `chooser` targeting `targeted` — the first card in
+ * the targeted unit's controller's hand that `interposesFromHand` and answers this source (R651),
+ * when the targeted card is a unit of the chooser's opponent acting on the field and that player
+ * has an open unit zone to summon it into (with none, nothing happens). Null when nothing answers.
+ */
+export function interceptorFor(
+  state: GameState,
+  chooser: PlayerId,
+  targeted: CardInstance,
+  source?: CardType,
+): CardInstance | null {
   if (targeted.zone.z !== "field" || targeted.zone.row !== "units" || isBuried(state, targeted)) return null;
   const defender = targeted.controller;
   if (defender !== opponentOf(chooser)) return null;
   if (firstFreeZone(state, defender, "units") === null) return null;
-  return state.players[defender].hand.find(interposesFromHand) ?? null;
+  return state.players[defender].hand.find((card) => interposesFromHand(card) && answersSource(card, source)) ?? null;
 }
 
 /**
@@ -121,10 +138,10 @@ export function targetingDiscardsFor(
 }
 
 /**
- * R450, R641: whether the player can pay a targeting cost of `required` discards — that many cards
+ * R450, R654: whether the player can pay a targeting cost of `required` discards — that many cards
  * held outside `keep` (the card a play is taking out of that hand, §10.5 step 1, and any hand card
  * the same play picks), or null when they can. The discards themselves are random at pay time
- * (R641: a discard is its player's choice only when the card says "of your choice"); nothing lists
+ * (R654: a discard is its player's choice only when the card says "of your choice"); nothing lists
  * or chooses them, so there are no paying sets to enumerate.
  */
 export function whyTargetingDiscardsUnpayable(

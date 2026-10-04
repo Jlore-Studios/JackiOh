@@ -2196,5 +2196,55 @@
       "persona": "sapi-synth-deep",
       "cast": "Adjusting weights. Improving slightly."
     }
+  },
+  "emotes": {
+    "vanilla": {
+      "persona": "plain",
+      "greetings": "Hello. I'm Mr. Vanilla. That's it.",
+      "wellPlayed": "Well played. Plainly.",
+      "oops": "Oops. That was... unflavored.",
+      "thanks": "Thanks. Simple as that.",
+      "threaten": "No tricks. No text. Just pain."
+    },
+    "gary": {
+      "persona": "hustler",
+      "greetings": "Hey there, friend! Feeling lucky?",
+      "wellPlayed": "Ha! Well played. The house tips its hat.",
+      "oops": "Oops. Tails. It's always tails.",
+      "thanks": "Thanks! I'm putting it all on red.",
+      "threaten": "Double or nothing. And you've got nothing."
+    },
+    "timmy": {
+      "persona": "kid",
+      "greetings": "Hi! Hi! Let's go, let's go!",
+      "wellPlayed": "Well played! Okay, my turn, my turn!",
+      "oops": "Oops! Too fast!",
+      "thanks": "Thanks! No time, gotta run!",
+      "threaten": "You'll be gone before you blink."
+    },
+    "dfender": {
+      "persona": "guard",
+      "greetings": "Greetings. Get behind me.",
+      "wellPlayed": "Well played. Nothing gets past me... usually.",
+      "oops": "Oops. Must've left a gap.",
+      "thanks": "Thank you. I've got your back.",
+      "threaten": "Go ahead. Swing. See what happens."
+    },
+    "felinors": {
+      "persona": "cat",
+      "greetings": "Mrrow! Hello! ...Hello!",
+      "wellPlayed": "Well played! ...Well played!",
+      "oops": "Oops. ...Oops.",
+      "thanks": "Thanks! We both mean it.",
+      "threaten": "There are more of us than you think."
+    },
+    "shredder": {
+      "persona": "robot",
+      "greetings": "GREETINGS. SHREDDER-10 ONLINE.",
+      "wellPlayed": "WELL PLAYED. RECALIBRATING.",
+      "oops": "ERROR. THAT WAS NOT IN THE MANUAL.",
+      "thanks": "GRATITUDE DOT EXE EXECUTED.",
+      "threaten": "TARGET ACQUIRED. SHREDDING."
+    }
   }
 }

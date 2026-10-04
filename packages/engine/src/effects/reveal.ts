@@ -1,5 +1,5 @@
 // Reveal (Classic #88 Siphon Squad's "Start of Turn: Reveal", Classic #65 Ace in the Hole's Radiant
-// "Revealed regardless of the coin flip"; R645): a backrow Trap or Field Trap whose identity is
+// "Revealed regardless of the coin flip"; R658): a backrow Trap or Field Trap whose identity is
 // public while the card stays armed.
 //
 // A revealed card is no longer face-down (`preview.isFaceDown`), so both players read its face —
@@ -20,7 +20,7 @@ export function reveal(args: { target?: TargetSpec } = {}): Effect {
       const card = instanceOf(ctx, args.target ?? { of: "self" });
       if (card === null || card.zone.z !== "field" || card.zone.row !== "backrow") return;
       card.revealed = true;
-      // R646: a printed Brittle a face-down arrival never started begins now that it shows.
+      // R659: a printed Brittle a face-down arrival never started begins now that it shows.
       startBrittleOnField(ctx.state, card, false);
     },
   };

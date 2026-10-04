@@ -9,8 +9,9 @@
 //            R66 reads #94 Genn's Greed's: a hand card at its hand cost, a deck or field card at its
 //            own; an X-cost card counts the X it was played for on the field and 0 anywhere else
 //            (R396). The Spell itself is resolving, in no pile, and is spared. The base face reaches
-//            both players' field, hand and deck, the zones its Radiant face names: the Radiant narrows
-//            whose, not where. Graveyards and exile are untouched. Tunes: none (the number is chosen)."
+//            the Field alone, the whole board (balance patch 1); the Radiant reaches the opponent's
+//            field, hand and deck. Graveyards and exile are untouched. Tunes: none (the number is
+//            chosen)."
 //
 // THE NUMBER is a play-time choice (R81), so it is declared — a `ModeDecl` of kind `number` whose
 // options are the eleven numbers — and it travels in the `play` action's `modes`; `legalActions`

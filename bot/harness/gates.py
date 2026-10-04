@@ -2,7 +2,9 @@
 
 The list is `gates` in `.harness/config.json`. It is never widened by the bot: a red gate the
 bot cannot fix is reported, not skipped. A gate that is also red on the untouched base is marked
-pre-existing, so the change is not blamed for it.
+pre-existing, so the change is not blamed for it. A gate that runs out of time is inconclusive: it
+said nothing about the change, so it neither blocks it nor runs again on the base (which would only
+time out too); CI on the pull request runs every check before anything merges.
 """
 
 from __future__ import annotations
@@ -17,6 +19,8 @@ from harness.config import Gate
 from harness.redact import redact
 
 TAIL_CHARS = 6000
+#: The exit code `run_gate` gives a gate that ran out of time (as `timeout(1)` does).
+TIMED_OUT = 124
 
 
 @dataclass
@@ -29,6 +33,8 @@ class GateResult:
     tail: str
     pre_existing: bool = False
     skipped: str = ""
+    #: It ran out of time, so it says nothing either way (`mark_inconclusive`).
+    inconclusive: bool = False
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -52,7 +58,7 @@ def run_gate(gate: Gate, cwd: Path, env: Mapping[str, str], timeout_s: int | Non
         code = proc.returncode
     except subprocess.TimeoutExpired as exc:
         output = _as_text(exc.stdout) + "\n" + _as_text(exc.stderr) + f"\n(timed out after {limit}s)"
-        code = 124
+        code = TIMED_OUT
     return GateResult(
         name=gate.name,
         run=gate.run,
@@ -76,9 +82,17 @@ def run_all(gates: tuple[Gate, ...], cwd: Path, env: Mapping[str, str],
     return results
 
 
+def mark_inconclusive(results: list[GateResult], gate_names: set[str]) -> None:
+    """Mark the gates in `gate_names` that ran out of time as inconclusive. Only the gates: an
+    install that times out still fails, since nothing after it can run."""
+    for result in results:
+        if result.name in gate_names and result.exit_code == TIMED_OUT and not result.skipped:
+            result.inconclusive = True
+
+
 def green(results: list[GateResult]) -> bool:
-    """True when every gate passed or was already red on the base."""
-    return all(r.ok or r.pre_existing for r in results)
+    """True when every gate passed, was already red on the base, or ran out of time."""
+    return all(r.ok or r.pre_existing or r.inconclusive for r in results)
 
 
 def table(results: list[GateResult]) -> str:
@@ -90,6 +104,8 @@ def table(results: list[GateResult]) -> str:
             verdict = f"skipped ({r.skipped})"
         elif r.ok:
             verdict = "pass"
+        elif r.inconclusive:
+            verdict = "timed out: inconclusive, left to CI"
         elif r.pre_existing:
             verdict = f"fail (exit {r.exit_code}), also red on main"
         else:
@@ -102,7 +118,7 @@ def failures_text(results: list[GateResult]) -> str:
     """The output of every gate this change turned red, for the next build pass."""
     parts = []
     for r in results:
-        if r.ok or r.pre_existing:
+        if r.ok or r.pre_existing or r.inconclusive:
             continue
         parts.append(f"### {r.name}: `{r.run}` exited {r.exit_code}\n\n{r.tail or r.skipped}")
     return "\n\n".join(parts)

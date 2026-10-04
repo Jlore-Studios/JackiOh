@@ -67,8 +67,9 @@ describe("B3.4 params: the numbers a card declares", () => {
     // A Radiant-only number: Cloaked Toe Cracker's "gain 1 mana" exists on its Radiant face only.
     expect(cardDef("classic-006").params).toEqual([{ key: "mana", base: 1, radiant: 1, better: "up", step: 1, min: 1 }]);
     expect(cardDef("classic-006").base.text).not.toContain("{mana}");
-    // A stated step and a lower-is-better threshold with a stated floor.
-    expect(cardDef("classic-083").params?.[0]).toMatchObject({ key: "damage", base: 11, radiant: 22, step: 2 });
+    // A stated step and a lower-is-better threshold with a stated floor (Flame Lance deals 10 [20],
+    // balance patch 1).
+    expect(cardDef("classic-083").params?.[0]).toMatchObject({ key: "damage", base: 10, radiant: 20, step: 2 });
     expect(cardDef("classic-038").params?.[0]).toMatchObject({ key: "plays", base: 3, radiant: 2, better: "down", min: 2 });
     // A percentage: step 10, never above 100.
     expect(cardDef("classicplus-019-2").params?.[0]).toMatchObject({ key: "chance", base: 25, radiant: 50, step: 10, max: 100 });
@@ -76,9 +77,10 @@ describe("B3.4 params: the numbers a card declares", () => {
 
   it("R482 never makes a numbered keyword, an Echo or an Activate count a param: the X change tunes those", () => {
     const keys = (id: string): string[] => (cardDef(id).params ?? []).map((param) => param.key);
-    // Solarius prints Spell Damage +2 and draws 1: only the draw is a param.
+    // Solarius prints Spell Damage +2; its Cry (which drew 1) is gone on both faces (balance
+    // patch 1), so no number is a param.
     expect(cardDef("classicplus-038").base.keywords).toEqual([{ kind: "Spell Damage", n: 2 }]);
-    expect(keys("classicplus-038")).toEqual(["draw"]);
+    expect(keys("classicplus-038")).toEqual([]);
     // Top Loser's Armor, Twice Forward's printed Brittle, Brother Ping's Activate, Echo's Echo 1.
     expect(keys("classicplus-019-1")).toEqual([]);
     expect(keys("classicplus-074")).toEqual(["plays", "brittleGain"]);

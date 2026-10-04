@@ -25,12 +25,12 @@
 // Rush Token and Chaos Golem indices, the real backrow types) down the real §10.5 play path.
 
 import { describe, expect, it } from "vitest";
-import type { Action, GameEvent, PlayerId } from "@jackioh/shared";
+import type { GameEvent, PlayerId } from "@jackioh/shared";
 // R28's number lives in `config.ts` and is NOT re-exported by the subsystem namespace: reaching
 // for it as `subsystems.CALL_TO_CHAOS_CHAIN_CAP` yields `undefined`, which silently disables every
 // chain assertion below, so it is imported by name.
-import { CALL_TO_CHAOS_CHAIN_CAP, createRng, effectiveCost, hashState, queryCost, reduce, subsystems } from "@jackioh/engine";
-import type { CardInstance, GameState } from "@jackioh/engine";
+import { CALL_TO_CHAOS_CHAIN_CAP, createRng, effectiveCost, queryCost, subsystems } from "@jackioh/engine";
+import type { CardInstance } from "@jackioh/engine";
 import { cardDef } from "../src/catalog-data";
 import { query } from "../src/query";
 import { base as chaosBase, radiant as chaosRadiant } from "../src/scripts/095-call-to-chaos";
@@ -355,10 +355,20 @@ describe("#95 Call to Chaos — base, the ten effects", () => {
     const summoned = eventsOf(s, "summoned");
     expect(summoned).toHaveLength(5);
     expect(summoned.every((event) => event.row === "backrow")).toBe(true);
-    expect(summoned.map((event) => event.lane)).toEqual([1, 2, 3, 4, 5]);
+    // Each into the leftmost open backrow zone (R64). An Animated Field Spell among them (patch
+    // v0.2.10, R383) animates as it enters, into a unit zone, so the zone it left takes the next one.
+    const animated = eventsOf(s, "animated").map((event) => event.instanceId);
+    for (const id of animated) {
+      const card = s.card(id);
+      expect(cardDef(card.defId).type).toBe("Field Spell");
+      expect(cardDef(card.defId).base.keywords).toContainEqual({ kind: "Animated" });
+      expect(card.zone).toMatchObject({ z: "field", row: "units" });
+    }
+    expect(summoned.every((event) => animated.includes(event.instanceId) || s.card(event.instanceId).zone.z === "field")).toBe(true);
 
     const placed = backrowOf(s, "p1");
-    expect(placed).toHaveLength(5);
+    expect(placed).toHaveLength(5 - animated.length);
+    expect(placed.map((card) => (card.zone.z === "field" ? card.zone.lane : 0))).toEqual(placed.map((_, at) => at + 1));
     for (const card of placed) {
       const def = cardDef(card.defId);
       // "Field Spells or Traps (Field Traps included)".
@@ -559,9 +569,10 @@ describe("#95 Call to Chaos — R436 names what it rolled to both players", () =
     for (const effect of subsystems.CHAOS_EFFECTS) expect(text).toContain(effect.label.toLowerCase());
   });
 
-  it("R436 R113 a roll a question pauses is announced once: Hinder's discard stops the whole-deck draw, and the rest follows the answer", () => {
+  it("R436 Hinder's random discard pauses nothing: the whole-deck draw runs through, announced once", () => {
     // A Radiant roll with the whole-deck draw and a later effect, the Golem. The library's Hinder is
-    // cast by that draw and asks p1 to discard (R431), which pauses the draw and the Golem behind it.
+    // cast by that draw and discards at random (R654, R431: no prompt), so the draw and the Golem
+    // behind it run through in one pass.
     const cursor = radiantCursorWhere(
       (rolled) =>
         rolled.includes("draw") && rolled.includes("golem") && !rolled.includes("recast") && !rolled.includes("tokens"),
@@ -571,33 +582,21 @@ describe("#95 Call to Chaos — R436 names what it rolled to both players", () =
       radiantCursor: cursor,
       p1: { hand: [CHAOS, MENACE, JAMMED], mana: 8, library: ["core-021", RENO, RENO] },
     });
-    expect(s.state.pending?.kind).toBe("hand");
+    // No question was asked at any point: with no prompt open the roll cannot have paused (R113).
+    expect(s.state.pending).toBeNull();
     expect(eventsOf(s, "chaosRolled")).toHaveLength(1);
-    expect(eventsOf(s, "summoned").some((event) => event.defId === GOLEM)).toBe(false);
-    // §9.3: the paused roll is plain JSON, its memo included: a round-tripped copy answers to the
-    // same game as the live one.
-    const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
-    expect(hashState(thawed)).toBe(hashState(s.state));
-    const answer = {
-      type: "answer",
-      choiceId: s.state.pending?.id ?? "",
-      selection: [{ pick: "instance", instanceId: s.card(JAMMED).id }],
-      playerId: "p1",
-      nonce: "chaos-roundtrip-answer",
-    } as Action;
-    const live = reduce(s.state, answer);
-    const frozen = reduce(thawed, answer);
-    expect(live.error).toBeUndefined();
-    expect(frozen.state).toEqual(live.state);
-    expect(frozen.events).toEqual(live.events);
-
-    s.answer(s.card(JAMMED).id);
-
-    // The rest of the roll resolved after the answer, and nothing was rolled or announced again.
-    expect(eventsOf(s, "chaosRolled")).toHaveLength(1);
-    expect(eventsOf(s, "summoned").some((event) => event.defId === GOLEM)).toBe(true);
-    s.expectInZone(JAMMED, "graveyard");
+    // The draw completed: the library is empty and both Renos are in hand.
+    expect(s.pile("p1", "library")).toEqual([]);
     expect(s.hand("p1").filter((card) => card.defId === RENO)).toHaveLength(2);
+    // The Hinder was cast by the draw and is in the graveyard, and its random discard took exactly
+    // one of the two hand cards: the other is still in hand.
+    s.expectInZone("core-021", "graveyard");
+    const menace = s.hand("p1").some((card) => card.defId === MENACE);
+    const jammed = s.hand("p1").some((card) => card.defId === JAMMED);
+    expect(menace !== jammed).toBe(true);
+    s.expectInZone(menace ? JAMMED : MENACE, "graveyard");
+    // The Golem behind the draw resolved too, and nothing was rolled or announced again.
+    expect(eventsOf(s, "summoned").some((event) => event.defId === GOLEM)).toBe(true);
   });
 });
 

@@ -182,7 +182,7 @@ export type PlayRun = {
   modes: string[];
   tributes: string[];
   /**
-   * B5 E5, R450, R641: the targeting cost step 1 checked, owed whatever the step-1 interception did
+   * B5 E5, R450, R654: the targeting cost step 1 checked, owed whatever the step-1 interception did
    * (Classic #33: the targeting happened). Step 2 pays this count at random — never recomputed off
    * the redirected picks, whose costs nobody owes.
    */
@@ -475,7 +475,7 @@ export function validatePlay(
       targets,
       modes,
       tributes: [...(action.tributes ?? [])],
-      // B5 E5, R450, R641: read against the picks as checked, before the step-1 interception moves
+      // B5 E5, R450, R654: read against the picks as checked, before the step-1 interception moves
       // any of them — a cost the targeting owes whatever answers it.
       targetingOwed: targetingDiscardsRequired(state, player, resolvingFace(state, player, card, cost), targets, modes),
       at: 1,
@@ -607,7 +607,7 @@ function payStep(sink: EngineSink, run: PlayRun): void {
     const holder = findInstance(sink.state, run.plague.from);
     if (holder !== undefined) spendPlagueTokens(sink, holder, run.plague.tokens);
   }
-  // B5 E5, R450, R641: a targeting cost is part of the price, paid with it (Classic #89) — random
+  // B5 E5, R450, R654: a targeting cost is part of the price, paid with it (Classic #89) — random
   // cards from the hand, drawn at pay time. Never the card being played or a hand card it picks.
   // The count is step 1's, owed whatever the interception did to the picks.
   if (run.targetingOwed > 0) payTargetingDiscards(sink, run.player, run.targetingOwed, playUses(card, run.targets));
@@ -1949,9 +1949,10 @@ export function runPlaySteps(sink: EngineSink, player: PlayerId, action: PlayAct
 /**
  * B5 E5, E9, R450: the targeting point of a play's declared targets, at §10.5 step 1 once the play is
  * legal. An interceptor in the targeted player's hand (Classic #33) answers the first declared
- * `target` pick naming one of that player's units, if it would itself be a legal pick of that
- * declaration, and the pick moves to it. The costs the picks carry were checked at step 1 and are paid
- * at step 2, whatever the interception did (the targeting happened).
+ * `target` pick naming one of that player's units — a `by: "spell"` one only when the played card
+ * is a Spell (R651) — if it would itself be a legal pick of that declaration, and the pick moves to
+ * it. The costs the picks carry were checked at step 1 and are paid at step 2, whatever the
+ * interception did (the targeting happened).
  */
 function interceptDeclaredTargets(sink: EngineSink, run: PlayRun): void {
   if (run.targets.length === 0) return;
@@ -1969,6 +1970,8 @@ function interceptDeclaredTargets(sink: EngineSink, run: PlayRun): void {
       const decl = decls[index];
       return decl !== null && decl !== undefined && interceptorFitsDecl(state, run.player, face, decl, interceptor);
     },
+    // R651: a `by: "spell"` interceptor (Classic #33 Joro) answers only a Spell's declared target.
+    source: cardTypeOf(state, card),
   });
 }
 

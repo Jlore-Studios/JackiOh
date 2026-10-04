@@ -4,7 +4,7 @@
 //            (either side, face-down cards included, repeats allowed), one prompt per token. Tunes:
 //            tokens 5 ↑."
 //
-// `placePlagueTokens`: one `target` prompt naming the single permanent every placement lands on (R648),
+// `placePlagueTokens`: one `target` prompt naming the single permanent every placement lands on (R661),
 // over every permanent on the field (a face-down card the chooser may not read offered by its id
 // alone, R177); with none on the field nothing is placed. Each placement is its own (C #53 answers
 // each; C #27 multiplies its own). The count is the declared `tokens` (R386).

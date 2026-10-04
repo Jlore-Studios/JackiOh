@@ -9,7 +9,8 @@
 //            the Golem's own stats fight (First Strike, Trample's excess to the hero, §4.4); a Golem that
 //            left the field in that combat transforms into nothing. It is transformed (Transform, §6.3)
 //            in place into a random non-token Unit of the Classic or Classic+ set (the text names the
-//            sets, R380), on its base face, with no Cry (R1); a Transform on the field keeps the type
+//            sets, R380), on its base face — on its Radiant face for the Radiant Golem (balance patch
+//            1) — with no Cry (R1); a Transform on the field keeps the type
 //            (R35), and an Immutable Golem is not transformed. If the Golem was the defender's killer
 //            (R42), 'may attack again' passes to the new Unit: its exertion is fresh and it is not
 //            summoning sick this turn. Tunes: none."
@@ -19,7 +20,8 @@
 // the Golem's (R42), whether it survived, and whether the attack was forced (R53) — "an attack it
 // declared" is not a forced one. E24's `transformRandom` draws the Unit (R129: no draw when it cannot
 // land) and `readyToAttack` lifts the new body's sickness (its exertion is a new instance's, fresh). The
-// keywords are the catalog's faces, so both faces run this one script.
+// keywords are the catalog's faces; each face runs its own script, differing only in the face the
+// new Unit is transformed into.
 
 import type { Effect, EffectContext, Script } from "@jackioh/engine";
 import { afterAttackOf } from "@jackioh/engine";

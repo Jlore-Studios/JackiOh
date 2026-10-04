@@ -1,5 +1,5 @@
 // C #8 Pickle — SPEC §8.6 row 8, BUILD M9 Classic row C 8: "Three mode prompts held by the opponent
-// during your turn, one after another, repeats allowed: they discard a card at random (R641),
+// during your turn, one after another, repeats allowed: they discard a card at random (R654),
 // they exile the bottom card of their deck, or you draw 1; a mode that would do nothing is not
 // offered (discard with an empty hand, exile with an empty deck), and "you draw" always is, fatigue
 // included; each prompt runs its own clock and a timeout answers it with the AI policy (R79); your
@@ -83,7 +83,7 @@ describe("C #8 Pickle", () => {
       s.expectInZone(PICKLE, "graveyard");
     });
 
-    it("R641 discard discards a random card of theirs at once, with no hand pick", () => {
+    it("R654 discard discards a random card of theirs at once, with no hand pick", () => {
       const s = pickle();
       s.play(PICKLE);
       s.answer("discard");
@@ -230,7 +230,7 @@ describe("C #8 Pickle", () => {
       expect(picked.state.work).toEqual([]);
     });
 
-    it("R641 the random discard comes from the match rng: the same game discards the same card", () => {
+    it("R654 the random discard comes from the match rng: the same game discards the same card", () => {
       const first = pickle();
       first.play(PICKLE);
       first.answer("discard");
@@ -283,7 +283,7 @@ describe("C #8 Pickle", () => {
   });
 
   describe("radiant", () => {
-    it("R641 they discard 2 cards at random", () => {
+    it("R654 they discard 2 cards at random", () => {
       const s = pickle(true);
       s.play(PICKLE);
       expect(open(s).options.map((option) => option.label)).toEqual([

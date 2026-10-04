@@ -189,6 +189,11 @@ export type CardProps = {
    * unit's is. Absent otherwise.
    */
   backrowVanilla?: boolean;
+  /**
+   * #165: what a touch hold opens — the inspect sheet (default), or the hover preview while the
+   * finger stays down. The board hands it `touchHoldMode(view)` (contract.ts).
+   */
+  touchHold?: "sheet" | "preview";
   /** What a click reports. Absent means the element is not clickable and clicks bubble. */
   target?: ClickTarget | null;
   /** Units carry the switch-position button (BUILD M5-T2). */
@@ -257,7 +262,7 @@ export default function Card(props: CardProps): ReactElement {
           }
         : null;
   // Lines of code is a hidden stat in matches.
-  const inspect = useInspectTrigger(subject, { prefer: form === "full" ? "above" : "beside", showLoc: false });
+  const inspect = useInspectTrigger(subject, { prefer: form === "full" ? "above" : "beside", touchHold: props.touchHold, showLoc: false });
 
   const legal = isLegal(props.highlight, testId);
   const selected = isSelected(props.highlight, testId);

@@ -520,7 +520,7 @@ describe("R383 Animated: its face prints the Unit it becomes, and a card standin
     expect(preview.querySelector('.cf-state[data-state="animated"]')?.getAttribute("data-animated")).toBe("2");
     expect(within(preview).getByTestId(INSPECT_STATES).textContent).toBe(animatedWords({ home: 2 }, "Field Spell"));
     expect(animatedWords({ home: 2 }, "Field Spell")).toBe(
-      "Animated on your turn: back to its backrow zone (lane 2) at the end of its controller's turn",
+      "Animated on your turn: back to its backrow (lane 2) at the end of its controller's turn",
     );
     expect(animatedWords({}, "Field Trap")).toBe("Animated: this Field Trap stands in a unit zone as a Unit");
     expect(preview.querySelector('[data-glossary-term="Animated on your turn"]')).not.toBeNull();

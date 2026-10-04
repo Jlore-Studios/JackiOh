@@ -1,9 +1,9 @@
 // C #25 Lag in the System (SPEC §8.6 row 25, §6.3 Exile; R13, R65, R66, R113, R135, R396). Spell,
 // cost 0, Common.
-//   Base:    "Exile every card on the field that costs ({threshold}) or less." (balance patch 1: the
+//   Base:    "Exile every ({threshold}) Cost or less card on the field." (balance patch 1: the
 //            Field alone, the whole board)
-//   Radiant: "Exile every enemy card on the field, in their hand and in their deck that costs
-//            ({threshold}) or less."
+//   Radiant: "Exile every ({threshold}) Cost or less enemy card on the field, in their hand and in
+//            their deck."
 //   Engine:  "C #18 with the numbers fixed at 0 and 1: the same zones, the same cost reading (R65 at
 //            resolution; an X card in a hand or deck costs 0, so it goes, and on the field it costs its
 //            X, R396), the Spell itself spared, graveyards and exile untouched. Tunes: threshold 1 ↑."

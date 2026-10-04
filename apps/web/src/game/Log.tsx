@@ -28,7 +28,7 @@ import { costPhrase, useInspectTrigger, type FaceModel } from "../cards/index.ts
 import { markWords } from "../cards/marks.ts";
 import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
 import { CatalogContext, withMatchDefs } from "./catalog.ts";
-import { sideOf, testid } from "./contract.ts";
+import { sideOf, testid, touchHoldMode } from "./contract.ts";
 import { cardInView, namedFace } from "./faces.ts";
 import { outcomeFor, resultReason } from "./Result.tsx";
 import { CHAOS_TEXT } from "./showcase/constants.ts";
@@ -442,10 +442,10 @@ function cardOf(event: GameEvent, view: PlayerView, remembered: ReadonlyMap<stri
 type Line = { key: string; type: GameEvent["type"]; text: string; face: FaceModel | null };
 
 /** One line; a line about a card is a button that opens it (see the header). */
-function LogLine({ line }: { line: Line }): ReactElement {
+function LogLine({ line, touchHold }: { line: Line; touchHold?: "sheet" | "preview" }): ReactElement {
   const face = line.face;
   // Lines of code is a hidden stat in matches.
-  const inspect = useInspectTrigger(face === null ? null : { key: `log-${line.key}`, face }, { showLoc: false });
+  const inspect = useInspectTrigger(face === null ? null : { key: `log-${line.key}`, face }, { touchHold, showLoc: false });
   if (face === null) {
     return (
       <li className="log-line" data-event={line.type}>
@@ -512,7 +512,7 @@ export default function Log({ view, revealed = false }: LogProps): ReactElement 
   return (
     <ol ref={listRef} className="log" data-testid={testid.log} aria-label="Game log">
       {lines.map((line) => (
-        <LogLine key={line.key} line={line} />
+        <LogLine key={line.key} line={line} touchHold={touchHoldMode(view)} />
       ))}
     </ol>
   );

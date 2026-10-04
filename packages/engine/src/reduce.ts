@@ -384,16 +384,19 @@ function endDueTurns(sink: EngineSink): void {
 
 /**
  * §2.5, R82: when nothing but ending the turn is left, the turn ends by itself — unless the active
- * player has turned that off for themselves (R345), when the turn waits for their End turn.
+ * player has turned that off for themselves (R345), when the turn waits for their End turn. Only
+ * whether one other action exists matters, so the walk stops at the first (`eachLegalAction`): this
+ * runs after every action, the AI's simulated ones included, and listing every play to the end was
+ * nearly a third of a long gate game (#188).
  */
 function autoEndDue(state: GameState): boolean {
   if (state.result !== null || state.pending !== null || state.phase !== "main") return false;
   const player = state.active;
   if (state.players[player].autoEndTurn === false) return false;
-  const meaningful = legalActions(state, player).filter(
-    (action) => action.type !== "endTurn" && action.type !== "concede" && action.type !== "offerDraw",
-  );
-  return meaningful.length === 0;
+  for (const action of eachLegalAction(state, player)) {
+    if (action.type !== "endTurn" && action.type !== "concede" && action.type !== "offerDraw") return false;
+  }
+  return true;
 }
 
 function rememberNonce(state: GameState, nonce: string, events: GameEvent[]): void {
@@ -488,8 +491,16 @@ function mulliganSubsets(ids: string[]): string[][] {
  * open, that prompt's own answers from `prompts.promptAnswers`.
  */
 export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
+  return [...eachLegalAction(state, player)];
+}
+
+/**
+ * `legalActions` one action at a time, in the same order: the one place the list is made, so a
+ * caller that only asks whether some action exists (`autoEndDue`) stops computing at the first.
+ */
+function* eachLegalAction(state: GameState, player: PlayerId): Generator<ActionBody> {
   syncFusedScripts(state);
-  if (state.result !== null) return [];
+  if (state.result !== null) return;
 
   const pending = state.pending;
   if (pending !== null) {
@@ -498,8 +509,13 @@ export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
     // seats are offered it, as they are at every other moment of a live game. §10.7's policy never
     // takes it (R84), so what the policy draws from is still that prompt's answers alone.
     const concede: ActionBody = { type: "concede" };
-    if (pending.playerId !== player) return [concede];
-    return [...promptAnswers(pending), concede];
+    if (pending.playerId !== player) {
+      yield concede;
+      return;
+    }
+    yield* promptAnswers(pending);
+    yield concede;
+    return;
   }
 
   if (state.mulligan !== undefined) {
@@ -507,37 +523,36 @@ export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
     // concede (R211); a seat that has answered waits for the other, with concede alone.
     const concede: ActionBody = { type: "concede" };
     const mulligan = mulliganPromptFor(state, player);
-    if (mulligan === null) return [concede];
-    return [
-      ...mulliganSubsets(mulligan.options.map((option) => option.key)).map((keep) => ({
-        type: "mulligan" as const,
-        keep,
-      })),
-      concede,
-    ];
+    if (mulligan === null) {
+      yield concede;
+      return;
+    }
+    for (const keep of mulliganSubsets(mulligan.options.map((option) => option.key))) yield { type: "mulligan", keep };
+    yield concede;
+    return;
   }
 
-  const out: ActionBody[] = [];
   if (hasStandingDrawOffer(state, player)) {
-    out.push({ type: "answerDraw", accept: true }, { type: "answerDraw", accept: false });
+    yield { type: "answerDraw", accept: true };
+    yield { type: "answerDraw", accept: false };
   }
 
   if (state.active !== player || state.phase !== "main") {
-    out.push({ type: "concede" });
-    return out;
+    yield { type: "concede" };
+    return;
   }
 
   const side = state.players[player];
-  for (const card of side.hand) out.push(...playActionsFor(state, player, card));
+  for (const card of side.hand) yield* playActionsFor(state, player, card);
   // B5 E11, R454: a card in the player's graveyard, while a permission on their field lets them play
   // it (`graveyardPlay.ts`) — the same `play` action, naming a graveyard card.
-  for (const card of side.graveyard) out.push(...graveyardPlayActionsFor(state, player, card));
+  for (const card of side.graveyard) yield* graveyardPlayActionsFor(state, player, card);
 
   for (const unit of activeUnitsOf(state, player)) {
     for (const target of attackTargets(state, unit)) {
-      out.push({ type: "attack", attackerId: unit.id, targetId: attackTargetId(target) });
+      yield { type: "attack", attackerId: unit.id, targetId: attackTargetId(target) };
     }
-    if (canSwitch(state, unit)) out.push({ type: "switchPosition", instanceId: unit.id });
+    if (canSwitch(state, unit)) yield { type: "switchPosition", instanceId: unit.id };
   }
 
   // R43, R384: a power or an ability is the instance's, so every card the player has acting on the
@@ -545,14 +560,14 @@ export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
   for (const row of ["units", "backrow"] as const) {
     for (const ref of slotsOf(player, row)) {
       const card = cardAt(state, ref);
-      if (card !== null) out.push(...activationActions(state, player, card));
+      if (card !== null) yield* activationActions(state, player, card);
     }
   }
 
-  if (canOfferDraw(state, player)) out.push({ type: "offerDraw" });
+  if (canOfferDraw(state, player)) yield { type: "offerDraw" };
 
-  out.push({ type: "endTurn" }, { type: "concede" });
-  return out;
+  yield { type: "endTurn" };
+  yield { type: "concede" };
 }
 
 /** Exported for the AI policy and the client: the instance an `attack` action would move (§10.2). */

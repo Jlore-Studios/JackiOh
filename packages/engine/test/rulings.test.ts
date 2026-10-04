@@ -756,7 +756,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
 
   // Proved by rulings-b.test.ts "R47 …" (occupied fizzles, Locked lands, the Reborn zone holds) and
   // effects-summon.test.ts "R47 …" (a lane-named summon fizzles on an occupied zone). Reborn into a
-  // zone Locked meanwhile is R647's proof now (statecheck.test.ts "R647 …").
+  // zone Locked meanwhile is R660's proof now (statecheck.test.ts "R660 …").
   it("R47 fails an aimed summon on an occupied zone; a Locked zone takes it unless the card says otherwise", () => {
     provenIn(47, "rulings-b.test.ts", "effects-summon.test.ts");
   });
@@ -2849,9 +2849,11 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(381, CARDS_REFERENCES_TEST, CARDS_CATALOG_TEST);
   });
 
-  // Proved by cards query.test.ts "R382 …" (the Fruit pool and the Grapes, Dropshipping's pool).
+  // Proved by cards query.test.ts "R382 …" (the Fruit pool and the Grapes, Dropshipping's pool),
+  // engine effects-fruit.test.ts "R382 …" (a Grape a pool picks is re-rolled by GRAPE_ODDS) and cards
+  // classic-plus/023-dropshipping.test.ts "R382 …" (the same through Dropshipping's pool).
   it("R382 puts the five Grapes in every Fruit pool and every token in Dropshipping's", () => {
-    provenIn(382, CARDS_QUERY_TEST);
+    provenIn(382, CARDS_QUERY_TEST, "effects-fruit.test.ts", PLUS("023-dropshipping"));
   });
 
   // Proved by animated.test.ts, effects-animate.test.ts "R383 …".
@@ -3050,9 +3052,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(417, PLUS_029_TEST, "lastBoards.test.ts");
   });
 
-  // Proved by cards classic-plus/033-ivory-tower.test.ts "R418 …" and engine carried-damage.test.ts "R418 …".
-  it("R418 lets a Unit top C+ #33 Ivory Tower's backrow pile, the Tower acting beneath it", () => {
-    provenIn(418, PLUS_033_TEST, "carried-damage.test.ts");
+  // Proved by cards classic-plus/033-ivory-tower.test.ts "R418 …" (patch v0.2.10: the first Unit stacked
+  // onto the Tower is fused into it, and the Tower stays a backrow Field Spell).
+  it("R418 fuses the first Unit stacked onto C+ #33 Ivory Tower into it, the Tower staying a Field Spell", () => {
+    provenIn(418, PLUS_033_TEST);
   });
 
   // Proved by cards classic-plus/035-rollback.test.ts "R419 …" (the three steps, hidden information, JSON
@@ -3134,9 +3137,18 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // R433's client half: apps/web game/dealtDeck.test.tsx "R433 …" (a mostly unknown deck is backs under
-  // "Your deck", with its counts) and routes/play.test.tsx "R433 …" (nothing lists a dealt deck).
+  // "Your deck", with its counts) and routes/play.test.tsx "R433 …" (nothing lists a dealt deck); its
+  // wiring: apps/web practice/core.test.ts "R433 …" (practice's random deck is dealt to the human's seat
+  // alone) and apps/server match/dealt-deck.test.ts "R433 …" (All Random deals both seats, and a rebuild
+  // folds them so).
   it("R433 lists a dealt deck with only the cards its owner has been shown", () => {
-    provenIn(433, "../../../apps/web/src/game/dealtDeck.test.tsx", WEB_PLAY_TEST);
+    provenIn(
+      433,
+      "../../../apps/web/src/game/dealtDeck.test.tsx",
+      WEB_PLAY_TEST,
+      WEB_PRACTICE_CORE_TEST,
+      "../../../apps/server/test/match/dealt-deck.test.ts",
+    );
   });
 
   // R434's client half: apps/web game/reveal.test.tsx and game/Hand.test.tsx "R434 …" (the opponent's
@@ -3620,8 +3632,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(584, CLASSIC_PLUS_064_TEST);
   });
 
-  // Proved by cards classic-plus/070-chaos-machine.test.ts "R585 …" (it may Upgrade itself).
-  it("R585 lets C+ #70 Chaos Machine pick itself", () => {
+  // Proved by cards classic-plus/070-chaos-machine.test.ts "R585 …" (it never Upgrades itself:
+  // alone with an empty hand nothing changes, and the pick is always among the other cards).
+  it("R585 never lets C+ #70 Chaos Machine pick itself", () => {
     provenIn(585, CLASSIC_PLUS_070_TEST);
   });
 
@@ -3770,59 +3783,145 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(640, "setup-aside.test.ts");
   });
 
-  // Proved by targeting.test.ts "R641 …" (no play carries discards, the exact cost pays both with no
-  // prompt, the kept cards never pay) and the card side in packages/cards
-  // test/classic/089-paul-allens-ghost.test.ts "R641 …" (one play, two random others, the interception
-  // stays paid).
-  it("R641 discards are random by default, paid at pay time with no choice", () => {
-    provenIn(641, "targeting.test.ts", "../../cards/test/classic/089-paul-allens-ghost.test.ts");
-  });
+  // ---------------------------------------------------------------------------------------------
+  // R641–R645: the emotes patch (issue #75) — hero portraits, voice-line and emoji emotes, the
+  // shared rate limit, the mutes, and the AI's emote personas. Cosmetic end to end.
+  // ---------------------------------------------------------------------------------------------
 
-  // Proved by the card side in packages/cards/test/classic/021-turtinator.test.ts "R642 …" (alone, no
-  // activation is listed and naming itself is refused, on both faces).
-  it("R642 lets Turtinator Tribute anything but itself", () => {
-    provenIn(642, "../../cards/test/classic/021-turtinator.test.ts");
-  });
+  const SHARED_EMOTES_TEST = "../../shared/test/emotes.test.ts";
+  const AI_PERSONAS_TEST = "../../ai/test/personas.test.ts";
+  const WEB_VOICE_LINES_TEST = "../../../apps/web/src/audio/voice-lines.test.ts";
+  const WEB_VOICE_ASSETS_TEST = "../../../apps/web/src/audio/voice-assets.test.ts";
+  const WEB_PORTRAITS_TEST = "../../../apps/web/src/emotes/portraits.test.ts";
+  const WEB_SESSION_EMOTES_TEST = "../../../apps/web/src/emotes/session.test.ts";
+  const WEB_EMOTE_PLAY_TEST = "../../../apps/web/src/emotes/play.test.ts";
+  const WEB_EMOTE_UI_TEST = "../../../apps/web/src/emotes/ui.test.tsx";
+  const WEB_NET_TEST = "../../../apps/web/src/game/net.test.ts";
 
-  // Proved by the card side in packages/cards/test/classic/034-ancient-acquisition.test.ts "R643 …"
-  // (two random returns with no prompt, the same game returning the same cards).
-  it("R643 returns Ancient Acquisition's cards at random, with no pick", () => {
-    provenIn(643, "../../cards/test/classic/034-ancient-acquisition.test.ts");
-  });
-
-  // Proved by the card side in packages/cards/test/classic/022-mid-runner.test.ts "R644 …" (the lane
-  // count's center, odd and even, and the Radiant three bounces).
-  it("R644 computes Mid Runner's midlane from the lane count", () => {
-    provenIn(644, "../../cards/test/classic/022-mid-runner.test.ts");
-  });
-
-  // Proved by effects-reveal.test.ts "R645 …" (a revealed Trap reads face-up but still fires) and the
-  // card side in packages/cards/test/classic/065-ace-in-the-hole.test.ts and
-  // test/classic/088-siphon-squad.test.ts "R645 …" (Revealed on tails, revealed at the start of turn).
-  it("R645 reveals a backrow card's face without firing it", () => {
+  // Proved by packages/shared emotes.test.ts (the six-id roster, `vanilla` the default, null and
+  // unknown read as it), packages/validator drafts.test.ts (D5 accepts null and every roster id,
+  // refuses an unknown one naming the field), apps/server decks.test.ts and db/contract.ts (the
+  // column round-trips, the view echoes it) and apps/web emotes/portraits.test.ts (every roster
+  // id resolves to its catalog card by name).
+  it("R641 gives a deck a hero portrait from the six-id roster, checked as D5, null reading vanilla", () => {
     provenIn(
-      645,
+      641,
+      SHARED_EMOTES_TEST,
+      VALIDATOR_DRAFTS_TEST,
+      SERVER_DECKS_TEST,
+      SERVER_STORE_CONTRACT,
+      WEB_PORTRAITS_TEST,
+    );
+  });
+
+  // Proved by packages/shared emotes.test.ts (pickPortrait's bounds and pickPortraitFromSeed's
+  // determinism), apps/server queue.test.ts and rooms.test.ts (the ticket's and room's frozen
+  // portraits, All Random's per-seat deal) and match/actor.test.ts (the frame on join and on
+  // reconnect, vanilla for a match that predates it), apps/web net.test.ts (the frame parses).
+  it("R642 fixes a match's portraits when its seats are fixed and sends them on join and reconnect", () => {
+    provenIn(642, SHARED_EMOTES_TEST, SERVER_ACTOR_TEST, SERVER_QUEUE_TEST, SERVER_ROOMS_TEST, WEB_NET_TEST);
+  });
+
+  // Proved by packages/shared emotes.test.ts (the ten wire ids; the gate's cooldown, window and
+  // cap), apps/server match/actor.test.ts (relay to the opponent alone, malformed unknown ids,
+  // silent drops), apps/web emotes/session.test.ts (local show on admit, mute, one emote per
+  // player) and net.test.ts (the relay parses, sendEmote's frame).
+  it("R643 keeps emotes out of the game, relays them to the opponent, and limits both ends alike", () => {
+    provenIn(643, SHARED_EMOTES_TEST, SERVER_ACTOR_TEST, WEB_SESSION_EMOTES_TEST, WEB_NET_TEST);
+  });
+
+  // Proved by apps/web audio/voice-lines.test.ts and voice-assets.test.ts (every portrait's five
+  // lines with text and files inside the budget), emotes/play.test.ts (each emote's channel:
+  // voice for lines, effects for emoji) and emotes/ui.test.tsx (bubble and sticker shows).
+  it("R644 shows a voice emote's line as a bubble on the voice channel and an emoji as a synth sticker", () => {
+    provenIn(644, WEB_VOICE_LINES_TEST, WEB_VOICE_ASSETS_TEST, WEB_EMOTE_PLAY_TEST, WEB_EMOTE_UI_TEST);
+  });
+
+  // Proved by packages/ai personas.test.ts (the weighted deal at every boundary, the tutorial's
+  // Silent, the whole trigger and reply tables, reply-once and the caps, the shared gate, and
+  // the import isolation that keeps the module out of engine and search).
+  it("R645 deals each AI an emote persona whose rolls never touch the engine or the search", () => {
+    provenIn(645, AI_PERSONAS_TEST);
+  });
+
+  // Proved by packages/cards/test/versions.test.ts "R650 …": a `vA.B.Y` micro patch is named after
+  // the newest version in patches.json with the next letter.
+  it("R650 names a micro patch after the newest version, with the next letter", () => {
+    provenIn(650, "../../cards/test/versions.test.ts");
+  });
+
+  // Proved by cards classic/033-joro.test.ts "R651 …" (a Spell's declared target and a Spell's prompt
+  // answer summon it; an attack, a Unit's Cry pick, an activation and a Trap's pick do not).
+  it("R651 answers C #33 Joro only to a Spell's targeting", () => {
+    provenIn(651, CLASSIC_033_TEST);
+  });
+
+  // Proved by cards classic-plus/032-3-blade-storm.test.ts "R652 …" (Whirlwinds cast round after round,
+  // Pierce through Armor) and engine rounds.test.ts "R652 …" (each round casts; the stops).
+  it("R652 casts C+ #32.3 Blade Storm's base face as Whirlwinds until a Unit dies", () => {
+    provenIn(652, PLUS("032-3-blade-storm"), "rounds.test.ts");
+  });
+
+  // Proved by cards classic-plus/033-ivory-tower.test.ts "R653 …" (the stacked Unit's play resolves
+  // first, what stands on the Tower then is fused, one Unit a stay) and engine backrow-piles.test.ts
+  // "R653 …" (the carrier that fuses its Unit takes one a stay, none while Immutable).
+  it("R653 fuses C+ #33's stacked Unit once its play resolves, and lets the Tower take one Unit a stay", () => {
+    provenIn(653, PLUS_033_TEST, "backrow-piles.test.ts");
+  });
+
+  // Proved by targeting.test.ts "R654 …" (no play carries discards, the exact cost pays both with no
+  // prompt, the kept cards never pay) and the card side in packages/cards
+  // test/classic/089-paul-allens-ghost.test.ts "R654 …" (one play, two random others, the interception
+  // stays paid).
+  it("R654 discards are random by default, paid at pay time with no choice", () => {
+    provenIn(654, "targeting.test.ts", "../../cards/test/classic/089-paul-allens-ghost.test.ts");
+  });
+
+  // Proved by the card side in packages/cards/test/classic/021-turtinator.test.ts "R655 …" (alone, no
+  // activation is listed and naming itself is refused, on both faces).
+  it("R655 lets Turtinator Tribute anything but itself", () => {
+    provenIn(655, "../../cards/test/classic/021-turtinator.test.ts");
+  });
+
+  // Proved by the card side in packages/cards/test/classic/034-ancient-acquisition.test.ts "R656 …"
+  // (two random returns with no prompt, the same game returning the same cards).
+  it("R656 returns Ancient Acquisition's cards at random, with no pick", () => {
+    provenIn(656, "../../cards/test/classic/034-ancient-acquisition.test.ts");
+  });
+
+  // Proved by the card side in packages/cards/test/classic/022-mid-runner.test.ts "R657 …" (the lane
+  // count's center, odd and even, and the Radiant three bounces).
+  it("R657 computes Mid Runner's midlane from the lane count", () => {
+    provenIn(657, "../../cards/test/classic/022-mid-runner.test.ts");
+  });
+
+  // Proved by effects-reveal.test.ts "R658 …" (a revealed Trap reads face-up but still fires) and the
+  // card side in packages/cards/test/classic/065-ace-in-the-hole.test.ts and
+  // test/classic/088-siphon-squad.test.ts "R658 …" (Revealed on tails, revealed at the start of turn).
+  it("R658 reveals a backrow card's face without firing it", () => {
+    provenIn(
+      658,
       "effects-reveal.test.ts",
       "../../cards/test/classic/065-ace-in-the-hole.test.ts",
       "../../cards/test/classic/088-siphon-squad.test.ts",
     );
   });
 
-  // Proved by twiceForward.test.ts "R646 …" (no count while face-down, shown when destroyed
+  // Proved by twiceForward.test.ts "R659 …" (no count while face-down, shown when destroyed
   // unrevealed) and the card side in packages/cards
-  // test/classic-plus/074-twice-forward-one-step-backwards.test.ts "R646 …".
-  it("R646 starts no Brittle count while a backrow Trap is unrevealed", () => {
-    provenIn(646, "twiceForward.test.ts", "../../cards/test/classic-plus/074-twice-forward-one-step-backwards.test.ts");
+  // test/classic-plus/074-twice-forward-one-step-backwards.test.ts "R659 …".
+  it("R659 starts no Brittle count while a backrow Trap is unrevealed", () => {
+    provenIn(659, "twiceForward.test.ts", "../../cards/test/classic-plus/074-twice-forward-one-step-backwards.test.ts");
   });
 
-  // Proved by zones.test.ts "R647 …" (a Locked zone takes a summon but no play),
-  // statecheck.test.ts "R647 …" (Reborn still returns into one) and animated.test.ts "R647 …"
+  // Proved by zones.test.ts "R660 …" (a Locked zone takes a summon but no play),
+  // statecheck.test.ts "R660 …" (Reborn still returns into one) and animated.test.ts "R660 …"
   // (the home return is a move, not a play), and the card side in packages/cards
-  // test/067-zoomerbin-oomen.test.ts and test/classic-plus/019-league-of-losers.test.ts "R647 …"
+  // test/067-zoomerbin-oomen.test.ts and test/classic-plus/019-league-of-losers.test.ts "R660 …"
   // (the cards' own overrides: a fizzle and a skip).
-  it("R647 refuses only plays into a Locked zone: summons, moves and returns still land", () => {
+  it("R660 refuses only plays into a Locked zone: summons, moves and returns still land", () => {
     provenIn(
-      647,
+      660,
       "zones.test.ts",
       "statecheck.test.ts",
       "animated.test.ts",
@@ -3832,29 +3931,29 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
-  // Proved by effects-plague.test.ts "R648 …" (every token on the one pick, the Radiant count, the
+  // Proved by effects-plague.test.ts "R661 …" (every token on the one pick, the Radiant count, the
   // −X/−X death after the whole effect) and the card side in packages/cards
   // test/classic/070-book-of-plague.test.ts and test/classic/061-plague-bringer-goliath.test.ts
-  // "R648 …" (no spreading: the whole effect lands on the one pick).
-  it("R648 places every Plague Token of one effect on the single permanent one prompt names", () => {
+  // "R661 …" (no spreading: the whole effect lands on the one pick).
+  it("R661 places every Plague Token of one effect on the single permanent one prompt names", () => {
     provenIn(
-      648,
+      661,
       "effects-plague.test.ts",
       "../../cards/test/classic/070-book-of-plague.test.ts",
       "../../cards/test/classic/061-plague-bringer-goliath.test.ts",
     );
   });
 
-  // Proved by recruit-variants.test.ts "R649 …" (the scan prefers a non-X match; only-X still recruits;
+  // Proved by recruit-variants.test.ts "R662 …" (the scan prefers a non-X match; only-X still recruits;
   // recruitAll leaves X-cost cards the same way). No card script needed it: the skip lives in the
   // Recruit scan itself.
-  it("R649 skips (X)-cost cards in a Recruit scan unless they are the only valid targets", () => {
-    provenIn(649, "recruit-variants.test.ts");
+  it("R662 skips (X)-cost cards in a Recruit scan unless they are the only valid targets", () => {
+    provenIn(662, "recruit-variants.test.ts");
   });
 
-  // Proved by effects-transform.test.ts "R650 …" (DEF stays DEF on the new instance).
-  it("R650 keeps a transformed Unit's battle position", () => {
-    provenIn(650, "effects-transform.test.ts");
+  // Proved by effects-transform.test.ts "R663 …" (DEF stays DEF on the new instance).
+  it("R663 keeps a transformed Unit's battle position", () => {
+    provenIn(663, "effects-transform.test.ts");
   });
 });
 
@@ -3894,5 +3993,6 @@ describe("SPEC §11 index completeness", () => {
     expect(rows.length).toBeGreaterThan(0);
     // Ascending, no duplicates, and exactly the rows §11 has: a new row makes this red.
     expect(named).toEqual(rows);
+
   });
 });

@@ -2,12 +2,12 @@
 // turn, on either player's turn and the start-of-turn draw included, do not happen at all: no card
 // moves, no fatigue, nothing is cast on draw (§2.4); a draw made earlier that turn counts; with another
 // limit the lowest holds; lifted when Palantir leaves; the opponent playing a Book (a Spell tagged
-// Book, a cast included, R70) opens the announce window (§10.5), where the base face asks you in a
-// prompt with its own clock (R79): yes → Palantir is Tributed and the Book is countered (never played:
-// no spell script, not counted as played, its mana spent) and moves to your hand as your card (its
-// owner changes, R12), burned into your graveyard at a full hand (R317); no → the Book resolves and
-// Palantir stays; a non-Book Spell opens no prompt; every event naming the stolen Book follows R97,
-// judged where it sits now; the paused play survives a JSON round trip and replays from the log;
+// Book, a cast included, R70) opens the announce window (§10.5), where the base face steals with no
+// "you may" (balance patch 1, mandatory): Palantir is Tributed and the Book is countered (never
+// played: no spell script, not counted as played, its mana spent) and moves to your hand as your
+// card (its owner changes, R12), burned into your graveyard at a full hand (R317); there is no pass,
+// so no prompt opens; a non-Book Spell opens no prompt either; every event naming the stolen Book
+// follows R97, judged where it sits now; the resolved steal survives a JSON round trip and replays;
 // radiant: every opponent Spell is countered and stolen with no prompt, its own cost (R65 out of
 // play: an X Spell 0) added to `memory.stolenCost`, and Palantir Tributes itself once that total
 // reaches 2, not before; its tuned numbers (draw limit, never below 1; radiant threshold) read
@@ -20,6 +20,7 @@ import { describe, expect, it } from "vitest";
 import { hashState, reduce, stepParam, type GameState } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
+import { expectAnimated } from "../_animated";
 import { base, def, radiant } from "../../src/scripts/classic/004-palantir";
 
 const PALANTIR = "classic-004";
@@ -172,7 +173,6 @@ describe("C #4 Palantir", () => {
       const s = setup({}, {}, false);
       // p2 plays the Book and p1 takes it, Tributing Palantir: the limit goes with it.
       s.play(BOOK);
-      s.answer("steal");
       s.play(STOCKPILE);
 
       expect(drawsBy(s.lastEvents, "p2")).toBe(2);
@@ -180,23 +180,23 @@ describe("C #4 Palantir", () => {
   });
 
   describe("base: the Book steal", () => {
-    it("R448 the opponent's Book opens a prompt to its controller during the opponent's turn", () => {
+    it("R448 the opponent's Book opens no prompt: the steal resolves during the opponent's turn", () => {
       const s = setup();
 
       s.play(BOOK);
 
-      expect(s.state.pending?.playerId).toBe("p1");
-      expect(s.state.pending?.options.map((option) => option.key)).toEqual(["mode:steal", "mode:pass"]);
-      s.expectEvents("cardAnnounced", "promptOpened");
+      expect(s.state.pending).toBeNull();
+      expect(count(s.events, "promptOpened")).toBe(0);
+      s.expectEvents("cardAnnounced", "countered");
       expect(count(s.events, "cardPlayed")).toBe(0);
     });
 
-    it("R12 yes: Palantir is Tributed and the Book is countered into your hand as your card", () => {
+    it("R12 Palantir is Tributed and the Book is countered into your hand as your card", () => {
       const s = setup();
       const book = s.card(BOOK);
       const palantir = s.card(PALANTIR);
 
-      s.play(book).answer("steal");
+      s.play(book);
 
       s.expectInZone(palantir, "graveyard");
       const taken = s.card(book.id);
@@ -210,29 +210,29 @@ describe("C #4 Palantir", () => {
       s.expectEvents("countered");
     });
 
-    it("R317 yes with a full hand: the stolen Book burns into your graveyard", () => {
+    it("R317 with a full hand: the stolen Book burns into your graveyard", () => {
       const ten = Array.from({ length: 10 }, () => VANILLA);
       const s = setup({ hand: ten });
       const book = s.card(BOOK);
 
-      s.play(book).answer("steal");
+      s.play(book);
 
       expect(s.hand("p1")).toHaveLength(10);
       expect(s.pile("p1", "graveyard").map((card) => card.id)).toContain(book.id);
       expect(s.card(book.id).owner).toBe("p1");
     });
 
-    it("no: the Book resolves and Palantir stays", () => {
+    it("no 'you may': there is no pass, so the Book never resolves while Palantir stands", () => {
       const s = setup();
       const palantir = s.card(PALANTIR);
+      const book = s.card(BOOK);
 
-      s.play(BOOK).answer("pass");
+      s.play(BOOK);
 
-      s.expectInZone(palantir, "field");
-      expect(count(s.events, "cardPlayed")).toBe(1);
-      // Book of Knowledge draws 3, and Palantir's own limit lets 1 through.
-      expect(drawsBy(s.events, "p2")).toBe(1);
-      s.expectInZone(BOOK, "graveyard");
+      s.expectInZone(palantir, "graveyard");
+      expect(count(s.events, "cardPlayed")).toBe(0);
+      const taken = s.card(book.id);
+      expect(taken.zone).toMatchObject({ z: "hand", player: "p1" });
     });
 
     it("a non-Book Spell opens no prompt", () => {
@@ -248,7 +248,7 @@ describe("C #4 Palantir", () => {
       const s = setup();
       const book = s.card(BOOK);
 
-      s.play(book).answer("steal");
+      s.play(book);
 
       // The announce and the counter named the Book; now it is in p1's hand, so p2's view names it
       // nowhere, while p1 reads it. The `stolen` event is left out: the engine shows it to whoever
@@ -268,40 +268,32 @@ describe("C #4 Palantir", () => {
       const start = JSON.parse(JSON.stringify(s.state)) as GameState;
       const book = s.card(BOOK);
 
-      s.play(book).answer("steal");
+      s.play(book);
 
       const played = reduce(start, { type: "play", playerId: "p2", instanceId: book.id, nonce: "replay-1" });
       expect(played.error).toBeUndefined();
-      const answered = reduce(played.state, {
-        type: "answer",
-        playerId: "p1",
-        choiceId: played.state.pending?.id ?? "",
-        selection: [{ pick: "mode", option: "steal" }],
-        nonce: "replay-2",
-      });
-      expect(answered.error).toBeUndefined();
-      expect(hashState(answered.state)).toBe(hashState(s.state));
+      expect(played.state.pending).toBeNull();
+      expect(hashState(played.state)).toBe(hashState(s.state));
     });
 
-    it("§9.3 the paused play survives a JSON round trip and resumes through reduce", () => {
+    it("§9.3 the resolved steal survives a JSON round trip with the Book in your hand", () => {
       const s = setup();
       const book = s.card(BOOK);
       s.play(book);
-      const paused = s.state;
-      const revived = JSON.parse(JSON.stringify(paused)) as GameState;
-      expect(revived).toEqual(paused);
+      const done = s.state;
+      const revived = JSON.parse(JSON.stringify(done)) as GameState;
+      expect(revived).toEqual(done);
+      expect(revived.pending).toBeNull();
 
       const result = reduce(revived, {
         type: "answer",
         playerId: "p1",
-        choiceId: revived.pending?.id ?? "",
-        selection: [{ pick: "mode", option: "steal" }],
+        choiceId: "",
+        selection: [],
         nonce: "palantir-round-trip",
       });
 
-      expect(result.error).toBeUndefined();
-      expect(result.state.pending).toBeNull();
-      expect(result.state.work).toEqual([]);
+      expect(result.error).toBe("no prompt is open");
       expect(result.state.players.p1.hand.map((card) => card.id)).toContain(book.id);
     });
   });
@@ -421,5 +413,32 @@ describe("C #4 Palantir", () => {
       expect(count(s.events, "countered")).toBe(0);
       expect(drawsBy(s.events, "p1")).toBe(2);
     });
+  });
+});
+
+describe("C #4 Palantir: Animated (patch v0.2.10)", () => {
+  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 0/3 Unit; with none open it stays a Field Spell", () => {
+    expectAnimated({ def: "classic-004", stats: { attack: 0, health: 3 } });
+  });
+
+  it("R383 radiant: a 0/6 Unit", () => {
+    expectAnimated({ def: "classic-004", radiant: true, stats: { attack: 0, health: 6 } });
+  });
+
+  it("R383 played, it keeps its Aura as a Unit: after the opponent's start-of-turn draw, their next draws do not happen", () => {
+    const s = scenario({
+      p1: { hand: [PALANTIR, TIMMY], library: [VANILLA, VANILLA] },
+      p2: { hand: [STOCKPILE, VANILLA], library: [...DECK] },
+    });
+
+    s.play(PALANTIR, { zone: 3 });
+    expect(s.unit("p1", 3)?.defId).toBe(PALANTIR);
+    s.endTurn();
+    expect(drawsBy(s.lastEvents, "p2")).toBe(1);
+    s.play(STOCKPILE);
+
+    expect(drawsBy(s.lastEvents, "p2")).toBe(0);
+    expect(count(s.lastEvents, "drawLimited")).toBeGreaterThan(0);
+    expect(s.pile("p2", "library")).toHaveLength(DECK.length - 1);
   });
 });

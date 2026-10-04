@@ -40,6 +40,9 @@ class FakeGitHub:
         self.reacted: list[tuple[int, str]] = []
         self.auto_merge: dict[str, str] = {}
         self.auto_merge_heads: dict[str, str] = {}
+        self.blockers: dict[int, list[int]] = {}
+        #: The merge commit title asked for, by pull request node id.
+        self.merge_titles: dict[str, str] = {}
         self.auto_merge_error: str = ""
         self.protection: dict[str, Any] | None = None
         self.branch_checks: set[str] | None = None
@@ -59,6 +62,7 @@ class FakeGitHub:
             "number": number, "title": title, "body": body, "state": state,
             "labels": [{"name": n} for n in labels], "user": dict(user or OPERATOR),
             "created_at": f"2026-09-{10 + number % 15:02d}T00:00:00Z", "assignees": [],
+            "id": 5_000_000 + number,
         }
         self.threads[number] = thread
         self.comments.setdefault(number, [])
@@ -127,8 +131,41 @@ class FakeGitHub:
                 found.append(copy.deepcopy(thread))
         return found[:limit]
 
+    def block(self, number: int, *blockers: int) -> None:
+        """Link `blockers` as GitHub issue dependencies blocking `number`."""
+        self.blockers.setdefault(number, []).extend(blockers)
+        open_ones = [b for b in self.blockers[number] if self.threads[b]["state"] == "open"]
+        self.threads[number]["issue_dependencies_summary"] = {
+            "blocked_by": len(open_ones), "total_blocked_by": len(self.blockers[number]),
+            "blocking": 0, "total_blocking": 0}
+
+    def blocked_by(self, number: int) -> list[dict]:
+        return [copy.deepcopy(self.threads[b]) for b in self.blockers.get(number, [])]
+
+    def blocking(self, number: int) -> list[dict]:
+        return [copy.deepcopy(self.threads[n]) for n, found in sorted(self.blockers.items())
+                if number in found]
+
+    def _by_id(self, issue_id: int) -> int:
+        found = [n for n, t in self.threads.items() if t.get("id") == issue_id]
+        if not found:
+            raise GitHubError(f"no issue with id {issue_id}", 404)
+        return found[0]
+
+    def add_blocked_by(self, number: int, blocker_id: int) -> None:
+        self.block(number, self._by_id(blocker_id))
+
+    def add_sub_issue(self, parent: int, child_id: int) -> None:
+        child = self._by_id(child_id)
+        self.threads[child]["parent_issue_url"] = (
+            f"https://api.github.com/repos/{self.repo}/issues/{parent}")
+
     def list_comments(self, number: int, limit: int = 300) -> list[dict]:
         return copy.deepcopy(self.comments.get(number, []))
+
+    def list_commits(self, *, author: str = "", limit: int = 1000) -> list[dict]:
+        return [c for c in getattr(self, "commits", [])
+                if not author or (c.get("author") or {}).get("login") == author][:limit]
 
     def create_comment(self, number: int, body: str) -> dict[str, Any]:
         comment = {"id": next(self._ids), "body": with_marker(body), "user": dict(BOT),
@@ -248,11 +285,13 @@ class FakeGitHub:
     def required_checks(self, branch: str) -> set[str] | None:
         return None if self.branch_checks is None else set(self.branch_checks)
 
-    def enable_auto_merge(self, node_id: str, method: str, expected_head: str = "") -> None:
+    def enable_auto_merge(self, node_id: str, method: str, expected_head: str = "",
+                          headline: str = "") -> None:
         if self.auto_merge_error:
             raise GitHubError(self.auto_merge_error, 200)
         self.auto_merge[node_id] = method
         self.auto_merge_heads[node_id] = expected_head
+        self.merge_titles[node_id] = headline
         self._pull_by_node(node_id)["auto_merge"] = {"merge_method": method}
 
     def disable_auto_merge(self, node_id: str) -> None:
@@ -262,8 +301,9 @@ class FakeGitHub:
     def mark_ready(self, node_id: str) -> None:
         self._pull_by_node(node_id)["draft"] = False
 
-    def merge_pull(self, number: int, method: str) -> dict[str, Any]:
+    def merge_pull(self, number: int, method: str, title: str = "") -> dict[str, Any]:
         self.threads[number].update(state="closed", merged=True)
+        self.merge_titles[f"PR_{number}"] = title
         return {"merged": True}
 
     # ------------------------------------------------------------------ contents

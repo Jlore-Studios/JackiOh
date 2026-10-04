@@ -236,7 +236,7 @@ export function needsZone(state: GameState, card: CardInstance): boolean {
 /**
  * §6.2 Stack: "may be played onto an occupied zone" (§3.2). Read off the card's keywords as they stand
  * where it is (§10.4, `layers.unitHas`): its face's, the ones granted to it in hand (B5 E38) and the
- * ones an aura gives the cards in a hand (Classic+ #33 Ivory Tower's "Your cards have Stack"). A backrow
+ * ones an aura gives the cards in a hand (a "Your cards have Stack" aura). A backrow
  * card with Stack tops an occupied backrow zone as a Unit tops a unit zone (B5 E21, R447).
  */
 export function playsOnStack(state: GameState, card: CardInstance): boolean {
@@ -275,8 +275,18 @@ export function legalZonesFor(
   const refs = playsOnStack(state, card)
     ? slotsOf(player, row).filter((ref) => acceptsStack(state, ref))
     : slotsOf(player, row).filter((ref) => isOpen(state, ref) || freedByTribute(state, ref, tributes));
-  const carriers = row === "units" ? carrierZonesFor(state, player) : [];
+  const carriers = row === "units" ? carrierZonesFor(state, player).filter((ref) => !immutableFuser(state, ref)) : [];
   return [...refs, ...carriers].map((ref) => ({ row: ref.row, lane: ref.lane }));
+}
+
+/**
+ * R653, R23: a carrier that fuses its Unit in (Classic+ #33 Ivory Tower) takes no Unit while it is
+ * Immutable, since its text could not change to take the Unit in. Read here and in `refuseZone`, beside
+ * `zones.whyCannotCarry`, because Immutable is a keyword the layers compute (§10.4).
+ */
+function immutableFuser(state: GameState, ref: ZoneSlot): boolean {
+  const top = cardAt(state, ref);
+  return top !== null && flagsOf(top).fusesCarried === true && unitHas(state, top, "Immutable");
 }
 
 /**
@@ -1096,7 +1106,7 @@ export function pricedPlayActions(
             if (bound && !tributePicksAgree(state, player, face, choices.targets ?? [], choices.modes ?? [], tributes)) {
               continue;
             }
-            // B5 E5, R450, R641: the targets' discard cost is random at pay time, so it lists no
+            // B5 E5, R450, R654: the targets' discard cost is random at pay time, so it lists no
             // paying sets — one action, offered only when the cost can be paid at all.
             const owed = targetingDiscardsRequired(state, player, face, choices.targets ?? [], choices.modes ?? []);
             if (whyTargetingDiscardsUnpayable(state, player, owed, playUses(card, choices.targets ?? [])) !== null) {
@@ -1150,12 +1160,13 @@ function refuseZone(
   if (!needs) return `${name} takes no zone`;
 
   const row = rowForCard(state, card);
-  // R446: a Unit may name a backrow zone whose card carries one (Classic+ #33 Ivory Tower).
+  // R446: a Unit may name a backrow zone whose card carries one (Classic+ #33 Ivory Tower, R653).
   if (row === "units" && zone.row === "backrow") {
     if (!Number.isInteger(zone.lane) || zone.lane < 1 || zone.lane > rowSize(zone.row)) {
       return `there is no ${zone.row} zone ${zone.lane}`;
     }
-    return whyCannotCarry(state, { player, row: zone.row, lane: zone.lane });
+    const ref: ZoneSlot = { player, row: zone.row, lane: zone.lane };
+    return whyCannotCarry(state, ref) ?? (immutableFuser(state, ref) ? "an Immutable card takes no Unit in" : null);
   }
   if (zone.row !== row) return `${name} goes in the ${row} row`;
   // §3.2: a zone is one of the row's lanes, numbered 1 up — never a place between two of them.
@@ -1322,7 +1333,7 @@ export function whyChoicesRefused(
   if (!tributePicksAgree(state, player, face, action.targets ?? [], action.modes ?? [], action.tributes ?? [])) {
     return `${defOf(state, face.defId).name}'s Tribute pick must be a unit it tributes`;
   }
-  // B5 E5, R450, R641: a declared target that costs discards needs that many other cards held —
+  // B5 E5, R450, R654: a declared target that costs discards needs that many other cards held —
   // the discards are random at pay time, so the action carries none. Never the card being played.
   const required = targetingDiscardsRequired(state, player, face, action.targets ?? [], action.modes ?? []);
   return whyTargetingDiscardsUnpayable(state, player, required, playUses(card, action.targets ?? []));
