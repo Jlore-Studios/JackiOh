@@ -126,12 +126,15 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(wrong).toEqual([]);
   });
 
-  it("R366 patch v0.2.4 only changes base.text and radiant.text between v0.2.0 and the current catalog", () => {
-    const before = readSnapshot("v0.2.0");
+  it("R366 patch v0.2.4 only changes base.text and radiant.text between v0.2.1 and the current catalog", () => {
+    // v0.2.1 sits between v0.2.0 and here and rewrites #98 Heroic Power's cost, refs, params and
+    // loc as well as its text (R388 holds that shape), so the text-only promise v0.2.4 makes is
+    // measured from v0.2.1, not v0.2.0.
+    const before = readSnapshot("v0.2.1");
     const differingCards: string[] = [];
     for (const [id, currentCard] of Object.entries(CATALOG)) {
       const priorCard = before[id] as unknown as CardDef | undefined;
-      expect(priorCard, `card ${id} existed in v0.2.0`).toBeDefined();
+      expect(priorCard, `card ${id} existed in v0.2.1`).toBeDefined();
       if (!priorCard) continue;
 
       const priorNonText = {

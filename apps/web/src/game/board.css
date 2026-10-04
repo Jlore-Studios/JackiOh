@@ -205,7 +205,7 @@
   align-items: center;
   gap: 6px;
   max-width: 20ch;
-  min-height: 42px;
+  min-height: 35px;
   padding: 2px 11px 2px 2px;
   border: 1px solid color-mix(in srgb, var(--line-bright) 75%, transparent);
   border-radius: 24px;
@@ -246,13 +246,15 @@
   outline-offset: 2px;
 }
 
+/* The crest is 29 px so the button stands 35 px tall, as the hero panel did before the
+   v0.2.1 crest (B46's vertical budget, B29's 44 px touch tile is met by the row it sits in). */
 .power-crest {
   position: relative;
   display: inline-grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 29px;
+  height: 29px;
   border: 3px solid #8a94a6;
   border-radius: 50%;
   background: radial-gradient(circle at 36% 30%, var(--power-light, #9ac7ff), var(--power-dark, #18244c) 80%);

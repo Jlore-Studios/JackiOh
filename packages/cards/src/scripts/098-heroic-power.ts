@@ -1,6 +1,7 @@
 // #98 Heroic Power (SPEC §8.5, §6.2 "Start of Game"/Activate/Quickdraw, R43, R46, R103, R352, R384,
 // patch v0.2.1's R651–R658). Field Spell, tags Quickdraw, cost (0), Mythic.
-//   Base:    "Indestructible. Start of game: Gain one of 13 random powers, each 'Activate: Spend (X)':
+//   Base:    "Indestructible. Start of game: Gain one of 13 random powers, each "Activate -
+//             Spend (X)."
 //             (3) Expedition Map; (1) Life Tap; (1) Steady Shot; (2) Ranching; (1) Cat Cafe; (1) Ping;
 //             (2) Witness Value; (2) Stitching; (1) Armor Up; (2) Die Insect; (2) KY Brainstorm;
 //             (2) Pluck; (3) Terminus Tricks" — each power's clause is in §8.5 and in `HERO_POWERS`.
