@@ -1091,15 +1091,13 @@
       "taken_asks": [],
       "votes": {
         "approvals": [
-          "muse",
           "gemini"
         ],
-        "builder": "muse",
+        "builder": "gemini",
         "rejections": [],
-        "sha": "9514e817711428c574e6e3fff332117d83e243eb",
+        "sha": "386594cf406e3218ef925b36ccefdbb1f103a5c9",
         "tiers": {
-          "gemini": "medium",
-          "muse": "medium"
+          "gemini": "medium"
         }
       }
     },
