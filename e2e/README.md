@@ -39,6 +39,7 @@ e2e/
   cypress/component/audio-recipes.cy.tsx  polish 2: every SFX recipe rendered in Chrome's OfflineAudioContext is finite, audible and quiet after its length, impact grows with damage, and through the real mix each effect sits in its band against the shipped voice lines
   cypress/component/audio-toggle.cy.tsx   polish 2: inside .app-shell the mute toggle is a 44 px circle with a 22 px icon
   cypress/component/deckbuilder-layout.cy.tsx  B39/B29/B38 on the deck workshop (`DeckWorkshop`, a full deck open): no overflow at 390x844 and 1280x720, two pool columns on the phone, two whole pool rows at 1280x720, the first pool row on a phone's first screen, the verdict in the sidebar, every pool keyword bold in its rules box's ink (#85)
+  cypress/component/emotes-layout.cy.tsx  #219 on the fixture board: the picker's emoji drawn at least 36 px square, every voice label at least 11 px, every item a 44 px touch target on a touch-sized screen, both menus and a voice line's bubble kept on the screen at six viewports
   fixtures/decks/*.json    scenario decks, named for the spec that uses them; a deck may carry the seat's
                            `handicap` (R180: deckSize, manaBonus, manaCap, extraOpeningCards,
                            extraDrawsPerTurn, heroHealth?), and then holds its deckSize cards (R184)
