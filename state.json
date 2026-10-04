@@ -1834,11 +1834,9 @@
     "what": "revise #171 on devin"
   },
   "last_sweep": {
-    "at": "2026-10-04T03:59:43Z",
+    "at": "2026-10-04T04:10:18Z",
     "notes": [
-      "#197: typed it Task",
-      "#195: typed it Task",
-      "#188: typed it Task"
+      "started a night run, as a lane was free: #196 (easy) is queued to build, for `claude-1`: plan on `claude-1` (claude, `opus`, strong)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
