@@ -3015,6 +3015,7 @@
         "reason": "the claude CLI could not run: Failed to authenticate. API Error: 401 OAuth access token is invalid.",
         "streak": 4
       },
+      "refused_until": "2026-10-04T21:40:00Z",
       "spent": [
         {
           "at": "2026-10-03T10:13:19Z",
@@ -3039,8 +3040,21 @@
         {
           "at": "2026-10-03T15:45:47Z",
           "minutes": 0.1
+        },
+        {
+          "at": "2026-10-04T18:25:07Z",
+          "minutes": 96.7
         }
-      ]
+      ],
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-04T21:40:00Z",
+          "utilization": 1.0
+        },
+        "observed_at": "2026-10-04T18:25:07Z",
+        "rejected_resets_at": "2026-10-04T21:40:00Z",
+        "status": "rejected"
+      }
     },
     "devin": {
       "spent": [
