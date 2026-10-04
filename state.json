@@ -1989,19 +1989,12 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-04T16:51:43Z",
+      "feedback_since": "2026-10-04T17:37:29Z",
       "forced": false,
       "interruptions": 0,
       "issue": 200,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "Unresolved merge-conflict markers remain in SPEC.md, so the spec is unparsable and unmergeable.",
-          "evidence": "git grep shows HEAD:SPEC.md:1627:<<<<<<< HEAD, :1630:=======, :1632:<<<<<<< HEAD, :1634:>>>>>>> origin/main, :1635:=======, :1637:>>>>>>> origin/main; read of SPEC.md:1627-1637 shows nested markers duplicating R374/R375 rows.",
-          "severity": "blocking",
-          "where": "SPEC.md:1627"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "devin",
       "question": "",
@@ -2021,7 +2014,7 @@
           "where": "self check"
         }
       ],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-04T17:37:29Z",
       "stop_requested": false,
       "taken_asks": [],
