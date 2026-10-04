@@ -19,7 +19,7 @@
 // already says. `POWER_WORDS` is keyed by the power's stored name as the view carries it (R103) and
 // written from §8 #98's titles and clauses, base and radiant, the way `game/modeText.ts` words a
 // "Choose one" option; `inPlay.test.ts` holds it to the engine's own table so the two cannot drift
-// apart. A clause may write a declared number (Steady Shot's `{shot}`, R637), which
+// apart. A clause may write a declared number (Steady Shot's `{shot}`, R659), which
 // `fillPowerParams` fills from the view as every face's text is filled (B3.4 rule 5, R386). A power's
 // X is the view's (`HeroPowerView.x`) on the field; a hand card's view names only the power, so its X
 // is the engine's own constant for that power (`HERO_POWER_COST`, CLAUDE.md rule 9).
@@ -62,7 +62,7 @@ export type PowerWords = { title: string; radiantTitle: string; base: string; ra
 /**
  * §8 #98's thirteen powers (patch v0.2.1), each its title and clause, base and radiant, by the stored
  * name the view gives it (R103, R243), in the engine's roll order. `{shot}` is Steady Shot's declared
- * number (R637), which the view fills.
+ * number (R659), which the view fills.
  */
 export const POWER_WORDS: Readonly<Record<string, PowerWords>> = {
   recruit: {
@@ -182,7 +182,7 @@ export function powerText(power: RolledPower, radiant: boolean, keywordLine: str
 }
 
 /**
- * A power's words with their `{key}`s filled (B3.4 rule 5, R386, R637) exactly as `fillParams` fills
+ * A power's words with their `{key}`s filled (B3.4 rule 5, R386, R659) exactly as `fillParams` fills
  * a face: the view's numbers as they stand (`values`), else the card's printed ones (`params`). With
  * no declaration to hand (no catalog yet) the view's numbers fill alone, so Steady Shot's `{shot}`
  * never shows raw.

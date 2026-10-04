@@ -243,7 +243,7 @@ export type HeroPowerView = {
   /** "Activate: Spend (X)" (§8 #98): the mana the power's activation spends (R43); the card costs (0). */
   x: number;
   usedThisTurn: boolean;
-  /** B3.4, R386: the card's declared numbers as they stand (Steady Shot's `shot`, R656), when it has any. */
+  /** B3.4, R386: the card's declared numbers as they stand (Steady Shot's `shot`, R659), when it has any. */
   params?: Record<string, number>;
 };
 

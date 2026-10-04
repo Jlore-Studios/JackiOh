@@ -247,7 +247,7 @@ describe("R43 a Heroic Power in play prints the one power it rolled", () => {
     expect(text(preview, `[data-testid="${INSPECT_PRINTED}"]`)).toContain("Gain one of 13 random powers");
   });
 
-  it("R637 a Radiant Steady Shot prints its Radiant clause with the {shot} the view gives it, never a placeholder", () => {
+  it("R659 a Radiant Steady Shot prints its Radiant clause with the {shot} the view gives it, never a placeholder", () => {
     vi.useFakeTimers();
     const power: HeroPowerView = {
       instanceId: "b1",

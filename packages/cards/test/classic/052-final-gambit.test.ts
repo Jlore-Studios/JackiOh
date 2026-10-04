@@ -40,6 +40,9 @@ const GOING_LONG = "core-084"; // Field Spell: your hero has Armor 2.
 const ANTI_ONESHOT = "core-073"; // Field Spell: your hero can't take more than 5 damage at once.
 const FILLER = "core-005";
 const DECK = [FILLER, FILLER, FILLER, FILLER, FILLER] as const;
+const FORWARD = "classicplus-074"; // (2) Field Trap: every 2 cards the opponent plays, the last is fused into this.
+const RAPID = "core-010"; // (0) Spell: Combo 3: draw 3.
+const TRUE_STRIKE = "core-044"; // (1) Spell: Pierce. Deal 4 damage. Exile this.
 
 type Gambit = string | { def: string; radiant?: boolean };
 
@@ -278,6 +281,27 @@ describe("C #52 Final Gambit", () => {
       expect(s.events.at(-1)?.type).toBe("gameOver");
       s.expectHealth("p1", 1);
       expect(s.hand("p1")).toHaveLength(1);
+    });
+
+    it("R216 fused into a Field Trap that stays (C+ #74), it re-aims its own fatigue only until the enemy hero falls, and the follow-ups owed after that do nothing", () => {
+      const s = scenario({
+        p1: { hand: [FORWARD, FILLER], health: 4 },
+        p2: { hand: [RAPID, GAMBIT, TRUE_STRIKE], library: DECK, health: 40 },
+      });
+      s.play(FORWARD, { zone: 2 }).endTurn();
+      s.state.players.p2.mana.current = 10;
+      // p2's second play is fused into p1's Field Trap, which keeps Final Gambit's text and stays.
+      s.play(RAPID).play(GAMBIT);
+      expect(s.backrow("p1", 2)?.defId).toContain(GAMBIT);
+      s.state.players.p1.fatigueCount = 20;
+      // 4 at 4 health is lethal: re-aimed (4), then heal 10 and draw 3 from an empty deck. Each
+      // fatigue, 21, 22 and 23, is lethal at 14 and re-aimed too; p2 falls at the second, so the
+      // three follow-ups owed by then neither heal nor draw, and the drain ends at the state check.
+      s.play(TRUE_STRIKE, { targets: [{ pick: "hero", player: "p1" }] });
+      expect(s.events.filter((event) => event.type === "redirected")).toHaveLength(4);
+      expect(heroHits(s, "p2")).toEqual([4, 21, 22, 23]);
+      expect(s.state.result).toMatchObject({ winner: "p1" });
+      s.expectHealth("p1", 14);
     });
 
     it("a second Final Gambit finds no lethal hit once the first has re-aimed it, and stays set", () => {

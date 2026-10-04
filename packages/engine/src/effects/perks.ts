@@ -1,5 +1,5 @@
 // Small gifts a card gives its own side: Armor its hero keeps for the rest of the game (C+ #46 Felinor
-// Flagbearer, SPEC §8.7) or until its next turn (Core #98's Armor Up, patch v0.2.1, R651), and a discount
+// Flagbearer, SPEC §8.7) or until its next turn (Core #98's Armor Up, patch v0.2.1, R654), and a discount
 // on a random card of a hand (C+ #49 Jay Fungus).
 
 import { effectiveCost, isXCost } from "../mana";
@@ -25,7 +25,7 @@ export function gainHeroArmor(args: { amount: number; player?: PlayerSpec }): Ef
 }
 
 /**
- * R651, Core #98's Armor Up: "Your hero gains N Armor until your next turn" — the same per-hit
+ * R654, Core #98's Armor Up: "Your hero gains N Armor until your next turn" — the same per-hit
  * reduction, held as a `heroArmor` modifier on the player that ends as that player's next turn starts
  * (`modifiers.expireAtTurnStart`), so it covers the opponent's turn between and never touches the
  * Armor written on the hero. Its badge is the modifier's (R169).

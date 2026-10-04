@@ -216,12 +216,19 @@ export type StaticFlags = {
   // ---- v0.2.0 static flags, by workstream: instance data (B2.7, B3.3, B3.4, E38, E39) ----
   // ---- v0.2.0 static flags, by workstream: field (B3.1, E20, E21, E22) ----
   /**
-   * B5 E21, R446: "A Unit may be played on top of this" (Classic+ #33 Ivory Tower). While this backrow
-   * card acts in its zone, a Unit its controller plays may name that zone and stand on it: a Unit for
-   * every rule that can neither attack nor be attacked, with this card still acting beneath it
-   * (`zones.carrierZonesFor`, `zones.isCarried`).
+   * B5 E21, R446: "A Unit may be played on top of this". While this backrow card acts in its zone, a
+   * Unit its controller plays may name that zone and stand on it: a Unit for every rule that can
+   * neither attack nor be attacked, with this card still acting beneath it (`zones.carrierZonesFor`,
+   * `zones.isCarried`). No card prints it since patch v0.2.10; `fusesCarried` builds on it.
    */
   carrier?: boolean;
+  /**
+   * R653: "The first Unit you stack onto this is fused into it" (Classic+ #33 Ivory Tower). A carrier,
+   * as `carrier` is, that takes one Unit a stay on the field (`zones.stackedOnto` names it) and none
+   * while it is Immutable, whose text could take no Unit in (R23). The fusion is the card's own, once
+   * that Unit's play has resolved.
+   */
+  fusesCarried?: boolean;
   // ---- v0.2.0 static flags, by workstream: play pipeline (E1, E2, E5 targeting, E11, E12, E15) ----
   /**
    * Classic+ #68 Organic Produce: while on the field, every card its controller plays carrying one of

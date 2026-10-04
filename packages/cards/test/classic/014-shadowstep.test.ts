@@ -194,7 +194,7 @@ describe("C #14 Shadowstep", () => {
       expect(s.view("p2").opponent.hand).toEqual({ count: 3 });
     });
 
-    it("§3.2 R659 a stolen Unit you control that dies returns to your hand, as its current owner's", () => {
+    it("§3.2 R662 a stolen Unit you control that dies returns to your hand, as its current owner's", () => {
       const s = scenario({
         p1: { hand: [MIND_CONTROL, STOCKPILE], backrow: [{ def: SHADOWSTEP, faceUp: false }], library: [STOCKPILE] },
         p2: { hand: [BIG_FELINOR, STOCKPILE], field: [MENACE], library: [STOCKPILE, STOCKPILE] },
@@ -206,7 +206,7 @@ describe("C #14 Shadowstep", () => {
       s.play(BIG_FELINOR);
       expect(fired(s)).toBe(1);
       s.expectInZone(menace, "hand");
-      // "Return them to your hand": the thief's, its current owner since the steal (R659).
+      // "Return them to your hand": the thief's, its current owner since the steal (R662).
       expect(s.hand("p1").map((card) => card.id)).toContain(menace.id);
       expect(s.hand("p2").map((card) => card.id)).not.toContain(menace.id);
     });

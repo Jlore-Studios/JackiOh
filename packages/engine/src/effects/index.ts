@@ -192,7 +192,7 @@ export { cardsInCardScope, matchesCardScope, readersOf, unreadableBy } from "./c
 export type { CardScope, CardZone, Readers, ScopedCard } from "./cardScope";
 
 // Degrade and Upgrade (B3.4, R386, R440, R442), an Upgrade of a named number of the card's own (Core #98's
-// Steady Shot, R656), and KY's Constant's number set outright (Classic+ #41).
+// Steady Shot, R659), and KY's Constant's number set outright (Classic+ #41).
 export {
   NUMBER_CARD_KEY,
   applicableChanges,
@@ -336,7 +336,7 @@ export { destroyFieldSpellsAndHit, drawWhileCheap, fieldSpellsDoomed } from "./d
 export type { FieldSpellSide } from "./datacenter";
 
 // Classic+ #46–#61:
-// Armor a hero keeps for the game (C+ #46) or until its next turn (Core #98's Armor Up, R651), and a
+// Armor a hero keeps for the game (C+ #46) or until its next turn (Core #98's Armor Up, R654), and a
 // random hand card made cheaper (C+ #49).
 export { discountRandomInHand, gainHeroArmor, gainHeroArmorUntilNextTurn } from "./perks";
 
@@ -374,7 +374,8 @@ export {
 
 // B5 E34, R416: R29's scorer choosing a whole hand (C+ #27 Zephrys Zealotism).
 export { replaceHandWithPerfect } from "../subsystems/perfectHand";
-// R59: rounds of damage, each with its own state check, until a Unit dies (C+ #32.3 Blade Storm).
-export { damageRoundsUntilDeath } from "./rounds";
+// R59: rounds of damage, each with its own state check, until a Unit dies (C+ #32.3 Blade Storm);
+// R652: rounds that cast instead (its base face's Whirlwinds).
+export { castRoundsUntilDeath, damageRoundsUntilDeath } from "./rounds";
 // B5 E29, R419: return the board, or one side of it, to a snapshot of the last few turns (C+ #35 Rollback).
 export { rollBack } from "../subsystems/boardHistory";

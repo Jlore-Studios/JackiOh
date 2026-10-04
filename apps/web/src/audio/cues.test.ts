@@ -50,6 +50,7 @@ const LINES: VoiceLineTable = {
     "core-096": { kind: "trap", persona: "snob", cast: "Checkmate, puppet." },
     "core-t-sheep": { kind: "unit", persona: "sheep", play: "Baa?", death: "Baa..." },
   },
+  emotes: {},
 };
 
 /** A unit (#4), a Spell (#5), a Field Spell (#6), a Field Trap (#18), a Trap (#96), a token. */
@@ -448,7 +449,7 @@ describe("R204: which moments speak", () => {
   });
 
   it("R204 (B18) with an empty voice table nothing speaks, and a play still whooshes", () => {
-    const empty: VoiceLineTable = { version: 1, personas: {}, cards: {} };
+    const empty: VoiceLineTable = { version: 1, personas: {}, cards: {}, emotes: {} };
     expect(shape(played(UNIT), ctx({ lines: empty }))).toEqual([sfx("play")]);
     expect(shape(played(SPELL), ctx({ lines: empty }))).toEqual([sfx("play")]);
     expect(shape(destroyed(UNIT), ctx({ lines: empty }))).toEqual([sfx("death")]);

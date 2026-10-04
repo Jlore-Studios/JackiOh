@@ -102,7 +102,7 @@ describe("patch v0.2.1: each Heroic Power has its own art on the hero", () => {
     expect(screen.getByTestId(testid.power).querySelector(".power-title")).toHaveTextContent("Armor Up");
   });
 
-  it("R637 the tooltip and accessible name are the power as the catalog prints it, {shot} filled from the view", () => {
+  it("R659 the tooltip and accessible name are the power as the catalog prints it, {shot} filled from the view", () => {
     renderHero(viewWith([power({ name: "burn", ability: "burn", radiant: true, x: 1, params: { shot: 8 } })]));
     const button = screen.getByTestId(testid.power);
     const words = "Activate: Spend (1): Steady Shot: Deal 8 damage to the enemy hero. Upgrade this permanently by +2 damage.";
@@ -111,7 +111,7 @@ describe("patch v0.2.1: each Heroic Power has its own art on the hero", () => {
     expect(button.getAttribute("title")).not.toMatch(/[{}]/);
   });
 
-  it("R637 with no catalog loaded, the view's number still fills {shot}", () => {
+  it("R659 with no catalog loaded, the view's number still fills {shot}", () => {
     render(<Hero view={viewWith([power({ name: "burn", ability: "burn", x: 1, params: { shot: 2 } })])} side="you" />);
     expect(screen.getByTestId(testid.power).getAttribute("title")).toBe(
       "Activate: Spend (1): Steady Shot: Deal 2 damage to the enemy hero.",

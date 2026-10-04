@@ -162,7 +162,7 @@ export type ModifierExpiry =
   /** Lasts through that player's next turn; `fromTurn` is the turn it was created on (R48). */
   | { until: "nextTurnOf"; player: PlayerId; fromTurn: number }
   /**
-   * R651: "until your next turn" — ends as that player's next turn starts (`modifiers.expireAtTurnStart`);
+   * R654: "until your next turn" — ends as that player's next turn starts (`modifiers.expireAtTurnStart`);
    * `fromTurn` is the turn it was created on.
    */
   | { until: "startOfTurnOf"; player: PlayerId; fromTurn: number }
@@ -219,7 +219,7 @@ export type PlayerModifier = {
   | { kind: "healToDamage"; converterId: string }
   // ---- v0.2.1 modifier kinds ----
   /**
-   * R651: Core #98's Armor Up, "Your hero gains N Armor until your next turn" — §4.4 step 2's per-hit
+   * R654: Core #98's Armor Up, "Your hero gains N Armor until your next turn" — §4.4 step 2's per-hit
    * reduction on this player's hero while it lasts (`damage.heroArmorOf`), with a `startOfTurnOf`
    * expiry. Several stack, each its own modifier.
    */

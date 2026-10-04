@@ -1,11 +1,12 @@
 // T-AI-6 Datacenter Fire (SPEC §8.7 row T-AI-6, §7, B8). (2) Spell, AI, Token.
 //   Base:    "Destroy all Field Spells. Deal 1 damage to each hero for each one destroyed."
 //   Radiant: "Destroy all enemy Field Spells. Deal 2 damage to the enemy hero for each one destroyed."
-//   Engine:  "The Field Spells on both sides (Traps and Field Traps are not), an Ivory Tower beneath a
-//            Unit included (R418); Indestructible ones (#98) survive and don't count. The damage is one
-//            instance per hero, 1 (Radiant 2) times the count, through §4.4, so Spell Damage raises it
-//            once (§4.4 step 0); none destroyed, no damage. Its preview (R280) is the damage each hero
-//            would take now. The base face burns your own Claude's Datacenter too. Tunes: none."
+//   Engine:  "The Field Spells on both sides (Traps and Field Traps are not), an Ivory Tower included
+//            whatever it has fused (R418, R588); Indestructible ones (#98) survive and don't count. The
+//            damage is one instance per hero, 1 (Radiant 2) times the count, through §4.4, so Spell
+//            Damage raises it once (§4.4 step 0); none destroyed, no damage. Its preview (R280) is the
+//            damage each hero would take now. The base face burns your own Claude's Datacenter too
+//            while it stands in its backrow zone; animated, it is a Unit and stays (R588). Tunes: none."
 //
 // The sweep and the count are one engine verb (`destroyFieldSpellsAndHit`, effects/datacenter.ts), and
 // the preview reads the same count (`fieldSpellsDoomed`) off the public backrows, times the face's

@@ -382,7 +382,7 @@ describe("viewFor (§10.8, M3-T6)", () => {
     });
   });
 
-  it("R33 a stolen trap becomes visible to its thief and hidden from its previous controller, whose card it no longer is (R659)", () => {
+  it("R33 a stolen trap becomes visible to its thief and hidden from its previous controller, whose card it no longer is (R662)", () => {
     const state = game("r33-steal");
     const hidden = put(state, secretTrap.id, slot("p2", "backrow", 1));
 
@@ -393,7 +393,7 @@ describe("viewFor (§10.8, M3-T6)", () => {
 
     run(state, steal({ instanceId: hidden.id }), { controller: "p1" });
 
-    // R33's point: the view follows control, and current ownership moved with it (R659).
+    // R33's point: the view follows control, and current ownership moved with it (R662).
     expect(hidden.controller).toBe("p1");
     expect(hidden.owner).toBe("p1");
     expect(hidden.faceUp).toBeUndefined();

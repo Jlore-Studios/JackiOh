@@ -102,7 +102,7 @@ missing or malformed value rather than failing later at the first request.
 | `SUPABASE_SECRET_KEY` | yes | `sb_secret_…` (or the legacy `service_role` JWT). **Server only** — it bypasses every RLS policy. Never give it a `VITE_` alias |
 | `DATABASE_URL` | yes | Postgres connection string for the transactional work in §9.4 and §9.5 |
 | `CODE_PEPPER` | yes | ≥32 chars. Keys the HMAC over invite codes and IP addresses, so a stolen table cannot be brute-forced and no raw address is ever stored |
-| `CATALOG_VERSION` | yes | The latest patch's version, `v0.2.1` (R388). Must match what the client ships (`VITE_CATALOG_VERSION`), `CATALOG_VERSION` in `packages/cards`, and what `db:seed-catalog` stamped on `cards.catalog_version` and `app.settings` |
+| `CATALOG_VERSION` | yes | The latest patch's version, `v0.2.10` (R388). Must match what the client ships (`VITE_CATALOG_VERSION`), `CATALOG_VERSION` in `packages/cards`, and what `db:seed-catalog` stamped on `cards.catalog_version` and `app.settings` |
 | `SUPABASE_JWKS_URL` | no | Defaults to `${SUPABASE_URL}/auth/v1/.well-known/jwks.json` |
 | `SUPABASE_JWT_SECRET` | no | HS256 fallback, for a project not yet on asymmetric signing keys. Discouraged |
 | `PORT` | no | Defaults to 8787 |
@@ -241,6 +241,8 @@ Properties the actor holds, each with a test named after it:
 - Every resolved action is appended to `match_actions`. A crashed or evicted actor rebuilds itself
   by folding `(seed, decks, log)` — a reconnect gets a fresh full view, never a log replay (§9.5).
   A match whose setup took last boards (below) folds with the boards frozen into it at its start.
+  An All Random match (R258) folds, as it started, with both seats dealt (R433), read off the
+  match's mode (`matches.modeOf`), so neither player's deck pile lists a card they were not shown.
 
 ### Last boards (C+ #29 Portal to the Past, R417)
 

@@ -19,7 +19,7 @@
 // Radiant, after the same check: each of those Units that had a token, is not a token (R11: a token is
 // gone) and now lies in a graveyard — not one Reborn already put back on the field, not one exiled
 // instead of dying — is summoned for the caster (§6.3 Summon: no Cry, R1; it becomes the caster's card
-// as it reaches the caster's side, R12, R659),
+// as it reaches the caster's side, R12, R662),
 // in the order they stood on the board (R68: the active side first, lane order), each into the
 // caster's leftmost open zone (R64); a full row leaves the rest where they are. The rest of the text
 // runs on a stay that begins after the check (R174), which is what lets it name a card in its

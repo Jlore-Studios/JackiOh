@@ -19,7 +19,12 @@ export function rowSize(row: Row): number {
 }
 
 export function slotsOf(player: PlayerId, row: Row): ZoneSlot[] {
-  return Array.from({ length: rowSize(row) }, (_, i) => ({ player, row, lane: i + 1 }));
+  // A loop, not `Array.from({ length })`: every unit read asks for slots through the layers, and
+  // Array.from's generic path was a fifth of a long AI gate game's time (#188).
+  const size = rowSize(row);
+  const slots: ZoneSlot[] = [];
+  for (let lane = 1; lane <= size; lane += 1) slots.push({ player, row, lane });
+  return slots;
 }
 
 /** §3.1: lane N-1 and N+1 on the same side and row, never across sides. */
@@ -104,12 +109,26 @@ export function carriedAt(state: GameState, ref: ZoneSlot): CardInstance | null 
 }
 
 /**
- * B5 E21, R446: a backrow card whose text lets a Unit be played on top of it (Classic+ #33 Ivory
- * Tower's `staticFlags.carrier`). The flag is the card's text, so a Vanilla carrier carries nothing
- * more (§6.3, R115: `flagsOf` reads nothing off a Vanilla instance).
+ * B5 E21, R446: a backrow card whose text lets a Unit be played on top of it (`staticFlags.carrier`,
+ * or Classic+ #33 Ivory Tower's `fusesCarried`, R653). The flag is the card's text, so a Vanilla
+ * carrier carries nothing more (§6.3, R115: `flagsOf` reads nothing off a Vanilla instance).
  */
 export function isCarrier(card: CardInstance): boolean {
-  return flagsOf(card).carrier === true;
+  const flags = flagsOf(card);
+  return flags.carrier === true || flags.fusesCarried === true;
+}
+
+/**
+ * R653: where a carrier that fuses its Unit (`fusesCarried`) notes the Unit stacked onto it, by id, for
+ * the rest of its stay. Memory, so R78 clears it when the card leaves the field, and a Fuse that keeps
+ * the carrier keeps it (R77: it is the engine's entry, not a text's).
+ */
+const STACKED_KEY = "__stacked";
+
+/** R653: the id of the Unit stacked onto this `fusesCarried` carrier on this stay, or null if none yet. */
+export function stackedOnto(card: CardInstance): string | null {
+  const id = card.memory[STACKED_KEY];
+  return typeof id === "string" ? id : null;
 }
 
 /** R446: whether this card is a Unit standing on a carrier in a backrow zone. */
@@ -140,6 +159,7 @@ export function whyCannotCarry(state: GameState, ref: ZoneSlot): string | null {
   const top = cardAt(state, ref);
   if (top === null || !isCarrier(top)) return "that zone holds no card a Unit may be played on top of";
   if (carriedAt(state, ref) !== null) return "that card already carries a Unit";
+  if (flagsOf(top).fusesCarried === true && stackedOnto(top) !== null) return "that card has taken its one Unit";
   if (isLocked(state, ref)) return "that zone is Locked";
   if (isReserved(state, ref)) return "that zone is held for a card's return";
   return null;
@@ -290,6 +310,8 @@ export function placeOnField(
     if (top === null || carriedAt(state, ref) !== null) return false;
     if (!isCarrier(top) && options.stack !== true) return false;
     setCarried(side, ref.lane, instance);
+    // R653: the first Unit to stand on a carrier that fuses its Unit is the one it takes this stay.
+    if (flagsOf(top).fusesCarried === true && stackedOnto(top) === null) top.memory[STACKED_KEY] = instance.id;
   } else {
     // B5 E21: a Stack card may top an occupied backrow zone as it may a unit zone; the card beneath
     // goes dormant (§3.2). A zone carrying a Unit takes nothing more (R446).
@@ -301,7 +323,7 @@ export function placeOnField(
     side.backrow[ref.lane - 1] = instance;
   }
 
-  // R12/R659: a card's current owner follows the side that receives it on the field. Keeping the
+  // R12/R662: a card's current owner follows the side that receives it on the field. Keeping the
   // two aligned here gives every later bounce, graveyard, exile and library move the normal zone
   // routing without an original-owner exception at each departure.
   instance.owner = ref.player;
@@ -711,11 +733,16 @@ export function moveToZone(
  * Units its carriers hold, in backrow lane order — a carried Unit is a Unit for every rule (R446).
  */
 export function activeUnitsOf(state: GameState, player: PlayerId): CardInstance[] {
-  const tops = slotsOf(player, "units").flatMap((ref) => {
-    const card = cardAt(state, ref);
-    return card === null ? [] : [card];
-  });
-  return [...tops, ...carriedUnitsOf(state, player)];
+  // Read straight off the rows, not through `slotsOf` and `cardAt`: the auras ask for this on every
+  // unit read (`layers.auraSources`), so it builds nothing it does not return (#188).
+  const side = state.players[player];
+  const units: CardInstance[] = [];
+  for (let lane = 1; lane <= UNIT_ZONES; lane += 1) {
+    const top = side.units[lane - 1]?.[0] ?? null;
+    if (top !== null) units.push(top);
+  }
+  for (const card of side.carried ?? []) if (card !== null) units.push(card);
+  return units;
 }
 
 export function dormantUnitsOf(state: GameState, player: PlayerId): CardInstance[] {

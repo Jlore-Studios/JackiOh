@@ -312,7 +312,7 @@ describe("R384 Heroic Power is built through the same activation", () => {
 
 describe("R43 patch v0.2.1: a Heroic Power is its card's Activate ability, built and aimed from the hero", () => {
   // As `viewFor` gives it: the power on the hero, and the #98 card in the backrow listing the one
-  // ability it rolled (R384). `legalActions` lists one `activate` per target Ping may declare (R635).
+  // ability it rolled (R384). `legalActions` lists one `activate` per target Ping may declare (R657).
   const ping = { ...heroPower, name: "ping", ability: "ping", x: 1 };
   const PING_ABILITY: ActivationView = { ability: "ping", label: "Ping: Pierce. Deal 1 damage", usesLeft: 1, usable: true };
   const powerPing = (target: Selection): ActivationBody => ({ type: "activate", instanceId: "power-1", ability: "ping", targets: [target] });
@@ -342,7 +342,7 @@ describe("R43 patch v0.2.1: a Heroic Power is its card's Activate ability, built
     expect(activationControlTestids(pingView(), powerPing(heroP2))[0]).toBe(testid.power);
   });
 
-  it("R635 the power's press waits for a target, and a click on one sends the listed `activate` with it", () => {
+  it("R657 the power's press waits for a target, and a click on one sends the listed `activate` with it", () => {
     const view = pingView();
     const pressed = onClickTarget(view, legal, IDLE, { on: "activate", instanceId: "power-1" });
     expect(pressed.action).toBeUndefined();

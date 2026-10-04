@@ -9,7 +9,7 @@
 //    `effects/targets.ts`, which asks `effectIsFromSpell` for every card a single target or a scope
 //    names, so every verb written in that vocabulary passes an immune unit by.
 //  * The attack restrictions: can't be attacked (Classic+ #51), attacked only from its own lane
-//    (Classic+ #19.1), can't attack or be attacked (Classic+ #33's carried Unit). `combat.ts` asks
+//    (Classic+ #19.1), can't attack or be attacked (a carried Unit, R446). `combat.ts` asks
 //    `attackRestriction` for a declared attack (§4.2 step 2), for the Taunt wall (step 3: a Taunt
 //    binds only the attackers that may attack it) and for every forced attack, which skips steps 1 to
 //    3 (R53) but not these.

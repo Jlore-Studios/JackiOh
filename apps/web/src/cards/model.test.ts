@@ -471,7 +471,7 @@ describe("a face in play is the card as the view says it stands; the collection'
     expect(f.printed?.full).toBe(fillParams(def("core-098"), "radiant"));
   });
 
-  it("R637 Steady Shot's {shot} reads the view's number, and an Upgraded one is marked where it stands", () => {
+  it("R659 Steady Shot's {shot} reads the view's number, and an Upgraded one is marked where it stands", () => {
     const base = face("core-098", false, { liveCost: 0, inPlay: { power: { name: "burn", x: 1 }, params: { shot: 2 } } });
     expect(base.text.full).toBe("Indestructible\nActivate: Spend (1): Steady Shot: Deal 2 damage to the enemy hero.");
     expect(base.text.tuned ?? []).toEqual([]);

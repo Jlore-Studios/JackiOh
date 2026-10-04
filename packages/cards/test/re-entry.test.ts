@@ -329,7 +329,7 @@ describe("§8 #52, R4, R78: a rider on a card that never reached the hand", () =
     });
     const seven = g.card(SEVEN_SEVEN);
 
-    // p1 steals the 7/7 into its own lane 1 (R15), and is its current owner from then on (R659).
+    // p1 steals the 7/7 into its own lane 1 (R15), and is its current owner from then on (R662).
     // Rotating left, p1's lane 1 would move to p2's lane 1 — to the opponent — so radiant Silas
     // bounces it to its owner's hand "costing 0" (R12), p1's, but that hand is full, so it is burned
     // into p1's graveyard instead (§2.4, R4).

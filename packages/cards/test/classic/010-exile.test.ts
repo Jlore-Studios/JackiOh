@@ -1,8 +1,8 @@
 // C #10 Exile — SPEC §8.6 row 10, BUILD M9 Classic row C 10: "Face-down (R33); fires on the opponent's
-// play of a card whose cost paid is (1) or less (R56), so a free cast always qualifies (R70), in the
+// play of a card whose cost paid is (2) or less (R56), so a free cast always qualifies (R70), in the
 // announce window before the card moves (§10.5); counters it: it never resolves or enters the field,
 // no Cry, not counted as played by the turn's or the game's counts, Combo, Quickstriker or Ceaseless
-// Void, its mana and Tributes stay spent, and it goes to exile, not the graveyard; a (2)+ Cost play
+// Void, its mana and Tributes stay spent, and it goes to exile, not the graveyard; a (3)+ Cost play
 // and your own plays leave it set; a face-down set is announced to the opponent by its zone and cost
 // only (§10.5 step 3a), so their `cardAnnounced` names no card and the exile then shows the card;
 // radiant: (3) or less, then exile random enemy permanents one at a time, each with a cost (R65 on the
@@ -117,12 +117,21 @@ describe("C #10 Exile", () => {
       expect(s.state.players.p1.mana.nextTurnMod).toBe(0);
     });
 
-    it("R56 a (2) Cost play leaves it set", () => {
+    it("R56 a (2) Cost play is countered and exiled too", () => {
       const s = setup();
 
       s.play(POINTMASTER, { zone: 1 });
 
-      s.expectInZone(POINTMASTER, "field");
+      s.expectInZone(POINTMASTER, "exile");
+      s.expectEvents("cardAnnounced", "trapFired", "countered", "exiled");
+    });
+
+    it("R56 a (3) Cost play leaves it set", () => {
+      const s = setup({ hand: [MENACE, VANILLA] });
+
+      s.play(MENACE, { zone: 1 });
+
+      s.expectInZone(MENACE, "field");
       expect(count(s.events, "countered")).toBe(0);
       expect(s.backrow("p1", 2)?.faceUp).toBe(false);
     });
@@ -163,13 +172,13 @@ describe("C #10 Exile", () => {
       expect(s.pile("p2", "exile").map((card) => card.defId)).toEqual([BEAR]);
     });
 
-    it("R386 an Upgrade of its threshold reaches a (2) Cost play", () => {
-      const s = setup();
+    it("R386 an Upgrade of its threshold reaches a (3) Cost play", () => {
+      const s = setup({ hand: [MENACE, VANILLA] });
       stepParam(s.card(EXILE), "threshold", 1);
 
-      s.play(POINTMASTER, { zone: 1 });
+      s.play(MENACE, { zone: 1 });
 
-      s.expectInZone(POINTMASTER, "exile");
+      s.expectInZone(MENACE, "exile");
     });
   });
 

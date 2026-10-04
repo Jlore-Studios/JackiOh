@@ -25,7 +25,8 @@ place. With one user per subscription, a session can read only its own login and
 only in its own home, and its runner, labelled with its id alone, takes only its jobs. A Claude
 account's token comes from its GitHub secret, handed to that job alone, and is never written to
 the home. At most `machine_parallel` (6) jobs run here at once, each as its own user; Devin has
-`"lanes": 6`, so Devin can fill the machine on its six runners when the others are idle.
+`"lanes": 6`, so Devin can fill the machine on its six runners when the others are idle, and Muse
+has two (`night-vm-muse` and `night-vm-muse-2`, both under `agent-muse` and its one login).
 
 Every repository workflow could ask for these labels, so the repository makes outside
 contributors' pull requests wait for approval before any workflow runs (Settings → Actions →
@@ -87,7 +88,10 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 - **Disk:** each job's files, the user's package store, Cypress's binary and what the job left in
   `/tmp` are deleted when the job ends
   (`/usr/local/bin/night-vm-job-done.sh`, the runners' job-completed hook); the checkout and the
-  logins stay. `CYPRESS_INSTALL_BINARY=0` keeps `pnpm install` from fetching Cypress's 800 MB binary
+  logins stay. A user with another job still going (Devin's or Muse's other lanes) keeps its
+  package store, and `/tmp` leftovers go once older than any job (6 hours). Muse's own session
+  logs (a few hundred MB a day) go once untouched for 8 hours. The 30 GB disk was 95% full on
+  2026-10-04 before Muse's logs were pruned. `CYPRESS_INSTALL_BINARY=0` keeps `pnpm install` from fetching Cypress's 800 MB binary
   at all, since the bot's checks never run e2e.
 - **How many at once:** six machine jobs (`machine_parallel`), because a job here runs only the
   light checks. The load is each job's checks, not its model: on 2026-10-02 three jobs running

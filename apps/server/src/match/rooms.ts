@@ -27,6 +27,7 @@ import {
   readModeChoice,
   type FrozenChoice,
 } from "../api/decks";
+import { pickPortraitFromSeed } from "@jackioh/shared";
 import { normalizeCode, isWellFormedCode } from "../api/crypto";
 import { ApiError, ok, route, type ApiRequest, type Route } from "../api/http";
 import { seedOverrideOf } from "../api/queue";
@@ -160,15 +161,36 @@ function roomSeats(
 ): [MatchSeat, MatchSeat] {
   if (room.mode === "random") {
     // R258: dealt from the match seed and the seat, and frozen into the match row like any deck.
+    // R642: the portraits are dealt the same way, uniformly and seat by seat.
     return [
-      { profileId: room.hostProfileId, player: "p1", deck: deps.dealRandomDeck(`${seed}:p1-deck`) },
-      { profileId: joinerId, player: "p2", deck: deps.dealRandomDeck(`${seed}:p2-deck`) },
+      {
+        profileId: room.hostProfileId,
+        player: "p1",
+        deck: deps.dealRandomDeck(`${seed}:p1-deck`),
+        portrait: pickPortraitFromSeed(`${seed}:portrait:p1`),
+      },
+      {
+        profileId: joinerId,
+        player: "p2",
+        deck: deps.dealRandomDeck(`${seed}:p2-deck`),
+        portrait: pickPortraitFromSeed(`${seed}:portrait:p2`),
+      },
     ];
   }
   if (joiner.mode !== "bo1") throw new Error(`a ${joiner.mode} choice reached a Best-of-1 room`);
   return [
-    { profileId: room.hostProfileId, player: "p1", deck: [...room.hostDeck] },
-    { profileId: joinerId, player: "p2", deck: [...joiner.deck.cards] },
+    {
+      profileId: room.hostProfileId,
+      player: "p1",
+      deck: [...room.hostDeck],
+      portrait: room.hostPortrait ?? undefined,
+    },
+    {
+      profileId: joinerId,
+      player: "p2",
+      deck: [...joiner.deck.cards],
+      portrait: joiner.deck.portrait ?? undefined,
+    },
   ];
 }
 
@@ -201,6 +223,7 @@ export function createRoomRoutes(): Route[] {
         mode: frozen.mode,
         // §9.4, §9.5: the deck or the trio is frozen here, exactly as it is into a queue ticket.
         hostDeck: frozen.mode === "bo1" ? [...frozen.deck.cards] : [],
+        hostPortrait: frozen.mode === "bo1" ? (frozen.deck.portrait ?? null) : null,
         hostTrio: frozen.mode === "bo3" ? frozen.trio : null,
         catalogVersion: deps.catalog.version,
         createdAt: now,

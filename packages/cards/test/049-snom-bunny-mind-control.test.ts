@@ -44,7 +44,7 @@ describe("#49 Snom Bunny Mind Control", () => {
 
     expect(g.unit("p1", 3)?.id).toBe(prey.id);
     expect(g.unit("p2", 3)).toBeNull();
-    // R12, R659: the thief is its controller and its current owner.
+    // R12, R662: the thief is its controller and its current owner.
     expect(g.card(prey).controller).toBe("p1");
     expect(g.card(prey).owner).toBe("p1");
     g.expectEvents("cardPlayed", "controlChanged", "enteredGraveyard");

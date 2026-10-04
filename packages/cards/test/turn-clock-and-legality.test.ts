@@ -249,7 +249,7 @@ describe("§10.6: a prompt's options can each be picked through the view", () =>
   it("§10.6 a target prompt's options have distinct keys, so each of two same-named units can be picked (§10.8, R81, R103)", () => {
     // Two Duplicating Felinors — #12's own copy makes this an ordinary board — and a Radiant C #40 MC
     // Tech, whose "steal one of your choice" opens a target prompt as its Cry resolves (§10.6). (#98's
-    // Ping declares its target with the activation since patch v0.2.1, R654, so it no longer asks.)
+    // Ping declares its target with the activation since patch v0.2.1, R657, so it no longer asks.)
     const s = scenario({
       seed: "inv-r4-prompt-keys",
       p1: { hand: [{ def: MC_TECH, radiant: true }, RENO], mana: 8 },

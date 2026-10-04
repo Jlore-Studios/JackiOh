@@ -10,7 +10,7 @@
 // Felinor under #92 Felinor Fiender (a Stack pile), #3 Right-house defender (Reborn), #49 Snom Bunny Mind
 // Control, #63 Plastic Surgery (a buff and a keyword), #66 The Rock (Radiant: Indestructible, Immutable),
 // #83 Transmogulate, #85 Unlicensed Experimentation, the Rush Token, C+ #12.8 Frostspatula ("Animated on
-// your turn") and C+ #33 Ivory Tower (a carried Unit).
+// your turn") and C+ #33 Ivory Tower (a Field Spell that fuses the first Unit stacked onto it).
 
 import { describe, expect, it } from "vitest";
 import type { Action, ActionInput, GameEvent, PlayerId } from "@jackioh/shared";
@@ -25,6 +25,7 @@ import {
   legalActions,
   reduce,
   seatToAct,
+  stackedOnto,
   subsystems,
   type GameState,
 } from "@jackioh/engine";
@@ -306,32 +307,24 @@ describe("C+ #35 Rollback — base: both sides", () => {
     expect(s.stats(late).attack).toBe(s.stats(early).attack - 3);
   });
 
-  it("R419 R566 a Unit an Ivory Tower carried goes back onto it: the Tower out of the graveyard, its Lock lifted, the Unit moved along its side", () => {
+  it("R419 R566 an Ivory Tower that has fused a Unit in since goes back as it stood: unfused, ready to take a Unit (R653)", () => {
     const s = onTurn11({
       p1: { hand: [ROLLBACK, TOKEN_MAKER], field: [VANILLA], backrow: [{ def: TOWER, lane: 2 }] },
-      p2: { hand: [MAGIC_JAMMED], field: [TIMMY] },
+      p2: { field: [TIMMY] },
     });
-    const carrierZone = { player: "p1", row: "backrow", lane: 2 } as const;
-    s.play(TOKEN_MAKER, { zone: 2, row: "backrow" });
     const tower = s.backrow("p1", 2)!;
-    const rider = carriedAt(s.state, carrierZone)!;
-    expect(rider.defId).toBe(TOKEN_MAKER);
-    s.endTurn(); // turn 12's snapshot: the Tower carrying it
-    // The Tower to the graveyard and its zone Locked; the Unit steps down into a unit zone (R446).
-    s.play(MAGIC_JAMMED, { targets: target(tower.id) });
-    s.expectInZone(tower, "graveyard");
-    expect(carriedAt(s.state, carrierZone)).toBeNull();
-    expect(s.state.players.p1.units.flat().some((card) => card?.id === rider.id)).toBe(true);
-    s.endTurn();
+    s.play(TOKEN_MAKER, { zone: 2, row: "backrow" });
+    // R653: once its play resolved, Me and Mr Token was fused into the Tower.
+    expect(s.card(tower.id).defId).not.toBe(TOWER);
+    expect(carriedAt(s.state, { player: "p1", row: "backrow", lane: 2 })).toBeNull();
+    s.endTurn().endTurn();
 
-    s.play(ROLLBACK, { modes: ["1"] });
+    s.play(ROLLBACK, { modes: ["2"] }); // turn 13 → the start of turn 11, before the fusion
     expect(s.backrow("p1", 2)?.id).toBe(tower.id);
-    expect(carriedAt(s.state, carrierZone)?.id).toBe(rider.id);
-    expect(s.state.players.p1.units.flat().some((card) => card?.id === rider.id)).toBe(false);
-    expect(s.state.players.p1.locks.backrow[1]).toBe(false);
-    expect(ofType(s.lastEvents, "unlocked")).toEqual([{ type: "unlocked", player: "p1", row: "backrow", lane: 2 }]);
-    // The Tower entered from the graveyard; the Unit never left the side (R566).
-    expect(ofType(s.lastEvents, "controlChanged").map((event) => event.instanceId)).toEqual([tower.id]);
+    expect(s.backrow("p1", 2)?.defId).toBe(TOWER);
+    expect(stackedOnto(s.card(tower.id))).toBeNull();
+    // It stood on the same side and kept its id, so `rolledBack` alone reports it (R566).
+    expect(ofType(s.lastEvents, "controlChanged").map((event) => event.instanceId)).not.toContain(tower.id);
   });
 
   it("R419 step 2: from a hand, a graveyard and exile — no Cry for a card that comes back (R1)", () => {
@@ -384,7 +377,7 @@ describe("C+ #35 Rollback — base: both sides", () => {
     const timmy = s.unit("p2", 1)!;
     s.play(MIND_CONTROL, { targets: target(timmy.id) });
     s.endTurn(); // turn 12's snapshot holds Timmy on p1's side
-    s.play(FLOOD); // back to its current owner, p1, since the steal (R659); the turn has nothing left (R82)
+    s.play(FLOOD); // back to its current owner, p1, since the steal (R662); the turn has nothing left (R82)
     s.expectInZone(timmy, "hand");
     expect(s.hand("p1").map((card) => card.id)).toContain(timmy.id);
     expect(s.state.turn).toBe(13);
@@ -643,7 +636,7 @@ describe("C+ #35 Rollback — Radiant: your side, your opponent's or both", () =
     toTurn13(s);
     s.play(ROLLBACK, { modes: ["2", "your side"] });
     // p1's side as it was holds no Timmy, and p2's side is not restored: it goes to its owner's hand,
-    // p1's since the steal (R659).
+    // p1's since the steal (R662).
     expect(s.hand("p1").map((card) => card.id)).toContain(timmy.id);
     expect(s.hand("p2").map((card) => card.id)).not.toContain(timmy.id);
   });

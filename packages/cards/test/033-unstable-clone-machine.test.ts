@@ -11,7 +11,8 @@
 
 import { describe, expect, it } from "vitest";
 import { scenario } from "./_harness";
-import { LIBRARY_CAP, type CardInstance } from "@jackioh/engine";
+import { expectAnimated } from "./_animated";
+import { LIBRARY_CAP, subsystems, type CardInstance } from "@jackioh/engine";
 
 /** The copies of one def sitting in a library. */
 function copiesIn(cards: CardInstance[], defId: string): CardInstance[] {
@@ -282,16 +283,41 @@ describe("R119: a permanent does not answer the play that put it onto the field"
 
     s.play(pileOn);
 
-    // The Recruit put the Clone Machine on p1's backrow while Pile On's play was resolving.
-    const backrow = [1, 2, 3, 4, 5].flatMap((lane) => {
-      const card = s.backrow("p1", lane);
-      return card === null ? [] : [card.defId];
-    });
-    expect(backrow).toContain("core-033");
+    // Playing it activated the power once (R43): the Recruit put the Clone Machine on p1's field while
+    // the Heroic Power's play was resolving, where it animated (patch v0.2.10, R383).
+    const field = [1, 2, 3, 4, 5].flatMap((lane) =>
+      [s.unit("p1", lane), s.backrow("p1", lane)].flatMap((card) => (card === null ? [] : [card.defId])),
+    );
+    expect(field).toContain("core-033");
     // R119: "does not fire on the play that put it onto the field: it starts counting from the next
     // play". No copies of Pile On are shuffled in: the one in the library is Pile On itself, which
     // goes to the bottom of the deck instead of the graveyard.
     expect(copiesIn(s.pile("p1", "library"), "classic-060").map((card) => card.id)).toEqual([pileOn.id]);
+  });
+
+  it("R119 a Clone Machine a Heroic Power's Recruit put on the field does not answer that play", () => {
+    const s = scenario({
+      seed: "edge-r8-hp-clone",
+      p1: { hand: ["core-098", "core-008"], library: ["core-033", "core-008", "core-008", "core-008"], mana: 8 },
+      p2: { hand: ["core-008"], library: ["core-008", "core-008", "core-008", "core-008", "core-008", "core-008"] },
+    });
+    // R43: the power lives on the instance; "(3) Recruit a permanent". Since patch v0.2.1 playing
+    // the power's card activates nothing, so the Recruit is activated after the play.
+    const hp = s.hand("p1")[0];
+    if (hp === undefined) throw new Error("expected the Heroic Power in hand");
+    hp.memory[subsystems.POWER_KEY] = "recruit";
+
+    s.play(hp);
+    s.activate(hp);
+
+    // The Recruit put the Clone Machine on p1's field, where it animated (patch v0.2.10, R383).
+    const field = [1, 2, 3, 4, 5].flatMap((lane) =>
+      [s.unit("p1", lane), s.backrow("p1", lane)].flatMap((card) => (card === null ? [] : [card.defId])),
+    );
+    expect(field).toContain("core-033");
+    // R119: "does not fire on the play that put it onto the field: it starts counting from the next
+    // play". No copies of the Heroic Power are shuffled in.
+    expect(copiesIn(s.pile("p1", "library"), "core-098")).toHaveLength(0);
   });
 });
 
@@ -313,5 +339,29 @@ describe("#33 Unstable Clone Machine — R311 the owner's library list", () => {
     // p2 reads p1's library as a count and nothing else.
     expect(s.view("p2").opponent.ownLibrary).toBeUndefined();
     expect(s.view("p2").opponent.libraryCount).toBe(4);
+  });
+});
+
+describe("#33 Unstable Clone Machine: Animated (patch v0.2.10)", () => {
+  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 2/3 Unit; with none open it stays a Field Spell", () => {
+    expectAnimated({ def: "core-033", stats: { attack: 2, health: 3 } });
+  });
+
+  it("R383 radiant: a 4/6 Unit", () => {
+    expectAnimated({ def: "core-033", radiant: true, stats: { attack: 4, health: 6 } });
+  });
+
+  it("R383 played, it keeps its text as a Unit: the next play still shuffles 3 copies in", () => {
+    const s = scenario({
+      seed: "clone-animated",
+      p1: { hand: ["33", "15"], library: [] },
+      p2: { field: ["15"] },
+    });
+
+    s.play("33", { zone: 3 });
+    expect(s.unit("p1", 3)?.defId).toBe("core-033");
+    s.play("15");
+
+    expect(copiesIn(s.pile("p1", "library"), "core-015")).toHaveLength(3);
   });
 });

@@ -102,7 +102,7 @@ const TURTLE_U1: ActionBody = { type: "activate", instanceId: "act2", ability: "
 const TURTLE_U2: ActionBody = { type: "activate", instanceId: "act2", ability: "turtle", tributes: ["u2"], targets: [at("e1")] };
 
 /**
- * Patch v0.2.1 (R43, R635): a Ping Heroic Power, whose power is the card's one Activate ability
+ * Patch v0.2.1 (R43, R657): a Ping Heroic Power, whose power is the card's one Activate ability
  * `ping`, its target (any unit or hero) declared in the `activate` that `legalActions` lists — one
  * body per target, as the engine lists them.
  */
@@ -365,7 +365,7 @@ describe("R384 Heroic Power works through the same build", () => {
     expect(onAction).toHaveBeenCalledWith(body);
   });
 
-  it("R635 Ping: a press waits for its target, the targets light, and a click on an enemy unit sends that `activate`", () => {
+  it("R657 Ping: a press waits for its target, the targets light, and a click on an enemy unit sends that `activate`", () => {
     const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
 
     fireEvent.click(el(testid.power));
@@ -382,7 +382,7 @@ describe("R384 Heroic Power works through the same build", () => {
     expect(onAction).toHaveBeenCalledWith(powerPing(at("e2")));
   });
 
-  it("R635 Ping: a click on either hero sends the `activate` naming that hero", () => {
+  it("R657 Ping: a click on either hero sends the `activate` naming that hero", () => {
     const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
 
     fireEvent.click(el(testid.power));
@@ -395,7 +395,7 @@ describe("R384 Heroic Power works through the same build", () => {
     expect(onAction).toHaveBeenCalledTimes(2);
   });
 
-  it("R635 Ping: a second press on the power puts it down and sends nothing", () => {
+  it("R657 Ping: a second press on the power puts it down and sends nothing", () => {
     const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
 
     fireEvent.click(el(testid.power));
@@ -470,7 +470,7 @@ describe("R510 an activation is dragged from its control onto its target", () =>
     expect(onAction).toHaveBeenCalledWith(legal[0]);
   });
 
-  it("R635 patch v0.2.1: Ping is dragged from the power on the hero to an enemy unit, and the release sends that `activate`", () => {
+  it("R657 patch v0.2.1: Ping is dragged from the power on the hero to an enemy unit, and the release sends that `activate`", () => {
     const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
 
     drag(el(testid.power), el(testid.card("e1")));
@@ -486,7 +486,7 @@ describe("R510 an activation is dragged from its control onto its target", () =>
     expect(onAction).toHaveBeenCalledWith(powerPing(at("e1")));
   });
 
-  it("R635 patch v0.2.1: Ping is dragged from the power to the enemy hero", () => {
+  it("R657 patch v0.2.1: Ping is dragged from the power to the enemy hero", () => {
     const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
 
     drag(el(testid.power), el(testid.hero("opponent")));

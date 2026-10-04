@@ -156,7 +156,7 @@ const goingLongScripts: CardScripts = {
 
 /**
  * #98 Heroic Power as patch v0.2.1 wires it (R43): costs (0), rolls one of the thirteen powers at start
- * of game, and has that power as its one Activate ability. It declares Steady Shot's number (R637).
+ * of game, and has that power as its one Activate ability. It declares Steady Shot's number (R659).
  */
 export const HERO_POWERS = HERO_POWER_NAMES;
 export const heroicPower = def({

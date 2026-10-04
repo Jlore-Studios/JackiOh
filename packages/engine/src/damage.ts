@@ -54,7 +54,7 @@ function controllerOf(target: DamageTarget): PlayerId {
 /**
  * §4.4 step 2 for a hero: the Armor written on the hero itself, plus every backrow card that grants
  * it (#84 Going Long), each contributing the `HERO_ARMOR` value its own face and price select, plus
- * the Armor its player holds "until your next turn" (#98's Armor Up, a `heroArmor` modifier, R651).
+ * the Armor its player holds "until your next turn" (#98's Armor Up, a `heroArmor` modifier, R654).
  *
  * R124: hero Armor from several sources **adds up**, exactly as §6.2's Armor stacks on a unit
  * (printed + Defense +1 + auras) — two Going Longs paid 2 are Armor 4. That is deliberately the
@@ -66,7 +66,7 @@ function controllerOf(target: DamageTarget): PlayerId {
  * `subsystems/scorer` and §10.8's hero block — so no projection can disagree with the hit (R44).
  */
 export function heroArmorOf(state: GameState, player: PlayerId): number {
-  // R651: Armor "until your next turn" (#98's Armor Up) is a modifier on the player, summed in while it lasts.
+  // R654: Armor "until your next turn" (#98's Armor Up) is a modifier on the player, summed in while it lasts.
   const lasting = state.players[player].mods.reduce(
     (sum, mod) => (mod.kind === "heroArmor" ? sum + Math.max(0, Math.trunc(mod.amount)) : sum),
     0,
@@ -110,16 +110,14 @@ function heroGuardsOf(state: GameState, player: PlayerId): { cap?: number; divis
 }
 
 /**
- * §4.4 step 3: the smallest hero cap on offer — any Anti-oneshot Armor this player controls, and every
+ * §4.4 step 3: the smallest hero cap on offer — any Anti-oneshot Armor acting on this player's side,
+ * in its backrow zone or animated into a unit zone (R383: it keeps all of its text), and every
  * per-hit cap its cards set (E6, Classic+ #11 Anime Armor's 1): the lowest cap wins.
  */
 export function heroDamageCap(state: GameState, player: PlayerId): number | null {
-  const oneshot = slotsOf(player, "backrow")
-    .map((ref) => cardAt(state, ref))
-    .flatMap((card) => {
-      if (card === null || flagsOf(card).antiOneshot !== true) return [];
-      return [card.radiant ? ANTI_ONESHOT_CAP.radiant : ANTI_ONESHOT_CAP.base];
-    });
+  const oneshot = actingTextsOf(state, player).flatMap((card) =>
+    flagsOf(card).antiOneshot === true ? [card.radiant ? ANTI_ONESHOT_CAP.radiant : ANTI_ONESHOT_CAP.base] : [],
+  );
   const guarded = heroGuardsOf(state, player).flatMap((guard) =>
     guard.cap === undefined ? [] : [Math.max(0, Math.trunc(guard.cap))],
   );

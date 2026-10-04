@@ -23,7 +23,7 @@
 //
 // THE RADIANT RECRUIT is the engine's E25 `recruit({ from: "exile", whose: "enemy" })`: their exile
 // scanned newest first for a permanent (never a Spell), summoned on your side under your control and
-// yours from then on (R12, R659) (a Unit to your leftmost open unit zone, a Trap face-down to your backrow, read by
+// yours from then on (R12, R662) (a Unit to your leftmost open unit zone, a Trap face-down to your backrow, read by
 // you alone, R33); with no open zone for it, or no permanent there, nothing is recruited. A Unit it
 // recruited then makes one forced attack on the enemy hero (`forcedAttacks` over the units of its
 // definition this list summoned, R53): no Taunt, position or summoning sickness stops it, and it spends

@@ -237,7 +237,7 @@ describe("bounce (§6.3, M3-T1)", () => {
     expect(eventsOfType(events, "enteredGraveyard").map((e) => e.instanceId)).toEqual([victim.id]);
   });
 
-  it("R659 a unit placed on the other side bounces to its current owner's hand, not its original owner's", () => {
+  it("R662 a unit placed on the other side bounces to its current owner's hand, not its original owner's", () => {
     const state = game();
     const theirs = newInstance(state, "fx-4", "p2", { z: "hand", player: "p2" });
     expect(placeOnField(state, theirs, slot("p1", "units", 1))).toBe(true);

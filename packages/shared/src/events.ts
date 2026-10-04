@@ -102,7 +102,7 @@ export type GameEvent =
       owner: PlayerId;
       /**
        * The player who controlled it as it died. R172: a stolen unit dies as its controller's, who is
-       * its current owner too since patch v0.2.1 (R659) — Classic #14 Shadowstep's "your Units" reads this.
+       * its current owner too since patch v0.2.1 (R662) — Classic #14 Shadowstep's "your Units" reads this.
        */
       controller: PlayerId;
       attack: number;

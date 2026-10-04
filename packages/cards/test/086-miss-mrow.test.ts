@@ -53,7 +53,7 @@ describe('#86 "Miss" Mrow — base', () => {
     // R15: p1's lane 1 was free, so the killer kept its lane.
     expect(s.unit("p1", 1)?.defId).toBe(FELINORS);
     expect(s.unit("p2", 1)).toBeNull();
-    // R12, R659: control, and the current owner with it; R78: it never left the field, so its
+    // R12, R662: control, and the current owner with it; R78: it never left the field, so its
     // damage came along.
     expect(s.unit("p1", 1)?.owner).toBe("p1");
     expect(s.unit("p1", 1)?.controller).toBe("p1");

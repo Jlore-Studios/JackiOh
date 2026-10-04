@@ -102,7 +102,7 @@ describe("B5 E22 Flicker", () => {
     expect(state.delayed).toEqual([]);
   });
 
-  it("a stolen unit re-enters the same zone on its thief's side, still the thief's card (R659)", () => {
+  it("a stolen unit re-enters the same zone on its thief's side, still the thief's card (R662)", () => {
     const state = playing("flicker-stolen");
     const unit = put(state, plain.id, slot("p2", "units", 1));
     const sink = sinkFor(state);

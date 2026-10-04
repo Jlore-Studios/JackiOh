@@ -31,7 +31,7 @@
 // Activate control of its own, Card.tsx). A press reports `{ on: "activate", instanceId }`, the click
 // every Activate control reports (ActivateControl.tsx), so `actions.ts` builds a power exactly as it
 // builds any activation: the one `activate` `legalActions` lists for it is sent at once, and a power
-// with a target to declare (Ping, R635) waits for it on the board, clicked or dragged to (game/drag).
+// with a target to declare (Ping, R657) waits for it on the board, clicked or dragged to (game/drag).
 // The first keeps the `power` testid the e2e specs press; a further one is `power-<instanceId>`, drawn
 // as its crest alone so it does not crowd the hero. The opponent's powers are tags with the same
 // crest, which nothing presses. Whether a button is live is `props.highlight.legal`; `usedThisTurn` is
@@ -40,7 +40,11 @@
 
 import type { CSSProperties, ReactElement } from "react";
 
+import { DEFAULT_PORTRAIT } from "@jackioh/shared";
+
 import { fillPowerParams, POWER_ART_BOX, powerArtOf, powerLine, powerTitle } from "../cards/index.ts";
+import { HeroPortrait } from "../emotes/Portrait.tsx";
+import { EmoteMenu, EmoteShow as EmoteShowEl, MuteMenu } from "../emotes/ui.tsx";
 import { ACTIVATED_EVENT } from "./ActivateControl.tsx";
 import { animTestid } from "./animations.ts";
 import { cx, isLegal, isSelected, legalAttr, PopLayer, type Pops } from "./Card.tsx";
@@ -51,11 +55,14 @@ import {
   type AnimatingMap,
   type BoardControl,
   type ClickTarget,
+  type HeroEmotes,
   type Highlight,
   type Side,
 } from "./contract.ts";
 import { glowAttr } from "./glow.ts";
 import type { HeroPowerView, PlayerView } from "@jackioh/shared";
+
+export type { HeroEmotes } from "./contract.ts";
 
 export type HeroProps = {
   view: PlayerView;
@@ -65,6 +72,7 @@ export type HeroProps = {
   onClick?: (target: ClickTarget) => void;
   onControl?: (control: BoardControl) => void;
   pops?: Pops;
+  emotes?: HeroEmotes;
 };
 
 /** What a spent power's tooltip and accessible name add (`usedThisTurn`, drawn and never obeyed). */
@@ -72,7 +80,7 @@ export const POWER_USED_NOTE = "Used this turn.";
 
 /**
  * The power as the catalog prints it, "Activate: Spend (X): <Title>: <clause>.", on the face it runs,
- * its declared numbers filled with the ones the view gives it (Steady Shot's `{shot}`, R637) and else
+ * its declared numbers filled with the ones the view gives it (Steady Shot's `{shot}`, R659) and else
  * the card's printed ones. A stored name the client's table does not know reads as itself.
  */
 export function usePowerWords(power: HeroPowerView): string {
@@ -136,8 +144,13 @@ export default function Hero(props: HeroProps): ReactElement {
       aria-label={side === "you" ? "Your hero" : "Opponent hero"}
       tabIndex={legal ? 0 : undefined}
       onClick={() => {
-        if (!legal) return;
-        props.onClick?.(target);
+        // Issue §2: targeting always wins. A legal hero is a target, so the click lands on it; a
+        // non-legal one opens its emote menu instead (yours the picker, theirs the mute item).
+        if (legal) {
+          props.onClick?.(target);
+        } else {
+          props.emotes?.onPortrait();
+        }
       }}
       onKeyDown={(event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
@@ -146,17 +159,29 @@ export default function Hero(props: HeroProps): ReactElement {
         props.onClick?.(target);
       }}
     >
+      {/* Issue §1: the portrait is the hero's art, with health and armor badged on it. The badges
+          are the same `hero-health`/`hero-armor` elements, moved inside the oval. */}
+      <HeroPortrait
+        portrait={props.emotes?.portrait ?? DEFAULT_PORTRAIT}
+        health={hero.health}
+        armor={hero.armor}
+      >
+        {props.emotes?.show !== null && props.emotes?.show !== undefined && (
+          <EmoteShowEl key={props.emotes.show.key} show={props.emotes.show} />
+        )}
+        {props.emotes?.menu === "emotes" && (
+          <EmoteMenu
+            side={side}
+            gate={props.emotes.gate}
+            onPick={props.emotes.onPick}
+            onClose={props.emotes.onCloseMenu}
+          />
+        )}
+        {props.emotes?.menu === "mute" && (
+          <MuteMenu muted={props.emotes.muted} onMute={props.emotes.onMute} onClose={props.emotes.onCloseMenu} />
+        )}
+      </HeroPortrait>
       <span className="hero-seat">{side === "you" ? "You" : "Opponent"}</span>
-      {/* A hero past lethal reads 0, as Hearthstone draws it: "-6" is overkill, not health. The
-          true number stays in `data-health`. */}
-      <span className="hero-health" data-health={hero.health} title="Health">
-        {Math.max(0, hero.health)}
-      </span>
-      {hero.armor > 0 && (
-        <span className="hero-armor" data-armor={hero.armor} title="Hero armor">
-          {hero.armor}
-        </span>
-      )}
 
       {hero.power !== null &&
         (side === "you" ? (

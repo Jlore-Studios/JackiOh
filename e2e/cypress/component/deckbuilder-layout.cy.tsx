@@ -76,6 +76,7 @@ function decksResponse(decks: readonly (readonly string[])[]): DecksResponse {
       id: DECK_IDS[at] ?? DECK_IDS[0],
       name: `Deck ${String(at + 1)}`,
       cards: [...cards],
+      portrait: null,
       catalogVersion: CATALOG_VERSION,
       createdAt: SAVED_AT + at,
       updatedAt: SAVED_AT + at,

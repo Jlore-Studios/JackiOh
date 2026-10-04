@@ -37,7 +37,7 @@
 // so a face-down Trap is never a static source, and a replacement into a graveyard, which
 // `moveToZone` asks with no event list to fire into, is only ever a static one.
 
-import type { PlayerId } from "@jackioh/shared";
+import type { CardType, PlayerId } from "@jackioh/shared";
 import { opponentOf } from "@jackioh/shared";
 import { DAMAGE_REDIRECT_CAP, LIBRARY_CAP } from "./config";
 import { dealDamage, type DamageSink, type DamageTarget } from "./damage";
@@ -83,8 +83,18 @@ export type ReplacedEvent =
   | { moment: "wouldDie"; units: { instanceId: string; controller: PlayerId }[] }
   /** This card would go to its owner's graveyard, from `from`. */
   | { moment: "toGraveyard"; instanceId: string; defId: string; owner: PlayerId; from: string }
-  /** `by` chose this unit of `controller`'s — as an attack's target, or as a play's or prompt's pick. */
-  | { moment: "targeted"; instanceId: string; controller: PlayerId; by: PlayerId; what: "attack" | "target" };
+  /**
+   * `by` chose this unit of `controller`'s — as an attack's target, or as a play's or prompt's pick.
+   * `source` is the targeting card's type (a Spell, a Unit, a Trap …); an attack has none (R651).
+   */
+  | {
+    moment: "targeted";
+    instanceId: string;
+    controller: PlayerId;
+    by: PlayerId;
+    what: "attack" | "target";
+    source?: CardType;
+  };
 
 /**
  * Where the card must stand to replace: acting on the field (a unit on top of its pile, a backrow
@@ -127,14 +137,18 @@ type ReplacementOf<M extends ReplacementMoment, Instead> = {
  *  - `toGraveyard`: `to` — exile, or the bottom of the owner's library.
  *  - `targeted`: `interpose: true` — summon this from its controller's hand (leftmost open unit
  *    zone; with none it does nothing), no Cry, summoning sick, and the attack or pick moves to it.
- *    Answers only its controller's unit targeted by the other player (`TargetedReplacement`).
+ *    Answers only its controller's unit targeted by the other player (`TargetedReplacement`); `by:
+ *    "spell"` answers only a targeting whose `source` is a Spell (Classic #33 Joro, R651).
  */
 export type ReplacementDef =
   | ReplacementOf<"lethalHit", { redirect: "enemyHero" }>
   | ReplacementOf<"healed", { damage: "pierce"; lasting?: "thisTurn" }>
   | ReplacementOf<"wouldDie", { flicker: "yours" }>
   | ReplacementOf<"toGraveyard", { to: "exile" | "bottomOfLibrary" }>
-  | ReplacementOf<"targeted", { interpose: true }>;
+  | (ReplacementOf<"targeted", { interpose: true }> & {
+      /** R651: when present, the replacement answers only a targeting by this kind of card. */
+      by?: "spell";
+    });
 
 /**
  * B5 E5, E9: THE declaration of "a friendly unit is targeted" (Classic #33 Joro), for every targeting
@@ -244,6 +258,18 @@ function standsWhere(state: GameState, cand: Candidate, where: ReplacementWhere,
   return cardTypeOf(state, cand.card) === "Field Trap" || cand.card.faceUp !== true;
 }
 
+/**
+ * R651: whether a "targeted" replacement answers a targeting from this source — a `by: "spell"`
+ * replacement (Classic #33 Joro) answers only a Spell's targeting, and an attack carries no source.
+ */
+function targetedSourceMatches(
+  def: TargetedReplacement,
+  event: Extract<ReplacedEvent, { moment: "targeted" }>,
+): boolean {
+  if (def.by === undefined) return true;
+  return event.source === "Spell";
+}
+
 /** The first of the card's replacements for this moment that stands where it must and whose `when` holds. */
 function answering<M extends ReplacementMoment>(
   state: GameState,
@@ -256,6 +282,14 @@ function answering<M extends ReplacementMoment>(
   );
   return defs.find((def) => {
     if (!standsWhere(state, cand, def.where ?? "field", event)) return false;
+    if (
+      moment === "targeted" &&
+      !targetedSourceMatches(
+        def as TargetedReplacement,
+        event as Extract<ReplacedEvent, { moment: "targeted" }>,
+      )
+    )
+      return false;
     const when = def.when as ((ctx: ReplacementContext) => boolean) | undefined;
     if (when === undefined) return true;
     return when({ state, self: cand.card, controller: cand.controller, radiant: cand.card.radiant, event }) === true;

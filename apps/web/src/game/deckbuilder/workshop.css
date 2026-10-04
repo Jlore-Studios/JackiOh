@@ -792,9 +792,10 @@
   }
 
   /* The pool's first row belongs on a phone's first screen, so the editor's head spends no height
-     on what the fields already say: the name field's label is kept for a screen reader only, and
-     "Compare with" sits beside its select. */
-  .ws-name .ws-field-label {
+     on what the fields already say: the name field's label and the portrait picker's label are kept
+     for a screen reader only, and "Compare with" sits beside its select. */
+  .ws-name .ws-field-label,
+  .portrait-current-label {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -805,6 +806,16 @@
 
   .ws-editor-head {
     align-items: center;
+    flex-wrap: nowrap;
+  }
+
+  .ws-name {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .portrait-current {
+    padding: 0;
   }
 
   .ws-compare-pick {

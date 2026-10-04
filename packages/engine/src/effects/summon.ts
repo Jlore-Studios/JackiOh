@@ -9,7 +9,7 @@
 
 import type { CardType, PlayerId, Row, Tag } from "@jackioh/shared";
 import { animateOnEntry } from "../animated";
-import { defOf, excludingDefId, query, type CatalogQueryArgs } from "../catalog";
+import { defOf, excludingDefId, pickGenerated, query, type CatalogQueryArgs } from "../catalog";
 import { unitedEnchantments } from "../enchantments";
 import { cardTypeOf } from "../faces";
 import { effectiveCost } from "../mana";
@@ -341,7 +341,7 @@ export function summonRandom(
       }));
       if (![...rows].some((row) => zoneFor(ctx, player, row, args) !== null)) return;
 
-      const def = ctx.rng.pick(pool);
+      const def = pickGenerated(ctx.rng, pool);
       if (def === undefined) return;
       summonFresh(ctx, def.id, player, args);
     },
@@ -432,7 +432,7 @@ function announceRadiant(ctx: EffectContext, recruited: CardInstance | null, rad
  * whose pile it is (default the recruiting side's) — "Recruit a card from their exile" (Classic #1
  * Radiant) summons the opponent's card on the recruiting side, under its control, and it becomes that
  * side's card as it arrives, so it goes to the recruiting side's piles when it leaves the field (R12,
- * R659). `count` is "Recruit N"
+ * R662). `count` is "Recruit N"
  * (Classic #31 Radiant, #65 Radiant): N scans, one after another, each the whole of a single Recruit,
  * so a scan whose card finds no zone fizzles and the next scan finds that card again (Core #69's
  * "three top-down scans; stops when the board is full").
