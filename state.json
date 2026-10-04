@@ -1603,10 +1603,8 @@
     "what": "revise #144 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-04T01:19:47Z",
-    "notes": [
-      "started a night run, as a lane was free: #143 (hard) is queued to revise, for `claude-2`: build on `claude-2` (claude, `opus`, strong); review on `claude-2` (claude, `opus`, strong)"
-    ],
+    "at": "2026-10-04T01:30:20Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
