@@ -2677,8 +2677,11 @@
     "what": "build #55 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-04T20:07:48Z",
-    "notes": [],
+    "at": "2026-10-04T20:18:37Z",
+    "notes": [
+      "started a night run, as a lane was free: #223 conflicts with main",
+      "#227: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
