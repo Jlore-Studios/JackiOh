@@ -12,7 +12,7 @@
 //
 // Each station has two in-game tracks (rotated across matches), a low-health variant (minor, faster,
 // with a low pulse and busier percussion) and a match-start sting. The menu theme, the three result
-// stings with their loops, the eight Mythic themes and the two shared Legendary themes are shared.
+// stings with their loops, the nine Mythic themes and the two shared Legendary themes are shared.
 
 import {
   DR, DRUMS, GM, KIT, RHYTHMS,
@@ -767,6 +767,27 @@ function zephrysZealotism() {
   return { song };
 }
 
+/** Classic+ #29 Portal to the Past: a clockwork music box that winds time back — celesta and
+ *  musicBox falling figures over strings, the arps running down where the others rise. */
+function portalToThePast() {
+  const song = createSong({ id: "mythic-portal-to-the-past", bpm: 88, key: key("A", "minor") });
+  song.reverb = { room: 0.85, damp: 0.35, width: 1, level: 0.65 };
+  instrument(song, 0, GM.musicBox, { volume: 88, pan: 64, reverb: 70 });
+  instrument(song, 1, GM.celesta, { volume: 80, pan: 40, reverb: 70 });
+  instrument(song, 2, GM.strings, { volume: 70, reverb: 75 });
+  instrument(song, 3, GM.harp, { volume: 78, pan: 84, reverb: 70 });
+  instrument(song, 4, GM.contrabass, { volume: 80, reverb: 55 });
+  const intro = section(song, "intro", 1, ["i"]);
+  arp(intro, { ch: 0, step: 0.25, pattern: [7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6, 7, 8], center: 67, vel: 60 });
+  const body = section(song, "body", 8, ["i", "VI", "iv", "V+", "i", "VI", "ii", "V+"]);
+  melody(body, { ch: 0, rhythms: RHYTHMS.lofi, range: [7, 14], vel: 70, motifBars: [0, 4], start: 9, seed: 1 });
+  arp(body, { ch: 1, step: 0.5, pattern: [0, 2, 4, 2, 5, 4, 2, 4], center: 62, vel: 46 });
+  pad(body, { ch: 2, center: 57, vel: 44 });
+  arp(body, { ch: 3, step: 0.5, pattern: [4, 3, 2, 1, 0, 1, 2, 3], center: 69, vel: 40 });
+  bass(body, { ch: 4, pattern: [[0, "R", 1.9, 1], [2, "5", 1.9, 0.8]], vel: 62 });
+  return { song };
+}
+
 /** Classic+ #74 Twice Forward One Step Backwards: a lopsided waltz whose motif walks back. */
 function twiceForward() {
   const song = createSong({ id: "mythic-twice-forward", bpm: 132, beatsPerBar: 3, key: key("A", "minor") });
@@ -904,6 +925,7 @@ export const TRACKS = [
   { id: "mythic-ceaseless-void", loop: true, build: ceaselessVoid },
   { id: "mythic-in-too-deep", loop: true, build: inTooDeep },
   { id: "mythic-zephrys-zealotism", loop: true, build: zephrysZealotism },
+  { id: "mythic-portal-to-the-past", loop: true, build: portalToThePast },
   { id: "mythic-twice-forward", loop: true, build: twiceForward },
   { id: "legendary-1", loop: true, build: legendaryTheme1 },
   { id: "legendary-2", loop: true, build: legendaryTheme2 },

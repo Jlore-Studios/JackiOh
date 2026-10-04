@@ -24,7 +24,7 @@ const idsOf = (version: string, kind: string): string[] =>
 
 describe("R388 card patch history (B4.2)", () => {
   it("R388 lists every patch once, in the order they were made, each with its snapshot", () => {
-    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4"]);
+    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4", "v0.2.2"]);
     expect(new Set(VERSIONS).size).toBe(VERSIONS.length);
     for (const patch of PATCHES) {
       expect(existsSync(snapshotPath(patch.version)), `${patch.version}.json`).toBe(true);
@@ -40,7 +40,7 @@ describe("R388 card patch history (B4.2)", () => {
 
   it("R388 makes the catalog version the newest patch, and catalog.json its snapshot", () => {
     expect(CATALOG_VERSION).toBe(VERSIONS[VERSIONS.length - 1]);
-    expect(CATALOG_VERSION).toBe("v0.2.4");
+    expect(CATALOG_VERSION).toBe("v0.2.2");
     const snapshot = readSnapshot(CATALOG_VERSION);
     const differ = [...new Set([...Object.keys(snapshot), ...Object.keys(CATALOG)])].filter(
       (id) => JSON.stringify(snapshot[id]) !== JSON.stringify(CATALOG[id]),
@@ -112,6 +112,38 @@ describe("R388 card patch history (B4.2)", () => {
         (change) => change.kind === "changed" && change.fields.every((f) => f === "base.text" || f === "radiant.text"),
       ),
     ).toBe(true);
+  });
+
+  it("R388 records patch v0.2.2: the rarity pass (issue #44, R651–R653)", () => {
+    expect(idsOf("v0.2.2", "added")).toHaveLength(0);
+    expect(idsOf("v0.2.2", "removed")).toHaveLength(0);
+    expect(idsOf("v0.2.2", "changed")).toHaveLength(45);
+    // The fifteen rarity moves each name `rarity` among their fields.
+    const fieldsOf = (id: string): readonly string[] => {
+      const change = changesOf("v0.2.2").find((entry) => entry.id === id);
+      return change?.kind === "changed" ? change.fields : [];
+    };
+    const moved = [
+      "core-027",
+      "core-028",
+      "core-040",
+      "classic-003",
+      "classic-009",
+      "classic-012",
+      "classic-016",
+      "classic-018",
+      "classic-025",
+      "classic-028",
+      "classic-060",
+      "classic-061",
+      "classic-076",
+      "classicplus-029",
+      "classicplus-077",
+    ];
+    expect(moved.filter((id) => !fieldsOf(id).includes("rarity"))).toEqual([]);
+    // #87's new (4) Cost and C #63's radiant numbers ride the same patch as the text pass's words.
+    expect(fieldsOf("core-087")).toContain("cost");
+    expect(fieldsOf("classic-063")).toEqual(expect.arrayContaining(["params", "base.text", "radiant.text"]));
   });
 
   it("R388 indexes each card by the versions that added or changed it", () => {

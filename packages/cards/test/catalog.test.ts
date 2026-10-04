@@ -15,21 +15,24 @@
 //                    Token tag follow §8's in-catalog token rows and §7's token rules. The costs of
 //                    #16 Hit Job (3), #17 Flood, #34 Collateral Damage, #43 Big Felinor, #49 Snom
 //                    Bunny Mind Control, #88 Twisting Nether (4) and #65 Masochism Mask (1) are
-//                    patch v0.2.0's (issue #40).
+//                    patch v0.2.0's (issue #40); #27's, #28's and #40's rarities and #87's cost
+//                    are patch v0.2.2's (issue #44, R651, R653).
 //   CLASSIC        — docs/classic-sets.md B6, each entry's header line (`classic-NNN` · (cost)
 //                    type, tags · rarity · stats base → Radiant), with the decisions B9 and the
 //                    v0.2.0 plan adopted: #55 is Book of Wildfire, #72 Grand Counterspell (R381),
-//                    #86 Genn's Radiant 42/42.
+//                    #86 Genn's Radiant 42/42; the ten rarity cells the table disagrees with
+//                    (#3, #9, #12, #16, #18, #25, #28, #60, #61, #76) are patch v0.2.2's (R651).
 //   CLASSIC_PLUS   — docs/classic-sets.md B7's header lines and token bullets (B2.3's numbering;
 //                    the Losers typed Unit, Otherworldly Removal's three and the Grapes typed Spell
 //                    by their sections' own sentences, the Grapes tagged Fruit, every token tagged
 //                    Token and rated "Token", B2.5) and B8's table of the ten AI generated cards
-//                    (tagged AI). Buff Billy's "3X/3X → 7X/7X" prints 0/0 (its `xStats` carry X).
+//                    (tagged AI). Buff Billy's "3X/3X → 7X/7X" prints 0/0 (its `xStats` carry X);
+//                    #29's and #77's rarities are patch v0.2.2's (R651).
 //   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //                    being R349's fallback.
-//   rarity         — SPEC §8's rarity paragraph for Core (35/37/16/7/5) and B2.5's table for
-//                    Classic (42/25/13/9/1) and Classic+ (13/25/25/13/2); B2.1's totals, 268 cards
-//                    and 49 tokens in 317 entries.
+//   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and its own distribution
+//                    for Classic (35/26/18/10/1) and Classic+ (13/24/25/13/3) since patch v0.2.2
+//                    (R651); B2.1's totals, 268 cards and 49 tokens in 317 entries.
 //   tag vocabulary — SPEC §5/§6 tags as BUILD M4-T1 lists them, R278's Jlockeed, and B2.4's Book,
 //                    Pancake and AI.
 //
@@ -82,8 +85,8 @@ const CORE: readonly SpecRow[] = [
   { index: "24", name: "Efficiency Dividend", cost: "X", type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "25", name: "4-mana 7/7", cost: 4, type: "Unit", tags: [], rarity: "Common", base: [7, 7], radiant: [14, 14] },
   { index: "26", name: "Glowy Jelly Bean", cost: 3, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
-  { index: "27", name: "Blood Ridden Glowy Jelly Bean", cost: 1, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
-  { index: "28", name: "Knockoff Temu Glowy Jelly Bean", cost: 2, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
+  { index: "27", name: "Blood Ridden Glowy Jelly Bean", cost: 1, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
+  { index: "28", name: "Knockoff Temu Glowy Jelly Bean", cost: 2, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "29", name: "GIGA Glowy Jelly Bean", cost: 6, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "30", name: "Archivist", cost: 2, type: "Unit", tags: ["Human"], rarity: "Rare", base: [4, 5], radiant: [8, 10] },
   { index: "31", name: "KY's Math Equation", cost: 1, type: "Spell", tags: ["KY"], rarity: "Rare", base: [null, null], radiant: [null, null] },
@@ -95,7 +98,7 @@ const CORE: readonly SpecRow[] = [
   { index: "37", name: "Gravedigger", cost: 2, type: "Unit", tags: [], rarity: "Rare", base: [4, 5], radiant: [8, 10] },
   { index: "38", name: "Quickstriker", cost: 3, type: "Field Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "39", name: "Recycling Initiative", cost: 0, type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
-  { index: "40", name: "Echoes of the Forgotten", cost: 2, type: "Field Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
+  { index: "40", name: "Echoes of the Forgotten", cost: 2, type: "Field Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "41", name: "Sheepish", cost: 1, type: "Trap", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "42", name: "Eugenics", cost: 2, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "43", name: "Big Felinor", cost: 4, type: "Unit", tags: ["Felinor"], rarity: "Rare", base: [3, 10], radiant: [6, 20] },
@@ -144,7 +147,7 @@ const CORE: readonly SpecRow[] = [
   { index: "84", name: "Going Long", cost: { base: 2, embiggen: 4 }, type: "Field Spell", tags: ["Quickdraw"], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "85", name: "Unlicensed Experimentation", cost: 2, type: "Trap", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
   { index: "86", name: "\"Miss\" Mrow", cost: 1, type: "Unit", tags: ["Felinor"], rarity: "Epic", base: [1, 1], radiant: [2, 2] },
-  { index: "87", name: "Pocket Chaos", cost: 2, type: "Spell", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
+  { index: "87", name: "Pocket Chaos", cost: 4, type: "Spell", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
   { index: "88", name: "Twisting Nether", cost: 4, type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "89", name: "Corpse Eater", cost: 4, type: "Unit", tags: [], rarity: "Epic", base: [2, 2], radiant: [6, 6] },
   { index: "90", name: "CN-Viral Injection", cost: 2, type: "Spell", tags: ["CN"], rarity: "Rare", base: [null, null], radiant: [null, null] },
@@ -172,32 +175,32 @@ const CORE: readonly SpecRow[] = [
 const CLASSIC: readonly SpecRow[] = [
   { index: "1", name: "Curse of the Forgotten Classic", cost: 1, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "2", name: "The Trickster", cost: 1, type: "Unit", tags: ["Human"], rarity: "Common", base: [2, 1], radiant: [4, 2] },
-  { index: "3", name: "Book of Heal", cost: 1, type: "Spell", tags: ["Book"], rarity: "Common", base: [null, null], radiant: [null, null] },
+  { index: "3", name: "Book of Heal", cost: 1, type: "Spell", tags: ["Book"], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "4", name: "Palantir", cost: 1, type: "Field Spell", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
   { index: "5", name: "Tesla", cost: 2, type: "Field Trap", tags: [], rarity: "Epic", base: [1, 4], radiant: [2, 8] },
   { index: "6", name: "Cloaked Toe Cracker", cost: 2, type: "Unit", tags: ["Human"], rarity: "Common", base: [3, 4], radiant: [6, 8] },
   { index: "7", name: "InfiniScepter", cost: 1, type: "Field Spell", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
   { index: "8", name: "Pickle", cost: 1, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
-  { index: "9", name: "Income Tax", cost: 2, type: "Trap", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
+  { index: "9", name: "Income Tax", cost: 2, type: "Trap", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
   { index: "10", name: "Exile", cost: 2, type: "Trap", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "11", name: "Mind Melt", cost: 1, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
-  { index: "12", name: "Book of Blood", cost: 1, type: "Spell", tags: ["Book"], rarity: "Common", base: [null, null], radiant: [null, null] },
+  { index: "12", name: "Book of Blood", cost: 1, type: "Spell", tags: ["Book"], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "13", name: "Boots on the Ground", cost: 1, type: "Unit", tags: ["Human"], rarity: "Common", base: [2, 1], radiant: [4, 2] },
   { index: "14", name: "Shadowstep", cost: 2, type: "Trap", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "15", name: "Nose Hunter", cost: 1, type: "Unit", tags: ["Human"], rarity: "Common", base: [3, 1], radiant: [6, 2] },
-  { index: "16", name: "Book of Flame", cost: 1, type: "Spell", tags: ["Book"], rarity: "Common", base: [null, null], radiant: [null, null] },
+  { index: "16", name: "Book of Flame", cost: 1, type: "Spell", tags: ["Book"], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "17", name: "Counterspell", cost: 2, type: "Trap", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
-  { index: "18", name: "Glitch in the System", cost: 3, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
+  { index: "18", name: "Glitch in the System", cost: 3, type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "19", name: "Lizard's Breath", cost: 1, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "20", name: "The Power to Punish", cost: 2, type: "Field Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "21", name: "Turtinator", cost: 2, type: "Unit", tags: [], rarity: "Common", base: [5, 4], radiant: [10, 8] },
   { index: "22", name: "Mid Runner", cost: 1, type: "Unit", tags: ["Human"], rarity: "Common", base: [2, 1], radiant: [4, 2] },
   { index: "23", name: "Devil's Pact", cost: 2, type: "Field Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "24", name: "Book of Knowledge", cost: 1, type: "Spell", tags: ["Book"], rarity: "Epic", base: [null, null], radiant: [null, null] },
-  { index: "25", name: "Lag in the System", cost: 0, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
+  { index: "25", name: "Lag in the System", cost: 0, type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "26", name: "Rapid Draw", cost: 0, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "27", name: "Pestilent Slime", cost: 0, type: "Unit", tags: [], rarity: "Common", base: [1, 1], radiant: [2, 2] },
-  { index: "28", name: "Second Wind", cost: 0, type: "Field Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
+  { index: "28", name: "Second Wind", cost: 0, type: "Field Spell", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
   { index: "29", name: "Book of Vital Kill", cost: 1, type: "Spell", tags: ["Book"], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "30", name: "Recycle", cost: 1, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "31", name: "Cookie Guild", cost: 2, type: "Unit", tags: ["Human"], rarity: "Common", base: [2, 4], radiant: [4, 8] },
@@ -229,8 +232,8 @@ const CLASSIC: readonly SpecRow[] = [
   { index: "57", name: "Echo", cost: 1, type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "58", name: "Common Resources", cost: 2, type: "Field Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "59", name: "Plague Doctor", cost: 1, type: "Unit", tags: ["Human"], rarity: "Common", base: [2, 3], radiant: [4, 6] },
-  { index: "60", name: "Pile On", cost: 5, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
-  { index: "61", name: "Plague Bringer Goliath", cost: 3, type: "Unit", tags: [], rarity: "Legendary", base: [7, 7], radiant: [14, 14] },
+  { index: "60", name: "Pile On", cost: 5, type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
+  { index: "61", name: "Plague Bringer Goliath", cost: 3, type: "Unit", tags: [], rarity: "Rare", base: [7, 7], radiant: [14, 14] },
   { index: "62", name: "Living Bomb", cost: 1, type: "Field Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "63", name: "Crop Dusting", cost: 2, type: "Trap", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "64", name: "Malzahar's Recycler", cost: 2, type: "Field Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
@@ -245,7 +248,7 @@ const CLASSIC: readonly SpecRow[] = [
   { index: "73", name: "Nurse Cleaver", cost: 2, type: "Unit", tags: [], rarity: "Common", base: [3, 6], radiant: [6, 12] },
   { index: "74", name: "Corpse Plantation", cost: 2, type: "Field Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "75", name: "Argusland", cost: 1, type: "Field Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
-  { index: "76", name: "Plague Bringer", cost: 2, type: "Unit", tags: [], rarity: "Common", base: [4, 4], radiant: [8, 8] },
+  { index: "76", name: "Plague Bringer", cost: 2, type: "Unit", tags: [], rarity: "Rare", base: [4, 4], radiant: [8, 8] },
   { index: "77", name: "Anti-Magic Monkey", cost: 2, type: "Unit", tags: [], rarity: "Common", base: [5, 5], radiant: [10, 10] },
   { index: "78", name: "Mutate Spell", cost: 1, type: "Field Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "79", name: "Risky Die", cost: 1, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
@@ -304,7 +307,7 @@ const CLASSIC_PLUS: readonly SpecRow[] = [
   { index: "26", name: "Tommy Tempo", cost: 3, type: "Unit", tags: ["Human"], rarity: "Common", base: [9, 9], radiant: [18, 18] },
   { index: "27", name: "Zephrys Zealotism", cost: 4, type: "Spell", tags: [], rarity: "Mythic", base: [null, null], radiant: [null, null] },
   { index: "28", name: "Nuestro hogar, nuestras tumbas", cost: 2, type: "Unit", tags: [], rarity: "Common", base: [3, 4], radiant: [6, 8] },
-  { index: "29", name: "Portal to the Past", cost: 3, type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
+  { index: "29", name: "Portal to the Past", cost: 3, type: "Spell", tags: [], rarity: "Mythic", base: [null, null], radiant: [null, null] },
   { index: "30", name: "Felinor Fuser", cost: 3, type: "Unit", tags: ["Felinor"], rarity: "Epic", base: [3, 3], radiant: [6, 6] },
   { index: "31", name: "Fusion Lab", cost: 2, type: "Field Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "32", name: "Otherworldly Removal", cost: 2, type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
@@ -367,7 +370,7 @@ const CLASSIC_PLUS: readonly SpecRow[] = [
   { index: "75.1", name: "J-lease J-Jungle EX-plorer Pack", cost: 2, type: "Spell", tags: ["Token"], rarity: "Token", base: [null, null], radiant: [null, null] },
   { index: "76", name: "Brother Lar", cost: 1, type: "Unit", tags: ["CN", "Human"], rarity: "Rare", base: [1, 1], radiant: [2, 2] },
   { index: "76.1", name: "Brother Ping", cost: 2, type: "Unit", tags: ["CN", "Human", "Token"], rarity: "Token", base: [4, 4], radiant: [8, 8] },
-  { index: "77", name: "Anti-Softlock", cost: 2, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
+  { index: "77", name: "Anti-Softlock", cost: 2, type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "78", name: "Claude's Datacenter", cost: 2, type: "Field Spell", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
   { index: "T-AI-1", name: "Helpful Assistant", cost: 1, type: "Unit", tags: ["AI", "Token"], rarity: "Token", base: [1, 3], radiant: [2, 6] },
   { index: "T-AI-2", name: "Scaling Law", cost: 2, type: "Unit", tags: ["AI", "Token"], rarity: "Token", base: [2, 2], radiant: [4, 4] },
@@ -406,9 +409,9 @@ const ALLOWED_TAGS: readonly string[] = [
 
 /** SPEC §8's and B2.5's distributions. Tokens carry rarity "Token" and are counted apart. */
 const RARITY_COUNTS: Readonly<Record<string, Readonly<Record<string, number>>>> = {
-  Core: { Common: 35, Rare: 37, Epic: 16, Legendary: 7, Mythic: 5 },
-  Classic: { Common: 42, Rare: 25, Epic: 13, Legendary: 9, Mythic: 1 },
-  "Classic+": { Common: 13, Rare: 25, Epic: 25, Legendary: 13, Mythic: 2 },
+  Core: { Common: 32, Rare: 40, Epic: 16, Legendary: 7, Mythic: 5 },
+  Classic: { Common: 35, Rare: 26, Epic: 18, Legendary: 10, Mythic: 1 },
+  "Classic+": { Common: 13, Rare: 24, Epic: 25, Legendary: 13, Mythic: 3 },
 };
 
 /** B2.1: cards and tokens per set. */
@@ -561,7 +564,7 @@ for (const [set, rows] of FIXTURES) {
 }
 
 describe("rarity distribution (SPEC §8, B2.5, BUILD M4-T1)", () => {
-  it("is Core 35/37/16/7/5, Classic 42/25/13/9/1 and Classic+ 13/25/25/13/2 (Common/Rare/Epic/Legendary/Mythic)", () => {
+  it("is Core 32/40/16/7/5, Classic 35/26/18/10/1 and Classic+ 13/24/25/13/3 (Common/Rare/Epic/Legendary/Mythic)", () => {
     for (const [set, expected] of Object.entries(RARITY_COUNTS)) {
       const counted: Record<string, number> = {};
       for (const entry of ENTRIES.filter((e) => e.set === set && e.token === false)) {
@@ -599,6 +602,75 @@ describe("rarity distribution (SPEC §8, B2.5, BUILD M4-T1)", () => {
     };
     expect(printed).toEqual(expected);
     expect(ENTRIES.filter((entry) => entry.printedRarity !== undefined).every((entry) => entry.set === "Classic+" && entry.token)).toBe(true);
+  });
+});
+
+describe("R651 rarity criteria, families and consistency (patch v0.2.2, issue #44)", () => {
+  /** §8's family table: a naming template, one card type and one effect shape take one rarity. */
+  const FAMILIES: readonly { family: string; rarity: Rarity; members: readonly string[] }[] = [
+    { family: "Book of ___", rarity: "Epic", members: [
+      "classic-003", "classic-012", "classic-016", "classic-024", "classic-029", "classic-055", "classic-070",
+      "classicplus-053", "classicplus-054", "classicplus-055", "classicplus-056", "classicplus-057",
+      "classicplus-071", "classicplus-072",
+    ] },
+    { family: "Call to Chaos (___ Edition)", rarity: "Legendary", members: ["core-095", "classicplus-073"] },
+    { family: "___ Glowy Jelly Bean", rarity: "Rare", members: ["core-026", "core-027", "core-028", "core-029"] },
+    { family: "The Power to ___", rarity: "Rare", members: ["classic-020", "classic-081"] },
+    { family: "___ in the System", rarity: "Epic", members: ["classic-018", "classic-025"] },
+    { family: "___ of the Forgotten", rarity: "Rare", members: ["core-040", "classic-001"] },
+    { family: "Rapid ___", rarity: "Common", members: ["core-010", "classic-026"] },
+    { family: "___ Shroom", rarity: "Epic", members: ["classicplus-001", "classicplus-002"] },
+    { family: "Plague Bringer ___", rarity: "Rare", members: ["classic-061", "classic-076"] },
+    { family: "Jlockeed ___", rarity: "Common", members: ["core-013", "core-014"] },
+    { family: "Right-house defender / Wrong-House Attacker", rarity: "Common", members: ["core-003", "classicplus-006"] },
+  ];
+
+  /** The fifteen cards the pass moved (the family table covers the rest of their families). */
+  const MOVED: Readonly<Record<string, Rarity>> = {
+    "core-027": "Rare",
+    "core-028": "Rare",
+    "core-040": "Rare",
+    "classic-003": "Epic",
+    "classic-009": "Legendary",
+    "classic-012": "Epic",
+    "classic-016": "Epic",
+    "classic-018": "Epic",
+    "classic-025": "Epic",
+    "classic-028": "Legendary",
+    "classic-060": "Epic",
+    "classic-061": "Rare",
+    "classic-076": "Rare",
+    "classicplus-029": "Mythic",
+    "classicplus-077": "Epic",
+  };
+
+  it("R651 every family in §8's table takes one rarity for every member, which wins over the criteria", () => {
+    for (const { family, rarity, members } of FAMILIES) {
+      for (const id of members) {
+        expect(CATALOG[id]?.rarity, `${family} member ${id}`).toBe(rarity);
+      }
+    }
+    // Family consistency wins over the criteria: setting hero health is Legendary territory, yet
+    // Book of Vital Kill is Epic because it is a Book.
+    expect(CATALOG["classic-029"]?.rarity).toBe("Epic");
+    expect(CATALOG["classic-029"]?.name).toBe("Book of Vital Kill");
+  });
+
+  it("R651 the pass moved fifteen cards, Core's #27, #28 and #40 among them on the designer's word", () => {
+    for (const [id, rarity] of Object.entries(MOVED)) {
+      expect(CATALOG[id]?.rarity, id).toBe(rarity);
+    }
+  });
+
+  it("R651 a bigger version of the same effect is never a lower rarity than the smaller one", () => {
+    // Classic #60 Pile On Recruits the whole deck; Core #69 Call to Arms Recruits three — the
+    // bigger version landed Epic, never below the smaller one's Common.
+    const ORDER: readonly Rarity[] = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
+    const pileOn = CATALOG["classic-060"]?.rarity;
+    const callToArms = CATALOG["core-069"]?.rarity;
+    expect(pileOn).toBe("Epic");
+    expect(callToArms).toBe("Common");
+    expect(ORDER.indexOf(pileOn ?? "Common")).toBeGreaterThanOrEqual(ORDER.indexOf(callToArms ?? "Common"));
   });
 });
 

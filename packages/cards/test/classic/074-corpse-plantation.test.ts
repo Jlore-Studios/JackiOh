@@ -16,7 +16,7 @@ import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/074-corpse-plantation";
 
 const PLANTATION = "classic-074";
-const CRAWLER = "classic-053"; // (1) Unit: Cry: place a Plague Token on another permanent.
+const CRAWLER = "classic-053"; // (1) Unit: Cry: place a Plague Counter on another permanent.
 const SLIME = "classic-027"; // (0) Unit 1/1.
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt.
 const MR_TOKEN = "core-015"; // (1) Unit 1/1: Cry: Summon a Rush Token.
@@ -77,7 +77,7 @@ describe("C #74 Corpse Plantation", () => {
   });
 
   describe("base", () => {
-    it("Cry: one placement of 2 Plague Tokens on itself", () => {
+    it("Cry: one placement of 2 Plague Counters on itself", () => {
       const s = scenario({ p1: { hand: [PLANTATION, ANCHOR] }, p2: { hand: [ANCHOR] } });
 
       s.play(PLANTATION);
@@ -153,7 +153,7 @@ describe("C #74 Corpse Plantation", () => {
       const mrToken = s.card(MR_TOKEN).id;
       const menace = s.card(MENACE).id;
 
-      expect(send(s.state, { instanceId: menace }).error).toMatch(/Plague Tokens/);
+      expect(send(s.state, { instanceId: menace }).error).toMatch(/Plague Counters/);
       expect(send(s.state, { instanceId: menace, plague: { from: plantation, tokens: 0 } }).error).toBeDefined();
       expect(send(s.state, { instanceId: menace, plague: { from: plantation, tokens: 3 } }).error).toBeDefined();
       expect(send(s.state, { instanceId: mrToken, plague: { from: plantation, tokens: 2 } }).error).toBeDefined();

@@ -33,12 +33,12 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     all: { label: "All units", detail: "Switch the position of every unit." },
   },
   // #87 Pocket Chaos: "swap hero health, swap boards (every zone, lane-preserving), or swap libraries";
-  // radiant: "You may skip adding it".
+  // radiant: "You may add it". The copy's base cost is one under the cast copy's (R653).
   "core-087": {
     health: { label: "Swap hero Health", detail: "You and your opponent trade hero Health." },
     board: { label: "Swap boards", detail: "Every zone changes sides, each card keeping its lane." },
     library: { label: "Swap decks", detail: "You and your opponent trade decks." },
-    gift: { label: "Give a copy", detail: "Add a Pocket Chaos to your opponent's hand." },
+    gift: { label: "Give a copy", detail: "Add a Pocket Chaos with a base cost (1) less to your opponent's hand." },
     skip: { label: "Keep it to yourself", detail: "Your opponent gets no Pocket Chaos." },
   },
   // #88 Twisting Nether (radiant): "Choose: all enemy permanents, or all".

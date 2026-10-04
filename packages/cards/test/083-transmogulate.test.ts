@@ -3,7 +3,8 @@
 // BUILD M4-T4's must-pass row: "Zone counts preserved; board cards replaced by same-type
 // Legendaries in place; pool is exactly #52, #85, #87, #92, #93, #95, and a Field Trap becomes
 // Unlicensed Experimentation (R35); the hand is replaced too (R365); radiant gives radiant cards" —
-// and since patch v0.2.0 (R380) the pool is every set's non-token Legendaries but #83.
+// and since patch v0.2.0 (R380) the pool is every set's non-token Legendaries but #83, which patch
+// v0.2.2's rarity pass (R651) grew by Classic #9 Income Tax and #28 Second Wind.
 //
 // The board fixture covers every permanent type at once: a Unit, an Immutable Unit (R23), a Field
 // Spell, a Trap and a Field Trap. The pool is read from the catalog and checked to hold the six ids
@@ -16,7 +17,7 @@
 
 import { describe, expect, it } from "vitest";
 import { scenario } from "./_harness";
-import { catalog } from "../src/query";
+import { TRAP_TYPES, catalog } from "../src/query";
 
 const TRANSMOGULATE = "core-083";
 
@@ -28,22 +29,28 @@ const POOL = catalog.pool(TRANSMOGULATE, { rarity: "Legendary" }).map((def) => d
 const CORE_SIX = ["core-052", "core-085", "core-087", "core-092", "core-093", "core-095"];
 /** The Legendary Units in the pool, every set's (Core #52 Silly Silas and #92 Felinor Fiender among them). */
 const LEGENDARY_UNITS = catalog.pool(TRANSMOGULATE, { rarity: "Legendary", type: "Unit" }).map((def) => def.id);
-/** The Legendary Field Spells: Core #93 Combo-Index, Classic #4, #7, Classic+ #78. */
+/** The Legendary Field Spells: Core #93 Combo-Index, Classic #4, #7, #28 (since patch v0.2.2, R651), Classic+ #78. */
 const LEGENDARY_FIELD_SPELLS = catalog.pool(TRANSMOGULATE, { rarity: "Legendary", type: "Field Spell" }).map((def) => def.id);
-/** The only Legendary Trap of any set: #85 Unlicensed Experimentation — and "Field Trap counts as Trap". */
-const LEGENDARY_TRAP = "core-085";
+/** The Legendary Traps of any set: #85 Unlicensed Experimentation and, since patch v0.2.2 (R651),
+ *  Classic #9 Income Tax — with "Field Trap counts as Trap" widening the query to both types. */
+const LEGENDARY_TRAPS = catalog.pool(TRANSMOGULATE, { rarity: "Legendary", type: TRAP_TYPES }).map((def) => def.id);
 
 /** Board fixtures: #11 Tempo Timmy (Unit), a Radiant #19 Midrange Menace (Immutable Unit), #73
  *  (Field Spell), #41 Sheepish (Trap), #18 Bread and Butter (Field Trap). */
 const IMMUTABLE = "core-019";
-function board(radiantFace = false) {
+/**
+ * `fieldSpell` seeds the backrow Field Spell. Zone-count tests pass null: a Field Spell can be
+ * replaced by Classic #28 Second Wind since patch v0.2.2 (R651), whose Aura would send the cards
+ * the count is watching — Transmogulate itself among them — to exile instead of the graveyard.
+ */
+function board(radiantFace = false, fieldSpell: string | null = "core-073") {
   const s = scenario({
     seed: "transmogulate",
     p1: {
       hand: [TRANSMOGULATE, "core-056"],
       field: ["core-011", { def: IMMUTABLE, radiant: true }],
       backrow: [
-        { def: "core-073", lane: 1 },
+        ...(fieldSpell === null ? [] : [{ def: fieldSpell, lane: 1 }]),
         { def: "core-041", lane: 2 },
         { def: "core-018", lane: 3 },
       ],
@@ -64,16 +71,16 @@ describe("#83 Transmogulate — base", () => {
 
     // A Unit becomes a Legendary Unit, in its own lane.
     expect(LEGENDARY_UNITS).toContain(s.unit("p1", 1)?.defId);
-    // A Field Spell becomes the Legendary Field Spell; a Trap becomes the Legendary Trap.
+    // A Field Spell becomes a Legendary Field Spell; a Trap becomes a Legendary Trap.
     expect(LEGENDARY_FIELD_SPELLS).toContain(s.backrow("p1", 1)?.defId);
-    expect(s.backrow("p1", 2)?.defId).toBe(LEGENDARY_TRAP);
+    expect(LEGENDARY_TRAPS).toContain(s.backrow("p1", 2)?.defId);
     s.expectEvents("cardPlayed", "transformed");
   });
 
-  it("R35 'Field Trap counts as Trap': a Field Trap becomes Unlicensed Experimentation", () => {
+  it("R35 'Field Trap counts as Trap': a Field Trap becomes a Legendary trap", () => {
     const s = board().play(TRANSMOGULATE);
 
-    expect(s.backrow("p1", 3)?.defId).toBe(LEGENDARY_TRAP);
+    expect(LEGENDARY_TRAPS).toContain(s.backrow("p1", 3)?.defId);
   });
 
   it("R23 an Immutable board card stays, since this is a Transform", () => {
@@ -86,7 +93,7 @@ describe("#83 Transmogulate — base", () => {
   });
 
   it("R35 R365 same counts per zone, in hand, library, graveyard and exile", () => {
-    const s = board();
+    const s = board(false, null);
     const before = {
       hand: s.hand("p1").length - 1,
       library: s.pile("p1", "library").length,
@@ -107,7 +114,7 @@ describe("#83 Transmogulate — base", () => {
     for (const id of CORE_SIX) expect(POOL).toContain(id);
     expect(POOL).not.toContain(TRANSMOGULATE);
     expect(POOL.some((id) => id.startsWith("classic"))).toBe(true);
-    const s = board();
+    const s = board(false, null);
     const spell = s.card(TRANSMOGULATE).id;
     s.play(TRANSMOGULATE);
 
@@ -223,7 +230,7 @@ describe("#83 Transmogulate — radiant", () => {
 
     expect(LEGENDARY_UNITS).toContain(s.unit("p1", 1)?.defId);
     expect(LEGENDARY_FIELD_SPELLS).toContain(s.backrow("p1", 1)?.defId);
-    expect(s.backrow("p1", 3)?.defId).toBe(LEGENDARY_TRAP);
+    expect(LEGENDARY_TRAPS).toContain(s.backrow("p1", 3)?.defId);
     for (const card of s.pile("p1", "library")) expect(POOL).toContain(card.defId);
   });
 

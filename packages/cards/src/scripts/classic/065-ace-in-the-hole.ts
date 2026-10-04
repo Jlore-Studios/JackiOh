@@ -1,7 +1,7 @@
 // C #65 Ace in the Hole (SPEC §8.6 row 65; §2.2, §6.3 Recruit; R33, R62, R78, R99, R386). Trap, cost 2,
 // Common.
-//   Base:    "End of your turn: Flip a coin. On heads, this activates: Recruit {recruits|card|cards}." (1)
-//   Radiant: "End of your turn: Flip a coin. On tails, Recruit a card. On heads, this activates:
+//   Base:    "End of your turn: Flip a coin. On heads, this reveals: Recruit {recruits|card|cards}." (1)
+//   Radiant: "End of your turn: Flip a coin. On tails, Recruit a card. On heads, this reveals:
 //            Recruit {recruits|card|cards}." (3)
 //   Engine:  one seeded coin at each end of its controller's turn. Heads fires it in the end-of-turn trap
 //            window (R62; consumed); Recruit scans the deck top down for a permanent, "3 cards" three

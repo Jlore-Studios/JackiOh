@@ -1,9 +1,9 @@
 // C #38 Jackiestan Auctioneer (SPEC §8.6 row 38). Field Trap, Human, cost 2, Rare, 4/4 → 8/8 (its unit
 // face).
 //   Both faces: "Animated
-//                Activates when the cards a player has played in a turn reach {plays}: Summon this as a
+//                Reveals when the cards a player has played in a turn reach {plays}: Summon this as a
 //                Unit.
-//                Once this has activated: Whenever a player plays a card, draw {draw} and deal {damage}
+//                Once this has revealed: Whenever a player plays a card, draw {draw} and deal {damage}
 //                damage to the enemy hero." — plays 3 on the base face and 2 on the Radiant, damage 2 and 4.
 //
 // R395: while it is face-down only the activation condition is live. It answers the `cardPlayed` that
@@ -11,7 +11,7 @@
 // the play under way; a cast counts, R70; a countered card was never played, R448, so it never
 // reaches here), and then animates (Animated, B3.1, R383) in Attack Position into the unit zone in its
 // own lane, else the leftmost open, unlocked, unreserved one (R64), summoning sick; with no open unit
-// zone it stays face-up in its backrow zone. It remembers that it has activated (`memory.activated`).
+// zone it stays face-up in its backrow zone. It remembers that it has revealed (`memory.activated`).
 //
 // From the next play on — never the play that set it off, as a permanent never answers its own arrival
 // (R119) — every card either player plays makes its controller draw {draw} and deals one hit of
@@ -31,7 +31,7 @@ import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classic-038");
 
-/** What the Auctioneer keeps once it has activated. */
+/** What the Auctioneer keeps once it has revealed. */
 const ACTIVATED = "activated";
 
 type Played = Extract<GameEvent, { type: "cardPlayed" }>;

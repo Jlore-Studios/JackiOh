@@ -1,7 +1,8 @@
 // #87 Pocket Chaos (SPEC §8.5, BUILD M4-T4 row 87): "Health swap, lane-preserving board swap
 // including face-down traps with locks staying put, library swap that transfers ownership of the
-// swapped cards (R73); opponent gains a Pocket Chaos; exiled; radiant may skip the gift". Patch
-// v0.1.1 removed the draw R275 had added to the radiant face.
+// swapped cards (R73); opponent gains a Pocket Chaos one base cost under this one's (R653); exiled;
+// radiant may skip the gift". Patch v0.1.1 removed the draw R275 had added to the radiant face;
+// patch v0.2.2 set the cost to (4) and wrote the gift's base-cost rule (R653).
 
 import { describe, expect, it } from "vitest";
 import { isLocked, lockZone } from "@jackioh/engine";
@@ -19,8 +20,9 @@ const POSTDOC = "core-061"; // 2/4
 const SHEEPISH = "core-041"; // Trap
 const MANA_WELL = "core-006"; // Field Spell; start-of-turn only
 
-// §2.5: one always-playable card per hand keeps a scenario on the turn it started on.
-const FILLER = "core-005";
+// §2.5: one always-playable card per hand keeps a scenario on the turn it started on; a (0)-cost
+// one stays playable no matter what the R653 cost seeds leave in the pool.
+const FILLER = "core-010";
 
 const SEED = "chaos-87";
 
@@ -285,6 +287,73 @@ describe("#87 Pocket Chaos — radiant", () => {
 
     expect(s.unit("p2", 2)?.id).toBe(gary.id);
     expect(s.card(gary).controller).toBe("p2");
+    expect(s.hand("p2").filter((card) => card.defId === CHAOS)).toHaveLength(0);
+  });
+});
+
+describe("#87 Pocket Chaos — the gift's base cost (R653)", () => {
+  it("R653 a fresh cast hands over a copy whose base cost is one less than the printed (4)", () => {
+    const s = scenario({
+      seed: SEED,
+      p1: { hand: [CHAOS, FILLER] },
+      p2: { hand: [FILLER] },
+    });
+
+    s.play(CHAOS, { modes: ["health"] });
+
+    const gifts = s.hand("p2").filter((card) => card.defId === CHAOS);
+    expect(gifts).toHaveLength(1);
+    expect(gifts[0]?.costOverride).toBe(3);
+  });
+
+  it("R653 the cast copy's own costOverride is the base it discounts: a (2) copy hands over a (1)", () => {
+    const s = scenario({
+      seed: SEED,
+      p1: { hand: [{ def: CHAOS, costOverride: 2 }, FILLER] },
+      p2: { hand: [FILLER] },
+    });
+
+    s.play(CHAOS, { modes: ["health"] });
+
+    expect(s.hand("p2").find((card) => card.defId === CHAOS)?.costOverride).toBe(1);
+  });
+
+  it("R653 costMod is a modifier over the base, never part of it: paying (2) for a (4) still gifts a (3)", () => {
+    const s = scenario({
+      seed: SEED,
+      p1: { hand: [{ def: CHAOS, costMod: -2 }, FILLER] },
+      p2: { hand: [FILLER] },
+    });
+
+    s.play(CHAOS, { modes: ["health"] });
+
+    expect(s.hand("p2").find((card) => card.defId === CHAOS)?.costOverride).toBe(3);
+  });
+
+  it("R653 a cast copy whose own base is (1) adds no copy at all: the swap and the exile still happen", () => {
+    const s = scenario({
+      seed: SEED,
+      p1: { hand: [{ def: CHAOS, costOverride: 1 }, FILLER], health: 12 },
+      p2: { hand: [FILLER], health: 25 },
+    });
+    const self = s.card(CHAOS);
+
+    s.play(CHAOS, { modes: ["health"] });
+
+    s.expectHealth("p1", 25).expectHealth("p2", 12);
+    expect(s.hand("p2").filter((card) => card.defId === CHAOS)).toHaveLength(0);
+    s.expectInZone(self, "exile");
+  });
+
+  it('R653 a radiant (1)-base copy that answers "gift" still adds nothing', () => {
+    const s = scenario({
+      seed: SEED,
+      p1: { hand: [{ def: CHAOS, radiant: true, costOverride: 1 }, FILLER] },
+      p2: { hand: [FILLER] },
+    });
+
+    s.play(CHAOS, { modes: ["health", "gift"] });
+
     expect(s.hand("p2").filter((card) => card.defId === CHAOS)).toHaveLength(0);
   });
 });

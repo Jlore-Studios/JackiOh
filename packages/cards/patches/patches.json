@@ -4638,5 +4638,413 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.2.2",
+    "date": "2026-10-04",
+    "title": "Patch v0.2.2: rarity pass",
+    "source": "#44",
+    "notes": "Rarity pass over Classic and Classic+ (and Core #27, #28, #40); Traps reveal; Plague Counters; Crop Dusting's Radiant face; Pocket Chaos costs (4)",
+    "changes": [
+      {
+        "id": "core-027",
+        "name": "Blood Ridden Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "core-028",
+        "name": "Knockoff Temu Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "core-040",
+        "name": "Echoes of the Forgotten",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "core-087",
+        "name": "Pocket Chaos",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-091",
+        "name": "Fed Fauci",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-003",
+        "name": "Book of Heal",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classic-005",
+        "name": "Tesla",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-009",
+        "name": "Income Tax",
+        "kind": "changed",
+        "fields": [
+          "rarity",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-010",
+        "name": "Exile",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-012",
+        "name": "Book of Blood",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classic-014",
+        "name": "Shadowstep",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-016",
+        "name": "Book of Flame",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classic-017",
+        "name": "Counterspell",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-018",
+        "name": "Glitch in the System",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classic-025",
+        "name": "Lag in the System",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classic-027",
+        "name": "Pestilent Slime",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-028",
+        "name": "Second Wind",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classic-038",
+        "name": "Jackiestan Auctioneer",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-039",
+        "name": "Outbreak",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-042",
+        "name": "Transmutable Toxins",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-043",
+        "name": "Plague Nuke",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-047",
+        "name": "Recurring Felinor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-052",
+        "name": "Final Gambit",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-053",
+        "name": "Plague Crawler",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-059",
+        "name": "Plague Doctor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-060",
+        "name": "Pile On",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classic-061",
+        "name": "Plague Bringer Goliath",
+        "kind": "changed",
+        "fields": [
+          "rarity",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-062",
+        "name": "Living Bomb",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-063",
+        "name": "Crop Dusting",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-065",
+        "name": "Ace in the Hole",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-069",
+        "name": "Plague Charger",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-070",
+        "name": "Book of Plague",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-072",
+        "name": "Grand Counterspell",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-074",
+        "name": "Corpse Plantation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-076",
+        "name": "Plague Bringer",
+        "kind": "changed",
+        "fields": [
+          "rarity",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-078",
+        "name": "Mutate Spell",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-087",
+        "name": "Plague Chalice",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-001",
+        "name": "Doom Shroom",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-002",
+        "name": "Groom Shroom",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-003",
+        "name": "Second Amendment Snake",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-022",
+        "name": "Blood Moon",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-029",
+        "name": "Portal to the Past",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classicplus-077",
+        "name": "Anti-Softlock",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classicplus-t-ai-08",
+        "name": "Rate Limit",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-t-ai-09",
+        "name": "Refusal",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]

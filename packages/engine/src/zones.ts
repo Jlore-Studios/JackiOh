@@ -516,7 +516,7 @@ const FIELD_TRIGGER_ZONES: readonly unknown[] = ["field", "backrow"];
 /**
  * R174: drop the triggers and turn hooks this card queued while it stood on the field. They belong
  * to that stay: a Reborn body or a replayed card under the same id is a reset instance that has
- * entered the field again (R78, R83), so an entry queued before it left — #91's Plague Token for the
+ * entered the field again (R78, R83), so an entry queued before it left — #91's Plague Counter for the
  * hit that killed it, #37's start-of-turn hook queued before it died — never acts on what came
  * back. Without Reborn the entry already fizzled, because a card in a graveyard answers none of
  * its field triggers (R153); this makes the card that returns answer none of them either.

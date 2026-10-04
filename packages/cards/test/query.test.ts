@@ -219,7 +219,8 @@ describe("R35 the Transmogulate pool (#83): every non-token Legendary but #83 (B
   // THE ARGUMENTS A CARD SCRIPT PASSES:
   //     catalog.query({ rarity: "Legendary", excludeDefId: "core-083" })
   //   or catalog.pool("core-083", { rarity: "Legendary" })
-  // R35: "Pool: the Legendary-rarity cards except #83", which since patch v0.2.0 reaches every set.
+  // R35: "Pool: the Legendary-rarity cards except #83", which since patch v0.2.0 reaches every set;
+  // patch v0.2.2's rarity pass (R651) added Classic #9 Income Tax and #28 Second Wind to it.
   // For replacing a card on the board, the script narrows the same pool by type and asks for
   // TRAP_TYPES when the board card is a trap ("Field Trap counts as Trap").
   const R35_POOL = [
@@ -231,11 +232,12 @@ describe("R35 the Transmogulate pool (#83): every non-token Legendary but #83 (B
     "core-095",
     "classic-004",
     "classic-007",
+    "classic-009",
+    "classic-028",
     "classic-033",
     "classic-044",
     "classic-045",
     "classic-056",
-    "classic-061",
     "classic-080",
     "classic-085",
     "classicplus-012",
@@ -266,8 +268,9 @@ describe("R35 the Transmogulate pool (#83): every non-token Legendary but #83 (B
   });
 
   it("R35 narrowed by type for a board replacement, with Field Trap counting as Trap", () => {
-    // Only Core #85 is a Legendary trap, so a board trap — Trap or Field Trap — is replaced by it.
-    expect(ids(catalog.pool("core-083", { rarity: "Legendary", type: TRAP_TYPES }))).toEqual(["core-085"]);
+    // The Legendary traps are Core #85 and, since patch v0.2.2, Classic #9 Income Tax, so a board
+    // trap — Trap or Field Trap — is replaced by one of them.
+    expect(ids(catalog.pool("core-083", { rarity: "Legendary", type: TRAP_TYPES }))).toEqual(["core-085", "classic-009"]);
     expect(coreIndices(catalog.pool("core-083", { rarity: "Legendary", type: "Unit" }))).toEqual(["52", "92"]);
   });
 });

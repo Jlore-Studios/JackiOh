@@ -247,8 +247,8 @@ in `catalog.test.ts`:
 
 | Set | Common | Rare | Epic | Legendary | Mythic |
 | --- | --- | --- | --- | --- | --- |
-| Classic | 42 | 25 | 13 | 9 | 1 |
-| Classic+ (with B2.3's numbers) | 13 | 25 | 25 | 13 | 2 |
+| Classic | 35 | 26 | 18 | 10 | 1 |
+| Classic+ (with B2.3's numbers) | 13 | 24 | 25 | 13 | 3 |
 
 Tokens keep `rarity: "Token"`, so no pool ever finds one by rarity. The designer printed a rarity on
 every Classic+ token but the AI generated cards (B8): Legendary on the eight Pancakes, the five Losers,
@@ -392,7 +392,7 @@ declares). Activate generalises it.
 6. **Not a play.** Activating counts for nothing that counts plays (Combo, Quickstriker, "whenever you
    play a card", Ceaseless Void). What the effect plays or casts counts as usual (R70).
 7. **♾️ is bounded** by `ACTIVATE_UNLIMITED_CAP` (100 per card per turn, `config.ts`) so a fuzz game
-   still ends. Every ♾️ card here is bounded anyway by a resource (units to tribute, Plague Tokens).
+   still ends. Every ♾️ card here is bounded anyway by a resource (units to tribute, Plague Counters).
 8. **Legal actions.** `legalActions` lists `activate` exactly as it lists `activatePower` today:
    `heroPower.whyCannotActivate` is already both the refusal and the list for Heroic Power (R43,
    §10.2's pattern), and it generalises to any card's ability.
@@ -710,7 +710,7 @@ through a fixture script, as CLAUDE.md asks of engine behaviour, before any card
 | E16 | **Cards between players' piles** | Give cards from one hand to the other (C #9), draw from the opponent's deck (C #58), take a card from the opponent's deck (C+ #12.3) — all E2's ownership change; swap decks is R73's library swap. | C #9, #58, #85; C+ #12.3 |
 | E17 | **Show the opponent's hand in a prompt** | Their hand cards are the options, seen by the chooser only, as KY's Private Tutor reveals library cards (§10.8, R310). | C #11 |
 | E18 | **New prompt kinds** | `number` (pick a number from a fixed range: C #18), a mode prompt held by the *other* player (C #8), a multiple-choice answer (C+ #42), board cells (C+ #62), a quest reward (C #90), a budgeted multi-pick from a pile (C #44). The existing kinds stay. | as listed |
-| E19 | **Plague Tokens, extended** | "Place N Plague Tokens" with no card named is N placements, each on a permanent (either side, face-down cards included) the placer chooses, repeats allowed, one prompt per token; "Place N Plague Tokens on X" is one placement of N. Placement multipliers (×2, ×3); "when a Plague Token is placed on this" (once per placement); stats per token (aura or self); tokens spent as mana; tokens consumed. `counterChanged` already carries `plague`. | C #27, #39, #42, #43, #53, #59, #61, #62, #63, #69, #70, #74, #76, #78, #87; C+ #3 |
+| E19 | **Plague Counters, extended** | "Place N Plague Counters" with no card named is N placements, each on a permanent (either side, face-down cards included) the placer chooses, repeats allowed, one prompt per token; "Place N Plague Counters on X" is one placement of N. Placement multipliers (×2, ×3); "when a Plague Counter is placed on this" (once per placement); stats per token (aura or self); tokens spent as mana; tokens consumed. `counterChanged` already carries `plague`. | C #27, #39, #42, #43, #53, #59, #61, #62, #63, #69, #70, #74, #76, #78, #87; C+ #3 |
 | E20 | **Lock variants, Unlock** | Lock a whole lane, the zone a permanent was just played into, a random zone, the firing trap's own zone; unlock every zone (event `unlocked`). | C #71, #84; C+ #1, #34, #77 |
 | E21 | **Backrow piles** | §3.2 already lets a Stack card onto an occupied zone "of the right row", but no backrow card has had Stack, so no backrow pile has ever existed and nothing handles one. Once something gives backrow cards Stack, backrow zones hold piles; only the top acts, so a face-down trap under a pile cannot fire and an aura under one is off. Ivory Tower is the one backrow pile a Unit may top (CL39). | C+ #33, #77 |
 | E22 | **Flicker** | The card leaves the field and re-enters the same zone at once: R78's reset, summoning sick, no Cry, no Death. It counts as summoned. | C #14 r |
@@ -815,7 +815,7 @@ base → Radiant.
 > a Unit. Deal 8 damage to it. Then summon this in Defense Position.
 
 - **Text:** Animated, Lifesteal
-  Activates when your opponent summons a Unit: Deal 4 damage to it. Then summon this as a Unit in
+  Reveals when your opponent summons a Unit: Deal 4 damage to it. Then summon this as a Unit in
   Defense Position.
 - **Radiant:** the same with 8 damage.
 - **Engine:** a Field Trap answering each Unit that arrives on the opponent's side, however it
@@ -881,7 +881,7 @@ base → Radiant.
 > They give you all but one card of their choice from their hand and the cost of those cards are all
 > reduced by (1).
 
-- **Text:** Activates when your opponent draws their 2nd card in a turn: They keep one card of their
+- **Text:** Reveals when your opponent draws their 2nd card in a turn: They keep one card of their
   choice and give you the rest of their hand.
 - **Radiant:** … The cards you get cost (1) less.
 - **Engine:** E4's per-turn draw count on both players' turns (their start-of-turn draw counts, so on
@@ -899,8 +899,8 @@ base → Radiant.
 > it costs less than (3), Exile random Permanents from your opponent’s Field until the difference in
 > cost is made up (but never exceeded). {AI please find a way to clean up this text}
 
-- **Text:** Activates when your opponent plays a card that costs (1) or less: Counter and exile it.
-- **Radiant (the clean-up asked for):** Activates when your opponent plays a card that costs (3) or
+- **Text:** Reveals when your opponent plays a card that costs (1) or less: Counter and exile it.
+- **Radiant (the clean-up asked for):** Reveals when your opponent plays a card that costs (3) or
   less: Counter and exile it. Then exile random enemy permanents with a total cost of up to (3) minus
   its cost.
 - **Engine:** E1 in the announce window, the card exiled rather than sent to the graveyard. Radiant:
@@ -959,8 +959,8 @@ base → Radiant.
 > (0). ~~~ Activates when any number of your Units die. Flicker them so that they survive and add
 > copies to your hand that cost (0).
 
-- **Text:** Activates when any of your Units die: Return them to your hand. They cost (0).
-- **Radiant:** Activates when any of your Units would die: Flicker them instead, so they survive. Add a
+- **Text:** Reveals when any of your Units die: Return them to your hand. They cost (0).
+- **Radiant:** Reveals when any of your Units would die: Flicker them instead, so they survive. Add a
   copy of each to your hand. The copies cost (0).
 - **Engine:** base: one firing for every Unit of yours one state-check pass collects; each card still
   in a graveyard afterwards goes to its owner's hand (§3.2) with `costOverride 0`. Tokens have ceased
@@ -1003,8 +1003,8 @@ base → Radiant.
 > **Designer:** Activates when your opponent casts a Spell. Counter it. ~~~ Activates when your
 > opponent casts a Spell. Counter it. Add a (0) cost copy to your hand.
 
-- **Text:** Activates when your opponent plays a Spell: Counter it.
-- **Radiant:** Activates when your opponent plays a Spell: Counter it. Add a copy of it to your hand.
+- **Text:** Reveals when your opponent plays a Spell: Counter it.
+- **Radiant:** Reveals when your opponent plays a Spell: Counter it. Add a copy of it to your hand.
   The copy costs (0).
 - **Engine:** E1 on the announce of a Spell (the Spell type, not Field Spells). Radiant: a fresh copy
   (Radiant flag kept) in your hand, yours, `costOverride 0`.
@@ -1144,7 +1144,7 @@ base → Radiant.
 
 > **Designer:** 1/1 Double Plague Tokens placed on this. ~~~ 2/2 Triple Plague Tokens placed on this.
 
-- **Text:** Plague Tokens placed on this are doubled. **Radiant:** … tripled.
+- **Text:** Plague Counters placed on this are doubled. **Radiant:** … tripled.
 - **Engine:** E19's placement multiplier on every placement onto it.
 - **Numbers:** multiplier 2 ↑.
 
@@ -1302,8 +1302,8 @@ base → Radiant.
 > Draw 1 and deal 4 damage to each enemy hero.
 
 - **Text:** Animated
-  Activates when a player plays their 3rd card in a turn: Summon this as a Unit.
-  Once this has activated: Whenever a player plays a card, draw 1 and deal 2 damage to the enemy hero.
+  Reveals when a player plays their 3rd card in a turn: Summon this as a Unit.
+  Once this has revealed: Whenever a player plays a card, draw 1 and deal 2 damage to the enemy hero.
 - **Radiant:** the same with "2nd card" and 4 damage.
 - **Engine:** a Field Trap answering any player's 3rd `cardPlayed` of a turn (E4 counts plays per
   player per turn; casts count, R70), then it animates (B3.1). From then on — animated, or stuck face-up
@@ -1323,9 +1323,9 @@ base → Radiant.
 > equal to its cost and it belongs to an enemy, Steal it. Otherwise, Draw equal to the number of
 > Plague Tokens on it.
 
-- **Text:** Place a Plague Token on a permanent. If it's an enemy permanent with at least as many
-  Plague Tokens as its cost, steal it. Otherwise, draw a card for each Plague Token on it.
-- **Radiant:** the same with 2 Plague Tokens.
+- **Text:** Place a Plague Counter on a permanent. If it's an enemy permanent with at least as many
+  Plague Counters as its cost, steal it. Otherwise, draw a card for each Plague Counter on it.
+- **Radiant:** the same with 2 Plague Counters.
 - **Engine:** one declared target, one placement of 1 (2) (E19; a Pestilent Slime doubles it). Its
   cost is R65's on the field (an X card at the X it was played for, CL17). Steal per §6.3 and R15;
   otherwise draw N (hand cap).
@@ -1370,9 +1370,9 @@ base → Radiant.
 > at random on Units. Ally Units gain +2/+2 per Plague Token on them. Enemy Units gain -2/-2 per Plague
 > Token on them.
 
-- **Text:** Aura: Your Units have +1/+1 for each Plague Token on them. Enemy Units have −1/−1 for each
-  Plague Token on them.
-  Activate: Place a Plague Token on each of 2 random Units.
+- **Text:** Aura: Your Units have +1/+1 for each Plague Counter on them. Enemy Units have −1/−1 for each
+  Plague Counter on them.
+  Activate: Place a Plague Counter on each of 2 random Units.
 - **Radiant:** +2/+2 and −2/−2.
 - **Engine:** an aura (§10.4 layer 5) reading each unit's `counters.plague`; −1/−1 lowers max health, so
   an enemy can die of it at the state check (Core #46's rule). Activate (once per turn): one token
@@ -1388,9 +1388,9 @@ base → Radiant.
 > Mana for each Plague Token on them and those with Plague Tokens are resummoned from the GY under your
 > control.
 
-- **Text:** Destroy all Units. Gain 1 mana for each Plague Token that was on them.
-- **Radiant:** Destroy all Units. Gain 1 mana for each Plague Token that was on them. Then summon, under
-  your control, each of those Units that had a Plague Token from its owner's graveyard.
+- **Text:** Destroy all Units. Gain 1 mana for each Plague Counter that was on them.
+- **Radiant:** Destroy all Units. Gain 1 mana for each Plague Counter that was on them. Then summon, under
+  your control, each of those Units that had a Plague Counter from its owner's graveyard.
 - **Engine:** count the tokens on every unit first, destroy all (one state check, §4.5), then the
   temporary mana. Radiant: after that check, each non-token unit card that had a token and is now in a
   graveyard is summoned to your side (control yours, owner unchanged), leftmost open zones in lane
@@ -1515,7 +1515,7 @@ base → Radiant.
 > Draw 3. ~~~ Activate when you would take lethal damage. Redirect it to your opponent, heal 20, and
 > Draw your deck.
 
-- **Text:** Activates when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero.
+- **Text:** Reveals when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero.
   Then heal your hero 10 and draw 3.
 - **Radiant:** the same, then heal your hero 20 and draw your deck.
 - **Engine:** E5 at §4.4 after the hero caps and before step 5: when the amount would leave your hero at
@@ -1534,9 +1534,9 @@ base → Radiant.
 > Draw 1. ~~~ 4/4 Cry: Place 2 Plague Tokens on another card. When a Plague Token is placed on this,
 > Draw 2.
 
-- **Text:** Cry: Place a Plague Token on another permanent.
-  Whenever Plague Tokens are placed on this, draw 1.
-- **Radiant:** 2 Plague Tokens; draw 2.
+- **Text:** Cry: Place a Plague Counter on another permanent.
+  Whenever Plague Counters are placed on this, draw 1.
+- **Radiant:** 2 Plague Counters; draw 2.
 - **Engine:** a declared target (another permanent); E19's placement trigger, once per placement however
   many tokens it places.
 - **Numbers:** tokens 1 ↑; draw 1 ↑.
@@ -1611,8 +1611,8 @@ base → Radiant.
 > **Designer:** 2/3 Cry: Deal damage equal to the number of Plague Tokens on the field. ~~~ 4/6 Cry:
 > Place 2 Plague Tokens on this. Deal damage equal to the number of Plague Tokens on the field.
 
-- **Text:** Cry: Deal damage equal to the number of Plague Tokens on the field.
-- **Radiant:** Cry: Place 2 Plague Tokens on this. Then deal damage equal to the number of Plague
+- **Text:** Cry: Deal damage equal to the number of Plague Counters on the field.
+- **Radiant:** Cry: Place 2 Plague Counters on this. Then deal damage equal to the number of Plague
   Tokens on the field.
 - **Engine:** a declared target; one hit of N, every token on both sides counted as it resolves (after
   the Radiant's own placement). A `preview` (R280) shows N.
@@ -1641,7 +1641,7 @@ base → Radiant.
 > Rush Trample Cry: Place 3 Plague Tokens. Draw 3.
 
 - **Text:** Tribute 1, Rush, Trample
-  Cry: Place 3 Plague Tokens. Draw 1.
+  Cry: Place 3 Plague Counters. Draw 1.
 - **Radiant:** the same with draw 3.
 - **Engine:** Tribute (B4.5 applies); E19: three placements, each on a permanent you choose.
 - **Numbers:** tokens 3 ↑; draw 1 ↑.
@@ -1653,11 +1653,11 @@ base → Radiant.
 > them. ~~~ At the start of each enemy’s turn, they destroy all cards with a Plague Counter on them.
 
 - **Text:** At the start of each player's turn: Destroy every permanent that player controls with a
-  Plague Token on it.
+  Plague Counter on it.
 - **Radiant:** At the start of your opponent's turn: Destroy every permanent they control with a Plague
   Token on it.
 - **Engine:** a start-of-turn trigger on both players' turns (the text names each player's), in R68's
-  order. "Plague Counter" is the Plague Token.
+  order. "Plague Counter" is the Plague Counter.
 - **Rulings (CL21):** "they destroy all cards" means *their own* cards — the only reading under which
   the Radiant face ("each enemy's turn") is the stronger one.
 - **Numbers:** none.
@@ -1668,15 +1668,15 @@ base → Radiant.
 > **Designer:** Start of Turn: activate. Put a Plague Token on each Permanent. Draw 1.
 > *(no Radiant face written)*
 
-- **Text:** Activates at the start of your turn: Place a Plague Token on each permanent. Draw 1.
-- **Radiant (proposed):** Activates at the start of your turn: Place 2 Plague Tokens on each permanent.
-  Draw 2.
+- **Text:** Start of turn: Reveal. Place a Plague Counter on each permanent. Draw 1.
+- **Radiant (designer, patch v0.2.2):** Start of turn: Reveal. Place 3 Plague Counters on each permanent.
+  Draw 3.
 - **Engine:** a Trap whose condition is its controller's start of turn (with the start-of-turn
   triggers, R62); it fires once and goes to the graveyard. Every permanent on the field, both sides,
   face-down ones included.
 - **Numbers:** tokens 1 ↑; draw 1 ↑.
-- **Check:** **R276**: every card needs a Radiant face; the one proposed doubles both numbers (R275).
-  **⚠ designer.**
+- **Check:** **R276**: every card needs a Radiant face; the one proposed doubled both numbers (R275)
+  until designer patch v0.2.2 set them to 3 and 3.
 
 #### Classic #64 · Malzahar’s Recycler
 `classic-064` · (2) Field Spell · Rare
@@ -1701,8 +1701,8 @@ base → Radiant.
 > **Designer:** End of Turn: Flip a coin. If heads, activate. Recruit a card. ~~~ End of Turn: Flip a
 > coin. If tails, Recruit a card. If heads, activate. Recruit 3 cards.
 
-- **Text:** End of your turn: Flip a coin. On heads, this activates: Recruit a card.
-- **Radiant:** End of your turn: Flip a coin. On tails, Recruit a card. On heads, this activates:
+- **Text:** End of your turn: Flip a coin. On heads, this reveals: Recruit a card.
+- **Radiant:** End of your turn: Flip a coin. On tails, Recruit a card. On heads, this reveals:
   Recruit 3 cards.
 - **Engine:** a check in the end-of-turn trap window of its controller's turns (R62). Heads fires it
   (consumed); E25 recruits permanents from the top of your deck. The Radiant's tails recruits without
@@ -1763,8 +1763,8 @@ base → Radiant.
 > Token on this
 
 - **Text:** Charge
-  Has First Strike while it has a Plague Token.
-  Has +2 Attack for each Plague Token on it.
+  Has First Strike while it has a Plague Counter.
+  Has +2 Attack for each Plague Counter on it.
 - **Radiant:** the same with +4.
 - **Engine:** E35's conditional keyword and a self stat layer (§10.4) reading its own
   `counters.plague`.
@@ -1776,7 +1776,7 @@ base → Radiant.
 
 > **Designer:** Place 5 Plague Tokens. ~~~ Place 10 Plague Tokens.
 
-- **Text:** Place 5 Plague Tokens. **Radiant:** Place 10 Plague Tokens.
+- **Text:** Place 5 Plague Counters. **Radiant:** Place 10 Plague Counters.
 - **Engine:** E19: five (ten) placements, each on a permanent you choose.
 - **Numbers:** tokens 5 ↑.
 - **Check:** the tag is written "book"; read as Book.
@@ -1802,8 +1802,8 @@ base → Radiant.
 > **Designer:** Activate when enemy casts any kind of Spell or Trap. Counter that card. ~~~ Activate
 > when enemy casts any kind of Spell or Trap. Steal that card.
 
-- **Text:** Activates when your opponent plays a Spell, Field Spell, Trap or Field Trap: Counter it.
-- **Radiant:** Activates when your opponent plays a Spell, Field Spell, Trap or Field Trap: Steal it.
+- **Text:** Reveals when your opponent plays a Spell, Field Spell, Trap or Field Trap: Counter it.
+- **Radiant:** Reveals when your opponent plays a Spell, Field Spell, Trap or Field Trap: Steal it.
 - **Engine:** E1 on the opponent's announce of any non-Unit, so a Field Spell or a Trap is countered
   before it reaches the backrow (a face-down set is announced by its zone only, but the engine knows
   what it is). Radiant: E2 — countered and moved to your hand as yours.
@@ -1826,10 +1826,10 @@ base → Radiant.
 > You may spend Plague Tokens on this as mana to cast Units from your GY. You must spend at least (1)
 > Plague Token.
 
-- **Text:** Cry: Place 2 Plague Tokens on this.
-  You may play Units from your graveyard, paying with Plague Tokens from this: each token pays (1), and
+- **Text:** Cry: Place 2 Plague Counters on this.
+  You may play Units from your graveyard, paying with Plague Counters from this: each token pays (1), and
   each such play spends at least 1 token.
-- **Radiant:** the same with 4 Plague Tokens.
+- **Radiant:** the same with 4 Plague Counters.
 - **Engine:** E11 for Units, with a second way to pay: the `play` action carries how many tokens pay
   (at least 1, at most the tokens here and the price), the rest in mana. The designer's "cast" here is a
   play: the Unit's Cry fires and it counts as played (not R70's free cast).
@@ -1852,8 +1852,8 @@ base → Radiant.
 > Draw 2.
 
 - **Text:** Rush
-  Cry: Place 2 Plague Tokens. Draw 1.
-- **Radiant:** the same with 4 Plague Tokens and draw 2.
+  Cry: Place 2 Plague Counters. Draw 1.
+- **Radiant:** the same with 4 Plague Counters and draw 2.
 - **Engine:** E19: two (four) placements, your choice each.
 - **Numbers:** tokens 2 ↑; draw 1 ↑.
 
@@ -1877,9 +1877,9 @@ base → Radiant.
 > Field, hand, or Library (Exile otherwise). · Ally Backrow: Draw 4. · Ally Unit: Attack a random
 > enemy twice.
 
-- **Text:** Activate ♾️: Remove a Plague Token from a permanent. If it's an enemy permanent, exile it.
+- **Text:** Activate ♾️: Remove a Plague Counter from a permanent. If it's an enemy permanent, exile it.
   If it's your backrow card, draw 2. If it's your Unit, it attacks a random enemy.
-- **Radiant:** Activate ♾️: Remove a Plague Token from a permanent. If it's an enemy permanent, fuse it
+- **Radiant:** Activate ♾️: Remove a Plague Counter from a permanent. If it's an enemy permanent, fuse it
   onto a card of yours of its type on your field, in your hand or in your deck, or exile it if you
   have none. If it's your backrow card, draw 4. If it's your Unit, it attacks a random enemy twice.
 - **Engine:** B3.2 Activate ♾️ with a declared target (a permanent with a token). A forced attack (R53)
@@ -2004,10 +2004,10 @@ base → Radiant.
 > Plague Tokens on this. ~~~ Enters with X Plague Tokens on it. Counter all enemy cards with cost equal
 > to the number of Plague Tokens on this.
 
-- **Text:** This enters with X Plague Tokens on it.
-  Aura: Counter every card played whose cost equals the number of Plague Tokens on this.
-- **Radiant:** This enters with X Plague Tokens on it.
-  Aura: Counter every card your opponent plays whose cost equals the number of Plague Tokens on this.
+- **Text:** This enters with X Plague Counters on it.
+  Aura: Counter every card played whose cost equals the number of Plague Counters on this.
+- **Radiant:** This enters with X Plague Counters on it.
+  Aura: Counter every card your opponent plays whose cost equals the number of Plague Counters on this.
 - **Engine:** X is at least 1 (R348). E1 on every announce whose cost paid equals the current count
   (both players'; the Radiant's: the opponent's). The count moves: Mutate Spell consumes tokens, other
   cards add them. It is not on the field during its own announce, so it never counters itself.
@@ -2094,7 +2094,7 @@ base → Radiant.
   | 10 | your graveyard holds 6 or more Units | M (end) |
 
   Rewards: **A** heal your hero 6 · **B** deal 3 damage (a target) · **C** return 2 random cards from
-  your graveyard to your hand · **D** place 3 Plague Tokens (E19) · **E** a random Unit of yours gets
+  your graveyard to your hand · **D** place 3 Plague Counters (E19) · **E** a random Unit of yours gets
   +3/+3 · **F** bounce a permanent (a target) · **G** your opponent discards 2 (their choice) · **H**
   draw 2 · **I** Recruit a card · **J** gain 100 mana this turn (temporary, §2.3) · **K** exile your
   opponent's deck · **L** Aura: you may play cards from your graveyard (E11) · **M** Aura: your Units
@@ -2129,8 +2129,8 @@ after the card that defines it. The designer's number is given where B2.3 moved 
 > **Designer:** Activate when your Hero is attacked: Exile all Units. Lock this slot. ~~~ Activate when
 > your Hero is attacked: Exile all enemy Units. Lock this slot.
 
-- **Text:** Activates when an enemy Unit attacks your hero: Exile all Units. Lock this zone.
-- **Radiant:** Activates when an enemy Unit attacks your hero: Exile all enemy Units. Lock this zone.
+- **Text:** Reveals when an enemy Unit attacks your hero: Exile all Units. Lock this zone.
+- **Radiant:** Reveals when an enemy Unit attacks your hero: Exile all enemy Units. Lock this zone.
 - **Engine:** §4.2 step 4's trap window (My Pawn's). Exile every Unit on the field (tops of piles; a
   card dormant beneath resumes). The attacker is gone, so no combat happens (R44's cancel). The trap goes
   to the graveyard as it fires, and E20 Locks the backrow zone it stood in.
@@ -2143,7 +2143,7 @@ after the card that defines it. The designer's number is given where B2.3 moved 
 > Taunt. ~~~ Activate when your Hero is attacked: Fill your board with random Radiant Felinors. Give
 > them Taunt.
 
-- **Text:** Activates when an enemy Unit attacks your hero: Fill your board with random Felinor Units.
+- **Text:** Reveals when an enemy Unit attacks your hero: Fill your board with random Felinor Units.
   Give them Taunt.
 - **Radiant:** … random Radiant Felinor Units …
 - **Engine:** the same window. "Fill your board" (R64): one random non-token Felinor Unit of any set
@@ -2160,9 +2160,9 @@ after the card that defines it. The designer's number is given where B2.3 moved 
 > Plague Token on this. ~~~ 2/12 End of Turn: Gain 3 Plague Tokens Death: Deal 1 damage split among
 > enemies for each Plague Token on this.
 
-- **Text:** End of turn: Place 2 Plague Tokens on this.
-  Death: Deal 1 damage to a random enemy for each Plague Token on this.
-- **Radiant:** the same with 3 Plague Tokens.
+- **Text:** End of turn: Place 2 Plague Counters on this.
+  Death: Deal 1 damage to a random enemy for each Plague Counter on this.
+- **Radiant:** the same with 3 Plague Counters.
 - **Engine:** one placement of 2 (3) on itself (E19). Death reads its last-known tokens (R78) and makes
   E37's random split: that many 1-damage hits, each on a random enemy (the hero or a unit) still
   standing.
@@ -2534,9 +2534,9 @@ The five Losers (`classicplus-019-1` … `-5`), Units, Tokens, Legendary by the 
 > damage instead. ~~~ {Becomes a Field Trap} Activates when an enemy is healed: All enemy healing is
 > converted to Pierce damage instead.
 
-- **Text:** Activates when an enemy would be healed: For the rest of this turn, healing on enemies deals
+- **Text:** Reveals when an enemy would be healed: For the rest of this turn, healing on enemies deals
   that much Pierce damage to them instead.
-- **Radiant (a Field Trap):** Activates when an enemy would be healed: From now on, healing on enemies
+- **Radiant (a Field Trap):** Reveals when an enemy would be healed: From now on, healing on enemies
   deals that much Pierce damage to them instead.
 - **Engine:** E5's "would be healed" point and E8. "Enemy" is the enemy hero or an enemy unit; Lifesteal
   is healing; "heal up to" (Reno) and "heal to full" are healing; setting health (E7) is not. The damage
@@ -3558,8 +3558,8 @@ a language model's habits, good and bad.
 | T-AI-5 | **Autocomplete** | (0) Spell | Add a copy of the last Unit, Spell or Field Spell your opponent played to your hand. | … It costs (0). |
 | T-AI-6 | **Datacenter Fire** | (2) Spell | Destroy all Field Spells. Deal 1 damage to each hero for each one destroyed. | Destroy all enemy Field Spells. Deal 2 damage to the enemy hero for each one destroyed. |
 | T-AI-7 | **Alignment Tax** | (1) Spell | Your opponent's cards cost (1) more during their next turn. | … (2) more … |
-| T-AI-8 | **Rate Limit** | (1) Trap | Activates when your opponent plays their 3rd card in a turn: After it resolves, their turn ends. | … their 2nd card … |
-| T-AI-9 | **Refusal** | (1) Trap | Activates when your opponent plays a Spell that targets one of your Units: Counter it. | Activates when your opponent plays a Spell that targets you or one of your cards: Counter it. Draw 1. |
+| T-AI-8 | **Rate Limit** | (1) Trap | Reveals when your opponent plays their 3rd card in a turn: After it resolves, their turn ends. | … their 2nd card … |
+| T-AI-9 | **Refusal** | (1) Trap | Reveals when your opponent plays a Spell that targets one of your Units: Counter it. | Reveals when your opponent plays a Spell that targets you or one of your cards: Counter it. Draw 1. |
 | T-AI-10 | **Fine-Tuning** | (2) Field Spell | End of turn: Upgrade a random card in your hand. | End of turn: Upgrade 2 random cards in your hand. |
 
 Engine notes:
@@ -3608,7 +3608,7 @@ the designer's answer should land in SPEC before the card it touches ships.
 | 15 | C #22 | Mid Runner's Radiant only doubles stats (R275) | Keep; record in the audit |
 | 16 | C #28 | Second Wind: are the Cry's discards playable? | Yes |
 | 17 | C #33 | Joro: from hand only? Radiant 1/1 (R275)? | Hand only; named exception |
-| 18 | C #63 | Crop Dusting has no Radiant face | 2 Plague Tokens each, draw 2 |
+| 18 | C #63 | Crop Dusting has no Radiant face | 2 Plague Counters each, draw 2; designer patch v0.2.2: 3 each, draw 3 |
 | 19 | C #78 | Mutate Spell: a Field Spell? | Yes |
 | 20 | C #80 | BOOM! Big Max Radiant 26/16 and no rider (R275) | Named exception for the stats; Charge for Rush |
 | 21 | C #86 | Genn's faces are identical (R276) | Radiant 42/42, tripled as Mr. Vanilla's |

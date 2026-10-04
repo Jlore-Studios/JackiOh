@@ -63,6 +63,7 @@ attribution is required when they play in the game.
 | `mythic-ceaseless-void` | `apps/web/public/audio/music/mythic-ceaseless-void.m4a` | Theme of #100 Ceaseless Void: choir, drone, celesta | 34.4 s |
 | `mythic-in-too-deep` | `apps/web/public/audio/music/mythic-in-too-deep.m4a` | Theme of Classic #90 In Too Deep: halo pad, harp, vibraphone | 31.9 s |
 | `mythic-zephrys-zealotism` | `apps/web/public/audio/music/mythic-zephrys-zealotism.m4a` | Theme of Classic+ #27 Zephrys Zealotism: choir, organ, timpani | 29.2 s |
+| `mythic-portal-to-the-past` | `apps/web/public/audio/music/mythic-portal-to-the-past.m4a` | Theme of Classic+ #29 Portal to the Past: a clockwork music box, celesta, harp | 28.0 s |
 | `mythic-twice-forward` | `apps/web/public/audio/music/mythic-twice-forward.m4a` | Theme of Classic+ #74 Twice Forward One Step Backwards: a waltz for clarinet and bassoon | 28.0 s |
 | `legendary-1` | `apps/web/public/audio/music/legendary-1.m4a` | Shared entrance theme of the Core and Classic Legendaries: a brass fanfare over timpani, celesta glint | 29.0 s |
 | `legendary-2` | `apps/web/public/audio/music/legendary-2.m4a` | Shared entrance theme of the Classic+ Legendaries: a brass fanfare over timpani, piccolo glint | 29.0 s |

@@ -1,5 +1,5 @@
 // C #78 Mutate Spell — SPEC §8.6 row 78, BUILD M9 Classic row C 78: "A Field Spell (R402); Activate ♾️
-// (R384), the target carried in the `activate` action: a permanent with a Plague Token, either side,
+// (R384), the target carried in the `activate` action: a permanent with a Plague Counter, either side,
 // face-down included (the option carries only its id, R177); remove one token, then: an enemy permanent is
 // exiled; your backrow card, itself included, draws 2; your Unit makes one forced attack (R53) on a random
 // enemy it may attack, hero or Unit, spending no exertion; with no tokened permanent it can't activate; at
@@ -26,7 +26,7 @@ import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/078-mutate-spell";
 
 const MUTATE = "classic-078";
-const CRAWLER = "classic-053"; // (1) Unit: whenever Plague Tokens are placed on this, draw 1.
+const CRAWLER = "classic-053"; // (1) Unit: whenever Plague Counters are placed on this, draw 1.
 const VANILLA = "core-008"; // (1) Unit 4/4.
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt; Radiant adds Immutable.
 const TIMMY = "core-011"; // (1) Unit 3/3 Rush, First Strike.

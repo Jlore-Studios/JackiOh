@@ -1,6 +1,6 @@
 // C #17 Counterspell (SPEC §8.6 row 17). Trap, cost 2, Common.
-//   Base:    "Activates when your opponent plays a Spell: Counter it."
-//   Radiant: "Activates when your opponent plays a Spell: Counter it. Add a copy of it to your hand.
+//   Base:    "Reveals when your opponent plays a Spell: Counter it."
+//   Radiant: "Reveals when your opponent plays a Spell: Counter it. Add a copy of it to your hand.
 //             The copy costs ({setCost})."
 //
 // Counter (§6.3, B5 E1, R448) answers the opponent's `cardAnnounced` of a Spell — the Spell type, so a

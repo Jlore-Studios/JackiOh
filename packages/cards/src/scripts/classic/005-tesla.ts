@@ -1,6 +1,6 @@
 // C #5 Tesla (SPEC §8.6 row 5). Field Trap, cost 2, Epic, 1/4 → 2/8 (its unit face).
 //   Both faces: "Animated, Lifesteal
-//                Activates when your opponent summons a Unit: Deal {damage} damage to it. Then summon
+//                Reveals when your opponent summons a Unit: Deal {damage} damage to it. Then summon
 //                this as a Unit in Defense Position." — damage 4 on the base face, 8 on the Radiant.
 //
 // A Field Trap answering each Unit that arrives on the opponent's side, however it is summoned (§6.3

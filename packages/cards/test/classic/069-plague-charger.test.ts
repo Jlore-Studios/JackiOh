@@ -4,7 +4,7 @@
 // with no token it has neither; radiant 8/4: +4 per token; its tuned number (attack per token) reads
 // through `param()` (R386)".
 //
-// Its yellow glow (R195, `conditionMet`: "while it has a Plague Token", on the field) is proved, both
+// Its yellow glow (R195, `conditionMet`: "while it has a Plague Counter", on the field) is proved, both
 // answers, in `test/condition-active.test.ts`.
 
 import { stepParam, type CardInstance } from "@jackioh/engine";
@@ -14,8 +14,8 @@ import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/069-plague-charger";
 
 const CHARGER = "classic-069";
-const CRAWLER = "classic-053"; // (1) Unit: Cry: place 1 Plague Token on another permanent.
-const MUTATE = "classic-078"; // (1) Field Spell: Activate ♾️: remove a Plague Token from a permanent …
+const CRAWLER = "classic-053"; // (1) Unit: Cry: place 1 Plague Counter on another permanent.
+const MUTATE = "classic-078"; // (1) Field Spell: Activate ♾️: remove a Plague Counter from a permanent …
 const VANILLA = "core-008"; // (1) Unit 4/4.
 const FLOOD = "core-017"; // (4) Spell: Bounce all Units.
 const FILLER = "core-005"; // (1) Spell (§2.5).
@@ -57,7 +57,7 @@ describe("C #69 Plague Charger", () => {
       s.expectHealth("p2", 16);
     });
 
-    it("§10.4 +2 Attack for each Plague Token on it, and First Strike while it has one", () => {
+    it("§10.4 +2 Attack for each Plague Counter on it, and First Strike while it has one", () => {
       const one = scenario({ p1: { field: [{ def: CHARGER, counters: { plague: 1 } }], hand: [FILLER] } });
       one.expectStats(CHARGER, { attack: 6, health: 2 });
       expect(kinds(one, CHARGER)).toEqual(["Charge", "First Strike"]);
@@ -156,7 +156,7 @@ describe("C #69 Plague Charger", () => {
       expect(kinds(s, CHARGER)).toEqual(["Charge"]);
     });
 
-    it("+4 Attack for each Plague Token on it, and First Strike while it has one", () => {
+    it("+4 Attack for each Plague Counter on it, and First Strike while it has one", () => {
       const s = scenario({ p1: { field: [{ def: CHARGER, radiant: true, counters: { plague: 2 } }], hand: [FILLER] } });
 
       s.expectStats(CHARGER, { attack: 16, health: 4 });

@@ -192,7 +192,7 @@ export type BackrowView =
       /**
        * `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the letter that number is,
        * E..S, which the engine names so a client prints it rather than working it out (R372).
-       * `plague` is the card's Plague Tokens (§6.3, B5 E19), absent at none.
+       * `plague` is the card's Plague Counters (§6.3, B5 E19), absent at none.
        */
       counters: { grade?: number; gradeLetter?: string; plague?: number };
       owner: PlayerId;
@@ -215,7 +215,7 @@ export type BackrowView =
        */
       cost?: number;
       /**
-       * B5 E19, R471: the Plague Tokens on the face-down card. Tokens are public wherever they sit, so
+       * B5 E19, R471: the Plague Counters on the face-down card. Tokens are public wherever they sit, so
        * both players see the count on the card's back; the card stays hidden. Absent at none.
        */
       plague?: number;

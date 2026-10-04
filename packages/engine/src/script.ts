@@ -394,7 +394,7 @@ export type Script = {
   heroGuard?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => { cap?: number; divisor?: number }[];
   /**
    * B5 E35: keywords the card has only while a condition holds (Classic #69 Plague Charger's First
-   * Strike "while it has a Plague Token"), read in the layers with its printed keywords (§10.4), so a
+   * Strike "while it has a Plague Counter"), read in the layers with its printed keywords (§10.4), so a
    * Vanilla takes them. A PURE READ of instance data: like an aura's `applies`, it must never call
    * back into `unitView`, or the layers would recurse.
    */
@@ -410,7 +410,7 @@ export type Script = {
   afterAttack?: Hook;
   // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----
   /**
-   * B5 E19, R471: "Plague Tokens placed on this are doubled" (Classic #27 Pestilent Slime; tripled on
+   * B5 E19, R471: "Plague Counters placed on this are doubled" (Classic #27 Pestilent Slime; tripled on
    * its Radiant face). What each placement onto this card is multiplied by, asked of the card as it
    * receives the placement — a pure read (a card reads its declared number here, B3.4), floored at 1.
    * A fused card's multipliers multiply (`subsystems/fuse`).
@@ -425,7 +425,7 @@ export type Script = {
   deckTriggers?: TriggerDef[];
   /**
    * B5 E26: triggers this card answers while it lies in a graveyard ("While this is in your
-   * graveyard: when one of your Traps activates, return this", Classic #47). R153's other graveyard
+   * graveyard: when one of your Traps reveals, return this", Classic #47). R153's other graveyard
    * answer, the end-of-turn return, stays the `endOfTurn` hook's.
    */
   graveyardTriggers?: TriggerDef[];

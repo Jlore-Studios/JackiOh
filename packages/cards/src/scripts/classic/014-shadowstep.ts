@@ -1,7 +1,7 @@
 // C #14 Shadowstep (SPEC §8.6 row 14, §4.5, §6.2 Replacement, §6.3 Flicker; R4, R11, R12, R33, R57,
 // R61, R64, R69, R78, R97, R99, R317). Trap, cost 2, Common.
-//   Base:    "Activates when any of your Units die: Return them to your hand. They cost ({setCost})."
-//   Radiant: "Activates when any of your Units would die: Flicker them instead, so they survive. Add a
+//   Base:    "Reveals when any of your Units die: Return them to your hand. They cost ({setCost})."
+//   Radiant: "Reveals when any of your Units would die: Flicker them instead, so they survive. Add a
 //            copy of each to your hand. The copies cost ({setCost})."
 //   Engine:  "Base: one firing covers every Unit of yours that one state-check pass collects (§4.5);
 //            each card still in a graveyard afterwards goes to its owner's hand (§3.2) with

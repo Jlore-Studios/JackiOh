@@ -165,7 +165,7 @@ describe("R42: the killer is the hit that took the unit to 0", () => {
 });
 
 describe("R174: what was queued for a card's old stay does not act on its Reborn body", () => {
-  it("R174 Fed Fauci's Plague Token for the hit that killed it does not land on its Reborn body (R78)", () => {
+  it("R174 Fed Fauci's Plague Counter for the hit that killed it does not land on its Reborn body (R78)", () => {
     const g = scenario({
       seed: REBORN_SEED,
       p1: {

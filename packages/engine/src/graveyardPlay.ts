@@ -4,7 +4,7 @@
 //
 // A permission is a card on the field saying so — Classic #28 Second Wind ("You may play cards from
 // your graveyard"; its Radiant face only those whose price, as it would be paid, is (1) or more),
-// Classic #74 Corpse Plantation (Units, paid partly or wholly with the Plague Tokens on it), and
+// Classic #74 Corpse Plantation (Units, paid partly or wholly with the Plague Counters on it), and
 // Classic #90 In Too Deep's reward L (an aura of the same permission while the card stands). Each is
 // `Script.graveyardPlay`, a pure read asked of the cards acting on the player's own side.
 //
@@ -28,7 +28,7 @@ import { cardAt, slotsOf } from "./zones";
  * - `units`: Units only (Classic #74); absent, every card type (Classic #28, In Too Deep's reward L).
  * - `minPrice`: the least price a play under it may have, as it would be paid — after every discount
  *   (Classic #28 Radiant: (1), which stops a (0) loop).
- * - `plague`: plays under it pay with the Plague Tokens on the granting card (Classic #74): each token
+ * - `plague`: plays under it pay with the Plague Counters on the granting card (Classic #74): each token
  *   pays PLAGUE_TOKEN_MANA, at least MIN_PLAGUE_PAYMENT of them, at most the tokens there and the
  *   price, and the rest in mana. Such a play must spend tokens; a permission without `plague` is paid
  *   in mana alone.
@@ -42,10 +42,10 @@ export type GraveyardPlayPermission = {
 /** A permission and the card on the field granting it. */
 export type GraveyardGrant = { source: CardInstance; permission: GraveyardPlayPermission };
 
-/** The Plague Tokens a play from the graveyard spends: the play action's `plague`. */
+/** The Plague Counters a play from the graveyard spends: the play action's `plague`. */
 export type PlagueSpend = NonNullable<Extract<ActionBody, { type: "play" }>["plague"]>;
 
-/** How one play pays its price besides mana: the Plague Tokens a graveyard play spends (R454). */
+/** How one play pays its price besides mana: the Plague Counters a graveyard play spends (R454). */
 export type PlayPayment = { plague?: PlagueSpend };
 
 /**
@@ -92,7 +92,7 @@ export function playableFromGraveyard(state: GameState, card: CardInstance): boo
   return inOwnGraveyard(state, player, card) && admitting(state, player, card).length > 0;
 }
 
-/** The Plague Tokens on a card now (§6.3 Plague Token). */
+/** The Plague Counters on a card now (§6.3 Plague Counter). */
 function plagueOn(card: CardInstance): number {
   return card.counters.plague ?? 0;
 }
@@ -143,29 +143,29 @@ export function whyGraveyardPlayRefused(
 
   if (plague === undefined) {
     if (!priced.some((grant) => grant.permission.plague !== true)) {
-      return "that card may only be played from your graveyard by spending Plague Tokens";
+      return "that card may only be played from your graveyard by spending Plague Counters";
     }
     return price > mana ? `that card costs ${price}, more than your mana` : null;
   }
 
   const grant = priced.find((entry) => entry.permission.plague === true && entry.source.id === plague.from);
-  if (grant === undefined) return "those Plague Tokens cannot pay for that card";
+  if (grant === undefined) return "those Plague Counters cannot pay for that card";
   if (!Number.isInteger(plague.tokens) || plague.tokens < MIN_PLAGUE_PAYMENT) {
-    return `spend at least ${MIN_PLAGUE_PAYMENT} Plague Token`;
+    return `spend at least ${MIN_PLAGUE_PAYMENT} Plague Counter`;
   }
-  if (plague.tokens > plagueOn(grant.source)) return "there are not that many Plague Tokens there";
-  if (plague.tokens * PLAGUE_TOKEN_MANA > price) return "that is more Plague Tokens than the price";
+  if (plague.tokens > plagueOn(grant.source)) return "there are not that many Plague Counters there";
+  if (plague.tokens * PLAGUE_TOKEN_MANA > price) return "that is more Plague Counters than the price";
   if (price - plague.tokens * PLAGUE_TOKEN_MANA > mana) return "the rest of the price is more than your mana";
   return null;
 }
 
-/** R454: the mana a play pays once its Plague Tokens have paid their part. */
+/** R454: the mana a play pays once its Plague Counters have paid their part. */
 export function manaDue(price: number, plague: PlagueSpend | undefined): number {
   return Math.max(0, price - (plague?.tokens ?? 0) * PLAGUE_TOKEN_MANA);
 }
 
 /**
- * R454, §10.5 step 2: take the Plague Tokens a play spends off the card that holds them, reported as
+ * R454, §10.5 step 2: take the Plague Counters a play spends off the card that holds them, reported as
  * any change of the count is (`counterChanged`, no `placed`: a removal, E19).
  */
 export function spendPlagueTokens(sink: EngineSink, card: CardInstance, tokens: number): void {

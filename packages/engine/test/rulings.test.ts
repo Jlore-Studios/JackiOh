@@ -876,7 +876,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // Proved by rulings-b.test.ts "R63 tramples only the excess, cleaves past a stopped hit, ignores zero hits
-  // and lifesteals the total once"; damage.test.ts "R63 gives Fed Fauci one Plague Token per damage
+  // and lifesteals the total once"; damage.test.ts "R63 gives Fed Fauci one Plague Counter per damage
   // instance, and none for an instance Armor zeroed"; effects-damage.test.ts "R63 an amount of 0 or less is
   // not a damage instance at all".
   it("R63 tramples only the excess, cleaves past a stopped hit, and makes a zero hit no damage instance", () => {
@@ -2926,7 +2926,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
 
   // Proved by cards classic/038-jackiestan-auctioneer.test.ts "R395 …" (face-down only the activation
   // condition is live; the "whenever" starts with the next play).
-  it("R395 keeps C #38 Jackiestan Auctioneer's \"whenever\" text off until it has activated", () => {
+  it("R395 keeps C #38 Jackiestan Auctioneer's \"whenever\" text off until it has revealed", () => {
     provenIn(395, CLASSIC_038_TEST);
   });
 
@@ -3352,7 +3352,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // Proved by effects-plague.test.ts "R471 …".
-  it("R471 places Plague Tokens one placement at a time, on cards that act", () => {
+  it("R471 places Plague Counters one placement at a time, on cards that act", () => {
     provenIn(471, "effects-plague.test.ts");
   });
 
@@ -3775,6 +3775,27 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // the newest version in patches.json with the next letter.
   it("R650 names a micro patch after the newest version, with the next letter", () => {
     provenIn(650, "../../cards/test/versions.test.ts");
+  });
+
+  // Proved by packages/cards/test/catalog.test.ts "R651 …": the family table holds its one rarity
+  // for every member, the fifteen cards the pass moved carry their new rarities, and the bigger
+  // version of an effect never sits lower; patches.test.ts "R388 records patch v0.2.2" names the
+  // rows the pass's fields moved too.
+  it("R651 fixes rarity's criteria, its families and their consistency rules", () => {
+    provenIn(651, CARDS_CATALOG_TEST, CARDS_PATCHES_TEST);
+  });
+
+  // Proved by card-text.test.ts "R652 …": no printed face says "Plague Token", and "activate" is
+  // §6.2's keyword alone.
+  it("R652 renames the Plague Token the Plague Counter, and a Trap \"reveals\"", () => {
+    provenIn(652, CARDS_CARD_TEXT_TEST);
+  });
+
+  // Proved by packages/cards/test/087-pocket-chaos.test.ts "R653 …": the gift's `costOverride` is
+  // one under the cast copy's own R65 base, `costMod` and the price paid never enter it, and none
+  // is added where the result would be (0).
+  it("R653 sets the base cost of the Pocket Chaos a cast one adds", () => {
+    provenIn(653, "../../cards/test/087-pocket-chaos.test.ts");
   });
 });
 

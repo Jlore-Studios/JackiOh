@@ -1,6 +1,6 @@
 // C #52 Final Gambit (SPEC §8.6 row 52; §4.4 step 4a, §6.3 Redirect; R18, R33, R44, R58, R125, R216,
 // R317, R386). Trap, cost 2, Epic.
-//   Base:    "Activates when a hit would bring your hero to 0 or less: Redirect the hit to the enemy
+//   Base:    "Reveals when a hit would bring your hero to 0 or less: Redirect the hit to the enemy
 //            hero. Then heal your hero {heal} and draw {draw}." (10, 3)
 //   Radiant: "… Then heal your hero {heal} and draw your deck." (20)
 //   Engine:  a replacement at "would take lethal damage" (after Armor, multipliers and caps; this hit

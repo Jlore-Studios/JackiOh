@@ -153,7 +153,7 @@ describe("C+ #47 Jogg's Box", () => {
     });
 
     it("R452 R471 a cast Book of Plague (C #70) places its tokens at random: its caster is never asked", () => {
-      const PLAGUE_BOOK = "classic-070"; // (1) Spell: "Place {tokens} Plague Tokens."
+      const PLAGUE_BOOK = "classic-070"; // (1) Spell: "Place {tokens} Plague Counters."
       const spells = Object.entries(CATALOG).filter(([id, entry]) => entry.type !== "Spell" || id === BOX || id === PLAGUE_BOOK);
       try {
         registerCatalog(Object.fromEntries(spells), CATALOG_VERSION);

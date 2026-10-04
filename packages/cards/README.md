@@ -309,7 +309,7 @@ The pools the spec pins down, as the argument object to write:
 | a pool its card limits to sets | `catalog.query({ set: ["Classic", "Classic+"] })` | only those sets: C+ #27 Zephrys Zealotism, #73.1 Classic Golem and #75.1's Pack name Classic and Classic+, C+ #73 names Classic; #82 KY's Trial and #97 Zephyrs name Core (`set: "Core"`) |
 | KY (#57 Conjure KY) | `catalog.pool("core-057", { tags: ["KY"] })` | Core #31, #51, #82 and C+ #41, #42, #62 |
 | a (1) Cost Trap (#67 Zoomerbin Oomen) | `catalog.query({ type: catalog.trapTypes, cost: 1 })` | Core #18, #41, #60, #71, #96 and C+ #22 Blood Moon (#85 costs (2) since patch v0.1.1; radiant #67 drops the cost and reaches it) |
-| Transmogulate (#83, R35) | `catalog.pool("core-083", { rarity: "Legendary" })` | every non-token Legendary but #83: Core's six (#52, #85, #87, #92, #93, #95), Classic's nine and Classic+'s thirteen |
+| Transmogulate (#83, R35) | `catalog.pool("core-083", { rarity: "Legendary" })` | every non-token Legendary but #83: Core's six (#52, #85, #87, #92, #93, #95), Classic's ten and Classic+'s thirteen |
 | Call to Chaos (#95) | `catalog.query({ tags: ["Call to Chaos"] })` — **no** `excludeDefId` | #95 and C+ #73, the Classic+ Edition: the §5.1 exception, a text that names a pool holding itself (R28, R387) |
 | Fruit (C+ #58 Fruit Basket) | `catalog.pool("classicplus-058", { tags: ["Fruit"] })` | the non-token Fruit cards but Fruit Basket, plus the five Grapes (C+ #65.1–#65.5), which no other pool holds but the next one (R382) |
 | every card and token (C+ #23 Dropshipping) | `catalog.pool("classicplus-023", { withTokens: true })` | every card and every token of every set — a Grape, a Loser, an AI card — but Dropshipping (R382) |

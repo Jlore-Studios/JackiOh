@@ -68,16 +68,16 @@ function both(script: Script): CardScripts {
 }
 
 // ---------------------------------------------------------------------------
-// E19 Plague Tokens.
+// E19 Plague Counters.
 // ---------------------------------------------------------------------------
 
-/** Classic #70's shape: "Place 2 Plague Tokens" (Radiant 3), then 1 damage to the enemy hero. */
+/** Classic #70's shape: "Place 2 Plague Counters" (Radiant 3), then 1 damage to the enemy hero. */
 export const plagueBook = def("plague-book", "Spell");
-/** Classic #27's shape: Plague Tokens placed on this are doubled (Radiant tripled). */
+/** Classic #27's shape: Plague Counters placed on this are doubled (Radiant tripled). */
 export const slime = unit("slime", 1, 1);
-/** Classic #53's shape: whenever Plague Tokens are placed on this, 1 damage to the enemy hero. */
+/** Classic #53's shape: whenever Plague Counters are placed on this, 1 damage to the enemy hero. */
 export const crawler = unit("crawler", 2, 2);
-/** Classic #42's aura: your Units +1/+1 per Plague Token on them, enemy Units −1/−1 per token. */
+/** Classic #42's aura: your Units +1/+1 per Plague Counter on them, enemy Units −1/−1 per token. */
 export const toxins = def("toxins", "Field Spell");
 /** Classic #39's shape: one placement of 1 (Radiant 2) on a declared permanent. */
 export const outbreak = def("outbreak", "Spell");
@@ -85,7 +85,7 @@ export const outbreak = def("outbreak", "Spell");
 export const dusting = def("dusting", "Spell");
 /** Classic #42's Activate, as a Spell: one token on each of 2 different random Units. */
 export const scatter = def("scatter", "Spell");
-/** Classic #69's self layer: +2 attack for each Plague Token on this. */
+/** Classic #69's self layer: +2 attack for each Plague Counter on this. */
 export const charger = unit("charger", 4, 2);
 /** A face-down trap with no text, to carry tokens in the backrow. */
 export const quietTrap = def("quiet-trap", "Trap");
@@ -281,7 +281,7 @@ function fuserScript(): Script {
 }
 
 /**
- * Classic #42's aura: each Unit on the field with Plague Tokens on it gets `per` × its tokens, up on
+ * Classic #42's aura: each Unit on the field with Plague Counters on it gets `per` × its tokens, up on
  * its controller's side and down on the other, as one entry per Unit (the amount is the Unit's own).
  */
 function toxinsAura(state: GameState, self: CardInstance, per: number): ReturnType<NonNullable<Script["aura"]>> {

@@ -194,7 +194,7 @@ describe("the damage pipeline (§4.4, M2-T3)", () => {
 
   it("step 6: an instance Armor reduces to 0 emits no damage event, and a 0 hit is no instance at all (R63)", () => {
     // M1 has no trigger dispatch, so what step 6 makes observable is the `damage` event an
-    // on-damage trigger such as Fed Fauci's Plague Token would fire from: one per instance dealt,
+    // on-damage trigger such as Fed Fauci's Plague Counter would fire from: one per instance dealt,
     // none at all for an instance stopped before step 5.
     const state = newGame();
     const armour = put(state, armoured.id, slot("p2", "units", 1));
@@ -419,12 +419,12 @@ const fedFauci: CardDef = {
   rarity: "Rare",
   token: false,
   cost: 2,
-  base: { attack: 1, health: 6, keywords: [{ kind: "Rush" }], text: "+1 Plague Token when this takes damage" },
+  base: { attack: 1, health: 6, keywords: [{ kind: "Rush" }], text: "+1 Plague Counter when this takes damage" },
   radiant: { attack: 2, health: 12, keywords: [{ kind: "Rush" }], text: "same" },
 };
 
 describe("on-damage triggers (§4.4 step 6, M2-T3)", () => {
-  it("R63 gives Fed Fauci one Plague Token per damage instance, and none for an instance Armor zeroed", () => {
+  it("R63 gives Fed Fauci one Plague Counter per damage instance, and none for an instance Armor zeroed", () => {
     const state = newGame();
     registerCatalog({ ...registeredCatalog(), [fedFauci.id]: fedFauci });
     const script = {

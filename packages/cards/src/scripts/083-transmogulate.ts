@@ -12,14 +12,16 @@
 //    Pool: the §8 Legendary-rarity cards except #83, which is #52, #85, #87, #92, #93, #95".
 // Clause by clause:
 //   - "the pool" is `catalog.pool("83", { rarity: "Legendary" })` — §5.1's one query function with
-//     this card's own index excluded, which `test/query.test.ts` pins to exactly those six. This
-//     file never lists the six by hand: two sources of one pool is the bug that file prevents.
+//     this card's own index excluded, which `test/query.test.ts` pins to the exact list: R35's six,
+//     every set's since patch v0.2.0, plus Classic #9 and #28 since patch v0.2.2 (R651). This file
+//     never lists them by hand: two sources of one pool is the bug that file prevents.
 //   - "same-type replacement in place" is one `transform` per board card, narrowed to the
 //     Legendaries of that card's type: a Unit becomes #52 or #92, a Field Spell becomes #93, and a
-//     Trap becomes #85. "Field Trap counts as Trap" is `TRAP_TYPES` (both types in one query), so a
-//     Field Trap also becomes #85 Unlicensed Experimentation — BUILD M4-T4's own example. The pool
-//     holds no Legendary Field Trap, which is why the type match has to be read this way rather
-//     than as an exact `type` equality.
+//     Trap becomes #85 — or, since patch v0.2.2 made Classic #9 Income Tax Legendary (R651), the
+//     other Legendary trap. "Field Trap counts as Trap" is `TRAP_TYPES` (both types in one query),
+//     so a Field Trap becomes one of them too — BUILD M4-T4's own example. The pool holds no
+//     Legendary Field Trap, which is why the type match has to be read this way rather than as an
+//     exact `type` equality.
 //   - "in place" and "replaced cards cease to exist" are `effects/transform.ts`: `replaceOnField`
 //     keeps the zone, the position and the Stack pile beneath, `replaceOffField` keeps the pile
 //     index (so a library keeps its order), and both leave the old card in no pile at all. That is
@@ -67,7 +69,8 @@ const OFF_FIELD_ZONES = ["hand", "library", "graveyard", "exile"] as const;
 
 /**
  * R35's pool: every non-token Legendary but this card (R387), of every set (R380) — in Core #52, #85,
- * #87, #92, #93, #95, proved by `test/query.test.ts`, not listed here.
+ * #87, #92, #93, #95, with Classic #9 and #28 added by patch v0.2.2 (R651); proved by
+ * `test/query.test.ts`, not listed here.
  */
 function legendaries(type?: CardType | CardType[]): CardDef[] {
   return catalog.pool(def.id, { rarity: "Legendary", ...(type === undefined ? {} : { type }) });

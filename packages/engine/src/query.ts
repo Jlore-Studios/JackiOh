@@ -197,7 +197,7 @@ export function killerOf(state: GameState, card: CardInstance | null): CardInsta
 }
 
 // ---- v0.2.0 board facts, by workstream: generation (B5 E19, R471) ----
-// Plague Tokens are read here like every other board fact; the counter's rules are `plague.ts`'s.
+// Plague Counters are read here like every other board fact; the counter's rules are `plague.ts`'s.
 //   `plagueOn(card)`             the tokens on one permanent (Classic #39, #43, #69, #87; C+ #3)
 //   `plagueOnField(state, p?)`   every token on the field, or one side's (Classic #59)
 //   `permanentsOnField(state)`   every permanent on the field in R68's order, face-down included

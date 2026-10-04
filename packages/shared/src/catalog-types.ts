@@ -343,7 +343,7 @@ export type TargetFilter = {
   costRange?: { min?: number; max?: number };
   /** A unit with damage above 0 (Classic+ #32.1 Execute). */
   damaged?: boolean;
-  /** A card with at least one Plague Token on it (Classic #78 Mutate Spell). */
+  /** A card with at least one Plague Counter on it (Classic #78 Mutate Spell). */
   plague?: boolean;
   /**
    * The name of a predicate in the declaring script's `targetChecks`, for a filter no field above

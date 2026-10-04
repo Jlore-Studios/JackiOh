@@ -30,7 +30,7 @@ const HIT_JOB = "core-016"; // (3) Spell: destroy target Unit
 const BIG_FELINOR = "core-043"; // (4) Unit: "Cry: Destroy all non-Felinor Units."
 const MOTHS = "core-009"; // (2) Unit 1/14: "Start of turn: Every enemy Unit attacks this."
 const TWINSPELL = "core-079"; // (2) Field Spell: "Your next Spell gains Echo +1."
-const TOXINS = "classic-042"; // (2) Field Spell: "Activate: Place a Plague Token on each of 2 random Units."
+const TOXINS = "classic-042"; // (2) Field Spell: "Activate: Place a Plague Counter on each of 2 random Units."
 const STOCKPILE = "core-005"; // (1) Spell, a spare card (§2.5)
 
 function redirects(s: Scenario): Extract<GameEvent, { type: "redirected" }>[] {
@@ -220,7 +220,7 @@ describe("C #33 Joro", () => {
       expect(redirects(s).map((event) => [event.fromId, event.toId])).toEqual([[menace.id, joro.id]]);
     });
 
-    it("a random pick targets nothing: C #42's random Plague Tokens draw no Joro", () => {
+    it("a random pick targets nothing: C #42's random Plague Counters draw no Joro", () => {
       const s = scenario({
         active: "p2",
         p1: { hand: [JORO, STOCKPILE], field: [MENACE] },

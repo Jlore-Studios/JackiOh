@@ -1,6 +1,6 @@
 // T-AI-9 Refusal (SPEC §8.7 row T-AI-9, §7, B8). (1) Trap, AI, Token.
-//   Base:    "Activates when your opponent plays a Spell that targets one of your Units: Counter it."
-//   Radiant: "Activates when your opponent plays a Spell that targets you or one of your cards: Counter
+//   Base:    "Reveals when your opponent plays a Spell that targets one of your Units: Counter it."
+//   Radiant: "Reveals when your opponent plays a Spell that targets you or one of your cards: Counter
 //            it. Draw 1."
 //   Engine:  "Counter (§6.3), in §10.5's announce window (`cardAnnounced`): a Spell whose declared
 //            targets (R81) include a Unit you control (Radiant: your hero or any card you control or

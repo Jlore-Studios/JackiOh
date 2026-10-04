@@ -1,7 +1,7 @@
 // C #10 Exile (SPEC §8.6 row 10). Trap, cost 2, Common.
-//   Base:    "Activates when your opponent plays a card that costs ({threshold}) or less: Counter and
+//   Base:    "Reveals when your opponent plays a card that costs ({threshold}) or less: Counter and
 //             exile it."
-//   Radiant: "Activates when your opponent plays a card that costs ({threshold}) or less: Counter and
+//   Radiant: "Reveals when your opponent plays a card that costs ({threshold}) or less: Counter and
 //             exile it. Then exile random enemy permanents that together cost up to ({threshold})
 //             minus its cost."
 //

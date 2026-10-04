@@ -663,7 +663,7 @@ export function runQueuedTrigger(sink: EngineSink, entry: QueuedTrigger): void {
  * but the fused definition namespaces each ingredient's trigger ids (`<ingredientDefId>:<id>`), so
  * an entry the card queued before the Fuse, under its old definition, is found under that
  * definition's namespace: Fed Fauci hit by the Cry that Unlicensed Experimentation then fused onto
- * it still owes its Plague Token (R212).
+ * it still owes its Plague Counter (R212).
  */
 function queuedTriggerDef(holder: TriggerHolder, entry: QueuedTrigger): TriggerDef | undefined {
   const exact = holder.triggers.find((candidate) => candidate.id === entry.hook);

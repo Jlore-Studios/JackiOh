@@ -1,9 +1,9 @@
-// #87 Pocket Chaos (SPEC §8.4, §10.6, R4, R11, R12, R33, R73, R81, R88).
+// #87 Pocket Chaos (SPEC §8.4, §10.6, R4, R11, R12, R33, R73, R81, R88, R653).
 //
 // Base: "Choose one: Swap hero health, boards or decks with your opponent. Then add a Pocket Chaos
-// to your opponent's hand. Exile this." Radiant: "… Then you may add a Pocket Chaos to your
-// opponent's hand. Exile this." (§8's cell "You may skip adding it"; patch v0.1.1 removed the
-// Radiant face's "draw 1").
+// with a base cost (1) less than this one's to your opponent's hand, unless its base cost would be
+// (0). Exile this." Radiant: "… Then you may add a Pocket Chaos …" (§8's cell "You may add it";
+// patch v0.1.1 removed the Radiant face's "draw 1", patch v0.2.2 set the cost and the gift's base).
 //
 // §8's Conventions: the radiant cell restates the "add a Pocket Chaos" clause, so the Choose one and
 // the exile are kept unchanged. The radiant difference is one: the gift becomes optional.
@@ -40,10 +40,17 @@
 // copy — R57's "carries the radiant flag" is about copies of an existing card, and nothing in this
 // card's text or the radiant cell says the gift is Radiant.
 //
+// The copy's base cost is R653's: one under the cast copy's own R65 base — its `costOverride` where
+// it carries one, else its printed cost — so a copy handed over at a lower base hands one lower
+// still. The cast copy's `costMod` and the price the play paid are modifiers over the base and
+// never enter it, and where the result would be (0) no copy is added at all: a copy whose own base
+// is (1) or (0) gives nothing, on either face.
+//
 // `def.id` is the definition this file already owns, so the gift needs no id literal and no second
 // catalog lookup.
 
-import type { Effect, Script } from "@jackioh/engine";
+import type { Effect, EffectContext, Script } from "@jackioh/engine";
+import { printedCost } from "@jackioh/engine";
 import { addToHand, chosenOptions, exile, swap } from "@jackioh/engine/effects";
 import type { ModeDecl } from "@jackioh/shared";
 import { cardDef } from "../catalog-data";
@@ -61,6 +68,20 @@ const GIFT = "gift";
 const SKIP = "skip";
 const GIFT_MODE: ModeDecl = { kind: "mode", options: [GIFT, SKIP] };
 
+/** R653: the copy's base cost is one under the cast copy's own. */
+const GIFT_DISCOUNT = 1;
+
+/**
+ * The cast copy's R65 base — its `costOverride` where it carries one, else its printed cost — less
+ * GIFT_DISCOUNT, floored at 0 (R653). `ctx.self` is the resolving card, never null for a cry its own
+ * text runs.
+ */
+function giftCost(ctx: EffectContext): number {
+  const self = ctx.self;
+  const castBase = self === null ? 0 : (self.costOverride ?? printedCost(ctx.state, self));
+  return Math.max(0, castBase - GIFT_DISCOUNT);
+}
+
 /** `radiantFace` is the whole of the radiant text: an optional gift. */
 function chaos(radiantFace: boolean): Script {
   return {
@@ -68,10 +89,12 @@ function chaos(radiantFace: boolean): Script {
     cry: (ctx): Effect[] => {
       // Only an explicit SKIP skips: the base clause is to add it, and the radiant cell makes that
       // optional rather than reversing it, so an unanswered gift mode still hands the copy over.
+      // A gift whose base would be (0) is never added on either face (R653).
       const skipped = radiantFace && chosenOptions(ctx).includes(SKIP);
+      const gift = giftCost(ctx);
       return [
         swap(),
-        ...(skipped ? [] : [addToHand({ defId: def.id, player: "enemy" })]),
+        ...(skipped || gift === 0 ? [] : [addToHand({ defId: def.id, player: "enemy", costOverride: gift })]),
         exile({ target: { of: "self" } }),
       ];
     },

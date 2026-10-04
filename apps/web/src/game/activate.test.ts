@@ -1,5 +1,5 @@
 // The client half of Activate (B3.2, R384; presentation R510), the play's new payments (B5 E5's
-// discards, E11/E19's Plague Tokens), a Tribute onto its own zone (B4.5, R391) and plays from the
+// discards, E11/E19's Plague Counters), a Tribute onto its own zone (B4.5, R391) and plays from the
 // graveyard (B5 E11), as `actions.ts` builds them. Every test feeds a hand-built `legal` array and
 // checks that what comes out was read from that array and nothing else (CLAUDE.md rule 7): no
 // count of uses, no check of a cost, no zone arithmetic.
@@ -352,7 +352,7 @@ describe("B5 E5 a target that costs discards (Classic #89): the discards are pic
   });
 });
 
-describe("B5 E11, E19 Plague Tokens paying a graveyard play (Classic #74)", () => {
+describe("B5 E11, E19 Plague Counters paying a graveyard play (Classic #74)", () => {
   const mana: ActionBody = { type: "play", instanceId: "gy1", zone: { row: "units", lane: 5 } };
   const one: ActionBody = { type: "play", instanceId: "gy1", zone: { row: "units", lane: 5 }, plague: { from: "fs1", tokens: 1 } };
   const two: ActionBody = { type: "play", instanceId: "gy1", zone: { row: "units", lane: 5 }, plague: { from: "fs1", tokens: 2 } };

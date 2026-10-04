@@ -166,7 +166,7 @@ function asSet(keywords: readonly Keyword[]): Keyword[] {
 
 /**
  * B5 E35: a keyword that holds only while a condition does (Classic #69 Plague Charger's First Strike
- * "while it has a Plague Token"): the card's `conditionalKeywords` hook, read with its printed ones,
+ * "while it has a Plague Counter"): the card's `conditionalKeywords` hook, read with its printed ones,
  * so a Vanilla takes it (`scriptOf` runs no script for one). The hook reads instance data only.
  */
 function conditionalKeywordsOf(state: GameState, instance: CardInstance): Keyword[] {

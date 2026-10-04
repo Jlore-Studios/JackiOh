@@ -1,6 +1,6 @@
-// Counters on an instance and locks on a zone (§6.3). Plague Tokens live on the instance and R78
+// Counters on an instance and locks on a zone (§6.3). Plague Counters live on the instance and R78
 // clears them when the card leaves the field; a Lock lives on the zone and outlives every occupant.
-// The Plague Token rules themselves — what a placement is, the multiplier, the report — are
+// The Plague Counter rules themselves — what a placement is, the multiplier, the report — are
 // `../plague`'s (R471); the placement verbs of patch v0.2.0 are `./plague`'s.
 
 import type { Row } from "@jackioh/shared";
@@ -16,8 +16,8 @@ function instanceOf(ctx: EffectContext, spec: TargetSpec): CardInstance | null {
 }
 
 /**
- * #91 Fed Fauci: add Plague Tokens to a permanent, any number of them — one placement (R471, so a
- * card that multiplies what is placed on it multiplies this, and "whenever Plague Tokens are placed
+ * #91 Fed Fauci: add Plague Counters to a permanent, any number of them — one placement (R471, so a
+ * card that multiplies what is placed on it multiplies this, and "whenever Plague Counters are placed
  * on this" answers it). A negative amount takes them off and the count floors at 0; R78 resets the
  * counter when the card leaves the field.
  */
@@ -34,7 +34,7 @@ export function plague(args: { target?: TargetSpec; amount: number }): Effect {
   };
 }
 
-/** Clear every Plague Token on a permanent. */
+/** Clear every Plague Counter on a permanent. */
 export function clearPlague(args: { target?: TargetSpec } = {}): Effect {
   return {
     kind: "clearPlague",

@@ -1,7 +1,7 @@
 // C #43 Plague Nuke (SPEC §8.6 row 43). (3) Spell, Epic.
-//   Base:    "Destroy all Units. Gain {mana} mana for each Plague Token that was on them." — 1
-//   Radiant: "Destroy all Units. Gain {mana} mana for each Plague Token that was on them. Then summon,
-//            under your control, each of those Units that had a Plague Token from its owner's
+//   Base:    "Destroy all Units. Gain {mana} mana for each Plague Counter that was on them." — 1
+//   Radiant: "Destroy all Units. Gain {mana} mana for each Plague Counter that was on them. Then summon,
+//            under your control, each of those Units that had a Plague Counter from its owner's
 //            graveyard." — 1
 //   Engine:  "Count the tokens on every unit first, destroy all (one state check, §4.5), then the
 //            temporary mana. An Indestructible unit survives, but its tokens count ("on them" is every
@@ -11,7 +11,7 @@
 //            back on the field is not summoned again; tokens are gone (R11). Tunes: mana per token 1 ↑."
 //
 // "Them" is every Unit on the field as the Spell resolves — the top of each unit pile on both sides,
-// never a card dormant under a Stack (R13) — read once, first: the Plague Tokens on them all, and the
+// never a card dormant under a Stack (R13) — read once, first: the Plague Counters on them all, and the
 // ones that carry any. Then every Unit is destroyed, and the deaths happen in ONE §4.5 check
 // (`afterStateCheck` runs it at this point of the list, R59), so an Indestructible unit survives with
 // its tokens counted all the same. After that check comes the temporary mana (§2.3): {mana} per token.
@@ -24,7 +24,7 @@
 // runs on a stay that begins after the check (R174), which is what lets it name a card in its
 // graveyard.
 //
-// R280: the preview is the mana it would give now — the Plague Tokens on the Units on the field,
+// R280: the preview is the mana it would give now — the Plague Counters on the Units on the field,
 // which are public (§10.8), times {mana} — read by the same count the resolution uses.
 //
 // The number is the declared `mana` (R386), read through `param`.
@@ -49,14 +49,14 @@ import { cardDef } from "../../catalog-data";
 export const def = cardDef("classic-043");
 
 /** R280: the words of the text the preview's value follows, on both faces. */
-const MANA_LABEL = "for each Plague Token that was on them";
+const MANA_LABEL = "for each Plague Counter that was on them";
 
 /** Every Unit on the field, R68's order from `first`'s side: the tops of the unit piles (R13). */
 function unitsOnField(state: GameState, first: PlayerId): CardInstance[] {
   return [...activeUnitsOf(state, first), ...activeUnitsOf(state, opponentOf(first))];
 }
 
-/** The Plague Tokens on every Unit on the field now: what the mana counts. */
+/** The Plague Counters on every Unit on the field now: what the mana counts. */
 function tokensOnUnits(state: GameState, first: PlayerId): number {
   return unitsOnField(state, first).reduce((sum, unit) => sum + plagueOn(unit), 0);
 }

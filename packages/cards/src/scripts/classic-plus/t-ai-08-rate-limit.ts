@@ -1,5 +1,5 @@
 // T-AI-8 Rate Limit (SPEC §8.7 row T-AI-8, §7, B8). (1) Trap, AI, Token.
-//   Base:    "Activates when your opponent plays their 3rd card in a turn: After it resolves, their
+//   Base:    "Reveals when your opponent plays their 3rd card in a turn: After it resolves, their
 //            turn ends."
 //   Radiant: "… their 2nd card …"
 //   Engine:  "Counts the opponent's plays that turn (`turnLog.cardsPlayed`, casts included, R70; a

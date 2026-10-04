@@ -1,9 +1,9 @@
 // C #63 Crop Dusting — SPEC §8.6 row 63, BUILD M9 Classic row C 63: "Face-down (R33); fires at the start
 // of your next turn with the start-of-turn triggers (R62) and goes to the graveyard; places 1 Plague
-// Token on each permanent on the field, both sides, face-down ones included (C #27 doubles its own),
+// Counter on each permanent on the field, both sides, face-down ones included (C #27 doubles its own),
 // then draws 1; the placement on a face-down card never names it to the player who can't read it (R97);
-// radiant: 2 tokens each and draw 2 (the adopted Radiant face, R276); its tuned numbers (tokens, draw)
-// read through `param()` (R386)".
+// radiant: 3 counters each and draw 3 (the designer's face since patch v0.2.2, R652); its tuned numbers
+// (tokens, draw) read through `param()` (R386)".
 //
 // The C #27 Pestilent Slime case needs C #27's script (cards-classic-a) registered.
 
@@ -14,8 +14,8 @@ import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/063-crop-dusting";
 
 const DUSTING = "classic-063";
-const CRAWLER = "classic-053"; // (1) Unit: whenever Plague Tokens are placed on this, draw 1.
-const SLIME = "classic-027"; // (0) Unit: Plague Tokens placed on this are doubled.
+const CRAWLER = "classic-053"; // (1) Unit: whenever Plague Counters are placed on this, draw 1.
+const SLIME = "classic-027"; // (0) Unit: Plague Counters placed on this are doubled.
 const VANILLA = "core-008"; // (1) Unit 4/4.
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt.
 const FIENDER = "core-092"; // (2) Unit 5/7 Stack.
@@ -68,8 +68,8 @@ describe("C #63 Crop Dusting", () => {
     expect(def.type).toBe("Trap");
     expect(base.triggers?.map((trigger) => [trigger.id, trigger.on])).toEqual([["crop-dusting", ["turnStarted"]]]);
     expect(def.params).toEqual([
-      { key: "tokens", base: 1, radiant: 2, better: "up", step: 1, min: 1 },
-      { key: "draw", base: 1, radiant: 2, better: "up", step: 1, min: 1 },
+      { key: "tokens", base: 1, radiant: 3, better: "up", step: 1, min: 1 },
+      { key: "draw", base: 1, radiant: 3, better: "up", step: 1, min: 1 },
     ]);
     expect(radiant).toBe(base);
   });
@@ -96,7 +96,7 @@ describe("C #63 Crop Dusting", () => {
       expect(placedOn(s).size).toBe(0);
     });
 
-    it("R62 R550 at the start of your next turn it fires: 1 token on each permanent on both sides, itself included, then draw 1, then the graveyard", () => {
+    it("R62 R550 at the start of your next turn it fires: 1 Plague Counter on each permanent on both sides, itself included, then draw 1, then the graveyard", () => {
       const s = setUp();
       const dusting = s.card(DUSTING);
       const vanilla = s.card(VANILLA);
@@ -229,17 +229,17 @@ describe("C #63 Crop Dusting", () => {
   });
 
   describe("radiant", () => {
-    it("R276 places 2 Plague Tokens on each permanent, one placement each, and draws 2", () => {
+    it("R276 places 3 Plague Counters on each permanent, one placement each, and draws 3", () => {
       const s = setUp(true);
       const cards: CardInstance[] = [s.card(VANILLA), s.card(MANA_WELL), s.card(MENACE), s.card(PAWN)];
       s.endTurn();
 
       s.endTurn();
 
-      for (const card of cards) expect(s.card(card).counters.plague, card.defId).toBe(2);
-      expect([...placedOn(s).values()]).toEqual([[2], [2], [2], [2], [2]]);
-      // Its two draws, then the turn's.
-      expect(drawsBy(s.lastEvents, "p1")).toHaveLength(3);
+      for (const card of cards) expect(s.card(card).counters.plague, card.defId).toBe(3);
+      expect([...placedOn(s).values()]).toEqual([[3], [3], [3], [3], [3]]);
+      // Its three draws, then the turn's.
+      expect(drawsBy(s.lastEvents, "p1")).toHaveLength(4);
       s.expectInZone(DUSTING, "graveyard");
     });
 
@@ -250,7 +250,7 @@ describe("C #63 Crop Dusting", () => {
       s.expectInZone(DUSTING, "field");
     });
 
-    it("R386 a Degrade places 1 on each and draws 1", () => {
+    it("R386 a Degrade off the (3)/(3) face places 2 on each and draws 2", () => {
       const s = scenario({ p1: { hand: [{ def: DUSTING, radiant: true }, FILLER], field: [VANILLA], library: lib(5) }, p2: { hand: [FILLER], library: lib(4) } });
       stepParam(s.card(DUSTING), "tokens", -1);
       stepParam(s.card(DUSTING), "draw", -1);
@@ -259,8 +259,8 @@ describe("C #63 Crop Dusting", () => {
 
       s.endTurn();
 
-      expect(s.card(VANILLA).counters.plague).toBe(1);
-      expect(drawsBy(s.lastEvents, "p1")).toHaveLength(2);
+      expect(s.card(VANILLA).counters.plague).toBe(2);
+      expect(drawsBy(s.lastEvents, "p1")).toHaveLength(3);
     });
   });
 });

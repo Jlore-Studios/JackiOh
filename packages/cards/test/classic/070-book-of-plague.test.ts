@@ -14,8 +14,8 @@ import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/070-book-of-plague";
 
 const BOOK = "classic-070";
-const CRAWLER = "classic-053"; // (1) Unit: whenever Plague Tokens are placed on this, draw 1.
-const SLIME = "classic-027"; // (0) Unit: Plague Tokens placed on this are doubled.
+const CRAWLER = "classic-053"; // (1) Unit: whenever Plague Counters are placed on this, draw 1.
+const SLIME = "classic-027"; // (0) Unit: Plague Counters placed on this are doubled.
 const PALANTIR = "classic-004"; // (1) Field Spell: when your opponent plays a Book, you may Tribute this to steal it.
 const VANILLA = "core-008"; // (1) Unit 4/4.
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt.
