@@ -1219,11 +1219,15 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "cognition",
         "rejections": [],
         "sha": "b44dae72e9a491be9b28a310cefba233f229c92a",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "173": {
