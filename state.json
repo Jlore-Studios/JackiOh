@@ -786,6 +786,7 @@
     "144": {
       "action": "review",
       "asks": [],
+      "closed_at": "2026-10-04T16:26:11Z",
       "cross_rounds": 1,
       "died": 0,
       "failures": 0,
@@ -808,6 +809,7 @@
           "where": "packages/cards/test/patches.test.ts:76"
         }
       ],
+      "merged": true,
       "pending_at": "2026-10-03T16:22:09Z",
       "pending_by": "MaxGoetzmann",
       "pending_request": false,
