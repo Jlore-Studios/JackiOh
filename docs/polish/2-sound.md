@@ -1040,12 +1040,15 @@ charged to the burst, and that holds for a slow phone as much as for Cypress.
 - A bespoke sound per card: SFX are per event type, and personality comes from the voice lines. A
   summon is sized by the unit and a Radiant unit glints (B56); a rarity sting would need the rarity,
   which neither the view nor the client's card lookup carries. (R655 later let a card's hooks play
-  named effects from `card-audio.json5`'s bank, beside or instead of its lines.)
+  named effects from `card-audio.json5`'s bank, beside or instead of its lines, and R658 gave every
+  readable play a sting by its rarity, once the client's lookup carried it.)
 - A separate Radiant line or voice for each card; a Radiant card speaks its base lines.
-- Spatial panning by lane, sidechain ducking of SFX under voice, and reverb.
+- Spatial panning by lane, sidechain ducking of SFX under voice, and reverb. (R658, issue #259,
+  later added all three.)
 - The full settings panel and gear: task 7 mounts `AudioControls` at integration. This branch only
   mounts `AudioToggle`.
-- Bypassing the iOS ringer or silent switch (Web Audio honours it), and haptics.
+- Bypassing the iOS ringer or silent switch (Web Audio honours it), and haptics. (R658 later added
+  haptics, `apps/web/src/haptics/`, behind a Vibration switch.)
 - Localized lines, recorded human voice actors, and any server or engine change.
 - Any new `GameEvent` type, `PlayerView` field or rule. Audio reads the view as it is.
 

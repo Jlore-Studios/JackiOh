@@ -18,11 +18,13 @@ import {
   GOLD_BURST_DELAY_MS,
   HIDDEN_DEF_ID,
   HINDER_DEF_ID,
+  LANE_PAN_MAX,
   NEXT_REFRESH_MODIFIER_ID,
+  STING_DELAY_MS,
   VOICE_DELAY_MS,
   VOICE_PRIORITY,
 } from "./constants.ts";
-import { SOUND_CUES, cuesFor, timbreFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
+import { SOUND_CUES, cuesFor, lanePan, timbreFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
 import { SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
 import type { SfxId, SoundCue, CardAudioTable } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
@@ -1166,5 +1168,103 @@ describe("R655 a card's hook may carry an effect beside or instead of its line",
   it("R655 the attack hook is no event's: an attack declared plays the plain attack sound alone", () => {
     const declared: GameEvent = { type: "attackDeclared", attackerId: "u1", targetId: "u6", forced: false };
     expect(shape(declared, fx())).toEqual([sfx("attack")]);
+  });
+});
+
+/* --------------------------------------------------------------------------------------------- *
+ * R658 (#259): a sting for every readable play, and lane panning
+ * --------------------------------------------------------------------------------------------- */
+
+describe("R658 every card the viewer can read stings as it is played, by its rarity", () => {
+  const catalogOf =
+    (rarity: CueCard["rarity"], type: CueCard["type"] = "Unit") =>
+    (): CueCard => ({ type, tags: [], ...(rarity === undefined ? {} : { rarity }) });
+  const stingOf = (event: GameEvent, context: CueContext): SoundCue | undefined =>
+    cuesFor(event, context).find((c) => c.kind === "sfx" && (c.id === "sting" || c.id === "entrance"));
+
+  it("R658 a Common, Rare or Epic Unit or Spell stings on its cardPlayed, sized by its rarity, just after the whoosh", () => {
+    for (const [rarity, params] of [
+      ["Common", undefined],
+      ["Rare", { tier: "rare" }],
+      ["Epic", { tier: "epic" }],
+    ] as const) {
+      for (const [defId, type] of [
+        [UNIT, "Unit"],
+        [SPELL, "Spell"],
+      ] as const) {
+        const cue = stingOf(played(defId), ctx({ card: catalogOf(rarity, type) }));
+        expect(cue, `${rarity} ${type}`).toEqual(
+          params === undefined
+            ? { kind: "sfx", id: "sting", delayMs: STING_DELAY_MS }
+            : { kind: "sfx", id: "sting", params, delayMs: STING_DELAY_MS },
+        );
+      }
+    }
+  });
+
+  it("R658 a Legendary or Mythic Spell enters with the entrance on its cast; a Legendary or Mythic Unit keeps its entrance on summoned", () => {
+    expect(stingOf(played(SPELL), ctx({ card: catalogOf("Legendary", "Spell") }))).toEqual({
+      kind: "sfx",
+      id: "entrance",
+      delayMs: STING_DELAY_MS,
+    });
+    expect(stingOf(played(SPELL), ctx({ card: catalogOf("Mythic", "Spell") }))).toMatchObject({
+      id: "entrance",
+      params: { mythic: true },
+    });
+    expect(stingOf(played(UNIT), ctx({ card: catalogOf("Legendary") }))).toBeUndefined();
+    const summon: GameEvent = { type: "summoned", player: "p1", instanceId: "c1", defId: UNIT, row: "units", lane: 3 };
+    expect(stingOf(summon, ctx({ card: catalogOf("Legendary") }))).toMatchObject({ id: "entrance" });
+  });
+
+  it("R658 no sting for the sentinel, a Trap's set, a card cast as it is drawn, or a Token with no printed rarity", () => {
+    expect(stingOf(played(HIDDEN_DEF_ID, "p2"), ctx({ card: catalogOf("Epic") }))).toBeUndefined();
+    expect(stingOf(played(TRAP), ctx({ card: catalogOf("Epic", "Trap") }))).toBeUndefined();
+    expect(stingOf(played(FIELD_TRAP), ctx({ card: catalogOf("Epic", "Field Trap") }))).toBeUndefined();
+    expect(stingOf(played(SPELL), ctx({ card: catalogOf("Rare", "Spell"), castOnDraw: () => true }))).toBeUndefined();
+    expect(stingOf(played(TOKEN), ctx({ card: catalogOf("Token") }))).toBeUndefined();
+    expect(stingOf(played(UNIT), ctx()), "no catalog: the plain sounds").toBeUndefined();
+  });
+
+  it("R658 a Token that prints a rarity stings with it", () => {
+    const card = (): CueCard => ({ type: "Unit", tags: [], rarity: "Token", printedRarity: "Rare" });
+    expect(stingOf(played(TOKEN), ctx({ card }))).toMatchObject({ id: "sting", params: { tier: "rare" } });
+  });
+});
+
+describe("R658 an effect about a unit on the field comes from its lane", () => {
+  it("R658 lanePan centres the middle lane and puts the outer ones LANE_PAN_MAX either way", () => {
+    expect([0, 1, 2, 3, 4].map((i) => lanePan(i, 5))).toEqual([-LANE_PAN_MAX, -LANE_PAN_MAX / 2, 0, LANE_PAN_MAX / 2, LANE_PAN_MAX]);
+    expect(lanePan(0, 1)).toBe(0);
+  });
+
+  it("R658 a hit on the opponent's lane-1 unit pans left, the viewer's lane-5 unit's death right, and a hero hit stays centred", () => {
+    const enemy = unit("p2", { instanceId: "e1" });
+    const mine = unit("p1", { instanceId: "m5" });
+    const view = baseView({
+      you: emptySide("p1", { units: [null, null, null, null, mine] }),
+      opponent: emptySide("p2", { units: [enemy, null, null, null, null] }),
+    });
+    const hit = cuesFor({ type: "damage", sourceId: "m5", targetId: "e1", amount: 3, combat: true }, ctx({ view }));
+    expect(hit).toEqual([{ kind: "sfx", id: "impact", params: { amount: 3, pan: -LANE_PAN_MAX }, delayMs: 0 }]);
+    const death = cuesFor(destroyed(UNIT, "p1", "m5"), ctx({ view }));
+    expect(death.filter((c) => c.kind === "sfx").map((c) => (c.kind === "sfx" ? c.params?.pan : null))).toEqual([LANE_PAN_MAX]);
+    expect(death.some((c) => c.kind === "voice"), "a line is never panned, and still speaks").toBe(true);
+    const face = cuesFor({ type: "damage", sourceId: "m5", targetId: "hero-p2", amount: 3, combat: true }, ctx({ view }));
+    expect(face).toEqual([{ kind: "sfx", id: "impact", params: { amount: 3 }, delayMs: 0 }]);
+    const middle = baseView({ you: emptySide("p1", { units: [null, null, mine, null, null] }) });
+    expect(cuesFor(destroyed(UNIT, "p1", "m5"), ctx({ view: middle })).find((c) => c.kind === "sfx")).toEqual({
+      kind: "sfx",
+      id: "death",
+      delayMs: 0,
+    });
+  });
+
+  it("R658 a unit that has just arrived is found in the newest view", () => {
+    const arrived = unit("p1", { instanceId: "c1" });
+    const newest = baseView({ you: emptySide("p1", { units: [null, null, null, arrived, null] }) });
+    const summon: GameEvent = { type: "summoned", player: "p1", instanceId: "c1", defId: UNIT, row: "units", lane: 4 };
+    const cues = cuesFor(summon, ctx({ newestView: () => newest }));
+    expect(cues.find((c) => c.kind === "sfx" && c.id === "summon")).toMatchObject({ params: { pan: LANE_PAN_MAX / 2 } });
   });
 });

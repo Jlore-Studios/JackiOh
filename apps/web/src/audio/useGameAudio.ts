@@ -3,7 +3,7 @@
 // unlock, the UI ticks and the debug handle for the component's lifetime, and preloads the voice
 // lines the view makes likely. It also gives the board the music (R631): a music director that
 // hears every view, every event the sound director resolves, and each idle, for as long as the
-// board is mounted.
+// board is mounted. The same events reach the haptics (R658), so a buzz lands with its sound.
 //
 // ORDER MATTERS. `Game` calls this directly after `const runner = queue.current;`, before its own
 // layout effects, so the director's `onView` runs before Game's enqueue layout effect: the events
@@ -22,6 +22,7 @@ import { CatalogContext, type CardLookup } from "../game/catalog.ts";
 import type { CueCard } from "./cues.ts";
 import { retainAppAudio } from "./appAudio.ts";
 import { exposeAudioDebug } from "./debug.ts";
+import { createHaptics, type Haptics } from "../haptics/haptics.ts";
 import { createSoundDirector, type SoundDirector } from "./director.ts";
 import { getAudioEngine } from "./engine.ts";
 import { getMusicPlayer } from "./music.ts";
@@ -62,13 +63,20 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
   //    the sound director below reaches it through the ref, so it only ever hears this board's.
   const musicRef = useRef<MusicDirector | null>(null);
 
-  // 1b. The sound director, created once per mounted Game against the singleton engine.
+  // 1b. The sound director, created once per mounted Game against the singleton engine, and the
+  //     haptics (R658), which hear every event it resolves in the same step as its cues.
+  const hapticsRef = useRef<Haptics | null>(null);
+  hapticsRef.current ??= createHaptics();
+  const haptics = hapticsRef.current;
   const directorRef = useRef<SoundDirector | null>(null);
   directorRef.current ??= createSoundDirector(
     getAudioEngine(),
     CARD_AUDIO,
     (defId) => cueCard(lookupRef.current, defId),
-    (event, planned) => quietly(() => musicRef.current?.onEvent(event, planned)),
+    (event, planned) => {
+      quietly(() => musicRef.current?.onEvent(event, planned));
+      quietly(() => haptics.onEvent(event, planned));
+    },
   );
   const director = directorRef.current;
 

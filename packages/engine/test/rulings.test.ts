@@ -4002,6 +4002,20 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R656 a cast that targets enemies aims each target pick by its declaration", () => {
     provenIn(656, "effects-cast.test.ts");
   });
+
+  // Proved by apps/web audio/cues.test.ts "R658 …" (the stings by rarity, none for the sentinel, a
+  // Trap or a cast on draw; the lane pans), engine.test.ts and sfx.test.ts "R658 …" (the panner, the
+  // effects' duck under a line, the shared reverb; the sting's recipe), and haptics/haptics.test.ts
+  // "R658 …" (the three moments, the gap, the switch and Reduce Motion).
+  it("R658 every readable play stings by rarity, effects pan by lane under a voice duck and reverb, and a phone ticks", () => {
+    provenIn(
+      658,
+      "../../../apps/web/src/audio/cues.test.ts",
+      "../../../apps/web/src/audio/engine.test.ts",
+      "../../../apps/web/src/audio/sfx.test.ts",
+      "../../../apps/web/src/haptics/haptics.test.ts",
+    );
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

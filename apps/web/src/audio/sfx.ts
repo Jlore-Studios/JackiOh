@@ -38,6 +38,7 @@ export const SFX_IDS: readonly SfxId[] = [
   "cancel", "entrance", "fatigue", "refuse",
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
   "emoteSob", "emoteYawn", "emoteLaugh", "emoteAngry", "emoteWahWah",
+  "sting",
 ];
 
 /** Every card family a summon or spell may be given (types.ts SfxTimbre), for the tests. */
@@ -1237,6 +1238,38 @@ const emoteWahWah: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
+/* ------------------------------------------------------------------------------------------- *
+ * Patch v0.2.X (#259, R658): the play sting
+ * ------------------------------------------------------------------------------------------- */
+
+/**
+ * R658: a card the viewer can read is played (cues.ts), a sting sized by its rarity under the card
+ * whoosh. Common: a bright pluck and its fifth. Rare: a three-note bell arpeggio. Epic: a four-note
+ * climb over a shimmering open chord. Legendary and Mythic cards have the entrance instead.
+ */
+const sting: SfxRecipe = (ctx, out, at, params) => {
+  const tier = params.tier ?? "common";
+  const len = tier === "epic" ? 0.78 : tier === "rare" ? 0.56 : 0.36;
+  const k = kit(ctx, out, at, len);
+  if (tier === "common") {
+    tone(k, out, "triangle", 784, 0, 0.003, 0.42, 0.2);
+    tone(k, out, "triangle", 1175, 0.07, 0.003, 0.34, len);
+    return len;
+  }
+  const notes = tier === "epic" ? [523, 659, 784, 1047] : [659, 831, 988];
+  const step = tier === "epic" ? 0.07 : 0.08;
+  notes.forEach((hz, i) => {
+    const start = step * i;
+    fmBell(k, out, hz, 2, hz * 0.6, start, 0.003, tier === "epic" ? 0.19 : 0.22, Math.min(len, start + 0.32));
+  });
+  if (tier === "epic") {
+    const shimmer = tremolo(k, 8, 0.25);
+    chain(shimmer, out);
+    for (const hz of [262, 392, 523]) tone(k, shimmer, "sine", hz, 0.08, 0.06, 0.1, len);
+  }
+  return len;
+};
+
 export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   draw: { recipe: draw, durationMs: 180, gain: 1 },
   play: { recipe: play, durationMs: 260, gain: 0.82 },
@@ -1281,6 +1314,7 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   emoteLaugh: { recipe: emoteLaugh, durationMs: 750, gain: 0.8 },
   emoteAngry: { recipe: emoteAngry, durationMs: 700, gain: 0.8 },
   emoteWahWah: { recipe: emoteWahWah, durationMs: 1800, gain: 0.8 },
+  sting: { recipe: sting, durationMs: 800, gain: 1 },
 };
 
 /**

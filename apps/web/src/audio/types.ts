@@ -13,7 +13,9 @@ export type SfxId =
   // Patch v0.2.0 (R506): card moments, Call to Chaos's roll (R436), a mark (R437), the turn clock (R439).
   | "manaCrack" | "bloodDrain" | "goldBurst" | "castOnDraw" | "chaosRoll" | "brand" | "heartbeat" | "clockTick"
   // Patch v0.2.X (R644): the five emoji emotes (issue §4), synthesized on the effects channel.
-  | "emoteSob" | "emoteYawn" | "emoteLaugh" | "emoteAngry" | "emoteWahWah";
+  | "emoteSob" | "emoteYawn" | "emoteLaugh" | "emoteAngry" | "emoteWahWah"
+  // Patch v0.2.X (#259, R658): the play sting of a card below Legendary.
+  | "sting";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`, which follows the
@@ -45,7 +47,17 @@ export type SfxParams = {
   urgent?: boolean;
   /** brand: the mark lifting from its card, a soft release, rather than the brand landing (R437). */
   release?: boolean;
+  /** sting: the played card's rarity below Legendary (R658). Absent: Common. */
+  tier?: StingTier;
+  /**
+   * R658: where on the board the sound comes from, -1 (the leftmost lane) to 1 (the rightmost), read
+   * off the lane of the unit it is about. Absent: centred. The engine pans; no recipe reads it.
+   */
+  pan?: number;
 };
+
+/** R658: the play sting's sizes, by the card's rarity (Common, Rare, Epic). */
+export type StingTier = "common" | "rare" | "epic";
 
 /** A card's sound family in `card-audio.json5`, from its catalog type: which hooks it may carry. */
 export type CardKind = "unit" | "spell" | "trap";

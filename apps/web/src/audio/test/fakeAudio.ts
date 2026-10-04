@@ -8,7 +8,8 @@
 // `connect(node | AudioParam)` / `disconnect`, `start` / `stop` / `onended`, and the AudioParam
 // `value`, `setValueAtTime`, `linearRampToValueAtTime`, `exponentialRampToValueAtTime`,
 // `setTargetAtTime` and `cancelScheduledValues`. The engine's extras are there too:
-// `createDynamicsCompressor`, `decodeAudioData`, `resume`, `close` and `state`.
+// `createDynamicsCompressor`, `decodeAudioData`, `resume`, `close` and `state`, and the mix's
+// `createStereoPanner` (`pan`) and `createConvolver` (`buffer`, set once) (R658).
 //
 // Every object the code under test touches is a Proxy. Reading or writing anything outside that
 // subset records a violation and throws, as does anything the real API would reject (a negative
@@ -189,7 +190,8 @@ export class FakeBuffer {
   }
 }
 
-export type FakeNodeKind = "destination" | "gain" | "oscillator" | "biquad" | "bufferSource" | "compressor";
+export type FakeNodeKind =
+  | "destination" | "gain" | "oscillator" | "biquad" | "bufferSource" | "compressor" | "stereoPanner" | "convolver";
 
 export class FakeNode {
   readonly kind: FakeNodeKind;
@@ -292,6 +294,8 @@ const CONTEXT_KEYS = [
   "createBufferSource",
   "createBuffer",
   "createDynamicsCompressor",
+  "createStereoPanner",
+  "createConvolver",
   "decodeAudioData",
   "resume",
   "close",
@@ -429,6 +433,8 @@ export class FakeAudio {
       createBiquadFilter: (): BiquadFilterNode => this.createNode("biquad").proxy as BiquadFilterNode,
       createBufferSource: (): AudioBufferSourceNode => this.createNode("bufferSource").proxy as AudioBufferSourceNode,
       createDynamicsCompressor: (): DynamicsCompressorNode => this.createNode("compressor").proxy as DynamicsCompressorNode,
+      createStereoPanner: (): StereoPannerNode => this.createNode("stereoPanner").proxy as StereoPannerNode,
+      createConvolver: (): ConvolverNode => this.createNode("convolver").proxy as ConvolverNode,
       createBuffer: (channels: unknown, length: unknown, sampleRate: unknown): AudioBuffer => {
         const where = "context.createBuffer";
         const c = finite(v, where, channels, "numberOfChannels");
@@ -691,6 +697,23 @@ export class FakeAudio {
         param("release", 0.25);
         Object.defineProperty(surface, "reduction", { get: () => 0, enumerable: true });
         readable.push("reduction");
+        break;
+      case "stereoPanner":
+        param("pan", 0);
+        break;
+      case "convolver":
+        Object.defineProperty(surface, "buffer", {
+          get: () => rec.buffer?.proxy ?? null,
+          set: (value: unknown) => {
+            const buffer = this.recordOf(value);
+            if (!(buffer instanceof FakeBuffer)) refuse(v, `${where}.buffer`, "must be an AudioBuffer of this context");
+            if (rec.buffer !== null) refuse(v, `${where}.buffer`, "can only be set once", "InvalidStateError");
+            rec.buffer = buffer as FakeBuffer;
+          },
+          enumerable: true,
+        });
+        readable.push("buffer");
+        writable.push("buffer");
         break;
     }
 
