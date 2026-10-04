@@ -1895,8 +1895,10 @@
       "feedback_since": "2026-10-04T14:51:13Z",
       "issue": 200,
       "kind": "revise",
-      "queued_at": "2026-10-04T15:23:32Z",
+      "queued_at": "2026-10-04T15:25:52Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [],
         "builder": "cognition",
