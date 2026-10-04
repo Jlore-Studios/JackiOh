@@ -1574,7 +1574,14 @@
           "severity": "blocking",
           "where": "self check"
         }
-      ]
+      ],
+      "votes": {
+        "approvals": [],
+        "builder": "cognition",
+        "rejections": [],
+        "sha": "91a4f68f19579c03e098dace9fa64a8399e14fe8",
+        "tiers": {}
+      }
     },
     "31": {
       "failures": 0,
