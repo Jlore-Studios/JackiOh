@@ -1261,7 +1261,7 @@
       "stop_requested": false
     },
     "171": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_fixes": 3,
       "ci_reruns": {
@@ -1282,11 +1282,11 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "devin",
       "question": "",
       "queued_at": "2026-10-04T20:25:52Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "37223958932",
+      "run_id": "37232315908",
       "self_check_findings": [
         {
           "claim": "The self check's answer could not be read twice in a row.",
@@ -1296,7 +1296,7 @@
         }
       ],
       "source": "conflict",
-      "started_at": "2026-10-04T18:19:49Z",
+      "started_at": "2026-10-04T20:35:56Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -2684,9 +2684,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T20:32:02Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37232284019",
-    "what": "revise #214 on devin"
+    "at": "2026-10-04T20:35:56Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37232315908",
+    "what": "revise #171 on devin"
   },
   "last_sweep": {
     "at": "2026-10-04T20:29:03Z",
