@@ -1687,7 +1687,7 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-04T09:20:57Z",
+      "feedback_since": "2026-10-04T15:56:27Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-04T09:29:12Z",
@@ -1710,10 +1710,10 @@
       "run_id": "37214822425",
       "self_check_findings": [
         {
-          "claim": "Conflict markers are still in apps/server/test/api/catalog.test.ts, apps/web/src/patches/PatchNotes.test.tsx, apps/web/src/patches/source.test.ts, apps/web/src/routes/patch-notes.test.tsx.",
+          "claim": "Conflict markers are still in BUILD.md, SPEC.md, apps/server/test/api/catalog.test.ts, apps/web/src/patches/PatchNotes.test.tsx, apps/web/src/patches/source.test.ts, apps/web/src/routes/patch-notes.test.tsx, docs/radiant-audit.md, packages/cards/test/card-text.test.ts, packages/cards/test/catalog.test.ts, packages/cards/test/classic/033-joro.test.ts, packages/cards/test/patches.test.ts, packages/engine/test/rulings.test.ts.",
           "evidence": "git grep",
           "severity": "blocking",
-          "where": "apps/server/test/api/catalog.test.ts"
+          "where": "BUILD.md"
         },
         {
           "claim": "The self check's answer could not be read twice in a row.",
@@ -1728,7 +1728,7 @@
           "where": "checks"
         }
       ],
-      "source": "request",
+      "source": "",
       "started_at": "2026-10-04T15:56:27Z",
       "stop_requested": false,
       "taken_asks": [
