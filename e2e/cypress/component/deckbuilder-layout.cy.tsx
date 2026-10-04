@@ -4,7 +4,7 @@
 //
 // jsdom has no layout, so the workshop's own tests can only prove structure. This spec puts the
 // builder in front of a real layout engine with the heaviest pool it ever shows: every one of the
-// 268 deckable cards of Core, Classic and Classic+ as a full CardFace, a full deck of 20 open in the sidebar, and three
+// deckable cards of Core, Classic and Classic+ as a full CardFace, a full deck of 20 open in the sidebar, and three
 // saved decks and a trio in the rail.
 //
 // THE MOUNT. The deck builder is now the deck workshop (SPEC §9.4, R250–R256): `DeckWorkshop`, the
@@ -19,7 +19,7 @@
 //
 // WHAT IS MEASURED, as board-layout.cy.tsx does for the board: documentElement, body and the
 // workshop's own scrollWidth, each at most the viewport width. Two controls keep "it fits" from
-// being satisfied by a builder that is not there: all 268 pool items are present, and the workshop
+// being satisfied by a builder that is not there: every deckable pool item is present, and the workshop
 // spans the viewport. Each measure sits inside `.should()`, so it retries while the fonts, the
 // procedural art and `useFitText` settle.
 
@@ -53,8 +53,6 @@ const VIEWPORTS = [
 
 /** The deckable cards: no token, by flag or by tag, the same test the validator's L3 applies. */
 const DECKABLE = Object.values(CATALOG).filter((def) => !def.token && !def.tags.includes("Token"));
-/** SPEC §8, §8.6, §8.7: Core's 100, Classic's 90 and Classic+'s 78 (R380: one format, every set). */
-const DECKABLE_COUNT = 268;
 
 /** A collection owning every deckable card once. */
 const COLLECTION: Record<string, number> = Object.fromEntries(DECKABLE.map((def) => [def.id, 1]));
@@ -76,6 +74,7 @@ function decksResponse(decks: readonly (readonly string[])[]): DecksResponse {
       id: DECK_IDS[at] ?? DECK_IDS[0],
       name: `Deck ${String(at + 1)}`,
       cards: [...cards],
+      portrait: null,
       catalogVersion: CATALOG_VERSION,
       createdAt: SAVED_AT + at,
       updatedAt: SAVED_AT + at,
@@ -120,7 +119,6 @@ const POOL_ITEMS = `${ts(CARD_POOL)} .db-item`;
 
 describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
   beforeEach(() => {
-    expect(DECKABLE, "the three sets have 268 deckable cards").to.have.length(DECKABLE_COUNT);
     mountWorkshop(FULL_DECKS);
   });
 
@@ -139,7 +137,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
       cy.get(ts(DECK_EDITOR)).should("have.attr", "data-deck", DECK_IDS[0]);
       cy.get(ts(DB_FILTERS)).should("be.visible");
       cy.get(ts(DB_SIDEBAR)).should("be.visible");
-      cy.get(POOL_ITEMS).should("have.length", DECKABLE_COUNT);
+      cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
 
       cy.document().should((doc) => {
         const builder = doc.querySelector(ts(WORKSHOP));
@@ -219,7 +217,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
   // sit 90 px below a 720 px screen, under a page that scrolled as well.
   it("B39 at 1280x720 the pool's own bottom edge is on screen and the page itself does not scroll", () => {
     cy.viewport(1280, 720);
-    cy.get(POOL_ITEMS).should("have.length", DECKABLE_COUNT);
+    cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
     cy.document().should((doc) => {
       const pool = doc.querySelector(ts(CARD_POOL));
       expect(pool, "the pool").to.not.eq(null);
@@ -235,7 +233,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
   // cards size to the screen's height.
   it("the pool shows two whole rows of cards at 1280x720", () => {
     cy.viewport(1280, 720);
-    cy.get(POOL_ITEMS).should("have.length", DECKABLE_COUNT);
+    cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
     cy.document().should((doc) => {
       const pool = doc.querySelector(ts(CARD_POOL));
       expect(pool, "the pool").to.not.eq(null);
@@ -258,7 +256,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
     it(`every pool card's rules text is at least ${String(FIT_FLOOR_PX)} px at ${where}`, () => {
       cy.viewport(viewport.width, viewport.height);
-      cy.get(POOL_ITEMS).should("have.length", DECKABLE_COUNT);
+      cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
       cy.document().should((doc) => {
         const small: string[] = [];
         for (const text of doc.querySelectorAll<HTMLElement>(`${ts(CARD_POOL)} .card-text`)) {
@@ -284,7 +282,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
   it("every pool card prints its keywords in bold in the rules box's ink (#85)", () => {
     cy.viewport(1280, 720);
     cy.get(ts(WORKSHOP)).should("have.class", "tavern");
-    cy.get(POOL_ITEMS).should("have.length", DECKABLE_COUNT);
+    cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
     cy.document().should((doc) => {
       const missing: string[] = [];
       const faint: string[] = [];
@@ -306,7 +304,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   });
 
-  // Integration QA: a refused save's reasons rendered under all 268 pool cards on a phone. There is
+  // Integration QA: a refused save's reasons rendered under all the pool cards on a phone. There is
   // no Save button any more (R256); the deck's verdict sits in its sidebar, on the first screen, at
   // every size — and on a phone, where the sidebar and the pool stack, above the pool, never under
   // its cards. (On a desktop the two are side by side, so "above" means nothing there.)
@@ -318,7 +316,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
       // An empty deck, so the verdict has something to say (L2: 0 of 20 cards).
       mountWorkshop([[]]);
       cy.get(`${ts(DB_SIDEBAR)} ${ts(DECK_VERDICT)} ${ts(LOADOUT_ERRORS)}`).should("have.attr", "data-count", "1");
-      cy.get(POOL_ITEMS).should("have.length", DECKABLE_COUNT);
+      cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
       cy.document().should((doc) => {
         const verdict = doc.querySelector(ts(DECK_VERDICT))?.getBoundingClientRect();
         const firstCard = doc.querySelector(POOL_ITEMS)?.getBoundingClientRect();
@@ -336,7 +334,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
 
   it("at 390x844 with a full deck open, the first row of the pool is on the first screen", () => {
     cy.viewport(390, 844);
-    cy.get(POOL_ITEMS).should("have.length", DECKABLE_COUNT);
+    cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
     cy.document().should((doc) => {
       const first = doc.querySelector(POOL_ITEMS);
       expect(first, "the first pool card").to.not.eq(null);

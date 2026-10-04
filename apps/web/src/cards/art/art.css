@@ -25,6 +25,17 @@
   -webkit-user-select: none;
 }
 
+/*
+ * A lazy window that has not drawn yet (CardArt `lazy`, near.ts): its theme's two sky colours as
+ * a flat gradient — no SVG to parse — under a vignette that reads like the finished picture's
+ * shading. CardArt sets --art-sky-* inline; the fallback is the ground .cf-art already paints.
+ */
+.cf-art[data-art-pending="true"] {
+  background-image:
+    radial-gradient(ellipse at 50% 45%, transparent 55%, rgb(0 0 0 / 0.38)),
+    linear-gradient(var(--art-sky-1, #11131b), var(--art-sky-2, #11131b));
+}
+
 .cf-art-img {
   position: absolute;
   inset: 0;

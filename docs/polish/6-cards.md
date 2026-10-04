@@ -1370,9 +1370,11 @@ card layer alone; no rule changed.
 - **A long grid drew every picture at load.** A procedural picture is a data-URI SVG on the art
   window's background, which the browser parses when the window is first styled and laid out (about
   1.3 ms a card). `CardArt` takes a `lazy` prop, which `CardFace` passes on as `lazyArt` and the pool
-  grid (the deck builder's and the Almanac's) sets: the window stays its dark ground
-  (`data-art-pending="true"`) until it is within `ART_NEAR_MARGIN_PX` of the box that scrolls it,
-  then draws and keeps its picture (`art/near.ts`: one `IntersectionObserver` per scrolling box,
+  grid (the deck builder's and the Almanac's) sets: the window shows a flat gradient of its theme's
+  two sky colours (`data-art-pending="true"`, painted by `art.css` from custom properties — no SVG
+  to parse) until it has stayed within `ART_NEAR_MARGIN_PX` of the box that scrolls it for
+  `ART_DWELL_MS` — a card flicked straight past never pays the parse — then draws and keeps its
+  picture (`art/near.ts`: one `IntersectionObserver` per scrolling box,
   rooted at the nearest `overflow-y: auto | scroll` ancestor, because a margin widens the root and
   nothing else). Real art is an `<img loading="lazy">` already. Where nothing can be watched
   (jsdom) a window draws at once, and a face outside a grid is never lazy.

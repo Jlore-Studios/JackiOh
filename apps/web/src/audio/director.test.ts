@@ -21,7 +21,8 @@ import { createAudioEngine } from "./engine.ts";
 import { resetAudioSettingsForTests, writeAudioSettings } from "./settings.ts";
 import { FakeClock, FakeFetch, fakeContextFactory, fakeSpeech, settle } from "./test/fakeAudio.ts";
 import { answerPrompts, devDeck, handDefId, playOf, realGame, type RealGame } from "./test/realGame.ts";
-import type { AudioEngine, SfxId, SfxParams, SoundSink, VoiceLineKind, VoiceLineTable } from "./types.ts";
+import type { AudioEngine, SfxId, SfxParams, SoundSink, PlayableLineKind,
+  VoiceLineTable } from "./types.ts";
 import { newEventsSince, planEntries, sameOccurrence, type AnimationEntry } from "../game/animations.ts";
 import { baseView, emptySide, unit, withEvents } from "../test/fixtures.ts";
 
@@ -41,11 +42,12 @@ const LINES: VoiceLineTable = {
     "core-004": { kind: "unit", persona: "hustler", play: "Double or nothing, baby!", death: "House always wins." },
     "core-008": { kind: "unit", persona: "plain", play: "Hello. I am very normal.", death: "Plain. Simple. Gone." },
   },
+  emotes: {},
 };
 
 type Sent =
   | { kind: "sfx"; id: SfxId; params: SfxParams | undefined; delayMs: number }
-  | { kind: "voice"; defId: string; line: VoiceLineKind; delayMs: number; priority?: number };
+  | { kind: "voice"; defId: string; line: PlayableLineKind; delayMs: number; priority?: number };
 
 type Recorder = SoundSink & { sent: Sent[] };
 
@@ -305,6 +307,7 @@ describe("B25 events the runner never started are flushed once, condensed, by on
     const lines: VoiceLineTable = {
       ...LINES,
       cards: { ...LINES.cards, "core-005": { kind: "spell", persona: "plain", cast: "Hoarding is self care." } },
+  emotes: {},
     };
     const director = createSoundDirector(sink, lines);
     begin(director, [drawn("c1"), played("core-005", "c2")]);

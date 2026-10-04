@@ -1,13 +1,17 @@
 // Shared audio types (docs/polish/2-sound.md, Surface). Every audio module and test reads these, so
 // they are a cross-slice boundary: do not rename or reshape them.
 
+import type { VoiceEmoteId } from "@jackioh/shared";
+
 export type SfxId =
   | "draw" | "play" | "summon" | "attack" | "impact" | "shieldShatter" | "heal" | "buff" | "debuff"
   | "death" | "burn" | "trapSet" | "trapSting" | "spell" | "mana" | "turnStart" | "victory"
   | "defeat" | "uiClick" | "uiHover" | "whoosh" | "radiant" | "lock" | "poof" | "notify" | "drain"
   | "cancel" | "entrance" | "fatigue" | "refuse"
   // Patch v0.2.0 (R506): card moments, Call to Chaos's roll (R436), a mark (R437), the turn clock (R439).
-  | "manaCrack" | "bloodDrain" | "goldBurst" | "castOnDraw" | "chaosRoll" | "brand" | "heartbeat" | "clockTick";
+  | "manaCrack" | "bloodDrain" | "goldBurst" | "castOnDraw" | "chaosRoll" | "brand" | "heartbeat" | "clockTick"
+  // Patch v0.2.X (R644): the five emoji emotes (issue §4), synthesized on the effects channel.
+  | "emoteSob" | "emoteYawn" | "emoteLaugh" | "emoteAngry" | "emoteWahWah";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`, which follows the
@@ -42,8 +46,13 @@ export type SfxParams = {
 };
 
 export type VoiceLineKind = "play" | "death" | "cast";
-/** "<defId>-<line>", e.g. "core-004-play", "core-051-1-cast". Parse from the END: defIds contain "-". */
-export type VoiceKey = `${string}-${VoiceLineKind}`;
+/**
+ * What `playVoice` accepts: a card's line, or R644's portrait emote line (`emote-<portrait>-<id>`
+ * files). The split-from-the-end VoiceKey convention holds either way.
+ */
+export type PlayableLineKind = VoiceLineKind | VoiceEmoteId;
+/** "<defId>-<line>", e.g. "core-004-play", "core-051-1-cast", "emote-gary-thanks". Parse from the END: defIds contain "-". */
+export type VoiceKey = `${string}-${PlayableLineKind}`;
 
 /** What every persona carries, whichever synthesizer rendered its files. */
 type PersonaCommon = {
@@ -89,11 +98,23 @@ export type VoiceLineEntry =
   | ({ kind: "unit"; persona: string; play: string; death: string } & Overrides)
   | ({ kind: "spell" | "trap"; persona: string; cast: string } & Overrides);
 
+/** R644: one portrait's five issue-§3 lines. Keyed by portrait id in `VoiceLineTable.emotes`. */
+export type EmoteLineEntry = {
+  persona: string;
+  greetings: string;
+  wellPlayed: string;
+  oops: string;
+  thanks: string;
+  threaten: string;
+} & Overrides;
+
 export type VoiceLineTable = {
   version: 1;
   personas: Record<string, Persona>;
   /** Keyed by catalog id: exactly the ids of packages/cards/catalog.json, tokens included. */
   cards: Record<string, VoiceLineEntry>;
+  /** Keyed by portrait id (shared `PORTRAIT_IDS`): the six portraits' emote lines. */
+  emotes: Record<string, EmoteLineEntry>;
 };
 
 export type VoiceManifest = {
@@ -112,7 +133,7 @@ export type VoicePriority = number;
 
 export type SoundCue =
   | { kind: "sfx"; id: SfxId; params?: SfxParams; delayMs: number }
-  | { kind: "voice"; defId: string; line: VoiceLineKind; delayMs: number; priority: VoicePriority };
+  | { kind: "voice"; defId: string; line: PlayableLineKind; delayMs: number; priority: VoicePriority };
 
 export type AudioState = "unsupported" | "locked" | "running" | "suspended" | "closed";
 
@@ -136,7 +157,7 @@ export type PlayedCue =
   | {
       kind: "voice";
       defId: string;
-      line: VoiceLineKind;
+      line: PlayableLineKind;
       delayMs: number;
       atMs: number;
       outcome: VoiceOutcome;
@@ -202,8 +223,8 @@ export type MusicCardEntry = { theme?: string; station?: MusicStation };
 export type SoundSink = {
   /** true when accepted (and logged); false when refused. Never throws. */
   playSfx(id: SfxId, params?: SfxParams, delayMs?: number): boolean;
-  /** `priority` defaults to VOICE_PRIORITY.play. */
-  playVoice(defId: string, line: VoiceLineKind, delayMs?: number, priority?: VoicePriority): boolean;
+  /** `priority` defaults to VOICE_PRIORITY.play. `defId` may be an `emote-<portrait>` id (R644). */
+  playVoice(defId: string, line: PlayableLineKind, delayMs?: number, priority?: VoicePriority): boolean;
 };
 
 export type AudioEngine = SoundSink & {

@@ -282,6 +282,8 @@ export type SavedDeck = {
   name: string;
   cards: string[];
   catalogVersion: string;
+  /** R641: the deck's hero portrait, `null` meaning `vanilla` (D5). */
+  portrait: string | null;
   createdAt: number;
   updatedAt: number;
 };
@@ -308,7 +310,7 @@ export function getDecks(token: string): Promise<DecksResponse> {
   return apiRequest<DecksResponse>("/api/decks", { token });
 }
 
-export type DeckInput = { name: string; cards: readonly string[]; catalogVersion: string };
+export type DeckInput = { name: string; cards: readonly string[]; catalogVersion: string; portrait?: string | null };
 
 /**
  * `PUT /api/decks/:id`: creates the deck when the id is new, else replaces its name and cards.

@@ -40,6 +40,8 @@ import { useSetting } from "../settings/index.ts";
 export type HandProps = {
   side: Side;
   hand: CardView[] | { count: number };
+  /** #165: what a touch hold on a card opens (contract.ts's `touchHoldMode`). */
+  touchHold?: "sheet" | "preview";
   highlight?: Highlight;
   animating?: AnimatingMap;
   onClick?: (target: ClickTarget) => void;
@@ -75,7 +77,7 @@ function EmptyHand({ side }: { side: Side }): ReactElement {
  * R434: one of the opponent's cards at the game's end, a back turning over to its face. Both are
  * drawn; board.css shows the back first and flips to the face, and a reduced motion shows the face.
  */
-function RevealedSlot({ card, index }: { card: CardView; index: number }): ReactElement {
+function RevealedSlot({ card, index, touchHold }: { card: CardView; index: number; touchHold?: "sheet" | "preview" }): ReactElement {
   return (
     <div className="hand-slot hand-slot--revealed" style={{ "--i": index } as CSSProperties}>
       <div className="hand-flip">
@@ -83,7 +85,7 @@ function RevealedSlot({ card, index }: { card: CardView; index: number }): React
           <Card card={null} className="card-hand" />
         </div>
         <div className="hand-flip-face">
-          <Card testId={revealTestid.handCard(card.instanceId)} card={card} className="card-hand" />
+          <Card testId={revealTestid.handCard(card.instanceId)} card={card} className="card-hand" touchHold={touchHold} />
         </div>
       </div>
     </div>
@@ -136,7 +138,7 @@ export default function Hand(props: HandProps): ReactElement {
       </div>
     ));
   } else if (revealed) {
-    cards = hand.map((card, index) => <RevealedSlot key={card.instanceId} card={card} index={index} />);
+    cards = hand.map((card, index) => <RevealedSlot key={card.instanceId} card={card} index={index} touchHold={props.touchHold} />);
   } else {
     cards = hand.map((card, index) => {
       const handTestid = testid.handCard(card.instanceId);
@@ -155,6 +157,7 @@ export default function Hand(props: HandProps): ReactElement {
             card={card}
             className="card-hand"
             target={{ on: "hand", instanceId: card.instanceId }}
+            touchHold={props.touchHold}
             highlight={props.highlight}
             animating={props.animating}
             onClick={props.onClick}

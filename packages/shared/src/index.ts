@@ -4,3 +4,4 @@ export * from "./events";
 export * from "./view";
 export * from "./codes";
 export * from "./stats";
+export * from "./emotes";

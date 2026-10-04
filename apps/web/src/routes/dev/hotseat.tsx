@@ -17,6 +17,9 @@ import type { Action, ActionBody, CardDefs, PlayerId, PlayerView } from "@jackio
 import type { Handicap } from "@jackioh/engine/config";
 
 import Game from "../../game/Game.tsx";
+import { getAudioEngine } from "../../audio/index.ts";
+import { useEmotes } from "../../emotes/useEmotes.ts";
+import { useSetting } from "../../settings/index.ts";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
 import { testid } from "../../game/contract.ts";
 import { DECK_SIZE, DEFAULT_DECK_ID, DECK_IDS, resolveDecks } from "../../game/decks.ts";
@@ -390,6 +393,16 @@ function Hotseat({
   const next = otherSeat(session.seat);
   const lookup = useMemo(() => (defs === null ? null : lookupFromDefs(defs)), [defs]);
 
+  // R642–R644: hotseat emotes run locally with the same shared gate — no wire, so `send` only
+  // shows and plays. The dev decks carry no portrait (they are not saved decks), so both seats
+  // read `vanilla`; the device mute applies to whichever seat isn't holding the device.
+  const globalMuteEmotes = useSetting("muteOpponentEmotes");
+  const emotes = useEmotes({
+    engine: getAudioEngine(),
+    globalMute: globalMuteEmotes,
+    you: view.viewer,
+  });
+
   // A finished game's ways on (Result.tsx): the same seed and decks again, or back to the start.
   const resultActions = (
     <>
@@ -401,7 +414,7 @@ function Hotseat({
       </button>
     </>
   );
-  const game = <Game view={view} legal={legal} onAction={dispatch} error={error} resultActions={resultActions} />;
+  const game = <Game view={view} legal={legal} onAction={dispatch} error={error} resultActions={resultActions} emotes={emotes} />;
 
   return (
     <div className="app-shell app-shell--wide">

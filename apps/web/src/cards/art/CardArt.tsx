@@ -11,7 +11,7 @@
 // (`useDefResolver`: the deck builder's, else the board's), so a card draws the same picture in the
 // hand, on the board and in the deck list. With no name anywhere, the picture has no motif.
 
-import { useEffect, useRef, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
 import type { CardType, Tag } from "@jackioh/shared";
 
@@ -20,7 +20,7 @@ import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
 import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
 import { proceduralArtUri } from "./svg.ts";
-import { compositionFor, themeFor } from "./themes.ts";
+import { compositionFor, themeFor, THEME_PALETTES } from "./themes.ts";
 
 import "./art.css";
 
@@ -38,9 +38,11 @@ export type CardArtProps = {
   manifest?: ArtManifest;
   className?: string;
   /**
-   * A grid of many faces: draw the procedural picture only once the window is near the screen
-   * (near.ts). Until then the window is its dark ground, `data-art-pending="true"`. A real-art
-   * `<img>` is already `loading="lazy"`, and a window that cannot be watched draws at once.
+   * A grid of many faces: draw the procedural picture only once the window has stayed near the
+   * screen for a short dwell (near.ts), so a card flicked straight past never pays the parse.
+   * Until then the window is its theme's sky as a flat gradient, `data-art-pending="true"`
+   * (art.css). A real-art `<img>` is already `loading="lazy"`, and a window that cannot be
+   * watched draws at once.
    */
   lazy?: boolean;
 };
@@ -63,7 +65,7 @@ export function CardArt({
 }: CardArtProps): ReactElement {
   // The src that failed to load, so a later src (another card, the other face) gets its own try.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  // A lazy window is drawn once it has been near the screen, and stays drawn.
+  // A lazy window is drawn once it has dwelt near the screen, and stays drawn.
   const windowRef = useRef<HTMLSpanElement>(null);
   const [near, setNear] = useState(() => !lazy || !canWatchArt());
   useEffect(() => {
@@ -104,6 +106,8 @@ export function CardArt({
   }
 
   const uri = near ? proceduralArtUri(defId, theme, compositionFor(type), radiant, motif) : null;
+  // The pending window's placeholder sky, which art.css paints as a flat gradient.
+  const [skyTop, skyBottom] = THEME_PALETTES[theme].sky;
   return (
     <span
       ref={windowRef}
@@ -114,7 +118,11 @@ export function CardArt({
       data-art-motif={motif ?? undefined}
       data-art-pending={uri === null ? "true" : undefined}
       aria-hidden="true"
-      style={uri === null ? undefined : { backgroundImage: `url("${uri}")`, backgroundSize: "cover" }}
+      style={
+        uri === null
+          ? ({ "--art-sky-1": skyTop, "--art-sky-2": skyBottom } as CSSProperties)
+          : { backgroundImage: `url("${uri}")`, backgroundSize: "cover" }
+      }
     />
   );
 }

@@ -201,6 +201,9 @@ export async function loadCurrentPatch(url: URL = new URL("patches.json", patche
 // Routes
 // ---------------------------------------------------------------------------
 
+/** The response header `GET /api/catalog` carries the deployed git commit in, when it is known. */
+export const DEPLOYED_COMMIT_HEADER = "x-deployed-commit";
+
 /**
  * `GET /api/catalog`.
  *
@@ -226,11 +229,18 @@ export async function loadCurrentPatch(url: URL = new URL("patches.json", patche
  * That is the whole `CardDefs` record and `auth: "none"`, both for the reasons the proposal above
  * states; they are not restated here, so there is one place to change if the ruling changes.
  */
-export function createCatalogRoutes(options: { patches?: URL } = {}): Route[] {
+export function createCatalogRoutes(
+  options: { patches?: URL; commit?: string | undefined } = {},
+): Route[] {
   return [
-    route("GET", "/api/catalog", "none", async (_req, deps) =>
-      ok({ version: deps.catalog.version, defs: deps.catalog.defs }),
-    ),
+    // `commit` is the git commit this deploy runs (`env.ts` DEPLOYED_COMMIT), sent as a header so
+    // the body stays the same bytes for everybody (R163). `deploy-watch.yml` reads it to tell a
+    // server that Render redeployed from one it left alone.
+    route("GET", "/api/catalog", "none", async (_req, deps) => {
+      const response = ok({ version: deps.catalog.version, defs: deps.catalog.defs });
+      if (options.commit !== undefined) response.headers.set(DEPLOYED_COMMIT_HEADER, options.commit);
+      return response;
+    }),
 
     /**
      * R388 (B4.2): `GET /api/catalog/:version` — the catalog as a patch left it, in the same shape
