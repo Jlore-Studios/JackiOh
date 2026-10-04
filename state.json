@@ -1542,11 +1542,15 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "cognition",
         "rejections": [],
         "sha": "2e39735c34cd81d1df2065d8c65dff3e54f28fe0",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "31": {
