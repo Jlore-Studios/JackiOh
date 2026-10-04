@@ -5,6 +5,7 @@ builder (Devin above all) starts from it."""
 from __future__ import annotations
 
 import unittest
+from datetime import timedelta
 
 from harness import issueplan
 from harness import plan as plan_mod
@@ -125,6 +126,35 @@ class PlanningLaneTests(unittest.TestCase):
         gh.runs.pop("50")
         self.assertEqual(plan_mod.make(ctx)["action"], "plan")
 
+    def test_a_capped_subscription_runs_one_thing_at_a_time(self):
+        """claude-2 (capped) neither plans while it builds nor builds while it plans: two runs
+        deciding from one reading went past its cap together."""
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh, machine=(), env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"))
+        busy(gh, ctx, ("claude-2", 50))
+        queue(gh, ctx, 3, planned=False)
+        self.assertNotIn(plan_mod.make(ctx)["action"], ("plan", "build"))
+        gh.runs.pop("50")
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["action"], planned["provider"]), ("plan", "claude-2"))
+        running(gh, ctx, planned)
+        queue(gh, ctx, 4)
+        self.assertNotIn(plan_mod.make(ctx)["action"], ("plan", "build"))
+
+    def test_headroom_holds_back_builds_but_not_plans(self):
+        """At 80% of its 5-hour window claude-2 (cap 90%, builds start under 75%) still plans,
+        which is short, but starts no build."""
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh, machine=(), env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"))
+        later = iso(NIGHT + timedelta(hours=2))
+        ctx.store.update(lambda s: s.setdefault("providers", {}).update({"claude-2": {"usage": {
+            "five_hour": {"utilization": 0.8, "resets_at": later},
+            "observed_at": iso(NIGHT)}}}))
+        queue(gh, ctx, 3)                    # planned: a build
+        self.assertNotEqual(plan_mod.make(ctx)["action"], "build")
+        queue(gh, ctx, 4, planned=False)     # not planned: a plan
+        self.assertEqual(plan_mod.make(ctx)["action"], "plan")
+
     def test_a_planning_run_starts_with_every_build_lane_taken(self):
         gh = FakeGitHub()
         ctx = lane_ctx(gh, max_parallel=2)
@@ -173,3 +203,48 @@ class PlanningLaneTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PersonsPlanTests(unittest.TestCase):
+    """A Plan section someone puts in the description (`issueplan.START` … `END`) is the plan: the
+    bot neither plans over it nor holds the item in the Needs plan stage."""
+
+    def body(self, task="Make the Almanac load faster."):
+        return (f"{task}\n\n{issueplan.START}\n## Plan\n\n1. In `apps/web/src/cards/art/Art.tsx`, "
+                f"delay the draw.\n{issueplan.END}\n")
+
+    def test_it_counts_as_a_strong_plan_and_devin_builds_from_it(self):
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh, machine=("devin",))
+        busy(gh, ctx, *[(p, 50 + i) for i, p in enumerate(
+            ("claude-3", "claude-1", "claude-4", "claude-2"))])  # no strong model is free
+        gh.add_issue(3, labels=(LABEL_BUILD, EASY), body=self.body())
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["action"], planned["number"], planned["provider"]),
+                         ("build", 3, "devin"))
+        self.assertIsNone(seats(planned)["plan"])  # not planned again
+        self.assertNotIn(LABEL_NEEDS_PLAN, gh.label_names(3))
+        self.assertEqual(planned["handoff"]["notes"],
+                         "1. In `apps/web/src/cards/art/Art.tsx`, delay the draw.")
+        self.assertEqual(planned["handoff"]["provider"], "the issue's description")
+        self.assertIn(issueplan.START, gh.threads[3]["body"])  # the bot left it as it was
+
+    def test_without_the_markers_it_is_only_text_and_a_bots_medium_plan_still_counts_as_medium(self):
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh)
+        gh.add_issue(3, labels=(LABEL_BUILD,), body="## Plan\n\nSomething loose.")
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["action"], planned["number"]), ("plan", 3))
+        # The bot's own record wins over the description: an easy item a medium model planned
+        # still waits for a strong plan, which Devin needs.
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh, machine=("devin",))
+        busy(gh, ctx, *[(p, 50 + i) for i, p in enumerate(
+            ("claude-3", "claude-1", "claude-4", "claude-2"))])
+        gh.add_issue(4, labels=(LABEL_BUILD, EASY), body=self.body())
+        ctx.store.update(lambda s: state_item(s, 4).update(planned_at=iso(NIGHT),
+                                                            planned_tier="medium"))
+        planned = plan_mod.make(ctx)  # claude-3 plans on the planning lane while it builds
+        self.assertEqual((planned["action"], planned["number"], seats(planned)["plan"][2]),
+                         ("plan", 4, "strong"))
+        self.assertIn(LABEL_NEEDS_PLAN, gh.label_names(4))

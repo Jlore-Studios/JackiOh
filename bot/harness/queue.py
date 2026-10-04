@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from harness import asks
+from harness import asks, issueplan
 from harness import providers as providers_mod
 from harness.asks import Ask
 from harness.clock import iso
@@ -237,6 +237,18 @@ class Candidate:
     bot_pr: bool = False
 
 
+def plan_of(record: dict[str, Any], thread: dict[str, Any], kind: str) -> dict[str, Any]:
+    """Whether a build is planned, and by what tier: the bot's own record of its planning run,
+    or else a Plan section someone put in the issue's description (`issueplan.START` … `END`),
+    which counts as a strong plan: a person, or a session they ran, wrote it on purpose, and the
+    bot must not plan over it."""
+    if record.get("planned_at"):
+        return {"planned": True, "plan_tier": str(record.get("planned_tier") or "")}
+    if kind == "build" and issueplan.plan_of(thread.get("body")):
+        return {"planned": True, "plan_tier": "strong"}
+    return {"planned": False, "plan_tier": ""}
+
+
 def strong_plan(candidate: Candidate) -> bool:
     """A strong model wrote its plan. A plan from before planners' tiers were recorded counts:
     the planner was strong whenever one was free."""
@@ -288,8 +300,7 @@ def candidates(ctx: Context, state: dict[str, Any],
                 str(record.get("queued_at") or thread.get("created_at") or ""),
                 difficulty=difficulty_of(names, str(record.get("difficulty") or "")),
                 builder=str(votes.get("builder") or ""),
-                priority=priority_tier(names), planned=bool(record.get("planned_at")),
-                plan_tier=str(record.get("planned_tier") or "") if record.get("planned_at") else "",
+                priority=priority_tier(names), **plan_of(record, thread, kind),
                 approved=tuple(votes.get("approvals") or ()), bot_pr=LABEL_PR in names)
     if skipped is not None:
         skipped.extend(f"#{number} skipped: labelled `human`, so no model takes it, whatever its "

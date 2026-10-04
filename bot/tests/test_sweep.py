@@ -24,7 +24,7 @@ LAST_WEEK = iso(DAY - timedelta(days=5))
 class Base(unittest.TestCase):
     def setUp(self):
         self.gh = FakeGitHub()
-        self.gh.add_issue(5, "Make the Coin shiny")
+        self.gh.add_issue(5, "Make the Coin shiny")["type"] = {"name": "Task"}  # typed already
         self.ctx = make_ctx(self.gh, at=DAY, trust_text=TRUST)
         # The first sweep ever only sets its baseline; these tests start from a later one.
         self.ctx.store.update(lambda s: s.update(last_sweep={"since": "2026-09-01T00:00:00Z"}))
@@ -133,7 +133,7 @@ class LostEventTests(Base):
     def test_an_assignment_already_handled_or_stopped_is_left_alone(self):
         self.gh.threads[5]["assignees"] = [BOT]
         self.ctx.store.update(lambda s: state_item(s, 5).update(queued_at=AN_HOUR_AGO))
-        self.gh.add_issue(6)
+        self.gh.add_issue(6)["type"] = {"name": "Task"}
         self.gh.threads[6]["assignees"] = [BOT]
         self.ctx.store.update(lambda s: state_item(s, 6).update(stop_requested=True))
         self.assertEqual(sweep.sweep(self.ctx), [])
@@ -283,3 +283,47 @@ class NightRunTests(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IssueTypeTests(Base):
+    """Every open issue gets a type: triage types the ones people open, and the sweep the rest."""
+
+    def type_of(self, number):
+        return self.gh.threads[number].get("type")
+
+    def test_a_bots_issue_is_typed_at_once_and_a_persons_after_triage_had_its_chance(self):
+        alert = self.gh.add_issue(20, "CI: a job ran over 7 minutes",
+                                  user={"login": "github-actions[bot]", "id": 41898282})
+        alert["created_at"] = JUST_NOW
+        fresh = self.gh.add_issue(21, "Patch v0.2.X: the Almanac crashes on a phone")
+        fresh["created_at"] = JUST_NOW  # triage may still type it
+        self.gh.add_issue(22, "Patch v0.2.X: a public card and player stats page")
+        self.gh.add_issue(23, "Patch v0.2.X: Animated pass on Field Spells").update(type={"name": "Task"})
+        self.gh.add_issue(24, "Easter egg: Glitch", labels=("bot:pr",)).update(pull_request={})
+        notes = sweep.sweep(self.ctx)
+        self.assertEqual(self.type_of(20), "Task")
+        self.assertIsNone(self.type_of(21))
+        self.assertEqual(self.type_of(22), "Feature")
+        self.assertEqual(self.type_of(23), {"name": "Task"})  # a type someone set stays
+        self.assertNotIn("type", {k for k, v in self.gh.threads[24].items() if v})  # a PR has none
+        self.assertIn("#20: typed it Task", notes)
+        self.gh.add_issue(25, "Make the Coin shiny")
+        sweep.sweep(self.ctx)
+        self.assertEqual(self.type_of(25), "Task")  # nothing else fits
+        self.ctx = make_ctx(self.gh, at=DAY + timedelta(hours=4), trust_text=TRUST)
+        sweep.sweep(self.ctx)
+        self.assertEqual(self.type_of(21), "Bug")
+
+    def test_the_fallback_rules(self):
+        from harness import triage
+        types = triage.DEFAULT_ISSUE_TYPES
+        def kind(title, *labels):
+            return triage.fallback_type({"title": title, "labels": [{"name": n} for n in labels]},
+                                        types)
+        self.assertEqual(kind("Patch v0.2.X: Rendering lag with large Radiant hands"), "Bug")
+        self.assertEqual(kind("CI: the Postgres test runners wait for the real server"), "Task")
+        self.assertEqual(kind("Night bot: a help command"), "Task")
+        self.assertEqual(kind("Patch v0.2.X: Music improvements"), "Task")
+        self.assertEqual(kind("Ranked: a new leaderboard page"), "Feature")
+        self.assertEqual(kind("Patch v0.2.X: a settings page", "architecture"), "Task")
+        self.assertEqual(triage.fallback_type({"title": "x"}, {"Chore": "upkeep"}), "")

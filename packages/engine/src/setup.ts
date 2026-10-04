@@ -1,6 +1,11 @@
 // Shuffle, the opening draw table, Quickdraw, the mulligan, The Coin and start-of-game effects
 // (SPEC §2.1, R9, R43, R244).
 //
+// Cast on draw cards sit out the deal (R635): the opening draw and the mulligan's replacements never
+// take one, so nothing is cast before turn 1, and once both mulligans are resolved they are shuffled
+// into their owner's library (`shuffleInSetAside`). A Quickdraw card replaces an opening draw, so a
+// seat is dealt at most as many as it has draws (R640).
+//
 // The mulligan is concurrent (R265): once the opening deal is done both seats' prompts open at
 // once, either seat may answer first, and an answer is sealed — it changes nothing until the other
 // seat has answered too (R266). The second answer resolves both, always in seat order (player 1's
@@ -12,7 +17,7 @@ import type { PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
 import { findDef } from "./catalog";
 import { COIN_DEF_ID, OPENING_COINS, OPENING_DRAW } from "./config";
-import { addToHand, draw } from "./draw";
+import { addToHand, castsOnDraw, draw } from "./draw";
 import type { EngineSink } from "./resolve";
 import { flagsOf } from "./scripts";
 import { runStartOfGame } from "./prompts";
@@ -114,13 +119,14 @@ export function whyMulliganRefused(state: GameState, player: PlayerId, keep: rea
 }
 
 /**
- * R113: the `resume.hook` of what setup still owes when a cast asks during it. §2.1's opening draw
- * and R9's replacement draws are draws, and a cast-on-draw card drawn there is cast (§2.4, R70) — a
- * whole play, which can ask its caster something (R81). The question is state until it is answered
- * (§9.3), and §10.1 allows one prompt at a time, so setup cannot open the mulligans over it, or go
- * on resolving them: it owes the rest of itself — the other seats' opening draws and the mulligans,
- * or the shuffle-back, the seats still to resolve and the game — and the answer's drain brings it
- * back (R122). Registered at module scope below.
+ * R113: the `resume.hook` of what setup still owes when a clause asks during it. A card setup draws
+ * never casts (R635), so what can still ask is a start-of-game clause on arrival (R151): the opening
+ * draw and R9's replacement draws put cards in a hand, and a clause that runs as one arrives can ask
+ * its owner something (R224). The question is state until it is answered (§9.3), and §10.1 allows one
+ * prompt at a time, so setup cannot open the mulligans over it, or go on resolving them: it owes the
+ * rest of itself — the other seats' opening draws and the mulligans, or the shuffle-back, the seats
+ * still to resolve and the game — and the answer's drain brings it back (R122). Registered at module
+ * scope below.
  */
 export const SETUP_WORK = "@setup";
 
@@ -147,14 +153,31 @@ function isQuickdraw(card: CardInstance): boolean {
 }
 
 /**
+ * R635: how many cards setup may still draw from `player`'s library: all of it but the cards set
+ * aside at its bottom, the ones that cast on draw. Setup draws no more than this, so it never takes a
+ * set-aside card to fill a hand and never draws from an empty library (R3's fatigue).
+ */
+function drawableCount(state: GameState, player: PlayerId): number {
+  return state.players[player].library.filter((card) => !castsOnDraw(state, card)).length;
+}
+
+/**
  * §2.1 steps 1 and 2 for each seat from `seat` on, then both mulligans (R265).
  *
- * R225: each Quickdraw card "replaces one of these draws" (§2.1, §6.2) — the last ones. The seat
- * draws its other opening cards first, off the top of a library whose Quickdraw cards wait at the
- * bottom (the order among the rest is the shuffle's), and then each Quickdraw card goes to the hand
- * as the draw it replaces: counted by R55's draw counter and reported as a draw. So the opponent can
- * tell from none of it — #100's price, the deal's events, the hand and library counts while a cast
- * the opening draw made is asking (R224) — whether the opening hand holds one (§9.1).
+ * R225, R640: each Quickdraw card "replaces one of these draws" (§2.1, §6.2) — the last ones — and a
+ * card cannot replace a draw that does not exist, so a seat is dealt at most as many as its opening
+ * hand holds (the first ones in the shuffle's order); the others stay in the library as ordinary
+ * cards. The seat draws its other opening cards first, off the top of a library whose dealt Quickdraw
+ * cards wait at the bottom, and then each goes to the hand as the draw it replaces: counted by R55's
+ * draw counter and reported as a draw. So the opponent can tell from none of it — #100's price, the
+ * deal's events, the hand and library counts while a start-of-game clause on arrival is asking (R224),
+ * the size of the opening hand, which is always §2.1's table entry — whether the opening hand holds
+ * one (§9.1).
+ *
+ * R635: the cards that cast on draw wait just above them, at the bottom of the library, out of reach
+ * of the draws. They stay in the library, so its count says nothing about them, and are shuffled in
+ * once the mulligans are done. A hand is short when the library holds too few other cards, and empty
+ * when it holds none: the draw is `min` of the hand and what may be drawn, never a fatigue draw.
  */
 function dealFrom(sink: EngineSink, seat: number): void {
   const state = sink.state;
@@ -162,14 +185,18 @@ function dealFrom(sink: EngineSink, seat: number): void {
   for (let at = seat; at < PLAYER_IDS.length; at += 1) {
     const player = PLAYER_IDS[at] as PlayerId;
     const side = state.players[player];
+    const size = openingHandSize(state, player);
     const shuffled = sink.rng.shuffle(side.library);
-    const quickdraw = shuffled.filter(isQuickdraw);
-    side.library = [...shuffled.filter((card) => !isQuickdraw(card)), ...quickdraw];
-
     // R182: a handicapped seat's extra opening cards are part of the same total Quickdraw replaces.
-    draw(sink, player, Math.max(0, openingHandSize(state, player) - quickdraw.length));
-    // A cast the opening draw made is asking (R158: the draw has owed its own remainder), so this
-    // seat's Quickdraw cards, the seats after it and the mulligan wait behind it.
+    const quickdraw = shuffled.filter(isQuickdraw).slice(0, size);
+    const rest = shuffled.filter((card) => !quickdraw.includes(card));
+    const setAside = rest.filter((card) => castsOnDraw(state, card));
+    const drawable = rest.filter((card) => !castsOnDraw(state, card));
+    side.library = [...drawable, ...setAside, ...quickdraw];
+
+    draw(sink, player, Math.max(0, Math.min(size - quickdraw.length, drawable.length)));
+    // An arrival clause of the opening draw is asking (R158: the draw has owed its own remainder), so
+    // this seat's Quickdraw cards, the seats after it and the mulligan wait behind it.
     if (paused(sink)) {
       if (state.result === null) oweSetup(sink, { step: QUICKDRAW_STEP, seat: at });
       return;
@@ -180,10 +207,28 @@ function dealFrom(sink: EngineSink, seat: number): void {
   openMulligans(sink);
 }
 
-/** R225: the seat's Quickdraw cards, each as the opening draw it replaces, in the library's order. */
+/**
+ * R225, R640: the Quickdraw cards `dealFrom` left at the very bottom of the library, which are the
+ * ones it deals: a run of them from the end, no longer than the opening hand. Read off the library
+ * rather than remembered, so the owed `quickdraw` step (R113) names no card and the seat's Quickdraw
+ * cards stay out of `state.work`, where the other seat's AI could read them (R185).
+ */
+function dealtQuickdraw(state: GameState, player: PlayerId): CardInstance[] {
+  const library = state.players[player].library;
+  const size = openingHandSize(state, player);
+  const dealt: CardInstance[] = [];
+  for (let at = library.length - 1; at >= 0 && dealt.length < size; at -= 1) {
+    const card = library[at] as CardInstance;
+    if (!isQuickdraw(card)) break;
+    dealt.unshift(card);
+  }
+  return dealt;
+}
+
+/** R225: the seat's dealt Quickdraw cards, each as the opening draw it replaces, in the library's order. */
 function dealQuickdraw(sink: EngineSink, player: PlayerId): void {
   const state = sink.state;
-  for (const card of state.players[player].library.filter(isQuickdraw)) {
+  for (const card of dealtQuickdraw(state, player)) {
     moveToZone(state, card, "hand");
     state.counters.drawn += 1;
     sink.events.push({ type: "drawn", player, instanceId: card.id, defId: card.defId });
@@ -250,10 +295,12 @@ function resolveFrom(sink: EngineSink, sealed: readonly SealedMulligan[]): void 
     if (at >= 0) side.hand.splice(at, 1);
   }
 
-  draw(sink, next.player, returned.length);
-  // A replacement's cast is asking (§2.4, R70, R224): the shuffle-back, the seats after this one and
-  // the game wait for the answer, and the returned cards wait with them, in the owed item — they are
-  // in no pile until they go back.
+  // R635: the replacements come off the cards setup may draw, so a seat that returns more than the
+  // library holds besides the set-aside cards is dealt fewer back, never a fatigue draw.
+  draw(sink, next.player, Math.min(returned.length, drawableCount(state, next.player)));
+  // An arrival clause of a replacement is asking (R224): the shuffle-back, the seats after this one
+  // and the game wait for the answer, and the returned cards wait with them, in the owed item — they
+  // are in no pile until they go back.
   if (paused(sink)) {
     if (state.result === null) {
       oweSetup(sink, {
@@ -401,8 +448,29 @@ export function dealCoins(sink: EngineSink): void {
   });
 }
 
-/** R244's Coin, the start-of-game effects, then player 1 takes the first turn and draws (§2.1, R10). */
+/**
+ * R635: both mulligans are resolved, so each seat's cast-on-draw cards, which waited at the bottom of
+ * its library out of the draws' reach, are shuffled in: taken out and put back one at a time at a
+ * uniform random place among the rest, with the match rng. Left where they lay they would be the last
+ * cards the seat drew. A seat with none takes no rng draw, so a deck without one deals as it always
+ * did. Nothing is reported: a `shuffledIn` per card would tell the other seat how many the deck holds
+ * (§9.1, R97).
+ */
+function shuffleInSetAside(sink: EngineSink): void {
+  const state = sink.state;
+  for (const player of PLAYER_IDS) {
+    const side = state.players[player];
+    const waiting = side.library.filter((card) => castsOnDraw(state, card));
+    if (waiting.length === 0) continue;
+    const out = new Set(waiting);
+    side.library = side.library.filter((card) => !out.has(card));
+    for (const card of waiting) side.library.splice(sink.rng.int(side.library.length + 1), 0, card);
+  }
+}
+
+/** R635's shuffle-in, R244's Coin, the start-of-game effects, then player 1 takes the first turn and draws (§2.1, R10). */
 export function finishSetup(sink: EngineSink): void {
+  shuffleInSetAside(sink);
   dealCoins(sink);
   const cards = PLAYER_IDS.flatMap((player) => {
     const side = sink.state.players[player];
