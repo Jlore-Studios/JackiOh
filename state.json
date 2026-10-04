@@ -1084,14 +1084,14 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "agy",
       "question": "",
       "queued_at": "2026-10-04T03:33:46Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "37172840525",
+      "run_id": "37177438188",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-10-04T03:04:17Z",
+      "started_at": "2026-10-04T04:35:53Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -1931,9 +1931,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T04:31:09Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37177161765",
-    "what": "review #144 on agy"
+    "at": "2026-10-04T04:35:53Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37177438188",
+    "what": "revise #168 on agy"
   },
   "last_sweep": {
     "at": "2026-10-04T04:31:19Z",
