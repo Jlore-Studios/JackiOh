@@ -74,6 +74,7 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       players: [first.profileId, second.profileId],
       decks: [[...first.deck], [...second.deck]],
       catalogVersion: input.catalogVersion,
+      ranked: input.ranked,
       status: "live",
       createdAt: now,
       finishedAt: null,
@@ -83,16 +84,22 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       // reconnected client) reads the same pair.
       portraits: [portraitOrDefault(first.portrait), portraitOrDefault(second.portrait)],
     };
-    await deps.store.matches.create(match);
-    // R433: read after the create, as `rebuild` reads it, so both fold the same setup.
+    // R433: the mode is read off what made the match — its tickets, its room or its series, which
+    // the reserved `open` skeleton already links — so it reads the same before the row is written
+    // as `rebuild` reads it after, and both fold the same setup.
     const dealt = dealtFor(await deps.store.matches.modeOf(match.id));
 
     // The opening draw is part of the engine, not of the log: `fold` replays `createGame` and
-    // `beginGame` from `(seed, decks)` before it applies a single action (§9.3).
+    // `beginGame` from `(seed, decks)` before it applies a single action (§9.3). It runs before
+    // the row is written so a game the engine cannot begin leaves nothing behind: written first,
+    // the row went `live` with no actor and no log, and nothing but the ceiling reaper could ever
+    // end it — while an `open` skeleton a caller reserved stays `open`, which
+    // `matches.discardOpen` (R263) is still able to release.
     const state = deps.engine.beginGame(
       deps.engine.createGame({ seed: match.seed, decks: match.decks, ...lastBoardsOf(match), ...dealt }),
     ).state;
 
+    await deps.store.matches.create(match);
     actors.set(match.id, createMatchActor(deps, { match, state }));
     deps.log.info("match.started", { matchId: match.id, players: match.players });
   }

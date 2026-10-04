@@ -2,7 +2,8 @@
 // others, with its tab title and canonical link, linked from the site footer beside Patch notes,
 // served by vercel.json (net/deploy-routes.test.ts reads `paths`) and listed in the sitemap. It
 // shows every catalog card, tokens included, through the deck builder's own browse pane, read-only,
-// and asks no server anything. The pool's filter and sort semantics are filters.test.ts's.
+// and the page itself asks no server anything (the R654 statistics block in the detail view reads
+// the public card aggregates). The pool's filter and sort semantics are filters.test.ts's.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -14,6 +15,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
+import { INSPECT_STATS } from "../cards/inspect/testids.ts";
 import { ALMANAC_TAGS, DEFAULT_FILTER, DEFAULT_SORT, almanacPool, costBucket } from "../game/deckbuilder/filters.ts";
 import { poolCardLabel } from "../game/deckbuilder/PoolGrid.tsx";
 import {
@@ -256,5 +258,66 @@ describe("R630 the almanac's browse pane", () => {
     fireEvent.click(screen.getByTestId(DB_SORT_DIR));
     expect(screen.getByTestId(DB_SORT_DIR)).toHaveAttribute("data-dir", "desc");
     expect(shownIds()).toEqual([...almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, { key: "name", dir: "desc" })]);
+  });
+});
+
+describe("R654 the almanac's card statistics block", () => {
+  it("R654 the almanac's detail view renders the compact statistics block with a link to the full stats page", async () => {
+    const unit = CARDS.find((def) => !def.token && def.set === "Core");
+    if (unit === undefined) throw new Error("the catalog has no Core card");
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/stats/cards")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              patch: "0.2.0",
+              previousPatch: null,
+              gate: { cleared: false, liveGames: 412, minLiveGames: 1000 },
+              source: "provisional",
+              sourceLabel: "AI games + live games (provisional)",
+              minSample: 20,
+              totalGames: 1200,
+              cards: [
+                {
+                  id: unit.id,
+                  name: unit.name,
+                  cost: unit.cost,
+                  rarity: unit.rarity,
+                  set: unit.set,
+                  games: 50,
+                  winRate: 0.6,
+                  drawnGames: 40,
+                  drawnWinRate: 0.65,
+                  playedGames: 30,
+                  playedWinRate: 0.7,
+                  playRate: 0.5,
+                  hasEnoughGames: true,
+                },
+              ],
+              summary: {
+                totalGames: 1200,
+                liveGames: 412,
+                activePatch: "0.2.0",
+                source: "provisional",
+                bestCard: null,
+                worstCard: null,
+              },
+            }),
+            { status: 200 },
+          ),
+        );
+      }
+      return Promise.resolve(new Response("{}", { status: 200 }));
+    });
+    render(<AlmanacRoute />);
+    fireEvent.click(screen.getByTestId(poolCardId(unit.id)));
+    const stats = await screen.findByTestId(INSPECT_STATS, undefined, SLOW);
+    expect(stats).toHaveTextContent("60%");
+    expect(stats).toHaveTextContent("AI games + live games (provisional)");
+    expect(within(screen.getByTestId(INSPECT_DETAIL)).getByRole("link", { name: /view full stats/i })).toHaveAttribute(
+      "href",
+      `/stats?tab=cards&card=${encodeURIComponent(unit.id)}`,
+    );
   });
 });

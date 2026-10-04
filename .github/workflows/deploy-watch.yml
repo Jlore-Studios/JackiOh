@@ -11,6 +11,8 @@
 # live server keeps serving the same version, and the version alone cannot tell. It also catches a
 # start command that is not render.yaml's: the new commit is live but serves another catalog version.
 # The issue says which of those it is, and the run that finds the server live closes it again.
+# Before it polls, it asks Render to deploy the push through the service's deploy hook (the
+# RENDER_DEPLOY_HOOK_URL secret), so a deploy no longer waits on Render's GitHub integration.
 #
 # The wait is up to WINDOWS × WINDOW_SECONDS (about 18 minutes: Render's build and boot, plus a
 # free instance waking), split into windows that each run as a job of their own, every one under
@@ -52,6 +54,8 @@ jobs:
       served: ${{ steps.poll.outputs.served }}
       served_version: ${{ steps.poll.outputs.served_version }}
       served_commit: ${{ steps.poll.outputs.served_commit }}
+      service: ${{ steps.deploy.outputs.service }}
+      api: ${{ steps.deploy.outputs.api }}
     steps:
       - uses: actions/checkout@v4
       - id: expected
@@ -59,6 +63,46 @@ jobs:
           version=$(awk '$1 == "-" && $2 == "key:" { k = $3; next } k == "CATALOG_VERSION" && $1 == "value:" { gsub(/"/, "", $2); print $2; exit }' render.yaml)
           echo "render.yaml names catalog $version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+      # Render deploys a push when its GitHub integration tells it to, and that has failed twice now:
+      # after the repository moved, and again after it was reconnected (#224). With no access to the
+      # repository Render hears of no push: its build log says "It looks like we don't have access to
+      # your repo, but we'll try to clone it anyway" and checks out the same old commit every time
+      # (9809419, all of 2026-10-04). So this step names the commit. With RENDER_API_KEY it starts the
+      # deploy through Render's API with `commitId`, the documented way to deploy one commit; without
+      # it, through the deploy hook (RENDER_DEPLOY_HOOK_URL) with `ref`. The repository is public, so
+      # Render clones it either way. With neither, the watch relies on Render's own auto-deploy. The
+      # service id is the `srv-...` in the hook's URL (or the RENDER_SERVICE_ID variable); it is an
+      # identifier, not a secret, and the `render` job below tracks the deploy by it.
+      - name: ask Render to deploy this push
+        id: deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE_ID_VAR: ${{ vars.RENDER_SERVICE_ID }}
+        run: |
+          service=${SERVICE_ID_VAR:-$(grep -oE 'srv-[a-z0-9]+' <<<"$HOOK" | head -n 1 || true)}
+          echo "service=$service" >> "$GITHUB_OUTPUT"
+          if [ -n "$RENDER_API_KEY" ] && [ -n "$service" ]; then
+            code=$(curl -sS -o "$RUNNER_TEMP/deploy.json" -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer $RENDER_API_KEY" -H 'Accept: application/json' -H 'Content-Type: application/json' \
+              -d "{\"commitId\":\"$GITHUB_SHA\"}" "https://api.render.com/v1/services/$service/deploys" || echo 000)
+            if [ "${code:0:1}" = 2 ]; then
+              echo "Render is deploying ${GITHUB_SHA:0:7}: deploy $(jq -r '.id // "?"' "$RUNNER_TEMP/deploy.json"), status $(jq -r '.status // "?"' "$RUNNER_TEMP/deploy.json")."
+              echo "api=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::warning::Render's API refused the deploy of ${GITHUB_SHA:0:7} (HTTP $code): $(head -c 300 "$RUNNER_TEMP/deploy.json" 2>/dev/null). Trying the deploy hook."
+          fi
+          if [ -z "$HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL is not set: relying on Render's own auto-deploy (docs/deploy-cloudflare.md, section 5)."
+            exit 0
+          fi
+          case $HOOK in *\?*) sep='&' ;; *) sep='?' ;; esac
+          if curl -fsS -X POST -o /dev/null "${HOOK}${sep}ref=${GITHUB_SHA}"; then
+            echo "Render was asked to deploy ${GITHUB_SHA:0:7}."
+          else
+            echo "::warning::Render's deploy hook refused the request; the watch still checks whether the push went live."
+          fi
       - id: poll
         uses: ./.github/actions/poll-live
         with:
@@ -66,6 +110,41 @@ jobs:
           expected: ${{ steps.expected.outputs.version }}
           commit: ${{ github.sha }}
           seconds: ${{ env.WINDOW_SECONDS }}
+
+  # Render's own account of the deploy this push started (Bounceapp/render-action): it finds the
+  # deploy of this commit through Render's API and follows it until it is live or has failed, so a
+  # failed build or boot shows here, with a link to its Render log, instead of only as a server that
+  # never moved. It only tracks a deploy, never starts one, so it runs when window 1 started one
+  # through the API. The windows above stay what decides and what opens the issue: this job is
+  # capped under CI's five-minute budget (#73) and a deploy that outlasts it is not a failure.
+  render:
+    name: Render deploy of this push
+    needs: [window-1]
+    # The action reads the push's commit from a push event only.
+    if: github.event_name == 'push' && needs.window-1.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: follow the deploy on Render
+        id: render
+        continue-on-error: true
+        timeout-minutes: 4
+        uses: Bounceapp/render-action@667d896d04b8d9f8c3b1263970efae0948ab0da5 # 0.12.0
+        with:
+          render-token: ${{ secrets.RENDER_API_KEY }}
+          service-id: ${{ needs.window-1.outputs.service }}
+          retries: "20"
+          wait: "10000"
+      - name: say what Render reported
+        env:
+          OUTCOME: ${{ steps.render.outcome }}
+          STATUS: ${{ steps.render.outputs.status }}
+        run: |
+          case "$OUTCOME:$STATUS" in
+            success:live) echo "### Render: ${GITHUB_SHA:0:7} is live" >> "$GITHUB_STEP_SUMMARY" ;;
+            success:*) echo "### Render: the deploy of ${GITHUB_SHA:0:7} ended as ${STATUS:-unknown}" >> "$GITHUB_STEP_SUMMARY" ;;
+            *) echo "::warning::Render's deploy of ${GITHUB_SHA:0:7} failed, or outlasted this job; the step above links its Render log. The windows keep checking the live server." ;;
+          esac
 
   window-2:
     name: live server, window 2 of 4
@@ -155,7 +234,7 @@ jobs:
           if [ -n "$SERVED_COMMIT" ] && [ "$SERVED_COMMIT" = "$SHA" ]; then
             diagnosis="Render deployed this commit but serves another catalog version than render.yaml names. The start command takes the version from the newest entry of packages/cards/patches/patches.json (scripts/catalog-version.mjs), so either render.yaml's \`CATALOG_VERSION\` and that list disagree (the patch command writes both, and R388's test holds them equal), or the service is not running render.yaml's start command: open jackioh-server, Settings, Build & Deploy, and Blueprints."
           elif [ -n "$SERVED_COMMIT" ]; then
-            diagnosis="Render is still running \`${SERVED_COMMIT:0:7}\`, not this push. Open jackioh-server, Events: no \"Deploy started\" for \`${SHA:0:7}\` means Render is not receiving pushes (the repository was moved or renamed, the GitHub app lost access to it, or Auto-Deploy is off: Settings, Build & Deploy; a Blueprint's own repository is under Blueprints). A deploy marked failed names its step in its log: the build, the \`release\` step's migrations or reseed, or the boot."
+            diagnosis="Render is still running \`${SERVED_COMMIT:0:7}\`, not this push. If the \`RENDER_DEPLOY_HOOK_URL\` secret is not set, set it (jackioh-server, Settings, Deploy Hook): the watch then asks Render to deploy every push itself. Open jackioh-server, Events: no \"Deploy started\" for \`${SHA:0:7}\` means Render is not receiving pushes (the repository was moved or renamed, the GitHub app lost access to it, or Auto-Deploy is off: Settings, Build & Deploy; a Blueprint's own repository is under Blueprints). A deploy marked failed names its step in its log: the build, the \`release\` step's migrations or reseed, or the boot."
           else
             diagnosis="The server reported no commit. Either it predates this check and Render has not deployed since (jackioh-server, Events shows whether pushes start deploys, and Settings, Build & Deploy shows the repository, branch and Auto-Deploy), or \`RENDER_GIT_COMMIT\` is not set where it runs."
           fi

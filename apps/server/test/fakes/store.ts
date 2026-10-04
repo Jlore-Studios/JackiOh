@@ -29,7 +29,10 @@ import {
   createMemoryGameRecordStore,
   createMemoryLastBoardStore,
   createMemoryPlayerSettingsStore,
+  createMemoryPlayerStatsStore,
+  createMemoryRankedStore,
   createMemoryTutorialStore,
+  emptyRankedTables,
   matchModeIn,
   purgeExpiredRows,
   removeProfileRows,
@@ -37,8 +40,12 @@ import {
   type GameRecordTables,
   type LastBoardTables,
   type PlayerSettingsTables,
+  type PlayerStatsTables,
+  type RankedTables,
   type TutorialTables,
 } from "../../src/api/memory-stores";
+import { RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START } from "../../src/config";
+import { DuplicateResultError } from "../../src/api/ports";
 import type {
   CodeAttempt,
   CollectionEntry,
@@ -70,7 +77,9 @@ type Tables = {
 } & DeckTables &
   TutorialTables &
   PlayerSettingsTables &
+  RankedTables &
   LastBoardTables &
+  PlayerStatsTables &
   GameRecordTables;
 
 function emptyTables(): Tables {
@@ -91,7 +100,9 @@ function emptyTables(): Tables {
     tutorial: [],
     playerSettings: [],
     lastBoards: [],
+    playerStats: [],
     gameRecords: [],
+    ...emptyRankedTables(),
   };
 }
 
@@ -139,8 +150,11 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
       id: input.id,
       userId: input.userId ?? `user-${input.id}`,
       email: input.email ?? `${input.id}@example.test`,
+      displayName: input.displayName ?? null,
       status: input.status ?? "active",
-      rating: input.rating ?? 1000,
+      rating: input.rating ?? RATING_START,
+      ratingDeviation: input.ratingDeviation ?? RATING_DEVIATION_START,
+      ratingVolatility: input.ratingVolatility ?? RATING_VOLATILITY_START,
       inMatchId: input.inMatchId ?? null,
       createdAt: input.createdAt ?? 0,
     };
@@ -200,7 +214,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
       call("profiles.getMany");
       return tables.profiles.filter((p) => profileIds.includes(p.id)).map(clone);
     },
-    create: async ({ userId, email, rating, at }) => {
+    create: async ({ userId, email, rating, at, displayName }) => {
       call("profiles.create");
       const existing = tables.profiles.find((p) => p.userId === userId);
       if (existing !== undefined) throw new Error(`profile for ${userId} already exists`);
@@ -208,8 +222,11 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
         id: `profile-${nextProfile}`,
         userId,
         email,
+        displayName: displayName ?? null,
         status: "pending",
         rating,
+        ratingDeviation: RATING_DEVIATION_START,
+        ratingVolatility: RATING_VOLATILITY_START,
         inMatchId: null,
         createdAt: at,
       };
@@ -223,11 +240,25 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
       if (row === undefined) throw new Error(`no profile ${profileId}`);
       row.status = status;
     },
+    setGlicko: async (profileId, glicko) => {
+      call("profiles.setGlicko");
+      const row = profileOf(profileId);
+      if (row === undefined) throw new Error(`no profile ${profileId}`);
+      row.rating = glicko.rating;
+      row.ratingDeviation = glicko.deviation;
+      row.ratingVolatility = glicko.volatility;
+    },
     setRating: async (profileId, rating) => {
       call("profiles.setRating");
       const row = profileOf(profileId);
       if (row === undefined) throw new Error(`no profile ${profileId}`);
       row.rating = rating;
+    },
+    setDisplayName: async (profileId, displayName) => {
+      call("profiles.setDisplayName");
+      const row = profileOf(profileId);
+      if (row === undefined) throw new Error(`no profile ${profileId}`);
+      row.displayName = displayName;
     },
     // Migration 0012's account deletion, shared with `src/api/e2e-store.ts`.
     remove: async (profileId) => {
@@ -328,6 +359,8 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
   store.lastBoards = createMemoryLastBoardStore(() => tables, call);
   // R376: the card statistics' game records, shared with the end-to-end store like the tutorial.
   store.gameRecords = createMemoryGameRecordStore(() => tables, call);
+  // R654: each profile's player statistics and privacy setting.
+  store.playerStats = createMemoryPlayerStatsStore(() => tables, call);
 
   store.matches = {
     create: async (match) => {
@@ -488,7 +521,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     insert: async (row: ResultRow) => {
       call("results.insert");
       if (tables.results.some((existing) => existing.matchId === row.matchId)) {
-        throw new Error(`results already holds a row for ${row.matchId}`);
+        throw new DuplicateResultError(row.matchId);
       }
       tables.results.push(clone(row));
     },
@@ -498,6 +531,10 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
       return row === undefined ? null : clone(row);
     },
   };
+
+  // SPEC §9.12's ranked ladder, shared with `src/api/e2e-store.ts`; `db/store.ts` carries the
+  // same tables since migration 0022.
+  store.ranked = createMemoryRankedStore(() => tables, call);
 
   return store;
 }

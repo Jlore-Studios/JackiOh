@@ -261,8 +261,9 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     ]);
   });
 
-  it("R366 patch v0.2.10 only Animates eighteen Field Spells, rewords Ivory Tower and moves Final Gambit's loc between v0.2.5 and the current catalog", () => {
+  it("R366 patch v0.2.10 only Animates eighteen Field Spells, rewords Ivory Tower and moves Final Gambit's loc between v0.2.5 and v0.2.10", () => {
     const before = readSnapshot("v0.2.5");
+    const after = readSnapshot("v0.2.10") as unknown as Record<string, CardDef>;
     const animated = new Set([
       "core-014",
       "core-033",
@@ -284,7 +285,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
       "classicplus-078",
     ]);
     const changed: string[] = [];
-    for (const [id, currentCard] of Object.entries(CATALOG)) {
+    for (const [id, currentCard] of Object.entries(after)) {
       const priorCard = before[id] as unknown as CardDef | undefined;
       expect(priorCard, `card ${id} existed in v0.2.5`).toBeDefined();
       if (!priorCard) continue;

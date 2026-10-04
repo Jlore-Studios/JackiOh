@@ -6,10 +6,13 @@ from __future__ import annotations
 import argparse
 import contextlib
 import io
+import json
 import unittest
 from datetime import timedelta
+from unittest import mock
 
-from harness import dashboard
+from harness import __main__ as main_mod
+from harness import dashboard, providers
 from harness.__main__ import cmd_dashboard
 from harness.clock import iso
 from harness.config import LABEL_BUILD, LABEL_PR, LABEL_REVISE, LABEL_WORKING
@@ -17,12 +20,18 @@ from harness.errors import GitHubError
 from harness.state import item as state_item
 
 from tests.fakes import OPERATOR, STRANGER, FakeGitHub
-from tests.support import NIGHT, make_config, make_ctx
+from tests.support import NIGHT, make_config, make_ctx, raw_providers
 from tests.test_cross import ALL
 
 
 def opened(gh: FakeGitHub) -> list[int]:
     return [n for n, t in gh.threads.items() if t["title"] == dashboard.TITLE]
+
+
+def offline(gh: FakeGitHub | None = None):
+    """The loop's contexts on a fake GitHub, so a test never reaches the network."""
+    gh = gh or FakeGitHub()
+    return mock.patch.object(main_mod, "_ctx", lambda cfg, **_: make_ctx(gh, at=NIGHT, cfg=cfg))
 
 
 class DashboardTests(unittest.TestCase):
@@ -102,7 +111,7 @@ class DashboardTests(unittest.TestCase):
         gantt = body.split("```mermaid\ngantt")[1].split("```")[0]
         self.assertNotIn("#", gantt)  # a gantt chart reads `#` as a comment
         # The lanes as boxes: each Claude account, then each slot on the machine.
-        self.assertIn('subgraph hosted["Claude accounts, on GitHub\'s runners: 1 of 4 working"]',
+        self.assertIn('subgraph hosted["Claude accounts, on GitHub\'s runners: 1 of 5 working"]',
                       body)
         self.assertIn('h0["<b>claude-1</b><br/>🟢 building #37<br/>since 21:13"]:::busy', body)
         self.assertIn('subgraph machine["The machine: 1 of 6 slots in use"]', body)
@@ -149,7 +158,7 @@ class DashboardTests(unittest.TestCase):
             clock[0] += seconds
 
         out = io.StringIO()
-        with mock.patch.object(dashboard, "update", update), \
+        with mock.patch.object(dashboard, "update", update), offline(), \
                 mock.patch.object(main_mod.time, "monotonic", lambda: clock[0]), \
                 mock.patch.object(main_mod.time, "sleep", sleep), contextlib.redirect_stdout(out):
             code = cmd_dashboard(make_config(), argparse.Namespace(every=600, for_seconds=1200))
@@ -178,7 +187,7 @@ class DashboardTests(unittest.TestCase):
             return "rewrote #148"
 
         out = io.StringIO()
-        with mock.patch.object(main_mod.sweep_mod, "sweep", sweep), \
+        with mock.patch.object(main_mod.sweep_mod, "sweep", sweep), offline(), \
                 mock.patch.object(dashboard, "update", update), \
                 mock.patch.object(main_mod.time, "monotonic", lambda: clock[0]), \
                 mock.patch.object(main_mod.time, "sleep",
@@ -231,9 +240,102 @@ class DashboardTests(unittest.TestCase):
         cfg = make_config()
         out = io.StringIO()
         from unittest import mock
-        with mock.patch.object(dashboard, "update", broken), contextlib.redirect_stdout(out):
+        with mock.patch.object(dashboard, "update", broken), offline(), \
+                contextlib.redirect_stdout(out):
             self.assertEqual(cmd_dashboard(cfg, argparse.Namespace()), 0)
         self.assertIn("::warning::the status issue was not updated", out.getvalue())
+
+
+class FreshEachTickTests(unittest.TestCase):
+    """The loop's job runs for hours, and GitHub fixes its secrets when its run is created (hours
+    before it starts, for a run queued behind the last loop): each tick reads the subscriptions
+    from the default branch again and takes the newest plan job's record of the secrets."""
+
+    def loop(self, gh, cfg, ticks, between=lambda tick: None):
+        seen = []
+        clock = [0.0]
+
+        def update(ctx):
+            seen.append(ctx.cfg)
+            between(len(seen))
+            return "rewrote #148"
+
+        out = io.StringIO()
+        with mock.patch.object(dashboard, "update", update), offline(gh), \
+                mock.patch.object(main_mod.time, "monotonic", lambda: clock[0]), \
+                mock.patch.object(main_mod.time, "sleep",
+                                  lambda s: clock.__setitem__(0, clock[0] + s)), \
+                contextlib.redirect_stdout(out):
+            cmd_dashboard(cfg, argparse.Namespace(every=600, for_seconds=600 * (ticks - 1)))
+        return seen, out.getvalue()
+
+    def test_a_secret_a_plan_job_saw_after_this_run_was_created_shows_at_the_next_tick(self):
+        gh = FakeGitHub()
+        gh.runs["777"] = {"status": "in_progress", "created_at": "2026-09-30T01:00:00Z"}
+        cfg = make_config(env={"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN"})
+        store = make_ctx(gh, cfg=cfg).store
+        # A record older than this run says nothing new: its own list stands.
+        store.update(lambda s: s.update(secrets={"set": ["CLAUDE_CODE_OAUTH_TOKEN"],
+                                                 "at": "2026-09-30T00:30:00Z"}), "seed")
+
+        def add_token_4(tick):
+            if tick == 1:  # a plan job, after this run was created, has token 4
+                store.update(lambda s: s.update(secrets={
+                    "set": ["CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN_4"],
+                    "at": "2026-09-30T02:00:00Z"}), "plan")
+
+        seen, _ = self.loop(gh, cfg, 2, add_token_4)
+        self.assertEqual([c.secrets.has("CLAUDE_CODE_OAUTH_TOKEN_4") for c in seen],
+                         [False, True])
+        self.assertTrue(all(c.secrets.has("CLAUDE_CODE_OAUTH_TOKEN") for c in seen))
+
+    def test_a_subscription_changed_on_main_shows_at_the_next_tick(self):
+        gh = FakeGitHub()
+        raw = raw_providers()
+        raw["providers"]["claude-4"]["limits"]["five_hour"] = 0.33
+
+        def change_main(tick):
+            if tick == 1:
+                gh.files[("main", ".harness/providers.json")] = (json.dumps(raw), "b1")
+            if tick == 2:
+                gh.files[("main", ".harness/providers.json")] = ("{not json", "b2")
+
+        seen, out = self.loop(gh, make_config(), 3, change_main)
+        caps = [c.pool.get("claude-4").limits.stops["five_hour"] for c in seen]
+        # The file is not on main in the first tick; then the change; then a broken file keeps it.
+        self.assertEqual(caps[1:], [0.33, 0.33])
+        self.assertNotEqual(caps[0], 0.33)
+        self.assertIn("::warning::kept the subscriptions and secrets as they were", out)
+
+    def test_a_plan_job_records_the_secrets_it_saw(self):
+        from harness import plan as plan_mod
+        gh = FakeGitHub()
+        both = "CLAUDE_CODE_OAUTH_TOKEN CLAUDE_CODE_OAUTH_TOKEN_5"
+        ctx = make_ctx(gh, cfg=make_config(env={"HARNESS_SECRETS_SET": both}))
+        plan_mod.make(ctx)
+        self.assertEqual(ctx.store.load()["secrets"],
+                         {"set": ["CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN_5"],
+                          "at": iso(NIGHT)})
+
+    def test_the_record_and_which_list_wins(self):
+        known = providers.Secrets(frozenset({"A"}), True)
+        record = providers.secrets_record(known, {}, NIGHT)
+        self.assertEqual(record, {"set": ["A"], "at": iso(NIGHT)})
+        state = {"secrets": record}
+        # The same list is written again only every SECRETS_NOTE_EVERY; a new one at once.
+        self.assertIsNone(providers.secrets_record(known, state, NIGHT + timedelta(minutes=10)))
+        self.assertIsNotNone(providers.secrets_record(
+            known, state, NIGHT + providers.SECRETS_NOTE_EVERY))
+        self.assertIsNotNone(providers.secrets_record(
+            providers.Secrets(frozenset({"A", "B"}), True), state, NIGHT + timedelta(minutes=1)))
+        # Run by hand, nothing is known, so nothing is written.
+        self.assertIsNone(providers.secrets_record(providers.Secrets(frozenset(), False), {}, NIGHT))
+        own = providers.Secrets(frozenset({"B"}), True)
+        self.assertEqual(providers.newer_secrets(own, state, NIGHT - timedelta(hours=1)).present,
+                         {"A"})
+        self.assertIs(providers.newer_secrets(own, state, NIGHT + timedelta(hours=1)), own)
+        self.assertEqual(providers.newer_secrets(own, state, None).present, {"A"})
+        self.assertIs(providers.newer_secrets(own, {}, None), own)
 
 
 if __name__ == "__main__":

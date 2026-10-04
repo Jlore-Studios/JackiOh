@@ -50,6 +50,8 @@ from harness.trust import TRUSTED_ASSOCIATIONS, Trust
 HUMANS: tuple[str, ...] = ("MaxGoetzmann", "jgoetzmann")
 #: The type labels (`docs/issues-and-patches.md`): the only ones a pull request gets.
 TYPE_LABELS: tuple[str, ...] = ("patch", "major version", "architecture", "night bot")
+#: Labels only the night bot puts on, besides its `bot:` ones.
+BOT_ONLY: frozenset[str] = frozenset({config_mod.LABEL_READY})
 HUMAN_LABEL = "human"
 #: Groups a thread carries at most one of; a person's choice from one is never added to.
 GROUPS: tuple[re.Pattern[str], ...] = (
@@ -67,7 +69,7 @@ DEVIN_TIMEOUT_S = 300
 CONVENTION = re.compile(
     r"^(?:Patch v\d+\.\d+\.(?:\d+|X|Y)[a-z]?(?: \(part \d+ of \d+\))?"
     r"|v\d+\.\d+\.0(?: \(part \d+ of \d+\))?"
-    r"|Night bot(?: v\d+(?:\.\d+)?)?|CI|Architecture): \S")
+    r"|Night bot|CI|Architecture): \S")
 VERSION = re.compile(r"\bv\d+\.\d+(?:\.(?:\d+|X|Y))?[a-z]?\b")
 CONVENTIONS_DOC = Path("docs") / "issues-and-patches.md"
 #: The organisation's issue types (Settings → Planning → Issue types), used when the token cannot
@@ -216,6 +218,11 @@ def issue_types(gh: Any) -> dict[str, str]:
     return found or dict(DEFAULT_ISSUE_TYPES)
 
 
+def _bot_only(name: str) -> bool:
+    """A label the night bot keeps for itself, which triage never offers or adds."""
+    return name.startswith("bot:") or name in BOT_ONLY
+
+
 def prompt(thread: Mapping[str, Any], is_pr: bool, repo_labels: list[Mapping[str, Any]],
            conventions: str, types: Mapping[str, str] | None = None,
            open_issues: list[Mapping[str, Any]] | None = None) -> str:
@@ -223,7 +230,7 @@ def prompt(thread: Mapping[str, Any], is_pr: bool, repo_labels: list[Mapping[str
     then the thread fenced as data."""
     kind = "pull request" if is_pr else "issue"
     labels = "\n".join(f"- `{label.get('name')}`: {label.get('description') or ''}"
-                       for label in repo_labels if not str(label.get("name")).startswith("bot:"))
+                       for label in repo_labels if not _bot_only(str(label.get("name"))))
     types = dict(types or DEFAULT_ISSUE_TYPES)
     type_rule = "" if is_pr else (
         '\n- "type": the issue\'s type, exactly one of '
@@ -350,7 +357,7 @@ def decide(verdict: Mapping[str, Any] | None, thread: Mapping[str, Any], is_pr: 
         kind = ""
     if HUMAN_LABEL in present:
         kind = "human"  # a person said so
-    allowed = {name for name in repo_labels if not name.startswith("bot:")}
+    allowed = {name for name in repo_labels if not _bot_only(name)}
     if is_pr:
         allowed &= set(TYPE_LABELS)
     wanted = [str(name) for name in verdict.get("labels") or [] if isinstance(name, str)]

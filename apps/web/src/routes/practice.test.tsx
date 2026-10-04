@@ -109,7 +109,7 @@ function signedIn(status: "active" | "pending" | "banned"): Account {
     kind: "ready",
     token: "tok-1",
     me: {
-      profile: { id: "u1", status, rating: 1000 },
+      profile: { id: "u1", status },
       needsInviteCode: status === "pending",
       emailVerified: true,
       currentMatchId: null,
@@ -1476,6 +1476,8 @@ describe("practice plays on the full board, with sound and settings", () => {
       dispose: () => undefined,
       playSfx: () => true,
       playVoice: () => true,
+      playEffect: () => true,
+      playPickup: () => true,
     };
     return {
       engine,
