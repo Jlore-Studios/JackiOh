@@ -1971,7 +1971,7 @@
         "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled",
         "streak": 1
       },
-      "refused_until": "2026-10-04T01:21:32Z",
+      "refused_until": "2026-10-04T06:20:26Z",
       "spent": [
         {
           "at": "2026-10-03T02:02:07Z",
@@ -2156,6 +2156,10 @@
         {
           "at": "2026-10-04T04:34:56Z",
           "minutes": 3.2
+        },
+        {
+          "at": "2026-10-04T05:49:26Z",
+          "minutes": 12.6
         }
       ]
     },
