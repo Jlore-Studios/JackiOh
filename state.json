@@ -1986,9 +1986,12 @@
     "214": {
       "action": "revise",
       "asks": [],
+      "ci_fixes": 1,
       "ci_reruns": {
         "38efdb8549192f045ddb8012ae2f66998d4263ea": 1
       },
+      "ci_run_id": 37222149060,
+      "ci_sha": "38efdb8549192f045ddb8012ae2f66998d4263ea",
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "easy",
@@ -2011,7 +2014,8 @@
       "pending_request": false,
       "provider": "devin",
       "question": "",
-      "queued_at": "2026-10-04T17:52:12Z",
+      "queued_at": "2026-10-04T18:08:31Z",
+      "requested_by": "jgoetzmann-bot",
       "run_id": "37221161125",
       "self_check_findings": [
         {
@@ -2027,7 +2031,7 @@
           "where": "self check"
         }
       ],
-      "source": "",
+      "source": "ci",
       "started_at": "2026-10-04T17:37:29Z",
       "stop_requested": false,
       "taken_asks": [],
