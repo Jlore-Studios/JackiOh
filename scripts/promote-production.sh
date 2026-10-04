@@ -41,11 +41,19 @@
 # When production moves it writes `promoted=true` to GITHUB_OUTPUT, which is what starts the workflow's
 # `deploy` job (GitHub Actions builds and deploys production; Cloudflare builds nothing).
 #
-# It talks to GitHub through `gh` (GH_TOKEN) and to git through the checkout's own credentials: the
-# workflow checks out main with its whole history. A push or a merge made with GITHUB_TOKEN starts no
-# workflow (so this cannot loop), but GitHub still sends it to Cloudflare's app, which builds
-# production. Needs GNU or BSD coreutils only for `date +%s`; the clock arithmetic is plain seconds
-# and jq does the formatting.
+# It talks to GitHub through `gh` and to git through the checkout's own credentials: the workflow
+# checks out main with its whole history. Two tokens. What moves production (the push of the
+# promote branch, its pull request, the merge, the branch's deletion) goes out as PROMOTE_TOKEN, and
+# the checkout pushes with the same one: whenever main changed a file under .github/workflows since
+# production, GitHub refuses that ref update from the Actions token ("refusing to allow a GitHub App
+# to create or update workflow ... without `workflows` permission"), and no `permissions:` entry can
+# grant it. The workflow passes BOT_GITHUB_TOKEN, which has the `workflow` scope (bot/README.md).
+# Everything else (the countdown issue, its comments, reactions and the label) stays on GH_TOKEN, the
+# Actions token, whose writes start no workflow, so the night bot never sees the issue. The bot's
+# pull request starts no loop either: CI runs on it as on any pull request, but a pull request's CI
+# never starts promote-production.yml (only a push to main's does), the push of a promote branch or
+# of production starts nothing, and the bot's harness ignores its own events. Needs GNU or BSD
+# coreutils only for `date +%s`; the clock arithmetic is plain seconds and jq does the formatting.
 
 # The backticks in the printf formats below are Markdown for GitHub, not command substitutions.
 # shellcheck disable=SC2016
@@ -60,6 +68,7 @@ set -euo pipefail
 : "${LISTED_COMMITS:=100}"
 : "${MERGE_ATTEMPTS:=4}"
 : "${MERGE_RETRY_SECONDS:=5}"
+: "${PROMOTE_TOKEN:=${GH_TOKEN:-}}"
 REPO=$GITHUB_REPOSITORY
 SUMMARY=${GITHUB_STEP_SUMMARY:-/dev/null}
 
@@ -75,6 +84,12 @@ catalog() {
     k == "CATALOG_VERSION" && $1 == "value:" { gsub(/"/, "", $2); print $2; exit }' || true
 }
 has_production() { git rev-parse --verify -q origin/production >/dev/null; }
+# What moves production goes out as PROMOTE_TOKEN (the header says why); the git push uses the
+# checkout's credentials, which the workflow sets to the same token.
+promoter() { GH_TOKEN=$PROMOTE_TOKEN gh "$@"; }
+push_ref() {
+  git push origin "$1" || fail "Could not push $1. When main has changed .github/workflows since production, only a token with the workflow scope may move it: the BOT_GITHUB_TOKEN secret (bot/README.md, 'Setting it up'), which promote-production.yml checks out with."
+}
 # production moved: the workflow's `deploy` job builds it and puts it on Cloudflare only then.
 moved() { echo "promoted=true" >> "${GITHUB_OUTPUT:-/dev/null}"; }
 
@@ -103,7 +118,7 @@ promote() {
   WHY=$2 PR_NUMBER='' COUNT=0 CANDIDATE=$cand CATALOG=$(catalog "$cand")
 
   if ! has_production; then
-    git push origin "$cand:refs/heads/production"
+    push_ref "$cand:refs/heads/production"
     RESULT=created
     moved
     echo "production did not exist; it is now ${cand:0:12}."
@@ -139,10 +154,10 @@ promote() {
   } > "$body"
 
   ensure_label
-  git push origin "$cand:refs/heads/$branch"
-  pr=$(gh pr list --base production --head "$branch" --state open --json number --jq '.[0].number // empty')
+  push_ref "$cand:refs/heads/$branch"
+  pr=$(promoter pr list --base production --head "$branch" --state open --json number --jq '.[0].number // empty')
   if [ -z "$pr" ]; then
-    url=$(gh pr create --base production --head "$branch" --label "$RELEASE_LABEL" \
+    url=$(promoter pr create --base production --head "$branch" --label "$RELEASE_LABEL" \
       --title "Promote main to production: $COUNT commit(s) up to ${cand:0:7}" --body-file "$body")
     pr=${url##*/}
   fi
@@ -151,11 +166,11 @@ promote() {
   # GitHub works out whether a new pull request merges cleanly in the background, so the first
   # attempt right after `create` can be refused for a moment.
   for attempt in $(seq 1 "$MERGE_ATTEMPTS"); do
-    if gh pr merge "$pr" --merge --match-head-commit "$cand"; then break; fi
+    if promoter pr merge "$pr" --merge --match-head-commit "$cand"; then break; fi
     [ "$attempt" -lt "$MERGE_ATTEMPTS" ] || fail "Pull request #$pr could not be merged into production. It stays open; read its page for the reason."
     sleep "$MERGE_RETRY_SECONDS"
   done
-  gh api -X DELETE "repos/$REPO/git/refs/heads/$branch" --silent || true
+  promoter api -X DELETE "repos/$REPO/git/refs/heads/$branch" --silent || true
 
   git fetch -q origin production
   git diff --quiet "$cand" origin/production \

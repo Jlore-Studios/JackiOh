@@ -29,9 +29,11 @@
 #                      commit, or the `sha` given, which must also be green and on main. A hold does
 #                      not stop it.
 #
-# A push or a merge made with GITHUB_TOKEN starts no workflow, so this cannot loop. Opening pull
-# requests needs Settings -> Actions -> General -> "Allow GitHub Actions to create and approve pull
-# requests".
+# The promote branch, its pull request and the merge go out with the bot's token (BOT_GITHUB_TOKEN),
+# because GitHub refuses the Actions token any update to production that carries a change to
+# .github/workflows. Nothing loops: a pull request's CI never starts this workflow (only a green push
+# to main does), and no workflow runs on a push to a promote branch or to production. The countdown
+# issue stays on the Actions token, whose writes start no workflow.
 #
 # The `deploy` job then builds production and deploys it to the Cloudflare Worker itself, with
 # `wrangler deploy` and the CLOUDFLARE_API_TOKEN secret: the same install CI runs (where the build is
@@ -101,15 +103,20 @@ jobs:
     outputs:
       promoted: ${{ steps.promote.outputs.promoted }}
     steps:
+      # The script pushes with the checkout's credentials. Moving production past a change to
+      # .github/workflows is refused to the Actions token, so the bot's token (it has the `workflow`
+      # scope) does the moving: here, and as PROMOTE_TOKEN below. The script's header says more.
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
 
       - name: merge main into production and keep the countdown issue
         id: promote
         env:
           GH_TOKEN: ${{ github.token }}
+          PROMOTE_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
           EVENT: ${{ github.event_name }}
           RUN_SHA: ${{ github.event.workflow_run.head_sha }}
           INPUT_SHA: ${{ inputs.sha }}
