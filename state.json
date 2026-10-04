@@ -364,6 +364,12 @@
       "lines": [
         "@jgoetzmann-bot work on this --force"
       ]
+    },
+    "c:5981248174": {
+      "at": "2026-10-04T14:50:27Z",
+      "lines": [
+        "/harness continue"
+      ]
     }
   },
   "items": {
