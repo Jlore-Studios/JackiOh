@@ -242,8 +242,9 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // Designer patch v0.1.1: #55 Lava Golem's Radiant face is its base text less the drawback ("If
     // opposing Units are used, summon for your opponent."), so its text adds nothing to mark; its
     // doubled stats are what R277 marks on it.
-    // Classic #60 and Classic+ #5 drop words too (radiantDiff.test.ts names all three).
-    const pureDeletions = new Set(["core-055", "classic-060", "classicplus-005"]);
+    // Classic #60 and Classic+ #5 drop words too, and patch v0.2.4's Classic+ #34 drops "Choose
+    // one." (radiantDiff.test.ts names all four).
+    const pureDeletions = new Set(["core-055", "classic-060", "classicplus-005", "classicplus-034"]);
     for (const card of DEFS) {
       const f = face(card.id, true);
       // The Radiant face prints its catalog text with its `{key}` numbers filled in (B3.4 rule 5).

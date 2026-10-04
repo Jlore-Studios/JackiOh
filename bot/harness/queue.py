@@ -58,11 +58,18 @@ def _halt_note(ctx: Context, state: dict[str, Any]) -> str:
     return " The bot is halted, though: `/harness start` resumes it." if state.get("halted") else ""
 
 
+def is_human(names: set[str]) -> bool:
+    """Labelled `human` (whatever its case): people do it, and the bot leaves it alone."""
+    return LABEL_HUMAN in {name.lower() for name in names}
+
+
+def human_reply(number: int) -> str:
+    return (f"#{number} is labelled `{LABEL_HUMAN}`: people do it, so I leave it alone. Take that "
+            "label off to hand it to me.")
+
+
 def _label_note(names: set[str]) -> str:
-    """What `human` or `difficulty:hard` on the thread changes about who takes it."""
-    lowered = {name.lower() for name in names}
-    if LABEL_HUMAN in lowered:
-        return " It is labelled `human`, though, so no model takes it until that label comes off."
+    """What `difficulty:hard` on the thread changes about who takes it (`human` refuses earlier)."""
     if difficulty_of(names) == "hard":
         return " It is labelled `difficulty:hard`, so only Opus plans, builds and reviews it."
     return ""
@@ -88,6 +95,8 @@ def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
     if issue.get("state") != "open":
         return f"#{number} is closed, so there is nothing to build. Reopen it first."
     names = label_names(issue)
+    if is_human(names):
+        return human_reply(number)
     if LABEL_WORKING in names:
         _pending(ctx, number, by, ask)
         return (f"I am working on #{number} right now. When this run ends I go round once more "
@@ -114,6 +123,8 @@ def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, sou
     pull = ctx.gh.get_pull(number)
     if pull.get("state") != "open":
         return f"#{number} is not open, so I will not change it."
+    if is_human(label_names(pull)):
+        return human_reply(number)
     head_repo = ((pull.get("head") or {}).get("repo") or {}).get("full_name")
     if head_repo != ctx.cfg.repo:
         return f"#{number} comes from a fork; I can only push to branches in {ctx.cfg.repo}."
