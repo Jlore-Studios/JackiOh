@@ -29,6 +29,7 @@ import {
   createMemoryGameRecordStore,
   createMemoryLastBoardStore,
   createMemoryPlayerSettingsStore,
+  createMemoryPlayerStatsStore,
   createMemoryTutorialStore,
   matchModeIn,
   purgeExpiredRows,
@@ -37,6 +38,7 @@ import {
   type GameRecordTables,
   type LastBoardTables,
   type PlayerSettingsTables,
+  type PlayerStatsTables,
   type TutorialTables,
 } from "../../src/api/memory-stores";
 import type {
@@ -71,6 +73,7 @@ type Tables = {
   TutorialTables &
   PlayerSettingsTables &
   LastBoardTables &
+  PlayerStatsTables &
   GameRecordTables;
 
 function emptyTables(): Tables {
@@ -91,6 +94,7 @@ function emptyTables(): Tables {
     tutorial: [],
     playerSettings: [],
     lastBoards: [],
+    playerStats: [],
     gameRecords: [],
   };
 }
@@ -139,6 +143,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
       id: input.id,
       userId: input.userId ?? `user-${input.id}`,
       email: input.email ?? `${input.id}@example.test`,
+      displayName: input.displayName ?? null,
       status: input.status ?? "active",
       rating: input.rating ?? 1000,
       inMatchId: input.inMatchId ?? null,
@@ -200,7 +205,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
       call("profiles.getMany");
       return tables.profiles.filter((p) => profileIds.includes(p.id)).map(clone);
     },
-    create: async ({ userId, email, rating, at }) => {
+    create: async ({ userId, email, rating, at, displayName }) => {
       call("profiles.create");
       const existing = tables.profiles.find((p) => p.userId === userId);
       if (existing !== undefined) throw new Error(`profile for ${userId} already exists`);
@@ -208,6 +213,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
         id: `profile-${nextProfile}`,
         userId,
         email,
+        displayName: displayName ?? null,
         status: "pending",
         rating,
         inMatchId: null,
@@ -228,6 +234,12 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
       const row = profileOf(profileId);
       if (row === undefined) throw new Error(`no profile ${profileId}`);
       row.rating = rating;
+    },
+    setDisplayName: async (profileId, displayName) => {
+      call("profiles.setDisplayName");
+      const row = profileOf(profileId);
+      if (row === undefined) throw new Error(`no profile ${profileId}`);
+      row.displayName = displayName;
     },
     // Migration 0012's account deletion, shared with `src/api/e2e-store.ts`.
     remove: async (profileId) => {
@@ -328,6 +340,8 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
   store.lastBoards = createMemoryLastBoardStore(() => tables, call);
   // R376: the card statistics' game records, shared with the end-to-end store like the tutorial.
   store.gameRecords = createMemoryGameRecordStore(() => tables, call);
+  // R654: each profile's player statistics and privacy setting.
+  store.playerStats = createMemoryPlayerStatsStore(() => tables, call);
 
   store.matches = {
     create: async (match) => {

@@ -38,6 +38,7 @@ import { createRecordResult, reapStuckMatches } from "./api/results";
 import { purgeExpired } from "./api/retention";
 import { createSeriesRoutes, startSeriesSweeper } from "./api/series";
 import { createSettingsRoutes } from "./api/settings";
+import { createStatsRoutes } from "./api/stats";
 import { createTutorialRoutes } from "./api/tutorial";
 import { MATCH_REAPER_INTERVAL_SECONDS, RETENTION_PURGE_INTERVAL_SECONDS } from "./config";
 import { loadEnv, type ServerEnv } from "./env";
@@ -261,6 +262,7 @@ export function allRoutes(options: { commit?: string | undefined } = {}): Route[
     ...createSeriesRoutes(),
     ...createTutorialRoutes(),
     ...createSettingsRoutes(),
+    ...createStatsRoutes(),
   ];
 }
 

@@ -428,6 +428,112 @@
   font-size: 13px;
 }
 
+/* Card stats block in CardDetail (R654) */
+.inspect-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-bright, #454d66);
+  border-radius: 10px;
+  background: rgba(11, 13, 19, 0.6);
+  font-size: 13px;
+  color: var(--text, #e8eaf2);
+}
+
+.inspect-stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inspect-stats-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim, #9aa1b8);
+}
+
+.inspect-stats-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface, #1e222f);
+  color: var(--text-dim, #9aa1b8);
+  border: 1px solid var(--line, #2c3245);
+}
+
+.inspect-stats-badge[data-source="live"] {
+  color: var(--success, #4ade80);
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+.inspect-stats-badge[data-source="provisional"] {
+  color: var(--warning, #fbbf24);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.inspect-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.inspect-stats-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inspect-stats-metric-label {
+  font-size: 11px;
+  color: var(--text-dim, #9aa1b8);
+}
+
+.inspect-stats-metric-value {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.inspect-stats-sample-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-dim, #9aa1b8);
+}
+
+.inspect-stats-personal {
+  padding-top: 6px;
+  border-top: 1px dashed var(--line, #2c3245);
+  font-size: 12px;
+  color: var(--text, #e8eaf2);
+}
+
+.inspect-stats-personal-label {
+  color: var(--text-dim, #9aa1b8);
+}
+
+.inspect-stats-footer {
+  margin-top: 4px;
+}
+
+.inspect-stats-link {
+  color: var(--accent, #60a5fa);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.inspect-stats-link:hover {
+  text-decoration: underline;
+}
+
+.inspect-stats-loading,
+.inspect-stats-unavailable {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-dim, #9aa1b8);
+}
+
 .inspect-actions {
   display: flex;
   flex: none;

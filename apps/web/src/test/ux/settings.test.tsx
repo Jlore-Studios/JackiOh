@@ -51,9 +51,10 @@ const DEFAULTS: Settings = {
   hoverPreviews: true,
   reduceMotion: false,
   muteOpponentEmotes: false,
+  publicStats: true,
 };
-// Sorted: what `Object.keys(parsed).sort()` produces — muteOpponentEmotes before reduceMotion.
-const KEYS = ["autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "muteOpponentEmotes", "reduceMotion"];
+// Sorted: what `Object.keys(parsed).sort()` produces — muteOpponentEmotes before publicStats before reduceMotion.
+const KEYS = ["autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "muteOpponentEmotes", "publicStats", "reduceMotion"];
 
 afterEach(() => {
   cleanup();
