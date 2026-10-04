@@ -1733,7 +1733,7 @@
       },
       "ci_run_id": 37187703636,
       "ci_sha": "f5c08f5ddf8bd57fb44f045905473bbd20c4f513",
-      "cross_rounds": 1,
+      "cross_rounds": 2,
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
@@ -1750,12 +1750,25 @@
       },
       "interruptions": 0,
       "issue": 44,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "12 files contain committed unresolved merge-conflict markers, so the tree cannot typecheck or test.",
+          "evidence": "git grep -l '^<<<<<<< ' lists BUILD.md, SPEC.md, apps/server/test/api/catalog.test.ts, apps/web/src/patches/PatchNotes.test.tsx, apps/web/src/patches/source.test.ts, apps/web/src/routes/patch-notes.test.tsx, docs/radiant-audit.md, packages/cards/test/card-text.test.ts, packages/cards/test/catalog.test.ts, packages/cards/test/classic/033-joro.test.ts, packages/cards/test/patches.test.ts, packages/engine/test/rulings.test.ts; e.g. patches.test.ts has triple-nested <<<<<<< HEAD blocks asserting competing VERSIONS lists.",
+          "severity": "blocking",
+          "where": "SPEC.md:219"
+        },
+        {
+          "claim": "R651/R652/R653 are defined twice with different meanings, colliding with main's already-assigned R651-R653.",
+          "evidence": "HEAD SPEC has v0.2.2 rows R651/R652/R653 at lines 1901-1903 and v0.2.10 rows R651 (Joro) / R652 (Blade Storm) / R653 (Ivory Tower) at 1912-1914; origin/main SPEC already contains R651-R653 for Joro/Blade Storm/Ivory Tower, and rulings.test.ts has the same collision (HEAD block vs origin/main block at ~3855-3890). v0.2.2 rulings need the next free numbers.",
+          "severity": "blocking",
+          "where": "SPEC.md:1901"
+        }
+      ],
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-04T16:57:36Z",
+      "queued_at": "2026-10-04T17:30:10Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37220154902",
       "self_check_findings": [
@@ -1778,7 +1791,7 @@
           "where": "checks"
         }
       ],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-04T17:25:05Z",
       "stop_requested": false,
       "taken_asks": [],
