@@ -49,7 +49,7 @@ import {
 // The shapes
 // ---------------------------------------------------------------------------------------------
 
-export type DeckItem = { id: string; name: string; cards: readonly string[]; createdAt: number; updatedAt: number };
+export type DeckItem = { id: string; name: string; cards: readonly string[]; portrait: string | null; createdAt: number; updatedAt: number };
 export type TrioItem = { id: string; name: string; deckIds: TrioSlots; createdAt: number; updatedAt: number };
 
 export type SyncState = "saved" | "saving" | "offline" | "error";
@@ -113,8 +113,8 @@ export type DeckStore = {
   getSnapshot(): WorkshopSnapshot;
   subscribe(listener: () => void): () => void;
   /** Null at `limits.decks`. The UI supplies the name. */
-  createDeck(init: { name: string; cards?: readonly string[] }): string | null;
-  updateDeck(id: string, patch: { name?: string; cards?: readonly string[] }): void;
+  createDeck(init: { name: string; cards?: readonly string[]; portrait?: string | null }): string | null;
+  updateDeck(id: string, patch: { name?: string; cards?: readonly string[]; portrait?: string | null }): void;
   /** Also empties every trio slot that named it (R252), as the server does. */
   deleteDeck(id: string): void;
   /** Null at `limits.trios`. */
@@ -234,7 +234,9 @@ function deckFrom(value: unknown): DeckItem | null {
   const { id, name, cards, createdAt, updatedAt } = value;
   if (typeof id !== "string" || id.length === 0 || typeof name !== "string" || !isStringArray(cards)) return null;
   if (!isFiniteNumber(createdAt) || !isFiniteNumber(updatedAt)) return null;
-  return { id, name, cards: [...cards], createdAt, updatedAt };
+  // R641: the portrait rides the same row; an old mirror without it reads as `vanilla` (null).
+  const portrait = "portrait" in value && typeof value.portrait === "string" ? value.portrait : null;
+  return { id, name, cards: [...cards], portrait, createdAt, updatedAt };
 }
 
 function slotsFrom(value: unknown): TrioSlots | null {
@@ -542,7 +544,7 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
   }
 
   function deckInput(item: DeckItem): DeckInput {
-    return { name: deckNameForSave(item.name, limits.nameLength), cards: [...item.cards], catalogVersion };
+    return { name: deckNameForSave(item.name, limits.nameLength), cards: [...item.cards], catalogVersion, portrait: item.portrait };
   }
 
   function trioInput(item: TrioItem): TrioInput {
@@ -731,6 +733,8 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
         id: ids.deckIds[at] ?? newId(),
         name: deckNameForSave(slot.name, limits.nameLength),
         cards: [...slot.cards],
+        // D5: an import carries no portrait; the deck reads `vanilla` until the player picks one.
+        portrait: null,
         createdAt: stamped,
         updatedAt: stamped,
       };
@@ -821,7 +825,7 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
     createDeck(init) {
       if (decks.length >= limits.decks) return null;
       const now = clock.now();
-      const item: DeckItem = { id: newId(), name: init.name, cards: [...(init.cards ?? [])], createdAt: now, updatedAt: now };
+      const item: DeckItem = { id: newId(), name: init.name, cards: [...(init.cards ?? [])], portrait: init.portrait ?? null, createdAt: now, updatedAt: now };
       const entry = tracked(item, true);
       decks = [...decks, entry];
       changed();
@@ -834,8 +838,9 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
       if (entry === undefined) return;
       const name = patch.name ?? entry.item.name;
       const cards = patch.cards ?? entry.item.cards;
-      if (name === entry.item.name && sameList(cards, entry.item.cards)) return;
-      edited(entry, { ...entry.item, name, cards: [...cards], updatedAt: clock.now() });
+      const portrait = patch.portrait === undefined ? entry.item.portrait : patch.portrait;
+      if (name === entry.item.name && sameList(cards, entry.item.cards) && portrait === entry.item.portrait) return;
+      edited(entry, { ...entry.item, name, cards: [...cards], portrait, updatedAt: clock.now() });
     },
 
     deleteDeck(id) {

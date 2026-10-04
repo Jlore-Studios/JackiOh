@@ -127,6 +127,7 @@ function decksResponse(decks: readonly PracticeSavedDeck[] | null): DecksRespons
       name: deck.name,
       cards: [...deck.cards],
       catalogVersion: "v1",
+      portrait: deck.portrait ?? null,
       createdAt: i,
       updatedAt: i,
     })),

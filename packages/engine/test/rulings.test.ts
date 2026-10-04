@@ -3774,6 +3774,67 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(640, "setup-aside.test.ts");
   });
 
+  // ---------------------------------------------------------------------------------------------
+  // R641–R645: the emotes patch (issue #75) — hero portraits, voice-line and emoji emotes, the
+  // shared rate limit, the mutes, and the AI's emote personas. Cosmetic end to end.
+  // ---------------------------------------------------------------------------------------------
+
+  const SHARED_EMOTES_TEST = "../../shared/test/emotes.test.ts";
+  const AI_PERSONAS_TEST = "../../ai/test/personas.test.ts";
+  const WEB_VOICE_LINES_TEST = "../../../apps/web/src/audio/voice-lines.test.ts";
+  const WEB_VOICE_ASSETS_TEST = "../../../apps/web/src/audio/voice-assets.test.ts";
+  const WEB_PORTRAITS_TEST = "../../../apps/web/src/emotes/portraits.test.ts";
+  const WEB_SESSION_EMOTES_TEST = "../../../apps/web/src/emotes/session.test.ts";
+  const WEB_EMOTE_PLAY_TEST = "../../../apps/web/src/emotes/play.test.ts";
+  const WEB_EMOTE_UI_TEST = "../../../apps/web/src/emotes/ui.test.tsx";
+  const WEB_NET_TEST = "../../../apps/web/src/game/net.test.ts";
+
+  // Proved by packages/shared emotes.test.ts (the six-id roster, `vanilla` the default, null and
+  // unknown read as it), packages/validator drafts.test.ts (D5 accepts null and every roster id,
+  // refuses an unknown one naming the field), apps/server decks.test.ts and db/contract.ts (the
+  // column round-trips, the view echoes it) and apps/web emotes/portraits.test.ts (every roster
+  // id resolves to its catalog card by name).
+  it("R641 gives a deck a hero portrait from the six-id roster, checked as D5, null reading vanilla", () => {
+    provenIn(
+      641,
+      SHARED_EMOTES_TEST,
+      VALIDATOR_DRAFTS_TEST,
+      SERVER_DECKS_TEST,
+      SERVER_STORE_CONTRACT,
+      WEB_PORTRAITS_TEST,
+    );
+  });
+
+  // Proved by packages/shared emotes.test.ts (pickPortrait's bounds and pickPortraitFromSeed's
+  // determinism), apps/server queue.test.ts and rooms.test.ts (the ticket's and room's frozen
+  // portraits, All Random's per-seat deal) and match/actor.test.ts (the frame on join and on
+  // reconnect, vanilla for a match that predates it), apps/web net.test.ts (the frame parses).
+  it("R642 fixes a match's portraits when its seats are fixed and sends them on join and reconnect", () => {
+    provenIn(642, SHARED_EMOTES_TEST, SERVER_ACTOR_TEST, SERVER_QUEUE_TEST, SERVER_ROOMS_TEST, WEB_NET_TEST);
+  });
+
+  // Proved by packages/shared emotes.test.ts (the ten wire ids; the gate's cooldown, window and
+  // cap), apps/server match/actor.test.ts (relay to the opponent alone, malformed unknown ids,
+  // silent drops), apps/web emotes/session.test.ts (local show on admit, mute, one emote per
+  // player) and net.test.ts (the relay parses, sendEmote's frame).
+  it("R643 keeps emotes out of the game, relays them to the opponent, and limits both ends alike", () => {
+    provenIn(643, SHARED_EMOTES_TEST, SERVER_ACTOR_TEST, WEB_SESSION_EMOTES_TEST, WEB_NET_TEST);
+  });
+
+  // Proved by apps/web audio/voice-lines.test.ts and voice-assets.test.ts (every portrait's five
+  // lines with text and files inside the budget), emotes/play.test.ts (each emote's channel:
+  // voice for lines, effects for emoji) and emotes/ui.test.tsx (bubble and sticker shows).
+  it("R644 shows a voice emote's line as a bubble on the voice channel and an emoji as a synth sticker", () => {
+    provenIn(644, WEB_VOICE_LINES_TEST, WEB_VOICE_ASSETS_TEST, WEB_EMOTE_PLAY_TEST, WEB_EMOTE_UI_TEST);
+  });
+
+  // Proved by packages/ai personas.test.ts (the weighted deal at every boundary, the tutorial's
+  // Silent, the whole trigger and reply tables, reply-once and the caps, the shared gate, and
+  // the import isolation that keeps the module out of engine and search).
+  it("R645 deals each AI an emote persona whose rolls never touch the engine or the search", () => {
+    provenIn(645, AI_PERSONAS_TEST);
+  });
+
   // Proved by packages/cards/test/versions.test.ts "R650 …": a `vA.B.Y` micro patch is named after
   // the newest version in patches.json with the next letter.
   it("R650 names a micro patch after the newest version, with the next letter", () => {

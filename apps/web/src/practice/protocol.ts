@@ -14,7 +14,7 @@ export type PracticeDeckChoice =
   | { kind: "random" }
   | { kind: "preset"; id: string }
   /** `index` is the 1-based deck number the setup's `saved:<n>` value names. */
-  | { kind: "saved"; index: number; cards: string[] };
+  | { kind: "saved"; index: number; cards: string[]; portrait?: string | null };
 
 export type PracticeStartConfig = {
   seed: string;
