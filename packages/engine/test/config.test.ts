@@ -39,10 +39,10 @@ describe("config constants (BUILD §2)", () => {
     expect([1, 2, 3].map(config.FATIGUE_DAMAGE)).toEqual([1, 2, 3]);
   });
 
-  it("R21 random keyword pool has the thirteen listed keywords, R346's Pierce and R636's Windfury last", () => {
+  it("R21 random keyword pool has the fourteen listed keywords, R346's Pierce, R636's Windfury and R49's Deft last", () => {
     expect(config.RANDOM_KEYWORD_POOL).toEqual([
       "Taunt", "Armor 1", "Rush", "Charge", "First Strike", "Poisonous",
-      "Lifesteal", "Reborn", "Divine Shield", "Trample", "Cleave", "Pierce", "Windfury",
+      "Lifesteal", "Reborn", "Divine Shield", "Trample", "Cleave", "Pierce", "Windfury", "Deft",
     ]);
   });
 

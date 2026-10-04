@@ -120,8 +120,9 @@ export function runHook(
  * How a cast is made, beyond R70's defaults (B5 E12; R452, R453):
  *
  * - `random`: every choice its caster would make is made at random (`randomCast.ts`, R452).
- * - `targetEnemies`: each target pick narrows to enemies when one is legal (R452); a card carrying the
- *   `targetEnemies` enchantment (E39) is cast so whoever casts it.
+ * - `targetEnemies`: each target pick is aimed by its declaration (R656: harm at enemies, help at
+ *   friends, when one is legal); a card carrying the `targetEnemies` enchantment (E39) is cast so
+ *   whoever casts it.
  * - `afterward: "exile"`: a Spell goes to exile rather than its graveyard once it has resolved
  *   (Classic #56 Spell Tyrant's "then exile them", R453) — §10.5 step 7's landing (`echo.exileOnLanding`).
  */
