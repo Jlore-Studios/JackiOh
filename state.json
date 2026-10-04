@@ -1541,9 +1541,9 @@
     "what": "revise #180 on devin"
   },
   "last_sweep": {
-    "at": "2026-10-04T00:48:08Z",
+    "at": "2026-10-04T00:58:39Z",
     "notes": [
-      "started a night run, as a lane was free: #88 (medium) is queued to build, for `gpt`: build on `gpt` (codex, `gpt-5.6-terra`, medium); review on `gpt` (codex, `gpt-5.6-terra`, medium)"
+      "started a night run, as a lane was free: #143 (hard) is queued to revise, for `claude-2`: build on `claude-2` (claude, `opus`, strong); review on `claude-2` (claude, `opus`, strong)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
