@@ -224,7 +224,7 @@ export const script: LessonScript = {
       ...restOfTurn("end-first"),
       text: (ctx) => {
         const move = nextMove(ctx);
-        return move?.kind === "end" && ctx.view.you.mana.current === 0 ? "That is all your mana. End your turn." : moveText(ctx, move);
+        return move?.kind === "end" && ctx.view.you.mana.current === 0 ? "That is all your mana. End the turn." : moveText(ctx, move);
       },
     },
 

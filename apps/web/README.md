@@ -108,7 +108,7 @@ src/
     music.ts musicScene.ts                   the music player (bar-line crossfades, the turn mix, focus) and menu vs board (R631)
     musicDirector.ts musicPlan.ts            a board's music from the viewer's own view, and the priority stack
     musicData.ts music-manifest.json         the rendered tracks (loop points, tempo) and music-cards.json, the
-    music-cards.json                         Mythic themes and station switches by card id
+    music-cards.json                         Mythic themes, shared Legendary entrance themes and station switches by card id
   fx/                   the effects layer (docs/polish/1-animations.md; SPEC §10.10, R200–R202)
     types.ts constants.ts   the cue contract and every FX number
     settings.ts         effects speed, intensity and motion (localStorage, jackioh.fx.v1)
@@ -411,8 +411,8 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   sample-exact even for a decoder that keeps AAC's 48 ms of encoder priming.
 - `node apps/web/scripts/gen-music.mjs --check` needs no renderer, runs anywhere, and is what
   `music-assets.test.ts` calls.
-- Record a new track's source in `assets/music/LICENSES.md`. A Mythic's theme or a station switch is
-  an entry in `src/audio/music-cards.json`, and the music system needs no change for it.
+- Record a new track's source in `assets/music/LICENSES.md`. A Mythic's theme, a Legendary's shared entrance
+  theme or a station switch is an entry in `src/audio/music-cards.json`, and the music system needs no change for it.
 
 ## Regenerating the voice lines
 
