@@ -744,11 +744,15 @@
         "c:5975340065"
       ],
       "votes": {
-        "approvals": [],
-        "builder": "cognition",
+        "approvals": [
+          "gemini"
+        ],
+        "builder": "gemini",
         "rejections": [],
-        "sha": "b885cf702733e95b7db29879b08e3f086930f2be",
-        "tiers": {}
+        "sha": "2640b26a3366cab7dfaa68566c75bae106434df3",
+        "tiers": {
+          "gemini": "medium"
+        }
       }
     },
     "145": {
