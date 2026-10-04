@@ -248,14 +248,18 @@ needs level 3.
 
 ## Triage
 
-`triage.yml` labels, assigns, titles and types every issue or pull request that someone trusted
-opens, from a Devin call (`triage.py`):
+`triage.yml` labels, assigns, titles, types and links every issue or pull request that someone
+trusted opens, from a Devin call (`triage.py`). To run it on any thread again, with whatever it has
+already: `gh workflow run triage.yml -f number=<n>` (or **Run workflow** on the triage workflow's
+Actions page). Its Devin call runs on the bot's AWS machine either way.
 
 - **Who:** the author must be an owner, member or collaborator, or on `.harness/trust.txt`, and not
   the bot. Anyone else's issue or pull request is left alone, so a stranger's text never reaches
   the machine.
 - **Three jobs:**
-  - **`gate`**, on GitHub's runner, decides whether to triage.
+  - **`gate`**, on GitHub's runner, decides whether to triage. A new thread with everything
+    already set is skipped, unless its text names a blocker or it is a part of a patch; a thread a
+    person called triage on always goes.
   - **`classify`**, on Devin's own runner (`night-vm-devin`), reads the title and body through the
     API with a read-only token. It fences them as data in a prompt and runs Devin read-only in an
     empty directory.
@@ -271,12 +275,23 @@ opens, from a Devin call (`triage.py`):
   - **Type:** an issue gets one of the organisation's issue types (Task, Bug or Feature; read from
     the org, or those three when the token can't read them) if it has none. A pull request has no
     type. GitHub drops a type it won't take without an error, so `apply` reads it back and says so.
+  - **Dependencies** (issues only), as GitHub issue dependencies, which hold the night bot's build
+    while the blocker is open ([Dependencies](#priority-and-human)):
+    - **blocked by** each open issue its text names ("Blocked by #125", "Depends on #12", "Do not
+      start until #125 has merged"), each earlier part of its patch that is still open (same name
+      and same "of m"), and each open issue Devin says must come first;
+    - **blocking** each open issue Devin says waits for it;
+    - **a sub-issue of** its patch's open tracker, for a "part n of m" title with no parent yet,
+      when Devin names it and the tracker shares its version.
+
+    Only open issues, never the issue itself, never one linked already either way, at most five of
+    each. The links from the issue's own text and title are made even when Devin gave no answer.
 - **Issues triage never types.** The sweep (every ten minutes, in the status loop) types every
   open issue still without one: a bot's (the CI-duration alerts, the status issue), which never
   reaches triage, at once; anyone else's after three hours, so triage, which can wait that long
   for a free Devin runner, goes first. It reads the title and labels (`triage.fallback_type`):
   a failure is a Bug; tooling, CI, the bot and trackers a Task; something new a Feature.
-- **It only adds.** A person's labels, assignees, conventional title and type stay. A priority or a model
+- **It only adds.** A person's labels, assignees, conventional title, type and links stay. A priority or a model
   tier a person chose gets no second one.
 - **When it can't:** a failure, or Devin past its `off_from` (2026-10-15), skips quietly.
 - **Waiting:** `classify` shares `night-vm-devin` with Devin's bot jobs, so it waits while one runs.
@@ -744,7 +759,7 @@ workflows. The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `b
 | `logins.py`, `vault.py` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
 | `machine/` | the machine: its setup, its runners, and the starter that wakes it (not part of the `harness` package) |
 | `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
-| `triage.py` | labels, assigns, titles and types a new issue or pull request from a Devin call (`triage.yml`) |
+| `triage.py` | labels, assigns, titles, types and links (blocked by, blocks, parent) a new issue or pull request, or one a person calls it on, from a Devin call (`triage.yml`) |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
 | `dashboard.py` | the pinned status issue: opened and pinned once, rewritten every ten minutes by `bot-status.yml` (`harness dashboard --sweep --every 600 --for 19800`, which sweeps first each time) and after every sweep |
 | `state.py`, `status.py`, `clock.py` | the state file on `bot-state`, the status report, time and windows |

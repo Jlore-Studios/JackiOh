@@ -97,7 +97,8 @@ class PromptTests(unittest.TestCase):
         # An issue is asked for its type, from the organisation's list; a pull request is not.
         self.assertIn('"type": the issue\'s type, exactly one of Task (A specific piece of work); '
                       'Bug (An unexpected problem or behavior); Feature', text)
-        self.assertIn('"reason": "...", "type": "..."}', text)
+        self.assertIn('"reason": "...", "type": "...", "blocked_by": [], "blocks": [], '
+                      '"parent": 0}', text)
         pr = triage.prompt(thread(pr=True), True, labels, "", {"Chore": "upkeep"})
         self.assertNotIn('"type"', pr)
 
@@ -221,6 +222,168 @@ class DecideTests(unittest.TestCase):
         self.assertEqual([a["login"] for a in gh.threads[40]["assignees"]],
                          ["MaxGoetzmann", "jgoetzmann"])
         self.assertEqual(gh.threads[40]["title"], "Patch v0.2.9: a public Card Almanac")
+
+
+def issue(number: int, title: str = "An issue", body: str = "") -> dict:
+    return {"number": number, "title": title, "body": body, "state": "open", "labels": []}
+
+
+class LinkTests(unittest.TestCase):
+    """Triage also links what must close first, so the night bot holds a build until it has."""
+
+    def setUp(self):
+        self.open = {n: issue(n, t) for n, t in (
+            (122, "Patch v0.2.X: keyword rules, animation and homescreen pass, card fixes"),
+            (124, "Patch v0.2.X (part 2 of 4): global animations"),
+            (125, "Homescreen rotation and player statistics"),
+            (130, "Patch v0.2.X (part 1 of 3): another patch"),
+            (131, "Patch v0.2.X: a public card and player stats page"),
+            (140, "Patch v0.3.0: something later"))}
+
+    def decide(self, verdict, title="Patch v0.2.X (part 4 of 4): more card patches", body="",
+               linked=None, pr=False):
+        subject = {**thread(title=title, number=126, pr=pr), "body": body}
+        return triage.decide(verdict, subject, pr, REPO_LABELS, BOT, open_issues=self.open,
+                             linked=linked or {})
+
+    def test_the_text_and_the_earlier_parts_block_it_without_a_model(self):
+        plan = self.decide(None, body="**Blocked by #125.** Do not start until #125 has merged. "
+                                      "See #131 for the page.")
+        self.assertEqual(plan.blocked_by, [125, 124])  # named, then the earlier part
+        self.assertIn("no usable answer from Devin", plan.notes)
+        self.assertFalse(plan.empty())
+
+    def test_devins_links_only_to_open_issues_never_itself_or_twice(self):
+        plan = self.decide({"kind": "bot", "labels": [], "blocked_by": ["#131", 126, 999, "x", 131],
+                            "blocks": [125, "140", 131], "parent": "#122"},
+                           title="Patch v0.2.X: keyword rules")
+        self.assertEqual(plan.blocked_by, [131])
+        self.assertEqual(plan.blocks, [125, 140])  # 131 already blocks it: no cycle
+        self.assertEqual(plan.parent, 0)  # only a part gets a parent
+
+    def test_a_link_a_person_made_stays_and_is_not_made_again(self):
+        plan = self.decide({"kind": "bot", "blocked_by": [124, 131], "blocks": [125]},
+                           linked={"blocked_by": {124}, "blocking": {125}, "parent": 122})
+        self.assertEqual(plan.blocked_by, [131])
+        self.assertEqual((plan.blocks, plan.parent), ([], 0))
+
+    def test_a_part_goes_under_its_patchs_open_tracker(self):
+        self.assertEqual(self.decide({"kind": "bot", "parent": 122}).parent, 122)
+        for wrong in (124, 140, 999, 126):  # a part, another version, not open, itself
+            plan = self.decide({"kind": "bot", "parent": wrong})
+            self.assertEqual(plan.parent, 0, wrong)
+            self.assertIn(f"the suggested parent #{wrong} is not this patch's open tracker",
+                          plan.notes)
+
+    def test_at_most_five_of_each(self):
+        self.open.update({n: issue(n) for n in range(200, 210)})
+        plan = self.decide({"kind": "bot", "blocked_by": list(range(200, 210))},
+                           title="Patch v0.2.X: keyword rules")
+        self.assertEqual(plan.blocked_by, list(range(200, 205)))
+        self.assertIn("kept the first 5 of 10 blocked-by links", plan.notes)
+
+    def test_a_pull_request_gets_no_links(self):
+        plan = self.decide({"kind": "bot", "blocked_by": [125]}, pr=True, title="Anything",
+                           body="Blocked by #125.")
+        self.assertEqual((plan.blocked_by, plan.blocks, plan.parent), ([], [], 0))
+
+    def test_apply_links_by_id_and_the_bots_queue_then_holds_it(self):
+        from harness import queue as queue_mod
+        from harness.config import LABEL_BUILD
+        from tests.support import make_ctx
+        gh = FakeGitHub()
+        gh.add_issue(122, "Patch v0.2.X: the tracker")
+        gh.add_issue(124, "Patch v0.2.X (part 2 of 4): animations")
+        gh.add_issue(125, "Homescreen")
+        gh.add_issue(126, "Patch v0.2.X (part 4 of 4): more card patches", labels=(LABEL_BUILD,))
+        plan = triage.Plan(blocked_by=[125], blocks=[124], parent=122)
+        ids = {n: gh.threads[n]["id"] for n in gh.threads}
+        done = triage.apply(gh, 126, plan, ids)
+        self.assertEqual(done, ["marked it blocked by #125", "marked it blocking #124",
+                                "made it a sub-issue of #122"])
+        self.assertEqual([i["number"] for i in gh.blocked_by(126)], [125])
+        self.assertEqual([i["number"] for i in gh.blocking(126)], [124])
+        self.assertEqual(triage.parent_number(gh.get_issue(126)), 122)
+        skipped: list[str] = []
+        ctx = make_ctx(gh)
+        queue_mod.candidates(ctx, ctx.store.load(), skipped)
+        self.assertIn("#126 skipped: it waits for #124, #125 to close first", skipped)
+        # A missing id is a refusal of that link alone.
+        self.assertEqual(triage.apply(gh, 126, triage.Plan(blocked_by=[999]), ids),
+                         ["could not do this: marked it blocked by #999 (no id for #999)"])
+
+    def test_the_gate_lets_a_fully_triaged_issue_through_for_its_links(self):
+        done = dict(title="Night bot: a thing", labels=("night bot",), assignees=("jgoetzmann",),
+                    issue_type="Task")
+        go = lambda payload, **kw: triage.gate(payload, TRUST, BOT, ROOT, BEFORE_OFF,
+                                               "America/Chicago", **kw)
+        self.assertFalse(go(event(**done))[0])
+        self.assertTrue(go(event(**done), asked=True)[0])  # a person called it
+        blocked = event(**done)
+        blocked["issue"]["body"] = "Blocked by #125."
+        self.assertTrue(go(blocked)[0])
+        part = event(**{**done, "title": "Patch v0.2.X (part 2 of 3): a part", "labels": ("patch",)})
+        self.assertTrue(go(part)[0])
+
+    def test_the_prompt_lists_the_open_issues_as_data(self):
+        listed = [issue(125, "Homescreen"), issue(126, "Itself"),
+                  {**issue(150, "A pull request"), "pull_request": {}}]
+        text = triage.prompt(thread(number=126), False, [], "", None, listed)
+        self.assertIn("#125 Homescreen", text)
+        self.assertNotIn("#126 Itself", text)
+        self.assertNotIn("#150", text)
+        self.assertIn('"blocked_by": [], "blocks": [], "parent": 0}', text)
+        self.assertNotIn("blocked_by", triage.prompt(thread(pr=True), True, [], "", None, listed))
+
+
+class CommandTests(unittest.TestCase):
+    """`python -m harness triage`, as the workflow's jobs run it."""
+
+    def run_step(self, gh, step, **fields):
+        import argparse
+        import contextlib
+        import io
+        import harness.__main__ as main_mod
+        from tests.support import make_config, make_ctx
+        cfg = make_config()
+        out = io.StringIO()
+        args = argparse.Namespace(step=step, payload=fields.get("payload", ""),
+                                  number=fields.get("number", "0"),
+                                  verdict=fields.get("verdict", ""))
+        github_output = Path(tempfile.mkdtemp()) / "out"
+        with mock.patch.object(main_mod, "_ctx", lambda cfg, write=True: make_ctx(gh, cfg=cfg)), \
+                mock.patch.dict(os.environ, {"GITHUB_OUTPUT": str(github_output)}), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(main_mod.cmd_triage(cfg, args), 0)
+        written = github_output.read_text() if github_output.exists() else ""
+        return out.getvalue(), written
+
+    def test_a_dispatch_triages_the_thread_it_names_again(self):
+        gh = FakeGitHub()
+        gh.add_issue(126, "Night bot: a thing", labels=("night bot",))
+        gh.threads[126].update(assignees=[{"login": "jgoetzmann"}], type={"name": "Task"},
+                               author_association="OWNER")
+        payload = Path(tempfile.mkdtemp()) / "event.json"
+        payload.write_text(json.dumps({"inputs": {"number": "#126"}}))
+        with mock.patch.object(triage, "devin_off", lambda *a: ""):
+            printed, written = self.run_step(gh, "gate", payload=str(payload))
+        self.assertIn("go=true", written)
+        self.assertIn("number=126", written)
+        payload.write_text(json.dumps({"inputs": {"number": "9999"}}))
+        printed, written = self.run_step(gh, "gate", payload=str(payload))
+        self.assertIn("go=false", written)
+        self.assertIn("#9999 could not be read", printed)
+
+    def test_apply_without_an_answer_still_links_what_the_text_names(self):
+        gh = FakeGitHub()
+        gh.add_issue(124, "Patch v0.2.X (part 2 of 4): animations")
+        gh.add_issue(125, "Homescreen")
+        gh.add_issue(126, "Patch v0.2.X (part 4 of 4): more card patches", body="Blocked by #125.")
+        printed, _ = self.run_step(gh, "apply", number="126",
+                                   verdict=str(Path(tempfile.mkdtemp()) / "missing.json"))
+        self.assertEqual(sorted(i["number"] for i in gh.blocked_by(126)), [124, 125])
+        self.assertIn("marked it blocked by #125", printed)
+        self.assertIn("no usable answer from Devin", printed)
 
 
 FAKE_DEVIN = textwrap.dedent('''\
