@@ -1748,12 +1748,14 @@
       "taken_asks": [],
       "votes": {
         "approvals": [
-          "muse"
+          "muse",
+          "gemini"
         ],
         "builder": "muse",
         "rejections": [],
         "sha": "065b5ba88f0c9daab760d3063ec16eafb532bf1c",
         "tiers": {
+          "gemini": "medium",
           "muse": "medium"
         }
       }
