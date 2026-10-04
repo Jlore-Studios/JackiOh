@@ -9,7 +9,7 @@
 
 import type { CardType, PlayerId, Row, Tag } from "@jackioh/shared";
 import { animateOnEntry } from "../animated";
-import { defOf, excludingDefId, query, type CatalogQueryArgs } from "../catalog";
+import { defOf, excludingDefId, pickGenerated, query, type CatalogQueryArgs } from "../catalog";
 import { unitedEnchantments } from "../enchantments";
 import { cardTypeOf } from "../faces";
 import { effectiveCost } from "../mana";
@@ -341,7 +341,7 @@ export function summonRandom(
       }));
       if (![...rows].some((row) => zoneFor(ctx, player, row, args) !== null)) return;
 
-      const def = ctx.rng.pick(pool);
+      const def = pickGenerated(ctx.rng, pool);
       if (def === undefined) return;
       summonFresh(ctx, def.id, player, args);
     },

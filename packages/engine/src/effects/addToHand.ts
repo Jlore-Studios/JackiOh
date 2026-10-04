@@ -7,7 +7,7 @@
 // `addToHand`, so §2.4's hand cap and R4's burn apply once, in one place, and R11's unit-token card
 // ceases to exist instead of reaching the graveyard.
 
-import { excludingDefId, query, type CatalogQueryArgs } from "../catalog";
+import { excludingDefId, pickGenerated, query, type CatalogQueryArgs } from "../catalog";
 import { addToHand as putInHand } from "../draw";
 import type { Effect, EffectContext } from "../script";
 import { newInstance, type CardInstance } from "../state";
@@ -149,7 +149,7 @@ export function addRandomFromCatalog(args: {
 
       const count = Math.max(0, Math.trunc(args.count ?? 1));
       for (let i = 0; i < count; i += 1) {
-        const def = ctx.rng.pick(pool);
+        const def = pickGenerated(ctx.rng, pool);
         if (def === undefined) return;
         createInHand(ctx, def.id, args);
       }

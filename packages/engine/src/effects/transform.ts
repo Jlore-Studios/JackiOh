@@ -6,7 +6,7 @@
 
 import type { CardDef, CardType, PlayerId, Row } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
-import { defOf, excludingDefId, query, type CatalogQueryArgs } from "../catalog";
+import { defOf, excludingDefId, pickGenerated, query, type CatalogQueryArgs } from "../catalog";
 import { cardTypeOf } from "../faces";
 import { unitHas } from "../layers";
 import type { Effect, EffectContext } from "../script";
@@ -218,7 +218,7 @@ export function transformRandom(
       const pool = query(excludingDefId(args.query ?? {}, ctx.self?.defId ?? ctx.defId)).filter((def) =>
         canReplace(old, def),
       );
-      const def = ctx.rng.pick(pool);
+      const def = pickGenerated(ctx.rng, pool);
       if (def === undefined) return;
       const radiant = args.radiant === "keep" ? old.radiant : args.radiant === true;
       const replacement = replaceCard(ctx, old, def, radiant);

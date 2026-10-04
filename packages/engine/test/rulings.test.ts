@@ -2850,9 +2850,11 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(381, CARDS_REFERENCES_TEST, CARDS_CATALOG_TEST);
   });
 
-  // Proved by cards query.test.ts "R382 …" (the Fruit pool and the Grapes, Dropshipping's pool).
+  // Proved by cards query.test.ts "R382 …" (the Fruit pool and the Grapes, Dropshipping's pool),
+  // engine effects-fruit.test.ts "R382 …" (a Grape a pool picks is re-rolled by GRAPE_ODDS) and cards
+  // classic-plus/023-dropshipping.test.ts "R382 …" (the same through Dropshipping's pool).
   it("R382 puts the five Grapes in every Fruit pool and every token in Dropshipping's", () => {
-    provenIn(382, CARDS_QUERY_TEST);
+    provenIn(382, CARDS_QUERY_TEST, "effects-fruit.test.ts", PLUS("023-dropshipping"));
   });
 
   // Proved by animated.test.ts, effects-animate.test.ts "R383 …".
@@ -3630,8 +3632,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(584, CLASSIC_PLUS_064_TEST);
   });
 
-  // Proved by cards classic-plus/070-chaos-machine.test.ts "R585 …" (it may Upgrade itself).
-  it("R585 lets C+ #70 Chaos Machine pick itself", () => {
+  // Proved by cards classic-plus/070-chaos-machine.test.ts "R585 …" (it never Upgrades itself:
+  // alone with an empty hand nothing changes, and the pick is always among the other cards).
+  it("R585 never lets C+ #70 Chaos Machine pick itself", () => {
     provenIn(585, CLASSIC_PLUS_070_TEST);
   });
 
@@ -3845,6 +3848,18 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // the newest version in patches.json with the next letter.
   it("R650 names a micro patch after the newest version, with the next letter", () => {
     provenIn(650, "../../cards/test/versions.test.ts");
+  });
+
+  // Proved by cards classic/033-joro.test.ts "R651 …" (a Spell's declared target and a Spell's prompt
+  // answer summon it; an attack, a Unit's Cry pick, an activation and a Trap's pick do not).
+  it("R651 answers C #33 Joro only to a Spell's targeting", () => {
+    provenIn(651, CLASSIC_033_TEST);
+  });
+
+  // Proved by cards classic-plus/032-3-blade-storm.test.ts "R652 …" (Whirlwinds cast round after round,
+  // Pierce through Armor) and engine rounds.test.ts "R652 …" (each round casts; the stops).
+  it("R652 casts C+ #32.3 Blade Storm's base face as Whirlwinds until a Unit dies", () => {
+    provenIn(652, PLUS("032-3-blade-storm"), "rounds.test.ts");
   });
 });
 
