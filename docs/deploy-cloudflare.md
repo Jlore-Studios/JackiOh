@@ -79,8 +79,9 @@ These are all tested against a simulated repo before this change shipped:
 ### 2.3 The countdown issue: hold and delay
 
 Exactly one issue labelled `production merge` is open at a time. Its title reads "Merging to
-production in 23 hours (2026-10-05 15:00 UTC)" when it is opened and again whenever a command changes
-it, so the hours are right at that moment and the date always is. The first line of its body is a
+production in 23 hours (2026-10-05 15:00 UTC)", and every check (the hourly cron, every green CI run
+on `main`, every command) brings the hours up to date, so it counts down; a check in the same hour
+edits nothing. The first line of its body is a
 hidden state line (the time, whether it is held, the last comment read); leave it alone.
 
 Anyone with write access comments on the issue:
@@ -90,6 +91,7 @@ Anyone with write access comments on the issue:
 | `/hold` (a reason after it, if you like) | Nothing merges until `/resume`. The title says "on hold". |
 | `/resume` (or `/release`, `/unhold`) | Lifts the hold. If the time has passed, it merges at once. |
 | `/delay 3h`, `/delay 2d` | Moves the merge later by that long. At most 168 hours at a time; use `/hold` for longer. If the time has already passed, it counts from the comment. |
+| `/fast-forward` | Merges now, past a hold: the comment starts the check, which merges within a minute. |
 
 A command is a line that starts with the slash, in any case. Each is acknowledged with a 👍 (😕 when
 it was refused: the commenter has no write access, or it is not understood), and a comment wakes the
@@ -104,13 +106,20 @@ request, and the next one is opened for the first 15:00 UTC at least 12 hours aw
 (section 5) merges at once, hold or no hold, and starts the countdown over.
 
 The label is the custom tag: the workflow finds the open issue by it, and it is on every promotion
-pull request too. To rename it, change `RELEASE_LABEL` in `scripts/promote-production.sh` and the
+pull request too. Both also carry `human` and are assigned to jgoetzmann and MaxGoetzmann
+(`ASSIGNEES`, `HUMAN_LABEL`), so they reach both people and the night bot never picks them up. To rename it, change `RELEASE_LABEL` in `scripts/promote-production.sh` and the
 label named in the job's `if` in `promote-production.yml`; `promote-production.test.ts` fails until
 they agree. The hour (`RELEASE_HOUR_UTC`) and the other numbers are at the top of the script.
 
-It moves `production` with the built-in `GITHUB_TOKEN` (permission `contents: write`); a push made
-with that token starts no other workflow, so it cannot loop. Its `deploy` job uses one secret,
-`CLOUDFLARE_API_TOKEN`.
+It moves `production` (the promote branch, the pull request, its merge) with the night bot's token,
+the `BOT_GITHUB_TOKEN` secret, which has the `workflow` scope: GitHub refuses the built-in
+`GITHUB_TOKEN` any update to `production` that carries a change to `.github/workflows`, whatever the
+job's `permissions:` say, and a day of `main` often carries one ("refusing to allow a GitHub App to
+create or update workflow ... without `workflows` permission"). The countdown issue, its comments and
+the label stay on `GITHUB_TOKEN`, whose writes start no workflow, so the night bot never picks the
+issue up. Nothing loops: a pull request's CI never starts the promotion (only a green push to `main`
+does), and nothing runs on a push to a promote branch or to `production`. Its `deploy` job uses one
+secret, `CLOUDFLARE_API_TOKEN`.
 
 ## 3. What is in this change
 
@@ -142,15 +151,15 @@ every response.
 
 Do these in order. Steps 2 to 4 are where most mistakes would happen.
 
-### Step 1: Merge this pull request, and allow the workflow to open pull requests
+### Step 1: Merge this pull request, and check the bot's token
 
 `promote-production.yml` has to be on `main` before it can run or be started by hand. It opens and
-merges pull requests with the built-in token, which GitHub allows only when two repository settings
-say so: Settings -> Actions -> General -> Workflow permissions -> **Allow GitHub Actions to create
-and approve pull requests** (for an organization's repository, the organization's setting must allow
-it first), and Settings -> General -> Pull Requests -> **Allow merge commits**. Without the first,
-a run fails with "GitHub Actions is not permitted to create or approve pull requests"; without the
-second, the merge is refused.
+merges its pull requests as the night bot, with the `BOT_GITHUB_TOKEN` secret (`bot/README.md`,
+"Setting it up": a classic token with the `public_repo` and `workflow` scopes), which the bot
+already uses. The merge is a merge commit, so Settings -> General -> Pull Requests -> **Allow merge
+commits** must stay on. Without the secret the workflow falls back to the built-in token, and the
+first promotion that carries a workflow change fails with "Could not push ... only a token with the
+workflow scope may move it".
 
 ### Step 2: Create the `production` branch
 
@@ -255,6 +264,7 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
 - **Normal day:** merge to main as usual. Staging updates within minutes; production catches up when
   the countdown issue's time comes (15:00 UTC). To change the hour, edit `RELEASE_HOUR_UTC` in
   `scripts/promote-production.sh`; the hourly `cron` stays as it is.
+- **Now, please:** comment `/fast-forward` on the countdown issue.
 - **Not yet, I'm mid-change:** comment `/hold` on the countdown issue, and `/resume` when the work is
   done; or `/delay 6h` for a known wait (section 2.3). Neither stops a catalog bump.
 - **Ship now (hotfix):** merge the fix, wait for its CI on main to pass, then Actions ->
@@ -268,11 +278,28 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   workflow) until the fix has merged, then re-enable it.
 - **Pause production:** `/hold` on the countdown issue (a catalog bump still goes out), or disable the
   workflow to stop everything. Staging keeps updating.
+- **A promote run fails with "refusing to allow a GitHub App to create or update workflow" or "only
+  a token with the workflow scope may move it":** the run had no `BOT_GITHUB_TOKEN`, or that token
+  lost its `workflow` scope or expired, and main changed `.github/workflows` since production. Renew
+  the token (`bot/README.md`, "Setting it up"), then run *promote production* by hand. The first
+  failure, on 2026-10-04, is why the promotion moves production as the bot.
 - **A promote run fails with "production has diverged":** someone committed to `production` by hand
   or main was rewritten. Compare with `git log --oneline --graph origin/main origin/production`. If
   nothing on `production` needs keeping, an admin can reset it with
   `git push --force origin <green-main-sha>:production` (temporarily allowing force pushes in the
   ruleset), and the next run continues normally. The hourly check fails the same way until then.
+- **A run says "main has N newer commit(s) whose CI has not passed yet":** production has every
+  green commit and `main` is ahead. The countdown stays due (a `/fast-forward` too), and the next
+  green CI run on `main` merges. CI on `main` is never cancelled by a newer push (`ci.yml`'s
+  `concurrency`), so that is at most a run or two away; before that change a busy afternoon left no
+  commit of `main` green for hours.
+- **A run says "Not merging … yet: main has changed .github/workflows":** only without the
+  `BOT_GITHUB_TOKEN` secret. The Actions token is refused a push of workflow files that differ from
+  `main`'s, so while `main`'s newest commit changes a workflow and its CI is still running, the
+  newest green commit cannot be pushed with it. Nothing to do: the green CI run on that commit
+  merges it. With the secret set, nothing waits. A manual run says the same and fails;
+  run it again once CI on `main` is green. Every failure names the command that failed and quotes
+  what GitHub said, on the run's page.
 - **A promote run fails with "could not be merged into production":** the pull request is left open
   and says why on its page (a setting, a conflict). Fix that and the next hourly check opens a new
   one; close the old one.
@@ -317,9 +344,8 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
 - Cloudflare: none. The `VITE_` settings are all public and committed, and there is no Worker
   script.
 - GitHub: `CLOUDFLARE_API_TOKEN`, which the deploy job uses to upload the build. Moving `production`
-  uses the built-in `GITHUB_TOKEN`, with the two repository settings in step 1. Pull requests and
-  issues made with that token start no other workflow, so `ci.yml` does not run on a promotion pull
-  request, which is right: its commits already passed.
+  uses the bot's existing `BOT_GITHUB_TOKEN` (step 1). CI runs on a promotion pull request like any
+  other, but the merge does not wait for it: its head is a commit of `main` whose CI already passed.
 - Render and Supabase: unchanged, except for the `PUBLIC_ORIGINS` value and the Redirect URL above.
 
 ## 7. Known gaps and recommended next steps

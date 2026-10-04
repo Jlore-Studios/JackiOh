@@ -10,7 +10,7 @@ GitHub write token.
 
 | | |
 |---|---|
-| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04, 30 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
+| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04, 60 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
 | Way in | Session Manager only (`aws ssm start-session --target <instance>`): no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. |
 | Users | `agent-<id>` per subscription (`agent-gpt`, `agent-agy`, `agent-muse`, `agent-devin`): a home only it can read, no `sudo`, no Docker |
 | Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user |
@@ -48,7 +48,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 
 ## Building it
 
-1. **The instance.** Launch Ubuntu 24.04 (x86_64) as `m7i-flex.large` with a 30 GB gp3 disk, an
+1. **The instance.** Launch Ubuntu 24.04 (x86_64) as `m7i-flex.large` with a 60 GB gp3 disk, an
    instance profile holding `AmazonSSMManagedInstanceCore`, a security group with no inbound
    rule, no key pair, shutdown behaviour **stop**, and the tag `Name=jackioh-night-vm`.
 2. **Set it up**, with the ids from `providers.json`:
@@ -90,9 +90,14 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
   (`/usr/local/bin/night-vm-job-done.sh`, the runners' job-completed hook); the checkout and the
   logins stay. A user with another job still going (Devin's or Muse's other lanes) keeps its
   package store, and `/tmp` leftovers go once older than any job (6 hours). Muse's own session
-  logs (a few hundred MB a day) go once untouched for 8 hours. The 30 GB disk was 95% full on
-  2026-10-04 before Muse's logs were pruned. `CYPRESS_INSTALL_BINARY=0` keeps `pnpm install` from fetching Cypress's 800 MB binary
-  at all, since the bot's checks never run e2e.
+  logs (a few hundred MB a day) go once untouched for 8 hours. Devin's session database (about
+  700 MB a day) goes when a job ends with no other Devin job running, and its logs once 8 hours
+  old. `CYPRESS_INSTALL_BINARY=0` keeps `pnpm install` from fetching Cypress's 800 MB binary at
+  all, since the bot's checks never run e2e. About 22 GB is fixed: 8 GB of swap, ten runners'
+  installs at 0.7 GB each, the system and the CLIs. Six jobs' worktrees and installs come on top,
+  which filled the first 30 GB disk on 2026-10-04, so it was grown to 60 GB. To grow it again,
+  raise the volume's size (`aws ec2 modify-volume`), then on the machine
+  `growpart /dev/nvme0n1 1 && resize2fs /dev/nvme0n1p1`. Neither needs a restart.
 - **How many at once:** six machine jobs (`machine_parallel`), because a job here runs only the
   light checks. The load is each job's checks, not its model: on 2026-10-02 three jobs running
   the full set had the machine at load average 14 on 2 vCPUs with 1.5 GB swapped. Measured on
@@ -105,7 +110,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
   Claude jobs there. The Free plan's largest machines are the 2-vCPU `m7i-flex.large` and
   `c7i-flex.large`.
 - **Cost:** the machine is billed by the hour while it runs (about $0.096 an hour, so about $70 a
-  month if it never stopped) plus its disk (about $2.40 a month). A stopped machine costs only
+  month if it never stopped) plus its disk (about $4.80 a month). A stopped machine costs only
   the disk. The starter's Lambda calls and its schedule fit in the free tier.
 - **The starter** looks only at bot-night runs, through GitHub's public API by repository id, so a
   rename or a transfer does not break it. It leaves alone a job that has waited three hours (its

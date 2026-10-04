@@ -81,13 +81,15 @@ class AutoMergeTests(unittest.TestCase):
         h.gh.add_pull(30, "feature/someone", labels=(LABEL_CROSS,))
         self.assertNotEqual(plan_mod.make(h.ctx).get("number"), 30)
 
-    def test_with_no_other_family_set_up_it_says_it_waits_for_a_person(self):
+    def test_with_only_its_builder_set_up_it_waits_for_that_models_second_review(self):
         h = Harness(self, env=secrets(), machine=("gpt",), at=DAY)
         h.gh.add_issue(12, "Make the rules v2", labels=(LABEL_BUILD,))
         h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
                             "review": reviewer(APPROVE)}))
-        self.assertIn("No subscription that could give that review is set up",
-                      h.gh.bot_comments(12)[-1])
+        comment = h.gh.bot_comments(12)[-1]
+        self.assertIn("`gpt` (medium) approved it, so it waits for a strong or medium model's "
+                      "review (the same medium model may review it again)", comment)
+        self.assertNotIn("No subscription that could give that review is set up", comment)
 
 
 class SecondReviewTests(unittest.TestCase):

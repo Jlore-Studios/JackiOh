@@ -12,14 +12,14 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from harness import asks, issueplan
+from harness import asks, issueplan, review_rule
 from harness import providers as providers_mod
 from harness.asks import Ask
 from harness.clock import iso
 from harness.config import (DEFAULT_DIFFICULTY, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED,
                             LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_PR, LABEL_PR_OPEN,
                             LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW, LABEL_PRIORITY_MEDIUM,
-                            LABEL_REVISE, LABEL_WORKING)
+                            LABEL_READY, LABEL_REVISE, LABEL_WORKING)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.state import item as state_item
@@ -32,10 +32,13 @@ def label_names(thread: dict[str, Any]) -> set[str]:
 
 
 def set_state_label(ctx: Context, number: int, current: set[str], wanted: str | None) -> None:
-    """Leave exactly `wanted` (or none) of the queue's state labels on the thread."""
+    """Leave exactly `wanted` (or none) of the queue's state labels on the thread. A pull request
+    back in the queue is no longer ready for a person to merge, so `ready for merge` comes off."""
     for name in STATE_LABELS:
         if name in current and name != wanted:
             ctx.gh.remove_label(number, name)
+    if wanted and LABEL_READY in current:
+        ctx.gh.remove_label(number, LABEL_READY)
     if wanted and wanted not in current:
         ctx.gh.add_labels(number, [wanted])
 
@@ -242,8 +245,10 @@ class Candidate:
     planned: bool = False
     #: The tier of the model that wrote that plan ("" if none, or if not recorded).
     plan_tier: str = ""
-    #: For a review: the families whose approval the head already has, which may not give it again.
+    #: For a review: the families whose approval the head already has (for the reviewer's prompt).
     approved: tuple[str, ...] = ()
+    #: For a review: the tier of each approval the head has, one per review (`review_rule`).
+    approval_tiers: tuple[str, ...] = ()
     #: A pull request the bot opened (`bot:pr`): one a person opened never gets a review run, so
     #: its revision needs a reviewer in the same run.
     bot_pr: bool = False
@@ -382,7 +387,10 @@ def candidates(ctx: Context, state: dict[str, Any],
                 difficulty=difficulty_of(names, str(record.get("difficulty") or "")),
                 builder=str(votes.get("builder") or ""),
                 priority=priority_tier(names), **plan_of(record, thread, kind),
-                approved=tuple(votes.get("approvals") or ()), bot_pr=LABEL_PR in names)
+                approved=tuple(votes.get("approvals") or ()),
+                approval_tiers=tuple(tier for _, tier in review_rule.approvals(
+                    votes, ctx.cfg.pool.family_tier)),
+                bot_pr=LABEL_PR in names)
             if kind == "build" and not found[number].forced:
                 builds.append(thread)
     waiting = waits_for(ctx, builds) if builds else {}

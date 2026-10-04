@@ -22,7 +22,7 @@
 // terminates a match" and which is idempotent by design (§9.5's reaper and a client ending could
 // race). The reason is `match-ceiling` — one of the seven `results_reason_check` allows, and the
 // honest one for a match nobody finished, since §9.5 makes the ceiling a draw. Ratings are passed
-// back unchanged so a reset cannot move anyone's Elo.
+// back unchanged so a reset cannot move anyone's hidden rating.
 //
 // INERT WITHOUT `E2E_DATABASE_URL`. CI sets neither it nor `E2E_ONLINE`, so the spec is skipped
 // there and this task is never called. Nothing here is reachable from the frozen M8 specs.
@@ -49,8 +49,15 @@ export async function onlineReset(): Promise<OnlineResetResult> {
     // 1. End every unfinished match through the sanctioned path. `end_match` clears both
     //    players' `current_match_id` itself (§9.5: "every ending ... clears both players'
     //    in-match state"), which is the whole point of using it rather than a bare UPDATE.
-    const live = await client.query<{ id: string; p1: string | null; p2: string | null }>(
-      `select m.id, m.p1_profile_id as p1, m.p2_profile_id as p2
+    const live = await client.query<{
+      id: string;
+      p1: string | null;
+      p2: string | null;
+      server_owned: boolean;
+    }>(
+      `select m.id, m.p1_profile_id as p1, m.p2_profile_id as p2,
+              (m.ranked or exists (
+                select 1 from public.series s where s.next_match_id = m.id)) as server_owned
          from public.matches m
         where m.status <> 'over'`,
     );
@@ -71,19 +78,55 @@ export async function onlineReset(): Promise<OnlineResetResult> {
         ended += 1;
         continue;
       }
-      const ratings = await client.query<{ rating: number }>(
-        "select rating from public.profiles where id = any($1::uuid[])",
+      const ratings = await client.query<{ id: string; rating: number }>(
+        "select id, rating from public.profiles where id = any($1::uuid[])",
         [[row.p1, row.p2].filter((id): id is string => id !== null)],
       );
-      const p1Rating = ratings.rows[0]?.rating ?? 1000;
-      const p2Rating = ratings.rows[1]?.rating ?? p1Rating;
+      // Map by id: `any()` promises no order, so a positional rows[0]/rows[1] could hand p1's
+      // rating to p2.
+      const byId = new Map(ratings.rows.map((row2) => [row2.id, row2.rating]));
+      const p1Rating = row.p1 === null ? 1000 : (byId.get(row.p1) ?? 1000);
+      const p2Rating = row.p2 === null ? p1Rating : (byId.get(row.p2) ?? p1Rating);
+      if (row.server_owned) {
+        // A RANKED match, or one a series calls its game in play: `app.end_match` refuses both
+        // since migration 0022, because the rating move, the ladder write and the series
+        // transition live only in the server's result write. The reset cannot reproduce that
+        // write — but it can end the match the honest way the reset always has: a winnerless
+        // ceiling draw with ratings passed back unchanged (which is also what an abandoned
+        // series' game records), plus the one extra statement the series itself needs — marked
+        // 'over', abandoned, so its players are freed like everyone else's.
+        await client.query(
+          `insert into public.results (
+             match_id, p1_profile_id, p2_profile_id, winner_profile_id, reason, turns,
+             p1_rating_before, p1_rating_after, p2_rating_before, p2_rating_after, ended_at)
+           values ($1::uuid, $2::uuid, $3::uuid, null, 'match-ceiling', 0,
+                   $4::double precision, $4::double precision,
+                   $5::double precision, $5::double precision, now())
+           on conflict (match_id) do nothing`,
+          [row.id, row.p1, row.p2, p1Rating, p2Rating],
+        );
+        await client.query(
+          "update public.matches set status = 'over', ended_at = now() where id = $1::uuid",
+          [row.id],
+        );
+        await client.query(
+          `update public.series
+              set status = 'over', version = version + 1, pick_deadline_at = null,
+                  ended_at = now(), updated_at = now(),
+                  state = state || '{"endReason": "abandoned"}'::jsonb
+            where next_match_id = $1::uuid and status <> 'over'`,
+          [row.id],
+        );
+        ended += 1;
+        continue;
+      }
       // No winner: a draw, so neither rating is meant to move, and passing the current values
-      // back is how `end_match` is told that.
-      await client.query("select app.end_match($1::uuid, null, 'match-ceiling', 0, $2::int, $3::int)", [
-        row.id,
-        p1Rating,
-        p2Rating,
-      ]);
+      // back is how `end_match` is told that. The ratings are doubles since migration 0022
+      // widened the column and the function from int — an ::int cast would refuse a real one.
+      await client.query(
+        "select app.end_match($1::uuid, null, 'match-ceiling', 0, $2::double precision, $3::double precision)",
+        [row.id, p1Rating, p2Rating],
+      );
       ended += 1;
     }
 

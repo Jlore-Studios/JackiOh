@@ -33,6 +33,9 @@ function recorder(): Recorder {
     playVoice() {
       return true;
     },
+    playEffect() {
+      return true;
+    },
   };
 }
 

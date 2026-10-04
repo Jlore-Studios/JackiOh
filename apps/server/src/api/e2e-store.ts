@@ -48,6 +48,8 @@ import {
   CODE_ATTEMPTS_PER_IP_PER_HOUR,
   CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
   CODE_ATTEMPT_WINDOW_SECONDS,
+  RATING_DEVIATION_START,
+  RATING_VOLATILITY_START,
 } from "../config";
 import { LAUNCH_COPIES, LAUNCH_GRANT_REASON } from "./collection";
 import {
@@ -56,7 +58,9 @@ import {
   createMemoryLastBoardStore,
   createMemoryPlayerSettingsStore,
   createMemoryPlayerStatsStore,
+  createMemoryRankedStore,
   createMemoryTutorialStore,
+  emptyRankedTables,
   matchModeIn,
   purgeExpiredRows,
   removeProfileRows,
@@ -65,8 +69,10 @@ import {
   type LastBoardTables,
   type PlayerSettingsTables,
   type PlayerStatsTables,
+  type RankedTables,
   type TutorialTables,
 } from "./memory-stores";
+import { DuplicateResultError } from "./ports";
 import type {
   CatalogInfo,
   CodeAttempt,
@@ -102,6 +108,7 @@ type Tables = {
 } & DeckTables &
   TutorialTables &
   PlayerSettingsTables &
+  RankedTables &
   LastBoardTables &
   PlayerStatsTables &
   GameRecordTables;
@@ -126,6 +133,7 @@ function emptyTables(): Tables {
     lastBoards: [],
     playerStats: [],
     gameRecords: [],
+    ...emptyRankedTables(),
   };
 }
 
@@ -451,6 +459,8 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
         displayName: displayName ?? null,
         status: "pending",
         rating,
+        ratingDeviation: RATING_DEVIATION_START,
+        ratingVolatility: RATING_VOLATILITY_START,
         inMatchId: null,
         createdAt: at,
       };
@@ -465,6 +475,13 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
       row.status = status;
       // R111: the trigger fires on the `pending → active` transition only.
       if (wasPending && status === "active") applyLaunchGrant(profileId);
+    },
+    setGlicko: async (profileId, glicko) => {
+      const row = profileOf(profileId);
+      if (row === undefined) throw new Error(`no profile ${profileId}`);
+      row.rating = glicko.rating;
+      row.ratingDeviation = glicko.deviation;
+      row.ratingVolatility = glicko.volatility;
     },
     setRating: async (profileId, rating) => {
       const row = profileOf(profileId);
@@ -573,6 +590,9 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
   store.gameRecords = createMemoryGameRecordStore(() => tables);
   // R654: each profile's player statistics and privacy setting.
   store.playerStats = createMemoryPlayerStatsStore(() => tables);
+
+  // SPEC §9.12: the ranked ladder, shared with the unit-test fake like the decks.
+  store.ranked = createMemoryRankedStore(() => tables);
 
   // -------------------------------------------------------------------------
   // Matches (§9.3, §9.5)
@@ -709,7 +729,7 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
   store.results = {
     insert: async (row: ResultRow) => {
       if (tables.results.some((existing) => existing.matchId === row.matchId)) {
-        throw new Error(`results holds one row per match: ${row.matchId}`);
+        throw new DuplicateResultError(row.matchId);
       }
       tables.results.push(clone(row));
     },

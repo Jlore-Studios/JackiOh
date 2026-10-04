@@ -20,6 +20,8 @@ const ROOT = join(HERE, "../../../..");
 const SCRIPT = join(ROOT, "scripts/promote-production.sh");
 const WORKFLOW = readFileSync(join(ROOT, ".github/workflows/promote-production.yml"), "utf8");
 const LABEL = "production merge";
+// Both people, and `human` so the night bot never picks these up.
+const PEOPLE = ["jgoetzmann", "MaxGoetzmann"];
 
 // --- the stand-in for `gh` -------------------------------------------------------------------
 
@@ -34,7 +36,7 @@ const st = JSON.parse(fs.readFileSync(file, "utf8"));
 const argv = process.argv.slice(2);
 const VALUE = new Set(["--title", "--label", "--body-file", "--body", "--base", "--head", "--state", "--limit", "--json", "--jq",
   "--reason", "--comment", "--color", "--description", "--workflow", "--branch", "--event", "--status", "--commit",
-  "--match-head-commit", "-X", "-f"]);
+  "--match-head-commit", "--assignee", "-X", "-f"]);
 const pos = [];
 const flag = {};
 for (let i = 0; i < argv.length; i++) {
@@ -56,7 +58,13 @@ function out(data) {
 const bot = (n, body) => st.issues.find((i) => i.number === n).comments.push({ id: st.nextComment++, login: "github-actions[bot]", type: "Bot", assoc: "NONE", at: iso(), body });
 const issue = (n) => st.issues.find((i) => i.number === Number(n));
 st.log.push(argv.join(" "));
+if ((st.fail || []).some((prefix) => argv.join(" ").startsWith(prefix))) {
+  process.stderr.write("HTTP 403: Resource not accessible by integration\n");
+  process.exit(1);
+}
 const [a, b] = pos;
+// Which token each call went out with, and what it was: "pr merge", "issue close", "api DELETE".
+st.tokens.push(process.env.GH_TOKEN + " " + a + " " + (a === "api" ? (f("-X") || "GET") : b));
 if (a === "run" && b === "list") {
   const sha = f("--commit") !== undefined ? (st.green.includes(f("--commit")) ? f("--commit") : "") : st.newestGreen;
   out(sha ? [{ headSha: sha }] : []);
@@ -68,7 +76,7 @@ if (a === "run" && b === "list") {
   out({ body: issue(pos[2]).body, title: issue(pos[2]).title });
 } else if (a === "issue" && b === "create") {
   const number = st.next++;
-  st.issues.push({ number, title: f("--title"), body: fs.readFileSync(f("--body-file"), "utf8"), labels: flag["--label"], state: "open", reason: "", comments: [] });
+  st.issues.push({ number, title: f("--title"), body: fs.readFileSync(f("--body-file"), "utf8"), labels: flag["--label"], assignees: (f("--assignee") || "").split(","), state: "open", reason: "", comments: [] });
   process.stdout.write("https://github.com/acme/game/issues/" + number + "\n");
 } else if (a === "issue" && b === "edit") {
   const i = issue(pos[2]);
@@ -85,7 +93,7 @@ if (a === "run" && b === "list") {
   out(st.prs.filter((p) => p.state === "open" && p.base === f("--base") && p.head === f("--head")).map((p) => ({ number: p.number })));
 } else if (a === "pr" && b === "create") {
   const number = st.next++;
-  st.prs.push({ number, head: f("--head"), base: f("--base"), title: f("--title"), body: fs.readFileSync(f("--body-file"), "utf8"), labels: flag["--label"], state: "open", merged: false });
+  st.prs.push({ number, head: f("--head"), base: f("--base"), title: f("--title"), body: fs.readFileSync(f("--body-file"), "utf8"), labels: flag["--label"], assignees: (f("--assignee") || "").split(","), state: "open", merged: false });
   process.stdout.write("https://github.com/acme/game/pull/" + number + "\n");
 } else if (a === "pr" && b === "merge") {
   const p = st.prs.find((x) => x.number === Number(pos[2]));
@@ -112,8 +120,8 @@ fs.writeFileSync(file, JSON.stringify(st));
 `;
 
 interface Comment { id: number; login: string; type: string; assoc: string; at: string; body: string }
-interface Issue { number: number; title: string; body: string; labels: string[]; state: "open" | "closed"; reason: string; comments: Comment[] }
-interface Pr { number: number; head: string; base: string; title: string; body: string; labels: string[]; state: string; merged: boolean }
+interface Issue { number: number; title: string; body: string; labels: string[]; assignees?: string[]; state: "open" | "closed"; reason: string; comments: Comment[] }
+interface Pr { number: number; head: string; base: string; title: string; body: string; labels: string[]; assignees?: string[]; state: string; merged: boolean }
 interface Gh {
   next: number;
   nextComment: number;
@@ -124,7 +132,9 @@ interface Gh {
   green: string[];
   newestGreen: string;
   failMerges: number;
+  fail: string[];
   log: string[];
+  tokens: string[];
 }
 
 // --- a world: origin, a working copy, the stand-in -------------------------------------------
@@ -183,7 +193,7 @@ function world(): World {
   git(root, "init", "-q", "--bare", "-b", "main", w.origin);
   git(root, "init", "-q", "-b", "main", w.work);
   git(w.work, "remote", "add", "origin", w.origin);
-  const empty: Gh = { next: 1, nextComment: 1000, issues: [], prs: [], reactions: [], labels: [], green: [], newestGreen: "", failMerges: 0, log: [] };
+  const empty: Gh = { next: 1, nextComment: 1000, issues: [], prs: [], reactions: [], labels: [], green: [], newestGreen: "", failMerges: 0, fail: [], log: [], tokens: [] };
   writeFileSync(stateFile(w), JSON.stringify(empty));
   commit(w, "c1", { "render.yaml": renderYaml("v0.2.1"), "app.txt": "one\n" });
   git(w.work, "push", "-q", "origin", `${w.sha.c1}:refs/heads/production`);
@@ -264,7 +274,8 @@ describe("the countdown issue", () => {
     const [only, ...rest] = openIssues(w);
     expect(rest).toEqual([]);
     expect(only?.title).toBe("Merging to production in 23 hours (2026-10-05 15:00 UTC)");
-    expect(only?.labels).toEqual([LABEL]);
+    expect(only?.labels).toEqual([LABEL, "human"]);
+    expect(only?.assignees).toEqual(PEOPLE);
     expect(marker(only as Issue)).toBe(`due=${DUE} held=0 last=0`);
     expect(gh(w).labels).toEqual([LABEL]);
     expect(gh(w).prs).toEqual([]);
@@ -284,7 +295,7 @@ describe("the countdown issue", () => {
     const { prs } = gh(w);
     expect(prs).toHaveLength(1);
     const pr = prs[0] as Pr;
-    expect(pr).toMatchObject({ number: 2, base: "production", state: "closed", merged: true, labels: [LABEL] });
+    expect(pr).toMatchObject({ number: 2, base: "production", state: "closed", merged: true, labels: [LABEL, "human"], assignees: PEOPLE });
     expect(pr.title).toBe(`Promote main to production: 2 commit(s) up to ${w.sha.c3?.slice(0, 7)}`);
     expect(pr.body).toContain("Countdown issue: #1");
     expect(pr.body).toContain("Catalog: v0.2.1");
@@ -300,7 +311,7 @@ describe("the countdown issue", () => {
     expect(old.comments.at(-1)?.body).toContain("Merged to production in #2 (the scheduled merge): 2 commits");
     const [next, ...rest] = openIssues(w);
     expect(rest).toEqual([]);
-    expect(next).toMatchObject({ number: 3, title: "Merging to production in 24 hours (2026-10-06 15:00 UTC)" });
+    expect(next).toMatchObject({ number: 3, title: "Merging to production in 24 hours (2026-10-06 15:00 UTC)", labels: [LABEL, "human"], assignees: PEOPLE });
     expect(marker(next as Issue)).toBe(`due=${at("2026-10-06T15:00:00Z")} held=0 last=0`);
   });
 
@@ -313,6 +324,31 @@ describe("the countdown issue", () => {
     expect(gh(w).prs.map((p) => [p.number, p.merged])).toEqual([[2, true], [4, true]]);
     expect(tree(w, "production")).toBe(tree(w, w.sha.c5 as string));
     expect(openIssues(w).map((i) => i.number)).toEqual([5]);
+  });
+
+  it("stays due, rather than close as nothing to merge, while main is ahead but not green yet", () => {
+    // 2026-10-04: every push to main cancelled the CI run before it, the newest green commit was the
+    // one production had, and /fast-forward closed the countdown with nothing merged.
+    const w = counting();
+    ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
+    const ahead = commit(w, "c4", { "app.txt": "four\n" }, false);
+    const id = comment(w, 3, "/fast-forward", "2026-10-05T16:00:00Z");
+    const r = ok(run(w, "issue_comment", "2026-10-05T16:00:30Z"));
+    expect(reactions(w, id)).toEqual(["+1"]);
+    expect(r.text).toContain("1 newer commit(s) whose CI has not passed yet");
+    expect(issue(w, 3).state).toBe("open");
+    expect(issue(w, 3).title).toBe("Merging to production at the next check (2026-10-05 16:00 UTC)");
+    expect(gh(w).prs).toHaveLength(1);
+
+    // CI passes on main: its run merges what /fast-forward asked for, and the countdown rolls.
+    edit(w, (s) => {
+      s.green.push(ahead);
+      s.newestGreen = ahead;
+    });
+    ok(run(w, "workflow_run", "2026-10-05T16:30:00Z", { RUN_SHA: ahead }));
+    expect(gh(w).prs).toHaveLength(2);
+    expect(tree(w, "production")).toBe(tree(w, ahead));
+    expect(issue(w, 3).state).toBe("closed");
   });
 
   it("closes it as nothing to merge when production already has everything", () => {
@@ -350,6 +386,71 @@ describe("the countdown issue", () => {
     });
     ok(run(w, "schedule", "2026-10-04T17:00:00Z"));
     expect(marker(issue(w, 1))).toBe(`due=${DUE} held=0 last=0`);
+  });
+});
+
+describe("the countdown in the title", () => {
+  const titleEdits = (w: World): number => gh(w).log.filter((l) => /^issue edit 1 --title /u.test(l)).length;
+
+  it("counts down at every check, the hourly one among them, and leaves the body alone", () => {
+    const w = counting();
+    const body = issue(w, 1).body;
+    ok(run(w, "schedule", "2026-10-04T22:07:00Z"));
+    expect(issue(w, 1).title).toBe("Merging to production in 17 hours (2026-10-05 15:00 UTC)");
+    expect(issue(w, 1).body).toBe(body);
+    ok(run(w, "workflow_run", "2026-10-05T09:40:00Z", { RUN_SHA: w.sha.c3 as string }));
+    expect(issue(w, 1).title).toBe("Merging to production in 5 hours (2026-10-05 15:00 UTC)");
+    ok(run(w, "schedule", "2026-10-05T14:07:00Z"));
+    expect(issue(w, 1).title).toBe("Merging to production in 1 hour (2026-10-05 15:00 UTC)");
+  });
+
+  it("edits nothing when the hours have not changed", () => {
+    const w = counting();
+    ok(run(w, "schedule", "2026-10-04T22:07:00Z"));
+    const edits = titleEdits(w);
+    ok(run(w, "schedule", "2026-10-04T22:30:00Z"));
+    expect(titleEdits(w)).toBe(edits);
+    expect(gh(w).log.filter((l) => l.startsWith("issue edit"))).toHaveLength(edits);
+  });
+});
+
+describe("/fast-forward", () => {
+  it("merges at once, hours before the time, and starts the next countdown", () => {
+    const w = counting();
+    const id = comment(w, 1, "/fast-forward", "2026-10-04T18:00:00Z");
+    const r = ok(run(w, "issue_comment", "2026-10-04T18:00:30Z"));
+    expect(reactions(w, id)).toEqual(["+1"]);
+    expect(r.output).toContain("promoted=true");
+    expect(gh(w).prs.map((p) => [p.number, p.merged])).toEqual([[2, true]]);
+    expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
+    expect(issue(w, 1)).toMatchObject({ state: "closed", reason: "completed" });
+    expect(issue(w, 1).comments.at(-1)?.body).toContain("Merged to production in #2");
+    expect(openIssues(w).map((i) => i.title)).toEqual(["Merging to production in 21 hours (2026-10-05 15:00 UTC)"]);
+  });
+
+  it("goes past a hold", () => {
+    const w = counting();
+    comment(w, 1, "/hold", "2026-10-04T17:00:00Z");
+    ok(run(w, "issue_comment", "2026-10-04T17:01:00Z"));
+    comment(w, 1, "/fast-forward", "2026-10-04T18:00:00Z");
+    ok(run(w, "issue_comment", "2026-10-04T18:00:30Z"));
+    expect(gh(w).prs).toHaveLength(1);
+    expect(issue(w, 1).state).toBe("closed");
+  });
+
+  it("is refused from anyone without write access", () => {
+    const w = counting();
+    const id = comment(w, 1, "/fast-forward", "2026-10-04T18:00:00Z", { login: "stranger", assoc: "NONE" });
+    ok(run(w, "issue_comment", "2026-10-04T18:00:30Z"));
+    expect(reactions(w, id)).toEqual(["confused"]);
+    expect(gh(w).prs).toEqual([]);
+    expect(issue(w, 1).state).toBe("open");
+  });
+
+  it("is in the issue's instructions, and wakes the workflow", () => {
+    const w = counting();
+    expect(issue(w, 1).body).toContain("| `/fast-forward` | Merges now, past a hold. |");
+    expect(WORKFLOW).toContain("contains(github.event.comment.body, '/fast-forward')");
   });
 });
 
@@ -648,6 +749,32 @@ describe("what stops it", () => {
     expect(issue(stuck, 1).state).toBe("open");
   });
 
+  it("moves production with PROMOTE_TOKEN, which may update workflows, and keeps everything else on GH_TOKEN", () => {
+    // GitHub refuses the Actions token a ref update that carries a change to .github/workflows, so
+    // the push, the pull request, its merge and the branch's deletion go out as the bot; the
+    // countdown issue stays on the Actions token, whose writes start no workflow.
+    const w = counting();
+    edit(w, (s) => {
+      s.tokens = [];
+    });
+    ok(run(w, "schedule", "2026-10-05T15:07:00Z", { GH_TOKEN: "actions", PROMOTE_TOKEN: "bot" }));
+    expect(gh(w).prs[0]?.merged).toBe(true);
+    const calls = (token: string): string[] =>
+      gh(w).tokens.filter((c) => c.startsWith(`${token} `)).map((c) => c.slice(token.length + 1));
+    expect(calls("bot")).toEqual(["pr list", "pr create", "pr merge", "api DELETE"]);
+    expect(calls("actions")).toEqual(expect.arrayContaining(["run list", "label create", "issue close", "issue create"]));
+    expect(calls("actions").filter((c) => c.startsWith("pr ") || c === "api DELETE")).toEqual([]);
+
+    // Without one, everything goes out as GH_TOKEN.
+    const plain = counting();
+    edit(plain, (s) => {
+      s.tokens = [];
+    });
+    ok(run(plain, "schedule", "2026-10-05T15:07:00Z"));
+    expect(gh(plain).tokens.filter((c) => !c.startsWith("x "))).toEqual([]);
+    expect(gh(plain).tokens).toContain("x pr merge");
+  });
+
   it("never moves production backwards: promoting a commit it already has is a no-op", () => {
     const w = counting();
     ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
@@ -657,6 +784,73 @@ describe("what stops it", () => {
     expect(production(w)).toBe(before);
     expect(gh(w).prs).toHaveLength(1);
     expect(openIssues(w).map((i) => i.number)).toEqual([3]);
+  });
+
+  it("waits, without failing, while main's newest commit changes a workflow and has not passed CI", () => {
+    // GitHub refuses the workflow token a push whose .github/workflows differ from main's: the real
+    // run of 2026-10-04 20:08 died pushing promote/<the newest green commit> for exactly that.
+    const w = counting();
+    const red = commit(w, "c4", { ".github/workflows/new.yml": "on: push\n" }, false);
+    const waited = ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
+    expect(waited.text).toContain("::notice::Not merging");
+    expect(waited.output).not.toContain("promoted=true");
+    expect(gh(w).prs).toEqual([]);
+    expect(issue(w, 1).state).toBe("open");
+    expect(git(w.origin, "for-each-ref", "refs/heads/promote")).toBe("");
+
+    const manual = run(w, "workflow_dispatch", "2026-10-05T15:10:00Z");
+    expect(manual.status).not.toBe(0);
+    expect(manual.text).toContain("Run this again once CI on main is green");
+
+    // CI passes on main's newest commit: its workflow_run merges it, workflow and all.
+    edit(w, (s) => {
+      s.green.push(red);
+      s.newestGreen = red;
+    });
+    ok(run(w, "workflow_run", "2026-10-05T15:20:00Z", { RUN_SHA: red }));
+    expect(gh(w).prs).toHaveLength(1);
+    expect(tree(w, "production")).toBe(tree(w, red));
+    expect(issue(w, 1).state).toBe("closed");
+  });
+
+  it("does not wait with the bot's token, which may push workflow files: it merges the newest green commit", () => {
+    const w = counting();
+    commit(w, "c4", { ".github/workflows/new.yml": "on: push\n" }, false);
+    const r = ok(run(w, "schedule", "2026-10-05T15:07:00Z", { GH_TOKEN: "actions", PROMOTE_TOKEN: "bot" }));
+    expect(r.text).not.toContain("Not merging");
+    expect(gh(w).prs).toHaveLength(1);
+    expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
+  });
+
+  it("says in its error what GitHub said when it refuses a push", () => {
+    const w = counting();
+    const hook = join(w.origin, "hooks", "pre-receive");
+    writeFileSync(
+      hook,
+      "#!/bin/sh\nwhile read old new ref; do case $ref in refs/heads/promote/*) echo \"refusing to allow a GitHub App to create or update workflow\" >&2; exit 1;; esac; done\n",
+    );
+    chmodSync(hook, 0o755);
+    const r = run(w, "schedule", "2026-10-05T15:07:00Z");
+    expect(r.status).not.toBe(0);
+    expect(r.text).toMatch(/::error::Could not push [0-9a-f]+:refs\/heads\/promote\/\S+: .*refusing to allow a GitHub App to create or update workflow.*BOT_GITHUB_TOKEN/u);
+    expect(issue(w, 1).state).toBe("open");
+  });
+
+  it("names the command in its error when anything else fails", () => {
+    const w = counting();
+    edit(w, (s) => {
+      s.fail = ["label create"];
+    });
+    const r = run(w, "schedule", "2026-10-05T15:07:00Z");
+    expect(r.status).not.toBe(0);
+    expect(r.text).toMatch(/::error::scripts\/promote-production\.sh line \d+: `gh label create .*` failed \(exit 1\)/u);
+
+    edit(w, (s) => {
+      s.fail = ["pr create"];
+    });
+    const refused = run(w, "schedule", "2026-10-05T15:07:00Z");
+    expect(refused.status).not.toBe(0);
+    expect(refused.text).toContain("::error::`gh pr` failed (exit 1): HTTP 403: Resource not accessible by integration");
   });
 
   it("refuses an event it does not know", () => {
@@ -681,6 +875,12 @@ describe("the workflow", () => {
   it("holds the concurrency group on the job, so a comment that wakes nothing never queues", () => {
     expect(WORKFLOW).not.toMatch(/^concurrency:/mu);
     expect(WORKFLOW).toMatch(/^ {4}concurrency:\n {6}group: promote-production\n {6}cancel-in-progress: false$/mu);
+  });
+
+  it("checks out, and moves production, with the bot's token, which has the workflow scope", () => {
+    const token = "${{ secrets.BOT_GITHUB_TOKEN || github.token }}";
+    expect(WORKFLOW).toContain(`          fetch-depth: 0\n          token: ${token}\n`);
+    expect(WORKFLOW).toContain(`          GH_TOKEN: \${{ github.token }}\n          PROMOTE_TOKEN: ${token}\n`);
   });
 
   it("asks for the permissions the script uses, and no more", () => {

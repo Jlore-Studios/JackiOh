@@ -94,6 +94,8 @@ export const paths = {
   patchNotes: "/patch-notes",
   /** R630: every card, tokens included, to browse (routes/almanac.tsx). Public, like the landing page. */
   almanac: "/almanac",
+  /** R608, R612: the global ranked ladder (routes/leaderboard.tsx). Gated: every read needs an account. */
+  leaderboard: "/leaderboard",
   /** R654: public card and player statistics page (routes/stats.tsx). Public, like the landing page. */
   stats: "/stats",
   hotseat: "/dev/hotseat",

@@ -21,10 +21,11 @@ import { useEmotes } from "./useEmotes.ts";
 type Sink = SoundSink & {
   playSfx: ReturnType<typeof vi.fn>;
   playVoice: ReturnType<typeof vi.fn>;
+  playEffect: ReturnType<typeof vi.fn>;
 };
 
 function engineSpy(): Sink {
-  return { playSfx: vi.fn(() => true), playVoice: vi.fn(() => true) };
+  return { playSfx: vi.fn(() => true), playVoice: vi.fn(() => true), playEffect: vi.fn(() => true) };
 }
 
 type Options = {

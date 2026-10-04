@@ -194,8 +194,8 @@ describe("R639 one rotation step", () => {
   });
 });
 
-describe("R655 a swap below the threshold", () => {
-  it("R655 draws from the deal's own pool, evenly: a Core card of the slot's rarity, every one as likely as the next", () => {
+describe("R656 a swap below the threshold", () => {
+  it("R656 draws from the deal's own pool, evenly: a Core card of the slot's rarity, every one as likely as the next", () => {
     // Below ROTATION_MIN_GAMES the fan swaps among FAN_POOL with EVEN, as R374's deal did: the
     // swap keeps the slot's rarity, repeats nothing on show and never leaves Core.
     const hand = dealLandingFan(seeded(7));
