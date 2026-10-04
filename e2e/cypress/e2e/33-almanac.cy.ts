@@ -3,7 +3,7 @@
 //
 // BUILD M8's key assertions for this row: "the footer's "Card almanac" link opens `/almanac`;
 // filtering by a cost keeps only cards of that cost; a card's detail view opens with no add action
-// and closes; no API call except the public stats block (R641) is made on the page; Back returns
+// and closes; no API call except the public stats block (R654) is made on the page; Back returns
 // to the landing page". Issue #54 asks for the same walk: signed out, the landing page, the
 // footer's link, a cost, a card's detail closed again, and Back. Also asserted, off the DOM: the
 // link sits right after Patch notes, and the almanac is the deck builder's browse pane, read-only
@@ -109,7 +109,7 @@ describe("Spec 33 — the Card Almanac (R630)", () => {
     cy.get(ts(INSPECT_CLOSE)).click();
     cy.get(ts(INSPECT_DETAIL)).should("not.exist");
 
-    // The almanac asked the server nothing except the public card aggregates (R641):
+    // The almanac asked the server nothing except the public card aggregates (R654):
     // the detail view's statistics block reads `/api/stats/*`, which is public and cacheable.
     cy.then(() => {
       const calls = apiCalls.slice(callsBefore);

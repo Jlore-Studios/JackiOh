@@ -1941,9 +1941,10 @@ export function runPlaySteps(sink: EngineSink, player: PlayerId, action: PlayAct
 /**
  * B5 E5, E9, R450: the targeting point of a play's declared targets, at §10.5 step 1 once the play is
  * legal. An interceptor in the targeted player's hand (Classic #33) answers the first declared
- * `target` pick naming one of that player's units, if it would itself be a legal pick of that
- * declaration, and the pick moves to it. The costs the picks carry were checked at step 1 and are paid
- * at step 2, whatever the interception did (the targeting happened).
+ * `target` pick naming one of that player's units — a `by: "spell"` one only when the played card
+ * is a Spell (R651) — if it would itself be a legal pick of that declaration, and the pick moves to
+ * it. The costs the picks carry were checked at step 1 and are paid at step 2, whatever the
+ * interception did (the targeting happened).
  */
 function interceptDeclaredTargets(sink: EngineSink, run: PlayRun): void {
   if (run.targets.length === 0) return;
@@ -1961,6 +1962,8 @@ function interceptDeclaredTargets(sink: EngineSink, run: PlayRun): void {
       const decl = decls[index];
       return decl !== null && decl !== undefined && interceptorFitsDecl(state, run.player, face, decl, interceptor);
     },
+    // R651: a `by: "spell"` interceptor (Classic #33 Joro) answers only a Spell's declared target.
+    source: cardTypeOf(state, card),
   });
 }
 

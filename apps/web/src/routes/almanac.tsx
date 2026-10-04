@@ -3,7 +3,7 @@
 // that edits a deck, no collection and no ownership. Public like the Patch notes page: the catalog
 // is public (§5.1) and ships in the bundle, so the page reads `@jackioh/cards/catalog.json`, as the
 // landing's fan does, and asks no server and no account anything for the catalog. The card detail's
-// statistics block (R641) reads the public card aggregates, like the deck builder's.
+// statistics block (R654) reads the public card aggregates, like the deck builder's.
 //
 // The page decides nothing (CLAUDE.md rule 7): what the filter and the sort keep is filters.ts's,
 // the faces and the detail view are the cards module's. It wears the deck builder's look
@@ -122,7 +122,7 @@ export default function AlmanacRoute(): ReactElement {
                 ? null
                 : { cardId: detailCardId, meta: <span className="db-detail-meta">{almanacMeta(detailDef)}</span> }
             }
-            // R641: the almanac's detail view carries the same compact statistics block as the
+            // R654: the almanac's detail view carries the same compact statistics block as the
             // deck builder's, reading the public card aggregates.
             showStats
             onCloseDetail={() => {

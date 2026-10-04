@@ -1,4 +1,4 @@
-// Tests for the public statistics page (SPEC §9.11, R641).
+// Tests for the public statistics page (SPEC §9.11, R654).
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -158,13 +158,13 @@ afterEach(() => {
   document.head.querySelector('link[rel="canonical"]')?.remove();
 });
 
-describe("R641 public statistics route", () => {
-  it("R641 is served at /stats signed out with document title", () => {
+describe("R654 public statistics route", () => {
+  it("R654 is served at /stats signed out with document title", () => {
     expect(paths.stats).toBe("/stats");
     expect(documentTitleFor(paths.stats)).toBe("Statistics · JackiOh");
   });
 
-  it("R641 renders summary tiles and provisional banner when below 1000 live games", async () => {
+  it("R654 renders summary tiles and provisional banner when below 1000 live games", async () => {
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.screen, undefined, SLOW)).toBeInTheDocument();
@@ -178,7 +178,7 @@ describe("R641 public statistics route", () => {
     expect(banner).toHaveTextContent("AI development games pad the data");
   });
 
-  it("R641 cards table displays 'not enough games' below sample floor and percentage when at or above sample floor", async () => {
+  it("R654 cards table displays 'not enough games' below sample floor and percentage when at or above sample floor", async () => {
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
@@ -192,7 +192,7 @@ describe("R641 public statistics route", () => {
     expect(screen.getByText("not enough games")).toBeInTheDocument();
   });
 
-  it("R641 sorts cards by column on header click and keyboard activation", async () => {
+  it("R654 sorts cards by column on header click and keyboard activation", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
@@ -210,7 +210,7 @@ describe("R641 public statistics route", () => {
     expect(nameHeader).toHaveAttribute("aria-sort", "descending");
   });
 
-  it("R641 filters cards by search input", async () => {
+  it("R654 filters cards by search input", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
@@ -225,7 +225,7 @@ describe("R641 public statistics route", () => {
     expect(screen.getByText("Lava Hound")).toBeInTheDocument();
   });
 
-  it("R641 opens card drill-down modal on row click and closes on close button", async () => {
+  it("R654 opens card drill-down modal on row click and closes on close button", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
@@ -247,7 +247,7 @@ describe("R641 public statistics route", () => {
     expect(screen.queryByTestId(statsTestid.drillDownModal)).not.toBeInTheDocument();
   });
 
-  it("R641 players tab lists public player aggregates and keeps Elo separate", async () => {
+  it("R654 players tab lists public player aggregates and keeps Elo separate", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
@@ -265,7 +265,7 @@ describe("R641 public statistics route", () => {
     expect(within(table).queryByText(/rating/i)).not.toBeInTheDocument();
   });
 
-  it("R641 fallback button switches to previous patch live data when available", async () => {
+  it("R654 fallback button switches to previous patch live data when available", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
@@ -279,7 +279,7 @@ describe("R641 public statistics route", () => {
     });
   });
 
-  it("R641 shows player's personal stats when signed in and local stats exist", async () => {
+  it("R654 shows player's personal stats when signed in and local stats exist", async () => {
     // Set mock active session
     window.localStorage.setItem(
       SESSION_STORAGE_KEY,
@@ -303,7 +303,7 @@ describe("R641 public statistics route", () => {
     expect(screen.getByText(/5×/)).toBeInTheDocument();
   });
 
-  it("R641 site footer links to stats page", () => {
+  it("R654 site footer links to stats page", () => {
     render(<SiteFooter />);
     const footerLink = screen.getByTestId(siteFooterTestid.stats);
     expect(footerLink).toHaveAttribute("href", "/stats");

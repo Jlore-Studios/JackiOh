@@ -509,7 +509,7 @@ export function App(): ReactElement {
     if (path === paths.patchNotes) return <PatchNotesRoute />;
     // R630: the Card Almanac is public, like the catalog it shows.
     if (path === paths.almanac) return <AlmanacRoute />;
-    // R641: public statistics page is public, like the almanac.
+    // R654: public statistics page is public, like the almanac.
     if (path === paths.stats) return <StatsRoute />;
 
     const matchId = matchIdOf(path);

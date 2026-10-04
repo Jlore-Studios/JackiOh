@@ -17,7 +17,7 @@ const JUNGLE = "classicplus-019-2";
 const BOT = "classicplus-019-5";
 const TOP = "classicplus-019-1";
 const VANILLA = "core-008"; // 4/4
-const TOWER = "classicplus-033"; // Ivory Tower: the Unit it carries can't attack or be attacked
+const FIGHTER = "classicplus-051"; // Jlockheed's J15 Fighter: Can't be attacked
 const MROW = "core-086"; // 1/1, Can't attack; Death: take control of the Unit that destroyed this
 const FILLER = "core-005";
 const DECK = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
@@ -102,23 +102,14 @@ describe("C+ #19.2 Jungle Loser", () => {
       }
     });
 
-    it("§4.2 step 2 a Unit that can't be attacked is never drawn: the one an Ivory Tower carries", () => {
+    it("§4.2 step 2 a Unit that can't be attacked is never drawn: C+ #51 Jlockheed's J15 Fighter", () => {
       for (let seed = 1; seed <= 6; seed += 1) {
-        const s = scenario({
-          seed: `jungle-carried-${seed}`,
-          active: "p2",
-          p1: { hand: [FILLER], library: DECK, field: [{ def: JUNGLE, lane: 2 }] },
-          p2: { hand: [VANILLA, FILLER], library: DECK, backrow: [{ def: TOWER, lane: 1 }], field: [{ def: VANILLA, lane: 5 }] },
-        });
-        const carried = s.card(VANILLA);
-        s.play(carried, { zone: 1, row: "backrow" });
-        expect(s.card(carried).zone).toMatchObject({ z: "field", row: "backrow", lane: 1 });
+        const s = always(jungle([], false, { field: [{ def: FIGHTER, lane: 1 }, { def: VANILLA, lane: 5 }] }, `jungle-fighter-${seed}`));
+        const fighter = s.unit("p2", 1);
         s.endTurn();
-        always(s).endTurn();
         const targets = attacksBy(s, loser(s).id).map((attack) => attack.targetId);
         expect(targets).toHaveLength(1);
-        expect(targets).not.toContain(carried.id);
-        expect(s.card(carried).damage).toBe(0);
+        expect(targets).not.toContain(fighter?.id);
       }
     });
 

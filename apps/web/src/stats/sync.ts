@@ -1,4 +1,4 @@
-// Player statistics sync with the account (SPEC §9.11, R641).
+// Player statistics sync with the account (SPEC §9.11, R654).
 //
 // When an active session is present, syncs the device's tracked player statistics
 // and privacy preference to PUT /api/stats/player.

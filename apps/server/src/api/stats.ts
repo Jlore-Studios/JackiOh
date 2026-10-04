@@ -1,8 +1,8 @@
 /**
- * Public card and player statistics page API (SPEC §9.11, R641).
+ * Public card and player statistics page API (SPEC §9.11, R654).
  *
  * Exposes:
- *  - GET /api/stats/cards: public card win rates, provisional gate at 1000 live games (R641).
+ *  - GET /api/stats/cards: public card win rates, provisional gate at 1000 live games (R654).
  *  - GET /api/stats/cards/:id: card drill-down (patches, turn played, co-played cards).
  *  - GET /api/stats/player: caller's full stats (auth: "active").
  *  - PUT /api/stats/player: caller's stats upsert (auth: "active").
@@ -88,7 +88,7 @@ export function createStatsRoutes(): Route[] {
   return [
     /**
      * GET /api/stats/cards
-     * Public card win-rate data. Applies R641 publication gate:
+     * Public card win-rate data. Applies R654 publication gate:
      * - AI games pad the stats until the current patch has logged 1000 live games.
      * - At and above 1000 live games, live games only, AI games ignored.
      * - Minimum sample threshold: below 20 games, hasEnoughGames is false.
@@ -109,11 +109,11 @@ export function createStatsRoutes(): Route[] {
         patch: requestedPatch,
       });
 
-      // Filter live games (tutorial games excluded per R641)
+      // Filter live games (tutorial games excluded per R654)
       const liveRecords = patchRecords.filter((r) => r.source === "live" && (r.mode as string) !== "tutorial");
       const liveGamesCount = liveRecords.length;
 
-      // R641 publication gate: exactly 1000 live games required to clear the gate
+      // R654 publication gate: exactly 1000 live games required to clear the gate
       const cleared = liveGamesCount >= PUBLIC_STATS_MIN_LIVE_GAMES;
 
       let source: "provisional" | "live" | "dev";

@@ -21,7 +21,9 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactElement } from "react";
 
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
+import { portraitOrDefault } from "@jackioh/shared";
 
+import { PortraitPicker } from "../../emotes/PortraitPicker.tsx";
 import { closeInspect } from "../../cards/index.ts";
 import CardBrowser, { type BrowserDetail } from "./CardBrowser.tsx";
 import { encodeDeckCode } from "./deckCode.ts";
@@ -91,6 +93,8 @@ export type DeckEditorProps = {
   sort: PoolSort;
   onSort: (next: PoolSort) => void;
   onRename: (name: string) => void;
+  /** R641, issue §8: the deck's hero portrait changed; saved through the same upsert. */
+  onPortrait: (portrait: string) => void;
   onCards: (cards: readonly string[]) => void;
   onDelete: () => void;
   /** Saves now, without waiting for the debounce. */
@@ -121,7 +125,7 @@ function joinNames(names: readonly string[]): string {
 
 export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const { deck, decks, trios, catalog, collection, limits, saved, refusal } = props;
-  const { filter, onFilter, sort, onSort, onRename, onCards, onDelete, onSaveNow, onBack } = props;
+  const { filter, onFilter, sort, onSort, onRename, onPortrait, onCards, onDelete, onSaveNow, onBack } = props;
 
   const label = deckLabel(deck, limits.nameLength);
   const [compare, setCompare] = useState<Compare>(NO_COMPARE);
@@ -347,6 +351,14 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
       <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onBack}>
         ← All decks
       </button>
+      {/* Issue §8: the deck's portrait. The picker holds the whole roster and the previews;
+          picking one saves like any edit. `null` in the store reads `vanilla` (R641). */}
+      <PortraitPicker
+        portrait={portraitOrDefault(deck.portrait)}
+        onPick={(next) => {
+          onPortrait(next);
+        }}
+      />
       <label className="ws-name" htmlFor={nameId}>
         <span className="ws-field-label">Deck name</span>
         <input

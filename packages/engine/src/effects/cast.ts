@@ -19,7 +19,7 @@
 // into nothing (R452), as R28's Call to Chaos cap does.
 
 import type { Enchantment } from "@jackioh/shared";
-import { excludingDefId, query, type CatalogQueryArgs } from "../catalog";
+import { excludingDefId, pickGenerated, query, type CatalogQueryArgs } from "../catalog";
 import type { CostRule } from "../costRules";
 import { addModifier } from "../modifiers";
 import { mayCastNow } from "../randomCast";
@@ -125,7 +125,7 @@ function castOneRandom(
       if (!mayCastNow(ctx.state, ctx.controller)) return;
       // B4.1, R387: never the casting card's own definition, named by its id.
       const pool = query(excludingDefId(asked, ctx.self?.defId ?? ctx.defId));
-      const def = ctx.rng.pick(pool);
+      const def = pickGenerated(ctx.rng, pool);
       if (def === undefined) return;
       const card = newInstance(ctx.state, def.id, ctx.controller, { z: "resolving", player: ctx.controller });
       card.radiant = radiant;

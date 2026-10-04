@@ -2,7 +2,7 @@
 // others, with its tab title and canonical link, linked from the site footer beside Patch notes,
 // served by vercel.json (net/deploy-routes.test.ts reads `paths`) and listed in the sitemap. It
 // shows every catalog card, tokens included, through the deck builder's own browse pane, read-only,
-// and the page itself asks no server anything (the R641 statistics block in the detail view reads
+// and the page itself asks no server anything (the R654 statistics block in the detail view reads
 // the public card aggregates). The pool's filter and sort semantics are filters.test.ts's.
 
 import { readFileSync } from "node:fs";
@@ -261,8 +261,8 @@ describe("R630 the almanac's browse pane", () => {
   });
 });
 
-describe("R641 the almanac's card statistics block", () => {
-  it("R641 the almanac's detail view renders the compact statistics block with a link to the full stats page", async () => {
+describe("R654 the almanac's card statistics block", () => {
+  it("R654 the almanac's detail view renders the compact statistics block with a link to the full stats page", async () => {
     const unit = CARDS.find((def) => !def.token && def.set === "Core");
     if (unit === undefined) throw new Error("the catalog has no Core card");
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {

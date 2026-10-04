@@ -49,6 +49,7 @@ import type {
   CodeAttempt,
   CollectionEntry,
   CollectionGrant,
+  FrozenDeck,
   FrozenTrio,
   InviteCode,
   LastBoardEntry,
@@ -80,7 +81,7 @@ import type {
   UpsertOutcome,
 } from "../api/ports";
 import { toPublicPlayerSummary } from "../api/memory-stores";
-import { parseGameRecord, sourcesOf, type Action } from "@jackioh/shared";
+import { parseGameRecord, portraitOrDefault, sourcesOf, type Action, type PortraitId } from "@jackioh/shared";
 
 /**
  * The endings that always have a winner (`GameOverReason`, packages/shared/src/events.ts): one
@@ -168,8 +169,12 @@ function frozenTrioOf(value: unknown): FrozenTrio {
   const trio = value as { name?: unknown; decks?: unknown };
   if (!Array.isArray(trio.decks)) throw new Error("expected a frozen trio's decks array");
   const [first, second, third, ...rest] = trio.decks.map((deck: unknown) => {
-    const entry = (deck ?? {}) as { name?: unknown; cards?: unknown };
-    return { name: textOf(entry.name), cards: cardListOf(entry.cards) };
+    const entry = (deck ?? {}) as { name?: unknown; cards?: unknown; portrait?: unknown };
+    const frozen: FrozenDeck = { name: textOf(entry.name), cards: cardListOf(entry.cards) };
+    // R642: the portrait freezes with the deck (ports.ts). Absent on rows frozen before
+    // portraits existed, so absence stays absent and reads as `vanilla` downstream.
+    if (entry.portrait !== undefined) frozen.portrait = entry.portrait === null ? null : textOf(entry.portrait);
+    return frozen;
   });
   if (first === undefined || second === undefined || third === undefined || rest.length > 0) {
     throw new Error("expected a frozen trio of exactly three decks");
@@ -379,11 +384,13 @@ type MatchDbRow = {
   ended_at: Date | null;
   p1_last_board: unknown;
   p2_last_board: unknown;
+  p1_portrait: string | null;
+  p2_portrait: string | null;
 };
 
 const MATCH_COLUMNS = `id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
   catalog_version, turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
-  ceiling_at, created_at, ended_at, p1_last_board, p2_last_board`;
+  ceiling_at, created_at, ended_at, p1_last_board, p2_last_board, p1_portrait, p2_portrait`;
 
 /** R417: a stored board (`last_boards.board`, `matches.p*_last_board`), as migration 0017's CHECK admits it. */
 function lastBoardOf(value: unknown): LastBoardEntry[] {
@@ -420,6 +427,11 @@ function toMatch(row: MatchDbRow): MatchRow {
     },
     // R417: absent when both are empty, as the registry writes it.
     ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
+    // R642: absent when neither seat carried a portrait (a match from before 0019); both then
+    // read as `vanilla` wherever `MatchRow.portraits` is consumed.
+    ...(row.p1_portrait !== null || row.p2_portrait !== null
+      ? { portraits: [portraitOrDefault(row.p1_portrait), portraitOrDefault(row.p2_portrait)] as [PortraitId, PortraitId] }
+      : {}),
   };
 }
 
@@ -443,6 +455,7 @@ type TicketRow = {
   rating: number;
   mode: string;
   frozen_deck: unknown;
+  portrait: string | null;
   frozen_trio: unknown;
   catalog_version: string;
   status: string;
@@ -450,7 +463,7 @@ type TicketRow = {
   match_id: string | null;
 };
 
-const TICKET_COLUMNS = `id, profile_id, rating, mode, frozen_deck, frozen_trio, catalog_version, status,
+const TICKET_COLUMNS = `id, profile_id, rating, mode, frozen_deck, portrait, frozen_trio, catalog_version, status,
   enqueued_at, match_id`;
 
 /** `tickets.status` is queued/claimed/cancelled; the port calls the same three open/matched/cancelled. */
@@ -468,6 +481,7 @@ function toTicket(row: TicketRow): Ticket {
     rating: row.rating,
     mode: queueModeOf(row.mode),
     deck: cardListOf(row.frozen_deck),
+    portrait: row.portrait,
     trio: trioOrNull(row.frozen_trio),
     catalogVersion: row.catalog_version,
     enqueuedAt: msOf(row.enqueued_at),
@@ -513,13 +527,14 @@ type RoomRow = {
   p1_profile_id: string;
   p2_profile_id: string | null;
   p1_deck: unknown;
+  p1_portrait: string | null;
   catalog_version: string;
   created_at: Date;
   ceiling_at: Date;
 };
 
 const ROOM_COLUMNS = `id, room_code, room_mode, room_trio, p1_profile_id, p2_profile_id, p1_deck,
-  catalog_version, created_at, ceiling_at`;
+  p1_portrait, catalog_version, created_at, ceiling_at`;
 
 function toRoom(row: RoomRow): Room {
   return {
@@ -529,6 +544,8 @@ function toRoom(row: RoomRow): Room {
     // could only ever have been a Best-of-1 room. See KNOWN DIVERGENCES (rooms).
     mode: row.room_mode === null ? "bo1" : queueModeOf(row.room_mode),
     hostDeck: cardListOf(row.p1_deck),
+    // R642: the host's portrait waits in the open row beside the host's deck (migration 0019).
+    hostPortrait: row.p1_portrait,
     hostTrio: trioOrNull(row.room_trio),
     catalogVersion: row.catalog_version,
     createdAt: msOf(row.created_at),
@@ -546,12 +563,13 @@ type DeckRow = {
   profile_id: string;
   name: string;
   cards: unknown;
+  portrait: string | null;
   catalog_version: string;
   created_at: Date;
   updated_at: Date;
 };
 
-const DECK_COLUMNS = `id, profile_id, name, cards, catalog_version, created_at, updated_at`;
+const DECK_COLUMNS = `id, profile_id, name, cards, portrait, catalog_version, created_at, updated_at`;
 
 function toDeck(row: DeckRow): SavedDeck {
   return {
@@ -560,6 +578,8 @@ function toDeck(row: DeckRow): SavedDeck {
     name: row.name,
     // A jsonb array keeps the order it was written in, so this is the player's order (R250).
     cards: cardListOf(row.cards),
+    // R641: `null` is the default — `vanilla` — which a deck saved before 0019 also reads back as.
+    portrait: row.portrait,
     catalogVersion: row.catalog_version,
     createdAt: msOf(row.created_at),
     updatedAt: msOf(row.updated_at),
@@ -631,7 +651,7 @@ function toPlayerSettings(row: PlayerSettingsDbRow): PlayerSettingsRow {
   return { profileId: row.profile_id, groups: row.groups };
 }
 
-/** `public.player_stats` (migration 0019, R641): player stats and privacy flag. */
+/** `public.player_stats` (migration 0021, R654): player stats and privacy flag. */
 type PlayerStatsDbRow = {
   profile_id: string;
   stats: unknown;
@@ -1303,9 +1323,19 @@ function buildStore(session: Session): Store {
     upsert: async (deck, maxDecks) => {
       const { rows } = await session.query<{ outcome: unknown }>(
         deck.profileId,
-        `select app.upsert_deck($1::uuid, $2::uuid, $3::text, $4::jsonb, $5::text, ${ts("$6")}, $7::int)
+        `select app.upsert_deck($1::uuid, $2::uuid, $3::text, $4::jsonb, $5::text, ${ts("$6")}, $7::int,
+           $8::text)
            as outcome`,
-        [deck.profileId, deck.id, deck.name, json(deck.cards), deck.catalogVersion, deck.updatedAt, maxDecks],
+        [
+          deck.profileId,
+          deck.id,
+          deck.name,
+          json(deck.cards),
+          deck.catalogVersion,
+          deck.updatedAt,
+          maxDecks,
+          deck.portrait,
+        ],
       );
       return upsertOutcomeOf("app.upsert_deck", UPSERT_OUTCOMES, rows[0]?.outcome);
     },
@@ -1436,11 +1466,14 @@ function buildStore(session: Session): Store {
           match.finishedAt,
           json(match.lastBoards?.[0] ?? []),
           json(match.lastBoards?.[1] ?? []),
+          match.portraits?.[0] ?? null,
+          match.portraits?.[1] ?? null,
         ];
         const values = `
           $2::text, $3::text, $4::uuid, $5::uuid, $6::jsonb, $7::jsonb, $8::text,
           ${nullableTs("$9")}, ${nullableTs("$10")}, ${nullableTs("$11")}, ${nullableTs("$12")},
-          ${nullableTs("$13")}, ${ts("$14")}, ${ts("$15")}, ${nullableTs("$16")}, $17::jsonb, $18::jsonb`;
+          ${nullableTs("$13")}, ${ts("$14")}, ${ts("$15")}, ${nullableTs("$16")}, $17::jsonb, $18::jsonb,
+          $19::text, $20::text`;
 
         if (status === undefined) {
           await q(
@@ -1448,7 +1481,7 @@ function buildStore(session: Session): Store {
                id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck, catalog_version,
                turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
                grace_deadline_at, ceiling_at, created_at, ended_at, p1_last_board, p2_last_board,
-               started_at, last_seq)
+               p1_portrait, p2_portrait, started_at, last_seq)
              values ($1::uuid, ${values}, ${ts("$15")}, 0)`,
             params,
           );
@@ -1463,7 +1496,8 @@ function buildStore(session: Session): Store {
              p1_disconnected_at = ${nullableTs("$11")}, p2_disconnected_at = ${nullableTs("$12")},
              grace_deadline_at = ${nullableTs("$13")}, ceiling_at = ${ts("$14")},
              created_at = ${ts("$15")}, ended_at = ${nullableTs("$16")}, started_at = ${ts("$15")},
-             p1_last_board = $17::jsonb, p2_last_board = $18::jsonb
+             p1_last_board = $17::jsonb, p2_last_board = $18::jsonb,
+             p1_portrait = $19::text, p2_portrait = $20::text
            where id = $1::uuid`,
           params,
         );
@@ -1658,10 +1692,10 @@ function buildStore(session: Session): Store {
       const { rowCount } = await session.query(
         room.hostProfileId,
         `insert into public.matches (
-           room_code, room_mode, room_trio, status, seed, p1_profile_id, p1_deck, catalog_version,
-           ceiling_at, created_at)
+           room_code, room_mode, room_trio, status, seed, p1_profile_id, p1_deck, p1_portrait,
+           catalog_version, ceiling_at, created_at)
          values ($1::text, $2::text, $3::jsonb, 'open', '', $4::uuid, $5::jsonb, $6::text,
-                 ${ts("$7")}, ${ts("$8")})
+                 $7::text, ${ts("$8")}, ${ts("$9")})
          on conflict (room_code) where room_code is not null and status <> 'over' do nothing`,
         [
           room.code,
@@ -1669,6 +1703,7 @@ function buildStore(session: Session): Store {
           room.hostTrio === null ? null : json(room.hostTrio),
           room.hostProfileId,
           json(room.hostDeck),
+          room.hostPortrait ?? null,
           room.catalogVersion,
           room.expiresAt,
           room.createdAt,
@@ -1735,16 +1770,17 @@ function buildStore(session: Session): Store {
       await session.query(
         ticket.profileId,
         `insert into public.tickets
-           (id, profile_id, rating, mode, frozen_deck, frozen_trio, catalog_version, status,
+           (id, profile_id, rating, mode, frozen_deck, portrait, frozen_trio, catalog_version, status,
             enqueued_at, match_id)
-         values ($1::uuid, $2::uuid, $3::int, $4::text, $5::jsonb, $6::jsonb, $7::text, $8::text,
-                 ${ts("$9")}, $10::uuid)`,
+         values ($1::uuid, $2::uuid, $3::int, $4::text, $5::jsonb, $6::text, $7::jsonb, $8::text,
+                 $9::text, ${ts("$10")}, $11::uuid)`,
         [
           ticket.id,
           ticket.profileId,
           ticket.rating,
           ticket.mode,
           json(ticket.deck),
+          ticket.portrait ?? null,
           ticket.trio === null ? null : json(ticket.trio),
           ticket.catalogVersion,
           fromTicketStatus(ticket.status),
@@ -2202,7 +2238,7 @@ function buildStore(session: Session): Store {
   };
 
   // -------------------------------------------------------------------------
-  // Player statistics on the account (SPEC §9.11, R639, R641)
+  // Player statistics on the account (SPEC §9.11, R639, R654)
   // -------------------------------------------------------------------------
 
   store.playerStats = {

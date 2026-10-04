@@ -571,7 +571,7 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
   store.lastBoards = createMemoryLastBoardStore(() => tables);
   // R376: the card statistics' game records, shared with the unit-test fake like the tutorial.
   store.gameRecords = createMemoryGameRecordStore(() => tables);
-  // R641: each profile's player statistics and privacy setting.
+  // R654: each profile's player statistics and privacy setting.
   store.playerStats = createMemoryPlayerStatsStore(() => tables);
 
   // -------------------------------------------------------------------------

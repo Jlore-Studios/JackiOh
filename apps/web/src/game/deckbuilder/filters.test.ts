@@ -197,6 +197,7 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Jlockeed",
       "Book",
       "Pancake",
+      "Plague",
     ]);
     // Only the ten AI tokens carry "AI", and the pool never offers a Token.
     expect(FILTER_TAGS).not.toContain("AI");
@@ -475,7 +476,7 @@ describe("sortPool (B34)", () => {
     expect(ids).toEqual(copy);
   });
 
-  it("R641 sorts by winRate: cards above sample threshold first, unsampled cards last", () => {
+  it("R654 sorts by winRate: cards above sample threshold first, unsampled cards last", () => {
     const winRates = new Map([
       ["x-01", { winRate: 0.55, hasEnoughGames: true }],
       ["x-02", { winRate: 0.65, hasEnoughGames: true }],

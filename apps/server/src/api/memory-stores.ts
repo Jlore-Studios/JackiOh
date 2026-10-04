@@ -103,6 +103,7 @@ export function createMemoryDeckStores(
         if (existing.profileId !== deck.profileId) return "not_owner";
         existing.name = deck.name;
         existing.cards = [...deck.cards];
+        existing.portrait = deck.portrait;
         existing.catalogVersion = deck.catalogVersion;
         existing.updatedAt = deck.updatedAt;
         return "updated";
@@ -453,7 +454,7 @@ export function createMemoryGameRecordStore(
 }
 
 // ---------------------------------------------------------------------------
-// Player statistics on the account (SPEC §9.11, R639, R641)
+// Player statistics on the account (SPEC §9.11, R639, R654)
 // ---------------------------------------------------------------------------
 
 export type PlayerStatsTables = {
