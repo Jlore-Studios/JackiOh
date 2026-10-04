@@ -23,7 +23,7 @@ A Classic+ card is shown. Core cards live at the top of `src/scripts/` and `test
 | 7 | `packages/cards/scripts/validate-catalog.ts` | the set's `cards` and `rarities`, and `EXPECTED_TAG_COUNTS` for each tag the card has | `validate:catalog` |
 | 8 | `docs/radiant-audit.md` | one row `\| <index> \| <name> \| …`; the Radiant face must meet R275 (about twice the base face; doubling stats alone is not enough for a unit with text) | `radiant-standard.test.ts` |
 | 9 | `BUILD.md` | the card's must-pass row in the M9 (or M4-T4) table | none |
-| 10 | `apps/web/src/audio/voice-lines.json` | the card's lines, in catalog order | `voiceData.test.ts` |
+| 10 | `apps/web/src/audio/card-audio.json5` | the card's entry in catalog order, its name in a comment beside its id: a Unit's play and death lines, anything else's cast line, and any effects or attack hook (R651; the file's header says how) | `voice-lines.test.ts`, `voiceData.test.ts` |
 | 11 | `packages/cards/test/patches.test.ts` | its `VERSIONS` list gains the patch — the one patch list still transcribed (#63's fragments may change this) | itself |
 | 12 | `packages/cards/patches/*` and four version sites | by `patch`, [§3](#3-the-patch-and-its-order) | `patches.test.ts`, `loc.test.ts` |
 
@@ -136,6 +136,8 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   whole event window (#106), `determinize` put a Siphon Squad in a hidden slot the seat's own view rules out (#107), and a deeply nested
   fusion resumed Final Gambit's step against the wrong ingredient (#105). If a gate fails at a seed that has nothing to do with
   your card, print the failing game's state, find which card the throw or the diff names, and file it rather than editing the test.
+- **A renamed card** (a patch that changes a `name`) fails `voice-lines.test.ts` until its comment in `card-audio.json5`, the name on the
+  line of its id, says the new name (R651).
 
 ## 5. Do not read
 
@@ -157,5 +159,5 @@ board fact goes in `packages/engine/src/query.ts`, a new keyword also needs its 
 Every card needs its voice lines **rendered**: `apps/web/src/audio/voice-assets.test.ts` (B35, B36, B37, R501) expects an `.m4a` per line in
 `apps/web/public/audio/voice/` and a manifest entry. `pnpm --filter @jackioh/web gen:voice` renders them with macOS `say` and `afconvert` or
 Windows SAPI and ffmpeg, and has no Linux backend, so a card added from Linux or CI fails about twenty tests there until a person renders them.
-`node apps/web/scripts/gen-voice.mjs --check` lists what is missing. Write the `voice-lines.json` entry (the text needs no tool) and say in the
-PR that the audio is owed.
+`node apps/web/scripts/gen-voice.mjs --check` lists what is missing. Write the `card-audio.json5` entry (the text needs no tool) and say in the
+PR that the audio is owed. A hook that is only an effect renders nothing, so it is never owed.

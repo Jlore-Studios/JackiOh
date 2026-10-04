@@ -6,7 +6,8 @@
 // only when the runner STARTS the entry that animates it, so sound and motion land together.
 // Whatever the runner never starts — every entry under reduced motion, `gameOver`'s zero-length
 // entry, a queue drained at a game's end or a skip — is flushed once, condensed, when the runner
-// goes idle.
+// goes idle. A condensed burst plays at most FLUSH_MAX_SFX plain effects, one card effect and one
+// line: the most important of each (R651).
 //
 // R203: the first view, and a view for a different seat (a hotseat hand-over), voices nothing and
 // drops everything owed, so the arriving seat hears nothing its own view did not produce.
@@ -37,8 +38,8 @@ import type { GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared"
 import { newEventsSince, type AnimationEntry } from "../game/animations.ts";
 import { FLUSH_GAP_MS, FLUSH_MAX_SFX, HIDDEN_DEF_ID, PAIR_OFFSET_MS, PLAY_STACK_MAX } from "./constants.ts";
 import { cuesFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
-import type { SoundCue, SoundSink, VoiceLineTable } from "./types.ts";
-import { VOICE_LINES } from "./voiceData.ts";
+import type { CardAudioTable, SoundCue, SoundSink } from "./types.ts";
+import { CARD_AUDIO } from "./voiceData.ts";
 
 export type SoundDirector = {
   /** Feed every newest view (Game's props.view). */
@@ -93,7 +94,7 @@ function sideMana(view: PlayerView, player: PlayerId): number {
  */
 export function createSoundDirector(
   sink: SoundSink,
-  lines: VoiceLineTable = VOICE_LINES,
+  lines: CardAudioTable = CARD_AUDIO,
   card?: (defId: string) => CueCard | undefined,
   observe?: (event: GameEvent, view: PlayerView) => void,
 ): SoundDirector {
@@ -176,6 +177,7 @@ export function createSoundDirector(
 
   function send(cue: SoundCue, delayMs: number): void {
     if (cue.kind === "sfx") sink.playSfx(cue.id, cue.params, delayMs);
+    else if (cue.kind === "effect") sink.playEffect(cue.defId, cue.hook, delayMs);
     else sink.playVoice(cue.defId, cue.line, delayMs, cue.priority);
   }
 
@@ -186,14 +188,18 @@ export function createSoundDirector(
   function flush(items: readonly Owed[]): void {
     const effects: SoundCue[] = [];
     let endCue: SoundCue | null = null;
-    let line: SoundCue | null = null;
+    let line: Extract<SoundCue, { kind: "voice" }> | null = null;
+    let cardEffect: Extract<SoundCue, { kind: "effect" }> | null = null;
 
     for (const item of items) {
       voiced.add(item.event);
       for (const cue of resolve(item.event, item.view)) {
         if (cue.kind === "voice") {
           // The most important line of the burst, the first of those on a tie.
-          if (line === null || (line.kind === "voice" && cue.priority > line.priority)) line = cue;
+          if (line === null || cue.priority > line.priority) line = cue;
+        } else if (cue.kind === "effect") {
+          // R651: a card's effect is chosen as its line is: the burst's most important, the first on a tie.
+          if (cardEffect === null || cue.priority > cardEffect.priority) cardEffect = cue;
         } else if (item.event.type === "gameOver") {
           if (endCue === null) endCue = cue;
         } else {
@@ -218,7 +224,8 @@ export function createSoundDirector(
       send(cue, j * FLUSH_GAP_MS);
     });
 
-    // One voice at a time: the burst's most important line, at its own delay.
+    // One card effect and one voice: the burst's most important of each, at its own delay.
+    if (cardEffect !== null) send(cardEffect, cardEffect.delayMs);
     if (line !== null) send(line, line.delayMs);
   }
 

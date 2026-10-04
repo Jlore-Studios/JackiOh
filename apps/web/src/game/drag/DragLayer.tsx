@@ -38,6 +38,11 @@ export type DragLayerProps = {
   interaction: Interaction;
   onInteraction: (next: Interaction) => void;
   onAction: (body: ActionBody) => void;
+  /**
+   * R651: a press has just become a drag, once per lift. `Game` plays a lifted attacker's `attack`
+   * hook from it; the drop, a cancel and the attack itself report nothing.
+   */
+  onLift?: (plan: DragPlan) => void;
 };
 
 type Point = { x: number; y: number };
@@ -291,7 +296,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       const travelled = Math.hypot(event.clientX - press.start.x, event.clientY - press.start.y);
       if (travelled < DRAG_THRESHOLD_PX) return;
 
-      const { view, legal, interaction, onInteraction } = latest.current;
+      const { view, legal, interaction, onInteraction, onLift } = latest.current;
       const plan = planDrag(view, legal, interaction, press.source);
       const element = press.element;
       const start = press.start;
@@ -300,6 +305,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       if (plan === null) return;
 
       onInteraction(plan.lifted);
+      onLift?.(plan);
       root.setAttribute("data-dragging", plan.kind);
       try {
         element.setPointerCapture(event.pointerId);

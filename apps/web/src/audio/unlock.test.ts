@@ -9,13 +9,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAudioEngine } from "./engine.ts";
 import { resetAudioSettingsForTests } from "./settings.ts";
 import { FakeClock, FakeFetch, fakeContextFactory, fakeSpeech, type FakeAudio, type FakeAudioOptions, type FakeContextFactory } from "./test/fakeAudio.ts";
-import type { AudioEngine, AudioState, VoiceLineTable, VoiceManifest } from "./types.ts";
+import type { AudioEngine, AudioState, CardAudioTable, VoiceManifest } from "./types.ts";
 import { UNLOCK_EVENTS, installAudioUnlock } from "./unlock.ts";
 
-const LINES: VoiceLineTable = {
-  version: 1,
-  personas: { hustler: { say: "Rocko (English (US))", rate: 215, pbas: 50, pmod: 45, web: { pitch: 1.1, rate: 1.15 } } },
-  cards: { "core-004": { kind: "unit", persona: "hustler", play: "Double or nothing, baby!", death: "House always wins." } },
+const LINES: CardAudioTable = {
+  voices: { hustler: { say: "Rocko (English (US))", rate: 215, pbas: 50, pmod: 45, web: { pitch: 1.1, rate: 1.15 } } },
+  effects: {},
+  cards: {
+    "core-004": {
+      kind: "unit",
+      play: { voice: "hustler", text: "Double or nothing, baby!" },
+      death: { voice: "hustler", text: "House always wins." },
+    },
+  },
 };
 const MANIFEST: VoiceManifest = { version: 1, format: "m4af aac@22050 mono 32000", files: {} };
 

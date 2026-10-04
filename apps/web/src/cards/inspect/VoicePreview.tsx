@@ -1,16 +1,18 @@
 // A card's voice lines, previewed from its detail view (SPEC §10.10, R630): a mic dropdown, one
 // option per line the card has, playing through the audio engine like the settings panel's own
-// preview does. Presentation only (CLAUDE.md rule 7): it reads the public voice table through
-// `entryFor`, which is null for the hidden sentinel and for a fused transient definition, so R203
-// holds, and it changes none of R204's in-game speech moments. Muted or voice-off refusal lives
-// inside the engine (`playVoice` returns false), so there are no settings checks here.
+// preview does. Presentation only (CLAUDE.md rule 7): it reads the public card sound table through
+// `lineFor`, which is null for the hidden sentinel and for a fused transient definition, so R203
+// holds, and it changes none of R204's in-game speech moments. It lists the hooks that have a line,
+// in CARD_HOOKS's order (R651); a hook with only an effect has nothing to preview here. Muted or
+// voice-off refusal lives inside the engine (`playVoice` returns false), so there are no settings
+// checks here.
 
 import type { ChangeEvent, ReactElement } from "react";
 
-import { VOICE_PRIORITY } from "../../audio/constants.ts";
+import { CARD_HOOK_NAMES, VOICE_PRIORITY } from "../../audio/constants.ts";
 import { getAudioEngine } from "../../audio/engine.ts";
 import type { VoiceLineKind } from "../../audio/types.ts";
-import { entryFor, VOICE_LINES } from "../../audio/voiceData.ts";
+import { CARD_AUDIO, lineFor } from "../../audio/voiceData.ts";
 
 function MicIcon(): ReactElement {
   return (
@@ -33,19 +35,16 @@ function MicIcon(): ReactElement {
   );
 }
 
-const UNIT_LINES: readonly VoiceLineKind[] = ["play", "death"];
-const CAST_LINES: readonly VoiceLineKind[] = ["cast"];
-
 const LINE_LABELS: Record<VoiceLineKind, string> = {
   play: "Play",
+  attack: "Attack",
   death: "Death",
   cast: "Cast",
 };
 
 export function VoicePreview({ defId }: { defId: string }): ReactElement | null {
-  const entry = entryFor(VOICE_LINES, defId);
-  if (entry === null) return null;
-  const lines = entry.kind === "unit" ? UNIT_LINES : CAST_LINES;
+  const lines = CARD_HOOK_NAMES.filter((hook) => lineFor(CARD_AUDIO, defId, hook) !== null);
+  if (lines.length === 0) return null;
   const onChange = (event: ChangeEvent<HTMLSelectElement>): void => {
     const line = event.currentTarget.value;
     if (line === "") return;

@@ -8,6 +8,7 @@ import type { ActionBody, GameEvent, PlayerId, PlayerView } from "@jackioh/share
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  CARD_EFFECT_DELAY_MS,
   DEATH_VOICE_DELAY_MS,
   FLUSH_GAP_MS,
   FLUSH_MAX_SFX,
@@ -21,7 +22,7 @@ import { createAudioEngine } from "./engine.ts";
 import { resetAudioSettingsForTests, writeAudioSettings } from "./settings.ts";
 import { FakeClock, FakeFetch, fakeContextFactory, fakeSpeech, settle } from "./test/fakeAudio.ts";
 import { answerPrompts, devDeck, handDefId, playOf, realGame, type RealGame } from "./test/realGame.ts";
-import type { AudioEngine, SfxId, SfxParams, SoundSink, VoiceLineKind, VoiceLineTable } from "./types.ts";
+import type { AudioEngine, CardAudioTable, CardHook, SfxId, SfxParams, SoundSink, VoiceLineKind } from "./types.ts";
 import { newEventsSince, planEntries, sameOccurrence, type AnimationEntry } from "../game/animations.ts";
 import { baseView, emptySide, unit, withEvents } from "../test/fixtures.ts";
 
@@ -29,23 +30,24 @@ import { baseView, emptySide, unit, withEvents } from "../test/fixtures.ts";
  * Fixtures
  * --------------------------------------------------------------------------------------------- */
 
-const LINES: VoiceLineTable = {
-  version: 1,
-  personas: {
+const LINES: CardAudioTable = {
+  voices: {
     hustler: { say: "Rocko (English (US))", rate: 215, pbas: 50, pmod: 45, web: { pitch: 1, rate: 1.15 } },
     plain: { say: "Eddy (English (US))", rate: 170, pbas: 40, pmod: 0, web: { pitch: 1, rate: 0.9 } },
     guard: { say: "Ralph", rate: 175, pbas: 38, pmod: 20, web: { pitch: 0.8, rate: 0.95 } },
   },
+  effects: {},
   cards: {
-    "core-001": { kind: "unit", persona: "guard", play: "Stand behind me. Way behind.", death: "Defense... offended." },
-    "core-004": { kind: "unit", persona: "hustler", play: "Double or nothing, baby!", death: "House always wins." },
-    "core-008": { kind: "unit", persona: "plain", play: "Hello. I am very normal.", death: "Plain. Simple. Gone." },
+    "core-001": { kind: "unit", play: { voice: "guard", text: "Stand behind me. Way behind." }, death: { voice: "guard", text: "Defense... offended." } },
+    "core-004": { kind: "unit", play: { voice: "hustler", text: "Double or nothing, baby!" }, death: { voice: "hustler", text: "House always wins." } },
+    "core-008": { kind: "unit", play: { voice: "plain", text: "Hello. I am very normal." }, death: { voice: "plain", text: "Plain. Simple. Gone." } },
   },
 };
 
 type Sent =
   | { kind: "sfx"; id: SfxId; params: SfxParams | undefined; delayMs: number }
-  | { kind: "voice"; defId: string; line: VoiceLineKind; delayMs: number; priority?: number };
+  | { kind: "voice"; defId: string; line: VoiceLineKind; delayMs: number; priority?: number }
+  | { kind: "effect"; defId: string; hook: CardHook; delayMs: number };
 
 type Recorder = SoundSink & { sent: Sent[] };
 
@@ -65,6 +67,10 @@ function recorder(): Recorder {
       );
       return true;
     },
+    playEffect(defId, hook, delayMs) {
+      sent.push({ kind: "effect", defId, hook, delayMs: delayMs ?? 0 });
+      return true;
+    },
   };
 }
 
@@ -73,9 +79,13 @@ function rig(): { sink: Recorder; director: SoundDirector } {
   return { sink, director: createSoundDirector(sink, LINES) };
 }
 
-/** Every cue sent, as "sfx:id@delay" / "voice:defId/line@delay", in the order sent. */
+/** Every cue sent, as "sfx:id@delay" / "voice:defId/line@delay" / "effect:defId/hook@delay", in the order sent. */
 function sent(sink: Recorder): string[] {
-  return sink.sent.map((s) => (s.kind === "sfx" ? `sfx:${s.id}@${String(s.delayMs)}` : `voice:${s.defId}/${s.line}@${String(s.delayMs)}`));
+  return sink.sent.map((s) => {
+    if (s.kind === "sfx") return `sfx:${s.id}@${String(s.delayMs)}`;
+    if (s.kind === "effect") return `effect:${s.defId}/${s.hook}@${String(s.delayMs)}`;
+    return `voice:${s.defId}/${s.line}@${String(s.delayMs)}`;
+  });
 }
 
 const sfxSent = (sink: Recorder) => sink.sent.filter((s): s is Extract<Sent, { kind: "sfx" }> => s.kind === "sfx");
@@ -302,9 +312,9 @@ describe("B25 events the runner never started are flushed once, condensed, by on
 
   it("B25 a flushed sfx ignores its own delay and takes its slot in the gap sequence", () => {
     const sink = recorder();
-    const lines: VoiceLineTable = {
+    const lines: CardAudioTable = {
       ...LINES,
-      cards: { ...LINES.cards, "core-005": { kind: "spell", persona: "plain", cast: "Hoarding is self care." } },
+      cards: { ...LINES.cards, "core-005": { kind: "spell", cast: { voice: "plain", text: "Hoarding is self care." } } },
     };
     const director = createSoundDirector(sink, lines);
     begin(director, [drawn("c1"), played("core-005", "c2")]);
@@ -848,5 +858,79 @@ describe("B47 a trap that answers a play is heard over that play's line", () => 
     expect(sources, "two lines started").toHaveLength(2);
     expect(sources[0]?.stopTime, "Timmy's line was stopped early").not.toBeNull();
     expect(sources[1]?.stopTime, "Sheepish's line played out").toBeNull();
+  });
+});
+
+/* --------------------------------------------------------------------------------------------- *
+ * R651: card effects ride the same path as the lines
+ * --------------------------------------------------------------------------------------------- */
+
+describe("R651 a card's effect is sent on its hook's moment, through the director", () => {
+  /** #66 The Rock: an effect and a line on its play, only an effect on its death; #5 a cast that is only an effect. */
+  const FX_LINES: CardAudioTable = {
+    voices: LINES.voices,
+    effects: {
+      thud: { sfx: "impact", pitch: 0.6, gain: 1 },
+      crumble: { sfx: "death", pitch: 1.3, gain: 0.7 },
+      zap: { sfx: "castOnDraw", pitch: 1.3, gain: 1 },
+    },
+    cards: {
+      ...LINES.cards,
+      "core-066": { kind: "unit", play: { voice: "guard", text: "Rock solid.", effect: "thud" }, death: { effect: "crumble" } },
+      "core-005": { kind: "spell", cast: { effect: "zap" } },
+    },
+  };
+
+  function fxRig(): { sink: Recorder; director: SoundDirector } {
+    const sink = recorder();
+    return { sink, director: createSoundDirector(sink, FX_LINES) };
+  }
+
+  it("R651 the runner starting a play sends the effect at the line's moment, and the line CARD_EFFECT_DELAY_MS after it", () => {
+    const { sink, director } = fxRig();
+    const view = begin(director, [played("core-066", "c1"), summoned("core-066", "c1")]);
+    director.onEntryStart(must(entriesOf(view, view.events)[0], "the pair"));
+
+    expect([...sent(sink)].sort()).toEqual(
+      [
+        "sfx:play@0",
+        `effect:core-066/play@${String(VOICE_DELAY_MS)}`,
+        `voice:core-066/play@${String(VOICE_DELAY_MS + CARD_EFFECT_DELAY_MS)}`,
+        `sfx:summon@${String(PAIR_OFFSET_MS)}`,
+      ].sort(),
+    );
+  });
+
+  it("R651 a hook that is only an effect sends the effect and no line", () => {
+    const { sink, director } = fxRig();
+    const view = begin(director, [destroyed("core-066", "c1"), played("core-005", "c2")]);
+    for (const entry of entriesOf(view, view.events)) director.onEntryStart(entry);
+
+    const cards = sent(sink).filter((cue) => !cue.startsWith("sfx:"));
+    expect(cards).toEqual([`effect:core-066/death@${String(DEATH_VOICE_DELAY_MS)}`, `effect:core-005/cast@${String(VOICE_DELAY_MS)}`]);
+  });
+
+  it("R651 a flushed burst sends one card effect, its most important, beside its one line", () => {
+    const { sink, director } = fxRig();
+    begin(director, [played("core-066", "c1"), summoned("core-066", "c1"), destroyed("core-066", "c3", "p2"), played("core-005", "c2")]);
+    director.onIdle();
+
+    const effects = sink.sent.filter((cue) => cue.kind === "effect");
+    // The death answers what just happened (VOICE_PRIORITY.react), so it outranks the play and the cast.
+    expect(effects).toEqual([{ kind: "effect", defId: "core-066", hook: "death", delayMs: DEATH_VOICE_DELAY_MS }]);
+    expect(linesSent(sink)).toEqual([`core-066/play!${String(VOICE_PRIORITY.play)}`]);
+  });
+
+  it("R651 the sentinel sends no effect, even from a table that has one under that name", () => {
+    const sink = recorder();
+    const poisoned: CardAudioTable = {
+      ...FX_LINES,
+      cards: { ...FX_LINES.cards, [HIDDEN_DEF_ID]: { kind: "unit", play: { effect: "thud" }, death: { effect: "crumble" } } },
+    };
+    const director = createSoundDirector(sink, poisoned);
+    const view = begin(director, [played(HIDDEN_DEF_ID, HIDDEN_DEF_ID, "p2"), destroyed(HIDDEN_DEF_ID, "c9", "p2")]);
+    for (const entry of entriesOf(view, view.events)) director.onEntryStart(entry);
+
+    expect(sink.sent.filter((cue) => cue.kind !== "sfx")).toEqual([]);
   });
 });

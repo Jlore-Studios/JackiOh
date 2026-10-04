@@ -12,6 +12,7 @@ import { CATALOG } from "@jackioh/cards";
 
 import {
   BLOOD_BEAN_DEF_ID,
+  CARD_EFFECT_DELAY_MS,
   CHAOS_REVEAL_MAX,
   DEATH_VOICE_DELAY_MS,
   GOLD_BURST_DELAY_MS,
@@ -23,7 +24,7 @@ import {
 } from "./constants.ts";
 import { SOUND_CUES, cuesFor, timbreFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
 import { SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
-import type { SfxId, SoundCue, VoiceLineTable } from "./types.ts";
+import type { SfxId, SoundCue, CardAudioTable } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
 import { themeFor } from "../cards/art/themes.ts";
 import { lookupFromDefs } from "../game/catalog.ts";
@@ -33,22 +34,22 @@ import { baseView, emptySide, unit } from "../test/fixtures.ts";
  * Fixtures
  * --------------------------------------------------------------------------------------------- */
 
-const LINES: VoiceLineTable = {
-  version: 1,
-  personas: {
+const LINES: CardAudioTable = {
+  voices: {
     hustler: { say: "Rocko (English (US))", rate: 215, pbas: 50, pmod: 45, web: { pitch: 1, rate: 1.15 } },
     narrator: { say: "Eddy (English (UK))", rate: 185, pbas: 45, pmod: 35, web: { pitch: 1, rate: 1 } },
     crone: { say: "Grandma (English (US))", rate: 170, pbas: 50, pmod: 40, web: { pitch: 1.1, rate: 0.9 } },
     snob: { say: "Albert", rate: 170, pbas: 40, pmod: 30, web: { pitch: 0.8, rate: 0.9 } },
     sheep: { say: "Bahh", rate: 180, pbas: 55, pmod: 40, web: { pitch: 1.5, rate: 1 } },
   },
+  effects: {},
   cards: {
-    "core-004": { kind: "unit", persona: "hustler", play: "Double or nothing, baby!", death: "House always wins." },
-    "core-005": { kind: "spell", persona: "narrator", cast: "Hoarding is self care." },
-    "core-006": { kind: "spell", persona: "crone", cast: "Drink up, dearie." },
-    "core-018": { kind: "trap", persona: "crone", cast: "Waste not, want toast." },
-    "core-096": { kind: "trap", persona: "snob", cast: "Checkmate, puppet." },
-    "core-t-sheep": { kind: "unit", persona: "sheep", play: "Baa?", death: "Baa..." },
+    "core-004": { kind: "unit", play: { voice: "hustler", text: "Double or nothing, baby!" }, death: { voice: "hustler", text: "House always wins." } },
+    "core-005": { kind: "spell", cast: { voice: "narrator", text: "Hoarding is self care." } },
+    "core-006": { kind: "spell", cast: { voice: "crone", text: "Drink up, dearie." } },
+    "core-018": { kind: "trap", cast: { voice: "crone", text: "Waste not, want toast." } },
+    "core-096": { kind: "trap", cast: { voice: "snob", text: "Checkmate, puppet." } },
+    "core-t-sheep": { kind: "unit", play: { voice: "sheep", text: "Baa?" }, death: { voice: "sheep", text: "Baa..." } },
   },
 };
 
@@ -65,9 +66,11 @@ function ctx(over: Partial<CueContext> = {}): CueContext {
   return { view: baseView(), lines: LINES, manaBefore: () => 0, ...over };
 }
 
-/** A cue as one comparable string: "sfx:play@0", "voice:core-004/play@150". */
+/** A cue as one comparable string: "sfx:play@0", "voice:core-004/play@150", "effect:core-066/play@150". */
 function said(cue: SoundCue): string {
-  return cue.kind === "sfx" ? `sfx:${cue.id}@${String(cue.delayMs)}` : `voice:${cue.defId}/${cue.line}@${String(cue.delayMs)}`;
+  if (cue.kind === "sfx") return `sfx:${cue.id}@${String(cue.delayMs)}`;
+  if (cue.kind === "effect") return `effect:${cue.defId}/${cue.hook}@${String(cue.delayMs)}`;
+  return `voice:${cue.defId}/${cue.line}@${String(cue.delayMs)}`;
 }
 
 /** Every voice cue's line and priority, e.g. "core-004/death!2". */
@@ -94,6 +97,7 @@ function onlySfx(event: GameEvent, context: CueContext = ctx()): Extract<SoundCu
 
 const sfx = (id: SfxId, delayMs = 0): string => `sfx:${id}@${String(delayMs)}`;
 const voice = (defId: string, line: string, delayMs: number): string => `voice:${defId}/${line}@${String(delayMs)}`;
+const effect = (defId: string, hook: string, delayMs: number): string => `effect:${defId}/${hook}@${String(delayMs)}`;
 
 const played = (defId: string, player: PlayerId = "p1", instanceId = "c1"): GameEvent => ({
   type: "cardPlayed",
@@ -448,7 +452,7 @@ describe("R204: which moments speak", () => {
   });
 
   it("R204 (B18) with an empty voice table nothing speaks, and a play still whooshes", () => {
-    const empty: VoiceLineTable = { version: 1, personas: {}, cards: {} };
+    const empty: CardAudioTable = { voices: {}, effects: {}, cards: {} };
     expect(shape(played(UNIT), ctx({ lines: empty }))).toEqual([sfx("play")]);
     expect(shape(played(SPELL), ctx({ lines: empty }))).toEqual([sfx("play")]);
     expect(shape(destroyed(UNIT), ctx({ lines: empty }))).toEqual([sfx("death")]);
@@ -554,9 +558,9 @@ describe("R203: audio reveals no more than the screen", () => {
   });
 
   it("R203 (B20) the sentinel never speaks, even from a table that has an entry under that name", () => {
-    const poisoned: VoiceLineTable = {
+    const poisoned: CardAudioTable = {
       ...LINES,
-      cards: { ...LINES.cards, [HIDDEN_DEF_ID]: { kind: "unit", persona: "hustler", play: "Guess who.", death: "Guess who." } },
+      cards: { ...LINES.cards, [HIDDEN_DEF_ID]: { kind: "unit", play: { voice: "hustler", text: "Guess who." }, death: { voice: "hustler", text: "Guess who." } } },
     };
     const context = ctx({ lines: poisoned });
     for (const event of [played(HIDDEN_DEF_ID, "p2", HIDDEN_DEF_ID), destroyed(HIDDEN_DEF_ID, "p2", HIDDEN_DEF_ID), trapFired(HIDDEN_DEF_ID, "p2")]) {
@@ -850,9 +854,9 @@ describe("the catalog colours summons and spells, never what the viewer cannot n
 const LOOKUP = lookupFromDefs(CATALOG);
 const realCard = (defId: string): CueCard | undefined => cueCard(LOOKUP, defId);
 /** The inline voice table, with the Book spell's entry: a spell's shimmer rides its table kind. */
-const REAL_LINES: VoiceLineTable = {
+const REAL_LINES: CardAudioTable = {
   ...LINES,
-  cards: { ...LINES.cards, "classic-016": { kind: "spell", persona: "narrator", cast: "Hot off the press." } },
+  cards: { ...LINES.cards, "classic-016": { kind: "spell", cast: { voice: "narrator", text: "Hot off the press." } } },
 };
 const withRealCatalog = (over: Partial<CueContext> = {}): CueContext => ctx({ card: realCard, lines: REAL_LINES, ...over });
 const BOOK_SPELL = "classic-016"; // Book of Flame
@@ -1076,5 +1080,89 @@ describe("R506 patch v0.2.0's moments sound the way they went", () => {
     const cues = cuesFor(SAMPLES.animated, ctx({ unitNow: () => unit, card: () => ({ type: "Field Trap", tags: ["Human"] }) }));
     expect(cues).toEqual([{ kind: "sfx", id: "summon", params: { amount: 8 }, delayMs: 0 }]);
     expect(cuesFor(SAMPLES.animated, ctx())).toEqual([{ kind: "sfx", id: "summon", delayMs: 0 }]);
+  });
+});
+
+/* --------------------------------------------------------------------------------------------- *
+ * R651: a hook's effect plays at the moment its line would speak
+ * --------------------------------------------------------------------------------------------- */
+
+describe("R651 a card's hook may carry an effect beside or instead of its line", () => {
+  /** The Rock (#66) with an effect and a line on its play and only an effect on its death; #5, #18 and #96 likewise. */
+  const FX: CardAudioTable = {
+    voices: LINES.voices,
+    effects: {
+      thud: { sfx: "impact", pitch: 0.6, gain: 1 },
+      crumble: { sfx: "death", pitch: 1.3, gain: 0.7 },
+      zap: { sfx: "castOnDraw", pitch: 1.3, gain: 1 },
+      gong: { sfx: "entrance", pitch: 0.7, gain: 0.6 },
+      rumble: { sfx: "death", pitch: 0.5, gain: 0.8 },
+    },
+    cards: {
+      ...LINES.cards,
+      "core-066": {
+        kind: "unit",
+        play: { voice: "hustler", text: "Rock solid.", effect: "thud" },
+        attack: { effect: "rumble" },
+        death: { effect: "crumble" },
+      },
+      [SPELL]: { kind: "spell", cast: { voice: "narrator", text: "Hoarding is self care.", effect: "zap" } },
+      [FIELD_SPELL]: { kind: "spell", cast: { effect: "zap" } },
+      [TRAP]: { kind: "trap", cast: { voice: "snob", text: "Checkmate, puppet.", effect: "gong" } },
+    },
+  };
+  const ROCK = "core-066";
+  const fx = (over: Partial<CueContext> = {}): CueContext => ctx({ lines: FX, ...over });
+  const summonedUnit = (defId: string): GameEvent => ({ type: "summoned", player: "p2", instanceId: "t1", defId, row: "units", lane: 1 });
+
+  it("R651 a unit's play starts its effect at the line's moment and its line CARD_EFFECT_DELAY_MS later", () => {
+    expect(shape(played(ROCK), fx())).toEqual(
+      [sfx("play"), effect(ROCK, "play", VOICE_DELAY_MS), voice(ROCK, "play", VOICE_DELAY_MS + CARD_EFFECT_DELAY_MS)].sort(),
+    );
+    // Both carry the play's priority, so a flush ranks them alike.
+    const cues = cuesFor(played(ROCK), fx()).filter((c) => c.kind !== "sfx");
+    expect(cues.map((c) => c.priority)).toEqual([VOICE_PRIORITY.play, VOICE_PRIORITY.play]);
+  });
+
+  it("R651 a unit an effect summons plays its play effect at the lowest priority, as its line would", () => {
+    const cues = cuesFor(summonedUnit(ROCK), fx()).filter((c) => c.kind === "effect");
+    expect(cues).toEqual([{ kind: "effect", defId: ROCK, hook: "play", delayMs: VOICE_DELAY_MS, priority: VOICE_PRIORITY.summon }]);
+  });
+
+  it("R651 a death hook that is only an effect plays the effect and speaks nothing", () => {
+    expect(shape(destroyed(ROCK), fx())).toEqual([sfx("death"), effect(ROCK, "death", DEATH_VOICE_DELAY_MS)].sort());
+    expect(voices(destroyed(ROCK), fx())).toEqual([]);
+  });
+
+  it("R651 a spell's cast and a firing trap's cast carry their effects; a Field Spell's may be an effect alone", () => {
+    expect(shape(played(SPELL), fx())).toContain(effect(SPELL, "cast", VOICE_DELAY_MS));
+    expect(shape(played(SPELL), fx())).toContain(voice(SPELL, "cast", VOICE_DELAY_MS + CARD_EFFECT_DELAY_MS));
+    expect(shape(played(FIELD_SPELL), fx()).filter((c) => !c.startsWith("sfx:"))).toEqual([effect(FIELD_SPELL, "cast", VOICE_DELAY_MS)]);
+    expect(shape(trapFired(TRAP), fx())).toEqual(
+      [sfx("trapSting"), effect(TRAP, "cast", VOICE_DELAY_MS), voice(TRAP, "cast", VOICE_DELAY_MS + CARD_EFFECT_DELAY_MS)].sort(),
+    );
+    const trapCues = cuesFor(trapFired(TRAP), fx()).filter((c) => c.kind === "effect");
+    expect(trapCues.map((c) => c.priority)).toEqual([VOICE_PRIORITY.react]);
+  });
+
+  it("R651 (R203) a trap's set plays no effect: its own seat hears the set, the other the plain whoosh", () => {
+    expect(shape(played(TRAP), fx())).toEqual([sfx("trapSet")]);
+    expect(shape(played(HIDDEN_DEF_ID, "p2", HIDDEN_DEF_ID), fx())).toEqual([sfx("play")]);
+  });
+
+  it("R651 (R203) the sentinel plays no effect, even from a table that has one under that name", () => {
+    const poisoned: CardAudioTable = {
+      ...FX,
+      cards: { ...FX.cards, [HIDDEN_DEF_ID]: { kind: "unit", play: { effect: "thud" }, death: { effect: "crumble" } } },
+    };
+    const context = ctx({ lines: poisoned });
+    for (const event of [played(HIDDEN_DEF_ID, "p2", HIDDEN_DEF_ID), destroyed(HIDDEN_DEF_ID, "p2", HIDDEN_DEF_ID), trapFired(HIDDEN_DEF_ID, "p2")]) {
+      expect(cuesFor(event, context).filter((c) => c.kind === "effect"), event.type).toEqual([]);
+    }
+  });
+
+  it("R651 the attack hook is no event's: an attack declared plays the plain attack sound alone", () => {
+    const declared: GameEvent = { type: "attackDeclared", attackerId: "u1", targetId: "u6", forced: false };
+    expect(shape(declared, fx())).toEqual([sfx("attack")]);
   });
 });

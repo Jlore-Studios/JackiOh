@@ -30,7 +30,7 @@
 //        Chrome from the committed .m4a files with their persona trims.
 //
 // B15 and B16 measure a recipe alone, as described above. B57 measures what a player hears, so it
-// also imports mix.ts, the default settings and voice-lines.json (for the persona trims).
+// also imports mix.ts, the default settings and voiceData.ts's card table (for the voices' trims).
 //
 // Run it with:
 //   E2E_COMPONENT_PORT=5282 pnpm --dir e2e exec cypress run --component --browser chrome \
@@ -39,7 +39,7 @@
 import { buildMix } from "../../../apps/web/src/audio/mix.ts";
 import { DEFAULT_AUDIO_SETTINGS } from "../../../apps/web/src/audio/settings.ts";
 import { SFX, SFX_IDS, SFX_TIMBRES, type SfxRecipe } from "../../../apps/web/src/audio/sfx.ts";
-import voiceLines from "../../../apps/web/src/audio/voice-lines.json";
+import { CARD_AUDIO, lineFor } from "../../../apps/web/src/audio/voiceData.ts";
 
 type SfxId = (typeof SFX_IDS)[number];
 type SfxParams = Parameters<SfxRecipe>[3];
@@ -303,10 +303,9 @@ async function renderMix(cues: readonly Cue[], lines: readonly { buffer: AudioBu
 }
 
 function personaGain(key: string): number {
-  const defId = key.slice(0, key.lastIndexOf("-"));
-  const table = voiceLines as unknown as { personas: Record<string, { gain?: number }>; cards: Record<string, { persona: string }> };
-  const persona = table.cards[defId]?.persona ?? "";
-  return table.personas[persona]?.gain ?? 1;
+  const at = key.lastIndexOf("-");
+  const line = key.slice(at + 1) as Parameters<typeof lineFor>[2];
+  return lineFor(CARD_AUDIO, key.slice(0, at), line)?.persona.gain ?? 1;
 }
 
 async function decode(b64: string): Promise<AudioBuffer> {

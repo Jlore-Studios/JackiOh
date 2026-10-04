@@ -3,6 +3,7 @@
 
 export { useGameAudio } from "./useGameAudio.ts";
 export { useVoiceSpeaking } from "./useVoiceSpeaking.ts";
+export { usePickupSound } from "./usePickupSound.ts";
 export { useTurnClockAlarm } from "./useTurnClockAlarm.ts";
 export { default as AudioToggle } from "./AudioToggle.tsx";
 export { default as AudioControls } from "./AudioControls.tsx";

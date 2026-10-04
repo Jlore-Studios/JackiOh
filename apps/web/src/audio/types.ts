@@ -1,6 +1,8 @@
 // Shared audio types (docs/polish/2-sound.md, Surface). Every audio module and test reads these, so
 // they are a cross-slice boundary: do not rename or reshape them.
 
+import type { CARD_HOOKS } from "./constants.ts";
+
 export type SfxId =
   | "draw" | "play" | "summon" | "attack" | "impact" | "shieldShatter" | "heal" | "buff" | "debuff"
   | "death" | "burn" | "trapSet" | "trapSting" | "spell" | "mana" | "turnStart" | "victory"
@@ -41,11 +43,16 @@ export type SfxParams = {
   release?: boolean;
 };
 
-export type VoiceLineKind = "play" | "death" | "cast";
+/** A card's sound family in `card-audio.json5`, from its catalog type: which hooks it may carry. */
+export type CardKind = "unit" | "spell" | "trap";
+/** R651: when a card's sounds play (constants.ts CARD_HOOKS, the one list of them). */
+export type CardHook = keyof typeof CARD_HOOKS;
+/** A voice line is a hook's line, so its kinds are the hooks. */
+export type VoiceLineKind = CardHook;
 /** "<defId>-<line>", e.g. "core-004-play", "core-051-1-cast". Parse from the END: defIds contain "-". */
 export type VoiceKey = `${string}-${VoiceLineKind}`;
 
-/** What every persona carries, whichever synthesizer rendered its files. */
+/** What every voice (once called a persona) carries, whichever synthesizer rendered its files. */
 type PersonaCommon = {
   /** For the speechSynthesis fallback: SpeechSynthesisUtterance pitch (0–2) and rate (0.1–10). */
   web: { pitch: number; rate: number };
@@ -66,10 +73,7 @@ export type SayPersona = PersonaCommon & {
   pmod: number;
 };
 
-/**
- * R501: a persona rendered by Windows SAPI and shaped by ffmpeg (gen-voice.mjs's second backend).
- * Its lines take no per-card overrides.
- */
+/** R501: a persona rendered by Windows SAPI and shaped by ffmpeg (gen-voice.mjs's second backend). */
 export type SapiPersona = PersonaCommon & {
   backend: "sapi";
   /** An installed SAPI voice name, e.g. "Microsoft Zira Desktop". */
@@ -84,16 +88,28 @@ export type SapiPersona = PersonaCommon & {
 
 export type Persona = SayPersona | SapiPersona;
 
-type Overrides = { rate?: number; pbas?: number; pmod?: number };
-export type VoiceLineEntry =
-  | ({ kind: "unit"; persona: string; play: string; death: string } & Overrides)
-  | ({ kind: "spell" | "trap"; persona: string; cast: string } & Overrides);
+/**
+ * R651: a sound effect in the effects bank: one of the procedural recipes, shifted by `pitch` (a
+ * frequency ratio, 1 as the recipe is written), trimmed by `gain` and given the recipe's own params.
+ */
+export type CardEffect = { sfx: SfxId; pitch: number; gain: number; params?: SfxParams };
 
-export type VoiceLineTable = {
-  version: 1;
-  personas: Record<string, Persona>;
+/** R651: one hook's sounds, as the file writes them: a voice line, an effect, or both (never neither). */
+export type HookAssignment =
+  | { voice: string; text: string; effect?: string }
+  | { effect: string; voice?: undefined; text?: undefined };
+
+/** A card's hooks, with the kind its catalog type gives it (the file never states it). */
+export type CardAudioEntry = { kind: CardKind } & { [H in CardHook]?: HookAssignment };
+
+/** `card-audio.json5` as `voiceData.ts` parses it (R651). */
+export type CardAudioTable = {
+  /** The voices bank: what each voice's lines are rendered and spoken with. */
+  voices: Record<string, Persona>;
+  /** The effects bank, by the name a hook gives. */
+  effects: Record<string, CardEffect>;
   /** Keyed by catalog id: exactly the ids of packages/cards/catalog.json, tokens included. */
-  cards: Record<string, VoiceLineEntry>;
+  cards: Record<string, CardAudioEntry>;
 };
 
 export type VoiceManifest = {
@@ -112,7 +128,9 @@ export type VoicePriority = number;
 
 export type SoundCue =
   | { kind: "sfx"; id: SfxId; params?: SfxParams; delayMs: number }
-  | { kind: "voice"; defId: string; line: VoiceLineKind; delayMs: number; priority: VoicePriority };
+  | { kind: "voice"; defId: string; line: VoiceLineKind; delayMs: number; priority: VoicePriority }
+  /** R651: a card's effect for a hook, at the moment the hook's line would speak. */
+  | { kind: "effect"; defId: string; hook: CardHook; delayMs: number; priority: VoicePriority };
 
 export type AudioState = "unsupported" | "locked" | "running" | "suspended" | "closed";
 
@@ -141,6 +159,17 @@ export type PlayedCue =
       atMs: number;
       outcome: VoiceOutcome;
       priority: VoicePriority;
+    }
+  | {
+      kind: "effect";
+      defId: string;
+      hook: CardHook;
+      /** The effects bank's name for what played. */
+      effect: string;
+      delayMs: number;
+      atMs: number;
+      /** Present when the cue was accepted while the context was not running, so nothing was scheduled. */
+      suspended?: true;
     };
 
 /** A music station: the overall flavour of the in-game music (SPEC §10.11 "Music", R631). */
@@ -204,9 +233,17 @@ export type SoundSink = {
   playSfx(id: SfxId, params?: SfxParams, delayMs?: number): boolean;
   /** `priority` defaults to VOICE_PRIORITY.play. */
   playVoice(defId: string, line: VoiceLineKind, delayMs?: number, priority?: VoicePriority): boolean;
+  /** R651: the card's effect for `hook`, on the effects bus. false when it has none or it is refused. */
+  playEffect(defId: string, hook: CardHook, delayMs?: number): boolean;
 };
 
 export type AudioEngine = SoundSink & {
+  /**
+   * R651: the viewer picked up their own Unit to attack (a drag lifted, or a click chose it): its
+   * `attack` hook, effect then line, at once. Refused within PICKUP_MIN_GAP_MS of the last one
+   * accepted; otherwise it cuts off whatever the last pick-up is still playing.
+   */
+  playPickup(defId: string): boolean;
   state(): AudioState;
   /** Call synchronously inside a user gesture. Idempotent. */
   unlock(): void;

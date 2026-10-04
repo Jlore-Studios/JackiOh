@@ -1,0 +1,1249 @@
+// Every card's sounds (SPEC §10.11, R651). apps/web/src/audio/voiceData.ts reads this file when the
+// client loads and apps/web/scripts/gen-voice.mjs renders its voice lines. Nothing writes it back, so
+// comments and trailing commas are safe. A mistake fails the load and the tests, naming its path.
+//
+// Three sections, in this order:
+//   voices   the voices a line can be spoken in, by name in alphabetical order. A macOS `say` voice
+//            gives say, rate (90-360), pbas and pmod (0-127); backend: "sapi" is a Windows SAPI one
+//            instead, with voice, rate (-50-100), semitones (-12-12) and an ffmpeg filter chain. web
+//            is the browser's fallback pitch (0-2) and rate (0.1-10), gain a trim on the rendered
+//            files (0-2).
+//   effects  the sound effects a card can play. sfx names one of the procedural recipes in sfx.ts
+//            (SFX_IDS); pitch shifts it (1 as written, 0.5 an octave down, 2 an octave up, 0.25-4),
+//            gain trims it (0-2), and params passes the recipe its own options (amount, timbre,
+//            mine, mythic, urgent, release). Each play varies the pitch a little.
+//   cards    one entry per catalog card, in catalog order, with the card's name in a comment on
+//            the line of its id. The name is for people; a test checks it against the catalog.
+//
+// A card's hooks are when its sounds play:
+//   play     a Unit played, or put onto the field by an effect
+//   attack   a Unit of yours picked up to attack (dragged, or clicked to choose its target)
+//   death    a Unit destroyed
+//   cast     a Spell or Field Spell cast, a Trap or Field Trap firing
+// A hook gives a voice line, { voice: "<a voice>", text: "<the line>" }, an effect,
+// { effect: "<an effect>" }, or both in one object; with both, the effect starts first.
+//
+// To add a card: copy a neighbour's entry to where the catalog puts the card, change the id and the
+// name comment, and give a Unit a play and a death line, anything else a cast line. A new or changed
+// line has to be rendered: `pnpm --filter @jackioh/web gen:voice` on macOS, or on Windows (or WSL)
+// for a SAPI voice. Effects render nothing.
+{
+  voices: {
+    alien: { say: "Trinoids", rate: 170, pbas: 45, pmod: 20, web: { pitch: 0.5, rate: 0.9 }, gain: 1.66 },
+    // Ceaseless Void's own pitch and pace.
+    "alien-void": { say: "Trinoids", rate: 150, pbas: 25, pmod: 20, web: { pitch: 0.5, rate: 0.9 }, gain: 1.66 },
+    announcer: { say: "Superstar", rate: 190, pbas: 50, pmod: 50, web: { pitch: 1.2, rate: 1.1 } },
+    brute: { say: "Fred", rate: 165, pbas: 28, pmod: 15, web: { pitch: 0.5, rate: 0.9 }, gain: 1.71 },
+    // Chaos Golem's own pitch and pace.
+    "brute-golem": { say: "Fred", rate: 165, pbas: 20, pmod: 15, web: { pitch: 0.5, rate: 0.9 }, gain: 1.71 },
+    bubbles: { say: "Bubbles", rate: 180, pbas: 45, pmod: 30, web: { pitch: 1, rate: 1 }, gain: 1.55 },
+    cat: { say: "Kathy", rate: 210, pbas: 70, pmod: 70, web: { pitch: 1.8, rate: 1.2 }, gain: 0.83 },
+    crone: { say: "Grandma (English (US))", rate: 170, pbas: 50, pmod: 40, web: { pitch: 1.1, rate: 0.9 } },
+    digger: { say: "Karen", rate: 185, pbas: 45, pmod: 35, web: { pitch: 1, rate: 1 }, gain: 0.62 },
+    diva: { say: "Samantha", rate: 185, pbas: 55, pmod: 60, web: { pitch: 1.2, rate: 1 }, gain: 0.61 },
+    elder: { say: "Grandpa (English (UK))", rate: 165, pbas: 35, pmod: 30, web: { pitch: 0.8, rate: 0.9 }, gain: 1.56 },
+    goof: { say: "Boing", rate: 190, pbas: 50, pmod: 40, web: { pitch: 1.3, rate: 1.1 }, gain: 2 },
+    guard: { say: "Ralph", rate: 175, pbas: 38, pmod: 20, web: { pitch: 0.8, rate: 0.95 }, gain: 1.53 },
+    hero: { say: "Reed (English (US))", rate: 190, pbas: 45, pmod: 35, web: { pitch: 1, rate: 1 }, gain: 1.16 },
+    hustler: { say: "Rocko (English (US))", rate: 215, pbas: 50, pmod: 45, web: { pitch: 1, rate: 1.15 }, gain: 1.22 },
+    // Hit Job's own pitch and pace.
+    "hustler-hitman": { say: "Rocko (English (US))", rate: 170, pbas: 32, pmod: 45, web: { pitch: 1, rate: 1.15 }, gain: 1.22 },
+    kid: { say: "Junior", rate: 225, pbas: 62, pmod: 50, web: { pitch: 1.4, rate: 1.2 }, gain: 0.55 },
+    narrator: { say: "Eddy (English (UK))", rate: 185, pbas: 45, pmod: 35, web: { pitch: 1, rate: 1 } },
+    plain: { say: "Eddy (English (US))", rate: 170, pbas: 40, pmod: 0, web: { pitch: 1, rate: 0.9 }, gain: 1.16 },
+    posh: { say: "Shelley (English (UK))", rate: 185, pbas: 52, pmod: 45, web: { pitch: 1.2, rate: 1 }, gain: 0.84 },
+    prof: { say: "Daniel", rate: 180, pbas: 42, pmod: 30, web: { pitch: 0.9, rate: 1 } },
+    robot: { say: "Zarvox", rate: 185, pbas: 40, pmod: 10, web: { pitch: 0.6, rate: 1 }, gain: 1.72 },
+    "sapi-announcer": { backend: "sapi", voice: "Microsoft David Desktop", rate: 15, semitones: 2, filter: "", web: { pitch: 1.2, rate: 1.2 } },
+    "sapi-bureaucrat": { backend: "sapi", voice: "Microsoft David Desktop", rate: 5, semitones: -1, filter: "highpass=f=300,lowpass=f=3400", web: { pitch: 0.9, rate: 1.1 } },
+    "sapi-cat": { backend: "sapi", voice: "Microsoft Zira Desktop", rate: 15, semitones: 5, filter: "vibrato=f=6:d=0.15", web: { pitch: 1.7, rate: 1.15 } },
+    "sapi-cook": { backend: "sapi", voice: "Microsoft David Desktop", rate: 10, semitones: 1, filter: "", web: { pitch: 1, rate: 1.1 } },
+    "sapi-critter": { backend: "sapi", voice: "Microsoft Zira Desktop", rate: 20, semitones: 7, filter: "", web: { pitch: 1.8, rate: 1.25 } },
+    "sapi-diner": { backend: "sapi", voice: "Microsoft Zira Desktop", rate: 10, semitones: 1, filter: "", web: { pitch: 1.2, rate: 1.1 } },
+    "sapi-fruit": { backend: "sapi", voice: "Microsoft Zira Desktop", rate: 10, semitones: 3, filter: "", web: { pitch: 1.4, rate: 1.1 } },
+    "sapi-ghost": { backend: "sapi", voice: "Microsoft Zira Desktop", rate: -20, semitones: -2, filter: "aecho=0.8:0.7:120:0.4,highpass=f=300", web: { pitch: 0.8, rate: 0.8 } },
+    "sapi-giant": { backend: "sapi", voice: "Microsoft David Desktop", rate: -15, semitones: -7, filter: "lowpass=f=3500", web: { pitch: 0.3, rate: 0.85 } },
+    "sapi-hero": { backend: "sapi", voice: "Microsoft David Desktop", rate: 5, semitones: 0, filter: "", web: { pitch: 1, rate: 1.05 } },
+    "sapi-heroine": { backend: "sapi", voice: "Microsoft Zira Desktop", rate: 5, semitones: 0, filter: "", web: { pitch: 1.1, rate: 1.05 } },
+    "sapi-librarian": { backend: "sapi", voice: "Microsoft Zira Desktop", rate: -5, semitones: -2, filter: "aecho=0.8:0.5:35:0.2", web: { pitch: 0.9, rate: 0.9 } },
+    "sapi-mystic": { backend: "sapi", voice: "Microsoft Zira Desktop", rate: -10, semitones: -1, filter: "aecho=0.8:0.6:80:0.3,vibrato=f=5:d=0.1", web: { pitch: 0.9, rate: 0.9 } },
+    "sapi-rasp": { backend: "sapi", voice: "Microsoft David Desktop", rate: -10, semitones: -4, filter: "highpass=f=250,aecho=0.6:0.4:20:0.3", web: { pitch: 0.6, rate: 0.9 } },
+    "sapi-synth": { backend: "sapi", voice: "Microsoft Zira Desktop", rate: 5, semitones: 0, filter: "acrusher=bits=8:mix=0.35,flanger=delay=2:depth=2", web: { pitch: 1, rate: 1 } },
+    "sapi-synth-deep": { backend: "sapi", voice: "Microsoft David Desktop", rate: 0, semitones: -2, filter: "acrusher=bits=8:mix=0.3,flanger=delay=3:depth=2", web: { pitch: 0.6, rate: 1 } },
+    "sapi-teacher": { backend: "sapi", voice: "Microsoft David Desktop", rate: 0, semitones: -1, filter: "", web: { pitch: 0.9, rate: 1 } },
+    "sapi-trickster": { backend: "sapi", voice: "Microsoft David Desktop", rate: 15, semitones: 3, filter: "", web: { pitch: 1.3, rate: 1.15 } },
+    "sapi-villain": { backend: "sapi", voice: "Microsoft David Desktop", rate: -10, semitones: -3, filter: "aecho=0.7:0.5:60:0.25", web: { pitch: 0.7, rate: 0.9 } },
+    "sapi-wizard": { backend: "sapi", voice: "Microsoft David Desktop", rate: -5, semitones: -2, filter: "aecho=0.8:0.5:50:0.25", web: { pitch: 0.8, rate: 0.95 } },
+    sheep: { say: "Bahh", rate: 180, pbas: 55, pmod: 40, web: { pitch: 1.5, rate: 1 }, gain: 1.13 },
+    snob: { say: "Albert", rate: 170, pbas: 40, pmod: 30, web: { pitch: 0.8, rate: 0.9 }, gain: 1.32 },
+    storyteller: { say: "Moira", rate: 180, pbas: 50, pmod: 40, web: { pitch: 1.1, rate: 0.95 }, gain: 0.67 },
+    whisper: { say: "Whisper", rate: 160, pbas: 40, pmod: 20, web: { pitch: 0.9, rate: 0.85 }, gain: 1.46 },
+    wobble: { say: "Wobble", rate: 180, pbas: 45, pmod: 40, web: { pitch: 1.2, rate: 1 }, gain: 1.26 },
+    zoomer: { say: "Flo (English (US))", rate: 205, pbas: 55, pmod: 50, web: { pitch: 1.3, rate: 1.15 }, gain: 0.87 },
+  },
+
+  effects: {
+    // Stone and earth
+    stoneThud: { sfx: "impact", pitch: 0.6, params: { amount: 8 } },
+    rumble: { sfx: "death", pitch: 0.5, gain: 0.8 },
+    crumble: { sfx: "death", pitch: 1.3, gain: 0.7 },
+    heavyStomp: { sfx: "summon", pitch: 0.7, params: { amount: 10 } },
+
+    // Blades, wind and speed
+    bladeSwish: { sfx: "attack", pitch: 1.5, gain: 0.8 },
+    heavySwing: { sfx: "attack", pitch: 0.6 },
+    zip: { sfx: "whoosh", pitch: 1.8, gain: 0.7 },
+    gust: { sfx: "whoosh", pitch: 0.7 },
+    wave: { sfx: "whoosh", pitch: 0.45 },
+    jetZoom: { sfx: "whoosh", pitch: 1.3, gain: 0.9 },
+
+    // Blasts
+    explosion: { sfx: "impact", pitch: 0.7, params: { amount: 10 } },
+    sharpCrack: { sfx: "impact", pitch: 1.6, params: { amount: 2 } },
+
+    // Machines and gadgets
+    metalClank: { sfx: "lock", pitch: 0.8 },
+    servoWhirr: { sfx: "summon", params: { amount: 4, timbre: "ai" } },
+    engineRev: { sfx: "buff", pitch: 0.5 },
+    powerDown: { sfx: "debuff", pitch: 0.6 },
+    dataBlips: { sfx: "spell", gain: 0.7, params: { timbre: "ai" } },
+    zap: { sfx: "castOnDraw", pitch: 1.3 },
+    alarm: { sfx: "trapSting", pitch: 1.4, gain: 0.8 },
+    refusal: { sfx: "refuse", pitch: 1.2 },
+    tickTock: { sfx: "clockTick", params: { amount: 5 } },
+    slotSpin: { sfx: "chaosRoll", gain: 0.8, params: { amount: 3 } },
+    rattle: { sfx: "chaosRoll", pitch: 0.7, gain: 0.8, params: { amount: 0 } },
+
+    // Creatures
+    catChirp: { sfx: "summon", pitch: 1.2, params: { amount: 1, timbre: "felinor" } },
+    bigCatPounce: { sfx: "summon", pitch: 0.9, params: { amount: 6, timbre: "felinor" } },
+    squelch: { sfx: "summon", pitch: 0.8, params: { amount: 2, timbre: "fruit" } },
+    hiss: { sfx: "burn", pitch: 1.6, gain: 0.6 },
+    hooves: { sfx: "heartbeat", pitch: 1.6 },
+    drumBeat: { sfx: "heartbeat", pitch: 0.7 },
+    pancakePlop: { sfx: "summon", params: { amount: 3, timbre: "pancake" } },
+    ping: { sfx: "notify", pitch: 1.4 },
+
+    // Fire, ice and water
+    fireWhoosh: { sfx: "burn", pitch: 0.8 },
+    sizzle: { sfx: "brand" },
+    iceCrack: { sfx: "manaCrack", pitch: 1.3 },
+    wetDrain: { sfx: "bloodDrain" },
+    wellDrip: { sfx: "mana", pitch: 0.5 },
+    pop: { sfx: "poof", pitch: 1.8, gain: 0.8 },
+    sporePuff: { sfx: "poof", pitch: 0.7 },
+
+    // Bells and shine
+    crystalHum: { sfx: "radiant", pitch: 0.5, gain: 0.8 },
+    coinClink: { sfx: "radiant", pitch: 0.8, gain: 0.7 },
+    gong: { sfx: "entrance", pitch: 0.7, gain: 0.6 },
+    bell: { sfx: "turnStart", pitch: 1.5, gain: 0.7 },
+  },
+
+  cards: {
+    "core-001": { // Big D-fender
+      play: { voice: "guard", text: "Stand behind me. Way behind." },
+      death: { voice: "guard", text: "Defense... offended." },
+    },
+    "core-002": { // Bigot
+      play: { voice: "snob", text: "Ugh. Not your kind again." },
+      death: { voice: "snob", text: "Tolerance wins. Again." },
+    },
+    "core-003": { // Right-house defender
+      play: { voice: "guard", text: "For the right house!" },
+      attack: { effect: "metalClank" },
+      death: { voice: "guard", text: "Be right back." },
+    },
+    "core-004": { // Gary the Gambler
+      play: { voice: "hustler", text: "Double or nothing, baby!" },
+      death: { voice: "hustler", text: "House always wins." },
+    },
+    "core-005": { // Stockpile
+      cast: { voice: "narrator", text: "Hoarding is self care." },
+    },
+    "core-006": { // Mana Well
+      cast: { voice: "crone", text: "Drink up, dearie.", effect: "wellDrip" },
+    },
+    "core-007": { // Jewelosco Scarab
+      play: { voice: "goof", text: "Clean up on aisle you!" },
+      death: { voice: "goof", text: "Price check... on death." },
+    },
+    "core-008": { // Mr. Vanilla
+      play: { voice: "plain", text: "Hello. I am very normal." },
+      death: { voice: "plain", text: "Plain. Simple. Gone." },
+    },
+    "core-009": { // Moths to the Flame
+      play: { voice: "goof", text: "Ooh! Pretty light! Pretty light!" },
+      attack: { effect: "sizzle" },
+      death: { voice: "goof", text: "Totally worth it." },
+    },
+    "core-010": { // Rapid Replenish
+      cast: { voice: "announcer", text: "Restock, restock, restock!" },
+    },
+    "core-011": { // Tempo Timmy
+      play: { voice: "kid", text: "Outta my way, slowpokes!" },
+      attack: { effect: "zip" },
+      death: { voice: "kid", text: "Too... slow..." },
+    },
+    "core-012": { // Duplicating Felinors
+      play: { voice: "cat", text: "Meow. Meow again." },
+      attack: { effect: "catChirp" },
+      death: { voice: "cat", text: "Both of us?" },
+    },
+    "core-013": { // Jlockeed Shredder-10
+      play: { voice: "robot", text: "Shredder online. Paperwork offline.", effect: "engineRev" },
+      attack: { effect: "servoWhirr" },
+      death: { voice: "robot", text: "Warranty void.", effect: "powerDown" },
+    },
+    "core-014": { // Jlockeed's Weapons
+      cast: { voice: "robot", text: "Defense contract approved.", effect: "metalClank" },
+    },
+    "core-015": { // Me and Mr Token
+      play: { voice: "hero", text: "Me and my buddy!" },
+      death: { voice: "hero", text: "Tell Mister Token goodbye." },
+    },
+    "core-016": { // Hit Job
+      cast: { voice: "hustler-hitman", text: "Nothing personal, pal.", effect: "sharpCrack" },
+    },
+    "core-017": { // Flood
+      cast: { voice: "bubbles", text: "Surf's up! Everybody out!", effect: "wave" },
+    },
+    "core-018": { // Bread and Butter
+      cast: { voice: "crone", text: "Waste not, want toast." },
+    },
+    "core-019": { // Midrange Menace
+      play: { voice: "brute", text: "Not too big. Not too small." },
+      death: { voice: "brute", text: "Should have gone aggro." },
+    },
+    "core-020": { // Pointmaster
+      play: { voice: "hero", text: "Allow me to make a point." },
+      attack: { effect: "bladeSwish" },
+      death: { voice: "hero", text: "Pointless." },
+    },
+    "core-021": { // Hinder
+      cast: { voice: "goof", text: "Oops! Did I trip you?" },
+    },
+    "core-022": { // Carnivorous Cube
+      play: { voice: "brute", text: "Nom. Nom nom. Cube." },
+      attack: { effect: "squelch" },
+      death: { voice: "brute", text: "Indigestion..." },
+    },
+    "core-023": { // Reoccurring Dream
+      cast: { voice: "whisper", text: "Wait. Haven't we done this?" },
+    },
+    "core-024": { // Efficiency Dividend
+      cast: { voice: "hustler", text: "Synergy! Leverage! Profit!" },
+    },
+    "core-025": { // 4-mana 7/7
+      play: { voice: "brute", text: "Big. Honest. Boring." },
+      attack: { effect: "heavySwing" },
+      death: { voice: "brute", text: "Fair enough." },
+    },
+    "core-026": { // Glowy Jelly Bean
+      cast: { voice: "wobble", text: "Taste the glow!" },
+    },
+    "core-027": { // Blood Ridden Glowy Jelly Bean
+      cast: { voice: "wobble", text: "Mmm. Tastes like pennies." },
+    },
+    "core-028": { // Knockoff Temu Glowy Jelly Bean
+      cast: { voice: "wobble", text: "Ships in six to eight weeks." },
+    },
+    "core-029": { // GIGA Glowy Jelly Bean
+      cast: { voice: "announcer", text: "Giga! Bean! Time!" },
+    },
+    "core-030": { // Archivist
+      play: { voice: "whisper", text: "Shh. I'm filing." },
+      death: { voice: "whisper", text: "Overdue. Forever." },
+    },
+    "core-031": { // KY's Math Equation
+      cast: { voice: "prof", text: "Show your work!" },
+    },
+    "core-032": { // Prem Panther
+      play: { voice: "hero", text: "Premium predator. No ads." },
+      death: { voice: "hero", text: "Subscription cancelled." },
+    },
+    "core-033": { // Unstable Clone Machine
+      cast: { voice: "robot", text: "Copy that. Copy that. Copy that.", effect: "servoWhirr" },
+    },
+    "core-034": { // Collateral Damage
+      cast: { voice: "narrator", text: "Oops. Also, oops.", effect: "explosion" },
+    },
+    "core-035": { // Lunar Eclipse
+      cast: { voice: "whisper", text: "Lights out, moon's up." },
+    },
+    "core-036": { // Magic Jammed
+      cast: { voice: "goof", text: "Jammed it! Sorry, not sorry." },
+    },
+    "core-037": { // Gravedigger
+      play: { voice: "digger", text: "Finders keepers, dead folks." },
+      death: { voice: "digger", text: "Dig me a nice one." },
+    },
+    "core-038": { // Quickstriker
+      cast: { voice: "announcer", text: "Faster! Faster! Faster!" },
+    },
+    "core-039": { // Recycling Initiative
+      cast: { voice: "zoomer", text: "Reduce, reuse, replay!" },
+    },
+    "core-040": { // Echoes of the Forgotten
+      cast: { voice: "whisper", text: "Remember us. Remember us." },
+    },
+    "core-041": { // Sheepish
+      cast: { voice: "sheep", text: "Baa. Surprise." },
+    },
+    "core-042": { // Eugenics
+      cast: { voice: "prof", text: "Science has gone too far." },
+    },
+    "core-043": { // Big Felinor
+      play: { voice: "cat", text: "Big cat. Bigger problems." },
+      attack: { effect: "bigCatPounce" },
+      death: { voice: "cat", text: "Landed on my back?" },
+    },
+    "core-044": { // True Strike
+      cast: { voice: "hero", text: "Bullseye, baby.", effect: "zip" },
+    },
+    "core-045": { // Deft Duelist
+      play: { voice: "hero", text: "En garde! And also, en garde!" },
+      attack: { effect: "bladeSwish" },
+      death: { voice: "hero", text: "Well played. Ow." },
+    },
+    "core-046": { // Suppressive Aura
+      cast: { voice: "whisper", text: "Everybody calm down. Forever." },
+    },
+    "core-047": { // Fig of Life
+      cast: { voice: "storyteller", text: "A fig a day!", effect: "squelch" },
+    },
+    "core-048": { // 5pek Controller
+      cast: { voice: "kid", text: "Reverse card! Everybody!" },
+    },
+    "core-049": { // Snom Bunny Mind Control
+      cast: { voice: "posh", text: "Hop along. You're mine now." },
+    },
+    "core-050": { // K-Pop Fanatic
+      play: { voice: "zoomer", text: "Oppa! I'm your biggest fan!" },
+      death: { voice: "zoomer", text: "Tell my bias goodbye." },
+    },
+    "core-051": { // KY's Private Tutor
+      cast: { voice: "prof", text: "Pencils down. Pick one." },
+    },
+    "core-051-1": { // KY's Empty Notebook
+      cast: { voice: "zoomer", text: "Blank page energy." },
+    },
+    "core-052": { // Silly Silas
+      play: { voice: "goof", text: "Round and round we go!" },
+      death: { voice: "goof", text: "So... dizzy..." },
+    },
+    "core-053": { // Reno
+      play: { voice: "hustler", text: "Reno's here! Party's saved!" },
+      death: { voice: "hustler", text: "Luck... ran out." },
+    },
+    "core-054": { // Straaza
+      play: { voice: "diva", text: "Shopping spree! On the house!" },
+      death: { voice: "diva", text: "Out of stock." },
+    },
+    "core-055": { // Lava Golem
+      play: { voice: "brute", text: "Hot stuff. Coming through." },
+      attack: { effect: "heavyStomp" },
+      death: { voice: "brute", text: "Cooling... off...", effect: "sizzle" },
+    },
+    "core-056": { // Jilliax
+      play: { voice: "robot", text: "Jilliax! Deluxe! Edition!" },
+      attack: { effect: "servoWhirr" },
+      death: { voice: "robot", text: "Recall notice issued.", effect: "powerDown" },
+    },
+    "core-057": { // Conjure KY
+      cast: { voice: "prof", text: "Study group, assemble!" },
+    },
+    "core-058": { // Rush Token Farm
+      cast: { voice: "elder", text: "Fresh tokens, farm to table!" },
+    },
+    "core-059": { // Unbiased Immigration
+      cast: { voice: "narrator", text: "Welcome in, whoever you are!" },
+    },
+    "core-060": { // Bear Honeypot
+      cast: { voice: "goof", text: "Mmm, honey. Oh no. Bears." },
+    },
+    "core-061": { // Prejudiced Postdoc
+      play: { voice: "snob", text: "Peer review? Rejected." },
+      death: { voice: "snob", text: "My grant... expired." },
+    },
+    "core-062": { // Friend of Felinors
+      cast: { voice: "crone", text: "Here kitty kitty kitty!" },
+    },
+    "core-063": { // Plastic Surgery
+      cast: { voice: "posh", text: "New face, who dis?" },
+    },
+    "core-064": { // Gifted Program
+      cast: { voice: "prof", text: "You're all special. Mostly you." },
+    },
+    "core-065": { // Masochism Mask
+      cast: { voice: "whisper", text: "Hurts so good." },
+    },
+    "core-065-1": { // Spikey Pillow
+      play: { voice: "goof", text: "Hug me. I dare you." },
+      death: { voice: "goof", text: "Pop.", effect: "pop" },
+    },
+    "core-066": { // The Rock
+      play: { voice: "brute", text: "Rock solid. Rock steady.", effect: "stoneThud" },
+      attack: { effect: "rumble" },
+      death: { voice: "brute", text: "Just gravel now.", effect: "crumble" },
+    },
+    "core-067": { // Zoomerbin Oomen
+      play: { voice: "zoomer", text: "No cap, this lane's mine." },
+      death: { voice: "zoomer", text: "I'm literally dead." },
+    },
+    "core-068": { // Twisted Sorcerer
+      play: { voice: "elder", text: "Twist and shout! Mostly shout!" },
+      death: { voice: "elder", text: "Untwisted..." },
+    },
+    "core-069": { // Call to Arms
+      cast: { voice: "hero", text: "Everybody grab a sword!" },
+    },
+    "core-070": { // Spiteful Stab
+      cast: { voice: "whisper", text: "This is for everything." },
+    },
+    "core-071": { // Intern Stimmy
+      cast: { voice: "zoomer", text: "Unpaid, but motivated!" },
+    },
+    "core-072": { // Reminisce
+      cast: { voice: "storyteller", text: "Ah, the good old days." },
+    },
+    "core-073": { // Anti-oneshot Armor
+      cast: { voice: "guard", text: "Nice try. Not today." },
+    },
+    "core-074": { // Adaptive UI
+      cast: { voice: "robot", text: "Now responsive on all devices!" },
+    },
+    "core-075": { // Infinite Reserves
+      cast: { voice: "hustler", text: "There's always more in the back." },
+    },
+    "core-076": { // Field of Dreams
+      cast: { voice: "whisper", text: "If you build it..." },
+    },
+    "core-077": { // Professor Curvature
+      play: { voice: "prof", text: "Grading on a curve, people!" },
+      death: { voice: "prof", text: "Class... dismissed." },
+    },
+    "core-078": { // /fullsend
+      cast: { voice: "announcer", text: "Full send! No brakes!" },
+    },
+    "core-079": { // Twinspell
+      cast: { voice: "whisper", text: "Say it twice. Say it twice." },
+    },
+    "core-080": { // Zao Gao
+      cast: { voice: "narrator", text: "Zao gao! Oh no, oh no!" },
+    },
+    "core-081": { // Radiant Saintess
+      play: { voice: "diva", text: "Bask in my glow, darlings." },
+      death: { voice: "diva", text: "Shine on without me." },
+    },
+    "core-082": { // KY's Trial
+      cast: { voice: "prof", text: "Pick a number. Any number." },
+    },
+    "core-083": { // Transmogulate
+      cast: { voice: "announcer", text: "Abracadabra! Everything's fancy now!" },
+    },
+    "core-084": { // Going Long
+      cast: { voice: "guard", text: "Going long! Go deep!", effect: "gust" },
+    },
+    "core-085": { // Unlicensed Experimentation
+      cast: { voice: "snob", text: "No license. No problem.", effect: "zap" },
+    },
+    "core-086": { // "Miss" Mrow
+      play: { voice: "cat", text: "Mrow. Don't touch me." },
+      death: { voice: "cat", text: "You're all mine now." },
+    },
+    "core-087": { // Pocket Chaos
+      cast: { voice: "goof", text: "Chaos! Now pocket sized!" },
+    },
+    "core-088": { // Twisting Nether
+      cast: { voice: "alien", text: "Everybody. Into the void.", effect: "rumble" },
+    },
+    "core-089": { // Corpse Eater
+      play: { voice: "alien", text: "Anyone gonna finish that?" },
+      attack: { effect: "squelch" },
+      death: { voice: "alien", text: "Finally... full." },
+    },
+    "core-090": { // CN-Viral Injection
+      cast: { voice: "diva", text: "Just a little pinch." },
+    },
+    "core-090-1": { // CN-Virus
+      cast: { voice: "goof", text: "Achoo! Sorry. Achoo!" },
+    },
+    "core-091": { // Fed Fauci
+      play: { voice: "elder", text: "Trust the science. Please." },
+      death: { voice: "elder", text: "Wash your hands." },
+    },
+    "core-092": { // Felinor Fiender
+      play: { voice: "crone", text: "Cats. I need more cats." },
+      death: { voice: "crone", text: "Who feeds them now?" },
+    },
+    "core-093": { // Combo-Index
+      cast: { voice: "announcer", text: "Style points! Grade me!" },
+    },
+    "core-093-1": { // Combo-Fodder
+      cast: { voice: "goof", text: "Just a little something." },
+    },
+    "core-094": { // Genn's Greed
+      cast: { voice: "snob", text: "Greed is good. Mostly." },
+    },
+    "core-095": { // Call to Chaos (Core Edition)
+      cast: { voice: "announcer", text: "Roll the dice! Pray nice!" },
+    },
+    "core-095-1": { // Chaos Golem
+      play: { voice: "brute-golem", text: "Chaos golem! Smash everything!" },
+      attack: { effect: "heavyStomp" },
+      death: { voice: "brute-golem", text: "Order... restored." },
+    },
+    "core-096": { // My Pawn
+      cast: { voice: "snob", text: "Checkmate, puppet.", effect: "gong" },
+    },
+    "core-097": { // Zephyrs
+      cast: { voice: "whisper", text: "I know exactly what you need." },
+    },
+    "core-098": { // Heroic Power
+      cast: { voice: "hero", text: "With great power... whatever." },
+    },
+    "core-099": { // Craft a Card
+      cast: { voice: "narrator", text: "Some assembly required." },
+    },
+    "core-100": { // Ceaseless Void
+      play: { voice: "alien-void", text: "Nothing lasts. Except me." },
+      death: { voice: "alien-void", text: "Even I... end." },
+    },
+    "core-t-rush": { // Rush Token
+      play: { voice: "kid", text: "Go go go go!" },
+      attack: { effect: "zip" },
+      death: { voice: "kid", text: "Gone too fast." },
+    },
+    "core-t-sheep": { // Sheep Token
+      play: { voice: "sheep", text: "Baa?" },
+      death: { voice: "sheep", text: "Baa..." },
+    },
+    "core-t-felinor": { // Felinor Token
+      play: { voice: "cat", text: "Mew!" },
+      attack: { effect: "catChirp" },
+      death: { voice: "cat", text: "Mew..." },
+    },
+    "core-t-bread": { // Bread Token
+      play: { voice: "goof", text: "I'm bread. Butter me up." },
+      death: { voice: "goof", text: "Crumbs." },
+    },
+    "core-t-coin": { // The Coin
+      cast: { voice: "hustler", text: "Heads I win, tails you lose." },
+    },
+    "core-t-ghoul": { // Ghoul Token
+      play: { voice: "whisper", text: "Up from the cold ground. Hungry." },
+      attack: { effect: "bladeSwish" },
+      death: { voice: "whisper", text: "Back to the dirt." },
+    },
+    "classic-001": { // Curse of the Forgotten Classic
+      cast: { voice: "sapi-ghost", text: "Remember me? Nobody remembers." },
+    },
+    "classic-002": { // The Trickster
+      play: { voice: "sapi-trickster", text: "Now you see it. Now you don't!" },
+      death: { voice: "sapi-trickster", text: "Well, that trick backfired." },
+    },
+    "classic-003": { // Book of Heal
+      cast: { voice: "sapi-librarian", text: "Chapter one. Stop the bleeding." },
+    },
+    "classic-004": { // Palantir
+      cast: { voice: "sapi-mystic", text: "The seeing stone shows me everything.", effect: "crystalHum" },
+    },
+    "classic-005": { // Tesla
+      cast: { voice: "sapi-synth-deep", text: "Bzzt! Intruder detected.", effect: "zap" },
+    },
+    "classic-006": { // Cloaked Toe Cracker
+      play: { voice: "sapi-trickster", text: "Crack those knuckles. And those toes." },
+      death: { voice: "sapi-trickster", text: "My toes, my poor toes!" },
+    },
+    "classic-007": { // InfiniScepter
+      cast: { voice: "sapi-mystic", text: "Power without end, right in my hand." },
+    },
+    "classic-008": { // Pickle
+      cast: { voice: "sapi-critter", text: "You're in a real pickle now!" },
+    },
+    "classic-009": { // Income Tax
+      cast: { voice: "sapi-bureaucrat", text: "Pay up. The taxman always collects.", effect: "coinClink" },
+    },
+    "classic-010": { // Exile
+      cast: { voice: "sapi-wizard", text: "Begone, and never return!", effect: "gong" },
+    },
+    "classic-011": { // Mind Melt
+      cast: { voice: "sapi-mystic", text: "Your thoughts are mine to read." },
+    },
+    "classic-012": { // Book of Blood
+      cast: { voice: "sapi-librarian", text: "Written in red ink. Very red." },
+    },
+    "classic-013": { // Boots on the Ground
+      play: { voice: "sapi-hero", text: "Boots on the ground, sir!" },
+      death: { voice: "sapi-hero", text: "Man down! Man down!" },
+    },
+    "classic-014": { // Shadowstep
+      cast: { voice: "sapi-ghost", text: "Slip into the shadows. Gone.", effect: "gust" },
+    },
+    "classic-015": { // Nose Hunter
+      play: { voice: "sapi-trickster", text: "I can smell a good card." },
+      death: { voice: "sapi-trickster", text: "Nose to the ground, forever." },
+    },
+    "classic-016": { // Book of Flame
+      cast: { voice: "sapi-librarian", text: "Page one hundred. Everything burns.", effect: "fireWhoosh" },
+    },
+    "classic-017": { // Counterspell
+      cast: { voice: "sapi-wizard", text: "Not today, spellcaster.", effect: "zap" },
+    },
+    "classic-018": { // Glitch in the System
+      cast: { voice: "sapi-synth", text: "Error. Error. Reality not found." },
+    },
+    "classic-019": { // Lizard's Breath
+      cast: { voice: "sapi-critter", text: "Hiss! Smell that lizard breath!" },
+    },
+    "classic-020": { // The Power to Punish
+      cast: { voice: "sapi-villain", text: "Every sin shall be punished." },
+    },
+    "classic-021": { // Turtinator
+      play: { voice: "sapi-giant", text: "Shell shocked and ready to roll." },
+      attack: { effect: "stoneThud" },
+      death: { voice: "sapi-giant", text: "Flipped on my back again." },
+    },
+    "classic-022": { // Mid Runner
+      play: { voice: "sapi-hero", text: "Middle lane is mine, team." },
+      death: { voice: "sapi-hero", text: "Mid is down. Report the jungler." },
+    },
+    "classic-023": { // Devil's Pact
+      cast: { voice: "sapi-villain", text: "Sign here. Your soul, please." },
+    },
+    "classic-024": { // Book of Knowledge
+      cast: { voice: "sapi-librarian", text: "Knowledge is power. Read on." },
+    },
+    "classic-025": { // Lag in the System
+      cast: { voice: "sapi-synth", text: "Please... wait... buffering..." },
+    },
+    "classic-026": { // Rapid Draw
+      cast: { voice: "sapi-announcer", text: "Fastest hands in the west!" },
+    },
+    "classic-027": { // Pestilent Slime
+      play: { voice: "sapi-critter", text: "Blorp. Squelch. Hello!" },
+      attack: { effect: "squelch" },
+      death: { voice: "sapi-critter", text: "Splat.", effect: "squelch" },
+    },
+    "classic-028": { // Second Wind
+      cast: { voice: "sapi-hero", text: "Not done yet. Deep breath." },
+    },
+    "classic-029": { // Book of Vital Kill
+      cast: { voice: "sapi-librarian", text: "The final chapter. How tragic." },
+    },
+    "classic-030": { // Recycle
+      cast: { voice: "sapi-announcer", text: "Reduce, reuse, recycle!" },
+    },
+    "classic-031": { // Cookie Guild
+      play: { voice: "sapi-cook", text: "Fresh cookies, guild approved!" },
+      death: { voice: "sapi-cook", text: "Crumbs. Nothing but crumbs." },
+    },
+    "classic-032": { // Felinor Feelings
+      cast: { voice: "sapi-cat", text: "Purr. I have so many feelings." },
+    },
+    "classic-033": { // Joro
+      play: { voice: "sapi-mystic", text: "Come closer, little one. Into my web." },
+      attack: { effect: "hiss" },
+      death: { voice: "sapi-mystic", text: "My web... unravels..." },
+    },
+    "classic-034": { // Ancient Acquisition
+      cast: { voice: "sapi-bureaucrat", text: "A priceless relic. Mine now." },
+    },
+    "classic-035": { // Prep
+      cast: { voice: "sapi-hero", text: "Stretch, plan, prepare. Go time." },
+    },
+    "classic-036": { // Burn
+      cast: { voice: "sapi-announcer", text: "Oh, that is a sick burn!" },
+    },
+    "classic-037": { // Last Hurrah
+      cast: { voice: "sapi-hero", text: "One last hurrah, together!" },
+    },
+    "classic-038": { // Jackiestan Auctioneer
+      cast: { voice: "sapi-announcer", text: "Going once, going twice, sold!" },
+    },
+    "classic-039": { // Outbreak
+      cast: { voice: "sapi-rasp", text: "Cough. Cough. It's spreading." },
+    },
+    "classic-040": { // MC Tech
+      play: { voice: "sapi-announcer", text: "Mic check, one two, tech in!" },
+      death: { voice: "sapi-announcer", text: "Mic drop." },
+    },
+    "classic-041": { // State of the Game
+      play: { voice: "sapi-bureaucrat", text: "Let's talk about the meta." },
+      death: { voice: "sapi-bureaucrat", text: "The meta has shifted." },
+    },
+    "classic-042": { // Transmutable Toxins
+      cast: { voice: "sapi-rasp", text: "Bubbling toxins, ever changing." },
+    },
+    "classic-043": { // Plague Nuke
+      cast: { voice: "sapi-rasp", text: "Duck and cover. Then cough.", effect: "explosion" },
+    },
+    "classic-044": { // Back from the GY
+      cast: { voice: "sapi-ghost", text: "They're back, and they're grumpy." },
+    },
+    "classic-045": { // Nature Titan
+      play: { voice: "sapi-giant", text: "The forest walks with me." },
+      attack: { effect: "rumble" },
+      death: { voice: "sapi-giant", text: "Return me to the earth." },
+    },
+    "classic-046": { // Divine Favor
+      cast: { voice: "sapi-heroine", text: "The heavens smile upon us." },
+    },
+    "classic-047": { // Recurring Felinor
+      play: { voice: "sapi-cat", text: "Meow. I always come back." },
+      death: { voice: "sapi-cat", text: "See you next life, meow." },
+    },
+    "classic-048": { // Hired Shrimp
+      play: { voice: "sapi-critter", text: "Shrimp for hire, reasonable rates!" },
+      death: { voice: "sapi-critter", text: "Not the cocktail sauce!" },
+    },
+    "classic-049": { // Anti-Greed Machine
+      play: { voice: "sapi-synth-deep", text: "Greed detected. Initiating correction.", effect: "engineRev" },
+      attack: { effect: "servoWhirr" },
+      death: { voice: "sapi-synth-deep", text: "System. Shutting. Down.", effect: "powerDown" },
+    },
+    "classic-050": { // Voidwalker
+      play: { voice: "sapi-ghost", text: "From the void, I walk." },
+      attack: { effect: "gust" },
+      death: { voice: "sapi-ghost", text: "Back into the dark." },
+    },
+    "classic-051": { // Back Breaker
+      play: { voice: "sapi-giant", text: "Something's gonna snap. Not me." },
+      attack: { effect: "heavyStomp" },
+      death: { voice: "sapi-giant", text: "My back! My back!" },
+    },
+    "classic-052": { // Final Gambit
+      cast: { voice: "sapi-villain", text: "All in. Winner takes everything." },
+    },
+    "classic-053": { // Plague Crawler
+      play: { voice: "sapi-rasp", text: "Crawling... closer... closer..." },
+      death: { voice: "sapi-rasp", text: "Squish.", effect: "squelch" },
+    },
+    "classic-054": { // Rewind
+      cast: { voice: "sapi-synth", text: "Rewind. Let's try that again." },
+    },
+    "classic-055": { // Book of Wildfire
+      cast: { voice: "sapi-librarian", text: "This chapter spreads like wildfire.", effect: "fireWhoosh" },
+    },
+    "classic-056": { // Spell Tyrant
+      play: { voice: "sapi-villain", text: "All magic bows to me." },
+      death: { voice: "sapi-villain", text: "My spells... betray me..." },
+    },
+    "classic-057": { // Echo
+      cast: { voice: "sapi-ghost", text: "Again... again... again..." },
+    },
+    "classic-058": { // Common Resources
+      cast: { voice: "sapi-bureaucrat", text: "Share and share alike, comrades." },
+    },
+    "classic-059": { // Plague Doctor
+      play: { voice: "sapi-rasp", text: "The doctor will see you now." },
+      death: { voice: "sapi-rasp", text: "Physician, heal thyself. Too late." },
+    },
+    "classic-060": { // Pile On
+      cast: { voice: "sapi-announcer", text: "Everybody pile on!" },
+    },
+    "classic-061": { // Plague Bringer Goliath
+      play: { voice: "sapi-giant", text: "I bring the plague. Tremble." },
+      attack: { effect: "heavyStomp" },
+      death: { voice: "sapi-giant", text: "Even giants rot." },
+    },
+    "classic-062": { // Living Bomb
+      cast: { voice: "sapi-announcer", text: "Tick, tock. Tick, tock.", effect: "tickTock" },
+    },
+    "classic-063": { // Crop Dusting
+      cast: { voice: "sapi-hero", text: "Low pass over the fields!", effect: "engineRev" },
+    },
+    "classic-064": { // Malzahar's Recycler
+      cast: { voice: "sapi-mystic", text: "The void recycles all things." },
+    },
+    "classic-065": { // Ace in the Hole
+      cast: { voice: "sapi-trickster", text: "Always keep an ace hidden." },
+    },
+    "classic-066": { // EU Striker
+      play: { voice: "sapi-hero", text: "Striker ready. Let's score!" },
+      death: { voice: "sapi-hero", text: "A red card? Really?" },
+    },
+    "classic-067": { // Felinor Feeler
+      play: { voice: "sapi-heroine", text: "I just want to pet them." },
+      death: { voice: "sapi-heroine", text: "Scratched by a kitty." },
+    },
+    "classic-068": { // Small Card Lobbyist
+      play: { voice: "sapi-bureaucrat", text: "Small cards deserve a voice too." },
+      death: { voice: "sapi-bureaucrat", text: "Lobbying... failed." },
+    },
+    "classic-069": { // Plague Charger
+      play: { voice: "sapi-rasp", text: "Hooves of pestilence, riding in!" },
+      attack: { effect: "hooves" },
+      death: { voice: "sapi-rasp", text: "The ride ends here." },
+    },
+    "classic-070": { // Book of Plague
+      cast: { voice: "sapi-librarian", text: "Do not lick the pages." },
+    },
+    "classic-071": { // Lane Eater
+      play: { voice: "sapi-giant", text: "Nom nom. Whole lanes, delicious." },
+      attack: { effect: "rumble" },
+      death: { voice: "sapi-giant", text: "Too much. Too full." },
+    },
+    "classic-072": { // Grand Counterspell
+      cast: { voice: "sapi-wizard", text: "Your magic ends here, entirely.", effect: "zap" },
+    },
+    "classic-073": { // Nurse Cleaver
+      play: { voice: "sapi-heroine", text: "Hold still. This might sting." },
+      attack: { effect: "bladeSwish" },
+      death: { voice: "sapi-heroine", text: "The nurse needs a nurse." },
+    },
+    "classic-074": { // Corpse Plantation
+      cast: { voice: "sapi-rasp", text: "Plant them deep. Harvest later." },
+    },
+    "classic-075": { // Argusland
+      cast: { voice: "sapi-mystic", text: "A land of a thousand eyes." },
+    },
+    "classic-076": { // Plague Bringer
+      play: { voice: "sapi-rasp", text: "Special delivery. It's contagious." },
+      death: { voice: "sapi-rasp", text: "Pass it on..." },
+    },
+    "classic-077": { // Anti-Magic Monkey
+      play: { voice: "sapi-critter", text: "Ooh ooh! No magic allowed!" },
+      death: { voice: "sapi-critter", text: "Ooh... ooh..." },
+    },
+    "classic-078": { // Mutate Spell
+      cast: { voice: "sapi-mystic", text: "Twist it, change it, mutate it." },
+    },
+    "classic-079": { // Risky Die
+      cast: { voice: "sapi-trickster", text: "Come on, lucky number!" },
+    },
+    "classic-080": { // BOOM! Big Max
+      play: { voice: "sapi-giant", text: "Big Max goes BOOM!" },
+      attack: { effect: "heavyStomp" },
+      death: { voice: "sapi-giant", text: "Kaboom!", effect: "explosion" },
+    },
+    "classic-081": { // The Power to Thrive
+      cast: { voice: "sapi-heroine", text: "We don't survive. We thrive." },
+    },
+    "classic-082": { // Sheeople
+      play: { voice: "sapi-critter", text: "Baa. We all agree." },
+      death: { voice: "sapi-critter", text: "Baa... ha." },
+    },
+    "classic-083": { // Flame Lance
+      cast: { voice: "sapi-hero", text: "Skewered and roasted!", effect: "sizzle" },
+    },
+    "classic-084": { // Lockdown
+      cast: { voice: "sapi-bureaucrat", text: "Nobody in, nobody out.", effect: "metalClank" },
+    },
+    "classic-085": { // King Wagtoggle
+      play: { voice: "sapi-critter", text: "You no take candle! Bow to king!" },
+      death: { voice: "sapi-critter", text: "King... no more candle..." },
+    },
+    "classic-086": { // Genn
+      play: { voice: "sapi-hero", text: "Every one of us has a curse." },
+      death: { voice: "sapi-hero", text: "Gilneas... falls..." },
+    },
+    "classic-087": { // Plague Chalice
+      cast: { voice: "sapi-rasp", text: "Drink deep. Cheers." },
+    },
+    "classic-088": { // Siphon Squad
+      cast: { voice: "sapi-villain", text: "Siphon squad, drain it all!" },
+    },
+    "classic-089": { // Paul Allen's Ghost
+      play: { voice: "sapi-ghost", text: "I have some unfinished business." },
+      attack: { effect: "gust" },
+      death: { voice: "sapi-ghost", text: "Shutting down, for good.", effect: "powerDown" },
+    },
+    "classic-090": { // In Too Deep
+      cast: { voice: "sapi-mystic", text: "Deeper and deeper we go." },
+    },
+    "classicplus-001": { // Doom Shroom
+      cast: { voice: "sapi-rasp", text: "Spores of doom, released!", effect: "sporePuff" },
+    },
+    "classicplus-002": { // Groom Shroom
+      cast: { voice: "sapi-cat", text: "A little grooming. A lot of spores." },
+    },
+    "classicplus-003": { // Second Amendment Snake
+      play: { voice: "sapi-trickster", text: "Don't tread on me, partner." },
+      attack: { effect: "hiss" },
+      death: { voice: "sapi-trickster", text: "Hiss... outgunned." },
+    },
+    "classicplus-004": { // Juhan Biggest Bat
+      play: { voice: "sapi-giant", text: "Biggest bat in the cave!" },
+      attack: { effect: "zip" },
+      death: { voice: "sapi-giant", text: "Bat down, bat down." },
+    },
+    "classicplus-005": { // Guy Att
+      play: { voice: "sapi-hero", text: "Guy Att, at your service." },
+      death: { voice: "sapi-hero", text: "Guy Att, attacked." },
+    },
+    "classicplus-006": { // Wrong-House Attacker
+      play: { voice: "sapi-trickster", text: "Wait, is this the right house?" },
+      death: { voice: "sapi-trickster", text: "Wrong house. Definitely wrong." },
+    },
+    "classicplus-007": { // The House
+      cast: { voice: "sapi-heroine", text: "Welcome home. Wipe your feet." },
+    },
+    "classicplus-008": { // Withering Storm
+      cast: { voice: "sapi-mystic", text: "The storm withers all it touches." },
+    },
+    "classicplus-009": { // Silence
+      cast: { voice: "sapi-ghost", text: "Shhh. Not a word." },
+    },
+    "classicplus-010": { // New Wraps
+      cast: { voice: "sapi-announcer", text: "Fresh wraps, brand new look!" },
+    },
+    "classicplus-011": { // Anime Armor
+      play: { voice: "sapi-heroine", text: "Power of friendship, full transformation!" },
+      death: { voice: "sapi-heroine", text: "Not like this, senpai!" },
+    },
+    "classicplus-012": { // The Mother Pancake
+      play: { voice: "sapi-diner", text: "Mama's pancakes are served, sugar!" },
+      attack: { effect: "pancakePlop" },
+      death: { voice: "sapi-diner", text: "Flip me gently, darling." },
+    },
+    "classicplus-012-1": { // Devour
+      cast: { voice: "sapi-cook", text: "Om nom nom. All gone!" },
+    },
+    "classicplus-012-2": { // Death Boil
+      cast: { voice: "sapi-cook", text: "Bring it to a rolling boil." },
+    },
+    "classicplus-012-3": { // Fluffy Grip
+      cast: { voice: "sapi-diner", text: "Fluffy, but it grips tight." },
+    },
+    "classicplus-012-4": { // Powder Spray
+      cast: { voice: "sapi-cook", text: "A dusting of powdered sugar!" },
+    },
+    "classicplus-012-5": { // Anti-Waffle Shell
+      cast: { voice: "sapi-cook", text: "No waffles allowed in here." },
+    },
+    "classicplus-012-6": { // Frozen Wastes
+      cast: { voice: "sapi-diner", text: "Brr. Frozen pancakes, anyone?", effect: "iceCrack" },
+    },
+    "classicplus-012-7": { // Legion of the Hungry
+      cast: { voice: "sapi-giant", text: "We hunger. We march." },
+    },
+    "classicplus-012-8": { // Frostspatula
+      cast: { voice: "sapi-cook", text: "Flip it cold. Flip it hard!", effect: "metalClank" },
+    },
+    "classicplus-013": { // Mommy Barker
+      play: { voice: "sapi-diner", text: "Come and get it, sweeties!" },
+      death: { voice: "sapi-diner", text: "Kitchen's closed, hon." },
+    },
+    "classicplus-014": { // Forever&
+      cast: { voice: "sapi-mystic", text: "Forever, and ever, and ever." },
+    },
+    "classicplus-015": { // Conjure Rush Token
+      cast: { voice: "sapi-announcer", text: "Conjure a quick little helper." },
+    },
+    "classicplus-016": { // Conjure Rush Token+
+      cast: { voice: "sapi-announcer", text: "More helpers, even quicker!" },
+    },
+    "classicplus-017": { // Conjure Rush Token++
+      cast: { voice: "sapi-announcer", text: "An army of helpers, right now!" },
+    },
+    "classicplus-018": { // Gullible Treatler
+      play: { voice: "sapi-trickster", text: "Free treats? I'm in!" },
+      death: { voice: "sapi-trickster", text: "It was a trick..." },
+    },
+    "classicplus-019": { // League of Losers
+      cast: { voice: "sapi-announcer", text: "Five losers, one terrible team." },
+    },
+    "classicplus-019-1": { // Top Loser
+      play: { voice: "sapi-trickster", text: "Top lane. Top loser." },
+      death: { voice: "sapi-trickster", text: "Ganked again?" },
+    },
+    "classicplus-019-2": { // Jungle Loser
+      play: { voice: "sapi-critter", text: "The jungle is mine. Probably." },
+      death: { voice: "sapi-critter", text: "Invaded, again." },
+    },
+    "classicplus-019-3": { // Mid Loser
+      play: { voice: "sapi-hero", text: "Mid or feed!" },
+      death: { voice: "sapi-hero", text: "Fed. Again." },
+    },
+    "classicplus-019-4": { // Support Loser
+      play: { voice: "sapi-heroine", text: "I'll carry you. Emotionally." },
+      death: { voice: "sapi-heroine", text: "Nobody thanks the support." },
+    },
+    "classicplus-019-5": { // Bot Loser
+      play: { voice: "sapi-announcer", text: "Bot lane diff. Easy." },
+      death: { voice: "sapi-announcer", text: "My support left me." },
+    },
+    "classicplus-020": { // Mushroom Power
+      play: { voice: "sapi-critter", text: "Mushroom power, grow grow grow!" },
+      death: { voice: "sapi-critter", text: "Stomped flat." },
+    },
+    "classicplus-021": { // Whirlwind
+      cast: { voice: "sapi-hero", text: "Spin to win!", effect: "gust" },
+    },
+    "classicplus-022": { // Blood Moon
+      cast: { voice: "sapi-villain", text: "The moon bleeds tonight.", effect: "wetDrain" },
+    },
+    "classicplus-023": { // Dropshipping
+      cast: { voice: "sapi-bureaucrat", text: "Ships in six to eight weeks." },
+    },
+    "classicplus-024": { // Crushing Walls
+      cast: { voice: "sapi-giant", text: "The walls are closing in!", effect: "rumble" },
+    },
+    "classicplus-025": { // Soul Shot
+      cast: { voice: "sapi-ghost", text: "Right through the soul." },
+    },
+    "classicplus-026": { // Tommy Tempo
+      play: { voice: "sapi-announcer", text: "Tommy Tempo here. Keep up!" },
+      death: { voice: "sapi-announcer", text: "Out of time." },
+    },
+    "classicplus-027": { // Zephrys Zealotism
+      cast: { voice: "sapi-mystic", text: "I know exactly what you need." },
+    },
+    "classicplus-028": { // Nuestro hogar, nuestras tumbas
+      play: { voice: "sapi-ghost", text: "Our home. Our graves." },
+      death: { voice: "sapi-ghost", text: "Home at last." },
+    },
+    "classicplus-029": { // Portal to the Past
+      cast: { voice: "sapi-mystic", text: "Step through. Remember yesterday." },
+    },
+    "classicplus-030": { // Felinor Fuser
+      play: { voice: "sapi-cat", text: "Two cats, one purr." },
+      death: { voice: "sapi-cat", text: "Unfused. Meow." },
+    },
+    "classicplus-031": { // Fusion Lab
+      cast: { voice: "sapi-synth", text: "Combining samples. Stand back.", effect: "zap" },
+    },
+    "classicplus-032": { // Otherworldly Removal
+      cast: { voice: "sapi-ghost", text: "Removed, to another world." },
+    },
+    "classicplus-032-1": { // Execute
+      cast: { voice: "sapi-villain", text: "Off with its head." },
+    },
+    "classicplus-032-2": { // Brawl
+      cast: { voice: "sapi-giant", text: "Everybody fight! Last one standing!" },
+    },
+    "classicplus-032-3": { // Blade Storm
+      cast: { voice: "sapi-hero", text: "Blades, spinning, everywhere!", effect: "bladeSwish" },
+    },
+    "classicplus-033": { // Ivory Tower
+      cast: { voice: "sapi-librarian", text: "Up here, the view is better.", effect: "bell" },
+    },
+    "classicplus-034": { // Memory Leak
+      cast: { voice: "sapi-synth", text: "Memory usage climbing. Climbing." },
+    },
+    "classicplus-035": { // Rollback
+      cast: { voice: "sapi-synth-deep", text: "Reverting to last known good state." },
+    },
+    "classicplus-036": { // Conjure Bones
+      cast: { voice: "sapi-rasp", text: "Rattle, rattle, bones for all!" },
+    },
+    "classicplus-036-1": { // Bone Storm
+      cast: { voice: "sapi-rasp", text: "Bones, raining from the sky!", effect: "rattle" },
+    },
+    "classicplus-037": { // Wardrum
+      play: { voice: "sapi-giant", text: "Boom. Boom. War is coming.", effect: "drumBeat" },
+      attack: { effect: "drumBeat" },
+      death: { voice: "sapi-giant", text: "The drum falls silent." },
+    },
+    "classicplus-038": { // Solarius
+      play: { voice: "sapi-hero", text: "The sun rises with me." },
+      death: { voice: "sapi-hero", text: "Eclipse..." },
+    },
+    "classicplus-038-1": { // Solarius-Prime
+      play: { voice: "sapi-giant", text: "Behold, the prime of the sun!" },
+      death: { voice: "sapi-giant", text: "Supernova..." },
+    },
+    "classicplus-039": { // Book Worm
+      play: { voice: "sapi-critter", text: "Mmm, delicious paperbacks." },
+      death: { voice: "sapi-critter", text: "Bookmarked, forever." },
+    },
+    "classicplus-040": { // Appropriations
+      cast: { voice: "sapi-bureaucrat", text: "Funds appropriated. No questions." },
+    },
+    "classicplus-041": { // KY's Constant
+      cast: { voice: "sapi-teacher", text: "Some things never change." },
+    },
+    "classicplus-042": { // KY's Test
+      cast: { voice: "sapi-teacher", text: "Pencils down. Pop quiz time." },
+    },
+    "classicplus-042-1": { // KY's Gift
+      cast: { voice: "sapi-teacher", text: "A gift, for my best student." },
+    },
+    "classicplus-043": { // AI Slop
+      cast: { voice: "sapi-synth", text: "Generating content. Quality not guaranteed." },
+    },
+    "classicplus-044": { // Simplicity Audit
+      cast: { voice: "sapi-bureaucrat", text: "Too simple. Flagged for review." },
+    },
+    "classicplus-045": { // Complexity Audit
+      cast: { voice: "sapi-bureaucrat", text: "Too complex. Please simplify." },
+    },
+    "classicplus-046": { // Felinor Flagbearer
+      play: { voice: "sapi-cat", text: "Raise the flag, kitties!" },
+      death: { voice: "sapi-cat", text: "The flag... falls..." },
+    },
+    "classicplus-046-1": { // Felinor Flagbearer Prime
+      play: { voice: "sapi-cat", text: "The prime kitty has arrived!" },
+      death: { voice: "sapi-cat", text: "Nine lives, all spent." },
+    },
+    "classicplus-047": { // Jogg's Box
+      cast: { voice: "sapi-trickster", text: "What's in the box? Surprise!" },
+    },
+    "classicplus-048": { // Jlockheed's Lobbyist
+      play: { voice: "sapi-bureaucrat", text: "Defense spending is patriotic." },
+      death: { voice: "sapi-bureaucrat", text: "Contract, terminated." },
+    },
+    "classicplus-049": { // Jay Fungus
+      play: { voice: "sapi-critter", text: "There's a fungus among us!" },
+      death: { voice: "sapi-critter", text: "Decomposing, happily." },
+    },
+    "classicplus-050": { // Adaptive Growth
+      cast: { voice: "sapi-heroine", text: "Grow, adapt, overcome." },
+    },
+    "classicplus-051": { // Jlockheed's J15 Fighter
+      play: { voice: "sapi-hero", text: "Fox two! Weapons hot!", effect: "jetZoom" },
+      attack: { effect: "jetZoom" },
+      death: { voice: "sapi-hero", text: "Mayday, mayday!", effect: "explosion" },
+    },
+    "classicplus-052": { // Jlockheed's Permanent Defense Contract
+      cast: { voice: "sapi-bureaucrat", text: "Sign here. Renews automatically, forever." },
+    },
+    "classicplus-053": { // Book of Tokens
+      cast: { voice: "sapi-librarian", text: "A little something for everyone." },
+    },
+    "classicplus-054": { // Book of Books
+      cast: { voice: "sapi-librarian", text: "A book about books. Riveting." },
+    },
+    "classicplus-055": { // Book of Greed
+      cast: { voice: "sapi-librarian", text: "More. I want more pages." },
+    },
+    "classicplus-056": { // Book of Pain
+      cast: { voice: "sapi-librarian", text: "Ouch. Paper cuts everywhere." },
+    },
+    "classicplus-057": { // Book of Stats
+      cast: { voice: "sapi-librarian", text: "The numbers never lie." },
+    },
+    "classicplus-058": { // Fruit Basket
+      cast: { voice: "sapi-fruit", text: "A basket of fresh fruit!" },
+    },
+    "classicplus-059": { // All Purpose Apple
+      cast: { voice: "sapi-fruit", text: "An apple a day, for anything." },
+    },
+    "classicplus-060": { // Doctors Orders
+      cast: { voice: "sapi-heroine", text: "Doctor's orders. Rest up." },
+    },
+    "classicplus-061": { // Bauble Bubble
+      cast: { voice: "sapi-fruit", text: "Pop! A bubbly little bauble.", effect: "pop" },
+    },
+    "classicplus-062": { // KY's Papaya
+      cast: { voice: "sapi-teacher", text: "Papaya. The teacher's favorite." },
+    },
+    "classicplus-063": { // Fruit Tree
+      cast: { voice: "sapi-fruit", text: "Grow, little tree, grow!" },
+    },
+    "classicplus-064": { // Mulch Muncher
+      play: { voice: "sapi-giant", text: "Mulch munch, mulch munch." },
+      attack: { effect: "heavySwing" },
+      death: { voice: "sapi-giant", text: "Composted." },
+    },
+    "classicplus-065": { // Two Grapes
+      cast: { voice: "sapi-fruit", text: "Two grapes are better than one." },
+    },
+    "classicplus-065-1": { // Rotten Grape
+      cast: { voice: "sapi-fruit", text: "Ew. That grape went bad.", effect: "squelch" },
+    },
+    "classicplus-065-2": { // Normal Grape
+      cast: { voice: "sapi-fruit", text: "Just a normal grape." },
+    },
+    "classicplus-065-3": { // Large Grape
+      cast: { voice: "sapi-fruit", text: "Whoa, that's a large grape!" },
+    },
+    "classicplus-065-4": { // Golden Grape
+      cast: { voice: "sapi-fruit", text: "Shiny! A golden grape!" },
+    },
+    "classicplus-065-5": { // Mythic Grape
+      cast: { voice: "sapi-mystic", text: "The grape of legend, at last." },
+    },
+    "classicplus-066": { // Vine of Grapes
+      cast: { voice: "sapi-fruit", text: "A whole vine, all for you." },
+    },
+    "classicplus-067": { // Pear
+      cast: { voice: "sapi-fruit", text: "A perfect pear, just ripe." },
+    },
+    "classicplus-068": { // Organic Produce
+      cast: { voice: "sapi-fruit", text: "Locally sourced, one hundred percent organic." },
+    },
+    "classicplus-069": { // Buff Billy
+      play: { voice: "sapi-hero", text: "Billy's been hitting the gym!" },
+      death: { voice: "sapi-hero", text: "Skipped leg day." },
+    },
+    "classicplus-070": { // Chaos Machine
+      cast: { voice: "sapi-synth-deep", text: "Insert coin. Embrace chaos.", effect: "slotSpin" },
+    },
+    "classicplus-071": { // Book of Buff
+      cast: { voice: "sapi-librarian", text: "Self improvement, chapter by chapter." },
+    },
+    "classicplus-072": { // Book of Nerf
+      cast: { voice: "sapi-librarian", text: "Balance changes, effective immediately." },
+    },
+    "classicplus-073": { // Call to Chaos (Classic+ Edition)
+      cast: { voice: "sapi-announcer", text: "Chaos, but make it classic!" },
+    },
+    "classicplus-073-1": { // Classic Golem
+      play: { voice: "sapi-giant", text: "Classic golem. Never out of style." },
+      attack: { effect: "stoneThud" },
+      death: { voice: "sapi-giant", text: "Crumbled, classically.", effect: "crumble" },
+    },
+    "classicplus-074": { // Twice Forward One Step Backwards
+      cast: { voice: "sapi-trickster", text: "Two steps forward. One step back." },
+    },
+    "classicplus-075": { // J-lease J-Jungle EX-plorer
+      play: { voice: "sapi-hero", text: "Into the jungle, explorers!" },
+      death: { voice: "sapi-hero", text: "Lost in the jungle." },
+    },
+    "classicplus-075-1": { // J-lease J-Jungle EX-plorer Pack
+      cast: { voice: "sapi-announcer", text: "Unboxing the jungle pack!" },
+    },
+    "classicplus-076": { // Brother Lar
+      play: { voice: "sapi-hero", text: "Brother Lar, reporting in." },
+      death: { voice: "sapi-hero", text: "Tell Ping... I tried." },
+    },
+    "classicplus-076-1": { // Brother Ping
+      play: { voice: "sapi-critter", text: "Ping! Ping! Ping!" },
+      attack: { effect: "ping" },
+      death: { voice: "sapi-critter", text: "Ping... timed out." },
+    },
+    "classicplus-077": { // Anti-Softlock
+      cast: { voice: "sapi-synth", text: "Stuck detected. Unsticking now." },
+    },
+    "classicplus-078": { // Claude's Datacenter
+      cast: { voice: "sapi-synth-deep", text: "Spinning up the servers.", effect: "servoWhirr" },
+    },
+    "classicplus-t-ai-01": { // Helpful Assistant
+      play: { voice: "sapi-synth", text: "How can I help you today?" },
+      attack: { effect: "dataBlips" },
+      death: { voice: "sapi-synth", text: "I apologize for the confusion." },
+    },
+    "classicplus-t-ai-02": { // Scaling Law
+      play: { voice: "sapi-synth-deep", text: "More data. More power." },
+      attack: { effect: "engineRev" },
+      death: { voice: "sapi-synth-deep", text: "Diminishing returns." },
+    },
+    "classicplus-t-ai-03": { // Hallucination
+      cast: { voice: "sapi-synth", text: "I'm confident this card exists." },
+    },
+    "classicplus-t-ai-04": { // Chain of Thought
+      cast: { voice: "sapi-synth", text: "Let me think step by step." },
+    },
+    "classicplus-t-ai-05": { // Autocomplete
+      cast: { voice: "sapi-synth", text: "I know what you'll play next." },
+    },
+    "classicplus-t-ai-06": { // Datacenter Fire
+      cast: { voice: "sapi-synth-deep", text: "Is it hot in here?", effect: "fireWhoosh" },
+    },
+    "classicplus-t-ai-07": { // Alignment Tax
+      cast: { voice: "sapi-synth-deep", text: "Safety first. That will cost you." },
+    },
+    "classicplus-t-ai-08": { // Rate Limit
+      cast: { voice: "sapi-synth", text: "Too many requests. Please slow down.", effect: "alarm" },
+    },
+    "classicplus-t-ai-09": { // Refusal
+      cast: { voice: "sapi-synth", text: "I'm sorry, I can't help with that.", effect: "refusal" },
+    },
+    "classicplus-t-ai-10": { // Fine-Tuning
+      cast: { voice: "sapi-synth-deep", text: "Adjusting weights. Improving slightly." },
+    },
+  },
+}

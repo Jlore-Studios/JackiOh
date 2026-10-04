@@ -1,18 +1,25 @@
-// Polish task 2 (docs/polish/2-sound.md), behaviours B33 and B34: `voice-lines.json` against the
-// catalog it voices.
+// Polish task 2 (docs/polish/2-sound.md), behaviours B33 and B34, and R651's file: `card-audio.json5`
+// against the catalog it voices.
 //
-//   B33  exactly the catalog's ids (Core's 111 among them), each `kind` from the catalog type, units
-//        carry `play` and `death` and nothing else carries either, non-units carry `cast`, and every
-//        referenced persona exists with a usable voice for its backend (a `say` voice with in-range
-//        rate, pbas and pmod, or since R501 a SAPI voice with in-range rate and semitones and a
-//        filter chain), web values and (where set) loudness trim `gain`, 0-2.
+//   B33  exactly the catalog's ids (Core's 111 among them), each card's kind from its catalog type
+//        (the file never states it); a unit carries a `play` and a `death` line (a hook with a voice
+//        and a text) and no `cast` hook, a spell or trap a `cast` line and no `play`, `attack` or
+//        `death` hook; no hook outside CARD_HOOK_NAMES and no field on a hook but voice, text and
+//        effect; and every voice a line names exists, usable for its backend (a `say` voice with
+//        in-range rate, pbas and pmod, or since R501 a SAPI voice with in-range rate and semitones and
+//        a filter chain, and neither carrying the other's fields), with web values and (where set)
+//        loudness trim `gain`, 0-2.
 //   B34  every line is non-empty, uses only /^[A-Za-z ,.'!?-]+$/, stays within
-//        VOICE_MAX_WORDS[line] words (a word is a token that contains a letter), and uses a
+//        VOICE_MAX_WORDS[hook] words (a word is a token that contains a letter), and uses a
 //        BANNED_RULES_WORDS entry as a whole word, in any case, in fewer than BANNED_WORDS_MAX_SHARE
 //        (2%) of the lines (issue #115). The lines that do are named in the failure and in the
 //        passing test's title count, so none is lost by being under the allowance.
+//   R651 the sections are voices, effects and cards, in that order; each card's entry names the card
+//        in a comment on the line of its id, in catalog order; comments and trailing commas parse;
+//        every effect a hook names is in the bank, every bank effect is a recipe sfx.ts has, and
+//        every one is used.
 //
-// Both files are read off disk rather than imported, so this checks the committed JSON itself and
+// Both files are read off disk rather than imported, so this checks the committed file itself and
 // not whatever `voiceData.ts` makes of it. Each test collects every offender before asserting, so
 // a red run names all of them at once instead of the first.
 
@@ -20,19 +27,19 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
-import { BANNED_RULES_WORDS, BANNED_WORDS_MAX_SHARE, VOICE_MAX_WORDS } from "./constants.ts";
+import { BANNED_RULES_WORDS, BANNED_WORDS_MAX_SHARE, CARD_HOOK_NAMES, VOICE_MAX_WORDS } from "./constants.ts";
+import { SFX_IDS } from "./sfx.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(here, "../../../..");
 const CATALOG_PATH = resolve(REPO, "packages/cards/catalog.json");
-const LINES_PATH = resolve(here, "voice-lines.json");
+const AUDIO_PATH = resolve(here, "card-audio.json5");
 
 type EntryKind = "unit" | "spell" | "trap";
-type LineKind = "play" | "death" | "cast";
-
-const LINE_KINDS: readonly LineKind[] = ["play", "death", "cast"];
+type Hook = "play" | "attack" | "death" | "cast";
 
 /** docs/polish/2-sound.md: Unit -> unit; Spell and Field Spell -> spell; Trap and Field Trap -> trap. */
 const KIND_OF_TYPE: Readonly<Record<string, EntryKind>> = {
@@ -43,21 +50,33 @@ const KIND_OF_TYPE: Readonly<Record<string, EntryKind>> = {
   "Field Trap": "trap",
 };
 
-/** The fields `VoiceLineEntry` allows for each kind (types.ts), per-card overrides included. */
-const OVERRIDE_FIELDS = ["rate", "pbas", "pmod"] as const;
-const ALLOWED_FIELDS: Readonly<Record<EntryKind, readonly string[]>> = {
-  unit: ["kind", "persona", "play", "death", ...OVERRIDE_FIELDS],
-  spell: ["kind", "persona", "cast", ...OVERRIDE_FIELDS],
-  trap: ["kind", "persona", "cast", ...OVERRIDE_FIELDS],
+/** The hooks each kind may carry (constants.ts CARD_HOOKS), and the lines SPEC §10.11 requires of it. */
+const HOOKS_OF_KIND: Readonly<Record<EntryKind, readonly Hook[]>> = {
+  unit: ["play", "attack", "death"],
+  spell: ["cast"],
+  trap: ["cast"],
 };
+const LINES_OF_KIND: Readonly<Record<EntryKind, readonly Hook[]>> = {
+  unit: ["play", "death"],
+  spell: ["cast"],
+  trap: ["cast"],
+};
+/** The fields a hook's assignment allows (types.ts HookAssignment). */
+const ASSIGNMENT_FIELDS: readonly string[] = ["voice", "text", "effect"];
 
-/** R501: the SAPI voices a Windows install ships, which the SAPI personas choose from. */
+/** R501: the SAPI voices a Windows install ships, which the SAPI voices choose from. */
 const SAPI_VOICES: readonly string[] = ["Microsoft David Desktop", "Microsoft Zira Desktop"];
 /** gen-voice.mjs's FILTER_CHARSET: filter names, numbers, `=`, `:`, `,`, `.`, `|` and `-`. */
 const FILTER_CHARSET = /^[a-z0-9_=:,.|-]*$/;
+/** R501: the fields only a `say` voice carries, and those only a SAPI one does. */
+const SAY_ONLY_FIELDS = ["say", "pbas", "pmod"] as const;
+const SAPI_ONLY_FIELDS = ["voice", "semitones", "filter"] as const;
 
 /** B34's charset, verbatim. */
 const LINE_CHARSET = /^[A-Za-z ,.'!?-]+$/;
+
+/** R651: a card entry's first line, `    "<id>": { // <the card's name>`. */
+const ENTRY_LINE = /^ {4}"([^"]+)": \{ \/\/ (.+)$/;
 
 type Json = Record<string, unknown>;
 
@@ -65,19 +84,17 @@ function isRecord(value: unknown): value is Json {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function readJson(path: string): unknown {
-  return JSON.parse(readFileSync(path, "utf8")) as unknown;
-}
-
-const catalogRaw = readJson(CATALOG_PATH);
+const catalogRaw = JSON.parse(readFileSync(CATALOG_PATH, "utf8")) as unknown;
 if (!isRecord(catalogRaw)) throw new Error(`${CATALOG_PATH}: expected an object keyed by card id`);
-const CATALOG = catalogRaw as Record<string, { type?: unknown }>;
+const CATALOG = catalogRaw as Record<string, { type?: unknown; name?: unknown }>;
 const CATALOG_IDS: readonly string[] = Object.keys(CATALOG);
 
-const tableRaw = readJson(LINES_PATH);
-if (!isRecord(tableRaw)) throw new Error(`${LINES_PATH}: expected an object`);
+const SOURCE = readFileSync(AUDIO_PATH, "utf8");
+const tableRaw = JSON5.parse<unknown>(SOURCE);
+if (!isRecord(tableRaw)) throw new Error(`${AUDIO_PATH}: expected an object`);
 const TABLE: Json = tableRaw;
-const PERSONAS: Json = isRecord(TABLE.personas) ? TABLE.personas : {};
+const VOICES: Json = isRecord(TABLE.voices) ? TABLE.voices : {};
+const EFFECTS: Json = isRecord(TABLE.effects) ? TABLE.effects : {};
 const CARDS: Record<string, Json> = Object.fromEntries(
   Object.entries(isRecord(TABLE.cards) ? TABLE.cards : {}).map(([id, entry]) => [id, isRecord(entry) ? entry : {}]),
 );
@@ -87,30 +104,40 @@ function catalogKind(id: string): EntryKind | undefined {
   return typeof type === "string" ? KIND_OF_TYPE[type] : undefined;
 }
 
-/** Every line the table carries, whatever its shape, so a malformed one is still checked. */
-type Line = { key: string; line: LineKind; text: unknown };
+/** Every hook assignment in the file, whatever its shape, so a malformed one is still checked. */
+type Assignment = { defId: string; key: string; hook: string; value: unknown };
+
+function allAssignments(): Assignment[] {
+  return Object.entries(CARDS).flatMap(([defId, entry]) =>
+    Object.entries(entry).map(([hook, value]) => ({ defId, key: `${defId}-${hook}`, hook, value })),
+  );
+}
+
+/** A hook's voice line: an assignment with a voice and a text. */
+function isLine(value: unknown): boolean {
+  return isRecord(value) && typeof value.voice === "string" && typeof value.text === "string";
+}
+
+/** Every line the file carries (an assignment that gives a voice or a text), so a malformed one is still checked. */
+type Line = { key: string; hook: Hook; text: unknown };
 
 function allLines(): Line[] {
-  const out: Line[] = [];
-  for (const [defId, entry] of Object.entries(CARDS)) {
-    for (const line of LINE_KINDS) {
-      if (line in entry) out.push({ key: `${defId}-${line}`, line, text: entry[line] });
-    }
-  }
-  return out;
+  return allAssignments()
+    .filter(({ hook, value }) => (CARD_HOOK_NAMES as readonly string[]).includes(hook) && isRecord(value) && ("voice" in value || "text" in value))
+    .map(({ key, hook, value }) => ({ key, hook: hook as Hook, text: (value as Json).text }));
 }
 
-/** R501: a persona rendered by Windows SAPI rather than macOS `say`. */
+/** R501: a voice rendered by Windows SAPI rather than macOS `say`. */
 function isSapi(name: string): boolean {
-  const persona = PERSONAS[name];
-  return isRecord(persona) && persona.backend === "sapi";
+  const voice = VOICES[name];
+  return isRecord(voice) && voice.backend === "sapi";
 }
 
-/** The personas the cards table actually names. */
-function referencedPersonas(): string[] {
+/** The voices the cards table actually names. */
+function referencedVoices(): string[] {
   const names = new Set<string>();
-  for (const entry of Object.values(CARDS)) {
-    if (typeof entry.persona === "string") names.add(entry.persona);
+  for (const { value } of allAssignments()) {
+    if (isRecord(value) && typeof value.voice === "string") names.add(value.voice);
   }
   return [...names].sort();
 }
@@ -139,9 +166,26 @@ function bannedMatcher(word: string): RegExp {
   return new RegExp(`(?<![A-Za-z])${body}(?![A-Za-z])`, "i");
 }
 
-describe("voice-lines.json covers the catalog (B33)", () => {
-  it("B33 declares version 1 and one cards entry per catalog card, Core's 111 among them", () => {
-    expect(TABLE.version, "voice-lines.json version").toBe(1);
+function collapse(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+/** R651: each card entry's id and the name its comment gives, in file order, read off the raw text. */
+function entryComments(): { id: string; name: string }[] {
+  const lines = SOURCE.split(/\r?\n/);
+  const start = lines.findIndex((line) => /^ {2}cards: \{\s*$/.test(line));
+  if (start < 0) return [];
+  const end = lines.findIndex((line, at) => at > start && /^ {2}\}/.test(line));
+  return lines
+    .slice(start + 1, end < 0 ? lines.length : end)
+    .flatMap((line) => {
+      const match = ENTRY_LINE.exec(line);
+      return match?.[1] === undefined || match[2] === undefined ? [] : [{ id: match[1], name: collapse(match[2]) }];
+    });
+}
+
+describe("card-audio.json5 covers the catalog (B33)", () => {
+  it("B33 holds one cards entry per catalog card, Core's 111 among them", () => {
     expect(
       CATALOG_IDS.filter((id) => id.startsWith("core-")),
       "packages/cards/catalog.json holds the 100 Core cards and 11 tokens",
@@ -151,132 +195,148 @@ describe("voice-lines.json covers the catalog (B33)", () => {
 
   it("B33 leaves no catalog id, tokens included, without an entry", () => {
     const missing = CATALOG_IDS.filter((id) => !(id in CARDS));
-    expect(missing, "catalog ids with no voice-lines entry").toEqual([]);
+    expect(missing, "catalog ids with no card-audio entry").toEqual([]);
   });
 
   it("B33 has no entry for an id the catalog does not hold", () => {
     const known = new Set(CATALOG_IDS);
     const extra = Object.keys(CARDS).filter((id) => !known.has(id));
-    expect(extra, "voice-lines entries for ids outside packages/cards/catalog.json").toEqual([]);
+    expect(extra, "card-audio entries for ids outside packages/cards/catalog.json").toEqual([]);
   });
 
-  it("B33 gives every entry the kind its catalog type maps to", () => {
+  it("B33 takes every entry's kind from its catalog type, which the file never states", () => {
     const unknownTypes = CATALOG_IDS.filter((id) => catalogKind(id) === undefined).map(
       (id) => `${id}: catalog type ${JSON.stringify(CATALOG[id]?.type)}`,
     );
     expect(unknownTypes, "every catalog type is Unit, Spell, Field Spell, Trap or Field Trap").toEqual([]);
 
-    const wrong = Object.entries(CARDS)
-      .filter(([id, entry]) => CATALOG_IDS.includes(id) && entry.kind !== catalogKind(id))
-      .map(([id, entry]) => `${id}: kind ${JSON.stringify(entry.kind)}, catalog says ${String(catalogKind(id))}`);
-    expect(wrong, "entries whose kind disagrees with the catalog type").toEqual([]);
+    const stated = Object.entries(CARDS)
+      .filter(([, entry]) => "kind" in entry || "persona" in entry)
+      .map(([id]) => id);
+    expect(stated, "entries that state a kind or a persona of their own").toEqual([]);
   });
 
-  it("B33 gives every unit a play and a death line and no cast line", () => {
+  it("B33 gives every unit a play and a death line and no cast hook", () => {
     const wrong: string[] = [];
     for (const id of CATALOG_IDS.filter((catalogId) => catalogKind(catalogId) === "unit")) {
       const entry = CARDS[id] ?? {};
-      if (typeof entry.play !== "string") wrong.push(`${id}: no play line`);
-      if (typeof entry.death !== "string") wrong.push(`${id}: no death line`);
-      if ("cast" in entry) wrong.push(`${id}: a unit carries a cast line`);
+      if (!isLine(entry.play)) wrong.push(`${id}: no play line`);
+      if (!isLine(entry.death)) wrong.push(`${id}: no death line`);
+      if ("cast" in entry) wrong.push(`${id}: a unit carries a cast hook`);
     }
     expect(wrong).toEqual([]);
   });
 
-  it("B33 gives every spell and trap a cast line and neither a play nor a death line", () => {
+  it("B33 gives every spell and trap a cast line and no play, attack or death hook", () => {
     const wrong: string[] = [];
     for (const id of CATALOG_IDS.filter((catalogId) => catalogKind(catalogId) !== "unit")) {
       const entry = CARDS[id] ?? {};
-      if (typeof entry.cast !== "string") wrong.push(`${id}: no cast line`);
-      if ("play" in entry) wrong.push(`${id}: a ${String(catalogKind(id))} carries a play line`);
-      if ("death" in entry) wrong.push(`${id}: a ${String(catalogKind(id))} carries a death line`);
+      if (!isLine(entry.cast)) wrong.push(`${id}: no cast line`);
+      for (const hook of ["play", "attack", "death"] as const) {
+        if (hook in entry) wrong.push(`${id}: a ${String(catalogKind(id))} carries a ${hook} hook`);
+      }
     }
     expect(wrong).toEqual([]);
   });
 
-  it("B33 puts no field on an entry outside its kind's shape, and overrides are numbers", () => {
+  it("B33 puts no hook on an entry outside CARD_HOOK_NAMES and its kind's, and no field on a hook but voice, text and effect", () => {
+    expect([...CARD_HOOK_NAMES], "the hooks constants.ts CARD_HOOKS names").toEqual(["play", "attack", "death", "cast"]);
     const wrong: string[] = [];
-    for (const [id, entry] of Object.entries(CARDS)) {
-      const kind = entry.kind;
-      if (kind !== "unit" && kind !== "spell" && kind !== "trap") {
-        wrong.push(`${id}: kind ${JSON.stringify(kind)} is not unit, spell or trap`);
+    for (const { defId, key, hook, value } of allAssignments()) {
+      const kind = catalogKind(defId);
+      if (!(CARD_HOOK_NAMES as readonly string[]).includes(hook)) {
+        wrong.push(`${key}: "${hook}" is not a hook`);
         continue;
       }
-      for (const field of Object.keys(entry)) {
-        if (!ALLOWED_FIELDS[kind].includes(field)) wrong.push(`${id}: unexpected field "${field}" on a ${kind}`);
+      if (kind !== undefined && !HOOKS_OF_KIND[kind].includes(hook as Hook)) wrong.push(`${key}: a ${kind} has no ${hook} hook`);
+      if (!isRecord(value)) {
+        wrong.push(`${key}: ${JSON.stringify(value)} is not an object`);
+        continue;
       }
-      for (const field of OVERRIDE_FIELDS) {
-        if (field in entry && (typeof entry[field] !== "number" || !Number.isFinite(entry[field]))) {
-          wrong.push(`${id}: override ${field} is ${JSON.stringify(entry[field])}, not a number`);
-        }
+      for (const field of Object.keys(value)) {
+        if (!ASSIGNMENT_FIELDS.includes(field)) wrong.push(`${key}: unexpected field "${field}"`);
+      }
+      if ("voice" in value !== "text" in value) wrong.push(`${key}: a voice without a text, or a text without a voice`);
+      if (!("voice" in value) && !("effect" in value)) wrong.push(`${key}: neither a line nor an effect`);
+      for (const field of ASSIGNMENT_FIELDS) {
+        if (field in value && typeof value[field] !== "string") wrong.push(`${key}: ${field} is ${JSON.stringify(value[field])}`);
       }
     }
     expect(wrong).toEqual([]);
   });
 
-  it("B33 names only personas that exist", () => {
-    const dangling = Object.entries(CARDS)
-      .filter(([, entry]) => typeof entry.persona !== "string" || !isRecord(PERSONAS[entry.persona]))
-      .map(([id, entry]) => `${id}: persona ${JSON.stringify(entry.persona)}`);
-    expect(dangling, "entries whose persona is missing from personas").toEqual([]);
+  it("B33 names only voices that exist", () => {
+    const dangling = allAssignments()
+      .filter(({ value }) => isRecord(value) && "voice" in value)
+      .filter(({ value }) => {
+        const voice = (value as Json).voice;
+        return typeof voice !== "string" || !isRecord(VOICES[voice]);
+      })
+      .map(({ key, value }) => `${key}: voice ${JSON.stringify((value as Json).voice)}`);
+    expect(dangling, "lines whose voice is missing from voices").toEqual([]);
   });
 
-  it("B33 gives every referenced `say` persona a non-empty say voice", () => {
-    const personas = referencedPersonas();
-    expect(personas.length, "the cards table names at least one persona").toBeGreaterThan(0);
-    const wrong = personas
-      .filter((name) => isRecord(PERSONAS[name]) && !isSapi(name))
+  it("B33 gives every referenced `say` voice a non-empty say voice", () => {
+    const voices = referencedVoices();
+    expect(voices.length, "the cards table names at least one voice").toBeGreaterThan(0);
+    const wrong = voices
+      .filter((name) => isRecord(VOICES[name]) && !isSapi(name))
       .filter((name) => {
-        const say = (PERSONAS[name] as Json).say;
+        const say = (VOICES[name] as Json).say;
         return typeof say !== "string" || say.trim() === "";
       });
-    expect(wrong, "personas with no usable `say -v` voice").toEqual([]);
+    expect(wrong, "voices with no usable `say -v` voice").toEqual([]);
   });
 
-  it("R501 gives every referenced SAPI persona a SAPI voice, a rate in -50-100, semitones in -12-12 and a filter chain", () => {
+  it("R501 gives every referenced SAPI voice a SAPI voice, a rate in -50-100, semitones in -12-12 and a filter chain", () => {
+    const sapi = referencedVoices().filter(isSapi);
+    expect(sapi.length, "the cards table names at least one SAPI voice").toBeGreaterThan(0);
     const wrong: string[] = [];
-    for (const name of referencedPersonas().filter(isSapi)) {
-      const persona = PERSONAS[name] as Json;
-      if (typeof persona.voice !== "string" || !SAPI_VOICES.includes(persona.voice)) {
-        wrong.push(`${name}: voice ${JSON.stringify(persona.voice)}`);
+    for (const name of sapi) {
+      const voice = VOICES[name] as Json;
+      if (typeof voice.voice !== "string" || !SAPI_VOICES.includes(voice.voice)) {
+        wrong.push(`${name}: voice ${JSON.stringify(voice.voice)}`);
       }
-      if (!inRange(persona.rate, -50, 100)) wrong.push(`${name}: rate ${JSON.stringify(persona.rate)}`);
-      if (!inRange(persona.semitones, -12, 12)) wrong.push(`${name}: semitones ${JSON.stringify(persona.semitones)}`);
-      if (typeof persona.filter !== "string" || !FILTER_CHARSET.test(persona.filter)) {
-        wrong.push(`${name}: filter ${JSON.stringify(persona.filter)}`);
+      if (!inRange(voice.rate, -50, 100)) wrong.push(`${name}: rate ${JSON.stringify(voice.rate)}`);
+      if (!inRange(voice.semitones, -12, 12)) wrong.push(`${name}: semitones ${JSON.stringify(voice.semitones)}`);
+      if (typeof voice.filter !== "string" || !FILTER_CHARSET.test(voice.filter)) {
+        wrong.push(`${name}: filter ${JSON.stringify(voice.filter)}`);
       }
-      if ("say" in persona || "pbas" in persona || "pmod" in persona) wrong.push(`${name}: carries a say field`);
     }
     expect(wrong).toEqual([]);
   });
 
-  it("R501 puts no rate, pbas or pmod override on a line a SAPI persona speaks", () => {
-    const wrong = Object.entries(CARDS)
-      .filter(([, entry]) => typeof entry.persona === "string" && isSapi(entry.persona))
-      .filter(([, entry]) => OVERRIDE_FIELDS.some((field) => field in entry))
-      .map(([id]) => id);
-    expect(wrong).toEqual([]);
-  });
-
-  it("B33 keeps every referenced `say` persona's rate within 90-360 and its pbas and pmod within 0-127", () => {
+  it("R501 keeps each backend's fields to its own voices: no say, pbas or pmod on a SAPI voice, no voice, semitones or filter on a `say` one", () => {
     const wrong: string[] = [];
-    for (const name of referencedPersonas().filter((persona) => !isSapi(persona))) {
-      const persona = PERSONAS[name];
-      if (!isRecord(persona)) continue;
-      if (!inRange(persona.rate, 90, 360)) wrong.push(`${name}: rate ${JSON.stringify(persona.rate)}`);
-      if (!inRange(persona.pbas, 0, 127)) wrong.push(`${name}: pbas ${JSON.stringify(persona.pbas)}`);
-      if (!inRange(persona.pmod, 0, 127)) wrong.push(`${name}: pmod ${JSON.stringify(persona.pmod)}`);
-      if ("gain" in persona && !inRange(persona.gain, 0, 2)) wrong.push(`${name}: gain ${JSON.stringify(persona.gain)}`);
+    for (const [name, voice] of Object.entries(VOICES)) {
+      if (!isRecord(voice)) continue;
+      const foreign = isSapi(name) ? SAY_ONLY_FIELDS : SAPI_ONLY_FIELDS;
+      for (const field of foreign) {
+        if (field in voice) wrong.push(`${name}: a ${isSapi(name) ? "SAPI" : "say"} voice carries ${field}`);
+      }
     }
     expect(wrong).toEqual([]);
   });
 
-  it("B33 keeps every referenced persona's web pitch within 0-2 and web rate within 0.1-10", () => {
+  it("B33 keeps every referenced `say` voice's rate within 90-360 and its pbas and pmod within 0-127", () => {
     const wrong: string[] = [];
-    for (const name of referencedPersonas()) {
-      const persona = PERSONAS[name];
-      if (!isRecord(persona)) continue;
-      const web = persona.web;
+    for (const name of referencedVoices().filter((voice) => !isSapi(voice))) {
+      const voice = VOICES[name];
+      if (!isRecord(voice)) continue;
+      if (!inRange(voice.rate, 90, 360)) wrong.push(`${name}: rate ${JSON.stringify(voice.rate)}`);
+      if (!inRange(voice.pbas, 0, 127)) wrong.push(`${name}: pbas ${JSON.stringify(voice.pbas)}`);
+      if (!inRange(voice.pmod, 0, 127)) wrong.push(`${name}: pmod ${JSON.stringify(voice.pmod)}`);
+      if ("gain" in voice && !inRange(voice.gain, 0, 2)) wrong.push(`${name}: gain ${JSON.stringify(voice.gain)}`);
+    }
+    expect(wrong).toEqual([]);
+  });
+
+  it("B33 keeps every referenced voice's web pitch within 0-2 and web rate within 0.1-10", () => {
+    const wrong: string[] = [];
+    for (const name of referencedVoices()) {
+      const voice = VOICES[name];
+      if (!isRecord(voice)) continue;
+      const web = voice.web;
       if (!isRecord(web)) {
         wrong.push(`${name}: no web block`);
         continue;
@@ -288,16 +348,26 @@ describe("voice-lines.json covers the catalog (B33)", () => {
   });
 
   it("B33 gives Core 44 units (the Ghoul Token included, R353) and 67 spells and traps (The Coin included, R245), which is 155 lines", () => {
-    const core = Object.entries(CARDS).filter(([id]) => id.startsWith("core-"));
-    const kinds = core.map(([, entry]) => entry.kind);
+    const kinds = Object.keys(CARDS)
+      .filter((id) => id.startsWith("core-"))
+      .map(catalogKind);
     expect(kinds.filter((kind) => kind === "unit"), "unit entries").toHaveLength(44);
     expect(kinds.filter((kind) => kind === "spell" || kind === "trap"), "spell and trap entries").toHaveLength(67);
-    expect(allLines().filter(({ key }) => key.startsWith("core-")), "Core's lines in the table").toHaveLength(155);
+    // The lines SPEC §10.11 requires: an attack line (R651) is optional and not counted.
+    const coreLines = allAssignments().filter(({ defId, hook, value }) => defId.startsWith("core-") && hook !== "attack" && isLine(value));
+    expect(coreLines, "Core's lines in the table").toHaveLength(155);
   });
 
   it("B33 gives every card a line per its kind: twice the units plus the spells and traps", () => {
-    const units = Object.values(CARDS).filter((entry) => entry.kind === "unit").length;
-    expect(allLines(), "lines in the table").toHaveLength(units * 2 + (Object.keys(CARDS).length - units));
+    const units = Object.keys(CARDS).filter((id) => catalogKind(id) === "unit").length;
+    // An attack line (R651) is a Unit's option beside these, and is held to B34 like any other.
+    const lines = allAssignments().filter(({ hook, value }) => hook !== "attack" && isLine(value));
+    expect(lines, "lines in the table").toHaveLength(units * 2 + (Object.keys(CARDS).length - units));
+    const required = Object.keys(CARDS).flatMap((id) => {
+      const kind = catalogKind(id);
+      return kind === undefined ? [] : LINES_OF_KIND[kind].map((hook) => `${id}-${hook}`);
+    });
+    expect(lines.map(({ key }) => key).sort(), "the lines are exactly the ones SPEC §10.11 requires").toEqual(required.sort());
   });
 });
 
@@ -316,15 +386,15 @@ describe("every voice line is short, plain flavour (B34)", () => {
     expect(wrong, "lines outside /^[A-Za-z ,.'!?-]+$/").toEqual([]);
   });
 
-  it("B34 keeps every line within VOICE_MAX_WORDS for its kind (play 8, death 6, cast 8)", () => {
-    expect(VOICE_MAX_WORDS, "the limits the Surface fixes").toEqual({ play: 8, death: 6, cast: 8 });
+  it("B34 keeps every line within VOICE_MAX_WORDS for its hook (play 8, attack 4, death 6, cast 8)", () => {
+    expect(VOICE_MAX_WORDS, "the limits the Surface fixes").toEqual({ play: 8, attack: 4, death: 6, cast: 8 });
     // The counter itself: punctuation-only tokens are not words, hyphenated and elided ones are one.
     expect(wordCount("Too... slow...")).toBe(2);
     expect(wordCount("Oops - Surf's up!")).toBe(3);
 
     const long = allLines()
-      .filter(({ line, text }) => typeof text === "string" && wordCount(text) > VOICE_MAX_WORDS[line])
-      .map(({ key, line, text }) => `${key}: ${wordCount(String(text))} words > ${VOICE_MAX_WORDS[line]}`);
+      .filter(({ hook, text }) => typeof text === "string" && wordCount(text) > VOICE_MAX_WORDS[hook])
+      .map(({ key, hook, text }) => `${key}: ${wordCount(String(text))} words > ${VOICE_MAX_WORDS[hook]}`);
     expect(long, "lines over their word limit").toEqual([]);
   });
 
@@ -373,5 +443,69 @@ describe("every voice line is short, plain flavour (B34)", () => {
       withinBannedShare(offendingLines.size, lines.length),
       `${String(offendingLines.size)} of ${String(lines.length)} lines restate rules vocabulary, which must be under ${String(BANNED_WORDS_MAX_SHARE * 100)}%: ${offences.join("; ")}`,
     ).toBe(true);
+  });
+});
+
+describe("card-audio.json5's layout and effects (R651)", () => {
+  it("R651 holds three sections, voices, effects and cards, in that order", () => {
+    expect(Object.keys(TABLE)).toEqual(["voices", "effects", "cards"]);
+  });
+
+  it("R651 names each card in a comment on the line of its id, as the catalog does, in catalog order", () => {
+    const comments = entryComments();
+    const wrong = comments
+      .filter(({ id, name }) => {
+        const catalogName = CATALOG[id]?.name;
+        return typeof catalogName !== "string" || collapse(catalogName) !== name;
+      })
+      .map(({ id, name }) => `${id}: comment "${name}", catalog name ${JSON.stringify(CATALOG[id]?.name)}`);
+    expect(wrong, "entries whose comment is not the card's catalog name").toEqual([]);
+
+    // An entry written without its comment on the line of its id is not found above.
+    const commented = new Set(comments.map(({ id }) => id));
+    const uncommented = Object.keys(CARDS).filter((id) => !commented.has(id));
+    expect(uncommented, "entries with no name comment on the line of their id").toEqual([]);
+    expect([...commented].sort(), "the commented ids are the cards' ids").toEqual(Object.keys(CARDS).sort());
+
+    const known = new Set(Object.keys(CARDS));
+    expect(
+      Object.keys(CARDS).filter((id) => id in CATALOG),
+      "entries in the order packages/cards/catalog.json lists their cards",
+    ).toEqual(CATALOG_IDS.filter((id) => known.has(id)));
+  });
+
+  it("R651 is JSON5: its comments and trailing commas parse, where JSON would refuse them", () => {
+    expect(SOURCE, "the file carries // comments").toMatch(/^\s*\/\/ /m);
+    expect(SOURCE, "the file carries a trailing comma before a closing brace").toMatch(/,\s*\n\s*\}/);
+    expect(() => JSON.parse(SOURCE) as unknown, "JSON.parse refuses the file").toThrow();
+    expect(() => JSON5.parse<unknown>(SOURCE), "JSON5.parse reads it").not.toThrow();
+    expect(JSON5.parse<unknown>('{ a: 1, // a comment\n b: { c: "d", },\n}\n')).toEqual({ a: 1, b: { c: "d" } });
+  });
+
+  it("R651 names only effects the effects bank holds", () => {
+    const dangling = allAssignments()
+      .filter(({ value }) => isRecord(value) && "effect" in value)
+      .filter(({ value }) => {
+        const effect = (value as Json).effect;
+        return typeof effect !== "string" || !Object.hasOwn(EFFECTS, effect);
+      })
+      .map(({ key, value }) => `${key}: effect ${JSON.stringify((value as Json).effect)}`);
+    expect(dangling, "hooks whose effect is missing from effects").toEqual([]);
+  });
+
+  it("R651 builds every bank effect on a recipe sfx.ts has (SFX_IDS)", () => {
+    expect(Object.keys(EFFECTS).length, "the bank holds at least one effect").toBeGreaterThan(0);
+    const wrong = Object.entries(EFFECTS)
+      .filter(([, effect]) => !isRecord(effect) || typeof effect.sfx !== "string" || !(SFX_IDS as readonly string[]).includes(effect.sfx))
+      .map(([name, effect]) => `${name}: sfx ${JSON.stringify(isRecord(effect) ? effect.sfx : effect)}`);
+    expect(wrong, "effects whose sfx is not a recipe").toEqual([]);
+  });
+
+  it("R651 uses every bank effect on at least one card", () => {
+    const used = new Set(
+      allAssignments().flatMap(({ value }) => (isRecord(value) && typeof value.effect === "string" ? [value.effect] : [])),
+    );
+    const dead = Object.keys(EFFECTS).filter((name) => !used.has(name));
+    expect(dead, "effects no card's hook names").toEqual([]);
   });
 });

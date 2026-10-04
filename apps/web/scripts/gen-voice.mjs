@@ -1,18 +1,23 @@
 #!/usr/bin/env node
-// Renders every voice line in src/audio/voice-lines.json to public/audio/voice/<key>.m4a and records
+// Renders every voice line in src/audio/card-audio.json5 to public/audio/voice/<key>.m4a and records
 // each file in src/audio/voice-manifest.json (docs/polish/2-sound.md, "gen-voice.mjs"; SPEC §10.11,
-// R501).
+// R501, R651).
+//
+// The file is JSON5 and only ever read. A voice line is a card hook's assignment that names a voice
+// from the voices bank (with its text); its key is `<defId>-<hook>`. An assignment that is only an
+// effect renders nothing. Which hooks a card may carry is voiceData.ts's to check (CARD_HOOKS); this
+// script holds every catalog card to SPEC §10.11's lines: a Unit's play and death, anything else's cast.
 //
 //   node apps/web/scripts/gen-voice.mjs [--check] [--force] [--only <defId>] [--root <webDir>] [--catalog <file>]
 //   pnpm --filter @jackioh/web gen:voice
 //
-// TWO BACKENDS (R501). Each persona names the synthesizer its lines render with:
-//   - "say" (the default when a persona names none): macOS `say`, encoded by `afconvert`. Core's
+// TWO BACKENDS (R501). Each voice names the synthesizer its lines render with:
+//   - "say" (the default when a voice names none): macOS `say`, encoded by `afconvert`. Core's
 //     lines were rendered this way, and their voiceHash is exactly the original formula, so adding the
 //     second backend left every one of those files current.
 //   - "sapi": Windows SAPI (`System.Speech`) driven through `powershell.exe`, natively or from WSL,
 //     where the WAVs go through a Windows-visible temp dir; then trimmed, pitch-shifted, coloured by
-//     the persona's own ffmpeg filter chain, peak-normalised and encoded by `ffmpeg` to the same mono
+//     the voice's own ffmpeg filter chain, peak-normalised and encoded by `ffmpeg` to the same mono
 //     AAC at 22050 Hz and about 32 kbps. One PowerShell process renders a whole batch, because each
 //     start costs about a second.
 // Generate renders the keys whose backend this machine has. A key that needs rendering by a backend
@@ -20,7 +25,7 @@
 //
 // It is idempotent by input, never by output bytes: legacy `say` voices such as Fred are not
 // byte-deterministic from run to run, so a key is rendered again only when its voiceHash (the
-// persona's backend fields and the text) differs from the manifest's, or its file is missing or has
+// voice's backend fields and the text) differs from the manifest's, or its file is missing or has
 // the wrong size. `--force` renders every key again and `--only <defId>` limits rendering to one card.
 // Orphan files and manifest entries are always removed, and the manifest is rewritten only when its
 // content changes, so a second run with no input change writes nothing.
@@ -36,6 +41,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import JSON5 from "json5";
 
 /** Bump when the encoding flags below change, so every file renders again. */
 const HASH_VERSION = 1;
@@ -63,13 +70,14 @@ const MAX_SECONDS = 4.0;
 const JOBS = 2;
 /** Lines one PowerShell process renders before the next starts. */
 const SAPI_BATCH = 60;
+/** SPEC §10.11: the lines every card of a kind has. */
 const LINES_BY_KIND = { unit: ["play", "death"], spell: ["cast"], trap: ["cast"] };
 const KIND_OF_TYPE = { Unit: "unit", Spell: "spell", "Field Spell": "spell", Trap: "trap", "Field Trap": "trap" };
 const BACKENDS = ["say", "sapi"];
-/** SAPI persona ranges: SSML prosody rate in percent, the ffmpeg pitch shift in semitones. */
+/** SAPI voice ranges: SSML prosody rate in percent, the ffmpeg pitch shift in semitones. */
 const SAPI_RATE_RANGE = [-50, 100];
 const SAPI_SEMITONE_RANGE = [-12, 12];
-/** What a persona's ffmpeg filter chain may contain: filter names, numbers, `=`, `:`, `,`, `.`, `|` and `-`. */
+/** What a voice's ffmpeg filter chain may contain: filter names, numbers, `=`, `:`, `,`, `.`, `|` and `-`. */
 const FILTER_CHARSET = /^[a-z0-9_=:,.|-]*$/;
 const USAGE =
   "usage: node scripts/gen-voice.mjs [--check] [--force] [--only <defId>] [--root <webDir>] [--catalog <file>]";
@@ -141,104 +149,107 @@ function onDisk(bytes) {
   return Math.ceil(bytes / BLOCK_BYTES) * BLOCK_BYTES;
 }
 
-function backendOf(persona) {
-  return persona?.backend ?? "say";
+function backendOf(voice) {
+  return voice?.backend ?? "say";
 }
 
 function inRange(value, [min, max]) {
   return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
 }
 
-/** A persona's problems, or [] when it can render. */
-function personaProblems(name, persona) {
-  const backend = backendOf(persona);
-  if (!BACKENDS.includes(backend)) return [`persona ${name}: unknown backend ${JSON.stringify(backend)}`];
+/** A voice's problems, or [] when it can render. */
+function voiceProblems(name, voice) {
+  const backend = backendOf(voice);
+  if (!BACKENDS.includes(backend)) return [`voice ${name}: unknown backend ${JSON.stringify(backend)}`];
   if (backend === "say") {
-    return typeof persona.say === "string" && persona.say !== "" ? [] : [`persona ${name}: no say voice`];
+    return typeof voice.say === "string" && voice.say !== "" ? [] : [`voice ${name}: no say voice`];
   }
   const problems = [];
-  if (typeof persona.voice !== "string" || persona.voice === "") problems.push(`persona ${name}: no SAPI voice`);
-  if (!inRange(persona.rate, SAPI_RATE_RANGE)) problems.push(`persona ${name}: SAPI rate ${JSON.stringify(persona.rate)}`);
-  if (!inRange(persona.semitones, SAPI_SEMITONE_RANGE)) {
-    problems.push(`persona ${name}: semitones ${JSON.stringify(persona.semitones)}`);
+  if (typeof voice.voice !== "string" || voice.voice === "") problems.push(`voice ${name}: no SAPI voice`);
+  if (!inRange(voice.rate, SAPI_RATE_RANGE)) problems.push(`voice ${name}: SAPI rate ${JSON.stringify(voice.rate)}`);
+  if (!inRange(voice.semitones, SAPI_SEMITONE_RANGE)) {
+    problems.push(`voice ${name}: semitones ${JSON.stringify(voice.semitones)}`);
   }
-  if (typeof persona.filter !== "string" || !FILTER_CHARSET.test(persona.filter)) {
-    problems.push(`persona ${name}: filter ${JSON.stringify(persona.filter)}`);
+  if (typeof voice.filter !== "string" || !FILTER_CHARSET.test(voice.filter)) {
+    problems.push(`voice ${name}: filter ${JSON.stringify(voice.filter)}`);
   }
   return problems;
 }
 
-/** Every key the lines table expects, with its backend, effective values and hash. */
+function isObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Every key the file expects (each hook assignment that names a voice), with its backend, values and hash. */
 function expectedKeys(table, problems) {
   const expected = new Map();
-  const personas = table.personas ?? {};
-  const badPersonas = new Set();
-  for (const [name, persona] of Object.entries(personas)) {
-    const found = personaProblems(name, persona);
-    if (found.length > 0) badPersonas.add(name);
+  const voices = isObject(table.voices) ? table.voices : {};
+  const badVoices = new Set();
+  for (const [name, voice] of Object.entries(voices)) {
+    const found = voiceProblems(name, voice);
+    if (found.length > 0) badVoices.add(name);
     problems.push(...found);
   }
-  for (const [defId, entry] of Object.entries(table.cards ?? {})) {
-    const lines = LINES_BY_KIND[entry?.kind];
-    if (!lines) {
-      problems.push(`${defId}: unknown kind ${JSON.stringify(entry?.kind)}`);
+  for (const [defId, entry] of Object.entries(isObject(table.cards) ? table.cards : {})) {
+    if (!isObject(entry)) {
+      problems.push(`${defId}: not an object`);
       continue;
     }
-    const persona = personas[entry.persona];
-    if (!persona) {
-      problems.push(`${defId}: unknown persona ${JSON.stringify(entry.persona)}`);
-      continue;
-    }
-    if (badPersonas.has(entry.persona)) {
-      problems.push(`${defId}: persona ${entry.persona} cannot render`);
-      continue;
-    }
-    const backend = backendOf(persona);
-    if (backend === "sapi" && ["rate", "pbas", "pmod"].some((field) => field in entry)) {
-      problems.push(`${defId}: a SAPI persona's lines take no rate, pbas or pmod override`);
-      continue;
-    }
-    for (const line of lines) {
-      const key = `${defId}-${line}`;
-      const text = entry[line];
-      if (typeof text !== "string" || text.trim() === "") {
-        problems.push(`${key}: no ${line} line`);
+    for (const [hook, assignment] of Object.entries(entry)) {
+      const key = `${defId}-${hook}`;
+      if (!isObject(assignment)) {
+        problems.push(`${key}: not an object`);
         continue;
       }
+      if (assignment.voice === undefined) continue;
+      const voice = voices[assignment.voice];
+      if (!isObject(voice)) {
+        problems.push(`${key}: unknown voice ${JSON.stringify(assignment.voice)}`);
+        continue;
+      }
+      if (badVoices.has(assignment.voice)) {
+        problems.push(`${key}: voice ${assignment.voice} cannot render`);
+        continue;
+      }
+      const text = assignment.text;
+      if (typeof text !== "string" || text.trim() === "") {
+        problems.push(`${key}: no text for its voice`);
+        continue;
+      }
+      const backend = backendOf(voice);
       if (backend === "say") {
-        const values = {
-          say: persona.say,
-          rate: entry.rate ?? persona.rate,
-          pbas: entry.pbas ?? persona.pbas,
-          pmod: entry.pmod ?? persona.pmod,
-          text,
-        };
-        expected.set(key, { defId, line, backend, ...values, hash: voiceHash(values) });
+        const values = { say: voice.say, rate: voice.rate, pbas: voice.pbas, pmod: voice.pmod, text };
+        expected.set(key, { defId, line: hook, backend, ...values, hash: voiceHash(values) });
       } else {
-        const values = {
-          voice: persona.voice,
-          rate: persona.rate,
-          semitones: persona.semitones,
-          filter: persona.filter,
-          text,
-        };
-        expected.set(key, { defId, line, backend, ...values, hash: sapiHash(values) });
+        const values = { voice: voice.voice, rate: voice.rate, semitones: voice.semitones, filter: voice.filter, text };
+        expected.set(key, { defId, line: hook, backend, ...values, hash: sapiHash(values) });
       }
     }
   }
   return expected;
 }
 
-function catalogProblems(catalog, table) {
+/** Every catalog card has an entry and SPEC §10.11's lines; every entry is a catalog card. */
+function catalogProblems(catalog, table, expected) {
   const problems = [];
-  const cards = table.cards ?? {};
+  const cards = isObject(table.cards) ? table.cards : {};
   const ids = new Set();
   for (const [id, card] of Object.entries(catalog)) {
     ids.add(id);
-    const entry = cards[id];
-    if (!entry) problems.push(`${id}: missing from voice-lines.json`);
-    else if (entry.kind !== KIND_OF_TYPE[card.type]) {
-      problems.push(`${id}: kind ${JSON.stringify(entry.kind)}, but the catalog type is ${card.type}`);
+    if (!Object.hasOwn(cards, id)) {
+      problems.push(`${id}: missing from card-audio.json5`);
+      continue;
+    }
+    const lines = LINES_BY_KIND[KIND_OF_TYPE[card.type]];
+    if (!lines) {
+      problems.push(`${id}: unknown catalog type ${JSON.stringify(card.type)}`);
+      continue;
+    }
+    for (const line of lines) {
+      const key = `${id}-${line}`;
+      if (!expected.has(key) && !problems.some((problem) => problem.startsWith(`${key}:`))) {
+        problems.push(`${key}: no ${line} line`);
+      }
     }
   }
   for (const id of Object.keys(cards)) if (!ids.has(id)) problems.push(`${id}: not in the catalog`);
@@ -247,22 +258,25 @@ function catalogProblems(catalog, table) {
 
 function load(root, catalogPath) {
   const files = {
-    lines: path.join(root, "src/audio/voice-lines.json"),
+    table: path.join(root, "src/audio/card-audio.json5"),
     manifest: path.join(root, "src/audio/voice-manifest.json"),
     voiceDir: path.join(root, "public/audio/voice"),
   };
   const dataProblems = [];
   let table = {};
   try {
-    table = readJson(files.lines);
-    if (table.version !== 1) dataProblems.push(`voice-lines.json: version ${JSON.stringify(table.version)}, expected 1`);
+    table = JSON5.parse(fs.readFileSync(files.table, "utf8"));
+    if (!isObject(table)) {
+      dataProblems.push("card-audio.json5: not an object");
+      table = {};
+    }
   } catch (err) {
-    dataProblems.push(`voice-lines.json: ${err.message}`);
+    dataProblems.push(`card-audio.json5: ${err.message}`);
   }
   const expected = expectedKeys(table, dataProblems);
 
   try {
-    dataProblems.push(...catalogProblems(readJson(catalogPath), table));
+    dataProblems.push(...catalogProblems(readJson(catalogPath), table, expected));
   } catch (err) {
     dataProblems.push(`catalog: ${err.message}`);
   }
@@ -575,13 +589,13 @@ async function generate(ctx, opts) {
     return 2;
   }
   const { expected, manifest, files } = ctx;
-  // Never render or delete anything from a lines table that doesn't hold together.
+  // Never render or delete anything from a card table that doesn't hold together.
   if (ctx.dataProblems.length > 0) {
     report(ctx.dataProblems);
     return 1;
   }
   if (opts.only !== null && ![...expected.values()].some((want) => want.defId === opts.only)) {
-    usage(`--only ${opts.only}: no such card in voice-lines.json`);
+    usage(`--only ${opts.only}: no card with a voice line by that id in card-audio.json5`);
   }
   fs.mkdirSync(files.voiceDir, { recursive: true });
 

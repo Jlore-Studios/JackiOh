@@ -41,6 +41,7 @@ import DrawOfferNotice from "./DrawOffer.tsx";
 import Prompt from "./Prompt.tsx";
 import { promptOver } from "./promptOver.ts";
 import DragLayer from "./drag/DragLayer.tsx";
+import type { DragPlan } from "./drag/model.ts";
 import { IDLE, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
 import {
   animTestid,
@@ -56,7 +57,7 @@ import FxLayer from "../fx/FxLayer.tsx";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { useSetting } from "../settings/index.ts";
 import "./animations.css";
-import { useGameAudio, useVoiceSpeaking } from "../audio/index.ts";
+import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.ts";
 import { useGameStats } from "../stats/useGameStats.ts";
 
 /**
@@ -280,13 +281,27 @@ export default function Game({
     [onAction],
   );
 
+  // R651: picking up one of your Units to attack plays its `attack` hook: a drag lifting it, or a
+  // click choosing it as the attacker (click-click counts as a pick-up). Both lift only a Unit
+  // `legal` lets attack, and nothing about it is sent.
+  const pickUp = usePickupSound(shown);
+  const onLift = useCallback(
+    (plan: DragPlan) => {
+      if (plan.lifted.stage === "attacking") pickUp(plan.lifted.attackerId);
+    },
+    [pickUp],
+  );
+
   const handleClick = useCallback(
     (target: ClickTarget) => {
       const next = onClickTarget(shown, legal, interaction, target);
       setInteraction(next.interaction);
+      if (next.interaction !== interaction && next.interaction.stage === "attacking") {
+        pickUp(next.interaction.attackerId);
+      }
       if (next.action !== undefined) onAction(next.action);
     },
-    [shown, legal, interaction, onAction],
+    [shown, legal, interaction, onAction, pickUp],
   );
 
   const handleControl = useCallback(
@@ -399,7 +414,14 @@ export default function Game({
           onCancel={shown.pending === null ? () => setInteraction(IDLE) : undefined}
         />
       )}
-      <DragLayer view={shown} legal={legal} interaction={interaction} onInteraction={setInteraction} onAction={onAction} />
+      <DragLayer
+        view={shown}
+        legal={legal}
+        interaction={interaction}
+        onInteraction={setInteraction}
+        onAction={onAction}
+        onLift={onLift}
+      />
 
       {shown.result !== null ? (
         <GameResult
