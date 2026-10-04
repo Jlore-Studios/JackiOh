@@ -382,6 +382,12 @@
       "lines": [
         "@jgoetzmann-bot needs rebase"
       ]
+    },
+    "c:5981787396": {
+      "at": "2026-10-04T15:51:22Z",
+      "lines": [
+        "@jgoetzmann-bot change the tests to reflect new card behavior"
+      ]
     }
   },
   "items": {
