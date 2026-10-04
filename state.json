@@ -2152,6 +2152,11 @@
       ]
     },
     "devin": {
+      "infra": {
+        "at": "2026-10-04T04:27:39Z",
+        "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled",
+        "streak": 1
+      },
       "spent": [
         {
           "at": "2026-10-03T12:53:53Z",
