@@ -2,8 +2,8 @@
 # issue anyone can hold or delay. docs/deploy-cloudflare.md is the plan; scripts/promote-production.sh
 # is the logic (read its header first) and apps/web/src/net/promote-production.test.ts holds it.
 #
-# Cloudflare builds one branch, `production`, and nothing else. This workflow is the only thing that
-# moves it, and only by merging a pull request whose head is a commit of main whose push-to-main CI
+# The Worker serves what the `production` branch holds, and nothing else. This workflow is the only
+# thing that moves it, and only by merging a pull request whose head is a commit of main whose push-to-main CI
 # run passed. It never force-pushes: a `production` that carries anything main does not fails the
 # run, loudly, for a human to look at.
 #
@@ -29,9 +29,17 @@
 #                      commit, or the `sha` given, which must also be green and on main. A hold does
 #                      not stop it.
 #
-# A push or a merge made with GITHUB_TOKEN starts no workflow (so this cannot loop) but GitHub still
-# sends it to Cloudflare's GitHub app, which is what builds and deploys. Opening pull requests needs
-# Settings -> Actions -> General -> "Allow GitHub Actions to create and approve pull requests".
+# A push or a merge made with GITHUB_TOKEN starts no workflow, so this cannot loop. Opening pull
+# requests needs Settings -> Actions -> General -> "Allow GitHub Actions to create and approve pull
+# requests".
+#
+# The `deploy` job then builds production and deploys it to the Cloudflare Worker itself, with
+# `wrangler deploy` and the CLOUDFLARE_API_TOKEN secret: the same install CI runs (where the build is
+# known to pass), the public VITE_ settings from apps/web/.env.production, and
+# apps/web/scripts/check-production-bundle.mjs between the build and the deploy, so a bundle that
+# cannot sign in never goes live. Cloudflare's own Git builds failed on every commit after the first,
+# with logs only the dashboard shows, and built every branch; with this job they are disconnected
+# (docs/deploy-cloudflare.md, step 3). After the deploy it fetches the live site and checks it.
 name: promote production
 
 on:
@@ -49,6 +57,16 @@ on:
         description: "Commit of main to promote (default: the newest one whose CI passed)"
         required: false
         default: ""
+      redeploy:
+        description: "Build and deploy production even if it does not move"
+        type: boolean
+        required: false
+        default: false
+
+env:
+  # The Cloudflare account the `jackioh` Worker lives in (dash.cloudflare.com/<this>/workers/...).
+  # An identifier, not a secret; the API token is the secret.
+  CLOUDFLARE_ACCOUNT_ID: 3c0495fcdd2622a08e1a91b8de248b46
 
 permissions:
   contents: write
@@ -80,6 +98,8 @@ jobs:
       cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      promoted: ${{ steps.promote.outputs.promoted }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -87,9 +107,91 @@ jobs:
           fetch-depth: 0
 
       - name: merge main into production and keep the countdown issue
+        id: promote
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
           RUN_SHA: ${{ github.event.workflow_run.head_sha }}
           INPUT_SHA: ${{ inputs.sha }}
         run: bash scripts/promote-production.sh
+
+  deploy:
+    name: build and deploy to Cloudflare
+    needs: promote
+    if: >-
+      needs.promote.outputs.promoted == 'true' ||
+      (github.event_name == 'workflow_dispatch' && inputs.redeploy)
+    # Two deploys never overlap; a deploy waiting its turn builds whatever production is by then.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # The install covers the whole workspace, e2e/ included; no browser is needed here.
+      CYPRESS_INSTALL_BINARY: "0"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: production
+
+      - uses: ./.github/actions/setup
+
+      - name: build the web app
+        env:
+          # A repository variable may hold the publishable key instead of apps/web/.env.production.
+          # It is only exported when set: an empty variable would override the file's value.
+          KEY_FROM_VARS: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -n "$KEY_FROM_VARS" ]; then
+            echo "VITE_SUPABASE_PUBLISHABLE_KEY=$KEY_FROM_VARS" >> "$GITHUB_ENV"
+            export VITE_SUPABASE_PUBLISHABLE_KEY="$KEY_FROM_VARS"
+          fi
+          pnpm --filter @jackioh/web build
+
+      - name: refuse a bundle that cannot sign in or reach the server
+        run: |
+          if [ ! -f apps/web/scripts/check-production-bundle.mjs ]; then
+            echo "::error::production ($(git rev-parse --short HEAD)) predates this deploy job and its settings. Run this workflow without a sha once main's CI is green, so production moves to a commit that has them."
+            exit 1
+          fi
+          node apps/web/scripts/check-production-bundle.mjs
+
+      - name: deploy
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -o pipefail
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::The CLOUDFLARE_API_TOKEN secret is not set, so production was built but not deployed. docs/deploy-cloudflare.md, step 3, says how to make one."
+            exit 1
+          fi
+          npx --yes wrangler@4 deploy 2>&1 | tee "$RUNNER_TEMP/deploy.log"
+          url=$(grep -oE 'https://[A-Za-z0-9.-]+\.workers\.dev' "$RUNNER_TEMP/deploy.log" | head -n 1 || true)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: check the live site
+        if: steps.deploy.outputs.url != ''
+        env:
+          SITE: ${{ steps.deploy.outputs.url }}
+        run: |
+          # The new version can take a few seconds to reach every edge.
+          # The settings land in whichever chunk holds src/net/auth.ts, so every script index.html
+          # loads or preloads is read.
+          for attempt in 1 2 3 4 5 6; do
+            scripts=$(curl -fsS "$SITE/" | grep -oE '/assets/[A-Za-z0-9_.-]+\.js' | sort -u || true)
+            found=
+            for script in $scripts; do
+              if curl -fsS "$SITE$script" | grep -q 'sb_publishable_'; then found=$script; break; fi
+            done
+            if [ -n "$found" ]; then echo "sign-in is configured ($found)"; break; fi
+            if [ "$attempt" = 6 ]; then echo "::error::$SITE does not serve a bundle with sign-in configured"; exit 1; fi
+            sleep 10
+          done
+          status=$(curl -s -o /dev/null -w '%{http_code}' "$SITE/decks")
+          [ "$status" = 200 ] || { echo "::error::$SITE/decks answered $status, not 200"; exit 1; }
+          curl -sI "$SITE/decks" | grep -qi '^content-security-policy:' || { echo "::error::$SITE sends no Content-Security-Policy"; exit 1; }
+          status=$(curl -s -o /dev/null -w '%{http_code}' "$SITE/not-a-page")
+          [ "$status" = 404 ] || { echo "::error::$SITE/not-a-page answered $status, not 404"; exit 1; }
+          echo "### production is live at $SITE" >> "$GITHUB_STEP_SUMMARY"

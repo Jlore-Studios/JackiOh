@@ -38,6 +38,9 @@
 # result that differs from the candidate. Nothing is ever force-pushed. If production does not exist
 # the candidate is pushed as production, with no pull request.
 #
+# When production moves it writes `promoted=true` to GITHUB_OUTPUT, which is what starts the workflow's
+# `deploy` job (GitHub Actions builds and deploys production; Cloudflare builds nothing).
+#
 # It talks to GitHub through `gh` (GH_TOKEN) and to git through the checkout's own credentials: the
 # workflow checks out main with its whole history. A push or a merge made with GITHUB_TOKEN starts no
 # workflow (so this cannot loop), but GitHub still sends it to Cloudflare's app, which builds
@@ -72,6 +75,8 @@ catalog() {
     k == "CATALOG_VERSION" && $1 == "value:" { gsub(/"/, "", $2); print $2; exit }' || true
 }
 has_production() { git rev-parse --verify -q origin/production >/dev/null; }
+# production moved: the workflow's `deploy` job builds it and puts it on Cloudflare only then.
+moved() { echo "promoted=true" >> "${GITHUB_OUTPUT:-/dev/null}"; }
 
 newest_green() {
   gh run list --workflow ci.yml --branch main --event push --status success --limit 1 \
@@ -100,6 +105,7 @@ promote() {
   if ! has_production; then
     git push origin "$cand:refs/heads/production"
     RESULT=created
+    moved
     echo "production did not exist; it is now ${cand:0:12}."
     printf '### production created at `%s` (%s)\n\nCatalog: %s\n' "${cand:0:12}" "$WHY" "$CATALOG" >> "$SUMMARY"
     return 0
@@ -156,6 +162,7 @@ promote() {
     || fail "production's files differ from ${cand:0:12} after merging #$pr. Someone changed production meanwhile; see docs/deploy-cloudflare.md, 'production has diverged'."
 
   RESULT=merged PR_NUMBER=$pr
+  moved
   echo "Merged #$pr: production now has ${cand:0:12} ($COUNT commits)."
   printf '### production <- `%s` (%s)\n\nPull request #%s, catalog %s, %s commits.\n' \
     "${cand:0:12}" "$WHY" "$pr" "$CATALOG" "$COUNT" >> "$SUMMARY"

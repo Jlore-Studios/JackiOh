@@ -192,10 +192,12 @@ function world(): World {
   return w;
 }
 
-interface Run { status: number | null; text: string }
+interface Run { status: number | null; text: string; output: string }
 let runs = 0;
 function run(w: World, event: string, now: string, extra: Record<string, string> = {}): Run {
   const runner = join(w.root, `runner-${++runs}`);
+  const output = join(w.root, `output-${runs}`);
+  writeFileSync(output, "");
   git(w.root, "clone", "-q", w.origin, runner);
   const result = spawnSync("bash", [SCRIPT], {
     cwd: runner,
@@ -205,6 +207,7 @@ function run(w: World, event: string, now: string, extra: Record<string, string>
       PATH: `${w.bin}:${process.env.PATH ?? ""}`,
       GITHUB_REPOSITORY: "acme/game",
       GITHUB_STEP_SUMMARY: "/dev/null",
+      GITHUB_OUTPUT: output,
       GITHUB_RUN_ID: "",
       GH_TOKEN: "x",
       EVENT: event,
@@ -217,7 +220,7 @@ function run(w: World, event: string, now: string, extra: Record<string, string>
       ...extra,
     },
   });
-  return { status: result.status, text: `${result.stdout}${result.stderr}` };
+  return { status: result.status, text: `${result.stdout}${result.stderr}`, output: readFileSync(output, "utf8") };
 }
 const ok = (r: Run): Run => {
   expect(r.status, r.text).toBe(0);
@@ -574,6 +577,39 @@ describe("running it by hand", () => {
     expect(production(w)).toBe(w.sha.c3);
     expect(gh(w).prs).toEqual([]);
     expect(openIssues(w).map((i) => i.title)).toEqual(["Merging to production in 21 hours (2026-10-05 15:00 UTC)"]);
+  });
+});
+
+describe("the deploy job", () => {
+  // GitHub Actions builds production and puts it on Cloudflare (the workflow's `deploy` job), and only
+  // when the promote job's `promoted` output says production moved.
+  it("is signalled when a merge moves production, and not when nothing does", () => {
+    const w = counting();
+    expect(ok(run(w, "schedule", "2026-10-05T14:07:00Z")).output).not.toContain("promoted=true");
+    expect(ok(run(w, "schedule", "2026-10-05T15:07:00Z")).output).toContain("promoted=true");
+    // Nothing new on main since: the next due check merges nothing.
+    expect(ok(run(w, "schedule", "2026-10-06T15:07:00Z")).output).not.toContain("promoted=true");
+  });
+
+  it("is signalled by a catalog bump, and by creating production, and not by a hold", () => {
+    const w = counting();
+    comment(w, 1, "/hold", "2026-10-05T10:00:00Z");
+    expect(ok(run(w, "issue_comment", "2026-10-05T10:01:00Z")).output).not.toContain("promoted=true");
+    const bump = commit(w, "c4", { "render.yaml": renderYaml("v0.2.2") });
+    expect(ok(run(w, "workflow_run", "2026-10-05T11:00:00Z", { RUN_SHA: bump })).output).toContain("promoted=true");
+
+    const fresh = world();
+    git(fresh.origin, "update-ref", "-d", "refs/heads/production");
+    expect(ok(run(fresh, "workflow_dispatch", "2026-10-04T18:00:00Z")).output).toContain("promoted=true");
+  });
+
+  it("is wired to that output in the workflow, and can be forced with `redeploy`", () => {
+    expect(WORKFLOW).toMatch(/^ {4}outputs:\n {6}promoted: \$\{\{ steps\.promote\.outputs\.promoted \}\}$/mu);
+    expect(WORKFLOW).toMatch(/^ {6}- name: merge main into production and keep the countdown issue\n {8}id: promote$/mu);
+    expect(WORKFLOW).toContain("needs: promote");
+    expect(WORKFLOW).toContain("needs.promote.outputs.promoted == 'true'");
+    expect(WORKFLOW).toMatch(/github\.event_name == 'workflow_dispatch' && inputs\.redeploy/u);
+    expect(WORKFLOW).toMatch(/^ {6}redeploy:\n/mu);
   });
 });
 
