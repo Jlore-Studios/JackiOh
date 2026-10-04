@@ -2146,11 +2146,15 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "cognition",
         "rejections": [],
         "sha": "f5f6cfd0c29c1fd0624e474cbd8eb605625dd89c",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "31": {
