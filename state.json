@@ -1621,7 +1621,7 @@
       "pending_request": false,
       "provider": "devin",
       "question": "",
-      "queued_at": "2026-10-04T08:26:44Z",
+      "queued_at": "2026-10-04T08:45:48Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "37189377964",
       "self_check_findings": [
