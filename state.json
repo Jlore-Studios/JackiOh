@@ -1038,7 +1038,9 @@
     },
     "166": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:5984798817"
+      ],
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -1067,9 +1069,7 @@
       "source": "request",
       "started_at": "2026-10-04T22:12:40Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5984798817"
-      ]
+      "taken_asks": []
     },
     "167": {
       "action": "review",
