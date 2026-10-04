@@ -1308,11 +1308,15 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "cognition",
         "rejections": [],
         "sha": "fd40330362c1962abcbb598777e58c773ea507df",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "173": {
