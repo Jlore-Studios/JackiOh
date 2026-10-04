@@ -2021,13 +2021,9 @@
       "votes": {
         "approvals": [],
         "builder": "cognition",
-        "rejections": [
-          "muse"
-        ],
-        "sha": "c093b86c113c720221963c2e64073bf201b2bd27",
-        "tiers": {
-          "muse": "medium"
-        }
+        "rejections": [],
+        "sha": "38efdb8549192f045ddb8012ae2f66998d4263ea",
+        "tiers": {}
       }
     },
     "218": {
