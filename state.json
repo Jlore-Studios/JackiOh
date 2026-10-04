@@ -1737,25 +1737,12 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-04T16:52:32Z",
+      "feedback_since": "2026-10-04T17:32:45Z",
       "forced": false,
       "interruptions": 0,
       "issue": 44,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "12 files contain committed unresolved merge-conflict markers, so the tree cannot typecheck or test.",
-          "evidence": "git grep -l '^<<<<<<< ' lists BUILD.md, SPEC.md, apps/server/test/api/catalog.test.ts, apps/web/src/patches/PatchNotes.test.tsx, apps/web/src/patches/source.test.ts, apps/web/src/routes/patch-notes.test.tsx, docs/radiant-audit.md, packages/cards/test/card-text.test.ts, packages/cards/test/catalog.test.ts, packages/cards/test/classic/033-joro.test.ts, packages/cards/test/patches.test.ts, packages/engine/test/rulings.test.ts; e.g. patches.test.ts has triple-nested <<<<<<< HEAD blocks asserting competing VERSIONS lists.",
-          "severity": "blocking",
-          "where": "SPEC.md:219"
-        },
-        {
-          "claim": "R651/R652/R653 are defined twice with different meanings, colliding with main's already-assigned R651-R653.",
-          "evidence": "HEAD SPEC has v0.2.2 rows R651/R652/R653 at lines 1901-1903 and v0.2.10 rows R651 (Joro) / R652 (Blade Storm) / R653 (Ivory Tower) at 1912-1914; origin/main SPEC already contains R651-R653 for Joro/Blade Storm/Ivory Tower, and rulings.test.ts has the same collision (HEAD block vs origin/main block at ~3855-3890). v0.2.2 rulings need the next free numbers.",
-          "severity": "blocking",
-          "where": "SPEC.md:1901"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "devin",
       "question": "",
@@ -1782,7 +1769,7 @@
           "where": "checks"
         }
       ],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-04T17:32:45Z",
       "stop_requested": false,
       "taken_asks": [],
