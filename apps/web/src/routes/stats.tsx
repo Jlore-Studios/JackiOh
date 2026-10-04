@@ -537,7 +537,7 @@ export default function StatsRoute(): ReactElement {
                           }}
                           tabIndex={0}
                         >
-                          Cost {sortCol === "cost" && (sortDir === "asc" ? "↑" : "↓")}
+                          Cost{sortCol === "cost" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
                         </th>
                       )}
                       {visibleCols.rarity && (

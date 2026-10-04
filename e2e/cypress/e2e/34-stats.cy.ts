@@ -46,9 +46,9 @@ const PROVISIONAL_CARDS_FIXTURE = {
   cards: [
     {
       id: "core-001",
-      name: "Footman",
-      cost: 1,
-      rarity: "common",
+      name: "Big D-fender",
+      cost: 2,
+      rarity: "Common",
       set: "core",
       games: 120,
       wins: 78,
@@ -57,12 +57,13 @@ const PROVISIONAL_CARDS_FIXTURE = {
       drawnWins: 60,
       drawnWinRate: 0.667,
       playRate: 0.85,
+      hasEnoughGames: true,
     },
     {
       id: "core-002",
-      name: "Recruit",
+      name: "Bigot",
       cost: 2,
-      rarity: "rare",
+      rarity: "Common",
       set: "core",
       games: 80,
       wins: 28,
@@ -71,6 +72,7 @@ const PROVISIONAL_CARDS_FIXTURE = {
       drawnWins: 24,
       drawnWinRate: 0.343,
       playRate: 0.55,
+      hasEnoughGames: true,
     },
   ],
   summary: {
@@ -78,17 +80,17 @@ const PROVISIONAL_CARDS_FIXTURE = {
     liveGames: 412,
     activePatch: "v0.2.0",
     source: "provisional",
-    bestCard: { id: "core-001", name: "Footman", winRate: 0.65 },
-    worstCard: { id: "core-002", name: "Recruit", winRate: 0.35 },
+    bestCard: { id: "core-001", name: "Big D-fender", winRate: 0.65 },
+    worstCard: { id: "core-002", name: "Bigot", winRate: 0.35 },
   },
 };
 
 const CARD_DRILL_DOWN_FIXTURE = {
   card: {
     id: "core-001",
-    name: "Footman",
-    cost: 1,
-    rarity: "common",
+    name: "Big D-fender",
+    cost: 2,
+    rarity: "Common",
   },
   patches: [
     { patch: "v0.1.1", games: 50, wins: 30, winRate: 0.6 },
@@ -98,7 +100,7 @@ const CARD_DRILL_DOWN_FIXTURE = {
     { turn: 2, games: 30, wins: 18, winRate: 0.6 },
   ],
   coPlayed: [
-    { id: "core-002", name: "Recruit", games: 45, winRate: 0.6 },
+    { id: "core-002", name: "Bigot", games: 45, winRate: 0.6 },
   ],
 };
 
@@ -189,17 +191,17 @@ describe("Spec 34 — the public Statistics page (R641)", () => {
 
     // Cards table renders rows
     cy.get(ts(STATS_CARDS_TABLE)).should("be.visible");
-    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Footman").and("contain.text", "Recruit");
+    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Big D-fender").and("contain.text", "Bigot");
 
     // Search filters cards
-    cy.get(ts(STATS_SEARCH_INPUT)).type("Footman");
-    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Footman").and("not.contain.text", "Recruit");
+    cy.get(ts(STATS_SEARCH_INPUT)).type("D-fender");
+    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Big D-fender").and("not.contain.text", "Bigot");
     cy.get(ts(STATS_SEARCH_INPUT)).clear();
-    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Recruit");
+    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Bigot");
 
-    // Card drill-down modal opens and closes
-    cy.get(ts(STATS_CARDS_TABLE)).contains("Footman").click();
-    cy.get(ts(STATS_DRILL_DOWN_MODAL)).should("be.visible").and("contain.text", "Footman");
+    // Card drill-down modal opens and closes (the title reads the card's catalog name)
+    cy.get(ts(STATS_CARDS_TABLE)).contains("Big D-fender").click();
+    cy.get(ts(STATS_DRILL_DOWN_MODAL)).should("be.visible").and("contain.text", "Big D-fender");
     cy.get(ts(STATS_DRILL_DOWN_CLOSE)).click();
     cy.get(ts(STATS_DRILL_DOWN_MODAL)).should("not.exist");
 
@@ -208,7 +210,7 @@ describe("Spec 34 — the public Statistics page (R641)", () => {
     cy.get(ts(STATS_PLAYERS_TABLE)).should("be.visible");
     cy.get(ts(STATS_PLAYERS_TABLE)).should("contain.text", "AcePlayer");
     cy.get(ts(STATS_PLAYERS_TABLE)).should("contain.text", "150");
-    cy.get(ts(STATS_PLAYERS_TABLE)).should("contain.text", "Footman");
+    cy.get(ts(STATS_PLAYERS_TABLE)).should("contain.text", "Big D-fender");
     // Assert Elo and ratings are kept separate and not exposed
     cy.get(ts(STATS_PLAYERS_TABLE)).should("not.contain.text", "Elo").and("not.contain.text", "Rating");
 
