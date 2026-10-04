@@ -1947,7 +1947,7 @@
       }
     },
     "214": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "ci_fixes": 1,
       "ci_reruns": {
@@ -1972,17 +1972,17 @@
       },
       "interruptions": 0,
       "issue": 200,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
       "pending_request": false,
       "provider": "devin",
       "question": "",
       "queued_at": "2026-10-04T22:50:14Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "37239158253",
+      "run_id": "37241051768",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-10-04T22:17:51Z",
+      "started_at": "2026-10-04T22:50:30Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -2712,9 +2712,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T22:48:14Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37241062552",
-    "what": "review #142 on muse"
+    "at": "2026-10-04T22:50:30Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37241051768",
+    "what": "review #214 on devin"
   },
   "last_sweep": {
     "at": "2026-10-04T22:47:19Z",
