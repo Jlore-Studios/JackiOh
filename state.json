@@ -3163,6 +3163,10 @@
         {
           "at": "2026-10-04T23:30:57Z",
           "minutes": 93.0
+        },
+        {
+          "at": "2026-10-04T23:31:53Z",
+          "minutes": 4.7
         }
       ],
       "usage": {
@@ -3170,7 +3174,7 @@
           "resets_at": "2026-10-05T02:40:00Z",
           "utilization": 1.0
         },
-        "observed_at": "2026-10-04T23:30:57Z",
+        "observed_at": "2026-10-04T23:31:53Z",
         "rejected_resets_at": "2026-10-05T02:40:00Z",
         "status": "rejected"
       }
