@@ -16,10 +16,11 @@ required CI checks pass; one still short of it waits in `bot:cross-review` for a
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
-from harness import asks, failures, issueplan, review_rule
+from harness import asks, disk, failures, issueplan, review_rule
 from harness import gates as gates_mod
 from harness import plan as plan_mod
 from harness import providers as providers_mod
@@ -114,6 +115,7 @@ class Deliverer:
         self.ctx.store.update(lambda s: providers_mod.note_usage(
             s, self.provider.id, usage, reset_at, self.ctx.now(), minutes),
             f"usage {self.provider.id}")
+        self._machine_disk()
         self._login_works()
         if action == "suggest":
             self._suggestions()
@@ -149,6 +151,25 @@ class Deliverer:
                 if exc.status not in (409, 422):
                     break  # only a race with another writer is worth trying again
         self.log.append(f"could not keep the refreshed login of {self.provider.id}: {problem}")
+
+    def _machine_disk(self) -> None:
+        """A job on the bot's machine read its disk: keep the newest reading, and open, rewrite
+        or close the issue about a disk filling up (`disk.py`)."""
+        if providers_mod.hosted(self.provider.runs_on):
+            return
+        found = disk.newest(self.result)
+        if found is None:
+            return
+        reported = str((self.result.get("disk") or {}).get("runner") or "")
+        runner = reported if re.fullmatch(r"[\w.-]{1,80}", reported) else self.provider.runs_on
+        self.ctx.store.update(lambda s: disk.note(s, found, runner, self.cfg.run_url or ""),
+                              "machine disk")
+        try:
+            done = disk.alert(self.ctx)
+        except GitHubError as exc:
+            done = f"could not settle the disk issue: {exc}"
+        if done:
+            self.log.append(done)
 
     def _login_works(self) -> None:
         """A model call went through on this run's subscription: any streak of runs that could

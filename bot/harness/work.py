@@ -19,10 +19,12 @@ call is asked.
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable
 
+from harness import disk as disk_mod
 from harness import gates as gates_mod
 from harness import prompts, review_rule, verdicts
 from harness import providers as providers_mod
@@ -75,7 +77,8 @@ SETTINGS_FILES = (".claude/settings.json", ".claude/settings.local.json", ".mcp.
 MANIFESTS = ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc")
 
 #: How an interruption ends the item: `stop` and `infra` have statuses of their own; the rest
-#: (`budget`, `usage`, `halt`) are `interrupted` and requeue.
+#: (`budget`, `usage`, `halt`, and `disk` for the machine's disk filling up during the work) are
+#: `interrupted` and requeue.
 KIND_STATUS = {"stop": "stopped", "infra": "infra"}
 
 
@@ -112,6 +115,7 @@ class Worker:
         after_call: Callable[[], None] | None = None,
         now: Callable[[], datetime] | None = None,
         env: dict[str, str] | None = None,
+        disk_reader: Callable[[], dict[str, Any]] | None = None,
     ) -> None:
         self.cfg = cfg
         self.plan = plan
@@ -134,6 +138,10 @@ class Worker:
         #: every job there shares two vCPUs, and CI on the pull request runs the rest anyway.
         self.on_machine = not hosted(str(plan.get("runs_on") or self.provider.runs_on))
         self.gates = [gate for gate in cfg.gates if gate.machine or not self.on_machine]
+        #: How full the disk is (`disk.reading`), read on the machine only: its subscriptions share
+        #: one disk, and a full one fails whichever job writes next.
+        self.disk_reader = disk_reader or (lambda: disk_mod.reading(
+            self.work_dir if self.work_dir.exists() else cfg.root, self.now()))
         main = cfg.pool.seats(self.provider)[0]
         seats = plan.get("seats") if isinstance(plan.get("seats"), dict) else None
         #: The model each role runs on. A plan from before seats runs every role on the
@@ -311,6 +319,8 @@ class Worker:
     def run(self) -> dict[str, Any]:
         self.out_dir.mkdir(parents=True, exist_ok=True)
         try:
+            if self.on_machine:
+                self._disk_check()
             self._start_check()
             action = self.plan.get("action")
             if action == "suggest":
@@ -326,11 +336,43 @@ class Worker:
         except Interrupt as stop:
             self._interrupted(stop)
         except Exception as exc:  # noqa: BLE001 - every failure must still leave a result
-            self.result.update(status="failed", reason=redact(f"{type(exc).__name__}: {exc}")[:2000])
-            self._save_wip("the harness failed")
+            reason = redact(f"{type(exc).__name__}: {exc}")[:2000]
+            if disk_mod.is_full(exc):
+                # The machine's disk, not the item: a pause that keeps what was built.
+                self._interrupted(Interrupt(f"the machine's disk filled up ({reason})", "disk"))
+            else:
+                self.result.update(status="failed", reason=reason)
+                self._save_wip("the harness failed")
         finally:
+            if self.on_machine:
+                self._read_disk("end")
             self.write_result()
         return self.result
+
+    def _read_disk(self, when: str) -> dict[str, Any] | None:
+        disk = self.result.setdefault("disk", {})
+        try:
+            found = self.disk_reader()
+        except OSError:
+            return None
+        disk[when] = found
+        return found
+
+    def _disk_check(self) -> None:
+        """On the machine, before any work: room for this job (`disk.py`). Short of
+        `CLEAN_BELOW` free, clean what this user's jobs can do without first; still short of
+        `FLOOR`, stop on the machine's account, never the item's."""
+        found = self._read_disk("start")
+        self.result["disk"]["runner"] = os.environ.get("RUNNER_NAME", "")
+        if found is None or found["free"] >= disk_mod.CLEAN_BELOW:
+            return
+        self.result["disk"]["cleaned"] = disk_mod.clean(self.cfg.root, self.env)
+        found = self._read_disk("after_clean") or found
+        if found["free"] < disk_mod.FLOOR:
+            self.result["infra_scope"] = "machine"
+            raise Interrupt(f"the machine's disk is {disk_mod.describe(found)}, under the "
+                            f"{disk_mod.size(disk_mod.FLOOR)} a job needs, even after cleaning",
+                            "infra")
 
     # ------------------------------------------------------------------ an item
 

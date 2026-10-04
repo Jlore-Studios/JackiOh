@@ -399,7 +399,12 @@ meanwhile. Each such failure in a row waits longer (50 minutes, 2 hours, then 8 
 and after the third the bot opens an issue labelled `night bot` and `human` asking a person to
 renew the login or switch the subscription off; it closes that issue itself once a run there gets
 a model call through. A failure that was not the subscription's own (an install red on untouched
-`main`, a push GitHub refused) waits 50 minutes without lengthening the streak.
+`main`, a push GitHub refused, the machine's disk too full to start) waits 50 minutes without
+lengthening the streak. On the machine a job reads the disk before it starts, cleans it when short
+and does no work under 3 GB free, and a disk that fills up during the work pauses the item and
+keeps what it built; neither counts against the item. While the disk is 80% full or has under
+3 GB free, the bot keeps one issue open about it, labelled `night bot` and `human`, and closes it
+at 70% ([`harness/disk.py`](harness/disk.py), [`machine/`](machine/README.md), Disk).
 
 ### Difficulty and tiers
 
