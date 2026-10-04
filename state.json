@@ -1612,12 +1612,14 @@
       "taken_asks": [],
       "votes": {
         "approvals": [
-          "muse"
+          "muse",
+          "gemini"
         ],
         "builder": "cognition",
         "rejections": [],
         "sha": "2e39735c34cd81d1df2065d8c65dff3e54f28fe0",
         "tiers": {
+          "gemini": "medium",
           "muse": "medium"
         }
       }
