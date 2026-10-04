@@ -1,7 +1,7 @@
 // C #74 Corpse Plantation (SPEC §8.6 row 74). (2) Field Spell, Epic.
 //   Base:    "Cry: Place {tokens|Plague Counter|Plague Counters} on this.
-//             You may play Units from your graveyard, paying with Plague Counters from this: each token pays
-//             (1), and each such play spends at least 1 token." — 2 tokens; Radiant: 4.
+//             You may play Units from your graveyard, paying with Plague Counters from this: each counter pays
+//             (1), and each such play spends at least 1 counter." — 2 tokens; Radiant: 4.
 //   Engine:  "A Field Spell's Cry fires as it is played. Play from the graveyard (§6.3 Play) for Units,
 //            live while this is on the field, with a second way to pay: the `play` action carries how
 //            many tokens pay (at least 1, at most the tokens on this and the price), the rest in mana, and

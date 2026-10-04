@@ -2924,7 +2924,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(394, CLASSIC_033_TEST);
   });
 
-  // Proved by cards classic/038-jackiestan-auctioneer.test.ts "R395 …" (face-down only the activation
+  // Proved by cards classic/038-jackiestan-auctioneer.test.ts "R395 …" (face-down only the reveal
   // condition is live; the "whenever" starts with the next play).
   it("R395 keeps C #38 Jackiestan Auctioneer's \"whenever\" text off until it has revealed", () => {
     provenIn(395, CLASSIC_038_TEST);

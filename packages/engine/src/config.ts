@@ -296,10 +296,10 @@ export const TUNE_MIN_AMOUNT = 1;
 
 /**
  * B5 E11, R454: the fewest Plague Counters a play from the graveyard that pays with tokens spends
- * (Classic #74 Corpse Plantation: "each such play spends at least 1 token").
+ * (Classic #74 Corpse Plantation: "each such play spends at least 1 counter").
  */
 export const MIN_PLAGUE_PAYMENT = 1;
-/** B5 E11, R454: what one Plague Counter spent as mana pays of a price ("each token pays (1)"). */
+/** B5 E11, R454: what one Plague Counter spent as mana pays of a price ("each counter pays (1)"). */
 export const PLAGUE_TOKEN_MANA = 1;
 /**
  * B5 E12, R452: how many casts one random cast and every cast made inside its resolution may make in

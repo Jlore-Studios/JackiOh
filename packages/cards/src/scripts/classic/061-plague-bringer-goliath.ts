@@ -1,4 +1,4 @@
-// C #61 Plague Bringer Goliath (SPEC §8.6 row 61). (3) Unit, Legendary, 7/7 → 14/14.
+// C #61 Plague Bringer Goliath (SPEC §8.6 row 61). (3) Unit, Rare, 7/7 → 14/14.
 //   Base:    "Tribute 1, Rush, Trample
 //             Cry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}." — 3 tokens, draw 1
 //   Radiant: the same text — 3 tokens, draw 3

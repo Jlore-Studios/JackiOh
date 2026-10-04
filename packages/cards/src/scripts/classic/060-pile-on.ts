@@ -1,5 +1,5 @@
 // C #60 Pile On (SPEC §8.6 row 60; §6.2 Replacement, §6.3 Recruit, §2.3; R1, R11, R33, R80, R275). Spell,
-// cost 5, Rare.
+// cost 5, Epic.
 //   Base:    "Recruit every permanent in your deck.\nIf this would go to your graveyard, put it on the
 //            bottom of your deck instead."
 //   Radiant: "Recruit every permanent in your deck." (the clause dropped on purpose, R275)

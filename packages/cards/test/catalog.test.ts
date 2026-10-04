@@ -20,8 +20,9 @@
 //   CLASSIC        — docs/classic-sets.md B6, each entry's header line (`classic-NNN` · (cost)
 //                    type, tags · rarity · stats base → Radiant), with the decisions B9 and the
 //                    v0.2.0 plan adopted: #55 is Book of Wildfire, #72 Grand Counterspell (R381),
-//                    #86 Genn's Radiant 42/42; the ten rarity cells the table disagrees with
-//                    (#3, #9, #12, #16, #18, #25, #28, #60, #61, #76) are patch v0.2.2's (R651).
+//                    #86 Genn's Radiant 42/42; the ten rarities patch v0.2.2 moved (#3, #9, #12,
+//                    #16, #18, #25, #28, #60, #61, #76) are the patch's, as the header lines record
+//                    (R651).
 //   CLASSIC_PLUS   — docs/classic-sets.md B7's header lines and token bullets (B2.3's numbering;
 //                    the Losers typed Unit, Otherworldly Removal's three and the Grapes typed Spell
 //                    by their sections' own sentences, the Grapes tagged Fruit, every token tagged

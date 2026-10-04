@@ -34,7 +34,7 @@ const RECYCLE = "core-039"; // (0) Spell: Exile this.
 const TWINSPELL = "core-079"; // (2) Field Spell.
 const CALL = "core-069"; // (2) Spell: Recruit 3.
 const COUNTERSPELL = "classic-017"; // Trap: counters the opponent's Spell.
-const AUCTIONEER = "classic-038"; // Field Trap: from its activation on, each play draws its controller 1.
+const AUCTIONEER = "classic-038"; // Field Trap: from its reveal on, each play draws its controller 1.
 
 const DECK = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] as const;
 

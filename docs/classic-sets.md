@@ -777,7 +777,7 @@ base → Radiant.
 - **Numbers:** discount 2 ↑.
 
 #### Classic #3 · Book of Heal
-`classic-003` · (1) Spell, Book · Common
+`classic-003` · (1) Spell, Book · Epic
 
 > **Designer:** Heal 9 ~~~ Heal 18
 
@@ -874,7 +874,7 @@ base → Radiant.
 - **Numbers:** choices 3 ↑; discard 1 ↑; exile 1 ↑; draw 1 ↑.
 
 #### Classic #9 · Income Tax
-`classic-009` · (2) Trap · Common
+`classic-009` · (2) Trap · Legendary
 
 > **Designer:** Activates when your opponent draws the 2nd card on a turn. They give you all but one
 > card of their choice from their hand. ~~~ Activates when your opponent draws the 2nd card on a turn.
@@ -928,7 +928,7 @@ base → Radiant.
 - **Numbers:** cards exiled 1 ↑.
 
 #### Classic #12 · Book of Blood
-`classic-012` · (1) Spell, Book · Common
+`classic-012` · (1) Spell, Book · Epic
 
 > **Designer:** Deal 5 damage to a Unit. Lifesteal. ~~~ Deal 10 damage to a Unit. Lifesteal.
 
@@ -988,7 +988,7 @@ base → Radiant.
 - **Numbers:** exiled 1 ↑.
 
 #### Classic #16 · Book of Flame
-`classic-016` · (1) Spell, Book · Common
+`classic-016` · (1) Spell, Book · Epic
 
 > **Designer:** Deal 4 damage ~~~ Deal 8 damage
 
@@ -1012,7 +1012,7 @@ base → Radiant.
 - **Check:** shares its name with #72 (B2.8).
 
 #### Classic #18 · Glitch in the System
-`classic-018` · (3) Spell · Common
+`classic-018` · (3) Spell · Epic
 
 > **Designer:** Pick a number. Exile all cards that cost that much. ~~~ Pick a number. Exile all
 > cards from your opponent’s Field, Hand, and Deck that cost that much.
@@ -1119,7 +1119,7 @@ base → Radiant.
 - **Numbers:** draw 3 ↑.
 
 #### Classic #25 · Lag in the System
-`classic-025` · (0) Spell · Common
+`classic-025` · (0) Spell · Epic
 
 > **Designer:** Exile all (0) and (1) cost cards. ~~~ Exile all enemy (0) and (1) cost cards.
 
@@ -1149,7 +1149,7 @@ base → Radiant.
 - **Numbers:** multiplier 2 ↑.
 
 #### Classic #28 · Second Wind
-`classic-028` · (0) Field Spell · Epic
+`classic-028` · (0) Field Spell · Legendary
 
 > **Designer:** Cry: Exile your Deck. Discard your hand. Aura: You can play cards from your GY. When
 > a card enters your GY, Exile it. ~~~ Cry: Exile your Deck. Discard your hand. Aura: You can play
@@ -1619,7 +1619,7 @@ base → Radiant.
 - **Numbers:** Radiant tokens 2 ↑.
 
 #### Classic #60 · Pile On
-`classic-060` · (5) Spell · Rare
+`classic-060` · (5) Spell · Epic
 
 > **Designer:** Recruit your entire Deck. If this is put in your GY, put it at the bottom of your
 > Library instead. ~~~ Recruit your entire Deck.
@@ -1635,7 +1635,7 @@ base → Radiant.
 - **Numbers:** none.
 
 #### Classic #61 · Plague Bringer Goliath
-`classic-061` · (3) Unit · Legendary · 7/7 → 14/14
+`classic-061` · (3) Unit · Rare · 7/7 → 14/14
 
 > **Designer:** 7/7 Tribute 1 Rush Trample Cry: Place 3 Plague Tokens. Draw 1. ~~~ 14/14 Tribute 1
 > Rush Trample Cry: Place 3 Plague Tokens. Draw 3.
@@ -1846,7 +1846,7 @@ base → Radiant.
 - **Numbers:** divisor 2 ↑.
 
 #### Classic #76 · Plague Bringer
-`classic-076` · (2) Unit · Common · 4/4 → 8/8
+`classic-076` · (2) Unit · Rare · 4/4 → 8/8
 
 > **Designer:** 4/4 Rush Cry: Place 2 Plague Tokens. Draw 1. ~~~ 8/8 Rush Cry: Place 4 Plague Tokens.
 > Draw 2.
@@ -2636,7 +2636,7 @@ The five Losers (`classicplus-019-1` … `-5`), Units, Tokens, Legendary by the 
 - **Numbers:** heal 3 ↑.
 
 #### Classic+ #29 · Portal to the Past
-`classicplus-029` · (3) Spell · Epic
+`classicplus-029` · (3) Spell · Mythic
 
 > **Designer:** Discover a card from your last game’s board (as it was when that game ended). It costs
 > (0). ~~~ Add 3 random cards from your last game’s board (as it was when that game ended) to your
@@ -3507,7 +3507,7 @@ The five Grapes (`classicplus-065-1` … `-5`), Fruit Spell Tokens that any Frui
   - **Numbers:** Activate 1 ↑ (its X); damage 1 ↑.
 
 #### Classic+ #77 · Anti-Softlock *(the designer's second #28)*
-`classicplus-077` · (2) Spell · Rare
+`classicplus-077` · (2) Spell · Epic
 
 > **Designer:** Draw 1. All cards on both players' boards, hands, and decks gain Stack and Pierce.
 > Unlock all slots. ~~~ Draw 2. Choose one: all cards on both players' boards, hands, and decks, or only

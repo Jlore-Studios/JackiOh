@@ -100,7 +100,7 @@ describe("C #74 Corpse Plantation", () => {
       expect(graveyardPlays(s.state, menace).every((play) => play.plague?.from === s.card(PLANTATION).id)).toBe(true);
     });
 
-    it("a play: each token pays (1), the rest in mana, and the spent tokens come off it", () => {
+    it("a play: each counter pays (1), the rest in mana, and the spent tokens come off it", () => {
       const s = standing(2);
       const plantation = s.card(PLANTATION);
       const menace = s.card(MENACE);
