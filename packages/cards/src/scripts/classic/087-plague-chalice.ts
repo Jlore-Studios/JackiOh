@@ -11,19 +11,28 @@
 // "Enters with X" is one placement of X on itself as its Cry (`placePlague`). The Aura answers each
 // `cardAnnounced` whose `costPaid` equals the tokens on it now — the count moves as tokens are placed and
 // removed (C #78) — by countering that play to its owner's graveyard (`counterPlay`).
+//
+// Patch v0.2.12 (#126, R658): `wouldCounter` is the same match asked ahead of any play, so the engine
+// can warn the viewer off a hand card the Chalice would counter (`counteredOnPlay`). Both halves call
+// `counters`, so the warning and the counter cannot disagree.
 
-import { plagueOn, type EffectContext, type Script, type TriggerDef } from "@jackioh/engine";
+import { plagueOn, type CardInstance, type EffectContext, type Script, type TriggerDef } from "@jackioh/engine";
 import { counterPlay, placePlague } from "@jackioh/engine/effects";
-import type { GameEvent } from "@jackioh/shared";
+import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classic-087");
 
+/** The match: a play `player` makes paying `costPaid`, against this Chalice's count and its face's reach. */
+function counters(self: CardInstance, controller: PlayerId, player: PlayerId, costPaid: number, opponentOnly: boolean): boolean {
+  if (opponentOnly && player === controller) return false;
+  return costPaid === plagueOn(self);
+}
+
 function matches(ctx: EffectContext & { event: GameEvent }, opponentOnly: boolean): string | null {
   const event = ctx.event;
   if (event.type !== "cardAnnounced" || ctx.self === null) return null;
-  if (opponentOnly && event.player === ctx.controller) return null;
-  return event.costPaid === plagueOn(ctx.self) ? event.instanceId : null;
+  return counters(ctx.self, ctx.controller, event.player, event.costPaid, opponentOnly) ? event.instanceId : null;
 }
 
 function chalice(opponentOnly: boolean): Script {
@@ -36,7 +45,11 @@ function chalice(opponentOnly: boolean): Script {
       return instanceId === null ? [] : [counterPlay({ target: { of: "instance", instanceId } })];
     },
   };
-  return { cry: (ctx) => [placePlague({ target: { of: "self" }, amount: ctx.x })], triggers: [aura] };
+  return {
+    cry: (ctx) => [placePlague({ target: { of: "self" }, amount: ctx.x })],
+    triggers: [aura],
+    wouldCounter: ({ self, controller, player, costPaid }) => counters(self, controller, player, costPaid, opponentOnly),
+  };
 }
 
 export const base: Script = chalice(false);

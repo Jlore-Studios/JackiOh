@@ -1,0 +1,112 @@
+/* R658: Classic #87 Plague Chalice's warning on the viewer's own hand card. Card.tsx draws the
+   elements and this file is their look; none of it is a rule, since the engine put `counteredOnPlay`
+   on the view (CLAUDE.md rule 7).
+
+   A green film over the face says "don't play this": bubbles rise through it (its ::before and
+   ::after, two layers of radial-gradient bubbles moved by transform alone) and a badge with a struck
+   circle sits in the top-right corner, so it reads by shape as well as by colour. The film takes no
+   pointer event; the badge does, for its tooltip, and a click or drag on it reaches the card it sits
+   in. Under reduced motion (the media query or the settings switch, index.css) the bubbles are gone
+   and the film holds still as a plain green tint with its badge. */
+
+.countered-warning {
+  --countered-rim: #a3e635;
+  --countered-core: #4d7c0f;
+  --countered-bubble: rgb(217 249 157 / 80%);
+
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--countered-core) 55%, transparent),
+    color-mix(in srgb, var(--countered-rim) 14%, transparent) 70%
+  );
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--countered-rim) 85%, transparent);
+}
+
+/* Two layers of bubbles, each twice the card's height with a tile one card tall, so rising by half
+   its own height loops without a seam. The second is smaller, sparser and slower. */
+.countered-warning::before,
+.countered-warning::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 -100% 0;
+  background-repeat: repeat-y;
+  background-size: 100% 50%;
+}
+
+.countered-warning::before {
+  background-image:
+    radial-gradient(circle at 18% 82%, var(--countered-bubble) 0 3px, transparent 4px),
+    radial-gradient(circle at 46% 55%, var(--countered-bubble) 0 4px, transparent 5px),
+    radial-gradient(circle at 72% 90%, var(--countered-bubble) 0 2px, transparent 3px),
+    radial-gradient(circle at 84% 38%, var(--countered-bubble) 0 3px, transparent 4px),
+    radial-gradient(circle at 30% 20%, var(--countered-bubble) 0 2px, transparent 3px);
+  animation: countered-rise 2.6s linear infinite;
+}
+
+.countered-warning::after {
+  background-image:
+    radial-gradient(circle at 60% 70%, var(--countered-bubble) 0 2px, transparent 3px),
+    radial-gradient(circle at 10% 45%, var(--countered-bubble) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 90% 12%, var(--countered-bubble) 0 2px, transparent 3px);
+  opacity: 0.8;
+  animation: countered-rise 4.1s linear infinite;
+}
+
+@keyframes countered-rise {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+/* The badge: a struck circle, the "don't" sign, on a dark green disc. */
+.countered-warning-badge {
+  position: absolute;
+  top: 4%;
+  right: 6%;
+  width: 22%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid var(--countered-rim);
+  background:
+    linear-gradient(
+      135deg,
+      transparent calc(50% - 1.5px),
+      var(--countered-rim) calc(50% - 1.5px) calc(50% + 1.5px),
+      transparent calc(50% + 1.5px)
+    ),
+    rgb(26 46 5 / 88%);
+  box-shadow: 0 0 8px 1px color-mix(in srgb, var(--countered-rim) 60%, transparent);
+  pointer-events: auto;
+}
+
+.countered-warning-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .countered-warning::before,
+  .countered-warning::after {
+    display: none;
+    animation: none;
+  }
+}
+
+:root[data-reduce-motion="true"] .countered-warning::before,
+:root[data-reduce-motion="true"] .countered-warning::after {
+  display: none;
+  animation: none;
+}

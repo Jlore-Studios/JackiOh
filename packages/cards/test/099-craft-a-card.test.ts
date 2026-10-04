@@ -3,13 +3,12 @@
 //
 // BUILD M4-T4 row 99: "Two Discovers, fused def in `transientDefs` with both forms fused, no
 // on-field target and the ingredients' shared type (R77), cost 0 in hand, making it Radiant later
-// switches to the fused radiant form; radiant three, then draw 1".
+// switches to the fused radiant form; radiant three" (patch v0.2.12 took off the radiant draw).
 //
 //   Base:    "Discover a Unit, then Discover another; Fuse them; the result costs 0 and goes to
 //            your hand"
 //   Radiant: "Discover a Unit, then Discover another, then a third; Fuse them; the result costs 0
-//            and goes to your hand; draw 1" — §8's cell "Three Discovers; then draw 1" (R275). The
-//            draw follows the fuse.
+//            and goes to your hand" — §8's cell "Three Discovers". Neither face draws.
 //
 // R102's "the whole verb does nothing at all" guards are unreachable from a #99 play (it always
 // brings two or three definitions and a destination hand), so they are asserted against
@@ -144,8 +143,7 @@ describe("#99 Craft a Card — the Discover chain", () => {
   it("§10.9 both faces are a Cry plus a resume table, and the radiant face has one more step", () => {
     expect(Object.keys(craftBase).sort()).toEqual(["cry", "resume"]);
     expect(Object.keys(craftRadiant).sort()).toEqual(["cry", "resume"]);
-    // §8.5's radiant cell, "Three Discovers; then draw 1": one more Discover step, and the draw
-    // rides the last one (after the fuse), so it adds no step of its own.
+    // §8.5's radiant cell, "Three Discovers": one more Discover step.
     expect(Object.keys(craftBase.resume ?? {})).toHaveLength(2);
     expect(Object.keys(craftRadiant.resume ?? {})).toHaveLength(3);
   });
@@ -396,38 +394,32 @@ describe("#99 Craft a Card — the fused result (R77, R102)", () => {
   });
 });
 
-describe("#99 Craft a Card — radiant's draw (R275)", () => {
-  it("R275 draws 1 once the fused card has gone to your hand", () => {
+describe("#99 Craft a Card — the radiant face draws nothing (patch v0.2.12)", () => {
+  it("the radiant face draws nothing after the fusion, and the library is untouched", () => {
     const { s } = craft({ radiantFace: true, p1: { library: [TIMMY, MENACE], mana: 8 } });
     const fused = fusedDefOf(s.state);
 
-    // The fuse, then the draw: the top of the library, and only that card.
-    const types = s.events.map((event) => event.type);
-    const fusedAt = types.indexOf("fused");
-    const drawnAt = types.indexOf("drawn");
-    expect(fusedAt).toBeGreaterThanOrEqual(0);
-    expect(drawnAt).toBeGreaterThan(fusedAt);
-    expect(eventsOf(s, "drawn")).toHaveLength(1);
-    expect(s.hand("p1").map((card) => card.defId)).toEqual([SPARE, fused.id, TIMMY]);
-    expect(s.pile("p1", "library").map((card) => card.defId)).toEqual([MENACE]);
+    expect(eventsOf(s, "drawn")).toHaveLength(0);
+    expect(s.hand("p1").map((card) => card.defId)).toEqual([SPARE, fused.id]);
+    expect(s.pile("p1", "library").map((card) => card.defId)).toEqual([TIMMY, MENACE]);
   });
 
-  it("R4 the draw comes after the fusion, so with the hand full it is the draw that burns", () => {
-    // #99 leaves the hand to resolve, the crafted card takes that slot (above), and the hand is at
-    // HAND_CAP when the draw lands: the drawn card burns and the crafted one stays.
+  it("R4 with the hand full the crafted card still lands and nothing burns", () => {
+    // #99 leaves the hand to resolve and the crafted card takes that slot, so the hand ends at
+    // HAND_CAP with no draw after it to burn.
     const filler = Array.from({ length: HAND_CAP - 2 }, () => SPARE);
     const { s } = craft({ radiantFace: true, p1: { hand: filler, library: [TIMMY], mana: 8 } });
     const fused = fusedDefOf(s.state);
 
     expect(s.hand("p1")).toHaveLength(HAND_CAP);
     expect(s.hand("p1").filter((card) => card.defId === fused.id)).toHaveLength(1);
-    expect(eventsOf(s, "burned").map((event) => event.defId)).toEqual([TIMMY]);
+    expect(eventsOf(s, "burned")).toHaveLength(0);
   });
 
-  it("§2.4 an empty library makes the radiant draw a fatigue hit", () => {
+  it("§2.4 an empty library costs the radiant face nothing: no draw, so no fatigue", () => {
     const { s } = craft({ radiantFace: true, p1: { health: 20, mana: 8 } });
     fusedDefOf(s.state);
-    s.expectHealth("p1", 19);
+    s.expectHealth("p1", 20);
   });
 });
 

@@ -2,10 +2,9 @@
 //   Base:    "Discover a Unit, then Discover another; Fuse them; the result costs 0 and goes to
 //             your hand"
 //   Radiant: "Discover a Unit, then Discover another, then a third; Fuse them; the result costs 0
-//             and goes to your hand; draw 1" (§8's cell "Three Discovers; then draw 1", R275's
-//             added draw). "Fuse them; the result costs 0 and goes to your hand" is kept (§8
-//             Conventions), and R77 agrees: "Craft a Card fuses two or three cards". The draw
-//             follows the fuse, so the crafted card is in hand before the draw can fill it.
+//             and goes to your hand" (§8's cell "Three Discovers"). "Fuse them; the result costs 0
+//             and goes to your hand" is kept (§8 Conventions), and R77 agrees: "Craft a Card fuses
+//             two or three cards". Patch v0.2.12 (#126) took off the draw R275's pass had added.
 //   Engine:  "Fuse per 6.3 creates a transient definition stored in match state".
 //
 // THE CHAIN (§10.6). Each Discover is one `PendingChoice` whose `resume` names the next step, and
@@ -48,7 +47,7 @@
 
 import type { Effect, EffectContext, Hook, Script } from "@jackioh/engine";
 import { subsystems } from "@jackioh/engine";
-import { chosenOptions, discoverFromCatalog, draw, fuseCards } from "@jackioh/engine/effects";
+import { chosenOptions, discoverFromCatalog, fuseCards } from "@jackioh/engine/effects";
 import { cardDef } from "../catalog-data";
 
 export const def = cardDef("core-099");
@@ -98,21 +97,12 @@ function craft(picks: readonly string[]): Effect[] {
   return [fuseCards({ defIds: [...picks], toHand: "self" })];
 }
 
-/** Radiant: "…; draw 1", after the fused card has gone to your hand. */
-const RADIANT_DRAW = 1;
-
-/**
- * `discovers` and `draws` are the whole of the difference between the two faces (§8.5's radiant
- * cell). The draw is its own clause: a fusion that fizzled (§8 Conventions) still draws.
- */
-function craftACard(discovers: 2 | 3, draws: number): Script {
+/** `discovers` is the whole of the difference between the two faces (§8.5's radiant cell). */
+function craftACard(discovers: 2 | 3): Script {
   /** Each step appends the id it was answered with and hands the list to the next one. */
   const openSecond: Hook = (ctx) => [discoverUnit(SECOND, withAnswer(ctx))];
   const openThird: Hook = (ctx) => [discoverUnit(THIRD, withAnswer(ctx))];
-  const fuseThem: Hook = (ctx) => [
-    ...craft(withAnswer(ctx)),
-    ...(draws > 0 ? [draw({ count: draws })] : []),
-  ];
+  const fuseThem: Hook = (ctx) => craft(withAnswer(ctx));
 
   return {
     cry: () => [discoverUnit(FIRST, [])],
@@ -125,6 +115,6 @@ function craftACard(discovers: 2 | 3, draws: number): Script {
   };
 }
 
-export const base: Script = craftACard(2, 0);
+export const base: Script = craftACard(2);
 
-export const radiant: Script = craftACard(3, RADIANT_DRAW);
+export const radiant: Script = craftACard(3);

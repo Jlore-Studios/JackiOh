@@ -31,12 +31,13 @@ import {
   whyChoicesRefused,
 } from "../src/playChoices";
 import { beginGame, legalActions, reduce } from "../src/reduce";
+import { castCard } from "../src/resolve";
 import type { CardScripts, Effect, Script } from "../src/script";
 import { registerScripts, registeredScripts } from "../src/scripts";
 import type { CardInstance, GameState } from "../src/state";
-import { placeOnField } from "../src/zones";
+import { activeUnitsOf, placeOnField } from "../src/zones";
 import { plain, stacker } from "./fixtures/combat";
-import { inHand, newGame, put, slot } from "./fixtures/harness";
+import { inHand, newGame, put, sinkFor, slot } from "./fixtures/harness";
 
 // ---------------------------------------------------------------------------
 // Fixtures.
@@ -84,8 +85,10 @@ const traveller = unit("traveller");
 const discoverer = def("discoverer", "Spell");
 /** A spare card to sit in a hand as a candidate. */
 const candidate = def("candidate", "Spell");
+/** #63 Plastic Surgery's shape: one unit on either side, which the play needs (R657). */
+const neededPick = def("needed-pick", "Spell");
 
-const DEFS = [unitHitter, handPicker, oneToTwo, declaresNothing, traveller, discoverer, candidate];
+const DEFS = [unitHitter, handPicker, oneToTwo, declaresNothing, traveller, discoverer, candidate, neededPick];
 
 /** Records the selections and modes a play delivered, so "it travelled" is observable. */
 function recordChoices(): Effect {
@@ -120,6 +123,10 @@ const SCRIPTS: Record<string, CardScripts> = {
     cry: () => [],
   }),
   [declaresNothing.id]: both({ cry: () => [] }),
+  [neededPick.id]: both({
+    targets: [{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit"] }, required: true }],
+    cry: () => [damage({ to: { of: "chosen" }, amount: 1 })],
+  }),
   [traveller.id]: both({
     targets: [{ kind: "hand", min: 1, max: 1 }],
     modes: [{ kind: "direction", options: ["left", "right"] }],
@@ -404,5 +411,54 @@ describe("the refusals a play's choices go through (§10.5 step 1, R81, R90)", (
         modes: [only(pending?.options ?? []).key],
       }),
     ).toMatch(/takes no mode choices/);
+  });
+});
+
+describe("R657 a pick the play needs", () => {
+  const offers = (state: GameState, card: CardInstance): boolean =>
+    legalActions(state, "p1").some((action) => action.type === "play" && action.instanceId === card.id);
+
+  it("R657 a needed pick the board cannot satisfy is neither offered nor accepted, where R90's plain pick plays and fizzles", () => {
+    const state = playing("r657-empty");
+    expect([...activeUnitsOf(state, "p1"), ...activeUnitsOf(state, "p2")]).toEqual([]);
+    const needed = handCard(state, neededPick.id);
+    const plainPick = handCard(state, oneToTwo.id);
+
+    // R90: the plain declaration is still offered on an empty board, and fizzles.
+    expect(offers(state, plainPick)).toBe(true);
+    // R657: the needed one is not offered, and naming it anyway is refused with the state untouched.
+    expect(playChoiceCombinations(state, "p1", needed)).toEqual([]);
+    expect(offers(state, needed)).toBe(false);
+    expect(whyChoicesRefused(state, "p1", needed, { type: "play", instanceId: needed.id })).toMatch(
+      /cannot be played without 1 legal target/,
+    );
+    const refused = actResult(state, { type: "play", instanceId: needed.id, playerId: "p1" });
+    expect(refused.error).toMatch(/cannot be played without 1 legal target/);
+    expect(refused.state).toBe(state);
+
+    // A unit on either side satisfies it: offered once per unit, and the play goes through.
+    const foe = put(state, plain.id, slot("p2", "units", 1));
+    expect(playChoiceCombinations(state, "p1", needed).map((combo) => ids(combo.targets ?? []))).toEqual([[foe.id]]);
+    expect(offers(state, needed)).toBe(true);
+    const played = actResult(state, {
+      type: "play",
+      instanceId: needed.id,
+      playerId: "p1",
+      targets: [onInstance(foe.id)],
+    });
+    expect(played.error).toBeUndefined();
+    expect(played.state.players.p2.units[0]?.[0]?.damage).toBe(1);
+  });
+
+  it("R657 a cast is never refused (R70): cast with no unit on the board, the needed pick fizzles", () => {
+    const state = playing("r657-cast");
+    const card = handCard(state, neededPick.id);
+    const sink = sinkFor(state);
+
+    castCard(sink, card);
+
+    expect(state.pending).toBeNull();
+    expect(state.players.p1.hand.some((held) => held.id === card.id)).toBe(false);
+    expect(state.players.p1.graveyard.some((gone) => gone.id === card.id)).toBe(true);
   });
 });

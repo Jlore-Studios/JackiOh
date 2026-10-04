@@ -1,0 +1,10 @@
+{
+  "version": "v0.2.12",
+  "title": "Patch v0.2.12: More card patches",
+  "sources": "#126",
+  "notes": "Plastic Surgery can no longer be played with no Unit to target, though a cast with none still fizzles (R657). Craft a Card's Radiant face no longer draws a card. Crushing Walls now closes spiked walls in on lanes 1 and 5, and a card in your hand that Plague Chalice would counter now wears a green warning (R658).",
+  "cards": [
+    "core-099",
+    "classic-087"
+  ]
+}

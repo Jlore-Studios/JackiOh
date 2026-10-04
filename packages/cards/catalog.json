@@ -2689,14 +2689,14 @@
     "rarity": "Mythic",
     "token": false,
     "cost": 4,
-    "loc": 46,
+    "loc": 42,
     "base": {
       "keywords": [],
       "text": "Discover 2 Units. Fuse them and add the result to your hand. It costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover 3 Units. Fuse them and add the result to your hand. It costs (0). Draw 1."
+      "text": "Discover 3 Units. Fuse them and add the result to your hand. It costs (0)."
     }
   },
   "core-100": {
@@ -5989,7 +5989,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": "X",
-    "loc": 21,
+    "loc": 28,
     "base": {
       "attack": 0,
       "health": 3,

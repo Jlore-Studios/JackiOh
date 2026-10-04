@@ -93,8 +93,11 @@ src/
                         on phones, the prompt's bottom sheet on phones, and small pickers
                         docked clear of the field
     glow.ts             data-glow / data-condition-active helpers: green from
-                        Highlight.glow, yellow from the view's conditionActive
+                        Highlight.glow, yellow from the view's conditionActive; and
+                        data-countered-on-play, R658's Plague Chalice warning from the view's
+                        counteredOnPlay
     highlights.css      the green and yellow glow colours, imported after board.css
+    countered.css       R658: the warning's green bubbling film and badge, still under reduced motion
     drag/               drag to play: pointer events for mouse and touch, the targeting
                         arrow and reticle, and a dropped card held where it landed until
                         the board shows the play; click-click keeps working in every mode
@@ -122,7 +125,8 @@ src/
     dom.ts fx.css       DOM flourishes (splats, rays, banners, ghosts, stand-ins) and their keyframes
     castOnDraw.ts       R502: which cardPlayed is a cast on draw, read off the order of the redacted events
     cardFx.ts           R502: the cast on draw's burst out of the Deck pile, and CARD_FX, one table from a card
-                        to its signature recipe (#21 Hinder's mana crack, #27 Blood Ridden's blood drain)
+                        to its signature recipe (#21 Hinder's mana crack, #27 Blood Ridden's blood drain,
+                        C+ #24 Crushing Walls' spiked walls)
     manaMarks.ts        R502: the crystals the next refresh will not fill, read off the view's rider badge and
                         marked on the board's trays (drawn in every mode: it is information)
     chaos.ts brand.ts   R436: Call to Chaos's effect names and slot-machine reveal; R437: a mark's brand

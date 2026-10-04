@@ -4002,6 +4002,25 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R656 a cast that targets enemies aims each target pick by its declaration", () => {
     provenIn(656, "effects-cast.test.ts");
   });
+
+  // Proved by playChoices.test.ts "R657 …" (a needed pick the board cannot satisfy is neither
+  // offered nor accepted, a plain one still plays, and a cast fizzles) and Plastic Surgery's own test
+  // (both faces, either side, and the cast).
+  it("R657 a play is refused, and never offered, while a pick it needs has no legal option", () => {
+    provenIn(657, "playChoices.test.ts", "../../cards/test/063-plastic-surgery.test.ts");
+  });
+
+  // Proved by counterWarning.test.ts "R658 …" (fixture counters: who is warned, never a Trap, a hand
+  // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
+  // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
+  it("R658 a hand card the field would counter at every price carries a warning on its own seat", () => {
+    provenIn(
+      658,
+      "counterWarning.test.ts",
+      "../../cards/test/classic/087-plague-chalice.test.ts",
+      "../../../apps/web/src/game/countered.test.tsx",
+    );
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

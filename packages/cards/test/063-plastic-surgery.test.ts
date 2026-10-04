@@ -1,13 +1,13 @@
 // #63 Plastic Surgery — SPEC §8.3, BUILD M4-T4 row 63.
 //
 // Must-pass: "+3/+3 and one pool keyword the unit lacks (R21); radiant +6/+6 and two distinct
-// keywords."
+// keywords; not playable with no Unit to target, though a cast with none fizzles (R657)."
 
 import { describe, expect, it } from "vitest";
-import type { CardInstance } from "@jackioh/engine";
+import { castCard, createRng, legalActions, type CardInstance } from "@jackioh/engine";
 // R21's pool as a constant, so this test never restates the eleven keywords (SPEC §6.1).
 import { RANDOM_KEYWORD_POOL } from "@jackioh/engine/config";
-import type { KeywordKind, Selection } from "@jackioh/shared";
+import type { GameEvent, KeywordKind, Selection } from "@jackioh/shared";
 import { scenario } from "./_harness";
 
 const SURGERY = "core-063"; // Spell, 1
@@ -107,12 +107,47 @@ describe("#63 Plastic Surgery", () => {
     expect(run()).toEqual(run());
   });
 
-  it("§8 Conventions no target means the spell fizzles and still counts as played", () => {
-    const s = scenario({ p1: { hand: [SURGERY], mana: 4 }, p2: {} });
+  it("R657 is not playable with no Unit on the board, on either face: never offered, and refused", () => {
+    for (const radiant of [false, true]) {
+      const s = scenario({ p1: { hand: [{ def: SURGERY, radiant }], mana: 4 }, p2: {} });
+      const surgery = s.card(SURGERY);
 
-    s.play(SURGERY);
+      expect(offered(s.state, surgery)).toEqual([]);
+      expect(() => s.play(SURGERY)).toThrow(/cannot be played without 1 legal target/);
 
-    s.expectInZone(SURGERY, "graveyard");
-    s.expectEvents("cardPlayed", "enteredGraveyard");
+      s.expectInZone(SURGERY, "hand");
+      s.expectMana("p1", 4);
+    }
+  });
+
+  it("R657 is offered with a Unit on either side, once per Unit, on either face", () => {
+    for (const radiant of [false, true]) {
+      const s = scenario({ p1: { hand: [{ def: SURGERY, radiant }], field: [FELINOR], mana: 4 }, p2: { field: [MENACE] } });
+
+      expect(offered(s.state, s.card(SURGERY))).toEqual([[s.card(FELINOR).id], [s.card(MENACE).id]]);
+    }
+  });
+
+  it("R657 a cast with no Unit on the board is never refused (R70): it fizzles and still counts as played", () => {
+    for (const radiant of [false, true]) {
+      const s = scenario({ p1: { hand: [{ def: SURGERY, radiant }], mana: 4 }, p2: {} });
+      const events: GameEvent[] = [];
+      const sink = { state: s.state, events, rng: createRng(s.state.seed, s.state.rngCursor) };
+
+      castCard(sink, s.card(SURGERY));
+
+      expect(s.state.pending).toBeNull();
+      s.expectInZone(SURGERY, "graveyard");
+      expect(events.map((event) => event.type)).toContain("cardPlayed");
+    }
   });
 });
+
+/** The target lists of every `play` `legalActions` offers p1 for this card (R81). */
+function offered(state: Parameters<typeof legalActions>[0], card: CardInstance): string[][] {
+  return legalActions(state, "p1").flatMap((action) =>
+    action.type === "play" && action.instanceId === card.id
+      ? [(action.targets ?? []).flatMap((target) => (target.pick === "instance" ? [target.instanceId] : []))]
+      : [],
+  );
+}
