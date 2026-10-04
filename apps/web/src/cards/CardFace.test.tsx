@@ -363,7 +363,7 @@ describe("B10: RulesText marks terms in bold", () => {
     }
   }, CATALOG_SWEEP_TIMEOUT_MS);
 
-  it("B10 patch v0.2.0's words are bold terms (Activate ♾️, Brittle, Animated, Upgrade, Degrade), and so is Classic #65's End of your turn (#85)", () => {
+  it("B10 patch v0.2.0's words are bold terms (Activate ♾️, Brittle, Animated, Upgrade, Degrade), and so is Classic #65's End of turn (#85)", () => {
     const termsOf = (id: string): string[] =>
       [...catalogFace(id).querySelectorAll(".card-text strong.cf-term")].map((term) => `${term.getAttribute("data-term") ?? ""}=${term.textContent ?? ""}`);
     expect(termsOf("classic-078")).toContain("Activate=Activate ♾️:");
@@ -376,7 +376,7 @@ describe("B10: RulesText marks terms in bold", () => {
     expect(tuners).toContain("Upgrade");
     expect(tuners).toContain("Degrade");
     cleanup();
-    expect(termsOf("classic-065")[0]).toBe("End of turn=End of your turn:");
+    expect(termsOf("classic-065")[0]).toBe("End of turn=End of turn:");
   });
 
   it("B10 a term keeps the rules box's ink in a tavern screen, whose own bold words are pale gold (#85)", () => {

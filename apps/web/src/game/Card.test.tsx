@@ -665,7 +665,7 @@ describe("B18: Card picks its form from its props", () => {
     const root = cardRoot(flood.instanceId);
     expect(screen.getByTestId("resolving-you").contains(root)).toBe(true);
     expect(root.getAttribute("data-face")).toBe("full");
-    expect(inside(root, ".card-text").textContent).toContain("Bounce all Units.");
+    expect(inside(root, ".card-text").textContent).toContain("Return all Units to hand.");
   });
 });
 

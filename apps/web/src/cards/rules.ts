@@ -16,7 +16,7 @@ type Pattern = { text: string; term: GlossaryTermId };
 
 const ENTRIES: readonly GlossaryEntry[] = Object.values(GLOSSARY);
 
-/** Every spelling, longest first, so "Start of your turn" is tried before anything shorter. */
+/** Every spelling, longest first, so longer terms are tried before shorter ones. */
 const PATTERNS: readonly Pattern[] = ENTRIES.flatMap((entry) =>
   [entry.label, ...entry.aliases].map((text) => ({ text, term: entry.id })),
 ).sort((a, b) => b.text.length - a.text.length);

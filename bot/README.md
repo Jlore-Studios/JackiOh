@@ -91,8 +91,20 @@ more than one, the highest counts, and any other `priority:*` label counts as no
 the order is the usual one ([who takes what](#subscriptions)), and a forced item still goes before
 every tier. A priority label never makes work eligible or ineligible.
 
-**`human`** takes work away from every model: a person will do it. No model picks it up,
-whatever else it is labelled, forced or not.
+**`human`** takes work away from the bot altogether: people do it. That is a decision, an
+account or a secret, repository work the bot may not do (a change to `bot/`, `.harness/` or
+`.github/`), or work a person is already building. No model picks it up, whatever else it is
+labelled, forced or not, and the bot never touches it: it is never queued, planned or built,
+gets no `bot:*` stage label, and a conflicted `human` pull request is not revised. A
+`/harness build`, an assignment or a mention gets one reply saying so, and nothing else. Take
+the label off to hand it to the bot.
+
+**Dependencies.** An issue waits, unless it is forced, while something it waits for is still open:
+an issue a line of its description names ("Blocked by #125", "Depends on #12 and #14", "Do not
+start until #125 has merged"; the Plan section does not count), an issue GitHub's own issue
+dependencies say blocks it, or an earlier part of the same patch (a title such as
+`Patch v0.2.X (part 3 of 4): …` waits for parts 1 and 2 of 4 under the same name,
+[docs/issues-and-patches.md](../docs/issues-and-patches.md)). Revisions and reviews never wait.
 
 Label names match whatever their case. Labels are read afresh at every pickup, so a change counts
 at the next run, and a run already going is never stopped. The pull request the bot opens for an
@@ -101,7 +113,7 @@ its reviews follow the same rules. A label changed on the issue after that, `hum
 not reliably reach the pull request (a later build of the issue copies added labels again, never
 removed ones): change it there too. The `peek` and `plan` steps of a night run log the chosen
 item's priority tier and difficulty, the model and tier picked for each role, any step up in tier
-and why, and every item passed over because of `human`.
+and why, and every item passed over because of `human` or a dependency.
 
 The issue is the spec, so write it the way you would for a careful contributor: what should
 happen, where, and how you would check it. The builder reads the issue body, every comment from
@@ -146,7 +158,8 @@ Every way of asking either gets an answer at once, or is found again later:
   verb ("stauts") runs nothing and gets a "did you mean", rather than a build of the typo.
 - **A run that dies without a result** goes to the back of the queue and is blocked after two
   in a row. A failure outside any item (the CLI refusing to start, a broken install on `main`)
-  charges nothing and pauses runs for 50 minutes.
+  charges nothing and pauses that subscription for 50 minutes, longer each time in a row
+  ([who takes what](#subscriptions)).
 - **A stop or halt said after the last checkpoint** still counts: deliver checks again, so
   nothing merges that you stopped.
 - **`--force`** and **`/harness run`** start a run at once. Both are written down first, so if
@@ -231,7 +244,7 @@ needs level 3.
 | `bot:needs-review` | a bot pull request that touches a review-only path; a person merges it |
 | `difficulty:easy`, `difficulty:medium`, `difficulty:hard` | the weakest tier that may build it: weak, medium, strong; none counts as medium, and with several the hardest counts ([below](#difficulty-and-tiers)) |
 | `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
-| `human` | a person will do it; no model picks it up |
+| `human` | people do it; the bot never queues, plans, builds or labels it |
 
 ## Triage
 
@@ -249,8 +262,8 @@ opens, from a Devin call (`triage.py`):
   - **`apply`**, on GitHub's runner, holds the write token and runs no model.
 - **What `apply` changes:**
   - **Labels:** only the repository's own, never a `bot:` one.
-  - **Assignees:** a human task goes to MaxGoetzmann and jgoetzmann, with `human`, so the night
-    bot skips it. A bot task (an issue) is assigned to the bot, which queues it (the sweep answers
+  - **Assignees:** a human task goes to MaxGoetzmann and jgoetzmann, with `human`, which the
+    night bot never touches. A bot task (an issue) is assigned to the bot, which queues it (the sweep answers
     the assignment).
   - **Title:** an issue's title follows `docs/issues-and-patches.md`, but only when its old title
     doesn't already, and only if every version number survives. A pull request keeps its title,
@@ -350,14 +363,19 @@ order the router tries them after `priority`. A subscription's own `lanes`
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as
-many items at a time as its `lanes`. Items go in this order: forced, the priority tier, the harder
-difficulty, reviews, revisions, then the oldest builds. Which subscription and model take each role
+many items at a time as its `lanes`. Items go in this order: forced, the priority tier, reviews,
+revisions, then builds, the harder difficulty first and then the oldest, so work already begun
+finishes before new work starts. Which subscription and model take each role
 is [Difficulty and tiers](#difficulty-and-tiers); on top of that, a subscription must be free, set
 up, inside its hours (unless the item is forced) and under its limits. A run that claims an item
 starts another run while a lane and more work are free, and a run that finishes starts the next,
 so the lanes fill up. A run that could not work at all (its login refused, its CLI would not
 install or start) leaves its subscription alone for 50 minutes, and the item goes to another one
-meanwhile.
+meanwhile. Each such failure in a row waits longer (50 minutes, 2 hours, then 8 hours each time),
+and after the third the bot opens an issue labelled `night bot` and `human` asking a person to
+renew the login or switch the subscription off; it closes that issue itself once a run there gets
+a model call through. A failure that was not the subscription's own (an install red on untouched
+`main`, a push GitHub refused) waits 50 minutes without lengthening the streak.
 
 ### Difficulty and tiers
 
@@ -551,8 +569,11 @@ GitHub Actions, such as the harness's local `bb` container.
    - a builder session on the builder's model (`claude --model sonnet --effort xhigh`, say) that
      can read, edit and run commands;
    - the repository's checks from `.harness/config.json`, with any check that is also red on
-     untouched `main` marked as not this change's fault. On the bot's machine a run skips the
-     checks marked `"machine": false` (lint and the full unit tests), which CI on the pull
+     untouched `main` marked as not this change's fault. The test check runs only the tests the
+     change can affect (`vitest run --changed origin/main`, without the AI gates and the fuzz
+     wave, which CI runs in jobs of their own). A check that runs out of time is inconclusive:
+     it neither blocks the change nor runs again on `main`, and CI decides. On the bot's machine
+     a run skips the checks marked `"machine": false` (lint and the tests), which CI on the pull
      request runs anyway, and its builder and reviewer are told to check only what they changed:
      every job there shares two vCPUs, so the heavy suites run on GitHub's runners instead;
    - for a self-checking builder, [the self-check loop](#the-self-check-loop);
@@ -564,7 +585,9 @@ GitHub Actions, such as the harness's local `bb` container.
    A planning run of its own plans and builds nothing; its plan goes back as the item's handoff.
 
    The harness also puts back anything the builder changed under `.github/`, `.harness/` or
-   `bot/`, and records that as a blocking finding. Between steps it checks for a halt, a `stop`,
+   `bot/`, and records that as a blocking finding; a build whose whole change was there ends at
+   once, asking a person, since nothing of it could be delivered. A run whose issue or pull
+   request is closed stops at its next checkpoint. Between steps it checks for a halt, a `stop`,
    the usage stop and the clock. When any of those says stop, it commits what it has as work in
    progress so the next run can pick it up. An item that runs out of time three runs in a row is
    blocked as too big for one night. A failure that is not the item's fault (an expired Claude
@@ -577,9 +600,9 @@ GitHub Actions, such as the harness's local `bb` container.
    GitHub must not have moved meanwhile, and no forbidden path may change. Only then does it push
    (never with force) and open or update the pull request. It turns on auto-merge only when the
    review rule holds, no review-only path changed and `main`'s protection requires every CI
-   check; otherwise the change waits for a review run (`bot:cross-review`) or for you. A change
-   the reviewer never approved becomes a draft PR labelled `bot:blocked`, with the findings, and
-   never merges by itself. It records the subscription's usage and minutes, keeps a refreshed
+   check, with the pull request's title (and number) as the squash commit's title; otherwise the change waits for a review run (`bot:cross-review`) or for you. A change
+   the reviewer never approved becomes a draft PR labelled `bot:blocked`, with the findings, the
+   rounds it really took and why it stopped, and never merges by itself. It records the subscription's usage and minutes, keeps a refreshed
    login and a handoff, and starts the next run if a lane is free and there is work.
 
 ## Safety
@@ -673,7 +696,7 @@ days.
 
 | I want to | Do this |
 |---|---|
-| see what it is doing | the pinned issue **Night bot status**, which `bot-status.yml` rewrites every ten minutes (one job loops for five and a half hours, then starts the next loop; an hourly schedule restarts it if it stops, since GitHub fires schedules here only every few hours; each tick also runs the sweep, so a broken chain of night runs restarts within ten minutes) with what each lane is doing and a link to its run, a timeline of the runs going now, the lanes in use, each subscription's usage as bars, the queue and the last runs; or `/harness status` anywhere, or `python3 -m harness status` in `bot/`: its "Running now" lists each subscription at work, on what, for how long, and its run |
+| see what it is doing | the pinned issue **Night bot status**, which `bot-status.yml` rewrites every ten minutes (one job loops for five and a half hours, then starts the next loop; an hourly schedule restarts it if it stops, since GitHub fires schedules here only every few hours; each tick also runs the sweep, so a broken chain of night runs restarts within ten minutes) with what each lane is doing and when it started (a clock time linking to its run; hover it for how long it had run), a timeline of the runs going now, the lanes as boxes (each Claude account, open or why not, and each of the machine's slots with the run in it), each subscription's usage as bars, the queue and the last runs; or `/harness status` anywhere, or `python3 -m harness status` in `bot/`: its "Running now" lists each subscription at work, on what, for how long, and its run |
 | stop everything now | `/harness halt`; for a lock nobody can lift by comment, commit `.harness/HALT` |
 | start again | `/harness start` (and delete `.harness/HALT` if you committed it) |
 | run now, outside a subscription's hours | `/harness run`, `/harness build --force`, or Actions → bot-night → Run workflow |
@@ -681,7 +704,7 @@ days.
 | add a subscription, or change its hours, limits or model | set its secret or log it in on the machine, and edit `.harness/providers.json` in a pull request; a new one on the machine also needs `setup.sh` and `register-runners.sh` ([`machine/`](machine/README.md)) |
 | look at the machine | `aws ssm start-session --target <instance>`; it powers off after 30 idle minutes and the starter wakes it within five minutes of a job |
 | set how hard an item is | label it `difficulty:easy`, `difficulty:medium` (the default) or `difficulty:hard` (Opus only) |
-| keep an item from every model | label it `human` |
+| keep the bot off an item altogether | label it `human` |
 | change which subscription is spent first | reorder `priority` in `.harness/providers.json` |
 | have an item picked up sooner or later | label it `priority:high`, `priority:medium` or `priority:low` |
 | stop one item | `/harness stop` on its issue or pull request |

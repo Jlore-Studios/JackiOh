@@ -7,7 +7,8 @@ takes it (`pairs`), or a suggestion survey when nothing is queued and one is due
 an item, it starts another run when a lane and more work are still free, so the lanes fill up.
 
 Who does what (`pairs`, `assign`): items go in order of urgency (forced, then the priority tier,
-the harder first, reviews, revisions, the oldest builds). An item's difficulty (`difficulty:easy`,
+reviews, revisions, then builds, the harder first and then the oldest), so work already begun is
+finished before new work starts. An item's difficulty (`difficulty:easy`,
 `medium` or `hard`; medium without a label) sets the weakest tier that may build it (`MIN_TIER`).
 Among the seats (`providers.Seat`: one model on one subscription) whose subscription is free and
 available (`providers.availability`: switched on, its secret set, inside its hours unless the item
@@ -30,7 +31,9 @@ is forced, under its limits):
 - **a review run** (`bot:cross-review`): a strong seat whenever one is free, otherwise a medium
   one of a family that has not approved the head yet; a hard item waits for a strong one.
 
-An item labelled `human` is never queued (`candidates`). `claude-1` is shared with its owner, so
+An item labelled `human` is never queued (`candidates`), nor a build that waits for another
+issue (`queue.waits_for`: a "Blocked by #n" line, GitHub's own blocked-by link, or an earlier
+part of the same patch still open). `claude-1` is shared with its owner, so
 an unforced run uses it only after the gate saw it quiet (`quiet_ok`).
 """
 
@@ -53,7 +56,8 @@ from harness.errors import GitHubError
 from harness.prompts import data
 from harness.providers import TIER_RANK, Pool, Provider, Seat, tier_at_least
 from harness.queue import (KIND_ORDER, PRIORITY_NAMES, Candidate, branch_for_issue, candidates,
-                           label_names, needs_plan, open_pull_for_branch, set_state_label,
+                           is_human, label_names, needs_plan,
+                           open_pull_for_branch, set_state_label,
                            strong_plan)
 from harness.state import item as state_item
 
@@ -113,7 +117,7 @@ def stops(ctx: Context, state: dict[str, Any], force: bool) -> str | None:
     if cfg.secrets.known and not any(p.enabled and (p.login == "machine" or cfg.secrets.has(p.secret))
                                      for p in cfg.pool.ordered()):
         return "no subscription has its secret set, so no model can run"
-    # A run that could not work backs off its own subscription only (providers.INFRA_BACKOFF).
+    # A run that could not work backs off its own subscription only (providers.INFRA_BACKOFFS).
     return None
 
 
@@ -394,9 +398,11 @@ def pairs(ctx: Context, state: dict[str, Any], queue: list[Candidate], lanes: La
           skipped: list[str] | None = None) -> Iterator[tuple[Candidate, Assignment]]:
     """Every queued item that a subscription can take now, with who takes it on which seats,
     most urgent first. (`skipped` is the queue's: the items labelled `human`.)"""
-    order = sorted(queue, key=lambda c: (not (force or c.forced), c.priority,
+    # Reviews and revisions finish work already begun, so they go before new builds; among the
+    # builds the harder first, since only the stronger models can take them.
+    order = sorted(queue, key=lambda c: (not (force or c.forced), c.priority, KIND_ORDER[c.kind],
                                          -DIFFICULTIES.index(c.difficulty),
-                                         KIND_ORDER[c.kind], c.queued_at, c.number))
+                                         c.queued_at, c.number))
     # The Needs plan stage first: a strong model plans on the planning lane, which takes no build
     # lane, the items a builder that cannot plan (Devin) waits on before the rest.
     planning: list[tuple[Candidate, Assignment]] = []
@@ -621,7 +627,8 @@ def housekeeping_due(ctx: Context, state: dict[str, Any]) -> str | None:
             return f"#{thread['number']} was left working by a run that ended"
     for thread in ctx.gh.list_issues(labels=LABEL_PR):
         names = label_names(thread)
-        if "pull_request" not in thread or names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}:
+        if ("pull_request" not in thread or names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}
+                or is_human(names)):
             continue
         record = state["items"].get(str(thread["number"]), {})
         if record.get("stop_requested"):
@@ -771,7 +778,7 @@ def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
         if "pull_request" not in thread:
             continue
         names = label_names(thread)
-        if names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}:
+        if names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED} or is_human(names):
             continue
         pull = ctx.gh.get_pull(int(thread["number"]))
         record = state["items"].get(str(pull["number"]), {})

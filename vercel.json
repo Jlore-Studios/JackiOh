@@ -13,6 +13,7 @@
       "patch/**": false,
       "patches/**": false,
       "polish/**": false,
+      "production": false,
       "wt/**": false
     }
   },
