@@ -786,25 +786,38 @@
     "144": {
       "action": "review",
       "asks": [],
-      "cross_rounds": 0,
+      "cross_rounds": 1,
       "died": 0,
       "failures": 0,
       "feedback_since": "2026-10-04T15:46:15Z",
       "forced": false,
       "interruptions": 0,
       "issue": 63,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "Any branch with a pending fragment fails this server test, so the first step of the new flow, a card change plus its fragment, cannot pass CI.",
+          "evidence": "The test loads catalog.json under loadCurrentPatch() (line 280). For the current version the route returns deps.catalog.defs (apps/server/src/api/catalog.ts:255), and the loop asserts expect(body.defs, version).toEqual(await snapshotFile(version)) for every version, including v0.2.10. With a claimed card changed, catalog.json differs from v0.2.10.json and the test fails. The diff edited this test (added a prefix check at line 284) but left the loop alone. docs/ADDING_CARDS.md says a pending-claimed card needs no test edits. patches-ship.test.ts only uses fixture repos, so nothing ever ran the suite on the real repo with a fragment pending. packages/cards/test/card-text.test.ts:264-350 also compares the v0.2.5 snapshot with the live CATALOG against an exact changed list and fails on any fragment branch.",
+          "severity": "blocking",
+          "where": "apps/server/test/api/catalog.test.ts:290"
+        },
+        {
+          "claim": "Two tests still pin the newest version to 'v0.2.10', so every promotion PR is red and can never auto-merge as the issue's design requires.",
+          "evidence": "patches.test.ts:76 has expect(CATALOG_VERSION).toBe('v0.2.10'), right after the dynamic check on line 75. apps/web/src/routes/patch-notes.test.tsx:56 has expect(shipped.at(-1)?.version).toBe('v0.2.10'), and the diff rewrote the comment on line 53 to say 'whatever a promotion named it' but kept the literal. Any ship that appends a patch bumps CATALOG_VERSION and the last entry, so both fail. The diff turned the neighbouring assertions into prefix checks (patches.test.ts:53, source.test.ts, catalog.test.ts, history.test.ts) for exactly this reason.",
+          "severity": "blocking",
+          "where": "packages/cards/test/patches.test.ts:76"
+        }
+      ],
       "pending_at": "2026-10-03T16:22:09Z",
       "pending_by": "MaxGoetzmann",
       "pending_request": false,
       "provider": "claude-2",
       "question": "",
-      "queued_at": "2026-10-04T15:59:50Z",
+      "queued_at": "2026-10-04T16:20:40Z",
       "requested_by": "jgoetzmann",
       "run_id": "37215374694",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-04T16:04:47Z",
       "stop_requested": false,
       "taken_asks": [],
