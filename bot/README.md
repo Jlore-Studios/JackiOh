@@ -383,6 +383,10 @@ they may build. With its six lanes it fills whatever room on the machine the med
   and a checklist for done. Its plan goes into the issue's description, in a **Plan** section
   (`harness/issueplan.py`), and into the handoff. The builder starts from that section as it
   stands then, so a person can correct the plan in the description before anyone builds it.
+  A person (or a session they run) can also write the plan: put it in the description between
+  `<!-- jackioh-bot:plan -->` and `<!-- /jackioh-bot:plan -->`. With no planning run of the bot's
+  on record, that section counts as a strong plan, so the item leaves the Needs plan stage and
+  the bot does not plan over it (`queue.plan_of`).
   Devin, which cannot plan, builds only from a strong model's plan. When no strong model is free
   on the lane and a medium or strong builder takes an unplanned item, it plans it first in its own
   run, on its strongest model; that plan goes into the description too. A revision is not planned

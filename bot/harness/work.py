@@ -390,7 +390,7 @@ class Worker:
             if not str(handoff.get("notes") or "").strip():
                 return ""
             if self.plan.get("plan_in_issue"):
-                return ("\n\n## The plan\n\nA strong model planned this before anyone built it. "
+                return ("\n\n## The plan\n\nThis was planned before anyone built it. "
                         "The plan is the **Plan** section of the issue's description above (a "
                         "person may have edited it since, and that version is the plan), and it is "
                         f"at the top of `{NOTES_FILE}`, which you keep going. Follow it step by "
