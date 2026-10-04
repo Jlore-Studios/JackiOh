@@ -1351,7 +1351,9 @@
     "188": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-04T10:26:57Z",
         "family": "claude",
@@ -1361,6 +1363,7 @@
         "reason": "planned on opus",
         "trail": ""
       },
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
