@@ -1018,9 +1018,7 @@
       "source": "request",
       "started_at": "2026-10-04T02:27:13Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5975340182"
-      ]
+      "taken_asks": []
     },
     "167": {
       "action": "revise",
