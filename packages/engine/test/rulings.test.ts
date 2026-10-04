@@ -4002,6 +4002,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R656 a cast that targets enemies aims each target pick by its declaration", () => {
     provenIn(656, "effects-cast.test.ts");
   });
+
+  // Proved by effects-transform.test.ts "R659 …": the new body is sick whatever the old one's
+  // readiness, on either player's turn; R424's Classic Golem is the exception its own test proves.
+  it("R659 a transformed Unit is summoning sick", () => {
+    provenIn(659, "effects-transform.test.ts");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {
