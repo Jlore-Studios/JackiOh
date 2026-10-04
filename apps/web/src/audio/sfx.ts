@@ -17,6 +17,10 @@
 // The frequencies and times below are each recipe's data, like keyframes in `animations.css`, and
 // stay local to it (CLAUDE.md rule 9 names only the numbers another module reads).
 //
+// PITCH (R655). A card's effect plays a recipe shifted in pitch (`renderSfx`): every oscillator and
+// filter the run builds is detuned by the same cents, and the crushed wavetable plays that much
+// faster or slower. The times stay as written, so a pitched recipe keeps its contract.
+//
 // LEVELS (B57). The recipes use their headroom (each peaks well inside 1 on its own), and the gains
 // in the SFX table set the mix against the voice lines, which sit at about -20 dBFS active RMS at
 // the default settings: a maximum hit and the big moments (death, a trap springing, turn start,
@@ -115,11 +119,21 @@ const FLOOR = 0.0001;
 /** An offset past any recipe's end; `time()` clamps it to the end. */
 const UNTIL_END = Number.POSITIVE_INFINITY;
 
-/** One recipe run: its context, its output and its span [at, end]. */
-type Kit = { ctx: BaseAudioContext; out: AudioNode; at: number; end: number };
+/** One recipe run: its context, its output, its span [at, end] and its pitch shift in cents (R655). */
+type Kit = { ctx: BaseAudioContext; out: AudioNode; at: number; end: number; cents: number };
+
+/** A detune of this many cents is an octave. */
+const CENTS_PER_OCTAVE = 1200;
+/** The pitch shift of the recipe `renderSfx` is running, in cents; 0 outside it. Recipes run synchronously. */
+let pitchNow = 0;
 
 function kit(ctx: BaseAudioContext, out: AudioNode, at: number, lengthS: number): Kit {
-  return { ctx, out, at, end: at + lengthS };
+  return { ctx, out, at, end: at + lengthS, cents: pitchNow };
+}
+
+/** `hz` shifted by the run's pitch, for a node with no detune of its own (the crushed wavetable). */
+function pitched(k: Kit, hz: number): number {
+  return hz * 2 ** (k.cents / CENTS_PER_OCTAVE);
 }
 
 /** `at + offset`, clamped into the recipe's span, so nothing lands before `at` or after the end. */
@@ -144,6 +158,7 @@ function oscillator(k: Kit, type: OscillatorType, hz: number, start = 0): Oscill
   const osc = k.ctx.createOscillator();
   osc.type = type;
   osc.frequency.setValueAtTime(hz, time(k, start));
+  if (k.cents !== 0) osc.detune.setValueAtTime(k.cents, time(k, start));
   return osc;
 }
 
@@ -158,6 +173,7 @@ function biquad(k: Kit, type: BiquadFilterType, hz: number, q: number): BiquadFi
   const filter = k.ctx.createBiquadFilter();
   filter.type = type;
   filter.frequency.setValueAtTime(hz, k.at);
+  if (k.cents !== 0) filter.detune.setValueAtTime(k.cents, k.at);
   filter.Q.setValueAtTime(q, k.at);
   return filter;
 }
@@ -277,7 +293,7 @@ function crushedBlip(k: Kit, into: AudioNode, hz: number, start: number, stop: n
   const source = k.ctx.createBufferSource();
   source.buffer = crushedBuffer(k.ctx);
   source.loop = true;
-  source.playbackRate.setValueAtTime((hz * CRUSH_CYCLE) / k.ctx.sampleRate, time(k, start));
+  source.playbackRate.setValueAtTime((pitched(k, hz) * CRUSH_CYCLE) / k.ctx.sampleRate, time(k, start));
   chain(source, envelope(k, start, 0.002, peak, stop), into);
   run(k, source, start, stop);
 }
@@ -1266,3 +1282,23 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   emoteAngry: { recipe: emoteAngry, durationMs: 700, gain: 0.8 },
   emoteWahWah: { recipe: emoteWahWah, durationMs: 1800, gain: 0.8 },
 };
+
+/**
+ * R655: runs `id`'s recipe shifted by `pitch` (a frequency ratio: 1 as written, 0.5 an octave down)
+ * and returns its length in seconds, which is the unshifted recipe's.
+ */
+export function renderSfx(
+  id: SfxId,
+  ctx: BaseAudioContext,
+  out: AudioNode,
+  at: number,
+  params: SfxParams = {},
+  pitch = 1,
+): number {
+  pitchNow = CENTS_PER_OCTAVE * Math.log2(pitch);
+  try {
+    return SFX[id].recipe(ctx, out, at, params);
+  } finally {
+    pitchNow = 0;
+  }
+}

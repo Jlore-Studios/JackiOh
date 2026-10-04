@@ -1476,6 +1476,8 @@ describe("practice plays on the full board, with sound and settings", () => {
       dispose: () => undefined,
       playSfx: () => true,
       playVoice: () => true,
+      playEffect: () => true,
+      playPickup: () => true,
     };
     return {
       engine,

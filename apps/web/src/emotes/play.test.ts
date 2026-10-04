@@ -17,7 +17,7 @@ import {
 
 import { VOICE_PRIORITY } from "../audio/constants.ts";
 import type { SfxId, SoundSink } from "../audio/types.ts";
-import { VOICE_LINES, emoteVoiceDef } from "../audio/voiceData.ts";
+import { CARD_AUDIO, emoteVoiceDef } from "../audio/voiceData.ts";
 import {
   EMOTE_BUBBLE_MAX_MS,
   EMOTE_BUBBLE_MIN_MS,
@@ -32,10 +32,15 @@ import {
 } from "./play.ts";
 
 /** A SoundSink that records: exactly what engine.ts implements and a test can spy on. */
-function sink(): SoundSink & { playSfx: ReturnType<typeof vi.fn>; playVoice: ReturnType<typeof vi.fn> } {
+function sink(): SoundSink & {
+  playSfx: ReturnType<typeof vi.fn>;
+  playVoice: ReturnType<typeof vi.fn>;
+  playEffect: ReturnType<typeof vi.fn>;
+} {
   return {
     playSfx: vi.fn(() => true),
     playVoice: vi.fn(() => true),
+    playEffect: vi.fn(() => true),
   };
 }
 
@@ -75,8 +80,8 @@ describe("R644 the voice emotes", () => {
 
   it("R644 a voice emote's bubble carries its portrait's own line text and holds its audible span", () => {
     for (const portrait of PORTRAIT_IDS) {
-      const entry = VOICE_LINES.emotes[portrait];
-      if (entry === undefined) throw new Error(`voice-lines.json has no emotes.${portrait}`);
+      const entry = CARD_AUDIO.emotes[portrait];
+      if (entry === undefined) throw new Error(`card-audio.json5 has no emotes.${portrait}`);
       for (const emote of VOICE_EMOTE_IDS) {
         const text = voiceBubbleText(portrait, emote);
         expect(text, `${portrait}.${emote}`).toBe(entry[emote]);
@@ -101,7 +106,7 @@ describe("R644 the voice emotes", () => {
 
 /** Read back what `play.ts` reads, so the fallback test states its premise. */
 function emoteLineCheck(portrait: string): unknown {
-  return VOICE_LINES.emotes[portrait];
+  return CARD_AUDIO.emotes[portrait];
 }
 
 describe("R644 the emoji emotes", () => {

@@ -27,6 +27,13 @@
 // burst, on the opponent's seat too, where that `radiantSet` carries the sentinel: the burst reads
 // the public cast, never the card it hit. A card cast as it is drawn stings (`castOnDraw`), Call to
 // Chaos's roll dings once for each effect it names (R436), and a mark brands its card (R437).
+//
+// R655: those moments are a card's hooks (`play`, `death`, `cast`), and a hook in `card-audio.json5`
+// gives a line, a named effect, or both. The effect plays at the moment the line would speak, and a
+// line an effect leads waits CARD_EFFECT_DELAY_MS more, so the sound reads as what the card does and
+// the line as its reaction. The effect is read off the same readable entry as the line, so R203 holds
+// for both. The `attack` hook is no event's: the board plays it when the viewer picks a Unit up
+// (`usePickupSound`).
 
 import type {
   CardType,
@@ -43,6 +50,7 @@ import type {
 import { themeFor } from "../cards/art/themes.ts";
 import {
   BLOOD_BEAN_DEF_ID,
+  CARD_EFFECT_DELAY_MS,
   CHAOS_REVEAL_MAX,
   DEATH_VOICE_DELAY_MS,
   GOLD_BURST_DELAY_MS,
@@ -53,15 +61,16 @@ import {
   VOICE_PRIORITY,
 } from "./constants.ts";
 import type {
+  CardAudioTable,
+  CardHook,
   SfxId,
   SfxParams,
   SfxTimbre,
   SoundCue,
   VoiceLineKind,
-  VoiceLineTable,
   VoicePriority,
 } from "./types.ts";
-import { entryFor } from "./voiceData.ts";
+import { entryFor, hookFor } from "./voiceData.ts";
 
 /**
  * The public catalog facts a cue may colour itself with (§5.1): never looked up for "hidden".
@@ -79,7 +88,8 @@ export type PlayFrame = { defId: string; instanceId: string; player: PlayerId; c
 export type CueContext = {
   /** The view the batch was planned against (pre-batch): `viewer` and seat orientation come from here. */
   view: PlayerView;
-  lines: VoiceLineTable;
+  /** The card sound table (R655): every card's hooks, with the voices and effects they name. */
+  lines: CardAudioTable;
   /** Current mana this player had before this event, as the director tracks it. */
   manaBefore: (player: PlayerId) => number;
   /**
@@ -174,6 +184,28 @@ function voice(defId: string, line: VoiceLineKind, delayMs: number, priority: Vo
 }
 
 /**
+ * R655: a readable card's sounds for one hook at its moment: the hook's effect at `delayMs`, and its
+ * line then, or CARD_EFFECT_DELAY_MS later when the effect leads it. None for a card behind the
+ * sentinel or a hook the table does not give.
+ */
+export function hookCues(
+  ctx: CueContext,
+  defId: string,
+  hook: CardHook,
+  delayMs: number,
+  priority: VoicePriority,
+): readonly SoundCue[] {
+  const assignment = hookFor(ctx.lines, defId, hook);
+  if (assignment === null) return NONE;
+  const cues: SoundCue[] = [];
+  if (assignment.effect !== undefined) cues.push({ kind: "effect", defId, hook, delayMs, priority });
+  if (assignment.voice !== undefined) {
+    cues.push(voice(defId, hook, assignment.effect === undefined ? delayMs : delayMs + CARD_EFFECT_DELAY_MS, priority));
+  }
+  return cues;
+}
+
+/**
  * A unit arriving: a thud sized by the unit (attack plus health, so a 1/1 Sheep taps the table and a
  * 7/7 shakes it) with its family's accent, a Legendary or Mythic sting as the light rays rise, a
  * golden glint when it is Radiant, and, when no play of it has sounded (a token, a Recruit, a
@@ -195,7 +227,7 @@ function summonCues(event: Extract<GameEvent, { type: "summoned" }>, ctx: CueCon
   if (unit?.radiant === true) cues.push(sfx("radiant", undefined, RADIANT_GLINT_DELAY_MS));
   const played = ctx.wasPlayed?.(event.instanceId) ?? false;
   if (!played && entryFor(ctx.lines, event.defId)?.kind === "unit") {
-    cues.push(voice(event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.summon));
+    cues.push(...hookCues(ctx, event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.summon));
   }
   return cues;
 }
@@ -251,14 +283,14 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
       const kind = entryFor(ctx.lines, event.defId)?.kind;
       if (kind === "trap") return [sfx("trapSet")];
       const arrive = arrival(event, ctx);
-      if (kind === "unit") return [arrive, voice(event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.play)];
+      if (kind === "unit") return [arrive, ...hookCues(ctx, event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.play)];
       if (kind === "spell") {
         const card = readable(ctx, event.defId);
         const timbre = card === undefined ? undefined : timbreFor(card);
         return [
           arrive,
           sfx("spell", timbre === undefined ? undefined : { timbre }, SPELL_SHIMMER_DELAY_MS),
-          voice(event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.play),
+          ...hookCues(ctx, event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.play),
         ];
       }
       return [arrive];
@@ -286,7 +318,7 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
     sfx: "death",
     cues: (event, ctx) =>
       entryFor(ctx.lines, event.defId)?.kind === "unit"
-        ? [sfx("death"), voice(event.defId, "death", DEATH_VOICE_DELAY_MS, VOICE_PRIORITY.react)]
+        ? [sfx("death"), ...hookCues(ctx, event.defId, "death", DEATH_VOICE_DELAY_MS, VOICE_PRIORITY.react)]
         : [sfx("death")],
   },
   enteredGraveyard: silent("the destroy, discard or resolve that sent it there already sounded"),
@@ -338,10 +370,10 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // play-reactive traps fire on the very play they answer, so the line cuts in on that play's line.
   trapFired: {
     sfx: "trapSting",
-    cues: (event, ctx) =>
-      entryFor(ctx.lines, event.defId) === null
-        ? [sfx("trapSting")]
-        : [sfx("trapSting"), voice(event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.react)],
+    cues: (event, ctx) => [
+      sfx("trapSting"),
+      ...hookCues(ctx, event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.react),
+    ],
   },
   attackDeclared: { sfx: "attack", cues: () => [sfx("attack")] },
   attackCancelled: { sfx: "cancel", cues: () => [sfx("cancel")] },

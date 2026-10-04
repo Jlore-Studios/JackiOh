@@ -3977,6 +3977,24 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       WEB_STATS_ROUTE_TEST,
     );
   });
+
+  // Proved by apps/web audio/cues.test.ts, director.test.ts, engine.test.ts and sfx.test.ts "R655 …"
+  // (an effect at its hook's moment, ahead of its line, never for the sentinel; the pick-up's gap and
+  // cut-off), test/ux/attack-pickup.test.tsx "R655 …" (the pick-up on the drag's lift and the click,
+  // nothing on the drop), and voiceData.test.ts and voice-lines.test.ts "R655 …" (the file's shape,
+  // its name comments, and the load failing with the path of a mistake).
+  it("R655 lets a card's hooks play effects, and a Unit picked up to attack play its attack hook", () => {
+    provenIn(
+      655,
+      "../../../apps/web/src/audio/cues.test.ts",
+      "../../../apps/web/src/audio/director.test.ts",
+      "../../../apps/web/src/audio/engine.test.ts",
+      "../../../apps/web/src/audio/sfx.test.ts",
+      "../../../apps/web/src/test/ux/attack-pickup.test.tsx",
+      "../../../apps/web/src/audio/voiceData.test.ts",
+      "../../../apps/web/src/audio/voice-lines.test.ts",
+    );
+  });
 });
 
 describe("SPEC §11 index completeness", () => {
