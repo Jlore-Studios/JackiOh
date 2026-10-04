@@ -1072,7 +1072,7 @@
       },
       "ci_run_id": 37173756115,
       "ci_sha": "2ed45ad546dffb06f4d093715ff7bcae1dfa5744",
-      "died": 1,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-04T06:12:30Z",
