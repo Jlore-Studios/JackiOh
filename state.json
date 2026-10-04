@@ -1159,10 +1159,7 @@
       "run_id": "37157610135",
       "started_at": "2026-10-03T22:13:10Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5946889038",
-        "c:5972578425"
-      ]
+      "taken_asks": []
     },
     "46": {
       "asks": [],
