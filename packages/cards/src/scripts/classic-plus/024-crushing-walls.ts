@@ -1,6 +1,6 @@
 // C+ #24 Crushing Walls (SPEC §8.7 row 24): destroy the top card of every zone in lanes 1 and 5, both
 // rows (Radiant: the enemy's only); a Unit standing on an Ivory Tower while its play resolves is passed
-// by (R446, R635), and the Tower is destroyed whatever it has fused (R418).
+// by (R446, R651), and the Tower is destroyed whatever it has fused (R418).
 
 import { isCarried, slotOf, type EffectContext, type Script } from "@jackioh/engine";
 import { cardsInScope, destroy, forEachCard } from "@jackioh/engine/effects";

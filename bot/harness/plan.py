@@ -7,7 +7,8 @@ takes it (`pairs`), or a suggestion survey when nothing is queued and one is due
 an item, it starts another run when a lane and more work are still free, so the lanes fill up.
 
 Who does what (`pairs`, `assign`): items go in order of urgency (forced, then the priority tier,
-the harder first, reviews, revisions, the oldest builds). An item's difficulty (`difficulty:easy`,
+reviews, revisions, then builds, the harder first and then the oldest), so work already begun is
+finished before new work starts. An item's difficulty (`difficulty:easy`,
 `medium` or `hard`; medium without a label) sets the weakest tier that may build it (`MIN_TIER`).
 Among the seats (`providers.Seat`: one model on one subscription) whose subscription is free and
 available (`providers.availability`: switched on, its secret set, inside its hours unless the item
@@ -30,7 +31,9 @@ is forced, under its limits):
 - **a review run** (`bot:cross-review`): a strong seat whenever one is free, otherwise a medium
   one of a family that has not approved the head yet; a hard item waits for a strong one.
 
-An item labelled `human` is never queued (`candidates`). `claude-1` is shared with its owner, so
+An item labelled `human` is never queued (`candidates`), nor a build that waits for another
+issue (`queue.waits_for`: a "Blocked by #n" line, GitHub's own blocked-by link, or an earlier
+part of the same patch still open). `claude-1` is shared with its owner, so
 an unforced run uses it only after the gate saw it quiet (`quiet_ok`).
 """
 
@@ -45,7 +48,7 @@ from harness import asks, issueplan, threads
 from harness import providers as providers_mod
 from harness.clock import iso, parse_iso
 from harness.config import (DIFFICULTIES, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
-                            LABEL_NEEDS_PLAN, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
+                            LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_SUGGESTION, LABEL_WORKING,
                             MIN_TIER, NIGHT_WORKFLOW, STATE_BRANCH)
 from harness.context import Context
@@ -53,7 +56,8 @@ from harness.errors import GitHubError
 from harness.prompts import data
 from harness.providers import TIER_RANK, Pool, Provider, Seat, tier_at_least
 from harness.queue import (KIND_ORDER, PRIORITY_NAMES, Candidate, branch_for_issue, candidates,
-                           label_names, needs_plan, open_pull_for_branch, set_state_label,
+                           is_human, label_names, needs_plan,
+                           open_pull_for_branch, set_state_label,
                            strong_plan)
 from harness.state import item as state_item
 
@@ -113,7 +117,7 @@ def stops(ctx: Context, state: dict[str, Any], force: bool) -> str | None:
     if cfg.secrets.known and not any(p.enabled and (p.login == "machine" or cfg.secrets.has(p.secret))
                                      for p in cfg.pool.ordered()):
         return "no subscription has its secret set, so no model can run"
-    # A run that could not work backs off its own subscription only (providers.INFRA_BACKOFF).
+    # A run that could not work backs off its own subscription only (providers.INFRA_BACKOFFS).
     return None
 
 
@@ -145,10 +149,12 @@ class Lanes:
         return sum(1 for number in self.planning if self.held.get(number) == provider_id)
 
     def full(self, provider: Provider) -> bool:
-        """It holds as many runs as its `lanes`. A subscription the quiet check guards counts its
-        planning run too: the check cannot tell a second run of the bot's from its owner."""
+        """It holds as many runs as its `lanes`. A subscription the quiet check guards, or one
+        with usage caps, counts its planning run too: the quiet check cannot tell a second run of
+        the bot's from its owner, and two runs deciding from one reading go past a cap together
+        (claude-2 planned and revised at once from 0% and was refused at 100% 15 minutes later)."""
         held = self.count(provider.id)
-        if provider.quiet_check:
+        if provider.quiet_check or provider.limits.stops:
             held += self.planning_by(provider.id)
         return held >= provider.lanes
 
@@ -208,8 +214,9 @@ def _usable(ctx: Context, state: dict[str, Any], provider: Provider, lanes: Lane
     if (provider.quiet_check and cfg.quiet.enabled and not forced
             and quiet_ok not in (ANY_QUIET, provider.id)):
         return False
+    # A build or a revision runs long: it starts only with `start_headroom` under each cap.
     return providers_mod.availability(provider, state, ctx.now(), cfg.timezone, cfg.secrets,
-                                      forced=forced) is None
+                                      forced=forced, starting=role in ("build", "revise")) is None
 
 
 @dataclass
@@ -306,8 +313,8 @@ def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: 
         seat = cfg.pool.best_seat(provider, "strong")
         if seat is None or "plan" not in provider.roles or lanes.planning_by(provider.id):
             continue
-        if provider.quiet_check and lanes.count(provider.id):
-            continue
+        if (provider.quiet_check or provider.limits.stops) and lanes.count(provider.id):
+            continue  # one run at a time on a guarded or capped subscription (`Lanes.full`)
         if machine_full(cfg.pool, provider, lanes):
             continue
         if (provider.quiet_check and cfg.quiet.enabled and not forced
@@ -391,9 +398,11 @@ def pairs(ctx: Context, state: dict[str, Any], queue: list[Candidate], lanes: La
           skipped: list[str] | None = None) -> Iterator[tuple[Candidate, Assignment]]:
     """Every queued item that a subscription can take now, with who takes it on which seats,
     most urgent first. (`skipped` is the queue's: the items labelled `human`.)"""
-    order = sorted(queue, key=lambda c: (not (force or c.forced), c.priority,
+    # Reviews and revisions finish work already begun, so they go before new builds; among the
+    # builds the harder first, since only the stronger models can take them.
+    order = sorted(queue, key=lambda c: (not (force or c.forced), c.priority, KIND_ORDER[c.kind],
                                          -DIFFICULTIES.index(c.difficulty),
-                                         KIND_ORDER[c.kind], c.queued_at, c.number))
+                                         c.queued_at, c.number))
     # The Needs plan stage first: a strong model plans on the planning lane, which takes no build
     # lane, the items a builder that cannot plan (Devin) waits on before the rest.
     planning: list[tuple[Candidate, Assignment]] = []
@@ -618,7 +627,8 @@ def housekeeping_due(ctx: Context, state: dict[str, Any]) -> str | None:
             return f"#{thread['number']} was left working by a run that ended"
     for thread in ctx.gh.list_issues(labels=LABEL_PR):
         names = label_names(thread)
-        if "pull_request" not in thread or names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}:
+        if ("pull_request" not in thread or names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}
+                or is_human(names)):
             continue
         record = state["items"].get(str(thread["number"]), {})
         if record.get("stop_requested"):
@@ -707,13 +717,21 @@ def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, assignment: Assignm
 
 def sync_needs_plan(ctx: Context, state: dict[str, Any]) -> list[str]:
     """Keep `bot:needs-plan` on exactly the queued items in the Needs plan stage, and on the ones
-    being planned now."""
+    being planned now; and `bot:planned` on the queued ones a strong model has planned (it stays
+    after they leave the queue, and comes off only if the item needs a plan again)."""
     notes: list[str] = []
     try:
-        wanted = {c.number for c in candidates(ctx, state) if needs_plan(c)}
+        queued = [c for c in candidates(ctx, state) if c.kind == "build"]
+        wanted = {c.number for c in queued if needs_plan(c)}
         labelled = ctx.gh.list_issues(labels=LABEL_NEEDS_PLAN)
+        planned = {c.number for c in queued if c.planned and not needs_plan(c)}
+        has_planned = {int(t["number"]) for t in ctx.gh.list_issues(labels=LABEL_PLANNED)}
     except GitHubError as exc:
         return [f"could not sync `{LABEL_NEEDS_PLAN}`: {exc}"]
+    for number in sorted(planned - has_planned):
+        ctx.gh.add_labels(number, [LABEL_PLANNED])
+    for number in sorted(has_planned & wanted):
+        ctx.gh.remove_label(number, LABEL_PLANNED)
     have = set()
     for thread in labelled:
         number = int(thread["number"])
@@ -760,7 +778,7 @@ def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
         if "pull_request" not in thread:
             continue
         names = label_names(thread)
-        if names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}:
+        if names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED} or is_human(names):
             continue
         pull = ctx.gh.get_pull(int(thread["number"]))
         record = state["items"].get(str(pull["number"]), {})
@@ -924,7 +942,7 @@ def claim(ctx: Context, candidate: Candidate,
         if not handoff or handoff.get("kind") == "plan":
             planned["handoff"] = {**handoff, "kind": "plan",
                                   "provider": handoff.get("provider") or record.get("planned_by")
-                                  or "?", "notes": planned["plan_in_issue"]}
+                                  or "the issue's description", "notes": planned["plan_in_issue"]}
     set_state_label(ctx, number, names, LABEL_WORKING)
     if LABEL_NEEDS_PLAN in names and assignment.action != "plan":
         ctx.gh.remove_label(number, LABEL_NEEDS_PLAN)  # this run plans it first, in the run

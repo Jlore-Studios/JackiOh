@@ -77,7 +77,7 @@ const ENCHANTMENT_ICON: Readonly<Record<Enchantment["kind"], IconName>> = {
  */
 export function animatedWords(animated: { home?: number }, type: CardType): string {
   if (animated.home === undefined) return `Animated: this ${type} stands in a unit zone as a Unit`;
-  return `Animated on your turn: back to its backrow zone (lane ${String(animated.home)}) at the end of its controller's turn`;
+  return `Animated on your turn: back to its backrow (lane ${String(animated.home)}) at the end of its controller's turn`;
 }
 
 /** The enchantments a face shows, each distinct one once, in the order the view lists them. */

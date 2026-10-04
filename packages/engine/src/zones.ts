@@ -105,7 +105,7 @@ export function carriedAt(state: GameState, ref: ZoneSlot): CardInstance | null 
 
 /**
  * B5 E21, R446: a backrow card whose text lets a Unit be played on top of it (`staticFlags.carrier`,
- * or Classic+ #33 Ivory Tower's `fusesCarried`, R635). The flag is the card's text, so a Vanilla
+ * or Classic+ #33 Ivory Tower's `fusesCarried`, R651). The flag is the card's text, so a Vanilla
  * carrier carries nothing more (§6.3, R115: `flagsOf` reads nothing off a Vanilla instance).
  */
 export function isCarrier(card: CardInstance): boolean {
@@ -114,13 +114,13 @@ export function isCarrier(card: CardInstance): boolean {
 }
 
 /**
- * R635: where a carrier that fuses its Unit (`fusesCarried`) notes the Unit stacked onto it, by id, for
+ * R651: where a carrier that fuses its Unit (`fusesCarried`) notes the Unit stacked onto it, by id, for
  * the rest of its stay. Memory, so R78 clears it when the card leaves the field, and a Fuse that keeps
  * the carrier keeps it (R77: it is the engine's entry, not a text's).
  */
 const STACKED_KEY = "__stacked";
 
-/** R635: the id of the Unit stacked onto this `fusesCarried` carrier on this stay, or null if none yet. */
+/** R651: the id of the Unit stacked onto this `fusesCarried` carrier on this stay, or null if none yet. */
 export function stackedOnto(card: CardInstance): string | null {
   const id = card.memory[STACKED_KEY];
   return typeof id === "string" ? id : null;
@@ -305,7 +305,7 @@ export function placeOnField(
     if (top === null || carriedAt(state, ref) !== null) return false;
     if (!isCarrier(top) && options.stack !== true) return false;
     setCarried(side, ref.lane, instance);
-    // R635: the first Unit to stand on a carrier that fuses its Unit is the one it takes this stay.
+    // R651: the first Unit to stand on a carrier that fuses its Unit is the one it takes this stay.
     if (flagsOf(top).fusesCarried === true && stackedOnto(top) === null) top.memory[STACKED_KEY] = instance.id;
   } else {
     // B5 E21: a Stack card may top an occupied backrow zone as it may a unit zone; the card beneath

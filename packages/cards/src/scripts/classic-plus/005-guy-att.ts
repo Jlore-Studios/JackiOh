@@ -2,7 +2,7 @@
 // Cry: destroy every backrow card you control (Radiant: every backrow card), face-down ones included,
 // tops of backrow piles only; one state check (R59), Indestructible ones staying (R46). An Animated
 // card standing in a unit zone is a Unit and is not hit (R383); an Ivory Tower is, whatever it has fused
-// (R418), and a Unit standing on it while its play resolves is not (R446, R635).
+// (R418), and a Unit standing on it while its play resolves is not (R446, R651).
 
 import type { Script } from "@jackioh/engine";
 import { destroyAll } from "@jackioh/engine/effects";

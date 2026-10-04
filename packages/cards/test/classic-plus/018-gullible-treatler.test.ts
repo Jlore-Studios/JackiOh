@@ -101,7 +101,7 @@ describe("C+ #18 Gullible Treatler", () => {
       const tower = s.card(TOWER).id;
       const rider = s.card(VANILLA).id;
       s.play(rider, { zone: 2, row: "backrow" });
-      // R635: the Vanilla is fused into the Tower, which stays a Field Spell in its backrow zone.
+      // R651: the Vanilla is fused into the Tower, which stays a Field Spell in its backrow zone.
       s.expectInZone(rider, "gone");
       expect(s.backrow("p1", 2)?.id).toBe(tower);
       expect(glows(s)).toBe(false);

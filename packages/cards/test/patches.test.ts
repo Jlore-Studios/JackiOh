@@ -24,7 +24,7 @@ const idsOf = (version: string, kind: string): string[] =>
 
 describe("R388 card patch history (B4.2)", () => {
   it("R388 lists every patch once, in the order they were made, each with its snapshot", () => {
-    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.10"]);
+    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4", "v0.2.10"]);
     expect(new Set(VERSIONS).size).toBe(VERSIONS.length);
     for (const patch of PATCHES) {
       expect(existsSync(snapshotPath(patch.version)), `${patch.version}.json`).toBe(true);
@@ -115,6 +115,17 @@ describe("R388 card patch history (B4.2)", () => {
     const keywords = (id: string): unknown => (after[id]?.["base"] as { keywords?: { kind: string }[] } | undefined)?.keywords?.[0]?.kind;
     expect(keywords("core-073")).toBe("Animated");
     expect((after["classicplus-033"]?.["base"] as { text?: string } | undefined)?.text).toBe("The first Unit you stack onto this is fused into it.");
+  });
+
+  it("R388 records patch v0.2.4: card text pass (issue #45)", () => {
+    expect(idsOf("v0.2.4", "added")).toHaveLength(0);
+    expect(idsOf("v0.2.4", "removed")).toHaveLength(0);
+    expect(idsOf("v0.2.4", "changed")).toHaveLength(22);
+    expect(
+      changesOf("v0.2.4").every(
+        (change) => change.kind === "changed" && change.fields.every((f) => f === "base.text" || f === "radiant.text"),
+      ),
+    ).toBe(true);
   });
 
   it("R388 indexes each card by the versions that added or changed it", () => {

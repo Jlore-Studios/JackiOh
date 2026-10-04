@@ -191,10 +191,10 @@ describe("R388 the Patch notes page", () => {
 });
 
 describe("R388 the Patch notes page over the real history", () => {
-  it("R388 lists the seven patches newest first, opens v0.2.10, and opens v0.2.0 with Masochism Mask's new cost and the new sets by name", async () => {
+  it("R388 lists the eight patches newest first, opens v0.2.10, and opens v0.2.0 with Masochism Mask's new cost and the new sets by name", async () => {
     renderPage();
     const entries = await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
-    expect(entries.map((element) => element.dataset.version)).toEqual(["v0.2.10", "v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0c", "v0.1.0b", "v0.1.0"]);
+    expect(entries.map((element) => element.dataset.version)).toEqual(["v0.2.10", "v0.2.4", "v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0c", "v0.1.0b", "v0.1.0"]);
     // The newest, patch v0.2.10 (issue #113), is open on arrival: every card it changed is on it once.
     await within(patchEntry("v0.2.10")).findByTestId(patchTestid.cards, undefined, SLOW);
     const shownIn = (version: string): (string | undefined)[] => {
@@ -208,6 +208,8 @@ describe("R388 the Patch notes page over the real history", () => {
       return (record?.changes ?? []).filter((change) => change.kind === "changed").map((change) => change.id);
     };
     expect(shownIn("v0.2.10").sort()).toEqual((await changedIn("v0.2.10")).sort());
+    // Collapse the newest and open v0.2.0 instead.
+    fireEvent.click(within(patchEntry("v0.2.10")).getByTestId(patchTestid.toggle));
     fireEvent.click(within(patchEntry("v0.2.0")).getByTestId(patchTestid.toggle));
     await within(patchEntry("v0.2.0")).findByTestId(patchTestid.cards, undefined, SLOW);
     const mask = within(patchEntry("v0.2.0")).getAllByTestId(patchTestid.changedCard).find((element) => element.dataset.card === "core-065");

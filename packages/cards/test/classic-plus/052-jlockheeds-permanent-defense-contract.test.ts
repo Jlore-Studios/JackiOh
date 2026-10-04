@@ -62,7 +62,7 @@ describe("C+ #52 Jlockheed's Permanent Defense Contract", () => {
       expect(mods).toHaveLength(1);
       expect(mods[0]?.expiry).toEqual({ until: "never" });
       // R169: its badge, public to both seats, in the card's own words.
-      const label = "For the rest of the game: At the start of your turn, add 1 random Jlockheed card to your hand.";
+      const label = "For the rest of the game.\nStart of turn: Add 1 random Jlockheed card to your hand.";
       expect(s.view("p2").opponent.modifiers.map((mod) => mod.label)).toEqual([label]);
       expect(s.view("p1").you.modifiers.map((mod) => mod.label)).toEqual([label]);
     });

@@ -2,7 +2,7 @@
 // an occupied backrow zone, only the top acts (a face-down trap under a pile never fires, an aura under
 // one is off), a pile travels whole; and a carrier (Classic+ #33 Ivory Tower) holds one Unit played on
 // top of it — a Unit for every rule that can neither attack nor be attacked, stepping down into a unit
-// zone when its zone stops carrying it; a carrier that fuses its Unit (Classic+ #33 Ivory Tower, R635)
+// zone when its zone stops carrying it; a carrier that fuses its Unit (Classic+ #33 Ivory Tower, R651)
 // takes one a stay. Pauses, a round trip, a replay and each seat's view included.
 // Fixtures: `fixtures/field.ts`.
 
@@ -395,8 +395,8 @@ describe("B5 E21 a carrier and the Unit it holds (R446)", () => {
   });
 });
 
-describe("R635 a carrier that fuses its Unit takes one Unit a stay", () => {
-  it("R635 the first Unit to stand on it is noted, and no other may name its zone, even once that one has gone", () => {
+describe("R651 a carrier that fuses its Unit takes one Unit a stay", () => {
+  it("R651 the first Unit to stand on it is noted, and no other may name its zone, even once that one has gone", () => {
     const state = playing("fuser-once");
     const holder = put(state, fuser.id, slot("p1", "backrow", 2));
     expect(stackedOnto(holder)).toBeNull();
@@ -423,7 +423,7 @@ describe("R635 a carrier that fuses its Unit takes one Unit a stay", () => {
     expect(stackedOnto(gone)).toBeNull();
   });
 
-  it("R635 an Immutable one takes none, since its text could not take the Unit in (R23)", () => {
+  it("R651 an Immutable one takes none, since its text could not take the Unit in (R23)", () => {
     const state = playing("fuser-immutable");
     const holder = put(state, fuser.id, slot("p1", "backrow", 2));
     holder.grantedKeywords.push({ kind: "Immutable" });

@@ -139,6 +139,14 @@ class DecideTests(unittest.TestCase):
         plan = self.decide({"kind": "bot", "labels": ["priority:high", "priority:low"]})
         self.assertEqual(plan.labels, ["priority:high"])
 
+    def test_micro_patches_and_night_bot_releases_follow_the_convention(self):
+        for title in ("Patch v0.2.Y: a faster Almanac", "Patch v0.2.5b: one more fix",
+                      "Night bot v2: fewer wasted runs", "Night bot v2.1: usage caps hold",
+                      "Night bot: a help command"):
+            self.assertTrue(triage.follows_convention(title), title)
+        self.assertFalse(triage.follows_convention("Night bot v: nothing"))
+        self.assertEqual(triage.VERSION.findall("Patch v0.2.Y: x"), ["v0.2.Y"])
+
     def test_a_title_is_standardized_only_when_it_breaks_the_convention(self):
         plan = self.decide({"kind": "bot", "title": "Patch v0.2.9: a public Card Almanac"},
                            title="card almanac for v0.2.9")

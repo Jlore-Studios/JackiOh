@@ -440,6 +440,9 @@ describe("determinize loses nothing the seat can see (B10)", () => {
     // decision reads (`aiToAct` is false once the game is over), so B10 holds over games in progress.
     expect(REAL_STATES.filter((state) => state.result === null).length).toBeGreaterThan(20);
     REAL_STATES.forEach((state, at) => {
+      // R434: a finished game's view shows the opponent's hand in full, which a redaction cannot
+      // keep. No seat is to act in one, so the AI never determinizes it; a sampled game that happens
+      // to end on a sampled step is not a state this check is about.
       if (state.result !== null) return;
       for (const seat of PLAYER_IDS) {
         const det = determinize(redact(state, seat), seat, createRng(`observe-b10:${at}:${seat}`));
