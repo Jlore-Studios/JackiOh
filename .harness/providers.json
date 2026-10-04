@@ -53,8 +53,8 @@
       "quiet_check": false
     },
     "claude-3": {
-      "note": "A third Claude account, the bot's own: any hour, no caps. First in the usage order: Opus for strong roles, Sonnet for weak-tier builds.",
-      "enabled": true,
+      "note": "A third Claude account, the bot's own: any hour, no caps. First in the usage order: Opus for strong roles, Sonnet for weak-tier builds. Switched off by the owner on 2026-10-04 until they say otherwise.",
+      "enabled": false,
       "cli": "claude",
       "family": "claude",
       "model": "opus",
