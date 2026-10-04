@@ -1458,7 +1458,7 @@ type RepeatRecord = NonNullable<PlayRun["repeat"]>;
 /**
  * The options one declaration offers a pick the pipeline makes itself — an Echo repeat's or a cast's
  * (R81, R70) — narrowed to enemies when the run targets enemies and one is legal (R452), or to friendly
- * targets when the declaration is beneficial (aim "help", R654).
+ * targets when the declaration is beneficial (aim "help", R656).
  */
 function castTargetOptions(state: GameState, run: PlayRun, card: CardInstance, decl: TargetDecl): Selection[] {
   const options = legalSelectionsFor(state, run.player, card, decl);

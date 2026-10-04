@@ -50,10 +50,9 @@ describe("R388 the /patch-notes route", () => {
     render(<App />);
     expect(await screen.findByTestId(patchTestid.screen, undefined, SLOW)).toBeInTheDocument();
     const entries = await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
-    // The newest patch — patches.json's last entry — opens the page (today v0.2.11, issue #181).
+    // The newest patch — patches.json's last entry, whatever a promotion named it (R646) — opens the page.
     const shipped = await realPatchSource.patches();
     expect(entries[0]?.dataset.version).toBe(shipped.at(-1)?.version);
-    expect(shipped.at(-1)?.version).toBe("v0.2.11");
     expect(document.title).toBe("Patch notes · JackiOh");
     // Nothing asked the server who is signed in: the page is not behind the gate.
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes("/api/auth/me"))).toBe(false);

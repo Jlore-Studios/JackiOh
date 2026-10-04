@@ -7,8 +7,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  CARD_EFFECT_DELAY_MS,
+  EFFECT_PITCH_JITTER,
   GAIN_SMOOTHING_S,
+  HIDDEN_DEF_ID,
   LOG_LIMIT,
+  MUSIC_DUCK_GAIN,
+  PICKUP_MIN_GAP_MS,
   SFX_MAX_VOICES,
   SFX_RETRIGGER_MS,
   VOICE_DECODED_MAX,
@@ -39,7 +44,7 @@ import {
   type FakeNode,
   type FakeSpeech,
 } from "./test/fakeAudio.ts";
-import type { AudioEngine, PlayedCue, SfxId, VoiceKey, VoiceLineTable, VoiceManifest } from "./types.ts";
+import type { AudioEngine, PlayedCue, SfxId, VoiceKey, CardAudioTable, VoiceManifest } from "./types.ts";
 
 /* --------------------------------------------------------------------------------------------- *
  * Fixtures
@@ -48,16 +53,16 @@ import type { AudioEngine, PlayedCue, SfxId, VoiceKey, VoiceLineTable, VoiceMani
 /** Distinct levels, so the sfx and voice buses can be told apart by their gain. */
 const LEVELS = { master: 0.5, sfx: 0.3, voice: 0.7 } as const;
 
-const LINES: VoiceLineTable = {
-  version: 1,
-  personas: {
+const LINES: CardAudioTable = {
+  voices: {
     hustler: { say: "Rocko (English (US))", rate: 215, pbas: 50, pmod: 45, web: { pitch: 1.1, rate: 1.15 } },
     narrator: { say: "Eddy (English (UK))", rate: 185, pbas: 45, pmod: 35, web: { pitch: 0.9, rate: 0.95 } },
   },
+  effects: {},
   cards: {
-    "core-004": { kind: "unit", persona: "hustler", play: "Double or nothing, baby!", death: "House always wins." },
-    "core-005": { kind: "spell", persona: "narrator", cast: "Hoarding is self care." },
-    "core-008": { kind: "unit", persona: "narrator", play: "Hello. I am very normal.", death: "Plain. Simple. Gone." },
+    "core-004": { kind: "unit", play: { voice: "hustler", text: "Double or nothing, baby!" }, death: { voice: "hustler", text: "House always wins." } },
+    "core-005": { kind: "spell", cast: { voice: "narrator", text: "Hoarding is self care." } },
+    "core-008": { kind: "unit", play: { voice: "narrator", text: "Hello. I am very normal." }, death: { voice: "narrator", text: "Plain. Simple. Gone." } },
   },
   emotes: {},
 };
@@ -1382,5 +1387,272 @@ describe("speaking: a line holds the voice channel from its request until it end
 
     r.engine.dispose();
     expect(r.engine.speaking()).toBe(false);
+  });
+});
+
+/* --------------------------------------------------------------------------------------------- *
+ * R655: card effects and the pick-up
+ * --------------------------------------------------------------------------------------------- */
+
+describe("R655 a card's effect and a Unit picked up to attack", () => {
+  /**
+   * #66 The Rock: effects alone on its play and attack hooks, an effect and a line on its death.
+   * #4: an attack hook with an effect and a line (with a file). #8 has no attack hook.
+   */
+  const FX_LINES: CardAudioTable = {
+    voices: LINES.voices,
+    effects: {
+      thud: { sfx: "impact", pitch: 0.5, gain: 0.5, params: { amount: 8 } },
+      rumble: { sfx: "death", pitch: 2, gain: 1 },
+    },
+    cards: {
+      ...LINES.cards,
+      "core-066": {
+        kind: "unit",
+        play: { effect: "thud" },
+        attack: { effect: "rumble" },
+        death: { voice: "hustler", text: "Just gravel now.", effect: "thud" },
+      },
+      "core-004": {
+        kind: "unit",
+        play: { voice: "hustler", text: "Double or nothing, baby!" },
+        attack: { voice: "hustler", text: "All in!", effect: "rumble" },
+        death: { voice: "hustler", text: "House always wins." },
+      },
+    },
+    emotes: {},
+  };
+  const FX_MANIFEST: VoiceManifest = { ...MANIFEST, files: { ...MANIFEST.files, "core-004-attack": FILE } };
+
+  function fxRig(engine: Partial<AudioEngineOptions> = {}): Rig {
+    return rig({ engine: { lines: FX_LINES, manifest: FX_MANIFEST, random: () => 0.5, ...engine } });
+  }
+
+  type EffectCue = Extract<PlayedCue, { kind: "effect" }>;
+  const effectEntries = (r: Rig): EffectCue[] => r.engine.log().filter((c): c is EffectCue => c.kind === "effect");
+  /** The per-cue gain nodes made since `from` that feed the sfx bus directly. */
+  const cueGains = (audio: FakeAudio, sfxBus: FakeNode, from: number): FakeNode[] =>
+    audio.nodes.slice(from).filter((n) => n.kind === "gain" && n.connections.includes(sfxBus));
+  const cents = (pitch: number): number => 1200 * Math.log2(pitch);
+
+  it("R655 an effect plays its recipe on the sfx bus from currentTime + delayMs/1000, logged with its card, hook and name", () => {
+    const r = fxRig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+    audio.currentTime = 2;
+    const before = audio.nodes.length;
+
+    expect(r.engine.playEffect("core-066", "play", 250)).toBe(true);
+
+    expect(r.engine.log().at(-1)).toEqual({ kind: "effect", defId: "core-066", hook: "play", effect: "thud", delayMs: 250, atMs: 10_000 });
+    const sources = audio.nodes.slice(before).filter((n) => n.started);
+    expect(sources.length, "the recipe started at least one source").toBeGreaterThan(0);
+    for (const source of sources) {
+      expect(must(source.startTime, "a start time")).toBeGreaterThanOrEqual(2.25 - 1e-9);
+      expect(audio.reaches(source, bus.sfx), `${source.kind} is heard through the sfx bus`).toBe(true);
+      expect(audio.reaches(source, bus.voice), `${source.kind} stays off the voice bus`).toBe(false);
+    }
+    expect(audio.violations).toEqual([]);
+  });
+
+  it("R655 an effect's gain is its recipe's times its own, and each oscillator and filter is detuned by its pitch", () => {
+    const r = fxRig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+    const before = audio.nodes.length;
+
+    expect(r.engine.playEffect("core-066", "play")).toBe(true);
+
+    const [cue] = cueGains(audio, bus.sfx, before);
+    expect(must(cue, "the effect's gain").param("gain").settled()).toBeCloseTo(SFX.impact.gain * 0.5, 9);
+    const tuned = audio.nodes.slice(before).filter((n) => n.kind === "oscillator" || n.kind === "biquad");
+    expect(tuned.length, "impact builds oscillators and filters").toBeGreaterThan(0);
+    // random() 0.5 is no variation: an octave down is -1200 cents exactly.
+    for (const node of tuned) expect(node.param("detune").settled(), node.kind).toBeCloseTo(cents(0.5), 6);
+    // The plain recipe is never detuned.
+    const plain = audio.nodes.length;
+    expect(r.engine.playSfx("impact", { amount: 8 })).toBe(true);
+    for (const node of audio.nodes.slice(plain).filter((n) => n.kind === "oscillator" || n.kind === "biquad")) {
+      expect(node.param("detune").settled()).toBe(0);
+    }
+    expect(audio.violations).toEqual([]);
+  });
+
+  it("R655 each play varies the pitch by at most EFFECT_PITCH_JITTER either way", () => {
+    const draws = [0, 0.999_999];
+    const r = fxRig({ random: () => draws.shift() ?? 0.5 });
+    const audio = unlocked(r);
+    const detunes: number[] = [];
+    for (const _ of [0, 1]) {
+      const before = audio.nodes.length;
+      expect(r.engine.playEffect("core-066", "play")).toBe(true);
+      const osc = must(audio.nodes.slice(before).find((n) => n.kind === "oscillator"), "an oscillator");
+      detunes.push(osc.param("detune").settled());
+      tick(r, PICKUP_MIN_GAP_MS);
+    }
+    expect(detunes[0]).toBeCloseTo(cents(0.5 * (1 - EFFECT_PITCH_JITTER)), 3);
+    expect(detunes[1]).toBeCloseTo(cents(0.5 * (1 + EFFECT_PITCH_JITTER)), 3);
+  });
+
+  it("R655 an effect plays with voice lines off, and is refused while muted, hidden, for the sentinel or for a hook with none", () => {
+    const r = fxRig();
+    unlocked(r);
+    writeAudioSettings({ voiceOn: false });
+    expect(r.engine.playEffect("core-066", "play")).toBe(true);
+    tick(r, SFX_RETRIGGER_MS);
+
+    writeAudioSettings({ voiceOn: true, muted: true });
+    expect(r.engine.playEffect("core-066", "play")).toBe(false);
+    writeAudioSettings({ muted: false });
+    r.page.visibility = "hidden";
+    expect(r.engine.playEffect("core-066", "play")).toBe(false);
+    r.page.visibility = "visible";
+    expect(r.engine.playEffect(HIDDEN_DEF_ID, "play")).toBe(false);
+    expect(r.engine.playEffect("core-008", "death")).toBe(false);
+    expect(r.engine.playEffect("core-999", "play")).toBe(false);
+
+    expect(effectEntries(r)).toHaveLength(1);
+  });
+
+  it("R655 an effect's retrigger guard is its own name's, so the plain sound of the same moment does not refuse it", () => {
+    const r = fxRig();
+    unlocked(r);
+
+    expect(r.engine.playSfx("impact")).toBe(true);
+    expect(r.engine.playEffect("core-066", "play")).toBe(true);
+    expect(r.engine.playEffect("core-066", "death"), "the same effect again at once").toBe(false);
+    tick(r, SFX_RETRIGGER_MS);
+    expect(r.engine.playEffect("core-066", "death")).toBe(true);
+    expect(r.engine.log().map((c) => c.kind)).toEqual(["sfx", "effect", "effect"]);
+  });
+
+  it("R655 an effect ducks the music like a line, whatever its recipe", () => {
+    const r = fxRig();
+    const audio = unlocked(r);
+    writeAudioSettings({ duckMusic: true });
+    const music = audio.nodeOf(must(r.engine.musicOutput(), "the music bus").input);
+    const duck = must(music.connections.find((c): c is FakeNode => "kind" in c && c.kind === "gain"), "the duck");
+
+    // `death` is not one of MUSIC_DUCK_SFX: the plain sound leaves the music alone, the effect dips it.
+    expect(r.engine.playSfx("death")).toBe(true);
+    expect(duck.param("gain").targets()).toEqual([]);
+    expect(r.engine.playEffect("core-066", "attack")).toBe(true);
+    expect(duck.param("gain").targets().map((t) => t.value)).toEqual([MUSIC_DUCK_GAIN, 1]);
+  });
+
+  it("R655 a context that is not running logs the effect as suspended and builds nothing", () => {
+    const r = rig({
+      factory: fakeContextFactory({ state: "suspended", resumeMode: "stay" }),
+      engine: { lines: FX_LINES, manifest: FX_MANIFEST },
+    });
+    const audio = unlocked(r);
+    const before = audio.nodes.length;
+
+    expect(r.engine.playEffect("core-066", "play")).toBe(true);
+    expect(r.engine.log()).toEqual([{ kind: "effect", defId: "core-066", hook: "play", effect: "thud", delayMs: 0, atMs: 10_000, suspended: true }]);
+    expect(audio.nodes.length).toBe(before);
+  });
+
+  it("R655 a pick-up plays the attack hook's effect at once and its line CARD_EFFECT_DELAY_MS later, at VOICE_PRIORITY.pickup", async () => {
+    const r = fxRig();
+    unlocked(r);
+
+    expect(r.engine.playPickup("core-004")).toBe(true);
+    await settle();
+
+    expect(effectEntries(r)).toEqual([{ kind: "effect", defId: "core-004", hook: "attack", effect: "rumble", delayMs: 0, atMs: 10_000 }]);
+    expect(voiceEntries(r)).toMatchObject([
+      { defId: "core-004", line: "attack", delayMs: CARD_EFFECT_DELAY_MS, priority: VOICE_PRIORITY.pickup },
+    ]);
+    expect(r.fetch.urls()).toContain(url("core-004-attack"));
+  });
+
+  it("R655 a pick-up within PICKUP_MIN_GAP_MS of the last plays nothing; a later one fades the last one's effect and cuts its line", async () => {
+    const r = fxRig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+    const before = audio.nodes.length;
+
+    expect(r.engine.playPickup("core-004")).toBe(true);
+    const [firstEffect] = cueGains(audio, bus.sfx, before);
+    await settle();
+    await elapse(r, PICKUP_MIN_GAP_MS - 1);
+    const logged = r.engine.log().length;
+    expect(r.engine.playPickup("core-004"), "inside the gap").toBe(false);
+    expect(r.engine.playPickup("core-066"), "inside the gap, another Unit").toBe(false);
+    expect(r.engine.log()).toHaveLength(logged);
+
+    const [line] = voiceSources(audio, bus.voice);
+    const firstLine = must(line, "the first pick-up's line is playing");
+    expect(firstLine.stopTime).toBeNull();
+    await elapse(r, 1);
+    expect(r.engine.playPickup("core-004")).toBe(true);
+    await settle();
+
+    const faded = must(firstEffect, "the first pick-up's effect").param("gain").targets();
+    expect(faded.map((t) => t.value), "the first effect fades to silence").toEqual([0]);
+    expect(firstLine.stopTime, "the first line is cut").not.toBeNull();
+    expect(voiceEntries(r).map((e) => `${e.line}!${String(e.priority)}`)).toEqual([
+      `attack!${String(VOICE_PRIORITY.pickup)}`,
+      `attack!${String(VOICE_PRIORITY.pickup)}`,
+    ]);
+    expect(audio.violations).toEqual([]);
+  });
+
+  it("R655 a pick-up's line cuts in on any line, a death line included", async () => {
+    const r = fxRig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+
+    expect(r.engine.playVoice("core-008", "death", 0, VOICE_PRIORITY.react)).toBe(true);
+    await settle();
+    await elapse(r, 100);
+    const [death] = voiceSources(audio, bus.voice);
+    expect(r.engine.playPickup("core-004")).toBe(true);
+    await settle();
+
+    expect(must(death, "the death line").stopTime).not.toBeNull();
+    expect(lastVoice(r)).toMatchObject({ defId: "core-004", line: "attack" });
+  });
+
+  it("R655 a pick-up whose attack hook is only an effect still cuts off the last pick-up's line, and frees the channel", async () => {
+    const r = fxRig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+
+    expect(r.engine.playPickup("core-004")).toBe(true);
+    await settle();
+    await elapse(r, PICKUP_MIN_GAP_MS);
+    const [line] = voiceSources(audio, bus.voice);
+    expect(r.engine.speaking()).toBe(true);
+
+    expect(r.engine.playPickup("core-066")).toBe(true);
+    expect(must(line, "the first pick-up's line").stopTime).not.toBeNull();
+    expect(r.engine.speaking()).toBe(false);
+    expect(effectEntries(r).map((e) => e.defId)).toEqual(["core-004", "core-066"]);
+  });
+
+  it("R655 a pick-up of a Unit with no attack hook, of the sentinel, or while muted plays nothing and does not start the gap", () => {
+    const r = fxRig();
+    unlocked(r);
+
+    expect(r.engine.playPickup("core-008")).toBe(false);
+    expect(r.engine.playPickup(HIDDEN_DEF_ID)).toBe(false);
+    writeAudioSettings({ muted: true });
+    expect(r.engine.playPickup("core-066")).toBe(false);
+    writeAudioSettings({ muted: false });
+    expect(r.engine.log()).toEqual([]);
+
+    expect(r.engine.playPickup("core-066"), "no refused pick-up held the gap").toBe(true);
+  });
+
+  it("R655 with voice lines off a pick-up plays its effect alone", async () => {
+    const r = fxRig();
+    unlocked(r);
+    writeAudioSettings({ voiceOn: false });
+
+    expect(r.engine.playPickup("core-004")).toBe(true);
+    await settle();
+    expect(r.engine.log().map((c) => c.kind)).toEqual(["effect"]);
   });
 });

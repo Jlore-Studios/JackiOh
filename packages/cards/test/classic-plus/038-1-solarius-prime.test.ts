@@ -1,6 +1,6 @@
 // C+ #38.1 Solarius-Prime — SPEC §8.7 row 38.1, BUILD M9 Classic+ row C+ 38.1: "Spell Damage +3; Cry
 // casts 5 random non-token Spells of any set one after another (R380), every choice random with no
-// prompt, each target aimed by its declaration (R654: harm at enemies, help at friends), X the current
+// prompt, each target aimed by its declaration (R656: harm at enemies, help at friends), X the current
 // mana and at least 1 (R348), each
 // cast a play (R70) whose hits its own Spell Damage raises (it is on the field during its Cry); a cast
 // with no legal target fizzles and the next goes; a game that ends midway stops the rest; the casts are
@@ -127,7 +127,7 @@ describe("C+ #38.1 Solarius-Prime", () => {
       expect([...sets].sort()).toEqual(["Classic", "Classic+", "Core"]);
     });
 
-    it("R654 each pick aims by its declaration: harm never at your hero, help never at an enemy", () => {
+    it("R656 each pick aims by its declaration: harm never at your hero, help never at an enemy", () => {
       // The helpful Spells a random cast can pick: their target declarations aim "help".
       const HELP = new Set(["classic-003", "classicplus-010", "classicplus-057", "classicplus-071", "core-047", "core-063"]);
       let aimed = 0;

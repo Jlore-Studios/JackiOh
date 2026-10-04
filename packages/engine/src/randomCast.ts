@@ -11,7 +11,7 @@
 //    (RANDOM_CAST_CHAIN_CAP). The other player's prompts are theirs and are asked as usual.
 //  - a cast that targets enemies when it can (Solarius-Prime's "Each aims at enemies when it harms
 //    and at your side when it helps", the `targetEnemies` enchantment Classic+ #40 Appropriations
-//    gives its Books, E39) aims each target pick by its declaration (R654): a harmful pick narrows
+//    gives its Books, E39) aims each target pick by its declaration (R656): a harmful pick narrows
 //    to the enemies among its options, a helpful one to the friends, when there is one — its declared
 //    targets, its Echo repeats' and the prompts its own text opens for its caster.
 //
@@ -143,7 +143,7 @@ export function preferEnemies<T>(
 }
 
 /**
- * R654: whether a pick names one of `chooser`'s friendly targets — the chooser's own hero,
+ * R656: whether a pick names one of `chooser`'s friendly targets — the chooser's own hero,
  * a card they control on the field, or a card in one of their piles.
  */
 export function isFriendlyPick(state: GameState, chooser: PlayerId, selection: Selection): boolean {
@@ -155,7 +155,7 @@ export function isFriendlyPick(state: GameState, chooser: PlayerId, selection: S
 }
 
 /**
- * R654: "target allies when beneficial" — the mirror of `preferEnemies`. Under a random cast that
+ * R656: "target allies when beneficial" — the mirror of `preferEnemies`. Under a random cast that
  * targets enemies, a declaration with `aim: "help"` narrows to friendly targets among the target picks
  * when there is a friendly target to pick and enough of them for `required`; otherwise every option.
  */

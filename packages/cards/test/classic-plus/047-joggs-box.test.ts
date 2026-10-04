@@ -152,7 +152,7 @@ describe("C+ #47 Jogg's Box", () => {
       }
     });
 
-    it("R654 Jogg's Box aims nothing: its helpful casts land on both sides across seeds", () => {
+    it("R656 Jogg's Box aims nothing: its helpful casts land on both sides across seeds", () => {
       const FIG = "core-047"; // (3) Spell: heal a target 20 — aimed help, but the Box carries no targetEnemies
       const spells = Object.entries(CATALOG).filter(([id, entry]) => entry.type !== "Spell" || id === BOX || id === FIG);
       const sides = new Set<string>();

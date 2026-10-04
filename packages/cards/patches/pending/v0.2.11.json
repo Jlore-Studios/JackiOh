@@ -1,0 +1,13 @@
+{
+  "version": "v0.2.11",
+  "title": "Patch v0.2.11: aimed random casts and the Deft keyword",
+  "sources": "#181, #206",
+  "notes": "Smarter targeting for random casts (R656: harmful picks aim at enemies, helpful ones at friends; Jogg's Box unchanged) and the Deft keyword (R49), printed by Deft Duelist and added to the random keyword pool (R21).",
+  "cards": [
+    "core-045",
+    "classic-003",
+    "classicplus-010",
+    "classicplus-038-1",
+    "classicplus-040"
+  ]
+}

@@ -280,9 +280,11 @@ describe("R388 — GET /api/catalog/:version serves the catalog as each patch le
     const catalog = await loadCatalog({ version: await loadCurrentPatch() });
     const router = createRouter(createCatalogRoutes(), createTestDeps({ catalog }));
     const patches = JSON.parse(await readFile(new URL("patches.json", PATCHES), "utf8")) as { version: string }[];
+    // Promotions only ever append (R646): the six versions the brief checked stay the prefix.
+    expect(patches.map((patch) => patch.version).slice(0, 6)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     expect(patches.length, "patches.json is the shipped history").toBeGreaterThan(0);
     expect(patches.map((patch) => patch.version)).toEqual(
-      expect.arrayContaining(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4", "v0.2.5", "v0.2.10", "v0.2.11"]),
+      expect.arrayContaining(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4", "v0.2.10"]),
     );
 
     for (const { version } of patches) {
@@ -290,7 +292,10 @@ describe("R388 — GET /api/catalog/:version serves the catalog as each patch le
       expect(response.status, version).toBe(200);
       const body = await readJson<CatalogBody>(response);
       expect(body.version).toBe(version);
-      expect(body.defs, version).toEqual(await snapshotFile(version));
+      // The version this server runs is served from the catalog it loaded; every other one is its
+      // snapshot. Between a card change's merge and its promotion the loaded catalog is ahead of the
+      // newest snapshot on the pending fragment's cards (R646), which packages/cards proves.
+      expect(body.defs, version).toEqual(version === catalog.version ? catalog.defs : await snapshotFile(version));
     }
   });
 

@@ -1,8 +1,9 @@
 // Production: apps/web as static assets on Cloudflare Workers, built from the `production` branch
 // (.github/workflows/promote-production.yml, docs/deploy-cloudflare.md).
 // Vercel stays on as staging (vercel.json). No Worker script: assets only, so nothing runs per
-// request and nothing here needs a secret. The VITE_* values are BUILD variables, set in the
-// Cloudflare dashboard, because Vite compiles them into the bundle.
+// request and nothing here needs a secret. promote-production.yml builds apps/web (its VITE_ values
+// from apps/web/.env.production) and runs `wrangler deploy` against this file; Cloudflare builds
+// nothing.
 // apps/web/src/net/cloudflare-config.test.ts holds this file in place.
 {
   "$schema": "node_modules/wrangler/config-schema.json",

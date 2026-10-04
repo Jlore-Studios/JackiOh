@@ -37,3 +37,5 @@ export const INSPECT_NOTE = "inspect-note";
 export const INSPECT_TUNED = "inspect-tuned";
 export const INSPECT_STATES = "inspect-states";
 export const INSPECT_LOC = "inspect-loc";
+export const INSPECT_STATS = "inspect-stats";
+

@@ -13,7 +13,7 @@
 import { describe, expect, it } from "vitest";
 import { fillParams, type CardDef, type Keyword } from "@jackioh/shared";
 import { CATALOG } from "../src/catalog-data";
-import { readSnapshot } from "../scripts/patches-io";
+import { readPatches, readSnapshot } from "../scripts/patches-io";
 
 const ENTRIES: readonly CardDef[] = Object.values(CATALOG);
 
@@ -263,7 +263,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
 
   it("R366 patch v0.2.10 only Animates eighteen Field Spells, rewords Ivory Tower and moves Final Gambit's loc between v0.2.5 and v0.2.10", () => {
     const before = readSnapshot("v0.2.5");
-    const after = readSnapshot("v0.2.10");
+    const after = readSnapshot("v0.2.10") as unknown as Record<string, CardDef>;
     const animated = new Set([
       "core-014",
       "core-033",
@@ -285,8 +285,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
       "classicplus-078",
     ]);
     const changed: string[] = [];
-    for (const [id, currentRaw] of Object.entries(after)) {
-      const currentCard = currentRaw as unknown as CardDef;
+    for (const [id, currentCard] of Object.entries(after)) {
       const priorCard = before[id] as unknown as CardDef | undefined;
       expect(priorCard, `card ${id} existed in v0.2.5`).toBeDefined();
       if (!priorCard) continue;
@@ -352,10 +351,13 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(changed.sort()).toEqual([...animated, "classicplus-033", "classic-052"].sort());
   });
 
-  it("R366 patch v0.2.11 aims Solarius-Prime and Appropriations, keywords Deft Duelist and moves two locs between v0.2.10 and the current catalog", () => {
+  it("R366 patch v0.2.11 aims Solarius-Prime and Appropriations, keywords Deft Duelist and moves two locs between v0.2.10 and v0.2.11", () => {
     const before = readSnapshot("v0.2.10");
+    // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
+    const shipped = readPatches().some((patch) => patch.version === "v0.2.11");
+    const after = shipped ? (readSnapshot("v0.2.11") as unknown as typeof CATALOG) : CATALOG;
     const changed: string[] = [];
-    for (const [id, currentCard] of Object.entries(CATALOG)) {
+    for (const [id, currentCard] of Object.entries(after)) {
       const priorCard = before[id] as unknown as CardDef | undefined;
       expect(priorCard, `card ${id} existed in v0.2.10`).toBeDefined();
       if (!priorCard) continue;
@@ -365,21 +367,21 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
       ["classic-003", "classicplus-010", "classicplus-038-1", "classicplus-040", "core-045"].sort(),
     );
     // Deft Duelist prints the Deft keyword on both faces (R49).
-    expect(CATALOG["core-045"]?.base.text).toBe("Charge, Deft");
-    expect(CATALOG["core-045"]?.radiant.text).toBe("Charge, Armor 1, Deft");
-    // The aimed casts say so on the face (R654).
+    expect(after["core-045"]?.base.text).toBe("Charge, Deft");
+    expect(after["core-045"]?.radiant.text).toBe("Charge, Armor 1, Deft");
+    // The aimed casts say so on the face (R656).
     for (const face of ["base", "radiant"] as const) {
-      expect(CATALOG["classicplus-038-1"]?.[face].text).toContain(
+      expect(after["classicplus-038-1"]?.[face].text).toContain(
         "Each aims at enemies when it harms and at your side when it helps.",
       );
-      expect(CATALOG["classicplus-040"]?.[face].text).toContain(
+      expect(after["classicplus-040"]?.[face].text).toContain(
         "aim at enemies when they harm and at your side when they help.",
       );
     }
     // Book of Heal and New Wraps move only their script's loc.
     for (const id of ["classic-003", "classicplus-010"]) {
       const priorCard = before[id] as unknown as CardDef;
-      const currentCard = CATALOG[id] as unknown as CardDef;
+      const currentCard = after[id] as unknown as CardDef;
       expect({ ...currentCard, loc: priorCard.loc }).toEqual(priorCard);
     }
   });

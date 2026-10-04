@@ -192,7 +192,7 @@ export function targetingDiscardSets(
 }
 
 /**
- * R654: whether a target declaration aims to help ("help") or harm ("harm").
+ * R656: whether a target declaration aims to help ("help") or harm ("harm").
  * Defaults to "harm".
  */
 export function targetAim(decl: TargetDecl): "harm" | "help" {

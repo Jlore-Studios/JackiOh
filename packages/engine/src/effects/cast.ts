@@ -34,7 +34,7 @@ import { instanceOf, playerOf, type PlayerSpec, type TargetSpec } from "./target
 export type CastHow = {
   /** R452: every choice at random. */
   random?: boolean;
-  /** R452, R654: target picks aim by declaration ("Each aims at enemies when it harms and at your side when it helps"). */
+  /** R452, R656: target picks aim by declaration ("Each aims at enemies when it harms and at your side when it helps"). */
   targetEnemies?: boolean;
   /** R453: a resolved Spell goes to exile instead of its graveyard ("Cast them, then exile them"). */
   afterward?: "exile";

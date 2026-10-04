@@ -95,6 +95,8 @@ const TermsRoute = lazy(() => import("./routes/terms.tsx"));
 const AccessibilityRoute = lazy(() => import("./routes/accessibility.tsx"));
 const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
 const AlmanacRoute = lazy(() => import("./routes/almanac.tsx"));
+const LeaderboardRoute = lazy(() => import("./routes/leaderboard.tsx"));
+const StatsRoute = lazy(() => import("./routes/stats.tsx"));
 
 /**
  * Chrome this file invented: the gate's holding panels, their exits and the 404. The names live in
@@ -412,6 +414,10 @@ function screenNameFor(path: string): string | null {
       return "Patch notes";
     case paths.almanac:
       return "Almanac";
+    case paths.leaderboard:
+      return "Leaderboard";
+    case paths.stats:
+      return "Statistics";
     case paths.hotseat:
       return DEV_ONLY ? "Hotseat" : null;
   }
@@ -499,6 +505,9 @@ export function App(): ReactElement {
     }
 
     if (path === paths.practice) return <PracticeRoute />;
+    if (path === paths.leaderboard) {
+      return <Gated key={path}>{(account) => <LeaderboardRoute token={account.token} />}</Gated>;
+    }
     if (path === paths.privacy) return <PrivacyRoute />;
     if (path === paths.terms) return <TermsRoute />;
     if (path === paths.accessibility) return <AccessibilityRoute />;
@@ -506,6 +515,8 @@ export function App(): ReactElement {
     if (path === paths.patchNotes) return <PatchNotesRoute />;
     // R630: the Card Almanac is public, like the catalog it shows.
     if (path === paths.almanac) return <AlmanacRoute />;
+    // R654: public statistics page is public, like the almanac.
+    if (path === paths.stats) return <StatsRoute />;
 
     const matchId = matchIdOf(path);
     if (matchId !== null) {

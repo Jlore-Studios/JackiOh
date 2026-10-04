@@ -375,7 +375,7 @@ export type TargetDecl = {
   /**
    * Whether the target pick is beneficial ("help") or harmful ("harm").
    * Defaults to "harm". Used by random casts with `targetEnemies` to aim at
-   * friendly targets when beneficial and enemies when harmful (R654).
+   * friendly targets when beneficial and enemies when harmful (R656).
    */
   aim?: "harm" | "help";
 };

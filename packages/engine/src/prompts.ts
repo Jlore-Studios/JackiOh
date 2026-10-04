@@ -105,7 +105,7 @@ export type ResumePlan = WorkPlan;
 export type OpenPromptArgs = {
   player: PlayerId;
   kind: PromptKind;
-  /** R654: whether a target prompt is beneficial or harmful, for targeting under targetEnemies. */
+  /** R656: whether a target prompt is beneficial or harmful, for targeting under targetEnemies. */
   aim?: "harm" | "help";
   prompt: string;
   options: readonly PromptOption[];

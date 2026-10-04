@@ -11,7 +11,7 @@ import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classicplus-057");
 
-// R654: a buff helps, so a random cast that targets enemies aims this at friends.
+// R656: a buff helps, so a random cast that targets enemies aims this at friends.
 const targets: TargetDecl[] = [{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit"] }, aim: "help" }];
 
 export const base: Script = {

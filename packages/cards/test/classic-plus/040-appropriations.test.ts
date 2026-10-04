@@ -125,7 +125,7 @@ describe("C+ #40 Appropriations", () => {
       }
     });
 
-    it("R654 every Book's target declaration says which it aims: help for heal and buff, harm by default", () => {
+    it("R656 every Book's target declaration says which it aims: help for heal and buff, harm by default", () => {
       const aimed = (targets: Script["targets"]): (string | undefined)[] =>
         (targets ?? []).map((decl) => (decl.kind === "target" ? decl.aim : undefined));
       expect(aimed(healBase.targets)).toEqual(["help"]);
@@ -138,7 +138,7 @@ describe("C+ #40 Appropriations", () => {
       expect(aimed(vitalKillBase.targets)).toEqual([undefined]);
     });
 
-    it("R654 an Education Book that helps aims friends: a drawn Book of Heal offers only your side", () => {
+    it("R656 an Education Book that helps aims friends: a drawn Book of Heal offers only your side", () => {
       const s = scenario({
         seed: "appropriations-aim",
         p1: { hand: [VANILLA], field: [TIMMY], library: ["classic-003"] },
