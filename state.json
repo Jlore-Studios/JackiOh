@@ -1929,14 +1929,18 @@
         {
           "at": "2026-10-03T21:22:22Z",
           "minutes": 29.9
+        },
+        {
+          "at": "2026-10-04T02:28:20Z",
+          "minutes": 29.3
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-04T01:40:00Z",
-          "utilization": 0.71
+          "resets_at": "2026-10-04T06:40:00Z",
+          "utilization": 0.36
         },
-        "observed_at": "2026-10-03T21:22:22Z",
+        "observed_at": "2026-10-04T02:28:20Z",
         "status": "allowed"
       }
     },
