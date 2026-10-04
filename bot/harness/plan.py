@@ -932,7 +932,7 @@ def claim(ctx: Context, candidate: Candidate,
         if not handoff or handoff.get("kind") == "plan":
             planned["handoff"] = {**handoff, "kind": "plan",
                                   "provider": handoff.get("provider") or record.get("planned_by")
-                                  or "?", "notes": planned["plan_in_issue"]}
+                                  or "the issue's description", "notes": planned["plan_in_issue"]}
     set_state_label(ctx, number, names, LABEL_WORKING)
     if LABEL_NEEDS_PLAN in names and assignment.action != "plan":
         ctx.gh.remove_label(number, LABEL_NEEDS_PLAN)  # this run plans it first, in the run

@@ -173,3 +173,48 @@ class PlanningLaneTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PersonsPlanTests(unittest.TestCase):
+    """A Plan section someone puts in the description (`issueplan.START` … `END`) is the plan: the
+    bot neither plans over it nor holds the item in the Needs plan stage."""
+
+    def body(self, task="Make the Almanac load faster."):
+        return (f"{task}\n\n{issueplan.START}\n## Plan\n\n1. In `apps/web/src/cards/art/Art.tsx`, "
+                f"delay the draw.\n{issueplan.END}\n")
+
+    def test_it_counts_as_a_strong_plan_and_devin_builds_from_it(self):
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh, machine=("devin",))
+        busy(gh, ctx, *[(p, 50 + i) for i, p in enumerate(
+            ("claude-3", "claude-1", "claude-4", "claude-2"))])  # no strong model is free
+        gh.add_issue(3, labels=(LABEL_BUILD, EASY), body=self.body())
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["action"], planned["number"], planned["provider"]),
+                         ("build", 3, "devin"))
+        self.assertIsNone(seats(planned)["plan"])  # not planned again
+        self.assertNotIn(LABEL_NEEDS_PLAN, gh.label_names(3))
+        self.assertEqual(planned["handoff"]["notes"],
+                         "1. In `apps/web/src/cards/art/Art.tsx`, delay the draw.")
+        self.assertEqual(planned["handoff"]["provider"], "the issue's description")
+        self.assertIn(issueplan.START, gh.threads[3]["body"])  # the bot left it as it was
+
+    def test_without_the_markers_it_is_only_text_and_a_bots_medium_plan_still_counts_as_medium(self):
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh)
+        gh.add_issue(3, labels=(LABEL_BUILD,), body="## Plan\n\nSomething loose.")
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["action"], planned["number"]), ("plan", 3))
+        # The bot's own record wins over the description: an easy item a medium model planned
+        # still waits for a strong plan, which Devin needs.
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh, machine=("devin",))
+        busy(gh, ctx, *[(p, 50 + i) for i, p in enumerate(
+            ("claude-3", "claude-1", "claude-4", "claude-2"))])
+        gh.add_issue(4, labels=(LABEL_BUILD, EASY), body=self.body())
+        ctx.store.update(lambda s: state_item(s, 4).update(planned_at=iso(NIGHT),
+                                                            planned_tier="medium"))
+        planned = plan_mod.make(ctx)  # claude-3 plans on the planning lane while it builds
+        self.assertEqual((planned["action"], planned["number"], seats(planned)["plan"][2]),
+                         ("plan", 4, "strong"))
+        self.assertIn(LABEL_NEEDS_PLAN, gh.label_names(4))
