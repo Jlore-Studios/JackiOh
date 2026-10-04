@@ -25,7 +25,7 @@ import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping
 
@@ -46,6 +46,11 @@ RESETS_IN = re.compile(
     r"[\s,]*(?:(\d+)\s*m(?:in(?:ute)?s?)?(?![a-z])|(\d+)m(?=\d))?[\s,]*(?:(\d+)\s*s)?")
 #: How often a running call's usage is looked at (`_Cli._launch`'s watcher).
 WATCH_SECONDS = 15
+#: How often a running call's usage is read again with the CLI's own command, for a CLI whose call
+#: streams none (agy, Muse): each reading starts a process of its own.
+POLL_SECONDS = 600
+#: How long one such reading may take before it is given up.
+USAGE_TIMEOUT_S = 90
 AUTH_WORDS = re.compile(
     r"(?i)(invalid api key|authentication[_ ]error|oauth token|not logged in|please run /login"
     r"|invalid bearer|401 unauthorized|credit balance is too low|sign in again"
@@ -70,15 +75,20 @@ EXIT_NOT_FOUND = 127
 DEFAULT_PARK = "+PT60M"
 
 
+def _resets_in_minutes(text: str | None) -> int | None:
+    """The minutes a "resets in 1h44m44s" names, a started minute counted whole; None for none."""
+    match = RESETS_IN.search(text or "")
+    if not match or not any(match.groups()):
+        return None
+    days, hours, hours2, minutes, minutes2, seconds = (int(g or 0) for g in match.groups())
+    return max(1, (days * 24 + hours + hours2) * 60 + minutes + minutes2 + (1 if seconds else 0))
+
+
 def park_for(error: str | None) -> str:
     """How long a refused CLI is left alone: until the reset its message names, plus a minute,
     or an hour when it names none."""
-    match = RESETS_IN.search(error or "")
-    if not match or not any(match.groups()):
-        return DEFAULT_PARK
-    days, hours, hours2, minutes, minutes2, seconds = (int(g or 0) for g in match.groups())
-    total = (days * 24 + hours + hours2) * 60 + minutes + minutes2 + (1 if seconds else 0)
-    return f"+PT{max(1, total) + 1}M"
+    total = _resets_in_minutes(error)
+    return DEFAULT_PARK if total is None else f"+PT{total + 1}M"
 #: How much of a transcript the next agent is shown (`trail`).
 TRAIL_ENTRIES = 40
 TRAIL_CHARS = 6000
@@ -307,11 +317,34 @@ class _Cli:
         """A usage reading in one line of the running call's output, if the CLI streams any."""
         return None
 
+    #: The CLI streams no usage during a call but has a command that reads it (`read_usage`):
+    #: it is read before the run, every `POLL_SECONDS` during a call, and after every call.
+    polls_usage = False
+
+    def read_usage(self, model: str) -> dict[str, Any] | None:
+        """The subscription's usage now, for `model`'s pool, read with the CLI's own command;
+        None where it has none or gave no reading."""
+        return None
+
+    def _with_usage(self, result: RunResult, request: RunRequest) -> RunResult:
+        """`result` with a fresh reading, for a CLI that `polls_usage`, after any call its login
+        and binary let run. A refusal that named no reset waits for the full window's instead."""
+        if not self.polls_usage or result.infra:
+            return result
+        usage = self.read_usage(request.model)
+        if usage:
+            result.usage = usage
+            if result.reset_at == DEFAULT_PARK:
+                result.reset_at = _exhausted_reset(usage) or DEFAULT_PARK
+        return result
+
     def _watch(self, proc: subprocess.Popen, raw: Path, request: RunRequest,
                done: threading.Event, stopped: list[str]) -> None:
-        """While the call runs: read the usage it streams, and stop it once `usage_stop` says
-        so. Without this a call (up to `call_timeout_minutes`) ran past its cap unchecked."""
+        """While the call runs: read the usage it streams (or, for a CLI that `polls_usage`, its
+        own reading every `POLL_SECONDS`), and stop it once `usage_stop` says so. Without this a
+        call (up to `call_timeout_minutes`) ran past its cap unchecked."""
         offset, pending = 0, ""
+        polled = time.monotonic()
         while not done.wait(WATCH_SECONDS):
             try:
                 with open(raw, encoding="utf-8", errors="replace") as handle:
@@ -319,10 +352,15 @@ class _Cli:
                     chunk = handle.read()
                     offset = handle.tell()
             except OSError:
-                continue
+                chunk = ""
             lines = (pending + chunk).split("\n")
             pending = lines.pop()
             readings = [u for u in (self.live_usage(line) for line in lines) if u]
+            if self.polls_usage and time.monotonic() - polled >= POLL_SECONDS:
+                polled = time.monotonic()
+                reading = self.read_usage(request.model)
+                if reading:
+                    readings.append(reading)
             if not readings or request.usage_stop is None:
                 continue
             reason = request.usage_stop(readings[-1])
@@ -543,15 +581,62 @@ def codex_usage(codex_home: Path, since: float) -> dict[str, Any] | None:
     return usage if len(usage) > 1 else None
 
 
+_ISO_UTC = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?Z$")
+
+
+def parse_agy_usage(text: str, model: str) -> dict[str, Any] | None:
+    """agy's `/usage` table as a reading for `model`'s pool. Each row is a pool, a limit, the
+    share left and its reset, tab-separated: `Gemini Models  Weekly Limit Remaining  2%
+    2026-10-09T17:47:52Z`. A Gemini model draws on the Gemini pool; the Claude and GPT models agy
+    also serves share the other one."""
+    gemini = model.lower().startswith("gemini")
+    usage: dict[str, Any] = {}
+    for line in text.splitlines():
+        cells = [cell.strip() for cell in re.split(r"\t+|\s{2,}", line.strip()) if cell.strip()]
+        if len(cells) < 3 or cells[0].lower().startswith("gemini") != gemini:
+            continue
+        limit = cells[1].lower()
+        share = re.fullmatch(r"(\d+(?:\.\d+)?)%", cells[2])
+        window = ("seven_day" if "week" in limit
+                  else "five_hour" if "five" in limit or "5" in limit else None)
+        if share is None or window is None:
+            continue
+        fraction = float(share.group(1)) / 100.0
+        used = fraction if "used" in limit else 1.0 - fraction
+        resets = cells[3] if len(cells) > 3 and _ISO_UTC.match(cells[3]) else None
+        usage[window] = {"utilization": round(min(1.0, max(0.0, used)), 4), "resets_at": resets}
+    return {**usage, "status": "allowed"} if usage else None
+
+
+def agy_usage(binary: str, model: str, env: dict[str, str],
+              run: Callable[..., Any] = subprocess.run) -> dict[str, Any] | None:
+    """agy's usage now, from its own `/usage` command: no model call, so it costs nothing."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix="bot-agy-usage-") as empty:
+        try:
+            proc = run([binary, "-p", "/usage"], cwd=empty, env=env, stdin=subprocess.DEVNULL,
+                       capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       timeout=USAGE_TIMEOUT_S)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+    return parse_agy_usage(proc.stdout or "", model)
+
+
 class AgyCli(_Cli):
     """Google's Antigravity CLI (`agy`), signed in on the machine with a Google account.
 
     Print mode reads the prompt from stdin. In headless mode agy refuses shell commands unless
     told otherwise, so `--dangerously-skip-permissions` lets it run them, as the other CLIs do;
     the job holds no write token. Its model names carry their effort (`gemini-3.8-flash-high`;
-    `agy models` lists them), and `--effort` passes the same."""
+    `agy models` lists them), and `--effort` passes the same. Its stream carries no usage, so its
+    `/usage` table is read around and during each call (`polls_usage`)."""
 
     cli = "agy"
+    polls_usage = True
+
+    def read_usage(self, model: str) -> dict[str, Any] | None:
+        return agy_usage(self.binary, model, self.env())
 
     def argv(self, request: RunRequest) -> list[str]:
         argv = [self.binary, "--output-format", "stream-json", "--dangerously-skip-permissions",
@@ -574,16 +659,23 @@ class AgyCli(_Cli):
         self._keep(launch, transcript)
         text = str(result.get("response") or "").strip()
         turns = result.get("num_turns") if isinstance(result.get("num_turns"), int) else None
+        if launch.stopped:
+            return self._with_usage(RunResult(
+                False, text, launch.code, turns, launch.elapsed,
+                f"stopped mid-call: {launch.stopped}", extra={"usage_stop": launch.stopped}),
+                request)
         if launch.timed_out:
-            return RunResult(False, text, EXIT_TIMEOUT, turns, launch.elapsed,
-                             f"timed out after {request.timeout_s}s", None, timed_out=True)
+            return self._with_usage(RunResult(False, text, EXIT_TIMEOUT, turns, launch.elapsed,
+                                              f"timed out after {request.timeout_s}s", None,
+                                              timed_out=True), request)
         ok = launch.code == 0 and result.get("status") == "SUCCESS"
         error = None
         if not ok:
             error = redact((str(result.get("error") or "") or launch.stderr
                             or f"agy exited {launch.code} ({result.get('status')})")[-2000:])
         reset_at = park_for(error) if not ok and RATE_LIMIT_WORDS.search(error or "") else None
-        return RunResult(ok, text, launch.code, turns, launch.elapsed, error, None, reset_at)
+        return self._with_usage(
+            RunResult(ok, text, launch.code, turns, launch.elapsed, error, None, reset_at), request)
 
     def trail(self, transcript: Path) -> str:
         entries: list[str] = []
@@ -606,10 +698,161 @@ class AgyCli(_Cli):
         return _trail_text(entries)
 
 
+#: What a terminal program writes besides text: control sequences, titles, cursor save and restore.
+_TERMINAL_CODES = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)"
+                             r"|\x1b[()][0-9A-Za-z]|\x1b[=>78MDEc]")
+#: Muse's TUI: the question it asks once per workspace, its prompt, and the panel `/usage` draws.
+MUSE_TRUST = "Do you trust this workspace"
+MUSE_PROMPT = "❯"
+_MUSE_WINDOWS = (("five_hour", "Current"), ("seven_day", "Weekly"))
+_MUSE_ROW = r"\b{label}\s+(\d+(?:\.\d+)?)%\s+used(?:[^\S\n]*\W[^\S\n]*Resets\s+(.+?))?[^\S\n]*(?:[│|]|$)"
+_MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
+
+
+def _screen_text(raw: bytes) -> str:
+    """A terminal's output as text: control sequences gone, carriage returns as line ends."""
+    text = _TERMINAL_CODES.sub("", raw.decode("utf-8", errors="replace"))
+    return text.replace("\r", "\n")
+
+
+def _muse_reset(text: str, now: datetime) -> str | None:
+    """A Muse reset as UTC. It prints the machine's own time: "at 6:42 PM" (today, or tomorrow
+    once that has passed), "Oct 5 at 12:00 AM", or "in 3h 5m"."""
+    found = re.search(r"(?i)(?:\b([a-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+)?at\s+(\d{1,2}):(\d{2})"
+                      r"\s*([ap])\.?m\b", text)
+    at: datetime | None = None
+    if found:
+        month, day, hour, minute, half = found.groups()
+        hour_24 = int(hour) % 12 + (12 if half.lower() == "p" else 0)
+        try:
+            at = now.replace(hour=hour_24, minute=int(minute), second=0, microsecond=0)
+            if month:
+                at = at.replace(month=_MONTHS.index(month.lower()) + 1, day=int(day))
+                if at < now - timedelta(days=1):
+                    at = at.replace(year=at.year + 1)
+            elif at < now:
+                at += timedelta(days=1)
+        except ValueError:  # an unknown month, or a day the month has not
+            at = None
+    else:
+        minutes = _resets_in_minutes(f"resets {text}")
+        at = now + timedelta(minutes=minutes) if minutes is not None else None
+    return at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if at else None
+
+
+def parse_muse_usage(screen: str, now: datetime) -> dict[str, Any] | None:
+    """Muse's `/usage` panel as a reading: "Current 5% used · Resets at 6:42 PM" is the 5-hour
+    window, "Weekly 35% used · Resets Oct 5 at 12:00 AM" the week. The newest drawing counts."""
+    usage: dict[str, Any] = {}
+    for window, label in _MUSE_WINDOWS:
+        rows = list(re.finditer(_MUSE_ROW.format(label=label), screen, re.M))
+        if rows:
+            percent, reset = rows[-1].groups()
+            usage[window] = {"utilization": round(min(1.0, float(percent) / 100.0), 4),
+                             "resets_at": _muse_reset(reset, now) if reset else None}
+    return {**usage, "status": "allowed"} if usage else None
+
+
+def _type(fd: int, text: str) -> None:
+    for char in text:
+        os.write(fd, char.encode("utf-8"))
+        time.sleep(0.03)
+
+
+def muse_screen(binary: str, env: dict[str, str], workspace: Path,
+                timeout_s: float = USAGE_TIMEOUT_S, quiet_s: float = 1.0) -> str:
+    """What Muse's TUI draws after `/usage`, read in a pseudo-terminal: `muse exec` runs no slash
+    commands, and neither its JSON events nor its session files carry the subscription's usage.
+    It answers the TUI's cursor query, trusts `workspace` the one time it is asked, types `/usage`
+    once the prompt is drawn and quiet, and ends the TUI as soon as the week's row is drawn.
+    Nothing else is typed, so no model is called. "" when the panel never came."""
+    import fcntl
+    import pty
+    import select
+    import struct
+    import termios
+
+    workspace.mkdir(parents=True, exist_ok=True)
+    master, slave = pty.openpty()
+    try:
+        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 50, 160, 0, 0))
+    except OSError:
+        pass
+    try:
+        proc = subprocess.Popen([binary, "--workspace", str(workspace)], cwd=str(workspace),
+                                env={**env, "TERM": "xterm-256color", "COLUMNS": "160",
+                                     "LINES": "50"},
+                                stdin=slave, stdout=slave, stderr=slave, start_new_session=True,
+                                close_fds=True)
+    except OSError:
+        os.close(master)
+        os.close(slave)
+        return ""
+    os.close(slave)
+    raw, mark, stage = b"", 0, "start"
+    heard = time.monotonic()
+    deadline = heard + timeout_s
+    try:
+        while time.monotonic() < deadline:
+            ready, _, _ = select.select([master], [], [], 0.2)
+            if ready:
+                try:
+                    chunk = os.read(master, 65536)
+                except OSError:  # the TUI is gone
+                    break
+                if not chunk:
+                    break
+                raw += chunk
+                heard = time.monotonic()
+                for _ in range(chunk.count(b"\x1b[6n")):  # where is the cursor? top left
+                    os.write(master, b"\x1b[1;1R")
+                continue
+            since = _screen_text(raw[mark:])
+            if stage == "asked" and re.search(r"\bWeekly\s+[\d.]+%\s+used", since):
+                if time.monotonic() - heard >= min(quiet_s, 0.5):
+                    break
+                continue
+            if time.monotonic() - heard < quiet_s:
+                continue
+            if stage == "start" and MUSE_TRUST in since:
+                _type(master, "1\r")
+                stage, mark = "trusted", len(raw)
+            elif stage in ("start", "trusted") and MUSE_PROMPT in since:
+                _type(master, "/usage")
+                time.sleep(0.3)
+                _type(master, "\r")
+                stage, mark = "asked", len(raw)
+    finally:
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.killpg(proc.pid, sig)
+            except OSError:  # already gone
+                pass
+            try:
+                proc.wait(timeout=3)
+                break
+            except subprocess.TimeoutExpired:
+                continue
+        os.close(master)
+    return _screen_text(raw[mark:]) if stage == "asked" else ""
+
+
 class MuseCli(_Cli):
-    """Meta's Muse Code CLI (`muse exec`)."""
+    """Meta's Muse Code CLI (`muse exec`). Its call reports no usage, so the TUI's `/usage` panel
+    is read around and during each call (`polls_usage`), in a workspace of its own under the
+    user's cache, trusted once."""
 
     cli = "muse"
+    polls_usage = True
+    #: Where the TUI is started to read `/usage`; `~/.cache/night-bot/muse-usage` when unset.
+    usage_dir: Path | None = None
+
+    def read_usage(self, model: str) -> dict[str, Any] | None:
+        env = self.env()
+        workspace = self.usage_dir or (Path(env.get("HOME") or Path.home()) / ".cache"
+                                       / "night-bot" / "muse-usage")
+        return parse_muse_usage(muse_screen(self.binary, env, workspace),
+                                datetime.now().astimezone())
 
     def argv(self, request: RunRequest, prompt_file: Path) -> list[str]:
         argv = [self.binary, "exec", "--yolo", "--disable-web-tools",
@@ -631,17 +874,23 @@ class MuseCli(_Cli):
         transcript_text = text + ("\n\n--- stderr ---\n" + stderr if stderr.strip() else "")
         raw.write_text(transcript_text, encoding="utf-8")
         self._keep(launch, transcript)
+        if launch.stopped:
+            return self._with_usage(RunResult(
+                False, text, launch.code, None, launch.elapsed,
+                f"stopped mid-call: {launch.stopped}", extra={"usage_stop": launch.stopped}),
+                request)
         if launch.timed_out:
-            return RunResult(False, text, EXIT_TIMEOUT, None, launch.elapsed,
-                             f"timed out after {request.timeout_s}s", None, timed_out=True)
+            return self._with_usage(RunResult(False, text, EXIT_TIMEOUT, None, launch.elapsed,
+                                              f"timed out after {request.timeout_s}s", None,
+                                              timed_out=True), request)
         ok = launch.code == 0
         error = None
         if not ok:
             last = [line for line in stderr.splitlines() if line.strip()]
             error = redact((last[-1] if last else f"muse exited {launch.code}")[-2000:])
         reset_at = park_for(error) if not ok and RATE_LIMIT_WORDS.search(error or "") else None
-        return RunResult(ok, text, launch.code, None, launch.elapsed, error, None, reset_at,
-                         infra_hint=launch.code == 2)
+        return self._with_usage(RunResult(ok, text, launch.code, None, launch.elapsed, error,
+                                          None, reset_at, infra_hint=launch.code == 2), request)
 
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")

@@ -1,4 +1,4 @@
-// R418, R446: a Unit an Ivory Tower carries is a Unit for every rule, so a hit lands on it — targeted
+// R446: a Unit a carrier holds is a Unit for every rule, so a hit lands on it — targeted
 // or swept — as on any acting Unit (`zones.actsOnField`, which knows carried Units; the damage
 // pipeline asks it rather than "the top of its unit zone"). Fixtures: `fixtures/field.ts`. And R53,
 // R446: it can't attack or be attacked, so a forced attack on "a random enemy" never draws it.
@@ -29,13 +29,13 @@ function carried(seed: string): { state: GameState; rider: CardInstance } {
 }
 
 describe("R446 a carried Unit takes damage", () => {
-  it("R418 a hit aimed at it lands", () => {
+  it("R446 a hit aimed at it lands", () => {
     const { state, rider } = carried("carried-hit");
     expect(dealDamage(sinkFor(state), { source: null, target: { kind: "unit", instance: rider }, amount: 2 })).toBe(2);
     expect(unitView(state, rider).health).toBe(unitView(state, rider).maxHealth - 2);
   });
 
-  it("R418 a sweep over 'all Units' hits it", () => {
+  it("R446 a sweep over 'all Units' hits it", () => {
     const { state, rider } = carried("carried-sweep");
     const sink = sinkFor(state);
     damageAll({ amount: 1, side: "enemy" }).apply(makeContext(sink, null, { controller: "p2" }));

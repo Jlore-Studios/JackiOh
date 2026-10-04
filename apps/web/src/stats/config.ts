@@ -11,14 +11,14 @@ export const PLAYER_STATS_VERSION = 1;
 /**
  * R639: the games a device has logged before the homescreen deals and swaps from every set. Below
  * it the fan deals Core cards (R374), which is what a new player is learning, and swaps among them
- * (R653).
+ * (R654).
  */
 export const ROTATION_MIN_GAMES = 10;
 
 /** R639: how long the fan holds a card before the next slot swaps for a freshly dealt one, in ms. */
 export const ROTATION_INTERVAL_MS = 7000;
 
-/** R653: how long a swap takes, in ms: the card going out fizzles away while the new one fades in over it. landing.tsx hands it to landing.css as `--fan-swap`. */
+/** R654: how long a swap takes, in ms: the card going out fizzles away while the new one fades in over it. landing.tsx hands it to landing.css as `--fan-swap`. */
 export const ROTATION_SWAP_MS = 1200;
 
 /**

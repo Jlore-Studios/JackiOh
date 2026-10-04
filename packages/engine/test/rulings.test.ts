@@ -3053,9 +3053,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(417, PLUS_029_TEST, "lastBoards.test.ts");
   });
 
-  // Proved by cards classic-plus/033-ivory-tower.test.ts "R418 …" and engine carried-damage.test.ts "R418 …".
-  it("R418 lets a Unit top C+ #33 Ivory Tower's backrow pile, the Tower acting beneath it", () => {
-    provenIn(418, PLUS_033_TEST, "carried-damage.test.ts");
+  // Proved by cards classic-plus/033-ivory-tower.test.ts "R418 …" (patch v0.2.10: the first Unit stacked
+  // onto the Tower is fused into it, and the Tower stays a backrow Field Spell).
+  it("R418 fuses the first Unit stacked onto C+ #33 Ivory Tower into it, the Tower staying a Field Spell", () => {
+    provenIn(418, PLUS_033_TEST);
   });
 
   // Proved by cards classic-plus/035-rollback.test.ts "R419 …" (the three steps, hidden information, JSON
@@ -3862,12 +3863,19 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(652, PLUS("032-3-blade-storm"), "rounds.test.ts");
   });
 
-  // Proved by apps/web routes/landing.test.tsx "R653 …" (swaps below the threshold among Core's
+  // Proved by cards classic-plus/033-ivory-tower.test.ts "R653 …" (the stacked Unit's play resolves
+  // first, what stands on the Tower then is fused, one Unit a stay) and engine backrow-piles.test.ts
+  // "R653 …" (the carrier that fuses its Unit takes one a stay, none while Immutable).
+  it("R653 fuses C+ #33's stacked Unit once its play resolves, and lets the Tower take one Unit a stay", () => {
+    provenIn(653, PLUS_033_TEST, "backrow-piles.test.ts");
+  });
+
+  // Proved by apps/web routes/landing.test.tsx "R654 …" (swaps below the threshold among Core's
   // cards, the ghost over the new card for ROTATION_SWAP_MS and no control, the deal entry and the
-  // sheet's rules) and routes/landingFan.test.ts "R653 …" (the swap's pool below the threshold,
+  // sheet's rules) and routes/landingFan.test.ts "R654 …" (the swap's pool below the threshold,
   // drawn evenly).
-  it("R653 rotates the homescreen's hand from the first visit, a swap a fizzle and an apparition", () => {
-    provenIn(653, WEB_LANDING_TEST, WEB_LANDING_FAN_TEST);
+  it("R654 rotates the homescreen's hand from the first visit, a swap a fizzle and an apparition", () => {
+    provenIn(654, WEB_LANDING_TEST, WEB_LANDING_FAN_TEST);
   });
 });
 
