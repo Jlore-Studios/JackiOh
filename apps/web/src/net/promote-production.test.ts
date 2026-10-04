@@ -16,19 +16,20 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WORKFLOW = join(HERE, "../../../../.github/workflows/promote-production.yml");
 
-/** The step's `run: |` block, dedented: it is the workflow's last step, so it runs to the end of the file. */
+/** The promote step's `run: |` block, dedented: every line indented under it, up to the next key. */
 function promoteScript(): string {
   const text = readFileSync(WORKFLOW, "utf8");
   const marker = "        run: |\n";
   const at = text.indexOf(marker, text.indexOf("pick the candidate and promote it"));
   expect(at, "the promote step's run block").toBeGreaterThan(-1);
-  const body = text
-    .slice(at + marker.length)
-    .split("\n")
-    .map((line) => (line.startsWith("          ") ? line.slice(10) : line))
-    .join("\n");
-  expect(body).toContain('git push origin "$candidate:refs/heads/production"');
-  return body;
+  const body: string[] = [];
+  for (const line of text.slice(at + marker.length).split("\n")) {
+    if (line.trim() !== "" && !line.startsWith("          ")) break;
+    body.push(line.slice(10));
+  }
+  const script = body.join("\n");
+  expect(script).toContain('git push origin "$candidate:refs/heads/production"');
+  return script;
 }
 
 const START = Date.parse("2026-10-01T00:00:00Z") / 1000;
@@ -37,7 +38,7 @@ const HOUR = 3600;
 let root = "";
 let seq = 0;
 
-type Rig = { origin: string; work: string; summary: string; shas: Record<string, string> };
+type Rig = { origin: string; work: string; summary: string; output: string; shas: Record<string, string> };
 
 function git(cwd: string, date: number | undefined, ...args: string[]): string {
   const stamp = date === undefined ? {} : { GIT_AUTHOR_DATE: `${date} +0000`, GIT_COMMITTER_DATE: `${date} +0000` };
@@ -77,7 +78,7 @@ function rig(commits: { name: string; hours: number; catalog: string }[], produc
   git(work, undefined, "push", "-q", "origin", "main");
   if (productionAt !== null) git(work, undefined, "push", "-q", "origin", `${shas[productionAt] ?? ""}:refs/heads/production`);
   git(work, undefined, "fetch", "-q", "origin");
-  return { origin, work, summary: join(root, `summary-${seq}.md`), shas };
+  return { origin, work, summary: join(root, `summary-${seq}.md`), output: join(root, `output-${seq}`), shas };
 }
 
 let stubDir = "";
@@ -85,6 +86,7 @@ let stubDir = "";
 /** Runs the workflow's script as `event` would, with `candidate` as the CI run's commit (workflow_run) or the newest green one. */
 function promote(r: Rig, event: string, candidate: string): { status: number; out: string } {
   writeFileSync(r.summary, "");
+  writeFileSync(r.output, "");
   const run = spawnSync("bash", ["-c", promoteScript()], {
     cwd: r.work,
     encoding: "utf8",
@@ -97,6 +99,7 @@ function promote(r: Rig, event: string, candidate: string): { status: number; ou
       INPUT_SHA: "",
       STUB_NEWEST: r.shas[candidate] ?? "",
       GITHUB_STEP_SUMMARY: r.summary,
+      GITHUB_OUTPUT: r.output,
       MAX_LAG_HOURS: "24",
     },
   });
@@ -144,6 +147,8 @@ describe("promote-production.yml", () => {
     expect(result.status, result.out).toBe(0);
     expect(result.out).toContain("waits for the daily promotion");
     expect(productionName(r)).toBe("a");
+    // Nothing moved, so the deploy job does not run.
+    expect(readFileSync(r.output, "utf8")).not.toContain("promoted=true");
   });
 
   it("promotes on a catalog bump at once, however recent production is", () => {
@@ -151,6 +156,8 @@ describe("promote-production.yml", () => {
     const result = promote(r, "workflow_run", "b");
     expect(result.status, result.out).toBe(0);
     expect(productionName(r)).toBe("b");
+    // A move is what starts the deploy job (`needs.promote.outputs.promoted`).
+    expect(readFileSync(r.output, "utf8")).toContain("promoted=true");
   });
 
   it("stands in for a daily run that never started: a green push a day past production's commit promotes it", () => {
