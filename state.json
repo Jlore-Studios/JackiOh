@@ -1779,7 +1779,9 @@
     },
     "203": {
       "action": "review",
-      "asks": [],
+      "asks": [
+        "c:5992188476"
+      ],
       "ci_fixes": 3,
       "ci_reruns": {
         "9e2449301500cade2775362d8a45e2bb8aca0617": 1,
@@ -1790,7 +1792,7 @@
       "cross_rounds": 2,
       "died": 0,
       "difficulty": "easy",
-      "failures": 3,
+      "failures": 0,
       "feedback_since": "2026-10-05T06:57:49Z",
       "forced": false,
       "handoff": {
@@ -1804,12 +1806,12 @@
       },
       "interruptions": 0,
       "issue": 44,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "pending_request": false,
       "provider": "devin",
       "question": "",
-      "queued_at": "2026-10-05T07:21:12Z",
+      "queued_at": "2026-10-05T09:57:40Z",
       "requested_by": "jgoetzmann",
       "run_id": "37277923355",
       "self_check_findings": [
@@ -1820,7 +1822,7 @@
           "where": "self check"
         }
       ],
-      "source": "",
+      "source": "request",
       "started_at": "2026-10-05T07:34:54Z",
       "stop_requested": false,
       "taken_asks": [],
