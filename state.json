@@ -2464,7 +2464,7 @@
       },
       "ci_run_id": 37297489784,
       "ci_sha": "5f724b531d6f9b67f6b82afe817adbc866dfb1db",
-      "cross_rounds": 0,
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
@@ -2481,12 +2481,31 @@
       },
       "interruptions": 0,
       "issue": 255,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The merge commits on this branch left nested git conflict markers (two `<<<<<<< HEAD`, two `=======`, two `>>>>>>> origin/main`) in the rulings index, so the file is not valid TypeScript, and the R661, R662 and R667 entries are spliced together with R661's `it` left unclosed inside the HEAD side.",
+          "evidence": "`git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' HEAD` finds lines 4044, 4045, 4053, 4054, 4074 and 4085 in this file. None are present at the base a5c10ed or the merge base 80e7960c. 5f724b53 first committed markers and 5a6bcc87 nested a second set. `pnpm typecheck`, `pnpm lint` and the engine vitest project cannot pass on this file.",
+          "severity": "blocking",
+          "where": "packages/engine/test/rulings.test.ts:4044"
+        },
+        {
+          "claim": "SPEC \u00a711's table has nested conflict markers around the R661, R662 and R667 rows, which breaks the Markdown table from R661 to the end of the file (R661\u2013R703 render as loose text) and leaves the source of truth unresolved.",
+          "evidence": "SPEC.md lines 1877\u20131885 read `<<<<<<< HEAD`, `<<<<<<< HEAD`, the R661 row, `=======`, `=======`, the R662 row, `>>>>>>> origin/main`, the R667 row, `>>>>>>> origin/main`. The builder's own self-check also reported 'Conflict markers are still in SPEC.md, packages/engine/test/rulings.test.ts' as blocking, and it is still open.",
+          "severity": "blocking",
+          "where": "SPEC.md:1877"
+        },
+        {
+          "claim": "The tests and checks in the PR description ran on the first build commit (c811152d), before revision 21f46539 and the two broken merges. Nothing shows the current HEAD passing, and as it stands HEAD cannot pass typecheck.",
+          "evidence": "The PR's 'Tests run' list matches c811152d's file set. 21f46539 later changed stats.tsx, stats.test.tsx, testids and 34-stats.cy.ts, and 5f724b53 and 5a6bcc87 brought in main with the markers above. The harness reported that it ran no checks in this run.",
+          "severity": "blocking",
+          "where": "task"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-2",
       "question": "",
-      "queued_at": "2026-10-05T11:35:46Z",
+      "queued_at": "2026-10-05T12:06:39Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "37304339017",
       "self_check_findings": [
@@ -2509,7 +2528,7 @@
           "where": "checks"
         }
       ],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-05T11:59:16Z",
       "stop_requested": false,
       "taken_asks": [],
