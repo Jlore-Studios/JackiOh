@@ -2945,7 +2945,7 @@
     "322": {
       "action": "build",
       "asks": [],
-      "failures": 0,
+      "failures": 1,
       "forced": false,
       "handoff": {
         "at": "2026-10-05T18:27:50Z",
