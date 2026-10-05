@@ -12,7 +12,7 @@
 // `GATE_SLOW_NOTICE_SECONDS` the corner offers what this device's own storage says (Account when it
 // holds a session, else Sign in) without waiting for the server's answer.
 
-import { Suspense, lazy, useEffect, useRef, useState, type ReactElement } from "react";
+import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
 import { GATE_SLOW_NOTICE_SECONDS } from "../../../server/src/config.ts";
 
@@ -29,10 +29,12 @@ import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { SettingsButton } from "../settings/index.ts";
 import { useSetting } from "../settings/store.ts";
-import { ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES } from "../stats/config.ts";
+import { ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES, ROTATION_SWAP_MS } from "../stats/config.ts";
 import { PlayerStatsCard } from "../stats/PlayerStatsCard.tsx";
 import { readPlayerStats, usePlayerStats } from "../stats/store.ts";
 import {
+  EVEN,
+  FAN_POOL,
   ROTATION_POOL,
   dealLandingFan,
   featureWeight,
@@ -104,8 +106,9 @@ function accountState(account: Account): LandingAccountState {
 /**
  * Five cards, left to right: four real faces dealt by `landingFan.ts` at random for this visit
  * (R374) and drawn by the cards module's CardFace, the middle one on its Radiant face, and a card
- * back last. The deal, the float and the spread are landing.css's; the faces are the game's own, so
- * the first screen shows cards as the board, the deck builder and the inspect sheet draw them.
+ * back last. The deal, the float, the spread and a swap's fizzle and apparition (R704) are
+ * landing.css's; the faces are the game's own, so the first screen shows cards as the board, the
+ * deck builder and the inspect sheet draw them.
  *
  * R639: a face is a control. A click, a tap, or Enter or Space on it opens the card's detail dialog
  * (`onOpen`), so a featured card can be read at full size on a phone as well as with a pointer. The
@@ -125,6 +128,7 @@ function CardFan({
     <div
       className="landing-fan"
       data-testid={landingTestid.fan}
+      style={{ "--fan-swap": `${String(ROTATION_SWAP_MS)}ms` } as CSSProperties}
       onMouseEnter={() => {
         onHold(true);
       }}
@@ -138,8 +142,9 @@ function CardFan({
         onHold(false);
       }}
     >
-      {hand.map(({ def, radiant }, index) => (
-        <LandingFanCard key={def.id} def={def} radiant={radiant} index={index} onOpen={onOpen} onHold={onHold} />
+      {/* R704: a slot is keyed by its place, not its card, so it stays mounted through a swap and the card going out can fizzle away in it while the new one fades in. */}
+      {hand.map((face, index) => (
+        <LandingFanSlot key={index} face={face} index={index} onOpen={onOpen} onHold={onHold} />
       ))}
       <div className="landing-fan-slot" aria-hidden="true">
         <div
@@ -155,6 +160,55 @@ function CardFan({
 }
 
 /**
+ * R704: one place in the fan. When the hand swaps the card in it, the card going out stays for
+ * `ROTATION_SWAP_MS` as a ghost over the new one and fizzles away (landing.css's `landing-fizzle`)
+ * while the new card fades in (`landing-apparition`). The ghost is decoration: hidden from
+ * assistive tech, no control, no fan card's test id, and it takes no pointer.
+ */
+function LandingFanSlot({ face, index, onOpen, onHold }: {
+  face: FanFace;
+  index: number;
+  onOpen: (def: CardDef) => void;
+  onHold: (held: boolean) => void;
+}): ReactElement {
+  // The card shown last render and the one just swapped out. A new card is noticed while rendering
+  // (React's "storing information from previous renders"), so the ghost and the new card first
+  // paint together.
+  const [shown, setShown] = useState(face);
+  const [leaving, setLeaving] = useState<FanFace | null>(null);
+  if (shown.def.id !== face.def.id) {
+    setShown(face);
+    setLeaving(shown);
+  }
+  useEffect(() => {
+    if (leaving === null) return undefined;
+    const timer = window.setTimeout(() => {
+      setLeaving(null);
+    }, ROTATION_SWAP_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [leaving]);
+  return (
+    <div className="landing-fan-slot">
+      <LandingFanCard key={face.def.id} def={face.def} radiant={face.radiant} index={index} swapped={leaving !== null} onOpen={onOpen} onHold={onHold} />
+      {leaving === null ? null : (
+        <div
+          key={leaving.def.id}
+          className="landing-fan-card landing-fan-card--leaving"
+          data-testid={landingTestid.fanLeaving}
+          data-def-id={leaving.def.id}
+          data-radiant={leaving.radiant ? "true" : undefined}
+          aria-hidden="true"
+        >
+          <CardFace face={faceModel({ defId: leaving.def.id, def: leaving.def, radiant: leaving.radiant })} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * One face of the fan. #165: on a touch screen a held finger is the mouse-over the screen lacks —
  * the hold shows the card's hover preview while the finger stays down, and the fan stands still
  * for it as it does for a pointer resting on it. A real mouse is untouched (`hover: false`): its
@@ -165,12 +219,14 @@ function LandingFanCard({
   def,
   radiant,
   index,
+  swapped,
   onOpen,
   onHold,
 }: {
   def: CardDef;
   radiant: boolean;
   index: number;
+  swapped: boolean;
   onOpen: (def: CardDef) => void;
   onHold: (held: boolean) => void;
 }): ReactElement {
@@ -179,6 +235,9 @@ function LandingFanCard({
     { key: `landing-fan-${def.id}`, face },
     { hover: false, touchHold: "preview", prefer: "above" },
   );
+  // R704: how the card came in, fixed when it mounts: the opening deal or a swap's apparition.
+  // It never changes, so the card is not dealt in again once the swap's ghost has gone.
+  const [entry] = useState<"deal" | "swap">(swapped ? "swap" : "deal");
   const held = inspect.open !== null;
   useEffect(() => {
     if (!held) return undefined;
@@ -188,11 +247,12 @@ function LandingFanCard({
     };
   }, [held, onHold]);
   return (
-    <div className="landing-fan-slot">
+    <>
       <div
         className="landing-fan-card landing-fan-card--face"
         data-testid={landingFanCardTestid(index)}
         data-face="up"
+        data-entry={entry}
         data-def-id={def.id}
         data-radiant={radiant ? "true" : undefined}
         role="button"
@@ -211,7 +271,7 @@ function LandingFanCard({
         <CardFace face={face} />
       </div>
       {inspect.overlay}
-    </div>
+    </>
   );
 }
 
@@ -314,14 +374,6 @@ function Actions(): ReactElement {
         >
           Build decks
         </a>
-        <a
-          className="landing-cta landing-cta--secondary"
-          href={paths.stats}
-          data-testid={landingTestid.statsLink}
-          onClick={followInApp(paths.stats)}
-        >
-          Stats
-        </a>
       </div>
       {/* Said where the player decides, not after they have signed up and confirmed an email. */}
       <p className="landing-cta-note" data-testid={landingTestid.inviteOnly}>
@@ -358,9 +410,9 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
   useSettingsAccountSync(account);
   const motion = useMotion();
   // R374: one deal per visit — per mount of the page. R639: a device that has logged enough games
-  // deals from every shipped set instead of Core alone, favouring cards that print at full size, and
-  // then swaps one card at a time (below).
-  const rotating = usePlayerStats().games >= ROTATION_MIN_GAMES;
+  // deals from every shipped set instead of Core alone, favouring cards that print at full size.
+  // R704: either way the hand then swaps one card at a time (below), from the pool it was dealt from.
+  const fullPool = usePlayerStats().games >= ROTATION_MIN_GAMES;
   const [hand, setHand] = useState(() =>
     readPlayerStats().games >= ROTATION_MIN_GAMES
       ? dealLandingFan(random, ROTATION_POOL, featureWeight)
@@ -370,21 +422,26 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
   const [held, setHeld] = useState(false);
   const nextSlot = useRef(0);
 
-  // R639: the rotation. One slot swaps for a fresh card each interval, left to right, and the hand
-  // stands still while a card is open or held and while the page is hidden, and under reduced motion
-  // (a hand that changes by itself is motion, and the hand it dealt stays for the visit).
+  // R639, R704: the rotation. One slot swaps for a fresh card each interval, left to right: from
+  // every shipped set, weighted, once the device has logged enough games, and among Core's cards,
+  // evenly, until then. The hand stands still while a card is open or held and while the page is
+  // hidden, and under reduced motion (a hand that changes by itself is motion).
   useEffect(() => {
-    if (!rotating || motion === "reduced" || open !== null || held) return undefined;
+    if (motion === "reduced" || open !== null || held) return undefined;
     const timer = window.setInterval(() => {
       if (document.visibilityState === "hidden") return;
       const at = nextSlot.current;
       nextSlot.current += 1;
-      setHand((current) => rotateFan(current, at, random));
+      setHand((current) =>
+        fullPool
+          ? rotateFan(current, at, random, ROTATION_POOL, featureWeight)
+          : rotateFan(current, at, random, FAN_POOL, EVEN),
+      );
     }, ROTATION_INTERVAL_MS);
     return () => {
       window.clearInterval(timer);
     };
-  }, [rotating, motion, open, held, random]);
+  }, [fullPool, motion, open, held, random]);
 
   return (
     <div

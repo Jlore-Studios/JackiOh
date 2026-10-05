@@ -141,6 +141,15 @@ const SERVER_RANKED_CONTRACT = "../../../apps/server/test/db/contract.ts";
 
 /** R169's card-side proofs: the two §8 cards a missing badge list made invisible. */
 const CARDS_CURVATURE_TEST = "../../cards/test/077-professor-curvature.test.ts";
+/** Issue #170's hidden token, Glitch (R673–R679). */
+const CARDS_GLITCH_TEST = "../../cards/test/classic/t-glitch-glitch.test.ts";
+/** Issue #170's server and client proofs: the swap's credit, the boards' sampling, the void. */
+const SERVER_GLITCH_TEST = "../../../apps/server/test/match/glitch.test.ts";
+const SERVER_CONTRACT_TEST = "../../../apps/server/test/db/contract.ts";
+const WEB_PRACTICE_GLITCH_TEST = "../../../apps/web/src/practice/core-glitch.test.ts";
+const WEB_ALMANAC_GLITCH_TEST = "../../../apps/web/src/routes/almanac.test.tsx";
+const WEB_FILTERS_GLITCH_TEST = "../../../apps/web/src/game/deckbuilder/filters.test.ts";
+const WEB_HISTORY_GLITCH_TEST = "../../../apps/web/src/patches/history.test.ts";
 const CARDS_FULLSEND_TEST = "../../cards/test/078-fullsend.test.ts";
 /** R169's client-side proof: the animation table's targets, checked against a rendered DOM. */
 const WEB_ANIMATION_TARGETS_TEST = "../../../apps/web/src/game/animation-targets.test.tsx";
@@ -4040,6 +4049,14 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/cards/art/convention.test.ts",
     );
   });
+  // Proved by apps/web routes/landing.test.tsx "R661 …" (no Stats call to action; the footer's link is
+  // the only one), routes/stats.test.tsx "R661 …" (no data source, no count towards the gate, no word of
+  // AI padding or a gate, the drill-down included), routes/almanac.test.tsx "R654 R661 …" (the card
+  // detail's statistics block names no source), and routes/play.test.tsx "R661 …" (the lobby's own rank
+  // in R612's words, its leaderboard link, and nothing when the rank cannot be read).
+  it("R661 keeps statistics off the landing page's calls to action and their workings behind the curtain, and shows the rank in the lobby", () => {
+    provenIn(661, WEB_LANDING_TEST, WEB_STATS_ROUTE_TEST, "../../../apps/web/src/routes/almanac.test.tsx", WEB_PLAY_TEST);
+  });
 
   // Proved by glow-facts.test.ts "R662 …" (the query facts and condition.ts's granted half) and by
   // each card's own test, both faces: on when the condition holds, off when it does not.
@@ -4060,6 +4077,46 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // Proved by apps/web settings/ChangeEmail.test.tsx "R663 …" (the form, its checks, the provider's
+  // refusals in one sentence, an ended session), net/auth-flows.test.ts "R663 …" (the request with
+  // its PKCE challenge, and its refusals classified) and routes/login-flows.test.tsx "R663 …" (the
+  // link's code exchanged, revoked, and the new address confirmed).
+  it("R663 lets a signed-in player change their email through the auth provider", () => {
+    provenIn(
+      663,
+      "../../../apps/web/src/settings/ChangeEmail.test.tsx",
+      "../../../apps/web/src/net/auth-flows.test.ts",
+      "../../../apps/web/src/routes/login-flows.test.tsx",
+    );
+  });
+
+  // Proved by apps/web net/auth-methods.test.ts "R664 …" (what the sign-in mailer sends, its neutral
+  // answers, the code's one sentence) and routes/login-methods.test.tsx "R664 …" (the code signs in;
+  // the link signs in only the browser holding its verifier).
+  it("R664 an email link or code signs in a confirmed account, the link only where it was asked for", () => {
+    provenIn(664, "../../../apps/web/src/net/auth-methods.test.ts", "../../../apps/web/src/routes/login-methods.test.tsx");
+  });
+
+  // Proved by the server's auth.test.ts "R665 …" (an account with a verified factor is honoured only
+  // at aal2, an outage cannot lower the bar), apps/web net/auth-methods.test.ts and
+  // routes/login-methods.test.tsx "R665 …" (the held session and its code, a recovery link's code
+  // first) and auth/TwoStepSettings.test.tsx "R665 …" (enrolling, confirming, removing).
+  it("R665 an account with an authenticator app is signed into, and honoured, only at aal2", () => {
+    provenIn(
+      665,
+      SERVER_AUTH_TEST,
+      "../../../apps/web/src/net/auth-methods.test.ts",
+      "../../../apps/web/src/routes/login-methods.test.tsx",
+      "../../../apps/web/src/auth/TwoStepSettings.test.tsx",
+    );
+  });
+
+  // Proved by apps/web net/auth-methods.test.ts and routes/login-methods.test.tsx "R666 …": only the
+  // providers the build names, always with PKCE, and the code that comes back signs in.
+  it("R666 an OAuth provider is offered only when configured and always reached with PKCE", () => {
+    provenIn(666, "../../../apps/web/src/net/auth-methods.test.ts", "../../../apps/web/src/routes/login-methods.test.tsx");
+  });
+
   // Proved by counterWarning.test.ts "R667 …" (fixture counters: who is warned, never a Trap, a hand
   // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
   // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
@@ -4070,6 +4127,42 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../cards/test/classic/087-plague-chalice.test.ts",
       "../../../apps/web/src/game/countered.test.tsx",
     );
+  });
+
+  // Proved by apps/web practice/core.test.ts "R668 …" (the save, the fold to the same hash and AI
+  // stream, the refusals, no lesson kept), saveStore.test.ts and resume.test.ts "R668 …" (the
+  // worker's store and the page's setup as untrusted storage), and routes/practice.test.tsx "R668 …"
+  // (the resume on a visit, a URL winning, leaving giving it up, the unload prompt for a lesson only,
+  // and a reload on the real core).
+  it("R668 keeps a free practice game in the worker and folds it back after a reload", () => {
+    provenIn(
+      668,
+      "../../../apps/web/src/practice/core.test.ts",
+      "../../../apps/web/src/practice/saveStore.test.ts",
+      "../../../apps/web/src/practice/resume.test.ts",
+      "../../../apps/web/src/routes/practice.test.tsx",
+    );
+  });
+
+  // Proved by apps/web audio/cues.test.ts "R669 …" (the stings by rarity, none for the sentinel, a
+  // Trap or a cast on draw; the lane pans), engine.test.ts and sfx.test.ts "R669 …" (the panner, the
+  // effects' duck under a line, the shared reverb; the sting's recipe), and haptics/haptics.test.ts
+  // "R669 …" (the three moments, the gap, the switch and Reduce Motion).
+  it("R669 every readable play stings by rarity, effects pan by lane under a voice duck and reverb, and a phone ticks", () => {
+    provenIn(
+      669,
+      "../../../apps/web/src/audio/cues.test.ts",
+      "../../../apps/web/src/audio/engine.test.ts",
+      "../../../apps/web/src/audio/sfx.test.ts",
+      "../../../apps/web/src/haptics/haptics.test.ts",
+    );
+  });
+
+  // Proved by apps/web fx/entrances.test.ts "R670 …": the marquee cards are Legendary or Mythic
+  // Units, each plays its own entrance in place of the rarity's on both seats, never for a hidden
+  // summon or a backrow set, paces nothing and stays inside R200's bounds.
+  it("R670 gives a few marquee Legendary and Mythic Units an entrance of their own that paces nothing", () => {
+    provenIn(670, "../../../apps/web/src/fx/entrances.test.ts");
   });
 
   // Proved by the card's own test, cards/test/classic/055-book-of-wildfire.test.ts "R671 …": the swap
@@ -4086,11 +4179,84 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(672, "../../../apps/server/test/api/rematch.test.ts");
   });
 
+  // Proved by glitch.test.ts and the real card's test: no draw at all before a System play, one more
+  // draw after, n/10000 of the picks Glitch, every System play counted.
+  it("R673 a … in the System play makes every card generated into a hand or deck Glitch at n/10000", () => {
+    provenIn(673, "glitch.test.ts", CARDS_GLITCH_TEST);
+  });
+
+  // Proved by glitch.test.ts and the real card's test: no pool, the every-token one included.
+  it("R674 Glitch is in no pool, the Almanac or the Deck Builder", () => {
+    provenIn(674, "glitch.test.ts", CARDS_GLITCH_TEST, WEB_ALMANAC_GLITCH_TEST, WEB_FILTERS_GLITCH_TEST, WEB_HISTORY_GLITCH_TEST);
+  });
+
+  // Proved by glitch.test.ts and the real card's test: (0) under any modifier, refused off-turn.
+  it("R675 Glitch is always playable on its owner's turn", () => {
+    provenIn(675, "glitch.test.ts", CARDS_GLITCH_TEST);
+  });
+
+  // Proved by glitch.test.ts and the real card's test: the outcome from the rng, the reset's new game.
+  it("R676 Glitch draws one of four outcomes; a reset deals the match again", () => {
+    provenIn(676, "glitch.test.ts", CARDS_GLITCH_TEST);
+  });
+
+  // Proved by glitch.test.ts and the real card's test: the seat each account plays.
+  it("R677 a Glitch swap gives each account the other seat, and its results", () => {
+    provenIn(677, "glitch.test.ts", CARDS_GLITCH_TEST, SERVER_GLITCH_TEST, WEB_PRACTICE_GLITCH_TEST);
+  });
+
+  // Proved by glitch.test.ts and the real card's test: both fields become the frozen boards.
+  it("R678 a Glitch lays two other games' boards on the field", () => {
+    provenIn(678, "glitch.test.ts", CARDS_GLITCH_TEST, SERVER_GLITCH_TEST, SERVER_CONTRACT_TEST);
+  });
+
+  // Proved by glitch.test.ts and the real card's test: no winner, reason voided.
+  it("R679 a Glitch voids the match", () => {
+    provenIn(679, "glitch.test.ts", CARDS_GLITCH_TEST, SERVER_GLITCH_TEST, SERVER_CONTRACT_TEST, WEB_PRACTICE_GLITCH_TEST, WEB_NET_TEST);
+  });
+
+  // Proved by apps/web game/slam.test.ts "R700 …" (what slams and what never does, the stats read off
+  // the newest view and the printed Tribute, both seats alike) and game/unitSlam.test.ts (the tiers'
+  // boundaries and the weights).
+  it("R700 a Unit the viewer can see lands with a weight read off its total stats", () => {
+    provenIn(700, "../../../apps/web/src/game/slam.test.ts");
+  });
+
+  // Proved by apps/web game/slam.test.ts "R701 …" (each tier's row, the action's shared totals,
+  // Reduce motion, the anticipation inside the entry) and fx/slam.test.ts "R701 …" (dust, shake,
+  // shockwave by tier, on the landing beat).
+  it("R701 a landing is its own animation entry, decorated by tier and capped per action", () => {
+    provenIn(701, "../../../apps/web/src/game/slam.test.ts", "../../../apps/web/src/fx/slam.test.ts");
+  });
+
+  // Proved by apps/web audio/slam.test.ts "R702 …" (the thud and impact by tier, the pitch spread,
+  // and the crowd through #57's quiet period, neutral).
+  it("R702 a landing's thud and the crowd's answer follow its tier", () => {
+    provenIn(702, "../../../apps/web/src/audio/slam.test.ts");
+  });
+
   // Proved by playChoices.test.ts "R703 …" (a needed pick the board cannot satisfy is neither
   // offered nor accepted, a plain one still plays, and a cast fizzles) and Plastic Surgery's own test
   // (both faces, either side, and the cast).
   it("R703 a play is refused, and never offered, while a pick it needs has no legal option", () => {
     provenIn(703, "playChoices.test.ts", "../../cards/test/063-plastic-surgery.test.ts");
+  });
+
+  // Proved by apps/web routes/landingFan.test.ts "R704 …" (a step among Core's cards keeps the
+  // rarities, repeats none, and reaches every card evenly) and routes/landing.test.tsx "R704 …"
+  // (the Core deal swaps one slot a step below the threshold, the swap fizzles the card going out
+  // over the new one for ROTATION_SWAP_MS, the new card fades in instead of being dealt again, and
+  // the fan carries the swap's length for the sheet).
+  it("R704 the homescreen's hand rotates from the first visit, swapping among Core's cards below the threshold", () => {
+    provenIn(704, WEB_LANDING_FAN_TEST, WEB_LANDING_TEST);
+  });
+
+  // Proved by apps/server test/match/aim.test.ts "R738 …" (the relay to the opponent alone, the shape
+  // check, the coalescing throttle, the hidden-information drop, the clear on a closed socket) and
+  // apps/web game/aim/aim.test.tsx "R738 …" (what a seat sends while it aims, its public handles,
+  // and the opponent's arrow drawn and cleared).
+  it("R738 shows the opponent's aim as an arrow built from public handles only", () => {
+    provenIn(738, "../../../apps/server/test/match/aim.test.ts", "../../../apps/web/src/game/aim/aim.test.tsx");
   });
 });
 

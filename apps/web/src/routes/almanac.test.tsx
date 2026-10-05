@@ -14,6 +14,8 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { GLITCH_DEF_ID } from "@jackioh/engine/config";
+
 import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
 import { CARD_FLAVOUR } from "../cards/flavour.ts";
 import { INSPECT_FLAVOUR, INSPECT_STATS } from "../cards/inspect/testids.ts";
@@ -49,7 +51,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 /** A lazily-imported route chunk, and a pool of every card, can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
 
-const CARDS: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards);
+/** R674: every card the almanac shows: the catalog's, Glitch excepted. */
+const CARDS: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards).filter((def) => def.id !== GLITCH_DEF_ID);
 const TOKENS: readonly CardDef[] = CARDS.filter((def) => def.token);
 
 function at(path: string): void {
@@ -133,11 +136,18 @@ describe("R630 the almanac's browse pane", () => {
     render(<AlmanacRoute />);
     const ids = shownIds();
     expect(ids).toEqual([...almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT)]);
-    expect([...ids].sort()).toEqual(Object.keys(ALMANAC_CATALOG.cards).sort());
+    expect([...ids].sort()).toEqual(CARDS.map((def) => def.id).sort());
     expect(TOKENS.length).toBeGreaterThan(0);
     for (const token of TOKENS) expect(ids, token.id).toContain(token.id);
     expect(screen.getByTestId(DB_RESULT_COUNT)).toHaveAttribute("data-count", String(CARDS.length));
     expect(screen.queryByTestId(DB_EMPTY)).toBeNull();
+  });
+
+  it("R674 never shows Glitch, though the catalog holds it", () => {
+    expect(ALMANAC_CATALOG.cards[GLITCH_DEF_ID]).toBeDefined();
+    render(<AlmanacRoute />);
+    expect(shownIds()).not.toContain(GLITCH_DEF_ID);
+    expect(almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT)).not.toContain(GLITCH_DEF_ID);
   });
 
   it("R630 renders the deck builder's own filter bar, pool and look", () => {
@@ -273,7 +283,7 @@ describe("R630 the almanac's browse pane", () => {
 });
 
 describe("R654 the almanac's card statistics block", () => {
-  it("R654 the almanac's detail view renders the compact statistics block with a link to the full stats page", async () => {
+  it("R654 R661 the almanac's detail view renders the compact statistics block, names no source, and links the full stats page", async () => {
     const unit = CARDS.find((def) => !def.token && def.set === "Core");
     if (unit === undefined) throw new Error("the catalog has no Core card");
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
@@ -325,7 +335,9 @@ describe("R654 the almanac's card statistics block", () => {
     fireEvent.click(screen.getByTestId(poolCardId(unit.id)));
     const stats = await screen.findByTestId(INSPECT_STATS, undefined, SLOW);
     expect(stats).toHaveTextContent("60%");
-    expect(stats).toHaveTextContent("AI games + live games (provisional)");
+    // R661: the response still names its source, but the block never shows it.
+    expect(stats.textContent).not.toContain("AI games + live games (provisional)");
+    expect(stats.querySelector(".inspect-stats-badge")).toBeNull();
     expect(within(screen.getByTestId(INSPECT_DETAIL)).getByRole("link", { name: /view full stats/i })).toHaveAttribute(
       "href",
       `/stats?tab=cards&card=${encodeURIComponent(unit.id)}`,

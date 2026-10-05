@@ -60,7 +60,8 @@ def _review_cell(review: Mapping[str, Any] | None, self_checks: list[Mapping[str
     if review is None:
         parts.append("no review")
     elif not review.get("readable", True):
-        parts.append("**review unreadable**")
+        parts.append("**review unreadable**" + (f": {_cell(review.get('error'), 90)}"
+                                                if review.get("error") else ""))
     else:
         blocking = _blocking(review)
         if blocking:

@@ -1,4 +1,4 @@
-// Compact card statistics block for CardDetail view (SPEC §9.11, R654).
+// Compact card statistics block for CardDetail view (SPEC §9.11, R654). It names no data source (R661).
 
 import { useEffect, useState, type ReactElement } from "react";
 import { INSPECT_STATS } from "../cards/inspect/testids.ts";
@@ -14,7 +14,6 @@ export type CardStatsBlockProps = {
 export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
   const [loading, setLoading] = useState(true);
   const [stat, setStat] = useState<PublicCardStat | null>(null);
-  const [sourceLabel, setSourceLabel] = useState<string>("");
   const [minSample, setMinSample] = useState<number>(20);
   const [error, setError] = useState(false);
 
@@ -30,7 +29,6 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
     getCardStats({ card: cardId, signal: controller.signal })
       .then((res) => {
         if (cancelled) return;
-        setSourceLabel(res.sourceLabel);
         setMinSample(res.minSample);
         const match = res.cards.find((c) => c.id === cardId) ?? null;
         setStat(match);
@@ -85,12 +83,6 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
     <div className="inspect-stats" data-testid={INSPECT_STATS}>
       <div className="inspect-stats-header">
         <span className="inspect-stats-title">Statistics</span>
-        <span
-          className="inspect-stats-badge"
-          data-source={sourceLabel.includes("provisional") ? "provisional" : "live"}
-        >
-          {sourceLabel}
-        </span>
       </div>
 
       <div className="inspect-stats-grid">

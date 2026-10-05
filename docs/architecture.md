@@ -61,7 +61,7 @@ SPEC §9.1, restated as channels rather than domains:
 
 | Channel | Credential | What it carries |
 | --- | --- | --- |
-| Browser → Supabase Auth | publishable key (`sb_publishable_…`) | signup, login, email verification, token refresh |
+| Browser → Supabase Auth | publishable key (`sb_publishable_…`) | signup, login (password, an emailed link or code, an OAuth provider), email verification, an authenticator app's enrolment and codes, token refresh (R664–R666) |
 | Browser → Data API | publishable key + the user's JWT | **reads only**: own profile row, own collection, own decks and trios, own tickets, own results, own tutorial progress, the `cards` projection |
 | Browser → server HTTP | the user's JWT as `Authorization: Bearer` | intent: "redeem this code", "save this deck", "enqueue Conquest with this trio", "pick this deck for game 2", "import this trio", "create a room", "join ABC234", "merge this device's tutorial progress" |
 | Browser → server WebSocket | the user's JWT in the `hello` frame | intent: one `Action` at a time; receives `viewFor` and nothing else |
@@ -434,6 +434,7 @@ public by construction; anything without that prefix must never appear in a clie
 | `VITE_SERVER_HTTP_URL` | `https://api.example.com` | wherever `apps/server` is deployed |
 | `VITE_SERVER_WS_URL` | `wss://api.example.com/ws` | same host, WebSocket path |
 | `VITE_CATALOG_VERSION` | e.g. `core-1` | must equal the server's `CATALOG_VERSION` |
+| `VITE_AUTH_OAUTH_PROVIDERS` | optional, e.g. `google,github` | R666: the OAuth providers the sign-in screen offers, by Supabase's names (apple, azure, discord, facebook, github, gitlab, google, twitch). Names only; unset offers none. Set it only once each named provider is enabled in the dashboard (§10, step 2) |
 
 A publishable key is safe in a browser **because RLS is the access control**, not because the key is
 secret. It maps to the `anon` role before login and `authenticated` after, and §3.2's matrix is the
@@ -550,6 +551,34 @@ step that is not yet implemented says which BUILD task delivers it.
    `/login?code=…`, and the browser that asked exchanges the code for a session with the verifier
    it kept. A link opened on another device confirms the address and asks for a sign-in (R324).
    No Supabase setting needs changing for PKCE.
+
+   The further ways in (issue #267, R664–R666) need these dashboard steps, done by a person:
+   - **Email sign-in link and code (R664).** Auth → Emails → Templates → **Magic Link**: the
+     template must carry both `{{ .ConfirmationURL }}` (the link) and `{{ .Token }}` (the code),
+     since the screen offers both; the default template has the link only. For example:
+     `<p>Sign in to JackiOh: <a href="{{ .ConfirmationURL }}">open this link in the browser you asked from</a>, or type this code: <strong>{{ .Token }}</strong></p><p>If you didn't ask to sign in, ignore this email.</p>`.
+     Auth → Providers → Email: keep **Confirm email** on, and leave the email OTP expiry at its
+     default (3600 s) or shorter. Nothing else changes: the link returns to `<origin>/login`, which
+     the Redirect URLs above already allow, and it is a PKCE link (R323).
+   - **Two-step sign-in (R665).** Auth → Multi-Factor: **TOTP (App Authenticator)** enabled (it is
+     on by default on a new project). Leave phone MFA off: the client offers only an authenticator
+     app, and the server's `aal2` rule counts only a verified TOTP factor.
+   - **OAuth providers (R666),** for each provider wanted: create an OAuth app at the provider
+     (Google Cloud console, GitHub developer settings, Discord developer portal, …) whose
+     authorised redirect URI is `https://<ref>.supabase.co/auth/v1/callback`; then Auth → Sign In /
+     Providers → the provider: enabled, its client id and secret pasted in (they stay in Supabase,
+     never in this repository or a `VITE_` variable). Then add the provider's name to
+     `VITE_AUTH_OAUTH_PROVIDERS` in `apps/web/.env.production` (and the Vercel project's variables
+     for staging) and let the web app rebuild. The provider returns to `<origin>/login`, already in
+     the Redirect URLs. Keep Supabase's default **automatic linking** (an OAuth sign-in whose
+     *verified* address matches an existing account signs into that account), and enable only
+     providers that report whether an address is verified (all eight the client names do). Leave
+     "Allow manual linking" off: nothing here uses it.
+     Before the first provider goes live, check one thing by hand on the project: sign up with a
+     password for an address you own and do not confirm it, then sign in with the provider for the
+     same address, then try the password. If the password still signs in, Supabase kept an
+     unconfirmed account's password through linking (a pre-account takeover); do not enable
+     providers until that is resolved.
 3. **Fill the server environment.** `cp apps/server/.env.example apps/server/.env` and set
    `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `CODE_PEPPER` (`openssl rand -base64 48`),
    `PUBLIC_ORIGINS` and `CATALOG_VERSION`. Then `pnpm install`. Every `@jackioh/server` script runs
@@ -593,8 +622,8 @@ step that is not yet implemented says which BUILD task delivers it.
    - `insert into public.collection …` as an `authenticated` user → must be refused. There is no
      policy, so there is no path (§9.4).
 6. **Seed the catalog.** `pnpm --filter @jackioh/server db:seed-catalog`. Requires
-   `packages/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 317
-   (268 cards + 49 tokens over Core, Classic and Classic+, patch v0.2.0) and
+   `packages/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 318
+   (268 cards + 50 tokens over Core, Classic and Classic+, patch v0.2.0 and Glitch, issue #170) and
    `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
 7. **Mint an invite code.** `pnpm --filter @jackioh/server codes:mint`. It generates 16 characters
    from `CODE_ALPHABET`, formats them `XXXX-XXXX-XXXX-XXXX`, HMACs with `CODE_PEPPER` and inserts

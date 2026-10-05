@@ -68,11 +68,11 @@ describe("GAME_EVENT_TYPES", () => {
   });
 
   it("agrees with SPEC §10.3's count, which BUILD M5-T4's table has one row for each of", () => {
-    // 64 is the number of rows in BUILD M5-T4's table: 41, R315's `fatigue`, R316's
+    // 65 is the number of rows in BUILD M5-T4's table: 41, R315's `fatigue`, R316's
     // `libraryOverflow`, and patch v0.2.0's twenty-one (docs/classic-sets.md B3, B5: `cardAnnounced`
-    // … `marked`, and Classic+ #41's `numberChanged`); the two tests above make this a count of the
+    // … `marked`, and Classic+ #41's `numberChanged`), and Glitch's `glitched` (issue #170); the two tests above make this a count of the
     // union itself rather than a count of the array copied from it.
-    expect(declaredTypes()).toHaveLength(64);
-    expect(GAME_EVENT_TYPES).toHaveLength(64);
+    expect(declaredTypes()).toHaveLength(65);
+    expect(GAME_EVENT_TYPES).toHaveLength(65);
   });
 });

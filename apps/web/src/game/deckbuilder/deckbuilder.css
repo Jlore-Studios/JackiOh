@@ -391,11 +391,19 @@
     filter 120ms ease;
 }
 
+/* An off-screen face is not laid out (#263): the Almanac's 318 faces cost most of their first
+   layout otherwise. The skip sits on the face, not on the grid item: the face is sized by the card
+   (`inset: 0`), so skipping it never changes a size the grid reads, and scrolling stays cheap (on
+   `.db-item` every skip relaid the grid, and frames ran past 150 ms). The clip margin leaves room
+   for what a face paints past its own box, which the paint containment would cut off. Its text is
+   fitted when it comes near the screen (fit.ts, `data-skippable`). */
 .deckbuilder.app-shell .db-card-face {
   position: absolute;
   inset: 0;
   z-index: 0;
   display: block;
+  content-visibility: auto;
+  overflow-clip-margin: 24px;
   /* A card that lands in a deck dims over a moment rather than blinking grey. */
   transition:
     opacity 180ms ease,

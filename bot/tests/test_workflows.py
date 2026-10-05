@@ -261,8 +261,8 @@ class TriageWorkflowTests(unittest.TestCase):
         block = re.search(r"permissions:\n((?:\s{6}.*\n)+)", job(self.text, name)).group(1)
         return dict(re.findall(r"^\s+([\w-]+):\s*(\w+)", block, re.M))
 
-    def test_only_new_threads_and_never_pull_request_code(self):
-        self.assertRegex(self.text, r"issues:\n\s+types: \[opened\]")
+    def test_issues_on_a_method_label_pull_requests_when_opened_never_their_code(self):
+        self.assertRegex(self.text, r"issues:\n\s+types: \[labeled\]")
         self.assertRegex(self.text, r"pull_request_target:\n\s+types: \[opened\]")
         # A person can call it on any thread by number; the gate reads that thread read-only.
         self.assertRegex(self.text, r"workflow_dispatch:\n\s+inputs:\n\s+number:")
@@ -274,9 +274,18 @@ class TriageWorkflowTests(unittest.TestCase):
         self.assertEqual(self.text.count("persist-credentials: false"), 3)
         self.assertNotIn("secrets.", self.text)
 
-    def test_the_model_runs_on_devins_runner_and_cannot_write(self):
+    def test_a_label_that_is_no_method_label_never_cancels_the_method_run(self):
+        """#307: only a method label starts the gate, and a `difficulty:*` label a person adds in
+        the two-minute wait runs in a group of its own, so it cancels nothing."""
+        self.assertIn("if: github.event_name != 'issues' || startsWith(github.event.label.name, "
+                      "'method:')", job(self.text, "gate"))
+        self.assertIn("!startsWith(github.event.label.name, 'method:') && "
+                      "format('-{0}', github.run_id)", self.text)
+        self.assertIn("cancel-in-progress: ${{ github.event_name == 'issues' }}", self.text)
+
+    def test_the_model_runs_on_muses_runner_and_cannot_write(self):
         classify = job(self.text, "classify")
-        self.assertIn("runs-on: night-vm-devin", classify)
+        self.assertIn("runs-on: night-vm-muse", classify)
         self.assertIn("if: needs.gate.outputs.go == 'true'", classify)
         self.assertEqual(self.grants("classify"),
                          {"contents": "read", "issues": "read", "pull-requests": "read"})

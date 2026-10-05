@@ -4,6 +4,10 @@
 // Layout (no horizontal overflow at 360-1280 px, B39) needs a layout engine, so it is the Cypress
 // component spec's job (e2e/cypress/component/landing-and-code-field.cy.tsx), not this file's.
 
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,10 +19,11 @@ import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import { seeded } from "../test/random.ts";
-import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION, ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES } from "../stats/config.ts";
+import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION, ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES, ROTATION_SWAP_MS } from "../stats/config.ts";
 import { dropPlayerStatsCache } from "../stats/store.ts";
 import LandingRoute from "./landing.tsx";
-import { ROTATION_POOL, dealLandingFan, featureWeight, rotateFan } from "./landingFan.ts";
+import { EVEN, FAN_POOL, ROTATION_POOL, dealLandingFan, featureWeight, rotateFan } from "./landingFan.ts";
+import { siteFooterTestid } from "./SiteFooter.tsx";
 
 const { App } = await import("../main.tsx");
 
@@ -198,6 +203,18 @@ describe("B37 the landing route", () => {
   });
 });
 
+describe("R661 the statistics are not a call to action", () => {
+  it("R661 the landing page's calls to action carry no Stats link; the site footer's is the only one", () => {
+    render(<LandingRoute />);
+    const ctas = within(landing()).getByRole("navigation", { name: "Play" });
+    expect(within(ctas).queryByText("Stats")).toBeNull();
+    expect(ctas.querySelector('a[href="/stats"]')).toBeNull();
+    const statsLinks = landing().querySelectorAll('a[href="/stats"]');
+    expect(statsLinks).toHaveLength(1);
+    expect(statsLinks[0]).toHaveAttribute("data-testid", siteFooterTestid.stats);
+  });
+});
+
 // ---------------------------------------------------------------------------------------------
 // B37: the corner slot
 // ---------------------------------------------------------------------------------------------
@@ -340,7 +357,7 @@ describe("B38 the hero", () => {
     expect(back.textContent).toBe("");
   });
 
-  it("R374 each visit deals its own hand, and a hand holds still while the page is up", () => {
+  it("R374 each visit deals its own hand, and a re-render in the same visit does not deal again", () => {
     const shown = (): string[] =>
       [0, 1, 2, 3].map((index) => screen.getByTestId(landingFanCardTestid(index)).getAttribute("data-def-id") ?? "");
     const first = render(<LandingRoute random={seeded(1)} />);
@@ -399,7 +416,8 @@ describe("B38 the hero", () => {
 
 // ---------------------------------------------------------------------------------------------
 // R639: the fan rotates through every set once the device has logged enough games, a face opens at
-// full size, and the device's statistics are shown
+// full size, and the device's statistics are shown. R704: the fan swaps from the first visit,
+// among Core's cards below the threshold, with a fizzle and an apparition.
 // ---------------------------------------------------------------------------------------------
 
 /** A device with this many logged games (the store's own shape, read back as the page would). */
@@ -421,16 +439,83 @@ describe("R639 the homescreen rotation", () => {
     dropPlayerStatsCache();
   });
 
-  it("R639 below the threshold the fan keeps its fixed deal of Core cards and never swaps", () => {
+  it("R704 below the threshold the fan deals Core and swaps one slot a step, left to right", () => {
     vi.useFakeTimers();
     withGames(ROTATION_MIN_GAMES - 1);
     render(<LandingRoute random={seeded(5)} />);
-    const hand = shownIds();
-    expect(hand).toEqual(dealLandingFan(seeded(5)).map(({ def }) => def.id));
+
+    // The same source, the same draws: the deal, then the swaps the page makes, among Core's cards.
+    const mirror = seeded(5);
+    let expected = dealLandingFan(mirror);
+    expect(shownIds()).toEqual(expected.map(({ def }) => def.id));
+
+    for (const slot of [0, 1, 2, 3, 0]) {
+      const before = shownIds();
+      act(() => {
+        vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
+      });
+      expected = rotateFan(expected, slot, mirror, FAN_POOL, EVEN);
+      const after = shownIds();
+      expect(after).toEqual(expected.map(({ def }) => def.id));
+      // One card moved, in the slot due, and it is a Core card of the same rarity the fan was not showing.
+      expect(after.filter((id, at) => id !== before[at])).toHaveLength(1);
+      expect(after[slot]).not.toBe(before[slot]);
+      expect(new Set(after).size).toBe(after.length);
+    }
+  });
+
+  it("R704 a swap fizzles the card going out over the new one, then lets it go", () => {
+    vi.useFakeTimers();
+    withGames(0);
+    render(<LandingRoute random={seeded(5)} />);
+    expect(screen.queryByTestId(landingTestid.fanLeaving)).toBeNull();
+    const before = shownIds();
     act(() => {
-      vi.advanceTimersByTime(ROTATION_INTERVAL_MS * 6);
+      vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
     });
-    expect(shownIds()).toEqual(hand);
+    // The card going out stays as a ghost: the old id, hidden from assistive tech, no control.
+    const ghost = screen.getByTestId(landingTestid.fanLeaving);
+    expect(ghost).toHaveAttribute("data-def-id", before[0]);
+    expect(ghost).toHaveAttribute("aria-hidden", "true");
+    expect(ghost.getAttribute("role")).toBeNull();
+    expect(ghost.getAttribute("data-testid")).not.toMatch(/^landing-fan-card-/);
+    act(() => {
+      vi.advanceTimersByTime(ROTATION_SWAP_MS);
+    });
+    expect(screen.queryByTestId(landingTestid.fanLeaving)).toBeNull();
+  });
+
+  it("R704 the deal plays no apparition, while a swapped card gathers out of the fizzle's smoke", () => {
+    vi.useFakeTimers();
+    withGames(0);
+    render(<LandingRoute random={seeded(5)} />);
+    for (const index of [0, 1, 2, 3]) {
+      expect(screen.getByTestId(landingFanCardTestid(index))).toHaveAttribute("data-entry", "deal");
+    }
+    act(() => {
+      vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
+    });
+    expect(screen.getByTestId(landingFanCardTestid(0))).toHaveAttribute("data-entry", "swap");
+    for (const index of [1, 2, 3]) {
+      expect(screen.getByTestId(landingFanCardTestid(index))).toHaveAttribute("data-entry", "deal");
+    }
+    // The ghost has gone, and the card is not dealt again.
+    act(() => {
+      vi.advanceTimersByTime(ROTATION_SWAP_MS);
+    });
+    expect(screen.queryByTestId(landingTestid.fanLeaving)).toBeNull();
+    expect(screen.getByTestId(landingFanCardTestid(0))).toHaveAttribute("data-entry", "swap");
+  });
+
+  it("R704 the fan carries the swap's length for the sheet, whose fizzle and apparition borrow the board's refused-card look", () => {
+    render(<LandingRoute random={seeded(5)} />);
+    const fan = screen.getByTestId(landingTestid.fan);
+    expect(fan.style.getPropertyValue("--fan-swap")).toBe(`${String(ROTATION_SWAP_MS)}ms`);
+    const sheet = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "landing.css"), "utf8");
+    expect(sheet).toContain(".landing .landing-fan-card--leaving {");
+    expect(sheet).toContain('.landing .landing-fan-card[data-entry="swap"] {');
+    expect(sheet).toContain("@keyframes landing-fizzle");
+    expect(sheet).toContain("@keyframes landing-apparition");
   });
 
   it("R639 at the threshold the fan deals from every set and swaps one slot a step, left to right", () => {

@@ -28,7 +28,10 @@ import { AI_GATE_BUDGET, SHADOW_BAN_IDS, aiToAct } from "@jackioh/ai";
 import { opponentOf } from "@jackioh/shared";
 import type { Action, ActionBody, PlayerId } from "@jackioh/shared";
 
+import { CATALOG_VERSION } from "@jackioh/cards";
+
 import { createPracticeCore } from "./core.ts";
+import { memorySaveStore, type PracticeSaveStore } from "./saveStore.ts";
 import { PRACTICE_PRESETS } from "./decks.ts";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
 import type { PracticeCore, PracticeCoreEnv } from "./core.ts";
@@ -961,5 +964,109 @@ describe("R433 practice's fresh random deck lists only the cards the human has b
     // Folded as if the deck had been built, the replay is a different game: every card of the
     // human's library reads as shown going in.
     expect(hashState(fold(base).state)).not.toBe(debug.hash);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R668: a free game in progress is kept in the worker's store and folds back after a reload
+// ---------------------------------------------------------------------------------------------
+
+describe("R668 the practice save and resume", () => {
+  /** A game walked `steps` requests in, on a core that keeps its saves in `saves`. */
+  function walked(saves: PracticeSaveStore, seed: string, steps: number): { d: Driver; last: PracticeSnapshot } {
+    const human: PlayerId = "p1";
+    const d = driver({ ...ENV, saves });
+    let last = snapshotOf(d.send({ type: "start", config: config({ seed, humanSeat: human }) }));
+    const rng = createRng(`${seed}:human`);
+    for (let n = 0; n < steps && last.view.result === null; n += 1) {
+      const response = step(d, human, rng, last);
+      if (response === null) break;
+      last = snapshotOf(response);
+    }
+    return { d, last };
+  }
+
+  it("R668 a new core folds the saved log back to the same state, snapshot and AI stream", { timeout: 120_000 }, () => {
+    const saves = memorySaveStore();
+    const { d, last } = walked(saves, "r658-fold", 16);
+    expect(last.view.result, "the walk leaves the game in progress").toBeNull();
+    const before = debugOf(d);
+    const save = saves.read();
+    expect(save).not.toBeNull();
+    expect(save?.catalog).toBe(CATALOG_VERSION);
+    expect(save?.log).toEqual(before.log);
+    expect(save?.hash).toBe(before.hash);
+
+    // The reload: a fresh core on the same store, asked by the setup the page remembers.
+    const again = driver({ ...ENV, saves });
+    const resumed = again.send({ type: "resume", config: config({ seed: "r658-fold", humanSeat: "p1" }) });
+    expect(resumed.type).toBe("started");
+    if (resumed.type !== "started") return;
+    expect(Object.keys(resumed).sort()).toEqual(["aiSeat", "defs", "id", "snapshot", "type"]);
+    expectRule7(again, resumed, "p1", "p2");
+    expect(resumed.snapshot).toEqual(last);
+    const after = debugOf(again);
+    expect(after.hash).toBe(before.hash);
+    expect(after.log).toEqual(before.log);
+    // And it is the same game a replay folds (R187).
+    expect(hashState(fold({ seed: after.seed, decks: after.decks, handicaps: after.handicaps, log: after.log, ...(after.dealt === undefined ? {} : { dealt: after.dealt }) }).state)).toBe(before.hash);
+
+    // The AI's stream is picked up at its cursor: both cores now play the same next moves.
+    const rngA = createRng("r658-next");
+    const rngB = createRng("r658-next");
+    let a = last;
+    let b = resumed.snapshot;
+    for (let n = 0; n < 20 && a.view.result === null; n += 1) {
+      const ra = step(d, "p1", rngA, a);
+      const rb = step(again, "p1", rngB, b);
+      if (ra === null || rb === null) break;
+      a = snapshotOf(ra);
+      b = snapshotOf(rb);
+      expect(b).toEqual(a);
+    }
+    expect(debugOf(again).hash).toBe(debugOf(d).hash);
+  });
+
+  it("R668 a resume of a game the store does not hold, of another game, or from another catalog fails and changes nothing", () => {
+    const empty = driver({ ...ENV, saves: memorySaveStore() });
+    expect(empty.send({ type: "resume", config: config() }).type).toBe("failed");
+    expect(driver({ ...ENV }).send({ type: "resume", config: config() }).type, "no store at all").toBe("failed");
+
+    const saves = memorySaveStore();
+    walked(saves, "r658-other", 6);
+    const kept = saves.read();
+    expect(kept).not.toBeNull();
+    if (kept === null) return;
+    const other = driver({ ...ENV, saves });
+    expect(other.send({ type: "resume", config: config({ seed: "not-this-one", humanSeat: "p1" }) }).type).toBe("failed");
+    expect(other.send({ type: "resume", config: config({ seed: "r658-other", humanSeat: "p2" }) }).type).toBe("failed");
+    // A resume that fails leaves no game running.
+    expect(other.send({ type: "aiStep" }).type).toBe("failed");
+
+    const stale = driver({ ...ENV, saves: memorySaveStore({ ...kept, catalog: "v0.0.0-not-this" }) });
+    expect(stale.send({ type: "resume", config: config({ seed: "r658-other", humanSeat: "p1" }) }).type).toBe("failed");
+    const tampered = driver({ ...ENV, saves: memorySaveStore({ ...kept, hash: "00000000" }) });
+    expect(tampered.send({ type: "resume", config: config({ seed: "r658-other", humanSeat: "p1" }) }).type).toBe("failed");
+    const forged = driver({ ...ENV, saves: memorySaveStore({ ...kept, log: [...kept.log, { type: "endTurn", playerId: "p2", nonce: "a999" } as Action] }) });
+    expect(forged.send({ type: "resume", config: config({ seed: "r658-other", humanSeat: "p1" }) }).type).toBe("failed");
+  });
+
+  it("R668 a lesson is never kept, and a finished game clears the save", () => {
+    const saves = memorySaveStore();
+    walked(saves, "r658-clear", 4);
+    expect(saves.read()).not.toBeNull();
+
+    const lesson = TUTORIAL_LESSONS[0];
+    expect(lesson).toBeDefined();
+    const d = driver({ ...ENV, saves });
+    d.send({ type: "start", config: config({ seed: "r658-lesson", humanSeat: "p1", lesson: lesson?.id ?? "" }) });
+    expect(saves.read(), "a lesson's deal forgets the free game").toBeNull();
+
+    const free = driver({ ...ENV, saves });
+    free.send({ type: "start", config: config({ seed: "r658-concede", humanSeat: "p1" }) });
+    expect(saves.read()).not.toBeNull();
+    const over = snapshotOf(free.send({ type: "act", action: { type: "concede" } }));
+    expect(over.view.result).not.toBeNull();
+    expect(saves.read()).toBeNull();
   });
 });

@@ -58,7 +58,8 @@ def sweep(ctx: Context) -> list[str]:
         return ["the first sweep: requests from now on are swept"]
     since = max(first, now - LOOKBACK)
     notes: list[str] = []
-    for part in (_comments, _reviews, _assignments, _failed_ci, _night_run, _issue_types):
+    for part in (_comments, _reviews, _assignments, _failed_ci, _needs_plan, _night_run,
+                 _issue_types):
         try:
             notes += part(ctx, since)
         except Exception as exc:  # noqa: BLE001 - one part failing never stops the rest
@@ -67,6 +68,13 @@ def sweep(ctx: Context) -> list[str]:
     ctx.store.update(lambda s: s.update(last_sweep={"at": iso(now), "since": iso(first),
                                                     "notes": notes[-20:]}), "sweep")
     return notes
+
+
+def _needs_plan(ctx: Context, since: datetime) -> list[str]:
+    """Every queued item with no plan its difficulty may build from, an unrated one included,
+    carries `bot:needs-plan` within one sweep (#317 part 8), so nothing waits for a person to
+    rate it: the planning lane rates and plans it, and `_night_run` starts that run."""
+    return plan_mod.sync_needs_plan(ctx, ctx.store.load())
 
 
 def _issue_types(ctx: Context, since: datetime) -> list[str]:

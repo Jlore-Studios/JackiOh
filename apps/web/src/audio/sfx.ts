@@ -28,16 +28,18 @@
 // the UI ticks quieter still but plainly audible. The component spec (audio-recipes.cy.tsx)
 // renders every recipe through the real mix and holds these bands, so a retune cannot drift.
 
-import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP } from "./constants.ts";
+import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP, IMPACT_HEADROOM } from "./constants.ts";
 import type { SfxId, SfxParams, SfxTimbre } from "./types.ts";
+import { damageTier, SLAM_PITCH_SPREAD, UNIT_SLAM } from "../game/damageFeel.ts";
 
 export const SFX_IDS: readonly SfxId[] = [
   "draw", "play", "summon", "attack", "impact", "shieldShatter", "heal", "buff", "debuff",
   "death", "burn", "trapSet", "trapSting", "spell", "mana", "turnStart", "victory",
-  "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "notify", "drain",
+  "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "sand", "endTurn", "notify", "drain",
   "cancel", "entrance", "fatigue", "refuse",
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
   "emoteSob", "emoteYawn", "emoteLaugh", "emoteAngry", "emoteWahWah",
+  "sting",
 ];
 
 /** Every card family a summon or spell may be given (types.ts SfxTimbre), for the tests. */
@@ -445,11 +447,14 @@ function summonAccent(k: Kit, timbre: SfxTimbre | undefined): void {
  * viewer can name adds its family's accent (`timbre`).
  */
 const summon: SfxRecipe = (ctx, out, at, params) => {
-  const t = amountT(params);
+  // #185: a landing Unit's tier weighs its thud (a soft tap to a deep boom) at a pitch within
+  // SLAM_PITCH_SPREAD; without one, its stats do, as before.
+  const t = params.slamTier === undefined ? amountT(params) : UNIT_SLAM[params.slamTier].thud;
+  const pitch = params.slamTier === undefined ? 1 : 1 + (Math.min(1, Math.max(0, params.variation ?? 0.5)) * 2 - 1) * SLAM_PITCH_SPREAD;
   const len = 0.25 + 0.12 * t;
   const peak = 0.45 + 0.45 * t;
   const k = kit(ctx, out, at, len);
-  const fromHz = 170 - 60 * t;
+  const fromHz = (170 - 60 * t) * pitch;
   const thud = tone(k, out, "sine", fromHz, 0, 0.005, peak, len);
   glide(k, thud.frequency, 60 - 25 * t, len * 0.7);
   const noise = noiseSource(k);
@@ -472,16 +477,21 @@ const attack: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A hit that grows louder, darker and longer with the amount, up to IMPACT_AMOUNT_CAP. */
+/** A hit whose weight is chosen by the public damage tier, from a tap to a GIGA board thump. */
 const impact: SfxRecipe = (ctx, out, at, params) => {
-  const t = amountT(params);
+  // A caller with no tier (a preview, a recipe test) is sized by its amount, capped as before (B16).
+  const tier = params.impactTier ?? damageTier(Math.min(params.amount ?? 0, IMPACT_AMOUNT_CAP));
+  const tierT = { tiny: 0.1, normal: 0.34, moderate: 0.54, big: 0.76, giga: 1 }[tier];
+  const t = tierT;
+  const pitch = 0.95 + Math.min(1, Math.max(0, params.variation ?? 0.5)) * 0.1;
   const len = 0.12 + 0.33 * t;
-  const peak = 0.5 + 0.5 * t;
+  // The noise and the thump peak together; IMPACT_HEADROOM keeps the sum under full scale (B15).
+  const peak = (0.5 + 0.5 * t) * IMPACT_HEADROOM;
   const k = kit(ctx, out, at, len);
   const noise = noiseSource(k);
   chain(noise, biquad(k, "lowpass", 5000 - 3800 * t, 0), envelope(k, 0, 0.004, 1.1 * peak, len), out);
   run(k, noise, 0, len);
-  const thumpHz = 110 - 50 * t;
+  const thumpHz = (110 - 50 * t) * pitch;
   const thump = tone(k, out, "sine", thumpHz, 0, 0.004, 0.75 * peak, len);
   glide(k, thump.frequency, thumpHz * 0.6, len);
   return len;
@@ -799,15 +809,45 @@ const lock: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A card vanishes (exile, transform, fuse): a soft dark puff. */
-const poof: SfxRecipe = (ctx, out, at) => {
+/** A card vanishes (exile, transform, fuse), or sand compresses: a soft dark puff. */
+const poof: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.43;
   const k = kit(ctx, out, at, len);
   const noise = noiseSource(k);
-  const filter = biquad(k, "lowpass", 900, 0);
-  glide(k, filter.frequency, 300, len);
+  // Sand passes a deterministic 0..1 variation, mapping to the requested ±8% crunch pitch;
+  // absent callers retain the original neutral recipe exactly.
+  const pitch = 0.92 + Math.min(1, Math.max(0, params.variation ?? 0.5)) * 0.16;
+  const filter = biquad(k, "lowpass", 900 * pitch, 0);
+  glide(k, filter.frequency, 300 * pitch, len);
   chain(noise, filter, envelope(k, 0, 0.04, 1.43, len), out);
   run(k, noise, 0, len);
+  return len;
+};
+
+/** A dry sand crunch: four grain bands, an ±8% pitch sway and a fuller transient as a pile builds. */
+const sand: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.24;
+  const k = kit(ctx, out, at, len);
+  const variant = Math.abs(Math.trunc(params.sandVariant ?? 0)) % 4;
+  const baseHz = [520, 670, 820, 980][variant] ?? 520;
+  const pitch = 0.92 + Math.min(1, Math.max(0, params.variation ?? 0.5)) * 0.16;
+  const build = Math.max(1, Math.min(6, params.sandBuild ?? 1));
+  const noise = noiseSource(k);
+  const filter = biquad(k, "bandpass", baseHz * pitch, 1.1);
+  chain(noise, filter, envelope(k, 0, 0.008, 0.58 + build * 0.08, len), out);
+  run(k, noise, 0, len);
+  return len;
+};
+
+/** A low wooden-and-metal clunk for the end-turn mechanism, distinct from the generic UI tick. */
+const endTurn: SfxRecipe = (ctx, out, at) => {
+  const len = 0.18;
+  const k = kit(ctx, out, at, len);
+  const thump = tone(k, out, "sine", 96, 0, 0.003, 0.64, len);
+  glide(k, thump.frequency, 54, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "lowpass", 780, 0), envelope(k, 0, 0.002, 0.65, 0.06), out);
+  run(k, noise, 0, 0.06);
   return len;
 };
 
@@ -1237,6 +1277,38 @@ const emoteWahWah: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
+/* ------------------------------------------------------------------------------------------- *
+ * Patch v0.2.X (#259, R669): the play sting
+ * ------------------------------------------------------------------------------------------- */
+
+/**
+ * R669: a card the viewer can read is played (cues.ts), a sting sized by its rarity under the card
+ * whoosh. Common: a bright pluck and its fifth. Rare: a three-note bell arpeggio. Epic: a four-note
+ * climb over a shimmering open chord. Legendary and Mythic cards have the entrance instead.
+ */
+const sting: SfxRecipe = (ctx, out, at, params) => {
+  const tier = params.tier ?? "common";
+  const len = tier === "epic" ? 0.78 : tier === "rare" ? 0.56 : 0.36;
+  const k = kit(ctx, out, at, len);
+  if (tier === "common") {
+    tone(k, out, "triangle", 784, 0, 0.003, 0.42, 0.2);
+    tone(k, out, "triangle", 1175, 0.07, 0.003, 0.34, len);
+    return len;
+  }
+  const notes = tier === "epic" ? [523, 659, 784, 1047] : [659, 831, 988];
+  const step = tier === "epic" ? 0.07 : 0.08;
+  notes.forEach((hz, i) => {
+    const start = step * i;
+    fmBell(k, out, hz, 2, hz * 0.6, start, 0.003, tier === "epic" ? 0.19 : 0.22, Math.min(len, start + 0.32));
+  });
+  if (tier === "epic") {
+    const shimmer = tremolo(k, 8, 0.25);
+    chain(shimmer, out);
+    for (const hz of [262, 392, 523]) tone(k, shimmer, "sine", hz, 0.08, 0.06, 0.1, len);
+  }
+  return len;
+};
+
 export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   draw: { recipe: draw, durationMs: 180, gain: 1 },
   play: { recipe: play, durationMs: 260, gain: 0.82 },
@@ -1262,6 +1334,8 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   radiant: { recipe: radiant, durationMs: 900, gain: 0.78 },
   lock: { recipe: lock, durationMs: 400, gain: 1 },
   poof: { recipe: poof, durationMs: 450, gain: 1 },
+  sand: { recipe: sand, durationMs: 240, gain: 0.52 },
+  endTurn: { recipe: endTurn, durationMs: 180, gain: 0.76 },
   notify: { recipe: notify, durationMs: 300, gain: 0.6 },
   drain: { recipe: drain, durationMs: 600, gain: 0.69 },
   cancel: { recipe: cancel, durationMs: 260, gain: 1 },
@@ -1281,6 +1355,7 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   emoteLaugh: { recipe: emoteLaugh, durationMs: 750, gain: 0.8 },
   emoteAngry: { recipe: emoteAngry, durationMs: 700, gain: 0.8 },
   emoteWahWah: { recipe: emoteWahWah, durationMs: 1800, gain: 0.8 },
+  sting: { recipe: sting, durationMs: 800, gain: 1 },
 };
 
 /**

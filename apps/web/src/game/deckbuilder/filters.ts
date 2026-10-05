@@ -7,8 +7,8 @@
 //
 // NO RULE LIVES HERE EITHER. Ownership comes from `poolFrom` (which already drops Tokens, since L3
 // bans them from a deck), and whether a deck is legal is `@jackioh/validator`'s alone. A filter only
-// hides cards from view; it never refuses one. Filter and sort state is deliberately not persisted:
-// a filter that survived a reload could hide cards and confuse a player (and spec 09).
+// hides cards from view; it never refuses one. The workshop keeps its filter and sort per device
+// (`savedBrowse.ts`, #263), and "Clear filters" clears the saved copy along with the chips.
 //
 // The Card Almanac (R630) browses with the same filter and sort. Its shelf is `almanacPool`: every
 // catalog card, tokens included, since L3's reason for hiding them is a deck's and the almanac
@@ -27,6 +27,7 @@ import {
 } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
+import { isGlitch } from "../../cards/glitch.ts";
 import { poolFrom } from "./loadout.ts";
 
 /**
@@ -285,7 +286,8 @@ export function visiblePool(
 }
 
 /**
- * What the almanac's grid shows (R630): every catalog card, tokens included, filtered, then sorted.
+ * What the almanac's grid shows (R630): every catalog card, tokens included, Glitch excepted (R674),
+ * filtered, then sorted.
  * There is no collection, so `filter.ownedOnly` is not read.
  */
 export function almanacPool(
@@ -294,7 +296,8 @@ export function almanacPool(
   sort: PoolSort,
   winRates?: ReadonlyMap<string, CardWinRateInfo>,
 ): readonly string[] {
-  return filteredAndSorted(Object.keys(catalog.cards), catalog, filter, sort, winRates);
+  // R674: every card but Glitch, which the almanac never shows.
+  return filteredAndSorted(Object.keys(catalog.cards).filter((id) => !isGlitch(id)), catalog, filter, sort, winRates);
 }
 
 function filteredAndSorted(

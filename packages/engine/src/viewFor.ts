@@ -1044,6 +1044,7 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
     case "unlocked":
     case "healthSet":
     case "rolledBack":
+    case "glitched":
     case "drawLimited":
       return event.type === "healthSet" && event.sourceId !== null && hidden(event.sourceId)
         ? { ...event, sourceId: HIDDEN_ID }

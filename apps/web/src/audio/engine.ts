@@ -3,14 +3,16 @@
 // Lazily built: no AudioContext exists until the first `unlock()`, which the unlock listeners call
 // inside a user gesture (autoplay policy, and iOS's resume-plus-silent-buffer rule). The graph is
 //
-//   per-cue gain ─▶ sfx bus ──────────────────┐
-//   persona gain ─▶ voice bus ────────────────┤
-//   music player ─▶ music bus ─▶ music duck ──┴─▶ master ─▶ limiter ─▶ destination
+//   per-cue gain ─▶ (lane pan) ─▶ sfx bus ─▶ sfx duck ──┐   (both sending a little to one reverb)
+//   persona gain ─▶ voice bus ──────────────────────────┤
+//   music player ─▶ music bus ─▶ music duck ────────────┴─▶ master ─▶ limiter ─▶ destination
 //
 // with bus gains read from the settings store and smoothed on change (mix.ts builds it). Both play
 // calls go through one acceptance gate and never throw. The music player (music.ts) plays into the
 // music bus `musicOutput()` hands out, and the engine ducks it under every voice line and the
-// effects MUSIC_DUCK_SFX names while `duckMusic` is on (R631).
+// effects MUSIC_DUCK_SFX names while `duckMusic` is on (R631). Every voice line also dips the
+// effects to SFX_VOICE_DUCK_GAIN for its span, whatever `duckMusic` says, and an sfx cue whose
+// params carry a `pan` (a unit's lane, cues.ts) plays through a stereo panner (R669).
 //
 // NOTHING IS SCHEDULED ON A CONTEXT THAT IS NOT RUNNING. A suspended (or Safari "interrupted")
 // context's clock stands still, so everything scheduled on it would start together the moment it
@@ -63,8 +65,11 @@ import {
   MUSIC_DUCK_RELEASE_TC_S,
   MUSIC_DUCK_SFX,
   PICKUP_MIN_GAP_MS,
+  SFX_DUCK_ATTACK_TC_S,
+  SFX_DUCK_RELEASE_TC_S,
   SFX_MAX_VOICES,
   SFX_RETRIGGER_MS,
+  SFX_VOICE_DUCK_GAIN,
   VOICE_DECODED_MAX,
   VOICE_FADE_S,
   VOICE_LATE_MS,
@@ -264,7 +269,12 @@ type VoiceChannel = {
   stop: (() => void) | null;
 };
 
-export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine {
+/** The concrete browser engine exposes the room buses; generic test sinks remain plain AudioEngine. */
+export type MatchFeelAudioEngine = AudioEngine & {
+  ambienceOutput(): { context: AudioContext; ambience: AudioNode; crowd: AudioNode; ambienceDuck: GainNode } | null;
+};
+
+export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAudioEngine {
   const factory = options.createContext === undefined ? defaultContextFactory() : options.createContext;
   const speech = options.speech === undefined ? browserSpeechPort() : options.speech;
   const fetchBytes = options.fetchBytes ?? defaultFetchBytes;
@@ -300,6 +310,8 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   const stateListeners = new Set<() => void>();
   /** The context time the music's current duck lets go at. */
   let duckUntil = 0;
+  /** R669: the context time the effects' duck under a voice line lets go at. */
+  let sfxDuckUntil = 0;
   let waiting: VoiceLine[] = [];
   let prefetchScheduled = false;
   /** The keys the prefetch has still to fetch: null until VOICE_PREFETCH_DELAY_MS after it was scheduled. */
@@ -348,6 +360,8 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     const t = ctx.currentTime;
     buses.master.gain.setTargetAtTime(levels.master, t, GAIN_SMOOTHING_S);
     buses.sfx.gain.setTargetAtTime(levels.sfx, t, GAIN_SMOOTHING_S);
+    buses.crowd.gain.setTargetAtTime(levels.crowd, t, GAIN_SMOOTHING_S);
+    buses.ambience.gain.setTargetAtTime(levels.ambience, t, GAIN_SMOOTHING_S);
     buses.voice.gain.setTargetAtTime(levels.voice, t, GAIN_SMOOTHING_S);
     buses.music.gain.setTargetAtTime(levels.music, t, GAIN_SMOOTHING_S);
     // A line already speaking stops with the setting, speech fallback included: the bus gain
@@ -421,6 +435,35 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     gain.setTargetAtTime(1, duckUntil, MUSIC_DUCK_RELEASE_TC_S);
   }
 
+  /**
+   * R669: dips the effects for a voice line's `lengthS` from `startAt` (context time), so the line
+   * is heard over the board. Overlapping lines hold the dip until the last of them ends.
+   */
+  function duckSfx(startAt: number, lengthS: number): void {
+    if (ctx === null || buses === null) return;
+    const gain = buses.sfxDuck.gain;
+    const t = Math.max(ctx.currentTime, startAt);
+    sfxDuckUntil = Math.max(sfxDuckUntil, t + lengthS);
+    gain.cancelScheduledValues(t);
+    gain.setTargetAtTime(SFX_VOICE_DUCK_GAIN, t, SFX_DUCK_ATTACK_TC_S);
+    gain.setTargetAtTime(1, sfxDuckUntil, SFX_DUCK_RELEASE_TC_S);
+  }
+
+  /**
+   * R669: where an sfx cue enters the effects bus: straight in, or through a stereo panner when its
+   * params pan it off centre. Returns what the cue's gain connects to, and the panner to disconnect
+   * after it.
+   */
+  function sfxInput(c: AudioContext, b: Mix, pan: number | undefined): { input: AudioNode; extra: AudioNode | null } {
+    if (pan === undefined || pan === 0 || !Number.isFinite(pan)) {
+      return { input: b.sfx, extra: null };
+    }
+    const panner = c.createStereoPanner();
+    panner.pan.value = Math.max(-1, Math.min(1, pan));
+    panner.connect(b.sfx);
+    return { input: panner, extra: panner };
+  }
+
   /* ----- log ----- */
 
   function pushLog(entry: PlayedCue): void {
@@ -463,20 +506,32 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
         return true;
       }
 
+      // Sand is a fidget surface: every physical tap gets its own crunch, even in a burst faster
+      // than ordinary UI/SFX retrigger protection. Its short, low-gain cue nodes still disconnect
+      // through the normal delayed cleanup below.
+      const rapid = id === "sand";
       const last = lastSfxAt.get(id);
-      if (last !== undefined && t - last < SFX_RETRIGGER_MS) return false;
+      if (!rapid && last !== undefined && t - last < SFX_RETRIGGER_MS) return false;
       sfxEnds = sfxEnds.filter((end) => end > t);
-      if (sfxEnds.length >= SFX_MAX_VOICES) return false;
+      if (!rapid && sfxEnds.length >= SFX_MAX_VOICES) return false;
 
       const cue = ctx.createGain();
       cue.gain.value = spec.gain;
-      cue.connect(buses.sfx);
+      const { input, extra } = sfxInput(ctx, buses, params?.pan);
+      cue.connect(input);
       const lengthMs = spec.recipe(ctx, cue, ctx.currentTime + delay / 1000, params ?? {}) * 1000;
 
-      lastSfxAt.set(id, t);
-      sfxEnds.push(t + delay + lengthMs);
+      if (!rapid) {
+        lastSfxAt.set(id, t);
+        // The fidget surface has its own deliberately unbounded short-voice path. Do not let a
+        // burst of sand grains consume the gameplay/SFX polyphony budget.
+        sfxEnds.push(t + delay + lengthMs);
+      }
       if (MUSIC_DUCK_SFX.includes(id)) duck(ctx.currentTime + delay / 1000, lengthMs / 1000);
-      later(delay + lengthMs + DISCONNECT_GRACE_MS, () => cue.disconnect());
+      later(delay + lengthMs + DISCONNECT_GRACE_MS, () => {
+        cue.disconnect();
+        extra?.disconnect();
+      });
       pushLog(logged());
       return true;
     } catch {
@@ -760,7 +815,10 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       speech.cancel();
     };
     setOutcome(ch.line, "speech");
-    if (ctx !== null) duck(ctx.currentTime, VOICE_SPEECH_MAX_MS / 1000);
+    if (ctx !== null) {
+      duck(ctx.currentTime, VOICE_SPEECH_MAX_MS / 1000);
+      duckSfx(ctx.currentTime, VOICE_SPEECH_MAX_MS / 1000);
+    }
     later(VOICE_SPEECH_MAX_MS, () => release(ch));
     const volume = Math.min(1, Math.max(0, settings.master * settings.voice));
     try {
@@ -815,6 +873,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     };
     source.start(startAt, span.offsetS, span.lengthS);
     duck(startAt, span.lengthS);
+    duckSfx(startAt, span.lengthS);
     setOutcome(line, "file");
     later(lengthMs, () => release(ch));
   }
@@ -1015,6 +1074,10 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       };
     },
     musicOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.music }),
+    ambienceOutput: () =>
+      ctx === null || buses === null || disposed
+        ? null
+        : { context: ctx, ambience: buses.ambience, crowd: buses.crowd, ambienceDuck: buses.ambienceDuck },
     subscribeState: (listener) => {
       stateListeners.add(listener);
       return () => {

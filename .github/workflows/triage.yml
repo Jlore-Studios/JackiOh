@@ -1,19 +1,24 @@
-# Triage (bot/harness/triage.py): a new issue or pull request from someone trusted gets its labels,
-# its assignees, a title that follows docs/issues-and-patches.md and, for an issue, its dependencies
-# (blocked by, blocks, its patch's tracker as parent), from a Devin call. Call it on any thread with
-# `gh workflow run triage.yml -f number=<n>`: it triages that one again, whatever it already has.
+# Triage (bot/harness/triage.py): an issue someone trusted labels `method:manual` or
+# `method:use-bot` (#307), two minutes after the label goes on, and each pull request someone
+# trusted opens, gets its labels, its assignees, a title that follows docs/issues-and-patches.md
+# and, for an issue, its dependencies (blocked by, blocks, its patch's tracker as parent), from a
+# Muse call. `method:manual` makes an issue `human` and assigns both people; `method:use-bot`
+# queues it for the bot and assigns the bot. Call it on any thread with
+# `gh workflow run triage.yml -f number=<n>` (an issue still needs a method label).
 #
-# gate -> classify -> apply. Only classify runs a model, on Devin's own runner on the bot's machine
-# (night-vm-devin), and it holds no write token: it reads the thread's title and body through the
-# API and writes Devin's answer as an artifact. apply, on GitHub's runner, holds the write token
-# and runs no model; it checks the answer against the thread and the repository before changing
-# anything. None of the jobs checks out pull request code. A stranger's issue or pull request
-# stops at the gate, so its text never reaches the machine. Any failure skips quietly.
+# gate -> classify -> apply. Only classify runs a model, on Muse's runner on the bot's machine
+# (night-vm-muse; it ran on Devin's until #317), and it holds no write token: it reads the thread's
+# title and body through the API and writes the answer as an artifact. apply, on GitHub's runner,
+# holds the write token and runs no model; it checks the answer against the thread and the
+# repository before changing anything. None of the jobs checks out pull request code. A stranger's
+# issue or pull request stops at the gate, so its text never reaches the machine. Any failure
+# skips quietly.
 name: triage
 
 on:
+  # A label set while the issue is being opened sends `labeled` too.
   issues:
-    types: [opened]
+    types: [labeled]
   # _target: this repository's workflow runs, never code from the pull request.
   pull_request_target:
     types: [opened]
@@ -25,9 +30,12 @@ on:
 
 permissions: {}
 
+# A run for any label but a method label gets a group of its own and is skipped at once, so a
+# `difficulty:*` or `priority:*` label a person adds during the two-minute wait never cancels the
+# method run. A newer method label cancels an older method run, and the wait starts again.
 concurrency:
-  group: triage-${{ github.event.issue.number || github.event.pull_request.number || inputs.number }}
-  cancel-in-progress: false
+  group: triage-${{ github.event.issue.number || github.event.pull_request.number || inputs.number }}${{ github.event_name == 'issues' && !startsWith(github.event.label.name, 'method:') && format('-{0}', github.run_id) || '' }}
+  cancel-in-progress: ${{ github.event_name == 'issues' }}
 
 env:
   PYTHONUTF8: "1"
@@ -36,6 +44,7 @@ env:
 jobs:
   gate:
     name: gate
+    if: github.event_name != 'issues' || startsWith(github.event.label.name, 'method:')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -57,9 +66,10 @@ jobs:
           python-version: "3.13"
 
       # Trusted author (owner, member, collaborator or .harness/trust.txt), not the bot itself,
-      # something left to do (always, when a person called it), and Devin switched on
-      # (providers.json). A dispatch names the thread, which the gate reads read-only.
-      - name: Should Devin triage this?
+      # an issue with exactly one method label (never `human` with method:use-bot), and Muse
+      # switched on (providers.json). A method label waits two minutes and reads the issue again;
+      # a dispatch names the thread, which the gate reads read-only.
+      - name: Should this be triaged?
         id: gate
         working-directory: bot
         env:
@@ -70,7 +80,7 @@ jobs:
     name: classify
     needs: gate
     if: needs.gate.outputs.go == 'true'
-    runs-on: night-vm-devin
+    runs-on: night-vm-muse
     timeout-minutes: 15
     permissions:
       contents: read         # the default branch's code and conventions
@@ -83,10 +93,10 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
 
-      - name: Ask Devin
+      - name: Ask Muse
         working-directory: bot
         env:
-          GITHUB_TOKEN: ${{ github.token }}   # read-only; never in Devin's environment
+          GITHUB_TOKEN: ${{ github.token }}   # read-only; never in Muse's environment
           NUMBER: ${{ needs.gate.outputs.number }}
         run: |
           python3 -m harness triage classify --number "${NUMBER}" \
@@ -130,8 +140,9 @@ jobs:
 
       # Labels from the repository's own set (no bot:*), assignees only the two people or the
       # bot, a title only when the old one breaks the convention, dependencies only to open
-      # issues; never removes anything. Links the issue's own text gives are made even when
-      # Devin gave no answer.
+      # issues; removes only the assignee a method label moves. The method label's own labels
+      # and assignees, and the links the issue's own text gives, are made even when Muse gave
+      # no answer.
       - name: Label, assign, title and link
         working-directory: bot
         env:

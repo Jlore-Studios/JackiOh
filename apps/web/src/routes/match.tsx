@@ -253,6 +253,18 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     emotes.receive(relayed.from, relayed.emote);
   }, [relayed, emotes]);
 
+  // R738: aims both ways. This seat's go out through the socket; the opponent's relay is drawn,
+  // and only ever the opponent's — a relay is never about the viewer's own seat.
+  const relayedAim = match.aim;
+  const viewer = view?.viewer;
+  const aim = useMemo(
+    () => ({
+      emit: match.sendAim,
+      opponent: relayedAim !== null && relayedAim.from !== viewer ? relayedAim.aim : null,
+    }),
+    [match.sendAim, relayedAim, viewer],
+  );
+
   // The clock frame of the turn the view is on (Clock.tsx `useFrameFor`): a view that has moved on
   // to the next turn never reads the last turn's deadline, even for the moment before its frame lands.
   const clock = useFrameFor(match.clock, turnKeyOf(view));
@@ -336,6 +348,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       legal={match.legal}
       onAction={match.send}
       emotes={emotes}
+      aim={aim}
       trackStats
       // A refused socket's reason is the console's (above); the board says it in a player's words.
       error={refusedWith === null ? match.error : `${connectionWords("refused")}. Head back to the lobby.`}
@@ -359,64 +372,60 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           </button>
         </>
       }
-    />
-  );
-
-  return (
-    <div className="app-shell app-shell--wide">
-      {/*
-        Leaving does NOT end the match — §9.5's clocks and the reaper still own that, and the
-        socket reconnects if you come back. Being unable to leave at all was the worse failure:
-        nav.tsx names this screen as trapped and it was the one that never got a way out.
-      */}
-      <BackLink />
-      <header className="match-bar">
-        <span>
-          Online match · Turn {view.turn} · <ConnectionLine state={match.connection} />
-          {DEV_ONLY ? (
-            <>
-              {" "}
-              · match <code>{matchId}</code> · seat <code>{view.viewer}</code>
-            </>
-          ) : null}
-        </span>
+      turnClock={
         <Clock
           youMs={inMulligan ? mulliganMs : activeIsYou ? turnMs : null}
           opponentMs={inMulligan ? mulliganMs : activeIsYou ? null : turnMs}
           graceMs={graceMs}
           mulligan={inMulligan}
-          // R268, R439: the readout counts down off the frame's own deadlines between the server's
-          // frames — the mulligan window can pass with none, and a turn's last 30 seconds must tick.
           frame={clock}
           viewer={view.viewer}
-          // R79: the turn clock is the active player's, and a prompt held by the other seat runs its
-          // own. A finished game runs neither.
           activePlayer={view.result === null ? view.active : null}
           promptHolder={view.result === null ? promptHolderOf(view.pending, view.viewer) : null}
         />
-      </header>
-      <SeriesBanner series={series} matchId={matchId} gameOver={view.result !== null} />
-      {/*
-        The rematch navigation that survives "View the board": the buttons above live in the
-        result panel's actions and unmount with it, so without this a seat that offered and
-        folded the panel would never be taken to the game the offers created (Rematch.tsx).
-        Same series gate as the buttons: series games offer no rematch.
-      */}
-      {view.result !== null && series === null ? <RematchWatcher token={token} matchId={matchId} /> : null}
-      {ranks !== null ? (
-        <p className="match-ranks" data-testid={matchTestid.ranks}>
-          {ranks.ranked ? "Ranked match" : "Unranked match"} · {ranks.seats.p1.tag}
-          {ranks.seats.p1.you ? " (you)" : ""} {rankWords(ranks.seats.p1.rank)} vs {ranks.seats.p2.tag}
-          {ranks.seats.p2.you ? " (you)" : ""} {rankWords(ranks.seats.p2.rank)}
-        </p>
-      ) : null}
+      }
+      matchStatus={
+        <>
+          Online match · <ConnectionLine state={match.connection} />
+          {DEV_ONLY ? (
+            <>
+              {" "}· match <code>{matchId}</code> · seat <code>{view.viewer}</code>
+            </>
+          ) : null}
+        </>
+      }
+      boardRail={
+        <>
+          <BackLink showSettings={false} />
+          <SeriesBanner series={series} matchId={matchId} gameOver={view.result !== null} />
+          {/*
+            The rematch navigation that survives "View the board": the buttons above live in the
+            result panel's actions and unmount with it, so without this a seat that offered and
+            folded the panel would never be taken to the game the offers created (Rematch.tsx).
+            Same series gate as the buttons: series games offer no rematch.
+          */}
+          {view.result !== null && series === null ? <RematchWatcher token={token} matchId={matchId} /> : null}
+          {ranks !== null ? (
+            <p className="match-ranks" data-testid={matchTestid.ranks}>
+              {ranks.ranked ? "Ranked match" : "Unranked match"} · {ranks.seats.p1.tag}
+              {ranks.seats.p1.you ? " (you)" : ""} {rankWords(ranks.seats.p1.rank)} vs {ranks.seats.p2.tag}
+              {ranks.seats.p2.you ? " (you)" : ""} {rankWords(ranks.seats.p2.rank)}
+            </p>
+          ) : null}
+        </>
+      }
+      boardNotice={
+        readOnly ? (
+          <p className="board-read-only" data-testid={matchTestid.missingLegal} role="alert">
+            Your moves can&rsquo;t be sent from this board right now. Reload the page to rejoin the match.
+          </p>
+        ) : null
+      }
+    />
+  );
 
-      {readOnly ? (
-        <p className="notice" data-testid={matchTestid.missingLegal} role="alert">
-          Your moves can&rsquo;t be sent from this board right now. Reload the page to rejoin the match.
-        </p>
-      ) : null}
-
+  return (
+    <div className="app-shell app-shell--wide">
       {/*
         The provider is ALWAYS rendered, `value={null}` included. `GET /api/catalog` resolves
         asynchronously, and conditionally wrapping the board changes the element type at this

@@ -416,6 +416,8 @@ type MatchDbRow = {
   ended_at: Date | null;
   p1_last_board: unknown;
   p2_last_board: unknown;
+  p1_glitch_board: unknown;
+  p2_glitch_board: unknown;
   ranked: boolean;
   p1_portrait: string | null;
   p2_portrait: string | null;
@@ -428,7 +430,7 @@ type MatchDbRow = {
 const MATCH_COLUMNS = `id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
   catalog_version, turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
   ceiling_at, created_at, ended_at, p1_last_board, p2_last_board, ranked, p1_portrait, p2_portrait,
-  mode, stake`;
+  mode, stake, p1_glitch_board, p2_glitch_board`;
 
 /** R417: a stored board (`last_boards.board`, `matches.p*_last_board`), as migration 0017's CHECK admits it. */
 function lastBoardOf(value: unknown): LastBoardEntry[] {
@@ -444,6 +446,7 @@ function toMatch(row: MatchDbRow): MatchRow {
   }
   const status: MatchStatus = row.status === "over" ? "finished" : "live";
   const boards: [LastBoardEntry[], LastBoardEntry[]] = [lastBoardOf(row.p1_last_board), lastBoardOf(row.p2_last_board)];
+  const glitch: [LastBoardEntry[], LastBoardEntry[]] = [lastBoardOf(row.p1_glitch_board), lastBoardOf(row.p2_glitch_board)];
   return {
     id: row.id,
     seed: row.seed,
@@ -465,6 +468,8 @@ function toMatch(row: MatchDbRow): MatchRow {
     },
     // R417: absent when both are empty, as the registry writes it.
     ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
+    // R678: absent when both are empty, as the registry writes it (migration 0024).
+    ...(glitch[0].length + glitch[1].length > 0 ? { glitchBoards: glitch } : {}),
     // R604: the flag migration 0022 adds. Absent when false, exactly as `MatchRow` types it —
     // `results.ts` reads a missing flag the same way (unranked).
     ...(row.ranked ? { ranked: true } : {}),
@@ -1712,6 +1717,9 @@ function buildStore(session: Session): Store {
           // R672: null on every row but a rematch's, which states both (migration 0023).
           match.mode ?? null,
           match.stake ?? null,
+          // R678: the Glitch boards sampled at creation (migration 0024), '[]' when absent.
+          json(match.glitchBoards?.[0] ?? []),
+          json(match.glitchBoards?.[1] ?? []),
         ];
         const values = `
           $2::text, $3::text, $4::uuid, $5::uuid, $6::jsonb, $7::jsonb, $8::text,
@@ -1725,8 +1733,8 @@ function buildStore(session: Session): Store {
                id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck, catalog_version,
                turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
                grace_deadline_at, ceiling_at, created_at, ended_at, p1_last_board, p2_last_board,
-               p1_portrait, p2_portrait, mode, stake, ranked, started_at, last_seq)
-             values ($1::uuid, ${values}, $21::boolean, ${ts("$15")}, 0)`,
+               p1_portrait, p2_portrait, mode, stake, ranked, started_at, last_seq, p1_glitch_board, p2_glitch_board)
+             values ($1::uuid, ${values}, $21::boolean, ${ts("$15")}, 0, $24::jsonb, $25::jsonb)`,
             params,
           );
           return;
@@ -1742,7 +1750,8 @@ function buildStore(session: Session): Store {
              created_at = ${ts("$15")}, ended_at = ${nullableTs("$16")}, started_at = ${ts("$15")},
              p1_last_board = $17::jsonb, p2_last_board = $18::jsonb,
              p1_portrait = $19::text, p2_portrait = $20::text, ranked = $21::boolean,
-             mode = $22::text, stake = $23::smallint
+             mode = $22::text, stake = $23::smallint,
+             p1_glitch_board = $24::jsonb, p2_glitch_board = $25::jsonb
            where id = $1::uuid`,
           params,
         );
@@ -1912,6 +1921,16 @@ function buildStore(session: Session): Store {
       await session.query(null, `delete from public.matches where id = $1::uuid and status = 'open'`, [
         matchId,
       ]);
+    },
+
+    /**
+     * R679: migration 0024's `app.forget_voided_match`, the one path that erases a live match and
+     * its append-only log. The foreign keys let both players go (`profiles.current_match_id` and
+     * `tickets.match_id` are `on delete set null`); a finished match, or one with a result, stays.
+     */
+    forgetVoided: async (matchId) => {
+      if (!isUuid(matchId)) return;
+      await session.query(null, `select app.forget_voided_match($1::uuid)`, [matchId]);
     },
   };
 
@@ -2462,6 +2481,21 @@ function buildStore(session: Session): Store {
          on conflict (profile_id, kind) do update set board = excluded.board, updated_at = excluded.updated_at`,
         [profileId, kind, json(board), at],
       );
+    },
+    // R678: random other players' non-empty server boards, one per profile (the primary key).
+    sampleOthers: async (excludeProfileIds, count) => {
+      if (count <= 0) return [];
+      const excluded = excludeProfileIds.filter(isUuid);
+      const { rows } = await session.query<{ board: unknown }>(
+        null,
+        `select board from public.last_boards
+          where kind = 'server' and jsonb_array_length(board) > 0
+            and profile_id <> all($1::uuid[])
+          order by random()
+          limit $2::int`,
+        [excluded, count],
+      );
+      return rows.map((row) => lastBoardOf(row.board));
     },
   };
 

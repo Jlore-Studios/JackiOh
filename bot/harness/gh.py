@@ -273,6 +273,12 @@ class GitHub:
             self.request("POST", f"{self._r}/issues/{int(number)}/assignees",
                          {"assignees": logins})
 
+    def remove_assignees(self, number: int, logins: Iterable[str]) -> None:
+        found = [login for login in logins if login]
+        if found:
+            self.request("DELETE", f"{self._r}/issues/{int(number)}/assignees",
+                         {"assignees": found})
+
     def remove_label(self, number: int, name: str) -> None:
         quoted = urllib.parse.quote(name, safe="")
         try:
@@ -461,6 +467,10 @@ class GitHub:
         self.request(
             "POST", f"{self._r}/git/refs", {"ref": f"refs/heads/{branch}", "sha": commit.get("sha", "")}
         )
+
+    def create_branch(self, branch: str, sha: str) -> None:
+        """A branch at `sha` (an existing commit)."""
+        self.request("POST", f"{self._r}/git/refs", {"ref": f"refs/heads/{branch}", "sha": sha})
 
     def delete_branch(self, branch: str) -> None:
         try:

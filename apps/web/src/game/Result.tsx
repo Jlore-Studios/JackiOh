@@ -62,6 +62,9 @@ export function resultReason(outcome: ResultOutcome, reason: GameOverReason): st
       return outcome === "win" ? "Your opponent left the match." : "You left the match.";
     case "match-ceiling":
       return "The match reached its time limit.";
+    case "voided":
+      // R679: a Glitch voided the match; it counts for nobody.
+      return "This match never happened.";
   }
 }
 

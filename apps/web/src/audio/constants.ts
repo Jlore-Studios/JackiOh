@@ -51,6 +51,12 @@ export const VOICE_PREFETCH_CONCURRENCY = 2;
 export const VOICE_SPEECH_MAX_MS = 4000; // speech fallback holds the voice channel at most this long
 export const VOICE_PRELOAD_MAX = 24;     // new keys fetched per preloadVoices call
 export const IMPACT_AMOUNT_CAP = 10;
+/**
+ * #57: the tiered impact's level scale. Its noise and thump peak together, so without it a Big hit
+ * (amount 10 and above in the recipe test, B15) renders just over full scale; with it that hit stays
+ * under 1 and still sits within B57's band of a voice line. A GIGA hit is caught by the limiter.
+ */
+export const IMPACT_HEADROOM = 0.9;
 export const GAIN_SMOOTHING_S = 0.015;   // setTargetAtTime time constant for bus changes
 export const VOICE_DELAY_MS = 150;       // play/cast line after the card whoosh
 export const DEATH_VOICE_DELAY_MS = 120;
@@ -154,3 +160,23 @@ export const MUSIC_DECODED_MAX = 3;
 export const MUSIC_BYTES_MAX = 8;
 /** §10.11's cap on the rendered music, counted in whole disk blocks (gen-music.mjs BUDGET_BYTES). */
 export const MUSIC_BUDGET_BYTES = 24 * 1024 * 1024;
+
+// ---- Patch v0.2.X sound polish (#259, R669): stings, the mix's panning, ducking and reverb ----
+/** A played card's rarity sting starts this long after the card whoosh, so the two read as one. */
+export const STING_DELAY_MS = 40;
+/** The pan of a sound about a unit in the outermost lane; the middle lane is centred. */
+export const LANE_PAN_MAX = 0.6;
+/** The effects' gain under a voice line, and how fast they dip and recover (the music's duck, for the effects). */
+export const SFX_VOICE_DUCK_GAIN = 0.7;
+export const SFX_DUCK_ATTACK_TC_S = 0.03;
+export const SFX_DUCK_RELEASE_TC_S = 0.2;
+/** The shared reverb: a small room's impulse, this long, its noise falling off by this power. */
+export const REVERB_SECONDS = 1.1;
+export const REVERB_DECAY_POWER = 3;
+/** The impulse is stereo: each channel its own noise, so the room is wide around a centred sound. */
+export const REVERB_CHANNELS = 2;
+/** How much of each bus the reverb hears: the effects a little, the voice lines less. */
+export const REVERB_SFX_SEND = 0.3;
+export const REVERB_VOICE_SEND = 0.3;
+/** The impulse's noise is filled from this seed, so every run of the mix is identical. */
+export const REVERB_SEED = 0x52564242; // "RVBB"

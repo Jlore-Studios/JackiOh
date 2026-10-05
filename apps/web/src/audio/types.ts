@@ -8,12 +8,14 @@ import type { CARD_HOOKS } from "./constants.ts";
 export type SfxId =
   | "draw" | "play" | "summon" | "attack" | "impact" | "shieldShatter" | "heal" | "buff" | "debuff"
   | "death" | "burn" | "trapSet" | "trapSting" | "spell" | "mana" | "turnStart" | "victory"
-  | "defeat" | "uiClick" | "uiHover" | "whoosh" | "radiant" | "lock" | "poof" | "notify" | "drain"
+  | "defeat" | "uiClick" | "uiHover" | "whoosh" | "radiant" | "lock" | "poof" | "sand" | "endTurn" | "notify" | "drain"
   | "cancel" | "entrance" | "fatigue" | "refuse"
   // Patch v0.2.0 (R506): card moments, Call to Chaos's roll (R436), a mark (R437), the turn clock (R439).
   | "manaCrack" | "bloodDrain" | "goldBurst" | "castOnDraw" | "chaosRoll" | "brand" | "heartbeat" | "clockTick"
   // Patch v0.2.X (R644): the five emoji emotes (issue §4), synthesized on the effects channel.
-  | "emoteSob" | "emoteYawn" | "emoteLaugh" | "emoteAngry" | "emoteWahWah";
+  | "emoteSob" | "emoteYawn" | "emoteLaugh" | "emoteAngry" | "emoteWahWah"
+  // Patch v0.2.X (#259, R669): the play sting of a card below Legendary.
+  | "sting";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`, which follows the
@@ -45,7 +47,26 @@ export type SfxParams = {
   urgent?: boolean;
   /** brand: the mark lifting from its card, a soft release, rather than the brand landing (R437). */
   release?: boolean;
+  /** sting: the played card's rarity below Legendary (R669). Absent: Common. */
+  tier?: StingTier;
+  /**
+   * R669: where on the board the sound comes from, -1 (the leftmost lane) to 1 (the rightmost), read
+   * off the lane of the unit it is about. Absent: centred. The engine pans; no recipe reads it.
+   */
+  pan?: number;
+  /** #185: a landing Unit's size tier; the summon thud is weighed by it rather than by `amount`. */
+  slamTier?: "tiny" | "small" | "medium" | "large" | "huge" | "massive";
+  /** Match-feel impact and sand variations. The caller supplies a sample from 0 through 1. */
+  variation?: number;
+  /** The public damage tier that selected this impact recipe. */
+  impactTier?: "tiny" | "normal" | "moderate" | "big" | "giga";
+  /** Sand's rolling four-way grain texture and the amount built up by sustained tapping. */
+  sandVariant?: number;
+  sandBuild?: number;
 };
+
+/** R669: the play sting's sizes, by the card's rarity (Common, Rare, Epic). */
+export type StingTier = "common" | "rare" | "epic";
 
 /** A card's sound family in `card-audio.json5`, from its catalog type: which hooks it may carry. */
 export type CardKind = "unit" | "spell" | "trap";
@@ -201,6 +222,10 @@ export type MusicStation = "tavern" | "edm" | "lofi" | "epic";
 export type AudioSettings = {
   master: number; // 0..1
   sfx: number; // 0..1
+  /** Match reactions, above the room bed. */
+  crowd: number;
+  /** Low procedural venue bed, about -24 dB relative to the default SFX bus. */
+  ambience: number;
   voice: number; // 0..1
   muted: boolean;
   voiceOn: boolean;

@@ -145,6 +145,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     drawLimited: { type: "drawLimited", player: "p1" },
     turnCutShort: { type: "turnCutShort", player: "p1", byInstanceId: null },
     marked: { type: "marked", instanceId: enemy, mark: "steal", color: "purple", added: true },
+    glitched: { type: "glitched", player: "p1", outcome: "swap" },
   };
 }
 

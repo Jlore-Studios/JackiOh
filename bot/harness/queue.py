@@ -19,7 +19,8 @@ from harness.clock import iso
 from harness.config import (DEFAULT_DIFFICULTY, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED,
                             LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_PR, LABEL_PR_OPEN,
                             LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW, LABEL_PRIORITY_MEDIUM,
-                            LABEL_READY, LABEL_REVISE, LABEL_WORKING)
+                            LABEL_READY, LABEL_REVISE, LABEL_WORKING, PLAN_FLOOR,
+                            UNRATED_PLAN_FLOOR)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.state import item as state_item
@@ -45,6 +46,12 @@ def set_state_label(ctx: Context, number: int, current: set[str], wanted: str | 
 
 def branch_for_issue(number: int) -> str:
     return f"bot/issue-{int(number)}"
+
+
+def wip_branch(number: int) -> str:
+    """Where a revision of pull request `number` that was cut off keeps its unfinished work
+    (#317 part 3): never the pull request's own branch, which would start CI on it."""
+    return f"bot/wip/{int(number)}"
 
 
 def open_pull_for_branch(ctx: Context, branch: str) -> dict[str, Any] | None:
@@ -80,12 +87,48 @@ def _label_note(names: set[str]) -> str:
 
 def difficulty_of(names: set[str], carried: str = "") -> str:
     """The thread's difficulty: the hardest `difficulty:*` label on it (whatever its case) or
-    `carried` (what its issue had, kept on a bot PR's record), and `medium` with neither."""
+    `carried` (what its issue had, kept on a bot PR's record, or a floor the bot raised it to),
+    and `medium` with neither."""
     found = [DIFFICULTY_LABELS[name.lower()] for name in names
              if name.lower() in DIFFICULTY_LABELS]
     if carried in DIFFICULTIES:
         found.append(carried)
     return max(found, key=DIFFICULTIES.index, default=DEFAULT_DIFFICULTY)
+
+
+def labelled_difficulty(names: set[str]) -> str:
+    """The hardest `difficulty:*` label on the thread, or "" for none."""
+    found = [DIFFICULTY_LABELS[name.lower()] for name in names
+             if name.lower() in DIFFICULTY_LABELS]
+    return max(found, key=DIFFICULTIES.index, default="")
+
+
+def carried_difficulty(record: dict[str, Any]) -> str:
+    """What the state file carries for a thread's difficulty: a bot pull request's issue's
+    (`difficulty`), and a floor the bot raised it to (`difficulty_floor`: the easy rule broken,
+    or three failures under a person's label, #317 part 8), the harder of the two."""
+    found = [str(record.get(key) or "") for key in ("difficulty", "difficulty_floor")]
+    found = [d for d in found if d in DIFFICULTIES]
+    return max(found, key=DIFFICULTIES.index, default="")
+
+
+def rating_source(names: set[str], record: dict[str, Any]) -> str:
+    """Who set the item's difficulty label: `bot` when its record's rating (`difficulty_by`) names
+    the label it carries, `person` for any other label, "" for none (#317 part 8). The bot never
+    replaces a person's label."""
+    label = labelled_difficulty(names)
+    by = record.get("difficulty_by") if isinstance(record.get("difficulty_by"), dict) else {}
+    if label and by.get("difficulty") == label:
+        return "bot"
+    return "person" if label else ""
+
+
+def rated(names: set[str], record: dict[str, Any]) -> bool:
+    """Someone has said how hard it is: a `difficulty:*` label, the bot's own rating
+    (`difficulty_by`), or a difficulty its record carries. An unrated item counts as medium for
+    routing, and a medium or strong model rates it when it plans it (#317 part 8)."""
+    return bool(labelled_difficulty(names) or record.get("difficulty_by")
+                or carried_difficulty(record))
 
 
 def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
@@ -154,6 +197,35 @@ def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, sou
                 + _halt_note(ctx, state) + _label_note(names))
     return (f"Queued a revision of #{number}; I will do it {_when(ctx, state)}.{held}"
             f"{_halt_note(ctx, state)}{_label_note(names)}")
+
+
+def queue_review(ctx: Context, number: int, *, by: str, floor: str = "", notes: str = "",
+                 ask: Ask | None = None) -> str:
+    """Queue a review run of a bot pull request's head, and no revision (`/harness review`,
+    #317 part 10): with `floor` (`strong` or `medium`) it waits for a reviewer of that tier or
+    stronger. Returns the reply line."""
+    pull = ctx.gh.get_pull(number)
+    names = label_names(pull)
+    if pull.get("state") != "open":
+        return f"#{number} is not open, so there is nothing to review."
+    if is_human(names):
+        return human_reply(number)
+    if LABEL_PR not in names:
+        return f"#{number} is not a pull request I opened; review runs are for mine only."
+    if LABEL_WORKING in names:
+        _pending(ctx, number, by, ask)
+        return (f"I am working on #{number} right now. When this run ends I go round once more "
+                "with your comment.")
+    set_state_label(ctx, number, names, LABEL_CROSS)
+
+    def change(state: dict[str, Any]) -> None:
+        record = state_item(state, number)
+        record.update(queued_at=iso(ctx.now()), requested_by=by, review_floor=floor,
+                      review_notes=notes[:2000], stop_requested=False, pending_request=False)
+        asks.note(record, ask)
+    state = ctx.store.update(change, f"queue review #{number}")
+    tier = f", by a {floor} model or stronger" if floor else ""
+    return f"Queued a review run of #{number}{tier}; I will do it {_when(ctx, state)}."
 
 
 def _start_now(ctx: Context, number: int, mode: str, queued: str) -> str:
@@ -257,6 +329,13 @@ class Candidate:
     carries: bool = False
     #: Its labels: subscriptions with `only_labels` take only items carrying them.
     labels: tuple[str, ...] = ()
+    #: Someone has rated how hard it is (`rated`); an unrated build is rated when it is planned.
+    rated: bool = True
+    #: A revision queued because `main` left the pull request with conflicts: only a builder
+    #: with its own reviewer in the run takes it, never Devin (#317 part 2).
+    conflict: bool = False
+    #: For a review: the weakest tier a person asked to review it (`/harness review strong`).
+    review_floor: str = ""
 
 
 def cleared(record: dict[str, Any]) -> dict[str, Any]:
@@ -284,17 +363,29 @@ def plan_of(record: dict[str, Any], thread: dict[str, Any], kind: str) -> dict[s
     return {"planned": False, "plan_tier": ""}
 
 
-def strong_plan(candidate: Candidate) -> bool:
-    """A strong model wrote its plan. A plan from before planners' tiers were recorded counts:
-    the planner was strong whenever one was free."""
-    return candidate.planned and candidate.plan_tier in ("strong", "")
+def plan_floor(candidate: Candidate) -> str:
+    """The weakest tier whose plan this item builds from (`config.PLAN_FLOOR`): medium for an
+    easy item, strong for anything harder, and medium to rate and plan an item nobody has rated
+    or planned yet. One planned but never rated (a plan from before ratings, or a planner that
+    gave none) counts as medium, so it needs a strong plan."""
+    if not candidate.rated and not candidate.planned:
+        return UNRATED_PLAN_FLOOR
+    return PLAN_FLOOR[candidate.difficulty]
+
+
+def plan_meets(candidate: Candidate) -> bool:
+    """Its plan was written by a model of at least its plan floor (#317 part 6). A plan from
+    before planners' tiers were recorded, or one a person put in the description, counts as
+    strong."""
+    return candidate.planned and providers_mod.tier_at_least(candidate.plan_tier or "strong",
+                                                             plan_floor(candidate))
 
 
 def needs_plan(candidate: Candidate) -> bool:
-    """The Needs plan stage: a build with no plan yet, or an easy one whose plan no strong model
-    wrote (a builder that cannot plan, Devin, builds only from a strong model's plan)."""
-    return candidate.kind == "build" and (
-        not candidate.planned or (candidate.difficulty == "easy" and not strong_plan(candidate)))
+    """The Needs plan stage: a build with no plan yet, or one whose plan came from a model
+    weaker than its difficulty's plan floor (a medium plan for a medium or hard item). Devin,
+    which cannot plan, builds only from a plan that meets its floor."""
+    return candidate.kind == "build" and not plan_meets(candidate)
 
 
 #: The order of urgency after forced items, the priority tier and the difficulty (`pairs` in
@@ -402,7 +493,7 @@ def candidates(ctx: Context, state: dict[str, Any],
             found[number] = Candidate(
                 number, kind, str(thread.get("title", "")), bool(record.get("forced")),
                 str(record.get("queued_at") or thread.get("created_at") or ""),
-                difficulty=difficulty_of(names, str(record.get("difficulty") or "")),
+                difficulty=difficulty_of(names, carried_difficulty(record)),
                 builder=str(votes.get("builder") or ""),
                 priority=priority_tier(names), **plan_of(record, thread, kind),
                 approved=tuple(votes.get("approvals") or ()),
@@ -410,7 +501,9 @@ def candidates(ctx: Context, state: dict[str, Any],
                     votes, ctx.cfg.pool.family_tier)),
                 bot_pr=LABEL_PR in names,
                 carries=kind == "revise" and LABEL_PR in names and carries(record),
-                labels=tuple(sorted(names)))
+                labels=tuple(sorted(names)), rated=kind != "build" or rated(names, record),
+                conflict=kind == "revise" and record.get("source") == "conflict",
+                review_floor=str(record.get("review_floor") or "") if kind == "review" else "")
             if kind == "build" and not found[number].forced:
                 builds.append(thread)
     waiting = waits_for(ctx, builds) if builds else {}

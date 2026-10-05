@@ -36,10 +36,12 @@ import type { DecksResponse } from "../../net/api.ts";
 import { BackLink } from "../../routes/nav.tsx";
 import DeckEditor from "./DeckEditor.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
-import { DEFAULT_FILTER, DEFAULT_SORT, type PoolFilter, type PoolSort } from "./filters.ts";
+import type { PoolFilter, PoolSort } from "./filters.ts";
 import ImportPanel from "./ImportPanel.tsx";
+import { loadBrowse, saveBrowse, type SavedBrowse } from "./savedBrowse.ts";
 import TrioImportPanel from "./TrioImportPanel.tsx";
 import {
+  browserStorage,
   createDeckStore,
   type DeckItem,
   type DeckStore,
@@ -396,9 +398,22 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   const [view, setView] = useState<"list" | "editor">(
     initialOpen === undefined || initialOpen === null ? "list" : "editor",
   );
-  // Filter and sort outlive a switch between decks, and are never persisted (Surface D).
-  const [filter, setFilter] = useState<PoolFilter>(DEFAULT_FILTER);
-  const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
+  // Filter and sort outlive a switch between decks, and are kept per device (savedBrowse.ts, #263).
+  const [browseStorage] = useState<StorageLike | null>(() =>
+    props.storage === undefined ? browserStorage() : props.storage,
+  );
+  const [browse, setBrowse] = useState<SavedBrowse>(() => loadBrowse(browseStorage));
+  const { filter, sort } = browse;
+  const updateBrowse = (next: SavedBrowse): void => {
+    setBrowse(next);
+    saveBrowse(browseStorage, next);
+  };
+  const setFilter = (next: PoolFilter): void => {
+    updateBrowse({ filter: next, sort });
+  };
+  const setSort = (next: PoolSort): void => {
+    updateBrowse({ filter, sort: next });
+  };
 
   // On a phone the half that held the focus disappears when the other opens, so the focus follows:
   // to the editor's way back when an item opens, and to the open item's row on the way back.

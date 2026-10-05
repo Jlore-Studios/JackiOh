@@ -14,11 +14,11 @@ export const landingTestid = {
   playOnline: "landing-play-online",
   buildDecks: "landing-build-decks",
   fan: "landing-card-fan",
+  fanLeaving: "landing-fan-leaving",
   hotseat: "landing-hotseat",
   inviteOnly: "landing-invite-only",
   stats: "landing-stats",
   statsClear: "landing-stats-clear",
-  statsLink: "landing-stats-link",
 } as const;
 
 /** `landing-fan-card-${index}`, 0..4. */
@@ -44,6 +44,8 @@ export const loginTestid = {
   linkError: "login-link-error",
   linkErrorSignIn: "login-link-error-sign-in",
   confirmed: "login-confirmed",
+  /** R663: an email change's link came back. */
+  emailChanged: "login-email-changed",
   sessionExpired: "login-session-expired",
   recoveryRefused: "login-recovery-refused",
   recoveryClaim: "login-recovery-claim",
@@ -60,6 +62,18 @@ export const loginTestid = {
   signedInSignOut: "login-signed-in-sign-out",
   resetCooldown: "login-reset-cooldown",
   resendLead: "login-resend-lead",
+  // R664: the email sign-in link and code.
+  emailCodeStart: "login-email-code-start",
+  code: "login-code",
+  codeError: "login-code-error",
+  codeSend: "login-code-send",
+  codeCooldown: "login-code-cooldown",
+  // R665: the authenticator app's step.
+  mfaCode: "login-mfa-code",
+  mfaCancel: "login-mfa-cancel",
+  // R666: one button per configured OAuth provider (`data-provider` names it).
+  oauth: "login-oauth",
+  oauthError: "login-oauth-error",
 } as const;
 
 export const resetTestid = {

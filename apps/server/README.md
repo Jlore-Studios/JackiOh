@@ -173,6 +173,11 @@ written with `collection` in one transaction as every collection change is.
   user-editable in Supabase and can appear in `auth.jwt()`, so an `email_verified` claim there is
   not evidence of anything. §9.4 step 1 requires a verified email, so it comes from
   `auth.admin.getUserById(...).email_confirmed_at`. Authorization data belongs in `app_metadata`.
+- **Two-step sign-in is enforced here (R665).** An account with a verified TOTP factor (read from
+  the same provider user, `factors`) is honoured only with an `aal2` token; an `aal1` one is
+  refused like an invalid token. The last answer that an account has a factor is remembered per
+  user, so an outage cannot lower the bar. Every way in (password, email link or code, OAuth) ends
+  in the same kind of token and the same `pending` profile, so nothing else here changed for them.
 - **RLS** is on for every table in `public`, and the server holds the secret key, which bypasses
   it. Both halves matter: RLS is what stops a browser reading another profile's collection with the
   publishable key, and the secret key is what lets the server be the sole writer (§9.1, §9.8).
@@ -243,7 +248,9 @@ R339). The codec is `packages/shared/src/codes.ts`.
 ## WebSocket surface
 
 One socket per player, per match. The message union is `src/match/protocol.ts`: the client sends
-`hello` and `action`, the server sends `hello`, `view`, `ack`, `error`, `prompt` and `clock`.
+`hello` and `action`, the server sends `hello`, `view`, `ack`, `error`, `prompt` and `clock`. Beside
+them ride three cosmetic frames that are never an action and never part of `PlayerView`: `portraits`
+(R642), `emote` both ways (R643) and `aim` both ways (R738, the opponent's targeting arrow).
 
 A browser sends its access token as the second `Sec-WebSocket-Protocol` entry,
 `new WebSocket(url, ["jackioh.v1", token])`, and the server echoes only `jackioh.v1`. A Node
@@ -267,6 +274,11 @@ Properties the actor holds, each with a test named after it:
   A match whose setup took last boards (below) folds with the boards frozen into it at its start.
   An All Random match (R258) folds, as it started, with both seats dealt (R433), read off the
   match's mode (`matches.modeOf`), so neither player's deck pile lists a card they were not shown.
+- An `aim` (R738) names only public handles — a hero, a zone, a position in the sender's own hand —
+  and is relayed to the opponent alone, at most one relay per seat per `AIM_RELAY_INTERVAL_MS`
+  (the newest waits out the interval, so none is lost). One that names a hand position past the
+  sender's hand, the opponent's hand or a zone off the board is dropped silently at relay time, and
+  a sender whose socket closes, or a game that ends, has its arrow cleared with a `null`.
 
 ### Last boards (C+ #29 Portal to the Past, R417)
 
@@ -283,6 +295,30 @@ gets the same boards back, never a newer one.
   match reads the board of the profile's last server match. Practice keeps its own on the device and
   hotseat has none; an empty board makes the card find nothing.
 - **Who writes it.** Only the server, and it has RLS like every table in `public` (`test:sql`).
+
+### Glitch (issue #170, R676–R679)
+
+The hidden token Glitch does one of four things, announced by a public `glitched` event. Only the
+engine's state moves the server: a client reaches any of it only by legally playing the card.
+
+- **Reset (R676)** is the engine's alone; `(seed, log)` folds to it like any other action.
+- **Swap (R677).** The engine counts `seatSwaps`; the port's `snapshot().seatsSwapped` says whether
+  the accounts hold each other's seat. The actor keys each socket by the seat its account *began*
+  in and reads everything else through `playing(home)`: the view and legal actions it is sent, the
+  seat its actions are stamped with, its disconnect grace. The result is credited by the seats as
+  played at the end (`creditedSeats`), so the winning seat's current account takes the win, the
+  rating move and that seat's last board.
+- **Boards (R678).** At `registry.start` the match samples `GLITCH_BOARDS_SAMPLED` other players'
+  non-empty server last boards (`lastBoards.sampleOthers`, never either seat's own; at random in
+  Postgres), freezes them on the row (`matches.p*_glitch_board`, migration 0024) and passes them to
+  `createGame` and every `fold` beside the last boards. Fewer boards leave a seat empty; none, and
+  the field is absent.
+- **Void (R679).** The game ends with reason `voided`, and the actor calls `voidMatch` instead of
+  `recordResult`: no result, rating move, game record or last board. Both sockets are closed with
+  `MATCH_VOIDED_CLOSE_CODE` and reason `voided` after the last view (which shows the void), the
+  registry drops the actor, `matches.forgetVoided` deletes the row and its log and lets both players
+  go (`app.forget_voided_match`), and one `match.voided` log line names the match and both profiles.
+  A voided Conquest game never happened: the series stays on that game and it starts again at once.
 
 ### Clocks (R79)
 

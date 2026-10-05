@@ -33,6 +33,7 @@ import {
   createMemoryRankedStore,
   createMemoryTutorialStore,
   emptyRankedTables,
+  forgetVoidedRows,
   matchModeIn,
   purgeExpiredRows,
   removeProfileRows,
@@ -414,6 +415,11 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     // No `open` rows here: a reserved match id is only an id until the registry creates it (R263).
     discardOpen: async (_matchId) => {
       call("matches.discardOpen");
+    },
+    // R679: the voided match goes as if it never existed.
+    forgetVoided: async (matchId) => {
+      call("matches.forgetVoided");
+      forgetVoidedRows(tables, matchId);
     },
   };
 

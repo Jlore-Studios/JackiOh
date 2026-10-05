@@ -123,6 +123,21 @@ export type RecordResultInput = {
  */
 export type RecordResult = (input: RecordResultInput) => Promise<ResultRow>;
 
+/** R679: what the actor knows of a match a Glitch voided. */
+export type VoidMatchInput = {
+  matchId: string;
+  /** The match's two profiles, seat order as it began (`MatchRow.players`), for the log line. */
+  players: readonly [string, string];
+  at: number;
+};
+
+/**
+ * R679: forget a voided match — no result, no rating, no record, no last board; the row and its log
+ * go and both players are let go — and log the one line that names it. A voided game of a Conquest
+ * series is played again. Bound at the composition root to `createVoidMatch` (`api/results.ts`).
+ */
+export type VoidMatch = (input: VoidMatchInput) => Promise<void>;
+
 // ---------------------------------------------------------------------------
 // The actor's dependencies
 // ---------------------------------------------------------------------------
@@ -135,4 +150,6 @@ export type ActorDeps = {
   engine: EnginePort;
   createClock: CreateMatchClock;
   recordResult: RecordResult;
+  /** R679: what a Glitch's void outcome does instead of `recordResult`. */
+  voidMatch: VoidMatch;
 };

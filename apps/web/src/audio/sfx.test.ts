@@ -16,11 +16,13 @@ import { CARD_AUDIO } from "./voiceData.ts";
 const UNION_ORDER: SfxId[] = [
   "draw", "play", "summon", "attack", "impact", "shieldShatter", "heal", "buff", "debuff",
   "death", "burn", "trapSet", "trapSting", "spell", "mana", "turnStart", "victory",
-  "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "notify", "drain",
+  "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "sand", "endTurn", "notify", "drain",
   "cancel", "entrance", "fatigue", "refuse",
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
   // Patch v0.2.X (R644): the five emoji emotes.
   "emoteSob", "emoteYawn", "emoteLaugh", "emoteAngry", "emoteWahWah",
+  // Patch v0.2.X (R669): the play sting.
+  "sting",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -49,6 +51,8 @@ const DURATION_MS: Record<SfxId, number> = {
   radiant: 900,
   lock: 400,
   poof: 450,
+  sand: 240,
+  endTurn: 180,
   notify: 300,
   drain: 600,
   cancel: 260,
@@ -69,9 +73,10 @@ const DURATION_MS: Record<SfxId, number> = {
   emoteLaugh: 750,
   emoteAngry: 700,
   emoteWahWah: 1800,
+  sting: 800,
 };
 
-const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }];
+const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];
 
 /** The recipe is asked to start here; `currentTime` is earlier, so "start now" is detectably early. */
 const NOW = 1;
@@ -215,7 +220,7 @@ function rampProblems(run: Run): string[] {
  * --------------------------------------------------------------------------------------------- */
 
 describe("B14 the SFX table", () => {
-  it("B14 SFX_IDS lists all 43 ids, in the order of the SfxId union", () => {
+  it("B14 SFX_IDS lists every id, in the order of the SfxId union", () => {
     expect([...SFX_IDS]).toEqual(UNION_ORDER);
   });
 
@@ -228,6 +233,16 @@ describe("B14 the SFX table", () => {
       expect(spec.gain, id).toBeGreaterThan(0);
       expect(spec.gain, id).toBeLessThanOrEqual(1);
     }
+  });
+
+  it("gives Big and GIGA impacts different escalating low-end recipes", () => {
+    const big = runRecipe("big impact", SFX.impact.recipe, SFX.impact.durationMs, { impactTier: "big", variation: 0.5 });
+    const giga = runRecipe("giga impact", SFX.impact.recipe, SFX.impact.durationMs, { impactTier: "giga", variation: 0.5 });
+    const bigThump = big.made.find((node) => node.kind === "oscillator");
+    const gigaThump = giga.made.find((node) => node.kind === "oscillator");
+
+    expect(big.returned as number).toBeLessThan(giga.returned as number);
+    expect(bigThump?.param("frequency").events.at(0)).not.toEqual(gigaThump?.param("frequency").events.at(0));
   });
 });
 
@@ -275,7 +290,7 @@ describe("B14 every recipe keeps the recipe contract on the fake context", () =>
       late.start(at);
       late.stop(at + 30); // stop: long after at + returned
       try {
-        ctx.createConvolver(); // subset: not permitted
+        ctx.createWaveShaper(); // subset: not permitted
       } catch {
         // The fake throws; the violation is recorded anyway.
       }
@@ -524,5 +539,34 @@ describe("R655 a recipe pitched for a card's effect", () => {
     pitchedRun("death", 0.5);
     const after = runRecipe("death after a pitched run", SFX.death.recipe, SFX.death.durationMs, {});
     expect(new Set(detunes(after))).toEqual(new Set([0]));
+  });
+});
+
+describe("R669 the play sting", () => {
+  const stingRun = (params: SfxParams): Run => runRecipe(`sting ${JSON.stringify(params)}`, SFX.sting.recipe, SFX.sting.durationMs, params);
+
+  it("R669 each tier keeps the recipe contract, and a rarer card's sting is longer and fuller", () => {
+    const runs = [stingRun({}), stingRun({ tier: "rare" }), stingRun({ tier: "epic" })];
+    expect([
+      ...runs.flatMap(subsetProblems),
+      ...runs.flatMap(lengthProblems),
+      ...runs.flatMap(scheduleProblems),
+      ...runs.flatMap(stopProblems),
+      ...runs.flatMap(wiringProblems),
+      ...runs.flatMap(rampProblems),
+    ]).toEqual([]);
+    const lengths = runs.map(returnedSeconds);
+    expect(lengths[0]).toBeLessThan(lengths[1] ?? 0);
+    expect(lengths[1]).toBeLessThan(lengths[2] ?? 0);
+    const voices = runs.map((run) => run.made.filter((n) => n.kind === "oscillator").length);
+    expect(voices[0]).toBeLessThan(voices[1] ?? 0);
+    expect(voices[1]).toBeLessThan(voices[2] ?? 0);
+  });
+
+  it("R669 the pan param changes nothing in a recipe: the engine pans", () => {
+    const plain = stingRun({ tier: "rare" });
+    const panned = stingRun({ tier: "rare", pan: 0.6 });
+    expect(panned.made.map((n) => n.kind)).toEqual(plain.made.map((n) => n.kind));
+    expect(returnedSeconds(panned)).toBe(returnedSeconds(plain));
   });
 });

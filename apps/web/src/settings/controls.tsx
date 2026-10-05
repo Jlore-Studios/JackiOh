@@ -8,6 +8,7 @@ import { useId, type CSSProperties, type ReactElement } from "react";
 import { CARD_SETTINGS_FIELDS, useCardSettings, writeCardSettings } from "../cards/settings.ts";
 import { FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
 import { useFxSettings, type FxIntensity } from "../fx/settings.ts";
+import { useHapticsSettings, writeHapticsSettings } from "../haptics/settings.ts";
 
 /** Every intensity the effects layer knows, in the order the picker lists them. */
 const INTENSITIES: readonly { value: FxIntensity; label: string }[] = [
@@ -171,6 +172,33 @@ export function AnimatedFoilSwitch(): ReactElement {
       </label>
       <p className="settings-hint" id={hintId}>
         {FOIL_FIELD?.description}
+      </p>
+    </div>
+  );
+}
+
+/** R669: the vibration on a drop, a hit and the viewer's turn start, on a phone that has one. */
+export function VibrationSwitch(): ReactElement {
+  const settings = useHapticsSettings();
+  const hintId = useId();
+  return (
+    <div className="settings-row">
+      <label className="settings-control">
+        <span className="settings-label">Vibration</span>
+        <input
+          type="checkbox"
+          role="switch"
+          className="settings-switch"
+          data-testid="setting-vibration"
+          checked={settings.vibration}
+          aria-describedby={hintId}
+          onChange={(event) => {
+            writeHapticsSettings({ vibration: event.currentTarget.checked });
+          }}
+        />
+      </label>
+      <p className="settings-hint" id={hintId}>
+        A short buzz when your card lands, a hit lands and your turn starts, on a phone that can. Off under Reduce motion.
       </p>
     </div>
   );

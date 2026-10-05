@@ -132,6 +132,31 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("<details><summary>The full status</summary>", body)
         self.assertIn("**Night bot status**", body)
 
+    def test_the_training_box_is_drawn_on_its_own(self):
+        """devin-train's slot is on the training box, which the night box's subscriptions cannot
+        take (#317 part 11): two boxes, six slots and one."""
+        ctx = make_ctx(self.gh, at=NIGHT, cfg=make_config(machine=("devin", "devin-train", "muse")))
+        for number in (37, 49):
+            self.gh.add_issue(number, labels=(LABEL_WORKING,))
+        self.gh.runs.update({"101": {"status": "in_progress"}, "102": {"status": "in_progress"}})
+        ago = lambda minutes: iso(NIGHT - timedelta(minutes=minutes))
+        def seed(state):
+            state_item(state, 37).update(provider="devin-train", kind="build", run_id="101",
+                                         started_at=ago(20))
+            state_item(state, 49).update(provider="muse", kind="revise", run_id="102",
+                                         started_at=ago(40))
+        ctx.store.update(seed, "seed")
+        body = dashboard.render(ctx)
+        self.assertIn('subgraph machine["The night box: 1 of 6 slots in use"]', body)
+        self.assertIn('subgraph training["The training box: ladder training items only"]', body)
+        self.assertIn('t0["<b>devin-train</b><br/>building #37<br/>since 21:40"]:::busy', body)
+        self.assertNotIn("devin-train</b>", body.split('subgraph training')[0].split(
+            'subgraph machine')[1])
+        self.assertIn("    section The night box\n    muse", body)
+        self.assertIn("    section The training box\n    devin-train", body)
+        self.assertIn("1 of 6 on the night box, 1 of 1 on the training box", body)
+        self.assertIn("The training box runs only items labelled `training`", body)
+
     def test_nothing_running(self):
         body = dashboard.render(self.ctx)
         self.assertIn("Nothing is running right now.", body)
