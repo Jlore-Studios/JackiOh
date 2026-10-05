@@ -2706,25 +2706,26 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-05T12:32:34Z",
+      "feedback_since": "2026-10-05T13:00:58Z",
       "forced": false,
       "interruptions": 0,
       "issue": 303,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "SPEC \u00a710.11 still says the settings dialog groups its settings in tabs \"(Gameplay, Visuals, Audio and Account)\", so after this change the SPEC describes a fourth tab that no longer exists.",
-          "evidence": "SPEC.md lines 1257\u20131258 read \"The dialog groups them in tabs (Gameplay, Visuals, Audio and Account), and opens on the tab the player used last on that device.\" The diff edits only the R634 row (line 1848) in SPEC.md and leaves this line alone. `grep -rn 'Audio and Account'` finds only this line. By CLAUDE.md, SPEC wins over the code, so a future builder or a REVIEW Part B audit would read the tab's absence as the bug. The builder plainly meant to keep SPEC in sync, since it rewrote R634's Account-tab clause, but missed this line. Fix: drop \"and Account\" (\"(Gameplay, Visuals and Audio)\").",
-          "severity": "blocking",
-          "where": "SPEC.md:1257"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "devin",
+      "question": "",
       "queued_at": "2026-10-05T13:00:00Z",
       "run_id": "37313496417",
-      "self_check_findings": [],
-      "source": "cross-review",
+      "self_check_findings": [
+        {
+          "claim": "The self check's answer could not be read twice in a row.",
+          "evidence": "the harness",
+          "severity": "blocking",
+          "where": "self check"
+        }
+      ],
+      "source": "",
       "started_at": "2026-10-05T13:00:58Z",
       "stop_requested": false,
       "taken_asks": [],
