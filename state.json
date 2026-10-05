@@ -2301,6 +2301,7 @@
     "287": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 0,
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-05T02:16:19Z",
