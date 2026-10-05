@@ -1,7 +1,8 @@
 // DOM effects: the CSS half of the effects layer (docs/polish/1-animations.md S10, B39).
 //
-// The director hands every DOM cue (splat, rays, sheen, ghost, arrows, banner, result, and R502's
-// fracture, Crushing Walls' walls, R437's brand and R436's chaos reveal) to
+// The director hands every DOM cue (splat, rays, sheen, ghost, arrows, banner, result, R502's
+// fracture, Crushing Walls' walls, R437's brand, R436's chaos reveal, and issue #124's fog and
+// zone wave) to
 // `mountDomEffect` at the moment the cue fires, with the anchor boxes it measured then. This module
 // appends exactly one element per cue and writes only data: its kind, its tone, its text as an
 // attribute, and its geometry and timing as `--fx-*` custom properties. Everything visual lives in
@@ -18,7 +19,8 @@
 //
 // Nothing here reads a card identity: a ghost is a card BACK only (R202).
 
-import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxTint } from "./types.ts";
+import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
+import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxTint } from "./types.ts";
 
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
 export type DomEffect = { readonly el: HTMLElement; remove(): void };
@@ -54,6 +56,53 @@ function tint(el: HTMLElement, colours: FxTint): void {
   el.style.setProperty("--fx-mark-rim", colours.rim);
   el.style.setProperty("--fx-mark-core", colours.core);
   el.style.setProperty("--fx-mark-glow", colours.glow);
+}
+
+/** Issue #124: a fog's or a zone wave's colours, as `--fx-tint-*` custom properties fx.css paints with. */
+function tintVars(el: HTMLElement, colours: FxTint): void {
+  el.style.setProperty("--fx-tint-rim", colours.rim);
+  el.style.setProperty("--fx-tint-core", colours.core);
+  el.style.setProperty("--fx-tint-glow", colours.glow);
+}
+
+/** The smallest box holding both, grown by `pad` of its height on every side. */
+function spanOf(a: FxBox, b: FxBox, pad: number): FxBox {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  const right = Math.max(a.x + a.width, b.x + b.width);
+  const bottom = Math.max(a.y + a.height, b.y + b.height);
+  const grow = (bottom - y) * pad;
+  return { x: x - grow, y: y - grow, width: right - x + 2 * grow, height: bottom - y + 2 * grow };
+}
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/**
+ * Issue #124: the fog's body. Puffs of cloud, each its own `--fx-puff` in the roll, and small icons
+ * drifting through them, each its own `--fx-icon`: an emblem's path, never a word (no text node).
+ */
+function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
+  el.style.setProperty("--fx-puffs", String(FX_FOG_PUFFS));
+  for (let i = 0; i < FX_FOG_PUFFS; i += 1) {
+    const puff = doc.createElement("div");
+    puff.className = "fx-fog-puff";
+    puff.style.setProperty("--fx-puff", String(i));
+    el.appendChild(puff);
+  }
+  if (icon === null) return;
+  el.style.setProperty("--fx-icons", String(FX_FOG_ICONS));
+  for (let i = 0; i < FX_FOG_ICONS; i += 1) {
+    const svg = doc.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("class", "fx-fog-icon");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("style", `--fx-icon: ${String(i)}`);
+    const path = doc.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", icon.d);
+    path.setAttribute("fill-rule", icon.rule);
+    svg.appendChild(path);
+    el.appendChild(svg);
+  }
 }
 
 /**
@@ -168,6 +217,25 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
     case "chaos": {
       el.setAttribute("data-text", cue.title);
       chaosLines(doc, el, cue.lines);
+      break;
+    }
+    case "fog": {
+      const from = boxes.from ?? null;
+      const to = boxes.to ?? null;
+      if (from === null || to === null) return null;
+      cover(el, spanOf(from, to, FX_FOG_PAD));
+      el.setAttribute("data-tone", cue.tone);
+      tintVars(el, cue.tint);
+      fogParts(doc, el, cue.icon);
+      break;
+    }
+    case "zone": {
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      cover(el, at);
+      el.setAttribute("data-direction", cue.direction);
+      el.setAttribute("data-text", cue.text);
+      tintVars(el, cue.tint);
       break;
     }
   }

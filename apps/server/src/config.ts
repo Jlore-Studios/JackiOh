@@ -530,6 +530,19 @@ export const SERIES_START_GIVE_UP_SECONDS = 120;
 export const SERIES_WRITE_ATTEMPTS = 3;
 /** How often the series screen and the match screen's series banner re-read the series. */
 export const SERIES_POLL_SECONDS = 2;
+/**
+ * How long the lobby shows "Match found! Taking you to your game…" before navigating to the
+ * paired game, so the pairing reads as an arrival instead of a silent vanish. A `setStatus`
+ * followed by a synchronous `navigate` never paints: the lobby unmounts in the same render
+ * (`main.tsx` keys the gate and the error boundary by path).
+ */
+export const MATCH_FOUND_NAV_DELAY_MS = 1200;
+/**
+ * SPEC §11 R672: how long one seat's rematch offer stands after a non-series match ends. Ten
+ * minutes: long enough to read the result screen and press the button, short enough that a stale
+ * offer cannot summon a game long after both players moved on.
+ */
+export const REMATCH_OFFER_TTL_MS = 600_000;
 
 // ---------------------------------------------------------------------------------------------
 // Tutorial progress on the account (SPEC §9.10, R320). The lessons themselves are the client's
@@ -721,6 +734,7 @@ export const SERVER_CONFIG = Object.freeze({
   SERIES_START_GIVE_UP_SECONDS,
   SERIES_WRITE_ATTEMPTS,
   SERIES_POLL_SECONDS,
+  MATCH_FOUND_NAV_DELAY_MS,
   TUTORIAL_LESSONS_MAX,
   TUTORIAL_LESSON_ID_MAX_LENGTH,
   PLAYER_SETTINGS_GROUPS_MAX,

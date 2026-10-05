@@ -24,16 +24,18 @@ import {
   getCollection,
   getDecks,
   getMe,
+  getOwnRank,
   getPopulation,
   joinRoom,
   type DecksResponse,
   type EnqueueResponse,
+  type OwnRankResponse,
   type QueueMode,
   type SavedDeck,
   type SavedTrio,
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
-import PlayRoute, { MODE_LABEL, PLAY_CHOICE_KEY, playModeTestid, playTestid } from "./play.tsx";
+import PlayRoute, { MATCH_FOUND_STATUS, MODE_LABEL, PLAY_CHOICE_KEY, pairTargetOf, playModeTestid, playTestid } from "./play.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -48,6 +50,7 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     getCatalog: vi.fn(),
     getCollection: vi.fn(),
     getPopulation: vi.fn(),
+    getOwnRank: vi.fn(),
   };
 });
 vi.mock("../net/navigate.ts", async (importOriginal) => {
@@ -128,6 +131,19 @@ function openTicket(mode: QueueMode): EnqueueResponse {
   return { ticketId: "tk-1", status: "open", matchId: null, seriesId: null, population: 1, mode };
 }
 
+/** `GET /api/ranked`'s answer: a Normal Grape III with one pip, unless a test overrides it. */
+function rankBody(over: Partial<OwnRankResponse> = {}): OwnRankResponse {
+  return {
+    season: "v0.2",
+    tag: "ABC123",
+    rank: { tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" },
+    streak: 2,
+    record: { games: 10, wins: 7, losses: 2, draws: 1 },
+    badges: [],
+    ...over,
+  };
+}
+
 beforeEach(() => {
   try {
     window.localStorage.clear();
@@ -142,6 +158,7 @@ beforeEach(() => {
     entries: ALL_IDS.map((id) => ({ cardId: id, quantity: 1 })),
   });
   vi.mocked(getPopulation).mockResolvedValue({ population: 3, byMode: { bo1: 2, bo3: 0, random: 1 } });
+  vi.mocked(getOwnRank).mockResolvedValue(rankBody());
 });
 
 afterEach(() => {
@@ -180,18 +197,26 @@ describe("the lobby's match watch", () => {
     vi.mocked(getMe).mockResolvedValue(me("match-42"));
     render(<PlayRoute token={TOKEN} />);
 
-    await waitFor(() => {
-      expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-42");
-    });
+    // The pairing announces itself for one beat (`MATCH_FOUND_NAV_DELAY_MS`) before the
+    // navigation lands it, so every navigation below waits past that beat.
+    await waitFor(
+      () => {
+        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-42");
+      },
+      { timeout: 5000 },
+    );
   });
 
   it("R259 sends a player between the games of a series to the series screen on mount", async () => {
     vi.mocked(getMe).mockResolvedValue(me(null, "series-7"));
     render(<PlayRoute token={TOKEN} />);
 
-    await waitFor(() => {
-      expect(vi.mocked(navigate)).toHaveBeenCalledWith("/series/series-7");
-    });
+    await waitFor(
+      () => {
+        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/series/series-7");
+      },
+      { timeout: 5000 },
+    );
   });
 
   it("leaves a player who is in no match exactly where they are", async () => {
@@ -226,6 +251,45 @@ describe("the lobby's way to practice", () => {
     await waitFor(() => {
       expect(vi.mocked(getMe)).toHaveBeenCalled();
     });
+  });
+});
+
+describe("R661 the lobby's rank", () => {
+  it("R661 shows the player's own rank in R612's words with the season, and links the leaderboard", async () => {
+    await renderLobby();
+
+    expect(await screen.findByTestId(playTestid.rank)).toHaveTextContent(
+      "Normal Grape III · 1/3 pips · Season v0.2",
+    );
+    const link = screen.getByTestId(playTestid.leaderboard);
+    expect(link).toHaveAttribute("href", paths.leaderboard);
+    // A panel of its own beside the queue, never inside the Find a match box (R505).
+    const box = screen.getByRole("region", { name: "Find a match" });
+    expect(within(box).queryByTestId(playTestid.rank)).toBeNull();
+    expect(within(box).queryByTestId(playTestid.leaderboard)).toBeNull();
+  });
+
+  it("R661 puts R612's words on placements and a Jlorious position too, and never a rating", async () => {
+    vi.mocked(getOwnRank).mockResolvedValue(
+      rankBody({ rank: { tier: "raisin", placementsPlayed: 4, placementGames: 10 } }),
+    );
+    const first = render(<PlayRoute token={TOKEN} />);
+    expect(await screen.findByTestId(playTestid.rank)).toHaveTextContent("Raisin · 4/10 placements");
+    first.unmount();
+
+    vi.mocked(getOwnRank).mockResolvedValue(rankBody({ rank: { tier: "jlorious", position: 42 } }));
+    render(<PlayRoute token={TOKEN} />);
+    const rank = await screen.findByTestId(playTestid.rank);
+    expect(rank).toHaveTextContent("Jlorious #42 · Season v0.2");
+    expect(rank.textContent).not.toMatch(/rating|elo/i);
+  });
+
+  it("R661 a rank that cannot be read shows nothing there, and the link stays", async () => {
+    vi.mocked(getOwnRank).mockRejectedValue(new Error("network down"));
+    await renderLobby();
+
+    expect(screen.queryByTestId(playTestid.rank)).toBeNull();
+    expect(screen.getByTestId(playTestid.leaderboard)).toHaveAttribute("href", paths.leaderboard);
   });
 });
 
@@ -275,6 +339,11 @@ describe("the lobby's modes", () => {
     });
     await screen.findByText(/In the Best of 1 queue/);
 
+    // The setup locks while queued, so the next mode is picked after leaving it.
+    fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
+    await waitFor(() => {
+      expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
+    });
     pickMode("bo3");
     fireEvent.change(screen.getByTestId(playTestid.trioSelect), { target: { value: LOOSE.id } });
     fireEvent.click(screen.getByTestId(playTestid.queue));
@@ -283,6 +352,10 @@ describe("the lobby's modes", () => {
     });
     await screen.findByText(new RegExp(`In the ${MODE_LABEL.bo3} queue`));
 
+    fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
+    await waitFor(() => {
+      expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
+    });
     pickMode("random");
     fireEvent.click(screen.getByTestId(playTestid.queue));
     await waitFor(() => {
@@ -449,29 +522,43 @@ describe("the lobby's answers", () => {
     pickMode("bo3");
     fireEvent.click(screen.getByTestId(playTestid.queue));
 
-    await waitFor(() => {
-      expect(vi.mocked(navigate)).toHaveBeenCalledWith("/series/series-1");
-    });
+    await waitFor(
+      () => {
+        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/series/series-1");
+      },
+      { timeout: 5000 },
+    );
   });
 
-  it("a join that makes a series goes to the series screen; one that makes a match, to the board", async () => {
+  it("a join that makes a series goes to the series screen", async () => {
     vi.mocked(joinRoom).mockResolvedValueOnce({ matchId: null, seriesId: "series-2", code: "ABCD", seat: "p2", mode: "bo3" });
     await renderLobby();
     pickMode("bo3");
     fireEvent.change(screen.getByTestId(playTestid.joinInput), { target: { value: "abcd" } });
     fireEvent.submit(screen.getByTestId(playTestid.joinForm));
 
-    await waitFor(() => {
-      expect(vi.mocked(navigate)).toHaveBeenCalledWith("/series/series-2");
-    });
+    await waitFor(
+      () => {
+        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/series/series-2");
+      },
+      { timeout: 5000 },
+    );
     expect(vi.mocked(joinRoom)).toHaveBeenCalledWith(TOKEN, "ABCD", { mode: "bo3", trioId: MAIN.id });
+  });
 
+  it("a join that makes a match goes to the board", async () => {
     vi.mocked(joinRoom).mockResolvedValueOnce({ matchId: "match-3", seriesId: null, code: "ABCD", seat: "p2", mode: "random" });
+    await renderLobby();
     pickMode("random");
+    fireEvent.change(screen.getByTestId(playTestid.joinInput), { target: { value: "abcd" } });
     fireEvent.submit(screen.getByTestId(playTestid.joinForm));
-    await waitFor(() => {
-      expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-3");
-    });
+
+    await waitFor(
+      () => {
+        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-3");
+      },
+      { timeout: 5000 },
+    );
   });
 
   it("R264 a join refused for another mode switches to the room's mode and says what to pick", async () => {
@@ -505,5 +592,94 @@ describe("the lobby's answers", () => {
     const roomMode = screen.getByTestId(playTestid.roomMode);
     expect(roomMode).toHaveAttribute("data-mode", "random");
     expect(roomMode).toHaveTextContent("All Random");
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// queue state: locked while queued, announced when paired
+// ---------------------------------------------------------------------------------------------
+
+describe("the lobby's queue state", () => {
+  it("pairTargetOf reads the board, the series screen, or nowhere", () => {
+    expect(pairTargetOf({ currentMatchId: "match-42", currentSeriesId: null })).toBe("/match/match-42");
+    expect(pairTargetOf({ currentMatchId: null, currentSeriesId: "series-7" })).toBe("/series/series-7");
+    expect(pairTargetOf({ currentMatchId: null, currentSeriesId: null })).toBeNull();
+    // The board wins when both are somehow set.
+    expect(pairTargetOf({ currentMatchId: "match-1", currentSeriesId: "series-1" })).toBe("/match/match-1");
+  });
+
+  it("locks the setup while queued, with Leave as the way out", async () => {
+    vi.mocked(enqueue).mockResolvedValue(openTicket("bo1"));
+    await renderLobby();
+    fireEvent.click(screen.getByTestId(playTestid.queue));
+
+    await waitFor(() => {
+      expect(screen.getByTestId(playTestid.searching)).toBeInTheDocument();
+    });
+    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
+    for (const mode of ["bo1", "bo3", "random"] as const) {
+      expect(screen.getByTestId(playModeTestid(mode))).toBeDisabled();
+    }
+    expect(screen.getByTestId(playTestid.deckSelect)).toBeDisabled();
+    expect(screen.getByTestId(playTestid.createRoom)).toBeDisabled();
+    expect(screen.getByTestId(playTestid.joinInput)).toBeDisabled();
+    expect(screen.getByTestId(playTestid.joinSubmit)).toBeDisabled();
+    // ...but never traps the player: Leave stays lit.
+    expect(screen.getByTestId(playTestid.leaveQueue)).not.toBeDisabled();
+  });
+
+  it("announces the pairing before navigating to it", async () => {
+    vi.mocked(getMe).mockResolvedValue(me("match-42"));
+    render(<PlayRoute token={TOKEN} />);
+
+    // The status paints first and the navigation follows a beat later: a `navigate` in the
+    // same breath would unmount this screen before the status commits, which a mocked
+    // `navigate` cannot tell — so this asserts the order, not just both happening.
+    expect(await screen.findByTestId(playTestid.status)).toHaveTextContent(MATCH_FOUND_STATUS);
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+    // The setup stays locked while the found beat plays, Leave included.
+    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
+    expect(screen.getByTestId(playTestid.leaveQueue)).toBeDisabled();
+    for (const mode of ["bo1", "bo3", "random"] as const) {
+      expect(screen.getByTestId(playModeTestid(mode))).toBeDisabled();
+    }
+    await waitFor(
+      () => {
+        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-42");
+      },
+      { timeout: 5000 },
+    );
+  });
+
+  it("an enqueue that pairs at once announces before navigating", async () => {
+    vi.mocked(enqueue).mockResolvedValue({ ...openTicket("bo1"), status: "matched", matchId: "match-7" });
+    await renderLobby();
+    fireEvent.click(screen.getByTestId(playTestid.queue));
+
+    // A pairing straight out of the answer announces itself like a watched one, not silently.
+    expect(await screen.findByTestId(playTestid.status)).toHaveTextContent(MATCH_FOUND_STATUS);
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+    await waitFor(
+      () => {
+        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-7");
+      },
+      { timeout: 5000 },
+    );
+  });
+
+  it("a join that pairs at once announces before navigating", async () => {
+    vi.mocked(joinRoom).mockResolvedValue({ matchId: "match-8", seriesId: null, code: "ABCD", seat: "p2", mode: "bo1" });
+    await renderLobby();
+    fireEvent.change(screen.getByTestId(playTestid.joinInput), { target: { value: "abcd" } });
+    fireEvent.submit(screen.getByTestId(playTestid.joinForm));
+
+    expect(await screen.findByTestId(playTestid.status)).toHaveTextContent(MATCH_FOUND_STATUS);
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+    await waitFor(
+      () => {
+        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-8");
+      },
+      { timeout: 5000 },
+    );
   });
 });

@@ -506,6 +506,17 @@ export type MatchRow = {
    * migration 0022; the store reads a false flag back as an absent one.
    */
   ranked?: boolean;
+  /**
+   * R672: the mode a rematch was made in, written when the rematch is created (migration 0023).
+   * Absent on every older row, whose mode `matches.modeOf` keeps deriving from its tickets, room
+   * or series exactly as before — no creation site but the rematch writes this.
+   */
+  mode?: QueueMode;
+  /**
+   * R672: a double-or-nothing rematch's stakes (migration 0023). Absent reads as 1, a normal game;
+   * only 2 is ever written, and only on a ranked rematch.
+   */
+  stake?: 1 | 2;
   status: MatchStatus;
   createdAt: number;
   finishedAt: number | null;
@@ -1130,6 +1141,14 @@ export type StartMatchInput = {
   /** R604: true when the queue paired it, for the match row. */
   ranked: boolean;
   seats: [MatchSeat, MatchSeat];
+  /**
+   * R672: the mode a rematch is made in, carried onto the match row. Absent everywhere else: the
+   * queue, the rooms and the series keep deriving the mode from what made the match
+   * (`matches.modeOf`), and only a rematch — which no ticket, room or series made — states it.
+   */
+  mode?: QueueMode;
+  /** R672: a double-or-nothing rematch's stakes, carried onto the match row. Absent reads as 1. */
+  stake?: 1 | 2;
 };
 
 /**
@@ -1148,6 +1167,12 @@ export type MatchDirectory = {
   has: (matchId: string) => boolean;
   /** Drop the in-memory actor; the log stays. Used by the reaper and by tests. */
   stop: (matchId: string) => Promise<void>;
+  /**
+   * R672: which seats' match sockets are open right now, or null when no live actor holds the
+   * match. The rematch status reads the opponent's seat off this: presence is an open socket, so
+   * a player who left or logged out reads as gone.
+   */
+  presenceOf: (matchId: string) => { p1: boolean; p2: boolean } | null;
 };
 
 // ---------------------------------------------------------------------------

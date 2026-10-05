@@ -46,6 +46,7 @@ import {
   FaceDownSheet,
   Icon,
   MinionFace,
+  PileDepth,
   UNREVEALED_NOTE,
   faceDownLabel,
   faceModel,
@@ -438,12 +439,9 @@ export default function Card(props: CardProps): ReactElement {
       )}
 
       {/* §3.2: the cards under a Stack pile are face-down and dormant. The view gives their
-          number only, so the pile shows a depth badge and no second card. */}
-      {buried > 0 && (
-        <span className="buried-badge" data-buried={buried} title="Cards buried under this pile">
-          {buried}
-        </span>
-      )}
+          number only, so the pile shows a depth badge and no second card; a press opens the pile
+          as a wheel, the top with its face and every buried card as a back. */}
+      {buried > 0 && <PileDepth buried={buried} top={face} className="buried-badge" />}
 
       {props.switchTarget === true && unit !== undefined && unit !== null && (
         <SwitchButton instanceId={unit.instanceId} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />

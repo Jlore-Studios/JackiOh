@@ -4039,6 +4039,35 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/cards/art/convention.test.ts",
     );
   });
+
+  // Proved by apps/web routes/landing.test.tsx "R661 …" (no Stats call to action; the footer's link is
+  // the only one), routes/stats.test.tsx "R661 …" (no data source, no count towards the gate, no word of
+  // AI padding or a gate, the drill-down included), routes/almanac.test.tsx "R654 R661 …" (the card
+  // detail's statistics block names no source), and routes/play.test.tsx "R661 …" (the lobby's own rank
+  // in R612's words, its leaderboard link, and nothing when the rank cannot be read).
+  it("R661 keeps statistics off the landing page's calls to action and their workings behind the curtain, and shows the rank in the lobby", () => {
+    provenIn(661, WEB_LANDING_TEST, WEB_STATS_ROUTE_TEST, "../../../apps/web/src/routes/almanac.test.tsx", WEB_PLAY_TEST);
+  });
+
+  // Proved by glow-facts.test.ts "R662 …" (the query facts and condition.ts's granted half) and by
+  // each card's own test, both faces: on when the condition holds, off when it does not.
+  it("R662 the yellow glow for the conditions R195 left out", () => {
+    provenIn(
+      662,
+      "glow-facts.test.ts",
+      "../../cards/test/018-bread-and-butter.test.ts",
+      "../../cards/test/038-quickstriker.test.ts",
+      "../../cards/test/041-sheepish.test.ts",
+      "../../cards/test/060-bear-honeypot.test.ts",
+      "../../cards/test/064-gifted-program.test.ts",
+      "../../cards/test/070-spiteful-stab.test.ts",
+      "../../cards/test/078-fullsend.test.ts",
+      "../../cards/test/085-unlicensed-experimentation.test.ts",
+      "../../cards/test/096-my-pawn.test.ts",
+      "../../cards/test/100-ceaseless-void.test.ts",
+    );
+  });
+
   // Proved by counterWarning.test.ts "R667 …" (fixture counters: who is warned, never a Trap, a hand
   // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
   // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
@@ -4056,6 +4085,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // became swapping on, Temporary kept, and the end of turn replaying exactly.
   it("R671 Book of Wildfire becomes a different Book at the end of its owner's turn, and the Book keeps swapping", () => {
     provenIn(671, "../../cards/test/classic/055-book-of-wildfire.test.ts");
+  });
+
+  // Proved by apps/server/test/api/rematch.test.ts "R672 …" (equal stakes make one rematch with
+  // the finished decks, mismatched stakes make none, doubles need a ranked match, and a doubled
+  // game moves each side's rating twice the single update's delta).
+  it("R672 a double-or-nothing rematch is ranked-only and moves each side's rating twice as far", () => {
+    provenIn(672, "../../../apps/server/test/api/rematch.test.ts");
   });
 
   // Proved by targeting.test.ts "R682 …" (no play carries discards, the exact cost pays both with no

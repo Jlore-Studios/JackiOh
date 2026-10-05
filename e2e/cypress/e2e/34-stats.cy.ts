@@ -1,9 +1,11 @@
-// Spec 34 — the public Statistics page (issue #131; SPEC §9.11, R654), on the landing page and `/stats`,
-// against `build:e2e` with stubbed `/api/stats/*` endpoints.
+// Spec 34 — the public Statistics page (issues #131 and #255; SPEC §9.11, R654, R661), on the landing
+// page and `/stats`, against `build:e2e` with stubbed `/api/stats/*` endpoints.
 //
-// BUILD M8's key assertions for this row: "the footer's "Stats" link opens `/stats`; provisional banner
-// shows live game count; summary tiles render; cards table searches and filters; card drill-down
-// opens CardFace modal; players tab renders public stats without Elo; Back returns to the landing page".
+// BUILD M8's key assertions for this row: "the landing's calls to action carry no Stats link and the
+// footer's "Stats" link opens `/stats`; the provisional banner names no data source and no count
+// towards the gate; summary tiles render the patch's games once, with no data source; cards table
+// searches and filters; card drill-down opens CardFace modal; players tab renders public stats
+// without Elo; Back returns to the landing page".
 //
 // Run it:
 //   pnpm build:e2e
@@ -24,7 +26,6 @@ import {
   STATS_PROVISIONAL_BANNER,
   STATS_SCREEN,
   STATS_SEARCH_INPUT,
-  STATS_SUMMARY_LIVE_GAMES,
   STATS_SUMMARY_TILES,
   STATS_SUMMARY_TOTAL_GAMES,
   STATS_TAB_PLAYERS,
@@ -154,16 +155,15 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
     });
   });
 
-  it("R654 signed out: the footer's Stats link, provisional banner, search, drill-down, players tab without Elo, and Back", () => {
+  it("R654 R661 signed out: no Stats call to action, the footer's Stats link, a provisional banner with no source or gate, search, drill-down, players tab without Elo, and Back", () => {
     expect(seed, "BUILD M8: every spec sets a seed").to.be.a("string").and.not.eq("");
 
     cy.visit("/");
     cy.get(ts(landingTestid.root)).should("be.visible");
 
-    // Landing CTA link to stats is present
-    cy.get(ts(landingTestid.statsLink))
-      .should("have.attr", "href", "/stats")
-      .and("contain.text", "Stats");
+    // R661: the landing's calls to action carry no Stats link; the site footer is the way in
+    cy.get(ts(landingTestid.root)).find(".landing-ctas").should("not.contain.text", "Stats");
+    cy.get(ts(landingTestid.root)).find(".landing-ctas a[href='/stats']").should("not.exist");
 
     // The footer's Stats link sits right after Card almanac
     cy.get(ts(SITE_FOOTER))
@@ -179,15 +179,22 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
     cy.title().should("eq", "Statistics · JackiOh");
     cy.get(ts(STATS_SCREEN)).should("be.visible");
 
-    // Provisional banner shows live game count progress below the 1000 gate
+    // The provisional banner says the figures are provisional, and names no source and no gate (R661)
     cy.get(ts(STATS_PROVISIONAL_BANNER))
       .should("be.visible")
-      .and("contain.text", "412 / 1000 live games on this patch");
+      .and("contain.text", "Provisional statistics")
+      .and("not.contain.text", "1000")
+      .and("not.contain.text", "AI development games");
+    cy.get(ts(STATS_SCREEN))
+      .should("not.contain.text", "Data source")
+      .and("not.contain.text", "AI games + live games (provisional)");
 
-    // Summary tiles show total games and live games
-    cy.get(ts(STATS_SUMMARY_TILES)).should("be.visible");
-    cy.get(ts(STATS_SUMMARY_TOTAL_GAMES)).should("contain.text", "1,412");
-    cy.get(ts(STATS_SUMMARY_LIVE_GAMES)).should("contain.text", "412");
+    // The summary counts the patch's games in one tile — never the gate's live count or the word
+    // "live" (R661)
+    cy.get(ts(STATS_SUMMARY_TILES)).should("be.visible").and("not.contain.text", "live");
+    cy.get(ts(STATS_SUMMARY_TOTAL_GAMES))
+      .should("contain.text", "Games on patch v0.2.0")
+      .and("contain.text", "1,412");
 
     // Cards table renders rows
     cy.get(ts(STATS_CARDS_TABLE)).should("be.visible");

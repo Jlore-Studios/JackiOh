@@ -257,6 +257,24 @@ export function createSoundDirector(
       const at = owed.findIndex((item) => item.event === first);
       if (at > 0) flush(owed.splice(0, at));
 
+      // Issue #124: a sweep or a whole-pile impact stands for many events, so voicing each would
+      // stack a sound per card; condense the entry to one of each sfx and its most important line.
+      if (entry.sweep !== undefined || entry.zone !== undefined) {
+        const items: Owed[] = [];
+        for (const event of entry.events) {
+          const index = owed.findIndex((item) => item.event === event);
+          const item = index >= 0 ? owed.splice(index, 1)[0] : undefined;
+          if (voiced.has(event)) continue;
+          if (item === undefined && known.has(event)) continue;
+          voiced.add(event);
+          const view = item?.view ?? seen;
+          if (view === null) continue;
+          items.push({ event, view });
+        }
+        flush(items);
+        return;
+      }
+
       entry.events.forEach((event, k) => {
         const index = owed.findIndex((item) => item.event === event);
         const item = index >= 0 ? owed[index] : undefined;

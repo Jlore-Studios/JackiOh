@@ -47,6 +47,7 @@ import { getCatalog, getMatchRanks, type MatchRanksResponse } from "../net/api.t
 import { navigate, paths } from "../net/navigate.ts";
 import { rankWords } from "../rank/rank.ts";
 import { BackLink, followInApp } from "./nav.tsx";
+import RematchButtons, { RematchWatcher } from "./Rematch.tsx";
 import { SeriesBanner, SeriesContinue, useMatchSeries } from "./SeriesBanner.tsx";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
@@ -339,9 +340,19 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       // A refused socket's reason is the console's (above); the board says it in a player's words.
       error={refusedWith === null ? match.error : `${connectionWords("refused")}. Head back to the lobby.`}
       resultActions={
-        // A finished match's way on (Result.tsx): the series' next game first when there is one,
-        // then the lobby, where the next one starts.
+        // A finished match's way on (Result.tsx): a rematch while the opponent is still here —
+        // never for a series game, finished or not: the server refuses those (`series_game`),
+        // and the Conquest continue flow owns what comes next — then the series' next game
+        // when there is one, then the lobby, where the next one starts.
         <>
+          {series === null ? (
+            <RematchButtons
+              token={token}
+              matchId={matchId}
+              connection={match.connection}
+              ranked={ranks?.ranked ?? false}
+            />
+          ) : null}
           <SeriesContinue series={series} matchId={matchId} />
           <button type="button" data-testid="result-back" onClick={() => navigate(paths.play)}>
             Back to lobby
@@ -385,6 +396,13 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
         />
       </header>
       <SeriesBanner series={series} matchId={matchId} gameOver={view.result !== null} />
+      {/*
+        The rematch navigation that survives "View the board": the buttons above live in the
+        result panel's actions and unmount with it, so without this a seat that offered and
+        folded the panel would never be taken to the game the offers created (Rematch.tsx).
+        Same series gate as the buttons: series games offer no rematch.
+      */}
+      {view.result !== null && series === null ? <RematchWatcher token={token} matchId={matchId} /> : null}
       {ranks !== null ? (
         <p className="match-ranks" data-testid={matchTestid.ranks}>
           {ranks.ranked ? "Ranked match" : "Unranked match"} · {ranks.seats.p1.tag}

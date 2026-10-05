@@ -5523,5 +5523,66 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.2.14b",
+    "date": "2026-10-05",
+    "title": "Patch v0.2.Y: the yellow condition glow for ten Core cards",
+    "source": "#260",
+    "notes": "The yellow 'condition met' glow (R662) for Bread and Butter, Bear Honeypot, Unlicensed Experimentation, My Pawn, Spiteful Stab and Ceaseless Void, and for the hand cards Quickstriker, Gifted Program and a Radiant /fullsend grant a condition to; Sheepish never glows. Only each script's line count moves; no card plays differently.",
+    "commits": [
+      "80e7960ccaef1a8c0bb5c463eadacd8fd402d858"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-018",
+        "name": "Bread and Butter",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-060",
+        "name": "Bear Honeypot",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-070",
+        "name": "Spiteful Stab",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-085",
+        "name": "Unlicensed Experimentation",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-096",
+        "name": "My Pawn",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-100",
+        "name": "Ceaseless Void",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      }
+    ]
   }
 ]

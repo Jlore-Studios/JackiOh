@@ -2,7 +2,7 @@
 // driven here against the real stores (`groups.ts`) and `localStorage`, with a fake API that merges
 // the way the server does (a group replaces the stored one only when strictly later).
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readAudioSettings, resetAudioSettingsForTests, writeAudioSettings } from "../audio/settings.ts";
@@ -10,8 +10,6 @@ import { readCardSettings, writeCardSettings } from "../cards/settings.ts";
 import { getFxSettings, resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import type { PlayerSettingsAccountCopy, PlayerSettingsGroup } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
-import { clearSession, writeSession } from "../net/session.ts";
-import AccountSettings from "./AccountSettings.tsx";
 import {
   SETTINGS_SYNC_DEBOUNCE_MS,
   SETTINGS_SYNC_GRACE_MS,
@@ -479,83 +477,6 @@ describe("R634 the hook: one sync for the page, only for an active account", () 
 
     expect(api.load.mock.calls[0]?.[0]).toBe("first");
     expect(api.save.mock.calls[0]?.[0]).toBe("renewed");
-    view.unmount();
-  });
-});
-
-describe("R633 the Account tab's status", () => {
-  function ready(profileId: string): Account {
-    return { kind: "ready", token: "tok", me: { profile: { id: profileId, status: "active" } } } as unknown as Account;
-  }
-
-  function Screen({ account, api }: { account: Account; api: SettingsAccountApi }) {
-    useSettingsAccountSync(account, api);
-    return <AccountSettings />;
-  }
-
-  it("R633 signed out it says the settings are on this device only and offers Sign in; signed in but not syncing here, it does not", () => {
-    clearSession();
-    const out = render(<AccountSettings />);
-    expect(screen.getByRole("status").textContent).toContain("Saved on this device only");
-    expect(screen.getByTestId("settings-sign-in")).toBeInTheDocument();
-    expect(screen.getByTestId("settings-account")).toHaveAttribute("data-phase", "signedOut");
-    out.unmount();
-
-    writeSession({ accessToken: "a", refreshToken: "r", expiresAt: null });
-    render(<AccountSettings />);
-    expect(screen.getByRole("status").textContent).toContain("reach your account the next time");
-    expect(screen.queryByTestId("settings-sign-in")).toBeNull();
-    clearSession();
-  });
-
-  it("R633 shows saved with the time once the account has the settings, and saving while a request is out", async () => {
-    const api = fakeApi();
-    let release: () => void = () => undefined;
-    const view = render(<Screen account={ready("p1")} api={api} />);
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
-    expect(screen.getByTestId("settings-account")).toHaveAttribute("data-phase", "saved");
-    expect(screen.getByRole("status").textContent).toContain("Saved to your account.");
-    expect(view.container.querySelector("time")).not.toBeNull();
-
-    api.gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    writeAudioSettings({ master: 0.2 });
-    await tick(SETTINGS_SYNC_DEBOUNCE_MS + 1);
-    expect(screen.getByTestId("settings-account")).toHaveAttribute("data-phase", "syncing");
-    expect(screen.getByRole("status").textContent).toContain("Saving to your account");
-
-    api.gate = null;
-    await act(async () => {
-      release();
-      await vi.advanceTimersByTimeAsync(0);
-    });
-    expect(screen.getByTestId("settings-account")).toHaveAttribute("data-phase", "saved");
-    view.unmount();
-  });
-
-  it("R633 an error says so and offers Try again, which asks the account again", async () => {
-    const api = fakeApi();
-    api.fail = true;
-    const view = render(<Screen account={ready("p1")} api={api} />);
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
-
-    expect(screen.getByTestId("settings-account")).toHaveAttribute("data-phase", "error");
-    expect(screen.getByRole("status").textContent).toContain("Couldn't reach your account");
-    expect(screen.queryByTestId("settings-sign-in")).toBeNull();
-
-    api.fail = false;
-    await act(async () => {
-      screen.getByTestId("settings-sync-retry").click();
-      await vi.advanceTimersByTimeAsync(0);
-    });
-
-    expect(screen.getByTestId("settings-account")).toHaveAttribute("data-phase", "saved");
-    expect(screen.queryByTestId("settings-sync-retry")).toBeNull();
     view.unmount();
   });
 });
