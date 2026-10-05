@@ -17,7 +17,6 @@ import { describe, expect, it } from "vitest";
 import { legalActions, stepParam } from "@jackioh/engine";
 import type { GameEvent, PlayerId, Selection } from "@jackioh/shared";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
-import { expectAnimated } from "../_animated";
 import { base, def, radiant } from "../../src/scripts/classic/007-infiniscepter";
 
 const SCEPTER = "classic-007";
@@ -26,6 +25,7 @@ const CALL = "core-069"; // (2) Spell: Recruit 3 (1) Cost or less Units.
 const HIT_JOB = "core-016"; // (3) Spell: Destroy target Unit.
 const FLAME = "classic-016"; // (1) Spell, Book: Deal 4 damage (8 Radiant).
 const DIVIDEND = "core-024"; // (X) Spell: modes damage / heal / mana.
+const JAMMED = "core-036"; // (1) Spell: Destroy target backrow card; Lock its zone.
 const TIMMY = "core-011"; // (1) Unit.
 const VANILLA = "core-008";
 const FILLER = "core-010"; // (0) Spell Rapid Replenish.
@@ -212,13 +212,12 @@ describe("C #7 InfiniScepter", () => {
     });
 
     it("R78 leaving the field clears what it remembered", () => {
-      const s = setup({ hand: [SCEPTER, STOCKPILE, FILLER] }, false, { hand: [HIT_JOB, FILLER] });
+      const s = setup({ hand: [SCEPTER, STOCKPILE, FILLER] }, false, { hand: [JAMMED, FILLER] });
       s.play(SCEPTER, { zone: 1, targets: pick(s.card(STOCKPILE)) });
       const scepter = s.card(SCEPTER);
 
-      // Animated since patch v0.2.10 (R383), it is a Unit, and a Unit's destroy reaches it.
       s.endTurn();
-      s.play(HIT_JOB, { targets: pick(scepter) });
+      s.play(JAMMED, { targets: pick(scepter) });
 
       s.expectInZone(scepter, "graveyard");
       expect(s.card(scepter).memory.scepter).toBeUndefined();
@@ -280,15 +279,5 @@ describe("C #7 InfiniScepter", () => {
 
       expect(() => s.play(SCEPTER, { zone: 1, targets: pick(grave) })).toThrow();
     });
-  });
-});
-
-describe("C #7 InfiniScepter: Animated (patch v0.2.10)", () => {
-  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 1/2 Unit; with none open it stays a Field Spell", () => {
-    expectAnimated({ def: "classic-007", stats: { attack: 1, health: 2 }, hand: ["core-008"] });
-  });
-
-  it("R383 radiant: a 2/4 Unit", () => {
-    expectAnimated({ def: "classic-007", radiant: true, stats: { attack: 2, health: 4 }, hand: ["core-008"] });
   });
 });

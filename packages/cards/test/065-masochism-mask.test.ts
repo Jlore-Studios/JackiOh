@@ -8,7 +8,6 @@ import type { CardInstance } from "@jackioh/engine";
 import type { PlayerId } from "@jackioh/shared";
 import { base, radiant } from "../src/scripts/065-masochism-mask";
 import { scenario, type Scenario } from "./_harness";
-import { expectAnimated } from "./_animated";
 
 const MASK = "core-065"; // Field Spell, 2, Quickdraw
 const PILLOW = "core-065-1"; // #65.1, the token the third option summons
@@ -152,32 +151,6 @@ describe("#65 Masochism Mask", () => {
     const s = maskScenario(true).startTurn().answer(EXILE_BOTTOM).answer(LOSE_THREE);
 
     s.expectInZone(POSTDOC, "exile");
-    s.expectHealth("p1", 27);
-  });
-});
-
-describe("#65 Masochism Mask: Animated (patch v0.2.10)", () => {
-  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 1/2 Unit; with none open it stays a Field Spell", () => {
-    expectAnimated({ def: "core-065", stats: { attack: 1, health: 2 } });
-  });
-
-  it("R383 radiant: a 2/4 Unit", () => {
-    expectAnimated({ def: "core-065", radiant: true, stats: { attack: 2, health: 4 } });
-  });
-
-  it("R383 played, it keeps its text as a Unit: the start of your next turn opens its mode prompt", () => {
-    const s = scenario({
-      p1: { hand: [MASK, TIMMY], library: LIBRARY },
-      p2: { hand: [TIMMY], library: LIBRARY },
-    });
-
-    s.play(MASK, { zone: 3 });
-    expect(unitAt(s, "p1", 3).defId).toBe(MASK);
-    s.endTurn().endTurn();
-
-    expect(s.state.pending).toMatchObject({ kind: "mode", playerId: "p1" });
-    expect(optionLabels(s)).toEqual([EXILE_BOTTOM, LOSE_THREE, SUMMON_PILLOW]);
-    s.answer(LOSE_THREE);
     s.expectHealth("p1", 27);
   });
 });
