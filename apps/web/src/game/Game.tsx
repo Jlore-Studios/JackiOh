@@ -49,12 +49,12 @@ import {
   animTestid,
   createAnimationQueue,
   newEventsSince,
-  prefersReducedMotion,
   type AnimationEntry,
   type AnimationQueue,
 } from "./animations.ts";
 import { sideView, testid, type BoardControl, type ClickTarget } from "./contract.ts";
 import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
+import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import FxLayer from "../fx/FxLayer.tsx";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { useSetting } from "../settings/index.ts";
@@ -208,8 +208,9 @@ export default function Game({
   // Polish task 7: the "Reduce motion" setting does what the OS preference does, so every duration
   // is 0 and the queue drains synchronously (BUILD M5-T4). The queue reads it once, when it is
   // built, so a change of setting builds a new queue; the subscription effect below tears the old
-  // one down and shows the newest view.
-  const reducedMotion = useSetting("reduceMotion") || prefersReducedMotion();
+  // one down and shows the newest view. #258: the OS preference is followed live the same way.
+  const osReducesMotion = useOsReducedMotion();
+  const reducedMotion = useSetting("reduceMotion") || osReducesMotion;
   const builtFor = useRef(reducedMotion);
   if (queue.current === null || builtFor.current !== reducedMotion) {
     builtFor.current = reducedMotion;

@@ -598,10 +598,12 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-testid="zone-opponent-backrow-1"
       >
         <div
+          aria-keyshortcuts="I"
           aria-label="Face-down trap"
           class="card card-back card-facedown card-backrow"
           data-face-down="true"
           role="img"
+          tabindex="0"
         >
           <span
             aria-hidden="true"
@@ -672,6 +674,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-unit cf-host cf-host--minion"
           data-can-act="true"
           data-card-type="Unit"
@@ -682,6 +685,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-owner="p2"
           data-position="ATK"
           data-testid="card-u6"
+          tabindex="0"
         >
           <span
             class="cf cf--minion"
@@ -792,6 +796,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-unit cf-host cf-host--minion"
           data-can-act="true"
           data-card-type="Unit"
@@ -802,6 +807,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-owner="p1"
           data-position="ATK"
           data-testid="card-u1"
+          tabindex="0"
         >
           <span
             class="cf cf--minion"
@@ -915,6 +921,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-spell cf-host cf-host--compact card-backrow"
           data-card-type="Field Spell"
           data-controller="p1"
@@ -923,6 +930,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-legal="false"
           data-owner="p1"
           data-testid="card-b18"
+          tabindex="0"
         >
           <span
             class="cf cf--compact"
@@ -986,10 +994,12 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-testid="zone-opponent-backrow-2"
       >
         <div
+          aria-keyshortcuts="I"
           aria-label="Face-down trap"
           class="card card-back card-facedown card-backrow"
           data-face-down="true"
           role="img"
+          tabindex="0"
         >
           <span
             aria-hidden="true"
@@ -1093,6 +1103,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         </svg>
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-unit cf-host cf-host--minion"
           data-can-act="true"
           data-card-type="Unit"
@@ -1104,6 +1115,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-position="DEF"
           data-testid="card-u7"
           style="transform: rotate(90deg) scale(0.72);"
+          tabindex="0"
         >
           <span
             class="cf cf--minion"
@@ -1195,6 +1207,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-unit radiant cf-host cf-host--minion"
           data-can-act="true"
           data-card-type="Unit"
@@ -1206,6 +1219,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-position="ATK"
           data-radiant="true"
           data-testid="card-u2"
+          tabindex="0"
         >
           <span
             class="cf cf--minion"
@@ -1936,6 +1950,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-spell cf-host cf-host--compact card-backrow"
           data-card-type="Field Trap"
           data-controller="p1"
@@ -1945,6 +1960,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-legal="false"
           data-owner="p1"
           data-testid="card-b19"
+          tabindex="0"
         >
           <span
             class="cf cf--compact"
@@ -2017,6 +2033,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-spell cf-host cf-host--compact card-backrow"
           data-card-type="Field Spell"
           data-controller="p2"
@@ -2025,6 +2042,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-legal="false"
           data-owner="p2"
           data-testid="card-b22"
+          tabindex="0"
         >
           <span
             class="cf cf--compact"
@@ -2084,6 +2102,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-unit radiant cf-host cf-host--minion"
           data-can-act="true"
           data-card-type="Unit"
@@ -2095,6 +2114,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-position="ATK"
           data-radiant="true"
           data-testid="card-u8"
+          tabindex="0"
         >
           <span
             class="cf cf--minion"
@@ -2194,6 +2214,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-unit cf-host cf-host--minion"
           data-can-act="true"
           data-card-type="Unit"
@@ -2205,6 +2226,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-position="DEF"
           data-testid="card-u3"
           style="transform: rotate(90deg) scale(0.72);"
+          tabindex="0"
         >
           <span
             class="cf cf--minion"
@@ -2328,10 +2350,12 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           />
         </svg>
         <div
+          aria-keyshortcuts="I"
           aria-label="Face-down trap"
           class="card card-back card-facedown card-backrow"
           data-face-down="true"
           role="img"
+          tabindex="0"
         >
           <span
             aria-hidden="true"
@@ -2406,10 +2430,12 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-testid="zone-opponent-backrow-4"
       >
         <div
+          aria-keyshortcuts="I"
           aria-label="Face-down trap"
           class="card card-back card-facedown card-backrow"
           data-face-down="true"
           role="img"
+          tabindex="0"
         >
           <span
             aria-hidden="true"
@@ -2480,6 +2506,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-unit cf-host cf-host--minion"
           data-can-act="true"
           data-card-type="Unit"
@@ -2490,6 +2517,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-owner="p2"
           data-position="ATK"
           data-testid="card-u9"
+          tabindex="0"
         >
           <span
             class="cf cf--minion"
@@ -2587,6 +2615,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-unit cf-host cf-host--minion"
           data-can-act="true"
           data-card-type="Unit"
@@ -2597,6 +2626,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-owner="p1"
           data-position="ATK"
           data-testid="card-u4"
+          tabindex="0"
         >
           <span
             class="cf cf--minion"
@@ -2720,10 +2750,12 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-testid="zone-you-backrow-4"
       >
         <div
+          aria-keyshortcuts="I"
           aria-label="Face-down trap"
           class="card card-back card-facedown card-backrow"
           data-face-down="true"
           role="img"
+          tabindex="0"
         >
           <span
             aria-hidden="true"
@@ -2798,10 +2830,12 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-testid="zone-opponent-backrow-5"
       >
         <div
+          aria-keyshortcuts="I"
           aria-label="Face-down trap"
           class="card card-back card-facedown card-backrow"
           data-face-down="true"
           role="img"
+          tabindex="0"
         >
           <span
             aria-hidden="true"
@@ -2872,6 +2906,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-unit cf-host cf-host--minion"
           data-can-act="true"
           data-card-type="Unit"
@@ -2882,6 +2917,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-owner="p2"
           data-position="ATK"
           data-testid="card-u10"
+          tabindex="0"
         >
           <span
             class="cf cf--minion"
@@ -3039,6 +3075,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-unit cf-host cf-host--minion"
           data-can-act="false"
           data-card-type="Unit"
@@ -3048,7 +3085,9 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-legal="false"
           data-owner="p1"
           data-position="ATK"
+          data-spent="true"
           data-testid="card-u5"
+          tabindex="0"
         >
           <span
             class="cf cf--minion"
@@ -3115,6 +3154,21 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           >
             ATK
           </span>
+          <span
+            class="spent-badge"
+            title="No action left this turn"
+          >
+            <span
+              aria-hidden="true"
+            >
+              Zz
+            </span>
+            <span
+              class="spent-badge-sr"
+            >
+              No action left this turn
+            </span>
+          </span>
           <button
             aria-disabled="true"
             class="switch-button"
@@ -3140,6 +3194,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-spell radiant cf-host cf-host--compact card-backrow"
           data-card-type="Trap"
           data-controller="p1"
@@ -3149,6 +3204,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-owner="p1"
           data-radiant="true"
           data-testid="card-b20"
+          tabindex="0"
         >
           <span
             class="cf cf--compact"
@@ -3418,12 +3474,14 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-spell cf-host cf-host--full card-hand"
           data-card-type="Unit"
           data-def-id="core-002"
           data-face="full"
           data-legal="false"
           data-testid="hand-card-c11"
+          tabindex="0"
         >
           <span
             class="cf cf--full"
@@ -3484,6 +3542,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-spell radiant cf-host cf-host--full card-hand"
           data-card-type="Unit"
           data-def-id="core-019"
@@ -3491,6 +3550,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-legal="false"
           data-radiant="true"
           data-testid="hand-card-c12"
+          tabindex="0"
         >
           <span
             class="cf cf--full"
@@ -3552,12 +3612,14 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-spell cf-host cf-host--full card-hand"
           data-card-type="Unit"
           data-def-id="core-055"
           data-face="full"
           data-legal="false"
           data-testid="hand-card-c13"
+          tabindex="0"
         >
           <span
             class="cf cf--full"
@@ -3618,12 +3680,14 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       >
         <div
           aria-disabled="true"
+          aria-keyshortcuts="I"
           class="card card-spell cf-host cf-host--full card-hand"
           data-card-type="Unit"
           data-def-id="core-077"
           data-face="full"
           data-legal="false"
           data-testid="hand-card-c14"
+          tabindex="0"
         >
           <span
             class="cf cf--full"

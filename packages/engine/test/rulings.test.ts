@@ -4081,6 +4081,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // Proved by apps/web fx/entrances.test.ts "R670 …": the marquee cards are Legendary or Mythic
+  // Units, each plays its own entrance in place of the rarity's on both seats, never for a hidden
+  // summon or a backrow set, paces nothing and stays inside R200's bounds.
+  it("R670 gives a few marquee Legendary and Mythic Units an entrance of their own that paces nothing", () => {
+    provenIn(670, "../../../apps/web/src/fx/entrances.test.ts");
+  });
+
   // Proved by the card's own test, cards/test/classic/055-book-of-wildfire.test.ts "R671 …": the swap
   // at its owner's end of turn in hand only, the pool without Wildfire, Radiant to Radiant, the Book it
   // became swapping on, Temporary kept, and the end of turn replaying exactly.
