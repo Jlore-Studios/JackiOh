@@ -1,5 +1,5 @@
 // C #9 Income Tax (SPEC §8.6 row 9, §6.3 Steal, §10.6; R12, R33, R58, R61, R78, R97, R99, R317,
-// R521). Trap, cost 2, Common.
+// R521). Trap, cost 2, Legendary.
 //   Base:    "Activates when the cards your opponent has drawn in a turn reach {draws}: They keep one
 //            card of their choice and give you the rest of their hand."
 //   Radiant: the same, then "The cards you get cost ({discount}) less."

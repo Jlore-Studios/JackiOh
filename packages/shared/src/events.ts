@@ -188,8 +188,8 @@ export type GameEvent =
       lost?: true;
     }
   /**
-   * `brittle` is B3.3's count (R385). `placed` (B5 E19) is how many Plague Tokens one placement put
-   * on the card — set on a placement only, so "whenever Plague Tokens are placed on this" answers the
+   * `brittle` is B3.3's count (R385). `placed` (B5 E19) is how many Plague Counters one placement put
+   * on the card — set on a placement only, so "whenever Plague Counters are placed on this" answers the
    * placement once however many tokens it placed, and never a removal.
    */
   | {

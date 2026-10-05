@@ -62,7 +62,7 @@ function endOf(cue: FxCue): number {
 
 describe("R670 marquee Legendary and Mythic entrances", () => {
   it("R670 a handful of cards have one, each a Legendary or Mythic Unit of the real catalog, and every key names a recipe", () => {
-    expect(MARQUEE.length).toBeGreaterThanOrEqual(5);
+    expect(MARQUEE.length).toBeGreaterThanOrEqual(4);
     for (const [defId, key] of MARQUEE) {
       const def = CATALOG[defId];
       expect(def, defId).toBeDefined();

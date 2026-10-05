@@ -16,7 +16,7 @@
 //     routes render the same picker with the same `data-prompt-kind`. An activation (R384) is
 //     built on this route too — its targets, modes and Tribute — and submits an `activate`; so are
 //     a play's payments: the cards a targeting cost discards (Classic #89, the `hand` picker) and
-//     the Plague Tokens paying a graveyard play (Classic #74, a `number` picker of chips).
+//     the Plague Counters paying a graveyard play (Classic #74, a `number` picker of chips).
 //
 // A card option is drawn as the card in play (faces.ts, SPEC §10.10): a card the view lists — a hand
 // card in a mulligan or a hand pick, a unit a target reaches — as it stands, and a Discover's card as
@@ -153,7 +153,7 @@ type Picker = {
   /** Which picker to draw, and the `data-prompt-kind` value M5-T4 animates on. */
   chrome: PromptKind;
   /**
-   * A play's payment drawn its own way whatever its chrome: `plague` is the Plague Token count of a
+   * A play's payment drawn its own way whatever its chrome: `plague` is the Plague Counter count of a
    * graveyard play (Classic #74), a `number` prompt to the DOM and a row of chips to the eye.
    */
   variant?: "plague";
@@ -357,10 +357,10 @@ function cardsWord(count: number): string {
   return count === 1 ? "1 card" : `${String(count)} cards`;
 }
 
-/** "Pay in mana only", "Spend 2 Plague Tokens", and where they come from when several cards pay. */
+/** "Pay in mana only", "Spend 2 Plague Counters", and where they come from when several cards pay. */
 function plagueLabel(view: PlayerView, option: PlagueChoice, nameSource: boolean): string {
   if (option === "none") return "Pay in mana only";
-  const tokens = `Spend ${String(option.tokens)} Plague ${option.tokens === 1 ? "Token" : "Tokens"}`;
+  const tokens = `Spend ${String(option.tokens)} Plague ${option.tokens === 1 ? "Counter" : "Counters"}`;
   const where = nameSource ? whereOf(view, option.from) : null;
   return where === null ? tokens : `${tokens} (${where})`;
 }
@@ -448,7 +448,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       };
     }
     case "plague": {
-      // B5 E11, E19 (Classic #74): how much of the price Plague Tokens pay, one option per way the
+      // B5 E11, E19 (Classic #74): how much of the price Plague Counters pay, one option per way the
       // engine listed; the rest is mana. Several paying cards are told apart by where they stand.
       const sources = new Set(need.options.flatMap((option) => (option === "none" ? [] : [option.from])));
       const byKey = new Map(need.options.map((option) => [plagueKey(option), option]));
@@ -456,7 +456,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         ...common,
         chrome: "number",
         variant: "plague",
-        title: "Pay with Plague Tokens?",
+        title: "Pay with Plague Counters?",
         items: need.options.map((option) => ({
           key: plagueKey(option),
           label: plagueLabel(view, option, sources.size > 1),
@@ -776,7 +776,7 @@ function PromptModal(props: {
 
     if (picker.variant === "plague") {
       return (
-        <div className="prompt-chips prompt-plague" role="group" aria-label="Plague Tokens">
+        <div className="prompt-chips prompt-plague" role="group" aria-label="Plague Counters">
           {items.map((item) => (
             <PlainOption key={item.key} item={item} pressed={pressed(item.key)} onPick={() => pick(item.key)} />
           ))}

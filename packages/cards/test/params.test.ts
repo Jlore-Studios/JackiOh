@@ -110,8 +110,8 @@ describe("B3.4 params: the numbers a card declares", () => {
         for (const value of [low, low + (param.step ?? 1), param.base, param.radiant]) {
           for (const face of ["base", "radiant"] as const) {
             const text = fillParams(card, face, { [param.key]: value });
-            if (/\b1 (cards|times|Plague Tokens|Units|Spells)\b/.test(text)) wrong.push(`${card.id} ${face} at ${value}: ${text}`);
-            if (/\b([2-9]|\d{2,}) (card|time|Plague Token|Unit|Spell)\b(?!s)/.test(text)) wrong.push(`${card.id} ${face} at ${value}: ${text}`);
+            if (/\b1 (cards|times|Plague Counters|Units|Spells)\b/.test(text)) wrong.push(`${card.id} ${face} at ${value}: ${text}`);
+            if (/\b([2-9]|\d{2,}) (card|time|Plague Counter|Unit|Spell)\b(?!s)/.test(text)) wrong.push(`${card.id} ${face} at ${value}: ${text}`);
           }
         }
       }

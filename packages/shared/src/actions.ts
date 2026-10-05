@@ -32,7 +32,7 @@ export type ActionBody =
        */
       discards?: string[];
       /**
-       * B5 E11, E19: Plague Tokens paying part of the price of a play from the graveyard (Classic #74
+       * B5 E11, E19: Plague Counters paying part of the price of a play from the graveyard (Classic #74
        * Corpse Plantation): `from` is the card they come off, `tokens` how many — each pays (1).
        */
       plague?: { from: string; tokens: number };

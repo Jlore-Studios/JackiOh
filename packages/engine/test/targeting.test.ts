@@ -6,7 +6,7 @@
 // a prompted pick asks for them next, and with too few other cards the card is no legal target at all),
 // and an interceptor answers (Classic #33 Joro, from its owner's hand: summoned, no Cry, summoning sick,
 // and the pick moves to it). A Spell's declarations never offer a card Immune to Spells, and the
-// v0.2.0 filter fields — a graveyard pick, a cost range, damaged, Plague Tokens, a named predicate —
+// v0.2.0 filter fields — a graveyard pick, a cost range, damaged, Plague Counters, a named predicate —
 // narrow what a declaration offers.
 
 import type { Action, ActionBody, GameEvent, PlayerId, Selection } from "@jackioh/shared";
@@ -111,7 +111,7 @@ describe("R450 the v0.2.0 filter fields (§10.6)", () => {
     expect(picks.some((pick) => pick.pick === "hero")).toBe(false);
   });
 
-  it("R450 damaged and Plague Token filters offer only the cards that match", () => {
+  it("R450 damaged and Plague Counter filters offer only the cards that match", () => {
     const state = game("r450-damaged");
     const hurt = put(state, "fx-1", slot("p2", "units", 1));
     const whole = put(state, "fx-2", slot("p2", "units", 2));

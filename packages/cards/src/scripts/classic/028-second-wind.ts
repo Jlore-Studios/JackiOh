@@ -1,5 +1,5 @@
 // C #28 Second Wind (SPEC §8.6 row 28, §6.2 Replacement, §6.3 Play; R1, R3, R65, R78, R393).
-// Field Spell, cost 0, Epic.
+// Field Spell, cost 0, Legendary.
 //   Base:    "Cry: Exile your deck. Discard your hand.\nAura: You may play cards from your graveyard.
 //            Cards that would go to your graveyard are exiled instead."
 //   Radiant: "Cry: Exile your deck. Discard your hand.\nAura: You may play cards from your graveyard

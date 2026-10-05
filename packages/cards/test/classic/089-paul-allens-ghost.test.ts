@@ -28,7 +28,7 @@ const VANILLA = "core-008"; // (1) Unit 4/4
 const MENACE = "core-019"; // (3) Unit 9/9
 const FILLER = "core-005"; // (1) Spell
 const SPARE = "core-010"; // (0) Spell, a card to discard
-const MUTATE = "classic-078"; // Activate: remove a Plague Token from a permanent; an enemy one is exiled.
+const MUTATE = "classic-078"; // Activate: remove a Plague Counter from a permanent; an enemy one is exiled.
 const MID_RUNNER = "classic-022"; // Cry: with 4 or more mana as it was played, bounce 2 random enemy permanents.
 
 let nonce = 0;

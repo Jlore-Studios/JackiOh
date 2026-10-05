@@ -103,7 +103,7 @@ export {
 } from "./choose";
 export type { DiscoverOffer, LibraryFilter, TargetScope } from "./choose";
 
-// Plague Token, Lock (§6.3, §3.2).
+// Plague Counter, Lock (§6.3, §3.2).
 export { clearPlague, lock, plague } from "./counters";
 export type { ZoneSpec } from "./counters";
 
