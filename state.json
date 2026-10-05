@@ -2921,10 +2921,8 @@
     "what": "review #166 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-05T05:37:09Z",
-    "notes": [
-      "CI on #166: #166: re-ran the failed jobs of run 37265717392"
-    ],
+    "at": "2026-10-05T05:47:50Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
