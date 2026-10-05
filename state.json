@@ -544,6 +544,12 @@
       "lines": [
         "/harness revise. Try a new pass through aiming to get existing work to pass the ci THEN get an adversarial reviewer to check. It may help to Create a plan -> execute on it and view the trace logs of failed ci/cds"
       ]
+    },
+    "c:5996156131": {
+      "at": "2026-10-05T14:08:34Z",
+      "lines": [
+        "/harness see if you can revise the spec to fit this into it this sense. If you cant but internal logic is consistent with this you may rewrite the spec to have it pass with this into it. Let me know if thats not possible"
+      ]
     }
   },
   "items": {
