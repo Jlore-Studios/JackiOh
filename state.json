@@ -2701,9 +2701,12 @@
       "action": "review",
       "asks": [],
       "cross_rounds": 1,
+      "died": 0,
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-05T12:32:34Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 303,
       "kind": "revise",
       "last_findings": [
