@@ -1,7 +1,7 @@
 // #63 Plastic Surgery — SPEC §8.3, BUILD M4-T4 row 63.
 //
 // Must-pass: "+3/+3 and one pool keyword the unit lacks (R21); radiant +6/+6 and two distinct
-// keywords; not playable with no Unit to target, though a cast with none fizzles (R657)."
+// keywords; not playable with no Unit to target, though a cast with none fizzles (R703)."
 
 import { describe, expect, it } from "vitest";
 import { castCard, createRng, legalActions, type CardInstance } from "@jackioh/engine";
@@ -107,7 +107,7 @@ describe("#63 Plastic Surgery", () => {
     expect(run()).toEqual(run());
   });
 
-  it("R657 is not playable with no Unit on the board, on either face: never offered, and refused", () => {
+  it("R703 is not playable with no Unit on the board, on either face: never offered, and refused", () => {
     for (const radiant of [false, true]) {
       const s = scenario({ p1: { hand: [{ def: SURGERY, radiant }], mana: 4 }, p2: {} });
       const surgery = s.card(SURGERY);
@@ -120,7 +120,7 @@ describe("#63 Plastic Surgery", () => {
     }
   });
 
-  it("R657 is offered with a Unit on either side, once per Unit, on either face", () => {
+  it("R703 is offered with a Unit on either side, once per Unit, on either face", () => {
     for (const radiant of [false, true]) {
       const s = scenario({ p1: { hand: [{ def: SURGERY, radiant }], field: [FELINOR], mana: 4 }, p2: { field: [MENACE] } });
 
@@ -128,7 +128,7 @@ describe("#63 Plastic Surgery", () => {
     }
   });
 
-  it("R657 a cast with no Unit on the board is never refused (R70): it fizzles and still counts as played", () => {
+  it("R703 a cast with no Unit on the board is never refused (R70): it fizzles and still counts as played", () => {
     for (const radiant of [false, true]) {
       const s = scenario({ p1: { hand: [{ def: SURGERY, radiant }], mana: 4 }, p2: {} });
       const events: GameEvent[] = [];

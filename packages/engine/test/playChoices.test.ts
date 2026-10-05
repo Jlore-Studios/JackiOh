@@ -85,7 +85,7 @@ const traveller = unit("traveller");
 const discoverer = def("discoverer", "Spell");
 /** A spare card to sit in a hand as a candidate. */
 const candidate = def("candidate", "Spell");
-/** #63 Plastic Surgery's shape: one unit on either side, which the play needs (R657). */
+/** #63 Plastic Surgery's shape: one unit on either side, which the play needs (R703). */
 const neededPick = def("needed-pick", "Spell");
 
 const DEFS = [unitHitter, handPicker, oneToTwo, declaresNothing, traveller, discoverer, candidate, neededPick];
@@ -414,11 +414,11 @@ describe("the refusals a play's choices go through (§10.5 step 1, R81, R90)", (
   });
 });
 
-describe("R657 a pick the play needs", () => {
+describe("R703 a pick the play needs", () => {
   const offers = (state: GameState, card: CardInstance): boolean =>
     legalActions(state, "p1").some((action) => action.type === "play" && action.instanceId === card.id);
 
-  it("R657 a needed pick the board cannot satisfy is neither offered nor accepted, where R90's plain pick plays and fizzles", () => {
+  it("R703 a needed pick the board cannot satisfy is neither offered nor accepted, where R90's plain pick plays and fizzles", () => {
     const state = playing("r657-empty");
     expect([...activeUnitsOf(state, "p1"), ...activeUnitsOf(state, "p2")]).toEqual([]);
     const needed = handCard(state, neededPick.id);
@@ -426,7 +426,7 @@ describe("R657 a pick the play needs", () => {
 
     // R90: the plain declaration is still offered on an empty board, and fizzles.
     expect(offers(state, plainPick)).toBe(true);
-    // R657: the needed one is not offered, and naming it anyway is refused with the state untouched.
+    // R703: the needed one is not offered, and naming it anyway is refused with the state untouched.
     expect(playChoiceCombinations(state, "p1", needed)).toEqual([]);
     expect(offers(state, needed)).toBe(false);
     expect(whyChoicesRefused(state, "p1", needed, { type: "play", instanceId: needed.id })).toMatch(
@@ -450,7 +450,7 @@ describe("R657 a pick the play needs", () => {
     expect(played.state.players.p2.units[0]?.[0]?.damage).toBe(1);
   });
 
-  it("R657 a cast is never refused (R70): cast with no unit on the board, the needed pick fizzles", () => {
+  it("R703 a cast is never refused (R70): cast with no unit on the board, the needed pick fizzles", () => {
     const state = playing("r657-cast");
     const card = handCard(state, neededPick.id);
     const sink = sinkFor(state);

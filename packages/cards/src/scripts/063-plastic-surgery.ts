@@ -1,4 +1,4 @@
-// #63 Plastic Surgery (SPEC §8.3, §6.1, R21, R78, R81, R90, R657).
+// #63 Plastic Surgery (SPEC §8.3, §6.1, R21, R78, R81, R90, R703).
 //
 // Base: "Target unit gets +3/+3 and 1 random keyword". Radiant: "+6/+6 and 2 random keywords",
 // which §8's Conventions read as changing only those numbers.
@@ -14,7 +14,7 @@
 // Both the buff (layer 4 of §10.4) and the grant (`grantedKeywords`) are permanent on the instance
 // and drop when the card leaves the field (R78).
 //
-// R81: the target travels in the `play` action, so resolution never pauses. R657 (patch v0.2.12,
+// R81: the target travels in the `play` action, so resolution never pauses. R703 (patch v0.2.14,
 // #126): the pick is `required`, so with no legal target on the board the card is not playable at
 // all, where R90 would let it play and fizzle. A cast still fizzles (R70, a cast is never refused),
 // which is why both effects resolve `{ of: "chosen" }` and do nothing when it is empty.
@@ -29,7 +29,7 @@ export const def = cardDef("core-063");
 /** "Target unit": either side, §8's Conventions, and no narrowing in either cell. */
 const targets: TargetDecl[] = [
   // R656: a buff and a keyword help, so a random cast that targets enemies aims this at friends.
-  // R657: and the play needs it, so no Unit to target means no play.
+  // R703: and the play needs it, so no Unit to target means no play.
   { kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit"] }, aim: "help", required: true },
 ];
 

@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./catalog.json": "./catalog.json",
+    "./flavour.json": "./flavour.json",
     "./patches/*": "./patches/*"
   },
   "scripts": {

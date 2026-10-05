@@ -4003,11 +4003,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(656, "effects-cast.test.ts");
   });
 
-  // Proved by playChoices.test.ts "R657 …" (a needed pick the board cannot satisfy is neither
-  // offered nor accepted, a plain one still plays, and a cast fizzles) and Plastic Surgery's own test
-  // (both faces, either side, and the cast).
-  it("R657 a play is refused, and never offered, while a pick it needs has no legal option", () => {
-    provenIn(657, "playChoices.test.ts", "../../cards/test/063-plastic-surgery.test.ts");
+  // Proved by engine animated.test.ts "R657 …" (a stat-less Animated card animates to 0/1, printed or
+  // granted, on either face).
+  it("R657 an Animated card with no printed stats fights as a 0/1", () => {
+    provenIn(657, "animated.test.ts");
   });
 
   // Proved by apps/web test/ux/drag-continue.test.tsx "R658 …" (a second drag from a pick, a backrow
@@ -4021,6 +4020,21 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // Proved by packages/cards/test/flavour.test.ts "R660 …" (the sidecar's keys, coverage, fields and
+  // caps), apps/web cards/flavour.test.tsx "R660 …" (no rules words; the preview, the sheet and the
+  // detail show it, the face and an unnamed card never), routes/almanac.test.tsx "R660 …" (the
+  // Almanac's detail), and cards/art/convention.test.ts "R660 …" (the art directory and the manifest
+  // against the convention, and each refusal).
+  it("R660 flavour and artist credits are a sidecar shown in inspect, and real art meets one file convention", () => {
+    provenIn(
+      660,
+      "../../cards/test/flavour.test.ts",
+      "../../../apps/web/src/cards/flavour.test.tsx",
+      "../../../apps/web/src/routes/almanac.test.tsx",
+      "../../../apps/web/src/cards/art/convention.test.ts",
+    );
+  });
+
   // Proved by counterWarning.test.ts "R667 …" (fixture counters: who is warned, never a Trap, a hand
   // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
   // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
@@ -4031,6 +4045,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../cards/test/classic/087-plague-chalice.test.ts",
       "../../../apps/web/src/game/countered.test.tsx",
     );
+  });
+
+  // Proved by playChoices.test.ts "R703 …" (a needed pick the board cannot satisfy is neither
+  // offered nor accepted, a plain one still plays, and a cast fizzles) and Plastic Surgery's own test
+  // (both faces, either side, and the cast).
+  it("R703 a play is refused, and never offered, while a pick it needs has no legal option", () => {
+    provenIn(703, "playChoices.test.ts", "../../cards/test/063-plastic-surgery.test.ts");
   });
 });
 

@@ -4,7 +4,7 @@
 //   Radiant: "Discover a Unit, then Discover another, then a third; Fuse them; the result costs 0
 //             and goes to your hand" (§8's cell "Three Discovers"). "Fuse them; the result costs 0
 //             and goes to your hand" is kept (§8 Conventions), and R77 agrees: "Craft a Card fuses
-//             two or three cards". Patch v0.2.12 (#126) took off the draw R275's pass had added.
+//             two or three cards". Patch v0.2.14 (#126) took off the draw R275's pass had added.
 //   Engine:  "Fuse per 6.3 creates a transient definition stored in match state".
 //
 // THE CHAIN (§10.6). Each Discover is one `PendingChoice` whose `resume` names the next step, and

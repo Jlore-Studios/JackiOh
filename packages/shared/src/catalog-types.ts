@@ -380,7 +380,7 @@ export type TargetDecl = {
   aim?: "harm" | "help";
   /**
    * The play needs this pick: while the board offers fewer than `min` options for it, the play is
-   * refused and `legalActions` never offers it, where R90 would let it play and fizzle (R657, #63
+   * refused and `legalActions` never offers it, where R90 would let it play and fizzle (R703, #63
    * Plastic Surgery). A cast is never refused (R70), so a cast with no option still fizzles.
    */
   required?: true;

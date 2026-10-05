@@ -17,7 +17,7 @@
 // in order, each taking its own minimum and the last one the remainder; one declaration may not
 // name the same card twice while two declarations may both name the same card; a declaration the
 // board cannot satisfy does not refuse the play, it fizzles on resolution — unless the play needs it
-// (`required`, R657), and then the play is neither offered nor accepted. §9.1 is why a `hand` pick
+// (`required`, R703), and then the play is neither offered nor accepted. §9.1 is why a `hand` pick
 // only ever offers the chooser's own hand, and R13 is why a unit pick only offers the top of a
 // Stack pile.
 //
@@ -776,7 +776,7 @@ function takeFor(decl: TargetDecl, offered: number): number {
 }
 
 /**
- * R657: a declaration the play needs (`required`) that the board cannot satisfy. The play is then
+ * R703: a declaration the play needs (`required`) that the board cannot satisfy. The play is then
  * neither offered (`subsetsFor`) nor accepted (`refuseTargets`), instead of fizzling as R90 has it.
  */
 function unmetRequirement(decl: TargetDecl, offered: number): boolean {
@@ -910,7 +910,7 @@ function splitSelections(
 
 /**
  * Every subset of `options` a declaration may answer with, size-ascending then index order; none at
- * all for a needed pick the board cannot satisfy, so no play is offered (R657).
+ * all for a needed pick the board cannot satisfy, so no play is offered (R703).
  */
 function subsetsFor(options: readonly Selection[], decl: TargetDecl, isLast: boolean): Selection[][] {
   if (unmetRequirement(decl, options.length)) return [];
@@ -1295,7 +1295,7 @@ function refuseTargets(
     const options = offered[index] ?? [];
     if (decl === undefined) continue;
 
-    // R657: unless the play needs it, in which case the play is refused.
+    // R703: unless the play needs it, in which case the play is refused.
     if (unmetRequirement(decl, options.length)) {
       return `${name} cannot be played without ${plural(decl.min, "legal target")}`;
     }

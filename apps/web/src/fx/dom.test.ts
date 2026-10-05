@@ -295,7 +295,7 @@ describe("R502 R437 R436 — the v0.2.0 DOM kinds", () => {
   });
 });
 
-describe("Patch v0.2.12 — Classic+ #24 Crushing Walls' walls", () => {
+describe("Patch v0.2.14 — Classic+ #24 Crushing Walls' walls", () => {
   const WALLS: FxDomCue = { kind: "walls", at: { kind: "testid", testid: "board" }, reach: 0.2, delayMs: 0, durationMs: 1250 };
 
   it("the walls cover the board's box and reach `reach` of its width in from each side", () => {

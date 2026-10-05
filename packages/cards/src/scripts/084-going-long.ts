@@ -14,9 +14,8 @@
 // Radiant copy in a deck still starts in hand — and nothing else about the opening hand is this
 // card's business.
 //
-// THE ARMOR is the `heroArmor` static flag, #73 Anti-oneshot Armor's shape exactly (though #73, Animated
-// since patch v0.2.10, is read from either zone): a flag on the card in the backrow that the pipeline
-// reads, never a write to the hero. `damage.ts`'s
+// THE ARMOR is the `heroArmor` static flag, #73 Anti-oneshot Armor's shape exactly: a flag on the
+// card in the backrow that the pipeline reads, never a write to the hero. `damage.ts`'s
 // `heroArmorOf(state, player)` sums the hero's own Armor and every backrow `heroArmor` grant,
 // each one taking the `HERO_ARMOR` value its instance's `radiant` and `embiggened` select (R124:
 // hero Armor from several sources adds up, unlike step 3's cap, which takes the smallest).

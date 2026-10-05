@@ -82,7 +82,7 @@ const S2 = {
   FX_BLOOD_PICK_BASE: 1,
   FX_BLOOD_PICK_STRIDE: 2,
   FX_BLOOD_TRAUMA: 0.2,
-  // Patch v0.2.12: Classic+ #24 Crushing Walls.
+  // Patch v0.2.14: Classic+ #24 Crushing Walls.
   FX_WALLS_HIT_AT: 0.3,
   FX_WALLS_TAIL_MS: 850,
   FX_WALLS_REACH: 0.2,
