@@ -3612,14 +3612,14 @@
     "claude-5": {
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-05T10:50:00Z",
-          "utilization": 1.05
+          "resets_at": "2026-10-05T15:50:00Z",
+          "utilization": 1.14
         },
-        "observed_at": "2026-10-05T09:22:17Z",
-        "rejected_resets_at": "2026-10-05T10:50:00Z",
+        "observed_at": "2026-10-05T11:08:44Z",
+        "rejected_resets_at": "2026-10-05T15:50:00Z",
         "seven_day": {
           "resets_at": "2026-10-12T09:00:00Z",
-          "utilization": 0.0
+          "utilization": 0.15
         },
         "status": "rejected"
       }
