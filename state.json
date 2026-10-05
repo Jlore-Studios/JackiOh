@@ -4241,9 +4241,9 @@
   "suggest": {
     "asks": [],
     "last_run": "2026-10-05T07:19:11Z",
-    "provider": "devin",
+    "provider": null,
     "requested": false,
-    "run_id": "37277002504",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
