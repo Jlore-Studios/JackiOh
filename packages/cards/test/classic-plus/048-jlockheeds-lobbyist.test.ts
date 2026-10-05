@@ -13,7 +13,7 @@ const HIT_JOB = "core-016"; // (3) Spell: destroy target Unit
 const SWITCH_ALL = "core-048"; // (0) Spell: switch the position of every Unit
 const VANILLA = "core-008"; // Mr. Vanilla 4/4
 const FILLER = "core-005";
-const POOL = ["classicplus-051", "classicplus-052", "core-013", "core-014"];
+const POOL = ["classic-004", "classicplus-051", "classicplus-052", "core-013", "core-014"]; // C #4 Palantir joined the tag in balance patch 1
 
 function board(opts: { radiant?: boolean; seed?: string; hand?: readonly string[] } = {}): Scenario {
   return scenario({
@@ -94,7 +94,7 @@ describe("C+ #48 Jlockheed's Lobbyist", () => {
       expect(card.costOverride).toBe(0);
     });
 
-    it("R278 R387 the pool is exactly Core #13, #14 and C+ #51, #52 — one tag, never itself", () => {
+    it("R278 R387 the pool is exactly Core #13, #14, C #4 and C+ #51, #52 — one tag, never itself", () => {
       const seen = new Set<string>();
       for (let i = 0; i < 80; i += 1) {
         const s = board({ seed: `lobby-${i}` });

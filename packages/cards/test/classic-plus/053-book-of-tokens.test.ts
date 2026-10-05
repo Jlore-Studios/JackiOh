@@ -101,6 +101,21 @@ describe("C+ #53 Book of Tokens", () => {
       expect(counts).toEqual(new Set([1, 2]));
     });
 
+    it("§6.1 Lucky 1: the Radiant face rolls twice and keeps the most, so it summons 2 more often", () => {
+      expect(def.radiant.keywords).toEqual([{ kind: "Lucky", n: 1 }]);
+      expect(def.base.keywords).toEqual([]);
+      const twos = (radiant: boolean): number => {
+        let found = 0;
+        for (let n = 0; n < 40; n += 1) {
+          const s = book({ radiant, seed: `book-of-tokens-lucky-${n}` });
+          s.play(BOOK);
+          if (tokens(s).length === 2) found += 1;
+        }
+        return found;
+      };
+      expect(twos(true)).toBeGreaterThan(twos(false));
+    });
+
     it("R386 the Radiant roll is untunable the same way", () => {
       const s = book({ radiant: true, seed: "book-of-tokens-radiant-tune" });
       stepParam(s.card(BOOK), "tokens", 2);

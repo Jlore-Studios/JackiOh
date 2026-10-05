@@ -14,7 +14,7 @@ import { def } from "../../src/scripts/classic-plus/052-jlockheeds-permanent-def
 const CONTRACT = "classicplus-052";
 const NETHER = "core-088"; // (4) Spell: destroy all permanents
 const FILLER = "core-005";
-const POOL = ["classicplus-048", "classicplus-051", "core-013", "core-014"];
+const POOL = ["classic-004", "classicplus-048", "classicplus-051", "core-013", "core-014"]; // C #4 Palantir joined the tag in balance patch 1
 
 function signed(opts: { radiant?: boolean; seed?: string; contracts?: number; fillers?: number } = {}): Scenario {
   const contract = { def: CONTRACT, ...(opts.radiant === true ? { radiant: true } : {}) };
@@ -88,7 +88,7 @@ describe("C+ #52 Jlockheed's Permanent Defense Contract", () => {
       expect(delivered(s)).toEqual([]);
     });
 
-    it("R278 R387 the pool is exactly Core #13, #14 and C+ #48, #51 — never this card", () => {
+    it("R278 R387 the pool is exactly Core #13, #14, C #4 and C+ #48, #51 — never this card", () => {
       const seen = new Set<string>();
       for (let i = 0; i < 60; i += 1) {
         const s = signed({ seed: `contract-${i}` });

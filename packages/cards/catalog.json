@@ -1800,7 +1800,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
-    "loc": 18,
+    "loc": 17,
     "base": {
       "attack": 1,
       "health": 2,
@@ -6036,11 +6036,11 @@
     "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Start of Turn: Reveal.\nAura: Enemy Units have −X Attack, where X is {multiplier}× the number of Units your opponent controls.\nWhen your opponent controls no Units, Tribute this."
+      "text": "Start of turn: Reveal.\nAura: Enemy Units have −X Attack, where X is {multiplier}× the number of Units your opponent controls.\nWhen your opponent controls no Units, Tribute this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of Turn: Reveal.\nAura: Enemy Units have 0 Attack.\nWhen your opponent controls no Units, Tribute this."
+      "text": "Start of turn: Reveal.\nAura: Enemy Units have 0 Attack.\nWhen your opponent controls no Units, Tribute this."
     }
   },
   "classic-089": {
@@ -6691,11 +6691,11 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Cry: Destroy all Units. Exile the top card of your deck for each one destroyed."
+      "text": "Destroy all Units. Exile the top card of your deck for each one destroyed."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cry: Destroy all Units. Exile the top card of your opponent's deck for each one destroyed."
+      "text": "Destroy all Units. Exile the top card of your opponent's deck for each one destroyed."
     }
   },
   "classicplus-012-7": {
@@ -7999,13 +7999,13 @@
       "attack": 1,
       "health": 4,
       "keywords": [],
-      "text": "Start of Turn: Place a Plague Token on this.\nDeath: Add a random Book to your hand for each Plague Token on this."
+      "text": "Start of turn: Place a Plague Token on this.\nDeath: Add a random Book to your hand for each Plague Token on this."
     },
     "radiant": {
       "attack": 2,
       "health": 8,
       "keywords": [],
-      "text": "Start of Turn: Place a Plague Token on this.\nDeath: Add a random Radiant Book to your hand for each Plague Token on this."
+      "text": "Start of turn: Place a Plague Token on this.\nDeath: Add a random Radiant Book to your hand for each Plague Token on this."
     }
   },
   "classicplus-040": {
@@ -8062,10 +8062,6 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 1,
-    "refs": [
-      "core-t-coin",
-      "classicplus-042-1"
-    ],
     "loc": 3,
     "base": {
       "keywords": [],
@@ -8524,14 +8520,19 @@
     "refs": [
       "core-t-rush"
     ],
-    "loc": 14,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Summon 1-2 Rush Tokens."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Lucky 1. Summon 1-2 Radiant Rush Tokens."
+      "keywords": [
+        {
+          "kind": "Lucky",
+          "n": 1
+        }
+      ],
+      "text": "Lucky 1\nSummon 1-2 Radiant Rush Tokens."
     }
   },
   "classicplus-054": {
@@ -8861,7 +8862,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nStart of Turn: Add a random Fruit to your hand. It costs (0)."
+      "text": "Animated\nStart of turn: Add a random Fruit to your hand. It costs (0)."
     },
     "radiant": {
       "attack": 2,
@@ -8871,7 +8872,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nStart of Turn: Add a random Radiant Fruit to your hand. It costs (0)."
+      "text": "Animated\nStart of turn: Add a random Radiant Fruit to your hand. It costs (0)."
     }
   },
   "classicplus-064": {
@@ -8937,13 +8938,6 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
-    "refs": [
-      "classicplus-065-1",
-      "classicplus-065-2",
-      "classicplus-065-3",
-      "classicplus-065-4",
-      "classicplus-065-5"
-    ],
     "params": [
       {
         "key": "grapes",
@@ -9137,13 +9131,6 @@
     "rarity": "Rare",
     "token": false,
     "cost": 3,
-    "refs": [
-      "classicplus-065-1",
-      "classicplus-065-2",
-      "classicplus-065-3",
-      "classicplus-065-4",
-      "classicplus-065-5"
-    ],
     "params": [
       {
         "key": "grapes",
@@ -9692,7 +9679,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nEnd of Turn: Add a random AI Generated card to your hand. It costs (0)."
+      "text": "Animated\nEnd of turn: Add a random AI generated card to your hand. It costs (0)."
     },
     "radiant": {
       "attack": 0,
@@ -9702,7 +9689,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nEnd of Turn: Add a random Radiant AI Generated card to your hand. It costs (0)."
+      "text": "Animated\nEnd of turn: Add a random Radiant AI generated card to your hand. It costs (0)."
     }
   },
   "classicplus-t-ai-01": {

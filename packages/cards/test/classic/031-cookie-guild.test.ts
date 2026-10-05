@@ -82,13 +82,23 @@ describe("C #31 Cookie Guild", () => {
       expect(libraryDefs(s)).toEqual([TEMPO]);
     });
 
-    it("R396 an X Unit costs (0) in the deck, so it is recruited", () => {
+    it("R396 R690 an X Unit costs (0) in the deck, but the Recruit skips it while another card matches", () => {
       const s = scenario({ p1: { hand: [GUILD, ANCHOR], library: [MENACE, BUFF_BILLY, TEMPO] }, p2: { hand: [ANCHOR] } });
 
       s.play(GUILD);
 
+      expect(summonedDefs(s)).toContain(TEMPO);
+      expect(summonedDefs(s)).not.toContain(BUFF_BILLY);
+      expect(libraryDefs(s)).toEqual([MENACE, BUFF_BILLY]);
+    });
+
+    it("R396 R690 an X Unit that is the only match is recruited", () => {
+      const s = scenario({ p1: { hand: [GUILD, ANCHOR], library: [MENACE, BUFF_BILLY] }, p2: { hand: [ANCHOR] } });
+
+      s.play(GUILD);
+
       expect(summonedDefs(s)).toContain(BUFF_BILLY);
-      expect(libraryDefs(s)).toEqual([MENACE, TEMPO]);
+      expect(libraryDefs(s)).toEqual([MENACE]);
     });
 
     it("with no match in the deck nothing happens, and the deck keeps its order", () => {
