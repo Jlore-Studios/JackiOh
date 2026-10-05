@@ -2726,10 +2726,9 @@
     "what": "plan #337 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-05T23:49:42Z",
+    "at": "2026-10-05T23:53:13Z",
     "notes": [
-      "started a night run, as a lane was free: #337 (medium) is queued to build, for `claude-3`: plan on `claude-3` (claude, `opus`, strong)",
-      "#337: typed it Task"
+      "labels: could not finish (GitHubError: POST /repos/Jlore-Studios/JackiOh/labels: HTTP 422: Validation Failed)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
