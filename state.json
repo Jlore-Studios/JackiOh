@@ -2644,10 +2644,8 @@
     "what": "revise #324 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-05T22:10:35Z",
-    "notes": [
-      "started a night run, as a lane was free: #324 (easy) is queued to revise, for `devin`: build on `devin` (devin, `swe-2-max`, weak); review in a review run after its self check"
-    ],
+    "at": "2026-10-05T22:22:44Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
