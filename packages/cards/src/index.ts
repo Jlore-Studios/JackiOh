@@ -29,6 +29,8 @@ import { SCRIPT_MODULES } from "./scripts/_generated";
 
 export { CATALOG, CATALOG_IDS, CATALOG_VERSION, cardDef, cardDefByIndex };
 export { catalog, query } from "./query";
+export { ARTIST_MAX_CHARS, FLAVOUR, FLAVOUR_MAX_CHARS } from "./flavour";
+export type { CardFlavour } from "./flavour";
 export type { CardQuery } from "./query";
 
 /** One card file's exports (SPEC §10.9). */
