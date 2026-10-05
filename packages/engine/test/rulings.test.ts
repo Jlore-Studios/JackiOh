@@ -4003,13 +4003,24 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(656, "effects-cast.test.ts");
   });
 
-  // Proved by apps/web audio/cues.test.ts "R658 …" (the stings by rarity, none for the sentinel, a
-  // Trap or a cast on draw; the lane pans), engine.test.ts and sfx.test.ts "R658 …" (the panner, the
-  // effects' duck under a line, the shared reverb; the sting's recipe), and haptics/haptics.test.ts
-  // "R658 …" (the three moments, the gap, the switch and Reduce Motion).
-  it("R658 every readable play stings by rarity, effects pan by lane under a voice duck and reverb, and a phone ticks", () => {
+  // Proved by apps/web test/ux/drag-continue.test.tsx "R658 …" (a second drag from a pick, a backrow
+  // card dropped on the board, a prompt option dragged out of its panel) and test/ux/drag-model.test.ts
+  // "R658 …" (the plans and the drops).
+  it("R658 drags a second choice from its picks, a backrow card onto the board, and a prompt's options", () => {
     provenIn(
       658,
+      "../../../apps/web/src/test/ux/drag-continue.test.tsx",
+      "../../../apps/web/src/test/ux/drag-model.test.ts",
+    );
+  });
+
+  // Proved by apps/web audio/cues.test.ts "R660 …" (the stings by rarity, none for the sentinel, a
+  // Trap or a cast on draw; the lane pans), engine.test.ts and sfx.test.ts "R660 …" (the panner, the
+  // effects' duck under a line, the shared reverb; the sting's recipe), and haptics/haptics.test.ts
+  // "R660 …" (the three moments, the gap, the switch and Reduce Motion).
+  it("R660 every readable play stings by rarity, effects pan by lane under a voice duck and reverb, and a phone ticks", () => {
+    provenIn(
+      660,
       "../../../apps/web/src/audio/cues.test.ts",
       "../../../apps/web/src/audio/engine.test.ts",
       "../../../apps/web/src/audio/sfx.test.ts",

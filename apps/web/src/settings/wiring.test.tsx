@@ -96,7 +96,7 @@ function toggle(testId: string): HTMLInputElement {
 const MYTHIC = Object.values(CATALOG).find((def) => def.rarity === "Mythic");
 
 describe("SETTINGS_SLOTS mounts every task's controls in its own section", () => {
-  it("lists the vibration under gameplay (R658), task 1's effects and task 6's foil under visuals, and task 2's audio under audio, each with a reset, and the account's status", () => {
+  it("lists the vibration under gameplay (R660), task 1's effects and task 6's foil under visuals, and task 2's audio under audio, each with a reset, and the account's status", () => {
     expect(SETTINGS_SLOTS.map((slot) => [slot.section, slot.id])).toEqual([
       ["gameplay", "haptics"],
       ["visuals", "fx"],

@@ -155,7 +155,7 @@ export const MUSIC_BYTES_MAX = 8;
 /** §10.11's cap on the rendered music, counted in whole disk blocks (gen-music.mjs BUDGET_BYTES). */
 export const MUSIC_BUDGET_BYTES = 24 * 1024 * 1024;
 
-// ---- Patch v0.2.X sound polish (#259, R658): stings, the mix's panning, ducking and reverb ----
+// ---- Patch v0.2.X sound polish (#259, R660): stings, the mix's panning, ducking and reverb ----
 /** A played card's rarity sting starts this long after the card whoosh, so the two read as one. */
 export const STING_DELAY_MS = 40;
 /** The pan of a sound about a unit in the outermost lane; the middle lane is centred. */

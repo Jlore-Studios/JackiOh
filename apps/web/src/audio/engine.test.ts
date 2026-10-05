@@ -166,7 +166,7 @@ function must<T>(value: T | null | undefined, what: string): T {
 
 type Buses = { compressor: FakeNode; master: FakeNode; sfx: FakeNode; sfxDuck: FakeNode; voice: FakeNode };
 
-/** The graph unlock() builds: sfx → its duck (R658) and voice → master → compressor → destination. */
+/** The graph unlock() builds: sfx → its duck (R660) and voice → master → compressor → destination. */
 function buses(audio: FakeAudio): Buses {
   const compressors = audio.nodesOf("compressor");
   expect(compressors, "one DynamicsCompressor").toHaveLength(1);
@@ -1670,11 +1670,11 @@ describe("R655 a card's effect and a Unit picked up to attack", () => {
 });
 
 /* --------------------------------------------------------------------------------------------- *
- * R658 (#259): lane panning, the effects' duck under voice, and the shared reverb
+ * R660 (#259): lane panning, the effects' duck under voice, and the shared reverb
  * --------------------------------------------------------------------------------------------- */
 
-describe("R658 the mix's panning, ducking and reverb", () => {
-  it("R658 an sfx cue with a pan plays through a stereo panner into the sfx bus; a centred one does not", () => {
+describe("R660 the mix's panning, ducking and reverb", () => {
+  it("R660 an sfx cue with a pan plays through a stereo panner into the sfx bus; a centred one does not", () => {
     const r = rig();
     const audio = unlocked(r);
     const bus = buses(audio);
@@ -1692,7 +1692,7 @@ describe("R658 the mix's panning, ducking and reverb", () => {
     expect(audio.violations).toEqual([]);
   });
 
-  it("R658 a voice line dips the effects' duck to SFX_VOICE_DUCK_GAIN for its span and lets it go after", async () => {
+  it("R660 a voice line dips the effects' duck to SFX_VOICE_DUCK_GAIN for its span and lets it go after", async () => {
     const r = rig();
     const audio = unlocked(r);
     const bus = buses(audio);
@@ -1710,7 +1710,7 @@ describe("R658 the mix's panning, ducking and reverb", () => {
     expect(audio.violations).toEqual([]);
   });
 
-  it("R658 an sfx cue alone leaves the effects' duck where it was", () => {
+  it("R660 an sfx cue alone leaves the effects' duck where it was", () => {
     const r = rig();
     const audio = unlocked(r);
     const bus = buses(audio);
@@ -1718,7 +1718,7 @@ describe("R658 the mix's panning, ducking and reverb", () => {
     expect(bus.sfxDuck.param("gain").targets()).toEqual([]);
   });
 
-  it("R658 the effects (after their duck) and the voice bus feed one convolver, which feeds master", () => {
+  it("R660 the effects (after their duck) and the voice bus feed one convolver, which feeds master", () => {
     const audio = unlocked(rig());
     const bus = buses(audio);
     const reverbs = audio.nodesOf("convolver");

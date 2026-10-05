@@ -1,4 +1,4 @@
-// Haptics (R658, issue #259): a short buzz on a phone for three moments of the viewer's own game,
+// Haptics (R660, issue #259): a short buzz on a phone for three moments of the viewer's own game,
 // read off the same event stream the sound director resolves, at the moment its sound plays.
 //
 //   drop  the viewer's own card lands (its `cardPlayed`: a play, a cast or a Trap set)

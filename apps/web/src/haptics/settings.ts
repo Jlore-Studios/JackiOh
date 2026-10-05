@@ -1,4 +1,4 @@
-// The viewer's vibration switch (R658, issue #259): a presentation preference of this device, so it
+// The viewer's vibration switch (R660, issue #259): a presentation preference of this device, so it
 // lives in this browser only, under HAPTICS_SETTINGS_KEY in `localStorage`. The settings panel mounts
 // it through `SETTINGS_SLOTS`; the haptics player reads it at every buzz, so it applies at once.
 //
