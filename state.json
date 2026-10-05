@@ -3012,11 +3012,11 @@
       "issue": 323,
       "kind": "review",
       "pending_request": false,
-      "provider": "devin",
+      "provider": "claude-4",
       "queued_at": "2026-10-05T19:05:46Z",
-      "run_id": "37361295291",
+      "run_id": "37361616861",
       "self_check_findings": [],
-      "started_at": "2026-10-05T19:09:37Z",
+      "started_at": "2026-10-05T19:13:49Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -3506,9 +3506,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-05T19:09:37Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37361295291",
-    "what": "review #324 on devin"
+    "at": "2026-10-05T19:13:49Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37361616861",
+    "what": "review #324 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-05T19:07:19Z",
