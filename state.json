@@ -2069,7 +2069,7 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-05T06:47:40Z",
+      "feedback_since": "2026-10-05T10:08:40Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-05T07:37:42Z",
@@ -2098,7 +2098,7 @@
           "where": "self check"
         }
       ],
-      "source": "request",
+      "source": "",
       "started_at": "2026-10-05T10:08:40Z",
       "stop_requested": false,
       "taken_asks": [
