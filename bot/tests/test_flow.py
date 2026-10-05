@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from harness import plan as plan_mod
+from harness import queue as queue_mod
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_SUGGESTION, LABEL_WORKING)
 from harness.deliver import Deliverer
@@ -105,12 +106,19 @@ class PlanTests(unittest.TestCase):
     def test_usage_stop(self):
         self.gh.add_issue(3, labels=(LABEL_BUILD,))
         # The readings the state file kept before there were several subscriptions are the first
-        # Claude account's.
+        # Claude account's. claude-1 has no weekly cap, so a spent week holds nothing back, while
+        # a spent 5-hour session still stops it. (A build claims its item, so each reading gets a
+        # fresh issue.)
         self.ctx.store.update(lambda s: s.update(usage={"seven_day": {"utilization": 0.95},
                                                         "observed_at": "2026-09-30T02:00:00Z"}))
-        self.assertIn("`claude-1` 7-day usage is 95%", plan_mod.make(self.ctx)["reason"])
+        self.assertEqual(plan_mod.make(self.ctx)["action"], "build")
+        self.gh.add_issue(4, labels=(LABEL_BUILD,))
+        self.ctx.store.update(lambda s: s.update(usage={"five_hour": {"utilization": 0.99},
+                                                        "observed_at": "2026-09-30T02:00:00Z"}))
+        self.assertIn("`claude-1` 5-hour usage is 99%", plan_mod.make(self.ctx)["reason"])
         # A reading that cannot be dated never blocks for ever.
-        self.ctx.store.update(lambda s: s.update(usage={"seven_day": {"utilization": 0.95}}))
+        self.gh.add_issue(5, labels=(LABEL_BUILD,))
+        self.ctx.store.update(lambda s: s.update(usage={"five_hour": {"utilization": 0.99}}))
         self.assertEqual(plan_mod.make(self.ctx)["action"], "build")
 
     def test_claims_the_oldest_forced_first_and_marks_it(self):
@@ -211,8 +219,23 @@ class FlowTests(unittest.TestCase):
         pull = h.gh.list_pulls(head="bot/issue-12")[0]
         self.assertNotIn(pull["node_id"], h.gh.auto_merge)
         self.assertIn("bot:needs-review", h.gh.label_names(int(pull["number"])))
+        self.assertIn("ready for merge", h.gh.label_names(int(pull["number"])))
         self.assertEqual(h.gh.review_requests, [(int(pull["number"]), ["jgoetzmann"])])
-        self.assertIn("package.json", h.gh.bot_comments(12)[-1])
+        said = h.gh.bot_comments(12)[-1]
+        self.assertIn("package.json", said)
+        self.assertIn("labelled `ready for merge`: @jgoetzmann, it waits for you to merge it", said)
+        # Back in the queue it is no longer ready: a revision takes the label off.
+        queue_mod.queue_revise(h.ctx, int(pull["number"]), by="jgoetzmann")
+        self.assertNotIn("ready for merge", h.gh.label_names(int(pull["number"])))
+
+    def test_an_approved_pull_request_with_auto_merge_off_is_ready_for_merge(self):
+        h = Harness(self, auto_merge=False)
+        h.gh.add_issue(12, labels=(LABEL_BUILD,))
+        h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
+                            "review": reviewer(APPROVE)}))
+        pull = h.gh.list_pulls(head="bot/issue-12")[0]
+        self.assertNotIn(pull["node_id"], h.gh.auto_merge)
+        self.assertEqual(h.gh.label_names(int(pull["number"])), {LABEL_PR, "ready for merge"})
 
     def test_no_auto_merge_while_main_is_unprotected(self):
         h = Harness(self)

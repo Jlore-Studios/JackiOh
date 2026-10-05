@@ -263,7 +263,7 @@ describe("C #90 In Too Deep", () => {
       s.play(MIND_CONTROL, { targets: [{ pick: "instance", instanceId: vanilla.id }] });
       expect(s.card(vanilla).controller).toBe("p1");
       s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: vanilla.id }] });
-      // R662: the thief is its controller and its current owner as it dies.
+      // R669: the thief is its controller and its current owner as it dies.
       expect(s.lastEvents.find((e) => e.type === "destroyed")).toMatchObject({ owner: "p1", controller: "p1" });
       expect(line(s)?.progress).toEqual({ "2": 0 });
       const timmy = must(s.unit("p2", 2), "Timmy");

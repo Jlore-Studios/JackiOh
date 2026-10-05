@@ -67,7 +67,7 @@ describe("#52 Silly Silas — base, rotating right", () => {
     s.expectEvents("cardPlayed", "rotated", "controlChanged");
   });
 
-  it("R12 R662 a card that crosses the centre line changes controller, and its current owner with it", () => {
+  it("R12 R669 a card that crosses the centre line changes controller, and its current owner with it", () => {
     const s = scenario({
       p1: { hand: ["core-052"], field: [{ def: "core-053", lane: 5 }] },
       p2: { field: [{ def: "core-t-felinor", lane: 1 }] },
@@ -207,7 +207,7 @@ describe("#52 Silly Silas — radiant", () => {
     expect(s.card(reno).costOverride).toBe(0);
     // Midrange Menace moves from p2's lane 1 to p1's — to Silas's controller, not to the opponent —
     // so the radiant clause leaves it alone and the base clause holds: it crosses and changes
-    // control and current owner, at its printed cost (§8 Conventions, R14, R171, R662).
+    // control and current owner, at its printed cost (§8 Conventions, R14, R171, R669).
     expect(unitAt(s, "p1", 1).id).toBe(menace);
     expect(s.card(menace).controller).toBe("p1");
     expect(s.card(menace).owner).toBe("p1");

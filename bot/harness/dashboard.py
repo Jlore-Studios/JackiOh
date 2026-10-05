@@ -17,6 +17,7 @@ import html
 from datetime import datetime, timedelta
 from typing import Any
 
+from harness import disk as disk_mod
 from harness import providers as providers_mod
 from harness import status as status_mod
 from harness.clock import human_delta, parse_iso, zone
@@ -253,7 +254,7 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> li
         doing, item, since = _doing(state, number)
         return f"{doing} {item}" + (f"<br/>since {_clock(ctx, since)}" if since else "")
 
-    # By name (claude-1 to claude-4), so each account keeps its place from one rewrite to the next.
+    # By name (claude-1 to claude-6), so each account keeps its place from one rewrite to the next.
     hosted = sorted((p for p in pool.ordered() if not pool.on_machine(p.id)), key=lambda p: p.id)
     boxes: list[str] = []
     busy_hosted = 0
@@ -390,6 +391,8 @@ def render(ctx: Context) -> str:
     lines += (running + [""] if running else [])
     lines += timeline(ctx, state, live) + [""] + lanes_boxes(ctx, state, live) + [""]
     lines += ["## Subscriptions", ""] + subscription_table(ctx, state, live) + [""]
+    disk_line = disk_mod.line(state)
+    lines += [disk_line, ""] if disk_line else []
     lines += ["## Queue", ""] + queue_table(issues) + [""]
     lines += ["## Last night-bot runs", ""] + runs_table(ctx) + [""]
     lines += ["<details><summary>The full status</summary>", "",

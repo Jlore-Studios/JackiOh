@@ -465,7 +465,7 @@ describe("Tribute as an additional cost of a play (§6.3, §3.2, R81)", () => {
 });
 
 describe("R360 a Tribute that takes an opposing unit summons #55's base face for the opponent", () => {
-  it("R360 lands it in the opponent's zone in the lane the play named, under their control and now their card (R662), still the player's play", () => {
+  it("R360 lands it in the opponent's zone in the lane the play named, under their control and now their card (R669), still the player's play", () => {
     const state = playing("hand-over-same-lane");
     const mine = put(state, plain.id, slot("p1", "units", 1));
     const mine2 = put(state, plain.id, slot("p1", "units", 2));

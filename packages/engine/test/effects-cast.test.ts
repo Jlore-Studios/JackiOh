@@ -8,9 +8,9 @@ import type { CardDef } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { registerCatalog, registeredCatalog } from "../src/catalog";
 import { RANDOM_CAST_CHAIN_CAP } from "../src/config";
-import { cast, castNew, castRandom, damage } from "../src/effects";
+import { cast, castNew, castRandom, damage, heal } from "../src/effects";
 import { legalActions } from "../src/reduce";
-import { castModesOf, preferEnemies } from "../src/randomCast";
+import { castModesOf, preferEnemies, preferFriends } from "../src/randomCast";
 import { hashState } from "../src/replay";
 import { applyEffects, castCard, makeContext } from "../src/resolve";
 import type { CardScripts, Effect } from "../src/script";
@@ -66,6 +66,9 @@ const pingB = spell("ping-b", 4602);
 const echoTarget = spell("echo-target", 4603);
 const castsNamed = spell("casts-named", 4604);
 const castsDiscover = spell("casts-discover", 4605);
+// R656: a helpful Spell — its target declaration aims "help", so a cast that targets enemies
+// prefers friends for it.
+const healFriend = spell("heal-friend", 4606);
 
 function both(script: CardScripts["base"]): CardScripts {
   return { base: script, radiant: script };
@@ -81,6 +84,10 @@ const INLINE: Record<string, CardScripts> = {
   }),
   [castsNamed.id]: both({ cry: () => [castNew({ def: targetSpell.id })] }),
   [castsDiscover.id]: both({ cry: () => [castRandom({ query: { defId: discoverSpell.id }, count: 1 })] }),
+  [healFriend.id]: both({
+    targets: [{ kind: "target", min: 1, max: 1, filter: { of: ["unit"] }, aim: "help" }],
+    cry: () => [heal({ target: { of: "chosen" }, amount: 3 })],
+  }),
 };
 
 function playing(seed: string): GameState {
@@ -92,6 +99,7 @@ function playing(seed: string): GameState {
     [echoTarget.id]: echoTarget,
     [castsNamed.id]: castsNamed,
     [castsDiscover.id]: castsDiscover,
+    [healFriend.id]: healFriend,
   });
   registerScripts({ ...registeredScripts(), ...INLINE });
   return state;
@@ -408,5 +416,81 @@ describe("E39 target enemies on a cast its caster makes (R452)", () => {
     const mixed = [...options, { pick: "hero" as const, player: "p2" as const }];
     expect(preferEnemies(state, "p1", mixed, (selection) => selection, 1)).toEqual([{ pick: "hero", player: "p2" }]);
     expect(preferEnemies(state, "p1", mixed, (selection) => selection, 2)).toEqual(mixed);
+  });
+});
+
+describe("R656 aimed random targets", () => {
+  it("R656 a helpful pick under targetEnemies narrows to friends when one is legal", () => {
+    const state = playing("r651-enchanted");
+    const own = put(state, "fx-2", slot("p1", "units", 1));
+    put(state, "fx-3", slot("p2", "units", 1));
+    const card = newInstance(state, healFriend.id, "p1", { z: "hand", player: "p1" });
+    card.enchantments = [{ kind: "targetEnemies" }];
+    state.players.p1.hand.push(card);
+    const sink = sinkFor(state);
+    castCard(sink, card, { targetEnemies: true });
+    expect(state.pending?.options.map((option) => option.selection)).toEqual([
+      { pick: "instance", instanceId: own.id },
+    ]);
+  });
+
+  it("R656 with no friend to pick, or too few, every option stays — and a mode pick is kept either way", () => {
+    const state = playing("r651-no-friend");
+    const foe = put(state, "fx-3", slot("p2", "units", 1));
+    const options = [
+      { pick: "instance" as const, instanceId: foe.id },
+      { pick: "hero" as const, player: "p2" as const },
+    ];
+    expect(preferFriends(state, "p1", options, (selection) => selection, 1)).toEqual(options);
+    const own = put(state, "fx-2", slot("p1", "units", 1));
+    const mode = { pick: "mode" as const, option: "a" };
+    const mixed = [...options, mode, { pick: "instance" as const, instanceId: own.id }, { pick: "hero" as const, player: "p1" as const }];
+    expect(preferFriends(state, "p1", mixed, (selection) => selection, 1)).toEqual([
+      mode,
+      { pick: "instance", instanceId: own.id },
+      { pick: "hero", player: "p1" },
+    ]);
+    expect(preferFriends(state, "p1", mixed, (selection) => selection, 4)).toEqual(mixed);
+  });
+
+  it("R656 a random cast that targets enemies aims each pick: harm at enemies, help at friends", () => {
+    let sawDamage = false;
+    let sawHeal = false;
+    for (const seed of ["r651-aim-1", "r651-aim-2", "r651-aim-3", "r651-aim-4", "r651-aim-5"]) {
+      const state = playing(seed);
+      const mine = put(state, "fx-2", slot("p1", "units", 1));
+      const foe = put(state, "fx-3", slot("p2", "units", 1));
+      mine.damage = 1;
+      foe.damage = 1;
+      const sink = run(state, [castRandom({ query: { defId: [targetSpell.id, healFriend.id] }, count: 4, targetEnemies: true })]);
+      expect(state.pending).toBeNull();
+      for (const hit of eventsOfType(sink.events, "damage")) {
+        sawDamage = true;
+        expect([foe.id, "hero-p2"]).toContain(hit.targetId);
+      }
+      for (const cured of eventsOfType(sink.events, "healed")) {
+        sawHeal = true;
+        expect(cured.targetId).toBe(mine.id);
+      }
+    }
+    expect(sawDamage).toBe(true);
+    expect(sawHeal).toBe(true);
+  });
+
+  it("R656 Jogg's Box stays fully random: with no targetEnemies even a helpful cast may land on enemies", () => {
+    const seen = new Set<string>();
+    for (const seed of ["r651-box-1", "r651-box-2", "r651-box-3", "r651-box-4", "r651-box-5", "r651-box-6"]) {
+      const state = playing(seed);
+      const mine = put(state, "fx-2", slot("p1", "units", 1));
+      const foe = put(state, "fx-3", slot("p2", "units", 1));
+      mine.damage = 1;
+      foe.damage = 1;
+      const sink = run(state, [castRandom({ query: { defId: [healFriend.id] }, count: 2 })]);
+      expect(state.pending).toBeNull();
+      for (const cured of eventsOfType(sink.events, "healed")) {
+        seen.add(cured.targetId === mine.id ? "friend" : "enemy");
+      }
+    }
+    expect(seen).toEqual(new Set(["friend", "enemy"]));
   });
 });

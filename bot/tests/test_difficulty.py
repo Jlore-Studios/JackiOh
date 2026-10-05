@@ -106,7 +106,8 @@ class BuilderTests(unittest.TestCase):
     def test_a_hard_item_takes_a_strong_model_only(self):
         gh = FakeGitHub()
         ctx = ctx_for(gh)
-        busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("claude-2", 53))
+        busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("claude-6", 71),
+             ("claude-5", 70), ("claude-2", 53))
         queue(gh, ctx, 3, HARD)
         planned = plan_mod.make(ctx)
         self.assertEqual(planned["action"], "none")  # agy, muse and gpt are free, and medium
@@ -114,11 +115,12 @@ class BuilderTests(unittest.TestCase):
 
     def test_the_usage_order(self):
         """For easy items Devin first while it has a lane (`easy_first`); then claude-3, then
-        claude-1, then the medium models (Muse on both its lanes), and claude-2 builds only after
-        all of them (`build_last`)."""
+        claude-1, then claude-4, claude-6 and claude-5 last of the Claude accounts, then the
+        medium models (Muse on both its lanes), and claude-2 builds only after all of them
+        (`build_last`)."""
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
-        for number in range(3, 12):
+        for number in range(3, 14):
             queue(gh, ctx, number, EASY)
             ctx.store.update(lambda s, n=number: state_item(s, n).update(
                 queued_at=f"2026-09-{n + 10:02d}T00:00:00Z"))
@@ -128,7 +130,7 @@ class BuilderTests(unittest.TestCase):
                                                          dataclasses.replace(ctx.cfg.pool.get(
                                                              "devin"), lanes=1)})))
         order = []
-        for _ in range(9):
+        for _ in range(11):
             planned = plan_mod.make(ctx)
             if planned["action"] == "none":
                 break
@@ -138,6 +140,7 @@ class BuilderTests(unittest.TestCase):
             order.append((planned["provider"], seats(planned)["build"][1]))
         self.assertEqual(order, [("devin", "swe-2-max"), ("claude-3", "sonnet"),
                                  ("claude-1", "sonnet"), ("claude-4", "opus"),
+                                 ("claude-6", "opus"), ("claude-5", "opus"),
                                  ("agy", "gemini-3.8-flash-high"),
                                  ("muse", "muse-spark-1.3-contributor"),
                                  ("muse", "muse-spark-1.3-contributor"),
@@ -154,7 +157,8 @@ class BuilderTests(unittest.TestCase):
         # (build_last, kept for planning and review) stays free.
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
-        busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("agy", 53))
+        busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("claude-6", 71),
+             ("claude-5", 70), ("agy", 53))
         ctx = make_ctx(gh, at=NIGHT, cfg=dataclasses.replace(
             ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20, machine_parallel=20)))
         busy(gh, ctx, ("muse", 54), ("muse", 62), ("gpt", 55))  # Muse has two lanes
@@ -174,8 +178,8 @@ class BuilderTests(unittest.TestCase):
         ctx = ctx_for(gh, machine=ALL_MACHINE)
         ctx = make_ctx(gh, at=NIGHT, cfg=dataclasses.replace(
             ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20, machine_parallel=20)))
-        busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("agy", 53),
-             ("muse", 54), ("muse", 56), ("gpt", 55))
+        busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("claude-6", 71),
+             ("claude-5", 70), ("agy", 53), ("muse", 54), ("muse", 56), ("gpt", 55))
         queue(gh, ctx, 3, MEDIUM)
         self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-2", "opus", "strong"))
 
@@ -311,31 +315,57 @@ class ReviewRunTests(unittest.TestCase):
         gh.threads[9]["labels"] = [{"name": LABEL_PR}, {"name": LABEL_CROSS}]
         self.assertEqual(seats(plan_mod.make(ctx))["review"][0], "claude-4")
 
-    def test_otherwise_a_medium_model_of_another_family(self):
+    def test_otherwise_a_medium_model_another_family_first_then_the_same_one(self):
         gh = FakeGitHub()
         ctx = ctx_for(gh, at=DAY)
         self.pull(gh, ctx)
         planned = plan_mod.make(ctx)
         self.assertEqual(seats(planned)["review"], ("agy", "gemini-3.8-flash-high", "medium"))
         self.assertEqual(planned["approved"], ["gpt"])
+        # With only gpt set up, gpt reviews it again: the same medium model may give both.
         gh2 = FakeGitHub()
         ctx2 = ctx_for(gh2, at=DAY, machine=("gpt",))
         self.pull(gh2, ctx2)
-        self.assertEqual(plan_mod.make(ctx2)["action"], "none")  # gpt approved; no other family
+        self.assertEqual(seats(plan_mod.make(ctx2))["review"], ("gpt", "gpt-5.6-terra", "medium"))
 
-    def test_a_hard_pull_request_waits_for_a_strong_model(self):
+    def test_a_hard_pull_request_takes_a_strong_model_first_or_a_medium_one(self):
         gh = FakeGitHub()
-        ctx = ctx_for(gh, at=DAY)
-        self.pull(gh, ctx, labels=(HARD,))
-        self.assertEqual(plan_mod.make(ctx)["action"], "none")
         ctx = ctx_for(gh, at=DAY, committed_hours=True)  # claude-3 all day
+        self.pull(gh, ctx, labels=(HARD,))
         self.assertEqual(seats(plan_mod.make(ctx))["review"], ("claude-3", "opus", "strong"))
-
-    def test_weak_models_never_review(self):
         gh = FakeGitHub()
-        ctx = ctx_for(gh, at=DAY, env=secrets(), machine=("devin",))
-        self.pull(gh, ctx)
-        self.assertEqual(plan_mod.make(ctx)["action"], "none")
+        ctx = ctx_for(gh, at=DAY)  # no Claude account by day: two medium approvals do
+        self.pull(gh, ctx, labels=(HARD,))
+        self.assertEqual(seats(plan_mod.make(ctx))["review"],
+                         ("agy", "gemini-3.8-flash-high", "medium"))
+
+    def test_a_weak_model_reviews_only_an_easy_item_short_of_a_weak_approval(self):
+        def review_with_devin_only(labels, votes=None):
+            gh = FakeGitHub()
+            ctx = ctx_for(gh, at=DAY, env=secrets(), machine=("devin",))
+            self.pull(gh, ctx, labels=labels, votes=votes)
+            return plan_mod.make(ctx)
+
+        planned = review_with_devin_only((EASY,))  # gpt approved it: a weak approval completes it
+        self.assertEqual((planned["action"], seats(planned)["review"]),
+                         ("review", ("devin", "swe-2-max", "weak")))
+        self.assertEqual(review_with_devin_only(())["action"], "none")  # medium: weak never counts
+        self.assertEqual(review_with_devin_only((HARD,))["action"], "none")
+        # An easy item with a weak approval already needs a medium or strong one, not another weak.
+        weak_only = {"sha": "h1", "builder": "cognition", "approvals": ["cognition"],
+                     "tiers": {"cognition": "weak"}}
+        self.assertEqual(review_with_devin_only((EASY,), weak_only)["action"], "none")
+
+    def test_whether_the_reviewers_set_up_could_still_ship_it(self):
+        from harness import review_rule
+        self.assertTrue(review_rule.reachable([], {"medium"}, "hard"))  # one medium model, twice
+        self.assertFalse(review_rule.reachable([], {"weak"}, "easy"))  # Devin alone never ships it
+        self.assertTrue(review_rule.reachable(["medium"], {"weak"}, "easy"))
+        self.assertFalse(review_rule.reachable(["medium"], {"weak"}, "medium"))
+        self.assertFalse(review_rule.reachable(["weak"], set(), "easy"))
+        self.assertEqual(review_rule.who([("muse", "medium"), ("muse", "medium"),
+                                          ("claude", "strong")]),
+                         "`muse` (medium) twice, `claude` (strong)")
 
     def test_the_rule(self):
         h = Harness(self, env=ALL, machine=MACHINE)
@@ -344,16 +374,32 @@ class ReviewRunTests(unittest.TestCase):
         out.mkdir()
         d = Deliverer(h.ctx, {"action": "review", "provider": "agy"}, out, h.deliver_repo)
         rule = d._rule_met
-        self.assertTrue(rule({"approvals": ["claude"], "tiers": {"claude": "strong"}}))
+
+        def reviews(*pairs):
+            return {"approvals": list(dict.fromkeys(f for f, _ in pairs)),
+                    "reviews": [{"family": f, "tier": t} for f, t in pairs]}
+
+        strong, gemini, muse, devin = (("claude", "strong"), ("gemini", "medium"),
+                                       ("muse", "medium"), ("cognition", "weak"))
+        for difficulty in ("easy", "medium", "hard"):
+            # One strong approval, or two medium ones (the same model twice too), at every
+            # difficulty.
+            self.assertTrue(rule(reviews(strong), difficulty))
+            self.assertTrue(rule(reviews(gemini, muse), difficulty))
+            self.assertTrue(rule(reviews(muse, muse), difficulty))
+            self.assertFalse(rule(reviews(gemini), difficulty))
+            self.assertFalse(rule(reviews(devin, devin), difficulty))
+        # A weak and a medium approval: only for an easy item.
+        self.assertTrue(rule(reviews(devin, gemini), "easy"))
+        self.assertFalse(rule(reviews(devin, gemini), "medium"))
+        self.assertFalse(rule(reviews(devin, gemini), "hard"))
+        # Votes kept before reviews were counted one by one: one per family.
         self.assertTrue(rule({"approvals": ["gemini", "muse"],
-                              "tiers": {"gemini": "medium", "muse": "medium"}}))
-        self.assertFalse(rule({"approvals": ["gemini"], "tiers": {"gemini": "medium"}}))
+                              "tiers": {"gemini": "medium", "muse": "medium"}}, "hard"))
+        self.assertTrue(rule({"approvals": ["gemini", "cognition"],
+                              "tiers": {"gemini": "medium", "cognition": "weak"}}, "easy"))
         self.assertFalse(rule({"approvals": ["gemini", "cognition"],
                                "tiers": {"gemini": "medium", "cognition": "weak"}}))
-        # A hard item takes a strong approval; two medium ones are not enough.
-        self.assertFalse(rule({"approvals": ["gemini", "muse"],
-                               "tiers": {"gemini": "medium", "muse": "medium"}}, hard=True))
-        self.assertTrue(rule({"approvals": ["claude"], "tiers": {"claude": "strong"}}, hard=True))
         # A rejection stands until its model approves.
         self.assertFalse(rule({"approvals": ["claude"], "rejections": ["gemini"],
                                "tiers": {"claude": "strong"}}))

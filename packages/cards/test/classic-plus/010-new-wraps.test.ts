@@ -38,7 +38,9 @@ describe("C+ #10 New Wraps", () => {
   it("is a (0) Spell targeting a Unit on either side, on both faces", () => {
     expect([def.type, def.cost]).toEqual(["Spell", 0]);
     for (const face of [base, radiant]) {
-      expect(face.targets).toEqual([{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit"] } }]);
+      expect(face.targets).toEqual([
+        { kind: "target", min: 1, max: 1, aim: "help", filter: { side: "any", of: ["unit"] } },
+      ]);
     }
   });
 

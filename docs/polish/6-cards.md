@@ -95,8 +95,9 @@ board still fits 1280×720 and 390×844.
 - No Blizzard art, frames, fonts, crests, logos or card backs, and no trademarks. Every frame,
   gem, crest and back is original CSS or inline SVG, and all art is procedural until real
   `apps/web/public/art/*.webp` files land.
-- There are no class tabs (JackiOh has no classes), no crafting, no golden or diamond tiers, and
-  no flavour text or artist line (the catalog carries neither).
+- There are no class tabs (JackiOh has no classes), no crafting and no golden or diamond tiers.
+  Flavour text and artist credits came later (R660): a sidecar beside the catalog
+  (`packages/cards/flavour.json`), shown in the inspect views and the detail view, never on a face.
 - **Hearthstone's click-to-add in the pool.** The brief says "in the deck builder, a click opens a
   detail view", so a click on a pool card opens it and its "Add to Deck N" adds the card. Adding
   still takes one gesture: the "+" on every pool card, or a drag onto a deck. (The fix stage changed
@@ -1167,7 +1168,8 @@ typecheck it with `pnpm --dir e2e typecheck:component`.
 ## Out of scope
 
 - Real card art. The manifest ships empty; artists drop `apps/web/public/art/<id>.webp` and
-  `<id>-radiant.webp` files in later and list them in `manifest.ts`.
+  `<id>-radiant.webp` files in later and list them in `manifest.ts`, under the convention in
+  `cards/art/ART.md` (R660).
 - The hand fan, tap-to-lift, drag to play, highlight colours and touch-target sizing (task 7), and
   anything else in `Board.tsx`, `Zone.tsx`, `Hand.tsx`, `Backrow.tsx`, `board.css`, `prompt.css`
   or `Game.tsx`.
@@ -1177,8 +1179,8 @@ typecheck it with `pnpm --dir e2e typecheck:component`.
 - Sounds on hover or inspect (task 2).
 - Keyboard-driven inspect on the board. In the deck builder a pool card opens its detail on
   Enter or Space, and a deck tile on I, the context-menu key or Shift+F10.
-- Persisting deck-builder filters or sort, deck codes, multiple loadouts, crafting, flavour text
-  and artist credits.
+- Persisting deck-builder filters or sort, deck codes, multiple loadouts and crafting. (Flavour text
+  and artist credits followed in R660.)
 - Changing SPEC §10.8's catalog finding. The client still loads the catalog beside the view, as
   `catalog.ts` documents.
 

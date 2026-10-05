@@ -6,10 +6,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP } from "./constants.ts";
-import { SFX, SFX_IDS, SFX_TIMBRES, noiseBuffer, type SfxRecipe, type SfxSpec } from "./sfx.ts";
+import { CHAOS_REVEAL_MAX, EFFECT_PITCH_JITTER, IMPACT_AMOUNT_CAP } from "./constants.ts";
+import { SFX, SFX_IDS, SFX_TIMBRES, noiseBuffer, renderSfx, type SfxRecipe, type SfxSpec } from "./sfx.ts";
 import { FakeAudio, FakeNode, type FakeParam, type ParamEvent } from "./test/fakeAudio.ts";
 import type { SfxId, SfxParams } from "./types.ts";
+import { CARD_AUDIO } from "./voiceData.ts";
 
 /** The SfxId union, in its declared order. */
 const UNION_ORDER: SfxId[] = [
@@ -468,5 +469,60 @@ describe("R506 the new families and moments keep the recipe contract", () => {
       expect(pitches[i] ?? 0, `amount ${String(i + 1)} is higher`).toBeGreaterThan(pitches[i - 1] ?? Infinity);
       expect(lengths[i] ?? Infinity, `amount ${String(i + 1)} is shorter`).toBeLessThan(lengths[i - 1] ?? 0);
     }
+  });
+});
+
+describe("R655 a recipe pitched for a card's effect", () => {
+  /** `id`'s recipe through `renderSfx` at `pitch`, as the engine plays a card's effect. */
+  const pitchedRun = (id: SfxId, pitch: number, params: SfxParams = {}): Run =>
+    runRecipe(`${id} ${JSON.stringify(params)} at pitch ${String(pitch)}`, (c, out, at, p) => renderSfx(id, c, out, at, p, pitch), SFX[id].durationMs, params);
+  const allProblems = (runs: readonly Run[]): string[] => [
+    ...runs.flatMap(subsetProblems),
+    ...runs.flatMap(lengthProblems),
+    ...runs.flatMap(scheduleProblems),
+    ...runs.flatMap(stopProblems),
+    ...runs.flatMap(wiringProblems),
+    ...runs.flatMap(rampProblems),
+  ];
+  const detunes = (run: Run): number[] =>
+    run.made.filter((n) => n.kind === "oscillator" || n.kind === "biquad").map((n) => n.param("detune").settled());
+
+  it("R655 every recipe keeps the recipe contract at the bank's lowest and highest pitch", () => {
+    expect(allProblems(SFX_IDS.flatMap((id) => [pitchedRun(id, 0.25), pitchedRun(id, 4)]))).toEqual([]);
+  });
+
+  it("R655 every effect in the shipped bank keeps the contract at its own pitch and params, varied either way", () => {
+    const effects = Object.entries(CARD_AUDIO.effects);
+    expect(effects.length, "the bank has effects").toBeGreaterThan(0);
+    const runs = effects.flatMap(([, effect]) =>
+      [1 - EFFECT_PITCH_JITTER, 1 + EFFECT_PITCH_JITTER].map((jitter) => pitchedRun(effect.sfx, effect.pitch * jitter, effect.params ?? {})),
+    );
+    expect(allProblems(runs)).toEqual([]);
+  });
+
+  it("R655 renderSfx detunes every oscillator and filter by the pitch in cents and keeps the recipe's length", () => {
+    const plain = pitchedRun("impact", 1, { amount: 8 });
+    const up = pitchedRun("impact", 2, { amount: 8 });
+    expect(detunes(plain).length).toBeGreaterThan(0);
+    expect(new Set(detunes(plain))).toEqual(new Set([0]));
+    expect(detunes(up)).toEqual(detunes(plain).map(() => 1200));
+    expect(returnedSeconds(up)).toBe(returnedSeconds(plain));
+    // The same nodes, at the same frequencies: only the detune differs.
+    expect(up.made.map((n) => n.kind)).toEqual(plain.made.map((n) => n.kind));
+  });
+
+  it("R655 the crushed wavetable, which has no detune, plays as much faster as the pitch is higher", () => {
+    const rate = (run: Run): number[] =>
+      run.made.filter((n) => n.kind === "bufferSource" && n.buffer !== null && n.buffer.length < 1000).map((n) => n.param("playbackRate").settled());
+    const plain = rate(pitchedRun("summon", 1, { timbre: "ai" }));
+    const down = rate(pitchedRun("summon", 0.5, { timbre: "ai" }));
+    expect(plain).toHaveLength(2);
+    down.forEach((value, i) => expect(value).toBeCloseTo((plain[i] ?? 0) * 0.5, 9));
+  });
+
+  it("R655 the pitch is the one run's: a recipe run after a pitched one, or straight from SFX, is not detuned", () => {
+    pitchedRun("death", 0.5);
+    const after = runRecipe("death after a pitched run", SFX.death.recipe, SFX.death.durationMs, {});
+    expect(new Set(detunes(after))).toEqual(new Set([0]));
   });
 });

@@ -1,12 +1,17 @@
-// R388 (B4.2): card patches are data. `packages/cards/patches/patches.json` lists every patch in
-// order, each `<version>.json` is the whole catalog as that patch left it, and `index.json` says in
-// which versions each card changed. The catalog version is the patch: `CATALOG_VERSION` is the
-// newest patch's version, everywhere the string lives, and catalog.json is its snapshot. A version
-// is opaque (R105): its order is patches.json's, never a comparison of strings.
+// R388 (B4.2): card patches are data. `packages/cards/patches/patches.json` lists every shipped
+// patch in ship order, each `<version>.json` is the whole catalog as that patch left it,
+// `index.json` says in which versions each card changed, and `shipped.json` carries each patch's
+// shipping commit and snapshot blob. The catalog version is the patch: `CATALOG_VERSION` is the
+// newest patch's version, everywhere the string lives. A version is opaque (R105): its order is
+// patches.json's, never a comparison of strings.
 //
-// The history before v0.2.0 was rebuilt from `git log --follow packages/cards/catalog.json` with
-// `pnpm --filter @jackioh/cards patch <version> "<title>" --date … --from-git <rev>`; the table the
-// brief checked on 2026-09-30 is asserted below, card by card where it names cards.
+// Several patches are built at once (R646), so branches change `catalog.json` and add one
+// fragment under `patches/pending/` instead of editing the history: while a fragment is pending,
+// the catalog differs from the newest snapshot on exactly the claimed cards, and `patches ship`
+// promotes each fragment after it merges.
+//
+// The history before v0.2.0 was rebuilt from `git log --follow packages/cards/catalog.json`; the
+// table the brief checked on 2026-09-30 is asserted below, card by card where it names cards.
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -15,7 +20,21 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CATALOG, CATALOG_VERSION } from "../src/catalog-data";
-import { INDEX_JSON, buildIndex, changedFields, diffCatalogs, readPatches, readSnapshot, snapshotPath, type Catalog } from "../scripts/patches-io";
+import {
+  INDEX_JSON,
+  buildIndex,
+  changedFields,
+  diffCatalogs,
+  gitBlobHash,
+  readFragments,
+  readPatches,
+  readShipped,
+  readSnapshot,
+  revertPending,
+  sameCatalog,
+  snapshotPath,
+  type Catalog,
+} from "../scripts/patches-io";
 import { versionsAtSites } from "../scripts/patch";
 
 const ROOT = fileURLToPath(new URL("../../..", import.meta.url));
@@ -29,7 +48,19 @@ const idsOf = (version: string, kind: string): string[] =>
 
 describe("R388 card patch history (B4.2)", () => {
   it("R388 lists every patch once, in the order they were made, each with its snapshot", () => {
-    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.1", "v0.2.4", "v0.2.5", "v0.2.10"]);
+    // Promotions only ever append (R646), so the history the file holds today can grow past
+    // this prefix but never move it: assert the prefix, plus the newest patch main shipped.
+    expect(VERSIONS.slice(0, 8)).toEqual([
+      "v0.1.0",
+      "v0.1.0b",
+      "v0.1.0c",
+      "v0.1.0d",
+      "v0.1.1",
+      "v0.2.0",
+      "v0.2.4",
+      "v0.2.5",
+    ]);
+    expect(VERSIONS).toContain("v0.2.10");
     expect(new Set(VERSIONS).size).toBe(VERSIONS.length);
     for (const patch of PATCHES) {
       expect(existsSync(snapshotPath(patch.version)), `${patch.version}.json`).toBe(true);
@@ -38,21 +69,39 @@ describe("R388 card patch history (B4.2)", () => {
       expect(patch.source.length, patch.version).toBeGreaterThan(0);
       expect(patch.notes.length, patch.version).toBeGreaterThan(0);
     }
-    // The dates never go backwards along patches.json's order (the order itself is the file's).
-    const dates = PATCHES.map((patch) => patch.date);
-    expect(dates).toEqual([...dates].sort());
   });
 
-  it("R388 makes the catalog version the newest patch, and catalog.json its snapshot", () => {
+  it("R388 makes the catalog version the newest patch, and catalog.json its snapshot apart from pending fragments (R646)", () => {
+    // Never a literal: `patches ship` moves the newest patch, and its pull request cannot edit tests.
     expect(CATALOG_VERSION).toBe(VERSIONS[VERSIONS.length - 1]);
-    expect(CATALOG_VERSION).toBe("v0.2.10");
     const snapshot = readSnapshot(CATALOG_VERSION);
-    const differ = [...new Set([...Object.keys(snapshot), ...Object.keys(CATALOG)])].filter(
-      (id) => JSON.stringify(snapshot[id]) !== JSON.stringify(CATALOG[id]),
-    );
-    const cut = `pnpm --filter @jackioh/cards patch ${CATALOG_VERSION} "<title>" (it amends the newest patch)`;
-    expect(differ, `catalog.json is the newest snapshot: run ${cut}`).toEqual([]);
-    expect(JSON.stringify(Object.keys(snapshot))).toBe(JSON.stringify(Object.keys(CATALOG)));
+    // Pending fragments hold the catalog ahead of the newest snapshot on exactly their claimed
+    // cards (R646): reverted to the snapshot, the catalog is the snapshot. With no fragments
+    // pending this is the old equality, entry for entry.
+    const claimed = new Set(readFragments().flatMap(({ fragment }) => fragment.cards));
+    const catalog = CATALOG as unknown as Catalog;
+    const reverted = revertPending(catalog, snapshot, claimed);
+    expect(
+      sameCatalog(reverted, snapshot),
+      "catalog.json with every pending-claimed entry reverted is the newest snapshot: " +
+        "claim the difference with `pnpm --filter @jackioh/cards patches <version> \"<title>\"`",
+    ).toBe(true);
+    if (claimed.size === 0) {
+      expect(JSON.stringify(Object.keys(snapshot))).toBe(JSON.stringify(Object.keys(catalog)));
+    }
+  });
+
+  it("R646 lists every shipped patch once in shipped.json, with the commit that shipped it and its snapshot's blob", () => {
+    const shipped = readShipped();
+    expect(shipped.map((entry) => entry.version)).toEqual(VERSIONS);
+    expect(new Set(shipped.map((entry) => entry.version)).size).toBe(shipped.length);
+    for (const entry of shipped) {
+      expect(entry.commit, `${entry.version} commit`).toMatch(/^[0-9a-f]{40}$/);
+      expect(entry.blob, `${entry.version} blob`).toMatch(/^[0-9a-f]{40}$/);
+      // The blob is the snapshot file's bytes as git hashes them, so a rewritten snapshot fails.
+      const bytes = readFileSync(snapshotPath(entry.version), "utf8");
+      expect(entry.blob, `${entry.version}.json`).toBe(gitBlobHash(bytes));
+    }
   });
 
   it("R388 bumps the version everywhere the string lives: the server's env example, render.yaml and its end-to-end default", () => {
@@ -130,16 +179,24 @@ describe("R388 card patch history (B4.2)", () => {
     expect(changed?.kind === "changed" ? changed.fields : []).toContain("cost");
   });
 
-  it("R388 records patch v0.2.1's Heroic Power rewrite without rewriting v0.2.0's data", () => {
-    const before = readSnapshot("v0.2.0");
-    const after = readSnapshot("v0.2.1");
-    expect(before["core-004"]?.["loc"]).toBe(11);
-    expect(before["core-098"]?.["loc"]).toBe(13);
-    const changed = changesOf("v0.2.1").find((change) => change.id === "core-098");
+  it("R388 records patch v0.2.1's Heroic Power rewrite, pending or shipped (R646)", () => {
+    // Pending until `patches ship` promotes it, then shipped: either way the patch rewrites
+    // core-098, and v0.2.0's snapshot keeps its data (loc 13), never rewritten.
+    const v020 = readSnapshot("v0.2.0");
+    expect(v020["core-004"]?.["loc"]).toBe(11);
+    expect(v020["core-098"]?.["loc"]).toBe(13);
+    const shipped = VERSIONS.includes("v0.2.1");
+    const pending = readFragments().find(({ fragment }) => fragment.version === "v0.2.1")?.fragment;
+    expect(shipped || pending !== undefined, "v0.2.1 is pending or shipped").toBe(true);
+    if (!shipped) expect(pending?.cards).toEqual(["core-098"]);
+    const changes = shipped
+      ? changesOf("v0.2.1")
+      : diffCatalogs(readSnapshot(CATALOG_VERSION), CATALOG as unknown as Catalog);
+    expect(changes.filter((change) => change.id !== "core-098")).toEqual([]);
+    const changed = changes.find((change) => change.id === "core-098");
     expect(changed?.kind === "changed" ? changed.fields : []).toEqual(
       expect.arrayContaining(["cost", "refs", "base.text", "radiant.text", "params", "loc"]),
     );
-    expect(after["core-098"]?.["loc"]).toBe(CATALOG["core-098"]?.loc);
   });
 
   it("R388 records patch v0.2.10: eighteen Field Spells Animated and Ivory Tower's text (issue #113)", () => {
@@ -156,6 +213,56 @@ describe("R388 card patch history (B4.2)", () => {
     expect((after["classicplus-033"]?.["base"] as { text?: string } | undefined)?.text).toBe("The first Unit you stack onto this is fused into it.");
     // Final Gambit's follow-up gained its R216 guard: the script's lines move, nothing printed does.
     expect(changesOf("v0.2.10").find((change) => change.id === "classic-052")).toMatchObject({ kind: "changed", fields: ["loc"] });
+  });
+
+  it("R388 records patch v0.2.11: aimed random casts and the Deft keyword (issue #181), pending or shipped (R646)", () => {
+    // Pending until `patches ship` promotes it, then shipped: either way the patch is these five
+    // cards' changes against v0.2.10's snapshot.
+    const five = ["core-045", "classic-003", "classicplus-010", "classicplus-038-1", "classicplus-040"];
+    const shipped = VERSIONS.includes("v0.2.11");
+    const pending = readFragments().find(({ fragment }) => fragment.version === "v0.2.11")?.fragment;
+    expect(shipped || pending !== undefined, "v0.2.11 is pending or shipped").toBe(true);
+    if (!shipped) expect(pending?.cards).toEqual(five);
+    const changes = shipped
+      ? changesOf("v0.2.11")
+      : diffCatalogs(readSnapshot("v0.2.10"), CATALOG as unknown as Catalog).filter((change) =>
+          five.includes(change.id),
+        );
+    expect(changes.filter((change) => change.kind !== "changed")).toEqual([]);
+    expect(changes.map((change) => change.id)).toEqual(five);
+    const fieldsOf = (id: string): string[] => {
+      const change = changes.find((c) => c.id === id);
+      return change?.kind === "changed" ? [...change.fields].sort() : [];
+    };
+    expect(fieldsOf("core-045")).toEqual(["base.keywords", "base.text", "loc", "radiant.keywords", "radiant.text"]);
+    expect(fieldsOf("classic-003")).toEqual(["loc"]);
+    expect(fieldsOf("classicplus-010")).toEqual(["loc"]);
+    expect(fieldsOf("classicplus-038-1")).toEqual(["base.text", "radiant.text"]);
+    expect(fieldsOf("classicplus-040")).toEqual(["base.text", "radiant.text"]);
+  });
+
+  it("R388 records patch v0.2.12: Animated removed from eighteen Field Spells (issue #218)", () => {
+    // The eighteen, in catalog order — the order a fragment's `cards` and a patch's `changes` use.
+    const unanimated = [
+      "core-014", "core-033", "core-038", "core-065", "core-073",
+      "classic-004", "classic-007", "classic-062", "classic-064", "classic-087",
+      "classicplus-007", "classicplus-012-5", "classicplus-012-7", "classicplus-031",
+      "classicplus-061", "classicplus-063", "classicplus-070", "classicplus-078",
+    ];
+    // The undo is in the catalog either way: no stats and no Animated on either face.
+    const face = (id: string) => CATALOG[id]?.base;
+    expect(face("core-073")?.attack).toBeUndefined();
+    expect(face("core-073")?.keywords).toEqual([]);
+    // Pending, the fragment is the patch's whole record (R646); shipped, `patches ship` has
+    // promoted it to the list with a snapshot of this catalog. The test holds on both sides
+    // of the promotion, which cannot edit it.
+    const fragment = readFragments().find(({ fragment }) => fragment.version === "v0.2.12")?.fragment;
+    if (fragment !== undefined) expect(fragment.cards).toEqual(unanimated);
+    else {
+      expect(idsOf("v0.2.12", "added")).toEqual([]);
+      expect(idsOf("v0.2.12", "removed")).toEqual([]);
+      expect(idsOf("v0.2.12", "changed")).toEqual(unanimated);
+    }
   });
 
   it("R388 records patch v0.2.4: card text pass (issue #45)", () => {
@@ -220,10 +327,12 @@ describe("R388 card patch history (B4.2)", () => {
     const index = buildIndex(PATCHES);
     expect(index["core-t-coin"]?.[0]).toBe("v0.1.0c");
     expect(index["core-t-ghoul"]?.[0]).toBe("v0.1.1");
-    expect(index["classic-001"]).toEqual(["v0.2.0"]);
+    expect(index["classic-001"]?.[0]).toBe("v0.2.0");
     expect(index["core-016"]).toContain("v0.2.0");
-    // Every catalog entry was added by some patch.
-    expect(Object.keys(CATALOG).filter((id) => index[id] === undefined)).toEqual([]);
+    // Every catalog entry was added by some patch, or is claimed by a pending fragment — which is
+    // not a shipped patch yet, so the index does not name it (R646).
+    const claimed = new Set(readFragments().flatMap(({ fragment }) => fragment.cards));
+    expect(Object.keys(CATALOG).filter((id) => index[id] === undefined && !claimed.has(id))).toEqual([]);
   });
 });
 

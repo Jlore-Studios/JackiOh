@@ -26,10 +26,16 @@ is forced, under its limits):
   the plan and the build share one run; otherwise the planning is a run of its own, and the item
   goes back to the queue to build from the plan. Such a planning run is short and starts before
   any long run, so a planner plans Devin's next item before it builds one of its own.
-- **review** in the run: the run's own strongest seat of at least medium (strong for a hard item);
-  a weak seat never reviews, so a run with none hands the change to a review run.
-- **a review run** (`bot:cross-review`): a strong seat whenever one is free, otherwise a medium
-  one of a family that has not approved the head yet; a hard item waits for a strong one.
+- **review** in the run: the run's own strongest seat of at least medium; a run with none (Devin's,
+  which checks itself instead) hands the change to a review run.
+- **a review run** (`bot:cross-review`): a strong seat whenever one is free, otherwise a medium one
+  (a family that has not approved the head yet first, but the same model may review it twice),
+  otherwise, for an easy item that has no weak approval yet, a weak one. What counts is the
+  review rule (`review_rule.py`): one strong approval, or two medium ones, or for an easy item one
+  weak and one medium.
+- **a conflict on a cleared change** (a bot PR whose commit met the rule, then conflicted with
+  `main`): a builder with its own reviewer in the run first, since that review carries the
+  clearance to the resolution (`deliver._carry`) and no review run follows.
 
 An item labelled `human` is never queued (`candidates`), nor a build that waits for another
 issue (`queue.waits_for`: a "Blocked by #n" line, GitHub's own blocked-by link, or an earlier
@@ -44,7 +50,7 @@ from datetime import timedelta
 from itertools import islice
 from typing import Any, Iterator
 
-from harness import asks, issueplan, threads
+from harness import asks, issueplan, review_rule, threads
 from harness import providers as providers_mod
 from harness.clock import iso, parse_iso
 from harness.config import (DIFFICULTIES, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
@@ -56,7 +62,7 @@ from harness.errors import GitHubError
 from harness.prompts import data
 from harness.providers import TIER_RANK, Pool, Provider, Seat, tier_at_least
 from harness.queue import (KIND_ORDER, PRIORITY_NAMES, Candidate, branch_for_issue, candidates,
-                           is_human, label_names, needs_plan,
+                           carries, cleared, is_human, label_names, needs_plan,
                            open_pull_for_branch, set_state_label,
                            strong_plan)
 from harness.state import item as state_item
@@ -332,25 +338,28 @@ def can_plan(pool: Pool, provider: Provider) -> bool:
 
 
 def run_reviewer(pool: Pool, provider: Provider, difficulty: str) -> Seat | None:
-    """A build or revise run's own adversarial reviewer: its strongest seat of at least medium
-    (strong for a hard item), or None, and the change goes to a review run."""
+    """A build or revise run's own adversarial reviewer: its strongest seat of at least medium,
+    or None, and the change goes to a review run. (`difficulty` does not change it: a hard item's
+    builder is strong, so its own reviewer is too.)"""
     if "review" not in provider.roles:
         return None
-    return pool.best_seat(provider, "strong" if difficulty == "hard" else "medium")
+    return pool.best_seat(provider, "medium")
 
 
 def review_seat(pool: Pool, providers: list[Provider], candidate: Candidate) -> Seat | None:
-    """A review run's reviewer: strong whenever one is free; otherwise medium, of a family whose
-    approval the head does not have yet. Weak never reviews; a hard item takes strong only."""
+    """A review run's reviewer: strong whenever one is free; otherwise medium, a family that has
+    not approved the head yet before one that has (the same model may review it twice);
+    otherwise weak, only where a weak approval helps (`review_rule.helps`: an easy item with no
+    weak approval yet)."""
     seats = [seat for provider in providers for seat in pool.seats(provider)]
-    strong = ranked(pool, [seat for seat in seats if seat.tier == "strong"])
-    if strong:
-        return strong[0]
-    if candidate.difficulty == "hard":
-        return None
-    medium = ranked(pool, [seat for seat in seats if seat.tier == "medium"
-                           and seat.family not in candidate.approved])
-    return medium[0] if medium else None
+    for tier in ("strong", "medium", "weak"):
+        if not review_rule.helps(candidate.approval_tiers, tier, candidate.difficulty):
+            continue
+        found = ranked(pool, [seat for seat in seats if seat.tier == tier])
+        found.sort(key=lambda seat: seat.family in candidate.approved)  # stable: keeps the order
+        if found:
+            return found[0]
+    return None
 
 
 def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lanes, *,
@@ -375,6 +384,10 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
     if candidate.kind == "revise" and not candidate.bot_pr:
         # A person's pull request never gets a review run: its reviewer must be in this run.
         builders = [p for p in builders if run_reviewer(pool, p, candidate.difficulty)]
+    elif candidate.carries:
+        # A conflict on a cleared change ships on the run's own review (`deliver._carry`), so a
+        # builder with a reviewer in its run goes first; one without (Devin) needs a review run.
+        builders = [p for p in builders if run_reviewer(pool, p, candidate.difficulty)] or builders
     builder, note = builder_seat(pool, builders, candidate.difficulty)
     if builder is None:
         return None
@@ -657,6 +670,7 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
     stop = stops(ctx, state, force)
     if stop:
         return nothing(stop)
+    note_secrets(ctx, state)
     notes = housekeeping(ctx, state) + announce_switched_off(ctx, state)
 
     def taken(planned: dict[str, Any]) -> dict[str, Any]:
@@ -747,6 +761,15 @@ def sync_needs_plan(ctx: Context, state: dict[str, Any]) -> list[str]:
     return notes
 
 
+def note_secrets(ctx: Context, state: dict[str, Any]) -> None:
+    """Record which provider secrets this run's workflow has, for the status loop: its own list
+    is fixed when its long run is created, so a secret added since shows there once a plan job
+    has seen it (`providers.newer_secrets`)."""
+    record = providers_mod.secrets_record(ctx.cfg.secrets, state, ctx.now())
+    if record is not None:
+        ctx.store.update(lambda s: s.update(secrets=record), "secrets seen")
+
+
 def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
     """Requeue items a dead run left working; queue a revision for conflicted bot PRs."""
     notes: list[str] = []
@@ -807,8 +830,12 @@ def _provider_fields(ctx: Context, provider: Provider) -> dict[str, Any]:
     """What the model job needs to know about the subscription it runs on. The secret's value
     is never here: the workflow hands the model job only the secret named."""
     vault, _ = ctx.gh.get_file(vault_path(provider.id), STATE_BRANCH)
+    # `shared` names the run's model step "Build, check and review", which the partner bot
+    # reads as this bot spending the shared subscription, so it excuses the rise. claude-1 is
+    # that subscription whether or not this bot waits for it to be quiet (`quiet_check`).
+    shared = provider.quiet_check or provider.id == "claude-1"
     return {"provider": provider.id, "cli": provider.cli, "secret": provider.secret,
-            "family": provider.family, "shared": provider.quiet_check, "vault": vault or "",
+            "family": provider.family, "shared": shared, "vault": vault or "",
             "login": provider.login, "runs_on": provider.runs_on}
 
 
@@ -827,8 +854,8 @@ def _start_message(assignment: Assignment, cfg: Any) -> str:
                      f"to {cfg.max_review_cycles} rounds")
         end = "Only an approved change becomes a pull request."
     else:
-        end = ("No weak model reviews, so the pull request then waits for a review run: one "
-               "strong model, or two medium ones of different families.")
+        end = ("No model here reviews it, so the pull request then waits for a review run, until "
+               f"{review_rule.SUMMARY} approved it.")
     return f"I {', '.join(steps[:-1])} and {steps[-1]}. {end}"
 
 
@@ -903,8 +930,7 @@ def claim(ctx: Context, candidate: Candidate,
             }
             message = (f"Starting a review now{run_link(cfg)}, on "
                        f"{assignment.review.describe()}. `{builder}` built the change; it merges "
-                       "once one strong model, or two medium ones of different families, approve "
-                       "the same commit.")
+                       f"once {review_rule.SUMMARY} approved the same commit.")
         else:
             source = str(record.get("source") or "request")
             feedback = threads.pull_feedback(ctx.gh, ctx.trust, number, cfg.bot_login,
@@ -930,6 +956,13 @@ def claim(ctx: Context, candidate: Candidate,
             }
             message = (f"Starting a revision now{run_link(cfg)}, because of: {source}. "
                        f"{_start_message(assignment, cfg)}")
+            if LABEL_PR in names and carries(record):
+                # The work job tells its builder and reviewer; deliver decides from git alone.
+                planned["cleared"] = cleared(record)
+                if assignment.review is not None:
+                    message += (" The reviews had cleared it before `main` moved, so if this "
+                                "revision changes nothing but the conflicted files and its "
+                                "reviewer approves, it merges without another review run.")
     planned.update(_provider_fields(ctx, provider))
     planned.update(difficulty=candidate.difficulty, seats=assignment.seats(),
                    routing=list(assignment.notes), assignment=assignment.describe())

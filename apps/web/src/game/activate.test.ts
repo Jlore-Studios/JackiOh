@@ -312,7 +312,7 @@ describe("R384 Heroic Power is built through the same activation", () => {
 
 describe("R43 patch v0.2.1: a Heroic Power is its card's Activate ability, built and aimed from the hero", () => {
   // As `viewFor` gives it: the power on the hero, and the #98 card in the backrow listing the one
-  // ability it rolled (R384). `legalActions` lists one `activate` per target Ping may declare (R657).
+  // ability it rolled (R384). `legalActions` lists one `activate` per target Ping may declare (R664).
   const ping = { ...heroPower, name: "ping", ability: "ping", x: 1 };
   const PING_ABILITY: ActivationView = { ability: "ping", label: "Ping: Pierce. Deal 1 damage", usesLeft: 1, usable: true };
   const powerPing = (target: Selection): ActivationBody => ({ type: "activate", instanceId: "power-1", ability: "ping", targets: [target] });
@@ -342,7 +342,7 @@ describe("R43 patch v0.2.1: a Heroic Power is its card's Activate ability, built
     expect(activationControlTestids(pingView(), powerPing(heroP2))[0]).toBe(testid.power);
   });
 
-  it("R657 the power's press waits for a target, and a click on one sends the listed `activate` with it", () => {
+  it("R664 the power's press waits for a target, and a click on one sends the listed `activate` with it", () => {
     const view = pingView();
     const pressed = onClickTarget(view, legal, IDLE, { on: "activate", instanceId: "power-1" });
     expect(pressed.action).toBeUndefined();
@@ -620,11 +620,11 @@ describe("R510 an activation is dragged to its target", () => {
     expect(planDrag(view, withAttack, IDLE, { on: "unit", instanceId: "act1", side: "you", lane: 1 })?.kind).toBe("attack");
   });
 
-  it("R510 nothing to aim at, a card listing several abilities, or a build in flight: the press stays a click", () => {
+  it("R510 nothing to aim at (off the backrow), a card listing several abilities, or a build in flight: the press stays a click", () => {
     const view = activateView();
     const untargeted: ActionBody[] = [{ type: "activate", instanceId: "fs1", ability: "punish", modes: ["discard"] }];
     expect(planDrag(view, untargeted, IDLE, { on: "activate", instanceId: "fs1" })).toBeNull();
-    expect(planDrag(view, untargeted, IDLE, { on: "backrow", instanceId: "fs1", side: "you", lane: 1 })).toBeNull();
+    // R658: a backrow card of yours is the exception, dragged onto the board (below).
 
     const several: ActionBody[] = [{ type: "activate", instanceId: "act2", ability: "ping", targets: [at("e1")] }];
     expect(planDrag(view, several, IDLE, { on: "unit", instanceId: "act2", side: "you", lane: 2 })).toBeNull();
@@ -640,5 +640,38 @@ describe("R510 an activation is dragged to its target", () => {
     const plan = planDrag(view, aimed, IDLE, { on: "backrow", instanceId: "fs1", side: "you", lane: 1 });
     expect(plan?.kind).toBe("activate");
     expect(planDrag(view, aimed, IDLE, { on: "backrow", instanceId: "fs1", side: "opponent", lane: 1 })).toBeNull();
+  });
+});
+
+describe("R658 a backrow card whose ability aims at nothing is dragged onto the board", () => {
+  const untargeted: ActionBody = { type: "activate", instanceId: "fs1", ability: "punish", modes: ["discard"] };
+  const twoModes: ActionBody = { type: "activate", instanceId: "fs1", ability: "punish", modes: ["draw"] };
+
+  it("R658 the press lifts it as a card ghost that may drop anywhere on the board, and the drop sends it", () => {
+    const view = activateView();
+    const plan = planDrag(view, [untargeted], IDLE, { on: "backrow", instanceId: "fs1", side: "you", lane: 1 });
+    expect(plan?.kind).toBe("activate");
+    expect(plan?.arrow).toBe(false);
+    expect(plan?.freeDrop).toBe(true);
+    if (plan === null) throw new Error("no plan");
+    expect(resolveDrop(view, [untargeted], plan, { at: "board" }).action).toEqual(untargeted);
+    expect(resolveDrop(view, [untargeted], plan, { at: "outside" })).toEqual({ interaction: IDLE });
+  });
+
+  it("R658 with two modes the drop leaves the mode to the picker, as the click does", () => {
+    const view = activateView();
+    const legal = [untargeted, twoModes];
+    const plan = planDrag(view, legal, IDLE, { on: "backrow", instanceId: "fs1", side: "you", lane: 1 });
+    if (plan === null) throw new Error("no plan");
+    const dropped = resolveDrop(view, legal, plan, { at: "board" });
+    expect(dropped.action).toBeUndefined();
+    expect(dropped.interaction.stage).toBe("activating");
+  });
+
+  it("R658 its control and a Unit with the same unaimed ability stay clicks", () => {
+    const view = activateView();
+    expect(planDrag(view, [untargeted], IDLE, { on: "activate", instanceId: "fs1" })).toBeNull();
+    const unaimedUnit: ActionBody = { type: "activate", instanceId: "act1", ability: "ping" };
+    expect(planDrag(view, [unaimedUnit], IDLE, { on: "unit", instanceId: "act1", side: "you", lane: 1 })).toBeNull();
   });
 });

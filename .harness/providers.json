@@ -3,7 +3,7 @@
   "machine_parallel": 6,
   "plan_lanes": 2,
   "start_headroom": { "five_hour": 0.15, "seven_day": 0.05 },
-  "priority": ["claude-3", "claude-1", "claude-4", "agy", "muse", "gpt", "claude-2", "devin"],
+  "priority": ["claude-3", "claude-1", "claude-4", "claude-6", "claude-5", "agy", "muse", "gpt", "claude-2", "devin"],
   "tiers": {
     "weak": [
       { "model": "sonnet", "note": "Claude Sonnet, on claude-3 and claude-1 only." },
@@ -33,8 +33,8 @@
       "runs_on": "ubuntu-latest",
       "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
       "off_hours": { "five_hour": 0.4 },
-      "limits": { "mode": "caps", "five_hour": 0.98, "seven_day": 0.9 },
-      "quiet_check": true
+      "limits": { "mode": "caps", "five_hour": 0.98 },
+      "quiet_check": false
     },
     "claude-2": {
       "note": "A second Claude account, capped at 90% of both its 5-hour session and its week. Kept back for planning and adversarial review on Opus: after the medium models in the usage order, and it builds only when no other subscription that may is free, Devin included (build_last). It never builds with Sonnet.",
@@ -69,6 +69,7 @@
       "quiet_check": false
     },
     "claude-4": {
+      "note": "A fourth Claude account (token added 2026-10-04) with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it.",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -78,8 +79,40 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
       "runs_on": "ubuntu-latest",
-      "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
-      "limits": { "mode": "caps", "five_hour": 0.98, "seven_day": 0.9 },
+      "schedule": { "mode": "window", "start": "03:00", "end": "15:00" },
+      "off_hours": { "five_hour": 0.5 },
+      "limits": { "mode": "caps", "five_hour": 0.7 },
+      "quiet_check": false
+    },
+    "claude-5": {
+      "note": "A fifth Claude account (token added 2026-10-04): any hour, capped at 40% of its 5-hour session and 60% of its week.",
+      "enabled": true,
+      "cli": "claude",
+      "family": "claude",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "login": "secret",
+      "secret": "CLAUDE_CODE_OAUTH_TOKEN_5",
+      "runs_on": "ubuntu-latest",
+      "schedule": { "mode": "always" },
+      "limits": { "mode": "caps", "five_hour": 0.4, "seven_day": 0.6 },
+      "quiet_check": false
+    },
+    "claude-6": {
+      "note": "A sixth Claude account (token added 2026-10-05), same rules as claude-4 with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it.",
+      "enabled": true,
+      "cli": "claude",
+      "family": "claude",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "login": "secret",
+      "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+      "runs_on": "ubuntu-latest",
+      "schedule": { "mode": "window", "start": "03:00", "end": "15:00" },
+      "off_hours": { "five_hour": 0.5 },
+      "limits": { "mode": "caps", "five_hour": 0.7 },
       "quiet_check": false
     },
     "gpt": {
@@ -107,7 +140,7 @@
       "login": "machine",
       "runs_on": "night-vm-agy",
       "schedule": { "mode": "always" },
-      "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 0.95 },
+      "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 1.0 },
       "quiet_check": false
     },
     "devin": {
@@ -141,7 +174,7 @@
       "runs_on": "night-vm-muse",
       "lanes": 2,
       "schedule": { "mode": "always" },
-      "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 0.95 },
+      "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 1.0 },
       "quiet_check": false
     }
   }

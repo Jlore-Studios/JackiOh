@@ -31,7 +31,7 @@
 // Activate control of its own, Card.tsx). A press reports `{ on: "activate", instanceId }`, the click
 // every Activate control reports (ActivateControl.tsx), so `actions.ts` builds a power exactly as it
 // builds any activation: the one `activate` `legalActions` lists for it is sent at once, and a power
-// with a target to declare (Ping, R657) waits for it on the board, clicked or dragged to (game/drag).
+// with a target to declare (Ping, R664) waits for it on the board, clicked or dragged to (game/drag).
 // The first keeps the `power` testid the e2e specs press; a further one is `power-<instanceId>`, drawn
 // as its crest alone so it does not crowd the hero. The opponent's powers are tags with the same
 // crest, which nothing presses. Whether a button is live is `props.highlight.legal`; `usedThisTurn` is
@@ -80,7 +80,7 @@ export const POWER_USED_NOTE = "Used this turn.";
 
 /**
  * The power as the catalog prints it, "Activate: Spend (X): <Title>: <clause>.", on the face it runs,
- * its declared numbers filled with the ones the view gives it (Steady Shot's `{shot}`, R659) and else
+ * its declared numbers filled with the ones the view gives it (Steady Shot's `{shot}`, R666) and else
  * the card's printed ones. A stored name the client's table does not know reads as itself.
  */
 export function usePowerWords(power: HeroPowerView): string {

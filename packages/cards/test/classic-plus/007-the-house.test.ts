@@ -7,7 +7,6 @@
 
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
-import { expectAnimated } from "../_animated";
 import { base, def, radiant } from "../../src/scripts/classic-plus/007-the-house";
 
 const HOUSE = "classicplus-007";
@@ -26,9 +25,6 @@ function setup(p1: SideSetup = {}, radiantFace = false, seed?: string): Scenario
   });
 }
 
-// Animated since patch v0.2.10 (R383): played into backrow zone 5 it animates into unit lane 5 before
-// its Cry, leaving lanes 1 to 4 to the Units it summons.
-
 /** The Units summoned, in order — not The House's own arrival in its backrow zone. */
 function summoned(s: Scenario): string[] {
   return s.events.flatMap((event) => (event.type === "summoned" && event.defId !== HOUSE ? [event.defId] : []));
@@ -37,7 +33,7 @@ function summoned(s: Scenario): string[] {
 /** The defs The House summoned with its Cry, under a seed. */
 function cryRoll(seed: string): string[] {
   const s = setup({}, false, seed);
-  s.play(HOUSE, { zone: 5 });
+  s.play(HOUSE, { zone: 1 });
   return summoned(s);
 }
 
@@ -54,7 +50,7 @@ describe("C+ #7 The House", () => {
   describe("base", () => {
     it("R406 its Cry summons one of the twins, yours, with no Cry; a seeded roll gives a fixed unit", () => {
       const s = setup();
-      s.play(HOUSE, { zone: 5 });
+      s.play(HOUSE, { zone: 1 });
 
       const defs = summoned(s);
       expect(defs).toHaveLength(1);
@@ -82,7 +78,7 @@ describe("C+ #7 The House", () => {
       const seed = Array.from({ length: 30 }, (_, i) => `house-${i + 1}`).find((each) => cryRoll(each)[0] === WRONG);
       if (seed === undefined) throw new Error("no seed rolled the Wrong-House Attacker");
       const s = setup({ hand: [{ def: HOUSE }, HIT_JOB, FILLER] }, false, seed);
-      s.play(HOUSE, { zone: 5 });
+      s.play(HOUSE, { zone: 1 });
       const made = s.unit("p1", 1)!;
       expect(made.defId).toBe(WRONG);
 
@@ -94,7 +90,7 @@ describe("C+ #7 The House", () => {
 
     it("§2.2 summons again at the start of your turn, and nothing at the opponent's", () => {
       const s = setup();
-      s.play(HOUSE, { zone: 5 });
+      s.play(HOUSE, { zone: 1 });
       expect(summoned(s)).toHaveLength(1);
 
       s.endTurn();
@@ -111,7 +107,7 @@ describe("C+ #7 The House", () => {
       const s = setup({ field: [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] });
       const cursor = s.state.rngCursor;
 
-      s.play(HOUSE, { zone: 5 });
+      s.play(HOUSE, { zone: 1 });
 
       expect(summoned(s)).toEqual([]);
       expect(s.state.rngCursor).toBe(cursor);
@@ -120,7 +116,7 @@ describe("C+ #7 The House", () => {
     it("R64 lands in the leftmost open unit zone", () => {
       const s = setup({ field: [VANILLA, { def: VANILLA, lane: 3 }] });
 
-      s.play(HOUSE, { zone: 5 });
+      s.play(HOUSE, { zone: 1 });
 
       expect([RIGHT, WRONG]).toContain(s.unit("p1", 2)?.defId);
     });
@@ -131,7 +127,7 @@ describe("C+ #7 The House", () => {
       const s = setup({}, true);
       const cursor = s.state.rngCursor;
 
-      s.play(HOUSE, { zone: 5 });
+      s.play(HOUSE, { zone: 1 });
 
       expect(summoned(s)).toEqual([RIGHT, WRONG]);
       expect([s.unit("p1", 1)?.defId, s.unit("p1", 2)?.defId]).toEqual([RIGHT, WRONG]);
@@ -144,32 +140,21 @@ describe("C+ #7 The House", () => {
     });
 
     it("with one zone open the second is skipped", () => {
-      const s = setup({ field: [VANILLA, VANILLA, VANILLA] }, true);
+      const s = setup({ field: [VANILLA, VANILLA, VANILLA, VANILLA] }, true);
 
-      s.play(HOUSE, { zone: 5 });
+      s.play(HOUSE, { zone: 1 });
 
-      expect(s.unit("p1", 5)?.defId).toBe(HOUSE);
       expect(summoned(s)).toEqual([RIGHT]);
-      expect(s.unit("p1", 4)?.defId).toBe(RIGHT);
+      expect(s.unit("p1", 5)?.defId).toBe(RIGHT);
     });
 
     it("summons both again at the start of your turn", () => {
       const s = setup({}, true);
-      s.play(HOUSE, { zone: 5 });
+      s.play(HOUSE, { zone: 1 });
       s.endTurn();
       s.endTurn();
 
       expect(summoned(s)).toEqual([RIGHT, WRONG, RIGHT, WRONG]);
     });
-  });
-});
-
-describe("C+ #7 The House: Animated (patch v0.2.10)", () => {
-  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 0/6 Unit; with none open it stays a Field Spell", () => {
-    expectAnimated({ def: "classicplus-007", stats: { attack: 0, health: 6 } });
-  });
-
-  it("R383 radiant: a 0/12 Unit", () => {
-    expectAnimated({ def: "classicplus-007", radiant: true, stats: { attack: 0, health: 12 } });
   });
 });

@@ -3,7 +3,7 @@
 // `FakeAudio` implements exactly the permitted Web Audio subset the design names, and nothing else:
 // `currentTime`, `sampleRate`, `destination`, `createGain`, `createOscillator` (sine, square,
 // sawtooth, triangle; `frequency`, `detune`), `createBiquadFilter` (lowpass, highpass, bandpass;
-// `frequency`, `Q`, `gain`), `createBufferSource` (`buffer`, `playbackRate`, `loop`, and the music
+// `frequency`, `detune`, `Q`, `gain`), `createBufferSource` (`buffer`, `playbackRate`, `loop`, and the music
 // player's `loopStart` and `loopEnd`), `createBuffer`,
 // `connect(node | AudioParam)` / `disconnect`, `start` / `stop` / `onended`, and the AudioParam
 // `value`, `setValueAtTime`, `linearRampToValueAtTime`, `exponentialRampToValueAtTime`,
@@ -643,6 +643,7 @@ export class FakeAudio {
       case "biquad":
         typed(FILTER_TYPES, "lowpass");
         param("frequency", 350);
+        param("detune", 0);
         param("Q", 1);
         param("gain", 0);
         break;

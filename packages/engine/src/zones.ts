@@ -323,7 +323,7 @@ export function placeOnField(
     side.backrow[ref.lane - 1] = instance;
   }
 
-  // R12/R662: a card's current owner follows the side that receives it on the field. Keeping the
+  // R12/R669: a card's current owner follows the side that receives it on the field. Keeping the
   // two aligned here gives every later bounce, graveyard, exile and library move the normal zone
   // routing without an original-owner exception at each departure.
   instance.owner = ref.player;

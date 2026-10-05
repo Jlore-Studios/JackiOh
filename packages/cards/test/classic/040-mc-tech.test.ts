@@ -56,7 +56,7 @@ describe("C #40 MC Tech", () => {
       const stolen = stolenIds(s);
       expect(stolen).toHaveLength(1);
       const card = s.card(stolen[0] ?? "");
-      // R662: "which is now yours" — its controller and current owner.
+      // R669: "which is now yours" — its controller and current owner.
       expect(card.controller).toBe("p1");
       expect(card.owner).toBe("p1");
     });

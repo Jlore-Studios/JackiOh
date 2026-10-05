@@ -408,7 +408,7 @@ export function upgrade(args: TuneArgs): Effect {
 }
 
 /**
- * R659, Core #98's Steady Shot: "Upgrade this permanently by +2 damage" — an Upgrade of the card
+ * R666, Core #98's Steady Shot: "Upgrade this permanently by +2 damage" — an Upgrade of the card
  * running the text whose change is named rather than drawn: `steps` steps of its declared number
  * `key` toward better (the number row, `params.steppableParams`), kept in `tuning` like every other
  * (R386), so nothing is drawn. An Immutable card is not changed (B3.4 rule 2), and a number at the

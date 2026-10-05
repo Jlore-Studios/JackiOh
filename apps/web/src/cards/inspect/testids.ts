@@ -22,6 +22,10 @@ export const INSPECT_PRINTED = "inspect-printed";
 export const INSPECT_REFS = "inspect-refs";
 /** Its place among them ("2 of 3"), when there are several. */
 export const INSPECT_REFS_POSITION = "inspect-refs-position";
+/** R660: a card's flavour line and artist credit, in the preview, the sheet and the detail view. */
+export const INSPECT_FLAVOUR = "inspect-flavour";
+/** R660: the artist credit inside it, where the sidecar names one. */
+export const INSPECT_ARTIST = "inspect-artist";
 
 // A list of cards (a graveyard or an exile pile): the hover preview, the sheet, and inside them.
 export const INSPECT_LIST_HOVER = "inspect-list-hover";
@@ -44,3 +48,5 @@ export const INSPECT_NOTE = "inspect-note";
 export const INSPECT_TUNED = "inspect-tuned";
 export const INSPECT_STATES = "inspect-states";
 export const INSPECT_LOC = "inspect-loc";
+export const INSPECT_STATS = "inspect-stats";
+

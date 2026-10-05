@@ -205,7 +205,7 @@ export const endless = def("endless", "Field Spell");
 /**
  * Heroic Power wired as Core #98 is since patch v0.2.1 (R43): it costs (0), and its powers are its
  * Activate abilities, so `activate` and its alias reach the real power. It declares Steady Shot's
- * number as the catalog does (R659).
+ * number as the catalog does (R666).
  */
 export const heroic = def("heroic", "Field Spell", {
   cost: 0,

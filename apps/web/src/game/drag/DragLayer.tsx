@@ -14,6 +14,12 @@
 // board can hide a press or a release from the drag; keys and the context menu are taken in the
 // bubble phase so a dialog that handles Escape itself (the settings panel) can keep it.
 //
+// R658: a play or an activation a drop (or a click) has narrowed but not finished is lifted again
+// by a press on one of its picks (the zone the card was dropped in, a Tribute, a target), so a Unit
+// dropped in its zone has its Cry aimed by a second drag. A backrow card of yours whose ability aims
+// at nothing is dragged onto the board like a spell with no target. A prompt's options are dragged
+// out of its panel (OptionDrag.tsx).
+//
 // A drop that sends a play leaves the card where it was dropped (`drag-landing`) and out of the
 // fan (landing.ts) until the board shows a newer view: the runner holds the old one back while the
 // play's events animate, and the card flying back into the hand for that time read as a refusal.
@@ -23,12 +29,14 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 
 import { readSettings } from "../../settings/index.ts";
-import { IDLE, type Interaction } from "../actions.ts";
+import { IDLE, isBuilding, type Interaction } from "../actions.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef } from "../catalog.ts";
+import { testid, type ClickTarget } from "../contract.ts";
 import { liveFace } from "../faces.ts";
 import BlockedMark, { type Blocked } from "./BlockedMark.tsx";
 import { setLanding } from "./landing.ts";
-import { DRAG_THRESHOLD_PX, planDrag, resolveDrop, type DragPlan, type DragSource, type DropSpot } from "./model.ts";
+import { DRAG_THRESHOLD_PX, planDrag, resolveDrop, type DragPlan, type DropSpot } from "./model.ts";
+import OptionDrag from "./OptionDrag.tsx";
 import { lockedZoneAt, pickDropSpot, targetFromElement } from "./targets.ts";
 import "./drag.css";
 
@@ -38,6 +46,11 @@ export type DragLayerProps = {
   interaction: Interaction;
   onInteraction: (next: Interaction) => void;
   onAction: (body: ActionBody) => void;
+  /**
+   * R655: a press has just become a drag, once per lift. `Game` plays a lifted attacker's `attack`
+   * hook from it; the drop, a cancel and the attack itself report nothing.
+   */
+  onLift?: (plan: DragPlan) => void;
 };
 
 type Point = { x: number; y: number };
@@ -51,8 +64,8 @@ type ReticleShape = "ring" | "frame" | "pad";
 /** Where an arrow over a target stops: the edge of its ring (a circle) or of its frame (a box). */
 type ArrowStop = { shape: "circle" | "box"; halfWidth: number; halfHeight: number };
 
-/** A press that has not yet travelled far enough to be a drag. */
-type Press = { pointerId: number; start: Point; source: DragSource; element: Element };
+/** A press that has not yet travelled far enough to be a drag. `testid` is what was pressed (R658). */
+type Press = { pointerId: number; start: Point; source: ClickTarget; testid: string; element: Element };
 
 /** A drag in flight: everything the overlay draws. */
 type Flight = {
@@ -157,6 +170,7 @@ export default function DragLayer(props: DragLayerProps): ReactElement {
     <>
       <PlayDrag {...props} onBlocked={setBlocked} />
       <BlockedMark blocked={blocked} onDone={clearBlocked} />
+      <OptionDrag />
     </>
   );
 }
@@ -228,14 +242,18 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       setDrawn(null);
     }
 
-    /** Back to idle with nothing sent. A press that never became a drag is simply forgotten. */
+    /**
+     * Back to idle with nothing sent, or (R658) to the build a drag lifted again from its picks. A
+     * press that never became a drag is simply forgotten.
+     */
     function cancel(): void {
       if (flight === null) {
         press = null;
         return;
       }
+      const missed = flight.plan.missed ?? IDLE;
       stopDragging();
-      latest.current.onInteraction(IDLE);
+      latest.current.onInteraction(missed);
     }
 
     function onPointerDown(event: PointerEvent): void {
@@ -257,13 +275,21 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       if (hit === null) return;
       const source = hit.target;
       // A hand card, a card of yours on the field (an attack, or its one Activate ability), or an
-      // Activate control (a card's own or a Heroic Power's, R384).
+      // Activate control (a card's own or a Heroic Power's, R384). R658: while a play or an
+      // activation is being built, anything it may have picked, which `planDrag` sorts out.
       const yours = (source.on === "unit" || source.on === "backrow") && source.side === "you";
-      if (source.on !== "hand" && source.on !== "activate" && !yours) return;
+      const building = isBuilding(latest.current.interaction);
+      if (source.on !== "hand" && source.on !== "activate" && !yours && !building) return;
       if (!readSettings().dragToPlay) return;
 
       const element = target.closest(`[data-testid="${hit.testid.replace(/["\\]/g, "\\$&")}"]`) ?? target;
-      press = { pointerId: event.pointerId, start: { x: event.clientX, y: event.clientY }, source, element };
+      press = {
+        pointerId: event.pointerId,
+        start: { x: event.clientX, y: event.clientY },
+        source,
+        testid: hit.testid,
+        element,
+      };
       // Never preventDefault: below the threshold this press is a click.
     }
 
@@ -291,8 +317,8 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       const travelled = Math.hypot(event.clientX - press.start.x, event.clientY - press.start.y);
       if (travelled < DRAG_THRESHOLD_PX) return;
 
-      const { view, legal, interaction, onInteraction } = latest.current;
-      const plan = planDrag(view, legal, interaction, press.source);
+      const { view, legal, interaction, onInteraction, onLift } = latest.current;
+      const plan = planDrag(view, legal, interaction, press.source, press.testid);
       const element = press.element;
       const start = press.start;
       press = null;
@@ -300,6 +326,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       if (plan === null) return;
 
       onInteraction(plan.lifted);
+      onLift?.(plan);
       root.setAttribute("data-dragging", plan.kind);
       try {
         element.setPointerCapture(event.pointerId);
@@ -348,9 +375,13 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
           });
         }
         if (result.action !== undefined) {
-          if (plan.kind === "play" && plan.source.on === "hand") {
-            const instanceId = plan.source.instanceId;
-            setLanded({ instanceId, card: handCard(view, instanceId), at, view });
+          const card = plan.kind === "play" && plan.source.on === "hand" ? handCard(view, plan.source.instanceId) : null;
+          if (card !== null) {
+            // R658: a play lifted again from its zone lands in that zone, not on the Cry's target.
+            const zone = plan.missed?.stage === "playing" ? plan.missed.picked.zone : undefined;
+            const zoneBox = zone === undefined ? null : byTestid(testid.zone("you", zone.row, zone.lane));
+            const settled = zoneBox === null ? null : centreOf(zoneBox);
+            setLanded({ instanceId: card.instanceId, card, at: settled ?? at, view });
           }
           onAction(result.action);
         }
@@ -498,7 +529,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       ) : (
         <MatchCardsProvider view={props.view}>
           <DragGhost
-            card={handCard(props.view, plan.source.instanceId)}
+            card={sourceCard(props.view, plan.source.instanceId)}
             instanceId={plan.source.instanceId}
             at={drawn.pointer}
             touch={drawn.touch}
@@ -527,6 +558,16 @@ function handCard(view: PlayerView, instanceId: string): CardView | null {
   const hand = view.you.hand;
   if (!Array.isArray(hand)) return null;
   return hand.find((card) => card.instanceId === instanceId) ?? null;
+}
+
+/** The card a ghost draws: a hand card, or (R658) a face-up backrow card of yours dragged onto the board. */
+function sourceCard(view: PlayerView, instanceId: string): CardView | null {
+  const inHand = handCard(view, instanceId);
+  if (inHand !== null) return inHand;
+  for (const entry of view.you.backrow) {
+    if (entry !== null && !entry.faceDown && entry.instanceId === instanceId) return entry;
+  }
+  return null;
 }
 
 /**

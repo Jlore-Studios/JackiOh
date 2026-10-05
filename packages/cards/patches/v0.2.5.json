@@ -2590,29 +2590,19 @@
     ],
     "rarity": "Mythic",
     "token": false,
-    "cost": 0,
+    "cost": "X",
     "refs": [
       "core-t-rush",
-      "core-t-felinor",
-      "core-t-ghoul"
+      "core-t-felinor"
     ],
-    "params": [
-      {
-        "key": "shot",
-        "base": 2,
-        "radiant": 4,
-        "better": "up",
-        "step": 2
-      }
-    ],
-    "loc": 11,
+    "loc": 13,
     "base": {
       "keywords": [
         {
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nStart of game: Gain one of 13 random powers, each \"Activate - Spend (X).\"\n(3) Expedition Map: Recruit a permanent.\n(1) Life Tap: Draw 1. Take 2 damage.\n(1) Steady Shot: Deal {shot} damage to the enemy hero.\n(2) Ranching: Summon a Rush Token.\n(1) Cat Cafe: Summon a Felinor Token.\n(1) Ping: Pierce. Deal 1 damage.\n(2) Witness Value: Discover a Unit.\n(2) Stitching: Discover two Units that cost (2) or less. Fuse them and add the result to your hand.\n(1) Armor Up: Your hero gains 2 Armor until your next turn.\n(2) Die Insect: Deal 8 damage to a random enemy.\n(2) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by (1).\n(2) Pluck: Add a random Fruit to your hand. It costs (0).\n(3) Terminus Tricks: Discover a Trap to summon."
+      "text": "Indestructible\nStart of game: Gain one of 8 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent; (1) lose 2 health, draw 1; (1) deal 1 damage to a target; (1) deal 2 damage to each opposing hero; (2) summon a Rush Token; (1) summon a Felinor Token; (2) Discover a Unit; (2) Stitching — Discover 2 (2) Cost or less Units, Fuse them and add the result to your hand.\nPlaying it costs the power's X and activates it once."
     },
     "radiant": {
       "keywords": [
@@ -2620,7 +2610,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nStart of game: Gain one of 13 random powers, each \"Activate - Spend (X).\"\n(3) Expedition Map: Recruit a permanent. Make it Radiant.\n(1) Life Tap: Draw 1 from each player's deck.\n(1) Steady Shot: Deal {shot} damage to the enemy hero. Upgrade this permanently by +2 damage.\n(2) Ranching: Summon a Radiant Rush Token.\n(1) Cat Cafe: Summon a random Felinor.\n(1) Ping: Pierce. Deal 1 damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(2) Witness Value: Discover a Radiant Unit.\n(2) Stitching: Discover two Radiant Units that cost (2) or less. Fuse them and add the result to your hand.\n(1) Tank Up: Your hero gains 4 Armor. Refresh this power.\n(2) Die Insect: Lucky 1. Deal 8 damage to a random enemy.\n(2) KY Brainstorm: Add a random Radiant KY card to your hand. Reduce the cost of all Spells in your hand by (1).\n(2) Pluck: Add a random Radiant Fruit to your hand. It costs (0).\n(3) Terminus Tricks: Discover a Radiant Trap to summon."
+      "text": "Indestructible\nStart of game: Gain one of 8 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent and make it Radiant; (1) lose 2 health, draw 2; (1) deal 2 damage to a target; (1) deal 4 damage to each opposing hero; (2) summon two Rush Tokens; (1) summon two Felinor Tokens; (2) Discover a Radiant Unit; (2) Stitching — Discover 2 Radiant (2) Cost or less Units, Fuse them and add the result to your hand.\nPlaying it costs the power's X and activates it once."
     }
   },
   "core-099": {

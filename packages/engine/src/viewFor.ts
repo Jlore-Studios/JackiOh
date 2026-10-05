@@ -354,8 +354,8 @@ function unitViewOf(state: GameState, pile: Pile, viewer: PlayerId): UnitView | 
 /**
  * §4.1: "each unit has one exertion per turn: one attack or one position switch", so a unit can
  * still act while either exertion is unspent — a summoning-sick unit may still switch, and a unit
- * that cannot attack may still switch back. `combat.hasExertion` owns that rule, Deft Duelist's
- * two exertions included (#45); *which* of the two is legal is `combat.canAttack`'s answer and
+ * that cannot attack may still switch back. `combat.hasExertion` owns that rule, Deft's
+ * two exertions included (R49); *which* of the two is legal is `combat.canAttack`'s answer and
  * `legalActions`', never the view's.
  */
 function canAct(state: GameState, card: CardInstance): boolean {
@@ -435,7 +435,7 @@ function carriedView(state: GameState, player: PlayerId, viewer: PlayerId): { ca
  * re-derived here; its declared numbers (`params`, R386) are the card's as they stand.
  *
  * It follows control: a stolen Heroic Power powers its new controller's hero, who is its current
- * owner too since patch v0.2.1 (R662). So a player can hold more than one — their own plus one
+ * owner too since patch v0.2.1 (R669). So a player can hold more than one — their own plus one
  * taken with #36 radiant or #49 — and each is separately once-per-turn, which is why this is a list
  * and every entry carries its `instanceId` for its `activate` (§10.2). Board order: p1's backrow
  * lane 1 to 5, then p2's.
@@ -522,7 +522,7 @@ function modifierLabel(state: GameState, mod: PlayerModifier, echo: number): str
     // R449: Classic #23 Devil's Pact's replacement, named as the card every play becomes.
     case "replacePlays":
       return `Each card you play becomes ${mod.radiant ? "a Radiant " : "a "}${findDef(state, mod.defId)?.name ?? mod.defId}`;
-    // R654: #98's Armor Up and Tank Up, in the power's own words.
+    // R661: #98's Armor Up and Tank Up, in the power's own words.
     case "heroArmor":
       return `Your hero has +${mod.amount} Armor until your next turn`;
   }

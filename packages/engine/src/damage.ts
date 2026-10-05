@@ -54,7 +54,7 @@ function controllerOf(target: DamageTarget): PlayerId {
 /**
  * §4.4 step 2 for a hero: the Armor written on the hero itself, plus every backrow card that grants
  * it (#84 Going Long), each contributing the `HERO_ARMOR` value its own face and price select, plus
- * the Armor its player holds "until your next turn" (#98's Armor Up, a `heroArmor` modifier, R654).
+ * the Armor its player holds "until your next turn" (#98's Armor Up, a `heroArmor` modifier, R661).
  *
  * R124: hero Armor from several sources **adds up**, exactly as §6.2's Armor stacks on a unit
  * (printed + Defense +1 + auras) — two Going Longs paid 2 are Armor 4. That is deliberately the
@@ -66,7 +66,7 @@ function controllerOf(target: DamageTarget): PlayerId {
  * `subsystems/scorer` and §10.8's hero block — so no projection can disagree with the hit (R44).
  */
 export function heroArmorOf(state: GameState, player: PlayerId): number {
-  // R654: Armor "until your next turn" (#98's Armor Up) is a modifier on the player, summed in while it lasts.
+  // R661: Armor "until your next turn" (#98's Armor Up) is a modifier on the player, summed in while it lasts.
   const lasting = state.players[player].mods.reduce(
     (sum, mod) => (mod.kind === "heroArmor" ? sum + Math.max(0, Math.trunc(mod.amount)) : sum),
     0,

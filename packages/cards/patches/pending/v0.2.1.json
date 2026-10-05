@@ -1,0 +1,9 @@
+{
+  "version": "v0.2.1",
+  "title": "Heroic Power rework and cosmetic fixes",
+  "sources": "Issue #37",
+  "notes": "Heroic Powers use Activate, cost no card mana, and offer the v0.2.1 power pool.",
+  "cards": [
+    "core-098"
+  ]
+}

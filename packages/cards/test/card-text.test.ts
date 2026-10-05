@@ -13,7 +13,7 @@
 import { describe, expect, it } from "vitest";
 import { fillParams, type CardDef, type Keyword } from "@jackioh/shared";
 import { CATALOG } from "../src/catalog-data";
-import { readSnapshot } from "../scripts/patches-io";
+import { readPatches, readSnapshot } from "../scripts/patches-io";
 
 const ENTRIES: readonly CardDef[] = Object.values(CATALOG);
 
@@ -126,17 +126,14 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(wrong).toEqual([]);
   });
 
-  it("R366 patch v0.2.4 only changes base.text and radiant.text between v0.2.1 and v0.2.4", () => {
-    // v0.2.1 sits between v0.2.0 and v0.2.4 and rewrites #98 Heroic Power's cost, refs, params and
-    // loc as well as its text (R388 holds that shape), so the text-only promise v0.2.4 makes is
-    // measured from v0.2.1, not v0.2.0.
-    const before = readSnapshot("v0.2.1");
+  it("R366 patch v0.2.4 only changes base.text and radiant.text between v0.2.0 and v0.2.4", () => {
+    const before = readSnapshot("v0.2.0");
     const after = readSnapshot("v0.2.4");
     const differingCards: string[] = [];
     for (const [id, currentRaw] of Object.entries(after)) {
       const currentCard = currentRaw as unknown as CardDef;
       const priorCard = before[id] as unknown as CardDef | undefined;
-      expect(priorCard, `card ${id} existed in v0.2.1`).toBeDefined();
+      expect(priorCard, `card ${id} existed in v0.2.0`).toBeDefined();
       if (!priorCard) continue;
 
       const priorNonText = {
@@ -264,8 +261,9 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     ]);
   });
 
-  it("R366 patch v0.2.10 only Animates eighteen Field Spells, rewords Ivory Tower and moves Final Gambit's loc between v0.2.5 and the current catalog", () => {
+  it("R366 patch v0.2.10 only Animates eighteen Field Spells, rewords Ivory Tower and moves Final Gambit's loc between v0.2.5 and v0.2.10", () => {
     const before = readSnapshot("v0.2.5");
+    const after = readSnapshot("v0.2.10") as unknown as Record<string, CardDef>;
     const animated = new Set([
       "core-014",
       "core-033",
@@ -287,7 +285,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
       "classicplus-078",
     ]);
     const changed: string[] = [];
-    for (const [id, currentCard] of Object.entries(CATALOG)) {
+    for (const [id, currentCard] of Object.entries(after)) {
       const priorCard = before[id] as unknown as CardDef | undefined;
       expect(priorCard, `card ${id} existed in v0.2.5`).toBeDefined();
       if (!priorCard) continue;
@@ -351,6 +349,111 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
       }
     }
     expect(changed.sort()).toEqual([...animated, "classicplus-033", "classic-052"].sort());
+  });
+
+  it("R366 patch v0.2.11 aims Solarius-Prime and Appropriations, keywords Deft Duelist and moves two locs between v0.2.10 and v0.2.11", () => {
+    const before = readSnapshot("v0.2.10");
+    // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
+    const shipped = readPatches().some((patch) => patch.version === "v0.2.11");
+    const after = shipped ? (readSnapshot("v0.2.11") as unknown as typeof CATALOG) : CATALOG;
+    const five = new Set(["classic-003", "classicplus-010", "classicplus-038-1", "classicplus-040", "core-045"]);
+    const changed: string[] = [];
+    for (const [id, currentCard] of Object.entries(after)) {
+      const priorCard = before[id] as unknown as CardDef | undefined;
+      expect(priorCard, `card ${id} existed in v0.2.10`).toBeDefined();
+      if (!priorCard) continue;
+      if (JSON.stringify(priorCard) !== JSON.stringify(currentCard)) changed.push(id);
+    }
+    // Another pending fragment's cards legitimately differ beside these five (R646), so the diff is
+    // read on this patch's claims.
+    expect(changed.filter((id) => five.has(id)).sort()).toEqual([...five].sort());
+    // Deft Duelist prints the Deft keyword on both faces (R49).
+    expect(after["core-045"]?.base.text).toBe("Charge, Deft");
+    expect(after["core-045"]?.radiant.text).toBe("Charge, Armor 1, Deft");
+    // The aimed casts say so on the face (R656).
+    for (const face of ["base", "radiant"] as const) {
+      expect(after["classicplus-038-1"]?.[face].text).toContain(
+        "Each aims at enemies when it harms and at your side when it helps.",
+      );
+      expect(after["classicplus-040"]?.[face].text).toContain(
+        "aim at enemies when they harm and at your side when they help.",
+      );
+    }
+    // Book of Heal and New Wraps move only their script's loc.
+    for (const id of ["classic-003", "classicplus-010"]) {
+      const priorCard = before[id] as unknown as CardDef;
+      const currentCard = after[id] as unknown as CardDef;
+      expect({ ...currentCard, loc: priorCard.loc }).toEqual(priorCard);
+    }
+  });
+
+  it("R366 patch v0.2.12 removes Animated from the eighteen v0.2.10 Field Spells between v0.2.10 and v0.2.12", () => {
+    const before = readSnapshot("v0.2.10");
+    // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
+    const shipped = readPatches().some((patch) => patch.version === "v0.2.12");
+    const after = shipped ? (readSnapshot("v0.2.12") as unknown as typeof CATALOG) : CATALOG;
+    const unanimated = new Set([
+      "core-014",
+      "core-033",
+      "core-038",
+      "core-065",
+      "core-073",
+      "classic-004",
+      "classic-007",
+      "classic-062",
+      "classic-064",
+      "classic-087",
+      "classicplus-007",
+      "classicplus-012-5",
+      "classicplus-012-7",
+      "classicplus-031",
+      "classicplus-061",
+      "classicplus-063",
+      "classicplus-070",
+      "classicplus-078",
+    ]);
+    const changed: string[] = [];
+    for (const [id, currentCard] of Object.entries(after)) {
+      const priorCard = before[id] as unknown as CardDef | undefined;
+      expect(priorCard, `card ${id} existed in v0.2.10`).toBeDefined();
+      if (!priorCard) continue;
+      if (JSON.stringify(priorCard) !== JSON.stringify(currentCard)) changed.push(id);
+      if (!unanimated.has(id)) continue;
+
+      for (const face of ["base", "radiant"] as const) {
+        expect(currentCard[face].attack, `${id} ${face} loses its stats`).toBeUndefined();
+        expect(currentCard[face].health, `${id} ${face} loses its stats`).toBeUndefined();
+        expect(currentCard[face].keywords, `${id} ${face} loses Animated`).toEqual([]);
+        expect(priorCard[face].keywords, `${id} ${face} printed Animated`).toEqual([{ kind: "Animated" }]);
+        expect(typeof priorCard[face].attack, `${id} ${face} printed attack`).toBe("number");
+        expect(typeof priorCard[face].health, `${id} ${face} printed health`).toBe("number");
+        expect(priorCard[face].text, `${id} ${face} printed Animated`).toBe(`Animated\n${currentCard[face].text}`);
+      }
+      // Nothing else on the card moves: restoring the eight Animated fields restores the snapshot.
+      expect(
+        {
+          ...currentCard,
+          base: {
+            ...currentCard.base,
+            attack: priorCard.base.attack,
+            health: priorCard.base.health,
+            keywords: priorCard.base.keywords,
+            text: priorCard.base.text,
+          },
+          radiant: {
+            ...currentCard.radiant,
+            attack: priorCard.radiant.attack,
+            health: priorCard.radiant.health,
+            keywords: priorCard.radiant.keywords,
+            text: priorCard.radiant.text,
+          },
+        },
+        `only Animated fields differ on ${id}`,
+      ).toEqual(priorCard);
+    }
+    // Another pending fragment's cards legitimately differ beside these eighteen (R646), so the
+    // diff is read on this patch's claims.
+    expect(changed.filter((id) => unanimated.has(id)).sort()).toEqual([...unanimated].sort());
   });
 
   it("R366 patch v0.2.4 no printed face uses any word the vocabulary table retired", () => {

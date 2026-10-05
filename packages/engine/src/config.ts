@@ -113,8 +113,8 @@ export const WINDFURY_ATTACKS = 2;
 
 /**
  * R21: Plastic Surgery and Zao Gao draw from this pool; a unit never gets a keyword it has. R346:
- * patch v0.1.1 added Pierce, at the end. R636 added Windfury after it; Temporary (R637) stays out,
- * since a card on the field is never in a hand to be discarded.
+ * patch v0.1.1 added Pierce, at the end. R636 added Windfury after it; Deft (R49) was added by
+ * patch v0.2.11; Temporary (R637) stays out, since a card on the field is never in a hand to be discarded.
  */
 export const RANDOM_KEYWORD_POOL = [
   "Taunt",
@@ -130,6 +130,7 @@ export const RANDOM_KEYWORD_POOL = [
   "Cleave",
   "Pierce",
   "Windfury",
+  "Deft",
 ] as const;
 
 /**
@@ -137,6 +138,12 @@ export const RANDOM_KEYWORD_POOL = [
  * its attack and health multiplied by this — a summon's X/X included (§7).
  */
 export const RADIANT_FALLBACK_FACTOR = 2;
+
+/** R657: an Animated card with no printed stats fights with this attack. */
+export const ANIMATED_FALLBACK_ATTACK = 0;
+
+/** R657: an Animated card with no printed stats fights with this health. */
+export const ANIMATED_FALLBACK_HEALTH = 1;
 
 /**
  * R348: the least X a player may choose for an X-cost card whose X is theirs to choose (#24, #74).
@@ -474,21 +481,21 @@ export const HERO_POWER_COST = {
 /** §8 #98 Life Tap: "Draw 1. Take 2 damage", and its Radiant face's draw from each player's deck. */
 export const LIFE_TAP_DRAW = 1;
 export const LIFE_TAP_DAMAGE = 2;
-/** §8 #98 Ping: "Pierce. Deal 1 damage", on both faces (R657). */
+/** §8 #98 Ping: "Pierce. Deal 1 damage", on both faces (R664). */
 export const PING_DAMAGE = 1;
 /**
  * §8 #98 Armor Up, the hero's Armor until its controller's next turn, and its Radiant face Tank Up,
- * the hero's Armor for the rest of the game (R654).
+ * the hero's Armor for the rest of the game (R661).
  */
 export const ARMOR_UP = { base: 2, radiant: 4 } as const;
-/** §8 #98 Die Insect: "Deal 8 damage to a random enemy"; its Radiant face adds "Lucky 1" (R656). */
+/** §8 #98 Die Insect: "Deal 8 damage to a random enemy"; its Radiant face adds "Lucky 1" (R663). */
 export const DIE_INSECT_DAMAGE = 8;
 export const DIE_INSECT_LUCKY = 1;
 /** §8 #98 KY Brainstorm: "Reduce the cost of all Spells in your hand by (1)". */
 export const KY_BRAINSTORM_DISCOUNT = 1;
 /** §8 #98 Pluck: the Fruit it adds "costs (0)" (`costOverride`). */
 export const PLUCK_COST = 0;
-/** §8 #98 Steady Shot's Radiant face: "Upgrade this" by this many steps of its damage (`{shot}`, R659). */
+/** §8 #98 Steady Shot's Radiant face: "Upgrade this" by this many steps of its damage (`{shot}`, R666). */
 export const STEADY_SHOT_UPGRADE_STEPS = 1;
 /**
  * §8 #98 Steady Shot's Radiant face: "… by +2 damage", the words for one step of `shot`. The step

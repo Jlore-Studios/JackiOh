@@ -318,7 +318,7 @@ describe("R171 a change of control is an entry (§4.1)", () => {
     expect(eventsOfType(events, "controlChanged").map((e) => e.instanceId)).toEqual([inbound.id]);
     expect(live(state, outbound).zone.z).toBe("hand");
     expect(inbound.controller).toBe("p1");
-    // R662: what crosses onto p1's side becomes p1's card.
+    // R669: what crosses onto p1's side becomes p1's card.
     expect(inbound.owner).toBe("p1");
     expect(inbound.summonedTurn).toBe(turn);
     expect(inbound.exertion).toEqual(FRESH);
@@ -431,7 +431,7 @@ describe("R171 a change of control is an entry (§4.1)", () => {
 // ---------------------------------------------------------------------------
 
 describe("R172 a stolen unit dies as its controller's", () => {
-  it("R172 a stolen Reborn unit returns to the zone it reserved on the thief's side, owned by the thief (R662) and sick", () => {
+  it("R172 a stolen Reborn unit returns to the zone it reserved on the thief's side, owned by the thief (R669) and sick", () => {
     const state = playing("cc-reborn");
     const turn = state.turn;
     ready(put(state, plain.id, slot("p1", "units", 1)), turn - 1);
@@ -444,7 +444,7 @@ describe("R172 a stolen unit dies as its controller's", () => {
     const events: GameEvent[] = [];
     stateCheck(sinkFor(state, events));
 
-    // It died as p1's, went to its current owner's pile, p1's, on the way (R12, R662), and came
+    // It died as p1's, went to its current owner's pile, p1's, on the way (R12, R669), and came
     // back where it died.
     expect(eventsOfType(events, "destroyed").map((e) => [e.instanceId, e.owner])).toEqual([[body.id, "p1"]]);
     const back = live(state, body);

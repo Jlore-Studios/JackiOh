@@ -112,8 +112,8 @@ export type Tuning = {
 /**
  * B5 E39: a lasting instruction that rides a card through every zone. `returnAfterResolve` is Classic+
  * #14 Forever&'s "After this resolves, return it to your hand. This can't cost less than (floor)";
- * `castOnDraw` and `targetEnemies` are Classic+ #40 Appropriations' "They have Cast on draw and target
- * enemies when they can".
+ * `castOnDraw` and `targetEnemies` are Classic+ #40 Appropriations' "They have Cast on draw and aim
+ * at enemies when they harm and at your side when they help".
  */
 export type Enchantment =
   | { kind: "returnAfterResolve"; floor: number }
@@ -243,7 +243,7 @@ export type HeroPowerView = {
   /** "Activate: Spend (X)" (§8 #98): the mana the power's activation spends (R43); the card costs (0). */
   x: number;
   usedThisTurn: boolean;
-  /** B3.4, R386: the card's declared numbers as they stand (Steady Shot's `shot`, R659), when it has any. */
+  /** B3.4, R386: the card's declared numbers as they stand (Steady Shot's `shot`, R666), when it has any. */
   params?: Record<string, number>;
 };
 

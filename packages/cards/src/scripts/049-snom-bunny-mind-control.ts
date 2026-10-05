@@ -15,7 +15,7 @@
 // Everything about where the card lands is §6.3 Steal and R15, in `effects/steal.ts`: the same lane
 // on this side when that zone is free, else the first free zone of the same row, and if the row has
 // no free zone at all the card stays with the opponent. The steal moves its controller and, with
-// it, its current owner (R12, R662): it goes to the thief's graveyard, hand or library when it later
+// it, its current owner (R12, R669): it goes to the thief's graveyard, hand or library when it later
 // leaves the field, and because it never leaves the field it keeps its damage, buffs, counters and
 // position (R78 is about leaving). R33 does the
 // rest for a face-down trap: `faceUp` is untouched, so the new controller is the one who may read

@@ -245,52 +245,55 @@ type ViewFingerprint = {
 };
 
 /**
- * One generic read of the rendered view. `[data-testid]` is the only bare selector in this file
- * and it is the testid vocabulary itself (BUILD M5-T1), not a class or a designer's string: the
- * point is to compare the WHOLE set before and after, so nothing can be enumerated by hand.
+ * One generic read of the rendered view, off a jQuery body. `[data-testid]` is the only bare
+ * selector in this file and it is the testid vocabulary itself (BUILD M5-T1), not a class or a
+ * designer's string: the point is to compare the WHOLE set before and after, so nothing can be
+ * enumerated by hand.
  */
+function readView($body: JQuery<HTMLElement>): ViewFingerprint {
+  const testids = $body
+    .find("[data-testid]")
+    .map((_index, element) => element.getAttribute("data-testid") ?? "")
+    .get()
+    .sort();
+
+  const prompt = $body.find(PROMPT);
+
+  const counters: Record<string, string> = {};
+  for (const side of SIDES) {
+    for (const id of [
+      handCountId(side),
+      libraryCountId(side),
+      graveyardCountId(side),
+      exileCountId(side),
+    ]) {
+      counters[id] = $body.find(ts(id)).text().trim();
+    }
+    counters[manaId(side)] = String($body.find(`${ts(manaId(side))} ${MANA_CRYSTAL}`).length);
+  }
+
+  const modifiers: Record<string, string[]> = {};
+  for (const side of SIDES) {
+    modifiers[modifiersId(side)] = $body
+      .find(`${ts(modifiersId(side))} ${MODIFIER_BADGE}`)
+      .map(
+        (_index, element) =>
+          `${element.getAttribute("data-modifier-id") ?? ""}=${(element.textContent ?? "").trim()}`,
+      )
+      .get();
+  }
+
+  return {
+    testids,
+    promptKind: prompt.length === 0 ? null : (prompt.attr("data-prompt-kind") ?? null),
+    counters,
+    modifiers,
+  };
+}
+
 function fingerprint(): Cypress.Chainable<ViewFingerprint> {
   cy.settled();
-  return cy.get("body", { log: false }).then(($body) => {
-    const testids = $body
-      .find("[data-testid]")
-      .map((_index, element) => element.getAttribute("data-testid") ?? "")
-      .get()
-      .sort();
-
-    const prompt = $body.find(PROMPT);
-
-    const counters: Record<string, string> = {};
-    for (const side of SIDES) {
-      for (const id of [
-        handCountId(side),
-        libraryCountId(side),
-        graveyardCountId(side),
-        exileCountId(side),
-      ]) {
-        counters[id] = $body.find(ts(id)).text().trim();
-      }
-      counters[manaId(side)] = String($body.find(`${ts(manaId(side))} ${MANA_CRYSTAL}`).length);
-    }
-
-    const modifiers: Record<string, string[]> = {};
-    for (const side of SIDES) {
-      modifiers[modifiersId(side)] = $body
-        .find(`${ts(modifiersId(side))} ${MODIFIER_BADGE}`)
-        .map(
-          (_index, element) =>
-            `${element.getAttribute("data-modifier-id") ?? ""}=${(element.textContent ?? "").trim()}`,
-        )
-        .get();
-    }
-
-    return {
-      testids,
-      promptKind: prompt.length === 0 ? null : (prompt.attr("data-prompt-kind") ?? null),
-      counters,
-      modifiers,
-    };
-  });
+  return cy.get("body", { log: false }).then(($body) => readView($body));
 }
 
 function optionKeysOf(print: ViewFingerprint): string[] {
@@ -380,7 +383,6 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
     waitForMyTurn();
 
     // --- player-turn 3: 2 mana. A Field Spell takes a backrow zone (R81's play-time choice) ---
-    // Animated since patch v0.2.10 (R383), the Mask then steps into units lane 1, keeping its text.
     cy.playByName(MASOCHISM_MASK, { zone: { side: "you", row: "backrow", lane: 1 } });
     cy.endTurn();
     seatTwoEndsTurn();
@@ -397,8 +399,8 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
     cy.answerPrompt("mode", { first: 1 });
     cy.noPrompt();
     // …and the freed mana buys the badge. R48 makes the discount cover seat 1's NEXT turn, which
-    // is player-turn 7 — the turn this file reloads on. Units lane 1 holds the animated Mask.
-    cy.playByName(PROFESSOR_CURVATURE, { zone: { side: "you", row: "units", lane: 2 } });
+    // is player-turn 7 — the turn this file reloads on.
+    cy.playByName(PROFESSOR_CURVATURE, { zone: { side: "you", row: "units", lane: 1 } });
     cy.get(ts(modifiersId("you"))).should("have.attr", "data-count", "1");
     cy.endTurn();
     seatTwoEndsTurn();
@@ -462,7 +464,16 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
 
     cy.waitForPrompt("mode");
 
-    fingerprint().should((after) => {
+    // The read runs INSIDE the `.should`, not in a `.then`: a `.then` snapshot is one fixed read,
+    // so the ranks the match bar fetches after the view (R612's `match-ranks` banner, the only
+    // testid on this screen that lands off its own request rather than the socket's) could be
+    // missing from it for no worse reason than the socket answering first — a difference in when
+    // the snapshot was taken, not in the view. A `.should` re-queries `body` and re-reads the DOM
+    // on every retry, so the comparison below waits for the rebuilt view to settle the way the
+    // `cy.settled()`s above wait for its animations.
+    cy.settled();
+    cy.get("body", { log: false }).should(($body) => {
+      const after = readView($body);
       expect(after.testids, "the same rendered view: every testid, before and after").to.deep.eq(
         before.testids,
       );
