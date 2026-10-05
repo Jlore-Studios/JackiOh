@@ -331,15 +331,16 @@ describe("R739 the card patches numbered in order (issue #290)", () => {
     { version: "v0.2.6", was: "v0.2.13", commit: "b26b1b9dde3f723528e60739caf5aee359a16c20", source: "#271" },
     { version: "v0.2.7", was: "v0.2.14", commit: "533b4e2db58eaae47b0edd0eee6da6d7e12439f3", source: "#126" },
     { version: "v0.2.7b", was: "v0.2.14b", commit: "80e7960ccaef1a8c0bb5c463eadacd8fd402d858", source: "#260" },
+    { version: "v0.2.8", was: "v0.2.16", commit: "509e9a302ab71542a4e141fe7231c9743722bdba", source: "#170" },
   ];
 
   it("R739 lists every card patch after v0.2.0 under the next number, or the next letter for a micro patch", () => {
     // The shipped prefix (R646): promotions append after it and never move it.
-    expect(VERSIONS.slice(0, 14)).toEqual([
+    expect(VERSIONS.slice(0, 15)).toEqual([
       "v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1",
-      "v0.2.0", "v0.2.1", "v0.2.2", "v0.2.3", "v0.2.4", "v0.2.5", "v0.2.6", "v0.2.7", "v0.2.7b",
+      "v0.2.0", "v0.2.1", "v0.2.2", "v0.2.3", "v0.2.4", "v0.2.5", "v0.2.6", "v0.2.7", "v0.2.7b", "v0.2.8",
     ]);
-    expect(VERSIONS.slice(6, 14)).toEqual(RENAMED.map((patch) => patch.version));
+    expect(VERSIONS.slice(6, 15)).toEqual(RENAMED.map((patch) => patch.version));
   });
 
   it("R739 keeps each renamed patch's shipping commit, source and snapshot, and no old name anywhere in the history", () => {
@@ -368,22 +369,15 @@ describe("R739 the card patches numbered in order (issue #290)", () => {
     expect(titleOf("v0.2.4")).toBe("Patch v0.2.4: aimed random casts and the Deft keyword");
     expect(titleOf("v0.2.5")).toBe("Patch v0.2.5: undo the v0.2.3 animated additions");
     expect(titleOf("v0.2.7")).toBe("Patch v0.2.7: More card patches");
+    expect(titleOf("v0.2.8")).toBe("Patch v0.2.8: Easter egg, Glitch");
     // The two whose titles named no number keep them.
     expect(titleOf("v0.2.2")).toBe("Small set of mechanics changes");
     expect(titleOf("v0.2.6")).toBe("Book of Wildfire becomes a different Book at the end of your turn");
   });
 
-  it("R739 ships issue #170's Glitch as v0.2.8, the number after v0.2.7b, pending or shipped (R646)", () => {
-    const pending = readFragments().find(({ fragment }) => fragment.version === "v0.2.8")?.fragment;
-    if (pending !== undefined) {
-      expect(pending.title).toBe("Patch v0.2.8: Easter egg, Glitch");
-      expect(pending.cards).toEqual(["classic-t-glitch"]);
-    } else {
-      // Promoted: the patch after v0.2.7b, adding the token.
-      expect(VERSIONS[VERSIONS.indexOf("v0.2.7b") + 1]).toBe("v0.2.8");
-      expect(PATCHES.find((patch) => patch.version === "v0.2.8")?.title).toBe("Patch v0.2.8: Easter egg, Glitch");
-      expect(idsOf("v0.2.8", "added")).toEqual(["classic-t-glitch"]);
-    }
+  it("R739 has issue #170's Glitch, shipped as v0.2.16, as v0.2.8, the patch that added the token", () => {
+    expect(idsOf("v0.2.8", "added")).toEqual(["classic-t-glitch"]);
+    expect(buildIndex(PATCHES)["classic-t-glitch"]).toEqual(["v0.2.8"]);
   });
 });
 

@@ -140,7 +140,7 @@ class PlanTests(unittest.TestCase):
         self.gh.add_issue(5, labels=(LABEL_BUILD,))
         plan_mod.make(by_hand, item=5)
         self.assertIn("Starting work on this now: it is difficulty:medium. I plan it on `claude-1` "
-                      "(claude, `opus`, strong), build it on `claude-1` (claude, `opus`, strong)",
+                      "(claude, `opus`, strong), build it on `claude-1` (claude, `sonnet`, medium)",
                       self.gh.bot_comments(5)[-1])
         self.assertEqual(self.ctx.store.load()["items"]["4"]["run_id"], "777")
 

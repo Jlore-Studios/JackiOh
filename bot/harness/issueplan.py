@@ -14,6 +14,14 @@ START = "<!-- jackioh-bot:plan -->"
 END = "<!-- /jackioh-bot:plan -->"
 #: GitHub refuses a description over 65,536 characters; the plan gives way, never the task.
 BODY_LIMIT = 65_000
+#: What the plan prompt asks a planner to stay under (`bot/prompts/plan.md`, #208).
+PLAN_WORDS = 2_500
+#: How much of a planner's answer becomes the plan: its beginning, where the goal and the first
+#: steps are, never its end alone (`work.py`), and how much a comment carrying a plan the
+#: description could not take shows (`deliver.py`). Room over PLAN_WORDS, so a plan that runs a
+#: little long is kept whole, and well under BODY_LIMIT and `threads.MAX_CHARS`, so the task and
+#: its comments keep room beside it. #307's plan was cut at the old 20,000.
+PLAN_CHARS = 30_000
 _SECTION = re.compile(re.escape(START) + r".*?(?:" + re.escape(END) + r"|\Z)", re.S)
 _AROUND = re.compile(r"\s*" + _SECTION.pattern + r"\s*", re.S)
 _HEADER = re.compile(r"\A\s*## Plan\s*\n+(?:_[^\n]*_\s*\n+)?")

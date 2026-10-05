@@ -4260,7 +4260,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // Proved by cards/test/patches.test.ts "R739 …" (the history in order under the new names, each
-  // renamed patch's shipping commit, source and title, and Glitch's fragment as v0.2.8) and
+  // renamed patch's shipping commit, source and title, Glitch's v0.2.16 among them as v0.2.8) and
   // apps/server test/sql/14_patch_retcon.sql "### R739: … ###" (migration 0025 renames each row
   // filed under an old name once, oldest name first, the catalog stamp and the grants in step).
   it("R739 numbers the card patches in order, and a database renames the rows filed under the old names", () => {

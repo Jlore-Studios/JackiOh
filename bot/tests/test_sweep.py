@@ -8,7 +8,8 @@ from datetime import timedelta
 from harness import events, sweep
 from harness.clock import iso
 from datetime import timedelta as _td  # noqa: F401
-from harness.config import LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE
+from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_NEEDS_PLAN, LABEL_PR, LABEL_PR_OPEN,
+                            LABEL_REVISE)
 from harness.errors import GitHubError, StateConflict
 from harness.state import item as state_item
 
@@ -37,7 +38,7 @@ class LostCommentTests(Base):
     def test_a_command_nobody_answered_is_answered_by_the_sweep(self):
         comment = self.gh.add_comment(5, "/harness build", OPERATOR, created_at=AN_HOUR_AGO)
         notes = sweep.sweep(self.ctx)
-        self.assertEqual(self.gh.label_names(5), {LABEL_BUILD})
+        self.assertEqual(self.gh.label_names(5), {LABEL_BUILD, LABEL_NEEDS_PLAN})  # queued, then planned first
         self.assertIn("Queued #5", self.replies(5)[-1])
         self.assertIn((comment["id"], "rocket"), self.gh.reacted)
         self.assertIn("answered a comment on #5", notes[0])
@@ -125,7 +126,7 @@ class LostEventTests(Base):
     def test_an_assignment_nothing_answered_is_queued(self):
         self.gh.threads[5]["assignees"] = [BOT]
         notes = sweep.sweep(self.ctx)
-        self.assertEqual(self.gh.label_names(5), {LABEL_BUILD})
+        self.assertEqual(self.gh.label_names(5), {LABEL_BUILD, LABEL_NEEDS_PLAN})  # queued, then planned first
         self.assertIn("assigned here but never queued", self.replies(5)[-1])
         self.assertIn("from an assignment", notes[0])
         self.assertEqual(sweep.sweep(self.ctx), [])
@@ -193,7 +194,7 @@ class LostEventTests(Base):
         ctx.clock_fn.at = DAY + timedelta(minutes=30)
         gh.add_comment(5, "/harness build", OPERATOR, created_at=iso(DAY + timedelta(minutes=5)))
         sweep.sweep(ctx)
-        self.assertEqual(gh.label_names(5), {LABEL_BUILD})
+        self.assertEqual(gh.label_names(5), {LABEL_BUILD, LABEL_NEEDS_PLAN})  # queued, then planned first
 
     def test_an_edited_comment_is_left_to_its_edit_event(self):
         comment = self.gh.add_comment(5, "/harness halt", OPERATOR, created_at=AN_HOUR_AGO)
@@ -207,7 +208,7 @@ class LostEventTests(Base):
                                   "issue_url": "https://api.github.com/repos/x/y/issues/404"}]
         self.gh.add_comment(5, "/harness build", OPERATOR, created_at=AN_HOUR_AGO)
         notes = sweep.sweep(self.ctx)
-        self.assertEqual(self.gh.label_names(5), {LABEL_BUILD})
+        self.assertEqual(self.gh.label_names(5), {LABEL_BUILD, LABEL_NEEDS_PLAN})  # queued, then planned first
         self.assertTrue(any("skipped one" in n for n in notes))
 
     def test_a_review_body_command_nobody_answered(self):

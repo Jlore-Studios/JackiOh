@@ -1,4 +1,4 @@
-<!-- version: 2 -->
+<!-- version: 3 -->
 # Plan issue #$number
 
 You are the planner for issue #$number of `$repo`, on branch `$branch` (base `$base`). Nobody has
@@ -31,11 +31,22 @@ $branch_state
 
 $gate_list
 
+## How hard it is
+
+$rating
+
+### The rule
+
+$easy_rule
+
 ## Your final message
 
-Your final message is the plan itself, in Markdown, and nothing else. The harness puts it into the
-issue's description, under **Plan**, where people read it and may correct it, and at the top of
-the notes the builder starts from. Use exactly these sections:
+Your final message is the plan itself, in Markdown, and nothing else (but for the rating line
+above, when you are asked for one). The harness puts it into the issue's description, under
+**Plan**, where people read it and may correct it, and at the top of the notes the builder starts
+from. The harness checks the **Files to touch** table against the rule: a plan rated easy that
+lists a file the rule rules out, or more files than it allows, is made medium. Use exactly these
+sections:
 
 1. **Goal.** What done looks like, in two or three sentences, with each requirement of the task
    named.
@@ -55,3 +66,10 @@ the notes the builder starts from. Use exactly these sections:
    README), and how the builder avoids it.
 7. **Open questions.** Anything only a person can decide. If the task cannot be done without
    that, say so first, before the Goal.
+
+Keep the whole plan under $plan_words words: the harness keeps only the
+first $plan_chars characters of it, and what it cuts reaches nobody. Say each thing once: the table gets a few words per
+file and the steps carry the detail; do not restate the task, this prompt or the checks listed
+above (in **Done when**, name a check rather than repeat its command); quote code only where the
+builder must copy it exactly; nothing before **Goal** (the rating line aside) and no summary after
+**Open questions**. A small change gets a short plan.

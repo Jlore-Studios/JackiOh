@@ -546,7 +546,7 @@ after it merges — never by editing the history on the branch.
   (issue #40: Classic, Classic+, the new keywords, Core's pools across sets and the Core card patches
   below). Everything before v0.1.1 was rebuilt from `git log --follow packages/cards/catalog.json` on a
   full clone (a shallow one stops early).
-- **The version is the patch.** `CATALOG_VERSION` is the latest patch's version, `v0.2.7b`, and a test
+- **The version is the patch.** `CATALOG_VERSION` is the latest patch's version, `v0.2.8`, and a test
   holds `catalog.json` equal to the latest snapshot (pending-claimed cards aside) and
   `CATALOG_VERSION` equal to its version. A
   patch bumps it everywhere the string lives: `src/catalog-data.ts`; the server's env

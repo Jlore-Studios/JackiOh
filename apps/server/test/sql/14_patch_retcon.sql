@@ -20,9 +20,9 @@ begin
   insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost, catalog_version)
   values ('r739-a', '739.1', 'Card under v0.2.4', 'Core', 'Unit', '{}', 'Common', false, '1'::jsonb, 'v0.2.4'),
          ('r739-b', '739.2', 'Card under v0.2.11', 'Core', 'Unit', '{}', 'Common', false, '1'::jsonb, 'v0.2.11'),
-         ('r739-c', '739.3', 'Card under v0.2.14b', 'Core', 'Unit', '{}', 'Common', false, '1'::jsonb, 'v0.2.14b');
+         ('r739-c', '739.3', 'Card under v0.2.16', 'Core', 'Unit', '{}', 'Common', false, '1'::jsonb, 'v0.2.16');
   -- The stamp db:seed-catalog left: its launch grant (0016) gives r739-c to every active account now.
-  update app.settings set value = '"v0.2.14b"' where key = 'catalog_version';
+  update app.settings set value = '"v0.2.16"' where key = 'catalog_version';
 
   insert into public.decks (id, profile_id, name, cards, catalog_version)
   values ('d7390000-0000-4000-8000-000000000001', p1, 'Under v0.2.5', '["core-001"]', 'v0.2.5'),
@@ -83,11 +83,11 @@ declare
 begin
   -- Cards and the stamp move together, so the launch grant the stamp fires found nothing to add.
   select array_agg(id || '=' || catalog_version order by id collate "C") into v_ids from public.cards where id like 'r739-%';
-  if v_ids <> array['r739-a=v0.2.1', 'r739-b=v0.2.4', 'r739-c=v0.2.7b'] then
-    raise exception 'FAIL (R739): the cards read %, expected v0.2.4 -> v0.2.1, v0.2.11 -> v0.2.4 and v0.2.14b -> v0.2.7b', v_ids;
+  if v_ids <> array['r739-a=v0.2.1', 'r739-b=v0.2.4', 'r739-c=v0.2.8'] then
+    raise exception 'FAIL (R739): the cards read %, expected v0.2.4 -> v0.2.1, v0.2.11 -> v0.2.4 and v0.2.16 -> v0.2.8', v_ids;
   end if;
-  if app.catalog_version() is distinct from 'v0.2.7b' then
-    raise exception 'FAIL (R739): app.settings names catalog %, expected v0.2.7b', app.catalog_version();
+  if app.catalog_version() is distinct from 'v0.2.8' then
+    raise exception 'FAIL (R739): app.settings names catalog %, expected v0.2.8', app.catalog_version();
   end if;
   select count(*) into v_int from public.collection_grants;
   if v_int::text <> current_setting('r739.grants') then

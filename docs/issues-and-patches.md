@@ -14,14 +14,33 @@ Every issue carries at least one type label:
 | `major version` | A `vX.Y.0` release that changes the game or the codebase broadly enough to bump the minor or major version (v0.2.0, v0.3.0, v1.0.0), and each of its parts |
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
 | `night bot` | The night bot itself: `bot/`, `.harness/` and its workflows |
+| `Info` | For the record, nothing to build: migrations, statistics, the night bot's status |
 | `production merge` | The countdown issue `promote-production.yml` keeps open (`Merging to production in N hours`) and the pull requests that merge main into production. The workflow opens, retitles and closes them and finds the open one by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Comments `/hold`, `/resume`, `/delay 3h` and `/fast-forward` steer it (`docs/deploy-cloudflare.md`, section 2.3) |
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
-patch whose work is all tooling (the codebase pass titled v0.2.8) is `patch` and `architecture`. The
-`difficulty:*` labels (`easy`, `medium`, `hard`: the weakest model tier that may build it; none is
-medium, and `hard` is Claude Opus's alone), `human` (people do it, such as a decision or any change to `bot/`, `.harness/` or `.github/`; the bot never queues, plans, builds or labels it), the `priority:*` labels
-(the bot's pickup order) and the `bot:*` labels are separate. Never add
-`bot:build` while retitling or relabelling, because it queues a build.
+patch whose work is all tooling (the codebase pass) is `patch` and `architecture`. The
+`difficulty:*` labels (`easy`, `medium`, `hard`: the weakest model tier that may build it; `hard`
+is Claude Opus's alone), `human` (people do it, such as a decision or any change to `bot/`,
+`.harness/` or `.github/`; the bot never queues, plans, builds or labels it), the `priority:*`
+labels (the bot's pickup order), the `method:*` labels and the `bot:*` labels are separate. Never
+add `bot:build` while retitling or relabelling, because it queues a build.
+
+**Who does an issue: the method labels.** An issue is triaged only once a person labels it
+`method:manual` or `method:use-bot` (#307). Two minutes after the label goes on, so a person can
+set a difficulty and a priority first, triage reads it again: `method:manual` adds `human` and
+assigns MaxGoetzmann and jgoetzmann (unassigning the bot); `method:use-bot` adds `bot:build`, a
+priority and its type labels, and assigns the bot (unassigning both people). An issue labelled
+`human` never goes to the bot.
+
+**How hard it is.** A person may set a `difficulty:*` label, and the bot never changes it.
+Otherwise the night bot's planner rates the issue when it plans it, and it counts as medium until
+then: **easy** only when it is small (at most 10 files and 400 lines), in one package, touches
+none of `SPEC.md`, `BUILD.md`, `packages/engine/test/rulings.test.ts` or the shared surfaces,
+does no engine, AI, catalog, card or migration work, is checked by a unit test, leaves the builder
+no decision, and is blocked by nothing (`bot/harness/easy.py`); **hard** for engine rules, the AI,
+design across packages, a migration, or about 40 files or more; **medium** for the rest. Triage
+gives no difficulty. Three failures of an issue's own raise it a step (`bot/README.md`, Rating,
+strikes and the step up).
 
 ## Issue type
 
@@ -56,16 +75,16 @@ suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you
 ## Version numbers
 
 - **Numbers run in order (R739).** A card patch takes the next number after the newest card patch on
-  `main`, shipped (`packages/cards/patches/patches.json`) or still pending (`pending/`): after v0.2.7b
-  with nothing pending, a normal patch (`Patch v0.2.X: …`) is v0.2.8, and a micro patch
-  (`Patch v0.2.Y: …`) becomes v0.2.7c when it ships (below). Name the pending fragment that number
+  `main`, shipped (`packages/cards/patches/patches.json`) or still pending (`pending/`): after v0.2.8
+  with nothing pending, a normal patch (`Patch v0.2.X: …`) is v0.2.9, and a micro patch
+  (`Patch v0.2.Y: …`) becomes v0.2.8b when it ships (below). Name the pending fragment that number
   when the branch makes it. Two normal patches in flight at once cannot both take it: the one that
   merges second renames its fragment to the number after, or `patches ship` would ship it as a
   revision letter of the first. A patch that changes no card data ships no version and takes no
   number, so it keeps its `X` or `Y` title and leaves no gap. The order is still `patches.json`'s,
   and nothing compares version strings (R105, R388). #290 renamed the history this way: v0.2.4,
-  v0.2.5, v0.2.10, v0.2.11, v0.2.12, v0.2.13, v0.2.14 and v0.2.14b are now v0.2.1 to v0.2.7 and
-  v0.2.7b, and the pending v0.2.16 is v0.2.8; commit messages and older titles keep the old names.
+  v0.2.5, v0.2.10, v0.2.11, v0.2.12, v0.2.13, v0.2.14, v0.2.14b and v0.2.16 are now v0.2.1 to
+  v0.2.7, v0.2.7b and v0.2.8; commit messages and older titles keep the old names.
 - **A shipped version never reopens.** A follow-up to it takes the same number plus a letter:
   `vX.Y.Zb`, then `c`, then `d`. This replaces the old `-rN` suffix: #85 renamed the patch history's
   v0.1.0-r1, -r2 and -r3 to v0.1.0b, v0.1.0c and v0.1.0d.
