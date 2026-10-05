@@ -2236,10 +2236,12 @@
         "sha": "e0742c2b29d258a0bd3065cdf0ee052f7554202f"
       },
       "cross_rounds": 0,
-      "died": 1,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-04T19:45:39Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 55,
       "kind": "review",
       "pending_request": false,
