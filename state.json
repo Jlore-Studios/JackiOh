@@ -1876,9 +1876,7 @@
       "run_id": "37384084831",
       "started_at": "2026-10-05T22:42:39Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6003444405"
-      ]
+      "taken_asks": []
     },
     "291": {
       "action": "build",
