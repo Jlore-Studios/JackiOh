@@ -98,6 +98,10 @@ describe("Issue #124: the stack wheel, the sweep fog and the whole-pile wave", (
           <Game view={view} legal={[]} onAction={noop} />
         </div>,
       ).then(({ rerender }) => {
+        // The first view must be committed before its delta arrives. Game plays only what is
+        // new since the view it has seen: a rerender batched into the initial mount arrives as
+        // the first view, which by design plays nothing, and the fog never mounts.
+        cy.get(BOARD).should("exist");
         cy.then(() =>
           rerender(
             <div className="app-shell app-shell--wide">
@@ -135,6 +139,9 @@ describe("Issue #124: the stack wheel, the sweep fog and the whole-pile wave", (
           <Game view={view} legal={[]} onAction={noop} />
         </div>,
       ).then(({ rerender }) => {
+        // The first view must be committed before its delta arrives (see the sweep test above):
+        // a rerender batched into the initial mount arrives as the first view and plays nothing.
+        cy.get(BOARD).should("exist");
         cy.then(() =>
           rerender(
             <div className="app-shell app-shell--wide">
