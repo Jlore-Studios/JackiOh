@@ -25,6 +25,7 @@ import type { FxDescriptor } from "../fx/types.ts";
 import { getFxSettings, normalizeSpeed, type FxSettings } from "../fx/settings.ts";
 import { readSettings as readPanelSettings } from "../settings/store.ts";
 import { type AnimatingMap, type Side, sideOf, testid } from "./contract";
+import { SLAM_BURST, UNIT_SLAM, type SlamTier } from "./damageFeel.ts";
 import { createPlayTracker, pileOf, pileRunAt, sweepAt, type Pile, type PlayTracker, type Sweep, type ZoneImpact } from "./runs.ts";
 
 /* ------------------------------------------------------------------------------------------- *
@@ -817,7 +818,73 @@ export type AnimationEntry = {
   zone?: ZoneImpact;
   /** A run of hits or heals that reached every unit of a side, played at once. */
   sweep?: Sweep;
+  /** #185: a Unit the viewer can see lands in this entry, this hard (`slamEntries`). */
+  slam?: EntrySlam;
 };
+
+/**
+ * #185: one landing's share of its action's slam (SLAM_BURST): the tier sets the look and the sound,
+ * and the hit-stop, shake and anticipation are what is left of the action's totals when it lands.
+ */
+export type EntrySlam = {
+  instanceId: string;
+  side: Side;
+  /** The zone the Unit lands in, as the entry's board draws it (null when it draws none). */
+  zone: string | null;
+  tier: SlamTier;
+  hitStopMs: number;
+  shakePx: number;
+  shakeMs: number;
+  /** Inside the entry's `durationMs`: the Unit hangs this long before its landing motion starts. */
+  anticipationMs: number;
+};
+
+/** The events that put a Unit on the field: a summon into a unit zone, a backrow card animating. */
+export type LandingEvent = Extract<GameEvent, { type: "summoned" | "animated" }>;
+
+/** #185: the tier a landing Unit slams at, or null when it slams not at all (a Unit the viewer cannot see). */
+export type SlamResolver = (event: LandingEvent) => SlamTier | null;
+
+/** The Unit an event lands, when it lands one the viewer may see (R97: never behind the sentinel). */
+export function landingOf(event: GameEvent): LandingEvent | null {
+  if (event.type === "animated") return event.defId === HIDDEN_ID ? null : event;
+  if (event.type === "summoned") return event.row === "units" && event.defId !== HIDDEN_ID ? event : null;
+  return null;
+}
+
+/**
+ * #185: gives each entry that lands a visible Unit its slam, out of one action's SLAM_BURST totals
+ * (the entries play one after another, so several Units landing together stagger by themselves).
+ * Under reduced motion there is no anticipation and no shake; the hit-stop stays (#57).
+ */
+export function slamEntries(entries: readonly AnimationEntry[], slamOf: SlamResolver, reducedMotion: boolean): AnimationEntry[] {
+  const left: { hitStopMs: number; shakePx: number; anticipationMs: number } = { ...SLAM_BURST };
+  return entries.map((entry) => {
+    for (const event of entry.events) {
+      const landing = landingOf(event);
+      const tier = landing === null ? null : slamOf(landing);
+      if (landing === null || tier === null) continue;
+      const feel = UNIT_SLAM[tier];
+      const take = (want: number, key: keyof typeof left): number => {
+        const got = Math.max(0, Math.min(want, left[key]));
+        left[key] -= got;
+        return got;
+      };
+      const slam: EntrySlam = {
+        instanceId: landing.instanceId,
+        side: sideOf(entry.view, landing.player),
+        zone: targetFor(landing, entry.view),
+        tier,
+        hitStopMs: take(feel.hitStopMs, "hitStopMs"),
+        shakePx: reducedMotion ? 0 : take(feel.shakePx, "shakePx"),
+        shakeMs: reducedMotion ? 0 : feel.shakeMs,
+        anticipationMs: reducedMotion || entry.durationMs <= 0 ? 0 : take(feel.anticipationMs, "anticipationMs"),
+      };
+      return { ...entry, slam, durationMs: entry.durationMs + slam.anticipationMs };
+    }
+    return entry;
+  });
+}
 
 /** The pile element that stands in for a card the board does not draw (a library card, a graveyard card). */
 export function pileTestid(pile: Pile): string {
@@ -1054,6 +1121,8 @@ export type AnimationQueueOptions = {
   minEntryMs?: number;
   /** Read at every enqueue (R201). Defaults to `getFxSettings`. */
   settings?: () => Pick<FxSettings, "speed" | "motion">;
+  /** #185: the tier a landing Unit slams at, read at every enqueue. Absent: nothing slams. */
+  slamOf?: SlamResolver;
 };
 
 const EMPTY_ANIMATING: AnimatingMap = new Map<string, GameEventType>();
@@ -1308,7 +1377,9 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
       // Read live, so a change in the settings panel applies from the next action on (R201).
       const settings = readSettings();
       const reduced = reducedMotion || settings.motion === "reduce" || readPanelSettings().reduceMotion;
-      const entries = planEntries(events, view, reduced, plays).map((entry) => {
+      const planned = planEntries(events, view, reduced, plays);
+      const slammed = options.slamOf === undefined ? planned : slamEntries(planned, options.slamOf, reduced);
+      const entries = slammed.map((entry) => {
         const durationMs = scaleForSpeed(entry.durationMs, settings.speed);
         return durationMs === entry.durationMs ? entry : { ...entry, durationMs };
       });

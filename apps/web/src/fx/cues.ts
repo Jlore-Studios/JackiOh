@@ -27,8 +27,9 @@
 import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
 import { GLITCH_WORDS } from "../cards/glitch.ts";
-import { ANIMATIONS, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry } from "../game/animations.ts";
+import { ANIMATIONS, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry, type EntrySlam } from "../game/animations.ts";
 import { sideOf, testid, type Side } from "../game/contract.ts";
+import { damageFeel, damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
@@ -54,7 +55,6 @@ import {
   FX_FUSE_FLIGHT_FRACTION,
   FX_HANDOVER_BANNER_MS,
   FX_HEAL_SPLAT_AT,
-  FX_HERO_TRAUMA_MULT,
   FX_LEGENDARY_TRAUMA,
   FX_LETHAL_LEAD_MAX_MS,
   FX_MANA_MAX_SPARKS,
@@ -70,8 +70,7 @@ import {
   FX_RESULT_TRAUMA,
   FX_REWIND_TRAUMA,
   FX_RING_MS,
-  FX_SHAKE_MAX_TRAUMA,
-  FX_SHAKE_MIN_DAMAGE,
+  FX_SHAKE_MAX_PX,
   FX_SLAM_AT,
   FX_SLAM_MAX_TRAUMA,
   FX_SLAM_STATS_MIN,
@@ -80,7 +79,6 @@ import {
   FX_TEXT,
   FX_TRAP_BURST_AT,
   FX_TRAP_TRAUMA,
-  FX_TRAUMA_PER_DAMAGE,
   FX_ZONE_COUNT_AT,
   FX_ZONE_TAIL_MS,
 } from "./constants.ts";
@@ -121,9 +119,15 @@ const TUNING = {
   cast: { count: 24, power: 1 },
   castOpponent: { count: 12, power: 0.8 },
   summonDust: { count: 30, power: 1.1 },
+  // #185: a Small Unit shifts a few grains, a Large one kicks up a cloud, a Huge or MASSIVE one heavy dust.
+  slamGrains: { count: 8, power: 0.5 },
+  slamCloud: { count: 48, power: 1.3 },
+  slamHeavy: { count: 64, power: 1.6 },
   summonGold: { count: 40, power: 1.3 },
   summonPrismatic: { count: 44, power: 1.3 },
   impactSpark: { count: 24, power: 1.2 },
+  impactHeavy: { count: 44, power: 1.45 },
+  impactDust: { count: 22, power: 0.9 },
   impactPoison: { count: 20, power: 0.8 },
   drainVoid: { count: 16, power: 0.8 },
   healHoly: { count: 26, power: 0.9 },
@@ -224,8 +228,6 @@ function viewportCenter(): FxAnchor {
 
 const isCard = (tgt: string): boolean => tgt.startsWith("card-");
 const isHandCard = (tgt: string): boolean => tgt.startsWith("hand-card-");
-const isHero = (tgt: string): boolean => tgt.startsWith("hero-");
-
 /* ------------------------------------------------------------------------------------------- *
  * Cue builders
  * ------------------------------------------------------------------------------------------- */
@@ -286,6 +288,14 @@ function banner(D: number, text: string, tone: FxBannerTone): FxCue {
 }
 
 /** Appends a shake of `min(1, base × intensity)` at `delayMs`, only when that is above 0. */
+/**
+ * The trauma that shakes the board by `px` at its peak: the shake's offset is FX_SHAKE_MAX_PX times
+ * trauma squared (shake.ts), so a tuning table can name its shake in pixels (#57, #185).
+ */
+export function traumaForShakePx(px: number): number {
+  return px <= 0 ? 0 : Math.min(1, Math.sqrt(px / FX_SHAKE_MAX_PX));
+}
+
 function pushShake(cues: FxCue[], intensity: number, base: number, delayMs: number): void {
   const trauma = Math.min(1, base * intensity);
   if (trauma > 0) {
@@ -394,50 +404,93 @@ const cast: Recipe = (event, p) => {
   return [burst(p.env.intensity, "arcane", at, "point", 0, "castOpponent"), ...accent];
 };
 
+/**
+ * #185: when in its entry a Unit hits the table: after the slam's anticipation, at FX_SLAM_AT of the
+ * landing motion that follows it.
+ */
+export function slamLandMs(entry: Pick<AnimationEntry, "slam">, D: number): number {
+  const wait = entry.slam?.anticipationMs ?? 0;
+  return wait + frac(FX_SLAM_AT, D - wait);
+}
+
+/** #185: what the board throws up under a landing Unit, by its tier (UNIT_SLAM's `board`). */
+function slamCues(slam: EntrySlam, i: number, D: number, tgt: string, at: number): FxCue[] {
+  const feel = UNIT_SLAM[slam.tier];
+  const zone = anchor(tgt);
+  const foot = anchor(tgt, FOOT);
+  const cues: FxCue[] = [];
+  switch (feel.board) {
+    case "none":
+      break;
+    case "grains":
+      cues.push(burst(i, "dust", foot, "ring", at, "slamGrains"));
+      break;
+    case "puff":
+      cues.push(burst(i, "dust", foot, "ring", at, "summonDust"));
+      break;
+    case "cloud":
+      cues.push(ring(D, "dust", zone, at), burst(i, "dust", foot, "ring", at, "slamCloud"));
+      break;
+    case "cracks":
+    case "crater":
+      cues.push(ring(D, "dust", zone, at), burst(i, "dust", foot, "ring", at, "slamCloud"), burst(i, "dust", foot, "area", at, "slamHeavy"));
+      break;
+  }
+  if (feel.shockwave) cues.push(ring(D, "dust", viewportCenter(), at));
+  pushShake(cues, i, traumaForShakePx(slam.shakePx), at);
+  return cues;
+}
+
 const summon: Recipe = (event, p) => {
+  // #185: the entry's slam, when it is this event's Unit landing (`slamEntries`).
+  const slam = "instanceId" in event && p.entry.slam?.instanceId === event.instanceId ? p.entry.slam : undefined;
+  const landAt = slamLandMs(p.entry, p.D);
   // B3.1: a backrow card stepping into its unit zone lands like a summon, with no entrance of its own.
   if (event.type === "animated") {
     // B3.1: the card lifts off its backrow zone and lands in its unit zone, where it slams down.
     const home = anchor(testid.zone(sideOf(p.view, event.player), "backrow", event.backrowLane));
-    const slam = frac(FX_SLAM_AT, p.D);
-    return [
-      ghost(p.D, home, anchor(p.tgt)),
-      burst(p.env.intensity, "arcane", home, "point", 0, "animateArcane"),
-      ring(p.D, "dust", anchor(p.tgt), slam),
-      burst(p.env.intensity, "dust", anchor(p.tgt, FOOT), "ring", slam, "summonDust"),
-    ];
+    const lift = [ghost(p.D, home, anchor(p.tgt)), burst(p.env.intensity, "arcane", home, "point", 0, "animateArcane")];
+    if (slam !== undefined) return [...lift, ...slamCues(slam, p.env.intensity, p.D, p.tgt, landAt)];
+    return [...lift, ring(p.D, "dust", anchor(p.tgt), landAt), burst(p.env.intensity, "dust", anchor(p.tgt, FOOT), "ring", landAt, "summonDust")];
   }
   if (event.type !== "summoned") return [];
   const i = p.env.intensity;
-  const slam = frac(FX_SLAM_AT, p.D);
   const facts = event.row === "units" && event.defId !== HIDDEN_ID ? p.env.card(event.defId) : undefined;
-  if (facts === undefined) return [burst(i, "dust", anchor(p.tgt, FOOT), "ring", slam, "summonDust")];
+  if (facts === undefined) return [burst(i, "dust", anchor(p.tgt, FOOT), "ring", landAt, "summonDust")];
 
   const at = anchor(p.tgt);
-  const cues: FxCue[] = [ring(p.D, "dust", at, slam), burst(i, "dust", anchor(p.tgt, FOOT), "ring", slam, "summonDust")];
+  const cues: FxCue[] =
+    slam === undefined
+      ? [ring(p.D, "dust", at, landAt), burst(i, "dust", anchor(p.tgt, FOOT), "ring", landAt, "summonDust")]
+      : slamCues(slam, i, p.D, p.tgt, landAt);
   let entrance = 0;
   if (facts.rarity === "Legendary") {
-    cues.push(rays(p.D, "legendary", at, 0), burst(i, "gold", at, "area", slam, "summonGold"));
+    cues.push(rays(p.D, "legendary", at, 0), burst(i, "gold", at, "area", landAt, "summonGold"));
     entrance = FX_LEGENDARY_TRAUMA;
   } else if (facts.rarity === "Mythic") {
-    cues.push(rays(p.D, "mythic", at, 0), burst(i, "prismatic", at, "area", slam, "summonPrismatic"));
+    cues.push(rays(p.D, "mythic", at, 0), burst(i, "prismatic", at, "area", landAt, "summonPrismatic"));
     entrance = FX_LEGENDARY_TRAUMA;
   }
-  // Issue #124: the unit lands in its family's look as well: its ring and its particles at the slam.
-  const look = lookOf(facts);
-  if (look !== undefined) cues.push(ring(p.D, look.ring, at, slam), burst(i, look.preset, at, "area", slam, "summonAccent"));
+  if (slam !== undefined) {
+    // The slam's own shake is in slamCues; a Legendary's entrance still lands on top of it.
+    pushShake(cues, i, entrance, landAt);
+    return cues;
+  }
   const stats = (facts.attack ?? 0) + (facts.health ?? 0);
   const slamTrauma =
     stats >= FX_SLAM_STATS_MIN
       ? Math.min(FX_SLAM_MAX_TRAUMA, (stats - FX_SLAM_STATS_MIN + 1) * FX_SLAM_TRAUMA_PER_STAT)
       : 0;
-  pushShake(cues, i, slamTrauma + entrance, slam);
+  pushShake(cues, i, slamTrauma + entrance, landAt);
   return cues;
 };
 
 const impact: Recipe = (event, p) => {
   if (event.type !== "damage") return [];
   const i = p.env.intensity;
+  const feel = damageFeel(event.amount);
+  const tier = damageTier(event.amount);
+  const particleIntensity = i * feel.particleScale;
   const at = anchor(p.tgt);
   const poisonous = sourceIsPoisonous(event.sourceId, p.view);
   const cues: FxCue[] = [];
@@ -452,17 +505,20 @@ const impact: Recipe = (event, p) => {
       hit = flight;
     }
   }
-  cues.push(burst(i, "spark", at, "point", hit, "impactSpark"));
+  cues.push(burst(particleIntensity, "spark", at, "point", hit, tier === "big" || tier === "giga" ? "impactHeavy" : "impactSpark"));
   if (event.amount > 0) cues.push(splat(p.D, "damage", event.amount, at, hit));
-  if (poisonous) cues.push(burst(i, "poison", at, "area", hit, "impactPoison"));
+  if (poisonous) cues.push(burst(particleIntensity, "poison", at, "area", hit, "impactPoison"));
   // Issue #124: a spell's or a card's hit lands in its family's look as well.
   if (!event.combat) {
     const look = lookOf(sourceFacts(event.sourceId, p.view, p.env));
-    if (look !== undefined) cues.push(burst(i, look.preset, at, "area", hit, "impactAccent"));
+    if (look !== undefined) cues.push(burst(particleIntensity, look.preset, at, "area", hit, "impactAccent"));
   }
-  const base =
-    event.amount < FX_SHAKE_MIN_DAMAGE ? 0 : Math.min(FX_SHAKE_MAX_TRAUMA, event.amount * FX_TRAUMA_PER_DAMAGE);
-  pushShake(cues, i, isHero(p.tgt) ? base * FX_HERO_TRAUMA_MULT : base, hit);
+  if (tier === "moderate" || tier === "big" || tier === "giga") {
+    cues.push(burst(particleIntensity, "dust", anchor(p.tgt, FOOT), "area", hit, "impactDust"));
+  }
+  if (tier === "giga") cues.push(ring(p.D, "dust", viewportCenter(), hit));
+  // B35: the board shakes here, by the tier's shakePx (#57's DAMAGE_FEEL); a Normal hit stays still.
+  pushShake(cues, i, traumaForShakePx(feel.shakePx), hit);
   return cues;
 };
 

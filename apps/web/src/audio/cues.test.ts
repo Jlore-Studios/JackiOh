@@ -6,7 +6,7 @@
 // "Readable" is the design's word: the defId is not the sentinel and the table has an entry for it.
 
 import { GAME_EVENT_TYPES, type GameEvent, type GameEventType, type PlayerId, type UnitView } from "@jackioh/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
@@ -610,6 +610,14 @@ describe("B21 amounts", () => {
     }
   });
 
+  it("B21 gives repeated identical impacts independent ±5% pitch samples", () => {
+    const random = vi.spyOn(Math, "random").mockReturnValueOnce(0).mockReturnValueOnce(1);
+    const event: GameEvent = { type: "damage", sourceId: "u1", targetId: "u2", amount: 15, combat: true };
+    expect(onlySfx(event).params?.variation).toBe(0);
+    expect(onlySfx(event).params?.variation).toBe(1);
+    random.mockRestore();
+  });
+
   it("B21 buffed gives buff when attack + health is 0 or more", () => {
     for (const [attack, health] of [
       [1, 1],
@@ -1081,9 +1089,12 @@ describe("R506 patch v0.2.0's moments sound the way they went", () => {
   });
 
   it("R203 R506 an Animated card lands with a summon sized by the Unit it is now, and no family accent", () => {
-    const unit = { attack: 4, health: 4 } as unknown as UnitView;
+    const unit = { attack: 4, health: 4, armor: 0, keywords: [] } as unknown as UnitView;
     const cues = cuesFor(SAMPLES.animated, ctx({ unitNow: () => unit, card: () => ({ type: "Field Trap", tags: ["Human"] }) }));
-    expect(cues).toEqual([{ kind: "sfx", id: "summon", params: { amount: 8 }, delayMs: 0 }]);
+    // #185: and with its slam's tier (4 + 4 is Small) and a pitch sample.
+    expect(cues).toEqual([
+      { kind: "sfx", id: "summon", params: { amount: 8, slamTier: "small", variation: expect.any(Number) }, delayMs: 0 },
+    ]);
     expect(cuesFor(SAMPLES.animated, ctx())).toEqual([{ kind: "sfx", id: "summon", delayMs: 0 }]);
   });
 });
@@ -1248,12 +1259,16 @@ describe("R669 an effect about a unit on the field comes from its lane", () => {
       opponent: emptySide("p2", { units: [enemy, null, null, null, null] }),
     });
     const hit = cuesFor({ type: "damage", sourceId: "m5", targetId: "e1", amount: 3, combat: true }, ctx({ view }));
-    expect(hit).toEqual([{ kind: "sfx", id: "impact", params: { amount: 3, pan: -LANE_PAN_MAX }, delayMs: 0 }]);
+    // #57 adds the hit's tier and a variation sample beside the pan; this test is about the pan.
+    expect(hit).toEqual([
+      { kind: "sfx", id: "impact", params: expect.objectContaining({ amount: 3, pan: -LANE_PAN_MAX }), delayMs: 0 },
+    ]);
     const death = cuesFor(destroyed(UNIT, "p1", "m5"), ctx({ view }));
     expect(death.filter((c) => c.kind === "sfx").map((c) => (c.kind === "sfx" ? c.params?.pan : null))).toEqual([LANE_PAN_MAX]);
     expect(death.some((c) => c.kind === "voice"), "a line is never panned, and still speaks").toBe(true);
     const face = cuesFor({ type: "damage", sourceId: "m5", targetId: "hero-p2", amount: 3, combat: true }, ctx({ view }));
-    expect(face).toEqual([{ kind: "sfx", id: "impact", params: { amount: 3 }, delayMs: 0 }]);
+    expect(face).toEqual([{ kind: "sfx", id: "impact", params: expect.objectContaining({ amount: 3 }), delayMs: 0 }]);
+    expect(face[0]?.kind === "sfx" ? face[0].params?.pan : "missing").toBeUndefined();
     const middle = baseView({ you: emptySide("p1", { units: [null, null, mine, null, null] }) });
     expect(cuesFor(destroyed(UNIT, "p1", "m5"), ctx({ view: middle })).find((c) => c.kind === "sfx")).toEqual({
       kind: "sfx",
