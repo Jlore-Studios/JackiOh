@@ -2771,6 +2771,11 @@
     "304": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-05T14:57:44Z",
+        "by": "`muse` (medium) twice",
+        "sha": "f5d746365481c418ef3190a46644b9a26fe5f7bd"
+      },
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
