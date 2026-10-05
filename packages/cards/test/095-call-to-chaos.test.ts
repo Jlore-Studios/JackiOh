@@ -355,20 +355,10 @@ describe("#95 Call to Chaos — base, the ten effects", () => {
     const summoned = eventsOf(s, "summoned");
     expect(summoned).toHaveLength(5);
     expect(summoned.every((event) => event.row === "backrow")).toBe(true);
-    // Each into the leftmost open backrow zone (R64). An Animated Field Spell among them (patch
-    // v0.2.10, R383) animates as it enters, into a unit zone, so the zone it left takes the next one.
-    const animated = eventsOf(s, "animated").map((event) => event.instanceId);
-    for (const id of animated) {
-      const card = s.card(id);
-      expect(cardDef(card.defId).type).toBe("Field Spell");
-      expect(cardDef(card.defId).base.keywords).toContainEqual({ kind: "Animated" });
-      expect(card.zone).toMatchObject({ z: "field", row: "units" });
-    }
-    expect(summoned.every((event) => animated.includes(event.instanceId) || s.card(event.instanceId).zone.z === "field")).toBe(true);
+    expect(summoned.map((event) => event.lane)).toEqual([1, 2, 3, 4, 5]);
 
     const placed = backrowOf(s, "p1");
-    expect(placed).toHaveLength(5 - animated.length);
-    expect(placed.map((card) => (card.zone.z === "field" ? card.zone.lane : 0))).toEqual(placed.map((_, at) => at + 1));
+    expect(placed).toHaveLength(5);
     for (const card of placed) {
       const def = cardDef(card.defId);
       // "Field Spells or Traps (Field Traps included)".

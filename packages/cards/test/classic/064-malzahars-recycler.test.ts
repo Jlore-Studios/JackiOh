@@ -16,7 +16,6 @@ import type { Action, GameEvent, PlayerId, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { base, def, radiant } from "../../src/scripts/classic/064-malzahars-recycler";
 import { scenario, type Scenario } from "../_harness";
-import { expectAnimated } from "../_animated";
 
 const RECYCLER = "classic-064";
 const ZAO_GAO = "core-080"; // (2) Spell: Discard 2 random cards. Summon 2 Rush Tokens …
@@ -315,33 +314,5 @@ describe("C #64 Malzahar's Recycler", () => {
       s.play(ZAO_GAO);
       expect(drawnBy(s.lastEvents, "p1")).toHaveLength(0);
     });
-  });
-});
-
-describe("C #64 Malzahar's Recycler: Animated (patch v0.2.10)", () => {
-  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 2/3 Unit; with none open it stays a Field Spell", () => {
-    expectAnimated({ def: "classic-064", stats: { attack: 2, health: 3 } });
-  });
-
-  it("R383 radiant: a 4/6 Unit", () => {
-    expectAnimated({ def: "classic-064", radiant: true, stats: { attack: 4, health: 6 } });
-  });
-
-  it("R383 played, it keeps its text as a Unit: its end-of-turn discard of 2 draws 2", () => {
-    const s = scenario({
-      p1: { hand: [RECYCLER, MENACE, VANILLA, FILLER], library: [VANILLA, VANILLA, VANILLA, VANILLA] },
-      p2: { hand: [FILLER], library: [VANILLA, VANILLA, VANILLA] },
-    });
-
-    s.play(RECYCLER, { zone: 3 });
-    expect(s.unit("p1", 3)?.defId).toBe(RECYCLER);
-    s.endTurn();
-    expect(s.state.pending).toMatchObject({ playerId: "p1", kind: "hand", min: 2, max: 2 });
-    s.answer(pick(s, MENACE, VANILLA));
-
-    const events = s.lastEvents;
-    const p2Starts = events.findIndex((event) => event.type === "turnStarted");
-    expect(discardedBy(events, "p1")).toHaveLength(2);
-    expect(drawnBy(events.slice(0, p2Starts), "p1")).toHaveLength(2);
   });
 });

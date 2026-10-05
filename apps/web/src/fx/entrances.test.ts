@@ -1,4 +1,4 @@
-// R660: the bespoke entrances of the marquee Legendary and Mythic Units (entrances.ts), planned the
+// R670: the bespoke entrances of the marquee Legendary and Mythic Units (entrances.ts), planned the
 // way FxLayer plans them: each entry remembered, then planned against the view the runner planned it
 // against.
 
@@ -60,8 +60,8 @@ function endOf(cue: FxCue): number {
   }
 }
 
-describe("R660 marquee Legendary and Mythic entrances", () => {
-  it("R660 a handful of cards have one, each a Legendary or Mythic Unit of the real catalog, and every key names a recipe", () => {
+describe("R670 marquee Legendary and Mythic entrances", () => {
+  it("R670 a handful of cards have one, each a Legendary or Mythic Unit of the real catalog, and every key names a recipe", () => {
     expect(MARQUEE.length).toBeGreaterThanOrEqual(5);
     for (const [defId, key] of MARQUEE) {
       const def = CATALOG[defId];
@@ -74,7 +74,7 @@ describe("R660 marquee Legendary and Mythic entrances", () => {
     expect(new Set(MARQUEE.map(([, key]) => key)).size).toBe(MARQUEE.length);
   });
 
-  it("R660 a marquee summoned into a unit zone plans its own entrance in place of the rarity's rays and gold", () => {
+  it("R670 a marquee summoned into a unit zone plans its own entrance in place of the rarity's rays and gold", () => {
     for (const [defId, key] of MARQUEE) {
       const cues = planAll([summoned("p1", "m1", defId)]);
       const D = ANIMATIONS.summoned.durationMs;
@@ -86,13 +86,13 @@ describe("R660 marquee Legendary and Mythic entrances", () => {
     }
   });
 
-  it("R660 a plain Legendary still gets the rarity entrance", () => {
+  it("R670 a plain Legendary still gets the rarity entrance", () => {
     const cues = planAll([summoned("p1", "m1", "core-052")]);
     expect(cues.some((cue) => cue.kind === "rays" && cue.tone === "legendary")).toBe(true);
     expect(cues.some((cue) => cue.kind === "burst" && cue.preset === "gold" && cue.spread === "area")).toBe(true);
   });
 
-  it("R660 played from the hand (the collapsed play and summon) and on the other seat, it plays the same entrance at that seat's zone", () => {
+  it("R670 played from the hand (the collapsed play and summon) and on the other seat, it plays the same entrance at that seat's zone", () => {
     const [defId, key] = MARQUEE[0] ?? ["", "voidCollapse"];
     const pair = [played("p1", "m1", defId), summoned("p1", "m1", defId)];
     // The pair is one entry, with the duration the runner gives the pair.
@@ -107,7 +107,7 @@ describe("R660 marquee Legendary and Mythic entrances", () => {
     expect(text).not.toContain(CATALOG[defId]?.name ?? "\u0000");
   });
 
-  it("R660 R202 a hidden summon and a backrow set get no entrance", () => {
+  it("R670 R202 a hidden summon and a backrow set get no entrance", () => {
     const hidden = planAll([summoned("p2", "hidden", "hidden")]);
     expect(hidden.some((cue) => cue.kind === "rays" || cue.kind === "crack" || cue.kind === "shake")).toBe(false);
     for (const [defId] of MARQUEE) {
@@ -116,7 +116,7 @@ describe("R660 marquee Legendary and Mythic entrances", () => {
     }
   });
 
-  it("R660 R201 an entrance paces nothing: the entry's duration is the summon's, marquee or not", () => {
+  it("R670 R201 an entrance paces nothing: the entry's duration is the summon's, marquee or not", () => {
     for (const [defId] of MARQUEE) {
       const view = fullBoardView();
       const marquee = planEntries([played("p1", "m1", defId), summoned("p1", "m1", defId)], view, false);
