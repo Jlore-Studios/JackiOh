@@ -3233,9 +3233,9 @@
     "what": "build #290 on devin"
   },
   "last_sweep": {
-    "at": "2026-10-05T13:05:27Z",
+    "at": "2026-10-05T13:16:30Z",
     "notes": [
-      "started a night run, as a lane was free: #290 (easy) is queued to build, for `devin`: build on `devin` (devin, `swe-2-max`, weak); review in a review run after its self check"
+      "started a night run, as a lane was free: #304 (easy) is queued to review, for `claude-3`: review on `claude-3` (claude, `opus`, strong)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
