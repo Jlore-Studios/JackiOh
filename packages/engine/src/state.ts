@@ -76,7 +76,7 @@ export type CardInstance = {
   /** A backrow card whose identity is public, e.g. a Field Trap that has fired (R33). */
   faceUp?: boolean;
   /**
-   * R638: a backrow Trap or Field Trap both players may read while it stays armed — revealed, not
+   * R686: a backrow Trap or Field Trap both players may read while it stays armed — revealed, not
    * face-up, so it still fires. Cleared by R78's reset with the card leaving the field.
    */
   revealed?: boolean;

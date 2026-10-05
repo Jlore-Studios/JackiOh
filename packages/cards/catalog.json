@@ -3008,11 +3008,11 @@
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Heal a target {heal}."
+      "text": "Heal {heal}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Heal a target {heal}."
+      "text": "Heal {heal}."
     }
   },
   "classic-004": {
@@ -3702,13 +3702,13 @@
       "attack": 5,
       "health": 4,
       "keywords": [],
-      "text": "Activate ♾️: Tribute a Unit. Deal damage equal to {multiplier}× its Attack to any target."
+      "text": "Activate ♾️: Tribute a Unit. Deal damage equal to {multiplier}× its Attack."
     },
     "radiant": {
       "attack": 10,
       "health": 8,
       "keywords": [],
-      "text": "Activate ♾️: Tribute a Unit. Deal damage equal to {multiplier}× its Attack to any target."
+      "text": "Activate ♾️: Tribute a Unit. Deal damage equal to {multiplier}× its Attack."
     }
   },
   "classic-022": {
@@ -4635,7 +4635,7 @@
       "attack": 8,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Destroy a permanent whose card takes more lines of code to implement than this one. Valid targets are highlighted."
+      "text": "Cry: Destroy a permanent whose card takes more lines of code to implement than this one."
     }
   },
   "classic-049": {
@@ -5514,11 +5514,11 @@
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Activate: Place {tokens|Plague Token|Plague Tokens} on this.\nYou may play Units from your graveyard, paying with Plague Tokens from this: each token pays (1), and each such play spends at least 1 token."
+      "text": "Activate: Place {tokens|Plague Token|Plague Tokens} on this.\nYou may play Units from your graveyard, paying with Plague Tokens from this: each token pays (1)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: Place {tokens|Plague Token|Plague Tokens} on this.\nYou may play Units from your graveyard, paying with Plague Tokens from this: each token pays (1), and each such play spends at least 1 token."
+      "text": "Activate: Place {tokens|Plague Token|Plague Tokens} on this.\nYou may play Units from your graveyard, paying with Plague Tokens from this: each token pays (1)."
     }
   },
   "classic-075": {
@@ -9470,7 +9470,7 @@
           "n": 2
         }
       ],
-      "text": "Brittle 2\nEvery {plays|card|cards} your opponent plays, the last one is fused into this after it resolves, and this gains +{brittleGain} Brittle."
+      "text": "Brittle 2\nEvery {plays|card|cards} your opponent plays, fuse the last into this and gain +{brittleGain} Brittle."
     },
     "radiant": {
       "keywords": [
@@ -9479,7 +9479,7 @@
           "n": 4
         }
       ],
-      "text": "Brittle 4\nEvery {plays|card|cards} your opponent plays, a Radiant copy of the last one is fused into this, and this gains +{brittleGain} Brittle."
+      "text": "Brittle 4\nEvery {plays|card|cards} your opponent plays, fuse a Radiant copy of the last into this and gain +{brittleGain} Brittle."
     }
   },
   "classicplus-075": {
