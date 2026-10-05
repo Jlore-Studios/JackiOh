@@ -1,4 +1,4 @@
-// R659: the warning a hand card carries when playing it now would only get it countered (Classic #87
+// R667: the warning a hand card carries when playing it now would only get it countered (Classic #87
 // Plague Chalice). `viewFor` sets `counteredOnPlay` from this on the viewer's own hand cards, and the
 // client draws it and decides nothing (CLAUDE.md rule 7).
 //
@@ -28,7 +28,7 @@ function readableCounters(state: GameState, player: PlayerId): TriggerHolder[] {
 }
 
 /**
- * R659: the ids of `player`'s hand cards that every price they could be played at now would see
+ * R667: the ids of `player`'s hand cards that every price they could be played at now would see
  * countered, by a card on the field `player` may read. Empty when no such card is on the field.
  */
 export function counteredHandCards(state: GameState, player: PlayerId): ReadonlySet<string> {

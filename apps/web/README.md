@@ -94,10 +94,10 @@ src/
                         docked clear of the field
     glow.ts             data-glow / data-condition-active helpers: green from
                         Highlight.glow, yellow from the view's conditionActive; and
-                        data-countered-on-play, R659's Plague Chalice warning from the view's
+                        data-countered-on-play, R667's Plague Chalice warning from the view's
                         counteredOnPlay
     highlights.css      the green and yellow glow colours, imported after board.css
-    countered.css       R659: the warning's green bubbling film and badge, still under reduced motion
+    countered.css       R667: the warning's green bubbling film and badge, still under reduced motion
     drag/               drag to play: pointer events for mouse and touch, the targeting
                         arrow and reticle, and a dropped card held where it landed until
                         the board shows the play; a build lifted again from its picks, a

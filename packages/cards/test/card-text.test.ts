@@ -399,7 +399,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     const craftBefore = before["core-099"] as unknown as CardDef;
     expect(after["core-099"]?.radiant.text).toBe("Discover 3 Units. Fuse them and add the result to your hand. It costs (0).");
     expect(after["core-099"]?.base).toEqual(craftBefore.base);
-    // Plague Chalice moves only its script's loc (R659's `wouldCounter`).
+    // Plague Chalice moves only its script's loc (R667's `wouldCounter`).
     const chaliceBefore = before["classic-087"] as unknown as CardDef;
     expect({ ...(after["classic-087"] as unknown as CardDef), loc: chaliceBefore.loc }).toEqual(chaliceBefore);
   });

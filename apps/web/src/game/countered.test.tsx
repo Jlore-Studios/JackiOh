@@ -1,4 +1,4 @@
-// R659 on the board: Classic #87 Plague Chalice's warning on the viewer's own hand card. The engine
+// R667 on the board: Classic #87 Plague Chalice's warning on the viewer's own hand card. The engine
 // puts `counteredOnPlay: true` on the card's view and the board only draws it (CLAUDE.md rule 7): the
 // fixtures below are `PlayerView`s, and the component is the board that renders them.
 
@@ -49,8 +49,8 @@ function renderBoard(view: PlayerView): void {
   );
 }
 
-describe("R659 the Plague Chalice warning on a hand card", () => {
-  it("R659 the view's flag draws the warning film and badge, with the words for a screen reader; a card without it has neither", () => {
+describe("R667 the Plague Chalice warning on a hand card", () => {
+  it("R667 the view's flag draws the warning film and badge, with the words for a screen reader; a card without it has neither", () => {
     renderBoard(warnedView());
 
     const doomed = screen.getByTestId(testid.handCard("doomed"));
@@ -64,7 +64,7 @@ describe("R659 the Plague Chalice warning on a hand card", () => {
     expect(screen.queryByTestId(testid.countered("safe"))).toBeNull();
   });
 
-  it("R659 the hover preview and the long-press sheet carry the note, so a phone shows it with no hover", () => {
+  it("R667 the hover preview and the long-press sheet carry the note, so a phone shows it with no hover", () => {
     vi.useFakeTimers();
     renderBoard(warnedView());
     const doomed = screen.getByTestId(testid.handCard("doomed"));
@@ -86,7 +86,7 @@ describe("R659 the Plague Chalice warning on a hand card", () => {
   });
 });
 
-describe("R659 countered.css", () => {
+describe("R667 countered.css", () => {
   function sheet(): string {
     for (const candidate of ["src/game/countered.css", "apps/web/src/game/countered.css"]) {
       const path = resolve(process.cwd(), candidate);
@@ -95,7 +95,7 @@ describe("R659 countered.css", () => {
     throw new Error("countered.css not found");
   }
 
-  it("R659 the film takes no pointer event, and its bubbles rise by transform alone", () => {
+  it("R667 the film takes no pointer event, and its bubbles rise by transform alone", () => {
     const css = sheet();
     expect(css).toMatch(/\.countered-warning \{[^}]*pointer-events: none;/);
     const keyframes = /@keyframes countered-rise \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
@@ -103,7 +103,7 @@ describe("R659 countered.css", () => {
     expect(keyframes).not.toMatch(/(?<![-\w])(top|bottom|left|right|background|opacity):/);
   });
 
-  it("R659 under the media query and under <html data-reduce-motion> the bubbles are gone and the tint holds still", () => {
+  it("R667 under the media query and under <html data-reduce-motion> the bubbles are gone and the tint holds still", () => {
     const css = sheet();
     const media = /@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
     for (const part of [".countered-warning::before", ".countered-warning::after"]) {

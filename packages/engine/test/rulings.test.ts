@@ -4021,12 +4021,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
-  // Proved by counterWarning.test.ts "R659 …" (fixture counters: who is warned, never a Trap, a hand
+  // Proved by counterWarning.test.ts "R667 …" (fixture counters: who is warned, never a Trap, a hand
   // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
   // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
-  it("R659 a hand card the field would counter at every price carries a warning on its own seat", () => {
+  it("R667 a hand card the field would counter at every price carries a warning on its own seat", () => {
     provenIn(
-      659,
+      667,
       "counterWarning.test.ts",
       "../../cards/test/classic/087-plague-chalice.test.ts",
       "../../../apps/web/src/game/countered.test.tsx",
