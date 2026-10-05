@@ -2759,8 +2759,10 @@
     "what": "review #223 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-05T01:39:33Z",
-    "notes": [],
+    "at": "2026-10-05T01:50:13Z",
+    "notes": [
+      "started a night run, as a lane was free: #143 (hard) is queued to revise, for `claude-2`: build on `claude-2` (claude, `opus`, strong); review on `claude-2` (claude, `opus`, strong)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
