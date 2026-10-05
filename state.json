@@ -2301,7 +2301,7 @@
     "287": {
       "action": "review",
       "asks": [],
-      "cross_rounds": 0,
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
@@ -2318,15 +2318,22 @@
       },
       "interruptions": 0,
       "issue": 255,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The 'Patch {patch}' summary tile still renders gate.liveGames as '{N} live' \u2014 the gate's numerator with the data-source word on it \u2014 contradicting R661's own text and leaking the very mechanics the issue asks to hide.",
+          "evidence": "stats.tsx:248 reads `cardStatsData?.gate.liveGames`; server-side (apps/server/src/api/stats.ts:114-117) that value is `liveGamesCount`, the figure compared to PUBLIC_STATS_MIN_LIVE_GAMES to flip `cleared`. Rendering '412 live' shows the banned count of live games towards the gate and the source word ('Live games' is the post-gate sourceLabel). Next to 'Total games: 1,412' (summary.totalGames = AI+live while provisional) it exposes the pad size by subtraction \u2014 'AI development games pad the data' stays derivable, the quoted example of what goes behind the curtain. It also falsifies R661's own sentence 'the client shows none of them [source, sourceLabel and gate] and reads `source` only to know whether to show the banner'. Tests lock the leak in: stats.test.tsx asserts '412 live' and '1,050 live' (also on the cleared fallback), e2e 34-stats.cy.ts asserts the tile contains '412'. Fix could be dropping the tile or sourcing the patch's counted games without the 'live' label, updating the tests and the stats-summary-live-games testid.",
+          "severity": "blocking",
+          "where": "apps/web/src/routes/stats.tsx:271"
+        }
+      ],
       "pending_request": false,
       "provider": "devin",
       "question": "",
-      "queued_at": "2026-10-05T03:22:40Z",
+      "queued_at": "2026-10-05T03:50:39Z",
       "run_id": "37259210037",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-05T03:23:26Z",
       "stop_requested": false,
       "taken_asks": [],
