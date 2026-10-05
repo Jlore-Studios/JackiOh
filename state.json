@@ -2300,7 +2300,7 @@
       "stop_requested": false
     },
     "287": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cross_rounds": 0,
       "died": 0,
@@ -2314,10 +2314,10 @@
       "pending_request": false,
       "provider": "devin",
       "queued_at": "2026-10-05T03:06:51Z",
-      "run_id": "37256696858",
+      "run_id": "37257908027",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-05T02:48:41Z",
+      "started_at": "2026-10-05T03:07:11Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -2820,9 +2820,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-05T02:48:41Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37256696858",
-    "what": "review #287 on devin"
+    "at": "2026-10-05T03:07:11Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37257908027",
+    "what": "revise #287 on devin"
   },
   "last_sweep": {
     "at": "2026-10-05T03:05:35Z",
