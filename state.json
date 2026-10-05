@@ -1959,9 +1959,7 @@
     },
     "208": {
       "action": "build",
-      "asks": [
-        "c:5988274868"
-      ],
+      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -1985,12 +1983,14 @@
       "question": "Every change for #208 is under bot/, which the night bot may not edit. Will a person build it from the Plan section (relabel it human)?",
       "queued_at": "2026-10-05T04:45:35Z",
       "requested_by": "jgoetzmann",
-      "run_id": "37215434011",
-      "started_at": "2026-10-04T16:05:50Z",
+      "run_id": "37265350323",
+      "started_at": "2026-10-05T04:54:12Z",
       "stop_requested": false,
       "stopped_at": "2026-10-04T17:09:16Z",
       "stopped_by": "MaxGoetzmann",
-      "taken_asks": []
+      "taken_asks": [
+        "c:5988274868"
+      ]
     },
     "212": {
       "closed_at": "2026-10-04T15:50:21Z",
@@ -2912,9 +2912,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-05T04:44:26Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37264778050",
-    "what": "revise #142 on claude-1"
+    "at": "2026-10-05T04:54:12Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37265350323",
+    "what": "build #208 on devin"
   },
   "last_sweep": {
     "at": "2026-10-05T04:43:19Z",
