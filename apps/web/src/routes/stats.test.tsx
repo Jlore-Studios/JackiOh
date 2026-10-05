@@ -174,8 +174,7 @@ describe("R654 public statistics route", () => {
     expect(screen.getByTestId(statsTestid.summaryLiveGames)).toHaveTextContent("412 live");
 
     const banner = screen.getByTestId(statsTestid.provisionalBanner);
-    expect(banner).toHaveTextContent("412 / 1000 live games on this patch");
-    expect(banner).toHaveTextContent("AI development games pad the data");
+    expect(banner).toHaveTextContent("Provisional statistics");
   });
 
   it("R654 cards table displays 'not enough games' below sample floor and percentage when at or above sample floor", async () => {
@@ -237,7 +236,7 @@ describe("R654 public statistics route", () => {
 
     const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
     expect(modal).toBeInTheDocument();
-    expect(await screen.findByText("Win rate by patch (cleared gate only)")).toBeInTheDocument();
+    expect(await screen.findByText("Win rate by patch")).toBeInTheDocument();
     expect(await screen.findByText("Win rate by turn played")).toBeInTheDocument();
     expect(await screen.findByText("Co-played cards (synergy)")).toBeInTheDocument();
 
@@ -270,7 +269,7 @@ describe("R654 public statistics route", () => {
     render(<StatsRoute />);
 
     const fallbackBtn = await screen.findByTestId(statsTestid.fallbackToggle, undefined, SLOW);
-    expect(fallbackBtn).toHaveTextContent("View previous patch (0.1.0) live data →");
+    expect(fallbackBtn).toHaveTextContent("View previous patch (0.1.0) →");
 
     await user.click(fallbackBtn);
 
@@ -308,5 +307,34 @@ describe("R654 public statistics route", () => {
     const footerLink = screen.getByTestId(siteFooterTestid.stats);
     expect(footerLink).toHaveAttribute("href", "/stats");
     expect(footerLink).toHaveTextContent("Stats");
+  });
+
+  it("R661 shows no data source, no count towards the gate and no word of AI padding or a gate, in the banner, the notes and the drill-down", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    const page = await screen.findByTestId(statsTestid.screen, undefined, SLOW);
+    const banner = await screen.findByTestId(statsTestid.provisionalBanner, undefined, SLOW);
+
+    // The banner says only that the figures are provisional (R661).
+    expect(banner).toHaveTextContent("Provisional statistics");
+    expect(banner.textContent).not.toContain("1000");
+    expect(banner.textContent).not.toMatch(/live games|AI/);
+    expect(banner.querySelector(".stats-provisional-progress")).toBeNull();
+
+    // No tile, badge or note names a source or the gate anywhere on the page (R661).
+    expect(page.querySelector(".stats-summary-badge")).toBeNull();
+    expect(page.textContent).not.toContain("Data source");
+    expect(page.textContent).not.toContain("AI games + live games (provisional)");
+    expect(page.textContent).not.toMatch(/AI development|publication gate|cleared gate/i);
+    // The kept tiles still render: total games and the patch's games.
+    expect(page.textContent).toContain("Total games");
+    expect(page.textContent).toContain("1,200");
+
+    // The drill-down names no gate either (R661).
+    await user.click(await screen.findByText("Spark Pup"));
+    const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    expect(modal.textContent).not.toMatch(/gate/i);
+    expect(within(modal).getByText("Win rate by patch")).toBeInTheDocument();
   });
 });

@@ -155,8 +155,9 @@ src/
                         the deck builder's browse pane (game/deckbuilder/CardBrowser.tsx) and the bundled
                         catalog, no API call; the site footer links it beside Patch notes
   routes/stats.tsx      /stats: the public card and player statistics page (R654), sortable cards table with
-                        confidence floor, card drill-down, public player aggregates, and provisional AI padding
-                        banner; the site footer links it
+                        confidence floor, card drill-down, public player aggregates, and a provisional banner
+                        that names no data source and none of the gate's workings (R661); the site footer
+                        links it, and the landing page's calls to action do not
   test/
     setup.ts            jsdom matchers and a matchMedia stub
     fixtures.ts         fixture PlayerViews; every test renders one of these
@@ -284,7 +285,8 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         (sync.ts, R256); a trio import is one POST /api/trios/import, never the autosave (R341)
 routes/play.tsx         /play: the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
                         trio choice with the validator's verdict as UX, the queue and the room code; it
-                        waits on /api/auth/me's currentMatchId and currentSeriesId
+                        waits on /api/auth/me's currentMatchId and currentSeriesId; it shows the player's
+                        own rank and links /leaderboard (R661)
 routes/series.tsx       /series/:id: a Conquest series (R330–R336): score, both sides' won (locked) decks,
                         the history, forfeit between games, the result
 routes/SeriesPicker.tsx the deck-selection phase before each game, laid out as the mulligan (R331–R333,

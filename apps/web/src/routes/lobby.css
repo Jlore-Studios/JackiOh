@@ -661,7 +661,8 @@
   cursor: not-allowed;
 }
 
-.tavern.play-screen .play-panel--practice a {
+.tavern.play-screen .play-panel--practice a,
+.tavern.play-screen .play-panel--rank a {
   align-self: flex-start;
   font-weight: 700;
 }

@@ -19,6 +19,11 @@
 // THE QUEUE'S COUNTS (R505) are on the mode tiles and nowhere else: each tile says how many are
 // waiting for its mode. The Find a match box says what this screen is doing (queued, looking for
 // an opponent, the room code) and repeats no count, and neither does the queued notice.
+//
+// THE RANK (R661) has a panel of its own beside the queue: the player's own visible rank from
+// `GET /api/ranked`, in `rank/rank.ts`'s words (placements, a Grape tier with its division and pips,
+// or a Jlorious position; never the hidden rating, R612), and the way to the leaderboard. It is
+// read once on arrival; a failed read shows no rank and keeps the link.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -42,16 +47,19 @@ import {
   getCollection,
   getDecks,
   getMe,
+  getOwnRank,
   getPopulation,
   joinRoom,
   roomModeOf,
   type ModeChoice,
+  type OwnRankResponse,
   type PopulationResponse,
   type QueueMode,
   type SavedDeck,
   type SavedTrio,
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
+import { rankWords } from "../rank/rank.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 import "../auth/tavern.css";
 import "./lobby.css";
@@ -93,6 +101,10 @@ export const playTestid = {
   copyRoomCode: "play-copy-room-code",
   /** The "searching" indicator shown while this screen is queued (`data-mode`). */
   searching: "play-searching",
+  /** R661: the player's own visible rank, in `rankWords`' words, with the season. */
+  rank: "play-rank",
+  /** R661: the way to `/leaderboard`. */
+  leaderboard: "play-leaderboard",
 } as const;
 
 export const QUEUE_MODES: readonly QueueMode[] = ["bo1", "bo3", "random"];
@@ -524,6 +536,25 @@ function RoomTicket({ room }: { room: Room }): ReactElement {
   );
 }
 
+/** R661: the player's own rank, once it has been read, and the way to the leaderboard. */
+function RankPanel({ rank }: { rank: OwnRankResponse | null }): ReactElement {
+  return (
+    <section className="lobby-card play-panel play-panel--rank" aria-labelledby="play-rank-heading">
+      <h2 id="play-rank-heading" className="play-panel__heading">
+        Your rank
+      </h2>
+      {rank === null ? null : (
+        <p data-testid={playTestid.rank}>
+          {rankWords(rank.rank)} · Season {rank.season}
+        </p>
+      )}
+      <a href={paths.leaderboard} data-testid={playTestid.leaderboard} onClick={followInApp(paths.leaderboard)}>
+        Leaderboard →
+      </a>
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------------------------------------
 // the route
 // ---------------------------------------------------------------------------------------------
@@ -541,6 +572,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
   /** True while this screen is waiting to be paired: queued, or hosting an unclaimed room. */
   const [waiting, setWaiting] = useState(false);
   const [population, setPopulation] = useState<PopulationResponse | null>(null);
+  const [rank, setRank] = useState<OwnRankResponse | null>(null);
 
   const stored = useMemo(readStoredChoice, []);
   const [mode, setMode] = useState<QueueMode>(stored.mode ?? "bo1");
@@ -563,6 +595,20 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
   useEffect(() => {
     refreshPopulation();
   }, [refreshPopulation]);
+
+  // R661: the player's own rank, once on arrival. A failed read shows no rank; the link stays.
+  useEffect(() => {
+    let cancelled = false;
+    attempt(() => getOwnRank(token)).then(
+      (next) => {
+        if (!cancelled) setRank(next);
+      },
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   // Remembered once the decks are known, so a stale id is replaced by what is really shown.
   const deckShown = deck?.id;
@@ -853,6 +899,8 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               Leave the queue
             </button>
           </section>
+
+          <RankPanel rank={rank} />
 
           <section className="lobby-card play-panel play-panel--room" aria-labelledby="play-room-heading">
             <h2 id="play-room-heading" className="play-panel__heading">

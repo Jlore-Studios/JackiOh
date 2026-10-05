@@ -18,7 +18,6 @@ export const landingTestid = {
   inviteOnly: "landing-invite-only",
   stats: "landing-stats",
   statsClear: "landing-stats-clear",
-  statsLink: "landing-stats-link",
 } as const;
 
 /** `landing-fan-card-${index}`, 0..4. */

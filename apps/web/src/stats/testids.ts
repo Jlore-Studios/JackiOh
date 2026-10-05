@@ -7,7 +7,6 @@ export const statsTestid = {
   summaryTiles: "stats-summary-tiles",
   summaryTotalGames: "stats-summary-total-games",
   summaryLiveGames: "stats-summary-live-games",
-  summarySource: "stats-summary-source",
   summaryBestCard: "stats-summary-best-card",
   summaryWorstCard: "stats-summary-worst-card",
   provisionalBanner: "stats-provisional-banner",

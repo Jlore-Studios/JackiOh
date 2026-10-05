@@ -4028,6 +4028,15 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/cards/art/convention.test.ts",
     );
   });
+
+  // Proved by apps/web routes/landing.test.tsx "R661 …" (no Stats call to action; the footer's link is
+  // the only one), routes/stats.test.tsx "R661 …" (no data source, no count towards the gate, no word of
+  // AI padding or a gate, the drill-down included), routes/almanac.test.tsx "R654 R661 …" (the card
+  // detail's statistics block names no source), and routes/play.test.tsx "R661 …" (the lobby's own rank
+  // in R612's words, its leaderboard link, and nothing when the rank cannot be read).
+  it("R661 keeps statistics off the landing page's calls to action and their workings behind the curtain, and shows the rank in the lobby", () => {
+    provenIn(661, WEB_LANDING_TEST, WEB_STATS_ROUTE_TEST, "../../../apps/web/src/routes/almanac.test.tsx", WEB_PLAY_TEST);
+  });
 });
 
 describe("SPEC §11 index completeness", () => {
