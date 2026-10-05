@@ -9,7 +9,9 @@
 //   - both menus stay on the screen, also where the seat puts the portrait at its left edge
 //     (narrower than 761 px, or shorter than 501 px),
 //   - a voice line's bubble is sized by its line rather than wrapped word by word, and stays on the
-//     screen.
+//     screen,
+//   - nothing on the board is drawn over the opponent's bubble, sticker or Mute menu, and none of
+//     them is faded by its hero (#257).
 //
 // The mount is mobile-ux.cy.tsx's: `Game` inside `.app-shell.app-shell--wide`, the narrowest
 // container the board is given, here with the routes' own `useEmotes` (no audio engine), so a pick
@@ -19,9 +21,9 @@
 // Every measurement is taken inside a `should` callback so it is retried until the layout has
 // settled after `cy.viewport()`, and until the bubble's pop-in has finished.
 
-import { StrictMode, type ReactElement } from "react";
+import { StrictMode, useEffect, type ReactElement } from "react";
 
-import { useEmotes } from "../../../apps/web/src/emotes/useEmotes.ts";
+import { useEmotes, type EmotesApi } from "../../../apps/web/src/emotes/useEmotes.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { fullBoardView } from "../../../apps/web/src/test/fixtures.ts";
 
@@ -57,18 +59,37 @@ function ts(testid: string): string {
   return `[data-testid="${testid}"]`;
 }
 
-function EmoteGame({ view, legal }: { view: View; legal: Legal }): ReactElement {
+function EmoteGame({
+  view,
+  legal,
+  onEmotes,
+}: {
+  view: View;
+  legal: Legal;
+  onEmotes: (emotes: EmotesApi) => void;
+}): ReactElement {
   const emotes = useEmotes({ engine: null, you: view.viewer });
+  useEffect(() => {
+    onEmotes(emotes);
+  }, [emotes, onEmotes]);
   return <Game view={view} legal={legal} onAction={() => undefined} emotes={emotes} />;
 }
 
+/** The mounted game's emote session, so a spec can play the opponent's emote arriving. */
+let mountedEmotes: EmotesApi | null = null;
+
+function keepEmotes(emotes: EmotesApi): void {
+  mountedEmotes = emotes;
+}
+
 function mountGame(): void {
+  mountedEmotes = null;
   // StrictMode, as main.tsx mounts the app: dev replays every layout effect, and the menu's
   // keep-on-screen measure has to hold its answer across the replay, not only the first run.
   cy.mount(
     <StrictMode>
       <div className="app-shell app-shell--wide">
-        <EmoteGame view={fullBoardView()} legal={END_TURN_ONLY} />
+        <EmoteGame view={fullBoardView()} legal={END_TURN_ONLY} onEmotes={keepEmotes} />
       </div>
     </StrictMode>,
   );
@@ -83,6 +104,50 @@ function fontSizePx(element: Element): number {
 function openPicker(): void {
   cy.get(`${ts("hero-you")} .hero-portrait`).click();
   cy.get(ts("emote-menu")).should("be.visible");
+}
+
+/** fullBoardView() seats the viewer as p1, so the opponent is p2. */
+const OPPONENT = "p2";
+
+/** The opponent's emote arrives, as the match's relay hands it to `receive`. */
+function opponentEmotes(emote: Parameters<EmotesApi["receive"]>[1]): void {
+  cy.wrap(null).should(() => {
+    expect(mountedEmotes, "the mounted emote session").not.to.equal(null);
+  });
+  cy.then(() => {
+    expect(mountedEmotes?.receive(OPPONENT, emote), `the opponent's ${emote}`).to.equal(true);
+  });
+}
+
+/**
+ * #257: nothing is drawn over `element` and nothing above it fades it. Nine points across it are
+ * asked what the browser draws there; a show is blind to the pointer, so it is made hittable first,
+ * which changes what is hit and nothing about what is drawn. Only points on the screen are asked.
+ */
+function expectDrawnOnTop(element: HTMLElement, what: string): void {
+  element.style.pointerEvents = "auto";
+  const doc = element.ownerDocument;
+  const box = element.getBoundingClientRect();
+  const width = doc.documentElement.clientWidth;
+  const height = doc.documentElement.clientHeight;
+  let asked = 0;
+  for (const fx of [0.15, 0.5, 0.85]) {
+    for (const fy of [0.2, 0.5, 0.8]) {
+      const x = box.left + box.width * fx;
+      const y = box.top + box.height * fy;
+      if (x < 0 || y < 0 || x > width || y > height) continue;
+      asked += 1;
+      const top = doc.elementFromPoint(x, y);
+      const cover = top?.closest("[data-testid]")?.getAttribute("data-testid") ?? top?.className ?? "nothing";
+      expect(top !== null && element.contains(top), `${what} at (${fx}, ${fy}), under ${String(cover)}`).to.equal(true);
+    }
+  }
+  expect(asked, `points of ${what} on the screen`).to.be.at.least(1);
+  let opacity = 1;
+  for (let el: Element | null = element.parentElement; el !== null; el = el.parentElement) {
+    opacity *= Number.parseFloat(doc.defaultView?.getComputedStyle(el).opacity ?? "1");
+  }
+  expect(opacity, `what fades ${what}`).to.equal(1);
 }
 
 function expectOnScreen(element: Element, what: string): void {
@@ -155,6 +220,35 @@ for (const viewport of VIEWPORTS) {
             expect(box?.height ?? 0, "the mute item's height").to.be.at.least(TOUCH_PX - EPSILON);
           }
         });
+    });
+
+    it("#257 the opponent's speech bubble is drawn over the board, at full strength", () => {
+      opponentEmotes("wellPlayed");
+      cy.get(`${ts("hero-opponent")} ${ts("emote-bubble")}`)
+        .should("contain.text", "Well played. Plainly.")
+        .and(($bubble) => {
+          expectDrawnOnTop($bubble[0] as HTMLElement, "the opponent's bubble");
+        });
+    });
+
+    it("#257 the opponent's emoji is drawn over the board, at full strength", () => {
+      opponentEmotes("laugh");
+      cy.get(`${ts("hero-opponent")} ${ts("emote-bubble")}[data-emoji="laugh"]`).should(($sticker) => {
+        expectDrawnOnTop($sticker[0] as HTMLElement, "the opponent's emoji");
+      });
+    });
+
+    it("#257 the opponent's Mute emotes menu is drawn over the board and takes the click", () => {
+      cy.get(`${ts("hero-opponent")} .hero-portrait`).click();
+      cy.get(ts("emote-mute-menu")).should(($menu) => {
+        expectDrawnOnTop($menu[0] as HTMLElement, "the mute menu");
+      });
+      // A click Cypress cannot land (the item covered) fails here: before #257 the field took it.
+      cy.get(ts("emote-mute")).click();
+      cy.get(ts("emote-mute-menu")).should("not.exist");
+      cy.then(() => {
+        expect(mountedEmotes?.muted(OPPONENT), "the opponent muted").to.equal(true);
+      });
     });
 
     it("#219 a voice line's bubble is sized by its line and stays on the screen", () => {

@@ -11,15 +11,21 @@ one medium one did, and no model's rejection of it stands. Votes are kept per co
 review, with the tier of the seat that cast them (`_vote`), from the plan's seats, never from the
 model job. A pull request whose commit has that gets auto-merge, which merges it once the
 required CI checks pass; one still short of it waits in `bot:cross-review` for a review run.
+
+A commit that meets the rule is recorded as cleared (`_clear`). When `main` then leaves it with
+conflicts, the revision that resolves them carries the clearance (`_carry`) if it started from
+that commit, its own run's reviewer approved it, and git shows it changed nothing beyond the files
+the merge left conflicted; it then ships on that one approval, with no review run.
 """
 
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
-from harness import asks, failures, issueplan, review_rule
+from harness import asks, disk, failures, issueplan, review_rule
 from harness import gates as gates_mod
 from harness import plan as plan_mod
 from harness import providers as providers_mod
@@ -32,7 +38,7 @@ from harness.config import (DIFFICULTY_LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL
 from harness.context import Context
 from harness.errors import GitError, GitHubError
 from harness.git import Git, matches
-from harness.queue import (PRIORITY_TIERS, branch_for_issue, difficulty_of, label_names,
+from harness.queue import (PRIORITY_TIERS, branch_for_issue, cleared, difficulty_of, label_names,
                            open_pull_for_branch, set_state_label)
 from harness.state import item as state_item
 from harness.redact import redact
@@ -114,6 +120,7 @@ class Deliverer:
         self.ctx.store.update(lambda s: providers_mod.note_usage(
             s, self.provider.id, usage, reset_at, self.ctx.now(), minutes),
             f"usage {self.provider.id}")
+        self._machine_disk()
         self._login_works()
         if action == "suggest":
             self._suggestions()
@@ -149,6 +156,25 @@ class Deliverer:
                 if exc.status not in (409, 422):
                     break  # only a race with another writer is worth trying again
         self.log.append(f"could not keep the refreshed login of {self.provider.id}: {problem}")
+
+    def _machine_disk(self) -> None:
+        """A job on the bot's machine read its disk: keep the newest reading, and open, rewrite
+        or close the issue about a disk filling up (`disk.py`)."""
+        if providers_mod.hosted(self.provider.runs_on):
+            return
+        found = disk.newest(self.result)
+        if found is None:
+            return
+        reported = str((self.result.get("disk") or {}).get("runner") or "")
+        runner = reported if re.fullmatch(r"[\w.-]{1,80}", reported) else self.provider.runs_on
+        self.ctx.store.update(lambda s: disk.note(s, found, runner, self.cfg.run_url or ""),
+                              "machine disk")
+        try:
+            done = disk.alert(self.ctx)
+        except GitHubError as exc:
+            done = f"could not settle the disk issue: {exc}"
+        if done:
+            self.log.append(done)
 
     def _login_works(self) -> None:
         """A model call went through on this run's subscription: any streak of runs that could
@@ -770,7 +796,9 @@ class Deliverer:
                                    f"{question}")
             self._remember(number, question=str(question or ""))
             return
-        started = self._record(number).get("started_at")
+        # As the run found it: the source and the clearance `_carry` reads are reset below.
+        before = self._record(number)
+        started = before.get("started_at")
         if status == "built" and not bot_pr:
             # No review run follows on a person's pull request: unreviewed work is not pushed.
             status = "not_approved"
@@ -819,12 +847,16 @@ class Deliverer:
             if reviewed and now_head and reviewed != now_head:
                 self._hold_auto_merge()
                 rule = self._approved(number, now_head, merge=not waiting, vote=False)
-            elif not approved:
-                rule = self._await_review(number, reviewed or now_head, queue=not waiting)
             else:
-                if pull.get("draft") and not waiting:
-                    self._try(lambda: self.gh.mark_ready(pull["node_id"]))
-                rule = self._approved(number, reviewed or now_head, merge=not waiting)
+                carry, why_not = self._carry(before, reviewed) if pushed else (None, "")
+                if not approved:
+                    rule = self._await_review(number, reviewed or now_head, queue=not waiting)
+                else:
+                    if pull.get("draft") and not waiting:
+                        self._try(lambda: self.gh.mark_ready(pull["node_id"]))
+                    rule = self._approved(number, reviewed or now_head, merge=not waiting,
+                                          carried=carry)
+                rule = self._carry_line(before, carry, why_not) + rule
             merge_note = "" if waiting else "\n\n" + rule
         said = (f"{self.review_seat.describe()} reviewed it adversarially and approved it"
                 if approved else self._self_check_said())
@@ -851,14 +883,17 @@ class Deliverer:
         approvals = set(votes.get("approvals") or [])
         if set(votes.get("rejections") or []) - approvals:
             return False
+        if review_rule.carried(votes):
+            return True
         return review_rule.met((tier for _, tier in self._approvals(votes)), difficulty)
 
-    def _vote(self, pr: int, head: str, *, approve: bool, builder: bool) -> dict[str, Any]:
+    def _vote(self, pr: int, head: str, *, approve: bool, builder: bool,
+              carried: dict[str, Any] | None = None) -> dict[str, Any]:
         """Record this run's reviewer's verdict on `head`, with its tier: an approval adds one
         review (once per run and family), a rejection withdraws that family's approvals of the
         head. A new
         head starts afresh: its builder is this run's model when this run built it, and unknown
-        otherwise."""
+        otherwise. `carried` is the clearance a conflict resolution carries to it (`_carry`)."""
         family = self.review_seat.family if self.review_seat else self.provider.family
         tier = self.review_seat.tier if self.review_seat else "weak"
         run = self.cfg.run_id
@@ -887,6 +922,8 @@ class Deliverer:
             current[other] = [f for f in current.get(other, []) if f != family]
             current["tiers"] = {**(current.get("tiers") or {}), family: tier}
             current["reviews"] = reviews
+            if carried:
+                current["carried"] = carried
             entry["votes"] = current
             votes.update(current)
 
@@ -894,25 +931,91 @@ class Deliverer:
         return votes
 
     def _approved(self, pr: int, head: str, *, merge: bool = True, vote: bool = True,
-                  builder: bool = True) -> str:
+                  builder: bool = True, carried: dict[str, Any] | None = None) -> str:
         """Record this run's reviewer's approval of `head` on the PR, then turn on auto-merge
-        when the rule is met; otherwise turn it off and queue a review run. Returns the line for
-        the comment."""
+        when the rule is met (recording `head` as cleared); otherwise turn it off and queue a
+        review run. Returns the line for the comment."""
         if vote:
-            votes = (self._vote(pr, head, approve=True, builder=builder)
+            votes = (self._vote(pr, head, approve=True, builder=builder, carried=carried)
                      if self.review_seat is not None
                      else self._vote_reset(pr, head, self.provider.family if builder else ""))
         else:
             votes = self._vote_reset(pr, head)
+        difficulty = self._difficulty(pr)
+        met = self._rule_met(votes, difficulty)
+        if met:
+            self._clear(pr, head, votes)
         if not merge:
             return ""
         labels = self._labels(pr)
         if LABEL_PR not in labels:
             return ""  # never auto-merge a pull request the bot did not open
-        difficulty = self._difficulty(pr)
-        if self._rule_met(votes, difficulty):
+        if met:
             return self._auto_merge(self.gh.get_pull(pr), expected_head=head)
         return self._wait_for_review(pr, votes, labels, difficulty)
+
+    def _clear(self, pr: int, head: str, votes: dict[str, Any]) -> None:
+        """Record `head` as cleared: its approvals met the review rule. A conflict with `main`
+        later needs only the resolving run's own review (`_carry`). A clearance carried across
+        a resolution keeps who cleared the change, and adds who reviewed the resolution."""
+        who = review_rule.who(self._approvals(votes))
+        entry: dict[str, Any] = {"sha": head, "at": iso(self.ctx.now()), "by": who}
+        carried = votes.get("carried")
+        if isinstance(carried, dict):
+            entry.update(by=str(carried.get("by") or who), resolved_by=who,
+                         carried_from=str(carried.get("from") or ""))
+        self._remember(pr, cleared=entry)
+
+    def _carry(self, record: dict[str, Any], head: str) -> tuple[dict[str, Any] | None, str]:
+        """Whether a revision carries its change's clearance to `head` (`review_rule`): it was
+        queued because `main` left the change with conflicts, it started from the commit the
+        rule cleared, a medium or strong model reviewed it in the run, and it changed nothing but
+        the files the merge left conflicted. That last is worked out here from git, never from
+        the model job: `head` against the merge git makes by itself of the cleared commit and the
+        `main` that `head` took in. Returns the carry, or None and why not (empty when the
+        revision was not a conflict on a cleared change)."""
+        clear = cleared(record)
+        if record.get("source") != "conflict" or not clear:
+            return None, ""
+        start = str(self.result.get("start") or "")
+        if clear["sha"] != start:
+            return None, "the branch had moved on from the commit they cleared"
+        seat = self.review_seat
+        if seat is None or not providers_mod.tier_at_least(seat.tier, "medium"):
+            return None, "no medium or strong model reviewed the resolution in this run"
+        try:
+            main = self.repo.merge_base(f"origin/{self.cfg.default_branch}", head)
+            proc = self.repo.run("merge-tree", "--write-tree", "--name-only", "--no-messages",
+                                 start, main, check=False)
+            lines = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+            if proc.returncode not in (0, 1) or not lines:
+                return None, "git could not redo the merge to compare against"
+            tree, conflicts = lines[0], lines[1:]
+            beyond = [p for p in self.repo.names_between(tree, head) if p not in conflicts]
+        except GitError:
+            return None, "git could not redo the merge to compare against"
+        if beyond:
+            shown = ", ".join(f"`{p}`" for p in beyond[:8]) + (", …" if len(beyond) > 8 else "")
+            return None, f"it changed more than the conflicts ({shown})"
+        return {"from": start, "main": main, "conflicts": conflicts,
+                "by": str(clear.get("by") or "")}, ""
+
+    def _carry_line(self, record: dict[str, Any], carry: dict[str, Any] | None,
+                    why_not: str) -> str:
+        """What a conflict revision of a cleared change did with the clearance, for the comment
+        ("" for any other revision)."""
+        clear = cleared(record)
+        if not clear or not (carry or why_not):
+            return ""
+        by = f" ({clear['by']})" if clear.get("by") else ""
+        said = f"The reviews had cleared this change at `{str(clear['sha'])[:12]}`{by}"
+        if carry is None:
+            return f"{said}, but that does not carry over: {why_not}. "
+        files = carry.get("conflicts") or []
+        resolved = ("resolved the conflicts in " + ", ".join(f"`{p}`" for p in files[:8])
+                    + (", …" if len(files) > 8 else "")) if files else "merged it cleanly"
+        return (f"{said}. This revision only merged `main` and {resolved}, and its own reviewer "
+                "approved that, so the clearance carries over and no review run is needed. ")
 
     def _await_review(self, pr: int, head: str, *, queue: bool = True) -> str:
         """A change no model in its run could review: its commit has no vote yet, and it waits

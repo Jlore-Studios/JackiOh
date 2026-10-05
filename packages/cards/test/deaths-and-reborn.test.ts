@@ -63,11 +63,13 @@ const FIENDER = "core-092";
 const LIBRARY = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
 /**
- * On this seed #63 Plastic Surgery's first random keyword is Reborn for a unit that already has
- * Rush (Fed Fauci) or has no keyword at all (Gravedigger): the pool order and the first rng draw are
- * the same in each scenario below (re-entry.test.ts uses it the same way).
+ * On these seeds #63 Plastic Surgery's first random keyword is Reborn: for a unit that already has
+ * Rush (Fed Fauci) the pool order and the first rng draw match re-entry.test.ts's token, so it shares
+ * that seed; the Gravedigger scenario draws from a fuller pool at another rng cursor, so it carries
+ * its own.
  */
-const REBORN_SEED = "re-entry-reborn-token-31"; // R346 put Pierce in the pool, which moved the roll off "-4"; R636's Windfury moved it off "-10" and "-19".
+const REBORN_SEED = "re-entry-reborn-token-32"; // R346 put Pierce in the pool, which moved the roll off "-4"; R636's Windfury moved it off "-10" and "-19"; R49's Deft moved it off "-31".
+const REBORN_SEED_DIGGER = "re-entry-reborn-token-40"; // Same history: R49's Deft moved the roll off "-31".
 
 const at = (card: CardInstance): Selection[] => [{ pick: "instance", instanceId: card.id }];
 
@@ -190,7 +192,7 @@ describe("R174: what was queued for a card's old stay does not act on its Reborn
 
   it("R174 a Gravedigger that dies to Cleave during Moths' run and comes back takes no card from its start-of-turn hook (R83)", () => {
     const g = scenario({
-      seed: REBORN_SEED,
+      seed: REBORN_SEED_DIGGER,
       p1: {
         hand: [SURGERY, VANILLA],
         field: [{ def: MOTHS, lane: 1 }, { def: GRAVEDIGGER, lane: 2 }],

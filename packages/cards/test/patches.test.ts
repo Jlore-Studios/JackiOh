@@ -195,6 +195,32 @@ describe("R388 card patch history (B4.2)", () => {
     expect(changesOf("v0.2.10").find((change) => change.id === "classic-052")).toMatchObject({ kind: "changed", fields: ["loc"] });
   });
 
+  it("R388 records patch v0.2.11: aimed random casts and the Deft keyword (issue #181), pending or shipped (R646)", () => {
+    // Pending until `patches ship` promotes it, then shipped: either way the patch is these five
+    // cards' changes against v0.2.10's snapshot.
+    const five = ["core-045", "classic-003", "classicplus-010", "classicplus-038-1", "classicplus-040"];
+    const shipped = VERSIONS.includes("v0.2.11");
+    const pending = readFragments().find(({ fragment }) => fragment.version === "v0.2.11")?.fragment;
+    expect(shipped || pending !== undefined, "v0.2.11 is pending or shipped").toBe(true);
+    if (!shipped) expect(pending?.cards).toEqual(five);
+    const changes = shipped
+      ? changesOf("v0.2.11")
+      : diffCatalogs(readSnapshot("v0.2.10"), CATALOG as unknown as Catalog).filter((change) =>
+          five.includes(change.id),
+        );
+    expect(changes.filter((change) => change.kind !== "changed")).toEqual([]);
+    expect(changes.map((change) => change.id)).toEqual(five);
+    const fieldsOf = (id: string): string[] => {
+      const change = changes.find((c) => c.id === id);
+      return change?.kind === "changed" ? [...change.fields].sort() : [];
+    };
+    expect(fieldsOf("core-045")).toEqual(["base.keywords", "base.text", "loc", "radiant.keywords", "radiant.text"]);
+    expect(fieldsOf("classic-003")).toEqual(["loc"]);
+    expect(fieldsOf("classicplus-010")).toEqual(["loc"]);
+    expect(fieldsOf("classicplus-038-1")).toEqual(["base.text", "radiant.text"]);
+    expect(fieldsOf("classicplus-040")).toEqual(["base.text", "radiant.text"]);
+  });
+
   it("R388 records patch v0.2.4: card text pass (issue #45)", () => {
     expect(idsOf("v0.2.4", "added")).toHaveLength(0);
     expect(idsOf("v0.2.4", "removed")).toHaveLength(0);

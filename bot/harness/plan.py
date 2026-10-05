@@ -33,6 +33,9 @@ is forced, under its limits):
   otherwise, for an easy item that has no weak approval yet, a weak one. What counts is the
   review rule (`review_rule.py`): one strong approval, or two medium ones, or for an easy item one
   weak and one medium.
+- **a conflict on a cleared change** (a bot PR whose commit met the rule, then conflicted with
+  `main`): a builder with its own reviewer in the run first, since that review carries the
+  clearance to the resolution (`deliver._carry`) and no review run follows.
 
 An item labelled `human` is never queued (`candidates`), nor a build that waits for another
 issue (`queue.waits_for`: a "Blocked by #n" line, GitHub's own blocked-by link, or an earlier
@@ -59,7 +62,7 @@ from harness.errors import GitHubError
 from harness.prompts import data
 from harness.providers import TIER_RANK, Pool, Provider, Seat, tier_at_least
 from harness.queue import (KIND_ORDER, PRIORITY_NAMES, Candidate, branch_for_issue, candidates,
-                           is_human, label_names, needs_plan,
+                           carries, cleared, is_human, label_names, needs_plan,
                            open_pull_for_branch, set_state_label,
                            strong_plan)
 from harness.state import item as state_item
@@ -381,6 +384,10 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
     if candidate.kind == "revise" and not candidate.bot_pr:
         # A person's pull request never gets a review run: its reviewer must be in this run.
         builders = [p for p in builders if run_reviewer(pool, p, candidate.difficulty)]
+    elif candidate.carries:
+        # A conflict on a cleared change ships on the run's own review (`deliver._carry`), so a
+        # builder with a reviewer in its run goes first; one without (Devin) needs a review run.
+        builders = [p for p in builders if run_reviewer(pool, p, candidate.difficulty)] or builders
     builder, note = builder_seat(pool, builders, candidate.difficulty)
     if builder is None:
         return None
@@ -945,6 +952,13 @@ def claim(ctx: Context, candidate: Candidate,
             }
             message = (f"Starting a revision now{run_link(cfg)}, because of: {source}. "
                        f"{_start_message(assignment, cfg)}")
+            if LABEL_PR in names and carries(record):
+                # The work job tells its builder and reviewer; deliver decides from git alone.
+                planned["cleared"] = cleared(record)
+                if assignment.review is not None:
+                    message += (" The reviews had cleared it before `main` moved, so if this "
+                                "revision changes nothing but the conflicted files and its "
+                                "reviewer approves, it merges without another review run.")
     planned.update(_provider_fields(ctx, provider))
     planned.update(difficulty=candidate.difficulty, seats=assignment.seats(),
                    routing=list(assignment.notes), assignment=assignment.describe())

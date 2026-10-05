@@ -1,7 +1,8 @@
 // Enchantments that ride a card (docs/classic-sets.md B5 E39): the verb that puts one on. Classic+ #40
-// Appropriations' Education shuffles in Books that "have Cast on draw and target enemies when they
-// can" — `enchant({ instanceId, enchantment: { kind: "castOnDraw" } })` and `{ kind: "targetEnemies" }`
-// on each Book it made — and #14 Forever&'s "after this resolves, return it to your hand; it can't cost
+// Appropriations' Education shuffles in Books that "have Cast on draw and aim at enemies when they
+// harm and at your side when they help" — `enchant({ instanceId, enchantment: { kind: "castOnDraw" } })`
+// and `{ kind: "targetEnemies" }` on each Book it made — and #14 Forever&'s "after this resolves, return
+// it to your hand; it can't cost
 // less than (2)" is `{ kind: "returnAfterResolve", floor }` (which the play pipeline stamps on the next
 // Spell played, `enchantments.addEnchantment`).
 //

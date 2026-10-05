@@ -17,6 +17,7 @@ import html
 from datetime import datetime, timedelta
 from typing import Any
 
+from harness import disk as disk_mod
 from harness import providers as providers_mod
 from harness import status as status_mod
 from harness.clock import human_delta, parse_iso, zone
@@ -390,6 +391,8 @@ def render(ctx: Context) -> str:
     lines += (running + [""] if running else [])
     lines += timeline(ctx, state, live) + [""] + lanes_boxes(ctx, state, live) + [""]
     lines += ["## Subscriptions", ""] + subscription_table(ctx, state, live) + [""]
+    disk_line = disk_mod.line(state)
+    lines += [disk_line, ""] if disk_line else []
     lines += ["## Queue", ""] + queue_table(issues) + [""]
     lines += ["## Last night-bot runs", ""] + runs_table(ctx) + [""]
     lines += ["<details><summary>The full status</summary>", "",

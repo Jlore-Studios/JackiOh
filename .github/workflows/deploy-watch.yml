@@ -71,8 +71,9 @@ jobs:
       # deploy through Render's API with `commitId`, the documented way to deploy one commit; without
       # it, through the deploy hook (RENDER_DEPLOY_HOOK_URL) with `ref`. The repository is public, so
       # Render clones it either way. With neither, the watch relies on Render's own auto-deploy. The
-      # service id is the `srv-...` in the hook's URL (or the RENDER_SERVICE_ID variable); it is an
-      # identifier, not a secret, and the `render` job below tracks the deploy by it.
+      # service id comes from the RENDER_SERVICE_ID variable, the `srv-...` in the hook's URL, or Render's
+      # API by render.yaml's service name (the hook URL saved on 2026-10-04 carries no `srv-`); it is
+      # an identifier, not a secret, and the `render` job below tracks the deploy by it.
       - name: ask Render to deploy this push
         id: deploy
         env:
@@ -80,7 +81,20 @@ jobs:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           SERVICE_ID_VAR: ${{ vars.RENDER_SERVICE_ID }}
         run: |
-          service=${SERVICE_ID_VAR:-$(grep -oE 'srv-[a-z0-9]+' <<<"$HOOK" | head -n 1 || true)}
+          # The service id: the RENDER_SERVICE_ID variable, else the `srv-...` in the hook's URL, else
+          # (with the API key) Render's own answer for render.yaml's service name.
+          service=$SERVICE_ID_VAR from="the RENDER_SERVICE_ID variable"
+          if [ -z "$service" ]; then
+            service=$(grep -oE 'srv-[a-z0-9]+' <<<"$HOOK" | head -n 1 || true) from="the deploy hook's URL"
+          fi
+          if [ -z "$service" ] && [ -n "$RENDER_API_KEY" ]; then
+            name=$(awk '$1 == "name:" { print $2; exit }' render.yaml)
+            service=$(curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" -H 'Accept: application/json' \
+              "https://api.render.com/v1/services?name=$name&limit=20" \
+              | jq -r --arg name "$name" '[.[]? | .service? | select(.name == $name) | .id][0] // empty' || true)
+            from="Render's API, by the service name $name"
+          fi
+          if [ -n "$service" ]; then echo "Render service $service, from $from."; fi
           echo "service=$service" >> "$GITHUB_OUTPUT"
           if [ -n "$RENDER_API_KEY" ] && [ -n "$service" ]; then
             code=$(curl -sS -o "$RUNNER_TEMP/deploy.json" -w '%{http_code}' -X POST \

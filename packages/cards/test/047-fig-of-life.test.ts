@@ -119,7 +119,7 @@ describe("#47 Fig of Life", () => {
     expect(def.tags).toContain("Fruit");
     for (const face of [base, radiant]) {
       expect(face.targets).toEqual([
-        { kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit", "hero"] } },
+        { kind: "target", min: 1, max: 1, aim: "help", filter: { side: "any", of: ["unit", "hero"] } },
       ]);
       // A declared target is not a prompt (R81), so nothing here opens one.
       expect(face.modes).toBeUndefined();
