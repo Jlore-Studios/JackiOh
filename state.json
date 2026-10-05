@@ -2695,6 +2695,14 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "304": {
+      "difficulty": "easy",
+      "failures": 0,
+      "feedback_since": "2026-10-05T12:32:34Z",
+      "issue": 303,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "31": {
       "failures": 0,
       "forced": false,
