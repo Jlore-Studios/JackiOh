@@ -4,10 +4,14 @@
 // base and a Radiant Quickstriker together deal X and then 2X.
 // The X its next play would count, its R280 `preview`, is proved in test/preview.test.ts.
 
+//
+// R662's yellow glow: the condition is the grant's, so while it acts for its controller and they have
+// played a card this turn, their hand cards glow (`condition.ts`), both faces, at the end of this file.
 import { createRng, subsystems } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { base, def, radiant } from "../src/scripts/038-quickstriker";
 import { scenario, type Scenario } from "./_harness";
+import { handGlows } from "./_glow";
 
 const QUICKSTRIKER = "core-038";
 /** Three plays whose own texts never touch a hero's health, so the damage read is Quickstriker's. */
@@ -243,5 +247,46 @@ describe("#38 Quickstriker", () => {
 
     // X = 1, and the kept card runs its Radiant face: both texts' grants, 2X each.
     expect(hitsOnP2(s)).toEqual([2, 2]);
+  });
+});
+
+describe("#38 Quickstriker lights its controller's hand once its Combo would hit (R662)", () => {
+  for (const radiant of [false, true]) {
+    const face = radiant ? "radiant" : "base";
+
+    it(`R662 ${face}: after a play this turn the next card glows, and playing it deals the Combo damage`, () => {
+      const s = scenario({
+        seed: `r662-038-${face}-on`,
+        p1: { backrow: [{ def: QUICKSTRIKER, radiant }], hand: [RAPID_REPLENISH, TEMPO_TIMMY, SPARE], library: [SPARE, SPARE] },
+        p2: { hand: [SPARE], library: [SPARE] },
+      });
+      // X = 0 for the first play of the turn: nothing glows yet.
+      expect(handGlows(s, s.card(TEMPO_TIMMY).id)).toBe(false);
+
+      s.play(RAPID_REPLENISH);
+      expect(handGlows(s, s.card(TEMPO_TIMMY).id)).toBe(true);
+      s.play(TEMPO_TIMMY);
+      expect(hitsOnP2(s)).toEqual([radiant ? 2 : 1]);
+    });
+
+    it(`R662 ${face}: the Quickstriker in hand does not light itself or the hand (R119)`, () => {
+      const s = scenario({
+        seed: `r662-038-${face}-hand`,
+        p1: { hand: [{ def: QUICKSTRIKER, radiant }, RAPID_REPLENISH, TEMPO_TIMMY], library: [SPARE] },
+      });
+      s.play(RAPID_REPLENISH);
+      expect(handGlows(s, s.card(QUICKSTRIKER).id)).toBe(false);
+      expect(handGlows(s, s.card(TEMPO_TIMMY).id)).toBe(false);
+    });
+  }
+
+  it("R662 the opponent's Quickstriker lights nothing in your hand", () => {
+    const s = scenario({
+      seed: "r662-038-theirs",
+      p1: { hand: [RAPID_REPLENISH, TEMPO_TIMMY], library: [SPARE] },
+      p2: { backrow: [QUICKSTRIKER] },
+    });
+    s.play(RAPID_REPLENISH);
+    expect(handGlows(s, s.card(TEMPO_TIMMY).id)).toBe(false);
   });
 });

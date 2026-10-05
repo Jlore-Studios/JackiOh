@@ -19,11 +19,15 @@
 // `traps.fireTrap` builds it, which pins each lethal boundary without an AI turn in the way. The
 // base face's cancel, lockout and AI turn are played through real attacks in my-pawn.test.ts.
 
+//
+// R662's yellow glow (`conditionMet`): on its controller's field while an enemy unit would be lethal
+// attacking their hero now, both faces, checked against the attack, at the end of this file.
 import { describe, expect, it } from "vitest";
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 import type { CardInstance, TrapTrigger } from "@jackioh/engine";
 import { createRng, makeContext } from "@jackioh/engine";
 import { scenario, type Scenario } from "./_harness";
+import { backrowGlows, opponentSeesGlow } from "./_glow";
 import { cardDef } from "../src/catalog-data";
 import { base, radiant } from "../src/scripts/096-my-pawn";
 
@@ -417,4 +421,50 @@ describe("#96 My Pawn — radiant (R283)", () => {
     expect(s.backrow("p2", 1)?.faceUp).toBe(false);
     s.expectInZone(attacker, "field");
   });
+});
+
+describe("#96 My Pawn glows while an enemy unit could swing for lethal (R662, R44)", () => {
+  const POINTMASTER = "core-020"; // 7/1 First Strike
+
+  for (const radiant of [false, true]) {
+    const face = radiant ? "radiant" : "base";
+
+    it(`R662 ${face}: at 7 health it glows for its controller only, and the swing is cancelled`, () => {
+      const s = scenario({
+        seed: `r662-096-${face}-on`,
+        active: "p2",
+        p1: { backrow: [{ def: "core-096", radiant }], health: 7 },
+        p2: { field: [POINTMASTER], hand: ["core-010"] },
+      });
+      expect(backrowGlows(s, 1)).toBe(true);
+      expect(opponentSeesGlow(s, 1)).toBe(false);
+
+      // The rest of the turn is played at random afterwards, so the cancel is what is read here.
+      s.attack(POINTMASTER, "hero");
+      expect(s.events.some((event) => event.type === "trapFired")).toBe(true);
+    });
+
+    it(`R662 ${face}: at 8 health it does not glow, and the swing lands`, () => {
+      const s = scenario({
+        seed: `r662-096-${face}-off`,
+        active: "p2",
+        p1: { backrow: [{ def: "core-096", radiant }], health: 8 },
+        p2: { field: [POINTMASTER], hand: ["core-010"] },
+      });
+      expect(backrowGlows(s, 1)).toBe(false);
+
+      s.attack(POINTMASTER, "hero");
+      expect(s.events.some((event) => event.type === "trapFired")).toBe(false);
+      s.expectHealth("p1", 1);
+    });
+
+    it(`R662 ${face}: on its controller's own turn it glows for the blow on the board`, () => {
+      const s = scenario({
+        seed: `r662-096-${face}-mine`,
+        p1: { backrow: [{ def: "core-096", radiant }], health: 7, hand: ["core-010"] },
+        p2: { field: [POINTMASTER] },
+      });
+      expect(backrowGlows(s, 1)).toBe(true);
+    });
+  }
 });
