@@ -1262,7 +1262,9 @@
     },
     "170": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:5988287119"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -1281,8 +1283,8 @@
       "pending_request": false,
       "provider": "claude-3",
       "question": "Which version number should Patch v0.2.X: Easter egg, Glitch ship as? Glitch is a new catalog entry, so patches check (part of pnpm validate:catalog) needs a pending fragment named with a real version, and the tooling refuses the v0.2.X placeholder (packages/cards/scripts/versions.ts says the designer picks the X). Retitle the issue with the number (for example v0.2.12, if no other patch has it), or name the in-flight patch it should join. Everything else in phase 1 is built and passing on bot/issue-170; the next run only adds the fragment and reruns the checks.",
-      "queued_at": "2026-10-03T20:21:47Z",
-      "requested_by": "MaxGoetzmann",
+      "queued_at": "2026-10-05T04:46:48Z",
+      "requested_by": "jgoetzmann",
       "run_id": "37256590034",
       "started_at": "2026-10-05T02:46:09Z",
       "stop_requested": false,
