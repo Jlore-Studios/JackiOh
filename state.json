@@ -2940,9 +2940,11 @@
     },
     "44": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:5999305618"
+      ],
       "died": 0,
-      "failures": 3,
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-10-05T14:18:53Z",
@@ -2963,7 +2965,7 @@
       "pr": 203,
       "provider": "devin",
       "question": "",
-      "queued_at": "2026-10-05T13:20:23Z",
+      "queued_at": "2026-10-05T17:09:09Z",
       "requested_by": "jgoetzmann",
       "run_id": "37321226914",
       "started_at": "2026-10-05T14:01:21Z",
