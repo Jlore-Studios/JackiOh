@@ -164,11 +164,7 @@ function ofType<T extends GameEvent["type"]>(events: readonly GameEvent[], type:
 
 
 function quickstrikersOf(s: Scenario, player: "p1" | "p2"): string[] {
-  // Since patch v0.2.10 a Quickstriker is Animated (R383): it stands in a unit zone once it has animated.
-  const side = s.state.players[player];
-  return [...side.backrow, ...side.units.map((pile) => pile?.[0] ?? null)].flatMap((card) =>
-    card?.defId === QUICKSTRIKER ? [card.id] : [],
-  );
+  return s.state.players[player].backrow.flatMap((card) => (card?.defId === QUICKSTRIKER ? [card.id] : []));
 }
 
 describe("R119, §10.5 step 6: an Echo repeat's granted Combo parts do not answer what its own play put in place", () => {
@@ -222,7 +218,7 @@ describe("R119, §10.5 step 6: an Echo repeat's granted Combo parts do not answe
     }
 
     // The setup did what it says: the Echo was taken (Twinspell reached the graveyard, two
-    // resolutions), and a Quickstriker arrived on p1's field during this play.
+    // resolutions), and a Quickstriker arrived in p1's backrow during this play.
     expect(s.pile("p1", "graveyard").map((card) => card.defId)).toContain(TWINSPELL);
     expect(ofType(s.events, "chaosRolled").filter((event) => event.instanceId === call.id)).toHaveLength(2);
     expect(quickstrikersOf(s, "p1").length).toBeGreaterThanOrEqual(1);

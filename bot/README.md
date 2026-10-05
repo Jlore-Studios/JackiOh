@@ -1,7 +1,7 @@
 # The JackiOh night bot
 
 `@jgoetzmann-bot` works through the issues you hand it, on whichever of your subscriptions is
-free: up to five Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
+free: up to six Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
 Google through the Antigravity CLI (`agy`), Meta through Muse Code and Cognition through the
 Devin CLI, each with its own hours
 and limits ([Subscriptions](#subscriptions)). Up to ten items run at once: the Claude accounts' on
@@ -34,8 +34,8 @@ flowchart TD
   E["bot-commands.yml, within seconds<br/>trust check, queue label, reply"]
   E -- "--force" --> PL
   subgraph night["bot-night.yml, up to three at once, one per subscription"]
-    GA["gate (no write token)<br/>work a free subscription can take?<br/>for the shared Claude account: is it quiet?"]
-    GA -- "quiet, the partner bot, or another subscription" --> PL
+    GA["gate (no write token)<br/>work a free subscription can take?"]
+    GA -- "the partner bot, or another subscription" --> PL
     PL["plan (bot token, no model)<br/>HALT? halted? a free lane?<br/>claim one item and one subscription: bot:working"]
     PL --> PN["planner (medium or strong)<br/>writes the plan into the notes"]
     PN --> B["work, on that subscription's own runner<br/>(its login only) builder: the cheapest the item's difficulty allows"]
@@ -307,11 +307,12 @@ The bot spends whichever of your subscriptions is free. They are listed in
 
 | Provider | CLI and model | Login | Hours | Limits |
 |---|---|---|---|---|
-| `claude-1` | Claude Code, `opus` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00, and outside it while under 40% of 5 hours (`off_hours`) | 98% of 5 hours, 90% of the week |
+| `claude-1` | Claude Code, `opus` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00, and outside it while under 40% of 5 hours (`off_hours`) | 98% of 5 hours, no weekly cap |
 | `claude-2` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
 | `claude-3` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
-| `claude-4` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its caps, and outside it while under 50% of 5 hours and 50% of the week (`off_hours`) | 70% of 5 hours, 70% of the week |
+| `claude-4` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-5` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week |
+| `claude-6` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | 100% of the week (Codex reports it) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, all of the week (its own `agy -p /usage`, the Gemini pool's row) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
@@ -369,8 +370,8 @@ each one and whether it could start now, and `/harness status` does the same on 
   - **A refusal** parks the subscription until the reset its message names ("resets in
     1h44m44s", "try again in 5 days 2 hours"). One that names none waits for the window the
     last reading had nearly full (85% or more), else an hour.
-- `quiet_check: true`: it waits until nobody else is spending it
-  ([below](#it-waits-for-the-subscription-to-be-quiet)).
+- `quiet_check`: no subscription sets it. When one did (`true`), the gate waited until
+  nobody else was spending it ([below](#it-no-longer-waits-for-the-subscription-to-be-quiet)).
 - `roles`: what it may do (`plan`, `build`, `fix`, `revise`, `review`, `suggest`).
 - `env`: non-secret environment for its CLI.
 - `off_hours` (`{"five_hour": 0.4}`, say): with a `window` schedule, it may also work outside the
@@ -385,7 +386,7 @@ may be on the bot's machine (its two vCPUs run each job's checks; GitHub's runne
 and no such limit), `plan_lanes` how many planning runs may go on top of those (the planning
 lane, below; 2), `priority` the usage order (below), and `tiers` each tier's models in the
 order the router tries them after `priority`. A subscription's own `lanes`
-(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill the machine's six alone, and Muse's is 2. A `secret` must be one of the names the workflows hand over (the four Claude ones,
+(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill the machine's six alone, and Muse's is 2. A `secret` must be one of the names the workflows hand over (the six Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as
@@ -431,9 +432,10 @@ keeps its issue's. The difficulty sets the weakest tier that may build it:
 
 **The usage order** (`priority`) is the owner's: spend claude-3 and claude-1 first, up to their
 caps; then the medium models, in any order (agy, Muse, Codex); then claude-2, kept back mostly for
-planning and reviewing; and Devin last. claude-4 and then claude-5 come right after claude-1:
-claude-4 held to half its usage outside 03:00–15:00 and to 70% inside it, claude-5 to 40% of its
-5-hour session and 60% of its week. For building alone, claude-2 is `build_last`: it
+planning and reviewing; and Devin last. claude-4, claude-6 and then claude-5, last of the
+Claude accounts, come right after claude-1: claude-4 and claude-6 held to half their 5-hour
+session outside 03:00–15:00 and to 70% of it inside it, with no weekly cap, claude-5 to 40% of
+its 5-hour session and 60% of its week. For building alone, claude-2 is `build_last`: it
 builds only when no other subscription that may is free, Devin included. Devin is `easy_first`:
 it may build only easy items, so it takes them ahead of everyone while it has a free lane, and the
 stronger models keep the medium and hard items only they may build. With its six lanes it fills
@@ -441,11 +443,11 @@ whatever room on the machine the medium models leave.
 
 - **Planning: the Needs plan stage.** Every build starts from a plan. A queued item with no plan
   carries `bot:needs-plan`, and so does an easy one whose plan no strong model wrote. A strong
-  model (Opus, in the usage order: claude-3, claude-1, claude-4, claude-5, claude-2) plans those first, on
+  model (Opus, in the usage order: claude-3, claude-1, claude-4, claude-6, claude-5, claude-2) plans those first, on
   the **planning lane**: `plan_lanes` runs on top of `max_parallel`, which take no build lane, so a
-  Claude account plans one item while it builds another. claude-1 is the exception: the quiet
-  check cannot tell a second run of the bot's from its owner, so it plans only while it holds
-  nothing else, and builds nothing while it plans. The lane takes the easy items first (Devin
+  Claude account plans one item while it builds another. claude-1 is the exception: with
+  usage caps, two runs deciding from one reading go past a cap together, so it plans only
+  while it holds nothing else, and builds nothing while it plans. The lane takes the easy items first (Devin
   waits on those), then the rest in the usual order, ahead of every build. The planner reads the
   task and the code, writes nothing, and must leave a weak builder no gap to fill
   (`bot/prompts/plan.md`): the files to touch by path, the steps in order, the tests and commands,
@@ -532,7 +534,7 @@ agy started when its quota ran out can be finished by Codex the same hour.
 
 None of these is an API key: each is the login of one account.
 
-- **Claude** (`claude-1` to `claude-5`), a GitHub secret each.
+- **Claude** (`claude-1` to `claude-6`), a GitHub secret each.
   1. Log in to the account with `claude`.
   2. Run `claude setup-token` and paste the token it prints (good for a year) into the secret.
 
@@ -565,39 +567,24 @@ subscription:
 - Google steers headless use towards API keys.
 - Anthropic's limits assume ordinary individual use per account.
 
-## It waits for the subscription to be quiet
+## It no longer waits for the subscription to be quiet
 
 `claude-1` is shared with you and with
-[bright-bots-harness](https://github.com/jgoetzmann/bright-bots-harness) (`quiet_check` in
-`providers.json`). So before a run claims anything, the `gate` job checks two things:
+[bright-bots-harness](https://github.com/jgoetzmann/bright-bots-harness), but the bot spends it
+like any other subscription now: no subscription sets `quiet_check` in `providers.json`, so the
+`gate` job asks only the one question it always asked first:
 
 1. **Is there work a free subscription can take?** (`harness peek`, which reads and changes
-   nothing). If not, the run ends here and spends nothing. If the best subscription for it is
-   not the shared one, the run goes ahead at once.
-2. **Is anyone else using the shared subscription?** (`harness quiet`). It reads the subscription's
-   usage with the smallest call there is (one turn of Haiku in an empty folder), waits 10
-   minutes, and reads it again.
-   - If usage did not rise, nobody else is working, and the run goes ahead.
-   - If it rose while bright-bots-harness was in one of its spending steps ("Run planned items",
-     "Discover and propose", "Sweep keywords", "Reconcile stale"), the rise is the partner's.
-     The bot goes ahead anyway, so the two bots can run at the same time.
-   - Any other rise is you or another agent, so it waits another 10 minutes and looks again.
-     It keeps looking for up to two hours. If it never turns quiet, the run takes other work on
-     another subscription instead, if there is some, or gives up until the next run.
+   nothing). If not, the run ends here and spends nothing. Otherwise the run goes ahead at
+   once, on the cheapest subscription the work allows.
 
-   Only one run waits at a time: while one does, the others go to the other subscriptions. And
-   when another Claude account can take the same work, the run goes ahead on that one instead of
-   waiting.
-
-bright-bots-harness applies the same rule the other way round: its partner is this bot's "Build,
-check and review" step, which only a run on `claude-1` has. A run on any other subscription
-names its step "Work on another subscription", so it never excuses a rise on the shared account. The gate's own step, "Wait until the subscription is quiet", never counts
-as spending. A forced run (`--force`, `/harness run`, or an item queued with `--force`) skips the
-wait. The settings are `quiet` in `.harness/config.json`.
-
-There are two things it cannot tell apart. It cannot separate you from the partner while the
-partner is spending. And it cannot see a run of either bot that happens somewhere other than
-GitHub Actions, such as the harness's local `bb` container.
+The quiet machinery (`harness quiet`, the gate's "Wait until the subscription is quiet" step,
+`quiet_check`, the `quiet` settings in `.harness/config.json`) stays in place but never fires.
+A run on `claude-1` still names its model step "Build, check and review", as before: that name
+is what bright-bots-harness reads as this bot spending the shared subscription, so it keeps
+excusing the rise and the two bots still run at the same time. A run on any other subscription
+names its step "Work on another subscription", so it never excuses a rise on the shared
+account.
 
 ## One night, step by step
 
@@ -790,7 +777,7 @@ workflows. The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `b
 | `events.py`, `queue.py` | the event workflow: commands, labels, assignment, reviews, CI |
 | `asks.py` | the reactions that follow a request from its comment to its answer |
 | `plan.py`, `work.py`, `deliver.py` | the jobs of a night run (`plan.peek` is the gate's first question) |
-| `quiet.py` | the gate's second question: is anyone else spending the subscription |
+| `quiet.py` | the retired gate wait: is anyone else spending the subscription (no subscription waits now) |
 | `providers.py` | `.harness/providers.json`: the subscriptions, their hours and limits, whether each is free |
 | `runner.py` | one backend per CLI (`claude`, `codex`, `agy`, `muse`): run it, read its answer, usage and refusals; plus the test fake |
 | `logins.py`, `vault.py` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |

@@ -8,7 +8,6 @@
 import { stepParam } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type PileSetup, type Scenario, type SideSetup } from "../_harness";
-import { expectAnimated } from "../_animated";
 
 const LEGION = "classicplus-012-7";
 const TOKENS = "core-015"; // (1) Unit 1/1, Cry: summon a Rush Token
@@ -28,12 +27,7 @@ function legion(radiant: boolean, library: readonly PileSetup[], p1: SideSetup =
   return s;
 }
 
-/** The Units it summoned, lane by lane: not the Legion itself, which animates into a unit zone (patch v0.2.10, R383). */
-const unitsOf = (s: Scenario): string[] =>
-  [1, 2, 3, 4, 5].flatMap((lane) => {
-    const unit = s.unit("p1", lane);
-    return unit === null || unit.defId === LEGION ? [] : [unit.defId];
-  });
+const unitsOf = (s: Scenario): string[] => [1, 2, 3, 4, 5].flatMap((lane) => (s.unit("p1", lane) === null ? [] : [s.unit("p1", lane)?.defId ?? ""]));
 
 describe("C+ #12.7 Legion of the Hungry", () => {
   describe("base", () => {
@@ -59,9 +53,7 @@ describe("C+ #12.7 Legion of the Hungry", () => {
 
     it("R64 they fill the leftmost open zones in the order they were exiled, until the board is full", () => {
       for (let i = 0; i < 6; i += 1) {
-        const s = legion(false, [MENACE, POINTMASTER, TOKENS], { field: [MENACE, { def: MENACE, lane: 5 }] }, `legion-${i}`);
-        // The Legion itself animates first, into the leftmost open unit zone (2), before its Cry (R383).
-        expect(s.unit("p1", 2)?.defId).toBe(LEGION);
+        const s = legion(false, [MENACE, POINTMASTER, TOKENS], { field: [MENACE, MENACE, { def: MENACE, lane: 5 }] }, `legion-${i}`);
         // Two open zones (3 and 4) for three Units: the first two exiled are summoned, the third stays.
         const exiledOrder = s.events.flatMap((event) => (event.type === "exiled" ? [event.instanceId] : []));
         expect(s.unit("p1", 3)?.id).toBe(exiledOrder[0]);
@@ -81,8 +73,7 @@ describe("C+ #12.7 Legion of the Hungry", () => {
       const cursor = s.state.rngCursor;
       s.play(LEGION);
       expect(s.state.rngCursor).toBe(cursor);
-      // Animated (patch v0.2.10, R383), it stands in unit lane 1, and its Cry did nothing.
-      expect(s.unit("p1", 1)?.defId).toBe(LEGION);
+      expect(s.backrow("p1", 1)?.defId).toBe(LEGION);
     });
 
     it("R97 the exiles are public; no event carries a deck position", () => {
@@ -103,23 +94,12 @@ describe("C+ #12.7 Legion of the Hungry", () => {
 
   describe("radiant", () => {
     it("the summoned Units are made Radiant; a Unit left in exile is not", () => {
-      // The Legion animates into unit lane 3, leaving lane 4 to one of the two Units.
-      const s = legion(true, [MENACE, POINTMASTER, LUNAR], { field: [MENACE, MENACE, { def: MENACE, lane: 5 }] });
+      const s = legion(true, [MENACE, POINTMASTER, LUNAR], { field: [MENACE, MENACE, MENACE, { def: MENACE, lane: 5 }] });
       const summoned = s.unit("p1", 4);
       expect(summoned?.radiant).toBe(true);
       const left = s.pile("p1", "exile").filter((card) => card.defId !== LUNAR);
       expect(left).toHaveLength(1);
       expect(left[0]?.radiant).toBe(false);
     });
-  });
-});
-
-describe("C+ #12.7 Legion of the Hungry: Animated (patch v0.2.10)", () => {
-  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 2/2 Unit; with none open it stays a Field Spell", () => {
-    expectAnimated({ def: "classicplus-012-7", stats: { attack: 2, health: 2 } });
-  });
-
-  it("R383 radiant: a 4/4 Unit", () => {
-    expectAnimated({ def: "classicplus-012-7", radiant: true, stats: { attack: 4, health: 4 } });
   });
 });
