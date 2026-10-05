@@ -387,12 +387,9 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     }
   });
 
-  it("R366 patch v0.2.13 (issue #88) changes exactly the balance-patch cards against v0.2.12's snapshot", () => {
-    const before = readSnapshot("v0.2.12");
+  it("R366 patch v0.2.14 (issue #88) changes exactly the balance-patch cards against v0.2.13's snapshot", () => {
+    const before = readSnapshot("v0.2.13");
     // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
-    // Classic #55 is claimed by the other pending fragment, v0.2.14 (issue #271, R671), so it
-    // legitimately differs beside these (R646) and is read on that patch's claims instead.
-    const wildfire = new Set(["classic-055"]);
     const after = CATALOG as unknown as Record<string, CardDef>;
     // The top-level fields each balance card may move (balance patch 1, issue #88); every other
     // field restores the v0.2.11 card, so no card smuggles an unlisted change.
@@ -453,13 +450,12 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     const changed: string[] = [];
     for (const [id, currentCard] of Object.entries(after)) {
       const priorCard = before[id] as unknown as CardDef | undefined;
-      expect(priorCard, `card ${id} existed in v0.2.12`).toBeDefined();
+      expect(priorCard, `card ${id} existed in v0.2.13`).toBeDefined();
       if (!priorCard) continue;
       if (JSON.stringify(priorCard) !== JSON.stringify(currentCard)) changed.push(id);
       const fields = allowed[id];
       if (fields === undefined) {
-        if (wildfire.has(id)) continue;
-        expect(currentCard, `card ${id} unchanged by v0.2.13`).toEqual(priorCard);
+        expect(currentCard, `card ${id} unchanged by v0.2.14`).toEqual(priorCard);
         continue;
       }
       const restored = { ...currentCard } as unknown as Record<string, unknown>;
@@ -467,7 +463,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
       for (const field of fields) restored[field] = prior[field];
       expect(restored, `only ${fields.join(", ")} differ on ${id}`).toEqual(priorCard);
     }
-    expect(changed.filter((id) => !wildfire.has(id)).sort()).toEqual(Object.keys(allowed).sort());
+    expect(changed.sort()).toEqual(Object.keys(allowed).sort());
   });
 
   it("R366 patch v0.2.12 removes Animated from the eighteen v0.2.10 Field Spells between v0.2.10 and v0.2.12", () => {
