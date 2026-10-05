@@ -4034,6 +4034,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/cards/art/convention.test.ts",
     );
   });
+
+  // Proved by the card's own test, cards/test/classic/055-book-of-wildfire.test.ts "R671 …": the swap
+  // at its owner's end of turn in hand only, the pool without Wildfire, Radiant to Radiant, the Book it
+  // became swapping on, Temporary kept, and the end of turn replaying exactly.
+  it("R671 Book of Wildfire becomes a different Book at the end of its owner's turn, and the Book keeps swapping", () => {
+    provenIn(671, "../../cards/test/classic/055-book-of-wildfire.test.ts");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

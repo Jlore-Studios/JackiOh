@@ -47,6 +47,7 @@ import type { GameEvent, GameEventType, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
 import { BACKROW_ZONES, CAST_ON_DRAW_CHAIN_CAP, LIBRARY_CAP, UNIT_ZONES } from "./config";
 import { isAnnounceLive } from "./announce";
+import { grantedHandTriggers } from "./bookSwap";
 import { heldBack } from "./drawComplete";
 import { sweepMarks } from "./marks";
 import { isFaceDown } from "./preview";
@@ -205,7 +206,8 @@ function holderOf(
     // R383: an animated Field Trap in a unit zone is a trap too — `traps.ts` fires it, and it is never
     // also queued (§10.3).
     isTrap: (zone === "backrow" || zone === "field") && isTrapCard(state, card),
-    triggers: registeredTriggers(script, zone),
+    // R671: a hand card's enchantments may grant it a hand trigger its text does not print.
+    triggers: zone === "hand" ? grantedHandTriggers(card, registeredTriggers(script, zone)) : registeredTriggers(script, zone),
     script,
   };
 }

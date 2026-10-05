@@ -50,8 +50,11 @@ export function questWords(quest: QuestView["open"][number]): string {
   return `Quest: ${quest.text} (${questProgress(quest)})`;
 }
 
-/** E39, R432: an enchantment in a player's words. */
-export function enchantmentWords(enchantment: Enchantment): string {
+/**
+ * E39, R432: an enchantment in a player's words. `radiant` is the face it rides, which Classic #55's
+ * swap reads: a Radiant card becomes a Radiant Book (R671).
+ */
+export function enchantmentWords(enchantment: Enchantment, radiant = false): string {
   switch (enchantment.kind) {
     case "returnAfterResolve":
       return `Returns to hand · can't cost less than (${String(enchantment.floor)})`;
@@ -59,6 +62,8 @@ export function enchantmentWords(enchantment: Enchantment): string {
       return "Cast on draw";
     case "targetEnemies":
       return "Targets enemies";
+    case "swapsBook":
+      return `End of turn: Become a different ${radiant ? "Radiant " : ""}Book`;
   }
 }
 
@@ -69,6 +74,7 @@ const ENCHANTMENT_ICON: Readonly<Record<Enchantment["kind"], IconName>> = {
   returnAfterResolve: "returnHand",
   castOnDraw: "castOnDraw",
   targetEnemies: "target",
+  swapsBook: "cog",
 };
 
 /**
@@ -130,7 +136,7 @@ export function stateBadges(face: FaceModel): StateBadge[] {
       kind: enchantment.kind,
       text: null,
       icon: ENCHANTMENT_ICON[enchantment.kind],
-      words: enchantmentWords(enchantment),
+      words: enchantmentWords(enchantment, face.radiant),
       data: {
         "data-enchantment": enchantment.kind,
         ...(enchantment.kind === "returnAfterResolve" ? { "data-floor": String(enchantment.floor) } : {}),
