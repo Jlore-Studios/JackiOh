@@ -514,6 +514,12 @@
       "lines": [
         "/harness build override the plan looks good"
       ]
+    },
+    "c:5995258732": {
+      "at": "2026-10-05T13:18:22Z",
+      "lines": [
+        "@jgoetzmann-bot work"
+      ]
     }
   },
   "items": {
