@@ -2086,7 +2086,7 @@
       },
       "ci_run_id": 37297565284,
       "ci_sha": "755f810282f2b54f9f75343e30dcbe64b877a93f",
-      "cross_rounds": 0,
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
@@ -2103,12 +2103,25 @@
       },
       "interruptions": 0,
       "issue": 200,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "Unresolved merge conflict markers committed in SPEC.md, so the spec is unparsable and rulings coverage cannot pass.",
+          "evidence": "grep shows SPEC.md:1883 <<<<<<< HEAD, :1885 =======, :1887 >>>>>>> origin/main; git diff base...HEAD shows R672 row vs R703 row inside conflict hunks.",
+          "severity": "blocking",
+          "where": "SPEC.md:1883"
+        },
+        {
+          "claim": "Unresolved merge conflict markers committed in rulings.test.ts, so the rulings gate cannot run.",
+          "evidence": "read shows lines 4082 <<<<<<< HEAD through 4095 >>>>>>> origin/main wrapping the R672 vs R703 it() blocks; git grep on HEAD finds markers in both files.",
+          "severity": "blocking",
+          "where": "packages/engine/test/rulings.test.ts:4082"
+        }
+      ],
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-05T11:35:23Z",
+      "queued_at": "2026-10-05T11:57:01Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "37303928644",
       "self_check_findings": [
@@ -2131,7 +2144,7 @@
           "where": "checks"
         }
       ],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-05T11:39:24Z",
       "stop_requested": false,
       "taken_asks": [],
