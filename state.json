@@ -1087,9 +1087,7 @@
       "source": "request",
       "started_at": "2026-10-04T23:12:33Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5984798817"
-      ]
+      "taken_asks": []
     },
     "167": {
       "action": "review",
