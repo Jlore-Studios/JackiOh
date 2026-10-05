@@ -4080,7 +4080,6 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/routes/login-flows.test.tsx",
     );
   });
-  });
 
   // Proved by apps/web net/auth-methods.test.ts "R664 …" (what the sign-in mailer sends, its neutral
   // answers, the code's one sentence) and routes/login-methods.test.tsx "R664 …" (the code signs in;
@@ -4135,7 +4134,6 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/routes/practice.test.tsx",
     );
   });
-  });
 
   // Proved by apps/web audio/cues.test.ts "R669 …" (the stings by rarity, none for the sentinel, a
   // Trap or a cast on draw; the lane pans), engine.test.ts and sfx.test.ts "R669 …" (the panner, the
@@ -4149,7 +4147,6 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/audio/sfx.test.ts",
       "../../../apps/web/src/haptics/haptics.test.ts",
     );
-  });
   });
 
   // Proved by apps/web fx/entrances.test.ts "R670 …": the marquee cards are Legendary or Mythic
