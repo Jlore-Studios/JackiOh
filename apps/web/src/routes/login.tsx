@@ -251,6 +251,8 @@ type LinkOutcome =
   | "checking"
   /** A confirmation link this browser did not start: the address is confirmed, sign in by hand. */
   | "confirmed"
+  /** R663: an email change's confirmation link: the new address is the account's, sign in with it. */
+  | "emailChanged"
   /** A recovery link whose account has no address to compare: nothing was held. */
   | "recoveryRefused"
   /** A recovery link asked for elsewhere: held back until the player types its address. */
@@ -460,7 +462,11 @@ export default function LoginRoute(): ReactElement {
         link =
           exchange.flow === "recovery"
             ? { kind: "recovery", session: exchange.session }
-            : { kind: "session", session: exchange.session, linkType: "signup" };
+            : {
+                kind: "session",
+                session: exchange.session,
+                linkType: exchange.flow === "email_change" ? "email_change" : "signup",
+              };
       } else {
         link = pending;
       }
@@ -506,6 +512,11 @@ export default function LoginRoute(): ReactElement {
         if (link.linkType === "invite") {
           setMode("forgot");
           setLinkOutcome("invited");
+          return;
+        }
+        if (link.linkType === "email_change") {
+          // R663: the change is made; like any link, it signs nobody in (R193).
+          setLinkOutcome("emailChanged");
           return;
         }
         // The sign-up this browser was waiting on is confirmed: its "confirm first" hint is over.
@@ -817,6 +828,12 @@ export default function LoginRoute(): ReactElement {
           {signingIn && linkOutcome === "confirmed" ? (
             <p className="notice" data-testid={loginTestid.confirmed} role="status">
               {AUTH_NOTICES.emailConfirmed}
+            </p>
+          ) : null}
+
+          {signingIn && linkOutcome === "emailChanged" ? (
+            <p className="notice" data-testid={loginTestid.emailChanged} role="status">
+              {AUTH_NOTICES.emailChanged}
             </p>
           ) : null}
 

@@ -4069,6 +4069,20 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // Proved by apps/web settings/ChangeEmail.test.tsx "R663 …" (the form, its checks, the provider's
+  // refusals in one sentence, an ended session), net/auth-flows.test.ts "R663 …" (the request with
+  // its PKCE challenge, and its refusals classified) and routes/login-flows.test.tsx "R663 …" (the
+  // link's code exchanged, revoked, and the new address confirmed).
+  it("R663 lets a signed-in player change their email through the auth provider", () => {
+    provenIn(
+      663,
+      "../../../apps/web/src/settings/ChangeEmail.test.tsx",
+      "../../../apps/web/src/net/auth-flows.test.ts",
+      "../../../apps/web/src/routes/login-flows.test.tsx",
+    );
+  });
+  });
+
   // Proved by counterWarning.test.ts "R667 …" (fixture counters: who is warned, never a Trap, a hand
   // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
   // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).

@@ -32,6 +32,7 @@ import { revokeSignedOutSession, sessionNearExpiry } from "../net/auth.ts";
 import { badgeWords, rankWords } from "../rank/rank.ts";
 import { paths } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses, readSession } from "../net/session.ts";
+import ChangeEmail from "../settings/ChangeEmail.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -299,6 +300,9 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
             {played === 0 ? <p>No finished matches yet.</p> : null}
           </>
         ) : null}
+
+        {/* R663: the email change, through the auth provider (it renders nothing signed out). */}
+        <ChangeEmail />
 
         <div className="account-session">
           <p>
