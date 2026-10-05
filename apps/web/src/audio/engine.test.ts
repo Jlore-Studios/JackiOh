@@ -28,6 +28,12 @@ import {
   VOICE_SPEECH_MAX_MS,
   VOICE_TRIM_LEAD_S,
   VOICE_TRIM_TAIL_S,
+  REVERB_CHANNELS,
+  REVERB_SFX_SEND,
+  REVERB_VOICE_SEND,
+  SFX_DUCK_ATTACK_TC_S,
+  SFX_DUCK_RELEASE_TC_S,
+  SFX_VOICE_DUCK_GAIN,
 } from "./constants.ts";
 import { audibleSpan, createAudioEngine, getAudioEngine, setAudioEngineForTests, type AudioEngineOptions } from "./engine.ts";
 import { LIMITER } from "./mix.ts";
@@ -158,9 +164,9 @@ function must<T>(value: T | null | undefined, what: string): T {
   return value;
 }
 
-type Buses = { compressor: FakeNode; master: FakeNode; sfx: FakeNode; voice: FakeNode };
+type Buses = { compressor: FakeNode; master: FakeNode; sfx: FakeNode; sfxDuck: FakeNode; voice: FakeNode };
 
-/** The graph unlock() builds: sfx and voice → master → compressor → destination. */
+/** The graph unlock() builds: sfx → its duck (R669) and voice → master → compressor → destination. */
 function buses(audio: FakeAudio): Buses {
   const compressors = audio.nodesOf("compressor");
   expect(compressors, "one DynamicsCompressor").toHaveLength(1);
@@ -170,11 +176,16 @@ function buses(audio: FakeAudio): Buses {
   const master = must(masters[0], "the master gain");
   const feeds = audio.inputsOf(master).filter((n) => n.kind === "gain");
   const near = (n: FakeNode, level: number): boolean => Math.abs(n.param("gain").settled() - level) < 1e-6;
-  const sfx = feeds.filter((n) => near(n, LEVELS.sfx));
   const voice = feeds.filter((n) => near(n, LEVELS.voice));
-  expect(sfx, "one sfx bus into master, at the sfx level").toHaveLength(1);
   expect(voice, "one voice bus into master, at the voice level").toHaveLength(1);
-  return { compressor, master, sfx: must(sfx[0], "the sfx bus"), voice: must(voice[0], "the voice bus") };
+  const sfx = feeds.flatMap((duck) => audio.inputsOf(duck).filter((n) => n.kind === "gain" && near(n, LEVELS.sfx)));
+  expect(sfx, "one sfx bus into master through its duck, at the sfx level").toHaveLength(1);
+  const sfxBus = must(sfx[0], "the sfx bus");
+  const sfxDuck = must(
+    feeds.find((n) => sfxBus.connections.includes(n)),
+    "the sfx duck",
+  );
+  return { compressor, master, sfx: sfxBus, sfxDuck, voice: must(voice[0], "the voice bus") };
 }
 
 type VoiceCue = Extract<PlayedCue, { kind: "voice" }>;
@@ -313,7 +324,8 @@ describe("B4 the bus graph", () => {
 
     expect(bus.compressor.connections).toContain(audio.destination);
     expect(bus.master.connections).toContain(bus.compressor);
-    expect(bus.sfx.connections).toContain(bus.master);
+    expect(bus.sfx.connections).toContain(bus.sfxDuck);
+    expect(bus.sfxDuck.connections).toContain(bus.master);
     expect(bus.voice.connections).toContain(bus.master);
     expect(bus.master.param("gain").settled()).toBeCloseTo(LEVELS.master, 6);
     expect(bus.sfx.param("gain").settled()).toBeCloseTo(LEVELS.sfx, 6);
@@ -1654,5 +1666,71 @@ describe("R655 a card's effect and a Unit picked up to attack", () => {
     expect(r.engine.playPickup("core-004")).toBe(true);
     await settle();
     expect(r.engine.log().map((c) => c.kind)).toEqual(["effect"]);
+  });
+});
+
+/* --------------------------------------------------------------------------------------------- *
+ * R669 (#259): lane panning, the effects' duck under voice, and the shared reverb
+ * --------------------------------------------------------------------------------------------- */
+
+describe("R669 the mix's panning, ducking and reverb", () => {
+  it("R669 an sfx cue with a pan plays through a stereo panner into the sfx bus; a centred one does not", () => {
+    const r = rig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+
+    expect(r.engine.playSfx("impact", { amount: 2, pan: -0.6 })).toBe(true);
+    const panners = audio.nodesOf("stereoPanner");
+    expect(panners).toHaveLength(1);
+    const panner = must(panners[0], "the panner");
+    expect(panner.param("pan").settled()).toBeCloseTo(-0.6, 6);
+    expect(panner.connections).toContain(bus.sfx);
+    expect(audio.inputsOf(panner).some((n) => n.kind === "gain")).toBe(true);
+
+    expect(r.engine.playSfx("death")).toBe(true);
+    expect(audio.nodesOf("stereoPanner"), "a centred cue adds no panner").toHaveLength(1);
+    expect(audio.violations).toEqual([]);
+  });
+
+  it("R669 a voice line dips the effects' duck to SFX_VOICE_DUCK_GAIN for its span and lets it go after", async () => {
+    const r = rig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+    audio.currentTime = 3;
+
+    expect(r.engine.playVoice("core-004", "play", 0)).toBe(true);
+    await settle();
+
+    const targets = bus.sfxDuck.param("gain").targets();
+    expect(targets.some((t) => Math.abs(t.value - SFX_VOICE_DUCK_GAIN) < 1e-9 && t.timeConstant === SFX_DUCK_ATTACK_TC_S)).toBe(true);
+    const release = targets.at(-1);
+    expect(release?.value).toBe(1);
+    expect(release?.timeConstant).toBe(SFX_DUCK_RELEASE_TC_S);
+    expect(must(release, "the release").time).toBeGreaterThan(3);
+    expect(audio.violations).toEqual([]);
+  });
+
+  it("R669 an sfx cue alone leaves the effects' duck where it was", () => {
+    const r = rig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+    r.engine.playSfx("impact", { amount: 3 });
+    expect(bus.sfxDuck.param("gain").targets()).toEqual([]);
+  });
+
+  it("R669 the effects (after their duck) and the voice bus feed one convolver, which feeds master", () => {
+    const audio = unlocked(rig());
+    const bus = buses(audio);
+    const reverbs = audio.nodesOf("convolver");
+    expect(reverbs).toHaveLength(1);
+    const reverb = must(reverbs[0], "the reverb");
+    expect(reverb.connections).toContain(bus.master);
+    expect(reverb.buffer?.numberOfChannels).toBe(REVERB_CHANNELS);
+    const sends = audio.inputsOf(reverb);
+    const levels = sends.map((n) => n.param("gain").settled()).sort();
+    expect(levels).toEqual([REVERB_VOICE_SEND, REVERB_SFX_SEND].sort());
+    expect(sends.some((n) => audio.inputsOf(n).includes(bus.sfxDuck))).toBe(true);
+    expect(sends.some((n) => audio.inputsOf(n).includes(bus.voice))).toBe(true);
+    expect(audio.violations).toEqual([]);
   });
 });

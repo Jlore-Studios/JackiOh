@@ -34,6 +34,13 @@
 // the line as its reaction. The effect is read off the same readable entry as the line, so R203 holds
 // for both. The `attack` hook is no event's: the board plays it when the viewer picks a Unit up
 // (`usePickupSound`).
+//
+// R669 (#259): every card the viewer can read stings as it is played, sized by its rarity: Common,
+// Rare and Epic Units and Spells on their `cardPlayed`, a Legendary or Mythic Spell with the
+// entrance there, and a Legendary or Mythic Unit with the entrance on its `summoned` as before.
+// Never a Trap (R203), never the sentinel, and never a card cast as it is drawn, whose own sting
+// stands in. And every effect about a unit on the field comes from that unit's lane: `cuesFor`
+// pans it left or right by where the unit stands, which the screen shows both seats alike.
 
 import type {
   CardType,
@@ -56,7 +63,9 @@ import {
   GOLD_BURST_DELAY_MS,
   HIDDEN_DEF_ID,
   HINDER_DEF_ID,
+  LANE_PAN_MAX,
   NEXT_REFRESH_MODIFIER_ID,
+  STING_DELAY_MS,
   VOICE_DELAY_MS,
   VOICE_PRIORITY,
 } from "./constants.ts";
@@ -67,6 +76,7 @@ import type {
   SfxParams,
   SfxTimbre,
   SoundCue,
+  StingTier,
   VoiceLineKind,
   VoicePriority,
 } from "./types.ts";
@@ -97,6 +107,8 @@ export type CueContext = {
    * arriving and its line has been spoken. Absent: no play has sounded.
    */
   wasPlayed?: (instanceId: string) => boolean;
+  /** R669: the newest view the director has, for where a unit that has just arrived stands. Absent: none. */
+  newestView?: () => PlayerView | null;
   /** The unit as the newest view shows it (its size and Radiance), or null. Absent: unknown. */
   unitNow?: (instanceId: string) => UnitView | null;
   /** The public catalog, by a defId the viewer can read. Absent (or undefined): the plain sounds. */
@@ -238,6 +250,31 @@ function inPlayOf(ctx: CueContext, defId: string): boolean {
 }
 
 /**
+ * R669: the sting of a card the viewer can read as it is played, by its rarity, or none: a Trap's
+ * play is its set (R203), a token prints its rarity or has none, and a card cast as it is drawn has
+ * its own sting already. A Legendary or Mythic Unit's sting is its entrance on `summoned`.
+ */
+function playSting(event: Extract<GameEvent, { type: "cardPlayed" }>, ctx: CueContext): readonly SoundCue[] {
+  const card = readable(ctx, event.defId);
+  if (card === undefined || card.type === "Trap" || card.type === "Field Trap") return NONE;
+  if (ctx.castOnDraw?.(event.instanceId) === true) return NONE;
+  const rarity = card.printedRarity ?? card.rarity;
+  const tier = STING_TIERS[rarity ?? "Token"];
+  if (tier !== undefined) return [sfx("sting", tier === "common" ? undefined : { tier }, STING_DELAY_MS)];
+  if (card.type === "Unit") return NONE;
+  if (rarity === "Legendary") return [sfx("entrance", undefined, STING_DELAY_MS)];
+  if (rarity === "Mythic") return [sfx("entrance", { mythic: true }, STING_DELAY_MS)];
+  return NONE;
+}
+
+/** R669: the rarities a play sting sizes itself by; Legendary and Mythic enter instead, a Token has none. */
+const STING_TIERS: Readonly<Partial<Record<Rarity | PrintedRarity, StingTier>>> = {
+  Common: "common",
+  Rare: "rare",
+  Epic: "epic",
+};
+
+/**
  * R506: a card cast as it is drawn arrives with the cast-on-draw sting in place of the play whoosh.
  * Only a card the viewer can read (the director never marks the sentinel), and never a Trap, whose
  * set sounds like every Trap's (R203).
@@ -283,12 +320,15 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
       const kind = entryFor(ctx.lines, event.defId)?.kind;
       if (kind === "trap") return [sfx("trapSet")];
       const arrive = arrival(event, ctx);
-      if (kind === "unit") return [arrive, ...hookCues(ctx, event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.play)];
+      if (kind === "unit") {
+        return [arrive, ...playSting(event, ctx), ...hookCues(ctx, event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.play)];
+      }
       if (kind === "spell") {
         const card = readable(ctx, event.defId);
         const timbre = card === undefined ? undefined : timbreFor(card);
         return [
           arrive,
+          ...playSting(event, ctx),
           sfx("spell", timbre === undefined ? undefined : { timbre }, SPELL_SHIMMER_DELAY_MS),
           ...hookCues(ctx, event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.play),
         ];
@@ -467,8 +507,73 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   glitched: { sfx: "whoosh", cues: () => [sfx("whoosh"), sfx("shieldShatter")] },
 };
 
-/** The cues for one event. */
+/**
+ * R669: the unit an event is about, by instance id, for its pan: the one that arrives, is hit, dies,
+ * attacks or is changed. An event about a hero, a hand or a player has none and stays centred.
+ */
+function unitOf(event: GameEvent): string | null {
+  switch (event.type) {
+    case "summoned":
+      return event.row === "units" ? event.instanceId : null;
+    case "damage":
+    case "healed":
+      return event.targetId;
+    case "attackDeclared":
+      return event.attackerId;
+    case "divineShieldLost":
+    case "destroyed":
+    case "buffed":
+    case "keywordGranted":
+    case "radiantSet":
+    case "transformed":
+    case "animated":
+    case "crumbled":
+    case "degraded":
+    case "upgraded":
+      return event.instanceId;
+    default:
+      return null;
+  }
+}
+
+/**
+ * R669: the pan of a unit in lane `index` (0-based) of `lanes`: the middle lane centred, the outer
+ * ones LANE_PAN_MAX either way. Both rows run left to right in the same lane order on both seats'
+ * screens, so the opponent's lane 1 sits above the viewer's lane 1.
+ */
+export function lanePan(index: number, lanes: number): number {
+  if (lanes <= 1) return 0;
+  const half = (lanes - 1) / 2;
+  return ((index - half) / half) * LANE_PAN_MAX;
+}
+
+/** R669: where the unit stands in the view, as a pan, or null when it is on no units row. */
+function panOf(view: PlayerView, instanceId: string): number | null {
+  for (const side of [view.you, view.opponent]) {
+    const index = side.units.findIndex((u) => u !== null && u.instanceId === instanceId);
+    if (index >= 0) return lanePan(index, side.units.length);
+  }
+  return null;
+}
+
+/** R669: every effect about a unit on the field, panned to its lane; a centred one is left as it was. */
+function panned(event: GameEvent, ctx: CueContext, cues: readonly SoundCue[]): readonly SoundCue[] {
+  const id = unitOf(event);
+  if (id === null || id === HIDDEN_DEF_ID) return cues;
+  // The view the event was planned against holds a unit that leaves (a death); an arrival is only
+  // in the newest one, which `unitNow` reads.
+  let pan = panOf(ctx.view, id);
+  if (pan === null) {
+    const newest = ctx.newestView?.() ?? null;
+    if (newest !== null) pan = panOf(newest, id);
+  }
+  if (pan === null || pan === 0) return cues;
+  const at = pan;
+  return cues.map((cue) => (cue.kind === "sfx" ? { ...cue, params: { ...cue.params, pan: at } } : cue));
+}
+
+/** The cues for one event, panned to the lane of the unit it is about (R669). */
 export function cuesFor(event: GameEvent, ctx: CueContext): readonly SoundCue[] {
   const row = SOUND_CUES[event.type] as { cues: (e: GameEvent, c: CueContext) => readonly SoundCue[] };
-  return row.cues(event, ctx);
+  return panned(event, ctx, row.cues(event, ctx));
 }

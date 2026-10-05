@@ -122,6 +122,7 @@ export function createSoundDirector(
       manaBefore: (player) => lastMana.get(player) ?? sideMana(view, player),
       wasPlayed: (instanceId) => played.has(instanceId),
       unitNow: (instanceId) => findUnit(seen, instanceId) ?? findUnit(view, instanceId),
+      newestView: () => seen,
       playing: () => plays[plays.length - 1] ?? null,
       castOnDraw: (instanceId) => castOnDraw !== null && instanceId === castOnDraw,
       ...(card === undefined ? {} : { card }),

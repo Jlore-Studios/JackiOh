@@ -779,8 +779,9 @@ div.app-shell.app-shell--wide.deckbuilder [deckbuilder]
 - On a desktop at least 501 px tall the builder is one screen tall (`100dvh`): the pool scrolls
   inside its column from its own top to the screen's foot, and the deck list fills what the
   sidebar has left.
-- Filter and sort state is not persisted. Filters that survive a reload could hide cards and
-  confuse both players and spec 09.
+- Filter and sort state was not persisted at first, since filters that survive a reload could
+  hide cards. #263 keeps them per device (`savedBrowse.ts`, one localStorage key), with the
+  active-filter count on the Filters toggle and "Clear filters" clearing the saved copy too.
 
 **`e2e/support/testids.ts` (additive).** One new block, "A14: card faces, inspect and deck-builder
 browse (polish 6)", mirrors every new name above (`INSPECT_*`, `DB_*`, the id functions and
@@ -1177,8 +1178,8 @@ typecheck it with `pnpm --dir e2e typecheck:component`.
 - Sounds on hover or inspect (task 2).
 - Keyboard-driven inspect on the board. In the deck builder a pool card opens its detail on
   Enter or Space, and a deck tile on I, the context-menu key or Shift+F10.
-- Persisting deck-builder filters or sort, deck codes, multiple loadouts and crafting. (Flavour text
-  and artist credits followed in R660.)
+- Persisting deck-builder filters or sort (since built, #263), deck codes, multiple loadouts and
+  crafting. (Flavour text and artist credits followed in R660.)
 - Changing SPEC §10.8's catalog finding. The client still loads the catalog beside the view, as
   `catalog.ts` documents.
 
@@ -1384,4 +1385,22 @@ card layer alone; no rule changed.
   reference machine. Skipping the off-screen ones with `content-visibility: auto` would remove most
   of it, but a skipped face has no layout for the fitter to read, and reading one anyway lays it out
   alone (5 s of layout across the Almanac in a trial), so the fit would have to wait for the face to
-  come into view. That is not done here.
+  come into view. That is not done here; #263 did it (below).
+
+**#263: skipped faces.** Each pool face (`.db-card-face`, absolutely positioned inside its card)
+carries `content-visibility: auto` and `data-skippable` (`SKIPPABLE_ATTRIBUTE`). The skip sits on
+the face rather than on `.db-item` because the face is sized by its card: skipping it changes no
+size the grid reads. On `.db-item` every skip relaid the grid's laid-out cards, and scrolling the
+Almanac ran frames past 150 ms. A fit inside a skippable face waits while the browser skips it: its
+first read is `checkVisibility({ contentVisibilityAuto: true })`, the one question that lays nothing
+out (a plain `checkVisibility()`, or a `getComputedStyle` of a skipped element, lays it out alone).
+A parked fit is queued again when a `contentvisibilityautostatechange` un-skips its face, and the
+first such event of a scroll queues every parked fit, since Chrome has flipped all of them by then,
+so they fit in one batch. `art/near.ts` starts its search for the scrolling box above the face for
+the same reason. In Chromium 141 at 1280x800 the Almanac's load went from about 810 ms of layout to
+about 130 ms; the first scroll through the whole grid pays about a second of layout spread over its
+frames (the worst about 22 ms, one batch of fits), later scrolls about 100 ms, and every face's fit
+is what it was before. Chrome dispatches the event after painting the frame that un-skipped the
+face, so after a jump (or on a fresh mount) a face shows its length tier's first guess for one
+frame; in a scroll the browser un-skips a face well before it is on screen, and only about one face
+in ten is changed by the fit at all.

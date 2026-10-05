@@ -32,9 +32,11 @@
 // ▼ Degraded, ◆ Tuned, R386) and the enchantments (E39). A tuned stat carries `data-tuned` and a ▲ or
 // ▼ pip beside its tone (cardstate.css), the number itself unchanged.
 //
-// There is no "zzz". `canAct` is false for every unit whose controller is not the active player,
-// and a summoning-sick unit may still switch (§4.1), so it can neither say "this unit is asleep"
-// nor "this one can attack". Whether a unit can attack is `legalActions`', drawn by the board's
+// The face draws no "zzz" itself. `canAct` is false for every unit whose controller is not the
+// active player, and a summoning-sick unit may still switch (§4.1), so read bare it can neither say
+// "this unit is asleep" nor "this one can attack". The board's card root draws the "can't act yet"
+// cue only where it means something, a unit of the player acting now with no action left
+// (game/spent.ts, #258). Whether a unit can attack is `legalActions`', drawn by the board's
 // highlight (task 7's green), never read off the view here (CLAUDE.md rule 7).
 
 import { useRef, type ReactElement } from "react";

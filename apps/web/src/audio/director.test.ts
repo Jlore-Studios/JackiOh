@@ -238,7 +238,7 @@ describe("B24 cues play when the runner starts an entry", () => {
     director.onView(next);
     director.onEntryStart(must(entriesOf(first, next.events)[0], "the pair"));
 
-    expect(sfxSent(sink).find((c) => c.id === "summon")?.params).toEqual({ amount: 11 });
+    expect(sfxSent(sink).find((c) => c.id === "summon")?.params).toMatchObject({ amount: 11 });
   });
 
   it("B24 an entry whose events were never owed still sounds, resolved against the last view", () => {
