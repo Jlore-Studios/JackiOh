@@ -2996,9 +2996,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-05T07:15:37Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37276647581",
-    "what": "review #287 on devin"
+    "at": "2026-10-05T07:19:11Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37277002504",
+    "what": "suggestions on devin"
   },
   "last_sweep": {
     "at": "2026-10-05T07:14:10Z",
@@ -4236,10 +4236,10 @@
   },
   "suggest": {
     "asks": [],
-    "last_run": null,
-    "provider": null,
+    "last_run": "2026-10-05T07:19:11Z",
+    "provider": "devin",
     "requested": false,
-    "run_id": null,
+    "run_id": "37277002504",
     "taken_asks": []
   },
   "usage": {
