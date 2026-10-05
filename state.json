@@ -2699,9 +2699,7 @@
       "run_id": "37350280220",
       "started_at": "2026-10-05T17:41:50Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5999384029"
-      ]
+      "taken_asks": []
     },
     "296": {
       "action": "review",
