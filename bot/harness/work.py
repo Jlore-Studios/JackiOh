@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from harness import disk as disk_mod
+from harness import memory as memory_mod
 from harness import easy as easy_mod
 from harness import gates as gates_mod
 from harness import prompts, review_rule, verdicts
@@ -133,6 +134,7 @@ class Worker:
         now: Callable[[], datetime] | None = None,
         env: dict[str, str] | None = None,
         disk_reader: Callable[[], dict[str, Any]] | None = None,
+        memory_reader: Callable[[], dict[str, Any] | None] | None = None,
     ) -> None:
         self.cfg = cfg
         self.plan = plan
@@ -159,6 +161,9 @@ class Worker:
         #: one disk, and a full one fails whichever job writes next.
         self.disk_reader = disk_reader or (lambda: disk_mod.reading(
             self.work_dir if self.work_dir.exists() else cfg.root, self.now()))
+        #: The machine's memory (`memory.reading`), read on the machine only (#312): as the run
+        #: starts, after each model call and check run, and as it ends.
+        self.memory_reader = memory_reader or (lambda: memory_mod.reading(self.now()))
         main = cfg.pool.seats(self.provider)[0]
         seats = plan.get("seats") if isinstance(plan.get("seats"), dict) else None
         #: The model each role runs on. A plan from before seats runs every role on the
@@ -327,6 +332,7 @@ class Worker:
             usage_stop=self._usage_stop if self.provider.limits.stops else None,
         )
         result = self.runner.run(request)
+        self._read_memory()
         if self.after_call is not None:
             self.after_call()
         self.minutes += result.duration_s / 60
@@ -394,6 +400,7 @@ class Worker:
         self.out_dir.mkdir(parents=True, exist_ok=True)
         try:
             if self.on_machine:
+                self._read_memory()
                 self._disk_check()
             self._start_check()
             action = self.plan.get("action")
@@ -420,8 +427,18 @@ class Worker:
         finally:
             if self.on_machine:
                 self._read_disk("end")
+                self._read_memory()
             self.write_result()
         return self.result
+
+    def _read_memory(self) -> None:
+        """Fold the machine's memory now into the result's `memory` (`memory.add`)."""
+        if not self.on_machine:
+            return
+        try:
+            memory_mod.add(self.result.setdefault("memory", {}), self.memory_reader())
+        except Exception:  # noqa: BLE001 - a reading never stops the work
+            pass
 
     def _read_disk(self, when: str) -> dict[str, Any] | None:
         disk = self.result.setdefault("disk", {})
@@ -788,6 +805,7 @@ class Worker:
                             for g in self.gates]
                 return results
         results += gates_mod.run_all(self.gates, self.wt.cwd, self.env, self.seconds_left)
+        self._read_memory()  # the install and the typecheck are what a machine job's memory goes on
         self._mark_pre_existing(results)
         return results
 

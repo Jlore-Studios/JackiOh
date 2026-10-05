@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from harness import disk as disk_mod
+from harness import memory as memory_mod
 from harness import plan as plan_mod
 from harness import providers as providers_mod
 from harness import status as status_mod
@@ -433,6 +434,8 @@ def render(ctx: Context) -> str:
     lines += ["## Subscriptions", ""] + subscription_table(ctx, state, live) + [""]
     disk_line = disk_mod.line(state)
     lines += [disk_line, ""] if disk_line else []
+    memory_line = memory_mod.line(state, ctx.now())
+    lines += [memory_line, ""] if memory_line else []
     lines += ["## Queue", ""] + queue_table(issues) + [""]
     lines += ["## Last night-bot runs", ""] + runs_table(ctx) + [""]
     lines += ["<details><summary>The full status</summary>", "",

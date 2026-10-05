@@ -162,8 +162,8 @@ class BuilderTests(unittest.TestCase):
         def stand_in(gh, machine):
             raw = raw_providers()
             for name, provider in raw["providers"].items():
-                if provider.get("login") == "machine" and name not in machine:
-                    provider["enabled"] = False
+                if provider.get("login") == "machine":
+                    provider["enabled"] = name in machine
                 if provider.get("cli") == "claude":
                     provider["schedule"] = {"mode": "window", "start": "21:00", "end": "07:00"}
                     provider.pop("off_hours", None)
