@@ -2780,14 +2780,10 @@
       "votes": {
         "approvals": [],
         "builder": "cognition",
-        "rejections": [
-          "claude"
-        ],
+        "rejections": [],
         "reviews": [],
-        "sha": "e53f4c4ef69497598bb88739d58398611e3f2a67",
-        "tiers": {
-          "claude": "strong"
-        }
+        "sha": "f5d746365481c418ef3190a46644b9a26fe5f7bd",
+        "tiers": {}
       }
     },
     "31": {
