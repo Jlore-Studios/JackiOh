@@ -822,9 +822,58 @@ def note_secrets(ctx: Context, state: dict[str, Any]) -> None:
         ctx.store.update(lambda s: s.update(secrets=record), "secrets seen")
 
 
+#: How long an item's record outlives its closed thread in the state file, and how often the
+#: records are looked over (#160, #317 part 12): GitHub's Contents API stops returning a file past
+#: 1 MB, and the 95 item records held 303 KB of the 374 KB file on 2026-10-05.
+KEEP_CLOSED = timedelta(days=7)
+PRUNE_EVERY = timedelta(hours=24)
+#: What a closed thread's record sheds at once: the bulky parts only an open one uses.
+SHED_WHEN_CLOSED = ("handoff", "last_findings", "self_check_findings", "strike_log", "votes",
+                    "asks", "taken_asks", "question")
+
+
+def prune(ctx: Context, state: dict[str, Any]) -> list[str]:
+    """Once a day: drop the record of every item whose thread closed more than `KEEP_CLOSED`
+    ago, and the bulky parts of the others that are closed. Open threads keep everything."""
+    last = parse_iso((state.get("pruned") or {}).get("at"))
+    now = ctx.now()
+    if last is not None and now - last < PRUNE_EVERY:
+        return []
+    try:
+        open_now = {int(t["number"]) for t in ctx.gh.list_issues(state="open", limit=1000)}
+    except GitHubError as exc:
+        return [f"could not prune the state file: {exc}"]
+    gone: list[int] = []
+    shed: list[int] = []
+    for key in list(state["items"]):
+        if not key.isdigit() or int(key) in open_now or not int(key):
+            continue
+        try:
+            thread = ctx.gh.get_issue(int(key))
+        except GitHubError:
+            continue
+        if thread.get("state") != "closed":
+            continue
+        closed = parse_iso(thread.get("closed_at"))
+        if closed is not None and now - closed >= KEEP_CLOSED:
+            gone.append(int(key))
+        elif any(field in state["items"][key] for field in SHED_WHEN_CLOSED):
+            shed.append(int(key))
+
+    def change(s: dict[str, Any]) -> None:
+        for number in gone:
+            s["items"].pop(str(number), None)
+        for number in shed:
+            for field_name in SHED_WHEN_CLOSED:
+                s["items"].get(str(number), {}).pop(field_name, None)
+        s["pruned"] = {"at": iso(now), "dropped": len(gone), "shed": len(shed)}
+    ctx.store.update(change, "prune")
+    return [f"pruned the state file: dropped {len(gone)} closed item(s), lightened {len(shed)}"]
+
+
 def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
     """Requeue items a dead run left working; queue a revision for conflicted bot PRs."""
-    notes: list[str] = []
+    notes: list[str] = prune(ctx, state)
     for thread in working_threads(ctx):
         number = int(thread["number"])
         record = state["items"].get(str(number), {})

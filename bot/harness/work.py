@@ -262,7 +262,8 @@ class Worker:
             max_turns=int(self.cfg.max_turns.get(role) or self.cfg.max_turns["review"]),
             timeout_s=max(60, timeout),
             model=seat.model,
-            effort=seat.effort,
+            effort=(self.provider.fix_effort if role == "fix" and self.provider.fix_effort
+                    else seat.effort),
             transcript=transcript,
             read_only=reader,
             extra_dirs=self._git_dirs(cwd),
@@ -1040,6 +1041,12 @@ class Worker:
             if self.carry_review:
                 earlier = context or (self._findings_text(findings) if findings else "")
                 context = (earlier + "\n\n" if earlier else "") + self.carry_review
+            if self._catch_up():
+                # `main` moved and merged cleanly: the checks and the review judge the merged head.
+                results = self._checks()
+                entry["gates"] = [{**r.to_dict(), "tail": r.tail[-1500:]} for r in results]
+                entry["caught_up"] = self.base_sha
+                guard = self._guard()
             review = self._review(cycle, report, results, findings, context=context)
             entry["review"] = review.to_dict()
             if not review.readable:
@@ -1095,6 +1102,38 @@ class Worker:
             finding = Finding("blocking", ", ".join(markers[:8]),
                               f"Conflict markers are still in {', '.join(markers)}.", "git grep")
         return finding, report
+
+    def _catch_up(self) -> bool:
+        """Before a review: merge `main` again when it moved since the run merged it and merges
+        cleanly (#160, #317 part 12), so what is approved still merges; `main` moves about every
+        half hour and a long run's approval was often stale before it was delivered. A merge
+        that would conflict is left for the conflict path, and a conflict revision of a cleared
+        change is left alone (deliver redoes its merge to check the carry). True when merged."""
+        if self.carry_build or self.wt is None:
+            return False
+        default = self.cfg.default_branch
+        self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                      f"+refs/heads/{default}:refs/remotes/origin/{default}", check=False)
+        now = self.repo.rev(self.base_ref)
+        if not now or now == self.base_sha or self.wt.run(
+                "merge-base", "--is-ancestor", now, "HEAD", check=False).returncode == 0:
+            return False
+        probe = self.wt.run("merge-tree", "--write-tree", "--no-messages", "HEAD", now,
+                            check=False)
+        if probe.returncode != 0:
+            return False
+        try:
+            conflicts = self.wt.merge(now, self.who)
+        except Exception:  # noqa: BLE001 - a merge that fails leaves the branch as it was
+            self.wt.run("merge", "--abort", check=False)
+            return False
+        if conflicts:
+            self.wt.run("merge", "--abort", check=False)
+            return False
+        self.base_sha = now
+        self._base_wt = None  # the checks red on `main` are `main`'s new self's now
+        self._base_gate_cache = {}
+        return True
 
     def _only_forbidden(self) -> bool:
         """A build whose whole change was in paths the bot may not change (`bot/`, `.harness/`,

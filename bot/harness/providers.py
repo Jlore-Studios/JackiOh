@@ -183,6 +183,9 @@ class Provider:
     #: Caps outside its `schedule` window (`{"five_hour": 0.4}`): it may work then too, but only
     #: under these, and a run that goes past them there stops. No entry: it works in its hours only.
     off_hours: Mapping[str, float] = field(default_factory=dict)
+    #: The effort a fix pass runs at (#160, #317 part 12): a fix answers named findings, which
+    #: needs less thought than the build. "" runs it at the seat's own effort.
+    fix_effort: str = ""
 
     def describe(self) -> str:
         return f"`{self.id}` ({self.cli}, {self.model})"
@@ -401,7 +404,7 @@ def _limits(raw: Any, where: str) -> Limits:
 _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "tier", "secret", "schedule",
                   "limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
                   "self_check", "extra_models", "off_from", "off_reason",
-                  "lanes", "build_last", "easy_first", "off_hours", "only_labels"}
+                  "lanes", "build_last", "easy_first", "off_hours", "only_labels", "fix_effort"}
 
 
 def _tier(value: Any, where: str) -> str:
@@ -528,6 +531,7 @@ def _provider(name: str, raw: Any) -> Provider:
         build_last=bool(raw.get("build_last", False)),
         easy_first=bool(raw.get("easy_first", False)),
         off_hours=_off_hours(raw.get("off_hours"), f"{where}.off_hours"),
+        fix_effort=str(raw.get("fix_effort") or ""),
         extra_models=_extra_models(raw.get("extra_models"), str(raw.get("effort", "")),
                                    f"{where}.extra_models"),
     )
