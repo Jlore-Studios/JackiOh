@@ -1119,7 +1119,9 @@
     },
     "166": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:5992197537"
+      ],
       "ci_fixes": 1,
       "ci_reruns": {
         "026156e4ab202aec00d3323cca97e8ecc6fa245c": 1
@@ -1141,7 +1143,9 @@
       "issue": 88,
       "kind": "revise",
       "last_findings": [],
-      "pending_request": false,
+      "pending_at": "2026-10-05T09:58:11Z",
+      "pending_by": "jgoetzmann",
+      "pending_request": true,
       "provider": "muse",
       "question": "",
       "queued_at": "2026-10-05T09:26:34Z",
