@@ -3018,37 +3018,26 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-05T18:43:22Z",
+      "feedback_since": "2026-10-05T21:26:21Z",
       "forced": false,
       "interruptions": 0,
       "issue": 323,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "This R277 test still expects Gary's old Radiant text, so the web project's `pnpm test` goes red with this change.",
-          "evidence": "Line 522 expects `.cf-text-base` to read exactly \"Cry: Flip 7 coins. Gain +2 attack per heads and +2 health per tails.\" for catalogFace(\"core-004\", true), which reads the real CATALOG (line 16). catalog.json now gives core-004's radiant.text the extra sentences \"Flip a coin. If heads, gain Divine Shield; if tails, gain Rush.\" The diff does not touch this file.",
-          "severity": "blocking",
-          "where": "apps/web/src/cards/CardFace.test.tsx:522"
-        },
-        {
-          "claim": "This R512 test expects base Gary's glossary to be only [\"Cry\"], but the new text also names Divine Shield and Rush, so the test fails.",
-          "evidence": "glossaryFor (rules.ts:99-107) adds every term termsIn(face.text.full) finds. \"Rush\" and \"Divine Shield\" are glossary terms (glossary.ts:192, :198). def() reads the real CATALOG (cardState.test.tsx:70-74), so the result becomes [\"Cry\",\"Divine Shield\",\"Rush\"]. The diff does not touch this file, and the builder ran no web tests.",
-          "severity": "blocking",
-          "where": "apps/web/src/cards/cardState.test.tsx:666"
-        },
-        {
-          "claim": "The buff breaks SPEC R291 for lesson 1: the AI's fixed deck there must hold \"units only, none whose keywords change combat\", and Gary now gives itself Rush or Divine Shield. The test meant to guard this only reads printed keywords, so nothing catches it.",
-          "evidence": "SPEC R291: \"\u2026units only, none whose keywords change combat, in lesson 1\". lessons/basics.ts:58 puts core-004 in lesson 1's aiDeck. lessons.test.ts:131-135 checks only `card.base.keywords` against COMBAT_KEYWORDS, and Gary prints none, so it stays green. Lesson 1 teaches summoning sickness and trading, and an AI Gary with Rush or Divine Shield undercuts both. The same lesson's deal note (basics.ts:7-10, \"only units with a line of text or less\u2026\") and the coach tip at tutorial/scripts/basics.ts:351 (\"flipped five coins\u2026\") now describe Gary wrongly. The diff neither handles this nor records a decision about it.",
-          "severity": "blocking",
-          "where": "apps/web/src/tutorial/lessons/basics.ts:58"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "devin",
+      "question": "",
       "queued_at": "2026-10-05T19:41:01Z",
       "run_id": "37374757811",
-      "self_check_findings": [],
-      "source": "cross-review",
+      "self_check_findings": [
+        {
+          "claim": "The self check's answer could not be read twice in a row.",
+          "evidence": "the harness",
+          "severity": "blocking",
+          "where": "self check"
+        }
+      ],
+      "source": "",
       "started_at": "2026-10-05T21:26:21Z",
       "stop_requested": false,
       "taken_asks": [],
