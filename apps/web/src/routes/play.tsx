@@ -32,7 +32,7 @@ import {
   type LoadoutResult,
 } from "@jackioh/validator";
 
-import { SERIES_POLL_SECONDS, SERIES_WINS_NEEDED } from "../../../server/src/config.ts";
+import { SERIES_POLL_SECONDS } from "../../../server/src/config.ts";
 import {
   ApiRequestError,
   createRoom,
@@ -116,15 +116,6 @@ export const MODE_LABEL: Readonly<Record<QueueMode, string>> = {
   bo1: "Best of 1",
   bo3: "Conquest",
   random: "All Random",
-};
-
-/** One line under each mode: what the player is signing up for (R257–R259). */
-export const MODE_HINT: Readonly<Record<QueueMode, string>> = {
-  bo1: "One game with one of your decks.",
-  bo3:
-    `Win a game with each of your trio's ${String(SERIES_WINS_NEEDED)} decks; a deck that wins is locked. ` +
-    "Both players pick a deck before each game, hidden until both have picked.",
-  random: "Both players get a fresh random deck, dealt with a sensible mana curve.",
 };
 
 /** Where the lobby remembers the last mode, deck and trio (a convenience; see `readStoredChoice`). */
@@ -745,7 +736,6 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                 <ModeIcon mode={option} />
                 <span className="lobby-mode__text">
                   <span className="lobby-mode__name">{MODE_LABEL[option]}</span>
-                  <span className="lobby-mode__hint">{MODE_HINT[option]}</span>
                 </span>
                 {byMode === undefined ? null : (
                   <span className="play-mode-tile__waiting">{String(byMode[option])} waiting</span>

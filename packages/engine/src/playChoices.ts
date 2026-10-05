@@ -1101,7 +1101,7 @@ function playPrices(state: GameState, player: PlayerId, card: CardInstance): Pla
   return out;
 }
 
-/** R658: the costs a play of this card from its player's hand could pay now, whatever mana is left. */
+/** R659: the costs a play of this card from its player's hand could pay now, whatever mana is left. */
 export function offeredPlayCosts(state: GameState, player: PlayerId, card: CardInstance): number[] {
   return [...new Set(playPrices(state, player, card).map((price) => price.cost))];
 }

@@ -29,7 +29,7 @@ export type CardView = {
    */
   conditionActive?: true;
   /**
-   * R658, §10.8: Classic #87 Plague Chalice's warning. Present, and `true`, only on the viewer's own
+   * R659, §10.8: Classic #87 Plague Chalice's warning. Present, and `true`, only on the viewer's own
    * hand card that a card on the field the viewer may read would counter at every price it could be
    * played at now. Absent otherwise: never `false`, never on the opponent's cards.
    */

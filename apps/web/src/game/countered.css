@@ -1,4 +1,4 @@
-/* R658: Classic #87 Plague Chalice's warning on the viewer's own hand card. Card.tsx draws the
+/* R659: Classic #87 Plague Chalice's warning on the viewer's own hand card. Card.tsx draws the
    elements and this file is their look; none of it is a rule, since the engine put `counteredOnPlay`
    on the view (CLAUDE.md rule 7).
 

@@ -1,4 +1,4 @@
-// R658: the counter warning a hand card's view carries (`counterWarning.ts`, `viewFor`), driven with
+// R659: the counter warning a hand card's view carries (`counterWarning.ts`, `viewFor`), driven with
 // fixture scripts so the engine is proved without `packages/cards`; Classic #87 Plague Chalice's own
 // test proves the real card again (CLAUDE.md, "The engine doesn't depend on packages/cards").
 //
@@ -92,8 +92,8 @@ function warned(view: PlayerView): string[] {
   return Array.isArray(hand) ? hand.filter((card: CardView) => card.counteredOnPlay === true).map((card) => card.defId) : [];
 }
 
-describe("R658 the counter warning on the viewer's hand", () => {
-  it("R658 marks each seat's own hand cards that a field card would counter at every price, and no others", () => {
+describe("R659 the counter warning on the viewer's hand", () => {
+  it("R659 marks each seat's own hand cards that a field card would counter at every price, and no others", () => {
     const state = playing("r658-field");
     put(state, counterField.id, slot("p2", "backrow", 1));
 
@@ -106,7 +106,7 @@ describe("R658 the counter warning on the viewer's hand", () => {
     expect(viewFor(state, "p1").opponent.hand).toEqual({ count: state.players.p2.hand.length });
   });
 
-  it("R658 a counter that covers only its controller's opponent warns only them", () => {
+  it("R659 a counter that covers only its controller's opponent warns only them", () => {
     const state = playing("r658-opponent");
     put(state, opponentsOnly.id, slot("p1", "backrow", 1));
 
@@ -114,7 +114,7 @@ describe("R658 the counter warning on the viewer's hand", () => {
     expect(warned(viewFor(state, "p2"))).toEqual([two.id]);
   });
 
-  it("R658 nothing warns while no card on the field would counter: none at all, one in a hand, or a Trap", () => {
+  it("R659 nothing warns while no card on the field would counter: none at all, one in a hand, or a Trap", () => {
     const none = playing("r658-none");
     expect(counteredHandCards(none, "p1").size).toBe(0);
 
@@ -128,7 +128,7 @@ describe("R658 the counter warning on the viewer's hand", () => {
     expect(warned(viewFor(trapped, "p1"))).toEqual([]);
   });
 
-  it("R658 the warning is the viewer's own: it is asked for one hand and lists that hand's ids", () => {
+  it("R659 the warning is the viewer's own: it is asked for one hand and lists that hand's ids", () => {
     const state = playing("r658-ids");
     put(state, counterField.id, slot("p1", "backrow", 2));
     const ids = (player: PlayerId): string[] =>

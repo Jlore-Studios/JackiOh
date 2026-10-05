@@ -1,5 +1,5 @@
 // The two glows as DOM attributes (docs/polish/7-mobile-ux.md S5, S6), and Plague Chalice's warning
-// beside them (R658).
+// beside them (R659).
 //
 // Green is `data-glow="ready"`: the element's testid is in `Highlight.glow`, which `highlightFor`
 // derived from `legalActions` alone. Yellow is `data-condition-active="true"`: the engine put
@@ -26,14 +26,14 @@ export function conditionAttr(card: Pick<CardView, "conditionActive"> | null | u
 }
 
 /**
- * R658: what the warning on a hand card says, in its tooltip, its inspect note and to a screen reader.
+ * R659: what the warning on a hand card says, in its tooltip, its inspect note and to a screen reader.
  * Classic #87 Plague Chalice is the one card whose counter the engine reads ahead (`wouldCounter`).
  */
 export const COUNTERED_NOTE = "Plague Chalice would counter this if you played it now";
 
 /**
  * `data-countered-on-play`: "true" when the engine put `counteredOnPlay: true` on the hand card's
- * view (R658); undefined otherwise. Like the yellow glow it is drawn, never decided, here.
+ * view (R659); undefined otherwise. Like the yellow glow it is drawn, never decided, here.
  */
 export function counteredAttr(card: Pick<CardView, "counteredOnPlay"> | null | undefined): "true" | undefined {
   return card?.counteredOnPlay === true ? "true" : undefined;

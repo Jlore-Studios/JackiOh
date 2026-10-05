@@ -454,7 +454,7 @@ export type Script = {
    */
   tributeWhen?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => boolean;
   /**
-   * Classic #87 Plague Chalice, R658: the static half of a counter the card's own trigger makes —
+   * Classic #87 Plague Chalice, R659: the static half of a counter the card's own trigger makes —
    * whether that trigger, the card standing as it does now, would counter a play `player` makes
    * paying `costPaid`. The trigger asks the same predicate, so the two cannot disagree, and
    * `counterWarning.ts` reads it to warn the viewer off a hand card (`counteredOnPlay`, §10.8). A

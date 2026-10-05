@@ -35,7 +35,7 @@
 //     libraries, face-down traps and R97's event redaction stay as they were.
 //   - R437: a mark (an effect aimed at the card that still waits, #50's pending steal) rides every
 //     view of the card in both seats, a face-down card's back included (`marks.ts`).
-//   - R195, R280, R658: three things the engine works out for a card ride on its view.
+//   - R195, R280, R659: three things the engine works out for a card ride on its view.
 //     `conditionActive` (the yellow glow) on the viewer's own cards only; `counteredOnPlay` (Plague
 //     Chalice's warning) on the viewer's own hand cards only (`counterWarning.ts` owns that rule);
 //     `preview` (what a formula comes to now) on every card view the viewer may read — the viewer's
@@ -295,7 +295,7 @@ function withCondition<T extends CardView>(view: T, active: boolean): T {
   return active ? { ...view, conditionActive: true } : view;
 }
 
-/** R658: the Plague Chalice warning, `true` or absent like the glow beside it. */
+/** R659: the Plague Chalice warning, `true` or absent like the glow beside it. */
 function withCounterWarning<T extends CardView>(view: T, countered: boolean): T {
   return countered ? { ...view, counteredOnPlay: true } : view;
 }
@@ -570,7 +570,7 @@ function reservedMask(state: GameState, player: PlayerId): { units: boolean[]; b
 function sideView(state: GameState, player: PlayerId, viewer: PlayerId): SideView {
   const side: PlayerState = state.players[player];
   const powers = heroPowersOf(state, player);
-  // R658: asked only for the viewer's own hand, the one hand a warning may ride.
+  // R659: asked only for the viewer's own hand, the one hand a warning may ride.
   const countered = player === viewer ? counteredHandCards(state, viewer) : new Set<string>();
   return {
     player,

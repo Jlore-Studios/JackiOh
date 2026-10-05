@@ -386,6 +386,24 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     }
   });
 
+  it("R366 patch v0.2.12 takes Craft a Card's Radiant draw off and moves Plague Chalice's loc between v0.2.11 and v0.2.12", () => {
+    const before = readSnapshot("v0.2.11");
+    // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
+    const shipped = readPatches().some((patch) => patch.version === "v0.2.12");
+    const after = shipped ? (readSnapshot("v0.2.12") as unknown as typeof CATALOG) : CATALOG;
+    const changed = Object.entries(after)
+      .filter(([id, card]) => JSON.stringify(before[id]) !== JSON.stringify(card))
+      .map(([id]) => id);
+    expect(changed.sort()).toEqual(["classic-087", "core-099"]);
+    // Craft a Card: the Radiant face keeps its three Discovers and loses "Draw 1"; the base face is as it was.
+    const craftBefore = before["core-099"] as unknown as CardDef;
+    expect(after["core-099"]?.radiant.text).toBe("Discover 3 Units. Fuse them and add the result to your hand. It costs (0).");
+    expect(after["core-099"]?.base).toEqual(craftBefore.base);
+    // Plague Chalice moves only its script's loc (R659's `wouldCounter`).
+    const chaliceBefore = before["classic-087"] as unknown as CardDef;
+    expect({ ...(after["classic-087"] as unknown as CardDef), loc: chaliceBefore.loc }).toEqual(chaliceBefore);
+  });
+
   it("R366 patch v0.2.4 no printed face uses any word the vocabulary table retired", () => {
     const wrong = swept.filter((face) =>
       failures(face).some(

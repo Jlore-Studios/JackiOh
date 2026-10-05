@@ -4010,12 +4010,23 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(657, "playChoices.test.ts", "../../cards/test/063-plastic-surgery.test.ts");
   });
 
-  // Proved by counterWarning.test.ts "R658 …" (fixture counters: who is warned, never a Trap, a hand
-  // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
-  // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
-  it("R658 a hand card the field would counter at every price carries a warning on its own seat", () => {
+  // Proved by apps/web test/ux/drag-continue.test.tsx "R658 …" (a second drag from a pick, a backrow
+  // card dropped on the board, a prompt option dragged out of its panel) and test/ux/drag-model.test.ts
+  // "R658 …" (the plans and the drops).
+  it("R658 drags a second choice from its picks, a backrow card onto the board, and a prompt's options", () => {
     provenIn(
       658,
+      "../../../apps/web/src/test/ux/drag-continue.test.tsx",
+      "../../../apps/web/src/test/ux/drag-model.test.ts",
+    );
+  });
+
+  // Proved by counterWarning.test.ts "R659 …" (fixture counters: who is warned, never a Trap, a hand
+  // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
+  // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
+  it("R659 a hand card the field would counter at every price carries a warning on its own seat", () => {
+    provenIn(
+      659,
       "counterWarning.test.ts",
       "../../cards/test/classic/087-plague-chalice.test.ts",
       "../../../apps/web/src/game/countered.test.tsx",

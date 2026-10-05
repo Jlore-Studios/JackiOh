@@ -94,13 +94,15 @@ src/
                         docked clear of the field
     glow.ts             data-glow / data-condition-active helpers: green from
                         Highlight.glow, yellow from the view's conditionActive; and
-                        data-countered-on-play, R658's Plague Chalice warning from the view's
+                        data-countered-on-play, R659's Plague Chalice warning from the view's
                         counteredOnPlay
     highlights.css      the green and yellow glow colours, imported after board.css
-    countered.css       R658: the warning's green bubbling film and badge, still under reduced motion
+    countered.css       R659: the warning's green bubbling film and badge, still under reduced motion
     drag/               drag to play: pointer events for mouse and touch, the targeting
                         arrow and reticle, and a dropped card held where it landed until
-                        the board shows the play; click-click keeps working in every mode
+                        the board shows the play; a build lifted again from its picks, a
+                        backrow card dropped on the board, a prompt option dragged out of its
+                        panel (R658, OptionDrag.tsx); click-click keeps working in every mode
   audio/                sound (SPEC §10.11); index.ts is the barrel Game.tsx imports, appAudio.ts
                         the page-wide unlock and UI ticks main.tsx holds, mix.ts the buses and limiter
     engine.ts sfx.ts unlock.ts settings.ts   lazy AudioContext and buses, procedural SFX, gesture unlock, the settings store

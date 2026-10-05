@@ -94,7 +94,7 @@ export const CRAFTED_CARD_COST = 0;
  * below cannot combine them and each is handled on its own: `cost` is dropped, because R77 fixes
  * the fused cost at min(sum, 4); `setStat` is summed like every other stat R77 sums; and
  * `conditionMet`, R195's yellow glow, answers a boolean, so the ingredients' hooks are or-ed
- * (R196); `tributeWhen` and `wouldCounter` (R403, R658) are or-ed the same way. A new member of
+ * (R196); `tributeWhen` and `wouldCounter` (R403, R659) are or-ed the same way. A new member of
  * `Script` that returns something other than a list belongs in this set:
  * left to `combineValues`, two such hooks become one that returns an array of their answers.
  * (`preview`, R280, returns a list, but of numbers rather than effects: it is one of `EAGER_KEYS`.)
@@ -110,7 +110,7 @@ const CONDITION_MET_KEY = "conditionMet";
 const TRIBUTE_WHEN_KEY = "tributeWhen";
 /** R471: a placement multiplier answers a number, so the ingredients' multipliers multiply. */
 const PLAGUE_MULTIPLIER_KEY = "plagueMultiplier";
-/** Classic #87 (R658): a fusion would counter a play when any ingredient's counter would. */
+/** Classic #87 (R659): a fusion would counter a play when any ingredient's counter would. */
 const WOULD_COUNTER_KEY = "wouldCounter";
 
 /** The script keys whose entries carry an `id` that has to stay unique across the ingredients. */
@@ -836,7 +836,7 @@ function fusedTributeWhen(scripts: readonly Script[]): Script["tributeWhen"] | u
   return (args) => hooks.some((hook) => hook(args));
 }
 
-/** R658, R102: a fusion carries every ingredient's counter trigger, so it would counter what any of them would. */
+/** R659, R102: a fusion carries every ingredient's counter trigger, so it would counter what any of them would. */
 function fusedWouldCounter(scripts: readonly Script[]): Script["wouldCounter"] | undefined {
   const hooks = scripts.flatMap((script) => (script.wouldCounter === undefined ? [] : [script.wouldCounter]));
   if (hooks.length <= 1) return hooks[0];

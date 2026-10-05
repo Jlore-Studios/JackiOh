@@ -25,7 +25,7 @@
 // the field) wears an Activate control per ability (ActivateControl.tsx), a sibling of the face like
 // the switch, which reports `{ on: "activate" }` and stops its click reaching the card.
 //
-// R658: the viewer's own hand card the engine marks `counteredOnPlay` (Classic #87 Plague Chalice
+// R659: the viewer's own hand card the engine marks `counteredOnPlay` (Classic #87 Plague Chalice
 // would counter it) wears a green, bubbling warning film and says why in its tooltip and inspect note.
 //
 // R437: a card whose view lists marks (#50 K-Pop Fanatic's pending steal) wears them, on a unit and
@@ -368,7 +368,7 @@ export default function Card(props: CardProps): ReactElement {
       // animations.css keeps a fired Field Trap on the board with its own flip (trapFired).
       data-field-trap={cardType === "Field Trap" ? "true" : undefined}
       data-condition-active={conditionAttr(card)}
-      // R658: the engine says a card on the field would counter this hand card if played now.
+      // R659: the engine says a card on the field would counter this hand card if played now.
       data-countered-on-play={counteredAttr(card)}
       data-owner={props.owner ?? unit?.owner}
       data-controller={props.controller ?? unit?.controller}
@@ -397,7 +397,7 @@ export default function Card(props: CardProps): ReactElement {
           face has `pointer-events: none`. */}
       <CardMarks marks={marks} instanceId={card.instanceId} />
       {card.counteredOnPlay === true && (
-        // R658: a green, bubbling "don't play this" over the face, by shape (bubbles and a crossed
+        // R659: a green, bubbling "don't play this" over the face, by shape (bubbles and a crossed
         // cup) as well as colour, with the words in a tooltip, the inspect note and for a screen
         // reader. The film takes no pointer, and a click or drag on the badge still reaches the card
         // it sits in; under reduced motion it holds still as a plain green tint (countered.css).

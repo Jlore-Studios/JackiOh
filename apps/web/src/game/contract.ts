@@ -47,7 +47,7 @@ export const testid = {
   switchPosition: (instanceId: string): string => `switch-${instanceId}`,
   /** R371: the "Face down" tag on the viewer's own face-down trap. */
   unrevealed: (instanceId: string): string => `unrevealed-${instanceId}`,
-  /** R658: the Plague Chalice warning on the viewer's own hand card. */
+  /** R659: the Plague Chalice warning on the viewer's own hand card. */
   countered: (instanceId: string): string => `countered-${instanceId}`,
   endTurn: "end-turn",
   offerDraw: "offer-draw",
