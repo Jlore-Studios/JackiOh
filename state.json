@@ -2124,6 +2124,7 @@
         "by": "`muse` (medium), `cognition` (weak)",
         "sha": "408355446f46df30d7dabf8ef01ad348491b00d6"
       },
+      "closed_at": "2026-10-05T02:55:54Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
@@ -2134,6 +2135,7 @@
       "issue": 218,
       "kind": "review",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "devin",
       "question": "",
