@@ -2230,6 +2230,7 @@
       "ci_reruns": {
         "e0742c2b29d258a0bd3065cdf0ee052f7554202f": 1
       },
+      "died": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-04T19:45:39Z",
@@ -2237,7 +2238,7 @@
       "kind": "review",
       "pending_request": false,
       "provider": "muse",
-      "queued_at": "2026-10-04T20:12:38Z",
+      "queued_at": "2026-10-05T02:57:40Z",
       "run_id": "37233969742",
       "self_check_findings": [],
       "started_at": "2026-10-04T21:01:42Z",
