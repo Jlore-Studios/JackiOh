@@ -4003,6 +4003,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(656, "effects-cast.test.ts");
   });
 
+  // Proved by engine animated.test.ts "R657 …" (a stat-less Animated card animates to 0/1, printed or
+  // granted, on either face).
+  it("R657 an Animated card with no printed stats fights as a 0/1", () => {
+    provenIn(657, "animated.test.ts");
+  });
+
   // Proved by apps/web test/ux/drag-continue.test.tsx "R658 …" (a second drag from a pick, a backrow
   // card dropped on the board, a prompt option dragged out of its panel) and test/ux/drag-model.test.ts
   // "R658 …" (the plans and the drops).
@@ -4014,11 +4020,26 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
-  // Proved by apps/web fx/entrances.test.ts "R660 …": the marquee cards are Legendary or Mythic
+  // Proved by packages/cards/test/flavour.test.ts "R660 …" (the sidecar's keys, coverage, fields and
+  // caps), apps/web cards/flavour.test.tsx "R660 …" (no rules words; the preview, the sheet and the
+  // detail show it, the face and an unnamed card never), routes/almanac.test.tsx "R660 …" (the
+  // Almanac's detail), and cards/art/convention.test.ts "R660 …" (the art directory and the manifest
+  // against the convention, and each refusal).
+  it("R660 flavour and artist credits are a sidecar shown in inspect, and real art meets one file convention", () => {
+    provenIn(
+      660,
+      "../../cards/test/flavour.test.ts",
+      "../../../apps/web/src/cards/flavour.test.tsx",
+      "../../../apps/web/src/routes/almanac.test.tsx",
+      "../../../apps/web/src/cards/art/convention.test.ts",
+    );
+  });
+
+  // Proved by apps/web fx/entrances.test.ts "R670 …": the marquee cards are Legendary or Mythic
   // Units, each plays its own entrance in place of the rarity's on both seats, never for a hidden
   // summon or a backrow set, paces nothing and stays inside R200's bounds.
-  it("R660 gives a few marquee Legendary and Mythic Units an entrance of their own that paces nothing", () => {
-    provenIn(660, "../../../apps/web/src/fx/entrances.test.ts");
+  it("R670 gives a few marquee Legendary and Mythic Units an entrance of their own that paces nothing", () => {
+    provenIn(670, "../../../apps/web/src/fx/entrances.test.ts");
   });
 });
 

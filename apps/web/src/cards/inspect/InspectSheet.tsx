@@ -6,7 +6,8 @@
 //
 // Patch v0.2.0 (SPEC §10.8): the face's states in words (StateNotes.tsx: the tuned ribbon R386,
 // Brittle R385, enchantments E39, standing as a Unit R383) and its lines of code (E36) stand with the
-// printed text and the glossary, in the column beside the face (inspect.css).
+// printed text and the glossary, in the column beside the face (inspect.css), with the card's flavour
+// line and artist credit (R660, Flavour.tsx) after the glossary.
 
 import { useRef } from "react";
 import type { ReactElement } from "react";
@@ -14,6 +15,7 @@ import { createPortal } from "react-dom";
 import { CardFace } from "../CardFace.tsx";
 import type { FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
+import { Flavour } from "./Flavour.tsx";
 import { Glossary } from "./Glossary.tsx";
 import { InspectNote } from "./InspectNote.tsx";
 import { Printed } from "./Printed.tsx";
@@ -50,6 +52,7 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
             <Printed face={face} />
           </RefsInteractive>
           <Glossary entries={glossaryFor(face)} />
+          {face.known ? <Flavour defId={face.defId} /> : null}
           <LocLine face={face} />
         </div>
         <button

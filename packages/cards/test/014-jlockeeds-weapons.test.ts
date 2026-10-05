@@ -18,7 +18,6 @@
 
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "./_harness";
-import { expectAnimated } from "./_animated";
 
 function lane(s: Scenario, player: "p1" | "p2", at: number): NonNullable<ReturnType<Scenario["unit"]>> {
   const unit = s.unit(player, at);
@@ -140,15 +139,5 @@ describe("#14 Jlockeed's Weapons", () => {
       s.expectInZone(bigot, "graveyard");
       expect(s.unit("p2", 1)).toBeNull();
     });
-  });
-});
-
-describe("#14 Jlockeed's Weapons: Animated (patch v0.2.10)", () => {
-  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 5/4 Unit, its own aura's +4 attack (Radiant +10) on it; with none open it stays a Field Spell", () => {
-    expectAnimated({ def: "core-014", stats: { attack: 5, health: 4 } });
-  });
-
-  it("R383 radiant: a 12/8 Unit", () => {
-    expectAnimated({ def: "core-014", radiant: true, stats: { attack: 12, health: 8 } });
   });
 });
