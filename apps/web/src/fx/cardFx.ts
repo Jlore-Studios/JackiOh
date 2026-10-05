@@ -210,7 +210,6 @@ export const CARD_FX: Readonly<Record<string, CardFxKey>> = {
   "core-100": "voidCollapse", // #100 Ceaseless Void (Mythic)
   "classic-080": "bigBoom", // BOOM! Big Max
   "classic-045": "titanBloom", // Nature Titan
-  "classic-061": "plagueStomp", // Plague Bringer Goliath
   "classic-056": "tyrantSigil", // Spell Tyrant
 };
 
