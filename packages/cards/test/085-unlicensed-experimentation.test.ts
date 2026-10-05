@@ -27,10 +27,14 @@
 //   #15 Me and Mr Tok 1, 1/1, Cry: summon a Rush Token — the R17 timing probe
 //   #8  Mr. Vanilla   1, 3/3, Immutable, no Cry
 
+//
+// R662's yellow glow (`conditionMet`): on its controller's field while they control a permanent other
+// than the trap that is not Immutable, both faces, checked against the opponent's play, at the end.
 import { describe, expect, it } from "vitest";
 import type { CardInstance } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
 import { scenario, type Scenario } from "./_harness";
+import { backrowGlows, opponentSeesGlow } from "./_glow";
 
 const TRAP = "core-085"; // Trap, 1, Legendary
 const TIMMY = "core-011"; // Unit, 1 — 3/3 Rush, First Strike
@@ -349,4 +353,56 @@ describe("#85 Unlicensed Experimentation — radiant", () => {
     s.expectStats(vanilla, { attack: 18, maxHealth: 18 });
     s.expectStats(timmy, { attack: 10, maxHealth: 10 });
   });
+});
+
+describe("#85 Unlicensed Experimentation glows while a Fuse has somewhere to land (R662)", () => {
+  const VANILLA = "core-008"; // Mr. Vanilla, a 1-cost Unit
+  const MENACE = "core-019"; // Midrange Menace; its Radiant face is Immutable
+
+  for (const radiant of [false, true]) {
+    const face = radiant ? "radiant" : "base";
+
+    it(`R662 ${face}: with a Unit of its controller's it glows for them only, and the opponent's Unit is fused onto it`, () => {
+      const s = scenario({
+        seed: `r662-085-${face}-on`,
+        active: "p2",
+        p1: { backrow: [{ def: "core-085", radiant }], field: [VANILLA] },
+        p2: { hand: [VANILLA, "core-010"] },
+      });
+      expect(backrowGlows(s, 1)).toBe(true);
+      expect(opponentSeesGlow(s, 1)).toBe(false);
+
+      s.play(VANILLA);
+      expect(s.events.some((event) => event.type === "trapFired")).toBe(true);
+      expect(s.unit("p2", 1)).toBeNull();
+    });
+
+    it(`R662 ${face}: alone on its side it does not glow, and the opponent's Unit stays theirs`, () => {
+      const s = scenario({
+        seed: `r662-085-${face}-off`,
+        active: "p2",
+        p1: { backrow: [{ def: "core-085", radiant }] },
+        p2: { hand: [VANILLA, "core-010"] },
+      });
+      expect(backrowGlows(s, 1)).toBe(false);
+
+      s.play(VANILLA);
+      expect(s.events.some((event) => event.type === "trapFired")).toBe(false);
+      expect(s.unit("p2", 1)?.defId).toBe(VANILLA);
+    });
+
+    it(`R662 ${face}: an Immutable permanent alone takes no Fuse (R23), so it does not glow`, () => {
+      const s = scenario({
+        seed: `r662-085-${face}-immutable`,
+        active: "p2",
+        p1: { backrow: [{ def: "core-085", radiant }], field: [{ def: MENACE, radiant: true }] },
+        p2: { hand: [VANILLA, "core-010"] },
+      });
+      expect(backrowGlows(s, 1)).toBe(false);
+
+      // R61: it still fires and is consumed, and the Unit stays where it landed.
+      s.play(VANILLA);
+      expect(s.unit("p2", 1)?.defId).toBe(VANILLA);
+    });
+  }
 });

@@ -25,6 +25,7 @@ import type { FxDescriptor } from "../fx/types.ts";
 import { getFxSettings, normalizeSpeed, type FxSettings } from "../fx/settings.ts";
 import { readSettings as readPanelSettings } from "../settings/store.ts";
 import { type AnimatingMap, type Side, sideOf, testid } from "./contract";
+import { createPlayTracker, pileOf, pileRunAt, sweepAt, type Pile, type PlayTracker, type Sweep, type ZoneImpact } from "./runs.ts";
 
 /* ------------------------------------------------------------------------------------------- *
  * Testids this table needs that `contract.ts` does not define
@@ -763,8 +764,25 @@ export function targetFor(event: GameEvent, view: PlayerView): string | null {
  * ------------------------------------------------------------------------------------------- */
 
 /**
- * One unit of motion. Usually one event; two only for the collapsed `cardPlayed` + `summoned`
- * pair, which BUILD M5-T4 requires the client to play "as one motion".
+ * Issue #124: how long a cast holds the board (a card another card cast, `runs.ts`), long enough for
+ * the showcase to put the cast card up and the player to read it, where a play is 400 ms. Each cast
+ * also gets a burst budget of its own (`CAST_BUDGET_MS`, the cast and what it does), so ten casts in one action
+ * (C+ #47 Jogg's Box) play one after another at a pace that can be followed, instead of seventy
+ * entries squeezed into one `BURST_BUDGET_MS`.
+ */
+export const CAST_ENTRY_MS = 800;
+export const CAST_BUDGET_MS = 2200;
+/** Issue #124: a run of events that reached a whole Deck, Graveyard or Exile, played once. */
+export const ZONE_IMPACT_MS = 700;
+/** Issue #124: a run of hits or heals that swept a whole side, played as one roll of fog. */
+export const SWEEP_MS = 600;
+
+/**
+ * One unit of motion. Usually one event; two for the collapsed `cardPlayed` + `summoned` pair, which
+ * BUILD M5-T4 requires the client to play "as one motion". Issue #124 adds three more shapes, each
+ * marked so the effects layer, the showcase and the sound director can tell (`runs.ts`): a cast, with
+ * the `cardAnnounced` before it; a whole-pile impact, every event of the run; and a sweep, every hit
+ * or heal of the run at once.
  */
 export type AnimationEntry = {
   events: readonly GameEvent[];
@@ -780,7 +798,28 @@ export type AnimationEntry = {
   frames: ReadonlyMap<string, GameEventType>;
   /** The view this entry was planned against: the board as it stood before its events. */
   view: PlayerView;
+  /**
+   * A card another card cast (§6.3 Cast): its `cardPlayed` and the announce before it. `by` is the
+   * casting card's definition (R97's sentinel when the view hides it) and `ordinal` which of its
+   * casts this is, 1 on.
+   */
+  cast?: { by: string; ordinal: number };
+  /** A run of events that reached every card of one pile, played once on that pile. */
+  zone?: ZoneImpact;
+  /** A run of hits or heals that reached every unit of a side, played at once. */
+  sweep?: Sweep;
 };
+
+/** The pile element that stands in for a card the board does not draw (a library card, a graveyard card). */
+export function pileTestid(pile: Pile): string {
+  if (pile.pile === "library") return animTestid.library(pile.side);
+  return pile.pile === "graveyard" ? animTestid.graveyard(pile.side) : animTestid.exile(pile.side);
+}
+
+/** Entries the burst budget never squeezes: each stands for many events, or holds a cast up to be read. */
+function pinned(entry: AnimationEntry): boolean {
+  return entry.cast !== undefined || entry.zone !== undefined || entry.sweep !== undefined;
+}
 
 function frameMap(entries: readonly (readonly [string | null, GameEventType])[]): Map<string, GameEventType> {
   const map = new Map<string, GameEventType>();
@@ -800,42 +839,152 @@ function isSummonOfPlay(played: GameEvent, next: GameEvent | undefined): boolean
   );
 }
 
+/** The two ids name the same card, R97's sentinel naming any. */
+function sameCard(a: string, b: string): boolean {
+  return a === b || a === HIDDEN_ID || b === HIDDEN_ID;
+}
+
+/**
+ * Where an event plays: its row's element, else, for a card the board does not draw (a library card a
+ * Degrade reached, a card in a graveyard), the pile it lies in (`runs.ts`).
+ */
+function frameFor(event: GameEvent, view: PlayerView, plays: PlayTracker): string | null {
+  const own = targetFor(event, view);
+  if (own !== null) return own;
+  const pile = pileOf(event, view, plays.current());
+  return pile === null ? null : pileTestid(pile);
+}
+
+/**
+ * What a cast's events mark: the zone a cast Unit lands in, and the cast card itself only where the
+ * board draws it (a card cast out of the viewer's hand). Never the hand region: the card did not come
+ * from a hand, and lifting one for each of ten casts would say it did.
+ */
+function castFrame(event: GameEvent, view: PlayerView): string | null {
+  if (event.type === "summoned") return targetFor(event, view);
+  return event.type === "cardPlayed" ? locateInstance(view, event.instanceId) : null;
+}
+
 /**
  * Turns an event stream into entries, collapsing each `cardPlayed` + `summoned` pair and reading
  * every duration through `durationFor`, so `reducedMotion` zeroes all of them.
+ *
+ * Issue #124 (`runs.ts`): a sweep plays as one entry, a run that reached a whole pile as one entry on
+ * that pile, and a cast as one entry with its announce, held for `CAST_ENTRY_MS`. `plays` remembers the
+ * plays still resolving from one batch to the next; the runner keeps one for its whole life, and a
+ * caller without one gets a fresh tracker, which reads casts inside this batch alone.
  */
 export function planEntries(
   events: readonly GameEvent[],
   view: PlayerView,
   reducedMotion: boolean,
+  plays: PlayTracker = createPlayTracker(),
 ): AnimationEntry[] {
   const out: AnimationEntry[] = [];
-  for (let i = 0; i < events.length; i += 1) {
+  const timed = (ms: number): number => (reducedMotion ? 0 : ms);
+  const take = (from: number, length: number): GameEvent[] => {
+    const run = events.slice(from, from + length);
+    for (const event of run) plays.see(event);
+    return run;
+  };
+  let i = 0;
+  while (i < events.length) {
     const event = events[i];
-    if (event === undefined) continue;
+    if (event === undefined) {
+      i += 1;
+      continue;
+    }
+
+    // A sweep: every hit (or heal) of the run lands at once, under one roll of fog.
+    const sweep = sweepAt(events, i, view);
+    if (sweep !== null) {
+      const run = take(i, sweep.length);
+      out.push({
+        events: run,
+        type: event.type,
+        durationMs: timed(SWEEP_MS),
+        frames: frameMap(run.map((e) => [targetFor(e, view), e.type] as const)),
+        view,
+        sweep: sweep.sweep,
+      });
+      i += sweep.length;
+      continue;
+    }
+
+    // A run that reached every card of one pile: one "affecting this zone" entry on that pile.
+    const pileRun = pileRunAt(events, i, view, plays.current());
+    if (pileRun !== null && pileRun.whole) {
+      const run = take(i, pileRun.length);
+      out.push({
+        events: run,
+        type: event.type,
+        durationMs: timed(ZONE_IMPACT_MS),
+        frames: frameMap([[pileTestid(pileRun.pile), event.type]]),
+        view,
+        zone: { ...pileRun.pile, count: pileRun.count, events: pileRun.length },
+      });
+      i += pileRun.length;
+      continue;
+    }
+
+    // A cast: its announce, its `cardPlayed` and, for a Unit, the `summoned` that lands it. A cast card
+    // comes from no hand the board draws (or from a pile), so only a card the board does draw marks.
+    const played = event.type === "cardAnnounced" ? events[i + 1] : event;
+    const casting =
+      played?.type === "cardPlayed" &&
+      played.costPaid === 0 &&
+      plays.current() !== undefined &&
+      (event.type === "cardPlayed" || (event.type === "cardAnnounced" && sameCard(event.instanceId, played.instanceId)));
+    if (casting && played.type === "cardPlayed") {
+      const at = event === played ? i : i + 1;
+      const landed = events[at + 1];
+      const length = at - i + 1 + (isSummonOfPlay(played, landed) ? 1 : 0);
+      const run = events.slice(i, i + length);
+      let cast: { by: string; ordinal: number } | null = null;
+      for (const seen of run) {
+        const made = plays.see(seen);
+        if (made !== null) cast = { by: made.by.defId, ordinal: made.ordinal };
+      }
+      out.push({
+        events: run,
+        type: "cardPlayed",
+        durationMs: timed(CAST_ENTRY_MS),
+        frames: frameMap(run.map((e) => [castFrame(e, view), e.type] as const)),
+        view,
+        cast: cast ?? { by: HIDDEN_ID, ordinal: 1 },
+      });
+      i += length;
+      continue;
+    }
+
     const next = events[i + 1];
     if (isSummonOfPlay(event, next) && next !== undefined) {
+      const frames = frameMap([
+        [frameFor(event, view, plays), event.type],
+        [frameFor(next, view, plays), next.type],
+      ]);
+      take(i, 2);
       out.push({
         events: [event, next],
         type: event.type,
         // The pair's duration is the `cardPlayed` duration: one motion, one span of time.
         durationMs: durationFor(event.type, reducedMotion),
-        frames: frameMap([
-          [targetFor(event, view), event.type],
-          [targetFor(next, view), next.type],
-        ]),
+        frames,
         view,
       });
-      i += 1;
+      i += 2;
       continue;
     }
+    const frames = frameMap([[frameFor(event, view, plays), event.type]]);
+    take(i, 1);
     out.push({
       events: [event],
       type: event.type,
       durationMs: durationFor(event.type, reducedMotion),
-      frames: frameMap([[targetFor(event, view), event.type]]),
+      frames,
       view,
     });
+    i += 1;
   }
   return out;
 }
@@ -891,6 +1040,8 @@ export type AnimationQueueOptions = {
   onSettled?: () => void;
   /** Overrides for the burst budget below; the defaults are what the client ships with. */
   burstBudgetMs?: number;
+  /** A cast's own segment of the budget (issue #124, `CAST_BUDGET_MS`). */
+  castBudgetMs?: number;
   minEntryMs?: number;
   /** Read at every enqueue (R201). Defaults to `getFxSettings`. */
   settings?: () => Pick<FxSettings, "speed" | "motion">;
@@ -1039,6 +1190,7 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
   const readSettings = options.settings ?? getFxSettings;
   const onSettled = options.onSettled;
   const burstBudgetMs = options.burstBudgetMs ?? BURST_BUDGET_MS;
+  const castBudgetMs = options.castBudgetMs ?? CAST_BUDGET_MS;
   const minEntryMs = options.minEntryMs ?? MIN_ENTRY_MS;
   // `options.now` is accepted for parity with the client's other injected clocks and is
   // deliberately unread: `schedule` owns every deadline, so the runner keeps no timestamps and
@@ -1046,6 +1198,8 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
 
   const queue: AnimationEntry[] = [];
   let current: AnimationEntry | null = null;
+  /** The plays still resolving, across batches (issue #124): a cast can come in the batch after a prompt. */
+  const plays = createPlayTracker();
   /** Bumped by `drain`/`reset` so a timer already in flight cannot resurrect a cleared queue. */
   let epoch = 0;
   let owed = false;
@@ -1068,16 +1222,48 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
     return true;
   }
 
-  /** Squeeze what is still waiting so the whole backlog fits the burst budget. See the note above. */
-  function fitBudget(budgetMs: number): void {
-    const total = queue.reduce((sum, entry) => sum + entry.durationMs, 0);
-    if (total <= budgetMs) return;
-    const factor = budgetMs / total;
-    for (let i = 0; i < queue.length; i += 1) {
+  /**
+   * Squeezes `queue[from..to)` so its entries fit `budgetMs`. A pinned entry (a cast, a whole-pile
+   * impact, a sweep) keeps its time and takes it out of the budget first.
+   */
+  function squeeze(from: number, to: number, budgetMs: number): void {
+    let fixed = 0;
+    let total = 0;
+    for (let i = from; i < to; i += 1) {
       const entry = queue[i];
-      if (entry === undefined || entry.durationMs <= 0) continue;
+      if (entry === undefined) continue;
+      if (pinned(entry)) fixed += entry.durationMs;
+      else total += entry.durationMs;
+    }
+    const room = Math.max(0, budgetMs - fixed);
+    if (total <= room) return;
+    const factor = room / total;
+    for (let i = from; i < to; i += 1) {
+      const entry = queue[i];
+      if (entry === undefined || entry.durationMs <= 0 || pinned(entry)) continue;
       queue[i] = { ...entry, durationMs: Math.max(minEntryMs, Math.round(entry.durationMs * factor)) };
     }
+  }
+
+  /**
+   * Squeeze what is still waiting so the backlog fits the burst budget. See the note above. Issue
+   * #124: each cast starts a segment of its own, the cast and what it does, with `castBudgetMs`, so a
+   * card that casts ten cards plays ten followable beats rather than one blur; what comes before the
+   * first cast waiting (or all of it, with none) keeps `budgetMs`, or what is left of the cast's own
+   * segment when a cast is in flight.
+   */
+  function fitBudget(budgetMs: number, castBudgetMs: number): void {
+    let start = 0;
+    let budget = budgetMs;
+    if (queue[0]?.cast !== undefined) budget = castBudgetMs;
+    else if (current?.cast !== undefined) budget = Math.max(0, castBudgetMs - current.durationMs);
+    for (let k = 0; k < queue.length; k += 1) {
+      if (queue[k]?.cast === undefined || k === start) continue;
+      squeeze(start, k, budget);
+      start = k;
+      budget = castBudgetMs;
+    }
+    squeeze(start, queue.length, budget);
   }
 
   function pump(): void {
@@ -1113,13 +1299,14 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
       // Read live, so a change in the settings panel applies from the next action on (R201).
       const settings = readSettings();
       const reduced = reducedMotion || settings.motion === "reduce" || readPanelSettings().reduceMotion;
-      const entries = planEntries(events, view, reduced).map((entry) => {
+      const entries = planEntries(events, view, reduced, plays).map((entry) => {
         const durationMs = scaleForSpeed(entry.durationMs, settings.speed);
         return durationMs === entry.durationMs ? entry : { ...entry, durationMs };
       });
       if (entries.length > 0) queue.push(...entries);
       owed = true;
-      fitBudget(burstBudgetMs / normalizeSpeed(settings.speed));
+      const speed = normalizeSpeed(settings.speed);
+      fitBudget(burstBudgetMs / speed, castBudgetMs / speed);
       pump();
     },
     animating() {
@@ -1148,6 +1335,7 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
       queue.length = 0;
       current = null;
       owed = false;
+      plays.clear();
       notify();
       signal({ kind: "reset" });
     },

@@ -1418,6 +1418,260 @@
   text-shadow: 0 0 10px color-mix(in srgb, var(--fx-gold) 70%, transparent);
 }
 
+/* ------------------------------------------- fog: a sweep rolls over a row (issue #124) --- */
+
+/* A bank of cloud rolls left to right over the whole row of units a sweep reached, in the colours of
+   what cast it (`--fx-tint-*`, a family's palette, fx/looks.ts), with that family's emblem (or a flame
+   for hits, a heart for heals) drifting up through it. The bank, its puffs and its icons move by
+   transform and opacity alone; each puff and icon starts a little after the one to its left, so the
+   fog reaches the lanes one after another, as the planner lands the hits (cues.ts `sweepCues`). */
+
+@keyframes fx-fog-roll {
+  0% {
+    transform: translateX(-30%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(20%);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-fog-puff {
+  0% {
+    transform: translateX(-40%) scale(0.6);
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateX(35%) scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-fog-icon {
+  0% {
+    transform: translateY(45%) scale(0.3) rotate(-25deg);
+    opacity: 0;
+  }
+  35% {
+    transform: translateY(0) scale(1.1) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-70%) scale(0.85) rotate(18deg);
+    opacity: 0;
+  }
+}
+
+.fx-fog {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: var(--fx-w);
+  height: var(--fx-h);
+  z-index: 2;
+  border-radius: 45% / 50%;
+  background: radial-gradient(
+    ellipse 65% 75% at 50% 55%,
+    color-mix(in srgb, var(--fx-tint-glow) 40%, transparent) 0%,
+    color-mix(in srgb, var(--fx-tint-glow) 14%, transparent) 55%,
+    transparent 78%
+  );
+  animation: fx-fog-roll var(--fx-ms) cubic-bezier(0.3, 0.1, 0.3, 1) both;
+}
+
+.fx-fog-puff {
+  position: absolute;
+  top: 8%;
+  left: calc(var(--fx-puff) / var(--fx-puffs) * 88%);
+  width: 34%;
+  height: 84%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--fx-tint-core) 70%, transparent) 0%,
+    color-mix(in srgb, var(--fx-tint-glow) 45%, transparent) 55%,
+    transparent 100%
+  );
+  animation: fx-fog-puff calc(var(--fx-ms) * 0.7) ease-out calc(var(--fx-ms) * var(--fx-puff) / var(--fx-puffs) * 0.3) both;
+}
+
+.fx-fog-puff:nth-child(even) {
+  top: 22%;
+  height: 70%;
+}
+
+.fx-fog[data-tone="heal"] .fx-fog-puff {
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--fx-tint-core) 85%, white) 0%,
+    color-mix(in srgb, var(--fx-tint-glow) 40%, transparent) 60%,
+    transparent 100%
+  );
+}
+
+.fx-fog-icon {
+  position: absolute;
+  top: 34%;
+  left: calc((var(--fx-icon) + 0.25) / var(--fx-icons) * 100%);
+  width: auto;
+  height: 32%;
+  aspect-ratio: 1;
+  fill: var(--fx-tint-core);
+  stroke: var(--fx-tint-rim);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  animation: fx-fog-icon calc(var(--fx-ms) * 0.6) ease-out calc(var(--fx-ms) * (0.1 + var(--fx-icon) / var(--fx-icons) * 0.3)) both;
+}
+
+.fx-fog-icon:nth-of-type(even) {
+  top: 12%;
+}
+
+/* ---------------------------- zone: a whole Deck, Graveyard or Exile reached (issue #124) --- */
+
+/* One wave over the pile instead of one flash per card: the pile's box glows in the colour of what
+   happened to it, a band of light washes through it the way the change went (up for an Upgrade, down
+   for a Degrade, across otherwise), and the count it reached pops in its middle. The words ride in
+   `data-text` (fx/dom.ts). */
+
+@keyframes fx-zone-wave {
+  0% {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.12);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-zone-sweep-across {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes fx-zone-sweep-up {
+  from {
+    transform: translateY(120%);
+  }
+  to {
+    transform: translateY(-120%);
+  }
+}
+
+@keyframes fx-zone-sweep-down {
+  from {
+    transform: translateY(-120%);
+  }
+  to {
+    transform: translateY(120%);
+  }
+}
+
+@keyframes fx-zone-count {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+  35% {
+    transform: translate(-50%, -50%) scale(1.25);
+    opacity: 1;
+  }
+  55% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -85%) scale(1);
+    opacity: 0;
+  }
+}
+
+.fx-zone {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: var(--fx-w);
+  height: var(--fx-h);
+  z-index: 3;
+  overflow: hidden;
+  border-radius: var(--radius, 7px);
+  box-shadow:
+    inset 0 0 0 2px var(--fx-tint-rim),
+    inset 0 0 14px 3px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent),
+    0 0 18px 4px color-mix(in srgb, var(--fx-tint-glow) 65%, transparent);
+  animation: fx-zone-wave var(--fx-ms) ease-out both;
+}
+
+.fx-zone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--fx-tint-glow) 55%, transparent) 35%,
+    color-mix(in srgb, var(--fx-tint-core) 90%, white) 50%,
+    color-mix(in srgb, var(--fx-tint-glow) 55%, transparent) 65%,
+    transparent 100%
+  );
+  animation: fx-zone-sweep-across calc(var(--fx-ms) * 0.75) cubic-bezier(0.45, 0, 0.2, 1) both;
+}
+
+.fx-zone[data-direction="up"]::before,
+.fx-zone[data-direction="down"]::before {
+  background: linear-gradient(
+    0deg,
+    transparent 0%,
+    color-mix(in srgb, var(--fx-tint-glow) 55%, transparent) 35%,
+    color-mix(in srgb, var(--fx-tint-core) 90%, white) 50%,
+    color-mix(in srgb, var(--fx-tint-glow) 55%, transparent) 65%,
+    transparent 100%
+  );
+}
+
+.fx-zone[data-direction="up"]::before {
+  animation-name: fx-zone-sweep-up;
+}
+
+.fx-zone[data-direction="down"]::before {
+  animation-name: fx-zone-sweep-down;
+}
+
+.fx-zone::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  color: var(--fx-white, #fff);
+  font: 900 clamp(13px, 1.1em, 20px) / 1 ui-sans-serif, system-ui, sans-serif;
+  white-space: nowrap;
+  text-shadow:
+    0 0 6px var(--fx-tint-glow),
+    0 2px 3px rgb(0 0 0 / 0.8);
+  animation: fx-zone-count var(--fx-ms) ease-out both;
+}
+
 /* ------------------------------------------------------------------------ reduced motion --- */
 
 /* R200: under prefers-reduced-motion no effect is drawn at all. FxLayer already renders

@@ -8,8 +8,12 @@
 // X while the discount is live. R62's position for the delayed exile is proved by the event order:
 // the exile lands before `turnEnded`, which `turn.ts` emits immediately before cleanup.
 
+//
+// R662's yellow glow: the Radiant face's "Combo: draw 1" lights its controller's hand for the rest of
+// the turn (`condition.ts`); the base face lights nothing. Both at the end of this file.
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "./_harness";
+import { handGlows } from "./_glow";
 
 const FULLSEND = "core-078";
 
@@ -259,5 +263,28 @@ describe("#78 /fullsend — radiant", () => {
     expect(s.pile("p1", "exile").map((card) => card.defId).sort()).toEqual([...left].sort());
     expect(modsOf(s, "costDiscount")).toHaveLength(0);
     expect(modsOf(s, "comboDraw")).toHaveLength(0);
+  });
+});
+
+describe("#78 /fullsend's Radiant Combo draw lights the hand (R662)", () => {
+  it("R662 radiant: once it resolves the hand glows, and the next play draws 1", () => {
+    const s = board(true);
+    expect(handGlows(s, s.card(COST_0).id)).toBe(false);
+
+    s.play(FULLSEND);
+    expect(handGlows(s, s.card(COST_0).id)).toBe(true);
+    const before = s.hand("p1").length;
+    s.play(COST_0);
+    // Rapid Replenish leaves the hand and the Combo draw brings one in.
+    expect(s.hand("p1").length).toBe(before);
+  });
+
+  it("R662 base: the discount is no condition, so nothing glows and the next play draws nothing", () => {
+    const s = board(false);
+    s.play(FULLSEND);
+    expect(handGlows(s, s.card(COST_0).id)).toBe(false);
+    const before = s.hand("p1").length;
+    s.play(COST_0);
+    expect(s.hand("p1").length).toBe(before - 1);
   });
 });

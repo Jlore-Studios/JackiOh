@@ -12,7 +12,8 @@ import type { FxRng } from "./rng.ts";
 import { createSpriteCache, domSpriteCanvas, type SpriteCache } from "./sprites.ts";
 import type { FxBox, FxPreset, FxSpread } from "./types.ts";
 
-export type EmitOptions = { count: number; spread: FxSpread; box: FxBox; power: number };
+/** `scale` multiplies each particle's size (issue #124's variations on a preset); absent, 1. */
+export type EmitOptions = { count: number; spread: FxSpread; box: FxBox; power: number; scale?: number };
 
 export type ParticleSystem = {
   /** Emits at (x, y), or across `box` for "area" and around its ellipse for "ring". Returns how many. */
@@ -247,6 +248,7 @@ export function createParticleSystem(options: { capacity: number; rng: FxRng; sp
       const n = Math.min(emitOptions.count, cap);
       const spec = SPECS[p]!;
       const { power, spread, box } = emitOptions;
+      const sizeScale = emitOptions.scale ?? 1;
       const colorCount = spec.colors.length;
 
       for (let k = 0; k < n; k++) {
@@ -268,7 +270,7 @@ export function createParticleSystem(options: { capacity: number; rng: FxRng; sp
         pool.y[slot] = py;
         pool.vx[slot] = cos * speed;
         pool.vy[slot] = sin * speed;
-        pool.size[slot] = between(spec.size, rng());
+        pool.size[slot] = between(spec.size, rng()) * sizeScale;
         pool.life[slot] = between(spec.life, rng());
         pool.age[slot] = 0;
         pool.rot[slot] = rng() * TAU;
