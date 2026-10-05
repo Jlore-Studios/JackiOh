@@ -14,6 +14,7 @@ export const landingTestid = {
   playOnline: "landing-play-online",
   buildDecks: "landing-build-decks",
   fan: "landing-card-fan",
+  fanLeaving: "landing-fan-leaving",
   hotseat: "landing-hotseat",
   inviteOnly: "landing-invite-only",
   stats: "landing-stats",

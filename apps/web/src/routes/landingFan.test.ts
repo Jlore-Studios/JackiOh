@@ -14,6 +14,7 @@ import { faceModel } from "../cards/model.ts";
 import { FEATURE_WEIGHT_DENSE, FEATURE_WEIGHT_PLAIN } from "../stats/config.ts";
 import { seeded } from "../test/random.ts";
 import {
+  EVEN,
   FAN_FACES,
   FAN_POOL,
   FAN_RADIANT_AT,
@@ -190,5 +191,39 @@ describe("R639 one rotation step", () => {
       for (const { def } of hand) sets.add(def.set);
     }
     expect(sets).toEqual(new Set(["Core", "Classic", "Classic+"]));
+  });
+});
+
+describe("R704 swaps below the threshold", () => {
+  it("R704 a step among Core's cards keeps the rarities, repeats none, and reaches every card evenly", () => {
+    for (const seed of SEEDS) {
+      const hand = dealLandingFan(seeded(seed));
+      for (const slot of [0, 1, 2, 3]) {
+        const next = rotateFan(hand, slot, seeded(seed + 1000), FAN_POOL, EVEN);
+        expect(next, `seed ${String(seed)} slot ${String(slot)}`).toHaveLength(hand.length);
+        expect(next[slot]?.def.id).not.toBe(hand[slot]?.def.id);
+        expect(next[slot]?.def.rarity).toBe(hand[slot]?.def.rarity);
+        expect(next[slot]?.def.set).toBe("Core");
+        expect(next[slot]?.radiant).toBe(hand[slot]?.radiant);
+        expect(next.filter((_, at) => at !== slot)).toEqual(hand.filter((_, at) => at !== slot));
+        expect(new Set(next.map(({ def }) => def.id)).size).toBe(next.length);
+      }
+    }
+    // Evenly: every Core card of the slot's rarity arrives, about as often as every other.
+    const hand = dealLandingFan(seeded(5));
+    const rarity = hand[0]?.def.rarity;
+    const pool = FAN_POOL.filter((def) => def.rarity === rarity);
+    expect(pool.length).toBeGreaterThan(1);
+    const arrivals = new Map<string, number>();
+    const random = seeded(6);
+    let current = hand;
+    for (let step = 0; step < 20_000; step += 1) {
+      current = rotateFan(current, 0, random, FAN_POOL, EVEN);
+      const id = current[0]?.def.id;
+      if (id !== undefined) arrivals.set(id, (arrivals.get(id) ?? 0) + 1);
+    }
+    expect([...arrivals.keys()].sort()).toEqual(pool.map((def) => def.id).sort());
+    const counts = [...arrivals.values()];
+    expect(Math.max(...counts) / Math.min(...counts)).toBeLessThan(1.5);
   });
 });
