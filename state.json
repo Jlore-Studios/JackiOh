@@ -526,6 +526,12 @@
       "lines": [
         "/harness build try again. First get a model to rewrite the plan from main"
       ]
+    },
+    "c:5995295726": {
+      "at": "2026-10-05T13:20:19Z",
+      "lines": [
+        "/harness build rewrite the plan before starting"
+      ]
     }
   },
   "items": {
