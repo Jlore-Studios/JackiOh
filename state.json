@@ -1829,7 +1829,7 @@
       "pending_request": false,
       "provider": "devin",
       "question": "",
-      "queued_at": "2026-10-05T10:37:08Z",
+      "queued_at": "2026-10-05T11:21:57Z",
       "requested_by": "jgoetzmann",
       "run_id": "37296497879",
       "self_check_findings": [
@@ -1852,7 +1852,7 @@
           "where": "checks"
         }
       ],
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-10-05T10:28:00Z",
       "stop_requested": false,
       "taken_asks": [],
