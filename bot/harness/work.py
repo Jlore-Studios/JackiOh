@@ -52,6 +52,10 @@ BUILDER_DENY = ("WebFetch", "WebSearch") + NETWORK_DENY
 READER_DENY = BUILDER_DENY + ("Edit", "Write", "MultiEdit", "NotebookEdit", "Bash(git commit:*)")
 
 DIFF_IN_PROMPT = 60_000
+#: A call that fails sooner than this with nothing to show (no text) is the subscription's failure,
+#: not the item's: its CLI or login is broken (#317 part 1). Devin failed every call in seconds
+#: from 2026-10-05 07:30Z, and each one was charged to its item as a build or an unreadable review.
+INSTANT_FAILURE_S = 60
 #: The builder's running notes, at the top of the worktree. Git ignores it (`info/exclude`), so it
 #: is never committed; the harness reads it when the run ends and hands it to the next agent.
 NOTES_FILE = ".bot-notes.md"
@@ -274,6 +278,10 @@ class Worker:
                             result.reset_at)
         if result.infra:
             raise Interrupt(f"the {self.provider.cli} CLI could not run: {result.error}", "infra")
+        if (not result.ok and not result.timed_out and not (result.text or "").strip()
+                and result.duration_s < INSTANT_FAILURE_S):
+            raise Interrupt(f"the {self.provider.cli} CLI failed at once: "
+                            f"{result.error or 'it said nothing'}", "infra")
         return result
 
     def _usage_stop(self, usage: dict[str, Any]) -> str | None:
@@ -739,6 +747,8 @@ class Worker:
             review = verdicts.review(result.text)
             if review.readable:
                 break
+            if not result.ok:
+                review.error = redact(str(result.error or "it failed without an error"))[:2000]
             self.check()
         review.reviewed_sha = head
         return review
@@ -788,6 +798,7 @@ class Worker:
         """One builder session and its commit. Returns its report, or None when it stopped to
         ask a person (the run then ends as `blocked`), and the round's record."""
         assert self.wt is not None
+        before = self.wt.head()
         built = self.call(role, prompt, self.wt.cwd, reader=False)
         report = verdicts.build_report(built.text)
         entry: dict[str, Any] = {
@@ -797,6 +808,17 @@ class Worker:
                         "error": built.error, "timed_out": built.timed_out,
                         "model": self.build_seat.model, "tier": self.build_seat.tier},
         }
+        if (not built.ok and not built.timed_out and self.wt.head() == before
+                and not self.wt.dirty()):
+            # A session that failed and changed nothing is no pass (#317 part 1): the checks and
+            # the self check would only judge the branch as it was. One that failed after doing
+            # work (Claude's turn limit, say) keeps it, and the checks and the review judge it.
+            entry["builder"]["changed"] = False
+            self.result.update(status="failed", reason=redact(
+                f"the builder's session failed and changed nothing: "
+                f"{built.error or 'no error given'}")[:2000])
+            self._finish()
+            return None, entry
         if report.status == "blocked":
             self._save_wip("the builder needs a decision")
             self.result.update(status="blocked", question=report.question, report=report.body,
@@ -804,6 +826,7 @@ class Worker:
             self._finish()
             return None, entry
         self._commit(f"bot: {role} pass {cycle} for #{self.plan['number']}")
+        entry["builder"]["changed"] = self.wt.head() != before
         return report, entry
 
     def _self_check_loop(self, cycle: int, entry: dict[str, Any], report: Any,
@@ -826,8 +849,9 @@ class Worker:
                                    context=SELF_CHECK_CONTEXT.format(n=n, cap=cap))
             flagged = list(guard) + list(verdict.blocking)
             if not verdict.readable:
-                flagged.append(Finding("blocking", "self check", "The self check's answer could "
-                                       "not be read twice in a row.", "the harness"))
+                flagged.append(Finding("blocking", "self check",
+                                       f"The self check gave no verdict: {verdict.why_unreadable}.",
+                                       "the harness"))
             if not gates_mod.green(results):
                 flagged.append(Finding("blocking", "checks", "Checks this change turned red "
                                        "must pass.", "the harness's gate run"))
@@ -904,8 +928,7 @@ class Worker:
             review = self._review(cycle, report, results, findings, context=context)
             entry["review"] = review.to_dict()
             if not review.readable:
-                self.result.update(status="not_approved", reason="the reviewer's answer could "
-                                   "not be read twice in a row")
+                self.result.update(status="not_approved", reason=review.why_unreadable)
                 break
             if review.approved and gates_mod.green(results) and not guard:
                 self.approved_sha = review.reviewed_sha
@@ -994,8 +1017,7 @@ class Worker:
         review = self._review(1, report, [], [], context=context, max_cycles=1)
         self.result["cycles"].append({"n": 1, "review": review.to_dict()})
         if not review.readable:
-            self.result.update(status="failed", reason="the reviewer's answer could not be read "
-                               "twice in a row")
+            self.result.update(status="failed", reason=review.why_unreadable)
             return
         self.result.update(
             status="reviewed",

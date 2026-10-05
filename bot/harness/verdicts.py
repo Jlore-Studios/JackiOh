@@ -77,6 +77,8 @@ class Review:
     findings: list[Finding] = field(default_factory=list)
     body: str = ""
     reviewed_sha: str = ""
+    #: The reviewer's call failed (`RunResult.error`), so there was no answer to read.
+    error: str = ""
 
     @property
     def blocking(self) -> list[Finding]:
@@ -93,8 +95,18 @@ class Review:
         return self.readable and not self.blocking
 
     def to_dict(self) -> dict:
-        return {"verdict": self.verdict, "readable": self.readable,
-                "findings": [f.to_dict() for f in self.findings], "body": self.body[:20000]}
+        found = {"verdict": self.verdict, "readable": self.readable,
+                 "findings": [f.to_dict() for f in self.findings], "body": self.body[:20000]}
+        if self.error:
+            found["error"] = self.error[:2000]
+        return found
+
+    @property
+    def why_unreadable(self) -> str:
+        """Why there was no verdict, for a reason or a finding."""
+        if self.error:
+            return f"the reviewer's call failed: {self.error[:500]}"
+        return "the reviewer's answer could not be read twice in a row"
 
 
 def review(text: str) -> Review:
