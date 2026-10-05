@@ -1,7 +1,7 @@
 // C+ #61 Bauble Bubble (SPEC §8.7 row 61). (1) Field Spell, Fruit, Rare.
 //   Base:    "Death: Add {cards|Stockpile|Stockpiles} to your hand. Each costs (0)." — cards 2
 //   Radiant: "Death: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs (0)."
-//   Engine:  "A Death that fires from either zone (§4.5): it fires when the card goes from the field to a
+//   Engine:  "A Death on a backrow card (§4.5): it fires when the card goes from the field to a
 //            graveyard, destroyed or sacrificed, as a Unit's does; not on bounce, exile, transform or
 //            steal (§6.2). Stockpile is #5; `costOverride` 0; the hand cap burns extras. A bait card:
 //            nothing until it pops. Tunes: cards 2 ↑."

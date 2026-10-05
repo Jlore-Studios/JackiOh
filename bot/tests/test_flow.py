@@ -106,12 +106,19 @@ class PlanTests(unittest.TestCase):
     def test_usage_stop(self):
         self.gh.add_issue(3, labels=(LABEL_BUILD,))
         # The readings the state file kept before there were several subscriptions are the first
-        # Claude account's.
+        # Claude account's. claude-1 has no weekly cap, so a spent week holds nothing back, while
+        # a spent 5-hour session still stops it. (A build claims its item, so each reading gets a
+        # fresh issue.)
         self.ctx.store.update(lambda s: s.update(usage={"seven_day": {"utilization": 0.95},
                                                         "observed_at": "2026-09-30T02:00:00Z"}))
-        self.assertIn("`claude-1` 7-day usage is 95%", plan_mod.make(self.ctx)["reason"])
+        self.assertEqual(plan_mod.make(self.ctx)["action"], "build")
+        self.gh.add_issue(4, labels=(LABEL_BUILD,))
+        self.ctx.store.update(lambda s: s.update(usage={"five_hour": {"utilization": 0.99},
+                                                        "observed_at": "2026-09-30T02:00:00Z"}))
+        self.assertIn("`claude-1` 5-hour usage is 99%", plan_mod.make(self.ctx)["reason"])
         # A reading that cannot be dated never blocks for ever.
-        self.ctx.store.update(lambda s: s.update(usage={"seven_day": {"utilization": 0.95}}))
+        self.gh.add_issue(5, labels=(LABEL_BUILD,))
+        self.ctx.store.update(lambda s: s.update(usage={"five_hour": {"utilization": 0.99}}))
         self.assertEqual(plan_mod.make(self.ctx)["action"], "build")
 
     def test_claims_the_oldest_forced_first_and_marks_it(self):

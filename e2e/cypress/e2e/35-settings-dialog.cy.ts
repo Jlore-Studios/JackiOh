@@ -23,7 +23,7 @@
 // the intercepted request, and everything else is a retried assertion on the DOM; every selector
 // comes from support/testids.ts and support/ux.ts. Nothing here starts a game, so there is no seed.
 
-import { accounts, routes, server } from "../../support/config.ts";
+import { SESSION_STORAGE_KEY, accounts, routes, server } from "../../support/config.ts";
 import { ts } from "../../support/testids.ts";
 import {
   SETTINGS_CLOSE,
@@ -240,9 +240,17 @@ describe("35 — the settings dialog (#128, #129, R633, R634)", () => {
       readAccount().its("groups.audio.values.playMusicInBackground").should("eq", true);
       closeSettings();
 
-      // A fresh device: nothing in localStorage but the session the visit writes.
-      cy.clearLocalStorage();
-      cy.visitAs(account(), routes.deckbuilder());
+      // A fresh device: nothing in localStorage but the session the visit writes. Cleared as the new
+      // page loads, not from here while the old one is still open: a page that sees its storage
+      // emptied by another window (as `cy.clearLocalStorage` is) takes it for another tab putting
+      // its settings back, stamps them as changed, and the next load keeps them over the account's.
+      cy.visitAs(account(), routes.deckbuilder(), {
+        onBeforeLoad(win) {
+          for (const key of Object.keys(win.localStorage)) {
+            if (key !== SESSION_STORAGE_KEY) win.localStorage.removeItem(key);
+          }
+        },
+      });
       cy.wait("@load", { timeout: SYNC_TIMEOUT });
       openSettings();
       openTab("audio");
