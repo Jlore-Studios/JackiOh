@@ -2250,6 +2250,14 @@
       "kind": "revise",
       "merged": true
     },
+    "334": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-05T22:45:01Z",
+      "issue": 322,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "37": {
       "died": 0,
       "failures": 0,
