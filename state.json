@@ -2119,6 +2119,11 @@
     "223": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-05T02:54:34Z",
+        "by": "`muse` (medium), `cognition` (weak)",
+        "sha": "408355446f46df30d7dabf8ef01ad348491b00d6"
+      },
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
