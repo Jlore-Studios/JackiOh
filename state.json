@@ -1840,9 +1840,7 @@
       "source": "",
       "started_at": "2026-10-05T10:09:12Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5992188476"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "cognition",
