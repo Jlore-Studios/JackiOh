@@ -112,18 +112,18 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
-    "loc": 11,
+    "loc": 13,
     "base": {
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Flip 5 coins. Gain +1 attack per heads and +1 health per tails."
+      "text": "Cry: Flip 5 coins. Gain +1 attack per heads and +1 health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Flip 7 coins. Gain +2 attack per heads and +2 health per tails."
+      "text": "Cry: Flip 7 coins. Gain +2 attack per heads and +2 health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
     }
   },
   "core-005": {

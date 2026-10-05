@@ -27,7 +27,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Any, Callable
 
-from harness import commands, events, triage
+from harness import commands, events, stepup, triage
 from harness import plan as plan_mod
 from harness.clock import iso, parse_iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
@@ -58,8 +58,8 @@ def sweep(ctx: Context) -> list[str]:
         return ["the first sweep: requests from now on are swept"]
     since = max(first, now - LOOKBACK)
     notes: list[str] = []
-    for part in (_comments, _reviews, _assignments, _failed_ci, _needs_plan, _night_run,
-                 _issue_types):
+    for part in (_comments, _reviews, _assignments, _failed_ci, _needs_plan, _green_heads,
+                 _night_run, _issue_types):
         try:
             notes += part(ctx, since)
         except Exception as exc:  # noqa: BLE001 - one part failing never stops the rest
@@ -75,6 +75,27 @@ def _needs_plan(ctx: Context, since: datetime) -> list[str]:
     carries `bot:needs-plan` within one sweep (#317 part 8), so nothing waits for a person to
     rate it: the planning lane rates and plans it, and `_night_run` starts that run."""
     return plan_mod.sync_needs_plan(ctx, ctx.store.load())
+
+
+def _green_heads(ctx: Context, since: datetime) -> list[str]:
+    """A bot pull request whose head met the review rule and then went green in CI ends its
+    item's strikes (#316). Only a head the review rule cleared is looked at, and its check runs
+    are read only when its item has strikes to clear."""
+    notes: list[str] = []
+    items = ctx.store.load()["items"]
+
+    def act(pull: dict[str, Any]) -> str | None:
+        if LABEL_PR not in label_names(pull):
+            return None
+        number = int(pull["number"])
+        record = items.get(str(number), {})
+        if not isinstance(record.get("cleared"), dict):
+            return None
+        if stepup.clear_if_green(ctx, number, str((pull.get("head") or {}).get("sha") or "")):
+            return f"#{number}: approved and green, so its strikes are cleared"
+        return None
+    _each(ctx.gh.list_pulls(state="open"), act, notes)
+    return notes
 
 
 def _issue_types(ctx: Context, since: datetime) -> list[str]:

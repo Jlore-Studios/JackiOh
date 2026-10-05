@@ -353,7 +353,7 @@ Acceptance: `pnpm test --filter cards` runs a test file per catalog entry (111 f
 | 1 | Big D-fender | 1 | DEF ally takes 3 less (1 position + 2 aura), ATK ally unaffected; it never attacks; radiant +4 |
 | 2 | Bigot | 1 | Destroys chosen enemy non-Human, Human not targetable, no target → enters anyway; radiant clears every enemy non-Human, Humans survive |
 | 3 | Right-house defender | 2 | Shield eats first hit; dies → returns at 1 without Reborn; radiant Death summons a base Right-house defender on both deaths while Reborn keeps its zone (R8, R64) |
-| 4 | Gary the Gambler | 2 | Fixed seed → fixed stats; heads+tails = 5 (radiant 7 at +2 each); Lucky has no effect (R32) |
+| 4 | Gary the Gambler | 2 | Fixed seed → fixed stats; heads+tails = 5 (radiant 7 at +2 each); second coin grants Divine Shield on heads, Rush on tails, identical on both faces; Lucky has no effect (R32/R130) |
 | 5 | Stockpile | 1 | Draw 2, heal 2 (hero may exceed 30); hand cap burns; radiant 5/5 |
 | 6 | Mana Well | 1 | Turn-4 player has 5 mana; leaves → back to 4; radiant 6 |
 | 7 | Jewelosco Scarab | 1 | Discover offers 3 distinct (2) Cost non-token cards of any set, never #7 (R380, R387); radiant (3) Cost pick costs (2) |

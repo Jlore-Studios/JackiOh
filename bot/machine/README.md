@@ -190,8 +190,15 @@ box in the status issue's mermaid.
   `JackiOh/NightVM` namespace. It needs the instance role to be allowed to send them, once:
   `aws iam attach-role-policy --role-name <the night box's role> --policy-arn
   arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy`, then run `setup.sh` again (it changes
-  nothing else). After a busy day, read memory beside CPU and decide `machine_parallel`: fewer
-  lanes if the box swaps, the same if it does not. A bigger box (4 vCPUs) needs the paid plan.
+  nothing else). Without it the bot still knows (#312): each model job on the machine reads the
+  kernel's memory stall time (`/proc/pressure/memory`), its swapping (`/proc/vmstat`) and the
+  memory available (`/proc/meminfo`) as it starts, after each model call and check run, and as
+  it ends; the deliver job keeps the last 60 runs' figures, and the status issue says, for the
+  last 24 hours, whether the box had memory to spare or ran short (a run stalled on memory for
+  5 s or more), with the least memory available and how many runs swapped
+  ([`harness/memory.py`](../harness/memory.py)). After a busy day, read it beside CPU and decide
+  `machine_parallel`: fewer lanes if the box ran short or swapped, the same if it had memory to
+  spare. A bigger box (4 vCPUs) needs the paid plan.
 - **Cost:** the machine is billed by the hour while it runs (about $0.096 an hour, so about $70 a
   month if it never stopped) plus its disk (about $4.80 a month). A stopped machine costs only
   the disk. The starter's Lambda calls and its schedule fit in the free tier.

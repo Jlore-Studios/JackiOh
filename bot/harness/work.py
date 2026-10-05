@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from harness import disk as disk_mod
+from harness import memory as memory_mod
 from harness import easy as easy_mod
 from harness import gates as gates_mod
 from harness import prompts, review_rule, verdicts
@@ -72,6 +73,19 @@ never delivered): your plan, what is done, what is next, the decisions you made 
 dead ends you hit. Update it as you go, not only at the end. Your session can be cut off at any
 moment (a usage limit, the clock), and the next agent, possibly another model, starts from this
 file and the branch."""
+#: Rounds in a row the reviewer sends back while the builder runs on a lane's weaker model, before
+#: the run moves the builder to the lane's strongest one (`Worker._switch`): Sonnet gets two
+#: tries on a Claude account, then its Opus takes over on the same lane.
+SWITCH_UP_AFTER = 2
+#: What a builder on a lane with two models is told (`Worker._switch_ask`).
+SWITCH_ASK = """
+
+## Your model
+
+This run's lane can run {models}, and this pass runs on `{model}`. You choose what the next pass of
+this run runs on: when this needs more than you can give it (a subtle rule, a hard conflict, a fix
+you could not find), put `"next_model": "{up}"` in your report's header; when what is left is plain
+work, `"next_model": "{down}"`. Leave it out to stay on `{model}`.{floor}"""
 PLAN_CUT = "\n\n…(the plan was cut here; the planner wrote more)"
 SELF_CHECK_CONTEXT = """This is a self check, not a review. You are the same model that built
 this change, in a fresh session, and nothing you say here approves it: an independent reviewer
@@ -97,7 +111,7 @@ class Interrupt(Exception):
 
 
 #: What a probe returns when the run must stop: the reason, and its kind (`halt`, `stop` for a
-#: person stopping this item, or `usage`).
+#: person stopping this item, `suspend` for the run's subscription suspended, or `usage`).
 Probe = Callable[[dict | None], "tuple[str, str] | None"]
 
 
@@ -120,6 +134,7 @@ class Worker:
         now: Callable[[], datetime] | None = None,
         env: dict[str, str] | None = None,
         disk_reader: Callable[[], dict[str, Any]] | None = None,
+        memory_reader: Callable[[], dict[str, Any] | None] | None = None,
     ) -> None:
         self.cfg = cfg
         self.plan = plan
@@ -146,6 +161,9 @@ class Worker:
         #: one disk, and a full one fails whichever job writes next.
         self.disk_reader = disk_reader or (lambda: disk_mod.reading(
             self.work_dir if self.work_dir.exists() else cfg.root, self.now()))
+        #: The machine's memory (`memory.reading`), read on the machine only (#312): as the run
+        #: starts, after each model call and check run, and as it ends.
+        self.memory_reader = memory_reader or (lambda: memory_mod.reading(self.now()))
         main = cfg.pool.seats(self.provider)[0]
         seats = plan.get("seats") if isinstance(plan.get("seats"), dict) else None
         #: The model each role runs on. A plan from before seats runs every role on the
@@ -155,6 +173,14 @@ class Worker:
         self.plan_seat = self._seat(seats, "plan")
         self.self_check = bool(seats.get("self_check")) if seats is not None else False
         self.main_seat = main
+        #: The seats this run may move its builder between (`_switch`): the account's own seats,
+        #: when they span more than one tier, as each Claude account's Opus and Sonnet do.
+        own = cfg.pool.own_seats(self.provider)
+        self.switchable = own if len({seat.tier for seat in own}) > 1 else []
+        #: Rounds in a row sent back while the builder ran below the lane's strongest seat.
+        self.sent_back = 0
+        #: The model the builder asked its next pass to run on, and the round it asked in.
+        self.asked: tuple[str, int] | None = None
         self.plan_text = ""
         self.minutes = 0.0
         self.build_transcript: Path | None = None
@@ -193,6 +219,8 @@ class Worker:
                       "build": self.build_seat.to_dict(),
                       "review": self.review_seat.to_dict() if self.review_seat else None,
                       "self_check": self.self_check},
+            #: Every move of the builder between the lane's models (`_switch`).
+            "switches": [],
         }
 
     def _seat(self, seats: dict[str, Any] | None, role: str) -> Any:
@@ -210,6 +238,50 @@ class Worker:
         if role == "suggest":
             return self.main_seat
         return self.build_seat  # build, fix, revise, and the builder's own self check
+
+    def _difficulty(self) -> str:
+        """The item's difficulty as this run knows it: the planner's rating when it rated it in
+        this run, else the plan's."""
+        rated = (self.result.get("plan") or {}).get("rating")
+        planned = str(self.plan.get("difficulty") or "medium")
+        planned = planned if planned in MIN_TIER else "medium"
+        found = str((rated or {}).get("difficulty") or planned)
+        found = found if found in MIN_TIER else planned
+        if self._rating_source() == "bot":
+            # The bot's own earlier rating is never lowered (`deliver._apply_rating`).
+            found = max(found, planned, key=list(MIN_TIER).index)
+        return found
+
+    def _switch(self, model: str, why: str, cycle: int) -> bool:
+        """Move this run's builder to the lane's seat running `model`: each Claude account runs
+        Opus and Sonnet both, and its run switches between them as the work needs, never under
+        the item's difficulty (`MIN_TIER`). The reviewer stays as assigned, since the review
+        rule counts its tier. Returns whether it moved."""
+        target = next((seat for seat in self.switchable if seat.model == model), None)
+        if target is None or target.model == self.build_seat.model:
+            return False
+        if not providers_mod.tier_at_least(target.tier, MIN_TIER[self._difficulty()]):
+            return False
+        self.result["switches"].append({"n": cycle, "from": self.build_seat.model,
+                                        "to": target.model, "why": why})
+        self.build_seat = target
+        self.sent_back = 0
+        return True
+
+    def _switch_ask(self) -> str:
+        """The builder's note on choosing its next pass's model, on a lane with two models."""
+        if not self.switchable:
+            return ""
+        floor = MIN_TIER[self._difficulty()]
+        strongest = max(self.switchable, key=lambda s: providers_mod.TIER_RANK[s.tier])
+        weakest = min(self.switchable, key=lambda s: providers_mod.TIER_RANK[s.tier])
+        note = ""
+        if not providers_mod.tier_at_least(weakest.tier, floor):
+            note = (f" This item is `difficulty:{self._difficulty()}`, which keeps its builder on "
+                    f"`{strongest.model}`, so asking for `{weakest.model}` changes nothing.")
+        models = " and ".join(f"`{seat.model}` ({seat.tier})" for seat in self.switchable)
+        return SWITCH_ASK.format(models=models, model=self.build_seat.model, up=strongest.model,
+                                 down=weakest.model, floor=note)
 
     # ------------------------------------------------------------------ plumbing
 
@@ -247,7 +319,7 @@ class Worker:
         where = self.out_dir if self.cfg.upload_transcripts else self.work_dir
         transcript = where / "transcripts" / f"{self.calls:02d}-{role}.jsonl"
         if not reader:
-            prompt += NOTES_ASK
+            prompt += NOTES_ASK + self._switch_ask()
             self.build_transcript = transcript
         seat = self.seat_for(role)
         request = RunRequest(
@@ -268,6 +340,7 @@ class Worker:
             usage_stop=self._usage_stop if self.provider.limits.stops else None,
         )
         result = self.runner.run(request)
+        self._read_memory()
         if self.after_call is not None:
             self.after_call()
         self.minutes += result.duration_s / 60
@@ -335,6 +408,7 @@ class Worker:
         self.out_dir.mkdir(parents=True, exist_ok=True)
         try:
             if self.on_machine:
+                self._read_memory()
                 self._disk_check()
             self._start_check()
             action = self.plan.get("action")
@@ -361,8 +435,18 @@ class Worker:
         finally:
             if self.on_machine:
                 self._read_disk("end")
+                self._read_memory()
             self.write_result()
         return self.result
+
+    def _read_memory(self) -> None:
+        """Fold the machine's memory now into the result's `memory` (`memory.add`)."""
+        if not self.on_machine:
+            return
+        try:
+            memory_mod.add(self.result.setdefault("memory", {}), self.memory_reader())
+        except Exception:  # noqa: BLE001 - a reading never stops the work
+            pass
 
     def _read_disk(self, when: str) -> dict[str, Any] | None:
         disk = self.result.setdefault("disk", {})
@@ -729,6 +813,7 @@ class Worker:
                             for g in self.gates]
                 return results
         results += gates_mod.run_all(self.gates, self.wt.cwd, self.env, self.seconds_left)
+        self._read_memory()  # the install and the typecheck are what a machine job's memory goes on
         self._mark_pre_existing(results)
         return results
 
@@ -871,15 +956,39 @@ class Worker:
         return string_template(easy_mod.RULE).safe_substitute(max_files=rule.max_files,
                                                                max_lines=rule.max_lines)
 
+    def _sent_back(self, cycle: int, built_on: Any) -> None:
+        """A round the reviewer sent back, built on `built_on`. On a lane with two models,
+        `SWITCH_UP_AFTER` of them in a row on the weaker one move the builder to the stronger for
+        the next pass; one the stronger built counts towards nothing."""
+        if not self.switchable:
+            return
+        strongest = max(self.switchable, key=lambda s: providers_mod.TIER_RANK[s.tier])
+        if built_on.tier == strongest.tier:
+            self.sent_back = 0
+            return
+        self.sent_back += 1
+        if self.sent_back >= SWITCH_UP_AFTER:
+            self._switch(strongest.model, f"the reviewer sent back {self.sent_back} rounds in a "
+                         f"row on `{built_on.model}`", cycle)
+
     def _rated_out(self) -> bool:
-        """A build run that planned and rated an unrated item stops after planning when the
-        rating needs a stronger model than this run's builder, or a stronger planner than this
-        one (`PLAN_FLOOR`): the item goes back to the queue, rated, for those."""
+        """A build run whose planner rated the item (an unrated one, or one the bot rated before
+        and the planner rated higher) stops after planning when the rating needs a stronger model
+        than this run's builder, or a stronger planner than this one (`PLAN_FLOOR`): the item goes
+        back to the queue, rated, for those. A lane with two models switches instead."""
         rated = (self.result.get("plan") or {}).get("rating")
-        if not isinstance(rated, dict) or self._rating_source():
+        if not isinstance(rated, dict) or self._rating_source() == "person":
             return False
-        difficulty = str(rated.get("difficulty"))
+        difficulty = self._difficulty()
         planner = self.seat_for("plan")
+        if providers_mod.tier_at_least(planner.tier, PLAN_FLOOR[difficulty]) and self.switchable:
+            # A lane with two models builds what its planner rated on the weakest of them that
+            # meets the rating, up or down: no need to send the item back to the queue.
+            fits = [seat for seat in self.switchable
+                    if providers_mod.tier_at_least(seat.tier, MIN_TIER[difficulty])]
+            if fits:
+                seat = min(fits, key=lambda s: providers_mod.TIER_RANK[s.tier])
+                self._switch(seat.model, f"its planner rated it difficulty:{difficulty}", 0)
         if (providers_mod.tier_at_least(self.build_seat.tier, MIN_TIER[difficulty])
                 and providers_mod.tier_at_least(planner.tier, PLAN_FLOOR[difficulty])):
             return False
@@ -929,6 +1038,11 @@ class Worker:
             return None, entry
         self._commit(f"bot: {role} pass {cycle} for #{self.plan['number']}")
         entry["builder"]["changed"] = self.wt.head() != before
+        if report.next_model and self.switchable:
+            # Taken once this round is judged, so its review counts against the model that
+            # built it (`_sent_back`).
+            entry["builder"]["next_model"] = report.next_model
+            self.asked = (report.next_model, cycle)
         return report, entry
 
     def _self_check_loop(self, cycle: int, entry: dict[str, Any], report: Any,
@@ -991,10 +1105,15 @@ class Worker:
         open_self_check: list[Finding] = []
         for cycle in range(1, self.cfg.max_review_cycles + 1):
             self.check()
+            if self.asked is not None:
+                model, asked_in = self.asked
+                self.asked = None
+                self._switch(model, "the builder asked for it", asked_in)
             if cycle == 1:
                 role, prompt = self._first_prompt(conflicts)
             else:
                 role, prompt = "fix", self._fix_prompt(cycle, findings, failures)
+            built_on = self.build_seat
             built, entry = self._build_pass(cycle, role, prompt)
             self.result["cycles"].append(entry)
             if built is None:
@@ -1061,6 +1180,7 @@ class Worker:
             if not findings and failures:
                 findings = [Finding("blocking", "checks", "Checks this change turned red must "
                                     "pass.", "the harness's gate run")]
+            self._sent_back(cycle, built_on)
         else:
             self.result.update(status="not_approved",
                                reason=f"no approval after {self.cfg.max_review_cycles} review cycles")
@@ -1156,7 +1276,8 @@ class Worker:
 
     def _last_checkpoint(self) -> None:
         """A halt or a stop said during the last review still counts: no finished change is
-        handed on past one. The clock and the usage stop no longer matter here."""
+        handed on past one. The clock, the usage stop and a suspension of the run's subscription
+        no longer matter here: its model calls are over, so the finished change is handed on."""
         if self.probe is None:
             return
         found = self.probe(None)

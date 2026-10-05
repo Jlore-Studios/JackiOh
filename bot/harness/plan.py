@@ -18,7 +18,7 @@ is forced, under its limits):
   claude-1, then the medium models, then Devin, with `build_last` ones such as claude-2 after
   all of them) with a seat that meets the tier, on its weakest such seat. An easy item goes to
   an `easy_first` subscription (Devin) ahead of that order while it has a free lane; otherwise
-  claude-3 and claude-1 build it with Sonnet, not Opus. A
+  the Claude accounts build it with Sonnet, not Opus (and the run may switch: `work._switch`). A
   builder above the item's tier (no seat of that tier free, or one comes later in the usage
   order) is said in the run's log.
 - **plan**: a build that has no plan yet gets a planning session first, on a medium or strong
