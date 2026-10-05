@@ -30,7 +30,7 @@ from harness import prompts, review_rule, verdicts
 from harness import providers as providers_mod
 from harness.clock import iso, now as clock_now
 from harness.config import Config, child_env
-from harness.git import Git, Identity, worktree_add
+from harness.git import MARKER_LINE, Git, Identity, worktree_add
 from harness.prompts import data
 from harness.providers import hosted
 from harness.redact import redact, redact_json
@@ -633,7 +633,7 @@ class Worker:
         changed = [p for p in self.wt.changed_paths(self.base_ref) if (self.wt.cwd / p).is_file()]
         if not changed:
             return []
-        proc = self.wt.run("grep", "-l", "-E", r"^(<<<<<<< |>>>>>>> )", "--", *changed, check=False)
+        proc = self.wt.run("grep", "-l", "-E", MARKER_LINE, "--", *changed, check=False)
         return [p for p in proc.stdout.splitlines() if p.strip()]
 
     def _anchors(self) -> list[str]:
@@ -909,7 +909,17 @@ class Worker:
                 report = checked
             if self.review_seat is None:
                 # No seat here reviews in the run (a weak one only in a review run): a review
-                # run judges it.
+                # run judges it. But never with conflict markers left in it (#317 part 2): its
+                # self checks may run out with them still open, as Devin's did on #203, #214
+                # and #287, and nothing after this would catch them before CI.
+                left, report = self._clear_markers(cycle, entry, report)
+                if report is None:
+                    return
+                if left:
+                    findings = [left]
+                    self.result.update(status="not_approved", reason=f"conflict markers are "
+                                       f"still in {left.where} after its last fix")
+                    break
                 self.result.update(status="built", reason=(
                     "built; no model on this subscription may review it, so it waits for a "
                     "review run" + (f", with {len(open_self_check)} self-check finding(s) still "
@@ -954,6 +964,32 @@ class Worker:
             self_check_findings=[f.to_dict() for f in open_self_check],
         )
         self._finish()
+
+    def _clear_markers(self, cycle: int, entry: dict[str, Any],
+                       report: Any) -> tuple[Finding | None, Any]:
+        """Before a change leaves the run with no reviewer in it: one fix pass when conflict
+        markers are left in it and there is time. Returns the marker finding still open (None when
+        there are none), and the builder's latest report (None when that pass stopped to ask a
+        person, which ends the run)."""
+        markers = self._unresolved_markers()
+        if not markers:
+            return None, report
+        finding = Finding("blocking", ", ".join(markers[:8]),
+                          f"Conflict markers are still in {', '.join(markers)}: resolve every "
+                          "one, keeping both sides' meaning.", "git grep")
+        if self.seconds_left() >= self.cfg.min_minutes_for_a_call * 60:
+            fixed, fix = self._build_pass(cycle, "fix", self._fix_prompt(
+                cycle, [finding], "", label="Conflict markers left in the change"))
+            entry["marker_fix"] = fix["builder"]
+            if fixed is None:
+                return finding, None
+            report = fixed
+            markers = self._unresolved_markers()
+            if not markers:
+                return None, report
+            finding = Finding("blocking", ", ".join(markers[:8]),
+                              f"Conflict markers are still in {', '.join(markers)}.", "git grep")
+        return finding, report
 
     def _only_forbidden(self) -> bool:
         """A build whose whole change was in paths the bot may not change (`bot/`, `.harness/`,

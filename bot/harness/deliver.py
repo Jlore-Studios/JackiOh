@@ -262,7 +262,8 @@ class Deliverer:
             self.log.append(f"auto-merge off on #{pull.get('number')}")
 
     def _publish(self, *, approved: bool) -> tuple[bool, str]:
-        """Push the bundle's branch. `(pushed, problem)`; no bundle is `(False, "")`."""
+        """Push the bundle's branch. `(pushed, problem)`; no bundle is `(False, "")`. A bundle
+        whose head holds a conflict marker in a file it changed is refused (#317 part 2)."""
         name = self.result.get("bundle")
         branch = str(self.plan.get("branch") or "")
         if not name or not branch:
@@ -293,6 +294,12 @@ class Deliverer:
         forbidden = self.repo.unsanctioned(local, [start, merged_main], self.cfg.forbidden_paths)
         if forbidden:
             return False, f"the change touches paths the bot may not change: {', '.join(forbidden)}"
+        markers = self.repo.markers(local, self.repo.changed_paths(f"origin/{default}", local))
+        if markers:
+            return False, ("conflict markers are still in "
+                           + ", ".join(f"`{p}`" for p in markers[:8])
+                           + (", …" if len(markers) > 8 else "")
+                           + ", so I pushed nothing")
         if not approved:
             self._hold_auto_merge()
         if self.cfg.dry_run:
