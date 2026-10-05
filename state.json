@@ -1940,7 +1940,9 @@
     },
     "208": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:5988274868"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -1962,11 +1964,11 @@
       "planned_tier": "strong",
       "provider": "devin",
       "question": "Every change for #208 is under bot/, which the night bot may not edit. Will a person build it from the Plan section (relabel it human)?",
-      "queued_at": "2026-10-04T17:00:08Z",
-      "requested_by": "MaxGoetzmann",
+      "queued_at": "2026-10-05T04:45:35Z",
+      "requested_by": "jgoetzmann",
       "run_id": "37215434011",
       "started_at": "2026-10-04T16:05:50Z",
-      "stop_requested": true,
+      "stop_requested": false,
       "stopped_at": "2026-10-04T17:09:16Z",
       "stopped_by": "MaxGoetzmann",
       "taken_asks": []
