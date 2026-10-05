@@ -2008,12 +2008,22 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "cognition"
+        ],
         "builder": "cognition",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "cognition",
+            "run": "37254362760",
+            "tier": "weak"
+          }
+        ],
         "sha": "845678ed86f070993839a9e7296a6d0fad93238a",
-        "tiers": {}
+        "tiers": {
+          "cognition": "weak"
+        }
       }
     },
     "218": {
