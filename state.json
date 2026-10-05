@@ -2114,7 +2114,7 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-04T22:16:24Z",
+      "feedback_since": "2026-10-04T23:27:52Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-04T23:18:59Z",
@@ -2135,7 +2135,7 @@
       "queued_at": "2026-10-04T23:27:39Z",
       "run_id": "37243246621",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-04T23:27:52Z",
       "stop_requested": false,
       "taken_asks": [],
