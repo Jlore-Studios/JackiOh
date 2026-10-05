@@ -833,7 +833,7 @@
       "cross_rounds": 0,
       "died": 0,
       "failures": 0,
-      "feedback_since": "2026-10-05T06:28:01Z",
+      "feedback_since": "2026-10-05T10:02:14Z",
       "forced": false,
       "interruptions": 0,
       "issue": 124,
@@ -846,7 +846,7 @@
       "requested_by": "jgoetzmann",
       "run_id": "37293882775",
       "self_check_findings": [],
-      "source": "request",
+      "source": "",
       "started_at": "2026-10-05T10:02:14Z",
       "stop_requested": false,
       "taken_asks": [
