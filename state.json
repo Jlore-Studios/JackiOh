@@ -2061,7 +2061,9 @@
     },
     "208": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:5994560213"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -2083,8 +2085,8 @@
       "planned_tier": "strong",
       "provider": "devin",
       "question": "`/harness override` is not a real command \u2014 `bot/` stays in `.harness/config.json`'s forbidden_paths, which only a commit to main can change, so every file this issue needs is still undeliverable by me. Will a person build the Plan section as written, or first land a narrower forbidden_paths + bot/prompts/system.md change so the bot may?",
-      "queued_at": "2026-10-05T04:45:35Z",
-      "requested_by": "jgoetzmann",
+      "queued_at": "2026-10-05T12:35:52Z",
+      "requested_by": "MaxGoetzmann",
       "run_id": "37265350323",
       "started_at": "2026-10-05T04:54:12Z",
       "stop_requested": false,
