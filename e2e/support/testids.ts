@@ -1016,7 +1016,6 @@ export const STATS_TAB_CARDS = "stats-tab-cards";
 export const STATS_TAB_PLAYERS = "stats-tab-players";
 export const STATS_SUMMARY_TILES = "stats-summary-tiles";
 export const STATS_SUMMARY_TOTAL_GAMES = "stats-summary-total-games";
-export const STATS_SUMMARY_PATCH_GAMES = "stats-summary-patch-games";
 export const STATS_SUMMARY_BEST_CARD = "stats-summary-best-card";
 export const STATS_SUMMARY_WORST_CARD = "stats-summary-worst-card";
 export const STATS_PROVISIONAL_BANNER = "stats-provisional-banner";

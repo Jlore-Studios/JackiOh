@@ -6,8 +6,8 @@
 //  - Players: public player aggregates (games, win rate, favourite cards, fun stats from #125).
 // Features:
 //  - Provisional banner while the current patch is below the publication gate (R654). It, like the
-//    rest of the page, names no data source and none of the gate's workings (R661); the patch tile
-//    shows the patch's counted games, never the gate's live count.
+//    rest of the page, names no data source and none of the gate's workings (R661); its one games
+//    tile counts the patch's games, never the gate's live count.
 //  - Per-row sample floor (20 games): displays "not enough games" below threshold.
 //  - URL search params for shareable views.
 //  - Card drill-down modal showing CardFace, patch history, turn curve, and co-played synergy.
@@ -263,11 +263,7 @@ export default function StatsRoute(): ReactElement {
         {cardStatsData && (
           <section className="stats-summary-tiles" data-testid={statsTestid.summaryTiles} aria-label="Statistics summary">
             <div className="stats-summary-tile" data-testid={statsTestid.summaryTotalGames}>
-              <span className="stats-summary-label">Total games</span>
-              <span className="stats-summary-value">{summary?.totalGames.toLocaleString()}</span>
-            </div>
-            <div className="stats-summary-tile" data-testid={statsTestid.summaryPatchGames}>
-              <span className="stats-summary-label">Patch {cardStatsData.patch}</span>
+              <span className="stats-summary-label">Games on patch {cardStatsData.patch}</span>
               <span className="stats-summary-value">{summary?.totalGames.toLocaleString()}</span>
             </div>
             {summary?.bestCard && (
