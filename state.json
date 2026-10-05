@@ -2535,7 +2535,9 @@
     },
     "287": {
       "action": "review",
-      "asks": [],
+      "asks": [
+        "c:5996175751"
+      ],
       "ci_fixes": 1,
       "ci_reruns": {
         "5f724b531d6f9b67f6b82afe817adbc866dfb1db": 1
@@ -2550,7 +2552,7 @@
       "forced": false,
       "interruptions": 0,
       "issue": 255,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [
         {
           "claim": "Unresolved, nested merge-conflict markers are committed in the rulings index, and the R661 `it(...)` block has lost its closing `});`, so the file does not parse; the engine test project, typecheck, lint and the index's completeness test cannot pass.",
@@ -2568,7 +2570,7 @@
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
-      "queued_at": "2026-10-05T13:42:01Z",
+      "queued_at": "2026-10-05T14:09:49Z",
       "requested_by": "jgoetzmann",
       "run_id": "37318865781",
       "self_check_findings": [
@@ -2591,7 +2593,7 @@
           "where": "checks"
         }
       ],
-      "source": "",
+      "source": "request",
       "started_at": "2026-10-05T13:43:43Z",
       "stop_requested": false,
       "taken_asks": [],
