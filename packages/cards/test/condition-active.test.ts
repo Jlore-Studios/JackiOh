@@ -907,10 +907,10 @@ describe("R195 the cards that declare conditionMet", () => {
 });
 
 // =============================================================================================
-// C #69 Plague Charger (field only): while it has a Plague Token
+// C #69 Plague Charger (field only): while it has a Plague Counter
 // =============================================================================================
 
-describe("C #69 Plague Charger lights up while it has a Plague Token (R195)", () => {
+describe("C #69 Plague Charger lights up while it has a Plague Counter (R195)", () => {
   const CHARGER = "classic-069";
   const VANILLA = "core-008"; // (1) Unit 4/4.
   const FILLER = "core-005";

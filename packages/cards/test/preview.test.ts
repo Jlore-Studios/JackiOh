@@ -11,7 +11,7 @@
 //   #38 Quickstriker            its controller's count of plays this turn (public)
 //   #40 Echoes of the Forgotten its controller's exile count (public, §3)
 //   #70 Spiteful Stab           its controller's hero health and exile count (public)
-//   #91 Fed Fauci               its own Plague Tokens (its counters travel on its view, §10.8)
+//   #91 Fed Fauci               its own Plague Counters (its counters travel on its view, §10.8)
 //   C #19 Lizard's Breath       its controller's deck, graveyard and exile SIZES (public, §10.8), never
 //                               their contents — so it has its own proof below rather than the fence
 //                               at the end, which walls a library off whole
@@ -165,8 +165,8 @@ describe("R280 the Core cards that declare preview", () => {
     expect(labels(ECHOES, "radiant")).toEqual(["twice the cards in your exile"]);
     expect(labels(SPITEFUL_STAB, "base")).toEqual([cardDef(SPITEFUL_STAB).base.text]);
     expect(labels(SPITEFUL_STAB, "radiant")).toEqual([cardDef(SPITEFUL_STAB).radiant.text]);
-    expect(labels(FED_FAUCI, "base")).toEqual(["+1 mana per Plague Token"]);
-    expect(labels(FED_FAUCI, "radiant")).toEqual(["+2 mana per Plague Token"]);
+    expect(labels(FED_FAUCI, "base")).toEqual(["+1 mana per Plague Counter"]);
+    expect(labels(FED_FAUCI, "radiant")).toEqual(["+2 mana per Plague Counter"]);
   });
 });
 
@@ -412,7 +412,7 @@ describe("#70 Spiteful Stab previews its damage (R280)", () => {
 });
 
 // =============================================================================================
-// #91 Fed Fauci: its own Plague Tokens
+// #91 Fed Fauci: its own Plague Counters
 // =============================================================================================
 
 describe("#91 Fed Fauci previews the mana its next start of turn gives (R280)", () => {
@@ -420,7 +420,7 @@ describe("#91 Fed Fauci previews the mana its next start of turn gives (R280)", 
     ["base", 2],
     ["radiant", 4],
   ] as const) {
-    it(`R280 ${face}: two Plague Tokens preview ${expected}, and its controller's next turn starts with that much more`, () => {
+    it(`R280 ${face}: two Plague Counters preview ${expected}, and its controller's next turn starts with that much more`, () => {
       const s = scenario({
         active: "p2",
         p1: {
@@ -910,11 +910,11 @@ describe("C #1 Curse of the Forgotten Classic previews N, its one hit (R280)", (
 });
 
 // =============================================================================================
-// C #43 Plague Nuke: the mana it would give, the Plague Tokens on the Units on the field
+// C #43 Plague Nuke: the mana it would give, the Plague Counters on the Units on the field
 // =============================================================================================
 
 describe("C #43 Plague Nuke previews the mana it would give now (R280)", () => {
-  const LABEL = "for each Plague Token that was on them";
+  const LABEL = "for each Plague Counter that was on them";
   const VANILLA = "core-008";
 
   function nuke(face: Face, mine: number, theirs: number): Scenario {
@@ -1085,11 +1085,11 @@ describe("C+ #74 Twice Forward previews the plays it has counted, to its control
 });
 
 // =============================================================================================
-// C #59 Plague Doctor: N, every Plague Token on the field (and the Radiant face's own placement)
+// C #59 Plague Doctor: N, every Plague Counter on the field (and the Radiant face's own placement)
 // =============================================================================================
 
 describe("C #59 Plague Doctor previews N, the hit its Cry deals (R280)", () => {
-  const DOCTOR_LABEL = "the number of Plague Tokens on the field";
+  const DOCTOR_LABEL = "the number of Plague Counters on the field";
   const PAWN = "core-096";
 
   /** Tokens on both sides, a face-down trap's included: 2 + 1 + 3 = 6 on the field. */

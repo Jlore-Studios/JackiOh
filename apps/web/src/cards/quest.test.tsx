@@ -77,7 +77,7 @@ const DEEPER: QuestView = {
       goal: 2,
       rewards: [
         { id: "C", text: "Return 2 random cards from your graveyard to your hand" },
-        { id: "D", text: "Place 3 Plague Tokens" },
+        { id: "D", text: "Place 3 Plague Counters" },
       ],
     },
     {
@@ -203,7 +203,7 @@ describe("R404 In Too Deep's quest line in the inspect overlays", () => {
     expect(quests[1]?.textContent).toContain("Quest: Your cards deal 12 damage to enemies (12/12)");
     expect(Array.from(must(quests[0], "quest 2").querySelectorAll("li[data-reward]")).map((reward) => reward.textContent)).toEqual([
       "Return 2 random cards from your graveyard to your hand",
-      "Place 3 Plague Tokens",
+      "Place 3 Plague Counters",
     ]);
     const aura = must(states.querySelector<HTMLElement>('li[data-state="questAura"]'), "the aura line");
     expect(aura.getAttribute("data-aura")).toBe("M");

@@ -90,7 +90,7 @@ describe("R115: a Vanilla copy keeps none of the card's text", () => {
     expect(offersSwitch(g, pillow)).toBe(false);
   });
 
-  it("R115 a Vanilla copy of Fed Fauci gains no Plague Token when damaged (§6.3 Vanilla, §8 #91)", () => {
+  it("R115 a Vanilla copy of Fed Fauci gains no Plague Counter when damaged (§6.3 Vanilla, §8 #91)", () => {
     const g = scenario({
       p1: { hand: [POSTDOC, TRUE_STRIKE, HINDER], field: [{ def: FAUCI, lane: 1 }], mana: 10, library: LIBRARY },
       p2: { library: LIBRARY },
@@ -256,7 +256,7 @@ describe("R243: a Vanilla unit's view says its text is gone (§6.3 Vanilla, R115
       const original = side.units[0];
       const vanillaCopy = side.units[2];
       // Same definition, same printed keywords (Rush) on the original and none on the copy — but
-      // Fauci's scripted text (the Plague Token trigger, the start-of-turn mana) is text too, and
+      // Fauci's scripted text (the Plague Counter trigger, the start-of-turn mana) is text too, and
       // only the view can tell a client the copy has none of it.
       expect(vanillaCopy?.defId).toBe(original?.defId);
       expect(vanillaCopy?.vanilla, `${viewer}'s view marks the copy Vanilla`).toBe(true);

@@ -1,5 +1,5 @@
 // C #38 Jackiestan Auctioneer — SPEC §8.6 row 38, BUILD M9 Classic row C 38: "Face-down, only its
-// activation condition is live (R395): it fires when any player plays their 3rd card in a turn
+// reveal condition is live (R395): it fires when any player plays their 3rd card in a turn
 // (counted per player per turn; casts count, R70; a countered card was never played); then it animates
 // (R383) in Attack Position into its lane's unit zone, else the leftmost open one, summoning sick; with
 // no open zone it stays face-up in the backrow; from the next play on, never the play that set it off
@@ -66,7 +66,7 @@ describe("C #38 Jackiestan Auctioneer", () => {
   });
 
   describe("base", () => {
-    it("R395 face-down, only the activation condition is live: a player's 1st and 2nd plays do nothing", () => {
+    it("R395 face-down, only the reveal condition is live: a player's 1st and 2nd plays do nothing", () => {
       const s = setup();
 
       playFillers(s, 2);
@@ -237,7 +237,7 @@ describe("C #38 Jackiestan Auctioneer", () => {
   });
 
   describe("radiant", () => {
-    it("R275 its unit face is an 8/8, and it activates on the 2nd play", () => {
+    it("R275 its unit face is an 8/8, and it reveals on the 2nd play", () => {
       const s = setup({}, {}, true);
 
       playFillers(s, 2);

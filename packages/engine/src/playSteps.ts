@@ -298,7 +298,7 @@ export type PlayRun = {
    * rather than from the hand. Absent for a play from hand and for a cast.
    */
   source?: "graveyard";
-  /** E11, R454: the Plague Tokens paying part of the price (`costPaid` is the whole price). */
+  /** E11, R454: the Plague Counters paying part of the price (`costPaid` is the whole price). */
   plague?: { from: string; tokens: number };
   /** E12, R452: a random cast — every choice its caster would make is made at random. */
   random?: boolean;
@@ -426,9 +426,9 @@ export function validatePlay(
   const source = playSourceOf(state, player, action.instanceId);
   if (source === undefined) return { error: `no card ${action.instanceId} in ${player}'s hand` };
   const card = source.card;
-  // R454: Plague Tokens pay only for a play from the graveyard a permission lets them pay for.
+  // R454: Plague Counters pay only for a play from the graveyard a permission lets them pay for.
   if (source.from === "hand" && action.plague !== undefined) {
-    return { error: "only a play from your graveyard can spend Plague Tokens" };
+    return { error: "only a play from your graveyard can spend Plague Counters" };
   }
 
   const refused = whyChoicesRefused(state, player, card, action);
@@ -597,7 +597,7 @@ function payStep(sink: EngineSink, run: PlayRun): void {
   // board they are read against.
   const spentRules = costRulesSpentBy(sink.state, card);
 
-  // R454: Plague Tokens pay their part of the price, and the mana the rest.
+  // R454: Plague Counters pay their part of the price, and the mana the rest.
   spendMana(side, manaDue(run.costPaid, run.plague));
   sink.events.push(manaEvent(run.player, side));
   if (run.plague !== undefined) {

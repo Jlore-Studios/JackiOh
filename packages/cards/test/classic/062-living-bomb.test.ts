@@ -1,5 +1,5 @@
 // C #62 Living Bomb — SPEC §8.6 row 62, BUILD M9 Classic row C 62: "At the start of each player's turn,
-// in R68's order: destroy every permanent that player controls with a Plague Token on it, face-down ones
+// in R68's order: destroy every permanent that player controls with a Plague Counter on it, face-down ones
 // and Living Bomb itself included, the other player's untouched (R400); Indestructible ones survive
 // (R46); a card's tokens are gone once it leaves (R78); radiant: only at the start of your opponent's
 // turn, and only their permanents; no tuned numbers".
@@ -15,7 +15,7 @@ const BOMB = "classic-062";
 const VANILLA = "core-008"; // (1) Unit 4/4.
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt.
 const ROCK = "core-066"; // (4) Unit 10/10 Indestructible, Tribute 1.
-const FAUCI = "core-091"; // (2) Unit 1/6 Rush; Start of turn: +1 mana per Plague Token.
+const FAUCI = "core-091"; // (2) Unit 1/6 Rush; Start of turn: +1 mana per Plague Counter.
 const FIENDER = "core-092"; // (2) Unit 5/7 Stack.
 const REBORN = "core-003"; // (1) Unit 1/1 Taunt, Divine Shield, Reborn.
 const PAWN = "core-096"; // (1) Trap: answers only an attack that would be lethal.

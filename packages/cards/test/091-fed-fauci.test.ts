@@ -1,4 +1,4 @@
-// #91 Fed Fauci (SPEC §8.4, BUILD M4-T4 row 91: "One Plague Token per damage instance; +1 mana per
+// #91 Fed Fauci (SPEC §8.4, BUILD M4-T4 row 91: "One Plague Counter per damage instance; +1 mana per
 // token at start of turn (radiant +2); counters reset on leaving").
 //
 // Fixtures. Fauci is 1/6 → 2/12, so a 2-attack unit can hit it twice without killing it:
@@ -64,7 +64,7 @@ describe("#91 Fed Fauci — base", () => {
     expect(keywordsInLane(s, "p1", 1).map((k) => k.kind)).toEqual(["Rush"]);
   });
 
-  it("makes one Plague Token per damage instance", () => {
+  it("makes one Plague Counter per damage instance", () => {
     const s = board({ enemies: [POSTDOC] });
     const fauci = s.card(FAUCI);
 
@@ -118,7 +118,7 @@ describe("#91 Fed Fauci — base", () => {
     expect(plagueOn(s, fauci)).toBe(1);
   });
 
-  it("start of turn: +1 mana per Plague Token", () => {
+  it("start of turn: +1 mana per Plague Counter", () => {
     const s = board({ enemies: [POSTDOC, POSTDOC] });
     const fauci = s.card(FAUCI);
 
@@ -170,7 +170,7 @@ describe("#91 Fed Fauci — radiant", () => {
     expect(plagueOn(s, fauci)).toBe(1);
   });
 
-  it("start of turn: +2 mana per Plague Token", () => {
+  it("start of turn: +2 mana per Plague Counter", () => {
     const s = board({ radiant: true, enemies: [POSTDOC, POSTDOC] });
     const fauci = s.card(FAUCI);
 

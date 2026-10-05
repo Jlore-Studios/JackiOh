@@ -158,7 +158,7 @@ describe("E35 Immune to Spells: a Spell's effects pass it by", () => {
 });
 
 describe("E35 a keyword that holds only while a condition does", () => {
-  it("First Strike while it has a Plague Token, gone when the token is, and with the text under a Vanilla", () => {
+  it("First Strike while it has a Plague Counter, gone when the token is, and with the text under a Vanilla", () => {
     const state = playing("dc-conditional");
     const bull = put(state, charger.id, slot("p1", "units", 1));
     const keywords = (): string[] => unitView(state, bull).keywords.map((k) => k.kind);

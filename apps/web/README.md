@@ -269,7 +269,7 @@ reduced motion) while the `activated` row plays on its card.
 
 **A play's payments** (B5 E5, E11, E19). Plays that differ by `discards` (Classic #89's targeting
 cost) ask for them after the target, in the `hand` picker; plays that differ by `plague` (Classic
-#74) ask how many Plague Tokens pay, in a `number` picker of chips with "Pay in mana only" first. A
+#74) ask how many Plague Counters pay, in a `number` picker of chips with "Pay in mana only" first. A
 Tribute and its zone are narrowed together as whole candidates (R391), so a Tribute onto its own
 zone is picked by clicking the unit or its zone.
 

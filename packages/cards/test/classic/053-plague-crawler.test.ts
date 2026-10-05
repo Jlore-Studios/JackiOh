@@ -1,6 +1,6 @@
-// C #53 Plague Crawler — SPEC §8.6 row 53, BUILD M9 Classic row C 53: "Cry: one Plague Token on another
+// C #53 Plague Crawler — SPEC §8.6 row 53, BUILD M9 Classic row C 53: "Cry: one Plague Counter on another
 // permanent (a declared target, either side, face-down included; with none it enters anyway); whenever
-// Plague Tokens are placed on it, by either player, draw 1, once per placement however many tokens
+// Plague Counters are placed on it, by either player, draw 1, once per placement however many tokens
 // (C #27's doubling included); a face-down option carries only its id (R177) and the placement on it
 // never names it to you; radiant 4/4: 2 tokens, draw 2; its tuned numbers (tokens, draw) read through
 // `param()` (R386)".
@@ -15,7 +15,7 @@ import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/053-plague-crawler";
 
 const CRAWLER = "classic-053";
-const SLIME = "classic-027"; // (0) Unit 1/1: Plague Tokens placed on this are doubled.
+const SLIME = "classic-027"; // (0) Unit 1/1: Plague Counters placed on this are doubled.
 const VANILLA = "core-008"; // (1) Unit 4/4.
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt; Radiant adds Immutable.
 const MANA_WELL = "core-006"; // (3) Field Spell.
@@ -79,7 +79,7 @@ describe("C #53 Plague Crawler", () => {
   });
 
   describe("base", () => {
-    it("is a 2/2, and its Cry places 1 Plague Token on an enemy Unit you choose, as one placement", () => {
+    it("is a 2/2, and its Cry places 1 Plague Counter on an enemy Unit you choose, as one placement", () => {
       const s = scenario({ p1: { hand: [CRAWLER, ANCHOR] }, p2: { hand: [ANCHOR], field: [VANILLA] } });
       const vanilla = s.card(VANILLA);
 
@@ -164,7 +164,7 @@ describe("C #53 Plague Crawler", () => {
       expect(JSON.stringify(s.view("p2").you.backrow)).toContain(UNLICENSED);
     });
 
-    it("whenever Plague Tokens are placed on it, it draws 1: a second Crawler's Cry on it", () => {
+    it("whenever Plague Counters are placed on it, it draws 1: a second Crawler's Cry on it", () => {
       const s = scenario({ p1: { hand: [CRAWLER, CRAWLER, ANCHOR], library: lib(3) }, p2: { hand: [ANCHOR] } });
       const [first, second] = crawlers(s, "p1");
       if (first === undefined || second === undefined) throw new Error("two Crawlers in hand");
@@ -282,7 +282,7 @@ describe("C #53 Plague Crawler", () => {
   });
 
   describe("radiant", () => {
-    it("is a 4/4, and its Cry places 2 Plague Tokens on another permanent as one placement", () => {
+    it("is a 4/4, and its Cry places 2 Plague Counters on another permanent as one placement", () => {
       const s = scenario({ p1: { hand: [{ def: CRAWLER, radiant: true }, ANCHOR] }, p2: { hand: [ANCHOR], field: [VANILLA] } });
       const vanilla = s.card(VANILLA);
 
@@ -292,7 +292,7 @@ describe("C #53 Plague Crawler", () => {
       expect(placements(s)).toEqual([{ id: vanilla.id, value: 2, placed: 2 }]);
     });
 
-    it("whenever Plague Tokens are placed on it, it draws 2", () => {
+    it("whenever Plague Counters are placed on it, it draws 2", () => {
       const s = scenario({ p1: { hand: [CRAWLER, ANCHOR], field: [{ def: CRAWLER, radiant: true }], library: lib(3) }, p2: { hand: [ANCHOR] } });
       const onField = s.unit("p1", 1) as CardInstance;
 

@@ -418,7 +418,7 @@ describe("every voice line is short, plain flavour (B34)", () => {
       "Embiggen", "Radiant", "Armor", "Rush", "Charge", "Cry", "Deathrattle", "Battlecry", "mana",
       "damage", "summon", "exile", "fatigue", "backrow", "graveyard",
       "Animated", "Activate", "Brittle", "Degrade", "Upgrade", "Spell Damage", "Immune to Spells", "Counter",
-      "Flicker", "Plague Token",
+      "Flicker", "Plague Counter",
     ]);
     // The matcher itself: whole words in any case, across whitespace, and never inside a longer word.
     expect(bannedMatcher("Taunt").test("I TAUNT you!")).toBe(true);

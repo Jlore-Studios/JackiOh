@@ -1,4 +1,4 @@
-// C #12 Book of Blood (SPEC §8.6 row 12). (1) Spell, Book, Common.
+// C #12 Book of Blood (SPEC §8.6 row 12). (1) Spell, Book, Epic.
 //   Base:    "Lifesteal\nDeal {damage} damage to a Unit." — damage 5
 //   Radiant: "Lifesteal\nDeal {damage} damage to a Unit." — damage 10
 //   Engine:  "A Unit target, either side; the effect states its own Lifesteal (R85), so your hero

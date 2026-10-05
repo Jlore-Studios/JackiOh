@@ -1,4 +1,4 @@
-// C+ #77 Anti-Softlock (SPEC §8.7 row 77, E20, E21, E38, R81, R346, R386, R440). (2) Spell, Rare.
+// C+ #77 Anti-Softlock (SPEC §8.7 row 77, E20, E21, E38, R81, R346, R386, R440). (2) Spell, Epic.
 //   Draw {draw}. Every card on the field, in hands and in decks gains Stack and Pierce. Unlock every
 //   zone. Radiant: Draw {draw}. Choose all cards or only yours: each of them gains Stack and Pierce.
 //   Unlock every zone.

@@ -232,11 +232,12 @@ describe("R35 the Transmogulate pool (#83): every non-token Legendary but #83 (B
     "core-095",
     "classic-004",
     "classic-007",
+    "classic-009",
+    "classic-028",
     "classic-033",
     "classic-044",
     "classic-045",
     "classic-056",
-    "classic-061",
     "classic-080",
     "classic-085",
     "classicplus-012",
@@ -267,8 +268,9 @@ describe("R35 the Transmogulate pool (#83): every non-token Legendary but #83 (B
   });
 
   it("R35 narrowed by type for a board replacement, with Field Trap counting as Trap", () => {
-    // Only Core #85 is a Legendary trap, so a board trap — Trap or Field Trap — is replaced by it.
-    expect(ids(catalog.pool("core-083", { rarity: "Legendary", type: TRAP_TYPES }))).toEqual(["core-085"]);
+    // Core #85 and Classic #9 (Legendary since patch v0.2.17, issue #44) are the Legendary traps,
+    // so a board trap — Trap or Field Trap — is replaced by one of them.
+    expect(ids(catalog.pool("core-083", { rarity: "Legendary", type: TRAP_TYPES }))).toEqual(["core-085", "classic-009"]);
     expect(coreIndices(catalog.pool("core-083", { rarity: "Legendary", type: "Unit" }))).toEqual(["52", "92"]);
   });
 });

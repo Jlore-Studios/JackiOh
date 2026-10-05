@@ -726,7 +726,7 @@ function fusedSetStat(scripts: readonly Script[]): Script["setStat"] | undefined
 }
 
 /**
- * R471: "Plague Tokens placed on this are doubled" (Classic #27). Each ingredient's text multiplies
+ * R471: "Plague Counters placed on this are doubled" (Classic #27). Each ingredient's text multiplies
  * what is placed on the fused card, so two such texts multiply: a Pestilent Slime fused onto a
  * Pestilent Slime quadruples, as two doublings in a row do. Each hook is asked about the fused card
  * at its own ingredient's price (`scripts.asIngredient`, R102).

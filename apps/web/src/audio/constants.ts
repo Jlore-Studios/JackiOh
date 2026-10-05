@@ -79,7 +79,7 @@ export const BANNED_RULES_WORDS: readonly string[] = [
   "damage", "summon", "exile", "fatigue", "backrow", "graveyard",
   // Patch v0.2.0's rules words (docs/classic-sets.md B3, B5).
   "Animated", "Activate", "Brittle", "Degrade", "Upgrade", "Spell Damage", "Immune to Spells", "Counter",
-  "Flicker", "Plague Token",
+  "Flicker", "Plague Counter",
 ];
 
 /**

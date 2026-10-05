@@ -1,4 +1,4 @@
-// C #3 Book of Heal (SPEC §8.6 row 3). (1) Spell, Book, Common.
+// C #3 Book of Heal (SPEC §8.6 row 3). (1) Spell, Book, Epic.
 //   Base:    "Heal a target {heal}." — heal 9
 //   Radiant: "Heal a target {heal}." — heal 18
 //   Engine:  "§6.3 Heal on any unit or hero, as #47 Fig of Life reads "Heal" (R19). Tunes: heal 9 ↑

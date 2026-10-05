@@ -1,4 +1,4 @@
-// C #16 Book of Flame (SPEC §8.6 row 16). (1) Spell, Book, Common.
+// C #16 Book of Flame (SPEC §8.6 row 16). (1) Spell, Book, Epic.
 //   Base:    "Deal {damage} damage." — damage 4
 //   Radiant: "Deal {damage} damage." — damage 8
 //   Engine:  "One targeted hit ("deal N damage" with no target named is targeted, as #68 Twisted

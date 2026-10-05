@@ -1,17 +1,17 @@
 // C #38 Jackiestan Auctioneer (SPEC §8.6 row 38). Field Trap, Human, cost 2, Rare, 4/4 → 8/8 (its unit
 // face).
 //   Both faces: "Animated
-//                Activates when the cards a player has played in a turn reach {plays}: Summon this as a
+//                Reveals when the cards a player has played in a turn reach {plays}: Summon this as a
 //                Unit.
-//                Once this has activated: Whenever a player plays a card, draw {draw} and deal {damage}
+//                Once this has revealed: Whenever a player plays a card, draw {draw} and deal {damage}
 //                damage to the enemy hero." — plays 3 on the base face and 2 on the Radiant, damage 2 and 4.
 //
-// R395: while it is face-down only the activation condition is live. It answers the `cardPlayed` that
+// R395: while it is face-down only the reveal condition is live. It answers the `cardPlayed` that
 // takes any player's plays this turn to {plays} (the per-player per-turn count, which already counts
 // the play under way; a cast counts, R70; a countered card was never played, R448, so it never
 // reaches here), and then animates (Animated, B3.1, R383) in Attack Position into the unit zone in its
 // own lane, else the leftmost open, unlocked, unreserved one (R64), summoning sick; with no open unit
-// zone it stays face-up in its backrow zone. It remembers that it has activated (`memory.activated`).
+// zone it stays face-up in its backrow zone. It remembers that it has revealed (`memory.activated`).
 //
 // From the next play on — never the play that set it off, as a permanent never answers its own arrival
 // (R119) — every card either player plays makes its controller draw {draw} and deals one hit of
@@ -21,7 +21,7 @@
 // its animating (B3.1 rule 4) — and one already a Unit stays put (R383).
 //
 // A Field Trap is never consumed. One trigger carries both texts, so one event can never be answered
-// by both the activation and the "whenever" (R395). The conditions live in `when` (R99).
+// by both the reveal and the "whenever" (R395). The conditions live in `when` (R99).
 
 import type { GameEvent } from "@jackioh/shared";
 import type { Effect, EffectContext, Script, TrapTrigger } from "@jackioh/engine";
@@ -31,7 +31,7 @@ import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classic-038");
 
-/** What the Auctioneer keeps once it has activated. */
+/** What the Auctioneer keeps once it has revealed. */
 const ACTIVATED = "activated";
 
 type Played = Extract<GameEvent, { type: "cardPlayed" }>;

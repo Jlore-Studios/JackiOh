@@ -1,4 +1,4 @@
-// Plague Tokens on an instance and Locks on a zone (BUILD M3-T1): §6.3's Plague Token row with
+// Plague Counters on an instance and Locks on a zone (BUILD M3-T1): §6.3's Plague Counter row with
 // R78's reset, and §3.2's Lock, which the current occupant survives and which outlives it.
 
 import type { PlayerId, Selection } from "@jackioh/shared";
@@ -40,8 +40,8 @@ function handCard(state: GameState, defId: string): CardInstance {
   return card;
 }
 
-describe("plague (§6.3 Plague Token, M3-T1)", () => {
-  it("#91: adds Plague Tokens, any number of them, and reports the new count", () => {
+describe("plague (§6.3 Plague Counter, M3-T1)", () => {
+  it("#91: adds Plague Counters, any number of them, and reports the new count", () => {
     const state = newGame("plague-add");
     const unit = put(state, plain.id, slot("p1", "units", 1));
     const sink = sinkFor(state);
@@ -84,7 +84,7 @@ describe("plague (§6.3 Plague Token, M3-T1)", () => {
     expect(eventsOfType(sink.events, "counterChanged").map((e) => e.value)).toEqual([3, 1, 0, 4, 0]);
   });
 
-  it("R78: Plague Tokens reset when the card leaves the field", () => {
+  it("R78: Plague Counters reset when the card leaves the field", () => {
     const state = newGame("plague-leaves");
     const unit = put(state, plain.id, slot("p1", "units", 1));
     const sink = sinkFor(state);
