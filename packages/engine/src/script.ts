@@ -454,6 +454,14 @@ export type Script = {
    */
   tributeWhen?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => boolean;
   /**
+   * Classic #87 Plague Chalice, R667: the static half of a counter the card's own trigger makes —
+   * whether that trigger, the card standing as it does now, would counter a play `player` makes
+   * paying `costPaid`. The trigger asks the same predicate, so the two cannot disagree, and
+   * `counterWarning.ts` reads it to warn the viewer off a hand card (`counteredOnPlay`, §10.8). A
+   * PURE READ, like `tributeWhen`.
+   */
+  wouldCounter?: (args: { state: GameState; self: CardInstance; controller: PlayerId; player: PlayerId; costPaid: number }) => boolean;
+  /**
    * Classic #62 Living Bomb, R400: "At the start of your opponent's turn" — the `startOfTurn` hook of
    * the other side, queued right after the active player's at R62's start-of-turn trigger point, so
    * R68's order (the active player's cards, then the opponent's) holds.

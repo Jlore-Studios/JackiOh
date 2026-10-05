@@ -82,13 +82,20 @@ describe("R502 the planner's memory across entries", () => {
   it("R502 keeps the plays still resolving, innermost last, each with its step count, and closes them on cardResolved or countered", () => {
     const memory = createFxMemory();
     memory.remember([drawn("p2", "c27", "core-027"), played("p2", "c27", "core-027")]);
-    expect(memory.resolving()).toEqual({ player: "p2", instanceId: "c27", defId: "core-027", castOnDraw: true, step: 0 });
+    expect(memory.resolving()).toEqual({ player: "p2", instanceId: "c27", defId: "core-027", castOnDraw: true, step: 0, seen: {} });
     memory.remember([{ type: "healthLost", player: "p2", amount: 5 }]);
     expect(memory.resolving()?.step).toBe(1);
+    expect(memory.resolving()?.seen).toEqual({ healthLost: 1 });
     memory.remember([played("p2", "c95", "core-095")]);
     expect(memory.resolving()?.defId).toBe("core-095");
+    expect(memory.resolving()?.seen).toEqual({});
     memory.remember([resolved("p2", "c95", "core-095")]);
     expect(memory.resolving()?.defId).toBe("core-027");
+    // The outer play counted the inner one's events too, by type, and a copy changes nothing.
+    expect(memory.resolving()?.seen).toEqual({ healthLost: 1, cardPlayed: 1, cardResolved: 1 });
+    const copy = memory.resolving();
+    if (copy !== undefined) (copy.seen as Record<string, number>).healthLost = 9;
+    expect(memory.resolving()?.seen.healthLost).toBe(1);
     memory.remember([{ type: "countered", player: "p2", instanceId: "c27", defId: "core-027", byInstanceId: null, to: "graveyard" }]);
     expect(memory.resolving()).toBeUndefined();
   });

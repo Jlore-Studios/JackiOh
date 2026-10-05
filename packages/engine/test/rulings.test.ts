@@ -4041,6 +4041,18 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // Proved by counterWarning.test.ts "R667 …" (fixture counters: who is warned, never a Trap, a hand
+  // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
+  // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
+  it("R667 a hand card the field would counter at every price carries a warning on its own seat", () => {
+    provenIn(
+      667,
+      "counterWarning.test.ts",
+      "../../cards/test/classic/087-plague-chalice.test.ts",
+      "../../../apps/web/src/game/countered.test.tsx",
+    );
+  });
+
   // Proved by the card's own test, cards/test/classic/055-book-of-wildfire.test.ts "R671 …": the swap
   // at its owner's end of turn in hand only, the pool without Wildfire, Radiant to Radiant, the Book it
   // became swapping on, Temporary kept, and the end of turn replaying exactly.
@@ -4048,12 +4060,20 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(671, "../../cards/test/classic/055-book-of-wildfire.test.ts");
   });
 
+<<<<<<< HEAD
   // Proved by apps/web routes/landing.test.tsx "R672 …" (swaps below the threshold among Core's
   // cards, the ghost over the new card for ROTATION_SWAP_MS and no control, the deal entry and the
   // sheet's rules) and routes/landingFan.test.ts "R672 …" (the swap's pool below the threshold,
   // drawn evenly).
   it("R672 rotates the homescreen's hand from the first visit, a swap a fizzle and an apparition", () => {
     provenIn(672, WEB_LANDING_TEST, WEB_LANDING_FAN_TEST);
+=======
+  // Proved by playChoices.test.ts "R703 …" (a needed pick the board cannot satisfy is neither
+  // offered nor accepted, a plain one still plays, and a cast fizzles) and Plastic Surgery's own test
+  // (both faces, either side, and the cast).
+  it("R703 a play is refused, and never offered, while a pick it needs has no legal option", () => {
+    provenIn(703, "playChoices.test.ts", "../../cards/test/063-plastic-surgery.test.ts");
+>>>>>>> origin/main
   });
 });
 
