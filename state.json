@@ -802,7 +802,7 @@
       "cross_rounds": 0,
       "died": 0,
       "failures": 0,
-      "feedback_since": "2026-10-05T00:19:32Z",
+      "feedback_since": "2026-10-05T06:28:01Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-05T05:19:44Z",
@@ -824,7 +824,7 @@
       "requested_by": "jgoetzmann",
       "run_id": "37271171944",
       "self_check_findings": [],
-      "source": "request",
+      "source": "",
       "started_at": "2026-10-05T06:28:01Z",
       "stop_requested": false,
       "taken_asks": [
