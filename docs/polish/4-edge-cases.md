@@ -526,7 +526,7 @@ Start in `effects/steal.ts`, `effects/swap.ts`, `subsystems/rotation.ts`, `layer
 
 - Bounce and replay in one turn.
 - Reborn (R83, R172).
-- Transform's readiness: today a transform is always sick (`transform.ts:71`), while Hearthstone's
+- Transform's readiness: a transform is always sick (`transform.ts`, R659), while Hearthstone's
   Evolve keeps readiness. See Out of scope.
 - Fuse keeping readiness (R77).
 - Copies, Recruit, casts, Call to Chaos summons.
@@ -1309,7 +1309,8 @@ notes no resume.
 
 ## Out of scope
 
-- **Transform readiness.** A transformed unit is always sick today (`transform.ts:71`). Hearthstone's
+- **Transform readiness.** A transformed unit is always sick today (`transform.ts`), which R659 now
+  records as the rule. Hearthstone's
   Evolve keeps the original's readiness. It only matters for #83 Transmogulate on your own board, it
   errs on the side the user complained about (units attacking too early), and changing it is a
   balance call. It stays as it is unless the user asks.
