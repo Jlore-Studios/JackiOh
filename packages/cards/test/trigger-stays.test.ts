@@ -148,7 +148,7 @@ describe("R212: a Reborn body does not answer for the stay that died", () => {
     expect(g.card(fauci).counters.plague ?? 0).toBe(0);
   });
 
-  it("R212 a Prem Panther that trades and comes back through Reborn draws what a Panther that trades without Reborn draws (R42, R174)", () => {
+  it("R212 a Prem Panther that trades and comes back through Reborn draws what a Panther that trades without Reborn draws: the hook is owed on the snapshot, not answered by the stay (R42, R174, R426)", () => {
     const trade = (reborn: boolean): Scenario => {
       const g = scenario({
         p1: { hand: [VANILLA], field: [{ def: PANTHER, lane: 1 }], library: [...LIBRARY] },
@@ -165,10 +165,13 @@ describe("R212: a Reborn body does not answer for the stay that died", () => {
     };
 
     // Without Reborn the Panther is in its graveyard when the `destroyed` event is dispatched, and a
-    // graveyard registers none of its field triggers (R153): it draws nothing.
+    // graveyard registers none of its field triggers (R153) — but the Panther's draw is no trigger
+    // answering the event: its `afterAttack` hook is owed on the snapshot it fought with (R426), so
+    // the trade still draws 2 (balance patch 1).
     const plain = trade(false);
+    expect(plain.hand("p1")).toHaveLength(3);
     // With Reborn the same trade happens, and the body back in lane 1 is a new arrival (R83) that
-    // destroyed nothing.
+    // destroyed nothing — which draws the same 2 through the dead stay's owed hook.
     const back = trade(true);
     back.expectInZone(unitAt(back, "p1", 1), "field");
     expect(back.hand("p1")).toHaveLength(plain.hand("p1").length);

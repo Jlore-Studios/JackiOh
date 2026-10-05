@@ -93,7 +93,7 @@ describe("C+ #19 League of Losers", () => {
       expect(row(s)).toEqual([FIVE[0], BODY, FIVE[2], FIVE[3], FIVE[4]]);
     });
 
-    it("§3.2 a Locked zone is skipped", () => {
+    it("R668 a Locked zone is skipped — the card's own override of the Locked-takes-summons rule", () => {
       const s = league();
       lockZone(s.state, { player: "p1", row: "units", lane: 4 });
       s.play(LEAGUE);

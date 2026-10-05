@@ -54,7 +54,7 @@ describe("C #21 Turtinator", () => {
     expect(radiant).toBe(base);
     const ability = base.activations?.[0];
     expect(ability?.uses).toBe("unlimited");
-    expect(ability?.cost).toEqual({ tribute: 1 });
+    expect(ability?.cost).toEqual({ tribute: 1, tributeExcludesSelf: true });
     expect(ability?.targets?.[0]?.filter).toEqual({ of: ["unit", "hero"] });
   });
 
@@ -90,14 +90,15 @@ describe("C #21 Turtinator", () => {
       s.expectHealth("p2", 23);
     });
 
-    it("R384 Turtinator may Tribute itself, and the hit still comes from it", () => {
+    it("R663 Turtinator cannot Tribute itself: alone on its side, no activation is listed", () => {
       const s = setup({ field: [TURTLE] });
       const turtle = s.card(TURTLE);
 
-      eat(s, TURTLE);
+      expect(activationsOf(s, "p1", turtle.id)).toHaveLength(0);
+      expect(() => eat(s, TURTLE)).toThrow();
 
-      s.expectInZone(turtle, "graveyard");
-      s.expectHealth("p2", 25);
+      s.expectInZone(turtle, "field");
+      s.expectHealth("p2", 30);
     });
 
     it("R384 the Tribute is its cost: an activation that names none is refused and changes nothing", () => {
@@ -200,7 +201,8 @@ describe("C #21 Turtinator", () => {
       eat(s, POINTMASTER);
 
       s.expectHealth("p2", 30 - 3 - 4 - 7);
-      expect(activationsOf(s, "p1", s.card(TURTLE).id).length).toBeGreaterThan(0);
+      // R663: with only itself left to Tribute, no further activation is listed.
+      expect(activationsOf(s, "p1", s.card(TURTLE).id)).toHaveLength(0);
     });
 
     it("R384 stops at ACTIVATE_UNLIMITED_CAP uses in a turn", () => {
@@ -250,12 +252,15 @@ describe("C #21 Turtinator", () => {
       s.expectHealth("p2", 16);
     });
 
-    it("tributing itself deals twice its own 10", () => {
+    it("R663 the Radiant face cannot Tribute itself either", () => {
       const s = setup({ field: [{ def: TURTLE, radiant: true }] }, { health: 30 });
+      const turtle = s.card(TURTLE);
 
-      eat(s, TURTLE);
+      expect(activationsOf(s, "p1", turtle.id)).toHaveLength(0);
+      expect(() => eat(s, TURTLE)).toThrow();
 
-      s.expectHealth("p2", 10);
+      s.expectInZone(turtle, "field");
+      s.expectHealth("p2", 30);
     });
 
     it("R386 an Upgrade takes the Radiant multiplier to 3", () => {

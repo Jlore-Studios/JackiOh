@@ -14,7 +14,6 @@ import {
   isLocked,
   isOpen,
   moveToZone,
-  openZones,
   placeOnField,
 } from "../src/zones";
 import { plain } from "./fixtures/combat";
@@ -127,13 +126,15 @@ describe("lock (§3.2, M3-T1)", () => {
       { type: "locked", player: "p2", row: "units", lane: 2 },
     ]);
 
-    // Once it leaves, the zone still accepts nothing: the lock lasts until the game ends.
+    // Once it leaves, the lock lasts until the game ends — but R668 lets placements in: a Lock
+    // refuses plays, never summons or moves.
     moveToZone(state, occupant, "graveyard");
     expect(cardAt(state, slot("p2", "units", 2))).toBeNull();
     expect(isLocked(state, slot("p2", "units", 2))).toBe(true);
     const newcomer = newInstance(state, plain.id, "p2", { z: "hand", player: "p2" });
-    expect(placeOnField(state, newcomer, slot("p2", "units", 2))).toBe(false);
-    expect(openZones(state, "p2", "units").map((ref) => ref.lane)).toEqual([1, 3, 4, 5]);
+    expect(placeOnField(state, newcomer, slot("p2", "units", 2))).toBe(true);
+    expect(cardAt(state, slot("p2", "units", 2))?.id).toBe(newcomer.id);
+    expect(isLocked(state, slot("p2", "units", 2))).toBe(true);
   });
 
   it("#36 Magic Jammed: locks a named backrow zone, and locking it again changes nothing", () => {

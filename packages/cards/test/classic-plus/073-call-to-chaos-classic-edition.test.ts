@@ -19,7 +19,7 @@
 // `packages/engine/test/callToChaosPlus.test.ts`; this file proves the card against the real catalog.
 
 import { CALL_TO_CHAOS_CHAIN_CAP, HAND_CAP, createRng, effectiveCost, hashState, reduce, subsystems, type GameState } from "@jackioh/engine";
-import type { Action, GameEvent } from "@jackioh/shared";
+import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { cardDef } from "../../src/catalog-data";
 import { scenario, type PileSetup, type Scenario, type SideSetup } from "../_harness";
@@ -351,9 +351,10 @@ describe("C+ #73 Call to Chaos (Classic+ Edition)", () => {
       expect(firstSummon).toBeLessThan(cast);
     });
 
-    it("R113 R436 a question inside its recursion pauses it; the answer after a JSON round trip finishes it once", () => {
+    it("R436 R87 the recursion finishes in one pass: Hinder's random discard pauses nothing, and nothing runs twice", () => {
       // The recursion, one link short of the cap, casts a base Core #95 that rolls "draw your whole
-      // deck": the deck's Hinder is cast and asks p1 to discard (R431), pausing the chain.
+      // deck": the deck's Hinder is cast and discards at random (R662, R431: no prompt), so the draw
+      // and the Golem run through with no prompt open (R113) and the chain lands once.
       let found: Scenario | null = null;
       for (let cursor = 0; cursor < CURSOR_SEARCH * 4 && found === null; cursor += 1) {
         const names = subsystems.rollChaosEffects(createRng(SEED, cursor), true, TABLE).map((effect) => effect.name);
@@ -363,28 +364,12 @@ describe("C+ #73 Call to Chaos (Classic+ Edition)", () => {
           chain: CALL_TO_CHAOS_CHAIN_CAP - 1,
           p1: { hand: [{ def: CHAOS, radiant: true }, VANILLA], library: [HINDER, TIMMY], mana: 8 },
         });
-        if (s.state.pending?.kind === "hand") found = s;
+        const hinderCast = s.pile("p1", "graveyard").some((card) => card.defId === HINDER);
+        const golem = eventsOf(s, "summoned").some((event) => event.defId === GOLEM);
+        if (s.state.pending === null && hinderCast && golem) found = s;
       }
       const s = found;
-      if (s === null) throw new Error("no roll pauses on the Hinder");
-      expect(eventsOf(s, "chaosRolled").filter((event) => event.defId === CHAOS)).toHaveLength(1);
-      expect(eventsOf(s, "summoned").filter((event) => event.defId === GOLEM)).toHaveLength(1);
-      const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
-      expect(hashState(thawed)).toBe(hashState(s.state));
-      const answer = {
-        type: "answer",
-        choiceId: s.state.pending?.id ?? "",
-        selection: [{ pick: "instance", instanceId: s.card(VANILLA).id }],
-        playerId: "p1",
-        nonce: "plus-pause",
-      } as Action;
-      const live = reduce(s.state, answer);
-      const frozen = reduce(thawed, answer);
-      expect(live.error).toBeUndefined();
-      expect(hashState(frozen.state)).toBe(hashState(live.state));
-      expect(frozen.events).toEqual(live.events);
-      s.answer(s.card(VANILLA).id);
-      expect(s.state.pending).toBeNull();
+      if (s === null) throw new Error("no roll casts the Hinder through the recursion");
       // Nothing of the Radiant's own roll ran twice, and it landed in the graveyard once the chain was done.
       expect(eventsOf(s, "chaosRolled").filter((event) => event.defId === CHAOS)).toHaveLength(1);
       expect(eventsOf(s, "summoned").filter((event) => event.defId === GOLEM)).toHaveLength(1);

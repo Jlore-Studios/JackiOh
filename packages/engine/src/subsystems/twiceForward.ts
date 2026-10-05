@@ -7,16 +7,17 @@
 // never re-roots it, `work.rerootRemembered`). It is kept by the trap trigger's own predicate: §10.3
 // offers a trap each event once (`traps.fireTrap`; one a predicate declined is never owed it again,
 // R99), and the predicate is the only part of a trap that runs without firing it — a fired Field Trap
-// is face-up from then on (R33), and this one must stay face-down until it first fuses. So the
+// is face-up from then on (R33), and this one must stay face-down until it first activates. So the
 // predicate counts each play as it is played (`cardPlayed`, §10.5 step 4), notes the card an even
 // count names (`memory.fuseOn`), and admits that card's `cardResolved` — firing the trap — only when
-// there is a card to fuse; with nothing left to fuse it gains its Brittle there, face-down. Counting
-// plays, not resolutions, keeps "every second card your opponent plays" right when a play casts a card
-// that resolves before it (R70): the cast is the later play.
+// there is a card to fuse; with nothing left to fuse it reveals and gains its Brittle there (R667).
+// Counting plays, not resolutions, keeps "every second card your opponent plays" right when a play
+// casts a card that resolves before it (R70): the cast is the later play.
 // ponytail: a trap predicate that writes its card's own counter; a "watch without firing" trigger kind in
 // traps.ts is the upgrade path if a second card ever needs one.
 
 import type { GameEvent } from "@jackioh/shared";
+import { startBrittleOnField } from "../brittleCount";
 import { fuseCards } from "../effects/fuse";
 import { gainBrittle } from "../effects/brittle";
 import { param } from "../params";
@@ -66,6 +67,16 @@ function stillThere(state: GameState, play: Resolved): CardInstance | null {
 }
 
 /**
+ * R667: turn the card face-up, public to both players, and start the printed Brittle its face-down
+ * arrival never started. Firing already turned a fusing card face-up; the nothing-left-to-fuse path
+ * reveals it here, so no Brittle ever sits on an unrevealed card.
+ */
+function revealSelf(state: GameState, self: CardInstance): void {
+  self.faceUp = true;
+  startBrittleOnField(state, self, false);
+}
+
+/**
  * R425: the trigger both faces carry. `radiantCopy` is the Radiant face's "a Radiant copy of it is
  * fused into this", which leaves the played card where it is and so always has something to fuse.
  */
@@ -87,7 +98,9 @@ export function twiceForwardTrigger(args: { radiantCopy: boolean }): TriggerDef 
       if (play === null || !owed(self).includes(play.instanceId)) return false;
       self.memory[FUSE_ON_KEY] = owed(self).filter((id) => id !== play.instanceId);
       if (args.radiantCopy || stillThere(ctx.state, play) !== null) return true;
-      // Nothing left to fuse: the Brittle still comes, and the trap stays as it was (R33).
+      // Nothing left to fuse: the card reveals and its Brittle starts now (R667 — no Brittle while
+      // unrevealed), then the gain lands on the started count. The trap stays armed (R33).
+      revealSelf(ctx.state, self);
       gainBrittle({ instanceId: self.id, n: param(ctx, GAIN) }).apply(ctx);
       return false;
     },
@@ -95,6 +108,9 @@ export function twiceForwardTrigger(args: { radiantCopy: boolean }): TriggerDef 
       const self = ctx.self;
       const play = opponentsPlay(ctx);
       if (self === null || play === null) return [];
+      // The first fuse reveals the card (R667): firing turned it face-up, and its printed Brittle
+      // starts now, before the gain lands on it.
+      revealSelf(ctx.state, self);
       const fused = args.radiantCopy
         ? fuseCards({ defIds: [play.defId], targetInstanceId: self.id, radiantIngredients: true })
         : fuseCards({ instanceIds: [play.instanceId], targetInstanceId: self.id });

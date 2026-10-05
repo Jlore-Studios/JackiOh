@@ -11,6 +11,7 @@ import type { Action, ActionInput, GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { activeBrittleCount, brittleTick, gainBrittleCount, giveBrittleCount } from "../src/brittle";
 import { BRITTLE_FIRST_TICK_TURNS } from "../src/config";
+import { reveal } from "../src/effects/reveal";
 import { vanilla } from "../src/effects/transform";
 import { unitView } from "../src/layers";
 import { makeContext } from "../src/resolve";
@@ -63,8 +64,12 @@ describe("B3.3 where a Brittle count lives and when it starts (R385)", () => {
     expect(unit.brittle).toEqual({ count: 2, since: 4, printed: true });
     const radiant = put(state, brittleUnit.id, slot("p1", "units", 2), { radiant: true });
     expect(radiant.brittle?.count).toBe(4);
-    // A Field Trap set in the backrow has entered the field too (Classic+ #74: "starts when it is set").
+    // R667: a Field Trap set face-down has entered the field but is unrevealed, so it starts
+    // no count — no Brittle while unrevealed (Classic+ #74).
     const trap = put(state, brittleTrap.id, slot("p1", "backrow", 1));
+    expect(trap.brittle).toBeUndefined();
+    // The count starts when the card reveals.
+    reveal().apply(makeContext(sinkFor(state), trap, {}));
     expect(trap.brittle).toEqual({ count: 3, since: 4, printed: true });
   });
 

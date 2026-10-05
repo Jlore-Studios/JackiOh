@@ -1,7 +1,7 @@
 // C #18 Glitch in the System (SPEC §8.6 row 18, §6.3 Exile, §10.6; R13, R65, R66, R81, R113, R135,
 // R396). Spell, cost 3, Common.
-//   Base:    "Choose a number. Exile every card on the field, in hands and in decks that costs that
-//            much."
+//   Base:    "Choose a number. Exile every card on the field that costs that much." (balance patch 1:
+//            the Field alone, the whole board)
 //   Radiant: "Choose a number. Exile every card on your opponent's field, in their hand and in their
 //            deck that costs that much."
 //   Engine:  "A `number` choice (§10.6), declared with the play (R81) from a fixed list, 0 to 10
@@ -9,8 +9,9 @@
 //            R66 reads #94 Genn's Greed's: a hand card at its hand cost, a deck or field card at its
 //            own; an X-cost card counts the X it was played for on the field and 0 anywhere else
 //            (R396). The Spell itself is resolving, in no pile, and is spared. The base face reaches
-//            both players' field, hand and deck, the zones its Radiant face names: the Radiant narrows
-//            whose, not where. Graveyards and exile are untouched. Tunes: none (the number is chosen)."
+//            the Field alone, the whole board (balance patch 1); the Radiant reaches the opponent's
+//            field, hand and deck. Graveyards and exile are untouched. Tunes: none (the number is
+//            chosen)."
 //
 // THE NUMBER is a play-time choice (R81), so it is declared — a `ModeDecl` of kind `number` whose
 // options are the eleven numbers — and it travels in the `play` action's `modes`; `legalActions`
@@ -46,15 +47,20 @@ function chosenNumber(ctx: EffectContext): number | null {
   return Number(picked);
 }
 
-/** Every card on the field and in the hands and decks of `whose` sides, in the order the header gives. */
-function reachable(ctx: EffectContext, whose: Whose): CardInstance[] {
+/**
+ * Every card on the field and in the hands and decks of `whose` sides, in the order the header
+ * gives — or the field alone (the whole board) when `fieldOnly`, which is the base face's scope
+ * (balance patch 1).
+ */
+function reachable(ctx: EffectContext, whose: Whose, fieldOnly: boolean): CardInstance[] {
   const field = cardsInScope(ctx, { side: whose, rows: ["units", "backrow"] });
+  if (fieldOnly) return field;
   const players = whose === "enemy" ? sidesOf(ctx, "enemy") : [ctx.controller, ...sidesOf(ctx, "enemy")];
   const piles = players.flatMap((player) => [...zoneCards(ctx.state, player, "hand"), ...zoneCards(ctx.state, player, "library")]);
   return [...field, ...piles];
 }
 
-function glitch(whose: Whose): Script {
+function glitch(whose: Whose, fieldOnly: boolean): Script {
   return {
     modes: NUMBER_CHOICE,
     cry: (ctx) => {
@@ -62,7 +68,7 @@ function glitch(whose: Whose): Script {
       if (number === null) return [];
       return [
         forEachCard({
-          cards: (read) => reachable(read, whose).filter((card) => costNow(read.state, card) === number),
+          cards: (read) => reachable(read, whose, fieldOnly).filter((card) => costNow(read.state, card) === number),
           each: (instanceId) => exile({ target: { of: "instance", instanceId } }),
         }),
       ];
@@ -70,6 +76,6 @@ function glitch(whose: Whose): Script {
   };
 }
 
-export const base: Script = glitch("any");
+export const base: Script = glitch("any", true);
 
-export const radiant: Script = glitch("enemy");
+export const radiant: Script = glitch("enemy", false);

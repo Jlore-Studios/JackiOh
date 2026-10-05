@@ -1,7 +1,7 @@
 // C #76 Plague Bringer — SPEC §8.6 row 76, BUILD M9 Classic row C 76: "Rush; Cry: two placements of one
-// Plague Token, one prompt each, on any permanent either side (a face-down option carries only its id,
-// R177), then draw 1; radiant 8/8: four placements, draw 2; its tuned numbers (tokens, draw) read
-// through `param()` (R386)".
+// Plague Token, both on the one permanent a single prompt names (R669), on any permanent either side
+// (a face-down option carries only its id, R177), then draw 1; radiant 8/8: four placements, draw 2;
+// its tuned numbers (tokens, draw) read through `param()` (R386)".
 
 import { hashState, reduce, stepParam, type CardInstance, type GameState } from "@jackioh/engine";
 import type { GameEvent, PlayerId } from "@jackioh/shared";
@@ -37,8 +37,9 @@ function drawsBy(events: readonly GameEvent[], player: PlayerId): number {
   return events.filter((event) => event.type === "drawn" && event.player === player).length;
 }
 
-function placeAll(s: Scenario, card: CardInstance, times: number): void {
-  for (let n = 0; n < times; n += 1) s.answer(card.id);
+/** Answer the one placement prompt on `card`: every placement lands there (R669). */
+function placeAll(s: Scenario, card: CardInstance): void {
+  s.answer(card.id);
 }
 
 function board(radiantFace = false, library = 4): Scenario {
@@ -65,7 +66,7 @@ describe("C #76 Plague Bringer", () => {
       const s = board();
       s.play(BRINGER);
       const bringer = s.card(BRINGER);
-      placeAll(s, bringer, 2);
+      placeAll(s, bringer);
       const theirs = must(s.unit("p2", 2), "p2's Vanilla");
 
       s.expectStats(bringer, { attack: 4, health: 4 });
@@ -75,30 +76,28 @@ describe("C #76 Plague Bringer", () => {
       expect(() => s.attack(bringer, "hero")).toThrow();
     });
 
-    it("Cry: two placements, one prompt each, over every permanent on either side, itself and face-down cards included", () => {
+    it("Cry: two placements on the one permanent a single prompt names, over every permanent on either side, itself and face-down cards included", () => {
       const s = board();
       s.play(BRINGER);
       const bringer = s.card(BRINGER);
 
       expect(new Set(optionIds(s))).toEqual(new Set([bringer.id, s.card(VANILLA).id, s.card(MANA_WELL).id, s.card(PAWN).id]));
+      // One answer puts both on the pick: no second prompt opens.
       s.answer(s.card(VANILLA).id);
-      expect(s.state.pending).not.toBeNull();
-      s.answer(s.card(MANA_WELL).id);
 
       expect(s.state.pending).toBeNull();
-      expect(s.card(VANILLA).counters.plague).toBe(1);
-      expect(s.card(MANA_WELL).counters.plague).toBe(1);
+      expect(s.card(VANILLA).counters.plague).toBe(2);
+      expect(s.card(MANA_WELL).counters.plague ?? 0).toBe(0);
     });
 
-    it("repeats are allowed; then draw 1, after the last placement", () => {
+    it("R669 no spreading; then draw 1, after the one answer", () => {
       const s = board();
       s.play(BRINGER);
       const vanilla = s.card(VANILLA);
 
       s.answer(vanilla.id);
-      expect(drawsBy(s.events, "p1")).toBe(0);
-      s.answer(vanilla.id);
 
+      expect(s.state.pending).toBeNull();
       expect(s.card(vanilla).counters.plague).toBe(2);
       expect(drawsBy(s.lastEvents, "p1")).toBe(1);
     });
@@ -112,7 +111,7 @@ describe("C #76 Plague Bringer", () => {
       if (!mine.forYou) throw new Error("the prompt is p1's");
       const option = must(mine.options.find((entry) => entry.instanceId === pawn.id || entry.key.includes(pawn.id)), "the trap's option");
       expect(option.defId).toBeUndefined();
-      placeAll(s, pawn, 2);
+      placeAll(s, pawn);
 
       expect(s.card(pawn).counters.plague).toBe(2);
       expect(JSON.stringify(s.view("p1"))).not.toContain(PAWN);
@@ -129,21 +128,20 @@ describe("C #76 Plague Bringer", () => {
       const s = scenario({ p1: { hand: [BRINGER, ANCHOR], field: [CRAWLER], library: lib(4) }, p2: { hand: [ANCHOR] } });
       s.play(BRINGER);
 
-      placeAll(s, s.card(CRAWLER), 2);
+      placeAll(s, s.card(CRAWLER));
 
       // Two Crawler draws and the Bringer's own.
       expect(drawsBy(s.events, "p1")).toBe(3);
     });
 
-    it("§9.3 the chain paused after one placement survives a JSON round trip", () => {
+    it("§9.3 the open prompt survives a JSON round trip", () => {
       const s = board();
       s.play(BRINGER);
       const vanilla = s.card(VANILLA);
-      s.answer(vanilla.id);
 
       const revived = JSON.parse(JSON.stringify(s.state)) as GameState;
       expect(revived).toEqual(s.state);
-      const choice = must(revived.pending, "the second placement");
+      const choice = must(revived.pending, "the placement prompt");
       const result = reduce(revived, {
         type: "answer",
         playerId: "p1",
@@ -154,6 +152,7 @@ describe("C #76 Plague Bringer", () => {
       expect(result.error).toBeUndefined();
       s.answer(vanilla.id);
 
+      expect(result.state.pending).toBeNull();
       expect(hashState(result.state)).toBe(hashState(s.state));
       expect(drawsBy(result.events, "p1")).toBe(1);
     });
@@ -161,18 +160,18 @@ describe("C #76 Plague Bringer", () => {
     it("§2.4 with an empty deck the draw is fatigue", () => {
       const s = board(false, 0);
       s.play(BRINGER);
-      placeAll(s, s.card(VANILLA), 2);
+      placeAll(s, s.card(VANILLA));
 
       expect(s.lastEvents.filter((event) => event.type === "fatigue" && event.player === "p1")).toHaveLength(1);
     });
 
-    it("R386 an Upgrade asks three times and draws 2", () => {
+    it("R386 an Upgrade places three and draws 2", () => {
       const s = board();
       stepParam(s.card(BRINGER), "tokens", 1);
       stepParam(s.card(BRINGER), "draw", 1);
       s.play(BRINGER);
 
-      placeAll(s, s.card(VANILLA), 3);
+      placeAll(s, s.card(VANILLA));
 
       expect(s.state.pending).toBeNull();
       expect(s.card(VANILLA).counters.plague).toBe(3);
@@ -181,31 +180,29 @@ describe("C #76 Plague Bringer", () => {
   });
 
   describe("radiant", () => {
-    it("is an 8/8 with Rush; four placements, then draw 2", () => {
+    it("is an 8/8 with Rush; four placements on the one pick, then draw 2", () => {
       const s = board(true);
       s.play(BRINGER);
       const bringer = s.card(BRINGER);
 
       s.expectStats(bringer, { attack: 8, health: 8 });
-      placeAll(s, s.card(VANILLA), 3);
-      expect(s.state.pending).not.toBeNull();
-      expect(drawsBy(s.events, "p1")).toBe(0);
-      s.answer(s.card(MANA_WELL).id);
+      placeAll(s, s.card(VANILLA));
 
-      expect(s.card(VANILLA).counters.plague).toBe(3);
-      expect(s.card(MANA_WELL).counters.plague).toBe(1);
+      expect(s.state.pending).toBeNull();
+      expect(s.card(VANILLA).counters.plague).toBe(4);
       expect(drawsBy(s.lastEvents, "p1")).toBe(2);
     });
 
-    it("R386 a Degrade asks three times and draws 1", () => {
+    it("R386 a Degrade places three and draws 1", () => {
       const s = board(true);
       stepParam(s.card(BRINGER), "tokens", -1);
       stepParam(s.card(BRINGER), "draw", -1);
       s.play(BRINGER);
 
-      placeAll(s, s.card(VANILLA), 3);
+      placeAll(s, s.card(VANILLA));
 
       expect(s.state.pending).toBeNull();
+      expect(s.card(VANILLA).counters.plague).toBe(3);
       expect(drawsBy(s.lastEvents, "p1")).toBe(1);
     });
 

@@ -1,11 +1,12 @@
 // C #8 Pickle — SPEC §8.6 row 8, BUILD M9 Classic row C 8: "Three mode prompts held by the opponent
-// during your turn, one after another, repeats allowed: they discard a card (their own hand pick,
-// R16), they exile the bottom card of their deck, or you draw 1; a mode that would do nothing is not
+// during your turn, one after another, repeats allowed: they discard a card at random (R662),
+// they exile the bottom card of their deck, or you draw 1; a mode that would do nothing is not
 // offered (discard with an empty hand, exile with an empty deck), and "you draw" always is, fatigue
 // included; each prompt runs its own clock and a timeout answers it with the AI policy (R79); your
-// view names none of their hand options, their view never names your drawn card, and the mode options
-// name no card; the paused prompts survive a JSON round trip; radiant: discard 2, exile the bottom 2,
-// or draw 2; its tuned numbers (choices, discard, exile, draw) read through `param()` (R386)".
+// view names none of their remaining hand, their view never names your drawn card, and the mode
+// options name no card; the paused prompts survive a JSON round trip; radiant: discard 2, exile the
+// bottom 2, or draw 2; its tuned numbers (choices, discard, exile, draw) read through `param()`
+// (R386)".
 
 import { describe, expect, it } from "vitest";
 import { reduce, stepParam, type GameState, type PendingChoice } from "@jackioh/engine";
@@ -82,25 +83,16 @@ describe("C #8 Pickle", () => {
       s.expectInZone(PICKLE, "graveyard");
     });
 
-    it("R16 discard opens their own hand pick, and the card they pick is discarded", () => {
+    it("R662 discard discards a random card of theirs at once, with no hand pick", () => {
       const s = pickle();
       s.play(PICKLE);
       s.answer("discard");
-      const pick = open(s);
-      expect(pick.playerId).toBe("p2");
-      expect(pick.kind).toBe("hand");
-      expect(pick.min).toBe(1);
-      expect(pick.max).toBe(1);
-      const offered = pick.options.map((option) =>
-        option.selection.pick === "instance" ? s.card(option.selection.instanceId).defId : "?",
-      );
-      expect(offered).toEqual([...THEIR_HAND]);
-      const timmy = s.card("core-011");
-      s.answer(timmy.id);
-      s.expectInZone(timmy, "graveyard");
-      s.expectEvents("discarded");
-      // The next question follows.
+      // No follow-up pick: the random discard landed and the next question is open.
       expect(open(s).kind).toBe("mode");
+      const grave = defs(s, "p2", "graveyard");
+      expect(grave).toHaveLength(1);
+      expect([...THEIR_HAND]).toContain(grave[0]);
+      s.expectEvents("discarded");
     });
 
     it("exile takes the bottom card of their deck", () => {
@@ -116,11 +108,12 @@ describe("C #8 Pickle", () => {
       s.play(PICKLE);
       s.answer("exile");
       s.answer("discard");
-      s.answer(s.card("core-008").id);
       s.answer("draw");
       expect(s.state.pending).toBeNull();
       expect(defs(s, "p2", "exile")).toEqual([THEIR_DECK[3]]);
-      expect(defs(s, "p2", "graveyard")).toEqual(["core-008"]);
+      const grave = defs(s, "p2", "graveyard");
+      expect(grave).toHaveLength(1);
+      expect([...THEIR_HAND]).toContain(grave[0]);
       expect(defs(s, "p1", "hand")).toEqual([FILLER, MY_DECK[0]]);
     });
 
@@ -142,7 +135,7 @@ describe("C #8 Pickle", () => {
       const s = pickle(false, { theirHand: ["core-008"] });
       s.play(PICKLE);
       s.answer("discard");
-      s.answer(s.card("core-008").id);
+      expect(defs(s, "p2", "graveyard")).toEqual(["core-008"]);
       expect(modes(s)).toEqual(["exile", "draw"]);
     });
 
@@ -171,16 +164,17 @@ describe("C #8 Pickle", () => {
       expect(result.events.filter((event) => event.type === "promptAnswered")).toHaveLength(1);
     });
 
-    it("R177 your view names none of their hand while they pick what to discard", () => {
+    it("R177 your view names none of their remaining hand", () => {
       const s = pickle();
       s.play(PICKLE);
       s.answer("discard");
-      expect(s.view("p1").pending).toEqual({ forYou: false, pendingFor: "p2" });
       const mine = JSON.stringify(s.view("p1"));
       for (const card of s.hand("p2")) {
         expect(mine).not.toContain(`"${card.id}"`);
         expect(mine).not.toContain(card.defId);
       }
+      // The random discard itself is public: the graveyard names it.
+      for (const card of s.pile("p2", "graveyard")) expect(mine).toContain(card.id);
     });
 
     it("R97 their view never names the card you draw", () => {
@@ -236,28 +230,16 @@ describe("C #8 Pickle", () => {
       expect(picked.state.work).toEqual([]);
     });
 
-    it("§9.3 the paused discard pick survives a JSON round trip and resumes through reduce", () => {
-      const s = pickle();
-      s.play(PICKLE);
-      s.answer("discard");
-      const revived = JSON.parse(JSON.stringify(s.state)) as GameState;
-      expect(revived).toEqual(s.state);
-      const pick = must(revived.pending, "the discard pick");
-      expect(pick.kind).toBe("hand");
-      const vanilla = s.card("core-008");
-      const answered = reduce(revived, {
-        type: "answer",
-        playerId: "p2",
-        choiceId: pick.id,
-        selection: [{ pick: "instance", instanceId: vanilla.id }],
-        nonce: "pickle-round-trip-discard",
-      });
-      expect(answered.error).toBeUndefined();
-      expect(answered.events.some((event) => event.type === "discarded" && event.instanceId === vanilla.id)).toBe(true);
-      // The second question follows, still the opponent's.
-      const second = must(answered.state.pending, "the second question");
-      expect(second.kind).toBe("mode");
-      expect(second.playerId).toBe("p2");
+    it("R662 the random discard comes from the match rng: the same game discards the same card", () => {
+      const first = pickle();
+      first.play(PICKLE);
+      first.answer("discard");
+      const second = pickle();
+      second.play(PICKLE);
+      second.answer("discard");
+      const ids = (s: Scenario): string[] =>
+        s.events.flatMap((event) => (event.type === "discarded" ? [event.instanceId] : []));
+      expect(ids(first)).toEqual(ids(second));
     });
 
     it("R386 an Upgrade of choices asks a fourth question", () => {
@@ -283,10 +265,10 @@ describe("C #8 Pickle", () => {
       stepParam(s.card(PICKLE), "exile", 1);
       s.play(PICKLE);
       s.answer("discard");
-      expect(open(s).max).toBe(2);
-      s.answer([s.card("core-008").id, s.card("core-011").id]);
+      const grave = defs(s, "p2", "graveyard");
+      expect(grave).toHaveLength(2);
+      for (const defId of grave) expect([...THEIR_HAND]).toContain(defId);
       s.answer("exile");
-      expect(defs(s, "p2", "graveyard")).toEqual(["core-008", "core-011"]);
       expect(defs(s, "p2", "exile")).toEqual([THEIR_DECK[3], THEIR_DECK[2]]);
     });
 
@@ -301,7 +283,7 @@ describe("C #8 Pickle", () => {
   });
 
   describe("radiant", () => {
-    it("they discard 2 cards of their choice", () => {
+    it("R662 they discard 2 cards at random", () => {
       const s = pickle(true);
       s.play(PICKLE);
       expect(open(s).options.map((option) => option.label)).toEqual([
@@ -310,20 +292,18 @@ describe("C #8 Pickle", () => {
         "Your opponent draws 2 cards",
       ]);
       s.answer("discard");
-      const pick = open(s);
-      expect(pick.min).toBe(2);
-      expect(pick.max).toBe(2);
-      s.answer([s.card("core-008").id, s.card("core-015").id]);
-      expect(defs(s, "p2", "graveyard")).toEqual(["core-008", "core-015"]);
+      expect(open(s).kind).toBe("mode");
+      const grave = defs(s, "p2", "graveyard");
+      expect(grave).toHaveLength(2);
+      for (const defId of grave) expect([...THEIR_HAND]).toContain(defId);
     });
 
     it("a hand of one card discards that one", () => {
       const s = pickle(true, { theirHand: ["core-008"] });
       s.play(PICKLE);
       s.answer("discard");
-      expect(open(s).max).toBe(1);
-      s.answer(s.card("core-008").id);
       expect(s.hand("p2")).toEqual([]);
+      expect(defs(s, "p2", "graveyard")).toEqual(["core-008"]);
     });
 
     it("they exile the bottom 2 cards of their deck", () => {

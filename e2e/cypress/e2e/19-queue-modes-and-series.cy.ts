@@ -440,8 +440,8 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
   it("a Conquest series: sealed picks, the picked decks, won decks locked, the last deck picked for you, three wins end it and rate it once (R330–R338, R262)", () => {
     // The series' games are seeded `${seed}:1`..`:3` (R335). No #21 Hinder is dealt into an opening
     // hand in any game: setup sets a cast-on-draw card aside until the mulligans are done (R635).
-    // Before that the seed had to avoid it, since its base face asks for a discard (R431) and the
-    // hand this test reads would not have been on the board yet.
+    // Before that the seed had to avoid it, since a turn-1 cast discards a random card (R431, R662),
+    // changing the hand this test reads.
     const seed = seedFor("19-series-0");
     const seatOne = accounts.p1();
     const seatTwo = accounts.p2();

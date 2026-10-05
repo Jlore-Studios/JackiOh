@@ -337,17 +337,18 @@ describe("summonRandom (§5.1, §10.7, R60, #67)", () => {
     expect(trap?.faceUp).toBeUndefined();
   });
 
-  it("R47 fizzles on an occupied or a Locked backrow lane", () => {
+  it("R47 fizzles on an occupied backrow lane, but a Locked one takes the summon (R668)", () => {
     const occupied = game("random-occupied");
     put(occupied, poolTrap.id, slot("p1", "backrow", 2));
     const before = occupied.nextId;
     expect(run(occupied, summonRandom({ query: { defId: [poolTrap.id] }, lane: 2 }))).toEqual([]);
     expect(occupied.nextId).toBe(before);
 
+    // A Lock refuses plays, never summons: the generic summon lands and the lock stays.
     const locked = game("random-locked");
     lockZone(locked, slot("p1", "backrow", 2));
-    expect(run(locked, summonRandom({ query: { defId: [poolTrap.id] }, lane: 2 }))).toEqual([]);
-    expect(cardAt(locked, slot("p1", "backrow", 2))).toBeNull();
+    expect(run(locked, summonRandom({ query: { defId: [poolTrap.id] }, lane: 2 })).length).toBeGreaterThan(0);
+    expect(cardAt(locked, slot("p1", "backrow", 2))?.defId).toBe(poolTrap.id);
   });
 
   it("§9.3 takes its rng draw inside apply, and the same cursor gives the same pick", () => {

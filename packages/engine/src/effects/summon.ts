@@ -12,7 +12,7 @@ import { animateOnEntry } from "../animated";
 import { defOf, excludingDefId, pickGenerated, query, type CatalogQueryArgs } from "../catalog";
 import { unitedEnchantments } from "../enchantments";
 import { cardTypeOf } from "../faces";
-import { effectiveCost } from "../mana";
+import { effectiveCost, isXCost } from "../mana";
 import { runStartOfGame } from "../prompts";
 import type { Effect, EffectContext } from "../script";
 import { newInstance, type CardInstance } from "../state";
@@ -25,7 +25,6 @@ import {
   freshFaceDownId,
   landsFaceDown,
   isEmpty,
-  isLocked,
   isReserved,
   isUnitToken,
   placeOnField,
@@ -82,9 +81,12 @@ function isPermanentType(type: CardType): boolean {
   return type !== "Spell";
 }
 
-/** What `placeOnField` will accept, checked before the card leaves the zone it is in (§3.2). */
+/**
+ * What `placeOnField` will accept, checked before the card leaves the zone it is in (§3.2). R668: a
+ * named summon enters a Locked zone — only plays refuse one — so this checks the reservation alone.
+ */
 function canPlace(ctx: EffectContext, ref: ZoneSlot, stack: boolean): boolean {
-  if (isLocked(ctx.state, ref) || isReserved(ctx.state, ref)) return false;
+  if (isReserved(ctx.state, ref)) return false;
   if (isEmpty(ctx.state, ref)) return true;
   return ref.row === "units" && stack;
 }
@@ -412,6 +414,17 @@ function recruitable(ctx: EffectContext, card: CardInstance, filter: RecruitFilt
 }
 
 /**
+ * R670: of the valid targets a scan may take, an (X)-cost card comes last — recruited, never played,
+ * it would arrive with no X behind it, so a scan takes the first valid target that is not (X)-cost
+ * and only when nothing else is valid takes the first (X)-cost one.
+ */
+function skipXCost(ctx: EffectContext, cards: CardInstance[]): CardInstance[] {
+  if (cards.length === 0) return cards;
+  const solid = cards.filter((card) => !isXCost(ctx.state, card));
+  return solid.length > 0 ? solid : cards;
+}
+
+/**
  * #98 radiant, "Recruit and make it Radiant": the second half is §6.3's Make Radiant, and every
  * visible change is announced (§10.3) — `radiantSet` is what §10.10 animates the glow from. The flag
  * went on as the card left the pile, so it lands on its Radiant face; the cue follows the summon, and
@@ -434,7 +447,8 @@ function announceRadiant(ctx: EffectContext, recruited: CardInstance | null, rad
  * so it goes back to its owner's piles when it leaves the field (§3.2, R12). `count` is "Recruit N"
  * (Classic #31 Radiant, #65 Radiant): N scans, one after another, each the whole of a single Recruit,
  * so a scan whose card finds no zone fizzles and the next scan finds that card again (Core #69's
- * "three top-down scans; stops when the board is full").
+ * "three top-down scans; stops when the board is full"). Every scan skips (X)-cost cards unless they
+ * are the only valid targets (R670).
  */
 export function recruit(
   args: {
@@ -456,7 +470,8 @@ export function recruit(
       const filter = args.filter ?? {};
       const scans = Math.max(1, Math.trunc(args.count ?? 1));
       for (let scan = 0; scan < scans; scan += 1) {
-        const found = recruitPile(ctx, args.from ?? "library", whose).find((card) => recruitable(ctx, card, filter));
+        const valid = recruitPile(ctx, args.from ?? "library", whose).filter((card) => recruitable(ctx, card, filter));
+        const found = skipXCost(ctx, valid)[0];
         if (found === undefined) return;
 
         const recruited = summonExisting(ctx, found, player, {
@@ -474,7 +489,8 @@ export function recruit(
  * down (a library) or newest first (an exile), as the effect reaches it, and each matching permanent
  * is summoned in turn while its row has an open zone — a Unit to the unit row, the rest to the backrow,
  * a Trap face-down (§3.2) — and passed over, staying where it is, once that row is full; a Spell or a
- * unit-token card stays (§6.3, R218). Each summon is its own step of a part (`resolve.lazyPart`) whose
+ * unit-token card stays (§6.3, R218). (X)-cost cards stay too unless they are the only valid targets
+ * (R670). Each summon is its own step of a part (`resolve.lazyPart`) whose
  * card list is kept as its memo, so a question a summoned card asks as it arrives (R151) pauses the
  * rest, which resumes over the same cards in the same order (R113).
  */
@@ -487,9 +503,10 @@ export function recruitAll(
     const filter = args.filter ?? {};
     const ids = Array.isArray(memo)
       ? memo.filter((id): id is string => typeof id === "string")
-      : recruitPile(ctx, args.from ?? "library", whose)
-          .filter((card) => recruitable(ctx, card, filter))
-          .map((card) => card.id);
+      : skipXCost(
+          ctx,
+          recruitPile(ctx, args.from ?? "library", whose).filter((card) => recruitable(ctx, card, filter)),
+        ).map((card) => card.id);
     const pile = args.from ?? "library";
     const effects: Effect[] = ids.map((id) => ({
       kind: "recruitOne",

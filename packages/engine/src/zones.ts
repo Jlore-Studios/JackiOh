@@ -18,6 +18,24 @@ export function rowSize(row: Row): number {
   return row === "units" ? UNIT_ZONES : BACKROW_ZONES;
 }
 
+/**
+ * §3.1, Classic #22: the midlane lanes of a board `lanes` wide — the center lane of an odd count,
+ * both center lanes of an even one (R665). Locks never matter to it. The caller reads the count off
+ * the board (a side's unit row length), never off `MID_LANE`, which no longer exists.
+ */
+export function midlaneLanes(lanes: number): number[] {
+  if (!Number.isInteger(lanes) || lanes <= 0) return [];
+  return lanes % 2 === 1 ? [(lanes + 1) / 2] : [lanes / 2, lanes / 2 + 1];
+}
+
+/**
+ * R665: the midlane lanes of a player's own board, read off its unit row length. Card scripts
+ * read the midlane through this (never `state.players[…]` themselves, M3-T1).
+ */
+export function midlaneLanesOf(state: GameState, player: PlayerId): number[] {
+  return midlaneLanes(state.players[player].units.length);
+}
+
 export function slotsOf(player: PlayerId, row: Row): ZoneSlot[] {
   // A loop, not `Array.from({ length })`: every unit read asks for slots through the layers, and
   // Array.from's generic path was a fifth of a long AI gate game's time (#188).
@@ -68,7 +86,7 @@ export function lockZone(state: GameState, ref: ZoneSlot): void {
   state.players[ref.player].locks[ref.row][ref.lane - 1] = true;
 }
 
-/** B5 E20: a Locked zone accepts summons again. Its occupant, if any, is unaffected. */
+/** B5 E20: clear the flag. Its occupant, if any, is unaffected. R668: summons and moves enter Locked zones, so Unlock only re-opens the zone for plays. */
 export function unlockZone(state: GameState, ref: ZoneSlot): void {
   state.players[ref.player].locks[ref.row][ref.lane - 1] = false;
 }
@@ -167,12 +185,14 @@ export function whyCannotCarry(state: GameState, ref: ZoneSlot): string | null {
 
 /**
  * §3.2, B5 E21: a zone a Stack card may enter although it is occupied. Occupancy is exactly what
- * Stack lifts, so what is left is what occupancy never covered — a Locked zone and a zone held for a
- * card's return (R64, B3.1 rule 6) take no Stack card either — plus, in a backrow zone, a carrier's
- * Unit: a zone carrying one takes nothing more (R446).
+ * Stack lifts, so what is left is what occupancy never covered — a zone held for a card's return
+ * (R64, B3.1 rule 6) takes no Stack card either — plus, in a backrow zone, a carrier's Unit: a zone
+ * carrying one takes nothing more (R446). A play's Stack entry still honors a Lock (R668: only plays
+ * are refused one); a move's does not, via `{ move: true }`.
  */
-export function acceptsStackCard(state: GameState, ref: ZoneSlot): boolean {
-  if (isLocked(state, ref) || isReserved(state, ref)) return false;
+export function acceptsStackCard(state: GameState, ref: ZoneSlot, options: { move?: boolean } = {}): boolean {
+  if (isReserved(state, ref)) return false;
+  if (!options.move && isLocked(state, ref)) return false;
   return ref.row === "units" || carriedAt(state, ref) === null;
 }
 
@@ -218,9 +238,17 @@ function isUnitFace(state: GameState, instance: CardInstance): boolean {
   return (face.type ?? def.type) === "Unit";
 }
 
-/** A zone that accepts a summon: empty and unlocked (§3.2). */
+/**
+ * A zone a play, or a summon with no named zone, may take: empty and unlocked (§3.2). R668: a named
+ * summon or a move may enter a Locked zone instead (`takesMove`, `placeOnField`); only plays refuse one.
+ */
 export function isOpen(state: GameState, ref: ZoneSlot): boolean {
   return isEmpty(state, ref) && !isLocked(state, ref) && !isReserved(state, ref);
+}
+
+/** R668: a zone a move may enter — empty and unreserved. Locked zones take moves; only plays refuse one. */
+export function takesMove(state: GameState, ref: ZoneSlot): boolean {
+  return isEmpty(state, ref) && !isReserved(state, ref);
 }
 
 /**
@@ -294,7 +322,8 @@ export function placeOnField(
   ref: ZoneSlot,
   options: { stack?: boolean } = {},
 ): boolean {
-  if (isLocked(state, ref)) return false;
+  // R668: a Lock refuses plays, never placements — summons, moves, rotations and restores all land.
+  // Plays never reach here unvetted (`playChoices` offers and `playSteps` assigns unlocked zones only).
   if (isReserved(state, ref)) return false;
   const side = state.players[ref.player];
 
@@ -512,6 +541,7 @@ export function resetInstance(instance: CardInstance): void {
   delete instance.armorOverride;
   delete instance.tauntSuppressedTurn;
   delete instance.faceUp;
+  delete instance.revealed;
   delete instance.lastDamagedBy;
   delete instance.x;
   delete instance.embiggened;
@@ -794,22 +824,22 @@ export function slotOf(state: GameState, instance: CardInstance): ZoneSlot | nul
 export function stepIntoUnitZone(state: GameState, card: CardInstance, to: ZoneSlot): boolean {
   const from = slotOf(state, card);
   if (from === null || from.row !== "backrow" || to.row !== "units") return false;
-  if (from.player !== to.player || !actsOnField(state, card) || !isOpen(state, to)) return false;
+  if (from.player !== to.player || !actsOnField(state, card) || !takesMove(state, to)) return false;
   removeFromField(state, card, { withPile: true });
   return placeOnField(state, card, to);
 }
 
 /**
  * B3.1 rule 6: move a card acting in a unit zone into a backrow zone of its side, without leaving the
- * field. `to` must take it: not Locked, not held for another card, and empty — or, for a card that
- * has Stack, a zone a Stack card may top (B5 E21). The caller releases the card's own home first. False,
+ * field. `to` must take it: not held for another card, and empty — or, for a card that
+ * has Stack, a zone a Stack card may top (B5 E21). A Lock never stops a move (R668). The caller releases the card's own home first. False,
  * changing nothing, when it cannot go.
  */
 export function stepIntoBackrow(state: GameState, card: CardInstance, to: ZoneSlot, options: { stack?: boolean } = {}): boolean {
   const from = slotOf(state, card);
   if (from === null || from.row !== "units" || to.row !== "backrow") return false;
   if (from.player !== to.player || !actsOnField(state, card)) return false;
-  const takes = isEmpty(state, to) ? isOpen(state, to) : options.stack === true && acceptsStackCard(state, to);
+  const takes = isEmpty(state, to) ? takesMove(state, to) : options.stack === true && acceptsStackCard(state, to, { move: true });
   if (!takes) return false;
   removeFromField(state, card, { withPile: true });
   return placeOnField(state, card, to, { stack: options.stack === true });

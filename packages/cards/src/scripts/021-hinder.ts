@@ -10,17 +10,14 @@
 // fills current mana to §2.3's max plus that one-shot rider, floored at 0, then clears it. So a −2
 // against a 1-mana refresh is 0, not −1, and max mana itself is untouched (§2.3).
 //
-// THE DISCARD (R431, R16, R81, R70, R158). "Discard 1" names no "random", so the caster picks the
-// card (R16). It is the card's own choice, so it is declared (R81, as #26 declares its hand pick):
-// played from hand it travels in the play action, and cast — on a draw, which is how Hinder almost
-// always resolves — the caster is asked it as the cast begins (R70), a hand prompt in the middle of
-// the draw, which pauses the draw and owes its remainder on `state.work` (R158). The pick offers the
-// caster's own hand and never Hinder itself (§9.1, R90); with an empty hand there is nothing to offer,
-// the declaration takes nothing, and the discard fizzles while the mana clause still lands (R90). The
-// discard comes second, after the mana clause, as the text reads.
+// THE DISCARD (R431, R662, R70). "Discard 1" names no "of your choice", so the discard is random
+// from the caster's hand (R662) — no declaration travels in the play action (R81), and a cast, on a
+// draw, which is how Hinder almost always resolves, asks nothing as it begins (R70): no hand prompt
+// pauses the draw. With an empty hand there is nothing to discard, and the mana clause still lands.
+// The discard comes second, after the mana clause, as the text reads.
 
 import type { Script } from "@jackioh/engine";
-import { discard, nextTurnMana } from "@jackioh/engine/effects";
+import { discardRandom, nextTurnMana } from "@jackioh/engine/effects";
 import { cardDef } from "../catalog-data";
 
 export const def = cardDef("core-021");
@@ -35,9 +32,8 @@ function hinder(lower: number, discards: boolean): Script {
   }
   return {
     staticFlags: { castOnDraw: true },
-    // R16, R81: "Discard 1" — one card of the caster's own hand, their choice.
-    targets: [{ kind: "hand", min: 1, max: 1, filter: { of: ["hand"] } }],
-    cry: () => [nextTurnMana({ amount: -lower, player: "enemy" }), discard({ target: { of: "chosen" } })],
+    // R662: "Discard 1" — one random card of the caster's own hand.
+    cry: () => [nextTurnMana({ amount: -lower, player: "enemy" }), discardRandom({ count: 1 })],
   };
 }
 

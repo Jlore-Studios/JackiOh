@@ -561,7 +561,7 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     expect(field.markedDestroyed).toBe(false);
   });
 
-  it("R47 fizzles a lane-targeted summon into an occupied or Locked zone, and holds a Reborn unit's zone", () => {
+  it("R47 a lane-targeted summon fizzles on an occupied zone but lands on a Locked one (R668), and holds a Reborn unit's zone", () => {
     const state = game("r47");
     const sink = sinkFor(state);
     const ctx = makeContext(sink, null, { controller: "p1" });
@@ -569,9 +569,11 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     put(state, plain.id, slot("p1", "units", 2));
     lockZone(state, slot("p1", "units", 3));
 
-    applyEffects([summon({ defId: small.id, lane: 2 })], ctx); // occupied
-    applyEffects([summon({ defId: small.id, lane: 3 })], ctx); // Locked
+    applyEffects([summon({ defId: small.id, lane: 2 })], ctx); // occupied: fizzles
     expect(activeUnitsOf(state, "p1").map((u) => u.defId)).toEqual([plain.id]);
+
+    applyEffects([summon({ defId: small.id, lane: 3 })], ctx); // Locked: lands (R668)
+    expect(cardAt(state, slot("p1", "units", 3))?.defId).toBe(small.id);
 
     applyEffects([summon({ defId: small.id, lane: 4 })], ctx);
     expect(cardAt(state, slot("p1", "units", 4))?.defId).toBe(small.id);

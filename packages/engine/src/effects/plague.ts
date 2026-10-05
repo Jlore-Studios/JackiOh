@@ -9,19 +9,20 @@
 //     Dusting's "on each permanent", face-down ones included);
 //   - `placePlagueRandom`: one placement on each of N different random cards of a scope (Classic #42
 //     Transmutable Toxins, R60);
-//   - `placePlagueTokens`: "Place N Plague Tokens" with no card named — N placements, each on a
-//     permanent the placer chooses in a prompt of their own over every permanent on the field, either
-//     side, face-down included, repeats allowed (Classic #61, #70, #76, #90 reward D);
+//   - `placePlagueTokens`: "Place N Plague Tokens" with no card named — N placements, all on the one
+//     permanent the placer chooses in a single prompt of their own over every permanent on the field,
+//     either side, face-down included (R669; Classic #61, #70, #76, #90 reward D);
 //   - `consumePlague`: take tokens off (Classic #78 Mutate Spell).
 //
-// PROMPTS (R113, R122). Each placement of `placePlagueTokens` is its own `target` prompt. The first
-// is opened by the effect, so the list it stands in parks its rest on `state.work` as any asking
-// effect's does; the rest are opened by the answer to the one before (`answerPlacement`, registered
-// with `prompts.registerPromptAnswerer` for this module's hook), each carrying only how many
-// placements are left and how many tokens each puts, so a paused chain is plain data that survives
-// JSON and replays exactly. The last answer drains what the first prompt interrupted. The state check
-// waits for the whole effect (R59), so a unit a placement shrank to 0 health (an aura reading its
-// tokens, #42) dies after the last placement, not between two.
+// PROMPTS (R113, R122, R669). `placePlagueTokens` opens one `target` prompt naming the single
+// permanent all of its placements go on. The prompt is opened by the effect, so the list it stands
+// in parks its rest on `state.work` as any asking effect's does; the answer places every placement
+// on the pick and drains what the prompt interrupted (`answerPlacement`, registered with
+// `prompts.registerPromptAnswerer` for this module's hook). The resume carries only how many tokens
+// each placement puts and how many placements land, so a paused chain is plain data that survives
+// JSON and replays exactly. The state check waits for the whole effect (R59), so a unit the
+// placements shrank to 0 health (an aura reading its tokens, #42) dies after the last placement,
+// not between two.
 
 import type { Selection } from "@jackioh/shared";
 import { defOf } from "../catalog";
@@ -40,7 +41,7 @@ import {
 import type { EngineSink } from "../resolve";
 import type { Effect, EffectContext } from "../script";
 import { findInstance, type CardInstance, type PendingChoice, type Resume } from "../state";
-import { beginWorkCascade, drainWork, paused } from "../work";
+import { beginWorkCascade, drainWork } from "../work";
 import { isBuried } from "../zones";
 import { cardsInScope, instanceOf, type BoardScope, type TargetSpec } from "./targets";
 
@@ -122,13 +123,13 @@ export function consumePlague(args: { target?: TargetSpec; amount?: number }): E
 /** The hook every placement prompt names, answered by `answerPlacement` below (R122). */
 export const PLAGUE_PLACEMENT_HOOK = "plague:placement";
 
-/** What a placement prompt carries to its answer: this placement's tokens and how many follow it. */
-type PlacementData = { amount: number; left: number };
+/** What the one placement prompt carries to its answer: each placement's tokens and how many land. */
+type PlacementData = { amount: number; count: number };
 
 function placementData(data: Record<string, unknown>): PlacementData | null {
-  const { amount, left } = data;
-  if (typeof amount !== "number" || typeof left !== "number") return null;
-  return { amount, left };
+  const { amount, count } = data;
+  if (typeof amount !== "number" || typeof count !== "number") return null;
+  return { amount, count };
 }
 
 /** The label a placement option shows its chooser; `viewFor` hides a card the chooser may not read (R177). */
@@ -137,8 +138,8 @@ function labelOf(ctx: Pick<EffectContext, "state">, card: CardInstance): string 
 }
 
 /**
- * Open the next placement's prompt for `resume`'s placer over every permanent on the field (R68's
- * order, the placer's side first), or return false when there is none — the placements left fizzle
+ * Open the one placement prompt for `resume`'s placer over every permanent on the field (R68's
+ * order, the placer's side first), or return false when there is none — the placements fizzle
  * then, and draw nothing (R129).
  */
 function askPlacement(sink: EngineSink, player: PendingChoice["playerId"], resume: Resume): boolean {
@@ -146,24 +147,25 @@ function askPlacement(sink: EngineSink, player: PendingChoice["playerId"], resum
   if (cards.length === 0) return false;
   const data = placementData(resume.data);
   const tokens = data?.amount ?? 1;
-  // B5 E12, R452: a random cast's caster is never asked, so under one every placement goes on a random
-  // permanent (R60, repeats allowed; an enemy one when the cast targets enemies) and nothing pauses —
+  const count = Math.max(1, Math.trunc(data?.count ?? 1));
+  const total = tokens * count;
+  // B5 E12, R452: a random cast's caster is never asked, so under one every placement goes on one
+  // random permanent (R60; an enemy one when the cast targets enemies) and nothing pauses —
   // this hook answers its own prompts (`registerPromptAnswerer`), so `openPrompt` would ask instead.
   const mode = castModeForPrompt(sink.state, player, resume.instanceId);
   if (mode?.random === true) {
-    for (let left = data?.left ?? 0; left >= 0 && !paused(sink); left -= 1) {
-      const now = permanentsOnField(sink.state, player);
-      const pool = mode.targetEnemies ? preferEnemies(sink.state, player, now, (card) => ({ pick: "instance", instanceId: card.id }), 1) : now;
-      const card = pool[sink.rng.int(pool.length)];
-      if (card === undefined) break;
-      placePlagueOn(sink, card, tokens);
-    }
+    const now = permanentsOnField(sink.state, player);
+    const pool = mode.targetEnemies ? preferEnemies(sink.state, player, now, (card) => ({ pick: "instance", instanceId: card.id }), 1) : now;
+    if (pool.length === 0) return false;
+    const card = pool[sink.rng.int(pool.length)];
+    if (card === undefined) return false;
+    for (let at = 0; at < count; at += 1) placePlagueOn(sink, card, tokens);
     return false;
   }
   const asked = openPrompt(sink, {
     player,
     kind: "target",
-    prompt: tokens === 1 ? "Place a Plague Token on a permanent" : `Place ${tokens} Plague Tokens on a permanent`,
+    prompt: total === 1 ? "Place a Plague Token on a permanent" : `Place ${total} Plague Tokens on a permanent`,
     options: cards.map((card) => ({
       key: `instance:${card.id}`,
       label: labelOf(sink, card),
@@ -175,11 +177,11 @@ function askPlacement(sink: EngineSink, player: PendingChoice["playerId"], resum
 }
 
 /**
- * "Place N Plague Tokens" (B5 E19, R471): `count` placements of `amount` (default 1), each on a
- * permanent the running card's controller chooses — either side, face-down cards included, the same
- * card as often as they like — in a prompt of its own. The first prompt opens as this effect applies;
- * each answer places, then opens the next; with no permanent on the field the placements left do
- * nothing. The other player sees only that a prompt is open (§10.6, R81).
+ * "Place N Plague Tokens" (B5 E19, R471, R669): `count` placements of `amount` (default 1), all on
+ * the one permanent the running card's controller chooses — either side, face-down cards included —
+ * in a single prompt. The prompt opens as this effect applies; its answer places every placement on
+ * the pick, then what the prompt interrupted resumes. With no permanent on the field the placements
+ * do nothing. The other player sees only that a prompt is open (§10.6, R81).
  */
 export function placePlagueTokens(args: { count: number; amount?: number }): Effect {
   return {
@@ -193,7 +195,7 @@ export function placePlagueTokens(args: { count: number; amount?: number }): Eff
         step: "place",
         radiant: ctx.radiant,
         ...(ctx.self === null ? {} : { instanceId: ctx.self.id }),
-        data: { amount: Math.max(1, Math.trunc(args.amount ?? 1)), left: count - 1 },
+        data: { amount: Math.max(1, Math.trunc(args.amount ?? 1)), count },
       });
       askPlacement(ctx, ctx.controller, resume);
     },
@@ -201,10 +203,9 @@ export function placePlagueTokens(args: { count: number; amount?: number }): Eff
 }
 
 /**
- * R122: the answer to a placement prompt — validated as any prompt's, closed, the placement made on
- * the pick (a card that is no longer a permanent on the field takes nothing), then the next
- * placement's prompt; once none is left, or none can be asked, what the first prompt interrupted
- * resumes (R113).
+ * R122, R669: the answer to the one placement prompt — validated as any prompt's, closed, every
+ * placement made on the pick (a card that is no longer a permanent on the field takes nothing),
+ * then what the prompt interrupted resumes (R113).
  */
 function answerPlacement(sink: EngineSink, answer: AnswerInput): string | null {
   const pending = sink.state.pending;
@@ -219,12 +220,11 @@ function answerPlacement(sink: EngineSink, answer: AnswerInput): string | null {
   closePrompt(sink);
   beginWorkCascade(sink);
   const card = picked?.pick === "instance" ? findInstance(sink.state, picked.instanceId) : undefined;
-  if (card !== undefined) placePlagueOn(sink, card, data.amount);
-
-  if (data.left > 0 && !paused(sink)) {
-    const next: Resume = { ...resume, data: { ...resume.data, left: data.left - 1 } };
-    if (askPlacement(sink, pending.playerId, next)) return null;
+  if (card !== undefined) {
+    const times = Math.max(1, Math.trunc(data.count));
+    for (let at = 0; at < times; at += 1) placePlagueOn(sink, card, data.amount);
   }
+
   drainWork(sink);
   return null;
 }

@@ -1,14 +1,11 @@
-// C+ #39 Book Worm — SPEC §8.7 row 39, BUILD M9 Classic+ row C+ 39: "Its count N is 1 as it arrives
-// and rises by 1 at each start of its controller's turn (`counters.books`); Death adds N random
-// non-token Books of any set (R380, repeats allowed), reading N last-known (R78), a full hand burning
-// the rest; bounced and played again it starts at 1; its preview is N (R280); the growth reads through
-// `param()`; radiant the Books are Radiant".
-//
-// N is kept in the instance's memory (§10.1), which R78 clears as the card leaves the field, exactly
-// as it would clear a counter; the preview proofs (R280) are below, in this file.
+// C+ #39 Book Worm — SPEC §8.7 row 39, BUILD M9 Classic+ row C+ 39: "It starts with no Plague Tokens
+// (balance patch 1: no N counter — the tokens stacked on itself are the count); at each start of its
+// controller's turn one Plague Token is placed on it; Death adds one random non-token Book of any set
+// (R380, repeats allowed) per token, reading the tokens last-known (R78, R89), a full hand burning the
+// rest; bounced and played again it starts at none; the public token count is the preview both players
+// see; no tunable; radiant the Books are Radiant".
 
-import { HAND_CAP, defOf, stepParam } from "@jackioh/engine";
-import type { CardView } from "@jackioh/shared";
+import { HAND_CAP, defOf, stepParam, type CardInstance } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
 
@@ -36,19 +33,20 @@ function booksIn(s: Scenario, before: readonly string[]): string[] {
     .map((card) => card.defId);
 }
 
-function previewOf(view: CardView | null | undefined): number | undefined {
-  return view?.preview?.find((entry) => entry.label === "N")?.value;
+/** The Plague Tokens stacked on the Worm (§10.1, public in every view). */
+function tokensOf(s: Scenario, card: CardInstance): number {
+  return s.card(card).counters.plague ?? 0;
 }
 
 describe("C+ #39 Book Worm", () => {
   describe("base", () => {
-    it("N is 1 as it arrives: dying at once it adds 1 Book", () => {
+    it("it starts with no Plague Tokens: dying at once adds no Book", () => {
       const s = onField();
+      expect(tokensOf(s, s.card(WORM))).toBe(0);
       const before = s.hand("p1").map((card) => card.id);
       s.attack(WORM, MENACE);
       s.expectInZone(WORM, "graveyard");
-      const added = booksIn(s, before);
-      expect(added).toHaveLength(1);
+      expect(booksIn(s, before)).toHaveLength(0);
     });
 
     it("R380 the Books are random non-token Book cards of any set, never the Worm", () => {
@@ -59,9 +57,13 @@ describe("C+ #39 Book Worm", () => {
           p1: { hand: [FILLER], field: [WORM], library: [FILLER] },
           p2: { hand: [FILLER], field: [MENACE] },
         });
+        nextOwnTurn(s); // One token: one Book.
+        expect(tokensOf(s, s.card(WORM))).toBe(1);
         const before = s.hand("p1").map((card) => card.id);
         s.attack(WORM, MENACE);
-        for (const id of booksIn(s, before)) {
+        const added = booksIn(s, before);
+        expect(added).toHaveLength(1);
+        for (const id of added) {
           const def = defOf(s.state, id);
           expect(def.tags).toContain("Book");
           expect(def.token).toBe(false);
@@ -72,76 +74,81 @@ describe("C+ #39 Book Worm", () => {
       expect(sets.size).toBeGreaterThan(1);
     });
 
-    it("N rises by 1 at each start of its controller's turn, never the opponent's", () => {
+    it("one token lands at each start of its controller's turn, never the opponent's", () => {
       const s = onField(false, [FILLER, FILLER]);
-      s.endTurn(); // p2's start of turn: no growth.
-      expect(previewOf(s.view("p1").you.units[0])).toBe(1);
-      s.endTurn(); // p1's: N = 2.
-      expect(previewOf(s.view("p1").you.units[0])).toBe(2);
-      nextOwnTurn(s); // N = 3.
-      const before = s.hand("p1").map((card) => card.id);
-      s.attack(WORM, MENACE);
-      expect(booksIn(s, before)).toHaveLength(3);
-    });
-
-    it("R78 Death reads N last-known: the count it had as it died", () => {
-      const s = onField(false, [FILLER, FILLER]);
-      nextOwnTurn(s);
+      const worm = s.card(WORM);
+      s.endTurn(); // p2's start of turn: no token.
+      expect(tokensOf(s, worm)).toBe(0);
+      s.endTurn(); // p1's: the first token.
+      expect(tokensOf(s, worm)).toBe(1);
+      nextOwnTurn(s); // The second.
+      expect(tokensOf(s, worm)).toBe(2);
       const before = s.hand("p1").map((card) => card.id);
       s.attack(WORM, MENACE);
       expect(booksIn(s, before)).toHaveLength(2);
-      expect(s.card(WORM).memory).toEqual({});
+    });
+
+    it("R78 R89 Death reads the tokens last-known: the count it had as it died", () => {
+      const s = onField(false, [FILLER, FILLER]);
+      nextOwnTurn(s);
+      nextOwnTurn(s);
+      expect(tokensOf(s, s.card(WORM))).toBe(2);
+      const before = s.hand("p1").map((card) => card.id);
+      s.attack(WORM, MENACE);
+      expect(booksIn(s, before)).toHaveLength(2);
     });
 
     it("§2.4 a full hand burns the Books that do not fit", () => {
       const hand = Array.from({ length: HAND_CAP - 1 }, () => FILLER);
       const s = onField(false, hand);
-      nextOwnTurn(s); // N = 2; the turn's draw fills the hand to the cap.
+      nextOwnTurn(s); // One token; the turn's draw fills the hand to the cap.
+      expect(tokensOf(s, s.card(WORM))).toBe(1);
       expect(s.hand("p1")).toHaveLength(HAND_CAP);
       s.attack(WORM, MENACE);
       expect(s.hand("p1")).toHaveLength(HAND_CAP);
-      expect(s.events.filter((event) => event.type === "burned")).toHaveLength(2);
+      expect(s.events.filter((event) => event.type === "burned")).toHaveLength(1);
     });
 
-    it("R78 bounced and played again it starts at 1", () => {
+    it("R78 bounced and played again it starts at no tokens", () => {
       const s = onField(false, [FLOOD, FILLER, FILLER]);
-      nextOwnTurn(s); // N = 2.
-      expect(previewOf(s.view("p1").you.units[0])).toBe(2);
+      nextOwnTurn(s); // One token.
+      expect(tokensOf(s, s.card(WORM))).toBe(1);
       s.play(FLOOD);
       s.expectInZone(WORM, "hand");
-      expect(s.card(WORM).memory).toEqual({});
       // With no mana left the turn may end by itself (§2.5); come round to p1's next turn either way.
       const turn = s.state.turn;
       while (s.state.active !== "p1" || s.state.turn === turn) s.endTurn();
       s.play(WORM);
-      expect(previewOf(s.view("p1").you.units[0])).toBe(1);
+      expect(tokensOf(s, s.card(WORM))).toBe(0);
     });
 
-    it("R280 its preview is N, on the field, to both players; in hand it reads 1", () => {
+    it("R280 the token count is public, on the field, to both players; in hand it reads no tokens", () => {
       const s = scenario({
         p1: { hand: [WORM, FILLER], field: [WORM], library: [FILLER, FILLER] },
         p2: { hand: [FILLER], field: [MENACE], library: [FILLER, FILLER] },
       });
       nextOwnTurn(s);
-      const field = s.view("p1").you.units[0];
-      expect(previewOf(field)).toBe(2);
-      expect(previewOf(s.view("p2").opponent.units[0])).toBe(2);
+      expect(s.view("p1").you.units[0]?.counters?.plague).toBe(1);
+      expect(s.view("p2").opponent.units[0]?.counters?.plague).toBe(1);
       const inHand = s.view("p1").you.hand;
       if (!Array.isArray(inHand)) throw new Error("own hand in full");
-      expect(previewOf(inHand.find((card) => card.defId === WORM))).toBe(1);
-      // The label is a substring of the face's text (R280).
-      expect(defOf(s.state, WORM).base.text).toContain("N");
-      // What the preview says is what the Death then adds.
+      const wormInHand = inHand.find((card) => card.defId === WORM);
+      expect(wormInHand === undefined || !("counters" in wormInHand)).toBe(true);
+      // The text names what the counters are.
+      expect(defOf(s.state, WORM).base.text).toContain("Plague Token");
+      // What the counters say is what the Death then adds.
       const before = s.hand("p1").map((card) => card.id);
       s.attack(s.unit("p1", 1)?.id ?? "", MENACE);
-      expect(booksIn(s, before)).toHaveLength(2);
+      expect(booksIn(s, before)).toHaveLength(1);
     });
 
     it("R97 the Books it adds are hidden from the opponent", () => {
       const s = onField();
+      nextOwnTurn(s);
       const before = s.hand("p1").map((card) => card.id);
       s.attack(WORM, MENACE);
       const added = s.hand("p1").filter((card) => !before.includes(card.id));
+      expect(added).toHaveLength(1);
       const shown = s.view("p2").events.filter((event) => event.type === "addedToHand");
       expect(shown.length).toBeGreaterThan(0);
       for (const event of shown) {
@@ -150,20 +157,21 @@ describe("C+ #39 Book Worm", () => {
       }
     });
 
-    it("R386 the growth reads through param(): an Upgrade grows N by 2 a turn", () => {
+    it("R386 there is no tunable growth: an Upgrade still stacks one token a turn", () => {
       const s = onField(false, [FILLER, FILLER]);
       stepParam(s.card(WORM), "growth", 1);
       nextOwnTurn(s);
-      expect(previewOf(s.view("p1").you.units[0])).toBe(3);
+      expect(tokensOf(s, s.card(WORM))).toBe(1);
       const before = s.hand("p1").map((card) => card.id);
       s.attack(WORM, MENACE);
-      expect(booksIn(s, before)).toHaveLength(3);
+      expect(booksIn(s, before)).toHaveLength(1);
     });
   });
 
   describe("radiant", () => {
-    it("the Books it adds are Radiant, N of them", () => {
+    it("the Books it adds are Radiant, one per token", () => {
       const s = onField(true, [FILLER, FILLER]);
+      nextOwnTurn(s);
       nextOwnTurn(s);
       const before = s.hand("p1").map((card) => card.id);
       s.attack(WORM, MENACE);
@@ -172,10 +180,10 @@ describe("C+ #39 Book Worm", () => {
       expect(added.every((card) => card.radiant && defOf(s.state, card.defId).tags.includes("Book"))).toBe(true);
     });
 
-    it("R280 its preview is N on the Radiant face too", () => {
+    it("R280 its token count is public on the Radiant face too", () => {
       const s = onField(true, [FILLER, FILLER]);
       nextOwnTurn(s);
-      expect(previewOf(s.view("p1").you.units[0])).toBe(2);
+      expect(s.view("p1").you.units[0]?.counters?.plague).toBe(1);
     });
   });
 });

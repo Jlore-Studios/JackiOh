@@ -1,6 +1,7 @@
-// Plague Tokens, extended (docs/classic-sets.md B5 E19, R471): "Place N Plague Tokens" as N
-// placements each asked in a prompt, "Place N on X" as one placement, placement multipliers, the
-// "placed on this" trigger, stats per token through the layers, removal, and what each player sees.
+// Plague Tokens, extended (docs/classic-sets.md B5 E19, R471, R669): "Place N Plague Tokens" as N
+// placements all on the one permanent a single prompt names, "Place N on X" as one placement,
+// placement multipliers, the "placed on this" trigger, stats per token through the layers, removal,
+// and what each player sees.
 
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -64,8 +65,8 @@ function heroHealth(state: GameState, player: "p1" | "p2"): number {
   return state.players[player].hero.health;
 }
 
-describe("E19 Place N Plague Tokens: a prompt per placement (R471)", () => {
-  it("R471 places each token where its own prompt says, over every permanent on either side, face-down included", () => {
+describe("E19 Place N Plague Tokens: one prompt naming the single target (R471, R669)", () => {
+  it("R669 places every token on the one permanent the single prompt names, over every permanent on either side, face-down included", () => {
     const { run: start, mine, theirs, trap } = board("plague-prompts");
     const book = handCard(start.state, plagueBook.id);
     let run = frozen(start);
@@ -80,16 +81,10 @@ describe("E19 Place N Plague Tokens: a prompt per placement (R471)", () => {
     // The rest of the Cry waits for the placements (R113).
     expect(heroHealth(run.state, "p2")).toBe(enemyBefore);
 
+    // One answer puts both placements on the same face-down card: no second prompt opens.
     run = answer(run, pick(trap));
     // `reduce` works on a copy, so the card is read back out of the state the answer returned.
     const trapNow = (): CardInstance => run.state.players.p2.backrow[2] as CardInstance;
-    expect(plagueOn(trapNow())).toBe(1);
-    const second = run.state.pending;
-    expect(second).not.toBeNull();
-    expect(second?.id).not.toBe(first?.id);
-
-    // Repeats are allowed: the same face-down card again.
-    run = answer(run, pick(trap));
     expect(plagueOn(trapNow())).toBe(2);
     expect(run.state.pending).toBeNull();
     expect(heroHealth(run.state, "p2")).toBe(enemyBefore - 1);
@@ -101,27 +96,25 @@ describe("E19 Place N Plague Tokens: a prompt per placement (R471)", () => {
     ]);
   });
 
-  it("R471 a Radiant face's larger count is that many prompts, and a paused chain survives JSON and replays", () => {
-    const { run: start, mine, theirs } = board("plague-json");
+  it("R669 a Radiant face's larger count lands on the one pick, and the paused prompt survives JSON and replays", () => {
+    const { run: start, theirs } = board("plague-json");
     const book = handCard(start.state, plagueBook.id);
     book.radiant = true;
     let run = frozen(start);
     run = act(run, { type: "play", instanceId: book.id, playerId: "p1" });
-    run = answer(run, pick(mine));
 
-    // Mid-chain: two placements left, the Spell's damage parked behind them (R113).
+    // Paused on the one prompt, the Spell's damage parked behind it (R113).
     const paused = run.state;
     const round = JSON.parse(JSON.stringify(paused)) as GameState;
     expect(round).toEqual(paused);
-    expect(round.pending?.resume.data).toMatchObject({ left: 1, amount: 1 });
+    expect(round.pending?.resume.data).toMatchObject({ count: 3, amount: 1 });
 
-    let live = answer(run, pick(theirs));
-    live = answer(live, pick(theirs));
-    const fromJson = answer(answer({ ...run, state: round }, pick(theirs)), pick(theirs));
+    const live = answer(run, pick(theirs));
+    const fromJson = answer({ ...run, state: round }, pick(theirs));
     expect(hashState(fromJson.state)).toBe(hashState(live.state));
     expect(hashState(replayed(live))).toBe(hashState(live.state));
-    expect(plagueOn(live.state.players.p2.units[1]?.[0] as CardInstance)).toBe(2);
-    expect(plagueOn(live.state.players.p1.units[0]?.[0] as CardInstance)).toBe(1);
+    expect(plagueOn(live.state.players.p2.units[1]?.[0] as CardInstance)).toBe(3);
+    expect(plagueOn(live.state.players.p1.units[0]?.[0] as CardInstance)).toBe(0);
   });
 
   it("R471 with no permanent on the field nothing is asked and the rest of the list resolves at once", () => {
@@ -168,16 +161,17 @@ describe("E19 Place N Plague Tokens: a prompt per placement (R471)", () => {
     expect(trapOption).toEqual({ key: `instance:${trap.id}`, label: HIDDEN_OPTION_LABEL, instanceId: trap.id });
     expect(JSON.stringify(mine)).not.toContain(quietTrap.id);
 
+    // The one answer lands both placements on the trap (R669).
     run = answer(run, pick(trap));
     // The event names the trap to its controller and hides it from the placer (R97); the count on the
     // card's back is public to both (R471).
     const placerEvents = viewFor(run.state, "p1").events.filter((event) => event.type === "counterChanged");
     const ownerEvents = viewFor(run.state, "p2").events.filter((event) => event.type === "counterChanged");
-    expect(placerEvents.at(-1)).toMatchObject({ instanceId: HIDDEN_ID, value: 1, placed: 1 });
-    expect(ownerEvents.at(-1)).toMatchObject({ instanceId: trap.id, value: 1, placed: 1 });
-    expect(viewFor(run.state, "p1").opponent.backrow[2]).toEqual({ faceDown: true, cost: 1, plague: 1 });
+    expect(placerEvents.at(-1)).toMatchObject({ instanceId: HIDDEN_ID, value: 2, placed: 1 });
+    expect(ownerEvents.at(-1)).toMatchObject({ instanceId: trap.id, value: 2, placed: 1 });
+    expect(viewFor(run.state, "p1").opponent.backrow[2]).toEqual({ faceDown: true, cost: 1, plague: 2 });
     const ownerZone = viewFor(run.state, "p2").you.backrow[2];
-    expect(ownerZone).toMatchObject({ faceDown: false, counters: { plague: 1 } });
+    expect(ownerZone).toMatchObject({ faceDown: false, counters: { plague: 2 } });
   });
 });
 
@@ -265,11 +259,11 @@ describe("E19 one placement, multipliers and the placed trigger (R471)", () => {
     run = act(run, { type: "play", instanceId: spell.id, targets: [pick(worm)], playerId: "p1" });
     expect(heroHealth(run.state, "p2")).toBe(before - 1);
 
-    // Two placements on it: two answers, which wait for the whole effect and the Spell (R59, R68).
+    // Two placements on it: one answer (R669); all three triggers still wait for the whole effect and
+    // the Spell (R59, R68), so the health lands where two answers put it.
     run = act(run, { type: "play", instanceId: book.id, playerId: "p1" });
     run = answer(run, pick(worm));
-    expect(heroHealth(run.state, "p2")).toBe(before - 1);
-    run = answer(run, pick(worm));
+    expect(run.state.pending).toBeNull();
     expect(heroHealth(run.state, "p2")).toBe(before - 1 - 1 - 2);
 
     // Taking tokens off is no placement.
@@ -377,8 +371,26 @@ describe("E19 placements over a scope, at random, and removals", () => {
 });
 
 describe("E19 stats per token (auras and self layers)", () => {
-  it("R471 an aura reading each unit's tokens buffs its side and shrinks the other, and a −X/−X kills at the state check after the whole effect", () => {
+  it("R471 R669 an aura reading each unit's tokens buffs its side and shrinks the other: both placements land on the one pick", () => {
     const { run: start, mine, theirs } = board("plague-aura");
+    const state = start.state;
+    put(state, toxins.id, slot("p1", "backrow", 1));
+    put(state, body.id, slot("p2", "units", 4)); // 1/1
+    const book = handCard(state, plagueBook.id);
+    let run = frozen(start);
+
+    run = act(run, { type: "play", instanceId: book.id, playerId: "p1" });
+    run = answer(run, pick(mine));
+    expect(run.state.pending).toBeNull();
+    const ally = run.state.players.p1.units[0]?.[0] as CardInstance;
+    expect(unitView(run.state, ally)).toMatchObject({ attack: 3, maxHealth: 3 });
+    const enemy = run.state.players.p2.units[1]?.[0] as CardInstance;
+    expect(theirs.id).toBe(enemy.id);
+    expect(unitView(run.state, enemy)).toMatchObject({ attack: 3, maxHealth: 5 });
+  });
+
+  it("R669 a −X/−X from the placements kills at the state check after the whole effect", () => {
+    const { run: start } = board("plague-aura-death");
     const state = start.state;
     put(state, toxins.id, slot("p1", "backrow", 1));
     const frail = put(state, body.id, slot("p2", "units", 4)); // 1/1
@@ -387,21 +399,12 @@ describe("E19 stats per token (auras and self layers)", () => {
 
     run = act(run, { type: "play", instanceId: book.id, playerId: "p1" });
     run = answer(run, pick(frail));
-    // −1/−1 took it to 0 health, but the state check waits for the rest of the effect (R59).
-    const between = run.state.players.p2.units[3]?.[0] as CardInstance;
-    expect(between.id).toBe(frail.id);
-    expect(unitView(run.state, between).health).toBe(0);
-
-    run = answer(run, pick(mine));
+    // Both placements landed before any state check, so the 1/1 is gone only now that the effect ended.
+    expect(run.state.pending).toBeNull();
     expect(run.state.players.p2.units[3]).toBeNull();
     expect(eventsOfType(run.state.applied.at(-1)?.events ?? [], "destroyed").map((event) => event.instanceId)).toEqual([
       frail.id,
     ]);
-    const ally = run.state.players.p1.units[0]?.[0] as CardInstance;
-    expect(unitView(run.state, ally)).toMatchObject({ attack: 2, maxHealth: 2 });
-    const enemy = run.state.players.p2.units[1]?.[0] as CardInstance;
-    expect(theirs.id).toBe(enemy.id);
-    expect(unitView(run.state, enemy)).toMatchObject({ attack: 3, maxHealth: 5 });
   });
 
   it("R471 a self layer reads the card's own tokens (Classic #69: +2 attack per token)", () => {

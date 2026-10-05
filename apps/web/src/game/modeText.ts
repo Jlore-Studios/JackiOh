@@ -46,6 +46,14 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     enemy: { label: "Enemy permanents", detail: "Destroy every enemy permanent." },
     all: { label: "All permanents", detail: "Destroy every permanent on both sides." },
   },
+  // C+ #40 Appropriations (X spell): "Choose one: Military, Education, Culture, or Healthcare" —
+  // the effects the Discover menu shows, X filled in on play.
+  "classicplus-040": {
+    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +2X Attack and Rush." },
+    Education: { label: "Education", detail: "Shuffle 2X random Radiant Books into your deck. They have Cast on draw." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant." },
+    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +2X Health and Armor X." },
+  },
 };
 
 /**
@@ -53,6 +61,13 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
  * missing here reads the same on both faces.
  */
 export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText>>>> = {
+  // C+ #40 Appropriations, radiant: every multiple quintupled, the Armor doubled.
+  "classicplus-040": {
+    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +5X Attack and Rush." },
+    Education: { label: "Education", detail: "Shuffle 5X random Radiant Books into your deck. They have Cast on draw." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant." },
+    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X." },
+  },
   // #24 Efficiency Dividend, radiant: "deal 2X damage to a target; heal a target 4X; gain X mana
   // next turn" (§8 #24, R275), every mode doubled.
   "core-024": {

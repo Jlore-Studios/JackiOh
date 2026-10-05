@@ -138,57 +138,23 @@ export function targetingDiscardsFor(
 }
 
 /**
- * R450: why these discards are not the `required` payment for a targeting, or null when they are: as
- * many cards as it costs, all different, all in the player's hand, and none of `keep` — the card a
- * play is taking out of that hand (§10.5 step 1), and any hand card the same play picks.
+ * R450, R662: whether the player can pay a targeting cost of `required` discards — that many cards
+ * held outside `keep` (the card a play is taking out of that hand, §10.5 step 1, and any hand card
+ * the same play picks), or null when they can. The discards themselves are random at pay time
+ * (R662: a discard is its player's choice only when the card says "of your choice"); nothing lists
+ * or chooses them, so there are no paying sets to enumerate.
  */
-export function whyTargetingDiscardsRefused(
+export function whyTargetingDiscardsUnpayable(
   state: GameState,
   player: PlayerId,
   required: number,
-  discards: readonly string[],
   keep: readonly string[] = [],
 ): string | null {
-  if (discards.length !== required) {
-    return required === 0
-      ? "nothing here costs a discard to target"
-      : `targeting that costs ${required} discard${required === 1 ? "" : "s"}, got ${discards.length}`;
-  }
-  const hand = new Set(state.players[player].hand.map((card) => card.id));
-  const seen = new Set<string>();
-  for (const id of discards) {
-    if (keep.includes(id)) return `${id} cannot pay for this targeting: the play itself uses it`;
-    if (!hand.has(id)) return `${id} is not a card in your hand`;
-    if (seen.has(id)) return "the same card cannot be discarded twice";
-    seen.add(id);
-  }
-  return null;
-}
-
-/** R450: every set of `required` cards of the player's hand that pays a targeting cost, `keep` excepted. */
-export function targetingDiscardSets(
-  state: GameState,
-  player: PlayerId,
-  required: number,
-  keep: readonly string[] = [],
-): string[][] {
-  if (required <= 0) return [[]];
-  const hand = state.players[player].hand.filter((card) => !keep.includes(card.id)).map((card) => card.id);
-  const out: string[][] = [];
-  const chosen: string[] = [];
-  const walk = (from: number): void => {
-    if (chosen.length === required) {
-      out.push([...chosen]);
-      return;
-    }
-    for (let at = from; at < hand.length; at += 1) {
-      chosen.push(hand[at] as string);
-      walk(at + 1);
-      chosen.pop();
-    }
-  };
-  walk(0);
-  return out;
+  if (required <= 0) return null;
+  const held = state.players[player].hand.filter((card) => !keep.includes(card.id)).length;
+  return held >= required
+    ? null
+    : `targeting that costs ${required} discard${required === 1 ? "" : "s"}, and you hold ${held} card${held === 1 ? "" : "s"}`;
 }
 
 /**

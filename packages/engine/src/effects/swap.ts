@@ -71,10 +71,9 @@ function mirrorOf(ref: ZoneSlot): ZoneSlot {
  * Whether a destination can take a swapped card.
  *
  * R73 says locks stay with their zones but not what happens to a card whose destination is Locked,
- * or reserved for a dying Reborn unit (R64). A Locked zone "accepts no summons until the game ends"
- * (§3.2) and a reserved zone "counts as occupied for every other card that would enter it" (§3.2,
- * R64). R88 settles it, following R14, which answers the same question for the other whole-board
- * move: the card bounces to its owner's hand.
+ * or reserved for a dying Reborn unit (R64). R88 settles it, following R14, which answers the same
+ * question for the other whole-board move: the card bounces to its owner's hand. The bounce is
+ * #87's card-specific override of R668 (moves enter Locked zones unless the card says otherwise).
  */
 function canAccept(state: GameState, ref: ZoneSlot): boolean {
   return !isLocked(state, ref) && !isReserved(state, ref);

@@ -1,16 +1,16 @@
 // C #20 The Power to Punish — SPEC §8.6 row 20, BUILD M9 Classic row C 20: "Activate, once per turn
 // (R384), the mode and its target carried in the `activate` action: deal 2 damage to a target; the
-// opponent discards a card of their choice (R16; an empty hand: nothing), the prompt's options their
-// own hand and named nowhere in your view; or a Unit, either side, is destroyed at the start of your
-// next turn, a delayed effect keyed to that stay on the field that fizzles if the Unit has left it,
-// even if it came back (R174), resolving with the start-of-turn delayed effects (R62, R68) and still
-// firing if The Power to Punish has left the field (as R76); an Indestructible target survives (R46);
-// activating is not a play; radiant: 4 damage; discards 2; or every enemy Unit on the field at the
-// start of your next turn is destroyed, the Units there then rather than a list fixed at activation;
-// its tuned numbers (damage, discards) read through `param()` (R386)".
+// opponent discards a card at random (R662; an empty hand: nothing), with no prompt; or a Unit, either
+// side, is destroyed at the start of your next turn, a delayed effect keyed to that stay on the field
+// that fizzles if the Unit has left it, even if it came back (R174), resolving with the start-of-turn
+// delayed effects (R62, R68) and still firing if The Power to Punish has left the field (as R76); an
+// Indestructible target survives (R46); activating is not a play; radiant: 4 damage; discards 2; or
+// every enemy Unit on the field at the start of your next turn is destroyed, the Units there then
+// rather than a list fixed at activation; its tuned numbers (damage, discards) read through `param()`
+// (R386)".
 
 import { describe, expect, it } from "vitest";
-import { legalActions, reduce, stepParam, type GameState } from "@jackioh/engine";
+import { legalActions, stepParam } from "@jackioh/engine";
 import type { PlayerId, Selection } from "@jackioh/shared";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/020-the-power-to-punish";
@@ -98,64 +98,41 @@ describe("C #20 The Power to Punish", () => {
       s.expectHealth("p2", 30);
     });
 
-    it("R16 the opponent discards a card of their choice: they hold the prompt, over their own hand", () => {
+    it("R662 the opponent discards a card at random: no prompt opens", () => {
       const s = setup({}, { hand: [VANILLA, TIMMY, MENACE] });
-      const menace = s.card(MENACE);
 
       punish(s, DISCARD);
 
-      const pending = s.state.pending;
-      expect(pending?.playerId).toBe("p2");
-      expect(pending?.kind).toBe("hand");
-      expect(pending?.options.map((option) => option.selection)).toEqual(
-        s.hand("p2").map((card) => ({ pick: "instance", instanceId: card.id })),
-      );
-
-      s.answer([{ pick: "instance", instanceId: menace.id }]);
-
-      s.expectInZone(menace, "graveyard");
-      expect(s.hand("p2")).toHaveLength(2);
       expect(s.state.pending).toBeNull();
-      s.expectEvents("promptOpened", "discarded");
+      expect(s.hand("p2")).toHaveLength(2);
+      const grave = s.pile("p2", "graveyard").map((card) => card.defId);
+      expect(grave).toHaveLength(1);
+      expect([VANILLA, TIMMY, MENACE]).toContain(grave[0]);
+      s.expectEvents("activated", "discarded");
     });
 
-    it("R177 your view names none of the options of the opponent's discard pick", () => {
+    it("R177 your view names none of the opponent's remaining hand", () => {
       const s = setup({}, { hand: [VANILLA, TIMMY, MENACE] });
-      const ids = s.hand("p2").map((card) => card.id);
 
       punish(s, DISCARD);
 
       const seen = JSON.stringify(s.view("p1"));
-      for (const defId of [VANILLA, TIMMY, MENACE]) expect(seen).not.toContain(defId);
-      for (const id of ids) expect(seen).not.toContain(id);
-      // The opponent's own view does carry its options.
-      expect(JSON.stringify(s.view("p2"))).toContain(MENACE);
+      for (const card of s.hand("p2")) expect(seen).not.toContain(card.id);
+      // The discard itself is public: the graveyard names it.
+      for (const card of s.pile("p2", "graveyard")) expect(seen).toContain(card.id);
     });
 
-    it("§9.3 the opponent's open discard pick survives a JSON round trip and resumes through reduce", () => {
-      const s = setup({}, { hand: [VANILLA, TIMMY] });
-      punish(s, DISCARD);
-      const paused = s.state;
-      const revived = JSON.parse(JSON.stringify(paused)) as GameState;
-      expect(revived).toEqual(paused);
-
-      const choiceId = revived.pending?.id ?? "";
-      const pick = s.card(TIMMY).id;
-      const result = reduce(revived, {
-        type: "answer",
-        playerId: "p2",
-        choiceId,
-        selection: [{ pick: "instance", instanceId: pick }],
-        nonce: "punish-round-trip",
-      });
-
-      expect(result.error).toBeUndefined();
-      expect(result.state.pending).toBeNull();
-      expect(result.state.work).toEqual([]);
-      expect(result.state.players.p2.graveyard.map((card) => card.id)).toContain(pick);
+    it("R662 the random discard comes from the match rng: the same game discards the same card", () => {
+      const first = setup({}, { hand: [VANILLA, TIMMY, MENACE] });
+      punish(first, DISCARD);
+      const second = setup({}, { hand: [VANILLA, TIMMY, MENACE] });
+      punish(second, DISCARD);
+      const ids = (s: Scenario): string[] =>
+        s.events.flatMap((event) => (event.type === "discarded" ? [event.instanceId] : []));
+      expect(ids(first)).toEqual(ids(second));
     });
 
-    it("R16 an opponent with an empty hand discards nothing and is asked nothing", () => {
+    it("R662 an opponent with an empty hand discards nothing and is asked nothing", () => {
       const s = setup({}, { hand: [], field: [VANILLA] });
 
       punish(s, DISCARD);
@@ -188,6 +165,22 @@ describe("C #20 The Power to Punish", () => {
       punish(s, DOOM, at(vanilla));
       toNextTurn(s);
 
+      s.expectInZone(vanilla, "graveyard");
+    });
+
+    it("R437 the Unit marked for death wears #50's aura in red, in both seats' views, until it dies", () => {
+      const s = setup({}, { field: [VANILLA] });
+      const vanilla = s.card(VANILLA);
+
+      punish(s, DOOM, at(vanilla));
+
+      expect(s.events.some((event) => event.type === "marked" && event.mark === "destroy" && event.color === "red")).toBe(true);
+      // Vanilla is p2's: the opponent's side from p1's seat, its own side from p2's.
+      const fromP1 = s.view("p1").opponent.units.flat().find((card) => card !== null && card.instanceId === vanilla.id);
+      expect(fromP1?.marks).toEqual([{ mark: "destroy", color: "red" }]);
+      const fromP2 = s.view("p2").you.units.flat().find((card) => card !== null && card.instanceId === vanilla.id);
+      expect(fromP2?.marks).toEqual([{ mark: "destroy", color: "red" }]);
+      toNextTurn(s);
       s.expectInZone(vanilla, "graveyard");
     });
 
@@ -272,9 +265,9 @@ describe("C #20 The Power to Punish", () => {
       const two = setup({}, { hand: [VANILLA, TIMMY, MENACE] });
       stepParam(two.card(PUNISH), "discards", 1);
       punish(two, DISCARD);
-      expect(two.state.pending?.min).toBe(2);
-      two.answer([two.card(VANILLA).id, two.card(TIMMY).id]);
-      expect(two.pile("p2", "graveyard").map((card) => card.defId).sort()).toEqual([TIMMY, VANILLA].sort());
+      expect(two.state.pending).toBeNull();
+      expect(two.hand("p2")).toHaveLength(1);
+      expect(two.pile("p2", "graveyard")).toHaveLength(2);
     });
   });
 
@@ -287,25 +280,22 @@ describe("C #20 The Power to Punish", () => {
       s.expectHealth("p2", 26);
     });
 
-    it("R16 the opponent discards 2 cards of their choice", () => {
+    it("R662 the opponent discards 2 cards at random", () => {
       const s = setup({}, { hand: [VANILLA, TIMMY, MENACE] }, true);
 
       punish(s, DISCARD);
-      expect(s.state.pending?.min).toBe(2);
-      expect(s.state.pending?.max).toBe(2);
-      s.answer([s.card(VANILLA).id, s.card(MENACE).id]);
-
-      expect(s.hand("p2").map((card) => card.defId)).toEqual([TIMMY]);
+      expect(s.state.pending).toBeNull();
+      expect(s.hand("p2")).toHaveLength(1);
+      expect(s.pile("p2", "graveyard")).toHaveLength(2);
     });
 
-    it("R16 with one card in hand the opponent discards that one", () => {
+    it("R662 with one card in hand the opponent discards that one", () => {
       const s = setup({}, { hand: [TIMMY], field: [VANILLA] }, true);
 
       punish(s, DISCARD);
-      expect(s.state.pending?.max).toBe(1);
-      s.answer([s.card(TIMMY).id]);
-
+      expect(s.state.pending).toBeNull();
       expect(s.hand("p2")).toHaveLength(0);
+      expect(s.pile("p2", "graveyard").map((card) => card.defId)).toEqual([TIMMY]);
     });
 
     it("the third mode takes no target", () => {

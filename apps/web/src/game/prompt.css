@@ -527,6 +527,17 @@
   margin-top: 2px;
 }
 
+/* The modal scrolls (`overflow-y` above), so a long menu would push Confirm below the fold where no
+   player looks for it. The bar sticks to the modal's visible bottom instead: the options scroll
+   under it, and Confirm (and Cancel) stay visible and clickable whatever the menu holds. */
+.prompt-actions {
+  position: sticky;
+  bottom: 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--line-bright);
+  background: var(--bg-raised);
+}
+
 .prompt-board-note {
   margin: 0;
   color: var(--text-dim);

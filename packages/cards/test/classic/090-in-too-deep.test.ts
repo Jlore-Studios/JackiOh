@@ -1,6 +1,7 @@
 // C #90 In Too Deep (SPEC §8.6 row 90; BUILD M9 row C 90; R404, R540–R543). (1) Field Spell,
 // Quickdraw, Mythic: Indestructible, and a quest line — ten quests, thirteen rewards, a `reward`
-// prompt on the base face, every reward and every path on the Radiant face.
+// prompt on the base face, every reward and every path on the Radiant face. Quest 1's text lives in
+// the quest line, not the card text: it appears on the card face only after the card is played.
 //
 // The quest machinery is the engine's (`subsystems/quests.ts`, proved alone by
 // `packages/engine/test/quests.test.ts`); this file proves the card: its tree, each of its ten quests
@@ -29,7 +30,7 @@ import {
 } from "@jackioh/engine";
 import type { Action, ActionInput, CardView, GameEvent, PlayerId } from "@jackioh/shared";
 import { hasKeyword } from "@jackioh/shared";
-import { base, radiant } from "../../src/scripts/classic/090-in-too-deep";
+import { base, def, radiant } from "../../src/scripts/classic/090-in-too-deep";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 
 const ITD = "classic-090";
@@ -143,6 +144,16 @@ describe("C #90 In Too Deep", () => {
       s.play(MAGIC_JAMMED, { targets: [{ pick: "instance", instanceId: s.card(ITD).id }] });
       s.expectInZone(ITD, "field");
       expect(line(s)).toMatchObject({ active: ["2"], progress: { "2": 1 } });
+    });
+
+    it("quest 1 lives in the quest line, not the card text: the static face names no quest", () => {
+      // Balance patch 1: the first quest appears on the card face only after it is played.
+      expect(def.base.text).not.toContain("Quest:");
+      expect(def.radiant.text).not.toContain("Quest:");
+      const s = scenario({ p1: { hand: [ITD, ...(SPARE.hand ?? [])], library: SPARE.library }, p2: SPARE });
+      s.play(ITD);
+      expect(shown(s, "p1").quest?.open.map((quest) => quest.id)).toEqual(["1"]);
+      expect(shown(s, "p2").quest?.open.map((quest) => quest.id)).toEqual(["1"]);
     });
 
     it("R404 quest 1 opens as it enters: 0 of 2, and both views show it with rewards A and B on offer", () => {
@@ -294,17 +305,16 @@ describe("C #90 In Too Deep", () => {
       expect(s.pile("p1", "graveyard")).toEqual([]);
     });
 
-    it("R471 reward D: three Plague Token placements, each a prompt of yours over every permanent, then quest 5", () => {
+    it("R471 R669 reward D: three Plague Token placements on the one permanent a single prompt of yours names, then quest 5", () => {
       const s = scenario({ p1: { backrow: [ITD], field: [VANILLA], ...SPARE }, p2: { field: [MENACE], ...SPARE } });
       onQuest(s, "2", 2);
       anyAction(s);
       s.answer("D");
       const foe = must(s.unit("p2", 1), "Menace");
-      for (let at = 0; at < 3; at += 1) {
-        expect(pendingKind(s)).toBe("target");
-        expect(line(s)?.active).toEqual([]);
-        s.answer(foe.id);
-      }
+      expect(pendingKind(s)).toBe("target");
+      expect(line(s)?.active).toEqual([]);
+      // One answer puts all three on the pick: no second prompt opens.
+      s.answer(foe.id);
       expect(s.card(foe).counters.plague).toBe(3);
       expect(line(s)).toMatchObject({ active: ["5"], done: ["2"] });
     });
@@ -730,7 +740,7 @@ describe("C #90 In Too Deep", () => {
       // met by the board (In Too Deep and two Units).
       setLine(s, { active: ["2", "3"], progress: { "2": 2 }, done: ["1"] });
       anyAction(s);
-      // Quest 2: C (two graveyard cards), D (three placements); quest 3: D again (three more), E.
+      // Quest 2: C (two graveyard cards), D (three placements on one pick); quest 3: D again, E.
       const foe = must(s.unit("p2", 1), "Menace");
       let placements = 0;
       while (s.state.pending !== null) {
@@ -738,7 +748,8 @@ describe("C #90 In Too Deep", () => {
         s.answer(foe.id);
         placements += 1;
       }
-      expect(placements).toBe(6);
+      // One prompt per D grant (R669): two answers, six counters.
+      expect(placements).toBe(2);
       expect(s.card(foe).counters.plague).toBe(6);
       expect(s.events.filter((e) => e.type === "buffed")).toHaveLength(1);
       const memory = must(line(s), "the line");

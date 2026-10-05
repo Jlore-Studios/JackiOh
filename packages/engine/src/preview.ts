@@ -39,15 +39,16 @@ export function backrowIsPublic(state: GameState, card: CardInstance, viewer: Pl
 }
 
 /**
- * R33, R371: a backrow Trap or Field Trap that has not flipped face-up, so only its controller may
- * read it. `backrowIsPublic` above is this plus the controller's exception, and `viewFor` marks the
+ * R33, R371, R666: a backrow Trap or Field Trap that has not flipped face-up, so only its
+ * controller may read it — unless it is revealed, which both players read while it stays armed.
+ * `backrowIsPublic` above is this plus the controller's exception, and `viewFor` marks the
  * controller's own view of such a card `unrevealed` from the same answer, so the mark a client draws
  * and the back the other player sees cannot disagree.
  */
 export function isFaceDown(state: GameState, card: CardInstance): boolean {
   const type = cardTypeOf(state, card);
   if (type !== "Trap" && type !== "Field Trap") return false;
-  return card.faceUp !== true;
+  return card.faceUp !== true && card.revealed !== true;
 }
 
 /** R280, §10.8: whether `viewer` may read `card` where the question places it. */

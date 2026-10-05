@@ -77,12 +77,12 @@ function trapOf(state: GameState, trapId: string): CardInstance {
 }
 
 describe("C+ #74's Field Trap (R425)", () => {
-  it("R385 its printed Brittle starts when it is set", () => {
+  it("R667 set face-down, it holds no Brittle: only its controller reads the back", () => {
     const { state, trapId } = opponentsTurn("brittle");
     const card = trapOf(state, trapId);
     expect(card.faceUp === true).toBe(false);
-    expect(activeBrittleCount(card)).toBe(4);
-    expect(card.brittle?.since).toBe(1);
+    expect(activeBrittleCount(card)).toBeNull();
+    expect(card.brittle).toBeUndefined();
   });
 
   it("R425 R99 counts the opponent's 1st play and stays face-down, unfired", () => {
@@ -102,7 +102,8 @@ describe("C+ #74's Field Trap (R425)", () => {
     expect(second.state.players.p2.units[0]).toBeNull();
     expect(defOf(second.state, kept.defId).type).toBe("Field Trap");
     expect(kept.zone).toMatchObject({ z: "field", row: "backrow", lane: 2, player: "p1" });
-    expect(activeBrittleCount(kept)).toBe(5);
+    // R667: the first fuse reveals it and starts its printed Brittle 2, then gains +1.
+    expect(activeBrittleCount(kept)).toBe(3);
     expect(kept.faceUp).toBe(true);
     const types = second.events.map((event) => event.type);
     expect(types.indexOf("cardResolved")).toBeLessThan(types.indexOf("trapFired"));
@@ -124,23 +125,24 @@ describe("C+ #74's Field Trap (R425)", () => {
     // R227: the trap was set under a fresh id, the one its play announced.
     const setId = eventsOfType(second.events, "cardPlayed")[0]?.instanceId;
     expect(eventsOfType(second.events, "fused")[0]?.instanceIds).toContain(setId);
-    expect(activeBrittleCount(trapOf(second.state, trapId))).toBe(5);
+    expect(activeBrittleCount(trapOf(second.state, trapId))).toBe(3);
   });
 
-  it("R589 R425 with nothing left to fuse (an exiled Spell) it still gains +1 Brittle, unfired and face-down (R33)", () => {
+  it("R589 R425 with nothing left to fuse (an exiled Spell) it reveals (R667) and still gains +1 Brittle, unfired", () => {
     const { state, trapId } = opponentsTurn("gone");
     const second = play(play(state, "p2", spell.id).state, "p2", selfExiler.id);
     const kept = trapOf(second.state, trapId);
     expect(second.card.id).toBeDefined();
     expect(second.state.players.p2.exile.some((card) => card.id === second.card.id)).toBe(true);
     expect(eventsOfType(second.events, "trapFired")).toEqual([]);
-    expect(kept.faceUp === true).toBe(false);
+    // No Brittle sits on an unrevealed card: the gain reveals it first, then lands on the started 2.
+    expect(kept.faceUp).toBe(true);
     expect(kept.defId).toBe(forward.id);
-    expect(activeBrittleCount(kept)).toBe(5);
-    // The opponent reads neither the count nor the card.
+    expect(activeBrittleCount(kept)).toBe(3);
+    // Revealed, the opponent reads the card now.
     const theirs = JSON.stringify(viewFor(second.state, "p2"));
-    expect(theirs).not.toContain(trapId);
-    expect(theirs).not.toContain(forward.id);
+    expect(theirs).toContain(trapId);
+    expect(theirs).toContain(forward.id);
   });
 
   it("R70 R425 a card a play casts is the later play: the cast is the 2nd and is fused, not the card that cast it", () => {
@@ -189,7 +191,7 @@ describe("C+ #74's Field Trap (R425)", () => {
     let next = state;
     for (let i = 0; i < 4; i += 1) next = play(next, "p2", spell.id).state;
     expect(twiceForwardPlays(trapOf(next, trapId))).toBe(4);
-    expect(activeBrittleCount(trapOf(next, trapId))).toBe(6);
+    expect(activeBrittleCount(trapOf(next, trapId))).toBe(4);
   });
 
   it("R386 the every-N step reads through param(): an Upgrade's 'plays' never goes below 2, a Degrade makes it 3", () => {
@@ -205,7 +207,7 @@ describe("C+ #74's Field Trap (R425)", () => {
     expect(trapOf(next, slow.trapId).faceUp === true).toBe(false);
     next = play(next, "p2", spell.id).state;
     expect(trapOf(next, slow.trapId).faceUp).toBe(true);
-    expect(activeBrittleCount(trapOf(next, slow.trapId))).toBe(6);
+    expect(activeBrittleCount(trapOf(next, slow.trapId))).toBe(4);
   });
 
   it("R179 its count and fused definition survive JSON, and the round trip plays on exactly as the live game", () => {
@@ -230,7 +232,7 @@ describe("C+ #74's Field Trap (R425)", () => {
       const kept = trapOf(second.state, trapId);
       expect(kept.defId).not.toBe(forward.id);
       expect(defOf(second.state, kept.defId).type).toBe("Field Trap");
-      expect(activeBrittleCount(kept)).toBe(11);
+      expect(activeBrittleCount(kept)).toBe(5);
       expect(kept.faceUp).toBe(true);
     });
 

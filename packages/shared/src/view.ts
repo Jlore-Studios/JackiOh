@@ -203,6 +203,11 @@ export type BackrowView =
        * back. Absent on every public card and on a Field Trap that has fired.
        */
       unrevealed?: true;
+      /**
+       * R243, §6.3 Vanilla: the backrow card's text is gone — a client stamps it as it stamps a
+       * vanilla unit. Absent otherwise.
+       */
+      vanilla?: true;
       /** B5 E21: face-down, dormant cards beneath this one in a backrow pile (§3.2). Absent for none. */
       buried?: number;
     })

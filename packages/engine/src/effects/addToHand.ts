@@ -157,17 +157,29 @@ export function addRandomFromCatalog(args: {
   };
 }
 
-/** Move a random card from your graveyard to your hand (#37 Gravedigger). */
-export function addRandomFromGraveyard(args: { player?: PlayerSpec } = {}): Effect {
+/**
+ * Move random cards from your graveyard to your hand (#37 Gravedigger draws one; C #34 Ancient
+ * Acquisition draws its number, from the graveyard or, on its Radiant face, the graveyard and
+ * exile together — balance patch 1 made those returns random, R664). Each draw picks uniformly
+ * from the cards still in the piles through the match rng, so fewer cards than asked ends it. The
+ * hand cap burns the overflow (§2.4, R4).
+ */
+export function addRandomFromGraveyard(args: { player?: PlayerSpec; count?: number; exile?: boolean } = {}): Effect {
   return {
     kind: "addRandomFromGraveyard",
     apply(ctx): void {
       const player = playerOf(ctx, args.player ?? "self");
-      const graveyard = ctx.state.players[player].graveyard;
-      if (graveyard.length === 0) return;
-      const card = ctx.rng.pick(graveyard);
-      if (card === undefined) return;
-      putInHand(ctx, card);
+      const count = Math.max(0, Math.trunc(args.count ?? 1));
+      for (let i = 0; i < count; i += 1) {
+        const pool = [
+          ...ctx.state.players[player].graveyard,
+          ...(args.exile === true ? ctx.state.players[player].exile : []),
+        ];
+        if (pool.length === 0) return;
+        const card = ctx.rng.pick(pool);
+        if (card === undefined) return;
+        putInHand(ctx, card);
+      }
     },
   };
 }

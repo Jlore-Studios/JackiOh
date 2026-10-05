@@ -2,19 +2,18 @@
 //
 // "Targeting" is choosing: a declared `target` pick of a play, a cast or an activation, and a `target`
 // prompt's answer (random picks, "all" effects, Tributes, hand and zone picks target nothing). At that
-// point a targeting cost is owed (Classic #89 Paul Allen's Ghost: a declared pick carries its discards,
-// a prompted pick asks for them next, and with too few other cards the card is no legal target at all),
-// and an interceptor answers (Classic #33 Joro, from its owner's hand: summoned, no Cry, summoning sick,
-// and the pick moves to it). A Spell's declarations never offer a card Immune to Spells, and the
-// v0.2.0 filter fields — a graveyard pick, a cost range, damaged, Plague Tokens, a named predicate —
-// narrow what a declaration offers.
+// point a targeting cost is owed (Classic #89 Paul Allen's Ghost: random discards at pay time, R662,
+// and with too few other cards the card is no legal target at all), and an interceptor answers
+// (Classic #33 Joro, from its owner's hand: summoned, no Cry, summoning sick, and the pick moves to
+// it). A Spell's declarations never offer a card Immune to Spells, and the v0.2.0 filter fields — a
+// graveyard pick, a cost range, damaged, Plague Tokens, a named predicate — narrow what a declaration
+// offers.
 
 import type { Action, ActionBody, GameEvent, PlayerId, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { HERO_HEALTH } from "../src/config";
 import { declaredTargets, legalSelectionsFor, playActionsFor } from "../src/playChoices";
 import { beginGame, legalActions, reduce } from "../src/reduce";
-import { hashState } from "../src/replay";
 import type { CardInstance, GameState, PendingChoice } from "../src/state";
 import { interceptTargeting, whyTargetAnswerRefused } from "../src/targetingPoint";
 import { canPayToTarget, targetingDiscardsOf } from "../src/targeting";
@@ -160,45 +159,64 @@ describe("R450 Immune to Spells (E35): a Spell's declarations never offer it", (
 });
 
 describe("R450 a targeting cost (Classic #89 Paul Allen's Ghost)", () => {
-  it("R450 a declared target naming it carries two discards, listed whole, from the other hand cards", () => {
+  it("R450 R662 a declared target naming it lists one play with no discards carried, offered only when payable", () => {
     const state = game("r450-ghost-list");
     const ghost = put(state, PA.ghost.id, slot("p2", "units", 1));
     const other = put(state, "fx-1", slot("p2", "units", 2));
     const bolt = one(state, "p1", PA.bolt.id);
-    const spare = hand(state, "p1", "fx-5", 3);
+    hand(state, "p1", "fx-5", 3);
 
     expect(targetingDiscardsOf(state, ghost)).toBe(2);
     const plays = playActionsFor(state, "p1", bolt);
     const atGhost = plays.filter((play) => play.targets?.[0]?.pick === "instance" && play.targets[0].instanceId === ghost.id);
     const atOther = plays.filter((play) => play.targets?.[0]?.pick === "instance" && play.targets[0].instanceId === other.id);
-    // Three other cards, two of them each time: three ways to pay.
-    expect(atGhost.map((play) => play.discards?.slice().sort())).toEqual(
-      [
-        [spare[0]?.id, spare[1]?.id],
-        [spare[0]?.id, spare[2]?.id],
-        [spare[1]?.id, spare[2]?.id],
-      ].map((pair) => pair.slice().sort()),
-    );
-    expect(atOther.every((play) => play.discards === undefined)).toBe(true);
+    // R662: the discards are random at pay time, so one play, carrying none.
+    expect(atGhost).toHaveLength(1);
+    expect(atOther).toHaveLength(1);
+    expect(atGhost.every((play) => !("discards" in play))).toBe(true);
+    expect(atOther.every((play) => !("discards" in play))).toBe(true);
     expect(legalActions(state, "p1").filter((action) => action.type === "play" && action.instanceId === bolt.id)).toHaveLength(
       plays.length,
     );
   });
 
-  it("R450 refuses a play that pays wrong: no discards, too few, the card itself, or a cost nobody owes", () => {
-    const state = game("r450-ghost-refuse");
+  it("R662 a targeting cost is never a choice: with exactly the cost held, the play pays both with no prompt", () => {
+    const state = game("r640-exact-cost");
     const ghost = put(state, PA.ghost.id, slot("p2", "units", 1));
     const bolt = one(state, "p1", PA.bolt.id);
     const [a, b] = hand(state, "p1", "fx-5", 2);
-    const play = (discards?: string[], target: Selection = at(ghost)): string | undefined =>
-      attempt(state, "p1", { type: "play", instanceId: bolt.id, targets: [target], ...(discards === undefined ? {} : { discards }) }).error;
+    const { state: after, events } = must(state, "p1", { type: "play", instanceId: bolt.id, targets: [at(ghost)] });
+    expect(after.pending).toBeNull();
+    expect(eventsOfType(events, "discarded").map((event) => event.instanceId).sort()).toEqual([a?.id, b?.id].sort());
+    expect(after.players.p1.hand).toHaveLength(0);
+  });
 
-    expect(play()).toBeDefined();
-    expect(play([a?.id ?? ""])).toBeDefined();
-    expect(play([a?.id ?? "", bolt.id])).toBeDefined();
-    expect(play([a?.id ?? "", a?.id ?? ""])).toBeDefined();
-    expect(play([a?.id ?? "", b?.id ?? ""], { pick: "hero", player: "p2" })).toBeDefined();
-    expect(play([a?.id ?? "", b?.id ?? ""])).toBeUndefined();
+  it("R450 R662 refuses a play naming it when too few other cards are held, and takes none otherwise", () => {
+    const state = game("r450-ghost-refuse");
+    const ghost = put(state, PA.ghost.id, slot("p2", "units", 1));
+    const bolt = one(state, "p1", PA.bolt.id);
+    hand(state, "p1", "fx-5", 1);
+    // Bolt plus one other: only one card outside the played card, fewer than the two owed — no legal target.
+    expect(attempt(state, "p1", { type: "play", instanceId: bolt.id, targets: [at(ghost)] }).error).toBeDefined();
+    expect(attempt(state, "p1", { type: "play", instanceId: bolt.id, targets: [{ pick: "hero", player: "p2" }] }).error).toBeUndefined();
+
+    const rich = game("r450-ghost-afford");
+    const richGhost = put(rich, PA.ghost.id, slot("p2", "units", 1));
+    const richBolt = one(rich, "p1", PA.bolt.id);
+    hand(rich, "p1", "fx-5", 2);
+    expect(attempt(rich, "p1", { type: "play", instanceId: richBolt.id, targets: [at(richGhost)] }).error).toBeUndefined();
+  });
+
+  it("R450 R662 two costly picks each payable alone but not together are refused as a cost", () => {
+    const state = game("r450-ghost-sum");
+    const first = put(state, PA.ghost.id, slot("p2", "units", 1));
+    const second = put(state, PA.ghost.id, slot("p2", "units", 2));
+    const twin = one(state, "p1", PA.twin.id);
+    hand(state, "p1", "fx-5", 3);
+    // Each pick is offered alone (three others pay either two), but the pair owes four.
+    expect(offered(state, "p1", twin)).toContainEqual(at(first));
+    expect(offered(state, "p1", twin)).toContainEqual(at(second));
+    expect(attempt(state, "p1", { type: "play", instanceId: twin.id, targets: [at(first), at(second)] }).error).toMatch(/discard/);
   });
 
   it("R450 with fewer than two other cards in hand it is no legal target", () => {
@@ -210,62 +228,69 @@ describe("R450 a targeting cost (Classic #89 Paul Allen's Ghost)", () => {
     expect(offered(state, "p1", bolt)).not.toContainEqual(at(ghost));
   });
 
-  it("R450 the discards are paid at step 2 with the mana, and the play resolves at the card", () => {
+  it("R450 R662 two random other cards are paid at step 2 with the mana, and the play resolves at the card", () => {
     const state = game("r450-ghost-pay");
     const ghost = put(state, PA.ghost.id, slot("p2", "units", 1));
     const bolt = one(state, "p1", PA.bolt.id);
     const [a, b, c] = hand(state, "p1", "fx-5", 3);
+    const spareIds = [a?.id, b?.id, c?.id];
 
     const { state: after, events } = must(state, "p1", {
       type: "play",
       instanceId: bolt.id,
       targets: [at(ghost)],
-      discards: [a?.id ?? "", b?.id ?? ""],
     });
 
     const order = events.map((event) => event.type);
-    expect(eventsOfType(events, "discarded").map((event) => event.instanceId)).toEqual([a?.id, b?.id]);
+    const discarded = eventsOfType(events, "discarded").map((event) => event.instanceId);
+    expect(discarded).toHaveLength(2);
+    // Random, but never the card being played: both come from the three spares.
+    for (const id of discarded) expect(spareIds).toContain(id);
+    expect(new Set(discarded).size).toBe(2);
     expect(order.indexOf("manaChanged")).toBeLessThan(order.indexOf("discarded"));
     expect(order.lastIndexOf("discarded")).toBeLessThan(order.indexOf("cardAnnounced"));
-    expect(after.players.p1.hand.map((card) => card.id)).toEqual([c?.id]);
+    expect(after.players.p1.hand).toHaveLength(1);
+    expect(spareIds).toContain(after.players.p1.hand[0]?.id);
     expect(cardAt(after, slot("p2", "units", 1))?.damage).toBe(2);
   });
 
-  it("R450 it binds its own controller too", () => {
+  it("R450 R662 it binds its own controller too", () => {
     const state = game("r450-ghost-own");
     const ghost = put(state, PA.ghost.id, slot("p1", "units", 1));
     const bolt = one(state, "p1", PA.bolt.id);
-    hand(state, "p1", "fx-5", 2);
+    hand(state, "p1", "fx-5", 1);
+    // Bolt plus one other: unpayable even for its controller — no legal target.
     expect(attempt(state, "p1", { type: "play", instanceId: bolt.id, targets: [at(ghost)] }).error).toBeDefined();
+    expect(offered(state, "p1", bolt)).not.toContainEqual(at(ghost));
+
+    const rich = game("r450-ghost-own-rich");
+    const ownGhost = put(rich, PA.ghost.id, slot("p1", "units", 1));
+    const richBolt = one(rich, "p1", PA.bolt.id);
+    hand(rich, "p1", "fx-5", 2);
+    // Payable — and the two random discards land on its controller all the same.
+    const { events } = must(rich, "p1", { type: "play", instanceId: richBolt.id, targets: [at(ownGhost)] });
+    expect(eventsOfType(events, "discarded")).toHaveLength(2);
   });
 
-  it("R450 a prompt answer naming it asks for the discards next, and the answer goes on once they are paid", () => {
+  it("R450 R662 a prompt answer naming it pays two random discards at once and goes on", () => {
     const state = game("r450-ghost-prompt");
     const ghost = put(state, PA.ghost.id, slot("p2", "units", 1));
     const chooser = one(state, "p1", PA.chooser.id);
     const [a, b] = hand(state, "p1", "fx-5", 2);
+    const spareIds = [a?.id, b?.id];
 
     const { state: asked } = must(state, "p1", { type: "play", instanceId: chooser.id });
     expect(asked.pending?.kind).toBe("target");
     expect(asked.pending?.options.map((option) => option.selection)).toContainEqual(at(ghost));
 
-    const { state: costly } = answer(asked, "p1", [at(ghost)]);
-    expect(costly.pending?.kind).toBe("hand");
-    expect(costly.pending?.min).toBe(2);
-    expect(costly.pending?.max).toBe(2);
-    expect(cardAt(costly, slot("p2", "units", 1))?.damage).toBe(0);
-    // The paused targeting is plain data: a JSON round trip answers the same way.
-    const round = JSON.parse(JSON.stringify(costly)) as GameState;
-    expect(hashState(round)).toBe(hashState(costly));
-
-    const paid = [at(a as CardInstance), at(b as CardInstance)];
-    const live = answer(costly, "p1", paid);
-    const revived = answer(round, "p1", paid);
-    expect(hashState(revived.state)).toBe(hashState(live.state));
-    expect(eventsOfType(live.events, "discarded").map((event) => event.instanceId)).toEqual([a?.id, b?.id]);
-    expect(cardAt(live.state, slot("p2", "units", 1))?.damage).toBe(2);
-    expect(live.state.pending).toBeNull();
-    expect(live.state.work).toEqual([]);
+    const { state: done, events } = answer(asked, "p1", [at(ghost)]);
+    // R662: no follow-up hand prompt — the cost is paid at once, at random.
+    expect(done.pending).toBeNull();
+    expect(done.work).toEqual([]);
+    const discarded = eventsOfType(events, "discarded").map((event) => event.instanceId);
+    expect(discarded).toHaveLength(2);
+    for (const id of discarded) expect(spareIds).toContain(id);
+    expect(cardAt(done, slot("p2", "units", 1))?.damage).toBe(2);
   });
 
   it("R450 a prompt never offers it to a chooser who cannot pay", () => {
@@ -280,22 +305,21 @@ describe("R450 a targeting cost (Classic #89 Paul Allen's Ghost)", () => {
     expect(picks).not.toContainEqual(at(ghost));
   });
 
-  it("R450 an Echo repeat's fresh pick of it asks for the discards too (the pipeline's own prompt)", () => {
+  it("R450 R662 an Echo repeat's fresh pick of it pays the discards too (the pipeline's own prompt)", () => {
     const state = game("r450-ghost-echo");
     const ghost = put(state, PA.ghost.id, slot("p2", "units", 1));
     const other = put(state, "fx-1", slot("p2", "units", 2));
     const echo = one(state, "p1", PA.echoBolt.id);
-    const [a, b] = hand(state, "p1", "fx-5", 2);
+    hand(state, "p1", "fx-5", 2);
 
     const { state: repeat } = must(state, "p1", { type: "play", instanceId: echo.id, targets: [at(other)] });
     expect(repeat.pending?.resume.hook).toBe("play");
-    const { state: costly } = answer(repeat, "p1", [at(ghost)]);
-    expect(costly.pending?.kind).toBe("hand");
-    const { state: done } = answer(costly, "p1", [at(a as CardInstance), at(b as CardInstance)]);
+    const { state: done, events } = answer(repeat, "p1", [at(ghost)]);
+    expect(done.pending).toBeNull();
+    expect(eventsOfType(events, "discarded")).toHaveLength(2);
     expect(cardAt(done, slot("p2", "units", 1))?.damage).toBe(1);
     expect(cardAt(done, slot("p2", "units", 2))?.damage).toBe(1);
     expect(done.players.p1.graveyard.map((card) => card.id)).toContain(echo.id);
-    expect(done.pending).toBeNull();
   });
 
   it("R450 an answer whose picks cost more cards than its chooser holds is refused", () => {
@@ -411,17 +435,16 @@ describe("R450 an interception (Classic #33 Joro)", () => {
     expect(cardAt(after, slot("p2", "units", 1))?.damage).toBe(0);
   });
 
-  it("R450 a cost already owed for the first pick stays paid when an interceptor takes the pick", () => {
+  it("R450 R662 a cost already owed for the first pick stays paid when an interceptor takes the pick", () => {
     const state = game("r450-joro-ghost");
     const ghost = put(state, PA.ghost.id, slot("p2", "units", 1));
     const joro = one(state, "p2", PA.joro.id);
     const bolt = one(state, "p1", PA.bolt.id);
-    const [a, b] = hand(state, "p1", "fx-5", 2);
+    hand(state, "p1", "fx-5", 2);
     const { state: after, events } = must(state, "p1", {
       type: "play",
       instanceId: bolt.id,
       targets: [at(ghost)],
-      discards: [a?.id ?? "", b?.id ?? ""],
     });
     expect(eventsOfType(events, "discarded")).toHaveLength(2);
     expect(eventsOfType(events, "redirected")[0]?.toId).toBe(joro.id);
