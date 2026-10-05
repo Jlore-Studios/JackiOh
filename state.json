@@ -2237,10 +2237,10 @@
       "question": "",
       "queued_at": "2026-10-05T22:24:37Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "37378410507",
+      "run_id": "37382220678",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-05T21:49:50Z",
+      "started_at": "2026-10-05T22:24:50Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -2634,9 +2634,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-05T22:15:21Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37381171475",
-    "what": "revise #324 on muse"
+    "at": "2026-10-05T22:24:50Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37382220678",
+    "what": "revise #325 on muse"
   },
   "last_sweep": {
     "at": "2026-10-05T22:22:44Z",
