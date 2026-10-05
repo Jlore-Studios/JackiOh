@@ -131,7 +131,8 @@ function catalogFacts(lookup: CardLookup | null, defId: string): FxCardFacts | u
   if (defId === "hidden" || lookup === null) return undefined;
   const info = lookup(defId, false);
   if (info === undefined) return undefined;
-  return { rarity: info.rarity, attack: info.attack, health: info.health };
+  // Issue #124: the card's family lends its look to the effects (looks.ts); the catalog is public.
+  return { rarity: info.rarity, attack: info.attack, health: info.health, type: info.type, tags: info.tags };
 }
 
 /** R502: the sides whose next-refresh rider this entry lays or spends. */
