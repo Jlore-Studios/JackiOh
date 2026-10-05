@@ -1,7 +1,7 @@
 # `@jackioh/cards` — the card layer
 
-317 card definitions in three sets — Core (100 cards and 11 tokens), Classic (90 cards) and
-Classic+ (78 cards and 38 tokens), 268 cards and 49 tokens in all — one script file and one test
+318 card definitions in three sets — Core (100 cards and 11 tokens), Classic (90 cards and Glitch, a hidden token) and
+Classic+ (78 cards and 38 tokens), 268 cards and 50 tokens in all — one script file and one test
 file per card, the catalog query every random pool in the game goes through, and the catalog's
 patch history.
 
@@ -74,7 +74,7 @@ has no hyphen inside the set part, so an id still splits one way. An `index` (`"
 
 `scripts/missing-tests.ts` is the authority on the pairing: for every catalog id whose test file it
 cannot find it prints the id, the card name and the exact path it expected, and it prints nothing
-when all 317 are covered. Run it to learn what to call your files:
+when all 318 are covered. Run it to learn what to call your files:
 
 ```
 pnpm --filter @jackioh/cards run missing-tests | grep core-043
@@ -278,7 +278,7 @@ What the registry exports, for the server, the client and the tests:
 
 | export | meaning |
 | --- | --- |
-| `CATALOG`, `CATALOG_IDS`, `CATALOG_VERSION` | all 317 defs from `catalog.json`, script or no script, and the latest patch's version (R388) |
+| `CATALOG`, `CATALOG_IDS`, `CATALOG_VERSION` | all 318 defs from `catalog.json`, script or no script, and the latest patch's version (R388) |
 | `cardDef(id)`, `cardDefByIndex(set, index)` | one def, throwing rather than returning `undefined` |
 | `CARDS` | `Record<catalogId, { def, base, radiant }>` — one entry per script file present |
 | `registerAll()` | `registerCatalog(CATALOG, CATALOG_VERSION)` then `registerScripts(...)`; idempotent |

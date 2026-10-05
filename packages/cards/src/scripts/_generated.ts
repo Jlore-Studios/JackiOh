@@ -214,7 +214,7 @@ import * as mclassic_087_plague_chalice from "./classic/087-plague-chalice";
 import * as mclassic_088_siphon_squad from "./classic/088-siphon-squad";
 import * as mclassic_089_paul_allens_ghost from "./classic/089-paul-allens-ghost";
 import * as mclassic_090_in_too_deep from "./classic/090-in-too-deep";
-import * as mclassic_t_glitch from "./classic/t-glitch";
+import * as mclassic_t_glitch_glitch from "./classic/t-glitch-glitch";
 import * as mclassic_plus_001_doom_shroom from "./classic-plus/001-doom-shroom";
 import * as mclassic_plus_002_groom_shroom from "./classic-plus/002-groom-shroom";
 import * as mclassic_plus_003_second_amendment_snake from "./classic-plus/003-second-amendment-snake";
@@ -534,7 +534,7 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mclassic_088_siphon_squad,
   mclassic_089_paul_allens_ghost,
   mclassic_090_in_too_deep,
-  mclassic_t_glitch,
+  mclassic_t_glitch_glitch,
   mclassic_plus_001_doom_shroom,
   mclassic_plus_002_groom_shroom,
   mclassic_plus_003_second_amendment_snake,

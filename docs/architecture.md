@@ -591,8 +591,8 @@ step that is not yet implemented says which BUILD task delivers it.
    - `insert into public.collection …` as an `authenticated` user → must be refused. There is no
      policy, so there is no path (§9.4).
 6. **Seed the catalog.** `pnpm --filter @jackioh/server db:seed-catalog`. Requires
-   `packages/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 317
-   (268 cards + 49 tokens over Core, Classic and Classic+, patch v0.2.0) and
+   `packages/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 318
+   (268 cards + 50 tokens over Core, Classic and Classic+, patch v0.2.0 and Glitch, issue #170) and
    `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
 7. **Mint an invite code.** `pnpm --filter @jackioh/server codes:mint`. It generates 16 characters
    from `CODE_ALPHABET`, formats them `XXXX-XXXX-XXXX-XXXX`, HMACs with `CODE_PEPPER` and inserts
