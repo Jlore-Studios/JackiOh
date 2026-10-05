@@ -82,6 +82,11 @@ const S2 = {
   FX_BLOOD_PICK_BASE: 1,
   FX_BLOOD_PICK_STRIDE: 2,
   FX_BLOOD_TRAUMA: 0.2,
+  // Patch v0.2.14: Classic+ #24 Crushing Walls.
+  FX_WALLS_HIT_AT: 0.3,
+  FX_WALLS_TAIL_MS: 850,
+  FX_WALLS_REACH: 0.2,
+  FX_WALLS_TRAUMA: 0.45,
   FX_BRAND_SLAM_AT: 0.35,
   FX_BRAND_TAIL_MS: 700,
   FX_CHAOS_LAND_AT: 0.4,
@@ -138,6 +143,8 @@ describe("S2 the effects constants", () => {
       constants.FX_LUNGE_CONTACT_AT,
       constants.FX_FLICKER_RETURN_AT,
       constants.FX_REDIRECT_FLIGHT_FRACTION,
+      constants.FX_WALLS_HIT_AT,
+      constants.FX_WALLS_REACH,
     ];
     for (const fraction of fractions) {
       expect(fraction).toBeGreaterThan(0);
@@ -198,6 +205,7 @@ describe("R200 the v0.2.0 tails fit inside T", () => {
   it("R502 R437 every new tail and landing fraction keeps its cue inside its entry plus FX_MAX_TAIL_MS", () => {
     expect(constants.FX_FRACTURE_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     expect(constants.FX_BRAND_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    expect(constants.FX_WALLS_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     for (const at of [constants.FX_CRACK_HIT_AT, constants.FX_BLOOD_FLIGHT_FRACTION, constants.FX_BRAND_SLAM_AT, constants.FX_CHAOS_LAND_AT, constants.FX_CHAOS_LAND_LAST]) {
       expect(at).toBeGreaterThanOrEqual(0);
       expect(at).toBeLessThanOrEqual(1);

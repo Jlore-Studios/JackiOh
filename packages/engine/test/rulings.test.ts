@@ -4041,6 +4041,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+<<<<<<< HEAD
   // Proved by apps/web routes/landing.test.tsx "R661 …" (no Stats call to action; the footer's link is
   // the only one), routes/stats.test.tsx "R661 …" (no data source, no count towards the gate, no word of
   // AI padding or a gate, the drill-down included), routes/almanac.test.tsx "R654 R661 …" (the card
@@ -4048,6 +4049,18 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // in R612's words, its leaderboard link, and nothing when the rank cannot be read).
   it("R661 keeps statistics off the landing page's calls to action and their workings behind the curtain, and shows the rank in the lobby", () => {
     provenIn(661, WEB_LANDING_TEST, WEB_STATS_ROUTE_TEST, "../../../apps/web/src/routes/almanac.test.tsx", WEB_PLAY_TEST);
+=======
+  // Proved by counterWarning.test.ts "R667 …" (fixture counters: who is warned, never a Trap, a hand
+  // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
+  // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
+  it("R667 a hand card the field would counter at every price carries a warning on its own seat", () => {
+    provenIn(
+      667,
+      "counterWarning.test.ts",
+      "../../cards/test/classic/087-plague-chalice.test.ts",
+      "../../../apps/web/src/game/countered.test.tsx",
+    );
+>>>>>>> origin/main
   });
 
   // Proved by the card's own test, cards/test/classic/055-book-of-wildfire.test.ts "R671 …": the swap
@@ -4055,6 +4068,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // became swapping on, Temporary kept, and the end of turn replaying exactly.
   it("R671 Book of Wildfire becomes a different Book at the end of its owner's turn, and the Book keeps swapping", () => {
     provenIn(671, "../../cards/test/classic/055-book-of-wildfire.test.ts");
+  });
+
+  // Proved by playChoices.test.ts "R703 …" (a needed pick the board cannot satisfy is neither
+  // offered nor accepted, a plain one still plays, and a cast fizzles) and Plastic Surgery's own test
+  // (both faces, either side, and the cast).
+  it("R703 a play is refused, and never offered, while a pick it needs has no legal option", () => {
+    provenIn(703, "playChoices.test.ts", "../../cards/test/063-plastic-surgery.test.ts");
   });
 });
 
