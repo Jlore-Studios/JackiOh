@@ -32,7 +32,7 @@ import {
   type LoadoutResult,
 } from "@jackioh/validator";
 
-import { SERIES_POLL_SECONDS } from "../../../server/src/config.ts";
+import { MATCH_FOUND_NAV_DELAY_MS, SERIES_POLL_SECONDS } from "../../../server/src/config.ts";
 import {
   ApiRequestError,
   createRoom,
@@ -578,11 +578,33 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
   const refreshPopulation = useCallback((): void => {
     attempt(() => getPopulation(token)).then(setPopulation, () => undefined);
   }, [token]);
-  // A pairing announces itself before the navigation lands it: the lobby says where it is going.
-  useLobbyWatch(token, waiting, refreshPopulation, (target) => {
+  // Found, as opposed to still waiting: a pairing has landed and the lobby is showing
+  // `MATCH_FOUND_STATUS` for one beat before it navigates there. The setup stays locked,
+  // like while queued, and Leave waits out the beat rather than racing the navigation.
+  const [found, setFound] = useState(false);
+  const foundTarget = useRef<string | null>(null);
+  const foundTimer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (foundTimer.current !== null) window.clearTimeout(foundTimer.current);
+    },
+    [],
+  );
+  // A pairing announces itself before the navigation lands it: the lobby says where it is
+  // going, and only then goes. The delay is `MATCH_FOUND_NAV_DELAY_MS` — a synchronous
+  // `navigate` after `setStatus` unmounts this screen before the status paints, and a test
+  // with a mocked `navigate` cannot tell. Single-flight: the watch and an immediate answer
+  // can name the same pairing at once.
+  const goFound = useCallback((target: string): void => {
+    if (foundTarget.current !== null) return;
+    foundTarget.current = target;
+    setFound(true);
     setStatus(MATCH_FOUND_STATUS);
-    navigate(target);
-  });
+    foundTimer.current = window.setTimeout(() => {
+      navigate(target);
+    }, MATCH_FOUND_NAV_DELAY_MS);
+  }, []);
+  useLobbyWatch(token, waiting, refreshPopulation, goFound);
   // The population once on arrival; the wait refreshes it with every poll.
   useEffect(() => {
     refreshPopulation();
@@ -613,14 +635,18 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       });
   }
 
-  /** Where a paired answer goes: the board, or the series screen to pick game 1's deck. */
+  /**
+   * Where a paired answer goes: the board, or the series screen to pick game 1's deck. A
+   * pairing straight out of `enqueue` / `joinRoom` announces itself the same way a watched
+   * one does, through `goFound`, rather than vanishing silently.
+   */
   function follow(answer: { matchId: string | null; seriesId: string | null }): boolean {
     if (typeof answer.matchId === "string" && answer.matchId.length > 0) {
-      navigate(paths.match(answer.matchId));
+      goFound(paths.match(answer.matchId));
       return true;
     }
     if (typeof answer.seriesId === "string" && answer.seriesId.length > 0) {
-      navigate(paths.series(answer.seriesId));
+      goFound(paths.series(answer.seriesId));
       return true;
     }
     return false;
@@ -681,12 +707,14 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
   }
 
   const noChoice = choice === null;
+  /** The setup stays locked while the found beat plays: a pairing already landed. */
+  const locked = waiting || found;
   /** Queued, as opposed to hosting a room: the room shows its own ticket instead of a beacon. */
-  const queued = waiting && room === null;
+  const queued = waiting && room === null && !found;
   const byMode = population?.byMode;
 
   return (
-    <div className="app-shell tavern lobby play-screen" data-waiting={waiting ? "true" : "false"}>
+    <div className="app-shell tavern lobby play-screen" data-waiting={locked ? "true" : "false"}>
       <BackLink />
 
       <header className="play-hero">
@@ -757,7 +785,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                   value={option}
                   checked={option === mode}
                   data-testid={playModeTestid(option)}
-                  disabled={waiting}
+                  disabled={locked}
                   onChange={() => {
                     setMode(option);
                   }}
@@ -804,7 +832,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                   className="lobby-select"
                   data-testid={playTestid.deckSelect}
                   value={deck?.id ?? ""}
-                  disabled={waiting}
+                  disabled={locked}
                   onChange={(event) => {
                     setDeckId(event.target.value);
                   }}
@@ -833,7 +861,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                   className="lobby-select"
                   data-testid={playTestid.trioSelect}
                   value={trio?.id ?? ""}
-                  disabled={waiting}
+                  disabled={locked}
                   onChange={(event) => {
                     setTrioId(event.target.value);
                   }}
@@ -869,7 +897,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               type="button"
               className="button-primary play-cta"
               data-testid={playTestid.queue}
-              disabled={busy || noChoice || waiting}
+              disabled={busy || noChoice || locked}
               onClick={onEnqueue}
             >
               Find a match
@@ -878,7 +906,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               type="button"
               className="link-button play-leave"
               data-testid={playTestid.leaveQueue}
-              disabled={busy}
+              disabled={busy || found}
               onClick={onLeaveQueue}
             >
               Leave the queue
@@ -894,7 +922,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               type="button"
               className="play-room-create"
               data-testid={playTestid.createRoom}
-              disabled={busy || noChoice || waiting}
+              disabled={busy || noChoice || locked}
               onClick={onCreateRoom}
             >
               Create a room
@@ -911,12 +939,12 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                   autoComplete="off"
                   spellCheck={false}
                   placeholder="Code"
-                  disabled={waiting}
+                  disabled={locked}
                   onChange={(event) => {
                     setJoinCode(event.target.value);
                   }}
                 />
-                <button type="submit" data-testid={playTestid.joinSubmit} disabled={busy || noChoice || waiting}>
+                <button type="submit" data-testid={playTestid.joinSubmit} disabled={busy || noChoice || locked}>
                   Join
                 </button>
               </div>

@@ -19,6 +19,12 @@ import { baseView } from "../test/fixtures.ts";
 import { formatClock } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "../game/clockConstants.ts";
 import MatchRoute, { connectionWords, promptHolderOf, withoutToken } from "./match.tsx";
+import { navigate } from "../net/navigate.ts";
+
+vi.mock("../net/navigate.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../net/navigate.ts")>();
+  return { ...actual, navigate: vi.fn() };
+});
 
 class FakeSocket implements SocketLike {
   readyState = 0;
@@ -702,6 +708,52 @@ describe("the death screen's rematch offers (R672)", () => {
     await act(async () => {});
     expect(screen.queryByTestId("rematch-offer")).toBeNull();
     expect(screen.queryByTestId("rematch-double")).toBeNull();
+  });
+
+  it("takes the seat to the rematch even after View the board folded the panel", async () => {
+    vi.mocked(navigate).mockClear();
+    // The rematch answers are held back until the panel is folded: neither the buttons'
+    // poll nor the watcher's has answered by then, so nothing can have navigated yet. Every
+    // pending poll is released, in case the buttons polled again after mounting.
+    const releaseRematch: Array<(body: string) => void> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => {
+            if (String(url).includes("/api/matches/m-1/rematch")) {
+              return new Promise<string>((resolve) => {
+                releaseRematch.push(resolve);
+              });
+            }
+            return Promise.resolve(
+              JSON.stringify(String(url).includes("/series") ? { series: null } : { version: "v1", defs: {} }),
+            );
+          },
+        } as unknown as Response),
+      ),
+    );
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+
+    // Fold the panel to its chip: the buttons unmount with it.
+    fireEvent.click(await screen.findByTestId("result-view-board"));
+    expect(screen.getByTestId("result-reopen")).toBeInTheDocument();
+    expect(screen.queryByTestId("rematch-offer")).toBeNull();
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+
+    // The matching offer lands afterwards: the watcher outlives the fold and navigates.
+    // (The buttons' released poll is dropped by their unmount guard.)
+    await act(async () => {
+      for (const release of releaseRematch) {
+        release(JSON.stringify({ youOffered: 1, opponentOffer: 1, opponentHere: true, matchId: "match-2" }));
+      }
+    });
+    await waitFor(() => {
+      expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-2");
+    });
   });
 });
 

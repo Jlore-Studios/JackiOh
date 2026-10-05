@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { navigate, paths } from "../net/navigate.ts";
 import { rematchOffer, rematchStatus, type RematchStatusResponse } from "../net/api.ts";
-import RematchButtons, { rematchTestid } from "./Rematch.tsx";
+import RematchButtons, { RematchWatcher, rematchTestid } from "./Rematch.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -107,5 +107,26 @@ describe("RematchButtons", () => {
     expect(screen.getByText(/needs a ranked match/i)).toBeInTheDocument();
     // The normal offer still works there.
     expect(screen.getByTestId(rematchTestid.offer)).not.toBeDisabled();
+  });
+});
+
+describe("RematchWatcher", () => {
+  it("renders nothing, and takes the seat to the game the offers created", async () => {
+    vi.mocked(rematchStatus).mockResolvedValue(statusOf({ youOffered: 1, opponentOffer: 1, matchId: "match-9" }));
+    const { container } = render(<RematchWatcher token={TOKEN} matchId={MATCH_ID} />);
+
+    await waitFor(() => {
+      expect(vi.mocked(navigate)).toHaveBeenCalledWith(paths.match("match-9"));
+    });
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("stays quiet while the seats disagree", async () => {
+    render(<RematchWatcher token={TOKEN} matchId={MATCH_ID} />);
+
+    await waitFor(() => {
+      expect(vi.mocked(rematchStatus)).toHaveBeenCalled();
+    });
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
   });
 });

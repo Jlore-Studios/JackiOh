@@ -10,7 +10,7 @@
 // computes, and navigates to the game the server made. The only numbers it reads are the server's
 // (`youOffered`, `opponentOffer`, `opponentHere`, `matchId`).
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import { SERIES_POLL_SECONDS } from "../../../server/src/config.ts";
 import type { ConnectionState } from "../game/net.ts";
@@ -50,21 +50,20 @@ function incomingWords(stakes: RematchStakes): string {
   return stakes === 2 ? "Your opponent wants double-or-nothing." : "Your opponent wants a rematch.";
 }
 
-export default function RematchButtons({ token, matchId, connection, ranked }: RematchButtonsProps): ReactElement | null {
-  const [status, setStatus] = useState<RematchStatusResponse | null>(null);
-  const [offering, setOffering] = useState<RematchStakes | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  // The status, now and every `SERIES_POLL_SECONDS`: the opponent's offer, their presence, and
-  // the game equal offers made. A created game takes both seats there at once.
+/**
+ * The status, now and every `SERIES_POLL_SECONDS`: the opponent's offer, their presence, and
+ * the game equal offers made. A created game takes both seats there at once. One
+ * implementation for the buttons and the watcher below, so the two never drift apart.
+ */
+function useRematchStatus(token: string, matchId: string, onStatus: (answer: RematchStatusResponse) => void): void {
+  const latest = useRef(onStatus);
+  latest.current = onStatus;
   useEffect(() => {
     let cancelled = false;
     const read = (): void => {
       rematchStatus(token, matchId).then(
         (answer) => {
-          if (cancelled) return;
-          setStatus(answer);
-          if (answer.matchId !== null) navigate(paths.match(answer.matchId));
+          if (!cancelled) latest.current(answer);
         },
         () => undefined,
       );
@@ -76,6 +75,34 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
       window.clearInterval(handle);
     };
   }, [token, matchId]);
+}
+
+/**
+ * The half of a rematch that must outlive the result panel. The buttons live in the panel's
+ * `actions` (`Result.tsx` renders those only while the panel is open), so a seat that offers
+ * and then presses "View the board" unmounts their poller — and is never taken to the game
+ * the opponent's matching offer creates, while already sitting in that ranked game. The
+ * match route mounts this alongside the board once the game is over, so the navigation
+ * survives the fold. It renders nothing and only ever navigates; offering still needs the
+ * panel open. Two pollers while the panel is open are harmless: both navigate idempotently
+ * to the same game.
+ */
+export function RematchWatcher({ token, matchId }: { token: string; matchId: string }): ReactElement | null {
+  useRematchStatus(token, matchId, (answer) => {
+    if (answer.matchId !== null) navigate(paths.match(answer.matchId));
+  });
+  return null;
+}
+
+export default function RematchButtons({ token, matchId, connection, ranked }: RematchButtonsProps): ReactElement | null {
+  const [status, setStatus] = useState<RematchStatusResponse | null>(null);
+  const [offering, setOffering] = useState<RematchStakes | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useRematchStatus(token, matchId, (answer) => {
+    setStatus(answer);
+    if (answer.matchId !== null) navigate(paths.match(answer.matchId));
+  });
 
   // Nothing until the status says the opponent is here — and never on a dead socket. A missing
   // first read reads the same as gone: no buttons on an unknown presence.
