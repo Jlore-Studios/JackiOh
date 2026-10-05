@@ -2131,12 +2131,22 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "cognition",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "37252258468",
+            "tier": "medium"
+          }
+        ],
         "sha": "408355446f46df30d7dabf8ef01ad348491b00d6",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "225": {
