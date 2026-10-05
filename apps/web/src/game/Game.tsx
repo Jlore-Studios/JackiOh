@@ -521,8 +521,6 @@ export default function Game({
       data-hit-stop={hitStop ? "true" : undefined}
       data-reduced-motion={reducedMotion ? "true" : undefined}
       style={impactFeel === undefined ? undefined : {
-        "--impact-shake-px": `${String(impactFeel.shakePx)}px`,
-        "--impact-shake-ms": `${String(impactFeel.shakeMs)}ms`,
         "--impact-number-scale": String(impactFeel.numberScale),
         "--impact-number-linger": `${String(impactFeel.numberLingerMs)}ms`,
       } as CSSProperties}

@@ -1287,10 +1287,7 @@
   animation: impact-card-wobble 250ms ease-in-out both;
 }
 
-.game:not([data-reduced-motion="true"]):is([data-impact-tier="moderate"], [data-impact-tier="big"], [data-impact-tier="giga"]) .board {
-  animation: board-impact-shake var(--impact-shake-ms) linear both;
-}
-
+/* The board itself shakes in the effects layer (fx/shake.ts, B35), sized by DAMAGE_FEEL's shakePx. */
 .game:not([data-reduced-motion="true"])[data-impact-tier="giga"]::after {
   content: "";
   position: fixed;
@@ -1305,13 +1302,6 @@
   0%, 100% { rotate: 0deg; }
   30% { rotate: -1.8deg; }
   70% { rotate: 1.8deg; }
-}
-
-@keyframes board-impact-shake {
-  0%, 100% { translate: 0 0; }
-  25% { translate: var(--impact-shake-px) calc(var(--impact-shake-px) * -0.45); }
-  50% { translate: calc(var(--impact-shake-px) * -0.8) var(--impact-shake-px); }
-  75% { translate: calc(var(--impact-shake-px) * 0.4) calc(var(--impact-shake-px) * -0.65); }
 }
 
 @keyframes giga-vignette-flash {
@@ -1429,6 +1419,7 @@
    hover and active rules, which would otherwise repaint it grey. */
 .board .control.control-end-turn {
   position: relative;
+  width: 100%;
   min-height: 38px;
   font-weight: 800;
   letter-spacing: 0.03em;
@@ -1734,6 +1725,11 @@
     contain: size;
   }
 
+  /* The housing takes End turn's place in the bar (#57); the button fills it. */
+  .board .control-bar .turn-mechanism {
+    flex: 1 1 100%;
+  }
+
   .board .control-bar .control-end-turn {
     flex: 1 1 100%;
     min-height: 58px;
@@ -1845,6 +1841,7 @@
     flex: 1 1 auto;
   }
 
+  .board .control-bar .turn-mechanism,
   .board .control-bar .control-end-turn {
     flex-grow: 2;
   }
@@ -1940,6 +1937,7 @@
    HIG). `.board .control` outranks src/index.css's `.app-shell button` padding. */
 @media (max-width: 1024px), (pointer: coarse) {
   .board .control,
+  .board .control.control-end-turn,
   .board .control-bar button,
   .board [data-testid="settings-open-game"],
   .board .control-bar .audio-toggle,
@@ -2182,6 +2180,12 @@
     flex: 0 0 auto;
   }
 
+  /* B29: the housing keeps room for a 44px button plus its 5px padding and 2px rim each side. */
+  .board .control-bar .turn-mechanism {
+    flex: 1 1 auto;
+    min-width: calc(44px + 14px);
+  }
+
   .board .control-bar .control-end-turn {
     flex: 1 1 auto;
     min-width: 0;
@@ -2290,6 +2294,7 @@
 
   /* End turn and the gear share the first row under the turn plate, Offer draw and Concede the
      second, so the column is three rows tall instead of four. */
+  .board .control-bar .turn-mechanism,
   .board .control-bar .control-end-turn {
     flex: 1 1 calc(100% - 56px);
   }

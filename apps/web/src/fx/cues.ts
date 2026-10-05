@@ -69,6 +69,7 @@ import {
   FX_RESULT_TRAUMA,
   FX_REWIND_TRAUMA,
   FX_RING_MS,
+  FX_SHAKE_MAX_PX,
   FX_SLAM_AT,
   FX_SLAM_MAX_TRAUMA,
   FX_SLAM_STATS_MIN,
@@ -282,6 +283,14 @@ function banner(D: number, text: string, tone: FxBannerTone): FxCue {
 }
 
 /** Appends a shake of `min(1, base × intensity)` at `delayMs`, only when that is above 0. */
+/**
+ * The trauma that shakes the board by `px` at its peak: the shake's offset is FX_SHAKE_MAX_PX times
+ * trauma squared (shake.ts), so a tuning table can name its shake in pixels (#57, #185).
+ */
+export function traumaForShakePx(px: number): number {
+  return px <= 0 ? 0 : Math.min(1, Math.sqrt(px / FX_SHAKE_MAX_PX));
+}
+
 function pushShake(cues: FxCue[], intensity: number, base: number, delayMs: number): void {
   const trauma = Math.min(1, base * intensity);
   if (trauma > 0) {
@@ -462,8 +471,9 @@ const impact: Recipe = (event, p) => {
   if (tier === "moderate" || tier === "big" || tier === "giga") {
     cues.push(burst(particleIntensity, "dust", anchor(p.tgt, FOOT), "area", hit, "impactDust"));
   }
-  // The board-level tier styling owns its exact shake; this keeps Normal hits visually still.
   if (tier === "giga") cues.push(ring(p.D, "dust", viewportCenter(), hit));
+  // B35: the board shakes here, by the tier's shakePx (#57's DAMAGE_FEEL); a Normal hit stays still.
+  pushShake(cues, i, traumaForShakePx(feel.shakePx), hit);
   return cues;
 };
 

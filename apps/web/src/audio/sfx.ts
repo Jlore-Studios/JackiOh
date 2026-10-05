@@ -28,8 +28,9 @@
 // the UI ticks quieter still but plainly audible. The component spec (audio-recipes.cy.tsx)
 // renders every recipe through the real mix and holds these bands, so a retune cannot drift.
 
-import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP } from "./constants.ts";
+import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP, IMPACT_HEADROOM } from "./constants.ts";
 import type { SfxId, SfxParams, SfxTimbre } from "./types.ts";
+import { damageTier } from "../game/damageFeel.ts";
 
 export const SFX_IDS: readonly SfxId[] = [
   "draw", "play", "summon", "attack", "impact", "shieldShatter", "heal", "buff", "debuff",
@@ -475,12 +476,14 @@ const attack: SfxRecipe = (ctx, out, at) => {
 
 /** A hit whose weight is chosen by the public damage tier, from a tap to a GIGA board thump. */
 const impact: SfxRecipe = (ctx, out, at, params) => {
-  const tier = params.impactTier ?? "normal";
+  // A caller with no tier (a preview, a recipe test) is sized by its amount, capped as before (B16).
+  const tier = params.impactTier ?? damageTier(Math.min(params.amount ?? 0, IMPACT_AMOUNT_CAP));
   const tierT = { tiny: 0.1, normal: 0.34, moderate: 0.54, big: 0.76, giga: 1 }[tier];
   const t = tierT;
   const pitch = 0.95 + Math.min(1, Math.max(0, params.variation ?? 0.5)) * 0.1;
   const len = 0.12 + 0.33 * t;
-  const peak = 0.5 + 0.5 * t;
+  // The noise and the thump peak together; IMPACT_HEADROOM keeps the sum under full scale (B15).
+  const peak = (0.5 + 0.5 * t) * IMPACT_HEADROOM;
   const k = kit(ctx, out, at, len);
   const noise = noiseSource(k);
   chain(noise, biquad(k, "lowpass", 5000 - 3800 * t, 0), envelope(k, 0, 0.004, 1.1 * peak, len), out);

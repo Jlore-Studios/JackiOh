@@ -13,6 +13,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ANIMATIONS, MIN_ENTRY_MS, planEntries, type AnimationEntry } from "../game/animations.ts";
 import { testid, type Side } from "../game/contract.ts";
+import { damageFeel } from "../game/damageFeel.ts";
 import { baseView, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
 import {
   FX_ARROWS_TAIL_MS,
@@ -41,11 +42,12 @@ import {
   FX_RAYS_TAIL_MS,
   FX_RESULT_MS,
   FX_RING_MS,
+  FX_SHAKE_MAX_PX,
   FX_SLAM_AT,
   FX_SPLAT_HOLD_MS,
   FX_TRAP_BURST_AT,
 } from "./constants.ts";
-import { delayCues, planFx, planHandover, planLethal, planResult, sourceAnchor } from "./cues.ts";
+import { delayCues, planFx, planHandover, planLethal, planResult, sourceAnchor, traumaForShakePx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
 import type { FxAnchor, FxCardFacts, FxCue, FxPlanEnv, FxPoint } from "./types.ts";
 
@@ -544,11 +546,18 @@ describe("B11 damage splats and tier particles", () => {
     }
   });
 
-  it("B11 normal damage has no generic FX shake", () => {
-    for (const amount of [1, 2, 3, 6, 20]) {
+  it("B11 B35 a Tiny or Normal hit leaves the board still; from Moderate up it shakes by DAMAGE_FEEL's shakePx", () => {
+    for (const amount of [1, 2, 3, 6]) {
       expect(shakesOf(plan([dmg(MINE, ENEMY, amount, true)], 300)), `unit ${amount}`).toEqual([]);
       expect(shakesOf(plan([dmg(MINE, "hero-p2", amount, true)], 300)), `hero ${amount}`).toEqual([]);
     }
+    for (const amount of [7, 10, 20]) {
+      const want = traumaForShakePx(damageFeel(amount).shakePx);
+      expect(want, `amount ${amount} has a shake`).toBeGreaterThan(0);
+      expect(shakesOf(plan([dmg(MINE, ENEMY, amount, true)], 300)), `unit ${amount}`).toEqual([want]);
+      expect(shakesOf(plan([dmg(MINE, "hero-p2", amount, true)], 300)), `hero ${amount}`).toEqual([want]);
+    }
+    expect(traumaForShakePx(FX_SHAKE_MAX_PX), "the largest shake is full trauma").toBe(1);
   });
 
   it("B11 Moderate adds dust, Big makes a heavier spark burst, and GIGA adds a board-wide shockwave", () => {
@@ -595,6 +604,7 @@ describe("B12 poison", () => {
       splat("damage", 7, cardT(ENEMY), 0, 300),
       burst("poison", cardT(ENEMY), "area", 0),
       burst("dust", cardT(ENEMY, FOOT), "area", 0),
+      shake(traumaForShakePx(damageFeel(7).shakePx), 0),
     ]);
   });
 
