@@ -142,11 +142,12 @@ src/
                         gear opens from the game's control bar and the nav
     slots.ts controls.tsx   the other tasks' controls the panel mounts (effects speed and
                         intensity, animated foil, the audio panel), each with its reset
-    tabs.ts             the dialog's sections are tabs (Gameplay, Visuals, Audio, Account); the tab used
+    tabs.ts             the dialog's sections are tabs (Gameplay, Visuals, Audio); the tab used
                         last is kept on the device (jackioh.settings.tab)
-    groups.ts accountSync.ts AccountSettings.tsx   an active account's copy of the settings (R633,
-                        R634): the four stores as groups, the sync that takes the newer side of each
-                        and sends changes up (GET/PUT /api/settings), and the Account tab's status
+    groups.ts accountSync.ts   an active account's copy of the settings (R633,
+                        R634): the four stores as groups and the sync that takes the newer side of each
+                        and sends changes up (GET/PUT /api/settings), with no status UI since #303:
+                        the sync runs silently
   stats/                the device's player statistics (R639): `track.ts` reads a game's log off the views the
                         board is handed (only what the viewer was shown), `useGameStats.ts` adds the finished
                         game to the totals `store.ts` keeps in localStorage (jackioh.stats.v1, in try/catch),

@@ -56,7 +56,6 @@ const SECTIONS: readonly SectionSpec[] = [
   },
   { id: "visuals", title: "Visuals", controls: ["reduceMotion"] },
   { id: "audio", title: "Audio", controls: ["muteOpponentEmotes"] },
-  { id: "account", title: "Account", controls: [] },
 ];
 
 /** The label is the switch's whole accessible name; the hint is its description. */
@@ -157,7 +156,6 @@ export default function SettingsPanel({
   // Slots can change under an open dialog; a tab that has gone falls back to the first one.
   const active: SettingsSectionId | undefined = ids.find((id) => id === chosen) ?? ids[0];
   const activeSection = sections.find((section) => section.id === active);
-  // The Account tab has no switch and no store to put back: its status is the account's.
   const canReset =
     activeSection !== undefined &&
     (activeSection.controls.length > 0 ||
