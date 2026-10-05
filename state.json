@@ -1769,7 +1769,7 @@
       "cross_rounds": 2,
       "died": 0,
       "difficulty": "easy",
-      "failures": 2,
+      "failures": 3,
       "feedback_since": "2026-10-05T06:57:49Z",
       "forced": false,
       "handoff": {
