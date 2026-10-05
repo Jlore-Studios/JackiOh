@@ -757,7 +757,9 @@
     },
     "142": {
       "action": "review",
-      "asks": [],
+      "asks": [
+        "c:5988235709"
+      ],
       "ci_fixes": 3,
       "ci_reruns": {
         "4207c0a988b0876c8b2ea793b6a94b440a38238e": 1,
@@ -782,16 +784,16 @@
       "forced": false,
       "interruptions": 0,
       "issue": 124,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-05T00:32:11Z",
+      "queued_at": "2026-10-05T04:41:44Z",
       "requested_by": "jgoetzmann",
       "run_id": "37247908307",
       "self_check_findings": [],
-      "source": "",
+      "source": "request",
       "started_at": "2026-10-05T01:30:15Z",
       "stop_requested": false,
       "taken_asks": [],
