@@ -2460,7 +2460,7 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-05T10:25:59Z",
+      "feedback_since": "2026-10-05T11:26:08Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-05T11:18:42Z",
@@ -2501,7 +2501,7 @@
           "where": "checks"
         }
       ],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-05T11:26:08Z",
       "stop_requested": false,
       "taken_asks": [],
