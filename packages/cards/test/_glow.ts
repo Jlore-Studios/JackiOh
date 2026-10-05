@@ -1,4 +1,4 @@
-// R195, R658: reading the yellow glow (`conditionActive`) off a viewer's own `viewFor`, for the card
+// R195, R662: reading the yellow glow (`conditionActive`) off a viewer's own `viewFor`, for the card
 // tests that prove it in their own file (README §5). The key is present and `true`, or absent: a key
 // present with any other value fails here.
 

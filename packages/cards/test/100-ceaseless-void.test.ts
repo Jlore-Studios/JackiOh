@@ -12,7 +12,7 @@
 // board-wide exile the effects barrel exports.
 
 //
-// R658's yellow glow (`conditionMet`): in hand once what a play of it costs now is within its
+// R662's yellow glow (`conditionMet`): in hand once what a play of it costs now is within its
 // controller's mana, both faces, at the end of this file.
 import { describe, expect, it } from "vitest";
 import type { GameEvent, PlayerId } from "@jackioh/shared";
@@ -114,7 +114,7 @@ describe("#100 Ceaseless Void — the card", () => {
     expect(def.radiant.keywords.map((keyword) => keyword.kind)).toEqual(["Charge"]);
   });
 
-  it("§10.9 one script serves both faces: the cost hook, the Cry and R658's glow, and nothing else", () => {
+  it("§10.9 one script serves both faces: the cost hook, the Cry and R662's glow, and nothing else", () => {
     // "Plus Charge" and the 20/20 are printed on the radiant face and so §10.4 layer 1, not a line
     // of script, which is why the two faces are the same object and both of the row's clauses are
     // kept.
@@ -418,11 +418,11 @@ describe("#100 Ceaseless Void — radiant 'Plus Charge'", () => {
   });
 });
 
-describe("#100 Ceaseless Void glows once the count brings it within your mana (R658)", () => {
+describe("#100 Ceaseless Void glows once the count brings it within your mana (R662)", () => {
   for (const radiantFace of [false, true]) {
     const face = radiantFace ? "radiant" : "base";
 
-    it(`R658 ${face}: at 97 counted it costs 3 of your 4 mana and glows, and it can be played`, () => {
+    it(`R662 ${face}: at 97 counted it costs 3 of your 4 mana and glows, and it can be played`, () => {
       const s = voidScenario({ radiantFace });
       setCounters(s, { drawn: 97 });
       expect(handGlows(s, held(s).id)).toBe(true);
@@ -430,7 +430,7 @@ describe("#100 Ceaseless Void glows once the count brings it within your mana (R
       s.expectInZone(VOID, "field");
     });
 
-    it(`R658 ${face}: at 95 counted it costs 5, more than your 4, and does not glow`, () => {
+    it(`R662 ${face}: at 95 counted it costs 5, more than your 4, and does not glow`, () => {
       const s = voidScenario({ radiantFace });
       setCounters(s, { drawn: 95 });
       expect(handGlows(s, held(s).id)).toBe(false);

@@ -4003,11 +4003,22 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(656, "effects-cast.test.ts");
   });
 
-  // Proved by glow-facts.test.ts "R658 …" (the query facts and condition.ts's granted half) and by
-  // each card's own test, both faces: on when the condition holds, off when it does not.
-  it("R658 the yellow glow for the conditions R195 left out", () => {
+  // Proved by apps/web test/ux/drag-continue.test.tsx "R658 …" (a second drag from a pick, a backrow
+  // card dropped on the board, a prompt option dragged out of its panel) and test/ux/drag-model.test.ts
+  // "R658 …" (the plans and the drops).
+  it("R658 drags a second choice from its picks, a backrow card onto the board, and a prompt's options", () => {
     provenIn(
       658,
+      "../../../apps/web/src/test/ux/drag-continue.test.tsx",
+      "../../../apps/web/src/test/ux/drag-model.test.ts",
+    );
+  });
+
+  // Proved by glow-facts.test.ts "R662 …" (the query facts and condition.ts's granted half) and by
+  // each card's own test, both faces: on when the condition holds, off when it does not.
+  it("R662 the yellow glow for the conditions R195 left out", () => {
+    provenIn(
+      662,
       "glow-facts.test.ts",
       "../../cards/test/018-bread-and-butter.test.ts",
       "../../cards/test/038-quickstriker.test.ts",

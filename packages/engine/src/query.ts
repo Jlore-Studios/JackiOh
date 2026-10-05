@@ -278,7 +278,7 @@ export function maxManaOf(state: GameState, player: PlayerId): number {
 }
 
 // ---------------------------------------------------------------------------
-// The yellow glow's facts for the cards R195 left out (R658)
+// The yellow glow's facts for the cards R195 left out (R662)
 // ---------------------------------------------------------------------------
 
 /** Every permanent that acts for this player: the tops of their unit piles and their backrow (§3.2). */
@@ -292,7 +292,7 @@ function permanentsHeldBy(state: GameState, player: PlayerId): CardInstance[] {
 }
 
 /**
- * R658: whether a card this player plays now from their hand would take a Combo branch a permanent
+ * R662: whether a card this player plays now from their hand would take a Combo branch a permanent
  * or a modifier grants it — #38 Quickstriker's "Combo X: deal X damage" (its flag on a permanent of
  * theirs, or a `quickstrikerDamage` rider), #78 /fullsend's Radiant "Combo: draw 1" (a `comboDraw`
  * rider). §10.5 step 5 resolves both only when the play has a card played earlier this turn before it
@@ -315,7 +315,7 @@ export function grantedComboLive(state: GameState, player: PlayerId): boolean {
 }
 
 /**
- * R658, R213: whether #64 Gifted Program would make this card from this player's hand Radiant if
+ * R662, R213: whether #64 Gifted Program would make this card from this player's hand Radiant if
  * they played it now — the question §10.5 step 3 asks (`giftedMakesRadiant`), with the cost a play
  * of it pays now (R56). A card that is Radiant already gains nothing, so it is never one.
  */
@@ -325,7 +325,7 @@ export function giftedWouldMakeRadiant(state: GameState, player: PlayerId, card:
 }
 
 /**
- * R658, R44: the units acting on the other side whose attack on this player's hero would be lethal
+ * R662, R44: the units acting on the other side whose attack on this player's hero would be lethal
  * now, by #96 My Pawn's own projection (`subsystems.isLethal`: after Armor and the Anti-oneshot cap,
  * net of a Lifesteal strike back). It asks whether the blow is on the board, not whether it can be
  * declared this moment. Stats, keywords and health are public (§10.8).
@@ -337,7 +337,7 @@ export function lethalAttackersOf(state: GameState, player: PlayerId): readonly 
 }
 
 /**
- * R658: the permanents of this player's that #85 Unlicensed Experimentation could fuse a played
+ * R662: the permanents of this player's that #85 Unlicensed Experimentation could fuse a played
  * permanent onto — every one acting for them but `except` (the trap itself) that is not Immutable
  * (R23). The types are the trap's to match when a permanent is played.
  */

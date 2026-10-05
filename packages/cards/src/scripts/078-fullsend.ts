@@ -36,7 +36,7 @@
 // the face, and its `radiant` flag persists in every zone (R78), so the radiant face's step is the
 // one that runs — and R127 has it run even if there were no instance left to find at all.
 //
-// THE GLOW (R658). /fullsend is gone to the graveyard by the time its grant counts, so the cards
+// THE GLOW (R662). /fullsend is gone to the graveyard by the time its grant counts, so the cards
 // that glow are the ones in its controller's hand: while the Radiant face's `comboDraw` rider is live
 // and a card has been played this turn (which /fullsend itself is), the next play draws, and
 // `condition.ts` lights every hand card (`query.grantedComboLive`). The base face grants a discount

@@ -9,7 +9,7 @@
 // the exile lands before `turnEnded`, which `turn.ts` emits immediately before cleanup.
 
 //
-// R658's yellow glow: the Radiant face's "Combo: draw 1" lights its controller's hand for the rest of
+// R662's yellow glow: the Radiant face's "Combo: draw 1" lights its controller's hand for the rest of
 // the turn (`condition.ts`); the base face lights nothing. Both at the end of this file.
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "./_harness";
@@ -266,8 +266,8 @@ describe("#78 /fullsend — radiant", () => {
   });
 });
 
-describe("#78 /fullsend's Radiant Combo draw lights the hand (R658)", () => {
-  it("R658 radiant: once it resolves the hand glows, and the next play draws 1", () => {
+describe("#78 /fullsend's Radiant Combo draw lights the hand (R662)", () => {
+  it("R662 radiant: once it resolves the hand glows, and the next play draws 1", () => {
     const s = board(true);
     expect(handGlows(s, s.card(COST_0).id)).toBe(false);
 
@@ -279,7 +279,7 @@ describe("#78 /fullsend's Radiant Combo draw lights the hand (R658)", () => {
     expect(s.hand("p1").length).toBe(before);
   });
 
-  it("R658 base: the discount is no condition, so nothing glows and the next play draws nothing", () => {
+  it("R662 base: the discount is no condition, so nothing glows and the next play draws nothing", () => {
     const s = board(false);
     s.play(FULLSEND);
     expect(handGlows(s, s.card(COST_0).id)).toBe(false);

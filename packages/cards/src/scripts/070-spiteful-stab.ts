@@ -31,7 +31,7 @@
 // anti-oneshot cap and Indestructible all still apply, and R63's zero rule applies if it is reduced
 // to nothing.
 //
-// THE GLOW (R658). In hand it lights up when either scaling term adds something: the amount
+// THE GLOW (R662). In hand it lights up when either scaling term adds something: the amount
 // `stabAmount` comes to now is more than the face's base damage, so a full step of missing health
 // (5, Radiant 3) or a card in its controller's exile. Built on `stabAmount`, the function the Cry
 // deals with, so the two cannot disagree.
@@ -78,7 +78,7 @@ function spitefulStab(face: "base" | "radiant"): Script {
     cry: (ctx): Effect[] => [damage({ to: { of: "chosen" }, amount: stabAmount(ctx.state, ctx.controller, numbers) })],
     // R280: the label is the face's whole text, the formula as printed.
     preview: (ctx) => [{ label: def[face].text, value: stabAmount(ctx.state, ctx.controller, numbers) }],
-    // R658: the scaling has kicked in.
+    // R662: the scaling has kicked in.
     conditionMet: (ctx) => ctx.zone === "hand" && stabAmount(ctx.state, ctx.controller, numbers) > numbers.base,
   };
 }

@@ -14,7 +14,7 @@
 //      from `scriptsFor`; a fused def carries its ingredients' hooks,
 //      or-ed, R196)
 //   5. a hand card a permanent or a modifier grants a condition that
-//      holds now (R658: #38's and #78's Combo, #64's Radiant)       -> true
+//      holds now (R662: #38's and #78's Combo, #64's Radiant)       -> true
 //   6. otherwise                                                    -> false
 //
 // Rule 2 is what keeps this from leaking: a hook only ever runs for its controller, who may read
@@ -61,7 +61,7 @@ export function conditionActive(
 }
 
 /**
- * R658: a condition another card grants this hand card holds now — playing it would take the
+ * R662: a condition another card grants this hand card holds now — playing it would take the
  * Combo branch a Quickstriker or a Radiant /fullsend gives "your cards", or Gifted Program would make
  * it Radiant as it is played.
  */

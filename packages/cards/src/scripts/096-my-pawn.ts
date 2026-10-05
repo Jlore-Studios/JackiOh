@@ -67,7 +67,7 @@
 // so the AI acts from a board the attacker has already left. The base face has nothing to settle
 // and keeps the playout exactly as it was.
 //
-// THE GLOW (R658). The trap lights up on its controller's field while an enemy unit acting on the
+// THE GLOW (R662). The trap lights up on its controller's field while an enemy unit acting on the
 // field would deal lethal damage to their hero if it attacked it now (`lethalAttackersOf`, the same
 // `subsystems.isLethal` the trigger asks). It says the blow is on the board, on either turn, not
 // that it can be declared this moment; stats and health are public. The same on both faces.
@@ -121,7 +121,7 @@ function myPawn(destroysAttacker: boolean): TrapTrigger {
   };
 }
 
-/** R658: armed while an enemy unit on the field could swing for lethal at its controller's hero. */
+/** R662: armed while an enemy unit on the field could swing for lethal at its controller's hero. */
 const conditionMet: NonNullable<Script["conditionMet"]> = (ctx) =>
   ctx.zone === "field" && lethalAttackersOf(ctx.state, ctx.controller).length > 0;
 

@@ -9,7 +9,7 @@
 // needs the card on the field, not a Cry.
 
 //
-// R658's yellow glow: the condition is the grant's, so the hand cards it would make Radiant if played
+// R662's yellow glow: the condition is the grant's, so the hand cards it would make Radiant if played
 // now glow (`condition.ts`), both faces, at the end of this file.
 import { describe, expect, it } from "vitest";
 import type { CardInstance } from "@jackioh/engine";
@@ -154,9 +154,9 @@ describe("#64 Gifted Program", () => {
   });
 });
 
-describe("#64 Gifted Program lights the hand card it would make Radiant (R658, R213)", () => {
-  it("R658 base: the 1-cost card glows and the 2-cost one does not, and the glowing one is played Radiant", () => {
-    const s = scenario({ seed: "r658-064-base", p1: { backrow: [GIFTED], hand: [FRIEND, POINTMASTER, MENACE] } });
+describe("#64 Gifted Program lights the hand card it would make Radiant (R662, R213)", () => {
+  it("R662 base: the 1-cost card glows and the 2-cost one does not, and the glowing one is played Radiant", () => {
+    const s = scenario({ seed: "r662-064-base", p1: { backrow: [GIFTED], hand: [FRIEND, POINTMASTER, MENACE] } });
     expect(handGlows(s, s.card(FRIEND).id)).toBe(true);
     expect(handGlows(s, s.card(POINTMASTER).id)).toBe(false);
 
@@ -164,9 +164,9 @@ describe("#64 Gifted Program lights the hand card it would make Radiant (R658, R
     expect(s.card(POINTMASTER).radiant).toBe(false);
   });
 
-  it("R658 radiant: the 2-cost card glows too, and once one cheap card is played nothing does", () => {
+  it("R662 radiant: the 2-cost card glows too, and once one cheap card is played nothing does", () => {
     const s = scenario({
-      seed: "r658-064-radiant",
+      seed: "r662-064-radiant",
       p1: { backrow: [{ def: GIFTED, radiant: true }], hand: [FRIEND, POINTMASTER, MENACE] },
     });
     expect(handGlows(s, s.card(FRIEND).id)).toBe(true);
@@ -178,13 +178,13 @@ describe("#64 Gifted Program lights the hand card it would make Radiant (R658, R
     expect(handGlows(s, s.card(FRIEND).id)).toBe(false);
   });
 
-  it("R658 a card already Radiant gains nothing, so it does not glow", () => {
-    const s = scenario({ seed: "r658-064-already", p1: { backrow: [GIFTED], hand: [{ def: FRIEND, radiant: true }, MENACE] } });
+  it("R662 a card already Radiant gains nothing, so it does not glow", () => {
+    const s = scenario({ seed: "r662-064-already", p1: { backrow: [GIFTED], hand: [{ def: FRIEND, radiant: true }, MENACE] } });
     expect(handGlows(s, s.card(FRIEND).id)).toBe(false);
   });
 
-  it("R658 without it on the field, or on the opponent's side, nothing glows", () => {
-    const s = scenario({ seed: "r658-064-none", p1: { hand: [FRIEND, MENACE] }, p2: { backrow: [GIFTED] } });
+  it("R662 without it on the field, or on the opponent's side, nothing glows", () => {
+    const s = scenario({ seed: "r662-064-none", p1: { hand: [FRIEND, MENACE] }, p2: { backrow: [GIFTED] } });
     expect(handGlows(s, s.card(FRIEND).id)).toBe(false);
   });
 });

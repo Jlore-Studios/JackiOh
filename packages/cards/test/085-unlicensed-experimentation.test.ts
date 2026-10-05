@@ -28,7 +28,7 @@
 //   #8  Mr. Vanilla   1, 3/3, Immutable, no Cry
 
 //
-// R658's yellow glow (`conditionMet`): on its controller's field while they control a permanent other
+// R662's yellow glow (`conditionMet`): on its controller's field while they control a permanent other
 // than the trap that is not Immutable, both faces, checked against the opponent's play, at the end.
 import { describe, expect, it } from "vitest";
 import type { CardInstance } from "@jackioh/engine";
@@ -355,16 +355,16 @@ describe("#85 Unlicensed Experimentation — radiant", () => {
   });
 });
 
-describe("#85 Unlicensed Experimentation glows while a Fuse has somewhere to land (R658)", () => {
+describe("#85 Unlicensed Experimentation glows while a Fuse has somewhere to land (R662)", () => {
   const VANILLA = "core-008"; // Mr. Vanilla, a 1-cost Unit
   const MENACE = "core-019"; // Midrange Menace; its Radiant face is Immutable
 
   for (const radiant of [false, true]) {
     const face = radiant ? "radiant" : "base";
 
-    it(`R658 ${face}: with a Unit of its controller's it glows for them only, and the opponent's Unit is fused onto it`, () => {
+    it(`R662 ${face}: with a Unit of its controller's it glows for them only, and the opponent's Unit is fused onto it`, () => {
       const s = scenario({
-        seed: `r658-085-${face}-on`,
+        seed: `r662-085-${face}-on`,
         active: "p2",
         p1: { backrow: [{ def: "core-085", radiant }], field: [VANILLA] },
         p2: { hand: [VANILLA, "core-010"] },
@@ -377,9 +377,9 @@ describe("#85 Unlicensed Experimentation glows while a Fuse has somewhere to lan
       expect(s.unit("p2", 1)).toBeNull();
     });
 
-    it(`R658 ${face}: alone on its side it does not glow, and the opponent's Unit stays theirs`, () => {
+    it(`R662 ${face}: alone on its side it does not glow, and the opponent's Unit stays theirs`, () => {
       const s = scenario({
-        seed: `r658-085-${face}-off`,
+        seed: `r662-085-${face}-off`,
         active: "p2",
         p1: { backrow: [{ def: "core-085", radiant }] },
         p2: { hand: [VANILLA, "core-010"] },
@@ -391,9 +391,9 @@ describe("#85 Unlicensed Experimentation glows while a Fuse has somewhere to lan
       expect(s.unit("p2", 1)?.defId).toBe(VANILLA);
     });
 
-    it(`R658 ${face}: an Immutable permanent alone takes no Fuse (R23), so it does not glow`, () => {
+    it(`R662 ${face}: an Immutable permanent alone takes no Fuse (R23), so it does not glow`, () => {
       const s = scenario({
-        seed: `r658-085-${face}-immutable`,
+        seed: `r662-085-${face}-immutable`,
         active: "p2",
         p1: { backrow: [{ def: "core-085", radiant }], field: [{ def: MENACE, radiant: true }] },
         p2: { hand: [VANILLA, "core-010"] },

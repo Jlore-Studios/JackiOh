@@ -21,7 +21,7 @@
 // by `legalActions` and by the refusal alike. Gifted Program cannot catch its own play: step 3 runs
 // before step 4 puts it on the board (R119).
 //
-// THE GLOW (R658). The condition this card prints is its grant's, so the cards that glow are the
+// THE GLOW (R662). The condition this card prints is its grant's, so the cards that glow are the
 // ones in its controller's hand that it would make Radiant if played now: `condition.ts` asks
 // `query.giftedWouldMakeRadiant`, which is `giftedMakesRadiant` at the cost a play pays now (R56,
 // R213), so the glow and step 3 cannot disagree. The card itself declares no `conditionMet`.

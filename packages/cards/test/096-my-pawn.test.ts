@@ -20,7 +20,7 @@
 // base face's cancel, lockout and AI turn are played through real attacks in my-pawn.test.ts.
 
 //
-// R658's yellow glow (`conditionMet`): on its controller's field while an enemy unit would be lethal
+// R662's yellow glow (`conditionMet`): on its controller's field while an enemy unit would be lethal
 // attacking their hero now, both faces, checked against the attack, at the end of this file.
 import { describe, expect, it } from "vitest";
 import type { GameEvent, PlayerId } from "@jackioh/shared";
@@ -423,15 +423,15 @@ describe("#96 My Pawn — radiant (R283)", () => {
   });
 });
 
-describe("#96 My Pawn glows while an enemy unit could swing for lethal (R658, R44)", () => {
+describe("#96 My Pawn glows while an enemy unit could swing for lethal (R662, R44)", () => {
   const POINTMASTER = "core-020"; // 7/1 First Strike
 
   for (const radiant of [false, true]) {
     const face = radiant ? "radiant" : "base";
 
-    it(`R658 ${face}: at 7 health it glows for its controller only, and the swing is cancelled`, () => {
+    it(`R662 ${face}: at 7 health it glows for its controller only, and the swing is cancelled`, () => {
       const s = scenario({
-        seed: `r658-096-${face}-on`,
+        seed: `r662-096-${face}-on`,
         active: "p2",
         p1: { backrow: [{ def: "core-096", radiant }], health: 7 },
         p2: { field: [POINTMASTER], hand: ["core-010"] },
@@ -444,9 +444,9 @@ describe("#96 My Pawn glows while an enemy unit could swing for lethal (R658, R4
       expect(s.events.some((event) => event.type === "trapFired")).toBe(true);
     });
 
-    it(`R658 ${face}: at 8 health it does not glow, and the swing lands`, () => {
+    it(`R662 ${face}: at 8 health it does not glow, and the swing lands`, () => {
       const s = scenario({
-        seed: `r658-096-${face}-off`,
+        seed: `r662-096-${face}-off`,
         active: "p2",
         p1: { backrow: [{ def: "core-096", radiant }], health: 8 },
         p2: { field: [POINTMASTER], hand: ["core-010"] },
@@ -458,9 +458,9 @@ describe("#96 My Pawn glows while an enemy unit could swing for lethal (R658, R4
       s.expectHealth("p1", 1);
     });
 
-    it(`R658 ${face}: on its controller's own turn it glows for the blow on the board`, () => {
+    it(`R662 ${face}: on its controller's own turn it glows for the blow on the board`, () => {
       const s = scenario({
-        seed: `r658-096-${face}-mine`,
+        seed: `r662-096-${face}-mine`,
         p1: { backrow: [{ def: "core-096", radiant }], health: 7, hand: ["core-010"] },
         p2: { field: [POINTMASTER] },
       });

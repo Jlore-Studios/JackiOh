@@ -56,7 +56,7 @@
 // identity in `viewFor`. R13 leaves a card dormant under a Stack off the field, so it is neither a
 // match nor a target; `cardAt` reads the acting card per zone, which is that rule.
 //
-// THE GLOW (R658). The trap lights up on its controller's field while they control a permanent,
+// THE GLOW (R662). The trap lights up on its controller's field while they control a permanent,
 // other than this trap, that a played permanent could be fused onto (`fusablePermanentsOf`: not
 // Immutable, R23). Which type the opponent will play is theirs to choose, so the glow says the trap
 // has somewhere to land, the same on both faces; R61 still fires it on an Immutable match alone.
@@ -166,7 +166,7 @@ function experimentation(onAll: boolean): TrapTrigger {
   };
 }
 
-/** R658: armed while a permanent of its controller's, other than this trap, could take a Fuse. */
+/** R662: armed while a permanent of its controller's, other than this trap, could take a Fuse. */
 const conditionMet: NonNullable<Script["conditionMet"]> = (ctx) =>
   ctx.zone === "field" && fusablePermanentsOf(ctx.state, ctx.controller, ctx.self.id).length > 0;
 

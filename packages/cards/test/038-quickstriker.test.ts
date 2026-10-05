@@ -5,7 +5,7 @@
 // The X its next play would count, its R280 `preview`, is proved in test/preview.test.ts.
 
 //
-// R658's yellow glow: the condition is the grant's, so while it acts for its controller and they have
+// R662's yellow glow: the condition is the grant's, so while it acts for its controller and they have
 // played a card this turn, their hand cards glow (`condition.ts`), both faces, at the end of this file.
 import { createRng, subsystems } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
@@ -261,13 +261,13 @@ describe("#38 Quickstriker: Animated (patch v0.2.10)", () => {
   });
 });
 
-describe("#38 Quickstriker lights its controller's hand once its Combo would hit (R658)", () => {
+describe("#38 Quickstriker lights its controller's hand once its Combo would hit (R662)", () => {
   for (const radiant of [false, true]) {
     const face = radiant ? "radiant" : "base";
 
-    it(`R658 ${face}: after a play this turn the next card glows, and playing it deals the Combo damage`, () => {
+    it(`R662 ${face}: after a play this turn the next card glows, and playing it deals the Combo damage`, () => {
       const s = scenario({
-        seed: `r658-038-${face}-on`,
+        seed: `r662-038-${face}-on`,
         p1: { backrow: [{ def: QUICKSTRIKER, radiant }], hand: [RAPID_REPLENISH, TEMPO_TIMMY, SPARE], library: [SPARE, SPARE] },
         p2: { hand: [SPARE], library: [SPARE] },
       });
@@ -280,9 +280,9 @@ describe("#38 Quickstriker lights its controller's hand once its Combo would hit
       expect(hitsOnP2(s)).toEqual([radiant ? 2 : 1]);
     });
 
-    it(`R658 ${face}: the Quickstriker in hand does not light itself or the hand (R119)`, () => {
+    it(`R662 ${face}: the Quickstriker in hand does not light itself or the hand (R119)`, () => {
       const s = scenario({
-        seed: `r658-038-${face}-hand`,
+        seed: `r662-038-${face}-hand`,
         p1: { hand: [{ def: QUICKSTRIKER, radiant }, RAPID_REPLENISH, TEMPO_TIMMY], library: [SPARE] },
       });
       s.play(RAPID_REPLENISH);
@@ -291,9 +291,9 @@ describe("#38 Quickstriker lights its controller's hand once its Combo would hit
     });
   }
 
-  it("R658 the opponent's Quickstriker lights nothing in your hand", () => {
+  it("R662 the opponent's Quickstriker lights nothing in your hand", () => {
     const s = scenario({
-      seed: "r658-038-theirs",
+      seed: "r662-038-theirs",
       p1: { hand: [RAPID_REPLENISH, TEMPO_TIMMY], library: [SPARE] },
       p2: { backrow: [QUICKSTRIKER] },
     });

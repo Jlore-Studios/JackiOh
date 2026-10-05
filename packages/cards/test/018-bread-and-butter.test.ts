@@ -17,7 +17,7 @@
 // test/preview.test.ts, with the face-down case (its controller alone sees it).
 
 //
-// R658's yellow glow (`conditionMet`): on its controller's field while the active player holds
+// R662's yellow glow (`conditionMet`): on its controller's field while the active player holds
 // unspent mana, both faces, checked against what ending the turn then does, at the end of this file.
 import { describe, expect, it } from "vitest";
 import type { CardInstance } from "@jackioh/engine";
@@ -161,13 +161,13 @@ describe("#18 Bread and Butter (radiant)", () => {
   });
 });
 
-describe("#18 Bread and Butter glows while a turn would end with unspent mana (R658)", () => {
+describe("#18 Bread and Butter glows while a turn would end with unspent mana (R662)", () => {
   for (const radiant of [false, true]) {
     const face = radiant ? "radiant" : "base";
 
-    it(`R658 ${face}: with mana left it glows for its controller only, and ending the turn pays out`, () => {
+    it(`R662 ${face}: with mana left it glows for its controller only, and ending the turn pays out`, () => {
       const s = scenario({
-        seed: `r658-018-${face}-on`,
+        seed: `r662-018-${face}-on`,
         p1: { backrow: [{ def: "core-018", radiant }], mana: 2, library: ["core-010"] },
         p2: { library: ["core-010"] },
       });
@@ -178,9 +178,9 @@ describe("#18 Bread and Butter glows while a turn would end with unspent mana (R
       expect(s.unit("p1", 1)?.defId).toBe(BREAD_TOKEN);
     });
 
-    it(`R658 ${face}: with no mana left it does not glow, and ending the turn pays nothing`, () => {
+    it(`R662 ${face}: with no mana left it does not glow, and ending the turn pays nothing`, () => {
       const s = scenario({
-        seed: `r658-018-${face}-off`,
+        seed: `r662-018-${face}-off`,
         p1: { backrow: [{ def: "core-018", radiant }], mana: 0, library: ["core-010"] },
         p2: { library: ["core-010"] },
       });
@@ -190,16 +190,16 @@ describe("#18 Bread and Butter glows while a turn would end with unspent mana (R
       expect(s.unit("p1", 1)).toBeNull();
     });
 
-    it(`R658 ${face}: on the opponent's turn it reads the opponent's mana`, () => {
-      const on = scenario({ seed: `r658-018-${face}-theirs`, active: "p2", p1: { backrow: [{ def: "core-018", radiant }], mana: 0 }, p2: { mana: 3 } });
+    it(`R662 ${face}: on the opponent's turn it reads the opponent's mana`, () => {
+      const on = scenario({ seed: `r662-018-${face}-theirs`, active: "p2", p1: { backrow: [{ def: "core-018", radiant }], mana: 0 }, p2: { mana: 3 } });
       expect(backrowGlows(on, 1)).toBe(true);
-      const off = scenario({ seed: `r658-018-${face}-theirs-0`, active: "p2", p1: { backrow: [{ def: "core-018", radiant }], mana: 3 }, p2: { mana: 0 } });
+      const off = scenario({ seed: `r662-018-${face}-theirs-0`, active: "p2", p1: { backrow: [{ def: "core-018", radiant }], mana: 3 }, p2: { mana: 0 } });
       expect(backrowGlows(off, 1)).toBe(false);
     });
   }
 
-  it("R658 in hand it never glows: its condition is the field's", () => {
-    const s = scenario({ seed: "r658-018-hand", p1: { hand: ["core-018", "core-010"], mana: 3 } });
+  it("R662 in hand it never glows: its condition is the field's", () => {
+    const s = scenario({ seed: "r662-018-hand", p1: { hand: ["core-018", "core-010"], mana: 3 } });
     expect(handGlows(s, s.card("core-018").id)).toBe(false);
   });
 });

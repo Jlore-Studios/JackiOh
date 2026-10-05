@@ -12,7 +12,7 @@
 // hero on either side, and R81 makes it a play-time pick.
 
 //
-// R658's yellow glow (`conditionMet`): in hand once either scaling term adds damage, both faces, checked
+// R662's yellow glow (`conditionMet`): in hand once either scaling term adds damage, both faces, checked
 // against what it then deals, at the end of this file.
 import { describe, expect, it } from "vitest";
 import { scenario, type ScenarioOptions } from "./_harness";
@@ -186,7 +186,7 @@ describe("#70 Spiteful Stab", () => {
   });
 });
 
-describe("#70 Spiteful Stab glows once its scaling adds damage (R658)", () => {
+describe("#70 Spiteful Stab glows once its scaling adds damage (R662)", () => {
   function stabGlows(s: Board): boolean {
     return handGlows(s, s.card(STAB).id);
   }
@@ -194,14 +194,14 @@ describe("#70 Spiteful Stab glows once its scaling adds damage (R658)", () => {
     return s.events.flatMap((event) => (event.type === "damage" && event.targetId === "hero-p2" ? [event.amount] : []));
   }
 
-  it("R658 base: at full health with an empty exile it does not glow, and deals its base 2", () => {
+  it("R662 base: at full health with an empty exile it does not glow, and deals its base 2", () => {
     const s = board({ p1: { hand: [STAB] } });
     expect(stabGlows(s)).toBe(false);
     s.play(STAB, { targets: AT_ENEMY_HERO });
     expect(dealt(s)).toEqual([2]);
   });
 
-  it("R658 base: 5 below 30, or one card in exile, and it glows, and deals 3", () => {
+  it("R662 base: 5 below 30, or one card in exile, and it glows, and deals 3", () => {
     const hurt = board({ p1: { hand: [STAB], health: 25 } });
     expect(stabGlows(hurt)).toBe(true);
     hurt.play(STAB, { targets: AT_ENEMY_HERO });
@@ -213,7 +213,7 @@ describe("#70 Spiteful Stab glows once its scaling adds damage (R658)", () => {
     expect(stabGlows(board({ p1: { hand: [STAB], health: 26 } }))).toBe(false);
   });
 
-  it("R658 radiant: a full step is 3, so 27 glows and 28 does not", () => {
+  it("R662 radiant: a full step is 3, so 27 glows and 28 does not", () => {
     const off = board({ p1: { hand: [{ def: STAB, radiant: true }], health: 28 } });
     expect(stabGlows(off)).toBe(false);
     off.play(STAB, { targets: AT_ENEMY_HERO });

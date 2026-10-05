@@ -1,4 +1,4 @@
-// R658: the board facts the yellow glow reads for the cards R195 left out (`src/query.ts`), and the
+// R662: the board facts the yellow glow reads for the cards R195 left out (`src/query.ts`), and the
 // granted half of `conditionActive` (`src/condition.ts` rule 5): a hand card glows while a condition
 // another card grants it holds. The real cards (#38, #64, #78, #96, #85) prove the same again in
 // their own test files; here the granting cards are test-only definitions carrying the same static
@@ -95,8 +95,8 @@ function mod(state: GameState, body: Rider): void {
   state.players.p1.mods.push(rider);
 }
 
-describe("R658 grantedComboLive: a granted Combo answers the next play", () => {
-  it("R658 a Quickstriker's flag on the field is live once a card has been played this turn", () => {
+describe("R662 grantedComboLive: a granted Combo answers the next play", () => {
+  it("R662 a Quickstriker's flag on the field is live once a card has been played this turn", () => {
     const state = board("gf-striker");
     put(state, striker.id, slot("p1", "backrow", 1));
     expect(grantedComboLive(state, "p1")).toBe(false);
@@ -106,7 +106,7 @@ describe("R658 grantedComboLive: a granted Combo answers the next play", () => {
     expect(grantedComboLive(state, "p2")).toBe(false);
   });
 
-  it("R658 a comboDraw or quickstrikerDamage rider counts; a spent turn's rider, or a draw of 0, does not", () => {
+  it("R662 a comboDraw or quickstrikerDamage rider counts; a spent turn's rider, or a draw of 0, does not", () => {
     const state = board("gf-riders");
     playedOne(state);
     expect(grantedComboLive(state, "p1")).toBe(false);
@@ -124,8 +124,8 @@ describe("R658 grantedComboLive: a granted Combo answers the next play", () => {
   });
 });
 
-describe("R658 giftedWouldMakeRadiant: step 3's question, asked of a hand card now", () => {
-  it("R658 the first card costing the threshold or less this turn, and not one already Radiant", () => {
+describe("R662 giftedWouldMakeRadiant: step 3's question, asked of a hand card now", () => {
+  it("R662 the first card costing the threshold or less this turn, and not one already Radiant", () => {
     const state = board("gf-gifted");
     put(state, gifted.id, slot("p1", "backrow", 1));
     const [cheap] = inHand(state, plain.id, "p1");
@@ -142,7 +142,7 @@ describe("R658 giftedWouldMakeRadiant: step 3's question, asked of a hand card n
     expect(giftedWouldMakeRadiant(state, "p1", cheap!)).toBe(false);
   });
 
-  it("R658 without a Gifted Program on the player's side nothing qualifies", () => {
+  it("R662 without a Gifted Program on the player's side nothing qualifies", () => {
     const state = board("gf-gifted-none");
     put(state, gifted.id, slot("p2", "backrow", 1));
     const [cheap] = inHand(state, plain.id, "p1");
@@ -150,8 +150,8 @@ describe("R658 giftedWouldMakeRadiant: step 3's question, asked of a hand card n
   });
 });
 
-describe("R658 lethalAttackersOf: R44's projection over the enemy units acting now", () => {
-  it("R658 names the enemy units whose attack on the hero would be lethal, and only those", () => {
+describe("R662 lethalAttackersOf: R44's projection over the enemy units acting now", () => {
+  it("R662 names the enemy units whose attack on the hero would be lethal, and only those", () => {
     const state = board("gf-lethal");
     const big = put(state, trampler.id, slot("p2", "units", 1)); // 6/4
     const small = put(state, plain.id, slot("p2", "units", 2)); // 3/3
@@ -171,8 +171,8 @@ describe("R658 lethalAttackersOf: R44's projection over the enemy units acting n
   });
 });
 
-describe("R658 fusablePermanentsOf: where #85's Fuse could land", () => {
-  it("R658 every permanent of the player's but the one excepted, and never an Immutable one", () => {
+describe("R662 fusablePermanentsOf: where #85's Fuse could land", () => {
+  it("R662 every permanent of the player's but the one excepted, and never an Immutable one", () => {
     const state = board("gf-fusable");
     const trap = put(state, striker.id, slot("p1", "backrow", 1));
     expect(fusablePermanentsOf(state, "p1", trap.id)).toEqual([]);
@@ -184,8 +184,8 @@ describe("R658 fusablePermanentsOf: where #85's Fuse could land", () => {
   });
 });
 
-describe("R658 conditionActive rule 5: a hand card glows for a condition another card grants", () => {
-  it("R658 a Quickstriker on the field and a card played: every hand card glows, in the owner's view only", () => {
+describe("R662 conditionActive rule 5: a hand card glows for a condition another card grants", () => {
+  it("R662 a Quickstriker on the field and a card played: every hand card glows, in the owner's view only", () => {
     const state = board("gf-glow-striker");
     put(state, striker.id, slot("p1", "backrow", 1));
     const [card] = inHand(state, plain.id, "p1");
@@ -199,7 +199,7 @@ describe("R658 conditionActive rule 5: a hand card glows for a condition another
     expect(conditionActive(state, card!, "p1", "hand")).toBe(false);
   });
 
-  it("R658 a Gifted Program lights the hand cards it would make Radiant, and not the rest", () => {
+  it("R662 a Gifted Program lights the hand cards it would make Radiant, and not the rest", () => {
     const state = board("gf-glow-gifted");
     put(state, gifted.id, slot("p1", "backrow", 1));
     const [cheap] = inHand(state, plain.id, "p1");
@@ -208,7 +208,7 @@ describe("R658 conditionActive rule 5: a hand card glows for a condition another
     expect(conditionActive(state, dear!, "p1", "hand")).toBe(false);
   });
 
-  it("R658 a granted condition never lights a card on the field", () => {
+  it("R662 a granted condition never lights a card on the field", () => {
     const state = board("gf-glow-field");
     put(state, striker.id, slot("p1", "backrow", 1));
     const unit = put(state, plain.id, slot("p1", "units", 1));

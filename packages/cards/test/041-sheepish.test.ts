@@ -9,7 +9,7 @@
 // that ran — and the Unit standing in its zone is a Sheep all the same.
 
 //
-// R658: it declares no `conditionMet` and never glows, on either face (the script's header says why);
+// R662: it declares no `conditionMet` and never glows, on either face (the script's header says why);
 // the last describe below holds that.
 import { describe, expect, it } from "vitest";
 import { scenario } from "./_harness";
@@ -238,17 +238,17 @@ describe("#41 Sheepish — radiant", () => {
   });
 });
 
-describe("#41 Sheepish never glows (R658: nothing on the board decides it)", () => {
+describe("#41 Sheepish never glows (R662: nothing on the board decides it)", () => {
   for (const radiant of [false, true]) {
     const face = radiant ? "radiant" : "base";
 
-    it(`R658 ${face}: armed on either turn, with the opponent holding a Unit or not, it never lights up`, () => {
+    it(`R662 ${face}: armed on either turn, with the opponent holding a Unit or not, it never lights up`, () => {
       expect(sheepishBase.conditionMet).toBeUndefined();
       expect(sheepishRadiant.conditionMet).toBeUndefined();
-      const mine = scenario({ seed: `r658-041-${face}-mine`, p1: { backrow: [{ def: "core-041", radiant }], hand: ["core-010"] } });
+      const mine = scenario({ seed: `r662-041-${face}-mine`, p1: { backrow: [{ def: "core-041", radiant }], hand: ["core-010"] } });
       expect(backrowGlows(mine, 1)).toBe(false);
       const theirs = scenario({
-        seed: `r658-041-${face}-theirs`,
+        seed: `r662-041-${face}-theirs`,
         active: "p2",
         p1: { backrow: [{ def: "core-041", radiant }] },
         p2: { hand: ["core-008", "core-010"] },
