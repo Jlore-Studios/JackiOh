@@ -3364,8 +3364,10 @@
     "what": "build #200 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-05T17:18:36Z",
-    "notes": [],
+    "at": "2026-10-05T17:29:17Z",
+    "notes": [
+      "CI on #166: #166: re-ran the failed jobs of run 37345561211"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
