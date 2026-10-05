@@ -3335,8 +3335,10 @@
     "what": "review #304 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-05T15:30:00Z",
-    "notes": [],
+    "at": "2026-10-05T15:40:39Z",
+    "notes": [
+      "started a night run, as a lane was free: #166 (medium) is queued to revise, for `muse`: build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
