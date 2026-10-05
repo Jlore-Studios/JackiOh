@@ -592,6 +592,12 @@
       "lines": [
         "@jgoetzmann-bot raised difficulty to hard; try again"
       ]
+    },
+    "c:5999630561": {
+      "at": "2026-10-05T17:29:50Z",
+      "lines": [
+        "/harness stop"
+      ]
     }
   },
   "items": {
