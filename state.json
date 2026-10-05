@@ -1967,7 +1967,7 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-04T23:45:54Z",
+      "feedback_since": "2026-10-05T00:12:27Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-05T00:06:36Z",
@@ -1989,7 +1989,7 @@
       "requested_by": "jgoetzmann-bot",
       "run_id": "37246395984",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-05T00:12:27Z",
       "stop_requested": false,
       "taken_asks": [],
