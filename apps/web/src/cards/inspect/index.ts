@@ -12,6 +12,7 @@ export type {
   InspectSubject,
 } from "./useInspectTrigger.tsx";
 export { closeInspect } from "./store.ts";
+export { INSPECT_KEY_SHORTCUT, isInspectKey } from "./keys.ts";
 export { CardDetail } from "./CardDetail.tsx";
 export { CardListPreview, CardListSheet } from "./CardList.tsx";
 export { FaceDownPreview, FaceDownSheet } from "./FaceDown.tsx";

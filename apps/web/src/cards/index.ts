@@ -100,6 +100,8 @@ export {
   INSPECT_NOTE,
   INSPECT_SCRIM,
   INSPECT_SHEET,
+  INSPECT_KEY_SHORTCUT,
+  isInspectKey,
   useInspectTrigger,
 } from "./inspect/index.ts";
 export type {

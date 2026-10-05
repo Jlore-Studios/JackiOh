@@ -60,12 +60,18 @@ src/
                         (R370, cards/inspect/FaceDown.tsx); your own face-down trap, `unrevealed` in the view,
                         is its face under a dashed frame, a veil and a "Face down" tag with a struck-through
                         eye (R371, facedown.css, cards/faceDown.ts for the words); a grade badge prints the
-                        letter the view names (R372)
+                        letter the view names (R372). Every card with something to inspect takes keyboard focus,
+                        and I, the context-menu key or Shift+F10 opens its sheet, as on the deck builder's tiles
+                        (cards/inspect/keys.ts, #258); Enter and Space still play or pick only a legal one
     actions.ts Prompt.tsx                                               M5-T2
     ActivateControl.tsx activate.css   R384, R510: the Activate control on a card the viewer controls (see
                         "Patch v0.2.0 at the table")
     hotseat.ts decks.ts                                                 M5-T3
     animations.ts                                                       M5-T4
+    useOsReducedMotion.ts  the OS reduced-motion query followed live: Game.tsx rebuilds the runner when it flips (#258)
+    spent.ts spent.css  the "can't act yet" cue (#258): a unit of the player acting now (main phase, no prompt)
+                        whose view says `canAct` false is dimmed and wears a "Zz" badge, in words for a screen
+                        reader; drawn state, never permission (rule 7)
     Game.tsx            board + prompts + animation runner + effects layer + audio + drag layer + showcase, wired together
     ConfirmConcede.tsx  "Concede this game?": the Concede control only asks (see "Three flows at the table")
     DrawOffer.tsx       the draw offer's notices and the answering seat's Accept / Decline (same section)
@@ -123,6 +129,8 @@ src/
     castOnDraw.ts       R502: which cardPlayed is a cast on draw, read off the order of the redacted events
     cardFx.ts           R502: the cast on draw's burst out of the Deck pile, and CARD_FX, one table from a card
                         to its signature recipe (#21 Hinder's mana crack, #27 Blood Ridden's blood drain)
+    entrances.ts        R658: the marquee Legendary and Mythic Units' own entrances, keyed in CARD_FX, which
+                        replace the rarity entrance on their summon into a unit zone
     manaMarks.ts        R502: the crystals the next refresh will not fill, read off the view's rider badge and
                         marked on the board's trays (drawn in every mode: it is information)
     chaos.ts brand.ts   R436: Call to Chaos's effect names and slot-machine reveal; R437: a mark's brand

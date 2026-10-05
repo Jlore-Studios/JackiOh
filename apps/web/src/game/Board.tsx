@@ -50,6 +50,7 @@ import { revealedOpponentHand } from "./reveal.ts";
 import { CardListPreview, CardListSheet, useInspectTrigger, type CardListEntry, type InspectOverlayState } from "../cards/index.ts";
 import { SettingsButton, useSetting } from "../settings/index.ts";
 import AudioToggle from "../audio/AudioToggle.tsx";
+import { ActingProvider } from "./spent.ts";
 
 // Order matters: highlights.css paints the glow over board.css's borders (S7).
 import "./board.css";
@@ -516,9 +517,11 @@ export default function Board({
     onControl?.("end-turn");
   }
 
-  // R243: the match-made definitions and field powers this view names, for every card drawn below.
+  // R243: the match-made definitions and field powers this view names, for every card drawn below;
+  // #258: and who is acting now, for the units that have no action left (spent.ts).
   return (
     <MatchCardsProvider view={view}>
+      <ActingProvider view={view}>
       <div
         className="board"
         data-testid={testid.board}
@@ -632,6 +635,7 @@ export default function Board({
 
         <Log view={view} revealed={logOpen} />
       </div>
+      </ActingProvider>
     </MatchCardsProvider>
   );
 }

@@ -13,6 +13,7 @@ import { testid, type Side } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
 import { castOnDrawViews } from "../audio/test/realGame.ts";
 import { CARD_FX, CARD_RECIPES } from "./cardFx.ts";
+import { ENTRANCES, isEntranceKey } from "./entrances.ts";
 import {
   FX_BLOOD_FLIGHT_FRACTION,
   FX_BLOOD_PICK_BASE,
@@ -233,8 +234,11 @@ describe("R502 #27 Blood Ridden's blood drain", () => {
 
 describe("R502 the per-card table", () => {
   it("R502 one table keys each recipe by definition, and every recipe it names exists", () => {
-    expect(CARD_FX).toEqual({ [HINDER]: "manaCrack", [BLOOD]: "bloodDrain" });
-    for (const key of Object.values(CARD_FX)) expect(typeof CARD_RECIPES[key]).toBe("function");
+    expect(CARD_FX[HINDER]).toBe("manaCrack");
+    expect(CARD_FX[BLOOD]).toBe("bloodDrain");
+    for (const key of Object.values(CARD_FX)) {
+      expect(isEntranceKey(key) ? typeof ENTRANCES[key] : typeof CARD_RECIPES[key as "manaCrack" | "bloodDrain"]).toBe("function");
+    }
   });
 
   it("R200 every cue the cast on draw and both recipes plan starts inside its entry and ends within FX_MAX_TAIL_MS of its end, for short and long entries", () => {
