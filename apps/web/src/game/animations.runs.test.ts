@@ -109,6 +109,31 @@ describe("createAnimationQueue budgets", () => {
     };
   }
 
+  it("holds a spell cast no board element marks for its full entry", () => {
+    const view = pileView();
+    const clock = fakeClock();
+    const queue = createAnimationQueue({ schedule: clock.schedule, reducedMotion: false });
+    const box = { type: "cardPlayed", player: "p1", instanceId: "box", defId: "classicplus-047", costPaid: 8 } as const;
+    const announce = (id: string): GameEvent => ({ type: "cardAnnounced", player: "p1", instanceId: id, defId: "core-010", cardType: "Spell", costPaid: 0, targets: [] });
+    const spell = (id: string): GameEvent => ({ type: "cardPlayed", player: "p1", instanceId: id, defId: "core-010", costPaid: 0 });
+    queue.enqueue([box, announce("c1"), spell("c1")], view);
+    // The box's own play is in flight first; run it out to reach the cast.
+    clock.calls.shift()?.run();
+    const flight = queue.inFlight();
+    expect(flight?.cast).toEqual({ by: "classicplus-047", ordinal: 1 });
+    expect(flight?.durationMs).toBe(CAST_ENTRY_MS);
+    // The cast card is fresh off no hand, so no board element marks it and `frames` is empty;
+    // the showcase names the card instead. Game.tsx still renders its
+    // `animation-queue[data-animating]` sentinel while any entry is in flight, so `cy.settled()`
+    // waits out the hold.
+    expect(flight?.frames.size).toBe(0);
+    expect(queue.idle()).toBe(false);
+    clock.flush();
+    const scheduled = clock.schedule.mock.calls.map((call) => Number(call[1]));
+    expect(scheduled).toContain(CAST_ENTRY_MS);
+    expect(queue.idle()).toBe(true);
+  });
+
   it("keeps a zone impact's and a sweep's time while squeezing the rest", () => {
     const view = pileView();
     const clock = fakeClock();
