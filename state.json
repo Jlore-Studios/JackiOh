@@ -538,6 +538,12 @@
       "lines": [
         "/harness revise. See if more work is needed here or if this is complete"
       ]
+    },
+    "c:5995443818": {
+      "at": "2026-10-05T13:28:46Z",
+      "lines": [
+        "/harness revise. Try a new pass through aiming to get existing work to pass the ci THEN get an adversarial reviewer to check. It may help to Create a plan -> execute on it and view the trace logs of failed ci/cds"
+      ]
     }
   },
   "items": {
