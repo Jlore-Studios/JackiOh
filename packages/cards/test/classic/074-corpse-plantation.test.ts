@@ -1,5 +1,5 @@
 // C #74 Corpse Plantation — SPEC §8.6 row 74, BUILD M9 Classic row C 74: "Cry: one placement of 2 Plague
-// Tokens on itself; while it has tokens, `legalActions` offers `play` for Units in your graveyard, the
+// Counters on itself; while it has tokens, `legalActions` offers `play` for Units in your graveyard, the
 // action carrying how many tokens pay, at least 1 and at most the tokens on it and the price, each paying
 // (1) and the rest paid in mana; it is a play (the Unit's Cry fires and it counts as played), not a free
 // cast; a (0) Cost Unit can't use it; with no tokens left it offers nothing; tokens others place add to

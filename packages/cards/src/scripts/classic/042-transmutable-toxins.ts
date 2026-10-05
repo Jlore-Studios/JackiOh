@@ -12,7 +12,7 @@
 //            Tunes: tokens 2 ↑; stats per token 1 ↑."
 //
 // THE AURA is §10.4's layer 5, recomputed on every read: for each unit on the field carrying Plague
-// Tokens, one entry naming that unit with its stats per token (`param(ctx, "stats")`) times its
+// Counters, one entry naming that unit with its stats per token (`param(ctx, "stats")`) times its
 // tokens — up for its controller's own Units, down for the enemy's. Lowering max health is what kills
 // an enemy at the state check when it reaches 0 (§4.5), an Indestructible one too (R69). A unit
 // dormant under a Stack pile is not on the field (R13), so it is not read. The hook is a pure read of

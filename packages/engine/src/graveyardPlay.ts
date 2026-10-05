@@ -1,6 +1,6 @@
 // Playing cards from the graveyard (docs/classic-sets.md B5 E11, R454): the permissions that allow
 // it, the plays `legalActions` offers under them, the refusal §10.5 step 1 gives, and the Plague
-// Token payment Classic #74 Corpse Plantation adds.
+// Counter payment Classic #74 Corpse Plantation adds.
 //
 // A permission is a card on the field saying so — Classic #28 Second Wind ("You may play cards from
 // your graveyard"; its Radiant face only those whose price, as it would be paid, is (1) or more),

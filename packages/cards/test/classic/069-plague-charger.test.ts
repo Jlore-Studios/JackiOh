@@ -1,5 +1,5 @@
 // C #69 Plague Charger — SPEC §8.6 row 69, BUILD M9 Classic row C 69: "Charge; +2 Attack for each Plague
-// Token on it (a self stat layer, §10.4) and First Strike exactly while it has one (a keyword while a
+// Counter on it (a self stat layer, §10.4) and First Strike exactly while it has one (a keyword while a
 // condition holds, §6.1), both following the tokens as they come and go and gone when it leaves (R78);
 // with no token it has neither; radiant 8/4: +4 per token; its tuned number (attack per token) reads
 // through `param()` (R386)".

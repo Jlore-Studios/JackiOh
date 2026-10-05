@@ -2,14 +2,14 @@
 //   Base:    "At the start of each player's turn: Destroy every permanent that player controls with a
 //            Plague Counter on it."
 //   Radiant: "At the start of your opponent's turn: Destroy every permanent they control with a Plague
-//            Token on it."
+//            Counter on it."
 //   Engine:  "A start-of-turn trigger on both players' turns (Radiant: the opponent's only), in R68's
 //            order; the designer's "Plague Counter" is the Plague Counter. "They destroy all cards" is the
 //            turn player's own permanents, face-down ones included (R400): the only reading under which
 //            the Radiant face is the stronger one. Indestructible permanents stay (§6.1). Tunes: none."
 //
 // R400: at the start of a player's turn, every permanent THAT player controls with at least one Plague
-// Token on it is destroyed — the top of each unit pile and every backrow card, face-down ones included,
+// Counter on it is destroyed — the top of each unit pile and every backrow card, face-down ones included,
 // Living Bomb itself when it is the turn player's and carries a token — and the other player's are left
 // alone. Each is an ordinary §6.3 destroy, all in one effect, so they die together at the one state
 // check after it (§4.5, R59): an Indestructible one is knocked into Attack Position and stays (R46), a

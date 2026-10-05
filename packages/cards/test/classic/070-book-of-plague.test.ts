@@ -1,5 +1,5 @@
 // C #70 Book of Plague — SPEC §8.6 row 70, BUILD M9 Classic row C 70: "Five placements of one Plague
-// Token, one prompt each, on any permanent either side, face-down ones and repeats included; with no
+// Counter, one prompt each, on any permanent either side, face-down ones and repeats included; with no
 // permanent on the field it places nothing; each placement is its own for "whenever tokens are placed"
 // (C #53 draws five times) and C #27 doubles its share; a face-down option carries only its id (R177);
 // tagged Book, so C #4 answers it; radiant: ten; its tuned number (tokens) reads through `param()`

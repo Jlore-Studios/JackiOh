@@ -1,7 +1,7 @@
 // #91 Fed Fauci (SPEC §8.4, BUILD M4-T4 row 91, R63, R78).
 //
 // Base: "Rush. Whenever this takes damage, +1 Plague Counter. Start of turn: +1 mana per Plague
-// Token". Radiant: "Rush; +2 mana per token". The radiant cell lists Rush without "Plus", so Rush
+// Counter". Radiant: "Rush; +2 mana per counter". The radiant cell lists Rush without "Plus", so Rush
 // is the radiant face's COMPLETE keyword list (§8 Conventions) — which is what the catalog prints
 // on both faces, so nothing here grants it (§10.4 layer 1 reads it off the def). The cell restates
 // only the mana number, so the damage→token clause is kept exactly as the base writes it.
