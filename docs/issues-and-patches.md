@@ -17,7 +17,7 @@ Every issue carries at least one type label:
 | `production merge` | The countdown issue `promote-production.yml` keeps open (`Merging to production in N hours`) and the pull requests that merge main into production. The workflow opens, retitles and closes them and finds the open one by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Comments `/hold`, `/resume`, `/delay 3h` and `/fast-forward` steer it (`docs/deploy-cloudflare.md`, section 2.3) |
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
-patch whose work is all tooling (v0.2.8's codebase pass) is `patch` and `architecture`. The
+patch whose work is all tooling (the codebase pass titled v0.2.8) is `patch` and `architecture`. The
 `difficulty:*` labels (`easy`, `medium`, `hard`: the weakest model tier that may build it; none is
 medium, and `hard` is Claude Opus's alone), `human` (people do it, such as a decision or any change to `bot/`, `.harness/` or `.github/`; the bot never queues, plans, builds or labels it), the `priority:*` labels
 (the bot's pickup order) and the `bot:*` labels are separate. Never add
@@ -40,7 +40,7 @@ A pull request has no type.
 | Kind | Title |
 |---|---|
 | Patch | `Patch vX.Y.Z: <what it does>` |
-| Patch whose number isn't picked yet | `Patch v0.2.X: <what it does>`, with the X replaced once it is |
+| Normal patch not shipped yet | `Patch v0.2.X: <what it does>`, the X replaced by the next number once its fragment is made (see Version numbers) |
 | Micro patch | `Patch v0.2.Y: <what it does>`, named when it ships (see Version numbers) |
 | Revision of a shipped patch | `Patch vX.Y.Zb: <what it does>` |
 | Major version | `vX.Y.0: <what it does>` |
@@ -48,22 +48,30 @@ A pull request has no type.
 | Night bot | `Night bot: <…>` |
 | Tooling | `CI: <…>` or `Architecture: <…>` |
 
-"What it does" is a short phrase, such as `Patch v0.2.9: a public Card Almanac`. Keep version
-numbers exactly as the designer gave them. `ci-duration.yml` finds its open issue by its exact
-title, so leave that title alone. Night bot suggestions (`bot:suggestion`) arrive with plain
-titles, so retitle one when you accept it.
+"What it does" is a short phrase, such as `Patch v0.2.4: aimed random casts and the Deft keyword`.
+Keep a version number as it was given; #290's renames (R739) were not carried into older titles.
+`ci-duration.yml` finds its open issue by its exact title, so leave that title alone. Night bot
+suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you accept it.
 
 ## Version numbers
 
-- **Names are labels.** The designer picks a version before work starts, and versions may ship out
-  of name order (#63). The order is `packages/cards/patches/patches.json`'s, and nothing parses or
-  compares a version string (R105, R388).
+- **Numbers run in order (R739).** A card patch takes the next number after the newest card patch on
+  `main`, shipped (`packages/cards/patches/patches.json`) or still pending (`pending/`): after v0.2.7b
+  with nothing pending, a normal patch (`Patch v0.2.X: …`) is v0.2.8, and a micro patch
+  (`Patch v0.2.Y: …`) becomes v0.2.7c when it ships (below). Name the pending fragment that number
+  when the branch makes it. Two normal patches in flight at once cannot both take it: the one that
+  merges second renames its fragment to the number after, or `patches ship` would ship it as a
+  revision letter of the first. A patch that changes no card data ships no version and takes no
+  number, so it keeps its `X` or `Y` title and leaves no gap. The order is still `patches.json`'s,
+  and nothing compares version strings (R105, R388). #290 renamed the history this way: v0.2.4,
+  v0.2.5, v0.2.10, v0.2.11, v0.2.12, v0.2.13, v0.2.14 and v0.2.14b are now v0.2.1 to v0.2.7 and
+  v0.2.7b, and the pending v0.2.16 is v0.2.8; commit messages and older titles keep the old names.
 - **A shipped version never reopens.** A follow-up to it takes the same number plus a letter:
   `vX.Y.Zb`, then `c`, then `d`. This replaces the old `-rN` suffix: #85 renamed the patch history's
   v0.1.0-r1, -r2 and -r3 to v0.1.0b, v0.1.0c and v0.1.0d.
 - **Micro or normal.** A patch is a micro patch, `Patch v0.2.Y: …`, when it is small: one fix, one
   card's numbers or text, one cosmetic or client tweak, with no new mechanic, keyword, ruling set or
-  feature. Anything larger is a normal patch, `Patch v0.2.X: …`, whose number the designer picks.
+  feature. Anything larger is a normal patch, `Patch v0.2.X: …`, which takes the next number (above).
   When a micro patch grows past that, retitle it `X`; when a normal one shrinks to one tweak,
   retitle it `Y`.
 - **A micro patch is named when it ships (R650).** `Y` becomes the newest version in `patches.json`

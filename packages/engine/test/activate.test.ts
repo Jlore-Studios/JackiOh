@@ -526,7 +526,7 @@ describe("B3.2 rules 5, 8: choices and the list (R384, R81, R90)", () => {
     expect(activateActionsFor(state, "p1", card).some((body) => body.targets?.[0]?.pick === "instance" && body.targets[0].instanceId === costly.id)).toBe(false);
   });
 
-  it("R384 an ability a card does not have now is neither listed nor accepted (v0.2.1's rolled power)", () => {
+  it("R384 an ability a card does not have now is neither listed nor accepted (the Heroic Power patch's rolled power)", () => {
     const state = playing("has");
     const card = put(state, chooser.id, slot("p1", "backrow", 1));
     card.memory[PICK_KEY] = "beta";

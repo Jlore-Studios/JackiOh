@@ -546,7 +546,7 @@ after it merges — never by editing the history on the branch.
   (issue #40: Classic, Classic+, the new keywords, Core's pools across sets and the Core card patches
   below). Everything before v0.1.1 was rebuilt from `git log --follow packages/cards/catalog.json` on a
   full clone (a shallow one stops early).
-- **The version is the patch.** `CATALOG_VERSION` is the latest patch's version, `v0.2.10`, and a test
+- **The version is the patch.** `CATALOG_VERSION` is the latest patch's version, `v0.2.7b`, and a test
   holds `catalog.json` equal to the latest snapshot (pending-claimed cards aside) and
   `CATALOG_VERSION` equal to its version. A
   patch bumps it everywhere the string lives: `src/catalog-data.ts`; the server's env
@@ -571,7 +571,8 @@ after it merges — never by editing the history on the branch.
   request that merges itself. A test that reads the real history asserts the shipped prefix, never
   the newest version by name: the promotion cannot edit tests. A version's place is
   fixed by when it lands on `main`, whatever its name (R375): v0.2.0 landing after v0.2.5 reads
-  after it.
+  after it. Since #290 a card patch takes the next number after the newest one (R739), so a
+  name and its place agree.
 - **Data, not code.** A snapshot keeps a card's data (its texts, numbers, `params` and `loc`), not its
   script. A patch that changes what a script does is recorded by the card's new text and its ruling,
   and an old log of that card's games replays exactly only under the code it was played with.

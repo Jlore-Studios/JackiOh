@@ -229,7 +229,7 @@ export type AudioSettings = {
   voice: number; // 0..1
   muted: boolean;
   voiceOn: boolean;
-  /** Patch v0.2.7 (R631): the music bus, 0..1. */
+  /** #51's music (R631): the music bus, 0..1. */
   music: number;
   /** The station a match starts on. A card may switch it for the rest of that match. */
   station: MusicStation;

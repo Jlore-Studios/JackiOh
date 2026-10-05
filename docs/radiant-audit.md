@@ -1,6 +1,6 @@
 # The Radiant audit
 
-2026-09-24 · the Radiant pass (SPEC §5.2, §11 R275–R283) · patch v0.2.0 of 2026-09-30 (Classic, Classic+, the Core patches) · patch v0.2.10 of 2026-10-03 (the Animated pass and Ivory Tower; last section)
+2026-09-24 · the Radiant pass (SPEC §5.2, §11 R275–R283) · patch v0.2.0 of 2026-09-30 (Classic, Classic+, the Core patches) · patch v0.2.3 of 2026-10-03 (the Animated pass and Ivory Tower; last section)
 
 Every card's Radiant face held against one standard, and the ones below it raised. SPEC §8 (and §7
 for the tokens) is where the result lives; this document is the record of the judgement, one row
@@ -165,7 +165,7 @@ the Radiant face as the catalog now prints it.
 | 96 | My Pawn | Trap | When the opponent declares an attack that would be lethal to your hero: cancel it, and an AI plays the rest of their turn with random legal actions | When the opponent declares an attack that would be lethal to your hero: cancel it, and an AI plays the rest of their turn with random legal actions | Below → raised | When the opponent declares an attack that would be lethal to your hero: cancel it, destroy the attacker, and an AI plays the rest of their turn with random legal actions | Had no Radiant form (R276). Now it also destroys the attacker it stops (R283). |
 | 97 | Zephyrs | Spell | Discover the "perfect" card from the Core set; exile this | A perfect Radiant card | Meets | unchanged (printed in full: Discover the "perfect" Radiant card from the Core set; exile this) | The perfect card → the perfect Radiant card (about 2×). |
 | 98 | Heroic Power | Field Spell | Indestructible / Start of game: Gain one of 8 random powers, each "Once per turn, spend X": (3) Recruit a permanent; (1) lose 2 health, draw 1; (1) deal 1 damage to a target; (1) deal 2 damage to each opposing hero; (2) summon a Rush Token; (1) summon a Felinor Token; (2) Discover a Unit; (2) Stitching — Discover 2 Cost (2) or less Units, Fuse them and add the result to your hand. / Playing it costs the power's X and activates it once. | Powers become: Recruit and make it Radiant; lose 2, draw 2; deal 2; 4 to each opposing hero; two Rush Tokens; two Felinor Tokens; Discover a Radiant Unit | Meets | unchanged (printed in full: Indestructible / Start of game: Gain one of 8 random powers, each "Once per turn, spend X": (3) Recruit a permanent and make it Radiant; (1) lose 2 health, draw 2; (1) deal 2 damage to a target; (1) deal 4 damage to each opposing hero; (2) summon two Rush Tokens; (1) summon two Felinor Tokens; (2) Discover a Radiant Unit; (2) Stitching — Discover 2 Radiant Cost (2) or less Units, Fuse them and add the result to your hand. / Playing it costs the power's X and activates it once.) | Every power doubles its amount or adds Radiant. Patch v0.1.1 (designer) added the eighth, Stitching, whose Radiant clause Discovers Radiant Units and makes the fused card Radiant (R352). |
-| 99 | Craft a Card | Spell | Discover a Unit, then Discover another; Fuse them; the result costs 0 and goes to your hand | Three Discovers | Below → raised; designer patch v0.2.14 | Discover a Unit, then Discover another, then a third; Fuse them; the result costs 0 and goes to your hand | Three Discovers fused for two is 1.5×, and the Radiant pass added a draw to raise it. Designer patch v0.2.14 (#126) took the draw off again: a third fused ingredient (its stats, keywords and text summed in, at cost 0) is the whole upgrade, the designer's number, recorded here as such. |
+| 99 | Craft a Card | Spell | Discover a Unit, then Discover another; Fuse them; the result costs 0 and goes to your hand | Three Discovers | Below → raised; designer patch v0.2.7 | Discover a Unit, then Discover another, then a third; Fuse them; the result costs 0 and goes to your hand | Three Discovers fused for two is 1.5×, and the Radiant pass added a draw to raise it. Designer patch v0.2.7 (#126) took the draw off again: a third fused ingredient (its stats, keywords and text summed in, at cost 0) is the whole upgrade, the designer's number, recorded here as such. |
 | 100 | Ceaseless Void | Unit | 10/10 · Cry: exile all other permanents on both sides. Costs 1 less per card drawn, played, destroyed or exiled this game by either player | 10/10 · Plus Charge | Below → raised | 20/20 · Charge. Cry: exile all other permanents on both sides. Costs 1 less per card drawn, played, destroyed or exiled this game by either player | 10/10 → 10/10 missed the stat half. Now 20/20, Charge kept. |
 | T-rush | Rush Token | Unit | 3/3 · Rush. | 6/6 · Rush | Below → raised | 6/6 · Rush, Cleave. | 6/6 doubled the stats but kept only Rush. Now Rush and Cleave, which suits a body that fights units the turn it lands. |
 | T-sheep | Sheep Token | Unit | 1/1 · Worth 2 Tributes while on the field. | 2/2 · Worth 3 Tributes | Meets | unchanged (printed in full: 2/2 · Worth 3 Tributes while on the field.) | Stats doubled; worth 2 → 3 Tributes, and 3 already pays Core's largest Tribute (Lava Golem's) alone. |
@@ -459,14 +459,14 @@ in v0.2.0. "Base" is the base face as v0.2.0 prints it.
 | T-AI-9 | Refusal | Trap | Activates when your opponent plays a Spell that targets one of your Units: Counter it. | Activates when your opponent plays a Spell that targets you or one of your cards: Counter it. Draw 1. | Meets | Your Units → you or any of your cards, a broader scope, and adds a draw. |
 | T-AI-10 | Fine-Tuning | Field Spell | End of turn: Upgrade a random card in your hand. | End of turn: Upgrade 2 random cards in your hand. | Meets | One card → two (2×). |
 
-## Patch v0.2.10 (issue #113, 2026-10-03)
+## Patch v0.2.3 (issue #113, 2026-10-03)
 
 The designer's patch gave eighteen Field Spells Animated and a unit face (SPEC §6.1, R383) and replaced
 C+ #33 Ivory Tower's text (R418, R653). Each Animated card's Radiant face doubles its unit face, as
 Tesla's, Jackiestan Auctioneer's and Frostspatula's do, which the stat half holds an Animated card to,
 and keeps the Radiant text it had: the effect half is the one the rows above judged, and every verdict
 stands. Ivory Tower's Radiant face is the designer's: the Unit it fuses in goes in on its Radiant face.
-"Base" and "Radiant" are the faces the catalog prints in v0.2.10.
+"Base" and "Radiant" are the faces the catalog prints in v0.2.3.
 
 ### Core
 
@@ -502,4 +502,4 @@ stands. Ivory Tower's Radiant face is the designer's: the Unit it fuses in goes 
 | 70 | Chaos Machine | Field Spell | 2/2 · Animated / Start of turn and end of turn: Upgrade a random card in your hand or on your side of the field. Degrade a random card in your opponent's hand or on their side of the field. | 4/4 · Animated / Start of turn and end of turn: Upgrade 2 random cards in your hand or on your side of the field. Degrade 2 random cards in your opponent's hand or on their side of the field. | Meets | Its unit face doubled (R383). One card each way → two (2×), as before. |
 | 78 | Claude's Datacenter | Field Spell | 0/5 · Animated / End of turn: Add a random AI generated card to your hand. Each costs (0). | 0/10 · Animated / End of turn: Add a random Radiant AI generated card to your hand. Each costs (0). | Meets | Its unit face doubled (R383). The AI generated card is Radiant (about 2×), as before. |
 
-Undone by patch v0.2.12 (issue #218): the eighteen faces above are removed; only C #5, C #38 and C+ #12.8 print Animated. Ivory Tower's row stands.
+Undone by patch v0.2.5 (issue #218): the eighteen faces above are removed; only C #5, C #38 and C+ #12.8 print Animated. Ivory Tower's row stands.

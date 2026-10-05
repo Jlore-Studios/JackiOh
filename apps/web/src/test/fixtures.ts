@@ -124,7 +124,7 @@ const ALL_KEYWORDS: Keyword[] = [
   // Patch v0.2.X's keyword rules (R636, R637).
   { kind: "Windfury" },
   { kind: "Temporary" },
-  // Patch v0.2.11's keyword (R49).
+  // Patch v0.2.4's keyword (R49).
   { kind: "Deft" },
 ];
 

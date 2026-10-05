@@ -4438,9 +4438,9 @@
     ]
   },
   {
-    "version": "v0.2.4",
+    "version": "v0.2.1",
     "date": "2026-10-03",
-    "title": "Patch v0.2.4: card text pass",
+    "title": "Patch v0.2.1: card text pass",
     "source": "#45",
     "notes": "Card text pass: consistent terminology and house style across Core, Classic and Classic+",
     "changes": [
@@ -4640,7 +4640,7 @@
     ]
   },
   {
-    "version": "v0.2.5",
+    "version": "v0.2.2",
     "date": "2026-10-04",
     "title": "Small set of mechanics changes",
     "source": "#149",
@@ -4833,9 +4833,9 @@
     ]
   },
   {
-    "version": "v0.2.10",
+    "version": "v0.2.3",
     "date": "2026-10-04",
-    "title": "Patch v0.2.10: Animated pass on Field Spells, Ivory Tower fuses",
+    "title": "Patch v0.2.3: Animated pass on Field Spells, Ivory Tower fuses",
     "source": "Issue #113",
     "notes": "Eighteen Field Spells that could come to life gain Animated, with a unit face and its Radiant double: Core #14, #33, #38, #65 and #73, Classic #4, #7, #62, #64 and #87, Classic+ #7, #12.5, #12.7, #31, #61, #63, #70 and #78. Classic+ #33 Ivory Tower's text is replaced: the first Unit you stack onto it is fused into it (its Radiant face fuses it in Radiant). Classic #52 Final Gambit's follow-up neither heals nor draws once its re-aimed hit has felled the enemy hero (R216), so one fused into a Field Trap that stays cannot re-aim its own fatigue for ever.",
     "changes": [
@@ -5130,9 +5130,9 @@
     ]
   },
   {
-    "version": "v0.2.11",
+    "version": "v0.2.4",
     "date": "2026-10-04",
-    "title": "Patch v0.2.11: aimed random casts and the Deft keyword",
+    "title": "Patch v0.2.4: aimed random casts and the Deft keyword",
     "source": "#181, #206",
     "notes": "Smarter targeting for random casts (R656: harmful picks aim at enemies, helpful ones at friends; Jogg's Box unchanged) and the Deft keyword (R49), printed by Deft Duelist and added to the random keyword pool (R21).",
     "commits": [
@@ -5189,11 +5189,11 @@
     ]
   },
   {
-    "version": "v0.2.12",
+    "version": "v0.2.5",
     "date": "2026-10-05",
-    "title": "Patch v0.2.12: undo the v0.2.10 animated additions",
+    "title": "Patch v0.2.5: undo the v0.2.3 animated additions",
     "source": "Issue #218",
-    "notes": "Removes Animated and the unit faces from the eighteen Field Spells v0.2.10 animated; Ivory Tower's fusion (R653) and Final Gambit's R216 guard stay. Adds R657: an Animated card with no printed stats fights as a 0/1.",
+    "notes": "Removes Animated and the unit faces from the eighteen Field Spells v0.2.3 animated; Ivory Tower's fusion (R653) and Final Gambit's R216 guard stay. Adds R657: an Animated card with no printed stats fights as a 0/1.",
     "commits": [
       "1be5a28e08c3b6ef94b95b3845c908adaa86d14e"
     ],
@@ -5472,7 +5472,7 @@
     ]
   },
   {
-    "version": "v0.2.13",
+    "version": "v0.2.6",
     "date": "2026-10-05",
     "title": "Book of Wildfire becomes a different Book at the end of your turn",
     "source": "#271",
@@ -5495,9 +5495,9 @@
     ]
   },
   {
-    "version": "v0.2.14",
+    "version": "v0.2.7",
     "date": "2026-10-05",
-    "title": "Patch v0.2.14: More card patches",
+    "title": "Patch v0.2.7: More card patches",
     "source": "#126",
     "notes": "Plastic Surgery can no longer be played with no Unit to target, though a cast with none still fizzles (R703). Craft a Card's Radiant face no longer draws a card. Crushing Walls now closes spiked walls in on lanes 1 and 5, and a card in your hand that Plague Chalice would counter now wears a green warning (R667).",
     "commits": [
@@ -5525,7 +5525,7 @@
     ]
   },
   {
-    "version": "v0.2.14b",
+    "version": "v0.2.7b",
     "date": "2026-10-05",
     "title": "Patch v0.2.Y: the yellow condition glow for ten Core cards",
     "source": "#260",

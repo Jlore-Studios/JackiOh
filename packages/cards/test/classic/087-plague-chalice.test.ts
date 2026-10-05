@@ -263,7 +263,7 @@ describe("C #87 Plague Chalice", () => {
   });
 });
 
-describe("C #87 Plague Chalice: R667 the warning on the viewer's hand (patch v0.2.14)", () => {
+describe("C #87 Plague Chalice: R667 the warning on the viewer's hand (patch v0.2.7)", () => {
   /** The hand cards `player`'s own view marks `counteredOnPlay`, by definition. */
   function warned(s: Scenario, player: "p1" | "p2"): string[] {
     const hand = s.view(player).you.hand;

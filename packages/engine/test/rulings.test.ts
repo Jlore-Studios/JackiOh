@@ -3081,7 +3081,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(417, PLUS_029_TEST, "lastBoards.test.ts");
   });
 
-  // Proved by cards classic-plus/033-ivory-tower.test.ts "R418 …" (patch v0.2.10: the first Unit stacked
+  // Proved by cards classic-plus/033-ivory-tower.test.ts "R418 …" (patch v0.2.3: the first Unit stacked
   // onto the Tower is fused into it, and the Tower stays a backrow Field Spell).
   it("R418 fuses the first Unit stacked onto C+ #33 Ivory Tower into it, the Tower staying a Field Spell", () => {
     provenIn(418, PLUS_033_TEST);
@@ -4257,6 +4257,14 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // and the opponent's arrow drawn and cleared).
   it("R738 shows the opponent's aim as an arrow built from public handles only", () => {
     provenIn(738, "../../../apps/server/test/match/aim.test.ts", "../../../apps/web/src/game/aim/aim.test.tsx");
+  });
+
+  // Proved by cards/test/patches.test.ts "R739 …" (the history in order under the new names, each
+  // renamed patch's shipping commit, source and title, and Glitch's fragment as v0.2.8) and
+  // apps/server test/sql/14_patch_retcon.sql "### R739: … ###" (migration 0025 renames each row
+  // filed under an old name once, oldest name first, the catalog stamp and the grants in step).
+  it("R739 numbers the card patches in order, and a database renames the rows filed under the old names", () => {
+    provenIn(739, "../../cards/test/patches.test.ts", "../../../apps/server/test/sql/14_patch_retcon.sql");
   });
 });
 

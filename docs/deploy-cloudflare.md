@@ -334,7 +334,7 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   through the API with `RENDER_API_KEY`, or the hook's `ref` (section 4, step 4).
 - **Render stopped deploying (the repository moved):** when the repository was transferred from
   `jgoetzmann` to `Jlore-Studios`, Render kept the last deploy it had made (Oct 2) and received no
-  push after it, so a catalog change (v0.2.4) never arrived and nothing flagged it, because the
+  push after it, so a catalog change (v0.2.1) never arrived and nothing flagged it, because the
   watch then compared only the catalog version and the version had not changed. To repair it:
   jackioh-server, Settings, Build & Deploy: the repository must be `Jlore-Studios/JackiOh`, the
   branch `main`, Auto-Deploy on commit ("After CI checks pass" would wait on the red Cloudflare

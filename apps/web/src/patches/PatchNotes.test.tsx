@@ -200,12 +200,12 @@ describe("R388 the Patch notes page over the real history", () => {
     expect(entries.map((element) => element.dataset.version)).toEqual(shipped.map((patch) => patch.version).reverse());
     // Only the newest opens on load (R507); an older patch's cards wait for its toggle, so v0.2.0
     // — the patch this test reads, frozen history — is opened by hand once it is no longer newest.
-    // Today the newest is v0.2.10; issue #181's pending fragment ships as v0.2.11 and issue #218's
-    // as v0.2.12 after it (R646's first-parent ship order). Any of the three opens with every card
-    // it changed (v0.2.10 added the Mask's faces, v0.2.12 removes them).
+    // v0.2.3 added the Mask's faces, v0.2.4 aimed random casts and v0.2.5 removes the faces again
+    // (R739's names for issues #113, #181 and #218): whichever of the three is the newest opens with
+    // every card it changed.
     const newest = shipped.at(-1)?.version ?? "";
     await within(patchEntry(newest)).findByTestId(patchTestid.cards, undefined, SLOW);
-    if (newest === "v0.2.10" || newest === "v0.2.11" || newest === "v0.2.12") {
+    if (newest === "v0.2.3" || newest === "v0.2.4" || newest === "v0.2.5") {
       const record = shipped.find((patch) => patch.version === newest);
       const changedIds = (record?.changes ?? []).filter((change) => change.kind === "changed").map((change) => change.id);
       const shownNewest = [

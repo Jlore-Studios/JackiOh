@@ -145,7 +145,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
 
 /**
  * "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, R346's PI, and
- * patch v0.2.0's AN AT BR SD IS, then R636's WF and R637's TE, then patch v0.2.11's DE.
+ * patch v0.2.0's AN AT BR SD IS, then R636's WF and R637's TE, then patch v0.2.4's DE.
  */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",
@@ -452,14 +452,14 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(GLOSSARY.Indestructible.rule).toContain("tributed");
     // R500: Tribute's reminder is short and says Units, not the rules' "sacrifice".
     expect(GLOSSARY.Tribute.rule).toBe("Playing this also costs X of your Units, which go to the graveyard");
-    // Patch v0.2.4: backrow zone becomes backrow in players' words.
+    // Patch v0.2.1: backrow zone becomes backrow in players' words.
     expect(inPlayerWords("steps from its backrow zone into a unit zone")).toBe("steps from its backrow into a unit zone");
-    // Patch v0.2.4: retired turn-trigger prose reads label-style in players' words.
+    // Patch v0.2.1: retired turn-trigger prose reads label-style in players' words.
     expect(inPlayerWords("At the start of your turn, the count drops")).toBe("At the start of turn, the count drops");
     expect(inPlayerWords("it heals at the end of your turn")).toBe("it heals at the end of turn");
     for (const entry of Object.values(GLOSSARY)) {
       expect(entry.rule, entry.id).not.toMatch(/\blibrar(y|ies)\b|\bsacrific|\bbounce\b|\bbackrow zone\b/i);
-      // Patch v0.2.4 (issue #45): no glossary rule uses any other word the vocabulary table retired.
+      // Patch v0.2.1 (issue #45): no glossary rule uses any other word the vocabulary table retired.
       expect(entry.rule, entry.id).not.toMatch(/\b(at the (start|end)( and end)? of your turn|(start|end) of your turn)\b/i);
       expect(entry.rule, entry.id).not.toMatch(/\bEnd your turn\b/);
       expect(entry.rule, entry.id).not.toMatch(/\bStart of Game\b/);
@@ -482,7 +482,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       expect(entry.section, id).toBe("§6.1");
       expect(entry.rule, id).toBe(inPlayerWords(specRule("6.1", id)));
     }
-    // The catalog writes "Can't"; aliases are empty (patch v0.2.4, issue #45).
+    // The catalog writes "Can't"; aliases are empty (patch v0.2.1, issue #45).
     expect(GLOSSARY["Can't be in Defense Position"].aliases).toEqual([]);
   });
 

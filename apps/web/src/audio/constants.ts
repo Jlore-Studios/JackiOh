@@ -122,7 +122,7 @@ export const CLOCK_ALARM_LOOKAHEAD_MS = 400;
 /** A beat whose moment passed at most this long ago still plays, at once; an older one is skipped. */
 export const CLOCK_ALARM_LATE_MS = 250;
 
-// ---- Patch v0.2.7 music (SPEC §10.11 "Music", R631) ----
+// ---- #51's music (SPEC §10.11 "Music", R631) ----
 /** The stations, in the order the picker lists them. */
 export const MUSIC_STATIONS = ["tavern", "edm", "lofi", "epic"] as const;
 /** The match counter that rotates each station's in-game tracks, kept per device. */
