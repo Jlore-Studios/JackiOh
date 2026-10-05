@@ -38,11 +38,18 @@
  *    (`GET /auth/v1/user`, which refuses a token whose session is gone), and only the answer that
  *    it is live is remembered, per session, for `AUTH_SESSION_LIVE_CACHE_SECONDS`. That one answer
  *    is also the authoritative user, so it stands in for the admin lookup when it is fresh.
+ *  - TWO-STEP SIGN-IN (R659). An account with a verified authenticator app (a TOTP factor) is
+ *    honoured only with an `aal2` token, the level the provider gives a session once its code was
+ *    typed. Without this the second step would be the client's alone: a stolen password signs in at
+ *    `aal1`, and every API call would take that token. Whether the account HAS a factor is read
+ *    from the provider's user (the same answers as `email_confirmed_at`), never from the token, and
+ *    the last answer is remembered per user so an outage cannot lower the bar (`mfaEnrolled`).
  */
 
 import { createClient } from "@supabase/supabase-js";
 import {
   createRemoteJWKSet,
+  decodeJwt,
   decodeProtectedHeader,
   jwtVerify,
   type JWTPayload,
@@ -129,6 +136,11 @@ export type AuthApiUser = {
   email_confirmed_at?: string | null;
   /** Provider-controlled claims (`app_metadata`), safe for authorization. */
   app_metadata?: Record<string, unknown>;
+  /**
+   * R659: whether the account has a VERIFIED TOTP factor (GoTrue's `factors`, `status: "verified"`).
+   * An unverified factor (an enrolment never finished) does not count.
+   */
+  mfa_enrolled?: boolean;
 };
 
 export type AuthApiSession = {
@@ -246,8 +258,21 @@ function asAuthApiUser(value: unknown): AuthApiUser | null {
     email: typeof email === "string" ? email : null,
     email_confirmed_at: typeof confirmedAt === "string" ? confirmedAt : null,
     app_metadata: asRecord(record["app_metadata"]),
+    mfa_enrolled: hasVerifiedTotp(record["factors"]),
   };
 }
+
+/** R659: GoTrue's `factors` list holds a verified TOTP factor. */
+function hasVerifiedTotp(factors: unknown): boolean {
+  if (!Array.isArray(factors)) return false;
+  return factors.some((factor: unknown) => {
+    const record = asRecord(factor);
+    return record["factor_type"] === "totp" && record["status"] === "verified";
+  });
+}
+
+/** The level a token claims to be (`aal`): `aal2` once a second factor was proved (R659). */
+const SECOND_FACTOR_LEVEL = "aal2";
 
 function toAuthUser(user: AuthApiUser): AuthUser {
   return {
@@ -362,6 +387,8 @@ type LocalClaims = {
   appMetadata: Record<string, unknown>;
   /** The provider's session this token belongs to (`session_id`), when the token names one. */
   sessionId: string | null;
+  /** R659: the token's assurance level (`aal`), from the verified payload. */
+  aal: string | null;
 };
 
 /** What the provider said about a verified token's session (R194). */
@@ -420,6 +447,21 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
   /** userId -> when its *confirmed* email was last read from the auth server. */
   const confirmed = new Map<string, { at: number; email: string | null }>();
 
+  /**
+   * R659: the users the provider last said have a verified authenticator app. Kept for as long as
+   * that stays the latest answer (positives only; a later answer without one removes the entry), so
+   * an `aal1` token for such an account is refused even while the provider cannot be reached or the
+   * answer is being served from `confirmed`.
+   */
+  const mfaEnrolled = new Set<string>();
+  const learnMfa = (user: AuthApiUser): void => {
+    if (user.mfa_enrolled === true) mfaEnrolled.add(user.id);
+    else mfaEnrolled.delete(user.id);
+  };
+  /** R659: the token's level is short of what the account needs. */
+  const missingSecondFactor = (userId: string, aal: string | null): boolean =>
+    aal !== SECOND_FACTOR_LEVEL && mfaEnrolled.has(userId);
+
   /** session id -> when the provider last said that session is live (R194). Positives only. */
   const liveSessions = new Map<string, number>();
   const liveSessionTtlMs = AUTH_SESSION_LIVE_CACHE_SECONDS * MS_PER_SECOND;
@@ -431,12 +473,14 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
     if (typeof sub !== "string" || sub.length === 0) return null;
     const email = payload["email"];
     const sessionId = payload["session_id"];
+    const aal = payload["aal"];
     return {
       sub,
       email: typeof email === "string" ? email : null,
       // `app_metadata` only. `user_metadata` is user-editable and is never read.
       appMetadata: asRecord(payload["app_metadata"]),
       sessionId: typeof sessionId === "string" && sessionId.length > 0 ? sessionId : null,
+      aal: typeof aal === "string" ? aal : null,
     };
   };
 
@@ -509,6 +553,7 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
         user: {
           id: userId,
           email: cached.email,
+          mfa_enrolled: mfaEnrolled.has(userId),
           // Only confirmed emails are cached, so a hit means confirmed. The timestamp's value is
           // never shown to anyone; `isEmailConfirmed` only asks whether it is set.
           email_confirmed_at: new Date(cached.at).toISOString(),
@@ -521,8 +566,9 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
     const lookup = await admin.getUserById(userId).catch(
       (): AdminLookup => ({ kind: "unavailable" }),
     );
-    if (lookup.kind === "ok" && isEmailConfirmed(lookup.user)) {
-      confirmed.set(userId, { at: now(), email: lookup.user.email ?? null });
+    if (lookup.kind === "ok") {
+      learnMfa(lookup.user);
+      if (isEmailConfirmed(lookup.user)) confirmed.set(userId, { at: now(), email: lookup.user.email ?? null });
     }
     return lookup;
   };
@@ -552,6 +598,7 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
       if (checkedAt - seen >= liveSessionTtlMs) liveSessions.delete(id);
     }
     liveSessions.set(sessionId, checkedAt);
+    learnMfa(lookup.user);
     // The same answer is R159's authoritative user: a confirmed email is remembered as the admin
     // lookup's would be.
     if (isEmailConfirmed(lookup.user)) confirmed.set(sub, { at: checkedAt, email: lookup.user.email ?? null });
@@ -580,6 +627,8 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
           // Ended at the provider (a sign-out, a dropped link, a reset elsewhere): not valid.
           if (session.kind === "ended") return null;
           if (session.kind === "live") {
+            // R659: an account with an authenticator app needs the code's level.
+            if (missingSecondFactor(claims.sub, claims.aal)) return null;
             const authoritative = toAuthUser(session.user);
             return {
               userId: claims.sub,
@@ -595,6 +644,8 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
         const lookup = await authoritativeUser(claims.sub);
         // The auth server says this user no longer exists: not currently valid.
         if (lookup.kind === "missing") return null;
+        // R659, after the lookup (which refreshes what is known): on an outage, the last answer.
+        if (missingSecondFactor(claims.sub, claims.aal)) return null;
         if (lookup.kind === "unavailable") {
           // Fail closed on the security-relevant field: the signature proved who this is, but
           // nothing proved the email is confirmed, so §9.4 step 1 must not pass.
@@ -623,6 +674,15 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
       if (hsKey !== null || !signedWithSharedSecret(token)) return null;
       const lookup = await fetchUserByToken(token);
       if (lookup.kind !== "ok") return null;
+      learnMfa(lookup.user);
+      // R659. The provider has just accepted this token, so its payload is the provider's own.
+      let aal: unknown;
+      try {
+        aal = decodeJwt(token)["aal"];
+      } catch {
+        return null;
+      }
+      if (missingSecondFactor(lookup.user.id, typeof aal === "string" ? aal : null)) return null;
       return toAuthUser(lookup.user);
     },
 
@@ -659,6 +719,7 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
       const outcome = await remove(userId).catch((): AdminDeletion => "unavailable");
       if (outcome === "unavailable") throw new ApiError("unavailable", ACCOUNT_DELETION_RETRY_MESSAGE);
       confirmed.delete(userId);
+      mfaEnrolled.delete(userId);
     },
   };
 }

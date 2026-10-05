@@ -33,6 +33,7 @@ import { badgeWords, rankWords } from "../rank/rank.ts";
 import { paths } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses, readSession } from "../net/session.ts";
 import { BackLink, followInApp } from "./nav.tsx";
+import TwoStepSettings from "../auth/TwoStepSettings.tsx";
 
 import "../auth/tavern.css";
 import "./account.css";
@@ -299,6 +300,9 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
             {played === 0 ? <p>No finished matches yet.</p> : null}
           </>
         ) : null}
+
+        {/* R659: an authenticator app for this account. */}
+        <TwoStepSettings token={token} />
 
         <div className="account-session">
           <p>

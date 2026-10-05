@@ -14,7 +14,15 @@ const WEB = join(HERE, "../..");
 const ROOT = join(WEB, "../..");
 
 /** apps/server/src/env.ts PUBLIC_ENV_VARS, the variables a browser bundle may carry. */
-const PUBLIC = ["VITE_SUPABASE_URL", "VITE_SUPABASE_PUBLISHABLE_KEY", "VITE_SERVER_HTTP_URL", "VITE_SERVER_WS_URL", "VITE_CATALOG_VERSION"];
+const PUBLIC = [
+  "VITE_SUPABASE_URL",
+  "VITE_SUPABASE_PUBLISHABLE_KEY",
+  "VITE_SERVER_HTTP_URL",
+  "VITE_SERVER_WS_URL",
+  "VITE_CATALOG_VERSION",
+  // R660: provider names only; set once a provider is set up in the Supabase dashboard.
+  "VITE_AUTH_OAUTH_PROVIDERS",
+];
 
 function entries(): [string, string][] {
   return readFileSync(join(WEB, ".env.production"), "utf8")

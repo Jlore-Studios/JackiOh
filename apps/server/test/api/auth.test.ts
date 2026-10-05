@@ -887,3 +887,98 @@ describe("/api/profile reports identity and the ladder record", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// R659: an account with an authenticator app is honoured only at `aal2`
+// ---------------------------------------------------------------------------
+
+/** A tier-2 token at an assurance level, optionally naming its provider session. */
+async function tokenAt(userId: string, aal: "aal1" | "aal2", sessionId?: string): Promise<string> {
+  return new SignJWT({
+    email: `${userId}@example.test`,
+    aal,
+    app_metadata: { provider: "email" },
+    ...(sessionId === undefined ? {} : { session_id: sessionId }),
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(userId)
+    .setIssuer(ISSUER)
+    .setAudience("authenticated")
+    .sign(SECRET_BYTES);
+}
+
+/** A confirmed user whose authenticator app is verified (the admin lookup's shape). */
+function enrolledUser(userId: string): AuthApiUser {
+  return { ...confirmedUser(userId), mfa_enrolled: true };
+}
+
+/** `GET /auth/v1/user`'s JSON for a user with these factors, as GoTrue sends it. */
+function userWithFactors(userId: string, factors: { status: string; factor_type?: string }[]): () => Response {
+  return () =>
+    Response.json({
+      ...confirmedUser(userId),
+      factors: factors.map((factor, index) => ({
+        id: `factor-${String(index)}`,
+        factor_type: factor.factor_type ?? "totp",
+        status: factor.status,
+      })),
+    });
+}
+
+describe("R659 — two-step sign-in: an account with an authenticator app needs an aal2 token", () => {
+  it("R659 refuses an aal1 token for an account with a verified factor, and takes its aal2 token", async () => {
+    const h = providerWith({ admin: (userId) => ({ kind: "ok", user: enrolledUser(userId) }) });
+
+    // A password alone (aal1) is not enough once the account has an authenticator app…
+    expect(await h.auth.verifyAccessToken(await tokenAt(ALICE, "aal1"))).toBeNull();
+    // …the code's level is, and the identity and the verified email come through as ever.
+    const ok = await h.auth.verifyAccessToken(await tokenAt(ALICE, "aal2"));
+    expect(ok?.userId).toBe(ALICE);
+    expect(ok?.emailVerified).toBe(true);
+
+    // Through the router the aal1 token cannot even read the code screen's `/api/auth/me`.
+    const router = createRouter(createAuthRoutes(), createTestDeps({ auth: h.auth }));
+    const aal1 = await tokenAt(ALICE, "aal1");
+    const res = await router(new Request("http://api.test/api/auth/me", { headers: { authorization: `Bearer ${aal1}` } }));
+    expect(res.status).toBe(401);
+  });
+
+  it("R659 an account without a factor is unchanged: aal1, or no aal claim at all, is honoured", async () => {
+    const h = providerWith();
+    expect((await h.auth.verifyAccessToken(await tokenAt(ALICE, "aal1")))?.userId).toBe(ALICE);
+    expect((await h.auth.verifyAccessToken(await tokenFor(BOB)))?.userId).toBe(BOB);
+  });
+
+  it("R659 reads the factor from the provider's user: only a VERIFIED totp factor counts", async () => {
+    const unfinished = providerWithSessions(userWithFactors(ALICE, [{ status: "unverified" }]));
+    expect((await unfinished.auth.verifyAccessToken(await tokenAt(ALICE, "aal1", "s-1")))?.userId).toBe(ALICE);
+
+    const otherKind = providerWithSessions(userWithFactors(ALICE, [{ status: "verified", factor_type: "phone" }]));
+    expect((await otherKind.auth.verifyAccessToken(await tokenAt(ALICE, "aal1", "s-2")))?.userId).toBe(ALICE);
+
+    const enrolled = providerWithSessions(userWithFactors(ALICE, [{ status: "unverified" }, { status: "verified" }]));
+    expect(await enrolled.auth.verifyAccessToken(await tokenAt(ALICE, "aal1", "s-3"))).toBeNull();
+    expect((await enrolled.auth.verifyAccessToken(await tokenAt(ALICE, "aal2", "s-4")))?.userId).toBe(ALICE);
+  });
+
+  it("R659 an outage cannot lower the bar: the last answer that the account has a factor stands", async () => {
+    const h = providerWith({ admin: (userId) => ({ kind: "ok", user: enrolledUser(userId) }) });
+    expect(await h.auth.verifyAccessToken(await tokenAt(ALICE, "aal1"))).toBeNull();
+
+    // The provider goes away after the cached answer has lapsed: an aal1 token is still refused,
+    // while the aal2 one keeps its identity (R159's outage rule).
+    h.timers.charge(CACHE_TTL_MS * 10);
+    h.admin.answer(() => ({ kind: "unavailable" }));
+    expect(await h.auth.verifyAccessToken(await tokenAt(ALICE, "aal1"))).toBeNull();
+    expect((await h.auth.verifyAccessToken(await tokenAt(ALICE, "aal2")))?.userId).toBe(ALICE);
+  });
+
+  it("R659 removing the factor lowers the bar again once the provider says so", async () => {
+    const h = providerWith({ admin: (userId) => ({ kind: "ok", user: enrolledUser(userId) }) });
+    expect(await h.auth.verifyAccessToken(await tokenAt(ALICE, "aal1"))).toBeNull();
+
+    h.timers.charge(CACHE_TTL_MS * 10);
+    h.admin.answer((userId) => ({ kind: "ok", user: confirmedUser(userId) }));
+    expect((await h.auth.verifyAccessToken(await tokenAt(ALICE, "aal1")))?.userId).toBe(ALICE);
+  });
+});

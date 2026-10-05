@@ -1,0 +1,32 @@
+/* `/account`'s two-step sign-in (auth/TwoStepSettings.tsx, R659), set apart by the same brass
+   hairline as signing out and deleting. The QR code sits on white, which every camera reads. */
+
+.tavern.app-shell .account-two-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(201, 149, 63, 0.22);
+}
+
+.tavern.app-shell .account-two-step__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tavern.app-shell .account-two-step__qr {
+  align-self: flex-start;
+  width: 180px;
+  height: 180px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.tavern.app-shell .account-two-step__secret {
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
