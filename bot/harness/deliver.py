@@ -48,8 +48,6 @@ from harness.state import item as state_item
 from harness.redact import redact
 
 REPORT_CHARS = 30_000
-#: How much of a plan its comment shows.
-PLAN_COMMENT_CHARS = 20_000
 #: How much of a stopped run's notes and session trail is kept for the next agent.
 HANDOFF_NOTES = 8000
 HANDOFF_TRAIL = 6000
@@ -425,7 +423,7 @@ class Deliverer:
                                    f"plan. {nxt}")
             return
         plan = self.result.get("plan") if isinstance(self.result.get("plan"), dict) else {}
-        text = redact(str(plan.get("text") or ""))[:PLAN_COMMENT_CHARS]
+        text = redact(str(plan.get("text") or ""))[:issueplan.PLAN_CHARS]
         self.gh.create_comment(number, f"Planned on {who} ({self._link()}), but the description "
                                "could not take the plan, so it is here. It is queued to build "
                                "from this plan, on the cheapest model its difficulty allows.\n\n"

@@ -33,6 +33,7 @@ from harness import providers as providers_mod
 from harness.clock import iso, now as clock_now
 from harness.config import MIN_TIER, PLAN_FLOOR, Config, child_env
 from harness.git import MARKER_LINE, Git, Identity, worktree_add
+from harness.issueplan import PLAN_CHARS, PLAN_WORDS
 from harness.prompts import data
 from harness.providers import hosted
 from harness.redact import redact, redact_json
@@ -71,9 +72,6 @@ never delivered): your plan, what is done, what is next, the decisions you made 
 dead ends you hit. Update it as you go, not only at the end. Your session can be cut off at any
 moment (a usage limit, the clock), and the next agent, possibly another model, starts from this
 file and the branch."""
-#: How much of a planner's answer becomes the plan: its beginning, where the goal and the first
-#: steps are, never its end alone.
-PLAN_CHARS = 20_000
 PLAN_CUT = "\n\n…(the plan was cut here; the planner wrote more)"
 SELF_CHECK_CONTEXT = """This is a self check, not a review. You are the same model that built
 this change, in a fresh session, and nothing you say here approves it: an independent reviewer
@@ -818,6 +816,7 @@ class Worker:
             branch_state=self._branch_state(), gate_list=self._gate_list(),
             difficulty=self.plan.get("difficulty") or "medium",
             rating=self._rating_ask(), easy_rule=self._easy_rule(),
+            plan_words=f"{PLAN_WORDS:,}", plan_chars=f"{PLAN_CHARS:,}",
         ) + self._handoff_text()
         head = self.wt.head()
         result = self.call("plan", prompt, self.wt.cwd, reader=True)

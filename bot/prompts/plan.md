@@ -66,3 +66,10 @@ sections:
    README), and how the builder avoids it.
 7. **Open questions.** Anything only a person can decide. If the task cannot be done without
    that, say so first, before the Goal.
+
+Keep the whole plan under $plan_words words: the harness keeps only the
+first $plan_chars characters of it, and what it cuts reaches nobody. Say each thing once: the table gets a few words per
+file and the steps carry the detail; do not restate the task, this prompt or the checks listed
+above (in **Done when**, name a check rather than repeat its command); quote code only where the
+builder must copy it exactly; nothing before **Goal** (the rating line aside) and no summary after
+**Open questions**. A small change gets a short plan.
