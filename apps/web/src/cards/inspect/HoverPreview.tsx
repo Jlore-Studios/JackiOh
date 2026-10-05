@@ -10,7 +10,8 @@
 // enchantments (E39), standing as a Unit (R383) — has them in words at the top of that column
 // (StateNotes.tsx), since the badges' tooltips cannot be hovered here, and a printed text beside a
 // tuned face whose numbers moved. Whenever the column is drawn it ends with the card's lines of code
-// (E36): a meta line fits there, and a face with nothing beside it stays alone.
+// (E36): a meta line fits there, and a face with nothing beside it stays alone. Above that line, the
+// card's flavour line and artist credit (R660, Flavour.tsx), which draw the column on their own.
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement } from "react";
@@ -28,6 +29,8 @@ import {
 } from "./constants.ts";
 import { Glossary } from "./Glossary.tsx";
 import { placePreview, type PreviewPrefer, type Rect } from "./placement.ts";
+import { Flavour } from "./Flavour.tsx";
+import { flavourFor } from "../flavour.ts";
 import { InspectNote } from "./InspectNote.tsx";
 import { Printed } from "./Printed.tsx";
 import { LocLine, StateNotes, hasStateNotes } from "./StateNotes.tsx";
@@ -58,7 +61,8 @@ export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPre
   const resolve = useDefResolver();
   const named = resolve === null ? 0 : namedCards(face, resolve).length;
   const notes = hasStateNotes(face);
-  const side = notes || face.printed !== null;
+  const flavoured = face.known && flavourFor(face.defId) !== null;
+  const side = notes || face.printed !== null || flavoured;
   const placed = placePreview(anchor, viewportSize(), estimatedSize(entries.length > 0 || side, named > 0), prefer);
 
   // Once laid out, place it again by its real size. jsdom has no layout and keeps the estimate.
@@ -93,6 +97,7 @@ export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPre
           {notes ? <StateNotes face={face} /> : null}
           <Printed face={face} />
           <Glossary entries={entries} />
+          {flavoured ? <Flavour defId={face.defId} /> : null}
           <LocLine face={face} />
         </div>
       ) : null}
