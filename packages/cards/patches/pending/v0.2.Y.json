@@ -1,9 +1,0 @@
-{
-  "version": "v0.2.Y",
-  "title": "Patch v0.2.Y: Buff Gary the Gambler",
-  "sources": "#323",
-  "notes": "Gary the Gambler base and radiant Cries gain: flip a coin, heads Divine Shield, tails Rush",
-  "cards": [
-    "core-004"
-  ]
-}

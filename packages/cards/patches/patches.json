@@ -5602,5 +5602,28 @@
         "kind": "added"
       }
     ]
+  },
+  {
+    "version": "v0.2.16b",
+    "date": "2026-10-05",
+    "title": "Patch v0.2.Y: Buff Gary the Gambler",
+    "source": "#323",
+    "notes": "Gary the Gambler base and radiant Cries gain: flip a coin, heads Divine Shield, tails Rush",
+    "commits": [
+      "16724d26939a1a03779523f11461b41c57871ccb"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-004",
+        "name": "Gary the Gambler",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]
