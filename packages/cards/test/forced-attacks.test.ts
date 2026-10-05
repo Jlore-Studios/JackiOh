@@ -106,7 +106,7 @@ describe("R174: a forced run and a target that left the field", () => {
   it("R174 a Felinor Fiender that dies mid-run to Moths to the Flame and comes back through Reborn does not attack in that run (R96, R83)", () => {
     // On this seed Plastic Surgery's random keyword for the Fiender is Reborn (§6.1's pool, R21).
     const g = scenario({
-      seed: "r4-fiender-reborn-8", // R346's Pierce moved the roll off "-7"
+      seed: "r4-fiender-reborn-33", // R346's Pierce moved the roll off "-7", R49's Deft off "-8"
       active: "p2",
       turn: 10,
       p1: { field: [{ def: MOTHS, lane: 1 }], hand: [STOCKPILE], library: [...LIBRARY] },

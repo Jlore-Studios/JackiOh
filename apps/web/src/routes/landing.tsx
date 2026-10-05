@@ -1,9 +1,8 @@
 // The landing page: `/`, the one screen that is not a form.
 //
 // NO SPEC RULE LIVES HERE. It is the front door (docs/polish/5-sign-in.md, B37-B39): a warm tavern
-// hero with the wordmark and a fanned hand of cards, one dominant call to action, and a short strip
-// that says how the game plays, with every number read from the config that owns it (CLAUDE.md
-// rule 9). Everything visual is CSS in `landing.css`, scoped under `.landing` (its palette is
+// hero with the wordmark and a fanned hand of cards, and one dominant call to action. Everything
+// visual is CSS in `landing.css`, scoped under `.landing` (its palette is
 // `auth/tavern.css`'s, which the sign-in screens share), so nothing here can move the board's
 // pixel-measured layout (index.css's header says why that matters).
 //
@@ -17,11 +16,9 @@ import { Suspense, lazy, useEffect, useRef, useState, type ReactElement } from "
 
 import { GATE_SLOW_NOTICE_SECONDS } from "../../../server/src/config.ts";
 
-import { DECK_SIZE, MAX_MANA, UNIT_ZONES } from "@jackioh/engine/config";
-import { LOADOUT_DECKS } from "@jackioh/validator";
 import type { CardDef } from "@jackioh/shared";
 
-import { landingFanCardTestid, landingStepTestid, landingTestid } from "../auth/testids.ts";
+import { landingFanCardTestid, landingTestid } from "../auth/testids.ts";
 import { CardBack } from "../cards/CardBack.tsx";
 import { CardFace } from "../cards/CardFace.tsx";
 import { useInspectTrigger } from "../cards/inspect/useInspectTrigger.tsx";
@@ -347,159 +344,6 @@ function Actions(): ReactElement {
 }
 
 // ---------------------------------------------------------------------------------------------
-// How it plays
-// ---------------------------------------------------------------------------------------------
-
-type StepIcon = "mana" | "lanes" | "deck" | "loadout";
-
-type Step = { readonly icon: StepIcon; readonly title: string; readonly text: string };
-
-/** Each tile states exactly one number, and that number comes from the config that owns it. */
-const STEPS: readonly Step[] = [
-  {
-    icon: "mana",
-    title: `Mana up to ${MAX_MANA}`,
-    text: "You gain a mana crystal each turn and they refill as your turn starts. Spend them on units, spells and traps.",
-  },
-  {
-    icon: "lanes",
-    title: `${UNIT_ZONES} lanes a side`,
-    text: "Units hold the lanes on your side of the table. Behind them, the backrow keeps your traps face down until they spring.",
-  },
-  {
-    icon: "deck",
-    title: `Decks of ${DECK_SIZE}`,
-    text: "Every card in a deck is different. Draw, trade and outlast until the other hero falls.",
-  },
-  {
-    icon: "loadout",
-    title: `A loadout of ${LOADOUT_DECKS} decks`,
-    text: "No card is shared between your decks. Build them once, then take them to the queue or a private room.",
-  },
-];
-
-// The step icons: drawn, not typed, on a 24-unit grid, in the tile's gold (`currentColor`). A count
-// an icon shows (the lanes, the decks of a loadout) is drawn from the same constant its tile states,
-// so the picture can never disagree with the sentence beside it (CLAUDE.md rule 9).
-
-const ICON_GRID = 24;
-const ICON_CENTRE = ICON_GRID / 2;
-
-/** Where a lane edge `index` of `count` meets a row of the board: the table seen in perspective. */
-function laneEdge(index: number, count: number, near: boolean): number {
-  const [left, right] = near ? [2.5, 21.5] : [7, 17];
-  return left + ((right - left) * index) / count;
-}
-
-function ManaIcon(): ReactElement {
-  return (
-    <>
-      <path className="landing-icon-gem" d="M12 2.5 19.5 9 12 21.5 4.5 9Z" />
-      <path className="landing-icon-facet" d="M4.5 9h15M8.5 9 12 2.5 15.5 9M8.5 9 12 21.5 15.5 9" />
-    </>
-  );
-}
-
-/** The table from a seat: one side's lanes running away from the viewer, and the centre line. */
-function LanesIcon(): ReactElement {
-  const dividers = Array.from({ length: UNIT_ZONES - 1 }, (_, index) => index + 1);
-  return (
-    <>
-      <path className="landing-icon-card" d="M7 4H17L21.5 20H2.5Z" />
-      <path className="landing-icon-line" d="M5.2 12H18.8" />
-      {dividers.map((index) => (
-        <path
-          key={index}
-          className="landing-icon-facet landing-icon-lane-edge"
-          d={`M${String(laneEdge(index, UNIT_ZONES, false))} 4L${String(laneEdge(index, UNIT_ZONES, true))} 20`}
-        />
-      ))}
-    </>
-  );
-}
-
-function DeckIcon(): ReactElement {
-  return (
-    <>
-      <rect className="landing-icon-slot" x={8.5} y={2.5} width={11} height={15} rx={1.6} />
-      <rect className="landing-icon-slot" x={6.75} y={4.25} width={11} height={15} rx={1.6} />
-      <rect className="landing-icon-card" x={5} y={6} width={11} height={15} rx={1.6} />
-      <path className="landing-icon-facet" d="M10.5 10.5 12.8 13.5 10.5 16.5 8.2 13.5Z" />
-    </>
-  );
-}
-
-/** One card for each deck of a loadout, fanned from the bottom; the middle one in front. */
-function LoadoutIcon(): ReactElement {
-  const middle = (LOADOUT_DECKS - 1) / 2;
-  const order = Array.from({ length: LOADOUT_DECKS }, (_, index) => index).sort(
-    (a, b) => Math.abs(b - middle) - Math.abs(a - middle),
-  );
-  return (
-    <>
-      {order.map((index) => (
-        <g key={index} transform={`rotate(${String((index - middle) * 22)} ${String(ICON_CENTRE)} 21)`}>
-          <rect
-            className={`landing-icon-deck ${index === Math.round(middle) ? "landing-icon-card" : "landing-icon-back"}`}
-            x={7.5}
-            y={4}
-            width={9}
-            height={13}
-            rx={1.4}
-          />
-        </g>
-      ))}
-    </>
-  );
-}
-
-const STEP_ICONS: Readonly<Record<StepIcon, () => ReactElement>> = {
-  mana: ManaIcon,
-  lanes: LanesIcon,
-  deck: DeckIcon,
-  loadout: LoadoutIcon,
-};
-
-function StepIconMark({ icon }: { icon: StepIcon }): ReactElement {
-  const Drawing = STEP_ICONS[icon];
-  return (
-    <svg
-      className={`landing-step-icon landing-step-icon--${icon}`}
-      viewBox={`0 0 ${String(ICON_GRID)} ${String(ICON_GRID)}`}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <Drawing />
-    </svg>
-  );
-}
-
-function HowItPlays(): ReactElement {
-  return (
-    <section
-      className="landing-how"
-      data-testid={landingTestid.howItPlays}
-      aria-labelledby="landing-how-title"
-    >
-      <h2 id="landing-how-title" className="landing-how-title">
-        How it plays
-      </h2>
-      <ol className="landing-steps">
-        {STEPS.map((step, index) => (
-          <li key={step.title} className="landing-step" data-testid={landingStepTestid(index)}>
-            <span className="landing-step-glyph" aria-hidden="true">
-              <StepIconMark icon={step.icon} />
-            </span>
-            <h3 className="landing-step-title">{step.title}</h3>
-            <p className="landing-step-text">{step.text}</p>
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------------------------------------
 // The page
 // ---------------------------------------------------------------------------------------------
 
@@ -563,14 +407,9 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
 
         <div className="landing-hero-inner">
           <div className="landing-title-block">
-            <p className="landing-kicker">A duel of lanes, mana and hidden traps</p>
             <h1 id="landing-title" className="landing-wordmark">
               JackiOh
             </h1>
-            <p className="landing-lede">
-              Summon units into lanes, set traps face down in your backrow, and break the other hero
-              before they break yours.
-            </p>
           </div>
 
           <CardFan hand={hand} onOpen={setOpen} onHold={setHeld} />
@@ -578,8 +417,6 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
           <Actions />
         </div>
       </section>
-
-      <HowItPlays />
 
       <PlayerStatsCard />
 

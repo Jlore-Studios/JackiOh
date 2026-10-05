@@ -1,5 +1,6 @@
 #!/bin/bash
-# Runs a local script on the machine as root through Session Manager, and prints its output.
+# Runs a local script on the machine as root through Session Manager, with the scripts beside it,
+# and prints its output.
 # The machine has no inbound ports and no key pair; this is the way in for scripts (an
 # interactive shell is `aws ssm start-session --target <instance>`).
 #
@@ -37,11 +38,14 @@ if [ "$state" != running ]; then
   done
 fi
 
-# The script travels base64-encoded, its arguments shell-quoted.
-body="$(base64 < "$script" | tr -d '\n')"
+# The script travels with the scripts beside it (setup.sh installs clean.sh), as a base64
+# tarball, and its arguments shell-quoted.
+body="$(COPYFILE_DISABLE=1 tar czf - -C "$(dirname "$script")" --exclude='*.md' --exclude='*.py' --exclude=__pycache__ . \
+  | base64 | tr -d '\n')"
 quoted=""
 for arg in "$@"; do quoted+=" $(printf '%q' "$arg")"; done
-command="echo $body | base64 -d > /root/on-machine.sh && bash /root/on-machine.sh$quoted; status=\$?; rm -f /root/on-machine.sh; exit \$status"
+name="$(printf '%q' "$(basename "$script")")"
+command="rm -rf /root/on-machine && mkdir -p /root/on-machine && echo $body | base64 -d | tar xzf - -C /root/on-machine && bash /root/on-machine/$name$quoted; status=\$?; rm -rf /root/on-machine; exit \$status"
 params="$(jq -cn --arg c "$command" '{commands: [$c], executionTimeout: ["3600"]}')"
 id="$(aws ssm send-command --instance-ids "$INSTANCE_ID" --document-name AWS-RunShellScript \
   --comment "$(basename "$script")" --timeout-seconds 600 --parameters "$params" \

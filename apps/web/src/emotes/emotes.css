@@ -177,6 +177,28 @@
   }
 }
 
+/* ---- the stacking (#257) ----------------------------------------------------- */
+
+/* Every z-index in this file counts only inside the hero, because the hero is a stacking context
+   whenever it is not a target: board.css draws it at 0.9 opacity, and any opacity under 1 makes
+   one. The board then paints whatever follows the hero in the document over it: its seat's mana and
+   piles, and, for the opponent, whose seat comes before the field, the whole field. Their bubble
+   showed through it, their emoji hung under it, and their Mute menu could not be clicked. So while
+   a piece is up the hero is drawn at full strength and lifted over its seat's neighbours, and its
+   seat over the field and the hands, the way overflow.css lifts a seat for a pile notice. 16 keeps
+   it under everything that should cover an emote: the pile notices (18), the phone's open log and
+   the practice bar (20), a card in mid-animation (30 and up), the clock's turn fuse (37), the
+   effects layer and its "Your turn" banner (38), the result screen (39), the prompt (40) and the
+   settings (1000). */
+.seat:has(.emote-show, .emote-menu),
+.hero:has(.emote-show, .emote-menu) {
+  z-index: 16;
+}
+
+.hero[data-legal]:has(.emote-show, .emote-menu) {
+  opacity: 1;
+}
+
 /* ---- the show -------------------------------------------------------------- */
 
 .emote-show {

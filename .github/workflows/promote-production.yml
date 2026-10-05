@@ -146,9 +146,10 @@ jobs:
 
       - name: build the web app
         env:
-          # A repository variable may hold the publishable key instead of apps/web/.env.production.
-          # It is only exported when set: an empty variable would override the file's value.
-          KEY_FROM_VARS: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          # A repository variable (or a secret, if it was saved on that tab) may hold the publishable key
+          # instead of apps/web/.env.production. It is only exported when set: an empty variable would
+          # override the file's value.
+          KEY_FROM_VARS: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           if [ -n "$KEY_FROM_VARS" ]; then
             echo "VITE_SUPABASE_PUBLISHABLE_KEY=$KEY_FROM_VARS" >> "$GITHUB_ENV"

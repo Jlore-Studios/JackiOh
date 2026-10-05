@@ -19,7 +19,7 @@ from harness.clock import iso
 from harness.config import (DEFAULT_DIFFICULTY, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED,
                             LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_PR, LABEL_PR_OPEN,
                             LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW, LABEL_PRIORITY_MEDIUM,
-                            LABEL_REVISE, LABEL_WORKING)
+                            LABEL_READY, LABEL_REVISE, LABEL_WORKING)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.state import item as state_item
@@ -32,10 +32,13 @@ def label_names(thread: dict[str, Any]) -> set[str]:
 
 
 def set_state_label(ctx: Context, number: int, current: set[str], wanted: str | None) -> None:
-    """Leave exactly `wanted` (or none) of the queue's state labels on the thread."""
+    """Leave exactly `wanted` (or none) of the queue's state labels on the thread. A pull request
+    back in the queue is no longer ready for a person to merge, so `ready for merge` comes off."""
     for name in STATE_LABELS:
         if name in current and name != wanted:
             ctx.gh.remove_label(number, name)
+    if wanted and LABEL_READY in current:
+        ctx.gh.remove_label(number, LABEL_READY)
     if wanted and wanted not in current:
         ctx.gh.add_labels(number, [wanted])
 
@@ -249,6 +252,22 @@ class Candidate:
     #: A pull request the bot opened (`bot:pr`): one a person opened never gets a review run, so
     #: its revision needs a reviewer in the same run.
     bot_pr: bool = False
+    #: For a revision: it resolves a conflict with `main` on a change the review rule cleared
+    #: (`cleared`), so the run's own reviewer can carry that clearance (`deliver._carry`).
+    carries: bool = False
+
+
+def cleared(record: dict[str, Any]) -> dict[str, Any]:
+    """The last commit of a bot pull request that met the review rule, as deliver recorded it
+    (`{"sha", "at", "by", ...}`), or `{}`. It is keyed by commit: a head that moved since is not
+    cleared, whatever the record says."""
+    found = record.get("cleared")
+    return found if isinstance(found, dict) and found.get("sha") else {}
+
+
+def carries(record: dict[str, Any]) -> bool:
+    """A revision queued because `main` left a cleared change with conflicts."""
+    return record.get("source") == "conflict" and bool(cleared(record))
 
 
 def plan_of(record: dict[str, Any], thread: dict[str, Any], kind: str) -> dict[str, Any]:
@@ -387,7 +406,8 @@ def candidates(ctx: Context, state: dict[str, Any],
                 approved=tuple(votes.get("approvals") or ()),
                 approval_tiers=tuple(tier for _, tier in review_rule.approvals(
                     votes, ctx.cfg.pool.family_tier)),
-                bot_pr=LABEL_PR in names)
+                bot_pr=LABEL_PR in names,
+                carries=kind == "revise" and LABEL_PR in names and carries(record))
             if kind == "build" and not found[number].forced:
                 builds.append(thread)
     waiting = waits_for(ctx, builds) if builds else {}

@@ -254,6 +254,14 @@ jobs:
         if: ${{ !startsWith(needs.plan.outputs.runs_on || 'ubuntu-latest', 'ubuntu-') }}
         run: git -C "$GITHUB_WORKSPACE" worktree prune 2>/dev/null || true
 
+      # On the machine, the job's temporary files go in RUNNER_TEMP, which is emptied when the
+      # job ends, not in the /tmp every subscription's jobs share (bot/machine/README.md, Disk).
+      - name: Keep the job's temporary files with the job
+        if: ${{ !startsWith(needs.plan.outputs.runs_on || 'ubuntu-latest', 'ubuntu-') }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/tmp"
+          echo "TMPDIR=$RUNNER_TEMP/tmp" >> "$GITHUB_ENV"
+
       - name: Checkout the default branch
         uses: actions/checkout@v4
         with:

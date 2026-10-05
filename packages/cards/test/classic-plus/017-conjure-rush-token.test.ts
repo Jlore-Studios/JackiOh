@@ -80,9 +80,9 @@ describe("C+ #17 Conjure Rush Token++", () => {
       down.play(CARD);
       expect(gained(down, tokens(down)[0] ?? "")).toHaveLength(KEYWORDS - STEP);
     });
-    it("R21 tuned past the pool, the token gains every keyword R21 leaves it, 11, and no repeat", () => {
+    it("R21 tuned past the pool, the token gains every keyword R21 leaves it, 13, and no repeat", () => {
       const s = scenario({ p1: { hand: [CARD, FILLER] }, p2: { hand: [FILLER] } });
-      stepParam(s.card(CARD), "keywords", 3);
+      stepParam(s.card(CARD), "keywords", 4);
       s.play(CARD);
       expect(gained(s, tokens(s)[0] ?? "")).toHaveLength(RANDOM_KEYWORD_POOL.length - 1);
     });

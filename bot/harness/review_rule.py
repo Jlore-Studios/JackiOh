@@ -11,6 +11,12 @@ A commit ships when no model's rejection of it stands and it has
 That holds whatever the difficulty: a hard item ships on two medium approvals too. Approvals
 count per review, never per family: each review run, and each run's own adversarial reviewer,
 casts one. A weak approval counts only toward an easy item's weak-and-medium pair.
+
+A commit that met the rule is recorded as cleared. When `main` then leaves it with conflicts,
+the clearance carries to the revision that resolves them (`carried`), so no review run is
+needed again: the revision started from the cleared commit, changed nothing but the files the
+merge left conflicted, and its own run's adversarial reviewer (medium or strong) approved it
+(`deliver._carry`). A revision that changed anything more goes back under the rule above.
 """
 
 from __future__ import annotations
@@ -42,6 +48,12 @@ def met(tiers: Iterable[str], difficulty: str) -> bool:
     count = Counter(tiers)
     return (count["strong"] >= 1 or count["medium"] >= 2
             or (difficulty == "easy" and count["medium"] >= 1 and count["weak"] >= 1))
+
+
+def carried(votes: Mapping[str, Any]) -> bool:
+    """The head carries a cleared commit's clearance across a conflict resolution, and its own
+    run's reviewer approved it: that one approval is enough."""
+    return bool(votes.get("carried")) and bool(votes.get("approvals"))
 
 
 def helps(tiers: Iterable[str], tier: str, difficulty: str) -> bool:

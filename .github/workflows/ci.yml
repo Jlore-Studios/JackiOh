@@ -28,7 +28,12 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # A pull request's newer push replaces its running CI. main's never does: when every push to main
+  # cancelled the run before it, a busy afternoon (the night bot merges every few minutes) left no
+  # commit of main green for hours, and promote-production.yml, which takes only commits whose
+  # push-to-main CI passed, had nothing to ship. On main a newer push waits behind the running one,
+  # and GitHub keeps only the newest waiting, so main is green at most a run or two behind.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   # Card data and rules only. No secret belongs in this file: SUPABASE_SECRET_KEY and CODE_PEPPER

@@ -69,7 +69,9 @@ To change one of its pull requests, comment **`@jgoetzmann-bot <what to change>`
 **`/harness revise <notes>`** on it, submit a review that requests changes, or add **`bot:revise`**.
 It also revises its own pull requests without being asked: when CI fails twice on the same
 commit (it re-runs the failed jobs once first, in case the failure was flaky), and when `main`
-moves on and leaves the branch with conflicts. After three tries at fixing CI on one pull request
+moves on and leaves the branch with conflicts (once the reviews approved a change, resolving its
+conflicts takes no review run again: [the review rule](#difficulty-and-tiers)). After three
+tries at fixing CI on one pull request
 it stops and labels it `bot:blocked`. Asking for a revision turns auto-merge off until the
 revision lands. It can revise a pull request a person opened too, as long as the branch is in this
 repository. It never turns on auto-merge for someone else's pull request.
@@ -243,6 +245,7 @@ needs level 3.
 | `bot:pr` | a pull request the bot opened |
 | `bot:suggestion` | an improvement the bot proposes; add `bot:build` to have it built, close it to say no |
 | `bot:needs-review` | a bot pull request that touches a review-only path; a person merges it |
+| `ready for merge` | the reviews approved the pull request's head, but auto-merge could not turn on (a review-only path, `main`'s protection, GitHub refusing it, or `auto_merge` off), so the bot @-mentions the operator to merge it. It comes off when the pull request goes back into the queue (a revision, a review run, a run that holds it, `bot:blocked`); triage never adds it |
 | `difficulty:easy`, `difficulty:medium`, `difficulty:hard` | the weakest tier that may build it: weak, medium, strong; none counts as medium, and with several the hardest counts ([below](#difficulty-and-tiers)) |
 | `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
 | `human` | people do it; the bot never queues, plans, builds or labels it |
@@ -399,7 +402,12 @@ meanwhile. Each such failure in a row waits longer (50 minutes, 2 hours, then 8 
 and after the third the bot opens an issue labelled `night bot` and `human` asking a person to
 renew the login or switch the subscription off; it closes that issue itself once a run there gets
 a model call through. A failure that was not the subscription's own (an install red on untouched
-`main`, a push GitHub refused) waits 50 minutes without lengthening the streak.
+`main`, a push GitHub refused, the machine's disk too full to start) waits 50 minutes without
+lengthening the streak. On the machine a job reads the disk before it starts, cleans it when short
+and does no work under 3 GB free, and a disk that fills up during the work pauses the item and
+keeps what it built; neither counts against the item. While the disk is 80% full or has under
+3 GB free, the bot keeps one issue open about it, labelled `night bot` and `human`, and closes it
+at 70% ([`harness/disk.py`](harness/disk.py), [`machine/`](machine/README.md), Disk).
 
 ### Difficulty and tiers
 
@@ -481,6 +489,19 @@ model's. That holds at every difficulty: a hard item ships on two medium approva
   subscription's login, which the builder's code must never run beside. CI runs every check.
 - When the rule holds, auto-merge turns on, pinned to that commit: GitHub will not merge a head
   that moved after the approval.
+- **A conflict does not undo the reviews.** A commit that meets the rule is recorded as cleared
+  (`cleared` on its pull request's record). When `main` then leaves it with conflicts, while CI
+  runs or before, the revision that resolves them needs no review run: its builder resolves the
+  conflicts, its own run's reviewer (medium or strong) reviews the resolution adversarially,
+  told that its approval is the only one the resolution gets, and if it approves, auto-merge
+  turns on for the new commit, which is cleared in turn. That holds only when the revision
+  started from the cleared commit and changed nothing but the files the merge left conflicted.
+  The deliver job checks that itself: it redoes the merge of the cleared commit and `main` with
+  git and compares the new commit with it, trusting nothing the model job says. A builder with
+  its own reviewer in the run takes such a revision first (Devin has none). A revision that
+  changes anything more, a branch someone pushed to after the reviews, or a change still short of
+  the rule when the conflict came goes back under the rule, and the comment on the pull request
+  says why.
 - Blocking findings queue a revision, built by the building rule above (through the self-check
   loop again if that builder checks itself), which goes round the same way. A rejection stands
   against that commit until the same model approves it or the commit changes. After three such
@@ -645,7 +666,8 @@ GitHub Actions, such as the harness's local `bb` container.
   there. If protection is missing, it leaves the pull request for a person.
 - **Some changes always wait for a person.** A change that touches a review-only path
   (`review_paths`) still becomes a pull request, but it is labelled `bot:needs-review`, you are
-  asked to review it, and auto-merge stays off. The review-only paths are the files that define
+  asked to review it, and auto-merge stays off. Once the reviews approve it, it is labelled
+  `ready for merge` too, and the bot @-mentions you to merge it. The review-only paths are the files that define
   what the checks do or how the game deploys: every `package.json`, the lockfile, the vitest,
   vite, eslint, TypeScript and Cypress configs, `scripts/`, `vercel.json`, `render.yaml` and the
   database migrations.
