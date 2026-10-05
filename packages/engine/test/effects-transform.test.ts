@@ -129,6 +129,28 @@ describe("transform (§6.3, R23, R35, M3-T1)", () => {
     ]);
   });
 
+  it("R659 a Unit a Transform puts on the field is summoning sick this turn, however ready the old one was", () => {
+    const state = game();
+    state.active = "p1";
+    // A unit that has been on the field since an earlier turn, with its exertions unspent: ready.
+    const old = put(state, plain.id, slot("p1", "units", 2));
+    old.summonedTurn = state.turn - 2;
+    expect(isSick(state, old)).toBe(false);
+
+    run(state, transform({ instanceId: old.id, defId: crier.id }), { controller: "p1" });
+
+    const now = cardAt(state, slot("p1", "units", 2)) as CardInstance;
+    expect(now.summonedTurn).toBe(state.turn);
+    expect(isSick(state, now)).toBe(true);
+
+    // The opponent's own unit, transformed on the opponent's turn, is sick for that turn too.
+    state.active = "p2";
+    const theirs = put(state, plain.id, slot("p2", "units", 1));
+    theirs.summonedTurn = state.turn - 2;
+    run(state, transform({ instanceId: theirs.id, defId: sheep.id }), { controller: "p2" });
+    expect(isSick(state, cardAt(state, slot("p2", "units", 1)) as CardInstance)).toBe(true);
+  });
+
   it("R35 the replaced card ceases to exist: no graveyard, no exile and no Death", () => {
     const state = game();
     const old = put(state, mourner.id, slot("p1", "units", 1));

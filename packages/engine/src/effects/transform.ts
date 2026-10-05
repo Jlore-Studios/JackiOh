@@ -56,7 +56,8 @@ function replaceOnField(ctx: EffectContext, old: CardInstance, def: CardDef, rad
   const replacement = newInstance(ctx.state, def.id, old.owner, zoneOf(at));
   replacement.radiant = radiant;
   if (old.position !== undefined) replacement.position = old.position;
-  // A new body enters the field this turn, so it is summoning sick like a summoned card (§4.1).
+  // R659: a new body enters the field this turn, so it is summoning sick like a summoned card (§4.1);
+  // only text that says otherwise lifts it (R424).
   replacement.summonedTurn = ctx.state.turn;
 
   if (!replaceInZone(ctx.state, old, replacement)) return null;

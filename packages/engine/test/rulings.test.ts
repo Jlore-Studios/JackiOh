@@ -4020,6 +4020,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // Proved by effects-transform.test.ts "R659 …": the new body is sick whatever the old one's
+  // readiness, on either player's turn; R424's Classic Golem is the exception its own test proves.
+  it("R659 a transformed Unit is summoning sick", () => {
+    provenIn(659, "effects-transform.test.ts");
+  });
+
   // Proved by packages/cards/test/flavour.test.ts "R660 …" (the sidecar's keys, coverage, fields and
   // caps), apps/web cards/flavour.test.tsx "R660 …" (no rules words; the preview, the sheet and the
   // detail show it, the face and an unnamed card never), routes/almanac.test.tsx "R660 …" (the
