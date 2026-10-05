@@ -2547,6 +2547,7 @@
         "by": "`claude` (strong)",
         "sha": "f2b7290203528a04d565da52e692c7ff72e54f70"
       },
+      "closed_at": "2026-10-05T15:20:24Z",
       "cross_rounds": 4,
       "died": 0,
       "difficulty": "easy",
@@ -2557,6 +2558,7 @@
       "issue": 255,
       "kind": "revise",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "claude-1",
       "question": "",
