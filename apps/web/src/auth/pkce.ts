@@ -1,5 +1,6 @@
-// PKCE for the emailed links (R323, R324): the confirmation, its resend, the password reset, and an
-// email change's confirmation (R663).
+// PKCE for the emailed links (R323, R324): the confirmation, its resend, the password reset and an
+// email change's confirmation (R663); and for the two ways in that come back with a code to sign
+// this browser in: the email sign-in link (R664) and an OAuth provider (R666).
 //
 // GoTrue's implicit flow put a session's tokens in the link's URL fragment (`#access_token=…`), where
 // history, a shared screen or a referrer could see them. With PKCE the request that mails a link
@@ -29,10 +30,14 @@ const PKCE_VERIFIER_MAX_LENGTH = 128;
 /** What the challenge is: SHA-256 of the verifier, base64url (GoTrue spells it lower case). */
 export const PKCE_METHOD = "s256";
 
-/** Which emailed link a verifier is for. */
-export type PkceFlow = "signup" | "recovery" | "email_change";
+/**
+ * Which link a verifier is for (`email_change` is R663's). `magiclink` (R664) and `oauth` (R666) are the two whose code signs
+ * this browser in: the code exchanges only with the verifier THIS browser made when it asked, so a
+ * link someone else asked for can never sign it into their account (R193's login CSRF).
+ */
+export type PkceFlow = "signup" | "recovery" | "email_change" | "magiclink" | "oauth";
 
-const FLOWS: readonly PkceFlow[] = ["signup", "recovery", "email_change"];
+const FLOWS: readonly PkceFlow[] = ["signup", "recovery", "email_change", "magiclink", "oauth"];
 
 type Stored = { verifier: string; at: number };
 type StoredValue = { v: number } & Partial<Record<PkceFlow, Stored>>;
@@ -133,6 +138,11 @@ export function storedVerifiers(): { flow: PkceFlow; verifier: string }[] {
   })
     .sort((a, b) => b.at - a.at)
     .map(({ flow, verifier }) => ({ flow, verifier }));
+}
+
+/** The newest verifier's flow, or null: which way in a returning error most likely came from. */
+export function newestFlow(): PkceFlow | null {
+  return storedVerifiers()[0]?.flow ?? null;
 }
 
 /** The verifier for `flow` has been used (its code exchanged): forget it. */

@@ -74,6 +74,22 @@
 // The query is read BEFORE the scrub, and no destination is ever read from it (B35): every
 // navigation out of this screen goes to a `paths` value.
 //
+// THE OTHER WAYS IN (issue #267). Each ends where a password sign-in does, at the gate in `main.tsx`,
+// with an account the server gates exactly the same (§9.4): none of them makes an account active.
+//   - AN EMAIL CODE (R664): "Sign in with an email code instead" mails a link and a code to a
+//     confirmed account (`requestEmailSignIn`, one neutral sentence whatever the provider answered).
+//     The code, typed here, signs in. The link comes back with a PKCE code and signs in only the
+//     browser that asked: its code exchanges only with this browser's `magiclink` verifier. That is
+//     the one way a link's session is kept, and it is not R193's case: R193 refuses a session from
+//     a link because anyone can send one, while a PKCE sign-in link can only finish where it began.
+//   - AN OAUTH PROVIDER (R666): one button per provider the build names (`oauthProviders`). It leaves
+//     for the provider with a PKCE challenge, and the code it comes back with is exchanged, and kept,
+//     the same way; a provider that sends the player back with an error says so in our words.
+//   - TWO-STEP SIGN-IN (R665): whatever the way in, a session for an account with an authenticator
+//     app is held here, in memory, until its code is typed (`mode: "mfa"`), and only the `aal2`
+//     session that comes back is kept; cancelling revokes the held one. A recovery link for such an
+//     account asks for the code too, before the server is asked whose it is (it refuses `aal1`).
+//
 // NO DEAD ENDS. `BackLink` is on the screen in every mode, the forgot form has its own way back,
 // and the resend and reset mailers answer the same neutral sentence whether or not the address has
 // an account (R192), then wait out the provider's per-address interval before offering again. That
@@ -105,16 +121,27 @@ import {
   AUTH_MESSAGES,
   AUTH_NOTICES,
   AuthError,
+  OAUTH_PROVIDER_LABELS,
   adoptSession,
+  assuranceLevel,
+  authConfig,
   exchangeAuthCode,
+  oauthProviders,
   refreshSession,
+  requestEmailSignIn,
   requestPasswordReset,
   resendConfirmation,
   revokeSignedOutSession,
+  secondFactorFor,
   signIn,
   signUp,
+  startOAuthSignIn,
+  verifyEmailCode,
+  verifySecondFactor,
   type CodeExchange,
+  type OAuthProvider,
 } from "../net/auth.ts";
+import { forgetVerifier, newestFlow } from "../auth/pkce.ts";
 import { loginModeOf, loginReasonOf, navigate, paths } from "../net/navigate.ts";
 import { takeReturnTo } from "../net/return-to.ts";
 import {
@@ -140,8 +167,19 @@ export { loginTestid };
 /** The line under "Create account" that links the privacy policy. */
 export const signUpPrivacyTestid = "login-sign-up-privacy";
 
-/** `claimReset`: a recovery link asked for elsewhere, waiting for the player to type their address. */
-type Mode = "signIn" | "signUp" | "forgot" | "claimReset";
+/**
+ * `claimReset`: a recovery link asked for elsewhere, waiting for the player to type their address.
+ * `emailCode`: the email sign-in link and code (R664). `mfa`: a session waiting for the code from
+ * the account's authenticator app (R665).
+ */
+type Mode = "signIn" | "signUp" | "forgot" | "claimReset" | "emailCode" | "mfa";
+
+/**
+ * R665: a session held for its second step, the factor whose code it needs, and what happens once it
+ * has it: `signIn` keeps it as this browser's session; `recovery` hands the raised session back to
+ * the recovery link being checked (the link's own state still owns it, so leaving revokes it).
+ */
+type SecondStep = { session: Session; factorId: string; then: "signIn" | "recovery" };
 
 /** An emailed link that carries a session, waiting for the server to say whose it is. */
 type SessionLink =
@@ -205,6 +243,12 @@ async function exchangeLinkOnce(state: LinkState, code: string): Promise<CodeExc
   return exchange;
 }
 
+/** R665: the factor the link's exchange said its session still needs, or null. */
+async function exchangedFactor(state: LinkState): Promise<string | null> {
+  const exchange = await state.exchange;
+  return exchange?.kind === "session" ? exchange.secondFactor : null;
+}
+
 /** The link's session is not kept: revoke it (see A LINK'S SESSION THAT IS NOT KEPT). */
 function revokeLink(state: LinkState): void {
   const session = state.session;
@@ -224,6 +268,8 @@ type Entry = {
   sessionExpired: boolean;
   email: string;
   linkError: boolean;
+  /** R666: an OAuth provider sent the player back with an error rather than a code. */
+  oauthFailed: boolean;
   link: PendingLink | null;
 };
 
@@ -280,6 +326,7 @@ function readEntry(): Entry {
     // reset may be another person's (see NOTHING IS PREFILLED FROM STORAGE).
     email: "",
     linkError: false,
+    oauthFailed: false,
     link: null,
   };
 
@@ -302,8 +349,15 @@ function readEntry(): Entry {
       entry.link = { kind: "code", code: link.code };
       break;
     case "error":
-      // `linkExpired` and `linkDenied` read the same sentence; the ways forward are the same too.
       entry.mode = "signIn";
+      if (newestFlow() === "oauth") {
+        // R666: the newest thing this browser asked for was an OAuth sign-in, and the provider sent
+        // it back with an error (cancelled, or refused): not an emailed link's failure.
+        forgetVerifier("oauth");
+        entry.oauthFailed = true;
+        break;
+      }
+      // `linkExpired` and `linkDenied` read the same sentence; the ways forward are the same too.
       entry.linkError = true;
       break;
   }
@@ -393,6 +447,18 @@ export default function LoginRoute(): ReactElement {
   const resetCooldown = useAddressCooldown(resetRunning);
   const resendWait = resendCooldown.secondsFor(email);
   const resetWait = resetCooldown.secondsFor(email);
+  /** R664: the code from a sign-in email, or (R665) from an authenticator app. */
+  const [code, setCode] = useState("");
+  const [codeError, setCodeError] = useState<string | null>(null);
+  /** R664: the address the sign-in code was mailed to; null until one was asked for. */
+  const [codeSentTo, setCodeSentTo] = useState<string | null>(null);
+  const codeCooldown = useAddressCooldown();
+  const codeWait = codeCooldown.secondsFor(email);
+  /** R665: the session waiting for its authenticator code (see `SecondStep`). */
+  const secondStep = useRef<SecondStep | null>(null);
+  /** R666: the OAuth providers this build offers. */
+  const [providers] = useState(oauthProviders);
+  const [oauthFailed, setOauthFailed] = useState(entry.oauthFailed);
   const noticeRef = useRef<HTMLParagraphElement>(null);
   /** Set when a notice should take focus once it renders (a sign-up that moved the form on). */
   const focusNotice = useRef(false);
@@ -411,9 +477,11 @@ export default function LoginRoute(): ReactElement {
     const state = linkState.current;
     return () => {
       mounted.current = false;
-      if (state.session === null) return;
       window.setTimeout(() => {
-        if (!mounted.current) revokeLink(state);
+        if (mounted.current) return;
+        revokeLink(state);
+        // R665: a sign-in left at its second step is not kept, so it is revoked too.
+        releaseSecondStep();
       }, 0);
     };
   }, []);
@@ -459,6 +527,19 @@ export default function LoginRoute(): ReactElement {
           setResendOffered(true);
           return;
         }
+        if (exchange.flow === "magiclink" || exchange.flow === "oauth") {
+          // R664, R666: a sign-in THIS browser asked for (only its verifier exchanges the code), so
+          // unlike R193's links it signs in, past its second step if the account has one (R665).
+          if (acted.current) {
+            revokeLink(state);
+            return;
+          }
+          const held = takeLink(state);
+          if (held === null) return;
+          setLinkOutcome("none");
+          signInWith(held, exchange.secondFactor);
+          return;
+        }
         link =
           exchange.flow === "recovery"
             ? { kind: "recovery", session: exchange.session }
@@ -475,6 +556,24 @@ export default function LoginRoute(): ReactElement {
       const session = state.session;
       // Let go meanwhile: the player moved on, and it has been revoked.
       if (session === null) return;
+      if (link.kind === "recovery" && renewal !== "spent" && assuranceLevel(session.accessToken) !== "aal2") {
+        // R665: the server refuses an `aal1` token for an account with an authenticator app, so its
+        // code comes first. A code's exchange said already; an implicit link's account is asked.
+        // An answer that could not be had asks for nothing: the server still has the last word.
+        let factor: string | null = null;
+        if (pending.kind === "code") factor = await exchangedFactor(state);
+        else if (authConfig() !== null) factor = await secondFactorFor(session).catch(() => null);
+        if (cancelled) return;
+        if (acted.current) {
+          revokeLink(state);
+          return;
+        }
+        if (factor !== null) {
+          secondStep.current = { session, factorId: factor, then: "recovery" };
+          enterSecondStep();
+          return;
+        }
+      }
       const check: LinkCheck = renewal === "spent" ? { kind: "refused" } : await checkLink(session.accessToken);
       if (cancelled) return;
       if (acted.current) {
@@ -553,6 +652,147 @@ export default function LoginRoute(): ReactElement {
     };
   }, [entry, checkRound]);
 
+  /** R665: a sign-in held for its second step and not finished is revoked. */
+  function releaseSecondStep(): void {
+    const step = secondStep.current;
+    secondStep.current = null;
+    // A recovery link's session belongs to the link's state, which revokes it itself.
+    if (step !== null && step.then === "signIn") void revokeSignedOutSession(step.session);
+  }
+
+  /** Keep a session as this browser's own and go on, as a password sign-in does. */
+  function keepSession(session: Session): void {
+    // Replaces (and revokes) any other session this browser held (R194).
+    adoptSession(session);
+    // Back to the gated screen that sent the player here, else `/decks`, the first gated
+    // screen; the one gate in `main.tsx` redirects from there, so this file needs no notion of
+    // account status. Always a fixed `paths` value, never a URL from the query (B35).
+    navigate(takeReturnTo() ?? paths.decks, { replace: true });
+  }
+
+  /** R665: the session is kept at once, or held for its authenticator code first. */
+  function signInWith(session: Session, secondFactor: string | null): void {
+    if (secondFactor === null) {
+      keepSession(session);
+      return;
+    }
+    secondStep.current = { session, factorId: secondFactor, then: "signIn" };
+    enterSecondStep();
+  }
+
+  function enterSecondStep(): void {
+    setMode("mfa");
+    setCode("");
+    setCodeError(null);
+    setError(null);
+    setNotice(null);
+    setLinkOutcome("none");
+  }
+
+  /** R665: the authenticator code for the held session. */
+  function submitSecondStep(): void {
+    const step = secondStep.current;
+    if (step === null) {
+      switchMode("signIn");
+      return;
+    }
+    const problem = requiredProblem(code, "code");
+    setCodeError(problem);
+    if (problem !== null) {
+      document.getElementById("login-code")?.focus();
+      return;
+    }
+    setBusy(true);
+    verifySecondFactor(step.session, step.factorId, code)
+      .then((raised) => {
+        if (secondStep.current !== step) return;
+        secondStep.current = null;
+        if (step.then === "signIn") {
+          keepSession(raised);
+          return;
+        }
+        // The recovery link goes on being checked, now with a token the server accepts.
+        linkState.current.session = raised;
+        setMode("signIn");
+        setLinkOutcome("checking");
+        setCheckRound((round) => round + 1);
+      })
+      .catch((cause: unknown) => {
+        setCodeError(messageOf(cause));
+        document.getElementById("login-code")?.focus();
+      })
+      .finally(() => {
+        setBusy(false);
+      });
+  }
+
+  /** R664: mail the sign-in link and code (again). */
+  function sendEmailCode(): void {
+    const problem = emailProblem(email);
+    setEmailError(problem);
+    if (problem !== null) {
+      document.getElementById("login-email")?.focus();
+      return;
+    }
+    const address = normalizeEmail(email);
+    if (codeCooldown.secondsFor(address) > 0) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    requestEmailSignIn(address)
+      .then(() => {
+        // One sentence whatever the provider answered (R192); `requestEmailSignIn` resolves on all.
+        setNotice(AUTH_NOTICES.emailCodeSent);
+        setCodeSentTo(address);
+        setCode("");
+        setCodeError(null);
+        codeCooldown.startUntil(address, deadlineAfter(AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, Date.now()));
+      })
+      .catch((cause: unknown) => {
+        setError(messageOf(cause));
+      })
+      .finally(() => {
+        setBusy(false);
+      });
+  }
+
+  /** R664: the typed sign-in code. */
+  function submitEmailCode(address: string): void {
+    const problem = requiredProblem(code, "code");
+    setCodeError(problem);
+    if (problem !== null) {
+      document.getElementById("login-code")?.focus();
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    verifyEmailCode(address, code)
+      .then((result) => {
+        signInWith(result.session, result.secondFactor);
+      })
+      .catch((cause: unknown) => {
+        setCodeError(messageOf(cause));
+        document.getElementById("login-code")?.focus();
+      })
+      .finally(() => {
+        setBusy(false);
+      });
+  }
+
+  /** R666: leave for an OAuth provider. A refusal before leaving is said here. */
+  function continueWith(provider: OAuthProvider): void {
+    if (busy) return;
+    acted.current = true;
+    releaseLink();
+    setBusy(true);
+    setError(null);
+    setOauthFailed(false);
+    startOAuthSignIn(provider).catch((cause: unknown) => {
+      setError(messageOf(cause));
+      setBusy(false);
+    });
+  }
+
   /** A link this screen still answers for is let go (revoked) once the player moves on from it. */
   function releaseLink(): void {
     claimAddress.current = null;
@@ -568,6 +808,11 @@ export default function LoginRoute(): ReactElement {
   function switchMode(next: Mode): void {
     acted.current = true;
     releaseLink();
+    releaseSecondStep();
+    setCode("");
+    setCodeError(null);
+    setCodeSentTo(null);
+    setOauthFailed(false);
     setMode(next);
     setError(null);
     setNotice(null);
@@ -637,6 +882,10 @@ export default function LoginRoute(): ReactElement {
       claimReset();
       return;
     }
+    if (mode === "mfa") {
+      submitSecondStep();
+      return;
+    }
     acted.current = true;
     releaseLink();
     if (linkOutcome === "checking") setLinkOutcome("none");
@@ -645,6 +894,11 @@ export default function LoginRoute(): ReactElement {
     const address = normalizeEmail(email);
     let nextEmailError: string | null;
     let nextPasswordError: string | null = null;
+    if (mode === "emailCode") {
+      if (codeSentTo !== null && sameAddress(address, codeSentTo)) submitEmailCode(codeSentTo);
+      else sendEmailCode();
+      return;
+    }
     if (mode === "signUp") {
       nextEmailError = emailProblem(email);
       nextPasswordError = newPasswordProblem(password);
@@ -714,12 +968,8 @@ export default function LoginRoute(): ReactElement {
     const justSignedUp = pendingEmail();
     signIn(address, password)
       .then((result) => {
-        // Replaces (and revokes) any other session this browser held (R194).
-        adoptSession(result.session);
-        // Back to the gated screen that sent the player here, else `/decks`, the first gated
-        // screen; the one gate in `main.tsx` redirects from there, so this file needs no notion of
-        // account status. Always a fixed `paths` value, never a URL from the query (B35).
-        navigate(takeReturnTo() ?? paths.decks, { replace: true });
+        // Kept at once, or (R665) once its authenticator code has been typed.
+        signInWith(result.session, result.secondFactor);
       })
       .catch((cause: unknown) => {
         setError(messageOf(cause));
@@ -741,8 +991,17 @@ export default function LoginRoute(): ReactElement {
   const forgot = mode === "forgot";
   const signingIn = mode === "signIn";
   const claiming = mode === "claimReset";
+  const emailCode = mode === "emailCode";
+  const secondFactor = mode === "mfa";
+  /** R664: the code was mailed to the address in the field, so the field to type it is shown. */
+  const codeAsked = emailCode && codeSentTo !== null && sameAddress(normalizeEmail(email), codeSentTo);
 
-  const title = signingUp ? "Create an account" : forgot || claiming ? "Reset your password" : "Sign in";
+  let title: string;
+  if (signingUp) title = "Create an account";
+  else if (forgot || claiming) title = "Reset your password";
+  else if (emailCode) title = "Sign in with an email code";
+  else if (secondFactor) title = "Two-step sign-in";
+  else title = "Sign in";
 
   let submitLabel: string;
   if (signingUp) {
@@ -754,6 +1013,11 @@ export default function LoginRoute(): ReactElement {
     submitLabel = busy ? "Sending…" : "Send reset link";
   } else if (claiming) {
     submitLabel = "Continue";
+  } else if (emailCode) {
+    if (codeAsked) submitLabel = busy ? "Signing in…" : "Sign in";
+    else submitLabel = busy ? "Sending…" : "Email me a sign-in code";
+  } else if (secondFactor) {
+    submitLabel = busy ? "Checking…" : "Verify";
   } else {
     submitLabel = busy ? "Signing in…" : "Sign in";
   }
@@ -806,6 +1070,18 @@ export default function LoginRoute(): ReactElement {
             <h1>JackiOh</h1>
           </div>
           <h2>{title}</h2>
+
+          {secondFactor ? (
+            <p className="notice" data-testid={loginTestid.notice} role="status">
+              {AUTH_NOTICES.mfaRequired}
+            </p>
+          ) : null}
+
+          {(signingIn || signingUp) && oauthFailed ? (
+            <p className="notice" data-testid={loginTestid.oauthError} role="alert">
+              {AUTH_MESSAGES.oauthFailed}
+            </p>
+          ) : null}
 
           {signingIn && sessionExpired ? (
             <p className="notice" data-testid={loginTestid.sessionExpired} role="status">
@@ -984,24 +1260,60 @@ export default function LoginRoute(): ReactElement {
             // Our own messages, next to the field, rather than the browser's bubble.
             noValidate
           >
-            <label htmlFor="login-email">{claiming ? "Your account's email" : "Email"}</label>
-            <input
-              id="login-email"
-              data-testid={loginTestid.email}
-              type="email"
-              autoComplete="username"
-              value={email}
-              aria-invalid={emailError !== null}
-              aria-describedby={emailError !== null ? "login-email-error" : undefined}
-              onChange={(event) => {
-                setEmail(event.target.value);
-                setEmailError(null);
-              }}
-            />
-            {emailError !== null ? (
-              <p id="login-email-error" className="auth-field-error" data-testid={loginTestid.emailError}>
-                {emailError}
-              </p>
+            {secondFactor ? null : (
+              <>
+                <label htmlFor="login-email">{claiming ? "Your account's email" : "Email"}</label>
+                <input
+                  id="login-email"
+                  data-testid={loginTestid.email}
+                  type="email"
+                  autoComplete="username"
+                  value={email}
+                  aria-invalid={emailError !== null}
+                  aria-describedby={emailError !== null ? "login-email-error" : undefined}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    setEmailError(null);
+                  }}
+                />
+                {emailError !== null ? (
+                  <p id="login-email-error" className="auth-field-error" data-testid={loginTestid.emailError}>
+                    {emailError}
+                  </p>
+                ) : null}
+              </>
+            )}
+
+            {codeAsked || secondFactor ? (
+              <>
+                <label htmlFor="login-code">
+                  {secondFactor ? "Code from your authenticator app" : "Code from the email"}
+                </label>
+                <input
+                  id="login-code"
+                  data-testid={loginTestid.code}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  // Focused when the step opens: it is the one thing to do there.
+                  autoFocus={secondFactor}
+                  value={code}
+                  aria-invalid={codeError !== null}
+                  aria-describedby={codeError !== null ? "login-code-error" : undefined}
+                  onChange={(event) => {
+                    setCode(event.target.value);
+                    setCodeError(null);
+                  }}
+                />
+                {codeError !== null ? (
+                  <p id="login-code-error" className="auth-field-error" data-testid={loginTestid.codeError}>
+                    {codeError}
+                  </p>
+                ) : null}
+              </>
             ) : null}
 
             {signingIn || signingUp ? (
@@ -1057,10 +1369,29 @@ export default function LoginRoute(): ReactElement {
             <button
               type="submit"
               data-testid={loginTestid.submit}
-              disabled={busy || (forgot && resetWait > 0)}
+              disabled={busy || (forgot && resetWait > 0) || (emailCode && !codeAsked && codeWait > 0)}
             >
               {submitLabel}
             </button>
+            {codeAsked ? (
+              <div className="auth-resend">
+                <button
+                  type="button"
+                  className="link-button"
+                  data-testid={loginTestid.codeSend}
+                  disabled={busy || codeWait > 0}
+                  onClick={sendEmailCode}
+                >
+                  Send a new code
+                </button>
+              </div>
+            ) : null}
+            {emailCode && codeWait > 0 ? (
+              // Only the wait: whether a mail went out is the neutral notice's to say (R192).
+              <p className="auth-hint" data-testid={loginTestid.codeCooldown} data-seconds={codeWait}>
+                You can ask for another in {codeWait} s.
+              </p>
+            ) : null}
             {signingUp ? (
               <p className="auth-hint" data-testid={signUpPrivacyTestid}>
                 By creating an account you agree to the{" "}
@@ -1082,7 +1413,43 @@ export default function LoginRoute(): ReactElement {
             ) : null}
           </form>
 
+          {(signingIn || signingUp) && providers.length > 0 ? (
+            // R666: only the providers this build names, so none appears before it is set up.
+            <div className="auth-oauth" role="group" aria-label="Other ways to sign in">
+              <p className="auth-hint">Or continue with</p>
+              <div className="auth-actions">
+                {providers.map((provider) => (
+                  <button
+                    key={provider}
+                    type="button"
+                    className="button-secondary"
+                    data-testid={loginTestid.oauth}
+                    data-provider={provider}
+                    disabled={busy}
+                    onClick={() => {
+                      continueWith(provider);
+                    }}
+                  >
+                    {OAUTH_PROVIDER_LABELS[provider]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="auth-links">
+            {signingIn ? (
+              <button
+                type="button"
+                className="link-button"
+                data-testid={loginTestid.emailCodeStart}
+                onClick={() => {
+                  switchMode("emailCode");
+                }}
+              >
+                Sign in with an email code instead
+              </button>
+            ) : null}
             {(signingIn &&
               !linkError &&
               linkOutcome !== "recoveryRefused" &&
@@ -1091,16 +1458,16 @@ export default function LoginRoute(): ReactElement {
             claiming
               ? forgotButton
               : null}
-            {forgot || claiming ? (
+            {forgot || claiming || emailCode || secondFactor ? (
               <button
                 type="button"
                 className="link-button"
-                data-testid={loginTestid.backToSignIn}
+                data-testid={secondFactor ? loginTestid.mfaCancel : loginTestid.backToSignIn}
                 onClick={() => {
                   switchMode("signIn");
                 }}
               >
-                Back to sign in
+                {secondFactor ? "Cancel and sign in again" : emailCode ? "Sign in with a password" : "Back to sign in"}
               </button>
             ) : (
               <button
