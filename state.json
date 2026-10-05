@@ -2070,22 +2070,12 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [
-          "cognition"
-        ],
+        "approvals": [],
         "builder": "cognition",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "cognition",
-            "run": "37260259391",
-            "tier": "weak"
-          }
-        ],
-        "sha": "b7ea27fe12b2d76ea0591579ec00729353116e22",
-        "tiers": {
-          "cognition": "weak"
-        }
+        "reviews": [],
+        "sha": "2b82806f62209209b1d575cbcb9b5ff7517d6024",
+        "tiers": {}
       }
     },
     "218": {
