@@ -3359,15 +3359,19 @@
         {
           "at": "2026-10-05T06:11:14Z",
           "minutes": 34.5
+        },
+        {
+          "at": "2026-10-05T10:02:51Z",
+          "minutes": 15.5
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-05T09:40:00Z",
-          "utilization": 0.99
+          "resets_at": "2026-10-05T14:40:00Z",
+          "utilization": 0.48
         },
-        "observed_at": "2026-10-05T06:11:14Z",
-        "status": "allowed_warning"
+        "observed_at": "2026-10-05T10:02:51Z",
+        "status": "allowed"
       }
     },
     "claude-2": {
