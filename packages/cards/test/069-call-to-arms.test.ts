@@ -118,7 +118,7 @@ describe("#69 Call to Arms", () => {
     expect(libraryIds(s)).toEqual([TIMMY, POINTMASTER]);
   });
 
-  it("R64 a Locked unit zone is skipped, and a full-but-locked row stops the recruiting", () => {
+  it("R688 a Locked unit zone takes a recruit once no unlocked zone is open", () => {
     const s = board({ p1: { hand: [CALL], library: [TIMMY, VANILLA, DEFENDER] } });
     // §3.2 Lock is a zone flag; the harness exposes no setter (reported as a harness gap).
     s.state.players.p1.locks.units[0] = true;
@@ -127,9 +127,10 @@ describe("#69 Call to Arms", () => {
     s.state.players.p1.locks.units[4] = true;
     s.play(CALL);
 
-    // Only lane 3 is open, so one recruit lands and the other two scans find no zone.
-    expect(unitIds(s)).toEqual([null, null, TIMMY, null, null]);
-    expect(libraryIds(s)).toEqual([VANILLA, DEFENDER]);
+    // The first scan takes the one open unlocked zone (lane 3); with none left, the next scans
+    // take the leftmost empty Locked lanes (R688 prefers unlocked, then fills Locked).
+    expect(unitIds(s)).toEqual([VANILLA, DEFENDER, TIMMY, null, null]);
+    expect(libraryIds(s)).toEqual([]);
   });
 
   it("R1 a recruited unit fires no Cry: Me and Mr Token brings no Rush Token", () => {

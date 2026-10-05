@@ -2948,11 +2948,11 @@
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Heal {heal}."
+      "text": "Heal a target {heal}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Heal {heal}."
+      "text": "Heal a target {heal}."
     }
   },
   "classic-004": {
@@ -9469,11 +9469,11 @@
     "loc": 13,
     "base": {
       "keywords": [],
-      "text": "End of turn: Add a random AI generated card to your hand. It costs (0)."
+      "text": "End of turn: Add a random AI Generated card to your hand. It costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Add a random Radiant AI generated card to your hand. It costs (0)."
+      "text": "End of turn: Add a random Radiant AI Generated card to your hand. It costs (0)."
     }
   },
   "classicplus-t-ai-01": {

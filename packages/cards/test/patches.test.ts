@@ -243,7 +243,7 @@ describe("R388 card patch history (B4.2)", () => {
     );
     expect(changes.filter((change) => change.kind !== "changed")).toEqual([]);
     expect(changes.map((change) => change.id)).toEqual(claimed);
-    expect(claimed).toHaveLength(63);
+    expect(claimed).toHaveLength(62);
   });
 
   it("R388 records patch v0.2.12: Animated removed from eighteen Field Spells (issue #218)", () => {

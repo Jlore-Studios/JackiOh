@@ -418,7 +418,6 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
       "core-031": ["base", "radiant"],
       "core-032": ["base", "radiant"],
       "core-052": ["radiant"],
-      "classic-003": ["base", "radiant"],
       "classic-004": ["tags", "loc", "base"],
       "classic-008": ["loc"],
       "classic-010": ["cost"],
