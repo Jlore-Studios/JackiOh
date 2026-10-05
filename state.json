@@ -2447,9 +2447,7 @@
       "run_id": "37265479542",
       "started_at": "2026-10-05T04:55:06Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5988325169"
-      ]
+      "taken_asks": []
     },
     "294": {
       "failures": 0,
