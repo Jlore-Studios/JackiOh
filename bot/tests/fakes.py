@@ -224,6 +224,12 @@ class FakeGitHub:
             if login not in current:
                 self.threads[number]["assignees"].append({"login": login})
 
+    def remove_assignees(self, number: int, logins: Any) -> None:
+        gone = {str(login).lower() for login in logins}
+        self.threads[number]["assignees"] = [
+            a for a in self.threads[number].get("assignees", [])
+            if str(a.get("login")).lower() not in gone]
+
     def remove_label(self, number: int, name: str) -> None:
         self.threads[number]["labels"] = [l for l in self.threads[number]["labels"] if l["name"] != name]
 
@@ -334,8 +340,15 @@ class FakeGitHub:
         self.branches.add(branch)
         self.files[(branch, path)] = (text, f"sha{next(self._shas)}")
 
+    def create_branch(self, branch: str, sha: str) -> None:
+        if branch in self.branches:
+            raise GitHubError(f"{branch} exists", 422)
+        self.branches.add(branch)
+        self.created_branches = [*getattr(self, "created_branches", []), (branch, sha)]
+
     def delete_branch(self, branch: str) -> None:
         self.branches.discard(branch)
+        self.deleted_branches = [*getattr(self, "deleted_branches", []), branch]
 
     # ------------------------------------------------------------------ actions
 

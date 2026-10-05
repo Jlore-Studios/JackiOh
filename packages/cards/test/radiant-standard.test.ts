@@ -15,6 +15,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { fillParams, type CardDef } from "@jackioh/shared";
+import { GLITCH_DEF_ID } from "@jackioh/engine";
 import { CATALOG } from "../src/catalog-data";
 
 const ENTRIES: readonly CardDef[] = Object.values(CATALOG);
@@ -84,6 +85,8 @@ describe("R276 every card has a Radiant face (SPEC §5.2)", () => {
     const unchanged = ENTRIES.filter(
       (card) =>
         card.radiantFallback !== true &&
+        // R674: Glitch is blank on both faces, the one card a Make Radiant leaves as it was.
+        card.id !== GLITCH_DEF_ID &&
         fillParams(card, "radiant") === fillParams(card, "base") &&
         JSON.stringify(card.radiant.xStats) === JSON.stringify(card.base.xStats) &&
         card.radiant.attack === card.base.attack &&

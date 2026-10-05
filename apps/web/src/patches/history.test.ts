@@ -2,6 +2,8 @@
 // first. Order always comes from patches.json (R105 as B4.2 rewrites it): the fixture versions sort
 // the wrong way as strings.
 
+import type { CardDef } from "@jackioh/shared";
+import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 import { describe, expect, it } from "vitest";
 
 import { FIXTURE_INDEX, FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V1, V2, V3, fixtureSource } from "./fixtures.ts";
@@ -15,6 +17,7 @@ import {
   versionBefore,
   versionsForCard,
 } from "./history.ts";
+import { countsLine } from "./PatchNotes.tsx";
 import { realPatchSource, type Patch, type Snapshot } from "./source.ts";
 
 function patch(patches: readonly Patch[], version: string): Patch {
@@ -108,6 +111,35 @@ describe("R507 a patch's cards", () => {
       ["Core", 100],
       ["Core tokens", 9],
     ]);
+  });
+});
+
+describe("R674 Glitch in the patch notes", () => {
+  it("R674 a patch that records Glitch neither lists nor counts it", () => {
+    const glitch: CardDef = {
+      id: GLITCH_DEF_ID,
+      index: "T-glitch",
+      name: "Glitch",
+      set: "Classic",
+      type: "Spell",
+      tags: ["Token"],
+      rarity: "Token",
+      token: true,
+      cost: 0,
+      base: { keywords: [], text: "" },
+      radiant: { keywords: [], text: "" },
+    };
+    const record: Patch = {
+      version: "v9.9.9",
+      date: "2026-10-05",
+      title: "Glitch",
+      source: "#170",
+      notes: "",
+      changes: [{ kind: "added", id: GLITCH_DEF_ID, name: "Glitch" }],
+    };
+    const cards = patchCards(record, { [GLITCH_DEF_ID]: glitch }, {});
+    expect(cards.added).toEqual([]);
+    expect(countsLine(record)).toBe("");
   });
 });
 

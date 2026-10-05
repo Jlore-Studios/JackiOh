@@ -184,6 +184,14 @@ box in the status issue's mermaid.
   Claude accounts run on GitHub's runners, so `max_parallel` is 10: six here and up to four
   Claude jobs there. The Free plan's largest machines are the 2-vCPU `m7i-flex.large` and
   `c7i-flex.large`.
+- **Memory** (#317): EC2 records only the CPU (hourly averages above 60% in 27 of the 48 hours
+  to 2026-10-05, peaks of 100%), so `setup.sh` installs the CloudWatch agent, which sends
+  `mem_used_percent`, `mem_available` and `swap_used_percent` every 60 s to the
+  `JackiOh/NightVM` namespace. It needs the instance role to be allowed to send them, once:
+  `aws iam attach-role-policy --role-name <the night box's role> --policy-arn
+  arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy`, then run `setup.sh` again (it changes
+  nothing else). After a busy day, read memory beside CPU and decide `machine_parallel`: fewer
+  lanes if the box swaps, the same if it does not. A bigger box (4 vCPUs) needs the paid plan.
 - **Cost:** the machine is billed by the hour while it runs (about $0.096 an hour, so about $70 a
   month if it never stopped) plus its disk (about $4.80 a month). A stopped machine costs only
   the disk. The starter's Lambda calls and its schedule fit in the free tier.

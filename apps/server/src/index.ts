@@ -36,7 +36,7 @@ import { systemTimers } from "./api/ports";
 import { createQueueRoutes, startMatchmaker } from "./api/queue";
 import { createRankedRoutes, loadPatchVersion, openSeason } from "./api/ranked";
 import { createRematchRoutes } from "./api/rematch";
-import { createRecordResult, reapStuckMatches } from "./api/results";
+import { createRecordResult, createVoidMatch, reapStuckMatches } from "./api/results";
 import { purgeExpired } from "./api/retention";
 import { createSeriesRoutes, startSeriesSweeper } from "./api/series";
 import { createSettingsRoutes } from "./api/settings";
@@ -129,7 +129,7 @@ const E2E_ENV_DEFAULTS: Readonly<Record<string, string>> = {
   DATABASE_URL: "memory://e2e-fixture-store",
   CODE_PEPPER: "e2e-fixture-code-pepper-not-a-secret-abcdefgh",
   PUBLIC_ORIGINS: VITE_DEV_ORIGINS.join(","),
-  CATALOG_VERSION: "v0.2.14b",
+  CATALOG_VERSION: "v0.2.16",
 };
 
 function e2eRequested(source: Record<string, string | undefined>): boolean {
@@ -243,6 +243,8 @@ export async function createRuntime(
     engine,
     createClock: createMatchClock,
     recordResult: createRecordResult(deps),
+    // R679: a Glitch's void outcome, which records nothing.
+    voidMatch: createVoidMatch(deps),
   });
   deps.matches = overrides.matches ?? registry;
   // R143: the one thing a handler reads this for is the optional seed on `POST /api/queue`.

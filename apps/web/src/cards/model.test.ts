@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 import { fillParams, type CardDef, type CardFace } from "@jackioh/shared";
 
 import { fusedDef } from "../test/fixtures.ts";
@@ -318,7 +319,8 @@ describe("B8: faceModel cost", () => {
 
   it("B8 whenever there is a live cost the gem shows it, for every catalog card that is not X", () => {
     for (const card of DEFS) {
-      if (card.cost === "X") continue;
+      // Glitch's gem shows glyphs whatever it costs (glitch.test.tsx).
+      if (card.cost === "X" || card.id === GLITCH_DEF_ID) continue;
       for (const liveCost of [0, 1, 4, 7]) {
         expect(face(card.id, false, { liveCost }).cost.text, `${card.id} at ${String(liveCost)}`).toBe(String(liveCost));
       }

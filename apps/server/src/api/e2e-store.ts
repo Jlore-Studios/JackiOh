@@ -61,6 +61,7 @@ import {
   createMemoryRankedStore,
   createMemoryTutorialStore,
   emptyRankedTables,
+  forgetVoidedRows,
   matchModeIn,
   purgeExpiredRows,
   removeProfileRows,
@@ -638,6 +639,10 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
     modeOf: async (matchId) => matchModeIn(tables, matchId),
     // No `open` rows here: a reserved match id is only an id until the registry creates it (R263).
     discardOpen: async (_matchId) => {
+    },
+    // R679: the voided match goes as if it never existed.
+    forgetVoided: async (matchId) => {
+      forgetVoidedRows(tables, matchId);
     },
   };
 

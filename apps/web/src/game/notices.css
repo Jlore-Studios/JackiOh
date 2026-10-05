@@ -1,21 +1,13 @@
-/* The table talk around the board: the draw offer's notices (DrawOffer.tsx) and "Concede this
-   game?" (ConfirmConcede.tsx). Both float over the board rather than taking height from it (the
-   game screen is budgeted to the viewport, board.css), and both are drawn in the design tokens, so
-   they read on any theme those tokens describe. */
+/* The table talk around the board: the draw offer's notices (DrawOffer.tsx) are inset into the
+   physical control rail; "Concede this game?" (ConfirmConcede.tsx) remains an interaction modal.
+   Both use the design tokens, so they read on any theme those tokens describe. */
 
 /* ---- the draw offer ----------------------------------------------------------------------- */
 
-/* The live region: always in the tree, sized by the notice in it, blind to the pointer where it is
-   empty. Across the top of the screen under the refusal toast (`.game-error`, z 45), over the
-   board and its effects layer, clear of the safe area. */
-.game > .draw-notices {
-  position: fixed;
-  top: calc(max(12px, env(safe-area-inset-top)) + 44px);
-  left: 50%;
-  z-index: 44;
-  width: max-content;
-  max-width: calc(100vw - 32px);
-  translate: -50% 0;
+/* The live region is inset into the physical control rail. It remains transparent except for its
+   own buttons, so it never intercepts a card or board control gesture. */
+.board-notices > .draw-notices {
+  width: 100%;
   pointer-events: none;
 }
 
@@ -29,8 +21,7 @@
   font-size: 13px;
   font-weight: 650;
   text-align: center;
-  /* The notice floats over the top of the board for the rest of a turn, so it takes no taps of its
-     own: only its Accept and Decline buttons do (below). */
+  /* Only the accept/decline buttons take a pointer; the rail around them remains transparent. */
   pointer-events: none;
 }
 
@@ -123,10 +114,10 @@
   }
 }
 
-/* A phone: the notice may take the width it needs, and the question sits above its answers. */
+/* A phone: the rail's own width contains the notice, and the question sits above its answers. */
 @media (max-width: 600px) {
-  .game > .draw-notices {
-    width: calc(100vw - 24px);
+  .board-notices > .draw-notices {
+    width: 100%;
     max-width: none;
   }
 

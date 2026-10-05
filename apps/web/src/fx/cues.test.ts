@@ -13,6 +13,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ANIMATIONS, MIN_ENTRY_MS, planEntries, type AnimationEntry } from "../game/animations.ts";
 import { testid, type Side } from "../game/contract.ts";
+import { damageFeel } from "../game/damageFeel.ts";
 import { baseView, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
 import {
   FX_ARROWS_TAIL_MS,
@@ -41,11 +42,12 @@ import {
   FX_RAYS_TAIL_MS,
   FX_RESULT_MS,
   FX_RING_MS,
+  FX_SHAKE_MAX_PX,
   FX_SLAM_AT,
   FX_SPLAT_HOLD_MS,
   FX_TRAP_BURST_AT,
 } from "./constants.ts";
-import { delayCues, planFx, planHandover, planLethal, planResult, sourceAnchor } from "./cues.ts";
+import { delayCues, planFx, planHandover, planLethal, planResult, sourceAnchor, traumaForShakePx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
 import type { FxAnchor, FxCardFacts, FxCue, FxPlanEnv, FxPoint } from "./types.ts";
 
@@ -108,7 +110,7 @@ function tid(value: string, point?: FxPoint): FxAnchor {
 
 const FOOT: FxPoint = { x: 0.5, y: 1 };
 const CENTER: FxAnchor = { kind: "viewport", at: { x: FX_CENTER.x, y: FX_CENTER.y } };
-const cardT = (id: string): FxAnchor => tid(testid.card(id));
+const cardT = (id: string, point?: FxPoint): FxAnchor => tid(testid.card(id), point);
 const handCardT = (id: string): FxAnchor => tid(testid.handCard(id));
 const heroT = (side: Side): FxAnchor => tid(testid.hero(side));
 const zoneT = (side: Side, row: "units" | "backrow", lane: number): FxAnchor => tid(testid.zone(side, row, lane));
@@ -450,10 +452,9 @@ describe("B9 intensity", () => {
     expect(checked, "some samples must shake").toBeGreaterThan(3);
   });
 
-  it("B9 a hero hit at high intensity is capped at trauma 1", () => {
+  it("B9 damage-tier board shake is separate from the effects director's intensity shake", () => {
     const cues = plan([dmg(MINE, "hero-p2", 6, true)], 300, { env: envOf({ intensity: FX_INTENSITY_SCALE.high }) });
-    // 0.6 × 1.25 = 0.75 at normal; × 1.6 = 1.2, capped.
-    expect(shakesOf(cues)).toEqual([1]);
+    expect(shakesOf(cues)).toEqual([]);
   });
 
   it("B9 intensity 0 plans nothing for any sample", () => {
@@ -481,7 +482,6 @@ describe("B10 spell projectiles", () => {
         projectile("arcane", cardT(MINE), cardT(ENEMY), flight),
         burst("spark", cardT(ENEMY), "point", flight),
         splat("damage", 4, cardT(ENEMY), flight, D),
-        shake(0.6, flight),
       ]);
     });
   });
@@ -490,7 +490,7 @@ describe("B10 spell projectiles", () => {
     forDs("damage", (D) => {
       const cues = plan([dmg(MINE, ENEMY, 4, true)], D);
       expect(cues.some((c) => c.kind === "projectile")).toBe(false);
-      expectCues(cues, [burst("spark", cardT(ENEMY), "point", 0), splat("damage", 4, cardT(ENEMY), 0, D), shake(0.6, 0)]);
+      expectCues(cues, [burst("spark", cardT(ENEMY), "point", 0), splat("damage", 4, cardT(ENEMY), 0, D)]);
     });
   });
 
@@ -498,7 +498,6 @@ describe("B10 spell projectiles", () => {
     expectCues(plan([dmg(ENEMY, ENEMY, 4, false)], 300), [
       burst("spark", cardT(ENEMY), "point", 0),
       splat("damage", 4, cardT(ENEMY), 0, 300),
-      shake(0.6, 0),
     ]);
   });
 
@@ -507,7 +506,6 @@ describe("B10 spell projectiles", () => {
       expectCues(plan([dmg(source, ENEMY, 4, false)], 300), [
         burst("spark", cardT(ENEMY), "point", 0),
         splat("damage", 4, cardT(ENEMY), 0, 300),
-        shake(0.6, 0),
       ]);
     }
   });
@@ -532,7 +530,7 @@ describe("B10 spell projectiles", () => {
   });
 });
 
-describe("B11 damage splats and shake", () => {
+describe("B11 damage splats and tier particles", () => {
   it("B11 damage plans a damage splat with the event's amount and a spark burst at the target", () => {
     for (const amount of [1, 3, 6, 20]) {
       for (const [targetId, anchor] of [
@@ -548,28 +546,29 @@ describe("B11 damage splats and shake", () => {
     }
   });
 
-  it("B11 damage below 3 shakes nothing", () => {
-    for (const amount of [1, 2]) {
+  it("B11 B35 a Tiny or Normal hit leaves the board still; from Moderate up it shakes by DAMAGE_FEEL's shakePx", () => {
+    for (const amount of [1, 2, 3, 6]) {
       expect(shakesOf(plan([dmg(MINE, ENEMY, amount, true)], 300)), `unit ${amount}`).toEqual([]);
       expect(shakesOf(plan([dmg(MINE, "hero-p2", amount, true)], 300)), `hero ${amount}`).toEqual([]);
     }
+    for (const amount of [7, 10, 20]) {
+      const want = traumaForShakePx(damageFeel(amount).shakePx);
+      expect(want, `amount ${amount} has a shake`).toBeGreaterThan(0);
+      expect(shakesOf(plan([dmg(MINE, ENEMY, amount, true)], 300)), `unit ${amount}`).toEqual([want]);
+      expect(shakesOf(plan([dmg(MINE, "hero-p2", amount, true)], 300)), `hero ${amount}`).toEqual([want]);
+    }
+    expect(traumaForShakePx(FX_SHAKE_MAX_PX), "the largest shake is full trauma").toBe(1);
   });
 
-  it("B11 on a unit, trauma is 0.15 per damage from 3 up, capped at 0.8", () => {
-    const trauma = (amount: number) => shakesOf(plan([dmg(MINE, ENEMY, amount, true)], 300)).map(round6);
-    expect(trauma(3)).toEqual([0.45]);
-    expect(trauma(4)).toEqual([0.6]);
-    expect(trauma(5)).toEqual([0.75]);
-    expect(trauma(6)).toEqual([0.8]);
-    expect(trauma(20)).toEqual([0.8]);
-  });
-
-  it("B11 on a hero, trauma is multiplied by 1.25", () => {
-    const trauma = (amount: number) => shakesOf(plan([dmg(MINE, "hero-p2", amount, true)], 300)).map(round6);
-    expect(trauma(3)).toEqual([0.5625]);
-    expect(trauma(4)).toEqual([0.75]);
-    expect(trauma(20)).toEqual([1]);
-    expect(shakesOf(plan([dmg(MINE, "hero-p1", 4, true)], 300)).map(round6)).toEqual([0.75]);
+  it("B11 Moderate adds dust, Big makes a heavier spark burst, and GIGA adds a board-wide shockwave", () => {
+    const moderate = plan([dmg(MINE, ENEMY, 8, true)], 300);
+    expect(moderate.some((cue) => cue.kind === "burst" && cue.preset === "dust")).toBe(true);
+    const big = plan([dmg(MINE, ENEMY, 15, true)], 300);
+    const bigSpark = big.find((cue) => cue.kind === "burst" && cue.preset === "spark");
+    const normalSpark = plan([dmg(MINE, ENEMY, 5, true)], 300).find((cue) => cue.kind === "burst" && cue.preset === "spark");
+    expect(bigSpark?.kind === "burst" && normalSpark?.kind === "burst" ? bigSpark.count > normalSpark.count : false).toBe(true);
+    const giga = plan([dmg(MINE, ENEMY, 25, true)], 300);
+    expect(giga.some((cue) => cue.kind === "ring" && cue.at.kind === "viewport")).toBe(true);
   });
 
   it("B11 zero damage plans no splat and no shake", () => {
@@ -595,7 +594,6 @@ describe("B12 poison", () => {
         burst("spark", cardT(ENEMY), "point", flight),
         splat("damage", 3, cardT(ENEMY), flight, D),
         burst("poison", cardT(ENEMY), "area", flight),
-        shake(0.45, flight),
       ]);
     });
   });
@@ -605,7 +603,8 @@ describe("B12 poison", () => {
       burst("spark", cardT(ENEMY), "point", 0),
       splat("damage", 7, cardT(ENEMY), 0, 300),
       burst("poison", cardT(ENEMY), "area", 0),
-      shake(0.8, 0),
+      burst("dust", cardT(ENEMY, FOOT), "area", 0),
+      shake(traumaForShakePx(damageFeel(7).shakePx), 0),
     ]);
   });
 
@@ -680,14 +679,12 @@ describe("B13 sourceAnchor and memory", () => {
         projectile("arcane", zoneT("you", "backrow", 3), heroT("opponent"), flight),
         burst("spark", heroT("opponent"), "point", flight),
         splat("damage", 5, heroT("opponent"), flight, 300),
-        shake(0.75 * 1.25, flight),
       ],
     );
     expectCues(plan([dmg("s42", ENEMY_2, 4, false)], 300, { prime: [played("p2", "s42", "core-070")] }), [
       projectile("fire", heroT("opponent"), cardT(ENEMY_2), flight),
       burst("spark", cardT(ENEMY_2), "point", flight),
       splat("damage", 4, cardT(ENEMY_2), flight, 300),
-      shake(0.6, flight),
     ]);
   });
 
@@ -1795,7 +1792,6 @@ describe("R200 planLethal: the killing blow a drained game over never drew", () 
     expectCues(lethal.cues, [
       burst("spark", heroT("opponent"), "point", 0),
       splat("damage", 5, heroT("opponent"), 0, 300),
-      shake(0.75 * 1.25, 0),
     ]);
   });
 

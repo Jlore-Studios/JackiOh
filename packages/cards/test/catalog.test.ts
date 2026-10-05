@@ -29,7 +29,7 @@
 //                    being R349's fallback.
 //   rarity         — SPEC §8's rarity paragraph for Core (35/37/16/7/5) and B2.5's table for
 //                    Classic (42/25/13/9/1) and Classic+ (13/25/25/13/2); B2.1's totals, 268 cards
-//                    and 49 tokens in 317 entries.
+//                    and 50 tokens in 318 entries (Glitch, issue #170, the fiftieth).
 //   tag vocabulary — SPEC §5/§6 tags as BUILD M4-T1 lists them, R278's Jlockeed, B2.4's Book,
 //                    Pancake and AI, and the mechanics patch's Plague (every card that uses
 //                    Plague Tokens).
@@ -40,6 +40,7 @@
 
 import { describe, expect, it } from "vitest";
 import { fillParams, type CardCost, type CardDef, type CardFace, type CardType, type Rarity, type SetName, type Tag } from "@jackioh/shared";
+import { GLITCH_DEF_ID } from "@jackioh/engine";
 import { CATALOG } from "../src/catalog-data";
 
 /** `[attack, health]`, or `null` for a §8 Stats cell that is empty (a card with no stats). */
@@ -261,6 +262,8 @@ const CLASSIC: readonly SpecRow[] = [
   { index: "88", name: "Siphon Squad", cost: 2, type: "Field Trap", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "89", name: "Paul Allen's Ghost", cost: 2, type: "Unit", tags: [], rarity: "Rare", base: [5, 6], radiant: [10, 12] },
   { index: "90", name: "In Too Deep", cost: 1, type: "Field Spell", tags: ["Quickdraw"], rarity: "Mythic", base: [null, null], radiant: [null, null] },
+  // Issue #170, R674: Glitch, the hidden token R673's roll makes, blank on both faces.
+  { index: "T-glitch", name: "Glitch", cost: 0, type: "Spell", tags: ["Token"], rarity: "Token", base: [null, null], radiant: [null, null] },
 ];
 
 const CLASSIC_PLUS: readonly SpecRow[] = [
@@ -416,7 +419,7 @@ const RARITY_COUNTS: Readonly<Record<string, Readonly<Record<string, number>>>> 
 /** B2.1: cards and tokens per set. */
 const SET_SIZES: Readonly<Record<string, { cards: number; tokens: number }>> = {
   Core: { cards: 100, tokens: 11 },
-  Classic: { cards: 90, tokens: 0 },
+  Classic: { cards: 90, tokens: 1 },
   "Classic+": { cards: 78, tokens: 38 },
 };
 
@@ -702,8 +705,10 @@ describe("every entry has a radiant face of its own (SPEC §5.2, R276)", () => {
     // {heal}." prints 9 on one face and 18 on the other.
     const printed = (entry: CardDef, face: "base" | "radiant"): string =>
       JSON.stringify({ ...entry[face], text: fillParams(entry, face) });
+    // R674: Glitch is blank on both faces, the one entry exempt; its client face corrupts whatever it shows.
     const same = ENTRIES.filter(
-      (entry) => entry.radiantFallback !== true && printed(entry, "radiant") === printed(entry, "base"),
+      (entry) =>
+        entry.radiantFallback !== true && entry.id !== GLITCH_DEF_ID && printed(entry, "radiant") === printed(entry, "base"),
     ).map((entry) => `${entry.id} (#${entry.index}) radiant is a copy of base`);
     expect(same, "entries whose radiant face is identical to base").toEqual([]);
     expect(ENTRIES.filter((entry) => entry.radiantFallback === true).map((entry) => entry.id)).toEqual(["core-t-ghoul"]);

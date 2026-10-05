@@ -22,7 +22,7 @@
 
 import type { Action, ActionBody, Aim, AimEnd, PlayerId, PlayerView } from "@jackioh/shared";
 import { aimKey, emoteGate, portraitOrDefault } from "@jackioh/shared";
-import { AIM_RELAY_INTERVAL_MS, MATCH_ACTIONS_PER_SECOND } from "../config";
+import { AIM_RELAY_INTERVAL_MS, MATCH_ACTIONS_PER_SECOND, MATCH_VOIDED_CLOSE_CODE } from "../config";
 import type { LastBoardEntry, MatchActionRow, MatchClocks, MatchRow, MatchSeat } from "../api/ports";
 import type { Timer } from "../api/ports";
 import type { ActorDeps, ClockExpiry, ClockView, MatchClock, Socket } from "./contracts";
@@ -34,6 +34,7 @@ import {
   encode,
   emoteRelayMessage,
   errorMessage,
+  MATCH_VOIDED_CLOSE_REASON,
   parseClientMessage,
   portraitsMessage,
   promptForOpponent,
@@ -55,20 +56,33 @@ export type MatchActorInput = {
   state?: EngineState;
   /** The rows already in `match_actions`: the seq counter and the nonce map are rebuilt from them. */
   log?: readonly MatchActionRow[];
+  /**
+   * R679: called once, synchronously, when a Glitch voids the match, before the store forgets it —
+   * the registry drops the actor here, so nothing can reach a match that no longer exists.
+   */
+  onVoided?: () => void;
 };
 
 export type MatchActor = {
   readonly matchId: string;
+  /** The seats as the match began: index 0 is the account that started in p1. */
   readonly seats: readonly [MatchSeat, MatchSeat];
-  /** Which seat a profile holds, or null when it is not in this match. */
-  seatOf: (profileId: string) => PlayerId | null;
-  /** Hands a connection to a seat. Replaces (and closes) a socket that seat already held. */
-  attach: (player: PlayerId, socket: Socket) => void;
-  /** §9.5: lets go of a seat's socket and starts its disconnect grace. */
-  detach: (player: PlayerId) => void;
   /**
-   * Applies one action as `player` — the seat is stamped here, never taken from the client
-   * (§9.1). Resolves with the `ack` or the `error` the client is sent.
+   * The seat a profile BEGAN the match in, or null when it is not in this match. It names the
+   * account's connection, not the seat it plays: after a Glitch's swap (R677) the account that began
+   * in p1 plays p2, and the actor routes its socket there (`playing`).
+   */
+  seatOf: (profileId: string) => PlayerId | null;
+  /**
+   * Hands a connection to the account that began in `home` (`seatOf`). Replaces (and closes) a
+   * socket that account already held.
+   */
+  attach: (home: PlayerId, socket: Socket) => void;
+  /** §9.5: lets go of that account's socket and starts its disconnect grace. */
+  detach: (home: PlayerId) => void;
+  /**
+   * Applies one action as engine seat `player` — the seat is stamped here, never taken from the
+   * client (§9.1). Resolves with the `ack` or the `error` the client is sent.
    */
   submit: (player: PlayerId, nonce: string, body: ActionBody) => Promise<ServerMessage>;
   /** Resolves when the actor's queue has drained. */
@@ -87,9 +101,18 @@ export type MatchActor = {
   presence: () => { p1: boolean; p2: boolean };
 };
 
-/** R417: the boards a match was created with, as `createGame` and `fold` take them. */
-export function lastBoardsOf(match: MatchRow): { lastBoards?: [LastBoardEntry[], LastBoardEntry[]] } {
-  return match.lastBoards === undefined ? {} : { lastBoards: match.lastBoards };
+/**
+ * R417, R678: the boards a match was created with — its seats' last boards and the two other
+ * players' boards a Glitch may put on the field — as `createGame` and `fold` take them.
+ */
+export function lastBoardsOf(match: MatchRow): {
+  lastBoards?: [LastBoardEntry[], LastBoardEntry[]];
+  glitchBoards?: [LastBoardEntry[], LastBoardEntry[]];
+} {
+  return {
+    ...(match.lastBoards === undefined ? {} : { lastBoards: match.lastBoards }),
+    ...(match.glitchBoards === undefined ? {} : { glitchBoards: match.glitchBoards }),
+  };
 }
 
 export function createMatchActor(deps: ActorDeps, input: MatchActorInput): MatchActor {
@@ -143,6 +166,8 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   const aims: Record<PlayerId, AimSlot> = { p1: emptyAimSlot(), p2: emptyAimSlot() };
   /** R642: the pair the `portraits` frame carries, `vanilla` for a match that predates them. */
   const portraits = match.portraits ?? [portraitOrDefault(null), portraitOrDefault(null)];
+  /** R679: set once a Glitch voided the match; nothing more is sent, written or attached. */
+  let voided = false;
   /**
    * A rebuilt actor whose log already ends in a result and whose row is already `finished` has
    * nothing left to record. One that is still `live` crashed between the terminal action and the
@@ -152,6 +177,13 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   let stopped = false;
   let persistedClocks = match.clocks;
   const opening = deps.engine.snapshot(state);
+  /**
+   * R677: whether the accounts hold each other's seat, as of the last state change. Every socket is
+   * keyed by the seat its account began in (`home`), and every engine read by the seat played now,
+   * so this one flag is the whole mapping. Only the engine's state sets it — a Glitch's swap, which
+   * a client reaches only by legally playing Glitch — never a frame.
+   */
+  let swapped = opening.seatsSwapped;
   let lastPendingFor: PlayerId | null = opening.pendingFor;
   /** R265: which seats owed a mulligan at the last push, so a `prompt` frame goes out on a change. */
   let lastMulliganOwed = mulliganWindow(opening).join(",");
@@ -185,15 +217,29 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   // Sending. §10.8: a socket only ever carries this player's own view.
   // ---------------------------------------------------------------------
 
+  /**
+   * R677: the seat the account that began in `home` plays now — and, read the other way, the account
+   * (by its home) that plays engine seat `seat`; a swap is its own inverse.
+   */
+  function playing(home: PlayerId): PlayerId {
+    return swapped ? other(home) : home;
+  }
+
+  /** Sends to the account playing engine seat `player` now. */
   function send(player: PlayerId, message: ServerMessage): void {
-    const socket = sockets[player];
+    sendToHome(playing(player), message);
+  }
+
+  /** Sends to the account that began the match in `home`, whatever seat it plays. */
+  function sendToHome(home: PlayerId, message: ServerMessage): void {
+    const socket = sockets[home];
     if (socket === null || !socket.isOpen) return;
     try {
       socket.send(encode(message));
     } catch (error: unknown) {
       deps.log.warn("match.send.failed", {
         matchId: match.id,
-        player,
+        home,
         message: error instanceof Error ? error.message : String(error),
       });
     }
@@ -316,6 +362,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   /** Pushes everything the clients need after a state change, in one order for both seats. */
   async function afterChange(): Promise<void> {
     const snapshot = deps.engine.snapshot(state);
+    if (snapshot.seatsSwapped !== swapped) onSeatsSwapped(snapshot.seatsSwapped);
     clock.sync(clockViewFor(snapshot));
     await persistClocks();
 
@@ -365,6 +412,59 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     lastPendingFor = pendingFor;
   }
 
+  /**
+   * R677: a Glitch swapped the seats. From here every socket reads the view of, and acts for, the
+   * other seat. A disconnect grace belongs to the account, so one running moves with it to the seat
+   * it plays now (restarted there: the clock keeps one deadline per seat, not per account).
+   */
+  function onSeatsSwapped(now: boolean): void {
+    const away = PLAYERS.filter((home) => sockets[home] === null);
+    for (const home of away) clock.clearGrace(playing(home));
+    swapped = now;
+    for (const home of away) clock.startGrace(playing(home));
+    deps.log.info("match.seats.swapped", { matchId: match.id, swapped });
+  }
+
+  /**
+   * R677: the seats as the results writer credits them — engine seat p1 with the account that plays
+   * it NOW, and its deck — so the winning seat's current account gets the win (Elo included), and the
+   * last board each seat ended with goes to the account that ended it.
+   */
+  function creditedSeats(): [MatchSeat, MatchSeat] {
+    const [first, second] = match.players;
+    return [
+      { profileId: swapped ? second : first, player: "p1", deck: match.decks[0] },
+      { profileId: swapped ? first : second, player: "p2", deck: match.decks[1] },
+    ];
+  }
+
+  /**
+   * R679: a Glitch voided the match. It never happened: no result, no rating move, no last board
+   * and no game record. Both sockets are closed with `MATCH_VOIDED_CLOSE_CODE` (the last view they
+   * got already shows the game over with reason `voided`), the registry drops the actor, and
+   * `deps.voidMatch` removes the match from the store and logs the one line abuse checks read.
+   */
+  async function onVoid(): Promise<void> {
+    voided = true;
+    stopped = true;
+    for (const home of PLAYERS) {
+      const socket = sockets[home];
+      sockets[home] = null;
+      if (socket !== null && socket.isOpen) socket.close(MATCH_VOIDED_CLOSE_CODE, MATCH_VOIDED_CLOSE_REASON);
+    }
+    input.onVoided?.();
+    try {
+      await deps.voidMatch({ matchId: match.id, players: match.players, at: deps.timers.now() });
+    } catch (error: unknown) {
+      // The row stays live, so the next socket for it rebuilds this actor, folds to the same void
+      // and tries again.
+      deps.log.alert("match.void.failed", {
+        matchId: match.id,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   /** §9.5: "Every ending records a result and clears both players' in-match state." Once. */
   async function onTerminal(snapshot: MatchSnapshot): Promise<void> {
     if (finished || snapshot.result === null) return;
@@ -372,6 +472,11 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     clock.stop();
     // R738: no aim outlives the game.
     for (const player of PLAYERS) endAim(player);
+    // R679: the one ending that records nothing. Only the engine's state reaches it.
+    if (snapshot.result.reason === "voided") {
+      await onVoid();
+      return;
+    }
     const at = deps.timers.now();
 
     try {
@@ -379,7 +484,8 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
       // behind the `RecordResult` port; the actor never writes them itself.
       await deps.recordResult({
         matchId: match.id,
-        seats,
+        // R677: credited by who plays each seat now, not by who began in it.
+        seats: creditedSeats(),
         outcome: snapshot.result,
         turns: snapshot.turn,
         at,
@@ -470,32 +576,34 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   // Sockets
   // ---------------------------------------------------------------------
 
-  function onFrame(player: PlayerId, text: string): void {
+  /** A frame from the account that began in `home`; the seat it acts for is read as it runs. */
+  function onFrame(home: PlayerId, text: string): void {
+    const player = playing(home);
     const message = parseClientMessage(text);
 
     switch (message.type) {
       case "malformed":
         // A bad frame is answered, not fatal: the actor stays up and the other seat is untouched.
         deps.log.warn("match.frame.malformed", { matchId: match.id, player, reason: message.reason });
-        send(player, errorMessage("malformed", message.reason));
+        sendToHome(home, errorMessage("malformed", message.reason));
         return;
 
       case "hello":
         // §9.5: "Reconnect gets a fresh full view, never a log replay."
         fireAndForget(async () => {
-          pushView(player);
-          pushClock(player);
+          pushView(playing(home));
+          pushClock(playing(home));
           // R642: portraits ride again on a reconnect, as on join.
-          send(player, portraitsMessage(portraits[0], portraits[1]));
+          sendToHome(home, portraitsMessage(portraits[0], portraits[1]));
         }, "hello");
         return;
 
       case "emote": {
         // R643: same gate the client ran. A fail is a silent drop — no error, no rejected-action
         // log; a pass relays to the opponent only (the sender already showed it locally).
-        const gate = emoteGate(emoteHistory[player], deps.timers.now());
+        const gate = emoteGate(emoteHistory[home], deps.timers.now());
         if (!gate.ok) return;
-        emoteHistory[player] = [...gate.sentAt, deps.timers.now()];
+        emoteHistory[home] = [...gate.sentAt, deps.timers.now()];
         send(other(player), emoteRelayMessage(player, message.emote));
         return;
       }
@@ -505,26 +613,28 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
         return;
 
       case "joinRoom":
-        send(
-          player,
+        sendToHome(
+          home,
           errorMessage("unsupported", "join a room with POST /api/rooms/:code/join, not over the socket"),
         );
         return;
 
       case "action": {
         const now = deps.timers.now();
-        if (floodExceeded(player, now)) {
+        if (floodExceeded(home, now)) {
           // §9.8: reject the overflow; the socket stays open.
           deps.log.warn("match.action.flooded", { matchId: match.id, player });
-          send(
-            player,
+          sendToHome(
+            home,
             errorMessage("rate_limited", "too many actions; slow down", message.nonce),
           );
           return;
         }
         fireAndForget(async () => {
-          const reply = await applyAction(player, message.nonce, message.body);
-          send(player, reply);
+          // R677: the seat is the one this account plays when the action runs — a swap queued ahead
+          // of it has already moved the account — and the reply goes to the account that sent it.
+          const reply = await applyAction(playing(home), message.nonce, message.body);
+          sendToHome(home, reply);
         }, `action:${message.body.type}`);
         return;
       }
@@ -606,56 +716,65 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     return false;
   }
 
-  function onSocketGone(player: PlayerId, socket: Socket): void {
+  function onSocketGone(home: PlayerId, socket: Socket): void {
     // A socket that has already been replaced or dropped by `stop()` is not a disconnect.
-    if (sockets[player] !== socket) return;
-    sockets[player] = null;
+    if (sockets[home] !== socket) return;
+    sockets[home] = null;
     if (stopped || finished) return;
-    endAim(player);
-    deps.log.info("match.socket.closed", { matchId: match.id, player });
+    // R738: the aim of the seat this account plays (R677) ends with its socket.
+    endAim(playing(home));
+    deps.log.info("match.socket.closed", { matchId: match.id, player: playing(home), home });
     fireAndForget(async () => {
-      // §9.5: grace starts, and "the clock keeps running while a player is disconnected".
+      // §9.5: grace starts, and "the clock keeps running while a player is disconnected" — on the
+      // seat this account plays (R677).
+      const player = playing(home);
       clock.startGrace(player);
       await persistClocks();
       pushClock(other(player));
     }, "disconnect");
   }
 
-  function attach(player: PlayerId, socket: Socket): void {
-    const previous = sockets[player];
-    sockets[player] = socket;
+  function attach(home: PlayerId, socket: Socket): void {
+    if (voided) {
+      // R679: the match no longer exists; a socket that arrives late hears only that.
+      socket.close(MATCH_VOIDED_CLOSE_CODE, MATCH_VOIDED_CLOSE_REASON);
+      return;
+    }
+    const previous = sockets[home];
+    sockets[home] = socket;
     socket.attach({
       message: (text) => {
-        onFrame(player, text);
+        onFrame(home, text);
       },
       close: () => {
-        onSocketGone(player, socket);
+        onSocketGone(home, socket);
       },
     });
     if (previous !== null && previous !== socket) previous.close(1000, "replaced by a new socket");
 
-    deps.log.info("match.socket.attached", { matchId: match.id, player });
+    deps.log.info("match.socket.attached", { matchId: match.id, player: playing(home), home });
     fireAndForget(async () => {
+      const player = playing(home);
       clock.clearGrace(player);
       await persistClocks();
       // §9.5: a fresh full view, never a log replay. R642: the portraits ride with it.
       pushView(player);
       pushClock(player);
-      send(player, portraitsMessage(portraits[0], portraits[1]));
+      sendToHome(home, portraitsMessage(portraits[0], portraits[1]));
       pushClock(other(player));
     }, "attach");
   }
 
-  function detach(player: PlayerId): void {
-    const socket = sockets[player];
+  function detach(home: PlayerId): void {
+    const socket = sockets[home];
     if (socket === null) return;
     if (socket.isOpen) {
       socket.close(1000, "detached");
       // A transport that does not call back synchronously still leaves the seat empty.
-      onSocketGone(player, socket);
+      onSocketGone(home, socket);
       return;
     }
-    onSocketGone(player, socket);
+    onSocketGone(home, socket);
   }
 
   // The clock has to be armed before the first action, not on the first one (R79: the turn clock

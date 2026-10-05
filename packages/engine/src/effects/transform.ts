@@ -228,7 +228,10 @@ export function transformRandom(
       const pool = query(excludingDefId(args.query ?? {}, ctx.self?.defId ?? ctx.defId)).filter((def) =>
         canReplace(old, def),
       );
-      const def = pickGenerated(ctx.rng, pool);
+      // R673: a card transformed in a hand or a deck is generated there and may be Glitch; one on the
+      // field may not, since Glitch is only ever played.
+      const held = old.zone.z === "hand" || old.zone.z === "library";
+      const def = pickGenerated(ctx.rng, pool, held ? ctx.state : undefined);
       if (def === undefined) return;
       const radiant = args.radiant === "keep" ? old.radiant : args.radiant === true;
       const replacement = replaceCard(ctx, old, def, radiant);

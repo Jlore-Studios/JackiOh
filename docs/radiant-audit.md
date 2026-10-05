@@ -328,6 +328,7 @@ in v0.2.0. "Base" is the base face as v0.2.0 prints it.
 | 88 | Siphon Squad | Field Trap | Start of Turn: Reveal. / Aura: Enemy Units have −X Attack, where X is twice the number of Units your opponent controls. / When your opponent controls no Units, Tribute this. | Start of Turn: Reveal. / Aura: Enemy Units have 0 Attack. / When your opponent controls no Units, Tribute this. | Meets | A −X that grows with their board → every enemy Unit at 0 Attack whatever the board: never weaker, and total (R403). |
 | 89 | Paul Allen's Ghost | Unit | 5/6 · Divine Shield / To target this with anything but an attack, a player must also discard 2 cards. | 10/12 · Divine Shield, Reborn / To target this with anything but an attack, a player must also discard 2 cards. | Meets | Stats doubled; adds Reborn. |
 | 90 | In Too Deep | Field Spell | Indestructible / Each quest you complete offers rewards; the reward you choose sets your next quest. (Quest 1's text lives in the quest line: it appears on the card face only after the card is played.) | Indestructible / Each quest you complete gives every reward it offers, and you follow every path. | Meets | One reward and one path a quest → every reward and every path: a broader scope (R404). |
+| T-glitch | Glitch | Spell | (blank) | (blank) | Exempt (R674) | Issue #170's hidden token, blank on both faces: nothing it prints could be doubled, and no Make Radiant can find it while it stays in no pool. Its one effect, a random outcome of four (R676), is the same whichever face it shows. |
 
 ### Classic+
 

@@ -11,6 +11,7 @@ import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 import { describe, expect, it } from "vitest";
 
 import { CATALOG as CORE_CATALOG } from "@jackioh/cards";
+import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 
 import {
   ALMANAC_TAGS,
@@ -666,7 +667,8 @@ describe("the almanac's pool (R630)", () => {
   it("R630 the Token chip keeps the tokens and nothing else", () => {
     expect(almanacPool(CATALOG, filter({ tags: new Set<Tag>(["Token"]) }), DEFAULT_SORT)).toEqual([TOKEN]);
     const tokens = almanacPool(REAL, filter({ tags: new Set<Tag>(["Token"]) }), DEFAULT_SORT);
-    const realTokens = Object.values(CORE_CATALOG).filter((d) => d.token);
+    // R674: every token but Glitch.
+    const realTokens = Object.values(CORE_CATALOG).filter((d) => d.token && d.id !== GLITCH_DEF_ID);
     expect(tokens).toHaveLength(realTokens.length);
     expect(new Set(tokens)).toEqual(new Set(realTokens.map((d) => d.id)));
   });
@@ -677,11 +679,28 @@ describe("the almanac's pool (R630)", () => {
     for (const id of ai) expect(CORE_CATALOG[id]?.tags, id).toContain("AI");
   });
 
-  it("R630 shows the whole real catalog, the deck builder's pool plus every token", () => {
+  it("R630 shows the whole real catalog, the deck builder's pool plus every token (Glitch excepted, R674)", () => {
     const all = almanacPool(REAL, DEFAULT_FILTER, DEFAULT_SORT);
-    expect([...all].sort()).toEqual(Object.keys(CORE_CATALOG).sort());
+    expect([...all].sort()).toEqual(Object.keys(CORE_CATALOG).filter((id) => id !== GLITCH_DEF_ID).sort());
     const deckable = visiblePool(REAL, null, DEFAULT_FILTER, DEFAULT_SORT);
-    expect(all.length - deckable.length).toBe(Object.values(CORE_CATALOG).filter((d) => d.token).length);
+    expect(all.length - deckable.length).toBe(Object.values(CORE_CATALOG).filter((d) => d.token && d.id !== GLITCH_DEF_ID).length);
+  });
+
+  it("R674 Glitch is in neither the almanac's pool nor the deck builder's, under any filter", () => {
+    expect(CORE_CATALOG[GLITCH_DEF_ID]).toBeDefined();
+    for (const f of [DEFAULT_FILTER, filter({ tags: new Set<Tag>(["Token"]) }), filter({ ownedOnly: false })]) {
+      expect(almanacPool(REAL, f, DEFAULT_SORT)).not.toContain(GLITCH_DEF_ID);
+      expect(visiblePool(REAL, null, f, DEFAULT_SORT)).not.toContain(GLITCH_DEF_ID);
+    }
+    // An owned Glitch (a collection the server could never send) still stays out of the pool.
+    expect(visiblePool(REAL, { [GLITCH_DEF_ID]: 1 }, filter({ ownedOnly: true }), DEFAULT_SORT)).not.toContain(GLITCH_DEF_ID);
+    // And with no token flag on it at all, the pool still leaves it out.
+    const glitch = CORE_CATALOG[GLITCH_DEF_ID];
+    if (glitch === undefined) throw new Error("no Glitch in the catalog");
+    const untokened: CardDef = { ...glitch, token: false, tags: [] };
+    const bare: CatalogSnapshot = { version: "glitch-test", cards: { [GLITCH_DEF_ID]: untokened } };
+    expect(visiblePool(bare, null, filter({ ownedOnly: false }), DEFAULT_SORT)).toEqual([]);
+    expect(almanacPool(bare, DEFAULT_FILTER, DEFAULT_SORT)).toEqual([]);
   });
 
   it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then AI and Token", () => {

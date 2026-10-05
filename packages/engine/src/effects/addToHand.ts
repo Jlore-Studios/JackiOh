@@ -149,7 +149,8 @@ export function addRandomFromCatalog(args: {
 
       const count = Math.max(0, Math.trunc(args.count ?? 1));
       for (let i = 0; i < count; i += 1) {
-        const def = pickGenerated(ctx.rng, pool);
+        // R673: a card generated into a hand may be Glitch.
+        const def = pickGenerated(ctx.rng, pool, ctx.state);
         if (def === undefined) return;
         createInHand(ctx, def.id, args);
       }

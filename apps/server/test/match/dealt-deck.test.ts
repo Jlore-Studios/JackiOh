@@ -10,7 +10,7 @@
 import { describe, expect, it } from "vitest";
 import type { PlayerView } from "@jackioh/shared";
 import type { QueueMode } from "../../src/api/ports";
-import { createRecordResult } from "../../src/api/results";
+import { createRecordResult, createVoidMatch } from "../../src/api/results";
 import { createMatchClock } from "../../src/match/clock";
 import type { ActorDeps } from "../../src/match/contracts";
 import type { EnginePort } from "../../src/match/engine";
@@ -34,6 +34,7 @@ function world(): { deps: TestDeps; engine: EnginePort; registry: MatchRegistry 
     engine,
     createClock: createMatchClock,
     recordResult: createRecordResult(deps),
+    voidMatch: createVoidMatch(deps),
   };
   return { deps, engine, registry: createMatchRegistry(actorDeps) };
 }

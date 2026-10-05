@@ -16,6 +16,7 @@ import { StrictMode, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ANIMATIONS, HIDDEN_ID } from "./animations.ts";
+import { DAMAGE_FEEL, SLAM_LAND_AT, UNIT_SLAM } from "./damageFeel.ts";
 import Game from "./Game.tsx";
 import { resultReason } from "./Result.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
@@ -37,6 +38,7 @@ afterEach(() => {
 const START: GameEvent[] = [{ type: "turnStarted", player: "p1", turn: 3 }];
 /** A hit on the viewer's hero: an event the runner animates, so it holds the view back. */
 const HIT: GameEvent = { type: "damage", sourceId: null, targetId: "hero-p1", amount: 3, combat: false };
+const GIGA_HIT: GameEvent = { type: "damage", sourceId: null, targetId: "hero-p1", amount: 25, combat: false };
 
 describe("the board's moves wait for the board", () => {
   it("does not enable End turn for a view the runner is still holding back, and does once it drains", () => {
@@ -66,6 +68,106 @@ describe("the board's moves wait for the board", () => {
   it("offers the moves at once when nothing is animating", () => {
     render(<Game view={withEvents(baseView(), START)} legal={[END_TURN]} onAction={vi.fn()} />);
     expect(screen.getByTestId("end-turn")).not.toBeDisabled();
+  });
+});
+
+describe("issue #57 damage feel", () => {
+  it("keeps a GIGA damage number on the board for its full 1.2-second linger after the queue drains", () => {
+    const before = withEvents(baseView(), START);
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    const after = withEvents(baseView(), [...START, GIGA_HIT]);
+    rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
+
+    expect(screen.getByTestId("game")).toHaveAttribute("data-impact-tier", "giga");
+    expect(screen.getByTestId("game")).toHaveAttribute("data-hit-stop", "true");
+    act(() => {
+      vi.advanceTimersByTime(ANIMATIONS.damage.durationMs);
+    });
+    expect(screen.queryByTestId("animation-queue")).toBeNull();
+    expect(document.querySelector(".damage-pop")).toHaveTextContent("25");
+
+    act(() => {
+      vi.advanceTimersByTime(DAMAGE_FEEL.giga.numberLingerMs - ANIMATIONS.damage.durationMs);
+    });
+    expect(document.querySelector(".damage-pop")).toBeNull();
+  });
+
+  it("keeps hit-stop when Reduce motion drains damage entries synchronously", () => {
+    writeSettings({ reduceMotion: true });
+    const before = withEvents(baseView(), START);
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    rerender(<Game view={withEvents(baseView(), [...START, HIT])} legal={[]} onAction={vi.fn()} />);
+
+    expect(screen.getByTestId("game")).toHaveAttribute("data-reduced-motion", "true");
+    expect(screen.getByTestId("game")).toHaveAttribute("data-hit-stop", "true");
+    act(() => {
+      vi.advanceTimersByTime(DAMAGE_FEEL.normal.hitStopMs);
+    });
+    expect(screen.getByTestId("game")).not.toHaveAttribute("data-hit-stop");
+  });
+});
+
+describe("issue #185 unit slam on the board", () => {
+  /** A MASSIVE Unit (20/20) landing in the opponent's lane 3: the newest view has it standing there. */
+  function landing(): { before: PlayerView; after: PlayerView } {
+    const giant = unit("p2", { instanceId: "giant", attack: 20, health: 20, maxHealth: 20 });
+    const before = withEvents(baseView(), START);
+    const event: GameEvent = { type: "summoned", player: "p2", instanceId: "giant", defId: giant.defId, row: "units", lane: 3 };
+    const after = withEvents(
+      baseView({ opponent: emptySide("p2", { hand: { count: 4 }, units: [null, null, giant, null, null] }) }),
+      [...START, event],
+    );
+    return { before, after };
+  }
+
+  it("R701 marks the board with the landing's tier and side, hangs for its anticipation, then hit-stops on the landing", () => {
+    const { before, after } = landing();
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
+    const game = screen.getByTestId("game");
+    expect(game).toHaveAttribute("data-slam-tier", "massive");
+    expect(game).toHaveAttribute("data-slam-side", "opponent");
+    expect(game.style.getPropertyValue("--slam-anticipation")).toBe(`${String(UNIT_SLAM.massive.anticipationMs)}ms`);
+    expect(game).not.toHaveAttribute("data-hit-stop");
+    act(() => {
+      vi.advanceTimersByTime(UNIT_SLAM.massive.anticipationMs + ANIMATIONS.summoned.durationMs * SLAM_LAND_AT);
+    });
+    expect(game).toHaveAttribute("data-hit-stop", "true");
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(game).not.toHaveAttribute("data-slam-tier");
+    expect(game).not.toHaveAttribute("data-hit-stop");
+  });
+
+  it("R701 under Reduce motion the landing still hit-stops, with no anticipation", () => {
+    writeSettings({ reduceMotion: true });
+    const { before, after } = landing();
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
+    const game = screen.getByTestId("game");
+    expect(game).toHaveAttribute("data-hit-stop", "true");
+    expect(game).not.toHaveAttribute("data-slam-tier");
+  });
+});
+
+describe("issue #57 board-mounted match chrome", () => {
+  it("mounts route chrome and action refusals inside the physical board rail", () => {
+    render(
+      <Game
+        view={withEvents(baseView(), START)}
+        legal={[]}
+        onAction={vi.fn()}
+        error="That action is no longer legal."
+        boardRail={<a href="/">Back to lobby</a>}
+        boardNotice={<p>Read-only replay</p>}
+      />,
+    );
+
+    expect(screen.getByText("Back to lobby").closest(".board")).not.toBeNull();
+    expect(screen.getByText("Read-only replay").closest(".board")).not.toBeNull();
+    expect(screen.getByTestId("action-error").closest(".board")).not.toBeNull();
+    expect(document.querySelector(".game > .game-error")).toBeNull();
   });
 });
 

@@ -216,6 +216,38 @@ WantedBy=timers.target
 EOF
 systemctl daemon-reload
 systemctl enable --now night-vm-idle-stop.timer night-vm-disk.timer >/dev/null 2>&1
+
+# Memory on record (#317, owner action B): CloudWatch keeps only the CPU of an instance, so the
+# CloudWatch agent sends memory and swap every 60 s to the JackiOh/NightVM namespace. It needs the
+# instance role to hold CloudWatchAgentServerPolicy (README.md, Memory); without it the agent
+# runs and sends nothing, and nothing else is affected.
+CW=/opt/aws/amazon-cloudwatch-agent
+if [ ! -x "$CW/bin/amazon-cloudwatch-agent-ctl" ]; then
+  if curl -fsSL -o /tmp/cwagent.deb \
+      https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb; then
+    dpkg -i -E /tmp/cwagent.deb >/dev/null || echo "warning: the CloudWatch agent did not install"
+  else
+    echo "warning: the CloudWatch agent could not be downloaded"
+  fi
+  rm -f /tmp/cwagent.deb
+fi
+if [ -x "$CW/bin/amazon-cloudwatch-agent-ctl" ]; then
+  cat > "$CW/etc/night-vm.json" <<'EOF'
+{
+  "agent": { "metrics_collection_interval": 60, "run_as_user": "cwagent" },
+  "metrics": {
+    "namespace": "JackiOh/NightVM",
+    "append_dimensions": { "InstanceId": "${aws:InstanceId}" },
+    "metrics_collected": {
+      "mem": { "measurement": ["mem_used_percent", "mem_available"] },
+      "swap": { "measurement": ["swap_used_percent"] }
+    }
+  }
+}
+EOF
+  "$CW/bin/amazon-cloudwatch-agent-ctl" -a fetch-config -m ec2 -s -c "file:$CW/etc/night-vm.json" \
+    >/dev/null || echo "warning: the CloudWatch agent did not start"
+fi
 apt-get clean
 
 for cli in claude codex agy muse devin; do printf '%-7s %s\n' "$cli" "$($cli --version 2>&1 | head -1)"; done

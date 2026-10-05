@@ -141,6 +141,15 @@ const SERVER_RANKED_CONTRACT = "../../../apps/server/test/db/contract.ts";
 
 /** R169's card-side proofs: the two §8 cards a missing badge list made invisible. */
 const CARDS_CURVATURE_TEST = "../../cards/test/077-professor-curvature.test.ts";
+/** Issue #170's hidden token, Glitch (R673–R679). */
+const CARDS_GLITCH_TEST = "../../cards/test/classic/t-glitch-glitch.test.ts";
+/** Issue #170's server and client proofs: the swap's credit, the boards' sampling, the void. */
+const SERVER_GLITCH_TEST = "../../../apps/server/test/match/glitch.test.ts";
+const SERVER_CONTRACT_TEST = "../../../apps/server/test/db/contract.ts";
+const WEB_PRACTICE_GLITCH_TEST = "../../../apps/web/src/practice/core-glitch.test.ts";
+const WEB_ALMANAC_GLITCH_TEST = "../../../apps/web/src/routes/almanac.test.tsx";
+const WEB_FILTERS_GLITCH_TEST = "../../../apps/web/src/game/deckbuilder/filters.test.ts";
+const WEB_HISTORY_GLITCH_TEST = "../../../apps/web/src/patches/history.test.ts";
 const CARDS_FULLSEND_TEST = "../../cards/test/078-fullsend.test.ts";
 /** R169's client-side proof: the animation table's targets, checked against a rendered DOM. */
 const WEB_ANIMATION_TARGETS_TEST = "../../../apps/web/src/game/animation-targets.test.tsx";
@@ -4169,6 +4178,42 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(672, "../../../apps/server/test/api/rematch.test.ts");
   });
 
+  // Proved by glitch.test.ts and the real card's test: no draw at all before a System play, one more
+  // draw after, n/10000 of the picks Glitch, every System play counted.
+  it("R673 a … in the System play makes every card generated into a hand or deck Glitch at n/10000", () => {
+    provenIn(673, "glitch.test.ts", CARDS_GLITCH_TEST);
+  });
+
+  // Proved by glitch.test.ts and the real card's test: no pool, the every-token one included.
+  it("R674 Glitch is in no pool, the Almanac or the Deck Builder", () => {
+    provenIn(674, "glitch.test.ts", CARDS_GLITCH_TEST, WEB_ALMANAC_GLITCH_TEST, WEB_FILTERS_GLITCH_TEST, WEB_HISTORY_GLITCH_TEST);
+  });
+
+  // Proved by glitch.test.ts and the real card's test: (0) under any modifier, refused off-turn.
+  it("R675 Glitch is always playable on its owner's turn", () => {
+    provenIn(675, "glitch.test.ts", CARDS_GLITCH_TEST);
+  });
+
+  // Proved by glitch.test.ts and the real card's test: the outcome from the rng, the reset's new game.
+  it("R676 Glitch draws one of four outcomes; a reset deals the match again", () => {
+    provenIn(676, "glitch.test.ts", CARDS_GLITCH_TEST);
+  });
+
+  // Proved by glitch.test.ts and the real card's test: the seat each account plays.
+  it("R677 a Glitch swap gives each account the other seat, and its results", () => {
+    provenIn(677, "glitch.test.ts", CARDS_GLITCH_TEST, SERVER_GLITCH_TEST, WEB_PRACTICE_GLITCH_TEST);
+  });
+
+  // Proved by glitch.test.ts and the real card's test: both fields become the frozen boards.
+  it("R678 a Glitch lays two other games' boards on the field", () => {
+    provenIn(678, "glitch.test.ts", CARDS_GLITCH_TEST, SERVER_GLITCH_TEST, SERVER_CONTRACT_TEST);
+  });
+
+  // Proved by glitch.test.ts and the real card's test: no winner, reason voided.
+  it("R679 a Glitch voids the match", () => {
+    provenIn(679, "glitch.test.ts", CARDS_GLITCH_TEST, SERVER_GLITCH_TEST, SERVER_CONTRACT_TEST, WEB_PRACTICE_GLITCH_TEST, WEB_NET_TEST);
+  });
+
   // Proved by targeting.test.ts "R682 …" (no play carries discards, the exact cost pays both with no
   // prompt, the kept cards never pay) and the card side in packages/cards
   // test/classic/089-paul-allens-ghost.test.ts "R682 …" (one play, two random others, the interception
@@ -4273,6 +4318,26 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/cards/inspect/inspect.test.tsx",
       "../../../apps/web/src/game/Card.test.tsx",
     );
+  });
+
+  // Proved by apps/web game/slam.test.ts "R700 …" (what slams and what never does, the stats read off
+  // the newest view and the printed Tribute, both seats alike) and game/unitSlam.test.ts (the tiers'
+  // boundaries and the weights).
+  it("R700 a Unit the viewer can see lands with a weight read off its total stats", () => {
+    provenIn(700, "../../../apps/web/src/game/slam.test.ts");
+  });
+
+  // Proved by apps/web game/slam.test.ts "R701 …" (each tier's row, the action's shared totals,
+  // Reduce motion, the anticipation inside the entry) and fx/slam.test.ts "R701 …" (dust, shake,
+  // shockwave by tier, on the landing beat).
+  it("R701 a landing is its own animation entry, decorated by tier and capped per action", () => {
+    provenIn(701, "../../../apps/web/src/game/slam.test.ts", "../../../apps/web/src/fx/slam.test.ts");
+  });
+
+  // Proved by apps/web audio/slam.test.ts "R702 …" (the thud and impact by tier, the pitch spread,
+  // and the crowd through #57's quiet period, neutral).
+  it("R702 a landing's thud and the crowd's answer follow its tier", () => {
+    provenIn(702, "../../../apps/web/src/audio/slam.test.ts");
   });
 
   // Proved by playChoices.test.ts "R703 …" (a needed pick the board cannot satisfy is neither

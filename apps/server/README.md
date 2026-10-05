@@ -296,6 +296,30 @@ gets the same boards back, never a newer one.
   hotseat has none; an empty board makes the card find nothing.
 - **Who writes it.** Only the server, and it has RLS like every table in `public` (`test:sql`).
 
+### Glitch (issue #170, R676–R679)
+
+The hidden token Glitch does one of four things, announced by a public `glitched` event. Only the
+engine's state moves the server: a client reaches any of it only by legally playing the card.
+
+- **Reset (R676)** is the engine's alone; `(seed, log)` folds to it like any other action.
+- **Swap (R677).** The engine counts `seatSwaps`; the port's `snapshot().seatsSwapped` says whether
+  the accounts hold each other's seat. The actor keys each socket by the seat its account *began*
+  in and reads everything else through `playing(home)`: the view and legal actions it is sent, the
+  seat its actions are stamped with, its disconnect grace. The result is credited by the seats as
+  played at the end (`creditedSeats`), so the winning seat's current account takes the win, the
+  rating move and that seat's last board.
+- **Boards (R678).** At `registry.start` the match samples `GLITCH_BOARDS_SAMPLED` other players'
+  non-empty server last boards (`lastBoards.sampleOthers`, never either seat's own; at random in
+  Postgres), freezes them on the row (`matches.p*_glitch_board`, migration 0024) and passes them to
+  `createGame` and every `fold` beside the last boards. Fewer boards leave a seat empty; none, and
+  the field is absent.
+- **Void (R679).** The game ends with reason `voided`, and the actor calls `voidMatch` instead of
+  `recordResult`: no result, rating move, game record or last board. Both sockets are closed with
+  `MATCH_VOIDED_CLOSE_CODE` and reason `voided` after the last view (which shows the void), the
+  registry drops the actor, `matches.forgetVoided` deletes the row and its log and lets both players
+  go (`app.forget_voided_match`), and one `match.voided` log line names the match and both profiles.
+  A voided Conquest game never happened: the series stays on that game and it starts again at once.
+
 ### Clocks (R79)
 
 All of R79's values come from `src/config.ts` and are stated nowhere else: turn clock 75 s, prompt

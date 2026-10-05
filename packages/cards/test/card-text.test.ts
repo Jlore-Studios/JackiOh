@@ -406,6 +406,9 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
 
   it("R366 patch v0.2.15 (issue #88) changes exactly the balance-patch cards against v0.2.14b's snapshot", () => {
     const before = readSnapshot("v0.2.14b");
+    // Main shipped v0.2.16 (issue #170's Glitch card) after the baseline, so a card the baseline
+    // lacks is main's, not this patch's: it must match its shipped snapshot below.
+    const shippedAfter = readSnapshot("v0.2.16");
     // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
     const after = CATALOG as unknown as Record<string, CardDef>;
     // The top-level fields each balance card may move (balance patch 1, issue #88); every other
@@ -477,8 +480,13 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     const changed: string[] = [];
     for (const [id, currentCard] of Object.entries(after)) {
       const priorCard = before[id] as unknown as CardDef | undefined;
-      expect(priorCard, `card ${id} existed in v0.2.14b`).toBeDefined();
-      if (!priorCard) continue;
+      if (!priorCard) {
+        expect(
+          currentCard,
+          `card ${id} added after v0.2.14b matches its shipped snapshot`,
+        ).toEqual(shippedAfter[id] as unknown as CardDef);
+        continue;
+      }
       if (JSON.stringify(priorCard) !== JSON.stringify(currentCard)) changed.push(id);
       const fields = allowed[id];
       if (fields === undefined) {

@@ -73,10 +73,10 @@ class PlannedLabelTests(unittest.TestCase):
         busy(gh, ctx, *[(p, 50 + i) for i, p in enumerate(
             ("claude-3", "claude-1", "claude-4", "claude-2"))])
         queue(gh, ctx, 3)                                      # planned (a strong model's, legacy)
-        queue(gh, ctx, 4, EASY)
+        queue(gh, ctx, 4, "difficulty:medium")
         ctx.store.update(lambda s: state_item(s, 4).update(planned_at=iso(NIGHT),
                                                             planned_tier="medium"))
-        gh.add_labels(4, [LABEL_PLANNED])                      # an easy item needing a strong plan
+        gh.add_labels(4, [LABEL_PLANNED])                      # a medium item needing a strong plan
         plan_mod.make(ctx)
         self.assertIn(LABEL_PLANNED, gh.label_names(3))
         self.assertNotIn(LABEL_NEEDS_PLAN, gh.label_names(3))

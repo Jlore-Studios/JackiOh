@@ -55,6 +55,8 @@ import type {
 } from "@jackioh/shared";
 
 import { themeFor } from "../cards/art/themes.ts";
+import { damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
+import { slamStatsOf, slamTier } from "../game/unitSlam.ts";
 import {
   BLOOD_BEAN_DEF_ID,
   CARD_EFFECT_DELAY_MS,
@@ -86,7 +88,14 @@ import { entryFor, hookFor } from "./voiceData.ts";
  * The public catalog facts a cue may colour itself with (§5.1): never looked up for "hidden".
  * `printedRarity` is a token's printed rarity (B2.5), for its summon sting only.
  */
-export type CueCard = { type: CardType; tags: readonly Tag[]; rarity?: Rarity; printedRarity?: PrintedRarity };
+export type CueCard = {
+  type: CardType;
+  tags: readonly Tag[];
+  rarity?: Rarity;
+  printedRarity?: PrintedRarity;
+  /** The base face's rules text: a landing Unit's printed Tribute (#185, unitSlam.ts). */
+  text?: string;
+};
 
 /**
  * R506: a play in progress, as the director follows the stream: from its `cardPlayed` until its
@@ -231,7 +240,7 @@ function summonCues(event: Extract<GameEvent, { type: "summoned" }>, ctx: CueCon
   const params: SfxParams = {};
   if (unit !== null) params.amount = unit.attack + unit.health;
   if (timbre !== undefined) params.timbre = timbre;
-  const cues: SoundCue[] = [sfx("summon", Object.keys(params).length === 0 ? undefined : params)];
+  const cues: SoundCue[] = [...slamSound(unit, card, params)];
   // B2.5: a token's printed rarity is the one it enters with; its `rarity` stays "Token".
   const rarity = card?.printedRarity ?? card?.rarity;
   if (rarity === "Legendary") cues.push(sfx("entrance"));
@@ -241,6 +250,22 @@ function summonCues(event: Extract<GameEvent, { type: "summoned" }>, ctx: CueCon
   if (!played && entryFor(ctx.lines, event.defId)?.kind === "unit") {
     cues.push(...hookCues(ctx, event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.summon));
   }
+  return cues;
+}
+
+/**
+ * #185: a Unit the viewer can read lands with its tier's weight: the summon thud from a soft tap to a
+ * deep boom (pitch within SLAM_PITCH_SPREAD), and under a Huge or MASSIVE one an impact (the crack,
+ * the boom). A Unit behind the sentinel, or one already gone from the newest view, keeps the plain
+ * thud sized by its stats (R203).
+ */
+function slamSound(unit: UnitView | null, card: CueCard | undefined, base: SfxParams): readonly SoundCue[] {
+  if (unit === null || card === undefined) return [sfx("summon", Object.keys(base).length === 0 ? undefined : base)];
+  const tier = slamTier(slamStatsOf(unit, card.text));
+  const variation = Math.random();
+  const cues: SoundCue[] = [sfx("summon", { ...base, slamTier: tier, variation })];
+  const impact = UNIT_SLAM[tier].impact;
+  if (impact !== "none") cues.push(sfx("impact", { impactTier: impact, variation }));
   return cues;
 }
 
@@ -311,6 +336,11 @@ function healthSetCues(event: Extract<GameEvent, { type: "healthSet" }>, ctx: Cu
   return [sfx("notify")];
 }
 
+/** Each impact gets an independent ±5% pitch sample, including repeated hits on the same target. */
+function impactVariation(_event: Extract<GameEvent, { type: "damage" }>): number {
+  return Math.random();
+}
+
 export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // R204: a unit's play line and a spell's cast line ride its `cardPlayed`, casts included. R203:
   // the viewer's own trap set makes the set sound and says nothing; a hidden card is a plain whoosh.
@@ -341,7 +371,10 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   summoned: { sfx: "summon", cues: summonCues },
   damage: {
     sfx: "impact",
-    cues: (event) => (event.amount > 0 ? [sfx("impact", { amount: event.amount })] : NONE),
+    cues: (event) =>
+      event.amount > 0
+        ? [sfx("impact", { amount: event.amount, impactTier: damageTier(event.amount), variation: impactVariation(event) })]
+        : NONE,
   },
   healthLost: {
     sfx: "drain",
@@ -480,7 +513,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
     sfx: "summon",
     cues: (event, ctx) => {
       const unit = ctx.unitNow?.(event.instanceId) ?? null;
-      return [sfx("summon", unit === null ? undefined : { amount: unit.attack + unit.health })];
+      const card = readable(ctx, event.defId);
+      return slamSound(unit, card, unit === null ? {} : { amount: unit.attack + unit.health });
     },
   },
   deanimated: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
@@ -503,6 +537,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   turnCutShort: { sfx: "notify", cues: () => [sfx("notify", { urgent: true })] },
   // R437: a mark brands its card as it lands (#50's pending steal) and lets go softly as it lifts.
   marked: { sfx: "brand", cues: markCues },
+  // R676: a Glitch tears the match: the rollback's rush with a shattering glass over it.
+  glitched: { sfx: "whoosh", cues: () => [sfx("whoosh"), sfx("shieldShatter")] },
 };
 
 /**
