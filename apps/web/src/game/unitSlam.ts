@@ -1,6 +1,8 @@
 // Unit Slam (#185): how hard a Unit lands, from its size. Presentation only (CLAUDE.md rule 7): it
 // reads the public numbers of a Unit the viewer can see and never changes resolution or timing.
 
+import { hasKeyword, type UnitView } from "@jackioh/shared";
+
 export type SlamTier = "tiny" | "small" | "medium" | "large" | "huge" | "massive";
 
 /** The numbers a landing Unit's size is read from, as the viewer's `UnitView` shows them. */
@@ -48,4 +50,27 @@ export function slamTierOfTotal(total: number): SlamTier {
 
 export function slamTier(stats: SlamStats): SlamTier {
   return slamTierOfTotal(slamTotal(stats));
+}
+
+/**
+ * The card's printed "Tribute N". The view carries no Tribute cost, so the client reads it off the
+ * face's text the way the card prints it ("Tribute 1, Indestructible", "Taunt, Tribute 3"). A Cry
+ * that tributes ("Tribute one of your other Units") is an effect, not a cost, and has no number.
+ */
+const TRIBUTE_COST = /\bTribute (\d+)\b/;
+
+export function printedTributes(text: string | undefined): number {
+  const match = text === undefined ? null : TRIBUTE_COST.exec(text);
+  return match === null ? 0 : Number(match[1]);
+}
+
+/** A landing Unit's numbers, read from its view and the text of the face it landed on. */
+export function slamStatsOf(unit: Pick<UnitView, "attack" | "health" | "armor" | "keywords">, faceText?: string): SlamStats {
+  return {
+    attack: unit.attack,
+    health: unit.health,
+    armor: unit.armor,
+    indestructible: hasKeyword(unit.keywords, "Indestructible"),
+    tributes: printedTributes(faceText),
+  };
 }
