@@ -96,12 +96,14 @@ function toggle(testId: string): HTMLInputElement {
 const MYTHIC = Object.values(CATALOG).find((def) => def.rarity === "Mythic");
 
 describe("SETTINGS_SLOTS mounts every task's controls in its own section", () => {
-  it("lists task 1's effects and task 6's foil under visuals, and task 2's audio under audio, each with a reset, and the account's status", () => {
+  it("lists task 1's effects and task 6's foil under visuals, and task 2's audio under audio, each with a reset, and the account's status and email change", () => {
     expect(SETTINGS_SLOTS.map((slot) => [slot.section, slot.id])).toEqual([
       ["visuals", "fx"],
       ["visuals", "card-foil"],
       ["audio", "audio"],
       ["account", "account-sync"],
+      // R663: the email change; like the status, it has no store to reset.
+      ["account", "account-email"],
     ]);
     // Every store has a reset; the account's status is not a store.
     for (const slot of SETTINGS_SLOTS.filter((entry) => entry.section !== "account")) {

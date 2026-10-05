@@ -19,6 +19,7 @@ import { DEFAULT_AUDIO_SETTINGS, writeAudioSettings } from "../audio/settings.ts
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../cards/settings.ts";
 import { DEFAULT_FX_SETTINGS, setFxSettings } from "../fx/settings.ts";
 import AccountSettings from "./AccountSettings.tsx";
+import ChangeEmail from "./ChangeEmail.tsx";
 import { AnimatedFoilSwitch, FxControls } from "./controls.tsx";
 
 export type SettingsSectionId = "gameplay" | "visuals" | "audio" | "account";
@@ -32,7 +33,7 @@ export type SettingsSlot = {
   reset?: () => void;
 };
 
-/** Task 1's effects speed and intensity, task 6's animated foil, task 2's audio controls and the account's sync status. */
+/** Task 1's effects speed and intensity, task 6's animated foil, task 2's audio controls, the account's sync status and its email change. */
 export const SETTINGS_SLOTS: readonly SettingsSlot[] = [
   {
     section: "visuals",
@@ -60,4 +61,6 @@ export const SETTINGS_SLOTS: readonly SettingsSlot[] = [
   },
   // Issue #129: where the settings are kept. It has no store to reset: the status is the account's.
   { section: "account", id: "account-sync", render: () => createElement(AccountSettings) },
+  // R663: a signed-in player's email change, through the auth provider. Nothing to reset.
+  { section: "account", id: "account-email", render: () => createElement(ChangeEmail) },
 ];

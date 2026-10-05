@@ -1,4 +1,5 @@
-// PKCE for the emailed links (R323, R324): the confirmation, its resend, and the password reset.
+// PKCE for the emailed links (R323, R324): the confirmation, its resend, the password reset, and an
+// email change's confirmation (R663).
 //
 // GoTrue's implicit flow put a session's tokens in the link's URL fragment (`#access_token=…`), where
 // history, a shared screen or a referrer could see them. With PKCE the request that mails a link
@@ -9,10 +10,10 @@
 //
 // The verifier is kept in `localStorage`, inside try/catch like every store here: a confirmation
 // link is usually opened in a new tab, and `sessionStorage` would not reach it. One verifier per
-// kind of link (`signup`, which a resend reuses so the first email's link keeps working, and
-// `recovery`), each with the time it was made, so the newest is tried first. A code that comes back
-// with no verifier here was asked for on another device or browser (R324), which the caller says in
-// its own words. A verifier is forgotten once its code has been exchanged.
+// kind of link (`signup`, which a resend reuses so the first email's link keeps working,
+// `recovery` and `email_change`), each with the time it was made, so the newest is tried first. A
+// code that comes back with no verifier here was asked for on another device or browser (R324),
+// which the caller says in its own words. A verifier is forgotten once its code has been exchanged.
 //
 // A verifier on its own grants nothing: the one-time code from the email is needed too, and that
 // code is worth nothing without it. Nothing here is ever shown or read from a URL.
@@ -29,9 +30,9 @@ const PKCE_VERIFIER_MAX_LENGTH = 128;
 export const PKCE_METHOD = "s256";
 
 /** Which emailed link a verifier is for. */
-export type PkceFlow = "signup" | "recovery";
+export type PkceFlow = "signup" | "recovery" | "email_change";
 
-const FLOWS: readonly PkceFlow[] = ["signup", "recovery"];
+const FLOWS: readonly PkceFlow[] = ["signup", "recovery", "email_change"];
 
 type Stored = { verifier: string; at: number };
 type StoredValue = { v: number } & Partial<Record<PkceFlow, Stored>>;

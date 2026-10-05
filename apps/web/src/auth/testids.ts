@@ -44,6 +44,8 @@ export const loginTestid = {
   linkError: "login-link-error",
   linkErrorSignIn: "login-link-error-sign-in",
   confirmed: "login-confirmed",
+  /** R663: an email change's link came back. */
+  emailChanged: "login-email-changed",
   sessionExpired: "login-session-expired",
   recoveryRefused: "login-recovery-refused",
   recoveryClaim: "login-recovery-claim",

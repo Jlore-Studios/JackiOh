@@ -20,10 +20,11 @@
 //   POST /auth/v1/recover?redirect_to=...          mail a password-reset link
 //   POST /auth/v1/token?grant_type=pkce            an emailed link's code, for a session (R323)
 //   PUT  /auth/v1/user                             set a new password (Bearer: the recovery token)
+//   PUT  /auth/v1/user?redirect_to=...             change the address (Bearer: the session; mails a link, R663)
 //   POST /auth/v1/token?grant_type=refresh_token   renew a session (R194)
 //   POST /auth/v1/logout?scope=local               revoke this session's refresh token (R194)
 //
-// EMAILED LINKS CARRY A CODE, NOT TOKENS (R323). The three mailers send a PKCE challenge
+// EMAILED LINKS CARRY A CODE, NOT TOKENS (R323). The mailers send a PKCE challenge
 // (`auth/pkce.ts`), so a link comes back as `/login?code=…` and `exchangeAuthCode` turns the code
 // into a session with the verifier this browser kept. A browser that cannot hash (no `crypto.subtle`
 // outside a secure context) sends no challenge and gets the implicit flow's link, which
@@ -54,7 +55,7 @@ import {
 // --- failures and their sentences --------------------------------------------------------------
 
 /** Which provider call a refusal came from; the same answer means different things on each. */
-export type AuthEndpoint = "signIn" | "signUp" | "resend" | "recover" | "updatePassword" | "refresh";
+export type AuthEndpoint = "signIn" | "signUp" | "resend" | "recover" | "updatePassword" | "changeEmail" | "refresh";
 
 export type AuthFailure =
   | "credentials"
@@ -69,6 +70,8 @@ export type AuthFailure =
   | "passwordTooLong"
   | "signUpInvalid"
   | "invalidEmail"
+  | "emailChangeRefused"
+  | "sameEmail"
   | "signupsClosed"
   | "linkExpired"
   | "sessionEnded"
@@ -121,6 +124,10 @@ export const AUTH_MESSAGES: Readonly<Record<AuthFailure, string>> = {
   signUpInvalid:
     "Check the email address and the password: one of them can't be used. A long password may be over the limit, so try a shorter one.",
   invalidEmail: "Enter a valid email address.",
+  // R160, R663: the provider refuses an address another account holds; saying so would make the
+  // form an account-existence oracle, so every refusal about the address itself reads the same.
+  emailChangeRefused: "That address can't be used for this account. Check it, or choose another.",
+  sameEmail: "That is already your account's email address.",
   signupsClosed: "New accounts can't be created right now.",
   linkExpired: "That link has expired or was already used. Request a new one below.",
   sessionEnded: "Your session has ended. Sign in again.",
@@ -164,6 +171,8 @@ export const AUTH_NOTICES: Readonly<{
   resendSent: string;
   resetSent: string;
   emailConfirmed: string;
+  emailChangeSent: string;
+  emailChanged: string;
   sessionExpired: string;
   confirmFirst: string;
   checkingLink: string;
@@ -183,6 +192,11 @@ export const AUTH_NOTICES: Readonly<{
   resendSent: `If that address has an account waiting for confirmation, a new link is on its way. ${MAIL_INTERVAL_NOTE}`,
   resetSent: `If that address has an account, a reset link is on its way. ${MAIL_INTERVAL_NOTE}`,
   emailConfirmed: "Your email is confirmed. Sign in to continue.",
+  // R663: with Supabase's secure email change on, the current address is mailed a link too, and the
+  // change waits for both; with it off, only the new one is. The sentence covers both.
+  emailChangeSent:
+    "Check the new address for a confirmation link. If your current address gets one too, open both. Your email changes once the change is confirmed; until then, sign in with your current one.",
+  emailChanged: "Your new email address is confirmed. Sign in with it to continue.",
   sessionExpired: "Your session ended. Sign in again to continue.",
   // Keyed on this browser's own sign-up (`pendingEmail`), never on the provider's answer, so it
   // reveals nothing R160 hides.
@@ -295,6 +309,7 @@ function genericRefusal(endpoint: AuthEndpoint): AuthFailure {
     case "resend":
     case "recover":
     case "updatePassword":
+    case "changeEmail":
       return "service";
     case "refresh":
       return "sessionEnded";
@@ -317,7 +332,8 @@ export function classifyProviderRefusal(endpoint: AuthEndpoint, status: number, 
 
   // R192: a rate limit is reported as a rate limit, never as the identical sign-in error.
   if (status === 429) {
-    return endpoint === "signUp" && code === "over_email_send_rate_limit" ? "emailRateLimited" : "rateLimited";
+    const mails = endpoint === "signUp" || endpoint === "changeEmail";
+    return mails && code === "over_email_send_rate_limit" ? "emailRateLimited" : "rateLimited";
   }
   if (status >= 500) return "service";
 
@@ -336,6 +352,12 @@ export function classifyProviderRefusal(endpoint: AuthEndpoint, status: number, 
     // Sign-in's refusal stays R160's one sentence; the other two are about what was just typed.
     if (endpoint === "updatePassword") return "passwordTooLong";
     if (endpoint === "signUp") return "signUpInvalid";
+    return genericRefusal(endpoint);
+  }
+  if (endpoint === "changeEmail") {
+    if (status === 401 || status === 403 || (code !== null && SESSION_CODES.has(code))) return "sessionEnded";
+    // `email_exists` names another account's address, so it says what an invalid address says (R160).
+    if (status === 400 || status === 422) return "emailChangeRefused";
     return genericRefusal(endpoint);
   }
   if (code === "email_address_invalid") {
@@ -710,6 +732,25 @@ export async function exchangeAuthCode(code: string): Promise<CodeExchange> {
 }
 
 // --- session calls -----------------------------------------------------------------------------
+
+/**
+ * R663: ask the provider to move the signed-in account to `email`. It mails a confirmation link
+ * (with a PKCE challenge, R323, so it comes back as `/login?code=…`) to the new address, and to
+ * the current one too when the project's secure email change is on; nothing changes until it is
+ * confirmed. Throws an `AuthError`: `sessionEnded` for a token the provider no longer takes, the
+ * one `emailChangeRefused` for any refusal of the address itself (R160), `rateLimited` or
+ * `emailRateLimited`, else `service` or `network`.
+ */
+export async function requestEmailChange(accessToken: string, email: string): Promise<void> {
+  const config = requireConfig();
+  const { status, json } = await send(config, {
+    method: "PUT",
+    path: withRedirect("/auth/v1/user"),
+    body: { email, ...(await pkceFields("email_change")) },
+    bearer: accessToken,
+  });
+  if (!isSuccess(status)) throw providerRefusal("changeEmail", status, json);
+}
 
 /** Set a new password with the recovery link's access token (`/reset-password`). */
 export async function updatePassword(accessToken: string, password: string): Promise<void> {

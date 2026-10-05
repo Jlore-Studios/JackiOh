@@ -511,6 +511,27 @@
   color: #fca5a5;
 }
 
+.settings-email__label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.settings-email__input {
+  width: 100%;
+  max-width: 34ch;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line-bright);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.settings-email__error {
+  color: #fca5a5;
+}
+
 .settings-account__status time {
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
