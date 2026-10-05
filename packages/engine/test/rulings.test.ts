@@ -4039,6 +4039,25 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/cards/art/convention.test.ts",
     );
   });
+  // Proved by counterWarning.test.ts "R667 …" (fixture counters: who is warned, never a Trap, a hand
+  // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
+  // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
+  it("R667 a hand card the field would counter at every price carries a warning on its own seat", () => {
+    provenIn(
+      667,
+      "counterWarning.test.ts",
+      "../../cards/test/classic/087-plague-chalice.test.ts",
+      "../../../apps/web/src/game/countered.test.tsx",
+    );
+  });
+
+  // Proved by the card's own test, cards/test/classic/055-book-of-wildfire.test.ts "R671 …": the swap
+  // at its owner's end of turn in hand only, the pool without Wildfire, Radiant to Radiant, the Book it
+  // became swapping on, Temporary kept, and the end of turn replaying exactly.
+  it("R671 Book of Wildfire becomes a different Book at the end of its owner's turn, and the Book keeps swapping", () => {
+    provenIn(671, "../../cards/test/classic/055-book-of-wildfire.test.ts");
+  });
+
   // Proved by targeting.test.ts "R682 …" (no play carries discards, the exact cost pays both with no
   // prompt, the kept cards never pay) and the card side in packages/cards
   // test/classic/089-paul-allens-ghost.test.ts "R682 …" (one play, two random others, the interception
@@ -4143,25 +4162,6 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/cards/inspect/inspect.test.tsx",
       "../../../apps/web/src/game/Card.test.tsx",
     );
-  });
-
-  // Proved by counterWarning.test.ts "R667 …" (fixture counters: who is warned, never a Trap, a hand
-  // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
-  // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
-  it("R667 a hand card the field would counter at every price carries a warning on its own seat", () => {
-    provenIn(
-      667,
-      "counterWarning.test.ts",
-      "../../cards/test/classic/087-plague-chalice.test.ts",
-      "../../../apps/web/src/game/countered.test.tsx",
-    );
-  });
-
-  // Proved by the card's own test, cards/test/classic/055-book-of-wildfire.test.ts "R671 …": the swap
-  // at its owner's end of turn in hand only, the pool without Wildfire, Radiant to Radiant, the Book it
-  // became swapping on, Temporary kept, and the end of turn replaying exactly.
-  it("R671 Book of Wildfire becomes a different Book at the end of its owner's turn, and the Book keeps swapping", () => {
-    provenIn(671, "../../cards/test/classic/055-book-of-wildfire.test.ts");
   });
 
   // Proved by playChoices.test.ts "R703 …" (a needed pick the board cannot satisfy is neither
