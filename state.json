@@ -2975,8 +2975,8 @@
       "provider": "devin",
       "queued_at": "2026-10-05T18:09:14Z",
       "requested_by": "jgoetzmann",
-      "run_id": "37357473313",
-      "started_at": "2026-10-05T18:39:06Z",
+      "run_id": "37358763879",
+      "started_at": "2026-10-05T18:49:24Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -3465,9 +3465,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-05T18:43:22Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37357986082",
-    "what": "build #323 on muse"
+    "at": "2026-10-05T18:49:24Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37358763879",
+    "what": "build #322 on devin"
   },
   "last_sweep": {
     "at": "2026-10-05T18:45:00Z",
