@@ -61,7 +61,7 @@ SPEC §9.1, restated as channels rather than domains:
 
 | Channel | Credential | What it carries |
 | --- | --- | --- |
-| Browser → Supabase Auth | publishable key (`sb_publishable_…`) | signup, login (password, an emailed link or code, an OAuth provider), email verification, an authenticator app's enrolment and codes, token refresh (R658–R660) |
+| Browser → Supabase Auth | publishable key (`sb_publishable_…`) | signup, login (password, an emailed link or code, an OAuth provider), email verification, an authenticator app's enrolment and codes, token refresh (R664–R666) |
 | Browser → Data API | publishable key + the user's JWT | **reads only**: own profile row, own collection, own decks and trios, own tickets, own results, own tutorial progress, the `cards` projection |
 | Browser → server HTTP | the user's JWT as `Authorization: Bearer` | intent: "redeem this code", "save this deck", "enqueue Conquest with this trio", "pick this deck for game 2", "import this trio", "create a room", "join ABC234", "merge this device's tutorial progress" |
 | Browser → server WebSocket | the user's JWT in the `hello` frame | intent: one `Action` at a time; receives `viewFor` and nothing else |
@@ -434,7 +434,7 @@ public by construction; anything without that prefix must never appear in a clie
 | `VITE_SERVER_HTTP_URL` | `https://api.example.com` | wherever `apps/server` is deployed |
 | `VITE_SERVER_WS_URL` | `wss://api.example.com/ws` | same host, WebSocket path |
 | `VITE_CATALOG_VERSION` | e.g. `core-1` | must equal the server's `CATALOG_VERSION` |
-| `VITE_AUTH_OAUTH_PROVIDERS` | optional, e.g. `google,github` | R660: the OAuth providers the sign-in screen offers, by Supabase's names (apple, azure, discord, facebook, github, gitlab, google, twitch). Names only; unset offers none. Set it only once each named provider is enabled in the dashboard (§10, step 2) |
+| `VITE_AUTH_OAUTH_PROVIDERS` | optional, e.g. `google,github` | R666: the OAuth providers the sign-in screen offers, by Supabase's names (apple, azure, discord, facebook, github, gitlab, google, twitch). Names only; unset offers none. Set it only once each named provider is enabled in the dashboard (§10, step 2) |
 
 A publishable key is safe in a browser **because RLS is the access control**, not because the key is
 secret. It maps to the `anon` role before login and `authenticated` after, and §3.2's matrix is the
@@ -552,18 +552,18 @@ step that is not yet implemented says which BUILD task delivers it.
    it kept. A link opened on another device confirms the address and asks for a sign-in (R324).
    No Supabase setting needs changing for PKCE.
 
-   The further ways in (issue #267, R658–R660) need these dashboard steps, done by a person:
-   - **Email sign-in link and code (R658).** Auth → Emails → Templates → **Magic Link**: the
+   The further ways in (issue #267, R664–R666) need these dashboard steps, done by a person:
+   - **Email sign-in link and code (R664).** Auth → Emails → Templates → **Magic Link**: the
      template must carry both `{{ .ConfirmationURL }}` (the link) and `{{ .Token }}` (the code),
      since the screen offers both; the default template has the link only. For example:
      `<p>Sign in to JackiOh: <a href="{{ .ConfirmationURL }}">open this link in the browser you asked from</a>, or type this code: <strong>{{ .Token }}</strong></p><p>If you didn't ask to sign in, ignore this email.</p>`.
      Auth → Providers → Email: keep **Confirm email** on, and leave the email OTP expiry at its
      default (3600 s) or shorter. Nothing else changes: the link returns to `<origin>/login`, which
      the Redirect URLs above already allow, and it is a PKCE link (R323).
-   - **Two-step sign-in (R659).** Auth → Multi-Factor: **TOTP (App Authenticator)** enabled (it is
+   - **Two-step sign-in (R665).** Auth → Multi-Factor: **TOTP (App Authenticator)** enabled (it is
      on by default on a new project). Leave phone MFA off: the client offers only an authenticator
      app, and the server's `aal2` rule counts only a verified TOTP factor.
-   - **OAuth providers (R660),** for each provider wanted: create an OAuth app at the provider
+   - **OAuth providers (R666),** for each provider wanted: create an OAuth app at the provider
      (Google Cloud console, GitHub developer settings, Discord developer portal, …) whose
      authorised redirect URI is `https://<ref>.supabase.co/auth/v1/callback`; then Auth → Sign In /
      Providers → the provider: enabled, its client id and secret pasted in (they stay in Supabase,

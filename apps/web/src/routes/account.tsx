@@ -301,7 +301,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
           </>
         ) : null}
 
-        {/* R659: an authenticator app for this account. */}
+        {/* R665: an authenticator app for this account. */}
         <TwoStepSettings token={token} />
 
         <div className="account-session">

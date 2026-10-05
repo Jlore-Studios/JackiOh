@@ -4003,20 +4003,20 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(656, "effects-cast.test.ts");
   });
 
-  // Proved by apps/web net/auth-methods.test.ts "R658 …" (what the sign-in mailer sends, its neutral
-  // answers, the code's one sentence) and routes/login-methods.test.tsx "R658 …" (the code signs in;
+  // Proved by apps/web net/auth-methods.test.ts "R664 …" (what the sign-in mailer sends, its neutral
+  // answers, the code's one sentence) and routes/login-methods.test.tsx "R664 …" (the code signs in;
   // the link signs in only the browser holding its verifier).
-  it("R658 an email link or code signs in a confirmed account, the link only where it was asked for", () => {
-    provenIn(658, "../../../apps/web/src/net/auth-methods.test.ts", "../../../apps/web/src/routes/login-methods.test.tsx");
+  it("R664 an email link or code signs in a confirmed account, the link only where it was asked for", () => {
+    provenIn(664, "../../../apps/web/src/net/auth-methods.test.ts", "../../../apps/web/src/routes/login-methods.test.tsx");
   });
 
-  // Proved by the server's auth.test.ts "R659 …" (an account with a verified factor is honoured only
+  // Proved by the server's auth.test.ts "R665 …" (an account with a verified factor is honoured only
   // at aal2, an outage cannot lower the bar), apps/web net/auth-methods.test.ts and
-  // routes/login-methods.test.tsx "R659 …" (the held session and its code, a recovery link's code
-  // first) and auth/TwoStepSettings.test.tsx "R659 …" (enrolling, confirming, removing).
-  it("R659 an account with an authenticator app is signed into, and honoured, only at aal2", () => {
+  // routes/login-methods.test.tsx "R665 …" (the held session and its code, a recovery link's code
+  // first) and auth/TwoStepSettings.test.tsx "R665 …" (enrolling, confirming, removing).
+  it("R665 an account with an authenticator app is signed into, and honoured, only at aal2", () => {
     provenIn(
-      659,
+      665,
       SERVER_AUTH_TEST,
       "../../../apps/web/src/net/auth-methods.test.ts",
       "../../../apps/web/src/routes/login-methods.test.tsx",
@@ -4024,10 +4024,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
-  // Proved by apps/web net/auth-methods.test.ts and routes/login-methods.test.tsx "R660 …": only the
+  // Proved by apps/web net/auth-methods.test.ts and routes/login-methods.test.tsx "R666 …": only the
   // providers the build names, always with PKCE, and the code that comes back signs in.
-  it("R660 an OAuth provider is offered only when configured and always reached with PKCE", () => {
-    provenIn(660, "../../../apps/web/src/net/auth-methods.test.ts", "../../../apps/web/src/routes/login-methods.test.tsx");
+  it("R666 an OAuth provider is offered only when configured and always reached with PKCE", () => {
+    provenIn(666, "../../../apps/web/src/net/auth-methods.test.ts", "../../../apps/web/src/routes/login-methods.test.tsx");
   });
 });
 

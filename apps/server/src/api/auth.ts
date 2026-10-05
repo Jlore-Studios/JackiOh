@@ -38,7 +38,7 @@
  *    (`GET /auth/v1/user`, which refuses a token whose session is gone), and only the answer that
  *    it is live is remembered, per session, for `AUTH_SESSION_LIVE_CACHE_SECONDS`. That one answer
  *    is also the authoritative user, so it stands in for the admin lookup when it is fresh.
- *  - TWO-STEP SIGN-IN (R659). An account with a verified authenticator app (a TOTP factor) is
+ *  - TWO-STEP SIGN-IN (R665). An account with a verified authenticator app (a TOTP factor) is
  *    honoured only with an `aal2` token, the level the provider gives a session once its code was
  *    typed. Without this the second step would be the client's alone: a stolen password signs in at
  *    `aal1`, and every API call would take that token. Whether the account HAS a factor is read
@@ -137,7 +137,7 @@ export type AuthApiUser = {
   /** Provider-controlled claims (`app_metadata`), safe for authorization. */
   app_metadata?: Record<string, unknown>;
   /**
-   * R659: whether the account has a VERIFIED TOTP factor (GoTrue's `factors`, `status: "verified"`).
+   * R665: whether the account has a VERIFIED TOTP factor (GoTrue's `factors`, `status: "verified"`).
    * An unverified factor (an enrolment never finished) does not count.
    */
   mfa_enrolled?: boolean;
@@ -262,7 +262,7 @@ function asAuthApiUser(value: unknown): AuthApiUser | null {
   };
 }
 
-/** R659: GoTrue's `factors` list holds a verified TOTP factor. */
+/** R665: GoTrue's `factors` list holds a verified TOTP factor. */
 function hasVerifiedTotp(factors: unknown): boolean {
   if (!Array.isArray(factors)) return false;
   return factors.some((factor: unknown) => {
@@ -271,7 +271,7 @@ function hasVerifiedTotp(factors: unknown): boolean {
   });
 }
 
-/** The level a token claims to be (`aal`): `aal2` once a second factor was proved (R659). */
+/** The level a token claims to be (`aal`): `aal2` once a second factor was proved (R665). */
 const SECOND_FACTOR_LEVEL = "aal2";
 
 function toAuthUser(user: AuthApiUser): AuthUser {
@@ -387,7 +387,7 @@ type LocalClaims = {
   appMetadata: Record<string, unknown>;
   /** The provider's session this token belongs to (`session_id`), when the token names one. */
   sessionId: string | null;
-  /** R659: the token's assurance level (`aal`), from the verified payload. */
+  /** R665: the token's assurance level (`aal`), from the verified payload. */
   aal: string | null;
 };
 
@@ -448,7 +448,7 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
   const confirmed = new Map<string, { at: number; email: string | null }>();
 
   /**
-   * R659: the users the provider last said have a verified authenticator app. Kept for as long as
+   * R665: the users the provider last said have a verified authenticator app. Kept for as long as
    * that stays the latest answer (positives only; a later answer without one removes the entry), so
    * an `aal1` token for such an account is refused even while the provider cannot be reached or the
    * answer is being served from `confirmed`.
@@ -458,7 +458,7 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
     if (user.mfa_enrolled === true) mfaEnrolled.add(user.id);
     else mfaEnrolled.delete(user.id);
   };
-  /** R659: the token's level is short of what the account needs. */
+  /** R665: the token's level is short of what the account needs. */
   const missingSecondFactor = (userId: string, aal: string | null): boolean =>
     aal !== SECOND_FACTOR_LEVEL && mfaEnrolled.has(userId);
 
@@ -627,7 +627,7 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
           // Ended at the provider (a sign-out, a dropped link, a reset elsewhere): not valid.
           if (session.kind === "ended") return null;
           if (session.kind === "live") {
-            // R659: an account with an authenticator app needs the code's level.
+            // R665: an account with an authenticator app needs the code's level.
             if (missingSecondFactor(claims.sub, claims.aal)) return null;
             const authoritative = toAuthUser(session.user);
             return {
@@ -644,7 +644,7 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
         const lookup = await authoritativeUser(claims.sub);
         // The auth server says this user no longer exists: not currently valid.
         if (lookup.kind === "missing") return null;
-        // R659, after the lookup (which refreshes what is known): on an outage, the last answer.
+        // R665, after the lookup (which refreshes what is known): on an outage, the last answer.
         if (missingSecondFactor(claims.sub, claims.aal)) return null;
         if (lookup.kind === "unavailable") {
           // Fail closed on the security-relevant field: the signature proved who this is, but
@@ -675,7 +675,7 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
       const lookup = await fetchUserByToken(token);
       if (lookup.kind !== "ok") return null;
       learnMfa(lookup.user);
-      // R659. The provider has just accepted this token, so its payload is the provider's own.
+      // R665. The provider has just accepted this token, so its payload is the provider's own.
       let aal: unknown;
       try {
         aal = decodeJwt(token)["aal"];

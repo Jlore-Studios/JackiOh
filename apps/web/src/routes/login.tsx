@@ -76,16 +76,16 @@
 //
 // THE OTHER WAYS IN (issue #267). Each ends where a password sign-in does, at the gate in `main.tsx`,
 // with an account the server gates exactly the same (§9.4): none of them makes an account active.
-//   - AN EMAIL CODE (R658): "Sign in with an email code instead" mails a link and a code to a
+//   - AN EMAIL CODE (R664): "Sign in with an email code instead" mails a link and a code to a
 //     confirmed account (`requestEmailSignIn`, one neutral sentence whatever the provider answered).
 //     The code, typed here, signs in. The link comes back with a PKCE code and signs in only the
 //     browser that asked: its code exchanges only with this browser's `magiclink` verifier. That is
 //     the one way a link's session is kept, and it is not R193's case: R193 refuses a session from
 //     a link because anyone can send one, while a PKCE sign-in link can only finish where it began.
-//   - AN OAUTH PROVIDER (R660): one button per provider the build names (`oauthProviders`). It leaves
+//   - AN OAUTH PROVIDER (R666): one button per provider the build names (`oauthProviders`). It leaves
 //     for the provider with a PKCE challenge, and the code it comes back with is exchanged, and kept,
 //     the same way; a provider that sends the player back with an error says so in our words.
-//   - TWO-STEP SIGN-IN (R659): whatever the way in, a session for an account with an authenticator
+//   - TWO-STEP SIGN-IN (R665): whatever the way in, a session for an account with an authenticator
 //     app is held here, in memory, until its code is typed (`mode: "mfa"`), and only the `aal2`
 //     session that comes back is kept; cancelling revokes the held one. A recovery link for such an
 //     account asks for the code too, before the server is asked whose it is (it refuses `aal1`).
@@ -169,13 +169,13 @@ export const signUpPrivacyTestid = "login-sign-up-privacy";
 
 /**
  * `claimReset`: a recovery link asked for elsewhere, waiting for the player to type their address.
- * `emailCode`: the email sign-in link and code (R658). `mfa`: a session waiting for the code from
- * the account's authenticator app (R659).
+ * `emailCode`: the email sign-in link and code (R664). `mfa`: a session waiting for the code from
+ * the account's authenticator app (R665).
  */
 type Mode = "signIn" | "signUp" | "forgot" | "claimReset" | "emailCode" | "mfa";
 
 /**
- * R659: a session held for its second step, the factor whose code it needs, and what happens once it
+ * R665: a session held for its second step, the factor whose code it needs, and what happens once it
  * has it: `signIn` keeps it as this browser's session; `recovery` hands the raised session back to
  * the recovery link being checked (the link's own state still owns it, so leaving revokes it).
  */
@@ -243,7 +243,7 @@ async function exchangeLinkOnce(state: LinkState, code: string): Promise<CodeExc
   return exchange;
 }
 
-/** R659: the factor the link's exchange said its session still needs, or null. */
+/** R665: the factor the link's exchange said its session still needs, or null. */
 async function exchangedFactor(state: LinkState): Promise<string | null> {
   const exchange = await state.exchange;
   return exchange?.kind === "session" ? exchange.secondFactor : null;
@@ -268,7 +268,7 @@ type Entry = {
   sessionExpired: boolean;
   email: string;
   linkError: boolean;
-  /** R660: an OAuth provider sent the player back with an error rather than a code. */
+  /** R666: an OAuth provider sent the player back with an error rather than a code. */
   oauthFailed: boolean;
   link: PendingLink | null;
 };
@@ -349,7 +349,7 @@ function readEntry(): Entry {
     case "error":
       entry.mode = "signIn";
       if (newestFlow() === "oauth") {
-        // R660: the newest thing this browser asked for was an OAuth sign-in, and the provider sent
+        // R666: the newest thing this browser asked for was an OAuth sign-in, and the provider sent
         // it back with an error (cancelled, or refused): not an emailed link's failure.
         forgetVerifier("oauth");
         entry.oauthFailed = true;
@@ -445,16 +445,16 @@ export default function LoginRoute(): ReactElement {
   const resetCooldown = useAddressCooldown(resetRunning);
   const resendWait = resendCooldown.secondsFor(email);
   const resetWait = resetCooldown.secondsFor(email);
-  /** R658: the code from a sign-in email, or (R659) from an authenticator app. */
+  /** R664: the code from a sign-in email, or (R665) from an authenticator app. */
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
-  /** R658: the address the sign-in code was mailed to; null until one was asked for. */
+  /** R664: the address the sign-in code was mailed to; null until one was asked for. */
   const [codeSentTo, setCodeSentTo] = useState<string | null>(null);
   const codeCooldown = useAddressCooldown();
   const codeWait = codeCooldown.secondsFor(email);
-  /** R659: the session waiting for its authenticator code (see `SecondStep`). */
+  /** R665: the session waiting for its authenticator code (see `SecondStep`). */
   const secondStep = useRef<SecondStep | null>(null);
-  /** R660: the OAuth providers this build offers. */
+  /** R666: the OAuth providers this build offers. */
   const [providers] = useState(oauthProviders);
   const [oauthFailed, setOauthFailed] = useState(entry.oauthFailed);
   const noticeRef = useRef<HTMLParagraphElement>(null);
@@ -478,7 +478,7 @@ export default function LoginRoute(): ReactElement {
       window.setTimeout(() => {
         if (mounted.current) return;
         revokeLink(state);
-        // R659: a sign-in left at its second step is not kept, so it is revoked too.
+        // R665: a sign-in left at its second step is not kept, so it is revoked too.
         releaseSecondStep();
       }, 0);
     };
@@ -526,8 +526,8 @@ export default function LoginRoute(): ReactElement {
           return;
         }
         if (exchange.flow === "magiclink" || exchange.flow === "oauth") {
-          // R658, R660: a sign-in THIS browser asked for (only its verifier exchanges the code), so
-          // unlike R193's links it signs in, past its second step if the account has one (R659).
+          // R664, R666: a sign-in THIS browser asked for (only its verifier exchanges the code), so
+          // unlike R193's links it signs in, past its second step if the account has one (R665).
           if (acted.current) {
             revokeLink(state);
             return;
@@ -551,7 +551,7 @@ export default function LoginRoute(): ReactElement {
       // Let go meanwhile: the player moved on, and it has been revoked.
       if (session === null) return;
       if (link.kind === "recovery" && renewal !== "spent" && assuranceLevel(session.accessToken) !== "aal2") {
-        // R659: the server refuses an `aal1` token for an account with an authenticator app, so its
+        // R665: the server refuses an `aal1` token for an account with an authenticator app, so its
         // code comes first. A code's exchange said already; an implicit link's account is asked.
         // An answer that could not be had asks for nothing: the server still has the last word.
         let factor: string | null = null;
@@ -641,7 +641,7 @@ export default function LoginRoute(): ReactElement {
     };
   }, [entry, checkRound]);
 
-  /** R659: a sign-in held for its second step and not finished is revoked. */
+  /** R665: a sign-in held for its second step and not finished is revoked. */
   function releaseSecondStep(): void {
     const step = secondStep.current;
     secondStep.current = null;
@@ -659,7 +659,7 @@ export default function LoginRoute(): ReactElement {
     navigate(takeReturnTo() ?? paths.decks, { replace: true });
   }
 
-  /** R659: the session is kept at once, or held for its authenticator code first. */
+  /** R665: the session is kept at once, or held for its authenticator code first. */
   function signInWith(session: Session, secondFactor: string | null): void {
     if (secondFactor === null) {
       keepSession(session);
@@ -678,7 +678,7 @@ export default function LoginRoute(): ReactElement {
     setLinkOutcome("none");
   }
 
-  /** R659: the authenticator code for the held session. */
+  /** R665: the authenticator code for the held session. */
   function submitSecondStep(): void {
     const step = secondStep.current;
     if (step === null) {
@@ -715,7 +715,7 @@ export default function LoginRoute(): ReactElement {
       });
   }
 
-  /** R658: mail the sign-in link and code (again). */
+  /** R664: mail the sign-in link and code (again). */
   function sendEmailCode(): void {
     const problem = emailProblem(email);
     setEmailError(problem);
@@ -745,7 +745,7 @@ export default function LoginRoute(): ReactElement {
       });
   }
 
-  /** R658: the typed sign-in code. */
+  /** R664: the typed sign-in code. */
   function submitEmailCode(address: string): void {
     const problem = requiredProblem(code, "code");
     setCodeError(problem);
@@ -768,7 +768,7 @@ export default function LoginRoute(): ReactElement {
       });
   }
 
-  /** R660: leave for an OAuth provider. A refusal before leaving is said here. */
+  /** R666: leave for an OAuth provider. A refusal before leaving is said here. */
   function continueWith(provider: OAuthProvider): void {
     if (busy) return;
     acted.current = true;
@@ -957,7 +957,7 @@ export default function LoginRoute(): ReactElement {
     const justSignedUp = pendingEmail();
     signIn(address, password)
       .then((result) => {
-        // Kept at once, or (R659) once its authenticator code has been typed.
+        // Kept at once, or (R665) once its authenticator code has been typed.
         signInWith(result.session, result.secondFactor);
       })
       .catch((cause: unknown) => {
@@ -982,7 +982,7 @@ export default function LoginRoute(): ReactElement {
   const claiming = mode === "claimReset";
   const emailCode = mode === "emailCode";
   const secondFactor = mode === "mfa";
-  /** R658: the code was mailed to the address in the field, so the field to type it is shown. */
+  /** R664: the code was mailed to the address in the field, so the field to type it is shown. */
   const codeAsked = emailCode && codeSentTo !== null && sameAddress(normalizeEmail(email), codeSentTo);
 
   let title: string;
@@ -1397,7 +1397,7 @@ export default function LoginRoute(): ReactElement {
           </form>
 
           {(signingIn || signingUp) && providers.length > 0 ? (
-            // R660: only the providers this build names, so none appears before it is set up.
+            // R666: only the providers this build names, so none appears before it is set up.
             <div className="auth-oauth" role="group" aria-label="Other ways to sign in">
               <p className="auth-hint">Or continue with</p>
               <div className="auth-actions">

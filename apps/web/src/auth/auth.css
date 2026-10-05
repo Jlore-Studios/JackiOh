@@ -70,7 +70,7 @@
   gap: var(--auth-gap);
 }
 
-/* R660: the OAuth providers the build names, under the form, a 44 px target each. */
+/* R666: the OAuth providers the build names, under the form, a 44 px target each. */
 .auth-screen .auth-oauth {
   display: flex;
   flex-direction: column;

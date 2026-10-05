@@ -1,9 +1,9 @@
-// `/account`'s two-step sign-in (R659): turn an authenticator app on or off for this account.
+// `/account`'s two-step sign-in (R665): turn an authenticator app on or off for this account.
 //
 // The provider does the work (`net/auth.ts`): enrolling makes an UNVERIFIED factor and shows its QR
 // code and key; the factor counts for nothing until a code from the app is typed here, which also
 // raises this session to `aal2`. That raised session replaces the stored one at once, because from
-// then on the server honours only `aal2` tokens for this account (R659). It is the same session at
+// then on the server honours only `aal2` tokens for this account (R665). It is the same session at
 // the provider with new tokens, so it is written, never adopted: `adoptSession` would revoke the
 // session it replaces, which is this one. Leaving an enrolment unfinished removes the unverified
 // factor, and the next enrolment clears any that are left.

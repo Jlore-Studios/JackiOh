@@ -20,7 +20,7 @@ const PUBLIC = [
   "VITE_SERVER_HTTP_URL",
   "VITE_SERVER_WS_URL",
   "VITE_CATALOG_VERSION",
-  // R660: provider names only; set once a provider is set up in the Supabase dashboard.
+  // R666: provider names only; set once a provider is set up in the Supabase dashboard.
   "VITE_AUTH_OAUTH_PROVIDERS",
 ];
 

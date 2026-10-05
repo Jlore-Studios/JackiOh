@@ -173,7 +173,7 @@ written with `collection` in one transaction as every collection change is.
   user-editable in Supabase and can appear in `auth.jwt()`, so an `email_verified` claim there is
   not evidence of anything. §9.4 step 1 requires a verified email, so it comes from
   `auth.admin.getUserById(...).email_confirmed_at`. Authorization data belongs in `app_metadata`.
-- **Two-step sign-in is enforced here (R659).** An account with a verified TOTP factor (read from
+- **Two-step sign-in is enforced here (R665).** An account with a verified TOTP factor (read from
   the same provider user, `factors`) is honoured only with an `aal2` token; an `aal1` one is
   refused like an invalid token. The last answer that an account has a factor is remembered per
   user, so an outage cannot lower the bar. Every way in (password, email link or code, OAuth) ends

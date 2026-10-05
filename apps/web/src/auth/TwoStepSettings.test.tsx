@@ -1,4 +1,4 @@
-// `/account`'s two-step sign-in (R659): enrol an authenticator app, confirm it with a code (which
+// `/account`'s two-step sign-in (R665): enrol an authenticator app, confirm it with a code (which
 // raises this session to aal2 and stores it), and remove it. The provider is a stubbed `fetch`.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -64,8 +64,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("R659 turning two-step sign-in on and off", () => {
-  it("R659 shows nothing on a build with no auth provider", () => {
+describe("R665 turning two-step sign-in on and off", () => {
+  it("R665 shows nothing on a build with no auth provider", () => {
     vi.stubEnv("VITE_SUPABASE_URL", "");
     const calls = serve({});
     render(<TwoStepSettings token={TOKEN} />);
@@ -73,7 +73,7 @@ describe("R659 turning two-step sign-in on and off", () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("R659 enrols, and only a code from the app turns it on, storing the raised session", async () => {
+  it("R665 enrols, and only a code from the app turns it on, storing the raised session", async () => {
     let listed = 0;
     const calls = serve({
       "GET /auth/v1/user": () => {
@@ -108,7 +108,7 @@ describe("R659 turning two-step sign-in on and off", () => {
     expect(listed).toBeGreaterThan(0);
   });
 
-  it("R659 a wrong code leaves it off and says so", async () => {
+  it("R665 a wrong code leaves it off and says so", async () => {
     serve({
       "GET /auth/v1/user": factors([]),
       "POST /auth/v1/factors": ENROLLED,
@@ -124,7 +124,7 @@ describe("R659 turning two-step sign-in on and off", () => {
     expect(readSession()?.accessToken).toBe(TOKEN);
   });
 
-  it("R659 cancelling an enrolment removes the unverified factor", async () => {
+  it("R665 cancelling an enrolment removes the unverified factor", async () => {
     const calls = serve({
       "GET /auth/v1/user": factors([]),
       "POST /auth/v1/factors": ENROLLED,
@@ -139,7 +139,7 @@ describe("R659 turning two-step sign-in on and off", () => {
     });
   });
 
-  it("R659 an account with a verified factor shows it on, and turning it off asks first", async () => {
+  it("R665 an account with a verified factor shows it on, and turning it off asks first", async () => {
     const calls = serve({
       "GET /auth/v1/user": factors([{ id: "f-app", status: "verified" }]),
       "DELETE /auth/v1/factors/f-app": { status: 200, body: { id: "f-app" } },
@@ -155,7 +155,7 @@ describe("R659 turning two-step sign-in on and off", () => {
     expect(calls.find((call) => call.method === "DELETE")?.auth).toBe(`Bearer ${TOKEN}`);
   });
 
-  it("R659 factors that cannot be read offer nothing rather than the wrong thing", async () => {
+  it("R665 factors that cannot be read offer nothing rather than the wrong thing", async () => {
     serve({ "GET /auth/v1/user": { status: 500, body: {} } });
     render(<TwoStepSettings token={TOKEN} />);
     expect((await screen.findByTestId(twoStepTestid.state)).getAttribute("data-state")).toBe("unknown");

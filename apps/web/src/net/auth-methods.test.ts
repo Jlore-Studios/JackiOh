@@ -1,5 +1,5 @@
-// `net/auth.ts`'s three further ways in (issue #267): the email sign-in link and code (R658), the
-// authenticator app's second step (R659) and the OAuth providers (R660). Every one ends in a session
+// `net/auth.ts`'s three further ways in (issue #267): the email sign-in link and code (R664), the
+// authenticator app's second step (R665) and the OAuth providers (R666). Every one ends in a session
 // for an account the server gates exactly as a password sign-in's (§9.4): nothing here can make an
 // account active, and these tests only prove what each call sends and how it reads the answers.
 
@@ -88,8 +88,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("R658 the email sign-in link and code", () => {
-  it("R658 mails a link and code only to an existing account, with a PKCE challenge this browser keeps", async () => {
+describe("R664 the email sign-in link and code", () => {
+  it("R664 mails a link and code only to an existing account, with a PKCE challenge this browser keeps", async () => {
     const calls = serve(200, {});
     await requestEmailSignIn(EMAIL);
     expect(calls).toHaveLength(1);
@@ -114,17 +114,17 @@ describe("R658 the email sign-in link and code", () => {
     ["the per-address interval", 429, { error_code: "over_email_send_rate_limit" }],
     ["a mail that could not be sent", 500, {}],
     ["the built-in mailer's allow-list", 400, { error_code: "email_address_not_authorized" }],
-  ])("R658 answers the same for %s, so the form is no oracle (R192)", async (_name, status, body) => {
+  ])("R664 answers the same for %s, so the form is no oracle (R192)", async (_name, status, body) => {
     serve(status, body);
     await expect(requestEmailSignIn(EMAIL)).resolves.toBeUndefined();
   });
 
-  it("R658 still says when the typed address is not an address", async () => {
+  it("R664 still says when the typed address is not an address", async () => {
     serve(400, { error_code: "email_address_invalid" });
     expect((await refusal(requestEmailSignIn("nope"))).failure).toBe("invalidEmail");
   });
 
-  it("R658 a code is verified as type email, with spaces and dashes taken out", async () => {
+  it("R664 a code is verified as type email, with spaces and dashes taken out", async () => {
     const calls = serve(200, TOKEN_BODY);
     const { session, secondFactor } = await verifyEmailCode(EMAIL, " 123 456 ");
     expect(secondFactor).toBeNull();
@@ -140,14 +140,14 @@ describe("R658 the email sign-in link and code", () => {
     ["an address with no account", 400, { error_code: "user_not_found" }],
     ["an unauthorised answer", 401, {}],
     ["any other refusal", 422, { error_code: "validation_failed" }],
-  ])("R658 reads %s as the one sentence (R160)", async (_name, status, body) => {
+  ])("R664 reads %s as the one sentence (R160)", async (_name, status, body) => {
     serve(status, body);
     const error = await refusal(verifyEmailCode(EMAIL, "123456"));
     expect(error.failure).toBe("codeInvalid");
     expect(error.message).toBe(AUTH_MESSAGES.codeInvalid);
   });
 
-  it("R658 a rate limit is a rate limit (R192), and a code that is not digits is never sent", async () => {
+  it("R664 a rate limit is a rate limit (R192), and a code that is not digits is never sent", async () => {
     serve(429, {});
     expect((await refusal(verifyEmailCode(EMAIL, "123456"))).failure).toBe("rateLimited");
     const calls = serve(200, TOKEN_BODY);
@@ -155,7 +155,7 @@ describe("R658 the email sign-in link and code", () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("R658 the link's code exchanges with the magic-link verifier, and says which way in it was", async () => {
+  it("R664 the link's code exchanges with the magic-link verifier, and says which way in it was", async () => {
     serve(200, {});
     await requestEmailSignIn(EMAIL);
     const calls = serve(200, TOKEN_BODY);
@@ -167,17 +167,17 @@ describe("R658 the email sign-in link and code", () => {
   });
 });
 
-describe("R659 two-step sign-in with an authenticator app", () => {
+describe("R665 two-step sign-in with an authenticator app", () => {
   const AAL1 = tokenWith({ sub: "user-1", aal: "aal1" });
   const AAL2 = tokenWith({ sub: "user-1", aal: "aal2" });
 
-  it("R659 reads the token's own assurance level", () => {
+  it("R665 reads the token's own assurance level", () => {
     expect(assuranceLevel(AAL1)).toBe("aal1");
     expect(assuranceLevel(AAL2)).toBe("aal2");
     expect(assuranceLevel("not-a-token")).toBeNull();
   });
 
-  it("R659 a token answer says which factor is still needed, without asking anyone", async () => {
+  it("R665 a token answer says which factor is still needed, without asking anyone", async () => {
     serve(200, {
       access_token: AAL1,
       expires_in: 3600,
@@ -191,13 +191,13 @@ describe("R659 two-step sign-in with an authenticator app", () => {
     expect((await verifyEmailCode(EMAIL, "123456")).secondFactor).toBeNull();
   });
 
-  it("R659 an aal2 session needs nothing more, and asks nobody", async () => {
+  it("R665 an aal2 session needs nothing more, and asks nobody", async () => {
     const calls = serve(500);
     expect(await secondFactorFor({ accessToken: AAL2 })).toBeNull();
     expect(calls).toHaveLength(0);
   });
 
-  it("R659 an aal1 session needs the account's first VERIFIED totp factor", async () => {
+  it("R665 an aal1 session needs the account's first VERIFIED totp factor", async () => {
     const calls = serve(200, {
       id: "user-1",
       factors: [
@@ -215,7 +215,7 @@ describe("R659 two-step sign-in with an authenticator app", () => {
     expect(await secondFactorFor({ accessToken: AAL1 })).toBeNull();
   });
 
-  it("R659 a code is a challenge and then its answer, and the session that comes back replaces the old", async () => {
+  it("R665 a code is a challenge and then its answer, and the session that comes back replaces the old", async () => {
     const calls = serveBy((call) =>
       call.url.pathname.endsWith("/challenge") ? { status: 200, body: { id: "challenge-1" } } : { status: 200, body: { access_token: "aal2-token", expires_in: 3600 } },
     );
@@ -231,7 +231,7 @@ describe("R659 two-step sign-in with an authenticator app", () => {
     expect(next.refreshToken).toBe("refresh-old");
   });
 
-  it("R659 a wrong code is its own sentence; a code that is not six digits is never sent", async () => {
+  it("R665 a wrong code is its own sentence; a code that is not six digits is never sent", async () => {
     serveBy((call) =>
       call.url.pathname.endsWith("/challenge")
         ? { status: 200, body: { id: "challenge-1" } }
@@ -247,7 +247,7 @@ describe("R659 two-step sign-in with an authenticator app", () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("R659 enrolling clears an unfinished factor first, names the issuer and draws the QR code safely", async () => {
+  it("R665 enrolling clears an unfinished factor first, names the issuer and draws the QR code safely", async () => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg"><path fill="#000" d="M0 0h1v1H0z"/></svg>';
     const calls = serveBy((call) => {
       if (call.method === "GET") {
@@ -275,7 +275,7 @@ describe("R659 two-step sign-in with an authenticator app", () => {
     expect(enrolment.qrCode).toBe(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
   });
 
-  it("R659 a QR code that is not an SVG data URI is not drawn; the key to type stays", async () => {
+  it("R665 a QR code that is not an SVG data URI is not drawn; the key to type stays", async () => {
     serveBy((call) =>
       call.method === "GET"
         ? { status: 200, body: { id: "user-1", factors: [] } }
@@ -286,7 +286,7 @@ describe("R659 two-step sign-in with an authenticator app", () => {
     expect(enrolment.secret).toBe("JBSWY3DP");
   });
 
-  it("R659 a project without TOTP says so in our words", async () => {
+  it("R665 a project without TOTP says so in our words", async () => {
     serveBy((call) =>
       call.method === "GET"
         ? { status: 200, body: { id: "user-1", factors: [] } }
@@ -297,7 +297,7 @@ describe("R659 two-step sign-in with an authenticator app", () => {
     expect(error.message).not.toContain("PROVIDER");
   });
 
-  it("R659 removing a factor deletes it with the session's token", async () => {
+  it("R665 removing a factor deletes it with the session's token", async () => {
     const calls = serve(200, { id: "f-app" });
     await removeFactor({ accessToken: AAL2 }, "f-app");
     expect(calls[0]?.method).toBe("DELETE");
@@ -309,8 +309,8 @@ describe("R659 two-step sign-in with an authenticator app", () => {
   });
 });
 
-describe("R660 OAuth providers, behind configuration", () => {
-  it("R660 offers only the providers the public env names, known ones only, once each", () => {
+describe("R666 OAuth providers, behind configuration", () => {
+  it("R666 offers only the providers the public env names, known ones only, once each", () => {
     expect(oauthProviders(undefined)).toEqual([]);
     expect(oauthProviders("")).toEqual([]);
     expect(oauthProviders(" Google, github,google, myspace ,")).toEqual(["google", "github"]);
@@ -318,12 +318,12 @@ describe("R660 OAuth providers, behind configuration", () => {
     expect(oauthProviders("constructor,__proto__,toString")).toEqual([]);
   });
 
-  it("R660 offers none when this build has no auth provider", () => {
+  it("R666 offers none when this build has no auth provider", () => {
     vi.stubEnv("VITE_SUPABASE_URL", "");
     expect(oauthProviders("google")).toEqual([]);
   });
 
-  it("R660 the authorize URL carries the provider, the fixed /login return and a PKCE challenge kept here", async () => {
+  it("R666 the authorize URL carries the provider, the fixed /login return and a PKCE challenge kept here", async () => {
     const url = new URL(await oauthAuthorizeUrl("github"));
     expect(url.origin + url.pathname).toBe(`${URL_}/auth/v1/authorize`);
     expect(url.searchParams.get("provider")).toBe("github");
@@ -333,12 +333,12 @@ describe("R660 OAuth providers, behind configuration", () => {
     expect(await challengeFor(kept?.verifier ?? "")).toBe(url.searchParams.get("code_challenge"));
   });
 
-  it("R660 is never started without PKCE: no challenge, no OAuth (its tokens would come back in a URL)", async () => {
+  it("R666 is never started without PKCE: no challenge, no OAuth (its tokens would come back in a URL)", async () => {
     vi.stubGlobal("crypto", { getRandomValues: (bytes: Uint8Array) => bytes, subtle: undefined });
     expect((await refusal(oauthAuthorizeUrl("google"))).failure).toBe("oauthUnavailable");
   });
 
-  it("R660 the provider's code exchanges with the oauth verifier, and says which way in it was", async () => {
+  it("R666 the provider's code exchanges with the oauth verifier, and says which way in it was", async () => {
     await oauthAuthorizeUrl("google");
     serve(200, TOKEN_BODY);
     const exchange = await exchangeAuthCode("2b5e0c1a-8f1b-4c4f-9a35-0d8b3c1f2e77");

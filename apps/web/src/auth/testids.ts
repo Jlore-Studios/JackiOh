@@ -60,16 +60,16 @@ export const loginTestid = {
   signedInSignOut: "login-signed-in-sign-out",
   resetCooldown: "login-reset-cooldown",
   resendLead: "login-resend-lead",
-  // R658: the email sign-in link and code.
+  // R664: the email sign-in link and code.
   emailCodeStart: "login-email-code-start",
   code: "login-code",
   codeError: "login-code-error",
   codeSend: "login-code-send",
   codeCooldown: "login-code-cooldown",
-  // R659: the authenticator app's step.
+  // R665: the authenticator app's step.
   mfaCode: "login-mfa-code",
   mfaCancel: "login-mfa-cancel",
-  // R660: one button per configured OAuth provider (`data-provider` names it).
+  // R666: one button per configured OAuth provider (`data-provider` names it).
   oauth: "login-oauth",
   oauthError: "login-oauth-error",
 } as const;

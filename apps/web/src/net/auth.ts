@@ -22,19 +22,19 @@
 //   PUT  /auth/v1/user                             set a new password (Bearer: the recovery token)
 //   POST /auth/v1/token?grant_type=refresh_token   renew a session (R194)
 //   POST /auth/v1/logout?scope=local               revoke this session's refresh token (R194)
-//   POST /auth/v1/otp?redirect_to=...              mail a sign-in link and code (R658)
-//   POST /auth/v1/verify                           a mailed sign-in code, for a session (R658)
-//   GET  /auth/v1/user                             the account's two-factor factors (R659)
-//   POST /auth/v1/factors                          enrol an authenticator app (R659)
-//   POST /auth/v1/factors/{id}/challenge, /verify  its code, for an `aal2` session (R659)
-//   DELETE /auth/v1/factors/{id}                   remove a factor (R659)
-//   GET  /auth/v1/authorize?provider=...           (a navigation, not a fetch) an OAuth provider (R660)
+//   POST /auth/v1/otp?redirect_to=...              mail a sign-in link and code (R664)
+//   POST /auth/v1/verify                           a mailed sign-in code, for a session (R664)
+//   GET  /auth/v1/user                             the account's two-factor factors (R665)
+//   POST /auth/v1/factors                          enrol an authenticator app (R665)
+//   POST /auth/v1/factors/{id}/challenge, /verify  its code, for an `aal2` session (R665)
+//   DELETE /auth/v1/factors/{id}                   remove a factor (R665)
+//   GET  /auth/v1/authorize?provider=...           (a navigation, not a fetch) an OAuth provider (R666)
 //
 // EVERY WAY IN ENDS AT THE SAME GATE. A link, a code and an OAuth provider each end in a session
 // for an `auth.users` row, and that row's profile starts `pending` (the trigger) like a password
 // sign-up's: nothing here, nor on the server, creates an active account; only a redeemed invite code
 // does (§9.4). Before a session is kept, `secondFactorFor` asks whether the account has an
-// authenticator app; if it has, the session is kept only once its code is typed (R659).
+// authenticator app; if it has, the session is kept only once its code is typed (R665).
 //
 // EMAILED LINKS CARRY A CODE, NOT TOKENS (R323). The three mailers send a PKCE challenge
 // (`auth/pkce.ts`), so a link comes back as `/login?code=…` and `exchangeAuthCode` turns the code
@@ -74,13 +74,13 @@ export type AuthEndpoint =
   | "recover"
   | "updatePassword"
   | "refresh"
-  /** R658: mail a sign-in link and code. */
+  /** R664: mail a sign-in link and code. */
   | "otp"
-  /** R658: a mailed sign-in code. */
+  /** R664: a mailed sign-in code. */
   | "verifyOtp"
-  /** R659: an authenticator app's code (enrolling, or signing in). */
+  /** R665: an authenticator app's code (enrolling, or signing in). */
   | "mfaVerify"
-  /** R659: enrolling, listing or removing a factor. */
+  /** R665: enrolling, listing or removing a factor. */
   | "mfa";
 
 export type AuthFailure =
@@ -159,14 +159,14 @@ export const AUTH_MESSAGES: Readonly<Record<AuthFailure, string>> = {
   network: "Couldn't reach the sign-in service. Check your connection and try again.",
   service: "The sign-in service had a problem. Try again in a minute.",
   unconfigured: AUTH_UNCONFIGURED_MESSAGE,
-  // R658: one sentence for a wrong code, a spent one, an expired one and an address with no account,
+  // R664: one sentence for a wrong code, a spent one, an expired one and an address with no account,
   // so the code form is no more an oracle than the password form (R160).
   codeInvalid: "That code didn't work. Check the newest email we sent, or ask for a new code.",
   mfaCodeInvalid: "That code didn't match. Type the 6-digit code your authenticator app shows now.",
   mfaUnavailable: "Two-step sign-in isn't available on this site right now.",
-  // R660: an OAuth sign-in needs PKCE, which needs a secure context (`crypto.subtle`).
+  // R666: an OAuth sign-in needs PKCE, which needs a secure context (`crypto.subtle`).
   oauthUnavailable: "That sign-in option doesn't work in this browser. Sign in with your email instead.",
-  // R660: the provider sent the player back without a sign-in (cancelled, or refused).
+  // R666: the provider sent the player back without a sign-in (cancelled, or refused).
   oauthFailed: "Signing in with that account didn't finish. Try again, or sign in with your email.",
 };
 
@@ -251,7 +251,7 @@ export const AUTH_NOTICES: Readonly<{
   inviteNeedsPassword:
     "You've been invited. Your account needs a password before you can sign in: ask for a link to set one below.",
   inviteOnly: "Online play needs an invite code, which you enter after confirming your email.",
-  // R658, R192: the same words whether or not the address has an account. A link or code goes only
+  // R664, R192: the same words whether or not the address has an account. A link or code goes only
   // to a CONFIRMED account; a new address signs up with a password first.
   emailCodeSent:
     `If that address has a confirmed account, an email with a sign-in link and a code is on its way. ` +
@@ -361,7 +361,7 @@ function genericRefusal(endpoint: AuthEndpoint): AuthFailure {
   }
 }
 
-/** GoTrue's answers when the project has not turned TOTP on (R659). */
+/** GoTrue's answers when the project has not turned TOTP on (R665). */
 const MFA_DISABLED_CODES: ReadonlySet<string> = new Set([
   "mfa_totp_enroll_not_enabled",
   "mfa_totp_verify_not_enabled",
@@ -387,7 +387,7 @@ export function classifyProviderRefusal(endpoint: AuthEndpoint, status: number, 
   }
   if (status >= 500) return "service";
 
-  // R658: a sign-in code's every refusal is one sentence, whether the code was wrong, spent or
+  // R664: a sign-in code's every refusal is one sentence, whether the code was wrong, spent or
   // expired, or the address has no account: telling them apart is R160's oracle again.
   if (endpoint === "verifyOtp") return "codeInvalid";
   if (endpoint === "mfaVerify" || endpoint === "mfa") {
@@ -579,7 +579,7 @@ type TokenResponse = {
 };
 
 /**
- * R659: the factor whose code a session from this token answer still needs, or null. GoTrue's token
+ * R665: the factor whose code a session from this token answer still needs, or null. GoTrue's token
  * answers carry the user, whose `factors` lists the account's (GoTrue leaves it out when there are
  * none), so this asks nobody; a token the provider already raised to `aal2` needs nothing.
  */
@@ -618,7 +618,7 @@ function sessionFromTokens(body: TokenResponse, fallbackRefreshToken: string | n
 export type SignInResult = {
   session: Session;
   emailVerified: boolean;
-  /** R659: the authenticator app whose code is still needed before the session may be kept. */
+  /** R665: the authenticator app whose code is still needed before the session may be kept. */
   secondFactor: string | null;
 };
 
@@ -936,10 +936,10 @@ export async function revokeSignedOutSession(session: Session): Promise<void> {
   }
 }
 
-// --- the email sign-in link and code (R658) -------------------------------------------------------
+// --- the email sign-in link and code (R664) -------------------------------------------------------
 
 /**
- * Mail a sign-in link and a one-time code to an address (R658). `create_user: false`: only an
+ * Mail a sign-in link and a one-time code to an address (R664). `create_user: false`: only an
  * account that already exists AND has confirmed its address is mailed. That keeps sign-up in one
  * place (the password form, R193), and it closes a takeover: GoTrue treats an unconfirmed account
  * as not yet signed up, so a link for it would confirm an address someone else registered first and
@@ -970,7 +970,7 @@ export function normalizeOneTimeCode(raw: string): string {
 }
 
 /**
- * R658: the code from a sign-in email, for a session. Every refusal is `codeInvalid` (one sentence,
+ * R664: the code from a sign-in email, for a session. Every refusal is `codeInvalid` (one sentence,
  * R160), bar a rate limit (R192) and a fault.
  */
 export async function verifyEmailCode(
@@ -993,7 +993,7 @@ export async function verifyEmailCode(
   return { session, secondFactor: secondFactorIn(body, session.accessToken) };
 }
 
-// --- two-step sign-in: an authenticator app (R659) ------------------------------------------------
+// --- two-step sign-in: an authenticator app (R665) ------------------------------------------------
 
 /** One of the account's TOTP factors, as GoTrue lists them on `GET /auth/v1/user`. */
 export type TotpFactor = { id: string; verified: boolean };
@@ -1027,7 +1027,7 @@ function factorsOf(body: unknown): TotpFactor[] {
   });
 }
 
-/** The account's TOTP factors (R659). Throws `sessionEnded` for a token the provider refuses. */
+/** The account's TOTP factors (R665). Throws `sessionEnded` for a token the provider refuses. */
 export async function listTotpFactors(accessToken: string): Promise<TotpFactor[]> {
   const config = requireConfig();
   const { status, json } = await send(config, { method: "GET", path: "/auth/v1/user", bearer: accessToken });
@@ -1036,7 +1036,7 @@ export async function listTotpFactors(accessToken: string): Promise<TotpFactor[]
 }
 
 /**
- * R659: the factor whose code this session still needs, or null when it needs none, asked of the
+ * R665: the factor whose code this session still needs, or null when it needs none, asked of the
  * provider (`secondFactorIn` reads it from a token answer instead, where there is one). A session the
  * provider already raised to `aal2` needs none; otherwise the account's first verified authenticator
  * app is the one to ask for. The server refuses an `aal1` token for an account that has one, so a
@@ -1060,7 +1060,7 @@ function factorPath(factorId: string, suffix = ""): string {
 const TOTP_CODE_PATTERN = /^[0-9]{6}$/u;
 
 /**
- * R659: an authenticator app's code for `factorId`, which raises the session to `aal2`. GoTrue asks
+ * R665: an authenticator app's code for `factorId`, which raises the session to `aal2`. GoTrue asks
  * for a challenge first and then its answer; the session that comes back replaces the one given
  * (the same session at the provider, with new tokens). Used to finish enrolling a factor as well as
  * to sign in with one.
@@ -1117,7 +1117,7 @@ function qrImage(raw: unknown): string | null {
 }
 
 /**
- * R659: start enrolling an authenticator app. An unverified factor left by an enrolment that was
+ * R665: start enrolling an authenticator app. An unverified factor left by an enrolment that was
  * never finished is removed first, so they never pile up against the provider's cap. The factor
  * counts for nothing (not at sign-in, not at the server) until `verifySecondFactor` confirms a code.
  */
@@ -1141,7 +1141,7 @@ export async function enrollTotp(session: Session): Promise<TotpEnrolment> {
   return { factorId: body.id, qrCode: qrImage(body.totp?.qr_code), secret };
 }
 
-/** R659: remove a factor. The provider asks an `aal2` session to remove a verified one. */
+/** R665: remove a factor. The provider asks an `aal2` session to remove a verified one. */
 export async function removeFactor(session: Session, factorId: string): Promise<void> {
   const config = requireConfig();
   const { status, json } = await send(config, {
@@ -1152,7 +1152,7 @@ export async function removeFactor(session: Session, factorId: string): Promise<
   if (!isSuccess(status)) throw new AuthError(classifyProviderRefusal("mfa", status, json));
 }
 
-// --- OAuth providers (R660) -----------------------------------------------------------------------
+// --- OAuth providers (R666) -----------------------------------------------------------------------
 
 /**
  * The OAuth providers this client knows how to name, as Supabase spells them. A name in
@@ -1177,7 +1177,7 @@ function isOAuthProvider(name: string): name is OAuthProvider {
 }
 
 /**
- * R660: the providers this build offers, read from the PUBLIC `VITE_AUTH_OAUTH_PROVIDERS` (a
+ * R666: the providers this build offers, read from the PUBLIC `VITE_AUTH_OAUTH_PROVIDERS` (a
  * comma-separated list, `apps/web/.env.example`). Unset, it is none: a provider appears only once it
  * is set up in the Supabase dashboard AND named here, so nothing is offered that cannot work. None
  * either when auth itself is not configured.
@@ -1192,7 +1192,7 @@ export function oauthProviders(raw: unknown = import.meta.env.VITE_AUTH_OAUTH_PR
 }
 
 /**
- * R660: the provider's authorize URL, with a PKCE challenge whose verifier this browser keeps
+ * R666: the provider's authorize URL, with a PKCE challenge whose verifier this browser keeps
  * (`flow: "oauth"`). Its code comes back to `/login?code=…` (`authRedirectUrl`), which exchanges it
  * as it does an emailed link's (R323). Throws `oauthUnavailable` when this browser cannot make a
  * challenge: OAuth is never offered by the implicit flow, whose tokens come back in a URL.
@@ -1214,7 +1214,7 @@ export async function oauthAuthorizeUrl(provider: OAuthProvider): Promise<string
   return `${config.url}/auth/v1/authorize?${params.toString()}`;
 }
 
-/** R660: leave for the provider's sign-in page. A navigation, so the CSP's `connect-src` is not involved. */
+/** R666: leave for the provider's sign-in page. A navigation, so the CSP's `connect-src` is not involved. */
 export async function startOAuthSignIn(provider: OAuthProvider): Promise<void> {
   const url = await oauthAuthorizeUrl(provider);
   window.location.assign(url);

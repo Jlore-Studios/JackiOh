@@ -176,7 +176,7 @@ const CALL: Record<AuthEndpoint, () => Promise<unknown>> = {
   recover: () => requestPasswordReset(EMAIL),
   updatePassword: () => updatePassword(ACCESS, PASSWORD),
   refresh: () => refreshSession(freshRefreshToken()),
-  // R658, R659: their tables are in auth-methods.test.ts; here they join the unreachable check.
+  // R664, R665: their tables are in auth-methods.test.ts; here they join the unreachable check.
   otp: () => requestEmailSignIn(EMAIL),
   verifyOtp: () => verifyEmailCode(EMAIL, "123456"),
   mfaVerify: () => verifySecondFactor({ accessToken: ACCESS }, "factor-1", "123456"),
@@ -1132,7 +1132,7 @@ describe("R323 R324 PKCE: the mailers' challenge and the code's exchange", () =>
     expect(exchange).toEqual({
       kind: "session",
       flow: "recovery",
-      // R659: no verified factor in the answer's user, so no second step.
+      // R665: no verified factor in the answer's user, so no second step.
       secondFactor: null,
       session: { accessToken: "access-new", refreshToken: "refresh-new", expiresAt: expect.any(Number) as unknown as number },
     });

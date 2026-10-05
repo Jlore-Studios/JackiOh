@@ -1,5 +1,5 @@
-// `/login`'s further ways in (issue #267): the email sign-in link and code (R658), the second step
-// for an account with an authenticator app (R659) and the OAuth providers (R660). The provider and
+// `/login`'s further ways in (issue #267): the email sign-in link and code (R664), the second step
+// for an account with an authenticator app (R665) and the OAuth providers (R666). The provider and
 // our server are a stubbed `fetch`; nothing leaves the process.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -131,13 +131,13 @@ afterEach(async () => {
   releaseRecoverySession();
 });
 
-describe("R658 signing in with an email code", () => {
+describe("R664 signing in with an email code", () => {
   function toEmailCode(): void {
     fireEvent.click(screen.getByTestId(loginTestid.emailCodeStart));
     expect(screen.getByTestId(loginTestid.form)).toHaveAttribute("data-mode", "emailCode");
   }
 
-  it("R658 mails a link and code, then the typed code signs in", async () => {
+  it("R664 mails a link and code, then the typed code signs in", async () => {
     const calls = serve({ "/auth/v1/otp": { status: 200, body: {} }, "/auth/v1/verify": tokens(AAL1) });
     render(<LoginRoute />);
     toEmailCode();
@@ -162,7 +162,7 @@ describe("R658 signing in with an email code", () => {
     expect(window.location.pathname).toBe(paths.decks);
   });
 
-  it("R658 an address with no confirmed account reads the same notice (R192)", async () => {
+  it("R664 an address with no confirmed account reads the same notice (R192)", async () => {
     serve({ "/auth/v1/otp": { status: 422, body: { error_code: "otp_disabled" } } });
     render(<LoginRoute />);
     toEmailCode();
@@ -171,7 +171,7 @@ describe("R658 signing in with an email code", () => {
     expect((await screen.findByTestId(loginTestid.notice)).textContent).toBe(AUTH_NOTICES.emailCodeSent);
   });
 
-  it("R658 a wrong code is one sentence, and nothing is stored", async () => {
+  it("R664 a wrong code is one sentence, and nothing is stored", async () => {
     serve({ "/auth/v1/otp": { status: 200, body: {} }, "/auth/v1/verify": { status: 403, body: { error_code: "otp_expired" } } });
     render(<LoginRoute />);
     toEmailCode();
@@ -186,7 +186,7 @@ describe("R658 signing in with an email code", () => {
     expect(window.location.pathname).toBe(paths.login);
   });
 
-  it("R658 changing the address goes back to asking for a code for it", async () => {
+  it("R664 changing the address goes back to asking for a code for it", async () => {
     serve({ "/auth/v1/otp": { status: 200, body: {} } });
     render(<LoginRoute />);
     toEmailCode();
@@ -197,7 +197,7 @@ describe("R658 signing in with an email code", () => {
     expect(screen.queryByTestId(loginTestid.code)).toBeNull();
   });
 
-  it("R658 the link this browser asked for signs it in (its code exchanges only with this browser's verifier)", async () => {
+  it("R664 the link this browser asked for signs it in (its code exchanges only with this browser's verifier)", async () => {
     await challengeForRequest("magiclink");
     const [kept] = storedVerifiers();
     const calls = serve({ "/auth/v1/token": tokens(AAL1) });
@@ -211,7 +211,7 @@ describe("R658 signing in with an email code", () => {
     expect(paths_(calls)).not.toContain("POST /auth/v1/logout");
   });
 
-  it("R658 a sign-in link with no verifier here (asked for elsewhere) signs nothing in", async () => {
+  it("R664 a sign-in link with no verifier here (asked for elsewhere) signs nothing in", async () => {
     const calls = serve({ "/auth/v1/token": tokens(AAL1) });
     window.history.replaceState(null, "", `/login?code=${CODE}`);
     render(<LoginRoute />);
@@ -222,14 +222,14 @@ describe("R658 signing in with an email code", () => {
   });
 });
 
-describe("R659 the second step for an account with an authenticator app", () => {
+describe("R665 the second step for an account with an authenticator app", () => {
   function signInWithPassword(): void {
     setField(loginTestid.email, EMAIL);
     setField(loginTestid.password, PASSWORD);
     submitForm();
   }
 
-  it("R659 a password is not enough: the session is held until the app's code raises it to aal2", async () => {
+  it("R665 a password is not enough: the session is held until the app's code raises it to aal2", async () => {
     const calls = serve({ "/auth/v1/token": tokens(AAL1, VERIFIED_APP), ...MFA_ANSWERS });
     render(<LoginRoute />);
     signInWithPassword();
@@ -253,7 +253,7 @@ describe("R659 the second step for an account with an authenticator app", () => 
     expect(window.location.pathname).toBe(paths.decks);
   });
 
-  it("R659 a wrong code says so and keeps the step open", async () => {
+  it("R665 a wrong code says so and keeps the step open", async () => {
     serve({
       "/auth/v1/token": tokens(AAL1, VERIFIED_APP),
       "POST /auth/v1/factors/factor-1/challenge": { status: 200, body: { id: "challenge-1" } },
@@ -270,7 +270,7 @@ describe("R659 the second step for an account with an authenticator app", () => 
     expect(readSession()).toBeNull();
   });
 
-  it("R659 cancelling revokes the held session and stores nothing", async () => {
+  it("R665 cancelling revokes the held session and stores nothing", async () => {
     const calls = serve({ "/auth/v1/token": tokens(AAL1, VERIFIED_APP), "/auth/v1/logout": { status: 204 } });
     render(<LoginRoute />);
     signInWithPassword();
@@ -282,7 +282,7 @@ describe("R659 the second step for an account with an authenticator app", () => 
     expect(readSession()).toBeNull();
   });
 
-  it("R659 an email code or a sign-in link for such an account asks for the app's code too", async () => {
+  it("R665 an email code or a sign-in link for such an account asks for the app's code too", async () => {
     await challengeForRequest("magiclink");
     serve({ "/auth/v1/token": tokens(AAL1, VERIFIED_APP), ...MFA_ANSWERS });
     window.history.replaceState(null, "", `/login?code=${CODE}`);
@@ -296,7 +296,7 @@ describe("R659 the second step for an account with an authenticator app", () => 
     expect(readSession()?.accessToken).toBe(AAL2);
   });
 
-  it("R659 a reset link for such an account asks for the code before the server is asked whose it is", async () => {
+  it("R665 a reset link for such an account asks for the code before the server is asked whose it is", async () => {
     await challengeForRequest("recovery");
     rememberPendingReset(EMAIL);
     const calls = serve({ "/auth/v1/token": tokens(AAL1, VERIFIED_APP), ...MFA_ANSWERS }, { [AAL2]: EMAIL });
@@ -316,7 +316,7 @@ describe("R659 the second step for an account with an authenticator app", () => 
     expect(readSession()).toBeNull();
   });
 
-  it("R659 an account without one signs in at once, as before", async () => {
+  it("R665 an account without one signs in at once, as before", async () => {
     serve({ "/auth/v1/token": tokens(AAL1) });
     render(<LoginRoute />);
     signInWithPassword();
@@ -326,14 +326,14 @@ describe("R659 the second step for an account with an authenticator app", () => 
   });
 });
 
-describe("R660 OAuth providers, behind configuration", () => {
-  it("R660 offers no provider until the build names one", () => {
+describe("R666 OAuth providers, behind configuration", () => {
+  it("R666 offers no provider until the build names one", () => {
     serve({});
     render(<LoginRoute />);
     expect(screen.queryAllByTestId(loginTestid.oauth)).toHaveLength(0);
   });
 
-  it("R660 offers exactly the named providers, and leaves for one with a PKCE challenge kept here", async () => {
+  it("R666 offers exactly the named providers, and leaves for one with a PKCE challenge kept here", async () => {
     vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "github,google,unknown");
     serve({});
     render(<LoginRoute />);
@@ -347,7 +347,7 @@ describe("R660 OAuth providers, behind configuration", () => {
     });
   });
 
-  it("R660 the provider's code signs this browser in", async () => {
+  it("R666 the provider's code signs this browser in", async () => {
     await challengeForRequest("oauth");
     serve({ "/auth/v1/token": tokens(AAL1) });
     window.history.replaceState(null, "", `/login?code=${CODE}`);
@@ -357,7 +357,7 @@ describe("R660 OAuth providers, behind configuration", () => {
     expect(window.location.pathname).toBe(paths.decks);
   });
 
-  it("R660 a provider that sends the player back with an error says so in our words", async () => {
+  it("R666 a provider that sends the player back with an error says so in our words", async () => {
     await challengeForRequest("oauth");
     serve({});
     window.history.replaceState(null, "", "/login?error=access_denied&error_description=PROVIDER-TEXT");

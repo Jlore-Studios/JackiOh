@@ -889,7 +889,7 @@ describe("/api/profile reports identity and the ladder record", () => {
 });
 
 // ---------------------------------------------------------------------------
-// R659: an account with an authenticator app is honoured only at `aal2`
+// R665: an account with an authenticator app is honoured only at `aal2`
 // ---------------------------------------------------------------------------
 
 /** A tier-2 token at an assurance level, optionally naming its provider session. */
@@ -925,8 +925,8 @@ function userWithFactors(userId: string, factors: { status: string; factor_type?
     });
 }
 
-describe("R659 — two-step sign-in: an account with an authenticator app needs an aal2 token", () => {
-  it("R659 refuses an aal1 token for an account with a verified factor, and takes its aal2 token", async () => {
+describe("R665 — two-step sign-in: an account with an authenticator app needs an aal2 token", () => {
+  it("R665 refuses an aal1 token for an account with a verified factor, and takes its aal2 token", async () => {
     const h = providerWith({ admin: (userId) => ({ kind: "ok", user: enrolledUser(userId) }) });
 
     // A password alone (aal1) is not enough once the account has an authenticator app…
@@ -943,13 +943,13 @@ describe("R659 — two-step sign-in: an account with an authenticator app needs 
     expect(res.status).toBe(401);
   });
 
-  it("R659 an account without a factor is unchanged: aal1, or no aal claim at all, is honoured", async () => {
+  it("R665 an account without a factor is unchanged: aal1, or no aal claim at all, is honoured", async () => {
     const h = providerWith();
     expect((await h.auth.verifyAccessToken(await tokenAt(ALICE, "aal1")))?.userId).toBe(ALICE);
     expect((await h.auth.verifyAccessToken(await tokenFor(BOB)))?.userId).toBe(BOB);
   });
 
-  it("R659 reads the factor from the provider's user: only a VERIFIED totp factor counts", async () => {
+  it("R665 reads the factor from the provider's user: only a VERIFIED totp factor counts", async () => {
     const unfinished = providerWithSessions(userWithFactors(ALICE, [{ status: "unverified" }]));
     expect((await unfinished.auth.verifyAccessToken(await tokenAt(ALICE, "aal1", "s-1")))?.userId).toBe(ALICE);
 
@@ -961,7 +961,7 @@ describe("R659 — two-step sign-in: an account with an authenticator app needs 
     expect((await enrolled.auth.verifyAccessToken(await tokenAt(ALICE, "aal2", "s-4")))?.userId).toBe(ALICE);
   });
 
-  it("R659 an outage cannot lower the bar: the last answer that the account has a factor stands", async () => {
+  it("R665 an outage cannot lower the bar: the last answer that the account has a factor stands", async () => {
     const h = providerWith({ admin: (userId) => ({ kind: "ok", user: enrolledUser(userId) }) });
     expect(await h.auth.verifyAccessToken(await tokenAt(ALICE, "aal1"))).toBeNull();
 
@@ -973,7 +973,7 @@ describe("R659 — two-step sign-in: an account with an authenticator app needs 
     expect((await h.auth.verifyAccessToken(await tokenAt(ALICE, "aal2")))?.userId).toBe(ALICE);
   });
 
-  it("R659 removing the factor lowers the bar again once the provider says so", async () => {
+  it("R665 removing the factor lowers the bar again once the provider says so", async () => {
     const h = providerWith({ admin: (userId) => ({ kind: "ok", user: enrolledUser(userId) }) });
     expect(await h.auth.verifyAccessToken(await tokenAt(ALICE, "aal1"))).toBeNull();
 
