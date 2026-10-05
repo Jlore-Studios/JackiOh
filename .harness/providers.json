@@ -157,8 +157,8 @@
       "quiet_check": false
     },
     "devin": {
-      "note": "Cognition's Devin CLI, logged in on the machine as agent-devin (`devin auth login --force-manual-token-flow`). SWE-2, its effort in the name; `devin models list` names the models. Weak, so it builds easy items only, and it takes them ahead of the stronger models while it has a free lane (easy_first).",
-      "enabled": true,
+      "note": "Cognition's Devin CLI, logged in on the machine as agent-devin (`devin auth login --force-manual-token-flow`). SWE-2, its effort in the name; `devin models list` names the models. Weak, so it builds easy items only, and it takes them ahead of the stronger models while it has a free lane (easy_first). Off since 2026-10-05 (#311): every call failed within seconds from 07:30Z; switch it back on once `devin -p` answers on the machine.",
+      "enabled": false,
       "cli": "devin",
       "family": "cognition",
       "model": "swe-2-max",
@@ -191,8 +191,8 @@
       "quiet_check": false
     },
     "devin-train": {
-      "note": "A second Devin login on the training box, for ladder training items only (`only_labels`): long RL training runs live there, off the bot's own machine. Label a training issue `training` (and `difficulty:easy`, which Devin may build); it trains the proposal within the ladder's budget, through the self-check loop like any Devin build. Reviews float to any reviewer.",
-      "enabled": true,
+      "note": "A second Devin login on the training box, for ladder training items only (`only_labels`): long RL training runs live there, off the bot's own machine. Label a training issue `training` (and `difficulty:easy`, which Devin may build); it trains the proposal within the ladder's budget, through the self-check loop like any Devin build. Reviews float to any reviewer. Off with devin (#311) until a `devin -p` call answers on the training box.",
+      "enabled": false,
       "cli": "devin",
       "family": "cognition",
       "model": "swe-2-max",

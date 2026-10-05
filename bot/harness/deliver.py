@@ -25,7 +25,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from harness import asks, disk, failures, issueplan, review_rule
+from harness import asks, disk, failures, issueplan, memory, review_rule
 from harness import easy as easy_mod
 from harness import stepup
 from harness import gates as gates_mod
@@ -123,6 +123,7 @@ class Deliverer:
             s, self.provider.id, usage, reset_at, self.ctx.now(), minutes),
             f"usage {self.provider.id}")
         self._machine_disk()
+        self._machine_memory()
         self._login_works()
         if action == "suggest":
             self._suggestions()
@@ -177,6 +178,18 @@ class Deliverer:
             done = f"could not settle the disk issue: {exc}"
         if done:
             self.log.append(done)
+
+    def _machine_memory(self) -> None:
+        """A job on the bot's machine read its memory: keep its summary for the status issue's
+        line on the machine's memory (`memory.py`, #312)."""
+        if providers_mod.hosted(self.provider.runs_on):
+            return
+        found = memory.summary(self.result.get("memory"))
+        if found is None:
+            return
+        reported = str((self.result.get("disk") or {}).get("runner") or "")
+        runner = reported if re.fullmatch(r"[\w.-]{1,80}", reported) else self.provider.runs_on
+        self.ctx.store.update(lambda s: memory.note(s, found, runner), "machine memory")
 
     def _login_works(self) -> None:
         """A model call went through on this run's subscription: any streak of runs that could

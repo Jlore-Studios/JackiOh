@@ -341,7 +341,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-6` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | 100% of the week (Codex reports it) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, all of the week (its own `agy -p /usage`, the Gemini pool's row) |
-| `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
+| `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16); **off since 2026-10-05** (#311: every call failed in seconds), with devin-train, until `devin -p` answers on the machine | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
 | `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on two lanes | on the machine, as `agent-muse` | any time | 95% of 5 hours, all of the week (its TUI's `/usage` panel) |
 | `devin-train` | a second Devin login, `swe-2-max`, for ladder training only | on the training box, as `agent-devin-train` | any time | none: until it refuses |
 
@@ -444,6 +444,9 @@ and does no work under 3 GB free, and a disk that fills up during the work pause
 keeps what it built; neither counts against the item. While the disk is 80% full or has under
 3 GB free, the bot keeps one issue open about it, labelled `night bot` and `human`, and closes it
 at 70% ([`harness/disk.py`](harness/disk.py), [`machine/`](machine/README.md), Disk).
+Each job there also reads the machine's memory (stall time, swapping, memory available), and
+the status issue says whether the last 24 hours ran it short ([`harness/memory.py`](harness/memory.py),
+[`machine/`](machine/README.md), Memory).
 
 ### Difficulty and tiers
 
@@ -944,6 +947,7 @@ workflows. The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `b
 | `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
 | `triage.py` | labels, assigns, titles, types and links (blocked by, blocks, parent) an issue with a method label, a new pull request, or one a person calls it on, from a Muse call (`triage.yml`) |
 | `easy.py`, `stepup.py` | the easy rule and its checks on a plan and a change; strikes, the step up and the rebuild (#317) |
+| `memory.py` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
 | `dashboard.py` | the pinned status issue: opened and pinned once, rewritten every ten minutes by `bot-status.yml` (`harness dashboard --sweep --every 600 --for 19800`, which sweeps first each time) and after every sweep |
 | `state.py`, `status.py`, `clock.py` | the state file on `bot-state`, the status report, time and windows |
