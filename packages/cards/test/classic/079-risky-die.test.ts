@@ -109,10 +109,10 @@ describe("C #79 Risky Die", () => {
       expect(s.pile("p1", "library").map((card) => card.defId)).toEqual([STOCKPILE, FILLER]);
     });
 
-    it("§9.3 a cast on draw resolves inside the draws (R661: no prompt); after a JSON round trip they finish, and only the drawn cards are judged", () => {
+    it("§9.3 a cast on draw resolves inside the draws (R682: no prompt); after a JSON round trip they finish, and only the drawn cards are judged", () => {
       const s = scenario({ p1: { hand: [RISKY, VANILLA], library: [HINDER, MENACE, STOCKPILE, FILLER] } });
       s.play(RISKY);
-      // Hinder is cast on the first draw; its discard is random (R661), so with one card held the
+      // Hinder is cast on the first draw; its discard is random (R682), so with one card held the
       // Vanilla goes with no prompt opening.
       expect(s.state.pending).toBeNull();
       const round = JSON.parse(JSON.stringify(s.state)) as GameState;

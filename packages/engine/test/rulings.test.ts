@@ -4039,59 +4039,59 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/cards/art/convention.test.ts",
     );
   });
-  // Proved by targeting.test.ts "R661 …" (no play carries discards, the exact cost pays both with no
+  // Proved by targeting.test.ts "R682 …" (no play carries discards, the exact cost pays both with no
   // prompt, the kept cards never pay) and the card side in packages/cards
-  // test/classic/089-paul-allens-ghost.test.ts "R661 …" (one play, two random others, the interception
+  // test/classic/089-paul-allens-ghost.test.ts "R682 …" (one play, two random others, the interception
   // stays paid).
-  it("R661 discards are random by default, paid at pay time with no choice", () => {
-    provenIn(661, "targeting.test.ts", "../../cards/test/classic/089-paul-allens-ghost.test.ts");
+  it("R682 discards are random by default, paid at pay time with no choice", () => {
+    provenIn(682, "targeting.test.ts", "../../cards/test/classic/089-paul-allens-ghost.test.ts");
   });
 
-  // Proved by the card side in packages/cards/test/classic/021-turtinator.test.ts "R662 …" (alone, no
+  // Proved by the card side in packages/cards/test/classic/021-turtinator.test.ts "R683 …" (alone, no
   // activation is listed and naming itself is refused, on both faces).
-  it("R662 lets Turtinator Tribute anything but itself", () => {
-    provenIn(662, "../../cards/test/classic/021-turtinator.test.ts");
+  it("R683 lets Turtinator Tribute anything but itself", () => {
+    provenIn(683, "../../cards/test/classic/021-turtinator.test.ts");
   });
 
-  // Proved by the card side in packages/cards/test/classic/034-ancient-acquisition.test.ts "R663 …"
+  // Proved by the card side in packages/cards/test/classic/034-ancient-acquisition.test.ts "R684 …"
   // (two random returns with no prompt, the same game returning the same cards).
-  it("R663 returns Ancient Acquisition's cards at random, with no pick", () => {
-    provenIn(663, "../../cards/test/classic/034-ancient-acquisition.test.ts");
+  it("R684 returns Ancient Acquisition's cards at random, with no pick", () => {
+    provenIn(684, "../../cards/test/classic/034-ancient-acquisition.test.ts");
   });
 
-  // Proved by the card side in packages/cards/test/classic/022-mid-runner.test.ts "R664 …" (the lane
+  // Proved by the card side in packages/cards/test/classic/022-mid-runner.test.ts "R685 …" (the lane
   // count's center, odd and even, and the Radiant three bounces).
-  it("R664 computes Mid Runner's midlane from the lane count", () => {
-    provenIn(664, "../../cards/test/classic/022-mid-runner.test.ts");
+  it("R685 computes Mid Runner's midlane from the lane count", () => {
+    provenIn(685, "../../cards/test/classic/022-mid-runner.test.ts");
   });
 
-  // Proved by effects-reveal.test.ts "R665 …" (a revealed Trap reads face-up but still fires) and the
+  // Proved by effects-reveal.test.ts "R686 …" (a revealed Trap reads face-up but still fires) and the
   // card side in packages/cards/test/classic/065-ace-in-the-hole.test.ts and
-  // test/classic/088-siphon-squad.test.ts "R665 …" (Revealed on tails, revealed at the start of turn).
-  it("R665 reveals a backrow card's face without firing it", () => {
+  // test/classic/088-siphon-squad.test.ts "R686 …" (Revealed on tails, revealed at the start of turn).
+  it("R686 reveals a backrow card's face without firing it", () => {
     provenIn(
-      665,
+      686,
       "effects-reveal.test.ts",
       "../../cards/test/classic/065-ace-in-the-hole.test.ts",
       "../../cards/test/classic/088-siphon-squad.test.ts",
     );
   });
 
-  // Proved by twiceForward.test.ts "R666 …" (no count while face-down, shown when destroyed
+  // Proved by twiceForward.test.ts "R687 …" (no count while face-down, shown when destroyed
   // unrevealed) and the card side in packages/cards
-  // test/classic-plus/074-twice-forward-one-step-backwards.test.ts "R666 …".
-  it("R666 starts no Brittle count while a backrow Trap is unrevealed", () => {
-    provenIn(666, "twiceForward.test.ts", "../../cards/test/classic-plus/074-twice-forward-one-step-backwards.test.ts");
+  // test/classic-plus/074-twice-forward-one-step-backwards.test.ts "R687 …".
+  it("R687 starts no Brittle count while a backrow Trap is unrevealed", () => {
+    provenIn(687, "twiceForward.test.ts", "../../cards/test/classic-plus/074-twice-forward-one-step-backwards.test.ts");
   });
 
-  // Proved by zones.test.ts "R667 …" (a Locked zone takes a summon but no play),
-  // statecheck.test.ts "R667 …" (Reborn still returns into one) and animated.test.ts "R667 …"
+  // Proved by zones.test.ts "R688 …" (a Locked zone takes a summon but no play),
+  // statecheck.test.ts "R688 …" (Reborn still returns into one) and animated.test.ts "R688 …"
   // (the home return is a move, not a play), and the card side in packages/cards
-  // test/067-zoomerbin-oomen.test.ts and test/classic-plus/019-league-of-losers.test.ts "R667 …"
+  // test/067-zoomerbin-oomen.test.ts and test/classic-plus/019-league-of-losers.test.ts "R688 …"
   // (the cards' own overrides: a fizzle and a skip).
-  it("R667 refuses only plays into a Locked zone: summons, moves and returns still land", () => {
+  it("R688 refuses only plays into a Locked zone: summons, moves and returns still land", () => {
     provenIn(
-      667,
+      688,
       "zones.test.ts",
       "statecheck.test.ts",
       "animated.test.ts",
@@ -4101,29 +4101,60 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
-  // Proved by effects-plague.test.ts "R668 …" (every token on the one pick, the Radiant count, the
+  // Proved by effects-plague.test.ts "R689 …" (every token on the one pick, the Radiant count, the
   // −X/−X death after the whole effect) and the card side in packages/cards
   // test/classic/070-book-of-plague.test.ts and test/classic/061-plague-bringer-goliath.test.ts
-  // "R668 …" (no spreading: the whole effect lands on the one pick).
-  it("R668 places every Plague Token of one effect on the single permanent one prompt names", () => {
+  // "R689 …" (no spreading: the whole effect lands on the one pick).
+  it("R689 places every Plague Token of one effect on the single permanent one prompt names", () => {
     provenIn(
-      668,
+      689,
       "effects-plague.test.ts",
       "../../cards/test/classic/070-book-of-plague.test.ts",
       "../../cards/test/classic/061-plague-bringer-goliath.test.ts",
     );
   });
 
-  // Proved by recruit-variants.test.ts "R669 …" (the scan prefers a non-X match; only-X still recruits;
+  // Proved by recruit-variants.test.ts "R690 …" (the scan prefers a non-X match; only-X still recruits;
   // recruitAll leaves X-cost cards the same way). No card script needed it: the skip lives in the
   // Recruit scan itself.
-  it("R669 skips (X)-cost cards in a Recruit scan unless they are the only valid targets", () => {
-    provenIn(669, "recruit-variants.test.ts");
+  it("R690 skips (X)-cost cards in a Recruit scan unless they are the only valid targets", () => {
+    provenIn(690, "recruit-variants.test.ts");
   });
 
-  // Proved by effects-transform.test.ts "R670 …" (DEF stays DEF on the new instance).
-  it("R670 keeps a transformed Unit's battle position", () => {
-    provenIn(670, "effects-transform.test.ts");
+  // Proved by effects-transform.test.ts "R691 …" (DEF stays DEF on the new instance).
+  it("R691 keeps a transformed Unit's battle position", () => {
+    provenIn(691, "effects-transform.test.ts");
+  });
+
+  // Proved by packages/cards test/card-text.test.ts "R692 …" (no face says "return … to hand"; the
+  // cards that return one say Bounce) and apps/web src/cards/rules.test.ts "R692 …" (the glossary
+  // finds Bounce and "Bounced" where cards print them).
+  it("R692 prints Bounce for every return to hand", () => {
+    provenIn(692, "../../cards/test/card-text.test.ts", "../../../apps/web/src/cards/rules.test.ts");
+  });
+
+  // Proved by apps/web src/cards/inspect/inspect.test.tsx "R693 …" (showLoc false shows no LocLine,
+  // the default shows it) and src/game/Card.test.tsx "R693 …" (a board card's hover preview ends
+  // with no lines of code); the collection half is CardDetail.test.tsx's E36 meta-line tests, which
+  // still print the count outside a match.
+  it("R693 hides lines of code in matches but keeps it on collection views", () => {
+    provenIn(
+      693,
+      "../../../apps/web/src/cards/inspect/inspect.test.tsx",
+      "../../../apps/web/src/game/Card.test.tsx",
+    );
+  });
+
+  // Proved by counterWarning.test.ts "R667 …" (fixture counters: who is warned, never a Trap, a hand
+  // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
+  // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
+  it("R667 a hand card the field would counter at every price carries a warning on its own seat", () => {
+    provenIn(
+      667,
+      "counterWarning.test.ts",
+      "../../cards/test/classic/087-plague-chalice.test.ts",
+      "../../../apps/web/src/game/countered.test.tsx",
+    );
   });
 
   // Proved by the card's own test, cards/test/classic/055-book-of-wildfire.test.ts "R671 …": the swap
@@ -4131,6 +4162,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // became swapping on, Temporary kept, and the end of turn replaying exactly.
   it("R671 Book of Wildfire becomes a different Book at the end of its owner's turn, and the Book keeps swapping", () => {
     provenIn(671, "../../cards/test/classic/055-book-of-wildfire.test.ts");
+  });
+
+  // Proved by playChoices.test.ts "R703 …" (a needed pick the board cannot satisfy is neither
+  // offered nor accepted, a plain one still plays, and a cast fizzles) and Plastic Surgery's own test
+  // (both faces, either side, and the cast).
+  it("R703 a play is refused, and never offered, while a pick it needs has no legal option", () => {
+    provenIn(703, "playChoices.test.ts", "../../cards/test/063-plastic-surgery.test.ts");
   });
 });
 

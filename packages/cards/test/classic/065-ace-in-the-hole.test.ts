@@ -184,7 +184,7 @@ describe("C #65 Ace in the Hole", () => {
       s.expectInZone(ACE, "graveyard");
     });
 
-    it("R665 tails: it Recruits 1 without firing, and stays set Revealed — readable, still armed", () => {
+    it("R686 tails: it Recruits 1 without firing, and stays set Revealed — readable, still armed", () => {
       const s = withCoin("tails", { radiant: true });
       const ace = s.card(ACE);
       s.endTurn();
@@ -192,7 +192,7 @@ describe("C #65 Ace in the Hole", () => {
       expect(units(s)).toEqual([VANILLA, null, null, null, null]);
       s.expectInZone(ace, "field");
       expect(s.card(ace).faceUp).not.toBe(true);
-      // R665: Revealed regardless of the coin flip — the opponent reads its face, but it never fired.
+      // R686: Revealed regardless of the coin flip — the opponent reads its face, but it never fired.
       expect(s.card(ace).revealed).toBe(true);
       const theirs = s.view("p2");
       expect(JSON.stringify(theirs)).toContain(ACE);

@@ -230,20 +230,20 @@ describe("R388 card patch history (B4.2)", () => {
     expect(change?.kind === "changed" ? [...change.fields].sort() : []).toEqual(["base.text", "loc", "radiant.text"]);
   });
 
-  it("R388 records patch v0.2.14: Classic and Classic+ balance patch 1 (issue #88), pending (R646)", () => {
+  it("R388 records patch v0.2.15: Classic and Classic+ balance patch 1 (issue #88), pending (R646)", () => {
     // Pending until `patches ship` promotes it (R646): the fragment claims the balance cards,
-    // and the catalog differs from v0.2.13's snapshot on exactly those cards. Renumbered from
-    // v0.2.13: main shipped that version (issue #271) before this branch merged, so ship order
-    // stays version order.
-    const fragment = readFragments().find(({ fragment }) => fragment.version === "v0.2.14")?.fragment;
-    expect(fragment, "v0.2.14 is pending").toBeDefined();
+    // and the catalog differs from v0.2.14's snapshot on exactly those cards. Numbered v0.2.15:
+    // main shipped v0.2.13 (issue #271) and v0.2.14 (#126) before this branch merged, so ship
+    // order stays version order.
+    const fragment = readFragments().find(({ fragment }) => fragment.version === "v0.2.15")?.fragment;
+    expect(fragment, "v0.2.15 is pending").toBeDefined();
     const claimed = fragment?.cards ?? [];
-    const changes = diffCatalogs(readSnapshot("v0.2.13"), CATALOG as unknown as Catalog).filter((change) =>
+    const changes = diffCatalogs(readSnapshot("v0.2.14"), CATALOG as unknown as Catalog).filter((change) =>
       claimed.includes(change.id),
     );
     expect(changes.filter((change) => change.kind !== "changed")).toEqual([]);
     expect(changes.map((change) => change.id)).toEqual(claimed);
-    expect(claimed).toHaveLength(52);
+    expect(claimed).toHaveLength(63);
   });
 
   it("R388 records patch v0.2.12: Animated removed from eighteen Field Spells (issue #218)", () => {

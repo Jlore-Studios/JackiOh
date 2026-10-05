@@ -14,7 +14,7 @@ const RAPID = "core-010"; // (0) Spell
 const D_FENDER = "core-001"; // (2) Unit
 const MENACE = "core-019"; // (3) Unit
 const ADAPTIVE_UI = "core-074"; // (X) Spell
-const HINDER = "core-021"; // (0) Spell, cast on draw; the base face discards 1 at random with no prompt (R431, R661)
+const HINDER = "core-021"; // (0) Spell, cast on draw; the base face discards 1 at random with no prompt (R431, R682)
 const VANILLA = "core-008"; // (1) Unit, the spare in hand
 const PALANTIR = "classic-004"; // (1) Field Spell: "Aura: Your opponent can't draw more than 1 card each turn."
 
@@ -108,9 +108,9 @@ describe("T-AI-4 Chain of Thought", () => {
       expect(s.view("p2").opponent.hand).toEqual({ count: 3 });
     });
 
-    it("R661, R431 Hinder's random discard asks nothing mid-draw: no prompt opens and the chain has ended", () => {
+    it("R682, R431 Hinder's random discard asks nothing mid-draw: no prompt opens and the chain has ended", () => {
       const s = chain([TIMMY, HINDER, TIMMY, TIMMY]).play(CHAIN);
-      // R661: "Discard 1" names no "of your choice", so the discard is random and no
+      // R682: "Discard 1" names no "of your choice", so the discard is random and no
       // hand prompt pauses the draw; the cast-on-draw card still ends the chain (R58, R596).
       expect(s.state.pending).toBeNull();
 

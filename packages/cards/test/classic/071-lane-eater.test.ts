@@ -96,7 +96,7 @@ describe("C #71 Lane Eater", () => {
       expect(locked(s, "p2", "units", 2)).toBe(true);
     });
 
-    it("R47 R667 a destroyed Reborn Unit returns to its now-Locked zone: a Lock refuses plays, not the return", () => {
+    it("R47 R688 a destroyed Reborn Unit returns to its now-Locked zone: a Lock refuses plays, not the return", () => {
       const s = scenario({ p1: { hand: [LANE_EATER, STOCKPILE], library: SPARE.library, mana: 10 }, p2: { field: [{ def: DEFENDER, lane: 2 }], ...SPARE } });
       const defenderId = s.unit("p2", 2)!.id;
       s.play(LANE_EATER, { zone: 2 });

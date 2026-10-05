@@ -46,7 +46,7 @@ export function activeBrittleCount(card: Pick<CardInstance, "brittle" | "vanilla
  * there never ticked, so its turn cycle starts now, and its first tick waits for a whole round on the
  * field (`BRITTLE_FIRST_TICK_TURNS`) however long it was held.
  *
- * R666: a backrow Trap or Field Trap that enters face-down starts no count — there is no Brittle
+ * R687: a backrow Trap or Field Trap that enters face-down starts no count — there is no Brittle
  * while it is unrevealed (Classic+ #74). The count starts when the card reveals: its own subsystem
  * starts it with its first activation, and the `reveal` effect starts one for any card it shows.
  */

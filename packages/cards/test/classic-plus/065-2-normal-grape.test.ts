@@ -13,7 +13,7 @@ import { base, def, radiant } from "../../src/scripts/classic-plus/065-2-normal-
 const GRAPE = "classicplus-065-2";
 const FILLER = "core-005"; // (1) Spell
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt
-const HINDER = "core-021"; // Cast on draw; base face makes its caster discard 1 at random (R661)
+const HINDER = "core-021"; // Cast on draw; base face makes its caster discard 1 at random (R682)
 const SOLARIUS = "classicplus-038"; // Unit printing Spell Damage +2
 const DECK_A = "core-011"; // Tempo Timmy, (1) Unit
 const DECK_B = "core-001"; // Big D-fender, (2) Unit
@@ -179,13 +179,13 @@ describe("C+ #65.2 Normal Grape", () => {
       }
     });
 
-    it("R58 a cast-on-draw card casts free with no prompt (R661); its chain's repeat brings no discount, the grape's own draws do", () => {
+    it("R58 a cast-on-draw card casts free with no prompt (R682); its chain's repeat brings no discount, the grape's own draws do", () => {
       const s = scenario({
         p1: { hand: [grape(true), FILLER], library: [HINDER, DECK_A, DECK_B, DECK_C, DECK_D] },
         p2: { hand: [FILLER] },
       });
       s.play(GRAPE, { targets: [{ pick: "hero", player: "p2" }] });
-      // Base Hinder's discard is random (R661): no prompt opens mid-list.
+      // Base Hinder's discard is random (R682): no prompt opens mid-list.
       expect(s.state.pending).toBeNull();
 
       const revived = JSON.parse(JSON.stringify(s.state)) as GameState;

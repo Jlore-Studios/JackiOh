@@ -1,7 +1,7 @@
 // C #64 Malzahar's Recycler (SPEC §8.6 row 64, BUILD M9 Classic row C 64). (2) Field Spell, Rare.
 //   Base:    "End of turn: Discard 2 cards. / Whenever you discard cards, draw that many."
 //   Radiant: "End of turn: Discard 2 cards. / Whenever you discard cards, draw your deck."
-//   Engine:  "The end-of-turn discard is 2 random cards (R661; fewer in hand: all of them). The draw
+//   Engine:  "The end-of-turn discard is 2 random cards (R682; fewer in hand: all of them). The draw
 //            answers your `discarded` events one effect at a time: an effect that discards 2 draws 2.
 //            Radiant: 'draw your deck' (R58, the deck's size as it starts) once per discarding effect.
 //            Every discard of yours counts: your own, C #15 Nose Hunter's random one, C #8 Pickle's,
@@ -10,7 +10,7 @@
 //
 // Readings:
 //   - The end-of-turn discard is §6.2's end-of-turn hook (its controller's turn, while it acts on the
-//     field): 2 random cards of its controller's hand (R661), all of a smaller hand, nothing from an
+//     field): 2 random cards of its controller's hand (R682), all of a smaller hand, nothing from an
 //     empty one.
 //   - "Whenever you discard cards" answers the `discarded` events of cards its controller owned in
 //     hand as they went — whoever's effect discarded them (an opponent's C #8 Pickle makes you
@@ -30,7 +30,7 @@ import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classic-064");
 
-/** "End of turn: Discard 2 cards." — random (R661). */
+/** "End of turn: Discard 2 cards." — random (R682). */
 const END_OF_TURN_DISCARDS = 2;
 
 const endOfTurn = (): Effect[] => [discardRandom({ count: END_OF_TURN_DISCARDS })];

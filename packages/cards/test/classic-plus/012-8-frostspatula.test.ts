@@ -85,7 +85,7 @@ describe("C+ #12.8 Frostspatula", () => {
       s.expectStats(SPATULA, { health: 2 });
     });
 
-    it("R383 R667 a home zone Locked meanwhile still takes the return at cleanup: a Lock refuses plays, not the return", () => {
+    it("R383 R688 a home zone Locked meanwhile still takes the return at cleanup: a Lock refuses plays, not the return", () => {
       const s = played(false, 2);
       // A Lock on its reserved backrow zone, as Lock effects leave one (§3.2).
       lockZone(s.state, { player: "p1", row: "backrow", lane: 2 });

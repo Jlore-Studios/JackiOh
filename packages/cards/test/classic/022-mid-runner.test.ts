@@ -1,5 +1,5 @@
 // C #22 Mid Runner — SPEC §8.6 row 22, BUILD M9 Classic row C 22: "Cry, two independent checks at
-// resolution: in midlane (computed from the lane count, R664) it Tributes itself (a death), anywhere
+// resolution: in midlane (computed from the lane count, R685) it Tributes itself (a death), anywhere
 // else it stays; if you had 4 or more mana before paying for it (recorded as the play begins, §10.5
 // step 1), two different random enemy permanents (R60; fewer if fewer) return to their owners' hands,
 // tokens ceasing to exist (R11) and a full hand burning (R317); both may happen in one Cry;
@@ -43,13 +43,13 @@ function enemyBoardIds(s: Scenario): string[] {
 }
 
 describe("C #22 Mid Runner", () => {
-  it("runs one script on both faces, and midlane of 5 lanes is lane 3 (R664)", () => {
+  it("runs one script on both faces, and midlane of 5 lanes is lane 3 (R685)", () => {
     expect(def.id).toBe(RUNNER);
     expect(radiant).toBe(base);
     expect(midlaneLanes(5)).toEqual([3]);
   });
 
-  it("R664 computes midlane from the lane count: odd counts center, even counts both centers", () => {
+  it("R685 computes midlane from the lane count: odd counts center, even counts both centers", () => {
     expect(midlaneLanes(5)).toEqual([3]);
     expect(midlaneLanes(3)).toEqual([2]);
     expect(midlaneLanes(1)).toEqual([1]);

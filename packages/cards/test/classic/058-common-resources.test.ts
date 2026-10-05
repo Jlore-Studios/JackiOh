@@ -112,7 +112,7 @@ describe("C #58 Common Resources", () => {
     it("R58 R549 §9.3 a cast on draw is yours either way: no prompt, its repeat draws from your own deck, and the turn finishes after a JSON round trip", () => {
       const s = waiting({ p1Hand: [FILLER, VANILLA], p2Library: [VANILLA, MENACE, HINDER] });
       s.endTurn();
-      // R661: the cast's discard is random, so no prompt opens and the turn just finishes.
+      // R682: the cast's discard is random, so no prompt opens and the turn just finishes.
       expect(s.state.pending).toBeNull();
       const round = JSON.parse(JSON.stringify(s.state)) as GameState;
       expect(round).toEqual(s.state);

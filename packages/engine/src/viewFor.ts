@@ -35,10 +35,12 @@
 //     libraries, face-down traps and R97's event redaction stay as they were.
 //   - R437: a mark (an effect aimed at the card that still waits, #50's pending steal) rides every
 //     view of the card in both seats, a face-down card's back included (`marks.ts`).
-//   - R195, R280: two things the engine works out for a card ride on its view. `conditionActive`
-//     (the yellow glow) on the viewer's own cards only; `preview` (what a formula comes to now) on
-//     every card view the viewer may read — the viewer's hand, the top of a unit pile and a backrow
-//     card face-up to the viewer — and on no other (`preview.ts` owns that rule).
+//   - R195, R280, R667: three things the engine works out for a card ride on its view.
+//     `conditionActive` (the yellow glow) on the viewer's own cards only; `counteredOnPlay` (Plague
+//     Chalice's warning) on the viewer's own hand cards only (`counterWarning.ts` owns that rule);
+//     `preview` (what a formula comes to now) on every card view the viewer may read — the viewer's
+//     hand, the top of a unit pile and a backrow card face-up to the viewer — and on no other
+//     (`preview.ts` owns that rule).
 //
 // Stats are never read off an instance: `layers.unitView` recomputes every stat and keyword on read
 // (§10.4), so no stored total ever reaches the client.
@@ -68,6 +70,7 @@ import { announcedFaceDownTo } from "./announce";
 import { findDef } from "./catalog";
 import { hasExertion } from "./combat";
 import { conditionActive } from "./condition";
+import { counteredHandCards } from "./counterWarning";
 import { heroArmorOf } from "./damage";
 import { cardTypeOf } from "./faces";
 import { handKeywordsView, instanceDataView } from "./instanceView";
@@ -290,6 +293,11 @@ function withCopies<T extends CardView>(view: T, state: GameState, card: CardIns
  */
 function withCondition<T extends CardView>(view: T, active: boolean): T {
   return active ? { ...view, conditionActive: true } : view;
+}
+
+/** R667: the Plague Chalice warning, `true` or absent like the glow beside it. */
+function withCounterWarning<T extends CardView>(view: T, countered: boolean): T {
+  return countered ? { ...view, counteredOnPlay: true } : view;
 }
 
 /**
@@ -565,6 +573,8 @@ function reservedMask(state: GameState, player: PlayerId): { units: boolean[]; b
 function sideView(state: GameState, player: PlayerId, viewer: PlayerId): SideView {
   const side: PlayerState = state.players[player];
   const powers = heroPowersOf(state, player);
+  // R667: asked only for the viewer's own hand, the one hand a warning may ride.
+  const countered = player === viewer ? counteredHandCards(state, viewer) : new Set<string>();
   return {
     player,
     hero: {
@@ -586,7 +596,10 @@ function sideView(state: GameState, player: PlayerId, viewer: PlayerId): SideVie
       player === viewer
         ? side.hand.map((card) =>
             withPreview(
-              withCondition(handCardView(state, card), conditionActive(state, card, viewer, "hand")),
+              withCounterWarning(
+                withCondition(handCardView(state, card), conditionActive(state, card, viewer, "hand")),
+                countered.has(card.id),
+              ),
               previewOf(state, card, viewer, "hand"),
             ),
           )

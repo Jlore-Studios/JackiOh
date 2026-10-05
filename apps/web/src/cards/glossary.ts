@@ -30,6 +30,7 @@
 //   R446), and matching stays case-sensitive, as "may tribute enemy units" stays plain words.
 // - §6.2's Activate, one row for "Activate", "Activate X" and "Activate ♾️" (the tokenizer takes
 //   the count or the ♾️ with the label, as it takes "Armor 2").
+// - Balance patch 1 adds §6.3's Bounce (R692), with "Bounced" as its alias.
 // - §6.3's Counter, Steal, Unlock, Flicker, Plague Token (and "Plague Tokens"), Redirect, Set health,
 //   End the turn, Trigger a Cry and Look at a hand ("Look at your opponent's hand"): each label is
 //   SPEC's row name and each alias the words cards print. Only capitalised spellings match, so "steal
@@ -77,6 +78,7 @@ export type VerbTermId =
   | "Steal"
   | "Unlock"
   | "Flicker"
+  | "Bounce"
   | "Degrade"
   | "Upgrade"
   | "Plague Token"
@@ -269,6 +271,8 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Steal: verb("Steal", "Take control"),
   Unlock: verb("Unlock", "A Locked zone accepts plays again"),
   Flicker: verb("Flicker", "The card leaves the field then re-enters the same zone at once"),
+  // Balance patch 1 (R692): the printed word for every return to its owner's hand.
+  Bounce: verb("Bounce", "Return to owner's hand", ["Bounced"]),
   Degrade: verb("Degrade", DEGRADE_RULE),
   Upgrade: verb("Upgrade", UPGRADE_RULE),
   "Plague Token": verb("Plague Token", "Counter on a permanent, any number, reset on leaving the field", ["Plague Tokens"]),

@@ -101,7 +101,7 @@ describe("T-AI-8 Rate Limit", () => {
 
     it("R158 R456 a 3rd play that asks pauses the end: answered after a JSON round trip, the play finishes and then the turn ends", () => {
       // The 3rd play is Scarab, whose Cry Discovers: the question pauses the turn the trap already
-      // ended. (Base Hinder used to be the asker here; since R661 its discard is random, so a draw
+      // ended. (Base Hinder used to be the asker here; since R682 its discard is random, so a draw
       // that casts it asks nothing.)
       const s = setup({}, { hand: [VANILLA, REPLENISH, SCARAB, VANILLA] });
       s.play(VANILLA, { zone: 1 }).play(REPLENISH).play(SCARAB, { zone: 2 });

@@ -140,7 +140,7 @@ describe("R70: a cast-on-draw card is cast through §10.5's steps, and is whole 
     // played earlier, so Mr. Vanilla's granted Combo draws — Hinder, which casts itself. The cast is
     // a play for every rule that counts or reacts to plays, Combo named first (R70), with 2 cards
     // played earlier this turn, so Hinder's granted Combo draws 1 (a Reno). The Cry's random
-    // discard (R661) resolves after that draw, so it eats the Reno; then the cast-on-draw draw
+    // discard (R682) resolves after that draw, so it eats the Reno; then the cast-on-draw draw
     // repeats (§2.4) and brings a second Reno, the one card left standing.
     const g = scenario({
       // The Radiant /fullsend: the face that grants "Combo: Draw 1" since patch v0.1.1.

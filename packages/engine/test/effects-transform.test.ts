@@ -120,7 +120,7 @@ describe("transform (§6.3, R23, R35, M3-T1)", () => {
     expect(state.players.p2.hero.health).toBe(HERO_HEALTH);
   });
 
-  it("R670 a transformed Unit keeps its battle position: DEF stays DEF", () => {
+  it("R691 a transformed Unit keeps its battle position: DEF stays DEF", () => {
     const state = game();
     const old = put(state, plain.id, slot("p1", "units", 3));
     old.position = "DEF";

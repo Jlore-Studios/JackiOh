@@ -11,7 +11,7 @@ import { base, def, radiant } from "../../src/scripts/classic-plus/065-3-large-g
 const GRAPE = "classicplus-065-3";
 const FILLER = "core-005";
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt
-const HINDER = "core-021"; // Cast on draw; base face makes its caster discard 1 at random (R661)
+const HINDER = "core-021"; // Cast on draw; base face makes its caster discard 1 at random (R682)
 const SOLARIUS = "classicplus-038"; // Spell Damage +2
 const DECK_A = "core-043"; // (4) Unit, Big Felinor
 const DECK_B = "core-025"; // (4) Unit
@@ -122,10 +122,10 @@ describe("C+ #65.3 Large Grape", () => {
       s.expectHealth("p1", 40);
     });
 
-    it("R58 a cast-on-draw card casts free with no prompt (R661); its chain's repeat brings no price, the grape's own draw does", () => {
+    it("R58 a cast-on-draw card casts free with no prompt (R682); its chain's repeat brings no price, the grape's own draw does", () => {
       const s = scenario({ p1: { hand: [RADIANT, FILLER], library: [HINDER, DECK_A, DECK_B] }, p2: { hand: [FILLER] } });
       s.play(GRAPE, { targets: [{ pick: "hero", player: "p2" }] });
-      // Base Hinder's discard is random (R661): no prompt opens mid-list.
+      // Base Hinder's discard is random (R682): no prompt opens mid-list.
       expect(s.state.pending).toBeNull();
       const revived = JSON.parse(JSON.stringify(s.state)) as GameState;
       expect(revived).toEqual(s.state);

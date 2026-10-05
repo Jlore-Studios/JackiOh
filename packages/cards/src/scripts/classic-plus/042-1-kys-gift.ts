@@ -5,7 +5,7 @@
 //   They cost (0). Radiant: 2 mana, 2 discards, heal 10, and the four cards are Radiant.
 //
 // Its controller's start of turn (R62), in the order written. The mana is temporary (§2.3). The discard
-// is random from the opponent's hand (R661): fewer cards than asked taking what they have and none
+// is random from the opponent's hand (R682): fewer cards than asked taking what they have and none
 // taking nothing. The four cards come from non-token pools of every set (R380), each at `costOverride`
 // 0; the hand cap burns. The numbers are the declared `mana`, `discards` and `heal` (R386); one script
 // runs both faces.

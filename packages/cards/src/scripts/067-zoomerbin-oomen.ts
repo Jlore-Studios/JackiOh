@@ -11,19 +11,19 @@
 // row from the def's type (`rowOf`: everything but a Unit and a Spell goes to the backrow), so
 // naming the lane is the whole placement.
 //
-// R47: a lane-targeted summon into an occupied zone fizzles, and §8's Conventions keep
-// the unit on the field regardless — "the unit still enters". `summon`'s `zoneFor`/`canPlace`
-// already implements exactly that (reserved or occupied → no zone → nothing created). A Locked
-// zone is this card's own override of R667 (summons enter Locked zones unless the card says
-// otherwise; §8: "zone occupied or Locked → fizzles"), so the script checks the Lock itself.
+// R47: a lane-targeted summon into an occupied zone fizzles, and §8's Conventions keep the unit on
+// the field regardless — "the unit still enters". A Locked zone takes the summon since balance patch
+// 1 (R688: a Lock refuses only plays; this card's text says nothing of Locks). `summon`'s
+// `zoneFor`/`canPlace` already implements exactly that (reserved or occupied → no zone → nothing
+// created; Locked → the trap lands), so this card needs no check of its own and must not grow one.
 //
 // §3.2 and R33: `summonOnto` leaves anything that is not a Field Spell face-down, and only the
 // current controller may read a face-down trap. R1: a summon fires no Cry and pays nothing, so the
 // trap arrives unpaid and dormant until its own trigger condition is met.
 //
 // THE POOL. The Engine cell: the base pool is the Cost (1) traps, #18, #41, #60, #71, #96 (patch
-// v0.1.1 made #85 cost 2), and the radiant face's is every Core trap, #85 included, summoned
-// Radiant; zone occupied or Locked → fizzles. `TRAP_TYPES` is `["Trap", "Field Trap"]` because the
+// v0.1.1 made #85 cost 2; balance patch 1 adds Classic #10 Exile at (1)), and the radiant face's is
+// every Core trap, #85 included, summoned Radiant; zone occupied → fizzles. `TRAP_TYPES` is `["Trap", "Field Trap"]` because the
 // filters match `def.type` exactly while SPEC reads "Field Trap counts as Trap" (§8 #51, R35, R61) —
 // `test/query.test.ts` pins both pools. The radiant form drops the cost, keeps the types and sets the
 // §5.2 flag on the trap it makes. §5.1 keeps tokens out
@@ -38,7 +38,7 @@
 // library (CLAUDE.md rules 4 and 5).
 
 import type { Effect, Script } from "@jackioh/engine";
-import { isLocked, slotOf } from "@jackioh/engine";
+import { slotOf } from "@jackioh/engine";
 import { summonRandom } from "@jackioh/engine/effects";
 import { cardDef } from "../catalog-data";
 import { TRAP_TYPES, type CardQuery } from "../query";
@@ -66,8 +66,6 @@ function oomen(pool: CardQuery, radiant: boolean): Script {
       const at = slotOf(ctx.state, self);
       // Off the field there is no "this lane" to summon into, so nothing happens (§3.1).
       if (at === null) return [];
-      // R667's card-specific override: a Locked zone fizzles this summon (§8 row 67).
-      if (isLocked(ctx.state, { player: ctx.controller, row: "backrow", lane: at.lane })) return [];
       return [summonRandom({ query: pool, player: "self", lane: at.lane, radiant })];
     },
   };

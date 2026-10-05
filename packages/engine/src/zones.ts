@@ -20,7 +20,7 @@ export function rowSize(row: Row): number {
 
 /**
  * §3.1, Classic #22: the midlane lanes of a board `lanes` wide — the center lane of an odd count,
- * both center lanes of an even one (R664). Locks never matter to it. The caller reads the count off
+ * both center lanes of an even one (R685). Locks never matter to it. The caller reads the count off
  * the board (a side's unit row length), never off `MID_LANE`, which no longer exists.
  */
 export function midlaneLanes(lanes: number): number[] {
@@ -29,7 +29,7 @@ export function midlaneLanes(lanes: number): number[] {
 }
 
 /**
- * R664: the midlane lanes of a player's own board, read off its unit row length. Card scripts
+ * R685: the midlane lanes of a player's own board, read off its unit row length. Card scripts
  * read the midlane through this (never `state.players[…]` themselves, M3-T1).
  */
 export function midlaneLanesOf(state: GameState, player: PlayerId): number[] {
@@ -86,7 +86,7 @@ export function lockZone(state: GameState, ref: ZoneSlot): void {
   state.players[ref.player].locks[ref.row][ref.lane - 1] = true;
 }
 
-/** B5 E20: clear the flag. Its occupant, if any, is unaffected. R667: summons and moves enter Locked zones, so Unlock only re-opens the zone for plays. */
+/** B5 E20: clear the flag. Its occupant, if any, is unaffected. R688: summons and moves enter Locked zones, so Unlock only re-opens the zone for plays. */
 export function unlockZone(state: GameState, ref: ZoneSlot): void {
   state.players[ref.player].locks[ref.row][ref.lane - 1] = false;
 }
@@ -187,7 +187,7 @@ export function whyCannotCarry(state: GameState, ref: ZoneSlot): string | null {
  * §3.2, B5 E21: a zone a Stack card may enter although it is occupied. Occupancy is exactly what
  * Stack lifts, so what is left is what occupancy never covered — a zone held for a card's return
  * (R64, B3.1 rule 6) takes no Stack card either — plus, in a backrow zone, a carrier's Unit: a zone
- * carrying one takes nothing more (R446). A play's Stack entry still honors a Lock (R667: only plays
+ * carrying one takes nothing more (R446). A play's Stack entry still honors a Lock (R688: only plays
  * are refused one); a move's does not, via `{ move: true }`.
  */
 export function acceptsStackCard(state: GameState, ref: ZoneSlot, options: { move?: boolean } = {}): boolean {
@@ -239,14 +239,14 @@ function isUnitFace(state: GameState, instance: CardInstance): boolean {
 }
 
 /**
- * A zone a play, or a summon with no named zone, may take: empty and unlocked (§3.2). R667: a named
+ * A zone a play, or a summon with no named zone, may take: empty and unlocked (§3.2). R688: a named
  * summon or a move may enter a Locked zone instead (`takesMove`, `placeOnField`); only plays refuse one.
  */
 export function isOpen(state: GameState, ref: ZoneSlot): boolean {
   return isEmpty(state, ref) && !isLocked(state, ref) && !isReserved(state, ref);
 }
 
-/** R667: a zone a move may enter — empty and unreserved. Locked zones take moves; only plays refuse one. */
+/** R688: a zone a move may enter — empty and unreserved. Locked zones take moves; only plays refuse one. */
 export function takesMove(state: GameState, ref: ZoneSlot): boolean {
   return isEmpty(state, ref) && !isReserved(state, ref);
 }
@@ -301,6 +301,15 @@ export function firstFreeZone(state: GameState, player: PlayerId, row: Row): Zon
   return openZones(state, player, row)[0] ?? null;
 }
 
+/**
+ * R64, R688: where a summon, a recruit or a move with no named zone enters — the leftmost open zone,
+ * else the leftmost empty Locked one (a Lock refuses only plays), or null when the row is full. Plays
+ * and casts keep `firstFreeZone`.
+ */
+export function firstEntryZone(state: GameState, player: PlayerId, row: Row): ZoneSlot | null {
+  return firstFreeZone(state, player, row) ?? slotsOf(player, row).find((ref) => takesMove(state, ref)) ?? null;
+}
+
 export function zoneOf(ref: ZoneSlot): Zone {
   return { z: "field", player: ref.player, row: ref.row, lane: ref.lane };
 }
@@ -322,7 +331,7 @@ export function placeOnField(
   ref: ZoneSlot,
   options: { stack?: boolean } = {},
 ): boolean {
-  // R667: a Lock refuses plays, never placements — summons, moves, rotations and restores all land.
+  // R688: a Lock refuses plays, never placements — summons, moves, rotations and restores all land.
   // Plays never reach here unvetted (`playChoices` offers and `playSteps` assigns unlocked zones only).
   if (isReserved(state, ref)) return false;
   const side = state.players[ref.player];
@@ -832,7 +841,7 @@ export function stepIntoUnitZone(state: GameState, card: CardInstance, to: ZoneS
 /**
  * B3.1 rule 6: move a card acting in a unit zone into a backrow zone of its side, without leaving the
  * field. `to` must take it: not held for another card, and empty — or, for a card that
- * has Stack, a zone a Stack card may top (B5 E21). A Lock never stops a move (R667). The caller releases the card's own home first. False,
+ * has Stack, a zone a Stack card may top (B5 E21). A Lock never stops a move (R688). The caller releases the card's own home first. False,
  * changing nothing, when it cannot go.
  */
 export function stepIntoBackrow(state: GameState, card: CardInstance, to: ZoneSlot, options: { stack?: boolean } = {}): boolean {

@@ -39,7 +39,7 @@ export function backrowIsPublic(state: GameState, card: CardInstance, viewer: Pl
 }
 
 /**
- * R33, R371, R665: a backrow Trap or Field Trap that has not flipped face-up, so only its
+ * R33, R371, R686: a backrow Trap or Field Trap that has not flipped face-up, so only its
  * controller may read it — unless it is revealed, which both players read while it stays armed.
  * `backrowIsPublic` above is this plus the controller's exception, and `viewFor` marks the
  * controller's own view of such a card `unrevealed` from the same answer, so the mark a client draws

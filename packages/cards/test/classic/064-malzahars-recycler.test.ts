@@ -1,5 +1,5 @@
 // C #64 Malzahar's Recycler — SPEC §8.6 row 64, BUILD M9 Classic row C 64: "End of your turn: discard
-// 2 cards at random (R661; fewer → all, none → nothing); whenever you discard, draw as many as that
+// 2 cards at random (R682; fewer → all, none → nothing); whenever you discard, draw as many as that
 // effect discarded, one answer per discarding effect (its own end-of-turn discard draws 2); every
 // discard of yours counts (C #15, C #26, C #37, C #8 played against you), an opponent's discard does
 // not, and a Brittle crumble is no discard; the drawn cards are never named in the opponent's view;
@@ -70,10 +70,10 @@ describe("C #64 Malzahar's Recycler", () => {
   });
 
   describe("base", () => {
-    it("R661 at the end of your turn 2 random cards are discarded, and its own discard draws 2", () => {
+    it("R682 at the end of your turn 2 random cards are discarded, and its own discard draws 2", () => {
       const s = recycling({ hand: [MENACE, VANILLA, FILLER] });
       s.endTurn();
-      // R661: no prompt opens — the two discards land at once, at random.
+      // R682: no prompt opens — the two discards land at once, at random.
       expect(s.events.some((event) => event.type === "promptOpened" && (event as { player?: string }).player === "p1")).toBe(false);
       const discarded = discardedBy(s.lastEvents, "p1").map((event) => (event as { defId: string }).defId);
       expect(discarded).toHaveLength(2);
@@ -86,7 +86,7 @@ describe("C #64 Malzahar's Recycler", () => {
       expect(s.hand("p1")).toHaveLength(3);
     });
 
-    it("R661 the random discards come from the match rng: the same game discards the same cards", () => {
+    it("R682 the random discards come from the match rng: the same game discards the same cards", () => {
       const first = recycling({ hand: [MENACE, VANILLA, FILLER] });
       first.endTurn();
       const second = recycling({ hand: [MENACE, VANILLA, FILLER] });
@@ -96,7 +96,7 @@ describe("C #64 Malzahar's Recycler", () => {
       expect(ids(first)).toEqual(ids(second));
     });
 
-    it("R661 with fewer than 2 cards it discards them all, and draws that many", () => {
+    it("R682 with fewer than 2 cards it discards them all, and draws that many", () => {
       const s = recycling({ hand: [MENACE] });
       s.endTurn();
       expect(s.state.pending).toBeNull();
@@ -121,10 +121,10 @@ describe("C #64 Malzahar's Recycler", () => {
       expect(drawnBy(s.lastEvents, "p1")).toHaveLength(2);
     });
 
-    it("R661 a random discard of yours counts: Hinder cast on draw discards 1 at random, and you draw 1", () => {
+    it("R682 a random discard of yours counts: Hinder cast on draw discards 1 at random, and you draw 1", () => {
       const s = recycling({ hand: [STOCKPILE, MENACE], library: [HINDER, VANILLA, VANILLA, VANILLA, VANILLA] });
       s.play(STOCKPILE);
-      // Hinder is cast on the first draw and discards at random (R661): no prompt opens.
+      // Hinder is cast on the first draw and discards at random (R682): no prompt opens.
       expect(s.state.pending).toBeNull();
       expect(discardedBy(s.lastEvents, "p1")).toHaveLength(1);
       // Stockpile's two draws (the first repeating past Hinder) and the Recycler's one.
@@ -162,7 +162,7 @@ describe("C #64 Malzahar's Recycler", () => {
       const library = Array.from({ length: 8 }, () => VANILLA);
       const s = recycling({ hand: [RAPID_DRAW, FILLER], library });
       s.play(RAPID_DRAW);
-      // R661: no prompt opens — four random cards go at once.
+      // R682: no prompt opens — four random cards go at once.
       expect(s.state.pending).toBeNull();
       expect(discardedBy(s.lastEvents, "p1")).toHaveLength(4);
       expect(drawnBy(s.lastEvents, "p1")).toHaveLength(8);
@@ -194,7 +194,7 @@ describe("C #64 Malzahar's Recycler", () => {
       s.play(PICKLE);
       expect(s.state.pending?.playerId).toBe("p1");
       s.answer("discard");
-      // R661: the discard lands at once, at random — no second answer.
+      // R682: the discard lands at once, at random — no second answer.
       expect(discardedBy(s.lastEvents, "p1")).toHaveLength(1);
       // The answer is a queued trigger (§10.3): it draws once Pickle has finished asking.
       s.answer("exile").answer("exile");
@@ -210,7 +210,7 @@ describe("C #64 Malzahar's Recycler", () => {
         p2: { hand: [FILLER], backrow: [{ def: INCOME_TAX, faceUp: false }], library: [VANILLA, VANILLA] },
       });
       s.endTurn();
-      // R661: the Recycler's two discards are random, so no prompt opens — and the two draws set off the tax.
+      // R682: the Recycler's two discards are random, so no prompt opens — and the two draws set off the tax.
       expect(s.events.some((event) => event.type === "trapFired")).toBe(true);
       expect(s.state.pending).toMatchObject({ playerId: "p1", kind: "hand" });
       s.answer(pick(s, FILLER));
@@ -245,10 +245,10 @@ describe("C #64 Malzahar's Recycler", () => {
       expect(drawnBy(s.lastEvents, "p1")).toHaveLength(1);
     });
 
-    it("R97 R661 no prompt opens, and the cards drawn are never named in the opponent's view", () => {
+    it("R97 R682 no prompt opens, and the cards drawn are never named in the opponent's view", () => {
       const s = recycling({ hand: [MENACE, VANILLA, FILLER] });
       s.endTurn();
-      // R661: no prompt opens at all — nothing to redact options from.
+      // R682: no prompt opens at all — nothing to redact options from.
       expect(s.state.pending).toBeNull();
       expect(s.view("p2").pending).toBeNull();
       const drawnIds = drawnBy(s.lastEvents, "p1").map((event) => (event as { instanceId: string }).instanceId);
@@ -268,7 +268,7 @@ describe("C #64 Malzahar's Recycler", () => {
     it("R58 its own end-of-turn discard draws your whole deck, as its size stands then", () => {
       const s = recycling({ radiant: true, hand: [MENACE, VANILLA], library: [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] });
       s.endTurn();
-      // R661: no prompt — and the whole two-card hand goes, so both discards are certain.
+      // R682: no prompt — and the whole two-card hand goes, so both discards are certain.
       expect(s.state.pending).toBeNull();
       const events = s.lastEvents;
       const p2Starts = events.findIndex((event) => event.type === "turnStarted");
@@ -282,7 +282,7 @@ describe("C #64 Malzahar's Recycler", () => {
       const library = Array.from({ length: 12 }, () => VANILLA);
       const s = recycling({ radiant: true, hand: [MENACE], library });
       s.endTurn();
-      // R661: the one-card hand goes with no prompt.
+      // R682: the one-card hand goes with no prompt.
       expect(s.state.pending).toBeNull();
       expect(s.hand("p1")).toHaveLength(10);
       expect(s.events.filter((event) => event.type === "burned")).toHaveLength(2);

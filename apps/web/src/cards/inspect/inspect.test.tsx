@@ -339,7 +339,7 @@ describe("hover preview (B22)", () => {
     expect(screen.getByTestId("a-open")).toHaveTextContent("hover");
   });
 
-  it("lines of code is a hidden stat in matches: showLoc false shows no LocLine, the default shows it", () => {
+  it("R693 lines of code is a hidden stat in matches: showLoc false shows no LocLine, the default shows it", () => {
     render(
       <Scene>
         <Trigger id="a" subject={subjectOf("loc-a", "core-043")} options={{ showLoc: false }} />

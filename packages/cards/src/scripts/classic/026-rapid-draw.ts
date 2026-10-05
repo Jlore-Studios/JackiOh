@@ -1,13 +1,13 @@
 // C #26 Rapid Draw (SPEC §8.6 row 26). (0) Spell, Common.
 //   Base:    "Draw {draw}. Then discard {discard|card|cards}." — draw 4, discard 4
 //   Radiant: "Draw {draw}. Then discard {discard|card|cards}." — draw 5, discard 4
-//   Engine:  "Four draws (Radiant five; the hand cap applies, R4), then 4 random discards (R661;
+//   Engine:  "Four draws (Radiant five; the hand cap applies, R4), then 4 random discards (R682;
 //            fewer in hand, all of them). Tunes: draw 4 ↑; discard 4 ↓."
 //
 // The draws are §2.4's pipeline (`draw`): each its own cast-on-draw chain (R58), fatigue on an empty
 // deck, the hand cap burning the overflow (R4, R317), a draw limit stopping the rest (R457).
 //
-// "Then discard": R661 makes it random, read during resolution over the hand the draws left. The hand
+// "Then discard": R682 makes it random, read during resolution over the hand the draws left. The hand
 // is read as the list reaches the discard, not as the card is played — a draw that pauses (a
 // cast-on-draw card's own prompt) resumes into the rest of the list, and the discard then reads the
 // hand as it stands.

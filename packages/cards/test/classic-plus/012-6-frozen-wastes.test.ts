@@ -1,8 +1,9 @@
-// C+ #12.6 Frozen Wastes — SPEC §8.7 row 12.6, R408, BUILD M9 Classic+ row C+ 12.6: "Spell whose
-// unlabelled text is its Cry (R408): destroys every Unit on both sides, then exiles the top card of
+// C+ #12.6 Frozen Wastes — SPEC §8.7 row 12.6, R408, BUILD M9 Classic+ row C+ 12.6: "Spell (a Field
+// Spell until balance patch 1): destroys every Unit on both sides, then exiles the top card of
 // your deck once for each Unit that died (Indestructible survivors don't count, a Reborn unit that died
-// does), a short deck exiling what it has with no fatigue; the exiles are public (R97); afterwards it
-// goes to the graveyard; its preview is the cards it would exile now (R280); radiant exiles from the top of the
+// does), a short deck exiling what it has with no fatigue; the exiles are public (R97); it then goes to
+// the graveyard, needing no backrow zone to play; its preview is the cards it would exile now (R280);
+// radiant exiles from the top of the
 // opponent's deck instead". The R280 proof is here (its preview reads deck sizes, never contents).
 
 import type { CardView } from "@jackioh/shared";
@@ -71,13 +72,14 @@ describe("C+ #12.6 Frozen Wastes", () => {
       expect(s.view("p2").opponent.exile).toHaveLength(3);
     });
 
-    it("R408 afterwards it goes to the graveyard with no further text", () => {
+    it("R408 a Spell since balance patch 1: it resolves and goes to the graveyard, with no backrow body left", () => {
       const s = wastes(false, { field: [] }, { field: [] });
       s.play(WASTES);
       s.expectInZone(WASTES, "graveyard");
+      expect(s.backrow("p1", 1)).toBeNull();
     });
 
-    it("a Spell, it plays with a full backrow", () => {
+    it("it needs no open backrow zone to play", () => {
       const s = wastes(false, { backrow: [MANA_WELL, MANA_WELL, MANA_WELL, MANA_WELL, MANA_WELL] });
       s.play(WASTES);
       s.expectInZone(WASTES, "graveyard");

@@ -313,7 +313,7 @@ describe("R384 Heroic Power is built through the same activation", () => {
 // The play's new payments
 // ---------------------------------------------------------------------------------------------
 
-describe("B5 E5 R661 a target that costs discards (Classic #89): random at pay time, nothing picked", () => {
+describe("B5 E5 R682 a target that costs discards (Classic #89): random at pay time, nothing picked", () => {
   const ghost = "e2";
   const legal: ActionBody[] = [
     { type: "play", instanceId: "h1", targets: [at("e1")] },

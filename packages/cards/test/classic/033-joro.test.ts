@@ -230,7 +230,7 @@ describe("C #33 Joro", () => {
       });
       const menace = s.card(MENACE);
       s.play(BRINGER);
-      // R668: one `target` prompt names the single permanent both placements land on.
+      // R689: one `target` prompt names the single permanent both placements land on.
       expect(s.state.pending?.kind).toBe("target");
       s.answer([{ pick: "instance", instanceId: menace.id }]);
       expect(redirects(s)).toEqual([]);

@@ -353,7 +353,7 @@ describe("C+ #73 Call to Chaos (Classic+ Edition)", () => {
 
     it("R436 R87 the recursion finishes in one pass: Hinder's random discard pauses nothing, and nothing runs twice", () => {
       // The recursion, one link short of the cap, casts a base Core #95 that rolls "draw your whole
-      // deck": the deck's Hinder is cast and discards at random (R661, R431: no prompt), so the draw
+      // deck": the deck's Hinder is cast and discards at random (R682, R431: no prompt), so the draw
       // and the Golem run through with no prompt open (R113) and the chain lands once.
       let found: Scenario | null = null;
       for (let cursor = 0; cursor < CURSOR_SEARCH * 4 && found === null; cursor += 1) {

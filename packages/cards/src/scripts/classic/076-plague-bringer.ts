@@ -7,7 +7,7 @@
 //            tokens 2 ↑; draw 1 ↑."
 //
 // Rush is printed on both faces. `placePlagueTokens` asks one `target` prompt naming the single
-// permanent every placement lands on (R668; a face-down card the chooser may not read offered by its
+// permanent every placement lands on (R689; a face-down card the chooser may not read offered by its
 // id alone, R177) and parks the draw behind it (R113). Both numbers are declared (R386).
 
 import { param, type Script } from "@jackioh/engine";

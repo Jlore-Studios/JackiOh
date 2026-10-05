@@ -1,5 +1,5 @@
 // C #34 Ancient Acquisition — SPEC §8.6 row 34, BUILD M9 Classic row C 34: "Return 2 random cards
-// from your graveyard to hand, with no prompt (R663; fewer if fewer; an empty graveyard: nothing);
+// from your graveyard to hand, with no prompt (R684; fewer if fewer; an empty graveyard: nothing);
 // the resolving Spell is never one of its own returns; a full hand burns the overflow (R317); the
 // returned cards follow R97 in the opponent's view once in your hand; cast by C #47 the returns are
 // still its caster's; radiant: up to 4 from your graveyard or your exile; its tuned number (cards)
@@ -46,7 +46,7 @@ describe("C #34 Ancient Acquisition", () => {
   });
 
   describe("base", () => {
-    it("R663 returns 2 random cards with no prompt, from the graveyard", () => {
+    it("R684 returns 2 random cards with no prompt, from the graveyard", () => {
       const s = acquire(false);
       s.play(ACQUIRE);
       expect(s.state.pending).toBeNull();
@@ -60,7 +60,7 @@ describe("C #34 Ancient Acquisition", () => {
       for (const defId of inHand) expect([MENACE, SEVEN, FELINORS, VANILLA, REPLENISH]).toContain(defId);
     });
 
-    it("R663 the random returns come from the match rng: the same game returns the same cards", () => {
+    it("R684 the random returns come from the match rng: the same game returns the same cards", () => {
       const first = acquire(false);
       first.play(ACQUIRE);
       const second = acquire(false);
@@ -72,7 +72,7 @@ describe("C #34 Ancient Acquisition", () => {
       expect(ids(first)).toEqual(ids(second));
     });
 
-    it("R663 each return is its own addedToHand event, naming the card to you", () => {
+    it("R684 each return is its own addedToHand event, naming the card to you", () => {
       const s = acquire(false);
       s.play(ACQUIRE);
       expect(s.events.filter((event) => event.type === "addedToHand" && event.player === "p1")).toHaveLength(2);
@@ -139,7 +139,7 @@ describe("C #34 Ancient Acquisition", () => {
       expect(s.pile("p1", "exile").map((card) => card.defId)).toEqual([VANILLA]);
     });
 
-    it("R177 R663 no prompt opens, so the opponent reads only the public events", () => {
+    it("R177 R684 no prompt opens, so the opponent reads only the public events", () => {
       const s = acquire(false);
       s.play(ACQUIRE);
       expect(s.state.pending).toBeNull();
@@ -176,7 +176,7 @@ describe("C #34 Ancient Acquisition", () => {
   });
 
   describe("radiant", () => {
-    it("R663 returns up to 4 at random from your graveyard and your exile", () => {
+    it("R684 returns up to 4 at random from your graveyard and your exile", () => {
       const s = acquire(true, { graveyard: [MENACE, SEVEN, FELINORS], exile: [VANILLA, ECLIPSE, MANA_WELL] });
       s.play(ACQUIRE);
       expect(s.state.pending).toBeNull();

@@ -5,7 +5,7 @@
 // price paid was the old card's; a Unit or a trap replaced this way takes no zone; a cast (R70) is
 // replaced too; a card played before activating is not; the modifier expires at cleanup; activating is
 // not a play; the opponent's view never names a replaced card (it ceased to exist unread, R177);
-// radiant: discard 6 cards at random (R661; all if fewer), and each replacement is a Radiant Book
+// radiant: discard 6 cards at random (R682; all if fewer), and each replacement is a Radiant Book
 // of Flame; its tuned number (discards) reads through `param()` (R386)".
 
 import { describe, expect, it } from "vitest";
@@ -219,7 +219,7 @@ describe("C #23 Devil's Pact", () => {
   });
 
   describe("radiant", () => {
-    it("R661 Cry: discard 6 cards at random, with no prompt", () => {
+    it("R682 Cry: discard 6 cards at random, with no prompt", () => {
       const eight = [VANILLA, VANILLA, TIMMY, TIMMY, STOCKPILE, STOCKPILE, FILLER, BEAR];
       const s = scenario({ p1: { hand: [{ def: PACT, radiant: true }, ...eight] }, p2: { hand: [FILLER] } });
 
@@ -230,7 +230,7 @@ describe("C #23 Devil's Pact", () => {
       expect(count(s.lastEvents, "discarded")).toBe(6);
     });
 
-    it("R661 the random discards come from the match rng: the same game discards the same cards", () => {
+    it("R682 the random discards come from the match rng: the same game discards the same cards", () => {
       const eight = [VANILLA, VANILLA, TIMMY, TIMMY, STOCKPILE, STOCKPILE, FILLER, BEAR];
       const mk = (): Scenario =>
         scenario({ p1: { hand: [{ def: PACT, radiant: true }, ...eight] }, p2: { hand: [FILLER] } });
@@ -243,7 +243,7 @@ describe("C #23 Devil's Pact", () => {
       expect(ids(first)).toEqual(ids(second));
     });
 
-    it("R661 with 6 or fewer in hand it discards all of them, asking nothing", () => {
+    it("R682 with 6 or fewer in hand it discards all of them, asking nothing", () => {
       const s = scenario({ p1: { hand: [{ def: PACT, radiant: true }, VANILLA, TIMMY] }, p2: { hand: [FILLER] } });
 
       s.play(PACT, { zone: 1 });

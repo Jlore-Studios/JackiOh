@@ -17,7 +17,7 @@ import { spellCannotReach } from "./restrictions";
 import type { Script } from "./script";
 import { scriptOf, scriptsFor } from "./scripts";
 import { findInstance, type CardInstance, type GameState } from "./state";
-import { firstFreeZone, isBuried } from "./zones";
+import { firstEntryZone, isBuried } from "./zones";
 
 /** A card acting on the field: a unit on top of its pile, or a backrow card (§3.2, R13). */
 function actsOnField(state: GameState, card: CardInstance): boolean {
@@ -114,7 +114,7 @@ export function interceptorFor(
   if (targeted.zone.z !== "field" || targeted.zone.row !== "units" || isBuried(state, targeted)) return null;
   const defender = targeted.controller;
   if (defender !== opponentOf(chooser)) return null;
-  if (firstFreeZone(state, defender, "units") === null) return null;
+  if (firstEntryZone(state, defender, "units") === null) return null;
   return state.players[defender].hand.find((card) => interposesFromHand(card) && answersSource(card, source)) ?? null;
 }
 
@@ -138,10 +138,10 @@ export function targetingDiscardsFor(
 }
 
 /**
- * R450, R661: whether the player can pay a targeting cost of `required` discards — that many cards
+ * R450, R682: whether the player can pay a targeting cost of `required` discards — that many cards
  * held outside `keep` (the card a play is taking out of that hand, §10.5 step 1, and any hand card
  * the same play picks), or null when they can. The discards themselves are random at pay time
- * (R661: a discard is its player's choice only when the card says "of your choice"); nothing lists
+ * (R682: a discard is its player's choice only when the card says "of your choice"); nothing lists
  * or chooses them, so there are no paying sets to enumerate.
  */
 export function whyTargetingDiscardsUnpayable(

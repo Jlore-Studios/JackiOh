@@ -21,7 +21,7 @@ const STORM = "classicplus-008";
 const VANILLA = "core-008"; // (1) 4/4: a Degrade can change its cost or its stats.
 const IMMUTABLE = { def: "core-019", radiant: true } as const; // Radiant Midrange Menace: Immutable.
 const NETHER = "core-088"; // (4) Spell, no keywords, no numbers: no Degrade reaches it.
-const HINDER = "core-021"; // Cast on draw: … Discard 1 at random with no prompt (R661).
+const HINDER = "core-021"; // Cast on draw: … Discard 1 at random with no prompt (R682).
 const FILLER = "core-010";
 const STOCKPILE = "core-005";
 
@@ -155,12 +155,12 @@ describe("C+ #8 Withering Storm", () => {
       expect(JSON.stringify(s.view("p2").you.ownLibrary)).toBe(listBefore);
     });
 
-    it("R661 the draw's cast asks nothing, and the Degrades are still made once", () => {
+    it("R682 the draw's cast asks nothing, and the Degrades are still made once", () => {
       const s = setup([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA], false, undefined, [HINDER, STOCKPILE]);
 
       s.play(STORM);
 
-      // Base Hinder's discard is random (R661): the draw's cast opens no prompt.
+      // Base Hinder's discard is random (R682): the draw's cast opens no prompt.
       expect(s.state.pending).toBeNull();
       const revived = JSON.parse(JSON.stringify(s.state)) as GameState;
       expect(revived).toEqual(s.state);

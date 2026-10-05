@@ -64,7 +64,7 @@ describe("B3.3 where a Brittle count lives and when it starts (R385)", () => {
     expect(unit.brittle).toEqual({ count: 2, since: 4, printed: true });
     const radiant = put(state, brittleUnit.id, slot("p1", "units", 2), { radiant: true });
     expect(radiant.brittle?.count).toBe(4);
-    // R666: a Field Trap set face-down has entered the field but is unrevealed, so it starts
+    // R687: a Field Trap set face-down has entered the field but is unrevealed, so it starts
     // no count — no Brittle while unrevealed (Classic+ #74).
     const trap = put(state, brittleTrap.id, slot("p1", "backrow", 1));
     expect(trap.brittle).toBeUndefined();

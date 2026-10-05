@@ -1,7 +1,7 @@
 // C #61 Plague Bringer Goliath — SPEC §8.6 row 61, BUILD M9 Classic row C 61: "Tribute 1, Rush, Trample:
 // can't be played without a Unit to Tribute, and may take the tributed Unit's zone on a full board
 // (R391); Cry: place 3 Plague Tokens as three placements, all on the one permanent a single prompt
-// names (R668), on any permanent either side, face-down ones included (a face-down option carries only
+// names (R689), on any permanent either side, face-down ones included (a face-down option carries only
 // its id, R177), then draw 1; Trample's excess hits the hero (R63); radiant 14/14: draw 3; its tuned
 // numbers (tokens, draw) read through `param()` (R386)".
 
@@ -127,7 +127,7 @@ describe("C #61 Plague Bringer Goliath", () => {
       expect(placed).toHaveLength(3);
     });
 
-    it("R668 no spreading: one answer puts all three on the pick, three placements of 1", () => {
+    it("R689 no spreading: one answer puts all three on the pick, three placements of 1", () => {
       const s = ready();
       playGoliath(s);
       const menace = s.card(MENACE);

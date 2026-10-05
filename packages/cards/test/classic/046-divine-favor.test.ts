@@ -18,7 +18,7 @@ const FILLER = "core-010"; // (0) Spell
 const STOCKPILE = "core-005";
 const MENACE = "core-019";
 const CN_VIRUS = "core-090-1"; // Cast on draw
-const HINDER = "core-021"; // Cast on draw: … Discard 1 at random (R661: no prompt).
+const HINDER = "core-021"; // Cast on draw: … Discard 1 at random (R682: no prompt).
 
 function drawn(events: readonly GameEvent[], player: PlayerId = "p1"): GameEvent[] {
   return events.filter((event) => event.type === "drawn" && event.player === player);
@@ -76,10 +76,10 @@ describe("C #46 Divine Favor", () => {
       expect(s.pile("p1", "library")).toHaveLength(2);
     });
 
-    it("§9.3 a cast on draw ends it too (R661: no prompt); the chain still repeats into one Menace", () => {
+    it("§9.3 a cast on draw ends it too (R682: no prompt); the chain still repeats into one Menace", () => {
       const s = scenario({ p1: { hand: [FAVOR, FILLER], library: [HINDER, MENACE, MENACE] }, p2: { hand: many(4) } });
       s.play(FAVOR);
-      // Hinder's discard is random (R661): no prompt opens, and the one card held goes.
+      // Hinder's discard is random (R682): no prompt opens, and the one card held goes.
       expect(s.state.pending).toBeNull();
       const round = JSON.parse(JSON.stringify(s.state)) as GameState;
       expect(round).toEqual(s.state);
