@@ -23,7 +23,7 @@ from harness.context import Context
 from harness.errors import GitHubError
 from harness.providers import Provider
 from harness.queue import (label_names, queue_build, queue_review, queue_revise, set_state_label,
-                           stop)
+                           stop, wip_branch)
 from harness.state import item as state_item
 from harness import threads
 from harness.status import report
@@ -391,6 +391,18 @@ def on_issue_change(ctx: Context, payload: dict[str, Any], *, is_pr: bool) -> li
     return [reply]
 
 
+def _drop_wip(ctx: Context, number: int) -> None:
+    """A closed or merged bot pull request's unfinished revision (`bot/wip/<pr>`, #313) is done
+    with: delete the branch and drop the record's `wip`."""
+    if not ctx.store.load()["items"].get(str(number), {}).get("wip"):
+        return
+    try:
+        ctx.gh.delete_branch(wip_branch(number))
+    except GitHubError:
+        pass  # gone already
+    ctx.store.update(lambda s: state_item(s, number).pop("wip", None), f"wip #{number} closed")
+
+
 def on_pull_closed(ctx: Context, payload: dict[str, Any]) -> list[str]:
     pull = payload.get("pull_request") or {}
     if LABEL_PR not in label_names(pull):
@@ -400,6 +412,12 @@ def on_pull_closed(ctx: Context, payload: dict[str, Any]) -> list[str]:
     ctx.store.update(lambda s: state_item(s, number).update(closed_at=iso(ctx.now()),
                                                             merged=bool(pull.get("merged"))),
                      f"closed #{number}")
+    _drop_wip(ctx, number)
+    if pull.get("merged"):
+        try:
+            stepup.clear(ctx, number)  # merged: approved and green, so its strikes are over
+        except GitHubError:
+            pass
     if issue is None:
         return ["closed; no linked issue"]
     ctx.gh.remove_label(issue, LABEL_PR_OPEN)
@@ -452,15 +470,17 @@ def on_ci(ctx: Context, payload: dict[str, Any]) -> list[str]:
             continue
         fixes = int(record.get("ci_fixes", 0))
         link = f"[run]({run.get('html_url')})"
-        if fixes >= ctx.cfg.max_failures:
+        if fixes:
+            # Every CI fix that left it red is a strike of its own (#316), not only the last one.
             try:
-                stepped = stepup.strike(ctx, number, f"CI still failed after {fixes} fixes",
+                stepped = stepup.strike(ctx, number, f"CI still failed after {fixes} fix(es)",
                                         link=link)
             except GitHubError:
                 stepped = False
             if stepped:
                 out.append(f"#{number}: stepped up after {fixes} CI fixes")
                 continue
+        if fixes >= ctx.cfg.max_failures:
             set_state_label(ctx, number, names, LABEL_BLOCKED)
             if pull.get("auto_merge"):
                 try:

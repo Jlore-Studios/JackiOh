@@ -715,10 +715,30 @@ class Deliverer:
         self.ctx.store.update(lambda s: state_item(s, number).pop("wip", None),
                               f"wip #{number} done")
 
+    def _progressed(self, number: int, kind: str, before: str) -> bool:
+        """Whether a cut-off run's kept work moved on: a commit of its own, not a merge of
+        `main`, past `before` (the head the last cut-off run kept, `bot/wip/<pr>`), or past where
+        this run started when it did not build on that. A revision that resumes from its wip
+        pushes it again every time, so "pushed" alone is no progress."""
+        head = str(self.result.get("head") or "")
+        if not head:
+            return False
+        for base in (before, str(self.result.get("start") or "")):
+            if not base or self.repo.run("merge-base", "--is-ancestor", base, head,
+                                         check=False).returncode != 0:
+                continue
+            found = self.repo.run("rev-list", "--no-merges", "--count", f"{base}..{head}",
+                                  check=False)
+            return found.returncode == 0 and (found.stdout or "0").strip() not in ("", "0")
+        return False
+
     def _interrupted(self, number: int, kind: str) -> None:
         interrupt = str(self.result.get("interrupt") or "budget")
         reason = self.result.get("reason")
+        kept = self._record(number).get("wip") if kind == "revise" else None
+        before = str(kept.get("sha") or "") if isinstance(kept, dict) else ""
         pushed, problem = self._keep_work(number, kind)
+        moved = pushed and self._progressed(number, kind, before)
         try:
             calls = int(self.result.get("model_calls") or 0)
         except (TypeError, ValueError):
@@ -730,7 +750,7 @@ class Deliverer:
         if interrupt in ("budget", "usage") and calls:
             def count(s: dict[str, Any]) -> None:
                 entry = state_item(s, number)
-                entry["interruptions"] = 0 if pushed else int(entry.get("interruptions", 0)) + 1
+                entry["interruptions"] = 0 if moved else int(entry.get("interruptions", 0)) + 1
             state = self.ctx.store.update(count, f"interrupted #{number}")
             count_now = int(state_item(state, number).get("interruptions", 0))
             if count_now >= self.cfg.max_failures:
@@ -1236,10 +1256,8 @@ class Deliverer:
         a resolution keeps who cleared the change, and adds who reviewed the resolution."""
         who = review_rule.who(self._approvals(votes))
         entry: dict[str, Any] = {"sha": head, "at": iso(self.ctx.now()), "by": who}
-        try:
-            stepup.clear(self.ctx, pr)  # a head that met the rule ends the item's strikes
-        except GitHubError:
-            pass
+        # The item's strikes end once this head is green in CI too (#316): the sweep sees that
+        # (`sweep._green_heads`), and a merge does (`events.on_pull_closed`).
         carried = votes.get("carried")
         if isinstance(carried, dict):
             entry.update(by=str(carried.get("by") or who), resolved_by=who,

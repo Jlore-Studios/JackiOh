@@ -80,6 +80,32 @@ def clear(ctx: Context, number: int) -> None:
                      f"strikes #{target} cleared")
 
 
+def green(ctx: Context, sha: str) -> bool:
+    """Every check branch protection requires (`required_checks`) passed on `sha`."""
+    wanted = set(ctx.cfg.required_checks)
+    if not wanted or not sha:
+        return False
+    passed = {str(run.get("name")) for run in ctx.gh.check_runs(sha)
+              if run.get("conclusion") in ("success", "neutral", "skipped")}
+    return wanted <= passed
+
+
+def clear_if_green(ctx: Context, pr: int, head: str) -> bool:
+    """A bot pull request's head that met the review rule (its record's `cleared`) and is green in
+    CI ends its item's strikes (#316): a person's request never does. Returns whether it cleared."""
+    record = ctx.store.load()["items"].get(str(pr), {})
+    cleared = record.get("cleared") if isinstance(record.get("cleared"), dict) else {}
+    if not head or cleared.get("sha") != head:
+        return False
+    target, _ = pair(ctx, pr)
+    if not int(ctx.store.load()["items"].get(str(target), {}).get("strikes") or 0):
+        return False
+    if not green(ctx, head):
+        return False
+    clear(ctx, pr)
+    return True
+
+
 def _reasons(reasons: list[str]) -> str:
     return "; ".join(dict.fromkeys(r for r in reasons if r)) or "no reason recorded"
 
@@ -172,11 +198,13 @@ def rebuild(ctx: Context, issue: int, pr: int, *, why: str, said: str = "") -> s
 
     def change(state: dict[str, Any]) -> None:
         entry = state_item(state, issue)
+        # The pull request's last findings are what killed it: the new build starts from them.
+        findings = state_item(state, pr).get("last_findings") or entry.get("last_findings") or []
         for key in ("pr", "handoff", "wip"):
             entry.pop(key, None)
         entry.update(kind="build", queued_at=now, failures=0, interruptions=0, died=0, strikes=0,
                      strike_log=[], stop_requested=False, previous_pr=pr, previous_branch=old,
-                     previous_why=why[:500])
+                     previous_why=why[:500], last_findings=list(findings))
         state_item(state, pr).pop("wip", None)
     ctx.store.update(change, f"rebuild #{issue}")
     labels = label_names(ctx.gh.get_issue(issue))
