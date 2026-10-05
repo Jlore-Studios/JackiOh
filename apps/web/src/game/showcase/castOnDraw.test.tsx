@@ -88,7 +88,10 @@ describe("R502 the cast on draw is held up", () => {
   });
 
   it("R502 the viewer's own too, captioned as theirs, though their other plays are never held up", () => {
-    mountThen([drawn("p1", "c27", BLOOD), cast("p1", "c27", BLOOD), cast("p1", "c3", "core-011")]);
+    // The other play pays its cost: a cost-0 play nested in the cast's still-open play would be one
+    // of its casts (issue #124), not an ordinary play.
+    const other: GameEvent = { type: "cardPlayed", player: "p1", instanceId: "c3", defId: "core-011", costPaid: 1 };
+    mountThen([drawn("p1", "c27", BLOOD), cast("p1", "c27", BLOOD), other]);
     expect(screen.getByTestId(T.root)).toHaveAttribute("data-showcase-def", BLOOD);
     expect(screen.getByTestId(T.caption)).toHaveTextContent(CAST_ON_DRAW_TEXT.you);
     advance(showcaseCastHoldMs(1));

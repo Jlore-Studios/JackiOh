@@ -1061,6 +1061,19 @@
   font-weight: 700;
 }
 
+/* A pile's depth badge is a button that reads as the badge it was (a press opens the pile as a
+   wheel, issue #124). `.board` outranks src/index.css's `.app-shell button` padding, border
+   radius and weight, which would otherwise make it a full-size control, as `.board
+   .switch-button` does for the in-card switch below. */
+.board button.buried-badge {
+  padding: 0 3px;
+  border: 0;
+  border-radius: 3px;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* On a unit the attack and health own the bottom edge, and the counters sat on top of the attack
    gem, hiding the number a player reads first. They ride on the line just above the numbers. */
 .zone .card-unit .counter {
