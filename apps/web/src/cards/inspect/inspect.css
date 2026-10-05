@@ -597,7 +597,7 @@
      Close a row of its own. Here the card takes the sheet's full height, and the glossary and
      Close stand beside it. */
   /* The right column holds, top down, whichever the face has of its states (StateNotes.tsx), its
-     printed text, its glossary, its flavour line (R658), its lines of code and Close: each is placed in column 2 and flows
+     printed text, its glossary, its flavour line (R660), its lines of code and Close: each is placed in column 2 and flows
      into the next free row, the face spans every row, and the last row takes the slack. */
   .inspect-sheet {
     display: grid;
@@ -828,7 +828,7 @@
   flex: none;
 }
 
-/* ---- Flavour (R658): the card's flavour line and artist credit, quiet under the rules ---------- */
+/* ---- Flavour (R660): the card's flavour line and artist credit, quiet under the rules ---------- */
 
 .inspect-flavour {
   flex: none;

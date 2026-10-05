@@ -24,7 +24,7 @@ A Classic+ card is shown. Core cards live at the top of `src/scripts/` and `test
 | 8 | `docs/radiant-audit.md` | one row `\| <index> \| <name> \| …`; the Radiant face must meet R275 (about twice the base face; doubling stats alone is not enough for a unit with text) | `radiant-standard.test.ts` |
 | 9 | `BUILD.md` | the card's must-pass row in the M9 (or M4-T4) table | none |
 | 10 | `apps/web/src/audio/card-audio.json5` | the card's entry in catalog order, its name in a comment beside its id: a Unit's play and death lines, anything else's cast line, and any effects or attack hook (R655; the file's header says how) | `voice-lines.test.ts`, `voiceData.test.ts` |
-| 11 | `packages/cards/flavour.json` | the card's flavour line, `"<id>": { "flavour": "…" }`: one short line in the source notes' voice, no rules words, at most 120 characters (R658); it is not card data, so no fragment claims it | `flavour.test.ts` (both of them) |
+| 11 | `packages/cards/flavour.json` | the card's flavour line, `"<id>": { "flavour": "…" }`: one short line in the source notes' voice, no rules words, at most 120 characters (R660); it is not card data, so no fragment claims it | `flavour.test.ts` (both of them) |
 | 12 | the count assertions below | the totals change by one | the tests named |
 | 13 | `packages/cards/patches/pending/<version>.json` | the fragment, `run patches …` ([§3](#3-the-patch-and-its-order)); the shipped history and the four version sites move at promotion, not here | `patches check`, `patches.test.ts`, `loc.test.ts` |
 

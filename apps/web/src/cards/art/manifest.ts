@@ -7,7 +7,7 @@
 //
 // The delivery convention (format, size, weight) is in ART.md beside this file, and convention.ts
 // holds its numbers; convention.test.ts fails on a listed file that is missing or breaks it, and on
-// a file in the directory that no line here lists (R658). To add art: drop the file(s) in
+// a file in the directory that no line here lists (R660). To add art: drop the file(s) in
 // `apps/web/public/art/`, then add a line here, for example
 //   "core-002": { base: true, radiant: true },
 // and, if the artist is credited, their name as the card's `artist` in packages/cards/flavour.json.

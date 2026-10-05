@@ -15,9 +15,9 @@ export const INSPECT_GLOSSARY = "inspect-glossary";
 export const INSPECT_PRINTED = "inspect-printed";
 /** R279: the hover preview's column of the cards a face's text names. */
 export const INSPECT_REFS = "inspect-refs";
-/** R658: a card's flavour line and artist credit, in the preview, the sheet and the detail view. */
+/** R660: a card's flavour line and artist credit, in the preview, the sheet and the detail view. */
 export const INSPECT_FLAVOUR = "inspect-flavour";
-/** R658: the artist credit inside it, where the sidecar names one. */
+/** R660: the artist credit inside it, where the sidecar names one. */
 export const INSPECT_ARTIST = "inspect-artist";
 
 // A list of cards (a graveyard or an exile pile): the hover preview, the sheet, and inside them.

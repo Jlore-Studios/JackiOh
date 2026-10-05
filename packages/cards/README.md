@@ -592,7 +592,7 @@ The same patch rewrote every text in the house style (R432) and opened every Cor
 set to all three sets (R380): #7, #54, #57, #59, #67, #83, #95, #98 and #99 draw from every set, while
 #82 KY's Trial and #97 Zephyrs name Core and keep to it.
 
-## 9. Flavour text and artist credits (R658)
+## 9. Flavour text and artist credits (R660)
 
 `flavour.json` is a sidecar beside the catalog, keyed by catalog id: `{ "flavour"?: string,
 "artist"?: string }` per card and token. It is words about a card, not the card, so it is not card

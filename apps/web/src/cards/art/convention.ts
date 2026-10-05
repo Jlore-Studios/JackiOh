@@ -1,4 +1,4 @@
-// The real-art delivery convention (R658, ART.md): what a file in `apps/web/public/art/` must be for
+// The real-art delivery convention (R660, ART.md): what a file in `apps/web/public/art/` must be for
 // the manifest to list it. Pure: it reads bytes it is handed, so convention.test.ts can hold the real
 // directory to it and prove each refusal on bytes made up in the test. Nothing in the bundle calls it.
 

@@ -1,4 +1,4 @@
-// R658: the real-art delivery convention (convention.ts, ART.md). The first block holds the real
+// R660: the real-art delivery convention (convention.ts, ART.md). The first block holds the real
 // `apps/web/public/art/` and `ART_MANIFEST` to it, so an artist's delivery is a file plus a
 // manifest line and CI says what is wrong with either. The rest prove each refusal on files made up
 // here: three real WebP files, one per bitstream (encoded by ImageMagick, base64 below), and bytes
@@ -39,17 +39,17 @@ function deliveredFiles(): Map<string, Uint8Array> {
   return files;
 }
 
-describe("R658 the art directory meets the convention", () => {
-  it("R658 every manifest line names a catalog card whose files exist and meet the convention, and every file is listed", () => {
+describe("R660 the art directory meets the convention", () => {
+  it("R660 every manifest line names a catalog card whose files exist and meet the convention, and every file is listed", () => {
     expect(artDeliveryProblems(ART_MANIFEST, deliveredFiles(), CATALOG_IDS)).toEqual([]);
   });
 
-  it("R658 the convention's numbers: square 512 px files of at most 96 KiB", () => {
+  it("R660 the convention's numbers: square 512 px files of at most 96 KiB", () => {
     expect(ART_SIDE_PX).toBe(512);
     expect(ART_MAX_BYTES).toBe(98_304);
   });
 
-  it("R658 a face's file is named for its card id, the Radiant face with -radiant, and artUrl asks for that name", () => {
+  it("R660 a face's file is named for its card id, the Radiant face with -radiant, and artUrl asks for that name", () => {
     expect(artFileName("core-002", false)).toBe("core-002.webp");
     expect(artFileName("core-002", true)).toBe("core-002-radiant.webp");
     const manifest: ArtManifest = { "core-002": { base: true, radiant: true } };
@@ -58,14 +58,14 @@ describe("R658 the art directory meets the convention", () => {
   });
 });
 
-describe("R658 webpSize reads the picture size of each WebP bitstream", () => {
-  it("R658 lossy, lossless and extended files", () => {
+describe("R660 webpSize reads the picture size of each WebP bitstream", () => {
+  it("R660 lossy, lossless and extended files", () => {
     expect(webpSize(bytesOf(LOSSY_512))).toEqual({ width: 512, height: 512 });
     expect(webpSize(bytesOf(LOSSLESS_512_BY_384))).toEqual({ width: 512, height: 384 });
     expect(webpSize(bytesOf(EXTENDED_300_BY_512))).toEqual({ width: 300, height: 512 });
   });
 
-  it("R658 anything else is not a WebP file", () => {
+  it("R660 anything else is not a WebP file", () => {
     const png = new Uint8Array(64);
     png.set([0x89, 0x50, 0x4e, 0x47]);
     expect(webpSize(png)).toBeNull();
@@ -77,12 +77,12 @@ describe("R658 webpSize reads the picture size of each WebP bitstream", () => {
   });
 });
 
-describe("R658 artFileProblem", () => {
-  it("R658 accepts a square 512 px WebP under the budget", () => {
+describe("R660 artFileProblem", () => {
+  it("R660 accepts a square 512 px WebP under the budget", () => {
     expect(artFileProblem(bytesOf(LOSSY_512))).toBeNull();
   });
 
-  it("R658 refuses the wrong size, the wrong format and a file over the budget", () => {
+  it("R660 refuses the wrong size, the wrong format and a file over the budget", () => {
     expect(artFileProblem(bytesOf(LOSSLESS_512_BY_384))).toBe("is 512x384, not 512x512");
     expect(artFileProblem(bytesOf(EXTENDED_300_BY_512))).toBe("is 300x512, not 512x512");
     expect(artFileProblem(new Uint8Array(64))).toBe("is not a WebP file");
@@ -92,10 +92,10 @@ describe("R658 artFileProblem", () => {
   });
 });
 
-describe("R658 artDeliveryProblems", () => {
+describe("R660 artDeliveryProblems", () => {
   const good = bytesOf(LOSSY_512);
 
-  it("R658 a complete delivery has no problems, a base face alone or both faces", () => {
+  it("R660 a complete delivery has no problems, a base face alone or both faces", () => {
     const manifest: ArtManifest = { "core-002": { base: true, radiant: true }, "core-003": { base: true } };
     const files = new Map([
       ["core-002.webp", good],
@@ -105,7 +105,7 @@ describe("R658 artDeliveryProblems", () => {
     expect(artDeliveryProblems(manifest, files, CATALOG_IDS)).toEqual([]);
   });
 
-  it("R658 names a missing file, a file that breaks the convention and a file no line lists", () => {
+  it("R660 names a missing file, a file that breaks the convention and a file no line lists", () => {
     const manifest: ArtManifest = { "core-002": { base: true, radiant: true } };
     const files = new Map([
       ["core-002.webp", bytesOf(LOSSLESS_512_BY_384)],
@@ -118,7 +118,7 @@ describe("R658 artDeliveryProblems", () => {
     ]);
   });
 
-  it("R658 names a line for an id the catalog lacks and a line that lists neither face", () => {
+  it("R660 names a line for an id the catalog lacks and a line that lists neither face", () => {
     const manifest: ArtManifest = { "core-999": { base: true }, "core-002": {} };
     const files = new Map([["core-999.webp", good]]);
     expect(artDeliveryProblems(manifest, files, CATALOG_IDS)).toEqual([

@@ -720,9 +720,9 @@ export const INSPECT_GLOSSARY = "inspect-glossary";
 export const INSPECT_PRINTED = "inspect-printed";
 /** A14: R279, the hover preview's column of the cards a face's text names. */
 export const INSPECT_REFS = "inspect-refs";
-/** A14: R658, a card's flavour line and artist credit in the preview, the sheet and the detail view. */
+/** A14: R660, a card's flavour line and artist credit in the preview, the sheet and the detail view. */
 export const INSPECT_FLAVOUR = "inspect-flavour";
-/** A14: R658, the artist credit inside it, where the sidecar names one. */
+/** A14: R660, the artist credit inside it, where the sidecar names one. */
 export const INSPECT_ARTIST = "inspect-artist";
 /** A14: card stats block in the inspect detail dialog (R654). */
 export const INSPECT_STATS = "inspect-stats";

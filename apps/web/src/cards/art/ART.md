@@ -4,7 +4,7 @@ Every card draws procedural art (`procedural.ts`, `svg.ts`) until real art is de
 the procedural art stays the fallback after that: a card the manifest does not list, a face whose file
 fails to load, and a Radiant face with no file of its own (which shows the base file under a gold
 tint) all fall back without a request or an error. This file is the convention an artist's
-delivery meets (R658). `convention.ts` holds its numbers, and `convention.test.ts` holds the real
+delivery meets (R660). `convention.ts` holds its numbers, and `convention.test.ts` holds the real
 directory and `manifest.ts` to them in CI.
 
 ## A delivery is a file plus a manifest line

@@ -4003,14 +4003,25 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(656, "effects-cast.test.ts");
   });
 
-  // Proved by packages/cards/test/flavour.test.ts "R658 …" (the sidecar's keys, coverage, fields and
-  // caps), apps/web cards/flavour.test.tsx "R658 …" (no rules words; the preview, the sheet and the
-  // detail show it, the face and an unnamed card never), routes/almanac.test.tsx "R658 …" (the
-  // Almanac's detail), and cards/art/convention.test.ts "R658 …" (the art directory and the manifest
-  // against the convention, and each refusal).
-  it("R658 flavour and artist credits are a sidecar shown in inspect, and real art meets one file convention", () => {
+  // Proved by apps/web test/ux/drag-continue.test.tsx "R658 …" (a second drag from a pick, a backrow
+  // card dropped on the board, a prompt option dragged out of its panel) and test/ux/drag-model.test.ts
+  // "R658 …" (the plans and the drops).
+  it("R658 drags a second choice from its picks, a backrow card onto the board, and a prompt's options", () => {
     provenIn(
       658,
+      "../../../apps/web/src/test/ux/drag-continue.test.tsx",
+      "../../../apps/web/src/test/ux/drag-model.test.ts",
+    );
+  });
+
+  // Proved by packages/cards/test/flavour.test.ts "R660 …" (the sidecar's keys, coverage, fields and
+  // caps), apps/web cards/flavour.test.tsx "R660 …" (no rules words; the preview, the sheet and the
+  // detail show it, the face and an unnamed card never), routes/almanac.test.tsx "R660 …" (the
+  // Almanac's detail), and cards/art/convention.test.ts "R660 …" (the art directory and the manifest
+  // against the convention, and each refusal).
+  it("R660 flavour and artist credits are a sidecar shown in inspect, and real art meets one file convention", () => {
+    provenIn(
+      660,
       "../../cards/test/flavour.test.ts",
       "../../../apps/web/src/cards/flavour.test.tsx",
       "../../../apps/web/src/routes/almanac.test.tsx",

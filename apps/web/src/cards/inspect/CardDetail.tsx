@@ -15,7 +15,7 @@
 // them. The actions row (the caller's actions and Close) is pinned under the scrolling body, so it
 // is visible the moment the dialog opens, which is also where focus lands.
 //
-// After the glossary, the card's flavour line and artist credit (R658, Flavour.tsx).
+// After the glossary, the card's flavour line and artist credit (R660, Flavour.tsx).
 //
 // Last in the column, the card's History (R388, patches/CardHistory.tsx): collapsed under a
 // "History" control, it loads the card's patch history when opened and lists each patch that changed

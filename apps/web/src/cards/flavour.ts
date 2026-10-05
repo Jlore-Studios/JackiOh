@@ -1,4 +1,4 @@
-// A card's flavour line and artist credit (R658), read from the sidecar beside the catalog
+// A card's flavour line and artist credit (R660), read from the sidecar beside the catalog
 // (`@jackioh/cards/flavour.json`, packages/cards/src/flavour.ts), the way the catalog itself is read
 // from its JSON: the bundle carries the words, and no server is asked. Presentation only (CLAUDE.md
 // rule 7). The sidecar is keyed by catalog id, so the hidden sentinel and a match-made definition

@@ -1,4 +1,4 @@
-// A card's flavour line and artist credit (R658) where a card is read at leisure: the hover
+// A card's flavour line and artist credit (R660) where a card is read at leisure: the hover
 // preview's column, the touch sheet and the detail view (the deck builder's and the Card Almanac's).
 // Never on a face itself, where the rules have the room. A card with neither draws nothing.
 

@@ -194,7 +194,7 @@ describe("R630 the almanac's browse pane", () => {
     expect(screen.getByTestId(INSPECT_DETAIL)).toHaveAttribute("data-card", unit.id);
   });
 
-  it("R658 a card's detail shows its flavour line from the sidecar, a token's too", () => {
+  it("R660 a card's detail shows its flavour line from the sidecar, a token's too", () => {
     render(<AlmanacRoute />);
     for (const id of ["core-001", "core-t-sheep"]) {
       fireEvent.click(screen.getByTestId(poolCardId(id)));

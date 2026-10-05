@@ -1,4 +1,4 @@
-// Flavour text and artist credits (issue #265, R658): a sidecar beside the catalog, keyed by card
+// Flavour text and artist credits (issue #265, R660): a sidecar beside the catalog, keyed by card
 // id, never a catalog field. A card's flavour line and its artist are words about the card, not the
 // card, so an edit to `flavour.json` changes no rule, no def and no patch: it needs no pending
 // fragment (README §8), and the designer may rewrite any line at will.

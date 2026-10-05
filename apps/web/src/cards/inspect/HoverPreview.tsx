@@ -11,7 +11,7 @@
 // (StateNotes.tsx), since the badges' tooltips cannot be hovered here, and a printed text beside a
 // tuned face whose numbers moved. Whenever the column is drawn it ends with the card's lines of code
 // (E36): a meta line fits there, and a face with nothing beside it stays alone. Above that line, the
-// card's flavour line and artist credit (R658, Flavour.tsx), which draw the column on their own.
+// card's flavour line and artist credit (R660, Flavour.tsx), which draw the column on their own.
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement } from "react";

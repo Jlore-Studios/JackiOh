@@ -7,7 +7,7 @@
 // Patch v0.2.0 (SPEC §10.8): the face's states in words (StateNotes.tsx: the tuned ribbon R386,
 // Brittle R385, enchantments E39, standing as a Unit R383) and its lines of code (E36) stand with the
 // printed text and the glossary, in the column beside the face (inspect.css), with the card's flavour
-// line and artist credit (R658, Flavour.tsx) after the glossary.
+// line and artist credit (R660, Flavour.tsx) after the glossary.
 
 import { useRef } from "react";
 import type { ReactElement } from "react";
