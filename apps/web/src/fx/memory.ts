@@ -9,7 +9,8 @@
 //   to be a cast on draw (`castOnDraw.ts`), even though the two are separate entries;
 // - the plays still resolving, innermost last: a `cardPlayed` opens one, its `cardResolved` (or its
 //   `countered`) closes it. A per-card recipe (`cardFx.ts`) decorates the events inside its card's
-//   own resolution (#21 Hinder's mana loss, #27 Blood Ridden's Radiant pick and its blood price).
+//   own resolution (#21 Hinder's mana loss, #27 Blood Ridden's Radiant pick and its blood price), and
+//   each play counts the events it has seen, in all and by type (Crushing Walls' first `destroyed`).
 //
 // R202: only ids the viewer may read are kept as ids. An event redacted to the "hidden" sentinel is
 // ignored by the id maps, and a hidden play is kept as a hidden play, so every hidden card looks the
@@ -40,7 +41,7 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
   const casters = new Map<string, PlayerId>();
   const traps = new Map<string, FxTrapZone>();
   let recent: GameEvent[] = [];
-  let resolving: FxPlay[] = [];
+  let resolving: (FxPlay & { seen: Partial<Record<GameEvent["type"], number>> })[] = [];
   let castOnDraw = new WeakSet<GameEvent>();
 
   /** Closes the innermost play of `player` with this id (the sentinel matches the innermost of `player`). */
@@ -58,14 +59,17 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
   return {
     remember(events: readonly GameEvent[]): void {
       for (const event of events) {
-        for (const play of resolving) play.step += 1;
+        for (const play of resolving) {
+          play.step += 1;
+          play.seen[event.type] = (play.seen[event.type] ?? 0) + 1;
+        }
         recent.push(event);
         if (recent.length > FX_MEMORY_RECENT) recent = recent.slice(recent.length - FX_MEMORY_RECENT);
         if (event.type === "cardPlayed") {
           if (event.instanceId !== HIDDEN_ID) put(casters, event.instanceId, event.player, limit);
           const onDraw = castOnDrawAt(recent, recent.length - 1);
           if (onDraw) castOnDraw.add(event);
-          resolving.push({ player: event.player, instanceId: event.instanceId, defId: event.defId, castOnDraw: onDraw, step: 0 });
+          resolving.push({ player: event.player, instanceId: event.instanceId, defId: event.defId, castOnDraw: onDraw, step: 0, seen: {} });
           if (resolving.length > FX_MEMORY_RESOLVING) resolving = resolving.slice(resolving.length - FX_MEMORY_RESOLVING);
         } else if (event.type === "cardResolved" || event.type === "countered") {
           close(event.player, event.instanceId);
@@ -85,7 +89,7 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
     },
     resolving(): FxPlay | undefined {
       const play = resolving[resolving.length - 1];
-      return play === undefined ? undefined : { ...play };
+      return play === undefined ? undefined : { ...play, seen: { ...play.seen } };
     },
     castOnDraw(event: GameEvent): boolean {
       return castOnDraw.has(event);
