@@ -2401,22 +2401,12 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [
-          "cognition"
-        ],
+        "approvals": [],
         "builder": "cognition",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "cognition",
-            "run": "37262563260",
-            "tier": "weak"
-          }
-        ],
-        "sha": "21f465393c1e1cad463f781a84ed9d2582927d4d",
-        "tiers": {
-          "cognition": "weak"
-        }
+        "reviews": [],
+        "sha": "13e78164cc7ec7fede505f6c830075e68217ebd0",
+        "tiers": {}
       }
     },
     "290": {
