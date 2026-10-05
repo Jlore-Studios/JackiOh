@@ -35,6 +35,7 @@ import type { Logger, ServerDeps, Store } from "./api/ports";
 import { systemTimers } from "./api/ports";
 import { createQueueRoutes, startMatchmaker } from "./api/queue";
 import { createRankedRoutes, loadPatchVersion, openSeason } from "./api/ranked";
+import { createRematchRoutes } from "./api/rematch";
 import { createRecordResult, reapStuckMatches } from "./api/results";
 import { purgeExpired } from "./api/retention";
 import { createSeriesRoutes, startSeriesSweeper } from "./api/series";
@@ -225,6 +226,7 @@ export async function createRuntime(
       },
       has: () => false,
       stop: async () => {},
+      presenceOf: () => null,
     },
     // R375, R609: the game's version names the season and is recorded with every rated game.
     patchVersion: overrides.patchVersion ?? (await loadPatchVersion()),
@@ -265,6 +267,7 @@ export function allRoutes(options: { commit?: string | undefined } = {}): Route[
     ...createSeriesRoutes(),
     ...createTutorialRoutes(),
     ...createRankedRoutes(),
+    ...createRematchRoutes(),
     ...createSettingsRoutes(),
     ...createStatsRoutes(),
   ];

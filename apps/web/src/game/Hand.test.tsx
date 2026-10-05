@@ -155,6 +155,21 @@ describe("R434 the opponent's hand row turns face up at the game's end", () => {
     expect(hand.querySelector("[data-def-id]")).toBeNull();
   });
 
+  it("R434 the revealed hand fans at face width, not squeezed to back width", () => {
+    // jsdom lays nothing out (see the file's header), so the width is proved off the stylesheet:
+    // a revealed row fans its slots at face width like the viewer's hand, and its faces stand at
+    // full card height with them.
+    const rules = boardRules();
+    const fan = rules.find((rule) => rule.selectors.includes('.hand-opponent[data-revealed="true"] .hand-cards'));
+    expect(fan?.body).toContain("--slot-w: var(--hand-card-w)");
+    const face = rules.find((rule) => rule.selectors.includes('.hand-opponent[data-revealed="true"] .card-hand'));
+    expect(face?.body).toContain("height: var(--hand-card-h)");
+    expect(face?.body).toContain("max-width: var(--hand-card-w)");
+    // And the row the board renders at the game's end is the one the rule selects.
+    renderBoard(finished());
+    expect(screen.getByTestId("hand-opponent")).toHaveAttribute("data-revealed", "true");
+  });
+
   it("R434 the flip is scaled by --anim-scale and stopped under reduced motion, which leaves the face up", () => {
     const rules = boardRules();
     const flip = rules.find((rule) => rule.selectors.includes(".hand-flip") && rule.body.includes("animation:"));
