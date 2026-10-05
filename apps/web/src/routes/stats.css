@@ -61,27 +61,6 @@
   color: var(--accent, #60a5fa);
 }
 
-.stats-summary-badge {
-  display: inline-block;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 6px;
-  width: fit-content;
-}
-
-.stats-summary-badge[data-source="live"] {
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.3);
-}
-
-.stats-summary-badge[data-source="provisional"] {
-  background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.3);
-}
-
 /* Provisional banner */
 .stats-provisional-banner {
   display: flex;
@@ -99,26 +78,6 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #fbbf24;
-}
-
-.stats-provisional-text {
-  margin: 4px 0 0;
-  font-size: 14px;
-  color: var(--text, #e8eaf2);
-}
-
-.stats-provisional-progress {
-  width: 100%;
-  height: 8px;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.stats-provisional-bar {
-  height: 100%;
-  background: #fbbf24;
-  transition: width 300ms ease;
 }
 
 .stats-fallback-btn {

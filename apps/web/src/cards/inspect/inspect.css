@@ -455,25 +455,6 @@
   color: var(--text-dim, #9aa1b8);
 }
 
-.inspect-stats-badge {
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--surface, #1e222f);
-  color: var(--text-dim, #9aa1b8);
-  border: 1px solid var(--line, #2c3245);
-}
-
-.inspect-stats-badge[data-source="live"] {
-  color: var(--success, #4ade80);
-  border-color: rgba(74, 222, 128, 0.3);
-}
-
-.inspect-stats-badge[data-source="provisional"] {
-  color: var(--warning, #fbbf24);
-  border-color: rgba(251, 191, 36, 0.3);
-}
-
 .inspect-stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

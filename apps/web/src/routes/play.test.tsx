@@ -24,10 +24,12 @@ import {
   getCollection,
   getDecks,
   getMe,
+  getOwnRank,
   getPopulation,
   joinRoom,
   type DecksResponse,
   type EnqueueResponse,
+  type OwnRankResponse,
   type QueueMode,
   type SavedDeck,
   type SavedTrio,
@@ -48,6 +50,7 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     getCatalog: vi.fn(),
     getCollection: vi.fn(),
     getPopulation: vi.fn(),
+    getOwnRank: vi.fn(),
   };
 });
 vi.mock("../net/navigate.ts", async (importOriginal) => {
@@ -128,6 +131,19 @@ function openTicket(mode: QueueMode): EnqueueResponse {
   return { ticketId: "tk-1", status: "open", matchId: null, seriesId: null, population: 1, mode };
 }
 
+/** `GET /api/ranked`'s answer: a Normal Grape III with one pip, unless a test overrides it. */
+function rankBody(over: Partial<OwnRankResponse> = {}): OwnRankResponse {
+  return {
+    season: "v0.2",
+    tag: "ABC123",
+    rank: { tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" },
+    streak: 2,
+    record: { games: 10, wins: 7, losses: 2, draws: 1 },
+    badges: [],
+    ...over,
+  };
+}
+
 beforeEach(() => {
   try {
     window.localStorage.clear();
@@ -142,6 +158,7 @@ beforeEach(() => {
     entries: ALL_IDS.map((id) => ({ cardId: id, quantity: 1 })),
   });
   vi.mocked(getPopulation).mockResolvedValue({ population: 3, byMode: { bo1: 2, bo3: 0, random: 1 } });
+  vi.mocked(getOwnRank).mockResolvedValue(rankBody());
 });
 
 afterEach(() => {
@@ -234,6 +251,45 @@ describe("the lobby's way to practice", () => {
     await waitFor(() => {
       expect(vi.mocked(getMe)).toHaveBeenCalled();
     });
+  });
+});
+
+describe("R661 the lobby's rank", () => {
+  it("R661 shows the player's own rank in R612's words with the season, and links the leaderboard", async () => {
+    await renderLobby();
+
+    expect(await screen.findByTestId(playTestid.rank)).toHaveTextContent(
+      "Normal Grape III · 1/3 pips · Season v0.2",
+    );
+    const link = screen.getByTestId(playTestid.leaderboard);
+    expect(link).toHaveAttribute("href", paths.leaderboard);
+    // A panel of its own beside the queue, never inside the Find a match box (R505).
+    const box = screen.getByRole("region", { name: "Find a match" });
+    expect(within(box).queryByTestId(playTestid.rank)).toBeNull();
+    expect(within(box).queryByTestId(playTestid.leaderboard)).toBeNull();
+  });
+
+  it("R661 puts R612's words on placements and a Jlorious position too, and never a rating", async () => {
+    vi.mocked(getOwnRank).mockResolvedValue(
+      rankBody({ rank: { tier: "raisin", placementsPlayed: 4, placementGames: 10 } }),
+    );
+    const first = render(<PlayRoute token={TOKEN} />);
+    expect(await screen.findByTestId(playTestid.rank)).toHaveTextContent("Raisin · 4/10 placements");
+    first.unmount();
+
+    vi.mocked(getOwnRank).mockResolvedValue(rankBody({ rank: { tier: "jlorious", position: 42 } }));
+    render(<PlayRoute token={TOKEN} />);
+    const rank = await screen.findByTestId(playTestid.rank);
+    expect(rank).toHaveTextContent("Jlorious #42 · Season v0.2");
+    expect(rank.textContent).not.toMatch(/rating|elo/i);
+  });
+
+  it("R661 a rank that cannot be read shows nothing there, and the link stays", async () => {
+    vi.mocked(getOwnRank).mockRejectedValue(new Error("network down"));
+    await renderLobby();
+
+    expect(screen.queryByTestId(playTestid.rank)).toBeNull();
+    expect(screen.getByTestId(playTestid.leaderboard)).toHaveAttribute("href", paths.leaderboard);
   });
 });
 

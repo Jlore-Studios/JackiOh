@@ -19,6 +19,7 @@ import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION, ROTATION_INTERVAL_MS, ROTATION_
 import { dropPlayerStatsCache } from "../stats/store.ts";
 import LandingRoute from "./landing.tsx";
 import { ROTATION_POOL, dealLandingFan, featureWeight, rotateFan } from "./landingFan.ts";
+import { siteFooterTestid } from "./SiteFooter.tsx";
 
 const { App } = await import("../main.tsx");
 
@@ -195,6 +196,18 @@ describe("B37 the landing route", () => {
       expect(notPrevented, `${testid} keeps the browser's default`).toBe(true);
       expect(window.location.pathname).toBe(paths.landing);
     }
+  });
+});
+
+describe("R661 the statistics are not a call to action", () => {
+  it("R661 the landing page's calls to action carry no Stats link; the site footer's is the only one", () => {
+    render(<LandingRoute />);
+    const ctas = within(landing()).getByRole("navigation", { name: "Play" });
+    expect(within(ctas).queryByText("Stats")).toBeNull();
+    expect(ctas.querySelector('a[href="/stats"]')).toBeNull();
+    const statsLinks = landing().querySelectorAll('a[href="/stats"]');
+    expect(statsLinks).toHaveLength(1);
+    expect(statsLinks[0]).toHaveAttribute("data-testid", siteFooterTestid.stats);
   });
 });
 
