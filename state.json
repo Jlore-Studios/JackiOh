@@ -1809,9 +1809,7 @@
       "run_id": "37315987121",
       "started_at": "2026-10-05T13:20:43Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5995280910"
-      ]
+      "taken_asks": []
     },
     "202": {
       "action": "revise",
