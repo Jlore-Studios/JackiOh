@@ -2441,6 +2441,9 @@
     "287": {
       "action": "review",
       "asks": [],
+      "ci_reruns": {
+        "5f724b531d6f9b67f6b82afe817adbc866dfb1db": 1
+      },
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
