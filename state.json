@@ -2754,19 +2754,12 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-05T13:00:58Z",
+      "feedback_since": "2026-10-05T13:23:44Z",
       "forced": false,
       "interruptions": 0,
       "issue": 303,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "SPEC \u00a710.11 still says the settings dialog has an Account tab, so after this change SPEC disagrees with the code it governs.",
-          "evidence": "SPEC.md lines 1257\u20131258 on the branch read \"The dialog groups them in tabs (Gameplay, Visuals, Audio and Account), and opens on the tab the player used last\". The diff edits only R634's row (line 1848). The plan and the PR body both say SPEC's false Account-tab wording was removed, but this sentence was missed. Under CLAUDE.md, SPEC wins a disagreement and the code is treated as the bug, so a later SPEC-vs-code audit could put the tab back. Fix: \"(Gameplay, Visuals and Audio)\".",
-          "severity": "blocking",
-          "where": "SPEC.md:1257"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "devin",
       "question": "",
@@ -2780,7 +2773,7 @@
           "where": "self check"
         }
       ],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-05T13:23:44Z",
       "stop_requested": false,
       "taken_asks": [],
