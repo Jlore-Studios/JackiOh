@@ -2749,8 +2749,10 @@
     "what": "revise #142 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-05T00:45:34Z",
-    "notes": [],
+    "at": "2026-10-05T00:56:14Z",
+    "notes": [
+      "started a night run, as a lane was free: #142 (medium) is queued to review, for `muse` (another run waits for `claude-1`)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
