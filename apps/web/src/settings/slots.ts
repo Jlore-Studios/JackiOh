@@ -18,7 +18,8 @@ import AudioControls from "../audio/AudioControls.tsx";
 import { DEFAULT_AUDIO_SETTINGS, writeAudioSettings } from "../audio/settings.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../cards/settings.ts";
 import { DEFAULT_FX_SETTINGS, setFxSettings } from "../fx/settings.ts";
-import { AnimatedFoilSwitch, FxControls } from "./controls.tsx";
+import { DEFAULT_HAPTICS_SETTINGS, writeHapticsSettings } from "../haptics/settings.ts";
+import { AnimatedFoilSwitch, FxControls, VibrationSwitch } from "./controls.tsx";
 
 export type SettingsSectionId = "gameplay" | "visuals" | "audio";
 
@@ -31,8 +32,16 @@ export type SettingsSlot = {
   reset?: () => void;
 };
 
-/** Task 1's effects speed and intensity, task 6's animated foil and task 2's audio controls. */
+/** Task 1's effects speed and intensity, task 6's animated foil, task 2's audio controls and the vibration switch (R669). */
 export const SETTINGS_SLOTS: readonly SettingsSlot[] = [
+  {
+    section: "gameplay",
+    id: "haptics",
+    render: () => createElement(VibrationSwitch),
+    reset: () => {
+      writeHapticsSettings({ ...DEFAULT_HAPTICS_SETTINGS });
+    },
+  },
   {
     section: "visuals",
     id: "fx",

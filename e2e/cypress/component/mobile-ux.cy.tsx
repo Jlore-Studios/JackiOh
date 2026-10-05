@@ -3,8 +3,9 @@
 //
 //   B18  the glow colours, read from the computed `box-shadow`, End turn's included, and no outer
 //        glow of its own on a Radiant card
-//   B29  44x44 px touch targets at 390x844, 844x390 and 768x1024, and the switch's hit area, which
-//        never takes the middle of its unit's tile, and none at all while it cannot be pressed
+//   B29  44x44 px touch targets at 390x844, 844x390 and 768x1024, and the switch's target at its
+//        zone's corner (#258: out of the card, up to 44x44), which never takes the middle of its
+//        unit's tile, and none at all while it cannot be pressed
 //   B30  the hand fan: inside the hand, >= 28 px (10 cards) / >= 44 px (7 cards) of each card showing
 //        on a phone, and no overlap at 1280x720
 //   B31  the phone-landscape grid, the board's height budget, and the log hidden on phones
@@ -272,10 +273,12 @@ function expectTouchSize($element: JQuery<HTMLElement>, what: string): void {
 }
 
 /**
- * How far short of its tile's centre lines the switch's hit area stops (board.css's
- * `--switch-clear`), less a pixel for rounding.
+ * The switch's target (#258, board.css `.board .zone > .switch-button`): out of the card, at its
+ * zone's top-right corner, `SWITCH_TARGET_PX` square wherever the zone has the room, and never
+ * nearer its zone's centre lines than `SWITCH_CLEAR_PX` (`--switch-clear`).
  */
-const SWITCH_CLEAR_PX = 7;
+const SWITCH_TARGET_PX = 44;
+const SWITCH_CLEAR_PX = 6;
 
 /** Every one of your units may switch position, as on your own turn: their switches can be pressed. */
 function switchesLegal(view: View): Legal {
@@ -301,11 +304,14 @@ function expectMiddlesToCards(): void {
         const owner = doc.elementFromPoint(x, y)?.closest("[data-testid]") ?? null;
         if (owner !== card) problems.push(`${id} ${label} → ${owner?.getAttribute("data-testid") ?? "nothing"}`);
       }
-      const button = card.querySelector<HTMLButtonElement>(":scope > .switch-button");
+      // #258: the switch is the card's sibling in its zone. One that cannot be pressed lets a tap
+      // through to whatever is under it, the card or its zone, never itself.
+      const zone = card.parentElement;
+      const button = zone?.querySelector<HTMLButtonElement>(":scope > .switch-button") ?? null;
       if (button?.disabled === true) {
-        const glyph = rectOf(button);
+        const glyph = rectOf(button.querySelector(".switch-glyph") ?? button);
         const owner = doc.elementFromPoint(glyph.left + glyph.width / 2, glyph.top + glyph.height / 2)?.closest("[data-testid]") ?? null;
-        if (owner !== card) problems.push(`${id}'s disabled switch → ${owner?.getAttribute("data-testid") ?? "nothing"}`);
+        if (owner !== card && owner !== zone) problems.push(`${id}'s disabled switch → ${owner?.getAttribute("data-testid") ?? "nothing"}`);
       }
     }
     expect(problems, "taps that miss their unit").to.deep.eq([]);
@@ -327,43 +333,47 @@ describe("B29 touch targets are at least 44x44 px on phones and tablets", () => 
       }
     });
 
-    // The reach used to be a fixed 12 px left of and below the glyph. On a phone's tile (64x87 here,
-    // 72x59 on its side, 45x59 under a lesson's coach) that reached the tile's middle, and a tap on
-    // a unit to attack switched it instead, so the hit area now stops SWITCH_CLEAR_PX short of the
-    // tile's centre lines (board.css): 12 px where the tile has the room (a tablet's), less where
-    // it has not. Only a switch that can be pressed takes a tap at all, so these switches are legal.
-    it(`B29 the switch (⟳) takes a tap up to 12 px left of and below its glyph, short of its tile's middle, at ${where}`, () => {
+    // #258: the switch left the card for its zone's top-right corner, where its target is a full
+    // 44x44 wherever the zone has the room. It stops SWITCH_CLEAR_PX short of the zone's centre
+    // lines, so on a phone's small tile (64x87 here, 72x59 on its side, 45x59 under a lesson's
+    // coach) it shrinks rather than take the middle, where a tap on a unit means attack. Only a
+    // switch that can be pressed takes a tap at all, so these switches are legal.
+    it(`B29 the switch (⟳) takes a tap across a target of up to 44x44 at its zone's corner, short of the tile's middle, at ${where}`, () => {
       cy.viewport(viewport.width, viewport.height);
       const view = fullBoardView();
       mountGame(view, switchesLegal(view));
 
-      cy.get(`${BOARD} .card[data-position="ATK"] [data-testid^="switch-"]:not(:disabled)`)
+      cy.get(`${BOARD} .zone > [data-testid^="switch-"]:not(:disabled)`)
         .should("have.length.at.least", 3)
         .each(($switch) => {
           cy.wrap($switch, { log: false }).should(($element) => {
             const button = $element[0] as HTMLElement;
             const box = rectOf(button);
-            const card = button.closest(".card") as HTMLElement;
-            const tile = rectOf(card);
+            // It is placed in its zone's padding box: inside the zone's border.
+            const zoneElement = button.parentElement as HTMLElement;
+            const zone = rectOf(zoneElement);
+            const inner = {
+              top: zone.top + zoneElement.clientTop,
+              right: zone.left + zoneElement.clientLeft + zoneElement.clientWidth,
+              width: zoneElement.clientWidth,
+              height: zoneElement.clientHeight,
+            };
             const doc = button.ownerDocument;
-            const reach = 12;
-            // The container's width is the card's content box, so its inline padding is room the
-            // switch leaves to the card as well.
-            const padding = parseFloat(getComputedStyle(card).paddingLeft) || 0;
-            const left = Math.min(reach, box.left - (tile.left + tile.width / 2) - SWITCH_CLEAR_PX - padding);
-            const down = Math.min(reach, tile.top + tile.height / 2 - SWITCH_CLEAR_PX - box.bottom);
-            if (viewport.label === "tablet") {
-              expect([left, down], `the whole reach on a tablet's tile`).to.deep.eq([reach, reach]);
-            }
-            // Inside the glyph by a pixel where the tile has no room for any reach.
-            const x = box.left - Math.max(left, -1);
-            const y = box.bottom + Math.max(down, -1);
+            const side = (room: number): number => Math.min(SWITCH_TARGET_PX, room / 2 - SWITCH_CLEAR_PX);
+            expect(box.width, "the target's width").to.be.closeTo(side(inner.width), 1);
+            expect(box.height, "the target's height").to.be.closeTo(side(inner.height), 1);
+            expect(box.right, "at the zone's right edge").to.be.closeTo(inner.right, 1);
+            expect(box.top, "at the zone's top edge").to.be.closeTo(inner.top, 1);
+            if (viewport.label === "tablet") expectTouchSize($element, `${$switch.attr("data-testid") ?? "a switch"} on a tablet`);
+            // Its inner corners and its middle are the switch's own tap.
+            const inset = 2;
             for (const [px, py] of [
-              [x, box.top + box.height / 2],
-              [box.left + box.width / 2, y],
-              [x, y],
+              [box.left + inset, box.top + inset],
+              [box.right - inset, box.bottom - inset],
+              [box.left + inset, box.bottom - inset],
+              [box.left + box.width / 2, box.top + box.height / 2],
             ] as const) {
-              const hit = doc.elementFromPoint(px, py);
+              const hit = doc.elementFromPoint(px, py)?.closest("button") ?? null;
               expect(hit, `a tap at (${Math.round(px)}, ${Math.round(py)}) near ${$switch.attr("data-testid") ?? "a switch"}`).to.eq(button);
             }
           });

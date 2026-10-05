@@ -33,7 +33,7 @@ import {
   type ReactNode,
 } from "react";
 
-import type { ActionBody, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
+import type { ActionBody, Aim, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 
 import type { EmoteShow } from "../emotes/session.ts";
 import type { HeroEmotes } from "./Hero.tsx";
@@ -43,18 +43,20 @@ import DrawOfferNotice from "./DrawOffer.tsx";
 import Prompt from "./Prompt.tsx";
 import { promptOver } from "./promptOver.ts";
 import DragLayer from "./drag/DragLayer.tsx";
+import OpponentAim from "./aim/OpponentAim.tsx";
+import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
 import { IDLE, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
 import {
   animTestid,
   createAnimationQueue,
   newEventsSince,
-  prefersReducedMotion,
   type AnimationEntry,
   type AnimationQueue,
 } from "./animations.ts";
 import { sideView, testid, type BoardControl, type ClickTarget } from "./contract.ts";
 import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
+import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import FxLayer from "../fx/FxLayer.tsx";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { useSetting } from "../settings/index.ts";
@@ -107,7 +109,15 @@ export type GameProps = {
    * screen and a test fixture leave it off.
    */
   trackStats?: boolean;
+  /**
+   * R738: the opponent's aim. `emit` sends this seat's own as it changes; `opponent` is the
+   * opponent's as last relayed, drawn as its arrow. Online play sets it; hotseat and tests do not.
+   */
+  aim?: GameAim;
 };
+
+/** What Game needs of a route that shows aims both ways (R738). */
+export type GameAim = { emit: (aim: Aim | null) => void; opponent: Aim | null };
 
 /**
  * What Game needs of a route's `useEmotes` (emotes/useEmotes.ts): the pure reads plus the two
@@ -136,6 +146,7 @@ export default function Game({
   autoEndTurn: pinnedAutoEndTurn,
   emotes,
   trackStats = false,
+  aim,
 }: GameProps): ReactElement {
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
   const root = useRef<HTMLDivElement>(null);
@@ -208,8 +219,9 @@ export default function Game({
   // Polish task 7: the "Reduce motion" setting does what the OS preference does, so every duration
   // is 0 and the queue drains synchronously (BUILD M5-T4). The queue reads it once, when it is
   // built, so a change of setting builds a new queue; the subscription effect below tears the old
-  // one down and shows the newest view.
-  const reducedMotion = useSetting("reduceMotion") || prefersReducedMotion();
+  // one down and shows the newest view. #258: the OS preference is followed live the same way.
+  const osReducesMotion = useOsReducedMotion();
+  const reducedMotion = useSetting("reduceMotion") || osReducesMotion;
   const builtFor = useRef(reducedMotion);
   if (queue.current === null || builtFor.current !== reducedMotion) {
     builtFor.current = reducedMotion;
@@ -381,6 +393,8 @@ export default function Game({
   }, [dispatch, refocusConcede]);
 
   const highlight = useMemo(() => highlightFor(shown, legal, interaction), [shown, legal, interaction]);
+  // R738: what this seat aims at goes to the opponent; theirs is drawn below until the game ends.
+  useAimEmitter(shown, legal, interaction, aim?.emit);
   const animated = useMemo(() => burst.map((entry) => ({ frames: entry.frames, events: entry.events })), [burst]);
 
   /**
@@ -471,6 +485,7 @@ export default function Game({
           cast on draw up as the runner reaches it. */}
       <FxLayer queue={runner} view={shown} latest={view} />
       <CardShowcase view={view} queue={runner} />
+      <OpponentAim view={shown} aim={shown.result === null ? (aim?.opponent ?? null) : null} />
 
       {promptOver(shown, burst, inFlight) ? null : (
         <Prompt

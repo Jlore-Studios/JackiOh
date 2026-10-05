@@ -568,12 +568,13 @@ nothing in it carries a `hand-card-*` or `card-*` testid:
     `(hover: hover) and (pointer: fine)`.
 - **Touch sizing.** Under the touch-sizing query, `.control` buttons, the gear, the log toggle,
   `.power-button` and `.hero` are at least 44×44 px, and each zone's smaller side is at least
-  44 px. The in-card switch (⟳) keeps its small glyph but gains a transparent `::before` hit area
-  reaching up to 16 px left of it and below it; the card clips it (`overflow: hidden`). On a small
-  tile the reach is capped (container units on the field card) so it stops short of the tile's
-  centre lines and stays in its top-right quarter, which leaves the rest of a phone tile, its centre
-  above all, to the card's own tap and drag. A switch that is not legal takes no pointer at all, so
-  a tap on it reaches the card beneath (B29; revised by the tutorial's review, SPEC §9.10).
+  44 px. The switch (⟳) is out of the card (#258): a sibling of it in its zone, whose top-right
+  corner holds a transparent target of up to 44×44 px with the small glyph drawn in its corner. The
+  target stops `--switch-clear` (6 px) short of the zone's centre lines, so it is a full 44×44
+  wherever the zone has the room (a tablet's or a desktop's tile) and shrinks on a phone's small tile
+  rather than take its middle, which stays the card's own tap (attack, or pick it as a target) and
+  drag. A switch that is not legal takes no pointer at all, so a tap on it reaches the card or the
+  zone beneath (B29; revised by the tutorial's review, SPEC §9.10, and by #258).
 - **Safe areas.** Under the phone queries, `.board` pads with
   `max(6px, env(safe-area-inset-*))` on the left, right and bottom. The prompt sheet pads its
   bottom with `env(safe-area-inset-bottom)`.
@@ -886,9 +887,8 @@ zones and prompts at 1280×720.
 - Task 1's effects speed and intensity controls and task 2's audio controls. They are mounted at
   integration through `SETTINGS_SLOTS`. (`reduceMotion` itself now reaches the runner, B41; task
   1's speed setting joins it in `Game.tsx` at integration.)
-- `Card.tsx` internals, including where the in-card switch button (⟳) sits. Its glyph stays below
-  44 px; board.css only gives it a bigger hit area inside the card (S11). Moving it out of the card,
-  where a full 44 px target fits, is task 6's.
+- `Card.tsx` internals, including where the switch button (⟳) sits. #258 has since moved it out of
+  the card into its zone's corner, where a full 44 px target fits wherever the zone has the room.
 - Yellow for conditions a player modifier grants to other cards (#38 Quickstriker, #64 Gifted
   Program, #78 /fullsend), scaling amounts (#70 Spiteful Stab), event-triggered traps (#18, #41,
   #60, #85, #96) and cost reductions (#100).

@@ -1137,3 +1137,64 @@ Three reviewers read the branch. What changed because of them:
 - **Proxy hops are calibrated, not assumed.** `render.yaml` starts at 1, and `docs/architecture.md`
   says to set the count the operator's own header-less request shows.
 - The landing fan's faces are still decoration; task 6's `CardFace` replaces them at integration.
+
+## More ways in (issue #267): email link or code, two-step sign-in, OAuth
+
+Added 2026-10-05, as R664 (email link or code), R665 (two-step sign-in) and R666 (OAuth providers).
+The dashboard steps a person has to take are in `docs/architecture.md` §10, step 2.
+
+### What each path does
+
+- **Email link or code (R664).** "Sign in with an email code instead" posts `/auth/v1/otp` with
+  `create_user: false` and a PKCE challenge (verifier kept under the new `magiclink` flow). The email
+  carries a link and a six-digit code (the Magic Link template must include `{{ .Token }}`). The code
+  goes to `/auth/v1/verify` with `type: "email"`. The link comes back to `/login?code=…` and is
+  exchanged like R323's links, but its session is **kept**, which no emailed link did before.
+- **Two-step sign-in (R665).** Account → "Turn on two-step sign-in" enrols a TOTP factor
+  (`/auth/v1/factors`), shows the provider's QR code (an SVG drawn by an `<img>`, re-encoded) and the
+  key, and confirms it with a code (challenge, then verify), which also raises the session to
+  `aal2` and stores it over the old one. Every sign-in path checks the token answer's `user.factors`;
+  for an account with a verified factor the session is held in memory until the app's code is typed.
+  The server refuses an `aal1` token for such an account (`apps/server/src/api/auth.ts`).
+- **OAuth (R666).** One button per provider named in `VITE_AUTH_OAUTH_PROVIDERS`. A click stores an
+  `oauth` verifier and navigates to `/auth/v1/authorize?provider=…&redirect_to=<origin>/login&code_challenge=…`.
+  The code that comes back is exchanged and kept like R664's link. An error coming back (cancelled,
+  refused) reads as "Signing in with that account didn't finish" when the newest verifier this
+  browser holds is the OAuth one.
+
+### Threat model
+
+**The token the server accepts** is unchanged except for one rule. It is still verified exactly as
+before: JWKS signature, issuer, `authenticated` audience, the session checked live at the provider
+(R194), the email's confirmation and now the account's factors read from the provider's user, never
+from the token. The new rule: an account with a verified TOTP factor is honoured only with
+`aal: "aal2"`. The last answer that an account has a factor is kept per user, so a provider outage
+cannot lower the bar back to `aal1`.
+
+**Redirect URLs.** Every path returns to `<origin>/login` (`authRedirectUrl`, built from
+`window.location.origin` and a fixed path, never from input), which must be on the project's
+Redirect URLs allow-list. The provider falls back to the Site URL for anything else, and `/` moves a
+code on to `/login` (R323). OAuth adds the provider's own callback, `https://<ref>.supabase.co/auth/v1/callback`,
+registered at the provider. No new route takes a destination from a URL.
+
+**The invite gate.** Every path ends in an `auth.users` row. The trigger gives a new one a `pending`
+profile, and only a redeemed code makes it `active` (§9.4). No new path writes `profiles`, and the
+server's routes are unchanged, so no path can create an active account or skip the gate.
+
+**What an attacker gains from each path:**
+
+| Path | Attack | Outcome |
+| --- | --- | --- |
+| Email code | Probe which addresses have accounts | Nothing: the request answers one neutral sentence for every address, and a wrong code, a spent code and an unknown address read as one sentence (R160, R192). |
+| Email code | Guess a code | The provider's own OTP rate limits and expiry (six digits, one hour by default), plus R192's reporting. Same exposure as Supabase's built-in email OTP. |
+| Email link | Login CSRF: send the victim a link for the attacker's account, so the victim's invite code activates it | Blocked: the link's code exchanges only with the verifier of the browser that asked (`bad_code_verifier` anywhere else, read as R324's "opened elsewhere"). An implicit `#access_token…&type=magiclink` link still signs nothing in (R193). |
+| Email link | Pre-account takeover: register the victim's address with the attacker's password, then wait for the victim to sign in by link | Blocked by `create_user: false`: GoTrue treats an unconfirmed account as not signed up and refuses it `otp_disabled`, so no link or code is ever sent for it. The owner goes through R193's confirm-then-sign-in path, which exposes the other password. |
+| Email code | Talk the victim into typing the attacker's address and code | Social engineering, out of scope; the victim would also have to type someone else's address. |
+| Two-step | Stolen password | An `aal1` session only. The client holds it for the code and the server refuses it, so it reads nothing and plays nothing. |
+| Two-step | Stolen password, then turn the factor off | Removing a verified factor needs an `aal2` session (the provider's rule), which needs the app. |
+| Two-step | Reset the password by email, which yields an `aal1` session | The reset screen is reached only after the app's code (the link waits for it). The new password alone still signs in at `aal1`. |
+| Two-step | Data API with an `aal1` token | Reads of the player's own rows only (RLS, §3.2 of `docs/architecture.md`): nothing hidden, no writes. Not raised to `aal2`, which would mean RLS policies on `auth.mfa_factors`. Recorded in R665. |
+| OAuth | Login CSRF, as for the link | Blocked the same way: the authorize request carries a PKCE challenge, and the code exchanges only with this browser's `oauth` verifier. OAuth is never started without PKCE (`oauthUnavailable`). |
+| OAuth | Pre-account takeover through automatic linking | Supabase links an OAuth identity to an existing account only through a provider-verified address, and only providers that report verification are named. Whether an unconfirmed account's password survives that linking is Supabase's behaviour, not this code's, so it is checked once by hand before the first provider goes live (`docs/architecture.md` §10, step 2). |
+| OAuth | A provider name injected through configuration | Only names on a fixed list are offered, and the name is URL-encoded. The variable is public and holds no secret: client ids and secrets live in the Supabase dashboard. |
+| All | Secrets in the bundle | None: the only new client variable is `VITE_AUTH_OAUTH_PROVIDERS` (names), listed in `PUBLIC_ENV_VARS` and allowed by `env-production.test.ts`. |

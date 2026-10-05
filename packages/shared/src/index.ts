@@ -5,3 +5,4 @@ export * from "./view";
 export * from "./codes";
 export * from "./stats";
 export * from "./emotes";
+export * from "./aim";

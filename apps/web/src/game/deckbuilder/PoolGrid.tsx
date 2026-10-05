@@ -154,7 +154,9 @@ function PoolItem({ cardId, def, deck, onInspect }: PoolItemProps): ReactElement
         }}
         {...inspect.handlers}
       >
-        <span className="db-card-face" aria-hidden="true">
+        {/* `data-skippable` (fit.ts SKIPPABLE_ATTRIBUTE): deckbuilder.css lets the browser skip the
+            face's layout off screen, and its text fit waits until it is near (#263). */}
+        <span className="db-card-face" aria-hidden="true" data-skippable="">
           <CardFace face={face} layout="full" lazyArt />
         </span>
         {badge === null ? null : (

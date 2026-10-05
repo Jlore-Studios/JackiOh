@@ -14,7 +14,7 @@ import { useRef, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { FIT_FLOOR_PX, FIT_MIN } from "./constants.ts";
-import { flushFits, LONG_ATTRIBUTE, scheduleFit, useFitText } from "./fit.ts";
+import { flushFits, LONG_ATTRIBUTE, scheduleFit, SKIPPABLE_ATTRIBUTE, useFitText } from "./fit.ts";
 
 type Model = {
   /** The font at full size (4.4cqh on a real face), in px. */
@@ -343,5 +343,139 @@ describe("a web font landing (fonts.css)", () => {
     fonts.dispatchEvent(new Event("loadingdone"));
     flushFits();
     expect(setProperty, "an unmounted box is not refitted").not.toHaveBeenCalled();
+  });
+});
+
+describe("a face the browser skips waits for it (#263)", () => {
+  const model: Model = { basePx: 11, tierScale: 0.62, box: 80, longBox: 120, need: 1.2 };
+
+  /**
+   * A skippable item holding one text box. `state.skipped` is what `content-visibility: auto` would
+   * say; `checkVisibility({ contentVisibilityAuto: true })` answers false for it, as for a box that
+   * is hidden some other way.
+   */
+  function skippable(state: { skipped: boolean }, holder = true): { item: HTMLElement; text: HTMLElement } {
+    const item = document.createElement("div");
+    if (holder) item.setAttribute(SKIPPABLE_ATTRIBUTE, "");
+    const text = document.createElement("span");
+    text.dataset.probe = "text";
+    item.append(text);
+    document.body.append(item);
+    Object.defineProperty(text, "checkVisibility", {
+      value: (options?: { contentVisibilityAuto?: boolean }) => !(options?.contentVisibilityAuto === true && state.skipped),
+    });
+    return { item, text };
+  }
+
+  function unskip(item: HTMLElement, skipped = false): void {
+    const event = new Event("contentvisibilityautostatechange");
+    Object.defineProperty(event, "skipped", { value: skipped });
+    item.dispatchEvent(event);
+  }
+
+  afterEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it("parks a skipped face's fit, and fits it once its item is un-skipped", async () => {
+    modelLayout(model);
+    const state = { skipped: true };
+    const { item, text } = skippable(state);
+    const done = vi.fn();
+    scheduleFit(text, { floorPx: FIT_FLOOR_PX }, done);
+    flushFits();
+    expect(done).not.toHaveBeenCalled();
+    expect(text.style.getPropertyValue("--cf-fit")).toBe("");
+    expect(meter.paid).toBe(0);
+
+    state.skipped = false;
+    unskip(item);
+    await Promise.resolve();
+    expect(done).toHaveBeenCalledTimes(1);
+    expect(text.style.getPropertyValue("--cf-fit")).not.toBe("");
+  });
+
+  it("fits every face one scroll un-skipped in one batch, from the first event, and leaves the rest parked", async () => {
+    const layouts = async (count: number): Promise<{ paid: number; done: number; waiting: number }> => {
+      modelLayout(model);
+      const states = Array.from({ length: count + 1 }, () => ({ skipped: true }));
+      const items = states.map((state) => skippable(state));
+      const done = vi.fn();
+      for (const { text } of items) scheduleFit(text, { floorPx: FIT_FLOOR_PX }, done);
+      flushFits();
+      // The scroll brings all but the last near; only the first item's event has been heard yet.
+      for (const state of states.slice(0, count)) state.skipped = false;
+      const first = items[0];
+      if (first === undefined) throw new Error("no items");
+      unskip(first.item);
+      await Promise.resolve();
+      const result = {
+        paid: meter.paid,
+        done: done.mock.calls.length,
+        waiting: items.filter(({ text }) => text.style.getPropertyValue("--cf-fit") === "").length,
+      };
+      // The later events of the same scroll find nothing left to resume.
+      for (const { item } of items.slice(1, count)) unskip(item);
+      await Promise.resolve();
+      expect(done.mock.calls.length).toBe(result.done);
+      document.body.replaceChildren();
+      vi.restoreAllMocks();
+      return result;
+    };
+    const one = await layouts(1);
+    const many = await layouts(12);
+    expect(one).toEqual({ paid: one.paid, done: 1, waiting: 1 });
+    expect(many).toEqual({ paid: one.paid, done: 12, waiting: 1 });
+  });
+
+  it("resumes nothing for an event that skips, or for a subtree with no parked fit", async () => {
+    modelLayout(model);
+    const state = { skipped: true };
+    const { item, text } = skippable(state);
+    const other = document.createElement("div");
+    document.body.append(other);
+    const done = vi.fn();
+    scheduleFit(text, {}, done);
+    flushFits();
+    state.skipped = false;
+    unskip(item, true);
+    unskip(other);
+    await Promise.resolve();
+    expect(done).not.toHaveBeenCalled();
+    unskip(item);
+    await Promise.resolve();
+    expect(done).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not park a box whose holder said it is not skipped, nor one outside any holder", () => {
+    modelLayout(model);
+    // Hidden some other way: the holder's own event said its contents are laid out.
+    const { item, text } = skippable({ skipped: true });
+    unskip(item);
+    const hidden = vi.fn();
+    scheduleFit(text, {}, hidden);
+    flushFits();
+    expect(hidden).toHaveBeenCalledTimes(1);
+
+    const outside = skippable({ skipped: true }, false);
+    const loose = vi.fn();
+    scheduleFit(outside.text, {}, loose);
+    flushFits();
+    expect(loose).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops a parked fit that is cancelled", async () => {
+    modelLayout(model);
+    const state = { skipped: true };
+    const { item, text } = skippable(state);
+    const done = vi.fn();
+    const cancel = scheduleFit(text, {}, done);
+    flushFits();
+    cancel();
+    state.skipped = false;
+    unskip(item);
+    await Promise.resolve();
+    expect(done).not.toHaveBeenCalled();
+    expect(text.style.getPropertyValue("--cf-fit")).toBe("");
   });
 });
