@@ -10,7 +10,7 @@
 //   - `/login/` is not matched by a `/login` rule, so each path is listed with and without the slash;
 //   - unmatched paths get public/404.html with a 404 status (`not_found_handling: "404-page"`).
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -62,15 +62,38 @@ describe("public/_redirects", () => {
 });
 
 describe("public/_headers", () => {
-  it("sends vercel.json's headers on every path, value for value", () => {
-    const [scope, ...rest] = lines(readFileSync(join(PUBLIC, "_headers"), "utf8"));
-    expect(scope).toBe("/*");
-    const headers = rest.map((line) => {
+  /** Each block: a path line, then its indented `Key: value` lines. */
+  function blocks(): { path: string; headers: { key: string; value: string }[] }[] {
+    const out: { path: string; headers: { key: string; value: string }[] }[] = [];
+    for (const line of lines(readFileSync(join(PUBLIC, "_headers"), "utf8"))) {
+      if (!/^\s/u.test(line)) {
+        out.push({ path: line.trim(), headers: [] });
+        continue;
+      }
       const at = line.indexOf(":");
-      return { key: line.slice(0, at).trim(), value: line.slice(at + 1).trim() };
-    });
+      out.at(-1)?.headers.push({ key: line.slice(0, at).trim(), value: line.slice(at + 1).trim() });
+    }
+    return out;
+  }
+
+  it("sends vercel.json's headers on every path, value for value", () => {
+    const [first] = blocks();
+    expect(first?.path).toBe("/*");
     const all = vercel.headers.find((block) => block.source === "/(.*)");
-    expect(headers).toEqual(all?.headers);
+    expect(first?.headers).toEqual(all?.headers);
+  });
+
+  it("has exactly vercel.json's header blocks, each path in Cloudflare's spelling (`(.*)` as `*`)", () => {
+    const expected = vercel.headers.map((block) => ({ path: block.source.replace("(.*)", "*"), headers: block.headers }));
+    expect(blocks()).toEqual(expected);
+  });
+
+  it("lets a browser keep the web fonts a year (#262): their names carry their versions", () => {
+    const fonts = blocks().find((block) => block.path === "/fonts/*");
+    expect(fonts?.headers).toEqual([{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }]);
+    const files = readdirSync(join(PUBLIC, "fonts")).filter((file) => file.endsWith(".woff2"));
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) expect(file, "a versioned name").toMatch(/-\d+\.\d+\.\d+-/u);
   });
 });
 

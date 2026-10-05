@@ -1,0 +1,9 @@
+{
+  "version": "v0.2.13",
+  "title": "Book of Wildfire becomes a different Book at the end of your turn",
+  "sources": "#271",
+  "notes": "Classic #55 Book of Wildfire gains \"End of turn: Become a different Book.\" (Radiant: \"\u2026 a different Radiant Book.\"): at the end of its owner's turn, while in hand, it becomes a random other Book (never Wildfire, never the Book it is), on its own face, which keeps swapping each turn (R671).",
+  "cards": [
+    "classic-055"
+  ]
+}

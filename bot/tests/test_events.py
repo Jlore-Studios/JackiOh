@@ -399,7 +399,7 @@ class StatusTests(unittest.TestCase):
         text = status.report(ctx)
         runs = "https://github.com/jgoetzmann/JackiOh/actions/runs"
         self.assertIn("\n".join([
-            "- **Running now** (3 of 10 lanes, 7 free; 2 of 6 on the machine, the rest on "
+            "- **Running now** (3 of 10 lanes, 7 free; 2 of 7 on the machine, the rest on "
             "GitHub's runners):",
             f"  - `claude-1` (claude, `opus`): building #37, for 47m, [run]({runs}/101).",
             f"  - `agy` (agy, `gemini-3.8-flash-high`): a suggestion survey, just started, [run]({runs}/103).",
