@@ -334,11 +334,11 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | Provider | CLI and model | Login | Hours | Limits |
 |---|---|---|---|---|
 | `claude-1` | Claude Code, `opus` at `xhigh` (fix passes at `high`), and `sonnet` at `xhigh` (medium) | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00, and outside it while under 40% of 5 hours (`off_hours`) | 98% of 5 hours, no weekly cap |
-| `claude-2` | Claude Code, `opus` only | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
+| `claude-2` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
 | `claude-3` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
-| `claude-4` | `opus`, and `sonnet` as Devin's stand-in (`takes_over`) | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
-| `claude-5` | the same as claude-4 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week |
-| `claude-6` | the same as claude-4 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
+| `claude-4` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
+| `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week |
+| `claude-6` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | 100% of the week (Codex reports it) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, all of the week (its own `agy -p /usage`, the Gemini pool's row) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
@@ -359,10 +359,11 @@ prints each one and whether it could start now, and `/harness status` does the s
   carry their effort (`gemini-3.8-flash-high`; `agy models` lists them), and `effort` matches it.
 - `tier`: `weak`, `medium` or `strong`, the tier of `model` ([below](#difficulty-and-tiers)).
 - `extra_models`: other models the subscription runs for a role, each with its `model`, `effort`
-  and `tier`. claude-3 and claude-1 run Sonnet at `xhigh` (medium, #317) for easy and medium
-  builds as well as Opus. On claude-4, claude-6 and claude-5 Sonnet has `takes_over: "devin"`: it
-  stands in for Devin, building only easy items and only while Devin cannot take them (off, backed
-  off, or its lanes full), and it never plans or reviews.
+  and `tier`. Every Claude account runs Sonnet at `xhigh` (medium, #317) beside Opus, and
+  switches between them as the work needs ([below](#switching-between-opus-and-sonnet)). An
+  extra model may carry `takes_over: "<id>"`, making it a stand-in for that subscription: it
+  builds only easy items, only while that one cannot take them (off, backed off, or its lanes
+  full), and never plans or reviews. No committed seat uses it now.
 - `fix_effort`: the effort a fix pass runs at (`high` on the Claude accounts), which answers named
   findings and needs less thought than the build; empty runs it at the seat's own.
 - `self_check: true`: its builds check themselves before any review (Devin;
@@ -452,7 +453,7 @@ nothing):
 | Tier | Models |
 |---|---|
 | strong | Claude Opus, on every Claude account |
-| medium | Muse, Gemini through agy, Claude Sonnet at `xhigh` (on claude-3 and claude-1; Devin's stand-in on claude-4, claude-6 and claude-5), Codex (`gpt`) |
+| medium | Muse, Gemini through agy, Claude Sonnet at `xhigh` (on every Claude account, beside its Opus), Codex (`gpt`) |
 | weak | Devin |
 
 Every item has a difficulty, from its labels: `difficulty:easy`, `difficulty:medium` or
@@ -508,13 +509,13 @@ else. Its builds still need a plan first, like Devin's, and their reviews float 
   revision is not planned again. The ten-minute sweep keeps `bot:needs-plan` in step, so an
   unrated issue is in the stage within one pass.
 - **Building, fixing, revising.** The first free subscription in the usage order with a model that
-  meets the item's tier builds it, on its weakest such model: claude-3 and claude-1 build an easy
-  or medium item with Sonnet and a hard one with Opus. When that is above the item's tier (none of
-  that tier is free, or the usage order puts a stronger one first), the run's log says so and
-  why. An easy item goes to Devin first while it has a free lane and works. Otherwise claude-3 or
-  claude-1 builds it with Sonnet, then claude-4, claude-6 and claude-5 with Sonnet as Devin's
-  stand-in (`takes_over`, only while Devin cannot take it), then the medium models, and claude-2
-  (with Opus) only when everyone else is busy. A medium item passes Devin by. A revision that
+  meets the item's tier builds it, on its weakest such model: every Claude account builds an
+  easy or medium item with Sonnet and a hard one with Opus, and its run may switch between the two
+  ([below](#switching-between-opus-and-sonnet)). When that is above the item's tier (none of that
+  tier is free, or the usage order puts a stronger one first), the run's log says so and why. An
+  easy item goes to Devin first while it has a free lane and works. Otherwise the Claude accounts
+  build it with Sonnet in the usage order, then the medium models, and claude-2 only when everyone
+  else is busy. A medium item passes Devin by. A revision that
   resolves a conflict with `main` goes only to a builder with its own reviewer in the run, never
   to Devin (#317): SPEC §11 and the rulings index conflict on nearly every merge, and Devin
   committed markers there again and again (#203, #214, #287). A fix pass runs at `fix_effort`.
@@ -530,6 +531,27 @@ else. Its builds still need a plan first, like Devin's, and their reviews float 
   30 minutes for a stronger one (`plan.WEAK_REVIEW_AFTER`). A weak model reviews nothing else, and
   a stand-in seat reviews nothing. `/harness review strong` (or `medium`) asks for a review run of
   a bot pull request's head at that tier or stronger, and no revision.
+
+### Switching between Opus and Sonnet
+
+Every Claude account runs two models, Opus (strong) and Sonnet at `xhigh` (medium). The router
+starts a run on the weaker one that meets the item's difficulty, and the run moves its builder
+between them as the work needs (`work.Worker._switch`), never below the item's difficulty: a hard
+item stays on Opus.
+
+- **The builder chooses.** A builder on such a lane is told both models and which one it runs on.
+  Its report's header may carry `"next_model": "opus"` when the work needs more than it can give,
+  or `"next_model": "sonnet"` when what is left is plain work; the run's next pass runs on that one.
+- **Sent back twice on Sonnet.** Two rounds in a row that the reviewer sends back while the builder
+  runs on Sonnet move it to Opus for the next pass (`work.SWITCH_UP_AFTER`).
+- **The planner's rating.** When a run's planner rates an unrated item, the builder moves to the
+  weaker model that meets the rating, up or down, and the run goes on, rather than sending the item
+  back to the queue for another builder.
+
+The reviewer stays as the router assigned it, since the review rule counts its tier. Each round's
+record names the model that built it, the result lists every switch (`switches`), and the comment
+the run leaves says when and why it switched. A lane with one model (Muse, agy, Codex, Devin) never
+switches.
 
 ### The easy rule
 

@@ -11,8 +11,8 @@ provider from start to finish; `plan` chooses it and records it on the item it c
 provider works on one item at a time and at most `max_parallel` items run at once.
 
 Every model a provider can run is a *seat* with a *tier* (`weak`, `medium` or `strong`): its main
-`model` with its `tier`, and any `extra_models` (claude-3 and claude-1 run Sonnet, weak, as well as
-Opus, strong). The tier attaches to the model a role runs on, not to the subscription. The
+`model` with its `tier`, and any `extra_models` (every Claude account runs Sonnet, medium, as well
+as Opus, strong, and a run switches between them: `work.Worker._switch`). The tier attaches to the model a role runs on, not to the subscription. The
 top-level `tiers` map lists each tier's models in the order the router tries them, after the
 subscriptions' own order (`priority`, the usage order). A provider with `self_check` (Devin)
 checks its own builds before any review.

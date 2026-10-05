@@ -586,6 +586,18 @@ class Deliverer:
     def _link(self) -> str:
         return f"[run]({self.cfg.run_url})" if self.cfg.run_url else "the run"
 
+    def _built_on(self) -> str:
+        """The builder's seat, and every move the run made between its lane's models (each
+        Claude account switches between Opus and Sonnet: `work.Worker._switch`)."""
+        moves = []
+        for move in self.result.get("switches") or []:
+            if not isinstance(move, dict):
+                continue
+            when = f"after round {move['n']}" if move.get("n") else "before round 1"
+            moves.append(f"{when} it switched to `{move.get('to')}`: {move.get('why')}")
+        text = self.build_seat.describe()
+        return text + (f" ({'; '.join(moves)})" if moves else "")
+
     def _requeue_label(self, number: int, kind: str) -> None:
         set_state_label(self.ctx, number, self._labels(number),
                         LABEL_REVISE if kind == "revise" else LABEL_BUILD)
@@ -965,7 +977,7 @@ class Deliverer:
                 said = self._self_check_said()
             if approved:
                 self._unstick(number, pr)
-            self.gh.create_comment(number, f"Opened #{pr}, built on {self.build_seat.describe()}. "
+            self.gh.create_comment(number, f"Opened #{pr}, built on {self._built_on()}. "
                                    f"{said} {merge_note}")
             self._remember(number, last_findings=[], question="", failures=0, pr=pr)
         else:
@@ -1125,7 +1137,7 @@ class Deliverer:
         said = (f"{self.review_seat.describe()} reviewed it adversarially and approved it"
                 if approved else self._self_check_said())
         self.gh.create_comment(number, f"Revision {'pushed' if pushed else 'done'} "
-                               f"({self._link()}) on {self.build_seat.describe()}; {said}{note}"
+                               f"({self._link()}) on {self._built_on()}; {said}{note}"
                                f"\n\n{report}{merge_note}")
 
     # ------------------------------------------------------------------ the review rule
