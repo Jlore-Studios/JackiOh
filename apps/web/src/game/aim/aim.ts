@@ -1,4 +1,4 @@
-// The aim this seat shows the opponent (SPEC §9.5, R658), as data.
+// The aim this seat shows the opponent (SPEC §9.5, R660), as data.
 //
 // While a play, an Activate or an attack is being aimed — by drag or by click-select, both of which
 // are the board's `interaction` — the opponent's board draws an arrow from its source to the

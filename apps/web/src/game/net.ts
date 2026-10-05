@@ -221,7 +221,7 @@ export type ServerFrame =
   | { type: "portraits"; p1: PortraitId; p2: PortraitId }
   /** R643: an emote the opponent sent, relayed by the actor. */
   | { type: "emote"; from: PlayerId; emote: EmoteId }
-  /** R658: what the opponent is aiming at now, or null when its aim has ended. */
+  /** R660: what the opponent is aiming at now, or null when its aim has ended. */
   | { type: "aim"; from: PlayerId; aim: Aim | null };
 
 /**
@@ -372,7 +372,7 @@ export type MatchSnapshot = {
    * emote twice in a row still notifies.
    */
   emote: { from: PlayerId; emote: EmoteId; seq: number } | null;
-  /** R658: the opponent's aim as last relayed; null when none is up or the socket has dropped. */
+  /** R660: the opponent's aim as last relayed; null when none is up or the socket has dropped. */
   aim: { from: PlayerId; aim: Aim } | null;
 };
 
@@ -388,7 +388,7 @@ export type MatchClient = {
    * so there is nothing to wait for; the board shows it locally at once.
    */
   sendEmote: (emote: EmoteId) => void;
-  /** R658: tell the opponent what this seat is aiming at (null: the aim ended). Never answered. */
+  /** R660: tell the opponent what this seat is aiming at (null: the aim ended). Never answered. */
   sendAim: (aim: Aim | null) => void;
   /** Close for good: no reconnect until `connect()` is called again. */
   close: () => void;
@@ -579,7 +579,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     created.onclose = (event) => {
       if (socket !== created) return;
       socket = null;
-      // R658: an arrow from before the drop would stand there until the opponent aimed again.
+      // R660: an arrow from before the drop would stand there until the opponent aimed again.
       if (snapshot.aim !== null) patch({ aim: null });
       if (stopped) {
         patch({ connection: "closed" });
@@ -643,7 +643,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     },
     sendAim: (aim) => {
       const live = socket;
-      // As an emote: cosmetic, so a dead socket simply drops it (R658).
+      // As an emote: cosmetic, so a dead socket simply drops it (R660).
       if (live === null || live.readyState !== OPEN) return;
       try {
         live.send(JSON.stringify({ type: "aim", aim }));
@@ -780,7 +780,7 @@ export type UseMatchResult = MatchSnapshot & {
   send: (body: ActionBody) => void;
   /** R643: send one emote; the local board shows it at once and the server relays it on. */
   sendEmote: (emote: EmoteId) => void;
-  /** R658: send this seat's aim (null: the aim ended); the server relays it to the opponent. */
+  /** R660: send this seat's aim (null: the aim ended); the server relays it to the opponent. */
   sendAim: (aim: Aim | null) => void;
   /** The handshake URL, for the diagnostic line on the match route. */
   url: string;

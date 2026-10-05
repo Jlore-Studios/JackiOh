@@ -1,5 +1,5 @@
 /**
- * R658 — the opponent's aim through the actor (§9.5): a top-level `aim` frame, never an
+ * R660 — the opponent's aim through the actor (§9.5): a top-level `aim` frame, never an
  * `ActionBody`, shape-checked by `protocol.ts`, relayed to the opponent alone, coalesced to one
  * relay per `AIM_RELAY_INTERVAL_MS` per seat, and dropped when an end names anything the opponent
  * may not see.
@@ -85,8 +85,8 @@ const AT_HERO: Aim = {
   target: { at: "hero", player: "p2" },
 };
 
-describe("R658 — the opponent's aim through the actor (§9.5)", () => {
-  it("R658 relays an aim to the opponent alone, stamped with the sender's seat, and writes nothing", async () => {
+describe("R660 — the opponent's aim through the actor (§9.5)", () => {
+  it("R660 relays an aim to the opponent alone, stamped with the sender's seat, and writes nothing", async () => {
     const { actor, p1, p2, deps } = await harness();
     p1.receiveJson({ type: "aim", aim: AT_HERO });
     await actor.idle();
@@ -106,7 +106,7 @@ describe("R658 — the opponent's aim through the actor (§9.5)", () => {
     expect(relays(p2).at(-1)).toEqual({ type: "aim", from: "p1", aim: null });
   });
 
-  it("R658 shape-checks the frame: anything but public handles is malformed and relays nothing", async () => {
+  it("R660 shape-checks the frame: anything but public handles is malformed and relays nothing", async () => {
     const { actor, p1, p2 } = await harness();
     for (const aim of [
       { source: { at: "card", instanceId: "p1-h0" }, target: null },
@@ -125,7 +125,7 @@ describe("R658 — the opponent's aim through the actor (§9.5)", () => {
     expect(relays(p2)).toEqual([]);
   });
 
-  it("R658 keeps only the handle's fields: a smuggled instance id or def id never reaches the opponent", () => {
+  it("R660 keeps only the handle's fields: a smuggled instance id or def id never reaches the opponent", () => {
     const parsed = parseClientMessage(
       JSON.stringify({
         type: "aim",
@@ -145,7 +145,7 @@ describe("R658 — the opponent's aim through the actor (§9.5)", () => {
     });
   });
 
-  it("R658 coalesces aims inside AIM_RELAY_INTERVAL_MS: the newest goes alone once the interval ends", async () => {
+  it("R660 coalesces aims inside AIM_RELAY_INTERVAL_MS: the newest goes alone once the interval ends", async () => {
     const { actor, p1, p2, deps } = await harness();
     const second: Aim = { ...AT_HERO, target: { at: "zone", player: "p2", row: "units", lane: 3 } };
     const third: Aim = { ...AT_HERO, target: { at: "zone", player: "p2", row: "backrow", lane: 4 } };
@@ -168,7 +168,7 @@ describe("R658 — the opponent's aim through the actor (§9.5)", () => {
     expect(relays(p2)).toHaveLength(2);
   });
 
-  it("R658 keeps a window per seat: one seat's aims never spend the other's", async () => {
+  it("R660 keeps a window per seat: one seat's aims never spend the other's", async () => {
     const { actor, p1, p2 } = await harness();
     p1.receiveJson({ type: "aim", aim: AT_HERO });
     p2.receiveJson({ type: "aim", aim: { source: { at: "hero", player: "p2" }, target: { at: "hero", player: "p1" } } });
@@ -177,7 +177,7 @@ describe("R658 — the opponent's aim through the actor (§9.5)", () => {
     expect(relays(p1)).toEqual([{ type: "aim", from: "p2", aim: { source: { at: "hero", player: "p2" }, target: { at: "hero", player: "p1" } } }]);
   });
 
-  it("R658 drops an aim that names a hand card past the sender's hand, or the opponent's hand at all", async () => {
+  it("R660 drops an aim that names a hand card past the sender's hand, or the opponent's hand at all", async () => {
     const { actor, p1, p2, deps } = await harness();
     const count = handCount(actor.viewFor("p2"), "opponent");
     expect(count).toBeGreaterThan(0);
@@ -207,7 +207,7 @@ describe("R658 — the opponent's aim through the actor (§9.5)", () => {
     expect(relays(p2).map((frame) => frame.aim)).toEqual([fromHand("p1", count - 1), null]);
   });
 
-  it("R658 drops an aim at a zone past the board's lanes", () => {
+  it("R660 drops an aim at a zone past the board's lanes", () => {
     const view = {
       viewer: "p2",
       you: { hand: [], locks: { units: [false, false], backrow: [false] } },
@@ -220,7 +220,7 @@ describe("R658 — the opponent's aim through the actor (§9.5)", () => {
     expect(aimIsPublic({ source: { at: "hand", player: "p1", index: 2 }, target: null }, "p1", view)).toBe(false);
   });
 
-  it("R658 clears the sender's arrow when its socket goes", async () => {
+  it("R660 clears the sender's arrow when its socket goes", async () => {
     const { actor, p1, p2 } = await harness();
     p1.receiveJson({ type: "aim", aim: AT_HERO });
     await actor.idle();

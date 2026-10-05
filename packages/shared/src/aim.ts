@@ -1,4 +1,4 @@
-// The opponent's aim (SPEC §9.5, R658): what a player is aiming a play, an Activate or an attack
+// The opponent's aim (SPEC §9.5, R660): what a player is aiming a play, an Activate or an attack
 // at, as the opponent's board draws it — Hearthstone's targeting arrow, shown to both players.
 //
 // Cosmetic, like an emote (R643): an aim is never an `ActionBody`, never reaches `reduce`, the

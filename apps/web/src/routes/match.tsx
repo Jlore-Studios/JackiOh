@@ -252,7 +252,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     emotes.receive(relayed.from, relayed.emote);
   }, [relayed, emotes]);
 
-  // R658: aims both ways. This seat's go out through the socket; the opponent's relay is drawn,
+  // R660: aims both ways. This seat's go out through the socket; the opponent's relay is drawn,
   // and only ever the opponent's — a relay is never about the viewer's own seat.
   const relayedAim = match.aim;
   const viewer = view?.viewer;

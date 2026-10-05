@@ -110,13 +110,13 @@ export type GameProps = {
    */
   trackStats?: boolean;
   /**
-   * R658: the opponent's aim. `emit` sends this seat's own as it changes; `opponent` is the
+   * R660: the opponent's aim. `emit` sends this seat's own as it changes; `opponent` is the
    * opponent's as last relayed, drawn as its arrow. Online play sets it; hotseat and tests do not.
    */
   aim?: GameAim;
 };
 
-/** What Game needs of a route that shows aims both ways (R658). */
+/** What Game needs of a route that shows aims both ways (R660). */
 export type GameAim = { emit: (aim: Aim | null) => void; opponent: Aim | null };
 
 /**
@@ -392,7 +392,7 @@ export default function Game({
   }, [dispatch, refocusConcede]);
 
   const highlight = useMemo(() => highlightFor(shown, legal, interaction), [shown, legal, interaction]);
-  // R658: what this seat aims at goes to the opponent; theirs is drawn below until the game ends.
+  // R660: what this seat aims at goes to the opponent; theirs is drawn below until the game ends.
   useAimEmitter(shown, legal, interaction, aim?.emit);
   const animated = useMemo(() => burst.map((entry) => ({ frames: entry.frames, events: entry.events })), [burst]);
 

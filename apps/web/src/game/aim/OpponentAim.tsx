@@ -1,4 +1,4 @@
-// R658: the opponent's aim, drawn on this board — Hearthstone's targeting arrow in the opponent's
+// R660: the opponent's aim, drawn on this board — Hearthstone's targeting arrow in the opponent's
 // colour, from the source the opponent is aiming with to the target it is over, gone when the aim
 // ends. It draws only what the relay names, and the relay names only public handles: a hand card is
 // the card back at that position, a field card its zone, a hero its portrait (`aim.ts`).

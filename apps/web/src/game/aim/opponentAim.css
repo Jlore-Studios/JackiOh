@@ -1,4 +1,4 @@
-/* R658: the opponent's targeting arrow (OpponentAim.tsx). Red, where your own arrow is lit green
+/* R660: the opponent's targeting arrow (OpponentAim.tsx). Red, where your own arrow is lit green
    and gold, so whose aim it is reads at a glance. Never takes a hit. */
 
 .opponent-aim {
