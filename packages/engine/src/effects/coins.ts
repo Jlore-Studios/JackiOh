@@ -1,19 +1,25 @@
-// Coin flips that buff a unit (SPEC §8.1 #4 Gary the Gambler, §10.4 layer 4, §10.7, R32).
+// Coin flips that buff a unit or grant it a keyword (SPEC §8.1 #4 Gary the Gambler, §10.4
+// layer 4, §10.7, R32, R130).
 //
-// "Cry: flip 5 coins; +1 attack per heads, +1 max health per tails", radiant "7 coins; +2 per
-// heads, +2 per tails". #4's Engine cell reads "5 or 7 seeded rolls; permanent buff layer; Lucky
-// has no defined 'best' here so does not apply", and all three clauses are decisions this file
-// keeps rather than re-makes:
+// "Cry: flip 5 coins; +1 attack per heads, +1 max health per tails. Then flip a coin: heads
+// gains Divine Shield, tails gains Rush", radiant "7 coins; +2 per heads, +2 per tails" plus the
+// same rider verbatim. #4's Engine cell reads "5 or 7 seeded rolls; permanent buff layer; then
+// one seeded coin granting Divine Shield on heads, Rush on tails; Lucky has no defined 'best'
+// here so does not apply", and all four clauses are decisions this file keeps rather than
+// re-makes:
 //
 //   * SEEDED ROLLS. Every flip is `ctx.rng.coin()`, the only source of randomness §10.7 allows.
 //     `Math.random` is banned and lint-enforced (CLAUDE.md rule 4), and a card file may not roll
-//     for itself, which is the whole reason this verb exists.
-//   * PERMANENT BUFF LAYER. The totals are applied through `buff` from `./buff`, so there is ONE
-//     implementation of §10.4's layer 4: nothing here writes `card.buffs`, and the unit's totals
-//     stay something `unitView` computes on every read rather than something stored.
+//     for itself, which is the whole reason these verbs exist.
+//   * PERMANENT BUFF LAYER. The totals are applied through `buff` from `./buff`, and the rider
+//     keyword through `grantKeyword` from the same module, so there is ONE implementation of
+//     §10.4's layer 4: nothing here writes `card.buffs` or `card.grantedKeywords`, and the unit's
+//     totals stay something `unitView` computes on every read rather than something stored.
 //   * NO LUCKY. §6.1's Lucky X is "repeat a luck-based roll X extra times, keep the best", and a
-//     flip that pays out on heads AND on tails has no better side, so R32 leaves Gary out of it.
-//     There is deliberately no `lucky` option to wire in.
+//     flip that pays out on heads AND on tails has no better side, so R32/R130 leave Gary out of
+//     it. There is deliberately no `lucky` option to wire in.
+//   * ONE DRAW FOR THE RIDER. `flipCoinKeyword` takes exactly one seeded draw, and like
+//     `flipCoins` it pays on both faces, so R32/R130 leave it without Lucky too.
 //
 // THE FIZZLE IS TOTAL, AND THAT IS A DETERMINISM RULE, NOT TIDINESS. §10.7 stores `rngCursor` in
 // state, so the cursor is part of the match: every later draw in the game depends on how many were
@@ -22,8 +28,9 @@
 // diverge, and §9.3 requires they never do. So the target is resolved FIRST and a missing one takes
 // no draws at all, leaving the cursor exactly where it was.
 
+import type { Keyword } from "@jackioh/shared";
 import type { Effect } from "../script";
-import { buff, type BuffAmount } from "./buff";
+import { buff, grantKeyword, type BuffAmount } from "./buff";
 import { instanceOf, type TargetSpec } from "./targets";
 
 /** Heads × per-heads plus tails × per-tails, in one stat. */
@@ -71,6 +78,36 @@ export function flipCoins(args: {
         target: { of: "instance", instanceId: unit.id },
         attack: totalFor(heads, tails, perHeads, perTails, "attack"),
         health: totalFor(heads, tails, perHeads, perTails, "health"),
+      }).apply(ctx);
+    },
+  };
+}
+
+/**
+ * §8.1 #4: flip one coin and grant the target a keyword — `headsKeyword` on heads,
+ * `tailsKeyword` on tails (§10.4 granted keywords, §10.7, R32/R130).
+ *
+ * Gary the Gambler's rider after its stat flips: heads gains Divine Shield, tails gains Rush.
+ * Exactly one seeded `ctx.rng.coin()` draw, resolved against the target FIRST so a missing
+ * target takes zero draws, like `flipCoins`. It pays on both faces, so there is no Lucky to
+ * consult and no `lucky` option, per R32/R130.
+ */
+export function flipCoinKeyword(args: {
+  target: TargetSpec;
+  headsKeyword: Keyword;
+  tailsKeyword: Keyword;
+}): Effect {
+  return {
+    kind: "flipCoinKeyword",
+    apply(ctx): void {
+      // Resolved before the single draw: see the determinism note above.
+      const unit = instanceOf(ctx, args.target);
+      if (unit === null) return;
+
+      const heads = ctx.rng.coin();
+      grantKeyword({
+        target: { of: "instance", instanceId: unit.id },
+        keyword: heads ? args.headsKeyword : args.tailsKeyword,
       }).apply(ctx);
     },
   };
