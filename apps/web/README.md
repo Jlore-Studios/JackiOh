@@ -344,6 +344,10 @@ src/practice/
   decks.ts            random, the three named practice decks (hand-built lists), the account's saved decks by name
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
                       `jackioh.practice.lastBoard`, try/catch
+  saveStore.ts        the worker's save of a free game in progress (R668): config, log, AI cursor,
+                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom)
+  resume.ts           the page's half (R668): only the setup it chose, in localStorage
+                      `jackioh.practice.game`, try/catch
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
   ModifierList.tsx    every live R169 modifier in full, one tap from the HUD
 routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unchanged inside the worker's catalog
@@ -354,6 +358,13 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
   engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
+- A free game in progress survives a reload (R668). After every answer the core writes its save
+  to the worker's store, which never crosses to the page (the log names the AI's hidden cards); the
+  controller remembers the setup when the game is dealt and forgets it when the game ends, and the
+  route forgets it when the player leaves. A visit with no parameter that starts a game sends
+  `{ type: "resume", config }`, and the core folds the log back under the same nonces to the saved
+  hash, with the AI's stream at its saved cursor, or answers `failed` and the route shows the setup.
+  A lesson is never kept, so only a lesson in progress asks before the page unloads.
 - The one exception is `debug`, which carries the raw state, the log, the decks, the handicaps and
   the dealt seats for spec 13's replay check. The core answers it only when `MODE !== "production"`,
   and the route sets `window.__jackiohPractice` under the same condition, like `window.__jackioh`.

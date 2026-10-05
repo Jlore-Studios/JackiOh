@@ -4081,6 +4081,22 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // Proved by apps/web practice/core.test.ts "R668 …" (the save, the fold to the same hash and AI
+  // stream, the refusals, no lesson kept), saveStore.test.ts and resume.test.ts "R668 …" (the
+  // worker's store and the page's setup as untrusted storage), and routes/practice.test.tsx "R668 …"
+  // (the resume on a visit, a URL winning, leaving giving it up, the unload prompt for a lesson only,
+  // and a reload on the real core).
+  it("R668 keeps a free practice game in the worker and folds it back after a reload", () => {
+    provenIn(
+      668,
+      "../../../apps/web/src/practice/core.test.ts",
+      "../../../apps/web/src/practice/saveStore.test.ts",
+      "../../../apps/web/src/practice/resume.test.ts",
+      "../../../apps/web/src/routes/practice.test.tsx",
+    );
+  });
+  });
+
   // Proved by apps/web audio/cues.test.ts "R669 …" (the stings by rarity, none for the sentinel, a
   // Trap or a cast on draw; the lane pans), engine.test.ts and sfx.test.ts "R669 …" (the panner, the
   // effects' duck under a line, the shared reverb; the sting's recipe), and haptics/haptics.test.ts
