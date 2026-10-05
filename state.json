@@ -496,6 +496,12 @@
       "lines": [
         "@jgoetzmann-bot A follow-up for this revision: several of #88's checklist items aren't in this PR yet. A separate session built them on top of this PR's work, rebased onto main, on branch `claude/v02-classic-balance-1` (head c5a3b90). It isn't green (about 13 web tests fail there), so port these changes, not the branch:"
       ]
+    },
+    "c:5994491747": {
+      "at": "2026-10-05T12:31:28Z",
+      "lines": [
+        "(named the bot)"
+      ]
     }
   },
   "items": {
