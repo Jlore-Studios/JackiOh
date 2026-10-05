@@ -2519,14 +2519,10 @@
       "votes": {
         "approvals": [],
         "builder": "cognition",
-        "rejections": [
-          "muse"
-        ],
+        "rejections": [],
         "reviews": [],
         "sha": "3d7399b34ef916dc3e441f622dac7b05bcb6b6c7",
-        "tiers": {
-          "muse": "medium"
-        }
+        "tiers": {}
       }
     },
     "290": {
