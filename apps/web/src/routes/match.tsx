@@ -341,10 +341,11 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       error={refusedWith === null ? match.error : `${connectionWords("refused")}. Head back to the lobby.`}
       resultActions={
         // A finished match's way on (Result.tsx): a rematch while the opponent is still here —
-        // never for a live series game, whose continue flow owns what comes next — then the
-        // series' next game when there is one, then the lobby, where the next one starts.
+        // never for a series game, finished or not: the server refuses those (`series_game`),
+        // and the Conquest continue flow owns what comes next — then the series' next game
+        // when there is one, then the lobby, where the next one starts.
         <>
-          {series === null || series.status === "over" ? (
+          {series === null ? (
             <RematchButtons
               token={token}
               matchId={matchId}

@@ -4020,11 +4020,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
-  // Proved by apps/server/test/api/rematch.test.ts "R659 …" (equal stakes make one rematch with
-  // the finished decks, mismatched stakes make none, doubles need a ranked match, and a doubled
-  // game moves each side's rating twice the single update's delta).
-  it("R659 a double-or-nothing rematch is ranked-only and moves each side's rating twice as far", () => {
-    provenIn(659, "../../../apps/server/test/api/rematch.test.ts");
+  // Proved by effects-transform.test.ts "R659 …": the new body is sick whatever the old one's
+  // readiness, on either player's turn; R424's Classic Golem is the exception its own test proves.
+  it("R659 a transformed Unit is summoning sick", () => {
+    provenIn(659, "effects-transform.test.ts");
   });
 
   // Proved by packages/cards/test/flavour.test.ts "R660 …" (the sidecar's keys, coverage, fields and
@@ -4040,6 +4039,20 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/routes/almanac.test.tsx",
       "../../../apps/web/src/cards/art/convention.test.ts",
     );
+  });
+
+  // Proved by the card's own test, cards/test/classic/055-book-of-wildfire.test.ts "R671 …": the swap
+  // at its owner's end of turn in hand only, the pool without Wildfire, Radiant to Radiant, the Book it
+  // became swapping on, Temporary kept, and the end of turn replaying exactly.
+  it("R671 Book of Wildfire becomes a different Book at the end of its owner's turn, and the Book keeps swapping", () => {
+    provenIn(671, "../../cards/test/classic/055-book-of-wildfire.test.ts");
+  });
+
+  // Proved by apps/server/test/api/rematch.test.ts "R672 …" (equal stakes make one rematch with
+  // the finished decks, mismatched stakes make none, doubles need a ranked match, and a doubled
+  // game moves each side's rating twice the single update's delta).
+  it("R672 a double-or-nothing rematch is ranked-only and moves each side's rating twice as far", () => {
+    provenIn(672, "../../../apps/server/test/api/rematch.test.ts");
   });
 });
 

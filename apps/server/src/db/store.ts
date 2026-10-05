@@ -212,7 +212,7 @@ function queueModeOf(value: unknown): QueueMode {
   throw new Error(`expected a queue mode, got ${JSON.stringify(value)}`);
 }
 
-/** `matches.stake` carries `check (stake is null or stake in (1, 2))` (migration 0023, R659). */
+/** `matches.stake` carries `check (stake is null or stake in (1, 2))` (migration 0023, R672). */
 function stakeOf(value: unknown): 1 | 2 {
   if (value === 1 || value === 2) return value;
   throw new Error(`expected rematch stakes of 1 or 2, got ${JSON.stringify(value)}`);
@@ -419,9 +419,9 @@ type MatchDbRow = {
   ranked: boolean;
   p1_portrait: string | null;
   p2_portrait: string | null;
-  /** R659 (migration 0023): the mode a rematch stated; null on every older row. */
+  /** R672 (migration 0023): the mode a rematch stated; null on every older row. */
   mode: string | null;
-  /** R659 (migration 0023): 2 on a double-or-nothing rematch; null is a normal game. */
+  /** R672 (migration 0023): 2 on a double-or-nothing rematch; null is a normal game. */
   stake: number | null;
 };
 
@@ -468,7 +468,7 @@ function toMatch(row: MatchDbRow): MatchRow {
     // R604: the flag migration 0022 adds. Absent when false, exactly as `MatchRow` types it —
     // `results.ts` reads a missing flag the same way (unranked).
     ...(row.ranked ? { ranked: true } : {}),
-    // R659: migration 0023's columns. A null mode is "derive it" (`matches.modeOf` reads the row
+    // R672: migration 0023's columns. A null mode is "derive it" (`matches.modeOf` reads the row
     // first), and a null stake is a normal game — both absent exactly as `MatchRow` types them.
     ...(row.mode === null ? {} : { mode: queueModeOf(row.mode) }),
     ...(row.stake === null ? {} : { stake: stakeOf(row.stake) }),
@@ -1709,7 +1709,7 @@ function buildStore(session: Session): Store {
           // R604: false for a room and for the `open` skeletons this UPDATE turns live — a room
           // never calls this, and a queue skeleton's own write is what stamps the flag.
           match.ranked ?? false,
-          // R659: null on every row but a rematch's, which states both (migration 0023).
+          // R672: null on every row but a rematch's, which states both (migration 0023).
           match.mode ?? null,
           match.stake ?? null,
         ];
@@ -1888,7 +1888,7 @@ function buildStore(session: Session): Store {
       );
       const row = rows[0];
       if (row === undefined) return null;
-      // R659: a rematch states its own mode, since no ticket, room or series made it.
+      // R672: a rematch states its own mode, since no ticket, room or series made it.
       if (row.mode !== null) return queueModeOf(row.mode);
       if (row.room_code !== null) return row.room_mode === null ? "bo1" : queueModeOf(row.room_mode);
       return row.ticket_mode === null ? null : queueModeOf(row.ticket_mode);

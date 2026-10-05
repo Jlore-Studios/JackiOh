@@ -335,7 +335,7 @@ export function createFakeMatchDirectory(store?: Store): FakeMatchDirectory {
   const live = new Set<string>();
   return {
     started,
-    // R659: no sockets here, so nobody is present until a test says so by assigning this.
+    // R672: no sockets here, so nobody is present until a test says so by assigning this.
     presenceOf: () => null,
     start: async (input) => {
       started.push(input);
@@ -349,7 +349,7 @@ export function createFakeMatchDirectory(store?: Store): FakeMatchDirectory {
           decks: [[...first.deck], [...second.deck]],
           catalogVersion: input.catalogVersion,
           ranked: input.ranked,
-          // R659: carried exactly as `createMatchRegistry` carries them.
+          // R672: carried exactly as `createMatchRegistry` carries them.
           ...(input.mode === undefined ? {} : { mode: input.mode }),
           ...(input.stake === undefined ? {} : { stake: input.stake }),
           status: "live",

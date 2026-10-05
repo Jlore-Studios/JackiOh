@@ -1,4 +1,4 @@
-// `routes/Rematch.tsx`: the death screen's rematch offers (SPEC §9.5, R659).
+// `routes/Rematch.tsx`: the death screen's rematch offers (SPEC §9.5, R672).
 //
 // The buttons show only while both sockets are open — ours (`connection`) and theirs
 // (`opponentHere`) — and each one sends its stakes. Matching an incoming offer navigates to the

@@ -149,7 +149,7 @@ async function writeOnce(deps: ServerDeps, t: Store, input: WriteInput): Promise
         winnerSide: winnerSideOf(input.outcome, input.seats),
         reason: input.outcome.reason,
         at: input.at,
-        // R659: a double-or-nothing rematch's stakes ride on its row; absent is a normal game.
+        // R672: a double-or-nothing rematch's stakes ride on its row; absent is a normal game.
         ...(match.stake === 2 ? { stake: match.stake } : {}),
       });
       before = [rated.sides[0].before.rating, rated.sides[1].before.rating];

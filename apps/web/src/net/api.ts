@@ -678,7 +678,7 @@ export function getMatchRanks(token: string, matchId: string): Promise<MatchRank
 }
 
 // ---------------------------------------------------------------------------------------------
-// Rematch offers after a finished non-series match (SPEC §9.5, R659). Only offer stakes,
+// Rematch offers after a finished non-series match (SPEC §9.5, R672). Only offer stakes,
 // presence booleans and ids cross here — never decks, hands or ratings (CLAUDE.md rule 7).
 // ---------------------------------------------------------------------------------------------
 

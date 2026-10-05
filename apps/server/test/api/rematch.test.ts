@@ -1,10 +1,10 @@
 /**
- * Rematch offers after a finished non-series match (SPEC §9.5, R659):
+ * Rematch offers after a finished non-series match (SPEC §9.5, R672):
  * `POST`/`GET /api/matches/:matchId/rematch` (`src/api/rematch.ts`), the rating move a
  * double-or-nothing rematch makes (`src/api/ranked.ts`, `src/api/results.ts`), and the presence
  * the registry reports off the live actor's sockets (`src/match/registry.ts`, `src/match/actor.ts`).
  *
- *  - **R659**: a double-or-nothing rematch is ranked-only and doubles each side's Glicko rating
+ *  - **R672**: a double-or-nothing rematch is ranked-only and doubles each side's Glicko rating
  *    delta, with deviation and volatility from the single update.
  *  - Equal stakes from both seats create exactly one match with the finished decks, a fresh seed
  *    and the same seats; mismatched stakes create nothing.
@@ -136,11 +136,11 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// R659 — the rating move
+// R672 — the rating move
 // ---------------------------------------------------------------------------
 
-describe("R659 double-or-nothing", () => {
-  it("R659 doubles each side's rating movement, with deviation and volatility from the single update", async () => {
+describe("R672 double-or-nothing", () => {
+  it("R672 doubles each side's rating movement, with deviation and volatility from the single update", async () => {
     const sides = (a: string, b: string) =>
       [
         { kind: "player", profileId: a },
@@ -185,7 +185,7 @@ describe("R659 double-or-nothing", () => {
     }
   });
 
-  it("R659 a finished double-or-nothing rematch moves each side's rating twice as far", async () => {
+  it("R672 a finished double-or-nothing rematch moves each side's rating twice as far", async () => {
     for (const [pair, id, stake] of [
       [[A, B], "double-game", STAKE_DOUBLE],
       [["profile-c", "profile-d"], "single-game", STAKE_NORMAL],
@@ -214,7 +214,7 @@ describe("R659 double-or-nothing", () => {
     expect(1000 - b.rating).toBeCloseTo(2 * (1000 - d.rating), 8);
   });
 
-  it("R659 a double from an unranked match is refused", async () => {
+  it("R672 a double from an unranked match is refused", async () => {
     const tokenA = activeProfile(deps, A);
     activeProfile(deps, B);
     await finishedMatch(deps, FINISHED, A, B, { ranked: false });
@@ -345,6 +345,138 @@ describe("rematch offers", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Creation guards: the flags point at the created row, and a seat in another
+// game is never stolen (`profiles_current_match_id_fkey` on Postgres)
+// ---------------------------------------------------------------------------
+
+describe("rematch creation guards", () => {
+  it("flags the seats only once the row exists, which the foreign key demands", async () => {
+    const tokenA = activeProfile(deps, A);
+    const tokenB = activeProfile(deps, B);
+    await finishedMatch(deps, FINISHED, A, B);
+    await pairedTickets(deps, FINISHED, "bo1");
+
+    // Postgres refuses `current_match_id` pointing at no row; the fake does not, so emulate it:
+    // flagging before the start writes the row must fail.
+    const real = deps.store.profiles.setInMatch;
+    deps.store.profiles.setInMatch = async (profileId, matchId) => {
+      if (matchId !== null && (await deps.store.matches.get(matchId)) === null) {
+        throw new Error(`fk profiles_current_match_id_fkey: no match ${matchId}`);
+      }
+      return real(profileId, matchId);
+    };
+
+    await offer(tokenA, FINISHED, STAKE_NORMAL);
+    const created = await readJson<RematchOfferBody>(await offer(tokenB, FINISHED, STAKE_NORMAL));
+    expect(typeof created.matchId).toBe("string");
+    expect((await deps.store.profiles.getById(A))?.inMatchId).toBe(created.matchId);
+    expect((await deps.store.profiles.getById(B))?.inMatchId).toBe(created.matchId);
+  });
+
+  it("refuses with 409 when a seat found another game, creating nothing", async () => {
+    const tokenA = activeProfile(deps, A);
+    const tokenB = activeProfile(deps, B);
+    await finishedMatch(deps, FINISHED, A, B);
+    await deps.store.profiles.setInMatch(A, "match-elsewhere");
+
+    await offer(tokenA, FINISHED, STAKE_NORMAL);
+    const refused = await offer(tokenB, FINISHED, STAKE_NORMAL);
+    expect(refused.status).toBe(409);
+    expect((await readJson<{ error: { code: string } }>(refused)).error.code).toBe(
+      "already_in_match",
+    );
+    expect(await deps.store.matches.live()).toEqual([]);
+    expect(deps.matches.started).toEqual([]);
+    // Neither seat moved: A stays where it is, B stays out.
+    expect((await deps.store.profiles.getById(A))?.inMatchId).toBe("match-elsewhere");
+    expect((await deps.store.profiles.getById(B))?.inMatchId).toBeNull();
+  });
+
+  it("keeps a seat taken during the start in its game, with its tickets", async () => {
+    const tokenA = activeProfile(deps, A);
+    const tokenB = activeProfile(deps, B);
+    await finishedMatch(deps, FINISHED, A, B);
+    await pairedTickets(deps, FINISHED, "bo1");
+    // B holds a stray open ticket of its own.
+    await deps.store.tickets.insert({
+      id: "ticket-stray-b",
+      profileId: B,
+      rating: 1000,
+      mode: "bo1",
+      deck: [],
+      portrait: null,
+      trio: null,
+      catalogVersion: deps.catalog.version,
+      enqueuedAt: deps.timers.now(),
+      status: "open",
+      matchId: null,
+    });
+
+    const realStart = deps.matches.start;
+    deps.matches.start = async (input) => {
+      // B found another game between the pre-check and the flagging.
+      await deps.store.profiles.setInMatch(B, "match-elsewhere");
+      return realStart(input);
+    };
+
+    await offer(tokenA, FINISHED, STAKE_NORMAL);
+    const created = await readJson<RematchOfferBody>(await offer(tokenB, FINISHED, STAKE_NORMAL));
+    const rematchId = created.matchId as string;
+    expect(typeof rematchId).toBe("string");
+    // A moved into the rematch; B was skipped, never stolen.
+    expect((await deps.store.profiles.getById(A))?.inMatchId).toBe(rematchId);
+    expect((await deps.store.profiles.getById(B))?.inMatchId).toBe("match-elsewhere");
+    expect(deps.log.entries.some((entry) => entry.event === "rematch.seat_taken")).toBe(true);
+    // So did B's stray ticket: it stays open with its seat.
+    expect(await deps.store.tickets.openForProfile(B)).not.toBeNull();
+  });
+
+  it("a ranked rematch can itself spawn a double, while an unranked rematch stays undoubled", async () => {
+    const tokenA = activeProfile(deps, A);
+    const tokenB = activeProfile(deps, B);
+    await finishedMatch(deps, FINISHED, A, B);
+    await pairedTickets(deps, FINISHED, "bo1");
+
+    await offer(tokenA, FINISHED, STAKE_NORMAL);
+    const first = await readJson<RematchOfferBody>(await offer(tokenB, FINISHED, STAKE_NORMAL));
+    const chained = first.matchId as string;
+    expect(typeof chained).toBe("string");
+    // The game ends, and the ending clears the flags (`results.ts`).
+    await deps.store.matches.finish(chained, deps.timers.now());
+    await deps.store.profiles.setInMatch(A, null);
+    await deps.store.profiles.setInMatch(B, null);
+
+    // The rematch is ranked exactly when the finished match was, so it can double (R672).
+    await offer(tokenA, chained, STAKE_DOUBLE);
+    const second = await readJson<RematchOfferBody>(await offer(tokenB, chained, STAKE_DOUBLE));
+    expect(typeof second.matchId).toBe("string");
+    expect(await deps.store.matches.get(second.matchId as string)).toMatchObject({
+      ranked: true,
+      stake: STAKE_DOUBLE,
+    });
+
+    // An unranked rematch refuses the double like any unranked match.
+    await deps.store.profiles.setInMatch(A, null);
+    await deps.store.profiles.setInMatch(B, null);
+    await finishedMatch(deps, "match-casual", A, B, { ranked: false });
+    await offer(tokenA, "match-casual", STAKE_NORMAL);
+    const casual = await readJson<RematchOfferBody>(
+      await offer(tokenB, "match-casual", STAKE_NORMAL),
+    );
+    expect(typeof casual.matchId).toBe("string");
+    await deps.store.matches.finish(casual.matchId as string, deps.timers.now());
+    await deps.store.profiles.setInMatch(A, null);
+    await deps.store.profiles.setInMatch(B, null);
+    await offer(tokenA, casual.matchId as string, STAKE_DOUBLE);
+    const refused = await offer(tokenB, casual.matchId as string, STAKE_DOUBLE);
+    expect(refused.status).toBe(422);
+    expect((await readJson<{ error: { code: string } }>(refused)).error.code).toBe(
+      "double_requires_ranked",
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Refusals
 // ---------------------------------------------------------------------------
 
@@ -416,6 +548,11 @@ describe("rematch refusals", () => {
     const refused = await offer(tokenA, FINISHED, STAKE_NORMAL);
     expect(refused.status).toBe(422);
     expect((await readJson<{ error: { code: string } }>(refused)).error.code).toBe("series_game");
+
+    // Reading the status is refused the same way, so the death screen never polls one into view.
+    const read = await status(tokenA, FINISHED);
+    expect(read.status).toBe(422);
+    expect((await readJson<{ error: { code: string } }>(read)).error.code).toBe("series_game");
   });
 
   it("a bad stakes value is a 400", async () => {

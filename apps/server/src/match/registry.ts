@@ -75,7 +75,7 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       decks: [[...first.deck], [...second.deck]],
       catalogVersion: input.catalogVersion,
       ranked: input.ranked,
-      // R659: only a rematch states its mode and stakes — which no ticket, room or series made —
+      // R672: only a rematch states its mode and stakes — which no ticket, room or series made —
       // so only it lands on the row; every other start derives the mode as before.
       ...(input.mode === undefined ? {} : { mode: input.mode }),
       ...(input.stake === undefined ? {} : { stake: input.stake }),
@@ -90,7 +90,7 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
     };
     // R433: the mode is read off what made the match — its tickets, its room or its series, which
     // the reserved `open` skeleton already links — so it reads the same before the row is written
-    // as `rebuild` reads it after, and both fold the same setup. R659: a rematch states its mode
+    // as `rebuild` reads it after, and both fold the same setup. R672: a rematch states its mode
     // instead, since nothing made it but the finished match.
     const mode = input.mode ?? (await deps.store.matches.modeOf(match.id));
     const dealt = dealtFor(mode);
@@ -153,7 +153,7 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
   return {
     start,
     has: (matchId) => actors.has(matchId),
-    // R659: the seats' open sockets, or null once the actor is gone (a restart, the reaper).
+    // R672: the seats' open sockets, or null once the actor is gone (a restart, the reaper).
     // Never rebuilds: presence is about who is here now, not who could be folded back.
     presenceOf: (matchId) => actors.get(matchId)?.presence() ?? null,
     stop: async (matchId) => {

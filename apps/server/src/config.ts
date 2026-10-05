@@ -531,7 +531,7 @@ export const SERIES_WRITE_ATTEMPTS = 3;
 /** How often the series screen and the match screen's series banner re-read the series. */
 export const SERIES_POLL_SECONDS = 2;
 /**
- * SPEC §11 R659: how long one seat's rematch offer stands after a non-series match ends. Ten
+ * SPEC §11 R672: how long one seat's rematch offer stands after a non-series match ends. Ten
  * minutes: long enough to read the result screen and press the button, short enough that a stale
  * offer cannot summon a game long after both players moved on.
  */

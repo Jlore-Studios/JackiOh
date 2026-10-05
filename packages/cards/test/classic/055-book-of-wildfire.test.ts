@@ -6,8 +6,24 @@
 // The hit is one §4.4 damage instance from the Spell, so Divine Shield, Armor and Spell Damage meet it
 // as they meet any Spell's. C #4 Palantir's base face answers it as a Book (its steal prompt), and
 // C #29's Radiant face makes a Book of Flame, never this card (R381).
+//
+// Patch v0.2.X (#271, R671): at the end of its owner's turn, while it is in their hand, it becomes a
+// different Book — every non-token Book but Wildfire, Book of Flame included, drawn with the match rng
+// — on its own face, in its place in the hand; the Book it becomes has that Book's own text and keeps
+// the swap (the `swapsBook` enchantment), so it changes again at each end of its owner's turn.
 
-import { legalActions, playedThisGameWithTag, reduce, stepParam, type GameState } from "@jackioh/engine";
+import {
+  BOOK_SWAP_TRIGGER,
+  hashState,
+  heroOf,
+  legalActions,
+  playedThisGameWithTag,
+  query,
+  reduce,
+  stepParam,
+  type CardInstance,
+  type GameState,
+} from "@jackioh/engine";
 import type { Action, PlayerId, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { cardDef } from "../../src/catalog-data";
@@ -40,6 +56,28 @@ function wildfirePlays(s: Scenario, player: PlayerId = "p1"): Selection[][] {
   );
 }
 
+/** Every non-token Book of every set but Wildfire: the swap's pool (R380, R671). */
+const OTHER_BOOKS = query({ tags: ["Book"] })
+  .map((book) => book.id)
+  .filter((id) => id !== WILDFIRE);
+
+/** p1 holds this card (Radiant or not) and a filler, and p2 a filler, so no turn ends on its own. */
+function holding(seed: string, radiant = false): Scenario {
+  return scenario({ seed, p1: { hand: [{ def: WILDFIRE, radiant }, FILLER] }, p2: { hand: [FILLER] } });
+}
+
+/** p1's first hand card: where the Wildfire sits, and where what it became sits (R671). */
+function firstCard(s: Scenario): CardInstance {
+  const card = s.hand("p1")[0];
+  if (card === undefined) throw new Error("p1's hand is empty");
+  return card;
+}
+
+/** The Book p1's Wildfire is after p1's end of turn, from a game on `seed`. */
+function swappedOn(seed: string, radiant = false): CardInstance {
+  return firstCard(holding(seed, radiant).endTurn());
+}
+
 function hitsOn(s: Scenario, targetId: string): number[] {
   return s.events.flatMap((event) => (event.type === "damage" && event.targetId === targetId ? [event.amount] : []));
 }
@@ -53,6 +91,13 @@ describe("C #55 Book of Wildfire", () => {
     expect(def.params).toEqual([{ key: "damage", base: 4, radiant: 8, better: "up", step: 1, min: 1 }]);
     expect(base.targets).toEqual([{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit", "hero"] } }]);
     expect(radiant).toBe(base);
+    expect(base.handTriggers).toEqual([BOOK_SWAP_TRIGGER]);
+  });
+
+  it("R671 prints the swap on both faces, the Radiant one naming a Radiant Book", () => {
+    expect(def.base.text).toBe("Deal {damage} damage.\nEnd of turn: Become a different Book.");
+    expect(def.radiant.text).toBe("Deal {damage} damage.\nEnd of turn: Become a different Radiant Book.");
+    expect(def.refs).toBeUndefined();
   });
 
   it("R381 nothing names it: C #23 and C #29 name Book of Flame (C #16), never Book of Wildfire", () => {
@@ -183,6 +228,105 @@ describe("C #55 Book of Wildfire", () => {
     });
   });
 
+  describe("base: the swap (R671)", () => {
+    it("R671 at the end of its owner's turn, in hand, it becomes a different Book in its place in the hand", () => {
+      const s = holding("swap-1");
+      const wildfire = s.card(WILDFIRE);
+      s.endTurn();
+      const book = firstCard(s);
+      expect(s.hand("p1").some((card) => card.id === wildfire.id)).toBe(false);
+      expect(OTHER_BOOKS).toContain(book.defId);
+      expect(book.radiant).toBe(false);
+      expect(book.enchantments).toEqual([{ kind: "swapsBook", from: WILDFIRE }]);
+      expect(s.hand("p1")[1]?.defId).toBe(FILLER);
+      const swapped = s.events.find((event) => event.type === "transformed");
+      expect(swapped).toMatchObject({ instanceId: wildfire.id, fromDefId: WILDFIRE, toDefId: book.defId, hiddenFrom: ["p2"] });
+    });
+
+    it("R671 the pool is every other Book: never Wildfire, Book of Flame among them, the pick the match rng's", () => {
+      const seen = new Set<string>();
+      for (let n = 0; n < 60; n += 1) seen.add(swappedOn(`pool-${String(n)}`).defId);
+      expect(seen.has(WILDFIRE)).toBe(false);
+      expect([...seen].every((id) => OTHER_BOOKS.includes(id))).toBe(true);
+      expect(seen.has(BOOK_OF_FLAME)).toBe(true);
+      expect(seen.size).toBeGreaterThan(5);
+      // The same game picks the same Book.
+      expect(swappedOn("pool-7").defId).toBe(swappedOn("pool-7").defId);
+    });
+
+    it("R671 not at the end of the opponent's turn: in the other player's hand it stays Wildfire", () => {
+      const s = scenario({ p1: { hand: [FILLER] }, p2: { hand: [WILDFIRE, FILLER] } });
+      s.endTurn();
+      expect(s.hand("p2").map((card) => card.defId)).toContain(WILDFIRE);
+      s.expectInZone(WILDFIRE, "hand");
+      expect(s.events.some((event) => event.type === "transformed")).toBe(false);
+    });
+
+    it("R671 only in hand: in the library or the graveyard it stays Wildfire", () => {
+      const s = scenario({ p1: { hand: [FILLER], library: [FILLER, WILDFIRE], graveyard: [WILDFIRE] }, p2: { hand: [FILLER] } });
+      s.endTurn();
+      expect(s.pile("p1", "library").map((card) => card.defId)).toContain(WILDFIRE);
+      expect(s.pile("p1", "graveyard").map((card) => card.defId)).toEqual([WILDFIRE]);
+      expect(s.events.some((event) => event.type === "transformed")).toBe(false);
+    });
+
+    it("R671 the Book it became keeps swapping: unchanged on the opponent's turn, a different Book at its owner's next", () => {
+      const s = holding("swap-2");
+      s.endTurn();
+      const first = firstCard(s);
+      s.endTurn(); // p2's turn ends: p1's Book is not theirs to swap.
+      expect(firstCard(s).id).toBe(first.id);
+      s.endTurn();
+      const second = firstCard(s);
+      expect(second.id).not.toBe(first.id);
+      expect(second.defId).not.toBe(first.defId);
+      expect(OTHER_BOOKS).toContain(second.defId);
+      expect(second.enchantments).toEqual([{ kind: "swapsBook", from: WILDFIRE }]);
+    });
+
+    it("R671 the Book it became has that Book's own text: Book of Flame deals its 4 to a target", () => {
+      let seed = 0;
+      while (seed < 200 && swappedOn(`flame-${String(seed)}`).defId !== BOOK_OF_FLAME) seed += 1;
+      const s = holding(`flame-${String(seed)}`).endTurn().endTurn();
+      const flame = firstCard(s);
+      expect(flame.defId).toBe(BOOK_OF_FLAME);
+      const before = heroOf(s.state, "p2").health;
+      s.play(flame, { targets: [hero("p2")] }).expectHealth("p2", before - 4);
+    });
+
+    it("R671 its owner's view shows the Book it became with the swap riding it; the opponent's names neither", () => {
+      const s = holding("swap-3").endTurn();
+      const book = firstCard(s);
+      const own = s.view("p1");
+      const shown = Array.isArray(own.you.hand) ? own.you.hand.find((card) => card.instanceId === book.id) : undefined;
+      expect(shown).toMatchObject({ defId: book.defId, enchantments: [{ kind: "swapsBook", from: WILDFIRE }] });
+      const theirs = JSON.stringify(s.view("p2"));
+      expect(theirs).not.toContain(book.defId);
+      expect(theirs).not.toContain("swapsBook");
+    });
+
+    it("R671, R637 a Temporary Wildfire becomes a Temporary Book, which cleanup still discards", () => {
+      const s = holding("swap-4");
+      s.card(WILDFIRE).grantedKeywords.push({ kind: "Temporary" });
+      s.endTurn();
+      expect(s.hand("p1").map((card) => card.defId)).not.toContain(WILDFIRE);
+      const discarded = s.pile("p1", "graveyard");
+      expect(discarded).toHaveLength(1);
+      expect(OTHER_BOOKS).toContain(discarded[0]?.defId);
+    });
+
+    it("R671 its end of turn replays exactly: a JSON round trip of the state swaps to the same Book", () => {
+      const s = holding("swap-5");
+      const round = JSON.parse(JSON.stringify(s.state)) as GameState;
+      const action: Action = { type: "endTurn", playerId: "p1", nonce: "c55-swap" };
+      const a = reduce(s.state, action);
+      const b = reduce(round, action);
+      expect(a.error).toBeUndefined();
+      expect(hashState(b.state)).toBe(hashState(a.state));
+      expect(b.state).toEqual(a.state);
+    });
+  });
+
   describe("radiant", () => {
     it("deals 8 damage to a target", () => {
       const s = scenario({ p1: { hand: [{ def: WILDFIRE, radiant: true }, FILLER] }, p2: { field: [MENACE] } });
@@ -206,6 +350,43 @@ describe("C #55 Book of Wildfire", () => {
       const s = scenario({ p1: { hand: [{ def: WILDFIRE, radiant: true }, FILLER], field: [SOLARIUS] } });
       s.play(WILDFIRE, { targets: [hero("p2")] });
       expect(hitsOn(s, "hero-p2")).toEqual([10]);
+    });
+
+    it("R671 at the end of its owner's turn it becomes the Radiant face of a different Book, which keeps swapping Radiant", () => {
+      const s = holding("radiant-swap-1", true);
+      s.endTurn();
+      const first = firstCard(s);
+      expect(OTHER_BOOKS).toContain(first.defId);
+      expect(first.radiant).toBe(true);
+      expect(first.enchantments).toEqual([{ kind: "swapsBook", from: WILDFIRE }]);
+      s.endTurn().endTurn();
+      const second = firstCard(s);
+      expect(second.defId).not.toBe(first.defId);
+      expect(second.radiant).toBe(true);
+    });
+
+    it("R671 every Radiant pick is a Radiant Book other than Wildfire", () => {
+      for (let n = 0; n < 20; n += 1) {
+        const book = swappedOn(`radiant-pool-${String(n)}`, true);
+        expect(OTHER_BOOKS).toContain(book.defId);
+        expect(book.radiant).toBe(true);
+      }
+    });
+
+    it("R671 not at the opponent's end of turn, nor outside the hand", () => {
+      const s = scenario({
+        p1: { hand: [FILLER], library: [FILLER, { def: WILDFIRE, radiant: true }] },
+        p2: { hand: [{ def: WILDFIRE, radiant: true }, FILLER] },
+      });
+      s.endTurn();
+      expect(s.events.some((event) => event.type === "transformed")).toBe(false);
+    });
+
+    it("R671 its swap replays exactly from a JSON round trip", () => {
+      const s = holding("radiant-swap-2", true);
+      const round = JSON.parse(JSON.stringify(s.state)) as GameState;
+      const action: Action = { type: "endTurn", playerId: "p1", nonce: "c55-swap" };
+      expect(reduce(round, action).state).toEqual(reduce(s.state, action).state);
     });
   });
 });

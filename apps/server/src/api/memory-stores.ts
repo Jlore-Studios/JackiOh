@@ -424,7 +424,7 @@ export function matchModeIn(
   matchId: string,
 ): QueueMode | null {
   if (tables.series.some((row) => row.games.some((game) => game.matchId === matchId))) return "bo3";
-  // R659: a rematch states its own mode, since no ticket, room or series made it.
+  // R672: a rematch states its own mode, since no ticket, room or series made it.
   const own = tables.matches.find((row) => row.id === matchId)?.mode;
   if (own !== undefined) return own;
   const room = tables.rooms.find((row) => row.matchId === matchId);

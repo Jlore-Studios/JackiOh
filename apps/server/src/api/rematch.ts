@@ -1,5 +1,5 @@
 /**
- * Rematch offers after a finished non-series match (SPEC §9.5, R659).
+ * Rematch offers after a finished non-series match (SPEC §9.5, R672).
  *
  * After the death screen lands, either seat may offer a rematch — a normal one or a
  * double-or-nothing — and a new match is created only when both seats offer equal stakes.
@@ -29,9 +29,9 @@ import { callerProfile } from "./collection";
 import { ApiError, ok, route, type Route } from "./http";
 import type { MatchRow, QueueMode, ServerDeps } from "./ports";
 
-/** R659: a normal rematch moves the rating once; a double-or-nothing moves it twice. */
+/** R672: a normal rematch moves the rating once; a double-or-nothing moves it twice. */
 export const STAKE_NORMAL = 1;
-/** R659: a double-or-nothing rematch. Ranked matches only (`double_requires_ranked`). */
+/** R672: a double-or-nothing rematch. Ranked matches only (`double_requires_ranked`). */
 export const STAKE_DOUBLE = 2;
 
 export type RematchStakes = 1 | 2;
@@ -134,51 +134,56 @@ async function createRematch(
     },
   ] as const;
 
+  // Refuse before minting anything: one of them found another game while the offers were coming
+  // in, so the rematch loses and neither seat is stolen out of the game it is actually in.
   await deps.store.tx(async (t) => {
     for (const seat of seats) {
       const profile = (await t.profiles.getMany([seat.profileId]))[0];
-      // One of them found another game while the offers were coming in: the rematch loses, and
-      // neither seat is stolen out of the game it is actually in.
       if (profile !== undefined && profile.inMatchId !== null) {
         throw new ApiError("already_in_match", "finish your current match first");
       }
-      await t.profiles.setInMatch(seat.profileId, matchId);
-      // A stray open ticket would block the re-queue M7-T1 promises after this game ends, so the
-      // ending is not the only place that clears one (`results.ts`).
-      const ticket = await t.tickets.openForProfile(seat.profileId);
-      if (ticket !== null) await t.tickets.cancel(ticket.id, deps.timers.now());
     }
   });
 
+  // The start writes the row (`registry.ts`); a failed start leaves nothing behind, so there is
+  // nothing to undo — the caller clears the offer claim and the seats simply offer again.
+  await deps.matches.start({
+    matchId,
+    seed,
+    catalogVersion: finished.catalogVersion,
+    // The rematch is ranked exactly when the finished match was (§9.5).
+    ranked: finished.ranked ?? false,
+    mode,
+    // Absent reads as 1 downstream; only a double writes its stakes, and only ranked games
+    // reach here with 2 (`double_requires_ranked` above).
+    ...(stakes === STAKE_DOUBLE ? { stake: stakes } : {}),
+    seats: [seats[0], seats[1]],
+  });
+
+  // After the start, not before (`series.ts`'s `markInMatch`): the row is what the in-match
+  // reference points at (`profiles_current_match_id_fkey`), so flagging first is a foreign-key
+  // failure on Postgres. A seat taken during the start keeps its game and its tickets; like the
+  // series' post-start flags, a failure here is logged, not thrown — the game exists either way.
   try {
-    await deps.matches.start({
-      matchId,
-      seed,
-      catalogVersion: finished.catalogVersion,
-      // The rematch is ranked exactly when the finished match was (§9.5).
-      ranked: finished.ranked ?? false,
-      mode,
-      // Absent reads as 1 downstream; only a double writes its stakes, and only ranked games
-      // reach here with 2 (`double_requires_ranked` above).
-      ...(stakes === STAKE_DOUBLE ? { stake: stakes } : {}),
-      seats: [seats[0], seats[1]],
+    await deps.store.tx(async (t) => {
+      for (const seat of seats) {
+        const profile = (await t.profiles.getMany([seat.profileId]))[0];
+        if (profile !== undefined && profile.inMatchId !== null && profile.inMatchId !== matchId) {
+          deps.log.info("rematch.seat_taken", { matchId, profileId: seat.profileId });
+          continue;
+        }
+        await t.profiles.setInMatch(seat.profileId, matchId);
+        // A stray open ticket would block the re-queue M7-T1 promises after this game ends, so
+        // the ending is not the only place that clears one (`results.ts`).
+        const ticket = await t.tickets.openForProfile(seat.profileId);
+        if (ticket !== null) await t.tickets.cancel(ticket.id, deps.timers.now());
+      }
     });
   } catch (error) {
-    // The `setInMatch` transaction above has already committed, so a failed start would lock both
-    // players out of the queue, rooms and account deletion (`queue.ts` undoes the same way).
-    try {
-      await deps.store.tx(async (t) => {
-        await t.profiles.setInMatch(finished.players[0], null);
-        await t.profiles.setInMatch(finished.players[1], null);
-      });
-      await deps.store.matches.discardOpen(matchId);
-    } catch (cleanupError) {
-      deps.log.alert("rematch.cleanup_failed", {
-        matchId,
-        message: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-      });
-    }
-    throw error;
+    deps.log.alert("rematch.in_match_failed", {
+      matchId,
+      message: error instanceof Error ? error.message : String(error),
+    });
   }
   deps.log.info("rematch.created", { from: finished.id, matchId, stakes });
 }
@@ -206,7 +211,7 @@ export function createRematchRoutes(): Route[] {
       if (match === null) throw new ApiError("not_found", "no such match");
       const seat = seatOf(match, profile.id);
       if (seat === null) throw new ApiError("not_found", "no such match");
-      // R659: only a ranked match can spawn a double-or-nothing.
+      // R672: only a ranked match can spawn a double-or-nothing.
       if (stakes === STAKE_DOUBLE && !match.ranked) {
         throw new ApiError("double_requires_ranked", "double-or-nothing needs a ranked match");
       }
@@ -249,6 +254,11 @@ export function createRematchRoutes(): Route[] {
       if (match === null) throw new ApiError("not_found", "no such match");
       const seat = seatOf(match, profile.id);
       if (seat === null) throw new ApiError("not_found", "no such match");
+      // A finished series game offers no rematch either: the Conquest continue flow owns what
+      // comes next, so the death screen never polls one into view (`match.tsx`).
+      if ((await deps.store.series.withGame(match.id)) !== null) {
+        throw new ApiError("series_game", "series games continue from the series screen");
+      }
 
       const entry = liveEntry(match.id, deps.timers.now());
       const presence = deps.matches.presenceOf(match.id);

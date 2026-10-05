@@ -79,7 +79,7 @@ export type MatchActor = {
   /** Drops the actor: stops the clock and lets both sockets go, leaving the log alone. */
   stop: () => Promise<void>;
   /**
-   * R659: which seats hold an open socket right now. The registry's `presenceOf` reads this, so a
+   * R672: which seats hold an open socket right now. The registry's `presenceOf` reads this, so a
    * rematch offer learns whether the opponent is still on the match.
    */
   presence: () => { p1: boolean; p2: boolean };
@@ -596,7 +596,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     if (snapshot.result !== null) await onTerminal(snapshot);
   }, "arm");
 
-  /** R659: a seat is present while it holds a socket that is still open. */
+  /** R672: a seat is present while it holds a socket that is still open. */
   function presence(): { p1: boolean; p2: boolean } {
     const open = (player: PlayerId): boolean => {
       const socket = sockets[player];

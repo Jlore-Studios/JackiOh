@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0023: rematch mode and stakes (SPEC §9.5, R659)
+-- Migration 0023: rematch mode and stakes (SPEC §9.5, R672)
 -- ============================================================================
 -- Serves the rematch a finished non-series match offers: the new match is
 -- made by no ticket, room or series, so nothing `matches.modeOf` reads names
@@ -30,6 +30,6 @@ alter table public.matches add constraint matches_stake_check
   check (stake is null or stake in (1, 2));
 
 comment on column public.matches.mode is
-  'R659: the mode a rematch was made in. Only a rematch writes it (no ticket, room or series made it); older rows keep deriving theirs from what did.';
+  'R672: the mode a rematch was made in. Only a rematch writes it (no ticket, room or series made it); older rows keep deriving theirs from what did.';
 comment on column public.matches.stake is
-  'R659: a double-or-nothing rematch''s stakes (2); null is a normal game. Only ever 2, and only on a ranked rematch.';
+  'R672: a double-or-nothing rematch''s stakes (2); null is a normal game. Only ever 2, and only on a ranked rematch.';

@@ -294,7 +294,7 @@ export {
 export { FUSE_ONTO_HOOK, fuseGenerated, fuseOntoYourCard, fuseRandomInto } from "./fuse";
 export type { FuseInto, FuseOntoPile } from "./fuse";
 // the Transform variants (B5 E24):
-export { transformBeneath, transformRandom } from "./transform";
+export { swapBook, transformBeneath, transformRandom } from "./transform";
 // the Recruit extensions (B5 E25; `recruit` above gained `from`, `whose` and `count`):
 export { recruitAll } from "./summon";
 export type { RecruitSource } from "./summon";

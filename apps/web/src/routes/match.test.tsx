@@ -614,7 +614,7 @@ describe("the match screen's ranks (R604, R612)", () => {
   });
 });
 
-describe("the death screen's rematch offers (R659)", () => {
+describe("the death screen's rematch offers (R672)", () => {
   /** A finished game of a series in this status, shaped like the R259 block's answer. */
   function seriesIn(status: string): Record<string, unknown> {
     const decks = [0, 1, 2].map((slot) => ({
@@ -692,12 +692,16 @@ describe("the death screen's rematch offers (R659)", () => {
     expect(screen.queryByTestId("rematch-double")).toBeNull();
   });
 
-  it("offers a rematch again once the series is over", async () => {
+  it("shows no rematch once the series is over either: finished series games are refused too", async () => {
     stubMatchFetch(seriesIn("over"));
     render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
     finish();
 
-    expect(await screen.findByTestId("rematch-offer")).toBeInTheDocument();
+    // The banner read the series (so the hook ran), yet no rematch rendered for it.
+    await screen.findByTestId("series-banner");
+    await act(async () => {});
+    expect(screen.queryByTestId("rematch-offer")).toBeNull();
+    expect(screen.queryByTestId("rematch-double")).toBeNull();
   });
 });
 

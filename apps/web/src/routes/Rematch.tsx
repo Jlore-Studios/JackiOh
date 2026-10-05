@@ -1,4 +1,4 @@
-// The death screen's way to play again: rematch offers after an online match (SPEC §9.5, R659).
+// The death screen's way to play again: rematch offers after an online match (SPEC §9.5, R672).
 //
 // After a non-series match ends, either seat may offer a rematch — a normal one or, in a ranked
 // match, a double-or-nothing — and matching offers start one new game with the finished decks.
@@ -39,7 +39,7 @@ export type RematchButtonsProps = {
   matchId: string;
   /** Our own socket's state; anything but open hides every button. */
   connection: ConnectionState;
-  /** Whether the finished match was ranked: only ranked games go double-or-nothing (R659). */
+  /** Whether the finished match was ranked: only ranked games go double-or-nothing (R672). */
   ranked: boolean;
 };
 

@@ -507,13 +507,13 @@ export type MatchRow = {
    */
   ranked?: boolean;
   /**
-   * R659: the mode a rematch was made in, written when the rematch is created (migration 0023).
+   * R672: the mode a rematch was made in, written when the rematch is created (migration 0023).
    * Absent on every older row, whose mode `matches.modeOf` keeps deriving from its tickets, room
    * or series exactly as before — no creation site but the rematch writes this.
    */
   mode?: QueueMode;
   /**
-   * R659: a double-or-nothing rematch's stakes (migration 0023). Absent reads as 1, a normal game;
+   * R672: a double-or-nothing rematch's stakes (migration 0023). Absent reads as 1, a normal game;
    * only 2 is ever written, and only on a ranked rematch.
    */
   stake?: 1 | 2;
@@ -1142,12 +1142,12 @@ export type StartMatchInput = {
   ranked: boolean;
   seats: [MatchSeat, MatchSeat];
   /**
-   * R659: the mode a rematch is made in, carried onto the match row. Absent everywhere else: the
+   * R672: the mode a rematch is made in, carried onto the match row. Absent everywhere else: the
    * queue, the rooms and the series keep deriving the mode from what made the match
    * (`matches.modeOf`), and only a rematch — which no ticket, room or series made — states it.
    */
   mode?: QueueMode;
-  /** R659: a double-or-nothing rematch's stakes, carried onto the match row. Absent reads as 1. */
+  /** R672: a double-or-nothing rematch's stakes, carried onto the match row. Absent reads as 1. */
   stake?: 1 | 2;
 };
 
@@ -1168,7 +1168,7 @@ export type MatchDirectory = {
   /** Drop the in-memory actor; the log stays. Used by the reaper and by tests. */
   stop: (matchId: string) => Promise<void>;
   /**
-   * R659: which seats' match sockets are open right now, or null when no live actor holds the
+   * R672: which seats' match sockets are open right now, or null when no live actor holds the
    * match. The rematch status reads the opponent's seat off this: presence is an open socket, so
    * a player who left or logged out reads as gone.
    */

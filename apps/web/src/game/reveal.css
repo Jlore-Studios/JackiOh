@@ -105,7 +105,7 @@
   }
 }
 
-/* R659: the death screen's way back in (routes/Rematch.tsx) — the two offers side by side, the
+/* R672: the death screen's way back in (routes/Rematch.tsx) — the two offers side by side, the
    incoming offer above them, the wait below. Unanimated, so reduced motion needs no exception. */
 .rematch {
   display: flex;
