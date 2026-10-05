@@ -2530,7 +2530,7 @@
       },
       "ci_run_id": 37297489784,
       "ci_sha": "5f724b531d6f9b67f6b82afe817adbc866dfb1db",
-      "cross_rounds": 3,
+      "cross_rounds": 4,
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
@@ -2548,7 +2548,20 @@
       "interruptions": 0,
       "issue": 255,
       "kind": "review",
-      "last_findings": [],
+      "last_findings": [
+        {
+          "claim": "Unresolved, nested merge-conflict markers are committed in the rulings index, and the R661 `it(...)` block has lost its closing `});`, so the file does not parse; the engine test project, typecheck, lint and the index's completeness test cannot pass.",
+          "evidence": "`git grep -nE '^(<<<<<<<|=======|>>>>>>>)( |$)'` on HEAD hits lines 4044, 4045, 4053, 4054, 4074 and 4085; the same grep on base a6a6b63e finds nothing. In lines 4044\u20134085 the R661 block ends at `provenIn(661, \u2026);` followed by `=======`, and the only `});` after it is R667's. Deleting the marker lines alone still leaves the R661 block unclosed. The markers have been there since 5a6bcc87 (the revise pass) and survived both later merges of main.",
+          "severity": "blocking",
+          "where": "packages/engine/test/rulings.test.ts:4044"
+        },
+        {
+          "claim": "SPEC \u00a711's table has committed, nested conflict markers (`<<<<<<< HEAD` twice, `=======` twice, `>>>>>>> origin/main` twice) around the R661, R662 and R667 rows, so the master spec is corrupted and its ruling table broken.",
+          "evidence": "`sed -n 1876,1888p SPEC.md` shows R660, then two `<<<<<<< HEAD` lines, R661, two `=======` lines, R662, `>>>>>>> origin/main`, R667, `>>>>>>> origin/main`. Base a6a6b63e has no markers. The intended order is R660, R661, R662, R667 with the six marker lines removed.",
+          "severity": "blocking",
+          "where": "SPEC.md:1878"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
