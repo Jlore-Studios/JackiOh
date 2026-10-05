@@ -1819,7 +1819,7 @@
       "pending_request": false,
       "provider": "devin",
       "question": "",
-      "queued_at": "2026-10-05T10:25:42Z",
+      "queued_at": "2026-10-05T10:37:08Z",
       "requested_by": "jgoetzmann",
       "run_id": "37296497879",
       "self_check_findings": [
