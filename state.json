@@ -2525,7 +2525,9 @@
     },
     "287": {
       "action": "review",
-      "asks": [],
+      "asks": [
+        "c:5995443818"
+      ],
       "ci_fixes": 1,
       "ci_reruns": {
         "5f724b531d6f9b67f6b82afe817adbc866dfb1db": 1
@@ -2540,7 +2542,7 @@
       "forced": false,
       "interruptions": 0,
       "issue": 255,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [
         {
           "claim": "Unresolved merge-conflict markers are committed in SPEC.md, breaking the rulings table.",
@@ -2558,8 +2560,8 @@
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-05T12:26:37Z",
-      "requested_by": "jgoetzmann-bot",
+      "queued_at": "2026-10-05T13:28:51Z",
+      "requested_by": "jgoetzmann",
       "run_id": "37309579511",
       "self_check_findings": [
         {
@@ -2581,7 +2583,7 @@
           "where": "checks"
         }
       ],
-      "source": "",
+      "source": "request",
       "started_at": "2026-10-05T12:28:07Z",
       "stop_requested": false,
       "taken_asks": [],
