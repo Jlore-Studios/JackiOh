@@ -2085,7 +2085,7 @@
       "pending_request": false,
       "provider": "devin",
       "question": "",
-      "queued_at": "2026-10-05T10:25:20Z",
+      "queued_at": "2026-10-05T10:25:37Z",
       "requested_by": "jgoetzmann",
       "run_id": "37294214976",
       "self_check_findings": [
@@ -2096,7 +2096,7 @@
           "where": "self check"
         }
       ],
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-10-05T10:08:40Z",
       "stop_requested": false,
       "taken_asks": [],
