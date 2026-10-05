@@ -3058,12 +3058,22 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "cognition",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "37377799084",
+            "tier": "medium"
+          }
+        ],
         "sha": "caa36ac0d05f4db84bc67eb986e18a0223b8f57d",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "325": {
