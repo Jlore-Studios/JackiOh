@@ -2578,9 +2578,7 @@
       "source": "",
       "started_at": "2026-10-05T13:29:54Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5995443818"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "cognition",
