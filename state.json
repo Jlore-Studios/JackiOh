@@ -2457,6 +2457,14 @@
       "requested_by": "jgoetzmann",
       "stop_requested": false
     },
+    "296": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-05T04:55:06Z",
+      "issue": 291,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "31": {
       "failures": 0,
       "forced": false,
