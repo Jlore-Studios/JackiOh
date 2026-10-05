@@ -742,7 +742,7 @@
       "ci_sha": "50979d8126c530475ffdbe5d951cdef0092b44c5",
       "died": 0,
       "failures": 0,
-      "feedback_since": "2026-10-04T18:26:01Z",
+      "feedback_since": "2026-10-05T04:01:39Z",
       "forced": false,
       "interruptions": 0,
       "issue": 37,
@@ -755,7 +755,7 @@
       "requested_by": "jgoetzmann",
       "run_id": "37261696658",
       "self_check_findings": [],
-      "source": "request",
+      "source": "",
       "started_at": "2026-10-05T04:01:39Z",
       "stop_requested": false,
       "taken_asks": [
