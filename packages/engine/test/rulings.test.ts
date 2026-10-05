@@ -4003,6 +4003,16 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(656, "effects-cast.test.ts");
   });
 
+  // Proved by apps/web test/ux/drag-continue.test.tsx "R658 …" (a second drag from a pick, a backrow
+  // card dropped on the board, a prompt option dragged out of its panel) and test/ux/drag-model.test.ts
+  // "R658 …" (the plans and the drops).
+  it("R658 drags a second choice from its picks, a backrow card onto the board, and a prompt's options", () => {
+    provenIn(
+      658,
+      "../../../apps/web/src/test/ux/drag-continue.test.tsx",
+      "../../../apps/web/src/test/ux/drag-model.test.ts",
+    );
+  });
   // Proved by apps/web net/auth-methods.test.ts "R664 …" (what the sign-in mailer sends, its neutral
   // answers, the code's one sentence) and routes/login-methods.test.tsx "R664 …" (the code signs in;
   // the link signs in only the browser holding its verifier).

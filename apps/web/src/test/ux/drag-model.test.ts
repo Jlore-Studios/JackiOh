@@ -532,3 +532,52 @@ describe("B35 resolveDrop acts only on a drop the plan allows", () => {
     expectIdle(resolveDrop(view(), LEGAL, PLAN_H1, OUTSIDE));
   });
 });
+
+// ---------------------------------------------------------------------------------------------
+// R658: a build in flight lifted again from what it has picked
+// ---------------------------------------------------------------------------------------------
+
+describe("R658 a play narrowed to its zone is dragged again from that zone to its Cry target", () => {
+  /** c1 dropped (or clicked) into units lane 4, its Cry target still to name. */
+  function placed(): Interaction {
+    return clicked(yourZone("units", 4), clicked(hand("c1")));
+  }
+
+  it("R658 a press on the chosen zone lifts the build itself, with the arrow, onto its targets", () => {
+    const build = placed();
+    const plan = planDrag(view(), LEGAL, build, yourZone("units", 4), "zone-you-units-4");
+    expect(plan).not.toBeNull();
+    if (plan === null) return;
+    expect(plan.kind).toBe("play");
+    expect(plan.lifted).toBe(build);
+    expect(plan.arrow).toBe(true);
+    expect(plan.freeDrop).toBe(false);
+    expect(plan.sourceTestid).toBe("zone-you-units-4");
+    expect(plan.missed).toBe(build);
+    expect([...plan.dropTestids].sort()).toEqual(["card-e1", "hero-opponent"]);
+  });
+
+  it("R658 the drop on a target sends the body click-click sends; a drop on nothing keeps the build", () => {
+    const build = placed();
+    const plan = planDrag(view(), LEGAL, build, yourZone("units", 4), "zone-you-units-4");
+    if (plan === null) throw new Error("no plan");
+    expect(resolveDrop(view(), LEGAL, plan, at(ENEMY_HERO, "hero-opponent")).action).toEqual(C1_HERO);
+    expect(onClickTarget(view(), LEGAL, build, ENEMY_HERO).action).toEqual(C1_HERO);
+    expect(resolveDrop(view(), LEGAL, plan, BOARD)).toEqual({ interaction: build });
+    expect(resolveDrop(view(), LEGAL, plan, OUTSIDE)).toEqual({ interaction: build });
+  });
+
+  it("R658 the play's hand card still lifts it afresh, and a cell it has not picked lifts nothing", () => {
+    const build = placed();
+    expect(planDrag(view(), LEGAL, build, hand("c1"), "hand-card-c1")?.lifted).toEqual(lifting("c1", [C1_E1, C1_HERO]));
+    expect(planDrag(view(), LEGAL, build, yourZone("units", 5), "zone-you-units-5")).toBeNull();
+  });
+
+  it("R658 a build with nothing picked yet, or with only a picker's choice left, is not lifted again", () => {
+    const fresh = clicked(hand("c1"));
+    expect(planDrag(view(), LEGAL, fresh, yourZone("units", 4), "zone-you-units-4")).toBeNull();
+    // x1 has nothing on the board to aim at: its X is a picker's.
+    const x = pickInPlay(clicked(hand("x1")), {}).interaction;
+    expect(planDrag(view(), LEGAL, x, hand("x1"), "hand-card-x1")?.lifted).toEqual(lifting("x1", [X1_1, X1_2]));
+  });
+});
