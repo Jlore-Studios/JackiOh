@@ -2568,19 +2568,16 @@
           "muse"
         ],
         "builder": "muse",
-        "rejections": [
-          "claude"
-        ],
+        "rejections": [],
         "reviews": [
           {
             "family": "muse",
-            "run": "37289606629",
+            "run": "37294048467",
             "tier": "medium"
           }
         ],
-        "sha": "27dd8b0d97f54b1835a4e7121d04fc93cdb5873f",
+        "sha": "29cec7e60e0e3ccdd10abd7e24d0469920b5dc6f",
         "tiers": {
-          "claude": "strong",
           "muse": "medium"
         }
       }
