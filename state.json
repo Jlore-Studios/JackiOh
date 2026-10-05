@@ -1783,7 +1783,7 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-05T02:15:28Z",
+      "feedback_since": "2026-10-05T03:26:35Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-05T03:24:36Z",
@@ -1805,7 +1805,7 @@
       "requested_by": "jgoetzmann",
       "run_id": "37259388330",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-05T03:26:35Z",
       "stop_requested": false,
       "taken_asks": [],
