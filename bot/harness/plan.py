@@ -830,8 +830,12 @@ def _provider_fields(ctx: Context, provider: Provider) -> dict[str, Any]:
     """What the model job needs to know about the subscription it runs on. The secret's value
     is never here: the workflow hands the model job only the secret named."""
     vault, _ = ctx.gh.get_file(vault_path(provider.id), STATE_BRANCH)
+    # `shared` names the run's model step "Build, check and review", which the partner bot
+    # reads as this bot spending the shared subscription, so it excuses the rise. claude-1 is
+    # that subscription whether or not this bot waits for it to be quiet (`quiet_check`).
+    shared = provider.quiet_check or provider.id == "claude-1"
     return {"provider": provider.id, "cli": provider.cli, "secret": provider.secret,
-            "family": provider.family, "shared": provider.quiet_check, "vault": vault or "",
+            "family": provider.family, "shared": shared, "vault": vault or "",
             "login": provider.login, "runs_on": provider.runs_on}
 
 

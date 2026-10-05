@@ -147,7 +147,6 @@ const CARDS_GLITCH_TEST = "../../cards/test/classic/t-glitch-glitch.test.ts";
 const SERVER_GLITCH_TEST = "../../../apps/server/test/match/glitch.test.ts";
 const SERVER_CONTRACT_TEST = "../../../apps/server/test/db/contract.ts";
 const WEB_PRACTICE_GLITCH_TEST = "../../../apps/web/src/practice/core-glitch.test.ts";
-const WEB_NET_TEST = "../../../apps/web/src/game/net.test.ts";
 const WEB_ALMANAC_GLITCH_TEST = "../../../apps/web/src/routes/almanac.test.tsx";
 const WEB_FILTERS_GLITCH_TEST = "../../../apps/web/src/game/deckbuilder/filters.test.ts";
 const WEB_HISTORY_GLITCH_TEST = "../../../apps/web/src/patches/history.test.ts";
@@ -4011,6 +4010,38 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // friends, and Jogg's Box stays fully random.
   it("R656 a cast that targets enemies aims each target pick by its declaration", () => {
     provenIn(656, "effects-cast.test.ts");
+  });
+
+  // Proved by engine animated.test.ts "R657 …" (a stat-less Animated card animates to 0/1, printed or
+  // granted, on either face).
+  it("R657 an Animated card with no printed stats fights as a 0/1", () => {
+    provenIn(657, "animated.test.ts");
+  });
+
+  // Proved by apps/web test/ux/drag-continue.test.tsx "R658 …" (a second drag from a pick, a backrow
+  // card dropped on the board, a prompt option dragged out of its panel) and test/ux/drag-model.test.ts
+  // "R658 …" (the plans and the drops).
+  it("R658 drags a second choice from its picks, a backrow card onto the board, and a prompt's options", () => {
+    provenIn(
+      658,
+      "../../../apps/web/src/test/ux/drag-continue.test.tsx",
+      "../../../apps/web/src/test/ux/drag-model.test.ts",
+    );
+  });
+
+  // Proved by packages/cards/test/flavour.test.ts "R660 …" (the sidecar's keys, coverage, fields and
+  // caps), apps/web cards/flavour.test.tsx "R660 …" (no rules words; the preview, the sheet and the
+  // detail show it, the face and an unnamed card never), routes/almanac.test.tsx "R660 …" (the
+  // Almanac's detail), and cards/art/convention.test.ts "R660 …" (the art directory and the manifest
+  // against the convention, and each refusal).
+  it("R660 flavour and artist credits are a sidecar shown in inspect, and real art meets one file convention", () => {
+    provenIn(
+      660,
+      "../../cards/test/flavour.test.ts",
+      "../../../apps/web/src/cards/flavour.test.tsx",
+      "../../../apps/web/src/routes/almanac.test.tsx",
+      "../../../apps/web/src/cards/art/convention.test.ts",
+    );
   });
 
   // Proved by glitch.test.ts and the real card's test: no draw at all before a System play, one more

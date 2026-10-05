@@ -15,6 +15,8 @@
 // them. The actions row (the caller's actions and Close) is pinned under the scrolling body, so it
 // is visible the moment the dialog opens, which is also where focus lands.
 //
+// After the glossary, the card's flavour line and artist credit (R660, Flavour.tsx).
+//
 // Last in the column, the card's History (R388, patches/CardHistory.tsx): collapsed under a
 // "History" control, it loads the card's patch history when opened and lists each patch that changed
 // the card, newest first, with its faces as that patch left them and what changed marked. The
@@ -31,6 +33,7 @@ import { glossaryFor } from "../rules.ts";
 import { RulesText } from "../RulesText.tsx";
 import { RefsInteractive } from "../refContext.tsx";
 import { CardHistory } from "../../patches/CardHistory.tsx";
+import { Flavour } from "./Flavour.tsx";
 import { Glossary, mergeGlossary } from "./Glossary.tsx";
 import { CardStatsBlock } from "../../stats/CardStatsBlock.tsx";
 import { VoicePreview } from "./VoicePreview.tsx";
@@ -159,6 +162,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
               </p>
               <DetailRules base={base} radiant={radiant} />
               <Glossary entries={glossary} />
+              <Flavour defId={def.id} />
               {showStats ? <CardStatsBlock key={`stats-${def.id}`} cardId={def.id} /> : null}
               {meta === undefined || meta === null ? null : <div className="inspect-detail-meta">{meta}</div>}
               <CardHistory key={def.id} cardId={def.id} initiallyOpen={historyOpen} />

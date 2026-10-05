@@ -151,6 +151,12 @@ export const RANDOM_KEYWORD_POOL = [
  */
 export const RADIANT_FALLBACK_FACTOR = 2;
 
+/** R657: an Animated card with no printed stats fights with this attack. */
+export const ANIMATED_FALLBACK_ATTACK = 0;
+
+/** R657: an Animated card with no printed stats fights with this health. */
+export const ANIMATED_FALLBACK_HEALTH = 1;
+
 /**
  * R348: the least X a player may choose for an X-cost card whose X is theirs to choose (#24, #74).
  * Heroic Power's X is its power's and never chosen (R43), so this does not reach it.
