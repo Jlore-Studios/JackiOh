@@ -2073,7 +2073,9 @@
     },
     "322": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6003897668"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -2099,9 +2101,7 @@
       "run_id": "37379857313",
       "started_at": "2026-10-05T22:03:28Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6003897668"
-      ]
+      "taken_asks": []
     },
     "323": {
       "action": "build",
