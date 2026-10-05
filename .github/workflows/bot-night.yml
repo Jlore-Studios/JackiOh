@@ -9,9 +9,10 @@
 # only its own login; bot/machine/README.md). The machine starts itself when such a job queues
 # and powers off when idle. gate, plan and deliver always run on GitHub's runners.
 #
-# gate starts nothing unless there is work a free subscription can take, and when the best one
-# for it is the shared Claude subscription (claude-1), waits until it is quiet: nobody else is
-# spending it, apart from the partner bot (bright-bots-harness). plan and deliver hold the bot
+# gate starts nothing unless there is work a free subscription can take; it no longer waits
+# for the shared Claude subscription (claude-1) to be quiet, though a run on claude-1 still
+# names its model step so the partner bot (bright-bots-harness) excuses the spending.
+# plan and deliver hold the bot
 # account's token and run no model. gate and work hold a model secret and no GitHub write token;
 # work holds only the one secret of the subscription plan chose, and its output is a result file
 # and a git bundle that deliver checks for itself before pushing.
