@@ -35,11 +35,11 @@ function played(opts: { radiant?: boolean; seed?: string; hand?: number } = {}):
 }
 
 describe("C+ #65 Two Grapes", () => {
-  it("is a (1) Fruit Spell that names the five Grapes, and both faces run one shape of hook", () => {
+  it("is a (1) Fruit Spell with no refs ('Grape' names the five Grapes, R480), and both faces run one shape of hook", () => {
     expect(def.id).toBe(GRAPES);
     expect(def.cost).toBe(1);
     expect(def.tags).toContain("Fruit");
-    expect(def.refs).toEqual(GRAPE_IDS);
+    expect(def.refs).toBeUndefined();
     expect(def.params).toEqual([{ key: "grapes", base: 2, radiant: 2, better: "up", step: 1, min: 1 }]);
     expect(typeof base.cry).toBe("function");
     expect(typeof radiant.cry).toBe("function");

@@ -3145,7 +3145,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // Proved by 021-hinder.test.ts "R431 …".
-  it("R431 makes Hinder's base face discard 1 card of its caster's choice", () => {
+  it("R431 makes Hinder's base face discard 1 random card of its caster's hand", () => {
     provenIn(431, "../../cards/test/021-hinder.test.ts");
   });
 

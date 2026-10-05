@@ -3,7 +3,7 @@
 // again, at most `CHAIN_OF_THOUGHT_REPEATS` (4) more times, 5 draws in all; a cast-on-draw card (never in
 // hand, R58), a burned card or a fatigue draw ends the chain; radiant the threshold is (2)".
 
-import { CHAIN_OF_THOUGHT_REPEATS, hashState, reduce, type GameState } from "@jackioh/engine";
+import { CHAIN_OF_THOUGHT_REPEATS } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type PileSetup, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/t-ai-04-chain-of-thought";
@@ -14,7 +14,7 @@ const RAPID = "core-010"; // (0) Spell
 const D_FENDER = "core-001"; // (2) Unit
 const MENACE = "core-019"; // (3) Unit
 const ADAPTIVE_UI = "core-074"; // (X) Spell
-const HINDER = "core-021"; // (0) Spell, cast on draw; the base face asks its caster to discard 1 (R431)
+const HINDER = "core-021"; // (0) Spell, cast on draw; the base face discards 1 at random with no prompt (R431, R661)
 const VANILLA = "core-008"; // (1) Unit, the spare in hand
 const PALANTIR = "classic-004"; // (1) Field Spell: "Aura: Your opponent can't draw more than 1 card each turn."
 
@@ -108,29 +108,21 @@ describe("T-AI-4 Chain of Thought", () => {
       expect(s.view("p2").opponent.hand).toEqual({ count: 3 });
     });
 
-    it("R158 R113 a cast-on-draw card that asks pauses mid-draw; answered after a JSON round trip, the chain has ended", () => {
+    it("R661, R431 Hinder's random discard asks nothing mid-draw: no prompt opens and the chain has ended", () => {
       const s = chain([TIMMY, HINDER, TIMMY, TIMMY]).play(CHAIN);
-      expect(s.state.pending?.kind).toBe("hand");
+      // R661: "Discard 1" names no "of your choice", so the discard is random and no
+      // hand prompt pauses the draw; the cast-on-draw card still ends the chain (R58, R596).
+      expect(s.state.pending).toBeNull();
 
-      const revived = JSON.parse(JSON.stringify(s.state)) as GameState;
-      expect(revived).toEqual(s.state);
-      const spare = s.hand("p1").find((card) => card.defId === VANILLA);
-      const selection = [{ pick: "instance" as const, instanceId: spare?.id ?? "" }];
-      const resumed = reduce(revived, {
-        type: "answer",
-        playerId: "p1",
-        choiceId: revived.pending?.id ?? "",
-        selection,
-        nonce: "chain-pause",
-      });
-      expect(resumed.error).toBeUndefined();
-      s.answer(selection);
-      expect(hashState(resumed.state)).toBe(hashState(s.state));
-
-      // Timmy, then Hinder cast (discarding the Vanilla), whose repeat drew the second Timmy; the third stays.
+      // Timmy, then Hinder cast (discarding one card at random), whose repeat drew the
+      // second Timmy; the third stays. The chain itself drew nothing more.
+      expect(drawn(s)).toBe(3);
       s.expectInZone(HINDER, "graveyard");
-      expect(s.hand("p1").map((card) => card.defId).sort()).toEqual([TIMMY, TIMMY]);
+      s.expectInZone(CHAIN, "graveyard");
+      expect(s.pile("p1", "graveyard")).toHaveLength(3);
       expect(s.pile("p1", "library").map((card) => card.defId)).toEqual([TIMMY]);
+      expect(s.hand("p1")).toHaveLength(2);
+      expect(s.hand("p1").map((card) => card.defId)).toContain(TIMMY);
     });
   });
 

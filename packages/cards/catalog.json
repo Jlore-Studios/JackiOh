@@ -7894,10 +7894,6 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 1,
-    "refs": [
-      "core-t-coin",
-      "classicplus-042-1"
-    ],
     "loc": 3,
     "base": {
       "keywords": [],
@@ -8745,13 +8741,6 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
-    "refs": [
-      "classicplus-065-1",
-      "classicplus-065-2",
-      "classicplus-065-3",
-      "classicplus-065-4",
-      "classicplus-065-5"
-    ],
     "params": [
       {
         "key": "grapes",
@@ -8945,13 +8934,6 @@
     "rarity": "Rare",
     "token": false,
     "cost": 3,
-    "refs": [
-      "classicplus-065-1",
-      "classicplus-065-2",
-      "classicplus-065-3",
-      "classicplus-065-4",
-      "classicplus-065-5"
-    ],
     "params": [
       {
         "key": "grapes",

@@ -34,9 +34,15 @@ const DEALT_BY_A_RULE: readonly string[] = ["core-t-coin"];
 const RULES_WORDS: readonly string[] = ["Exile", "Burn", "Echo", "Recycle"];
 
 /** R480: the token pools a card names by tag, and the phrase that names each. */
-const TOKEN_POOLS: readonly { tag: "Pancake" | "AI"; phrase: string }[] = [
+const TOKEN_POOLS: readonly { tag: "Pancake" | "AI" | "Fruit" | "KY"; phrase: string }[] = [
   { tag: "Pancake", phrase: "Pancake token" },
   { tag: "AI", phrase: "AI generated card" },
+  // Balance patch 1 reworded C+ #78 to "AI Generated card": the pool is named in either case.
+  { tag: "AI", phrase: "AI Generated card" },
+  // Balance patch 1 hid the odds: "Grape" names the five Grapes (C+ #65, C+ #66).
+  { tag: "Fruit", phrase: "Grape" },
+  // Balance patch 1 hid the reward lists: "a random reward" names KY's Gift (C+ #42).
+  { tag: "KY", phrase: "random reward" },
 ];
 
 /** The names a text may call a card by: its name, and its name before a parenthesis. */
@@ -88,7 +94,7 @@ describe("R279 the reference map (SPEC §5, §7, §10.10)", () => {
     expect(wrong).toEqual([]);
   });
 
-  it("R279 has every token named by at least one card, except what a rule deals (The Coin, which Classic+ #42 KY's Test also names)", () => {
+  it("R279 has every token named by at least one card, except what a rule deals (The Coin)", () => {
     const named = new Set(ENTRIES.flatMap((card) => card.refs ?? []));
     // R480: a card whose text names a token pool by its tag names every member of it.
     for (const pool of TOKEN_POOLS) {
@@ -109,7 +115,15 @@ describe("R279 the reference map (SPEC §5, §7, §10.10)", () => {
       ENTRIES.filter((card) => [card.base.text, card.radiant.text].some((text) => text.includes(phrase))).map((card) => card.id);
     expect(naming("Pancake token")).toEqual(["classicplus-012", "classicplus-013"]);
     // AI Slop and Claude's Datacenter make them; Scaling Law counts them.
-    expect(naming("AI generated card")).toEqual(["classicplus-043", "classicplus-078", "classicplus-t-ai-02"]);
+    expect(naming("AI generated card")).toEqual(["classicplus-043", "classicplus-t-ai-02"]);
+    // Balance patch 1 reworded Claude's Datacenter to "AI Generated card".
+    expect(naming("AI Generated card")).toEqual(["classicplus-078"]);
+    const fruits = ENTRIES.filter((card) => card.token && card.tags.includes("Fruit")).map((card) => card.index);
+    expect(fruits).toEqual(["65.1", "65.2", "65.3", "65.4", "65.5"]);
+    // Balance patch 1 hid the odds and the reward lists: "Grape" names the five
+    // Grapes, and "a random reward" names KY's Gift.
+    expect(naming("Grape")).toEqual(["classicplus-065", "classicplus-066"]);
+    expect(naming("random reward")).toEqual(["classicplus-042"]);
   });
 
   it("R381 reads Exile, Burn, Echo and Recycle as rules words: a text that says one names no card unless its refs list it", () => {
