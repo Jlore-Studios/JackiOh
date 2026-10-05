@@ -4170,6 +4170,26 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(672, "../../../apps/server/test/api/rematch.test.ts");
   });
 
+  // Proved by apps/web game/slam.test.ts "R700 …" (what slams and what never does, the stats read off
+  // the newest view and the printed Tribute, both seats alike) and game/unitSlam.test.ts (the tiers'
+  // boundaries and the weights).
+  it("R700 a Unit the viewer can see lands with a weight read off its total stats", () => {
+    provenIn(700, "../../../apps/web/src/game/slam.test.ts");
+  });
+
+  // Proved by apps/web game/slam.test.ts "R701 …" (each tier's row, the action's shared totals,
+  // Reduce motion, the anticipation inside the entry) and fx/slam.test.ts "R701 …" (dust, shake,
+  // shockwave by tier, on the landing beat).
+  it("R701 a landing is its own animation entry, decorated by tier and capped per action", () => {
+    provenIn(701, "../../../apps/web/src/game/slam.test.ts", "../../../apps/web/src/fx/slam.test.ts");
+  });
+
+  // Proved by apps/web audio/slam.test.ts "R702 …" (the thud and impact by tier, the pitch spread,
+  // and the crowd through #57's quiet period, neutral).
+  it("R702 a landing's thud and the crowd's answer follow its tier", () => {
+    provenIn(702, "../../../apps/web/src/audio/slam.test.ts");
+  });
+
   // Proved by playChoices.test.ts "R703 …" (a needed pick the board cannot satisfy is neither
   // offered nor accepted, a plain one still plays, and a cast fizzles) and Plastic Surgery's own test
   // (both faces, either side, and the cast).

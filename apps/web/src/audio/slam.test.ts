@@ -7,11 +7,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CROWD_FEEL, SLAM_PITCH_SPREAD, UNIT_SLAM } from "../game/damageFeel.ts";
 import { baseView, unit } from "../test/fixtures.ts";
 import { createCrowdDirector } from "./crowd.ts";
-import { SOUND_CUES, type CueContext, type SoundCue } from "./cues.ts";
+import { SOUND_CUES, type CueContext } from "./cues.ts";
 import { createAudioEngine } from "./engine.ts";
 import { SFX } from "./sfx.ts";
 import { fakeContextFactory } from "./test/fakeAudio.ts";
-import type { AudioEngine } from "./types.ts";
+import type { AudioEngine, SoundCue } from "./types.ts";
 
 const engines: AudioEngine[] = [];
 afterEach(() => {

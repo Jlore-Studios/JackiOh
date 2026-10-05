@@ -16,7 +16,7 @@ import { StrictMode, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ANIMATIONS, HIDDEN_ID } from "./animations.ts";
-import { DAMAGE_FEEL } from "./damageFeel.ts";
+import { DAMAGE_FEEL, SLAM_LAND_AT, UNIT_SLAM } from "./damageFeel.ts";
 import Game from "./Game.tsx";
 import { resultReason } from "./Result.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
@@ -104,6 +104,50 @@ describe("issue #57 damage feel", () => {
       vi.advanceTimersByTime(DAMAGE_FEEL.normal.hitStopMs);
     });
     expect(screen.getByTestId("game")).not.toHaveAttribute("data-hit-stop");
+  });
+});
+
+describe("issue #185 unit slam on the board", () => {
+  /** A MASSIVE Unit (20/20) landing in the opponent's lane 3: the newest view has it standing there. */
+  function landing(): { before: PlayerView; after: PlayerView } {
+    const giant = unit("p2", { instanceId: "giant", attack: 20, health: 20, maxHealth: 20 });
+    const before = withEvents(baseView(), START);
+    const event: GameEvent = { type: "summoned", player: "p2", instanceId: "giant", defId: giant.defId, row: "units", lane: 3 };
+    const after = withEvents(
+      baseView({ opponent: emptySide("p2", { hand: { count: 4 }, units: [null, null, giant, null, null] }) }),
+      [...START, event],
+    );
+    return { before, after };
+  }
+
+  it("R701 marks the board with the landing's tier and side, hangs for its anticipation, then hit-stops on the landing", () => {
+    const { before, after } = landing();
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
+    const game = screen.getByTestId("game");
+    expect(game).toHaveAttribute("data-slam-tier", "massive");
+    expect(game).toHaveAttribute("data-slam-side", "opponent");
+    expect(game.style.getPropertyValue("--slam-anticipation")).toBe(`${String(UNIT_SLAM.massive.anticipationMs)}ms`);
+    expect(game).not.toHaveAttribute("data-hit-stop");
+    act(() => {
+      vi.advanceTimersByTime(UNIT_SLAM.massive.anticipationMs + ANIMATIONS.summoned.durationMs * SLAM_LAND_AT);
+    });
+    expect(game).toHaveAttribute("data-hit-stop", "true");
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(game).not.toHaveAttribute("data-slam-tier");
+    expect(game).not.toHaveAttribute("data-hit-stop");
+  });
+
+  it("R701 under Reduce motion the landing still hit-stops, with no anticipation", () => {
+    writeSettings({ reduceMotion: true });
+    const { before, after } = landing();
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
+    const game = screen.getByTestId("game");
+    expect(game).toHaveAttribute("data-hit-stop", "true");
+    expect(game).not.toHaveAttribute("data-slam-tier");
   });
 });
 

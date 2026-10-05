@@ -1,4 +1,4 @@
-// Unit Slam (#185): how hard a Unit lands, from its size. Presentation only (CLAUDE.md rule 7): it
+// Unit Slam (#185, R700): how hard a Unit lands, from its size. Presentation only (CLAUDE.md rule 7): it
 // reads the public numbers of a Unit the viewer can see and never changes resolution or timing.
 // Its numbers are in damageFeel.ts, beside #57's (CLAUDE.md rule 9).
 
