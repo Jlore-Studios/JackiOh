@@ -59,7 +59,7 @@ function enclosingZone(element: Element): Element | null {
   return null;
 }
 
-/** A control inside a card (the switch button) is pressed, never dragged. */
+/** A control on a card or in its zone (the switch button) is pressed, never dragged. */
 function isControl(element: Element): boolean {
   const tag = element.tagName.toLowerCase();
   return tag === "button" || tag === "input" || element.getAttribute("role") === "button";
@@ -75,7 +75,8 @@ function isControl(element: Element): boolean {
  *   an Activate control, `power`,
  *   `power-<id>`                     -> { on: "activate", instanceId, ability? } (R384: a press on one is
  *                                       the activation's own, ahead of the card or hero it sits on)
- * A press on any other <button>, <input> or [role=button] inside a card (the switch button) is NOT a drag source.
+ * A press on any other <button>, <input> or [role=button] inside a card or a zone (the switch button) is NOT a
+ * drag source, and maps to nothing.
  */
 export function targetFromElement(element: Element): { target: ClickTarget; testid: string } | null {
   let throughControl = false;
@@ -112,6 +113,8 @@ export function targetFromElement(element: Element): { target: ClickTarget; test
       }
 
       if (ZONE.test(id)) {
+        // #258: the switch sits in the zone, beside its card; a press on it is the switch's.
+        if (throughControl) return null;
         const place = placeOf(at);
         if (place === null) return null;
         return { target: { on: "zone", side: place.side, row: place.row, lane: place.lane }, testid: id };

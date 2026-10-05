@@ -1076,32 +1076,81 @@
   left: auto;
 }
 
-/* The in-card switch (⟳): a small round button in the top-right corner, clear of the stats.
-   `.board` outranks src/index.css's `.app-shell button` padding, which would otherwise make it
-   bigger than the card's name. */
-.board .switch-button {
+/* The switch (⟳), #258: out of the card, a sibling of it in its zone (Card.tsx), so a finger gets a
+   full 44 px target at the zone's top-right corner and a DEF card's rotation never turns it. The
+   button is the transparent target; `.switch-glyph` is the small round badge drawn in its corner.
+   The target takes at most the zone's top-right quarter, `--switch-clear` short of its centre
+   lines, so the middle of a tile is always the card's tap (attack, or pick it as a target) and
+   drag: 44x44 wherever the zone has the room, smaller only on a tile under 2 × (44 + 6) px, where
+   a fixed 44 px would reach the middle (a phone's 64x87, 72x59 held sideways, 45x59 under a
+   lesson's coach). `.board` outranks src/index.css's `.app-shell button` padding. */
+.board .zone > .switch-button {
+  --switch-target: 44px;
+  --switch-clear: 6px;
+  --switch-glyph: 16px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 5;
+  width: min(var(--switch-target), calc(50% - var(--switch-clear)));
+  height: min(var(--switch-target), calc(50% - var(--switch-clear)));
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0 10px 0 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.board .zone > .switch-button > .switch-glyph {
   position: absolute;
   top: 2px;
   right: 2px;
-  bottom: auto;
-  left: auto;
   display: grid;
   place-items: center;
-  width: 16px;
-  height: 16px;
-  padding: 0;
+  width: var(--switch-glyph);
+  height: var(--switch-glyph);
+  border: 1px solid rgb(255 255 255 / 0.4);
   border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #3a4460, #121622);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.7);
+  color: #e8ecf8;
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
+  pointer-events: none;
+}
+
+.board .zone > .switch-button:hover:not(:disabled) > .switch-glyph,
+.board .zone > .switch-button:focus-visible > .switch-glyph {
+  border-color: #fff;
+  background: radial-gradient(circle at 40% 35%, #56618a, #1c2233);
+}
+
+.board .zone > .switch-button[data-legal="true"] > .switch-glyph {
+  border-color: var(--legal, #4ec98a);
+  box-shadow:
+    0 0 0 1px var(--legal, #4ec98a),
+    0 1px 3px rgb(0 0 0 / 0.7);
 }
 
 /* A switch that cannot be pressed (every enemy unit's, and yours while switching is not legal)
    lets the pointer through to its card. A disabled <button> swallows a click, so a tap that landed
    on it did nothing, where the player meant the card under it: an enemy unit picked as a target,
    or your own unit picked to attack. */
-.board .switch-button:disabled {
+.board .zone > .switch-button:disabled {
   pointer-events: none;
+}
+
+.board .zone > .switch-button:disabled > .switch-glyph {
+  opacity: 0.35;
+}
+
+/* The opponent's units never switch on your screen, so their switch draws nothing beside them. */
+.board .zone[data-side="opponent"] > .switch-button:disabled > .switch-glyph {
+  visibility: hidden;
 }
 
 /* ----------------------------------------------------------------------- animation layers --- */
@@ -1666,31 +1715,9 @@
     min-height: 44px;
   }
 
-  /* The switch (⟳) stays a small glyph in the card's corner, but a finger gets a hit area round
-     it: up to 16 px of the card to its left and below (the card clips it, `overflow: hidden`, so
-     it is about 32x32 on a tablet's tile). The rest of the tile is the card's own tap (attack, or
-     pick it as a target) and drag, and the middle above all. A fixed 16 px reached a phone tile's
-     middle (45x59 with a lesson's coach above the board, 72x59 held sideways, smaller on a short
-     phone), so a tap on your unit to attack switched it to Defense instead. So the reach is
-     measured against the tile: a unit's card is a size container, and the hit area stops
-     `--switch-clear` short of its centre lines. In `::before` a percentage is of the button, its
-     containing block, so `50cq* - 100% - 3px` is the room between the glyph (2 px in, inside a
-     1 px border) and the card's centre line. At most the switch takes the tile's top-right
-     quarter; on a tile too small for any reach the glyph alone takes the tap, and the middle is
-     always the card's. A switch that cannot be pressed takes no tap at all (above). */
+  /* The unit's card is a size container; its faces size off it (`cq*`). */
   .board .zone > .card-unit {
     container-type: size;
-  }
-
-  .board .switch-button::before {
-    --switch-clear: 6px;
-    --switch-reach: 16px;
-    content: "";
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    bottom: calc(-1 * clamp(0px, 50cqh - 100% - 3px - var(--switch-clear), var(--switch-reach)));
-    left: calc(-1 * clamp(0px, 50cqw - 100% - 3px - var(--switch-clear), var(--switch-reach)));
   }
 }
 
@@ -1817,9 +1844,11 @@
     bottom: 18px;
   }
 
-  .board .switch-button {
-    width: 14px;
-    height: 14px;
+  .board .zone > .switch-button {
+    --switch-glyph: 14px;
+  }
+
+  .board .zone > .switch-button > .switch-glyph {
     font-size: 9px;
   }
 

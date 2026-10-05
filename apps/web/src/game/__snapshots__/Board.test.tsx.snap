@@ -771,18 +771,24 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           >
             ATK
           </span>
-          <button
-            aria-disabled="true"
-            class="switch-button"
-            data-legal="false"
-            data-testid="switch-u6"
-            disabled=""
-            title="Switch position"
-            type="button"
+        </div>
+        <button
+          aria-disabled="true"
+          aria-label="Switch position"
+          class="switch-button"
+          data-legal="false"
+          data-testid="switch-u6"
+          disabled=""
+          title="Switch position"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            class="switch-glyph"
           >
             ⟳
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
       <div
         aria-disabled="true"
@@ -896,18 +902,24 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           >
             ATK
           </span>
-          <button
-            aria-disabled="true"
-            class="switch-button"
-            data-legal="false"
-            data-testid="switch-u1"
-            disabled=""
-            title="Switch position"
-            type="button"
+        </div>
+        <button
+          aria-disabled="true"
+          aria-label="Switch position"
+          class="switch-button"
+          data-legal="false"
+          data-testid="switch-u1"
+          disabled=""
+          title="Switch position"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            class="switch-glyph"
           >
             ⟳
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
       <div
         aria-disabled="true"
@@ -1182,18 +1194,24 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           >
             DEF
           </span>
-          <button
-            aria-disabled="true"
-            class="switch-button"
-            data-legal="false"
-            data-testid="switch-u7"
-            disabled=""
-            title="Switch position"
-            type="button"
+        </div>
+        <button
+          aria-disabled="true"
+          aria-label="Switch position"
+          class="switch-button"
+          data-legal="false"
+          data-testid="switch-u7"
+          disabled=""
+          title="Switch position"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            class="switch-glyph"
           >
             ⟳
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
       <div
         aria-disabled="true"
@@ -1925,18 +1943,24 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           >
             3
           </span>
-          <button
-            aria-disabled="true"
-            class="switch-button"
-            data-legal="false"
-            data-testid="switch-u2"
-            disabled=""
-            title="Switch position"
-            type="button"
+        </div>
+        <button
+          aria-disabled="true"
+          aria-label="Switch position"
+          class="switch-button"
+          data-legal="false"
+          data-testid="switch-u2"
+          disabled=""
+          title="Switch position"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            class="switch-glyph"
           >
             ⟳
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
       <div
         aria-disabled="true"
@@ -2189,18 +2213,24 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           >
             1
           </span>
-          <button
-            aria-disabled="true"
-            class="switch-button"
-            data-legal="false"
-            data-testid="switch-u8"
-            disabled=""
-            title="Switch position"
-            type="button"
+        </div>
+        <button
+          aria-disabled="true"
+          aria-label="Switch position"
+          class="switch-button"
+          data-legal="false"
+          data-testid="switch-u8"
+          disabled=""
+          title="Switch position"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            class="switch-glyph"
           >
             ⟳
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
       <div
         aria-disabled="true"
@@ -2293,18 +2323,24 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           >
             DEF
           </span>
-          <button
-            aria-disabled="true"
-            class="switch-button"
-            data-legal="false"
-            data-testid="switch-u3"
-            disabled=""
-            title="Switch position"
-            type="button"
+        </div>
+        <button
+          aria-disabled="true"
+          aria-label="Switch position"
+          class="switch-button"
+          data-legal="false"
+          data-testid="switch-u3"
+          disabled=""
+          title="Switch position"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            class="switch-glyph"
           >
             ⟳
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
       <div
         aria-disabled="true"
@@ -2590,18 +2626,24 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           >
             ATK
           </span>
-          <button
-            aria-disabled="true"
-            class="switch-button"
-            data-legal="false"
-            data-testid="switch-u9"
-            disabled=""
-            title="Switch position"
-            type="button"
+        </div>
+        <button
+          aria-disabled="true"
+          aria-label="Switch position"
+          class="switch-button"
+          data-legal="false"
+          data-testid="switch-u9"
+          disabled=""
+          title="Switch position"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            class="switch-glyph"
           >
             ⟳
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
       <div
         aria-disabled="true"
@@ -2724,18 +2766,24 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           >
             3
           </span>
-          <button
-            aria-disabled="true"
-            class="switch-button"
-            data-legal="false"
-            data-testid="switch-u4"
-            disabled=""
-            title="Switch position"
-            type="button"
+        </div>
+        <button
+          aria-disabled="true"
+          aria-label="Switch position"
+          class="switch-button"
+          data-legal="false"
+          data-testid="switch-u4"
+          disabled=""
+          title="Switch position"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            class="switch-glyph"
           >
             ⟳
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
       <div
         aria-disabled="true"
@@ -3048,18 +3096,24 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           >
             ATK
           </span>
-          <button
-            aria-disabled="true"
-            class="switch-button"
-            data-legal="false"
-            data-testid="switch-u10"
-            disabled=""
-            title="Switch position"
-            type="button"
+        </div>
+        <button
+          aria-disabled="true"
+          aria-label="Switch position"
+          class="switch-button"
+          data-legal="false"
+          data-testid="switch-u10"
+          disabled=""
+          title="Switch position"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            class="switch-glyph"
           >
             ⟳
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
       <div
         aria-disabled="true"
@@ -3167,18 +3221,24 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               No action left this turn
             </span>
           </span>
-          <button
-            aria-disabled="true"
-            class="switch-button"
-            data-legal="false"
-            data-testid="switch-u5"
-            disabled=""
-            title="Switch position"
-            type="button"
+        </div>
+        <button
+          aria-disabled="true"
+          aria-label="Switch position"
+          class="switch-button"
+          data-legal="false"
+          data-testid="switch-u5"
+          disabled=""
+          title="Switch position"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            class="switch-glyph"
           >
             ⟳
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
       <div
         aria-disabled="true"

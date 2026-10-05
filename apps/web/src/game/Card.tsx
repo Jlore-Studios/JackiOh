@@ -23,7 +23,7 @@
 //
 // R384, R510: a card whose view lists `activations` (its controller's own view of a card acting on
 // the field) wears an Activate control per ability (ActivateControl.tsx), a sibling of the face like
-// the switch, which reports `{ on: "activate" }` and stops its click reaching the card.
+// the counters, which reports `{ on: "activate" }` and stops its click reaching the card.
 //
 // R437: a card whose view lists marks (#50 K-Pop Fanatic's pending steal) wears them, on a unit and
 // on a face-up backrow card of either seat: the corruption aura and a badge per mark
@@ -455,10 +455,6 @@ export default function Card(props: CardProps): ReactElement {
         </span>
       )}
 
-      {props.switchTarget === true && unit !== undefined && unit !== null && (
-        <SwitchButton instanceId={unit.instanceId} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
-      )}
-
       {/* R384, R510: the card's Activate abilities, which the view lists on its controller's own
           view of a card acting on the field (ActivateControl.tsx). Nothing when it lists none. */}
       <ActivateControls card={unit ?? card} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
@@ -469,9 +465,14 @@ export default function Card(props: CardProps): ReactElement {
 
   // The overlay is a sibling of the root, never its child, so the root's own click and drag
   // handlers never see an event from inside a preview or a sheet.
+  // #258: the switch (⟳) is a sibling of the root too, outside the card, so its zone can give it a
+  // full 44 px target at its corner (board.css) and a DEF card's rotation never turns it.
   return (
     <>
       {root}
+      {props.switchTarget === true && unit !== undefined && unit !== null && (
+        <SwitchButton instanceId={unit.instanceId} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
+      )}
       {inspect.overlay}
     </>
   );
@@ -501,13 +502,16 @@ function SwitchButton({
       aria-disabled={legal ? undefined : "true"}
       disabled={!legal}
       title="Switch position"
+      aria-label="Switch position"
       onClick={(event) => {
         event.stopPropagation();
         if (!legal) return;
         onClick?.({ on: "switch", instanceId });
       }}
     >
-      ⟳
+      <span className="switch-glyph" aria-hidden="true">
+        ⟳
+      </span>
     </button>
   );
 }
