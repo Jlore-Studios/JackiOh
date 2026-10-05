@@ -12,8 +12,9 @@ import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/024-book-of-knowledge";
 
 const BOOK = "classic-024";
-const PALANTIR = "classic-004"; // Field Spell; Aura: Your opponent can't draw more than 1 card each turn.
-const PALANTIR_PASS = "mode:pass"; // its "you may Tribute this to steal it", declined
+// Unit; Aura: Players can't draw more than 1 card each turn. (C #4 Palantir has the same limit, but
+// since balance patch 1 it Tributes itself to steal every Book, so a Book never resolves under it.)
+const ANTI_GREED = "classic-049";
 const VIRUS = "core-090-1"; // CN-Virus: Cast on draw: take 1 damage.
 const FILLER = "core-005";
 // Library cards nobody else holds, so the opponent's view can be searched for their ids.
@@ -88,13 +89,10 @@ describe("C #24 Book of Knowledge", () => {
       expect(theirs).not.toContain(A);
     });
 
-    it("§2.4 B5 E3 a draw limit stops the rest: under the opponent's Palantir only the first draw happens", () => {
-      const s = scenario({ p1: { hand: [BOOK], library: [A, B, C] }, p2: { hand: [FILLER], backrow: [{ def: PALANTIR, faceUp: true }] } });
+    it("§2.4 B5 E3 a draw limit stops the rest: under the opponent's Anti-Greed Machine only the first draw happens", () => {
+      const s = scenario({ p1: { hand: [BOOK], library: [A, B, C] }, p2: { hand: [FILLER], field: [ANTI_GREED] } });
 
-      // Palantir's other line answers a Book: its controller may Tribute it to steal the play. Declined.
       s.play(BOOK);
-      expect(s.state.pending?.playerId).toBe("p2");
-      s.answer(PALANTIR_PASS);
 
       expect(handDefs(s)).toEqual([A]);
       expect(count(s, "drawLimited")).toBe(2);

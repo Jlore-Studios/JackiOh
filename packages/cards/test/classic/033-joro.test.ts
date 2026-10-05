@@ -6,7 +6,7 @@
 // nothing; a Spell naming several of your Units moves the first only; one Joro answers one
 // targeting; your own picks never set it off; no open unit zone → nothing happens and Joro stays in
 // hand; it never answers from the deck or the field; the opponent's view and `legalActions` carry no
-// sign of Joro in your hand until it is summoned (R97); radiant: Indestructible, still 1/1 (a named
+// sign of Joro in your hand until it is summoned (R97); radiant: Indestructible and 2/2 since balance patch 1 (once a named
 // exception in the R275 radiant-standard test), so it survives the redirected hit, with no Taunt
 // (R347); no tuned numbers".
 //
@@ -231,10 +231,9 @@ describe("C #33 Joro", () => {
       });
       const menace = s.card(MENACE);
       s.play(BRINGER);
-      for (let at = 0; at < 2; at += 1) {
-        expect(s.state.pending?.kind).toBe("target");
-        s.answer([{ pick: "instance", instanceId: menace.id }]);
-      }
+      // One pick for both placements (R689).
+      expect(s.state.pending?.kind).toBe("target");
+      s.answer([{ pick: "instance", instanceId: menace.id }]);
       expect(redirects(s)).toEqual([]);
       s.expectInZone(JORO, "hand");
       expect(s.unit("p1", 1)?.counters.plague).toBe(2);
@@ -284,13 +283,13 @@ describe("C #33 Joro", () => {
   });
 
   describe("radiant", () => {
-    it("R275 Indestructible, still 1/1: it survives the redirected Spell", () => {
+    it("R275 Indestructible, a 2/2 since balance patch 1: it survives the redirected Spell", () => {
       const s = underAttack({ radiantFace: true });
       const joro = s.card(JORO);
       s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: s.card(VANILLA).id }] });
       expect(redirects(s)).toHaveLength(1);
       s.expectInZone(joro, "field");
-      s.expectStats(joro, { attack: 1, health: 1, maxHealth: 1 });
+      s.expectStats(joro, { attack: 2, health: 2, maxHealth: 2 });
       expect(s.stats(joro).keywords.map((keyword) => keyword.kind)).toContain("Indestructible");
       // Summoned this turn: summoning sick.
       expect(s.card(joro).summonedTurn).toBe(s.state.turn);

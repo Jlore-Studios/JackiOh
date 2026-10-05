@@ -21,7 +21,7 @@ const DEFENDER = "core-003"; // 1/1 Taunt, Divine Shield, Reborn
 const TOP_LOSER = "classicplus-019-1"; // Radiant: Immune to Spells
 const SOLARIUS = "classicplus-038"; // Spell Damage +2
 const FILLER = "core-005"; // a hand card, so a turn never auto-ends (§2.5)
-const PALANTIR = "classic-004"; // Base: when your opponent plays a Book, you may Tribute this to steal it.
+const PALANTIR = "classic-004"; // Base: when your opponent plays a Book, Tribute this to steal it.
 const VITAL_KILL = "classic-029"; // Radiant: … Add a Book of Flame to your hand.
 const BOOK_OF_FLAME = "classic-016";
 
@@ -129,12 +129,11 @@ describe("C #55 Book of Wildfire", () => {
       expect(playedThisGameWithTag(s.state, "p1", "Book")).toBe(1);
     });
 
-    it("C #4 Palantir's base face answers it as a Book: its controller may Tribute it and steal this", () => {
+    it("C #4 Palantir's base face answers it as a Book: it Tributes itself and steals this, with no question", () => {
       const s = scenario({ p1: { hand: [WILDFIRE, FILLER] }, p2: { backrow: [PALANTIR], hand: [FILLER] } });
       const wildfire = s.card(WILDFIRE);
       s.play(wildfire, { targets: [hero("p2")] });
-      expect(s.state.pending).toMatchObject({ playerId: "p2", kind: "mode" });
-      s.answer("steal");
+      expect(s.state.pending).toBeNull();
       s.expectInZone(PALANTIR, "graveyard");
       expect(s.card(wildfire.id)).toMatchObject({ owner: "p2", zone: { z: "hand", player: "p2" } });
       s.expectHealth("p2", 30);

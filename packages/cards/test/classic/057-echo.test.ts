@@ -14,7 +14,7 @@
 // copy fixed as the play begins; "this" is Echo) and R547 (its static text: Cast on draw yes, the
 // end-of-turn return no).
 
-import { addStep, lastSpellPlayed, legalActions, playedThisGameWithTag, reduce, subsystems, tuningOf, type GameState } from "@jackioh/engine";
+import { addStep, lastSpellPlayed, legalActions, newInstance, placeOnField, playedThisGameWithTag, reduce, subsystems, tuningOf, type GameState } from "@jackioh/engine";
 import type { Action, GameEvent, PlayerId, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { cardDef } from "../../src/catalog-data";
@@ -33,7 +33,7 @@ const DREAM = "core-023"; // (1) Spell: … End of turn: Return this to your han
 const CN_VIRUS = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage.
 const MENACE = "core-019"; // (3) Unit 9/9
 const VANILLA = "core-008"; // (1) Unit 4/4
-const PALANTIR = "classic-004"; // Base: when your opponent plays a Book, you may Tribute this to steal it.
+const PALANTIR = "classic-004"; // Base: when your opponent plays a Book, Tribute this to steal it.
 
 const AT_P2: Selection[] = [{ pick: "hero", player: "p2" }];
 
@@ -165,10 +165,11 @@ describe("C #57 Echo", () => {
     });
 
     it("R546 it keeps its own name, cost, type and tags: copying a Book makes no Book play, and C #4 Palantir does not ask", () => {
-      const s = scenario({ p1: { hand: [WILDFIRE, ECHO, VANILLA] }, p2: { backrow: [PALANTIR], hand: [VANILLA] } });
+      const s = scenario({ p1: { hand: [WILDFIRE, ECHO, VANILLA] }, p2: { hand: [VANILLA] } });
       s.play(WILDFIRE, { targets: AT_P2 });
-      expect(s.state.pending?.playerId).toBe("p2");
-      s.answer("pass");
+      // Palantir arrives after the Book resolved: since balance patch 1 it would steal the Book itself.
+      const palantir = newInstance(s.state, PALANTIR, "p2", { z: "hand", player: "p2" });
+      if (!placeOnField(s.state, palantir, { player: "p2", row: "backrow", lane: 1 })) throw new Error("no room for Palantir");
       expect(ownView(s)).toMatchObject({ defId: ECHO, cost: 1, copies: { defId: WILDFIRE } });
       s.play(ECHO, { targets: AT_P2 });
       expect(s.state.pending).toBeNull();

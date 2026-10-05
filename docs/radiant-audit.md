@@ -191,7 +191,7 @@ R372 lays them out.
   held to it as a Unit is (C #5 Tesla, C #38 Jackiestan Auctioneer, C+ #12.8 Frostspatula, R383),
   and C+ #69 Buff Billy's X stats are held as multipliers (3X → 7X). Patch v0.2.0 named two
   exceptions, both the designer's printed numbers (C #33 Joro stayed 1/1, C #80 BOOM! Big Max kept
-  its 26 attack); patch v0.2.11 drops both (Joro is 2/2, Big Max is 13/8 → 26/16), so no exception
+  its 26 attack); patch v0.2.14 drops both (Joro is 2/2, Big Max is 13/8 → 26/16), so no exception
   remains.
 
   R275 says the catalog-wide test of the stat half names no exception ("there is none"), and it
@@ -200,7 +200,7 @@ R372 lays them out.
   asks, recorded as v0.1.1 recorded #55 and #87: C #60 Pile On (its Radiant face is the base face less
   the clause that returns it to the deck, which the designer reads as a drawback) and C+ #3 Second
   Amendment Snake (2 Plague Tokens a turn → 3, 1.5×). C #22 Mid Runner left this list in patch
-  v0.2.11: its Radiant returns 3 permanents to the base face's 2.
+  v0.2.14: its Radiant Bounces 3 permanents to the base face's 2.
 - **Faces the patch wrote.** Where the designer's Radiant face was missing, identical to the base
   face or short of the standard, the patch prints one that meets it: C #63 Crop Dusting had none
   (R276) and doubles both numbers; C #86 Genn's two 14/14 faces become 14/14 → 42/42, tripled as
@@ -259,7 +259,7 @@ in v0.2.0. "Base" is the base face as v0.2.0 prints it.
 | 19 | Lizard's Breath | Spell | Deal 2 damage. Your largest pile adds its effect: Deck, draw 1; Graveyard, gain 2 mana; Exile, deal 4 more damage. Ties go to the pile listed first. | Deal 4 damage. Your two largest piles add their effects: Deck, draw 1; Graveyard, gain 2 mana; Exile, deal 4 more damage. Ties go to the pile listed first. | Meets | 2 damage → 4 and one pile's bonus → two (2×). |
 | 20 | The Power to Punish | Field Spell | Activate: Choose one: Deal 2 damage; your opponent discards a card; or choose a Unit, which is destroyed at the start of your next turn. | Activate: Choose one: Deal 4 damage; your opponent discards 2 cards; or all enemy Units are destroyed at the start of your next turn. | Meets | 2 damage → 4 and one discard → 2 (2×); one Unit → every enemy Unit. Each mode at least doubles. |
 | 21 | Turtinator | Unit | 5/4 · Activate ♾️: Tribute a Unit. Deal damage equal to its Attack to any target. | 10/8 · Activate ♾️: Tribute a Unit. Deal damage equal to twice its Attack to any target. | Meets | Stats doubled; damage equal to the Tribute's Attack → twice it (2×). |
-| 22 | Mid Runner | Unit | 2/1 · Cry: If this is in midlane, Tribute it. If you had 4 or more mana when you played this, return 2 random enemy permanents to hand. | 4/2 · Cry: If this is in midlane, Tribute it. If you had 4 or more mana when you played this, return 3 random enemy permanents to hand. | Meets | Stats doubled; the Radiant returns 3 permanents to the base face's 2 (patch v0.2.11 raised it, so it left the designer's-word list). |
+| 22 | Mid Runner | Unit | 2/1 · Cry: If this is in midlane, Tribute it. If you had 4 or more mana when you played this, Bounce 2 random enemy permanents. | 4/2 · Cry: If this is in midlane, Tribute it. If you had 4 or more mana when you played this, Bounce 3 random enemy permanents. | Meets | Stats doubled; the Radiant Bounces 3 permanents to the base face's 2 (patch v0.2.14 raised it, so it left the designer's-word list). |
 | 23 | Devil's Pact | Field Spell | Cry: Discard 666 cards. / Activate: This turn, each card you play is replaced by a Book of Flame. | Cry: Discard 6 cards. / Activate: This turn, each card you play is replaced by a Radiant Book of Flame. | Meets | Each replacement deals 8 damage, not 4 (2×), and the Cry's drawback shrinks from 666 cards to 6: a lighter drawback on top. |
 | 24 | Book of Knowledge | Spell | Draw 3. | Draw 6. | Meets | Draw 3 → 6 (2×). |
 | 25 | Lag in the System | Spell | Exile every (1) Cost or less card on the field. | Exile every (1) Cost or less enemy card on the field, in their hand and in their deck. | Meets | Both players' fields → the enemy's field, hand and deck: one-sided. |
@@ -354,7 +354,7 @@ in v0.2.0. "Base" is the base face as v0.2.0 prints it.
 | 12.7 | Legion of the Hungry | Field Spell | Cry: Exile 5 random cards from your deck. Summon the Units among them. | Cry: Exile 5 random cards from your deck. Summon the Units among them and make them Radiant. | Meets | The Units it summons are Radiant (about 2× each). |
 | 12.8 | Frostspatula | Field Spell | 10/3 · Animated on your turn, Rush / Death: Summon a copy of every Unit this destroyed. | 20/6 · Animated on your turn, Rush / Death: Summon a copy of every Unit this destroyed and make them Radiant. | Meets | Its unit face doubled (R383); the copies its Death summons are Radiant, about 2× each (R409). |
 | 13 | Mommy Barker | Unit | 2/2 · Death: Add a random Pancake token to your hand. | 4/4 · Reborn / Death: Add a random Pancake token to your hand. | Meets | Stats doubled; adds Reborn, so its Death fires on both deaths: two Pancakes for one (2×). |
-| 14 | Forever& | Spell | The next Spell you play gains "After this resolves, return it to hand. This can't cost less than (2)." | The next Spell you play gains "After this resolves, return it to hand. This can't cost less than (1)." | Meets | The floor (2) → (1), a cheaper repeat every time (patch v0.2.11 dropped the Radiant Draw 1). |
+| 14 | Forever& | Spell | The next Spell you play gains "After this resolves, Bounce it. This can't cost less than (2)." | The next Spell you play gains "After this resolves, Bounce it. This can't cost less than (1)." | Meets | The floor (2) → (1), a cheaper repeat every time (patch v0.2.14 dropped the Radiant Draw 1). |
 | 15 | Conjure Rush Token | Spell | Summon a Rush Token. It gains a random keyword. | Summon 3 Rush Tokens. Each gains a random keyword. | Meets | One token → three (3×). |
 | 16 | Conjure Rush Token+ | Spell | Summon a Rush Token. It gains 3 random keywords. | Summon 3 Rush Tokens. Each gains 3 random keywords. | Meets | One token → three (3×). |
 | 17 | Conjure Rush Token++ | Spell | Summon a Rush Token. It gains 6 random keywords. | Summon 3 Rush Tokens. Each gains 6 random keywords. | Meets (face written by the patch) | One token → three (3×). The designer's text repeated C+ #16's; the patch's 6 keywords, twice C+ #16's, give the card its own place on both faces. |
