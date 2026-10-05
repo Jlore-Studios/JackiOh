@@ -3031,6 +3031,9 @@
     "324": {
       "action": "review",
       "asks": [],
+      "ci_reruns": {
+        "caa36ac0d05f4db84bc67eb986e18a0223b8f57d": 1
+      },
       "cleared": {
         "at": "2026-10-05T21:52:10Z",
         "by": "`muse` (medium) twice",
