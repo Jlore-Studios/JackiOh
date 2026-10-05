@@ -3031,9 +3031,12 @@
     "324": {
       "action": "review",
       "asks": [],
+      "ci_fixes": 1,
       "ci_reruns": {
         "caa36ac0d05f4db84bc67eb986e18a0223b8f57d": 1
       },
+      "ci_run_id": 37360884569,
+      "ci_sha": "caa36ac0d05f4db84bc67eb986e18a0223b8f57d",
       "cleared": {
         "at": "2026-10-05T21:52:10Z",
         "by": "`muse` (medium) twice",
@@ -3047,12 +3050,13 @@
       "forced": false,
       "interruptions": 0,
       "issue": 323,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-05T21:48:13Z",
+      "queued_at": "2026-10-05T22:04:50Z",
+      "requested_by": "jgoetzmann-bot",
       "run_id": "37378320111",
       "self_check_findings": [
         {
@@ -3062,7 +3066,7 @@
           "where": "self check"
         }
       ],
-      "source": "",
+      "source": "ci",
       "started_at": "2026-10-05T21:49:08Z",
       "stop_requested": false,
       "taken_asks": [],
