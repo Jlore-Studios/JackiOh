@@ -195,7 +195,7 @@ export function costFloorOf(card: Pick<CardInstance, "enchantments">): number {
  * included), so `legalActions` never offers it and §10.5 step 1 refuses it; a cast is not asked (R70).
  */
 export function whyPlayBanned(state: GameState, player: PlayerId, card: CardInstance, price: number): string | null {
-  // R674: no rule forbids a play of Glitch.
+  // R675: no rule forbids a play of Glitch.
   if (card.defId === GLITCH_DEF_ID) return null;
   for (const aura of costAurasFor(state, player, card)) {
     if (aura.ban !== true) continue;

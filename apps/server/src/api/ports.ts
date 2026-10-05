@@ -517,7 +517,7 @@ export type MatchRow = {
    */
   lastBoards?: [LastBoardEntry[], LastBoardEntry[]];
   /**
-   * R677: the boards of two other players' last server games a Glitch may put on the field (seat
+   * R678: the boards of two other players' last server games a Glitch may put on the field (seat
    * order), sampled when the match is created and frozen on the row like `lastBoards`, so a rebuilt
    * actor folds the same game. Absent when no other player had a board to sample.
    */
@@ -574,7 +574,7 @@ export type MatchStore = {
    */
   discardOpen: (matchId: string) => Promise<void>;
   /**
-   * R678: a Glitch voided this live match, so it is removed as if it never existed: the row and its
+   * R679: a Glitch voided this live match, so it is removed as if it never existed: the row and its
    * action log go, and any profile whose in-match flag points at it is let go (both players can
    * queue again). Never touches a finished match or one with a result; a no-op for an unknown id.
    */
@@ -1024,7 +1024,7 @@ export type LastBoardStore = {
   /** R565: replace it, or write the first one, as a game of that kind ends (epoch ms `at`). */
   put: (profileId: string, kind: LastBoardKind, board: readonly LastBoardEntry[], at: number) => Promise<void>;
   /**
-   * R677: up to `count` non-empty `server` boards of profiles NOT in `excludeProfileIds`, each from a
+   * R678: up to `count` non-empty `server` boards of profiles NOT in `excludeProfileIds`, each from a
    * different profile, chosen at random (the in-memory stores take them in table order). Fewer
    * when fewer exist.
    */
@@ -1162,7 +1162,7 @@ export type GameRecorder = {
     seed: string;
     decks: [string[], string[]];
     log: readonly Action[];
-    /** R417, R677: the boards the match was created with, so the fold is the same game. */
+    /** R417, R678: the boards the match was created with, so the fold is the same game. */
     lastBoards?: [LastBoardEntry[], LastBoardEntry[]];
     glitchBoards?: [LastBoardEntry[], LastBoardEntry[]];
   }) => GameSummary | null;

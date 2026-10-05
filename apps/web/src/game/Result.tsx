@@ -63,7 +63,7 @@ export function resultReason(outcome: ResultOutcome, reason: GameOverReason): st
     case "match-ceiling":
       return "The match reached its time limit.";
     case "voided":
-      // R678: a Glitch voided the match; it counts for nobody.
+      // R679: a Glitch voided the match; it counts for nobody.
       return "This match never happened.";
   }
 }

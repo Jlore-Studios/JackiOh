@@ -206,7 +206,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
 
   function gapFor(view: PlayerView): number {
     const pending = view.pending;
-    // R676: the AI is whoever sits across from the human's view now, its starting seat or, after a
+    // R677: the AI is whoever sits across from the human's view now, its starting seat or, after a
     // Glitch swap, the human's.
     if (pending !== null && !pending.forYou && pending.pendingFor === opponentOf(view.viewer)) return pacing.promptAnswerMs;
     // R265: the AI's mulligan is still open while the human looks at its own.

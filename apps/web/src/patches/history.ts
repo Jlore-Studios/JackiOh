@@ -60,7 +60,7 @@ export function patchCards(patch: Patch, after: Snapshot, before: Snapshot | nul
   const removed: CardDef[] = [];
   const groups = new Map<string, { set: SetName; token: boolean; cards: CardDef[] }>();
   for (const change of patch.changes) {
-    // R673: Glitch is never listed, though a patch records it.
+    // R674: Glitch is never listed, though a patch records it.
     if (isGlitch(change.id)) continue;
     const delta = diffCard(before?.[change.id], after[change.id], { before: before ?? {}, after });
     if (delta === null) continue;

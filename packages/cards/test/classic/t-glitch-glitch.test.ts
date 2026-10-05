@@ -1,5 +1,5 @@
-// T-glitch Glitch (SPEC §7, issue #170; R672–R678). BUILD M9's row: "hidden Spell token, cost 0, blank;
-// only R672's roll makes one, after a … in the System play, at n/10000 per generated card; always
+// T-glitch Glitch (SPEC §7, issue #170; R673–R679). BUILD M9's row: "hidden Spell token, cost 0, blank;
+// only R673's roll makes one, after a … in the System play, at n/10000 per generated card; always
 // playable on its owner's turn; resolves as one of four outcomes drawn by the match rng".
 //
 // The engine's own test (packages/engine/test/glitch.test.ts) proves the odds' arithmetic and each
@@ -46,7 +46,7 @@ describe("T-glitch Glitch", () => {
     expect(radiant).toBe(base);
   });
 
-  it("R672 after a … in the System play, a generated card may be Glitch; at 10000 in 10000 every one is", () => {
+  it("R673 after a … in the System play, a generated card may be Glitch; at 10000 in 10000 every one is", () => {
     const g = scenario({ seed: "t-glitch-odds", p1: { hand: ["classic-025", "core-057"], mana: 4 } });
     g.play("classic-025");
     expect(g.state.systemPlays).toBe(1);
@@ -55,50 +55,50 @@ describe("T-glitch Glitch", () => {
     expect(g.hand("p1").map((card) => card.defId)).toEqual([GLITCH_DEF_ID, GLITCH_DEF_ID, GLITCH_DEF_ID]);
   });
 
-  it("R672 with no System play the same generation makes no Glitch and draws as it always did", () => {
+  it("R673 with no System play the same generation makes no Glitch and draws as it always did", () => {
     const g = scenario({ seed: "t-glitch-none", p1: { hand: ["core-057"], mana: 4 } });
     g.play("core-057");
     expect(g.state.systemPlays).toBeUndefined();
     expect(g.hand("p1").map((card) => card.defId)).not.toContain(GLITCH_DEF_ID);
   });
 
-  it("R673 is in no pool, Classic+ #23 Dropshipping's every-token pool included", () => {
+  it("R674 is in no pool, Classic+ #23 Dropshipping's every-token pool included", () => {
     expect(query({ withTokens: true }).map((card) => card.id)).not.toContain(GLITCH_DEF_ID);
     expect(query({ set: "Classic", token: true }).map((card) => card.id)).not.toContain(GLITCH_DEF_ID);
   });
 
-  it("R674 is played for nothing on its owner's turn, a cost increase and no mana notwithstanding", () => {
+  it("R675 is played for nothing on its owner's turn, a cost increase and no mana notwithstanding", () => {
     const g = withGlitch("t-glitch-free");
     g.card(GLITCH_DEF_ID).costMod = 3;
     g.play(GLITCH_DEF_ID);
     expect(outcomeOf(g.lastEvents)).toBeDefined();
   });
 
-  it("R675 each of the four outcomes comes from the match rng", () => {
+  it("R676 each of the four outcomes comes from the match rng", () => {
     const seen = new Set(GLITCH_OUTCOMES.map((outcome) => outcomeOf(played(outcome).events)));
     expect([...seen].sort()).toEqual([...GLITCH_OUTCOMES].sort());
   });
 
-  it("R675 reset: the match starts again at its mulligans", () => {
+  it("R676 reset: the match starts again at its mulligans", () => {
     const g = played("reset");
     expect(g.state.phase).toBe("mulligan");
     expect(g.state.mulligan).toBeDefined();
     expect(g.unit("p1", 1)).toBeNull();
   });
 
-  it("R676 swap: each account now plays the other seat", () => {
+  it("R677 swap: each account now plays the other seat", () => {
     const g = played("swap");
     expect(seatPlayedBy(g.state, "p1")).toBe("p2");
     expect(g.unit("p1", 1)?.defId).toBe("core-001");
   });
 
-  it("R677 boards: both fields become the frozen other games' boards", () => {
+  it("R678 boards: both fields become the frozen other games' boards", () => {
     const g = played("boards");
     expect([g.unit("p1", 1)?.defId, g.unit("p1", 1)?.radiant]).toEqual(["core-008", true]);
     expect(g.unit("p2", 1)).toBeNull();
   });
 
-  it("R678 void: the game ends with no winner, reason voided", () => {
+  it("R679 void: the game ends with no winner, reason voided", () => {
     expect(played("void").state.result).toEqual({ winner: "draw", reason: "voided" });
   });
 });

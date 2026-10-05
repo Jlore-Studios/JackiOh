@@ -355,7 +355,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "turnCutShort":
       return capitalised(`${name.whose(event.player)} turn was cut short`);
     case "glitched":
-      // R675: what a Glitch did, under its corrupted name (cards/glitch.ts).
+      // R676: what a Glitch did, under its corrupted name (cards/glitch.ts).
       return `${GLITCH_WORDS.name}: ${GLITCH_OUTCOME_LINE[event.outcome]}`;
     case "marked":
       // R437: the mark by the name its badge says (cards/marks.ts), never the engine's key; a marked
@@ -364,7 +364,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
   }
 }
 
-/** R675–R678: each Glitch outcome, as its log line ends. */
+/** R676–R679: each Glitch outcome, as its log line ends. */
 const GLITCH_OUTCOME_LINE: Readonly<Record<Extract<GameEvent, { type: "glitched" }>["outcome"], string>> = {
   reset: "the match resets",
   swap: "the players swap seats",

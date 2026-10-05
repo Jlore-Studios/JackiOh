@@ -416,7 +416,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     discardOpen: async (_matchId) => {
       call("matches.discardOpen");
     },
-    // R678: the voided match goes as if it never existed.
+    // R679: the voided match goes as if it never existed.
     forgetVoided: async (matchId) => {
       call("matches.forgetVoided");
       forgetVoidedRows(tables, matchId);

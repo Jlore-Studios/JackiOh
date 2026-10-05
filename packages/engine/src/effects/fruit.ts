@@ -180,7 +180,7 @@ export function replaceHandWithRandom(args: {
       if (pool.length === 0) return;
       for (let i = 0; i < replaced.length; i += 1) {
         if (ctx.state.result !== null) return;
-        // R672: a card generated into a hand may be Glitch.
+        // R673: a card generated into a hand may be Glitch.
         const def = pickGenerated(ctx.rng, pool, ctx.state);
         if (def === undefined) return;
         addToHand({

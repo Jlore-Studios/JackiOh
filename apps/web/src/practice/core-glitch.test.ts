@@ -1,5 +1,5 @@
 // A Glitch in a practice game (issue #170): after a swap the human plays the AI's former seat and the
-// AI the human's (R676), and a voided game shows its result and leaves no last board (R678).
+// AI the human's (R677), and a voided game shows its result and leaves no last board (R679).
 //
 // No deck deals a Glitch on cue, so `reduce` is the real one with a hook: a test names the change a
 // Glitch would have made (`seatSwaps` up by one, or the voided result), and the hook makes it on the
@@ -75,8 +75,8 @@ beforeEach(() => {
   hook.next = null;
 });
 
-describe("R676 a Glitch swap in practice", () => {
-  it("R676 after a swap the human sees, acts from and is credited in the AI's former seat, and the AI plays the human's", { timeout: 60_000 }, () => {
+describe("R677 a Glitch swap in practice", () => {
+  it("R677 after a swap the human sees, acts from and is credited in the AI's former seat, and the AI plays the human's", { timeout: 60_000 }, () => {
     const d = driver();
     const before = opened(d, "glitch-swap");
     expect(before.view.viewer).toBe(HUMAN);
@@ -118,8 +118,8 @@ describe("R676 a Glitch swap in practice", () => {
   });
 });
 
-describe("R678 a voided practice game", () => {
-  it("R678 shows the voided result and leaves no last board, where a conceded game leaves one", { timeout: 60_000 }, () => {
+describe("R679 a voided practice game", () => {
+  it("R679 shows the voided result and leaves no last board, where a conceded game leaves one", { timeout: 60_000 }, () => {
     const voided = driver();
     const first = opened(voided, "glitch-void");
     hook.next = (state) => {

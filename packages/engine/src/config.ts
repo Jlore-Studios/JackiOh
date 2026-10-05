@@ -57,16 +57,16 @@ export const MID_LANE = 3;
  */
 export const GLITCH_NUMBERS: readonly number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-// The Glitch Easter egg (SPEC §7, issue #170; R672–R678).
-/** R672: the "… in the System" cards — Classic #18 Glitch in the System and Classic #25 Lag in the System. */
+// The Glitch Easter egg (SPEC §7, issue #170; R673–R679).
+/** R673: the "… in the System" cards — Classic #18 Glitch in the System and Classic #25 Lag in the System. */
 export const SYSTEM_CARD_DEF_IDS: readonly string[] = ["classic-018", "classic-025"];
-/** R672, R673: the catalog id of Glitch, the hidden token a generated card may become. */
+/** R673, R674: the catalog id of Glitch, the hidden token a generated card may become. */
 export const GLITCH_DEF_ID = "classic-t-glitch";
-/** R672: each System play adds this many chances in GLITCH_ODDS_DENOMINATOR that a generated card is Glitch. */
+/** R673: each System play adds this many chances in GLITCH_ODDS_DENOMINATOR that a generated card is Glitch. */
 export const GLITCH_ODDS_PER_SYSTEM_PLAY = 1;
-/** R672: "a 1/10000 chance". */
+/** R673: "a 1/10000 chance". */
 export const GLITCH_ODDS_DENOMINATOR = 10000;
-/** R675: Glitch's four outcomes, in the order the issue lists them; one is drawn uniformly by the match rng. */
+/** R676: Glitch's four outcomes, in the order the issue lists them; one is drawn uniformly by the match rng. */
 export const GLITCH_OUTCOMES = ["reset", "swap", "boards", "void"] as const;
 
 /** R5 (decide): any unit may attack any enemy unit or hero, subject to Taunt. */

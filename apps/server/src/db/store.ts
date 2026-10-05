@@ -458,7 +458,7 @@ function toMatch(row: MatchDbRow): MatchRow {
     },
     // R417: absent when both are empty, as the registry writes it.
     ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
-    // R677: absent when both are empty, as the registry writes it (migration 0023).
+    // R678: absent when both are empty, as the registry writes it (migration 0023).
     ...(glitch[0].length + glitch[1].length > 0 ? { glitchBoards: glitch } : {}),
     // R604: the flag migration 0022 adds. Absent when false, exactly as `MatchRow` types it —
     // `results.ts` reads a missing flag the same way (unranked).
@@ -1700,7 +1700,7 @@ function buildStore(session: Session): Store {
           // R604: false for a room and for the `open` skeletons this UPDATE turns live — a room
           // never calls this, and a queue skeleton's own write is what stamps the flag.
           match.ranked ?? false,
-          // R677: the Glitch boards sampled at creation (migration 0023), '[]' when absent.
+          // R678: the Glitch boards sampled at creation (migration 0023), '[]' when absent.
           json(match.glitchBoards?.[0] ?? []),
           json(match.glitchBoards?.[1] ?? []),
         ];
@@ -1903,7 +1903,7 @@ function buildStore(session: Session): Store {
     },
 
     /**
-     * R678: migration 0023's `app.forget_voided_match`, the one path that erases a live match and
+     * R679: migration 0023's `app.forget_voided_match`, the one path that erases a live match and
      * its append-only log. The foreign keys let both players go (`profiles.current_match_id` and
      * `tickets.match_id` are `on delete set null`); a finished match, or one with a result, stays.
      */
@@ -2461,7 +2461,7 @@ function buildStore(session: Session): Store {
         [profileId, kind, json(board), at],
       );
     },
-    // R677: random other players' non-empty server boards, one per profile (the primary key).
+    // R678: random other players' non-empty server boards, one per profile (the primary key).
     sampleOthers: async (excludeProfileIds, count) => {
       if (count <= 0) return [];
       const excluded = excludeProfileIds.filter(isUuid);

@@ -47,7 +47,7 @@ function reasonText(outcome: PracticeOutcome, reason: GameOverReason): string {
     case "match-ceiling":
       return "The game has ended.";
     case "voided":
-      // R678: a Glitch voided the game.
+      // R679: a Glitch voided the game.
       return "This match never happened.";
   }
 }

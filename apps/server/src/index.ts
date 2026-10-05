@@ -241,7 +241,7 @@ export async function createRuntime(
     engine,
     createClock: createMatchClock,
     recordResult: createRecordResult(deps),
-    // R678: a Glitch's void outcome, which records nothing.
+    // R679: a Glitch's void outcome, which records nothing.
     voidMatch: createVoidMatch(deps),
   });
   deps.matches = overrides.matches ?? registry;

@@ -448,7 +448,7 @@ describe("reconnect", () => {
     }
   });
 
-  it("R678 a voided match's close (4410) is final: no reconnect, the last view kept", () => {
+  it("R679 a voided match's close (4410) is final: no reconnect, the last view kept", () => {
     const h = connected();
     h.socket().deliver({ type: "view", view: baseView({ turn: 4 }) });
     h.socket().drop(4410, "voided");

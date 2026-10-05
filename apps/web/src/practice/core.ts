@@ -63,7 +63,7 @@ export type PracticeCore = { handle(request: PracticeRequest): PracticeResponse 
 
 type PracticeGame = {
   config: PracticeStartConfig;
-  /** The seat the AI began in; after a Glitch swap it plays the other one (`aiSeatNow`, R676). */
+  /** The seat the AI began in; after a Glitch swap it plays the other one (`aiSeatNow`, R677). */
   aiSeat: PlayerId;
   decks: [string[], string[]];
   handicaps: Partial<Record<PlayerId, Handicap>>;
@@ -177,18 +177,18 @@ function startGame(config: PracticeStartConfig): PracticeGame {
   };
 }
 
-/** R676: the seat the human plays now: the one it began in, or the AI's after an odd number of Glitch swaps. */
+/** R677: the seat the human plays now: the one it began in, or the AI's after an odd number of Glitch swaps. */
 function humanSeatNow(game: PracticeGame): PlayerId {
   return seatPlayedBy(game.state, game.config.humanSeat);
 }
 
-/** R676: the seat the AI plays now. */
+/** R677: the seat the AI plays now. */
 function aiSeatNow(game: PracticeGame): PlayerId {
   return seatPlayedBy(game.state, game.aiSeat);
 }
 
 /**
- * One action for the human or the AI, in the seat it plays now (R676); null when the engine
+ * One action for the human or the AI, in the seat it plays now (R677); null when the engine
  * accepted it, else the engine's reason. The nonce counts by player, not by seat, so a swap leaves
  * both streams unbroken.
  */
@@ -213,10 +213,10 @@ function apply(game: PracticeGame, body: ActionBody, human: boolean): string | n
 }
 
 function snapshotOf(game: PracticeGame): PracticeSnapshot {
-  // R676: the human sees, and acts from, the seat it plays now; the result reads from it too.
+  // R677: the human sees, and acts from, the seat it plays now; the result reads from it too.
   const human = humanSeatNow(game);
   const result = game.state.result;
-  // R508: the board the human takes away, once a free game is over; R678: a voided game leaves none.
+  // R508: the board the human takes away, once a free game is over; R679: a voided game leaves none.
   const keepsBoard = result !== null && result.reason !== "voided" && game.config.lesson === undefined;
   return {
     view: viewFor(game.state, human),

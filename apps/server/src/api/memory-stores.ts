@@ -408,7 +408,7 @@ export function createMemoryLastBoardStore(
       if (row === undefined) tables().lastBoards.push({ profileId, kind, board: clone([...board]) });
       else row.board = clone([...board]);
     },
-    // R677: no randomness here (the in-memory stores draw nothing), so the first boards in table
+    // R678: no randomness here (the in-memory stores draw nothing), so the first boards in table
     // order; Postgres draws them at random. The contract asserts only what both hold.
     sampleOthers: async (excludeProfileIds, count) => {
       call("lastBoards.sampleOthers");
@@ -690,7 +690,7 @@ export type VoidTables = {
 };
 
 /**
- * `MatchStore.forgetVoided` (R678), as migration 0023's `app.forget_voided_match` makes Postgres do
+ * `MatchStore.forgetVoided` (R679), as migration 0023's `app.forget_voided_match` makes Postgres do
  * it: a live match with no result goes with its log, a profile pointed at it is let go and a ticket
  * that paired it loses the link (`on delete set null`, 0004). Anything else is left alone.
  */

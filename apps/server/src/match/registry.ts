@@ -62,7 +62,7 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
   const rebuilding = new Map<string, Promise<MatchActor>>();
 
   /**
-   * R678: a voided match is gone, so its actor leaves the map without `stop` (which waits on the
+   * R679: a voided match is gone, so its actor leaves the map without `stop` (which waits on the
    * actor's own queue, and the void runs inside it). A series game started again under the same id
    * then finds no actor in the way.
    */
@@ -79,7 +79,7 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       (await deps.store.lastBoards.get(first.profileId, "server")) ?? [],
       (await deps.store.lastBoards.get(second.profileId, "server")) ?? [],
     ];
-    // R677: two other players' last server boards — never either seat's own — sampled once, here,
+    // R678: two other players' last server boards — never either seat's own — sampled once, here,
     // and frozen on the row beside the decks, so every rebuild folds the same Glitch. A seat with no
     // board to sample gets the empty one; with none at all the field is left off.
     const sampled = await deps.store.lastBoards.sampleOthers([first.profileId, second.profileId], GLITCH_BOARDS_SAMPLED);

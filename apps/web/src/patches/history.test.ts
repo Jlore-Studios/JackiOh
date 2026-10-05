@@ -114,8 +114,8 @@ describe("R507 a patch's cards", () => {
   });
 });
 
-describe("R673 Glitch in the patch notes", () => {
-  it("R673 a patch that records Glitch neither lists nor counts it", () => {
+describe("R674 Glitch in the patch notes", () => {
+  it("R674 a patch that records Glitch neither lists nor counts it", () => {
     const glitch: CardDef = {
       id: GLITCH_DEF_ID,
       index: "T-glitch",

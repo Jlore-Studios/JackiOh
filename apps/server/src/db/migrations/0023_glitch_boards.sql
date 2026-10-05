@@ -1,9 +1,9 @@
 -- ============================================================================
 -- Migration 0023: Glitch (issue #170) — the boards outcome and the void outcome
 -- ============================================================================
--- Serves SPEC §7 (the hidden token Glitch) and SPEC §11 R677, R678.
+-- Serves SPEC §7 (the hidden token Glitch) and SPEC §11 R678, R679.
 --
---   * public.matches.p1_glitch_board / p2_glitch_board -- R677: the boards of
+--   * public.matches.p1_glitch_board / p2_glitch_board -- R678: the boards of
 --     two OTHER players' last server games, sampled from public.last_boards
 --     when the match is created, that a Glitch's boards outcome puts on the
 --     field. Like 0017's p1_last_board / p2_last_board they are an input of the
@@ -11,7 +11,7 @@
 --     the same game (SPEC §9.3, §9.5). '[]' for every older row, for an open
 --     room, and for a seat with no other board to sample: the empty board such
 --     a match was always played with.
---   * app.forget_voided_match(p_match_id) -- R678: a Glitch's void outcome
+--   * app.forget_voided_match(p_match_id) -- R679: a Glitch's void outcome
 --     ends the game with no winner, and the server keeps no trace of it but a
 --     log line. The match row goes, and with it its action log, which is
 --     append-only (0004, app.deny_row_mutation). Like app.purge_expired_rows
@@ -43,13 +43,13 @@ alter table public.matches add constraint matches_glitch_boards_check check (
 );
 
 comment on column public.matches.p1_glitch_board is
-  $$R677, SPEC §9.3: the board of another player's last server game that a
+  $$R678, SPEC §9.3: the board of another player's last server game that a
   Glitch puts on p1's side, sampled as this match started and frozen so a
   rebuilt actor folds the same game. p2_glitch_board is p2's.$$;
 
 
 -- ----------------------------------------------------------------------------
--- app.forget_voided_match -- R678's "as if it never existed".
+-- app.forget_voided_match -- R679's "as if it never existed".
 -- ----------------------------------------------------------------------------
 -- SECURITY INVOKER: the server calls it as service_role, which may delete from
 -- both tables already. Returns whether a match went.
@@ -83,7 +83,7 @@ end;
 $$;
 
 comment on function app.forget_voided_match(uuid) is
-  'Migration 0023 (R678): deletes a live match a Glitch voided, with its action '
+  'Migration 0023 (R679): deletes a live match a Glitch voided, with its action '
   'log; its players are let go by the foreign keys. Never a finished match or '
   'one with a result. Called by the server (src/db/store.ts matches.forgetVoided).';
 

@@ -237,7 +237,7 @@ export function createRecordResult(deps: ServerDeps): RecordResult {
 }
 
 /**
- * R678: the `VoidMatch` port the actor holds (`ActorDeps.voidMatch`) — what a Glitch's void outcome
+ * R679: the `VoidMatch` port the actor holds (`ActorDeps.voidMatch`) — what a Glitch's void outcome
  * does instead of `createRecordResult`. The match never happened: no `results` row, no rating move,
  * no last board, no game record. The store forgets the row and its log and lets both players go
  * (`matches.forgetVoided`), and one log line names the match and both profiles, for abuse checks.

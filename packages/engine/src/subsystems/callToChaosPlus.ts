@@ -60,7 +60,7 @@ export function replaceDeckWithCallToChaos(): Effect {
       apply(inner): void {
         const library = inner.state.players[inner.controller].library;
         const at = library.findIndex((card) => card.id === old.id);
-        const def = at < 0 ? undefined : pickGenerated(inner.rng, pool, inner.state); // R672: into a deck
+        const def = at < 0 ? undefined : pickGenerated(inner.rng, pool, inner.state); // R673: into a deck
         if (def === undefined) return;
         transform({ instanceId: old.id, defId: def.id }).apply(inner);
         const replacement = library[at];

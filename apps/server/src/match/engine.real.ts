@@ -89,7 +89,7 @@ export function enginePort(): EnginePort {
         mulliganOwed: api.mulliganOwed(state),
         phase: raw.phase,
         result: raw.result,
-        // R676: the engine's own answer to "do the accounts hold each other's seat".
+        // R677: the engine's own answer to "do the accounts hold each other's seat".
         seatsSwapped: api.seatsSwapped(state),
       };
     },

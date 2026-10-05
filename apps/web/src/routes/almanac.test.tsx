@@ -51,7 +51,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 /** A lazily-imported route chunk, and a pool of every card, can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
 
-/** R673: every card the almanac shows: the catalog's, Glitch excepted. */
+/** R674: every card the almanac shows: the catalog's, Glitch excepted. */
 const CARDS: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards).filter((def) => def.id !== GLITCH_DEF_ID);
 const TOKENS: readonly CardDef[] = CARDS.filter((def) => def.token);
 
@@ -143,7 +143,7 @@ describe("R630 the almanac's browse pane", () => {
     expect(screen.queryByTestId(DB_EMPTY)).toBeNull();
   });
 
-  it("R673 never shows Glitch, though the catalog holds it", () => {
+  it("R674 never shows Glitch, though the catalog holds it", () => {
     expect(ALMANAC_CATALOG.cards[GLITCH_DEF_ID]).toBeDefined();
     render(<AlmanacRoute />);
     expect(shownIds()).not.toContain(GLITCH_DEF_ID);

@@ -55,7 +55,7 @@ export type MatchActorInput = {
   /** The rows already in `match_actions`: the seq counter and the nonce map are rebuilt from them. */
   log?: readonly MatchActionRow[];
   /**
-   * R678: called once, synchronously, when a Glitch voids the match, before the store forgets it —
+   * R679: called once, synchronously, when a Glitch voids the match, before the store forgets it —
    * the registry drops the actor here, so nothing can reach a match that no longer exists.
    */
   onVoided?: () => void;
@@ -67,7 +67,7 @@ export type MatchActor = {
   readonly seats: readonly [MatchSeat, MatchSeat];
   /**
    * The seat a profile BEGAN the match in, or null when it is not in this match. It names the
-   * account's connection, not the seat it plays: after a Glitch's swap (R676) the account that began
+   * account's connection, not the seat it plays: after a Glitch's swap (R677) the account that began
    * in p1 plays p2, and the actor routes its socket there (`playing`).
    */
   seatOf: (profileId: string) => PlayerId | null;
@@ -95,7 +95,7 @@ export type MatchActor = {
 };
 
 /**
- * R417, R677: the boards a match was created with — its seats' last boards and the two other
+ * R417, R678: the boards a match was created with — its seats' last boards and the two other
  * players' boards a Glitch may put on the field — as `createGame` and `fold` take them.
  */
 export function lastBoardsOf(match: MatchRow): {
@@ -152,7 +152,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   const emoteHistory: Record<PlayerId, number[]> = { p1: [], p2: [] };
   /** R642: the pair the `portraits` frame carries, `vanilla` for a match that predates them. */
   const portraits = match.portraits ?? [portraitOrDefault(null), portraitOrDefault(null)];
-  /** R678: set once a Glitch voided the match; nothing more is sent, written or attached. */
+  /** R679: set once a Glitch voided the match; nothing more is sent, written or attached. */
   let voided = false;
   /**
    * A rebuilt actor whose log already ends in a result and whose row is already `finished` has
@@ -164,7 +164,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   let persistedClocks = match.clocks;
   const opening = deps.engine.snapshot(state);
   /**
-   * R676: whether the accounts hold each other's seat, as of the last state change. Every socket is
+   * R677: whether the accounts hold each other's seat, as of the last state change. Every socket is
    * keyed by the seat its account began in (`home`), and every engine read by the seat played now,
    * so this one flag is the whole mapping. Only the engine's state sets it — a Glitch's swap, which
    * a client reaches only by legally playing Glitch — never a frame.
@@ -204,7 +204,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   // ---------------------------------------------------------------------
 
   /**
-   * R676: the seat the account that began in `home` plays now — and, read the other way, the account
+   * R677: the seat the account that began in `home` plays now — and, read the other way, the account
    * (by its home) that plays engine seat `seat`; a swap is its own inverse.
    */
   function playing(home: PlayerId): PlayerId {
@@ -399,7 +399,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   }
 
   /**
-   * R676: a Glitch swapped the seats. From here every socket reads the view of, and acts for, the
+   * R677: a Glitch swapped the seats. From here every socket reads the view of, and acts for, the
    * other seat. A disconnect grace belongs to the account, so one running moves with it to the seat
    * it plays now (restarted there: the clock keeps one deadline per seat, not per account).
    */
@@ -412,7 +412,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   }
 
   /**
-   * R676: the seats as the results writer credits them — engine seat p1 with the account that plays
+   * R677: the seats as the results writer credits them — engine seat p1 with the account that plays
    * it NOW, and its deck — so the winning seat's current account gets the win (Elo included), and the
    * last board each seat ended with goes to the account that ended it.
    */
@@ -425,7 +425,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   }
 
   /**
-   * R678: a Glitch voided the match. It never happened: no result, no rating move, no last board
+   * R679: a Glitch voided the match. It never happened: no result, no rating move, no last board
    * and no game record. Both sockets are closed with `MATCH_VOIDED_CLOSE_CODE` (the last view they
    * got already shows the game over with reason `voided`), the registry drops the actor, and
    * `deps.voidMatch` removes the match from the store and logs the one line abuse checks read.
@@ -456,7 +456,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     if (finished || snapshot.result === null) return;
     finished = true;
     clock.stop();
-    // R678: the one ending that records nothing. Only the engine's state reaches it.
+    // R679: the one ending that records nothing. Only the engine's state reaches it.
     if (snapshot.result.reason === "voided") {
       await onVoid();
       return;
@@ -468,7 +468,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
       // behind the `RecordResult` port; the actor never writes them itself.
       await deps.recordResult({
         matchId: match.id,
-        // R676: credited by who plays each seat now, not by who began in it.
+        // R677: credited by who plays each seat now, not by who began in it.
         seats: creditedSeats(),
         outcome: snapshot.result,
         turns: snapshot.turn,
@@ -611,7 +611,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
           return;
         }
         fireAndForget(async () => {
-          // R676: the seat is the one this account plays when the action runs — a swap queued ahead
+          // R677: the seat is the one this account plays when the action runs — a swap queued ahead
           // of it has already moved the account — and the reply goes to the account that sent it.
           const reply = await applyAction(playing(home), message.nonce, message.body);
           sendToHome(home, reply);
@@ -649,7 +649,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     deps.log.info("match.socket.closed", { matchId: match.id, player: playing(home), home });
     fireAndForget(async () => {
       // §9.5: grace starts, and "the clock keeps running while a player is disconnected" — on the
-      // seat this account plays (R676).
+      // seat this account plays (R677).
       const player = playing(home);
       clock.startGrace(player);
       await persistClocks();
@@ -659,7 +659,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
 
   function attach(home: PlayerId, socket: Socket): void {
     if (voided) {
-      // R678: the match no longer exists; a socket that arrives late hears only that.
+      // R679: the match no longer exists; a socket that arrives late hears only that.
       socket.close(MATCH_VOIDED_CLOSE_CODE, MATCH_VOIDED_CLOSE_REASON);
       return;
     }

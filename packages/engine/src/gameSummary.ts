@@ -143,7 +143,7 @@ export function summarizeGame(input: ReplayInput): GameSummary | null {
     decks: input.decks,
     ...(input.catalog === undefined ? {} : { catalog: input.catalog }),
     ...(input.handicaps === undefined ? {} : { handicaps: input.handicaps }),
-    // R417, R677: setup like the decks, so the fold is the game that was played.
+    // R417, R678: setup like the decks, so the fold is the game that was played.
     ...(input.lastBoards === undefined ? {} : { lastBoards: input.lastBoards }),
     ...(input.glitchBoards === undefined ? {} : { glitchBoards: input.glitchBoards }),
   });

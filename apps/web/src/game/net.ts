@@ -151,7 +151,7 @@ function browserSocket(url: string): SocketLike {
 const REFUSAL_CLOSE_CODES: readonly number[] = [4401, 4403, 4404];
 
 /**
- * R678: the close code both sockets of a match a Glitch voided carry (`MATCH_VOIDED_CLOSE_CODE` in
+ * R679: the close code both sockets of a match a Glitch voided carry (`MATCH_VOIDED_CLOSE_CODE` in
  * `apps/server/src/config.ts`, restated like the refusals). The match no longer exists, so there is
  * nothing to reconnect to; the last view already shows the game over as voided.
  */

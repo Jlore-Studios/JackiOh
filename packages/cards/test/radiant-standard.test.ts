@@ -91,7 +91,7 @@ describe("R276 every card has a Radiant face (SPEC §5.2)", () => {
     const unchanged = ENTRIES.filter(
       (card) =>
         card.radiantFallback !== true &&
-        // R673: Glitch is blank on both faces, the one card a Make Radiant leaves as it was.
+        // R674: Glitch is blank on both faces, the one card a Make Radiant leaves as it was.
         card.id !== GLITCH_DEF_ID &&
         fillParams(card, "radiant") === fillParams(card, "base") &&
         JSON.stringify(card.radiant.xStats) === JSON.stringify(card.base.xStats) &&

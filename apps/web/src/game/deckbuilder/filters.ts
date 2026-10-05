@@ -286,7 +286,7 @@ export function visiblePool(
 }
 
 /**
- * What the almanac's grid shows (R630): every catalog card, tokens included, Glitch excepted (R673),
+ * What the almanac's grid shows (R630): every catalog card, tokens included, Glitch excepted (R674),
  * filtered, then sorted.
  * There is no collection, so `filter.ownedOnly` is not read.
  */
@@ -296,7 +296,7 @@ export function almanacPool(
   sort: PoolSort,
   winRates?: ReadonlyMap<string, CardWinRateInfo>,
 ): readonly string[] {
-  // R673: every card but Glitch, which the almanac never shows.
+  // R674: every card but Glitch, which the almanac never shows.
   return filteredAndSorted(Object.keys(catalog.cards).filter((id) => !isGlitch(id)), catalog, filter, sort, winRates);
 }
 

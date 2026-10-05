@@ -249,7 +249,7 @@ export function redact(state: GameState, seat: PlayerId): GameState {
   // ponytail: dropped whole, so the AI simulates a Rollback as restoring nothing; redact each snapshot's
   // hidden cards instead if the AI should ever plan around one.
   delete next.boardHistory;
-  // R675, R677: the decks the match began with and the boards a Glitch may lay down are no seat's to
+  // R676, R678: the decks the match began with and the boards a Glitch may lay down are no seat's to
   // read; dropped whole, so the AI simulates a Glitch reset as nothing and its boards as empty fields.
   delete next.opening;
   delete next.glitchBoards;

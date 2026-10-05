@@ -1,19 +1,19 @@
-// The Glitch Easter egg (issue #170; SPEC §7, R672–R678).
+// The Glitch Easter egg (issue #170; SPEC §7, R673–R679).
 //
-//   - `countSystemPlay` (R672): a play of a "… in the System" card (`SYSTEM_CARD_DEF_IDS`), by either
+//   - `countSystemPlay` (R673): a play of a "… in the System" card (`SYSTEM_CARD_DEF_IDS`), by either
 //     player, adds one to `state.systemPlays`, which `catalog.pickGenerated` reads: every card
 //     generated into a hand or a deck after that is Glitch with odds n/10000.
-//   - `glitch` (R675): Glitch's own text. One draw of the match rng picks one of `GLITCH_OUTCOMES`,
+//   - `glitch` (R676): Glitch's own text. One draw of the match rng picks one of `GLITCH_OUTCOMES`,
 //     and a public `glitched` event names it:
 //       reset  — the match starts again from `createGame`'s decks, shuffled and dealt by the match
 //                rng, mulligans and all (`resetMatch`, run by `reduce` once the action has settled,
 //                so nothing of the old game is still resolving when it goes);
-//       swap   — each account now plays the other seat (R676). The engine's game is unchanged; the
+//       swap   — each account now plays the other seat (R677). The engine's game is unchanged; the
 //                hosts read `state.seatSwaps` (`seatSwapped`), and the server credits results by it;
 //       boards — both fields become the boards of two other players' games, a frozen setup input
-//                like C+ #29's last boards (`state.glitchBoards`, R677); hands, decks and life stay;
+//                like C+ #29's last boards (`state.glitchBoards`, R678); hands, decks and life stay;
 //       void   — the game ends with no winner and reason `voided`, and the server keeps no trace of
-//                it but a log line (R678).
+//                it but a log line (R679).
 //
 // All of it is plain data on the state, so `(seed, decks, …, log)` folds to the same game (§9.3).
 
@@ -29,24 +29,24 @@ import { createGameForReset, newInstance, type CardInstance, type GameState } fr
 import { ceaseToExist, firstFreeZone, placeOnField, slotsOf, unlockZone, zoneContents } from "../zones";
 import { rebuildFusedDef } from "./fuse";
 
-/** R672: count one play of `card` if it is a "… in the System" card (a fused one counts once). */
+/** R673: count one play of `card` if it is a "… in the System" card (a fused one counts once). */
 export function countSystemPlay(state: GameState, card: CardInstance): void {
   if (!selfDefIds(card.defId).some((id) => SYSTEM_CARD_DEF_IDS.includes(id))) return;
   state.systemPlays = (state.systemPlays ?? 0) + 1;
 }
 
-/** R676: whether the accounts now hold each other's seat — an odd number of swaps. */
+/** R677: whether the accounts now hold each other's seat — an odd number of swaps. */
 export function seatsSwapped(state: Pick<GameState, "seatSwaps">): boolean {
   return (state.seatSwaps ?? 0) % 2 === 1;
 }
 
-/** R676: the seat the account that began the match in `seat` plays now. */
+/** R677: the seat the account that began the match in `seat` plays now. */
 export function seatPlayedBy(state: Pick<GameState, "seatSwaps">, seat: PlayerId): PlayerId {
   if (!seatsSwapped(state)) return seat;
   return seat === "p1" ? "p2" : "p1";
 }
 
-/** R675: Glitch's text — one of its four outcomes, drawn by the match rng. */
+/** R676: Glitch's text — one of its four outcomes, drawn by the match rng. */
 export function glitch(): Effect {
   return {
     kind: "glitch",
@@ -62,7 +62,7 @@ export function glitch(): Effect {
 }
 
 /**
- * R677: every card on both fields ceases to exist (no Death, no graveyard, R11's way out), the Locks
+ * R678: every card on both fields ceases to exist (no Death, no graveyard, R11's way out), the Locks
  * go, and each side takes its frozen other game's board in order: its Units into the unit zones and
  * the rest into the backrow, left to right, until a row is full. Each card is a new one its side owns,
  * on its entry's face, as having entered this turn (R171). Nothing is summoned or played, so nothing
@@ -94,7 +94,7 @@ function placeGlitchBoards(state: GameState): void {
 }
 
 /**
- * R675: the reset a Glitch owed, once its action has settled. The state becomes a new game made from
+ * R676: the reset a Glitch owed, once its action has settled. The state becomes a new game made from
  * the decks the match began with — its seats' handicaps, last boards and Glitch boards, the seat
  * swaps and the nonce log kept — with fresh ids, numbered from where the old game stopped by a stream
  * of this reset's own (R223), and setup runs again on the match rng. A state that keeps no record of

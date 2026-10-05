@@ -382,7 +382,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 54 rows of S4, patch v0.2.0 and Glitch (R675) carry fx with the listed recipe and the other 11 carry none", () => {
+  it("B1 exactly the 54 rows of S4, patch v0.2.0 and Glitch (R676) carry fx with the listed recipe and the other 11 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
     expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(54);

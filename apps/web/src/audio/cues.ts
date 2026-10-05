@@ -463,7 +463,7 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   turnCutShort: { sfx: "notify", cues: () => [sfx("notify", { urgent: true })] },
   // R437: a mark brands its card as it lands (#50's pending steal) and lets go softly as it lifts.
   marked: { sfx: "brand", cues: markCues },
-  // R675: a Glitch tears the match: the rollback's rush with a shattering glass over it.
+  // R676: a Glitch tears the match: the rollback's rush with a shattering glass over it.
   glitched: { sfx: "whoosh", cues: () => [sfx("whoosh"), sfx("shieldShatter")] },
 };
 

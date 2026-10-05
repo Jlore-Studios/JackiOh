@@ -667,7 +667,7 @@ describe("the almanac's pool (R630)", () => {
   it("R630 the Token chip keeps the tokens and nothing else", () => {
     expect(almanacPool(CATALOG, filter({ tags: new Set<Tag>(["Token"]) }), DEFAULT_SORT)).toEqual([TOKEN]);
     const tokens = almanacPool(REAL, filter({ tags: new Set<Tag>(["Token"]) }), DEFAULT_SORT);
-    // R673: every token but Glitch.
+    // R674: every token but Glitch.
     const realTokens = Object.values(CORE_CATALOG).filter((d) => d.token && d.id !== GLITCH_DEF_ID);
     expect(tokens).toHaveLength(realTokens.length);
     expect(new Set(tokens)).toEqual(new Set(realTokens.map((d) => d.id)));
@@ -679,14 +679,14 @@ describe("the almanac's pool (R630)", () => {
     for (const id of ai) expect(CORE_CATALOG[id]?.tags, id).toContain("AI");
   });
 
-  it("R630 shows the whole real catalog, the deck builder's pool plus every token (Glitch excepted, R673)", () => {
+  it("R630 shows the whole real catalog, the deck builder's pool plus every token (Glitch excepted, R674)", () => {
     const all = almanacPool(REAL, DEFAULT_FILTER, DEFAULT_SORT);
     expect([...all].sort()).toEqual(Object.keys(CORE_CATALOG).filter((id) => id !== GLITCH_DEF_ID).sort());
     const deckable = visiblePool(REAL, null, DEFAULT_FILTER, DEFAULT_SORT);
     expect(all.length - deckable.length).toBe(Object.values(CORE_CATALOG).filter((d) => d.token && d.id !== GLITCH_DEF_ID).length);
   });
 
-  it("R673 Glitch is in neither the almanac's pool nor the deck builder's, under any filter", () => {
+  it("R674 Glitch is in neither the almanac's pool nor the deck builder's, under any filter", () => {
     expect(CORE_CATALOG[GLITCH_DEF_ID]).toBeDefined();
     for (const f of [DEFAULT_FILTER, filter({ tags: new Set<Tag>(["Token"]) }), filter({ ownedOnly: false })]) {
       expect(almanacPool(REAL, f, DEFAULT_SORT)).not.toContain(GLITCH_DEF_ID);

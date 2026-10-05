@@ -56,7 +56,7 @@ export async function recordLiveGame(deps: ServerDeps, matchId: string): Promise
       seed: match.seed,
       decks: match.decks,
       log: log.map((row) => row.action),
-      // R417, R677: a match's frozen boards are setup, so the fold reads them as the live game did.
+      // R417, R678: a match's frozen boards are setup, so the fold reads them as the live game did.
       ...(match.lastBoards === undefined ? {} : { lastBoards: match.lastBoards }),
       ...(match.glitchBoards === undefined ? {} : { glitchBoards: match.glitchBoards }),
     });

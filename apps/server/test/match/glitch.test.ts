@@ -1,8 +1,8 @@
 /**
- * The Glitch Easter egg on the server (issue #170, SPEC §7, R675–R678): what the server does with
+ * The Glitch Easter egg on the server (issue #170, SPEC §7, R676–R679): what the server does with
  * the swap, boards and void outcomes the engine announces. The scripted engine (`test/fakes/
  * engine.ts`) reaches each on demand — `test-glitch-swap` and `test-glitch-void` — under the real
- * registry, actor and results writer, over the in-memory store. The reset outcome (R675) needs
+ * registry, actor and results writer, over the in-memory store. The reset outcome (R676) needs
  * nothing of the server: the engine rebuilds its own state, and `(seed, log)` still folds to it.
  *
  * The trust model these prove: only the engine's state moves an account to the other seat or voids
@@ -98,8 +98,8 @@ function lastView(socket: FakeSocket): PlayerView {
   return last.view;
 }
 
-describe("Glitch's swap (R676)", () => {
-  it("R676 routes each account's socket to the seat it now plays: views, legal actions and accepted actions", async () => {
+describe("Glitch's swap (R677)", () => {
+  it("R677 routes each account's socket to the seat it now plays: views, legal actions and accepted actions", async () => {
     const w = await world();
     expect(lastView(w.a).viewer).toBe("p1");
 
@@ -122,7 +122,7 @@ describe("Glitch's swap (R676)", () => {
     expect(lastView(w.a).active).toBe("p2");
   });
 
-  it("R676 a client frame cannot move an account: a playerId on the wire is discarded, before and after a swap", async () => {
+  it("R677 a client frame cannot move an account: a playerId on the wire is discarded, before and after a swap", async () => {
     const w = await world();
     w.a.receiveJson({ type: "action", action: { type: "endTurn", playerId: "p2", nonce: "x1" }, playerId: "p2" });
     await (await w.registry.actorFor(MATCH_ID)).idle();
@@ -140,7 +140,7 @@ describe("Glitch's swap (R676)", () => {
     expect(w.deps.store.tables.results[0]?.winnerProfileId).toBe(P2);
   });
 
-  it("R676 credits the result by the seats as they are played at the end: the winning seat's current account wins, Elo included", async () => {
+  it("R677 credits the result by the seats as they are played at the end: the winning seat's current account wins, Elo included", async () => {
     const w = await world();
     await frame(w, w.a, "n1", { type: "play", instanceId: "p1-h0" });
     // P2 now plays p1, whose hand holds test-lethal at slot 0: seat p1 wins.
@@ -155,7 +155,7 @@ describe("Glitch's swap (R676)", () => {
     expect(profile?.rating).toBeGreaterThan(1000);
   });
 
-  it("R676 a disconnect grace runs on the seat the account plays now", async () => {
+  it("R677 a disconnect grace runs on the seat the account plays now", async () => {
     const w = await world();
     await frame(w, w.a, "n1", { type: "play", instanceId: "p1-h0" });
     const actor = await w.registry.actorFor(MATCH_ID);
@@ -165,7 +165,7 @@ describe("Glitch's swap (R676)", () => {
     expect(actor.clocks().graceDeadline.p1).toBeNull();
   });
 
-  it("R676 a rebuilt actor reads the swap off the folded state", async () => {
+  it("R677 a rebuilt actor reads the swap off the folded state", async () => {
     const w = await world();
     await frame(w, w.a, "n1", { type: "play", instanceId: "p1-h0" });
     await w.registry.stop(MATCH_ID);
@@ -176,10 +176,10 @@ describe("Glitch's swap (R676)", () => {
   });
 });
 
-describe("Glitch's boards (R677)", () => {
+describe("Glitch's boards (R678)", () => {
   const board = (defId: string): LastBoardEntry[] => [{ defId, radiant: false }];
 
-  it("R677 freezes two other players' last server boards on the match, never either seat's own", async () => {
+  it("R678 freezes two other players' last server boards on the match, never either seat's own", async () => {
     let folded: FoldArgs | null = null;
     const w = await world({
       before: (deps) => {
@@ -213,7 +213,7 @@ describe("Glitch's boards (R677)", () => {
     expect(folded).toMatchObject({ glitchBoards: frozen });
   });
 
-  it("R677 passes what exists: one other board leaves the second seat's empty, none omits the field", async () => {
+  it("R678 passes what exists: one other board leaves the second seat's empty, none omits the field", async () => {
     const one = await world({
       before: (deps) => {
         deps.store.tables.lastBoards.push({ profileId: "profile-5", kind: "server", board: board("other-5") });
@@ -230,10 +230,10 @@ describe("Glitch's boards (R677)", () => {
   });
 });
 
-describe("Glitch's void (R678)", () => {
+describe("Glitch's void (R679)", () => {
   const voidDecks = { p1Deck: fakeDeck(["test-glitch-void"]) };
 
-  it("R678 writes no result, no rating, no game record and no last board, and the match is gone", async () => {
+  it("R679 writes no result, no rating, no game record and no last board, and the match is gone", async () => {
     const w = await world({
       ...voidDecks,
       before: (deps) => {
@@ -255,7 +255,7 @@ describe("Glitch's void (R678)", () => {
     expect(w.registry.has(MATCH_ID)).toBe(false);
   });
 
-  it("R678 closes both sockets with the voided close code, after a last view that shows the void", async () => {
+  it("R679 closes both sockets with the voided close code, after a last view that shows the void", async () => {
     const w = await world(voidDecks);
     await frame(w, w.a, "n1", { type: "play", instanceId: "p1-h0" });
     for (const socket of [w.a, w.b]) {
@@ -267,7 +267,7 @@ describe("Glitch's void (R678)", () => {
     await expect(w.registry.attach(MATCH_ID, P1, createFakeSocket())).rejects.toThrow("no such match");
   });
 
-  it("R678 logs one line naming the match and both profiles", async () => {
+  it("R679 logs one line naming the match and both profiles", async () => {
     const w = await world(voidDecks);
     await frame(w, w.a, "n1", { type: "play", instanceId: "p1-h0" });
     const lines = w.deps.log.entries.filter((entry) => entry.event === "match.voided");
@@ -276,7 +276,7 @@ describe("Glitch's void (R678)", () => {
     ]);
   });
 
-  it("R678 a voided Conquest game never happened: the series plays the same game again", async () => {
+  it("R679 a voided Conquest game never happened: the series plays the same game again", async () => {
     const deps = createTestDeps();
     deps.matches = createFakeMatchDirectory(deps.store);
     const tokens = [P1, P2].map((id) => {

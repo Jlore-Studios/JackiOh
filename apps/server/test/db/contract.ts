@@ -1028,7 +1028,7 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         expect((await store.matches.live()).find((match) => match.id === row.id)?.lastBoards).toEqual([BOARD, []]);
       });
 
-      it("R677 samples other profiles' non-empty server boards, never an excluded one", async () => {
+      it("R678 samples other profiles' non-empty server boards, never an excluded one", async () => {
         const [a, b, c, d, e, f] = [
           await activeProfile(),
           await activeProfile(),
@@ -1055,7 +1055,7 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         expect(await store.lastBoards.sampleOthers([a.id, b.id], 0)).toEqual([]);
       });
 
-      it("R677 a match row keeps the Glitch boards it started with", async () => {
+      it("R678 a match row keeps the Glitch boards it started with", async () => {
         const [p1, p2] = [await activeProfile(), await activeProfile()];
         const row: MatchRow = { ...matchRow(id(), p1.id, p2.id, harness, harness.now()), glitchBoards: [BOARD, []] };
         await store.matches.create(row);
@@ -1386,7 +1386,7 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         expect(await store.matches.get(row.id)).toEqual(row);
       });
 
-      it("R678 forgets a voided live match: its row, its log and both players' in-match flags", async () => {
+      it("R679 forgets a voided live match: its row, its log and both players' in-match flags", async () => {
         const [a, b] = [await activeProfile(), await activeProfile()];
         const row = matchRow(id(), a.id, b.id, harness, harness.now());
         await store.matches.create(row);
@@ -1410,7 +1410,7 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         await store.matches.forgetVoided(id());
       });
 
-      it("R678 never forgets a finished match or one with a result", async () => {
+      it("R679 never forgets a finished match or one with a result", async () => {
         const [a, b] = [await activeProfile(), await activeProfile()];
         const finished = matchRow(id(), a.id, b.id, harness, harness.now());
         await store.matches.create(finished);

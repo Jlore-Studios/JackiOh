@@ -44,7 +44,7 @@ function cards(count: number): string {
 
 /** "206 added · 111 changed", from the patch's own record; nothing for a kind it has none of. */
 export function countsLine(patch: Patch): string {
-  // R673: Glitch is not counted, as it is not listed (history.ts `patchCards`).
+  // R674: Glitch is not counted, as it is not listed (history.ts `patchCards`).
   const count = (kind: Patch["changes"][number]["kind"]): number =>
     patch.changes.filter((change) => change.kind === kind && !isGlitch(change.id)).length;
   const parts = [

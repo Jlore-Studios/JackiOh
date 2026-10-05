@@ -1,11 +1,11 @@
--- Glitch (migration 0023, issue #170, SPEC §7, R677, R678). Runs after 12_ranked.sql; profiles 1
+-- Glitch (migration 0023, issue #170, SPEC §7, R678, R679). Runs after 12_ranked.sql; profiles 1
 -- and 2 are active by then (03 activated them).
 \set ON_ERROR_STOP on
 
 -- Same rules as 01-12: every check raises on failure, every expected refusal is matched on its
 -- constraint name or its message, and every block runs inside a transaction that is rolled back.
 
-\echo '### R677: a match keeps the Glitch boards it started with ###'
+\echo '### R678: a match keeps the Glitch boards it started with ###'
 begin;
 do $$
 declare
@@ -27,30 +27,30 @@ begin
 
   select p1_glitch_board, p2_glitch_board into v_row from public.matches where id = mid;
   if v_row.p1_glitch_board <> v_board or v_row.p2_glitch_board <> '[]'::jsonb then
-    raise exception 'FAIL (R677): the match''s Glitch boards read %, expected p1 % and an empty p2', v_row, v_board;
+    raise exception 'FAIL (R678): the match''s Glitch boards read %, expected p1 % and an empty p2', v_row, v_board;
   end if;
   select p1_glitch_board, p2_glitch_board into v_row from public.matches where id = old;
   if v_row.p1_glitch_board <> '[]'::jsonb or v_row.p2_glitch_board <> '[]'::jsonb then
-    raise exception 'FAIL (R677): a match written without Glitch boards reads %, expected two empty boards', v_row;
+    raise exception 'FAIL (R678): a match written without Glitch boards reads %, expected two empty boards', v_row;
   end if;
   if not exists (select 1 from app.live_matches() m where m.id = mid and m.p1_glitch_board = v_board) then
-    raise exception 'FAIL (R677): app.live_matches() does not carry the Glitch board a restart folds with';
+    raise exception 'FAIL (R678): app.live_matches() does not carry the Glitch board a restart folds with';
   end if;
 
   begin
     update public.matches set p2_glitch_board = '[{"radiant": true}]' where id = mid;
-    raise exception 'FAIL (R677): a Glitch board entry with no defId was accepted';
+    raise exception 'FAIL (R678): a Glitch board entry with no defId was accepted';
   exception when check_violation then
     get stacked diagnostics refused_by = constraint_name;
     if refused_by is distinct from 'matches_glitch_boards_check' then
-      raise exception 'FAIL (R677): a malformed Glitch board refused by "%"', refused_by;
+      raise exception 'FAIL (R678): a malformed Glitch board refused by "%"', refused_by;
     end if;
   end;
-  raise notice 'OK (R677): frozen on the row, empty by default, shape checked';
+  raise notice 'OK (R678): frozen on the row, empty by default, shape checked';
 end $$;
 rollback;
 
-\echo '### R678: app.forget_voided_match erases a live match and its log, and nothing else ###'
+\echo '### R679: app.forget_voided_match erases a live match and its log, and nothing else ###'
 begin;
 do $$
 declare
@@ -75,31 +75,31 @@ begin
   update public.profiles set current_match_id = voided where id in (p1, p2);
 
   if not app.forget_voided_match(voided) then
-    raise exception 'FAIL (R678): a live match with no result was not forgotten';
+    raise exception 'FAIL (R679): a live match with no result was not forgotten';
   end if;
   if exists (select 1 from public.matches where id = voided) then
-    raise exception 'FAIL (R678): the voided match row survived';
+    raise exception 'FAIL (R679): the voided match row survived';
   end if;
   if exists (select 1 from public.match_actions where match_id = voided) then
-    raise exception 'FAIL (R678): the voided match kept its log';
+    raise exception 'FAIL (R679): the voided match kept its log';
   end if;
   select count(*) into n from public.profiles where id in (p1, p2) and current_match_id is not null;
   if n <> 0 then
-    raise exception 'FAIL (R678): % player(s) still held in the voided match', n;
+    raise exception 'FAIL (R679): % player(s) still held in the voided match', n;
   end if;
 
   if app.forget_voided_match(over_m) or app.forget_voided_match(result_m) then
-    raise exception 'FAIL (R678): a finished match, or one with a result, was forgotten';
+    raise exception 'FAIL (R679): a finished match, or one with a result, was forgotten';
   end if;
   select count(*) into n from public.matches where id in (over_m, result_m);
   if n <> 2 or not exists (select 1 from public.match_actions where match_id = over_m) then
-    raise exception 'FAIL (R678): a finished match or its log went';
+    raise exception 'FAIL (R679): a finished match or its log went';
   end if;
 
   -- The permission ends with the function.
   begin
     delete from public.match_actions where match_id = over_m;
-    raise exception 'FAIL (R678): a delete after the void got past the append-only guard';
+    raise exception 'FAIL (R679): a delete after the void got past the append-only guard';
   exception
     when raise_exception then
       if sqlerrm not like 'append-only table public.match_actions may not be updated or deleted%' then
@@ -107,7 +107,7 @@ begin
       end if;
   end;
 
-  raise notice 'OK (R678): the voided match and its log are gone, its players free; finished games stay';
+  raise notice 'OK (R679): the voided match and its log are gone, its players free; finished games stay';
 end $$;
 rollback;
 

@@ -640,7 +640,7 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
     // No `open` rows here: a reserved match id is only an id until the registry creates it (R263).
     discardOpen: async (_matchId) => {
     },
-    // R678: the voided match goes as if it never existed.
+    // R679: the voided match goes as if it never existed.
     forgetVoided: async (matchId) => {
       forgetVoidedRows(tables, matchId);
     },

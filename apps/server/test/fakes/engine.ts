@@ -36,8 +36,8 @@
  *  - `test-mutual-lethal` ends the match: both heroes die in the same check, a draw by
  *                         `both-heroes-dead` (§2.5's second row — the one ending no other scripted
  *                         card can reach, and the seventh of the reasons `api/results.ts` writes);
- *  - `test-glitch-swap`   a Glitch's swap (R676): `seatSwaps` goes up by one, `glitched` announces it;
- *  - `test-glitch-void`   a Glitch's void (R678): the game ends, no winner, reason `voided`.
+ *  - `test-glitch-swap`   a Glitch's swap (R677): `seatSwaps` goes up by one, `glitched` announces it;
+ *  - `test-glitch-void`   a Glitch's void (R679): the game ends, no winner, reason `voided`.
  */
 
 import type { Action, GameEvent, PlayerId, PlayerView, SideView } from "@jackioh/shared";
@@ -65,9 +65,9 @@ type FakeState = {
   nextChoice: number;
   /** R417: the last boards it was created with, kept so a fold is the same game. */
   lastBoards: [LastBoardEntry[], LastBoardEntry[]];
-  /** R677: the Glitch boards it was created with, likewise. */
+  /** R678: the Glitch boards it was created with, likewise. */
   glitchBoards: [LastBoardEntry[], LastBoardEntry[]] | null;
-  /** R676: how many Glitch swaps have resolved. */
+  /** R677: how many Glitch swaps have resolved. */
   seatSwaps: number;
 };
 

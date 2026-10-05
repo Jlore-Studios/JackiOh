@@ -94,7 +94,7 @@ const SETS: readonly SetExpectation[] = [
   },
   {
     // B2.1, B2.5: 90 cards and no tokens of its own; the designer's rarities. Issue #170 adds one
-    // shared token, Glitch, which only R672's roll ever makes (R673).
+    // shared token, Glitch, which only R673's roll ever makes (R674).
     set: "Classic",
     segment: "classic",
     cards: 90,

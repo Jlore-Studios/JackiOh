@@ -1077,7 +1077,7 @@ function placeCard(sink: EngineSink, run: PlayRun): boolean {
   state.counters.played += 1;
   // R429: a card that counts its own plays counts this one here, with every other count of it.
   countPlay(card);
-  // R672: a play of a "… in the System" card, by either player, raises the match's Glitch odds.
+  // R673: a play of a "… in the System" card, by either player, raises the match's Glitch odds.
   if (run.cast !== true) countSystemPlay(state, card);
   run.radiant = card.radiant;
   // B5 E4, R451: the per-turn types, the per-game tags and the "last" records.

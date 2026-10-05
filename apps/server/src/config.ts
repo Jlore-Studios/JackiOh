@@ -424,16 +424,16 @@ export const MATCH_REAPER_INTERVAL_SECONDS = 30;
 export const RESULT_WRITE_ATTEMPTS = 3;
 
 // ---------------------------------------------------------------------------------------------
-// Glitch (issue #170; SPEC §7, R677, R678).
+// Glitch (issue #170; SPEC §7, R678, R679).
 // ---------------------------------------------------------------------------------------------
 
 /**
- * R677: how many other players' last server boards a match samples as it is created, one per seat,
+ * R678: how many other players' last server boards a match samples as it is created, one per seat,
  * for a Glitch's boards outcome. Fewer when fewer other players have one.
  */
 export const GLITCH_BOARDS_SAMPLED = 2;
 /**
- * R678: the WebSocket close code both sockets of a voided match are closed with, beside the reason
+ * R679: the WebSocket close code both sockets of a voided match are closed with, beside the reason
  * `MATCH_VOIDED_CLOSE_REASON` (`match/protocol.ts`). In the 4000–4999 application range, read as
  * HTTP's 410 Gone: the match no longer exists. The last `view` the clients got already shows the
  * game over with reason `voided`.
