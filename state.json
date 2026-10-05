@@ -1242,20 +1242,25 @@
           "muse"
         ],
         "builder": "muse",
+        "carried": {
+          "by": "`muse` (medium) twice",
+          "conflicts": [
+            "SPEC.md",
+            "packages/cards/test/card-text.test.ts",
+            "packages/engine/test/rulings.test.ts"
+          ],
+          "from": "ca2396d468c904a5556ae19b23d061807b57ae2b",
+          "main": "b073600a258caa0550a4443ab3a0efd3bb1e3b5a"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "muse",
-            "run": "37298951025",
-            "tier": "medium"
-          },
-          {
-            "family": "muse",
-            "run": "37325158563",
+            "run": "37334810770",
             "tier": "medium"
           }
         ],
-        "sha": "ca2396d468c904a5556ae19b23d061807b57ae2b",
+        "sha": "da0baecc2937347be97c5b5f9422bd40c4321663",
         "tiers": {
           "muse": "medium"
         }
