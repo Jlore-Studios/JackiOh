@@ -4291,17 +4291,21 @@
         {
           "at": "2026-10-05T09:25:40Z",
           "minutes": 165.6
+        },
+        {
+          "at": "2026-10-05T09:44:04Z",
+          "minutes": 18.9
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-05T09:44:00Z",
-          "utilization": 0.25
+          "utilization": 0.28
         },
-        "observed_at": "2026-10-05T09:25:40Z",
+        "observed_at": "2026-10-05T09:44:04Z",
         "seven_day": {
           "resets_at": "2026-10-12T00:00:00Z",
-          "utilization": 0.16
+          "utilization": 0.17
         },
         "status": "allowed"
       }
