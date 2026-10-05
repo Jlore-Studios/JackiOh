@@ -2230,6 +2230,11 @@
       "ci_reruns": {
         "e0742c2b29d258a0bd3065cdf0ee052f7554202f": 1
       },
+      "cleared": {
+        "at": "2026-10-05T04:00:31Z",
+        "by": "`muse` (medium) twice",
+        "sha": "e0742c2b29d258a0bd3065cdf0ee052f7554202f"
+      },
       "cross_rounds": 0,
       "died": 1,
       "difficulty": "medium",
