@@ -2516,10 +2516,14 @@
       "votes": {
         "approvals": [],
         "builder": "cognition",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "5a6bcc87f9c23f9d3b08243f7f993933e9c4c6e3",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "290": {
