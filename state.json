@@ -622,6 +622,12 @@
       "lines": [
         "@jgoetzmann-bot revise this its failing ci"
       ]
+    },
+    "c:6005522014": {
+      "at": "2026-10-05T23:35:40Z",
+      "lines": [
+        "/harness stop"
+      ]
     }
   },
   "items": {
