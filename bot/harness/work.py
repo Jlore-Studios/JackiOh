@@ -97,7 +97,7 @@ class Interrupt(Exception):
 
 
 #: What a probe returns when the run must stop: the reason, and its kind (`halt`, `stop` for a
-#: person stopping this item, or `usage`).
+#: person stopping this item, `suspend` for the run's subscription suspended, or `usage`).
 Probe = Callable[[dict | None], "tuple[str, str] | None"]
 
 
@@ -1156,7 +1156,8 @@ class Worker:
 
     def _last_checkpoint(self) -> None:
         """A halt or a stop said during the last review still counts: no finished change is
-        handed on past one. The clock and the usage stop no longer matter here."""
+        handed on past one. The clock, the usage stop and a suspension of the run's subscription
+        no longer matter here: its model calls are over, so the finished change is handed on."""
         if self.probe is None:
             return
         found = self.probe(None)

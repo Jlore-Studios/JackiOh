@@ -638,6 +638,13 @@ def peek_record(state: dict[str, Any], provider_id: str) -> dict[str, Any]:
     return entry
 
 
+def suspension(state: dict[str, Any], provider_id: str) -> dict[str, Any] | None:
+    """The `/harness suspend` holding this provider (`by`, `at`, `reason`), or None. Only
+    `/harness resume <id>` lifts it: neither `--force` nor a bare `/harness start` does."""
+    held = peek_record(state, provider_id).get("suspended")
+    return dict(held) if isinstance(held, Mapping) else None
+
+
 def note_usage(state: dict[str, Any], provider_id: str, usage: dict | None, reset_at: str | None,
                at: datetime, minutes: float = 0.0) -> None:
     """Keep a run's newest usage reading, any refusal, and the minutes it spent."""
@@ -872,6 +879,11 @@ def availability(provider: Provider, state: dict[str, Any], at: datetime, zone_n
         return "switched off in providers.json"
     if switched_off_by_date(provider, at, zone_name):
         return f"switched off from {provider.off_from} (`off_from` in providers.json)"
+    held = suspension(state, provider.id)
+    if held is not None:
+        by = f" by @{held['by']}" if held.get("by") else ""
+        why = f" ({held['reason']})" if held.get("reason") else ""
+        return f"suspended{by}{why}; `/harness resume {provider.id}` lifts it"
     if provider.login == "secret" and secrets.has(provider.secret) is False:
         return f"its secret `{provider.secret}` is not set"
     if not forced and not provider.off_hours and not provider.schedule.is_open(zone_name, at):
