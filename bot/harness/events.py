@@ -9,8 +9,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from harness import asks, commands, stepup
 from datetime import timedelta
+
+from harness import asks, commands, stepup
+from harness import providers as providers_mod
 
 from harness.asks import Ask
 from harness.clock import iso, parse_iso
@@ -19,6 +21,7 @@ from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
                             LABEL_WORKING, MARKER)
 from harness.context import Context
 from harness.errors import GitHubError
+from harness.providers import Provider
 from harness.queue import (label_names, queue_build, queue_review, queue_revise, set_state_label,
                            stop)
 from harness.state import item as state_item
@@ -223,6 +226,8 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
         return ("Halted. No new model work starts until `/harness start`; a run already going "
                 "stops at its next checkpoint and keeps its work.")
     if verb == "start":
+        if command.args:
+            return _resume(ctx, command)
         ctx.store.update(lambda s: s.update(halted=False, halt={}), "start")
         extra = ""
         if ctx.repo_halted():
@@ -230,6 +235,20 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
         if command.force:
             return "Started. " + _run_now(ctx, None) + extra
         return "Started. The bot takes work again as soon as a subscription is free." + extra
+    if verb == "suspend":
+        word, _, rest = command.args.partition(" ")
+        if not word:
+            return ("`suspend` needs a subscription, as in `/harness suspend claude-3 using it "
+                    "myself`. Nothing was done.")
+        provider, problem = _subscription(ctx, word)
+        if provider is None:
+            return problem
+        held = {"by": by, "at": iso(ctx.now()), "reason": rest.strip()}
+        ctx.store.update(lambda s: providers_mod.record(s, provider.id).update(suspended=held),
+                         f"suspend {provider.id}")
+        return (f"Suspended `{provider.id}`. No new work starts on it until "
+                f"`/harness resume {provider.id}`; a run already going on it stops at its next "
+                "checkpoint, keeps its work and goes back to the queue for another subscription.")
     if verb == "run":
         target = command.args.lstrip("#")
         return _run_now(ctx, int(target) if target.isdigit() else None)
@@ -265,6 +284,33 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
             return queue_revise(ctx, number, by=by, force=command.force, ask=ask) + notes_line
         return queue_build(ctx, number, by=by, force=command.force, ask=ask) + notes_line
     return f"`{verb}` is not something I can do here."
+
+
+def _subscription(ctx: Context, word: str) -> tuple[Provider | None, str]:
+    """The subscription a `suspend` or `resume` names, or None and the reply saying why not."""
+    name = word.strip("`:,.!?").lower()
+    provider = ctx.cfg.pool.get(name)
+    if provider is not None:
+        return provider, ""
+    known = ", ".join(f"`{p.id}`" for p in ctx.cfg.pool.ordered())
+    return None, f"`{name}` is not a subscription; I know {known}. Nothing was done."
+
+
+def _resume(ctx: Context, command: Command) -> str:
+    """`start <subscription>` (`resume claude-3`): lift that one's suspension, and no halt."""
+    provider, problem = _subscription(ctx, command.args.split()[0])
+    if provider is None:
+        return problem + " `/harness start` alone lifts a halt."
+    if providers_mod.suspension(ctx.store.load(), provider.id) is None:
+        return f"`{provider.id}` is not suspended, so there was nothing to lift."
+    ctx.store.update(lambda s: providers_mod.record(s, provider.id).pop("suspended", None),
+                     f"resume {provider.id}")
+    reply = f"Resumed `{provider.id}`: the bot spends it again as soon as it is free."
+    if ctx.store.load().get("halted"):
+        reply += " The bot is still halted, though: `/harness start` lifts that."
+    if command.force:
+        reply += " " + _run_now(ctx, None)
+    return reply
 
 
 def _run_now(ctx: Context, item: int | None) -> str:

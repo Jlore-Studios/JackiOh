@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from harness.trust import LEVEL_NAMES
 
 VERBS: tuple[str, ...] = ("build", "revise", "review", "rebuild", "stop", "status", "help", "halt",
-                          "start", "suggest", "run")
+                          "start", "suggest", "run", "suspend")
 
 ALIASES: dict[str, str] = {
     "work": "build",
@@ -48,6 +48,7 @@ LEVELS: dict[str, int] = {
     "halt": 3,
     "start": 3,
     "run": 3,
+    "suspend": 3,
 }
 
 #: `--force` lifts the subscriptions' hours and nothing else (their usage caps hold). Operator only.
@@ -148,9 +149,10 @@ _MENTION_ARGS: dict[str, re.Pattern[str]] = {
     "rebuild": re.compile(r"^$"),
     "review": re.compile(r"^(?i:strong|medium)?$"),
     "halt": re.compile(r"^$"),
-    "start": re.compile(r"^$"),
+    "start": re.compile(r"^\S*$"),
     "suggest": re.compile(r"^$"),
     "run": re.compile(r"^(#?\d+)?$"),
+    "suspend": re.compile(r"^\S*$"),
 }
 _LIST_MARK = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
 _WRAP = "`*_~"
@@ -235,8 +237,9 @@ HELP = """\
 | `status` | halt state, each subscription, the queue | anywhere | 1 |
 | `help [verb]` | this list, or one command in detail | anywhere | 1 |
 | `halt [reason]` | stop all model work until `start` | anywhere | 3 |
-| `start` | lift a halt | anywhere | 3 |
+| `start [subscription]` | lift a halt; with a subscription, lift its suspension instead | anywhere | 3 |
 | `run [#n]` | start a run now, outside a subscription's hours if need be | anywhere | 3 |
+| `suspend <subscription> [reason]` | start no new work on one subscription until `resume <subscription>` | anywhere | 3 |
 
 Anything else after `/harness` or `@{bot}` is a request: a build on an issue, a revision on a PR, with your words as the notes. A single word that looks like a misspelt verb (`stauts`) runs nothing; I ask what you meant.
 After `@{bot}`, a control verb followed by more words reads as plain English, so `@{bot} stop using the old sprite` is a request. Write the verb alone, or with a colon (`@{bot} halt: away this week`), for the command.
@@ -271,10 +274,17 @@ VERB_HELP: dict[str, tuple[str, str, str]] = {
     "halt": ("halt [reason]", "Stop all model work until `start`; a run already going stops at "
              "its next checkpoint. After `@{bot}`, a colon after the verb gives the reason.",
              "@{bot} halt: away this week"),
-    "start": ("start", "Lift a halt. `start --force` also starts a run now.",
-              "/harness start --force"),
+    "start": ("start [subscription]", "Lift a halt. `start --force` also starts a run now. With a "
+              "subscription (`resume claude-3`), lift that one's suspension and leave a halt as it "
+              "is.", "/harness start --force"),
     "run": ("run [#n]", "Start a run now, outside a subscription's hours if need be, for one item or "
             "whatever is next in the queue.", "@{bot} run #12"),
+    "suspend": ("suspend <subscription> [reason]", "Start no new work on one subscription (an id "
+                "`status` lists, such as `claude-3` or `gpt`) until `/harness resume "
+                "<subscription>`; a run already going on it stops at its next checkpoint, keeps "
+                "its work and goes back to the queue for another subscription. `--force` does not "
+                "lift it. After `@{bot}`, a colon after the verb gives the reason.",
+                "@{bot} suspend: claude-3 using it myself"),
 }
 
 POINTER = "`/harness help` (or `@{bot} help`) lists the commands."

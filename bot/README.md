@@ -29,7 +29,7 @@ flowchart TD
   subgraph you["You, any time of day"]
     I["Issue: add the bot:build label, assign @jgoetzmann-bot,<br/>or comment /harness build or @jgoetzmann-bot &lt;request&gt;"]
     P["Pull request: comment @jgoetzmann-bot &lt;change&gt;,<br/>request changes, or add bot:revise"]
-    K["/harness halt · start · status · stop · suggest · run<br/>(add --force to skip the wait)"]
+    K["/harness halt · start · status · stop · suggest · run · suspend<br/>(add --force to skip the wait)"]
   end
   I --> E
   P --> E
@@ -196,8 +196,9 @@ code blocks are ignored, so quoting the bot back at it runs nothing.
 | `status` | halt state; which subscriptions are running what, for how long, with each run's link; each subscription's hours and usage; the queue | anywhere | 1 |
 | `help [verb]` | the commands, or one of them in detail with an example | anywhere | 1 |
 | `halt [reason]` | stop all model work until `start` | anywhere | 3 |
-| `start` | lift a halt (`start --force` also starts a run) | anywhere | 3 |
+| `start [subscription]` | lift a halt (`start --force` also starts a run); with a subscription (`resume claude-3`), lift that one's suspension and leave a halt as it is | anywhere | 3 |
 | `run [#n]` | start a run now, outside a subscription's hours if need be | anywhere | 3 |
+| `suspend <subscription> [reason]` | start no new work on one subscription (an id `status` lists: `claude-3`, `gpt`, …) until `resume <subscription>`; a run already going on it stops at its next checkpoint, keeps its work, and its item goes back to the queue for another subscription (a run whose model work is done still hands its change on); `--force` does not lift it | anywhere | 3 |
 
 Aliases: `work` (build), `fix` and `update` (revise), `resume` and `unhalt` (start), `go` (run).
 
@@ -207,10 +208,13 @@ Aliases: `work` (build), `fix` and `update` (revise), `resume` and `unhalt` (sta
 - **A misspelt verb runs nothing.** One word that is a letter or two off a verb or alias
   (`stauts`, `biuld --force`, `rnu #5`) gets "did you mean `status`?" instead of a build of the typo.
 - **Plain English after the bot's name.** After `@jgoetzmann-bot`, a control verb (`stop`,
-  `status`, `start`, `suggest`, `halt`, `run`, `help`) followed by words that do not fit it is read
-  as a request: `@jgoetzmann-bot stop using the old sprite` asks for a change, it does not stop
-  anything. Write the verb alone for the command, or put a colon after it to make the words its
-  own: `@jgoetzmann-bot halt: away this week`. After `/harness` the verb always wins.
+  `status`, `start`, `suggest`, `halt`, `run`, `suspend`, `help`) followed by words that do not
+  fit it is read as a request: `@jgoetzmann-bot stop using the old sprite` asks for a change, it
+  does not stop anything. Write the verb alone for the command, or put a colon after it to make
+  the words its own: `@jgoetzmann-bot halt: away this week`. After `/harness` the verb always
+  wins. `start` and `suspend` take one word after the bot's name, a subscription:
+  `@jgoetzmann-bot resume claude-3` lifts that one's suspension, while `@jgoetzmann-bot start with
+  option A` is still a request.
 
 ### What the reactions mean
 
@@ -226,11 +230,11 @@ without reading the thread:
 | 🎉 | done: the run that read it finished with an answer (a pull request opened or updated, a revision pushed, a survey done) |
 | 😕 | it ended without an answer: blocked, stopped, or given up on after too many failures |
 
-A command that needs no model (`status`, `help`, `halt`, `start`, `run`, `stop`) gets 👀 and 🚀
-only. When a run is interrupted (the time budget, the usage limit, a halt), its requests go back to
-waiting and get ❤️ again from the next run. A request left on an issue while it is being built
-moves to the pull request the build opens. A review cannot take a reaction, so a request made in a
-review's body gets the reply but not the reactions.
+A command that needs no model (`status`, `help`, `halt`, `start`, `run`, `suspend`, `stop`) gets 👀
+and 🚀 only. When a run is interrupted (the time budget, the usage limit, a halt), its requests go
+back to waiting and get ❤️ again from the next run. A request left on an issue while it is being
+built moves to the pull request the build opens. A review cannot take a reaction, so a request made
+in a review's body gets the reply but not the reactions.
 
 **Who may do what** comes from [`.harness/trust.txt`](../.harness/trust.txt): 3 operator,
 2 maintainer, 1 asker. A command from anyone else is ignored without a reply. A line with
@@ -346,8 +350,9 @@ CLI each time; every other subscription's runs on its own runner on the machine,
 A Claude account
 works only once its secret is set (Settings → Secrets and variables → Actions), so the ones you
 have not set up yet sit out. A login on the machine has no secret to check, so the bot counts it
-as set up; turn one off with `enabled: false`. `python3 -m harness providers` in `bot/` prints
-each one and whether it could start now, and `/harness status` does the same on GitHub.
+as set up; turn one off with `enabled: false`, or for a while, without a pull request, with
+`/harness suspend <id>` (until `/harness resume <id>`). `python3 -m harness providers` in `bot/`
+prints each one and whether it could start now, and `/harness status` does the same on GitHub.
 
 **What each entry says.**
 - `cli`, `model` and `effort`: the reasoning effort, where the CLI takes one. agy's model names
@@ -800,8 +805,10 @@ account.
 - **Text from GitHub is data.** Issue text (the title included), comments, reviews and CI logs
   reach the model fenced and labelled as data. Comments from people outside the trust list are
   left out, and their commands never start a runner.
-- **Three off switches.** `/harness halt` (with `start` to undo it), `/harness stop` for one item,
-  and a committed `.harness/HALT` file, which only someone who can push to `main` can lift.
+- **Four off switches.** `/harness halt` (with `start` to undo it), `/harness stop` for one item,
+  `/harness suspend <subscription>` for one subscription (with `resume <subscription>` to undo
+  it), and a committed `.harness/HALT` file, which only someone who can push to `main` can lift.
+  A halt and a suspension are separate: neither lifts the other.
 - **Usage.** Claude and Codex report each subscription's 5-hour and 7-day usage; the bot counts
   minutes for the others. Past a subscription's caps no new call starts on it, and a refused call
   parks it until the limit resets while the item moves to another subscription.
@@ -863,6 +870,7 @@ days.
 | see what it has done | the pinned issue **Night bot statistics** (`bot/harness/stats.py`), which the same loop rewrites every hour (`dashboard --stats`), or `python3 -m harness stats --force` in `bot/`. One table sets the last 6 hours, the last 24 hours, the last 7 days and all time side by side: runs by kind, outcomes, pull requests opened and merged, issues closed, lines added and removed, files, commits, time to merge, model hours. Each window then has its own section: per subscription and model, its runs by kind, outcomes, pull requests opened and merged, lines merged, pauses, failures and model time; bar charts of runs and lines by subscription; and every pull request merged in it with who planned, built, revised and approved it (all time adds model hours, outcomes and the last two weeks day by day). Charts are bars and lines, never pies. Runs and builders come from the bot's own comments; a pull request from before its comments named a builder takes the last build started on its issue before it was opened, and shows as "not recorded" when there was none |
 | stop everything now | `/harness halt`; for a lock nobody can lift by comment, commit `.harness/HALT` |
 | start again | `/harness start` (and delete `.harness/HALT` if you committed it) |
+| stop spending one subscription for a while | `/harness suspend <subscription> [reason]`, with its id as `/harness status` lists it; `/harness resume <subscription>` lifts it. For good, set `"enabled": false` in `.harness/providers.json` |
 | run now, outside a subscription's hours | `/harness run`, `/harness build --force`, or Actions → bot-night → Run workflow |
 | see each subscription | `/harness status`, or `python3 -m harness providers` in `bot/` |
 | add a subscription, or change its hours, limits or model | set its secret or log it in on the machine, and edit `.harness/providers.json` in a pull request; a new one on the machine also needs `setup.sh` and `register-runners.sh` ([`machine/`](machine/README.md)) |
