@@ -26,7 +26,7 @@ import {
   STATS_PROVISIONAL_BANNER,
   STATS_SCREEN,
   STATS_SEARCH_INPUT,
-  STATS_SUMMARY_LIVE_GAMES,
+  STATS_SUMMARY_PATCH_GAMES,
   STATS_SUMMARY_TILES,
   STATS_SUMMARY_TOTAL_GAMES,
   STATS_TAB_PLAYERS,
@@ -190,10 +190,14 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
       .should("not.contain.text", "Data source")
       .and("not.contain.text", "AI games + live games (provisional)");
 
-    // Summary tiles show total games and live games
+    // Summary tiles show the total games and the patch's counted games — never the gate's live
+    // count or the word "live" (R661)
     cy.get(ts(STATS_SUMMARY_TILES)).should("be.visible");
     cy.get(ts(STATS_SUMMARY_TOTAL_GAMES)).should("contain.text", "1,412");
-    cy.get(ts(STATS_SUMMARY_LIVE_GAMES)).should("contain.text", "412");
+    cy.get(ts(STATS_SUMMARY_PATCH_GAMES))
+      .should("contain.text", "Patch v0.2.0")
+      .and("contain.text", "1,412")
+      .and("not.contain.text", "live");
 
     // Cards table renders rows
     cy.get(ts(STATS_CARDS_TABLE)).should("be.visible");

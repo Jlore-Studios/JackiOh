@@ -6,7 +6,8 @@
 //  - Players: public player aggregates (games, win rate, favourite cards, fun stats from #125).
 // Features:
 //  - Provisional banner while the current patch is below the publication gate (R654). It, like the
-//    rest of the page, names no data source and none of the gate's workings (R661).
+//    rest of the page, names no data source and none of the gate's workings (R661); the patch tile
+//    shows the patch's counted games, never the gate's live count.
 //  - Per-row sample floor (20 games): displays "not enough games" below threshold.
 //  - URL search params for shareable views.
 //  - Card drill-down modal showing CardFace, patch history, turn curve, and co-played synergy.
@@ -245,7 +246,6 @@ export default function StatsRoute(): ReactElement {
 
   const summary = cardStatsData?.summary;
   const isProvisional = cardStatsData?.source === "provisional";
-  const liveGames = cardStatsData?.gate.liveGames ?? 0;
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
 
   const drillDownDef = cardDrillDownId ? CATALOG[cardDrillDownId] : undefined;
@@ -266,9 +266,9 @@ export default function StatsRoute(): ReactElement {
               <span className="stats-summary-label">Total games</span>
               <span className="stats-summary-value">{summary?.totalGames.toLocaleString()}</span>
             </div>
-            <div className="stats-summary-tile" data-testid={statsTestid.summaryLiveGames}>
+            <div className="stats-summary-tile" data-testid={statsTestid.summaryPatchGames}>
               <span className="stats-summary-label">Patch {cardStatsData.patch}</span>
-              <span className="stats-summary-value">{liveGames.toLocaleString()} live</span>
+              <span className="stats-summary-value">{summary?.totalGames.toLocaleString()}</span>
             </div>
             {summary?.bestCard && (
               <div className="stats-summary-tile" data-testid={statsTestid.summaryBestCard}>

@@ -71,6 +71,7 @@ const MOCK_CARD_STATS_PROVISIONAL = {
 
 const MOCK_CARD_STATS_CLEARED = {
   ...MOCK_CARD_STATS_PROVISIONAL,
+  patch: "0.1.0",
   gate: {
     cleared: true,
     liveGames: 1050,
@@ -80,7 +81,9 @@ const MOCK_CARD_STATS_CLEARED = {
   sourceLabel: "Live games",
   summary: {
     ...MOCK_CARD_STATS_PROVISIONAL.summary,
+    totalGames: 1050,
     liveGames: 1050,
+    activePatch: "0.1.0",
     source: "live",
   },
 };
@@ -171,7 +174,10 @@ describe("R654 public statistics route", () => {
     expect(await screen.findByTestId(statsTestid.summaryTiles, undefined, SLOW)).toBeInTheDocument();
 
     expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("1,200");
-    expect(screen.getByTestId(statsTestid.summaryLiveGames)).toHaveTextContent("412 live");
+    // R661: the patch tile counts the patch's games, never the gate's live games (412).
+    expect(screen.getByTestId(statsTestid.summaryPatchGames)).toHaveTextContent("Patch 0.2.0");
+    expect(screen.getByTestId(statsTestid.summaryPatchGames)).toHaveTextContent("1,200");
+    expect(screen.getByTestId(statsTestid.summaryPatchGames)).not.toHaveTextContent("412");
 
     const banner = screen.getByTestId(statsTestid.provisionalBanner);
     expect(banner).toHaveTextContent("Provisional statistics");
@@ -274,8 +280,10 @@ describe("R654 public statistics route", () => {
     await user.click(fallbackBtn);
 
     await waitFor(() => {
-      expect(screen.getByTestId(statsTestid.summaryLiveGames)).toHaveTextContent("1,050 live");
+      expect(screen.getByTestId(statsTestid.summaryPatchGames)).toHaveTextContent("Patch 0.1.0");
     });
+    expect(screen.getByTestId(statsTestid.summaryPatchGames)).toHaveTextContent("1,050");
+    expect(screen.getByTestId(statsTestid.summaryPatchGames)).not.toHaveTextContent("live");
   });
 
   it("R654 shows player's personal stats when signed in and local stats exist", async () => {
@@ -326,10 +334,12 @@ describe("R654 public statistics route", () => {
     expect(page.querySelector(".stats-summary-badge")).toBeNull();
     expect(page.textContent).not.toContain("Data source");
     expect(page.textContent).not.toContain("AI games + live games (provisional)");
-    expect(page.textContent).not.toMatch(/AI development|publication gate|cleared gate/i);
-    // The kept tiles still render: total games and the patch's games.
+    expect(page.textContent).not.toMatch(/AI development|publication gate|cleared gate|\blive\b/i);
+    // The kept tiles still render: total games and the patch's games, with no live count (R661).
     expect(page.textContent).toContain("Total games");
     expect(page.textContent).toContain("1,200");
+    expect(page.textContent).toContain("Patch 0.2.0");
+    expect(page.textContent).not.toContain("412");
 
     // The drill-down names no gate either (R661).
     await user.click(await screen.findByText("Spark Pup"));
