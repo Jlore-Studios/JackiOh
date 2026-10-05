@@ -2547,32 +2547,19 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-05T09:23:05Z",
+      "feedback_since": "2026-10-05T10:04:37Z",
       "forced": false,
       "interruptions": 0,
       "issue": 291,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The 'Match found! Taking you to your game\u2026' line never shows, so the 'make it clearer if you find a game' half of the lobby requirement does not reach the player.",
-          "evidence": "The onPair handler calls setStatus(MATCH_FOUND_STATUS) and then navigate(target) in the same callback. navigate() (net/navigate.ts) pushes history and dispatches NAVIGATED synchronously. usePathname is useSyncExternalStore over that event, and main.tsx renders <Gated key={path}> / <RouteErrorBoundary key={path}>, so the lobby unmounts in the same render that would have painted the status. The pairings that return straight from enqueue or join (follow(), play.tsx:617-627) never set it at all. The new play.test.tsx case passes only because navigate is mocked (vi.mock of ../net/navigate.ts).",
-          "severity": "blocking",
-          "where": "apps/web/src/routes/play.tsx:582"
-        },
-        {
-          "claim": "RematchButtons lives inside the result panel's actions, so 'View the board' unmounts it and stops its poller. A seat that offered and then folded the panel is never taken to the game the opponent's matching offer creates, while the server has already put it in that ranked (possibly double-stakes) game and its clocks run.",
-          "evidence": "Result.tsx renders {actions} only when shownForm === 'panel'; the chip form shows only 'Result' and 'Their hand'. match.tsx passes <RematchButtons> as part of resultActions. Navigation happens only in RematchButtons' poll or its own POST response. rematch.ts createRematch sets both profiles in-match. actor.ts starts a disconnect grace only in onSocketGone, so a seat that never attaches just has its mulligan and turn clocks expire. This task itself sends players to the board to read the revealed hand, so the fold is a likely path.",
-          "severity": "blocking",
-          "where": "apps/web/src/game/Result.tsx:152"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "muse",
       "question": "",
       "queued_at": "2026-10-05T10:03:01Z",
       "run_id": "37294048467",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-05T10:04:37Z",
       "stop_requested": false,
       "taken_asks": [],
