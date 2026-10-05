@@ -2575,14 +2575,10 @@
       "votes": {
         "approvals": [],
         "builder": "cognition",
-        "rejections": [
-          "muse"
-        ],
+        "rejections": [],
         "reviews": [],
-        "sha": "3d7399b34ef916dc3e441f622dac7b05bcb6b6c7",
-        "tiers": {
-          "muse": "medium"
-        }
+        "sha": "b94621e609a0bcff7387e7a579e10299fb427656",
+        "tiers": {}
       }
     },
     "290": {
