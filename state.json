@@ -1091,7 +1091,25 @@
       "source": "request",
       "started_at": "2026-10-04T23:12:33Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "37253548709",
+            "tier": "medium"
+          }
+        ],
+        "sha": "005f7aa4f0d917a38b34f859982582b6a55cf8a9",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     },
     "167": {
       "action": "review",
