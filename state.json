@@ -1152,7 +1152,7 @@
       "last_findings": [],
       "pending_at": "2026-10-05T09:58:47Z",
       "pending_by": "jgoetzmann",
-      "pending_request": true,
+      "pending_request": false,
       "provider": "muse",
       "question": "",
       "queued_at": "2026-10-05T09:26:34Z",
