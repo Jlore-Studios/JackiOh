@@ -461,7 +461,7 @@
     "refs": [
       "core-t-bread"
     ],
-    "loc": 37,
+    "loc": 46,
     "base": {
       "keywords": [],
       "text": "When any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = that player's unspent mana."
@@ -1548,7 +1548,7 @@
     "refs": [
       "core-t-rush"
     ],
-    "loc": 37,
+    "loc": 39,
     "base": {
       "keywords": [],
       "text": "When your opponent plays a (1) Cost or less card, if you have an empty unit zone: Summon 2 Rush Tokens. If it's a Unit, they attack it."
@@ -1820,7 +1820,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
-    "loc": 23,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Deal 2 damage to a target, +1 per full 5 health your hero is below 30, +1 per card in your exile."
@@ -2153,7 +2153,7 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 2,
-    "loc": 56,
+    "loc": 58,
     "base": {
       "keywords": [],
       "text": "When your opponent plays a permanent of a type you control: Fuse it onto a random permanent of yours of that type."
@@ -2555,7 +2555,7 @@
     "rarity": "Mythic",
     "token": false,
     "cost": 1,
-    "loc": 26,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "When your opponent declares an attack that would be lethal to your hero: Cancel it. The rest of their turn is played at random."
@@ -2629,14 +2629,14 @@
     "rarity": "Mythic",
     "token": false,
     "cost": 4,
-    "loc": 46,
+    "loc": 42,
     "base": {
       "keywords": [],
       "text": "Discover 2 Units. Fuse them and add the result to your hand. It costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover 3 Units. Fuse them and add the result to your hand. It costs (0). Draw 1."
+      "text": "Discover 3 Units. Fuse them and add the result to your hand. It costs (0)."
     }
   },
   "core-100": {
@@ -2649,7 +2649,7 @@
     "rarity": "Mythic",
     "token": false,
     "cost": 100,
-    "loc": 16,
+    "loc": 18,
     "base": {
       "attack": 10,
       "health": 10,
@@ -4784,14 +4784,14 @@
         "min": 1
       }
     ],
-    "loc": 7,
+    "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Deal {damage} damage."
+      "text": "Deal {damage} damage.\nEnd of turn: Become a different Book."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {damage} damage."
+      "text": "Deal {damage} damage.\nEnd of turn: Become a different Radiant Book."
     }
   },
   "classic-056": {
@@ -5881,7 +5881,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": "X",
-    "loc": 21,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "This enters with X Plague Tokens on it.\nAura: Counter every card played whose cost equals the number of Plague Tokens on this."

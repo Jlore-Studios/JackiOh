@@ -4029,6 +4029,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // Proved by effects-transform.test.ts "R659 …": the new body is sick whatever the old one's
+  // readiness, on either player's turn; R424's Classic Golem is the exception its own test proves.
+  it("R659 a transformed Unit is summoning sick", () => {
+    provenIn(659, "effects-transform.test.ts");
+  });
+
   // Proved by packages/cards/test/flavour.test.ts "R660 …" (the sidecar's keys, coverage, fields and
   // caps), apps/web cards/flavour.test.tsx "R660 …" (no rules words; the preview, the sheet and the
   // detail show it, the face and an unnamed card never), routes/almanac.test.tsx "R660 …" (the
@@ -4042,6 +4048,60 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/routes/almanac.test.tsx",
       "../../../apps/web/src/cards/art/convention.test.ts",
     );
+  });
+
+  // Proved by apps/web routes/landing.test.tsx "R661 …" (no Stats call to action; the footer's link is
+  // the only one), routes/stats.test.tsx "R661 …" (no data source, no count towards the gate, no word of
+  // AI padding or a gate, the drill-down included), routes/almanac.test.tsx "R654 R661 …" (the card
+  // detail's statistics block names no source), and routes/play.test.tsx "R661 …" (the lobby's own rank
+  // in R612's words, its leaderboard link, and nothing when the rank cannot be read).
+  it("R661 keeps statistics off the landing page's calls to action and their workings behind the curtain, and shows the rank in the lobby", () => {
+    provenIn(661, WEB_LANDING_TEST, WEB_STATS_ROUTE_TEST, "../../../apps/web/src/routes/almanac.test.tsx", WEB_PLAY_TEST);
+  });
+
+  // Proved by glow-facts.test.ts "R662 …" (the query facts and condition.ts's granted half) and by
+  // each card's own test, both faces: on when the condition holds, off when it does not.
+  it("R662 the yellow glow for the conditions R195 left out", () => {
+    provenIn(
+      662,
+      "glow-facts.test.ts",
+      "../../cards/test/018-bread-and-butter.test.ts",
+      "../../cards/test/038-quickstriker.test.ts",
+      "../../cards/test/041-sheepish.test.ts",
+      "../../cards/test/060-bear-honeypot.test.ts",
+      "../../cards/test/064-gifted-program.test.ts",
+      "../../cards/test/070-spiteful-stab.test.ts",
+      "../../cards/test/078-fullsend.test.ts",
+      "../../cards/test/085-unlicensed-experimentation.test.ts",
+      "../../cards/test/096-my-pawn.test.ts",
+      "../../cards/test/100-ceaseless-void.test.ts",
+    );
+  });
+
+  // Proved by counterWarning.test.ts "R667 …" (fixture counters: who is warned, never a Trap, a hand
+  // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
+  // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
+  it("R667 a hand card the field would counter at every price carries a warning on its own seat", () => {
+    provenIn(
+      667,
+      "counterWarning.test.ts",
+      "../../cards/test/classic/087-plague-chalice.test.ts",
+      "../../../apps/web/src/game/countered.test.tsx",
+    );
+  });
+
+  // Proved by the card's own test, cards/test/classic/055-book-of-wildfire.test.ts "R671 …": the swap
+  // at its owner's end of turn in hand only, the pool without Wildfire, Radiant to Radiant, the Book it
+  // became swapping on, Temporary kept, and the end of turn replaying exactly.
+  it("R671 Book of Wildfire becomes a different Book at the end of its owner's turn, and the Book keeps swapping", () => {
+    provenIn(671, "../../cards/test/classic/055-book-of-wildfire.test.ts");
+  });
+
+  // Proved by apps/server/test/api/rematch.test.ts "R672 …" (equal stakes make one rematch with
+  // the finished decks, mismatched stakes make none, doubles need a ranked match, and a doubled
+  // game moves each side's rating twice the single update's delta).
+  it("R672 a double-or-nothing rematch is ranked-only and moves each side's rating twice as far", () => {
+    provenIn(672, "../../../apps/server/test/api/rematch.test.ts");
   });
 
   // Proved by glitch.test.ts and the real card's test: no draw at all before a System play, one more
@@ -4078,6 +4138,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Proved by glitch.test.ts and the real card's test: no winner, reason voided.
   it("R679 a Glitch voids the match", () => {
     provenIn(679, "glitch.test.ts", CARDS_GLITCH_TEST, SERVER_GLITCH_TEST, SERVER_CONTRACT_TEST, WEB_PRACTICE_GLITCH_TEST, WEB_NET_TEST);
+  });
+
+  // Proved by playChoices.test.ts "R703 …" (a needed pick the board cannot satisfy is neither
+  // offered nor accepted, a plain one still plays, and a cast fizzles) and Plastic Surgery's own test
+  // (both faces, either side, and the cast).
+  it("R703 a play is refused, and never offered, while a pick it needs has no legal option", () => {
+    provenIn(703, "playChoices.test.ts", "../../cards/test/063-plastic-surgery.test.ts");
   });
 });
 

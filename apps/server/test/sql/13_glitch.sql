@@ -1,4 +1,4 @@
--- Glitch (migration 0023, issue #170, SPEC §7, R678, R679). Runs after 12_ranked.sql; profiles 1
+-- Glitch (migration 0024, issue #170, SPEC §7, R678, R679). Runs after 12_ranked.sql; profiles 1
 -- and 2 are active by then (03 activated them).
 \set ON_ERROR_STOP on
 
@@ -20,7 +20,7 @@ begin
   insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
                               p1_glitch_board, p2_glitch_board, catalog_version, ceiling_at, started_at)
   values (mid, 'live', 'seed-0023', p1, p2, '[]', '[]', v_board, '[]', 'core-1', now() + interval '1 hour', now());
-  -- A row written without them (an open room, any match from before 0023) reads the empty board.
+  -- A row written without them (an open room, any match from before 0024) reads the empty board.
   insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
                               catalog_version, ceiling_at, started_at, ended_at)
   values (old, 'over', 'seed-0022', p1, p2, '[]', '[]', 'core-1', now(), now(), now());

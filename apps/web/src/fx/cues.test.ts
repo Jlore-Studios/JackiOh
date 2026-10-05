@@ -1485,8 +1485,11 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   conceal: ["kind", "testid", "mode", "delayMs", "durationMs"],
   lunge: ["kind", "attacker", "target", "delayMs", "durationMs"],
   fracture: ["kind", "at", "delayMs", "durationMs"],
+  walls: ["kind", "at", "reach", "delayMs", "durationMs"],
   brand: ["kind", "at", "tint", "delayMs", "durationMs"],
   chaos: ["kind", "title", "lines", "delayMs", "durationMs"],
+  fog: ["kind", "tone", "from", "to", "tint", "icon", "delayMs", "durationMs"],
+  zone: ["kind", "at", "tint", "text", "direction", "delayMs", "durationMs"],
 };
 
 const ANCHOR_KEYS: Record<FxAnchor["kind"], { required: readonly string[]; optional: readonly string[] }> = {

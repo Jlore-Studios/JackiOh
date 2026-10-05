@@ -1377,6 +1377,24 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         expect(must(await store.matches.get(unranked.id), "the unranked match").ranked).toBeUndefined();
       });
 
+      /** §9.5: a rematch's mode and stakes survive the round trip; their absence reads as "derive it" and 1. */
+      it("round-trips the rematch mode and stake", async () => {
+        const [a, b] = [await activeProfile(), await activeProfile()];
+        const rematch = {
+          ...matchRow(id(), a.id, b.id, harness, harness.now()),
+          mode: "random" as const,
+          stake: 2 as const,
+        };
+        const plain = matchRow(id(), a.id, b.id, harness, harness.now());
+        await store.matches.create(rematch);
+        await store.matches.create(plain);
+        expect(must(await store.matches.get(rematch.id), "the rematch").mode).toBe("random");
+        expect(must(await store.matches.get(rematch.id), "the rematch").stake).toBe(2);
+        expect(must(await store.matches.get(plain.id), "the plain match").mode).toBeUndefined();
+        expect(must(await store.matches.get(plain.id), "the plain match").stake).toBeUndefined();
+        expect(await store.matches.modeOf(rematch.id)).toBe("random");
+      });
+
       it("R263 discards a reserved match id without touching a live match", async () => {
         const [a, b] = [await activeProfile(), await activeProfile()];
         const row = matchRow(id(), a.id, b.id, harness, harness.now());

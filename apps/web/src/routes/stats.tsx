@@ -5,8 +5,9 @@
 //  - Cards: sortable, filterable table of card win rates, play rates, and personal numbers.
 //  - Players: public player aggregates (games, win rate, favourite cards, fun stats from #125).
 // Features:
-//  - Publication gate: 1000 live games threshold on current patch.
-//  - Provisional banner when current patch is below gate.
+//  - Provisional banner while the current patch is below the publication gate (R654). It, like the
+//    rest of the page, names no data source and none of the gate's workings (R661); its one games
+//    tile counts the patch's games, never the gate's live count.
 //  - Per-row sample floor (20 games): displays "not enough games" below threshold.
 //  - URL search params for shareable views.
 //  - Card drill-down modal showing CardFace, patch history, turn curve, and co-played synergy.
@@ -27,7 +28,7 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
-import { CARD_STATS_MIN_SAMPLE, PUBLIC_STATS_MIN_LIVE_GAMES } from "../stats/config.ts";
+import { CARD_STATS_MIN_SAMPLE } from "../stats/config.ts";
 import { winPercent } from "../stats/model.ts";
 import { usePlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
@@ -245,8 +246,6 @@ export default function StatsRoute(): ReactElement {
 
   const summary = cardStatsData?.summary;
   const isProvisional = cardStatsData?.source === "provisional";
-  const liveGames = cardStatsData?.gate.liveGames ?? 0;
-  const minLiveGames = cardStatsData?.gate.minLiveGames ?? PUBLIC_STATS_MIN_LIVE_GAMES;
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
 
   const drillDownDef = cardDrillDownId ? CATALOG[cardDrillDownId] : undefined;
@@ -264,18 +263,8 @@ export default function StatsRoute(): ReactElement {
         {cardStatsData && (
           <section className="stats-summary-tiles" data-testid={statsTestid.summaryTiles} aria-label="Statistics summary">
             <div className="stats-summary-tile" data-testid={statsTestid.summaryTotalGames}>
-              <span className="stats-summary-label">Total games</span>
+              <span className="stats-summary-label">Games on patch {cardStatsData.patch}</span>
               <span className="stats-summary-value">{summary?.totalGames.toLocaleString()}</span>
-            </div>
-            <div className="stats-summary-tile" data-testid={statsTestid.summaryLiveGames}>
-              <span className="stats-summary-label">Patch {cardStatsData.patch}</span>
-              <span className="stats-summary-value">{liveGames.toLocaleString()} live</span>
-            </div>
-            <div className="stats-summary-tile" data-testid={statsTestid.summarySource}>
-              <span className="stats-summary-label">Data source</span>
-              <span className="stats-summary-badge" data-source={cardStatsData.source}>
-                {cardStatsData.sourceLabel}
-              </span>
             </div>
             {summary?.bestCard && (
               <div className="stats-summary-tile" data-testid={statsTestid.summaryBestCard}>
@@ -301,16 +290,6 @@ export default function StatsRoute(): ReactElement {
           <div className="stats-provisional-banner" data-testid={statsTestid.provisionalBanner} role="alert">
             <div className="stats-provisional-info">
               <span className="stats-provisional-title">Provisional statistics</span>
-              <p className="stats-provisional-text">
-                {liveGames} / {minLiveGames} live games on this patch. AI development games pad the data
-                until {minLiveGames} live games are logged.
-              </p>
-            </div>
-            <div className="stats-provisional-progress">
-              <div
-                className="stats-provisional-bar"
-                style={{ width: `${Math.min(100, Math.round((liveGames / minLiveGames) * 100))}%` }}
-              />
             </div>
             {cardStatsData?.previousPatch && (
               <button
@@ -323,7 +302,7 @@ export default function StatsRoute(): ReactElement {
                   fetchCardStats(target);
                 }}
               >
-                View previous patch ({cardStatsData.previousPatch}) live data →
+                View previous patch ({cardStatsData.previousPatch}) →
               </button>
             )}
           </div>
@@ -336,11 +315,6 @@ export default function StatsRoute(): ReactElement {
             <p>
               <strong>Sample size threshold:</strong> Cards with fewer than {minSample} games display{" "}
               <em>"not enough games"</em> instead of a percentage to prevent misleading sample artifacts.
-            </p>
-            <p>
-              <strong>Provisional gate:</strong> When a new patch releases, AI games pad card metrics until{" "}
-              {PUBLIC_STATS_MIN_LIVE_GAMES} live human games are recorded. Once reached, stats strictly use live
-              games only.
             </p>
             <p>
               <strong>When drawn vs Play rate:</strong> <em>When drawn</em> shows win rate when the card was in
@@ -819,9 +793,9 @@ export default function StatsRoute(): ReactElement {
                     <>
                       {/* Patches historical win rate */}
                       <section className="stats-drilldown-section">
-                        <h3>Win rate by patch (cleared gate only)</h3>
+                        <h3>Win rate by patch</h3>
                         {drillDownData.patches.length === 0 ? (
-                          <p className="stats-empty-sub">No previous patches have cleared the publication gate.</p>
+                          <p className="stats-empty-sub">No earlier patches to show yet.</p>
                         ) : (
                           <ul className="stats-drilldown-list">
                             {drillDownData.patches.map((p) => (

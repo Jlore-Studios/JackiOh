@@ -29,6 +29,12 @@ export type CardView = {
    */
   conditionActive?: true;
   /**
+   * R667, §10.8: Classic #87 Plague Chalice's warning. Present, and `true`, only on the viewer's own
+   * hand card that a card on the field the viewer may read would counter at every price it could be
+   * played at now. Absent otherwise: never `false`, never on the opponent's cards.
+   */
+  counteredOnPlay?: true;
+  /**
    * R280, §10.8: what the card's formula comes to now, one entry per labelled number its script's
    * `preview` hook returns — the label the formula as the running face prints it, the value what it
    * would come to if the card resolved now. Only on a card view the viewer may read: its own hand, a
@@ -113,12 +119,17 @@ export type Tuning = {
  * B5 E39: a lasting instruction that rides a card through every zone. `returnAfterResolve` is Classic+
  * #14 Forever&'s "After this resolves, return it to your hand. This can't cost less than (floor)";
  * `castOnDraw` and `targetEnemies` are Classic+ #40 Appropriations' "They have Cast on draw and aim
- * at enemies when they harm and at your side when they help".
+ * at enemies when they harm and at your side when they help". `swapsBook` is Classic #55's swap.
  */
 export type Enchantment =
   | { kind: "returnAfterResolve"; floor: number }
   | { kind: "castOnDraw" }
-  | { kind: "targetEnemies" };
+  | { kind: "targetEnemies" }
+  /**
+   * Classic #55 Book of Wildfire's "Becomes a different Book at the end of your turn", carried by the
+   * Book it became so the swap goes on (R671). `from` is the card that started it, which no swap picks.
+   */
+  | { kind: "swapsBook"; from: string };
 
 /** R437: a mark on a card, and the colour key the client draws it with ("purple"). */
 export type CardMark = { mark: string; color: string };

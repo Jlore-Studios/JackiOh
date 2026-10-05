@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0023: Glitch (issue #170) — the boards outcome and the void outcome
+-- Migration 0024: Glitch (issue #170) — the boards outcome and the void outcome
 -- ============================================================================
 -- Serves SPEC §7 (the hidden token Glitch) and SPEC §11 R678, R679.
 --
@@ -26,7 +26,7 @@
 -- TRUST BOUNDARY: unchanged. public.matches stays unreachable for client roles
 -- (0004), and the function is executable by postgres and service_role only.
 --
--- Apply order: ... -> 0017 (`matches.p*_last_board`) -> ... -> 0022 -> 0023.
+-- Apply order: ... -> 0017 (`matches.p*_last_board`) -> ... -> 0022 -> 0023 -> 0024.
 -- Safe to re-apply: add-column-if-not-exists, drop-constraint-if-exists-then-
 -- add, create-or-replace.
 -- ============================================================================
@@ -83,7 +83,7 @@ end;
 $$;
 
 comment on function app.forget_voided_match(uuid) is
-  'Migration 0023 (R679): deletes a live match a Glitch voided, with its action '
+  'Migration 0024 (R679): deletes a live match a Glitch voided, with its action '
   'log; its players are let go by the foreign keys. Never a finished match or '
   'one with a result. Called by the server (src/db/store.ts matches.forgetVoided).';
 

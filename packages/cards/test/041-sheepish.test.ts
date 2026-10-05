@@ -8,8 +8,12 @@
 // is "heal your hero up to 30 health", so a p1 hero left at 10 that is at 30 after the play is a Cry
 // that ran — and the Unit standing in its zone is a Sheep all the same.
 
+//
+// R662: it declares no `conditionMet` and never glows, on either face (the script's header says why);
+// the last describe below holds that.
 import { describe, expect, it } from "vitest";
 import { scenario } from "./_harness";
+import { backrowGlows } from "./_glow";
 import { base as sheepishBase, radiant as sheepishRadiant } from "../src/scripts/041-sheepish";
 
 /**
@@ -232,4 +236,28 @@ describe("#41 Sheepish — radiant", () => {
   it("R74 R427 both faces watch the same event, so the radiant text changes what fires, not when", () => {
     expect(sheepishRadiant.triggers?.map((trigger) => trigger.on)).toEqual([["cardResolved"]]);
   });
+});
+
+describe("#41 Sheepish never glows (R662: nothing on the board decides it)", () => {
+  for (const radiant of [false, true]) {
+    const face = radiant ? "radiant" : "base";
+
+    it(`R662 ${face}: armed on either turn, with the opponent holding a Unit or not, it never lights up`, () => {
+      expect(sheepishBase.conditionMet).toBeUndefined();
+      expect(sheepishRadiant.conditionMet).toBeUndefined();
+      const mine = scenario({ seed: `r662-041-${face}-mine`, p1: { backrow: [{ def: "core-041", radiant }], hand: ["core-010"] } });
+      expect(backrowGlows(mine, 1)).toBe(false);
+      const theirs = scenario({
+        seed: `r662-041-${face}-theirs`,
+        active: "p2",
+        p1: { backrow: [{ def: "core-041", radiant }] },
+        p2: { hand: ["core-008", "core-010"] },
+      });
+      expect(backrowGlows(theirs, 1)).toBe(false);
+
+      // And it still fires on the Unit: the missing glow hides nothing the trap would do.
+      theirs.play("core-008");
+      expect(theirs.unit("p2", 1)?.defId).toBe("core-t-sheep");
+    });
+  }
 });

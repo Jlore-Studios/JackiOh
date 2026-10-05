@@ -242,5 +242,7 @@ export function enchantNextSpellLabel(enchantment: Enchantment): string {
       return "Your next Spell gains Cast on draw";
     case "targetEnemies":
       return "Your next Spell aims at enemies when it harms and at your side when it helps";
+    case "swapsBook":
+      return "Your next Spell becomes a different Book at the end of your turn";
   }
 }

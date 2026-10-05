@@ -220,6 +220,8 @@ top of every handler:
 | `GET` | `/api/ranked` | active | The caller's own season, tag, rank, streak, record and season badges; never the hidden rating (R612) |
 | `GET` | `/api/leaderboard` | active | Jlorious #1–#100, then every other placed player by Grape tier, then the placing count (R608, R612) |
 | `GET` | `/api/matches/:id/ranks` | active | Both seats' ranks for the match screen, and whether the game moves them; 404 unless the caller plays it (R604, R612) |
+| `POST` | `/api/matches/:id/rematch` | active | Offer a rematch of a finished non-series match, `{ stakes: 1 \| 2 }`; equal stakes from both seats create the game and answer its id (R672) |
+| `GET` | `/api/matches/:id/rematch` | active | Both seats' offers, whether the opponent's socket is open, and the created game, if any; 404 unless the caller plays it, 422 on a series game (R672) |
 | `GET` | `/api/tutorial` | active | The account's tutorial progress (R320): completed lesson ids and the newest Hide/Show choice; empty before the first write |
 | `PUT` | `/api/tutorial` | active | Merge a device's progress into the account's (R320): `{ completed, hiddenChoice? }`. The lessons become the union, a choice replaces the stored one only when it is newer (a time after the server's clock counts as now), nothing is ever removed, and the answer is the merged progress. Ids are checked for shape only (lower-case slugs, `TUTORIAL_LESSON_ID_MAX_LENGTH`, at most `TUTORIAL_LESSONS_MAX`); the lessons are the client's |
 | `GET` | `/api/settings` | active | The account's game settings (R633): groups (`gameplay`, `audio`, `fx`, `cards`), each `{ at, values }`; empty before the first write |
@@ -296,7 +298,7 @@ engine's state moves the server: a client reaches any of it only by legally play
   rating move and that seat's last board.
 - **Boards (R678).** At `registry.start` the match samples `GLITCH_BOARDS_SAMPLED` other players'
   non-empty server last boards (`lastBoards.sampleOthers`, never either seat's own; at random in
-  Postgres), freezes them on the row (`matches.p*_glitch_board`, migration 0023) and passes them to
+  Postgres), freezes them on the row (`matches.p*_glitch_board`, migration 0024) and passes them to
   `createGame` and every `fold` beside the last boards. Fewer boards leave a seat empty; none, and
   the field is absent.
 - **Void (R679).** The game ends with reason `voided`, and the actor calls `voidMatch` instead of

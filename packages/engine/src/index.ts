@@ -47,6 +47,7 @@ export * from "./params";
 export * from "./numbers";
 export * from "./brittle";
 export * from "./enchantments";
+export * from "./bookSwap";
 // Patch v0.2.0, damage and combat (docs/classic-sets.md B5 E5, E6, E8, E9, E35): the replacement
 // windows and their declarations, and the restriction and status readers a card script asks with.
 export * from "./replacements";

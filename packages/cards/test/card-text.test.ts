@@ -13,7 +13,7 @@
 import { describe, expect, it } from "vitest";
 import { fillParams, type CardDef, type Keyword } from "@jackioh/shared";
 import { CATALOG } from "../src/catalog-data";
-import { readPatches, readSnapshot } from "../scripts/patches-io";
+import { readFragments, readPatches, readSnapshot } from "../scripts/patches-io";
 
 const ENTRIES: readonly CardDef[] = Object.values(CATALOG);
 
@@ -454,6 +454,29 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     // Another pending fragment's cards legitimately differ beside these eighteen (R646), so the
     // diff is read on this patch's claims.
     expect(changed.filter((id) => unanimated.has(id)).sort()).toEqual([...unanimated].sort());
+  });
+
+  it("R366 patch v0.2.14 takes Craft a Card's Radiant draw off and moves Plague Chalice's loc between v0.2.13 and v0.2.14", () => {
+    const before = readSnapshot("v0.2.13");
+    // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
+    const shipped = readPatches().some((patch) => patch.version === "v0.2.14");
+    const after = shipped ? (readSnapshot("v0.2.14") as unknown as typeof CATALOG) : CATALOG;
+    // The current catalog also carries every other pending patch's claims (R646), which are theirs to prove.
+    const others = new Set(
+      shipped ? [] : readFragments().flatMap(({ fragment }) => (fragment.version === "v0.2.14" ? [] : fragment.cards)),
+    );
+    const changed = Object.entries(after)
+      .filter(([id]) => !others.has(id))
+      .filter(([id, card]) => JSON.stringify(before[id]) !== JSON.stringify(card))
+      .map(([id]) => id);
+    expect(changed.sort()).toEqual(["classic-087", "core-099"]);
+    // Craft a Card: the Radiant face keeps its three Discovers and loses "Draw 1"; the base face is as it was.
+    const craftBefore = before["core-099"] as unknown as CardDef;
+    expect(after["core-099"]?.radiant.text).toBe("Discover 3 Units. Fuse them and add the result to your hand. It costs (0).");
+    expect(after["core-099"]?.base).toEqual(craftBefore.base);
+    // Plague Chalice moves only its script's loc (R667's `wouldCounter`).
+    const chaliceBefore = before["classic-087"] as unknown as CardDef;
+    expect({ ...(after["classic-087"] as unknown as CardDef), loc: chaliceBefore.loc }).toEqual(chaliceBefore);
   });
 
   it("R366 patch v0.2.4 no printed face uses any word the vocabulary table retired", () => {

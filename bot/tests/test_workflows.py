@@ -138,8 +138,9 @@ class NightWorkflowTests(unittest.TestCase):
         for name in ("gate", "plan", "work", "deliver"):
             self.assertRegex(job(self.text, name), r"timeout-minutes: \d+")
         gate = int(re.search(r"timeout-minutes: (\d+)", job(self.text, "gate")).group(1))
-        cfg = config.load(env={})
-        self.assertGreater(gate, cfg.quiet.max_wait_minutes + cfg.quiet.interval_minutes)
+        # No gate step waits any more (the quiet wait is retired), so a stuck gate fails fast
+        # instead of holding its run for hours.
+        self.assertLessEqual(gate, 30)
         self.assertIn("cancel-in-progress: false", self.text)
 
     def test_a_run_fires_every_hour_all_day(self):

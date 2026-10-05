@@ -49,9 +49,14 @@
 // bumped per card that gets there, an `exiled` event each, a unit token ceasing to exist instead
 // (R11). It matches only cards on the field, so a card dormant under a Stack pile is not one (R13);
 // the promotion that leaves behind is a rule the spec has not made — see the report.
+//
+// THE GLOW (R662). In hand it lights up once the reductions have brought it within its controller's
+// mana: what a play of it costs now (`playCost`, R65, with this card's own computed cost and every
+// discount) is no more than the mana they hold. The cost itself is on the face (R280), and the glow
+// marks the moment the count has done its work, whether or not a zone is free; the same on both faces.
 
 import type { Effect, GameState, Script } from "@jackioh/engine";
-import { queryCost } from "@jackioh/engine";
+import { playCost, queryCost, unspentManaOf } from "@jackioh/engine";
 import { exileAll } from "@jackioh/engine/effects";
 import { cardDef } from "../catalog-data";
 
@@ -88,6 +93,9 @@ function exileEveryOtherPermanent(): Effect[] {
 const void_: Script = {
   cost: ({ state }) => costNow(state),
   cry: () => exileEveryOtherPermanent(),
+  // R662: the reductions have brought it within its controller's mana.
+  conditionMet: (ctx) =>
+    ctx.zone === "hand" && playCost(ctx.state, ctx.self) <= unspentManaOf(ctx.state, ctx.controller),
 };
 
 export const base: Script = void_;

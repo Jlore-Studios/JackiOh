@@ -283,7 +283,7 @@ describe("R630 the almanac's browse pane", () => {
 });
 
 describe("R654 the almanac's card statistics block", () => {
-  it("R654 the almanac's detail view renders the compact statistics block with a link to the full stats page", async () => {
+  it("R654 R661 the almanac's detail view renders the compact statistics block, names no source, and links the full stats page", async () => {
     const unit = CARDS.find((def) => !def.token && def.set === "Core");
     if (unit === undefined) throw new Error("the catalog has no Core card");
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
@@ -335,7 +335,9 @@ describe("R654 the almanac's card statistics block", () => {
     fireEvent.click(screen.getByTestId(poolCardId(unit.id)));
     const stats = await screen.findByTestId(INSPECT_STATS, undefined, SLOW);
     expect(stats).toHaveTextContent("60%");
-    expect(stats).toHaveTextContent("AI games + live games (provisional)");
+    // R661: the response still names its source, but the block never shows it.
+    expect(stats.textContent).not.toContain("AI games + live games (provisional)");
+    expect(stats.querySelector(".inspect-stats-badge")).toBeNull();
     expect(within(screen.getByTestId(INSPECT_DETAIL)).getByRole("link", { name: /view full stats/i })).toHaveAttribute(
       "href",
       `/stats?tab=cards&card=${encodeURIComponent(unit.id)}`,

@@ -7,8 +7,10 @@
 import type { CardDef, CardType, PlayerId, Row } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import { defOf, excludingDefId, pickGenerated, query, type CatalogQueryArgs } from "../catalog";
+import { addEnchantment, enchantmentsOfKind } from "../enchantments";
 import { cardTypeOf } from "../faces";
 import { unitHas } from "../layers";
+import { isTemporaryCard } from "../temporary";
 import type { Effect, EffectContext } from "../script";
 import { newInstance, type CardInstance } from "../state";
 import { ceaseToExist, isCarried, moveToZone, pileAt, replaceInZone, slotOf, zoneOf, type OffFieldZone } from "../zones";
@@ -54,7 +56,8 @@ function replaceOnField(ctx: EffectContext, old: CardInstance, def: CardDef, rad
   const replacement = newInstance(ctx.state, def.id, old.owner, zoneOf(at));
   replacement.radiant = radiant;
   if (old.position !== undefined) replacement.position = old.position;
-  // A new body enters the field this turn, so it is summoning sick like a summoned card (§4.1).
+  // R659: a new body enters the field this turn, so it is summoning sick like a summoned card (§4.1);
+  // only text that says otherwise lifts it (R424).
   replacement.summonedTurn = ctx.state.turn;
 
   if (!replaceInZone(ctx.state, old, replacement)) return null;
@@ -68,8 +71,8 @@ function replaceOnField(ctx: EffectContext, old: CardInstance, def: CardDef, rad
 
 /**
  * R35's other zones: Transmogulate replaces hand, library, graveyard and exile cards too, "same
- * counts" per zone. A library keeps its order, so the replacement takes the old card's index;
- * `moveToZone` appends in the other piles, which leaves a wholly replaced hand in its old order.
+ * counts" per zone. A library and a hand keep their order, so the replacement takes the old card's
+ * index there; `moveToZone` appends in the other piles.
  */
 function replaceOffField(ctx: EffectContext, old: CardInstance, def: CardDef, radiant: boolean): CardInstance | null {
   const zone = old.zone.z;
@@ -91,6 +94,12 @@ function replaceOffField(ctx: EffectContext, old: CardInstance, def: CardDef, ra
   const replacement = newInstance(ctx.state, def.id, owner, { z: at, player: owner });
   replacement.radiant = radiant;
   moveToZone(ctx.state, replacement, at, { position: index });
+  // R671: a hand keeps its order too, so a card swapped in hand stays where its owner put it.
+  if (at === "hand") {
+    const hand = ctx.state.players[owner].hand;
+    hand.splice(hand.indexOf(replacement), 1);
+    hand.splice(index, 0, replacement);
+  }
   return replacement;
 }
 
@@ -273,4 +282,38 @@ export function transformBeneath(args: { of?: TargetSpec } = {}): Effect {
       }
     },
   };
+}
+
+/**
+ * Classic #55 Book of Wildfire, R671: "Becomes a different Book at the end of your turn" — the card
+ * `instanceId` names, while it is in a hand, is Replaced (§6.3, R35) by a Book drawn with `ctx.rng`
+ * from §5.1's pool: every non-token Book of every set (R380) but the one it is now and the card that
+ * started the swap (`from`, Wildfire itself). The new Book keeps the old card's face (a Radiant card
+ * becomes the Radiant face of the Book) and its place in the hand, and carries the swap on as the
+ * `swapsBook` enchantment, so it changes again at its owner's next end of turn. It is otherwise a new
+ * card, as any Transform result is (its cost changes and its other enchantments stay behind), except
+ * that a Temporary card's new Book is Temporary too (R637): the swap comes before cleanup, and a
+ * Temporary card must not leave the turn as a card that stays.
+ */
+export function swapBook(args: { instanceId: string; from: string }): Effect {
+  return {
+    kind: "swapBook",
+    apply(ctx): void {
+      const old = instanceOnItsStay(ctx, args.instanceId);
+      if (old === null || old.zone.z !== "hand") return;
+      const pool = query({ tags: ["Book"] }).filter((def) => def.id !== old.defId && def.id !== args.from);
+      const def = pickGenerated(ctx.rng, pool);
+      if (def === undefined) return;
+      const temporary = isTemporaryCard(ctx.state, old);
+      const replacement = replaceCard(ctx, old, def, old.radiant);
+      if (replacement === null) return;
+      addEnchantment(replacement, { kind: "swapsBook", from: args.from });
+      if (temporary) replacement.grantedKeywords.push({ kind: "Temporary" });
+    },
+  };
+}
+
+/** R671: the card that started a card's Book swap, or null when it carries none. */
+export function bookSwapSourceOf(card: CardInstance): string | null {
+  return enchantmentsOfKind(card, "swapsBook")[0]?.from ?? null;
 }

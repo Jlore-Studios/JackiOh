@@ -60,6 +60,7 @@ import {
   getCollection,
   getDecks,
   getMe,
+  getOwnRank,
   getPopulation,
   type DecksResponse,
   type SavedDeck,
@@ -82,6 +83,7 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     getCatalog: vi.fn(),
     getCollection: vi.fn(),
     getPopulation: vi.fn(),
+    getOwnRank: vi.fn(),
   };
 });
 vi.mock("../net/navigate.ts", async (importOriginal) => {
@@ -376,6 +378,7 @@ describe("QA v0.2.0, Global Cosmetic", () => {
     vi.mocked(getCatalog).mockResolvedValue({ version: "v1", defs: CATALOG });
     vi.mocked(getCollection).mockResolvedValue({ catalogVersion: "v1", entries: ids.map((cardId) => ({ cardId, quantity: 1 })) });
     vi.mocked(getPopulation).mockResolvedValue({ population: 97, byMode: { bo1: 41, bo3: 23, random: 33 } });
+    vi.mocked(getOwnRank).mockRejectedValue(new Error("the rank is not this spec's subject"));
     vi.mocked(enqueue).mockResolvedValue({ ticketId: "tk", status: "open", matchId: null, seriesId: null, population: 98, mode: "bo1" });
     vi.mocked(dequeue).mockResolvedValue({ cancelled: true });
 

@@ -96,8 +96,11 @@ src/
                         on phones, the prompt's bottom sheet on phones, and small pickers
                         docked clear of the field
     glow.ts             data-glow / data-condition-active helpers: green from
-                        Highlight.glow, yellow from the view's conditionActive
+                        Highlight.glow, yellow from the view's conditionActive; and
+                        data-countered-on-play, R667's Plague Chalice warning from the view's
+                        counteredOnPlay
     highlights.css      the green and yellow glow colours, imported after board.css
+    countered.css       R667: the warning's green bubbling film and badge, still under reduced motion
     drag/               drag to play: pointer events for mouse and touch, the targeting
                         arrow and reticle, and a dropped card held where it landed until
                         the board shows the play; a build lifted again from its picks, a
@@ -127,7 +130,8 @@ src/
     dom.ts fx.css       DOM flourishes (splats, rays, banners, ghosts, stand-ins) and their keyframes
     castOnDraw.ts       R502: which cardPlayed is a cast on draw, read off the order of the redacted events
     cardFx.ts           R502: the cast on draw's burst out of the Deck pile, and CARD_FX, one table from a card
-                        to its signature recipe (#21 Hinder's mana crack, #27 Blood Ridden's blood drain)
+                        to its signature recipe (#21 Hinder's mana crack, #27 Blood Ridden's blood drain,
+                        C+ #24 Crushing Walls' spiked walls)
     manaMarks.ts        R502: the crystals the next refresh will not fill, read off the view's rider badge and
                         marked on the board's trays (drawn in every mode: it is information)
     chaos.ts brand.ts   R436: Call to Chaos's effect names and slot-machine reveal; R437: a mark's brand
@@ -138,11 +142,12 @@ src/
                         gear opens from the game's control bar and the nav
     slots.ts controls.tsx   the other tasks' controls the panel mounts (effects speed and
                         intensity, animated foil, the audio panel), each with its reset
-    tabs.ts             the dialog's sections are tabs (Gameplay, Visuals, Audio, Account); the tab used
+    tabs.ts             the dialog's sections are tabs (Gameplay, Visuals, Audio); the tab used
                         last is kept on the device (jackioh.settings.tab)
-    groups.ts accountSync.ts AccountSettings.tsx   an active account's copy of the settings (R633,
-                        R634): the four stores as groups, the sync that takes the newer side of each
-                        and sends changes up (GET/PUT /api/settings), and the Account tab's status
+    groups.ts accountSync.ts   an active account's copy of the settings (R633,
+                        R634): the four stores as groups and the sync that takes the newer side of each
+                        and sends changes up (GET/PUT /api/settings), with no status UI since #303:
+                        the sync runs silently
   stats/                the device's player statistics (R639): `track.ts` reads a game's log off the views the
                         board is handed (only what the viewer was shown), `useGameStats.ts` adds the finished
                         game to the totals `store.ts` keeps in localStorage (jackioh.stats.v1, in try/catch),
@@ -155,8 +160,9 @@ src/
                         the deck builder's browse pane (game/deckbuilder/CardBrowser.tsx) and the bundled
                         catalog, no API call; the site footer links it beside Patch notes
   routes/stats.tsx      /stats: the public card and player statistics page (R654), sortable cards table with
-                        confidence floor, card drill-down, public player aggregates, and provisional AI padding
-                        banner; the site footer links it
+                        confidence floor, card drill-down, public player aggregates, and a provisional banner
+                        that names no data source and none of the gate's workings (R661); the site footer
+                        links it, and the landing page's calls to action do not
   test/
     setup.ts            jsdom matchers and a matchMedia stub
     fixtures.ts         fixture PlayerViews; every test renders one of these
@@ -164,7 +170,17 @@ scripts/
   gen-voice.mjs         renders card-audio.json5's lines to public/audio/voice/<card-id>-<hook>.m4a
   gen-music.mjs         renders the scores in music/tracks.mjs to public/audio/music/<track>.m4a (R631)
   music/                the composition toolkit (theory.mjs, compose.mjs, midi.mjs) and every score
+  font-fallbacks.py     the metric-matched fallbacks' size-adjust and ascent/descent overrides for
+                        src/fonts.css, from the font files (by hand; needs fontTools and brotli)
 ```
+
+The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
+(`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
+variable over weight, Latin subset, self-hosted in `public/fonts` with their licences. Each is
+`font-display: swap` behind a metric-matched local fallback, so text measures the same before and
+after a face lands, and `cards/fit.ts` refits every mounted box once `document.fonts` reports
+`loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
+(`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`).
 
 ## Three flows at the table
 
@@ -284,7 +300,8 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         (sync.ts, R256); a trio import is one POST /api/trios/import, never the autosave (R341)
 routes/play.tsx         /play: the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
                         trio choice with the validator's verdict as UX, the queue and the room code; it
-                        waits on /api/auth/me's currentMatchId and currentSeriesId
+                        waits on /api/auth/me's currentMatchId and currentSeriesId; it shows the player's
+                        own rank and links /leaderboard (R661)
 routes/series.tsx       /series/:id: a Conquest series (R330–R336): score, both sides' won (locked) decks,
                         the history, forfeit between games, the result
 routes/SeriesPicker.tsx the deck-selection phase before each game, laid out as the mulligan (R331–R333,

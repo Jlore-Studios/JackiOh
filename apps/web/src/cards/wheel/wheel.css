@@ -1,0 +1,145 @@
+/* A Stack pile opened as a wheel (issue #124): the dialog around CardWheel. The pile's top card
+   stands forward with its face, the dormant cards under it as backs, so what is above and below
+   what is obvious. transform and opacity carry every move; reduced motion holds them still. */
+
+.card-wheel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: center;
+  gap: 4px 8px;
+  width: 100%;
+}
+
+.card-wheel-stage {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 300px;
+  overflow: hidden;
+}
+
+.card-wheel-turn {
+  flex: 0 0 auto;
+  align-self: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px 10px;
+  border: 1px solid rgb(212 175 55 / 0.45);
+  border-radius: 10px;
+  background: rgb(0 0 0 / 0.45);
+  color: #e8c85c;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.card-wheel-turn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.card-wheel-card {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  height: 264px;
+  aspect-ratio: 5 / 7;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  transition:
+    transform 0.22s ease,
+    opacity 0.22s ease;
+}
+
+button.card-wheel-card {
+  cursor: pointer;
+}
+
+.card-wheel-card--primary {
+  z-index: 3;
+  transform: translateX(-50%) scale(1);
+}
+
+.card-wheel-card[data-offset="1"] {
+  z-index: 2;
+  transform: translateX(-12%) scale(0.72);
+  opacity: 0.88;
+}
+
+.card-wheel-card[data-offset="-1"] {
+  z-index: 2;
+  transform: translateX(-88%) scale(0.72);
+  opacity: 0.88;
+}
+
+/* Anything further out is off the wheel: kept for readers, hidden from sight and pointer. */
+.card-wheel-card:not(.card-wheel-card--primary):not([data-offset="1"]):not([data-offset="-1"]) {
+  z-index: 1;
+  transform: translateX(-50%) scale(0.5);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.card-wheel-meta {
+  flex: 1 1 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  min-height: 24px;
+  color: #f0e6c8;
+  font-size: 14px;
+}
+
+.card-wheel-note {
+  opacity: 0.8;
+}
+
+/* The sheet around the wheel: the inspect layer's dark scrim and dialog, sized for one card. */
+
+.stack-sheet {
+  width: min(560px, calc(100vw - 32px));
+  border: 1px solid rgb(212 175 55 / 0.4);
+  border-radius: 14px;
+  background: rgb(12 10 18 / 0.97);
+  padding: 12px 12px 14px;
+}
+
+.stack-sheet-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 8px;
+}
+
+.stack-sheet-title {
+  margin: 0;
+  flex: 1 1 auto;
+  color: #f0e6c8;
+  font-size: 16px;
+}
+
+@media (max-width: 600px) {
+  .card-wheel-stage {
+    height: 236px;
+  }
+
+  .card-wheel-card {
+    height: 208px;
+  }
+
+  .stack-sheet {
+    width: calc(100vw - 24px);
+    padding: 10px 8px 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-wheel-card {
+    transition: none;
+  }
+}

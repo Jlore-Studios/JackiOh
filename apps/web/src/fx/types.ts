@@ -1,7 +1,7 @@
 // The effects layer's contract (docs/polish/1-animations.md, Surface S1). Every other fx module
 // compiles against these types, so they are written exactly as the design document states them.
 
-import type { GameEvent, PlayerId, PlayerView, Rarity, Row } from "@jackioh/shared";
+import type { CardType, GameEvent, PlayerId, PlayerView, Rarity, Row, Tag } from "@jackioh/shared";
 import type { Side } from "../game/contract.ts";
 
 /** A point inside a box as fractions of its width and height; {x:0.5,y:0.5} is the centre. */
@@ -51,7 +51,20 @@ export type FxRayTone = "legendary" | "mythic" | "radiant" | "holy" | "victory";
 export type FxBannerTone = "you" | "opponent" | "muted";
 export type FxOutcome = "victory" | "defeat" | "draw";
 
-export type FxBurstCue = { kind: "burst"; preset: FxPreset; at: FxAnchor; delayMs: number; count: number; spread: FxSpread; power: number };
+/**
+ * `scale` (issue #124) multiplies every particle's size, as `power` multiplies its speed, so one preset
+ * gives a fine mist or a heavy spray. Absent: 1.
+ */
+export type FxBurstCue = {
+  kind: "burst";
+  preset: FxPreset;
+  at: FxAnchor;
+  delayMs: number;
+  count: number;
+  spread: FxSpread;
+  power: number;
+  scale?: number;
+};
 /** `density` is the intensity scale: it multiplies the trail and the arrival burst, as `count` does a burst's. */
 export type FxProjectileCue = { kind: "projectile"; preset: FxPreset; from: FxAnchor; to: FxAnchor; delayMs: number; flightMs: number; density: number };
 export type FxCrackCue = { kind: "crack"; at: FxAnchor; delayMs: number; durationMs: number };
@@ -71,6 +84,11 @@ export type FxResultCue = { kind: "result"; outcome: FxOutcome; text: string; de
  * sits on the crystal's own box; the lasting mark after it is the board's (`manaMarks.ts`).
  */
 export type FxFractureCue = { kind: "fracture"; at: FxAnchor; delayMs: number; durationMs: number };
+/**
+ * Classic+ #24 Crushing Walls: two spiked walls closing in from the left and right edges of `at`'s
+ * box, each `reach` of its width deep, then sliding back out (fx.css draws them).
+ */
+export type FxWallsCue = { kind: "walls"; at: FxAnchor; reach: number; delayMs: number; durationMs: number };
 /** A colour set for a DOM cue, as CSS colours: the rim, the bright core and the glow around it. */
 export type FxTint = { rim: string; core: string; glow: string };
 /** R437: a mark branded onto a card: a sigil in the mark's colours slams on and fades into the aura. */
@@ -82,6 +100,36 @@ export type FxBrandCue = { kind: "brand"; at: FxAnchor; tint: FxTint; delayMs: n
 export type FxChaosLine = { text: string; reel: readonly string[]; landMs: number };
 /** R436: the slot-machine reveal of the effects a Call to Chaos rolled, one line each, over the board. */
 export type FxChaosCue = { kind: "chaos"; title: string; lines: readonly FxChaosLine[]; delayMs: number; durationMs: number };
+/** A small glyph a DOM cue draws (an emblem of `cards/art/emblems.ts`): SVG path data in a 24×24 box. */
+export type FxIcon = { d: string; rule: "nonzero" | "evenodd" };
+/**
+ * Issue #124: a sweep's fog. A bank of cloud rolls over a whole row of units, left to right across the
+ * boxes from `from` to `to` (the row's first and last unit zones), in `tint`, which says what cast it,
+ * with small `icon`s drifting in it (the caster's emblem, or a flame or a heart). `tone` is hits or heals.
+ */
+export type FxFogCue = {
+  kind: "fog";
+  tone: "damage" | "heal";
+  from: FxAnchor;
+  to: FxAnchor;
+  tint: FxTint;
+  icon: FxIcon | null;
+  delayMs: number;
+  durationMs: number;
+};
+/**
+ * Issue #124: a whole Deck, Graveyard or Exile reached at once. A wave in `tint` washes over the pile
+ * once, pushing `direction` (a Degrade down, an Upgrade up), and `text` says how much it reached.
+ */
+export type FxZoneCue = {
+  kind: "zone";
+  at: FxAnchor;
+  tint: FxTint;
+  text: string;
+  direction: "up" | "down" | "none";
+  delayMs: number;
+  durationMs: number;
+};
 
 /**
  * Stage cues (docs/polish/1-animations.md, B46–B48): they act on the board's own elements rather than
@@ -114,8 +162,11 @@ export type FxDomCue =
   | FxBannerCue
   | FxResultCue
   | FxFractureCue
+  | FxWallsCue
   | FxBrandCue
-  | FxChaosCue;
+  | FxChaosCue
+  | FxFogCue
+  | FxZoneCue;
 export type FxStageCue = FxHoldCue | FxConcealCue | FxLungeCue;
 export type FxCue = FxCanvasCue | FxShakeCue | FxDomCue | FxStageCue;
 
@@ -157,8 +208,11 @@ export type FxRecipe =
 /** The optional `fx` field of an `ANIMATIONS` row: which recipe decorates the event. Data only. */
 export type FxDescriptor = { readonly recipe: FxRecipe };
 
-/** Public catalog facts about a readable defId (base face). `undefined` for "hidden" or unknown ids. */
-export type FxCardFacts = { rarity?: Rarity; attack?: number; health?: number };
+/**
+ * Public catalog facts about a readable defId (base face). `undefined` for "hidden" or unknown ids.
+ * `type` and `tags` (issue #124) pick the card's look (`looks.ts`): its particles, tint and emblem.
+ */
+export type FxCardFacts = { rarity?: Rarity; attack?: number; health?: number; type?: CardType; tags?: readonly Tag[] };
 
 export type FxTrapZone = { player: PlayerId; row: Row; lane: number };
 
@@ -178,6 +232,12 @@ export type FxPlay = {
    * reading anything a hidden card would change (R202).
    */
   step: number;
+  /**
+   * Those events by type: how many of each the planner has seen since the `cardPlayed`, the event
+   * being planned included. Types and counts only, public on both seats (R202). Classic+ #24
+   * Crushing Walls draws its walls at the first `destroyed` of its own play.
+   */
+  seen: Readonly<Partial<Record<GameEvent["type"], number>>>;
 };
 
 /** What the planner remembers across entries of one mount (who cast what, where a trap fired). */

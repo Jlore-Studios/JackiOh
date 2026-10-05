@@ -212,6 +212,12 @@ function queueModeOf(value: unknown): QueueMode {
   throw new Error(`expected a queue mode, got ${JSON.stringify(value)}`);
 }
 
+/** `matches.stake` carries `check (stake is null or stake in (1, 2))` (migration 0023, R672). */
+function stakeOf(value: unknown): 1 | 2 {
+  if (value === 1 || value === 2) return value;
+  throw new Error(`expected rematch stakes of 1 or 2, got ${JSON.stringify(value)}`);
+}
+
 /**
  * The id columns are `uuid`, and Postgres answers a malformed one with an error (22P02), not with
  * "no such row". A lookup whose id came from outside — `GET /api/matches/:matchId/series` reads
@@ -415,12 +421,16 @@ type MatchDbRow = {
   ranked: boolean;
   p1_portrait: string | null;
   p2_portrait: string | null;
+  /** R672 (migration 0023): the mode a rematch stated; null on every older row. */
+  mode: string | null;
+  /** R672 (migration 0023): 2 on a double-or-nothing rematch; null is a normal game. */
+  stake: number | null;
 };
 
 const MATCH_COLUMNS = `id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
   catalog_version, turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
-  ceiling_at, created_at, ended_at, p1_last_board, p2_last_board, p1_glitch_board, p2_glitch_board, ranked,
-  p1_portrait, p2_portrait`;
+  ceiling_at, created_at, ended_at, p1_last_board, p2_last_board, ranked, p1_portrait, p2_portrait,
+  mode, stake, p1_glitch_board, p2_glitch_board`;
 
 /** R417: a stored board (`last_boards.board`, `matches.p*_last_board`), as migration 0017's CHECK admits it. */
 function lastBoardOf(value: unknown): LastBoardEntry[] {
@@ -458,11 +468,15 @@ function toMatch(row: MatchDbRow): MatchRow {
     },
     // R417: absent when both are empty, as the registry writes it.
     ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
-    // R678: absent when both are empty, as the registry writes it (migration 0023).
+    // R678: absent when both are empty, as the registry writes it (migration 0024).
     ...(glitch[0].length + glitch[1].length > 0 ? { glitchBoards: glitch } : {}),
     // R604: the flag migration 0022 adds. Absent when false, exactly as `MatchRow` types it —
     // `results.ts` reads a missing flag the same way (unranked).
     ...(row.ranked ? { ranked: true } : {}),
+    // R672: migration 0023's columns. A null mode is "derive it" (`matches.modeOf` reads the row
+    // first), and a null stake is a normal game — both absent exactly as `MatchRow` types them.
+    ...(row.mode === null ? {} : { mode: queueModeOf(row.mode) }),
+    ...(row.stake === null ? {} : { stake: stakeOf(row.stake) }),
     // R642: absent when neither seat carried a portrait (a match from before 0019); both then
     // read as `vanilla` wherever `MatchRow.portraits` is consumed.
     ...(row.p1_portrait !== null || row.p2_portrait !== null
@@ -1700,7 +1714,10 @@ function buildStore(session: Session): Store {
           // R604: false for a room and for the `open` skeletons this UPDATE turns live — a room
           // never calls this, and a queue skeleton's own write is what stamps the flag.
           match.ranked ?? false,
-          // R678: the Glitch boards sampled at creation (migration 0023), '[]' when absent.
+          // R672: null on every row but a rematch's, which states both (migration 0023).
+          match.mode ?? null,
+          match.stake ?? null,
+          // R678: the Glitch boards sampled at creation (migration 0024), '[]' when absent.
           json(match.glitchBoards?.[0] ?? []),
           json(match.glitchBoards?.[1] ?? []),
         ];
@@ -1708,7 +1725,7 @@ function buildStore(session: Session): Store {
           $2::text, $3::text, $4::uuid, $5::uuid, $6::jsonb, $7::jsonb, $8::text,
           ${nullableTs("$9")}, ${nullableTs("$10")}, ${nullableTs("$11")}, ${nullableTs("$12")},
           ${nullableTs("$13")}, ${ts("$14")}, ${ts("$15")}, ${nullableTs("$16")}, $17::jsonb, $18::jsonb,
-          $19::text, $20::text`;
+          $19::text, $20::text, $22::text, $23::smallint`;
 
         if (status === undefined) {
           await q(
@@ -1716,8 +1733,8 @@ function buildStore(session: Session): Store {
                id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck, catalog_version,
                turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
                grace_deadline_at, ceiling_at, created_at, ended_at, p1_last_board, p2_last_board,
-               p1_portrait, p2_portrait, ranked, started_at, last_seq, p1_glitch_board, p2_glitch_board)
-             values ($1::uuid, ${values}, $21::boolean, ${ts("$15")}, 0, $22::jsonb, $23::jsonb)`,
+               p1_portrait, p2_portrait, mode, stake, ranked, started_at, last_seq, p1_glitch_board, p2_glitch_board)
+             values ($1::uuid, ${values}, $21::boolean, ${ts("$15")}, 0, $24::jsonb, $25::jsonb)`,
             params,
           );
           return;
@@ -1733,7 +1750,8 @@ function buildStore(session: Session): Store {
              created_at = ${ts("$15")}, ended_at = ${nullableTs("$16")}, started_at = ${ts("$15")},
              p1_last_board = $17::jsonb, p2_last_board = $18::jsonb,
              p1_portrait = $19::text, p2_portrait = $20::text, ranked = $21::boolean,
-             p1_glitch_board = $22::jsonb, p2_glitch_board = $23::jsonb
+             mode = $22::text, stake = $23::smallint,
+             p1_glitch_board = $24::jsonb, p2_glitch_board = $25::jsonb
            where id = $1::uuid`,
           params,
         );
@@ -1864,12 +1882,13 @@ function buildStore(session: Session): Store {
       if (!isUuid(matchId)) return null;
       if ((await store.series.withGame(matchId)) !== null) return "bo3";
       const { rows } = await session.query<{
+        mode: string | null;
         room_code: string | null;
         room_mode: string | null;
         ticket_mode: string | null;
       }>(
         null,
-        `select m.room_code, m.room_mode,
+        `select m.mode, m.room_code, m.room_mode,
                 (select t.mode from public.tickets t where t.match_id = m.id
                   order by t.enqueued_at, t.id limit 1) as ticket_mode
            from public.matches m
@@ -1878,6 +1897,8 @@ function buildStore(session: Session): Store {
       );
       const row = rows[0];
       if (row === undefined) return null;
+      // R672: a rematch states its own mode, since no ticket, room or series made it.
+      if (row.mode !== null) return queueModeOf(row.mode);
       if (row.room_code !== null) return row.room_mode === null ? "bo1" : queueModeOf(row.room_mode);
       return row.ticket_mode === null ? null : queueModeOf(row.ticket_mode);
     },
@@ -1903,7 +1924,7 @@ function buildStore(session: Session): Store {
     },
 
     /**
-     * R679: migration 0023's `app.forget_voided_match`, the one path that erases a live match and
+     * R679: migration 0024's `app.forget_voided_match`, the one path that erases a live match and
      * its append-only log. The foreign keys let both players go (`profiles.current_match_id` and
      * `tickets.match_id` are `on delete set null`); a finished match, or one with a result, stays.
      */

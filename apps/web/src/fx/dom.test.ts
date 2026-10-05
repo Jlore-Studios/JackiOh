@@ -82,6 +82,18 @@ const ARROWS_UP: FxDomCue = { kind: "arrows", direction: "up", at: anchor, delay
 const ARROWS_DOWN: FxDomCue = { kind: "arrows", direction: "down", at: anchor, delayMs: 0, durationMs: 550 };
 const BANNER: FxDomCue = { kind: "banner", text: "Your turn", tone: "you", delayMs: 0, durationMs: 1500 };
 const RESULT: FxDomCue = { kind: "result", outcome: "defeat", text: "Defeat", delayMs: 0, durationMs: 3200 };
+const TINT = { rim: "#ffb35c", core: "#fff1c2", glow: "#ff6a2b" };
+const FOG: FxDomCue = {
+  kind: "fog",
+  tone: "damage",
+  from: anchor,
+  to: { kind: "testid", testid: "card-u2" },
+  tint: TINT,
+  icon: { d: "M0 0h24v24H0z", rule: "nonzero" },
+  delayMs: 0,
+  durationMs: 1100,
+};
+const ZONE: FxDomCue = { kind: "zone", at: anchor, tint: TINT, text: "×12", direction: "down", delayMs: 0, durationMs: 1100 };
 
 /* ------------------------------------------------------------------------------------------- *
  * Each kind mounts one element to the contract
@@ -151,6 +163,30 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     const el = expectMounted(mountDomEffect(root, RESULT, {}), RESULT);
     expect(el.getAttribute("data-outcome")).toBe("defeat");
     expect(el.getAttribute("data-text")).toBe("Defeat");
+  });
+
+  it("issue #124 a fog spans its row's boxes, tinted, with puffs and one icon per emblem", () => {
+    const el = expectMounted(mountDomEffect(root, FOG, { from: AT, to: TO }), FOG);
+    expect(el.getAttribute("data-tone")).toBe("damage");
+    // The smallest box holding both, grown by FX_FOG_PAD of its height on every side.
+    expect(root.firstElementChild).toBe(el);
+    expect(el.querySelectorAll(".fx-fog-puff").length).toBeGreaterThan(0);
+    expect(el.querySelectorAll("svg.fx-fog-icon path").length).toBeGreaterThan(0);
+    expect(cssVar(el, "--fx-tint-glow")).toBe(TINT.glow);
+    // Without both row ends there is no row to roll over: nothing mounts.
+    root.innerHTML = "";
+    expect(mountDomEffect(root, FOG, { from: AT }), "a fog without its far end").toBe(null);
+    expect(root.childElementCount).toBe(0);
+  });
+
+  it("issue #124 a zone wave covers its pile, carrying its direction, text and tint", () => {
+    const el = expectMounted(mountDomEffect(root, ZONE, { at: AT }), ZONE);
+    expect(el.getAttribute("data-direction")).toBe("down");
+    expect(el.getAttribute("data-text")).toBe("×12");
+    expect(cssVar(el, "--fx-tint-rim")).toBe(TINT.rim);
+    expectCovering(el, AT);
+    root.innerHTML = "";
+    expect(mountDomEffect(root, ZONE, {}), "a zone wave without its pile").toBe(null);
   });
 
   it("B39 remove() takes out its own element and leaves the others", () => {
@@ -291,6 +327,22 @@ describe("R502 R437 R436 — the v0.2.0 DOM kinds", () => {
   it("R502 R437 a fracture or a brand with no box mounts nothing", () => {
     expect(mountDomEffect(root, FRACTURE, {})).toBeNull();
     expect(mountDomEffect(root, BRAND, { at: null })).toBeNull();
+    expect(root.childElementCount).toBe(0);
+  });
+});
+
+describe("Patch v0.2.14 — Classic+ #24 Crushing Walls' walls", () => {
+  const WALLS: FxDomCue = { kind: "walls", at: { kind: "testid", testid: "board" }, reach: 0.2, delayMs: 0, durationMs: 1250 };
+
+  it("the walls cover the board's box and reach `reach` of its width in from each side", () => {
+    const el = expectMounted(mountDomEffect(root, WALLS, { at: AT }), WALLS);
+    expectCovering(el, AT);
+    expect(cssVar(el, "--fx-reach")).toBe(`${String(AT.width * 0.2)}px`);
+    expect(textNodeCount(el)).toBe(0);
+  });
+
+  it("with no board to cover they mount nothing", () => {
+    expect(mountDomEffect(root, WALLS, { at: null })).toBeNull();
     expect(root.childElementCount).toBe(0);
   });
 });

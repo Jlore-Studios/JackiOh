@@ -184,8 +184,11 @@ const DOM_KINDS = {
   banner: "fx-banner-in",
   result: "fx-result-in",
   fracture: "fx-fracture-crack",
+  walls: "fx-walls-close",
   brand: "fx-brand-slam",
   chaos: "fx-chaos-in",
+  fog: "fx-fog-roll",
+  zone: "fx-zone-wave",
 } as const;
 
 const POP_GATE = normSelector('.game:has(> .fx-layer[data-fx="on"])');
