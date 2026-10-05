@@ -2224,6 +2224,8 @@
       "question": "",
       "queued_at": "2026-10-05T22:34:03Z",
       "requested_by": "jgoetzmann-bot",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "37383306778",
       "self_check_findings": [],
       "source": "",
