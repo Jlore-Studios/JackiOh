@@ -4003,14 +4003,25 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(656, "effects-cast.test.ts");
   });
 
-  // Proved by apps/web practice/core.test.ts "R659 …" (the save, the fold to the same hash and AI
-  // stream, the refusals, no lesson kept), saveStore.test.ts and resume.test.ts "R659 …" (the
-  // worker's store and the page's setup as untrusted storage), and routes/practice.test.tsx "R659 …"
+  // Proved by apps/web test/ux/drag-continue.test.tsx "R658 …" (a second drag from a pick, a backrow
+  // card dropped on the board, a prompt option dragged out of its panel) and test/ux/drag-model.test.ts
+  // "R658 …" (the plans and the drops).
+  it("R658 drags a second choice from its picks, a backrow card onto the board, and a prompt's options", () => {
+    provenIn(
+      658,
+      "../../../apps/web/src/test/ux/drag-continue.test.tsx",
+      "../../../apps/web/src/test/ux/drag-model.test.ts",
+    );
+  });
+
+  // Proved by apps/web practice/core.test.ts "R662 …" (the save, the fold to the same hash and AI
+  // stream, the refusals, no lesson kept), saveStore.test.ts and resume.test.ts "R662 …" (the
+  // worker's store and the page's setup as untrusted storage), and routes/practice.test.tsx "R662 …"
   // (the resume on a visit, a URL winning, leaving giving it up, the unload prompt for a lesson only,
   // and a reload on the real core).
-  it("R659 keeps a free practice game in the worker and folds it back after a reload", () => {
+  it("R662 keeps a free practice game in the worker and folds it back after a reload", () => {
     provenIn(
-      659,
+      662,
       "../../../apps/web/src/practice/core.test.ts",
       "../../../apps/web/src/practice/saveStore.test.ts",
       "../../../apps/web/src/practice/resume.test.ts",

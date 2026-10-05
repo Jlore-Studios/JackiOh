@@ -97,7 +97,9 @@ src/
     highlights.css      the green and yellow glow colours, imported after board.css
     drag/               drag to play: pointer events for mouse and touch, the targeting
                         arrow and reticle, and a dropped card held where it landed until
-                        the board shows the play; click-click keeps working in every mode
+                        the board shows the play; a build lifted again from its picks, a
+                        backrow card dropped on the board, a prompt option dragged out of its
+                        panel (R658, OptionDrag.tsx); click-click keeps working in every mode
   audio/                sound (SPEC §10.11); index.ts is the barrel Game.tsx imports, appAudio.ts
                         the page-wide unlock and UI ticks main.tsx holds, mix.ts the buses and limiter
     engine.ts sfx.ts unlock.ts settings.ts   lazy AudioContext and buses, procedural SFX, gesture unlock, the settings store
@@ -314,9 +316,9 @@ src/practice/
   decks.ts            random, the three named practice decks (hand-built lists), the account's saved decks by name
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
                       `jackioh.practice.lastBoard`, try/catch
-  saveStore.ts        the worker's save of a free game in progress (R659): config, log, AI cursor,
+  saveStore.ts        the worker's save of a free game in progress (R662): config, log, AI cursor,
                       catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom)
-  resume.ts           the page's half (R659): only the setup it chose, in localStorage
+  resume.ts           the page's half (R662): only the setup it chose, in localStorage
                       `jackioh.practice.game`, try/catch
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
   ModifierList.tsx    every live R169 modifier in full, one tap from the HUD
@@ -328,7 +330,7 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
   engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
-- A free game in progress survives a reload (R659). After every answer the core writes its save
+- A free game in progress survives a reload (R662). After every answer the core writes its save
   to the worker's store, which never crosses to the page (the log names the AI's hidden cards); the
   controller remembers the setup when the game is dealt and forgets it when the game ends, and the
   route forgets it when the player leaves. A visit with no parameter that starts a game sends

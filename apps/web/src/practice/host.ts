@@ -127,7 +127,7 @@ function createInThreadHost(env: Partial<PracticeCoreEnv>): PracticeHost {
 
   function load(): Promise<PracticeCore> {
     if (core === null) {
-      // R659: the save store is the env's (a test passes one to outlive the host, as IndexedDB
+      // R662: the save store is the env's (a test passes one to outlive the host, as IndexedDB
       // outlives a reload), else the scope's own.
       const saves = env.saves ?? defaultSaveStore();
       core = Promise.all([import("./core.ts"), saves.ready]).then(([mod]) =>

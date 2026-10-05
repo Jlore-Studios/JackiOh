@@ -1,5 +1,5 @@
 // Where the practice worker keeps a free game in progress, so a reload or a closed tab picks it up
-// again (SPEC §9.9, R659).
+// again (SPEC §9.9, R662).
 //
 // The save holds the action log, and the log holds the AI's actions, which name its hidden cards, so
 // it never crosses to the page (rule 7): the worker keeps it itself, in IndexedDB, which a worker
@@ -17,7 +17,7 @@ import type { Action } from "@jackioh/shared";
 import type { PracticeStartConfig } from "./protocol.ts";
 
 /**
- * R659: what a free practice game needs to come back: the start config as the worker had it (its
+ * R662: what a free practice game needs to come back: the start config as the worker had it (its
  * last board included), the action log, the AI stream's cursor, the catalog version and the state's
  * hash. Worker-side only.
  */

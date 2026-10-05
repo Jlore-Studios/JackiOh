@@ -968,10 +968,10 @@ describe("R433 practice's fresh random deck lists only the cards the human has b
 });
 
 // ---------------------------------------------------------------------------------------------
-// R659: a free game in progress is kept in the worker's store and folds back after a reload
+// R662: a free game in progress is kept in the worker's store and folds back after a reload
 // ---------------------------------------------------------------------------------------------
 
-describe("R659 the practice save and resume", () => {
+describe("R662 the practice save and resume", () => {
   /** A game walked `steps` requests in, on a core that keeps its saves in `saves`. */
   function walked(saves: PracticeSaveStore, seed: string, steps: number): { d: Driver; last: PracticeSnapshot } {
     const human: PlayerId = "p1";
@@ -986,7 +986,7 @@ describe("R659 the practice save and resume", () => {
     return { d, last };
   }
 
-  it("R659 a new core folds the saved log back to the same state, snapshot and AI stream", { timeout: 120_000 }, () => {
+  it("R662 a new core folds the saved log back to the same state, snapshot and AI stream", { timeout: 120_000 }, () => {
     const saves = memorySaveStore();
     const { d, last } = walked(saves, "r658-fold", 16);
     expect(last.view.result, "the walk leaves the game in progress").toBeNull();
@@ -1027,7 +1027,7 @@ describe("R659 the practice save and resume", () => {
     expect(debugOf(again).hash).toBe(debugOf(d).hash);
   });
 
-  it("R659 a resume of a game the store does not hold, of another game, or from another catalog fails and changes nothing", () => {
+  it("R662 a resume of a game the store does not hold, of another game, or from another catalog fails and changes nothing", () => {
     const empty = driver({ ...ENV, saves: memorySaveStore() });
     expect(empty.send({ type: "resume", config: config() }).type).toBe("failed");
     expect(driver({ ...ENV }).send({ type: "resume", config: config() }).type, "no store at all").toBe("failed");
@@ -1051,7 +1051,7 @@ describe("R659 the practice save and resume", () => {
     expect(forged.send({ type: "resume", config: config({ seed: "r658-other", humanSeat: "p1" }) }).type).toBe("failed");
   });
 
-  it("R659 a lesson is never kept, and a finished game clears the save", () => {
+  it("R662 a lesson is never kept, and a finished game clears the save", () => {
     const saves = memorySaveStore();
     walked(saves, "r658-clear", 4);
     expect(saves.read()).not.toBeNull();

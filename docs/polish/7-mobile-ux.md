@@ -244,7 +244,7 @@ export function hasMovesLeft(highlight: Highlight | undefined): boolean;
 | `hand-you` | `data-hover-preview` | `"on"` / `"off"` from `hoverPreviews` | `Hand.tsx` (slice 5) |
 | `.hand-cards` | inline `--n` | the hand size | `Hand.tsx` (slice 5) |
 | `.hand-slot` (wraps each hand card) | inline `--i`; `data-lifted` | index; `"true"` or absent (your hand only) | `Hand.tsx` (slice 5) |
-| `<html>` | `data-dragging` | `"play"` / `"attack"` while a drag is in flight | `DragLayer.tsx` (slice 3) |
+| `<html>` | `data-dragging` | `"play"` / `"attack"` / `"activate"` while a board drag is in flight (`"activate"`: R384, R510, R658), `"option"` while a prompt option is dragged (R658) | `DragLayer.tsx` (slice 3), `OptionDrag.tsx` |
 | `<html>` | `data-reduce-motion` | `"true"` or absent | settings store (slice 2) |
 | `board` | `data-log` | `"open"` or absent: the phone log sheet is open | `Board.tsx` (fix stage, B43) |
 | `log-toggle` | `aria-expanded` | a `<button>` in `.control-bar`, shown on phones only; toggles `data-log` | `Board.tsx` (fix stage, B43) |
