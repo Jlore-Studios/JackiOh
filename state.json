@@ -1790,7 +1790,7 @@
       "question": "",
       "queued_at": "2026-10-05T07:21:12Z",
       "requested_by": "jgoetzmann",
-      "run_id": "37277516593",
+      "run_id": "37277923355",
       "self_check_findings": [
         {
           "claim": "The self check's answer could not be read twice in a row.",
@@ -1800,7 +1800,7 @@
         }
       ],
       "source": "",
-      "started_at": "2026-10-05T07:25:59Z",
+      "started_at": "2026-10-05T07:34:54Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -3004,9 +3004,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-05T07:32:47Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37277871855",
-    "what": "review #142 on muse"
+    "at": "2026-10-05T07:34:54Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37277923355",
+    "what": "review #203 on devin"
   },
   "last_sweep": {
     "at": "2026-10-05T07:24:46Z",
