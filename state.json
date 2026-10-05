@@ -3611,10 +3611,10 @@
     "what": "revise #325 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-05T21:48:31Z",
+    "at": "2026-10-05T21:59:36Z",
     "notes": [
-      "CI on #325: #325: queued a CI fix",
-      "CI on #324: #324: blocked, stopped or already queued; left alone"
+      "CI on #324: #324: re-ran the failed jobs of run 37360884569",
+      "started a night run, as a lane was free: #290 (hard) is queued to build, for `claude-2`: build on `claude-2` (claude, `opus`, strong); review on `claude-2` (claude, `opus`, strong)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
