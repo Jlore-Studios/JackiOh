@@ -520,6 +520,12 @@
       "lines": [
         "@jgoetzmann-bot work"
       ]
+    },
+    "c:5995280910": {
+      "at": "2026-10-05T13:19:29Z",
+      "lines": [
+        "/harness build try again. First get a model to rewrite the plan from main"
+      ]
     }
   },
   "items": {
