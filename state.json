@@ -2303,6 +2303,14 @@
         }
       }
     },
+    "335": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-05T22:42:39Z",
+      "issue": 290,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "37": {
       "died": 0,
       "failures": 0,
