@@ -2077,7 +2077,7 @@
       }
     },
     "214": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_fixes": 2,
       "ci_reruns": {
@@ -2110,11 +2110,11 @@
         }
       ],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "devin",
       "question": "",
       "queued_at": "2026-10-05T11:57:01Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "37303928644",
+      "run_id": "37306200946",
       "self_check_findings": [
         {
           "claim": "Conflict markers are still in SPEC.md, packages/engine/test/rulings.test.ts.",
@@ -2136,7 +2136,7 @@
         }
       ],
       "source": "cross-review",
-      "started_at": "2026-10-05T11:39:24Z",
+      "started_at": "2026-10-05T12:02:29Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -3117,9 +3117,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-05T11:59:16Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37304339017",
-    "what": "review #287 on claude-2"
+    "at": "2026-10-05T12:02:29Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37306200946",
+    "what": "revise #214 on devin"
   },
   "last_sweep": {
     "at": "2026-10-05T11:58:41Z",
