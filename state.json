@@ -2482,7 +2482,7 @@
       },
       "ci_run_id": 37297489784,
       "ci_sha": "5f724b531d6f9b67f6b82afe817adbc866dfb1db",
-      "cross_rounds": 2,
+      "cross_rounds": 3,
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
@@ -2500,7 +2500,20 @@
       "interruptions": 0,
       "issue": 255,
       "kind": "review",
-      "last_findings": [],
+      "last_findings": [
+        {
+          "claim": "Unresolved merge-conflict markers are committed in SPEC.md, breaking the rulings table.",
+          "evidence": "git grep shows markers at SPEC.md:1877-1885 (<<<<<<< HEAD / ======= / >>>>>>> origin/main) interleaving the R661 row with main's R662 row; sed 1870-1890 shows the R661 line followed by literal marker lines.",
+          "severity": "blocking",
+          "where": "SPEC.md:1877"
+        },
+        {
+          "claim": "Unresolved merge-conflict markers are committed in rulings.test.ts, breaking TS parse/typecheck/vitest.",
+          "evidence": "git grep shows markers at rulings.test.ts:4044-4085; sed 4040-4090 shows literal <<<<<<</=======/>>>>>>> lines inside the R661/R662/R667 it-blocks, including a >>>>>>> line between provenIn(667)s closing and its it-close.",
+          "severity": "blocking",
+          "where": "packages/engine/test/rulings.test.ts:4044"
+        }
+      ],
       "pending_request": false,
       "provider": "muse",
       "question": "",
