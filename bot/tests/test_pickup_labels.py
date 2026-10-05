@@ -239,7 +239,7 @@ class LabelsTests(unittest.TestCase):
         planned, result = h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
                                               "review": reviewer(APPROVE)}))
         self.assertEqual((planned["provider"], planned["priority"], planned["difficulty"],
-                          result["status"]), ("agy", "high", "easy", "approved"))
+                          result["status"]), ("muse", "high", "easy", "approved"))
         pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
         self.assertEqual(h.gh.label_names(pr),
                          {LABEL_PR, LABEL_CROSS, "difficulty:easy", "Priority:High"})
@@ -249,6 +249,7 @@ class LabelsTests(unittest.TestCase):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
         h.gh.add_issue(12, labels=(LABEL_BUILD, "difficulty:hard", LOW))
         planned, result = h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
+                                              "fix": builder({"src/game.txt": "v3\n"}),
                                               "review": reviewer(changes("Still wrong."))}),
                                   force=True)
         self.assertEqual((planned["provider"], result["status"]), ("claude-3", "not_approved"))

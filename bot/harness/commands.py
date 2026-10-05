@@ -19,8 +19,8 @@ from dataclasses import dataclass
 
 from harness.trust import LEVEL_NAMES
 
-VERBS: tuple[str, ...] = ("build", "revise", "stop", "status", "help", "halt", "start", "suggest",
-                          "run")
+VERBS: tuple[str, ...] = ("build", "revise", "review", "rebuild", "stop", "status", "help", "halt",
+                          "start", "suggest", "run")
 
 ALIASES: dict[str, str] = {
     "work": "build",
@@ -40,6 +40,8 @@ LEVELS: dict[str, int] = {
     "typo": 1,
     "build": 2,
     "revise": 2,
+    "review": 2,
+    "rebuild": 2,
     "stop": 2,
     "suggest": 2,
     "request": 2,
@@ -143,6 +145,8 @@ _MENTION_ARGS: dict[str, re.Pattern[str]] = {
     "status": re.compile(r"^$"),
     "help": re.compile(r"^\S*$"),
     "stop": re.compile(r"^$"),
+    "rebuild": re.compile(r"^$"),
+    "review": re.compile(r"^(?i:strong|medium)?$"),
     "halt": re.compile(r"^$"),
     "start": re.compile(r"^$"),
     "suggest": re.compile(r"^$"),
@@ -224,6 +228,8 @@ HELP = """\
 |---|---|---|---|
 | `build [notes]` | queue this issue for the bot | issue | 2 |
 | `revise <notes>` | queue a revision of this PR with your notes | pull request | 2 |
+| `review [strong\\|medium] [notes]` | queue a review run of this PR's head, by that tier or stronger; no revision | pull request | 2 |
+| `rebuild` | close my PR and build its issue again from `main`, its branch kept | issue or PR | 2 |
 | `stop` | take this issue or PR out of the queue and stop work on it | issue or PR | 2 |
 | `suggest` | ask for improvement suggestions when the queue is empty | anywhere | 2 |
 | `status` | halt state, each subscription, the queue | anywhere | 1 |
@@ -245,6 +251,14 @@ VERB_HELP: dict[str, tuple[str, str, str]] = {
               "pull request it is the same as `revise`.", "/harness build make the Coin spin too"),
     "revise": ("revise <notes>", "Queue a revision of this pull request with your notes. "
                "Auto-merge stays off until the revision lands.", "@{bot} revise rename the helper"),
+    "review": ("review [strong|medium] [notes]", "Queue a review run of the head of one of my pull "
+               "requests, and no revision: the head stays as it is. With `strong` or `medium` the "
+               "review waits for a model of that tier or stronger rather than taking a weaker "
+               "one. Your notes reach the reviewer.", "/harness review strong check the replay"),
+    "rebuild": ("rebuild", "Close my pull request for this issue, keep its branch as "
+                "`bot/old/issue-<n>-<date>`, and queue the issue to build again from `main`, at "
+                "the same difficulty. The new build is told what went wrong with the old one.",
+                "/harness rebuild"),
     "stop": ("stop", "Take this issue or pull request out of the queue. A run working on it gives "
              "up at its next checkpoint and keeps what it has.", "/harness stop"),
     "suggest": ("suggest", "Ask for a suggestion survey the next time the queue is empty.",

@@ -81,6 +81,7 @@ class BuilderTests(unittest.TestCase):
     item's tier, on its weakest such seat."""
 
     def test_an_easy_item_is_built_with_sonnet_on_a_claude_account(self):
+        """With Devin off, an easy item goes to claude-3's Sonnet, medium since #317 part 5."""
         gh = FakeGitHub()
         ctx = ctx_for(gh)
         queue(gh, ctx, 3, EASY, planned=False)
@@ -88,20 +89,21 @@ class BuilderTests(unittest.TestCase):
         self.assertEqual((planned["action"], planned["provider"], planned["difficulty"]),
                          ("build", "claude-3", "easy"))
         self.assertEqual(seats(planned), {"plan": ("claude-3", "opus", "strong"),
-                                          "build": ("claude-3", "sonnet", "weak"),
+                                          "build": ("claude-3", "sonnet", "medium"),
                                           "review": ("claude-3", "opus", "strong")})
-        self.assertEqual(planned["routing"], [])
+        self.assertEqual(planned["routing"], [
+            "#3: stepped up from weak to medium to build it: no weak-tier model (swe-2-max) is "
+            "free now"])
 
-    def test_a_medium_item_on_a_claude_account_is_built_with_opus(self):
+    def test_a_medium_item_on_a_claude_account_is_built_with_sonnet(self):
+        """Sonnet at xhigh is medium (#317 part 5), so claude-3 builds a medium item with it and
+        keeps Opus for planning, reviews and hard items."""
         gh = FakeGitHub()
         ctx = ctx_for(gh)
         queue(gh, ctx, 3)
         planned = plan_mod.make(ctx)
-        self.assertEqual(seats(planned)["build"], ("claude-3", "opus", "strong"))
-        self.assertEqual(planned["routing"], [
-            "#3: built on strong though difficulty:medium allows medium: the usage order puts "
-            "`claude-3` before `agy` (agy, `gemini-3.8-flash-high`, medium), `muse` (muse, "
-            "`muse-spark-1.3-contributor`, medium), `gpt` (codex, `gpt-5.6-terra`, medium)"])
+        self.assertEqual(seats(planned)["build"], ("claude-3", "sonnet", "medium"))
+        self.assertEqual(planned["routing"], [])
 
     def test_a_hard_item_takes_a_strong_model_only(self):
         gh = FakeGitHub()
@@ -116,9 +118,10 @@ class BuilderTests(unittest.TestCase):
 
     def test_the_usage_order(self):
         """For easy items Devin first while it has a lane (`easy_first`); then claude-3, then
-        claude-1 (each twice: two lanes), then claude-4, claude-6 and claude-5 last of the
-        Claude accounts, then the medium models (Muse on both its lanes), and claude-2 builds
-        only after all of them (`build_last`)."""
+        claude-1 (each twice: two lanes) with Sonnet; then claude-4, claude-6 and claude-5 with
+        Sonnet, their stand-in for Devin while Devin's lanes are full (`takes_over`, #317 part
+        9); then the medium models, Muse first on both its lanes; and claude-2 builds only after
+        all of them (`build_last`)."""
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
         for number in range(3, 14):
@@ -142,11 +145,36 @@ class BuilderTests(unittest.TestCase):
         self.assertEqual(order, [("devin", "swe-2-max"), ("claude-3", "sonnet"),
                                  ("claude-3", "sonnet"),
                                  ("claude-1", "sonnet"), ("claude-1", "sonnet"),
-                                 ("claude-4", "opus"),
-                                 ("claude-6", "opus"), ("claude-5", "opus"),
-                                 ("agy", "gemini-3.8-flash-high"),
+                                 ("claude-4", "sonnet"),
+                                 ("claude-6", "sonnet"), ("claude-5", "sonnet"),
                                  ("muse", "muse-spark-1.3-contributor"),
-                                 ("muse", "muse-spark-1.3-contributor")])
+                                 ("muse", "muse-spark-1.3-contributor"),
+                                 ("agy", "gemini-3.8-flash-high")])
+
+    def test_a_sonnet_stand_in_builds_only_easy_items_devin_cannot_take(self):
+        """claude-4's Sonnet stands in for Devin (`takes_over`): with Devin free it builds
+        nothing, and it never builds a medium item, which claude-4 builds with Opus."""
+        gh = FakeGitHub()
+        ctx = ctx_for(gh, machine=("devin",))
+        busy(gh, ctx, ("claude-3", 50), ("claude-3", 59), ("claude-1", 51), ("claude-1", 58))
+        queue(gh, ctx, 3, EASY)
+        self.assertEqual(seats(plan_mod.make(ctx))["build"], ("devin", "swe-2-max", "weak"))
+        gh = FakeGitHub()
+        ctx = ctx_for(gh, machine=("devin",))
+        ctx = make_ctx(gh, at=NIGHT, cfg=dataclasses.replace(
+            ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20, machine_parallel=20)))
+        busy(gh, ctx, ("claude-3", 50), ("claude-3", 59), ("claude-1", 51), ("claude-1", 58),
+             *[("devin", n) for n in range(60, 66)])
+        queue(gh, ctx, 3, EASY)
+        self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-4", "sonnet", "medium"))
+        gh = FakeGitHub()
+        ctx = ctx_for(gh, machine=())
+        busy(gh, ctx, ("claude-3", 50), ("claude-3", 59), ("claude-1", 51), ("claude-1", 58))
+        queue(gh, ctx, 3, MEDIUM)
+        self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-4", "opus", "strong"))
+        # A stand-in never reviews: the review rule counts the run's reviewer, Opus.
+        self.assertEqual(ctx.cfg.pool.best_seat(ctx.cfg.pool.get("claude-4"), "medium").model,
+                         "opus")
 
     def test_sonnet_only_while_claude_1_or_claude_3_is_open(self):
         # claude-3 full (both lanes), claude-1 open and Devin full: claude-1 builds the easy
@@ -155,7 +183,7 @@ class BuilderTests(unittest.TestCase):
         ctx = ctx_for(gh, machine=("devin",))
         busy(gh, ctx, ("claude-3", 50), ("claude-3", 59), *[("devin", n) for n in range(60, 66)])
         queue(gh, ctx, 3, EASY)
-        self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-1", "sonnet", "weak"))
+        self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-1", "sonnet", "medium"))
         # Neither open and the medium models busy: Devin builds it, the default, while claude-2
         # (build_last, kept for planning and review) stays free.
         gh = FakeGitHub()
@@ -194,8 +222,8 @@ class BuilderTests(unittest.TestCase):
         planned = plan_mod.make(ctx)
         self.assertEqual(seats(planned)["build"], ("agy", "gemini-3.8-flash-high", "medium"))
         self.assertEqual(planned["routing"], [
-            "#3: stepped up from weak to medium to build it: no weak-tier model (sonnet, "
-            "swe-2-max) is free now"])
+            "#3: stepped up from weak to medium to build it: no weak-tier model (swe-2-max) is "
+            "free now"])
         self.assertIn("stepped up from weak to medium", planned["assignment"] + " ".join(
             planned["routing"]))
         # Medium with only a strong model free steps up to strong.
@@ -224,7 +252,7 @@ class BuilderTests(unittest.TestCase):
         gh.add_pull(9, "bot/issue-1", labels=(LABEL_PR, "bot:revise", EASY))
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], seats(planned)["build"]),
-                         ("revise", ("claude-3", "sonnet", "weak")))
+                         ("revise", ("claude-3", "sonnet", "medium")))
         self.assertIsNone(seats(planned)["plan"])  # a revision is not planned again
 
 
@@ -245,12 +273,25 @@ class PlannerTests(unittest.TestCase):
         self.assertIn("goes into this issue's description", gh.bot_comments(3)[-1])
 
     def test_with_no_strong_model_free_a_medium_one_plans_in_the_same_run(self):
+        """An item nobody has rated or planned may be rated and planned by a medium model
+        (#317 part 8): Muse, first of them, plans it in its own run."""
         gh = FakeGitHub()
         ctx = ctx_for(gh, at=DAY)
         queue(gh, ctx, 3, planned=False)
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], seats(planned)["plan"]),
-                         ("build", ("agy", "gemini-3.8-flash-high", "medium")))
+                         ("build", ("muse", "muse-spark-1.3-contributor", "medium")))
+
+    def test_a_medium_model_never_plans_a_rated_medium_item(self):
+        """A medium or hard item is planned by a strong model only (#317 part 6): with none free,
+        a medium builder does not plan it in its own run, though it plans an easy one."""
+        gh = FakeGitHub()
+        ctx = ctx_for(gh, at=DAY)
+        queue(gh, ctx, 3, MEDIUM, planned=False)
+        self.assertEqual(plan_mod.make(ctx)["action"], "none")
+        queue(gh, ctx, 4, EASY, planned=False)
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["number"], seats(planned)["plan"][2]), (4, "medium"))
 
     def test_with_no_planner_free_nothing_is_built(self):
         gh = FakeGitHub()
@@ -294,7 +335,7 @@ class PlannerTests(unittest.TestCase):
         runner = FakeRunner({"build": building, "review": reviewer(APPROVE)})
         planned, result = h.night(runner)
         self.assertEqual((planned["action"], planned["provider"], result["status"]),
-                         ("build", "agy", "approved"))
+                         ("build", "muse", "approved"))
         self.assertEqual([c.role for c in runner.calls], ["build", "review"])
         self.assertIn("## The plan", runner.calls[0].prompt)
         self.assertIn("**Plan** section of the issue's description", runner.calls[0].prompt)
@@ -324,7 +365,7 @@ class ReviewRunTests(unittest.TestCase):
         ctx = ctx_for(gh, at=DAY)
         self.pull(gh, ctx)
         planned = plan_mod.make(ctx)
-        self.assertEqual(seats(planned)["review"], ("agy", "gemini-3.8-flash-high", "medium"))
+        self.assertEqual(seats(planned)["review"], ("muse", "muse-spark-1.3-contributor", "medium"))
         self.assertEqual(planned["approved"], ["gpt"])
         # With only gpt set up, gpt reviews it again: the same medium model may give both.
         gh2 = FakeGitHub()
@@ -341,7 +382,7 @@ class ReviewRunTests(unittest.TestCase):
         ctx = ctx_for(gh, at=DAY)  # no Claude account by day: two medium approvals do
         self.pull(gh, ctx, labels=(HARD,))
         self.assertEqual(seats(plan_mod.make(ctx))["review"],
-                         ("agy", "gemini-3.8-flash-high", "medium"))
+                         ("muse", "muse-spark-1.3-contributor", "medium"))
 
     def test_a_weak_model_reviews_only_an_easy_item_short_of_a_weak_approval(self):
         def review_with_devin_only(labels, votes=None):
@@ -533,7 +574,7 @@ class ConfigTests(unittest.TestCase):
         gh = FakeGitHub()
         text = report(ctx_for(gh, machine=ALL_MACHINE))
         self.assertIn("`devin` (devin: `swe-2-max` weak, self-check;", text)
-        self.assertIn("`claude-3` (claude: `opus` strong, `sonnet` weak;", text)
+        self.assertIn("`claude-3` (claude: `opus` strong, `sonnet` medium;", text)
         # `harness providers` (and `window`, the same command), as bot selftest runs it.
         import contextlib
         import io
@@ -555,7 +596,7 @@ class ConfigTests(unittest.TestCase):
         look = plan_mod.peek(ctx)
         self.assertEqual(look.reason, "#3 (easy) is queued to build, for `claude-3`: plan on "
                          "`claude-3` (claude, `opus`, strong); build on `claude-3` (claude, "
-                         "`sonnet`, weak); review on `claude-3` (claude, `opus`, strong)")
+                         "`sonnet`, medium); review on `claude-3` (claude, `opus`, strong)")
 
 
 if __name__ == "__main__":

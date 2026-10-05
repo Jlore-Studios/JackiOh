@@ -533,6 +533,22 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
                 _output({"go": "false", "number": ""})
                 print(redact(f"triage: skip: #{asked} could not be read: {exc}"))
                 return 0
+        elif payload.get("action") == "labeled" and (payload.get("issue") or {}).get("number"):
+            # #307: a method label starts triage. A person gets METHOD_WAIT to set a difficulty
+            # and a priority, and then the issue is read again, so their labels count.
+            if not str((payload.get("label") or {}).get("name") or "").lower().startswith(
+                    "method:"):
+                _output({"go": "false", "number": ""})
+                print("triage: skip: not a method label")
+                return 0
+            time.sleep(triage_mod.METHOD_WAIT.total_seconds())
+            number = int(payload["issue"]["number"])
+            try:
+                payload = {"issue": _ctx(cfg, write=False).gh.get_issue(number)}
+            except (GitHubError, ValueError) as exc:
+                _output({"go": "false", "number": ""})
+                print(redact(f"triage: skip: #{number} could not be read: {exc}"))
+                return 0
         go, why = triage_mod.gate(payload, Trust.load(cfg.root / TRUST_PATH), cfg.bot_login,
                                   cfg.root, clock_now(), cfg.timezone, asked=bool(asked))
         thread, _ = triage_mod.thread_of(payload)
@@ -548,11 +564,13 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
             text = triage_mod.prompt(thread, "pull_request" in thread, ctx.gh.list_labels(),
                                      triage_mod.conventions_text(cfg.root),
                                      triage_mod.issue_types(ctx.gh),
-                                     ctx.gh.list_issues(state="open", limit=300))
-            answer = triage_mod.run_devin(cfg.bin("devin"), triage_mod.devin_model(cfg.root), text)
+                                     ctx.gh.list_issues(state="open", limit=300),
+                                     method=triage_mod.method_of(thread))
+            model, effort = triage_mod.classifier_model(cfg.root)
+            answer = triage_mod.run_muse(cfg.bin("muse"), model, effort, text)
             verdict = triage_mod.parse(answer)
         except Exception as exc:  # noqa: BLE001 - any failure skips
-            print(redact(f"triage: Devin did not classify #{number}: {exc}"))
+            print(redact(f"triage: {triage_mod.CLASSIFIER} did not classify #{number}: {exc}"))
             return 0
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps({"number": number, "verdict": verdict}), encoding="utf-8")
@@ -561,7 +579,8 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
     try:
         written = json.loads(out.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        # No answer from Devin: the links the issue's own text and title give are still made.
+        # No answer from the classifier: the method label's own labels and assignees, and the
+        # links the issue's own text and title give, are still made.
         written = {"number": number, "verdict": None}
     if int(written.get("number") or 0) != number:
         print(f"triage: the answer is for #{written.get('number')}, not #{number}")

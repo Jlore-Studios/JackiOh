@@ -25,6 +25,10 @@ class Identity:
         return cls(login, f"{user_id}+{login}@users.noreply.github.com")
 
 
+#: A line git writes into a file it could not merge: the start or the end of a conflict. A
+#: Markdown heading underline (`=======`) is not one, so the middle marker is left out.
+MARKER_LINE = r"^(<<<<<<< |>>>>>>> )"
+
 class Git:
     def __init__(self, cwd: Path, env: Mapping[str, str] | None = None) -> None:
         self.cwd = Path(cwd)
@@ -70,6 +74,32 @@ class Git:
         """Paths the branch changed since it left `base` (merge-base diff, renames split)."""
         text = self.out("diff", "--name-only", "--no-renames", f"{base}...{head}")
         return [line for line in text.splitlines() if line.strip()]
+
+    def markers(self, ref: str, paths: Iterable[str]) -> list[str]:
+        """The `paths` that hold a conflict marker line at `ref` (`MARKER_LINE`)."""
+        wanted = [p for p in paths if p]
+        if not wanted:
+            return []
+        proc = self.run("grep", "-l", "-E", MARKER_LINE, ref, "--", *wanted, check=False)
+        found = []
+        for line in proc.stdout.splitlines():
+            path = line.split(":", 1)[1] if line.startswith(f"{ref}:") else line
+            if path.strip():
+                found.append(path.strip())
+        return found
+
+    def numstat(self, base: str, head: str = "HEAD") -> dict[str, int]:
+        """Lines added plus removed per path since `head` left `base` (a binary file counts 0)."""
+        text = self.out("diff", "--numstat", "--no-renames", f"{base}...{head}")
+        counts: dict[str, int] = {}
+        for line in text.splitlines():
+            parts = line.split("\t", 2)
+            if len(parts) != 3:
+                continue
+            added, removed, path = parts
+            counts[path] = (int(added) if added.isdigit() else 0) + (
+                int(removed) if removed.isdigit() else 0)
+        return counts
 
     def names_between(self, a: str, b: str = "HEAD") -> list[str]:
         """Paths that differ between two commits (a two-dot diff, renames split)."""
