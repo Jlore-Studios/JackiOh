@@ -4910,14 +4910,18 @@
         {
           "at": "2026-10-05T14:57:31Z",
           "minutes": 6.9
+        },
+        {
+          "at": "2026-10-05T15:55:44Z",
+          "minutes": 9.9
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-05T19:50:00Z",
-          "utilization": 0.0
+          "utilization": 0.01
         },
-        "observed_at": "2026-10-05T14:57:31Z",
+        "observed_at": "2026-10-05T15:55:44Z",
         "seven_day": {
           "resets_at": "2026-10-12T00:00:00Z",
           "utilization": 0.24
