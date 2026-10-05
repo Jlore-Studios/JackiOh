@@ -4112,17 +4112,21 @@
         {
           "at": "2026-10-05T05:19:17Z",
           "minutes": 8.1
+        },
+        {
+          "at": "2026-10-05T06:12:04Z",
+          "minutes": 30.2
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-05T09:44:00Z",
-          "utilization": 0.08
+          "utilization": 0.09
         },
-        "observed_at": "2026-10-05T05:19:17Z",
+        "observed_at": "2026-10-05T06:12:04Z",
         "seven_day": {
           "resets_at": "2026-10-12T00:00:00Z",
-          "utilization": 0.1
+          "utilization": 0.11
         },
         "status": "allowed"
       }
