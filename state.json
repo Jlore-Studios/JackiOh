@@ -2145,15 +2145,6 @@
       "failures": 0,
       "feedback_since": "2026-10-05T22:15:21Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-10-05T22:13:53Z",
-        "family": "cognition",
-        "kind": "work",
-        "notes": "",
-        "provider": "devin",
-        "reason": "`devin` reached its usage limit",
-        "trail": "- --- stderr ---\n- Error: Agent error: Reached free model rate limit. Upgrade to Max for higher limits, or switch to a different model. Your limit will reset in 46 minutes (at 23:01 UTC). (trace ID: 117a035e9b4bdccbaf6031ff10e2b7c9): {\n- \"cognition.ai/errorKind\": \"unavailable\",\n- \"cognition.ai/retryable\": true\n- }"
-      },
       "interruptions": 0,
       "issue": 323,
       "kind": "revise",
