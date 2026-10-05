@@ -2751,7 +2751,7 @@
       "planned_at": "2026-10-03T16:39:41Z",
       "pr": 166,
       "provider": "muse",
-      "question": "Step budget exhausted mid-build: batch-2 card tests are green and the merge is marked resolved, but SPEC \u00a78 rows (#31/#39/#46/#60/#63/#78) plus BUILD/docs rows and the final gates still need a continuation run \u2014 shall /harness continue pick up exactly that list?",
+      "question": "",
       "queued_at": "2026-10-04T14:50:30Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37253548709",
