@@ -170,6 +170,10 @@ def make_probe(ctx: context_mod.Context, number: int | None,
         state = ctx.store.load()
         if state.get("halted"):
             return ("halted by /harness halt", "halt")
+        held = providers_mod.suspension(state, provider.id)
+        if held is not None:
+            by = f" by @{held['by']}" if held.get("by") else ""
+            return (f"`{provider.id}` was suspended{by}", "suspend")
         if number is not None:
             record = state["items"].get(str(number), {})
             if record.get("stop_requested"):
