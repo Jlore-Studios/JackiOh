@@ -3036,7 +3036,9 @@
     },
     "324": {
       "action": "review",
-      "asks": [],
+      "asks": [
+        "c:6004021990"
+      ],
       "ci_fixes": 1,
       "ci_reruns": {
         "caa36ac0d05f4db84bc67eb986e18a0223b8f57d": 1
@@ -3061,8 +3063,8 @@
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-05T22:04:50Z",
-      "requested_by": "jgoetzmann-bot",
+      "queued_at": "2026-10-05T22:05:09Z",
+      "requested_by": "jgoetzmann",
       "run_id": "37378320111",
       "self_check_findings": [
         {
@@ -3072,7 +3074,7 @@
           "where": "self check"
         }
       ],
-      "source": "ci",
+      "source": "request",
       "started_at": "2026-10-05T21:49:08Z",
       "stop_requested": false,
       "taken_asks": [],
