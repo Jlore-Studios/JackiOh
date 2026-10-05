@@ -23,7 +23,7 @@
 //
 // R384, R510: a card whose view lists `activations` (its controller's own view of a card acting on
 // the field) wears an Activate control per ability (ActivateControl.tsx), a sibling of the face like
-// the switch, which reports `{ on: "activate" }` and stops its click reaching the card.
+// the counters, which reports `{ on: "activate" }` and stops its click reaching the card.
 //
 // R667: the viewer's own hand card the engine marks `counteredOnPlay` (Classic #87 Plague Chalice
 // would counter it) wears a green, bubbling warning film and says why in its tooltip and inspect note.
@@ -44,12 +44,14 @@ import {
   FACE_DOWN_TAG,
   FaceDownPreview,
   FaceDownSheet,
+  INSPECT_KEY_SHORTCUT,
   Icon,
   MinionFace,
   PileDepth,
   UNREVEALED_NOTE,
   faceDownLabel,
   faceModel,
+  isInspectKey,
   useCardSettings,
   useInspectTrigger,
   type FaceModel,
@@ -61,12 +63,17 @@ import { marksOf } from "../cards/marks.ts";
 import ActivateControls from "./ActivateControl.tsx";
 import { useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
+import { isSpent, useActingSeat } from "./spent.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { COUNTERED_NOTE, conditionAttr, counteredAttr, glowAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
 
 import "./facedown.css";
 import "./countered.css";
+import "./spent.css";
+
+/** #258: what the "can't act yet" badge says in words (spent.css draws it). */
+export const SPENT_NOTE = "No action left this turn";
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter((part): part is string => typeof part === "string" && part.length > 0).join(" ");
@@ -225,6 +232,7 @@ export default function Card(props: CardProps): ReactElement {
   // The preview opens only while the panel's "Hover previews" is on too (useInspectTrigger.tsx).
   const panelHover = useSetting("hoverPreviews");
   const form = formOf(card, unit, props.type);
+  const acting = useActingSeat();
 
   // The card in play: the unit's view when it is one, else the card's own (a hand card's stats and
   // power, a face-up backrow card's power off the hero's list). A back has no face at all.
@@ -289,6 +297,21 @@ export default function Card(props: CardProps): ReactElement {
     fire(event);
   }
 
+  // #258: I, the context-menu key or Shift+F10 opens the inspect sheet, as on the deck builder's
+  // tiles (cards/inspect/keys.ts). Every card with something to inspect takes focus for it, legal or
+  // not; Enter and Space still play or pick only a legal one. A right-click stays the board's drag
+  // cancel, so only the keys open it.
+  const keyInspect = subject !== null;
+  function onInspectKey(event: KeyboardEvent<HTMLElement>): void {
+    if (isInspectKey(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+      inspect.openSheet(event.currentTarget);
+      return;
+    }
+    if (clickable) onKeyDown(event);
+  }
+
   const shared = {
     "data-testid": testId,
     "data-legal": clickable ? legalAttr(legal) : undefined,
@@ -297,8 +320,9 @@ export default function Card(props: CardProps): ReactElement {
     "data-glow": glowAttr(props.highlight, testId),
     "aria-disabled": clickable && !legal ? ("true" as const) : undefined,
     onClick: clickable ? fire : undefined,
-    onKeyDown: clickable ? onKeyDown : undefined,
-    tabIndex: clickable && legal ? 0 : undefined,
+    onKeyDown: keyInspect ? onInspectKey : clickable ? onKeyDown : undefined,
+    tabIndex: (clickable && legal) || keyInspect ? 0 : undefined,
+    "aria-keyshortcuts": keyInspect ? INSPECT_KEY_SHORTCUT : undefined,
     draggable: props.draggable === true && legal ? true : undefined,
     onDragStart: props.draggable === true ? (event: DragEvent<HTMLElement>) => beginDrag(event, legal, target) : undefined,
     onDragOver: clickable ? allowDrop : undefined,
@@ -349,6 +373,7 @@ export default function Card(props: CardProps): ReactElement {
   const counters: CardProps["counters"] = props.counters ?? unit?.counters;
   const buried = unit?.buried ?? 0;
   const cardType = face.type;
+  const spent = unit !== undefined && unit !== null && isSpent(unit, acting);
 
   const root = (
     <div
@@ -382,6 +407,8 @@ export default function Card(props: CardProps): ReactElement {
       data-position={position}
       // `canAct` is drawn as state, never read as permission: legality is `props.highlight`.
       data-can-act={unit === undefined || unit === null ? undefined : unit.canAct ? "true" : "false"}
+      // #258: no exertion left on the acting side's turn (spent.ts), drawn dimmed with a "Zz".
+      data-spent={spent ? "true" : undefined}
       // DEF is a sideways card: the rotation is inline so a test can read `rotate(90deg)` off the
       // style attribute (BUILD M5-T4 `positionSwitched`), and the scale keeps it inside its lane.
       // It is the root's only inline style; the faces put theirs on inner elements.
@@ -438,14 +465,18 @@ export default function Card(props: CardProps): ReactElement {
         </span>
       )}
 
+      {spent && (
+        // #258: the "can't act yet" cue (spent.ts says which units wear it, spent.css draws it).
+        <span className="spent-badge" title={SPENT_NOTE}>
+          <span aria-hidden="true">Zz</span>
+          <span className="spent-badge-sr">{SPENT_NOTE}</span>
+        </span>
+      )}
+
       {/* §3.2: the cards under a Stack pile are face-down and dormant. The view gives their
           number only, so the pile shows a depth badge and no second card; a press opens the pile
           as a wheel, the top with its face and every buried card as a back. */}
       {buried > 0 && <PileDepth buried={buried} top={face} className="buried-badge" />}
-
-      {props.switchTarget === true && unit !== undefined && unit !== null && (
-        <SwitchButton instanceId={unit.instanceId} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
-      )}
 
       {/* R384, R510: the card's Activate abilities, which the view lists on its controller's own
           view of a card acting on the field (ActivateControl.tsx). Nothing when it lists none. */}
@@ -457,9 +488,14 @@ export default function Card(props: CardProps): ReactElement {
 
   // The overlay is a sibling of the root, never its child, so the root's own click and drag
   // handlers never see an event from inside a preview or a sheet.
+  // #258: the switch (⟳) is a sibling of the root too, outside the card, so its zone can give it a
+  // full 44 px target at its corner (board.css) and a DEF card's rotation never turns it.
   return (
     <>
       {root}
+      {props.switchTarget === true && unit !== undefined && unit !== null && (
+        <SwitchButton instanceId={unit.instanceId} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
+      )}
       {inspect.overlay}
     </>
   );
@@ -489,13 +525,16 @@ function SwitchButton({
       aria-disabled={legal ? undefined : "true"}
       disabled={!legal}
       title="Switch position"
+      aria-label="Switch position"
       onClick={(event) => {
         event.stopPropagation();
         if (!legal) return;
         onClick?.({ on: "switch", instanceId });
       }}
     >
-      ⟳
+      <span className="switch-glyph" aria-hidden="true">
+        ⟳
+      </span>
     </button>
   );
 }

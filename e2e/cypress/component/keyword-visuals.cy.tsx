@@ -37,8 +37,10 @@ const SIZES = [
 const GLYPH_MIN_PX = 12;
 
 /**
- * The root's switch button, a sibling of the face in the top-right corner (cards.css
- * `.card.cf-host--minion > .switch-button`): `clamp(14px, 28%, 18px)` wide, 2px from the edge.
+ * The card's top-right corner, kept clear of the glyph row for the switch button's glyph. #258 moved
+ * the switch out of the card into its zone's corner (board.css `.board .zone > .switch-button`),
+ * where on a tile the card fills its glyph still sits over this corner, so the room stays reserved:
+ * `clamp(14px, 28%, 18px)` wide, 2px from the edge.
  */
 const SWITCH = { min: 14, share: 0.28, max: 18, inset: 2 } as const;
 

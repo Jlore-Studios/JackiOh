@@ -437,7 +437,12 @@ describe("B21: the full board with the real catalog fits 1280x720 and 390x844", 
         for (const card of doc.querySelectorAll<HTMLElement>(`${BOARD} .field .card.cf-host`)) {
           const name = card.querySelector(".cf .card-name")?.getBoundingClientRect();
           const gem = card.querySelector(".cf .cost-gem")?.getBoundingClientRect();
-          for (const badge of card.querySelectorAll<HTMLElement>(":scope > .switch-button, :scope > .counter, :scope > .buried-badge")) {
+          // #258: the switch's glyph is in the card's zone now, beside the card, and is held to the same rule.
+          const badges = [
+            ...card.querySelectorAll<HTMLElement>(":scope > .counter, :scope > .buried-badge"),
+            ...(card.parentElement?.querySelectorAll<HTMLElement>(":scope > .switch-button > .switch-glyph") ?? []),
+          ];
+          for (const badge of badges) {
             const box = badge.getBoundingClientRect();
             const label = `${card.getAttribute("data-testid") ?? "?"} ${badge.className}`;
             if (name !== undefined && overlap(box, name) > 1) problems.push(`${label} covers the name`);

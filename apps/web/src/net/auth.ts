@@ -20,10 +20,24 @@
 //   POST /auth/v1/recover?redirect_to=...          mail a password-reset link
 //   POST /auth/v1/token?grant_type=pkce            an emailed link's code, for a session (R323)
 //   PUT  /auth/v1/user                             set a new password (Bearer: the recovery token)
+//   PUT  /auth/v1/user?redirect_to=...             change the address (Bearer: the session; mails a link, R663)
 //   POST /auth/v1/token?grant_type=refresh_token   renew a session (R194)
 //   POST /auth/v1/logout?scope=local               revoke this session's refresh token (R194)
+//   POST /auth/v1/otp?redirect_to=...              mail a sign-in link and code (R664)
+//   POST /auth/v1/verify                           a mailed sign-in code, for a session (R664)
+//   GET  /auth/v1/user                             the account's two-factor factors (R665)
+//   POST /auth/v1/factors                          enrol an authenticator app (R665)
+//   POST /auth/v1/factors/{id}/challenge, /verify  its code, for an `aal2` session (R665)
+//   DELETE /auth/v1/factors/{id}                   remove a factor (R665)
+//   GET  /auth/v1/authorize?provider=...           (a navigation, not a fetch) an OAuth provider (R666)
 //
-// EMAILED LINKS CARRY A CODE, NOT TOKENS (R323). The three mailers send a PKCE challenge
+// EVERY WAY IN ENDS AT THE SAME GATE. A link, a code and an OAuth provider each end in a session
+// for an `auth.users` row, and that row's profile starts `pending` (the trigger) like a password
+// sign-up's: nothing here, nor on the server, creates an active account; only a redeemed invite code
+// does (§9.4). Before a session is kept, `secondFactorFor` asks whether the account has an
+// authenticator app; if it has, the session is kept only once its code is typed (R665).
+//
+// EMAILED LINKS CARRY A CODE, NOT TOKENS (R323). The mailers send a PKCE challenge
 // (`auth/pkce.ts`), so a link comes back as `/login?code=…` and `exchangeAuthCode` turns the code
 // into a session with the verifier this browser kept. A browser that cannot hash (no `crypto.subtle`
 // outside a secure context) sends no challenge and gets the implicit flow's link, which
@@ -54,7 +68,23 @@ import {
 // --- failures and their sentences --------------------------------------------------------------
 
 /** Which provider call a refusal came from; the same answer means different things on each. */
-export type AuthEndpoint = "signIn" | "signUp" | "resend" | "recover" | "updatePassword" | "refresh";
+export type AuthEndpoint =
+  | "signIn"
+  | "signUp"
+  | "resend"
+  | "recover"
+  | "updatePassword"
+  /** R663: an email change. */
+  | "changeEmail"
+  | "refresh"
+  /** R664: mail a sign-in link and code. */
+  | "otp"
+  /** R664: a mailed sign-in code. */
+  | "verifyOtp"
+  /** R665: an authenticator app's code (enrolling, or signing in). */
+  | "mfaVerify"
+  /** R665: enrolling, listing or removing a factor. */
+  | "mfa";
 
 export type AuthFailure =
   | "credentials"
@@ -69,12 +99,19 @@ export type AuthFailure =
   | "passwordTooLong"
   | "signUpInvalid"
   | "invalidEmail"
+  | "emailChangeRefused"
+  | "sameEmail"
   | "signupsClosed"
   | "linkExpired"
   | "sessionEnded"
   | "network"
   | "service"
-  | "unconfigured";
+  | "unconfigured"
+  | "codeInvalid"
+  | "mfaCodeInvalid"
+  | "mfaUnavailable"
+  | "oauthUnavailable"
+  | "oauthFailed";
 
 /**
  * R160, the client half: "Sign-up and sign-in answer identically for every outcome that depends on
@@ -121,12 +158,25 @@ export const AUTH_MESSAGES: Readonly<Record<AuthFailure, string>> = {
   signUpInvalid:
     "Check the email address and the password: one of them can't be used. A long password may be over the limit, so try a shorter one.",
   invalidEmail: "Enter a valid email address.",
+  // R160, R663: the provider refuses an address another account holds; saying so would make the
+  // form an account-existence oracle, so every refusal about the address itself reads the same.
+  emailChangeRefused: "That address can't be used for this account. Check it, or choose another.",
+  sameEmail: "That is already your account's email address.",
   signupsClosed: "New accounts can't be created right now.",
   linkExpired: "That link has expired or was already used. Request a new one below.",
   sessionEnded: "Your session has ended. Sign in again.",
   network: "Couldn't reach the sign-in service. Check your connection and try again.",
   service: "The sign-in service had a problem. Try again in a minute.",
   unconfigured: AUTH_UNCONFIGURED_MESSAGE,
+  // R664: one sentence for a wrong code, a spent one, an expired one and an address with no account,
+  // so the code form is no more an oracle than the password form (R160).
+  codeInvalid: "That code didn't work. Check the newest email we sent, or ask for a new code.",
+  mfaCodeInvalid: "That code didn't match. Type the 6-digit code your authenticator app shows now.",
+  mfaUnavailable: "Two-step sign-in isn't available on this site right now.",
+  // R666: an OAuth sign-in needs PKCE, which needs a secure context (`crypto.subtle`).
+  oauthUnavailable: "That sign-in option doesn't work in this browser. Sign in with your email instead.",
+  // R666: the provider sent the player back without a sign-in (cancelled, or refused).
+  oauthFailed: "Signing in with that account didn't finish. Try again, or sign in with your email.",
 };
 
 /** Unit conversion, not configuration. */
@@ -164,6 +214,8 @@ export const AUTH_NOTICES: Readonly<{
   resendSent: string;
   resetSent: string;
   emailConfirmed: string;
+  emailChangeSent: string;
+  emailChanged: string;
   sessionExpired: string;
   confirmFirst: string;
   checkingLink: string;
@@ -175,6 +227,10 @@ export const AUTH_NOTICES: Readonly<{
   recoveryClaimMismatch: string;
   inviteNeedsPassword: string;
   inviteOnly: string;
+  emailCodeSent: string;
+  mfaRequired: string;
+  mfaEnrolled: string;
+  mfaRemoved: string;
 }> = {
   // Identical for every address (R160): the provider mails nothing to an address that already has a
   // confirmed account, so the second sentence is the way on for a returning player.
@@ -183,6 +239,11 @@ export const AUTH_NOTICES: Readonly<{
   resendSent: `If that address has an account waiting for confirmation, a new link is on its way. ${MAIL_INTERVAL_NOTE}`,
   resetSent: `If that address has an account, a reset link is on its way. ${MAIL_INTERVAL_NOTE}`,
   emailConfirmed: "Your email is confirmed. Sign in to continue.",
+  // R663: with Supabase's secure email change on, the current address is mailed a link too, and the
+  // change waits for both; with it off, only the new one is. The sentence covers both.
+  emailChangeSent:
+    "Check the new address for a confirmation link. If your current address gets one too, open both. Your email changes once the change is confirmed; until then, sign in with your current one.",
+  emailChanged: "Your new email address is confirmed. Sign in with it to continue.",
   sessionExpired: "Your session ended. Sign in again to continue.",
   // Keyed on this browser's own sign-up (`pendingEmail`), never on the provider's answer, so it
   // reveals nothing R160 hides.
@@ -206,6 +267,14 @@ export const AUTH_NOTICES: Readonly<{
   inviteNeedsPassword:
     "You've been invited. Your account needs a password before you can sign in: ask for a link to set one below.",
   inviteOnly: "Online play needs an invite code, which you enter after confirming your email.",
+  // R664, R192: the same words whether or not the address has an account. A link or code goes only
+  // to a CONFIRMED account; a new address signs up with a password first.
+  emailCodeSent:
+    `If that address has a confirmed account, an email with a sign-in link and a code is on its way. ` +
+    `Open the link in this browser, or type the code below. ${MAIL_INTERVAL_NOTE}`,
+  mfaRequired: "This account uses two-step sign-in. Type the 6-digit code your authenticator app shows.",
+  mfaEnrolled: "Two-step sign-in is on. Signing in from now on asks for a code from your authenticator app.",
+  mfaRemoved: "Two-step sign-in is off. Signing in asks only for your email and password again.",
 };
 
 /**
@@ -295,11 +364,25 @@ function genericRefusal(endpoint: AuthEndpoint): AuthFailure {
     case "resend":
     case "recover":
     case "updatePassword":
+    case "changeEmail":
       return "service";
     case "refresh":
       return "sessionEnded";
+    case "otp":
+    case "mfa":
+      return "service";
+    case "verifyOtp":
+      return "codeInvalid";
+    case "mfaVerify":
+      return "mfaCodeInvalid";
   }
 }
+
+/** GoTrue's answers when the project has not turned TOTP on (R665). */
+const MFA_DISABLED_CODES: ReadonlySet<string> = new Set([
+  "mfa_totp_enroll_not_enabled",
+  "mfa_totp_verify_not_enabled",
+]);
 
 /**
  * Every provider answer maps to one `AuthFailure` (docs/polish/5-sign-in.md, the per-endpoint
@@ -317,9 +400,19 @@ export function classifyProviderRefusal(endpoint: AuthEndpoint, status: number, 
 
   // R192: a rate limit is reported as a rate limit, never as the identical sign-in error.
   if (status === 429) {
-    return endpoint === "signUp" && code === "over_email_send_rate_limit" ? "emailRateLimited" : "rateLimited";
+    const mails = endpoint === "signUp" || endpoint === "changeEmail";
+    return mails && code === "over_email_send_rate_limit" ? "emailRateLimited" : "rateLimited";
   }
   if (status >= 500) return "service";
+
+  // R664: a sign-in code's every refusal is one sentence, whether the code was wrong, spent or
+  // expired, or the address has no account: telling them apart is R160's oracle again.
+  if (endpoint === "verifyOtp") return "codeInvalid";
+  if (endpoint === "mfaVerify" || endpoint === "mfa") {
+    if (code !== null && MFA_DISABLED_CODES.has(code)) return "mfaUnavailable";
+    if (status === 401 || status === 403 || (code !== null && SESSION_CODES.has(code))) return "sessionEnded";
+    return genericRefusal(endpoint);
+  }
 
   if (code === "weak_password") {
     if (endpoint === "signIn") return "credentials";
@@ -338,9 +431,17 @@ export function classifyProviderRefusal(endpoint: AuthEndpoint, status: number, 
     if (endpoint === "signUp") return "signUpInvalid";
     return genericRefusal(endpoint);
   }
+  if (endpoint === "changeEmail") {
+    if (status === 401 || status === 403 || (code !== null && SESSION_CODES.has(code))) return "sessionEnded";
+    // `email_exists` names another account's address, so it says what an invalid address says (R160).
+    if (status === 400 || status === 422) return "emailChangeRefused";
+    return genericRefusal(endpoint);
+  }
   if (code === "email_address_invalid") {
     if (endpoint === "signIn") return "credentials";
-    if (endpoint === "signUp" || endpoint === "resend" || endpoint === "recover") return "invalidEmail";
+    if (endpoint === "signUp" || endpoint === "resend" || endpoint === "recover" || endpoint === "otp") {
+      return "invalidEmail";
+    }
     return genericRefusal(endpoint);
   }
   if (code !== null && SIGNUP_CLOSED_CODES.has(code)) {
@@ -434,7 +535,7 @@ async function pkceFields(flow: PkceFlow, reuse = false): Promise<PkceChallenge 
 // --- one request -------------------------------------------------------------------------------
 
 type ProviderRequest = {
-  method: "POST" | "PUT";
+  method: "GET" | "POST" | "PUT" | "DELETE";
   path: string;
   body?: Record<string, unknown>;
   /** A session call carries the access token; an anonymous one carries the publishable key. */
@@ -498,8 +599,18 @@ type TokenResponse = {
   refresh_token?: unknown;
   expires_at?: unknown;
   expires_in?: unknown;
-  user?: { email_confirmed_at?: unknown } | null;
+  user?: { email_confirmed_at?: unknown; factors?: unknown } | null;
 };
+
+/**
+ * R665: the factor whose code a session from this token answer still needs, or null. GoTrue's token
+ * answers carry the user, whose `factors` lists the account's (GoTrue leaves it out when there are
+ * none), so this asks nobody; a token the provider already raised to `aal2` needs nothing.
+ */
+function secondFactorIn(body: TokenResponse, accessToken: string): string | null {
+  if (assuranceLevel(accessToken) === "aal2") return null;
+  return factorsOf(body.user).find((factor) => factor.verified)?.id ?? null;
+}
 
 /**
  * A token response as a `Session`, or null when it carries no access token. `Session.expiresAt`
@@ -528,7 +639,12 @@ function sessionFromTokens(body: TokenResponse, fallbackRefreshToken: string | n
 
 // --- sign in, sign up --------------------------------------------------------------------------
 
-export type SignInResult = { session: Session; emailVerified: boolean };
+export type SignInResult = {
+  session: Session;
+  emailVerified: boolean;
+  /** R665: the authenticator app whose code is still needed before the session may be kept. */
+  secondFactor: string | null;
+};
 
 /**
  * GoTrue's password grant. On success the access token goes to `writeSession` (the caller's job)
@@ -559,6 +675,7 @@ export async function signIn(email: string, password: string): Promise<SignInRes
     // is for this screen's wording only and nothing downstream trusts it.
     emailVerified:
       typeof body.user?.email_confirmed_at === "string" && body.user.email_confirmed_at.length > 0,
+    secondFactor: secondFactorIn(body, session.accessToken),
   };
 }
 
@@ -607,7 +724,7 @@ export async function signUp(email: string, password: string): Promise<SignUpRes
  * `email_address_not_authorized` (the built-in mailer's allow-list). Reporting any of those would
  * make the forgot-password form an account-existence oracle.
  */
-function mailerRefusal(endpoint: "resend" | "recover", status: number, json: unknown): AuthError | null {
+function mailerRefusal(endpoint: "resend" | "recover" | "otp", status: number, json: unknown): AuthError | null {
   if (isSuccess(status)) return null;
   const failure = classifyProviderRefusal(endpoint, status, json);
   return failure === "invalidEmail" ? new AuthError(failure) : null;
@@ -665,7 +782,7 @@ export function isAuthCode(code: string): boolean {
 
 export type CodeExchange =
   /** The code and a verifier here matched: the link's session, and which kind of link it was. */
-  | { kind: "session"; session: Session; flow: PkceFlow }
+  | { kind: "session"; session: Session; flow: PkceFlow; secondFactor: string | null }
   /**
    * No verifier here matches the code: the link was asked for on another device or browser, or this
    * browser's storage was cleared (R324). The provider confirmed the address before it sent the
@@ -696,10 +813,11 @@ export async function exchangeAuthCode(code: string): Promise<CodeExchange> {
       body: { auth_code: code, code_verifier: verifier },
     });
     if (isSuccess(status)) {
-      const session = sessionFromTokens((json ?? {}) as TokenResponse, null);
+      const body = (json ?? {}) as TokenResponse;
+      const session = sessionFromTokens(body, null);
       if (session === null) return { kind: "refused" };
       forgetVerifier(flow);
-      return { kind: "session", session, flow };
+      return { kind: "session", session, flow, secondFactor: secondFactorIn(body, session.accessToken) };
     }
     if (status >= 500) throw new AuthError("service");
     if (status === 429) throw new AuthError("rateLimited");
@@ -710,6 +828,25 @@ export async function exchangeAuthCode(code: string): Promise<CodeExchange> {
 }
 
 // --- session calls -----------------------------------------------------------------------------
+
+/**
+ * R663: ask the provider to move the signed-in account to `email`. It mails a confirmation link
+ * (with a PKCE challenge, R323, so it comes back as `/login?code=…`) to the new address, and to
+ * the current one too when the project's secure email change is on; nothing changes until it is
+ * confirmed. Throws an `AuthError`: `sessionEnded` for a token the provider no longer takes, the
+ * one `emailChangeRefused` for any refusal of the address itself (R160), `rateLimited` or
+ * `emailRateLimited`, else `service` or `network`.
+ */
+export async function requestEmailChange(accessToken: string, email: string): Promise<void> {
+  const config = requireConfig();
+  const { status, json } = await send(config, {
+    method: "PUT",
+    path: withRedirect("/auth/v1/user"),
+    body: { email, ...(await pkceFields("email_change")) },
+    bearer: accessToken,
+  });
+  if (!isSuccess(status)) throw providerRefusal("changeEmail", status, json);
+}
 
 /** Set a new password with the recovery link's access token (`/reset-password`). */
 export async function updatePassword(accessToken: string, password: string): Promise<void> {
@@ -840,4 +977,288 @@ export async function revokeSignedOutSession(session: Session): Promise<void> {
   } catch {
     // Nothing to do: the device's copy is already gone (see `revokeSession`).
   }
+}
+
+// --- the email sign-in link and code (R664) -------------------------------------------------------
+
+/**
+ * Mail a sign-in link and a one-time code to an address (R664). `create_user: false`: only an
+ * account that already exists AND has confirmed its address is mailed. That keeps sign-up in one
+ * place (the password form, R193), and it closes a takeover: GoTrue treats an unconfirmed account
+ * as not yet signed up, so a link for it would confirm an address someone else registered first and
+ * sign the owner in on top of that person's password. The provider refuses such an address (and an
+ * unknown one) `otp_disabled`; like the other mailers this resolves on every answer but a malformed
+ * address (`mailerRefusal`, R192), so the form is no oracle.
+ *
+ * The link carries a PKCE challenge (R323), so it signs in only this browser: `/login` exchanges its
+ * code with the verifier kept here (`flow: "magiclink"`). The code in the same email works anywhere.
+ */
+export async function requestEmailSignIn(email: string): Promise<void> {
+  const config = requireConfig();
+  const { status, json } = await send(config, {
+    method: "POST",
+    path: withRedirect("/auth/v1/otp"),
+    body: { email, create_user: false, ...(await pkceFields("magiclink")) },
+  });
+  const refusal = mailerRefusal("otp", status, json);
+  if (refusal !== null) throw refusal;
+}
+
+/** GoTrue's sign-in codes are digits; anything else is never sent. */
+const EMAIL_CODE_PATTERN = /^[0-9]{6,10}$/u;
+
+/** A typed code with its spaces and dashes taken out (a code is often pasted as `123 456`). */
+export function normalizeOneTimeCode(raw: string): string {
+  return raw.replace(/[\s-]/gu, "");
+}
+
+/**
+ * R664: the code from a sign-in email, for a session. Every refusal is `codeInvalid` (one sentence,
+ * R160), bar a rate limit (R192) and a fault.
+ */
+export async function verifyEmailCode(
+  email: string,
+  code: string,
+): Promise<{ session: Session; secondFactor: string | null }> {
+  const token = normalizeOneTimeCode(code);
+  if (!EMAIL_CODE_PATTERN.test(token)) throw new AuthError("codeInvalid");
+  const config = requireConfig();
+  const { status, json } = await send(config, {
+    method: "POST",
+    path: "/auth/v1/verify",
+    body: { type: "email", email, token },
+  });
+  if (!isSuccess(status)) throw new AuthError(classifyProviderRefusal("verifyOtp", status, json));
+  const body = (json ?? {}) as TokenResponse;
+  const session = sessionFromTokens(body, null);
+  if (session === null) throw new AuthError("codeInvalid");
+  forgetPendingAddresses();
+  return { session, secondFactor: secondFactorIn(body, session.accessToken) };
+}
+
+// --- two-step sign-in: an authenticator app (R665) ------------------------------------------------
+
+/** One of the account's TOTP factors, as GoTrue lists them on `GET /auth/v1/user`. */
+export type TotpFactor = { id: string; verified: boolean };
+
+/** The assurance level an access token's own payload claims (`aal`), read and never verified. */
+export function assuranceLevel(accessToken: string): string | null {
+  const payload = accessToken.split(".")[1];
+  if (payload === undefined || payload.length === 0) return null;
+  try {
+    const base64 = payload.replace(/-/gu, "+").replace(/_/gu, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const bytes = Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
+    const claims: unknown = JSON.parse(new TextDecoder().decode(bytes));
+    if (typeof claims !== "object" || claims === null) return null;
+    const aal = (claims as Record<string, unknown>)["aal"];
+    return typeof aal === "string" ? aal : null;
+  } catch {
+    return null;
+  }
+}
+
+function factorsOf(body: unknown): TotpFactor[] {
+  if (typeof body !== "object" || body === null) return [];
+  const factors = (body as { factors?: unknown }).factors;
+  if (!Array.isArray(factors)) return [];
+  return factors.flatMap((entry: unknown): TotpFactor[] => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const record = entry as { id?: unknown; factor_type?: unknown; status?: unknown };
+    if (typeof record.id !== "string" || record.id.length === 0 || record.factor_type !== "totp") return [];
+    return [{ id: record.id, verified: record.status === "verified" }];
+  });
+}
+
+/** The account's TOTP factors (R665). Throws `sessionEnded` for a token the provider refuses. */
+export async function listTotpFactors(accessToken: string): Promise<TotpFactor[]> {
+  const config = requireConfig();
+  const { status, json } = await send(config, { method: "GET", path: "/auth/v1/user", bearer: accessToken });
+  if (!isSuccess(status)) throw new AuthError(classifyProviderRefusal("mfa", status, json));
+  return factorsOf(json);
+}
+
+/**
+ * R665: the factor whose code this session still needs, or null when it needs none, asked of the
+ * provider (`secondFactorIn` reads it from a token answer instead, where there is one). A session the
+ * provider already raised to `aal2` needs none; otherwise the account's first verified authenticator
+ * app is the one to ask for. The server refuses an `aal1` token for an account that has one, so a
+ * caller keeps a session only once this says null (or its code was typed).
+ */
+export async function secondFactorFor(session: Session): Promise<string | null> {
+  if (assuranceLevel(session.accessToken) === "aal2") return null;
+  const factors = await listTotpFactors(session.accessToken);
+  return factors.find((factor) => factor.verified)?.id ?? null;
+}
+
+/** A factor id is GoTrue's UUID; anything else is never put in a path. */
+const FACTOR_ID_PATTERN = /^[A-Za-z0-9-]{1,128}$/u;
+
+function factorPath(factorId: string, suffix = ""): string {
+  if (!FACTOR_ID_PATTERN.test(factorId)) throw new AuthError("mfaUnavailable");
+  return `/auth/v1/factors/${encodeURIComponent(factorId)}${suffix}`;
+}
+
+/** An authenticator app's codes are six digits. */
+const TOTP_CODE_PATTERN = /^[0-9]{6}$/u;
+
+/**
+ * R665: an authenticator app's code for `factorId`, which raises the session to `aal2`. GoTrue asks
+ * for a challenge first and then its answer; the session that comes back replaces the one given
+ * (the same session at the provider, with new tokens). Used to finish enrolling a factor as well as
+ * to sign in with one.
+ */
+export async function verifySecondFactor(session: Session, factorId: string, code: string): Promise<Session> {
+  const typed = normalizeOneTimeCode(code);
+  if (!TOTP_CODE_PATTERN.test(typed)) throw new AuthError("mfaCodeInvalid");
+  const config = requireConfig();
+  const challenge = await send(config, {
+    method: "POST",
+    path: factorPath(factorId, "/challenge"),
+    bearer: session.accessToken,
+  });
+  if (!isSuccess(challenge.status)) {
+    throw new AuthError(classifyProviderRefusal("mfa", challenge.status, challenge.json));
+  }
+  const challengeId = (challenge.json as { id?: unknown } | null)?.id;
+  if (typeof challengeId !== "string" || challengeId.length === 0) throw new AuthError("service");
+  const { status, json } = await send(config, {
+    method: "POST",
+    path: factorPath(factorId, "/verify"),
+    body: { challenge_id: challengeId, code: typed },
+    bearer: session.accessToken,
+  });
+  if (!isSuccess(status)) throw new AuthError(classifyProviderRefusal("mfaVerify", status, json));
+  const next = sessionFromTokens((json ?? {}) as TokenResponse, session.refreshToken ?? null);
+  if (next === null) throw new AuthError("service");
+  return next;
+}
+
+/** What enrolling shows the player: the QR code, and the same key to type by hand. */
+export type TotpEnrolment = { factorId: string; qrCode: string | null; secret: string };
+
+/** The issuer an authenticator app files the account under. */
+const TOTP_ISSUER = "JackiOh";
+
+/**
+ * GoTrue's QR code is an SVG as a `data:` URI, unencoded. It is drawn by an `<img>` (an SVG there
+ * runs no script) and re-encoded, since a raw `#` in a data URI ends it. Anything else is no QR.
+ */
+function qrImage(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const match = /^data:image\/svg\+xml(?:;[a-z0-9=-]+)*,(.*)$/isu.exec(raw);
+  const svg = match?.[1];
+  if (svg === undefined || svg.length === 0) return null;
+  let decoded = svg;
+  try {
+    decoded = decodeURIComponent(svg);
+  } catch {
+    // Already raw text: used as it is.
+  }
+  if (!decoded.trimStart().startsWith("<svg")) return null;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(decoded)}`;
+}
+
+/**
+ * R665: start enrolling an authenticator app. An unverified factor left by an enrolment that was
+ * never finished is removed first, so they never pile up against the provider's cap. The factor
+ * counts for nothing (not at sign-in, not at the server) until `verifySecondFactor` confirms a code.
+ */
+export async function enrollTotp(session: Session): Promise<TotpEnrolment> {
+  const config = requireConfig();
+  for (const factor of await listTotpFactors(session.accessToken)) {
+    if (!factor.verified) await removeFactor(session, factor.id);
+  }
+  const { status, json } = await send(config, {
+    method: "POST",
+    path: "/auth/v1/factors",
+    body: { factor_type: "totp", issuer: TOTP_ISSUER },
+    bearer: session.accessToken,
+  });
+  if (!isSuccess(status)) throw new AuthError(classifyProviderRefusal("mfa", status, json));
+  const body = (json ?? {}) as { id?: unknown; totp?: { qr_code?: unknown; secret?: unknown } | null };
+  const secret = body.totp?.secret;
+  if (typeof body.id !== "string" || body.id.length === 0 || typeof secret !== "string" || secret.length === 0) {
+    throw new AuthError("service");
+  }
+  return { factorId: body.id, qrCode: qrImage(body.totp?.qr_code), secret };
+}
+
+/** R665: remove a factor. The provider asks an `aal2` session to remove a verified one. */
+export async function removeFactor(session: Session, factorId: string): Promise<void> {
+  const config = requireConfig();
+  const { status, json } = await send(config, {
+    method: "DELETE",
+    path: factorPath(factorId),
+    bearer: session.accessToken,
+  });
+  if (!isSuccess(status)) throw new AuthError(classifyProviderRefusal("mfa", status, json));
+}
+
+// --- OAuth providers (R666) -----------------------------------------------------------------------
+
+/**
+ * The OAuth providers this client knows how to name, as Supabase spells them. A name in
+ * `VITE_AUTH_OAUTH_PROVIDERS` that is not here is ignored, so a typo shows nothing rather than a
+ * button that fails.
+ */
+export const OAUTH_PROVIDER_LABELS = {
+  apple: "Apple",
+  azure: "Microsoft",
+  discord: "Discord",
+  facebook: "Facebook",
+  github: "GitHub",
+  gitlab: "GitLab",
+  google: "Google",
+  twitch: "Twitch",
+} as const;
+
+export type OAuthProvider = keyof typeof OAUTH_PROVIDER_LABELS;
+
+function isOAuthProvider(name: string): name is OAuthProvider {
+  return Object.hasOwn(OAUTH_PROVIDER_LABELS, name);
+}
+
+/**
+ * R666: the providers this build offers, read from the PUBLIC `VITE_AUTH_OAUTH_PROVIDERS` (a
+ * comma-separated list, `apps/web/.env.example`). Unset, it is none: a provider appears only once it
+ * is set up in the Supabase dashboard AND named here, so nothing is offered that cannot work. None
+ * either when auth itself is not configured.
+ */
+export function oauthProviders(raw: unknown = import.meta.env.VITE_AUTH_OAUTH_PROVIDERS): OAuthProvider[] {
+  if (authConfig() === null || typeof raw !== "string") return [];
+  const named = raw
+    .split(",")
+    .map((name) => name.trim().toLowerCase())
+    .filter(isOAuthProvider);
+  return [...new Set(named)];
+}
+
+/**
+ * R666: the provider's authorize URL, with a PKCE challenge whose verifier this browser keeps
+ * (`flow: "oauth"`). Its code comes back to `/login?code=…` (`authRedirectUrl`), which exchanges it
+ * as it does an emailed link's (R323). Throws `oauthUnavailable` when this browser cannot make a
+ * challenge: OAuth is never offered by the implicit flow, whose tokens come back in a URL.
+ */
+export async function oauthAuthorizeUrl(provider: OAuthProvider): Promise<string> {
+  const config = requireConfig();
+  let challenge: PkceChallenge;
+  try {
+    challenge = await challengeForRequest("oauth");
+  } catch {
+    throw new AuthError("oauthUnavailable");
+  }
+  const params = new URLSearchParams({
+    provider,
+    redirect_to: authRedirectUrl(),
+    code_challenge: challenge.code_challenge,
+    code_challenge_method: challenge.code_challenge_method,
+  });
+  return `${config.url}/auth/v1/authorize?${params.toString()}`;
+}
+
+/** R666: leave for the provider's sign-in page. A navigation, so the CSP's `connect-src` is not involved. */
+export async function startOAuthSignIn(provider: OAuthProvider): Promise<void> {
+  const url = await oauthAuthorizeUrl(provider);
+  window.location.assign(url);
 }

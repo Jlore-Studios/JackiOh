@@ -522,12 +522,14 @@ describe("B17: everything Card.tsx rendered before, it still renders", () => {
     const def = cardRoot(defUnit.instanceId);
     const tag = inside(def, ".position-tag");
 
-    const switchButton = inside(def, `[data-testid="${testid.switchPosition(defUnit.instanceId)}"]`);
+    // #258: the switch is out of the card, its sibling in the zone, where it has room for 44 px.
+    const switchButton = screen.getByTestId(testid.switchPosition(defUnit.instanceId));
     expect(switchButton.tagName).toBe("BUTTON");
+    expect(def.contains(switchButton), "the switch sits outside its card").toBe(false);
+    expect(switchButton.parentElement).toBe(def.parentElement);
+    expect(switchButton.parentElement?.getAttribute("data-testid")).toBe(testid.zone("you", "units", 3));
     const first = yourUnit(view, 1);
-    expect(inside(cardRoot(first.instanceId), `[data-testid="${testid.switchPosition(first.instanceId)}"]`).tagName).toBe(
-      "BUTTON",
-    );
+    expect(screen.getByTestId(testid.switchPosition(first.instanceId)).parentElement).toBe(cardRoot(first.instanceId).parentElement);
 
     for (const [what, el, root] of [
       ["plague counter", plague, counted],
@@ -535,7 +537,6 @@ describe("B17: everything Card.tsx rendered before, it still renders", () => {
       ["backrow grade counter", trapGrade, trap],
       ["buried badge", buried, pile],
       ["position tag", tag, def],
-      ["switch button", switchButton, def],
     ] as const) {
       expect(el.closest(".cf"), `${what} sits outside .cf`).toBeNull();
       expect(el.closest(".card"), `${what} belongs to its own card`).toBe(root);

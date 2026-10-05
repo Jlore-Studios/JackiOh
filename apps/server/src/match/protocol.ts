@@ -34,7 +34,7 @@ import type {
   Selection,
   ZoneChoice,
 } from "@jackioh/shared";
-import { isEmoteId, type EmoteId, type PortraitId } from "@jackioh/shared";
+import { isEmoteId, parseAim, type Aim, type EmoteId, type PortraitId } from "@jackioh/shared";
 import type { MatchClocks } from "../api/ports";
 
 // ---------------------------------------------------------------------------
@@ -72,11 +72,19 @@ export type ActionMessage = { type: "action"; nonce: string; body: ActionBody };
  */
 export type EmoteMessage = { type: "emote"; emote: EmoteId };
 
-export type ClientMessage = HelloMessage | JoinRoomMessage | ActionMessage | EmoteMessage;
+/**
+ * R738: what the sender is aiming a play, an Activate or an attack at, for the opponent's board to
+ * draw — `null` when the aim ends. Cosmetic like an emote: top-level, never an `ActionBody`, so it
+ * never reaches `reduce`, the log or the replay hash, carries no nonce and is never answered. Its
+ * ends are public handles only (`@jackioh/shared` `aim.ts`); anything else is `malformed`.
+ */
+export type AimMessage = { type: "aim"; aim: Aim | null };
+
+export type ClientMessage = HelloMessage | JoinRoomMessage | ActionMessage | EmoteMessage | AimMessage;
 
 export type MalformedMessage = { type: "malformed"; reason: string };
 
-export const CLIENT_MESSAGE_TYPES = ["hello", "joinRoom", "action", "emote"] as const;
+export const CLIENT_MESSAGE_TYPES = ["hello", "joinRoom", "action", "emote", "aim"] as const;
 
 /**
  * R79: `timeout`, `disconnectExpired` and `ceilingReached` are server-only — "never sent by a
@@ -190,6 +198,12 @@ export type PortraitsMessage = { type: "portraits"; p1: PortraitId; p2: Portrait
  */
 export type EmoteRelayMessage = { type: "emote"; from: PlayerId; emote: EmoteId };
 
+/**
+ * R738: the opponent's aim, relayed — never to the sender, never part of `PlayerView`, and only
+ * once the actor has checked that every end names something the receiver may see (`actor.ts`).
+ */
+export type AimRelayMessage = { type: "aim"; from: PlayerId; aim: Aim | null };
+
 export type ServerMessage =
   | ViewMessage
   | AckMessage
@@ -197,7 +211,8 @@ export type ServerMessage =
   | PromptMessage
   | ClockMessage
   | PortraitsMessage
-  | EmoteRelayMessage;
+  | EmoteRelayMessage
+  | AimRelayMessage;
 
 export const SERVER_MESSAGE_TYPES = [
   "view",
@@ -207,6 +222,7 @@ export const SERVER_MESSAGE_TYPES = [
   "clock",
   "portraits",
   "emote",
+  "aim",
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -240,6 +256,10 @@ export function portraitsMessage(p1: PortraitId, p2: PortraitId): PortraitsMessa
 
 export function emoteRelayMessage(from: PlayerId, emote: EmoteId): EmoteRelayMessage {
   return { type: "emote", from, emote };
+}
+
+export function aimRelayMessage(from: PlayerId, aim: Aim | null): AimRelayMessage {
+  return { type: "aim", from, aim };
 }
 
 /** For the holder of the prompt: the choiceId it must answer and the kind to render. */
@@ -491,6 +511,13 @@ export function parseClientMessage(text: string): ClientMessage | MalformedMessa
       // is nothing else on the frame to validate (no nonce, no seat — the actor stamps the seat).
       if (!isEmoteId(parsed.emote)) return malformed(`"emote" must be a known emote id`);
       return { type: "emote", emote: parsed.emote };
+    }
+    case "aim": {
+      // R738: the shape check only, rebuilt field by field. Whether each end names something the
+      // opponent may see is the actor's call, against the live state (`actor.ts`).
+      const aim = parseAim(parsed.aim);
+      if (aim === undefined) return malformed(`"aim" must be null or { source, target } of public handles`);
+      return { type: "aim", aim };
     }
     default:
       return malformed(`"${type}" is not a client message`);

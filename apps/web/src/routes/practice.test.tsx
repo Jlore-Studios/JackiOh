@@ -48,6 +48,8 @@ import type {
   PracticeSnapshot,
   PracticeStartConfig,
 } from "../practice/protocol.ts";
+import { PRACTICE_RESUME_STORAGE_KEY, readPracticeResume } from "../practice/resume.ts";
+import { memorySaveStore } from "../practice/saveStore.ts";
 import { practiceTestid } from "../practice/testids.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
 import { setReducedMotion } from "../test/setup.ts";
@@ -150,6 +152,8 @@ type HostOptions = {
   holdAiSteps?: boolean;
   /** How the setup's `catalog` request is answered: with FAKE_DEFS (the default) or `failed`. */
   catalog?: "answer" | "fail";
+  /** R668: how `resume` is answered: as `started` (the default), or `failed` when the save does not fold. */
+  resume?: "started" | "failed";
 };
 
 /**
@@ -249,6 +253,19 @@ function routeHost(options: HostOptions = {}): RouteHost {
           });
         }
         return Promise.resolve(started);
+      }
+      if (body.type === "resume") {
+        human = body.config.humanSeat;
+        if (options.resume === "failed") {
+          return Promise.resolve({ id: mine, type: "failed", message: "the saved game does not fold" });
+        }
+        return Promise.resolve({
+          id: mine,
+          type: "started",
+          snapshot: snapshotFor(human, false),
+          defs: {},
+          aiSeat: opponentOf(human),
+        });
       }
       if (body.type === "aiStep" && options.holdAiSteps === true) {
         return new Promise<PracticeResponse>((resolve) => {
@@ -1233,7 +1250,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     expect(window.location.pathname).toBe("/");
   });
 
-  it("a reload or a closed tab asks first while a game is on, and not at setup or once it is over", async () => {
+  it("R668 a reload or a closed tab asks first while a lesson is on, and not for a free game (it is saved), at setup or once it is over", async () => {
     function unloadIsCancelled(): boolean {
       const event = new Event("beforeunload", { cancelable: true });
       window.dispatchEvent(event);
@@ -1249,13 +1266,92 @@ describe("B33 starting renders the game under the practice HUD", () => {
     visit("?seed=unload1&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost());
     await screen.findByTestId(T.hud);
-    expect(unloadIsCancelled(), "a game in progress").toBe(true);
+    expect(unloadIsCancelled(), "a free game in progress comes back after a reload").toBe(false);
+    cleanup();
+
+    visit(`?lesson=${TUTORIAL_LESSONS[0]?.id ?? ""}`);
+    renderRoute(routeHost());
+    await screen.findByTestId("game");
+    expect(unloadIsCancelled(), "a lesson in progress").toBe(true);
 
     concedeOnBoard();
-    await screen.findByTestId(T.result);
-    expect(unloadIsCancelled(), "a finished game").toBe(false);
+    await waitFor(() => {
+      expect(unloadIsCancelled(), "a finished lesson").toBe(false);
+    });
     cleanup();
     expect(unloadIsCancelled(), "after the route unmounts").toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R668: a free game in progress comes back after a reload
+// ---------------------------------------------------------------------------------------------
+
+describe("R668 resuming a practice game after a reload", () => {
+  const LEFT: PracticeStartConfig = { seed: "resume1", difficulty: "hard", humanSeat: "p2", deck: { kind: "random" } };
+
+  function keep(config: PracticeStartConfig): void {
+    window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify(config));
+  }
+
+  it("R668 with no params that start a game, the game this device left is asked back as resume and shows", async () => {
+    keep(LEFT);
+    const host = routeHost();
+    renderRoute(host);
+    const hud = await screen.findByTestId(T.hud);
+    expect(hud).toHaveAttribute("data-difficulty", "hard");
+    expect(hud).toHaveAttribute("data-human-seat", "p2");
+    expect(host.requests.filter((body) => body.type === "resume")).toEqual([{ type: "resume", config: LEFT }]);
+    expect(host.starts()).toEqual([]);
+    expect(readPracticeResume(), "still the game to come back to").toEqual(LEFT);
+  });
+
+  it("R668 a URL that starts a game wins over the one left, and replaces it", async () => {
+    keep(LEFT);
+    visit("?seed=url1&difficulty=easy&deck=random&seat=p1");
+    const host = routeHost();
+    renderRoute(host);
+    await screen.findByTestId(T.hud);
+    expect(host.requests.some((body) => body.type === "resume")).toBe(false);
+    expect(host.starts()).toHaveLength(1);
+    expect(readPracticeResume()).toEqual({ seed: "url1", difficulty: "easy", humanSeat: "p1", deck: { kind: "random" } });
+  });
+
+  it("R668 a game the worker cannot bring back is forgotten, and the player lands on the setup", async () => {
+    keep(LEFT);
+    renderRoute(routeHost({ resume: "failed" }));
+    expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
+    expect(screen.queryByTestId(T.error)).toBeNull();
+    expect(readPracticeResume()).toBeNull();
+  });
+
+  it("R668 leaving the game through New game gives it up", async () => {
+    keep(LEFT);
+    renderRoute(routeHost());
+    await screen.findByTestId(T.hud);
+    fireEvent.click(screen.getByTestId(T.newGame));
+    fireEvent.click(await screen.findByTestId(T.leaveConfirm));
+    expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
+    expect(readPracticeResume()).toBeNull();
+  });
+
+  it("R668 leaving through Menu gives it up too, and a finished game is not kept", async () => {
+    keep(LEFT);
+    renderRoute(routeHost());
+    await screen.findByTestId(T.hud);
+    fireEvent.click(screen.getByTestId(T.menu));
+    fireEvent.click(await screen.findByTestId(T.leaveConfirm));
+    expect(window.location.pathname).toBe("/");
+    expect(readPracticeResume()).toBeNull();
+    cleanup();
+
+    visit("?seed=over658&difficulty=easy&deck=random&seat=p1");
+    renderRoute(routeHost());
+    await screen.findByTestId(T.hud);
+    expect(readPracticeResume()).not.toBeNull();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    expect(readPracticeResume()).toBeNull();
   });
 });
 
@@ -1377,6 +1473,9 @@ describe("Surface: the setup is remembered, and the pacing follows ?pace and red
       deck: "preset:humans",
     });
 
+    // Leave the game, so the next visit opens on the setup rather than resuming it (R668).
+    fireEvent.click(screen.getByTestId(T.newGame));
+    fireEvent.click(await screen.findByTestId(T.leaveConfirm));
     cleanup();
     renderRoute(routeHost());
     await settle();
@@ -1721,6 +1820,43 @@ describe("R265 the practice mulligan: the human and the AI answer in either orde
     document.body.removeAttribute("data-speaking");
     await gameBegun();
     expect(screen.queryByTestId(`hand-card-${returned}`), "the returned card went back").toBeNull();
+  });
+
+  it("R668 a reload in the middle of a free game picks it up on the same state, against the real core", { timeout: 60_000 }, async () => {
+    // The worker's IndexedDB outlives the page; here one store outlives the first host.
+    const saves = memorySaveStore();
+    const host = (): PracticeHost =>
+      createPracticeHost({ forceInThread: true, env: { now: () => 0, budget: AI_GATE_BUDGET, saves } });
+    const route = (): ReturnType<typeof render> =>
+      render(
+        <PracticeRoute
+          hostFactory={host}
+          pacing={PRACTICE_PACING_FAST}
+          account={ANONYMOUS}
+          loadDecks={vi.fn(() => Promise.reject(new Error("no saved decks")))}
+        />,
+      );
+
+    // The human goes first, so once the mulligans are in nobody owes the AI a step and the state holds still.
+    visit("?seed=r658-reload&difficulty=medium&deck=random&seat=p1");
+    route();
+    await mulliganPicker();
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    await gameBegun();
+    const before = await window.__jackiohPractice?.snapshot();
+    expect(before?.log.map((action) => action.type), "both mulligans are in").toEqual(["mulligan", "mulligan"]);
+
+    // The reload: the page is gone, and comes back to /practice with no params.
+    cleanup();
+    visit("");
+    route();
+    const hud = await screen.findByTestId(T.hud, {}, BOOT);
+    expect(hud).toHaveAttribute("data-difficulty", "medium");
+    expect(hud).toHaveAttribute("data-human-seat", "p1");
+    await gameBegun();
+    const after = await window.__jackiohPractice?.snapshot();
+    expect(after?.hash).toBe(before?.hash);
+    expect(after?.log).toEqual(before?.log);
   });
 });
 

@@ -253,6 +253,18 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     emotes.receive(relayed.from, relayed.emote);
   }, [relayed, emotes]);
 
+  // R738: aims both ways. This seat's go out through the socket; the opponent's relay is drawn,
+  // and only ever the opponent's — a relay is never about the viewer's own seat.
+  const relayedAim = match.aim;
+  const viewer = view?.viewer;
+  const aim = useMemo(
+    () => ({
+      emit: match.sendAim,
+      opponent: relayedAim !== null && relayedAim.from !== viewer ? relayedAim.aim : null,
+    }),
+    [match.sendAim, relayedAim, viewer],
+  );
+
   // The clock frame of the turn the view is on (Clock.tsx `useFrameFor`): a view that has moved on
   // to the next turn never reads the last turn's deadline, even for the moment before its frame lands.
   const clock = useFrameFor(match.clock, turnKeyOf(view));
@@ -336,6 +348,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       legal={match.legal}
       onAction={match.send}
       emotes={emotes}
+      aim={aim}
       trackStats
       // A refused socket's reason is the console's (above); the board says it in a player's words.
       error={refusedWith === null ? match.error : `${connectionWords("refused")}. Head back to the lobby.`}
