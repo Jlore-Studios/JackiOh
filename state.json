@@ -454,6 +454,12 @@
       "lines": [
         "/harness pickup"
       ]
+    },
+    "c:5988287119": {
+      "at": "2026-10-05T04:46:45Z",
+      "lines": [
+        "/harness build. You can use the normal patch v0.2.X style (refer to other conventions)"
+      ]
     }
   },
   "items": {
