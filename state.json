@@ -2200,12 +2200,6 @@
         "tiers": {
           "muse": "medium"
         }
-      },
-      "wip": {
-        "at": "2026-10-05T22:14:14Z",
-        "provider": "devin",
-        "sha": "84bfbf15b8f84e7da0e9b779dbdd74d824f2e089",
-        "start": "caa36ac0d05f4db84bc67eb986e18a0223b8f57d"
       }
     },
     "325": {
