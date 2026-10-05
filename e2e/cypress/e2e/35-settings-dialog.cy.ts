@@ -3,17 +3,17 @@
 //
 // What it proves, against the `E2E=1` server and a `build:e2e` client:
 //
-//   * the dialog has four tabs, Gameplay, Visuals, Audio and Account, in that order; a click or the
+//   * the dialog has three tabs, Gameplay, Visuals and Audio, in that order (#304 took the Account
+//     tab out); a click or the
 //     arrow keys open one, only that tab's section is shown, and the dialog opens again on the tab
 //     the player used last;
 //   * Visuals' "Reduce motion" applies at once (`<html data-reduce-motion>`); "Reset this tab" puts
-//     back only the open tab, "Reset all" every tab, and the Account tab has nothing to reset;
+//     back only the open tab, and "Reset all" every tab;
 //   * the background-music switch is off by default, is kept on the device across a reload, and
 //     Reset this tab turns it off again;
-//   * signed out, the Account tab says the settings stay on this device and offers Sign in;
-//   * signed in (`e2e-p1`, active), a change reaches the account (`PUT /api/settings`) and the tab
-//     says so, and a fresh device (its `localStorage` empty) takes the account's copy on load
-//     (`GET /api/settings`); a save that fails says so and is sent again by Try again.
+//   * signed in (`e2e-p1`, active), a change reaches the account (`PUT /api/settings`), and a fresh
+//     device (its `localStorage` empty) takes the account's copy on load (`GET /api/settings`); the
+//     sync runs silently since #304, so the spec reads the account through the API.
 //
 // The E2E server keeps its store for its whole life and other specs sign in as `e2e-p1`, so the
 // account is only ever asked to change the background-music switch, and the spec leaves it off
@@ -39,14 +39,10 @@ import {
 } from "../../support/ux.ts";
 
 /** The tabs, in the order the dialog shows them (SECTIONS in apps/web/src/settings/SettingsPanel.tsx). */
-const TABS: readonly SettingsSection[] = ["gameplay", "visuals", "audio", "account"];
+const TABS: readonly SettingsSection[] = ["gameplay", "visuals", "audio"];
 
 /** The audio controls' background-music switch (MUSIC_FLAGS in apps/web/src/audio/AudioControls.tsx). */
 const MUSIC_BACKGROUND = "audio-music-background";
-/** The Account tab's status, its retry and its sign-in link (apps/web/src/settings/AccountSettings.tsx). */
-const SETTINGS_ACCOUNT = "settings-account";
-const SETTINGS_SYNC_RETRY = "settings-sync-retry";
-const SETTINGS_SIGN_IN = "settings-sign-in";
 
 /** Where the audio store keeps its settings (`AUDIO_SETTINGS_KEY` in apps/web/src/audio/constants.ts). */
 const AUDIO_SETTINGS_KEY = "jackioh.audio.v1";
@@ -130,7 +126,7 @@ describe("35 — the settings dialog (#128, #129, R633, R634)", () => {
       cy.visit("/");
     });
 
-    it("has four tabs; a click or an arrow key opens one, alone, and it opens again on the last one used", () => {
+    it("has three tabs; a click or an arrow key opens one, alone, and it opens again on the last one used", () => {
       openSettings();
       cy.get(ts(SETTINGS_TABLIST))
         .find('[role="tab"]')
@@ -148,14 +144,12 @@ describe("35 — the settings dialog (#128, #129, R633, R634)", () => {
       cy.get(ts(settingsSectionId("visuals"))).find(ts(settingId("reduceMotion"))).should("exist");
       openTab("audio");
       cy.get(ts(settingsSectionId("audio"))).find(ts(MUSIC_BACKGROUND)).should("exist");
-      openTab("account");
-      cy.get(ts(settingsSectionId("account"))).find(ts(SETTINGS_ACCOUNT)).should("exist");
 
       // The arrow keys walk the strip and wrap round its ends.
-      cy.get(ts(settingsTabId("account"))).focus().type("{rightarrow}");
+      cy.get(ts(settingsTabId("audio"))).focus().type("{rightarrow}");
       expectOpenTab("gameplay");
       cy.focused().should("have.attr", "data-testid", settingsTabId("gameplay"));
-      cy.focused().type("{leftarrow}{leftarrow}");
+      cy.focused().type("{leftarrow}");
       expectOpenTab("audio");
 
       closeSettings();
@@ -177,10 +171,6 @@ describe("35 — the settings dialog (#128, #129, R633, R634)", () => {
       cy.get("html").should("not.have.attr", "data-reduce-motion");
       openTab("gameplay");
       cy.get(ts(settingId("dragToPlay"))).should("not.be.checked");
-
-      // The Account tab keeps no store of its own, so there is nothing for it to reset.
-      openTab("account");
-      cy.get(ts(SETTINGS_RESET_TAB)).should("be.disabled");
 
       cy.get(ts(SETTINGS_RESET)).click();
       openTab("gameplay");
@@ -204,13 +194,6 @@ describe("35 — the settings dialog (#128, #129, R633, R634)", () => {
       storedBackground().should("eq", false);
     });
 
-    it("says the settings stay on this device, and offers Sign in", () => {
-      openSettings();
-      openTab("account");
-      cy.get(ts(SETTINGS_ACCOUNT)).should("have.attr", "data-phase", "signedOut").and("contain.text", "this device only");
-      cy.get(ts(SETTINGS_SIGN_IN)).should("be.visible").click();
-      cy.location("pathname").should("eq", routes.login());
-    });
   });
 
   describe("signed in as an active account", () => {
@@ -235,8 +218,6 @@ describe("35 — the settings dialog (#128, #129, R633, R634)", () => {
         expect(sent?.audio?.values.playMusicInBackground, "the audio group goes up with the switch on").to.eq(true);
         expect(save.response?.statusCode, "PUT /api/settings answered").to.eq(200);
       });
-      openTab("account");
-      cy.get(ts(SETTINGS_ACCOUNT)).should("have.attr", "data-phase", "saved").and("contain.text", "Saved to your account");
       readAccount().its("groups.audio.values.playMusicInBackground").should("eq", true);
       closeSettings();
 
@@ -263,28 +244,6 @@ describe("35 — the settings dialog (#128, #129, R633, R634)", () => {
         .its("request.body.groups.audio.values.playMusicInBackground")
         .should("eq", false);
       readAccount().its("groups.audio.values.playMusicInBackground").should("eq", false);
-    });
-
-    it("a save that fails says so on the Account tab, and Try again sends it", () => {
-      spyOnTheAccount();
-      // The newest intercept answers first: the page's first PUT never reaches the server.
-      cy.intercept({ method: "PUT", url: "**/api/settings", times: 1 }, { forceNetworkError: true }).as("failed");
-      cy.visitAs(account(), routes.deckbuilder());
-      cy.wait("@load", { timeout: SYNC_TIMEOUT });
-
-      openSettings();
-      openTab("audio");
-      cy.get(ts(MUSIC_BACKGROUND)).check({ force: true });
-      cy.wait("@failed", { timeout: SYNC_TIMEOUT });
-      openTab("account");
-      cy.get(ts(SETTINGS_ACCOUNT)).should("have.attr", "data-phase", "error");
-      cy.get(ts(SETTINGS_SYNC_RETRY)).should("be.visible").click();
-      cy.wait("@save", { timeout: SYNC_TIMEOUT })
-        .its("request.body.groups.audio.values.playMusicInBackground")
-        .should("eq", true);
-      cy.get(ts(SETTINGS_ACCOUNT)).should("have.attr", "data-phase", "saved");
-      cy.get(ts(SETTINGS_SYNC_RETRY)).should("not.exist");
-      readAccount().its("groups.audio.values.playMusicInBackground").should("eq", true);
     });
   });
 });
