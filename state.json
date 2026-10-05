@@ -2897,6 +2897,14 @@
       "started_at": "2026-09-29T17:45:52Z",
       "stop_requested": false
     },
+    "321": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-05T17:15:14Z",
+      "issue": 200,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "33": {
       "closed_at": "2026-09-29T19:12:16Z",
       "failures": 0,
