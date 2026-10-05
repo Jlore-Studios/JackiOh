@@ -628,6 +628,12 @@
       "lines": [
         "/harness stop"
       ]
+    },
+    "c:6005748937": {
+      "at": "2026-10-05T23:48:37Z",
+      "lines": [
+        "@jgoetzmann-bot see if you can make a c patch but if not possible INSTEAD just do whatever is necessary to ship this into main"
+      ]
     }
   },
   "items": {
