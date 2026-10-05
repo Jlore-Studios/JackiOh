@@ -24,6 +24,7 @@ import { hashState } from "../src/replay";
 import { findInstance, type CardInstance, type GameState } from "../src/state";
 import { isSpent } from "../src/traps";
 import { runHooksInTriggerOrder, settle } from "../src/triggers";
+import { unitView } from "../src/layers";
 import { viewFor, HIDDEN_ID } from "../src/viewFor";
 import { activeUnitsOf, cardAt, homeOf, isReserved, lockZone, placeOnField } from "../src/zones";
 import { plain, stacker } from "./fixtures/combat";
@@ -41,6 +42,8 @@ import {
   spatula,
   springer,
   tesla,
+  tower,
+  wisp,
 } from "./fixtures/field";
 import { eventsOfType, inHand, put, sinkFor, slot } from "./fixtures/harness";
 
@@ -371,6 +374,31 @@ describe("B3.1 Animated Field Spells and 'Animated on your turn' (R383)", () => 
     expect(state.players.p2.graveyard.map((c) => c.id)).toContain(card.id);
     expect(homeOf(state, card.id)).toBeUndefined();
     expect(isReserved(state, slot("p2", "backrow", 1))).toBe(false);
+  });
+
+  it("R657 an Animated card with no printed stats fights as a 0/1", () => {
+    const state = playing("animated-wisp");
+    const sink = sinkFor(state);
+    // Printed Animated, no stats on either face: a 0/1, not a 0/0 dead at the state check.
+    const base = put(state, wisp.id, slot("p1", "backrow", 2));
+    expect(animateCard(sink, base)).toBe(true);
+    expect(unitView(state, base).attack).toBe(0);
+    expect(unitView(state, base).maxHealth).toBe(1);
+    const radiant = put(state, wisp.id, slot("p1", "backrow", 3), { radiant: true });
+    expect(animateCard(sink, radiant)).toBe(true);
+    expect(unitView(state, radiant).attack).toBe(0);
+    expect(unitView(state, radiant).maxHealth).toBe(1);
+    // Granted Animated on a stat-less card reads the same fallback.
+    const granted = put(state, tower.id, slot("p1", "backrow", 4));
+    granted.grantedKeywords.push({ kind: "Animated" });
+    expect(animateCard(sink, granted)).toBe(true);
+    expect(unitView(state, granted).attack).toBe(0);
+    expect(unitView(state, granted).maxHealth).toBe(1);
+    // All three survive the state check in their unit zones.
+    settle(sink);
+    expect(cardAt(state, slot("p1", "units", 2))?.id).toBe(base.id);
+    expect(cardAt(state, slot("p1", "units", 3))?.id).toBe(radiant.id);
+    expect(cardAt(state, slot("p1", "units", 4))?.id).toBe(granted.id);
   });
 });
 

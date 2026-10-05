@@ -1,6 +1,6 @@
 {
-  "version": "v0.2.12",
-  "title": "Patch v0.2.12: Classic and Classic+ balance patch 1",
+  "version": "v0.2.13",
+  "title": "Patch v0.2.13: Classic and Classic+ balance patch 1",
   "sources": "#88",
   "notes": "Balance and presentation pass for the Classic and Classic+ sets: global UI/text rules, global mechanic changes, per-card balance and text changes",
   "cards": [

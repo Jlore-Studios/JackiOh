@@ -221,18 +221,42 @@ describe("R388 card patch history (B4.2)", () => {
     expect(fieldsOf("classicplus-040")).toEqual(["base.text", "radiant.text"]);
   });
 
-  it("R388 records patch v0.2.12: Classic and Classic+ balance patch 1 (issue #88), pending (R646)", () => {
+  it("R388 records patch v0.2.13: Classic and Classic+ balance patch 1 (issue #88), pending (R646)", () => {
     // Pending until `patches ship` promotes it (R646): the fragment claims the balance cards,
-    // and the catalog differs from v0.2.11's snapshot on exactly those cards.
-    const fragment = readFragments().find(({ fragment }) => fragment.version === "v0.2.12")?.fragment;
-    expect(fragment, "v0.2.12 is pending").toBeDefined();
+    // and the catalog differs from v0.2.12's snapshot on exactly those cards.
+    const fragment = readFragments().find(({ fragment }) => fragment.version === "v0.2.13")?.fragment;
+    expect(fragment, "v0.2.13 is pending").toBeDefined();
     const claimed = fragment?.cards ?? [];
-    const changes = diffCatalogs(readSnapshot("v0.2.11"), CATALOG as unknown as Catalog).filter((change) =>
+    const changes = diffCatalogs(readSnapshot("v0.2.12"), CATALOG as unknown as Catalog).filter((change) =>
       claimed.includes(change.id),
     );
     expect(changes.filter((change) => change.kind !== "changed")).toEqual([]);
     expect(changes.map((change) => change.id)).toEqual(claimed);
     expect(claimed).toHaveLength(52);
+  });
+
+  it("R388 records patch v0.2.12: Animated removed from eighteen Field Spells (issue #218)", () => {
+    // The eighteen, in catalog order — the order a fragment's `cards` and a patch's `changes` use.
+    const unanimated = [
+      "core-014", "core-033", "core-038", "core-065", "core-073",
+      "classic-004", "classic-007", "classic-062", "classic-064", "classic-087",
+      "classicplus-007", "classicplus-012-5", "classicplus-012-7", "classicplus-031",
+      "classicplus-061", "classicplus-063", "classicplus-070", "classicplus-078",
+    ];
+    // The undo is in the catalog either way: no stats and no Animated on either face.
+    const face = (id: string) => CATALOG[id]?.base;
+    expect(face("core-073")?.attack).toBeUndefined();
+    expect(face("core-073")?.keywords).toEqual([]);
+    // Pending, the fragment is the patch's whole record (R646); shipped, `patches ship` has
+    // promoted it to the list with a snapshot of this catalog. The test holds on both sides
+    // of the promotion, which cannot edit it.
+    const fragment = readFragments().find(({ fragment }) => fragment.version === "v0.2.12")?.fragment;
+    if (fragment !== undefined) expect(fragment.cards).toEqual(unanimated);
+    else {
+      expect(idsOf("v0.2.12", "added")).toEqual([]);
+      expect(idsOf("v0.2.12", "removed")).toEqual([]);
+      expect(idsOf("v0.2.12", "changed")).toEqual(unanimated);
+    }
   });
 
   it("R388 records patch v0.2.4: card text pass (issue #45)", () => {

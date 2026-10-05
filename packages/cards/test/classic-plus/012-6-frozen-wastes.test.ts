@@ -1,9 +1,8 @@
-// C+ #12.6 Frozen Wastes — SPEC §8.7 row 12.6, R408, BUILD M9 Classic+ row C+ 12.6: "Field Spell whose
+// C+ #12.6 Frozen Wastes — SPEC §8.7 row 12.6, R408, BUILD M9 Classic+ row C+ 12.6: "Spell whose
 // unlabelled text is its Cry (R408): destroys every Unit on both sides, then exiles the top card of
 // your deck once for each Unit that died (Indestructible survivors don't count, a Reborn unit that died
 // does), a short deck exiling what it has with no fatigue; the exiles are public (R97); afterwards it
-// stays in the backrow with no text, a card backrow effects can destroy; it needs an open backrow zone
-// to play; its preview is the cards it would exile now (R280); radiant exiles from the top of the
+// goes to the graveyard; its preview is the cards it would exile now (R280); radiant exiles from the top of the
 // opponent's deck instead". The R280 proof is here (its preview reads deck sizes, never contents).
 
 import type { CardView } from "@jackioh/shared";
@@ -72,19 +71,16 @@ describe("C+ #12.6 Frozen Wastes", () => {
       expect(s.view("p2").opponent.exile).toHaveLength(3);
     });
 
-    it("R408 afterwards it stays in the backrow with no further text, and backrow effects can destroy it", () => {
+    it("R408 afterwards it goes to the graveyard with no further text", () => {
       const s = wastes(false, { field: [] }, { field: [] });
       s.play(WASTES);
-      expect(s.backrow("p1", 1)?.defId).toBe(WASTES);
-      s.endTurn().endTurn();
-      expect(s.backrow("p1", 1)?.defId).toBe(WASTES);
-      s.play(MAGIC_JAMMED, { targets: [{ pick: "instance", instanceId: s.card(WASTES).id }] });
       s.expectInZone(WASTES, "graveyard");
     });
 
-    it("it needs an open backrow zone to play", () => {
+    it("a Spell, it plays with a full backrow", () => {
       const s = wastes(false, { backrow: [MANA_WELL, MANA_WELL, MANA_WELL, MANA_WELL, MANA_WELL] });
-      expect(() => s.play(WASTES)).toThrow();
+      s.play(WASTES);
+      s.expectInZone(WASTES, "graveyard");
     });
 
     it("R280 its preview is the cards it would exile now, and the Cry then exiles that many", () => {

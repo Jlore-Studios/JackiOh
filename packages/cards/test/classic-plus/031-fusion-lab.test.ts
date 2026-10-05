@@ -11,7 +11,6 @@ import type { Action, Selection } from "@jackioh/shared";
 import { defOf, effectiveCost, fusedIdParts, fusedIdSpecs, hashState, reduce, type GameState } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
-import { expectAnimated } from "../_animated";
 import { base, def, radiant } from "../../src/scripts/classic-plus/031-fusion-lab";
 
 const LAB = "classicplus-031";
@@ -205,13 +204,3 @@ describe("C+ #31 Fusion Lab", () => {
   });
 });
 
-describe("C+ #31 Fusion Lab: Animated (patch v0.2.10)", () => {
-  // Balance patch 1 removed the Cry, so the play declares nothing: no hand pick travels with it.
-  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 1/3 Unit; with none open it stays a Field Spell", () => {
-    expectAnimated({ def: "classicplus-031", stats: { attack: 1, health: 3 } });
-  });
-
-  it("R383 radiant: a 2/6 Unit", () => {
-    expectAnimated({ def: "classicplus-031", radiant: true, stats: { attack: 2, health: 6 } });
-  });
-});

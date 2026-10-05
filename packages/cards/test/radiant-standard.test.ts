@@ -4,7 +4,7 @@
 // to it: a Radiant Unit's attack and health are each at least twice its base face's, a 0 staying 0
 // (#1 Big D-fender, #65.1 Spikey Pillow), and a token summoned X/X (the Bread Token's printed 0/0)
 // passing on its printed face because the card that summons it scales X itself. A card allowed
-// below it is named in `STAT_EXCEPTIONS` with its reason: none remain, since patch v0.2.12 doubled
+// below it is named in `STAT_EXCEPTIONS` with its reason: none remain, since patch v0.2.13 doubled
 // the two v0.2.0 exceptions (Joro 2/2, BOOM! Big Max 13/8 → 26/16). A "[3X/3X]" face (Classic+
 // #69 Buff Billy, B2.7) is held to the same factor on its X multiples. The effect half — 100–150% stronger, a broader scope, or an added rider — is a judgement, recorded
 // card by card in docs/radiant-audit.md, and this file proves that document covers every entry.
@@ -24,7 +24,7 @@ const STAT_FACTOR = 2;
 
 /**
  * R275's named exceptions to the stat half, by id, with the reason. Core has none, and since patch
- * v0.2.12 (issue #88) neither does Classic nor Classic+: Joro is 2/2 and BOOM! Big Max is 13/8 →
+ * v0.2.13 (issue #88) neither does Classic nor Classic+: Joro is 2/2 and BOOM! Big Max is 13/8 →
  * 26/16, both doubling exactly, so the v0.2.0 exceptions are gone and the record stays empty.
  */
 const STAT_EXCEPTIONS: Readonly<Record<string, string>> = {};

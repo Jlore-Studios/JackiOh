@@ -129,12 +129,11 @@ describe("C #55 Book of Wildfire", () => {
       expect(playedThisGameWithTag(s.state, "p1", "Book")).toBe(1);
     });
 
-    it("C #4 Palantir's base face answers it as a Book: its controller may Tribute it and steal this", () => {
+    it("C #4 Palantir's base face answers it as a Book: Tributed at once with no prompt, and steals this", () => {
       const s = scenario({ p1: { hand: [WILDFIRE, FILLER] }, p2: { backrow: [PALANTIR], hand: [FILLER] } });
       const wildfire = s.card(WILDFIRE);
       s.play(wildfire, { targets: [hero("p2")] });
-      expect(s.state.pending).toMatchObject({ playerId: "p2", kind: "mode" });
-      s.answer("steal");
+      expect(s.state.pending).toBeNull();
       s.expectInZone(PALANTIR, "graveyard");
       expect(s.card(wildfire.id)).toMatchObject({ owner: "p2", zone: { z: "hand", player: "p2" } });
       s.expectHealth("p2", 30);
