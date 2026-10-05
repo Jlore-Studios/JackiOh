@@ -4,7 +4,8 @@ A strike is a run that failed for the item's own sake: a run that failed, a buil
 reviewer would not approve, a review run that rejected its head, CI still red after its fixes, a
 run that died. Infra, a usage pause, a halt or a stop is no strike. Strikes count on the issue (a
 bot pull request's count on the issue it closes), and nothing a person asks resets them: only a
-head that meets the review rule (`clear`), or a step up, does.
+head that meets the review rule and is green in CI (`clear_if_green`, from the sweep), a merge,
+or a step up does.
 
 At `STEP_UP_AFTER` (3) strikes the bot raises the item's difficulty one step, easy to medium to
 hard, so a stronger model plans and builds it, and rebuilds its open pull request from `main`
@@ -74,7 +75,7 @@ def strike(ctx: Context, number: int, why: str, *, link: str = "") -> bool:
 
 
 def clear(ctx: Context, number: int) -> None:
-    """A head met the review rule: the item's strikes are over."""
+    """The item's strikes are over: a head met the review rule and is green, or it merged."""
     target, _ = pair(ctx, number)
     ctx.store.update(lambda s: state_item(s, target).update(strikes=0, strike_log=[]),
                      f"strikes #{target} cleared")

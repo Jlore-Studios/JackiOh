@@ -127,11 +127,17 @@ class CommandTests(unittest.TestCase):
         self.assertIn("still halted", self.reply())
         self.assertTrue(self.ctx.store.load()["halted"])
         self.assertIsNone(self.suspended("claude-1"))
-        self.send("/harness start over")
+        self.send("/harness resume over")
         self.assertIn("`over` is not a subscription", self.reply())
         self.assertTrue(self.ctx.store.load()["halted"])
-        # And a bare start lifts the halt, never a suspension.
+        # A bare start, or one with a note that names no subscription, lifts the halt as it always
+        # did, and never a suspension.
         self.send("/harness suspend gpt")
+        self.send("/harness start now, back from vacation")
+        self.assertIn("Started.", self.reply())
+        self.assertFalse(self.ctx.store.load()["halted"])
+        self.assertIsNotNone(self.suspended("gpt"))
+        self.send("/harness halt again")
         self.send("/harness start")
         self.assertFalse(self.ctx.store.load()["halted"])
         self.assertIsNotNone(self.suspended("gpt"))

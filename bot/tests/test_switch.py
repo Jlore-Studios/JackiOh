@@ -14,6 +14,7 @@ from harness import verdicts
 from harness.config import LABEL_BUILD
 from harness.deliver import Deliverer
 from harness.runner import FakeRunner, RunResult
+from harness.state import item as state_item
 from harness.work import SWITCH_UP_AFTER, Worker
 
 from tests.support import DAY
@@ -110,6 +111,41 @@ class SwitchTests(unittest.TestCase):
         result = json.loads((out / "result.json").read_text())
         self.assertEqual((models(runner, "build"), models(runner, "fix")), (["opus"], ["sonnet"]))
         self.assertEqual(result["switches"][0]["to"], "sonnet")
+
+    def test_sonnet_gets_its_two_tries_after_opus_hands_it_the_work(self):
+        """The builder's ask is taken once its round is judged, so a round Opus built and the
+        reviewer sent back counts against Opus, not Sonnet."""
+        h = self.harness()
+        h.gh.add_issue(12, labels=(LABEL_BUILD, MEDIUM))
+        planned = plan_mod.make(h.ctx)
+        planned["seats"]["build"] = {**planned["seats"]["build"], "model": "opus", "tier": "strong"}
+        runner = FakeRunner({"build": builder({"src/game.txt": "v2\n"}, done(next_model="sonnet")),
+                             "fix": [builder({"src/game.txt": f"v{n}\n"}) for n in (3, 4, 5)],
+                             "review": [reviewer(changes("one")), reviewer(changes("two")),
+                                        reviewer(changes("three")), reviewer(APPROVE)]})
+        out = h.root / "out-tries"
+        Worker(h.cfg, planned, runner, h.clone, h.root / "work", out).run()
+        result = json.loads((out / "result.json").read_text())
+        self.assertEqual((models(runner, "build"), models(runner, "fix")),
+                         (["opus"], ["sonnet", "sonnet", "opus"]))
+        self.assertEqual([(m["to"], m["why"]) for m in result["switches"]], [
+            ("sonnet", "the builder asked for it"),
+            ("opus", "the reviewer sent back 2 rounds in a row on `sonnet`")])
+
+    def test_an_item_the_bot_rated_and_its_planner_rates_harder_is_built_on_opus(self):
+        """The bot rated it medium (a step up, say); the run's planner rates it hard. The run
+        moves its builder to Opus rather than building a hard item on Sonnet."""
+        h = self.harness()
+        h.gh.add_issue(12, labels=(LABEL_BUILD, MEDIUM))
+        h.ctx.store.update(lambda s: state_item(s, 12).update(
+            difficulty_by={"difficulty": "medium", "provider": "step-up"}))
+        runner = FakeRunner({"plan": rated("hard"), "build": builder({"src/game.txt": "v2\n"}),
+                             "review": reviewer(APPROVE)})
+        planned, result = h.night(runner)
+        self.assertEqual((planned["seats"]["build"]["model"], planned["rating"]["source"]),
+                         ("sonnet", "bot"))
+        self.assertEqual(models(runner, "build"), ["opus"])
+        self.assertEqual(result["switches"][0]["to"], "opus")
 
     def test_the_planners_rating_moves_the_builder_instead_of_sending_it_back(self):
         """An unrated item starts on Sonnet; its planner rates it hard, so the same run builds it

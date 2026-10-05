@@ -107,6 +107,18 @@ class WipTests(unittest.TestCase):
             self.assertEqual(h.origin_sha("bot/wip/40"), first["head"])  # kept, not moved on
             self.assertEqual(int(h.ctx.store.load()["items"]["40"]["interruptions"]), n)
 
+    def test_mains_commits_merged_in_are_no_progress(self):
+        """Every revision merges `main` in; its squash commits are no merges, but they are not the
+        run's work, so a cut-off run that did nothing else still counts."""
+        h = Harness(self)
+        pull(h)
+        h.night(FakeRunner({"revise": builder({"src/game.txt": "half\n"}), "review": capped}))
+        for n in (1, 2):
+            push_branch(h.origin, h.root, "main", {f"docs/other-{n}.md": "someone else's\n"})
+            _, result = h.night(FakeRunner({"revise": capped}))
+            self.assertEqual(result["status"], "interrupted")
+            self.assertEqual(int(h.ctx.store.load()["items"]["40"]["interruptions"]), n)
+
     def test_a_pause_that_moves_the_work_on_resets_the_count(self):
         h = Harness(self)
         pull(h)

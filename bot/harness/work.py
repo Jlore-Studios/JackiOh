@@ -179,6 +179,8 @@ class Worker:
         self.switchable = own if len({seat.tier for seat in own}) > 1 else []
         #: Rounds in a row sent back while the builder ran below the lane's strongest seat.
         self.sent_back = 0
+        #: The model the builder asked its next pass to run on, and the round it asked in.
+        self.asked: tuple[str, int] | None = None
         self.plan_text = ""
         self.minutes = 0.0
         self.build_transcript: Path | None = None
@@ -241,8 +243,14 @@ class Worker:
         """The item's difficulty as this run knows it: the planner's rating when it rated it in
         this run, else the plan's."""
         rated = (self.result.get("plan") or {}).get("rating")
-        found = str((rated or {}).get("difficulty") or self.plan.get("difficulty") or "medium")
-        return found if found in MIN_TIER else "medium"
+        planned = str(self.plan.get("difficulty") or "medium")
+        planned = planned if planned in MIN_TIER else "medium"
+        found = str((rated or {}).get("difficulty") or planned)
+        found = found if found in MIN_TIER else planned
+        if self._rating_source() == "bot":
+            # The bot's own earlier rating is never lowered (`deliver._apply_rating`).
+            found = max(found, planned, key=list(MIN_TIER).index)
+        return found
 
     def _switch(self, model: str, why: str, cycle: int) -> bool:
         """Move this run's builder to the lane's seat running `model`: each Claude account runs
@@ -948,27 +956,30 @@ class Worker:
         return string_template(easy_mod.RULE).safe_substitute(max_files=rule.max_files,
                                                                max_lines=rule.max_lines)
 
-    def _sent_back(self, cycle: int) -> None:
-        """A round the reviewer sent back. On a lane with two models, `SWITCH_UP_AFTER` of them in
-        a row on the weaker one move the builder to the stronger for the next pass."""
+    def _sent_back(self, cycle: int, built_on: Any) -> None:
+        """A round the reviewer sent back, built on `built_on`. On a lane with two models,
+        `SWITCH_UP_AFTER` of them in a row on the weaker one move the builder to the stronger for
+        the next pass; one the stronger built counts towards nothing."""
         if not self.switchable:
             return
         strongest = max(self.switchable, key=lambda s: providers_mod.TIER_RANK[s.tier])
-        if self.build_seat.tier == strongest.tier:
+        if built_on.tier == strongest.tier:
+            self.sent_back = 0
             return
         self.sent_back += 1
         if self.sent_back >= SWITCH_UP_AFTER:
             self._switch(strongest.model, f"the reviewer sent back {self.sent_back} rounds in a "
-                         f"row on `{self.build_seat.model}`", cycle)
+                         f"row on `{built_on.model}`", cycle)
 
     def _rated_out(self) -> bool:
-        """A build run that planned and rated an unrated item stops after planning when the
-        rating needs a stronger model than this run's builder, or a stronger planner than this
-        one (`PLAN_FLOOR`): the item goes back to the queue, rated, for those."""
+        """A build run whose planner rated the item (an unrated one, or one the bot rated before
+        and the planner rated higher) stops after planning when the rating needs a stronger model
+        than this run's builder, or a stronger planner than this one (`PLAN_FLOOR`): the item goes
+        back to the queue, rated, for those. A lane with two models switches instead."""
         rated = (self.result.get("plan") or {}).get("rating")
-        if not isinstance(rated, dict) or self._rating_source():
+        if not isinstance(rated, dict) or self._rating_source() == "person":
             return False
-        difficulty = str(rated.get("difficulty"))
+        difficulty = self._difficulty()
         planner = self.seat_for("plan")
         if providers_mod.tier_at_least(planner.tier, PLAN_FLOOR[difficulty]) and self.switchable:
             # A lane with two models builds what its planner rated on the weakest of them that
@@ -1028,8 +1039,10 @@ class Worker:
         self._commit(f"bot: {role} pass {cycle} for #{self.plan['number']}")
         entry["builder"]["changed"] = self.wt.head() != before
         if report.next_model and self.switchable:
+            # Taken once this round is judged, so its review counts against the model that
+            # built it (`_sent_back`).
             entry["builder"]["next_model"] = report.next_model
-            self._switch(report.next_model, "the builder asked for it", cycle)
+            self.asked = (report.next_model, cycle)
         return report, entry
 
     def _self_check_loop(self, cycle: int, entry: dict[str, Any], report: Any,
@@ -1092,10 +1105,15 @@ class Worker:
         open_self_check: list[Finding] = []
         for cycle in range(1, self.cfg.max_review_cycles + 1):
             self.check()
+            if self.asked is not None:
+                model, asked_in = self.asked
+                self.asked = None
+                self._switch(model, "the builder asked for it", asked_in)
             if cycle == 1:
                 role, prompt = self._first_prompt(conflicts)
             else:
                 role, prompt = "fix", self._fix_prompt(cycle, findings, failures)
+            built_on = self.build_seat
             built, entry = self._build_pass(cycle, role, prompt)
             self.result["cycles"].append(entry)
             if built is None:
@@ -1162,7 +1180,7 @@ class Worker:
             if not findings and failures:
                 findings = [Finding("blocking", "checks", "Checks this change turned red must "
                                     "pass.", "the harness's gate run")]
-            self._sent_back(cycle)
+            self._sent_back(cycle, built_on)
         else:
             self.result.update(status="not_approved",
                                reason=f"no approval after {self.cfg.max_review_cycles} review cycles")
