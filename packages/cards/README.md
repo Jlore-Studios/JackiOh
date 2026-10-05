@@ -16,8 +16,10 @@ the waves go in. When this README and SPEC.md disagree, SPEC.md wins and this fi
 packages/cards
 ├── catalog.json                 card data, proved against SPEC §8 by test/catalog.test.ts (M4-T1, M9)
 ├── patches                      the catalog's history (R388, §8 below)
-│   ├── patches.json             every patch in order: { version, date, title, source, notes }
-│   └── <version>.json           the whole catalog as that patch left it, v0.1.0 … v0.2.0
+│   ├── patches.json             every shipped patch in ship order: { version, date, title, source, notes }
+│   ├── <version>.json           the whole catalog as that patch left it, v0.1.0 … v0.2.0
+│   ├── shipped.json             every shipped patch's { version, commit, blob }
+│   └── pending/                 one fragment per patch being built: { version, title, sources, notes, cards }
 ├── src
 │   ├── catalog-data.ts          the ONE reader of catalog.json: CATALOG, CATALOG_VERSION, cardDef(id)
 │   ├── query.ts                 SPEC §5.1's catalog.query — the only random-pool source
@@ -32,7 +34,7 @@ packages/cards
 │   ├── gen-registry.ts          rewrites src/scripts/_generated.ts from the three folders
 │   ├── missing-tests.ts         prints catalog ids with no test file (M4-T3 acceptance)
 │   ├── validate-catalog.ts      catalog data checks, counted per set (M4-T1)
-│   └── …                        the `patch` script (§8) and the `loc` generator (§1)
+│   └── …                        the `patches` script (§8) and the `loc` generator (§1)
 └── test
     ├── _harness.ts              scenario() — the only way a card test builds a game (M4-T3)
     ├── globalSetup.ts           regenerates the script barrel before every test run
@@ -514,18 +516,26 @@ pnpm exec tsc -p packages/cards/tsconfig.json         # src + test + scripts
 pnpm lint                                             # includes the Math.random / Date ban
 pnpm --filter @jackioh/cards run gen                  # rebuild the script barrel
 pnpm --filter @jackioh/cards run missing-tests        # M4-T3 gate: silence means covered
-pnpm --filter @jackioh/cards run patch <version> "<title>"   # record a patch (§8)
+pnpm --filter @jackioh/cards run patches <version> <date> "<title>" # claim a patch (§8)
+pnpm --filter @jackioh/cards run patches check            # prove every catalog change is claimed once
+pnpm --filter @jackioh/cards run patches ship             # promote pending fragments in ship order
 ```
 
-## 8. Patches and the catalog version (R388)
+## 8. Patches and the catalog version (R388, R646)
 
 Every change to card data is a patch, and every patch is kept, so an older version of any card can
-still be read.
+still be read. Several patches are built at once, so a patch is claimed on its branch and shipped
+after it merges — never by editing the history on the branch.
 
-- **Patches are data.** `patches/patches.json` lists every patch in order as `{ version, date,
-  title, source, notes }`, and `patches/<version>.json` is the whole catalog as that patch left it
-  (snapshots, not diffs). A generated index maps each card id to the versions in which it changed;
-  the client's History section and Patch notes page read these files (`apps/web/README.md`).
+- **Patches are data.** `patches/patches.json` lists every shipped patch in ship order as
+  `{ version, date, title, source, notes }`, `patches/<version>.json` is the whole catalog as that
+  patch left it (snapshots, not diffs), and `patches/shipped.json` carries each patch's
+  `{ version, commit, blob }`: the commit that shipped it and its snapshot file's git blob hash.
+  A promoted entry also records that first-parent commit in `commits` and
+  `reconstructed: false`; historical entries stay byte-identical.
+  A generated index maps each card id to the versions in which it changed; the client's History
+  section and Patch notes page read these files (`apps/web/README.md`). Shipped snapshots are
+  never amended.
 - **The history.** v0.1.0 (2026-09-18: Core as first built, 100 cards and 9 tokens); v0.1.0b
   (2026-09-22: the Core Set balance changes of issue #1); v0.1.0c (2026-09-24: #95's text, and The
   Coin added); v0.1.0d (2026-09-25: the Radiant pass, R275–R279: Radiant faces, the Jlockeed tag and
@@ -534,15 +544,31 @@ still be read.
   below). Everything before v0.1.1 was rebuilt from `git log --follow packages/cards/catalog.json` on a
   full clone (a shallow one stops early).
 - **The version is the patch.** `CATALOG_VERSION` is the latest patch's version, `v0.2.10`, and a test
-  holds `catalog.json` equal to the latest snapshot and `CATALOG_VERSION` equal to its version. A
+  holds `catalog.json` equal to the latest snapshot (pending-claimed cards aside) and
+  `CATALOG_VERSION` equal to its version. A
   patch bumps it everywhere the string lives: `src/catalog-data.ts`; the server's env
   (`apps/server/.env.example`, `render.yaml`); the client's `VITE_CATALOG_VERSION`; and the database,
   where `db:seed-catalog` restamps every `cards` row and `app.settings` (`apps/server/README.md`). A
   version stays opaque (R105): nothing parses or orders one, and the order of patches is
   `patches.json`'s.
-- **Making one.** `pnpm --filter @jackioh/cards run patch <version> "<title>"` (in `scripts/`, where fs
-  is allowed) snapshots `catalog.json`, diffs it against the previous snapshot and writes the
-  patch-notes entry, card by card.
+- **Claiming one.** `pnpm --filter @jackioh/cards run patches <version> <date> "<title>"` (in `scripts/`,
+  where fs is allowed) writes `patches/pending/<version>.json` — `{ version, title, sources,
+  notes, cards }`, where `cards` lists the catalog ids the patch creates, changes or removes
+  (`--cards` lists them; otherwise they are diffed from the working catalog against the newest
+  shipped snapshot). `patches check` (in CI, in the `validate:catalog` step) fails naming the card
+  when a catalog change is unclaimed or claimed twice, when a claimed card did not change, when a
+  fragment's version is neither a bare patch number nor a micro `vA.B.Y` (R650), when a fragment
+  claims no card, or when a fragment's title, sources or notes is empty. `patches ship` promotes each fragment in
+  the order of the first-parent commit that added it — appending the patch (naming a micro
+  `vA.B.Y` after the then-newest patch, or `<version>b`, then `c`, … when that name already
+  shipped), snapshotting that commit's catalog, recording `shipped.json`, deleting the fragment
+  and bumping `CATALOG_VERSION`; with no fragments it changes nothing, and it writes nothing when a
+  fragment's commit changed other cards than it claims or `catalog.json` moved since.
+  `.github/workflows/patches-ship.yml` runs it after each merge and opens the promotion as a pull
+  request that merges itself. A test that reads the real history asserts the shipped prefix, never
+  the newest version by name: the promotion cannot edit tests. A version's place is
+  fixed by when it lands on `main`, whatever its name (R375): v0.2.0 landing after v0.2.5 reads
+  after it.
 - **Data, not code.** A snapshot keeps a card's data (its texts, numbers, `params` and `loc`), not its
   script. A patch that changes what a script does is recorded by the card's new text and its ruling,
   and an old log of that card's games replays exactly only under the code it was played with.
@@ -565,3 +591,16 @@ Patch v0.2.0's changes to Core, beside the two new sets:
 The same patch rewrote every text in the house style (R432) and opened every Core pool that names no
 set to all three sets (R380): #7, #54, #57, #59, #67, #83, #95, #98 and #99 draw from every set, while
 #82 KY's Trial and #97 Zephyrs name Core and keep to it.
+
+## 9. Flavour text and artist credits (R660)
+
+`flavour.json` is a sidecar beside the catalog, keyed by catalog id: `{ "flavour"?: string,
+"artist"?: string }` per card and token. It is words about a card, not the card, so it is not card
+data: an edit to it is not a patch, claims no pending fragment, and `patches check` and
+`validate:catalog` never read it. The designer edits it freely. `src/flavour.ts` exports it as
+`FLAVOUR` with its caps (`FLAVOUR_MAX_CHARS`, `ARTIST_MAX_CHARS`), and `test/flavour.test.ts` holds
+it to them: every key is a catalog card or token, every card and token has a flavour line, and each
+value is one trimmed line under its cap. The client's `apps/web/src/cards/flavour.test.tsx` also
+refuses any rules word in a flavour line (the voice lines' list, issue #115). An artist is credited
+when their art lands (`apps/web/src/cards/art/ART.md`). The client shows both in the inspect views
+and the Card Almanac, never on a face.

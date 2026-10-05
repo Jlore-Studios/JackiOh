@@ -1147,16 +1147,19 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 3,
     "base": {
       "attack": 4,
       "health": 3,
       "keywords": [
         {
           "kind": "Charge"
+        },
+        {
+          "kind": "Deft"
         }
       ],
-      "text": "Charge\nCan attack and switch position in the same turn."
+      "text": "Charge, Deft"
     },
     "radiant": {
       "attack": 8,
@@ -1168,9 +1171,12 @@
         {
           "kind": "Armor",
           "n": 1
+        },
+        {
+          "kind": "Deft"
         }
       ],
-      "text": "Charge, Armor 1\nCan attack and switch position in the same turn."
+      "text": "Charge, Armor 1, Deft"
     }
   },
   "core-046": {
@@ -2999,7 +3005,7 @@
         "min": 1
       }
     ],
-    "loc": 7,
+    "loc": 9,
     "base": {
       "keywords": [],
       "text": "Heal a target {heal}."
@@ -6414,7 +6420,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 0,
-    "loc": 5,
+    "loc": 7,
     "base": {
       "keywords": [],
       "text": "Give a Unit Reborn."
@@ -7964,7 +7970,7 @@
           "n": 3
         }
       ],
-      "text": "Spell Damage +3\nCry: Cast {casts|random Spell|random Spells}. Each targets enemies when it can."
+      "text": "Spell Damage +3\nCry: Cast {casts|random Spell|random Spells}. Each aims at enemies when it harms and at your side when it helps."
     },
     "radiant": {
       "attack": 18,
@@ -7975,7 +7981,7 @@
           "n": 7
         }
       ],
-      "text": "Spell Damage +7\nCry: Cast {casts|random Radiant Spell|random Radiant Spells}. Each targets enemies when it can."
+      "text": "Spell Damage +7\nCry: Cast {casts|random Radiant Spell|random Radiant Spells}. Each aims at enemies when it harms and at your side when it helps."
     }
   },
   "classicplus-039": {

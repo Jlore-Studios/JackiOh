@@ -32,3 +32,16 @@ export const FEATURE_PLAIN_MAX_TIER = "m";
 
 /** R639: how many cards each "favourite" list on the statistics card shows. */
 export const STATS_TOP_CARDS = 3;
+
+/**
+ * R654: live ranked and unranked games required on a patch before public card statistics
+ * strictly ignore AI development games.
+ */
+export const PUBLIC_STATS_MIN_LIVE_GAMES = 1000;
+
+/**
+ * R654: minimum sample of games a card must appear in to display a win rate percentage
+ * instead of "not enough games".
+ */
+export const CARD_STATS_MIN_SAMPLE = 20;
+

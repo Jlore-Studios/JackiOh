@@ -100,7 +100,7 @@ describe("locks and free zones (M1-T4)", () => {
     expect(state.players.p1.units).toEqual(before.players.p1.units);
   });
 
-  it("R660 a locked zone takes a summon but no play, and stays locked after its occupant leaves", () => {
+  it("R667 a locked zone takes a summon but no play, and stays locked after its occupant leaves", () => {
     const state = game();
     const card = put(state, "fx-1", unitSlot("p1", 2));
     lockZone(state, unitSlot("p1", 2));

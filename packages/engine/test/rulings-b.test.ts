@@ -143,7 +143,7 @@ const small = unitDefOf("small", 1, 2);
 const wardedTaunter = unitDefOf("warded-taunt", 4, 4, [{ kind: "Indestructible" }, { kind: "Taunt" }]);
 const wardedPinger = unitDefOf("warded-pinger", 4, 4, [{ kind: "Indestructible" }]);
 const rebornUnit = unitDefOf("reborn", 2, 2, [{ kind: "Reborn" }]);
-const duelist = unitDefOf("duelist", 4, 3);
+const duelist = unitDefOf("duelist", 4, 3, [{ kind: "Deft" }]);
 const immutable = unitDefOf("immutable", 2, 2, [{ kind: "Immutable" }]);
 const trampler = unitDefOf("trampler", 6, 4, [{ kind: "Trample" }]);
 const trampleLeech = unitDefOf("trample-leech", 6, 4, [{ kind: "Trample" }, { kind: "Lifesteal" }]);
@@ -314,7 +314,7 @@ const pingEnemyHero = (amount: number): Script => ({
 });
 
 const SCRIPTS: Record<string, CardScripts> = {
-  [duelist.id]: both({ staticFlags: { deftDuelist: true } }),
+  [duelist.id]: both({}),
   [caster.id]: both({ staticFlags: { castOnDraw: true } }),
   [splitter.id]: both({ cry: () => [rbDamageEnemyUnits(9)] }),
   [allEnemies.id]: both({ cry: () => [rbDamageAllEnemies(2)] }),
@@ -420,7 +420,7 @@ function handCard(state: GameState, defId: string, player: "p1" | "p2" = "p1"): 
   return only(inHand(state, defId, player));
 }
 
-/** R79: the server owns these, in apps/server/src/config.ts (BUILD §2, M7). */
+/** R79: the server owns these, in apps/server/src/config.ts (BUILD §2, M7) — the match lifecycle, and the ranked ladder's R603–R612 numbers. */
 const SERVER_CONSTANTS = [
   "TURN_CLOCK_SECONDS",
   "PROMPT_CLOCK_SECONDS",
@@ -428,8 +428,27 @@ const SERVER_CONSTANTS = [
   "DISCONNECT_GRACE_SECONDS",
   "MATCH_CEILING_MINUTES",
   "ROOM_CODE_LENGTH",
-  "ELO_K",
-  "ELO_START",
+  "RATING_START",
+  "RATING_DEVIATION_START",
+  "RATING_VOLATILITY_START",
+  "GLICKO_TAU",
+  "GLICKO_SCALE",
+  "GLICKO_CONVERGENCE",
+  "GLICKO_MAX_ITERATIONS",
+  "RANK_TIER_PERCENTS",
+  "RANK_DIVISIONS_PER_TIER",
+  "RANK_PIPS_PER_DIVISION",
+  "RANK_PLACEMENT_GAMES",
+  "RANK_WIN_PIPS",
+  "RANK_LOSS_PIPS",
+  "RANK_STREAK_LENGTH",
+  "RANK_STREAK_BONUS_PIPS",
+  "RANK_CONVERGENCE_GAP_PIPS",
+  "RANK_CONVERGENCE_PIPS",
+  "JLORIOUS_SIZE",
+  "PLAYER_TAG_LENGTH",
+  "SEASON_RESET_STRENGTH",
+  "SEASON_RESET_DEVIATION_BOOST",
 ];
 
 describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
@@ -542,7 +561,7 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     expect(field.markedDestroyed).toBe(false);
   });
 
-  it("R47 a lane-targeted summon fizzles on an occupied zone but lands on a Locked one (R660), and holds a Reborn unit's zone", () => {
+  it("R47 a lane-targeted summon fizzles on an occupied zone but lands on a Locked one (R667), and holds a Reborn unit's zone", () => {
     const state = game("r47");
     const sink = sinkFor(state);
     const ctx = makeContext(sink, null, { controller: "p1" });
@@ -553,7 +572,7 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     applyEffects([summon({ defId: small.id, lane: 2 })], ctx); // occupied: fizzles
     expect(activeUnitsOf(state, "p1").map((u) => u.defId)).toEqual([plain.id]);
 
-    applyEffects([summon({ defId: small.id, lane: 3 })], ctx); // Locked: lands (R660)
+    applyEffects([summon({ defId: small.id, lane: 3 })], ctx); // Locked: lands (R667)
     expect(cardAt(state, slot("p1", "units", 3))?.defId).toBe(small.id);
 
     applyEffects([summon({ defId: small.id, lane: 4 })], ctx);
@@ -615,6 +634,13 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     expect(declareAttack(sink, ordinary, { kind: "hero", player: "p2" }).error).toBeUndefined();
     expect(hasExertion(state, ordinary, "switch")).toBe(false);
     expect(switchPosition(sink, ordinary).error).toBe("that unit has already acted this turn");
+
+    // R49 reads the keyword through the layers, so a granted Deft works like a printed one.
+    const gifted = put(state, plain.id, slot("p1", "units", 3));
+    gifted.grantedKeywords.push({ kind: "Deft" });
+    expect(declareAttack(sink, gifted, { kind: "hero", player: "p2" }).error).toBeUndefined();
+    expect(hasExertion(state, gifted, "switch")).toBe(true);
+    expect(switchPosition(sink, gifted).error).toBeUndefined();
   });
 
   it("R50 discovers from the actual graveyard, so a spell token sitting there is eligible", () => {
@@ -1538,7 +1564,7 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     expect(viewFor(clean, "p1", 75_000).clockMs).toBe(75_000);
     expect(viewFor(clean, "p1").clockMs).toBeNull();
     expect(Object.keys(engineConfig).filter((key) => SERVER_CONSTANTS.includes(key))).toEqual([]);
-    // M6/M7: apps/server/src/config.ts carries the clock, grace, ceiling, room-code and Elo values.
+    // M6/M7: apps/server/src/config.ts carries the clock, grace, ceiling, room-code and rating values.
   });
 
   it("R80 caps a library at LIBRARY_CAP: a new card is never created and an existing one lands in the graveyard", () => {

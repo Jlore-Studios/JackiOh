@@ -9,7 +9,7 @@
 // text that makes a card harder to target (Classic #89) or answers its targeting (Classic #33, from a
 // hand) is read from there.
 
-import type { CardType, PlayerId, Selection } from "@jackioh/shared";
+import type { CardType, PlayerId, Selection, TargetDecl } from "@jackioh/shared";
 import { opponentOf } from "@jackioh/shared";
 import { fusedIdParts } from "./catalog";
 import type { TargetedReplacement } from "./replacements";
@@ -138,10 +138,10 @@ export function targetingDiscardsFor(
 }
 
 /**
- * R450, R654: whether the player can pay a targeting cost of `required` discards — that many cards
+ * R450, R661: whether the player can pay a targeting cost of `required` discards — that many cards
  * held outside `keep` (the card a play is taking out of that hand, §10.5 step 1, and any hand card
  * the same play picks), or null when they can. The discards themselves are random at pay time
- * (R654: a discard is its player's choice only when the card says "of your choice"); nothing lists
+ * (R661: a discard is its player's choice only when the card says "of your choice"); nothing lists
  * or chooses them, so there are no paying sets to enumerate.
  */
 export function whyTargetingDiscardsUnpayable(
@@ -155,4 +155,12 @@ export function whyTargetingDiscardsUnpayable(
   return held >= required
     ? null
     : `targeting that costs ${required} discard${required === 1 ? "" : "s"}, and you hold ${held} card${held === 1 ? "" : "s"}`;
+}
+
+/**
+ * R656: whether a target declaration aims to help ("help") or harm ("harm").
+ * Defaults to "harm".
+ */
+export function targetAim(decl: TargetDecl): "harm" | "help" {
+  return decl.aim ?? "harm";
 }

@@ -59,7 +59,7 @@ function summonFirstFree(defId: string): Effect {
   };
 }
 
-/** Lock (§3.2) this controller's unit lane 1, which is where the R660 test parks its Reborn unit. */
+/** Lock (§3.2) this controller's unit lane 1, which is where the R667 test parks its Reborn unit. */
 function lockOwnFirstLane(): Effect {
   return {
     kind: "statecheck:lockLane1",
@@ -117,7 +117,7 @@ const pinger = unitDefOf("pinger", 1, 1);
 const rebornSummoner = unitDefOf("reborn-summoner", 2, 2, [{ kind: "Reborn" }]);
 /** Reborn with a Cry, which §4.5 step 4 says must not fire on the way back. */
 const rebornCrier = unitDefOf("reborn-crier", 2, 2, [{ kind: "Reborn" }]);
-/** Reborn with no hooks at all, for the Locked-zone return (R660). */
+/** Reborn with no hooks at all, for the Locked-zone return (R667). */
 const rebornPlain = unitDefOf("reborn-plain", 2, 2, [{ kind: "Reborn" }]);
 /** Its Death trigger Locks its controller's lane 1 while the state check is still running. */
 const locker = unitDefOf("locker", 1, 1);
@@ -294,7 +294,7 @@ describe("the state check (M2-T5)", () => {
     expect(eventsOfType(again, "enteredGraveyard").map((e) => e.instanceId)).toEqual([reborner.id]);
   });
 
-  it("R660: Reborn into a zone that was Locked meanwhile still returns — the return is no play", () => {
+  it("R667: Reborn into a zone that was Locked meanwhile still returns — the return is no play", () => {
     const state = game("reborn-locked");
     state.turn = 2;
     state.active = "p1";
@@ -538,7 +538,7 @@ describe("the state check (M2-T5)", () => {
     expect(cardAt(state, slot("p1", "units", 1))?.defId).toBe(spawn.id);
   });
 
-  it("R660 the event stream shows the Reborn return into a Locked zone as a summon, not a graveyard stay", () => {
+  it("R667 the event stream shows the Reborn return into a Locked zone as a summon, not a graveyard stay", () => {
     const state = game("reborn-fizzle-event");
     const unit = put(state, rebornPlain.id, slot("p1", "units", 1));
     const lockerUnit = put(state, locker.id, slot("p1", "units", 3));

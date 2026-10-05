@@ -337,7 +337,7 @@ describe("summonRandom (§5.1, §10.7, R60, #67)", () => {
     expect(trap?.faceUp).toBeUndefined();
   });
 
-  it("R47 fizzles on an occupied backrow lane, but a Locked one takes the summon (R660)", () => {
+  it("R47 fizzles on an occupied backrow lane, but a Locked one takes the summon (R667)", () => {
     const occupied = game("random-occupied");
     put(occupied, poolTrap.id, slot("p1", "backrow", 2));
     const before = occupied.nextId;

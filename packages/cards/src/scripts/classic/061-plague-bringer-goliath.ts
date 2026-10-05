@@ -15,7 +15,7 @@
 // "Place N Plague Tokens" names no card, so it is N placements (`placePlagueTokens`), all on the one
 // permanent a single `target` prompt names for the Goliath's controller over every permanent on the
 // field — either side, the Goliath itself and face-down cards included (a face-down card the chooser
-// may not read is offered by its id alone, R177) (R661). Each placement is one placement of 1,
+// may not read is offered by its id alone, R177) (R668). Each placement is one placement of 1,
 // multiplied by the card that receives it (C #27), and each is its own for "whenever Plague Tokens
 // are placed on this" (C #53). The prompt parks the rest of the Cry on `state.work` (R113), so the
 // draw comes after the placements. The other player sees only that a prompt is open.

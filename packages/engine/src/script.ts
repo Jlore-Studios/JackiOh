@@ -163,7 +163,10 @@ export type StaticFlags = {
   infiniteReserves?: boolean;
   /** Cannot switch to Defense Position (#65.1). */
   neverDefense?: boolean;
-  /** R49: two exertions, so one attack plus one switch in a turn (#45 Deft Duelist). */
+  /**
+   * R49: two exertions, so one attack plus one switch in a turn. Legacy: patch v0.2.11 made this a
+   * printed keyword (Deft), which `combat.ts` reads through §10.4's layers instead of this flag.
+   */
   deftDuelist?: boolean;
   /** R30: this card's own Echo, so its play resolves this many extra times. */
   echo?: number;
@@ -484,7 +487,7 @@ export type ActivationDecl = {
     tributeSelf?: boolean;
     /**
      * A Tribute cost that may not take the card itself, even when it is a Unit (Classic #21
-     * Turtinator, which cannot Tribute itself; R655).
+     * Turtinator, which cannot Tribute itself; R662).
      */
     tributeExcludesSelf?: boolean;
   };

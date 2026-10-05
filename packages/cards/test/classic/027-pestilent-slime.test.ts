@@ -6,7 +6,7 @@
 //
 // The placements come from C #39 Outbreak ("Place {tokens} Plague Tokens on a permanent", one
 // placement) and C #70 Book of Plague ("Place {tokens} Plague Tokens": one placement per token, all
-// on the one permanent a single prompt names, R661).
+// on the one permanent a single prompt names, R668).
 
 import { stepParam } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
@@ -86,7 +86,7 @@ describe("C #27 Pestilent Slime", () => {
       expect(placements(s, slime.id)[0]?.placed).toBe(2);
     });
 
-    it("R471 R661 each one-token placement on it puts 2, each its own placement: one answer lands all five", () => {
+    it("R471 R668 each one-token placement on it puts 2, each its own placement: one answer lands all five", () => {
       const s = scenario({ p1: { hand: [BOOK_OF_PLAGUE, ANCHOR], field: [SLIME, VANILLA] }, p2: { hand: [ANCHOR] } });
       const slime = s.card(SLIME);
       const vanilla = s.card(VANILLA);

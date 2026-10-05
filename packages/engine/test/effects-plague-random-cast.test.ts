@@ -1,4 +1,4 @@
-// R452 meets E19 (R471, R661): "Place N Plague Tokens" inside a random cast (Classic+ #47 Jogg's Box
+// R452 meets E19 (R471, R668): "Place N Plague Tokens" inside a random cast (Classic+ #47 Jogg's Box
 // casting Classic #70 Book of Plague) asks its caster nothing — every placement goes on one random
 // permanent — as a random cast makes every choice at random. Through fixture cards; the real cards'
 // tests cover the same case again (packages/cards/test/classic-plus/047-joggs-box.test.ts).
@@ -59,7 +59,7 @@ function tokensOnField(state: GameState): number {
 }
 
 describe("R452 R471 placements inside a random cast", () => {
-  it("R452 R661 its caster is never asked: every placement lands on one random permanent at once", () => {
+  it("R452 R668 its caster is never asked: every placement lands on one random permanent at once", () => {
     const state = game("plague-random-cast");
     put(state, "fx-1", slot("p1", "units", 1));
     put(state, "fx-2", slot("p2", "units", 1));

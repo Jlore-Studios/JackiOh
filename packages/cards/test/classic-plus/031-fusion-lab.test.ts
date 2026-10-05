@@ -206,17 +206,12 @@ describe("C+ #31 Fusion Lab", () => {
 });
 
 describe("C+ #31 Fusion Lab: Animated (patch v0.2.10)", () => {
-  /** Its Cry's hand pick, declared with the play: the Stockpile beside it. */
-  const play = (s: Scenario): { targets: Selection[] } => {
-    const kept = s.hand("p1").find((card) => card.defId === "core-005");
-    return { targets: kept === undefined ? [] : pick(kept.id) };
-  };
-
+  // Balance patch 1 removed the Cry, so the play declares nothing: no hand pick travels with it.
   it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 1/3 Unit; with none open it stays a Field Spell", () => {
-    expectAnimated({ def: "classicplus-031", stats: { attack: 1, health: 3 }, play });
+    expectAnimated({ def: "classicplus-031", stats: { attack: 1, health: 3 } });
   });
 
   it("R383 radiant: a 2/6 Unit", () => {
-    expectAnimated({ def: "classicplus-031", radiant: true, stats: { attack: 2, health: 6 }, play });
+    expectAnimated({ def: "classicplus-031", radiant: true, stats: { attack: 2, health: 6 } });
   });
 });

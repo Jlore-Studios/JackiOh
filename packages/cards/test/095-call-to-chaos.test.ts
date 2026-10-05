@@ -571,7 +571,7 @@ describe("#95 Call to Chaos — R436 names what it rolled to both players", () =
 
   it("R436 Hinder's random discard pauses nothing: the whole-deck draw runs through, announced once", () => {
     // A Radiant roll with the whole-deck draw and a later effect, the Golem. The library's Hinder is
-    // cast by that draw and discards at random (R654, R431: no prompt), so the draw and the Golem
+    // cast by that draw and discards at random (R661, R431: no prompt), so the draw and the Golem
     // behind it run through in one pass.
     const cursor = radiantCursorWhere(
       (rolled) =>

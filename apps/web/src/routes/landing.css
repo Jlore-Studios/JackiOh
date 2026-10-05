@@ -224,19 +224,8 @@
   gap: 10px;
   min-width: 0;
   max-width: 100%;
-  /* Clear of the Sign in pill above it, so the kicker does not read as its caption. */
+  /* Clear of the Sign in pill above it, so the wordmark does not read as its caption. */
   padding-top: 16px;
-}
-
-.landing .landing-kicker {
-  color: var(--tavern-brass);
-  font-family: var(--tavern-serif);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  text-wrap: balance;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
 }
 
 /* The wordmark: gold leaf, a dark engraved edge, hearth glow and a cast shadow. The glow and the
@@ -267,14 +256,6 @@
     drop-shadow(0 0 14px rgba(255, 170, 60, 0.45))
     drop-shadow(0 3px 0 #3a1f0c)
     drop-shadow(0 10px 14px rgba(0, 0, 0, 0.75));
-}
-
-.landing .landing-lede {
-  max-width: 44ch;
-  color: color-mix(in srgb, var(--tavern-parchment) 82%, transparent);
-  font-size: 16px;
-  text-wrap: pretty;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 /* --- the card fan ---------------------------------------------------------------------------- */
@@ -519,17 +500,8 @@
   outline-offset: 3px;
 }
 
-/* --- how it plays ---------------------------------------------------------------------------- */
-
-.landing .landing-how {
-  position: relative;
-  padding: 32px var(--tavern-gutter) 48px;
-  border-top: 1px solid rgba(201, 149, 63, 0.55);
-  background:
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.12) 0 1px, transparent 1px 23px),
-    linear-gradient(180deg, var(--tavern-wood-deep), #1a0e07 70%, var(--tavern-night));
-  box-shadow: inset 0 12px 24px rgba(0, 0, 0, 0.5);
-}
+/* --- section headings ------------------------------------------------------------------------ */
+/* The one heading style the page's sections share ("Your table", `stats/PlayerStatsCard.tsx`). */
 
 .landing .landing-how-title {
   max-width: var(--tavern-content);
@@ -540,136 +512,6 @@
   color: var(--tavern-gold);
   text-align: center;
   text-shadow: 0 2px 0 #3a1f0c, 0 0 14px rgba(255, 170, 60, 0.3);
-}
-
-.landing .landing-steps {
-  list-style: none;
-  padding: 0;
-  margin: 0 auto;
-  max-width: var(--tavern-content);
-  display: grid;
-  /* Four across on a desktop, two by two on a tablet or a phone on its side, one column on a phone
-     held upright: never three and one. Set by width rather than auto-fit, which gave three and one
-     between about 780 and 1030 px (a phone on its side among them). */
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-}
-
-@media (min-width: 560px) {
-  .landing .landing-steps {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1100px) {
-  .landing .landing-steps {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-.landing .landing-step {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas:
-    "glyph title"
-    "glyph text";
-  column-gap: 12px;
-  row-gap: 4px;
-  align-items: start;
-  /* Rows hug their content; a tile stretched to its row's height keeps the space at the bottom. */
-  align-content: start;
-  min-width: 0;
-  padding: 16px;
-  border: 1px solid rgba(201, 149, 63, 0.6);
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(239, 224, 191, 0.09), rgba(239, 224, 191, 0.03));
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.12), 0 8px 18px rgba(0, 0, 0, 0.35);
-}
-
-/* A brass medallion holding the step's drawn icon (routes/landing.tsx `StepIconMark`). */
-.landing .landing-step-glyph {
-  grid-area: glyph;
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  border: 2px solid var(--tavern-brass);
-  background: radial-gradient(circle at 35% 30%, #6c4424, var(--tavern-wood-deep));
-  color: var(--tavern-gold);
-  box-shadow:
-    inset 0 1px 0 rgba(251, 231, 176, 0.25),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.35),
-    0 0 12px rgba(243, 201, 105, 0.2);
-}
-
-.landing .landing-step-icon {
-  display: block;
-  width: 28px;
-  height: 28px;
-  overflow: visible;
-  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.6));
-}
-
-.landing .landing-step-icon * {
-  stroke: currentColor;
-  stroke-width: 1.3;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
-}
-
-/* A card face up: filled with gold. A slot or a card behind it: an outline on dark wood. */
-.landing .landing-icon-card {
-  fill: color-mix(in srgb, var(--tavern-gold) 38%, transparent);
-}
-
-.landing .landing-icon-slot {
-  fill: rgba(18, 11, 7, 0.55);
-  stroke-opacity: 0.75;
-}
-
-/* A card seen from behind, as the fan's face-down card: dark, with a brass edge. */
-.landing .landing-icon-back {
-  fill: #3a2141;
-}
-
-.landing .landing-icon-line {
-  fill: none;
-  stroke-opacity: 0.6;
-  stroke-dasharray: 2 2;
-}
-
-.landing .landing-icon-facet {
-  fill: none;
-  stroke-width: 1;
-  stroke-opacity: 0.85;
-}
-
-/* The mana crystal is the colour of the cost gems on the cards above. */
-.landing .landing-icon-gem {
-  fill: color-mix(in srgb, var(--tavern-teal) 55%, transparent);
-}
-
-.landing .landing-step-icon--mana {
-  color: #bff3ea;
-  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.6)) drop-shadow(0 0 5px rgba(63, 182, 168, 0.6));
-}
-
-.landing .landing-step-title {
-  grid-area: title;
-  font-family: var(--tavern-serif);
-  font-size: 19px;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--tavern-gold-pale);
-}
-
-.landing .landing-step-text {
-  grid-area: text;
-  font-size: 14px;
-  color: color-mix(in srgb, var(--tavern-parchment) 78%, transparent);
-  overflow-wrap: anywhere;
 }
 
 /* --- wider screens --------------------------------------------------------------------------- */
@@ -749,17 +591,8 @@
     padding-top: 0;
   }
 
-  /* 12 px, the smallest text the page sets on a phone (it measured 11 here, integration QA). */
-  .landing .landing-kicker {
-    font-size: 12px;
-  }
-
   .landing .landing-wordmark {
     font-size: clamp(44px, 14vh, 68px);
-  }
-
-  .landing .landing-lede {
-    font-size: 14px;
   }
 
   .landing .landing-fan {

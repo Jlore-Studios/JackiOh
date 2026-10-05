@@ -1,5 +1,5 @@
 // C #47 Recurring Felinor — SPEC §8.6 row 47, BUILD M9 Classic row C 47: "Cry: cast a generated Ancient
-// Acquisition (C #34, base face), free and counted as played (R70), returning 2 at random (R656), the
+// Acquisition (C #34, base face), free and counted as played (R70), returning 2 at random (R663), the
 // Spell going to your graveyard afterwards (R87); while this card is in your graveyard, whenever one
 // of your Traps or Field Traps fires (`trapFired`), return this to hand (a graveyard trigger, R68); an
 // opponent's trap doesn't, and in a hand or on the field it doesn't; the returned card follows R97 in
@@ -59,7 +59,7 @@ describe("C #47 Recurring Felinor", () => {
       const played = s.events.flatMap((event) => (event.type === "cardPlayed" ? [event.defId] : []));
       expect(played).toEqual([FELINOR, ACQUISITION]);
 
-      // R656: no prompt — two random cards return, one stays.
+      // R663: no prompt — two random cards return, one stays.
       expect(s.state.pending).toBeNull();
       expect(s.hand("p1")).toHaveLength(3);
       expect(s.pile("p1", "graveyard")).toHaveLength(2);
@@ -77,7 +77,7 @@ describe("C #47 Recurring Felinor", () => {
       expect(s.pile("p1", "graveyard").map((card) => card.defId)).toEqual([ACQUISITION]);
     });
 
-    it("R656 the generated cast returns at random: the same game returns the same cards", () => {
+    it("R663 the generated cast returns at random: the same game returns the same cards", () => {
       const mk = (): Scenario =>
         scenario({ p1: { hand: [FELINOR, FILLER], graveyard: [LUNAR, GARY, VANILLA] }, p2: { hand: [FILLER] } });
       const first = mk();

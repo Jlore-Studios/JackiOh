@@ -17,7 +17,7 @@
 //      cannot be paid cannot be activated (`whyCannotActivateAbility`).
 //   5. The targets and modes the ability declares travel in the action, as a play's do (R81), checked
 //      by `playChoices` against the ability's declarations (R90); the discards a declared target
-//      costs (B5 E5, R450, Classic #89) are random at pay time (R654) and travel nowhere. Choices
+//      costs (B5 E5, R450, Classic #89) are random at pay time (R661) and travel nowhere. Choices
 //      made during resolution are ordinary prompts, which the card's `resume` table answers.
 //   6. Not a play: nothing that counts plays sees it (no turn log, no `counters.played`, no
 //      `cardPlayed`). What the effect plays or casts counts as usual (R70).
@@ -166,7 +166,7 @@ function markUse(state: GameState, card: CardInstance): void {
 function tributeUnitsFor(state: GameState, player: PlayerId, card: CardInstance, decl: ActivationDecl): CardInstance[] {
   const units = activeUnitsOf(state, player);
   // "Tribute this" pays with the card itself, so it is not also one of the units a Tribute counts.
-  // R655: a cost that excludes itself (Classic #21) never lists the card either.
+  // R662: a cost that excludes itself (Classic #21) never lists the card either.
   if (decl.cost?.tributeSelf === true || decl.cost?.tributeExcludesSelf === true) {
     return units.filter((unit) => unit.id !== card.id);
   }
@@ -265,7 +265,7 @@ export function whyActivateRefused(state: GameState, player: PlayerId, action: A
   return (
     whyDeclaredChoicesRefused(state, player, card, declaredOf(decl), targets, modes) ??
     refuseTributes(state, player, card, decl, action.tributes ?? []) ??
-    // B5 E5, R450, R654: a declared target that costs discards needs that many other cards held —
+    // B5 E5, R450, R661: a declared target that costs discards needs that many other cards held —
     // the discards are random at pay time, so the action carries none.
     whyTargetingDiscardsUnpayable(state, player, discardsOwed(state, player, card, decl, targets, modes), handPicks(targets))
   );
@@ -306,7 +306,7 @@ export function activateActionsFor(state: GameState, player: PlayerId, card: Car
     const choices = playChoiceCombinations(state, player, card, declaredOf(decl));
     for (const tributes of tributeSets) {
       for (const choice of choices) {
-        // B5 E5, R450, R654: the targets' discard cost is random at pay time, so it lists no
+        // B5 E5, R450, R661: the targets' discard cost is random at pay time, so it lists no
         // paying sets — one action, offered only when the cost can be paid at all.
         const owed = discardsOwed(state, player, card, decl, choice.targets ?? [], choice.modes ?? []);
         if (whyTargetingDiscardsUnpayable(state, player, owed, handPicks(choice.targets ?? [])) !== null) {
@@ -416,7 +416,7 @@ function payCosts(
     sink.events.push(manaEvent(run.player, side));
   }
 
-  // B5 E5, R450, R654: a targeting cost is part of the price, paid with it (Classic #89) — random
+  // B5 E5, R450, R661: a targeting cost is part of the price, paid with it (Classic #89) — random
   // cards from the hand, drawn at pay time. Never a hand card the activation picks.
   const owed = discardsOwed(sink.state, run.player, card, decl, run.targets, run.modes);
   if (owed > 0) payTargetingDiscards(sink, run.player, owed, handPicks(run.targets));

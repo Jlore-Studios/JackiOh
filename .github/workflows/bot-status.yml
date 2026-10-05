@@ -8,7 +8,9 @@
 # The hourly schedule only restarts the loop if it ever stops; the concurrency group keeps one
 # loop going and at most one waiting. Each tick also runs the sweep (bot-commands' scheduled job,
 # which GitHub fires as late), so when the bot's chain of runs breaks, the next night run starts
-# within ten minutes, not hours. It holds no model secret and runs no model. Cancelling a run by hand stops the loop until the
+# within ten minutes, not hours. Each tick also settles the issue about the bot machine's disk
+# (bot/harness/disk.py): open while the disk is filling up, closed once it is not.
+# It holds no model secret and runs no model. Cancelling a run by hand stops the loop until the
 # next schedule; disable the workflow to stop it for good.
 name: bot-status
 
@@ -61,6 +63,8 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_2' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_3 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_3' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_4 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_4' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_5 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_5' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
         run: python -m harness dashboard --sweep --stats --every "${EVERY_SECONDS}" --for "${LOOP_SECONDS}"

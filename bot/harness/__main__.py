@@ -8,6 +8,7 @@ token in BOT_GITHUB_TOKEN, GITHUB_TOKEN or GH_TOKEN, or a logged-in `gh`.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import shutil
 import subprocess
@@ -19,6 +20,7 @@ from typing import Any
 from harness import config as config_mod
 from harness import context as context_mod
 from harness import dashboard as dashboard_mod
+from harness import disk as disk_mod
 from harness import stats as stats_mod
 from harness import deliver as deliver_mod
 from harness import events as events_mod
@@ -29,7 +31,7 @@ from harness import quiet as quiet_mod
 from harness import status as status_mod
 from harness import sweep as sweep_mod
 from harness import triage as triage_mod
-from harness.clock import iso, now as clock_now
+from harness.clock import iso, now as clock_now, parse_iso
 from harness.config import LABELS, TRUST_PATH, Config
 from harness.errors import ConfigError, GitHubError, HarnessError, LoginError
 from harness.redact import redact
@@ -284,14 +286,49 @@ def cmd_status(cfg: Config, args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_created(cfg: Config) -> Any:
+    """When this workflow run was created, which is when GitHub fixed its list of secrets; None
+    run by hand, or when it cannot be read."""
+    if not cfg.run_id:
+        return None
+    try:
+        return parse_iso(_ctx(cfg).gh.get_run(cfg.run_id).get("created_at"))
+    except Exception:  # noqa: BLE001 - not knowing only means trusting the newest record
+        return None
+
+
+def _current(cfg: Config, since: Any) -> Config:
+    """The loop's config as it stands now. The `bot-status` job reads `.harness/` once, when it
+    starts, and runs for five and a half hours, and GitHub fixes its secrets when its run is
+    created, hours before that for a run queued behind the last loop; so a subscription added or
+    changed since would show as it was. Each tick reads the subscriptions again from the default
+    branch, and takes which secrets are set from the newest plan job's record when that is newer
+    than this run (`providers.newer_secrets`). What cannot be read stays as it was."""
+    pool, secrets = cfg.pool, cfg.secrets
+    try:
+        ctx = _ctx(cfg)
+        text, _ = ctx.gh.get_file(providers_mod.PROVIDERS_PATH.as_posix(), cfg.default_branch)
+        if text:
+            pool = providers_mod.parse(json.loads(text))
+        secrets = providers_mod.newer_secrets(cfg.secrets, ctx.store.load(), since)
+    except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
+        print(redact(f"::warning::kept the subscriptions and secrets as they were: {exc}"),
+              flush=True)
+    return dataclasses.replace(cfg, pool=pool, secrets=secrets)
+
+
 def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
     """The pinned status issue: once, or every `--every` seconds for `--for` seconds (the
     `bot-status` loop). With `--sweep` each tick sweeps first, so the bot does not wait hours
-    for GitHub's late schedules to start its next run when its chain of runs breaks. A failure is
-    only a warning: it never fails the sweep or the loop."""
+    for GitHub's late schedules to start its next run when its chain of runs breaks. Each tick
+    reads the subscriptions and the secrets afresh (`_current`), so one added or changed while
+    the loop runs shows within a tick, and settles the issue about the machine's disk
+    (`disk.alert`). A failure is only a warning: it never fails the sweep or the loop."""
     every = max(0, int(getattr(args, "every", 0) or 0))
     deadline = time.monotonic() + max(0, int(getattr(args, "for_seconds", 0) or 0))
+    since = _run_created(cfg)
     while True:
+        cfg = _current(cfg, since)
         if getattr(args, "sweep", False):
             try:
                 for line in sweep_mod.sweep(_ctx(cfg)) or ["nothing was left unanswered"]:
@@ -303,6 +340,12 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
             print(redact(f"dashboard: {note}"), flush=True)
         except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
             print(redact(f"::warning::the status issue was not updated: {exc}"), flush=True)
+        try:
+            note = disk_mod.alert(_ctx(cfg))
+            if note:
+                print(redact(f"disk: {note}"), flush=True)
+        except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
+            print(redact(f"::warning::the disk issue was not settled: {exc}"), flush=True)
         if getattr(args, "stats", False):
             try:
                 print(redact(stats_mod.update(_ctx(cfg))), flush=True)

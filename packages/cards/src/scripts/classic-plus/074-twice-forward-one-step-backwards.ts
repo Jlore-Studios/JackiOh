@@ -5,7 +5,7 @@
 //            into this, and this gains +{brittleGain} Brittle." (Brittle 4)
 //   Engine:  "A Field Trap (R425): a Trap is consumed when it fires, which would leave nothing to gain
 //            Brittle. No Brittle while it is unrevealed: its printed Brittle never starts face-down
-//            (R659); it reveals the first time it activates, and the count starts then. It counts the
+//            (R666); it reveals the first time it activates, and the count starts then. It counts the
 //            opponent's plays since it was set (`memory.plays`; casts count, R70; a countered card was
 //            never played). On each even count, once that card has resolved (§10.5 step 7), the card, if
 //            it still exists (a Unit on the field, a Spell in the graveyard, a trap in the backrow), is
@@ -14,13 +14,13 @@
 //            definition instead and leaves the card where it is. Either way this then gains +1 Brittle,
 //            on every even count. The texts fused in work for you where they can … a fused Cry never
 //            runs, since this is already on the field. It turns face-up, public, the first time it
-//            activates (R33, R659); until then its play count is read by its controller only, and a card
+//            activates (R33, R666); until then its play count is read by its controller only, and a card
 //            destroyed while unrevealed reads public in its graveyard (R97). Tunes: Brittle 2 ↑ (its
 //            X); every 2 ↓ (never below 2); Brittle gained 1 ↑."
 //
 // The whole card is its subsystem's trap trigger (`subsystems/twiceForward.ts`): the count on the
 // instance, the fuse after the play resolves, the reveal with the first activation and the Brittle
-// from then on. The printed Brittle is the catalog face's keyword (no start while face-down, R659;
+// from then on. The printed Brittle is the catalog face's keyword (no start while face-down, R666;
 // B3.4's X change tunes it), and "every N" and the Brittle gained are its declared `params`.
 
 import type { PreviewHook, Script } from "@jackioh/engine";

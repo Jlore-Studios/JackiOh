@@ -7,7 +7,8 @@ fixes, and the run's own adversarial reviewer. A builder whose seat has `self_ch
 its own change before any review: build, checks, a self check by a fresh session of the same
 model, and on findings a fix and the checks and the self check again, up to
 `max_self_check_rounds`. A clean self check is never an approval. A run whose subscription has no
-seat that may review (only weak ones) ends with the change built, for a review run to judge.
+seat of at least medium to review in the run (only weak ones) ends with the change built, for a
+review run to judge; a weak model reviews only in a review run, and only an easy item.
 
 This job holds no GitHub write credential. It writes `result.json` and a git bundle of the branch
 to the output directory; the deliver job checks the bundle itself and pushes it. Prompts are read
@@ -18,12 +19,14 @@ call is asked.
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable
 
+from harness import disk as disk_mod
 from harness import gates as gates_mod
-from harness import prompts, verdicts
+from harness import prompts, review_rule, verdicts
 from harness import providers as providers_mod
 from harness.clock import iso, now as clock_now
 from harness.config import Config, child_env
@@ -74,7 +77,8 @@ SETTINGS_FILES = (".claude/settings.json", ".claude/settings.local.json", ".mcp.
 MANIFESTS = ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc")
 
 #: How an interruption ends the item: `stop` and `infra` have statuses of their own; the rest
-#: (`budget`, `usage`, `halt`) are `interrupted` and requeue.
+#: (`budget`, `usage`, `halt`, and `disk` for the machine's disk filling up during the work) are
+#: `interrupted` and requeue.
 KIND_STATUS = {"stop": "stopped", "infra": "infra"}
 
 
@@ -111,6 +115,7 @@ class Worker:
         after_call: Callable[[], None] | None = None,
         now: Callable[[], datetime] | None = None,
         env: dict[str, str] | None = None,
+        disk_reader: Callable[[], dict[str, Any]] | None = None,
     ) -> None:
         self.cfg = cfg
         self.plan = plan
@@ -133,6 +138,10 @@ class Worker:
         #: every job there shares two vCPUs, and CI on the pull request runs the rest anyway.
         self.on_machine = not hosted(str(plan.get("runs_on") or self.provider.runs_on))
         self.gates = [gate for gate in cfg.gates if gate.machine or not self.on_machine]
+        #: How full the disk is (`disk.reading`), read on the machine only: its subscriptions share
+        #: one disk, and a full one fails whichever job writes next.
+        self.disk_reader = disk_reader or (lambda: disk_mod.reading(
+            self.work_dir if self.work_dir.exists() else cfg.root, self.now()))
         main = cfg.pool.seats(self.provider)[0]
         seats = plan.get("seats") if isinstance(plan.get("seats"), dict) else None
         #: The model each role runs on. A plan from before seats runs every role on the
@@ -160,6 +169,10 @@ class Worker:
         self._base_gate_cache: dict[str, bool] = {}
         #: The forbidden paths the last path guard put back (`_guard`).
         self.put_back: list[str] = []
+        #: For a conflict revision of a cleared change: what its builder and its reviewer are told
+        #: (`_cleared_notes`).
+        self.carry_build = ""
+        self.carry_review = ""
         self.result: dict[str, Any] = {
             "version": 1,
             "action": plan.get("action"),
@@ -310,6 +323,8 @@ class Worker:
     def run(self) -> dict[str, Any]:
         self.out_dir.mkdir(parents=True, exist_ok=True)
         try:
+            if self.on_machine:
+                self._disk_check()
             self._start_check()
             action = self.plan.get("action")
             if action == "suggest":
@@ -325,11 +340,43 @@ class Worker:
         except Interrupt as stop:
             self._interrupted(stop)
         except Exception as exc:  # noqa: BLE001 - every failure must still leave a result
-            self.result.update(status="failed", reason=redact(f"{type(exc).__name__}: {exc}")[:2000])
-            self._save_wip("the harness failed")
+            reason = redact(f"{type(exc).__name__}: {exc}")[:2000]
+            if disk_mod.is_full(exc):
+                # The machine's disk, not the item: a pause that keeps what was built.
+                self._interrupted(Interrupt(f"the machine's disk filled up ({reason})", "disk"))
+            else:
+                self.result.update(status="failed", reason=reason)
+                self._save_wip("the harness failed")
         finally:
+            if self.on_machine:
+                self._read_disk("end")
             self.write_result()
         return self.result
+
+    def _read_disk(self, when: str) -> dict[str, Any] | None:
+        disk = self.result.setdefault("disk", {})
+        try:
+            found = self.disk_reader()
+        except OSError:
+            return None
+        disk[when] = found
+        return found
+
+    def _disk_check(self) -> None:
+        """On the machine, before any work: room for this job (`disk.py`). Short of
+        `CLEAN_BELOW` free, clean what this user's jobs can do without first; still short of
+        `FLOOR`, stop on the machine's account, never the item's."""
+        found = self._read_disk("start")
+        self.result["disk"]["runner"] = os.environ.get("RUNNER_NAME", "")
+        if found is None or found["free"] >= disk_mod.CLEAN_BELOW:
+            return
+        self.result["disk"]["cleaned"] = disk_mod.clean(self.cfg.root, self.env)
+        found = self._read_disk("after_clean") or found
+        if found["free"] < disk_mod.FLOOR:
+            self.result["infra_scope"] = "machine"
+            raise Interrupt(f"the machine's disk is {disk_mod.describe(found)}, under the "
+                            f"{disk_mod.size(disk_mod.FLOOR)} a job needs, even after cleaning",
+                            "infra")
 
     # ------------------------------------------------------------------ an item
 
@@ -487,7 +534,7 @@ class Worker:
             conflict_text = (
                 data("\n".join(conflicts), "Files merged with conflict markers")
                 if conflicts else "The merge of `main` into the branch was clean."
-            )
+            ) + self.carry_build
             prompt = self.render(
                 "revise",
                 number=number, repo=self.cfg.repo, branch=plan["branch"], base=self.base_sha,
@@ -523,6 +570,37 @@ class Worker:
             gate_list=self._gate_list(),
         )
         return "build", prompt + self._handoff_text()
+
+    def _cleared_notes(self, conflicts: list[str]) -> tuple[str, str]:
+        """What a conflict revision of a cleared change tells its builder and its reviewer, when
+        it starts from the commit the review rule cleared: only its own review stands between
+        the resolution and `main`. ("", "") for any other run. Deliver decides the carry from
+        git alone (`deliver._carry`)."""
+        clear = self.plan.get("cleared")
+        if (self.plan.get("action") != "revise" or self.plan.get("source") != "conflict"
+                or not isinstance(clear, dict) or not self.start_sha
+                or clear.get("sha") != self.start_sha):
+            return "", ""
+        by = f" ({clear['by']})" if clear.get("by") else ""
+        cleared_at = f"at `{self.start_sha[:12]}`{by}"
+        build = (f"\n\nThe reviews had cleared this change {cleared_at} before `main` moved. "
+                 "Resolve the conflicts and change nothing else: if this revision changes only "
+                 "the conflicted files and its reviewer approves, it merges without another "
+                 "review run. If making it correct takes more (say `main` renamed something the "
+                 "change uses), make that change anyway and say so in your report: it then goes "
+                 "back to a review run.")
+        what = ("the builder resolved the conflicts in " + ", ".join(f"`{c}`" for c in conflicts)
+                if conflicts else "the merge was clean")
+        review = (f"This revision resolves a conflict on a change the review rule had already "
+                  f"cleared {cleared_at}: `main` moved and the branch no longer merged, so the "
+                  f"harness merged `main` into it and {what}. If you approve and the revision "
+                  "changed nothing beyond those files, it merges with no further review: yours "
+                  "is the only review of the resolution, so judge it hardest. In each conflicted "
+                  "file both `main`'s change and the branch's change must survive with their "
+                  "meaning, nothing `main` brought may be dropped or reverted, and the merged "
+                  "whole must still be correct. `git log --merges -1` finds the merge commit, and "
+                  "`git show --remerge-diff <it>` shows how each conflict was resolved.")
+        return build, review
 
     def _fix_prompt(self, cycle: int, findings: list[Finding], failures: str,
                     label: str = "Blocking findings") -> str:
@@ -773,6 +851,7 @@ class Worker:
     def _item(self) -> None:
         conflicts = self._prepare()
         assert self.wt is not None
+        self.carry_build, self.carry_review = self._cleared_notes(conflicts)
         if self.plan_seat is not None:
             self._planning()
         findings: list[Finding] = [_finding(f) for f in self.plan.get("previous_findings") or []]
@@ -805,7 +884,8 @@ class Worker:
                     return
                 report = checked
             if self.review_seat is None:
-                # No seat here may review (a weak one never does): a review run judges it.
+                # No seat here reviews in the run (a weak one only in a review run): a review
+                # run judges it.
                 self.result.update(status="built", reason=(
                     "built; no model on this subscription may review it, so it waits for a "
                     "review run" + (f", with {len(open_self_check)} self-check finding(s) still "
@@ -818,6 +898,9 @@ class Worker:
                            + "The builder's own self checks ran out with these findings still "
                            "open; judge them too:\n\n"
                            + self._findings_text(open_self_check, "Open self-check findings"))
+            if self.carry_review:
+                earlier = context or (self._findings_text(findings) if findings else "")
+                context = (earlier + "\n\n" if earlier else "") + self.carry_review
             review = self._review(cycle, report, results, findings, context=context)
             entry["review"] = review.to_dict()
             if not review.readable:
@@ -879,9 +962,10 @@ class Worker:
             raise Interrupt(found[0], found[1])
 
     def _second_review(self) -> None:
-        """A review run: a medium or strong model reads a bot pull request. Nothing is built or
-        pushed: the verdict goes to `deliver`, which merges once one strong approval, or two
-        medium ones of different families, hold for the same commit, or asks for a revision.
+        """A review run: a model reads a bot pull request (a weak one only for an easy item, where
+        its approval counts toward the review rule). Nothing is built or pushed: the verdict goes
+        to `deliver`, which merges once the approvals for the same commit meet the review rule
+        (`review_rule.py`), or asks for a revision.
         Nothing is installed or run either: the reviewer holds another subscription's login, and
         the builder's code (a postinstall script, a test) must not run beside it. CI runs every
         check on the pull request before it can merge."""
@@ -896,8 +980,8 @@ class Worker:
                   else "Nobody has approved it yet.")
         context = (f"This is a review run. `{builder}` built this change; you are "
                    f"`{self.provider.family}` on `{seat.model}` ({seat.tier} tier). It merges once "
-                   "one strong model, or two medium models of different families, approve the "
-                   f"same commit. {so_far} Dependencies are not installed in this run and you "
+                   f"{review_rule.SUMMARY} approved the same commit. {so_far} Dependencies are "
+                   "not installed in this run and you "
                    "should not run the branch's code: read it. CI runs every check on the pull "
                    "request before it can merge.")
         open_findings = [_finding(f) for f in self.plan.get("self_check_findings") or []]

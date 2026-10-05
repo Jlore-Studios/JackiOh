@@ -1,5 +1,5 @@
 // C #88 Siphon Squad — SPEC §8.6 row 88, BUILD M9 Classic row C 88: "Live while face-down (R403): its aura
-// works from the moment it is set; Start of Turn: Reveal (R658) shows its face at its controller's next
+// works from the moment it is set; Start of Turn: Reveal (R665) shows its face at its controller's next
 // start of turn, still armed; enemy Units have −X Attack, X twice the number of Units the opponent
 // controls, recomputed on every change and floored at 0; whenever the opponent controls no Units, at any
 // state check including the one right after it is set, it Tributes itself; until it reveals, the
@@ -62,7 +62,7 @@ describe("C #88 Siphon Squad", () => {
       expect(attackOf(s, "p2", 2)).toBe(5);
     });
 
-    it("R658 Start of Turn: Reveal — at its controller's next start of turn it shows its face, still armed", () => {
+    it("R665 Start of Turn: Reveal — at its controller's next start of turn it shows its face, still armed", () => {
       const s = setAgainst([VANILLA, MENACE]);
       expect(s.card(SIPHON).revealed).not.toBe(true);
       s.endTurn(); // p2's turn: not its controller's, nothing shows.

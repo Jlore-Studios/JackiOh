@@ -9,9 +9,10 @@
 # only its own login; bot/machine/README.md). The machine starts itself when such a job queues
 # and powers off when idle. gate, plan and deliver always run on GitHub's runners.
 #
-# gate starts nothing unless there is work a free subscription can take, and when the best one
-# for it is the shared Claude subscription (claude-1), waits until it is quiet: nobody else is
-# spending it, apart from the partner bot (bright-bots-harness). plan and deliver hold the bot
+# gate starts nothing unless there is work a free subscription can take; it no longer waits
+# for the shared Claude subscription (claude-1) to be quiet, though a run on claude-1 still
+# names its model step so the partner bot (bright-bots-harness) excuses the spending.
+# plan and deliver hold the bot
 # account's token and run no model. gate and work hold a model secret and no GitHub write token;
 # work holds only the one secret of the subscription plan chose, and its output is a result file
 # and a git bundle that deliver checks for itself before pushing.
@@ -111,6 +112,8 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_2' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_3 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_3' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_4 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_4' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_5 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_5' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
           INPUT_ITEM: ${{ github.event.inputs.item }}
@@ -211,6 +214,8 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_2' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_3 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_3' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_4 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_4' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_5 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_5' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
           QUIET_OK: ${{ needs.gate.outputs.quiet_ok }}
@@ -249,6 +254,14 @@ jobs:
       - name: Forget the last job's worktrees
         if: ${{ !startsWith(needs.plan.outputs.runs_on || 'ubuntu-latest', 'ubuntu-') }}
         run: git -C "$GITHUB_WORKSPACE" worktree prune 2>/dev/null || true
+
+      # On the machine, the job's temporary files go in RUNNER_TEMP, which is emptied when the
+      # job ends, not in the /tmp every subscription's jobs share (bot/machine/README.md, Disk).
+      - name: Keep the job's temporary files with the job
+        if: ${{ !startsWith(needs.plan.outputs.runs_on || 'ubuntu-latest', 'ubuntu-') }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/tmp"
+          echo "TMPDIR=$RUNNER_TEMP/tmp" >> "$GITHUB_ENV"
 
       - name: Checkout the default branch
         uses: actions/checkout@v4
@@ -394,6 +407,8 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_2' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_3 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_3' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_4 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_4' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_5 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_5' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
           PLAN_ACTION: ${{ needs.plan.outputs.action }}

@@ -39,7 +39,6 @@ import {
   codeFieldSegmentTestid,
   codeFieldTestid,
   inviteTestid,
-  landingStepTestid,
   landingTestid,
   loginTestid,
   resetTestid,
@@ -157,7 +156,6 @@ describe("B39 the landing page fits 360, 390, 768 and 1280 px", () => {
       for (const cta of LANDING_CTAS) expectOnScreen(cta, viewport);
       // B38: the fan is drawn (decoratively) and is part of what must fit.
       cy.get(byTestid(landingTestid.fan)).should("exist");
-      cy.get(byTestid(landingTestid.howItPlays)).should("be.visible");
 
       expectNoHorizontalOverflow(viewport);
     });
@@ -302,38 +300,4 @@ describe("a phone on its side reaches each auth form's button without scrolling"
       releaseRecoverySession();
     });
   });
-});
-
-// "How it plays" is four tiles. Rows of unequal length (three and one) read as a tile left over,
-// so every row holds the same number of tiles, at each width the grid changes near.
-
-const STEP_TILES = 4;
-const STEP_WIDTHS = [
-  { label: "phone", width: 390, height: 844 },
-  { label: "tablet", width: 768, height: 1024 },
-  { label: "phone on its side", width: 844, height: 390 },
-  { label: "small laptop", width: 1000, height: 700 },
-  { label: "desktop", width: 1280, height: 720 },
-] as const;
-
-describe("the landing's four steps never lay out three and one", () => {
-  for (const viewport of STEP_WIDTHS) {
-    it(`every row of steps is the same length at ${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`, () => {
-      cy.viewport(viewport.width, viewport.height);
-      cy.mount(<LandingRoute />);
-      cy.get(byTestid(landingStepTestid(STEP_TILES - 1))).should("be.visible");
-      cy.document().should((doc) => {
-        const rows = new Map<number, number>();
-        for (let index = 0; index < STEP_TILES; index += 1) {
-          const tile = doc.querySelector(byTestid(landingStepTestid(index)));
-          expect(tile, `step ${String(index)} is mounted`).to.not.eq(null);
-          if (tile === null) return;
-          const top = Math.round(tile.getBoundingClientRect().top);
-          rows.set(top, (rows.get(top) ?? 0) + 1);
-        }
-        const lengths = [...rows.values()];
-        expect(new Set(lengths).size, `row lengths ${lengths.join(", ")}`).to.eq(1);
-      });
-    });
-  }
 });

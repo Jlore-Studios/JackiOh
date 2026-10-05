@@ -16,7 +16,7 @@
 //     routes render the same picker with the same `data-prompt-kind`. An activation (R384) is
 //     built on this route too — its targets, modes and Tribute — and submits an `activate`; so is
 //     a play's payment: the Plague Tokens paying a graveyard play (Classic #74, a `number` picker
-//     of chips). A targeting cost's discards (Classic #89) are random at pay time (R654) and need
+//     of chips). A targeting cost's discards (Classic #89) are random at pay time (R661) and need
 //     no picker.
 //
 // A card option is drawn as the card in play (faces.ts, SPEC §10.10): a card the view lists — a hand

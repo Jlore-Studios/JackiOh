@@ -305,7 +305,7 @@ describe("C #90 In Too Deep", () => {
       expect(s.pile("p1", "graveyard")).toEqual([]);
     });
 
-    it("R471 R661 reward D: three Plague Token placements on the one permanent a single prompt of yours names, then quest 5", () => {
+    it("R471 R668 reward D: three Plague Token placements on the one permanent a single prompt of yours names, then quest 5", () => {
       const s = scenario({ p1: { backrow: [ITD], field: [VANILLA], ...SPARE }, p2: { field: [MENACE], ...SPARE } });
       onQuest(s, "2", 2);
       anyAction(s);
@@ -748,7 +748,7 @@ describe("C #90 In Too Deep", () => {
         s.answer(foe.id);
         placements += 1;
       }
-      // One prompt per D grant (R661): two answers, six counters.
+      // One prompt per D grant (R668): two answers, six counters.
       expect(placements).toBe(2);
       expect(s.card(foe).counters.plague).toBe(6);
       expect(s.events.filter((e) => e.type === "buffed")).toHaveLength(1);

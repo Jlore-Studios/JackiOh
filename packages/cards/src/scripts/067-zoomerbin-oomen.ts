@@ -14,7 +14,7 @@
 // R47: a lane-targeted summon into an occupied zone fizzles, and §8's Conventions keep
 // the unit on the field regardless — "the unit still enters". `summon`'s `zoneFor`/`canPlace`
 // already implements exactly that (reserved or occupied → no zone → nothing created). A Locked
-// zone is this card's own override of R660 (summons enter Locked zones unless the card says
+// zone is this card's own override of R667 (summons enter Locked zones unless the card says
 // otherwise; §8: "zone occupied or Locked → fizzles"), so the script checks the Lock itself.
 //
 // §3.2 and R33: `summonOnto` leaves anything that is not a Field Spell face-down, and only the
@@ -66,7 +66,7 @@ function oomen(pool: CardQuery, radiant: boolean): Script {
       const at = slotOf(ctx.state, self);
       // Off the field there is no "this lane" to summon into, so nothing happens (§3.1).
       if (at === null) return [];
-      // R660's card-specific override: a Locked zone fizzles this summon (§8 row 67).
+      // R667's card-specific override: a Locked zone fizzles this summon (§8 row 67).
       if (isLocked(ctx.state, { player: ctx.controller, row: "backrow", lane: at.lane })) return [];
       return [summonRandom({ query: pool, player: "self", lane: at.lane, radiant })];
     },

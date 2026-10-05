@@ -3,7 +3,7 @@
 //   Radiant: "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random keywords."
 //
 // Patch v0.1.1 (issue #27) changed three things, and R354 records how they are read: the discard is
-// random ("not of your choice", so R654's random default, never a prompt), the Radiant face's tokens
+// random ("not of your choice", so R661's random default, never a prompt), the Radiant face's tokens
 // gain a third keyword on top of being Radiant ("Modify": the change is added to the face the
 // Radiant pass gave it, R276), and the card is tagged CN.
 //

@@ -5,7 +5,7 @@
 //             Activate: This turn, each card you play is replaced by a Radiant Book of Flame."
 //   (discards: 666 on the base face — the whole hand, the joke — and 6 on the Radiant face.)
 //
-// The Cry (a Field Spell's Cry) discards {discards} random cards (R654): when the hand holds that
+// The Cry (a Field Spell's Cry) discards {discards} random cards (R661): when the hand holds that
 // many or fewer there is nothing to choose, and the whole hand goes (a discard all the same, so
 // C #64 sees each card). An empty hand discards nothing.
 //

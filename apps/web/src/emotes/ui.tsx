@@ -1,18 +1,19 @@
 // The emote UI (issue §2, §5): the picker that opens on your own portrait, the one-item "Mute
 // emotes" menu on the opponent's, and the bubble/sticker that pops out of a hero.
 //
-// Placement is inside the hero element (`position: relative`), so it needs no coordinates: the
-// voice lines sit on an arc above the portrait, the emoji in a row under them, the bubble or
-// sticker beside the portrait — `.emote-*` in emotes.css owns the geometry. Everything here is
+// Placement is inside the hero element (`position: relative`), so it needs no board coordinates:
+// the voice lines sit on an arc above the portrait, the emoji in a row under them, the bubble or
+// sticker beside the portrait — `.emote-*` in emotes.css owns the geometry, and an open menu only
+// measures itself once to slide back onto the screen (`useKeepOnScreen`, #219). Everything here is
 // cosmetic (R643): a menu pick reports the emote and the caller decides how it travels.
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactElement, type RefObject } from "react";
 
 import type { EmojiEmoteId, EmoteId, VoiceEmoteId } from "@jackioh/shared";
 import { EMOJI_EMOTE_IDS, VOICE_EMOTE_IDS, isVoiceEmote, type EmoteGate } from "@jackioh/shared";
 
 import { EmojiArt, EMOJI_LABEL } from "./EmojiArt.tsx";
-import { EMOTE_MENU_TICK_MS } from "./config.ts";
+import { EMOTE_MENU_EDGE_PX, EMOTE_MENU_TICK_MS } from "./config.ts";
 import type { EmoteShow as EmoteShowState } from "./session.ts";
 import "./emotes.css";
 
@@ -24,7 +25,11 @@ const VOICE_LABEL: Record<VoiceEmoteId, string> = {
   threaten: "Threaten",
 };
 
-/** The arc the five voice buttons sit on: how far each dips below the arc's crown, in px. */
+/**
+ * The arc the five voice buttons sit on: how far each dips below the arc's crown, in px. Each item
+ * carries its drop as `--emote-arc-drop`, which emotes.css turns into a translateY, and flattens on
+ * a phone held upright, where the voice lines wrap onto two rows.
+ */
 const ARC_DROP: readonly number[] = [14, 4, 0, 4, 14];
 
 /**
@@ -51,6 +56,42 @@ function useMenuLifetime(open: boolean, onClose: () => void): void {
 }
 
 /**
+ * How far to slide a menu centred on its portrait so it stays `margin` px inside a viewport
+ * `viewportWidth` wide (#219): right by what pokes out on the left, left by what pokes out on the
+ * right, nothing when it fits. A menu too wide for both keeps its left edge on the screen.
+ */
+export function menuShift(rect: { left: number; right: number }, viewportWidth: number, margin: number): number {
+  if (rect.left < margin) return margin - rect.left;
+  if (rect.right > viewportWidth - margin) return Math.max(viewportWidth - margin - rect.right, margin - rect.left);
+  return 0;
+}
+
+/**
+ * Keeps an open menu on the screen (#219). emotes.css centres the menu on the portrait, and a seat
+ * puts the portrait anywhere from the screen's left edge (a phone) to its middle, so once laid out
+ * the menu measures itself and slides sideways by `menuShift` through `--emote-menu-shift`, which
+ * the CSS adds to its centring transform. A layout effect, so the menu never paints off the screen.
+ * The measure first puts the variable back to 0: StrictMode replays this effect in dev (main.tsx
+ * mounts the app under it), and a re-run that read the shift the first run applied would take the
+ * slid menu for centred and write 0 back — the rect carries the transform.
+ */
+function useKeepOnScreen(ref: RefObject<HTMLDivElement | null>): void {
+  useLayoutEffect(() => {
+    const menu = ref.current;
+    if (menu === null) return;
+    menu.style.setProperty("--emote-menu-shift", "0px");
+    const rect = menu.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth;
+    // No layout (jsdom, or a hidden board): nothing to measure, so the menu stays centred.
+    if (rect.width === 0 || viewportWidth === 0) {
+      menu.style.removeProperty("--emote-menu-shift");
+      return;
+    }
+    menu.style.setProperty("--emote-menu-shift", `${menuShift(rect, viewportWidth, EMOTE_MENU_EDGE_PX)}px`);
+  }, [ref]);
+}
+
+/**
  * Your portrait's menu: the five voice lines on their arc, the five emoji below. `gate` is the
  * shared limiter's live reading — while limited the items grey and carry the wait in seconds,
  * and the press reports nothing (R643). Re-polled every EMOTE_MENU_TICK_MS so the wait counts down.
@@ -67,6 +108,8 @@ export function EmoteMenu({
   onClose: () => void;
 }): ReactElement {
   useMenuLifetime(true, onClose);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useKeepOnScreen(menuRef);
   const [, forceTick] = useState(0);
   useEffect(() => {
     const timer = window.setInterval(() => forceTick((tick) => tick + 1), EMOTE_MENU_TICK_MS);
@@ -84,6 +127,7 @@ export function EmoteMenu({
 
   return (
     <div
+      ref={menuRef}
       className={`emote-menu emote-menu-${side}`}
       data-emote-menu="true"
       data-testid="emote-menu"
@@ -105,7 +149,7 @@ export function EmoteMenu({
             data-testid={`emote-${emote}`}
             data-limited={limited ? "true" : undefined}
             disabled={limited}
-            style={{ transform: `translateY(${ARC_DROP[index] ?? 0}px)` }}
+            style={{ "--emote-arc-drop": `${ARC_DROP[index] ?? 0}px` } as React.CSSProperties}
             onClick={pick(emote)}
           >
             {VOICE_LABEL[emote]}
@@ -150,8 +194,11 @@ export function MuteMenu({
   onClose: () => void;
 }): ReactElement {
   useMenuLifetime(true, onClose);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useKeepOnScreen(menuRef);
   return (
     <div
+      ref={menuRef}
       className="emote-menu emote-menu-mute"
       data-emote-menu="true"
       data-testid="emote-mute-menu"

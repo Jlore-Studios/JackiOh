@@ -11,10 +11,10 @@
 //     Transmutable Toxins, R60);
 //   - `placePlagueTokens`: "Place N Plague Tokens" with no card named — N placements, all on the one
 //     permanent the placer chooses in a single prompt of their own over every permanent on the field,
-//     either side, face-down included (R661; Classic #61, #70, #76, #90 reward D);
+//     either side, face-down included (R668; Classic #61, #70, #76, #90 reward D);
 //   - `consumePlague`: take tokens off (Classic #78 Mutate Spell).
 //
-// PROMPTS (R113, R122, R661). `placePlagueTokens` opens one `target` prompt naming the single
+// PROMPTS (R113, R122, R668). `placePlagueTokens` opens one `target` prompt naming the single
 // permanent all of its placements go on. The prompt is opened by the effect, so the list it stands
 // in parks its rest on `state.work` as any asking effect's does; the answer places every placement
 // on the pick and drains what the prompt interrupted (`answerPlacement`, registered with
@@ -177,7 +177,7 @@ function askPlacement(sink: EngineSink, player: PendingChoice["playerId"], resum
 }
 
 /**
- * "Place N Plague Tokens" (B5 E19, R471, R661): `count` placements of `amount` (default 1), all on
+ * "Place N Plague Tokens" (B5 E19, R471, R668): `count` placements of `amount` (default 1), all on
  * the one permanent the running card's controller chooses — either side, face-down cards included —
  * in a single prompt. The prompt opens as this effect applies; its answer places every placement on
  * the pick, then what the prompt interrupted resumes. With no permanent on the field the placements
@@ -203,7 +203,7 @@ export function placePlagueTokens(args: { count: number; amount?: number }): Eff
 }
 
 /**
- * R122, R661: the answer to the one placement prompt — validated as any prompt's, closed, every
+ * R122, R668: the answer to the one placement prompt — validated as any prompt's, closed, every
  * placement made on the pick (a card that is no longer a permanent on the field takes nothing),
  * then what the prompt interrupted resumes (R113).
  */
