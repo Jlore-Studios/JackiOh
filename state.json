@@ -2524,10 +2524,8 @@
       "stop_requested": false
     },
     "287": {
-      "action": "review",
-      "asks": [
-        "c:5995443818"
-      ],
+      "action": "revise",
+      "asks": [],
       "ci_fixes": 1,
       "ci_reruns": {
         "5f724b531d6f9b67f6b82afe817adbc866dfb1db": 1
@@ -2558,11 +2556,11 @@
         }
       ],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "devin",
       "question": "",
       "queued_at": "2026-10-05T13:28:51Z",
       "requested_by": "jgoetzmann",
-      "run_id": "37309579511",
+      "run_id": "37317175011",
       "self_check_findings": [
         {
           "claim": "Conflict markers are still in SPEC.md, packages/engine/test/rulings.test.ts.",
@@ -2584,9 +2582,11 @@
         }
       ],
       "source": "request",
-      "started_at": "2026-10-05T12:28:07Z",
+      "started_at": "2026-10-05T13:29:54Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:5995443818"
+      ],
       "votes": {
         "approvals": [],
         "builder": "cognition",
@@ -3292,9 +3292,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-05T13:29:14Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37317082733",
-    "what": "build #294 on devin"
+    "at": "2026-10-05T13:29:54Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37317175011",
+    "what": "revise #287 on devin"
   },
   "last_sweep": {
     "at": "2026-10-05T13:27:33Z",
