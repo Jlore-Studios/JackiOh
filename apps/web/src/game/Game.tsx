@@ -26,6 +26,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useContext,
   useMemo,
   useRef,
   useState,
@@ -52,11 +53,16 @@ import {
   animTestid,
   createAnimationQueue,
   newEventsSince,
+  planEntries,
+  slamEntries,
   type AnimationEntry,
   type AnimationQueue,
 } from "./animations.ts";
 import { sideView, testid, type BoardControl, type ClickTarget } from "./contract.ts";
-import { damageFeel, damageTier, type DamageTier } from "./damageFeel.ts";
+import { CatalogContext } from "./catalog.ts";
+import { damageFeel, damageTier, SLAM_LAND_AT, UNIT_SLAM, type DamageTier } from "./damageFeel.ts";
+import { slamSand } from "./SandSurface.tsx";
+import { createSlamResolver } from "./slamResolver.ts";
 import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import FxLayer from "../fx/FxLayer.tsx";
@@ -226,8 +232,7 @@ export default function Game({
   const osReducesMotion = useOsReducedMotion();
   const reducedMotion = useSetting("reduceMotion") || osReducesMotion;
   const hitStopTimer = useRef<number | null>(null);
-  const triggerHitStop = useCallback((amount: number): void => {
-    const durationMs = damageFeel(amount).hitStopMs;
+  const triggerHitStopMs = useCallback((durationMs: number): void => {
     if (durationMs <= 0) return;
     if (hitStopTimer.current !== null) window.clearTimeout(hitStopTimer.current);
     setHitStop(true);
@@ -236,6 +241,7 @@ export default function Game({
       setHitStop(false);
     }, durationMs);
   }, []);
+  const triggerHitStop = useCallback((amount: number): void => triggerHitStopMs(damageFeel(amount).hitStopMs), [triggerHitStopMs]);
   useEffect(
     () => () => {
       if (hitStopTimer.current !== null) window.clearTimeout(hitStopTimer.current);
@@ -273,11 +279,34 @@ export default function Game({
   useEffect(() => {
     if (!reducedMotion && inFlightDamage !== undefined) triggerHitStop(inFlightDamage.amount);
   }, [inFlightDamage, reducedMotion, triggerHitStop]);
+  // #185: a landing Unit's hit-stop falls on its landing beat, after any anticipation (Reduce
+  // motion has none, and starts it as the action arrives, below).
+  const inFlightSlam = inFlight?.slam;
+  const inFlightMs = inFlight?.durationMs ?? 0;
+  useEffect(() => {
+    if (reducedMotion || inFlightSlam === undefined) return undefined;
+    const landsAt = inFlightSlam.anticipationMs + (inFlightMs - inFlightSlam.anticipationMs) * SLAM_LAND_AT;
+    const timer = window.setTimeout(() => {
+      triggerHitStopMs(inFlightSlam.hitStopMs);
+      // The cracks and the crater go into the sand under the cards, and fade there (SandSurface).
+      const board = UNIT_SLAM[inFlightSlam.tier].board;
+      const marks = board === "crater" ? (["crater", "cracks"] as const) : board === "cracks" ? (["cracks"] as const) : [];
+      const zone = inFlightSlam.zone === null ? null : root.current?.querySelector(`[data-testid="${inFlightSlam.zone}"]`);
+      if (marks.length > 0 && zone !== null && zone !== undefined) slamSand(zone, { marks });
+    }, landsAt);
+    return () => window.clearTimeout(timer);
+  }, [inFlightSlam, inFlightMs, reducedMotion, triggerHitStopMs]);
+  // #185: a landing Unit's tier comes from the newest view and the catalog, read at each enqueue.
+  const catalog = useContext(CatalogContext);
+  const catalogRef = useRef(catalog);
+  catalogRef.current = catalog;
+  const slamResolver = useMemo(() => createSlamResolver(() => latest.current, () => catalogRef.current), []);
   const builtFor = useRef(reducedMotion);
   if (queue.current === null || builtFor.current !== reducedMotion) {
     builtFor.current = reducedMotion;
     queue.current = createAnimationQueue({
       reducedMotion,
+      slamOf: slamResolver,
       onSettled: () => {
         setShown(latest.current);
       },
@@ -369,11 +398,14 @@ export default function Game({
           .filter((event): event is Extract<GameEvent, { type: "damage" }> => event.type === "damage")
           .reduce((amount, event) => Math.max(amount, event.amount), 0);
         triggerHitStop(largest);
+        // #185: and the heaviest landing's, from the same capped share the queue would give it.
+        const slams = slamEntries(planEntries(fresh, previous, true), slamResolver, true);
+        triggerHitStopMs(slams.reduce((ms, entry) => Math.max(ms, entry.slam?.hitStopMs ?? 0), 0));
       }
       runner.enqueue(fresh, previous);
     }
     if (runner.idle()) setShown(view);
-  }, [view, runner, reducedMotion, triggerHitStop]);
+  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver]);
 
   // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
   const legal = shown === view ? offered : NOTHING_LEGAL;
@@ -518,11 +550,19 @@ export default function Game({
       data-viewer={shown.viewer}
       data-speaking={speaking ? "true" : undefined}
       data-impact-tier={impactTier}
+      data-slam-tier={inFlightSlam === undefined || inFlightSlam.tier === "tiny" ? undefined : inFlightSlam.tier}
+      data-slam-side={inFlightSlam?.side}
       data-hit-stop={hitStop ? "true" : undefined}
       data-reduced-motion={reducedMotion ? "true" : undefined}
-      style={impactFeel === undefined ? undefined : {
-        "--impact-number-scale": String(impactFeel.numberScale),
-        "--impact-number-linger": `${String(impactFeel.numberLingerMs)}ms`,
+      style={impactFeel === undefined && inFlightSlam === undefined ? undefined : {
+        ...(impactFeel === undefined ? {} : {
+          "--impact-number-scale": String(impactFeel.numberScale),
+          "--impact-number-linger": `${String(impactFeel.numberLingerMs)}ms`,
+        }),
+        ...(inFlightSlam === undefined ? {} : {
+          "--slam-anticipation": `${String(inFlightSlam.anticipationMs)}ms`,
+          "--slam-land-ms": `${String(Math.round((inFlightMs - inFlightSlam.anticipationMs) * SLAM_LAND_AT))}ms`,
+        }),
       } as CSSProperties}
     >
       {inFlight === null ? null : (

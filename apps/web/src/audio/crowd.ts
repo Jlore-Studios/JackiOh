@@ -1,7 +1,7 @@
 // A procedural venue bed and public-event crowd reactions. It owns no game data: callers pass
 // damage amounts already present in the rendered event stream.
 
-import { CROWD_FEEL, damageFeel } from "../game/damageFeel.ts";
+import { CROWD_FEEL, damageFeel, UNIT_SLAM, type SlamTier } from "../game/damageFeel.ts";
 import { noiseBuffer } from "./sfx.ts";
 import type { AudioEngine } from "./types.ts";
 
@@ -12,6 +12,8 @@ type Cancel = () => void;
 export type CrowdDirector = {
   start(): void;
   observeDamage(amount: number): void;
+  /** #185: a landing Unit's tier; a Large one murmurs, a Huge one stirs, a MASSIVE one excites. */
+  observeSlam(tier: SlamTier): void;
   end(): void;
   dispose(): void;
 };
@@ -25,6 +27,16 @@ const DB_TO_GAIN = 10 ** (-CROWD_FEEL.ambientDuckDb / 20);
 const PATRON_VARIANTS = [0.82, 0.94, 1.06, 1.18] as const;
 const BED_SEAM_SAMPLES = 128;
 type ReactionKind = keyof typeof CROWD_FEEL.reactionMs;
+/** The reactions an event can start; cheer and applause only ever follow one. */
+type CrowdReaction = "ooh" | "gasp" | "roar";
+const REACTION_RANK: Readonly<Record<CrowdReaction, number>> = { ooh: 1, gasp: 2, roar: 3 };
+/** #185: a landing's murmur, stirring and excitement, in the reactions the venue has. */
+const SLAM_CROWD: Readonly<Record<"none" | "murmur" | "anticipation" | "excited", CrowdReaction | null>> = {
+  none: null,
+  murmur: "ooh",
+  anticipation: "gasp",
+  excited: "roar",
+};
 const venueBuffers = new WeakMap<BaseAudioContext, Map<number, AudioBuffer>>();
 
 function defaultLater(ms: number, run: () => void): Cancel {
@@ -187,7 +199,7 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
   let timer: Cancel | null = null;
   let debounce: Cancel | null = null;
   const reactionTimers = new Set<Cancel>();
-  let largest = 0;
+  let pending: { kind: CrowdReaction; tails: boolean } | null = null;
 
   const clearTimers = (): void => {
     timer?.();
@@ -238,6 +250,37 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
     schedulePatron();
   };
 
+  // Reactions begin one after another as the animation queue reaches them. Resetting this quiet period
+  // makes one resolution settle on its strongest moment (its largest hit, its heaviest landing)
+  // rather than reacting midway.
+  const observe = (kind: CrowdReaction, tails: boolean): void => {
+    if (!running || ending) return;
+    if (pending === null || REACTION_RANK[kind] > REACTION_RANK[pending.kind] || (REACTION_RANK[kind] === REACTION_RANK[pending.kind] && tails)) {
+      pending = { kind, tails };
+    }
+    debounce?.();
+    debounce = later(CROWD_FEEL.reactionDebounceMs, () => {
+      debounce = null;
+      const due = pending;
+      pending = null;
+      if (output === null || due === null) return;
+      let durationMs = reaction(output, due.kind, next() * 2 - 1);
+      const addTail = (delayMs: number, tail: ReactionKind): void => {
+        let cancel: Cancel = () => undefined;
+        cancel = later(delayMs, () => {
+          reactionTimers.delete(cancel);
+          if (running && !ending && output !== null) reaction(output, tail, next() * 2 - 1);
+        });
+        reactionTimers.add(cancel);
+        const tailDurationMs = tail === "applause" ? CROWD_FEEL.applauseTailMs : CROWD_FEEL.reactionMs[tail];
+        durationMs = Math.max(durationMs, delayMs + tailDurationMs);
+      };
+      if (due.tails && due.kind === "gasp") addTail(CROWD_FEEL.cheerDelayMs, "cheer");
+      if (due.tails && due.kind === "roar") addTail(CROWD_FEEL.applauseDelayMs, "applause");
+      duckAmbience(output, durationMs);
+    });
+  };
+
   const stateOff = options.engine.subscribeState(() => startBed());
 
   return {
@@ -246,33 +289,13 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
       startBed();
     },
     observeDamage(amount) {
-      const feel = damageFeel(amount);
-      if (!running || ending || feel.crowd === "none") return;
-      largest = Math.max(largest, amount);
-      // Damage entries begin one after another in the animation queue. Resetting this quiet period
-      // makes one multi-hit resolution settle on its final, largest hit rather than cheering midway.
-      debounce?.();
-      debounce = later(CROWD_FEEL.reactionDebounceMs, () => {
-        debounce = null;
-        const reactionFeel = damageFeel(largest);
-        largest = 0;
-        if (output === null || reactionFeel.crowd === "none") return;
-        const kind = reactionFeel.crowd;
-        let durationMs = reaction(output, kind, next() * 2 - 1);
-        const addTail = (delayMs: number, tail: ReactionKind): void => {
-          let cancel: Cancel = () => undefined;
-          cancel = later(delayMs, () => {
-            reactionTimers.delete(cancel);
-            if (running && !ending && output !== null) reaction(output, tail, next() * 2 - 1);
-          });
-          reactionTimers.add(cancel);
-          const tailDurationMs = tail === "applause" ? CROWD_FEEL.applauseTailMs : CROWD_FEEL.reactionMs[tail];
-          durationMs = Math.max(durationMs, delayMs + tailDurationMs);
-        };
-        if (kind === "gasp") addTail(CROWD_FEEL.cheerDelayMs, "cheer");
-        if (kind === "roar") addTail(CROWD_FEEL.applauseDelayMs, "applause");
-        duckAmbience(output, durationMs);
-      });
+      const kind = damageFeel(amount).crowd;
+      if (kind !== "none") observe(kind, true);
+    },
+    observeSlam(tier) {
+      const kind = SLAM_CROWD[UNIT_SLAM[tier].crowd];
+      // #185: the crowd is neutral, so a landing draws no cheer or applause after it.
+      if (kind !== null) observe(kind, false);
     },
     end() {
       if (ending) return;

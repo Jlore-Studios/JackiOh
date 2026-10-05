@@ -17,7 +17,8 @@ import { useContext, useEffect, useLayoutEffect, useRef } from "react";
 
 import type { PlayerView } from "@jackioh/shared";
 
-import type { AnimationQueue } from "../game/animations.ts";
+import { landingOf, type AnimationQueue } from "../game/animations.ts";
+import { slamTierFor } from "../game/slamResolver.ts";
 import { CatalogContext, type CardLookup } from "../game/catalog.ts";
 import type { CueCard } from "./cues.ts";
 import { retainAppAudio } from "./appAudio.ts";
@@ -50,6 +51,7 @@ export function cueCard(lookup: CardLookup | null, defId: string): CueCard | und
   if (info.rarity !== undefined) card.rarity = info.rarity;
   const printed = info.def?.printedRarity;
   if (printed !== undefined) card.printedRarity = printed;
+  if (info.text !== "") card.text = info.text;
   return card;
 }
 
@@ -59,6 +61,8 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
   const lookup = useContext(CatalogContext);
   const lookupRef = useRef(lookup);
   lookupRef.current = lookup;
+  const viewRef = useRef(view);
+  viewRef.current = view;
 
   // 1. The music director (R631), made when the board mounts (effect 7) and dropped when it leaves;
   //    the sound director below reaches it through the ref, so it only ever hears this board's.
@@ -79,6 +83,10 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
       quietly(() => musicRef.current?.onEvent(event, planned));
       quietly(() => haptics.onEvent(event, planned));
       if (event.type === "damage") quietly(() => crowdRef.current?.observeDamage(event.amount));
+      // #185: a landing Unit's crowd reaction, through the same quiet period as a hit's, at the tier
+      // the board slams it at (the newest view, as the queue reads it).
+      const landing = landingOf(event);
+      if (landing !== null) quietly(() => crowdRef.current?.observeSlam(slamTierFor(landing, viewRef.current, lookupRef.current)));
     },
   );
   const director = directorRef.current;
@@ -156,8 +164,6 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
 
   // 7. The board's music: entered on mount, with the view it mounted on, and handed back to the menu
   //    on unmount. A layout effect, so the first view reaches it before anything is drawn.
-  const viewRef = useRef(view);
-  viewRef.current = view;
   useLayoutEffect(() => {
     let leave: (() => void) | null = null;
     quietly(() => {

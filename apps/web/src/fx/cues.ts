@@ -26,9 +26,9 @@
 
 import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
-import { ANIMATIONS, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry } from "../game/animations.ts";
+import { ANIMATIONS, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry, type EntrySlam } from "../game/animations.ts";
 import { sideOf, testid, type Side } from "../game/contract.ts";
-import { damageFeel, damageTier } from "../game/damageFeel.ts";
+import { damageFeel, damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
@@ -118,6 +118,10 @@ const TUNING = {
   cast: { count: 24, power: 1 },
   castOpponent: { count: 12, power: 0.8 },
   summonDust: { count: 30, power: 1.1 },
+  // #185: a Small Unit shifts a few grains, a Large one kicks up a cloud, a Huge or MASSIVE one heavy dust.
+  slamGrains: { count: 8, power: 0.5 },
+  slamCloud: { count: 48, power: 1.3 },
+  slamHeavy: { count: 64, power: 1.6 },
   summonGold: { count: 40, power: 1.3 },
   summonPrismatic: { count: 44, power: 1.3 },
   impactSpark: { count: 24, power: 1.2 },
@@ -399,44 +403,84 @@ const cast: Recipe = (event, p) => {
   return [burst(p.env.intensity, "arcane", at, "point", 0, "castOpponent"), ...accent];
 };
 
+/**
+ * #185: when in its entry a Unit hits the table: after the slam's anticipation, at FX_SLAM_AT of the
+ * landing motion that follows it.
+ */
+export function slamLandMs(entry: Pick<AnimationEntry, "slam">, D: number): number {
+  const wait = entry.slam?.anticipationMs ?? 0;
+  return wait + frac(FX_SLAM_AT, D - wait);
+}
+
+/** #185: what the board throws up under a landing Unit, by its tier (UNIT_SLAM's `board`). */
+function slamCues(slam: EntrySlam, i: number, D: number, tgt: string, at: number): FxCue[] {
+  const feel = UNIT_SLAM[slam.tier];
+  const zone = anchor(tgt);
+  const foot = anchor(tgt, FOOT);
+  const cues: FxCue[] = [];
+  switch (feel.board) {
+    case "none":
+      break;
+    case "grains":
+      cues.push(burst(i, "dust", foot, "ring", at, "slamGrains"));
+      break;
+    case "puff":
+      cues.push(burst(i, "dust", foot, "ring", at, "summonDust"));
+      break;
+    case "cloud":
+      cues.push(ring(D, "dust", zone, at), burst(i, "dust", foot, "ring", at, "slamCloud"));
+      break;
+    case "cracks":
+    case "crater":
+      cues.push(ring(D, "dust", zone, at), burst(i, "dust", foot, "ring", at, "slamCloud"), burst(i, "dust", foot, "area", at, "slamHeavy"));
+      break;
+  }
+  if (feel.shockwave) cues.push(ring(D, "dust", viewportCenter(), at));
+  pushShake(cues, i, traumaForShakePx(slam.shakePx), at);
+  return cues;
+}
+
 const summon: Recipe = (event, p) => {
+  // #185: the entry's slam, when it is this event's Unit landing (`slamEntries`).
+  const slam = "instanceId" in event && p.entry.slam?.instanceId === event.instanceId ? p.entry.slam : undefined;
+  const landAt = slamLandMs(p.entry, p.D);
   // B3.1: a backrow card stepping into its unit zone lands like a summon, with no entrance of its own.
   if (event.type === "animated") {
     // B3.1: the card lifts off its backrow zone and lands in its unit zone, where it slams down.
     const home = anchor(testid.zone(sideOf(p.view, event.player), "backrow", event.backrowLane));
-    const slam = frac(FX_SLAM_AT, p.D);
-    return [
-      ghost(p.D, home, anchor(p.tgt)),
-      burst(p.env.intensity, "arcane", home, "point", 0, "animateArcane"),
-      ring(p.D, "dust", anchor(p.tgt), slam),
-      burst(p.env.intensity, "dust", anchor(p.tgt, FOOT), "ring", slam, "summonDust"),
-    ];
+    const lift = [ghost(p.D, home, anchor(p.tgt)), burst(p.env.intensity, "arcane", home, "point", 0, "animateArcane")];
+    if (slam !== undefined) return [...lift, ...slamCues(slam, p.env.intensity, p.D, p.tgt, landAt)];
+    return [...lift, ring(p.D, "dust", anchor(p.tgt), landAt), burst(p.env.intensity, "dust", anchor(p.tgt, FOOT), "ring", landAt, "summonDust")];
   }
   if (event.type !== "summoned") return [];
   const i = p.env.intensity;
-  const slam = frac(FX_SLAM_AT, p.D);
   const facts = event.row === "units" && event.defId !== HIDDEN_ID ? p.env.card(event.defId) : undefined;
-  if (facts === undefined) return [burst(i, "dust", anchor(p.tgt, FOOT), "ring", slam, "summonDust")];
+  if (facts === undefined) return [burst(i, "dust", anchor(p.tgt, FOOT), "ring", landAt, "summonDust")];
 
   const at = anchor(p.tgt);
-  const cues: FxCue[] = [ring(p.D, "dust", at, slam), burst(i, "dust", anchor(p.tgt, FOOT), "ring", slam, "summonDust")];
+  const cues: FxCue[] =
+    slam === undefined
+      ? [ring(p.D, "dust", at, landAt), burst(i, "dust", anchor(p.tgt, FOOT), "ring", landAt, "summonDust")]
+      : slamCues(slam, i, p.D, p.tgt, landAt);
   let entrance = 0;
   if (facts.rarity === "Legendary") {
-    cues.push(rays(p.D, "legendary", at, 0), burst(i, "gold", at, "area", slam, "summonGold"));
+    cues.push(rays(p.D, "legendary", at, 0), burst(i, "gold", at, "area", landAt, "summonGold"));
     entrance = FX_LEGENDARY_TRAUMA;
   } else if (facts.rarity === "Mythic") {
-    cues.push(rays(p.D, "mythic", at, 0), burst(i, "prismatic", at, "area", slam, "summonPrismatic"));
+    cues.push(rays(p.D, "mythic", at, 0), burst(i, "prismatic", at, "area", landAt, "summonPrismatic"));
     entrance = FX_LEGENDARY_TRAUMA;
   }
-  // Issue #124: the unit lands in its family's look as well: its ring and its particles at the slam.
-  const look = lookOf(facts);
-  if (look !== undefined) cues.push(ring(p.D, look.ring, at, slam), burst(i, look.preset, at, "area", slam, "summonAccent"));
+  if (slam !== undefined) {
+    // The slam's own shake is in slamCues; a Legendary's entrance still lands on top of it.
+    pushShake(cues, i, entrance, landAt);
+    return cues;
+  }
   const stats = (facts.attack ?? 0) + (facts.health ?? 0);
   const slamTrauma =
     stats >= FX_SLAM_STATS_MIN
       ? Math.min(FX_SLAM_MAX_TRAUMA, (stats - FX_SLAM_STATS_MIN + 1) * FX_SLAM_TRAUMA_PER_STAT)
       : 0;
-  pushShake(cues, i, slamTrauma + entrance, slam);
+  pushShake(cues, i, slamTrauma + entrance, landAt);
   return cues;
 };
 

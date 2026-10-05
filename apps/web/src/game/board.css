@@ -667,6 +667,30 @@
     calc(var(--sand-size) * -0.25) calc(var(--sand-size) * 0.45) 0 0 rgb(103 61 22 / 34%);
 }
 
+/* #185: a Huge Unit cracks the sand around its zone and a MASSIVE one leaves a crater; both sit
+   under the cards (this surface is below the lanes) and fade like every other mark. */
+.sand-mark--cracks,
+.sand-mark--crater {
+  width: calc(var(--sand-zone) * 1.6);
+  height: auto;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: none;
+  rotate: calc(var(--sand-variation) * 90deg);
+}
+
+.sand-mark--cracks {
+  background: repeating-conic-gradient(from 7deg, rgb(43 25 10 / 62%) 0deg 1.6deg, transparent 1.6deg 29deg);
+  mask: radial-gradient(circle, transparent 28%, #000 34%, #000 58%, transparent 70%);
+}
+
+.sand-mark--crater {
+  width: calc(var(--sand-zone) * 1.25);
+  background:
+    radial-gradient(circle, rgb(33 19 8 / 55%) 0 46%, rgb(255 214 140 / 38%) 54%, transparent 68%);
+}
+
 @keyframes sand-settle {
   0% { scale: 0.45; opacity: 0.95; }
   12% { scale: 1.1; }
@@ -1296,6 +1320,54 @@
   pointer-events: none;
   background: radial-gradient(ellipse at center, transparent 48%, rgb(127 29 29 / 38%));
   animation: giga-vignette-flash 400ms ease-out both;
+}
+
+/* #185 Unit Slam. The landing Unit hangs for its anticipation before its landing motion
+   (animations.css's jk-summon-scale), and the cards around it wobble as it hits: the landing side's
+   for a Large Unit, the whole board's for a Huge one, every card for a MASSIVE one, which also flashes
+   the edges of the screen. None of it plays under Reduce motion; the hit-stop and the sound do. */
+.game:not([data-reduced-motion="true"])[data-slam-tier] [data-animating="summoned"],
+.game:not([data-reduced-motion="true"])[data-slam-tier] [data-animating="animated"] {
+  animation-delay: var(--slam-anticipation, 0ms);
+}
+
+.game:not([data-reduced-motion="true"])[data-slam-tier="large"][data-slam-side="you"] .board [data-testid^="zone-you-"] .card:not([data-animating]),
+.game:not([data-reduced-motion="true"])[data-slam-tier="large"][data-slam-side="opponent"] .board [data-testid^="zone-opponent-"] .card:not([data-animating]) {
+  animation: slam-wobble-slight 220ms ease-in-out both;
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
+}
+
+.game:not([data-reduced-motion="true"])[data-slam-tier="huge"] .board .zone .card:not([data-animating]) {
+  animation: impact-card-wobble 250ms ease-in-out both;
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
+}
+
+.game:not([data-reduced-motion="true"])[data-slam-tier="massive"] .board .card:not([data-animating]) {
+  animation: slam-wobble-hard 320ms ease-in-out both;
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
+}
+
+.game:not([data-reduced-motion="true"])[data-slam-tier="massive"]::after {
+  content: "";
+  position: fixed;
+  z-index: 37;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 52%, rgb(41 24 10 / 42%));
+  animation: giga-vignette-flash 400ms ease-out both;
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
+}
+
+@keyframes slam-wobble-slight {
+  0%, 100% { rotate: 0deg; }
+  35% { rotate: -1deg; }
+  70% { rotate: 0.8deg; }
+}
+
+@keyframes slam-wobble-hard {
+  0%, 100% { rotate: 0deg; translate: 0 0; }
+  25% { rotate: -2.6deg; translate: 0 -3px; }
+  60% { rotate: 2.2deg; translate: 0 1px; }
 }
 
 @keyframes impact-card-wobble {

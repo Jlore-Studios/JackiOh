@@ -248,7 +248,9 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
           const table = ANIMATIONS[entry.type].durationMs;
           const parent = root?.parentElement ?? null;
           if (parent !== null) {
-            parent.style.setProperty(SQUEEZE, (entry.durationMs / table).toFixed(3));
+            // #185: a slam's anticipation is a wait before the motion, not a slower motion.
+            const motionMs = entry.durationMs - (entry.slam?.anticipationMs ?? 0);
+            parent.style.setProperty(SQUEEZE, (motionMs / table).toFixed(3));
           }
           const reached = riderSides(entry);
           if (reached.length > 0) {

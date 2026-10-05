@@ -19,7 +19,30 @@ export const SAND_FEEL = {
   crunchVariants: 4,
 } as const;
 
-type SandMark = { id: number; x: number; y: number; trail: boolean; grain: boolean; build: number; variation: number };
+type SandMark = {
+  id: number;
+  x: number;
+  y: number;
+  trail: boolean;
+  grain: boolean;
+  build: number;
+  variation: number;
+  /** #185: a landing Unit's mark on the sand, sized to its zone (`slamSand`). */
+  slam?: "cracks" | "crater";
+  /** The zone's width, in % of the field, for a slam mark. */
+  size?: number;
+};
+
+/** #185: what a landing leaves in the sand. Cracks are never drawn under Reduce motion. */
+export type SlamSand = { marks: readonly ("cracks" | "crater")[] };
+
+/** The DOM event a landing zone dispatches; it bubbles to the field this surface listens on. */
+export const SLAM_SAND_EVENT = "jk-slam-sand";
+
+/** #185: dispatch a landing's sand marks at `zone` (the field's surface draws them under the cards). */
+export function slamSand(zone: Element, sand: SlamSand): void {
+  zone.dispatchEvent(new CustomEvent<SlamSand>(SLAM_SAND_EVENT, { bubbles: true, detail: sand }));
+}
 
 export type SandSurfaceProps = {
   field: RefObject<HTMLElement | null>;
@@ -115,11 +138,30 @@ export default function SandSurface({ field, disabled }: SandSurfaceProps): Reac
     const up = (event: PointerEvent): void => {
       if (pointer.current?.id === event.pointerId) pointer.current = null;
     };
+    // #185: a slam's cracks and crater, centred on its zone and as wide as it, under the cards.
+    const slam = (event: Event): void => {
+      const detail = (event as CustomEvent<SlamSand>).detail;
+      const zone = event.target;
+      if (!(zone instanceof Element) || detail === undefined) return;
+      const bounds = element.getBoundingClientRect();
+      const box = zone.getBoundingClientRect();
+      if (bounds.width === 0 || bounds.height === 0) return;
+      const x = ((box.left + box.width / 2 - bounds.left) / bounds.width) * 100;
+      const y = ((box.top + box.height / 2 - bounds.top) / bounds.height) * 100;
+      const size = (box.width / bounds.width) * 100;
+      const added = detail.marks.map((kind): SandMark => {
+        markId.current += 1;
+        return { id: markId.current, x, y, trail: false, grain: false, build: 1, variation: variationFor(x, y, markId.current), slam: kind, size };
+      });
+      setMarks((previous) => [...previous, ...added].slice(-SAND_FEEL.maximumMarks));
+    };
+    element.addEventListener(SLAM_SAND_EVENT, slam);
     element.addEventListener("pointerdown", down);
     element.addEventListener("pointermove", move);
     element.addEventListener("pointerup", up);
     element.addEventListener("pointercancel", up);
     return () => {
+      element.removeEventListener(SLAM_SAND_EVENT, slam);
       element.removeEventListener("pointerdown", down);
       element.removeEventListener("pointermove", move);
       element.removeEventListener("pointerup", up);
@@ -131,7 +173,15 @@ export default function SandSurface({ field, disabled }: SandSurfaceProps): Reac
     <span className="sand-surface" aria-hidden="true">
       {marks.map((mark) => (
         <span
-          className={mark.grain ? "sand-mark sand-mark--grain" : mark.trail ? "sand-mark sand-mark--trail" : "sand-mark"}
+          className={
+            mark.slam !== undefined
+              ? `sand-mark sand-mark--${mark.slam}`
+              : mark.grain
+                ? "sand-mark sand-mark--grain"
+                : mark.trail
+                  ? "sand-mark sand-mark--trail"
+                  : "sand-mark"
+          }
           key={mark.id}
           style={{
             "--sand-x": `${String(mark.x)}%`,
@@ -139,6 +189,7 @@ export default function SandSurface({ field, disabled }: SandSurfaceProps): Reac
             "--sand-build": String(mark.build),
             "--sand-variation": String(mark.variation),
             "--sand-fade": `${String(SAND_FEEL.fadeMs)}ms`,
+            ...(mark.size === undefined ? {} : { "--sand-zone": `${String(mark.size)}%` }),
           } as CSSProperties}
         />
       ))}

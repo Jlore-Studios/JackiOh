@@ -1087,9 +1087,12 @@ describe("R506 patch v0.2.0's moments sound the way they went", () => {
   });
 
   it("R203 R506 an Animated card lands with a summon sized by the Unit it is now, and no family accent", () => {
-    const unit = { attack: 4, health: 4 } as unknown as UnitView;
+    const unit = { attack: 4, health: 4, armor: 0, keywords: [] } as unknown as UnitView;
     const cues = cuesFor(SAMPLES.animated, ctx({ unitNow: () => unit, card: () => ({ type: "Field Trap", tags: ["Human"] }) }));
-    expect(cues).toEqual([{ kind: "sfx", id: "summon", params: { amount: 8 }, delayMs: 0 }]);
+    // #185: and with its slam's tier (4 + 4 is Small) and a pitch sample.
+    expect(cues).toEqual([
+      { kind: "sfx", id: "summon", params: { amount: 8, slamTier: "small", variation: expect.any(Number) }, delayMs: 0 },
+    ]);
     expect(cuesFor(SAMPLES.animated, ctx())).toEqual([{ kind: "sfx", id: "summon", delayMs: 0 }]);
   });
 });

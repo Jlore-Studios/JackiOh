@@ -30,7 +30,7 @@
 
 import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP, IMPACT_HEADROOM } from "./constants.ts";
 import type { SfxId, SfxParams, SfxTimbre } from "./types.ts";
-import { damageTier } from "../game/damageFeel.ts";
+import { damageTier, SLAM_PITCH_SPREAD, UNIT_SLAM } from "../game/damageFeel.ts";
 
 export const SFX_IDS: readonly SfxId[] = [
   "draw", "play", "summon", "attack", "impact", "shieldShatter", "heal", "buff", "debuff",
@@ -447,11 +447,14 @@ function summonAccent(k: Kit, timbre: SfxTimbre | undefined): void {
  * viewer can name adds its family's accent (`timbre`).
  */
 const summon: SfxRecipe = (ctx, out, at, params) => {
-  const t = amountT(params);
+  // #185: a landing Unit's tier weighs its thud (a soft tap to a deep boom) at a pitch within
+  // SLAM_PITCH_SPREAD; without one, its stats do, as before.
+  const t = params.slamTier === undefined ? amountT(params) : UNIT_SLAM[params.slamTier].thud;
+  const pitch = params.slamTier === undefined ? 1 : 1 + (Math.min(1, Math.max(0, params.variation ?? 0.5)) * 2 - 1) * SLAM_PITCH_SPREAD;
   const len = 0.25 + 0.12 * t;
   const peak = 0.45 + 0.45 * t;
   const k = kit(ctx, out, at, len);
-  const fromHz = 170 - 60 * t;
+  const fromHz = (170 - 60 * t) * pitch;
   const thud = tone(k, out, "sine", fromHz, 0, 0.005, peak, len);
   glide(k, thud.frequency, 60 - 25 * t, len * 0.7);
   const noise = noiseSource(k);

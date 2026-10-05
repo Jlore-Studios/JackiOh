@@ -54,6 +54,8 @@ export type SfxParams = {
    * off the lane of the unit it is about. Absent: centred. The engine pans; no recipe reads it.
    */
   pan?: number;
+  /** #185: a landing Unit's size tier; the summon thud is weighed by it rather than by `amount`. */
+  slamTier?: "tiny" | "small" | "medium" | "large" | "huge" | "massive";
   /** Match-feel impact and sand variations. The caller supplies a sample from 0 through 1. */
   variation?: number;
   /** The public damage tier that selected this impact recipe. */

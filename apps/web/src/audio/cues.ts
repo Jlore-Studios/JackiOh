@@ -55,7 +55,8 @@ import type {
 } from "@jackioh/shared";
 
 import { themeFor } from "../cards/art/themes.ts";
-import { damageTier } from "../game/damageFeel.ts";
+import { damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
+import { slamStatsOf, slamTier } from "../game/unitSlam.ts";
 import {
   BLOOD_BEAN_DEF_ID,
   CARD_EFFECT_DELAY_MS,
@@ -87,7 +88,14 @@ import { entryFor, hookFor } from "./voiceData.ts";
  * The public catalog facts a cue may colour itself with (§5.1): never looked up for "hidden".
  * `printedRarity` is a token's printed rarity (B2.5), for its summon sting only.
  */
-export type CueCard = { type: CardType; tags: readonly Tag[]; rarity?: Rarity; printedRarity?: PrintedRarity };
+export type CueCard = {
+  type: CardType;
+  tags: readonly Tag[];
+  rarity?: Rarity;
+  printedRarity?: PrintedRarity;
+  /** The base face's rules text: a landing Unit's printed Tribute (#185, unitSlam.ts). */
+  text?: string;
+};
 
 /**
  * R506: a play in progress, as the director follows the stream: from its `cardPlayed` until its
@@ -232,7 +240,7 @@ function summonCues(event: Extract<GameEvent, { type: "summoned" }>, ctx: CueCon
   const params: SfxParams = {};
   if (unit !== null) params.amount = unit.attack + unit.health;
   if (timbre !== undefined) params.timbre = timbre;
-  const cues: SoundCue[] = [sfx("summon", Object.keys(params).length === 0 ? undefined : params)];
+  const cues: SoundCue[] = [...slamSound(unit, card, params)];
   // B2.5: a token's printed rarity is the one it enters with; its `rarity` stays "Token".
   const rarity = card?.printedRarity ?? card?.rarity;
   if (rarity === "Legendary") cues.push(sfx("entrance"));
@@ -242,6 +250,22 @@ function summonCues(event: Extract<GameEvent, { type: "summoned" }>, ctx: CueCon
   if (!played && entryFor(ctx.lines, event.defId)?.kind === "unit") {
     cues.push(...hookCues(ctx, event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.summon));
   }
+  return cues;
+}
+
+/**
+ * #185: a Unit the viewer can read lands with its tier's weight: the summon thud from a soft tap to a
+ * deep boom (pitch within SLAM_PITCH_SPREAD), and under a Huge or MASSIVE one an impact (the crack,
+ * the boom). A Unit behind the sentinel, or one already gone from the newest view, keeps the plain
+ * thud sized by its stats (R203).
+ */
+function slamSound(unit: UnitView | null, card: CueCard | undefined, base: SfxParams): readonly SoundCue[] {
+  if (unit === null || card === undefined) return [sfx("summon", Object.keys(base).length === 0 ? undefined : base)];
+  const tier = slamTier(slamStatsOf(unit, card.text));
+  const variation = Math.random();
+  const cues: SoundCue[] = [sfx("summon", { ...base, slamTier: tier, variation })];
+  const impact = UNIT_SLAM[tier].impact;
+  if (impact !== "none") cues.push(sfx("impact", { impactTier: impact, variation }));
   return cues;
 }
 
@@ -489,7 +513,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
     sfx: "summon",
     cues: (event, ctx) => {
       const unit = ctx.unitNow?.(event.instanceId) ?? null;
-      return [sfx("summon", unit === null ? undefined : { amount: unit.attack + unit.health })];
+      const card = readable(ctx, event.defId);
+      return slamSound(unit, card, unit === null ? {} : { amount: unit.attack + unit.health });
     },
   },
   deanimated: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
