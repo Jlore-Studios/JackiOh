@@ -3063,11 +3063,12 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-04T21:40:00Z",
-          "utilization": 0.4
+          "resets_at": "2026-10-05T04:40:00Z",
+          "utilization": 1.0
         },
-        "observed_at": "2026-10-04T18:02:50Z",
-        "status": "allowed"
+        "observed_at": "2026-10-05T02:10:43Z",
+        "rejected_resets_at": "2026-10-05T04:40:00Z",
+        "status": "rejected"
       }
     },
     "claude-2": {
