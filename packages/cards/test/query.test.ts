@@ -12,7 +12,7 @@
 // registered by `registerAll()` in `src/index.ts`; here we register the catalog data directly so
 // this file does not pull in the script registry.
 
-import { registerCatalog } from "@jackioh/engine";
+import { GLITCH_DEF_ID, registerCatalog } from "@jackioh/engine";
 import type { CardDef } from "@jackioh/shared";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -30,8 +30,9 @@ function coreIndices(defs: readonly CardDef[]): string[] {
 }
 
 /** Every token of every set (B2.1's census itself is catalog.test.ts's to prove). */
+/** Every token a pool may name — all of them but Glitch, which is in none (R674). */
 const TOKEN_IDS = Object.values(CATALOG)
-  .filter((def) => def.token)
+  .filter((def) => def.token && def.id !== GLITCH_DEF_ID)
   .map((def) => def.id);
 
 /** Every non-token def, in catalog order — the pool a plain query answers (R380). */
@@ -388,8 +389,10 @@ describe("R382 the Fruit pool holds the five Grapes; a pool that takes every tok
 
   it("R382 Classic+ #23 Dropshipping's pool takes every card and every token of every set but itself", () => {
     const every = ids(pool("classicplus-023", { withTokens: true }));
-    expect(every).toHaveLength(Object.keys(CATALOG).length - 1);
+    // R674: Glitch is the one token no pool takes.
+    expect(every).toHaveLength(Object.keys(CATALOG).length - 2);
     expect(every).not.toContain("classicplus-023");
+    expect(every).not.toContain(GLITCH_DEF_ID);
     for (const id of [...GRAPES, "classicplus-019-3", "classicplus-t-ai-01", "core-t-coin", "core-051-1"]) {
       expect(every).toContain(id);
     }

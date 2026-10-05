@@ -44,6 +44,7 @@ async function harness() {
         ratingAfter: [1000, 1000],
       }),
     ) as unknown as ActorDeps["recordResult"],
+    voidMatch: vi.fn(async () => {}),
   };
   const registry = createMatchRegistry(actorDeps);
   await registry.start({

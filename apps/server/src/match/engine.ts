@@ -41,6 +41,8 @@ export type CreateGameArgs = {
   decks: [string[], string[]];
   catalog?: CardDefs;
   lastBoards?: LastBoards;
+  /** R678: two other players' boards a Glitch may put on the field, frozen like `lastBoards`. */
+  glitchBoards?: LastBoards;
   /** R433: the seats whose deck was dealt rather than built (All Random's both, R258). */
   dealt?: readonly PlayerId[];
 };
@@ -52,6 +54,8 @@ export type FoldArgs = {
   catalog?: CardDefs;
   /** R417: the boards the match was created with, so the fold is the same game. */
   lastBoards?: LastBoards;
+  /** R678: the Glitch boards the match was created with, so the fold is the same game. */
+  glitchBoards?: LastBoards;
   /** R433: the dealt seats the match was created with, so the fold is the same game. */
   dealt?: readonly PlayerId[];
 };
@@ -74,6 +78,12 @@ export type MatchSnapshot = {
   mulliganOwed: PlayerId[];
   phase: "setup" | "mulligan" | "start" | "main" | "end" | "over";
   result: { winner: PlayerId | "draw"; reason: GameOverReason } | null;
+  /**
+   * R677: whether a Glitch has left the accounts holding each other's seat (an odd number of swaps,
+   * the engine's `seatsSwapped`). Public: the `glitched` event announced every swap. The account
+   * that began the match in p1 plays p2 while this is true, and the other way round.
+   */
+  seatsSwapped: boolean;
 };
 
 export type EnginePort = {
@@ -120,6 +130,7 @@ export const REQUIRED_ENGINE_EXPORTS = [
   "createRng",
   "lastBoardFor",
   "summarizeGame",
+  "seatsSwapped",
 ] as const;
 
 export class EngineUnavailableError extends Error {

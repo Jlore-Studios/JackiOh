@@ -150,6 +150,13 @@ function browserSocket(url: string): SocketLike {
  */
 const REFUSAL_CLOSE_CODES: readonly number[] = [4401, 4403, 4404];
 
+/**
+ * R679: the close code both sockets of a match a Glitch voided carry (`MATCH_VOIDED_CLOSE_CODE` in
+ * `apps/server/src/config.ts`, restated like the refusals). The match no longer exists, so there is
+ * nothing to reconnect to; the last view already shows the game over as voided.
+ */
+const VOIDED_CLOSE_CODE = 4410;
+
 /** A short backoff; the last entry repeats. Spec 05 reloads the page, so a resume is a fresh boot. */
 const RECONNECT_DELAYS_MS: readonly number[] = [250, 500, 1000, 2000, 5000];
 
@@ -582,6 +589,10 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       // R738: an arrow from before the drop would stand there until the opponent aimed again.
       if (snapshot.aim !== null) patch({ aim: null });
       if (stopped) {
+        patch({ connection: "closed" });
+        return;
+      }
+      if (event.code === VOIDED_CLOSE_CODE) {
         patch({ connection: "closed" });
         return;
       }

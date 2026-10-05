@@ -57,6 +57,18 @@ export const MID_LANE = 3;
  */
 export const GLITCH_NUMBERS: readonly number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
+// The Glitch Easter egg (SPEC §7, issue #170; R673–R679).
+/** R673: the "… in the System" cards — Classic #18 Glitch in the System and Classic #25 Lag in the System. */
+export const SYSTEM_CARD_DEF_IDS: readonly string[] = ["classic-018", "classic-025"];
+/** R673, R674: the catalog id of Glitch, the hidden token a generated card may become. */
+export const GLITCH_DEF_ID = "classic-t-glitch";
+/** R673: each System play adds this many chances in GLITCH_ODDS_DENOMINATOR that a generated card is Glitch. */
+export const GLITCH_ODDS_PER_SYSTEM_PLAY = 1;
+/** R673: "a 1/10000 chance". */
+export const GLITCH_ODDS_DENOMINATOR = 10000;
+/** R676: Glitch's four outcomes, in the order the issue lists them; one is drawn uniformly by the match rng. */
+export const GLITCH_OUTCOMES = ["reset", "swap", "boards", "void"] as const;
+
 /** R5 (decide): any unit may attack any enemy unit or hero, subject to Taunt. */
 export const LANE_RESTRICTED_ATTACKS: boolean = false;
 /** R1 (decide): Cry fires only when played from hand or cast by an effect. */

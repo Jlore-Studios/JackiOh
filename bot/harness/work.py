@@ -20,17 +20,20 @@ from __future__ import annotations
 
 import json
 import os
+from string import Template as string_template
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable
 
 from harness import disk as disk_mod
+from harness import easy as easy_mod
 from harness import gates as gates_mod
 from harness import prompts, review_rule, verdicts
 from harness import providers as providers_mod
 from harness.clock import iso, now as clock_now
-from harness.config import Config, child_env
-from harness.git import Git, Identity, worktree_add
+from harness.config import MIN_TIER, PLAN_FLOOR, Config, child_env
+from harness.git import MARKER_LINE, Git, Identity, worktree_add
+from harness.issueplan import PLAN_CHARS, PLAN_WORDS
 from harness.prompts import data
 from harness.providers import hosted
 from harness.redact import redact, redact_json
@@ -52,6 +55,10 @@ BUILDER_DENY = ("WebFetch", "WebSearch") + NETWORK_DENY
 READER_DENY = BUILDER_DENY + ("Edit", "Write", "MultiEdit", "NotebookEdit", "Bash(git commit:*)")
 
 DIFF_IN_PROMPT = 60_000
+#: A call that fails sooner than this with nothing to show (no text) is the subscription's failure,
+#: not the item's: its CLI or login is broken (#317 part 1). Devin failed every call in seconds
+#: from 2026-10-05 07:30Z, and each one was charged to its item as a build or an unreadable review.
+INSTANT_FAILURE_S = 60
 #: The builder's running notes, at the top of the worktree. Git ignores it (`info/exclude`), so it
 #: is never committed; the harness reads it when the run ends and hands it to the next agent.
 NOTES_FILE = ".bot-notes.md"
@@ -65,9 +72,6 @@ never delivered): your plan, what is done, what is next, the decisions you made 
 dead ends you hit. Update it as you go, not only at the end. Your session can be cut off at any
 moment (a usage limit, the clock), and the next agent, possibly another model, starts from this
 file and the branch."""
-#: How much of a planner's answer becomes the plan: its beginning, where the goal and the first
-#: steps are, never its end alone.
-PLAN_CHARS = 20_000
 PLAN_CUT = "\n\n…(the plan was cut here; the planner wrote more)"
 SELF_CHECK_CONTEXT = """This is a self check, not a review. You are the same model that built
 this change, in a fresh session, and nothing you say here approves it: an independent reviewer
@@ -169,6 +173,8 @@ class Worker:
         self._base_gate_cache: dict[str, bool] = {}
         #: The forbidden paths the last path guard put back (`_guard`).
         self.put_back: list[str] = []
+        #: The last cut-off revision's work this run starts from (`bot/wip/<pr>`), if any.
+        self.wip_used = ""
         #: For a conflict revision of a cleared change: what its builder and its reviewer are told
         #: (`_cleared_notes`).
         self.carry_build = ""
@@ -254,7 +260,8 @@ class Worker:
             max_turns=int(self.cfg.max_turns.get(role) or self.cfg.max_turns["review"]),
             timeout_s=max(60, timeout),
             model=seat.model,
-            effort=seat.effort,
+            effort=(self.provider.fix_effort if role == "fix" and self.provider.fix_effort
+                    else seat.effort),
             transcript=transcript,
             read_only=reader,
             extra_dirs=self._git_dirs(cwd),
@@ -274,6 +281,10 @@ class Worker:
                             result.reset_at)
         if result.infra:
             raise Interrupt(f"the {self.provider.cli} CLI could not run: {result.error}", "infra")
+        if (not result.ok and not result.timed_out and not (result.text or "").strip()
+                and result.duration_s < INSTANT_FAILURE_S):
+            raise Interrupt(f"the {self.provider.cli} CLI failed at once: "
+                            f"{result.error or 'it said nothing'}", "infra")
         return result
 
     def _usage_stop(self, usage: dict[str, Any]) -> str | None:
@@ -402,7 +413,8 @@ class Worker:
         start = remote if has_remote else self.base_ref
         self.base_sha = self.repo.rev(self.base_ref) or ""
         self.start_sha = self.repo.rev(start) or ""
-        self.wt = worktree_add(self.repo, self.work_dir / f"item-{number}", branch, start)
+        begin = self._wip_start(number, start) if self.plan["action"] == "revise" else start
+        self.wt = worktree_add(self.repo, self.work_dir / f"item-{number}", branch, begin)
         self._exclude_notes()
         self._seed_notes()
         self.result.update(branch=branch, base=self.base_sha, start=self.start_sha,
@@ -420,6 +432,26 @@ class Worker:
             raise Interrupt(f"dependency install failed on untouched main (exit "
                             f"{installed.exit_code}): {installed.tail[-1500:]}", "infra")
         return conflicts
+
+    def _wip_start(self, number: int, start: str) -> str:
+        """Where a revision's worktree starts: the last cut-off revision's work on
+        `bot/wip/<pr>` (#317 part 3), when it started from the pull request's head as it is now
+        and descends from it; otherwise (someone pushed since) the pull request's head. The
+        work's `start` stays the pull request's head either way, which deliver checks."""
+        wip = self.plan.get("wip")
+        if not isinstance(wip, dict) or not wip.get("sha"):
+            return start
+        ref = f"bot/wip/{int(number)}"
+        self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                      f"+refs/heads/{ref}:refs/remotes/origin/{ref}", check=False)
+        head = self.repo.rev(f"origin/{ref}")
+        if (head and wip.get("start") == self.start_sha and self.repo.run(
+                "merge-base", "--is-ancestor", self.start_sha, head, check=False).returncode == 0):
+            self.wip_used = ref
+            self.result["wip"] = {"used": ref, "sha": head}
+            return f"origin/{ref}"
+        self.result["wip"] = {"ignored": ref, "why": "the pull request's branch moved since"}
+        return start
 
     def _exclude_notes(self) -> None:
         """Tell git to ignore the notes file in every worktree of this clone."""
@@ -486,16 +518,34 @@ class Worker:
                     "which you keep going. Follow it unless the code shows it is wrong, and say "
                     "where you departed from it and why.\n\n"
                     + data(str(handoff["notes"]), "The plan"))
+        where = "in your worktree (see above)" if self.wip_used else "on the branch"
         parts = [f"## Picking up from another agent\n\nAn earlier run on "
                  f"`{handoff.get('provider', '?')}` ({handoff.get('family', '?')}) worked on this "
                  f"and stopped: {handoff.get('reason') or 'no reason recorded'}. Its work so far is "
-                 "on the branch. Below are the notes it kept and the end of its session. Check "
-                 "them against the diff and re-run the checks before you trust any of it."]
+                 f"{where}. Below are the notes it kept and the end of its session. Check them "
+                 "against the diff and re-run the checks before you trust any of it. Go on from "
+                 "where it stopped rather than starting over."]
         if str(handoff.get("notes") or "").strip():
             parts.append(data(str(handoff["notes"]), "Its notes"))
         if str(handoff.get("trail") or "").strip():
             parts.append(data(str(handoff["trail"]), "The end of its session"))
         return "\n\n" + "\n\n".join(parts)
+
+    def _wip_text(self) -> str:
+        """What a revision is told about the last cut-off run's work (#317 part 3)."""
+        if self.wip_used:
+            return ("\n\n## Unfinished work from the last run\n\nThe last revision run was cut "
+                    "off before it finished. Your worktree starts from `" + self.wip_used + "`, "
+                    "which holds its commits (\"bot: work in progress …\") on top of the pull "
+                    "request: go on from where it stopped rather than starting over, and check "
+                    "what it did against the task before you build on it.")
+        found = self.result.get("wip")
+        if isinstance(found, dict) and found.get("ignored"):
+            return ("\n\n## Unfinished work from the last run\n\nThe last revision run was cut "
+                    "off before it finished, but the pull request's branch moved after it "
+                    "stopped, so you start from the branch as it is now; that run's commits are "
+                    "not in your worktree, and its notes, if any, say what it had done.")
+        return ""
 
     def _branch_state(self) -> str:
         assert self.wt is not None
@@ -543,12 +593,19 @@ class Worker:
                 conflicts=conflict_text, branch_state=self._branch_state(),
                 gate_list=self._gate_list(),
             )
-            return "revise", prompt + self._handoff_text()
+            return "revise", prompt + self._wip_text() + self._handoff_text()
         previous = ""
+        if plan.get("previous_pr"):
+            kept = (f"; its branch is kept as `{plan['previous_branch']}` if you want to look"
+                    if plan.get("previous_branch") else "")
+            previous = (f"An earlier pull request for this issue, #{plan['previous_pr']}, was "
+                        f"closed and this issue built again from `main`: "
+                        f"{plan.get('previous_why') or 'it kept failing'}{kept}. Start from "
+                        "`main`, learn from what went wrong, and do not repeat it.\n\n")
         prior = plan.get("previous_findings") or []
         if prior:
-            previous = ("An earlier run left this branch unfinished. The last review's blocking "
-                        "findings were:\n\n" + self._findings_text([_finding(f) for f in prior]))
+            previous += ("An earlier run left this unfinished. The last review's blocking "
+                         "findings were:\n\n" + self._findings_text([_finding(f) for f in prior]))
         question = str(plan.get("previous_question") or "").strip()
         if question:
             previous += ("\n\nAn earlier run stopped to ask the question below. The answer, if "
@@ -625,7 +682,7 @@ class Worker:
         changed = [p for p in self.wt.changed_paths(self.base_ref) if (self.wt.cwd / p).is_file()]
         if not changed:
             return []
-        proc = self.wt.run("grep", "-l", "-E", r"^(<<<<<<< |>>>>>>> )", "--", *changed, check=False)
+        proc = self.wt.run("grep", "-l", "-E", MARKER_LINE, "--", *changed, check=False)
         return [p for p in proc.stdout.splitlines() if p.strip()]
 
     def _anchors(self) -> list[str]:
@@ -739,6 +796,8 @@ class Worker:
             review = verdicts.review(result.text)
             if review.readable:
                 break
+            if not result.ok:
+                review.error = redact(str(result.error or "it failed without an error"))[:2000]
             self.check()
         review.reviewed_sha = head
         return review
@@ -756,6 +815,8 @@ class Worker:
             base=self.base_sha, thread=self.plan.get("thread", ""),
             branch_state=self._branch_state(), gate_list=self._gate_list(),
             difficulty=self.plan.get("difficulty") or "medium",
+            rating=self._rating_ask(), easy_rule=self._easy_rule(),
+            plan_words=f"{PLAN_WORDS:,}", plan_chars=f"{PLAN_CHARS:,}",
         ) + self._handoff_text()
         head = self.wt.head()
         result = self.call("plan", prompt, self.wt.cwd, reader=True)
@@ -763,18 +824,69 @@ class Worker:
             self.wt.run("reset", "--quiet", "--hard", head)
         if self.wt.dirty():
             self.wt.discard_worktree_changes()
-        text = redact((result.text or "").strip())
+        rated, text = verdicts.rating(redact((result.text or "").strip()))
         if len(text) > PLAN_CHARS:
             text = text[:PLAN_CHARS - len(PLAN_CUT)].rstrip() + PLAN_CUT
         if not result.ok or not text:
             raise RuntimeError(f"the planner on {seat.model} wrote no plan"
                                + (f": {result.error}" if result.error else ""))
+        if rated and self._rating_source() == "person":
+            rated = None  # a person's label stands; the planner was told not to rate it
         self.plan_text = text
         notes = self.wt.cwd / NOTES_FILE
         earlier = notes.read_text(encoding="utf-8", errors="replace") if notes.is_file() else ""
         notes.write_text(f"# Plan ({seat.model}, {seat.tier})\n\n{text}\n\n# Notes\n\n"
                          f"{earlier}", encoding="utf-8")
         self.result["plan"] = {"seat": seat.to_dict(), "text": text}
+        if rated:
+            self.result["plan"]["rating"] = rated
+
+    def _rating_source(self) -> str:
+        rating = self.plan.get("rating") if isinstance(self.plan.get("rating"), dict) else {}
+        return str(rating.get("source") or "")
+
+    def _rating_ask(self) -> str:
+        """What the planner is told about rating the item (#317 part 8)."""
+        rating = self.plan.get("rating") if isinstance(self.plan.get("rating"), dict) else {}
+        difficulty = str(rating.get("difficulty") or self.plan.get("difficulty") or "medium")
+        if self._rating_source() == "person":
+            return (f"A person set this item's difficulty: `difficulty:{difficulty}`. Plan for "
+                    "that, and give no rating line. If the rule below says it is harder, say so "
+                    "under **Open questions**.")
+        line = ('    <!-- bot: {"difficulty": "easy", "why": "one line: the rule\'s line you were '
+                'least sure of, and why it holds"} -->')
+        ask = ("Rate how hard it is, by the rule below. The very first line of your answer is a "
+               "single HTML comment carrying JSON, with nothing before it, then the plan:\n\n"
+               f"{line}\n\n`difficulty` is `easy`, `medium` or `hard`. The rating decides who "
+               "builds it: an easy item goes to the weakest model (Devin's SWE-2), which cannot "
+               "fill gaps, resolve a hard conflict, or judge what it cannot see.")
+        if self._rating_source() == "bot":
+            ask += (f" The bot rated it `difficulty:{difficulty}` already"
+                    + (f" (`{rating.get('by')}`)" if rating.get("by") else "")
+                    + ": you may rate it higher, never lower.")
+        return ask
+
+    def _easy_rule(self) -> str:
+        rule = self.cfg.easy
+        return string_template(easy_mod.RULE).safe_substitute(max_files=rule.max_files,
+                                                               max_lines=rule.max_lines)
+
+    def _rated_out(self) -> bool:
+        """A build run that planned and rated an unrated item stops after planning when the
+        rating needs a stronger model than this run's builder, or a stronger planner than this
+        one (`PLAN_FLOOR`): the item goes back to the queue, rated, for those."""
+        rated = (self.result.get("plan") or {}).get("rating")
+        if not isinstance(rated, dict) or self._rating_source():
+            return False
+        difficulty = str(rated.get("difficulty"))
+        planner = self.seat_for("plan")
+        if (providers_mod.tier_at_least(self.build_seat.tier, MIN_TIER[difficulty])
+                and providers_mod.tier_at_least(planner.tier, PLAN_FLOOR[difficulty])):
+            return False
+        self.result.update(status="planned", reason=(
+            f"rated difficulty:{difficulty}, which needs a stronger model than this run's to "
+            f"{'plan' if not providers_mod.tier_at_least(planner.tier, PLAN_FLOOR[difficulty]) else 'build'} it"))
+        return True
 
     def _plan_run(self) -> None:
         """A planning run: the plan, and nothing built. The deliver job keeps it as the item's
@@ -788,6 +900,7 @@ class Worker:
         """One builder session and its commit. Returns its report, or None when it stopped to
         ask a person (the run then ends as `blocked`), and the round's record."""
         assert self.wt is not None
+        before = self.wt.head()
         built = self.call(role, prompt, self.wt.cwd, reader=False)
         report = verdicts.build_report(built.text)
         entry: dict[str, Any] = {
@@ -797,6 +910,17 @@ class Worker:
                         "error": built.error, "timed_out": built.timed_out,
                         "model": self.build_seat.model, "tier": self.build_seat.tier},
         }
+        if (not built.ok and not built.timed_out and self.wt.head() == before
+                and not self.wt.dirty()):
+            # A session that failed and changed nothing is no pass (#317 part 1): the checks and
+            # the self check would only judge the branch as it was. One that failed after doing
+            # work (Claude's turn limit, say) keeps it, and the checks and the review judge it.
+            entry["builder"]["changed"] = False
+            self.result.update(status="failed", reason=redact(
+                f"the builder's session failed and changed nothing: "
+                f"{built.error or 'no error given'}")[:2000])
+            self._finish()
+            return None, entry
         if report.status == "blocked":
             self._save_wip("the builder needs a decision")
             self.result.update(status="blocked", question=report.question, report=report.body,
@@ -804,6 +928,7 @@ class Worker:
             self._finish()
             return None, entry
         self._commit(f"bot: {role} pass {cycle} for #{self.plan['number']}")
+        entry["builder"]["changed"] = self.wt.head() != before
         return report, entry
 
     def _self_check_loop(self, cycle: int, entry: dict[str, Any], report: Any,
@@ -826,8 +951,9 @@ class Worker:
                                    context=SELF_CHECK_CONTEXT.format(n=n, cap=cap))
             flagged = list(guard) + list(verdict.blocking)
             if not verdict.readable:
-                flagged.append(Finding("blocking", "self check", "The self check's answer could "
-                                       "not be read twice in a row.", "the harness"))
+                flagged.append(Finding("blocking", "self check",
+                                       f"The self check gave no verdict: {verdict.why_unreadable}.",
+                                       "the harness"))
             if not gates_mod.green(results):
                 flagged.append(Finding("blocking", "checks", "Checks this change turned red "
                                        "must pass.", "the harness's gate run"))
@@ -854,6 +980,9 @@ class Worker:
         self.carry_build, self.carry_review = self._cleared_notes(conflicts)
         if self.plan_seat is not None:
             self._planning()
+            if self._rated_out():
+                self._finish()
+                return
         findings: list[Finding] = [_finding(f) for f in self.plan.get("previous_findings") or []]
         failures = ""
         report = verdicts.BuildReport("unknown", "", "", "")
@@ -885,7 +1014,17 @@ class Worker:
                 report = checked
             if self.review_seat is None:
                 # No seat here reviews in the run (a weak one only in a review run): a review
-                # run judges it.
+                # run judges it. But never with conflict markers left in it (#317 part 2): its
+                # self checks may run out with them still open, as Devin's did on #203, #214
+                # and #287, and nothing after this would catch them before CI.
+                left, report = self._clear_markers(cycle, entry, report)
+                if report is None:
+                    return
+                if left:
+                    findings = [left]
+                    self.result.update(status="not_approved", reason=f"conflict markers are "
+                                       f"still in {left.where} after its last fix")
+                    break
                 self.result.update(status="built", reason=(
                     "built; no model on this subscription may review it, so it waits for a "
                     "review run" + (f", with {len(open_self_check)} self-check finding(s) still "
@@ -901,11 +1040,16 @@ class Worker:
             if self.carry_review:
                 earlier = context or (self._findings_text(findings) if findings else "")
                 context = (earlier + "\n\n" if earlier else "") + self.carry_review
+            if self._catch_up():
+                # `main` moved and merged cleanly: the checks and the review judge the merged head.
+                results = self._checks()
+                entry["gates"] = [{**r.to_dict(), "tail": r.tail[-1500:]} for r in results]
+                entry["caught_up"] = self.base_sha
+                guard = self._guard()
             review = self._review(cycle, report, results, findings, context=context)
             entry["review"] = review.to_dict()
             if not review.readable:
-                self.result.update(status="not_approved", reason="the reviewer's answer could "
-                                   "not be read twice in a row")
+                self.result.update(status="not_approved", reason=review.why_unreadable)
                 break
             if review.approved and gates_mod.green(results) and not guard:
                 self.approved_sha = review.reviewed_sha
@@ -931,6 +1075,64 @@ class Worker:
             self_check_findings=[f.to_dict() for f in open_self_check],
         )
         self._finish()
+
+    def _clear_markers(self, cycle: int, entry: dict[str, Any],
+                       report: Any) -> tuple[Finding | None, Any]:
+        """Before a change leaves the run with no reviewer in it: one fix pass when conflict
+        markers are left in it and there is time. Returns the marker finding still open (None when
+        there are none), and the builder's latest report (None when that pass stopped to ask a
+        person, which ends the run)."""
+        markers = self._unresolved_markers()
+        if not markers:
+            return None, report
+        finding = Finding("blocking", ", ".join(markers[:8]),
+                          f"Conflict markers are still in {', '.join(markers)}: resolve every "
+                          "one, keeping both sides' meaning.", "git grep")
+        if self.seconds_left() >= self.cfg.min_minutes_for_a_call * 60:
+            fixed, fix = self._build_pass(cycle, "fix", self._fix_prompt(
+                cycle, [finding], "", label="Conflict markers left in the change"))
+            entry["marker_fix"] = fix["builder"]
+            if fixed is None:
+                return finding, None
+            report = fixed
+            markers = self._unresolved_markers()
+            if not markers:
+                return None, report
+            finding = Finding("blocking", ", ".join(markers[:8]),
+                              f"Conflict markers are still in {', '.join(markers)}.", "git grep")
+        return finding, report
+
+    def _catch_up(self) -> bool:
+        """Before a review: merge `main` again when it moved since the run merged it and merges
+        cleanly (#160, #317 part 12), so what is approved still merges; `main` moves about every
+        half hour and a long run's approval was often stale before it was delivered. A merge
+        that would conflict is left for the conflict path, and a conflict revision of a cleared
+        change is left alone (deliver redoes its merge to check the carry). True when merged."""
+        if self.carry_build or self.wt is None:
+            return False
+        default = self.cfg.default_branch
+        self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                      f"+refs/heads/{default}:refs/remotes/origin/{default}", check=False)
+        now = self.repo.rev(self.base_ref)
+        if not now or now == self.base_sha or self.wt.run(
+                "merge-base", "--is-ancestor", now, "HEAD", check=False).returncode == 0:
+            return False
+        probe = self.wt.run("merge-tree", "--write-tree", "--no-messages", "HEAD", now,
+                            check=False)
+        if probe.returncode != 0:
+            return False
+        try:
+            conflicts = self.wt.merge(now, self.who)
+        except Exception:  # noqa: BLE001 - a merge that fails leaves the branch as it was
+            self.wt.run("merge", "--abort", check=False)
+            return False
+        if conflicts:
+            self.wt.run("merge", "--abort", check=False)
+            return False
+        self.base_sha = now
+        self._base_wt = None  # the checks red on `main` are `main`'s new self's now
+        self._base_gate_cache = {}
+        return True
 
     def _only_forbidden(self) -> bool:
         """A build whose whole change was in paths the bot may not change (`bot/`, `.harness/`,
@@ -984,6 +1186,10 @@ class Worker:
                    "not installed in this run and you "
                    "should not run the branch's code: read it. CI runs every check on the pull "
                    "request before it can merge.")
+        notes = str(self.plan.get("review_notes") or "").strip()
+        if notes:
+            context += ("\n\nA person asked for this review (`/harness review`) with these "
+                        "notes:\n\n" + data(notes, "Their notes"))
         open_findings = [_finding(f) for f in self.plan.get("self_check_findings") or []]
         if open_findings:
             context += ("\n\nThe builder's own self checks ran out with these findings still "
@@ -994,8 +1200,7 @@ class Worker:
         review = self._review(1, report, [], [], context=context, max_cycles=1)
         self.result["cycles"].append({"n": 1, "review": review.to_dict()})
         if not review.readable:
-            self.result.update(status="failed", reason="the reviewer's answer could not be read "
-                               "twice in a row")
+            self.result.update(status="failed", reason=review.why_unreadable)
             return
         self.result.update(
             status="reviewed",

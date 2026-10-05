@@ -28,6 +28,7 @@ import {
   type Tag,
 } from "@jackioh/shared";
 
+import { glitchInfo, isGlitch } from "../cards/glitch.ts";
 import type { RolledPower } from "../cards/index.ts";
 
 export type CardInfo = {
@@ -54,7 +55,7 @@ export function lookupFromDefs(defs: CardDefs): CardLookup {
     const def = defs[defId];
     if (def === undefined) return undefined;
     const face = radiant ? def.radiant : def.base;
-    return {
+    const info: CardInfo = {
       name: def.name,
       // B2.7: a face with its own type is that type (Classic+ #22's Radiant Field Trap).
       type: face.type ?? def.type,
@@ -66,6 +67,8 @@ export function lookupFromDefs(defs: CardDefs): CardLookup {
       def,
       rarity: def.rarity,
     };
+    // Glitch's name and text are corrupted wherever a lookup answers for it (cards/glitch.ts).
+    return isGlitch(defId) ? glitchInfo(info) : info;
   };
 }
 

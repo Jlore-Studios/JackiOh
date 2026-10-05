@@ -2,6 +2,7 @@
 
 import type { GameEvent } from "@jackioh/shared";
 import { defOf } from "./catalog";
+import { GLITCH_DEF_ID } from "./config";
 import { climbPriceRules, costFloorOf, priceRulesFor } from "./costRules";
 import { cardTypeOf } from "./faces";
 import { playableFromGraveyard } from "./graveyardPlay";
@@ -149,6 +150,8 @@ function priceOf(state: GameState, instance: CardInstance, options: CostOptions)
   const side = state.players[instance.controller];
   const override = instance.costOverride;
   const floor = costFloorOf(instance);
+  // R675: Glitch costs (0) wherever it is and whatever would change that.
+  if (instance.defId === GLITCH_DEF_ID) return { cost: 0, usedRules: [] };
 
   // R65: X-cost cards cost exactly X and ignore modifiers, but an override makes one free. R455: a
   // floor the card carries is its own, and holds.

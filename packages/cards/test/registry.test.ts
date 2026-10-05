@@ -304,7 +304,9 @@ describe("naming (BUILD M4-T2, M4-T3)", () => {
     expect(ordered.indexOf("100-ceaseless-void")).toBe(111 - 7);
     expect(ordered.slice(105, 111)).toEqual(["t-bread", "t-coin", "t-felinor", "t-ghoul", "t-rush", "t-sheep"]);
     expect(ordered[111]).toBe("classic/001-curse-of-the-forgotten-classic");
-    expect(ordered[201]).toBe("classic-plus/001-doom-shroom");
+    // Classic's 90 cards, then its one shared token, Glitch (R674).
+    expect(ordered[201]).toBe("classic/t-glitch-glitch");
+    expect(ordered[202]).toBe("classic-plus/001-doom-shroom");
     expect(ordered.indexOf("classic-plus/012-8-frostspatula")).toBe(ordered.indexOf("classic-plus/012-the-mother-pancake") + 8);
     expect(ordered.slice(-10)[0]).toBe("classic-plus/t-ai-01-helpful-assistant");
     expect(ordered.at(-1)).toBe("classic-plus/t-ai-10-fine-tuning");

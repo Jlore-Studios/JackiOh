@@ -93,6 +93,8 @@ export type FxLayerProps = {
   view: PlayerView;
   /** The newest view (Game's `view`), which the burst in flight is heading to. Absent: `view`. */
   latest?: PlayerView;
+  /** Game-owned visual hit-stop. It never pauses the runner, game clock, input, or audio. */
+  paused?: boolean;
   /** Test seams; production passes none. */
   seams?: Partial<FxSeams>;
 };
@@ -146,7 +148,7 @@ function removeSqueeze(root: HTMLElement | null): void {
   root?.parentElement?.style.removeProperty(SQUEEZE);
 }
 
-export function FxLayer({ queue, view, latest, seams }: FxLayerProps): ReactElement {
+export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerProps): ReactElement {
   const [settings] = useFxSettings();
   // The settings panel's "Reduce motion" is read through its hook so a change re-renders the layer;
   // `reducedMotionNow` reads the same switch for callers outside React.
@@ -214,6 +216,11 @@ export function FxLayer({ queue, view, latest, seams }: FxLayerProps): ReactElem
     };
   }, [enabled]);
 
+  useLayoutEffect(() => {
+    if (paused) director.current?.pause();
+    else director.current?.resume();
+  }, [paused]);
+
   // The reduce setting behaves exactly like the media query (R200): index.css zeroes --anim-scale
   // on :root under the query, and this zeroes it on the game root under the setting.
   useLayoutEffect(() => {
@@ -241,7 +248,9 @@ export function FxLayer({ queue, view, latest, seams }: FxLayerProps): ReactElem
           const table = ANIMATIONS[entry.type].durationMs;
           const parent = root?.parentElement ?? null;
           if (parent !== null) {
-            parent.style.setProperty(SQUEEZE, (entry.durationMs / table).toFixed(3));
+            // #185: a slam's anticipation is a wait before the motion, not a slower motion.
+            const motionMs = entry.durationMs - (entry.slam?.anticipationMs ?? 0);
+            parent.style.setProperty(SQUEEZE, (motionMs / table).toFixed(3));
           }
           const reached = riderSides(entry);
           if (reached.length > 0) {
@@ -355,7 +364,7 @@ export function FxLayer({ queue, view, latest, seams }: FxLayerProps): ReactElem
   }, [view]);
 
   return (
-    <div ref={rootRef} className="fx-layer" data-testid="fx-layer" data-fx={enabled ? "on" : "off"} aria-hidden="true">
+    <div ref={rootRef} className="fx-layer" data-testid="fx-layer" data-fx={enabled ? "on" : "off"} data-paused={paused ? "true" : undefined} aria-hidden="true">
       {enabled ? <canvas ref={canvasRef} className="fx-canvas" data-testid="fx-canvas" /> : null}
       {enabled ? <div ref={domRef} className="fx-dom" data-testid="fx-dom" /> : null}
     </div>

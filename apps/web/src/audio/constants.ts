@@ -51,6 +51,12 @@ export const VOICE_PREFETCH_CONCURRENCY = 2;
 export const VOICE_SPEECH_MAX_MS = 4000; // speech fallback holds the voice channel at most this long
 export const VOICE_PRELOAD_MAX = 24;     // new keys fetched per preloadVoices call
 export const IMPACT_AMOUNT_CAP = 10;
+/**
+ * #57: the tiered impact's level scale. Its noise and thump peak together, so without it a Big hit
+ * (amount 10 and above in the recipe test, B15) renders just over full scale; with it that hit stays
+ * under 1 and still sits within B57's band of a voice line. A GIGA hit is caught by the limiter.
+ */
+export const IMPACT_HEADROOM = 0.9;
 export const GAIN_SMOOTHING_S = 0.015;   // setTargetAtTime time constant for bus changes
 export const VOICE_DELAY_MS = 150;       // play/cast line after the card whoosh
 export const DEATH_VOICE_DELAY_MS = 120;

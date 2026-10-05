@@ -16,6 +16,7 @@ import { createContext, useContext, useMemo, type ReactElement, type ReactNode }
 import type { CardDef, CardDefs } from "@jackioh/shared";
 
 import { CatalogContext } from "../game/catalog.ts";
+import { glitchDef, isGlitch } from "./glitch.ts";
 
 /** The printed definition of a catalog card, by id, or undefined when this screen has none. */
 export type DefResolver = (id: string) => CardDef | undefined;
@@ -25,7 +26,14 @@ const InteractiveContext = createContext(false);
 
 /** Makes a catalog's definitions the ones the references below it show. */
 export function CardDefsProvider({ defs, children }: { defs: CardDefs; children: ReactNode }): ReactElement {
-  const resolve = useMemo<DefResolver>(() => (id) => defs[id], [defs]);
+  // Glitch's words are corrupted wherever a reference or a motif reads them (glitch.ts).
+  const resolve = useMemo<DefResolver>(
+    () => (id) => {
+      const def = defs[id];
+      return def !== undefined && isGlitch(id) ? glitchDef(def) : def;
+    },
+    [defs],
+  );
   return <DefsContext.Provider value={resolve}>{children}</DefsContext.Provider>;
 }
 

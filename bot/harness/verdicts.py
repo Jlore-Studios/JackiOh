@@ -34,6 +34,26 @@ def header(text: str, tag: str) -> tuple[Any, str]:
     return value, rest.strip()
 
 
+#: The difficulties a planner may rate an item (`config.DIFFICULTIES`).
+RATINGS = ("easy", "medium", "hard")
+
+
+def rating(text: str) -> tuple[dict[str, str] | None, str]:
+    """A planner's rating, `{"difficulty", "why"}`, from the `<!-- bot: ... -->` line its answer
+    starts with (#317 part 8), and the plan without it. Only a line at the very start counts: a
+    plan may quote such a line further down."""
+    source = str(text or "").strip()
+    if not source.startswith("<!--"):
+        return None, source
+    value, rest = header(source, "bot")
+    if not isinstance(value, dict):
+        return None, source
+    difficulty = str(value.get("difficulty") or "").strip().lower()
+    if difficulty not in RATINGS:
+        return None, rest
+    return {"difficulty": difficulty, "why": " ".join(str(value.get("why") or "").split())[:300]}, rest
+
+
 @dataclass
 class BuildReport:
     status: str  # "done" | "blocked" | "unknown"
@@ -77,6 +97,8 @@ class Review:
     findings: list[Finding] = field(default_factory=list)
     body: str = ""
     reviewed_sha: str = ""
+    #: The reviewer's call failed (`RunResult.error`), so there was no answer to read.
+    error: str = ""
 
     @property
     def blocking(self) -> list[Finding]:
@@ -93,8 +115,18 @@ class Review:
         return self.readable and not self.blocking
 
     def to_dict(self) -> dict:
-        return {"verdict": self.verdict, "readable": self.readable,
-                "findings": [f.to_dict() for f in self.findings], "body": self.body[:20000]}
+        found = {"verdict": self.verdict, "readable": self.readable,
+                 "findings": [f.to_dict() for f in self.findings], "body": self.body[:20000]}
+        if self.error:
+            found["error"] = self.error[:2000]
+        return found
+
+    @property
+    def why_unreadable(self) -> str:
+        """Why there was no verdict, for a reason or a finding."""
+        if self.error:
+            return f"the reviewer's call failed: {self.error[:500]}"
+        return "the reviewer's answer could not be read twice in a row"
 
 
 def review(text: str) -> Review:

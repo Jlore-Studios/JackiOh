@@ -31,6 +31,7 @@ import { createMatchRegistry, type MatchRegistry } from "../../src/match/registr
 import { createFakeEngine, decksTheEngineAccepts, fakeDeck } from "../fakes/engine";
 import { createFakeSocket, type FakeSocket } from "../fakes/socket";
 import { createTestDeps, TEST_CATALOG_VERSION } from "../fakes/deps";
+import { createVoidMatch } from "../../src/api/results";
 
 const MATCH_ID = "match-recovery";
 
@@ -106,6 +107,7 @@ async function startMatch(options: { engine?: EnginePort; decks?: [string[], str
     engine,
     createClock: createMatchClock,
     recordResult: recordResult as unknown as ActorDeps["recordResult"],
+    voidMatch: createVoidMatch(deps),
   };
 
   const decks = options.decks ?? [fakeDeck(["test-prompt-self"]), fakeDeck(["test-prompt-enemy"])];
@@ -144,6 +146,9 @@ describe("M6-T4 crash recovery", () => {
       createClock: createMatchClock,
       recordResult: async () => {
         throw new Error("unreachable: no game exists to end");
+      },
+      voidMatch: async () => {
+        throw new Error("unreachable: no game exists to void");
       },
     });
 

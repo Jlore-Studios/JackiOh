@@ -409,7 +409,7 @@ describe("R439 the turn clock's last 30 seconds on the match bar", () => {
   }
 
   function clockRoot(): Element | null {
-    return document.querySelector(".match-bar .clock");
+    return document.querySelector(".turn-mechanism .clock");
   }
 
   it("R439 counts the turn clock down between the server's frames and turns urgent at 30 seconds", () => {

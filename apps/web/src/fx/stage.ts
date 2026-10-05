@@ -89,7 +89,9 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
       const played = entry.events.find(
         (e): e is Extract<GameEvent, { type: "cardPlayed" }> => e.type === "cardPlayed" && e.instanceId === event.instanceId,
       );
-      const landMs = frac(FX_SLAM_AT, D);
+      // #185: a slam's stand-in waits out the anticipation before it lands.
+      const wait = entry.slam?.instanceId === event.instanceId ? entry.slam.anticipationMs : 0;
+      const landMs = wait + frac(FX_SLAM_AT, D - wait);
       // R502: a card cast as it was drawn never was in a hand, so it comes out of its Deck pile.
       if (played !== undefined && c.env.memory.castOnDraw(played)) {
         return [hold(tid(animTestid.library(sideOf(view, played.player))), zone, landMs)];

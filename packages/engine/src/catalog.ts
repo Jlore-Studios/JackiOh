@@ -4,7 +4,13 @@
 
 import type { CardDef, CardDefs, CardType, CatalogQuery, FusedIngredient, Rarity, SetName, Tag } from "@jackioh/shared";
 import { SHIPPED_SETS } from "@jackioh/shared";
-import { GRAPE_ODDS, POOL_TOKEN_TAGS } from "./config";
+import {
+  GLITCH_DEF_ID,
+  GLITCH_ODDS_DENOMINATOR,
+  GLITCH_ODDS_PER_SYSTEM_PLAY,
+  GRAPE_ODDS,
+  POOL_TOKEN_TAGS,
+} from "./config";
 import type { Rng } from "./rng";
 
 let registered: CardDefs = {};
@@ -105,6 +111,8 @@ function tagPoolTakesToken(args: CatalogQueryArgs, def: CardDef): boolean {
 }
 
 function matchesQuery(def: CardDef, args: CatalogQueryArgs, tokensAllowed: boolean): boolean {
+  // R674: Glitch is in no pool, not even one that takes every token; only R673's roll makes one.
+  if (def.id === GLITCH_DEF_ID && !asList(args.defId).includes(def.id)) return false;
   if (!tokensAllowed && isToken(def) && !tagPoolTakesToken(args, def)) return false;
   if (args.token !== undefined && isToken(def) !== args.token) return false;
 
@@ -310,10 +318,27 @@ const GRAPE_DEF_IDS: ReadonlySet<string> = new Set(GRAPE_ODDS.map((grape) => gra
  * R382: draw the generated card from a pool — as `rng.pick` today, except that a Grape pick is
  * rolled again on `GRAPE_ODDS` and the Grape that roll names is generated instead, so the Grape
  * rarity pool persists across every kind of Grape generation. One extra rng draw, only when a
- * Grape was picked; every other pick draws exactly as before.
+ * Grape was picked; every other pick draws exactly as before. A caller generating into a hand or a
+ * deck passes the state as `glitch`, and the pick may then become Glitch (R673).
  */
-export function pickGenerated(rng: Rng, pool: readonly CardDef[]): CardDef | undefined {
-  const def = rng.pick(pool);
-  if (def === undefined || !GRAPE_DEF_IDS.has(def.id)) return def;
-  return findDef(null, rollGrape(rng)) ?? def;
+export function pickGenerated(rng: Rng, pool: readonly CardDef[], glitch?: GlitchOdds): CardDef | undefined {
+  const picked = rng.pick(pool);
+  const def = picked === undefined || !GRAPE_DEF_IDS.has(picked.id) ? picked : (findDef(null, rollGrape(rng)) ?? picked);
+  return def === undefined || glitch === undefined ? def : glitchOrNot(rng, def, glitch);
+}
+
+/** R673: what the Glitch roll reads — the match's count of "… in the System" plays. */
+export type GlitchOdds = { readonly systemPlays?: number };
+
+/**
+ * R673: after a card is picked for a hand or a deck, n/10000 that it is Glitch instead, n the match's
+ * System plays. One rng draw, and only when n is above 0, so a match no System card was played in
+ * draws exactly as before; a catalog without Glitch keeps the pick.
+ */
+export function glitchOrNot(rng: Rng, def: CardDef, glitch: GlitchOdds): CardDef {
+  const plays = glitch.systemPlays ?? 0;
+  if (plays <= 0) return def;
+  const roll = rng.int(GLITCH_ODDS_DENOMINATOR);
+  if (roll >= plays * GLITCH_ODDS_PER_SYSTEM_PLAY) return def;
+  return findDef(null, GLITCH_DEF_ID) ?? def;
 }
