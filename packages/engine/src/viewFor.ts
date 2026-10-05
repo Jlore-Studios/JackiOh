@@ -383,7 +383,7 @@ function canAct(state: GameState, card: CardInstance): boolean {
  */
 function backrowView(state: GameState, card: CardInstance | null, viewer: PlayerId): BackrowView {
   if (card === null) return null;
-  // B5 E19, R471: Plague Tokens are public wherever they sit, a face-down card's included; B5 E21: a
+  // B5 E19, R471: Plague Counters are public wherever they sit, a face-down card's included; B5 E21: a
   // backrow pile shows how many cards lie under its top, as a unit pile does (R13, R447).
   const plague = plagueOn(card);
   const slot = slotOf(state, card);

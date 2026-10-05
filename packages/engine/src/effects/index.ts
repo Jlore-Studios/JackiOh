@@ -103,7 +103,7 @@ export {
 } from "./choose";
 export type { DiscoverOffer, LibraryFilter, TargetScope } from "./choose";
 
-// Plague Token, Lock (§6.3, §3.2).
+// Plague Counter, Lock (§6.3, §3.2).
 export { clearPlague, lock, plague } from "./counters";
 export type { ZoneSpec } from "./counters";
 
@@ -168,7 +168,7 @@ export type { DelayAt } from "./delay";
 export { addPlayerModifier } from "./playerMods";
 
 // Coin flips (§6.3, §10.7): every flip goes through `ctx.rng`, never `Math.random`.
-export { flipCoins } from "./coins";
+export { flipCoins, flipCoinKeyword } from "./coins";
 
 // Fuse (§6.3, R77, R102) and Rotate (§6.3, §3.1, R14, R88): both wrap their subsystem whole.
 export { fuseCards } from "./fuse";

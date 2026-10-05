@@ -94,7 +94,7 @@ const COSTS: Record<string, number> = {
   [CARDS.myPawn]: 1,
   [BEAR_HONEYPOT]: 1,
   [CARDS.sillySilas]: 3,
-  [CARDS.pocketChaos]: 2,
+  [CARDS.pocketChaos]: 4,
 };
 
 /**

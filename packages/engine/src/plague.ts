@@ -1,15 +1,15 @@
-// Plague Tokens (SPEC §6.3 Plague Token; docs/classic-sets.md B5 E19; R471): the counter on a
+// Plague Counters (SPEC §6.3 Plague Counter; docs/classic-sets.md B5 E19; R471): the counter on a
 // permanent, how many a placement puts there, and how they come off again.
 //
-// A Plague Token is `instance.counters.plague` (§10.1), a count on a permanent that R78 clears when
+// A Plague Counter is `instance.counters.plague` (§10.1), a count on a permanent that R78 clears when
 // the card leaves the field. Three things touch it and this module owns all three, so a card, the
 // play pipeline and a verb in `effects/` can never disagree about them:
 //   - a placement (`placePlagueOn`): one effect putting N tokens on one card, multiplied by what the
 //     card receiving them says (Classic #27 Pestilent Slime's "doubled", `Script.plagueMultiplier`),
-//     and reported once as `counterChanged` with `placed`, which "whenever Plague Tokens are placed
+//     and reported once as `counterChanged` with `placed`, which "whenever Plague Counters are placed
 //     on this" answers once per placement however many tokens it put there (R471). Every gain of
-//     tokens is a placement, Core #91 Fed Fauci's "+1 Plague Token" included;
-//   - a removal (`removePlague`): Classic #78 Mutate Spell's "remove a Plague Token", and Classic #74
+//     tokens is a placement, Core #91 Fed Fauci's "+1 Plague Counter" included;
+//   - a removal (`removePlague`): Classic #78 Mutate Spell's "remove a Plague Counter", and Classic #74
 //     Corpse Plantation's tokens spent as mana, which the play pipeline pays through this, never by
 //     writing the counter itself. A removal is no placement and carries no `placed`;
 //   - the reads a card asks (`plagueOn`, `plagueOnField`, `permanentsOnField`), which `query.ts`
@@ -26,7 +26,7 @@ import { scriptOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
 import { cardAt, isBuried, slotsOf } from "./zones";
 
-/** The tokens a card carries now; an untouched card carries none (§6.3 Plague Token). */
+/** The tokens a card carries now; an untouched card carries none (§6.3 Plague Counter). */
 export function plagueOn(card: Pick<CardInstance, "counters">): number {
   return Math.max(0, card.counters.plague ?? 0);
 }
@@ -49,7 +49,7 @@ export function permanentsOnField(state: GameState, first: PlayerId = state.acti
 }
 
 /**
- * Classic #59 Plague Doctor: "the number of Plague Tokens on the field" — every token on every
+ * Classic #59 Plague Doctor: "the number of Plague Counters on the field" — every token on every
  * permanent, both sides, face-down cards included; or one side's only, with `player`.
  */
 export function plagueOnField(state: GameState, player?: PlayerId): number {
@@ -58,7 +58,7 @@ export function plagueOnField(state: GameState, player?: PlayerId): number {
     .reduce((sum, card) => sum + plagueOn(card), 0);
 }
 
-/** Whether a card can carry Plague Tokens now: a permanent on the field, not dormant (R13). */
+/** Whether a card can carry Plague Counters now: a permanent on the field, not dormant (R13). */
 export function carriesPlague(state: GameState, card: CardInstance): boolean {
   return card.zone.z === "field" && !isBuried(state, card);
 }
@@ -76,7 +76,7 @@ export function plagueMultiplierOf(state: GameState, card: CardInstance): number
 }
 
 /**
- * R471: one placement of `amount` Plague Tokens on `card`, multiplied by the card's multiplier.
+ * R471: one placement of `amount` Plague Counters on `card`, multiplied by the card's multiplier.
  * Returns how many went on — 0 when the card is not a permanent on the field or the amount is not
  * positive, in which case nothing changes and nothing is reported.
  */
@@ -91,7 +91,7 @@ export function placePlagueOn(sink: EngineSink, card: CardInstance, amount: numb
 }
 
 /**
- * Take up to `amount` Plague Tokens off a card (Classic #78's "remove a Plague Token", Classic #74's
+ * Take up to `amount` Plague Counters off a card (Classic #78's "remove a Plague Counter", Classic #74's
  * tokens spent as mana). Returns how many came off; the count floors at 0, and a removal that takes
  * nothing reports nothing.
  */

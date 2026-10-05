@@ -83,27 +83,29 @@ const SETS: readonly SetExpectation[] = [
   {
     // §8 + §7: the 100 Core indices, the 5 card-defined tokens, and the 6 named ones — the 4 tokens
     // several cards share, The Coin, which §2.1's setup deals (R244), and the Ghoul Token, a card of
-    // its own in patch v0.1.1 (R353). §8: "Distribution: 35 Common, 37 Rare, 16 Epic, 7 Legendary,
-    // 5 Mythic."
+    // its own in patch v0.1.1 (R353). §8: "Distribution: 32 Common, 40 Rare, 16 Epic, 7 Legendary,
+    // 5 Mythic" (patch v0.2.17, issue #44, made #27, #28 and #40 Rare).
     set: "Core",
     segment: "core",
     cards: 100,
     cardDefinedTokens: ["51.1", "65.1", "90.1", "93.1", "95.1"],
     sharedTokens: ["T-rush", "T-sheep", "T-felinor", "T-bread", "T-coin", "T-ghoul"],
-    rarities: { Common: 35, Rare: 37, Epic: 16, Legendary: 7, Mythic: 5 },
+    rarities: { Common: 32, Rare: 40, Epic: 16, Legendary: 7, Mythic: 5 },
   },
   {
-    // B2.1, B2.5: 90 cards and no tokens of its own; the designer's rarities. Issue #170 adds one
-    // shared token, Glitch, which only R673's roll ever makes (R674).
+    // B2.1, B2.5: 90 cards and one shared token; the designer's rarities, as patch v0.2.17
+    // (issue #44) left them: 35/26/18/10/1. Issue #170 adds the shared token, Glitch,
+    // which only R673's roll ever makes (R674).
     set: "Classic",
     segment: "classic",
     cards: 90,
     cardDefinedTokens: [],
     sharedTokens: ["T-glitch"],
-    rarities: { Common: 42, Rare: 25, Epic: 13, Legendary: 9, Mythic: 1 },
+    rarities: { Common: 35, Rare: 26, Epic: 18, Legendary: 10, Mythic: 1 },
   },
   {
-    // B2.1, B2.3, B2.5, B8: 78 cards, 28 tokens a card defines and the ten AI generated cards.
+    // B2.1, B2.3, B2.5, B8: 78 cards, 28 tokens a card defines and the ten AI generated cards,
+    // as patch v0.2.17 (issue #44) left them: 13/24/25/13/3.
     set: "Classic+",
     segment: "classicplus",
     cards: 78,
@@ -121,7 +123,7 @@ const SETS: readonly SetExpectation[] = [
       "76.1",
     ],
     sharedTokens: range("T-AI-", 1, 10),
-    rarities: { Common: 13, Rare: 25, Epic: 25, Legendary: 13, Mythic: 2 },
+    rarities: { Common: 13, Rare: 24, Epic: 25, Legendary: 13, Mythic: 3 },
   },
 ];
 

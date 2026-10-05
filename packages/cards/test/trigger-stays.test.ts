@@ -91,7 +91,7 @@ function answerRepeatWithHero(g: Scenario): void {
 }
 
 describe("R212: a Reborn body does not answer for the stay that died", () => {
-  it("R212 Fed Fauci that dies attacking and comes back through Reborn gets no Plague Token for the hit that killed it (R174)", () => {
+  it("R212 Fed Fauci that dies attacking and comes back through Reborn gets no Plague Counter for the hit that killed it (R174)", () => {
     const g = scenario({
       p1: { hand: [STOCKPILE], field: [{ def: FAUCI, lane: 1, damage: 5 }], library: [...LIBRARY] },
       p2: { hand: [STOCKPILE], field: [{ def: VANILLA, lane: 1 }], library: [...LIBRARY] },
@@ -109,7 +109,7 @@ describe("R212: a Reborn body does not answer for the stay that died", () => {
     expect(g.card(fauci).counters.plague ?? 0).toBe(0);
   });
 
-  it("R212 Fed Fauci forced into Moths to the Flame, killed by the strike back and reborn, gets no Plague Token (R53, R174)", () => {
+  it("R212 Fed Fauci forced into Moths to the Flame, killed by the strike back and reborn, gets no Plague Counter (R53, R174)", () => {
     const g = scenario({
       p1: { hand: [STOCKPILE], field: [{ def: MOTHS, lane: 1 }], library: [...LIBRARY] },
       p2: { hand: [STOCKPILE], field: [{ def: FAUCI, lane: 1, damage: 5 }], library: [...LIBRARY] },
@@ -125,7 +125,7 @@ describe("R212: a Reborn body does not answer for the stay that died", () => {
     expect(g.card(fauci).counters.plague ?? 0).toBe(0);
   });
 
-  it("R212 Fed Fauci killed by the first resolution of an Echoed True Strike gets no Plague Token on its Reborn body (§10.5 step 6)", () => {
+  it("R212 Fed Fauci killed by the first resolution of an Echoed True Strike gets no Plague Counter on its Reborn body (§10.5 step 6)", () => {
     const g = scenario({
       p1: {
         hand: [TWINSPELL, TRUE_STRIKE, VANILLA],

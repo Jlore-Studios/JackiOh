@@ -1,6 +1,6 @@
 // C #70 Book of Plague (SPEC §8.6 row 70). (1) Spell, Book, Epic.
-//   Base:    "Place {tokens|Plague Token|Plague Tokens}." — 5; Radiant: the same text — 10.
-//   Engine:  "Plague Tokens (§6.3): five (Radiant ten) placements of 1, each on a permanent you choose
+//   Base:    "Place {tokens|Plague Counter|Plague Counters}." — 5; Radiant: the same text — 10.
+//   Engine:  "Plague Counters (§6.3): five (Radiant ten) placements of 1, each on a permanent you choose
 //            (either side, face-down cards included, repeats allowed), one prompt per token. Tunes:
 //            tokens 5 ↑."
 //

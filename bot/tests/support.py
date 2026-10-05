@@ -52,7 +52,7 @@ NIGHT_WINDOW = {"mode": "window", "start": "21:00", "end": "07:00"}
 def test_pool(machine: tuple[str, ...] = (), committed_hours: bool = False,
               plan_lanes: int | None = 0) -> providers_mod.Pool:
     """The committed subscriptions, with the machine's (`"login": "machine"`) switched off
-    unless named in `machine`. A machine login has no secret to be missing, so it counts as set
+    unless named in `machine`, and on when named. A machine login has no secret to be missing, so it counts as set
     up in every run; tests start, as before the machine, with only the subscriptions whose
     secrets `HARNESS_SECRETS_SET` names.
 
@@ -67,8 +67,10 @@ def test_pool(machine: tuple[str, ...] = (), committed_hours: bool = False,
     if plan_lanes is not None:
         raw["plan_lanes"] = plan_lanes
     for name, provider in raw["providers"].items():
-        if provider.get("login") == "machine" and name not in machine:
-            provider["enabled"] = False
+        if provider.get("login") == "machine":
+            # Named ones are on whatever the owner commits (Devin is off since #311), so a test
+            # of a machine subscription stays about it.
+            provider["enabled"] = name in machine
         if provider.get("cli") == "claude" and not committed_hours:
             provider["schedule"] = dict(NIGHT_WINDOW)
             provider.pop("off_hours", None)

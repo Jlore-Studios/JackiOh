@@ -1,6 +1,6 @@
 // #91 Fed Fauci (SPEC §8.4, BUILD M4-T4 row 91, R63, R78).
 //
-// Base: "Rush. Whenever this takes damage, +1 Plague Token. Start of turn: +1 mana per Plague
+// Base: "Rush. Whenever this takes damage, +1 Plague Counter. Start of turn: +1 mana per Plague
 // Token". Radiant: "Rush; +2 mana per token". The radiant cell lists Rush without "Plus", so Rush
 // is the radiant face's COMPLETE keyword list (§8 Conventions) — which is what the catalog prints
 // on both faces, so nothing here grants it (§10.4 layer 1 reads it off the def). The cell restates
@@ -26,8 +26,8 @@
 // make a token off every hit anywhere on the board. Reported with this card; the guard stays
 // correct either way, since a non-trap trigger is not spent by returning nothing.
 //
-// R280: "+1 mana per Plague Token {n}" — the mana it gives at its controller's next start of turn,
-// its own Plague Tokens times the face's rate, off the same `manaNow` the hook gains. It reads the
+// R280: "+1 mana per Plague Counter {n}" — the mana it gives at its controller's next start of turn,
+// its own Plague Counters times the face's rate, off the same `manaNow` the hook gains. It reads the
 // card's own counters, which travel on its public view (§10.8); a card in hand holds none (R78).
 
 import type { CardInstance, EffectContext, Hook, Script, TriggerDef } from "@jackioh/engine";
@@ -37,10 +37,10 @@ import { cardDef } from "../catalog-data";
 
 export const def = cardDef("core-091");
 
-/** §8: "+1 Plague Token" — one per damage instance. */
+/** §8: "+1 Plague Counter" — one per damage instance. */
 const TOKENS_PER_DAMAGE = 1;
 
-/** §8: base "+1 mana per Plague Token"; radiant "+2 mana per token". */
+/** §8: base "+1 mana per Plague Counter"; radiant "+2 mana per token". */
 const MANA_PER_TOKEN = { base: 1, radiant: 2 } as const;
 
 /**
@@ -53,7 +53,7 @@ function isHitOnSelf(ctx: EffectContext & { event: GameEvent }): boolean {
   return ctx.event.targetId === self.id;
 }
 
-/** "+1 Plague Token". `plague` defaults its target to `{ of: "self" }`, which is this card. */
+/** "+1 Plague Counter". `plague` defaults its target to `{ of: "self" }`, which is this card. */
 const takesDamage: TriggerDef = {
   id: "fed-fauci-plague",
   on: ["damage"],
@@ -62,15 +62,15 @@ const takesDamage: TriggerDef = {
 };
 
 /** R280: the formula as each face prints it, which the preview labels its number with. */
-const FORMULA = { base: "+1 mana per Plague Token", radiant: "+2 mana per Plague Token" } as const;
+const FORMULA = { base: "+1 mana per Plague Counter", radiant: "+2 mana per Plague Counter" } as const;
 
-/** The mana the start-of-turn hook gains now: its own Plague Tokens times the face's rate. */
+/** The mana the start-of-turn hook gains now: its own Plague Counters times the face's rate. */
 function manaNow(self: CardInstance | null, perToken: number): number {
   return Math.max(0, self?.counters.plague ?? 0) * perToken;
 }
 
 /**
- * "Start of turn: +N mana per Plague Token" (§2.2, R62: after the refresh, before the draw). With
+ * "Start of turn: +N mana per Plague Counter" (§2.2, R62: after the refresh, before the draw). With
  * no tokens the card gains nothing and returns no effect at all, so it emits no `manaChanged` for a
  * change of zero.
  */

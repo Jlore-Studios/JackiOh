@@ -1,8 +1,8 @@
-// C #76 Plague Bringer (SPEC §8.6 row 76). (2) Unit, Common, 4/4 → 8/8.
+// C #76 Plague Bringer (SPEC §8.6 row 76). (2) Unit, Rare, 4/4 → 8/8.
 //   Base:    "Rush
-//             Cry: Place {tokens|Plague Token|Plague Tokens}. Draw {draw}." — 2 tokens, draw 1
+//             Cry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}." — 2 tokens, draw 1
 //   Radiant: the same text — 4 tokens, draw 2
-//   Engine:  "Plague Tokens (§6.3): two (Radiant four) placements of 1, each on a permanent you choose
+//   Engine:  "Plague Counters (§6.3): two (Radiant four) placements of 1, each on a permanent you choose
 //            (either side, face-down cards included, repeats allowed), one prompt per token. Tunes:
 //            tokens 2 ↑; draw 1 ↑."
 //

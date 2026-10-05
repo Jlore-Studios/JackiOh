@@ -1,12 +1,12 @@
-// C #42 Transmutable Toxins (SPEC §8.6 row 42, §6.2 Activate, §6.3 Plague Token, §10.4 layer 5; R60,
+// C #42 Transmutable Toxins (SPEC §8.6 row 42, §6.2 Activate, §6.3 Plague Counter, §10.4 layer 5; R60,
 // R69, R384). Field Spell, cost 2, Rare.
-//   Base:    "Aura: Your Units have +{stats}/+{stats} for each Plague Token on them. Enemy Units have
-//            −{stats}/−{stats} for each Plague Token on them.\nActivate: Place a Plague Token on each
+//   Base:    "Aura: Your Units have +{stats}/+{stats} for each Plague Counter on them. Enemy Units have
+//            −{stats}/−{stats} for each Plague Counter on them.\nActivate: Place a Plague Counter on each
 //            of {tokens|random Unit|random Units}." (stats 1, tokens 2)
 //   Radiant: the same words with stats 2.
 //   Engine:  "An aura (§10.4 layer 5) reading each unit's `counters.plague`; −1/−1 lowers max health,
 //            so an enemy can die of it at the state check (#46 Suppressive Aura's rule). Activate
-//            (§6.2, R384, once per turn): one Plague Token (§6.3) on each of two different random
+//            (§6.2, R384, once per turn): one Plague Counter (§6.3) on each of two different random
 //            units on the field, either side (R60: a random pick of N picks N different cards; with
 //            one unit on the field, it gets one token); a C #27 Pestilent Slime multiplies its own.
 //            Tunes: tokens 2 ↑; stats per token 1 ↑."
@@ -49,7 +49,7 @@ const toxins: Script = {
   activations: [
     {
       id: "transmutable-toxins",
-      label: "Place a Plague Token on each of several random Units",
+      label: "Place a Plague Counter on each of several random Units",
       uses: 1,
       run: (ctx) => [placePlagueRandom({ count: param(ctx, "tokens"), amount: 1, scope: { side: "any", rows: ["units"] } })],
     },

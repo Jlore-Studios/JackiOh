@@ -25,7 +25,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from harness import asks, disk, failures, issueplan, review_rule
+from harness import asks, disk, failures, issueplan, memory, review_rule
 from harness import easy as easy_mod
 from harness import stepup
 from harness import gates as gates_mod
@@ -123,6 +123,7 @@ class Deliverer:
             s, self.provider.id, usage, reset_at, self.ctx.now(), minutes),
             f"usage {self.provider.id}")
         self._machine_disk()
+        self._machine_memory()
         self._login_works()
         if action == "suggest":
             self._suggestions()
@@ -177,6 +178,18 @@ class Deliverer:
             done = f"could not settle the disk issue: {exc}"
         if done:
             self.log.append(done)
+
+    def _machine_memory(self) -> None:
+        """A job on the bot's machine read its memory: keep its summary for the status issue's
+        line on the machine's memory (`memory.py`, #312)."""
+        if providers_mod.hosted(self.provider.runs_on):
+            return
+        found = memory.summary(self.result.get("memory"))
+        if found is None:
+            return
+        reported = str((self.result.get("disk") or {}).get("runner") or "")
+        runner = reported if re.fullmatch(r"[\w.-]{1,80}", reported) else self.provider.runs_on
+        self.ctx.store.update(lambda s: memory.note(s, found, runner), "machine memory")
 
     def _login_works(self) -> None:
         """A model call went through on this run's subscription: any streak of runs that could
@@ -586,6 +599,18 @@ class Deliverer:
     def _link(self) -> str:
         return f"[run]({self.cfg.run_url})" if self.cfg.run_url else "the run"
 
+    def _built_on(self) -> str:
+        """The builder's seat, and every move the run made between its lane's models (each
+        Claude account switches between Opus and Sonnet: `work.Worker._switch`)."""
+        moves = []
+        for move in self.result.get("switches") or []:
+            if not isinstance(move, dict):
+                continue
+            when = f"after round {move['n']}" if move.get("n") else "before round 1"
+            moves.append(f"{when} it switched to `{move.get('to')}`: {move.get('why')}")
+        text = self.build_seat.describe()
+        return text + (f" ({'; '.join(moves)})" if moves else "")
+
     def _requeue_label(self, number: int, kind: str) -> None:
         set_state_label(self.ctx, number, self._labels(number),
                         LABEL_REVISE if kind == "revise" else LABEL_BUILD)
@@ -703,10 +728,33 @@ class Deliverer:
         self.ctx.store.update(lambda s: state_item(s, number).pop("wip", None),
                               f"wip #{number} done")
 
+    def _progressed(self, number: int, kind: str, before: str) -> bool:
+        """Whether a cut-off run's kept work moved on: a commit of its own, not a merge of
+        `main`, past `before` (the head the last cut-off run kept, `bot/wip/<pr>`), or past where
+        this run started when it did not build on that. A revision that resumes from its wip
+        pushes it again every time, so "pushed" alone is no progress."""
+        head = str(self.result.get("head") or "")
+        if not head:
+            return False
+        for base in (before, str(self.result.get("start") or "")):
+            if not base or self.repo.run("merge-base", "--is-ancestor", base, head,
+                                         check=False).returncode != 0:
+                continue
+            # Not main's: a merge of `main` brings its squash commits in, and they are no merges.
+            main = f"origin/{self.cfg.default_branch}"
+            ours = ["^" + main] if self.repo.rev(main) else []
+            found = self.repo.run("rev-list", "--no-merges", "--count", head, f"^{base}", *ours,
+                                  check=False)
+            return found.returncode == 0 and (found.stdout or "0").strip() not in ("", "0")
+        return False
+
     def _interrupted(self, number: int, kind: str) -> None:
         interrupt = str(self.result.get("interrupt") or "budget")
         reason = self.result.get("reason")
+        kept = self._record(number).get("wip") if kind == "revise" else None
+        before = str(kept.get("sha") or "") if isinstance(kept, dict) else ""
         pushed, problem = self._keep_work(number, kind)
+        moved = pushed and self._progressed(number, kind, before)
         try:
             calls = int(self.result.get("model_calls") or 0)
         except (TypeError, ValueError):
@@ -718,7 +766,7 @@ class Deliverer:
         if interrupt in ("budget", "usage") and calls:
             def count(s: dict[str, Any]) -> None:
                 entry = state_item(s, number)
-                entry["interruptions"] = 0 if pushed else int(entry.get("interruptions", 0)) + 1
+                entry["interruptions"] = 0 if moved else int(entry.get("interruptions", 0)) + 1
             state = self.ctx.store.update(count, f"interrupted #{number}")
             count_now = int(state_item(state, number).get("interruptions", 0))
             if count_now >= self.cfg.max_failures:
@@ -965,7 +1013,7 @@ class Deliverer:
                 said = self._self_check_said()
             if approved:
                 self._unstick(number, pr)
-            self.gh.create_comment(number, f"Opened #{pr}, built on {self.build_seat.describe()}. "
+            self.gh.create_comment(number, f"Opened #{pr}, built on {self._built_on()}. "
                                    f"{said} {merge_note}")
             self._remember(number, last_findings=[], question="", failures=0, pr=pr)
         else:
@@ -1090,9 +1138,12 @@ class Deliverer:
             self._unstick(number)
         report = str(self.result.get("report") or "")[:REPORT_CHARS]
         rerun = not pushed and bool(self._record(number).get("ci_run_id"))
+        # The head a CI fix pushed: CI red on it is a strike (`events.on_ci`, #316).
+        fixed = ({"ci_fixed_head": str(self.result.get("head") or "")}
+                 if pushed and self._record(number).get("source") == "ci" else {})
         self._remember(number, feedback_since=started, failures=0, source="", last_findings=[],
                        question="",
-                       self_check_findings=self.result.get("self_check_findings") or [])
+                       self_check_findings=self.result.get("self_check_findings") or [], **fixed)
         note = ""
         if not pushed and approved:
             note = "\n\nI changed nothing: the reviewer agreed no change was needed."
@@ -1125,7 +1176,7 @@ class Deliverer:
         said = (f"{self.review_seat.describe()} reviewed it adversarially and approved it"
                 if approved else self._self_check_said())
         self.gh.create_comment(number, f"Revision {'pushed' if pushed else 'done'} "
-                               f"({self._link()}) on {self.build_seat.describe()}; {said}{note}"
+                               f"({self._link()}) on {self._built_on()}; {said}{note}"
                                f"\n\n{report}{merge_note}")
 
     # ------------------------------------------------------------------ the review rule
@@ -1224,10 +1275,8 @@ class Deliverer:
         a resolution keeps who cleared the change, and adds who reviewed the resolution."""
         who = review_rule.who(self._approvals(votes))
         entry: dict[str, Any] = {"sha": head, "at": iso(self.ctx.now()), "by": who}
-        try:
-            stepup.clear(self.ctx, pr)  # a head that met the rule ends the item's strikes
-        except GitHubError:
-            pass
+        # The item's strikes end once this head is green in CI too (#316): the sweep sees that
+        # (`sweep._green_heads`), and a merge does (`events.on_pull_closed`).
         carried = votes.get("carried")
         if isinstance(carried, dict):
             entry.update(by=str(carried.get("by") or who), resolved_by=who,

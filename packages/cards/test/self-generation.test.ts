@@ -20,7 +20,7 @@ import { scenario } from "./_harness";
  */
 const NAMES_ITS_OWN_POOL: Readonly<Record<string, string>> = {
   "core-012": "Duplicating Felinors summons a copy of this unit (rule 4: copies are not generation)",
-  "core-087": "Pocket Chaos names itself: \"add a Pocket Chaos to your opponent's hand\" (rule 3)",
+  "core-087": "Pocket Chaos names itself: \"add a Pocket Chaos with a base cost (1) less …\" (rule 3)",
   "core-090": "CN-Viral Injection shuffles copies of itself (rule 4)",
   "core-095": "Call to Chaos casts a random Call to Chaos, a pool it names (R28, rule 3)",
   "classicplus-004": "Juhan Biggest Bat makes the cards beneath it copies of this (rule 4)",

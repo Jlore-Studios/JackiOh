@@ -37,7 +37,7 @@
 //      resolves; no target fizzles and the next quest still opens.
 //   C  return 2 random cards from your graveyard to your hand — two different cards (R60), all of them
 //      if fewer; a full hand burns one back once (§2.4, `returnRandomFromGraveyard`).
-//   D  place 3 Plague Tokens (§6.3, R471, R689): three placements, all on the one permanent you choose,
+//   D  place 3 Plague Counters (§6.3, R471, R689): three placements, all on the one permanent you choose,
 //      either side (`placePlagueTokens`).
 //   E  a random Unit of yours gets +3/+3 (`buffRandomUnit`, R60); none, nothing.
 //   F  bounce a target permanent — a Unit or a backrow card, either side, face-down ones and this card
@@ -134,7 +134,7 @@ const IN_TOO_DEEP_QUESTS: subsystems.QuestBook = {
     { id: "A", text: "Heal your hero 6", next: "2" },
     { id: "B", text: "Deal 3 damage to a target", next: "3" },
     { id: "C", text: "Return 2 random cards from your graveyard to your hand", next: "4" },
-    { id: "D", text: "Place 3 Plague Tokens", next: "5" },
+    { id: "D", text: "Place 3 Plague Counters", next: "5" },
     { id: "E", text: "A random Unit of yours gets +3/+3", next: "6" },
     { id: "F", text: "Bounce a target permanent", next: "7" },
     { id: "G", text: "Your opponent discards 2 cards of their choice", next: "8" },

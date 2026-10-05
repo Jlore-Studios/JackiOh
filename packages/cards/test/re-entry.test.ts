@@ -25,7 +25,7 @@
 //    Silas part bounced to hand is not buffed there by its Gary part.
 //  - Round 8, lens L2. R174: a Transform takes the card off the field like any departure, so a
 //    second Sheepish is not offered the play the first turned into a Sheep. R102, R212: a card a
-//    Fuse kept is on the same stay, so a trigger it queued before the Fuse (Fed Fauci's Plague Token
+//    Fuse kept is on the same stay, so a trigger it queued before the Fuse (Fed Fauci's Plague Counter
 //    for the Cry that hit it) still resolves under the fused definition's namespaced id.
 //  - Round 9, lens "re-entry and stays". R174: #22 reads its meal on the stay the play chose, so a
 //    crafted Cube + Cube naming one Reborn unit twice remembers it once; and a card the play's own
@@ -54,7 +54,7 @@ const MANA_WELL = "core-006";
 const TIMMY = "core-011";
 const POSTDOC = "core-061";
 const SORCERER = "core-068";
-const COMBO_INDEX = "core-093";
+const PALANTIR = "classic-004";
 const HEROIC_POWER = "core-098";
 const VANILLA = "core-008";
 const HIT_JOB = "core-016";
@@ -419,9 +419,11 @@ describe("R35, §3.2: a Transform replaces the occupant of a Locked zone", () =>
     expect(g.state.players.p1.locks.backrow[0]).toBe(true);
 
     // R35: every board card but an Immutable one is replaced in place; the lock only stops summons
-    // and "the current occupant is unaffected" (§3.2). The one Legendary Field Spell is #93.
+    // and "the current occupant is unaffected" (§3.2). Since patch v0.2.17 (issue #44) the Legendary
+    // Field Spell pool holds #93, Classic #4 and #7, Classic #28 and Classic+ #78; this seed draws
+    // Classic #4 Palantir.
     g.play(TRANSMOGULATE);
-    expect(g.backrow("p1", 1)?.defId).toBe(COMBO_INDEX);
+    expect(g.backrow("p1", 1)?.defId).toBe(PALANTIR);
     g.expectInZone(power, "gone");
   });
 });
@@ -658,7 +660,7 @@ describe("R174: a transformed card has left the field", () => {
 });
 
 describe("R102, R212: a card a Fuse kept is the same card on the same stay", () => {
-  it("R102 Fed Fauci hit by Twisted Sorcerer's Cry and then fused with the Sorcerer by Unlicensed Experimentation still gains its Plague Token (R77, R212)", () => {
+  it("R102 Fed Fauci hit by Twisted Sorcerer's Cry and then fused with the Sorcerer by Unlicensed Experimentation still gains its Plague Counter (R77, R212)", () => {
     const g = scenario({
       seed: "edge-r8-fauci-fuse",
       p1: { hand: [SORCERER, HINDER], mana: 10 },
@@ -675,7 +677,7 @@ describe("R102, R212: a card a Fuse kept is the same card on the same stay", () 
     const kept = g.card(fauci);
     expect(kept.zone.z).toBe("field");
     expect(kept.damage).toBe(4);
-    // "Whenever this takes damage, +1 Plague Token": the hit happened to this card on this stay
+    // "Whenever this takes damage, +1 Plague Counter": the hit happened to this card on this stay
     // (R212), and the Fuse neither moved it nor dropped Fauci's text, so the token lands.
     expect(kept.counters.plague ?? 0).toBe(1);
   });

@@ -1,6 +1,6 @@
-// C+ #39 Book Worm — SPEC §8.7 row 39, BUILD M9 Classic+ row C+ 39: "It starts with no Plague Tokens
+// C+ #39 Book Worm — SPEC §8.7 row 39, BUILD M9 Classic+ row C+ 39: "It starts with no Plague Counters
 // (balance patch 1: no N counter — the tokens stacked on itself are the count); at each start of its
-// controller's turn one Plague Token is placed on it; Death adds one random non-token Book of any set
+// controller's turn one Plague Counter is placed on it; Death adds one random non-token Book of any set
 // (R380, repeats allowed) per token, reading the tokens last-known (R78, R89), a full hand burning the
 // rest; bounced and played again it starts at none; the public token count is the preview both players
 // see; no tunable; radiant the Books are Radiant".
@@ -33,14 +33,14 @@ function booksIn(s: Scenario, before: readonly string[]): string[] {
     .map((card) => card.defId);
 }
 
-/** The Plague Tokens stacked on the Worm (§10.1, public in every view). */
+/** The Plague Counters stacked on the Worm (§10.1, public in every view). */
 function tokensOf(s: Scenario, card: CardInstance): number {
   return s.card(card).counters.plague ?? 0;
 }
 
 describe("C+ #39 Book Worm", () => {
   describe("base", () => {
-    it("it starts with no Plague Tokens: dying at once adds no Book", () => {
+    it("it starts with no Plague Counters: dying at once adds no Book", () => {
       const s = onField();
       expect(tokensOf(s, s.card(WORM))).toBe(0);
       const before = s.hand("p1").map((card) => card.id);
@@ -135,7 +135,7 @@ describe("C+ #39 Book Worm", () => {
       const wormInHand = inHand.find((card) => card.defId === WORM);
       expect(wormInHand === undefined || !("counters" in wormInHand)).toBe(true);
       // The text names what the counters are.
-      expect(defOf(s.state, WORM).base.text).toContain("Plague Token");
+      expect(defOf(s.state, WORM).base.text).toContain("Plague Counter");
       // What the counters say is what the Death then adds.
       const before = s.hand("p1").map((card) => card.id);
       s.attack(s.unit("p1", 1)?.id ?? "", MENACE);

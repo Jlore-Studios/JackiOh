@@ -24,7 +24,7 @@
 //
 // R81: zone, X, embiggen, Tribute and a card's declared targets and modes are NOT prompts. They
 // travel inside the `play` action, and `legalActions` enumerates them; so does a play's new payment,
-// the Plague Tokens that pay part of a graveyard play's price (`plague`, Classic #74) — while a
+// the Plague Counters that pay part of a graveyard play's price (`plague`, Classic #74) — while a
 // targeting cost's discards (Classic #89) are random at pay time (R682) and travel nowhere. R384: an
 // activation is built the same way — its targets, modes and Tribute travel in the `activate`
 // action — so a play and an activation are one "build" here (`BuildBody`), narrowed by one set of
@@ -77,7 +77,7 @@ export type ActivationBody = ActivateBody | PowerBody;
 /** An action the client builds choice by choice from its candidates (R81, R384). */
 export type BuildBody = PlayBody | ActivationBody;
 
-/** B5 E11, E19: Plague Tokens paying part of a graveyard play's price (Classic #74). */
+/** B5 E11, E19: Plague Counters paying part of a graveyard play's price (Classic #74). */
 export type PlagueSpend = NonNullable<PlayBody["plague"]>;
 /** A plague payment as the player picks it: tokens off a card, or none (the whole price in mana). */
 export type PlagueChoice = PlagueSpend | "none";
@@ -90,7 +90,7 @@ export type PlayBuild = {
   tributes?: string[];
   targets?: Selection[];
   modes?: string[];
-  /** B5 E11, E19: how a graveyard play's price is paid in Plague Tokens. */
+  /** B5 E11, E19: how a graveyard play's price is paid in Plague Counters. */
   plague?: PlagueChoice;
 };
 
@@ -421,7 +421,7 @@ function distinctBy<T>(values: readonly T[], key: (value: T) => string): T[] {
 /**
  * The next choice the build still needs, or null when the candidates agree on everything. Derived
  * purely from the candidate array: two candidates that differ only in `x` mean the player must
- * pick an X, and nothing else. Asked in cost order (X, embiggen and the Plague Tokens change what
+ * pick an X, and nothing else. Asked in cost order (X, embiggen and the Plague Counters change what
  * is paid), then the Tribute, the targets, the modes, and the board-driven zone last so a zone
  * click finishes the play — except that the modes come before the targets when some candidate
  * wants no target at all: a target-first order would force a target pick and strand the targetless

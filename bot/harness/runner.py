@@ -489,7 +489,7 @@ class ClaudeCli(_Cli):
         text = _text(result)
         error = None
         if is_error or code != 0:
-            error = redact((text or launch.stderr or f"claude exited {code}")[-2000:])
+            error = redact((text or stderr_error(launch.stderr or "", f"claude exited {code}"))[-2000:])
         reset_at = None
         rejected = isinstance(usage, dict) and usage.get("status") == "rejected"
         if (is_error or code != 0) and (rejected or RATE_LIMIT_WORDS.search(error or "")):
@@ -563,8 +563,8 @@ class CodexCli(_Cli):
             return RunResult(False, text, EXIT_TIMEOUT, None, launch.elapsed,
                              f"timed out after {request.timeout_s}s", usage, timed_out=True)
         ok = launch.code == 0 and not failed
-        error = None if ok else redact(("; ".join(failed) or launch.stderr
-                                        or f"codex exited {launch.code}")[-2000:])
+        error = None if ok else redact(("; ".join(failed) or stderr_error(
+            launch.stderr or "", f"codex exited {launch.code}"))[-2000:])
         reset_at = None
         if not ok and RATE_LIMIT_WORDS.search(error or ""):
             reset_at = _exhausted_reset(usage) or DEFAULT_PARK
@@ -711,8 +711,8 @@ class AgyCli(_Cli):
         ok = launch.code == 0 and result.get("status") == "SUCCESS"
         error = None
         if not ok:
-            error = redact((str(result.get("error") or "") or launch.stderr
-                            or f"agy exited {launch.code} ({result.get('status')})")[-2000:])
+            error = redact((str(result.get("error") or "") or stderr_error(
+                launch.stderr or "", f"agy exited {launch.code} ({result.get('status')})"))[-2000:])
         reset_at = park_for(error) if not ok and RATE_LIMIT_WORDS.search(error or "") else None
         return self._with_usage(
             RunResult(ok, text, launch.code, turns, launch.elapsed, error, None, reset_at), request)

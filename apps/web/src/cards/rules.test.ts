@@ -136,7 +136,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Bounce",
   "Degrade",
   "Upgrade",
-  "Plague Token",
+  "Plague Counter",
   "Set health",
   "Redirect",
   "End the turn",
@@ -525,8 +525,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
 
   it("B11 the glossary's aliases for retired variants are empty", () => {
     for (const [key, entry] of Object.entries(GLOSSARY)) {
-      if (key === "Plague Token") {
-        expect(entry.aliases, key).toEqual(["Plague Tokens"]);
+      if (key === "Plague Counter") {
+        expect(entry.aliases, key).toEqual(["Plague Counters"]);
       } else if (key === "Look at a hand") {
         expect(entry.aliases, key).toEqual(["Look at your opponent's hand"]);
       } else if (key === "Bounce") {
@@ -571,7 +571,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
       ["Flicker", "classic-014", "radiant", "Flicker"],
       ["Degrade", "classicplus-008", "base", "Degrade"],
       ["Upgrade", "classicplus-071", "base", "Upgrade"],
-      ["Plague Token", "classic-039", "base", "Plague Tokens"],
+      ["Plague Counter", "classic-039", "base", "Plague Counters"],
       ["Set health", "classic-029", "base", "Set health"],
       ["Redirect", "classic-052", "base", "Redirect"],
       ["End the turn", "classicplus-026", "base", "End the turn"],
@@ -623,7 +623,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
       "Flicker",
       "Degrade",
       "Upgrade",
-      "Plague Token",
+      "Plague Counter",
       "Set health",
       "Redirect",
       "End the turn",

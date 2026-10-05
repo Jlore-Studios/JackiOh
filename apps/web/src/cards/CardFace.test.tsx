@@ -538,7 +538,7 @@ describe("B14: the radiant face", () => {
   it("R277 a radiant face prints its whole text once and marks in gold what the base face lacks", () => {
     const cf = catalogFace("core-004", true);
     const text = one(cf, ".card-text");
-    expect(one(text, ".cf-text-base").textContent).toBe("Cry: Flip 7 coins. Gain +2 attack per heads and +2 health per tails.");
+    expect(one(text, ".cf-text-base").textContent).toBe("Cry: Flip 7 coins. Gain +2 attack per heads and +2 health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush.");
     expect(text.querySelector(".cf-text-radiant")).toBeNull();
     expect([...text.querySelectorAll(".cf-mark")].map((mark) => mark.textContent)).toEqual(["7", "+2", "+2"]);
   });

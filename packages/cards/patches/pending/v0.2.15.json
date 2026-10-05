@@ -2,7 +2,7 @@
   "version": "v0.2.15",
   "title": "Patch v0.2.15: Classic and Classic+ balance patch 1",
   "sources": "#88",
-  "notes": "Classic and Classic+ balance patch 1: random discards unless a card says of your choice (R682), a Bounce keyword for every return to hand (R692), Plague Tokens of one effect on one chosen permanent (R689), Recruit skipping (X)-cost cards (R690), Locked zones refusing only plays (R688), Transform keeping battle position (R691), Reveal (R686), and per-card balance and text changes across Classic and Classic+.",
+  "notes": "Classic and Classic+ balance patch 1: random discards unless a card says of your choice (R682), a Bounce keyword for every return to hand (R692), Plague Counters of one effect on one chosen permanent (R689), Recruit skipping (X)-cost cards (R690), Locked zones refusing only plays (R688), Transform keeping battle position (R691), Reveal (R686), and per-card balance and text changes across Classic and Classic+.",
   "cards": [
     "core-017",
     "core-021",

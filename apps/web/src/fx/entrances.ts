@@ -14,8 +14,6 @@
 //     crack and a big shake.
 //   #45 Nature Titan, "titanBloom": holy rays, a ring of dust, and leaves of sparkle and gold that
 //     bloom out of the slam.
-//   #61 Plague Bringer Goliath, "plagueStomp": a poison ring and a poison cloud with smoke at the
-//     foot of the slam.
 //   #56 Spell Tyrant, "tyrantSigil": an arcane ring from the first frame, sparkles round it, and an
 //     arcane burst with mythic rays at the slam.
 
@@ -37,8 +35,6 @@ const ENTRANCE_TUNING = {
   bloomSparkle: { count: 34, power: 1.1 },
   bloomGold: { count: 30, power: 1.2 },
   bloomDust: { count: 24, power: 1 },
-  plagueCloud: { count: 44, power: 1 },
-  plagueSmoke: { count: 22, power: 0.8 },
   sigilSparkle: { count: 26, power: 0.9 },
   sigilArcane: { count: 48, power: 1.4 },
 } as const;
@@ -48,7 +44,6 @@ export const ENTRANCE_TRAUMA = {
   voidCollapse: 0.8,
   bigBoom: 0.75,
   titanBloom: FX_LEGENDARY_TRAUMA,
-  plagueStomp: 0.6,
   tyrantSigil: FX_LEGENDARY_TRAUMA,
 } as const;
 
@@ -108,18 +103,6 @@ const titanBloom: Entrance = ({ D, tgt, intensity: i }) => {
   ];
 };
 
-const plagueStomp: Entrance = ({ D, tgt, intensity: i }) => {
-  const at = tid(tgt);
-  const slam = frac(FX_SLAM_AT, D);
-  return [
-    raysCue(D, "legendary", at, 0),
-    ringCue(D, "poison", at, slam),
-    tunedBurst(i, "poison", at, "area", slam, ENTRANCE_TUNING.plagueCloud),
-    tunedBurst(i, "smoke", tid(tgt, FOOT), "ring", slam, ENTRANCE_TUNING.plagueSmoke),
-    ...shakeCues(i, ENTRANCE_TRAUMA.plagueStomp, slam),
-  ];
-};
-
 const tyrantSigil: Entrance = ({ D, tgt, intensity: i }) => {
   const at = tid(tgt);
   const slam = frac(FX_SLAM_AT, D);
@@ -132,7 +115,7 @@ const tyrantSigil: Entrance = ({ D, tgt, intensity: i }) => {
   ];
 };
 
-export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = { voidCollapse, bigBoom, titanBloom, plagueStomp, tyrantSigil };
+export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = { voidCollapse, bigBoom, titanBloom, tyrantSigil };
 
 export function isEntranceKey(key: string): key is EntranceKey {
   return Object.prototype.hasOwnProperty.call(ENTRANCES, key);

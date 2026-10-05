@@ -1,5 +1,5 @@
 // C #25 Lag in the System (SPEC §8.6 row 25, §6.3 Exile; R13, R65, R66, R113, R135, R396). Spell,
-// cost 0, Common.
+// cost 0, Epic.
 //   Base:    "Exile every ({threshold}) Cost or less card on the field." (balance patch 1: the
 //            Field alone, the whole board)
 //   Radiant: "Exile every ({threshold}) Cost or less enemy card on the field, in their hand and in

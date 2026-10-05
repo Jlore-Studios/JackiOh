@@ -93,6 +93,56 @@ class WipTests(unittest.TestCase):
         self.assertIn("cut off 3 runs in a row without its work moving on",
                       h.gh.bot_comments(40)[-1])
 
+    def test_a_resumed_revision_that_gets_nowhere_still_counts(self):
+        """A revision that resumes from `bot/wip/<pr>` pushes it again every time; only a commit
+        of its own past the kept head is progress, so pauses with none still add up."""
+        h = Harness(self)
+        pull(h)
+        _, first = h.night(FakeRunner({"revise": builder({"src/game.txt": "half\n"}),
+                                       "review": capped}))
+        self.assertEqual(int(h.ctx.store.load()["items"]["40"].get("interruptions", 0)), 0)
+        for n in (1, 2):
+            _, result = h.night(FakeRunner({"revise": capped}))
+            self.assertEqual(result["status"], "interrupted")
+            self.assertEqual(h.origin_sha("bot/wip/40"), first["head"])  # kept, not moved on
+            self.assertEqual(int(h.ctx.store.load()["items"]["40"]["interruptions"]), n)
+
+    def test_mains_commits_merged_in_are_no_progress(self):
+        """Every revision merges `main` in; its squash commits are no merges, but they are not the
+        run's work, so a cut-off run that did nothing else still counts."""
+        h = Harness(self)
+        pull(h)
+        h.night(FakeRunner({"revise": builder({"src/game.txt": "half\n"}), "review": capped}))
+        for n in (1, 2):
+            push_branch(h.origin, h.root, "main", {f"docs/other-{n}.md": "someone else's\n"})
+            _, result = h.night(FakeRunner({"revise": capped}))
+            self.assertEqual(result["status"], "interrupted")
+            self.assertEqual(int(h.ctx.store.load()["items"]["40"]["interruptions"]), n)
+
+    def test_a_pause_that_moves_the_work_on_resets_the_count(self):
+        h = Harness(self)
+        pull(h)
+        h.night(FakeRunner({"revise": capped}))
+        h.night(FakeRunner({"revise": capped}))
+        self.assertEqual(int(h.ctx.store.load()["items"]["40"]["interruptions"]), 2)
+        _, result = h.night(FakeRunner({"revise": builder({"src/game.txt": "half\n"}),
+                                        "review": capped}))
+        self.assertEqual(result["status"], "interrupted")
+        self.assertEqual(int(h.ctx.store.load()["items"]["40"]["interruptions"]), 0)
+        self.assertEqual(h.gh.label_names(40), {LABEL_PR, LABEL_REVISE})
+
+    def test_closing_the_pull_request_drops_its_wip(self):
+        from harness import events
+        h = Harness(self)
+        h.gh.add_issue(12)
+        pull(h)
+        h.night(FakeRunner({"revise": builder({"src/game.txt": "half\n"}), "review": capped}))
+        self.assertIn("wip", h.ctx.store.load()["items"]["40"])
+        pr = dict(h.gh.threads[40], merged=False, state="closed")
+        events.handle(h.ctx, "pull_request", {"action": "closed", "pull_request": pr})
+        self.assertIn("bot/wip/40", h.gh.deleted_branches)
+        self.assertNotIn("wip", h.ctx.store.load()["items"]["40"])
+
 
 if __name__ == "__main__":
     unittest.main()

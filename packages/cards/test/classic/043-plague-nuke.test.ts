@@ -1,4 +1,4 @@
-// C #43 Plague Nuke — SPEC §8.6 row 43, BUILD M9 Classic row C 43: "Counts the Plague Tokens on every
+// C #43 Plague Nuke — SPEC §8.6 row 43, BUILD M9 Classic row C 43: "Counts the Plague Counters on every
 // Unit first, then destroys all Units in one state check (§4.5), then gives 1 mana this turn per token
 // counted, an Indestructible survivor's tokens included; its preview is that mana (R280); radiant:
 // after that check, each non-token Unit card that had a token and now lies in a graveyard is summoned
@@ -49,7 +49,7 @@ describe("C #43 Plague Nuke", () => {
   });
 
   describe("base", () => {
-    it("destroys all Units on both sides, then gains 1 mana per Plague Token that was on them", () => {
+    it("destroys all Units on both sides, then gains 1 mana per Plague Counter that was on them", () => {
       const s = scenario({
         p1: { hand: [NUKE, ANCHOR], field: [plagued(VANILLA, 2)] },
         p2: { hand: [ANCHOR], field: [plagued(MENACE, 3), VANILLA] },

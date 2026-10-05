@@ -1,4 +1,4 @@
-// R452 meets E19 (R471, R689): "Place N Plague Tokens" inside a random cast (Classic+ #47 Jogg's Box
+// R452 meets E19 (R471, R689): "Place N Plague Counters" inside a random cast (Classic+ #47 Jogg's Box
 // casting Classic #70 Book of Plague) asks its caster nothing — every placement goes on one random
 // permanent — as a random cast makes every choice at random. Through fixture cards; the real cards'
 // tests cover the same case again (packages/cards/test/classic-plus/047-joggs-box.test.ts).
