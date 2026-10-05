@@ -2248,7 +2248,9 @@
     },
     "334": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:6005748937"
+      ],
       "cleared": {
         "at": "2026-10-05T23:34:02Z",
         "by": "`claude` (strong)",
@@ -2274,10 +2276,11 @@
       "pending_request": false,
       "provider": "claude-3",
       "question": "This branch's patch fragment and main's Gary micro patch (#324) both need the file `packages/cards/patches/pending/v0.2.Y.json`. A fragment's file name has to match its version, and `v0.2.Y` is the only name a micro patch can have, so the two can't both be pending at once. Main's promotion pull request on branch `patches/ship-97a00bd6` (\"patches ship: v0.2.16b, v0.2.17\") ships Gary and deletes that file. Should I (a) wait until that promotion merges and then revise again, which I recommend? The fragment then merges cleanly and the other conflicts are mechanical. Or (b) rename this patch's fragment to a fixed number such as v0.2.18 now? That goes against the issue's micro `v0.2.Y` title.",
-      "queued_at": "2026-10-05T23:34:32Z",
+      "queued_at": "2026-10-05T23:48:43Z",
+      "requested_by": "jgoetzmann",
       "run_id": "37389535079",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "request",
       "started_at": "2026-10-05T23:39:26Z",
       "stop_requested": false,
       "taken_asks": [],
