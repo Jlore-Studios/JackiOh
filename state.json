@@ -2889,6 +2889,11 @@
     "321": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-05T18:03:50Z",
+        "by": "`muse` (medium), `claude` (strong)",
+        "sha": "3b71c90a86c4ba126ed0846437ce870614aefa99"
+      },
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
