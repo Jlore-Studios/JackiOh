@@ -3227,16 +3227,19 @@
         {
           "at": "2026-10-04T18:02:50Z",
           "minutes": 4.5
+        },
+        {
+          "at": "2026-10-05T06:11:14Z",
+          "minutes": 34.5
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-05T04:40:00Z",
-          "utilization": 1.0
+          "resets_at": "2026-10-05T09:40:00Z",
+          "utilization": 0.99
         },
-        "observed_at": "2026-10-05T02:10:43Z",
-        "rejected_resets_at": "2026-10-05T04:40:00Z",
-        "status": "rejected"
+        "observed_at": "2026-10-05T06:11:14Z",
+        "status": "allowed_warning"
       }
     },
     "claude-2": {
