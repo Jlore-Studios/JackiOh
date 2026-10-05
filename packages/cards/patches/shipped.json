@@ -73,5 +73,15 @@
     "version": "v0.2.16",
     "commit": "509e9a302ab71542a4e141fe7231c9743722bdba",
     "blob": "2744936c1447a032911fbf6a8cc9e327a97f7503"
+  },
+  {
+    "version": "v0.2.16b",
+    "commit": "16724d26939a1a03779523f11461b41c57871ccb",
+    "blob": "bad0d6f931ef9524a21f6ede29872396e7922467"
+  },
+  {
+    "version": "v0.2.17",
+    "commit": "97a00bd613bd3adfaafdc4d1580f5d895d2b5e22",
+    "blob": "0ed895027c145f1f0815ef07cf9998f9712d1fb5"
   }
 ]
