@@ -4228,10 +4228,10 @@
   },
   "suggest": {
     "asks": [],
-    "last_run": "2026-10-05T06:58:18Z",
-    "provider": "claude-6",
+    "last_run": null,
+    "provider": null,
     "requested": false,
-    "run_id": "37274923404",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
