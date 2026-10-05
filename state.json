@@ -1209,7 +1209,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-05T10:56:48Z",
+      "feedback_since": "2026-10-05T15:41:47Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-05T15:39:58Z",
@@ -1233,7 +1233,7 @@
       "requested_by": "jgoetzmann-bot",
       "run_id": "37334810770",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-05T15:41:47Z",
       "stop_requested": false,
       "taken_asks": [],
