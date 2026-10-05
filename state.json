@@ -2442,13 +2442,16 @@
     "287": {
       "action": "review",
       "asks": [],
+      "ci_fixes": 1,
       "ci_reruns": {
         "5f724b531d6f9b67f6b82afe817adbc866dfb1db": 1
       },
+      "ci_run_id": 37297489784,
+      "ci_sha": "5f724b531d6f9b67f6b82afe817adbc866dfb1db",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
-      "failures": 2,
+      "failures": 0,
       "feedback_since": "2026-10-05T10:25:59Z",
       "forced": false,
       "handoff": {
@@ -2462,13 +2465,13 @@
       },
       "interruptions": 0,
       "issue": 255,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "pending_request": false,
       "provider": "devin",
       "question": "",
-      "queued_at": "2026-10-05T10:34:57Z",
-      "requested_by": "jgoetzmann",
+      "queued_at": "2026-10-05T11:18:22Z",
+      "requested_by": "jgoetzmann-bot",
       "run_id": "37301613149",
       "self_check_findings": [
         {
@@ -2490,7 +2493,7 @@
           "where": "checks"
         }
       ],
-      "source": "",
+      "source": "ci",
       "started_at": "2026-10-05T11:18:20Z",
       "stop_requested": false,
       "taken_asks": [],
