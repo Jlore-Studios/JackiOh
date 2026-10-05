@@ -1,0 +1,87 @@
+/* The web fonts (issue #262): one display face and one text face, both under the SIL Open Font
+   License and self-hosted from public/fonts (their licences beside them), so the page asks no
+   third party for anything and the CSP's `font-src 'self'` holds.
+
+   - Alegreya (Huerta Tipográfica), the display face: titles, card names, the tavern's headings.
+   - Inter (Rasmus Andersson), the text face: everything else, card rules text included.
+
+   Both are variable fonts over the weight axis, so the many weights the CSS asks for (400 to 900)
+   are one file each, plus an italic. Only the Latin subset is shipped; anything outside it falls to
+   the stacks' system faces glyph by glyph. The files are Fontsource's builds (v5.3.0); the version
+   is in the file name, because public/_headers and vercel.json let browsers keep /fonts/* for a year
+   without asking: a new file needs a new name.
+
+   `font-display: swap` shows the text at once in the fallback and swaps the face in when it lands.
+   So that the swap moves nothing, each face has a metric-matched fallback: a local Arial or Times
+   New Roman (or Liberation, their metric twins on Linux) scaled to the web face's average width,
+   with its ascent and descent. A card's text is fitted from real metrics (`cards/fit.ts`,
+   `useFitText`), and with the fallback it measures the same before and after, so a card does not
+   refit when the font arrives. The numbers come from scripts/font-fallbacks.py; rerun it when a
+   file changes. */
+
+@font-face {
+  font-family: "Alegreya";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("/fonts/alegreya-5.3.0-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Alegreya";
+  font-style: italic;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("/fonts/alegreya-5.3.0-latin-wght-italic.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/inter-5.3.0-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/inter-5.3.0-latin-wght-italic.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* The metric-matched fallbacks (scripts/font-fallbacks.py). */
+
+@font-face {
+  font-family: "Alegreya Fallback";
+  src: local("Times New Roman"), local("TimesNewRomanPSMT"), local("Liberation Serif"), local("LiberationSerif");
+  size-adjust: 101.18%;
+  ascent-override: 100.41%;
+  descent-override: 34.1%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Inter Fallback";
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("LiberationSans");
+  size-adjust: 107.34%;
+  ascent-override: 90.25%;
+  descent-override: 22.47%;
+  line-gap-override: 0%;
+}
+
+:root {
+  /* The display face, then its fallback, then the old system stack for anything outside Latin. */
+  --font-display: "Alegreya", "Alegreya Fallback", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  /* The text face, likewise. */
+  --font-text: "Inter", "Inter Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}

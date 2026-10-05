@@ -259,8 +259,11 @@ class FlowTests(unittest.TestCase):
         h.gh.add_issue(13, labels=(LABEL_BUILD,))
         runner = FakeRunner({"build": builder({"src/game.txt": "v2\n"}), "review": reviewer(APPROVE)})
         h.night(runner)
-        self.assertEqual(len(h.gh.dispatches), 1)
-        self.assertEqual(h.gh.dispatches[0]["workflow"], "bot-night.yml")
+        # Two lanes free on the taker means two chained runs: each claims one item, and a
+        # run that finds nothing ends cheaply at its gate.
+        self.assertEqual(len(h.gh.dispatches), 2)
+        self.assertEqual([d["workflow"] for d in h.gh.dispatches],
+                         ["bot-night.yml", "bot-night.yml"])
 
     def test_a_rejected_build_becomes_a_draft_and_asks_for_help(self):
         h = Harness(self)
@@ -355,7 +358,9 @@ class FlowTests(unittest.TestCase):
         Deliverer(h.ctx, planned, out, h.deliver_repo).run()
         self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
         self.assertIn("behind the others", h.gh.bot_comments(12)[-1])
-        self.assertEqual(h.gh.dispatches, [])  # no chaining after a run that died
+        # The died run chains for the other item on the taker's free second lane; the died
+        # item itself waits out its backoff below.
+        self.assertEqual(len(h.gh.dispatches), 1)
         # Its subscription is left alone a while; then #12, at the back, waits behind #13.
         self.assertIn("could not work", plan_mod.make(h.ctx)["reason"])
         h.ctx.clock_fn.at = h.ctx.clock_fn.at.replace(hour=4)

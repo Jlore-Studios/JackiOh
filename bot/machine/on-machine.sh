@@ -9,14 +9,16 @@
 # Starts the machine first if it is stopped. Needs the AWS CLI signed in to the project.
 set -euo pipefail
 export AWS_REGION="${AWS_REGION:-us-east-2}"
-# The machine: INSTANCE_ID, or the one instance tagged Name=jackioh-night-vm.
+# The machine: INSTANCE_ID, or the one instance tagged Name=$TAG (the training box
+# takes TAG=jackioh-train-box).
+TAG="${TAG:-jackioh-night-vm}"
 if [ -z "${INSTANCE_ID:-}" ]; then
-  INSTANCE_ID="$(aws ec2 describe-instances --filters Name=tag:Name,Values=jackioh-night-vm \
+  INSTANCE_ID="$(aws ec2 describe-instances --filters Name=tag:Name,Values="$TAG" \
     Name=instance-state-name,Values=pending,running,stopping,stopped \
     --query 'Reservations[].Instances[].InstanceId' --output text)"
 fi
 if ! [[ "$INSTANCE_ID" =~ ^i-[0-9a-f]+$ ]]; then
-  echo "no single instance tagged Name=jackioh-night-vm; set INSTANCE_ID" >&2
+  echo "no single instance tagged Name=$TAG; set INSTANCE_ID" >&2
   exit 1
 fi
 script="${1:?a script to run}"

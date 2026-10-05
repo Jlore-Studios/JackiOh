@@ -255,6 +255,8 @@ class Candidate:
     #: For a revision: it resolves a conflict with `main` on a change the review rule cleared
     #: (`cleared`), so the run's own reviewer can carry that clearance (`deliver._carry`).
     carries: bool = False
+    #: Its labels: subscriptions with `only_labels` take only items carrying them.
+    labels: tuple[str, ...] = ()
 
 
 def cleared(record: dict[str, Any]) -> dict[str, Any]:
@@ -407,7 +409,8 @@ def candidates(ctx: Context, state: dict[str, Any],
                 approval_tiers=tuple(tier for _, tier in review_rule.approvals(
                     votes, ctx.cfg.pool.family_tier)),
                 bot_pr=LABEL_PR in names,
-                carries=kind == "revise" and LABEL_PR in names and carries(record))
+                carries=kind == "revise" and LABEL_PR in names and carries(record),
+                labels=tuple(sorted(names)))
             if kind == "build" and not found[number].forced:
                 builds.append(thread)
     waiting = waits_for(ctx, builds) if builds else {}

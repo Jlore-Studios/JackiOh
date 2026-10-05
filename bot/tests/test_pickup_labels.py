@@ -157,7 +157,10 @@ class HumanTests(unittest.TestCase):
     """#96: no model takes `human`, whatever its tier."""
 
     def test_human_is_never_selected_whatever_the_model(self):
-        for provider in every_model():
+        # devin-train takes only `training` items, so it takes nothing here by design.
+        general = [p for p in every_model() if not p.only_labels]
+        self.assertTrue(any(p.id == "devin-train" for p in every_model()))
+        for provider in general:
             gh = FakeGitHub()
             ctx = ctx_for(gh, only=provider)
             gh.add_issue(5, labels=(LABEL_BUILD, "human", HIGH, "difficulty:easy"))
