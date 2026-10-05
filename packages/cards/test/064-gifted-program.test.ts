@@ -8,11 +8,15 @@
 // which is what the first test pins down, and `backrow: [GIFTED]` is enough to arm it — the flag
 // needs the card on the field, not a Cry.
 
+//
+// R662's yellow glow: the condition is the grant's, so the hand cards it would make Radiant if played
+// now glow (`condition.ts`), both faces, at the end of this file.
 import { describe, expect, it } from "vitest";
 import type { CardInstance } from "@jackioh/engine";
 import type { PlayerId, Selection } from "@jackioh/shared";
 import { base, radiant } from "../src/scripts/064-gifted-program";
 import { scenario, type Scenario } from "./_harness";
+import { handGlows } from "./_glow";
 
 const GIFTED = "core-064"; // Field Spell, 2
 const FRIEND = "core-062"; // Spell, 1 — radiant adds +2/+2, so the face it ran is visible
@@ -147,5 +151,40 @@ describe("#64 Gifted Program", () => {
     // A fresh turn, so Friend of Felinors is the first cheap card again and runs its radiant text.
     s.expectStats(timmy, { attack: 11, maxHealth: 11 });
     s.expectStats(unitAt(s, "p1", 2), { attack: 3, maxHealth: 3 });
+  });
+});
+
+describe("#64 Gifted Program lights the hand card it would make Radiant (R662, R213)", () => {
+  it("R662 base: the 1-cost card glows and the 2-cost one does not, and the glowing one is played Radiant", () => {
+    const s = scenario({ seed: "r662-064-base", p1: { backrow: [GIFTED], hand: [FRIEND, POINTMASTER, MENACE] } });
+    expect(handGlows(s, s.card(FRIEND).id)).toBe(true);
+    expect(handGlows(s, s.card(POINTMASTER).id)).toBe(false);
+
+    s.play(POINTMASTER);
+    expect(s.card(POINTMASTER).radiant).toBe(false);
+  });
+
+  it("R662 radiant: the 2-cost card glows too, and once one cheap card is played nothing does", () => {
+    const s = scenario({
+      seed: "r662-064-radiant",
+      p1: { backrow: [{ def: GIFTED, radiant: true }], hand: [FRIEND, POINTMASTER, MENACE] },
+    });
+    expect(handGlows(s, s.card(FRIEND).id)).toBe(true);
+    expect(handGlows(s, s.card(POINTMASTER).id)).toBe(true);
+
+    s.play(POINTMASTER);
+    expect(s.card(POINTMASTER).radiant).toBe(true);
+    // "The first … each turn" (R213): the cheap play has been made.
+    expect(handGlows(s, s.card(FRIEND).id)).toBe(false);
+  });
+
+  it("R662 a card already Radiant gains nothing, so it does not glow", () => {
+    const s = scenario({ seed: "r662-064-already", p1: { backrow: [GIFTED], hand: [{ def: FRIEND, radiant: true }, MENACE] } });
+    expect(handGlows(s, s.card(FRIEND).id)).toBe(false);
+  });
+
+  it("R662 without it on the field, or on the opponent's side, nothing glows", () => {
+    const s = scenario({ seed: "r662-064-none", p1: { hand: [FRIEND, MENACE] }, p2: { backrow: [GIFTED] } });
+    expect(handGlows(s, s.card(FRIEND).id)).toBe(false);
   });
 });
