@@ -68,6 +68,12 @@ export const spatula = def("spatula", "Field Spell", {
 /** A plain Animated Field Spell, which animates as it enters the field (B3.1 rule 4). */
 export const golem = def("golem", "Field Spell", { base: face(3, 3, [ANIMATED]), radiant: face(6, 6, [ANIMATED]) });
 
+/** A stat-less Animated Field Spell (R657): incidentally animated, it fights as a 0/1. */
+export const wisp = def("wisp", "Field Spell", {
+  base: { keywords: [ANIMATED], text: "wisp" },
+  radiant: { keywords: [ANIMATED], text: "wisp" },
+});
+
 /** A carrier whose aura gives its controller's cards Stack: Classic+ #33 Ivory Tower's shape before patch v0.2.10. */
 export const tower = def("tower", "Field Spell", { cost: 2 });
 
@@ -122,6 +128,7 @@ export const FIELD_DEFS: CardDef[] = [
   asker,
   spatula,
   golem,
+  wisp,
   tower,
   fuser,
   cover,
@@ -216,6 +223,7 @@ export const FIELD_SCRIPTS: Record<string, CardScripts> = {
     aura: ({ self }) => [{ applies: (card) => card.controller === self.controller, mod: { keywords: [{ kind: "Stack" }] } }],
   }),
   [fuser.id]: both({ staticFlags: { fusesCarried: true } }),
+  [wisp.id]: both({}),
   [banner.id]: both({
     aura: ({ self }) => [
       { applies: (card) => card.controller === self.controller && card.zone.z === "field", mod: { attack: 2 } },

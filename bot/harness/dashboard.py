@@ -254,7 +254,7 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> li
         doing, item, since = _doing(state, number)
         return f"{doing} {item}" + (f"<br/>since {_clock(ctx, since)}" if since else "")
 
-    # By name (claude-1 to claude-5), so each account keeps its place from one rewrite to the next.
+    # By name (claude-1 to claude-6), so each account keeps its place from one rewrite to the next.
     hosted = sorted((p for p in pool.ordered() if not pool.on_machine(p.id)), key=lambda p: p.id)
     boxes: list[str] = []
     busy_hosted = 0

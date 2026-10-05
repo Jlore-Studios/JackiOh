@@ -5,8 +5,7 @@
 // The cap is not an effect and not an aura: it is step 3 of the §4.4 damage pipeline
 // ("Hero cap: if the target is a hero with Anti-oneshot Armor, clamp to 5 (radiant 3)"), so the card
 // contributes a static flag and the pipeline reads it. `damage.ts heroDamageCap` walks the cards
-// acting on the player's side for `staticFlags.antiOneshot` — its backrow zone, or the unit zone it
-// animated into (Animated since v0.2.10, R383) — takes `ANTI_ONESHOT_CAP.radiant` when the INSTANCE is
+// acting on the player's side for `staticFlags.antiOneshot`, takes `ANTI_ONESHOT_CAP.radiant` when the INSTANCE is
 // radiant and `.base` otherwise, and clamps with the smallest cap on that side. Three consequences
 // this card gets for free and must not re-implement:
 //   - the cap is per damage instance, so two 12-damage hits cost the hero 5 each;

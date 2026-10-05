@@ -88,7 +88,7 @@ class StageTests(unittest.TestCase):
 
 class PlanningLaneTests(unittest.TestCase):
     def test_planning_comes_first_easy_first_and_takes_no_build_lane(self):
-        """claude-3 plans while it builds; claude-1, which the quiet check guards, plans only
+        """claude-3 plans while it builds; claude-1, capped like the rest, plans only
         when it holds nothing else; Devin builds once a strong model planned it."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh)
@@ -117,7 +117,8 @@ class PlanningLaneTests(unittest.TestCase):
         self.assertIsNone(seats(planned)["plan"])  # built from the plan, not planned again
 
     def test_claude_1_never_plans_while_it_builds(self):
-        """The quiet check cannot tell a second run of the bot's on claude-1 from its owner."""
+        """Two capped runs deciding from one reading go past a cap together, so a capped
+        subscription plans only while it holds nothing."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh, machine=(), env=secrets("CLAUDE_CODE_OAUTH_TOKEN"))
         busy(gh, ctx, ("claude-1", 50))
