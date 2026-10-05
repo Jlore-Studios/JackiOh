@@ -16,6 +16,7 @@ import { StrictMode, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ANIMATIONS, HIDDEN_ID } from "./animations.ts";
+import { DAMAGE_FEEL } from "./damageFeel.ts";
 import Game from "./Game.tsx";
 import { resultReason } from "./Result.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
@@ -37,6 +38,7 @@ afterEach(() => {
 const START: GameEvent[] = [{ type: "turnStarted", player: "p1", turn: 3 }];
 /** A hit on the viewer's hero: an event the runner animates, so it holds the view back. */
 const HIT: GameEvent = { type: "damage", sourceId: null, targetId: "hero-p1", amount: 3, combat: false };
+const GIGA_HIT: GameEvent = { type: "damage", sourceId: null, targetId: "hero-p1", amount: 25, combat: false };
 
 describe("the board's moves wait for the board", () => {
   it("does not enable End turn for a view the runner is still holding back, and does once it drains", () => {
@@ -66,6 +68,62 @@ describe("the board's moves wait for the board", () => {
   it("offers the moves at once when nothing is animating", () => {
     render(<Game view={withEvents(baseView(), START)} legal={[END_TURN]} onAction={vi.fn()} />);
     expect(screen.getByTestId("end-turn")).not.toBeDisabled();
+  });
+});
+
+describe("issue #57 damage feel", () => {
+  it("keeps a GIGA damage number on the board for its full 1.2-second linger after the queue drains", () => {
+    const before = withEvents(baseView(), START);
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    const after = withEvents(baseView(), [...START, GIGA_HIT]);
+    rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
+
+    expect(screen.getByTestId("game")).toHaveAttribute("data-impact-tier", "giga");
+    expect(screen.getByTestId("game")).toHaveAttribute("data-hit-stop", "true");
+    act(() => {
+      vi.advanceTimersByTime(ANIMATIONS.damage.durationMs);
+    });
+    expect(screen.queryByTestId("animation-queue")).toBeNull();
+    expect(document.querySelector(".damage-pop")).toHaveTextContent("25");
+
+    act(() => {
+      vi.advanceTimersByTime(DAMAGE_FEEL.giga.numberLingerMs - ANIMATIONS.damage.durationMs);
+    });
+    expect(document.querySelector(".damage-pop")).toBeNull();
+  });
+
+  it("keeps hit-stop when Reduce motion drains damage entries synchronously", () => {
+    writeSettings({ reduceMotion: true });
+    const before = withEvents(baseView(), START);
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    rerender(<Game view={withEvents(baseView(), [...START, HIT])} legal={[]} onAction={vi.fn()} />);
+
+    expect(screen.getByTestId("game")).toHaveAttribute("data-reduced-motion", "true");
+    expect(screen.getByTestId("game")).toHaveAttribute("data-hit-stop", "true");
+    act(() => {
+      vi.advanceTimersByTime(DAMAGE_FEEL.normal.hitStopMs);
+    });
+    expect(screen.getByTestId("game")).not.toHaveAttribute("data-hit-stop");
+  });
+});
+
+describe("issue #57 board-mounted match chrome", () => {
+  it("mounts route chrome and action refusals inside the physical board rail", () => {
+    render(
+      <Game
+        view={withEvents(baseView(), START)}
+        legal={[]}
+        onAction={vi.fn()}
+        error="That action is no longer legal."
+        boardRail={<a href="/">Back to lobby</a>}
+        boardNotice={<p>Read-only replay</p>}
+      />,
+    );
+
+    expect(screen.getByText("Back to lobby").closest(".board")).not.toBeNull();
+    expect(screen.getByText("Read-only replay").closest(".board")).not.toBeNull();
+    expect(screen.getByTestId("action-error").closest(".board")).not.toBeNull();
+    expect(document.querySelector(".game > .game-error")).toBeNull();
   });
 });
 

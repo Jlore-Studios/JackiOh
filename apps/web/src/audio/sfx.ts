@@ -34,7 +34,7 @@ import type { SfxId, SfxParams, SfxTimbre } from "./types.ts";
 export const SFX_IDS: readonly SfxId[] = [
   "draw", "play", "summon", "attack", "impact", "shieldShatter", "heal", "buff", "debuff",
   "death", "burn", "trapSet", "trapSting", "spell", "mana", "turnStart", "victory",
-  "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "notify", "drain",
+  "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "sand", "endTurn", "notify", "drain",
   "cancel", "entrance", "fatigue", "refuse",
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
   "emoteSob", "emoteYawn", "emoteLaugh", "emoteAngry", "emoteWahWah",
@@ -473,16 +473,19 @@ const attack: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A hit that grows louder, darker and longer with the amount, up to IMPACT_AMOUNT_CAP. */
+/** A hit whose weight is chosen by the public damage tier, from a tap to a GIGA board thump. */
 const impact: SfxRecipe = (ctx, out, at, params) => {
-  const t = amountT(params);
+  const tier = params.impactTier ?? "normal";
+  const tierT = { tiny: 0.1, normal: 0.34, moderate: 0.54, big: 0.76, giga: 1 }[tier];
+  const t = tierT;
+  const pitch = 0.95 + Math.min(1, Math.max(0, params.variation ?? 0.5)) * 0.1;
   const len = 0.12 + 0.33 * t;
   const peak = 0.5 + 0.5 * t;
   const k = kit(ctx, out, at, len);
   const noise = noiseSource(k);
   chain(noise, biquad(k, "lowpass", 5000 - 3800 * t, 0), envelope(k, 0, 0.004, 1.1 * peak, len), out);
   run(k, noise, 0, len);
-  const thumpHz = 110 - 50 * t;
+  const thumpHz = (110 - 50 * t) * pitch;
   const thump = tone(k, out, "sine", thumpHz, 0, 0.004, 0.75 * peak, len);
   glide(k, thump.frequency, thumpHz * 0.6, len);
   return len;
@@ -800,15 +803,45 @@ const lock: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A card vanishes (exile, transform, fuse): a soft dark puff. */
-const poof: SfxRecipe = (ctx, out, at) => {
+/** A card vanishes (exile, transform, fuse), or sand compresses: a soft dark puff. */
+const poof: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.43;
   const k = kit(ctx, out, at, len);
   const noise = noiseSource(k);
-  const filter = biquad(k, "lowpass", 900, 0);
-  glide(k, filter.frequency, 300, len);
+  // Sand passes a deterministic 0..1 variation, mapping to the requested ±8% crunch pitch;
+  // absent callers retain the original neutral recipe exactly.
+  const pitch = 0.92 + Math.min(1, Math.max(0, params.variation ?? 0.5)) * 0.16;
+  const filter = biquad(k, "lowpass", 900 * pitch, 0);
+  glide(k, filter.frequency, 300 * pitch, len);
   chain(noise, filter, envelope(k, 0, 0.04, 1.43, len), out);
   run(k, noise, 0, len);
+  return len;
+};
+
+/** A dry sand crunch: four grain bands, an ±8% pitch sway and a fuller transient as a pile builds. */
+const sand: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.24;
+  const k = kit(ctx, out, at, len);
+  const variant = Math.abs(Math.trunc(params.sandVariant ?? 0)) % 4;
+  const baseHz = [520, 670, 820, 980][variant] ?? 520;
+  const pitch = 0.92 + Math.min(1, Math.max(0, params.variation ?? 0.5)) * 0.16;
+  const build = Math.max(1, Math.min(6, params.sandBuild ?? 1));
+  const noise = noiseSource(k);
+  const filter = biquad(k, "bandpass", baseHz * pitch, 1.1);
+  chain(noise, filter, envelope(k, 0, 0.008, 0.58 + build * 0.08, len), out);
+  run(k, noise, 0, len);
+  return len;
+};
+
+/** A low wooden-and-metal clunk for the end-turn mechanism, distinct from the generic UI tick. */
+const endTurn: SfxRecipe = (ctx, out, at) => {
+  const len = 0.18;
+  const k = kit(ctx, out, at, len);
+  const thump = tone(k, out, "sine", 96, 0, 0.003, 0.64, len);
+  glide(k, thump.frequency, 54, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "lowpass", 780, 0), envelope(k, 0, 0.002, 0.65, 0.06), out);
+  run(k, noise, 0, 0.06);
   return len;
 };
 
@@ -1295,6 +1328,8 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   radiant: { recipe: radiant, durationMs: 900, gain: 0.78 },
   lock: { recipe: lock, durationMs: 400, gain: 1 },
   poof: { recipe: poof, durationMs: 450, gain: 1 },
+  sand: { recipe: sand, durationMs: 240, gain: 0.52 },
+  endTurn: { recipe: endTurn, durationMs: 180, gain: 0.76 },
   notify: { recipe: notify, durationMs: 300, gain: 0.6 },
   drain: { recipe: drain, durationMs: 600, gain: 0.69 },
   cancel: { recipe: cancel, durationMs: 260, gain: 1 },
