@@ -574,6 +574,12 @@
       "lines": [
         "(named the bot)"
       ]
+    },
+    "c:5999305297": {
+      "at": "2026-10-05T17:09:01Z",
+      "lines": [
+        "/harness build A fresh build, as asked when #214 was closed. The three failed runs were all Devin: it reported \"built\" but pushed nothing reviewable, and no model on its subscription may review it (the same failure as #290). So this is now `difficulty:medium`, which keeps it to a medium or strong builder. Start from the plan in the description and current `main`."
+      ]
     }
   },
   "items": {
