@@ -2716,7 +2716,7 @@
       "taken_asks": []
     },
     "304": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "cross_rounds": 1,
       "died": 0,
@@ -2735,13 +2735,13 @@
       },
       "interruptions": 0,
       "issue": 303,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
       "pending_request": false,
-      "provider": "devin",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-10-05T13:15:41Z",
-      "run_id": "37313496417",
+      "run_id": "37315625134",
       "self_check_findings": [
         {
           "claim": "The self check's answer could not be read twice in a row.",
@@ -2751,7 +2751,7 @@
         }
       ],
       "source": "",
-      "started_at": "2026-10-05T13:00:58Z",
+      "started_at": "2026-10-05T13:19:11Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -3244,9 +3244,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-05T13:18:34Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37315465846",
-    "what": "plan #294 on claude-3"
+    "at": "2026-10-05T13:19:11Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37315625134",
+    "what": "review #304 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-05T13:16:30Z",
