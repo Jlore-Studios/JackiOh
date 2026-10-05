@@ -308,6 +308,24 @@ export function scheduleFit(element: HTMLElement, options: FitOptions, onDone?: 
  * every element in jsdom). The pass runs batched with the rest of the page's, on the microtask
  * after the commit (`scheduleFit`).
  */
+/**
+ * Every mounted fit's refit, for when a web font lands (fonts.css). The face is measured, and a
+ * box's size does not change when its font swaps in, so no ResizeObserver notices: the metric-matched
+ * fallback keeps the drift to a fraction of a pixel, and this refits exactly once the face is in.
+ */
+const refitOnFonts = new Set<() => void>();
+let fontsWatched = false;
+
+function watchFonts(): void {
+  if (fontsWatched || typeof document === "undefined") return;
+  const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+  if (fonts === undefined || typeof fonts.addEventListener !== "function") return;
+  fontsWatched = true;
+  fonts.addEventListener("loadingdone", () => {
+    for (const refit of [...refitOnFonts]) refit();
+  });
+}
+
 export function useFitText(ref: RefObject<HTMLElement | null>, content: string, options: FitOptions = {}): void {
   const { floorPx } = options;
   useLayoutEffect(() => {
@@ -325,16 +343,27 @@ export function useFitText(ref: RefObject<HTMLElement | null>, content: string, 
         last = box;
       });
     let cancel = queueFit();
-
-    if (typeof ResizeObserver === "undefined") return () => cancel();
-    const observer = new ResizeObserver(() => {
-      if (last === undefined || boxOf(element) === last) return;
+    const refit = (): void => {
       cancel();
       last = undefined;
       cancel = queueFit();
+    };
+    watchFonts();
+    refitOnFonts.add(refit);
+
+    if (typeof ResizeObserver === "undefined") {
+      return () => {
+        refitOnFonts.delete(refit);
+        cancel();
+      };
+    }
+    const observer = new ResizeObserver(() => {
+      if (last === undefined || boxOf(element) === last) return;
+      refit();
     });
     observer.observe(element);
     return () => {
+      refitOnFonts.delete(refit);
       observer.disconnect();
       cancel();
     };

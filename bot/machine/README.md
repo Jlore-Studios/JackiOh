@@ -24,9 +24,10 @@ A machine login (`"login": "machine"`) is a file in a home directory that its CL
 place. With one user per subscription, a session can read only its own login and leave things
 only in its own home, and its runner, labelled with its id alone, takes only its jobs. A Claude
 account's token comes from its GitHub secret, handed to that job alone, and is never written to
-the home. At most `machine_parallel` (6) jobs run here at once, each as its own user; Devin has
-`"lanes": 6`, so Devin can fill the machine on its six runners when the others are idle, and Muse
+the home. At most `machine_parallel` (7) jobs run across both boxes at once, each as its own user;
+Devin has `"lanes": 6` on the six runners here, and Muse
 has two (`night-vm-muse` and `night-vm-muse-2`, both under `agent-muse` and its one login).
+The seventh slot is the training box's `night-vm-devin-train`, below.
 
 Every repository workflow could ask for these labels, so the repository makes outside
 contributors' pull requests wait for approval before any workflow runs (Settings → Actions →
@@ -79,6 +80,53 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
    ```sh
    REPO_ID=$(gh api repos/OWNER/REPO --jq .id) bot/machine/deploy-starter.sh
    ```
+
+## The training box
+
+Ladder training runs (RL within its 300-minute budget, the gauntlet's hundreds of games) would
+starve the 2 vCPUs above, so they run on a second, bigger box as `devin-train`
+(`providers.json`): a Devin login whose jobs GitHub Actions sends to its runner,
+`night-vm-devin-train`, the seventh machine slot. The planner sends it only items labelled
+`training` (and nothing else goes there); their reviews float to any reviewer.
+
+| | |
+|---|---|
+| Instance | EC2 `m7i.xlarge` (4 vCPUs, 16 GB), Ubuntu 24.04 x86_64, 100 GB gp3 encrypted for checkpoints and stores, tagged `Name=jackioh-train-box`, in the project's Region |
+| Way in | Session Manager only, like the night box: no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. IMDSv2 required. |
+| Users | `agent-devin-train` only, from `setup.sh devin-train`: a home only it can read, no `sudo`, no Docker |
+| Runners | `~agent-devin-train/actions-runner`, registered as `night-vm-devin-train`, a systemd service under that user |
+| CLIs | the same install as the night box, plus the ladder's Python environment (`ladder/.venv`: `pyyaml`, `jsonschema`, `pytest`) |
+| Idle stop | the same 30-minute timer powers it off with no job and no Session Manager session |
+
+Build it with the same scripts:
+
+1. **The instance**, as in the table above (shutdown behaviour **stop**).
+2. **Set it up**: `TAG=jackioh-train-box bot/machine/on-machine.sh bot/machine/setup.sh
+   devin-train`.
+3. **Log Devin in once**, as `agent-devin-train`:
+   `sudo -iu agent-devin-train devin auth login --force-manual-token-flow`.
+4. **Register the runner**, from the repository's root: `bot/machine/register-runners.sh
+   OWNER/REPO` (it reads every `night-vm-*` provider, training included).
+5. **Starter for the training box**, so each box wakes only for its own runners:
+
+   ```sh
+   REPO_ID=$(gh api repos/OWNER/REPO --jq .id) \
+     TAG=jackioh-train-box STARTER_NAME=jackioh-train-starter STARTER_ROLE=jackioh-train-starter \
+     RUNNER_LABELS=night-vm-devin-train bot/machine/deploy-starter.sh
+   ```
+
+   and point the night starter at its own runners only:
+
+   ```sh
+   REPO_ID=$(gh api repos/OWNER/REPO --jq .id) \
+     RUNNER_LABELS=night-vm-gpt,night-vm-agy,night-vm-muse,night-vm-devin \
+     bot/machine/deploy-starter.sh
+   ```
+
+Training issues are labelled `training` (and `difficulty:easy`, which Devin may build) by the
+ladder's generation workflow (issue #55, phases 4–5); the lane takes them from the ordinary
+queue, builds on the training box through Devin's self-check loop, and shows as the seventh
+box in the status issue's mermaid.
 
 ## Running it
 

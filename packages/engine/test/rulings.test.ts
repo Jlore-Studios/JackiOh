@@ -4020,6 +4020,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // Proved by effects-transform.test.ts "R659 …": the new body is sick whatever the old one's
+  // readiness, on either player's turn; R424's Classic Golem is the exception its own test proves.
+  it("R659 a transformed Unit is summoning sick", () => {
+    provenIn(659, "effects-transform.test.ts");
+  });
+
   // Proved by packages/cards/test/flavour.test.ts "R660 …" (the sidecar's keys, coverage, fields and
   // caps), apps/web cards/flavour.test.tsx "R660 …" (no rules words; the preview, the sheet and the
   // detail show it, the face and an unnamed card never), routes/almanac.test.tsx "R660 …" (the
@@ -4035,12 +4041,19 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
-  // Proved by apps/web routes/landing.test.tsx "R671 …" (swaps below the threshold among Core's
+  // Proved by the card's own test, cards/test/classic/055-book-of-wildfire.test.ts "R671 …": the swap
+  // at its owner's end of turn in hand only, the pool without Wildfire, Radiant to Radiant, the Book it
+  // became swapping on, Temporary kept, and the end of turn replaying exactly.
+  it("R671 Book of Wildfire becomes a different Book at the end of its owner's turn, and the Book keeps swapping", () => {
+    provenIn(671, "../../cards/test/classic/055-book-of-wildfire.test.ts");
+  });
+
+  // Proved by apps/web routes/landing.test.tsx "R672 …" (swaps below the threshold among Core's
   // cards, the ghost over the new card for ROTATION_SWAP_MS and no control, the deal entry and the
-  // sheet's rules) and routes/landingFan.test.ts "R671 …" (the swap's pool below the threshold,
+  // sheet's rules) and routes/landingFan.test.ts "R672 …" (the swap's pool below the threshold,
   // drawn evenly).
-  it("R671 rotates the homescreen's hand from the first visit, a swap a fizzle and an apparition", () => {
-    provenIn(671, WEB_LANDING_TEST, WEB_LANDING_FAN_TEST);
+  it("R672 rotates the homescreen's hand from the first visit, a swap a fizzle and an apparition", () => {
+    provenIn(672, WEB_LANDING_TEST, WEB_LANDING_FAN_TEST);
   });
 });
 

@@ -419,13 +419,13 @@ function shownIds(): string[] {
   return [0, 1, 2, 3].map((index) => screen.getByTestId(landingFanCardTestid(index)).getAttribute("data-def-id") ?? "");
 }
 
-describe("R639, R671 the homescreen rotation", () => {
+describe("R639, R672 the homescreen rotation", () => {
   afterEach(() => {
     vi.useRealTimers();
     dropPlayerStatsCache();
   });
 
-  it("R671 below the threshold the fan swaps one slot a step, left to right, among Core's cards", () => {
+  it("R672 below the threshold the fan swaps one slot a step, left to right, among Core's cards", () => {
     vi.useFakeTimers();
     withGames(ROTATION_MIN_GAMES - 1);
     render(<LandingRoute random={seeded(5)} />);
@@ -523,7 +523,7 @@ describe("R639, R671 the homescreen rotation", () => {
     expect(shownIds()).not.toEqual(dealt);
   });
 
-  it("R671 a swap keeps the card going out over the new one for ROTATION_SWAP_MS, a ghost that is no control, then it is gone", () => {
+  it("R672 a swap keeps the card going out over the new one for ROTATION_SWAP_MS, a ghost that is no control, then it is gone", () => {
     vi.useFakeTimers();
     render(<LandingRoute random={seeded(5)} />);
     const dealt = shownIds();
@@ -554,7 +554,7 @@ describe("R639, R671 the homescreen rotation", () => {
     expect(shownIds()).toEqual(swapped);
   });
 
-  it("R671 the opening deal enters as a deal, and a swap's ghost keeps the slot's count at five cards", () => {
+  it("R672 the opening deal enters as a deal, and a swap's ghost keeps the slot's count at five cards", () => {
     vi.useFakeTimers();
     render(<LandingRoute random={seeded(5)} />);
     for (let index = 0; index < FAN_CARDS - 1; index += 1) {
@@ -572,7 +572,7 @@ describe("R639, R671 the homescreen rotation", () => {
     expect(within(fan).getAllByTestId(landingTestid.fanLeaving)).toHaveLength(1);
   });
 
-  it("R671 the sheet plays the swap for --fan-swap, which landing.tsx hands ROTATION_SWAP_MS", () => {
+  it("R672 the sheet plays the swap for --fan-swap, which landing.tsx hands ROTATION_SWAP_MS", () => {
     // The dom half: the fan carries the length the ghost's timeout reads as well.
     render(<LandingRoute random={seeded(5)} />);
     expect(screen.getByTestId(landingTestid.fan).getAttribute("style")).toContain(

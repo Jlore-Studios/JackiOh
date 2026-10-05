@@ -106,7 +106,7 @@ function accountState(account: Account): LandingAccountState {
 /**
  * Five cards, left to right: four real faces dealt by `landingFan.ts` at random for this visit
  * (R374) and drawn by the cards module's CardFace, the middle one on its Radiant face, and a card
- * back last. The deal, the float, the spread and a swap's fizzle and apparition (R671) are
+ * back last. The deal, the float, the spread and a swap's fizzle and apparition (R672) are
  * landing.css's; the faces are the game's own, so the first screen shows cards as the board, the
  * deck builder and the inspect sheet draw them.
  *
@@ -142,7 +142,7 @@ function CardFan({
         onHold(false);
       }}
     >
-      {/* R671: a slot is keyed by its place, not its card, so it stays mounted through a swap and the card going out can fizzle away in it while the new one fades in. */}
+      {/* R672: a slot is keyed by its place, not its card, so it stays mounted through a swap and the card going out can fizzle away in it while the new one fades in. */}
       {hand.map((face, index) => (
         <LandingFanSlot key={index} face={face} index={index} onOpen={onOpen} onHold={onHold} />
       ))}
@@ -160,7 +160,7 @@ function CardFan({
 }
 
 /**
- * R671: one place in the fan. When the hand swaps the card in it, the card going out stays for
+ * R672: one place in the fan. When the hand swaps the card in it, the card going out stays for
  * `ROTATION_SWAP_MS` as a ghost over the new one and fizzles away (landing.css's `landing-fizzle`)
  * while the new card fades in (`landing-apparition`). The ghost is decoration: hidden from
  * assistive tech, no control, no fan card's test id, and it takes no pointer.
@@ -235,7 +235,7 @@ function LandingFanCard({
     { key: `landing-fan-${def.id}`, face },
     { hover: false, touchHold: "preview", prefer: "above" },
   );
-  // R671: how the card came in, fixed when it mounts: the opening deal or a swap's apparition.
+  // R672: how the card came in, fixed when it mounts: the opening deal or a swap's apparition.
   // It never changes, so the card is not dealt in again once the swap's ghost has gone.
   const [entry] = useState<"deal" | "swap">(swapped ? "swap" : "deal");
   const held = inspect.open !== null;
@@ -419,7 +419,7 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
   const motion = useMotion();
   // R374: one deal per visit — per mount of the page. R639: a device that has logged enough games
   // deals from every shipped set instead of Core alone, favouring cards that print at full size.
-  // R671: either way the hand then swaps one card at a time (below), from the pool it was dealt from.
+  // R672: either way the hand then swaps one card at a time (below), from the pool it was dealt from.
   const fullPool = usePlayerStats().games >= ROTATION_MIN_GAMES;
   const [hand, setHand] = useState(() =>
     readPlayerStats().games >= ROTATION_MIN_GAMES
@@ -430,7 +430,7 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
   const [held, setHeld] = useState(false);
   const nextSlot = useRef(0);
 
-  // R639, R671: the rotation. One slot swaps for a fresh card each interval, left to right: from
+  // R639, R672: the rotation. One slot swaps for a fresh card each interval, left to right: from
   // every shipped set, weighted, once the device has logged enough games, and among Core's cards,
   // evenly, until then. The hand stands still while a card is open or held and while the page is
   // hidden, and under reduced motion (a hand that changes by itself is motion, and the hand it

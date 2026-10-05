@@ -30,7 +30,7 @@
   --tavern-text-dim: color-mix(in srgb, var(--tavern-parchment) 72%, transparent);
   --tavern-well: #0e0905;
 
-  --tavern-serif: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --tavern-serif: var(--font-display);
   --tavern-gutter: 16px;
   --tavern-content: 1120px;
 
