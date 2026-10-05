@@ -48,6 +48,12 @@ def branch_for_issue(number: int) -> str:
     return f"bot/issue-{int(number)}"
 
 
+def wip_branch(number: int) -> str:
+    """Where a revision of pull request `number` that was cut off keeps its unfinished work
+    (#317 part 3): never the pull request's own branch, which would start CI on it."""
+    return f"bot/wip/{int(number)}"
+
+
 def open_pull_for_branch(ctx: Context, branch: str) -> dict[str, Any] | None:
     pulls = ctx.gh.list_pulls(state="open", head=branch)
     return pulls[0] if pulls else None

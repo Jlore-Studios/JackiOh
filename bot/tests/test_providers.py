@@ -399,9 +399,9 @@ class MatchingTests(unittest.TestCase):
                           why(outside, 0.55))
         # A build starts only `start_headroom` under the cap that holds then.
         self.assertIsNone(why(morning, 0.5, starting=True))
-        self.assertIn("too close to its 70% cap", why(morning, 0.6, starting=True))
+        self.assertIn("too close to its 70% cap", why(morning, 0.67, starting=True))
         self.assertIn("too close to its 50% cap outside its hours",
-                      why(evening, 0.4, starting=True))
+                      why(evening, 0.47, starting=True))
         # A run going on stops at the cap that holds when it is checked.
         entry = {"usage": {"five_hour": {"utilization": 0.55, "resets_at": later}}}
         self.assertIsNone(providers.refusal(claude_4, entry, morning, "America/Chicago"))
@@ -457,9 +457,9 @@ class MatchingTests(unittest.TestCase):
             self.assertIsNone(why(at, 0.1, seven_day=0.55))
             self.assertIn("7-day usage is 61%, at or over its 60% cap; ",
                           why(at, 0.1, seven_day=0.61))
-        # A build starts only `start_headroom` under the caps: under 25% and 55%.
-        self.assertIsNone(why(DAY, 0.2, starting=True))
-        self.assertIn("too close to its 40% cap", why(DAY, 0.3, starting=True))
+        # A build starts only `start_headroom` under the caps: under 35% and 55%.
+        self.assertIsNone(why(DAY, 0.3, starting=True))
+        self.assertIn("too close to its 40% cap", why(DAY, 0.37, starting=True))
         self.assertIn("too close to its 60% cap", why(DAY, 0.1, seven_day=0.57, starting=True))
 
     def test_the_medium_models_may_spend_their_whole_week(self):

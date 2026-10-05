@@ -1019,6 +1019,8 @@ def claim(ctx: Context, candidate: Candidate,
         planned["self_check_findings"] = record["self_check_findings"]
     if record.get("handoff"):
         planned["handoff"] = record["handoff"]
+    if kind == "revise" and isinstance(record.get("wip"), dict):
+        planned["wip"] = record["wip"]  # the last cut-off revision's work (#317 part 3)
     if planned.get("plan_in_issue"):
         handoff = planned.get("handoff") if isinstance(planned.get("handoff"), dict) else {}
         if not handoff or handoff.get("kind") == "plan":

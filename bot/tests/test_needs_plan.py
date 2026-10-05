@@ -147,13 +147,13 @@ class PlanningLaneTests(unittest.TestCase):
         self.assertEqual(plan_mod.make(ctx)["action"], "build")  # the free lane again
 
     def test_headroom_holds_back_builds_but_not_plans(self):
-        """At 80% of its 5-hour window claude-2 (cap 90%, builds start under 75%) still plans,
+        """At 87% of its 5-hour window claude-2 (cap 90%, builds start under 85%) still plans,
         which is short, but starts no build."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh, machine=(), env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"))
         later = iso(NIGHT + timedelta(hours=2))
         ctx.store.update(lambda s: s.setdefault("providers", {}).update({"claude-2": {"usage": {
-            "five_hour": {"utilization": 0.8, "resets_at": later},
+            "five_hour": {"utilization": 0.87, "resets_at": later},
             "observed_at": iso(NIGHT)}}}))
         queue(gh, ctx, 3)                    # planned: a build
         self.assertNotEqual(plan_mod.make(ctx)["action"], "build")

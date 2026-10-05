@@ -173,6 +173,8 @@ class Worker:
         self._base_gate_cache: dict[str, bool] = {}
         #: The forbidden paths the last path guard put back (`_guard`).
         self.put_back: list[str] = []
+        #: The last cut-off revision's work this run starts from (`bot/wip/<pr>`), if any.
+        self.wip_used = ""
         #: For a conflict revision of a cleared change: what its builder and its reviewer are told
         #: (`_cleared_notes`).
         self.carry_build = ""
@@ -410,7 +412,8 @@ class Worker:
         start = remote if has_remote else self.base_ref
         self.base_sha = self.repo.rev(self.base_ref) or ""
         self.start_sha = self.repo.rev(start) or ""
-        self.wt = worktree_add(self.repo, self.work_dir / f"item-{number}", branch, start)
+        begin = self._wip_start(number, start) if self.plan["action"] == "revise" else start
+        self.wt = worktree_add(self.repo, self.work_dir / f"item-{number}", branch, begin)
         self._exclude_notes()
         self._seed_notes()
         self.result.update(branch=branch, base=self.base_sha, start=self.start_sha,
@@ -428,6 +431,26 @@ class Worker:
             raise Interrupt(f"dependency install failed on untouched main (exit "
                             f"{installed.exit_code}): {installed.tail[-1500:]}", "infra")
         return conflicts
+
+    def _wip_start(self, number: int, start: str) -> str:
+        """Where a revision's worktree starts: the last cut-off revision's work on
+        `bot/wip/<pr>` (#317 part 3), when it started from the pull request's head as it is now
+        and descends from it; otherwise (someone pushed since) the pull request's head. The
+        work's `start` stays the pull request's head either way, which deliver checks."""
+        wip = self.plan.get("wip")
+        if not isinstance(wip, dict) or not wip.get("sha"):
+            return start
+        ref = f"bot/wip/{int(number)}"
+        self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                      f"+refs/heads/{ref}:refs/remotes/origin/{ref}", check=False)
+        head = self.repo.rev(f"origin/{ref}")
+        if (head and wip.get("start") == self.start_sha and self.repo.run(
+                "merge-base", "--is-ancestor", self.start_sha, head, check=False).returncode == 0):
+            self.wip_used = ref
+            self.result["wip"] = {"used": ref, "sha": head}
+            return f"origin/{ref}"
+        self.result["wip"] = {"ignored": ref, "why": "the pull request's branch moved since"}
+        return start
 
     def _exclude_notes(self) -> None:
         """Tell git to ignore the notes file in every worktree of this clone."""
@@ -494,16 +517,34 @@ class Worker:
                     "which you keep going. Follow it unless the code shows it is wrong, and say "
                     "where you departed from it and why.\n\n"
                     + data(str(handoff["notes"]), "The plan"))
+        where = "in your worktree (see above)" if self.wip_used else "on the branch"
         parts = [f"## Picking up from another agent\n\nAn earlier run on "
                  f"`{handoff.get('provider', '?')}` ({handoff.get('family', '?')}) worked on this "
                  f"and stopped: {handoff.get('reason') or 'no reason recorded'}. Its work so far is "
-                 "on the branch. Below are the notes it kept and the end of its session. Check "
-                 "them against the diff and re-run the checks before you trust any of it."]
+                 f"{where}. Below are the notes it kept and the end of its session. Check them "
+                 "against the diff and re-run the checks before you trust any of it. Go on from "
+                 "where it stopped rather than starting over."]
         if str(handoff.get("notes") or "").strip():
             parts.append(data(str(handoff["notes"]), "Its notes"))
         if str(handoff.get("trail") or "").strip():
             parts.append(data(str(handoff["trail"]), "The end of its session"))
         return "\n\n" + "\n\n".join(parts)
+
+    def _wip_text(self) -> str:
+        """What a revision is told about the last cut-off run's work (#317 part 3)."""
+        if self.wip_used:
+            return ("\n\n## Unfinished work from the last run\n\nThe last revision run was cut "
+                    "off before it finished. Your worktree starts from `" + self.wip_used + "`, "
+                    "which holds its commits (\"bot: work in progress …\") on top of the pull "
+                    "request: go on from where it stopped rather than starting over, and check "
+                    "what it did against the task before you build on it.")
+        found = self.result.get("wip")
+        if isinstance(found, dict) and found.get("ignored"):
+            return ("\n\n## Unfinished work from the last run\n\nThe last revision run was cut "
+                    "off before it finished, but the pull request's branch moved after it "
+                    "stopped, so you start from the branch as it is now; that run's commits are "
+                    "not in your worktree, and its notes, if any, say what it had done.")
+        return ""
 
     def _branch_state(self) -> str:
         assert self.wt is not None
@@ -551,7 +592,7 @@ class Worker:
                 conflicts=conflict_text, branch_state=self._branch_state(),
                 gate_list=self._gate_list(),
             )
-            return "revise", prompt + self._handoff_text()
+            return "revise", prompt + self._wip_text() + self._handoff_text()
         previous = ""
         prior = plan.get("previous_findings") or []
         if prior:

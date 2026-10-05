@@ -2,7 +2,7 @@
   "max_parallel": 10,
   "machine_parallel": 7,
   "plan_lanes": 4,
-  "start_headroom": { "five_hour": 0.15, "seven_day": 0.05 },
+  "start_headroom": { "five_hour": 0.05, "seven_day": 0.05 },
   "priority": ["claude-3", "claude-1", "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt", "claude-2", "devin", "devin-train"],
   "tiers": {
     "weak": [

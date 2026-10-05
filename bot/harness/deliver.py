@@ -39,7 +39,7 @@ from harness.context import Context
 from harness.errors import GitError, GitHubError
 from harness.git import Git, matches
 from harness.queue import (PRIORITY_TIERS, branch_for_issue, cleared, difficulty_of, label_names,
-                           open_pull_for_branch, set_state_label)
+                           open_pull_for_branch, set_state_label, wip_branch)
 from harness.state import item as state_item
 from harness.redact import redact
 
@@ -361,6 +361,10 @@ class Deliverer:
             return
         kind = "revise" if self.plan["action"] == "revise" else "build"
         if status == "infra":
+            if not self.result.get("no_result"):
+                # A login or CLI that broke mid-run (#317 part 1) leaves the work it had, like a
+                # pause does: the next run, on another subscription, goes on from it.
+                self._keep_work(number, kind)
             self._infra(number, kind)
             return
         if status == "interrupted":
@@ -443,6 +447,8 @@ class Deliverer:
         """Someone closed the issue or pull request while the run worked on it: its work is not
         pushed, no pull request opens, and nothing queues it again."""
         set_state_label(self.ctx, number, label_names(thread), None)
+        if "pull_request" in thread:
+            self._drop_wip(number)
         where = "pull request" if "pull_request" in thread else "issue"
         self.gh.create_comment(number, f"This {where} was closed while a run was working on it "
                                f"({self._link()}), so that run's work was not delivered. Reopen "
@@ -551,28 +557,109 @@ class Deliverer:
         self.gh.create_comment(number, f"The run working on this died {where} ({self._link()}): "
                                f"{reason}. It is back in the queue, behind the others.")
 
+    def _keep_work(self, number: int, kind: str) -> tuple[bool, str]:
+        """Keep what a run that did not finish made: a build's on its own branch, a revision's
+        on `bot/wip/<pr>` (#317 part 3), which the next revision starts from. Before this a
+        revision cut off by a usage cap threw its work away: #143 lost 16 Opus runs so."""
+        if kind == "build":
+            return self._publish(approved=False)
+        return self._publish_wip(number)
+
+    def _publish_wip(self, number: int) -> tuple[bool, str]:
+        """Push an unfinished revision's bundle to `bot/wip/<pr>`, never to the pull request's
+        branch. The same checks as `_publish`, conflict markers aside (a resolution may stop
+        half-way): the head the result names, descending from where the work started, the pull
+        request's branch not moved meanwhile, and no forbidden path. `(pushed, problem)`."""
+        name = self.result.get("bundle")
+        branch = str(self.plan.get("branch") or "")
+        if not name or not branch:
+            return False, ""
+        bundle = self.out_dir / str(name)
+        if not bundle.is_file():
+            return False, "the result names a bundle the model job did not upload"
+        wip = wip_branch(number)
+        default = self.cfg.default_branch
+        for ref in (default, branch, wip):
+            self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                          f"+refs/heads/{ref}:refs/remotes/origin/{ref}", check=ref == default)
+        local = f"deliver/{wip}"
+        try:
+            head = self.repo.fetch_bundle(bundle, branch, local)
+        except GitError as exc:
+            return False, f"the bundle could not be read: {exc}"
+        start = str(self.result.get("start") or "")
+        if head != self.result.get("head") or not start or self.repo.run(
+                "merge-base", "--is-ancestor", start, head, check=False).returncode != 0:
+            return False, "the bundle does not hold the work the result names"
+        remote = self.repo.rev(f"origin/{branch}")
+        if remote and remote != start:
+            return False, f"`{branch}` moved on GitHub while I worked, so the work was not kept"
+        merged_main = self.repo.merge_base(f"origin/{default}", local)
+        if self.repo.unsanctioned(local, [start, merged_main], self.cfg.forbidden_paths):
+            return False, "the work touches paths the bot may not change, so it was not kept"
+        if self.cfg.dry_run:
+            self.log.append(f"dry run: would push {head} to {wip}")
+            return True, ""
+        url = f"{self.cfg.server_url}/{self.cfg.repo}.git"
+        old = self.repo.rev(f"origin/{wip}")
+        try:
+            if old and self.repo.run("merge-base", "--is-ancestor", old, head,
+                                     check=False).returncode != 0:
+                # The run started over from the pull request's head: the old work goes.
+                self.repo.push(url, f":refs/heads/{wip}", self.cfg.write_token)
+            self.repo.push(url, f"{local}:refs/heads/{wip}", self.cfg.write_token)
+        except GitError as exc:
+            return False, f"keeping the work on `{wip}` was refused: {exc}"
+        self._remember(number, wip={"sha": head, "start": start, "at": iso(self.ctx.now()),
+                                    "provider": self.provider.id})
+        self.log.append(f"kept the unfinished revision of #{number} on {wip}")
+        return True, ""
+
+    def _drop_wip(self, number: int) -> None:
+        """A revision delivered, or the pull request closed: its unfinished work is done with."""
+        if not self._record(number).get("wip"):
+            return
+        url = f"{self.cfg.server_url}/{self.cfg.repo}.git"
+        try:
+            if not self.cfg.dry_run:
+                self.repo.push(url, f":refs/heads/{wip_branch(number)}", self.cfg.write_token)
+        except GitError:
+            pass  # gone already
+        self.ctx.store.update(lambda s: state_item(s, number).pop("wip", None),
+                              f"wip #{number} done")
+
     def _interrupted(self, number: int, kind: str) -> None:
         interrupt = str(self.result.get("interrupt") or "budget")
         reason = self.result.get("reason")
-        pushed, problem = (False, "")
-        if kind == "build":
-            pushed, problem = self._publish(approved=False)
-        if interrupt == "budget":
-            state = self.ctx.store.update(lambda s: state_item(s, number).update(
-                interruptions=int(state_item(s, number).get("interruptions", 0)) + 1),
-                f"interrupted #{number}")
-            count = int(state_item(state, number).get("interruptions", 0))
-            if count >= self.cfg.max_failures:
+        pushed, problem = self._keep_work(number, kind)
+        try:
+            calls = int(self.result.get("model_calls") or 0)
+        except (TypeError, ValueError):
+            calls = 0
+        # A cut-off run that made progress (its work moved on) is a step of a long job, not a
+        # failure; one that made none counts, whatever cut it off, except a halt, the machine's
+        # disk, or a run stopped before any model call (#317 part 3). Before this only the time
+        # budget counted, so a usage pause could repeat for ever.
+        if interrupt in ("budget", "usage") and calls:
+            def count(s: dict[str, Any]) -> None:
+                entry = state_item(s, number)
+                entry["interruptions"] = 0 if pushed else int(entry.get("interruptions", 0)) + 1
+            state = self.ctx.store.update(count, f"interrupted #{number}")
+            count_now = int(state_item(state, number).get("interruptions", 0))
+            if count_now >= self.cfg.max_failures:
                 set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
                 self._remember(number, forced=False)
-                self.gh.create_comment(number, f"This ran out of time {count} runs in a row "
-                                       f"({self._link()}), so I stopped. It is probably too big "
-                                       "for one night; split it into smaller issues, or queue it "
-                                       "again to keep going.")
+                self.gh.create_comment(number, f"This was cut off {count_now} runs in a row "
+                                       f"without its work moving on ({self._link()}; last: "
+                                       f"{reason}), so I stopped. It may be too big for one run: "
+                                       "split it into smaller issues, or queue it again to keep "
+                                       "going.")
                 return
         self._requeue_label(number, kind)
         self._remember(number, last_findings=self.result.get("findings") or [])
-        kept = " The work so far is on the branch." if pushed else ""
+        where = (f"on `{wip_branch(number)}`, where the next revision starts"
+                 if kind == "revise" else "on the branch")
+        kept = f" The work so far is {where}." if pushed else ""
         self.gh.create_comment(number, f"Paused: {reason}.{kept} It stays queued and the next "
                                "run picks it up." + (f"\n\n{problem}" if problem else ""))
 
@@ -810,6 +897,7 @@ class Deliverer:
             # No review run follows on a person's pull request: unreviewed work is not pushed.
             status = "not_approved"
         if status not in ("approved", "built"):
+            self._drop_wip(number)  # nothing of it ships: the next revision starts afresh
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
             self._hold_auto_merge()
             stuck = self._mark_stuck(number)
@@ -828,6 +916,7 @@ class Deliverer:
             self.gh.create_comment(number, f"I could not push the revision ({self._link()}): "
                                    f"{problem}.")
             return
+        self._drop_wip(number)
         set_state_label(self.ctx, number, self._labels(number), None)
         if approved:
             self._unstick(number)
