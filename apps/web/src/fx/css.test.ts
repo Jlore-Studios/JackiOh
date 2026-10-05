@@ -184,6 +184,7 @@ const DOM_KINDS = {
   banner: "fx-banner-in",
   result: "fx-result-in",
   fracture: "fx-fracture-crack",
+  walls: "fx-walls-close",
   brand: "fx-brand-slam",
   chaos: "fx-chaos-in",
   fog: "fx-fog-roll",

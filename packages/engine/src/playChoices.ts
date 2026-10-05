@@ -16,7 +16,8 @@
 // R90 is the governing ruling for the validation: several declarations read the flat `targets` list
 // in order, each taking its own minimum and the last one the remainder; one declaration may not
 // name the same card twice while two declarations may both name the same card; a declaration the
-// board cannot satisfy does not refuse the play, it fizzles on resolution. §9.1 is why a `hand` pick
+// board cannot satisfy does not refuse the play, it fizzles on resolution — unless the play needs it
+// (`required`, R703), and then the play is neither offered nor accepted. §9.1 is why a `hand` pick
 // only ever offers the chooser's own hand, and R13 is why a unit pick only offers the top of a
 // Stack pile.
 //
@@ -775,6 +776,14 @@ function takeFor(decl: TargetDecl, offered: number): number {
 }
 
 /**
+ * R703: a declaration the play needs (`required`) that the board cannot satisfy. The play is then
+ * neither offered (`subsetsFor`) nor accepted (`refuseTargets`), instead of fizzling as R90 has it.
+ */
+function unmetRequirement(decl: TargetDecl, offered: number): boolean {
+  return decl.required === true && offered < decl.min;
+}
+
+/**
  * R90's reading of a flat `targets` list: one slice per declaration, in declaration order, measured
  * against what the board offers each declaration now. A fused card reads its ingredients' slices
  * this way (R102), each ingredient's script getting only the declarations it made.
@@ -899,8 +908,12 @@ function splitSelections(
   return out;
 }
 
-/** Every subset of `options` a declaration may answer with, size-ascending then index order. */
+/**
+ * Every subset of `options` a declaration may answer with, size-ascending then index order; none at
+ * all for a needed pick the board cannot satisfy, so no play is offered (R703).
+ */
 function subsetsFor(options: readonly Selection[], decl: TargetDecl, isLast: boolean): Selection[][] {
+  if (unmetRequirement(decl, options.length)) return [];
   const low = takeFor(decl, options.length);
   const high = isLast ? Math.min(decl.max, options.length) : low;
   const out: Selection[][] = [];
@@ -1064,6 +1077,35 @@ export function graveyardPlayActionsFor(state: GameState, player: PlayerId, card
   return pricedPlayActions(state, player, card, (price) => graveyardPaymentsFor(state, player, card, price));
 }
 
+/** One price a card's X and embiggen choices come to now (R65): the choices, the probe stamped with them, its cost. */
+type PlayPrice = { x: number | undefined; embiggen: boolean | undefined; probe: CardInstance; cost: number };
+
+/**
+ * R65, R455: every price the card could be played at now, one per X and embiggen choice — the prices
+ * `pricedPlayActions` lists plays at, with the ones a ban forbids left out, before any is paid for.
+ */
+function playPrices(state: GameState, player: PlayerId, card: CardInstance): PlayPrice[] {
+  const xValues: (number | undefined)[] = choosesX(state, card) ? legalXValues(state, player, card) : [undefined];
+  const embiggens: (boolean | undefined)[] = hasEmbiggenPrice(state, card)
+    ? legalEmbiggenChoices(state, card)
+    : [undefined];
+  const out: PlayPrice[] = [];
+  for (const x of xValues) {
+    for (const embiggen of embiggens) {
+      const probe: CardInstance = { ...card, x: x ?? card.x, embiggened: embiggen ?? card.embiggened };
+      const cost = playCost(state, probe);
+      if (whyPlayBanned(state, player, probe, cost) !== null) continue;
+      out.push({ x, embiggen, probe, cost });
+    }
+  }
+  return out;
+}
+
+/** R667: the costs a play of this card from its player's hand could pay now, whatever mana is left. */
+export function offeredPlayCosts(state: GameState, player: PlayerId, card: CardInstance): number[] {
+  return [...new Set(playPrices(state, player, card).map((price) => price.cost))];
+}
+
 /**
  * R81, R90's enumeration with the payment left to the caller: for each price the card's X and embiggen
  * choices come to, `payments` answers the ways a play may pay it — none, and that price is not offered;
@@ -1081,49 +1123,40 @@ export function pricedPlayActions(
   payments: (cost: number) => readonly PlayPayment[],
 ): PlayAction[] {
   const out: PlayAction[] = [];
-  const xValues: (number | undefined)[] = choosesX(state, card) ? legalXValues(state, player, card) : [undefined];
-  const embiggens: (boolean | undefined)[] = hasEmbiggenPrice(state, card)
-    ? legalEmbiggenChoices(state, card)
-    : [undefined];
   const tributeSets = legalTributeSets(state, player, card);
 
-  for (const x of xValues) {
-    for (const embiggen of embiggens) {
-      const probe: CardInstance = { ...card, x: x ?? card.x, embiggened: embiggen ?? card.embiggened };
-      const cost = playCost(state, probe);
-      if (whyPlayBanned(state, player, probe, cost) !== null) continue;
-      const paid = payments(cost);
-      if (paid.length === 0) continue;
-      // R214: the choices of the face step 5 will resolve, which this price decides (#64).
-      const face = resolvingFace(state, player, card, cost);
-      const bound = declaresBoundTribute(face);
-      for (const tributes of tributeSets) {
-        const zones: (ZoneChoice | undefined)[] = needsZone(state, card)
-          ? legalZonesFor(state, player, card, tributes)
-          : [undefined];
-        for (const zone of zones) {
-          for (const choices of playChoiceCombinations(state, player, face)) {
-            // R123: the declared Tribute's pick names the units this play tributes, and no others.
-            if (bound && !tributePicksAgree(state, player, face, choices.targets ?? [], choices.modes ?? [], tributes)) {
-              continue;
-            }
-            // B5 E5, R450: each set of cards that pays the targets' discard cost, listed whole like a
-            // Tribute's paying sets (a price left off the list could never be paid).
-            const owed = targetingDiscardsRequired(state, player, face, choices.targets ?? [], choices.modes ?? []);
-            for (const discards of targetingDiscardSets(state, player, owed, playUses(card, choices.targets ?? []))) {
-              for (const payment of paid) {
-                out.push({
-                  type: "play",
-                  instanceId: card.id,
-                  ...(zone === undefined ? {} : { zone }),
-                  ...(x === undefined ? {} : { x }),
-                  ...(embiggen === undefined ? {} : { embiggen }),
-                  ...(tributes.length === 0 ? {} : { tributes }),
-                  ...choices,
-                  ...payment,
-                  ...(discards.length === 0 ? {} : { discards }),
-                });
-              }
+  for (const { x, embiggen, cost } of playPrices(state, player, card)) {
+    const paid = payments(cost);
+    if (paid.length === 0) continue;
+    // R214: the choices of the face step 5 will resolve, which this price decides (#64).
+    const face = resolvingFace(state, player, card, cost);
+    const bound = declaresBoundTribute(face);
+    for (const tributes of tributeSets) {
+      const zones: (ZoneChoice | undefined)[] = needsZone(state, card)
+        ? legalZonesFor(state, player, card, tributes)
+        : [undefined];
+      for (const zone of zones) {
+        for (const choices of playChoiceCombinations(state, player, face)) {
+          // R123: the declared Tribute's pick names the units this play tributes, and no others.
+          if (bound && !tributePicksAgree(state, player, face, choices.targets ?? [], choices.modes ?? [], tributes)) {
+            continue;
+          }
+          // B5 E5, R450: each set of cards that pays the targets' discard cost, listed whole like a
+          // Tribute's paying sets (a price left off the list could never be paid).
+          const owed = targetingDiscardsRequired(state, player, face, choices.targets ?? [], choices.modes ?? []);
+          for (const discards of targetingDiscardSets(state, player, owed, playUses(card, choices.targets ?? []))) {
+            for (const payment of paid) {
+              out.push({
+                type: "play",
+                instanceId: card.id,
+                ...(zone === undefined ? {} : { zone }),
+                ...(x === undefined ? {} : { x }),
+                ...(embiggen === undefined ? {} : { embiggen }),
+                ...(tributes.length === 0 ? {} : { tributes }),
+                ...choices,
+                ...payment,
+                ...(discards.length === 0 ? {} : { discards }),
+              });
             }
           }
         }
@@ -1262,6 +1295,10 @@ function refuseTargets(
     const options = offered[index] ?? [];
     if (decl === undefined) continue;
 
+    // R703: unless the play needs it, in which case the play is refused.
+    if (unmetRequirement(decl, options.length)) {
+      return `${name} cannot be played without ${plural(decl.min, "legal target")}`;
+    }
     // R90: a declaration the board cannot satisfy asks for what the board has, not for its minimum.
     const required = takeFor(decl, options.length);
     if (got.length < required) return `${name} needs ${plural(required, "target")} for that choice`;

@@ -84,6 +84,14 @@ export const FX_BLOOD_FLIGHT_FRACTION = 0.6;
 export const FX_BLOOD_PICK_BASE = 1;          // the first back a hidden pick lands on (modulo the hand)
 export const FX_BLOOD_PICK_STRIDE = 2;        // how far each later pick of the same play moves on
 export const FX_BLOOD_TRAUMA = 0.2;
+// Patch v0.2.14: Classic+ #24 Crushing Walls. At the first card its play destroys, two spiked walls
+// slide in from the board's left and right edges over lanes 1 and 5, meet the cards at
+// FX_WALLS_HIT_AT of the cue (fx.css's `fx-walls-close` stop of the same name), shake and slide back
+// out. The cue lasts D + FX_WALLS_TAIL_MS, inside FX_MAX_TAIL_MS (R200).
+export const FX_WALLS_HIT_AT = 0.3;
+export const FX_WALLS_TAIL_MS = 850;
+export const FX_WALLS_REACH = 0.2;            // how far each wall reaches in, of the board's width: one lane of five
+export const FX_WALLS_TRAUMA = 0.45;
 // R437: a mark branded onto a card. The sigil slams on at FX_BRAND_SLAM_AT of the entry and fades
 // over FX_BRAND_TAIL_MS after it.
 export const FX_BRAND_SLAM_AT = 0.35;

@@ -262,3 +262,89 @@ describe("C #87 Plague Chalice", () => {
     });
   });
 });
+
+describe("C #87 Plague Chalice: R667 the warning on the viewer's hand (patch v0.2.14)", () => {
+  /** The hand cards `player`'s own view marks `counteredOnPlay`, by definition. */
+  function warned(s: Scenario, player: "p1" | "p2"): string[] {
+    const hand = s.view(player).you.hand;
+    return Array.isArray(hand) ? hand.filter((card) => card.counteredOnPlay === true).map((card) => card.defId) : [];
+  }
+
+  it("R667 base: each player's own hand card whose cost equals the count is marked, and only those", () => {
+    const s = standing(2);
+    // VANILLA (1), POINTMASTER (2), ANCHOR (0), FILLER (1): only the (2) meets a count of 2, on both seats.
+    expect(warned(s, "p1")).toEqual([POINTMASTER]);
+    expect(warned(s, "p2")).toEqual([POINTMASTER]);
+    expect(warned(standing(0), "p1")).toEqual([ANCHOR]);
+    expect(warned(standing(5), "p1")).toEqual([]);
+  });
+
+  it("R667 R97 the mark rides only the viewer's own hand: the opponent's is a count", () => {
+    const s = standing(2);
+    expect(s.view("p1").opponent.hand).toEqual({ count: 4 });
+    for (const card of s.view("p1").you.hand as { counteredOnPlay?: true; defId: string }[]) {
+      expect(card.counteredOnPlay === true).toBe(card.defId === POINTMASTER);
+    }
+  });
+
+  it("R667 radiant: only its controller's opponent is warned", () => {
+    const s = standing(2, true);
+    expect(warned(s, "p1")).toEqual([]);
+    expect(warned(s, "p2")).toEqual([POINTMASTER]);
+  });
+
+  it("R667 the warning and the counter agree: the marked card is countered, an unmarked one resolves", () => {
+    const s = standing(1);
+    expect(warned(s, "p1")).toEqual([VANILLA, FILLER]);
+    const vanilla = s.card(VANILLA);
+    s.play(vanilla);
+    expect(countered(s.lastEvents)).toEqual([vanilla.id]);
+
+    const t = standing(1);
+    expect(warned(t, "p1")).not.toContain(POINTMASTER);
+    const pointmaster = t.card(POINTMASTER);
+    t.play(pointmaster);
+    expect(countered(t.lastEvents)).toEqual([]);
+  });
+
+  it("R667 the mark moves with the count: a token removed takes it off the (2) and puts it on the (1)s", () => {
+    const s = standing(2);
+    expect(warned(s, "p1")).toEqual([POINTMASTER]);
+    s.card(CHALICE).counters.plague = 1;
+    expect(warned(s, "p1")).toEqual([VANILLA, FILLER]);
+  });
+
+  it("R667 an X card is marked only when every X it could be played for is countered", () => {
+    // A second Chalice in hand: X runs 1 to the mana, so one countered X leaves the others to play.
+    const s = scenario({
+      p1: { hand: [CHALICE], backrow: [{ def: CHALICE, counters: { plague: 1 } }], mana: 3 },
+      p2: { hand: [ANCHOR] },
+    });
+    expect(warned(s, "p1")).toEqual([]);
+    // With 1 mana its only X is 1, which the count meets.
+    s.state.players.p1.mana.current = 1;
+    expect(warned(s, "p1")).toEqual([CHALICE]);
+  });
+
+  it("R667 leaving the field ends the warning: exiled, it marks nothing more", () => {
+    const s = scenario({
+      active: "p2",
+      p1: { hand: [ANCHOR], backrow: [{ def: CHALICE, counters: { plague: 1 } }], library: lib(2) },
+      p2: { hand: [COLLATERAL, VANILLA, ANCHOR], library: lib(2), mana: 10 },
+    });
+    expect(warned(s, "p2")).toEqual([VANILLA]);
+
+    s.play(COLLATERAL, { targets: [{ pick: "instance", instanceId: s.card(CHALICE).id }] });
+
+    expect(warned(s, "p2")).toEqual([]);
+  });
+
+  it("R667 wouldCounter is the trigger's own match, on both faces", () => {
+    const s = standing(3);
+    const self = s.card(CHALICE);
+    const ask = (face: typeof base, player: "p1" | "p2", costPaid: number): boolean | undefined =>
+      face.wouldCounter?.({ state: s.state, self, controller: "p1", player, costPaid });
+    expect([ask(base, "p1", 3), ask(base, "p2", 3), ask(base, "p1", 2)]).toEqual([true, true, false]);
+    expect([ask(radiant, "p1", 3), ask(radiant, "p2", 3), ask(radiant, "p2", 2)]).toEqual([false, true, false]);
+  });
+});

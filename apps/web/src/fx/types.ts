@@ -84,6 +84,11 @@ export type FxResultCue = { kind: "result"; outcome: FxOutcome; text: string; de
  * sits on the crystal's own box; the lasting mark after it is the board's (`manaMarks.ts`).
  */
 export type FxFractureCue = { kind: "fracture"; at: FxAnchor; delayMs: number; durationMs: number };
+/**
+ * Classic+ #24 Crushing Walls: two spiked walls closing in from the left and right edges of `at`'s
+ * box, each `reach` of its width deep, then sliding back out (fx.css draws them).
+ */
+export type FxWallsCue = { kind: "walls"; at: FxAnchor; reach: number; delayMs: number; durationMs: number };
 /** A colour set for a DOM cue, as CSS colours: the rim, the bright core and the glow around it. */
 export type FxTint = { rim: string; core: string; glow: string };
 /** R437: a mark branded onto a card: a sigil in the mark's colours slams on and fades into the aura. */
@@ -157,6 +162,7 @@ export type FxDomCue =
   | FxBannerCue
   | FxResultCue
   | FxFractureCue
+  | FxWallsCue
   | FxBrandCue
   | FxChaosCue
   | FxFogCue
@@ -226,6 +232,12 @@ export type FxPlay = {
    * reading anything a hidden card would change (R202).
    */
   step: number;
+  /**
+   * Those events by type: how many of each the planner has seen since the `cardPlayed`, the event
+   * being planned included. Types and counts only, public on both seats (R202). Classic+ #24
+   * Crushing Walls draws its walls at the first `destroyed` of its own play.
+   */
+  seen: Readonly<Partial<Record<GameEvent["type"], number>>>;
 };
 
 /** What the planner remembers across entries of one mount (who cast what, where a trap fired). */
