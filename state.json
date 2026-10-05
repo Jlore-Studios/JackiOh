@@ -1079,7 +1079,7 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "muse",
-      "question": "Revision incomplete at step budget: conflicts resolved and main gates green, but cards tests still red (Palantir 8, Frozen Wastes 2, Fusion Lab animation 2 \u2014 all need test rewrites for the new behavior, no design decision needed). Continue the run to finish them? Details in .bot-notes.md and below.",
+      "question": "Revision is partial: merge conflicts fully resolved and core gates green, but ~30 test failures across ~15 files remain (pre-existing branch failures from the issue-88 behavior changes, not merge damage). Fixed 19 files; the rest need the same stale-expectation updates. Send another revision run to continue the test-fixing work (notes in .bot-notes.md, failure inventory below).",
       "queued_at": "2026-10-04T21:54:24Z",
       "requested_by": "jgoetzmann",
       "run_id": "37242009155",
