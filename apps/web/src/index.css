@@ -1,3 +1,5 @@
+@import "./fonts.css";
+
 /* Base reset and the design tokens the board and the prompts share.
    Layout rules live next to their components: game/board.css, game/prompt.css. */
 
@@ -83,7 +85,7 @@ body {
 body {
   background: var(--bg);
   color: var(--text);
-  font: 13px/1.35 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 13px/1.35 var(--font-text);
   overflow-x: hidden;
 }
 
