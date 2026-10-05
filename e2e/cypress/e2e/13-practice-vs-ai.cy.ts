@@ -549,4 +549,36 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
 
     expectNoServer();
   });
+  it("R659 a reload in the middle of a game picks it up on the same state", () => {
+    visitPractice(practiceUrl(`${SEED}:reload`, "medium", "p2"), { reducedMotion: true });
+    cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-difficulty", "medium");
+    keepWholeHand();
+    // The AI has played its first turn, and on the human's own turn it owes nothing, so the state
+    // holds still across the reload.
+    reachHumanTurn();
+
+    practiceHandle()
+      .then((handle) => handle.snapshot())
+      .then((before) => {
+        expect(before.log.some((action) => action.playerId === "p1"), "the AI acted").to.eq(true);
+
+        // No parameter that starts a game: the page asks the worker for the game it kept (R659).
+        visitPractice("/practice?pace=fast");
+        cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT })
+          .should("have.attr", "data-difficulty", "medium")
+          .and("have.attr", "data-human-seat", "p2");
+        cy.get(ts(PRACTICE_SETUP)).should("not.exist");
+        cy.get(ts(PRACTICE_ERROR)).should("not.exist");
+        reachHumanTurn();
+        practiceHandle()
+          .then((handle) => handle.snapshot())
+          .then((after) => {
+            expect(after.seed).to.eq(before.seed);
+            expect(after.log, "the same log, folded back").to.deep.eq(before.log);
+            expect(after.hash, "the same state").to.eq(before.hash);
+          });
+      });
+
+    expectNoServer();
+  });
 });

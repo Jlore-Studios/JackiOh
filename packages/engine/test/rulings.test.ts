@@ -4002,6 +4002,21 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R656 a cast that targets enemies aims each target pick by its declaration", () => {
     provenIn(656, "effects-cast.test.ts");
   });
+
+  // Proved by apps/web practice/core.test.ts "R659 …" (the save, the fold to the same hash and AI
+  // stream, the refusals, no lesson kept), saveStore.test.ts and resume.test.ts "R659 …" (the
+  // worker's store and the page's setup as untrusted storage), and routes/practice.test.tsx "R659 …"
+  // (the resume on a visit, a URL winning, leaving giving it up, the unload prompt for a lesson only,
+  // and a reload on the real core).
+  it("R659 keeps a free practice game in the worker and folds it back after a reload", () => {
+    provenIn(
+      659,
+      "../../../apps/web/src/practice/core.test.ts",
+      "../../../apps/web/src/practice/saveStore.test.ts",
+      "../../../apps/web/src/practice/resume.test.ts",
+      "../../../apps/web/src/routes/practice.test.tsx",
+    );
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

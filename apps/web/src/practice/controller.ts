@@ -39,6 +39,7 @@ import type { ActionBody, CardDefs, PlayerId, PlayerView } from "@jackioh/shared
 import type { PracticePacing } from "./config.ts";
 import type { PracticeHost } from "./host.ts";
 import { readLastBoard, writeLastBoard } from "./lastBoard.ts";
+import { clearPracticeResume, writePracticeResume } from "./resume.ts";
 import type {
   PracticeDebug,
   PracticeRequestBody,
@@ -68,6 +69,12 @@ export type PracticeController = {
   getState(): PracticeControllerState;
   subscribe(fn: () => void): () => void;
   start(config: PracticeStartConfig): Promise<void>;
+  /**
+   * R659: pick up the free game this device left in progress, named by its setup. When the worker
+   * has no such game or it does not fold, the device forgets it and the phase goes to "failed", as
+   * a start's refusal does.
+   */
+  resume(config: PracticeStartConfig): Promise<void>;
   /** Queued behind any in-flight request. */
   act(action: ActionBody): void;
   /** Whether the board is still animating a view; the AI's next step waits until it is not. */
@@ -188,6 +195,8 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
 
   function applySnapshot(snapshot: PracticeSnapshot, extra: Partial<PracticeControllerState> = {}): void {
     if (snapshot.view.result !== null) {
+      // R659: a finished game is not resumed.
+      clearPracticeResume();
       // R508: a finished free game's board becomes the human's last practice board.
       if (snapshot.lastBoard !== undefined) writeLastBoard(snapshot.lastBoard);
       clearTimer();
@@ -251,6 +260,35 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
     set({ phase: "failed", thinking: false, failure: unexpected(response) });
   }
 
+  function begin(config: PracticeStartConfig, body: PracticeRequestBody): Promise<void> {
+    if (disposed) return Promise.resolve();
+    generation += 1;
+    const gen = generation;
+    clearTimer();
+    lastStepTurn = null;
+    // Anything still queued belongs to the previous game.
+    const dropped = jobs.splice(0);
+    for (const job of dropped) job.done({ id: -1, type: "failed", message: CLOSED_MESSAGE });
+    set({ ...PRACTICE_IDLE_STATE, phase: "starting", config });
+
+    return new Promise<void>((resolve) => {
+      send(body, (response) => {
+        if (!disposed && gen === generation) {
+          if (response.type === "started") {
+            // R659: a free game is remembered from its deal on; a lesson's start forgets any.
+            writePracticeResume(config);
+            applySnapshot(response.snapshot, { aiSeat: response.aiSeat, defs: response.defs, failure: null });
+          } else {
+            // A save that does not fold is no game to come back to.
+            if (body.type === "resume") clearPracticeResume();
+            set({ phase: "failed", thinking: false, failure: unexpected(response) });
+          }
+        }
+        resolve();
+      });
+    });
+  }
+
   // -------------------------------------------------------------------------------------------
   // the public surface
   // -------------------------------------------------------------------------------------------
@@ -268,30 +306,14 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
     },
 
     start(config: PracticeStartConfig): Promise<void> {
-      if (disposed) return Promise.resolve();
-      generation += 1;
-      const gen = generation;
-      clearTimer();
-      lastStepTurn = null;
-      // Anything still queued belongs to the previous game.
-      const dropped = jobs.splice(0);
-      for (const job of dropped) job.done({ id: -1, type: "failed", message: CLOSED_MESSAGE });
-      set({ ...PRACTICE_IDLE_STATE, phase: "starting", config });
+      // R508: the human brings their last practice board (the worker ignores it for a lesson).
+      const board = readLastBoard();
+      return begin(config, { type: "start", config: board.length === 0 ? config : { ...config, lastBoard: board } });
+    },
 
-      return new Promise<void>((resolve) => {
-        // R508: the human brings their last practice board (the worker ignores it for a lesson).
-        const board = readLastBoard();
-        send({ type: "start", config: board.length === 0 ? config : { ...config, lastBoard: board } }, (response) => {
-          if (!disposed && gen === generation) {
-            if (response.type === "started") {
-              applySnapshot(response.snapshot, { aiSeat: response.aiSeat, defs: response.defs, failure: null });
-            } else {
-              set({ phase: "failed", thinking: false, failure: unexpected(response) });
-            }
-          }
-          resolve();
-        });
-      });
+    resume(config: PracticeStartConfig): Promise<void> {
+      // The worker's save holds the last board the game began with.
+      return begin(config, { type: "resume", config });
     },
 
     act(action: ActionBody): void {

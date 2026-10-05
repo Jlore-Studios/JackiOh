@@ -12,8 +12,16 @@
 // actions the engine accepted, so a refused action spends nothing and the log folds exactly
 // (`fold({ seed, decks, handicaps, lastBoards, dealt, log })`, R187, R508, R433). The AI draws from its own stream,
 // `createRng(`${seed}:ai`)`, kept for the whole game; the match rng in state is never touched by it.
+//
+// Resume (R659). The worker dies with the page, so after every answer a free game in progress is
+// written to the env's save store (`saveStore.ts`, IndexedDB in a worker), as the match actor's log
+// outlives a server restart: the config, the log, the AI stream's cursor, the catalog version and
+// the state's hash. The save never crosses to the page, whose log would name the AI's hidden cards.
+// After a reload the page sends `resume` with the setup it remembers, and the log is folded again
+// through `apply`, action by action, under the same nonces, to the same hash; the AI picks its
+// stream up at the saved cursor.
 
-import { registerAll } from "@jackioh/cards";
+import { CATALOG_VERSION, registerAll } from "@jackioh/cards";
 import {
   beginGame,
   createGame,
@@ -34,6 +42,7 @@ import { opponentOf, type Action, type ActionBody, type PlayerId } from "@jackio
 import { PRACTICE_AI_CLOCK_MS } from "./config.ts";
 import { lessonById } from "../tutorial/lessons.ts";
 import { presetById } from "./decks.ts";
+import type { PracticeSave, PracticeSaveStore } from "./saveStore.ts";
 import type {
   LastBoardCard,
   PracticeDebug,
@@ -55,6 +64,8 @@ export type PracticeCoreEnv = {
   dev: boolean;
   /** default AI_BUDGET */
   budget?: SearchBudget;
+  /** R659: where a free game in progress is kept; absent, nothing is kept and no resume folds. */
+  saves?: PracticeSaveStore;
 };
 
 /** `handle` never throws: anything that goes wrong comes back as `"failed"`. */
@@ -209,6 +220,48 @@ function snapshotOf(game: PracticeGame): PracticeSnapshot {
 }
 
 /**
+ * R659: the save a free game in progress leaves after each answer; none for a lesson (its coach
+ * reads the game from its first snapshot on, so a lesson restarts instead) or a finished game.
+ */
+function saveOf(game: PracticeGame): PracticeSave | null {
+  if (game.config.lesson !== undefined || game.state.result !== null) return null;
+  return {
+    catalog: CATALOG_VERSION,
+    config: JSON.parse(JSON.stringify(game.config)) as PracticeStartConfig,
+    log: JSON.parse(JSON.stringify(game.log)) as Action[],
+    aiCursor: game.rng.cursor,
+    hash: hashState(game.state),
+  };
+}
+
+/**
+ * R659: a save folded back into its game. The log is replayed through `apply`, so every action must
+ * be accepted under the nonce it was accepted under, and the folded state must hash as it did when
+ * saved; a save from another catalog, or one that does not fold to the same game, is refused.
+ */
+function resumeGame(save: PracticeSave | null, asked: PracticeStartConfig): PracticeGame {
+  if (save === null) throw new Error("no practice game is saved on this device");
+  // The page names the game it remembers; a save of any other game is not the one it asked for.
+  const { seed, humanSeat, difficulty } = save.config;
+  if (seed !== asked.seed || humanSeat !== asked.humanSeat || difficulty !== asked.difficulty) {
+    throw new Error("the saved practice game is not the one the page remembers");
+  }
+  if (save.catalog !== CATALOG_VERSION) {
+    throw new Error(`the saved game was played on catalog ${save.catalog}, not ${CATALOG_VERSION}`);
+  }
+  const game = startGame(save.config);
+  for (const action of save.log) {
+    const { playerId, nonce, ...body } = action;
+    const refusal = apply(game, body as ActionBody, playerId);
+    if (refusal !== null) throw new Error(`the saved game does not fold: ${refusal}`);
+    if (game.log[game.log.length - 1]?.nonce !== nonce) throw new Error("the saved game does not fold: a nonce differs");
+  }
+  if (hashState(game.state) !== save.hash) throw new Error("the saved game does not fold to the state it was saved at");
+  game.rng = createRng(`${save.config.seed}:ai`, save.aiCursor);
+  return game;
+}
+
+/**
  * The AI's fallback when `decide` gave nothing usable: `endTurn` when legal, else the first legal
  * action the engine accepts, never one R188 forbids.
  */
@@ -281,6 +334,16 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     };
   }
 
+  function started(id: number, active: PracticeGame): PracticeResponse {
+    env.saves?.write(saveOf(active));
+    return { id, type: "started", snapshot: snapshotOf(active), defs: registeredCatalog(), aiSeat: active.aiSeat };
+  }
+
+  function snapshotResponse(id: number, active: PracticeGame): PracticeResponse {
+    env.saves?.write(saveOf(active));
+    return { id, type: "snapshot", snapshot: snapshotOf(active) };
+  }
+
   function handleUnsafe(request: PracticeRequest): PracticeResponse {
     switch (request.type) {
       case "start": {
@@ -289,24 +352,25 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
         game = null;
         const next = startGame(request.config);
         game = next;
-        return {
-          id: request.id,
-          type: "started",
-          snapshot: snapshotOf(next),
-          defs: registeredCatalog(),
-          aiSeat: next.aiSeat,
-        };
+        return started(request.id, next);
+      }
+      case "resume": {
+        // Like a start, a resume replaces whatever was running, even when it fails.
+        game = null;
+        const next = resumeGame(env.saves?.read() ?? null, request.config);
+        game = next;
+        return started(request.id, next);
       }
       case "act": {
         const active = current();
         const refusal = apply(active, request.action, active.config.humanSeat);
         active.error = refusal;
-        return { id: request.id, type: "snapshot", snapshot: snapshotOf(active) };
+        return snapshotResponse(request.id, active);
       }
       case "aiStep": {
         const active = current();
         aiStep(active);
-        return { id: request.id, type: "snapshot", snapshot: snapshotOf(active) };
+        return snapshotResponse(request.id, active);
       }
       case "catalog":
         // The card data the setup screen previews decks with, before any game exists (§5.1: the

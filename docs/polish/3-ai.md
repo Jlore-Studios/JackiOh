@@ -1813,7 +1813,8 @@ one unswept card: it is cast on draw and never sits in hand.
   active account with no loadout is sent to Decks, a pending one hears its decks come once it is
   active, a failed read says so, and a loading one says it is looking (`SavedDecks`).
 - **A way out.** The HUD has Menu beside New game (both ask first while a game is on), and a
-  reload or a closed tab asks before a game in progress is lost (`beforeunload`).
+  reload or a closed tab asks before a game in progress is lost (`beforeunload`). Since R659 a free
+  game is kept in the worker and comes back after a reload instead, and only a lesson still asks.
 - **Voice lines hold the AI.** The controller's board flag became `setHold(reason, held)`. The
   route turns any `data-speaking` element into the "voice" hold, capped at
   `PRACTICE_VOICE_HOLD_MAX_MS`, so task 2's audio needs only to mark an element while a line plays.

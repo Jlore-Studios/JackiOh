@@ -75,6 +75,12 @@ export type PracticeDebug = {
 
 export type PracticeRequest =
   | { id: number; type: "start"; config: PracticeStartConfig }
+  /**
+   * R659: pick up the free game the worker saved on this device. `config` is the setup the page
+   * remembers (`resume.ts`); the save itself never leaves the worker. Answered as `started`, or
+   * `failed` when there is no such save or it does not fold.
+   */
+  | { id: number; type: "resume"; config: PracticeStartConfig }
   | { id: number; type: "act"; action: ActionBody }
   | { id: number; type: "aiStep" }
   /** The public card data, for the setup screen's deck preview; needs no game. */

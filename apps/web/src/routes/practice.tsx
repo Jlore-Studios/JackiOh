@@ -21,6 +21,9 @@
 //   ?lesson=<id>          start that tutorial lesson at once, on its own seed and seat (a `?seed=`
 //                         or `?seat=` never overrides a lesson's)
 //   ?pace=fast            e2e pacing, honoured only outside a production build
+//
+// With none of the params that start a game, a free game left in progress on this device (a reload,
+// a closed tab) picks up where it was (R659, `practice/resume.ts`); one that starts a game discards it.
 
 import {
   useCallback,
@@ -66,6 +69,7 @@ import { deckChoiceFromValue, deckChoiceValue, isAutostartDeckValue, isDeckValue
 import { createPracticeHost, type PracticeHost } from "../practice/host.ts";
 import { usePracticeEmotes } from "../practice/emotes.ts";
 import type { PracticeDebug, PracticeDeckChoice, PracticeStartConfig } from "../practice/protocol.ts";
+import { clearPracticeResume, readPracticeResume } from "../practice/resume.ts";
 import { ModifierList } from "../practice/ModifierList.tsx";
 import { PracticeLeave, type PracticeLeaveTo } from "../practice/PracticeLeave.tsx";
 import { OUTCOME_TITLE, PracticeResult, outcomeOf } from "../practice/PracticeResult.tsx";
@@ -483,8 +487,17 @@ function PracticeScreen({
     };
   }, [params]);
 
+  /**
+   * R659: the free game this device left in progress, read once; a URL that starts a game wins, and
+   * that game's own deal replaces it.
+   */
+  const resumeFrom = useRef<PracticeStartConfig | null>(null);
   /** The game to play, fixed (seed and seat included) when it is chosen; null shows the setup. */
-  const [game, setGame] = useState<PracticeStartConfig | null>(() => autostartConfig(params));
+  const [game, setGame] = useState<PracticeStartConfig | null>(() => {
+    const autostart = autostartConfig(params);
+    resumeFrom.current = autostart === null ? readPracticeResume() : null;
+    return autostart ?? resumeFrom.current;
+  });
   const [controller, setController] = useState<PracticeController | null>(null);
   /** A lesson's coach, fed by the controller from its first snapshot on; null for a practice game. */
   const [tracker, setTracker] = useState<CoachTracker | null>(null);
@@ -510,7 +523,8 @@ function PracticeScreen({
       lessonId === undefined ? null : createCoachTracker(next, scripts.current(lessonId) ?? silentScript(lessonId));
     setController(next);
     setTracker(coach);
-    void next.start(game);
+    if (resumeFrom.current === game) void next.resume(game);
+    else void next.start(game);
     return () => {
       coach?.dispose();
       next.dispose();
@@ -520,6 +534,15 @@ function PracticeScreen({
   }, [game]);
 
   const state = useControllerState(controller);
+  // R659: a save the worker will not fold (another catalog, a game that plays differently now) is
+  // no game to show a failure for: the player lands on the setup, as on a fresh visit.
+  // A failure later in the resumed game, with a board already shown, is reported like any other.
+  const resumeFailed = state.phase === "failed" && state.snapshot === null && game !== null && resumeFrom.current === game;
+  useEffect(() => {
+    if (!resumeFailed) return;
+    resumeFrom.current = null;
+    setGame(null);
+  }, [resumeFailed]);
   const startedDefs = state.defs;
   useEffect(() => {
     if (startedDefs !== null) setGameDefs(startedDefs);
@@ -586,13 +609,16 @@ function PracticeScreen({
     setLeaveAskedFor(null);
   }, []);
 
+  // Leaving a game gives it up (R659): no reload brings it back.
   const onNewGame = useCallback(() => {
     setLeaveAskedFor(null);
+    clearPracticeResume();
     setGame(null);
   }, []);
 
   const onMenu = useCallback(() => {
     setLeaveAskedFor(null);
+    clearPracticeResume();
     navigate(paths.landing);
   }, []);
 
@@ -605,6 +631,7 @@ function PracticeScreen({
   const [scrollToSetup, setScrollToSetup] = useState(false);
   const onPlayPractice = useCallback(() => {
     setLeaveAskedFor(null);
+    clearPracticeResume();
     setScrollToSetup(true);
     setGame(null);
   }, []);
@@ -615,10 +642,11 @@ function PracticeScreen({
     setScrollToSetup(false);
   }, [scrollToSetup, game]);
 
-  // A reload, a closed tab or a Back that leaves the page would end a game in progress without a
-  // word (a practice game is not saved, §9.9), so the browser asks first, as it does for an unsent
-  // form. A finished game, the setup and the failure screen let the page go.
-  const inProgress = game !== null && state.phase === "playing";
+  // A free game in progress is saved on the device and comes back after a reload (R659), but a
+  // lesson is not: its coach reads the game from the deal on, so a reload, a closed tab or a Back
+  // that leaves the page would end it without a word, and the browser asks first, as it does for an
+  // unsent form. A free game, a finished lesson, the setup and the failure screen let the page go.
+  const inProgress = game?.lesson !== undefined && state.phase === "playing";
   useEffect(() => {
     if (!inProgress) return;
     const onBeforeUnload = (event: BeforeUnloadEvent): void => {
