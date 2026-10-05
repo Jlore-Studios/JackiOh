@@ -1427,10 +1427,10 @@
 /* The sheen is a gradient layer wider than the card, laid behind a clip, and the sweep moves the layer
    with `transform`, which the compositor does on its own. Sliding `background-position` instead
    repainted every foil card on every frame, and with `mix-blend-mode` each repaint blended: ten
-   Radiant cards in a hand rastered for more than a second of every second (issue #117). The layer
-   is 260% of the card wide and rests 48% of the card to its left, which is where a 260% background
-   at 30% sat. Everything a face prints is inside `.cf-scale`, which clips already, so clipping the
-   root changes nothing but the sheen. */
+   Radiant cards in a hand rastered for more than a second of every second (issue #117). The still
+   foil is 260% of the card wide and rests 48% of the card to its left, which is where a 260%
+   background at 30% sat. Everything a face prints is inside `.cf-scale`, which clips already, so
+   clipping the root changes nothing but the sheen. */
 .cf[data-foil] {
   overflow: clip;
 }
@@ -1469,29 +1469,55 @@
   );
 }
 
-/* The sweep starts with the layer 208% of the card to the left and ends 48% to its right: 256% of
-   the card, which is 98.4615% of the layer's own width, the unit `translate` counts in. */
-.cf[data-foil="animated"]::after {
-  left: -208%;
-  will-change: transform;
-  animation: cf-foil-sweep 5.5s linear infinite;
+/* The sweep (#200). It used to slide the still layer 256% of the card, which left the band on the
+   card at both ends of the loop, so it jumped every 5.5 s; and on a face taller than 5:7 (a hand
+   card squeezed narrow, a minion filling its zone) the 115° gradient reached the layer's edge, which
+   crossed the card as a hard line. Now the band is a horizontal gradient, clear at both ends, on a
+   layer 170% of the card wide (the still band's width), and `skewX(-25deg)` leans it as the 115°
+   gradient leans, so its edges are never a line on a face of any shape. A skew moves a face's top
+   and bottom by 0.233 of its height each way: at translateX(-150%) the layer's right corner is
+   0.85 of the card's width less 0.233 of its height left of the face, and at translateX(110%) its
+   left corner is 0.87 of the width less 0.233 of the height right of it, both off the face while it
+   is up to 3.6 times as tall as it is wide, so the loop restarts where nothing shows
+   (cards/foil.test.ts). The band crosses a 5:7 face in about six of the eight seconds and rests off
+   it for the other two. It moves by transform alone, on its own layer. Under reduced motion (the
+   media query, or the settings panel's Reduce motion on <html>) none of this applies and an
+   animated face wears the still foil above. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion="true"]) .cf[data-foil="animated"]::after {
+    left: 0;
+    width: 170%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(255 244 200 / 0.5) 25%,
+      transparent 46%,
+      rgb(255 214 110 / 0.35) 73%,
+      transparent 100%
+    );
+    will-change: transform;
+    animation: cf-foil-sweep 8s linear infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-rarity="Mythic"][data-foil="animated"]::after {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(255 106 213 / 0.4) 23%,
+      rgb(148 208 255 / 0.4) 40%,
+      rgb(125 255 198 / 0.35) 58%,
+      rgb(255 230 109 / 0.35) 75%,
+      transparent 100%
+    );
+  }
 }
 
 @keyframes cf-foil-sweep {
   from {
-    transform: translateX(0);
+    transform: translateX(-150%) skewX(-25deg);
   }
   to {
-    transform: translateX(98.4615%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cf[data-foil]::after,
-  .cf[data-foil="animated"]::after {
-    left: -48%;
-    animation: none;
-    will-change: auto;
+    transform: translateX(110%) skewX(-25deg);
   }
 }
 

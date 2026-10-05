@@ -1385,3 +1385,27 @@ card layer alone; no rule changed.
   of it, but a skipped face has no layout for the fitter to read, and reading one anyway lays it out
   alone (5 s of layout across the Almanac in a trial), so the fit would have to wait for the face to
   come into view. That is not done here.
+
+## Addendum: the foil sweep's edges (2026-10-05, #200)
+
+The sweep the rendering pass built had two visible seams, both fixed in the card layer alone; no
+rule changed, and the motion still moves by `transform` only, on a layer about a third narrower.
+
+- **The loop jumped.** The sweep slid the still foil's 115° layer by 256% of the card, which left
+  part of the band on the card at both ends of the loop: a pale stripe sat bottom-right when the
+  loop ended and a gold one appeared top-left when it restarted, every 5.5 s.
+- **A hard vertical line crossed tall faces.** Where a 115° gradient sits along its line depends on
+  the layer's height, so on a face taller than 5:7 (a hand card squeezed narrow, a minion filling
+  its zone) the band's colour reached the layer's left edge, and that edge crossed the card as a
+  hard line.
+- **The band is now horizontal and clear at both ends.** The sweep is a 90° gradient, transparent
+  at 0% and 100%, on a layer 170% of the card wide (the still band's width), leaned by
+  `skewX(-25deg)` as the 115° gradient leans, so its edges are never a line on a face of any shape.
+  The 8 s loop slides it from `translateX(-150%)` to `translateX(110%)`, both rest positions off
+  the face while it is up to 3.6 times as tall as it is wide, so the loop restarts where nothing
+  shows (`cards/foil.test.ts` proves the geometry). The gold and Mythic stops are the old bands,
+  rescaled to 0–100%.
+- **Reduced motion wears the still foil.** The sweep lives under `prefers-reduced-motion:
+  no-preference` and `:root:not([data-reduce-motion="true"])`, the settings panel's Reduce motion;
+  under either, the old reduced-motion block is gone because there is nothing to undo — an animated
+  face simply keeps the shared still rule above.

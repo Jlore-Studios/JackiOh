@@ -4101,6 +4101,15 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R703 a play is refused, and never offered, while a pick it needs has no legal option", () => {
     provenIn(703, "playChoices.test.ts", "../../cards/test/063-plastic-surgery.test.ts");
   });
+
+  // Proved by apps/web routes/landingFan.test.ts "R704 …" (a step among Core's cards keeps the
+  // rarities, repeats none, and reaches every card evenly) and routes/landing.test.tsx "R704 …"
+  // (the Core deal swaps one slot a step below the threshold, the swap fizzles the card going out
+  // over the new one for ROTATION_SWAP_MS, the new card fades in instead of being dealt again, and
+  // the fan carries the swap's length for the sheet).
+  it("R704 the homescreen's hand rotates from the first visit, swapping among Core's cards below the threshold", () => {
+    provenIn(704, WEB_LANDING_FAN_TEST, WEB_LANDING_TEST);
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

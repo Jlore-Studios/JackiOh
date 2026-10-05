@@ -152,7 +152,7 @@ src/
                         board is handed (only what the viewer was shown), `useGameStats.ts` adds the finished
                         game to the totals `store.ts` keeps in localStorage (jackioh.stats.v1, in try/catch),
                         `PlayerStatsCard.tsx` is "Your table" on the homescreen, and `config.ts` holds the
-                        numbers (the rotation threshold and interval, the card weights)
+                        numbers (the rotation threshold, interval and swap length, the card weights)
   routes/dev/hotseat.tsx  the dev hotseat route
   routes/patch-notes.tsx  /patch-notes: every card patch and the cards it touched (patches/PatchNotes.tsx,
                         R388, R507); the site footer (routes/SiteFooter.tsx) links it
