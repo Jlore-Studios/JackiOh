@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jackioh-ladder"
+version = "0.1.0"
+description = "JackiOh AI training ladder (issue #55): arena, audit, gates, proposer"
+requires-python = ">=3.10"
+dependencies = ["pyyaml", "jsonschema"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
