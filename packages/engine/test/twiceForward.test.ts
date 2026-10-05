@@ -77,7 +77,7 @@ function trapOf(state: GameState, trapId: string): CardInstance {
 }
 
 describe("C+ #74's Field Trap (R425)", () => {
-  it("R667 set face-down, it holds no Brittle: only its controller reads the back", () => {
+  it("R687 set face-down, it holds no Brittle: only its controller reads the back", () => {
     const { state, trapId } = opponentsTurn("brittle");
     const card = trapOf(state, trapId);
     expect(card.faceUp === true).toBe(false);
@@ -102,7 +102,7 @@ describe("C+ #74's Field Trap (R425)", () => {
     expect(second.state.players.p2.units[0]).toBeNull();
     expect(defOf(second.state, kept.defId).type).toBe("Field Trap");
     expect(kept.zone).toMatchObject({ z: "field", row: "backrow", lane: 2, player: "p1" });
-    // R667: the first fuse reveals it and starts its printed Brittle 2, then gains +1.
+    // R687: the first fuse reveals it and starts its printed Brittle 2, then gains +1.
     expect(activeBrittleCount(kept)).toBe(3);
     expect(kept.faceUp).toBe(true);
     const types = second.events.map((event) => event.type);
@@ -128,7 +128,7 @@ describe("C+ #74's Field Trap (R425)", () => {
     expect(activeBrittleCount(trapOf(second.state, trapId))).toBe(3);
   });
 
-  it("R589 R425 with nothing left to fuse (an exiled Spell) it reveals (R667) and still gains +1 Brittle, unfired", () => {
+  it("R589 R425 with nothing left to fuse (an exiled Spell) it reveals (R687) and still gains +1 Brittle, unfired", () => {
     const { state, trapId } = opponentsTurn("gone");
     const second = play(play(state, "p2", spell.id).state, "p2", selfExiler.id);
     const kept = trapOf(second.state, trapId);

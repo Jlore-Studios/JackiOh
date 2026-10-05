@@ -148,7 +148,7 @@ describe("summon (§6.3, M3-T1)", () => {
     expect(lanesOf(state, "p1", "units")).toEqual([null, "fx-1", null, null, "fx-5"]);
   });
 
-  it("R668 a lane-named summon enters a Locked zone — only plays refuse one", () => {
+  it("R688 a lane-named summon enters a Locked zone — only plays refuse one", () => {
     const state = game();
     lockZone(state, slot("p1", "units", 4));
 

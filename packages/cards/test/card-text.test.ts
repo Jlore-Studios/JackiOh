@@ -126,6 +126,22 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(wrong).toEqual([]);
   });
 
+  it("R692 prints Bounce for every return to hand, and no face says \"return … to hand\"", () => {
+    const faces = facesOf(ENTRIES);
+    const stale = faces.filter((f) => /\breturns? [^.]*\bto (?:its owner's |their owner's |your )?hand\b/i.test(f.text));
+    expect(stale.map((f) => `${f.card.id} ${f.face}: ${f.text}`)).toEqual([]);
+    const bouncing: readonly (readonly [string, "base" | "radiant"])[] = [
+      ["core-017", "base"], ["core-017", "radiant"], ["core-023", "base"], ["core-024", "base"], ["core-031", "base"],
+      ["core-052", "radiant"], ["classic-014", "base"], ["classic-022", "base"], ["classic-022", "radiant"],
+      ["classic-034", "base"], ["classic-034", "radiant"], ["classic-047", "base"], ["classic-066", "base"],
+      ["classicplus-014", "base"], ["classicplus-014", "radiant"], ["classicplus-021", "radiant"],
+    ];
+    for (const [id, face] of bouncing) {
+      const text = faces.find((f) => f.card.id === id && f.face === face)?.text ?? "";
+      expect(text, `${id} ${face}`).toMatch(/\bBounced?\b/);
+    }
+  });
+
   it("R366 patch v0.2.4 only changes base.text and radiant.text between v0.2.0 and v0.2.4", () => {
     const before = readSnapshot("v0.2.0");
     const after = readSnapshot("v0.2.4");

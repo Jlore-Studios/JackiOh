@@ -133,6 +133,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Steal",
   "Unlock",
   "Flicker",
+  "Bounce",
   "Degrade",
   "Upgrade",
   "Plague Token",
@@ -595,6 +596,13 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
     expect(termsIn(played("classicplus-012-8"))).toContain("Animated on your turn");
     // Aliases are empty: SPEC's "Cannot" is plain words without the alias.
     expect(termsOf("Cannot be in Defense Position.")).toEqual([]);
+  });
+
+  it("R692 Bounce is a glossary term wherever a card prints it, \"Bounced\" included", () => {
+    expect(termsOf(played("core-017"))).toContainEqual({ text: "Bounce", term: "Bounce" });
+    expect(termsOf(played("classic-022", "radiant"))).toContainEqual({ text: "Bounce", term: "Bounce" });
+    expect(termsOf(played("core-052", "radiant"))).toContainEqual({ text: "Bounced", term: "Bounce" });
+    expect(termsIn("bounce all units")).toEqual([]);
   });
 
   it("R512 matching stays case-sensitive: a lower-case \"steal it\" or \"can't attack or be attacked\" is plain words", () => {

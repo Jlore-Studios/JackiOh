@@ -126,7 +126,7 @@ describe("lock (§3.2, M3-T1)", () => {
       { type: "locked", player: "p2", row: "units", lane: 2 },
     ]);
 
-    // Once it leaves, the lock lasts until the game ends — but R668 lets placements in: a Lock
+    // Once it leaves, the lock lasts until the game ends — but R688 lets placements in: a Lock
     // refuses plays, never summons or moves.
     moveToZone(state, occupant, "graveyard");
     expect(cardAt(state, slot("p2", "units", 2))).toBeNull();

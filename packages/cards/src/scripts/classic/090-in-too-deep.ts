@@ -37,7 +37,7 @@
 //      resolves; no target fizzles and the next quest still opens.
 //   C  return 2 random cards from your graveyard to your hand — two different cards (R60), all of them
 //      if fewer; a full hand burns one back once (§2.4, `returnRandomFromGraveyard`).
-//   D  place 3 Plague Tokens (§6.3, R471, R669): three placements, all on the one permanent you choose,
+//   D  place 3 Plague Tokens (§6.3, R471, R689): three placements, all on the one permanent you choose,
 //      either side (`placePlagueTokens`).
 //   E  a random Unit of yours gets +3/+3 (`buffRandomUnit`, R60); none, nothing.
 //   F  bounce a target permanent — a Unit or a backrow card, either side, face-down ones and this card

@@ -1,6 +1,6 @@
 // #21 Hinder — SPEC §8.2, BUILD M4-T4 row 21: "Auto-casts on draw and draws again; opponent's next
 // refresh −1 floored at 0; counts as played (R40, R70); radiant −2", and patch v0.2.0's discard
-// (R431): the base face's caster discards 1 at random (R662), with no prompt; nothing with an empty
+// (R431): the base face's caster discards 1 at random (R682), with no prompt; nothing with an empty
 // hand; the Radiant face is unchanged and discards nothing. R635 keeps it out of the opening deal
 // and the mulligan, so the "real game" below proves the deal, not a question.
 //
@@ -49,7 +49,7 @@ function drawHinder(s: Scenario): Scenario {
 
 describe("#21 Hinder", () => {
   describe("base", () => {
-    it("R431, R662 the cast asks nothing: no prompt opens and the draw goes on", () => {
+    it("R431, R682 the cast asks nothing: no prompt opens and the draw goes on", () => {
       const s = drawHinder(hinderOnTop("hinder-asks", false));
 
       // No question stops the draw: the random discard landed and the draw repeated.
@@ -64,7 +64,7 @@ describe("#21 Hinder", () => {
     it("R58, R70 it discards a random card, draws again, and never reaches the hand", () => {
       const s = drawHinder(hinderOnTop("hinder-cast", false));
 
-      // R662: the random card went to the graveyard as a discard.
+      // R682: the random card went to the graveyard as a discard.
       s.expectInZone(P1_FILLER, "graveyard");
       s.expectEvents("drawn", "cardPlayed", "discarded", "drawn");
       // R58: the cast-on-draw card is cast, the draw repeats and the next card goes to the hand.
@@ -73,7 +73,7 @@ describe("#21 Hinder", () => {
       s.expectInZone(HINDER, "graveyard");
     });
 
-    it("R662, R431 the discard is random: of two cards, one goes and one stays", () => {
+    it("R682, R431 the discard is random: of two cards, one goes and one stays", () => {
       const s = drawHinder(hinderOnTop("hinder-choice", false, undefined, [P1_FILLER, P1_SECOND]));
 
       expect(s.state.pending).toBeNull();
@@ -91,7 +91,7 @@ describe("#21 Hinder", () => {
       expect(survivor).not.toBe(discarded[0]);
     });
 
-    it("R662 the random discard comes from the match rng: the same game discards the same card", () => {
+    it("R682 the random discard comes from the match rng: the same game discards the same card", () => {
       const first = drawHinder(hinderOnTop("hinder-roundtrip", false, undefined, [P1_FILLER, P1_SECOND]));
       const second = drawHinder(hinderOnTop("hinder-roundtrip", false, undefined, [P1_FILLER, P1_SECOND]));
       const ids = (s: Scenario): string[] =>
@@ -179,7 +179,7 @@ describe("#21 Hinder", () => {
     });
   });
 
-  it("R431 both faces are Cast on draw; neither declares a discard pick (R662: random)", () => {
+  it("R431 both faces are Cast on draw; neither declares a discard pick (R682: random)", () => {
     expect(base.staticFlags?.castOnDraw).toBe(true);
     expect(radiant.staticFlags?.castOnDraw).toBe(true);
     expect(base.targets).toBeUndefined();
@@ -191,7 +191,7 @@ describe("#21 Hinder", () => {
 
 // ---------------------------------------------------------------------------
 // A real game: setup deals no Hinder (R635), so both mulligans open at once over hands that
-// hold none; turn 1's draw is what meets it, discarding at random with no prompt (R662), and
+// hold none; turn 1's draw is what meets it, discarding at random with no prompt (R682), and
 // the log folds back to the same game (§9.3).
 // ---------------------------------------------------------------------------
 
@@ -212,8 +212,8 @@ function act(state: GameState, body: ActionInput, log: Action[]): GameState {
   return result.state;
 }
 
-describe("#21 Hinder in a real game (R635, R662, §9.3)", () => {
-  it("R431, R635, R662 setup neither deals nor casts a Hinder; turn 1's draw casts it with a random discard and no prompt, and the log replays to the same state", () => {
+describe("#21 Hinder in a real game (R635, R682, §9.3)", () => {
+  it("R431, R635, R682 setup neither deals nor casts a Hinder; turn 1's draw casts it with a random discard and no prompt, and the log replays to the same state", () => {
     // A seed whose shuffle-in puts the Hinder on top of p1's library, so turn 1's draw casts it.
     let found: { seed: string; state: GameState; log: Action[] } | null = null;
     for (let at = 0; at < 300 && found === null; at += 1) {
@@ -233,7 +233,7 @@ describe("#21 Hinder in a real game (R635, R662, §9.3)", () => {
         state = act(state, { type: "mulligan", keep: state.players[player].hand.map((card) => card.id), playerId: player }, log);
       }
       expect(state.turn).toBe(1);
-      // R662: the cast discards at random and asks nothing, so a turn-1 cast leaves the Hinder and
+      // R682: the cast discards at random and asks nothing, so a turn-1 cast leaves the Hinder and
       // one discard in the graveyard with no prompt open.
       if (state.players.p1.graveyard.map((card) => card.defId).includes(HINDER)) found = { seed, state, log };
     }

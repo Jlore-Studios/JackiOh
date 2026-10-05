@@ -711,7 +711,7 @@ through a fixture script, as CLAUDE.md asks of engine behaviour, before any card
 | E16 | **Cards between players' piles** | Give cards from one hand to the other (C #9), draw from the opponent's deck (C #58), take a card from the opponent's deck (C+ #12.3) — all E2's ownership change; swap decks is R73's library swap. | C #9, #58, #85; C+ #12.3 |
 | E17 | **Show the opponent's hand in a prompt** | Their hand cards are the options, seen by the chooser only, as KY's Private Tutor reveals library cards (§10.8, R310). | C #11 |
 | E18 | **New prompt kinds** | `number` (pick a number from a fixed range: C #18), a mode prompt held by the *other* player (C #8), a multiple-choice answer (C+ #42), board cells (C+ #62), a quest reward (C #90), a budgeted multi-pick from a pile (C #44). The existing kinds stay. | as listed |
-| E19 | **Plague Tokens, extended** | "Place N Plague Tokens" with no card named is N placements, all on the one permanent a single prompt names (either side, face-down cards included) (balance patch 1, R669); "Place N Plague Tokens on X" is one placement of N. Placement multipliers (×2, ×3); "when a Plague Token is placed on this" (once per placement); stats per token (aura or self); tokens spent as mana; tokens consumed. `counterChanged` already carries `plague`. | C #27, #39, #42, #43, #53, #59, #61, #62, #63, #69, #70, #74, #76, #78, #87; C+ #3 |
+| E19 | **Plague Tokens, extended** | "Place N Plague Tokens" with no card named is N placements, all on the one permanent a single prompt names (either side, face-down cards included) (balance patch 1, R689); "Place N Plague Tokens on X" is one placement of N. Placement multipliers (×2, ×3); "when a Plague Token is placed on this" (once per placement); stats per token (aura or self); tokens spent as mana; tokens consumed. `counterChanged` already carries `plague`. | C #27, #39, #42, #43, #53, #59, #61, #62, #63, #69, #70, #74, #76, #78, #87; C+ #3 |
 | E20 | **Lock variants, Unlock** | Lock a whole lane, the zone a permanent was just played into, a random zone, the firing trap's own zone; unlock every zone (event `unlocked`). | C #71, #84; C+ #1, #34, #77 |
 | E21 | **Backrow piles** | §3.2 already lets a Stack card onto an occupied zone "of the right row", but no backrow card has had Stack, so no backrow pile has ever existed and nothing handles one. Once something gives backrow cards Stack, backrow zones hold piles; only the top acts, so a face-down trap under a pile cannot fire and an aura under one is off. Ivory Tower is the one backrow pile a Unit may top (CL39). | C+ #33, #77 |
 | E22 | **Flicker** | The card leaves the field and re-enters the same zone at once: R78's reset, summoning sick, no Cry, no Death. It counts as summoned. | C #14 r |
@@ -1253,7 +1253,7 @@ base → Radiant.
 
 - **Text:** Bounce 2 random cards from your graveyard.
 - **Radiant:** Bounce 4 random cards from your graveyard or exile.
-- **Engine:** that many random cards from the pile or piles (R664).
+- **Engine:** that many random cards from the pile or piles (R684).
 - **Numbers:** cards 2 ↑.
 - **Check:** #47 Recurring Felinor casts it.
 

@@ -10,10 +10,10 @@
 type ModeText = { label: string; detail: string };
 
 export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText>>>> = {
-  // #17 Flood (radiant): "Choose one: Return all Units, return all enemy Units, or destroy all enemy Units. Then draw 1."
+  // #17 Flood (radiant): "Choose one: Bounce all Units, Bounce all enemy Units, or destroy all enemy Units. Then draw 1."
   "core-017": {
-    "bounce all units": { label: "Return all units", detail: "Every unit returns to its owner's hand. Then draw 1." },
-    "bounce all enemy units": { label: "Return enemy units", detail: "Your opponent's units return to their hand. Then draw 1." },
+    "bounce all units": { label: "Bounce all units", detail: "Every unit returns to its owner's hand. Then draw 1." },
+    "bounce all enemy units": { label: "Bounce enemy units", detail: "Your opponent's units return to their hand. Then draw 1." },
     "destroy all enemy units": { label: "Destroy enemy units", detail: "Destroy every enemy unit. Then draw 1." },
   },
   // #24 Efficiency Dividend: "deal X damage to a target; heal a target 2X; gain floor(X/2) mana next turn".

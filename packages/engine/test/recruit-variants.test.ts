@@ -195,8 +195,8 @@ describe("E25 Recruit your entire deck (Classic #60)", () => {
   });
 });
 
-describe("R670 Recruit skips (X)-cost cards unless they are the only valid targets", () => {
-  it("R670 a scan takes the first non-X match past an (X)-cost card on top, which stays", () => {
+describe("R690 Recruit skips (X)-cost cards unless they are the only valid targets", () => {
+  it("R690 a scan takes the first non-X match past an (X)-cost card on top, which stays", () => {
     const start = playing("recruit-x-skip");
     const state = start.state;
     const library = ids(setLibrary(state, "p1", [xUnit.id, cheapUnit.id]));
@@ -205,7 +205,7 @@ describe("R670 Recruit skips (X)-cost cards unless they are the only valid targe
     expect(ids(state.players.p1.library)).toEqual([library[0]]);
   });
 
-  it("R670 with only (X)-cost matches the scan takes the first one", () => {
+  it("R690 with only (X)-cost matches the scan takes the first one", () => {
     const start = playing("recruit-x-only");
     const state = start.state;
     const library = ids(setLibrary(state, "p1", [xUnit.id, deckSpell.id]));
@@ -214,7 +214,7 @@ describe("R670 Recruit skips (X)-cost cards unless they are the only valid targe
     expect(ids(state.players.p1.library)).toEqual([library[1]]);
   });
 
-  it("R670 recruitAll leaves (X)-cost cards when other permanents match, and takes them when nothing else does", () => {
+  it("R690 recruitAll leaves (X)-cost cards when other permanents match, and takes them when nothing else does", () => {
     const mixed = playing("recruit-all-x-mixed");
     const mixedState = mixed.state;
     const mixedLibrary = ids(setLibrary(mixedState, "p1", [cheapUnit.id, xUnit.id, deckSpell.id]));

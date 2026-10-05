@@ -7,7 +7,7 @@
 // Activate (R384), once per turn: the mode and, for the modes that take one, the target are declared
 // in the `activate` action (R81), each target bound to its mode (`forModes`, R90).
 //   - "deal damage": one hit of {damage} from this card on a Unit or hero, either side.
-//   - "opponent discards": the discard is random from their hand (R662: no "of your choice"), so no
+//   - "opponent discards": the discard is random from their hand (R682: no "of your choice"), so no
 //     prompt opens. With fewer cards than asked they discard all they have; an empty hand discards
 //     nothing.
 //   - the delayed destroy (a delayed effect, §10.1, `destroyAtNextTurnStart`): on the base face the

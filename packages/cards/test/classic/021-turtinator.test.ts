@@ -90,7 +90,7 @@ describe("C #21 Turtinator", () => {
       s.expectHealth("p2", 23);
     });
 
-    it("R663 Turtinator cannot Tribute itself: alone on its side, no activation is listed", () => {
+    it("R683 Turtinator cannot Tribute itself: alone on its side, no activation is listed", () => {
       const s = setup({ field: [TURTLE] });
       const turtle = s.card(TURTLE);
 
@@ -201,7 +201,7 @@ describe("C #21 Turtinator", () => {
       eat(s, POINTMASTER);
 
       s.expectHealth("p2", 30 - 3 - 4 - 7);
-      // R663: with only itself left to Tribute, no further activation is listed.
+      // R683: with only itself left to Tribute, no further activation is listed.
       expect(activationsOf(s, "p1", s.card(TURTLE).id)).toHaveLength(0);
     });
 
@@ -252,7 +252,7 @@ describe("C #21 Turtinator", () => {
       s.expectHealth("p2", 16);
     });
 
-    it("R663 the Radiant face cannot Tribute itself either", () => {
+    it("R683 the Radiant face cannot Tribute itself either", () => {
       const s = setup({ field: [{ def: TURTLE, radiant: true }] }, { health: 30 });
       const turtle = s.card(TURTLE);
 

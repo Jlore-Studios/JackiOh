@@ -160,7 +160,7 @@ export function addRandomFromCatalog(args: {
 /**
  * Move random cards from your graveyard to your hand (#37 Gravedigger draws one; C #34 Ancient
  * Acquisition draws its number, from the graveyard or, on its Radiant face, the graveyard and
- * exile together — balance patch 1 made those returns random, R664). Each draw picks uniformly
+ * exile together — balance patch 1 made those returns random, R684). Each draw picks uniformly
  * from the cards still in the piles through the match rng, so fewer cards than asked ends it. The
  * hand cap burns the overflow (§2.4, R4).
  */

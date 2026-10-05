@@ -112,7 +112,7 @@ describe("C+ #14 Forever&", () => {
       const id = lunarIn(s);
       s.play(id, { targets: AT_HERO }); // stamped: back in hand
       expect(s.card(id).zone.z).toBe("hand");
-      s.play(RAPID_DRAW); // draws 2, then discards all 3 at random (R662)
+      s.play(RAPID_DRAW); // draws 2, then discards all 3 at random (R682)
       expect(s.state.pending).toBeNull();
       expect(s.card(id).zone.z).toBe("graveyard");
       s.endTurn().endTurn();

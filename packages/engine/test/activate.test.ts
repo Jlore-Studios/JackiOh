@@ -491,7 +491,7 @@ describe("B3.2 rules 5, 8: choices and the list (R384, R81, R90)", () => {
     expect(legalActions(state, "p1").some((body) => body.type === "activate" && body.instanceId === merchantCard.id)).toBe(false);
   });
 
-  it("R450 R662 a declared target that costs discards lists one action carrying none, paid random with the costs", () => {
+  it("R450 R682 a declared target that costs discards lists one action carrying none, paid random with the costs", () => {
     const state = playing("ghost");
     const card = put(state, pinger.id, slot("p1", "backrow", 1));
     const costly = put(state, ghost.id, slot("p2", "units", 1));
@@ -501,7 +501,7 @@ describe("B3.2 rules 5, 8: choices and the list (R384, R81, R90)", () => {
     const atGhost = { pick: "instance", instanceId: costly.id } as const;
 
     const listed = activateActionsFor(state, "p1", card).filter((body) => body.targets?.[0]?.pick === "instance" && body.targets[0].instanceId === costly.id);
-    // R662: the discards are random at pay time, so one action, carrying none.
+    // R682: the discards are random at pay time, so one action, carrying none.
     expect(listed).toHaveLength(1);
     expect(listed.every((body) => !("discards" in body))).toBe(true);
     expect(activateActionsFor(state, "p1", card).filter((body) => body.targets?.[0]?.pick === "hero").every((body) => !("discards" in body))).toBe(true);

@@ -1,5 +1,5 @@
 // C+ #56 Book of Pain — SPEC §8.7 row 56, BUILD M9 Classic+ row C+ 56: "The opponent discards 2 cards
-// at random (R662), with no prompt; the opponent's remaining hand stays hidden (§10.6) while the
+// at random (R682), with no prompt; the opponent's remaining hand stays hidden (§10.6) while the
 // discards are public; fewer cards, all of them; an empty hand, nothing; the count reads through
 // `param()`; radiant 4".
 
@@ -29,7 +29,7 @@ describe("C+ #56 Book of Pain", () => {
   });
 
   describe("base", () => {
-    it("R662 no prompt opens: 2 random cards of theirs go at once", () => {
+    it("R682 no prompt opens: 2 random cards of theirs go at once", () => {
       const s = pain();
       s.play(BOOK);
       expect(s.state.active).toBe("p1");
@@ -41,7 +41,7 @@ describe("C+ #56 Book of Pain", () => {
       s.expectInZone(BOOK, "graveyard");
     });
 
-    it("§10.6 R662 the opponent's remaining hand stays hidden, while the discards are public", () => {
+    it("§10.6 R682 the opponent's remaining hand stays hidden, while the discards are public", () => {
       const s = pain();
       s.play(BOOK);
       expect(s.view("p1").pending).toBeNull();
@@ -56,7 +56,7 @@ describe("C+ #56 Book of Pain", () => {
       for (const card of s.pile("p2", "graveyard")) expect(mine).toContain(card.id);
     });
 
-    it("R662 the random discards come from the match rng: the same game discards the same cards", () => {
+    it("R682 the random discards come from the match rng: the same game discards the same cards", () => {
       const first = pain();
       first.play(BOOK);
       const second = pain();
@@ -116,7 +116,7 @@ describe("C+ #56 Book of Pain", () => {
   });
 
   describe("radiant", () => {
-    it("R662 the opponent discards 4 at random", () => {
+    it("R682 the opponent discards 4 at random", () => {
       const s = pain({ radiant: true, theirs: [A, B, C, A, B] });
       s.play(BOOK);
       expect(s.state.pending).toBeNull();

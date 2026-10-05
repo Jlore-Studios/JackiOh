@@ -487,7 +487,7 @@ export type ActivationDecl = {
     tributeSelf?: boolean;
     /**
      * A Tribute cost that may not take the card itself, even when it is a Unit (Classic #21
-     * Turtinator, which cannot Tribute itself; R663).
+     * Turtinator, which cannot Tribute itself; R683).
      */
     tributeExcludesSelf?: boolean;
   };

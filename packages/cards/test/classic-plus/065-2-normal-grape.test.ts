@@ -7,13 +7,14 @@
 import { hashState, reduce, stepParam, type GameState } from "@jackioh/engine";
 import type { Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
+import { askingCastOnDraw } from "../_askingCast";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/065-2-normal-grape";
 
 const GRAPE = "classicplus-065-2";
 const FILLER = "core-005"; // (1) Spell
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt
-const HINDER = "core-021"; // Cast on draw; base face asks its caster to discard 1 (R431)
+const HINDER = "core-021"; // Cast on draw; its Radiant face asks nothing
 const SOLARIUS = "classicplus-038"; // Unit printing Spell Damage +2
 const DECK_A = "core-011"; // Tempo Timmy, (1) Unit
 const DECK_B = "core-001"; // Big D-fender, (2) Unit
@@ -157,7 +158,8 @@ describe("C+ #65.2 Normal Grape", () => {
     });
 
     it("R19 a friend is healed 4", () => {
-      const s = scenario({ p1: { hand: [grape(true), FILLER], library: [DECK_A, DECK_B] }, p2: { hand: [FILLER] } });
+      // Four draws (balance patch 1), so four cards in the deck: no fatigue muddies the heal.
+      const s = scenario({ p1: { hand: [grape(true), FILLER], library: [DECK_A, DECK_B, FILLER, FILLER] }, p2: { hand: [FILLER] } });
       s.play(GRAPE, { targets: [{ pick: "hero", player: "p1" }] });
       s.expectHealth("p1", 34);
     });
@@ -176,9 +178,10 @@ describe("C+ #65.2 Normal Grape", () => {
 
     it("R113 R58 a cast-on-draw card that asks pauses the rest; answered after a JSON round trip, the next draw is still discounted", () => {
       const s = scenario({
-        p1: { hand: [grape(true), FILLER], library: [HINDER, DECK_A, DECK_B] },
+        p1: { hand: [grape(true), FILLER], library: [DECK_A, DECK_B, MENACE, MENACE] },
         p2: { hand: [FILLER] },
       });
+      const asking = askingCastOnDraw(s);
       s.play(GRAPE, { targets: [{ pick: "hero", player: "p2" }] });
       expect(s.state.pending?.kind).toBe("hand");
 
@@ -197,9 +200,9 @@ describe("C+ #65.2 Normal Grape", () => {
       s.answer([{ pick: "instance", instanceId: filler?.id ?? "" }]);
       expect(hashState(resumed.state)).toBe(hashState(s.state));
 
-      // Hinder was cast (no discount); its chain's repeat brought DECK_A (no discount); the Grape's own
-      // second draw brought DECK_B, discounted.
-      expect(s.card(HINDER).zone.z).toBe("graveyard");
+      // The asking cast was cast (no discount); its chain's repeat brought DECK_A (no discount); the
+      // Grape's own later draws brought DECK_B and both Menaces, each discounted.
+      expect(s.card(asking).zone.z).toBe("graveyard");
       expect(s.card(DECK_A).costMod).toBe(0);
       expect(s.card(DECK_B).zone.z).toBe("hand");
       expect(s.card(DECK_B).costMod).toBe(-1);

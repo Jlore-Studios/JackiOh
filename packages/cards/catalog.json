@@ -453,11 +453,11 @@
     "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Return all Units to hand."
+      "text": "Bounce all Units."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Return all Units to hand, return all enemy Units to hand, or destroy all enemy Units. Then draw 1."
+      "text": "Choose one: Bounce all Units, Bounce all enemy Units, or destroy all enemy Units. Then draw 1."
     }
   },
   "core-018": {
@@ -612,7 +612,7 @@
     "loc": 33,
     "base": {
       "keywords": [],
-      "text": "30% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
+      "text": "30% chance a random card in your hand becomes Radiant.\nEnd of turn: Bounce this."
     },
     "radiant": {
       "keywords": [
@@ -621,7 +621,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\n40% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
+      "text": "Lucky 1\n40% chance a random card in your hand becomes Radiant.\nEnd of turn: Bounce this."
     }
   },
   "core-024": {
@@ -637,11 +637,11 @@
     "loc": 46,
     "base": {
       "keywords": [],
-      "text": "Choose one: Deal X damage to a target, heal a target 2X, or gain floor(X/2) mana next turn.\nEnd of turn: Return this to hand."
+      "text": "Choose one: Deal X damage to a target, heal a target 2X, or gain floor(X/2) mana next turn.\nEnd of turn: Bounce this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Deal 2X damage to a target, heal a target 4X, or gain X mana next turn.\nEnd of turn: Return this to hand."
+      "text": "Choose one: Deal 2X damage to a target, heal a target 4X, or gain X mana next turn.\nEnd of turn: Bounce this."
     }
   },
   "core-025": {
@@ -802,11 +802,11 @@
     "loc": 56,
     "base": {
       "keywords": [],
-      "text": "Deal Fib(times played + 1) damage to a target.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
+      "text": "Deal Fib(times played + 1) damage to a target.\nEnd of turn: Bounce this. It costs (1) more, to a maximum of (4)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal Fib(times played + 3) damage to a target.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
+      "text": "Deal Fib(times played + 3) damage to a target.\nEnd of turn: Bounce this. It costs (1) more, to a maximum of (4)."
     }
   },
   "core-032": {
@@ -1365,7 +1365,7 @@
       "attack": 8,
       "health": 8,
       "keywords": [],
-      "text": "Cry: Choose left or right. Rotate every card on the field one step that way. Cards that cross to your side change control. Cards that would cross to your opponent's return to their owner's hand instead, where they cost (0)."
+      "text": "Cry: Choose left or right. Rotate every card on the field one step that way. Cards that cross to your side change control. Cards that would cross to your opponent's side are Bounced instead. They cost (0)."
     }
   },
   "core-053": {
@@ -3460,7 +3460,7 @@
     "loc": 49,
     "base": {
       "keywords": [],
-      "text": "Activates when any of your Units die: Return them to hand. They cost ({setCost})."
+      "text": "Activates when any of your Units die: Bounce them. They cost ({setCost})."
     },
     "radiant": {
       "keywords": [],
@@ -3746,13 +3746,13 @@
       "attack": 2,
       "health": 1,
       "keywords": [],
-      "text": "Cry: If this is in midlane, Tribute it. If you had {threshold} or more mana when you played this, return {bounces|random enemy permanent|random enemy permanents} to hand."
+      "text": "Cry: If this is in midlane, Tribute it. If you had {threshold} or more mana when you played this, Bounce {bounces|random enemy permanent|random enemy permanents}."
     },
     "radiant": {
       "attack": 4,
       "health": 2,
       "keywords": [],
-      "text": "Cry: If this is in midlane, Tribute it. If you had {threshold} or more mana when you played this, return {bounces|random enemy permanent|random enemy permanents} to hand."
+      "text": "Cry: If this is in midlane, Tribute it. If you had {threshold} or more mana when you played this, Bounce {bounces|random enemy permanent|random enemy permanents}."
     }
   },
   "classic-023": {
@@ -4137,11 +4137,11 @@
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Return {cards|random card|random cards} from your graveyard to hand."
+      "text": "Bounce {cards|random card|random cards} from your graveyard."
     },
     "radiant": {
       "keywords": [],
-      "text": "Return {cards|random card|random cards} from your graveyard or exile to hand."
+      "text": "Bounce {cards|random card|random cards} from your graveyard or exile."
     }
   },
   "classic-035": {
@@ -4605,13 +4605,13 @@
       "attack": 3,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, return this to hand."
+      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, Bounce this."
     },
     "radiant": {
       "attack": 6,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, return this to hand. It costs ({returnCost})."
+      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, Bounce this. It costs ({returnCost})."
     }
   },
   "classic-048": {
@@ -5232,7 +5232,7 @@
       "attack": 5,
       "health": 4,
       "keywords": [],
-      "text": "While this is in your hand: After you play a Unit, summon this.\nAfter you play a card, return this to hand."
+      "text": "While this is in your hand: After you play a Unit, summon this.\nAfter you play a card, Bounce this."
     },
     "radiant": {
       "attack": 10,
@@ -5242,7 +5242,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhile this is in your hand: After you play a Unit, summon this.\nAfter you play a card, return this to hand."
+      "text": "Rush\nWhile this is in your hand: After you play a Unit, summon this.\nAfter you play a card, Bounce this."
     }
   },
   "classic-067": {
@@ -6850,11 +6850,11 @@
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "The next Spell you play gains \"After this resolves, return it to hand. This can't cost less than ({floor}).\""
+      "text": "The next Spell you play gains \"After this resolves, Bounce it. This can't cost less than ({floor}).\""
     },
     "radiant": {
       "keywords": [],
-      "text": "The next Spell you play gains \"After this resolves, return it to hand. This can't cost less than ({floor}).\""
+      "text": "The next Spell you play gains \"After this resolves, Bounce it. This can't cost less than ({floor}).\""
     }
   },
   "classicplus-015": {
@@ -7308,7 +7308,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Pierce\nDeal {damage} damage to all Units.\nEnd of turn: Return this to hand."
+      "text": "Pierce\nDeal {damage} damage to all Units.\nEnd of turn: Bounce this."
     }
   },
   "classicplus-022": {

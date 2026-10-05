@@ -1,5 +1,5 @@
 // C #76 Plague Bringer — SPEC §8.6 row 76, BUILD M9 Classic row C 76: "Rush; Cry: two placements of one
-// Plague Token, both on the one permanent a single prompt names (R669), on any permanent either side
+// Plague Token, both on the one permanent a single prompt names (R689), on any permanent either side
 // (a face-down option carries only its id, R177), then draw 1; radiant 8/8: four placements, draw 2;
 // its tuned numbers (tokens, draw) read through `param()` (R386)".
 
@@ -37,7 +37,7 @@ function drawsBy(events: readonly GameEvent[], player: PlayerId): number {
   return events.filter((event) => event.type === "drawn" && event.player === player).length;
 }
 
-/** Answer the one placement prompt on `card`: every placement lands there (R669). */
+/** Answer the one placement prompt on `card`: every placement lands there (R689). */
 function placeAll(s: Scenario, card: CardInstance): void {
   s.answer(card.id);
 }
@@ -90,7 +90,7 @@ describe("C #76 Plague Bringer", () => {
       expect(s.card(MANA_WELL).counters.plague ?? 0).toBe(0);
     });
 
-    it("R669 no spreading; then draw 1, after the one answer", () => {
+    it("R689 no spreading; then draw 1, after the one answer", () => {
       const s = board();
       s.play(BRINGER);
       const vanilla = s.card(VANILLA);
