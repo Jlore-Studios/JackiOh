@@ -1118,7 +1118,10 @@
     },
     "166": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:5992197537",
+        "c:5992206096"
+      ],
       "ci_fixes": 1,
       "ci_reruns": {
         "026156e4ab202aec00d3323cca97e8ecc6fa245c": 1
@@ -1161,10 +1164,7 @@
       "source": "request",
       "started_at": "2026-10-05T10:03:42Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5992197537",
-        "c:5992206096"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
