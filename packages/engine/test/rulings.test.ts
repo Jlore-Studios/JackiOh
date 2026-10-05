@@ -4081,6 +4081,21 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // Proved by apps/web audio/cues.test.ts "R669 …" (the stings by rarity, none for the sentinel, a
+  // Trap or a cast on draw; the lane pans), engine.test.ts and sfx.test.ts "R669 …" (the panner, the
+  // effects' duck under a line, the shared reverb; the sting's recipe), and haptics/haptics.test.ts
+  // "R669 …" (the three moments, the gap, the switch and Reduce Motion).
+  it("R669 every readable play stings by rarity, effects pan by lane under a voice duck and reverb, and a phone ticks", () => {
+    provenIn(
+      669,
+      "../../../apps/web/src/audio/cues.test.ts",
+      "../../../apps/web/src/audio/engine.test.ts",
+      "../../../apps/web/src/audio/sfx.test.ts",
+      "../../../apps/web/src/haptics/haptics.test.ts",
+    );
+  });
+  });
+
   // Proved by apps/web fx/entrances.test.ts "R670 …": the marquee cards are Legendary or Mythic
   // Units, each plays its own entrance in place of the rarity's on both seats, never for a hidden
   // summon or a backrow set, paces nothing and stays inside R200's bounds.
