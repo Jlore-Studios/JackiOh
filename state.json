@@ -484,6 +484,12 @@
       "lines": [
         "/harness revise `13-practice-vs-ai` fails one test on `e2e chrome (6/8)` and `e2e electron (6/8)` but passes on main, so find what this branch changes that the spec reads (deck building, rarities in the practice decks, the AI's deck) and fix it. Don't skip or loosen the test. Then have a medium or strong model review it; Devin's review answers couldn't be read on the last attempts."
       ]
+    },
+    "c:5992197537": {
+      "at": "2026-10-05T09:58:09Z",
+      "lines": [
+        "@jgoetzmann-bot For this pass: the pending fragment needs a new version. v0.2.13 has shipped (#297), so `pending/v0.2.13.json` is gone from main, and v0.2.14 belongs to #126's PR #279, which merges first. Put all of #88's catalog changes in **`pending/v0.2.15.json`** (title `Patch v0.2.15: Classic and Classic+ balance patch 1`), drop the v0.2.13/v0.2.14 edits, and check that `pnpm validate:catalog` (which runs `patches check`) passes after merging main."
+      ]
     }
   },
   "items": {
