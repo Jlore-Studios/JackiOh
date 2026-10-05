@@ -3072,6 +3072,11 @@
       "ci_reruns": {
         "ee3b117b5ff516dce9292a400668383398e8c4fe": 1
       },
+      "cleared": {
+        "at": "2026-10-05T21:44:21Z",
+        "by": "`muse` (medium) twice",
+        "sha": "ee3b117b5ff516dce9292a400668383398e8c4fe"
+      },
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
