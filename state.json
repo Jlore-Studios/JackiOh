@@ -1272,6 +1272,11 @@
             "family": "muse",
             "run": "37339250346",
             "tier": "medium"
+          },
+          {
+            "family": "muse",
+            "run": "37346823670",
+            "tier": "medium"
           }
         ],
         "sha": "5e935d19dd811b0a2ee4f59be0f3d461e390d646",
