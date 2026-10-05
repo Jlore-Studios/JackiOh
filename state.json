@@ -1063,6 +1063,7 @@
     "166": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -1079,16 +1080,35 @@
       },
       "interruptions": 0,
       "issue": 88,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "Frozen Wastes ships as a Spell in code but SPEC still defines it as a Field Spell that stays in the backrow.",
+          "evidence": "catalog classicplus-012-6 type is Spell at HEAD (Field Spell at base 5b6866de); SPEC still says Field Spell at lines 219, 267, 414, 720 and R408, and git diff SPEC shows no Frozen row touched.",
+          "severity": "blocking",
+          "where": "SPEC.md:720"
+        },
+        {
+          "claim": "Twice Forward ships Brittle 2/4 with no count while unrevealed but SPEC still prints Brittle 4/10 starting when set.",
+          "evidence": "catalog classicplus-074 keywords are Brittle 2/4; SPEC row 74 says Brittle 4/10 starts when set, R425 says starts when set, contradicting new R666 none while unrevealed.",
+          "severity": "blocking",
+          "where": "SPEC.md:802"
+        },
+        {
+          "claim": "R394 still gives Joro attacks-trigger scope and Radiant 1/1 as an R275 exception, contradicting the shipped 2/2 Spell-only Joro.",
+          "evidence": "R394 text keeps attacks trigger and 1/1 exception; SPEC row 33 is Spell-only 1/1 to 2/2, R651 is Spell-only, R275 says no exception remains with Joro 2/2, catalog classic-033 radiant is 2/2, and 033-joro.ts:2,14 still says 1/1.",
+          "severity": "blocking",
+          "where": "SPEC.md:1695"
+        }
+      ],
       "pending_request": false,
       "provider": "muse",
       "question": "Revision is partial: merge conflicts fully resolved and core gates green, but ~30 test failures across ~15 files remain (pre-existing branch failures from the issue-88 behavior changes, not merge damage). Fixed 19 files; the rest need the same stale-expectation updates. Send another revision run to continue the test-fixing work (notes in .bot-notes.md, failure inventory below).",
-      "queued_at": "2026-10-05T02:46:37Z",
+      "queued_at": "2026-10-05T02:56:57Z",
       "requested_by": "jgoetzmann",
       "run_id": "37256608008",
       "self_check_findings": [],
-      "source": "request",
+      "source": "cross-review",
       "started_at": "2026-10-05T02:47:01Z",
       "stop_requested": false,
       "taken_asks": [],
