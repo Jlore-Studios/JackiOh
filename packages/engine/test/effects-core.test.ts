@@ -183,6 +183,8 @@ const TESTED_BY: Readonly<Record<string, string>> = {
   // The Classic+ #40–#78 workstream's library verbs, each tested under its own kebab-case name.
   libraryCopies: "library-copies.test.ts",
   shuffleRandom: "shuffle-random.test.ts",
+  // The Glitch token's outcome roll (R664), beside the rest of the Easter egg it belongs to (R661–R663).
+  glitch: "glitch.test.ts",
 };
 
 describe("M3-T1 structural acceptance (BUILD M3-T1)", () => {

@@ -4028,6 +4028,45 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/cards/art/convention.test.ts",
     );
   });
+
+  // Proved by glitch.test.ts "R661 …" (the System plays counted, a fused card once; the check in
+  // `pickGenerated`: no draw while none was played, n in 10000 after, only where Glitch fits, and a
+  // replay folding back) and packages/cards/test/classic/t-glitch-glitch.test.ts "R661 …" (the real
+  // C #18 and C #25, a countered one and C #57 Echo not counted, Core #57 Conjure KY's and #83
+  // Transmogulate's generated cards).
+  it("R661 a card generated after n System plays is Glitch n times in 10000", () => {
+    provenIn(661, "glitch.test.ts", "../../cards/test/classic/t-glitch-glitch.test.ts");
+  });
+
+  // Proved by glitch.test.ts and packages/cards/test/query.test.ts "R662 …" (no pool holds it but one
+  // naming it), the card's own test, apps/web routes/almanac.test.tsx "R662 …" (not listed),
+  // patches/PatchNotes.test.tsx "R662 …" (named corrupted), cards/glitch.test.tsx "R662 …" (the blank
+  // face and the corrupted texts, a copier's too) and audio/voice-lines.test.ts "R662 …" (no line).
+  it("R662 Glitch is hidden: in no pool or list, blank and corrupted on the client, and silent", () => {
+    provenIn(
+      662,
+      "glitch.test.ts",
+      "../../cards/test/query.test.ts",
+      "../../cards/test/classic/t-glitch-glitch.test.ts",
+      "../../../apps/web/src/routes/almanac.test.tsx",
+      "../../../apps/web/src/patches/PatchNotes.test.tsx",
+      "../../../apps/web/src/cards/glitch.test.tsx",
+      "../../../apps/web/src/audio/voice-lines.test.ts",
+    );
+  });
+
+  // Proved by glitch.test.ts "R663 …" (a fixture aura's surcharge and ban, a cost change, an override,
+  // no tunable cost) and the card's own test "R663 …" (Alignment Tax and a cost change; C #57 Echo with
+  // its text keeps its own price; never on the opponent's turn).
+  it("R663 Glitch costs (0) whatever would change that and no ban refuses it, on its owner's turn", () => {
+    provenIn(663, "glitch.test.ts", "../../cards/test/classic/t-glitch-glitch.test.ts");
+  });
+
+  // Proved by glitch.test.ts "R664 …" (one draw, each outcome reachable, nothing else changes) and the
+  // card's own test "R664 …" (both faces, the Radiant one drawing first).
+  it("R664 Glitch's play rolls one of four outcomes on the match rng, none built yet", () => {
+    provenIn(664, "glitch.test.ts", "../../cards/test/classic/t-glitch-glitch.test.ts");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

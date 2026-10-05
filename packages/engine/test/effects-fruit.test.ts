@@ -262,7 +262,7 @@ describe("pickGenerated (R382)", () => {
     expect(pool.some((def) => GRAPE_IDS.includes(def.id))).toBe(false);
     const a = createRng("pick-through-seed");
     const b = createRng("pick-through-seed");
-    expect(pickGenerated(a, pool)).toBe(b.pick(pool));
+    expect(pickGenerated(a, pool, null)).toBe(b.pick(pool));
     expect(a.cursor).toBe(1);
   });
 
@@ -274,7 +274,7 @@ describe("pickGenerated (R382)", () => {
     const counts = new Map<string, number>();
     const seeds = 300;
     for (let i = 0; i < seeds; i += 1) {
-      const got = pickGenerated(createRng(`pick-grape-${i}`), pool);
+      const got = pickGenerated(createRng(`pick-grape-${i}`), pool, null);
       expect(got === undefined || GRAPE_IDS.includes(got.id)).toBe(true);
       counts.set(got?.id ?? "", (counts.get(got?.id ?? "") ?? 0) + 1);
     }
@@ -295,17 +295,17 @@ describe("pickGenerated (R382)", () => {
     const grape = findDef(null, GRAPE_IDS[0] ?? "");
     if (grape === undefined) throw new Error("fixture Rotten Grape");
     const through = createRng("pick-draws");
-    pickGenerated(through, plain);
+    pickGenerated(through, plain, null);
     expect(through.cursor).toBe(1);
     const rerolled = createRng("pick-draws");
-    pickGenerated(rerolled, [grape]);
+    pickGenerated(rerolled, [grape], null);
     expect(rerolled.cursor).toBe(2);
   });
 
   it("an empty pool is undefined and draws nothing", () => {
     game("pick-empty");
     const rng = createRng("pick-empty");
-    expect(pickGenerated(rng, [])).toBeUndefined();
+    expect(pickGenerated(rng, [], null)).toBeUndefined();
     expect(rng.cursor).toBe(0);
   });
 });

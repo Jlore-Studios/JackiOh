@@ -10,6 +10,7 @@ import { CATALOG } from "@jackioh/cards";
 import { fillParams, type CardDef, type CardFace } from "@jackioh/shared";
 
 import { fusedDef } from "../test/fixtures.ts";
+import { corruptedText, isGlitch } from "./glitch.ts";
 import { CONCEALED_TEXT, VANILLA_TEXT } from "./inPlay.ts";
 import { faceModel, frameRarity, type FaceModel, type FaceSource } from "./model.ts";
 import { markedText } from "./radiantDiff.ts";
@@ -113,7 +114,9 @@ describe("B7: faceModel copies the def and picks the face", () => {
 
         expect(f.defId, where).toBe(card.id);
         expect(f.known, where).toBe(true);
-        expect(f.name, where).toBe(card.name);
+        // R662: Glitch's name and text are drawn corrupted (glitch.test.tsx).
+        const glitch = isGlitch(card.id);
+        expect(f.name, where).toBe(glitch ? corruptedText(card.name) : card.name);
         // B2.7: a face with its own type is drawn as that type (Classic+ #22's Radiant Field Trap).
         expect(f.type, where).toBe(shown.type ?? card.type);
         expect(f.tags, where).toEqual(card.tags);
@@ -124,8 +127,9 @@ describe("B7: faceModel copies the def and picks the face", () => {
         expect(f.keywords, where).toEqual(shown.keywords);
         // Each face prints its own catalog text whole, its `{key}` numbers filled in (B3.4 rule 5); only
         // a radiant face marks anything (R277).
-        expect(f.text.full, where).toBe(fillParams(card, radiant ? "radiant" : "base"));
-        if (!radiant) expect(f.text.marks, where).toEqual([]);
+        const text = fillParams(card, radiant ? "radiant" : "base");
+        expect(f.text.full, where).toBe(glitch ? corruptedText(text) : text);
+        if (!radiant || glitch) expect(f.text.marks, where).toEqual([]);
 
         // B3.1 rule 1: an Animated Field Spell or Trap prints the stats of the Unit it becomes.
         const animated = shown.keywords.some((keyword) => keyword.kind === "Animated" || keyword.kind === "Animated on your turn");
@@ -245,7 +249,8 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // Classic #60 and Classic+ #5 drop words too, and patch v0.2.4's Classic+ #34 drops "Choose
     // one." (radiantDiff.test.ts names all four).
     const pureDeletions = new Set(["core-055", "classic-060", "classicplus-005", "classicplus-034"]);
-    for (const card of DEFS) {
+    // R662: Glitch prints no words to mark; its corrupted text is glitch.test.tsx's.
+    for (const card of DEFS.filter((entry) => !isGlitch(entry.id))) {
       const f = face(card.id, true);
       // The Radiant face prints its catalog text with its `{key}` numbers filled in (B3.4 rule 5).
       expect(f.text.full, card.id).toBe(fillParams(card, "radiant"));

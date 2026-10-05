@@ -1,4 +1,5 @@
-// `/almanac`: the public Card Almanac (R630). Every card in the catalog, tokens included, to browse
+// `/almanac`: the public Card Almanac (R630). Every card in the catalog, tokens included (a hidden one
+// aside, R662), to browse
 // without signing in: the deck builder's browse pane (game/deckbuilder/CardBrowser.tsx) with nothing
 // that edits a deck, no collection and no ownership. Public like the Patch notes page: the catalog
 // is public (§5.1) and ships in the bundle, so the page reads `@jackioh/cards/catalog.json`, as the

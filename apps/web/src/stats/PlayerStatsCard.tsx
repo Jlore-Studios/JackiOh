@@ -8,6 +8,7 @@ import catalogJson from "@jackioh/cards/catalog.json";
 import type { CardDefs } from "@jackioh/shared";
 
 import { landingTestid } from "../auth/testids.ts";
+import { displayName } from "../cards/glitch.ts";
 import { STATS_TOP_CARDS } from "./config.ts";
 import { topCards, winPercent, type CardCounter, type PlayerStats } from "./model.ts";
 import { resetPlayerStats, usePlayerStats } from "./store.ts";
@@ -23,7 +24,8 @@ const LISTS: readonly { counter: CardCounter; title: string; verb: (n: number) =
 ];
 
 function nameOf(id: string): string {
-  return CATALOG[id]?.name ?? id;
+  const def = CATALOG[id];
+  return def === undefined ? id : displayName(def);
 }
 
 /** The record line: "12 games: 7 won, 4 lost, 1 drawn (58% won)". */

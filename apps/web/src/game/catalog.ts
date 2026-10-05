@@ -28,6 +28,7 @@ import {
   type Tag,
 } from "@jackioh/shared";
 
+import { corruptedText, isGlitch } from "../cards/glitch.ts";
 import type { RolledPower } from "../cards/index.ts";
 
 export type CardInfo = {
@@ -54,12 +55,15 @@ export function lookupFromDefs(defs: CardDefs): CardLookup {
     const def = defs[defId];
     if (def === undefined) return undefined;
     const face = radiant ? def.radiant : def.base;
+    // B3.4: the face's `{key}` numbers filled in with its printed values; a raw placeholder never shows.
+    const text = fillParams(def, radiant ? "radiant" : "base");
+    // R662: the log, a prompt and an activation read Glitch's name and text corrupted, as its face does.
+    const glitch = isGlitch(defId);
     return {
-      name: def.name,
+      name: glitch ? corruptedText(def.name) : def.name,
       // B2.7: a face with its own type is that type (Classic+ #22's Radiant Field Trap).
       type: face.type ?? def.type,
-      // B3.4: the face's `{key}` numbers filled in with its printed values; a raw placeholder never shows.
-      text: fillParams(def, radiant ? "radiant" : "base"),
+      text: glitch ? corruptedText(text) : text,
       tags: def.tags,
       attack: face.attack,
       health: face.health,

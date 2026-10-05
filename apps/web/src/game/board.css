@@ -767,6 +767,11 @@
     box-shadow calc(150ms * var(--anim-scale)) ease;
 }
 
+/* R662: the Glitch token's art breaks out of its card (cards/glitch.css), so its card does not clip. */
+.card[data-glitch] {
+  overflow: visible;
+}
+
 /* Spells, traps and field cards are violet, units steel blue: the type reads before the text. */
 .card-spell {
   border-color: #4a4270;

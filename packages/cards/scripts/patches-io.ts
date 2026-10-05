@@ -89,6 +89,7 @@ const ENTRY_KEYS = [
   "rarity",
   "printedRarity",
   "token",
+  "hidden",
   "cost",
   "refs",
   "params",

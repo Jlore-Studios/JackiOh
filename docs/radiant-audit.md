@@ -336,6 +336,7 @@ in v0.2.0. "Base" is the base face as v0.2.0 prints it.
 | 88 | Siphon Squad | Field Trap | Aura: Enemy Units have −X Attack, where X is twice the number of Units your opponent controls. / When your opponent controls no Units, Tribute this. | Aura: Enemy Units have 0 Attack. / When your opponent controls no Units, Tribute this. | Meets | A −X that grows with their board → every enemy Unit at 0 Attack whatever the board: never weaker, and total (R403). |
 | 89 | Paul Allen's Ghost | Unit | 5/6 · Divine Shield / To target this with anything but an attack, a player must also discard 2 cards. | 10/12 · Divine Shield, Reborn / To target this with anything but an attack, a player must also discard 2 cards. | Meets | Stats doubled; adds Reborn. |
 | 90 | In Too Deep | Field Spell | Indestructible / Quest: Draw 2 cards. Each quest you complete offers rewards; the reward you choose sets your next quest. | Indestructible / Quest: Draw 2 cards. Each quest you complete gives every reward it offers, and you follow every path. | Meets | One reward and one path a quest → every reward and every path: a broader scope (R404). |
+| T-Glitch | Glitch | Spell | Always playable on your turn. Something happens at random. | Always playable on your turn. Draw 1. Something happens at random. | Meets (face written by the patch, R664) | Hidden and printed with no Radiant form (R662). Its effect has no number to double, and its four outcomes leave no room for a broader scope, so the patch adds a draw first, the rider R275 allows a Spell. |
 
 ### Classic+
 

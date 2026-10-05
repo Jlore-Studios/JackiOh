@@ -14,6 +14,7 @@ import type { CardDef } from "@jackioh/shared";
 import { VOICE_PRIORITY } from "../../audio/constants.ts";
 import { setAudioEngineForTests } from "../../audio/engine.ts";
 import type { AudioEngine } from "../../audio/types.ts";
+import { corruptedText, isGlitch } from "../glitch.ts";
 import { locWords } from "../model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { detailMetaLine } from "./CardDetail.tsx";
@@ -246,8 +247,17 @@ describe("CardDetail (B29)", () => {
     expect([...(line?.querySelectorAll(".cf-mark") ?? [])].map((mark) => mark.textContent)).toEqual(["enemy"]);
   });
 
+  it("R662 Glitch's detail (opened from the Patch notes) is labelled with its corrupted name, never its own", () => {
+    const glitch = CATALOG["classic-t-glitch"];
+    if (glitch === undefined) throw new Error("the catalog has no Glitch");
+    render(<CardDetail def={glitch} onClose={() => undefined} />);
+    expect(screen.getByTestId(INSPECT_DETAIL)).toHaveAttribute("aria-label", corruptedText(glitch.name));
+    expect(screen.getByTestId(INSPECT_DETAIL).textContent ?? "").not.toContain(glitch.base.text);
+  });
+
   it("B29 every catalog card opens a detail with its name on both faces and its #index in the meta", () => {
-    for (const def of Object.values(CATALOG)) {
+    // R662: Glitch's blank faces print no name; glitch.test.tsx proves them, and its detail's label below.
+    for (const def of Object.values(CATALOG).filter((entry) => !isGlitch(entry.id))) {
       const { unmount } = render(<CardDetail def={def} onClose={() => undefined} />);
       const detail = screen.getByTestId(INSPECT_DETAIL);
       expect(faceRoot(INSPECT_FACE_BASE).querySelector(".card-name"), def.id).toHaveTextContent(def.name);

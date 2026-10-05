@@ -4,7 +4,7 @@
 //   B33  exactly the catalog's ids (Core's 111 among them), each card's kind from its catalog type
 //        (the file never states it); a unit carries a `play` and a `death` line (a hook with a voice
 //        and a text) and no `cast` hook, a spell or trap a `cast` line and no `play`, `attack` or
-//        `death` hook; no hook outside CARD_HOOK_NAMES and no field on a hook but voice, text and
+//        `death` hook, a hidden card (R662) a `cast` effect and no line; no hook outside CARD_HOOK_NAMES and no field on a hook but voice, text and
 //        effect; and every voice a line names exists, usable for its backend (a `say` voice with
 //        in-range rate, pbas and pmod, or since R501 a SAPI voice with in-range rate and semitones and
 //        a filter chain, and neither carrying the other's fields), with web values and (where set)
@@ -86,8 +86,10 @@ function isRecord(value: unknown): value is Json {
 
 const catalogRaw = JSON.parse(readFileSync(CATALOG_PATH, "utf8")) as unknown;
 if (!isRecord(catalogRaw)) throw new Error(`${CATALOG_PATH}: expected an object keyed by card id`);
-const CATALOG = catalogRaw as Record<string, { type?: unknown; name?: unknown }>;
+const CATALOG = catalogRaw as Record<string, { type?: unknown; name?: unknown; hidden?: unknown }>;
 const CATALOG_IDS: readonly string[] = Object.keys(CATALOG);
+/** R662: the hidden cards (Glitch), which speak no line: every text they have is drawn corrupted. */
+const HIDDEN_IDS: readonly string[] = CATALOG_IDS.filter((id) => CATALOG[id]?.hidden === true);
 
 const SOURCE = readFileSync(AUDIO_PATH, "utf8");
 const tableRaw = JSON5.parse<unknown>(SOURCE);
@@ -229,11 +231,25 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
 
   it("B33 gives every spell and trap a cast line and no play, attack or death hook", () => {
     const wrong: string[] = [];
-    for (const id of CATALOG_IDS.filter((catalogId) => catalogKind(catalogId) !== "unit")) {
+    for (const id of CATALOG_IDS.filter((catalogId) => catalogKind(catalogId) !== "unit" && !HIDDEN_IDS.includes(catalogId))) {
       const entry = CARDS[id] ?? {};
       if (!isLine(entry.cast)) wrong.push(`${id}: no cast line`);
       for (const hook of ["play", "attack", "death"] as const) {
         if (hook in entry) wrong.push(`${id}: a ${String(catalogKind(id))} carries a ${hook} hook`);
+      }
+    }
+    expect(wrong).toEqual([]);
+  });
+
+  it("R662 gives a hidden card (Glitch) a cast effect and no line, so nothing it has is ever said in clear", () => {
+    expect(HIDDEN_IDS).toEqual(["classic-t-glitch"]);
+    const wrong: string[] = [];
+    for (const id of HIDDEN_IDS) {
+      const entry = CARDS[id] ?? {};
+      const cast = entry.cast;
+      if (!isRecord(cast) || typeof cast.effect !== "string") wrong.push(`${id}: no cast effect`);
+      if (allAssignments().some(({ defId, value }) => defId === id && isRecord(value) && ("voice" in value || "text" in value))) {
+        wrong.push(`${id}: a hidden card carries a line`);
       }
     }
     expect(wrong).toEqual([]);
@@ -362,10 +378,10 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
     const units = Object.keys(CARDS).filter((id) => catalogKind(id) === "unit").length;
     // An attack line (R655) is a Unit's option beside these, and is held to B34 like any other.
     const lines = allAssignments().filter(({ hook, value }) => hook !== "attack" && isLine(value));
-    expect(lines, "lines in the table").toHaveLength(units * 2 + (Object.keys(CARDS).length - units));
+    expect(lines, "lines in the table").toHaveLength(units * 2 + (Object.keys(CARDS).length - units - HIDDEN_IDS.length));
     const required = Object.keys(CARDS).flatMap((id) => {
       const kind = catalogKind(id);
-      return kind === undefined ? [] : LINES_OF_KIND[kind].map((hook) => `${id}-${hook}`);
+      return kind === undefined || HIDDEN_IDS.includes(id) ? [] : LINES_OF_KIND[kind].map((hook) => `${id}-${hook}`);
     });
     expect(lines.map(({ key }) => key).sort(), "the lines are exactly the ones SPEC §10.11 requires").toEqual(required.sort());
   });

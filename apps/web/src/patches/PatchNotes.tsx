@@ -19,6 +19,7 @@ import { useId, useState, type ReactElement } from "react";
 
 import type { CardDef, CardDefs } from "@jackioh/shared";
 
+import { displayName } from "../cards/glitch.ts";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { CardDefsProvider } from "../cards/refContext.tsx";
 import { ChangeList, changeSummary } from "./ChangeList.tsx";
@@ -70,7 +71,7 @@ function NameButton({ def, onOpen }: { def: CardDef; onOpen: OpenCard }): ReactE
         onOpen(def.id);
       }}
     >
-      {def.name}
+      {displayName(def)}
     </button>
   );
 }
@@ -111,7 +112,8 @@ function Section({ title, count, children }: { title: string; count: number; chi
 
 /** A patch's cards, filtered by `query`. */
 function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: string; onOpen: OpenCard }): ReactElement {
-  const keep = (def: CardDef): boolean => nameMatches(def.name, query);
+  // R662: a card is found by the name the page shows, so Glitch's true name finds nothing.
+  const keep = (def: CardDef): boolean => nameMatches(displayName(def), query);
   const changed = all.changed.filter((delta) => keep(delta.def));
   const quiet = all.dataOnly.filter((delta) => keep(delta.def));
   const added = all.added.map((group) => ({ ...group, cards: group.cards.filter(keep) })).filter((group) => group.cards.length > 0);

@@ -107,7 +107,7 @@ describe("C+ #23 Dropshipping", () => {
           const first = probe.pick(pool);
           firsts.push(first?.id);
           if (first !== undefined && grapes.has(first.id)) probe.int(table);
-          expected.push(pickGenerated(rng, pool)?.id);
+          expected.push(pickGenerated(rng, pool, s.state)?.id);
         }
         expect(firsts.some((id) => id !== undefined && grapes.has(id))).toBe(true);
         if (JSON.stringify(firsts) !== JSON.stringify(expected)) differed += 1;

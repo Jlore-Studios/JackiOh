@@ -266,6 +266,12 @@ export type StaticFlags = {
    */
   healToDamage?: boolean;
   // ---- v0.2.0 static flags, by workstream: prompts and generation (E19, E26) ----
+  /**
+   * R663: "Always playable on your turn" (the Glitch token, §7). The card costs (0) in every zone, and
+   * no override, discount, price rule or floor moves that (`mana.effectiveCost`), and no ban refuses
+   * its play (`costRules.whyPlayBanned`); it is played when its controller may play a card.
+   */
+  alwaysPlayable?: boolean;
 };
 
 /** R195, R280: where `viewFor` is asking about a card. */

@@ -1,9 +1,9 @@
 # `@jackioh/cards` — the card layer
 
-317 card definitions in three sets — Core (100 cards and 11 tokens), Classic (90 cards) and
-Classic+ (78 cards and 38 tokens), 268 cards and 49 tokens in all — one script file and one test
-file per card, the catalog query every random pool in the game goes through, and the catalog's
-patch history.
+318 card definitions in three sets — Core (100 cards and 11 tokens), Classic (90 cards and the
+hidden Glitch token) and Classic+ (78 cards and 38 tokens), 268 cards and 50 tokens in all — one
+script file and one test file per card, the catalog query every random pool in the game goes
+through, and the catalog's patch history.
 
 `SPEC.md` is the only source of rules and card text: §8 has every card (Classic in §8.6, Classic+ in
 §8.7) and §7 every token. `BUILD.md` M4-T1…M4-T4 is Core's work order and M9 the new sets' (patch
@@ -74,7 +74,7 @@ has no hyphen inside the set part, so an id still splits one way. An `index` (`"
 
 `scripts/missing-tests.ts` is the authority on the pairing: for every catalog id whose test file it
 cannot find it prints the id, the card name and the exact path it expected, and it prints nothing
-when all 317 are covered. Run it to learn what to call your files:
+when all 318 are covered. Run it to learn what to call your files:
 
 ```
 pnpm --filter @jackioh/cards run missing-tests | grep core-043
@@ -278,7 +278,7 @@ What the registry exports, for the server, the client and the tests:
 
 | export | meaning |
 | --- | --- |
-| `CATALOG`, `CATALOG_IDS`, `CATALOG_VERSION` | all 317 defs from `catalog.json`, script or no script, and the latest patch's version (R388) |
+| `CATALOG`, `CATALOG_IDS`, `CATALOG_VERSION` | all 318 defs from `catalog.json`, script or no script, and the latest patch's version (R388) |
 | `cardDef(id)`, `cardDefByIndex(set, index)` | one def, throwing rather than returning `undefined` |
 | `CARDS` | `Record<catalogId, { def, base, radiant }>` — one entry per script file present |
 | `registerAll()` | `registerCatalog(CATALOG, CATALOG_VERSION)` then `registerScripts(...)`; idempotent |
@@ -314,7 +314,7 @@ The pools the spec pins down, as the argument object to write:
 | Transmogulate (#83, R35) | `catalog.pool("core-083", { rarity: "Legendary" })` | every non-token Legendary but #83: Core's six (#52, #85, #87, #92, #93, #95), Classic's nine and Classic+'s thirteen |
 | Call to Chaos (#95) | `catalog.query({ tags: ["Call to Chaos"] })` — **no** `excludeDefId` | #95 and C+ #73, the Classic+ Edition: the §5.1 exception, a text that names a pool holding itself (R28, R387) |
 | Fruit (C+ #58 Fruit Basket) | `catalog.pool("classicplus-058", { tags: ["Fruit"] })` | the non-token Fruit cards but Fruit Basket, plus the five Grapes (C+ #65.1–#65.5), which no other pool holds but the next one (R382) |
-| every card and token (C+ #23 Dropshipping) | `catalog.pool("classicplus-023", { withTokens: true })` | every card and every token of every set — a Grape, a Loser, an AI card — but Dropshipping (R382) |
+| every card and token (C+ #23 Dropshipping) | `catalog.pool("classicplus-023", { withTokens: true })` | every card and every token of every set — a Grape, a Loser, an AI card — but Dropshipping (R382) and the hidden Glitch (R662) |
 
 **Footgun:** `type: "Trap"` matches the `type` field exactly and so drops the Field Traps (Core
 #18, #71, and the Classic and Classic+ Field Traps, C+ #22's Radiant face among them). Everywhere

@@ -33,6 +33,9 @@
 // #57 Echo, B5 E14, R399, R511) prints the Spell text the view says it has (`InPlay.copies`), filled
 // with the numbers it reads on the card, in place of its own copying sentence; it keeps its own name,
 // cost, type and art, and `copying` names the card it copies for the inspect notes.
+//
+// R662: the Glitch token's name and text are drawn corrupted (glitch.ts), so every surface that reads
+// a face, the inspect overlays and the board's titles included, shows the jumble and never the words.
 
 import {
   fillParams,
@@ -53,6 +56,7 @@ import {
   type Tuning,
 } from "@jackioh/shared";
 
+import { corruptedText, displayName, isGlitch } from "./glitch.ts";
 import {
   HEROIC_POWER_ID,
   VANILLA_TEXT,
@@ -257,7 +261,7 @@ export function faceModel(source: FaceSource): FaceModel {
   const ownText = inPlay?.params === undefined ? printedText : textOf(def, source.radiant, inPlay.params);
   // B5 E14, R511: a copier's own words are the copied Spell's text, filled with the numbers it reads.
   const copies = inPlay?.copies;
-  const liveText = copies === undefined ? ownText : copiedText(ownText, def, textOf(copies.def, copies.radiant, copies.params));
+  const liveText = copies === undefined ? ownText : copiedText(ownText, def, copiedFaceText(copies));
   const text = inPlay === undefined ? printedText : textInPlay(def, source.radiant, liveText, inPlay);
   const keywords = source.live?.keywords ?? printed?.keywords ?? [];
   // The values belong to the card's own words, its numbers as they stand included: a formula play
@@ -267,11 +271,14 @@ export function faceModel(source: FaceSource): FaceModel {
   // line of keywords gained since printing leaves them out.
   const tuning = inPlay === undefined ? null : faceTuning(def, source.radiant, inPlay.tuning, inPlay.params);
   const tunedKeys = new Set((tuning?.added ?? []).map(keywordKey));
+  // R662: every text Glitch has is drawn corrupted, so its true name and words never show.
+  const glitch = isGlitch(source.defId);
+  const name = def?.name ?? source.name ?? source.defId;
 
   return {
     defId: source.defId,
     known: def !== undefined,
-    name: def?.name ?? source.name ?? source.defId,
+    name: glitch ? corruptedText(name) : name,
     type,
     tags: def?.tags ?? [],
     rarity: def?.rarity ?? null,
@@ -281,7 +288,7 @@ export function faceModel(source: FaceSource): FaceModel {
     radiant: source.radiant,
     cost: costOf(def, source.liveCost, inPlay?.power),
     stats: statsOf(type, def !== undefined, printed, source.live ?? handLive(inPlay?.handStats, printed), grewOf(def, source)),
-    text,
+    text: glitch ? { full: corruptedText(text.full), marks: [] } : text,
     // The renderer links only the names that stand in the text, so play's own words link what they name.
     refs: [...(copies?.def.refs ?? []), ...(def?.refs ?? [])],
     values: printsItsText ? (inPlay?.preview ?? []) : [],
@@ -302,8 +309,14 @@ export function faceModel(source: FaceSource): FaceModel {
     loc: def?.loc ?? null,
     marks: inPlay?.marks ?? [],
     quest: inPlay?.quest ?? null,
-    copying: copies === undefined ? null : { defId: copies.def.id, name: copies.def.name, radiant: copies.radiant },
+    copying: copies === undefined ? null : { defId: copies.def.id, name: displayName(copies.def), radiant: copies.radiant },
   };
+}
+
+/** B5 E14, R511: the copied Spell's text, filled with its numbers; Glitch's corrupted, as its own face prints it (R662). */
+function copiedFaceText(copies: NonNullable<InPlay["copies"]>): FaceText {
+  const text = textOf(copies.def, copies.radiant, copies.params);
+  return isGlitch(copies.def.id) ? { full: corruptedText(text.full), marks: [] } : text;
 }
 
 /**

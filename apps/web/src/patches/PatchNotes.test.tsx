@@ -7,12 +7,15 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { CATALOG } from "@jackioh/cards";
+
+import { corruptedText } from "../cards/glitch.ts";
 import { INSPECT_CLOSE, INSPECT_DETAIL } from "../cards/inspect/testids.ts";
 import { closeInspect } from "../cards/inspect/store.ts";
 import { PatchSourceProvider } from "./context.tsx";
 import { FIXTURE_PATCHES, V1, V2, V3, fixtureSource } from "./fixtures.ts";
 import { PatchNotes, countsLine } from "./PatchNotes.tsx";
-import { EMPTY_PATCH_SOURCE, realPatchSource, type PatchSource } from "./source.ts";
+import { EMPTY_PATCH_SOURCE, realPatchSource, sourceFromData, type PatchSource } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
 /** The real history's first read runs the JSON chunks through the transform. */
@@ -187,6 +190,28 @@ describe("R388 the Patch notes page", () => {
     fireEvent.click(screen.getByTestId(patchTestid.cardsRetry));
     expect(await screen.findByTestId(patchTestid.cards)).toBeInTheDocument();
     quiet.mockRestore();
+  });
+});
+
+describe("R662 the hidden Glitch in a patch's notes", () => {
+  it("R662 names Glitch only corrupted, and its true name finds nothing", async () => {
+    const glitch = CATALOG["classic-t-glitch"];
+    if (glitch === undefined) throw new Error("the catalog has no Glitch");
+    const version = "v-glitch";
+    const source = sourceFromData({
+      patches: [
+        { version, date: "2026-10-05", title: "Easter egg", source: "#170", notes: "Glitch.", changes: [{ id: glitch.id, name: glitch.name, kind: "added" }] },
+      ],
+      index: { [glitch.id]: [version] },
+      snapshots: { [version]: { [glitch.id]: glitch } },
+    });
+    renderPage(source);
+    await screen.findAllByTestId(patchTestid.patch);
+    const name = await within(patchEntry(version)).findByTestId(patchTestid.openCard);
+    expect(name).toHaveTextContent(corruptedText(glitch.name));
+    expect(name.textContent).not.toContain(glitch.name);
+    fireEvent.change(within(patchEntry(version)).getByTestId(patchTestid.filter), { target: { value: glitch.name } });
+    expect(within(patchEntry(version)).queryByTestId(patchTestid.openCard)).toBeNull();
   });
 });
 

@@ -30,6 +30,9 @@
 // R503: every face with a set shows it as a small mark on the frame (`.cf-set[data-set]`, setMark.ts),
 // and a token that prints a rarity (B2.5's `printedRarity`) wears that rarity's frame, gem, crest and
 // foil rather than Token's, for display only. The art gets the card's name, which picks its motif.
+//
+// R662: the hidden Glitch token prints none of this. Its face is GlitchFace's: blank, with a glitch
+// where the art would be that breaks out of the frame.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -39,6 +42,8 @@ import { CardArt, type ArtShape } from "./art/index.ts";
 import { CardStates } from "./CardStates.tsx";
 import { FIT_FLOOR_PX, TIER_SCALE } from "./constants.ts";
 import { nameTier, textTier, useFitText } from "./fit.ts";
+import { isGlitch } from "./glitch.ts";
+import { GlitchFace } from "./GlitchFace.tsx";
 import { Icon } from "./icons.tsx";
 import { foilFor, frameRarity, type FaceModel } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
@@ -149,7 +154,12 @@ export function hasCrest(face: FaceModel): boolean {
   return crested(frameRarity(face));
 }
 
-export function CardFace({ face, layout = "full", className, lazyArt = false }: CardFaceProps): ReactElement {
+export function CardFace(props: CardFaceProps): ReactElement {
+  // R662: Glitch prints nothing; its face is blank and its art breaks out of the frame (GlitchFace.tsx).
+  return isGlitch(props.face.defId) ? <GlitchFace {...props} /> : <PrintedFace {...props} />;
+}
+
+function PrintedFace({ face, layout = "full", className, lazyArt = false }: CardFaceProps): ReactElement {
   const settings = useCardSettings();
   const nameRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);

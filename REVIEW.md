@@ -32,7 +32,7 @@ Inputs: `SPEC.md`, `JackiOh_Mechanics.md`, `JackiOh_Core_Cards.md`, `JackiOh_Cla
 | Check | Acceptance condition |
 | --- | --- |
 | A2.1 Cross-references | Every "§n", "section n", "(n.n)" and "R<n>" mentioned in SPEC resolves to an existing heading or row. |
-| A2.2 Counts | §1 says 268 cards (100 Core, 90 Classic, 78 Classic+) and 49 tokens; §7 has 49 token rows; §8 has 268 non-token rows (100 in §8.1–§8.5, 90 in §8.6, 78 in §8.7); each set's rarity sentence in §8 sums to its card count and equals the count of each rarity value in that set's tables (recount them). |
+| A2.2 Counts | §1 says 268 cards (100 Core, 90 Classic, 78 Classic+) and 50 tokens; §7 has 50 token rows; §8 has 268 non-token rows (100 in §8.1–§8.5, 90 in §8.6, 78 in §8.7); each set's rarity sentence in §8 sums to its card count and equals the count of each rarity value in that set's tables (recount them). |
 | A2.3 Rulings | Every "(ruling)" or "Ruling:" in §2–§10 has a matching row in §11, and every §11 row's "Cards affected" indices exist in §8. Rows marked "decide" are exactly the ones §11's intro lists. |
 | A2.4 Pipeline order | The damage order in §4.4 (steps 0–10, and 4a) is the order every other mention uses (§6.1 Armor/Divine Shield/Poisonous/Lifesteal/Trample/Cleave rows, §8 True Strike, Anti-oneshot Armor, Fed Fauci). |
 | A2.5 Pools | Compute from §8 across the three sets (pools reach every set unless a card names one, R380): KY-tagged non-token cards (Core #31, #51, #82, C+ #41, #42, #62; +#57 itself); (1) Cost Trap and Field Trap cards; Legendary-rarity non-token cards per the rarity columns; Fruit cards plus the five Grapes (R382). Check the pool statements in §8 (#57, #67, #83, and every §8.6/§8.7 card that names a pool) and in §11 match these computed sets. If the rarity columns changed the Legendary set, the Transmogulate pool statement must reflect it; otherwise BLOCKER. |
@@ -114,7 +114,7 @@ For each row, name the test(s) that prove it, or trace a fixture state through t
 ### B3 Card conformance (SPEC §8, BUILD §3 M4)
 
 1. `pnpm exec tsx packages/cards/scripts/missing-tests.ts` prints nothing.
-2. Count test files: one per catalog entry, 317 since patch v0.2.0 (111 in `packages/cards/test/`, the rest in `test/classic/` and `test/classic-plus/`; `pnpm --filter @jackioh/cards missing-tests` prints nothing).
+2. Count test files: one per catalog entry, 318 since the Glitch token (317 from patch v0.2.0; 111 in `packages/cards/test/`, the rest in `test/classic/` and `test/classic-plus/`; `pnpm --filter @jackioh/cards missing-tests` prints nothing).
 3. For every card in the BUILD M4-T4 table, open its test file and confirm each "must-pass" clause is a distinct `it(...)`, base and radiant both present. A card whose test skips a clause is MAJOR; a card whose implementation contradicts its §8 row is BLOCKER.
 4. Deep-read 15 scripts against their §8 rows: the fixed set #3, #9, #12, #18, #22, #31, #41, #52, #60, #85, #92, #93, #95, #96, #98, plus 5 more chosen with `seed % 100` from the current commit hash. Record for each: hook used, primitives used, prompt kinds declared, any behaviour not in the spec.
 5. Subsystems: `fuse`, `rotation`, `scorer`, `aiPolicy`, `heroPower`, `comboIndex`, `callToChaos`, `lethal` each have a test file and the acceptance cases in BUILD M3-T7.

@@ -289,7 +289,7 @@ function expectedKeys(table, problems) {
   return expected;
 }
 
-/** Every catalog card has an entry and SPEC §10.11's lines; every entry is a catalog card. */
+/** Every catalog card has an entry and SPEC §10.11's lines (a hidden card none, R662); every entry is a catalog card. */
 function catalogProblems(catalog, table, expected) {
   const problems = [];
   const cards = isObject(table.cards) ? table.cards : {};
@@ -305,6 +305,8 @@ function catalogProblems(catalog, table, expected) {
       problems.push(`${id}: unknown catalog type ${JSON.stringify(card.type)}`);
       continue;
     }
+    // R662: a hidden card (Glitch) speaks no line; its cast hook is an effect alone.
+    if (card.hidden === true) continue;
     for (const line of lines) {
       const key = `${id}-${line}`;
       if (!expected.has(key) && !problems.some((problem) => problem.startsWith(`${key}:`))) {

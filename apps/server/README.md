@@ -43,7 +43,7 @@ in `src/api/ports.ts` is the contract between this half of the server and `src/d
 1. `src/match/engine.ts` — the `EnginePort`. The only path to `@jackioh/engine`. `EngineState` is
    opaque: it holds both hands and both libraries, so nothing outside the port inspects it, and
    every per-player payload is a `viewFor`.
-2. `src/api/catalog.ts` — reads `packages/cards/catalog.json` (317 entries: 268 cards and 49 tokens
+2. `src/api/catalog.ts` — reads `packages/cards/catalog.json` (318 entries: 268 cards and 50 tokens
    in three sets, Core, Classic and Classic+) and derives `CatalogInfo`, including the catalog version
    §9.4 checks at save and at queue, which is the latest patch's (R388). It also serves the patch
    snapshots in `packages/cards/patches/`.
@@ -414,7 +414,7 @@ protocol, nonce dedupe, action log and log-folding recovery; room codes, in all 
 clock; results and the ranked ladder; matchmaking in three modes with frozen decks, opportunistic pairing, a
 sweeper, the widening window and the atomic claim; All Random's seeded decks; the Conquest series,
 its sealed picks and pick clock, its one rating move and its recovery after a restart; trio imports; the catalog loader against the
-real 317-entry `catalog.json` and the patch snapshots beside it.
+real 318-entry `catalog.json` and the patch snapshots beside it.
 
 Stubbed or pending, and why:
 

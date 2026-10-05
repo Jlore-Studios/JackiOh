@@ -16,6 +16,7 @@ import catalogJson from "@jackioh/cards/catalog.json";
 import type { CardDefs } from "@jackioh/shared";
 import { CardDefsProvider } from "../cards/index.ts";
 import { CardFace } from "../cards/CardFace.tsx";
+import { displayName } from "../cards/glitch.ts";
 import { faceModel } from "../cards/model.ts";
 import {
   getCardDrillDown,
@@ -760,7 +761,8 @@ export default function StatsRoute(): ReactElement {
                       const name = p.displayName ?? `Player ${p.profileId.slice(0, 8)}`;
                       const rate = p.winRate !== null ? `${Math.round(p.winRate * 100)}%` : "—";
                       const topCard = p.favouriteCards?.[0];
-                      const favCardName = topCard ? (CATALOG[topCard.id]?.name ?? topCard.id) : "—";
+                      const favDef = topCard === undefined ? undefined : CATALOG[topCard.id];
+                      const favCardName = topCard ? (favDef === undefined ? topCard.id : displayName(favDef)) : "—";
                       return (
                         <tr key={p.profileId} className="stats-tr">
                           <td className="stats-td stats-td--player-name">{name}</td>

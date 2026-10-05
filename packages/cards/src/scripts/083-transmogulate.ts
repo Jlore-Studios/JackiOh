@@ -37,7 +37,8 @@
 // R11: a unit token cannot sit in a graveyard or an exile pile. The pool holds no tokens, so no
 // replacement can vanish on arrival and thin a zone (`replaceOffField` guards it anyway).
 //
-// RANDOMNESS (CLAUDE.md rule 4, §9.3). Every pick is `ctx.rng`, never `Math.random`, and the picks
+// RANDOMNESS (CLAUDE.md rule 4, §9.3). Every pick is `ctx.rng` through the engine's generation
+// helper (`pickGenerated`, where the Glitch odds of R661 live too), never `Math.random`, and the picks
 // happen while the effect list is being built — the pool is a definition list, and `transform` takes
 // one `defId`, so there is no "transform into a random X" effect to defer them into. That is
 // deterministic here because this hook runs exactly once: the card opens no prompt, so nothing can
@@ -53,7 +54,7 @@
 // Reading is not mutation either way (CLAUDE.md rule 5 bans writing, and nothing here writes).
 
 import type { CardInstance, Effect, EffectContext, Script } from "@jackioh/engine";
-import { cardAt, defOf, numberingOrder, slotsOf, unitHas, zoneCards } from "@jackioh/engine";
+import { cardAt, defOf, numberingOrder, pickGenerated, slotsOf, unitHas, zoneCards } from "@jackioh/engine";
 import { transform } from "@jackioh/engine/effects";
 import type { CardDef, CardType } from "@jackioh/shared";
 import { cardDef } from "../catalog-data";
@@ -110,14 +111,18 @@ function pileCards(
   return zone === "library" ? numberingOrder(ctx.state, cards) : cards;
 }
 
-/** §6.3 Replace: one card, one random Legendary from its pool, named by instance (R81 does not apply). */
+/**
+ * §6.3 Replace: one card, one random Legendary from its pool, named by instance (R81 does not apply).
+ * The Legendary is a generated card, so after a System card was played it may be Glitch instead
+ * (R661), anywhere but the board, where a Spell has no zone.
+ */
 function replace(
   ctx: EffectContext,
   card: CardInstance,
   pool: readonly CardDef[],
   radiantResult: boolean,
 ): Effect[] {
-  const pick = ctx.rng.pick(pool);
+  const pick = pickGenerated(ctx.rng, pool, ctx.state, () => card.zone.z !== "field");
   if (pick === undefined) return [];
   return [transform({ instanceId: card.id, defId: pick.id, radiant: radiantResult })];
 }

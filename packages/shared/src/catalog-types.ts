@@ -260,6 +260,12 @@ export type CardDef = {
    */
   radiantFallback?: true;
   /**
+   * R662: a card kept out of sight (the Glitch token, §7): no random pool holds it, even one that takes
+   * every token (C+ #23), unless the pool names it by id, and the Almanac, the Deck Builder and the
+   * collection never list it. Once in a game it is a card like any other. Absent on every other card.
+   */
+  hidden?: true;
+  /**
    * R179, R468, R469: a fused definition's ingredients, in ingredient order — the definition each
    * was, and `radiant` when it went into both of the fused forms on its Radiant face ("fuse a random
    * Radiant card"). Only a Fuse writes it. While the list is short the id spells it out too; past

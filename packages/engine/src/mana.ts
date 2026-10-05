@@ -146,6 +146,8 @@ export function costRulesSpentBy(state: GameState, instance: CardInstance): stri
 }
 
 function priceOf(state: GameState, instance: CardInstance, options: CostOptions): Price {
+  // R663: a card that is always playable costs (0) wherever it lies, and nothing changes that.
+  if (scriptOf(instance).staticFlags?.alwaysPlayable === true) return { cost: 0, usedRules: [] };
   const side = state.players[instance.controller];
   const override = instance.costOverride;
   const floor = costFloorOf(instance);

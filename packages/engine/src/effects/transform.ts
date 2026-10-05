@@ -219,7 +219,8 @@ export function transformRandom(
       const pool = query(excludingDefId(args.query ?? {}, ctx.self?.defId ?? ctx.defId)).filter((def) =>
         canReplace(old, def),
       );
-      const def = pickGenerated(ctx.rng, pool);
+      // R661: Glitch may take the new card's place only where the old card's zone would hold it.
+      const def = pickGenerated(ctx.rng, pool, ctx.state, (candidate) => canReplace(old, candidate));
       if (def === undefined) return;
       const radiant = args.radiant === "keep" ? old.radiant : args.radiant === true;
       const replacement = replaceCard(ctx, old, def, radiant);

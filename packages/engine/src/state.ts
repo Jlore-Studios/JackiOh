@@ -551,6 +551,12 @@ export type GameState = {
    * (`subsystems/boardHistory.ts`). Never in a view (§10.8). Absent until the first turn starts.
    */
   boardHistory?: BoardSnapshot[];
+  /**
+   * R661: how many cards named "… in the System" (C #18, C #25) either player has played this match,
+   * casts included (R70), countered plays never (R448) — the Glitch odds' numerator (`catalog.pickGenerated`).
+   * Absent until the first, so a match without one hashes as it did before the field existed.
+   */
+  systemPlays?: number;
 };
 
 /** R417: one card of a last board — the card and its face, never stats, buffs or damage. */

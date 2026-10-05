@@ -23,8 +23,11 @@ import { CATALOG } from "../src/catalog-data";
 
 const ENTRIES: readonly CardDef[] = Object.values(CATALOG);
 
-/** §2.1, R244: dealt by a rule, so no card's text names it. */
-const DEALT_BY_A_RULE: readonly string[] = ["core-t-coin"];
+/**
+ * §2.1, R244: dealt by a rule, so no card's text names it; and R661's Glitch, which only a rule makes
+ * and which no text may name, since a client links every name it reads to that card's face (R279, R662).
+ */
+const DEALT_BY_A_RULE: readonly string[] = ["core-t-coin", "classic-t-glitch"];
 
 /**
  * R381 (B2.8): card names that are also rules words. A text using one names that card only when the
@@ -88,7 +91,7 @@ describe("R279 the reference map (SPEC §5, §7, §10.10)", () => {
     expect(wrong).toEqual([]);
   });
 
-  it("R279 has every token named by at least one card, except what a rule deals (The Coin, which Classic+ #42 KY's Test also names)", () => {
+  it("R279 has every token named by at least one card, except what a rule deals (The Coin, which Classic+ #42 KY's Test also names, and Glitch)", () => {
     const named = new Set(ENTRIES.flatMap((card) => card.refs ?? []));
     // R480: a card whose text names a token pool by its tag names every member of it.
     for (const pool of TOKEN_POOLS) {

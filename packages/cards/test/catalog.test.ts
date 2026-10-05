@@ -29,7 +29,7 @@
 //                    being R349's fallback.
 //   rarity         — SPEC §8's rarity paragraph for Core (35/37/16/7/5) and B2.5's table for
 //                    Classic (42/25/13/9/1) and Classic+ (13/25/25/13/2); B2.1's totals, 268 cards
-//                    and 49 tokens in 317 entries.
+//                    and 50 tokens in 318 entries.
 //   tag vocabulary — SPEC §5/§6 tags as BUILD M4-T1 lists them, R278's Jlockeed, B2.4's Book,
 //                    Pancake and AI, and the mechanics patch's Plague (every card that uses
 //                    Plague Tokens).
@@ -261,6 +261,7 @@ const CLASSIC: readonly SpecRow[] = [
   { index: "88", name: "Siphon Squad", cost: 2, type: "Field Trap", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "89", name: "Paul Allen's Ghost", cost: 2, type: "Unit", tags: [], rarity: "Rare", base: [5, 6], radiant: [10, 12] },
   { index: "90", name: "In Too Deep", cost: 1, type: "Field Spell", tags: ["Quickdraw"], rarity: "Mythic", base: [null, null], radiant: [null, null] },
+  { index: "T-Glitch", name: "Glitch", cost: 0, type: "Spell", tags: ["Token"], rarity: "Token", base: [null, null], radiant: [null, null] },
 ];
 
 const CLASSIC_PLUS: readonly SpecRow[] = [
@@ -416,7 +417,7 @@ const RARITY_COUNTS: Readonly<Record<string, Readonly<Record<string, number>>>> 
 /** B2.1: cards and tokens per set. */
 const SET_SIZES: Readonly<Record<string, { cards: number; tokens: number }>> = {
   Core: { cards: 100, tokens: 11 },
-  Classic: { cards: 90, tokens: 0 },
+  Classic: { cards: 90, tokens: 1 },
   "Classic+": { cards: 78, tokens: 38 },
 };
 
@@ -507,6 +508,12 @@ describe("catalog membership (BUILD M4-T1, B2.1)", () => {
       .map((entry) => entry.index)
       .sort();
     expect(flagged, "Core entries flagged token: true").toEqual([...expected].sort());
+  });
+
+  it("has Classic's one token, Glitch, no card names, and it alone is hidden (SPEC §7, R662)", () => {
+    const flagged = ENTRIES.filter((entry) => entry.set === "Classic" && entry.token).map((entry) => entry.index);
+    expect(flagged).toEqual(["T-Glitch"]);
+    expect(ENTRIES.filter((entry) => entry.hidden === true).map((entry) => entry.id)).toEqual(["classic-t-glitch"]);
   });
 
   it("has Classic+'s card-defined tokens and the ten AI generated cards (B2.1, B2.3, B8)", () => {

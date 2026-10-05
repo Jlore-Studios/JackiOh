@@ -341,7 +341,11 @@ export function summonRandom(
       }));
       if (![...rows].some((row) => zoneFor(ctx, player, row, args) !== null)) return;
 
-      const def = pickGenerated(ctx.rng, pool);
+      // R661: Glitch may take the summoned card's place only as a permanent with a zone to enter.
+      const def = pickGenerated(ctx.rng, pool, ctx.state, (candidate) => {
+        const row = rowOf(candidate.type);
+        return row !== null && zoneFor(ctx, player, row, args) !== null;
+      });
       if (def === undefined) return;
       summonFresh(ctx, def.id, player, args);
     },

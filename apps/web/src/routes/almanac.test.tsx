@@ -49,7 +49,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 /** A lazily-imported route chunk, and a pool of every card, can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
 
-const CARDS: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards);
+/** Every card the almanac lists: the whole catalog but a hidden card (Glitch, R662). */
+const CARDS: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards).filter((def) => def.hidden !== true);
 const TOKENS: readonly CardDef[] = CARDS.filter((def) => def.token);
 
 function at(path: string): void {
@@ -133,11 +134,20 @@ describe("R630 the almanac's browse pane", () => {
     render(<AlmanacRoute />);
     const ids = shownIds();
     expect(ids).toEqual([...almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT)]);
-    expect([...ids].sort()).toEqual(Object.keys(ALMANAC_CATALOG.cards).sort());
+    expect([...ids].sort()).toEqual(CARDS.map((def) => def.id).sort());
     expect(TOKENS.length).toBeGreaterThan(0);
     for (const token of TOKENS) expect(ids, token.id).toContain(token.id);
     expect(screen.getByTestId(DB_RESULT_COUNT)).toHaveAttribute("data-count", String(CARDS.length));
     expect(screen.queryByTestId(DB_EMPTY)).toBeNull();
+  });
+
+  it("R662 lists no hidden card, Glitch, even searched for by name or with the Token chip", () => {
+    const hidden = Object.values(ALMANAC_CATALOG.cards).filter((def) => def.hidden === true);
+    expect(hidden.map((def) => def.id)).toEqual(["classic-t-glitch"]);
+    render(<AlmanacRoute />);
+    expect(shownIds()).not.toContain("classic-t-glitch");
+    expect(almanacPool(ALMANAC_CATALOG, { ...DEFAULT_FILTER, search: "glitch" }, DEFAULT_SORT)).toEqual(["classic-018"]);
+    expect(almanacPool(ALMANAC_CATALOG, { ...DEFAULT_FILTER, tags: new Set<Tag>(["Token"]) }, DEFAULT_SORT)).not.toContain("classic-t-glitch");
   });
 
   it("R630 renders the deck builder's own filter bar, pool and look", () => {

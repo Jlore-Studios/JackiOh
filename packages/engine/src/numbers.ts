@@ -55,10 +55,11 @@ function inUnitRow(card: CardInstance): boolean {
 /**
  * R65, B3.4 rule 3: the card's own cost — `costOverride` or its printed cost (a computed or embiggen
  * price where R65 reads one), plus its `costMod` — with no player discount, since a Degrade changes
- * the card and not a price for a play. Null for an X-cost card, whose X is no cost a number may move.
+ * the card and not a price for a play. Null for an X-cost card, whose X is no cost a number may move,
+ * and for an always-playable one (R663, Glitch), whose (0) nothing moves.
  */
 export function ownCost(state: GameState, card: CardInstance): number | null {
-  if (isXCost(state, card)) return null;
+  if (isXCost(state, card) || scriptOf(card).staticFlags?.alwaysPlayable === true) return null;
   return (card.costOverride ?? printedCost(state, card)) + card.costMod;
 }
 

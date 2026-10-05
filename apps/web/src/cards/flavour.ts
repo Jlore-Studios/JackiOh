@@ -7,9 +7,11 @@
 import flavourJson from "@jackioh/cards/flavour.json";
 import type { CardFlavour } from "@jackioh/cards";
 
+import { corruptedText, isGlitch } from "./glitch.ts";
+
 export const CARD_FLAVOUR: Readonly<Record<string, CardFlavour>> = flavourJson;
 
-/** The card's entry when it has a flavour line or an artist, else null. */
+/** The card's entry when it has a flavour line or an artist, else null; Glitch's corrupted (R662). */
 export function flavourFor(
   defId: string,
   sidecar: Readonly<Record<string, CardFlavour>> = CARD_FLAVOUR,
@@ -17,5 +19,9 @@ export function flavourFor(
   if (!Object.hasOwn(sidecar, defId)) return null;
   const entry = sidecar[defId];
   if (entry === undefined || (entry.flavour === undefined && entry.artist === undefined)) return null;
-  return entry;
+  if (!isGlitch(defId)) return entry;
+  return {
+    ...(entry.flavour === undefined ? {} : { flavour: corruptedText(entry.flavour) }),
+    ...(entry.artist === undefined ? {} : { artist: corruptedText(entry.artist) }),
+  };
 }

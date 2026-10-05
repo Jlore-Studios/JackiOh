@@ -58,6 +58,8 @@ export { PileDepth } from "./CardStates.tsx";
 
 export { CardFace } from "./CardFace.tsx";
 export type { CardFaceProps } from "./CardFace.tsx";
+export { GlitchFace } from "./GlitchFace.tsx";
+export { corruptedText, isGlitch } from "./glitch.ts";
 export { MinionFace } from "./MinionFace.tsx";
 export type { MinionFaceProps } from "./MinionFace.tsx";
 export { CardBack } from "./CardBack.tsx";

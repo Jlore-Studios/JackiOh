@@ -170,6 +170,10 @@ export { addPlayerModifier } from "./playerMods";
 // Coin flips (§6.3, §10.7): every flip goes through `ctx.rng`, never `Math.random`.
 export { flipCoins } from "./coins";
 
+// The Glitch token's Cry (§7, R664): one of four outcomes, rolled on the match rng.
+export { GLITCH_OUTCOMES, glitchOutcome, rollGlitchOutcome } from "./glitch";
+export type { GlitchOutcome } from "./glitch";
+
 // Fuse (§6.3, R77, R102) and Rotate (§6.3, §3.1, R14, R88): both wrap their subsystem whole.
 export { fuseCards } from "./fuse";
 export { rotate } from "./rotate";

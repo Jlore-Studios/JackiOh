@@ -38,7 +38,8 @@ import { baseView, card, emptySide, fullBoardView, fusedDef, pendingFor } from "
 
 type CardDef = (typeof CATALOG)[string];
 
-const DEFS: readonly CardDef[] = Object.values(CATALOG);
+/** Every catalog card that prints a face: the hidden Glitch's is blank (R662), so it has nothing to fit. */
+const DEFS: readonly CardDef[] = Object.values(CATALOG).filter((def) => def.hidden !== true);
 
 /** Retries cover `useFitText`'s binary search and the ResizeObserver passes behind it. */
 const SETTLE_TIMEOUT_MS = 15_000;

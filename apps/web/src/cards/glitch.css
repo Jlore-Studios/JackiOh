@@ -1,0 +1,150 @@
+/* The Glitch token's face (SPEC §7, R662; GlitchFace.tsx): a blank card and a glitching blob that
+   breaks out of its frame. Every rule is scoped under `.cf[data-glitch]`, as cards.css scopes its own
+   under `.cf`. The motion is transform and opacity only, stepped so it jerks the way a broken picture
+   does, and none of it runs under Reduce motion: the blob rests, torn, where it is. */
+
+.cf[data-glitch] {
+  --glitch-ink: #120a1f;
+  --glitch-red: #ff2a5f;
+  --glitch-cyan: #27f3ff;
+  --glitch-period: 1.7s;
+  overflow: visible;
+}
+
+/* Completely blank: a plain plate, no frame colour, no gem, no words. */
+.cf[data-glitch] .cf-scale {
+  background: linear-gradient(172deg, #f4f3f6, #dcdbe2);
+}
+
+/* Larger than the art window and set off-centre, so it spills over the frame's edges. */
+.cf[data-glitch] .cf-glitch-blob {
+  position: absolute;
+  inset: 14% -16% 26% -12%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.cf[data-glitch] .cf-glitch-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: 46% 54% 38% 62% / 52% 36% 64% 48%;
+}
+
+.cf[data-glitch] .cf-glitch-layer[data-layer="body"] {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 6%, rgb(255 255 255 / 0.16) 6% 7%),
+    radial-gradient(circle at 38% 42%, #3b1f5c, var(--glitch-ink) 68%);
+  animation: glitch-jitter var(--glitch-period) steps(1, end) infinite;
+}
+
+.cf[data-glitch] .cf-glitch-layer[data-layer="red"],
+.cf[data-glitch] .cf-glitch-layer[data-layer="cyan"] {
+  opacity: 0.55;
+  mix-blend-mode: screen;
+}
+
+.cf[data-glitch] .cf-glitch-layer[data-layer="red"] {
+  background: var(--glitch-red);
+  transform: translate(-7%, 2%);
+  animation: glitch-tear-red calc(var(--glitch-period) * 0.7) steps(1, end) infinite;
+}
+
+.cf[data-glitch] .cf-glitch-layer[data-layer="cyan"] {
+  background: var(--glitch-cyan);
+  transform: translate(6%, -3%);
+  animation: glitch-tear-cyan calc(var(--glitch-period) * 0.9) steps(1, end) infinite;
+}
+
+/* A torn band of the picture, thrown sideways past the frame. */
+.cf[data-glitch] .cf-glitch-layer[data-layer="slice"] {
+  inset: 44% -10% 44% 6%;
+  border-radius: 0;
+  background: linear-gradient(90deg, var(--glitch-cyan), var(--glitch-ink) 30%, var(--glitch-red));
+  opacity: 0.85;
+  animation: glitch-slice calc(var(--glitch-period) * 1.3) steps(1, end) infinite;
+}
+
+@keyframes glitch-jitter {
+  0%,
+  100% {
+    transform: none;
+  }
+  18% {
+    transform: translate(3%, -2%) skewX(-6deg);
+  }
+  37% {
+    transform: translate(-4%, 1%) scale(1.04, 0.96);
+  }
+  58% {
+    transform: none;
+  }
+  71% {
+    transform: translate(2%, 3%) skewX(8deg);
+  }
+  86% {
+    transform: translate(-2%, -1%) scale(0.97, 1.05);
+  }
+}
+
+@keyframes glitch-tear-red {
+  0%,
+  100% {
+    transform: translate(-7%, 2%);
+  }
+  30% {
+    transform: translate(-13%, 0);
+  }
+  55% {
+    transform: translate(-4%, 4%);
+  }
+  80% {
+    transform: translate(-10%, -2%);
+  }
+}
+
+@keyframes glitch-tear-cyan {
+  0%,
+  100% {
+    transform: translate(6%, -3%);
+  }
+  25% {
+    transform: translate(12%, 1%);
+  }
+  60% {
+    transform: translate(3%, -5%);
+  }
+  85% {
+    transform: translate(9%, 2%);
+  }
+}
+
+@keyframes glitch-slice {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: none;
+  }
+  20% {
+    opacity: 0;
+    transform: translate(0, -240%);
+  }
+  45% {
+    opacity: 0.9;
+    transform: translate(-18%, 180%);
+  }
+  65% {
+    opacity: 0.6;
+    transform: translate(14%, -90%);
+  }
+}
+
+/* Reduced motion: the blob stays, torn and still. */
+@media (prefers-reduced-motion: reduce) {
+  .cf[data-glitch] .cf-glitch-layer {
+    animation: none;
+  }
+}
+
+:root[data-reduce-motion="true"] .cf[data-glitch] .cf-glitch-layer {
+  animation: none;
+}

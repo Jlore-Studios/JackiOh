@@ -244,7 +244,7 @@ export function castRandomCallToChaos(): Effect {
       const depth = chaosChainOf(ctx.self);
       if (chaosChainCapReached(depth)) return;
 
-      const def = pickGenerated(ctx.rng, query({ tags: [CHAOS_TAG] }));
+      const def = pickGenerated(ctx.rng, query({ tags: [CHAOS_TAG] }), ctx.state);
       if (def === undefined) return;
 
       const card = newInstance(ctx.state, def.id, ctx.controller, {

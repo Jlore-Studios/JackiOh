@@ -26,9 +26,10 @@
 // { effect: "<an effect>" }, or both in one object; with both, the effect starts first.
 //
 // To add a card: copy a neighbour's entry to where the catalog puts the card, change the id and the
-// name comment, and give a Unit a play and a death line, anything else a cast line. A new or changed
-// line has to be rendered: `pnpm --filter @jackioh/web gen:voice` on macOS, or on Windows (or WSL)
-// for a SAPI voice. Effects render nothing.
+// name comment, and give a Unit a play and a death line, anything else a cast line. A hidden card
+// (Glitch, R662) speaks no line, since every text it has is drawn corrupted: its cast hook is an effect
+// alone. A new or changed line has to be rendered: `pnpm --filter @jackioh/web gen:voice` on macOS, or
+// on Windows (or WSL) for a SAPI voice. Effects render nothing.
 {
   voices: {
     alien: { say: "Trinoids", rate: 170, pbas: 45, pmod: 20, web: { pitch: 0.5, rate: 0.9 }, gain: 1.66 },
@@ -110,6 +111,7 @@
     powerDown: { sfx: "debuff", pitch: 0.6 },
     dataBlips: { sfx: "spell", gain: 0.7, params: { timbre: "ai" } },
     zap: { sfx: "castOnDraw", pitch: 1.3 },
+    glitchCrackle: { sfx: "chaosRoll", pitch: 2.6, gain: 0.8, params: { amount: 3 } },
     alarm: { sfx: "trapSting", pitch: 1.4, gain: 0.8 },
     refusal: { sfx: "refuse", pitch: 1.2 },
     tickTock: { sfx: "clockTick", params: { amount: 5 } },
@@ -854,6 +856,9 @@
     },
     "classic-090": { // In Too Deep
       cast: { voice: "sapi-mystic", text: "Deeper and deeper we go." },
+    },
+    "classic-t-glitch": { // Glitch
+      cast: { effect: "glitchCrackle" },
     },
     "classicplus-001": { // Doom Shroom
       cast: { voice: "sapi-rasp", text: "Spores of doom, released!", effect: "sporePuff" },

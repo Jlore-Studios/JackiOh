@@ -125,7 +125,7 @@ function castOneRandom(
       if (!mayCastNow(ctx.state, ctx.controller)) return;
       // B4.1, R387: never the casting card's own definition, named by its id.
       const pool = query(excludingDefId(asked, ctx.self?.defId ?? ctx.defId));
-      const def = pickGenerated(ctx.rng, pool);
+      const def = pickGenerated(ctx.rng, pool, ctx.state);
       if (def === undefined) return;
       const card = newInstance(ctx.state, def.id, ctx.controller, { z: "resolving", player: ctx.controller });
       card.radiant = radiant;

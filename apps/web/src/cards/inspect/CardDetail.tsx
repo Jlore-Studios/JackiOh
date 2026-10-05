@@ -28,6 +28,7 @@ import { createPortal } from "react-dom";
 import type { CardDef } from "@jackioh/shared";
 import { CardFace } from "../CardFace.tsx";
 import { textTier } from "../fit.ts";
+import { displayName } from "../glitch.ts";
 import { faceModel, locWords, type FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
 import { RulesText } from "../RulesText.tsx";
@@ -134,7 +135,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
         data-card={def.id}
         role="dialog"
         aria-modal="true"
-        aria-label={def.name}
+        aria-label={displayName(def)}
       >
         {/* The faces and everything about them scroll; the actions row is pinned under them, so
             Add and Close are on screen as the dialog opens, whatever the card's length. */}

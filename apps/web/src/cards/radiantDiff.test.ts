@@ -13,6 +13,7 @@ import { CATALOG } from "@jackioh/cards";
 import { fillParams, type CardDef } from "@jackioh/shared";
 
 import { CardFace } from "./CardFace.tsx";
+import { isGlitch } from "./glitch.ts";
 import { faceModel } from "./model.ts";
 import { CardDefsProvider } from "./refContext.tsx";
 import { markedText, radiantMarks } from "./radiantDiff.ts";
@@ -105,7 +106,8 @@ describe("R277 the word diff", () => {
 
 describe("R277 every Radiant face renders its marks gold, bold and underlined", () => {
   it("R277 R279 every catalog card's Radiant face shows each marked stretch in a .cf-mark, references and all, and its base face none", () => {
-    for (const card of DEFS) {
+    // R662: Glitch's face prints no words at all (glitch.test.tsx).
+    for (const card of DEFS.filter((entry) => !isGlitch(entry.id))) {
       // Each face as it prints, its `{key}` numbers filled in (B3.4 rule 5).
       const expected = marks(fillParams(card, "base"), fillParams(card, "radiant"));
       // Inside the catalog, so the names its refs link are references and nest with the marks.

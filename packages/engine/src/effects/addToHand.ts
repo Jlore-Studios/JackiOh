@@ -149,7 +149,7 @@ export function addRandomFromCatalog(args: {
 
       const count = Math.max(0, Math.trunc(args.count ?? 1));
       for (let i = 0; i < count; i += 1) {
-        const def = pickGenerated(ctx.rng, pool);
+        const def = pickGenerated(ctx.rng, pool, ctx.state);
         if (def === undefined) return;
         createInHand(ctx, def.id, args);
       }

@@ -46,6 +46,7 @@ import {
   UNREVEALED_NOTE,
   faceDownLabel,
   faceModel,
+  isGlitch,
   useCardSettings,
   useInspectTrigger,
   type FaceModel,
@@ -350,6 +351,8 @@ export default function Card(props: CardProps): ReactElement {
       )}
       data-face={form}
       data-def-id={card.defId}
+      // R662: Glitch's art breaks out of its card, so the board's card lets it (board.css).
+      data-glitch={isGlitch(card.defId) ? "true" : undefined}
       data-radiant={card.radiant ? "true" : undefined}
       data-rarity={face.rarity ?? undefined}
       data-card-type={cardType}

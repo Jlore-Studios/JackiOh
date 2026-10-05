@@ -25,7 +25,7 @@ export function shuffleRandomFromCatalog(args: {
       const pool = query(excludingDefId(args.query, ctx.self?.defId ?? ctx.defId));
       const player = playerOf(ctx, args.player ?? "self");
       for (let at = 0; at < args.count && pool.length > 0; at += 1) {
-        const def = pickGenerated(ctx.rng, pool);
+        const def = pickGenerated(ctx.rng, pool, ctx.state);
         if (def === undefined) return;
         const card = newInstance(ctx.state, def.id, player, { z: "library", player });
         if (args.radiant === true) card.radiant = true;

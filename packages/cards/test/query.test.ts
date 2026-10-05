@@ -29,9 +29,17 @@ function coreIndices(defs: readonly CardDef[]): string[] {
   return defs.filter((def) => def.set === "Core").map((def) => def.index);
 }
 
-/** Every token of every set (B2.1's census itself is catalog.test.ts's to prove). */
+/**
+ * Every token of every set but the hidden one (B2.1's census itself is catalog.test.ts's to prove):
+ * R662 keeps Glitch out of every pool that does not name it by id.
+ */
 const TOKEN_IDS = Object.values(CATALOG)
-  .filter((def) => def.token)
+  .filter((def) => def.token && def.hidden !== true)
+  .map((def) => def.id);
+
+/** R662: the hidden cards, Glitch alone. */
+const HIDDEN_IDS = Object.values(CATALOG)
+  .filter((def) => def.hidden === true)
   .map((def) => def.id);
 
 /** Every non-token def, in catalog order — the pool a plain query answers (R380). */
@@ -82,6 +90,14 @@ describe("§5.1 tokens are out of every pool unless the card names the token poo
     // A card that names its token by id (Rush Token, Sheep Token, …) names the pool itself.
     expect(ids(query({ defId: ["core-t-rush", "core-t-sheep"] })).sort()).toEqual(["core-t-rush", "core-t-sheep"]);
     expect(ids(query({ token: false, tags: ["Token"] }))).toEqual([]);
+  });
+
+  it("R662 no pool reaches a hidden card but one that names it by id", () => {
+    expect(HIDDEN_IDS).toEqual(["classic-t-glitch"]);
+    for (const args of [{}, { withTokens: true }, { token: true }, { tags: ["Token" as const] }, { rarity: "Token" as const }, { set: "Classic" as const, withTokens: true }]) {
+      expect(ids(query(args)), JSON.stringify(args)).not.toContain("classic-t-glitch");
+    }
+    expect(ids(query({ defId: "classic-t-glitch" }))).toEqual(["classic-t-glitch"]);
   });
 
   it("R380 a pool that names a set keeps to it (Core #82 KY's Trial, #97 Zephyrs)", () => {
@@ -384,10 +400,11 @@ describe("R382 the Fruit pool holds the five Grapes; a pool that takes every tok
     }
   });
 
-  it("R382 Classic+ #23 Dropshipping's pool takes every card and every token of every set but itself", () => {
+  it("R382 Classic+ #23 Dropshipping's pool takes every card and every token of every set but itself and the hidden Glitch", () => {
     const every = ids(pool("classicplus-023", { withTokens: true }));
-    expect(every).toHaveLength(Object.keys(CATALOG).length - 1);
+    expect(every).toHaveLength(Object.keys(CATALOG).length - 1 - HIDDEN_IDS.length);
     expect(every).not.toContain("classicplus-023");
+    expect(every).not.toContain("classic-t-glitch");
     for (const id of [...GRAPES, "classicplus-019-3", "classicplus-t-ai-01", "core-t-coin", "core-051-1"]) {
       expect(every).toContain(id);
     }

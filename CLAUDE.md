@@ -41,7 +41,7 @@ pnpm fuzz              # the CI gate: seeds 1–1000 of random-policy games with
 pnpm ai:gate           # the AI's quality gates at full size (random 100, greedy 50, Hard vs Easy 50); minutes, CI's ai-gate job
 pnpm ai:sweep          # the shadow-ban sweep (R186); prints SHADOW_BAN rows to copy into packages/ai/src/shadowBan.ts by hand
 pnpm ai:stats          # an AI development run for the card statistics (R378): AI-vs-AI All Random games filed under a patch, --out writes them
-pnpm validate:catalog  # catalog.json data checks (268 cards and 49 tokens across Core, Classic, Classic+; rarity counts per set), then `patches check`: every catalog change claimed by exactly one pending fragment
+pnpm validate:catalog  # catalog.json data checks (268 cards and 50 tokens across Core, Classic, Classic+; rarity counts per set), then `patches check`: every catalog change claimed by exactly one pending fragment
 pnpm rulings:coverage  # SPEC §11 rows vs named tests vs R-ids cited in code (rule 3)
 pnpm --filter @jackioh/cards missing-tests   # catalog ids with no test file, and the path each one expects
 pnpm --filter @jackioh/cards run patches <version> <date> "<title>"     # the card patch history, packages/cards/patches/ (R388, R646): a branch's catalog change goes live as a pending fragment; `patches check` proves it, `patches ship` promotes it after merge and bumps CATALOG_VERSION everywhere

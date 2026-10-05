@@ -93,11 +93,14 @@ function writeJson(path: string, value: unknown): void {
 
 // ------------------------------------------------------------------------------ expectations ---
 
-const CATALOG = readJson(CATALOG_PATH) as Record<string, { type?: unknown }>;
+const CATALOG = readJson(CATALOG_PATH) as Record<string, { type?: unknown; hidden?: unknown }>;
 
-/** SPEC §10.11's lines: a play and a death line per Unit (tokens included), one cast line per everything else. */
+/**
+ * SPEC §10.11's lines: a play and a death line per Unit (tokens included), one cast line per everything
+ * else, but none for a hidden card (Glitch, R662), which speaks no line.
+ */
 const REQUIRED_KEYS: readonly string[] = Object.entries(CATALOG).flatMap(([id, card]) =>
-  card.type === "Unit" ? [`${id}-play`, `${id}-death`] : [`${id}-cast`],
+  card.hidden === true ? [] : card.type === "Unit" ? [`${id}-play`, `${id}-death`] : [`${id}-cast`],
 );
 
 const AUDIO = readJson5(AUDIO_PATH);

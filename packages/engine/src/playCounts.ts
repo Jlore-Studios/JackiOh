@@ -8,15 +8,17 @@
 //     Muncher's Fruit, AI Scaling Law's AI generated cards);
 //   * game-wide: the last Spell anyone played (Classic #57 Echo, `state.lastSpell`), and per player
 //     the last face-up card they played (AI Autocomplete, `gameLog.lastFaceUpPlay`). Each "last"
-//     record is overwritten by the next play and never cleared.
+//     record is overwritten by the next play and never cleared;
+//   * game-wide: the cards named "… in the System" either player has played (`state.systemPlays`,
+//     R661), the Glitch odds, never reset.
 // A cast is a play and counts (R70). A countered play never reaches step 4, so it counts for nothing
 // (R448). An Echo repeat is the same play resolving again, not a play (§6.2).
 //
 // The readers are `query.ts`'s (the read half of the card-facing surface); this module only writes.
 
 import type { PlayerId } from "@jackioh/shared";
-import { defOf, fusedIdParts } from "./catalog";
-import { LAST_FACE_UP_SKIPPED_TAGS } from "./config";
+import { defOf, fusedIdParts, selfDefIds } from "./catalog";
+import { LAST_FACE_UP_SKIPPED_TAGS, SYSTEM_CARD_DEF_IDS } from "./config";
 import { cardTypeOf } from "./faces";
 import { scriptOf } from "./scripts";
 import type { CardInstance, GameLog, GameState, PlayRecord } from "./state";
@@ -58,6 +60,12 @@ export function recordPlay(state: GameState, player: PlayerId, card: CardInstanc
   for (const tag of new Set(def.tags)) tags[tag] = (tags[tag] ?? 0) + 1;
   const log: GameLog = { ...side.gameLog, playedByTag: tags };
   side.gameLog = log;
+
+  // R661: a System card is counted by what the card is — its definition, or a fused card's ingredients,
+  // once however many of them are System cards — not by text it copies (Classic #57 Echo).
+  if (selfDefIds(card.defId).some((id) => SYSTEM_CARD_DEF_IDS.includes(id))) {
+    state.systemPlays = (state.systemPlays ?? 0) + 1;
+  }
 
   const record = playRecordOf(state, card);
   if (record === null) return;

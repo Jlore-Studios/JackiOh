@@ -12,7 +12,7 @@
 //
 // The Card Almanac (R630) browses with the same filter and sort. Its shelf is `almanacPool`: every
 // catalog card, tokens included, since L3's reason for hiding them is a deck's and the almanac
-// builds none, and its tag chips are `ALMANAC_TAGS`.
+// builds none, but a hidden one (Glitch, R662), and its tag chips are `ALMANAC_TAGS`.
 
 import {
   SHIPPED_SETS,
@@ -285,8 +285,8 @@ export function visiblePool(
 }
 
 /**
- * What the almanac's grid shows (R630): every catalog card, tokens included, filtered, then sorted.
- * There is no collection, so `filter.ownedOnly` is not read.
+ * What the almanac's grid shows (R630): every catalog card, tokens included, but a hidden one (R662),
+ * filtered, then sorted. There is no collection, so `filter.ownedOnly` is not read.
  */
 export function almanacPool(
   catalog: CatalogSnapshot,
@@ -294,7 +294,8 @@ export function almanacPool(
   sort: PoolSort,
   winRates?: ReadonlyMap<string, CardWinRateInfo>,
 ): readonly string[] {
-  return filteredAndSorted(Object.keys(catalog.cards), catalog, filter, sort, winRates);
+  const shelf = Object.keys(catalog.cards).filter((id) => catalog.cards[id]?.hidden !== true);
+  return filteredAndSorted(shelf, catalog, filter, sort, winRates);
 }
 
 function filteredAndSorted(

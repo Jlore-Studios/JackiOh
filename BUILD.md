@@ -59,7 +59,7 @@ jackioh/
       src/replay.ts            fold(seed, log) -> state; state hash
       test/                    unit + property tests
     cards/
-      catalog.json             268 cards + 49 tokens over Core, Classic and Classic+ (schema in M4-T1, M9-T1)
+      catalog.json             268 cards + 50 tokens over Core, Classic and Classic+ (schema in M4-T1, M9-T1)
       patches/                 patches.json and one whole-catalog snapshot per card patch (M9-T2, R388)
       src/index.ts             registry: defId -> {def, base, radiant}
       src/scripts/NNN-slug.ts  one file per Core card, NNN = zero-padded index, tokens as NNN-1-slug.ts
@@ -152,6 +152,9 @@ Every number below is a named export. Nothing in the engine hard-codes them.
 | `CHAOS_PLUS_UPGRADES` / `CHAOS_PLUS_DEGRADES` | 2 per card of your hand and deck / 3 per card of the opponent's field and hand | §8.7 C+ #73, R386 |
 | `MID_LANE` | 3, the middle lane of `UNIT_ZONES` ("midlane") | §3.1, §8.6 C #22 |
 | `GLITCH_NUMBERS` | 0 to 10: C #18's number prompt | §8.6 C #18, §10.6 |
+| `GLITCH_DEF_ID` | `"classic-t-glitch"` | §7, R662 |
+| `SYSTEM_CARD_DEF_IDS` | `["classic-018", "classic-025"]`: the cards named "… in the System" | §7, R661 |
+| `GLITCH_ODDS_PER_SYSTEM_PLAY` / `GLITCH_ODDS_DENOMINATOR` | 1 / 10000: each System card played makes a generated card Glitch 1 more time in 10000 | §7, R661 |
 | `BLADE_STORM_ROUNDS` | 30: the printed round cap, C+ #32.3's `rounds` param, which a Degrade or Upgrade moves on that card | §4.5, §8.7 C+ #32.3, R59 |
 | `ROLLBACK_MAX_TURNS` / `BOARD_HISTORY_DEPTH` | 3 / 4 (this turn's snapshot and the three before it) | §10.1, §8.7 C+ #35, R419 |
 | `GRAPE_ODDS` | Rotten 12, Normal 60, Large 20, Golden 7, Mythic 1 percent, in Lucky's order worst to best | §8.7 C+ #65, C+ #66, R382 |
@@ -344,7 +347,7 @@ Acceptance: a registry test asserts every catalog id has a script and every scri
 
 **M4-T3 Test template.** Files: `cards/test/_harness.ts`, `cards/test/NNN-slug.test.ts`.
 `_harness.ts` gives `scenario({ seed, p1: { hand, field, library, health, mana }, p2: {…} })` builders that place real instances, `playFrom(hand)`, `attack`, `answer`, `endTurn`, `view` and assertion helpers (`expectInZone`, `expectStats`, `expectEvents`). Every card test file covers, for base and radiant separately, each behaviour named in its §8 row plus the "must-pass" cases in the table below.
-Acceptance: `pnpm test --filter cards` runs a test file per catalog entry (111 for Core; 317 once M9 lands); a script that lists catalog ids without a test file (`cards/scripts/missing-tests.ts`) prints nothing.
+Acceptance: `pnpm test --filter cards` runs a test file per catalog entry (111 for Core; 317 once M9 lands, 318 with the Glitch token); a script that lists catalog ids without a test file (`cards/scripts/missing-tests.ts`) prints nothing.
 
 **M4-T4 Implement cards in waves.** Wave 1 first (keywords and single primitives), then Wave 2 (stored state, prompts, delayed and cross-turn effects, traps), then Wave 3 (subsystems). Within a wave, go in index order. A wave is done when every card in it passes its tests and the fuzz gate (M4 gate) still passes with those cards added to the fuzz deck pool.
 
@@ -772,6 +775,7 @@ Acceptance: `test:sql`, `test:db` and the API tests; a finished game writes both
 | C 88 | Siphon Squad | B | Live while face-down (R403): its aura works from the moment it is set and it stays face-down until something reveals it; enemy Units have −X Attack, X twice the number of Units the opponent controls, recomputed on every change and floored at 0; whenever the opponent controls no Units, at any state check including the one right after it is set, it Tributes itself; the opponent's view shows their attack drop and never names the card (R33); its preview is X, for its controller only while it is face-down and for both players once it is face-up (R280, §10.8); radiant: enemy Units have 0 Attack, set after every other layer (§10.4), so their hits are no hits (R63); its tuned number (multiplier) reads through `param()` (R386) |
 | C 89 | Paul Allen's Ghost | B | Divine Shield; targeting it with anything but an attack costs the targeting player two discards of their choice from their other hand cards: a declared target in a play or an activation carries the 2-card pick in the action (as a Tribute carries its set, R101), and a prompt answer naming it asks for the 2 cards next; with fewer than 2 other cards it is not a legal target, absent from `legalActions` and from the prompt's options; both players are bound, its controller too; attacks, random picks and "all" effects cost nothing; the discards are discards (C #64 sees them); radiant 10/12 Divine Shield, Reborn; its tuned number (discard) reads through `param()` (R386) |
 | C 90 | In Too Deep | C | Quickdraw: it starts in your opening hand (§2.1); Indestructible (a destroy leaves it, R46); quest 1 opens as it enters; the quest tree is data in the card file; each quest counts from the moment it opens, its completion noticed at the state check after the completing event on either player's turn, and the reward is a `reward` prompt (§10.6) for its controller (with its own clock on the opponent's turn, R79); each of the ten quests and thirteen rewards has a test, the quests counted as R404 reads them: quest 2 enemy permanents destroyed by anything, quest 3 permanents you control at once (itself included), quest 4 and quest 7 unspent mana at the end of your turn, quest 5 damage your cards deal to enemies, quest 6 your Units' total Attack and health at once, quest 8 cards entering either exile, quest 9 only the draw of yours that takes your deck's last card (an empty deck when it opens completes it at once), quest 10 Units in your graveyard; each reward opens its next quest per the tree and rewards J to M end the line; reward J gives 100 mana; the L and M auras hold while it is on the field and end with a Tribute or an exile, and M's Indestructible Units have no Taunt (R347); leaving the field resets the quest (R78); both views show the open quest, its progress and the rewards on offer, and `questProgressed` and `questCompleted` never name a hidden card; the quest state survives a JSON round trip and replays from the log; radiant: each completed quest grants every reward it offers and opens all their quests, a quest reached by two paths opens once, and a reward two completed quests offer is granted by each; no tuned numbers |
+| C T-Glitch | Glitch | B | A hidden (0) Spell token: in no random pool but one naming it by id, not even C+ #23's that takes every other token, and in neither the Almanac nor the Deck Builder (R662); after n System cards (C #18, C #25) have been played in the match, by either player, a card an effect generates from a pool is Glitch instead n times in 10000, one more draw of the match rng only while n > 0 (a match with none draws as before), never a summoned or field-transformed card (R661); costs (0) whatever would change that and no ban refuses it, on its owner's turn only (R663); played, one draw of the match rng picks one of four outcomes, none built yet, so nothing else happens (R664); blank face, corrupted name, text and flavour, a glitch for art that leaves the frame and stays still under Reduce motion, no voice line (R662); radiant: draws 1 first |
 
 **Classic+ must-pass cases (M9-T6 to T8).** "C+ N" is Classic+ card N, its tokens after it, then the ten AI generated cards (SPEC §8.7).
 
@@ -894,7 +898,7 @@ Acceptance: `test:sql`, `test:db` and the API tests; a finished game writes both
 | T-AI-9 | Refusal | B | Face-down Trap in the announce window of §10.5 (the price paid, the card not yet moved): when the opponent plays or casts a Spell whose declared targets include one of your Units, it Counters it: the Spell goes to its owner's graveyard unresolved and is treated as never played (no `cardPlayed`, no count for Combo, Quickstriker, Ceaseless Void or the turn log; its Echo repeats never happen), the mana and Tributes staying spent; `countered` is public; a Spell with no declared target, a Field Spell or a Trap never sets it off; with two Refusals the first cancels and the second stays set; hidden until it fires (R33); radiant also when the Spell targets you or any card of yours, and you draw 1 |
 | T-AI-10 | Fine-Tuning | B | Field Spell: at each end of your turn Upgrades one random card in your hand (R386: one draw; an Immutable card or one nothing fits unchanged); an empty hand, nothing and no random draw (R129); the `upgraded` event names nothing to the opponent (R97); nothing at the opponent's end; radiant 2 different random cards |
 
-**M9 gate.** Every acceptance item above green; `catalog.test.ts` at 268 cards and 49 tokens with each set's rarity counts; `pnpm fuzz` green at 1,000 seeds with every card of the three sets in the pool; `pnpm rulings:coverage` clean; REVIEW Part A and Part B pass.
+**M9 gate.** Every acceptance item above green; `catalog.test.ts` at 268 cards and 50 tokens with each set's rarity counts; `pnpm fuzz` green at 1,000 seeds with every card of the three sets in the pool; `pnpm rulings:coverage` clean; REVIEW Part A and Part B pass.
 
 ## 4. Test strategy summary
 
@@ -909,7 +913,7 @@ Acceptance: `test:sql`, `test:db` and the API tests; a finished game writes both
 ## 5. Definition of done
 
 - `pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e` all green in CI.
-- `catalog.test.ts` passes: 268 cards and 49 tokens; Core 100 and 11 with rarity counts 35/37/16/7/5, Classic 90 and 0 with 42/25/13/9/1, Classic+ 78 and 38 with 13/25/25/13/2 (§8).
+- `catalog.test.ts` passes: 268 cards and 50 tokens; Core 100 and 11 with rarity counts 35/37/16/7/5, Classic 90 and 1 with 42/25/13/9/1, Classic+ 78 and 38 with 13/25/25/13/2 (§8).
 - `missing-tests.ts` prints nothing.
 - `rulings.test.ts` covers every SPEC §11 row, R1–R439 and the blocks the workstreams used (script `rulings-coverage.ts` lists any missing id).
 - Fuzz gate: `pnpm fuzz` runs 1,000 seeds with the full card pool and prints its own counts (seeds, throws, non-terminations, replay mismatches, endings). `pnpm test` sweeps the same file at a reduced seed count as a smoke wave; the card pool is never reduced, and any exclusion must be a named entry in `POOL_EXCLUSIONS` with a reason, printed on every run so a narrowing cannot be hidden.

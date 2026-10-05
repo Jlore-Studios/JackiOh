@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef, CardType, Tag } from "@jackioh/shared";
 
+import { isGlitch } from "../glitch.ts";
 import { BACKDROPS, LAYOUTS, SKY_SCHEMES } from "./procedural.ts";
 import {
   ART_MANIFEST,
@@ -27,7 +28,8 @@ import {
   type Composition,
 } from "./index.ts";
 
-const DEFS: readonly CardDef[] = Object.values(CATALOG);
+/** Every catalog card that draws procedural art: Glitch's face draws none (R662, GlitchFace.tsx). */
+const DEFS: readonly CardDef[] = Object.values(CATALOG).filter((card) => !isGlitch(card.id));
 const SVG_PREFIX = "data:image/svg+xml,";
 /** B40: a theme-and-composition group this large draws every layout of its composition. */
 const GROUP_USES_EVERY_LAYOUT = 8;

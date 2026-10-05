@@ -27,6 +27,7 @@ import {
   TIER_SCALE,
 } from "./constants.ts";
 import { flushFits, nameTier, textTier, useFitText, type LengthTier } from "./fit.ts";
+import { isGlitch } from "./glitch.ts";
 import { faceModel, type FaceSource } from "./model.ts";
 import { termsIn } from "./rules.ts";
 import { SET_MARK_MIN_FACE_PX, setMarkOf } from "./setMark.ts";
@@ -41,6 +42,8 @@ afterEach(() => {
 /* -------------------------------------------------------------------------------------- helpers */
 
 const DEFS: readonly CardDef[] = Object.values(CATALOG);
+/** Every catalog card that prints a face: Glitch's is blank (R662), and glitch.test.tsx proves it. */
+const PRINTED_DEFS: readonly CardDef[] = DEFS.filter((card) => !isGlitch(card.id));
 const XHTML = "http://www.w3.org/1999/xhtml";
 const UNKNOWN_ID = "core-999";
 /**
@@ -421,7 +424,7 @@ describe("B10: RulesText marks terms in bold", () => {
   it(
     "B10 every catalog text reads back unchanged through RulesText, marks and all",
     () => {
-      for (const card of DEFS) {
+      for (const card of PRINTED_DEFS) {
         for (const radiant of [false, true]) {
           const text = faceModel({ defId: card.id, def: card, radiant }).text;
           const cf = catalogFace(card.id, radiant);
@@ -637,7 +640,7 @@ describe("B15: length tiers, and useFitText without layout", () => {
   });
 
   it("B15 .cf's data-name-tier is nameTier(name) for every catalog card", () => {
-    for (const card of DEFS) {
+    for (const card of PRINTED_DEFS) {
       expect(catalogFace(card.id).getAttribute("data-name-tier"), card.id).toBe(nameTier(card.name));
       cleanup();
     }
@@ -791,7 +794,7 @@ describe("R503: the set mark and a token's printed rarity", () => {
   it(
     "R503 every catalog face carries exactly one mark, its own set's",
     () => {
-      for (const card of DEFS) {
+      for (const card of PRINTED_DEFS) {
         expect(setMark(catalogFace(card.id)).getAttribute("data-set"), card.id).toBe(card.set);
         cleanup();
       }
