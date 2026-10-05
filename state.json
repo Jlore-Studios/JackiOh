@@ -2412,7 +2412,7 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-05T10:06:54Z",
+      "feedback_since": "2026-10-05T10:25:59Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-05T10:22:11Z",
@@ -2435,13 +2435,25 @@
       "run_id": "37296221154",
       "self_check_findings": [
         {
+          "claim": "Conflict markers are still in SPEC.md, packages/engine/test/rulings.test.ts.",
+          "evidence": "git grep",
+          "severity": "blocking",
+          "where": "SPEC.md"
+        },
+        {
           "claim": "The self check's answer could not be read twice in a row.",
           "evidence": "the harness",
           "severity": "blocking",
           "where": "self check"
+        },
+        {
+          "claim": "Checks this change turned red must pass.",
+          "evidence": "the harness's gate run",
+          "severity": "blocking",
+          "where": "checks"
         }
       ],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-05T10:25:59Z",
       "stop_requested": false,
       "taken_asks": [],
