@@ -25,8 +25,15 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(dict(first.off_hours), {"five_hour": 0.4})  # and outside, up to 40%
         fourth = cfg.pool.get("claude-4")
         self.assertEqual((fourth.schedule.start, fourth.schedule.end), ("03:00", "15:00"))
-        self.assertEqual(dict(fourth.limits.stops), {"five_hour": 0.7, "seven_day": 0.7})
-        self.assertEqual(dict(fourth.off_hours), {"five_hour": 0.5, "seven_day": 0.5})
+        self.assertEqual(dict(fourth.limits.stops), {"five_hour": 0.7})  # no weekly cap
+        self.assertEqual(dict(fourth.off_hours), {"five_hour": 0.5})
+        sixth = cfg.pool.get("claude-6")
+        self.assertEqual(sixth.secret, "CLAUDE_CODE_OAUTH_TOKEN_6")
+        self.assertEqual((sixth.schedule.start, sixth.schedule.end), ("03:00", "15:00"))
+        self.assertEqual(dict(sixth.limits.stops), {"five_hour": 0.7})  # no weekly cap
+        self.assertEqual(dict(sixth.off_hours), {"five_hour": 0.5})
+        first_caps = cfg.pool.get("claude-1")
+        self.assertEqual(dict(first_caps.limits.stops), {"five_hour": 0.98})  # no weekly cap
         self.assertEqual(cfg.max_self_check_rounds, 3)
         self.assertIn("plan", cfg.max_turns)
         self.assertEqual((cfg.pool.max_parallel, cfg.pool.machine_parallel), (10, 6))

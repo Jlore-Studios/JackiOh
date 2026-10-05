@@ -157,14 +157,18 @@ describe("R388 the History section", () => {
 });
 
 describe("R388 the History section over the real history", () => {
-  it("R388 Masochism Mask's history runs from v0.2.10's Animated face through v0.2.0's new cost, (2) Cost to (1) Cost, and ends where it was added", async () => {
+  it("R388 Masochism Mask's history runs from v0.2.10's Animated face — with v0.2.12's removal above it once that patch ships — through v0.2.0's new cost, (2) Cost to (1) Cost, and ends where it was added", async () => {
     const def = CATALOG["core-065"];
     if (def === undefined) throw new Error("expected core-065");
     renderDetail(def);
     openHistory();
     const entries = await screen.findAllByTestId(patchTestid.historyEntry, undefined, SLOW);
+    const versions = entries.map((element) => element.dataset.version);
     // Newest first, and a promotion that touches the Mask prepends (R646): the shipped five are the tail.
-    expect(entries.map((element) => element.dataset.version).slice(-5)).toEqual(["v0.2.10", "v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0"]);
+    expect(versions.slice(-5)).toEqual(["v0.2.10", "v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0"]);
+    // Issue #218's v0.2.12 removes the Mask's Animated face: pending today as a fragment, once
+    // promoted its entry sits above the v0.2.10 one it undoes.
+    if (versions.includes("v0.2.12")) expect(versions.indexOf("v0.2.12")).toBeLessThan(versions.indexOf("v0.2.10"));
     const cost = within(entry("v0.2.0")).getAllByTestId(patchTestid.change).find((line) => line.dataset.field === "cost");
     expect(cost).toHaveTextContent("(2) Cost → becomes (1) Cost");
     expect(entry("v0.1.0").dataset.kind).toBe("added");
