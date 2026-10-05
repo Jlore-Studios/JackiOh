@@ -9,8 +9,8 @@
 // turn's own draw (§2.2, R62), so it is the turn's first draw and the turn's own draw is the one a
 // limit of 1 stops.
 
-import { drawsThisTurn, reduce, stepParam, type GameState } from "@jackioh/engine";
-import type { Action, GameEvent, PlayerId } from "@jackioh/shared";
+import { drawsThisTurn, stepParam, type GameState } from "@jackioh/engine";
+import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { base, def, radiant } from "../../src/scripts/classic/058-common-resources";
 import { scenario, type Scenario } from "../_harness";
@@ -109,36 +109,27 @@ describe("C #58 Common Resources", () => {
       expect(s.lastEvents.some((event) => event.type === "damage" && event.targetId === "hero-p1" && event.amount === 1)).toBe(true);
     });
 
-    it("R58 R549 §9.3 a cast on draw that asks is yours to answer, its repeat draws from your own deck, and the answer finishes the turn after a JSON round trip", () => {
+    it("R58 R549 §9.3 a cast on draw is yours either way: no prompt, its repeat draws from your own deck, and the turn finishes after a JSON round trip", () => {
       const s = waiting({ p1Hand: [FILLER, VANILLA], p2Library: [VANILLA, MENACE, HINDER] });
       s.endTurn();
-      const pending = s.state.pending;
-      expect(pending).toMatchObject({ playerId: "p1", kind: "hand" });
-      const discard = s.hand("p1").find((card) => card.defId === VANILLA);
+      // R661: the cast's discard is random, so no prompt opens and the turn just finishes.
+      expect(s.state.pending).toBeNull();
       const round = JSON.parse(JSON.stringify(s.state)) as GameState;
-      const action: Action = {
-        type: "answer",
-        playerId: "p1",
-        nonce: "c58-round-trip",
-        choiceId: pending?.id ?? "",
-        selection: [{ pick: "instance", instanceId: discard?.id ?? "" }],
-      };
-      const live = reduce(s.state, action);
-      const revived = reduce(round, action);
-      expect(live.error).toBeUndefined();
-      expect(revived.state).toEqual(live.state);
-      // R70, R81: the cast's declared discard was asked as the cast began; answered, it is p1's play.
-      expect(live.events.find((event) => event.type === "cardPlayed" && event.defId === HINDER)).toMatchObject({ player: "p1" });
-      const p1 = live.state.players.p1;
+      expect(round).toEqual(s.state);
+      // R70: the cast resolved as p1's play without asking.
+      expect(s.events.find((event) => event.type === "cardPlayed" && event.defId === HINDER)).toMatchObject({ player: "p1" });
+      const p1 = s.state.players.p1;
+      const survivor = p1.hand.find((card) => card.defId === FILLER || card.defId === VANILLA)?.defId;
+      const victim = survivor === FILLER ? VANILLA : FILLER;
       expect(p1.graveyard.map((card) => [card.defId, card.owner])).toEqual([
-        [VANILLA, "p1"],
+        [victim, "p1"],
         [HINDER, "p1"],
       ]);
       // §2.4's repeat of the draw and the turn's own draw are p1's own draws, from p1's deck: only the
       // one bottom card left p2's deck.
-      expect(live.state.players.p2.library.map((card) => card.defId)).toEqual([VANILLA, MENACE]);
-      expect(p1.hand.map((card) => card.defId)).toEqual([FILLER, STOCKPILE, STOCKPILE]);
-      expect(live.state.pending).toBeNull();
+      expect(s.state.players.p2.library.map((card) => card.defId)).toEqual([VANILLA, MENACE]);
+      expect(p1.hand.map((card) => card.defId)).toEqual([survivor, STOCKPILE, STOCKPILE]);
+      expect(s.state.pending).toBeNull();
     });
 
     it("§10.1 it is your draw in your per-turn count: with the turn's own draw it sets off C #9 Income Tax", () => {

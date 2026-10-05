@@ -31,6 +31,8 @@ function bookWorm(radiant: boolean): Script {
     death: (ctx) => [
       addRandomFromCatalog({ query: { tags: ["Book"] }, count: tokensOnSelf(ctx), ...(radiant ? { radiant } : {}) }),
     ],
+    // R280: the tokens stacked on itself are the Books its Death would add — the public count.
+    preview: (ctx) => [{ label: "Plague Token", value: tokensOnSelf(ctx) }],
   };
 }
 

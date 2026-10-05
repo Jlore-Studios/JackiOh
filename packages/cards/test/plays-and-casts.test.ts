@@ -139,8 +139,9 @@ describe("R70: a cast-on-draw card is cast through §10.5's steps, and is whole 
     // p1 plays /fullsend (this turn "your cards gain 'Combo: draw 1'"), then Mr. Vanilla: 1 card
     // played earlier, so Mr. Vanilla's granted Combo draws — Hinder, which casts itself. The cast is
     // a play for every rule that counts or reacts to plays, Combo named first (R70), with 2 cards
-    // played earlier this turn, so Hinder's granted Combo draws 1 (a Reno); then the cast-on-draw
-    // draw repeats (§2.4) and brings a second Reno.
+    // played earlier this turn, so Hinder's granted Combo draws 1 (a Reno). The Cry's random
+    // discard (R661) resolves after that draw, so it eats the Reno; then the cast-on-draw draw
+    // repeats (§2.4) and brings a second Reno, the one card left standing.
     const g = scenario({
       // The Radiant /fullsend: the face that grants "Combo: Draw 1" since patch v0.1.1.
       p1: { hand: [{ def: FULLSEND, radiant: true }, VANILLA], library: [HINDER, RENO, RENO, RENO, RENO] },
@@ -152,7 +153,7 @@ describe("R70: a cast-on-draw card is cast through §10.5's steps, and is whole 
 
     expect(g.state.players.p1.turnLog.cardsPlayed).toBe(3);
     g.expectInZone(HINDER, "graveyard");
-    expect(g.hand("p1").filter((card) => card.defId === RENO)).toHaveLength(2);
+    expect(g.hand("p1").filter((card) => card.defId === RENO)).toHaveLength(1);
     expect(g.pile("p1", "library")).toHaveLength(2);
   });
 });

@@ -2,7 +2,7 @@
 // 5, and the drawn card costs (0) (`costOverride` 0); amount and draw read through `param()`; radiant 10
 // and 10, draw 2, and each drawn card costs (0)".
 
-import { hashState, reduce, stepParam, type GameState } from "@jackioh/engine";
+import { hashState, stepParam, type GameState } from "@jackioh/engine";
 import type { Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
@@ -11,7 +11,7 @@ import { base, def, radiant } from "../../src/scripts/classic-plus/065-3-large-g
 const GRAPE = "classicplus-065-3";
 const FILLER = "core-005";
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt
-const HINDER = "core-021"; // Cast on draw; base face asks its caster to discard 1
+const HINDER = "core-021"; // Cast on draw; base face makes its caster discard 1 at random (R661)
 const SOLARIUS = "classicplus-038"; // Spell Damage +2
 const DECK_A = "core-043"; // (4) Unit, Big Felinor
 const DECK_B = "core-025"; // (4) Unit
@@ -122,18 +122,21 @@ describe("C+ #65.3 Large Grape", () => {
       s.expectHealth("p1", 40);
     });
 
-    it("R113 a cast-on-draw prompt pauses the second draw; after a JSON round trip the answer prices it (0)", () => {
+    it("R58 a cast-on-draw card casts free with no prompt (R661); its chain's repeat brings no price, the grape's own draw does", () => {
       const s = scenario({ p1: { hand: [RADIANT, FILLER], library: [HINDER, DECK_A, DECK_B] }, p2: { hand: [FILLER] } });
       s.play(GRAPE, { targets: [{ pick: "hero", player: "p2" }] });
-      expect(s.state.pending?.kind).toBe("hand");
+      // Base Hinder's discard is random (R661): no prompt opens mid-list.
+      expect(s.state.pending).toBeNull();
       const revived = JSON.parse(JSON.stringify(s.state)) as GameState;
-      const filler = s.hand("p1").find((card) => card.defId === FILLER);
-      const selection = [{ pick: "instance" as const, instanceId: filler?.id ?? "" }];
-      const resumed = reduce(revived, { type: "answer", playerId: "p1", choiceId: revived.pending?.id ?? "", selection, nonce: "large-pause" });
-      expect(resumed.error).toBeUndefined();
-      s.answer(selection);
-      expect(hashState(resumed.state)).toBe(hashState(s.state));
+      expect(revived).toEqual(s.state);
+      expect(hashState(revived)).toBe(hashState(s.state));
+      // Hinder was cast (no price) and discarded the one card held; its chain's repeat brought
+      // DECK_A (no price, R596); the grape's own second draw brought DECK_B, priced (0).
+      expect(s.card(HINDER).zone.z).toBe("graveyard");
+      expect(s.card(FILLER).zone.z).toBe("graveyard");
+      expect(s.card(DECK_A).zone.z).toBe("hand");
       expect(s.card(DECK_A).costOverride).toBeUndefined();
+      expect(s.card(DECK_B).zone.z).toBe("hand");
       expect(s.card(DECK_B).costOverride).toBe(0);
     });
   });

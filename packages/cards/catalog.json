@@ -4786,14 +4786,14 @@
         "min": 1
       }
     ],
-    "loc": 7,
+    "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Deal {damage} damage."
+      "text": "Deal {damage} damage.\nEnd of turn: Become a different Book."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {damage} damage."
+      "text": "Deal {damage} damage.\nEnd of turn: Become a different Radiant Book."
     }
   },
   "classic-056": {

@@ -19,6 +19,7 @@ const STOCKPILE = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
 const REPLENISH = "core-010"; // (0) Spell
 const SHREDDER = "core-013"; // (3) Unit: End of turn: deal 2 damage to each enemy Unit and the enemy hero.
 const HINDER = "core-021"; // (0) Spell, cast on draw
+const SCARAB = "core-007"; // (1) Unit: Cry: Discover a (2) Cost card
 const HIT_JOB = "core-016"; // Spell: destroy a target Unit
 
 function trap(radiantFace = false, lane = 2): { def: string; radiant: boolean; faceUp: boolean; lane: number } {
@@ -99,18 +100,27 @@ describe("T-AI-8 Rate Limit", () => {
     });
 
     it("R158 R456 a 3rd play that asks pauses the end: answered after a JSON round trip, the play finishes and then the turn ends", () => {
-      // Stockpile's draw casts a base Hinder, their 3rd play, which asks them to discard (R431).
-      const s = setup({}, { library: [HINDER, VANILLA, VANILLA, VANILLA] });
-      s.play(VANILLA, { zone: 1 }).play(STOCKPILE);
-      expect(s.state.pending?.kind).toBe("hand");
+      // The 3rd play is Scarab, whose Cry Discovers: the question pauses the turn the trap already
+      // ended. (Base Hinder used to be the asker here; since R661 its discard is random, so a draw
+      // that casts it asks nothing.)
+      const s = setup({}, { hand: [VANILLA, REPLENISH, SCARAB, VANILLA] });
+      s.play(VANILLA, { zone: 1 }).play(REPLENISH).play(SCARAB, { zone: 2 });
+      expect(s.state.pending?.kind).toBe("discover");
       expect(s.state.active).toBe("p2");
       const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
       expect(hashState(thawed)).toBe(hashState(s.state));
-      const discard = s.hand("p2").find((card) => card.defId === VANILLA)?.id ?? "";
+      // The offered def ids read out of the view (§10.8), like #7's own test does: the raw state
+      // options carry only the key and the selection to send back.
+      const seen = s.view("p2").pending;
+      if (seen === null || !seen.forYou) throw new Error("no Discover open for p2");
+      const offeredId = seen.options[0]?.defId;
+      if (offeredId === undefined) throw new Error("no Discover option");
+      const selection = s.state.pending?.options[0]?.selection;
+      if (selection === undefined) throw new Error("no selection to send back");
       const answer = {
         type: "answer",
         choiceId: s.state.pending?.id ?? "",
-        selection: [{ pick: "instance", instanceId: discard }],
+        selection: [selection],
         playerId: "p2",
         nonce: "rate-limit-pause",
       } as Action;
@@ -118,10 +128,10 @@ describe("T-AI-8 Rate Limit", () => {
       const frozen = reduce(thawed, answer);
       expect(live.error).toBeUndefined();
       expect(hashState(frozen.state)).toBe(hashState(live.state));
-      s.answer(discard);
-      s.expectInZone(RATE_LIMIT, "graveyard").expectInZone(discard, "graveyard");
-      // Stockpile's heal landed before the turn ended.
-      s.expectHealth("p2", 32);
+      s.answer([selection]);
+      s.expectInZone(RATE_LIMIT, "graveyard");
+      // Scarab resolved after the answer: its Discover added the offered (2) Cost card to their hand.
+      expect(s.hand("p2").some((card) => card.defId === offeredId)).toBe(true);
       expect(s.state.active).toBe("p1");
       s.expectEvents("cardResolved", "turnCutShort", "turnEnded");
     });

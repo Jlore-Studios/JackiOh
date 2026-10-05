@@ -632,12 +632,14 @@ describe("C #22 Mid Runner lights up in hand while your mana reaches its thresho
   }
 
   for (const face of ["base", "radiant"] as const) {
-    it(`R195 ${face}: with 4 mana it glows in hand, and played now it bounces two`, () => {
+    // Base bounces 2, Radiant 3 (balance patch 1, issue #88).
+    const count = face === "radiant" ? 3 : 2;
+    it(`R195 ${face}: with 4 mana it glows in hand, and played now it bounces ${count === 3 ? "three" : "two"}`, () => {
       const s = scenario({ p1: { hand: [{ def: RUNNER, radiant: face === "radiant" }, ANCHOR] }, p2: { hand: [ANCHOR], field: TARGETS } });
 
       expect(handGlows(s, nth(copiesInHand(s, RUNNER), 0))).toBe(true);
       s.play(RUNNER, { zone: 1 });
-      expect(bounces(s)).toBe(2);
+      expect(bounces(s)).toBe(count);
     });
 
     it(`R195 ${face}: with 3 mana it does not glow, and played now it bounces nothing`, () => {

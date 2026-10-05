@@ -278,7 +278,7 @@
 .prompt-title-source {
   display: block;
   color: #f3e3b3;
-  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-family: var(--font-display);
   font-size: 17px;
   font-weight: 700;
 }
@@ -403,7 +403,7 @@
   border-radius: 8px;
   background: linear-gradient(180deg, #f4e7c8 0%, #ead8b0 100%);
   color: #2b1800;
-  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-family: var(--font-display);
   font-size: 17px;
   font-weight: 500;
   line-height: 1.45;
@@ -447,7 +447,7 @@
   max-width: none;
   margin: 0;
   color: #ffd24a;
-  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-family: var(--font-display);
   font-size: 22px;
   font-weight: 800;
   text-align: center;
