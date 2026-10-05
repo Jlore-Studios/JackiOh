@@ -2127,7 +2127,9 @@
     },
     "324": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:6004021990"
+      ],
       "ci_fixes": 1,
       "ci_reruns": {
         "caa36ac0d05f4db84bc67eb986e18a0223b8f57d": 1
@@ -2175,9 +2177,7 @@
       "source": "request",
       "started_at": "2026-10-05T22:13:17Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6004021990"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
