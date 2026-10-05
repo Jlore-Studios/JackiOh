@@ -4041,6 +4041,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+<<<<<<< HEAD
   // Proved by packages/cards/test/catalog.test.ts "R661 …": the family table holds its one rarity
   // for every member, the fifteen cards the pass moved carry their new rarities, and the bigger
   // version of an effect never sits lower; `patches check` claims the pass's rows too.
@@ -4059,6 +4060,18 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // is added where the result would be (0).
   it("R663 sets the base cost of the Pocket Chaos a cast one adds", () => {
     provenIn(663, "../../cards/test/087-pocket-chaos.test.ts");
+=======
+  // Proved by counterWarning.test.ts "R667 …" (fixture counters: who is warned, never a Trap, a hand
+  // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
+  // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
+  it("R667 a hand card the field would counter at every price carries a warning on its own seat", () => {
+    provenIn(
+      667,
+      "counterWarning.test.ts",
+      "../../cards/test/classic/087-plague-chalice.test.ts",
+      "../../../apps/web/src/game/countered.test.tsx",
+    );
+>>>>>>> origin/main
   });
 
   // Proved by the card's own test, cards/test/classic/055-book-of-wildfire.test.ts "R671 …": the swap
@@ -4066,6 +4079,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // became swapping on, Temporary kept, and the end of turn replaying exactly.
   it("R671 Book of Wildfire becomes a different Book at the end of its owner's turn, and the Book keeps swapping", () => {
     provenIn(671, "../../cards/test/classic/055-book-of-wildfire.test.ts");
+  });
+
+  // Proved by playChoices.test.ts "R703 …" (a needed pick the board cannot satisfy is neither
+  // offered nor accepted, a plain one still plays, and a cast fizzles) and Plastic Surgery's own test
+  // (both faces, either side, and the cast).
+  it("R703 a play is refused, and never offered, while a pick it needs has no legal option", () => {
+    provenIn(703, "playChoices.test.ts", "../../cards/test/063-plastic-surgery.test.ts");
   });
 });
 

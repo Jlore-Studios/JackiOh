@@ -29,6 +29,12 @@ export type CardView = {
    */
   conditionActive?: true;
   /**
+   * R667, §10.8: Classic #87 Plague Chalice's warning. Present, and `true`, only on the viewer's own
+   * hand card that a card on the field the viewer may read would counter at every price it could be
+   * played at now. Absent otherwise: never `false`, never on the opponent's cards.
+   */
+  counteredOnPlay?: true;
+  /**
    * R280, §10.8: what the card's formula comes to now, one entry per labelled number its script's
    * `preview` hook returns — the label the formula as the running face prints it, the value what it
    * would come to if the card resolved now. Only on a card view the viewer may read: its own hand, a
