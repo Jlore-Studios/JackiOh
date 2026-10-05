@@ -1,5 +1,5 @@
 // Which free practice game this device left in progress, so a reload or a closed tab picks it up
-// again (SPEC §9.9, R662).
+// again (SPEC §9.9, R668).
 //
 // The game itself is the worker's to keep (`saveStore.ts`): its log names the AI's hidden cards, so
 // it never reaches the page (rule 7). The page keeps only the setup it chose itself, the seed, seat,
@@ -7,7 +7,7 @@
 // while it folds. The controller writes it when a free game starts and clears it when the game
 // ends; the route clears it when the player leaves the game. Storage is untrusted and may be
 // missing: a read that throws or finds anything malformed is no game, and a write that throws
-// leaves the player at the setup after a reload, as before R662.
+// leaves the player at the setup after a reload, as before R668.
 
 import { DIFFICULTIES } from "@jackioh/engine/config";
 

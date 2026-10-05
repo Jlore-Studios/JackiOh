@@ -1,4 +1,4 @@
-// R662: the setup of the free game this device left in progress (resume.ts), read as untrusted input.
+// R668: the setup of the free game this device left in progress (resume.ts), read as untrusted input.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -17,8 +17,8 @@ const CONFIG: PracticeStartConfig = {
   deck: { kind: "saved", index: 2, cards: ["core-001"] },
 };
 
-describe("R662 the practice game to resume, on the device", () => {
-  it("R662 keeps the setup only (no last board), and clears", () => {
+describe("R668 the practice game to resume, on the device", () => {
+  it("R668 keeps the setup only (no last board), and clears", () => {
     expect(readPracticeResume()).toBeNull();
     writePracticeResume({ ...CONFIG, lastBoard: [{ defId: "core-008", radiant: false }] });
     expect(readPracticeResume()).toEqual(CONFIG);
@@ -26,13 +26,13 @@ describe("R662 the practice game to resume, on the device", () => {
     expect(readPracticeResume()).toBeNull();
   });
 
-  it("R662 a lesson is never remembered: writing one forgets the free game", () => {
+  it("R668 a lesson is never remembered: writing one forgets the free game", () => {
     writePracticeResume(CONFIG);
     writePracticeResume({ ...CONFIG, lesson: "basics" });
     expect(readPracticeResume()).toBeNull();
   });
 
-  it("R662 reads anything malformed as no game", () => {
+  it("R668 reads anything malformed as no game", () => {
     for (const raw of [
       "{not json",
       "null",
@@ -46,7 +46,7 @@ describe("R662 the practice game to resume, on the device", () => {
     }
   });
 
-  it("R662 storage that throws is no game, and a refused write throws nothing", () => {
+  it("R668 storage that throws is no game, and a refused write throws nothing", () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new Error("blocked");
     });

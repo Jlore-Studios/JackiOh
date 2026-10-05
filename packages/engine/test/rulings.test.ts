@@ -4003,6 +4003,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(656, "effects-cast.test.ts");
   });
 
+  // Proved by engine animated.test.ts "R657 …" (a stat-less Animated card animates to 0/1, printed or
+  // granted, on either face).
+  it("R657 an Animated card with no printed stats fights as a 0/1", () => {
+    provenIn(657, "animated.test.ts");
+  });
+
   // Proved by apps/web test/ux/drag-continue.test.tsx "R658 …" (a second drag from a pick, a backrow
   // card dropped on the board, a prompt option dragged out of its panel) and test/ux/drag-model.test.ts
   // "R658 …" (the plans and the drops).
@@ -4014,14 +4020,29 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
-  // Proved by apps/web practice/core.test.ts "R662 …" (the save, the fold to the same hash and AI
-  // stream, the refusals, no lesson kept), saveStore.test.ts and resume.test.ts "R662 …" (the
-  // worker's store and the page's setup as untrusted storage), and routes/practice.test.tsx "R662 …"
+  // Proved by packages/cards/test/flavour.test.ts "R660 …" (the sidecar's keys, coverage, fields and
+  // caps), apps/web cards/flavour.test.tsx "R660 …" (no rules words; the preview, the sheet and the
+  // detail show it, the face and an unnamed card never), routes/almanac.test.tsx "R660 …" (the
+  // Almanac's detail), and cards/art/convention.test.ts "R660 …" (the art directory and the manifest
+  // against the convention, and each refusal).
+  it("R660 flavour and artist credits are a sidecar shown in inspect, and real art meets one file convention", () => {
+    provenIn(
+      660,
+      "../../cards/test/flavour.test.ts",
+      "../../../apps/web/src/cards/flavour.test.tsx",
+      "../../../apps/web/src/routes/almanac.test.tsx",
+      "../../../apps/web/src/cards/art/convention.test.ts",
+    );
+  });
+
+  // Proved by apps/web practice/core.test.ts "R668 …" (the save, the fold to the same hash and AI
+  // stream, the refusals, no lesson kept), saveStore.test.ts and resume.test.ts "R668 …" (the
+  // worker's store and the page's setup as untrusted storage), and routes/practice.test.tsx "R668 …"
   // (the resume on a visit, a URL winning, leaving giving it up, the unload prompt for a lesson only,
   // and a reload on the real core).
-  it("R662 keeps a free practice game in the worker and folds it back after a reload", () => {
+  it("R668 keeps a free practice game in the worker and folds it back after a reload", () => {
     provenIn(
-      662,
+      668,
       "../../../apps/web/src/practice/core.test.ts",
       "../../../apps/web/src/practice/saveStore.test.ts",
       "../../../apps/web/src/practice/resume.test.ts",

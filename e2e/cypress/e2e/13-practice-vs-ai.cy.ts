@@ -549,7 +549,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
 
     expectNoServer();
   });
-  it("R662 a reload in the middle of a game picks it up on the same state", () => {
+  it("R668 a reload in the middle of a game picks it up on the same state", () => {
     visitPractice(practiceUrl(`${SEED}:reload`, "medium", "p2"), { reducedMotion: true });
     cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-difficulty", "medium");
     keepWholeHand();
@@ -562,7 +562,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
       .then((before) => {
         expect(before.log.some((action) => action.playerId === "p1"), "the AI acted").to.eq(true);
 
-        // No parameter that starts a game: the page asks the worker for the game it kept (R662).
+        // No parameter that starts a game: the page asks the worker for the game it kept (R668).
         visitPractice("/practice?pace=fast");
         cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT })
           .should("have.attr", "data-difficulty", "medium")

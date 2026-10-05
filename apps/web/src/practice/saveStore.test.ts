@@ -1,4 +1,4 @@
-// R662: the worker's store for a free game in progress (saveStore.ts), against a minimal IndexedDB
+// R668: the worker's store for a free game in progress (saveStore.ts), against a minimal IndexedDB
 // fake (jsdom has none): the read at boot, writes mirrored in order, and storage that fails.
 
 import { describe, expect, it } from "vitest";
@@ -70,8 +70,8 @@ function macrotasks(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 5));
 }
 
-describe("R662 the practice worker's save store", () => {
-  it("R662 memory keeps what is written until it is cleared", async () => {
+describe("R668 the practice worker's save store", () => {
+  it("R668 memory keeps what is written until it is cleared", async () => {
     const store = memorySaveStore();
     await store.ready;
     expect(store.read()).toBeNull();
@@ -81,7 +81,7 @@ describe("R662 the practice worker's save store", () => {
     expect(store.read()).toBeNull();
   });
 
-  it("R662 IndexedDB: a write outlives the store, and the next store reads it at boot", async () => {
+  it("R668 IndexedDB: a write outlives the store, and the next store reads it at boot", async () => {
     const idb = fakeIndexedDb();
     const first = indexedDbSaveStore(idb.factory);
     await first.ready;
@@ -104,7 +104,7 @@ describe("R662 the practice worker's save store", () => {
     expect(third.read()).toBeNull();
   });
 
-  it("R662 a malformed row is no save, and a database that will not open is memory only", async () => {
+  it("R668 a malformed row is no save, and a database that will not open is memory only", async () => {
     const idb = fakeIndexedDb();
     const boot = indexedDbSaveStore(idb.factory);
     await boot.ready;

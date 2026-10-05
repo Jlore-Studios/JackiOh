@@ -106,8 +106,8 @@ class BuilderTests(unittest.TestCase):
     def test_a_hard_item_takes_a_strong_model_only(self):
         gh = FakeGitHub()
         ctx = ctx_for(gh)
-        busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("claude-5", 70),
-             ("claude-2", 53))
+        busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("claude-6", 71),
+             ("claude-5", 70), ("claude-2", 53))
         queue(gh, ctx, 3, HARD)
         planned = plan_mod.make(ctx)
         self.assertEqual(planned["action"], "none")  # agy, muse and gpt are free, and medium
@@ -115,11 +115,12 @@ class BuilderTests(unittest.TestCase):
 
     def test_the_usage_order(self):
         """For easy items Devin first while it has a lane (`easy_first`); then claude-3, then
-        claude-1, then claude-4 and claude-5, then the medium models (Muse on both its lanes), and
-        claude-2 builds only after all of them (`build_last`)."""
+        claude-1, then claude-4, claude-6 and claude-5 last of the Claude accounts, then the
+        medium models (Muse on both its lanes), and claude-2 builds only after all of them
+        (`build_last`)."""
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
-        for number in range(3, 13):
+        for number in range(3, 14):
             queue(gh, ctx, number, EASY)
             ctx.store.update(lambda s, n=number: state_item(s, n).update(
                 queued_at=f"2026-09-{n + 10:02d}T00:00:00Z"))
@@ -129,7 +130,7 @@ class BuilderTests(unittest.TestCase):
                                                          dataclasses.replace(ctx.cfg.pool.get(
                                                              "devin"), lanes=1)})))
         order = []
-        for _ in range(10):
+        for _ in range(11):
             planned = plan_mod.make(ctx)
             if planned["action"] == "none":
                 break
@@ -139,7 +140,8 @@ class BuilderTests(unittest.TestCase):
             order.append((planned["provider"], seats(planned)["build"][1]))
         self.assertEqual(order, [("devin", "swe-2-max"), ("claude-3", "sonnet"),
                                  ("claude-1", "sonnet"), ("claude-4", "opus"),
-                                 ("claude-5", "opus"), ("agy", "gemini-3.8-flash-high"),
+                                 ("claude-6", "opus"), ("claude-5", "opus"),
+                                 ("agy", "gemini-3.8-flash-high"),
                                  ("muse", "muse-spark-1.3-contributor"),
                                  ("muse", "muse-spark-1.3-contributor"),
                                  ("gpt", "gpt-5.6-terra"), ("claude-2", "opus")])
@@ -155,8 +157,8 @@ class BuilderTests(unittest.TestCase):
         # (build_last, kept for planning and review) stays free.
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
-        busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("claude-5", 70),
-             ("agy", 53))
+        busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("claude-6", 71),
+             ("claude-5", 70), ("agy", 53))
         ctx = make_ctx(gh, at=NIGHT, cfg=dataclasses.replace(
             ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20, machine_parallel=20)))
         busy(gh, ctx, ("muse", 54), ("muse", 62), ("gpt", 55))  # Muse has two lanes
@@ -176,8 +178,8 @@ class BuilderTests(unittest.TestCase):
         ctx = ctx_for(gh, machine=ALL_MACHINE)
         ctx = make_ctx(gh, at=NIGHT, cfg=dataclasses.replace(
             ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20, machine_parallel=20)))
-        busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("claude-5", 70),
-             ("agy", 53), ("muse", 54), ("muse", 56), ("gpt", 55))
+        busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("claude-6", 71),
+             ("claude-5", 70), ("agy", 53), ("muse", 54), ("muse", 56), ("gpt", 55))
         queue(gh, ctx, 3, MEDIUM)
         self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-2", "opus", "strong"))
 

@@ -152,7 +152,7 @@ type HostOptions = {
   holdAiSteps?: boolean;
   /** How the setup's `catalog` request is answered: with FAKE_DEFS (the default) or `failed`. */
   catalog?: "answer" | "fail";
-  /** R662: how `resume` is answered: as `started` (the default), or `failed` when the save does not fold. */
+  /** R668: how `resume` is answered: as `started` (the default), or `failed` when the save does not fold. */
   resume?: "started" | "failed";
 };
 
@@ -1250,7 +1250,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     expect(window.location.pathname).toBe("/");
   });
 
-  it("R662 a reload or a closed tab asks first while a lesson is on, and not for a free game (it is saved), at setup or once it is over", async () => {
+  it("R668 a reload or a closed tab asks first while a lesson is on, and not for a free game (it is saved), at setup or once it is over", async () => {
     function unloadIsCancelled(): boolean {
       const event = new Event("beforeunload", { cancelable: true });
       window.dispatchEvent(event);
@@ -1284,17 +1284,17 @@ describe("B33 starting renders the game under the practice HUD", () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// R662: a free game in progress comes back after a reload
+// R668: a free game in progress comes back after a reload
 // ---------------------------------------------------------------------------------------------
 
-describe("R662 resuming a practice game after a reload", () => {
+describe("R668 resuming a practice game after a reload", () => {
   const LEFT: PracticeStartConfig = { seed: "resume1", difficulty: "hard", humanSeat: "p2", deck: { kind: "random" } };
 
   function keep(config: PracticeStartConfig): void {
     window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify(config));
   }
 
-  it("R662 with no params that start a game, the game this device left is asked back as resume and shows", async () => {
+  it("R668 with no params that start a game, the game this device left is asked back as resume and shows", async () => {
     keep(LEFT);
     const host = routeHost();
     renderRoute(host);
@@ -1306,7 +1306,7 @@ describe("R662 resuming a practice game after a reload", () => {
     expect(readPracticeResume(), "still the game to come back to").toEqual(LEFT);
   });
 
-  it("R662 a URL that starts a game wins over the one left, and replaces it", async () => {
+  it("R668 a URL that starts a game wins over the one left, and replaces it", async () => {
     keep(LEFT);
     visit("?seed=url1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost();
@@ -1317,7 +1317,7 @@ describe("R662 resuming a practice game after a reload", () => {
     expect(readPracticeResume()).toEqual({ seed: "url1", difficulty: "easy", humanSeat: "p1", deck: { kind: "random" } });
   });
 
-  it("R662 a game the worker cannot bring back is forgotten, and the player lands on the setup", async () => {
+  it("R668 a game the worker cannot bring back is forgotten, and the player lands on the setup", async () => {
     keep(LEFT);
     renderRoute(routeHost({ resume: "failed" }));
     expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
@@ -1325,7 +1325,7 @@ describe("R662 resuming a practice game after a reload", () => {
     expect(readPracticeResume()).toBeNull();
   });
 
-  it("R662 leaving the game through New game gives it up", async () => {
+  it("R668 leaving the game through New game gives it up", async () => {
     keep(LEFT);
     renderRoute(routeHost());
     await screen.findByTestId(T.hud);
@@ -1335,7 +1335,7 @@ describe("R662 resuming a practice game after a reload", () => {
     expect(readPracticeResume()).toBeNull();
   });
 
-  it("R662 leaving through Menu gives it up too, and a finished game is not kept", async () => {
+  it("R668 leaving through Menu gives it up too, and a finished game is not kept", async () => {
     keep(LEFT);
     renderRoute(routeHost());
     await screen.findByTestId(T.hud);
@@ -1473,7 +1473,7 @@ describe("Surface: the setup is remembered, and the pacing follows ?pace and red
       deck: "preset:humans",
     });
 
-    // Leave the game, so the next visit opens on the setup rather than resuming it (R662).
+    // Leave the game, so the next visit opens on the setup rather than resuming it (R668).
     fireEvent.click(screen.getByTestId(T.newGame));
     fireEvent.click(await screen.findByTestId(T.leaveConfirm));
     cleanup();
@@ -1822,7 +1822,7 @@ describe("R265 the practice mulligan: the human and the AI answer in either orde
     expect(screen.queryByTestId(`hand-card-${returned}`), "the returned card went back").toBeNull();
   });
 
-  it("R662 a reload in the middle of a free game picks it up on the same state, against the real core", { timeout: 60_000 }, async () => {
+  it("R668 a reload in the middle of a free game picks it up on the same state, against the real core", { timeout: 60_000 }, async () => {
     // The worker's IndexedDB outlives the page; here one store outlives the first host.
     const saves = memorySaveStore();
     const host = (): PracticeHost =>

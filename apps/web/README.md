@@ -33,7 +33,10 @@ src/
                         rolled power, R243, what a formula comes to now, R280) and inPlay.ts's words (#98's
                         power, ??? for Call to Chaos); with no `inPlay` it is the collection's printed card.
                         The inspect overlays in play show the printed text beside a face wherever the two
-                        differ (inspect/Printed.tsx). RulesText draws every face's text with its marks: a
+                        differ (inspect/Printed.tsx), and a card's flavour line and artist credit from
+                        `@jackioh/cards/flavour.json` under the glossary (flavour.ts, inspect/Flavour.tsx,
+                        R660). Real art follows art/ART.md, which art/convention.test.ts holds
+                        public/art/ and art/manifest.ts to. RulesText draws every face's text with its marks: a
                         Radiant face's changes in gold (radiantDiff.ts, R277), the cards its `refs` name as
                         references (refs.ts, CardRef.tsx, refContext.tsx, R279; the hover preview's
                         "Mentions" column is inspect/References.tsx), and "{n}" values (R280). A card's marks
@@ -316,9 +319,9 @@ src/practice/
   decks.ts            random, the three named practice decks (hand-built lists), the account's saved decks by name
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
                       `jackioh.practice.lastBoard`, try/catch
-  saveStore.ts        the worker's save of a free game in progress (R662): config, log, AI cursor,
+  saveStore.ts        the worker's save of a free game in progress (R668): config, log, AI cursor,
                       catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom)
-  resume.ts           the page's half (R662): only the setup it chose, in localStorage
+  resume.ts           the page's half (R668): only the setup it chose, in localStorage
                       `jackioh.practice.game`, try/catch
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
   ModifierList.tsx    every live R169 modifier in full, one tap from the HUD
@@ -330,7 +333,7 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
   engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
-- A free game in progress survives a reload (R662). After every answer the core writes its save
+- A free game in progress survives a reload (R668). After every answer the core writes its save
   to the worker's store, which never crosses to the page (the log names the AI's hidden cards); the
   controller remembers the setup when the game is dealt and forgets it when the game ends, and the
   route forgets it when the player leaves. A visit with no parameter that starts a game sends

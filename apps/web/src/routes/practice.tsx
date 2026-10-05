@@ -23,7 +23,7 @@
 //   ?pace=fast            e2e pacing, honoured only outside a production build
 //
 // With none of the params that start a game, a free game left in progress on this device (a reload,
-// a closed tab) picks up where it was (R662, `practice/resume.ts`); one that starts a game discards it.
+// a closed tab) picks up where it was (R668, `practice/resume.ts`); one that starts a game discards it.
 
 import {
   useCallback,
@@ -488,7 +488,7 @@ function PracticeScreen({
   }, [params]);
 
   /**
-   * R662: the free game this device left in progress, read once; a URL that starts a game wins, and
+   * R668: the free game this device left in progress, read once; a URL that starts a game wins, and
    * that game's own deal replaces it.
    */
   const resumeFrom = useRef<PracticeStartConfig | null>(null);
@@ -534,7 +534,7 @@ function PracticeScreen({
   }, [game]);
 
   const state = useControllerState(controller);
-  // R662: a save the worker will not fold (another catalog, a game that plays differently now) is
+  // R668: a save the worker will not fold (another catalog, a game that plays differently now) is
   // no game to show a failure for: the player lands on the setup, as on a fresh visit.
   // A failure later in the resumed game, with a board already shown, is reported like any other.
   const resumeFailed = state.phase === "failed" && state.snapshot === null && game !== null && resumeFrom.current === game;
@@ -609,7 +609,7 @@ function PracticeScreen({
     setLeaveAskedFor(null);
   }, []);
 
-  // Leaving a game gives it up (R662): no reload brings it back.
+  // Leaving a game gives it up (R668): no reload brings it back.
   const onNewGame = useCallback(() => {
     setLeaveAskedFor(null);
     clearPracticeResume();
@@ -642,7 +642,7 @@ function PracticeScreen({
     setScrollToSetup(false);
   }, [scrollToSetup, game]);
 
-  // A free game in progress is saved on the device and comes back after a reload (R662), but a
+  // A free game in progress is saved on the device and comes back after a reload (R668), but a
   // lesson is not: its coach reads the game from the deal on, so a reload, a closed tab or a Back
   // that leaves the page would end it without a word, and the browser asks first, as it does for an
   // unsent form. A free game, a finished lesson, the setup and the failure screen let the page go.

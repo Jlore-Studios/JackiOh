@@ -13,7 +13,7 @@
 // (`fold({ seed, decks, handicaps, lastBoards, dealt, log })`, R187, R508, R433). The AI draws from its own stream,
 // `createRng(`${seed}:ai`)`, kept for the whole game; the match rng in state is never touched by it.
 //
-// Resume (R662). The worker dies with the page, so after every answer a free game in progress is
+// Resume (R668). The worker dies with the page, so after every answer a free game in progress is
 // written to the env's save store (`saveStore.ts`, IndexedDB in a worker), as the match actor's log
 // outlives a server restart: the config, the log, the AI stream's cursor, the catalog version and
 // the state's hash. The save never crosses to the page, whose log would name the AI's hidden cards.
@@ -64,7 +64,7 @@ export type PracticeCoreEnv = {
   dev: boolean;
   /** default AI_BUDGET */
   budget?: SearchBudget;
-  /** R662: where a free game in progress is kept; absent, nothing is kept and no resume folds. */
+  /** R668: where a free game in progress is kept; absent, nothing is kept and no resume folds. */
   saves?: PracticeSaveStore;
 };
 
@@ -220,7 +220,7 @@ function snapshotOf(game: PracticeGame): PracticeSnapshot {
 }
 
 /**
- * R662: the save a free game in progress leaves after each answer; none for a lesson (its coach
+ * R668: the save a free game in progress leaves after each answer; none for a lesson (its coach
  * reads the game from its first snapshot on, so a lesson restarts instead) or a finished game.
  */
 function saveOf(game: PracticeGame): PracticeSave | null {
@@ -235,7 +235,7 @@ function saveOf(game: PracticeGame): PracticeSave | null {
 }
 
 /**
- * R662: a save folded back into its game. The log is replayed through `apply`, so every action must
+ * R668: a save folded back into its game. The log is replayed through `apply`, so every action must
  * be accepted under the nonce it was accepted under, and the folded state must hash as it did when
  * saved; a save from another catalog, or one that does not fold to the same game, is refused.
  */

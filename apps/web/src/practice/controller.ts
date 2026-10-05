@@ -70,7 +70,7 @@ export type PracticeController = {
   subscribe(fn: () => void): () => void;
   start(config: PracticeStartConfig): Promise<void>;
   /**
-   * R662: pick up the free game this device left in progress, named by its setup. When the worker
+   * R668: pick up the free game this device left in progress, named by its setup. When the worker
    * has no such game or it does not fold, the device forgets it and the phase goes to "failed", as
    * a start's refusal does.
    */
@@ -195,7 +195,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
 
   function applySnapshot(snapshot: PracticeSnapshot, extra: Partial<PracticeControllerState> = {}): void {
     if (snapshot.view.result !== null) {
-      // R662: a finished game is not resumed.
+      // R668: a finished game is not resumed.
       clearPracticeResume();
       // R508: a finished free game's board becomes the human's last practice board.
       if (snapshot.lastBoard !== undefined) writeLastBoard(snapshot.lastBoard);
@@ -275,7 +275,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
       send(body, (response) => {
         if (!disposed && gen === generation) {
           if (response.type === "started") {
-            // R662: a free game is remembered from its deal on; a lesson's start forgets any.
+            // R668: a free game is remembered from its deal on; a lesson's start forgets any.
             writePracticeResume(config);
             applySnapshot(response.snapshot, { aiSeat: response.aiSeat, defs: response.defs, failure: null });
           } else {
