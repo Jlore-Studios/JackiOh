@@ -501,7 +501,10 @@ class Deliverer:
             return False
         labels = self._labels(number)
         _, tier = self._planner()
-        meets = not tier or providers_mod.tier_at_least(tier, PLAN_FLOOR[self._difficulty(number)])
+        # A plan built from in the same run stands; one that stopped there must meet its floor.
+        planning_only = self.plan.get("action") == "plan" or self.result.get("status") == "planned"
+        meets = (not planning_only or not tier
+                 or providers_mod.tier_at_least(tier, PLAN_FLOOR[self._difficulty(number)]))
         try:
             if meets:
                 if LABEL_NEEDS_PLAN in labels:
