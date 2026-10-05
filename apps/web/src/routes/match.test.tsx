@@ -19,6 +19,12 @@ import { baseView } from "../test/fixtures.ts";
 import { formatClock } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "../game/clockConstants.ts";
 import MatchRoute, { connectionWords, promptHolderOf, withoutToken } from "./match.tsx";
+import { navigate } from "../net/navigate.ts";
+
+vi.mock("../net/navigate.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../net/navigate.ts")>();
+  return { ...actual, navigate: vi.fn() };
+});
 
 class FakeSocket implements SocketLike {
   readyState = 0;
@@ -611,6 +617,143 @@ describe("the match screen's ranks (R604, R612)", () => {
     });
     await act(async () => {});
     expect(screen.queryByTestId("match-ranks")).toBeNull();
+  });
+});
+
+describe("the death screen's rematch offers (R672)", () => {
+  /** A finished game of a series in this status, shaped like the R259 block's answer. */
+  function seriesIn(status: string): Record<string, unknown> {
+    const decks = [0, 1, 2].map((slot) => ({
+      slot,
+      name: `Deck ${String(slot + 1)}`,
+      cards: [],
+      won: false,
+      games: 0,
+    }));
+    return {
+      id: "series-1",
+      status,
+      gameNo: 1,
+      winsNeeded: SERIES_WINS_NEEDED,
+      maxGames: SERIES_MAX_GAMES,
+      pickDeadline: null,
+      now: 0,
+      currentMatchId: "m-1",
+      ranked: true,
+      you: { seat: "p1", wins: 0, trioName: "Main trio", decks, pick: null, autoPick: false },
+      opponent: { wins: 0, decks: decks.map(({ slot }) => ({ slot, won: false })), picked: false },
+      games: [],
+      result: null,
+    };
+  }
+
+  /** `GET /api/matches/m-1/series` answers this series (or none); `/rematch` says the opponent is here. */
+  function stubMatchFetch(series: Record<string, unknown> | null): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () =>
+            Promise.resolve(
+              JSON.stringify(
+                String(url).includes("/api/matches/m-1/rematch")
+                  ? { youOffered: null, opponentOffer: null, opponentHere: true, matchId: null }
+                  : String(url).includes("/series")
+                    ? { series }
+                    : { version: "v1", defs: {} },
+              ),
+            ),
+        } as unknown as Response),
+      ),
+    );
+  }
+
+  /** Push a finished game, the way the actor's last view reads after the killing blow. */
+  function finish(): void {
+    attach({
+      view: baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } }),
+    });
+  }
+
+  it("offers a rematch on a finished game that is in no series", async () => {
+    stubMatchFetch(null);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+
+    expect(await screen.findByTestId("rematch-offer")).toBeInTheDocument();
+    expect(screen.getByTestId("rematch-double")).toBeInTheDocument();
+  });
+
+  it("shows no rematch on a live series game, whose continue flow owns what comes next", async () => {
+    stubMatchFetch(seriesIn("playing"));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+
+    // The banner read the series (so the hook ran), yet no rematch rendered for it.
+    await screen.findByTestId("series-banner");
+    await act(async () => {});
+    expect(screen.queryByTestId("rematch-offer")).toBeNull();
+    expect(screen.queryByTestId("rematch-double")).toBeNull();
+  });
+
+  it("shows no rematch once the series is over either: finished series games are refused too", async () => {
+    stubMatchFetch(seriesIn("over"));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+
+    // The banner read the series (so the hook ran), yet no rematch rendered for it.
+    await screen.findByTestId("series-banner");
+    await act(async () => {});
+    expect(screen.queryByTestId("rematch-offer")).toBeNull();
+    expect(screen.queryByTestId("rematch-double")).toBeNull();
+  });
+
+  it("takes the seat to the rematch even after View the board folded the panel", async () => {
+    vi.mocked(navigate).mockClear();
+    // The rematch answers are held back until the panel is folded: neither the buttons'
+    // poll nor the watcher's has answered by then, so nothing can have navigated yet. Every
+    // pending poll is released, in case the buttons polled again after mounting.
+    const releaseRematch: Array<(body: string) => void> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => {
+            if (String(url).includes("/api/matches/m-1/rematch")) {
+              return new Promise<string>((resolve) => {
+                releaseRematch.push(resolve);
+              });
+            }
+            return Promise.resolve(
+              JSON.stringify(String(url).includes("/series") ? { series: null } : { version: "v1", defs: {} }),
+            );
+          },
+        } as unknown as Response),
+      ),
+    );
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+
+    // Fold the panel to its chip: the buttons unmount with it.
+    fireEvent.click(await screen.findByTestId("result-view-board"));
+    expect(screen.getByTestId("result-reopen")).toBeInTheDocument();
+    expect(screen.queryByTestId("rematch-offer")).toBeNull();
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+
+    // The matching offer lands afterwards: the watcher outlives the fold and navigates.
+    // (The buttons' released poll is dropped by their unmount guard.)
+    await act(async () => {
+      for (const release of releaseRematch) {
+        release(JSON.stringify({ youOffered: 1, opponentOffer: 1, opponentHere: true, matchId: "match-2" }));
+      }
+    });
+    await waitFor(() => {
+      expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-2");
+    });
   });
 });
 

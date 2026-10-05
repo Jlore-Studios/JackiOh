@@ -670,6 +670,23 @@
   max-width: var(--tavern-content);
 }
 
+/* Queued: the setup locks while the lobby waits for a pairing, so what cannot change reads as
+   locked. Leave stays lit: it is the way out. */
+.tavern.play-screen[data-waiting="true"] .play-panel--setup .lobby-mode,
+.tavern.play-screen[data-waiting="true"] .play-panel--setup .lobby-select {
+  opacity: 0.6;
+}
+
+.tavern.play-screen[data-waiting="true"] .play-panel--setup .lobby-mode {
+  cursor: not-allowed;
+}
+
+/* Paired: the "taking you to your game" line reads as an arrival, not another notice. */
+.tavern.play-screen > .notice.play-status--found {
+  border-color: var(--tavern-gold);
+  font-weight: 700;
+}
+
 /* --- the series screen and its deck picker ----------------------------------------------------
    /series/:id (routes/series.tsx) and its picker (routes/SeriesPicker.tsx) wear the same tavern as
    /play: the hero, numbered panels, a deck as a mode tile, the trio's decks as chips, the gold

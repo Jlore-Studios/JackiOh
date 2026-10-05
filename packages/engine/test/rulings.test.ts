@@ -4079,6 +4079,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(671, "../../cards/test/classic/055-book-of-wildfire.test.ts");
   });
 
+  // Proved by apps/server/test/api/rematch.test.ts "R672 …" (equal stakes make one rematch with
+  // the finished decks, mismatched stakes make none, doubles need a ranked match, and a doubled
+  // game moves each side's rating twice the single update's delta).
+  it("R672 a double-or-nothing rematch is ranked-only and moves each side's rating twice as far", () => {
+    provenIn(672, "../../../apps/server/test/api/rematch.test.ts");
+  });
+
   // Proved by playChoices.test.ts "R703 …" (a needed pick the board cannot satisfy is neither
   // offered nor accepted, a plain one still plays, and a cast fizzles) and Plastic Surgery's own test
   // (both faces, either side, and the cast).

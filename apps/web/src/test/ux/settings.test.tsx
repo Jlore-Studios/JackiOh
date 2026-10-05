@@ -641,8 +641,8 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
   it("B24 shows gameplay (drag, confirm, auto end, hover), visuals (reduce motion) and audio (mute opponent emotes), and no empty section", () => {
     // Integration mounts tasks 1, 2 and 6's controls through SETTINGS_SLOTS (settings-wiring.test.tsx);
     // with no slots the panel is task 7's alone. The audio section still draws: R643's device-wide
-    // "Mute opponent emotes" is a built-in switch of it. A section with nothing in it — account,
-    // here — is not drawn.
+    // "Mute opponent emotes" is a built-in switch of it. No account section exists since #303, so
+    // none is drawn.
     render(<SettingsPanel onClose={noop} slots={[]} />);
 
     const gameplay = screen.getByTestId("settings-section-gameplay");
@@ -791,8 +791,8 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     for (const key of ["dragToPlay", "confirmEndTurn", "hoverPreviews"] as const) {
       expect(switchFor(key).compareDocumentPosition(extra) & Node.DOCUMENT_POSITION_FOLLOWING, key).toBeTruthy();
     }
-    // No account slot and no account controls, so still no account section. (Audio stays drawn
-    // without a slot: "Mute opponent emotes" is a built-in switch of it, since R643.)
+    // No account section exists since #303. (Audio stays drawn without a slot:
+    // "Mute opponent emotes" is a built-in switch of it, since R643.)
     expect(screen.queryByTestId("settings-section-account")).toBeNull();
     expect(screen.getByTestId("settings-section-audio").contains(switchFor("muteOpponentEmotes"))).toBe(true);
   });

@@ -677,6 +677,37 @@ export function getMatchRanks(token: string, matchId: string): Promise<MatchRank
   return apiRequest<MatchRanksResponse>(`/api/matches/${encodeURIComponent(matchId)}/ranks`, { token });
 }
 
+// ---------------------------------------------------------------------------------------------
+// Rematch offers after a finished non-series match (SPEC §9.5, R672). Only offer stakes,
+// presence booleans and ids cross here — never decks, hands or ratings (CLAUDE.md rule 7).
+// ---------------------------------------------------------------------------------------------
+
+/** A rematch's stakes: 1 is a normal game, 2 is double-or-nothing (ranked only). */
+export type RematchStakes = 1 | 2;
+
+/** `POST /api/matches/:id/rematch`: the created game, or null while the seats disagree. */
+export type RematchOfferResponse = { matchId: string | null };
+
+/** `GET /api/matches/:id/rematch`: both seats' offers, the opponent's presence, the created game. */
+export type RematchStatusResponse = {
+  youOffered: RematchStakes | null;
+  opponentOffer: RematchStakes | null;
+  opponentHere: boolean;
+  matchId: string | null;
+};
+
+export function rematchOffer(token: string, matchId: string, stakes: RematchStakes): Promise<RematchOfferResponse> {
+  return apiRequest<RematchOfferResponse>(`/api/matches/${encodeURIComponent(matchId)}/rematch`, {
+    method: "POST",
+    token,
+    body: { stakes },
+  });
+}
+
+export function rematchStatus(token: string, matchId: string): Promise<RematchStatusResponse> {
+  return apiRequest<RematchStatusResponse>(`/api/matches/${encodeURIComponent(matchId)}/rematch`, { token });
+}
+
 /**
  * `POST /api/series/:id/pick` with a trio slot (0-based) and the game it is for. Answers with the
  * new projection. A pick is sealed (R331): another slot afterwards is a 409, the same slot again
