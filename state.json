@@ -1126,7 +1126,8 @@
     "166": {
       "action": "revise",
       "asks": [
-        "c:5992197537"
+        "c:5992197537",
+        "c:5992206096"
       ],
       "ci_fixes": 1,
       "ci_reruns": {
@@ -1149,7 +1150,7 @@
       "issue": 88,
       "kind": "revise",
       "last_findings": [],
-      "pending_at": "2026-10-05T09:58:11Z",
+      "pending_at": "2026-10-05T09:58:47Z",
       "pending_by": "jgoetzmann",
       "pending_request": true,
       "provider": "muse",
