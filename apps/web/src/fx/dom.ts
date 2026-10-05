@@ -1,7 +1,7 @@
 // DOM effects: the CSS half of the effects layer (docs/polish/1-animations.md S10, B39).
 //
 // The director hands every DOM cue (splat, rays, sheen, ghost, arrows, banner, result, and R502's
-// fracture, R437's brand and R436's chaos reveal) to
+// fracture, Crushing Walls' walls, R437's brand and R436's chaos reveal) to
 // `mountDomEffect` at the moment the cue fires, with the anchor boxes it measured then. This module
 // appends exactly one element per cue and writes only data: its kind, its tone, its text as an
 // attribute, and its geometry and timing as `--fx-*` custom properties. Everything visual lives in
@@ -149,6 +149,13 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       const at = boxes.at ?? null;
       if (at === null) return null;
       cover(el, at);
+      break;
+    }
+    case "walls": {
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      cover(el, at);
+      el.style.setProperty("--fx-reach", px(at.width * cue.reach));
       break;
     }
     case "brand": {

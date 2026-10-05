@@ -19,6 +19,10 @@
 //     stream lands; on the other seat the card is a back (R97), so the stream lands on a back picked
 //     by the play's own event count, which is the same whatever card it was; its `healthLost` spills
 //     blood at the hero over the row's own drain.
+//     Classic+ #24 Crushing Walls, "crushingWalls": at the first `destroyed` of its own play (the
+//     memory's count by type), two spiked walls close in on the board from both sides over lanes 1
+//     and 5, hit with dust and a shake, and slide back out; each card's own death still plays. A
+//     Crushing Walls that destroys nothing, or is countered, draws no walls.
 //   Another card reuses a recipe by adding its definition to `CARD_FX`. The table is keyed by the
 //   `cardPlayed`'s `defId`, which a hidden play never has, so a hidden card never keys a recipe.
 //
@@ -41,7 +45,12 @@ import {
   FX_CRACK_TRAUMA,
   FX_FRACTURE_TAIL_MS,
   FX_NEXT_REFRESH_MODIFIER_ID,
+  FX_CENTER,
   FX_RAYS_TAIL_MS,
+  FX_WALLS_HIT_AT,
+  FX_WALLS_REACH,
+  FX_WALLS_TAIL_MS,
+  FX_WALLS_TRAUMA,
 } from "./constants.ts";
 import { lostCrystals } from "./manaMarks.ts";
 import type { FxAnchor, FxCue, FxPlanEnv, FxPlay, FxProjectileCue } from "./types.ts";
@@ -59,6 +68,7 @@ const CARD_TUNING = {
   radiantGold: { count: 30, power: 1.1 },
   bloodPool: { count: 26, power: 1 },
   bloodRing: { count: 16, power: 1.2 },
+  wallDust: { count: 24, power: 1.2 },
 } as const;
 
 /** What a recipe here plans against: the entry, the view it was planned against, the env and D. */
@@ -86,7 +96,7 @@ export type CardFxResult = { cues: FxCue[]; row: "keep" | "replace" };
 
 type CardRecipe = (event: GameEvent, p: CardFxPlan, play: FxPlay) => CardFxResult | null;
 
-export type CardFxKey = "manaCrack" | "bloodDrain";
+export type CardFxKey = "manaCrack" | "bloodDrain" | "crushingWalls";
 
 function heroOf(view: PlayerView, play: FxPlay): FxAnchor {
   return tid(testid.hero(sideOf(view, play.player)));
@@ -165,12 +175,32 @@ const bloodDrain: CardRecipe = (event, p, play) => {
   return null;
 };
 
-export const CARD_RECIPES: { readonly [K in CardFxKey]: CardRecipe } = { manaCrack, bloodDrain };
+/** Classic+ #24 Crushing Walls: the walls close in once, at the first card its play destroys (see the header). */
+const crushingWalls: CardRecipe = (event, p, play) => {
+  if (event.type !== "destroyed" || play.seen.destroyed !== 1) return null;
+  const i = p.env.intensity;
+  const durationMs = p.D + FX_WALLS_TAIL_MS;
+  // The walls reach the cards at FX_WALLS_HIT_AT of the cue; the dust and shake go then, inside the entry.
+  const hit = Math.min(p.D, frac(FX_WALLS_HIT_AT, durationMs));
+  const edge = (x: number): FxAnchor => tid(testid.board, { x, y: FX_CENTER.y });
+  return {
+    cues: [
+      { kind: "walls", at: tid(testid.board), reach: FX_WALLS_REACH, delayMs: 0, durationMs },
+      tunedBurst(i, "dust", edge(FX_WALLS_REACH), "point", hit, CARD_TUNING.wallDust),
+      tunedBurst(i, "dust", edge(1 - FX_WALLS_REACH), "point", hit, CARD_TUNING.wallDust),
+      ...shakeCues(i, FX_WALLS_TRAUMA, hit),
+    ],
+    row: "keep",
+  };
+};
+
+export const CARD_RECIPES: { readonly [K in CardFxKey]: CardRecipe } = { manaCrack, bloodDrain, crushingWalls };
 
 /** A card's definition → its signature recipe. Add a definition here to give another card one. */
 export const CARD_FX: Readonly<Record<string, CardFxKey>> = {
   "core-021": "manaCrack", // #21 Hinder
   "core-027": "bloodDrain", // #27 Blood Ridden Glowy Jelly Bean
+  "classicplus-024": "crushingWalls", // C+ #24 Crushing Walls
 };
 
 /** The recipe of the card resolving now, if it has one and claims this event; else null. */
