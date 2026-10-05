@@ -2323,22 +2323,12 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [
-          "cognition"
-        ],
+        "approvals": [],
         "builder": "cognition",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "cognition",
-            "run": "37256696858",
-            "tier": "weak"
-          }
-        ],
-        "sha": "c811152df582fc512359015b6298c720af3a1d26",
-        "tiers": {
-          "cognition": "weak"
-        }
+        "reviews": [],
+        "sha": "e748fb03fddedb1420128f9bb7f2b6818ef90ff7",
+        "tiers": {}
       }
     },
     "31": {
