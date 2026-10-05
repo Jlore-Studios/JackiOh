@@ -106,12 +106,19 @@ class PlanTests(unittest.TestCase):
     def test_usage_stop(self):
         self.gh.add_issue(3, labels=(LABEL_BUILD,))
         # The readings the state file kept before there were several subscriptions are the first
-        # Claude account's.
+        # Claude account's. claude-1 has no weekly cap, so a spent week holds nothing back, while
+        # a spent 5-hour session still stops it. (A build claims its item, so each reading gets a
+        # fresh issue.)
         self.ctx.store.update(lambda s: s.update(usage={"seven_day": {"utilization": 0.95},
                                                         "observed_at": "2026-09-30T02:00:00Z"}))
-        self.assertIn("`claude-1` 7-day usage is 95%", plan_mod.make(self.ctx)["reason"])
+        self.assertEqual(plan_mod.make(self.ctx)["action"], "build")
+        self.gh.add_issue(4, labels=(LABEL_BUILD,))
+        self.ctx.store.update(lambda s: s.update(usage={"five_hour": {"utilization": 0.99},
+                                                        "observed_at": "2026-09-30T02:00:00Z"}))
+        self.assertIn("`claude-1` 5-hour usage is 99%", plan_mod.make(self.ctx)["reason"])
         # A reading that cannot be dated never blocks for ever.
-        self.ctx.store.update(lambda s: s.update(usage={"seven_day": {"utilization": 0.95}}))
+        self.gh.add_issue(5, labels=(LABEL_BUILD,))
+        self.ctx.store.update(lambda s: s.update(usage={"five_hour": {"utilization": 0.99}}))
         self.assertEqual(plan_mod.make(self.ctx)["action"], "build")
 
     def test_claims_the_oldest_forced_first_and_marks_it(self):
@@ -252,8 +259,11 @@ class FlowTests(unittest.TestCase):
         h.gh.add_issue(13, labels=(LABEL_BUILD,))
         runner = FakeRunner({"build": builder({"src/game.txt": "v2\n"}), "review": reviewer(APPROVE)})
         h.night(runner)
-        self.assertEqual(len(h.gh.dispatches), 1)
-        self.assertEqual(h.gh.dispatches[0]["workflow"], "bot-night.yml")
+        # Two lanes free on the taker means two chained runs: each claims one item, and a
+        # run that finds nothing ends cheaply at its gate.
+        self.assertEqual(len(h.gh.dispatches), 2)
+        self.assertEqual([d["workflow"] for d in h.gh.dispatches],
+                         ["bot-night.yml", "bot-night.yml"])
 
     def test_a_rejected_build_becomes_a_draft_and_asks_for_help(self):
         h = Harness(self)
@@ -348,7 +358,9 @@ class FlowTests(unittest.TestCase):
         Deliverer(h.ctx, planned, out, h.deliver_repo).run()
         self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
         self.assertIn("behind the others", h.gh.bot_comments(12)[-1])
-        self.assertEqual(h.gh.dispatches, [])  # no chaining after a run that died
+        # The died run chains for the other item on the taker's free second lane; the died
+        # item itself waits out its backoff below.
+        self.assertEqual(len(h.gh.dispatches), 1)
         # Its subscription is left alone a while; then #12, at the back, waits behind #13.
         self.assertIn("could not work", plan_mod.make(h.ctx)["reason"])
         h.ctx.clock_fn.at = h.ctx.clock_fn.at.replace(hour=4)

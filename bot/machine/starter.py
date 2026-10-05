@@ -53,8 +53,10 @@ def _when(text: str | None) -> datetime | None:
         return None
 
 
-def waiting_jobs(repo_id: str, workflows: list[str], get: Get, now: datetime) -> list[dict]:
-    """The jobs of active runs that wait for a runner on the machine."""
+def waiting_jobs(repo_id: str, workflows: list[str], get: Get, now: datetime,
+                 only: set[str] | None = None) -> list[dict]:
+    """The jobs of active runs that wait for a runner on the machine; with `only`, only
+    jobs for those runner labels (one box's runners, when two boxes share the starters)."""
     found = []
     seen: set[int] = set()
     for workflow in workflows:
@@ -70,6 +72,8 @@ def waiting_jobs(repo_id: str, workflows: list[str], get: Get, now: datetime) ->
                 for job in jobs:
                     labels = [label for label in job.get("labels") or []
                               if label.startswith(LABEL_PREFIX)]
+                    if only is not None and not (set(labels) & only):
+                        continue
                     since = _when(job.get("created_at"))
                     if job.get("status") in QUEUED and labels and (
                             since is None or now - since < MAX_WAIT):
@@ -88,10 +92,12 @@ def handler(event: Any = None, context: Any = None) -> dict[str, Any]:
         return {"state": state, "started": False}
     workflows = [w.strip() for w in os.environ.get("WORKFLOWS", DEFAULT_WORKFLOWS).split(",")
                  if w.strip()]
+    only = {label.strip() for label in os.environ.get("RUNNER_LABELS", "").split(",")
+            if label.strip()} or None
     try:
         waiting = waiting_jobs(os.environ["REPO_ID"], workflows,
                                _github(os.environ.get("GITHUB_TOKEN", "")),
-                               datetime.now(timezone.utc))
+                               datetime.now(timezone.utc), only=only)
     except (urllib.error.URLError, TimeoutError, ValueError) as exc:  # rate limit, outage
         print(json.dumps({"github": f"{type(exc).__name__}: {exc}"}))
         return {"state": state, "started": False, "error": str(exc)}

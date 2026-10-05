@@ -67,6 +67,7 @@ SECRETS: tuple[str, ...] = (
     "CLAUDE_CODE_OAUTH_TOKEN_3",
     "CLAUDE_CODE_OAUTH_TOKEN_4",
     "CLAUDE_CODE_OAUTH_TOKEN_5",
+    "CLAUDE_CODE_OAUTH_TOKEN_6",
     "CODEX_AUTH_JSON",
     "MUSE_AUTH",
 )
@@ -173,6 +174,10 @@ class Provider:
     #: It builds and revises easy items ahead of every other subscription while it has a free lane
     #: (Devin: it may build nothing harder, so the stronger models are kept for what only they can).
     easy_first: bool = False
+    #: Labels an item must carry for this subscription to take it (`devin-train` takes
+    #: only `training` items). Empty takes anything; a label claimed here is reserved:
+    #: subscriptions without it leave such items alone.
+    only_labels: tuple[str, ...] = ()
     #: Other models the subscription can run for a role, each with its own tier.
     extra_models: tuple["ExtraModel", ...] = ()
     #: Caps outside its `schedule` window (`{"five_hour": 0.4}`): it may work then too, but only
@@ -242,6 +247,22 @@ class Seat:
 
 def tier_at_least(tier: str, floor: str) -> bool:
     return TIER_RANK[tier] >= TIER_RANK[floor]
+
+
+def reserved_labels(providers: Mapping[str, Provider]) -> set[str]:
+    """Labels some subscription claims for itself (`only_labels`), lowercased: no other
+    subscription takes an item carrying one."""
+    return {label.lower() for p in providers.values() for label in p.only_labels}
+
+
+def takes_item(provider: Provider, labels: set[str], reserved: set[str]) -> bool:
+    """Whether `provider` may take an item carrying `labels` (any case): one with
+    `only_labels` takes only items carrying all of them; anything carrying a reserved
+    label is left to the subscriptions that claim it."""
+    names = {label.lower() for label in labels}
+    if provider.only_labels:
+        return all(label.lower() in names for label in provider.only_labels)
+    return not (reserved & names)
 
 
 @dataclass(frozen=True)
@@ -369,7 +390,7 @@ def _limits(raw: Any, where: str) -> Limits:
 _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "tier", "secret", "schedule",
                   "limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
                   "self_check", "extra_models", "off_from", "off_reason",
-                  "lanes", "build_last", "easy_first", "off_hours"}
+                  "lanes", "build_last", "easy_first", "off_hours", "only_labels"}
 
 
 def _tier(value: Any, where: str) -> str:
@@ -466,6 +487,11 @@ def _provider(name: str, raw: Any) -> Provider:
     if raw.get("quiet_check") and cli != "claude":
         raise ConfigError(f"{where}.quiet_check: only a Claude account can be checked for quiet "
                           "(the check reads Claude's usage)")
+    raw_labels = raw.get("only_labels", [])
+    if (not isinstance(raw_labels, list)
+            or not all(isinstance(item, str) and item for item in raw_labels)):
+        raise ConfigError(f"{where}.only_labels: a list of label names")
+    only_labels = tuple(raw_labels)
     return Provider(
         id=name,
         enabled=bool(raw.get("enabled", True)),
@@ -485,6 +511,7 @@ def _provider(name: str, raw: Any) -> Provider:
         off_from=_off_from(raw.get("off_from"), f"{where}.off_from"),
         off_reason=str(raw.get("off_reason") or ""),
         lanes=_lanes(raw.get("lanes", 1), f"{where}.lanes"),
+        only_labels=only_labels,
         self_check=bool(raw.get("self_check", False)),
         build_last=bool(raw.get("build_last", False)),
         easy_first=bool(raw.get("easy_first", False)),

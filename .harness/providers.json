@@ -1,9 +1,9 @@
 {
   "max_parallel": 10,
-  "machine_parallel": 6,
-  "plan_lanes": 2,
+  "machine_parallel": 7,
+  "plan_lanes": 4,
   "start_headroom": { "five_hour": 0.15, "seven_day": 0.05 },
-  "priority": ["claude-3", "claude-1", "claude-4", "claude-5", "agy", "muse", "gpt", "claude-2", "devin"],
+  "priority": ["claude-3", "claude-1", "claude-4", "claude-6", "claude-5", "agy", "muse", "gpt", "claude-2", "devin", "devin-train"],
   "tiers": {
     "weak": [
       { "model": "sonnet", "note": "Claude Sonnet, on claude-3 and claude-1 only." },
@@ -20,7 +20,7 @@
   },
   "providers": {
     "claude-1": {
-      "note": "The Claude subscription the bot has always used; shared with its owner and bright-bots-harness, so it waits for quiet. Second in the usage order: Opus for strong roles, Sonnet for weak-tier builds.",
+      "note": "The Claude subscription the bot has always used; shared with its owner and bright-bots-harness. Second in the usage order: Opus for strong roles, Sonnet for weak-tier builds. Two lanes, so it works two items at once.",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -31,13 +31,14 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN",
       "runs_on": "ubuntu-latest",
+      "lanes": 2,
       "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
       "off_hours": { "five_hour": 0.4 },
-      "limits": { "mode": "caps", "five_hour": 0.98, "seven_day": 0.9 },
-      "quiet_check": true
+      "limits": { "mode": "caps", "five_hour": 0.98 },
+      "quiet_check": false
     },
     "claude-2": {
-      "note": "A second Claude account, capped at 90% of both its 5-hour session and its week. Kept back for planning and adversarial review on Opus: after the medium models in the usage order, and it builds only when no other subscription that may is free, Devin included (build_last). It never builds with Sonnet.",
+      "note": "A second Claude account, capped at 90% of both its 5-hour session and its week. Kept back for planning and adversarial review on Opus: after the medium models in the usage order, and it builds only when no other subscription that may is free, Devin included (build_last). It never builds with Sonnet. Two lanes, so it works two items at once.",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -47,13 +48,14 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
       "runs_on": "ubuntu-latest",
+      "lanes": 2,
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.9, "seven_day": 0.9 },
       "build_last": true,
       "quiet_check": false
     },
     "claude-3": {
-      "note": "A third Claude account, the bot's own: any hour, no caps. First in the usage order: Opus for strong roles, Sonnet for weak-tier builds.",
+      "note": "A third Claude account, the bot's own: any hour, no caps. First in the usage order: Opus for strong roles, Sonnet for weak-tier builds. Two lanes, so it works two items at once.",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -64,12 +66,13 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
       "runs_on": "ubuntu-latest",
+      "lanes": 2,
       "schedule": { "mode": "always" },
       "limits": { "mode": "none" },
       "quiet_check": false
     },
     "claude-4": {
-      "note": "A fourth Claude account (token added 2026-10-04), held to half its usage: any hour under 50% of both its 5-hour session and its week (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of each.",
+      "note": "A fourth Claude account (token added 2026-10-04) with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it.",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -80,8 +83,8 @@
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
       "runs_on": "ubuntu-latest",
       "schedule": { "mode": "window", "start": "03:00", "end": "15:00" },
-      "off_hours": { "five_hour": 0.5, "seven_day": 0.5 },
-      "limits": { "mode": "caps", "five_hour": 0.7, "seven_day": 0.7 },
+      "off_hours": { "five_hour": 0.5 },
+      "limits": { "mode": "caps", "five_hour": 0.7 },
       "quiet_check": false
     },
     "claude-5": {
@@ -97,6 +100,22 @@
       "runs_on": "ubuntu-latest",
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.4, "seven_day": 0.6 },
+      "quiet_check": false
+    },
+    "claude-6": {
+      "note": "A sixth Claude account (token added 2026-10-05), same rules as claude-4 with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it.",
+      "enabled": true,
+      "cli": "claude",
+      "family": "claude",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "login": "secret",
+      "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+      "runs_on": "ubuntu-latest",
+      "schedule": { "mode": "window", "start": "03:00", "end": "15:00" },
+      "off_hours": { "five_hour": 0.5 },
+      "limits": { "mode": "caps", "five_hour": 0.7 },
       "quiet_check": false
     },
     "gpt": {
@@ -160,6 +179,23 @@
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 1.0 },
       "quiet_check": false
+    },
+    "devin-train": {
+      "note": "A second Devin login on the training box, for ladder training items only (`only_labels`): long RL training runs live there, off the bot's own machine. Label a training issue `training` (and `difficulty:easy`, which Devin may build); it trains the proposal within the ladder's budget, through the self-check loop like any Devin build. Reviews float to any reviewer.",
+      "enabled": true,
+      "cli": "devin",
+      "family": "cognition",
+      "model": "swe-2-max",
+      "effort": "",
+      "tier": "weak",
+      "self_check": true,
+      "login": "machine",
+      "runs_on": "night-vm-devin-train",
+      "schedule": { "mode": "always" },
+      "limits": { "mode": "none" },
+      "quiet_check": false,
+      "roles": ["build", "revise"],
+      "only_labels": ["training"]
     }
   }
 }

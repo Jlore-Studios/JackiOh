@@ -33,7 +33,10 @@ src/
                         rolled power, R243, what a formula comes to now, R280) and inPlay.ts's words (#98's
                         power, ??? for Call to Chaos); with no `inPlay` it is the collection's printed card.
                         The inspect overlays in play show the printed text beside a face wherever the two
-                        differ (inspect/Printed.tsx). RulesText draws every face's text with its marks: a
+                        differ (inspect/Printed.tsx), and a card's flavour line and artist credit from
+                        `@jackioh/cards/flavour.json` under the glossary (flavour.ts, inspect/Flavour.tsx,
+                        R660). Real art follows art/ART.md, which art/convention.test.ts holds
+                        public/art/ and art/manifest.ts to. RulesText draws every face's text with its marks: a
                         Radiant face's changes in gold (radiantDiff.ts, R277), the cards its `refs` name as
                         references (refs.ts, CardRef.tsx, refContext.tsx, R279; the hover preview's
                         "Mentions" column is inspect/References.tsx), and "{n}" values (R280). A card's marks
@@ -161,7 +164,17 @@ scripts/
   gen-voice.mjs         renders card-audio.json5's lines to public/audio/voice/<card-id>-<hook>.m4a
   gen-music.mjs         renders the scores in music/tracks.mjs to public/audio/music/<track>.m4a (R631)
   music/                the composition toolkit (theory.mjs, compose.mjs, midi.mjs) and every score
+  font-fallbacks.py     the metric-matched fallbacks' size-adjust and ascent/descent overrides for
+                        src/fonts.css, from the font files (by hand; needs fontTools and brotli)
 ```
+
+The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
+(`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
+variable over weight, Latin subset, self-hosted in `public/fonts` with their licences. Each is
+`font-display: swap` behind a metric-matched local fallback, so text measures the same before and
+after a face lands, and `cards/fit.ts` refits every mounted box once `document.fonts` reports
+`loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
+(`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`).
 
 ## Three flows at the table
 

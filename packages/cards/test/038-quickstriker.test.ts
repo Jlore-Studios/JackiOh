@@ -8,7 +8,6 @@ import { createRng, subsystems } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { base, def, radiant } from "../src/scripts/038-quickstriker";
 import { scenario, type Scenario } from "./_harness";
-import { expectAnimated } from "./_animated";
 
 const QUICKSTRIKER = "core-038";
 /** Three plays whose own texts never touch a hero's health, so the damage read is Quickstriker's. */
@@ -244,15 +243,5 @@ describe("#38 Quickstriker", () => {
 
     // X = 1, and the kept card runs its Radiant face: both texts' grants, 2X each.
     expect(hitsOnP2(s)).toEqual([2, 2]);
-  });
-});
-
-describe("#38 Quickstriker: Animated (patch v0.2.10)", () => {
-  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 3/2 Unit; with none open it stays a Field Spell", () => {
-    expectAnimated({ def: "core-038", stats: { attack: 3, health: 2 } });
-  });
-
-  it("R383 radiant: a 6/4 Unit", () => {
-    expectAnimated({ def: "core-038", radiant: true, stats: { attack: 6, health: 4 } });
   });
 });

@@ -88,7 +88,7 @@ class StageTests(unittest.TestCase):
 
 class PlanningLaneTests(unittest.TestCase):
     def test_planning_comes_first_easy_first_and_takes_no_build_lane(self):
-        """claude-3 plans while it builds; claude-1, which the quiet check guards, plans only
+        """claude-3 plans while it builds; claude-1, capped like the rest, plans only
         when it holds nothing else; Devin builds once a strong model planned it."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh)
@@ -117,29 +117,32 @@ class PlanningLaneTests(unittest.TestCase):
         self.assertIsNone(seats(planned)["plan"])  # built from the plan, not planned again
 
     def test_claude_1_never_plans_while_it_builds(self):
-        """The quiet check cannot tell a second run of the bot's on claude-1 from its owner."""
+        """Two lanes let a second build start while one runs, but a capped subscription
+        still never plans while it holds anything: two runs deciding from one reading go
+        past a cap together, so the planning side of that stays shut."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh, machine=(), env=secrets("CLAUDE_CODE_OAUTH_TOKEN"))
         busy(gh, ctx, ("claude-1", 50))
         queue(gh, ctx, 3, planned=False)
-        self.assertNotIn(plan_mod.make(ctx)["action"], ("plan", "build"))
+        self.assertEqual(plan_mod.make(ctx)["action"], "build")  # the free lane, never a plan
         gh.runs.pop("50")
         self.assertEqual(plan_mod.make(ctx)["action"], "plan")
 
-    def test_a_capped_subscription_runs_one_thing_at_a_time(self):
-        """claude-2 (capped) neither plans while it builds nor builds while it plans: two runs
-        deciding from one reading went past its cap together."""
+    def test_a_capped_subscription_builds_twice_but_never_plans_while_holding(self):
+        """claude-2 (capped) takes a second build on its free lane, but never plans while
+        it holds anything: the planning side of the two-runs-one-reading cap blowout stays
+        shut, while the mid-run refusal checks still guard the spending."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh, machine=(), env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"))
         busy(gh, ctx, ("claude-2", 50))
         queue(gh, ctx, 3, planned=False)
-        self.assertNotIn(plan_mod.make(ctx)["action"], ("plan", "build"))
+        self.assertEqual(plan_mod.make(ctx)["action"], "build")  # the free lane, never a plan
         gh.runs.pop("50")
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"]), ("plan", "claude-2"))
         running(gh, ctx, planned)
         queue(gh, ctx, 4)
-        self.assertNotIn(plan_mod.make(ctx)["action"], ("plan", "build"))
+        self.assertEqual(plan_mod.make(ctx)["action"], "build")  # the free lane again
 
     def test_headroom_holds_back_builds_but_not_plans(self):
         """At 80% of its 5-hour window claude-2 (cap 90%, builds start under 75%) still plans,

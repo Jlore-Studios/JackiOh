@@ -111,13 +111,13 @@ class DashboardTests(unittest.TestCase):
         gantt = body.split("```mermaid\ngantt")[1].split("```")[0]
         self.assertNotIn("#", gantt)  # a gantt chart reads `#` as a comment
         # The lanes as boxes: each Claude account, then each slot on the machine.
-        self.assertIn('subgraph hosted["Claude accounts, on GitHub\'s runners: 1 of 5 working"]',
+        self.assertIn('subgraph hosted["Claude accounts, on GitHub\'s runners: 1 of 6 working"]',
                       body)
         self.assertIn('h0["<b>claude-1</b><br/>🟢 building #37<br/>since 21:13"]:::busy', body)
-        self.assertIn('subgraph machine["The machine: 1 of 6 slots in use"]', body)
+        self.assertIn('subgraph machine["The machine: 1 of 7 slots in use"]', body)
         self.assertIn('m0["<b>muse</b><br/>revising #49<br/>since 19:57"]:::busy', body)
         self.assertIn('m5["free"]:::free', body)
-        self.assertIn("m0 ~~~ m1 ~~~ m2 ~~~ m3 ~~~ m4 ~~~ m5", body)
+        self.assertIn("m0 ~~~ m1 ~~~ m2 ~~~ m3 ~~~ m4 ~~~ m5 ~~~ m6", body)
         self.assertIn("Lanes: 2 of 10 in use", body)
         self.assertNotIn("pie", body)
         # Each subscription, with its usage as a bar.
@@ -135,7 +135,7 @@ class DashboardTests(unittest.TestCase):
     def test_nothing_running(self):
         body = dashboard.render(self.ctx)
         self.assertIn("Nothing is running right now.", body)
-        self.assertIn("The machine: 0 of 6 slots in use", body)
+        self.assertIn("The machine: 0 of 7 slots in use", body)
         self.assertIn("Lanes: 0 of 10 in use", body)
         self.assertIn("Nothing is queued.", body)
 
