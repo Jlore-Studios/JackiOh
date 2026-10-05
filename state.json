@@ -1041,6 +1041,7 @@
     "166": {
       "action": "revise",
       "asks": [],
+      "ci_fixed_head": "b5bfca766277396f3a7c4e1f211e98cd3c9fbdb9",
       "ci_fixes": 3,
       "ci_reruns": {
         "026156e4ab202aec00d3323cca97e8ecc6fa245c": 1,
@@ -1058,7 +1059,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-05T16:15:01Z",
+      "feedback_since": "2026-10-05T22:39:28Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-05T22:34:06Z",
@@ -1082,7 +1083,7 @@
       "requested_by": "jgoetzmann-bot",
       "run_id": "37383414439",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-05T22:39:28Z",
       "stop_requested": false,
       "taken_asks": [],
