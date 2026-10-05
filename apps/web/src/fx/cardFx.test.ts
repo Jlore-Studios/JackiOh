@@ -1,6 +1,7 @@
-// R502: the unmistakable cast on draw, and the per-card flourishes of #21 Hinder and #27 Blood Ridden
-// Glowy Jelly Bean (cardFx.ts), planned the way FxLayer plans them: each entry remembered, then
-// planned against the view the runner planned it against, from the redacted stream alone.
+// R502: the unmistakable cast on draw, and the per-card flourishes of #21 Hinder, #27 Blood Ridden
+// Glowy Jelly Bean and Classic+ #24 Crushing Walls (cardFx.ts), planned the way FxLayer plans them:
+// each entry remembered, then planned against the view the runner planned it against, from the
+// redacted stream alone.
 //
 // The last block drives the real engine (audio/test/realGame.ts) to a game where each card is cast
 // as it is drawn, and plans both seats' own redacted windows.
@@ -22,6 +23,9 @@ import {
   FX_INTENSITY_SCALE,
   FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
+  FX_WALLS_HIT_AT,
+  FX_WALLS_REACH,
+  FX_WALLS_TAIL_MS,
 } from "./constants.ts";
 import { planFx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
@@ -29,6 +33,7 @@ import type { FxAnchor, FxCue, FxPlanEnv } from "./types.ts";
 
 const HINDER = "core-021";
 const BLOOD = "core-027";
+const WALLS = "classicplus-024";
 
 function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
   return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
@@ -231,13 +236,83 @@ describe("R502 #27 Blood Ridden's blood drain", () => {
   });
 });
 
+/** A unit Crushing Walls destroys in an outer lane, as the engine reports it. */
+const destroyedIn = (owner: PlayerId, instanceId: string): GameEvent => ({
+  type: "destroyed",
+  instanceId,
+  defId: "core-008",
+  owner,
+  controller: owner,
+  attack: 4,
+  maxHealth: 4,
+  killerId: null,
+});
+
+/** p1 casts Crushing Walls and it destroys `count` cards, alternating sides, then resolves. */
+function wallsStream(count: number): GameEvent[] {
+  const crushed = Array.from({ length: count }, (_, k) => destroyedIn(k % 2 === 0 ? "p1" : "p2", `w${String(k)}`));
+  return [played("p1", "c24", WALLS), ...crushed, resolved("p1", "c24", WALLS)];
+}
+
+function wallsOf(cues: readonly FxCue[]): Extract<FxCue, { kind: "walls" }>[] {
+  return cues.filter((cue): cue is Extract<FxCue, { kind: "walls" }> => cue.kind === "walls");
+}
+
+describe("Patch v0.2.14: Classic+ #24 Crushing Walls closes in", () => {
+  it("the walls close in once, on the board, at the first card the play destroys, lasting D + their tail", () => {
+    const D = 400;
+    const results = planAll(wallsStream(4), fullBoardView(), envOf(), D);
+    const destroyed = results.filter((result) => result.entry.events.some((event) => event.type === "destroyed"));
+    expect(destroyed).toHaveLength(4);
+    expect(destroyed.map((result) => wallsOf(result.cues).length)).toEqual([1, 0, 0, 0]);
+    expect(wallsOf(results.flatMap((result) => result.cues))).toEqual([
+      { kind: "walls", at: tid(testid.board), reach: FX_WALLS_REACH, delayMs: 0, durationMs: D + FX_WALLS_TAIL_MS },
+    ]);
+  });
+
+  it("they hit with dust at both inner edges and a shake at FX_WALLS_HIT_AT of the cue, and each card's own death still plays", () => {
+    const D = 400;
+    const first = planAll(wallsStream(1), fullBoardView(), envOf(), D).find((result) =>
+      result.entry.events.some((event) => event.type === "destroyed"),
+    );
+    const cues = first?.cues ?? [];
+    const hit = Math.round(FX_WALLS_HIT_AT * (D + FX_WALLS_TAIL_MS));
+    const dust = cues.filter((cue) => cue.kind === "burst" && cue.preset === "dust" && cue.delayMs === hit);
+    expect(dust.map((cue) => (cue.kind === "burst" ? cue.at : null))).toEqual([
+      { kind: "testid", testid: testid.board, at: { x: FX_WALLS_REACH, y: expect.any(Number) } },
+      { kind: "testid", testid: testid.board, at: { x: 1 - FX_WALLS_REACH, y: expect.any(Number) } },
+    ]);
+    expect(cues.some((cue) => cue.kind === "shake" && cue.delayMs === hit)).toBe(true);
+    // The row's own recipe for the death is kept: the walls add to it, never replace it.
+    const plain = planAll([destroyedIn("p1", "w0")], fullBoardView(), envOf(), D)[0]?.cues ?? [];
+    expect(plain.length).toBeGreaterThan(0);
+    expect(cues.length).toBeGreaterThan(plain.length);
+  });
+
+  it("no walls when it destroys nothing, when it is countered, or for a card another play destroys", () => {
+    const nothing = planAll(wallsStream(0), fullBoardView(), envOf());
+    const countered = planAll(
+      [played("p1", "c24", WALLS), { type: "countered", player: "p1", instanceId: "c24", defId: WALLS, byInstanceId: null, to: "graveyard" }, destroyedIn("p2", "w9")],
+      fullBoardView(),
+      envOf(),
+    );
+    const other = planAll([played("p1", "c5", "core-005"), destroyedIn("p2", "w9"), resolved("p1", "c5", "core-005")], fullBoardView(), envOf());
+    for (const results of [nothing, countered, other]) expect(wallsOf(results.flatMap((result) => result.cues))).toEqual([]);
+  });
+
+  it("R202 a hidden play keys no walls, though its destroyed cards are public", () => {
+    const results = planAll([played("p2", "hidden", "hidden"), destroyedIn("p1", "w0"), resolved("p2", "hidden", "hidden")], fullBoardView(), envOf());
+    expect(wallsOf(results.flatMap((result) => result.cues))).toEqual([]);
+  });
+});
+
 describe("R502 the per-card table", () => {
   it("R502 one table keys each recipe by definition, and every recipe it names exists", () => {
-    expect(CARD_FX).toEqual({ [HINDER]: "manaCrack", [BLOOD]: "bloodDrain" });
+    expect(CARD_FX).toEqual({ [HINDER]: "manaCrack", [BLOOD]: "bloodDrain", [WALLS]: "crushingWalls" });
     for (const key of Object.values(CARD_FX)) expect(typeof CARD_RECIPES[key]).toBe("function");
   });
 
-  it("R200 every cue the cast on draw and both recipes plan starts inside its entry and ends within FX_MAX_TAIL_MS of its end, for short and long entries", () => {
+  it("R200 every cue the cast on draw and the per-card recipes plan starts inside its entry and ends within FX_MAX_TAIL_MS of its end, for short and long entries", () => {
     for (const D of [120, 200, 400, 732, 1400]) {
       const results = [
         ...planAll(hinderStream("p2", "p1"), fullBoardView(), envOf({ next: afterHinder(fullBoardView(), "you", 2) }), D),
@@ -247,8 +322,10 @@ describe("R502 the per-card table", () => {
           envOf(),
           D,
         ),
+        ...planAll(wallsStream(3), fullBoardView(), envOf(), D),
       ];
       const cues = results.flatMap((r) => r.cues);
+      expect(wallsOf(cues)).toHaveLength(1);
       expect(cues.length).toBeGreaterThan(10);
       for (const cue of cues) {
         expect(cue.delayMs, `${cue.kind} at D=${String(D)}`).toBeGreaterThanOrEqual(0);
@@ -260,7 +337,10 @@ describe("R502 the per-card table", () => {
   });
 
   it("R200 intensity 0 (the effects off, or reduced motion never planning) draws none of it", () => {
-    const results = planAll(hinderStream("p2", "p1"), fullBoardView(), envOf({ intensity: 0, next: afterHinder(fullBoardView(), "you", 2) }));
+    const results = [
+      ...planAll(hinderStream("p2", "p1"), fullBoardView(), envOf({ intensity: 0, next: afterHinder(fullBoardView(), "you", 2) })),
+      ...planAll(wallsStream(2), fullBoardView(), envOf({ intensity: 0 })),
+    ];
     expect(results.flatMap((r) => r.cues)).toEqual([]);
   });
 });

@@ -25,6 +25,9 @@
 // the field) wears an Activate control per ability (ActivateControl.tsx), a sibling of the face like
 // the switch, which reports `{ on: "activate" }` and stops its click reaching the card.
 //
+// R667: the viewer's own hand card the engine marks `counteredOnPlay` (Classic #87 Plague Chalice
+// would counter it) wears a green, bubbling warning film and says why in its tooltip and inspect note.
+//
 // R437: a card whose view lists marks (#50 K-Pop Fanatic's pending steal) wears them, on a unit and
 // on a face-up backrow card of either seat: the corruption aura and a badge per mark
 // (cards/CardMarks.tsx), and `data-marks` naming them on the root. A face-down backrow card's back
@@ -58,10 +61,11 @@ import ActivateControls from "./ActivateControl.tsx";
 import { useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
-import { conditionAttr, glowAttr } from "./glow.ts";
+import { COUNTERED_NOTE, conditionAttr, counteredAttr, glowAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
 
 import "./facedown.css";
+import "./countered.css";
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter((part): part is string => typeof part === "string" && part.length > 0).join(" ");
@@ -244,7 +248,15 @@ export default function Card(props: CardProps): ReactElement {
   const faceDown = props.faceDown;
   const subject: InspectSubject | InspectRenderSubject | null =
     card !== null
-      ? { key: testId ?? card.instanceId, face, ...(props.unrevealed === true ? { note: UNREVEALED_NOTE } : {}) }
+      ? {
+          key: testId ?? card.instanceId,
+          face,
+          ...(props.unrevealed === true
+            ? { note: UNREVEALED_NOTE }
+            : card.counteredOnPlay === true
+              ? { note: COUNTERED_NOTE }
+              : {}),
+        }
       : faceDown !== undefined
         ? {
             key: `facedown-${faceDown.at}`,
@@ -356,6 +368,8 @@ export default function Card(props: CardProps): ReactElement {
       // animations.css keeps a fired Field Trap on the board with its own flip (trapFired).
       data-field-trap={cardType === "Field Trap" ? "true" : undefined}
       data-condition-active={conditionAttr(card)}
+      // R667: the engine says a card on the field would counter this hand card if played now.
+      data-countered-on-play={counteredAttr(card)}
       data-owner={props.owner ?? unit?.owner}
       data-controller={props.controller ?? unit?.controller}
       data-vanilla={unit?.vanilla === true ? "true" : undefined}
@@ -382,6 +396,16 @@ export default function Card(props: CardProps): ReactElement {
       {/* Everything below is a sibling of `.cf`, not inside it, so it stays clickable while the
           face has `pointer-events: none`. */}
       <CardMarks marks={marks} instanceId={card.instanceId} />
+      {card.counteredOnPlay === true && (
+        // R667: a green, bubbling "don't play this" over the face, by shape (bubbles and a crossed
+        // cup) as well as colour, with the words in a tooltip, the inspect note and for a screen
+        // reader. The film takes no pointer, and a click or drag on the badge still reaches the card
+        // it sits in; under reduced motion it holds still as a plain green tint (countered.css).
+        <span className="countered-warning" data-testid={testid.countered(card.instanceId)}>
+          <span className="countered-warning-badge" aria-hidden="true" title={COUNTERED_NOTE} />
+          <span className="countered-warning-sr">{COUNTERED_NOTE}</span>
+        </span>
+      )}
       {position !== undefined && <span className="position-tag">{position}</span>}
 
       {counters?.plague !== undefined && (

@@ -1097,6 +1097,73 @@
   animation: fx-fracture-crack var(--fx-ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
+/* ---------------------------- walls: Classic+ #24 Crushing Walls closes in on lanes 1 and 5 --- */
+
+/* At the first card the play destroys, two stone walls with a row of steel spikes on their inner
+   face slide in from the board's left and right edges, each one lane deep (--fx-reach), slam into
+   the outermost zones at 30% (FX_WALLS_HIT_AT), shudder, hold, and slide back out. The board's box
+   clips them, so they come from beyond its edge and never reach past it. The right wall is the left
+   one mirrored by `scale`, which composes with the keyframes' `transform`, so one set drives both. */
+
+@keyframes fx-walls-close {
+  0% {
+    transform: translateX(-105%);
+  }
+  30% {
+    transform: translateX(0);
+  }
+  36% {
+    transform: translateX(-6%);
+  }
+  42% {
+    transform: translateX(0);
+  }
+  72% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-105%);
+    opacity: 0.8;
+  }
+}
+
+.fx-walls {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: var(--fx-w);
+  height: var(--fx-h);
+  z-index: 2;
+  overflow: hidden;
+}
+
+.fx-walls::before,
+.fx-walls::after {
+  --fx-spike: 14px;
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--fx-reach);
+  /* The spikes: one steel wedge per tile, its apex at the tile's inner edge, down the wall's face.
+     Behind them the wall itself, dark stone in courses. */
+  background:
+    conic-gradient(from 225deg at 100% 50%, rgb(226 232 240) 0deg, rgb(100 116 139) 45deg, rgb(51 65 85) 90deg, transparent 90deg)
+      right top / var(--fx-spike) calc(var(--fx-spike) * 2) repeat-y,
+    repeating-linear-gradient(0deg, transparent 0 22px, rgb(0 0 0 / 38%) 22px 24px) left top / calc(100% - var(--fx-spike)) 100% no-repeat,
+    linear-gradient(90deg, rgb(28 25 23), rgb(68 64 60) 70%, rgb(120 113 108)) left top / calc(100% - var(--fx-spike)) 100% no-repeat;
+  animation: fx-walls-close var(--fx-ms) cubic-bezier(0.55, 0, 0.35, 1) both;
+}
+
+.fx-walls::before {
+  left: 0;
+}
+
+.fx-walls::after {
+  right: 0;
+  scale: -1 1;
+}
+
 /* The lasting mark (fx/manaMarks.ts): each crystal the view says the next refresh will not fill is
    frosted over and cracked for as long as the rider stands. It is information, not an effect, so it
    is drawn whether or not the layer is on; only its glint moves, and under reduced motion it holds
