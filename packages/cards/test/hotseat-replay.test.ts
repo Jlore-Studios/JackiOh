@@ -116,10 +116,12 @@ const RECORDED = fileURLToPath(new URL("../../../e2e/artifacts/01-hotseat-full-g
  * their scripts are pinned to (`catalogVersion`, R388), so a match an older patch began replays on
  * that patch's scripts. The same fold with that field deleted everywhere hashes to "a798906b", the
  * value before it; the decks hold no #98 and no card that changes control. Under v0.2.1's stamp the
- * fold hashed to "a501d067"; v0.2.4 (a text patch) moved the stamp to "v0.2.4" and the hash with it,
- * the game still untouched — stripped of `catalogVersion` it still hashes to "a798906b".
+ * fold hashed to "a501d067"; v0.2.4 (a text patch) moved the stamp to "v0.2.4" and the hash with it
+ * ("551bbaab"). Later text patches moved the stamp again — v0.2.5, v0.2.10, v0.2.11, v0.2.12 — and
+ * the hash with it, the game still untouched: stripped of `catalogVersion` it still hashes to
+ * "a798906b", and the fold still ends p1 by hero death with no refusals.
  */
-const EXPECTED_HASH = "551bbaab";
+const EXPECTED_HASH = "46f7821f";
 
 /** What the recorded game ends in — a second anchor, so the hash is not the only witness. */
 const EXPECTED_RESULT = { winner: "p1", reason: "hero-death" } as const;
