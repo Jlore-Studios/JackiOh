@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from harness import disk as disk_mod
+from harness import plan as plan_mod
 from harness import providers as providers_mod
 from harness import status as status_mod
 from harness.clock import human_delta, parse_iso, zone
@@ -161,7 +162,8 @@ def timeline(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> list[
     pool = ctx.cfg.pool
     now = _local(ctx, ctx.now())
     fmt = "%Y-%m-%d %H:%M"
-    rows: dict[bool, list[str]] = {False: [], True: []}
+    training = plan_mod.training_ids(pool)
+    rows: dict[str, list[str]] = {"hosted": [], "night": [], "training": []}
     earliest = now
     for number, provider_id in _by_start(ctx, state, live):
         doing, item, since = _doing(state, number)
@@ -171,15 +173,19 @@ def timeline(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> list[
         took = human_delta(now - start)
         name = (f"{provider_id} · {doing} {item.lstrip('#')} · "
                 f"{'just started' if took == 'now' else took}")
-        rows[pool.on_machine(provider_id)].append(
+        where = ("training" if provider_id in training
+                 else "night" if pool.on_machine(provider_id) else "hosted")
+        rows[where].append(
             f"    {name.replace(':', ' ')} :active, {start.strftime(fmt)}, {end.strftime(fmt)}")
     lines = ["```mermaid", "gantt",
              f"    title Runs going now, as of {now.strftime('%H:%M')} (Central time)",
              "    dateFormat YYYY-MM-DD HH:mm", "    axisFormat %H:%M",
              f"    tickInterval {_tick(now - earliest)}", "    todayMarker off"]
-    for on_machine, section in ((False, "GitHub's runners"), (True, "The machine")):
-        if rows[on_machine]:
-            lines += [f"    section {section}"] + rows[on_machine]
+    night_name = "The night box" if training else "The machine"
+    for where, section in (("hosted", "GitHub's runners"), ("night", night_name),
+                           ("training", "The training box")):
+        if rows[where]:
+            lines += [f"    section {section}"] + rows[where]
     return lines + ["```"]
 
 
@@ -265,9 +271,14 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> li
         else:
             style, text = _account(ctx, state, provider)
         boxes.append(f'        h{i}["<b>{provider.id}</b><br/>{text}"]:::{style}')
-    machine = [(n, p) for p, numbers in runs.items() if pool.on_machine(p) for n in numbers]
+    # The night box and the training box apart (#317 part 11): devin-train's slot is on a box of
+    # its own, which the night box's subscriptions cannot take.
+    training = plan_mod.training_ids(pool)
+    machine = [(n, p) for p, numbers in runs.items() if pool.on_machine(p) and p not in training
+               for n in numbers]
     machine.sort(key=lambda pair: (_doing(state, pair[0])[2] or ctx.now(), pair[0]))
-    slots = max(pool.machine_parallel, len(machine))
+    night_slots = status_mod.night_slots(pool) if training else pool.machine_parallel
+    slots = max(night_slots, len(machine))
     slot_boxes = []
     for i in range(slots):
         if i < len(machine):
@@ -275,6 +286,19 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> li
             slot_boxes.append(f'        m{i}["<b>{provider_id}</b><br/>{run_line(number)}"]:::busy')
         else:
             slot_boxes.append(f'        m{i}["free"]:::free')
+    train_boxes = []
+    for provider_id in sorted(training):
+        provider = pool.get(provider_id)
+        held = runs.get(provider_id, [])
+        for lane in range(max(provider.lanes, len(held))):
+            name = f"t{len(train_boxes)}"
+            if lane < len(held):
+                train_boxes.append(f'        {name}["<b>{provider_id}</b><br/>'
+                                   f'{run_line(held[lane])}"]:::busy')
+            else:
+                style, text = _account(ctx, state, provider)
+                style, text = ("free", "free") if style == "open" else (style, text)
+                train_boxes.append(f'        {name}["<b>{provider_id}</b><br/>{text}"]:::{style}')
     claude = all(p.cli == "claude" for p in hosted)
     hosted_title = ("Claude accounts, on GitHub's runners" if claude and hosted
                     else "GitHub's runners")
@@ -283,15 +307,27 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> li
         lines += [f'    subgraph hosted["{hosted_title}: {busy_hosted} of {len(hosted)} working"]',
                   "        direction LR", *boxes,
                   "        " + " ~~~ ".join(f"h{i}" for i in range(len(hosted))), "    end"]
-    lines += [f'    subgraph machine["The machine: {len(machine)} of {pool.machine_parallel} '
+    night_title = "The night box" if training else "The machine"
+    lines += [f'    subgraph machine["{night_title}: {len(machine)} of {night_slots} '
               'slots in use"]', "        direction LR", *slot_boxes,
               "        " + " ~~~ ".join(f"m{i}" for i in range(slots)), "    end"]
+    if train_boxes:
+        lines += ['    subgraph training["The training box: ladder training items only"]',
+                  "        direction LR", *train_boxes]
+        if len(train_boxes) > 1:
+            lines.append("        " + " ~~~ ".join(f"t{i}" for i in range(len(train_boxes))))
+        lines.append("    end")
     if hosted:
         lines.append("    hosted ~~~ machine")
+    if train_boxes:
+        lines.append("    machine ~~~ training")
     lines += [*BOX_STYLES, "```"]
     planning = sum(1 for n in live if n and status_mod.record_of(state, n).get("action") == "plan")
     building = len(live) - planning
     plan_note = f"; planning {planning} of {pool.plan_lanes}" if pool.plan_lanes else ""
+    if train_boxes:
+        plan_note += (". The training box runs only items labelled `training` "
+                      f"({', '.join(f'`{p}`' for p in sorted(training))}), off the night box")
     return lines + ["", f"<sub>{LEGEND}</sub>", "",
                     f"<sub>Lanes: {building} of {pool.max_parallel} in use{plan_note}.</sub>"]
 
