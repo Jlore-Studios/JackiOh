@@ -2149,6 +2149,7 @@
         "by": "`muse` (medium) twice",
         "sha": "bc37b0d8886b251db13166e29a982bfa15e8c6ed"
       },
+      "closed_at": "2026-10-05T23:16:13Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
@@ -2159,6 +2160,7 @@
       "issue": 323,
       "kind": "review",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "",
