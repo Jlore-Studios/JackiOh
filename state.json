@@ -2418,7 +2418,7 @@
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
-      "failures": 1,
+      "failures": 0,
       "feedback_since": "2026-10-05T10:06:54Z",
       "forced": false,
       "handoff": {
@@ -2432,12 +2432,12 @@
       },
       "interruptions": 0,
       "issue": 255,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "pending_request": false,
       "provider": "devin",
       "question": "",
-      "queued_at": "2026-10-05T10:19:26Z",
+      "queued_at": "2026-10-05T10:25:33Z",
       "requested_by": "jgoetzmann",
       "run_id": "37295871112",
       "self_check_findings": [
@@ -2448,7 +2448,7 @@
           "where": "self check"
         }
       ],
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-10-05T10:21:29Z",
       "stop_requested": false,
       "taken_asks": [],
