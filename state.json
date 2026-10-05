@@ -2108,7 +2108,7 @@
       "question": "",
       "queued_at": "2026-10-05T11:19:16Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "37296471483",
+      "run_id": "37302086599",
       "self_check_findings": [
         {
           "claim": "Conflict markers are still in SPEC.md, packages/engine/test/rulings.test.ts.",
@@ -2130,7 +2130,7 @@
         }
       ],
       "source": "ci",
-      "started_at": "2026-10-05T10:27:01Z",
+      "started_at": "2026-10-05T11:24:16Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -3107,9 +3107,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-05T11:22:07Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37301803974",
-    "what": "revise #143 on claude-6"
+    "at": "2026-10-05T11:24:16Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37302086599",
+    "what": "revise #214 on devin"
   },
   "last_sweep": {
     "at": "2026-10-05T11:13:37Z",
