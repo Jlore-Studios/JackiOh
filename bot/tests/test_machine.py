@@ -56,6 +56,20 @@ class StarterTests(unittest.TestCase):
             job("work", "queued", ["night-vm-muse"], created="2026-10-02T14:00:00Z")]})
         self.assertEqual(starter.waiting_jobs("123", ["bot-night.yml"], get, NOW), [])
 
+    def test_a_box_wakes_only_for_its_own_runners(self):
+        """With two boxes, each starter watches its labels: a train job wakes the
+        training box, and the night box sleeps through it (and the other way round)."""
+        get, _ = fake_api({"in_progress": [{"id": 7}]}, {7: [
+            job("work", "queued", ["night-vm-gpt"]),
+            job("train", "queued", ["night-vm-devin-train"])]})
+        train = starter.waiting_jobs("123", ["bot-night.yml"], get, NOW,
+                                     only={"night-vm-devin-train"})
+        self.assertEqual([w["label"] for w in train], ["night-vm-devin-train"])
+        night = starter.waiting_jobs("123", ["bot-night.yml"], get, NOW,
+                                     only={"night-vm-gpt", "night-vm-agy", "night-vm-muse",
+                                           "night-vm-devin"})
+        self.assertEqual([w["label"] for w in night], ["night-vm-gpt"])
+
 
 if __name__ == "__main__":
     unittest.main()

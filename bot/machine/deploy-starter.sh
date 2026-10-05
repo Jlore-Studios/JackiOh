@@ -7,21 +7,24 @@
 #
 # STARTER_GITHUB_TOKEN, if set, is handed to the function to raise GitHub's rate limit (a
 # fine-grained token with read access to Actions only); without it the public API is used.
+# A second box (the training box) takes TAG, NAME and ROLE for its own names, plus
+# RUNNER_LABELS, the comma-separated runner labels that box wakes for (starter.py).
 set -euo pipefail
 REPO_ID="${REPO_ID:?the numeric id of the repository: gh api repos/OWNER/REPO --jq .id}"
 export AWS_REGION="${AWS_REGION:-us-east-2}"
-# The machine: INSTANCE_ID, or the one instance tagged Name=jackioh-night-vm.
+TAG="${TAG:-jackioh-night-vm}"
+# The machine: INSTANCE_ID, or the one instance tagged Name=$TAG.
 if [ -z "${INSTANCE_ID:-}" ]; then
-  INSTANCE_ID="$(aws ec2 describe-instances --filters Name=tag:Name,Values=jackioh-night-vm \
+  INSTANCE_ID="$(aws ec2 describe-instances --filters Name=tag:Name,Values="$TAG" \
     Name=instance-state-name,Values=pending,running,stopping,stopped \
     --query 'Reservations[].Instances[].InstanceId' --output text)"
 fi
 if ! [[ "$INSTANCE_ID" =~ ^i-[0-9a-f]+$ ]]; then
-  echo "no single instance tagged Name=jackioh-night-vm; set INSTANCE_ID" >&2
+  echo "no single instance tagged Name=$TAG; set INSTANCE_ID" >&2
   exit 1
 fi
-NAME=jackioh-night-vm-starter
-ROLE=jackioh-night-vm-starter
+NAME="${STARTER_NAME:-jackioh-night-vm-starter}"
+ROLE="${STARTER_ROLE:-jackioh-night-vm-starter}"
 here="$(cd "$(dirname "$0")" && pwd)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -48,7 +51,8 @@ aws iam put-role-policy --role-name "$ROLE" --policy-name start-the-night-machin
 cp "$here/starter.py" "$work/starter.py"
 (cd "$work" && zip -q starter.zip starter.py)
 token="${STARTER_GITHUB_TOKEN:-}"
-env="Variables={INSTANCE_ID=${INSTANCE_ID},REPO_ID=${REPO_ID}${token:+,GITHUB_TOKEN=${token}}}"
+labels="${RUNNER_LABELS:-}"
+env="Variables={INSTANCE_ID=${INSTANCE_ID},REPO_ID=${REPO_ID}${token:+,GITHUB_TOKEN=${token}}${labels:+,RUNNER_LABELS=${labels}}}"
 if aws lambda get-function --function-name "$NAME" >/dev/null 2>&1; then
   aws lambda update-function-code --function-name "$NAME" \
     --zip-file "fileb://$work/starter.zip" >/dev/null

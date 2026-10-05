@@ -5,7 +5,8 @@ free: up to six Claude accounts (Opus at extra-high effort), ChatGPT through the
 Google through the Antigravity CLI (`agy`), Meta through Muse Code and Cognition through the
 Devin CLI, each with its own hours
 and limits ([Subscriptions](#subscriptions)). Up to ten items run at once: the Claude accounts' on
-GitHub's runners, and at most six on the bot's own machine. Every model has a tier (weak,
+GitHub's runners, and at most seven on the bot's own machines (six on the night box, one on
+the training box). Every model has a tier (weak,
 medium or strong) and every item a difficulty (easy, medium or hard), which decides who may plan,
 build and review it ([Difficulty and tiers](#difficulty-and-tiers)). A medium or strong model plans
 each item first; the cheapest builder the owner's usage order allows builds it, runs the
@@ -317,6 +318,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, all of the week (its own `agy -p /usage`, the Gemini pool's row) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
 | `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on two lanes | on the machine, as `agent-muse` | any time | 95% of 5 hours, all of the week (its TUI's `/usage` panel) |
+| `devin-train` | a second Devin login, `swe-2-max`, for ladder training only | on the training box, as `agent-devin-train` | any time | none: until it refuses |
 
 The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
 CLI each time; every other subscription's runs on its own runner on the machine, `night-vm-<id>`.
@@ -373,6 +375,8 @@ each one and whether it could start now, and `/harness status` does the same on 
 - `quiet_check`: no subscription sets it. When one did (`true`), the gate waited until
   nobody else was spending it ([below](#it-no-longer-waits-for-the-subscription-to-be-quiet)).
 - `roles`: what it may do (`plan`, `build`, `fix`, `revise`, `review`, `suggest`).
+- `only_labels`: items carrying all of them are its alone (devin-train takes only `training`
+  items), and no other subscription takes an item carrying a label some subscription claims.
 - `env`: non-secret environment for its CLI.
 - `off_hours` (`{"five_hour": 0.4}`, say): with a `window` schedule, it may also work outside the
   window, but only under these tighter caps; a run there stops once past them.
@@ -386,7 +390,7 @@ may be on the bot's machine (its two vCPUs run each job's checks; GitHub's runne
 and no such limit), `plan_lanes` how many planning runs may go on top of those (the planning
 lane, below; 2), `priority` the usage order (below), and `tiers` each tier's models in the
 order the router tries them after `priority`. A subscription's own `lanes`
-(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill the machine's six alone, and Muse's is 2. A `secret` must be one of the names the workflows hand over (the six Claude ones,
+(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can nearly fill its box alone, Muse's is 2, and claude-1, claude-2 and claude-3 have 2 each. A `secret` must be one of the names the workflows hand over (the six Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as
@@ -432,14 +436,18 @@ keeps its issue's. The difficulty sets the weakest tier that may build it:
 
 **The usage order** (`priority`) is the owner's: spend claude-3 and claude-1 first, up to their
 caps; then the medium models, in any order (agy, Muse, Codex); then claude-2, kept back mostly for
-planning and reviewing; and Devin last. claude-4, claude-6 and then claude-5, last of the
+planning and reviewing; then Devin; and devin-train last, which takes only items labelled
+`training` on the training box. claude-4, claude-6 and then claude-5, last of the
 Claude accounts, come right after claude-1: claude-4 and claude-6 held to half their 5-hour
 session outside 03:00–15:00 and to 70% of it inside it, with no weekly cap, claude-5 to 40% of
 its 5-hour session and 60% of its week. For building alone, claude-2 is `build_last`: it
 builds only when no other subscription that may is free, Devin included. Devin is `easy_first`:
 it may build only easy items, so it takes them ahead of everyone while it has a free lane, and the
 stronger models keep the medium and hard items only they may build. With its six lanes it fills
-whatever room on the machine the medium models leave.
+whatever room on the night box the medium models leave. A `training` label reserves an item
+for devin-train (`only_labels`): no other subscription takes it, and devin-train takes nothing
+else. Its builds still need a strong model's plan first, like Devin's, and their reviews float
+to any reviewer.
 
 - **Planning: the Needs plan stage.** Every build starts from a plan. A queued item with no plan
   carries `bot:needs-plan`, and so does an easy one whose plan no strong model wrote. A strong

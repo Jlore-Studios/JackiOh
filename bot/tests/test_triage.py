@@ -104,6 +104,15 @@ class PromptTests(unittest.TestCase):
         pr = triage.prompt(thread(pr=True), True, labels, "", {"Chore": "upkeep"})
         self.assertNotIn('"type"', pr)
 
+    def test_the_classifier_sees_the_micro_patch_rule_and_prefers_y(self):
+        conventions = triage.conventions_text(ROOT)
+        self.assertIn("Micro or normal", conventions)  # the rule that titles a small patch `Y`
+        self.assertIn("## Version numbers", conventions)
+        labels = [{"name": "patch", "description": "A release"}]
+        text = triage.prompt(thread(title="Fix one card"), False, labels, conventions)
+        self.assertIn("Micro or normal", text)
+        self.assertIn("when torn between `X`\n  and `Y`, choose `Y`", text)
+
     def test_the_answer_is_the_last_json_object(self):
         answer = 'Sure.\n```json\n{"kind": "bot", "labels": ["patch"], "title": ""}\n```'
         self.assertEqual(triage.parse(answer)["kind"], "bot")
