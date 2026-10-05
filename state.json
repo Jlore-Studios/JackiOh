@@ -4922,17 +4922,21 @@
         {
           "at": "2026-10-05T15:55:44Z",
           "minutes": 9.9
+        },
+        {
+          "at": "2026-10-05T17:03:15Z",
+          "minutes": 46.0
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-05T19:50:00Z",
-          "utilization": 0.01
+          "utilization": 0.04
         },
-        "observed_at": "2026-10-05T15:55:44Z",
+        "observed_at": "2026-10-05T17:03:15Z",
         "seven_day": {
           "resets_at": "2026-10-12T00:00:00Z",
-          "utilization": 0.24
+          "utilization": 0.25
         },
         "status": "allowed"
       }
