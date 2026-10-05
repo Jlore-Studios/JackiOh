@@ -1082,7 +1082,9 @@
       "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-05T23:34:46Z",
-      "stop_requested": false,
+      "stop_requested": true,
+      "stopped_at": "2026-10-05T23:35:44Z",
+      "stopped_by": "jgoetzmann",
       "taken_asks": [],
       "votes": {
         "approvals": [
