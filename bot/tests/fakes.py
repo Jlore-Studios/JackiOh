@@ -334,8 +334,15 @@ class FakeGitHub:
         self.branches.add(branch)
         self.files[(branch, path)] = (text, f"sha{next(self._shas)}")
 
+    def create_branch(self, branch: str, sha: str) -> None:
+        if branch in self.branches:
+            raise GitHubError(f"{branch} exists", 422)
+        self.branches.add(branch)
+        self.created_branches = [*getattr(self, "created_branches", []), (branch, sha)]
+
     def delete_branch(self, branch: str) -> None:
         self.branches.discard(branch)
+        self.deleted_branches = [*getattr(self, "deleted_branches", []), branch]
 
     # ------------------------------------------------------------------ actions
 

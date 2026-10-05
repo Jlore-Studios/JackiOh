@@ -219,8 +219,11 @@ def issue_types(gh: Any) -> dict[str, str]:
 
 
 def _bot_only(name: str) -> bool:
-    """A label the night bot keeps for itself, which triage never offers or adds."""
-    return name.startswith("bot:") or name in BOT_ONLY
+    """A label the night bot keeps for itself, which triage never offers or adds: its `bot:`
+    ones, and the difficulty, which a medium or strong model rates when it plans the item, under
+    the easy rule (#317 part 8). A person may still set one."""
+    return (name.startswith("bot:") or name in BOT_ONLY
+            or name.lower().startswith("difficulty:"))
 
 
 def prompt(thread: Mapping[str, Any], is_pr: bool, repo_labels: list[Mapping[str, Any]],
@@ -267,9 +270,8 @@ Decide:
   an account, a secret, a design call, anything outside the repository, or any change to `bot/`,
   `.harness/` or `.github/`, which the bot may not touch.
 - "labels": every label that fits, at least one type label (patch, major version, architecture,
-  night bot); a priority label, or a difficulty label (difficulty:easy, difficulty:medium,
-  difficulty:hard: how strong a model the work needs), only if the text clearly asks for one.
-  Never a `bot:` label.
+  night bot); a priority label only if the text clearly asks for one. Never a `bot:` label,
+  and never a difficulty: the night bot rates that itself when it plans the work.
 - "title": the title the conventions give it (keep every version number exactly as written), or
   "" if the current title already follows them. A patch-sized change that is small — one fix,
   one feature, one card's numbers or text, one cosmetic or client tweak, with no new mechanic,

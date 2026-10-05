@@ -63,7 +63,8 @@ from harness.prompts import data
 from harness.providers import TIER_RANK, Pool, Provider, Seat, tier_at_least
 from harness.queue import (KIND_ORDER, PRIORITY_NAMES, Candidate, branch_for_issue, candidates,
                            carries, cleared, is_human, label_names, needs_plan,
-                           open_pull_for_branch, plan_floor, plan_meets, set_state_label)
+                           open_pull_for_branch, plan_floor, plan_meets, rating_source,
+                           set_state_label)
 from harness.state import item as state_item
 
 MODES = ("auto", "build", "revise", "review", "suggest")
@@ -362,6 +363,8 @@ def review_seat(pool: Pool, providers: list[Provider], candidate: Candidate,
     one (`waited`; None does not wait). A stand-in seat (`takes_over`) reviews nothing."""
     seats = [seat for provider in providers for seat in pool.own_seats(provider)]
     for tier in ("strong", "medium", "weak"):
+        if candidate.review_floor and not tier_at_least(tier, candidate.review_floor):
+            continue  # a person asked for this tier or stronger (`/harness review strong`)
         if not review_rule.helps(candidate.approval_tiers, tier, candidate.difficulty):
             continue
         if tier == "weak" and waited is not None and waited < WEAK_REVIEW_AFTER:
@@ -936,6 +939,15 @@ def claim(ctx: Context, candidate: Candidate,
         if written and assignment.action == "build":
             # A person may have edited the plan in the description: the builder starts from that.
             planned["plan_in_issue"] = written
+        # Who rated it, for the planner's prompt and for deliver (#317 part 8).
+        by = record.get("difficulty_by") if isinstance(record.get("difficulty_by"), dict) else {}
+        planned["rating"] = {"difficulty": candidate.difficulty,
+                             "source": rating_source(names, record),
+                             "by": str(by.get("provider") or "")}
+        if record.get("previous_pr"):
+            planned["previous_pr"] = record["previous_pr"]
+            planned["previous_branch"] = str(record.get("previous_branch") or "")
+            planned["previous_why"] = str(record.get("previous_why") or "")
         if assignment.action == "plan":
             message = (f"Planning this now{run_link(cfg)}, on {assignment.plan.describe()} "
                        f"(`{LABEL_NEEDS_PLAN}`): it is difficulty:{candidate.difficulty}. The plan "
@@ -976,6 +988,7 @@ def claim(ctx: Context, candidate: Candidate,
                 "thread": "\n\n".join(p for p in (pull_text, issue_text) if p),
                 "bot_pr": True,
                 "issue_number": issue_number,
+                "review_notes": str(record.get("review_notes") or ""),
             }
             message = (f"Starting a review now{run_link(cfg)}, on "
                        f"{assignment.review.describe()}. `{builder}` built the change; it merges "

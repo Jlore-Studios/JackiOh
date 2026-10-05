@@ -462,6 +462,10 @@ class GitHub:
             "POST", f"{self._r}/git/refs", {"ref": f"refs/heads/{branch}", "sha": commit.get("sha", "")}
         )
 
+    def create_branch(self, branch: str, sha: str) -> None:
+        """A branch at `sha` (an existing commit)."""
+        self.request("POST", f"{self._r}/git/refs", {"ref": f"refs/heads/{branch}", "sha": sha})
+
     def delete_branch(self, branch: str) -> None:
         try:
             self.request("DELETE", f"{self._r}/git/refs/heads/{urllib.parse.quote(branch)}")

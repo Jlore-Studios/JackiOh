@@ -177,7 +177,8 @@ def report(ctx: Context) -> str:
     lines.append(f"- Working on: {_numbers(labelled(LABEL_WORKING))}"
                  + (f" (no run is going for {ended} any more; the next plan requeues it)"
                     if ended else "") + ".")
-    lines.append(f"- **Needs plan** (a strong model plans these first, into the description): "
+    lines.append(f"- **Needs plan** (rated and planned first, into the description: an easy or "
+                 f"unrated item by a medium or strong model, the rest by a strong one): "
                  f"{_numbers(labelled(LABEL_NEEDS_PLAN, prs=False))}.")
     lines.append(f"- Queued to build: {_numbers(labelled(LABEL_BUILD, prs=False))}; "
                  f"to revise: {_numbers(labelled(LABEL_REVISE, prs=True))}; "
@@ -193,9 +194,12 @@ def report(ctx: Context) -> str:
     if last.get("url"):
         lines.append(f"- Last run: [{last.get('what', 'run')}]({last['url']}) at {last.get('at', '?')}.")
     lines.append(f"- Up to {cfg.max_review_cycles} build and review rounds per item, after a "
-                 "plan by a strong model on the planning lane (or by its builder when none is "
-                 "free), which goes into the issue's description. An item's `difficulty:easy|medium|hard` (medium "
-                 "without one) sets the weakest tier that may build it. A change merges once "
+                 "plan on the planning lane (or by its builder when none is free), which goes "
+                 "into the issue's description, by a medium or strong model for an easy or "
+                 "unrated item and a strong one for the rest; the planner rates an unrated item. "
+                 "An item's `difficulty:easy|medium|hard` (medium until rated) sets the weakest "
+                 "tier that may build it, and three failures of its own raise it a step. A "
+                 "change merges once "
                  f"{review_rule.SUMMARY} approved it. A self-checking builder "
                  f"checks itself up to {cfg.max_self_check_rounds} times first. Auto-merge "
                  f"{'on' if cfg.auto_merge else 'off'}.")

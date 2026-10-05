@@ -20,16 +20,18 @@ from __future__ import annotations
 
 import json
 import os
+from string import Template as string_template
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable
 
 from harness import disk as disk_mod
+from harness import easy as easy_mod
 from harness import gates as gates_mod
 from harness import prompts, review_rule, verdicts
 from harness import providers as providers_mod
 from harness.clock import iso, now as clock_now
-from harness.config import Config, child_env
+from harness.config import MIN_TIER, PLAN_FLOOR, Config, child_env
 from harness.git import MARKER_LINE, Git, Identity, worktree_add
 from harness.prompts import data
 from harness.providers import hosted
@@ -594,10 +596,17 @@ class Worker:
             )
             return "revise", prompt + self._wip_text() + self._handoff_text()
         previous = ""
+        if plan.get("previous_pr"):
+            kept = (f"; its branch is kept as `{plan['previous_branch']}` if you want to look"
+                    if plan.get("previous_branch") else "")
+            previous = (f"An earlier pull request for this issue, #{plan['previous_pr']}, was "
+                        f"closed and this issue built again from `main`: "
+                        f"{plan.get('previous_why') or 'it kept failing'}{kept}. Start from "
+                        "`main`, learn from what went wrong, and do not repeat it.\n\n")
         prior = plan.get("previous_findings") or []
         if prior:
-            previous = ("An earlier run left this branch unfinished. The last review's blocking "
-                        "findings were:\n\n" + self._findings_text([_finding(f) for f in prior]))
+            previous += ("An earlier run left this unfinished. The last review's blocking "
+                         "findings were:\n\n" + self._findings_text([_finding(f) for f in prior]))
         question = str(plan.get("previous_question") or "").strip()
         if question:
             previous += ("\n\nAn earlier run stopped to ask the question below. The answer, if "
@@ -807,6 +816,7 @@ class Worker:
             base=self.base_sha, thread=self.plan.get("thread", ""),
             branch_state=self._branch_state(), gate_list=self._gate_list(),
             difficulty=self.plan.get("difficulty") or "medium",
+            rating=self._rating_ask(), easy_rule=self._easy_rule(),
         ) + self._handoff_text()
         head = self.wt.head()
         result = self.call("plan", prompt, self.wt.cwd, reader=True)
@@ -814,18 +824,69 @@ class Worker:
             self.wt.run("reset", "--quiet", "--hard", head)
         if self.wt.dirty():
             self.wt.discard_worktree_changes()
-        text = redact((result.text or "").strip())
+        rated, text = verdicts.rating(redact((result.text or "").strip()))
         if len(text) > PLAN_CHARS:
             text = text[:PLAN_CHARS - len(PLAN_CUT)].rstrip() + PLAN_CUT
         if not result.ok or not text:
             raise RuntimeError(f"the planner on {seat.model} wrote no plan"
                                + (f": {result.error}" if result.error else ""))
+        if rated and self._rating_source() == "person":
+            rated = None  # a person's label stands; the planner was told not to rate it
         self.plan_text = text
         notes = self.wt.cwd / NOTES_FILE
         earlier = notes.read_text(encoding="utf-8", errors="replace") if notes.is_file() else ""
         notes.write_text(f"# Plan ({seat.model}, {seat.tier})\n\n{text}\n\n# Notes\n\n"
                          f"{earlier}", encoding="utf-8")
         self.result["plan"] = {"seat": seat.to_dict(), "text": text}
+        if rated:
+            self.result["plan"]["rating"] = rated
+
+    def _rating_source(self) -> str:
+        rating = self.plan.get("rating") if isinstance(self.plan.get("rating"), dict) else {}
+        return str(rating.get("source") or "")
+
+    def _rating_ask(self) -> str:
+        """What the planner is told about rating the item (#317 part 8)."""
+        rating = self.plan.get("rating") if isinstance(self.plan.get("rating"), dict) else {}
+        difficulty = str(rating.get("difficulty") or self.plan.get("difficulty") or "medium")
+        if self._rating_source() == "person":
+            return (f"A person set this item's difficulty: `difficulty:{difficulty}`. Plan for "
+                    "that, and give no rating line. If the rule below says it is harder, say so "
+                    "under **Open questions**.")
+        line = ('    <!-- bot: {"difficulty": "easy", "why": "one line: the rule\'s line you were '
+                'least sure of, and why it holds"} -->')
+        ask = ("Rate how hard it is, by the rule below. The very first line of your answer is a "
+               "single HTML comment carrying JSON, with nothing before it, then the plan:\n\n"
+               f"{line}\n\n`difficulty` is `easy`, `medium` or `hard`. The rating decides who "
+               "builds it: an easy item goes to the weakest model (Devin's SWE-2), which cannot "
+               "fill gaps, resolve a hard conflict, or judge what it cannot see.")
+        if self._rating_source() == "bot":
+            ask += (f" The bot rated it `difficulty:{difficulty}` already"
+                    + (f" (`{rating.get('by')}`)" if rating.get("by") else "")
+                    + ": you may rate it higher, never lower.")
+        return ask
+
+    def _easy_rule(self) -> str:
+        rule = self.cfg.easy
+        return string_template(easy_mod.RULE).safe_substitute(max_files=rule.max_files,
+                                                               max_lines=rule.max_lines)
+
+    def _rated_out(self) -> bool:
+        """A build run that planned and rated an unrated item stops after planning when the
+        rating needs a stronger model than this run's builder, or a stronger planner than this
+        one (`PLAN_FLOOR`): the item goes back to the queue, rated, for those."""
+        rated = (self.result.get("plan") or {}).get("rating")
+        if not isinstance(rated, dict) or self._rating_source():
+            return False
+        difficulty = str(rated.get("difficulty"))
+        planner = self.seat_for("plan")
+        if (providers_mod.tier_at_least(self.build_seat.tier, MIN_TIER[difficulty])
+                and providers_mod.tier_at_least(planner.tier, PLAN_FLOOR[difficulty])):
+            return False
+        self.result.update(status="planned", reason=(
+            f"rated difficulty:{difficulty}, which needs a stronger model than this run's to "
+            f"{'plan' if not providers_mod.tier_at_least(planner.tier, PLAN_FLOOR[difficulty]) else 'build'} it"))
+        return True
 
     def _plan_run(self) -> None:
         """A planning run: the plan, and nothing built. The deliver job keeps it as the item's
@@ -919,6 +980,9 @@ class Worker:
         self.carry_build, self.carry_review = self._cleared_notes(conflicts)
         if self.plan_seat is not None:
             self._planning()
+            if self._rated_out():
+                self._finish()
+                return
         findings: list[Finding] = [_finding(f) for f in self.plan.get("previous_findings") or []]
         failures = ""
         report = verdicts.BuildReport("unknown", "", "", "")
@@ -1084,6 +1148,10 @@ class Worker:
                    "not installed in this run and you "
                    "should not run the branch's code: read it. CI runs every check on the pull "
                    "request before it can merge.")
+        notes = str(self.plan.get("review_notes") or "").strip()
+        if notes:
+            context += ("\n\nA person asked for this review (`/harness review`) with these "
+                        "notes:\n\n" + data(notes, "Their notes"))
         open_findings = [_finding(f) for f in self.plan.get("self_check_findings") or []]
         if open_findings:
             context += ("\n\nThe builder's own self checks ran out with these findings still "

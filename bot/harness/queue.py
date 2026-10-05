@@ -112,6 +112,17 @@ def carried_difficulty(record: dict[str, Any]) -> str:
     return max(found, key=DIFFICULTIES.index, default="")
 
 
+def rating_source(names: set[str], record: dict[str, Any]) -> str:
+    """Who set the item's difficulty label: `bot` when its record's rating (`difficulty_by`) names
+    the label it carries, `person` for any other label, "" for none (#317 part 8). The bot never
+    replaces a person's label."""
+    label = labelled_difficulty(names)
+    by = record.get("difficulty_by") if isinstance(record.get("difficulty_by"), dict) else {}
+    if label and by.get("difficulty") == label:
+        return "bot"
+    return "person" if label else ""
+
+
 def rated(names: set[str], record: dict[str, Any]) -> bool:
     """Someone has said how hard it is: a `difficulty:*` label, the bot's own rating
     (`difficulty_by`), or a difficulty its record carries. An unrated item counts as medium for
@@ -186,6 +197,35 @@ def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, sou
                 + _halt_note(ctx, state) + _label_note(names))
     return (f"Queued a revision of #{number}; I will do it {_when(ctx, state)}.{held}"
             f"{_halt_note(ctx, state)}{_label_note(names)}")
+
+
+def queue_review(ctx: Context, number: int, *, by: str, floor: str = "", notes: str = "",
+                 ask: Ask | None = None) -> str:
+    """Queue a review run of a bot pull request's head, and no revision (`/harness review`,
+    #317 part 10): with `floor` (`strong` or `medium`) it waits for a reviewer of that tier or
+    stronger. Returns the reply line."""
+    pull = ctx.gh.get_pull(number)
+    names = label_names(pull)
+    if pull.get("state") != "open":
+        return f"#{number} is not open, so there is nothing to review."
+    if is_human(names):
+        return human_reply(number)
+    if LABEL_PR not in names:
+        return f"#{number} is not a pull request I opened; review runs are for mine only."
+    if LABEL_WORKING in names:
+        _pending(ctx, number, by, ask)
+        return (f"I am working on #{number} right now. When this run ends I go round once more "
+                "with your comment.")
+    set_state_label(ctx, number, names, LABEL_CROSS)
+
+    def change(state: dict[str, Any]) -> None:
+        record = state_item(state, number)
+        record.update(queued_at=iso(ctx.now()), requested_by=by, review_floor=floor,
+                      review_notes=notes[:2000], stop_requested=False, pending_request=False)
+        asks.note(record, ask)
+    state = ctx.store.update(change, f"queue review #{number}")
+    tier = f", by a {floor} model or stronger" if floor else ""
+    return f"Queued a review run of #{number}{tier}; I will do it {_when(ctx, state)}."
 
 
 def _start_now(ctx: Context, number: int, mode: str, queued: str) -> str:
@@ -294,6 +334,8 @@ class Candidate:
     #: A revision queued because `main` left the pull request with conflicts: only a builder
     #: with its own reviewer in the run takes it, never Devin (#317 part 2).
     conflict: bool = False
+    #: For a review: the weakest tier a person asked to review it (`/harness review strong`).
+    review_floor: str = ""
 
 
 def cleared(record: dict[str, Any]) -> dict[str, Any]:
@@ -460,7 +502,8 @@ def candidates(ctx: Context, state: dict[str, Any],
                 bot_pr=LABEL_PR in names,
                 carries=kind == "revise" and LABEL_PR in names and carries(record),
                 labels=tuple(sorted(names)), rated=kind != "build" or rated(names, record),
-                conflict=kind == "revise" and record.get("source") == "conflict")
+                conflict=kind == "revise" and record.get("source") == "conflict",
+                review_floor=str(record.get("review_floor") or "") if kind == "review" else "")
             if kind == "build" and not found[number].forced:
                 builds.append(thread)
     waiting = waits_for(ctx, builds) if builds else {}

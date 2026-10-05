@@ -25,7 +25,7 @@ from harness.config import (LABEL_BUILD, LABEL_CROSS, LABEL_NEEDS_PLAN, LABEL_PL
                             NIGHT_WORKFLOW)
 from harness.context import Context
 from harness.errors import GitHubError
-from harness.queue import difficulty_of, label_names
+from harness.queue import difficulty_of, label_names, labelled_difficulty
 
 TITLE = "Night bot status"
 MARKER = "<!-- jackioh-bot:dashboard -->"
@@ -336,7 +336,8 @@ def queue_table(issues: list[dict[str, Any]]) -> list[str]:
             continue
         priority = next((name.split(":", 1)[1] for name in sorted(names)
                          if name.lower().startswith("priority:")), "—")
-        rows.append(f"| #{issue['number']} | {kind} | {difficulty_of(names)} | {priority} "
+        rated = difficulty_of(names) if (is_pr or labelled_difficulty(names)) else "unrated"
+        rows.append(f"| #{issue['number']} | {kind} | {rated} | {priority} "
                     f"| {_cell(issue.get('title'))} |")
     if not rows:
         return ["Nothing is queued."]

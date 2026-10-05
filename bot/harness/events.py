@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from harness import asks, commands
+from harness import asks, commands, stepup
 from datetime import timedelta
 
 from harness.asks import Ask
@@ -19,7 +19,8 @@ from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
                             LABEL_WORKING, MARKER)
 from harness.context import Context
 from harness.errors import GitHubError
-from harness.queue import label_names, queue_build, queue_revise, set_state_label, stop
+from harness.queue import (label_names, queue_build, queue_review, queue_revise, set_state_label,
+                           stop)
 from harness.state import item as state_item
 from harness import threads
 from harness.status import report
@@ -246,6 +247,16 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
         return f"`{verb}` needs an issue or a pull request to act on."
     if verb == "stop":
         return stop(ctx, number, by=by)
+    if verb == "rebuild":
+        return stepup.rebuild_request(ctx, number, by)
+    if verb == "review":
+        if not is_pr:
+            return ("`review` asks for a review run of one of my pull requests; on an issue, "
+                    "`/harness build` queues it.")
+        first, _, rest = command.args.partition(" ")
+        floor = first.lower() if first.lower() in ("strong", "medium") else ""
+        notes = rest.strip() if floor else command.args.strip()
+        return queue_review(ctx, number, by=by, floor=floor, notes=notes, ask=ask)
     notes_line = ""
     if command.args:
         notes_line = " I will read your notes with the rest of the thread."
@@ -346,6 +357,8 @@ def on_pull_closed(ctx: Context, payload: dict[str, Any]) -> list[str]:
     if issue is None:
         return ["closed; no linked issue"]
     ctx.gh.remove_label(issue, LABEL_PR_OPEN)
+    if ctx.store.load()["items"].get(str(number), {}).get("rebuilt"):
+        return [f"#{number} closed to build #{issue} again"]  # `stepup.rebuild` said why
     if not pull.get("merged"):
         ctx.gh.create_comment(issue, f"#{number} was closed without merging. Comment "
                               f"`/harness build` to have me try again.")
@@ -394,6 +407,9 @@ def on_ci(ctx: Context, payload: dict[str, Any]) -> list[str]:
         fixes = int(record.get("ci_fixes", 0))
         link = f"[run]({run.get('html_url')})"
         if fixes >= ctx.cfg.max_failures:
+            if stepup.strike(ctx, number, f"CI still failed after {fixes} fixes", link=link):
+                out.append(f"#{number}: stepped up after {fixes} CI fixes")
+                continue
             set_state_label(ctx, number, names, LABEL_BLOCKED)
             if pull.get("auto_merge"):
                 try:

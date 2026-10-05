@@ -197,8 +197,19 @@ class ReviewRuleTests(unittest.TestCase):
             if LABEL_REVISE in h.gh.label_names(pr):
                 h.night(FakeRunner({"revise": builder({"src/game.txt": "again\n"}),
                                     "review": reviewer(APPROVE)}))
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_BLOCKED})
-        self.assertIn("It needs a person", h.gh.bot_comments(pr)[-1])
+        # Three rejections are three strikes (#317 parts 4 and 8): instead of blocking it for a
+        # person, the bot raises the issue a step and builds it again from main.
+        self.assertEqual(h.gh.threads[pr]["state"], "closed")
+        self.assertIn("difficulty:hard", h.gh.label_names(12))
+        self.assertIn(LABEL_BUILD, h.gh.label_names(12))
+        said = h.gh.bot_comments(12)[-1]
+        self.assertIn("This failed 3 times at `difficulty:medium`", said)
+        self.assertIn("It skips the replay check.", said)
+        self.assertIn(f"#{pr} is closed and #12 is queued to build again from `main`", said)
+        self.assertIn("Closed to build #12 again from `main`", h.gh.bot_comments(pr)[-1])
+        record = h.ctx.store.load()["items"]["12"]
+        self.assertEqual((record["previous_pr"], record["strikes"]), (pr, 0))
+        self.assertTrue(record["previous_branch"].startswith("bot/old/issue-12-"))
 
     def test_a_review_of_a_head_that_moved_does_not_count(self):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)

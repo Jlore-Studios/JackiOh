@@ -137,6 +137,18 @@ class Gate:
 
 
 @dataclass(frozen=True)
+class EasyRule:
+    """The limits of `difficulty:easy` (`harness/easy.py`), from `easy` in `.harness/config.json`:
+    at most `max_files` files and `max_lines` lines added plus removed (`generated` files aside),
+    and nothing under `off_limits`."""
+
+    max_files: int = 10
+    max_lines: int = 400
+    off_limits: tuple[str, ...] = ()
+    generated: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class Partner:
     """Another bot on the same subscription, and the steps of its workflows that spend it."""
 
@@ -188,6 +200,8 @@ class Config:
     pool: Pool
     #: Self checks a self-checking builder gets before its change goes to review anyway.
     max_self_check_rounds: int = 3
+    #: What `difficulty:easy` allows (`harness/easy.py`).
+    easy: EasyRule = field(default_factory=EasyRule)
     # From the environment.
     bot_token: str = field(default="", repr=False)
     actions_token: str = field(default="", repr=False)
@@ -255,7 +269,24 @@ _REQUIRED = (
 
 _ROLES = ("plan", "build", "fix", "revise", "review", "suggest")
 #: Keys `.harness/config.json` may leave out, with their defaults.
-_OPTIONAL = {"max_self_check_rounds": 3}
+_OPTIONAL = {"max_self_check_rounds": 3, "easy": {}}
+
+
+def _easy(raw: Any) -> EasyRule:
+    if not isinstance(raw, Mapping):
+        raise ConfigError("easy: expected an object")
+    unknown = sorted(set(raw) - {"max_files", "max_lines", "off_limits", "generated"})
+    if unknown:
+        raise ConfigError(f"easy: unknown keys {', '.join(unknown)}")
+    try:
+        rule = EasyRule(int(raw.get("max_files", 10)), int(raw.get("max_lines", 400)),
+                        tuple(str(p) for p in raw.get("off_limits") or ()),
+                        tuple(str(p) for p in raw.get("generated") or ()))
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(f"easy: {exc}") from exc
+    if rule.max_files < 1 or rule.max_lines < 1:
+        raise ConfigError("easy: max_files and max_lines must be at least 1")
+    return rule
 
 
 def _gate(raw: Any, where: str) -> Gate:
@@ -347,6 +378,7 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str],
         gates=gates,
         pool=pool if pool is not None else providers_mod.load(root),
         max_self_check_rounds=self_checks,
+        easy=_easy(raw.get("easy", _OPTIONAL["easy"])),
         bot_token=env.get("BOT_GITHUB_TOKEN", ""),
         actions_token=env.get("GITHUB_TOKEN", "") or env.get("GH_TOKEN", ""),
         backend=backend,
