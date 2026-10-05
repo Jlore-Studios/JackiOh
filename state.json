@@ -3580,10 +3580,8 @@
     "what": "revise #324 on devin"
   },
   "last_sweep": {
-    "at": "2026-10-05T20:53:00Z",
-    "notes": [
-      "started a night run, as a lane was free: #325 (medium) is queued to review, for `claude-1`: review on `claude-1` (claude, `opus`, strong)"
-    ],
+    "at": "2026-10-05T21:03:52Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
