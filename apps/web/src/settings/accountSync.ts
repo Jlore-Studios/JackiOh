@@ -21,10 +21,10 @@
 // later changes to the account, as R321 does for the tutorial: settings belong to the device as much
 // as to the account.
 //
-// A request that fails, or never answers, is dropped: the device keeps what it has, the status says
-// so (`useSettingsSyncState`), and the next change, the next load, coming back online or the
-// player's own retry sends what is owed. At most one request is in flight; changes made meanwhile are
-// sent together once it answers. Signed out, there is no account to sync, so nothing is sent at all.
+// A request that fails, or never answers, is dropped: the device keeps what it has, and the next
+// change, the next load, coming back online or a retry sends what is owed. At most one request is in
+// flight; changes made meanwhile are sent together once it answers. Signed out, there is no account
+// to sync, so nothing is sent at all.
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
@@ -51,7 +51,7 @@ export const settingsAccountApi: SettingsAccountApi = {
 };
 
 // ---------------------------------------------------------------------------------------------
-// The status the Account tab shows
+// The sync status (kept in module state; the dialog shows no tab for it since #303)
 // ---------------------------------------------------------------------------------------------
 
 /** `signedOut`: nothing is syncing (no active account on this screen); the rest are the account's copy. */
@@ -89,7 +89,7 @@ export function useSettingsSyncState(): SettingsSyncState {
   return useSyncExternalStore(subscribeSettingsSyncState, readSettingsSyncState, readSettingsSyncState);
 }
 
-/** The player's own "Try again": the running sync loads or sends again. Does nothing signed out. */
+/** A retry: the running sync loads or sends again. Does nothing signed out. */
 export function retrySettingsSync(): void {
   activeSync?.retry();
 }
