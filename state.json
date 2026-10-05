@@ -4330,17 +4330,21 @@
         {
           "at": "2026-10-05T22:26:39Z",
           "minutes": 7.6
+        },
+        {
+          "at": "2026-10-05T22:33:43Z",
+          "minutes": 6.5
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-06T02:39:00Z",
-          "utilization": 0.03
+          "utilization": 0.05
         },
-        "observed_at": "2026-10-05T22:26:39Z",
+        "observed_at": "2026-10-05T22:33:43Z",
         "seven_day": {
           "resets_at": "2026-10-12T00:00:00Z",
-          "utilization": 0.32
+          "utilization": 0.33
         },
         "status": "allowed"
       }
