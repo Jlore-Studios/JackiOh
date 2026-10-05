@@ -354,8 +354,8 @@ function unitViewOf(state: GameState, pile: Pile, viewer: PlayerId): UnitView | 
 /**
  * §4.1: "each unit has one exertion per turn: one attack or one position switch", so a unit can
  * still act while either exertion is unspent — a summoning-sick unit may still switch, and a unit
- * that cannot attack may still switch back. `combat.hasExertion` owns that rule, Deft Duelist's
- * two exertions included (#45); *which* of the two is legal is `combat.canAttack`'s answer and
+ * that cannot attack may still switch back. `combat.hasExertion` owns that rule, Deft's
+ * two exertions included (R49); *which* of the two is legal is `combat.canAttack`'s answer and
  * `legalActions`', never the view's.
  */
 function canAct(state: GameState, card: CardInstance): boolean {

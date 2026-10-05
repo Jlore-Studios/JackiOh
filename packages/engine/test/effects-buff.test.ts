@@ -34,6 +34,7 @@ const POOL_KEYWORDS: Keyword[] = [
   { kind: "Cleave" },
   { kind: "Pierce" },
   { kind: "Windfury" },
+  { kind: "Deft" },
 ];
 
 const everyKeyword: CardDef = {
@@ -274,8 +275,8 @@ describe("R21 random keywords (M3-T1)", () => {
     unit.position = "DEF"; // Defense grants Taunt and Armor 1 (§4.1)
     const sink = sinkFor(state);
 
-    // 11 draws from an 11-entry pool: everything the unit lacks, and nothing it has.
-    run(sink, grantRandomKeywords({ target: { of: "self" }, count: 11 }), { self: unit });
+    // 12 draws: everything the 14-entry pool holds but Taunt and Armor, and nothing it has.
+    run(sink, grantRandomKeywords({ target: { of: "self" }, count: 12 }), { self: unit });
 
     const kinds = grantedKinds(sink.events);
     expect(kinds).not.toContain("Taunt");

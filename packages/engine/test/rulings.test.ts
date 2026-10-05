@@ -554,10 +554,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(20, "rulings-a.test.ts", "combat-positions.test.ts");
   });
 
-  // Proved by rulings-a.test.ts "R21 draws random keywords from the thirteen-entry pool and never repeats one
+  // Proved by rulings-a.test.ts "R21 draws random keywords from the fourteen-entry pool and never repeats one
   // on a unit"; effects-buff.test.ts "R21 draws from the pool, never repeats within one grant, and is
   // seeded", "R21 never grants a keyword the unit already has, from any source", and 1 more.
-  it("R21 draws random keywords from the thirteen-entry pool and never repeats one on a unit", () => {
+  it("R21 draws random keywords from the fourteen-entry pool and never repeats one on a unit", () => {
     expect(config.RANDOM_KEYWORD_POOL).toEqual([
       "Taunt",
       "Armor 1",
@@ -572,8 +572,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "Cleave",
       "Pierce",
       "Windfury",
+      "Deft",
     ]);
-    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(13);
+    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(14);
     provenIn(21, "rulings-a.test.ts", "effects-buff.test.ts");
   });
 
@@ -3996,24 +3997,56 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
-  // Proved by packages/cards/test/catalog.test.ts "R656 …": the family table holds its one rarity
+  // Proved by effects-cast.test.ts "R656 …": a harmful pick narrows to enemies, a helpful one to
+  // friends, and Jogg's Box stays fully random.
+  it("R656 a cast that targets enemies aims each target pick by its declaration", () => {
+    provenIn(656, "effects-cast.test.ts");
+  });
+
+  // Proved by apps/web test/ux/drag-continue.test.tsx "R658 …" (a second drag from a pick, a backrow
+  // card dropped on the board, a prompt option dragged out of its panel) and test/ux/drag-model.test.ts
+  // "R658 …" (the plans and the drops).
+  it("R658 drags a second choice from its picks, a backrow card onto the board, and a prompt's options", () => {
+    provenIn(
+      658,
+      "../../../apps/web/src/test/ux/drag-continue.test.tsx",
+      "../../../apps/web/src/test/ux/drag-model.test.ts",
+    );
+  });
+
+  // Proved by packages/cards/test/flavour.test.ts "R660 …" (the sidecar's keys, coverage, fields and
+  // caps), apps/web cards/flavour.test.tsx "R660 …" (no rules words; the preview, the sheet and the
+  // detail show it, the face and an unnamed card never), routes/almanac.test.tsx "R660 …" (the
+  // Almanac's detail), and cards/art/convention.test.ts "R660 …" (the art directory and the manifest
+  // against the convention, and each refusal).
+  it("R660 flavour and artist credits are a sidecar shown in inspect, and real art meets one file convention", () => {
+    provenIn(
+      660,
+      "../../cards/test/flavour.test.ts",
+      "../../../apps/web/src/cards/flavour.test.tsx",
+      "../../../apps/web/src/routes/almanac.test.tsx",
+      "../../../apps/web/src/cards/art/convention.test.ts",
+    );
+  });
+
+  // Proved by packages/cards/test/catalog.test.ts "R661 …": the family table holds its one rarity
   // for every member, the fifteen cards the pass moved carry their new rarities, and the bigger
   // version of an effect never sits lower; `patches check` claims the pass's rows too.
-  it("R656 fixes rarity's criteria, its families and their consistency rules", () => {
-    provenIn(656, CARDS_CATALOG_TEST);
+  it("R661 fixes rarity's criteria, its families and their consistency rules", () => {
+    provenIn(661, CARDS_CATALOG_TEST);
   });
 
-  // Proved by card-text.test.ts "R657 …": no printed face says "Plague Token", and "activate" is
+  // Proved by card-text.test.ts "R662 …": no printed face says "Plague Token", and "activate" is
   // §6.2's keyword alone.
-  it("R657 renames the Plague Token the Plague Counter, and a Trap \"reveals\"", () => {
-    provenIn(657, CARDS_CARD_TEXT_TEST);
+  it("R662 renames the Plague Token the Plague Counter, and a Trap \"reveals\"", () => {
+    provenIn(662, CARDS_CARD_TEXT_TEST);
   });
 
-  // Proved by packages/cards/test/087-pocket-chaos.test.ts "R658 …": the gift's `costOverride` is
+  // Proved by packages/cards/test/087-pocket-chaos.test.ts "R663 …": the gift's `costOverride` is
   // one under the cast copy's own R65 base, `costMod` and the price paid never enter it, and none
   // is added where the result would be (0).
-  it("R658 sets the base cost of the Pocket Chaos a cast one adds", () => {
-    provenIn(658, "../../cards/test/087-pocket-chaos.test.ts");
+  it("R663 sets the base cost of the Pocket Chaos a cast one adds", () => {
+    provenIn(663, "../../cards/test/087-pocket-chaos.test.ts");
   });
 });
 

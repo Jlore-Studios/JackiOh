@@ -190,7 +190,7 @@ describe("R175: Reborn's return for a unit token and onto a Stack pile", () => {
   it("R175 a Rush Token given Reborn comes back through Reborn, reset and sick (§6.1's pool, R21, R83)", () => {
     // On this seed Plastic Surgery's random keyword is Reborn: §6.1's pool keeps Reborn for tokens.
     const g = scenario({
-      seed: "re-entry-reborn-token-31", // R346's Pierce moved the roll off "-4", R636's Windfury off "-10" and "-19"
+      seed: "re-entry-reborn-token-32", // R346's Pierce moved the roll off "-4", R636's Windfury off "-10" and "-19", R49's Deft off "-31"
       p1: { hand: [SURGERY, HIT_JOB], field: [{ def: RUSH_TOKEN, lane: 1 }], library: [...LIBRARY] },
       p2: { hand: [HIT_JOB], library: [...LIBRARY] },
     });

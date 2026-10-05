@@ -33,7 +33,10 @@ src/
                         rolled power, R243, what a formula comes to now, R280) and inPlay.ts's words (#98's
                         power, ??? for Call to Chaos); with no `inPlay` it is the collection's printed card.
                         The inspect overlays in play show the printed text beside a face wherever the two
-                        differ (inspect/Printed.tsx). RulesText draws every face's text with its marks: a
+                        differ (inspect/Printed.tsx), and a card's flavour line and artist credit from
+                        `@jackioh/cards/flavour.json` under the glossary (flavour.ts, inspect/Flavour.tsx,
+                        R660). Real art follows art/ART.md, which art/convention.test.ts holds
+                        public/art/ and art/manifest.ts to. RulesText draws every face's text with its marks: a
                         Radiant face's changes in gold (radiantDiff.ts, R277), the cards its `refs` name as
                         references (refs.ts, CardRef.tsx, refContext.tsx, R279; the hover preview's
                         "Mentions" column is inspect/References.tsx), and "{n}" values (R280). A card's marks
@@ -97,7 +100,9 @@ src/
     highlights.css      the green and yellow glow colours, imported after board.css
     drag/               drag to play: pointer events for mouse and touch, the targeting
                         arrow and reticle, and a dropped card held where it landed until
-                        the board shows the play; click-click keeps working in every mode
+                        the board shows the play; a build lifted again from its picks, a
+                        backrow card dropped on the board, a prompt option dragged out of its
+                        panel (R658, OptionDrag.tsx); click-click keeps working in every mode
   audio/                sound (SPEC §10.11); index.ts is the barrel Game.tsx imports, appAudio.ts
                         the page-wide unlock and UI ticks main.tsx holds, mix.ts the buses and limiter
     engine.ts sfx.ts unlock.ts settings.ts   lazy AudioContext and buses, procedural SFX, gesture unlock, the settings store

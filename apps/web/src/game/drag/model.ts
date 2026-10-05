@@ -10,7 +10,13 @@
 // Power's button) lifts its activation, and a press on a card you control that has nothing to
 // attack with lifts the one ability its control would; both draw the targeting arrow, and the drop
 // is the target click that narrows it. An activation with no target to aim at has nothing to drag
-// to: its press stays a click.
+// to: its press stays a click, except on a backrow card of yours, which is dragged onto the board
+// as a spell with no target is (R658).
+//
+// R658: a play or an activation that a drop (or a click) has narrowed but not finished, such as a
+// Unit placed in its zone whose Cry still wants a target, is lifted again from what it has picked
+// so far: a press on the chosen zone, Tribute or target draws the arrow from there to what is left,
+// with everything picked kept. Released on nothing, it goes back to the build it was, not to idle.
 //
 // Pure: no DOM, no React, no state of its own.
 
@@ -26,6 +32,7 @@ import {
   onClickTarget,
   outstandingNeed,
   pickInPlay,
+  playSourceTestid,
   type ActivationBody,
   type ClickResult,
   type Interaction,
@@ -55,6 +62,11 @@ export type DragPlan = {
   freeDrop: boolean;
   /** kind "attack" or "activate", or a play where no remaining candidate has a zone and some has targets. Otherwise a card ghost. */
   arrow: boolean;
+  /**
+   * R658: what a release on nothing (or a cancelled drag) leaves, when it is not IDLE: a build lifted
+   * again from its picks goes back to that build, so a missed drop never throws the picks away.
+   */
+  missed?: Interaction;
 };
 
 export type DropSpot =
@@ -139,7 +151,9 @@ function aims(candidates: readonly ActivationBody[]): boolean {
 
 /**
  * R384: an activation lifted from its control: every listed activation the control stands for
- * (`activationsFor`), unsettled, with the arrow. Null when none is listed or none aims at anything.
+ * (`activationsFor`), unsettled, with the arrow. Null when none is listed, or none aims at anything
+ * and `unaimed` is not set. R658: with `unaimed` (a backrow card of yours), an activation that aims
+ * at nothing is lifted as a card ghost and dropped anywhere on the board, as a spell with no target is.
  */
 function planActivation(
   view: PlayerView,
@@ -148,9 +162,12 @@ function planActivation(
   instanceId: string,
   ability: string | undefined,
   sourceTestid: string,
+  unaimed = false,
 ): DragPlan | null {
   const candidates = activationsFor(legal, instanceId, ability);
-  if (candidates.length === 0 || !aims(candidates)) return null;
+  if (candidates.length === 0) return null;
+  const aimed = aims(candidates);
+  if (!aimed && !unaimed) return null;
   const lifted: Activating = {
     stage: "activating",
     instanceId,
@@ -158,14 +175,15 @@ function planActivation(
     candidates,
     picked: {},
   };
+  const dropTestids = dropSetFor(view, legal, lifted);
   return {
     kind: "activate",
     source,
     sourceTestid,
     lifted,
-    dropTestids: dropSetFor(view, legal, lifted),
-    freeDrop: false,
-    arrow: true,
+    dropTestids,
+    freeDrop: !aimed && (dropTestids.size === 0 || outstandingNeed(lifted) === null),
+    arrow: aimed,
   };
 }
 
@@ -180,7 +198,48 @@ function planCardActivation(
 ): DragPlan | null {
   const listed = activationsOnField(view, source.instanceId);
   if (listed !== null && listed.length > 1) return null;
-  return planActivation(view, legal, source, source.instanceId, undefined, testid.card(source.instanceId));
+  const unaimed = source.on === "backrow";
+  return planActivation(view, legal, source, source.instanceId, undefined, testid.card(source.instanceId), unaimed);
+}
+
+/**
+ * R658: a build in flight lifted again from one of its picks. `pressed` is the testid pressed; it
+ * must be a pick the board shows as selected (the chosen zone, a Tribute, a declared target, or the
+ * card whose ability is built), not the hand card of the play, whose press lifts it afresh. Null
+ * when nothing is picked yet or nothing is left to aim at on the board (a picker's choice is next).
+ */
+function planContinue(
+  view: PlayerView,
+  legal: readonly ActionBody[],
+  interaction: Interaction,
+  pressed: string,
+): DragPlan | null {
+  if (!isBuilding(interaction)) return null;
+  if (Object.keys(interaction.picked).length === 0) return null;
+  if (interaction.stage === "playing" && pressed === playSourceTestid(view, interaction.instanceId)) return null;
+  const highlight = highlightFor(view, legal, interaction);
+  if (!highlight.selected.has(pressed)) return null;
+  // What is already picked still glows (every remaining candidate fixes it), but is not a place to go.
+  const dropTestids = new Set([...(highlight.glow ?? [])].filter((id) => !highlight.selected.has(id)));
+  if (dropTestids.size === 0 || outstandingNeed(interaction) === null) return null;
+  const source: DragSource =
+    interaction.stage === "playing"
+      ? { on: "hand", instanceId: interaction.instanceId }
+      : {
+          on: "activate",
+          instanceId: interaction.instanceId,
+          ...(interaction.ability === undefined ? {} : { ability: interaction.ability }),
+        };
+  return {
+    kind: interaction.stage === "playing" ? "play" : "activate",
+    source,
+    sourceTestid: pressed,
+    lifted: interaction,
+    dropTestids,
+    freeDrop: false,
+    arrow: true,
+    missed: interaction,
+  };
 }
 
 /**
@@ -188,8 +247,11 @@ function planCardActivation(
  * the card's testid is in the current glow (it's a declared target; its press stays a click).
  * unit source (`side: "you"`): the `attack`s naming it; with none, its one Activate ability's
  * aimed activations (R384); null if neither, or while a play or activation is in flight.
- * backrow source (`side: "you"`): its one Activate ability's aimed activations, as for a unit.
+ * backrow source (`side: "you"`): its one Activate ability's activations, aimed (the arrow) or not
+ * (a ghost dropped on the board, R658).
  * activate source (a control): the activations it stands for, when one of them aims at something.
+ * R658: with `pressed` (the testid pressed) one of the picks of a build in flight, the build itself,
+ * lifted again with its picks kept; this comes before all of the above.
  * Anything else: null.
  */
 export function planDrag(
@@ -197,7 +259,12 @@ export function planDrag(
   legal: readonly ActionBody[],
   interaction: Interaction,
   source: ClickTarget,
+  pressed?: string,
 ): DragPlan | null {
+  if (pressed !== undefined) {
+    const continued = planContinue(view, legal, interaction, pressed);
+    if (continued !== null) return continued;
+  }
   if (source.on === "hand") return planPlay(view, legal, interaction, source);
   if (source.on === "unit") return planAttack(view, legal, interaction, source);
   if (source.on === "backrow") {
@@ -216,9 +283,9 @@ export function planDrag(
 
 /**
  * target spot in dropTestids: r = onClickTarget(view, legal, plan.lifted, spot.target); return
- * r if r.action is set or r.interaction !== plan.lifted, else { interaction: IDLE }.
+ * r if r.action is set or r.interaction !== plan.lifted, else { interaction: plan.missed ?? IDLE }.
  * board spot and plan.freeDrop: pickInPlay(plan.lifted, {}), which is an action, or a play still
- * needing a picker. Anything else: { interaction: IDLE } and no action.
+ * needing a picker. Anything else: { interaction: plan.missed ?? IDLE } and no action.
  */
 export function resolveDrop(
   view: PlayerView,
@@ -229,8 +296,8 @@ export function resolveDrop(
   if (spot.at === "target" && plan.dropTestids.has(spot.testid)) {
     const result = onClickTarget(view, legal, plan.lifted, spot.target);
     if (result.action !== undefined || result.interaction !== plan.lifted) return result;
-    return { interaction: IDLE };
+    return { interaction: plan.missed ?? IDLE };
   }
   if (spot.at === "board" && plan.freeDrop) return pickInPlay(plan.lifted, {});
-  return { interaction: IDLE };
+  return { interaction: plan.missed ?? IDLE };
 }

@@ -33,7 +33,7 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     all: { label: "All units", detail: "Switch the position of every unit." },
   },
   // #87 Pocket Chaos: "swap hero health, swap boards (every zone, lane-preserving), or swap libraries";
-  // radiant: "You may add it". The copy's base cost is one under the cast copy's (R658).
+  // radiant: "You may add it". The copy's base cost is one under the cast copy's (R663).
   "core-087": {
     health: { label: "Swap hero Health", detail: "You and your opponent trade hero Health." },
     board: { label: "Swap boards", detail: "Every zone changes sides, each card keeping its lane." },

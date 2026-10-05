@@ -10,7 +10,7 @@ GitHub write token.
 
 | | |
 |---|---|
-| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04, 30 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
+| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04, 60 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
 | Way in | Session Manager only (`aws ssm start-session --target <instance>`): no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. |
 | Users | `agent-<id>` per subscription (`agent-gpt`, `agent-agy`, `agent-muse`, `agent-devin`): a home only it can read, no `sudo`, no Docker |
 | Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user |
@@ -37,7 +37,9 @@ contributors' pull requests wait for approval before any workflow runs (Settings
 | File | Runs | What it does |
 |---|---|---|
 | `setup.sh` | on the machine, as root | everything above except the logins and the registration; idempotent, run it again to update the CLIs or add a subscription |
-| `on-machine.sh` | on your computer | runs a local script on the machine through Session Manager, starting the machine first if it is stopped |
+| `clean.sh` | on the machine, as each agent user | gives back the disk that user's jobs can do without (Disk, below); installed as `/usr/local/bin/night-vm-clean.sh` |
+| `disk-report.sh` | on the machine, as root | read-only: what fills the disk, biggest first, the runner versions kept and the disk timer's last runs |
+| `on-machine.sh` | on your computer | runs a local script on the machine through Session Manager, with the scripts beside it, starting the machine first if it is stopped |
 | `register-runners.sh` | on your computer | registers each `night-vm-*` subscription's runner with GitHub and starts it as a service |
 | `starter.py` | AWS Lambda | starts the machine when a bot-night or triage job is queued for a `night-vm-*` runner (tested in `bot/tests/test_machine.py`) |
 | `deploy-starter.sh` | on your computer | creates or updates the starter, its role and its five-minute schedule |
@@ -48,7 +50,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 
 ## Building it
 
-1. **The instance.** Launch Ubuntu 24.04 (x86_64) as `m7i-flex.large` with a 30 GB gp3 disk, an
+1. **The instance.** Launch Ubuntu 24.04 (x86_64) as `m7i-flex.large` with a 60 GB gp3 disk, an
    instance profile holding `AmazonSSMManagedInstanceCore`, a security group with no inbound
    rule, no key pair, shutdown behaviour **stop**, and the tag `Name=jackioh-night-vm`.
 2. **Set it up**, with the ids from `providers.json`:
@@ -85,14 +87,44 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
   login, and run `register-runners.sh`.
 - **A login stopped working** (the job's doctor or the run says it was refused): log that user in
   again as in step 3. Nothing else changes.
-- **Disk:** each job's files, the user's package store, Cypress's binary and what the job left in
-  `/tmp` are deleted when the job ends
-  (`/usr/local/bin/night-vm-job-done.sh`, the runners' job-completed hook); the checkout and the
-  logins stay. A user with another job still going (Devin's or Muse's other lanes) keeps its
-  package store, and `/tmp` leftovers go once older than any job (6 hours). Muse's own session
-  logs (a few hundred MB a day) go once untouched for 8 hours. The 30 GB disk was 95% full on
-  2026-10-04 before Muse's logs were pruned. `CYPRESS_INSTALL_BINARY=0` keeps `pnpm install` from fetching Cypress's 800 MB binary
-  at all, since the bot's checks never run e2e.
+- **Disk:** every subscription's jobs share the one disk, and a full one fails whichever job
+  writes next (on 2026-10-04 a revision of #206 died on `No space left on device`, 66 MB free when
+  its job began). What keeps it clear:
+  - **`clean.sh`, as each user.** After every job (the runners' job-completed hook,
+    `/usr/local/bin/night-vm-job-done.sh`) it deletes that job's files; and after every job and
+    every ten minutes (`night-vm-disk.timer`, for every agent user) it deletes what nothing needs:
+    the user's package store, Cypress's binary and the npm cache once the user has no job going
+    (Devin's and Muse's other lanes share them), what a job that died without its hook left in an
+    idle runner's `_work/_temp`, the runner version a self-update replaced (`bin.<version>` and
+    `externals.<version>`, about 650 MB a runner, beside the one `bin` links to) and its download,
+    the runner's own logs after two days, the user's `/tmp` leftovers after 6 hours, Codex's
+    sessions after 7 days, Muse's (a few hundred MB a day) after 8 hours, and Devin's session
+    database (about 700 MB a day; the bot never resumes a Devin session) once Devin has no job
+    going, with its logs and summaries after 8 hours. It runs as the user whose home it cleans,
+    never as root, and the checkout and the logins stay.
+  - **Temporary files stay with the job:** on the machine `TMPDIR` is the job's own
+    `RUNNER_TEMP/tmp` (`bot-night.yml`), emptied when the job ends.
+  - **The system:** the journal is capped at 200 MB (it may otherwise take a tenth of the disk),
+    and the timer runs `apt-get clean`.
+  - **A model job checks before it starts** (`bot/harness/disk.py`): with under 8 GB free it runs
+    `clean.sh` first, from its checkout, and with under 3 GB still free it does no work. Its item is
+    not at fault, so it stays queued with nothing counted against it, the subscription backs off
+    for a while and the others take the work. A disk that fills up during the work pauses the item
+    and keeps what it built.
+  - **People hear of it:** every machine job reports its readings, and the deliver job and the
+    status loop (every ten minutes) open the issue "Night bot: the machine's disk is filling up"
+    at 80% used or under 3 GB free, rewrite it as readings come, and close it at 70% or under. The
+    status issue shows the newest reading. To see what fills it:
+    `bot/machine/on-machine.sh bot/machine/disk-report.sh`.
+  - **A bigger disk:** it was 30 GB until it filled up on 2026-10-04 (254 MB free), and was grown
+    to 60 GB in place. About 22 GB is fixed: 8 GB of swap, ten runners' installs at about 0.7 GB
+    each (twice that after a self-update until `clean.sh` removes the old version), the system and
+    the CLIs; six jobs' worktrees and installs come on top. To grow it again, raise the volume's
+    size (`aws ec2 modify-volume`); `setup.sh` grows the partition and the filesystem into it
+    (`growpart`, `resize2fs`), and cloud-init does at the machine's next start. Neither needs a
+    restart.
+  - `CYPRESS_INSTALL_BINARY=0` keeps `pnpm install` from fetching Cypress's 800 MB binary at all,
+    since the bot's checks never run e2e.
 - **How many at once:** six machine jobs (`machine_parallel`), because a job here runs only the
   light checks. The load is each job's checks, not its model: on 2026-10-02 three jobs running
   the full set had the machine at load average 14 on 2 vCPUs with 1.5 GB swapped. Measured on
@@ -105,7 +137,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
   Claude jobs there. The Free plan's largest machines are the 2-vCPU `m7i-flex.large` and
   `c7i-flex.large`.
 - **Cost:** the machine is billed by the hour while it runs (about $0.096 an hour, so about $70 a
-  month if it never stopped) plus its disk (about $2.40 a month). A stopped machine costs only
+  month if it never stopped) plus its disk (about $4.80 a month). A stopped machine costs only
   the disk. The starter's Lambda calls and its schedule fit in the free tier.
 - **The starter** looks only at bot-night runs, through GitHub's public API by repository id, so a
   rename or a transfer does not break it. It leaves alone a job that has waited three hours (its

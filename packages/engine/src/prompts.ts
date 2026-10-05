@@ -33,7 +33,7 @@
 // the queue is still the one `work.ts` owns; `settle` drains again and finds nothing left.
 
 import type { ActionBody, PlayerId, PromptKind, Selection } from "@jackioh/shared";
-import { castModeForPrompt, preferEnemies } from "./randomCast";
+import { castModeForPrompt, preferEnemies, preferFriends } from "./randomCast";
 import { makeContext, type EngineSink } from "./resolve";
 import type { Effect, EffectContext, Hook, Script } from "./script";
 import { scriptOf, scriptsFor } from "./scripts";
@@ -105,6 +105,8 @@ export type ResumePlan = WorkPlan;
 export type OpenPromptArgs = {
   player: PlayerId;
   kind: PromptKind;
+  /** R656: whether a target prompt is beneficial or harmful, for targeting under targetEnemies. */
+  aim?: "harm" | "help";
   prompt: string;
   options: readonly PromptOption[];
   /** Defaults to one pick (§10.6). */
@@ -916,8 +918,9 @@ function castPromptShape(sink: EngineSink, args: OpenPromptArgs): OpenPromptArgs
   if (mode === null) return args;
   const max = clamp(args.max ?? 1, 0, args.options.length);
   const required = clamp(args.min ?? 1, 0, max);
+  const prefer = args.aim === "help" ? preferFriends : preferEnemies;
   const options = mode.targetEnemies
-    ? preferEnemies(sink.state, args.player, args.options, (option) => option.selection, required)
+    ? prefer(sink.state, args.player, args.options, (option) => option.selection, required)
     : [...args.options];
   const shaped: OpenPromptArgs = { ...args, options };
   if (!mode.random) return shaped;

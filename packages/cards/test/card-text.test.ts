@@ -6,7 +6,7 @@
 // comma-separated list on a line of their own; each labelled ability starts a line of its own; and
 // every other line is sentences that end with a full stop. Patch v0.2.0 turned the cost words round
 // (R432, issue #40): "(N) Cost" is the noun ("a (1) Cost or less card", "(4)+ Cost cards") and
-// "costs (N)" the verb ("costs (1) less", "costs (0)"). Patch v0.2.2 (R657) renamed the Plague Token
+// "costs (N)" the verb ("costs (1) less", "costs (0)"). Patch v0.2.2 (R662) renamed the Plague Token
 // the Plague Counter and made a Trap "reveal" where it "activated". Every face is read with its
 // `params` filled in (B3.4 rule 5), as a player reads it. Text is presentation (CLAUDE.md rule 7):
 // no rule reads it, which is why the proof is a scan of the catalog rather than a game.
@@ -14,7 +14,7 @@
 import { describe, expect, it } from "vitest";
 import { fillParams, type CardDef, type Keyword } from "@jackioh/shared";
 import { CATALOG } from "../src/catalog-data";
-import { readSnapshot } from "../scripts/patches-io";
+import { readPatches, readSnapshot } from "../scripts/patches-io";
 
 const ENTRIES: readonly CardDef[] = Object.values(CATALOG);
 
@@ -352,6 +352,41 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(changed.sort()).toEqual([...animated, "classicplus-033", "classic-052"].sort());
   });
 
+  it("R366 patch v0.2.11 aims Solarius-Prime and Appropriations, keywords Deft Duelist and moves two locs between v0.2.10 and v0.2.11", () => {
+    const before = readSnapshot("v0.2.10");
+    // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
+    const shipped = readPatches().some((patch) => patch.version === "v0.2.11");
+    const after = shipped ? (readSnapshot("v0.2.11") as unknown as typeof CATALOG) : CATALOG;
+    const changed: string[] = [];
+    for (const [id, currentCard] of Object.entries(after)) {
+      const priorCard = before[id] as unknown as CardDef | undefined;
+      expect(priorCard, `card ${id} existed in v0.2.10`).toBeDefined();
+      if (!priorCard) continue;
+      if (JSON.stringify(priorCard) !== JSON.stringify(currentCard)) changed.push(id);
+    }
+    expect(changed.sort()).toEqual(
+      ["classic-003", "classicplus-010", "classicplus-038-1", "classicplus-040", "core-045"].sort(),
+    );
+    // Deft Duelist prints the Deft keyword on both faces (R49).
+    expect(after["core-045"]?.base.text).toBe("Charge, Deft");
+    expect(after["core-045"]?.radiant.text).toBe("Charge, Armor 1, Deft");
+    // The aimed casts say so on the face (R656).
+    for (const face of ["base", "radiant"] as const) {
+      expect(after["classicplus-038-1"]?.[face].text).toContain(
+        "Each aims at enemies when it harms and at your side when it helps.",
+      );
+      expect(after["classicplus-040"]?.[face].text).toContain(
+        "aim at enemies when they harm and at your side when they help.",
+      );
+    }
+    // Book of Heal and New Wraps move only their script's loc.
+    for (const id of ["classic-003", "classicplus-010"]) {
+      const priorCard = before[id] as unknown as CardDef;
+      const currentCard = after[id] as unknown as CardDef;
+      expect({ ...currentCard, loc: priorCard.loc }).toEqual(priorCard);
+    }
+  });
+
   it("R366 patch v0.2.4 no printed face uses any word the vocabulary table retired", () => {
     const wrong = swept.filter((face) =>
       failures(face).some(
@@ -395,7 +430,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(check("Cry: Add 2 random Units to your hand. They cost (1).")).toEqual([]);
   });
 
-  it("R657 says \"Plague Counter\", and keeps \"activate\" for §6.2's keyword alone", () => {
+  it("R662 says \"Plague Counter\", and keeps \"activate\" for §6.2's keyword alone", () => {
     const wrong = swept.filter((face) => {
       if (/\bPlague Tokens?\b/.test(face.text)) return true;
       // Every remaining "activat" is the Activate keyword's own label, bar #98's verb for it.

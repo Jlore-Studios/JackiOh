@@ -4,7 +4,7 @@
 // Legendaries in place; pool is exactly #52, #85, #87, #92, #93, #95, and a Field Trap becomes
 // Unlicensed Experimentation (R35); the hand is replaced too (R365); radiant gives radiant cards" —
 // and since patch v0.2.0 (R380) the pool is every set's non-token Legendaries but #83, which patch
-// v0.2.2's rarity pass (R656) grew by Classic #9 Income Tax and #28 Second Wind.
+// v0.2.2's rarity pass (R661) grew by Classic #9 Income Tax and #28 Second Wind.
 //
 // The board fixture covers every permanent type at once: a Unit, an Immutable Unit (R23), a Field
 // Spell, a Trap and a Field Trap. The pool is read from the catalog and checked to hold the six ids
@@ -29,9 +29,9 @@ const POOL = catalog.pool(TRANSMOGULATE, { rarity: "Legendary" }).map((def) => d
 const CORE_SIX = ["core-052", "core-085", "core-087", "core-092", "core-093", "core-095"];
 /** The Legendary Units in the pool, every set's (Core #52 Silly Silas and #92 Felinor Fiender among them). */
 const LEGENDARY_UNITS = catalog.pool(TRANSMOGULATE, { rarity: "Legendary", type: "Unit" }).map((def) => def.id);
-/** The Legendary Field Spells: Core #93 Combo-Index, Classic #4, #7, #28 (since patch v0.2.2, R656), Classic+ #78. */
+/** The Legendary Field Spells: Core #93 Combo-Index, Classic #4, #7, #28 (since patch v0.2.2, R661), Classic+ #78. */
 const LEGENDARY_FIELD_SPELLS = catalog.pool(TRANSMOGULATE, { rarity: "Legendary", type: "Field Spell" }).map((def) => def.id);
-/** The Legendary Traps of any set: #85 Unlicensed Experimentation and, since patch v0.2.2 (R656),
+/** The Legendary Traps of any set: #85 Unlicensed Experimentation and, since patch v0.2.2 (R661),
  *  Classic #9 Income Tax — with "Field Trap counts as Trap" widening the query to both types. */
 const LEGENDARY_TRAPS = catalog.pool(TRANSMOGULATE, { rarity: "Legendary", type: TRAP_TYPES }).map((def) => def.id);
 
@@ -40,7 +40,7 @@ const LEGENDARY_TRAPS = catalog.pool(TRANSMOGULATE, { rarity: "Legendary", type:
 const IMMUTABLE = "core-019";
 /**
  * `fieldSpell` seeds the backrow Field Spell. Zone-count tests pass null: a Field Spell can be
- * replaced by Classic #28 Second Wind since patch v0.2.2 (R656), whose Aura would send the cards
+ * replaced by Classic #28 Second Wind since patch v0.2.2 (R661), whose Aura would send the cards
  * the count is watching — Transmogulate itself among them — to exile instead of the graveyard.
  */
 function board(radiantFace = false, fieldSpell: string | null = "core-073") {

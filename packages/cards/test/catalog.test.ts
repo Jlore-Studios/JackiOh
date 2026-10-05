@@ -16,24 +16,24 @@
 //                    #16 Hit Job (3), #17 Flood, #34 Collateral Damage, #43 Big Felinor, #49 Snom
 //                    Bunny Mind Control, #88 Twisting Nether (4) and #65 Masochism Mask (1) are
 //                    patch v0.2.0's (issue #40); #27's, #28's and #40's rarities and #87's cost
-//                    are patch v0.2.2's (issue #44, R656, R658).
+//                    are patch v0.2.2's (issue #44, R661, R663).
 //   CLASSIC        — docs/classic-sets.md B6, each entry's header line (`classic-NNN` · (cost)
 //                    type, tags · rarity · stats base → Radiant), with the decisions B9 and the
 //                    v0.2.0 plan adopted: #55 is Book of Wildfire, #72 Grand Counterspell (R381),
 //                    #86 Genn's Radiant 42/42; the ten rarities patch v0.2.2 moved (#3, #9, #12,
 //                    #16, #18, #25, #28, #60, #61, #76) are the patch's, as the header lines record
-//                    (R656).
+//                    (R661).
 //   CLASSIC_PLUS   — docs/classic-sets.md B7's header lines and token bullets (B2.3's numbering;
 //                    the Losers typed Unit, Otherworldly Removal's three and the Grapes typed Spell
 //                    by their sections' own sentences, the Grapes tagged Fruit, every token tagged
 //                    Token and rated "Token", B2.5) and B8's table of the ten AI generated cards
 //                    (tagged AI). Buff Billy's "3X/3X → 7X/7X" prints 0/0 (its `xStats` carry X);
-//                    #29's and #77's rarities are patch v0.2.2's (R656).
+//                    #29's and #77's rarities are patch v0.2.2's (R661).
 //   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //                    being R349's fallback.
 //   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and its own distribution
 //                    for Classic (35/26/18/10/1) and Classic+ (13/24/25/13/3) since patch v0.2.2
-//                    (R656); B2.1's totals, 268 cards and 49 tokens in 317 entries.
+//                    (R661); B2.1's totals, 268 cards and 49 tokens in 317 entries.
 //   tag vocabulary — SPEC §5/§6 tags as BUILD M4-T1 lists them, R278's Jlockeed, B2.4's Book,
 //                    Pancake and AI, and the mechanics patch's Plague (every card that uses
 //                    Plague Counters).
@@ -618,7 +618,7 @@ describe("rarity distribution (SPEC §8, B2.5, BUILD M4-T1)", () => {
   });
 });
 
-describe("R656 rarity criteria, families and consistency (patch v0.2.2, issue #44)", () => {
+describe("R661 rarity criteria, families and consistency (patch v0.2.2, issue #44)", () => {
   /** §8's family table: a naming template, one card type and one effect shape take one rarity. */
   const FAMILIES: readonly { family: string; rarity: Rarity; members: readonly string[] }[] = [
     { family: "Book of ___", rarity: "Epic", members: [
@@ -657,7 +657,7 @@ describe("R656 rarity criteria, families and consistency (patch v0.2.2, issue #4
     "classicplus-077": "Epic",
   };
 
-  it("R656 every family in §8's table takes one rarity for every member, which wins over the criteria", () => {
+  it("R661 every family in §8's table takes one rarity for every member, which wins over the criteria", () => {
     for (const { family, rarity, members } of FAMILIES) {
       for (const id of members) {
         expect(CATALOG[id]?.rarity, `${family} member ${id}`).toBe(rarity);
@@ -669,13 +669,13 @@ describe("R656 rarity criteria, families and consistency (patch v0.2.2, issue #4
     expect(CATALOG["classic-029"]?.name).toBe("Book of Vital Kill");
   });
 
-  it("R656 the pass moved fifteen cards, Core's #27, #28 and #40 among them on the designer's word", () => {
+  it("R661 the pass moved fifteen cards, Core's #27, #28 and #40 among them on the designer's word", () => {
     for (const [id, rarity] of Object.entries(MOVED)) {
       expect(CATALOG[id]?.rarity, id).toBe(rarity);
     }
   });
 
-  it("R656 a bigger version of the same effect is never a lower rarity than the smaller one", () => {
+  it("R661 a bigger version of the same effect is never a lower rarity than the smaller one", () => {
     // Classic #60 Pile On Recruits the whole deck; Core #69 Call to Arms Recruits three — the
     // bigger version landed Epic, never below the smaller one's Common.
     const ORDER: readonly Rarity[] = ["Common", "Rare", "Epic", "Legendary", "Mythic"];

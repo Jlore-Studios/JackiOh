@@ -67,6 +67,7 @@ SECRETS: tuple[str, ...] = (
     "CLAUDE_CODE_OAUTH_TOKEN_3",
     "CLAUDE_CODE_OAUTH_TOKEN_4",
     "CLAUDE_CODE_OAUTH_TOKEN_5",
+    "CLAUDE_CODE_OAUTH_TOKEN_6",
     "CODEX_AUTH_JSON",
     "MUSE_AUTH",
 )
@@ -747,6 +748,38 @@ class Secrets:
         if name in self.present:
             return True
         return False if self.known else None
+
+
+#: How often a plan job rewrites its record of which secrets its workflow has when the list has
+#: not changed (`secrets_record`).
+SECRETS_NOTE_EVERY = timedelta(minutes=30)
+
+
+def secrets_record(secrets: Secrets, state: Mapping[str, Any],
+                   now: datetime) -> dict[str, Any] | None:
+    """The `state["secrets"]` record a plan job writes: which secrets its workflow has, and
+    when. None outside a workflow, or when the record there says the same and is recent."""
+    if not secrets.known:
+        return None
+    names = sorted(secrets.present)
+    record = state.get("secrets") if isinstance(state.get("secrets"), Mapping) else {}
+    at = parse_iso(record.get("at"))
+    if record.get("set") == names and at is not None and now - at < SECRETS_NOTE_EVERY:
+        return None
+    return {"set": names, "at": iso(now)}
+
+
+def newer_secrets(secrets: Secrets, state: Mapping[str, Any], since: datetime | None) -> Secrets:
+    """Which secrets to go by: the newest plan job's record (`secrets_record`) when it is newer
+    than `since`, when this process's own list was fixed (or `since` is unknown); else its own.
+    GitHub fixes a run's secrets when the run is created, so a long run, or one queued for hours,
+    would otherwise miss a secret added since."""
+    record = state.get("secrets") if isinstance(state.get("secrets"), Mapping) else {}
+    at = parse_iso(record.get("at"))
+    names = record.get("set")
+    if at is None or not isinstance(names, list) or (since is not None and at <= since):
+        return secrets
+    return Secrets(frozenset(str(name) for name in names), True)
 
 
 def _off_hours(raw: Any, where: str) -> dict[str, float]:

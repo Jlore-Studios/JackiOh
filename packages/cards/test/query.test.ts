@@ -221,7 +221,7 @@ describe("R35 the Transmogulate pool (#83): every non-token Legendary but #83 (B
   //     catalog.query({ rarity: "Legendary", excludeDefId: "core-083" })
   //   or catalog.pool("core-083", { rarity: "Legendary" })
   // R35: "Pool: the Legendary-rarity cards except #83", which since patch v0.2.0 reaches every set;
-  // patch v0.2.2's rarity pass (R656) added Classic #9 Income Tax and #28 Second Wind to it.
+  // patch v0.2.2's rarity pass (R661) added Classic #9 Income Tax and #28 Second Wind to it.
   // For replacing a card on the board, the script narrows the same pool by type and asks for
   // TRAP_TYPES when the board card is a trap ("Field Trap counts as Trap").
   const R35_POOL = [

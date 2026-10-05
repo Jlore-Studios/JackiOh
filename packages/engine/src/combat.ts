@@ -53,12 +53,12 @@ export type SwitchPositionOptions = {
 };
 
 /**
- * R49: Deft Duelist has two exertions, one attack and one switch, where every other unit has one.
- * The flag lives on the card's script (`staticFlags.deftDuelist`), so the rule is data rather than a
- * card name in the engine, and a granted copy of the text would carry it the same way.
+ * R49: a unit with Deft has two exertions, one attack and one switch, where every other unit has
+ * one. The keyword is read through §10.4's layers, so a granted Deft counts the same as a printed
+ * one (patch v0.2.11 made R49's flag a keyword).
  */
-function hasTwoExertions(unit: CardInstance): boolean {
-  return flagsOf(unit).deftDuelist === true;
+function hasTwoExertions(state: GameState, unit: CardInstance): boolean {
+  return unitHas(state, unit, "Deft");
 }
 
 /**
@@ -71,18 +71,18 @@ export function attacksPerTurn(state: GameState, unit: CardInstance): number {
 
 /**
  * §4.1: one exertion per turn, so a unit that attacked cannot switch and a unit that switched
- * cannot attack (R6). Deft Duelist spends the two independently (R49). R636: a unit with Windfury
- * attacks again until it has declared `attacksPerTurn`, and the first of them already spends the
- * exertion a switch needs.
+ * cannot attack (R6). A unit with Deft spends the two independently (R49). R636: a unit with
+ * Windfury attacks again until it has declared `attacksPerTurn`, and the first of them already
+ * spends the exertion a switch needs.
  */
 export function hasExertion(state: GameState, unit: CardInstance, kind: ExertionKind): boolean {
   const spent = unit.exertion;
   if (kind === "attack") {
     const attacks = spent.attacks ?? (spent.attacked ? 1 : 0);
     if (attacks >= attacksPerTurn(state, unit)) return false;
-    return hasTwoExertions(unit) || !spent.switched;
+    return hasTwoExertions(state, unit) || !spent.switched;
   }
-  if (hasTwoExertions(unit)) return !spent.switched;
+  if (hasTwoExertions(state, unit)) return !spent.switched;
   return !spent.attacked && !spent.switched;
 }
 

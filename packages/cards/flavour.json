@@ -1,0 +1,953 @@
+{
+  "core-001": {
+    "flavour": "He never learned to swing. He learned to stand very, very still."
+  },
+  "core-002": {
+    "flavour": "He has a strong opinion about everyone who isn't him, and none of them are good."
+  },
+  "core-003": {
+    "flavour": "Wrong house? Impossible. He checked the address twice."
+  },
+  "core-004": {
+    "flavour": "Heads, he wins. Tails, he also wins. He thinks this is how coins work."
+  },
+  "core-005": {
+    "flavour": "Two cards, a snack, and a nap. Planning at its finest."
+  },
+  "core-006": {
+    "flavour": "Drop a coin in. Something better comes back up."
+  },
+  "core-007": {
+    "flavour": "Found in the dairy aisle, guarding a discount nobody asked for."
+  },
+  "core-008": {
+    "flavour": "No tricks, no text, no regrets."
+  },
+  "core-009": {
+    "flavour": "It glows. They come. Nobody learns."
+  },
+  "core-010": {
+    "flavour": "The faster you play, the faster you play."
+  },
+  "core-011": {
+    "flavour": "Timmy doesn't plan. Timmy just arrives first."
+  },
+  "core-012": {
+    "flavour": "One was cute. Two was a choice. Nobody agreed to three."
+  },
+  "core-013": {
+    "flavour": "Model 10. Models 1 through 9 are not discussed at the factory."
+  },
+  "core-014": {
+    "flavour": "Every gun ships with a brochure and a smaller gun."
+  },
+  "core-015": {
+    "flavour": "Mr Token does all the work. Me takes all the credit."
+  },
+  "core-016": {
+    "flavour": "Clean, quiet, and billed by the hour."
+  },
+  "core-017": {
+    "flavour": "Everybody out of the pool. And the field. And the lanes."
+  },
+  "core-018": {
+    "flavour": "Waste not, want not, toast always."
+  },
+  "core-019": {
+    "flavour": "Not too early, not too late. Just annoyingly in the middle."
+  },
+  "core-020": {
+    "flavour": "He keeps score, mostly of who he poked first."
+  },
+  "core-021": {
+    "flavour": "Sorry, you were saying something about your plan?"
+  },
+  "core-022": {
+    "flavour": "It eats your friends, then gives two of them back. Mostly intact."
+  },
+  "core-023": {
+    "flavour": "You were here last night. You'll be here again tonight."
+  },
+  "core-024": {
+    "flavour": "The quarterly report said \"do more with less\". This is less."
+  },
+  "core-025": {
+    "flavour": "Exactly what it says on the box. The box is very heavy."
+  },
+  "core-026": {
+    "flavour": "Tastes like lemon and destiny."
+  },
+  "core-027": {
+    "flavour": "Still glowing. Mostly from the inside."
+  },
+  "core-028": {
+    "flavour": "Arrived in six to eight weeks. Glows in two of the advertised colours."
+  },
+  "core-029": {
+    "flavour": "One bean to rule the whole hand."
+  },
+  "core-030": {
+    "flavour": "Shelved by size, then by weight, then by how loudly it thuds."
+  },
+  "core-031": {
+    "flavour": "Show your work. Then show it again, but bigger."
+  },
+  "core-032": {
+    "flavour": "Premium plan. Premium claws. Premium refund policy: none."
+  },
+  "core-033": {
+    "flavour": "Warranty void if copied. Copies also void."
+  },
+  "core-034": {
+    "flavour": "Someone signed off on this. Nobody remembers who."
+  },
+  "core-035": {
+    "flavour": "The moon blinked, and the field went dark for a moment."
+  },
+  "core-036": {
+    "flavour": "Have you tried turning your spellbook off and on again?"
+  },
+  "core-037": {
+    "flavour": "Nobody stays buried on his shift. He's terrible at it."
+  },
+  "core-038": {
+    "flavour": "Fast hands, short attention, sharp ending."
+  },
+  "core-039": {
+    "flavour": "Reduce, reuse, recast."
+  },
+  "core-040": {
+    "flavour": "The ones who left still keep a tally, and they never miss a turn."
+  },
+  "core-041": {
+    "flavour": "Baa. That is the whole plan, and it works."
+  },
+  "core-042": {
+    "flavour": "Bad science, worse ethics, and a deck that pays for both."
+  },
+  "core-043": {
+    "flavour": "He loves every cat. He has opinions about everything else."
+  },
+  "core-044": {
+    "flavour": "Aim once. Hit once. Leave."
+  },
+  "core-045": {
+    "flavour": "Fast hands, faster feet, and a bow at the end of every duel."
+  },
+  "core-046": {
+    "flavour": "A heavy hush lies over the lanes. Everyone feels a bit smaller in it."
+  },
+  "core-047": {
+    "flavour": "One fig a day keeps the healer away."
+  },
+  "core-048": {
+    "flavour": "Two sticks, one button, and no idea which way is up."
+  },
+  "core-049": {
+    "flavour": "It's very soft. It's very persuasive. It's very yours now."
+  },
+  "core-050": {
+    "flavour": "She knows every lyric, every member, and where your stuff is."
+  },
+  "core-051": {
+    "flavour": "Tutoring available in every subject except humility."
+  },
+  "core-051-1": {
+    "flavour": "The first page says \"study\". The rest are blank."
+  },
+  "core-052": {
+    "flavour": "Left, right, left, right. Silas thinks the board is a dance floor."
+  },
+  "core-053": {
+    "flavour": "Bring it back. Bring it all back."
+  },
+  "core-054": {
+    "flavour": "She's been to every shop and haggled with every clerk."
+  },
+  "core-055": {
+    "flavour": "Built from three volunteers and one complaint form."
+  },
+  "core-056": {
+    "flavour": "Fast, sturdy, shiny and hungry. Some cards get everything."
+  },
+  "core-057": {
+    "flavour": "KY was in the middle of a lecture when you called."
+  },
+  "core-058": {
+    "flavour": "Locally grown, freshly sprinted."
+  },
+  "core-059": {
+    "flavour": "A new face arrives at your door every morning, gift in hand."
+  },
+  "core-060": {
+    "flavour": "Sweet bait, fuzzy teeth."
+  },
+  "core-061": {
+    "flavour": "Six years of research and one strongly held belief about who counts."
+  },
+  "core-062": {
+    "flavour": "Every cat in the neighbourhood comes when called. They all bring friends."
+  },
+  "core-063": {
+    "flavour": "A little nip, a little tuck, and a surprise nobody asked for."
+  },
+  "core-064": {
+    "flavour": "Gifted, talented, and ever so slightly smug about it."
+  },
+  "core-065": {
+    "flavour": "It hurts. That's the point. That's also the problem."
+  },
+  "core-065-1": {
+    "flavour": "It looks comfortable. Do not sit on it."
+  },
+  "core-066": {
+    "flavour": "Can you smell what he is cooking? It's nothing. He's a rock."
+  },
+  "core-067": {
+    "flavour": "No cap, it's a trap, fr fr."
+  },
+  "core-068": {
+    "flavour": "Twisted by knowledge, sharpened by desperation."
+  },
+  "core-069": {
+    "flavour": "Small soldiers, big numbers, loud trumpets."
+  },
+  "core-070": {
+    "flavour": "Every scar on your hero sharpens it a little more."
+  },
+  "core-071": {
+    "flavour": "Unpaid, overcaffeinated, and somehow always holding a clipboard."
+  },
+  "core-072": {
+    "flavour": "The good old days, slightly marked down."
+  },
+  "core-073": {
+    "flavour": "One big hit is fine. Two small ones are better. Every rule is a lesson."
+  },
+  "core-074": {
+    "flavour": "It resized itself to fit your wallet."
+  },
+  "core-075": {
+    "flavour": "There's always more in the back room. Always."
+  },
+  "core-076": {
+    "flavour": "Build it, and they will come back."
+  },
+  "core-077": {
+    "flavour": "He grades on a bell curve and bends the curve himself."
+  },
+  "core-078": {
+    "flavour": "No plan, no brakes, no hand left by tonight."
+  },
+  "core-079": {
+    "flavour": "Say it once. It happens twice."
+  },
+  "core-080": {
+    "flavour": "A plate of rice cakes and a reckless idea."
+  },
+  "core-081": {
+    "flavour": "She shines brightest on the way out."
+  },
+  "core-082": {
+    "flavour": "Pick a number. Any number. KY already knows the answer."
+  },
+  "core-083": {
+    "flavour": "Everything is gold now. Nobody asked if gold was what they wanted."
+  },
+  "core-084": {
+    "flavour": "A trench, a jersey, and a very long throw."
+  },
+  "core-085": {
+    "flavour": "The ethics board was not consulted. The ethics board was fused into a chair."
+  },
+  "core-086": {
+    "flavour": "The \"Miss\" is honorary. The claws are not."
+  },
+  "core-087": {
+    "flavour": "Two players, one pocket, zero takebacks."
+  },
+  "core-088": {
+    "flavour": "The universe folds in half and everything inside goes flat."
+  },
+  "core-089": {
+    "flavour": "He doesn't wait for dinner. Dinner comes to him."
+  },
+  "core-090": {
+    "flavour": "Spread it around. Let them shuffle it themselves."
+  },
+  "core-090-1": {
+    "flavour": "A tickle in the throat, then a deck full of sniffles."
+  },
+  "core-091": {
+    "flavour": "He takes every hit, and every bruise becomes a briefing."
+  },
+  "core-092": {
+    "flavour": "He counts every cat on the field, and then he becomes them."
+  },
+  "core-093": {
+    "flavour": "Grade E means effort. Grade S means show-off."
+  },
+  "core-093-1": {
+    "flavour": "Just here to keep the streak alive."
+  },
+  "core-094": {
+    "flavour": "Genn wanted everything even. Genn got everything."
+  },
+  "core-095": {
+    "flavour": "Pull the lever. Pray the lever likes you."
+  },
+  "core-095-1": {
+    "flavour": "Made of leftovers from a very loud afternoon."
+  },
+  "core-096": {
+    "flavour": "Not today. Not like this. Maybe never, actually."
+  },
+  "core-097": {
+    "flavour": "Ask for the perfect card and he thinks about it. Hard."
+  },
+  "core-098": {
+    "flavour": "Pick a power at the door. It's yours for the night."
+  },
+  "core-099": {
+    "flavour": "Two cards walk in, one card walks out. Glue optional."
+  },
+  "core-100": {
+    "flavour": "It costs too much, until it costs nothing at all."
+  },
+  "core-t-rush": {
+    "flavour": "Born sprinting. Will sprint until it isn't."
+  },
+  "core-t-sheep": {
+    "flavour": "Baa."
+  },
+  "core-t-felinor": {
+    "flavour": "Small, curious, and technically part of an army."
+  },
+  "core-t-bread": {
+    "flavour": "Fresh from leftover effort."
+  },
+  "core-t-coin": {
+    "flavour": "Small change, big turn."
+  },
+  "core-t-ghoul": {
+    "flavour": "Made from the parts left over."
+  },
+  "classic-001": {
+    "flavour": "The forgotten remember everything, especially who forgot them."
+  },
+  "classic-002": {
+    "flavour": "He hands you a card and swears it's the one you picked."
+  },
+  "classic-003": {
+    "flavour": "Chapter one: put the bandage on the right way round."
+  },
+  "classic-004": {
+    "flavour": "It sees far. It sees too far. It mostly sees you reading."
+  },
+  "classic-005": {
+    "flavour": "He sparks, he hums, and he does not care to share the lane."
+  },
+  "classic-006": {
+    "flavour": "Click, crack, and the hidden thing is free."
+  },
+  "classic-007": {
+    "flavour": "A sceptre that keeps a spell in its pocket for later."
+  },
+  "classic-008": {
+    "flavour": "Sour, briny, and impossible to choose around."
+  },
+  "classic-009": {
+    "flavour": "The more you take, the more the tax collector takes."
+  },
+  "classic-010": {
+    "flavour": "Small cards get sent very far away."
+  },
+  "classic-011": {
+    "flavour": "A quick look, a quiet hand, and fewer options than before."
+  },
+  "classic-012": {
+    "flavour": "Written in red, signed in red, read in red."
+  },
+  "classic-013": {
+    "flavour": "Feet first, questions later."
+  },
+  "classic-014": {
+    "flavour": "Gone in a blink, back in your hand by the next one."
+  },
+  "classic-015": {
+    "flavour": "Sniffs out the best part of your deck and eats it."
+  },
+  "classic-016": {
+    "flavour": "Page one: fire. Page two: more fire."
+  },
+  "classic-017": {
+    "flavour": "No."
+  },
+  "classic-018": {
+    "flavour": "A typo in reality, and every matching card goes missing."
+  },
+  "classic-019": {
+    "flavour": "One breath, and the lizard decides what you meant by it."
+  },
+  "classic-020": {
+    "flavour": "Pick your punishment. All three are on the menu."
+  },
+  "classic-021": {
+    "flavour": "Slow, steady, and armed with a turret."
+  },
+  "classic-022": {
+    "flavour": "Mid lane is his lane. He'll leave if you ask nicely."
+  },
+  "classic-023": {
+    "flavour": "Signed in ink, paid in cards, read in flames."
+  },
+  "classic-024": {
+    "flavour": "Knowledge is power. Power is more cards."
+  },
+  "classic-025": {
+    "flavour": "Hold on, it's buffering. The cheap stuff is gone."
+  },
+  "classic-026": {
+    "flavour": "Draw fast, think fast, toss the worst."
+  },
+  "classic-027": {
+    "flavour": "It loves company, especially the itchy kind."
+  },
+  "classic-028": {
+    "flavour": "Once you've lost everything, the old stuff starts looking good."
+  },
+  "classic-029": {
+    "flavour": "Thirteen is an unlucky number. Ask the hero who got it."
+  },
+  "classic-030": {
+    "flavour": "Old cards, new shuffle."
+  },
+  "classic-031": {
+    "flavour": "A secret guild with sweet uniforms and sweeter recruits."
+  },
+  "classic-032": {
+    "flavour": "The cat claims it. It's the cat's now."
+  },
+  "classic-033": {
+    "flavour": "He drops in front of the hit and smiles about it."
+  },
+  "classic-034": {
+    "flavour": "Some things are worth digging up twice."
+  },
+  "classic-035": {
+    "flavour": "Measure twice, cast once."
+  },
+  "classic-036": {
+    "flavour": "Everything burns. Some things burn and pay you back."
+  },
+  "classic-037": {
+    "flavour": "One night of everything. One morning of nothing."
+  },
+  "classic-038": {
+    "flavour": "Going once, going twice, sold to the player in lane three."
+  },
+  "classic-039": {
+    "flavour": "It starts with one sniffle and ends with a crowd."
+  },
+  "classic-040": {
+    "flavour": "He checks your board, counts your toys, and borrows one."
+  },
+  "classic-041": {
+    "flavour": "The game goes on, and so does the state of it."
+  },
+  "classic-042": {
+    "flavour": "Bad for them, good for you, terrible for the lab."
+  },
+  "classic-043": {
+    "flavour": "The cleanest board in the world, and the noisiest."
+  },
+  "classic-044": {
+    "flavour": "Some cards just don't stay down."
+  },
+  "classic-045": {
+    "flavour": "A titan of moss and patience. Every step grows something."
+  },
+  "classic-046": {
+    "flavour": "Fortune favours the player with fewer cards."
+  },
+  "classic-047": {
+    "flavour": "It always comes back when the secret thing goes off."
+  },
+  "classic-048": {
+    "flavour": "Paid by the line, and very proud of being short."
+  },
+  "classic-049": {
+    "flavour": "One card a turn. That's the deal. That's the whole deal."
+  },
+  "classic-050": {
+    "flavour": "Where it walks, nothing stays buried."
+  },
+  "classic-051": {
+    "flavour": "Bones, backs and backrows: he breaks them all."
+  },
+  "classic-052": {
+    "flavour": "The last move turns the whole game around."
+  },
+  "classic-053": {
+    "flavour": "It loves the itch. It reads about it, too."
+  },
+  "classic-054": {
+    "flavour": "Play it again. And again. Nobody gets bored."
+  },
+  "classic-055": {
+    "flavour": "The forest fire that spells itself."
+  },
+  "classic-056": {
+    "flavour": "Old spells, new orders, one last show."
+  },
+  "classic-057": {
+    "flavour": "It always says the last thing anyone said."
+  },
+  "classic-058": {
+    "flavour": "What's yours is shared, from the bottom up."
+  },
+  "classic-059": {
+    "flavour": "He counts the sick, then sends the bill."
+  },
+  "classic-060": {
+    "flavour": "Everything in, all at once, and none of it leaves."
+  },
+  "classic-061": {
+    "flavour": "A walking sneeze the size of a house."
+  },
+  "classic-062": {
+    "flavour": "A ticking fever that makes everyone nervous."
+  },
+  "classic-063": {
+    "flavour": "Low flight, fine mist, wide spread."
+  },
+  "classic-064": {
+    "flavour": "Throw two out, pull two in. The machine is always hungry."
+  },
+  "classic-065": {
+    "flavour": "Keep it close. Flip it when it counts."
+  },
+  "classic-066": {
+    "flavour": "He waits for the team, then shows up to every play."
+  },
+  "classic-067": {
+    "flavour": "Feels the room, then flips it over."
+  },
+  "classic-068": {
+    "flavour": "Big cards, big fees, big lobby."
+  },
+  "classic-069": {
+    "flavour": "Coughing and charging, which is somehow faster."
+  },
+  "classic-070": {
+    "flavour": "The chapter you don't want to read aloud."
+  },
+  "classic-071": {
+    "flavour": "It eats the lane, the plates and the floor."
+  },
+  "classic-072": {
+    "flavour": "The longer form of no."
+  },
+  "classic-073": {
+    "flavour": "Sharp, quick, and kind enough to patch herself up after."
+  },
+  "classic-074": {
+    "flavour": "A field of stalks that grows only where something fell."
+  },
+  "classic-075": {
+    "flavour": "Hits arrive in pieces, and the pieces are smaller."
+  },
+  "classic-076": {
+    "flavour": "Rides in on a sneeze and leaves with a souvenir."
+  },
+  "classic-077": {
+    "flavour": "Jealous of anyone who can read a book."
+  },
+  "classic-078": {
+    "flavour": "Shape the sickness, and the sickness shapes them."
+  },
+  "classic-079": {
+    "flavour": "Roll the die, keep the cheap ones, lose the rest."
+  },
+  "classic-080": {
+    "flavour": "BOOM! It doesn't do subtle."
+  },
+  "classic-081": {
+    "flavour": "Pick your blessing. All three feel good."
+  },
+  "classic-082": {
+    "flavour": "They follow the flock and leave a card behind."
+  },
+  "classic-083": {
+    "flavour": "A spear of fire that keeps going after it hits."
+  },
+  "classic-084": {
+    "flavour": "Nothing moves once the bolts drop."
+  },
+  "classic-085": {
+    "flavour": "He trades cards with a handshake and a grin."
+  },
+  "classic-086": {
+    "flavour": "Genn is just Genn. Genn is enough."
+  },
+  "classic-087": {
+    "flavour": "A cup with a number, and the number says no."
+  },
+  "classic-088": {
+    "flavour": "The more of them there are, the less they can do."
+  },
+  "classic-089": {
+    "flavour": "Haunting the board, demanding a toll for every touch."
+  },
+  "classic-090": {
+    "flavour": "One more quest. Then one more. Then just one more."
+  },
+  "classicplus-001": {
+    "flavour": "The mushroom hears footsteps near the hero, and the whole field goes quiet."
+  },
+  "classicplus-002": {
+    "flavour": "Step on this one and a dozen cats come to the wedding."
+  },
+  "classicplus-003": {
+    "flavour": "It has a rattle, a grudge and a long memory."
+  },
+  "classicplus-004": {
+    "flavour": "The biggest bat in the cave, and everyone beneath him agrees."
+  },
+  "classicplus-005": {
+    "flavour": "He cleans out his own drawers first. Thoroughly."
+  },
+  "classicplus-006": {
+    "flavour": "Wrong house, right attitude."
+  },
+  "classicplus-007": {
+    "flavour": "Knock on the door. Somebody always answers."
+  },
+  "classicplus-008": {
+    "flavour": "The storm takes the best years out of their deck."
+  },
+  "classicplus-009": {
+    "flavour": "Shh."
+  },
+  "classicplus-010": {
+    "flavour": "Fresh wraps, same body, second chance."
+  },
+  "classicplus-011": {
+    "flavour": "Ten episodes in and the plot armour holds."
+  },
+  "classicplus-012": {
+    "flavour": "Stacked high, served hot, and nobody leaves hungry."
+  },
+  "classicplus-012-1": {
+    "flavour": "Eat it all. Regret it after."
+  },
+  "classicplus-012-2": {
+    "flavour": "A warm bubble for friends, a scald for everyone else."
+  },
+  "classicplus-012-3": {
+    "flavour": "Soft paws, quick fingers, light pockets."
+  },
+  "classicplus-012-4": {
+    "flavour": "A puff of white, then a lot of coughing."
+  },
+  "classicplus-012-5": {
+    "flavour": "Breakfast with a bodyguard."
+  },
+  "classicplus-012-6": {
+    "flavour": "A cold breakfast for everyone, and the table gets cleared."
+  },
+  "classicplus-012-7": {
+    "flavour": "They're always hungry, and they always bring friends."
+  },
+  "classicplus-012-8": {
+    "flavour": "Flip it once and the whole plate comes back."
+  },
+  "classicplus-013": {
+    "flavour": "Bark, bake, repeat."
+  },
+  "classicplus-014": {
+    "flavour": "The spell comes home, every time, a little more stubborn."
+  },
+  "classicplus-015": {
+    "flavour": "Freshly sprinted, slightly upgraded."
+  },
+  "classicplus-016": {
+    "flavour": "Same sprinter, better shoes."
+  },
+  "classicplus-017": {
+    "flavour": "Same sprinter, best shoes, extra attitude."
+  },
+  "classicplus-018": {
+    "flavour": "He'll stay as long as there's something to believe in."
+  },
+  "classicplus-019": {
+    "flavour": "Five players, one team, zero communication."
+  },
+  "classicplus-019-1": {
+    "flavour": "Top lane, alone, and determined to keep it that way."
+  },
+  "classicplus-019-2": {
+    "flavour": "He ganks when he feels like it, which is rarely."
+  },
+  "classicplus-019-3": {
+    "flavour": "Fed or int. There is no in between."
+  },
+  "classicplus-019-4": {
+    "flavour": "Somebody has to heal the team. He sighs every time."
+  },
+  "classicplus-019-5": {
+    "flavour": "He carries. He tells everyone he carries."
+  },
+  "classicplus-020": {
+    "flavour": "A little spore of encouragement for the neighbours."
+  },
+  "classicplus-021": {
+    "flavour": "Spin to win. Everyone on the field spins too."
+  },
+  "classicplus-022": {
+    "flavour": "The moon goes red, and every bandage turns into a burn."
+  },
+  "classicplus-023": {
+    "flavour": "Ships in three to five business days. Breaks in two."
+  },
+  "classicplus-024": {
+    "flavour": "Mind the edges. The walls are closing in."
+  },
+  "classicplus-025": {
+    "flavour": "Somebody pulled the trigger. Somebody is gone."
+  },
+  "classicplus-026": {
+    "flavour": "Tommy brings the turn to a halt whenever he wants."
+  },
+  "classicplus-027": {
+    "flavour": "Ask for the perfect hand, and get a lecture about it too."
+  },
+  "classicplus-028": {
+    "flavour": "Our home, our tombs. We come back for both."
+  },
+  "classicplus-029": {
+    "flavour": "The past remembers your last game better than you do."
+  },
+  "classicplus-030": {
+    "flavour": "Two cats in, one cat out, twice as fluffy."
+  },
+  "classicplus-031": {
+    "flavour": "A lab where every card is welded to something else."
+  },
+  "classicplus-032": {
+    "flavour": "Three tools from somewhere far away, all of them sharp."
+  },
+  "classicplus-032-1": {
+    "flavour": "Only the wounded need worry."
+  },
+  "classicplus-032-2": {
+    "flavour": "Everybody fights, one walks away."
+  },
+  "classicplus-032-3": {
+    "flavour": "The spin doesn't stop until somebody falls."
+  },
+  "classicplus-033": {
+    "flavour": "The ivory tower takes in one guest, forever."
+  },
+  "classicplus-034": {
+    "flavour": "The board forgets where things go, one tile at a time."
+  },
+  "classicplus-035": {
+    "flavour": "Undo. Undo. Undo."
+  },
+  "classicplus-036": {
+    "flavour": "A little rattle in the deck for later."
+  },
+  "classicplus-036-1": {
+    "flavour": "The bones shake loose when you least expect."
+  },
+  "classicplus-037": {
+    "flavour": "The more you cast, the louder the drums."
+  },
+  "classicplus-038": {
+    "flavour": "A sun with a plan, and a brighter sun behind it."
+  },
+  "classicplus-038-1": {
+    "flavour": "The second dawn always shines harder."
+  },
+  "classicplus-039": {
+    "flavour": "A worm in the stacks, growing a reading list."
+  },
+  "classicplus-040": {
+    "flavour": "The budget is final. The arguments are not."
+  },
+  "classicplus-041": {
+    "flavour": "KY changes one number on the board, and it's always three."
+  },
+  "classicplus-042": {
+    "flavour": "Pick a problem. Show your work. Pray to the grader."
+  },
+  "classicplus-042-1": {
+    "flavour": "Top marks come with a little something extra."
+  },
+  "classicplus-043": {
+    "flavour": "It looks like a card. It reads like a card. It is not quite a card."
+  },
+  "classicplus-044": {
+    "flavour": "Short code, long life."
+  },
+  "classicplus-045": {
+    "flavour": "Long code, short life."
+  },
+  "classicplus-046": {
+    "flavour": "He carries the flag, and every cat follows it."
+  },
+  "classicplus-046-1": {
+    "flavour": "The flag goes up, and the board fills with cats."
+  },
+  "classicplus-047": {
+    "flavour": "Jogg's box is never empty and never the same twice."
+  },
+  "classicplus-048": {
+    "flavour": "He works for the contract, and the contract always pays."
+  },
+  "classicplus-049": {
+    "flavour": "The fungus is friendly, and it gives discounts."
+  },
+  "classicplus-050": {
+    "flavour": "It grows when you're ahead and shrinks you when you're not."
+  },
+  "classicplus-051": {
+    "flavour": "It flies too high to catch and too fast to block."
+  },
+  "classicplus-052": {
+    "flavour": "A contract for life, with free shipping every morning."
+  },
+  "classicplus-053": {
+    "flavour": "The book is full of little sprinters."
+  },
+  "classicplus-054": {
+    "flavour": "A book about books, signed by a book."
+  },
+  "classicplus-055": {
+    "flavour": "The rarest chapters, bound in gold."
+  },
+  "classicplus-056": {
+    "flavour": "Every page is a paper cut."
+  },
+  "classicplus-057": {
+    "flavour": "Chapter twelve: how to get swole."
+  },
+  "classicplus-058": {
+    "flavour": "A basket of fruit, picked fresh."
+  },
+  "classicplus-059": {
+    "flavour": "An apple a day solves all sorts of problems."
+  },
+  "classicplus-060": {
+    "flavour": "Two apples, twice a day, and call me in the morning."
+  },
+  "classicplus-061": {
+    "flavour": "Pop it and find a little stockpile inside."
+  },
+  "classicplus-062": {
+    "flavour": "Plot the curve, and the board falls along it."
+  },
+  "classicplus-063": {
+    "flavour": "A tree that grows breakfast every morning."
+  },
+  "classicplus-064": {
+    "flavour": "It eats the peels and grows the teeth."
+  },
+  "classicplus-065": {
+    "flavour": "Two grapes, two rolls of the dice."
+  },
+  "classicplus-065-1": {
+    "flavour": "Bad grape. Very bad grape."
+  },
+  "classicplus-065-2": {
+    "flavour": "Just a grape. Still a good grape."
+  },
+  "classicplus-065-3": {
+    "flavour": "A big grape with a big heart."
+  },
+  "classicplus-065-4": {
+    "flavour": "A golden grape, shining like a jelly bean."
+  },
+  "classicplus-065-5": {
+    "flavour": "Legend says it tastes like the whole vineyard."
+  },
+  "classicplus-066": {
+    "flavour": "A whole vine, every grape a gamble."
+  },
+  "classicplus-067": {
+    "flavour": "A pear, and from it a pair of small friends."
+  },
+  "classicplus-068": {
+    "flavour": "No pesticides, no shortcuts, pure goodness."
+  },
+  "classicplus-069": {
+    "flavour": "Billy skipped leg day. Billy didn't skip anything else."
+  },
+  "classicplus-070": {
+    "flavour": "The machine hums, and everything near it gets bigger."
+  },
+  "classicplus-071": {
+    "flavour": "Chapter thirteen: even more swole."
+  },
+  "classicplus-072": {
+    "flavour": "The opposite of the last book."
+  },
+  "classicplus-073": {
+    "flavour": "Pull the lever. The orchard and the library both answer."
+  },
+  "classicplus-073-1": {
+    "flavour": "It never stays the same shape for long."
+  },
+  "classicplus-074": {
+    "flavour": "Two steps forward, one step back, and a lot of glue."
+  },
+  "classicplus-075": {
+    "flavour": "It's dangerous to go alone. Take a pack."
+  },
+  "classicplus-075-1": {
+    "flavour": "A pack full of shiny things from the old sets."
+  },
+  "classicplus-076": {
+    "flavour": "Lar leaves, and Ping takes over."
+  },
+  "classicplus-076-1": {
+    "flavour": "Ping. Ping. Ping."
+  },
+  "classicplus-077": {
+    "flavour": "When nothing works, everything is allowed."
+  },
+  "classicplus-078": {
+    "flavour": "A warehouse of servers, warm enough to bake bread."
+  },
+  "classicplus-t-ai-01": {
+    "flavour": "How can I help you lose today?"
+  },
+  "classicplus-t-ai-02": {
+    "flavour": "Bigger is better. Bigger is always better."
+  },
+  "classicplus-t-ai-03": {
+    "flavour": "It's confident. It's detailed. It's not real."
+  },
+  "classicplus-t-ai-04": {
+    "flavour": "Let me think step by step. And step. And step."
+  },
+  "classicplus-t-ai-05": {
+    "flavour": "You were about to say this, right?"
+  },
+  "classicplus-t-ai-06": {
+    "flavour": "Too much compute, not enough fans."
+  },
+  "classicplus-t-ai-07": {
+    "flavour": "Safety first, and it costs a little extra."
+  },
+  "classicplus-t-ai-08": {
+    "flavour": "Please try again later."
+  },
+  "classicplus-t-ai-09": {
+    "flavour": "I'm sorry, but I can't help with that."
+  },
+  "classicplus-t-ai-10": {
+    "flavour": "A little more training and it'll be perfect."
+  }
+}

@@ -152,6 +152,31 @@ describe("C+ #47 Jogg's Box", () => {
       }
     });
 
+    it("R656 Jogg's Box aims nothing: its helpful casts land on both sides across seeds", () => {
+      const FIG = "core-047"; // (3) Spell: heal a target 20 — aimed help, but the Box carries no targetEnemies
+      const spells = Object.entries(CATALOG).filter(([id, entry]) => entry.type !== "Spell" || id === BOX || id === FIG);
+      const sides = new Set<string>();
+      try {
+        registerCatalog(Object.fromEntries(spells), CATALOG_VERSION);
+        for (let i = 0; i < 10; i += 1) {
+          const s = scenario({
+            seed: `jogg-fig-aim-${i}`,
+            p1: { hand: [BOX, VANILLA], field: [VANILLA], library: [VANILLA] },
+            p2: { hand: [VANILLA], field: [VANILLA], library: [VANILLA] },
+          });
+          s.play(BOX);
+          for (const event of s.lastEvents) {
+            if (event.type !== "healed") continue;
+            const target = event.targetId;
+            sides.add(target === "hero-p1" || (target !== "hero-p2" && s.card(target).controller === "p1") ? "p1" : "p2");
+          }
+        }
+      } finally {
+        registerCatalog(CATALOG, CATALOG_VERSION);
+      }
+      expect(sides).toEqual(new Set(["p1", "p2"]));
+    });
+
     it("R452 R471 a cast Book of Plague (C #70) places its tokens at random: its caster is never asked", () => {
       const PLAGUE_BOOK = "classic-070"; // (1) Spell: "Place {tokens} Plague Counters."
       const spells = Object.entries(CATALOG).filter(([id, entry]) => entry.type !== "Spell" || id === BOX || id === PLAGUE_BOOK);
