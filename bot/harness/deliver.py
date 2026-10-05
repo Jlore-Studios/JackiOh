@@ -1059,7 +1059,7 @@ class Deliverer:
         available = {seat.tier for provider in self.cfg.pool.ordered()
                      if provider.enabled and "review" in provider.roles
                      and (provider.login == "machine" or secrets.has(provider.secret) is not False)
-                     for seat in self.cfg.pool.seats(provider)}
+                     for seat in self.cfg.pool.own_seats(provider)}
         return review_rule.reachable([tier for _, tier in self._approvals(votes)], available,
                                      difficulty)
 

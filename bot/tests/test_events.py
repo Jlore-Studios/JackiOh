@@ -106,7 +106,7 @@ class CommentTests(unittest.TestCase):
         self.send("/harness status")
         text = self.reply()
         self.assertIn("Queued to build: #6", text)
-        self.assertIn("`claude-1` (claude: `opus` strong, `sonnet` weak; 21:00–07:00 "
+        self.assertIn("`claude-1` (claude: `opus` strong, `sonnet` medium; 21:00–07:00 "
                       "America/Chicago): outside its "
                       "hours", text)
         self.assertIn("`claude-2` (claude: `opus` strong; 21:00–07:00 America/Chicago): its secret "
@@ -402,13 +402,13 @@ class StatusTests(unittest.TestCase):
             "- **Running now** (3 of 10 lanes, 7 free; 2 of 7 on the machine, the rest on "
             "GitHub's runners):",
             f"  - `claude-1` (claude, `opus`): building #37, for 47m, [run]({runs}/101).",
-            f"  - `agy` (agy, `gemini-3.8-flash-high`): a suggestion survey, just started, [run]({runs}/103).",
             f"  - `muse` (muse, `muse-spark-1.3-contributor`): revising #49, for 2h 03m, "
             f"[run]({runs}/102).",
+            f"  - `agy` (agy, `gemini-3.8-flash-high`): a suggestion survey, just started, [run]({runs}/103).",
         ]), text)
         # A run that ended holds nothing, and its subscription says why it is or is not free.
         self.assertNotIn("`gpt` (codex", text.split("- Subscriptions")[0])
-        self.assertIn("  - `claude-1` (claude: `opus` strong, `sonnet` weak; 21:00–07:00 "
+        self.assertIn("  - `claude-1` (claude: `opus` strong, `sonnet` medium; 21:00–07:00 "
                       "America/Chicago): "
                       "**working on #37**.", text)
         self.assertNotIn("`gpt` (codex, `gpt-5.6-terra`, any time): **working", text)

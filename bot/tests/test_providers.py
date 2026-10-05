@@ -38,10 +38,10 @@ class ParseTests(unittest.TestCase):
         pool = providers.load(ROOT)
         # The usage order: claude-3 and claude-1 first, then claude-4, claude-6 and
         # claude-5 last of the Claude accounts (each under its caps), then the medium models,
-        # then claude-2, kept for planning and review, Devin, and devin-train, which takes
-        # only `training` items on the training box, last.
+        # Muse first (#317 part 9), then claude-2, kept for planning and review, Devin, and
+        # devin-train, which takes only `training` items on the training box, last.
         self.assertEqual(pool.priority, ("claude-3", "claude-1", "claude-4", "claude-6",
-                                         "claude-5", "agy", "muse", "gpt", "claude-2",
+                                         "claude-5", "muse", "agy", "gpt", "claude-2",
                                          "devin", "devin-train"))
         self.assertEqual((pool.max_parallel, pool.machine_parallel), (10, 7))
         self.assertEqual({p.cli for p in pool.ordered()}, set(providers.CLIS))
@@ -53,11 +53,11 @@ class ParseTests(unittest.TestCase):
         seats = {p.id: [(s.model, s.tier, s.self_check) for s in pool.seats(p)]
                  for p in pool.ordered()}
         self.assertEqual(seats, {
-            "claude-3": [("opus", "strong", False), ("sonnet", "weak", False)],
-            "claude-1": [("opus", "strong", False), ("sonnet", "weak", False)],
-            "claude-4": [("opus", "strong", False)],
-            "claude-5": [("opus", "strong", False)],
-            "claude-6": [("opus", "strong", False)],
+            "claude-3": [("opus", "strong", False), ("sonnet", "medium", False)],
+            "claude-1": [("opus", "strong", False), ("sonnet", "medium", False)],
+            "claude-4": [("opus", "strong", False), ("sonnet", "medium", False)],
+            "claude-5": [("opus", "strong", False), ("sonnet", "medium", False)],
+            "claude-6": [("opus", "strong", False), ("sonnet", "medium", False)],
             "agy": [("gemini-3.8-flash-high", "medium", False)],
             "muse": [("muse-spark-1.3-contributor", "medium", False)],
             "gpt": [("gpt-5.6-terra", "medium", False)],
@@ -65,7 +65,17 @@ class ParseTests(unittest.TestCase):
             "devin": [("swe-2-max", "weak", True)],
             "devin-train": [("swe-2-max", "weak", True)],
         })
-        self.assertEqual([e.model for e in pool.tiers["weak"]], ["sonnet", "swe-2-max"])
+        self.assertEqual([e.model for e in pool.tiers["weak"]], ["swe-2-max"])
+        self.assertEqual([e.model for e in pool.tiers["medium"]],
+                         ["muse-spark-1.3-contributor", "gemini-3.8-flash-high", "sonnet",
+                          "gpt-5.6-terra"])
+        # Sonnet on claude-4, -5 and -6 only stands in for Devin; on claude-3 and -1 it is a seat
+        # like any other (#317 parts 5 and 9).
+        self.assertEqual({p.id: [s.takes_over for s in pool.seats(p)]
+                          for p in pool.ordered() if p.cli == "claude"},
+                         {"claude-3": ["", ""], "claude-1": ["", ""], "claude-4": ["", "devin"],
+                          "claude-6": ["", "devin"], "claude-5": ["", "devin"],
+                          "claude-2": [""]})
         self.assertEqual([e.model for e in pool.tiers["strong"]], ["opus"])
         for provider in pool.ordered():
             self.assertFalse(hasattr(provider, "difficult") or hasattr(provider, "self_review"))
@@ -104,7 +114,10 @@ class ParseTests(unittest.TestCase):
         broken(lambda r: r["tiers"].update(huge=[]), "unknown tiers")
         broken(lambda r: r.pop("tiers"), "expected an object")
         broken(lambda r: r["providers"]["claude-2"].update(
-            extra_models=[{"model": "sonnet", "tier": "medium"}]), "tiers lists it under weak")
+            extra_models=[{"model": "sonnet", "tier": "weak"}]), "tiers lists it under medium")
+        broken(lambda r: r["providers"]["claude-2"].update(
+            extra_models=[{"model": "sonnet", "tier": "medium", "takes_over": "nobody"}]),
+            "which is not another provider")
         broken(lambda r: r["providers"]["claude-2"].update(extra_models=[{"tier": "weak"}]),
                "needs a model")
         broken(lambda r: r["providers"]["gpt"].update(difficult=True), "unknown keys difficult")
@@ -238,7 +251,7 @@ class MatchingTests(unittest.TestCase):
         planned = plan_mod.make(ctx_for(gh, at=DAY))
         self.assertEqual((planned["number"], planned["provider"], planned["cli"], planned["secret"],
                           planned["login"], planned["runs_on"]),
-                         (3, "agy", "agy", "", "machine", "night-vm-agy"))
+                         (3, "muse", "muse", "", "machine", "night-vm-muse"))
         gh2 = FakeGitHub()
         gh2.add_issue(3, labels=(LABEL_BUILD,))
         planned = plan_mod.make(ctx_for(gh2, at=DAY, machine=("gpt",)))
@@ -261,29 +274,27 @@ class MatchingTests(unittest.TestCase):
                           train.only_labels),
                          ("devin", "cognition", "machine", "night-vm-devin-train",
                           ("build", "revise"), ("training",)))
-        # Unplanned, Devin cannot take it: it builds only from a strong model's plan. By day no
-        # strong model is free (the Claude accounts keep to the night here), so agy plans it in
-        # its own run and builds it.
+        # Unplanned, Devin cannot take it: it builds only from a plan. By day no strong model is
+        # free (the Claude accounts keep to the night here), so Muse plans it in its own run and
+        # builds it.
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD, "difficulty:easy"))
         planned = plan_mod.make(ctx_for(gh, at=DAY, machine=ALL_MACHINE))
-        self.assertEqual((planned["action"], planned["provider"]), ("build", "agy"))
+        self.assertEqual((planned["action"], planned["provider"]), ("build", "muse"))
         self.assertIn("#3 needs a plan", planned["housekeeping"])
         # A medium item passes Devin by.
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD,))
         planned = plan_mod.make(ctx_for(gh, at=DAY, machine=ALL_MACHINE))
-        self.assertEqual((planned["action"], planned["provider"]), ("build", "agy"))
+        self.assertEqual((planned["action"], planned["provider"]), ("build", "muse"))
         # With nothing else free, Devin builds an easy item another model already planned.
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD, "difficulty:easy"))
         ctx = ctx_for(gh, at=DAY, machine=("devin",))
         self.assertEqual(plan_mod.make(ctx)["action"], "none")  # no planner is free
-        # A medium model's plan is not enough for Devin; a strong one's is.
+        # A medium model's plan is enough for an easy item (#317 part 6), and Devin builds it.
         ctx.store.update(lambda s: state_item(s, 3).update(planned_at=clock.iso(DAY),
                                                             planned_tier="medium"))
-        self.assertEqual(plan_mod.make(ctx)["action"], "none")
-        ctx.store.update(lambda s: state_item(s, 3).update(planned_tier="strong"))
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"]), ("build", "devin"))
         self.assertEqual(planned["seats"]["self_check"], True)
@@ -522,10 +533,10 @@ class MatchingTests(unittest.TestCase):
         ctx.store.update(lambda s: state_item(s, 9).update(run_id="7"))
         gh.add_issue(10, labels=(LABEL_BUILD,))
         planned = plan_mod.make(ctx)
-        # #10 builds on agy; with the planning lane off here (test_needs_plan.py has it), it
+        # #10 builds on Muse; with the planning lane off here (test_needs_plan.py has it), it
         # plans in its own run, on its medium model.
         self.assertEqual((planned["number"], planned["provider"], planned["action"]),
-                         (10, "agy", "build"))
+                         (10, "muse", "build"))
         self.assertEqual(planned["seats"]["plan"]["tier"], "medium")
         # Past 90% claude-2 is held; claude-3's readings never stop it, only a refusal does.
         later = clock.iso(DAY + timedelta(days=2))
@@ -565,8 +576,9 @@ class MatchingTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"], r=str(len(taken)): state_item(
                 s, n).update(run_id=r))
             taken.append((planned["number"], planned["provider"]))
-        # Muse has two lanes, so it takes a second item before gpt, next in the usage order.
-        self.assertEqual(taken, [(3, "agy"), (4, "muse"), (5, "muse"), (6, "gpt")])
+        # Muse, first of the medium models, has two lanes, so it takes two items before agy and
+        # gpt, next in the usage order.
+        self.assertEqual(taken, [(3, "muse"), (4, "muse"), (5, "agy"), (6, "gpt")])
         # By day the Claude accounts are closed, and each machine subscription holds its lanes.
         self.assertIn("`muse` is busy", planned["reason"])
         # Each claim with work and a lane left started the next run.
@@ -712,7 +724,7 @@ class MatchingTests(unittest.TestCase):
             votes={"sha": "h1", "builder": "gpt", "approvals": ["gpt"]}))
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"], planned["head"], planned["builder"]),
-                         ("review", "agy", "h1", "gpt"))
+                         ("review", "muse", "h1", "gpt"))
         self.assertEqual(gh.label_names(9), {LABEL_PR, LABEL_WORKING})
 
     def test_the_shared_subscription_takes_work_without_a_wait(self):
@@ -739,7 +751,7 @@ class PeekTests(unittest.TestCase):
                           look.fallback),
                          (True, "claude-1", "", "", False))
         look = plan_mod.peek(ctx_for(gh, at=DAY))
-        self.assertEqual((look.provider, look.quiet_provider), ("agy", ""))
+        self.assertEqual((look.provider, look.quiet_provider), ("muse", ""))
 
     def test_runs_never_wait_for_quiet(self):
         """Even a run sitting at the quiet step holds nothing back: with no subscription
@@ -760,7 +772,7 @@ class WhenTests(unittest.TestCase):
         text = providers.when_free(test_pool(), {}, DAY, "America/Chicago", only_claude)
         self.assertIn("when `claude-1` opens (21:00–07:00", text)
         text = providers.when_free(providers.load(ROOT), {}, DAY, "America/Chicago", only_claude)
-        self.assertIn("`agy`, `muse`, `gpt`, `devin`, `devin-train` can take it now", text)
+        self.assertIn("`muse`, `agy`, `gpt`, `devin`, `devin-train` can take it now", text)
 
 
 if __name__ == "__main__":

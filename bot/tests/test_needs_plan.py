@@ -83,7 +83,9 @@ class StageTests(unittest.TestCase):
         gh.add_issue(7, labels=(LABEL_NEEDS_PLAN,))       # not queued any more
         plan_mod.make(ctx)
         labelled = {n for n in (3, 4, 5, 6, 7) if LABEL_NEEDS_PLAN in gh.label_names(n)}
-        self.assertEqual(labelled, {3, 5})
+        # A medium plan is enough for an easy item; a medium (or hard) one needs a strong
+        # model's (#317 part 6).
+        self.assertEqual(labelled, {3, 6})
 
 
 class PlanningLaneTests(unittest.TestCase):
@@ -173,17 +175,22 @@ class PlanningLaneTests(unittest.TestCase):
         queue(gh, ctx, 3, planned=False)
         self.assertIn("every lane is busy", plan_mod.make(ctx)["reason"])
 
-    def test_only_a_strong_model_plans_on_the_lane(self):
-        """By day (the Claude accounts keep to the night here) no strong model is free: nothing
-        is planned on the lane, and a medium builder plans its own item in its run."""
+    def test_a_medium_model_rates_and_plans_an_unrated_item_on_the_lane(self):
+        """By day (the Claude accounts keep to the night here) no strong model is free: an item
+        nobody has rated or planned may still be rated and planned on the lane by a medium model
+        (#317 part 8), Muse first; a rated medium item waits for a strong planner (part 6)."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh, at=DAY, machine=ALL_MACHINE)
         queue(gh, ctx, 3, planned=False)
         planned = plan_mod.make(ctx)
-        self.assertEqual((planned["action"], planned["provider"]), ("build", "agy"))
-        self.assertEqual(seats(planned)["plan"], ("agy", "gemini-3.8-flash-high", "medium"))
-        self.assertNotIn(LABEL_NEEDS_PLAN, gh.label_names(3))  # this run plans it first
-        # An easy item no strong model planned is never Devin's.
+        self.assertEqual((planned["action"], planned["provider"]), ("plan", "muse"))
+        self.assertEqual(seats(planned)["plan"], ("muse", "muse-spark-1.3-contributor", "medium"))
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh, at=DAY, machine=ALL_MACHINE)
+        queue(gh, ctx, 3, "difficulty:medium", planned=False)
+        self.assertEqual(plan_mod.make(ctx)["action"], "none")
+        self.assertIn(LABEL_NEEDS_PLAN, gh.label_names(3))
+        # An easy item nobody planned is never Devin's.
         gh = FakeGitHub()
         ctx = lane_ctx(gh, at=DAY, machine=("devin",))
         queue(gh, ctx, 3, EASY, planned=False)
@@ -197,7 +204,7 @@ class PlanningLaneTests(unittest.TestCase):
                              "review": reviewer(APPROVE)})
         planned, result = h.night(runner)
         self.assertEqual((planned["action"], planned["provider"], result["status"]),
-                         ("build", "agy", "approved"))
+                         ("build", "muse", "approved"))
         record = h.ctx.store.load()["items"]["12"]
         self.assertEqual(record["planned_tier"], "medium")
         self.assertTrue(issueplan.plan_of(h.gh.threads[12]["body"]))
@@ -238,13 +245,13 @@ class PersonsPlanTests(unittest.TestCase):
         gh.add_issue(3, labels=(LABEL_BUILD,), body="## Plan\n\nSomething loose.")
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["number"]), ("plan", 3))
-        # The bot's own record wins over the description: an easy item a medium model planned
-        # still waits for a strong plan, which Devin needs.
+        # The bot's own record wins over the description: a medium item a medium model planned
+        # still waits for a strong plan (#317 part 6).
         gh = FakeGitHub()
         ctx = lane_ctx(gh, machine=("devin",))
         busy(gh, ctx, *[(p, 50 + i) for i, p in enumerate(
             ("claude-3", "claude-1", "claude-4", "claude-2"))])
-        gh.add_issue(4, labels=(LABEL_BUILD, EASY), body=self.body())
+        gh.add_issue(4, labels=(LABEL_BUILD, "difficulty:medium"), body=self.body())
         ctx.store.update(lambda s: state_item(s, 4).update(planned_at=iso(NIGHT),
                                                             planned_tier="medium"))
         planned = plan_mod.make(ctx)  # claude-3 plans on the planning lane while it builds

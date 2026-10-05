@@ -110,6 +110,15 @@ DIFFICULTY_LABELS = {f"difficulty:{name}": name for name in DIFFICULTIES}
 DEFAULT_DIFFICULTY = "medium"
 #: The weakest tier that may build an item of each difficulty (`providers.TIERS`).
 MIN_TIER = {"easy": "weak", "medium": "medium", "hard": "strong"}
+#: The weakest tier whose plan an item of each difficulty builds from (#317 part 6): a medium
+#: model may plan an easy item, only a strong one anything harder. An item no one has rated yet
+#: (`UNRATED_PLAN_FLOOR`) may be rated and planned by a medium model, whose plan then stands only
+#: if it rates the item easy (#317 part 8).
+PLAN_FLOOR = {"easy": "medium", "medium": "strong", "hard": "strong"}
+UNRATED_PLAN_FLOOR = "medium"
+#: Failures of an item's own (not infra, a usage pause, a halt or a stop) at one difficulty before
+#: the bot raises it a step, easy to medium to hard; three more at hard block it (#317 part 8).
+STEP_UP_AFTER = 3
 #: The pickup tiers, first to last; a thread with no priority label sits between medium and low
 #: (#90). Like `human`, these match whatever their case.
 LABEL_PRIORITY_HIGH = "priority:high"

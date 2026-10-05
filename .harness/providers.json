@@ -3,15 +3,15 @@
   "machine_parallel": 7,
   "plan_lanes": 4,
   "start_headroom": { "five_hour": 0.15, "seven_day": 0.05 },
-  "priority": ["claude-3", "claude-1", "claude-4", "claude-6", "claude-5", "agy", "muse", "gpt", "claude-2", "devin", "devin-train"],
+  "priority": ["claude-3", "claude-1", "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt", "claude-2", "devin", "devin-train"],
   "tiers": {
     "weak": [
-      { "model": "sonnet", "note": "Claude Sonnet, on claude-3 and claude-1 only." },
-      { "model": "swe-2-max", "note": "Devin (SWE-2): the last resort. Its builds check themselves before any review." }
+      { "model": "swe-2-max", "note": "Devin (SWE-2): easy items only, under the easy rule. Its builds check themselves before any review." }
     ],
     "medium": [
+      { "model": "muse-spark-1.3-contributor", "note": "Meta through Muse: the most reliable builder (#305), first among the medium models." },
       { "model": "gemini-3.8-flash-high", "note": "Google through agy." },
-      { "model": "muse-spark-1.3-contributor", "note": "Meta through Muse." },
+      { "model": "sonnet", "note": "Claude Sonnet at xhigh (#317 part 5): a general medium seat on claude-3 and claude-1, and Devin's stand-in on claude-4, claude-6 and claude-5 (takes_over)." },
       { "model": "gpt-5.6-terra", "note": "ChatGPT through Codex." }
     ],
     "strong": [
@@ -20,14 +20,14 @@
   },
   "providers": {
     "claude-1": {
-      "note": "The Claude subscription the bot has always used; shared with its owner and bright-bots-harness. Second in the usage order: Opus for strong roles, Sonnet for weak-tier builds. Two lanes, so it works two items at once.",
+      "note": "The Claude subscription the bot has always used; shared with its owner and bright-bots-harness. Second in the usage order: Opus for strong roles, Sonnet (medium) for easy and medium builds. Two lanes, so it works two items at once.",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
       "model": "opus",
       "effort": "xhigh",
       "tier": "strong",
-      "extra_models": [{ "model": "sonnet", "effort": "xhigh", "tier": "weak" }],
+      "extra_models": [{ "model": "sonnet", "effort": "xhigh", "tier": "medium" }],
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN",
       "runs_on": "ubuntu-latest",
@@ -55,14 +55,14 @@
       "quiet_check": false
     },
     "claude-3": {
-      "note": "A third Claude account, the bot's own: any hour, no caps. First in the usage order: Opus for strong roles, Sonnet for weak-tier builds. Two lanes, so it works two items at once.",
+      "note": "A third Claude account, the bot's own: any hour, no caps. First in the usage order: Opus for strong roles, Sonnet (medium) for easy and medium builds. Two lanes, so it works two items at once.",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
       "model": "opus",
       "effort": "xhigh",
       "tier": "strong",
-      "extra_models": [{ "model": "sonnet", "effort": "xhigh", "tier": "weak" }],
+      "extra_models": [{ "model": "sonnet", "effort": "xhigh", "tier": "medium" }],
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
       "runs_on": "ubuntu-latest",
@@ -72,13 +72,14 @@
       "quiet_check": false
     },
     "claude-4": {
-      "note": "A fourth Claude account (token added 2026-10-04) with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it.",
+      "note": "A fourth Claude account (token added 2026-10-04) with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it. Opus for every role; Sonnet only as Devin's stand-in, for easy builds while Devin cannot take them (takes_over).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
       "model": "opus",
       "effort": "xhigh",
       "tier": "strong",
+      "extra_models": [{ "model": "sonnet", "effort": "xhigh", "tier": "medium", "takes_over": "devin" }],
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
       "runs_on": "ubuntu-latest",
@@ -88,13 +89,14 @@
       "quiet_check": false
     },
     "claude-5": {
-      "note": "A fifth Claude account (token added 2026-10-04): any hour, capped at 40% of its 5-hour session and 60% of its week.",
+      "note": "A fifth Claude account (token added 2026-10-04): any hour, capped at 40% of its 5-hour session and 60% of its week. Opus for every role; Sonnet only as Devin's stand-in, for easy builds while Devin cannot take them (takes_over).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
       "model": "opus",
       "effort": "xhigh",
       "tier": "strong",
+      "extra_models": [{ "model": "sonnet", "effort": "xhigh", "tier": "medium", "takes_over": "devin" }],
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_5",
       "runs_on": "ubuntu-latest",
@@ -103,13 +105,14 @@
       "quiet_check": false
     },
     "claude-6": {
-      "note": "A sixth Claude account (token added 2026-10-05), same rules as claude-4 with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it.",
+      "note": "A sixth Claude account (token added 2026-10-05), same rules as claude-4 with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it. Opus for every role; Sonnet only as Devin's stand-in, for easy builds while Devin cannot take them (takes_over).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
       "model": "opus",
       "effort": "xhigh",
       "tier": "strong",
+      "extra_models": [{ "model": "sonnet", "effort": "xhigh", "tier": "medium", "takes_over": "devin" }],
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
       "runs_on": "ubuntu-latest",
