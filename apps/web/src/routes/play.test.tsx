@@ -33,7 +33,7 @@ import {
   type SavedTrio,
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
-import PlayRoute, { MODE_LABEL, PLAY_CHOICE_KEY, playModeTestid, playTestid } from "./play.tsx";
+import PlayRoute, { MATCH_FOUND_STATUS, MODE_LABEL, PLAY_CHOICE_KEY, pairTargetOf, playModeTestid, playTestid } from "./play.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -275,6 +275,11 @@ describe("the lobby's modes", () => {
     });
     await screen.findByText(/In the Best of 1 queue/);
 
+    // The setup locks while queued, so the next mode is picked after leaving it.
+    fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
+    await waitFor(() => {
+      expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
+    });
     pickMode("bo3");
     fireEvent.change(screen.getByTestId(playTestid.trioSelect), { target: { value: LOOSE.id } });
     fireEvent.click(screen.getByTestId(playTestid.queue));
@@ -283,6 +288,10 @@ describe("the lobby's modes", () => {
     });
     await screen.findByText(new RegExp(`In the ${MODE_LABEL.bo3} queue`));
 
+    fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
+    await waitFor(() => {
+      expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
+    });
     pickMode("random");
     fireEvent.click(screen.getByTestId(playTestid.queue));
     await waitFor(() => {
@@ -505,5 +514,49 @@ describe("the lobby's answers", () => {
     const roomMode = screen.getByTestId(playTestid.roomMode);
     expect(roomMode).toHaveAttribute("data-mode", "random");
     expect(roomMode).toHaveTextContent("All Random");
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// queue state: locked while queued, announced when paired
+// ---------------------------------------------------------------------------------------------
+
+describe("the lobby's queue state", () => {
+  it("pairTargetOf reads the board, the series screen, or nowhere", () => {
+    expect(pairTargetOf({ currentMatchId: "match-42", currentSeriesId: null })).toBe("/match/match-42");
+    expect(pairTargetOf({ currentMatchId: null, currentSeriesId: "series-7" })).toBe("/series/series-7");
+    expect(pairTargetOf({ currentMatchId: null, currentSeriesId: null })).toBeNull();
+    // The board wins when both are somehow set.
+    expect(pairTargetOf({ currentMatchId: "match-1", currentSeriesId: "series-1" })).toBe("/match/match-1");
+  });
+
+  it("locks the setup while queued, with Leave as the way out", async () => {
+    vi.mocked(enqueue).mockResolvedValue(openTicket("bo1"));
+    await renderLobby();
+    fireEvent.click(screen.getByTestId(playTestid.queue));
+
+    await waitFor(() => {
+      expect(screen.getByTestId(playTestid.searching)).toBeInTheDocument();
+    });
+    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
+    for (const mode of ["bo1", "bo3", "random"] as const) {
+      expect(screen.getByTestId(playModeTestid(mode))).toBeDisabled();
+    }
+    expect(screen.getByTestId(playTestid.deckSelect)).toBeDisabled();
+    expect(screen.getByTestId(playTestid.createRoom)).toBeDisabled();
+    expect(screen.getByTestId(playTestid.joinInput)).toBeDisabled();
+    expect(screen.getByTestId(playTestid.joinSubmit)).toBeDisabled();
+    // ...but never traps the player: Leave stays lit.
+    expect(screen.getByTestId(playTestid.leaveQueue)).not.toBeDisabled();
+  });
+
+  it("announces the pairing before navigating to it", async () => {
+    vi.mocked(getMe).mockResolvedValue(me("match-42"));
+    render(<PlayRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId(playTestid.status)).toHaveTextContent(MATCH_FOUND_STATUS);
+    await waitFor(() => {
+      expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-42");
+    });
   });
 });

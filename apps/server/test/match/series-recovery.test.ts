@@ -441,6 +441,7 @@ describe("R263 — every write is a compare-and-set", () => {
       },
       has: () => false,
       stop: async () => undefined,
+      presenceOf: () => null,
     };
     a.deps.matches = Object.assign(loser, { started: [] });
     await expect(ensureSeriesGame(a.deps, playing)).resolves.toBeUndefined();

@@ -104,3 +104,31 @@
     animation: none;
   }
 }
+
+/* R659: the death screen's way back in (routes/Rematch.tsx) — the two offers side by side, the
+   incoming offer above them, the wait below. Unanimated, so reduced motion needs no exception. */
+.rematch {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.rematch-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.rematch-incoming {
+  margin: 0;
+  font-weight: 700;
+}
+
+.rematch-note,
+.rematch-status {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-dim, #9aa1b8);
+}

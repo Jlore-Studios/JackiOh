@@ -4020,6 +4020,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // Proved by apps/server/test/api/rematch.test.ts "R659 …" (equal stakes make one rematch with
+  // the finished decks, mismatched stakes make none, doubles need a ranked match, and a doubled
+  // game moves each side's rating twice the single update's delta).
+  it("R659 a double-or-nothing rematch is ranked-only and moves each side's rating twice as far", () => {
+    provenIn(659, "../../../apps/server/test/api/rematch.test.ts");
+  });
+
   // Proved by packages/cards/test/flavour.test.ts "R660 …" (the sidecar's keys, coverage, fields and
   // caps), apps/web cards/flavour.test.tsx "R660 …" (no rules words; the preview, the sheet and the
   // detail show it, the face and an unnamed card never), routes/almanac.test.tsx "R660 …" (the

@@ -78,6 +78,11 @@ export type MatchActor = {
   clocks: () => MatchClocks;
   /** Drops the actor: stops the clock and lets both sockets go, leaving the log alone. */
   stop: () => Promise<void>;
+  /**
+   * R659: which seats hold an open socket right now. The registry's `presenceOf` reads this, so a
+   * rematch offer learns whether the opponent is still on the match.
+   */
+  presence: () => { p1: boolean; p2: boolean };
 };
 
 /** R417: the boards a match was created with, as `createGame` and `fold` take them. */
@@ -591,12 +596,22 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     if (snapshot.result !== null) await onTerminal(snapshot);
   }, "arm");
 
+  /** R659: a seat is present while it holds a socket that is still open. */
+  function presence(): { p1: boolean; p2: boolean } {
+    const open = (player: PlayerId): boolean => {
+      const socket = sockets[player];
+      return socket !== null && socket.isOpen;
+    };
+    return { p1: open("p1"), p2: open("p2") };
+  }
+
   return {
     matchId: match.id,
     seats,
     seatOf: (profileId) => seats.find((seat) => seat.profileId === profileId)?.player ?? null,
     attach,
     detach,
+    presence,
     submit: (player, nonce, body) => enqueue(() => applyAction(player, nonce, body)),
     idle: () => tail.then(() => undefined),
     viewFor: viewOf,

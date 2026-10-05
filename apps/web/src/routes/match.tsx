@@ -47,6 +47,7 @@ import { getCatalog, getMatchRanks, type MatchRanksResponse } from "../net/api.t
 import { navigate, paths } from "../net/navigate.ts";
 import { rankWords } from "../rank/rank.ts";
 import { BackLink, followInApp } from "./nav.tsx";
+import RematchButtons from "./Rematch.tsx";
 import { SeriesBanner, SeriesContinue, useMatchSeries } from "./SeriesBanner.tsx";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
@@ -339,9 +340,18 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       // A refused socket's reason is the console's (above); the board says it in a player's words.
       error={refusedWith === null ? match.error : `${connectionWords("refused")}. Head back to the lobby.`}
       resultActions={
-        // A finished match's way on (Result.tsx): the series' next game first when there is one,
-        // then the lobby, where the next one starts.
+        // A finished match's way on (Result.tsx): a rematch while the opponent is still here —
+        // never for a live series game, whose continue flow owns what comes next — then the
+        // series' next game when there is one, then the lobby, where the next one starts.
         <>
+          {series === null || series.status === "over" ? (
+            <RematchButtons
+              token={token}
+              matchId={matchId}
+              connection={match.connection}
+              ranked={ranks?.ranked ?? false}
+            />
+          ) : null}
           <SeriesContinue series={series} matchId={matchId} />
           <button type="button" data-testid="result-back" onClick={() => navigate(paths.play)}>
             Back to lobby

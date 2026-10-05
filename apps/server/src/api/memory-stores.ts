@@ -420,10 +420,13 @@ export function createMemoryLastBoardStore(
  * is `bo3`, a room's match has the room's mode, and a queue match its tickets' mode.
  */
 export function matchModeIn(
-  tables: { series: SeriesRow[]; rooms: Room[]; tickets: Ticket[] },
+  tables: { series: SeriesRow[]; rooms: Room[]; tickets: Ticket[]; matches: MatchRow[] },
   matchId: string,
 ): QueueMode | null {
   if (tables.series.some((row) => row.games.some((game) => game.matchId === matchId))) return "bo3";
+  // R659: a rematch states its own mode, since no ticket, room or series made it.
+  const own = tables.matches.find((row) => row.id === matchId)?.mode;
+  if (own !== undefined) return own;
   const room = tables.rooms.find((row) => row.matchId === matchId);
   if (room !== undefined) return room.mode;
   return tables.tickets.find((row) => row.matchId === matchId)?.mode ?? null;

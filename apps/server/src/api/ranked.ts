@@ -131,6 +131,12 @@ export type RankedGameInput = {
   winnerSide: 0 | 1 | null;
   reason: GameOverReason | SeriesEnd;
   at: number;
+  /**
+   * R659: a double-or-nothing rematch's stakes. Only 2 changes anything: each side's rating moves
+   * twice the single update's delta, with deviation and volatility from that single update.
+   * Absent (a normal game, a series) rates once.
+   */
+  stake?: 1 | 2;
 };
 
 /**
@@ -209,7 +215,16 @@ export async function planRankedGame(t: Store, deps: ServerDeps, input: RankedGa
   };
   const before = [await beforeOf(first), await beforeOf(second)] as const;
   const rated = rateGame(before[0].glicko, before[1].glicko, scoreOf(input.winnerSide, 0));
-  const after = [rated.a, rated.b] as const;
+  // R659: a double-or-nothing rematch doubles each side's rating movement around its own before:
+  // one update, then the delta twice. Deviation and volatility are the single update's — a
+  // doubled game moves the rating twice without sharpening the confidence twice.
+  const after =
+    input.stake === 2
+      ? ([
+          { ...rated.a, rating: before[0].glicko.rating + 2 * (rated.a.rating - before[0].glicko.rating) },
+          { ...rated.b, rating: before[1].glicko.rating + 2 * (rated.b.rating - before[1].glicko.rating) },
+        ] as const)
+      : ([rated.a, rated.b] as const);
 
   // The season with both new ratings in it, and each player's row as it stood.
   const newRating = new Map<string, number>();

@@ -614,6 +614,93 @@ describe("the match screen's ranks (R604, R612)", () => {
   });
 });
 
+describe("the death screen's rematch offers (R659)", () => {
+  /** A finished game of a series in this status, shaped like the R259 block's answer. */
+  function seriesIn(status: string): Record<string, unknown> {
+    const decks = [0, 1, 2].map((slot) => ({
+      slot,
+      name: `Deck ${String(slot + 1)}`,
+      cards: [],
+      won: false,
+      games: 0,
+    }));
+    return {
+      id: "series-1",
+      status,
+      gameNo: 1,
+      winsNeeded: SERIES_WINS_NEEDED,
+      maxGames: SERIES_MAX_GAMES,
+      pickDeadline: null,
+      now: 0,
+      currentMatchId: "m-1",
+      ranked: true,
+      you: { seat: "p1", wins: 0, trioName: "Main trio", decks, pick: null, autoPick: false },
+      opponent: { wins: 0, decks: decks.map(({ slot }) => ({ slot, won: false })), picked: false },
+      games: [],
+      result: null,
+    };
+  }
+
+  /** `GET /api/matches/m-1/series` answers this series (or none); `/rematch` says the opponent is here. */
+  function stubMatchFetch(series: Record<string, unknown> | null): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () =>
+            Promise.resolve(
+              JSON.stringify(
+                String(url).includes("/api/matches/m-1/rematch")
+                  ? { youOffered: null, opponentOffer: null, opponentHere: true, matchId: null }
+                  : String(url).includes("/series")
+                    ? { series }
+                    : { version: "v1", defs: {} },
+              ),
+            ),
+        } as unknown as Response),
+      ),
+    );
+  }
+
+  /** Push a finished game, the way the actor's last view reads after the killing blow. */
+  function finish(): void {
+    attach({
+      view: baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } }),
+    });
+  }
+
+  it("offers a rematch on a finished game that is in no series", async () => {
+    stubMatchFetch(null);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+
+    expect(await screen.findByTestId("rematch-offer")).toBeInTheDocument();
+    expect(screen.getByTestId("rematch-double")).toBeInTheDocument();
+  });
+
+  it("shows no rematch on a live series game, whose continue flow owns what comes next", async () => {
+    stubMatchFetch(seriesIn("playing"));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+
+    // The banner read the series (so the hook ran), yet no rematch rendered for it.
+    await screen.findByTestId("series-banner");
+    await act(async () => {});
+    expect(screen.queryByTestId("rematch-offer")).toBeNull();
+    expect(screen.queryByTestId("rematch-double")).toBeNull();
+  });
+
+  it("offers a rematch again once the series is over", async () => {
+    stubMatchFetch(seriesIn("over"));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+
+    expect(await screen.findByTestId("rematch-offer")).toBeInTheDocument();
+  });
+});
+
 describe("a socket refused mid-game", () => {
   it("tells the player in words, not with the server's reason", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
