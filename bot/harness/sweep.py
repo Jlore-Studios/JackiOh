@@ -79,7 +79,8 @@ def _needs_plan(ctx: Context, since: datetime) -> list[str]:
 
 def _green_heads(ctx: Context, since: datetime) -> list[str]:
     """A bot pull request whose head met the review rule and then went green in CI ends its
-    item's strikes (#316). Only pull requests with strikes to clear are read."""
+    item's strikes (#316). Only a head the review rule cleared is looked at, and its check runs
+    are read only when its item has strikes to clear."""
     notes: list[str] = []
     items = ctx.store.load()["items"]
 

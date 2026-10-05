@@ -7,6 +7,7 @@ Model work is only ever queued here; it happens in the night run, or at once whe
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from datetime import timedelta
@@ -226,7 +227,10 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
         return ("Halted. No new model work starts until `/harness start`; a run already going "
                 "stops at its next checkpoint and keeps its work.")
     if verb == "start":
-        if command.args:
+        # `resume <subscription>` (or `start <subscription>`) lifts that one's suspension; any
+        # other words after `start` are a note, and it lifts the halt as it always did.
+        if command.args and (_said_resume(command)
+                             or _subscription(ctx, command.args.split()[0])[0] is not None):
             return _resume(ctx, command)
         ctx.store.update(lambda s: s.update(halted=False, halt={}), "start")
         extra = ""
@@ -294,6 +298,11 @@ def _subscription(ctx: Context, word: str) -> tuple[Provider | None, str]:
         return provider, ""
     known = ", ".join(f"`{p.id}`" for p in ctx.cfg.pool.ordered())
     return None, f"`{name}` is not a subscription; I know {known}. Nothing was done."
+
+
+def _said_resume(command: Command) -> bool:
+    """The line's verb was `resume`, the alias that always names a subscription."""
+    return re.search(r"(?:^|[\s/])resume\b", command.line.lower()) is not None
 
 
 def _resume(ctx: Context, command: Command) -> str:
@@ -470,8 +479,10 @@ def on_ci(ctx: Context, payload: dict[str, Any]) -> list[str]:
             continue
         fixes = int(record.get("ci_fixes", 0))
         link = f"[run]({run.get('html_url')})"
-        if fixes:
-            # Every CI fix that left it red is a strike of its own (#316), not only the last one.
+        if fixes and str(record.get("ci_fixed_head") or "") == sha:
+            # Every CI fix that left it red is a strike of its own (#316), not only the last one:
+            # this is the head the last CI fix pushed (`deliver._revise`). A head some other
+            # revision made is no strike, whatever fixes came before.
             try:
                 stepped = stepup.strike(ctx, number, f"CI still failed after {fixes} fix(es)",
                                         link=link)

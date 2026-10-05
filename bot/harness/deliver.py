@@ -740,7 +740,10 @@ class Deliverer:
             if not base or self.repo.run("merge-base", "--is-ancestor", base, head,
                                          check=False).returncode != 0:
                 continue
-            found = self.repo.run("rev-list", "--no-merges", "--count", f"{base}..{head}",
+            # Not main's: a merge of `main` brings its squash commits in, and they are no merges.
+            main = f"origin/{self.cfg.default_branch}"
+            ours = ["^" + main] if self.repo.rev(main) else []
+            found = self.repo.run("rev-list", "--no-merges", "--count", head, f"^{base}", *ours,
                                   check=False)
             return found.returncode == 0 and (found.stdout or "0").strip() not in ("", "0")
         return False
@@ -1135,9 +1138,12 @@ class Deliverer:
             self._unstick(number)
         report = str(self.result.get("report") or "")[:REPORT_CHARS]
         rerun = not pushed and bool(self._record(number).get("ci_run_id"))
+        # The head a CI fix pushed: CI red on it is a strike (`events.on_ci`, #316).
+        fixed = ({"ci_fixed_head": str(self.result.get("head") or "")}
+                 if pushed and self._record(number).get("source") == "ci" else {})
         self._remember(number, feedback_since=started, failures=0, source="", last_findings=[],
                        question="",
-                       self_check_findings=self.result.get("self_check_findings") or [])
+                       self_check_findings=self.result.get("self_check_findings") or [], **fixed)
         note = ""
         if not pushed and approved:
             note = "\n\nI changed nothing: the reviewer agreed no change was needed."

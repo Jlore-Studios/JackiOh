@@ -544,12 +544,14 @@ item stays on Opus.
 
 - **The builder chooses.** A builder on such a lane is told both models and which one it runs on.
   Its report's header may carry `"next_model": "opus"` when the work needs more than it can give,
-  or `"next_model": "sonnet"` when what is left is plain work; the run's next pass runs on that one.
+  or `"next_model": "sonnet"` when what is left is plain work; the run's next pass runs on that one,
+  taken once the round is reviewed, so the review counts against the model that built it.
 - **Sent back twice on Sonnet.** Two rounds in a row that the reviewer sends back while the builder
   runs on Sonnet move it to Opus for the next pass (`work.SWITCH_UP_AFTER`).
-- **The planner's rating.** When a run's planner rates an unrated item, the builder moves to the
-  weaker model that meets the rating, up or down, and the run goes on, rather than sending the item
-  back to the queue for another builder.
+- **The planner's rating.** When a run's planner rates an unrated item, or rates higher one the bot
+  rated before, the builder moves to the weaker model that meets the rating, up or down (never
+  below the bot's earlier rating), and the run goes on, rather than sending the item back to the
+  queue for another builder.
 
 The reviewer stays as the router assigned it, since the review rule counts its tier. Each round's
 record names the model that built it, the result lists every switch (`switches`), and the comment
@@ -597,7 +599,7 @@ person's label, `difficulty_floor`), and a medium or stronger model takes it.
   Triage gives no difficulty.
 - **Strikes** (`harness/stepup.py`). A run that failed for the item's own sake is a strike: a
   failed run, a build or revision its reviewer would not approve, a review run that rejected its
-  head, each CI fix that left it red, a run that died. Infra, a usage pause, a halt or a stop is
+  head, a head a CI fix pushed that CI still fails, a run that died. Infra, a usage pause, a halt or a stop is
   none. Strikes count on the issue (a bot pull request's on the issue it closes), and no request
   resets them: a head that meets the review rule and is green in CI (the ten-minute sweep checks,
   and a merge counts), or a step up, does.

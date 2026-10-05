@@ -99,21 +99,36 @@ class StrikeTests(unittest.TestCase):
                                                         "pull_request": pull})
         self.assertEqual(self.strikes(), 0)
 
-    def ci(self, attempt: int = 1):
+    def ci(self, attempt: int = 1, sha: str = "s1"):
         run = {"name": "CI", "conclusion": "failure", "head_branch": "bot/issue-5",
-               "head_sha": "s1", "id": 99, "run_attempt": attempt, "html_url": "u",
+               "head_sha": sha, "id": 99, "run_attempt": attempt, "html_url": "u",
                "pull_requests": [{"number": 9}]}
         return events.handle(self.ctx, "workflow_run",
                              {"action": "completed", "sender": BOT, "workflow_run": run})
+
+    def new_head(self, sha: str, **record) -> None:
+        self.gh.threads[9]["head"]["sha"] = sha
+        self.gh.threads[9]["labels"] = [{"name": LABEL_PR}]
+        self.ctx.store.update(lambda s: state_item(s, 9).update(**record))
 
     def test_every_ci_fix_that_left_it_red_is_a_strike(self):
         self.ci()           # re-run once
         self.ci(attempt=2)  # then a first fix is queued: no strike, nothing was fixed yet
         self.assertEqual(self.strikes(), 0)
-        self.ctx.store.update(lambda s: state_item(s, 9).update(ci_reruns={"s1": 1}))
-        self.gh.threads[9]["labels"] = [{"name": LABEL_PR}]
-        self.ci(attempt=3)  # the first fix left it red
+        self.new_head("s2", ci_fixed_head="s2")  # the fix pushed s2
+        self.ci(sha="s2")
+        self.ci(attempt=2, sha="s2")  # and CI is still red on it
         self.assertEqual(self.strikes(), 1)
+
+    def test_a_head_no_ci_fix_made_is_no_strike(self):
+        """`ci_fixes` is never reset, so a head a conflict or cross-review revision made later must
+        not be struck for the CI fixes before it."""
+        self.ctx.store.update(lambda s: state_item(s, 9).update(ci_fixes=1, ci_fixed_head="s1"))
+        self.new_head("s3")
+        self.ci(sha="s3")
+        self.ci(attempt=2, sha="s3")
+        self.assertEqual(self.strikes(), 0)
+        self.assertIn(LABEL_REVISE, self.gh.label_names(9))  # it is fixed, not struck
 
 
 class RebuildTests(unittest.TestCase):
