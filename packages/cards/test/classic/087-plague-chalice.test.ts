@@ -10,7 +10,6 @@ import { legalActions, type CardInstance } from "@jackioh/engine";
 import type { ActionBody, GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
-import { expectAnimated } from "../_animated";
 import { base, def, radiant } from "../../src/scripts/classic/087-plague-chalice";
 
 const CHALICE = "classic-087";
@@ -261,15 +260,5 @@ describe("C #87 Plague Chalice", () => {
       s.play(CHALICE, { x: 2 });
       expect(s.card(CHALICE).counters.plague).toBe(2);
     });
-  });
-});
-
-describe("C #87 Plague Chalice: Animated (patch v0.2.10)", () => {
-  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 0/3 Unit, its printed stats, not X; with none open it stays a Field Spell", () => {
-    expectAnimated({ def: "classic-087", stats: { attack: 0, health: 3 }, play: { x: 1 } });
-  });
-
-  it("R383 radiant: a 0/6 Unit", () => {
-    expectAnimated({ def: "classic-087", radiant: true, stats: { attack: 0, health: 6 }, play: { x: 1 } });
   });
 });

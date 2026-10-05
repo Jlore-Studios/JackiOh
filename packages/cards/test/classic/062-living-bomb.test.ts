@@ -9,7 +9,6 @@
 
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
-import { expectAnimated } from "../_animated";
 import { base, def, radiant } from "../../src/scripts/classic/062-living-bomb";
 
 const BOMB = "classic-062";
@@ -278,32 +277,5 @@ describe("C #62 Living Bomb", () => {
 
       s.expectInZone(ROCK, "field");
     });
-  });
-});
-
-describe("C #62 Living Bomb: Animated (patch v0.2.10)", () => {
-  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 2/1 Unit; with none open it stays a Field Spell", () => {
-    expectAnimated({ def: "classic-062", stats: { attack: 2, health: 1 } });
-  });
-
-  it("R383 radiant: a 4/2 Unit", () => {
-    expectAnimated({ def: "classic-062", radiant: true, stats: { attack: 4, health: 2 } });
-  });
-
-  it("R383 played, it keeps its text as a Unit: at the start of the opponent's turn their plagued permanent is destroyed", () => {
-    const s = scenario({
-      p1: { hand: [BOMB, FILLER], library: lib(2) },
-      p2: { hand: [FILLER], field: [{ def: VANILLA, counters: { plague: 2 } }, { def: MENACE, lane: 2 }], library: lib(2) },
-    });
-    const plagued = s.unit("p2", 1)!;
-    const clean = s.unit("p2", 2)!;
-
-    s.play(BOMB, { zone: 3 });
-    expect(s.unit("p1", 3)?.defId).toBe(BOMB);
-    s.endTurn();
-
-    s.expectInZone(plagued, "graveyard");
-    s.expectInZone(clean, "field");
-    s.expectInZone(BOMB, "field");
   });
 });

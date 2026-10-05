@@ -4003,6 +4003,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(656, "effects-cast.test.ts");
   });
 
+  // Proved by engine animated.test.ts "R657 …" (a stat-less Animated card animates to 0/1, printed or
+  // granted, on either face).
+  it("R657 an Animated card with no printed stats fights as a 0/1", () => {
+    provenIn(657, "animated.test.ts");
+  });
+
   // Proved by apps/web test/ux/drag-continue.test.tsx "R658 …" (a second drag from a pick, a backrow
   // card dropped on the board, a prompt option dragged out of its panel) and test/ux/drag-model.test.ts
   // "R658 …" (the plans and the drops).
