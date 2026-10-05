@@ -93,12 +93,13 @@ const SETS: readonly SetExpectation[] = [
     rarities: { Common: 35, Rare: 37, Epic: 16, Legendary: 7, Mythic: 5 },
   },
   {
-    // B2.1, B2.5: 90 cards and no tokens of its own; the designer's rarities.
+    // B2.1, B2.5: 90 cards and no tokens of its own; the designer's rarities. Issue #170 adds one
+    // shared token, Glitch, which only R673's roll ever makes (R674).
     set: "Classic",
     segment: "classic",
     cards: 90,
     cardDefinedTokens: [],
-    sharedTokens: [],
+    sharedTokens: ["T-glitch"],
     rarities: { Common: 42, Rare: 25, Epic: 13, Legendary: 9, Mythic: 1 },
   },
   {
@@ -152,7 +153,7 @@ const EXPECTED_TAG_COUNTS: Readonly<Record<(typeof TAGS)[number], number>> = {
   Pancake: 10,
   AI: 10,
   Plague: 17,
-  Token: 49,
+  Token: 50,
 };
 
 /** B2.5: a token's printed rarity is one a card could carry. */
@@ -555,7 +556,7 @@ for (const [key, value] of entries) {
   if (unknownFields.length > 0) fail(where, `unknown field(s) ${unknownFields.join(", ")}`);
 }
 
-// 1, 2. The totals: B2.1's 268 cards and 49 tokens, 317 entries.
+// 1, 2. The totals: B2.1's 268 cards and, with Glitch (issue #170), 50 tokens, 318 entries.
 if (entries.length !== EXPECTED_TOTAL) {
   fail("catalog", `expected ${EXPECTED_TOTAL} entries, found ${entries.length}`);
 }

@@ -448,6 +448,15 @@ describe("reconnect", () => {
     }
   });
 
+  it("R679 a voided match's close (4410) is final: no reconnect, the last view kept", () => {
+    const h = connected();
+    h.socket().deliver({ type: "view", view: baseView({ turn: 4 }) });
+    h.socket().drop(4410, "voided");
+    expect(h.client.snapshot().connection).toBe("closed");
+    expect(h.client.snapshot().view?.turn).toBe(4);
+    expect(h.pending()).toBe(0);
+  });
+
   it("close() stops the reconnect and the socket", () => {
     const h = connected();
     h.client.close();

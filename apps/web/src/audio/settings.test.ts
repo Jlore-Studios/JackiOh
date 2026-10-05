@@ -17,7 +17,9 @@ import type { AudioSettings } from "./types.ts";
 
 /** R631: the music's settings, which every value saved before them reads as. */
 const MUSIC_DEFAULTS = { music: 0.5, station: "tavern", dynamicMusic: true, duckMusic: true, playMusicInBackground: false } as const;
-const DEFAULTS: AudioSettings = { master: 0.8, sfx: 0.8, voice: 1, muted: false, voiceOn: true, ...MUSIC_DEFAULTS };
+/** Issue #57: crowd is an audible reaction layer; ambience is -24 dB below full-scale SFX. */
+const MATCH_FEEL_DEFAULTS = { crowd: 0.5, ambience: 0.05 } as const;
+const DEFAULTS: AudioSettings = { master: 0.8, sfx: 0.8, voice: 1, muted: false, voiceOn: true, ...MATCH_FEEL_DEFAULTS, ...MUSIC_DEFAULTS };
 
 function stored(): unknown {
   const raw = localStorage.getItem("jackioh.audio.v1");
@@ -84,22 +86,22 @@ describe("B12 reading the settings", () => {
 
   it("B12 a valid stored value is read back", () => {
     storeRaw(JSON.stringify({ master: 0.25, sfx: 0.5, voice: 0, muted: true, voiceOn: false }));
-    expect(readAudioSettings()).toEqual({ master: 0.25, sfx: 0.5, voice: 0, muted: true, voiceOn: false, ...MUSIC_DEFAULTS });
+    expect(readAudioSettings()).toEqual({ master: 0.25, sfx: 0.5, voice: 0, muted: true, voiceOn: false, ...MATCH_FEEL_DEFAULTS, ...MUSIC_DEFAULTS });
   });
 
   it("B12 numbers are clamped to [0, 1], each field on its own", () => {
     storeRaw(JSON.stringify({ master: 2, sfx: -1, voice: 0.4, muted: false, voiceOn: true }));
-    expect(readAudioSettings()).toEqual({ master: 1, sfx: 0, voice: 0.4, muted: false, voiceOn: true, ...MUSIC_DEFAULTS });
+    expect(readAudioSettings()).toEqual({ master: 1, sfx: 0, voice: 0.4, muted: false, voiceOn: true, ...MATCH_FEEL_DEFAULTS, ...MUSIC_DEFAULTS });
   });
 
   it("B12 a non-number takes that field's default while the valid fields survive", () => {
     storeRaw(JSON.stringify({ master: "0.3", sfx: null, voice: 0.25, muted: true, voiceOn: false }));
-    expect(readAudioSettings()).toEqual({ master: 0.8, sfx: 0.8, voice: 0.25, muted: true, voiceOn: false, ...MUSIC_DEFAULTS });
+    expect(readAudioSettings()).toEqual({ master: 0.8, sfx: 0.8, voice: 0.25, muted: true, voiceOn: false, ...MATCH_FEEL_DEFAULTS, ...MUSIC_DEFAULTS });
   });
 
   it("B12 a non-boolean muted or voiceOn takes the default while the numbers survive", () => {
     storeRaw(JSON.stringify({ master: 0.1, sfx: 0.2, voice: 0.3, muted: "yes", voiceOn: 0 }));
-    expect(readAudioSettings()).toEqual({ master: 0.1, sfx: 0.2, voice: 0.3, muted: false, voiceOn: true, ...MUSIC_DEFAULTS });
+    expect(readAudioSettings()).toEqual({ master: 0.1, sfx: 0.2, voice: 0.3, muted: false, voiceOn: true, ...MATCH_FEEL_DEFAULTS, ...MUSIC_DEFAULTS });
   });
 
   it("B12 missing fields take their defaults", () => {
@@ -118,9 +120,9 @@ describe("B12 reading the settings", () => {
     for (const raw of [undefined, null, 0, 1, "x", true, [], [0.5, 0.5], () => 0, { master: {} }, { muted: 1, voiceOn: "false" }]) {
       const parsed = parseAudioSettings(raw);
       expect(Object.keys(parsed).sort(), String(raw)).toEqual([
-        "duckMusic", "dynamicMusic", "master", "music", "muted", "playMusicInBackground", "sfx", "station", "voice", "voiceOn",
+        "ambience", "crowd", "duckMusic", "dynamicMusic", "master", "music", "muted", "playMusicInBackground", "sfx", "station", "voice", "voiceOn",
       ]);
-      for (const key of ["master", "sfx", "voice", "music"] as const) {
+      for (const key of ["master", "sfx", "crowd", "ambience", "voice", "music"] as const) {
         expect(Number.isFinite(parsed[key]), `${String(raw)}.${key}`).toBe(true);
         expect(parsed[key]).toBeGreaterThanOrEqual(0);
         expect(parsed[key]).toBeLessThanOrEqual(1);
@@ -140,6 +142,7 @@ describe("B12 reading the settings", () => {
       voice: 1,
       muted: false,
       voiceOn: true,
+      ...MATCH_FEEL_DEFAULTS,
       ...MUSIC_DEFAULTS,
     });
   });
@@ -175,7 +178,7 @@ describe("B12 reading the settings", () => {
 
   it("R631 settings saved before the music existed keep their own values and gain the music's defaults", () => {
     storeRaw(JSON.stringify({ master: 0.3, sfx: 0.6, voice: 0.9, muted: false, voiceOn: false }));
-    expect(readAudioSettings()).toEqual({ master: 0.3, sfx: 0.6, voice: 0.9, muted: false, voiceOn: false, ...MUSIC_DEFAULTS });
+    expect(readAudioSettings()).toEqual({ master: 0.3, sfx: 0.6, voice: 0.9, muted: false, voiceOn: false, ...MATCH_FEEL_DEFAULTS, ...MUSIC_DEFAULTS });
   });
 });
 
@@ -253,7 +256,7 @@ describe("B13 writing the settings", () => {
     const listener = listen();
     expect(readAudioSettings()).toEqual(DEFAULTS);
 
-    const next = { master: 0.25, sfx: 0.5, voice: 0.75, muted: true, voiceOn: false, ...MUSIC_DEFAULTS, station: "epic" };
+    const next = { master: 0.25, sfx: 0.5, voice: 0.75, muted: true, voiceOn: false, ...MATCH_FEEL_DEFAULTS, ...MUSIC_DEFAULTS, station: "epic" };
     storeRaw(JSON.stringify(next));
     window.dispatchEvent(new StorageEvent("storage", { key: "jackioh.audio.v1", newValue: JSON.stringify(next) }));
 
@@ -268,7 +271,7 @@ describe("B13 writing the settings", () => {
     storeRaw(JSON.stringify({ master: 9, sfx: "loud", voice: -3, muted: "no", voiceOn: false }));
     window.dispatchEvent(new StorageEvent("storage", { key: "jackioh.audio.v1" }));
 
-    expect(listener).toHaveBeenLastCalledWith({ master: 1, sfx: 0.8, voice: 0, muted: false, voiceOn: false, ...MUSIC_DEFAULTS });
+    expect(listener).toHaveBeenLastCalledWith({ master: 1, sfx: 0.8, voice: 0, muted: false, voiceOn: false, ...MATCH_FEEL_DEFAULTS, ...MUSIC_DEFAULTS });
   });
 
   it("B13 a storage event for another key is ignored", () => {

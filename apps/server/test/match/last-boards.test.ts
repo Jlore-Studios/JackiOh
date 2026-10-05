@@ -13,7 +13,7 @@ import { describe, expect, it } from "vitest";
 import type { ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
 import { loadCatalog } from "../../src/api/catalog";
 import type { LastBoardEntry } from "../../src/api/ports";
-import { createRecordResult, reapStuckMatches } from "../../src/api/results";
+import { createRecordResult, createVoidMatch, reapStuckMatches } from "../../src/api/results";
 import { createMatchClock } from "../../src/match/clock";
 import type { ActorDeps } from "../../src/match/contracts";
 import type { EnginePort } from "../../src/match/engine";
@@ -59,6 +59,7 @@ function world(engine: EnginePort) {
     engine,
     createClock: createMatchClock,
     recordResult: createRecordResult(deps),
+    voidMatch: createVoidMatch(deps),
   };
   return { deps, registry: createMatchRegistry(actorDeps) };
 }

@@ -583,6 +583,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
     aria-label="Field"
     class="field"
   >
+    <span
+      aria-hidden="true"
+      class="sand-surface"
+    />
     <div
       class="lane"
       data-lane="1"
@@ -3825,16 +3829,22 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         Your turn
       </span>
     </div>
-    <button
-      aria-disabled="true"
-      class="control control-end-turn"
-      data-legal="false"
-      data-testid="end-turn"
-      disabled=""
-      type="button"
+    <div
+      class="turn-mechanism"
+      data-turn-state="locked"
     >
-      End turn
-    </button>
+      <button
+        aria-disabled="true"
+        class="control control-end-turn"
+        data-legal="false"
+        data-testid="end-turn"
+        data-turn-state="locked"
+        disabled=""
+        type="button"
+      >
+        End turn
+      </button>
+    </div>
     <button
       aria-disabled="true"
       class="control control-offer-draw"

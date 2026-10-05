@@ -31,6 +31,7 @@ import {
   legalActions,
   reduce,
   registeredCatalog,
+  seatPlayedBy,
   viewFor,
   type GameState,
   type Rng,
@@ -73,6 +74,7 @@ export type PracticeCore = { handle(request: PracticeRequest): PracticeResponse 
 
 type PracticeGame = {
   config: PracticeStartConfig;
+  /** The seat the AI began in; after a Glitch swap it plays the other one (`aiSeatNow`, R677). */
   aiSeat: PlayerId;
   decks: [string[], string[]];
   handicaps: Partial<Record<PlayerId, Handicap>>;
@@ -186,9 +188,23 @@ function startGame(config: PracticeStartConfig): PracticeGame {
   };
 }
 
-/** One action for a seat; null when the engine accepted it, else the engine's reason. */
-function apply(game: PracticeGame, body: ActionBody, seat: PlayerId): string | null {
-  const human = seat === game.config.humanSeat;
+/** R677: the seat the human plays now: the one it began in, or the AI's after an odd number of Glitch swaps. */
+function humanSeatNow(game: PracticeGame): PlayerId {
+  return seatPlayedBy(game.state, game.config.humanSeat);
+}
+
+/** R677: the seat the AI plays now. */
+function aiSeatNow(game: PracticeGame): PlayerId {
+  return seatPlayedBy(game.state, game.aiSeat);
+}
+
+/**
+ * One action for the human or the AI, in the seat it plays now (R677); null when the engine
+ * accepted it, else the engine's reason. The nonce counts by player, not by seat, so a swap leaves
+ * both streams unbroken.
+ */
+function apply(game: PracticeGame, body: ActionBody, human: boolean): string | null {
+  const seat = human ? humanSeatNow(game) : aiSeatNow(game);
   const nonce = human ? `h${String(game.humanCount)}` : `a${String(game.aiCount)}`;
   const action = { ...body, playerId: seat, nonce } as Action;
 
@@ -208,14 +224,17 @@ function apply(game: PracticeGame, body: ActionBody, seat: PlayerId): string | n
 }
 
 function snapshotOf(game: PracticeGame): PracticeSnapshot {
-  const human = game.config.humanSeat;
+  // R677: the human sees, and acts from, the seat it plays now; the result reads from it too.
+  const human = humanSeatNow(game);
+  const result = game.state.result;
+  // R508: the board the human takes away, once a free game is over; R679: a voided game leaves none.
+  const keepsBoard = result !== null && result.reason !== "voided" && game.config.lesson === undefined;
   return {
     view: viewFor(game.state, human),
     legal: legalActions(game.state, human),
-    aiToAct: aiToAct(game.state, game.aiSeat),
+    aiToAct: aiToAct(game.state, aiSeatNow(game)),
     error: game.error,
-    // R508: the board the human takes away, once a free game is over.
-    ...(game.state.result !== null && game.config.lesson === undefined ? { lastBoard: lastBoardFor(game.state, human) } : {}),
+    ...(keepsBoard ? { lastBoard: lastBoardFor(game.state, human) } : {}),
   };
 }
 
@@ -251,8 +270,9 @@ function resumeGame(save: PracticeSave | null, asked: PracticeStartConfig): Prac
   }
   const game = startGame(save.config);
   for (const action of save.log) {
-    const { playerId, nonce, ...body } = action;
-    const refusal = apply(game, body as ActionBody, playerId);
+    const { playerId: _seat, nonce, ...body } = action;
+    // R677: the nonce names the player (`h…` the human, `a…` the AI) whatever seat a swap left it in.
+    const refusal = apply(game, body as ActionBody, nonce.startsWith("h"));
     if (refusal !== null) throw new Error(`the saved game does not fold: ${refusal}`);
     if (game.log[game.log.length - 1]?.nonce !== nonce) throw new Error("the saved game does not fold: a nonce differs");
   }
@@ -266,7 +286,7 @@ function resumeGame(save: PracticeSave | null, asked: PracticeStartConfig): Prac
  * action the engine accepts, never one R188 forbids.
  */
 function fallbackActions(game: PracticeGame): ActionBody[] {
-  const legal = legalActions(game.state, game.aiSeat).filter((action) => !isForbiddenAiAction(action));
+  const legal = legalActions(game.state, aiSeatNow(game)).filter((action) => !isForbiddenAiAction(action));
   const endTurn = legal.filter((action) => action.type === "endTurn");
   const rest = legal.filter((action) => action.type !== "endTurn");
   return [...endTurn, ...rest];
@@ -283,12 +303,13 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
 
   /** One AI action, or nothing when the AI owes none. Throws only when no action is possible. */
   function aiStep(active: PracticeGame): void {
-    if (!aiToAct(active.state, active.aiSeat)) return;
+    const seat = aiSeatNow(active);
+    if (!aiToAct(active.state, seat)) return;
 
     let chosen: ActionBody | null;
     try {
       const t0 = env.now();
-      const decision = decide(active.state, active.aiSeat, {
+      const decision = decide(active.state, seat, {
         rng: active.rng,
         budget,
         shouldStop: () => env.now() - t0 > PRACTICE_AI_CLOCK_MS,
@@ -299,14 +320,14 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       chosen = null;
     }
 
-    if (chosen !== null && !isForbiddenAiAction(chosen) && apply(active, chosen, active.aiSeat) === null) {
+    if (chosen !== null && !isForbiddenAiAction(chosen) && apply(active, chosen, false) === null) {
       active.error = null;
       return;
     }
 
     let lastRefusal = "no legal action";
     for (const candidate of fallbackActions(active)) {
-      const refusal = apply(active, candidate, active.aiSeat);
+      const refusal = apply(active, candidate, false);
       if (refusal === null) {
         active.error = null;
         return;
@@ -363,7 +384,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       }
       case "act": {
         const active = current();
-        const refusal = apply(active, request.action, active.config.humanSeat);
+        const refusal = apply(active, request.action, true);
         active.error = refusal;
         return snapshotResponse(request.id, active);
       }

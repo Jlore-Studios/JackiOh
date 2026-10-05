@@ -8,7 +8,7 @@ import type { CARD_HOOKS } from "./constants.ts";
 export type SfxId =
   | "draw" | "play" | "summon" | "attack" | "impact" | "shieldShatter" | "heal" | "buff" | "debuff"
   | "death" | "burn" | "trapSet" | "trapSting" | "spell" | "mana" | "turnStart" | "victory"
-  | "defeat" | "uiClick" | "uiHover" | "whoosh" | "radiant" | "lock" | "poof" | "notify" | "drain"
+  | "defeat" | "uiClick" | "uiHover" | "whoosh" | "radiant" | "lock" | "poof" | "sand" | "endTurn" | "notify" | "drain"
   | "cancel" | "entrance" | "fatigue" | "refuse"
   // Patch v0.2.0 (R506): card moments, Call to Chaos's roll (R436), a mark (R437), the turn clock (R439).
   | "manaCrack" | "bloodDrain" | "goldBurst" | "castOnDraw" | "chaosRoll" | "brand" | "heartbeat" | "clockTick"
@@ -54,6 +54,15 @@ export type SfxParams = {
    * off the lane of the unit it is about. Absent: centred. The engine pans; no recipe reads it.
    */
   pan?: number;
+  /** #185: a landing Unit's size tier; the summon thud is weighed by it rather than by `amount`. */
+  slamTier?: "tiny" | "small" | "medium" | "large" | "huge" | "massive";
+  /** Match-feel impact and sand variations. The caller supplies a sample from 0 through 1. */
+  variation?: number;
+  /** The public damage tier that selected this impact recipe. */
+  impactTier?: "tiny" | "normal" | "moderate" | "big" | "giga";
+  /** Sand's rolling four-way grain texture and the amount built up by sustained tapping. */
+  sandVariant?: number;
+  sandBuild?: number;
 };
 
 /** R669: the play sting's sizes, by the card's rarity (Common, Rare, Epic). */
@@ -213,6 +222,10 @@ export type MusicStation = "tavern" | "edm" | "lofi" | "epic";
 export type AudioSettings = {
   master: number; // 0..1
   sfx: number; // 0..1
+  /** Match reactions, above the room bed. */
+  crowd: number;
+  /** Low procedural venue bed, about -24 dB relative to the default SFX bus. */
+  ambience: number;
   voice: number; // 0..1
   muted: boolean;
   voiceOn: boolean;

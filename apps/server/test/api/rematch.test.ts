@@ -601,6 +601,9 @@ describe("rematch presence", () => {
       recordResult: async () => {
         throw new Error("unreachable: no game ends here");
       },
+      voidMatch: async () => {
+        throw new Error("unreachable: no game is voided here");
+      },
     });
     const matchId = "match-presence";
     await registry.start({

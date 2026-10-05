@@ -61,6 +61,7 @@ import {
   powerText,
   type RolledPower,
 } from "./inPlay.ts";
+import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { radiantMarks, type TextRange } from "./radiantDiff.ts";
 import { faceTuning, filledText, type FaceTuning, type TunedRange } from "./tuning.ts";
 
@@ -279,7 +280,8 @@ export function faceModel(source: FaceSource): FaceModel {
     index: def?.index ?? null,
     set: def?.set ?? null,
     radiant: source.radiant,
-    cost: costOf(def, source.liveCost, inPlay?.power),
+    // Glitch's gem shows glyphs, never a number (glitch.ts); `data-cost` still carries the view's.
+    cost: isGlitch(source.defId) ? { ...costOf(def, source.liveCost, inPlay?.power), text: GLITCH_WORDS.cost, tone: "base", alt: null } : costOf(def, source.liveCost, inPlay?.power),
     stats: statsOf(type, def !== undefined, printed, source.live ?? handLive(inPlay?.handStats, printed), grewOf(def, source)),
     text,
     // The renderer links only the names that stand in the text, so play's own words link what they name.

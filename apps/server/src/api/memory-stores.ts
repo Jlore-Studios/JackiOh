@@ -408,6 +408,16 @@ export function createMemoryLastBoardStore(
       if (row === undefined) tables().lastBoards.push({ profileId, kind, board: clone([...board]) });
       else row.board = clone([...board]);
     },
+    // R678: no randomness here (the in-memory stores draw nothing), so the first boards in table
+    // order; Postgres draws them at random. The contract asserts only what both hold.
+    sampleOthers: async (excludeProfileIds, count) => {
+      call("lastBoards.sampleOthers");
+      const excluded = new Set(excludeProfileIds);
+      return tables()
+        .lastBoards.filter((row) => row.kind === "server" && row.board.length > 0 && !excluded.has(row.profileId))
+        .slice(0, Math.max(0, count))
+        .map((row) => clone(row.board));
+    },
   };
 }
 
@@ -671,6 +681,30 @@ export function removeProfileRows(tables: AccountTables, profileId: string): boo
     for (const side of game.sides) if (side.profileId === profileId) side.profileId = null;
   }
   return true;
+}
+
+/** The rows `MatchStore.forgetVoided` reaches, as both in-memory stores hold them. */
+export type VoidTables = {
+  profiles: { id: string; inMatchId: string | null }[];
+  matches: MatchRow[];
+  matchActions: MatchActionRow[];
+  tickets: Ticket[];
+  results: { matchId: string }[];
+};
+
+/**
+ * `MatchStore.forgetVoided` (R679), as migration 0024's `app.forget_voided_match` makes Postgres do
+ * it: a live match with no result goes with its log, a profile pointed at it is let go and a ticket
+ * that paired it loses the link (`on delete set null`, 0004). Anything else is left alone.
+ */
+export function forgetVoidedRows(tables: VoidTables, matchId: string): void {
+  const match = tables.matches.find((row) => row.id === matchId);
+  if (match === undefined || match.status !== "live") return;
+  if (tables.results.some((row) => row.matchId === matchId)) return;
+  keepOnly(tables.matches, (row) => row.id !== matchId);
+  keepOnly(tables.matchActions, (row) => row.matchId !== matchId);
+  for (const profile of tables.profiles) if (profile.inMatchId === matchId) profile.inMatchId = null;
+  for (const ticket of tables.tickets) if (ticket.matchId === matchId) ticket.matchId = null;
 }
 
 /** `Store.purgeExpired`: old attempts, and the logs of matches that ended before the cutoff. */

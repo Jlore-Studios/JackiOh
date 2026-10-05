@@ -32,6 +32,8 @@ export type BackLinkProps = {
    * own under them (settings.css).
    */
   children?: ReactNode;
+  /** The board already has its own settings mechanism; match navigation keeps only the exit control. */
+  showSettings?: boolean;
 };
 
 /**
@@ -44,6 +46,7 @@ export function BackLink({
   onLeave,
   onPress,
   children,
+  showSettings = true,
 }: BackLinkProps): ReactElement {
   return (
     <nav className="row screen-nav">
@@ -63,7 +66,7 @@ export function BackLink({
         {label}
       </button>
       {children === undefined ? null : <div className="screen-nav__extra">{children}</div>}
-      <SettingsButton placement="nav" />
+      {showSettings ? <SettingsButton placement="nav" /> : null}
     </nav>
   );
 }

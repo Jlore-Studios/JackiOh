@@ -20,7 +20,7 @@ import { createRuntime } from "../../src/index";
 import { setEnginePort } from "../../src/match/engine";
 import { recordLiveGame } from "../../src/api/game-records";
 import type { GameRecorder, QueueMode } from "../../src/api/ports";
-import { createRecordResult } from "../../src/api/results";
+import { createRecordResult, createVoidMatch } from "../../src/api/results";
 import { createMatchClock } from "../../src/match/clock";
 import { createMatchRegistry } from "../../src/match/registry";
 import { createRecordingLogger, createTestDeps, TEST_CATALOG_VERSION, type TestDeps } from "../fakes/deps";
@@ -73,6 +73,7 @@ async function liveMatch(mode: QueueMode | null, options: { recorder?: boolean }
     engine,
     createClock: createMatchClock,
     recordResult: createRecordResult(deps),
+    voidMatch: createVoidMatch(deps),
   });
   await registry.start({
     matchId: MATCH_ID,

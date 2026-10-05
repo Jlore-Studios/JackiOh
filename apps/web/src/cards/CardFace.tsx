@@ -40,6 +40,8 @@ import { CardStates } from "./CardStates.tsx";
 import { FIT_FLOOR_PX, TIER_SCALE } from "./constants.ts";
 import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
+import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
+import { GlitchBlob } from "./GlitchBlob.tsx";
 import { foilFor, frameRarity, type FaceModel } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { setMarkOf } from "./setMark.ts";
@@ -166,6 +168,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
   const scales = { "--cf-name-scale": String(TIER_SCALE[names]), "--cf-text-scale": String(TIER_SCALE[texts]) } as CSSProperties;
   // R503: the frame's rarity, a token's printed one included.
   const rarity = frameRarity(face);
+  // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
+  // blob spilling out over the frame, outside the clipped `.cf-scale`.
+  const glitch = isGlitch(face.defId);
 
   return (
     <span
@@ -181,6 +186,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
       data-in-play={face.inPlay ? "true" : undefined}
       data-vanilla={face.vanilla ? "true" : undefined}
       data-tuned={face.tuning?.verdict}
+      data-glitch={glitch ? "true" : undefined}
       style={scales}
     >
       <span className="cf-scale">
@@ -196,15 +202,19 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
         )}
 
         <span className="cf-art-frame">
-          <CardArt
-            defId={face.defId}
-            radiant={face.radiant}
-            tags={face.tags}
-            type={face.type}
-            name={face.name}
-            shape={ART_SHAPE[face.type]}
-            lazy={lazyArt}
-          />
+          {glitch ? (
+            <span className={`cf-art cf-art--${ART_SHAPE[face.type]} cf-glitch-void`} aria-hidden="true" />
+          ) : (
+            <CardArt
+              defId={face.defId}
+              radiant={face.radiant}
+              tags={face.tags}
+              type={face.type}
+              name={face.name}
+              shape={ART_SHAPE[face.type]}
+              lazy={lazyArt}
+            />
+          )}
         </span>
 
         <span className="card-name" ref={nameRef}>
@@ -217,11 +227,11 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
           </span>
         )}
 
-        <SetMarkBadge set={face.set} />
+        {!glitch && <SetMarkBadge set={face.set} />}
 
         <CardStates face={face} />
 
-        <span className="card-type">{face.type}</span>
+        <span className="card-type">{glitch ? GLITCH_WORDS.type : face.type}</span>
 
         {full && (
           <span className="card-text" ref={textRef}>
@@ -243,7 +253,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
           </span>
         )}
 
-        {full && face.tags.length > 0 && (
+        {full && !glitch && face.tags.length > 0 && (
           <span className="cf-tags">
             {face.tags.map((tag) => (
               <span key={tag} className="cf-tag" data-tag={tag}>
@@ -279,6 +289,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
           </span>
         )}
       </span>
+      {glitch && <GlitchBlob />}
     </span>
   );
 }
