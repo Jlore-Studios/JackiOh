@@ -2855,7 +2855,9 @@
     },
     "44": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:5995295726"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -2878,8 +2880,8 @@
       "pr": 203,
       "provider": "devin",
       "question": "",
-      "queued_at": "2026-10-03T01:36:30Z",
-      "requested_by": "MaxGoetzmann",
+      "queued_at": "2026-10-05T13:20:23Z",
+      "requested_by": "jgoetzmann",
       "run_id": "37173930004",
       "started_at": "2026-10-04T03:26:00Z",
       "stop_requested": false,
