@@ -2730,25 +2730,12 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "rejections": [
-          "claude"
-        ],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "37310170728",
-            "tier": "medium"
-          }
-        ],
+        "approvals": [],
+        "builder": "cognition",
+        "rejections": [],
+        "reviews": [],
         "sha": "e53f4c4ef69497598bb88739d58398611e3f2a67",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
+        "tiers": {}
       }
     },
     "31": {
