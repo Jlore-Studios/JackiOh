@@ -183,6 +183,9 @@ class Provider:
     #: Caps outside its `schedule` window (`{"five_hour": 0.4}`): it may work then too, but only
     #: under these, and a run that goes past them there stops. No entry: it works in its hours only.
     off_hours: Mapping[str, float] = field(default_factory=dict)
+    #: The effort a fix pass runs at (#160, #317 part 12): a fix answers named findings, which
+    #: needs less thought than the build. "" runs it at the seat's own effort.
+    fix_effort: str = ""
 
     def describe(self) -> str:
         return f"`{self.id}` ({self.cli}, {self.model})"
@@ -212,6 +215,10 @@ class ExtraModel:
     model: str
     effort: str
     tier: str
+    #: The subscription this model stands in for (#317 part 9): it builds only easy items, and
+    #: only while that subscription cannot take them (off, backed off, or its lanes full). It
+    #: plans and reviews nothing. Empty: an ordinary seat.
+    takes_over: str = ""
 
 
 @dataclass(frozen=True)
@@ -232,6 +239,8 @@ class Seat:
     self_check: bool
     #: Its place in its tier's preference order: the router tries the lowest first.
     rank: int
+    #: The subscription it stands in for (`ExtraModel.takes_over`), or "" for an ordinary seat.
+    takes_over: str = ""
 
     @property
     def family(self) -> str:
@@ -299,12 +308,17 @@ class Pool:
     def seats(self, provider: Provider) -> list[Seat]:
         """The models `provider` can run, its main one first."""
         found = []
-        for model, effort, tier, own_check in (
-                (provider.model, provider.effort, provider.tier, provider.self_check),
-                *((m.model, m.effort, m.tier, False) for m in provider.extra_models)):
+        for model, effort, tier, own_check, stands_in in (
+                (provider.model, provider.effort, provider.tier, provider.self_check, ""),
+                *((m.model, m.effort, m.tier, False, m.takes_over) for m in provider.extra_models)):
             rank, _ = self._entry(tier, model)
-            found.append(Seat(provider, model, effort, tier, own_check, rank))
+            found.append(Seat(provider, model, effort, tier, own_check, rank, stands_in))
         return found
+
+    def own_seats(self, provider: Provider) -> list[Seat]:
+        """`provider`'s seats that plan, review and build anything: every seat but a stand-in
+        (`takes_over`), which builds only the easy items another subscription cannot take."""
+        return [seat for seat in self.seats(provider) if not seat.takes_over]
 
     def seat(self, provider_id: str | None, model: str | None = None) -> Seat | None:
         """`provider_id`'s seat for `model`, or its main one; None when it has no such model."""
@@ -318,7 +332,7 @@ class Pool:
 
     def best_seat(self, provider: Provider, floor: str = "weak") -> Seat | None:
         """`provider`'s strongest seat at `floor` or above, or None."""
-        seats = [s for s in self.seats(provider) if tier_at_least(s.tier, floor)]
+        seats = [s for s in self.own_seats(provider) if tier_at_least(s.tier, floor)]
         return max(seats, key=lambda s: (TIER_RANK[s.tier], -s.rank), default=None)
 
     def family_tier(self, family: str) -> str:
@@ -390,7 +404,7 @@ def _limits(raw: Any, where: str) -> Limits:
 _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "tier", "secret", "schedule",
                   "limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
                   "self_check", "extra_models", "off_from", "off_reason",
-                  "lanes", "build_last", "easy_first", "off_hours", "only_labels"}
+                  "lanes", "build_last", "easy_first", "off_hours", "only_labels", "fix_effort"}
 
 
 def _tier(value: Any, where: str) -> str:
@@ -409,11 +423,12 @@ def _extra_models(raw: Any, effort: str, where: str) -> tuple[ExtraModel, ...]:
     for i, entry in enumerate(raw):
         if not isinstance(entry, Mapping) or not entry.get("model"):
             raise ConfigError(f"{where}[{i}]: needs a model and a tier")
-        unknown = sorted(set(entry) - {"model", "effort", "tier", "note"})
+        unknown = sorted(set(entry) - {"model", "effort", "tier", "note", "takes_over"})
         if unknown:
             raise ConfigError(f"{where}[{i}]: unknown keys {', '.join(unknown)}")
         found.append(ExtraModel(str(entry["model"]), str(entry.get("effort", effort)),
-                                _tier(entry.get("tier"), f"{where}[{i}].tier")))
+                                _tier(entry.get("tier"), f"{where}[{i}].tier"),
+                                str(entry.get("takes_over") or "")))
     return tuple(found)
 
 
@@ -516,6 +531,7 @@ def _provider(name: str, raw: Any) -> Provider:
         build_last=bool(raw.get("build_last", False)),
         easy_first=bool(raw.get("easy_first", False)),
         off_hours=_off_hours(raw.get("off_hours"), f"{where}.off_hours"),
+        fix_effort=str(raw.get("fix_effort") or ""),
         extra_models=_extra_models(raw.get("extra_models"), str(raw.get("effort", "")),
                                    f"{where}.extra_models"),
     )
@@ -558,6 +574,12 @@ def parse(raw: Any) -> Pool:
     plan_lanes = int(raw.get("plan_lanes", 0))
     if plan_lanes < 0:
         raise ConfigError(f"{PROVIDERS_PATH}: plan_lanes must be 0 or more")
+    for provider in providers.values():
+        for extra in provider.extra_models:
+            if extra.takes_over and (extra.takes_over not in providers
+                                     or extra.takes_over == provider.id):
+                raise ConfigError(f"{PROVIDERS_PATH}: {provider.id}'s {extra.model} takes over "
+                                  f"{extra.takes_over!r}, which is not another provider")
     pool = Pool(lanes, priority, providers, machine_parallel=machine, plan_lanes=plan_lanes,
                 tiers=tiers)
     # Every model a provider runs has its place in its own tier's order, so the router always

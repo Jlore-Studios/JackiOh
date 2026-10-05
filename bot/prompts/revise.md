@@ -1,4 +1,4 @@
-<!-- version: 1 -->
+<!-- version: 2 -->
 # Revise pull request #$number
 
 You are the builder for a revision of pull request #$number of `$repo`, on its branch `$branch`
@@ -37,6 +37,13 @@ Read the whole change before editing: `git diff $base...HEAD`.
   a breakage already on `main`), change nothing and say so plainly with the evidence.
 - `conflict`: resolve every marker so both `main`'s change and this branch's change survive with
   their meaning. Remove every marker. Do not stage, commit or abort the merge: the harness does.
+  SPEC §11 and `packages/engine/test/rulings.test.ts` conflict on nearly every merge, because each
+  branch appends the next R number: a row or index entry of this branch takes the next number
+  free after `main`'s highest, and every citation of it on this branch is renumbered to match;
+  `main`'s rows and entries stay exactly as they are. Before you stop, run
+  `git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- SPEC.md packages/engine/test/rulings.test.ts`
+  and every other file the merge left conflicted, and make sure it prints nothing. A change that
+  still holds a marker is never delivered.
 - `cross-review`: check each finding against the code and SPEC first; the second reviewer can be
   wrong. Fix what holds, and answer what does not with the evidence in your report.
 

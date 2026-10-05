@@ -75,6 +75,46 @@ EXIT_NOT_FOUND = 127
 DEFAULT_PARK = "+PT60M"
 
 
+#: How many of a failed CLI's last stderr lines its error keeps (`stderr_error`).
+ERROR_LINES = 20
+
+
+def _json_message(body: Any) -> str:
+    """The message in a JSON error body: its `message`, `error`, `detail` or
+    `error_description`, looked for inside a nested `error` object too."""
+    if isinstance(body, str):
+        return body.strip()
+    if not isinstance(body, dict):
+        return ""
+    for key in ("message", "error", "detail", "error_description"):
+        value = body.get(key)
+        found = _json_message(value) if isinstance(value, (dict, str)) else ""
+        if found:
+            return found
+    return ""
+
+
+def stderr_error(stderr: str, fallback: str) -> str:
+    """What a failed CLI said on stderr: the message of the JSON error body it ended with, when it
+    ended with one (Devin prints `{"error": {"message": ...}}` over several lines, so its last line
+    alone is a bare `}`, #317 part 1), else its last `ERROR_LINES` lines, else `fallback`."""
+    lines = [line for line in str(stderr or "").splitlines() if line.strip()]
+    if not lines:
+        return fallback
+    for start in range(len(lines) - 1, -1, -1):
+        if not lines[start].lstrip().startswith("{"):
+            continue
+        try:
+            body = json.loads("\n".join(lines[start:]))
+        except ValueError:
+            continue
+        message = _json_message(body)
+        if message:
+            return message
+        break
+    return "\n".join(lines[-ERROR_LINES:])
+
+
 def _resets_in_minutes(text: str | None) -> int | None:
     """The minutes a "resets in 1h44m44s" names, a started minute counted whole; None for none."""
     match = RESETS_IN.search(text or "")
@@ -886,8 +926,7 @@ class MuseCli(_Cli):
         ok = launch.code == 0
         error = None
         if not ok:
-            last = [line for line in stderr.splitlines() if line.strip()]
-            error = redact((last[-1] if last else f"muse exited {launch.code}")[-2000:])
+            error = redact(stderr_error(stderr, f"muse exited {launch.code}")[-2000:])
         reset_at = park_for(error) if not ok and RATE_LIMIT_WORDS.search(error or "") else None
         return self._with_usage(RunResult(ok, text, launch.code, None, launch.elapsed, error,
                                           None, reset_at, infra_hint=launch.code == 2), request)
@@ -969,8 +1008,7 @@ class DevinCli(_Cli):
         ok = launch.code == 0
         error = None
         if not ok:
-            last = [line for line in stderr.splitlines() if line.strip()]
-            error = redact((last[-1] if last else f"devin exited {launch.code}")[-2000:])
+            error = redact(stderr_error(stderr, f"devin exited {launch.code}")[-2000:])
         reset_at = park_for(error) if not ok and RATE_LIMIT_WORDS.search(error or "") else None
         return RunResult(ok, text, launch.code, None, launch.elapsed, error, None, reset_at)
 

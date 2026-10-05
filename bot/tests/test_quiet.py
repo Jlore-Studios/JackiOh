@@ -234,7 +234,7 @@ class PeekTests(unittest.TestCase):
         self.assertEqual((look.work, look.reason, look.forced, look.quiet_provider),
                          (True, "#3 (medium) is queued to build, for `claude-1`: plan on "
                           "`claude-1` (claude, `opus`, strong); build on `claude-1` (claude, "
-                          "`opus`, strong); review on `claude-1` (claude, `opus`, strong)",
+                          "`sonnet`, medium); review on `claude-1` (claude, `opus`, strong)",
                           True, ""))
         look = plan_mod.peek(make_ctx(FakeGitHub(), at=DAY), force=True)
         self.assertEqual((look.work, look.forced), (True, True))

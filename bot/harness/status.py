@@ -12,13 +12,30 @@ from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN
                             LABEL_NEEDS_PLAN, LABEL_PR, LABEL_REVISE, LABEL_SUGGESTION,
                             LABEL_WORKING)
 from harness.context import Context
-from harness.plan import run_status, working_threads
+from harness.plan import run_status, training_ids, working_threads
 from harness.providers import Provider
 
 #: What a run is doing to an item, by the item's kind (`queue.KIND_ORDER`).
 DOING = {"plan": "planning", "build": "building", "revise": "revising",
          "review": "reviewing"}
 
+
+
+def night_slots(pool: Any) -> int:
+    """The night box's slots: the machine's (`machine_parallel`), less the training box's."""
+    return pool.machine_parallel - sum(pool.get(p).lanes for p in training_ids(pool))
+
+
+def machine_text(pool: Any, live: dict[int, str]) -> str:
+    """How many runs are on each of the bot's boxes (#317 part 11): "2 of 6 on the night box,
+    0 of 1 on the training box", or "n of N on the machine" with no training box."""
+    training = training_ids(pool)
+    night = sum(1 for p in live.values() if pool.on_machine(p) and p not in training)
+    if not training:
+        return f"{night} of {pool.machine_parallel} on the machine"
+    trained = sum(1 for p in live.values() if p in training)
+    return (f"{night} of {night_slots(pool)} on the night box, {trained} of "
+            f"{pool.machine_parallel - night_slots(pool)} on the training box")
 
 def _numbers(items: list[dict[str, Any]]) -> str:
     if not items:
@@ -95,10 +112,8 @@ def running_lines(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> 
                 + (f", and {cfg.pool.plan_lanes} for planning" if cfg.pool.plan_lanes else "")
                 + ")."]
     order = {provider_id: i for i, provider_id in enumerate(cfg.pool.priority)}
-    on_machine = sum(1 for provider_id in live.values() if cfg.pool.on_machine(provider_id))
     lines = [f"- **Running now** ({len(live) - planning} of {lanes} lanes, {free} free; "
-             f"{on_machine} of {cfg.pool.machine_parallel} on the machine, the rest on GitHub's "
-             f"runners{planning_text}):"]
+             f"{machine_text(cfg.pool, live)}, the rest on GitHub's runners{planning_text}):"]
     for number, provider_id in sorted(live.items(),
                                       key=lambda kv: (order.get(kv[1], len(order)), kv[0])):
         record = _record(state, number)
@@ -177,7 +192,8 @@ def report(ctx: Context) -> str:
     lines.append(f"- Working on: {_numbers(labelled(LABEL_WORKING))}"
                  + (f" (no run is going for {ended} any more; the next plan requeues it)"
                     if ended else "") + ".")
-    lines.append(f"- **Needs plan** (a strong model plans these first, into the description): "
+    lines.append(f"- **Needs plan** (rated and planned first, into the description: an easy or "
+                 f"unrated item by a medium or strong model, the rest by a strong one): "
                  f"{_numbers(labelled(LABEL_NEEDS_PLAN, prs=False))}.")
     lines.append(f"- Queued to build: {_numbers(labelled(LABEL_BUILD, prs=False))}; "
                  f"to revise: {_numbers(labelled(LABEL_REVISE, prs=True))}; "
@@ -193,9 +209,12 @@ def report(ctx: Context) -> str:
     if last.get("url"):
         lines.append(f"- Last run: [{last.get('what', 'run')}]({last['url']}) at {last.get('at', '?')}.")
     lines.append(f"- Up to {cfg.max_review_cycles} build and review rounds per item, after a "
-                 "plan by a strong model on the planning lane (or by its builder when none is "
-                 "free), which goes into the issue's description. An item's `difficulty:easy|medium|hard` (medium "
-                 "without one) sets the weakest tier that may build it. A change merges once "
+                 "plan on the planning lane (or by its builder when none is free), which goes "
+                 "into the issue's description, by a medium or strong model for an easy or "
+                 "unrated item and a strong one for the rest; the planner rates an unrated item. "
+                 "An item's `difficulty:easy|medium|hard` (medium until rated) sets the weakest "
+                 "tier that may build it, and three failures of its own raise it a step. A "
+                 "change merges once "
                  f"{review_rule.SUMMARY} approved it. A self-checking builder "
                  f"checks itself up to {cfg.max_self_check_rounds} times first. Auto-merge "
                  f"{'on' if cfg.auto_merge else 'off'}.")
