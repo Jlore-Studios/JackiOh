@@ -314,6 +314,22 @@ function measuredTestids(calls: readonly { anchor: FxAnchor }[]): string[] {
  * ------------------------------------------------------------------------------------------- */
 
 describe("B32 — the director fires each cue on time and leaves nothing behind", () => {
+  it("freezes FX visual time during hit-stop and resumes from the remaining lifetime", () => {
+    const h = harness();
+    h.director.play([{ kind: "splat", tone: "damage", amount: 8, at: at("card-a"), delayMs: 0, durationMs: 100 }]);
+    h.frame(T0);
+    expect(h.root.childElementCount).toBe(1);
+
+    h.director.pause();
+    h.frame(T0 + 500);
+    expect(h.root.childElementCount, "the elapsed wall time must not age a frozen visual").toBe(1);
+    h.director.resume();
+    h.frame(T0 + 599);
+    expect(h.root.childElementCount).toBe(1);
+    h.frame(T0 + 600);
+    expect(h.root.childElementCount).toBe(0);
+  });
+
   it("R200 every cue of an entry is gone D + FX_MAX_TAIL_MS after the entry started: no activity, no particle, an empty DOM root", () => {
     const h = harness();
     h.director.play(entryCues());

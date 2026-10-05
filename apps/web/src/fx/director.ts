@@ -102,6 +102,10 @@ export type FxDirector = {
    * every aimed lunge (B46–B48), and leaves everything else to finish.
    */
   release(): void;
+  /** Freezes visual time for a short hit-stop without changing the animation queue or game clock. */
+  pause(): void;
+  /** Resumes a hit-stop, shifting visual deadlines by the frozen span. */
+  resume(): void;
   /** Pending cues + mounted DOM effects + canvasFx.alive() + (shake active ? 1 : 0). */
   active(): number;
   particles(): number;
@@ -218,6 +222,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
   let painted = false;
   /** The page scrolled or resized since the last frame: parked stand-ins re-measure their zone. */
   let layoutDirty = false;
+  let pausedAt: number | null = null;
 
   // Adaptive quality (B34). The cap halves when frames run slow and doubles back once they are
   // healthy again. "Slow" is judged against the display's own refresh, learned as the shortest
@@ -483,6 +488,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     shake.active();
 
   const onFrame = (frame: FxFrame): boolean => {
+    if (pausedAt !== null) return false;
     const at = frame.now;
 
     // 1. Fire due cues, in the order they were played.
@@ -603,6 +609,19 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       });
     },
     release: releaseStaged,
+    pause(): void {
+      if (disposed || pausedAt !== null) return;
+      pausedAt = now();
+    },
+    resume(): void {
+      if (disposed || pausedAt === null) return;
+      const elapsed = Math.max(0, now() - pausedAt);
+      pausedAt = null;
+      for (const item of pending) item.due += elapsed;
+      for (const item of mounted) item.expiresAt += elapsed;
+      for (const item of staged) item.expiresAt += elapsed;
+      if (hasWork()) loop.wake();
+    },
     active(): number {
       return pending.length + mounted.length + staged.length + canvasFx.alive() + (shake.active() ? 1 : 0);
     },

@@ -38,7 +38,7 @@ import {
 } from "@jackioh/shared";
 import { loadCatalog } from "../../src/api/catalog";
 import type { MatchClocks, ResultRow } from "../../src/api/ports";
-import { createRecordResult } from "../../src/api/results";
+import { createRecordResult, createVoidMatch } from "../../src/api/results";
 import { MATCH_ACTIONS_PER_SECOND, RATING_DEVIATION_START, RATING_VOLATILITY_START } from "../../src/config";
 import { rateGame, type Score } from "../../src/ranked/glicko2";
 
@@ -213,6 +213,7 @@ async function harness(
     engine: options.engine ?? createFakeEngine(),
     createClock: options.realClock === true ? createMatchClock : clocks.create,
     recordResult: recordResult as unknown as ActorDeps["recordResult"],
+    voidMatch: createVoidMatch(deps),
   };
 
   const registry = createMatchRegistry(actorDeps);
@@ -911,6 +912,7 @@ describe("R642 — the portraits frame (§9.5)", () => {
       engine: createFakeEngine(),
       createClock: clocks.create,
       recordResult: resultWriter() as unknown as ActorDeps["recordResult"],
+      voidMatch: createVoidMatch(deps),
     };
     const now = deps.timers.now();
     await deps.store.matches.create({

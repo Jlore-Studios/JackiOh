@@ -277,6 +277,13 @@ export function promptForOpponent(pendingFor: PlayerId, deadline: number | null)
   return { type: "prompt", forYou: false, pendingFor, deadline };
 }
 
+/**
+ * R679: the close reason both sockets of a voided match carry, with `MATCH_VOIDED_CLOSE_CODE`
+ * (`src/config.ts`). No new frame: the last `view` already shows the game over with reason
+ * `voided`, and the close tells the client the match is gone rather than to reconnect.
+ */
+export const MATCH_VOIDED_CLOSE_REASON = "voided";
+
 export function encode(message: ServerMessage): string {
   return JSON.stringify(message);
 }

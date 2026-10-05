@@ -26,12 +26,15 @@ from pathlib import Path
 from typing import Any
 
 from harness import asks, disk, failures, issueplan, review_rule
+from harness import easy as easy_mod
+from harness import stepup
 from harness import gates as gates_mod
 from harness import plan as plan_mod
 from harness import providers as providers_mod
 from harness import vault
 from harness.clock import iso, parse_iso
-from harness.config import (DIFFICULTY_LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
+from harness.config import (DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED, LABEL_BUILD,
+                            LABEL_CROSS, PLAN_FLOOR,
                             LABEL_HUMAN, LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_STUCK,
                             LABEL_NEEDS_REVIEW, LABEL_PR, LABEL_PR_OPEN, LABEL_READY,
                             LABEL_REVISE, LABEL_SUGGESTION, STATE_BRANCH)
@@ -39,13 +42,12 @@ from harness.context import Context
 from harness.errors import GitError, GitHubError
 from harness.git import Git, matches
 from harness.queue import (PRIORITY_TIERS, branch_for_issue, cleared, difficulty_of, label_names,
-                           open_pull_for_branch, set_state_label)
+                           labelled_difficulty, open_pull_for_branch, rating_source,
+                           set_state_label, wip_branch)
 from harness.state import item as state_item
 from harness.redact import redact
 
 REPORT_CHARS = 30_000
-#: How much of a plan its comment shows.
-PLAN_COMMENT_CHARS = 20_000
 #: How much of a stopped run's notes and session trail is kept for the next agent.
 HANDOFF_NOTES = 8000
 HANDOFF_TRAIL = 6000
@@ -262,7 +264,8 @@ class Deliverer:
             self.log.append(f"auto-merge off on #{pull.get('number')}")
 
     def _publish(self, *, approved: bool) -> tuple[bool, str]:
-        """Push the bundle's branch. `(pushed, problem)`; no bundle is `(False, "")`."""
+        """Push the bundle's branch. `(pushed, problem)`; no bundle is `(False, "")`. A bundle
+        whose head holds a conflict marker in a file it changed is refused (#317 part 2)."""
         name = self.result.get("bundle")
         branch = str(self.plan.get("branch") or "")
         if not name or not branch:
@@ -293,6 +296,12 @@ class Deliverer:
         forbidden = self.repo.unsanctioned(local, [start, merged_main], self.cfg.forbidden_paths)
         if forbidden:
             return False, f"the change touches paths the bot may not change: {', '.join(forbidden)}"
+        markers = self.repo.markers(local, self.repo.changed_paths(f"origin/{default}", local))
+        if markers:
+            return False, ("conflict markers are still in "
+                           + ", ".join(f"`{p}`" for p in markers[:8])
+                           + (", …" if len(markers) > 8 else "")
+                           + ", so I pushed nothing")
         if not approved:
             self._hold_auto_merge()
         if self.cfg.dry_run:
@@ -328,12 +337,17 @@ class Deliverer:
 
     def _item(self) -> None:
         number = int(self.plan["number"])
+        self.rating_note = ""
+        if self.plan.get("action") in ("plan", "build") and isinstance(self.result.get("plan"), dict):
+            self.rating_note = self._apply_rating(number)
         if self.plan.get("action") == "build" and isinstance(self.result.get("plan"), dict):
             # The run planned it first: a later run builds from that plan, never plans again.
             who, tier = self._planner()
             self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who,
                            planned_tier=tier)
             self._plan_into_issue(number, who)
+            if self.rating_note and self.result.get("status") != "planned":
+                self._try(lambda: self.gh.create_comment(number, self.rating_note))
         self._deliver_item(number)
         self._keep_handoff(number)
         self._close_asks(number)
@@ -344,7 +358,9 @@ class Deliverer:
             self._closed(number, thread)
             return
         status = self._late_stop(number, str(self.result.get("status")))
-        if self.plan["action"] == "plan":
+        if self.plan["action"] == "plan" or (self.plan["action"] == "build"
+                                             and status == "planned"):
+            # A build run that rated the item out of its reach stopped after planning it.
             self._planned(number, status)
             return
         if self.plan["action"] == "review":
@@ -354,6 +370,10 @@ class Deliverer:
             return
         kind = "revise" if self.plan["action"] == "revise" else "build"
         if status == "infra":
+            if not self.result.get("no_result"):
+                # A login or CLI that broke mid-run (#317 part 1) leaves the work it had, like a
+                # pause does: the next run, on another subscription, goes on from it.
+                self._keep_work(number, kind)
             self._infra(number, kind)
             return
         if status == "interrupted":
@@ -386,19 +406,74 @@ class Deliverer:
         who, tier = self._planner()
         self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who, planned_tier=tier)
         self._requeue_label(number, "build")
+        rated = getattr(self, "rating_note", "")
+        rated = f"{rated} " if rated else ""
+        difficulty = self._difficulty(number)
+        if tier and not providers_mod.tier_at_least(tier, PLAN_FLOOR[difficulty]):
+            # A medium planner rated it medium or hard: a strong model plans it next (part 6).
+            nxt = (f"A {PLAN_FLOOR[difficulty]} model plans `difficulty:{difficulty}` work, so "
+                   "one plans it next; it is queued for that.")
+        else:
+            nxt = ("Cleared and queued to build, on the cheapest model "
+                   f"`difficulty:{difficulty}` allows.")
         if self._plan_into_issue(number, who):
-            self.gh.create_comment(number, f"Planned on {who} ({self._link()}). The plan is in "
-                                   "this issue's description, under **Plan**: the builder starts "
-                                   "from that section, so edit it there to change the plan. It "
-                                   "is queued to build, on the cheapest model its difficulty "
-                                   "allows.")
+            self.gh.create_comment(number, f"{rated}Planned on {who} ({self._link()}). The plan "
+                                   "is in this issue's description, under **Plan**: the builder "
+                                   "starts from that section, so edit it there to change the "
+                                   f"plan. {nxt}")
             return
         plan = self.result.get("plan") if isinstance(self.result.get("plan"), dict) else {}
-        text = redact(str(plan.get("text") or ""))[:PLAN_COMMENT_CHARS]
+        text = redact(str(plan.get("text") or ""))[:issueplan.PLAN_CHARS]
         self.gh.create_comment(number, f"Planned on {who} ({self._link()}), but the description "
                                "could not take the plan, so it is here. It is queued to build "
                                "from this plan, on the cheapest model its difficulty allows.\n\n"
                                f"<details><summary>The plan</summary>\n\n{text}\n\n</details>")
+
+    def _apply_rating(self, number: int) -> str:
+        """Label the item with the difficulty its planner rated (#317 part 8), and say so: only
+        when no person set one (`queue.rating_source`), never lower than the bot's own earlier
+        rating, and easy only when the plan's **Files to touch** table holds to the easy rule
+        (`easy.plan_breach`). Records `difficulty_by`. Returns the sentence for the comment."""
+        plan = self.result.get("plan") if isinstance(self.result.get("plan"), dict) else {}
+        rated = plan.get("rating") if isinstance(plan.get("rating"), dict) else None
+        if not rated or str(rated.get("difficulty")) not in DIFFICULTIES:
+            return ""
+        labels = self._labels(number)
+        record = self._record(number)
+        if rating_source(labels, record) == "person":
+            return ""
+        wanted = str(rated["difficulty"])
+        earlier = str((record.get("difficulty_by") or {}).get("difficulty") or "")
+        if earlier in DIFFICULTIES and DIFFICULTIES.index(wanted) < DIFFICULTIES.index(earlier):
+            wanted = earlier  # a rating stands: nobody lowers it
+        breach = ""
+        if wanted == "easy":
+            breach = easy_mod.plan_breach(str(plan.get("text") or ""), self.cfg.easy,
+                                          self.cfg.review_paths, self.cfg.forbidden_paths)
+            if breach:
+                wanted = "medium"
+        who, tier = self._planner()
+        self._set_difficulty(number, wanted, labels)
+        self._remember(number, difficulty_by={"difficulty": wanted, "provider": self.provider.id,
+                                              "tier": tier, "at": iso(self.ctx.now()),
+                                              "why": str(rated.get("why") or "")[:300]})
+        why = f": {rated.get('why')}" if rated.get("why") else ""
+        said = f"Rated `difficulty:{rated['difficulty']}` by {who}{why}."
+        if breach:
+            said += (f" The easy rule does not hold ({breach}), so it is "
+                     "`difficulty:medium`.")
+        elif wanted != rated["difficulty"]:
+            said += f" It was rated `difficulty:{wanted}` before, and a rating is never lowered."
+        return said
+
+    def _set_difficulty(self, number: int, difficulty: str, labels: set[str]) -> None:
+        """Leave exactly `difficulty:<difficulty>` on the thread, of the difficulty labels."""
+        wanted = f"difficulty:{difficulty}"
+        for name in labels:
+            if name.lower() in DIFFICULTY_LABELS and name != wanted:
+                self._try(lambda n=name: self.gh.remove_label(number, n))
+        if wanted not in labels:
+            self._try(lambda: self.gh.add_labels(number, [wanted]))
 
     def _planner(self) -> tuple[str, str]:
         """Who wrote this run's plan, and that model's tier."""
@@ -423,11 +498,20 @@ class Deliverer:
         except GitHubError:
             return False
         labels = self._labels(number)
+        _, tier = self._planner()
+        # A plan built from in the same run stands; one that stopped there must meet its floor.
+        planning_only = self.plan.get("action") == "plan" or self.result.get("status") == "planned"
+        meets = (not planning_only or not tier
+                 or providers_mod.tier_at_least(tier, PLAN_FLOOR[self._difficulty(number)]))
         try:
-            if LABEL_NEEDS_PLAN in labels:
-                self.gh.remove_label(number, LABEL_NEEDS_PLAN)
-            if LABEL_PLANNED not in labels:
-                self.gh.add_labels(number, [LABEL_PLANNED])
+            if meets:
+                if LABEL_NEEDS_PLAN in labels:
+                    self.gh.remove_label(number, LABEL_NEEDS_PLAN)
+                if LABEL_PLANNED not in labels:
+                    self.gh.add_labels(number, [LABEL_PLANNED])
+            elif LABEL_NEEDS_PLAN not in labels:
+                # A medium plan of a medium or hard item (#317 part 6): a strong one comes next.
+                self.gh.add_labels(number, [LABEL_NEEDS_PLAN])
         except GitHubError:
             pass  # the next plan job's sync puts the labels right
         return True
@@ -436,6 +520,8 @@ class Deliverer:
         """Someone closed the issue or pull request while the run worked on it: its work is not
         pushed, no pull request opens, and nothing queues it again."""
         set_state_label(self.ctx, number, label_names(thread), None)
+        if "pull_request" in thread:
+            self._drop_wip(number)
         where = "pull request" if "pull_request" in thread else "issue"
         self.gh.create_comment(number, f"This {where} was closed while a run was working on it "
                                f"({self._link()}), so that run's work was not delivered. Reopen "
@@ -530,6 +616,8 @@ class Deliverer:
                                    f"({self._link()}): {reason}\n\nThat is not this item's fault; "
                                    "it stays queued, for another subscription meanwhile.")
             return
+        if self._strike(number, f"a run died: {reason}"):
+            return
         state = self.ctx.store.update(lambda s: state_item(s, number).update(
             died=int(state_item(s, number).get("died", 0)) + 1, queued_at=now), f"died #{number}")
         died = int(state_item(state, number).get("died", 0))
@@ -544,33 +632,190 @@ class Deliverer:
         self.gh.create_comment(number, f"The run working on this died {where} ({self._link()}): "
                                f"{reason}. It is back in the queue, behind the others.")
 
+    def _keep_work(self, number: int, kind: str) -> tuple[bool, str]:
+        """Keep what a run that did not finish made: a build's on its own branch, a revision's
+        on `bot/wip/<pr>` (#317 part 3), which the next revision starts from. Before this a
+        revision cut off by a usage cap threw its work away: #143 lost 16 Opus runs so."""
+        if kind == "build":
+            return self._publish(approved=False)
+        return self._publish_wip(number)
+
+    def _publish_wip(self, number: int) -> tuple[bool, str]:
+        """Push an unfinished revision's bundle to `bot/wip/<pr>`, never to the pull request's
+        branch. The same checks as `_publish`, conflict markers aside (a resolution may stop
+        half-way): the head the result names, descending from where the work started, the pull
+        request's branch not moved meanwhile, and no forbidden path. `(pushed, problem)`."""
+        name = self.result.get("bundle")
+        branch = str(self.plan.get("branch") or "")
+        if not name or not branch:
+            return False, ""
+        bundle = self.out_dir / str(name)
+        if not bundle.is_file():
+            return False, "the result names a bundle the model job did not upload"
+        wip = wip_branch(number)
+        default = self.cfg.default_branch
+        for ref in (default, branch, wip):
+            self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                          f"+refs/heads/{ref}:refs/remotes/origin/{ref}", check=ref == default)
+        local = f"deliver/{wip}"
+        try:
+            head = self.repo.fetch_bundle(bundle, branch, local)
+        except GitError as exc:
+            return False, f"the bundle could not be read: {exc}"
+        start = str(self.result.get("start") or "")
+        if head != self.result.get("head") or not start or self.repo.run(
+                "merge-base", "--is-ancestor", start, head, check=False).returncode != 0:
+            return False, "the bundle does not hold the work the result names"
+        remote = self.repo.rev(f"origin/{branch}")
+        if remote and remote != start:
+            return False, f"`{branch}` moved on GitHub while I worked, so the work was not kept"
+        merged_main = self.repo.merge_base(f"origin/{default}", local)
+        if self.repo.unsanctioned(local, [start, merged_main], self.cfg.forbidden_paths):
+            return False, "the work touches paths the bot may not change, so it was not kept"
+        if self.cfg.dry_run:
+            self.log.append(f"dry run: would push {head} to {wip}")
+            return True, ""
+        url = f"{self.cfg.server_url}/{self.cfg.repo}.git"
+        old = self.repo.rev(f"origin/{wip}")
+        try:
+            if old and self.repo.run("merge-base", "--is-ancestor", old, head,
+                                     check=False).returncode != 0:
+                # The run started over from the pull request's head: the old work goes.
+                self.repo.push(url, f":refs/heads/{wip}", self.cfg.write_token)
+            self.repo.push(url, f"{local}:refs/heads/{wip}", self.cfg.write_token)
+        except GitError as exc:
+            return False, f"keeping the work on `{wip}` was refused: {exc}"
+        self._remember(number, wip={"sha": head, "start": start, "at": iso(self.ctx.now()),
+                                    "provider": self.provider.id})
+        self.log.append(f"kept the unfinished revision of #{number} on {wip}")
+        return True, ""
+
+    def _drop_wip(self, number: int) -> None:
+        """A revision delivered, or the pull request closed: its unfinished work is done with."""
+        if not self._record(number).get("wip"):
+            return
+        url = f"{self.cfg.server_url}/{self.cfg.repo}.git"
+        try:
+            if not self.cfg.dry_run:
+                self.repo.push(url, f":refs/heads/{wip_branch(number)}", self.cfg.write_token)
+        except GitError:
+            pass  # gone already
+        self.ctx.store.update(lambda s: state_item(s, number).pop("wip", None),
+                              f"wip #{number} done")
+
     def _interrupted(self, number: int, kind: str) -> None:
         interrupt = str(self.result.get("interrupt") or "budget")
         reason = self.result.get("reason")
-        pushed, problem = (False, "")
-        if kind == "build":
-            pushed, problem = self._publish(approved=False)
-        if interrupt == "budget":
-            state = self.ctx.store.update(lambda s: state_item(s, number).update(
-                interruptions=int(state_item(s, number).get("interruptions", 0)) + 1),
-                f"interrupted #{number}")
-            count = int(state_item(state, number).get("interruptions", 0))
-            if count >= self.cfg.max_failures:
+        pushed, problem = self._keep_work(number, kind)
+        try:
+            calls = int(self.result.get("model_calls") or 0)
+        except (TypeError, ValueError):
+            calls = 0
+        # A cut-off run that made progress (its work moved on) is a step of a long job, not a
+        # failure; one that made none counts, whatever cut it off, except a halt, the machine's
+        # disk, or a run stopped before any model call (#317 part 3). Before this only the time
+        # budget counted, so a usage pause could repeat for ever.
+        if interrupt in ("budget", "usage") and calls:
+            def count(s: dict[str, Any]) -> None:
+                entry = state_item(s, number)
+                entry["interruptions"] = 0 if pushed else int(entry.get("interruptions", 0)) + 1
+            state = self.ctx.store.update(count, f"interrupted #{number}")
+            count_now = int(state_item(state, number).get("interruptions", 0))
+            if count_now >= self.cfg.max_failures:
                 set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
                 self._remember(number, forced=False)
-                self.gh.create_comment(number, f"This ran out of time {count} runs in a row "
-                                       f"({self._link()}), so I stopped. It is probably too big "
-                                       "for one night; split it into smaller issues, or queue it "
-                                       "again to keep going.")
+                self.gh.create_comment(number, f"This was cut off {count_now} runs in a row "
+                                       f"without its work moving on ({self._link()}; last: "
+                                       f"{reason}), so I stopped. It may be too big for one run: "
+                                       "split it into smaller issues, or queue it again to keep "
+                                       "going.")
                 return
         self._requeue_label(number, kind)
         self._remember(number, last_findings=self.result.get("findings") or [])
-        kept = " The work so far is on the branch." if pushed else ""
+        where = (f"on `{wip_branch(number)}`, where the next revision starts"
+                 if kind == "revise" else "on the branch")
+        kept = f" The work so far is {where}." if pushed else ""
         self.gh.create_comment(number, f"Paused: {reason}.{kept} It stays queued and the next "
                                "run picks it up." + (f"\n\n{problem}" if problem else ""))
 
+    def _builder_worked(self) -> bool:
+        """Some builder session of the run worked: it ended well, or it changed something."""
+        cycles = self.result.get("cycles") or []
+        if not cycles:
+            return True  # a result from before rounds were recorded, or a test's
+        return any((c.get("builder") or {}).get("ok") or (c.get("builder") or {}).get("changed")
+                   for c in cycles if isinstance(c, dict))
+
+    def _easy_breach(self, number: int, kind: str) -> bool:
+        """A weak builder's change on an easy item that breaks the easy rule (`easy.change_breach`:
+        too many files or lines, or an off-limits path) is not pushed (#317 part 8): its work is
+        kept for a stronger builder (a build's on its own branch, with no pull request; a
+        revision's on `bot/wip/<pr>`), the item becomes medium (its label, or a floor under a
+        person's label), and it is queued again. True when it did so."""
+        if self.build_seat is None or self.build_seat.tier != "weak":
+            return False
+        if self._difficulty(number) != "easy":
+            return False
+        counts = self._bundle_counts()
+        breach = easy_mod.change_breach(counts, self.cfg.easy) if counts else ""
+        if not breach:
+            return False
+        if kind == "build":
+            pushed, _ = self._publish(approved=False)
+        else:
+            pushed, _ = self._publish_wip(number)
+        issue, pr = stepup.pair(self.ctx, number)
+        for target in {issue, *([pr] if pr else [])}:
+            labels = self._labels(target)
+            if rating_source(labels, self._record(target)) == "person":
+                self._remember(target, difficulty_floor="medium")
+            else:
+                self._set_difficulty(target, "medium", labels)
+                self._remember(target, difficulty_by={
+                    "difficulty": "medium", "provider": "easy rule", "tier": "",
+                    "at": iso(self.ctx.now()), "why": breach})
+            if target == pr:
+                self._remember(target, difficulty="medium")
+        self._requeue_label(number, kind)
+        kept = ""
+        if pushed:
+            kept = (f" Its work is kept on `{self.plan.get('branch')}`" if kind == "build"
+                    else f" Its work is kept on `{wip_branch(number)}`") + ", for it to go on from."
+        self.gh.create_comment(number, f"Not pushed ({self._link()}): {self.build_seat.describe()} "
+                               f"built it as `difficulty:easy`, but the change breaks the easy "
+                               f"rule ({breach}), so it is `difficulty:medium` now and a medium "
+                               f"or stronger model takes it.{kept}")
+        return True
+
+    def _bundle_counts(self) -> dict[str, int]:
+        """Lines added plus removed per path of the bundle's head against `main`."""
+        name = self.result.get("bundle")
+        branch = str(self.plan.get("branch") or "")
+        if not name or not branch or not (self.out_dir / str(name)).is_file():
+            return {}
+        default = self.cfg.default_branch
+        try:
+            self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                          f"+refs/heads/{default}:refs/remotes/origin/{default}")
+            local = f"deliver/measure/{branch}"
+            self.repo.fetch_bundle(self.out_dir / str(name), branch, local)
+            return self.repo.numstat(f"origin/{default}", local)
+        except GitError:
+            return {}
+
+    def _strike(self, number: int, why: str) -> bool:
+        """One failure of the item's own (`stepup.strike`): True when it was its third, and the
+        item was stepped up (or blocked at hard) instead of ending the way the caller would."""
+        try:
+            return stepup.strike(self.ctx, number, why, link=self._link())
+        except GitHubError as exc:
+            self.log.append(f"could not count a strike on #{number}: {exc}")
+            return False
+
     def _fail(self, number: int, kind: str) -> None:
         """A run that produced nothing usable: requeue it, or block it after too many."""
+        if self._strike(number, f"the run failed: {self.result.get('reason') or 'unknown'}"):
+            return
         state = self.ctx.store.update(
             lambda s: state_item(s, number).update(
                 failures=int(state_item(s, number).get("failures", 0)) + 1),
@@ -641,6 +886,15 @@ class Deliverer:
             set_state_label(self.ctx, number, self._labels(number), None)
             kept = f" What I had is on `{branch}`." if pushed else ""
             self.gh.create_comment(number, f"Stopped, as asked.{kept}")
+            return
+        if status in ("approved", "built", "not_approved") and not self._builder_worked():
+            # #141 was opened by a run whose builder failed with a 401 in 0.0 minutes, from
+            # commits earlier runs had left on the branch (#317 part 4).
+            self.result["reason"] = ("no builder session in the run worked: "
+                                     + str(self.result.get("reason") or "no reason recorded"))
+            self._fail(number, "build")
+            return
+        if status in ("approved", "built") and self._easy_breach(number, "build"):
             return
         approved = status == "approved"
         built = status == "built"  # no model in the run could review it: a review run will
@@ -715,6 +969,9 @@ class Deliverer:
                                    f"{said} {merge_note}")
             self._remember(number, last_findings=[], question="", failures=0, pr=pr)
         else:
+            if self._strike(number, f"its reviewer did not approve it: "
+                            f"{self._first_finding() or self.result.get('reason')}"):
+                return
             set_state_label(self.ctx, number, issue_labels, LABEL_BLOCKED)
             if pr and LABEL_REVISE not in self._labels(pr):
                 set_state_label(self.ctx, pr, self._labels(pr), LABEL_BLOCKED)
@@ -796,6 +1053,8 @@ class Deliverer:
                                    f"{question}")
             self._remember(number, question=str(question or ""))
             return
+        if status in ("approved", "built") and self._easy_breach(number, "revise"):
+            return
         # As the run found it: the source and the clearance `_carry` reads are reset below.
         before = self._record(number)
         started = before.get("started_at")
@@ -803,6 +1062,10 @@ class Deliverer:
             # No review run follows on a person's pull request: unreviewed work is not pushed.
             status = "not_approved"
         if status not in ("approved", "built"):
+            self._drop_wip(number)  # nothing of it ships: the next revision starts afresh
+            if self._strike(number, f"a revision was not approved: "
+                            f"{self._first_finding() or self.result.get('reason')}"):
+                return
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
             self._hold_auto_merge()
             stuck = self._mark_stuck(number)
@@ -821,6 +1084,7 @@ class Deliverer:
             self.gh.create_comment(number, f"I could not push the revision ({self._link()}): "
                                    f"{problem}.")
             return
+        self._drop_wip(number)
         set_state_label(self.ctx, number, self._labels(number), None)
         if approved:
             self._unstick(number)
@@ -960,6 +1224,10 @@ class Deliverer:
         a resolution keeps who cleared the change, and adds who reviewed the resolution."""
         who = review_rule.who(self._approvals(votes))
         entry: dict[str, Any] = {"sha": head, "at": iso(self.ctx.now()), "by": who}
+        try:
+            stepup.clear(self.ctx, pr)  # a head that met the rule ends the item's strikes
+        except GitHubError:
+            pass
         carried = votes.get("carried")
         if isinstance(carried, dict):
             entry.update(by=str(carried.get("by") or who), resolved_by=who,
@@ -1059,7 +1327,7 @@ class Deliverer:
         available = {seat.tier for provider in self.cfg.pool.ordered()
                      if provider.enabled and "review" in provider.roles
                      and (provider.login == "machine" or secrets.has(provider.secret) is not False)
-                     for seat in self.cfg.pool.seats(provider)}
+                     for seat in self.cfg.pool.own_seats(provider)}
         return review_rule.reachable([tier for _, tier in self._approvals(votes)], available,
                                      difficulty)
 
@@ -1072,6 +1340,9 @@ class Deliverer:
     def _second_review(self, number: int, status: str) -> None:
         """Act on a review run's verdict on a bot pull request."""
         record = self._record(number)
+        if status not in ("infra", "interrupted"):
+            # A review a person asked for is answered: the next one takes any tier again.
+            self._remember(number, review_floor="", review_notes="")
         if status == "infra":
             self._infra(number, "review", requeue=LABEL_CROSS)
             return
@@ -1108,6 +1379,8 @@ class Deliverer:
         # A rejection stands against this head until that model approves it or the head moves.
         self._vote(number, head, approve=False, builder=False)
         self._hold_auto_merge(number)
+        if self._strike(number, f"{who} rejected it: {self._first_finding() or 'see its findings'}"):
+            return
         rounds = int(record.get("cross_rounds", 0)) + 1
         findings = self.result.get("findings") or []
         if rounds >= self.cfg.max_failures:
@@ -1231,6 +1504,15 @@ class Deliverer:
         run_id = self._record(number).get("ci_run_id")
         if run_id:
             self._try(lambda: self.ctx.act.rerun_failed_jobs(run_id))
+
+    def _first_finding(self) -> str:
+        """The first blocking finding's claim, cut short, for a strike's reason."""
+        findings = self.result.get("findings") or []
+        if not findings or not isinstance(findings[0], dict):
+            return ""
+        where = str(findings[0].get("where") or "")
+        claim = " ".join(str(findings[0].get("claim") or "").split())[:140]
+        return f"`{where}`: {claim}" if where else claim
 
     def _findings_md(self) -> str:
         findings = self.result.get("findings") or []

@@ -17,7 +17,8 @@ from harness.config import Gate, LABEL_BLOCKED, LABEL_BUILD, LABEL_HUMAN, LABEL_
 from harness.deliver import Deliverer
 from harness.runner import FakeRunner, RunResult
 from harness.state import item as state_item
-from harness.work import PLAN_CHARS, PLAN_CUT, Worker
+from harness.issueplan import PLAN_CHARS, PLAN_WORDS
+from harness.work import PLAN_CUT, Worker
 
 from tests.fakes import FakeGitHub, make_origin
 from tests.support import DAY, MACHINE, make_config, make_ctx
@@ -91,6 +92,48 @@ class PlanCutTests(unittest.TestCase):
         self.assertTrue(text.endswith(PLAN_CUT))
         self.assertLessEqual(len(text), PLAN_CHARS)
         self.assertTrue(result["handoff"]["notes"].startswith("# Plan"))
+
+    def run_plan(self, text):
+        root = Path(tempfile.mkdtemp())
+        _, clone = make_origin(root)
+        cfg = make_config(gates=GATES, install={"run": "true", "timeout_minutes": 1})
+        runner = FakeRunner({"plan": lambda request: RunResult(True, text)})
+        plan = {"action": "plan", "number": 12, "title": "Rules v2", "branch": "bot/issue-12",
+                "thread": "Please make the rules v2."}
+        return runner, Worker(cfg, plan, runner, clone, root / "work", root / "out").run()
+
+    def test_a_plan_over_the_old_cut_is_kept_whole(self):
+        """#208: plans were cut at 20,000 characters (#307's among them)."""
+        plan = "## Goal\nThe first step.\n" + "x" * 25_000 + "\nThe last step."
+        self.assertTrue(20_000 < len(plan) < PLAN_CHARS)
+        _, result = self.run_plan(plan)
+        self.assertEqual(result["status"], "planned")
+        self.assertEqual(result["plan"]["text"], plan)
+
+    def test_the_plan_prompt_states_its_budget(self):
+        runner, _ = self.run_plan("## Goal\nRules v2.")
+        prompt = runner.calls[0].prompt
+        self.assertIn(f"under {PLAN_WORDS:,} words", prompt)
+        self.assertIn(f"first {PLAN_CHARS:,} characters", prompt)
+        self.assertIn("Say each thing once", prompt)
+
+    def test_a_plan_the_description_refused_goes_whole_into_its_comment(self):
+        from harness.errors import GitHubError
+        h = Harness(self)
+        h.gh.add_issue(12, labels=(LABEL_BUILD,), body="Make the rules v2.")
+
+        def refuse(number, body):
+            raise GitHubError("body is too long", 422)
+        h.gh.set_issue_body = refuse
+        plan = "## Goal\nThe first step.\n" + "x" * 25_000 + "\nThe last step."
+        planned = plan_mod.make(h.ctx)
+        out = h.root / "out-plan"
+        runner = FakeRunner({"plan": lambda request: RunResult(True, plan)})
+        Worker(h.cfg, {**planned, "action": "plan"}, runner, h.clone, h.root / "work", out).run()
+        Deliverer(h.ctx, {**planned, "action": "plan"}, out, h.deliver_repo).run()
+        said = h.gh.bot_comments(12)[-1]
+        self.assertIn("could not take the plan", said)
+        self.assertIn("The last step.", said)
 
 
 class ForbiddenOnlyTests(unittest.TestCase):

@@ -11,6 +11,24 @@
   "min_minutes_for_a_call": 25,
   "max_review_cycles": 10,
   "max_self_check_rounds": 3,
+  "easy": {
+    "max_files": 10,
+    "max_lines": 400,
+    "off_limits": [
+      "SPEC.md",
+      "BUILD.md",
+      "packages/engine/test/rulings.test.ts",
+      "packages/shared/src/events.ts",
+      "packages/engine/src/",
+      "packages/ai/src/",
+      "packages/cards/catalog.json",
+      "packages/cards/patches/",
+      "packages/cards/src/scripts/",
+      "apps/server/src/db/migrations/",
+      "e2e/"
+    ],
+    "generated": ["packages/cards/src/scripts/_generated.ts"]
+  },
   "max_failures": 3,
   "auto_merge": true,
   "merge_method": "squash",

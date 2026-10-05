@@ -103,20 +103,20 @@ class WorkTests(unittest.TestCase):
 
     def test_a_fresh_reading_without_headroom_stops_a_build_before_any_model_work(self):
         """`cmd_work` pings a capped Claude account before the run. claude-2's 5-hour cap is
-        90% and a build starts only under 75% (`start_headroom`)."""
+        90% and a build starts only under 85% (`start_headroom`)."""
         runner = FakeRunner({"build": builder({"src/game.txt": "rules v2\n"}),
                              "review": reviewer(APPROVE)})
         plan = {"action": "build", "number": 12, "title": "Rules v2", "branch": "bot/issue-12",
                 "thread": "Please make the rules v2.", "provider": "claude-2"}
         worker = self.worker(runner, plan)
         worker.start_usage = {"status": "allowed", "five_hour": {
-            "utilization": 0.8, "resets_at": "2099-01-01T00:00:00Z"}}
+            "utilization": 0.87, "resets_at": "2099-01-01T00:00:00Z"}}
         result = worker.run()
         self.assertEqual(result["interrupt"], "usage")
-        self.assertIn("too close to its 90% cap to start a build (it starts under 75%)",
+        self.assertIn("too close to its 90% cap to start a build (it starts under 85%)",
                       result["reason"])
         self.assertEqual(runner.calls, [])
-        self.assertEqual(result["usage"]["five_hour"]["utilization"], 0.8)
+        self.assertEqual(result["usage"]["five_hour"]["utilization"], 0.87)
 
     def test_a_call_stopped_past_the_cap_stops_the_run(self):
         """Every call of a capped subscription carries the caps (`usage_stop`); the runner's

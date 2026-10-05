@@ -59,7 +59,7 @@ jackioh/
       src/replay.ts            fold(seed, log) -> state; state hash
       test/                    unit + property tests
     cards/
-      catalog.json             268 cards + 49 tokens over Core, Classic and Classic+ (schema in M4-T1, M9-T1)
+      catalog.json             268 cards + 50 tokens over Core, Classic and Classic+ (schema in M4-T1, M9-T1)
       patches/                 patches.json and one whole-catalog snapshot per card patch (M9-T2, R388)
       src/index.ts             registry: defId -> {def, base, radiant}
       src/scripts/NNN-slug.ts  one file per Core card, NNN = zero-padded index, tokens as NNN-1-slug.ts
@@ -344,7 +344,7 @@ Acceptance: a registry test asserts every catalog id has a script and every scri
 
 **M4-T3 Test template.** Files: `cards/test/_harness.ts`, `cards/test/NNN-slug.test.ts`.
 `_harness.ts` gives `scenario({ seed, p1: { hand, field, library, health, mana }, p2: {…} })` builders that place real instances, `playFrom(hand)`, `attack`, `answer`, `endTurn`, `view` and assertion helpers (`expectInZone`, `expectStats`, `expectEvents`). Every card test file covers, for base and radiant separately, each behaviour named in its §8 row plus the "must-pass" cases in the table below.
-Acceptance: `pnpm test --filter cards` runs a test file per catalog entry (111 for Core; 317 once M9 lands); a script that lists catalog ids without a test file (`cards/scripts/missing-tests.ts`) prints nothing.
+Acceptance: `pnpm test --filter cards` runs a test file per catalog entry (111 for Core; 317 once M9 lands, 318 with Glitch); a script that lists catalog ids without a test file (`cards/scripts/missing-tests.ts`) prints nothing.
 
 **M4-T4 Implement cards in waves.** Wave 1 first (keywords and single primitives), then Wave 2 (stored state, prompts, delayed and cross-turn effects, traps), then Wave 3 (subsystems). Within a wave, go in index order. A wave is done when every card in it passes its tests and the fuzz gate (M4 gate) still passes with those cards added to the fuzz deck pool.
 
@@ -543,6 +543,7 @@ A table `eventType → { animation, durationMs, testid }` with exactly one row p
 | `drawLimited` | The deck pile shakes once under a "Draw limit" tag; nothing moves | 300 ms | the library pile gains `data-animating="drawLimited"`; hand and deck counts are unchanged (§2.4) | `fizzle`: smoke puff at the pile |
 | `turnCutShort` | Banner "Turn ended" on both seats | 600 ms | banner text; `end-turn` disabled (§6.3 End the turn) | `banner`: muted "Turn ended" |
 | `marked` | The marked card takes its mark: a corruption sparkle in the mark's colour, purple for #50's pending steal (R437) | 400 ms | the card carries `data-mark`; a face-down card's back carries it | `radiant`-style pulse in the mark's colour |
+| `glitched` | A Glitch resolved (issue #170): a glitch banner names its outcome — the match resets, the seats swap, other games' boards appear, or the match never happened (R676–R679) | 600 ms | the board carries the banner | `banner` fx; static under Reduce motion |
 | `numberChanged` | The changed number on the card flashes and ticks to its new value; a back on a seat that may not read the card | 300 ms | the number shown equals the view's `{key}` value (C+ #41) | `glint`: arcane glint |
 
 The FX column names the effect recipe that decorates each row (`ANIMATIONS[type].fx`), specified with its cues in `docs/polish/1-animations.md`. Effects run on the `apps/web/src/fx` layer, start with their row's entry and pace nothing: the durations and acceptance cells above are unchanged, no effect carries a `data-animating` of its own, whatever trails an entry is gone within `FX_MAX_TAIL_MS` of its end, and the stage effects (a stand-in for a moved card, a hidden card, an aimed lunge) last no longer than the view swap (R200). The viewer's effects speed scales the durations (R201), and effects read only the redacted stream (R202).
@@ -893,8 +894,9 @@ Acceptance: `test:sql`, `test:db` and the API tests; a finished game writes both
 | T-AI-8 | Rate Limit | B | Face-down Trap: on the opponent's turn it fires as their 3rd play of the turn is played (`cardPlayed`; casts count, R70; a countered play is never played), going to your graveyard, and once that play has resolved their turn ends as if they had pressed End turn, every end-of-turn step running (`endTurnAfter`, §6.3); the opponent learns nothing of it until it fires (R33, R97); radiant after their 2nd play |
 | T-AI-9 | Refusal | B | Face-down Trap in the announce window of §10.5 (the price paid, the card not yet moved): when the opponent plays or casts a Spell whose declared targets include one of your Units, it Counters it: the Spell goes to its owner's graveyard unresolved and is treated as never played (no `cardPlayed`, no count for Combo, Quickstriker, Ceaseless Void or the turn log; its Echo repeats never happen), the mana and Tributes staying spent; `countered` is public; a Spell with no declared target, a Field Spell or a Trap never sets it off; with two Refusals the first cancels and the second stays set; hidden until it fires (R33); radiant also when the Spell targets you or any card of yours, and you draw 1 |
 | T-AI-10 | Fine-Tuning | B | Field Spell: at each end of your turn Upgrades one random card in your hand (R386: one draw; an Immutable card or one nothing fits unchanged); an empty hand, nothing and no random draw (R129); the `upgraded` event names nothing to the opponent (R97); nothing at the opponent's end; radiant 2 different random cards |
+| T-glitch | Glitch | B | Hidden Spell token (issue #170): in no pool, Almanac or Deck Builder (R674); only made in place of a card generated into a hand or deck after a C #18 or C #25 play, at n/10000 (R673), with no extra rng draw before one; costs (0) and is playable on its owner's turn whatever modifies costs or bans plays (R675); resolves as one of reset, seat swap, other boards, void, by the match rng (R676–R679); radiant the same blank face |
 
-**M9 gate.** Every acceptance item above green; `catalog.test.ts` at 268 cards and 49 tokens with each set's rarity counts; `pnpm fuzz` green at 1,000 seeds with every card of the three sets in the pool; `pnpm rulings:coverage` clean; REVIEW Part A and Part B pass.
+**M9 gate.** Every acceptance item above green; `catalog.test.ts` at 268 cards and 50 tokens with each set's rarity counts; `pnpm fuzz` green at 1,000 seeds with every card of the three sets in the pool; `pnpm rulings:coverage` clean; REVIEW Part A and Part B pass.
 
 ## 4. Test strategy summary
 
@@ -909,7 +911,7 @@ Acceptance: `test:sql`, `test:db` and the API tests; a finished game writes both
 ## 5. Definition of done
 
 - `pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e` all green in CI.
-- `catalog.test.ts` passes: 268 cards and 49 tokens; Core 100 and 11 with rarity counts 35/37/16/7/5, Classic 90 and 0 with 42/25/13/9/1, Classic+ 78 and 38 with 13/25/25/13/2 (§8).
+- `catalog.test.ts` passes: 268 cards and 50 tokens; Core 100 and 11 with rarity counts 35/37/16/7/5, Classic 90 and 1 with 42/25/13/9/1, Classic+ 78 and 38 with 13/25/25/13/2 (§8).
 - `missing-tests.ts` prints nothing.
 - `rulings.test.ts` covers every SPEC §11 row, R1–R439 and the blocks the workstreams used (script `rulings-coverage.ts` lists any missing id).
 - Fuzz gate: `pnpm fuzz` runs 1,000 seeds with the full card pool and prints its own counts (seeds, throws, non-terminations, replay mismatches, endings). `pnpm test` sweeps the same file at a reduced seed count as a smoke wave; the card pool is never reduced, and any exclusion must be a named entry in `POOL_EXCLUSIONS` with a reason, printed on every run so a narrowing cannot be hidden.

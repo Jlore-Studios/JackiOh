@@ -75,6 +75,9 @@ LABELS: dict[str, tuple[str, str]] = {
     "priority:high": ("d73a4a", "The night bot picks this up first"),
     "priority:medium": ("fbca04", "The night bot picks this up after priority:high"),
     "priority:low": ("0e8a16", "The night bot picks this up last, after unlabelled work"),
+    "Info": ("bfdadc", "For the record, nothing to build: migrations, statistics, the night bot's status"),
+    "method:manual": ("f9d0c4", "People handle it: two minutes after it goes on, triage labels it human, retitles it and assigns both people"),
+    "method:use-bot": ("c2e0c6", "The night bot takes it: two minutes after it goes on, triage labels, retitles and queues it and assigns the bot"),
 }
 
 LABEL_BUILD = "bot:build"
@@ -103,6 +106,10 @@ LABEL_STUCK = "bot:stuck"
 #: building. The bot never queues, plans, builds, labels or assigns it, and a request to build it
 #: gets a reply saying so.
 LABEL_HUMAN = "human"
+#: #307: a person's choice of who does an issue; triage takes no issue without one.
+LABEL_INFO = "Info"
+LABEL_METHOD_MANUAL = "method:manual"
+LABEL_METHOD_BOT = "method:use-bot"
 #: An item's difficulty decides which models may plan, build and review it; no label counts as
 #: medium, and with several the hardest counts. Like `human`, these match whatever their case.
 DIFFICULTIES = ("easy", "medium", "hard")
@@ -110,6 +117,15 @@ DIFFICULTY_LABELS = {f"difficulty:{name}": name for name in DIFFICULTIES}
 DEFAULT_DIFFICULTY = "medium"
 #: The weakest tier that may build an item of each difficulty (`providers.TIERS`).
 MIN_TIER = {"easy": "weak", "medium": "medium", "hard": "strong"}
+#: The weakest tier whose plan an item of each difficulty builds from (#317 part 6): a medium
+#: model may plan an easy item, only a strong one anything harder. An item no one has rated yet
+#: (`UNRATED_PLAN_FLOOR`) may be rated and planned by a medium model, whose plan then stands only
+#: if it rates the item easy (#317 part 8).
+PLAN_FLOOR = {"easy": "medium", "medium": "strong", "hard": "strong"}
+UNRATED_PLAN_FLOOR = "medium"
+#: Failures of an item's own (not infra, a usage pause, a halt or a stop) at one difficulty before
+#: the bot raises it a step, easy to medium to hard; three more at hard block it (#317 part 8).
+STEP_UP_AFTER = 3
 #: The pickup tiers, first to last; a thread with no priority label sits between medium and low
 #: (#90). Like `human`, these match whatever their case.
 LABEL_PRIORITY_HIGH = "priority:high"
@@ -125,6 +141,18 @@ class Gate:
     #: Runs in a model job on the bot's machine too. `false` leaves it to CI on the pull request
     #: there: the machine's two vCPUs are shared by every job on it, GitHub's runners are not.
     machine: bool = True
+
+
+@dataclass(frozen=True)
+class EasyRule:
+    """The limits of `difficulty:easy` (`harness/easy.py`), from `easy` in `.harness/config.json`:
+    at most `max_files` files and `max_lines` lines added plus removed (`generated` files aside),
+    and nothing under `off_limits`."""
+
+    max_files: int = 10
+    max_lines: int = 400
+    off_limits: tuple[str, ...] = ()
+    generated: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -179,6 +207,8 @@ class Config:
     pool: Pool
     #: Self checks a self-checking builder gets before its change goes to review anyway.
     max_self_check_rounds: int = 3
+    #: What `difficulty:easy` allows (`harness/easy.py`).
+    easy: EasyRule = field(default_factory=EasyRule)
     # From the environment.
     bot_token: str = field(default="", repr=False)
     actions_token: str = field(default="", repr=False)
@@ -246,7 +276,24 @@ _REQUIRED = (
 
 _ROLES = ("plan", "build", "fix", "revise", "review", "suggest")
 #: Keys `.harness/config.json` may leave out, with their defaults.
-_OPTIONAL = {"max_self_check_rounds": 3}
+_OPTIONAL = {"max_self_check_rounds": 3, "easy": {}}
+
+
+def _easy(raw: Any) -> EasyRule:
+    if not isinstance(raw, Mapping):
+        raise ConfigError("easy: expected an object")
+    unknown = sorted(set(raw) - {"max_files", "max_lines", "off_limits", "generated"})
+    if unknown:
+        raise ConfigError(f"easy: unknown keys {', '.join(unknown)}")
+    try:
+        rule = EasyRule(int(raw.get("max_files", 10)), int(raw.get("max_lines", 400)),
+                        tuple(str(p) for p in raw.get("off_limits") or ()),
+                        tuple(str(p) for p in raw.get("generated") or ()))
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(f"easy: {exc}") from exc
+    if rule.max_files < 1 or rule.max_lines < 1:
+        raise ConfigError("easy: max_files and max_lines must be at least 1")
+    return rule
 
 
 def _gate(raw: Any, where: str) -> Gate:
@@ -338,6 +385,7 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str],
         gates=gates,
         pool=pool if pool is not None else providers_mod.load(root),
         max_self_check_rounds=self_checks,
+        easy=_easy(raw.get("easy", _OPTIONAL["easy"])),
         bot_token=env.get("BOT_GITHUB_TOKEN", ""),
         actions_token=env.get("GITHUB_TOKEN", "") or env.get("GH_TOKEN", ""),
         backend=backend,

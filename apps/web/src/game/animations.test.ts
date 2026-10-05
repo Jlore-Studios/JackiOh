@@ -102,6 +102,7 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   drawLimited: 300,
   turnCutShort: 600,
   marked: 400,
+  glitched: 600,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -194,6 +195,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   drawLimited: { type: "drawLimited", player: "p2" },
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
+  glitched: { type: "glitched", player: "p1", outcome: "swap" },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -264,7 +266,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(64);
+    expect(rows).toHaveLength(65);
   });
 
   it("gives every row an animation name and a testid template", () => {

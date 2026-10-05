@@ -855,6 +855,11 @@
     "classic-090": { // In Too Deep
       cast: { voice: "sapi-mystic", text: "Deeper and deeper we go." },
     },
+    "classic-t-glitch": { // Glitch
+      // Glitch in the System's own line, word for word, so its render is that file's (the hash
+      // is over the voice and the text alone); the card's name and text are corrupted on its face.
+      cast: { voice: "sapi-synth", text: "Error. Error. Reality not found.", effect: "dataBlips" },
+    },
     "classicplus-001": { // Doom Shroom
       cast: { voice: "sapi-rasp", text: "Spores of doom, released!", effect: "sporePuff" },
     },
