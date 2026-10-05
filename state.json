@@ -3588,8 +3588,11 @@
     "what": "review #324 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-05T21:37:38Z",
-    "notes": [],
+    "at": "2026-10-05T21:48:31Z",
+    "notes": [
+      "CI on #325: #325: queued a CI fix",
+      "CI on #324: #324: blocked, stopped or already queued; left alone"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
