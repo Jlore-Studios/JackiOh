@@ -1084,7 +1084,7 @@
       "pending_request": false,
       "provider": "muse",
       "question": "Revision is partial: merge conflicts fully resolved and core gates green, but ~30 test failures across ~15 files remain (pre-existing branch failures from the issue-88 behavior changes, not merge damage). Fixed 19 files; the rest need the same stale-expectation updates. Send another revision run to continue the test-fixing work (notes in .bot-notes.md, failure inventory below).",
-      "queued_at": "2026-10-04T21:54:24Z",
+      "queued_at": "2026-10-05T02:46:37Z",
       "requested_by": "jgoetzmann",
       "run_id": "37242009155",
       "self_check_findings": [],
