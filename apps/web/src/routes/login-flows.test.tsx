@@ -1219,6 +1219,26 @@ describe("R323 R324 PKCE links", () => {
     expect(storedVerifiers()).toEqual([]);
   });
 
+  it("R663 an email change's link comes back with its code: the new address is confirmed, and it signs nothing in", async () => {
+    await challengeForRequest("email_change");
+    const [kept] = storedVerifiers();
+    const token = jwt({ sub: "user-1", email: EMAIL, pkce: 660 });
+    const calls = server({ [token]: EMAIL }, { "/auth/v1/token": exchanged(token), "/auth/v1/logout": { status: 204 } });
+    at(`/login?code=${CODE}`);
+    render(<LoginRoute />);
+
+    const changed = await screen.findByTestId(loginTestid.emailChanged);
+    expect(changed.textContent).toBe(AUTH_NOTICES.emailChanged);
+    expect(screen.queryByTestId(loginTestid.confirmed)).toBeNull();
+    await flushMicrotasks();
+    const [grant] = callsTo(calls, "/auth/v1/token");
+    expect(grant?.body).toEqual({ auth_code: CODE, code_verifier: kept?.verifier });
+    // R193: like every link, it is revoked, and nothing is stored.
+    expect(callsTo(calls, "/auth/v1/logout").map((call) => call.auth)).toEqual([`Bearer ${token}`]);
+    expect(readSession()).toBeNull();
+    expect(storedVerifiers()).toEqual([]);
+  });
+
   it("R323 a recovery link's code for the reset this browser asked for is held for this tab and opens /reset-password", async () => {
     rememberPendingReset(EMAIL);
     await challengeForRequest("recovery");

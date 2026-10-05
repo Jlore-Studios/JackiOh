@@ -25,7 +25,7 @@ import { useId, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type
 import type { CardCost, CardDef } from "@jackioh/shared";
 import type { CatalogSnapshot } from "@jackioh/validator";
 
-import { CardArt, faceModel, useInspectTrigger } from "../../cards/index.ts";
+import { CardArt, faceModel, isInspectKey, useInspectTrigger } from "../../cards/index.ts";
 import { DECK_SIZE } from "./deckSize.ts";
 import { deckListOrder } from "./filters.ts";
 import ManaCurve from "./ManaCurve.tsx";
@@ -126,10 +126,8 @@ type DeckTileProps = {
   onInspect: (cardId: string) => void;
 };
 
-/** The keys that open a tile's detail view: I, the context-menu key, and Shift+F10. */
-export function isInspectKey(event: { key: string; shiftKey: boolean }): boolean {
-  return event.key === "i" || event.key === "I" || event.key === "ContextMenu" || (event.shiftKey && event.key === "F10");
-}
+/** The keys that open a tile's detail view: I, the context-menu key, and Shift+F10 (cards/inspect/keys.ts). */
+export { isInspectKey };
 
 function DeckTile({ deckName, cardId, def, conflict, onRemove, onInspect }: DeckTileProps): ReactElement {
   const name = def?.name ?? cardId;

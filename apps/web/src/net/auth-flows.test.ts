@@ -26,7 +26,9 @@ import {
   authRedirectUrl,
   classifyProviderRefusal,
   exchangeAuthCode,
+  listTotpFactors,
   refreshSession,
+  requestEmailSignIn,
   requestPasswordReset,
   resendConfirmation,
   revokeSession,
@@ -34,7 +36,10 @@ import {
   sessionNearExpiry,
   signIn,
   signUp,
+  requestEmailChange,
   updatePassword,
+  verifyEmailCode,
+  verifySecondFactor,
   type AuthEndpoint,
   type AuthFailure,
 } from "./auth.ts";
@@ -171,7 +176,13 @@ const CALL: Record<AuthEndpoint, () => Promise<unknown>> = {
   resend: () => resendConfirmation(EMAIL),
   recover: () => requestPasswordReset(EMAIL),
   updatePassword: () => updatePassword(ACCESS, PASSWORD),
+  changeEmail: () => requestEmailChange(ACCESS, EMAIL),
   refresh: () => refreshSession(freshRefreshToken()),
+  // R664, R665: their tables are in auth-methods.test.ts; here they join the unreachable check.
+  otp: () => requestEmailSignIn(EMAIL),
+  verifyOtp: () => verifyEmailCode(EMAIL, "123456"),
+  mfaVerify: () => verifySecondFactor({ accessToken: ACCESS }, "factor-1", "123456"),
+  mfa: () => listTotpFactors(ACCESS),
 };
 
 beforeEach(() => {
@@ -205,6 +216,7 @@ const RATE_LIMITED_OTHER = {
   resend: "neutral",
   recover: "neutral",
   updatePassword: "rateLimited",
+  changeEmail: "rateLimited",
   refresh: "rateLimited",
 } as const;
 
@@ -217,6 +229,7 @@ const SERVICE = {
   resend: "neutral",
   recover: "neutral",
   updatePassword: "service",
+  changeEmail: "service",
   refresh: "service",
 } as const;
 
@@ -233,6 +246,7 @@ const TOKEN_REFUSED = {
   resend: "neutral",
   recover: "neutral",
   updatePassword: "linkExpired",
+  changeEmail: "sessionEnded",
   refresh: "sessionEnded",
 } as const;
 
@@ -256,6 +270,7 @@ const ROWS: readonly Row[] = [
       resend: "neutral",
       recover: "neutral",
       updatePassword: "rateLimited",
+      changeEmail: "emailRateLimited",
       refresh: "rateLimited",
     },
   },
@@ -308,7 +323,15 @@ const ROWS: readonly Row[] = [
       signUp: "invalidEmail",
       resend: "invalidEmail",
       recover: "invalidEmail",
+      changeEmail: "emailChangeRefused",
     },
+  },
+  {
+    // R160, R663: another account's address reads exactly as an invalid one.
+    answer: "email_exists",
+    status: 422,
+    body: { error_code: "email_exists", msg: PROVIDER_TEXT[0] },
+    outcomes: { changeEmail: "emailChangeRefused" },
   },
   { answer: "signup_disabled", status: 422, body: { error_code: "signup_disabled" }, outcomes: DISABLED },
   {
@@ -642,6 +665,22 @@ describe("the requests", () => {
     expect(call.body).toEqual({ password: PASSWORD });
     expectPublishableHeaders(call);
     expect(call.headers.get("authorization")).toBe(`Bearer ${ACCESS}`);
+  });
+
+  it("R663 requestEmailChange puts the new address with the session's bearer token, a PKCE challenge and <origin>/login", async () => {
+    const calls = serve(200, { id: "user-1", email: "old@example.com", new_email: EMAIL });
+    await expect(requestEmailChange(ACCESS, EMAIL)).resolves.toBeUndefined();
+
+    expect(calls).toHaveLength(1);
+    const call = calls[0] as Call;
+    expect(call.method).toBe("PUT");
+    expect(`${call.url.origin}${call.url.pathname}`).toBe(`${URL_}/auth/v1/user`);
+    expect(call.url.searchParams.get("redirect_to")).toBe(`${window.location.origin}/login`);
+    expect(call.body).toEqual({ email: EMAIL, ...PKCE_FIELDS });
+    expectPublishableHeaders(call);
+    expect(call.headers.get("authorization")).toBe(`Bearer ${ACCESS}`);
+    // R323: the verifier is kept for the link's return, under its own flow.
+    expect(storedVerifiers().map((entry) => entry.flow)).toEqual(["email_change"]);
   });
 
   it("B35 the redirect is always <origin>/login, whatever the address bar carries", async () => {
@@ -1123,6 +1162,8 @@ describe("R323 R324 PKCE: the mailers' challenge and the code's exchange", () =>
     expect(exchange).toEqual({
       kind: "session",
       flow: "recovery",
+      // R665: no verified factor in the answer's user, so no second step.
+      secondFactor: null,
       session: { accessToken: "access-new", refreshToken: "refresh-new", expiresAt: expect.any(Number) as unknown as number },
     });
     const call = calls[0] as Call;

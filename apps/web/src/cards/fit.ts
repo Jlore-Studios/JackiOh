@@ -26,6 +26,22 @@
 // the scheduler runs on the microtask that follows the commit, before the browser paints, so no card
 // is ever seen unfitted. `flushFits` runs the queue now (a test's, or anything that must read the
 // result at once).
+//
+// SKIPPED FACES WAIT (#263). The pool grid lets the browser skip the layout of its off-screen faces
+// (`content-visibility: auto` on `.db-card-face`, which carries SKIPPABLE_ATTRIBUTE). A skipped
+// face has no layout to read, and reading it anyway lays it out on its own, which across the
+// Almanac cost more than the skip saved. So a fit's first read asks whether its element is skipped,
+// with the one question that never lays anything out: `checkVisibility({ contentVisibilityAuto:
+// true })` (a plain `checkVisibility()` does lay out a skipped subtree). False inside a skippable
+// holder means skipped, unless the holder's own last `contentvisibilityautostatechange` said it is
+// not, in which case the box is hidden some other way and the fit runs as before (a no-op). A
+// skipped fit is parked. When a holder of a parked fit is un-skipped, every parked fit is queued
+// again: Chrome flips every face a scroll brings near at once and only then dispatches their
+// events, so the first event finds them all, and they fit in one batch. Chrome dispatches those
+// events after it has painted the frame that un-skipped them, so a face shows its length tier's
+// first guess for that one frame. In a scroll the browser un-skips a face well before it reaches
+// the screen, so this shows only after a jump or a fresh mount, and only on a face the fit changes
+// (about one in ten). A browser without `checkVisibility` (jsdom) never parks.
 
 import { useLayoutEffect, type RefObject } from "react";
 
@@ -95,8 +111,10 @@ function fontPx(element: HTMLElement): number {
 
 /** One read of layout, which the scheduler runs with every other fit's reads of the same round. */
 type Probe = () => unknown;
+/** Yielded instead of a read: the element is skipped, so the fit waits until it is not. */
+const PARK = Symbol("park");
 /** A fit in progress: its writes run as it is stepped, each `yield` hands over a read and waits for it. */
-type Steps<T> = Generator<Probe, T, unknown>;
+type Steps<T> = Generator<Probe | typeof PARK, T, unknown>;
 
 /** Asks for one read of layout and waits for its answer, which is the probe's own result. */
 function* read<T>(probe: () => T): Steps<T> {
@@ -216,17 +234,36 @@ function boxOf(element: HTMLElement): string {
   return `${element.clientWidth}x${element.clientHeight}`;
 }
 
+/** On an element the browser may skip the layout of (`content-visibility: auto`), the pool grid's items. */
+export const SKIPPABLE_ATTRIBUTE = "data-skippable";
+
+/** Each skippable holder's last reported state: true while its contents are skipped. */
+const holderSkipped = new WeakMap<Element, boolean>();
+
+/**
+ * True when the browser is skipping `element`'s layout for `content-visibility: auto` (see the
+ * header). Style only: it never lays anything out.
+ */
+function skipped(element: HTMLElement): boolean {
+  if (typeof element.checkVisibility !== "function") return false;
+  const holder = element.closest(`[${SKIPPABLE_ATTRIBUTE}]`);
+  if (holder === null) return false;
+  return !element.checkVisibility({ contentVisibilityAuto: true }) && holderSkipped.get(holder) !== false;
+}
+
 /**
  * A fit, then one more read of the box it left. Reading it from the pass's own callback would force
  * a layout per element (the pass's last write is behind it); as a step of the pass it is read with
- * everyone else's.
+ * everyone else's. While the element is skipped it waits, parked, and asks again once resumed.
  */
 function* fitThenMeasure(element: HTMLElement, options: FitOptions): Steps<string> {
+  while (yield* read(() => skipped(element))) yield PARK;
   yield* fit(element, options);
   return yield* read(() => boxOf(element));
 }
 
 type Job = {
+  element: HTMLElement;
   steps: Steps<string>;
   /** What the job's last read answered, which its next step receives. */
   reading: unknown;
@@ -236,6 +273,44 @@ type Job = {
 
 const queue = new Set<Job>();
 let flushQueued = false;
+/** Fits whose element is skipped, waiting for it to be un-skipped. */
+const parked = new Set<Job>();
+
+const STATE_CHANGE = "contentvisibilityautostatechange";
+
+function queueFlush(): void {
+  if (flushQueued) return;
+  flushQueued = true;
+  queueMicrotask(flushFits);
+}
+
+/**
+ * A holder's contents were skipped or un-skipped. If it holds a parked fit and came near the screen,
+ * every parked fit asks again, since the browser has already flipped every item this scroll
+ * un-skips (see the header); those still skipped park again on their first read.
+ */
+function onStateChange(event: Event): void {
+  const target = event.target;
+  const state = (event as Event & { skipped?: boolean }).skipped;
+  if (!(target instanceof Element) || typeof state !== "boolean") return;
+  holderSkipped.set(target, state);
+  if (state || ![...parked].some((job) => target.contains(job.element))) return;
+  for (const job of parked) queue.add(job);
+  parked.clear();
+  queueFlush();
+}
+
+let listening = false;
+
+/**
+ * From the first fit on, the document hears every holder's state (the event does not bubble, so in
+ * the capture phase), which is before the browser first decides any of them.
+ */
+function listen(): void {
+  if (listening || typeof document === "undefined") return;
+  listening = true;
+  document.addEventListener(STATE_CHANGE, onStateChange, true);
+}
 
 /**
  * Runs every queued fit to the end, in rounds. A round steps each fit up to its next read (so every
@@ -262,6 +337,7 @@ export function flushFits(): void {
       try {
         const step = job.steps.next(job.reading);
         if (step.done === true) job.onDone?.(step.value);
+        else if (step.value === PARK) parked.add(job);
         else reading.push([job, step.value]);
       } catch (error) {
         fail(error);
@@ -286,15 +362,14 @@ export function flushFits(): void {
  * has finished, with the box (`<width>x<height>`) the element was left at. Returns the function that drops it, for a pass the element no longer needs.
  */
 export function scheduleFit(element: HTMLElement, options: FitOptions, onDone?: (box: string) => void): () => void {
-  const job: Job = { steps: fitThenMeasure(element, options), reading: undefined, onDone, cancelled: false };
+  const job: Job = { element, steps: fitThenMeasure(element, options), reading: undefined, onDone, cancelled: false };
   queue.add(job);
-  if (!flushQueued) {
-    flushQueued = true;
-    queueMicrotask(flushFits);
-  }
+  listen();
+  queueFlush();
   return () => {
     job.cancelled = true;
     queue.delete(job);
+    parked.delete(job);
   };
 }
 

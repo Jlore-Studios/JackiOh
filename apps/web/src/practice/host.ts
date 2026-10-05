@@ -10,6 +10,7 @@
 // a dynamic import when it is first asked.
 
 import type { PracticeCore, PracticeCoreEnv } from "./core.ts";
+import { defaultSaveStore } from "./saveStore.ts";
 import type { PracticeRequest, PracticeRequestBody, PracticeResponse } from "./protocol.ts";
 
 export type PracticeHost = {
@@ -126,11 +127,15 @@ function createInThreadHost(env: Partial<PracticeCoreEnv>): PracticeHost {
 
   function load(): Promise<PracticeCore> {
     if (core === null) {
-      core = import("./core.ts").then((mod) =>
+      // R668: the save store is the env's (a test passes one to outlive the host, as IndexedDB
+      // outlives a reload), else the scope's own.
+      const saves = env.saves ?? defaultSaveStore();
+      core = Promise.all([import("./core.ts"), saves.ready]).then(([mod]) =>
         mod.createPracticeCore({
           now: () => performance.now(),
           dev: import.meta.env.MODE !== "production",
           ...env,
+          saves,
         }),
       );
       // A failed import is retried by the next request rather than cached as a failure.
