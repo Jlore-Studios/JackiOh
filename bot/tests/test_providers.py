@@ -61,7 +61,7 @@ class ParseTests(unittest.TestCase):
             "agy": [("gemini-3.8-flash-high", "medium", False)],
             "muse": [("muse-spark-1.3-contributor", "medium", False)],
             "gpt": [("gpt-5.6-terra", "medium", False)],
-            "claude-2": [("opus", "strong", False)],  # never Sonnet
+            "claude-2": [("opus", "strong", False), ("sonnet", "medium", False)],
             "devin": [("swe-2-max", "weak", True)],
             "devin-train": [("swe-2-max", "weak", True)],
         })
@@ -69,13 +69,12 @@ class ParseTests(unittest.TestCase):
         self.assertEqual([e.model for e in pool.tiers["medium"]],
                          ["muse-spark-1.3-contributor", "gemini-3.8-flash-high", "sonnet",
                           "gpt-5.6-terra"])
-        # Sonnet on claude-4, -5 and -6 only stands in for Devin; on claude-3 and -1 it is a seat
-        # like any other (#317 parts 5 and 9).
+        # Every Claude account switches between its Opus and its Sonnet as the work needs: no
+        # seat on them only stands in for another subscription.
         self.assertEqual({p.id: [s.takes_over for s in pool.seats(p)]
                           for p in pool.ordered() if p.cli == "claude"},
-                         {"claude-3": ["", ""], "claude-1": ["", ""], "claude-4": ["", "devin"],
-                          "claude-6": ["", "devin"], "claude-5": ["", "devin"],
-                          "claude-2": [""]})
+                         {name: ["", ""] for name in ("claude-1", "claude-2", "claude-3",
+                                                      "claude-4", "claude-5", "claude-6")})
         self.assertEqual([e.model for e in pool.tiers["strong"]], ["opus"])
         for provider in pool.ordered():
             self.assertFalse(hasattr(provider, "difficult") or hasattr(provider, "self_review"))

@@ -109,7 +109,8 @@ class CommentTests(unittest.TestCase):
         self.assertIn("`claude-1` (claude: `opus` strong, `sonnet` medium; 21:00–07:00 "
                       "America/Chicago): outside its "
                       "hours", text)
-        self.assertIn("`claude-2` (claude: `opus` strong; 21:00–07:00 America/Chicago): its secret "
+        self.assertIn("`claude-2` (claude: `opus` strong, `sonnet` medium; 21:00–07:00 "
+                      "America/Chicago): its secret "
                       "`CLAUDE_CODE_OAUTH_TOKEN_2` is not set", text)
 
     def test_free_text_on_an_issue_asks_for_a_build(self):
