@@ -3223,6 +3223,22 @@
         "status": "allowed"
       }
     },
+    "claude-6": {
+      "spent": [
+        {
+          "at": "2026-10-05T02:07:52Z",
+          "minutes": 13.1
+        }
+      ],
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-05T05:30:00Z",
+          "utilization": 0.15
+        },
+        "observed_at": "2026-10-05T02:07:52Z",
+        "status": "allowed"
+      }
+    },
     "devin": {
       "spent": [
         {
