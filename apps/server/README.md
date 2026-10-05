@@ -173,6 +173,11 @@ written with `collection` in one transaction as every collection change is.
   user-editable in Supabase and can appear in `auth.jwt()`, so an `email_verified` claim there is
   not evidence of anything. §9.4 step 1 requires a verified email, so it comes from
   `auth.admin.getUserById(...).email_confirmed_at`. Authorization data belongs in `app_metadata`.
+- **Two-step sign-in is enforced here (R665).** An account with a verified TOTP factor (read from
+  the same provider user, `factors`) is honoured only with an `aal2` token; an `aal1` one is
+  refused like an invalid token. The last answer that an account has a factor is remembered per
+  user, so an outage cannot lower the bar. Every way in (password, email link or code, OAuth) ends
+  in the same kind of token and the same `pending` profile, so nothing else here changed for them.
 - **RLS** is on for every table in `public`, and the server holds the secret key, which bypasses
   it. Both halves matter: RLS is what stops a browser reading another profile's collection with the
   publishable key, and the secret key is what lets the server be the sole writer (§9.1, §9.8).
@@ -243,7 +248,9 @@ R339). The codec is `packages/shared/src/codes.ts`.
 ## WebSocket surface
 
 One socket per player, per match. The message union is `src/match/protocol.ts`: the client sends
-`hello` and `action`, the server sends `hello`, `view`, `ack`, `error`, `prompt` and `clock`.
+`hello` and `action`, the server sends `hello`, `view`, `ack`, `error`, `prompt` and `clock`. Beside
+them ride three cosmetic frames that are never an action and never part of `PlayerView`: `portraits`
+(R642), `emote` both ways (R643) and `aim` both ways (R738, the opponent's targeting arrow).
 
 A browser sends its access token as the second `Sec-WebSocket-Protocol` entry,
 `new WebSocket(url, ["jackioh.v1", token])`, and the server echoes only `jackioh.v1`. A Node
@@ -267,6 +274,11 @@ Properties the actor holds, each with a test named after it:
   A match whose setup took last boards (below) folds with the boards frozen into it at its start.
   An All Random match (R258) folds, as it started, with both seats dealt (R433), read off the
   match's mode (`matches.modeOf`), so neither player's deck pile lists a card they were not shown.
+- An `aim` (R738) names only public handles — a hero, a zone, a position in the sender's own hand —
+  and is relayed to the opponent alone, at most one relay per seat per `AIM_RELAY_INTERVAL_MS`
+  (the newest waits out the interval, so none is lost). One that names a hand position past the
+  sender's hand, the opponent's hand or a zone off the board is dropped silently at relay time, and
+  a sender whose socket closes, or a game that ends, has its arrow cleared with a `null`.
 
 ### Last boards (C+ #29 Portal to the Past, R417)
 

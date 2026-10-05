@@ -26,11 +26,15 @@
 //   Another card reuses a recipe by adding its definition to `CARD_FX`. The table is keyed by the
 //   `cardPlayed`'s `defId`, which a hidden play never has, so a hidden card never keys a recipe.
 //
+// - R670: the same table gives a few marquee Legendary and Mythic Units an entrance of their own
+//   (entrances.ts). An entrance key claims the `summoned` that puts its own card into a unit zone,
+//   keyed by that event's `defId`, whoever cast it, and replaces the rarity entrance the row plans.
+//
 // R200: every delay lands inside the entry and everything trails off within FX_MAX_TAIL_MS.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
-import { HIDDEN_ID, animTestid, locateInstance, type AnimationEntry } from "../game/animations.ts";
+import { HIDDEN_ID, animTestid, locateInstance, targetFor, type AnimationEntry } from "../game/animations.ts";
 import { sideOf, testid } from "../game/contract.ts";
 import { frac, raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
 import {
@@ -52,6 +56,7 @@ import {
   FX_WALLS_TAIL_MS,
   FX_WALLS_TRAUMA,
 } from "./constants.ts";
+import { ENTRANCES, entranceEvent, isEntranceKey, type EntranceKey } from "./entrances.ts";
 import { lostCrystals } from "./manaMarks.ts";
 import type { FxAnchor, FxCue, FxPlanEnv, FxPlay, FxProjectileCue } from "./types.ts";
 
@@ -96,7 +101,7 @@ export type CardFxResult = { cues: FxCue[]; row: "keep" | "replace" };
 
 type CardRecipe = (event: GameEvent, p: CardFxPlan, play: FxPlay) => CardFxResult | null;
 
-export type CardFxKey = "manaCrack" | "bloodDrain" | "crushingWalls";
+export type CardFxKey = "manaCrack" | "bloodDrain" | "crushingWalls" | EntranceKey;
 
 function heroOf(view: PlayerView, play: FxPlay): FxAnchor {
   return tid(testid.hero(sideOf(view, play.player)));
@@ -194,20 +199,42 @@ const crushingWalls: CardRecipe = (event, p, play) => {
   };
 };
 
-export const CARD_RECIPES: { readonly [K in CardFxKey]: CardRecipe } = { manaCrack, bloodDrain, crushingWalls };
+export const CARD_RECIPES: { readonly [K in Exclude<CardFxKey, EntranceKey>]: CardRecipe } = { manaCrack, bloodDrain, crushingWalls };
 
 /** A card's definition → its signature recipe. Add a definition here to give another card one. */
 export const CARD_FX: Readonly<Record<string, CardFxKey>> = {
   "core-021": "manaCrack", // #21 Hinder
   "core-027": "bloodDrain", // #27 Blood Ridden Glowy Jelly Bean
   "classicplus-024": "crushingWalls", // C+ #24 Crushing Walls
+  // R670: marquee Legendary and Mythic Units' own entrances (entrances.ts).
+  "core-100": "voidCollapse", // #100 Ceaseless Void (Mythic)
+  "classic-080": "bigBoom", // BOOM! Big Max
+  "classic-045": "titanBloom", // Nature Titan
+  "classic-061": "plagueStomp", // Plague Bringer Goliath
+  "classic-056": "tyrantSigil", // Spell Tyrant
 };
+
+function keyOf(defId: string): CardFxKey | undefined {
+  return Object.prototype.hasOwnProperty.call(CARD_FX, defId) ? CARD_FX[defId] : undefined;
+}
+
+/** R670: a marquee Unit's own entrance, for the `summoned` that puts it into a unit zone; else null. */
+function planEntrance(event: GameEvent, p: CardFxPlan): CardFxResult | null {
+  const summoned = entranceEvent(event, HIDDEN_ID);
+  if (summoned === null) return null;
+  const key = keyOf(summoned.defId);
+  if (key === undefined || !isEntranceKey(key)) return null;
+  const tgt = targetFor(summoned, p.view);
+  if (tgt === null) return null;
+  return { cues: ENTRANCES[key]({ D: p.D, tgt, intensity: p.env.intensity }), row: "replace" };
+}
 
 /** The recipe of the card resolving now, if it has one and claims this event; else null. */
 export function planCardFx(event: GameEvent, p: CardFxPlan): CardFxResult | null {
+  const entrance = planEntrance(event, p);
+  if (entrance !== null) return entrance;
   const play = p.env.memory.resolving();
   if (play === undefined || play.defId === HIDDEN_ID) return null;
-  if (!Object.prototype.hasOwnProperty.call(CARD_FX, play.defId)) return null;
-  const key = CARD_FX[play.defId];
-  return key === undefined ? null : CARD_RECIPES[key](event, p, play);
+  const key = keyOf(play.defId);
+  return key === undefined || isEntranceKey(key) ? null : CARD_RECIPES[key](event, p, play);
 }

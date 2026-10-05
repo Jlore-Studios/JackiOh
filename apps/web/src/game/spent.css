@@ -1,0 +1,66 @@
+/* #258: a Unit that cannot act yet, drawn so it reads without colour.
+
+   `data-can-act="false"` is the view's `canAct` (Card.tsx), drawn as state and never read as
+   permission (CLAUDE.md rule 7). The view sets it false for every unit of the side whose turn it is
+   not, and for every unit at all outside the main phase or while a prompt is open, so the cue is
+   drawn only where spent.ts says so (`data-spent`, and the badge Card.tsx renders then): a unit of
+   the player acting now with no exertion left this turn (§4.1, R49). It is dimmed, and a "Zz"
+   badge sits on it, so the cue reads in greyscale and to colour-blind players too; the green glow
+   is still what says a unit can attack. The badge's drift is motion, so "Reduce motion" (the OS
+   query or the panel's switch) stills it; the dim and the badge stay. */
+
+.card-unit > .spent-badge {
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  min-width: 1.6em;
+  padding: 0.05em 0.35em;
+  border: 1px solid rgb(232 236 248 / 0.7);
+  border-radius: 999px;
+  background: rgb(12 16 28 / 0.82);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.7);
+  color: #e8ecf8;
+  font-size: clamp(9px, 0.95em, 13px);
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  pointer-events: none;
+  animation: jk-spent-drift calc(2.4s * var(--anim-scale, 1)) ease-in-out infinite alternate;
+}
+
+.card-unit[data-spent="true"] > .cf {
+  filter: saturate(0.35) brightness(0.72);
+}
+
+.spent-badge-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes jk-spent-drift {
+  from {
+    translate: -50% 0;
+  }
+  to {
+    translate: -50% -3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-unit > .spent-badge {
+    animation: none !important;
+  }
+}
+
+:root[data-reduce-motion="true"] .card-unit > .spent-badge {
+  animation: none !important;
+}

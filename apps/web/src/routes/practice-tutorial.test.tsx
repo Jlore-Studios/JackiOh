@@ -91,6 +91,7 @@ function routeHost(options: HostOptions = {}): RouteHost {
       let response: PracticeResponse;
       switch (body.type) {
         case "start":
+        case "resume":
           human = body.config.humanSeat;
           response = {
             id: mine,

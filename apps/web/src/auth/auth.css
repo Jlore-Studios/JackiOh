@@ -70,6 +70,17 @@
   gap: var(--auth-gap);
 }
 
+/* R666: the OAuth providers the build names, under the form, a 44 px target each. */
+.auth-screen .auth-oauth {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-screen .auth-oauth button {
+  min-height: 44px;
+}
+
 .auth-screen .auth-resend {
   display: flex;
   flex-wrap: wrap;

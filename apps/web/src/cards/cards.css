@@ -52,14 +52,9 @@
    pointer. board.css pins them to the corners, which on a minion are the cost, attack and health
    gems, so on a face they move.
 
-   The switch button is a real <button> on every field unit (disabled unless switching is legal),
-   so it must stay clear of the card's centre: a click there, from a player or from Cypress, has to
-   reach the card. It takes the top-right corner: the cost gem has the top left and the keyword
-   chips run down the left edge under it. Top right at 2px is also where polish task 7's board.css
-   puts it (`.board .switch-button`), so the two agree whichever wins after the merge. It is drawn
-   here as a small round badge because index.css's `.app-shell button` padding (9px 16px) would
-   otherwise blow it up into a dark slab across the portrait; `.card.cf-host--minion >
-   .switch-button` outranks that rule without touching board.css.
+   The switch button (⟳) is no longer one of them: #258 moved it out of the card, into the zone's
+   top-right corner (board.css `.board .zone > .switch-button`), so the card's top-right corner is
+   still kept clear of the keyword glyphs, where the switch's glyph sits over a tile the card fills.
 
    The counters (plague, grade) and a Stack pile's buried count sit on the portrait's right side,
    above the name plate and below the switch button, so none of them covers the name, the cost or
@@ -93,49 +88,6 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
-}
-
-.card.cf-host--minion > .switch-button {
-  top: 2px;
-  right: 2px;
-  bottom: auto;
-  left: auto;
-  /* Above the counters and the buried count (3): on a phone board.css widens the switch's hit
-     area 16 px left and down with an invisible ::before (polish task 7, B29), and a badge drawn
-     under that reach must not take the tap. */
-  z-index: 4;
-  display: grid;
-  place-items: center;
-  width: clamp(14px, 28%, 18px);
-  height: auto;
-  aspect-ratio: 1;
-  min-width: 0;
-  min-height: 0;
-  padding: 0;
-  border: 1px solid rgb(255 255 255 / 0.4);
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #3a4460, #121622);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.7);
-  color: #e8ecf8;
-  font-size: clamp(9px, 1.1em, 13px);
-  font-weight: 700;
-  line-height: 1;
-}
-
-.card.cf-host--minion > .switch-button:hover:not(:disabled) {
-  border-color: #fff;
-  background: radial-gradient(circle at 40% 35%, #56618a, #1c2233);
-}
-
-.card.cf-host--minion > .switch-button:disabled {
-  opacity: 0.35;
-}
-
-.card.cf-host--minion > .switch-button[data-legal="true"] {
-  border-color: var(--legal, #4ec98a);
-  box-shadow:
-    0 0 0 1px var(--legal, #4ec98a),
-    0 1px 3px rgb(0 0 0 / 0.7);
 }
 
 /* 39% from the bottom clears the stat gems and the name plate on every zone shape (their top is

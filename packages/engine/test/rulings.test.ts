@@ -4040,7 +4040,6 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/cards/art/convention.test.ts",
     );
   });
-
   // Proved by apps/web routes/landing.test.tsx "R661 …" (no Stats call to action; the footer's link is
   // the only one), routes/stats.test.tsx "R661 …" (no data source, no count towards the gate, no word of
   // AI padding or a gate, the drill-down included), routes/almanac.test.tsx "R654 R661 …" (the card
@@ -4069,6 +4068,46 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // Proved by apps/web settings/ChangeEmail.test.tsx "R663 …" (the form, its checks, the provider's
+  // refusals in one sentence, an ended session), net/auth-flows.test.ts "R663 …" (the request with
+  // its PKCE challenge, and its refusals classified) and routes/login-flows.test.tsx "R663 …" (the
+  // link's code exchanged, revoked, and the new address confirmed).
+  it("R663 lets a signed-in player change their email through the auth provider", () => {
+    provenIn(
+      663,
+      "../../../apps/web/src/settings/ChangeEmail.test.tsx",
+      "../../../apps/web/src/net/auth-flows.test.ts",
+      "../../../apps/web/src/routes/login-flows.test.tsx",
+    );
+  });
+
+  // Proved by apps/web net/auth-methods.test.ts "R664 …" (what the sign-in mailer sends, its neutral
+  // answers, the code's one sentence) and routes/login-methods.test.tsx "R664 …" (the code signs in;
+  // the link signs in only the browser holding its verifier).
+  it("R664 an email link or code signs in a confirmed account, the link only where it was asked for", () => {
+    provenIn(664, "../../../apps/web/src/net/auth-methods.test.ts", "../../../apps/web/src/routes/login-methods.test.tsx");
+  });
+
+  // Proved by the server's auth.test.ts "R665 …" (an account with a verified factor is honoured only
+  // at aal2, an outage cannot lower the bar), apps/web net/auth-methods.test.ts and
+  // routes/login-methods.test.tsx "R665 …" (the held session and its code, a recovery link's code
+  // first) and auth/TwoStepSettings.test.tsx "R665 …" (enrolling, confirming, removing).
+  it("R665 an account with an authenticator app is signed into, and honoured, only at aal2", () => {
+    provenIn(
+      665,
+      SERVER_AUTH_TEST,
+      "../../../apps/web/src/net/auth-methods.test.ts",
+      "../../../apps/web/src/routes/login-methods.test.tsx",
+      "../../../apps/web/src/auth/TwoStepSettings.test.tsx",
+    );
+  });
+
+  // Proved by apps/web net/auth-methods.test.ts and routes/login-methods.test.tsx "R666 …": only the
+  // providers the build names, always with PKCE, and the code that comes back signs in.
+  it("R666 an OAuth provider is offered only when configured and always reached with PKCE", () => {
+    provenIn(666, "../../../apps/web/src/net/auth-methods.test.ts", "../../../apps/web/src/routes/login-methods.test.tsx");
+  });
+
   // Proved by counterWarning.test.ts "R667 …" (fixture counters: who is warned, never a Trap, a hand
   // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
   // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
@@ -4079,6 +4118,42 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../cards/test/classic/087-plague-chalice.test.ts",
       "../../../apps/web/src/game/countered.test.tsx",
     );
+  });
+
+  // Proved by apps/web practice/core.test.ts "R668 …" (the save, the fold to the same hash and AI
+  // stream, the refusals, no lesson kept), saveStore.test.ts and resume.test.ts "R668 …" (the
+  // worker's store and the page's setup as untrusted storage), and routes/practice.test.tsx "R668 …"
+  // (the resume on a visit, a URL winning, leaving giving it up, the unload prompt for a lesson only,
+  // and a reload on the real core).
+  it("R668 keeps a free practice game in the worker and folds it back after a reload", () => {
+    provenIn(
+      668,
+      "../../../apps/web/src/practice/core.test.ts",
+      "../../../apps/web/src/practice/saveStore.test.ts",
+      "../../../apps/web/src/practice/resume.test.ts",
+      "../../../apps/web/src/routes/practice.test.tsx",
+    );
+  });
+
+  // Proved by apps/web audio/cues.test.ts "R669 …" (the stings by rarity, none for the sentinel, a
+  // Trap or a cast on draw; the lane pans), engine.test.ts and sfx.test.ts "R669 …" (the panner, the
+  // effects' duck under a line, the shared reverb; the sting's recipe), and haptics/haptics.test.ts
+  // "R669 …" (the three moments, the gap, the switch and Reduce Motion).
+  it("R669 every readable play stings by rarity, effects pan by lane under a voice duck and reverb, and a phone ticks", () => {
+    provenIn(
+      669,
+      "../../../apps/web/src/audio/cues.test.ts",
+      "../../../apps/web/src/audio/engine.test.ts",
+      "../../../apps/web/src/audio/sfx.test.ts",
+      "../../../apps/web/src/haptics/haptics.test.ts",
+    );
+  });
+
+  // Proved by apps/web fx/entrances.test.ts "R670 …": the marquee cards are Legendary or Mythic
+  // Units, each plays its own entrance in place of the rarity's on both seats, never for a hidden
+  // summon or a backrow set, paces nothing and stays inside R200's bounds.
+  it("R670 gives a few marquee Legendary and Mythic Units an entrance of their own that paces nothing", () => {
+    provenIn(670, "../../../apps/web/src/fx/entrances.test.ts");
   });
 
   // Proved by the card's own test, cards/test/classic/055-book-of-wildfire.test.ts "R671 …": the swap
@@ -4100,6 +4175,14 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // (both faces, either side, and the cast).
   it("R703 a play is refused, and never offered, while a pick it needs has no legal option", () => {
     provenIn(703, "playChoices.test.ts", "../../cards/test/063-plastic-surgery.test.ts");
+  });
+
+  // Proved by apps/server test/match/aim.test.ts "R738 …" (the relay to the opponent alone, the shape
+  // check, the coalescing throttle, the hidden-information drop, the clear on a closed socket) and
+  // apps/web game/aim/aim.test.tsx "R738 …" (what a seat sends while it aims, its public handles,
+  // and the opponent's arrow drawn and cleared).
+  it("R738 shows the opponent's aim as an arrow built from public handles only", () => {
+    provenIn(738, "../../../apps/server/test/match/aim.test.ts", "../../../apps/web/src/game/aim/aim.test.tsx");
   });
 });
 

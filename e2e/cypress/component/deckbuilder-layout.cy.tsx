@@ -116,6 +116,40 @@ function mountWorkshop(decks: readonly (readonly string[])[]): void {
 }
 
 const POOL_ITEMS = `${ts(CARD_POOL)} .db-item`;
+const POOL_TEXTS = `${ts(CARD_POOL)} .card-text`;
+
+function fitted(text: HTMLElement): boolean {
+  return text.style.getPropertyValue("--cf-fit") !== "";
+}
+
+/**
+ * #263: the browser skips the layout of an off-screen pool face (`content-visibility: auto`), and
+ * its text is fitted only once it nears the screen (fit.ts). This brings every item near in
+ * turn, two frames each, then goes back to the top, so a check of every face reads fitted text.
+ */
+function fitEveryPoolCard(): void {
+  cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
+  cy.document().then({ timeout: 60_000 }, async (doc) => {
+    const view = doc.defaultView;
+    if (view === null) return;
+    const frame = (): Promise<void> =>
+      new Promise((resolve) => {
+        view.requestAnimationFrame(() => {
+          resolve();
+        });
+      });
+    const items = [...doc.querySelectorAll<HTMLElement>(POOL_ITEMS)];
+    for (const item of [...items, ...items.slice(0, 1)]) {
+      item.scrollIntoView({ block: "center" });
+      await frame();
+      await frame();
+    }
+  });
+  cy.get(POOL_TEXTS).should(($texts) => {
+    const waiting = [...$texts].filter((text) => !fitted(text)).length;
+    expect(waiting, "pool faces still waiting for their fit").to.eq(0);
+  });
+}
 
 describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
   beforeEach(() => {
@@ -256,10 +290,10 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
     it(`every pool card's rules text is at least ${String(FIT_FLOOR_PX)} px at ${where}`, () => {
       cy.viewport(viewport.width, viewport.height);
-      cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
+      fitEveryPoolCard();
       cy.document().should((doc) => {
         const small: string[] = [];
-        for (const text of doc.querySelectorAll<HTMLElement>(`${ts(CARD_POOL)} .card-text`)) {
+        for (const text of doc.querySelectorAll<HTMLElement>(POOL_TEXTS)) {
           const px = parseFloat(getComputedStyle(text).fontSize);
           const id = text.closest(".db-item")?.getAttribute("data-card") ?? "?";
           if (px < FIT_FLOOR_PX - 0.05) small.push(`${id} at ${px.toFixed(2)}px`);
@@ -274,6 +308,25 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
       });
     });
   }
+
+  // #263: an off-screen card is not laid out, and its text waits to be fitted until it nears the
+  // screen; the first screen's cards are fitted at once, and a far card once it is scrolled to.
+  it("#263 a pool card off the screen is fitted when it nears the screen, not before", () => {
+    cy.viewport(1280, 720);
+    cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
+    cy.get(POOL_ITEMS).first().find(".card-text").should(($text) => {
+      expect(fitted($text[0] as HTMLElement), "the first card's text is fitted").to.eq(true);
+    });
+    cy.get(POOL_ITEMS).last().should(($item) => {
+      expect($item.find(".db-card-face").css("content-visibility"), "the face may be skipped").to.eq("auto");
+      const text = $item[0]?.querySelector<HTMLElement>(".card-text");
+      expect(text === null || text === undefined ? null : fitted(text), "the last card's text waits").to.eq(false);
+    });
+    cy.get(POOL_ITEMS).last().scrollIntoView();
+    cy.get(POOL_ITEMS).last().find(".card-text").should(($text) => {
+      expect(fitted($text[0] as HTMLElement), "the last card's text is fitted once near").to.eq(true);
+    });
+  });
 
   // #85: the builder is a tavern screen, and tavern.css paints the screen's own `strong` pale gold,
   // which reached every keyword on the parchment, where it all but vanished. Every term in the pool

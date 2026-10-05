@@ -59,6 +59,8 @@ export const PUBLIC_ENV_VARS: readonly string[] = [
   "VITE_SERVER_HTTP_URL",
   "VITE_SERVER_WS_URL",
   "VITE_CATALOG_VERSION",
+  // R666: which OAuth providers the sign-in screen offers, by name only (no client id, no secret).
+  "VITE_AUTH_OAUTH_PROVIDERS",
 ];
 
 // The server-only half: every variable `loadEnv` below reads. A lint or test can assert this
