@@ -5619,7 +5619,9 @@
     "name": "BOOM! Big Max",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Acclaimed"
+    ],
     "rarity": "Legendary",
     "token": false,
     "cost": 4,
@@ -7731,7 +7733,8 @@
     "set": "Classic+",
     "type": "Unit",
     "tags": [
-      "Quickdraw"
+      "Quickdraw",
+      "Acclaimed"
     ],
     "rarity": "Legendary",
     "token": false,
@@ -7766,12 +7769,15 @@
     "name": "Solarius",
     "set": "Classic+",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Catalyst"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": 2,
     "refs": [
-      "classicplus-038-1"
+      "classicplus-038-1",
+      "classicplus-038"
     ],
     "params": [
       {
@@ -7793,7 +7799,7 @@
           "n": 2
         }
       ],
-      "text": "Spell Damage +2\nCry: Draw {draw}.\nDeath: Shuffle a Solarius-Prime into your deck."
+      "text": "Spell Damage +2\nCry: Draw {draw}.\nDeath: Shuffle a Solarius Prime into your deck."
     },
     "radiant": {
       "attack": 6,
@@ -7804,16 +7810,17 @@
           "n": 5
         }
       ],
-      "text": "Spell Damage +5\nCry: Draw {draw}.\nDeath: Shuffle a Radiant Solarius-Prime into your deck."
+      "text": "Spell Damage +5\nCry: Draw {draw}.\nDeath: Shuffle a Radiant Solarius Prime into your deck."
     }
   },
   "classicplus-038-1": {
     "id": "classicplus-038-1",
     "index": "38.1",
-    "name": "Solarius-Prime",
+    "name": "Solarius Prime",
     "set": "Classic+",
     "type": "Unit",
     "tags": [
+      "Prime",
       "Token"
     ],
     "rarity": "Token",
@@ -8083,7 +8090,8 @@
     "set": "Classic+",
     "type": "Unit",
     "tags": [
-      "Felinor"
+      "Felinor",
+      "Catalyst"
     ],
     "rarity": "Legendary",
     "token": false,
@@ -8146,6 +8154,7 @@
     "type": "Unit",
     "tags": [
       "Felinor",
+      "Prime",
       "Token"
     ],
     "rarity": "Token",

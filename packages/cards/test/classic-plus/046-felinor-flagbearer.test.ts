@@ -42,8 +42,8 @@ function destroyFlag(s: Scenario): void {
 }
 
 describe("C+ #46 Felinor Flagbearer", () => {
-  it("is a (2) Felinor Unit, 4/4 Rush, Cleave (8/8 Radiant), naming its Prime", () => {
-    expect(def.tags).toEqual(["Felinor"]);
+  it("is a (2) Felinor Catalyst Unit, 4/4 Rush, Cleave (8/8 Radiant), naming its Prime", () => {
+    expect(def.tags).toEqual(["Felinor", "Catalyst"]);
     expect(def.refs).toContain(PRIME);
     const s = rally();
     s.play(FLAG);

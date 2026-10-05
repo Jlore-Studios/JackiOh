@@ -1,4 +1,4 @@
-// C+ #38.1 Solarius-Prime — SPEC §8.7 row 38.1, BUILD M9 Classic+ row C+ 38.1: "Spell Damage +3; Cry
+// C+ #38.1 Solarius Prime — SPEC §8.7 row 38.1, BUILD M9 Classic+ row C+ 38.1: "Spell Damage +3; Cry
 // casts 5 random non-token Spells of any set one after another (R380), every choice random with no
 // prompt, each target aimed by its declaration (R656: harm at enemies, help at friends), X the current
 // mana and at least 1 (R348), each
@@ -16,6 +16,7 @@ import { defOf, stepParam } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
+import { def } from "../../src/scripts/classic-plus/038-1-solarius-prime";
 
 const PRIME = "classicplus-038-1";
 const MENACE = "core-019";
@@ -93,7 +94,13 @@ function playPrime(
   return { s, prime };
 }
 
-describe("C+ #38.1 Solarius-Prime", () => {
+describe("C+ #38.1 Solarius Prime", () => {
+  it("is a Prime token named Solarius Prime, spaced as C+ #46.1 Felinor Flagbearer Prime is (patch v0.2.Y)", () => {
+    expect(def.name).toBe("Solarius Prime");
+    expect(def.token).toBe(true);
+    expect(def.tags).toEqual(["Prime", "Token"]);
+  });
+
   describe("base", () => {
     it("prints Spell Damage +3", () => {
       const s = scenario({ p1: { field: [PRIME] } });

@@ -2,7 +2,7 @@
 // casts, which runs of events hit a whole pile, and which runs of hits sweep a whole side.
 //
 // - A cast (§6.3 Cast, R70) is a play begun while another play is still resolving: Jogg's Box's ten
-//   random Spells, Solarius-Prime's five, a Cry that casts a card. Each one is a `cardPlayed` with cost
+//   random Spells, Solarius Prime's five, a Cry that casts a card. Each one is a `cardPlayed` with cost
 //   paid 0 that the stream opens inside another play's `cardPlayed` … `cardResolved`, so the tracker
 //   below keeps the plays still open, across batches (a cast can wait behind a prompt the other seat
 //   answers), and says which play cast it and which of its casts it is. The runner holds each cast up

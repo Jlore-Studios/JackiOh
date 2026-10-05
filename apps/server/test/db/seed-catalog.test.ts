@@ -22,7 +22,8 @@ const MIGRATIONS = resolve(import.meta.dirname, "../../src/db/migrations");
 /**
  * The tags `public.cards.cards_tags_check` admits once every migration has run: the array in the
  * last migration, in apply order, that adds the check. 0002 defines it, 0010 re-adds it with
- * Jlockeed, 0015 with Book, Pancake and AI, and 0020 with Plague.
+ * Jlockeed, 0015 with Book, Pancake and AI, 0020 with Plague, and 0025 with Catalyst, Prime and
+ * Acclaimed.
  */
 function admittedTags(): { file: string; tags: string[] } {
   const files = readdirSync(MIGRATIONS).filter((name) => name.endsWith(".sql")).sort();
@@ -106,13 +107,13 @@ describe("readCatalog", () => {
  * (seed-catalog.spec.ts) prove the same against Postgres.
  */
 describe("R278 the catalog's tags and the cards table's tag check", () => {
-  it("R278 every tag the real catalog carries, Jlockeed, Book, Pancake, AI and Plague included, is one the latest cards_tags_check admits", async () => {
+  it("R278 every tag the real catalog carries, Jlockeed, Book, Pancake, AI, Plague, Catalyst, Prime and Acclaimed included, is one the latest cards_tags_check admits", async () => {
     const entries = await readCatalog(REAL_CATALOG);
     const { file, tags } = admittedTags();
-    expect(file, "0020 re-adds the check with Plague").toBe("0020_plague_tag.sql");
+    expect(file, "0025 re-adds the check with Catalyst, Prime and Acclaimed").toBe("0025_catalyst_prime_acclaimed_tags.sql");
     const carried = [...new Set(entries.flatMap((entry) => entry.tags))].sort();
     expect(carried).toContain("Jlockeed");
-    expect(carried).toEqual(expect.arrayContaining(["Book", "Pancake", "AI", "Plague"]));
+    expect(carried).toEqual(expect.arrayContaining(["Book", "Pancake", "AI", "Plague", "Catalyst", "Prime", "Acclaimed"]));
     expect(carried.filter((tag) => !tags.includes(tag)), "tags the schema would refuse").toEqual([]);
     // No stale name either: every tag the check admits is one some catalog entry carries.
     expect([...tags].sort()).toEqual(carried);

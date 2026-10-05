@@ -60,13 +60,18 @@ export const FILTER_TAGS: readonly Tag[] = [
   "Pancake",
   // The mechanics patch: every card that uses Plague Tokens.
   "Plague",
+  // Patch v0.2.Y: Classic+ #38 Solarius and #46 Felinor Flagbearer, and Classic #80 BOOM! Big Max
+  // and Classic+ #37 Wardrum. "Prime" is left out with "AI": only the two Prime tokens carry it.
+  "Catalyst",
+  "Acclaimed",
 ];
 
 /**
- * The almanac's tag chips (R630): the deck builder's, then the two only tokens carry, "AI" (the ten
- * AI tokens) and "Token", since the almanac shows tokens. Every tag a catalog card carries.
+ * The almanac's tag chips (R630): the deck builder's, then the three only tokens carry, "Prime" (the
+ * two Prime tokens), "AI" (the ten AI tokens) and "Token", since the almanac shows tokens. Every tag
+ * a catalog card carries.
  */
-export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "AI", "Token"];
+export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Token"];
 
 /** The sets a deck may draw on (R380: one format, every set), in catalog order. */
 export const FILTER_SETS: readonly SetName[] = SHIPPED_SETS;

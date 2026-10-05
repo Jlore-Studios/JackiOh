@@ -876,7 +876,7 @@ const BOOK_SPELL = "classic-016"; // Book of Flame
 const PANCAKE_UNIT = "classicplus-012"; // The Mother Pancake, Legendary
 const AI_TOKEN_UNIT = "classicplus-t-ai-01"; // Helpful Assistant
 const GOLEM_TOKEN = "classicplus-073-1"; // Classic Golem: a token that prints Legendary
-const EPIC_TOKEN = "classicplus-038-1"; // Solarius-Prime: a token that prints Epic
+const EPIC_TOKEN = "classicplus-038-1"; // Solarius Prime: a token that prints Epic
 const LEGENDARY_FIELD_TOKEN = "classicplus-012-5"; // Anti-Waffle Shell: a Field Spell token printing Legendary
 
 const landedAs = (defId: string, row: "units" | "backrow" = "units", instanceId = "u9"): GameEvent => ({

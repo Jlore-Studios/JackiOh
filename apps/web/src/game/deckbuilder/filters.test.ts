@@ -199,9 +199,13 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Book",
       "Pancake",
       "Plague",
+      "Catalyst",
+      "Acclaimed",
     ]);
-    // Only the ten AI tokens carry "AI", and the pool never offers a Token.
+    // Only the ten AI tokens carry "AI" and the two Prime tokens "Prime", and the pool never offers a
+    // Token.
     expect(FILTER_TAGS).not.toContain("AI");
+    expect(FILTER_TAGS).not.toContain("Prime");
     expect([...FILTER_RARITIES]).toEqual(["Common", "Rare", "Epic", "Legendary", "Mythic"]);
     expect(FILTER_TAGS).not.toContain("Token");
     expect(FILTER_RARITIES).not.toContain("Token");
@@ -703,8 +707,8 @@ describe("the almanac's pool (R630)", () => {
     expect(almanacPool(bare, DEFAULT_FILTER, DEFAULT_SORT)).toEqual([]);
   });
 
-  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then AI and Token", () => {
-    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "AI", "Token"]);
+  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI and Token", () => {
+    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Token"]);
     const carried = new Set(Object.values(CORE_CATALOG).flatMap((d) => d.tags));
     expect(new Set(ALMANAC_TAGS)).toEqual(carried);
     expect(filterTagId("Token")).toBe("db-filter-tag-token");

@@ -322,7 +322,7 @@ export const MIN_PLAGUE_PAYMENT = 1;
 export const PLAGUE_TOKEN_MANA = 1;
 /**
  * B5 E12, R452: how many casts one random cast and every cast made inside its resolution may make in
- * all (Classic+ #47 Jogg's Box, #38.1 Solarius-Prime), as R28 caps a Call to Chaos chain and R58 a
+ * all (Classic+ #47 Jogg's Box, #38.1 Solarius Prime), as R28 caps a Call to Chaos chain and R58 a
  * cast-on-draw chain: a random cast whose casts cast at random cannot multiply without end.
  */
 export const RANDOM_CAST_CHAIN_CAP = 20;
