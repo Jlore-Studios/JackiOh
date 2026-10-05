@@ -1814,7 +1814,7 @@
       },
       "ci_run_id": 37187703636,
       "ci_sha": "f5c08f5ddf8bd57fb44f045905473bbd20c4f513",
-      "cross_rounds": 2,
+      "cross_rounds": 3,
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
@@ -1832,7 +1832,32 @@
       "interruptions": 0,
       "issue": 44,
       "kind": "review",
-      "last_findings": [],
+      "last_findings": [
+        {
+          "claim": "Unresolved merge conflict markers left in SPEC.md around the Plague Chalice rows.",
+          "evidence": "git show HEAD:SPEC.md | grep -n conflict shows 708:<<<<<<< HEAD, 711:=======, 714:>>>>>>> origin/main; section pits Counters/reveal text against Tokens/activation text plus R667.",
+          "severity": "blocking",
+          "where": "SPEC.md:708"
+        },
+        {
+          "claim": "Unresolved nested merge conflict markers left in SPEC \u00a711 around the new R rows.",
+          "evidence": "git show HEAD:SPEC.md | grep shows 1902:<<<<<<< HEAD twice, 1907-1908:======= twice, 1910/1912:>>>>>>> origin/main; one side adds R661/R662/R663 rarity rows, the other keeps main's R662 glow row.",
+          "severity": "blocking",
+          "where": "SPEC.md:1902"
+        },
+        {
+          "claim": "Unresolved nested conflict markers break the rulings index structure.",
+          "evidence": "git show HEAD:packages/engine/test/rulings.test.ts sed 4040-4105 shows <<<<<<< HEAD twice, ======= twice, two >>>>>>> origin/main markers, an unclosed R663 it-block before =======, and a stray }); at line 4096.",
+          "severity": "blocking",
+          "where": "packages/engine/test/rulings.test.ts:4044"
+        },
+        {
+          "claim": "Duplicate R662 row: branch reuses R662 for Plague/reveal while base already uses R662 for the yellow-glow rule.",
+          "evidence": "git show HEAD:SPEC.md grep shows | R662 | Plague Counter/reveals at 1905 and | R662 | yellow glow at 1909; rulings.test has it(R662 renames...) at 4055 and it(R662 yellow glow...) at 4068; base max R is 703 so 661-663 are not next-free numbers.",
+          "severity": "blocking",
+          "where": "SPEC.md:1905"
+        }
+      ],
       "pending_request": false,
       "provider": "muse",
       "question": "",
