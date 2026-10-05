@@ -82,7 +82,7 @@ describe("#258 the can't-act-yet cue", () => {
   });
 
   it("outside the main phase, under an open prompt or after the result, no unit wears it", () => {
-    const pending = pendingFor("chooseTarget", []);
+    const pending = pendingFor("target", []);
     expect(actingSeat({ ...fullBoardView(), pending })).toBeNull();
     expect(actingSeat({ ...fullBoardView(), phase: "mulligan" })).toBeNull();
     expect(actingSeat({ ...fullBoardView(), result: { winner: "p1", reason: "hero-death" } })).toBeNull();
@@ -132,8 +132,9 @@ describe("#258 keyboard inspect on the board", () => {
 
   it("a hand card opens it by key, and Enter still plays only a legal card", () => {
     const view = fullBoardView();
-    const first = view.you.hand[0];
-    const second = view.you.hand[1];
+    const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
+    const first = hand[0];
+    const second = hand[1];
     if (first === undefined || second === undefined) throw new Error("no hand cards");
     const onClick = vi.fn<(target: ClickTarget) => void>();
     renderBoard(view, { highlight: { legal: new Set([testid.handCard(first.instanceId)]), selected: new Set() }, onClick });
