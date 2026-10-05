@@ -185,11 +185,6 @@ export type CardProps = {
    */
   unrevealed?: boolean;
   /**
-   * R243, §6.3 Vanilla: a face-up backrow card's text is gone (`BackrowView.vanilla`), stamped as a
-   * unit's is. Absent otherwise.
-   */
-  backrowVanilla?: boolean;
-  /**
    * #165: what a touch hold opens — the inspect sheet (default), or the hover preview while the
    * finger stays down. The board hands it `touchHoldMode(view)` (contract.ts).
    */
@@ -364,7 +359,7 @@ export default function Card(props: CardProps): ReactElement {
       data-condition-active={conditionAttr(card)}
       data-owner={props.owner ?? unit?.owner}
       data-controller={props.controller ?? unit?.controller}
-      data-vanilla={unit?.vanilla === true || props.backrowVanilla === true ? "true" : undefined}
+      data-vanilla={unit?.vanilla === true ? "true" : undefined}
       // R437: the marks the view lists on the card, by name.
       data-marks={marks.length > 0 ? marks.map((entry) => entry.mark).join(" ") : undefined}
       // R371: your own face-down trap, which the other player sees only as a back.

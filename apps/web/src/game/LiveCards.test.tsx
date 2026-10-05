@@ -286,6 +286,20 @@ describe("R243 a Vanilla unit is marked, and its preview says its text is gone",
     expect(text(preview, `[data-testid="${INSPECT_PRINTED}"]`)).toContain(def("core-091").base.text);
   });
 
+  it("a Vanilla backrow card's face is marked, and its preview says its text is gone", () => {
+    vi.useFakeTimers();
+    const backrow = faceUpBackrow("p1", { instanceId: "b1", defId: "core-020", type: "Field Spell", vanilla: true });
+    renderBoard(
+      baseView({
+        you: emptySide("p1", { backrow: [backrow, null, null, null, null] }),
+      }),
+    );
+    const root = screen.getByTestId(testid.card("b1"));
+    expect(root.querySelector(".cf")).toHaveAttribute("data-vanilla", "true");
+    const preview = hover(root);
+    expect(text(preview, ".card-text")).toBe(VANILLA_TEXT);
+  });
+
   it("a unit that is not Vanilla carries no mark", () => {
     renderBoard(
       baseView({ you: emptySide("p1", { units: [unit("p1", { instanceId: "u1", defId: "core-091" }), null, null, null, null] }) }),

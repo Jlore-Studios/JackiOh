@@ -6,7 +6,7 @@
 //
 // The preview's proofs are in `test/preview.test.ts` (its C #46 section), with the set of hooked cards.
 
-import { stepParam, type GameState, reduce } from "@jackioh/engine";
+import { stepParam, type GameState } from "@jackioh/engine";
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { base, def, radiant } from "../../src/scripts/classic/046-divine-favor";
