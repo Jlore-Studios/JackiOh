@@ -466,8 +466,9 @@ describe("BUILD M8 12 — Silly Silas rotates one step around the ring and Pocke
     //    control changes, ownership does not.
     // -----------------------------------------------------------------------------------------
     playWhenDrawn("p1", CARDS.pocketChaos, {
-      // R81: a declared `mode`, one of "health" | "board" | "library".
-      answers: [{ kind: "mode", options: ["board"] }],
+      // R81: a declared `mode`, one of "health" | "board" | "library", drawn as a Discover
+      // pop-up since it has at most five options (#88).
+      answers: [{ kind: "discover", options: ["board"] }],
     });
 
     const swapped = mapBoard(rotated, acrossTheLine);

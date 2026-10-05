@@ -1,7 +1,7 @@
 // Patch v0.2.0's per-card states, drawn wherever the view lets the viewer read the card (SPEC §10.8):
 // a Brittle count (R385), what Degrade and Upgrade changed (R386, R513), the enchantments riding a
 // card (B5 E39), a backrow pile's depth (E21), an Animated card's stats and its standing as a Unit
-// (R383), a face's own type (B2.7) and a card's lines of code (E36).
+// (R383), a face's own type (B2.7) and a card's lines of code (E36), which a match hides (R693).
 //
 // Every view here is a fixture shaped as `viewFor` builds it (src/test/fixtures.ts, the view types in
 // packages/shared/src/view.ts), rendered on the board — a hand card (the tall face), a unit (the
@@ -40,7 +40,7 @@ import {
   INSPECT_STATES,
   INSPECT_TUNED,
 } from "./inspect/testids.ts";
-import { faceModel, locWords, type FaceModel } from "./model.ts";
+import { faceModel, type FaceModel } from "./model.ts";
 import { glossaryFor } from "./rules.ts";
 import {
   LESS_IS_BETTER,
@@ -606,34 +606,35 @@ describe("B2.7 a card the view gives a type of its own draws as that type", () =
 
 /* ------------------------------------------------------------------------- E36 lines of code */
 
+// R693 (#88): lines of code is a hidden stat in a match. The view still carries every count (§5) and
+// the face model reads it, which is what the collection's overlays print (inspect.test.tsx), but no
+// overlay opened from the board ends with it.
 describe("E36 a card's lines of code in the inspect overlays", () => {
-  it("E36 the hover preview and the sheet end with \"N lines of code\"", () => {
+  it("E36 R693 the board's hover preview and sheet end with no lines of code, though the face carries them", () => {
     vi.useFakeTimers();
     const gary = def("core-004");
     const loc = must(gary.loc, "Gary's count");
+    expect(faceModel({ defId: "core-004", def: gary, radiant: false }).loc).toBe(loc);
     renderBoard(handView({ defId: "core-004", cost: 1, attack: 1, health: 1 }));
-    const preview = hover(handRoot());
-    const line = within(preview).getByTestId(INSPECT_LOC);
-    expect(line.textContent).toBe(locWords(loc));
-    expect(line.getAttribute("data-loc")).toBe(String(loc));
+    expect(within(hover(handRoot())).queryByTestId(INSPECT_LOC)).toBeNull();
     fireEvent.pointerLeave(handRoot(), { pointerType: "mouse" });
-    const sheet = longPress(handRoot());
-    expect(within(sheet).getByTestId(INSPECT_LOC).textContent).toBe(locWords(loc));
+    expect(within(longPress(handRoot())).queryByTestId(INSPECT_LOC)).toBeNull();
   });
 
-  it("E36 a fused card's count is the sum its definition carries (the engine's Fuse adds its ingredients' up)", () => {
+  it("E36 a fused card's count is the sum its definition carries (the engine's Fuse adds its ingredients' up), and the board hides it (R693)", () => {
     vi.useFakeTimers();
     const first = def("core-004");
     const second = def("core-019");
     const sum = must(first.loc, "a count") + must(second.loc, "a count");
     const fused = { ...fusedDef([first, second], 4), loc: sum };
+    expect(faceModel({ defId: fused.id, def: fused, radiant: false }).loc).toBe(sum);
     renderBoard(
       baseView({
         you: emptySide("p1", { hand: [card({ instanceId: "h1", defId: fused.id, cost: 4, attack: 2, health: 2 })] }),
         defs: { [fused.id]: fused },
       }),
     );
-    expect(within(hover(handRoot())).getByTestId(INSPECT_LOC).textContent).toBe(locWords(sum));
+    expect(within(hover(handRoot())).queryByTestId(INSPECT_LOC)).toBeNull();
   });
 
   it("E36 a card nobody counted has no line", () => {

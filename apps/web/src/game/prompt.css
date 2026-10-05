@@ -831,6 +831,10 @@
     > .prompt-actions {
     grid-area: actions;
     margin: 0;
+    /* The bar has no list to scroll under its buttons, so the sticky footer's rule and gap would
+       only make it taller and push it up into the hand (B44). */
+    padding-top: 0;
+    border-top: 0;
   }
 
   .game:has(> .board[data-drag="on"]) .prompt[data-prompt-source="play"]:is(
