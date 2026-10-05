@@ -14,7 +14,7 @@
 import { describe, expect, it } from "vitest";
 import { fillParams, type CardDef, type Keyword } from "@jackioh/shared";
 import { CATALOG } from "../src/catalog-data";
-import { readPatches, readSnapshot } from "../scripts/patches-io";
+import { readFragments, readPatches, readSnapshot } from "../scripts/patches-io";
 
 const ENTRIES: readonly CardDef[] = Object.values(CATALOG);
 
@@ -462,7 +462,12 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
     const shipped = readPatches().some((patch) => patch.version === "v0.2.14");
     const after = shipped ? (readSnapshot("v0.2.14") as unknown as typeof CATALOG) : CATALOG;
+    // The current catalog also carries every other pending patch's claims (R646), which are theirs to prove.
+    const others = new Set(
+      shipped ? [] : readFragments().flatMap(({ fragment }) => (fragment.version === "v0.2.14" ? [] : fragment.cards)),
+    );
     const changed = Object.entries(after)
+      .filter(([id]) => !others.has(id))
       .filter(([id, card]) => JSON.stringify(before[id]) !== JSON.stringify(card))
       .map(([id]) => id);
     expect(changed.sort()).toEqual(["classic-087", "core-099"]);

@@ -869,8 +869,9 @@ describe("C+ #50 Adaptive Growth lights up while you control fewer Units (R195)"
 
 describe("R195 the cards that declare conditionMet", () => {
   // Classic+ #18 Gullible Treatler, #19.5 Bot Loser and #37 Wardrum prove theirs in their own test files
-  // (test/classic-plus/018-gullible-treatler, 019-5-bot-loser and 037-wardrum).
-  it("R195 are exactly #10, #53, #68, #71 and #93, Classic #22, #36, #40 and #69, and C+ #18, #19.5, #37 and #50, on both faces, so a new hook cannot land untested", () => {
+  // (test/classic-plus/018-gullible-treatler, 019-5-bot-loser and 037-wardrum), and so do R662's
+  // Core #18, #60, #70, #85, #96 and #100 (test/NNN-slug.test.ts).
+  it("R195 are exactly #10, #53, #68, #71 and #93, Classic #22, #36, #40 and #69, C+ #18, #19.5, #37 and #50, and R662's #18, #60, #70, #85, #96 and #100, on both faces, so a new hook cannot land untested", () => {
     const hooked = Object.entries(CARDS)
       .filter(([, card]) => card.base.conditionMet !== undefined || card.radiant.conditionMet !== undefined)
       .map(([id]) => id)
@@ -885,10 +886,16 @@ describe("R195 the cards that declare conditionMet", () => {
       "classicplus-037",
       "classicplus-050",
       "core-010",
+      "core-018",
       "core-053",
+      "core-060",
       "core-068",
+      "core-070",
       "core-071",
+      "core-085",
       "core-093",
+      "core-096",
+      "core-100",
     ]);
 
     for (const id of hooked) {

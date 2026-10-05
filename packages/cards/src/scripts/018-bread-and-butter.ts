@@ -30,6 +30,10 @@
 //
 // IT STAYS. §5.1 and §3.2: a Field Trap is not consumed when it fires, so it can pay out every turn;
 // both `traps.ts` and `triggers.ts` keep it on the field and only turn it face-up (R33).
+//
+// THE GLOW (R195, R662). The trap lights up on its controller's field while the active player holds
+// unspent mana, so the trap would pay out if the turn ended now: the same `unspentManaOf` its
+// preview reads, which is what `turnEnded.unspentMana` is as the turn ends. Mana is public.
 
 import type { Script, TrapTrigger } from "@jackioh/engine";
 import { unspentManaOf } from "@jackioh/engine";
@@ -106,6 +110,17 @@ function preview(face: "base" | "radiant"): NonNullable<Script["preview"]> {
   };
 }
 
-export const base: Script = { triggers: [breadTrigger(MULTIPLIER.base)], preview: preview("base") };
+/** R662: "ends a turn with unspent mana", asked of the turn as it stands; the same on both faces. */
+const conditionMet: NonNullable<Script["conditionMet"]> = (ctx) => {
+  if (ctx.zone !== "field") return false;
+  const active = ctx.yourTurn ? ctx.controller : opponentOf(ctx.controller);
+  return unspentManaOf(ctx.state, active) > 0;
+};
 
-export const radiant: Script = { triggers: [breadTrigger(MULTIPLIER.radiant)], preview: preview("radiant") };
+export const base: Script = { triggers: [breadTrigger(MULTIPLIER.base)], preview: preview("base"), conditionMet };
+
+export const radiant: Script = {
+  triggers: [breadTrigger(MULTIPLIER.radiant)],
+  preview: preview("radiant"),
+  conditionMet,
+};
