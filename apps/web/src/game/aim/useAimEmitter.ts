@@ -1,4 +1,4 @@
-// R660: this seat's aim, sent to the opponent as it changes.
+// R661: this seat's aim, sent to the opponent as it changes.
 //
 // It reads the board's own `interaction` — what a drag lifts and what a click-select picks are the
 // same state — and the target under the pointer, read off the DOM with the drag layer's own reader

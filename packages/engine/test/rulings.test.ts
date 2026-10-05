@@ -4003,12 +4003,23 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(656, "effects-cast.test.ts");
   });
 
-  // Proved by apps/server test/match/aim.test.ts "R660 …" (the relay to the opponent alone, the shape
+  // Proved by apps/web test/ux/drag-continue.test.tsx "R658 …" (a second drag from a pick, a backrow
+  // card dropped on the board, a prompt option dragged out of its panel) and test/ux/drag-model.test.ts
+  // "R658 …" (the plans and the drops).
+  it("R658 drags a second choice from its picks, a backrow card onto the board, and a prompt's options", () => {
+    provenIn(
+      658,
+      "../../../apps/web/src/test/ux/drag-continue.test.tsx",
+      "../../../apps/web/src/test/ux/drag-model.test.ts",
+    );
+  });
+
+  // Proved by apps/server test/match/aim.test.ts "R661 …" (the relay to the opponent alone, the shape
   // check, the coalescing throttle, the hidden-information drop, the clear on a closed socket) and
-  // apps/web game/aim/aim.test.tsx "R660 …" (what a seat sends while it aims, its public handles,
+  // apps/web game/aim/aim.test.tsx "R661 …" (what a seat sends while it aims, its public handles,
   // and the opponent's arrow drawn and cleared).
-  it("R660 shows the opponent's aim as an arrow built from public handles only", () => {
-    provenIn(660, "../../../apps/server/test/match/aim.test.ts", "../../../apps/web/src/game/aim/aim.test.tsx");
+  it("R661 shows the opponent's aim as an arrow built from public handles only", () => {
+    provenIn(661, "../../../apps/server/test/match/aim.test.ts", "../../../apps/web/src/game/aim/aim.test.tsx");
   });
 });
 

@@ -73,7 +73,7 @@ export type ActionMessage = { type: "action"; nonce: string; body: ActionBody };
 export type EmoteMessage = { type: "emote"; emote: EmoteId };
 
 /**
- * R660: what the sender is aiming a play, an Activate or an attack at, for the opponent's board to
+ * R661: what the sender is aiming a play, an Activate or an attack at, for the opponent's board to
  * draw — `null` when the aim ends. Cosmetic like an emote: top-level, never an `ActionBody`, so it
  * never reaches `reduce`, the log or the replay hash, carries no nonce and is never answered. Its
  * ends are public handles only (`@jackioh/shared` `aim.ts`); anything else is `malformed`.
@@ -199,7 +199,7 @@ export type PortraitsMessage = { type: "portraits"; p1: PortraitId; p2: Portrait
 export type EmoteRelayMessage = { type: "emote"; from: PlayerId; emote: EmoteId };
 
 /**
- * R660: the opponent's aim, relayed — never to the sender, never part of `PlayerView`, and only
+ * R661: the opponent's aim, relayed — never to the sender, never part of `PlayerView`, and only
  * once the actor has checked that every end names something the receiver may see (`actor.ts`).
  */
 export type AimRelayMessage = { type: "aim"; from: PlayerId; aim: Aim | null };
@@ -513,7 +513,7 @@ export function parseClientMessage(text: string): ClientMessage | MalformedMessa
       return { type: "emote", emote: parsed.emote };
     }
     case "aim": {
-      // R660: the shape check only, rebuilt field by field. Whether each end names something the
+      // R661: the shape check only, rebuilt field by field. Whether each end names something the
       // opponent may see is the actor's call, against the live state (`actor.ts`).
       const aim = parseAim(parsed.aim);
       if (aim === undefined) return malformed(`"aim" must be null or { source, target } of public handles`);

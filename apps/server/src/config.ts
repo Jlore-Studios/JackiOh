@@ -396,7 +396,7 @@ export const MATCH_ACTIONS_PER_SECOND = 5;
 // polling and UI use while still bounding a runaway or malicious client.
 export const API_REQUESTS_PER_MINUTE = 300;
 /**
- * SPEC §11 R660: the least time between two `aim` frames the actor relays for one seat. Aims that
+ * SPEC §11 R661: the least time between two `aim` frames the actor relays for one seat. Aims that
  * arrive faster are coalesced, never queued: the newest waits out the interval and goes alone, so
  * the opponent's arrow always ends where the sender's aim ended, at most this long behind it.
  * Ten a second follows a hover from target to target and bounds what a scripted client can push.

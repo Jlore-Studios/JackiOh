@@ -1,4 +1,4 @@
-// R660: the opponent's aim on the client — what this seat sends while it aims (by click-select and
+// R661: the opponent's aim on the client — what this seat sends while it aims (by click-select and
 // by drag), that it names only public handles, and the opponent's arrow drawn and cleared.
 //
 // jsdom has no layout and no `document.elementsFromPoint`; each test that hovers stubs it to return
@@ -60,8 +60,8 @@ afterEach(() => {
   __resetSettingsForTests();
 });
 
-describe("R660 the aim this seat sends", () => {
-  it("R660 a hand card's aim starts at its position in the hand and names targets by zone or hero, never an instance id", () => {
+describe("R661 the aim this seat sends", () => {
+  it("R661 a hand card's aim starts at its position in the hand and names targets by zone or hero, never an instance id", () => {
     const view = aimView();
     const interaction = playing("h1");
     const targets = aimTargets(view, LEGAL, interaction);
@@ -76,7 +76,7 @@ describe("R660 the aim this seat sends", () => {
     expect(JSON.stringify(aim)).not.toMatch(/h1|e1|core-/);
   });
 
-  it("R660 a placement is never shown: a card going into a zone aims at nothing", () => {
+  it("R661 a placement is never shown: a card going into a zone aims at nothing", () => {
     const view = aimView();
     const interaction = playing("z1");
     expect(aimTargets(view, LEGAL, interaction).size).toBe(0);
@@ -84,7 +84,7 @@ describe("R660 the aim this seat sends", () => {
     expect(aimFor(view, IDLE, new Set(), null)).toBeNull();
   });
 
-  it("R660 an attack starts at the attacker's zone, a Heroic Power at its hero", () => {
+  it("R661 an attack starts at the attacker's zone, a Heroic Power at its hero", () => {
     const view = aimView();
     expect(aimSource(view, { stage: "attacking", attackerId: "u1", candidates: [U1_E1, U1_HERO] })).toEqual({
       at: "zone",
@@ -97,7 +97,7 @@ describe("R660 the aim this seat sends", () => {
     ).toEqual({ at: "hero", player: "p1" });
   });
 
-  it("R660 click-selecting an attacker sends its aim, hovering a target adds it, and cancelling sends null", () => {
+  it("R661 click-selecting an attacker sends its aim, hovering a target adds it, and cancelling sends null", () => {
     const emit = vi.fn();
     render(<Game view={aimView()} legal={LEGAL} onAction={vi.fn()} aim={{ emit, opponent: null }} />);
     expect(emit).not.toHaveBeenCalled();
@@ -121,7 +121,7 @@ describe("R660 the aim this seat sends", () => {
     expect(emit).toHaveBeenLastCalledWith(null);
   });
 
-  it("R660 a board that unmounts mid-aim clears the arrow", () => {
+  it("R661 a board that unmounts mid-aim clears the arrow", () => {
     const emit = vi.fn();
     const { unmount } = render(<Game view={aimView()} legal={LEGAL} onAction={vi.fn()} aim={{ emit, opponent: null }} />);
     fireEvent.click(screen.getByTestId("hand-card-h1"));
@@ -131,13 +131,13 @@ describe("R660 the aim this seat sends", () => {
   });
 });
 
-describe("R660 the opponent's arrow", () => {
+describe("R661 the opponent's arrow", () => {
   const theirs: Aim = {
     source: { at: "hand", player: "p2", index: 2 },
     target: { at: "zone", player: "p1", row: "units", lane: 1 },
   };
 
-  it("R660 draws the opponent's aim from its card back to its target, and clears it when the aim ends", () => {
+  it("R661 draws the opponent's aim from its card back to its target, and clears it when the aim ends", () => {
     const { rerender } = render(<Game view={aimView()} legal={LEGAL} onAction={vi.fn()} aim={{ emit: vi.fn(), opponent: theirs }} />);
     expect(screen.getByTestId("opponent-aim")).toHaveAttribute("data-targeting", "true");
     expect(screen.getByTestId("opponent-aim-arrow")).toBeInTheDocument();
@@ -151,7 +151,7 @@ describe("R660 the opponent's arrow", () => {
     expect(screen.queryByTestId("opponent-aim")).toBeNull();
   });
 
-  it("R660 draws nothing for a hand position the board does not show, and nothing once the game is over", () => {
+  it("R661 draws nothing for a hand position the board does not show, and nothing once the game is over", () => {
     const past: Aim = { source: { at: "hand", player: "p2", index: 3 }, target: null };
     const { rerender } = render(<Game view={aimView()} legal={LEGAL} onAction={vi.fn()} aim={{ emit: vi.fn(), opponent: past }} />);
     expect(screen.queryByTestId("opponent-aim")).toBeNull();
@@ -163,7 +163,7 @@ describe("R660 the opponent's arrow", () => {
     expect(screen.queryByTestId("opponent-aim")).toBeNull();
   });
 
-  it("R660 a relayed aim frame is parsed whole or not at all", () => {
+  it("R661 a relayed aim frame is parsed whole or not at all", () => {
     expect(parseServerFrame(JSON.stringify({ type: "aim", from: "p2", aim: theirs }))).toEqual({ type: "aim", from: "p2", aim: theirs });
     expect(parseServerFrame(JSON.stringify({ type: "aim", from: "p2", aim: null }))).toEqual({ type: "aim", from: "p2", aim: null });
     expect(parseServerFrame(JSON.stringify({ type: "aim", from: "p3", aim: null }))).toBeNull();
