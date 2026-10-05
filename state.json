@@ -795,9 +795,9 @@
       "ci_run_id": 37170971365,
       "ci_sha": "64ef8326932faae394ca3b66304b2d469d449cd8",
       "cleared": {
-        "at": "2026-10-05T01:38:52Z",
+        "at": "2026-10-05T07:41:40Z",
         "by": "`muse` (medium) twice",
-        "sha": "47fab8d1777ee10b6609362e2b31c8014cd9367d"
+        "sha": "564ca6072678531e9f19b1b786468e7fb6f271bb"
       },
       "cross_rounds": 0,
       "died": 0,
