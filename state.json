@@ -1201,9 +1201,9 @@
       "ci_run_id": 37265717392,
       "ci_sha": "026156e4ab202aec00d3323cca97e8ecc6fa245c",
       "cleared": {
-        "at": "2026-10-05T05:19:25Z",
+        "at": "2026-10-05T14:39:51Z",
         "by": "`muse` (medium) twice",
-        "sha": "026156e4ab202aec00d3323cca97e8ecc6fa245c"
+        "sha": "ca2396d468c904a5556ae19b23d061807b57ae2b"
       },
       "cross_rounds": 0,
       "died": 0,
