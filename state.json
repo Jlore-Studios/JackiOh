@@ -3395,10 +3395,8 @@
     "what": "revise #321 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-05T17:39:56Z",
-    "notes": [
-      "started a night run, as a lane was free: #166 (medium) is queued to revise, for `claude-3`: build on `claude-3` (claude, `opus`, strong); review on `claude-3` (claude, `opus`, strong)"
-    ],
+    "at": "2026-10-05T17:50:37Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
