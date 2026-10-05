@@ -1239,11 +1239,11 @@ const emoteWahWah: SfxRecipe = (ctx, out, at) => {
 };
 
 /* ------------------------------------------------------------------------------------------- *
- * Patch v0.2.X (#259, R660): the play sting
+ * Patch v0.2.X (#259, R669): the play sting
  * ------------------------------------------------------------------------------------------- */
 
 /**
- * R660: a card the viewer can read is played (cues.ts), a sting sized by its rarity under the card
+ * R669: a card the viewer can read is played (cues.ts), a sting sized by its rarity under the card
  * whoosh. Common: a bright pluck and its fifth. Rare: a three-note bell arpeggio. Epic: a four-note
  * climb over a shimmering open chord. Legendary and Mythic cards have the entrance instead.
  */

@@ -35,7 +35,7 @@ export type SettingsSlot = {
 
 /**
  * Task 1's effects speed and intensity, task 6's animated foil, task 2's audio controls, the
- * vibration switch (R660) and the account's sync status.
+ * vibration switch (R669) and the account's sync status.
  */
 export const SETTINGS_SLOTS: readonly SettingsSlot[] = [
   {

@@ -114,7 +114,7 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   emoteLaugh: 750,
   emoteAngry: 700,
   emoteWahWah: 1800,
-  // Patch v0.2.X (R660).
+  // Patch v0.2.X (R669).
   sting: 800,
 };
 
@@ -353,7 +353,7 @@ const ROUTINE: readonly Cue[] = [
   { id: "chaosRoll", params: { amount: 3 } },
   { id: "clockTick", params: { amount: 1 } },
   { id: "clockTick", params: { amount: 10 } },
-  // R660: the play sting at each rarity.
+  // R669: the play sting at each rarity.
   { id: "sting", params: {} },
   { id: "sting", params: { tier: "rare" } },
   { id: "sting", params: { tier: "epic" } },

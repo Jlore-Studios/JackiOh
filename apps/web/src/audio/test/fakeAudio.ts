@@ -9,7 +9,7 @@
 // `value`, `setValueAtTime`, `linearRampToValueAtTime`, `exponentialRampToValueAtTime`,
 // `setTargetAtTime` and `cancelScheduledValues`. The engine's extras are there too:
 // `createDynamicsCompressor`, `decodeAudioData`, `resume`, `close` and `state`, and the mix's
-// `createStereoPanner` (`pan`) and `createConvolver` (`buffer`, set once) (R660).
+// `createStereoPanner` (`pan`) and `createConvolver` (`buffer`, set once) (R669).
 //
 // Every object the code under test touches is a Proxy. Reading or writing anything outside that
 // subset records a violation and throws, as does anything the real API would reject (a negative

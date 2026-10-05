@@ -12,7 +12,7 @@
 // music bus `musicOutput()` hands out, and the engine ducks it under every voice line and the
 // effects MUSIC_DUCK_SFX names while `duckMusic` is on (R631). Every voice line also dips the
 // effects to SFX_VOICE_DUCK_GAIN for its span, whatever `duckMusic` says, and an sfx cue whose
-// params carry a `pan` (a unit's lane, cues.ts) plays through a stereo panner (R660).
+// params carry a `pan` (a unit's lane, cues.ts) plays through a stereo panner (R669).
 //
 // NOTHING IS SCHEDULED ON A CONTEXT THAT IS NOT RUNNING. A suspended (or Safari "interrupted")
 // context's clock stands still, so everything scheduled on it would start together the moment it
@@ -305,7 +305,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   const stateListeners = new Set<() => void>();
   /** The context time the music's current duck lets go at. */
   let duckUntil = 0;
-  /** R660: the context time the effects' duck under a voice line lets go at. */
+  /** R669: the context time the effects' duck under a voice line lets go at. */
   let sfxDuckUntil = 0;
   let waiting: VoiceLine[] = [];
   let prefetchScheduled = false;
@@ -429,7 +429,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   }
 
   /**
-   * R660: dips the effects for a voice line's `lengthS` from `startAt` (context time), so the line
+   * R669: dips the effects for a voice line's `lengthS` from `startAt` (context time), so the line
    * is heard over the board. Overlapping lines hold the dip until the last of them ends.
    */
   function duckSfx(startAt: number, lengthS: number): void {
@@ -443,7 +443,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   }
 
   /**
-   * R660: where an sfx cue enters the effects bus: straight in, or through a stereo panner when its
+   * R669: where an sfx cue enters the effects bus: straight in, or through a stereo panner when its
    * params pan it off centre. Returns what the cue's gain connects to, and the panner to disconnect
    * after it.
    */

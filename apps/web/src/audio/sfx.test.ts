@@ -21,7 +21,7 @@ const UNION_ORDER: SfxId[] = [
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
   // Patch v0.2.X (R644): the five emoji emotes.
   "emoteSob", "emoteYawn", "emoteLaugh", "emoteAngry", "emoteWahWah",
-  // Patch v0.2.X (R660): the play sting.
+  // Patch v0.2.X (R669): the play sting.
   "sting",
 ];
 
@@ -530,10 +530,10 @@ describe("R655 a recipe pitched for a card's effect", () => {
   });
 });
 
-describe("R660 the play sting", () => {
+describe("R669 the play sting", () => {
   const stingRun = (params: SfxParams): Run => runRecipe(`sting ${JSON.stringify(params)}`, SFX.sting.recipe, SFX.sting.durationMs, params);
 
-  it("R660 each tier keeps the recipe contract, and a rarer card's sting is longer and fuller", () => {
+  it("R669 each tier keeps the recipe contract, and a rarer card's sting is longer and fuller", () => {
     const runs = [stingRun({}), stingRun({ tier: "rare" }), stingRun({ tier: "epic" })];
     expect([
       ...runs.flatMap(subsetProblems),
@@ -551,7 +551,7 @@ describe("R660 the play sting", () => {
     expect(voices[1]).toBeLessThan(voices[2] ?? 0);
   });
 
-  it("R660 the pan param changes nothing in a recipe: the engine pans", () => {
+  it("R669 the pan param changes nothing in a recipe: the engine pans", () => {
     const plain = stingRun({ tier: "rare" });
     const panned = stingRun({ tier: "rare", pan: 0.6 });
     expect(panned.made.map((n) => n.kind)).toEqual(plain.made.map((n) => n.kind));

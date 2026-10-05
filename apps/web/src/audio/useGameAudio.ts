@@ -3,7 +3,7 @@
 // unlock, the UI ticks and the debug handle for the component's lifetime, and preloads the voice
 // lines the view makes likely. It also gives the board the music (R631): a music director that
 // hears every view, every event the sound director resolves, and each idle, for as long as the
-// board is mounted. The same events reach the haptics (R660), so a buzz lands with its sound.
+// board is mounted. The same events reach the haptics (R669), so a buzz lands with its sound.
 //
 // ORDER MATTERS. `Game` calls this directly after `const runner = queue.current;`, before its own
 // layout effects, so the director's `onView` runs before Game's enqueue layout effect: the events
@@ -64,7 +64,7 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
   const musicRef = useRef<MusicDirector | null>(null);
 
   // 1b. The sound director, created once per mounted Game against the singleton engine, and the
-  //     haptics (R660), which hear every event it resolves in the same step as its cues.
+  //     haptics (R669), which hear every event it resolves in the same step as its cues.
   const hapticsRef = useRef<Haptics | null>(null);
   hapticsRef.current ??= createHaptics();
   const haptics = hapticsRef.current;

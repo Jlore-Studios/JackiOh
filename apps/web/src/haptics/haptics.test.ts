@@ -1,4 +1,4 @@
-// R660 (#259): the haptics player and its switch.
+// R669 (#259): the haptics player and its switch.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -24,8 +24,8 @@ beforeEach(() => {
   resetHapticsSettingsForTests();
 });
 
-describe("R660 haptics", () => {
-  it("R660 a drop is the viewer's own cardPlayed, a hit any damage over 0, a turn the viewer's own turnStarted", () => {
+describe("R669 haptics", () => {
+  it("R669 a drop is the viewer's own cardPlayed, a hit any damage over 0, a turn the viewer's own turnStarted", () => {
     expect(hapticFor(played("p1"), view)).toBe("drop");
     expect(hapticFor(played("p2"), view)).toBeNull();
     expect(hapticFor(hit(3), view)).toBe("hit");
@@ -35,7 +35,7 @@ describe("R660 haptics", () => {
     expect(hapticFor({ type: "healthLost", player: "p1", amount: 2 }, view)).toBeNull();
   });
 
-  it("R660 each moment buzzes its pattern, at most once every HAPTIC_MIN_GAP_MS", () => {
+  it("R669 each moment buzzes its pattern, at most once every HAPTIC_MIN_GAP_MS", () => {
     let t = 1000;
     const vibrate = vi.fn((_pattern: number[]) => true);
     const haptics = createHaptics({ vibrate, now: () => t, reducedMotion: () => false });
@@ -49,7 +49,7 @@ describe("R660 haptics", () => {
     expect(vibrate.mock.calls.slice(1)).toEqual([[[...HAPTIC_PATTERNS.hit]], [[...HAPTIC_PATTERNS.turn]]]);
   });
 
-  it("R660 nothing buzzes with the switch off, under reduced motion, or on a device with no vibrate", () => {
+  it("R669 nothing buzzes with the switch off, under reduced motion, or on a device with no vibrate", () => {
     const vibrate = vi.fn((_pattern: number[]) => true);
     let reduced = true;
     const haptics = createHaptics({ vibrate, now: () => 0, reducedMotion: () => reduced });
@@ -66,7 +66,7 @@ describe("R660 haptics", () => {
     }).not.toThrow();
   });
 
-  it("R660 a vibrate that throws is swallowed", () => {
+  it("R669 a vibrate that throws is swallowed", () => {
     const haptics = createHaptics({
       vibrate: () => {
         throw new Error("blocked");
@@ -79,8 +79,8 @@ describe("R660 haptics", () => {
   });
 });
 
-describe("R660 the vibration switch", () => {
-  it("R660 defaults on, persists to localStorage, and reads back a stored value", () => {
+describe("R669 the vibration switch", () => {
+  it("R669 defaults on, persists to localStorage, and reads back a stored value", () => {
     expect(readHapticsSettings()).toEqual(DEFAULT_HAPTICS_SETTINGS);
     expect(DEFAULT_HAPTICS_SETTINGS.vibration).toBe(true);
     writeHapticsSettings({ vibration: false });
@@ -89,7 +89,7 @@ describe("R660 the vibration switch", () => {
     expect(readHapticsSettings().vibration).toBe(false);
   });
 
-  it("R660 unparsable or mistyped storage falls back to the default, and a refused write still holds in memory", () => {
+  it("R669 unparsable or mistyped storage falls back to the default, and a refused write still holds in memory", () => {
     localStorage.setItem(HAPTICS_SETTINGS_KEY, "{not json");
     expect(readHapticsSettings()).toEqual(DEFAULT_HAPTICS_SETTINGS);
     resetHapticsSettingsForTests();

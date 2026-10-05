@@ -1172,17 +1172,17 @@ describe("R655 a card's hook may carry an effect beside or instead of its line",
 });
 
 /* --------------------------------------------------------------------------------------------- *
- * R660 (#259): a sting for every readable play, and lane panning
+ * R669 (#259): a sting for every readable play, and lane panning
  * --------------------------------------------------------------------------------------------- */
 
-describe("R660 every card the viewer can read stings as it is played, by its rarity", () => {
+describe("R669 every card the viewer can read stings as it is played, by its rarity", () => {
   const catalogOf =
     (rarity: CueCard["rarity"], type: CueCard["type"] = "Unit") =>
     (): CueCard => ({ type, tags: [], ...(rarity === undefined ? {} : { rarity }) });
   const stingOf = (event: GameEvent, context: CueContext): SoundCue | undefined =>
     cuesFor(event, context).find((c) => c.kind === "sfx" && (c.id === "sting" || c.id === "entrance"));
 
-  it("R660 a Common, Rare or Epic Unit or Spell stings on its cardPlayed, sized by its rarity, just after the whoosh", () => {
+  it("R669 a Common, Rare or Epic Unit or Spell stings on its cardPlayed, sized by its rarity, just after the whoosh", () => {
     for (const [rarity, params] of [
       ["Common", undefined],
       ["Rare", { tier: "rare" }],
@@ -1202,7 +1202,7 @@ describe("R660 every card the viewer can read stings as it is played, by its rar
     }
   });
 
-  it("R660 a Legendary or Mythic Spell enters with the entrance on its cast; a Legendary or Mythic Unit keeps its entrance on summoned", () => {
+  it("R669 a Legendary or Mythic Spell enters with the entrance on its cast; a Legendary or Mythic Unit keeps its entrance on summoned", () => {
     expect(stingOf(played(SPELL), ctx({ card: catalogOf("Legendary", "Spell") }))).toEqual({
       kind: "sfx",
       id: "entrance",
@@ -1217,7 +1217,7 @@ describe("R660 every card the viewer can read stings as it is played, by its rar
     expect(stingOf(summon, ctx({ card: catalogOf("Legendary") }))).toMatchObject({ id: "entrance" });
   });
 
-  it("R660 no sting for the sentinel, a Trap's set, a card cast as it is drawn, or a Token with no printed rarity", () => {
+  it("R669 no sting for the sentinel, a Trap's set, a card cast as it is drawn, or a Token with no printed rarity", () => {
     expect(stingOf(played(HIDDEN_DEF_ID, "p2"), ctx({ card: catalogOf("Epic") }))).toBeUndefined();
     expect(stingOf(played(TRAP), ctx({ card: catalogOf("Epic", "Trap") }))).toBeUndefined();
     expect(stingOf(played(FIELD_TRAP), ctx({ card: catalogOf("Epic", "Field Trap") }))).toBeUndefined();
@@ -1226,19 +1226,19 @@ describe("R660 every card the viewer can read stings as it is played, by its rar
     expect(stingOf(played(UNIT), ctx()), "no catalog: the plain sounds").toBeUndefined();
   });
 
-  it("R660 a Token that prints a rarity stings with it", () => {
+  it("R669 a Token that prints a rarity stings with it", () => {
     const card = (): CueCard => ({ type: "Unit", tags: [], rarity: "Token", printedRarity: "Rare" });
     expect(stingOf(played(TOKEN), ctx({ card }))).toMatchObject({ id: "sting", params: { tier: "rare" } });
   });
 });
 
-describe("R660 an effect about a unit on the field comes from its lane", () => {
-  it("R660 lanePan centres the middle lane and puts the outer ones LANE_PAN_MAX either way", () => {
+describe("R669 an effect about a unit on the field comes from its lane", () => {
+  it("R669 lanePan centres the middle lane and puts the outer ones LANE_PAN_MAX either way", () => {
     expect([0, 1, 2, 3, 4].map((i) => lanePan(i, 5))).toEqual([-LANE_PAN_MAX, -LANE_PAN_MAX / 2, 0, LANE_PAN_MAX / 2, LANE_PAN_MAX]);
     expect(lanePan(0, 1)).toBe(0);
   });
 
-  it("R660 a hit on the opponent's lane-1 unit pans left, the viewer's lane-5 unit's death right, and a hero hit stays centred", () => {
+  it("R669 a hit on the opponent's lane-1 unit pans left, the viewer's lane-5 unit's death right, and a hero hit stays centred", () => {
     const enemy = unit("p2", { instanceId: "e1" });
     const mine = unit("p1", { instanceId: "m5" });
     const view = baseView({
@@ -1260,7 +1260,7 @@ describe("R660 an effect about a unit on the field comes from its lane", () => {
     });
   });
 
-  it("R660 a unit that has just arrived is found in the newest view", () => {
+  it("R669 a unit that has just arrived is found in the newest view", () => {
     const arrived = unit("p1", { instanceId: "c1" });
     const newest = baseView({ you: emptySide("p1", { units: [null, null, null, arrived, null] }) });
     const summon: GameEvent = { type: "summoned", player: "p1", instanceId: "c1", defId: UNIT, row: "units", lane: 4 };

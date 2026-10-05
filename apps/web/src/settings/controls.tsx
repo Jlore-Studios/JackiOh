@@ -177,7 +177,7 @@ export function AnimatedFoilSwitch(): ReactElement {
   );
 }
 
-/** R660: the vibration on a drop, a hit and the viewer's turn start, on a phone that has one. */
+/** R669: the vibration on a drop, a hit and the viewer's turn start, on a phone that has one. */
 export function VibrationSwitch(): ReactElement {
   const settings = useHapticsSettings();
   const hintId = useId();

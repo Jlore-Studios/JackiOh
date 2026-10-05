@@ -6,7 +6,7 @@
 //   music player ─▶ music bus ─▶ music duck ────────────────────────────┴─▶ master ─▶ limiter ─▶ destination
 //
 // The music bus carries the music volume (R631); the duck under it is the engine's, which dips it
-// under a voice line or an important effect while `duckMusic` is on. R660 (#259): the effects have
+// under a voice line or an important effect while `duckMusic` is on. R669 (#259): the effects have
 // a duck of their own, which the engine dips under every voice line so a line is never buried under
 // the board, and a cue about a unit is panned to its lane before the bus (the engine adds the
 // panner). The effects (after their duck) and the voice lines each feed a little of themselves into
@@ -44,18 +44,18 @@ export const LIMITER = { thresholdDb: -6, kneeDb: 0, ratio: 20, attackS: 0.003, 
 export type Mix = {
   master: GainNode;
   sfx: GainNode;
-  /** R660: the effects' duck under a voice line, after the effects bus. */
+  /** R669: the effects' duck under a voice line, after the effects bus. */
   sfxDuck: GainNode;
   voice: GainNode;
   music: GainNode;
   musicDuck: GainNode;
   limiter: DynamicsCompressorNode;
-  /** R660: the shared reverb. */
+  /** R669: the shared reverb. */
   reverb: ConvolverNode;
 };
 
 /**
- * R660: the shared reverb's impulse: REVERB_SECONDS of seeded white noise on each of its channels (a different seed each, so it is wide), falling
+ * R669: the shared reverb's impulse: REVERB_SECONDS of seeded white noise on each of its channels (a different seed each, so it is wide), falling
  * off by REVERB_DECAY_POWER, a small room with no early reflections to colour a lone hit.
  */
 export function reverbImpulse(ctx: BaseAudioContext): AudioBuffer {
