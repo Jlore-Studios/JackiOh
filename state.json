@@ -1975,9 +1975,7 @@
       "stop_requested": false,
       "stopped_at": "2026-10-04T17:09:16Z",
       "stopped_by": "MaxGoetzmann",
-      "taken_asks": [
-        "c:5988274868"
-      ]
+      "taken_asks": []
     },
     "212": {
       "closed_at": "2026-10-04T15:50:21Z",
