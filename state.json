@@ -2344,14 +2344,10 @@
       "votes": {
         "approvals": [],
         "builder": "cognition",
-        "rejections": [
-          "cognition"
-        ],
+        "rejections": [],
         "reviews": [],
-        "sha": "e748fb03fddedb1420128f9bb7f2b6818ef90ff7",
-        "tiers": {
-          "cognition": "weak"
-        }
+        "sha": "21f465393c1e1cad463f781a84ed9d2582927d4d",
+        "tiers": {}
       }
     },
     "31": {
