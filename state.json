@@ -2542,7 +2542,8 @@
     "287": {
       "action": "review",
       "asks": [
-        "c:5996175751"
+        "c:5996175751",
+        "c:5996181605"
       ],
       "ci_fixes": 1,
       "ci_reruns": {
@@ -2576,7 +2577,7 @@
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
-      "queued_at": "2026-10-05T14:09:49Z",
+      "queued_at": "2026-10-05T14:10:00Z",
       "requested_by": "jgoetzmann",
       "run_id": "37318865781",
       "self_check_findings": [
