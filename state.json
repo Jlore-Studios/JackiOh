@@ -1232,11 +1232,9 @@
       "ci_run_id": 37336809418,
       "ci_sha": "da0baecc2937347be97c5b5f9422bd40c4321663",
       "cleared": {
-        "at": "2026-10-05T15:56:03Z",
+        "at": "2026-10-05T17:28:10Z",
         "by": "`muse` (medium) twice",
-        "carried_from": "ca2396d468c904a5556ae19b23d061807b57ae2b",
-        "resolved_by": "`muse` (medium)",
-        "sha": "da0baecc2937347be97c5b5f9422bd40c4321663"
+        "sha": "5e935d19dd811b0a2ee4f59be0f3d461e390d646"
       },
       "cross_rounds": 0,
       "died": 0,
