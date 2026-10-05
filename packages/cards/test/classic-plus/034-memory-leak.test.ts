@@ -3,7 +3,7 @@
 // ten not already Locked at each end of your turn (an occupied zone is fine, a Lock evicts nothing; all
 // ten Locked, nothing and no random draw, R129); "After your opponent plays a Unit or Field Spell" Locks
 // the zone that card went into (a cast counts, R70; a Spell, Trap or Field Trap doesn't; the card
-// stays); a Locked unit zone stops a Reborn return there (R175); radiant both at once, no choice".
+// stays); a Locked unit zone takes a Reborn return there (R175, R667); radiant both at once, no choice".
 
 import { describe, expect, it } from "vitest";
 import type { PlayerId } from "@jackioh/shared";
@@ -173,7 +173,7 @@ describe("C+ #34 Memory Leak", () => {
       expect(lockedOf(s, "p2").map((lock) => lock.lane).sort()).toEqual(wells);
     });
 
-    it("R175 a Locked unit zone stops a Reborn return there", () => {
+    it("R175 R667 a Locked unit zone takes a Reborn return there: a Lock refuses plays, not the return", () => {
       const s = scenario({
         p1: { hand: [LEAK, BONE_STORM, BONE_STORM, FILLER], library: [FILLER, FILLER], mana: 4 },
         p2: { hand: [DEFENDER, FILLER], library: [FILLER, FILLER] },
@@ -188,9 +188,8 @@ describe("C+ #34 Memory Leak", () => {
       if (first === undefined || second === undefined) throw new Error("two Bone Storms in hand");
       s.play(first);
       s.play(second);
-      s.expectInZone(DEFENDER, "graveyard");
-      expect(s.unit("p2", 2)).toBeNull();
-      expect([1, 2, 3, 4, 5].some((lane) => s.unit("p2", lane)?.defId === DEFENDER)).toBe(false);
+      expect(s.unit("p2", 2)?.defId).toBe(DEFENDER);
+      expect(lockedOf(s, "p2")).toEqual([{ row: "units", lane: 2 }]);
     });
   });
 

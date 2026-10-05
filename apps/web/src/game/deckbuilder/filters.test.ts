@@ -631,12 +631,12 @@ describe("the set chips (R380: one format, every set)", () => {
 describe("the Jlockeed tag (R278)", () => {
   const REAL: CatalogSnapshot = { version: "core-test", cards: CORE_CATALOG };
 
-  it("R278 offers a Jlockeed chip, and filtering on it keeps Core #13 and #14 and Classic+'s three Jlockheed cards", () => {
+  it("R278 offers a Jlockeed chip, and filtering on it keeps Core #13 and #14, Classic #4 and Classic+'s three Jlockheed cards", () => {
     expect(FILTER_TAGS).toContain("Jlockeed");
     expect(filterTagId("Jlockeed")).toBe("db-filter-tag-jlockeed");
     const kept = visiblePool(REAL, null, { ...DEFAULT_FILTER, ownedOnly: false, tags: new Set<Tag>(["Jlockeed"]) }, DEFAULT_SORT);
-    // docs/classic-sets.md B2.4: one faction, one tag, Classic+ #48, #51 and #52 beside Core's two.
-    expect([...kept].sort()).toEqual(["classicplus-048", "classicplus-051", "classicplus-052", "core-013", "core-014"]);
+    // docs/classic-sets.md B2.4: one faction, one tag, Classic #4 with Classic+ #48, #51 and #52 beside Core's two.
+    expect([...kept].sort()).toEqual(["classic-004", "classicplus-048", "classicplus-051", "classicplus-052", "core-013", "core-014"]);
   });
 });
 

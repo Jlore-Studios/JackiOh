@@ -7826,7 +7826,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
-    "loc": 15,
+    "loc": 16,
     "base": {
       "attack": 1,
       "health": 4,

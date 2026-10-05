@@ -85,12 +85,14 @@ describe("C+ #12.8 Frostspatula", () => {
       s.expectStats(SPATULA, { health: 2 });
     });
 
-    it("R383 a home zone Locked meanwhile keeps it a Unit through its cleanup", () => {
+    it("R383 R667 a home zone Locked meanwhile still takes the return at cleanup: a Lock refuses plays, not the return", () => {
       const s = played(false, 2);
       // A Lock on its reserved backrow zone, as Lock effects leave one (§3.2).
       lockZone(s.state, { player: "p1", row: "backrow", lane: 2 });
       s.endTurn();
-      expect(s.unit("p1", 2)?.id).toBe(spatulaId(s));
+      expect(s.backrow("p1", 2)?.id).toBe(spatulaId(s));
+      expect(s.unit("p1", 2)).toBeNull();
+      expect(eventsOf(s, "deanimated")).toHaveLength(1);
     });
 
     it("backrow effects reach it on the opponent's turn", () => {
