@@ -1,0 +1,14 @@
+{
+  "version": "v0.2.Y",
+  "title": "Patch v0.2.Y: the yellow condition glow for ten Core cards",
+  "sources": "#260",
+  "notes": "The yellow 'condition met' glow (R662) for Bread and Butter, Bear Honeypot, Unlicensed Experimentation, My Pawn, Spiteful Stab and Ceaseless Void, and for the hand cards Quickstriker, Gifted Program and a Radiant /fullsend grant a condition to; Sheepish never glows. Only each script's line count moves; no card plays differently.",
+  "cards": [
+    "core-018",
+    "core-060",
+    "core-070",
+    "core-085",
+    "core-096",
+    "core-100"
+  ]
+}

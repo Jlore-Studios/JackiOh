@@ -28,6 +28,12 @@
 // controller plays would count, which is every play so far this turn (`cardsPlayedThisTurn`, the
 // count `playedEarlier` gives a card still in hand, and the one the pipeline reads at step 5). It
 // reads the controller's plays this turn, which are public, and the same X shows on both faces.
+//
+// THE GLOW (R662). The condition this card prints is its grant's, so the cards that glow are the
+// ones in its controller's hand: while a Quickstriker acts for them and they have played a card this
+// turn, the next play takes the Combo branch (X ≥ 1), and `condition.ts` lights every hand card
+// (`query.grantedComboLive`, the facts `playSteps.quickstrikerCombo` reads). The card itself declares
+// no `conditionMet`: it prints no condition of its own, and its own play never answers its grant (R119).
 
 import type { Script } from "@jackioh/engine";
 import { cardsPlayedThisTurn } from "@jackioh/engine";

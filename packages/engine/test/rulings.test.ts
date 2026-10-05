@@ -4042,6 +4042,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   // Proved by apps/web routes/landing.test.tsx "R661 …" (no Stats call to action; the footer's link is
   // the only one), routes/stats.test.tsx "R661 …" (no data source, no count towards the gate, no word of
   // AI padding or a gate, the drill-down included), routes/almanac.test.tsx "R654 R661 …" (the card
@@ -4050,6 +4051,27 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R661 keeps statistics off the landing page's calls to action and their workings behind the curtain, and shows the rank in the lobby", () => {
     provenIn(661, WEB_LANDING_TEST, WEB_STATS_ROUTE_TEST, "../../../apps/web/src/routes/almanac.test.tsx", WEB_PLAY_TEST);
 =======
+=======
+  // Proved by glow-facts.test.ts "R662 …" (the query facts and condition.ts's granted half) and by
+  // each card's own test, both faces: on when the condition holds, off when it does not.
+  it("R662 the yellow glow for the conditions R195 left out", () => {
+    provenIn(
+      662,
+      "glow-facts.test.ts",
+      "../../cards/test/018-bread-and-butter.test.ts",
+      "../../cards/test/038-quickstriker.test.ts",
+      "../../cards/test/041-sheepish.test.ts",
+      "../../cards/test/060-bear-honeypot.test.ts",
+      "../../cards/test/064-gifted-program.test.ts",
+      "../../cards/test/070-spiteful-stab.test.ts",
+      "../../cards/test/078-fullsend.test.ts",
+      "../../cards/test/085-unlicensed-experimentation.test.ts",
+      "../../cards/test/096-my-pawn.test.ts",
+      "../../cards/test/100-ceaseless-void.test.ts",
+    );
+  });
+
+>>>>>>> origin/main
   // Proved by counterWarning.test.ts "R667 …" (fixture counters: who is warned, never a Trap, a hand
   // or an unreadable card), Plague Chalice's own test (both faces, the count moving, X prices, and
   // the warning agreeing with the counter) and the board's countered.test.tsx (drawn, never decided).
