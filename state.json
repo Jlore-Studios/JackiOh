@@ -2141,7 +2141,8 @@
       "taken_asks": [],
       "votes": {
         "approvals": [
-          "muse"
+          "muse",
+          "cognition"
         ],
         "builder": "cognition",
         "rejections": [],
@@ -2150,10 +2151,16 @@
             "family": "muse",
             "run": "37252258468",
             "tier": "medium"
+          },
+          {
+            "family": "cognition",
+            "run": "37254141570",
+            "tier": "weak"
           }
         ],
         "sha": "408355446f46df30d7dabf8ef01ad348491b00d6",
         "tiers": {
+          "cognition": "weak",
           "muse": "medium"
         }
       }
