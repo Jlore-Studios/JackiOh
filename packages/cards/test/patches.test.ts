@@ -230,17 +230,22 @@ describe("R388 card patch history (B4.2)", () => {
     expect(change?.kind === "changed" ? [...change.fields].sort() : []).toEqual(["base.text", "loc", "radiant.text"]);
   });
 
-  it("R388 records patch v0.2.15: Classic and Classic+ balance patch 1 (issue #88), pending (R646)", () => {
-    // Pending until `patches ship` promotes it (R646): the fragment claims the balance cards,
-    // and the catalog differs from v0.2.14's snapshot on exactly those cards. Numbered v0.2.15:
-    // main shipped v0.2.13 (issue #271) and v0.2.14 (#126) before this branch merged, so ship
-    // order stays version order.
+  it("R388 records patch v0.2.15: Classic and Classic+ balance patch 1 (issue #88)", () => {
+    // Numbered v0.2.15 before main shipped v0.2.16, v0.2.16b and v0.2.17, so it ships after them:
+    // ship order is not name order (R646). Pending, the fragment claims the balance cards and the
+    // catalog differs from the newest shipped snapshot on exactly those; shipped, `patches ship`
+    // has recorded the same cards against the patch before it. The test holds on both sides of
+    // the promotion, which cannot edit it.
     const fragment = readFragments().find(({ fragment }) => fragment.version === "v0.2.15")?.fragment;
-    expect(fragment, "v0.2.15 is pending").toBeDefined();
-    const claimed = fragment?.cards ?? [];
-    const changes = diffCatalogs(readSnapshot("v0.2.14"), CATALOG as unknown as Catalog).filter((change) =>
-      claimed.includes(change.id),
-    );
+    const at = VERSIONS.indexOf("v0.2.15");
+    const before = readSnapshot(at === -1 ? VERSIONS[VERSIONS.length - 1]! : VERSIONS[at - 1]!);
+    const after = (fragment !== undefined ? CATALOG : readSnapshot("v0.2.15")) as unknown as Catalog;
+    const claimed = fragment !== undefined ? fragment.cards : idsOf("v0.2.15", "changed");
+    if (fragment === undefined) {
+      expect(idsOf("v0.2.15", "added")).toEqual([]);
+      expect(idsOf("v0.2.15", "removed")).toEqual([]);
+    }
+    const changes = diffCatalogs(before, after).filter((change) => claimed.includes(change.id));
     expect(changes.filter((change) => change.kind !== "changed")).toEqual([]);
     expect(changes.map((change) => change.id)).toEqual(claimed);
     expect(claimed).toHaveLength(62);

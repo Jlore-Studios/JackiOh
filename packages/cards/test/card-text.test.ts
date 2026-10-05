@@ -404,15 +404,16 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     }
   });
 
-  it("R366 patch v0.2.15 (issue #88) changes exactly the balance-patch cards against v0.2.14b's snapshot", () => {
-    const before = readSnapshot("v0.2.14b");
-    // Main shipped v0.2.16 (issue #170's Glitch card) after the baseline, so a card the baseline
-    // lacks is main's, not this patch's: it must match its shipped snapshot below.
-    const shippedAfter = readSnapshot("v0.2.16");
-    // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
-    const after = CATALOG as unknown as Record<string, CardDef>;
+  it("R366 patch v0.2.15 (issue #88) changes exactly the balance-patch cards against the patch before it", () => {
+    // v0.2.15 ships after v0.2.17 (ship order is not name order, R646): its baseline is the newest
+    // shipped snapshot while it is pending and the patch before it once `patches ship` has
+    // promoted it, and the patch is the current catalog until then, its snapshot after.
+    const versions = readPatches().map((patch) => patch.version);
+    const at = versions.indexOf("v0.2.15");
+    const before = readSnapshot(at === -1 ? versions[versions.length - 1]! : versions[at - 1]!);
+    const after = (at === -1 ? CATALOG : readSnapshot("v0.2.15")) as unknown as Record<string, CardDef>;
     // The top-level fields each balance card may move (balance patch 1, issue #88); every other
-    // field restores the v0.2.14b card, so no card smuggles an unlisted change.
+    // field restores the baseline card, so no card smuggles an unlisted change.
     const allowed: Record<string, readonly string[]> = {
       "core-017": ["base", "radiant"],
       "core-021": ["loc"],
@@ -480,13 +481,8 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     const changed: string[] = [];
     for (const [id, currentCard] of Object.entries(after)) {
       const priorCard = before[id] as unknown as CardDef | undefined;
-      if (!priorCard) {
-        expect(
-          currentCard,
-          `card ${id} added after v0.2.14b matches its shipped snapshot`,
-        ).toEqual(shippedAfter[id] as unknown as CardDef);
-        continue;
-      }
+      expect(priorCard, `card ${id} is not new in v0.2.15`).toBeDefined();
+      if (!priorCard) continue;
       if (JSON.stringify(priorCard) !== JSON.stringify(currentCard)) changed.push(id);
       const fields = allowed[id];
       if (fields === undefined) {
