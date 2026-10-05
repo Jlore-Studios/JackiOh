@@ -2256,6 +2256,14 @@
       "requested_by": "MaxGoetzmann",
       "stop_requested": false
     },
+    "287": {
+      "difficulty": "easy",
+      "failures": 0,
+      "feedback_since": "2026-10-05T02:16:19Z",
+      "issue": 255,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "31": {
       "failures": 0,
       "forced": false,
