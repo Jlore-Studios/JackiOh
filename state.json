@@ -3580,9 +3580,9 @@
     "what": "revise #324 on devin"
   },
   "last_sweep": {
-    "at": "2026-10-05T20:42:05Z",
+    "at": "2026-10-05T20:53:00Z",
     "notes": [
-      "CI on #325: #325: re-ran the failed jobs of run 37364370009"
+      "started a night run, as a lane was free: #325 (medium) is queued to review, for `claude-1`: review on `claude-1` (claude, `opus`, strong)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
