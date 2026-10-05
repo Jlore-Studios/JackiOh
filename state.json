@@ -1999,22 +1999,12 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [
-          "cognition"
-        ],
+        "approvals": [],
         "builder": "cognition",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "cognition",
-            "run": "37254362760",
-            "tier": "weak"
-          }
-        ],
-        "sha": "845678ed86f070993839a9e7296a6d0fad93238a",
-        "tiers": {
-          "cognition": "weak"
-        }
+        "reviews": [],
+        "sha": "b7ea27fe12b2d76ea0591579ec00729353116e22",
+        "tiers": {}
       }
     },
     "218": {
