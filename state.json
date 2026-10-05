@@ -2776,6 +2776,7 @@
         "by": "`muse` (medium) twice",
         "sha": "f5d746365481c418ef3190a46644b9a26fe5f7bd"
       },
+      "closed_at": "2026-10-05T14:58:06Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
@@ -2786,6 +2787,7 @@
       "issue": 303,
       "kind": "review",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "",
