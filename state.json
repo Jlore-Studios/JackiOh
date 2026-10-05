@@ -2085,8 +2085,8 @@
       "question": "`/harness override` is not a real command \u2014 `bot/` stays in `.harness/config.json`'s forbidden_paths, which only a commit to main can change, so every file this issue needs is still undeliverable by me. Will a person build the Plan section as written, or first land a narrower forbidden_paths + bot/prompts/system.md change so the bot may?",
       "queued_at": "2026-10-05T12:35:52Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37312546010",
-      "started_at": "2026-10-05T12:54:22Z",
+      "run_id": "37313916429",
+      "started_at": "2026-10-05T13:04:20Z",
       "stop_requested": false,
       "stopped_at": "2026-10-04T17:09:16Z",
       "stopped_by": "MaxGoetzmann",
@@ -3229,9 +3229,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-05T13:00:58Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37313496417",
-    "what": "revise #304 on devin"
+    "at": "2026-10-05T13:04:20Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37313916429",
+    "what": "build #208 on devin"
   },
   "last_sweep": {
     "at": "2026-10-05T12:54:28Z",
