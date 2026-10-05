@@ -295,6 +295,22 @@ describe("R502 R437 R436 — the v0.2.0 DOM kinds", () => {
   });
 });
 
+describe("Patch v0.2.14 — Classic+ #24 Crushing Walls' walls", () => {
+  const WALLS: FxDomCue = { kind: "walls", at: { kind: "testid", testid: "board" }, reach: 0.2, delayMs: 0, durationMs: 1250 };
+
+  it("the walls cover the board's box and reach `reach` of its width in from each side", () => {
+    const el = expectMounted(mountDomEffect(root, WALLS, { at: AT }), WALLS);
+    expectCovering(el, AT);
+    expect(cssVar(el, "--fx-reach")).toBe(`${String(AT.width * 0.2)}px`);
+    expect(textNodeCount(el)).toBe(0);
+  });
+
+  it("with no board to cover they mount nothing", () => {
+    expect(mountDomEffect(root, WALLS, { at: null })).toBeNull();
+    expect(root.childElementCount).toBe(0);
+  });
+});
+
 describe("a stand-in swells inward from an edge (integration QA: lane 1 on a phone)", () => {
   // Imported here so the header's contract above stays about mountDomEffect.
   const view = { width: 390, height: 844 };
