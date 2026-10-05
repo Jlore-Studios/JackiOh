@@ -3038,6 +3038,14 @@
         }
       }
     },
+    "325": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-05T17:30:10Z",
+      "issue": 44,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "33": {
       "closed_at": "2026-09-29T19:12:16Z",
       "failures": 0,
