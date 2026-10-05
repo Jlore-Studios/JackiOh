@@ -1729,7 +1729,7 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-04T21:57:04Z",
+      "feedback_since": "2026-10-05T02:15:28Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-05T01:55:56Z",
@@ -1751,7 +1751,7 @@
       "requested_by": "jgoetzmann",
       "run_id": "37254453561",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-05T02:15:28Z",
       "stop_requested": false,
       "taken_asks": [],
