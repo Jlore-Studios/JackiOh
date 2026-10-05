@@ -36,6 +36,9 @@ export type ApiErrorCode =
   | "invalid_code"
   | "update_required"
   | "loadout_invalid"
+  | "match_not_finished"
+  | "series_game"
+  | "double_requires_ranked"
   | "rate_limited"
   | "unavailable"
   | "internal";
@@ -53,6 +56,9 @@ const STATUS: Record<ApiErrorCode, number> = {
   invalid_code: 400,
   update_required: 409,
   loadout_invalid: 422,
+  match_not_finished: 422,
+  series_game: 422,
+  double_requires_ranked: 422,
   rate_limited: 429,
   unavailable: 503,
   internal: 500,

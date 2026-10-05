@@ -417,6 +417,17 @@
   --slot-w: calc(var(--card-h) * 0.42);
 }
 
+/* The revealed opponent hand (R434) fans at face width like the viewer's hand, so the faces it
+   turns over are read at full card size instead of squeezed to back width. */
+.hand-opponent[data-revealed="true"] .hand-cards {
+  --slot-w: var(--hand-card-w);
+}
+
+.hand-opponent[data-revealed="true"] .card-hand {
+  max-width: var(--hand-card-w);
+  height: var(--hand-card-h);
+}
+
 .hand-slot {
   position: relative;
   flex: 0 0 var(--slot-w);

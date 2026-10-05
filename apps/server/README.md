@@ -220,6 +220,8 @@ top of every handler:
 | `GET` | `/api/ranked` | active | The caller's own season, tag, rank, streak, record and season badges; never the hidden rating (R612) |
 | `GET` | `/api/leaderboard` | active | Jlorious #1–#100, then every other placed player by Grape tier, then the placing count (R608, R612) |
 | `GET` | `/api/matches/:id/ranks` | active | Both seats' ranks for the match screen, and whether the game moves them; 404 unless the caller plays it (R604, R612) |
+| `POST` | `/api/matches/:id/rematch` | active | Offer a rematch of a finished non-series match, `{ stakes: 1 \| 2 }`; equal stakes from both seats create the game and answer its id (R672) |
+| `GET` | `/api/matches/:id/rematch` | active | Both seats' offers, whether the opponent's socket is open, and the created game, if any; 404 unless the caller plays it, 422 on a series game (R672) |
 | `GET` | `/api/tutorial` | active | The account's tutorial progress (R320): completed lesson ids and the newest Hide/Show choice; empty before the first write |
 | `PUT` | `/api/tutorial` | active | Merge a device's progress into the account's (R320): `{ completed, hiddenChoice? }`. The lessons become the union, a choice replaces the stored one only when it is newer (a time after the server's clock counts as now), nothing is ever removed, and the answer is the merged progress. Ids are checked for shape only (lower-case slugs, `TUTORIAL_LESSON_ID_MAX_LENGTH`, at most `TUTORIAL_LESSONS_MAX`); the lessons are the client's |
 | `GET` | `/api/settings` | active | The account's game settings (R633): groups (`gameplay`, `audio`, `fx`, `cards`), each `{ at, values }`; empty before the first write |
