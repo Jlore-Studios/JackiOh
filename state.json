@@ -1061,7 +1061,7 @@
       "taken_asks": []
     },
     "166": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "died": 0,
       "difficulty": "medium",
@@ -1079,17 +1079,17 @@
       },
       "interruptions": 0,
       "issue": 88,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
       "pending_request": false,
       "provider": "muse",
       "question": "Revision is partial: merge conflicts fully resolved and core gates green, but ~30 test failures across ~15 files remain (pre-existing branch failures from the issue-88 behavior changes, not merge damage). Fixed 19 files; the rest need the same stale-expectation updates. Send another revision run to continue the test-fixing work (notes in .bot-notes.md, failure inventory below).",
       "queued_at": "2026-10-05T02:46:37Z",
       "requested_by": "jgoetzmann",
-      "run_id": "37242009155",
+      "run_id": "37256608008",
       "self_check_findings": [],
       "source": "request",
-      "started_at": "2026-10-04T23:12:33Z",
+      "started_at": "2026-10-05T02:47:01Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -2776,9 +2776,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-05T02:46:09Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37256590034",
-    "what": "build #170 on claude-3"
+    "at": "2026-10-05T02:47:01Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37256608008",
+    "what": "review #166 on muse"
   },
   "last_sweep": {
     "at": "2026-10-05T02:44:14Z",
