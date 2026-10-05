@@ -33,7 +33,7 @@ import {
   type ReactNode,
 } from "react";
 
-import type { ActionBody, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
+import type { ActionBody, Aim, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 
 import type { EmoteShow } from "../emotes/session.ts";
 import type { HeroEmotes } from "./Hero.tsx";
@@ -43,6 +43,8 @@ import DrawOfferNotice from "./DrawOffer.tsx";
 import Prompt from "./Prompt.tsx";
 import { promptOver } from "./promptOver.ts";
 import DragLayer from "./drag/DragLayer.tsx";
+import OpponentAim from "./aim/OpponentAim.tsx";
+import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
 import { IDLE, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
 import {
@@ -107,7 +109,15 @@ export type GameProps = {
    * screen and a test fixture leave it off.
    */
   trackStats?: boolean;
+  /**
+   * R738: the opponent's aim. `emit` sends this seat's own as it changes; `opponent` is the
+   * opponent's as last relayed, drawn as its arrow. Online play sets it; hotseat and tests do not.
+   */
+  aim?: GameAim;
 };
+
+/** What Game needs of a route that shows aims both ways (R738). */
+export type GameAim = { emit: (aim: Aim | null) => void; opponent: Aim | null };
 
 /**
  * What Game needs of a route's `useEmotes` (emotes/useEmotes.ts): the pure reads plus the two
@@ -136,6 +146,7 @@ export default function Game({
   autoEndTurn: pinnedAutoEndTurn,
   emotes,
   trackStats = false,
+  aim,
 }: GameProps): ReactElement {
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
   const root = useRef<HTMLDivElement>(null);
@@ -382,6 +393,8 @@ export default function Game({
   }, [dispatch, refocusConcede]);
 
   const highlight = useMemo(() => highlightFor(shown, legal, interaction), [shown, legal, interaction]);
+  // R738: what this seat aims at goes to the opponent; theirs is drawn below until the game ends.
+  useAimEmitter(shown, legal, interaction, aim?.emit);
   const animated = useMemo(() => burst.map((entry) => ({ frames: entry.frames, events: entry.events })), [burst]);
 
   /**
@@ -472,6 +485,7 @@ export default function Game({
           cast on draw up as the runner reaches it. */}
       <FxLayer queue={runner} view={shown} latest={view} />
       <CardShowcase view={view} queue={runner} />
+      <OpponentAim view={shown} aim={shown.result === null ? (aim?.opponent ?? null) : null} />
 
       {promptOver(shown, burst, inFlight) ? null : (
         <Prompt

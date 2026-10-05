@@ -243,7 +243,9 @@ R339). The codec is `packages/shared/src/codes.ts`.
 ## WebSocket surface
 
 One socket per player, per match. The message union is `src/match/protocol.ts`: the client sends
-`hello` and `action`, the server sends `hello`, `view`, `ack`, `error`, `prompt` and `clock`.
+`hello` and `action`, the server sends `hello`, `view`, `ack`, `error`, `prompt` and `clock`. Beside
+them ride three cosmetic frames that are never an action and never part of `PlayerView`: `portraits`
+(R642), `emote` both ways (R643) and `aim` both ways (R738, the opponent's targeting arrow).
 
 A browser sends its access token as the second `Sec-WebSocket-Protocol` entry,
 `new WebSocket(url, ["jackioh.v1", token])`, and the server echoes only `jackioh.v1`. A Node
@@ -267,6 +269,11 @@ Properties the actor holds, each with a test named after it:
   A match whose setup took last boards (below) folds with the boards frozen into it at its start.
   An All Random match (R258) folds, as it started, with both seats dealt (R433), read off the
   match's mode (`matches.modeOf`), so neither player's deck pile lists a card they were not shown.
+- An `aim` (R738) names only public handles — a hero, a zone, a position in the sender's own hand —
+  and is relayed to the opponent alone, at most one relay per seat per `AIM_RELAY_INTERVAL_MS`
+  (the newest waits out the interval, so none is lost). One that names a hand position past the
+  sender's hand, the opponent's hand or a zone off the board is dropped silently at relay time, and
+  a sender whose socket closes, or a game that ends, has its arrow cleared with a `null`.
 
 ### Last boards (C+ #29 Portal to the Past, R417)
 
