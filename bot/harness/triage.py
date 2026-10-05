@@ -94,6 +94,8 @@ CONVENTION = re.compile(
     r"|Night bot|CI|Architecture): \S")
 VERSION = re.compile(r"\bv\d+\.\d+(?:\.(?:\d+|X|Y))?[a-z]?\b")
 CONVENTIONS_DOC = Path("docs") / "issues-and-patches.md"
+#: How much of the conventions the prompt carries: its Labels, Titles and Version numbers sections.
+CONVENTIONS_CHARS = 8000
 #: The organisation's issue types (Settings → Planning → Issue types), used when the token cannot
 #: read them: an issue gets one; a pull request has none.
 DEFAULT_ISSUE_TYPES: dict[str, str] = {
@@ -344,7 +346,7 @@ def conventions_text(root: Path) -> str:
     except OSError:
         return ""
     match = re.search(r"^## Labels\n.*?(?=^## A patch that takes several)", text, re.M | re.S)
-    return (match.group(0) if match else text)[:6000]
+    return (match.group(0) if match else text)[:CONVENTIONS_CHARS]
 
 
 def parse(answer: str) -> dict[str, Any] | None:

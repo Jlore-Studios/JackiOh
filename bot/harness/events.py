@@ -407,7 +407,12 @@ def on_ci(ctx: Context, payload: dict[str, Any]) -> list[str]:
         fixes = int(record.get("ci_fixes", 0))
         link = f"[run]({run.get('html_url')})"
         if fixes >= ctx.cfg.max_failures:
-            if stepup.strike(ctx, number, f"CI still failed after {fixes} fixes", link=link):
+            try:
+                stepped = stepup.strike(ctx, number, f"CI still failed after {fixes} fixes",
+                                        link=link)
+            except GitHubError:
+                stepped = False
+            if stepped:
                 out.append(f"#{number}: stepped up after {fixes} CI fixes")
                 continue
             set_state_label(ctx, number, names, LABEL_BLOCKED)
