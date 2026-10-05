@@ -2698,13 +2698,21 @@
       "taken_asks": []
     },
     "304": {
+      "action": "review",
+      "asks": [],
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-05T12:32:34Z",
       "issue": 303,
-      "kind": "revise",
+      "kind": "review",
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-10-05T12:52:19Z",
+      "run_id": "37312793697",
       "self_check_findings": [],
+      "started_at": "2026-10-05T12:56:01Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
@@ -3205,9 +3213,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-05T12:55:19Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37312594589",
-    "what": "build #290 on devin"
+    "at": "2026-10-05T12:56:01Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37312793697",
+    "what": "review #304 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-05T12:54:28Z",
