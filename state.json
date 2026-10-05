@@ -604,6 +604,12 @@
       "lines": [
         "/harness revise"
       ]
+    },
+    "c:6003444405": {
+      "at": "2026-10-05T21:35:48Z",
+      "lines": [
+        "@jgoetzmann-bot revised as hard"
+      ]
     }
   },
   "items": {
