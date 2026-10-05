@@ -143,7 +143,7 @@ const small = unitDefOf("small", 1, 2);
 const wardedTaunter = unitDefOf("warded-taunt", 4, 4, [{ kind: "Indestructible" }, { kind: "Taunt" }]);
 const wardedPinger = unitDefOf("warded-pinger", 4, 4, [{ kind: "Indestructible" }]);
 const rebornUnit = unitDefOf("reborn", 2, 2, [{ kind: "Reborn" }]);
-const duelist = unitDefOf("duelist", 4, 3);
+const duelist = unitDefOf("duelist", 4, 3, [{ kind: "Deft" }]);
 const immutable = unitDefOf("immutable", 2, 2, [{ kind: "Immutable" }]);
 const trampler = unitDefOf("trampler", 6, 4, [{ kind: "Trample" }]);
 const trampleLeech = unitDefOf("trample-leech", 6, 4, [{ kind: "Trample" }, { kind: "Lifesteal" }]);
@@ -314,7 +314,7 @@ const pingEnemyHero = (amount: number): Script => ({
 });
 
 const SCRIPTS: Record<string, CardScripts> = {
-  [duelist.id]: both({ staticFlags: { deftDuelist: true } }),
+  [duelist.id]: both({}),
   [caster.id]: both({ staticFlags: { castOnDraw: true } }),
   [splitter.id]: both({ cry: () => [rbDamageEnemyUnits(9)] }),
   [allEnemies.id]: both({ cry: () => [rbDamageAllEnemies(2)] }),
@@ -632,6 +632,13 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     expect(declareAttack(sink, ordinary, { kind: "hero", player: "p2" }).error).toBeUndefined();
     expect(hasExertion(state, ordinary, "switch")).toBe(false);
     expect(switchPosition(sink, ordinary).error).toBe("that unit has already acted this turn");
+
+    // R49 reads the keyword through the layers, so a granted Deft works like a printed one.
+    const gifted = put(state, plain.id, slot("p1", "units", 3));
+    gifted.grantedKeywords.push({ kind: "Deft" });
+    expect(declareAttack(sink, gifted, { kind: "hero", player: "p2" }).error).toBeUndefined();
+    expect(hasExertion(state, gifted, "switch")).toBe(true);
+    expect(switchPosition(sink, gifted).error).toBeUndefined();
   });
 
   it("R50 discovers from the actual graveyard, so a spell token sitting there is eligible", () => {

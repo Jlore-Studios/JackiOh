@@ -332,6 +332,13 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
     </>
   ),
 
+  Deft: () => (
+    <Part className="kw-glyph-art kw-dart" anim fit="contain">
+      <path d="M22 74 L66 22 L78 22 L78 34 L34 78 Z" fill="#e8b4e0" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M30 62 L58 34" stroke="#fdf3fb" strokeWidth="3" strokeLinecap="round" />
+    </Part>
+  ),
+
   Lucky: () => (
     <>
       <Part className="kw-glyph-art" fit="contain">

@@ -238,6 +238,6 @@ export function enchantNextSpellLabel(enchantment: Enchantment): string {
     case "castOnDraw":
       return "Your next Spell gains Cast on draw";
     case "targetEnemies":
-      return "Your next Spell targets enemies when it can";
+      return "Your next Spell aims at enemies when it harms and at your side when it helps";
   }
 }

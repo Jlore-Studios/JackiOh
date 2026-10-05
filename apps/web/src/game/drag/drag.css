@@ -30,9 +30,29 @@
   -webkit-user-drag: none;
 }
 
-/* A picker opened by the lifted play must not cover the board it is being dropped on. */
-:root[data-dragging] .prompt-scrim {
+/* A picker opened by the lifted play must not cover the board it is being dropped on. A prompt's
+   own option being dragged out of it (R658, OptionDrag.tsx) keeps its picker in view. */
+:root[data-dragging]:not([data-dragging="option"]) .prompt-scrim {
   visibility: hidden;
+}
+
+/* R658: the option in flight stays in its place in the picker, faded, as a hand card does. */
+:root[data-dragging="option"] .prompt [data-drag-source="true"] {
+  opacity: 0.35;
+}
+
+/* R658: a card option lifts on touch, so the browser must not pan under it; list and plain options
+   keep the panel scrolling, and are dragged with a mouse or a pen. */
+.game:has(> .board[data-drag="on"]) .prompt .prompt-card {
+  touch-action: none;
+}
+
+/* R658: a build in flight is lifted again from what it has picked (the zone a card was dropped in, a
+   Tribute, a target), so a finger on one must not pan the board. */
+.board[data-drag="on"] .zone[data-selected="true"],
+.board[data-drag="on"] .card[data-selected="true"],
+.board[data-drag="on"] [data-testid^="hero-"][data-selected="true"] {
+  touch-action: none;
 }
 
 :root[data-dragging],
@@ -100,6 +120,12 @@
     border-color 120ms ease,
     box-shadow 120ms ease;
   will-change: left, top;
+}
+
+/* R658: a prompt option's ghost carries only its name. */
+.drag-ghost--option {
+  justify-content: center;
+  text-align: center;
 }
 
 /* On touch the ghost rides above the finger, so the finger never hides the card or its target. */

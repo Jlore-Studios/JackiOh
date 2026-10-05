@@ -14,7 +14,6 @@ export const landingTestid = {
   playOnline: "landing-play-online",
   buildDecks: "landing-build-decks",
   fan: "landing-card-fan",
-  howItPlays: "landing-how-it-plays",
   hotseat: "landing-hotseat",
   inviteOnly: "landing-invite-only",
   stats: "landing-stats",
@@ -25,11 +24,6 @@ export const landingTestid = {
 /** `landing-fan-card-${index}`, 0..4. */
 export function landingFanCardTestid(index: number): string {
   return `landing-fan-card-${String(index)}`;
-}
-
-/** `landing-step-${index}`, 0..3. */
-export function landingStepTestid(index: number): string {
-  return `landing-step-${String(index)}`;
 }
 
 export const loginTestid = {

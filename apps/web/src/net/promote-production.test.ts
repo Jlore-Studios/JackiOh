@@ -273,7 +273,7 @@ describe("the countdown issue", () => {
     ok(run(w, "schedule", "2026-10-04T16:00:00Z"));
     const [only, ...rest] = openIssues(w);
     expect(rest).toEqual([]);
-    expect(only?.title).toBe("Merging to production in 23 hours (2026-10-05 15:00 UTC)");
+    expect(only?.title).toBe("Merging to production in 23 hours (2026-10-05 10:00 AM CT)");
     expect(only?.labels).toEqual([LABEL, "human"]);
     expect(only?.assignees).toEqual(PEOPLE);
     expect(marker(only as Issue)).toBe(`due=${DUE} held=0 last=0`);
@@ -311,7 +311,7 @@ describe("the countdown issue", () => {
     expect(old.comments.at(-1)?.body).toContain("Merged to production in #2 (the scheduled merge): 2 commits");
     const [next, ...rest] = openIssues(w);
     expect(rest).toEqual([]);
-    expect(next).toMatchObject({ number: 3, title: "Merging to production in 24 hours (2026-10-06 15:00 UTC)", labels: [LABEL, "human"], assignees: PEOPLE });
+    expect(next).toMatchObject({ number: 3, title: "Merging to production in 24 hours (2026-10-06 10:00 AM CT)", labels: [LABEL, "human"], assignees: PEOPLE });
     expect(marker(next as Issue)).toBe(`due=${at("2026-10-06T15:00:00Z")} held=0 last=0`);
   });
 
@@ -324,6 +324,31 @@ describe("the countdown issue", () => {
     expect(gh(w).prs.map((p) => [p.number, p.merged])).toEqual([[2, true], [4, true]]);
     expect(tree(w, "production")).toBe(tree(w, w.sha.c5 as string));
     expect(openIssues(w).map((i) => i.number)).toEqual([5]);
+  });
+
+  it("stays due, rather than close as nothing to merge, while main is ahead but not green yet", () => {
+    // 2026-10-04: every push to main cancelled the CI run before it, the newest green commit was the
+    // one production had, and /fast-forward closed the countdown with nothing merged.
+    const w = counting();
+    ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
+    const ahead = commit(w, "c4", { "app.txt": "four\n" }, false);
+    const id = comment(w, 3, "/fast-forward", "2026-10-05T16:00:00Z");
+    const r = ok(run(w, "issue_comment", "2026-10-05T16:00:30Z"));
+    expect(reactions(w, id)).toEqual(["+1"]);
+    expect(r.text).toContain("1 newer commit(s) whose CI has not passed yet");
+    expect(issue(w, 3).state).toBe("open");
+    expect(issue(w, 3).title).toBe("Merging to production at the next check (2026-10-05 11:00 AM CT)");
+    expect(gh(w).prs).toHaveLength(1);
+
+    // CI passes on main: its run merges what /fast-forward asked for, and the countdown rolls.
+    edit(w, (s) => {
+      s.green.push(ahead);
+      s.newestGreen = ahead;
+    });
+    ok(run(w, "workflow_run", "2026-10-05T16:30:00Z", { RUN_SHA: ahead }));
+    expect(gh(w).prs).toHaveLength(2);
+    expect(tree(w, "production")).toBe(tree(w, ahead));
+    expect(issue(w, 3).state).toBe("closed");
   });
 
   it("closes it as nothing to merge when production already has everything", () => {
@@ -343,6 +368,40 @@ describe("the countdown issue", () => {
     commit(w, "c4", { "app.txt": "four\n" });
     ok(run(w, "workflow_dispatch", "2026-10-06T14:00:00Z"));
     expect(marker(openIssues(w)[0] as Issue)).toContain(`due=${at("2026-10-07T15:00:00Z")}`);
+  });
+
+  it("keeps the merge at 10:00 AM Central through the end of daylight saving", () => {
+    // DST ends at 2 AM on Sunday 2026-11-01: 10:00 AM CT is 15:00 UTC the day before, 16:00 UTC after.
+    const w = world();
+    ok(run(w, "schedule", "2026-10-31T16:00:00Z"));
+    const [first] = openIssues(w);
+    expect(first?.title).toBe("Merging to production in 24 hours (2026-11-01 10:00 AM CT)");
+    expect(marker(first as Issue)).toContain(`due=${at("2026-11-01T16:00:00Z")}`);
+    ok(run(w, "schedule", "2026-11-01T16:07:00Z"));
+    const [next] = openIssues(w);
+    expect(next?.title).toBe("Merging to production in 24 hours (2026-11-02 10:00 AM CT)");
+    expect(marker(next as Issue)).toContain(`due=${at("2026-11-02T16:00:00Z")}`);
+  });
+
+  it("and back in March, when daylight saving starts", () => {
+    // DST starts at 2 AM on Sunday 2027-03-14: 10:00 AM CT is 16:00 UTC the day before, 15:00 UTC on it.
+    const w = world();
+    ok(run(w, "schedule", "2027-03-13T17:00:00Z"));
+    expect(marker(openIssues(w)[0] as Issue)).toContain(`due=${at("2027-03-14T15:00:00Z")}`);
+    expect(openIssues(w)[0]?.title).toBe("Merging to production in 22 hours (2027-03-14 10:00 AM CT)");
+  });
+
+  it("brings the body of an issue written in another format up to date at the next check", () => {
+    const w = counting();
+    edit(w, (s) => {
+      const i = s.issues[0] as Issue;
+      i.body = i.body.replace("2026-10-05 10:00 AM CT", "2026-10-05 15:00 UTC");
+    });
+    ok(run(w, "schedule", "2026-10-04T16:20:00Z"));
+    expect(issue(w, 1).body).toContain("at **2026-10-05 10:00 AM CT**");
+    const edits = gh(w).log.filter((l) => l.startsWith("issue edit")).length;
+    ok(run(w, "schedule", "2026-10-04T16:25:00Z"));
+    expect(gh(w).log.filter((l) => l.startsWith("issue edit"))).toHaveLength(edits);
   });
 
   it("closes any older duplicate as not planned and keeps the newest", () => {
@@ -371,12 +430,12 @@ describe("the countdown in the title", () => {
     const w = counting();
     const body = issue(w, 1).body;
     ok(run(w, "schedule", "2026-10-04T22:07:00Z"));
-    expect(issue(w, 1).title).toBe("Merging to production in 17 hours (2026-10-05 15:00 UTC)");
+    expect(issue(w, 1).title).toBe("Merging to production in 17 hours (2026-10-05 10:00 AM CT)");
     expect(issue(w, 1).body).toBe(body);
     ok(run(w, "workflow_run", "2026-10-05T09:40:00Z", { RUN_SHA: w.sha.c3 as string }));
-    expect(issue(w, 1).title).toBe("Merging to production in 5 hours (2026-10-05 15:00 UTC)");
+    expect(issue(w, 1).title).toBe("Merging to production in 5 hours (2026-10-05 10:00 AM CT)");
     ok(run(w, "schedule", "2026-10-05T14:07:00Z"));
-    expect(issue(w, 1).title).toBe("Merging to production in 1 hour (2026-10-05 15:00 UTC)");
+    expect(issue(w, 1).title).toBe("Merging to production in 1 hour (2026-10-05 10:00 AM CT)");
   });
 
   it("edits nothing when the hours have not changed", () => {
@@ -400,7 +459,7 @@ describe("/fast-forward", () => {
     expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
     expect(issue(w, 1)).toMatchObject({ state: "closed", reason: "completed" });
     expect(issue(w, 1).comments.at(-1)?.body).toContain("Merged to production in #2");
-    expect(openIssues(w).map((i) => i.title)).toEqual(["Merging to production in 21 hours (2026-10-05 15:00 UTC)"]);
+    expect(openIssues(w).map((i) => i.title)).toEqual(["Merging to production in 21 hours (2026-10-05 10:00 AM CT)"]);
   });
 
   it("goes past a hold", () => {
@@ -435,7 +494,7 @@ describe("holding and delaying from the comments", () => {
     const id = comment(w, 1, "/hold waiting on the almanac art", "2026-10-05T10:00:00Z");
     ok(run(w, "issue_comment", "2026-10-05T10:01:00Z"));
     expect(reactions(w, id)).toEqual(["+1"]);
-    expect(issue(w, 1).title).toBe("Merging to production: on hold (was due 2026-10-05 15:00 UTC)");
+    expect(issue(w, 1).title).toBe("Merging to production: on hold (was due 2026-10-05 10:00 AM CT)");
     expect(marker(issue(w, 1))).toBe(`due=${DUE} held=1 last=${id}`);
     expect(issue(w, 1).body).toContain("**On hold.**");
     ok(run(w, "schedule", "2026-10-05T16:07:00Z"));
@@ -453,7 +512,7 @@ describe("holding and delaying from the comments", () => {
     expect(reactions(w, id)).toEqual(["+1"]);
     expect(gh(w).prs).toHaveLength(1);
     expect(issue(w, 1)).toMatchObject({ state: "closed", reason: "completed" });
-    expect(openIssues(w)[0]?.title).toBe("Merging to production in 22 hours (2026-10-06 15:00 UTC)");
+    expect(openIssues(w)[0]?.title).toBe("Merging to production in 22 hours (2026-10-06 10:00 AM CT)");
   });
 
   it("goes back to counting down after /resume when the time has not come", () => {
@@ -461,7 +520,7 @@ describe("holding and delaying from the comments", () => {
     comment(w, 1, "/hold", "2026-10-05T08:00:00Z");
     comment(w, 1, "/RESUME", "2026-10-05T09:00:00Z");
     ok(run(w, "issue_comment", "2026-10-05T09:01:00Z"));
-    expect(issue(w, 1).title).toBe("Merging to production in 6 hours (2026-10-05 15:00 UTC)");
+    expect(issue(w, 1).title).toBe("Merging to production in 6 hours (2026-10-05 10:00 AM CT)");
     expect(marker(issue(w, 1))).toContain("held=0");
     expect(gh(w).prs).toEqual([]);
   });
@@ -471,7 +530,7 @@ describe("holding and delaying from the comments", () => {
     const id = comment(w, 1, "/delay 3h", "2026-10-05T10:00:00Z");
     ok(run(w, "issue_comment", "2026-10-05T10:01:00Z"));
     expect(reactions(w, id)).toEqual(["+1"]);
-    expect(issue(w, 1).title).toBe("Merging to production in 8 hours (2026-10-05 18:00 UTC)");
+    expect(issue(w, 1).title).toBe("Merging to production in 8 hours (2026-10-05 1:00 PM CT)");
     ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
     expect(gh(w).prs).toEqual([]);
     ok(run(w, "schedule", "2026-10-05T18:07:00Z"));
@@ -579,7 +638,7 @@ describe("a green push to main, for a cron GitHub never starts", () => {
     const w = world();
     const plain = commit(w, "c4", { "app.txt": "four\n" });
     ok(run(w, "workflow_run", "2026-10-04T16:00:00Z", { RUN_SHA: plain }));
-    expect(openIssues(w).map((i) => i.title)).toEqual(["Merging to production in 23 hours (2026-10-05 15:00 UTC)"]);
+    expect(openIssues(w).map((i) => i.title)).toEqual(["Merging to production in 23 hours (2026-10-05 10:00 AM CT)"]);
     expect(gh(w).prs).toEqual([]);
   });
 
@@ -614,7 +673,7 @@ describe("running it by hand", () => {
     ok(run(w, "workflow_dispatch", "2026-10-04T18:00:00Z"));
     expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
     expect(issue(w, 1)).toMatchObject({ state: "closed", reason: "completed" });
-    expect(openIssues(w)[0]?.title).toBe("Merging to production in 21 hours (2026-10-05 15:00 UTC)");
+    expect(openIssues(w)[0]?.title).toBe("Merging to production in 21 hours (2026-10-05 10:00 AM CT)");
   });
 
   it("takes the commit it is given, which must be a green one on main", () => {
@@ -652,7 +711,7 @@ describe("running it by hand", () => {
     ok(run(w, "workflow_dispatch", "2026-10-04T18:00:00Z"));
     expect(production(w)).toBe(w.sha.c3);
     expect(gh(w).prs).toEqual([]);
-    expect(openIssues(w).map((i) => i.title)).toEqual(["Merging to production in 21 hours (2026-10-05 15:00 UTC)"]);
+    expect(openIssues(w).map((i) => i.title)).toEqual(["Merging to production in 21 hours (2026-10-05 10:00 AM CT)"]);
   });
 });
 

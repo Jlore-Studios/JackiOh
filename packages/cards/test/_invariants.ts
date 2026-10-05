@@ -77,7 +77,10 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
   const stint = new Map<string, number>();
   const lastAttack = new Map<string, AttackMark>();
   // R636: the stint in which each instance was last seen with Windfury. Read from the states between
-  // actions and after each one, so a unit that dies on its second attack was seen with it before.
+  // actions and after each one, so a unit that dies on its second attack was seen with it before —
+  // and from `keywordGranted` events inside the action, so a unit granted Windfury mid-action is seen
+  // before its declarations: R44's AI turn can summon a Conjure token and fight with it twice inside
+  // one outer action, where no between-action state ever holds it.
   const windfury = new Map<string, number>();
   const readied = new Set<string>();
   // R424: the latest declared attack, and whether its attacker destroyed its target (R42).
@@ -191,6 +194,15 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
               attack.killed = true;
             }
             break;
+          case "keywordGranted": {
+            // A grant the stream saw is a grant the unit holds from this stint on: without this, a
+            // Windfury granted mid-action reads as a second attack without Windfury (see above).
+            // `lost` (R46) takes a keyword away instead of giving it, so it is never recorded.
+            if (event.keyword.kind === "Windfury" && event.lost !== true) {
+              windfury.set(event.instanceId, stint.get(event.instanceId) ?? 0);
+            }
+            break;
+          }
           case "attackDeclared": {
             // R53: a forced attack is not a declaration and spends nothing (nor readies, R424).
             attack = null;

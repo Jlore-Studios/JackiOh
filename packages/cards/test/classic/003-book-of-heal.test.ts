@@ -25,7 +25,9 @@ function healedAmounts(s: Scenario): number[] {
 describe("C #3 Book of Heal", () => {
   it("declares one target, any unit or hero on either side (R19), and runs one script on both faces", () => {
     expect(def.id).toBe(BOOK);
-    expect(base.targets).toEqual([{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit", "hero"] } }]);
+    expect(base.targets).toEqual([
+      { kind: "target", min: 1, max: 1, aim: "help", filter: { side: "any", of: ["unit", "hero"] } },
+    ]);
     expect(radiant).toBe(base);
   });
 

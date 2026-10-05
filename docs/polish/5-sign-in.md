@@ -508,9 +508,8 @@ export function retryAfterMsOf(error: unknown): number | null;
 ```ts
 export const landingTestid = { root: "landing", signIn: "landing-sign-in", account: "landing-account",
   playAi: "landing-play-ai", playOnline: "landing-play-online", buildDecks: "landing-build-decks",
-  fan: "landing-card-fan", howItPlays: "landing-how-it-plays", hotseat: "landing-hotseat" } as const;
+  fan: "landing-card-fan", hotseat: "landing-hotseat" } as const;
 export function landingFanCardTestid(index: number): string; // `landing-fan-card-${index}`, 0..4
-export function landingStepTestid(index: number): string;    // `landing-step-${index}`, 0..3
 export const loginTestid = { form: "login-form", email: "login-email", password: "login-password",
   submit: "login-submit", togglePassword: "login-toggle-password", error: "login-error",
   mode: "login-mode", notice: "login-notice", emailError: "login-email-error",
@@ -626,7 +625,7 @@ No `GameEvent`, no engine or view change, no settings module, and no new runtime
 35. **B35** No destination is ever read from a URL. Every post-auth navigation goes to a `paths` value, and `/login?next=https://evil.example` followed by a sign-in lands on `/decks`.
 36. **B36** No source file under `apps/web/src` uses `dangerouslySetInnerHTML` or assigns `innerHTML`. Test files are not scanned: they are never bundled (the integration branch narrowed this when the effects layer's tests built fixture DOM that way).
 37. **B37** `/` renders `LandingRoute` with CTAs to `/practice` (Play vs AI), `/play` (Play online) and `/decks` (Build decks). The corner slot holds `landing-sign-in` when anonymous, `landing-account` when signed in, and nothing while loading, for at most `GATE_SLOW_NOTICE_SECONDS`, after which it offers what this device's storage suggests.
-38. **B38** The hero shows the `JackiOh` wordmark and an `aria-hidden` fan of five cards (`landing-fan-card-0..4`). `data-motion` is `reduced` under `prefers-reduced-motion`. The four `landing-step-<i>` tiles state `MAX_MANA`, `UNIT_ZONES`, `DECK_SIZE` and `LOADOUT_DECKS` from config.
+38. **B38** The hero shows the `JackiOh` wordmark and an `aria-hidden` fan of five cards (`landing-fan-card-0..4`). `data-motion` is `reduced` under `prefers-reduced-motion`.
 39. **B39** At 360, 390, 768 and 1280 px wide, neither the landing nor the code field overflows horizontally (`documentElement.scrollWidth <= innerWidth`), and every landing CTA and the invite input are visible.
 40. **B40** The gate's error panel offers `gate-retry` (which re-reads `/api/auth/me` and opens the gate when it succeeds), `gate-home` and `gate-sign-out`. The banned panel offers `gate-home` and `gate-sign-out`, and the 404 panel offers `not-found-home`.
 

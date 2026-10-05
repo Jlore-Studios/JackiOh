@@ -39,7 +39,9 @@ function offered(s: Scenario): string[] {
 describe("C+ #57 Book of Stats", () => {
   it("is a (1) Spell, Book that declares one Unit target on either side", () => {
     expect(def.id).toBe(BOOK);
-    expect(base.targets).toEqual([{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit"] } }]);
+    expect(base.targets).toEqual([
+      { kind: "target", min: 1, max: 1, aim: "help", filter: { side: "any", of: ["unit"] } },
+    ]);
     expect(radiant).toBe(base);
   });
 
