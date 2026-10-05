@@ -2476,7 +2476,7 @@
       },
       "ci_run_id": 37297489784,
       "ci_sha": "5f724b531d6f9b67f6b82afe817adbc866dfb1db",
-      "cross_rounds": 1,
+      "cross_rounds": 2,
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
@@ -2493,12 +2493,25 @@
       },
       "interruptions": 0,
       "issue": 255,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "Unresolved merge-conflict markers are committed in SPEC.md, so the spec is unparsable and rulings coverage cannot pass.",
+          "evidence": "git grep on HEAD shows <<<<<<< HEAD (x2) at SPEC.md:1877-1878, =======, and >>>>>>> origin/main at :1883/:1885 bracketing the R661 row against main's R662 row.",
+          "severity": "blocking",
+          "where": "SPEC.md:1877"
+        },
+        {
+          "claim": "Unresolved merge-conflict markers are committed in rulings.test.ts, so typecheck and the R661 proving test cannot run.",
+          "evidence": "git grep on HEAD shows <<<<<<< HEAD (x2) at rulings.test.ts:4044-4045 through >>>>>>> origin/main at :4074/:4085, with one marker sitting inside the R667 it-block; the R661 provenIn entry is trapped inside the conflict.",
+          "severity": "blocking",
+          "where": "packages/engine/test/rulings.test.ts:4044"
+        }
+      ],
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-05T12:13:43Z",
+      "queued_at": "2026-10-05T12:19:43Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "37308087765",
       "self_check_findings": [
@@ -2521,7 +2534,7 @@
           "where": "checks"
         }
       ],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-05T12:14:45Z",
       "stop_requested": false,
       "taken_asks": [],
