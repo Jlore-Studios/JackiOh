@@ -58,8 +58,12 @@ export const SHOWCASE_BURST_MS = 420;
 
 /**
  * R502, R436: a cast on draw and a Call to Chaos roll wait for the animation runner to reach their
- * event, so they appear as the board plays them. The longest they wait: a whole burst at the slowest
- * effects speed, and one hold more. The runner going idle, draining or resetting lets them go at once.
+ * event, so they appear as the board plays them. Issue #124: so does every card another card casts.
+ * The longest they wait past the runner's last progress: a whole burst at the slowest effects speed,
+ * and one hold more. Every entry the runner starts restarts the wait while anything is still gated,
+ * so a burst longer than one budget (Jogg's Box's ten casts, each with its own CAST_BUDGET_MS) never
+ * times out while the runner is still reaching it. The runner going idle, draining or resetting lets
+ * them go at once.
  */
 export const SHOWCASE_GATE_MAX_MS = Math.ceil(BURST_BUDGET_MS / FX_SPEED_MIN) + SHOWCASE_HOLD_MS;
 

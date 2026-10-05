@@ -239,7 +239,10 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
   }, [show]);
 
   // What waits for the runner (R502, R436): let go as the runner starts the entry holding its event,
-  // or all at once when the runner goes idle, drains or resets, or when SHOWCASE_GATE_MAX_MS runs out.
+  // or all at once when the runner goes idle, drains or resets, or when SHOWCASE_GATE_MAX_MS runs out
+  // without the runner starting anything. Issue #124: every start restarts that wait while anything is
+  // still gated, so a burst the runner is still working through (Jogg's Box's ten casts, each with its
+  // own CAST_BUDGET_MS) never times out mid-burst, however many casts it holds.
   const gated = useRef<Gated[]>([]);
   const gateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const release = useCallback((match?: (event: GameEvent) => boolean) => {
@@ -253,6 +256,15 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
     }
     for (const item of go) item.release(match !== undefined);
   }, []);
+  /** Restarts the gate's wait while something is still gated; a no-op with nothing waiting. */
+  const refreshGate = useCallback(() => {
+    if (gated.current.length === 0) return;
+    if (gateTimer.current !== null) clearTimeout(gateTimer.current);
+    gateTimer.current = setTimeout(() => {
+      gateTimer.current = null;
+      release();
+    }, SHOWCASE_GATE_MAX_MS);
+  }, [release]);
   const gate = useCallback(
     (event: GameEvent, then: (reached: boolean) => void) => {
       if (queue === undefined) {
@@ -260,29 +272,28 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
         return;
       }
       gated.current.push({ event, release: then });
-      if (gateTimer.current === null) {
-        gateTimer.current = setTimeout(() => {
-          gateTimer.current = null;
-          release();
-        }, SHOWCASE_GATE_MAX_MS);
-      }
+      refreshGate();
     },
-    [queue, release],
+    [queue, refreshGate],
   );
 
   // A LAYOUT effect, so it listens before Game (the parent) feeds the runner this view's events.
   useLayoutEffect(() => {
     if (queue === undefined) return undefined;
     const onSignal = (signal: RunnerSignal): void => {
-      if (signal.kind === "start") release((event) => signal.entry.events.some((played) => sameEvent(played, event)));
-      else release();
+      if (signal.kind === "start") {
+        release((event) => signal.entry.events.some((played) => sameEvent(played, event)));
+        // Issue #124: the runner is still working through the burst, so what is still gated keeps
+        // its full wait. A no-op once nothing is gated.
+        refreshGate();
+      } else release();
     };
     const unsubscribe = queue.subscribeSignals(onSignal);
     return () => {
       unsubscribe();
       release();
     };
-  }, [queue, release]);
+  }, [queue, release, refreshGate]);
 
   useEffect(
     () => () => {
