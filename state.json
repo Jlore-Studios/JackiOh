@@ -3007,7 +3007,7 @@
       "action": "review",
       "asks": [],
       "difficulty": "easy",
-      "failures": 1,
+      "failures": 2,
       "feedback_since": "2026-10-05T18:43:22Z",
       "issue": 323,
       "kind": "review",
