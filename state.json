@@ -508,6 +508,12 @@
       "lines": [
         "/harness build"
       ]
+    },
+    "c:5994560213": {
+      "at": "2026-10-05T12:35:47Z",
+      "lines": [
+        "/harness build override the plan looks good"
+      ]
     }
   },
   "items": {
