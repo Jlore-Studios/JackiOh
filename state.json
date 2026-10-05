@@ -2138,10 +2138,14 @@
       "votes": {
         "approvals": [],
         "builder": "cognition",
-        "rejections": [],
+        "rejections": [
+          "muse"
+        ],
         "reviews": [],
         "sha": "e9a339891fe6aa0a761c846fc64002157dd98440",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "218": {
