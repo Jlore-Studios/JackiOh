@@ -22,7 +22,7 @@
 //   Another card reuses a recipe by adding its definition to `CARD_FX`. The table is keyed by the
 //   `cardPlayed`'s `defId`, which a hidden play never has, so a hidden card never keys a recipe.
 //
-// - R658: the same table gives a few marquee Legendary and Mythic Units an entrance of their own
+// - R660: the same table gives a few marquee Legendary and Mythic Units an entrance of their own
 //   (entrances.ts). An entrance key claims the `summoned` that puts its own card into a unit zone,
 //   keyed by that event's `defId`, whoever cast it, and replaces the rarity entrance the row plans.
 //
@@ -176,7 +176,7 @@ export const CARD_RECIPES: { readonly [K in Exclude<CardFxKey, EntranceKey>]: Ca
 export const CARD_FX: Readonly<Record<string, CardFxKey>> = {
   "core-021": "manaCrack", // #21 Hinder
   "core-027": "bloodDrain", // #27 Blood Ridden Glowy Jelly Bean
-  // R658: marquee Legendary and Mythic Units' own entrances (entrances.ts).
+  // R660: marquee Legendary and Mythic Units' own entrances (entrances.ts).
   "core-100": "voidCollapse", // #100 Ceaseless Void (Mythic)
   "classic-080": "bigBoom", // BOOM! Big Max
   "classic-045": "titanBloom", // Nature Titan
@@ -188,7 +188,7 @@ function keyOf(defId: string): CardFxKey | undefined {
   return Object.prototype.hasOwnProperty.call(CARD_FX, defId) ? CARD_FX[defId] : undefined;
 }
 
-/** R658: a marquee Unit's own entrance, for the `summoned` that puts it into a unit zone; else null. */
+/** R660: a marquee Unit's own entrance, for the `summoned` that puts it into a unit zone; else null. */
 function planEntrance(event: GameEvent, p: CardFxPlan): CardFxResult | null {
   const summoned = entranceEvent(event, HIDDEN_ID);
   if (summoned === null) return null;

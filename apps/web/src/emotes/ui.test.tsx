@@ -275,3 +275,49 @@ describe("#219 each voice item carries its arc drop as the --emote-arc-drop the 
     expect(items[0]?.style.transform).toBe("");
   });
 });
+
+// #257: a hero that is not a target is drawn at 0.9 opacity (board.css), which makes it a stacking
+// context, so the show's and the menus' z-indexes counted only inside it: the field, which follows
+// the opponent's seat in the document, painted over their bubble, sticker and Mute menu. The sheet
+// lifts the hero and its seat while a piece is up, and draws the hero at full strength. Whether
+// anything still covers a piece takes a layout engine (emotes-layout.cy.tsx); what the sheets pin is
+// the lift itself, and that it stays under every overlay the issue keeps above an emote.
+function sheet(path: string): string {
+  return readFileSync(join(dirname(fileURLToPath(import.meta.url)), path), "utf8");
+}
+
+/** The z-index of the first rule whose selector is `selector`, at the start of a line. */
+function zIndexOf(css: string, selector: string): number {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(`^${escaped}\\s*\\{[^}]*z-index:\\s*(\\d+)`, "m").exec(css);
+  if (match === null) throw new Error(`no z-index for ${selector}`);
+  return Number(match[1]);
+}
+
+/** The lift emotes.css gives a hero, and its seat, while a bubble, a sticker or a menu is up. */
+function emoteLift(): number {
+  return zIndexOf(emotesCss, ".seat:has(.emote-show, .emote-menu),\n.hero:has(.emote-show, .emote-menu)");
+}
+
+describe("#257 a hero with an emote up is lifted over the board, under every overlay", () => {
+  it("#257 the hero and its seat are lifted while a piece is up, and the hero is drawn at full strength", () => {
+    expect(emoteLift()).toBeGreaterThan(zIndexOf(sheet("../game/board.css"), '.board .hero[data-glow="ready"]'));
+    expect(emotesCss).toMatch(/^\.hero\[data-legal\]:has\(\.emote-show, \.emote-menu\)\s*\{[^}]*opacity:\s*1;/m);
+  });
+
+  it("#257 the lift stays under the pile notices, the turn fuse, the effects layer, the result screen, the prompt and the settings", () => {
+    const overlays: [string, string][] = [
+      ["../game/overflow.css", ".seat:has(.pile-notice)"],
+      ["../game/clock.css", ".clock-fuse"],
+      ["../fx/fx.css", ".fx-layer"],
+      ["../game/animations.css", '[data-testid="result-overlay"]'],
+      ["../game/animations.css", ".result-scrim"],
+      ["../game/prompt.css", ".prompt-scrim"],
+      ["../settings/settings.css", ".settings-scrim"],
+    ];
+    const lift = emoteLift();
+    for (const [file, selector] of overlays) {
+      expect(lift, `${selector} in ${file}`).toBeLessThan(zIndexOf(sheet(file), selector));
+    }
+  });
+});

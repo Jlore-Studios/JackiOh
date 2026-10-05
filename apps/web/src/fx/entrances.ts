@@ -1,4 +1,4 @@
-// R658: the bespoke entrances of a handful of marquee Legendary and Mythic Units (#258).
+// R660: the bespoke entrances of a handful of marquee Legendary and Mythic Units (#258).
 //
 // Every Legendary or Mythic Unit gets its rarity's entrance (cues.ts `summon`: rays, a gold or
 // prismatic burst and extra trauma). A card listed in `CARD_FX` (cardFx.ts) under one of the keys

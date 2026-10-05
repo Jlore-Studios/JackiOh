@@ -103,7 +103,9 @@ src/
     highlights.css      the green and yellow glow colours, imported after board.css
     drag/               drag to play: pointer events for mouse and touch, the targeting
                         arrow and reticle, and a dropped card held where it landed until
-                        the board shows the play; click-click keeps working in every mode
+                        the board shows the play; a build lifted again from its picks, a
+                        backrow card dropped on the board, a prompt option dragged out of its
+                        panel (R658, OptionDrag.tsx); click-click keeps working in every mode
   audio/                sound (SPEC §10.11); index.ts is the barrel Game.tsx imports, appAudio.ts
                         the page-wide unlock and UI ticks main.tsx holds, mix.ts the buses and limiter
     engine.ts sfx.ts unlock.ts settings.ts   lazy AudioContext and buses, procedural SFX, gesture unlock, the settings store
@@ -129,7 +131,7 @@ src/
     castOnDraw.ts       R502: which cardPlayed is a cast on draw, read off the order of the redacted events
     cardFx.ts           R502: the cast on draw's burst out of the Deck pile, and CARD_FX, one table from a card
                         to its signature recipe (#21 Hinder's mana crack, #27 Blood Ridden's blood drain)
-    entrances.ts        R658: the marquee Legendary and Mythic Units' own entrances, keyed in CARD_FX, which
+    entrances.ts        R660: the marquee Legendary and Mythic Units' own entrances, keyed in CARD_FX, which
                         replace the rarity entrance on their summon into a unit zone
     manaMarks.ts        R502: the crystals the next refresh will not fill, read off the view's rider badge and
                         marked on the board's trays (drawn in every mode: it is information)
