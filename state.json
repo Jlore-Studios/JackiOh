@@ -472,6 +472,12 @@
       "lines": [
         "/harness revise No code change is needed: every check is green and the branch is mergeable. The second review failed only because Devin's answer couldn't be read three times (around 07:18Z). Please review the current head with a medium or strong model and, if it approves, let auto-merge take it."
       ]
+    },
+    "c:5992187785": {
+      "at": "2026-10-05T09:57:27Z",
+      "lines": [
+        "/harness revise Fix the PR's own new component spec, `stack-wheel-and-sweeps.cy.tsx`, which fails 4 of its 6 tests in `e2e component (chrome)`: read the failures, fix the component or the spec (whichever is wrong), and keep `ANIMATIONS` total and `data-animating` accurate. Also check `24-library-browse` on `e2e electron (6/8)`. It failed once there but passed on Chrome, so confirm whether this branch touches what it reads before calling it flaky. #124 is now `difficulty:hard`, since three medium-model tries didn't get CI green."
+      ]
     }
   },
   "items": {
