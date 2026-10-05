@@ -33,8 +33,9 @@ function plagued(defId: string, n: number, extra: Record<string, unknown> = {}):
 }
 
 function manaGained(s: Scenario): number {
-  // The cast paid 3 from 4; anything above 1 is the Spell's gain (read off p1's own view, §10.8).
-  return s.view("p1").you.mana.current - 1;
+  // The cast paid its (4) from 4 (balance patch 1), so whatever is left is the Spell's gain (read off
+  // p1's own view, §10.8).
+  return s.view("p1").you.mana.current;
 }
 
 function unitDefs(s: Scenario, player: "p1" | "p2"): (string | null)[] {

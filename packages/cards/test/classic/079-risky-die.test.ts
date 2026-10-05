@@ -9,6 +9,7 @@ import { reduce, stepParam, type GameState } from "@jackioh/engine";
 import type { Action, GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { base, def, radiant } from "../../src/scripts/classic/079-risky-die";
+import { askingCastOnDraw } from "../_askingCast";
 import { scenario, type Scenario } from "../_harness";
 
 const RISKY = "classic-079";
@@ -19,7 +20,6 @@ const ARMOR = "core-073"; // (2) Field Spell
 const MENACE = "core-019"; // (3) Unit
 const DIVIDEND = "core-024"; // (X) Spell
 const CN_VIRUS = "core-090-1"; // (1) Spell, Cast on draw
-const HINDER = "core-021"; // (0) Spell, Cast on draw: … Discard 1.
 const VANILLA = "core-008"; // (1) Unit
 
 function drawnIds(events: readonly GameEvent[], player: PlayerId = "p1"): string[] {
@@ -110,9 +110,10 @@ describe("C #79 Risky Die", () => {
     });
 
     it("§9.3 a cast on draw that asks pauses the draws; after a JSON round trip they finish, and only the drawn cards are judged", () => {
-      const s = scenario({ p1: { hand: [RISKY, VANILLA], library: [HINDER, MENACE, STOCKPILE, FILLER] } });
+      const s = scenario({ p1: { hand: [RISKY, VANILLA], library: [MENACE, STOCKPILE, FILLER] } });
+      askingCastOnDraw(s);
       s.play(RISKY);
-      // Hinder is cast on the first draw and asks for its discard (R16).
+      // The asking cast is cast on the first draw and asks for its discard.
       expect(s.state.pending?.kind).toBe("hand");
       const vanilla = s.card(VANILLA);
       const round = JSON.parse(JSON.stringify(s.state)) as GameState;

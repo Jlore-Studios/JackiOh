@@ -21,6 +21,7 @@
 import { reduce, stepParam, type GameState } from "@jackioh/engine";
 import type { Action, GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
+import { askingCastOnDraw } from "../_askingCast";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/052-final-gambit";
 
@@ -35,7 +36,6 @@ const GARY = "core-004"; // 1/1
 const LUNAR = "core-035"; // (1) Spell: deal 3 damage to a target.
 const STOCKPILE = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
 const BLOOD_BEAN = "core-027"; // Cast on draw: make a random hand card Radiant. Lose 5 health.
-const HINDER = "core-021"; // Cast on draw: their next refresh −1. Discard 1 (a hand prompt, R158).
 const GOING_LONG = "core-084"; // Field Spell: your hero has Armor 2.
 const ANTI_ONESHOT = "core-073"; // Field Spell: your hero can't take more than 5 damage at once.
 const FILLER = "core-005";
@@ -67,6 +67,8 @@ function lethalAttack(opts: {
   p1Backrow?: readonly Gambit[];
   p1?: Partial<SideSetup>;
   p2?: Partial<SideSetup>;
+  /** Runs on the built game before the attack (a fixture placed in a deck). */
+  prepare?: (s: Scenario) => void;
 }): Scenario {
   const s = scenario({
     p1: {
@@ -79,6 +81,7 @@ function lethalAttack(opts: {
     p2: { hand: [FILLER], field: [opts.attacker], library: DECK, ...opts.p2 },
     active: "p2",
   });
+  opts.prepare?.(s);
   s.attack(opts.attacker, "hero");
   return s;
 }
@@ -325,7 +328,7 @@ describe("C #52 Final Gambit", () => {
     });
 
     it("a prompt its draws open pauses the follow-up, and a round-tripped state answers to the same game", () => {
-      const s = lethalAttack({ attacker: VANILLA, health: 4, p1: { library: [HINDER, FILLER, FILLER, FILLER] } });
+      const s = lethalAttack({ attacker: VANILLA, health: 4, p1: { library: [FILLER, FILLER, FILLER] }, prepare: (g) => void askingCastOnDraw(g) });
       const pending = s.state.pending;
       expect(pending).not.toBeNull();
       expect(pending?.playerId).toBe("p1");
@@ -348,7 +351,7 @@ describe("C #52 Final Gambit", () => {
       expect(live.error).toBeUndefined();
       expect(frozen.state).toEqual(live.state);
       expect(frozen.events).toEqual(live.events);
-      // The rest of the follow-up ran: Hinder's draw-again and the two draws after it.
+      // The rest of the follow-up ran: the asking cast's draw-again and the two draws after it.
       expect(live.state.players.p1.library).toHaveLength(0);
     });
 

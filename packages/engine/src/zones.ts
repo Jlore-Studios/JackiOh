@@ -301,6 +301,15 @@ export function firstFreeZone(state: GameState, player: PlayerId, row: Row): Zon
   return openZones(state, player, row)[0] ?? null;
 }
 
+/**
+ * R64, R688: where a summon, a recruit or a move with no named zone enters — the leftmost open zone,
+ * else the leftmost empty Locked one (a Lock refuses only plays), or null when the row is full. Plays
+ * and casts keep `firstFreeZone`.
+ */
+export function firstEntryZone(state: GameState, player: PlayerId, row: Row): ZoneSlot | null {
+  return firstFreeZone(state, player, row) ?? slotsOf(player, row).find((ref) => takesMove(state, ref)) ?? null;
+}
+
 export function zoneOf(ref: ZoneSlot): Zone {
   return { z: "field", player: ref.player, row: ref.row, lane: ref.lane };
 }

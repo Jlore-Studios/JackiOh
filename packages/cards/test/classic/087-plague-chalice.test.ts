@@ -136,8 +136,7 @@ describe("C #87 Plague Chalice", () => {
         p2: { hand: [ANCHOR, FILLER], library: [HINDER, ...lib(3)] },
       });
 
-      s.endTurn(); // p2 draws Hinder and casts it, paying 0; its discard is picked as the cast begins (R70)
-      s.answer(s.hand("p2").find((card) => card.defId === FILLER)?.id ?? "");
+      s.endTurn(); // p2 draws Hinder and casts it, paying 0; its discard is random, with no prompt (R682)
 
       expect(countered(s.events)).toEqual([]);
       expect(s.events.some((event) => event.type === "discarded")).toBe(true);
@@ -152,7 +151,6 @@ describe("C #87 Plague Chalice", () => {
       const hinder = s.pile("p2", "library")[0] as CardInstance;
 
       s.endTurn();
-      s.answer(s.hand("p2").find((card) => card.defId === FILLER)?.id ?? "");
 
       expect(countered(s.events)).toEqual([hinder.id]);
       expect(s.state.pending).toBeNull();
@@ -179,9 +177,9 @@ describe("C #87 Plague Chalice", () => {
       const chalice = s.card(CHALICE);
       const menace = s.hand("p1").find((card) => card.defId === MENACE) as CardInstance;
 
-      // The (2) Bringer resolves at a count of 1, and both its placements go on the Chalice.
+      // The (2) Bringer resolves at a count of 1, and both its placements go on the Chalice, one pick (R689).
       s.play(BRINGER);
-      s.answer(chalice.id).answer(chalice.id);
+      s.answer(chalice.id);
       expect(s.card(chalice).counters.plague).toBe(3);
       s.play(menace);
 

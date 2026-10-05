@@ -143,7 +143,8 @@ describe("R70: a cast-on-draw card is cast through §10.5's steps, and is whole 
     // draw repeats (§2.4) and brings a second Reno.
     const g = scenario({
       // The Radiant /fullsend: the face that grants "Combo: Draw 1" since patch v0.1.1.
-      p1: { hand: [{ def: FULLSEND, radiant: true }, VANILLA], library: [HINDER, RENO, RENO, RENO, RENO] },
+      // A Radiant Hinder, which discards nothing (R431), so both Renos stay in hand to be counted.
+      p1: { hand: [{ def: FULLSEND, radiant: true }, VANILLA], library: [{ def: HINDER, radiant: true }, RENO, RENO, RENO, RENO] },
       p2: { field: [{ def: VANILLA, lane: 1 }], library: [RENO, RENO] },
     });
 

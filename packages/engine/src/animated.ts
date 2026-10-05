@@ -42,7 +42,7 @@ import { isTurnOf, type CardInstance, type GameState, type Position } from "./st
 import {
   actsOnField,
   cardAt,
-  firstFreeZone,
+  firstEntryZone,
   homeOf,
   isCarried,
   isOpen,
@@ -93,7 +93,7 @@ export function isAnimated(state: GameState, card: CardInstance): boolean {
 /** B3.1 rule 2: where an animating card goes — its lane's unit zone when open, else R64's leftmost. */
 function unitZoneFor(state: GameState, player: PlayerId, lane: number): ZoneSlot | null {
   const same: ZoneSlot = { player, row: "units", lane };
-  return isOpen(state, same) ? same : firstFreeZone(state, player, "units");
+  return isOpen(state, same) ? same : firstEntryZone(state, player, "units");
 }
 
 /**
@@ -152,7 +152,7 @@ export function returnHome(sink: FieldSink, card: CardInstance): boolean {
   } else {
     // A home on the other side belongs to the side the card left: that zone is free again.
     if (home !== undefined) releaseHome(state, card.id);
-    to = firstFreeZone(state, from.player, "backrow");
+    to = firstEntryZone(state, from.player, "backrow");
     if (to === null) return false;
   }
 

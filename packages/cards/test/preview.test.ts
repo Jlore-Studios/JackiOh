@@ -60,8 +60,9 @@ const NEW_SET_PREVIEWED = [TWICE_FORWARD, DATACENTER_FIRE];
 /** Patch v0.2.0's Classic+ cards #1–#39 that declare one (R280), each proved in its own test file. */
 const SNAKE = "classicplus-003"; // C+ #3's hits: test/classic-plus/003-second-amendment-snake.test.ts
 const FROZEN_WASTES = "classicplus-012-6"; // C+ #12.6's exiles: test/classic-plus/012-6-frozen-wastes.test.ts
-const BOOK_WORM = "classicplus-039"; // C+ #39 Book Worm's N: test/classic-plus/039-book-worm.test.ts
-const CLASSIC_PLUS_C_PREVIEWED = [SNAKE, FROZEN_WASTES, BOOK_WORM];
+// C+ #39 Book Worm previewed its N until balance patch 1; its count is now the Plague Tokens on it,
+// which the board already shows.
+const CLASSIC_PLUS_C_PREVIEWED = [SNAKE, FROZEN_WASTES];
 
 const RAPID_REPLENISH = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play — a free anchor
 const TEMPO_TIMMY = "core-011"; // 1-cost Unit
@@ -925,8 +926,8 @@ describe("C #43 Plague Nuke previews the mana it would give now (R280)", () => {
   }
 
   function gained(s: Scenario): number {
-    // The Spell paid 3 of 4; read off p1's own view (§10.8).
-    return s.view("p1").you.mana.current - 1;
+    // The Spell paid its (4) of 4 (balance patch 1), so what is left is the gain; read off p1's own view (§10.8).
+    return s.view("p1").you.mana.current;
   }
 
   for (const face of FACES) {

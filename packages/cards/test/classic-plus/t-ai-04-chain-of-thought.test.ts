@@ -5,6 +5,7 @@
 
 import { CHAIN_OF_THOUGHT_REPEATS, hashState, reduce, type GameState } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
+import { askingCastOnDraw } from "../_askingCast";
 import { scenario, type PileSetup, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/t-ai-04-chain-of-thought";
 
@@ -14,7 +15,7 @@ const RAPID = "core-010"; // (0) Spell
 const D_FENDER = "core-001"; // (2) Unit
 const MENACE = "core-019"; // (3) Unit
 const ADAPTIVE_UI = "core-074"; // (X) Spell
-const HINDER = "core-021"; // (0) Spell, cast on draw; the base face asks its caster to discard 1 (R431)
+const HINDER = "core-021"; // (0) Spell, cast on draw; its Radiant face asks nothing
 const VANILLA = "core-008"; // (1) Unit, the spare in hand
 const PALANTIR = "classic-004"; // (1) Field Spell: "Aura: Your opponent can't draw more than 1 card each turn."
 
@@ -109,7 +110,9 @@ describe("T-AI-4 Chain of Thought", () => {
     });
 
     it("R158 R113 a cast-on-draw card that asks pauses mid-draw; answered after a JSON round trip, the chain has ended", () => {
-      const s = chain([TIMMY, HINDER, TIMMY, TIMMY]).play(CHAIN);
+      const s = chain([TIMMY, TIMMY, TIMMY]);
+      const asking = askingCastOnDraw(s, "p1", 1);
+      s.play(CHAIN);
       expect(s.state.pending?.kind).toBe("hand");
 
       const revived = JSON.parse(JSON.stringify(s.state)) as GameState;
@@ -127,8 +130,8 @@ describe("T-AI-4 Chain of Thought", () => {
       s.answer(selection);
       expect(hashState(resumed.state)).toBe(hashState(s.state));
 
-      // Timmy, then Hinder cast (discarding the Vanilla), whose repeat drew the second Timmy; the third stays.
-      s.expectInZone(HINDER, "graveyard");
+      // Timmy, then the asking cast (discarding the Vanilla), whose repeat drew the second Timmy; the third stays.
+      s.expectInZone(asking, "graveyard");
       expect(s.hand("p1").map((card) => card.defId).sort()).toEqual([TIMMY, TIMMY]);
       expect(s.pile("p1", "library").map((card) => card.defId)).toEqual([TIMMY]);
     });

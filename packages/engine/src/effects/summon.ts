@@ -21,7 +21,7 @@ import { exitMark } from "../stays";
 import { copyTuning } from "../tuning";
 import {
   fillBoardZones,
-  firstFreeZone,
+  firstEntryZone,
   freshFaceDownId,
   landsFaceDown,
   isEmpty,
@@ -93,7 +93,7 @@ function canPlace(ctx: EffectContext, ref: ZoneSlot, stack: boolean): boolean {
 
 /** R64 with no lane named, the named lane otherwise; null when the summon fizzles (§3.2). */
 function zoneFor(ctx: EffectContext, player: PlayerId, row: Row, at: SummonPlacement): ZoneSlot | null {
-  if (at.lane === undefined) return firstFreeZone(ctx.state, player, row);
+  if (at.lane === undefined) return firstEntryZone(ctx.state, player, row);
   if (at.lane < 1 || at.lane > rowSize(row)) return null;
   const ref: ZoneSlot = { player, row, lane: at.lane };
   return canPlace(ctx, ref, at.stack === true) ? ref : null;
@@ -514,7 +514,7 @@ export function recruitAll(
         const card = recruitPile(at, pile, whose).find((candidate) => candidate.id === id);
         if (card === undefined) return;
         const row = rowOf(cardTypeOf(at.state, card));
-        if (row === null || firstFreeZone(at.state, player, row) === null) return;
+        if (row === null || firstEntryZone(at.state, player, row) === null) return;
         summonExisting(at, card, player, {});
       },
     }));

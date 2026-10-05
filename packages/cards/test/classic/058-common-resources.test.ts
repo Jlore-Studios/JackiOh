@@ -13,6 +13,7 @@ import { drawsThisTurn, reduce, stepParam, type GameState } from "@jackioh/engin
 import type { Action, GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { base, def, radiant } from "../../src/scripts/classic/058-common-resources";
+import { askingCastOnDraw } from "../_askingCast";
 import { scenario, type Scenario } from "../_harness";
 
 const RESOURCES = "classic-058";
@@ -22,7 +23,6 @@ const MENACE = "core-019"; // (3) Unit 9/9
 const STOCKPILE = "core-005"; // (1) Spell
 const CN_VIRUS = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage
 const FILLER = "core-010"; // (0) Spell
-const HINDER = "core-021"; // (0) Spell, Cast on draw: your opponent has 1 less mana next turn. Discard 1.
 const INCOME_TAX = "classic-009"; // Trap: when the cards your opponent has drawn in a turn reach 2 …
 
 function drawnBy(events: readonly GameEvent[], player: PlayerId): Extract<GameEvent, { type: "drawn" }>[] {
@@ -110,7 +110,9 @@ describe("C #58 Common Resources", () => {
     });
 
     it("R58 R549 §9.3 a cast on draw that asks is yours to answer, its repeat draws from your own deck, and the answer finishes the turn after a JSON round trip", () => {
-      const s = waiting({ p1Hand: [FILLER, VANILLA], p2Library: [VANILLA, MENACE, HINDER] });
+      const s = waiting({ p1Hand: [FILLER, VANILLA], p2Library: [VANILLA, MENACE] });
+      // The bottom of p2's deck, which Common Resources draws: a cast on draw that asks.
+      const asking = askingCastOnDraw(s, "p2", 2);
       s.endTurn();
       const pending = s.state.pending;
       expect(pending).toMatchObject({ playerId: "p1", kind: "hand" });
@@ -128,11 +130,11 @@ describe("C #58 Common Resources", () => {
       expect(live.error).toBeUndefined();
       expect(revived.state).toEqual(live.state);
       // R70, R81: the cast's declared discard was asked as the cast began; answered, it is p1's play.
-      expect(live.events.find((event) => event.type === "cardPlayed" && event.defId === HINDER)).toMatchObject({ player: "p1" });
+      expect(live.events.find((event) => event.type === "cardPlayed" && event.instanceId === asking.id)).toMatchObject({ player: "p1" });
       const p1 = live.state.players.p1;
       expect(p1.graveyard.map((card) => [card.defId, card.owner])).toEqual([
         [VANILLA, "p1"],
-        [HINDER, "p1"],
+        [asking.defId, "p1"],
       ]);
       // §2.4's repeat of the draw and the turn's own draw are p1's own draws, from p1's deck: only the
       // one bottom card left p2's deck.

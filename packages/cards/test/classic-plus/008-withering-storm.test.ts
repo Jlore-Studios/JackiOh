@@ -14,6 +14,7 @@
 import { reduce, stepParam, type CardInstance, type GameState } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
+import { askingCastOnDraw } from "../_askingCast";
 import { scenario, type Scenario, type PileSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/008-withering-storm";
 
@@ -21,7 +22,6 @@ const STORM = "classicplus-008";
 const VANILLA = "core-008"; // (1) 4/4: a Degrade can change its cost or its stats.
 const IMMUTABLE = { def: "core-019", radiant: true } as const; // Radiant Midrange Menace: Immutable.
 const NETHER = "core-088"; // (4) Spell, no keywords, no numbers: no Degrade reaches it.
-const HINDER = "core-021"; // Cast on draw: … Discard 1 (a hand prompt during the draw, R431).
 const FILLER = "core-010";
 const STOCKPILE = "core-005";
 
@@ -156,7 +156,8 @@ describe("C+ #8 Withering Storm", () => {
     });
 
     it("R113 a prompt the draw opens survives a JSON round trip, and the Degrades are not made again", () => {
-      const s = setup([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA], false, undefined, [HINDER, STOCKPILE]);
+      const s = setup([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA], false, undefined, [STOCKPILE]);
+      askingCastOnDraw(s);
 
       s.play(STORM);
 

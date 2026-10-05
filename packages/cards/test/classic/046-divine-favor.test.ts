@@ -10,6 +10,7 @@ import { stepParam, type GameState, reduce } from "@jackioh/engine";
 import type { Action, GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { base, def, radiant } from "../../src/scripts/classic/046-divine-favor";
+import { askingCastOnDraw } from "../_askingCast";
 import { scenario } from "../_harness";
 
 const FAVOR = "classic-046";
@@ -18,7 +19,6 @@ const FILLER = "core-010"; // (0) Spell
 const STOCKPILE = "core-005";
 const MENACE = "core-019";
 const CN_VIRUS = "core-090-1"; // Cast on draw
-const HINDER = "core-021"; // Cast on draw: … Discard 1 (a prompt).
 
 function drawn(events: readonly GameEvent[], player: PlayerId = "p1"): GameEvent[] {
   return events.filter((event) => event.type === "drawn" && event.player === player);
@@ -77,7 +77,8 @@ describe("C #46 Divine Favor", () => {
     });
 
     it("§9.3 a cast on draw that asks ends it too; the answer finishes that draw's chain, after a JSON round trip", () => {
-      const s = scenario({ p1: { hand: [FAVOR, FILLER], library: [HINDER, MENACE, MENACE] }, p2: { hand: many(4) } });
+      const s = scenario({ p1: { hand: [FAVOR, FILLER], library: [MENACE, MENACE] }, p2: { hand: many(4) } });
+      askingCastOnDraw(s);
       s.play(FAVOR);
       expect(s.state.pending?.kind).toBe("hand");
       const round = JSON.parse(JSON.stringify(s.state)) as GameState;
@@ -92,7 +93,7 @@ describe("C #46 Divine Favor", () => {
       const revived = reduce(round, action);
       expect(live.error).toBeUndefined();
       expect(revived.state).toEqual(live.state);
-      // Hinder's chain repeats into one Menace; Divine Favor asks for no more.
+      // The asking cast's chain repeats into one Menace; Divine Favor asks for no more.
       expect(live.state.players.p1.hand.map((card) => card.defId)).toEqual([MENACE]);
       expect(live.state.players.p1.library).toHaveLength(1);
     });

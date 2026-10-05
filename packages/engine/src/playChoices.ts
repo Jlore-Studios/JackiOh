@@ -63,6 +63,7 @@ import {
   activeUnitsOf,
   cardAt,
   carrierZonesFor,
+  firstEntryZone,
   firstFreeZone,
   isOpen,
   isLocked,
@@ -753,7 +754,7 @@ export function interceptorFitsDecl(
 ): boolean {
   const defender = interceptor.controller;
   if (!sidesFor(player, decl).includes(defender) || !pickKindsFor(decl).includes("unit")) return false;
-  const zone = firstFreeZone(state, defender, "units");
+  const zone = firstEntryZone(state, defender, "units");
   if (zone === null) return false;
   const probe: CardInstance = { ...interceptor, zone: { z: "field", player: defender, row: "units", lane: zone.lane } };
   return cardAllowed(state, decl.filter, probe, card, player) && !spellCannotReach(state, card, probe);

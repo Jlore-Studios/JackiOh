@@ -9,6 +9,7 @@
 import { hashState, reduce, type GameState } from "@jackioh/engine";
 import type { Action, GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
+import { askingCastOnDraw } from "../_askingCast";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/t-ai-08-rate-limit";
 
@@ -99,8 +100,9 @@ describe("T-AI-8 Rate Limit", () => {
     });
 
     it("R158 R456 a 3rd play that asks pauses the end: answered after a JSON round trip, the play finishes and then the turn ends", () => {
-      // Stockpile's draw casts a base Hinder, their 3rd play, which asks them to discard (R431).
-      const s = setup({}, { library: [HINDER, VANILLA, VANILLA, VANILLA] });
+      // Stockpile's draw casts an asking cast-on-draw Spell, their 3rd play, which asks them to discard.
+      const s = setup({}, { library: [VANILLA, VANILLA, VANILLA] });
+      askingCastOnDraw(s, "p2");
       s.play(VANILLA, { zone: 1 }).play(STOCKPILE);
       expect(s.state.pending?.kind).toBe("hand");
       expect(s.state.active).toBe("p2");

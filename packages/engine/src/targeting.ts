@@ -17,7 +17,7 @@ import { spellCannotReach } from "./restrictions";
 import type { Script } from "./script";
 import { scriptOf, scriptsFor } from "./scripts";
 import { findInstance, type CardInstance, type GameState } from "./state";
-import { firstFreeZone, isBuried } from "./zones";
+import { firstEntryZone, isBuried } from "./zones";
 
 /** A card acting on the field: a unit on top of its pile, or a backrow card (§3.2, R13). */
 function actsOnField(state: GameState, card: CardInstance): boolean {
@@ -114,7 +114,7 @@ export function interceptorFor(
   if (targeted.zone.z !== "field" || targeted.zone.row !== "units" || isBuried(state, targeted)) return null;
   const defender = targeted.controller;
   if (defender !== opponentOf(chooser)) return null;
-  if (firstFreeZone(state, defender, "units") === null) return null;
+  if (firstEntryZone(state, defender, "units") === null) return null;
   return state.players[defender].hand.find((card) => interposesFromHand(card) && answersSource(card, source)) ?? null;
 }
 

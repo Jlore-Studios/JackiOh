@@ -5,13 +5,14 @@
 import { hashState, reduce, stepParam, type GameState } from "@jackioh/engine";
 import type { Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
+import { askingCastOnDraw } from "../_askingCast";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/065-3-large-grape";
 
 const GRAPE = "classicplus-065-3";
 const FILLER = "core-005";
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt
-const HINDER = "core-021"; // Cast on draw; base face asks its caster to discard 1
+const HINDER = "core-021"; // Cast on draw; its Radiant face asks nothing
 const SOLARIUS = "classicplus-038"; // Spell Damage +2
 const DECK_A = "core-043"; // (4) Unit, Big Felinor
 const DECK_B = "core-025"; // (4) Unit
@@ -123,7 +124,8 @@ describe("C+ #65.3 Large Grape", () => {
     });
 
     it("R113 a cast-on-draw prompt pauses the second draw; after a JSON round trip the answer prices it (0)", () => {
-      const s = scenario({ p1: { hand: [RADIANT, FILLER], library: [HINDER, DECK_A, DECK_B] }, p2: { hand: [FILLER] } });
+      const s = scenario({ p1: { hand: [RADIANT, FILLER], library: [DECK_A, DECK_B] }, p2: { hand: [FILLER] } });
+      askingCastOnDraw(s);
       s.play(GRAPE, { targets: [{ pick: "hero", player: "p2" }] });
       expect(s.state.pending?.kind).toBe("hand");
       const revived = JSON.parse(JSON.stringify(s.state)) as GameState;
