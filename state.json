@@ -2762,7 +2762,9 @@
     },
     "304": {
       "action": "review",
-      "asks": [],
+      "asks": [
+        "c:5996156131"
+      ],
       "cross_rounds": 3,
       "died": 0,
       "difficulty": "easy",
@@ -2771,7 +2773,7 @@
       "forced": false,
       "interruptions": 0,
       "issue": 303,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [
         {
           "claim": "SPEC \u00a710.11 still says the settings dialog groups its settings in tabs \"Gameplay, Visuals, Audio and Account\", so SPEC now describes an Account tab that the code no longer draws.",
@@ -2783,7 +2785,8 @@
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
-      "queued_at": "2026-10-05T13:47:39Z",
+      "queued_at": "2026-10-05T14:08:42Z",
+      "requested_by": "jgoetzmann",
       "run_id": "37319595341",
       "self_check_findings": [
         {
@@ -2793,7 +2796,7 @@
           "where": "self check"
         }
       ],
-      "source": "",
+      "source": "request",
       "started_at": "2026-10-05T13:49:22Z",
       "stop_requested": false,
       "taken_asks": [],
