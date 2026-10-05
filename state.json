@@ -2757,7 +2757,7 @@
     "304": {
       "action": "review",
       "asks": [],
-      "cross_rounds": 2,
+      "cross_rounds": 3,
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
@@ -2775,7 +2775,14 @@
       "interruptions": 0,
       "issue": 303,
       "kind": "review",
-      "last_findings": [],
+      "last_findings": [
+        {
+          "claim": "SPEC \u00a710.11 still says the settings dialog groups its settings in tabs \"Gameplay, Visuals, Audio and Account\", so SPEC now describes an Account tab that the code no longer draws.",
+          "evidence": "`sed -n 1250,1266p SPEC.md` shows lines 1258-1259: \"The dialog groups them in tabs (Gameplay, Visuals, Audio and Account), and opens on the tab the player used last\". The diff changes only the R634 row (line 1848). A repo-wide grep for \"Audio and Account\" or \", Account)\" finds only this line. SPEC is the only source of rules (CLAUDE.md rule 1), so a later builder or a REVIEW Part B audit would read this as a missing feature and could put the tab back.",
+          "severity": "blocking",
+          "where": "SPEC.md:1258"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
