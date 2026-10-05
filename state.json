@@ -2063,7 +2063,7 @@
       "action": "build",
       "asks": [],
       "died": 0,
-      "failures": 1,
+      "failures": 2,
       "forced": false,
       "handoff": {
         "at": "2026-10-05T12:51:34Z",
