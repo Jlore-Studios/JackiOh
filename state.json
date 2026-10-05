@@ -2566,13 +2566,19 @@
         "c:5996181605"
       ],
       "votes": {
-        "approvals": [],
-        "builder": "cognition",
-        "rejections": [
+        "approvals": [
           "claude"
         ],
-        "reviews": [],
-        "sha": "b94621e609a0bcff7387e7a579e10299fb427656",
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "37326546523",
+            "tier": "strong"
+          }
+        ],
+        "sha": "f2b7290203528a04d565da52e692c7ff72e54f70",
         "tiers": {
           "claude": "strong"
         }
