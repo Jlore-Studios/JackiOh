@@ -714,6 +714,15 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "brand" },
     target: (e, view) => locateInstance(view, e.instanceId),
   },
+  // R675: a Glitch's outcome is announced on the turn banner; the view after it (a new mulligan, the
+  // swapped seat, the other games' boards or the voided result) is the rest of the news.
+  glitched: {
+    animation: "jk-banner",
+    durationMs: 600,
+    testid: "turn-banner",
+    fx: { recipe: "banner" },
+    target: () => testid.banner,
+  },
 };
 
 /* ------------------------------------------------------------------------------------------- *

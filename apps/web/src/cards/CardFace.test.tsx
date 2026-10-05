@@ -14,6 +14,7 @@ import { useRef, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 import { fillParams, type CardDef, type CardType, type Rarity } from "@jackioh/shared";
 
 import { CardFace } from "./CardFace.tsx";
@@ -791,7 +792,8 @@ describe("R503: the set mark and a token's printed rarity", () => {
   it(
     "R503 every catalog face carries exactly one mark, its own set's",
     () => {
-      for (const card of DEFS) {
+      // Glitch is blank, set mark and all (glitch.test.tsx).
+      for (const card of DEFS.filter((entry) => entry.id !== GLITCH_DEF_ID)) {
         expect(setMark(catalogFace(card.id)).getAttribute("data-set"), card.id).toBe(card.set);
         cleanup();
       }

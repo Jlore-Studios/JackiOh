@@ -8,6 +8,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 import type { CardDef, CardType, Tag } from "@jackioh/shared";
 
 import { BACKDROPS, LAYOUTS, SKY_SCHEMES } from "./procedural.ts";
@@ -27,7 +28,8 @@ import {
   type Composition,
 } from "./index.ts";
 
-const DEFS: readonly CardDef[] = Object.values(CATALOG);
+/** Every card that draws a procedural picture: Glitch's window is blank, its blob drawn by glitch.css. */
+const DEFS: readonly CardDef[] = Object.values(CATALOG).filter((card) => card.id !== GLITCH_DEF_ID);
 const SVG_PREFIX = "data:image/svg+xml,";
 /** B40: a theme-and-composition group this large draws every layout of its composition. */
 const GROUP_USES_EVERY_LAYOUT = 8;

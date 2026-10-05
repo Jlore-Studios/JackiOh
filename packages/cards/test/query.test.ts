@@ -30,7 +30,7 @@ function coreIndices(defs: readonly CardDef[]): string[] {
 }
 
 /** Every token of every set (B2.1's census itself is catalog.test.ts's to prove). */
-/** Every token a pool may name — all of them but Glitch, which is in none (R659). */
+/** Every token a pool may name — all of them but Glitch, which is in none (R673). */
 const TOKEN_IDS = Object.values(CATALOG)
   .filter((def) => def.token && def.id !== GLITCH_DEF_ID)
   .map((def) => def.id);
@@ -387,7 +387,7 @@ describe("R382 the Fruit pool holds the five Grapes; a pool that takes every tok
 
   it("R382 Classic+ #23 Dropshipping's pool takes every card and every token of every set but itself", () => {
     const every = ids(pool("classicplus-023", { withTokens: true }));
-    // R659: Glitch is the one token no pool takes.
+    // R673: Glitch is the one token no pool takes.
     expect(every).toHaveLength(Object.keys(CATALOG).length - 2);
     expect(every).not.toContain("classicplus-023");
     expect(every).not.toContain(GLITCH_DEF_ID);

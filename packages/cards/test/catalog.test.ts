@@ -262,7 +262,7 @@ const CLASSIC: readonly SpecRow[] = [
   { index: "88", name: "Siphon Squad", cost: 2, type: "Field Trap", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "89", name: "Paul Allen's Ghost", cost: 2, type: "Unit", tags: [], rarity: "Rare", base: [5, 6], radiant: [10, 12] },
   { index: "90", name: "In Too Deep", cost: 1, type: "Field Spell", tags: ["Quickdraw"], rarity: "Mythic", base: [null, null], radiant: [null, null] },
-  // Issue #170, R659: Glitch, the hidden token R658's roll makes, blank on both faces.
+  // Issue #170, R673: Glitch, the hidden token R672's roll makes, blank on both faces.
   { index: "T-glitch", name: "Glitch", cost: 0, type: "Spell", tags: ["Token"], rarity: "Token", base: [null, null], radiant: [null, null] },
 ];
 
@@ -701,7 +701,7 @@ describe("every entry has a radiant face of its own (SPEC §5.2, R276)", () => {
     // {heal}." prints 9 on one face and 18 on the other.
     const printed = (entry: CardDef, face: "base" | "radiant"): string =>
       JSON.stringify({ ...entry[face], text: fillParams(entry, face) });
-    // R659: Glitch is blank on both faces, the one entry exempt; its client face corrupts whatever it shows.
+    // R673: Glitch is blank on both faces, the one entry exempt; its client face corrupts whatever it shows.
     const same = ENTRIES.filter(
       (entry) =>
         entry.radiantFallback !== true && entry.id !== GLITCH_DEF_ID && printed(entry, "radiant") === printed(entry, "base"),

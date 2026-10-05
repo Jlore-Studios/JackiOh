@@ -6,6 +6,8 @@
 
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
+import { isGlitch } from "../../cards/glitch.ts";
+
 /** `GET /api/collection`'s entries, as the validator wants them. */
 export function collectionFrom(
   entries: readonly { cardId: string; quantity: number }[],
@@ -26,6 +28,8 @@ export function poolFrom(catalog: CatalogSnapshot, collection: Collection | null
     const def = catalog.cards[id];
     if (def === undefined) return false;
     if (def.token || def.tags.includes("Token")) return false;
+    // R673: Glitch is never in a pool, a token or not.
+    if (isGlitch(id)) return false;
     if (collection === null) return true;
     return (collection[id] ?? 0) > 0;
   });

@@ -111,7 +111,7 @@ function tagPoolTakesToken(args: CatalogQueryArgs, def: CardDef): boolean {
 }
 
 function matchesQuery(def: CardDef, args: CatalogQueryArgs, tokensAllowed: boolean): boolean {
-  // R659: Glitch is in no pool, not even one that takes every token; only R658's roll makes one.
+  // R673: Glitch is in no pool, not even one that takes every token; only R672's roll makes one.
   if (def.id === GLITCH_DEF_ID && !asList(args.defId).includes(def.id)) return false;
   if (!tokensAllowed && isToken(def) && !tagPoolTakesToken(args, def)) return false;
   if (args.token !== undefined && isToken(def) !== args.token) return false;
@@ -319,7 +319,7 @@ const GRAPE_DEF_IDS: ReadonlySet<string> = new Set(GRAPE_ODDS.map((grape) => gra
  * rolled again on `GRAPE_ODDS` and the Grape that roll names is generated instead, so the Grape
  * rarity pool persists across every kind of Grape generation. One extra rng draw, only when a
  * Grape was picked; every other pick draws exactly as before. A caller generating into a hand or a
- * deck passes the state as `glitch`, and the pick may then become Glitch (R658).
+ * deck passes the state as `glitch`, and the pick may then become Glitch (R672).
  */
 export function pickGenerated(rng: Rng, pool: readonly CardDef[], glitch?: GlitchOdds): CardDef | undefined {
   const picked = rng.pick(pool);
@@ -327,11 +327,11 @@ export function pickGenerated(rng: Rng, pool: readonly CardDef[], glitch?: Glitc
   return def === undefined || glitch === undefined ? def : glitchOrNot(rng, def, glitch);
 }
 
-/** R658: what the Glitch roll reads — the match's count of "… in the System" plays. */
+/** R672: what the Glitch roll reads — the match's count of "… in the System" plays. */
 export type GlitchOdds = { readonly systemPlays?: number };
 
 /**
- * R658: after a card is picked for a hand or a deck, n/10000 that it is Glitch instead, n the match's
+ * R672: after a card is picked for a hand or a deck, n/10000 that it is Glitch instead, n the match's
  * System plays. One rng draw, and only when n is above 0, so a match no System card was played in
  * draws exactly as before; a catalog without Glitch keeps the pick.
  */

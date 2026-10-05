@@ -150,7 +150,7 @@ function priceOf(state: GameState, instance: CardInstance, options: CostOptions)
   const side = state.players[instance.controller];
   const override = instance.costOverride;
   const floor = costFloorOf(instance);
-  // R660: Glitch costs (0) wherever it is and whatever would change that.
+  // R674: Glitch costs (0) wherever it is and whatever would change that.
   if (instance.defId === GLITCH_DEF_ID) return { cost: 0, usedRules: [] };
 
   // R65: X-cost cards cost exactly X and ignore modifiers, but an override makes one free. R455: a

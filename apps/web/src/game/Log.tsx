@@ -25,6 +25,7 @@ import { useContext, useLayoutEffect, useRef, type MouseEvent, type ReactElement
 import type { GameEvent, LibraryOverflowOutcome, PlayerId, PlayerView, PromptKind } from "@jackioh/shared";
 
 import { costPhrase, useInspectTrigger, type FaceModel } from "../cards/index.ts";
+import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { markWords } from "../cards/marks.ts";
 import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
 import { CatalogContext, withMatchDefs } from "./catalog.ts";
@@ -353,12 +354,23 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return `${name.seat(event.player)} could not draw more this turn`;
     case "turnCutShort":
       return capitalised(`${name.whose(event.player)} turn was cut short`);
+    case "glitched":
+      // R675: what a Glitch did, under its corrupted name (cards/glitch.ts).
+      return `${GLITCH_WORDS.name}: ${GLITCH_OUTCOME_LINE[event.outcome]}`;
     case "marked":
       // R437: the mark by the name its badge says (cards/marks.ts), never the engine's key; a marked
       // card the viewer may not read (a face-down trap) is "a card".
       return event.added ? `${capitalised(name.instance(event.instanceId, "a card"))} was marked (${markWords(event.mark).name})` : null;
   }
 }
+
+/** R675–R678: each Glitch outcome, as its log line ends. */
+const GLITCH_OUTCOME_LINE: Readonly<Record<Extract<GameEvent, { type: "glitched" }>["outcome"], string>> = {
+  reset: "the match resets",
+  swap: "the players swap seats",
+  boards: "other games' boards appear",
+  void: "the match never happened",
+};
 
 /** Where a stolen card was taken from, as a line ends (R373: the rules' library is the Deck). */
 const STOLEN_FROM: Readonly<Record<Extract<GameEvent, { type: "stolen" }>["zone"], string>> = {

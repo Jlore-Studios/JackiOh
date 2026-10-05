@@ -17,6 +17,7 @@
 
 import { PLAYER_IDS, portraitOrDefault, type PlayerId } from "@jackioh/shared";
 import { ApiError } from "../api/http";
+import { GLITCH_BOARDS_SAMPLED } from "../config";
 import type { LastBoardEntry, MatchClocks, MatchDirectory, MatchRow, QueueMode, StartMatchInput } from "../api/ports";
 import { createMatchActor, lastBoardsOf, type MatchActor } from "./actor";
 import type { ActorDeps, Socket } from "./contracts";
@@ -60,6 +61,16 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
   /** In-flight rebuilds, so two sockets arriving together fold the log once, not twice. */
   const rebuilding = new Map<string, Promise<MatchActor>>();
 
+  /**
+   * R678: a voided match is gone, so its actor leaves the map without `stop` (which waits on the
+   * actor's own queue, and the void runs inside it). A series game started again under the same id
+   * then finds no actor in the way.
+   */
+  function forget(matchId: string): void {
+    actors.delete(matchId);
+    deps.log.info("match.forgotten", { matchId });
+  }
+
   async function start(input: StartMatchInput): Promise<void> {
     const [first, second] = input.seats;
     const now = deps.timers.now();
@@ -68,6 +79,11 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       (await deps.store.lastBoards.get(first.profileId, "server")) ?? [],
       (await deps.store.lastBoards.get(second.profileId, "server")) ?? [],
     ];
+    // R677: two other players' last server boards — never either seat's own — sampled once, here,
+    // and frozen on the row beside the decks, so every rebuild folds the same Glitch. A seat with no
+    // board to sample gets the empty one; with none at all the field is left off.
+    const sampled = await deps.store.lastBoards.sampleOthers([first.profileId, second.profileId], GLITCH_BOARDS_SAMPLED);
+    const glitchBoards: [LastBoardEntry[], LastBoardEntry[]] = [sampled[0] ?? [], sampled[1] ?? []];
     const match: MatchRow = {
       id: input.matchId,
       seed: input.seed,
@@ -80,6 +96,7 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       finishedAt: null,
       clocks: initialClocks(now, deps.config.matchCeilingMinutes),
       ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
+      ...(sampled.length > 0 ? { glitchBoards } : {}),
       // R642: the portraits the seats were dealt, frozen on the row so a rebuilt actor (and a
       // reconnected client) reads the same pair.
       portraits: [portraitOrDefault(first.portrait), portraitOrDefault(second.portrait)],
@@ -100,7 +117,7 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
     ).state;
 
     await deps.store.matches.create(match);
-    actors.set(match.id, createMatchActor(deps, { match, state }));
+    actors.set(match.id, createMatchActor(deps, { match, state, onVoided: () => forget(match.id) }));
     deps.log.info("match.started", { matchId: match.id, players: match.players });
   }
 
@@ -124,7 +141,7 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       deps.log.alert("match.fold.errors", { matchId, errors: folded.errors });
     }
 
-    const actor = createMatchActor(deps, { match, state: folded.state, log });
+    const actor = createMatchActor(deps, { match, state: folded.state, log, onVoided: () => forget(matchId) });
     actors.set(matchId, actor);
     deps.log.info("match.rebuilt", { matchId, actions: log.length });
     return actor;

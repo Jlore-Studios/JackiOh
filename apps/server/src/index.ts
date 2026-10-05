@@ -35,7 +35,7 @@ import type { Logger, ServerDeps, Store } from "./api/ports";
 import { systemTimers } from "./api/ports";
 import { createQueueRoutes, startMatchmaker } from "./api/queue";
 import { createRankedRoutes, loadPatchVersion, openSeason } from "./api/ranked";
-import { createRecordResult, reapStuckMatches } from "./api/results";
+import { createRecordResult, createVoidMatch, reapStuckMatches } from "./api/results";
 import { purgeExpired } from "./api/retention";
 import { createSeriesRoutes, startSeriesSweeper } from "./api/series";
 import { createSettingsRoutes } from "./api/settings";
@@ -241,6 +241,8 @@ export async function createRuntime(
     engine,
     createClock: createMatchClock,
     recordResult: createRecordResult(deps),
+    // R678: a Glitch's void outcome, which records nothing.
+    voidMatch: createVoidMatch(deps),
   });
   deps.matches = overrides.matches ?? registry;
   // R143: the one thing a handler reads this for is the optional seed on `POST /api/queue`.

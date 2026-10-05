@@ -306,7 +306,7 @@ export type ScenarioOptions = {
   active?: PlayerId;
   /** R417: each seat's last board, the `createGame` input C+ #29 reads (seat order). */
   lastBoards?: LastBoardInput;
-  /** R663: the two other games' boards a Glitch may lay down, the `createGame` input (seat order). */
+  /** R677: the two other games' boards a Glitch may lay down, the `createGame` input (seat order). */
   glitchBoards?: LastBoardInput;
 };
 

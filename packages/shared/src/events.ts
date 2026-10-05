@@ -363,7 +363,7 @@ export type GameEvent =
   /** B5 E10: an effect ended `player`'s turn (the turn's own `turnEnded` follows). */
   | { type: "turnCutShort"; player: PlayerId; byInstanceId: string | null }
   /**
-   * R661–R664: a Glitch `player` played did one of its four things. Public, and it names no card:
+   * R675–R678: a Glitch `player` played did one of its four things. Public, and it names no card:
    * `reset` (the match starts again, its setup's events follow), `swap` (each account now plays the
    * other seat; a host reads `GameState.seatSwaps`), `boards` (both fields became other games'
    * boards) or `void` (the match never happened; `gameOver` with reason `voided` follows).
@@ -404,7 +404,7 @@ export type GameOverReason =
   | "turn-cap"
   | "disconnect"
   | "match-ceiling"
-  /** R664: a Glitch voided the match — no winner, no result, no record (§2.5). */
+  /** R678: a Glitch voided the match — no winner, no result, no record (§2.5). */
   | "voided";
 
 /**

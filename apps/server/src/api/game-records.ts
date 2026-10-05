@@ -52,7 +52,14 @@ export async function recordLiveGame(deps: ServerDeps, matchId: string): Promise
     }
 
     const log = await deps.store.matches.actions(matchId);
-    const game = games.summarize({ seed: match.seed, decks: match.decks, log: log.map((row) => row.action) });
+    const game = games.summarize({
+      seed: match.seed,
+      decks: match.decks,
+      log: log.map((row) => row.action),
+      // R417, R677: a match's frozen boards are setup, so the fold reads them as the live game did.
+      ...(match.lastBoards === undefined ? {} : { lastBoards: match.lastBoards }),
+      ...(match.glitchBoards === undefined ? {} : { glitchBoards: match.glitchBoards }),
+    });
     if (game === null) {
       // The result came from this log's own last action, so a fold that does not reach it is a
       // determinism break (§9.3), and says so as loudly as the registry's fold errors do.

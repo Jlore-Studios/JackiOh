@@ -19,6 +19,7 @@
 
 import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
+import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { ANIMATIONS, animTestid, locateInstance, targetFor, type AnimationEntry } from "../game/animations.ts";
 import { sideOf, testid, type Side } from "../game/contract.ts";
 import { brandCues } from "./brand.ts";
@@ -711,6 +712,8 @@ const turnBanner: Recipe = (event, p) => {
   if (event.type === "turnAutoEnded") return [banner(p.D, FX_TEXT.autoEnded, "muted")];
   // B5 E10: an effect cut the turn short.
   if (event.type === "turnCutShort") return [banner(p.D, FX_TEXT.turnCutShort, "muted")];
+  // R675: a Glitch's banner is its own corrupted name (cards/glitch.ts), whatever it did.
+  if (event.type === "glitched") return [banner(p.D, GLITCH_WORDS.name, "muted")];
   if (event.type !== "turnStarted") return [];
   if (event.player === p.view.viewer) {
     return [banner(p.D, FX_TEXT.yourTurn, "you"), rays(p.D, "victory", viewportCenter(), 0)];

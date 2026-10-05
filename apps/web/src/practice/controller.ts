@@ -34,7 +34,7 @@
 // `setHold("voice", …)` (routes/practice.tsx), so the audio layer needs no handle on this
 // controller: it marks an element while a line plays and clears it when the line ends.
 
-import type { ActionBody, CardDefs, PlayerId, PlayerView } from "@jackioh/shared";
+import { opponentOf, type ActionBody, type CardDefs, type PlayerId, type PlayerView } from "@jackioh/shared";
 
 import type { PracticePacing } from "./config.ts";
 import type { PracticeHost } from "./host.ts";
@@ -206,7 +206,9 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
 
   function gapFor(view: PlayerView): number {
     const pending = view.pending;
-    if (pending !== null && !pending.forYou && pending.pendingFor === state.aiSeat) return pacing.promptAnswerMs;
+    // R676: the AI is whoever sits across from the human's view now, its starting seat or, after a
+    // Glitch swap, the human's.
+    if (pending !== null && !pending.forYou && pending.pendingFor === opponentOf(view.viewer)) return pacing.promptAnswerMs;
     // R265: the AI's mulligan is still open while the human looks at its own.
     if (view.mulligan !== undefined && !view.mulligan.opponentReady) return pacing.promptAnswerMs;
     if (lastStepTurn !== view.turn) return pacing.firstActionMs;

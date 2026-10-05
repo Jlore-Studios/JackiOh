@@ -460,7 +460,7 @@ export function reduce(state: GameState, action: Action, rng?: Rng): ReduceResul
   settle(sink);
   answerForLockedOut(sink);
   endDueTurns(sink);
-  // R661: a Glitch's reset goes once the action that drew it has settled.
+  // R675: a Glitch's reset goes once the action that drew it has settled.
   if (next.resetOwed === true) resetMatch(sink);
 
   next.rngCursor = sink.rng.cursor;

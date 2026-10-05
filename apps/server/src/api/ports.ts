@@ -517,6 +517,12 @@ export type MatchRow = {
    */
   lastBoards?: [LastBoardEntry[], LastBoardEntry[]];
   /**
+   * R677: the boards of two other players' last server games a Glitch may put on the field (seat
+   * order), sampled when the match is created and frozen on the row like `lastBoards`, so a rebuilt
+   * actor folds the same game. Absent when no other player had a board to sample.
+   */
+  glitchBoards?: [LastBoardEntry[], LastBoardEntry[]];
+  /**
    * R642: the hero portraits dealt to the seats, seat order like `decks`. Cosmetic only — it is
    * sent in the `portraits` frame, never part of `PlayerView`. Absent on matches started before
    * portraits existed; both seats then read as `vanilla`.
@@ -567,6 +573,12 @@ export type MatchStore = {
    * match.
    */
   discardOpen: (matchId: string) => Promise<void>;
+  /**
+   * R678: a Glitch voided this live match, so it is removed as if it never existed: the row and its
+   * action log go, and any profile whose in-match flag points at it is let go (both players can
+   * queue again). Never touches a finished match or one with a result; a no-op for an unknown id.
+   */
+  forgetVoided: (matchId: string) => Promise<void>;
 };
 
 export type Room = {
@@ -1011,6 +1023,12 @@ export type LastBoardStore = {
   get: (profileId: string, kind: LastBoardKind) => Promise<LastBoardEntry[] | null>;
   /** R565: replace it, or write the first one, as a game of that kind ends (epoch ms `at`). */
   put: (profileId: string, kind: LastBoardKind, board: readonly LastBoardEntry[], at: number) => Promise<void>;
+  /**
+   * R677: up to `count` non-empty `server` boards of profiles NOT in `excludeProfileIds`, each from a
+   * different profile, chosen at random (the in-memory stores take them in table order). Fewer
+   * when fewer exist.
+   */
+  sampleOthers: (excludeProfileIds: readonly string[], count: number) => Promise<LastBoardEntry[][]>;
 };
 
 // ---------------------------------------------------------------------------
@@ -1140,7 +1158,14 @@ export type GameRecorder = {
   /** R388's newest patch (`packages/cards/patches/patches.json`): every live record's `patch`. */
   patch: string;
   /** The engine port's `summarizeGame`: the record's game half, read off `(seed, decks, log)`. */
-  summarize: (args: { seed: string; decks: [string[], string[]]; log: readonly Action[] }) => GameSummary | null;
+  summarize: (args: {
+    seed: string;
+    decks: [string[], string[]];
+    log: readonly Action[];
+    /** R417, R677: the boards the match was created with, so the fold is the same game. */
+    lastBoards?: [LastBoardEntry[], LastBoardEntry[]];
+    glitchBoards?: [LastBoardEntry[], LastBoardEntry[]];
+  }) => GameSummary | null;
 };
 
 export type MatchDirectory = {

@@ -141,8 +141,16 @@ const SERVER_RANKED_CONTRACT = "../../../apps/server/test/db/contract.ts";
 
 /** R169's card-side proofs: the two §8 cards a missing badge list made invisible. */
 const CARDS_CURVATURE_TEST = "../../cards/test/077-professor-curvature.test.ts";
-/** Issue #170's hidden token, Glitch (R658–R664). */
+/** Issue #170's hidden token, Glitch (R672–R678). */
 const CARDS_GLITCH_TEST = "../../cards/test/classic/t-glitch-glitch.test.ts";
+/** Issue #170's server and client proofs: the swap's credit, the boards' sampling, the void. */
+const SERVER_GLITCH_TEST = "../../../apps/server/test/match/glitch.test.ts";
+const SERVER_CONTRACT_TEST = "../../../apps/server/test/db/contract.ts";
+const WEB_PRACTICE_GLITCH_TEST = "../../../apps/web/src/practice/core-glitch.test.ts";
+const WEB_NET_TEST = "../../../apps/web/src/game/net.test.ts";
+const WEB_ALMANAC_GLITCH_TEST = "../../../apps/web/src/routes/almanac.test.tsx";
+const WEB_FILTERS_GLITCH_TEST = "../../../apps/web/src/game/deckbuilder/filters.test.ts";
+const WEB_HISTORY_GLITCH_TEST = "../../../apps/web/src/patches/history.test.ts";
 const CARDS_FULLSEND_TEST = "../../cards/test/078-fullsend.test.ts";
 /** R169's client-side proof: the animation table's targets, checked against a rendered DOM. */
 const WEB_ANIMATION_TARGETS_TEST = "../../../apps/web/src/game/animation-targets.test.tsx";
@@ -4007,38 +4015,38 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
 
   // Proved by glitch.test.ts and the real card's test: no draw at all before a System play, one more
   // draw after, n/10000 of the picks Glitch, every System play counted.
-  it("R658 a … in the System play makes every card generated into a hand or deck Glitch at n/10000", () => {
-    provenIn(658, "glitch.test.ts", CARDS_GLITCH_TEST);
+  it("R672 a … in the System play makes every card generated into a hand or deck Glitch at n/10000", () => {
+    provenIn(672, "glitch.test.ts", CARDS_GLITCH_TEST);
   });
 
   // Proved by glitch.test.ts and the real card's test: no pool, the every-token one included.
-  it("R659 Glitch is in no pool, the Almanac or the Deck Builder", () => {
-    provenIn(659, "glitch.test.ts", CARDS_GLITCH_TEST);
+  it("R673 Glitch is in no pool, the Almanac or the Deck Builder", () => {
+    provenIn(673, "glitch.test.ts", CARDS_GLITCH_TEST, WEB_ALMANAC_GLITCH_TEST, WEB_FILTERS_GLITCH_TEST, WEB_HISTORY_GLITCH_TEST);
   });
 
   // Proved by glitch.test.ts and the real card's test: (0) under any modifier, refused off-turn.
-  it("R660 Glitch is always playable on its owner's turn", () => {
-    provenIn(660, "glitch.test.ts", CARDS_GLITCH_TEST);
+  it("R674 Glitch is always playable on its owner's turn", () => {
+    provenIn(674, "glitch.test.ts", CARDS_GLITCH_TEST);
   });
 
   // Proved by glitch.test.ts and the real card's test: the outcome from the rng, the reset's new game.
-  it("R661 Glitch draws one of four outcomes; a reset deals the match again", () => {
-    provenIn(661, "glitch.test.ts", CARDS_GLITCH_TEST);
+  it("R675 Glitch draws one of four outcomes; a reset deals the match again", () => {
+    provenIn(675, "glitch.test.ts", CARDS_GLITCH_TEST);
   });
 
   // Proved by glitch.test.ts and the real card's test: the seat each account plays.
-  it("R662 a Glitch swap gives each account the other seat, and its results", () => {
-    provenIn(662, "glitch.test.ts", CARDS_GLITCH_TEST);
+  it("R676 a Glitch swap gives each account the other seat, and its results", () => {
+    provenIn(676, "glitch.test.ts", CARDS_GLITCH_TEST, SERVER_GLITCH_TEST, WEB_PRACTICE_GLITCH_TEST);
   });
 
   // Proved by glitch.test.ts and the real card's test: both fields become the frozen boards.
-  it("R663 a Glitch lays two other games' boards on the field", () => {
-    provenIn(663, "glitch.test.ts", CARDS_GLITCH_TEST);
+  it("R677 a Glitch lays two other games' boards on the field", () => {
+    provenIn(677, "glitch.test.ts", CARDS_GLITCH_TEST, SERVER_GLITCH_TEST, SERVER_CONTRACT_TEST);
   });
 
   // Proved by glitch.test.ts and the real card's test: no winner, reason voided.
-  it("R664 a Glitch voids the match", () => {
-    provenIn(664, "glitch.test.ts", CARDS_GLITCH_TEST);
+  it("R678 a Glitch voids the match", () => {
+    provenIn(678, "glitch.test.ts", CARDS_GLITCH_TEST, SERVER_GLITCH_TEST, SERVER_CONTRACT_TEST, WEB_PRACTICE_GLITCH_TEST, WEB_NET_TEST);
   });
 });
 

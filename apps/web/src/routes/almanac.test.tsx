@@ -14,6 +14,8 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { GLITCH_DEF_ID } from "@jackioh/engine/config";
+
 import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
 import { INSPECT_STATS } from "../cards/inspect/testids.ts";
 import { ALMANAC_TAGS, DEFAULT_FILTER, DEFAULT_SORT, almanacPool, costBucket } from "../game/deckbuilder/filters.ts";
@@ -48,7 +50,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 /** A lazily-imported route chunk, and a pool of every card, can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
 
-const CARDS: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards);
+/** R673: every card the almanac shows: the catalog's, Glitch excepted. */
+const CARDS: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards).filter((def) => def.id !== GLITCH_DEF_ID);
 const TOKENS: readonly CardDef[] = CARDS.filter((def) => def.token);
 
 function at(path: string): void {
@@ -132,11 +135,18 @@ describe("R630 the almanac's browse pane", () => {
     render(<AlmanacRoute />);
     const ids = shownIds();
     expect(ids).toEqual([...almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT)]);
-    expect([...ids].sort()).toEqual(Object.keys(ALMANAC_CATALOG.cards).sort());
+    expect([...ids].sort()).toEqual(CARDS.map((def) => def.id).sort());
     expect(TOKENS.length).toBeGreaterThan(0);
     for (const token of TOKENS) expect(ids, token.id).toContain(token.id);
     expect(screen.getByTestId(DB_RESULT_COUNT)).toHaveAttribute("data-count", String(CARDS.length));
     expect(screen.queryByTestId(DB_EMPTY)).toBeNull();
+  });
+
+  it("R673 never shows Glitch, though the catalog holds it", () => {
+    expect(ALMANAC_CATALOG.cards[GLITCH_DEF_ID]).toBeDefined();
+    render(<AlmanacRoute />);
+    expect(shownIds()).not.toContain(GLITCH_DEF_ID);
+    expect(almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT)).not.toContain(GLITCH_DEF_ID);
   });
 
   it("R630 renders the deck builder's own filter bar, pool and look", () => {

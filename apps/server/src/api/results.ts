@@ -41,7 +41,7 @@ import type {
 } from "./ports";
 import { DuplicateResultError } from "./ports";
 import { RESULT_WRITE_ATTEMPTS } from "../config";
-import type { RecordResult, RecordResultInput, TerminalOutcome } from "../match/contracts";
+import type { RecordResult, RecordResultInput, TerminalOutcome, VoidMatch } from "../match/contracts";
 import { recordLiveGame } from "./game-records";
 import { rateRankedGame } from "./ranked";
 import { advanceSeriesInTx, resumeSeries } from "./series";
@@ -233,6 +233,31 @@ export function createRecordResult(deps: ServerDeps): RecordResult {
     // own failures, and a second write of the same match files nothing.
     await recordLiveGame(deps, input.matchId);
     return written.row;
+  };
+}
+
+/**
+ * R678: the `VoidMatch` port the actor holds (`ActorDeps.voidMatch`) — what a Glitch's void outcome
+ * does instead of `createRecordResult`. The match never happened: no `results` row, no rating move,
+ * no last board, no game record. The store forgets the row and its log and lets both players go
+ * (`matches.forgetVoided`), and one log line names the match and both profiles, for abuse checks.
+ *
+ * A voided game of a Conquest series is treated as a game that never started: the series stays
+ * `playing` on the same game, which is started again at once, with the same seats, decks and seed
+ * (`resumeSeries`) — the one thing `series.ts` does for a game a restart interrupted. Nothing is
+ * recorded in the series, so the score and both players' locked decks are what they were.
+ */
+export function createVoidMatch(deps: ServerDeps): VoidMatch {
+  return async (input) => {
+    const series = await deps.store.series.byMatch(input.matchId);
+    await deps.store.matches.forgetVoided(input.matchId);
+    deps.log.warn("match.voided", {
+      matchId: input.matchId,
+      players: [...input.players],
+      at: input.at,
+      ...(series === null ? {} : { seriesId: series.id }),
+    });
+    await resumeSeries(deps, series);
   };
 }
 

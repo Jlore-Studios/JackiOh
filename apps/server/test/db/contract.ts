@@ -1027,6 +1027,45 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         expect(await store.matches.get(row.id)).toEqual(row);
         expect((await store.matches.live()).find((match) => match.id === row.id)?.lastBoards).toEqual([BOARD, []]);
       });
+
+      it("R677 samples other profiles' non-empty server boards, never an excluded one", async () => {
+        const [a, b, c, d, e, f] = [
+          await activeProfile(),
+          await activeProfile(),
+          await activeProfile(),
+          await activeProfile(),
+          await activeProfile(),
+          await activeProfile(),
+        ];
+        const boardC: LastBoardEntry[] = [{ defId: "core-025", radiant: false }];
+        const boardF: LastBoardEntry[] = [{ defId: "core-012", radiant: true }];
+        await store.lastBoards.put(a.id, "server", BOARD, harness.now());
+        await store.lastBoards.put(b.id, "server", BOARD, harness.now());
+        await store.lastBoards.put(c.id, "server", boardC, harness.now());
+        await store.lastBoards.put(d.id, "server", [], harness.now());
+        await store.lastBoards.put(e.id, "practice", BOARD, harness.now());
+        await store.lastBoards.put(f.id, "server", boardF, harness.now());
+
+        const two = await store.lastBoards.sampleOthers([a.id, b.id], 2);
+        expect(two).toHaveLength(2);
+        expect(two).toEqual(expect.arrayContaining([boardC, boardF]));
+        expect(await store.lastBoards.sampleOthers([a.id, b.id], 5)).toHaveLength(2);
+        expect(await store.lastBoards.sampleOthers([a.id, b.id], 1)).toHaveLength(1);
+        expect(await store.lastBoards.sampleOthers([a.id, b.id, c.id, f.id], 2)).toEqual([]);
+        expect(await store.lastBoards.sampleOthers([a.id, b.id], 0)).toEqual([]);
+      });
+
+      it("R677 a match row keeps the Glitch boards it started with", async () => {
+        const [p1, p2] = [await activeProfile(), await activeProfile()];
+        const row: MatchRow = { ...matchRow(id(), p1.id, p2.id, harness, harness.now()), glitchBoards: [BOARD, []] };
+        await store.matches.create(row);
+        expect(await store.matches.get(row.id)).toEqual(row);
+        expect((await store.matches.live()).find((match) => match.id === row.id)?.glitchBoards).toEqual([BOARD, []]);
+        // A row written without them reads none.
+        const plain = matchRow(id(), p1.id, p2.id, harness, harness.now());
+        await store.matches.create(plain);
+        expect(must(await store.matches.get(plain.id), "the plain match").glitchBoards).toBeUndefined();
+      });
     });
 
     describe("playerStats", () => {
@@ -1345,6 +1384,54 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         await store.matches.discardOpen(row.id);
         await store.matches.discardOpen(id());
         expect(await store.matches.get(row.id)).toEqual(row);
+      });
+
+      it("R678 forgets a voided live match: its row, its log and both players' in-match flags", async () => {
+        const [a, b] = [await activeProfile(), await activeProfile()];
+        const row = matchRow(id(), a.id, b.id, harness, harness.now());
+        await store.matches.create(row);
+        await store.profiles.setInMatch(a.id, row.id);
+        await store.profiles.setInMatch(b.id, row.id);
+        await store.matches.appendActions([
+          { matchId: row.id, seq: 1, action: action("p1", "n1"), at: harness.now() },
+          { matchId: row.id, seq: 2, action: action("p2", "n2"), at: harness.now() },
+        ]);
+
+        await store.matches.forgetVoided(row.id);
+        expect(await store.matches.get(row.id)).toBeNull();
+        expect(await store.matches.actions(row.id)).toEqual([]);
+        expect((await store.matches.live()).map((m) => m.id)).not.toContain(row.id);
+        expect(must(await store.profiles.getById(a.id), "a").inMatchId).toBeNull();
+        expect(must(await store.profiles.getById(b.id), "b").inMatchId).toBeNull();
+        // The id is free again: a Conquest game voided is started again under it.
+        await store.matches.create(row);
+        expect(await store.matches.get(row.id)).toEqual(row);
+        // An unknown id is a no-op.
+        await store.matches.forgetVoided(id());
+      });
+
+      it("R678 never forgets a finished match or one with a result", async () => {
+        const [a, b] = [await activeProfile(), await activeProfile()];
+        const finished = matchRow(id(), a.id, b.id, harness, harness.now());
+        await store.matches.create(finished);
+        await store.matches.finish(finished.id, harness.now());
+        await store.matches.forgetVoided(finished.id);
+        expect(must(await store.matches.get(finished.id), "the finished match").status).toBe("finished");
+
+        const resulted = matchRow(id(), a.id, b.id, harness, harness.now());
+        await store.matches.create(resulted);
+        await store.results.insert({
+          matchId: resulted.id,
+          players: [a.id, b.id],
+          winnerProfileId: null,
+          reason: "draw-accepted",
+          turns: 3,
+          endedAt: harness.now(),
+          ratingBefore: [1000, 1000],
+          ratingAfter: [1000, 1000],
+        });
+        await store.matches.forgetVoided(resulted.id);
+        expect(await store.matches.get(resulted.id)).not.toBeNull();
       });
 
       it("finishes a match and drops it out of the live set", async () => {

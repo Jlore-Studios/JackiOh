@@ -35,7 +35,9 @@
  *  - `test-lethal`        ends the match: the player who played it wins by `hero-death`;
  *  - `test-mutual-lethal` ends the match: both heroes die in the same check, a draw by
  *                         `both-heroes-dead` (§2.5's second row — the one ending no other scripted
- *                         card can reach, and the seventh of the reasons `api/results.ts` writes).
+ *                         card can reach, and the seventh of the reasons `api/results.ts` writes);
+ *  - `test-glitch-swap`   a Glitch's swap (R676): `seatSwaps` goes up by one, `glitched` announces it;
+ *  - `test-glitch-void`   a Glitch's void (R678): the game ends, no winner, reason `voided`.
  */
 
 import type { Action, GameEvent, PlayerId, PlayerView, SideView } from "@jackioh/shared";
@@ -63,6 +65,10 @@ type FakeState = {
   nextChoice: number;
   /** R417: the last boards it was created with, kept so a fold is the same game. */
   lastBoards: [LastBoardEntry[], LastBoardEntry[]];
+  /** R677: the Glitch boards it was created with, likewise. */
+  glitchBoards: [LastBoardEntry[], LastBoardEntry[]] | null;
+  /** R676: how many Glitch swaps have resolved. */
+  seatSwaps: number;
 };
 
 export type FakeEngineOptions = {
@@ -159,7 +165,7 @@ function emptySide(player: PlayerId, fake: FakeState, viewer: PlayerId): SideVie
 
 export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
   const port: EnginePort = {
-    createGame: ({ seed, decks, lastBoards }) => {
+    createGame: ({ seed, decks, lastBoards, glitchBoards }) => {
       const state: FakeState = {
         seed,
         decks: [[...decks[0]], [...decks[1]]],
@@ -175,6 +181,8 @@ export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
         applied: [],
         nextChoice: 1,
         lastBoards: [[...(lastBoards?.[0] ?? [])], [...(lastBoards?.[1] ?? [])]],
+        glitchBoards: glitchBoards === undefined ? null : [[...glitchBoards[0]], [...glitchBoards[1]]],
+        seatSwaps: 0,
       };
       return asEngine(state);
     },
@@ -274,6 +282,15 @@ export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
           if (defId === "test-lethal") {
             next.result = { winner: player, reason: "hero-death" };
             events.push({ type: "gameOver", winner: player, reason: "hero-death" });
+          }
+          if (defId === "test-glitch-swap") {
+            next.seatSwaps += 1;
+            events.push({ type: "glitched", player, outcome: "swap" });
+          }
+          if (defId === "test-glitch-void") {
+            events.push({ type: "glitched", player, outcome: "void" });
+            next.result = { winner: "draw", reason: "voided" };
+            events.push({ type: "gameOver", winner: "draw", reason: "voided" });
           }
           if (defId === "test-mutual-lethal") {
             // §2.5: "Both heroes at 0 or less in the same check" is a draw, not a win for whoever
@@ -447,8 +464,15 @@ export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
       };
     },
 
-    fold: ({ seed, decks, log, lastBoards }) => {
-      let state = port.beginGame(port.createGame({ seed, decks, ...(lastBoards === undefined ? {} : { lastBoards }) })).state;
+    fold: ({ seed, decks, log, lastBoards, glitchBoards }) => {
+      let state = port.beginGame(
+        port.createGame({
+          seed,
+          decks,
+          ...(lastBoards === undefined ? {} : { lastBoards }),
+          ...(glitchBoards === undefined ? {} : { glitchBoards }),
+        }),
+      ).state;
       const errors: { nonce: string; error: string }[] = [];
       for (const action of log) {
         const result = port.reduce(state, action);
@@ -475,6 +499,7 @@ export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
         mulliganOwed: owedOf(fake),
         phase: fake.phase,
         result: fake.result,
+        seatsSwapped: fake.seatSwaps % 2 === 1,
       };
     },
 

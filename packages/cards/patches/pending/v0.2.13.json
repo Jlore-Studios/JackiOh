@@ -2,7 +2,7 @@
   "version": "v0.2.13",
   "title": "Patch v0.2.13: Easter egg, Glitch",
   "sources": "#170",
-  "notes": "A hidden token, Glitch: once a … in the System card has been played, each card generated into a hand or deck has n/10000 odds of being Glitch (R658). It is in no pool, the Almanac or the Deck Builder (R659), is always playable on its owner's turn (R660), and when played resets the match, swaps the seats, lays two other games' boards on the field, or voids the match (R661–R664).",
+  "notes": "A hidden token, Glitch: once a … in the System card has been played, each card generated into a hand or deck has n/10000 odds of being Glitch (R672). It is in no pool, the Almanac or the Deck Builder (R673), is always playable on its owner's turn (R674), and when played resets the match, swaps the seats, lays two other games' boards on the field, or voids the match (R675–R678).",
   "cards": [
     "classic-t-glitch"
   ]

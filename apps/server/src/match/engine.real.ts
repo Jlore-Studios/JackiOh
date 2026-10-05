@@ -50,7 +50,14 @@ export function enginePort(): EnginePort {
   registerAll();
 
   const api = engine as unknown as {
-    createGame: (args: { seed: string; decks: [string[], string[]]; catalog?: unknown; lastBoards?: unknown; dealt?: unknown }) => unknown;
+    createGame: (args: {
+      seed: string;
+      decks: [string[], string[]];
+      catalog?: unknown;
+      lastBoards?: unknown;
+      glitchBoards?: unknown;
+      dealt?: unknown;
+    }) => unknown;
     beginGame: (state: unknown) => { state: unknown; events: unknown[]; error?: string };
     reduce: (state: unknown, action: unknown) => { state: unknown; events: unknown[]; error?: string };
     legalActions: (state: unknown, player: unknown) => unknown[];
@@ -60,6 +67,7 @@ export function enginePort(): EnginePort {
     mulliganOwed: (state: unknown) => MatchSnapshot["mulliganOwed"];
     lastBoardFor: (state: unknown, player: "p1" | "p2") => ReturnType<EnginePort["lastBoards"]>[number];
     summarizeGame: (args: unknown) => ReturnType<EnginePort["summarizeGame"]>;
+    seatsSwapped: (state: unknown) => boolean;
   };
 
   return {
@@ -81,6 +89,8 @@ export function enginePort(): EnginePort {
         mulliganOwed: api.mulliganOwed(state),
         phase: raw.phase,
         result: raw.result,
+        // R676: the engine's own answer to "do the accounts hold each other's seat".
+        seatsSwapped: api.seatsSwapped(state),
       };
     },
     // R258: `banned: []` is practice's "random deck for a human" (no shadow-ban: R186's list shapes

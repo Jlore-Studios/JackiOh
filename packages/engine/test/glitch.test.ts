@@ -1,4 +1,4 @@
-// The Glitch Easter egg (issue #170; subsystems/glitch.ts, catalog.pickGenerated; R658–R664). Through a
+// The Glitch Easter egg (issue #170; subsystems/glitch.ts, catalog.pickGenerated; R672–R678). Through a
 // fixture Glitch registered under the real id; the real card's test (packages/cards/test/classic/
 // t-glitch-glitch.test.ts) covers the same cases again on the real catalog.
 
@@ -36,11 +36,11 @@ function game(seed: string): GameState {
   state.active = "p1";
   state.players.p1.turnsStarted = 2;
   state.players.p2.turnsStarted = 1;
-  state.players.p1.mana = { current: 0, max: 2 };
+  state.players.p1.mana = { ...state.players.p1.mana, current: 0, max: 2 };
   return state;
 }
 
-/** The first seed whose Glitch draws `outcome` when p1 plays it (each outcome is one rng draw, R661). */
+/** The first seed whose Glitch draws `outcome` when p1 plays it (each outcome is one rng draw, R675). */
 function seedFor(outcome: (typeof GLITCH_OUTCOMES)[number]): string {
   for (let n = 0; n < 200; n += 1) {
     const seed = `glitch-${outcome}-${n}`;
@@ -58,8 +58,8 @@ function playGlitch(state: GameState): { state: GameState; events: GameEvent[] }
   return result;
 }
 
-describe("R658 Glitch's odds", () => {
-  it("R658 with no System play a pick for a hand draws exactly as before: one draw, the same card", () => {
+describe("R672 Glitch's odds", () => {
+  it("R672 with no System play a pick for a hand draws exactly as before: one draw, the same card", () => {
     game("odds-none");
     const pool = query({ type: "Unit" });
     const a = createRng("odds-none");
@@ -69,7 +69,7 @@ describe("R658 Glitch's odds", () => {
     expect(a.cursor).toBe(b.cursor);
   });
 
-  it("R658 after n System plays one more draw makes the pick Glitch when it falls under n/10000", () => {
+  it("R672 after n System plays one more draw makes the pick Glitch when it falls under n/10000", () => {
     game("odds-some");
     const pool = query({ type: "Unit" });
     let glitched = 0;
@@ -94,7 +94,7 @@ describe("R658 Glitch's odds", () => {
     expect(pickGenerated(createRng("all"), pool, { systemPlays: GLITCH_ODDS_DENOMINATOR })?.id).toBe(GLITCH_DEF_ID);
   });
 
-  it("R658 counts every play of a … in the System card, by either player, and nothing else", () => {
+  it("R672 counts every play of a … in the System card, by either player, and nothing else", () => {
     const state = game("count");
     for (const defId of [...SYSTEM_CARD_DEF_IDS, "fx-1"]) {
       countSystemPlay(state, newInstance(state, defId, "p2", { z: "resolving", player: "p2" }));
@@ -102,7 +102,7 @@ describe("R658 Glitch's odds", () => {
     expect(state.systemPlays).toBe(SYSTEM_CARD_DEF_IDS.length);
   });
 
-  it("R659 no pool holds Glitch, not even one that takes every token; naming it by id still finds it", () => {
+  it("R673 no pool holds Glitch, not even one that takes every token; naming it by id still finds it", () => {
     game("pools");
     expect(query({ withTokens: true }).map((def) => def.id)).not.toContain(GLITCH_DEF_ID);
     expect(query({ tags: ["Token"] }).map((def) => def.id)).not.toContain(GLITCH_DEF_ID);
@@ -110,8 +110,8 @@ describe("R658 Glitch's odds", () => {
   });
 });
 
-describe("R660 Glitch is always playable on its owner's turn", () => {
-  it("R660 costs (0) whatever modifies it, so it is played with no mana", () => {
+describe("R674 Glitch is always playable on its owner's turn", () => {
+  it("R674 costs (0) whatever modifies it, so it is played with no mana", () => {
     const state = game("price");
     const [card] = inHand(state, GLITCH_DEF_ID, "p1");
     if (card === undefined) throw new Error("no Glitch");
@@ -121,22 +121,22 @@ describe("R660 Glitch is always playable on its owner's turn", () => {
     expect(reduce(state, { type: "play", playerId: "p1", instanceId: card.id, nonce: "free" }).error).toBeUndefined();
   });
 
-  it("R660 is not playable on the other player's turn", () => {
+  it("R674 is not playable on the other player's turn", () => {
     const state = game("their-turn");
     const [card] = inHand(state, GLITCH_DEF_ID, "p2");
     expect(reduce(state, { type: "play", playerId: "p2", instanceId: card?.id ?? "", nonce: "no" }).error).toBeDefined();
   });
 });
 
-describe("R661 Glitch's outcome and the reset", () => {
-  it("R661 draws its outcome from the match rng and says which, publicly", () => {
+describe("R675 Glitch's outcome and the reset", () => {
+  it("R675 draws its outcome from the match rng and says which, publicly", () => {
     for (const outcome of GLITCH_OUTCOMES) {
       const { events } = playGlitch(game(seedFor(outcome)));
       expect(events.filter((event) => event.type === "glitched")).toEqual([{ type: "glitched", player: "p1", outcome }]);
     }
   });
 
-  it("R661 a reset deals the match again from its decks: setup, mulligans open, fresh ids, the nonce log kept", () => {
+  it("R675 a reset deals the match again from its decks: setup, mulligans open, fresh ids, the nonce log kept", () => {
     const before = game(seedFor("reset"));
     before.systemPlays = 2;
     const oldIds = new Set([...before.players.p1.library, ...before.players.p2.library].map((card) => card.id));
@@ -155,7 +155,7 @@ describe("R661 Glitch's outcome and the reset", () => {
     expect(events.some((event) => event.type === "glitched")).toBe(true);
   });
 
-  it("R661 a reset is pure: the same state and action give the same state, and a JSON copy plays the same", () => {
+  it("R675 a reset is pure: the same state and action give the same state, and a JSON copy plays the same", () => {
     const start = game(seedFor("reset"));
     inHand(start, GLITCH_DEF_ID, "p1");
     const card = start.players.p1.hand.at(-1);
@@ -166,8 +166,8 @@ describe("R661 Glitch's outcome and the reset", () => {
   });
 });
 
-describe("R662 the seat swap", () => {
-  it("R662 swaps which seat each account plays, and only that: an even number of swaps is none", () => {
+describe("R676 the seat swap", () => {
+  it("R676 swaps which seat each account plays, and only that: an even number of swaps is none", () => {
     const { state } = playGlitch(game(seedFor("swap")));
     expect(state.seatSwaps).toBe(1);
     expect(seatsSwapped(state)).toBe(true);
@@ -177,8 +177,8 @@ describe("R662 the seat swap", () => {
   });
 });
 
-describe("R663 other games' boards", () => {
-  it("R663 replaces both fields with the frozen boards, Units to the unit zones and the rest to the backrow", () => {
+describe("R677 other games' boards", () => {
+  it("R677 replaces both fields with the frozen boards, Units to the unit zones and the rest to the backrow", () => {
     const seed = seedFor("boards");
     const state = game(seed);
     put(state, "fx-1", slot("p1", "units", 1));
@@ -201,14 +201,14 @@ describe("R663 other games' boards", () => {
   });
 });
 
-describe("R664 the void", () => {
-  it("R664 ends the game with no winner and reason voided", () => {
+describe("R678 the void", () => {
+  it("R678 ends the game with no winner and reason voided", () => {
     const { state, events } = playGlitch(game(seedFor("void")));
     expect(state.result).toEqual({ winner: "draw", reason: "voided" });
     expect(events.at(-1)).toEqual({ type: "gameOver", winner: "draw", reason: "voided" });
   });
 
-  it("R664 the effect alone, from any context, ends the game the same way", () => {
+  it("R678 the effect alone, from any context, ends the game the same way", () => {
     const state = game(seedFor("void"));
     const sink = sinkFor(state);
     glitch().apply(makeContext(sink, null, { controller: "p1" }));

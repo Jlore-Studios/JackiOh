@@ -19,6 +19,7 @@ import { useId, useState, type ReactElement } from "react";
 
 import type { CardDef, CardDefs } from "@jackioh/shared";
 
+import { isGlitch } from "../cards/glitch.ts";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { CardDefsProvider } from "../cards/refContext.tsx";
 import { ChangeList, changeSummary } from "./ChangeList.tsx";
@@ -43,7 +44,9 @@ function cards(count: number): string {
 
 /** "206 added · 111 changed", from the patch's own record; nothing for a kind it has none of. */
 export function countsLine(patch: Patch): string {
-  const count = (kind: Patch["changes"][number]["kind"]): number => patch.changes.filter((change) => change.kind === kind).length;
+  // R673: Glitch is not counted, as it is not listed (history.ts `patchCards`).
+  const count = (kind: Patch["changes"][number]["kind"]): number =>
+    patch.changes.filter((change) => change.kind === kind && !isGlitch(change.id)).length;
   const parts = [
     [count("added"), "added"],
     [count("changed"), "changed"],

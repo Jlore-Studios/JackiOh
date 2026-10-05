@@ -551,25 +551,25 @@ export type GameState = {
    * (`subsystems/boardHistory.ts`). Never in a view (§10.8). Absent until the first turn starts.
    */
   boardHistory?: BoardSnapshot[];
-  // ---- the Glitch Easter egg (issue #170; R658–R664) ----
-  /** R658: how many "… in the System" cards either player has played. Absent at 0, so a match without one hashes as before. */
+  // ---- the Glitch Easter egg (issue #170; R672–R678) ----
+  /** R672: how many "… in the System" cards either player has played. Absent at 0, so a match without one hashes as before. */
   systemPlays?: number;
-  /** R661: the decks and dealt seats `createGame` began with, which a reset deals again. Never in a view. */
+  /** R675: the decks and dealt seats `createGame` began with, which a reset deals again. Never in a view. */
   opening?: OpeningRecord;
-  /** R661: how many times Glitch has reset the match; keys the reset's id numbering. Absent until the first. */
+  /** R675: how many times Glitch has reset the match; keys the reset's id numbering. Absent until the first. */
   resets?: number;
-  /** R661: a reset Glitch owes, done once the action that drew it has settled (`subsystems/glitch`). */
+  /** R675: a reset Glitch owes, done once the action that drew it has settled (`subsystems/glitch`). */
   resetOwed?: true;
-  /** R662: how many times Glitch has swapped the seats; odd means each account now holds the other seat. */
+  /** R676: how many times Glitch has swapped the seats; odd means each account now holds the other seat. */
   seatSwaps?: number;
   /**
-   * R663: the two boards of other players' games a Glitch may put on the field, a `createGame` input
+   * R677: the two boards of other players' games a Glitch may put on the field, a `createGame` input
    * frozen like `lastBoards` (R417, R564). Never in a view.
    */
   glitchBoards?: Partial<Record<PlayerId, LastBoardEntry[]>>;
 };
 
-/** R661: what a Glitch reset deals again — `createGame`'s decks and dealt seats. */
+/** R675: what a Glitch reset deals again — `createGame`'s decks and dealt seats. */
 export type OpeningRecord = { decks: [string[], string[]]; dealt?: PlayerId[] };
 
 /** R417: one card of a last board — the card and its face, never stats, buffs or damage. */
@@ -694,7 +694,7 @@ export type CreateGameOptions = {
    */
   lastBoards?: LastBoardInput;
   /**
-   * R663: the boards of two other players' games a Glitch may put on the field, one per seat. Setup,
+   * R677: the boards of two other players' games a Glitch may put on the field, one per seat. Setup,
    * not an action, frozen as `lastBoards` is (R564): a replay passes the same boards
    * (`replay.ReplayInput.glitchBoards`). Omitted, a Glitch's boards outcome leaves both fields empty.
    */
@@ -824,7 +824,7 @@ export function createGame(options: CreateGameOptions): GameState {
 }
 
 /**
- * R661: the new game a Glitch reset deals — `createGame`'s, with ids numbered on from `nextId` in an
+ * R675: the new game a Glitch reset deals — `createGame`'s, with ids numbered on from `nextId` in an
  * order drawn from a stream of this reset's own (R223), so no id the old game showed names a card of
  * the new one.
  */
@@ -911,10 +911,10 @@ function buildGame(options: CreateGameOptions, firstId: number, stream: string):
   // R417, R564: frozen as the match is created, minus every entry this match cannot rebuild.
   const lastBoards = freezeLastBoards(options.lastBoards, catalog);
   if (lastBoards !== undefined) state.lastBoards = lastBoards;
-  // R663: the same freeze for the boards a Glitch may lay down.
+  // R677: the same freeze for the boards a Glitch may lay down.
   const glitchBoards = freezeLastBoards(options.glitchBoards, catalog);
   if (glitchBoards !== undefined) state.glitchBoards = glitchBoards;
-  // R661: what a Glitch reset deals again.
+  // R675: what a Glitch reset deals again.
   state.opening = {
     decks: [[...(options.decks[0] ?? [])], [...(options.decks[1] ?? [])]],
     ...(options.dealt === undefined || options.dealt.length === 0 ? {} : { dealt: [...options.dealt] }),

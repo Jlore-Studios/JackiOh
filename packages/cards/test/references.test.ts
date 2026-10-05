@@ -23,7 +23,7 @@ import { CATALOG } from "../src/catalog-data";
 
 const ENTRIES: readonly CardDef[] = Object.values(CATALOG);
 
-/** §2.1, R244: dealt by a rule, so no card's text names it — The Coin, and Glitch, which R658's roll deals. */
+/** §2.1, R244: dealt by a rule, so no card's text names it — The Coin, and Glitch, which R672's roll deals. */
 const DEALT_BY_A_RULE: readonly string[] = ["core-t-coin", "classic-t-glitch"];
 
 /**
