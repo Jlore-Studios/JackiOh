@@ -168,7 +168,7 @@ export type { DelayAt } from "./delay";
 export { addPlayerModifier } from "./playerMods";
 
 // Coin flips (§6.3, §10.7): every flip goes through `ctx.rng`, never `Math.random`.
-export { flipCoins } from "./coins";
+export { flipCoins, flipCoinKeyword } from "./coins";
 
 // Fuse (§6.3, R77, R102) and Rotate (§6.3, §3.1, R14, R88): both wrap their subsystem whole.
 export { fuseCards } from "./fuse";
