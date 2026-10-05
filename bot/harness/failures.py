@@ -57,6 +57,11 @@ def _review_cell(review: Mapping[str, Any] | None, self_checks: list[Mapping[str
     if self_checks:
         flagged = sum(1 for s in self_checks if s.get("flagged"))
         parts.append(f"self check ×{len(self_checks)}, {flagged} flagged")
+        failed = [str((s.get("review") or {}).get("error") or "") for s in self_checks
+                  if isinstance(s.get("review"), Mapping)]
+        failed = [error for error in failed if error]
+        if failed:
+            parts.append(f"**self-check call failed**: {_cell(failed[-1], 90)}")
     if review is None:
         parts.append("no review")
     elif not review.get("readable", True):

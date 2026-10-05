@@ -594,9 +594,10 @@ person's label, `difficulty_floor`), and a medium or stronger model takes it.
   Triage gives no difficulty.
 - **Strikes** (`harness/stepup.py`). A run that failed for the item's own sake is a strike: a
   failed run, a build or revision its reviewer would not approve, a review run that rejected its
-  head, CI still red after its fixes, a run that died. Infra, a usage pause, a halt or a stop is
+  head, each CI fix that left it red, a run that died. Infra, a usage pause, a halt or a stop is
   none. Strikes count on the issue (a bot pull request's on the issue it closes), and no request
-  resets them: a head that meets the review rule, or a step up, does.
+  resets them: a head that meets the review rule and is green in CI (the ten-minute sweep checks,
+  and a merge counts), or a step up, does.
 - **The step up.** At three strikes (`config.STEP_UP_AFTER`) the bot raises the item one step
   (easy to medium to hard), comments why, sends it back to the Needs plan stage when its plan's
   tier no longer meets the new floor, and, when a pull request is open, rebuilds it: the pull
