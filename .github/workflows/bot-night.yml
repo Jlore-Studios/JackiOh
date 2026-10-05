@@ -59,7 +59,7 @@ jobs:
   gate:
     name: gate
     runs-on: ubuntu-latest
-    timeout-minutes: 150     # the quiet wait is up to 120 minutes (quiet.max_wait_minutes)
+    timeout-minutes: 20     # no step waits any more (the quiet wait is retired): reads and a peek
     permissions:
       contents: read         # the queue and the state file; no write of any kind
       actions: read          # whether a run that holds an item is still alive

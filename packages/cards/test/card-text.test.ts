@@ -456,8 +456,8 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(changed.filter((id) => unanimated.has(id)).sort()).toEqual([...unanimated].sort());
   });
 
-  it("R366 patch v0.2.14 takes Craft a Card's Radiant draw off and moves Plague Chalice's loc between v0.2.12 and v0.2.14", () => {
-    const before = readSnapshot("v0.2.12");
+  it("R366 patch v0.2.14 takes Craft a Card's Radiant draw off and moves Plague Chalice's loc between v0.2.13 and v0.2.14", () => {
+    const before = readSnapshot("v0.2.13");
     // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
     const shipped = readPatches().some((patch) => patch.version === "v0.2.14");
     const after = shipped ? (readSnapshot("v0.2.14") as unknown as typeof CATALOG) : CATALOG;

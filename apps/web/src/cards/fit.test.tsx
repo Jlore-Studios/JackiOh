@@ -316,3 +316,32 @@ describe("the batched scheduler", () => {
     bad.remove();
   });
 });
+
+describe("a web font landing (fonts.css)", () => {
+  afterEach(() => {
+    delete (document as { fonts?: unknown }).fonts;
+  });
+
+  it("refits every mounted box when the document's fonts finish loading, and none once unmounted", () => {
+    // jsdom has no FontFaceSet: an EventTarget stands in for `document.fonts`.
+    const fonts = new EventTarget();
+    Object.defineProperty(document, "fonts", { value: fonts, configurable: true });
+    const model: Model = { basePx: 10, tierScale: 1, box: 60, longBox: 60, need: 0.4 };
+    const { text, font: before } = fitted(model);
+
+    // The web face sets wider than its fallback did: the same text now needs more room.
+    model.need = 0.6;
+    fonts.dispatchEvent(new Event("loadingdone"));
+    flushFits();
+    const after = fontOf(text, model);
+    expect(after, "refitted smaller for the wider face").toBeLessThan(before);
+    expect(model.need * after * after + 2 * PADDING, "and it fits its box again").toBeLessThanOrEqual(model.box + 1);
+
+    cleanup();
+    const setProperty = vi.mocked(CSSStyleDeclaration.prototype.setProperty);
+    setProperty.mockClear();
+    fonts.dispatchEvent(new Event("loadingdone"));
+    flushFits();
+    expect(setProperty, "an unmounted box is not refitted").not.toHaveBeenCalled();
+  });
+});

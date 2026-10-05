@@ -168,7 +168,17 @@ scripts/
   gen-voice.mjs         renders card-audio.json5's lines to public/audio/voice/<card-id>-<hook>.m4a
   gen-music.mjs         renders the scores in music/tracks.mjs to public/audio/music/<track>.m4a (R631)
   music/                the composition toolkit (theory.mjs, compose.mjs, midi.mjs) and every score
+  font-fallbacks.py     the metric-matched fallbacks' size-adjust and ascent/descent overrides for
+                        src/fonts.css, from the font files (by hand; needs fontTools and brotli)
 ```
+
+The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
+(`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
+variable over weight, Latin subset, self-hosted in `public/fonts` with their licences. Each is
+`font-display: swap` behind a metric-matched local fallback, so text measures the same before and
+after a face lands, and `cards/fit.ts` refits every mounted box once `document.fonts` reports
+`loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
+(`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`).
 
 ## Three flows at the table
 

@@ -18,7 +18,7 @@
   overflow-x: clip;
   background: var(--tavern-night);
   color: var(--tavern-parchment);
-  font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 16px/1.5 var(--font-text);
 }
 
 .landing *,

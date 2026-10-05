@@ -174,14 +174,14 @@
   gap: 7px;
   margin: 0;
   color: #f3e3b3;
-  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-family: var(--font-display);
   font-size: 16px;
   font-weight: 700;
 }
 
 .ws-cap {
   color: var(--text-dim);
-  font-family: system-ui, sans-serif;
+  font-family: var(--font-text);
   font-size: 12px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
@@ -344,7 +344,7 @@
   border-radius: 7px;
   background: var(--bg-sunken);
   color: #f3e3b3;
-  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-family: var(--font-display);
   font-size: 17px;
   font-weight: 700;
 }
@@ -552,7 +552,7 @@
 .ws-compare-name {
   overflow: hidden;
   color: #f3e3b3;
-  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-family: var(--font-display);
   font-size: 15px;
   font-weight: 700;
   text-overflow: ellipsis;
@@ -617,7 +617,7 @@
 .deckbuilder.app-shell .ws-import-title {
   margin: 0;
   color: #f3e3b3;
-  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-family: var(--font-display);
   font-size: 20px;
 }
 

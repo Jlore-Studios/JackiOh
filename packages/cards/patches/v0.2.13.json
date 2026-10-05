@@ -2629,14 +2629,14 @@
     "rarity": "Mythic",
     "token": false,
     "cost": 4,
-    "loc": 42,
+    "loc": 46,
     "base": {
       "keywords": [],
       "text": "Discover 2 Units. Fuse them and add the result to your hand. It costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover 3 Units. Fuse them and add the result to your hand. It costs (0)."
+      "text": "Discover 3 Units. Fuse them and add the result to your hand. It costs (0). Draw 1."
     }
   },
   "core-100": {
@@ -5881,7 +5881,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": "X",
-    "loc": 28,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "This enters with X Plague Tokens on it.\nAura: Counter every card played whose cost equals the number of Plague Tokens on this."

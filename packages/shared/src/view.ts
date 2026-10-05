@@ -119,12 +119,17 @@ export type Tuning = {
  * B5 E39: a lasting instruction that rides a card through every zone. `returnAfterResolve` is Classic+
  * #14 Forever&'s "After this resolves, return it to your hand. This can't cost less than (floor)";
  * `castOnDraw` and `targetEnemies` are Classic+ #40 Appropriations' "They have Cast on draw and aim
- * at enemies when they harm and at your side when they help".
+ * at enemies when they harm and at your side when they help". `swapsBook` is Classic #55's swap.
  */
 export type Enchantment =
   | { kind: "returnAfterResolve"; floor: number }
   | { kind: "castOnDraw" }
-  | { kind: "targetEnemies" };
+  | { kind: "targetEnemies" }
+  /**
+   * Classic #55 Book of Wildfire's "Becomes a different Book at the end of your turn", carried by the
+   * Book it became so the swap goes on (R671). `from` is the card that started it, which no swap picks.
+   */
+  | { kind: "swapsBook"; from: string };
 
 /** R437: a mark on a card, and the colour key the client draws it with ("purple"). */
 export type CardMark = { mark: string; color: string };
