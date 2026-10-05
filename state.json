@@ -2452,7 +2452,7 @@
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
-      "failures": 0,
+      "failures": 1,
       "feedback_since": "2026-10-05T10:25:59Z",
       "forced": false,
       "handoff": {
