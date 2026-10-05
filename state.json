@@ -2811,14 +2811,10 @@
       "votes": {
         "approvals": [],
         "builder": "cognition",
-        "rejections": [
-          "claude"
-        ],
+        "rejections": [],
         "reviews": [],
         "sha": "f5d746365481c418ef3190a46644b9a26fe5f7bd",
-        "tiers": {
-          "claude": "strong"
-        }
+        "tiers": {}
       }
     },
     "307": {
