@@ -2463,13 +2463,13 @@
       "feedback_since": "2026-10-05T11:26:08Z",
       "forced": false,
       "handoff": {
-        "at": "2026-10-05T11:18:42Z",
+        "at": "2026-10-05T11:32:39Z",
         "family": "cognition",
         "kind": "work",
         "notes": "# Revise PR #287 \u2014 conflict resolution \u2014 DONE\n\n## Task\n`conflict` revision: main moved; harness merged origin/main into `bot/issue-255`.\nConflicted files: `SPEC.md`, `packages/engine/test/rulings.test.ts`. Resolved; not staged\n(harness commits).\n\n## What the conflict was\nBoth sides appended a \u00a711 row after R660:\n- ours: `R661` (stats off landing page / behind curtain / rank in lobby \u2014 this PR)\n- main's: `R671` (Book of Wildfire end-of-turn swap, PR #292). Main skipped 662\u2013670\n  deliberately; R661 keeps its number and sits before R671 (ascending table order).\n\nAlso in the merge (auto-merged, verified both sides intact): BUILD.md C-55 row (main) +\nour `34-stats.cy.ts` e2e row (line 620), apps/web/README.md fonts paragraph (main) + our\nstats/play route entries (lines 159, 299), our `**R661` intro paragraph (line ~1370),\nmain's C #55 card-table line (line ~660).\n\n## Resolution\n- SPEC.md: dropped the three marker lines; rows now R659, R660, R661, R671.\n- rulings.test.ts: kept both `it` blocks in row order; inserted the `});` + blank line\n  the R661 block needed (the shared closer belongs to R671's `it`).\n\n## Verification (all run, all green)\n- `pnpm vitest run --project engine packages/engine/test/rulings.test.ts` \u2014 504 passed\n- `pnpm rulings:coverage` \u2014 502 rows, all named, no dangling citations\n- `pnpm exec eslint packages/engine/test/rulings.test.ts` \u2014 clean\n- `pnpm validate:catalog` \u2014 OK; `patches check` OK\n- `pnpm exec tsx packages/cards/scripts/missing-tests.ts` \u2014 pass (NOTEs only)\n- `grep` scan: zero conflict markers anywhere in tracked sources\n\n## Decisions\n- Did not renumber either row: R661 is this PR's title/plan number and R671 is already\n  shipped on main; the table tolerates the 662\u2013670 gap (existing gaps are normal per the\n  R380 paragraph: \"a block need not be used up, so the table may have gaps\").\n",
         "provider": "devin",
-        "reason": "the reviewer's answer could not be read twice in a row",
-        "trail": ""
+        "reason": "built; no model on this subscription may review it, so it waits for a review run, with 3 self-check finding(s) still open",
+        "trail": "- --- stderr ---\n- Error: Agent error: Reached free model rate limit. Upgrade to Max for higher limits, or switch to a different model. Your limit will reset in 11 hours 27 minutes (at 23:01 UTC). (trace ID: e95b89f6570d6811afe8e7660c39113e): {\n- \"cognition.ai/errorKind\": \"unavailable\",\n- \"cognition.ai/retryable\": true\n- }"
       },
       "interruptions": 0,
       "issue": 255,
