@@ -513,6 +513,33 @@ describe("postgres store, against a real database", () => {
     });
   });
 
+  describe("profiles.current_match_id (R672)", () => {
+    it("R672 refuses the flags ahead of the row, and takes them once the row exists", async () => {
+      const [a, b] = [await activeProfile(), await activeProfile()];
+      const matchId = uuid();
+      const now = Date.now();
+      // Flagging before the row exists violates the foreign key (0004): this is why a rematch
+      // starts its game before it flags the seats (`src/api/rematch.ts`).
+      await expect(store.profiles.setInMatch(a, matchId)).rejects.toThrow(/current_match_id/);
+      await store.matches.create({
+        id: matchId,
+        seed: "seed-rematch",
+        players: [a, b],
+        decks: [deckOf(0), deckOf(1)],
+        catalogVersion: CATALOG_VERSION,
+        status: "live",
+        createdAt: now,
+        finishedAt: null,
+        clocks: { turnDeadline: null, promptDeadline: null, graceDeadline: { p1: null, p2: null }, ceilingAt: now + 1000 },
+      });
+      await store.profiles.setInMatch(a, matchId);
+      await store.profiles.setInMatch(b, matchId);
+      const [pa, pb] = await store.profiles.getMany([a, b]);
+      expect(pa?.inMatchId).toBe(matchId);
+      expect(pb?.inMatchId).toBe(matchId);
+    });
+  });
+
   // -------------------------------------------------------------------------
   // app.append_match_action: the nonce dedupe the port cannot express
   // -------------------------------------------------------------------------
