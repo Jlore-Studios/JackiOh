@@ -34,7 +34,7 @@
       "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
       "off_hours": { "five_hour": 0.4 },
       "limits": { "mode": "caps", "five_hour": 0.98 },
-      "quiet_check": true
+      "quiet_check": false
     },
     "claude-2": {
       "note": "A second Claude account, capped at 90% of both its 5-hour session and its week. Kept back for planning and adversarial review on Opus: after the medium models in the usage order, and it builds only when no other subscription that may is free, Devin included (build_last). It never builds with Sonnet.",

@@ -4003,12 +4003,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(656, "effects-cast.test.ts");
   });
 
-  // Proved by apps/web routes/landing.test.tsx "R657 …" (swaps below the threshold among Core's
-  // cards, the ghost over the new card for ROTATION_SWAP_MS and no control, the deal entry and the
-  // sheet's rules) and routes/landingFan.test.ts "R657 …" (the swap's pool below the threshold,
-  // drawn evenly).
-  it("R657 rotates the homescreen's hand from the first visit, a swap a fizzle and an apparition", () => {
-    provenIn(657, WEB_LANDING_TEST, WEB_LANDING_FAN_TEST);
+  // Proved by engine animated.test.ts "R657 …" (a stat-less Animated card animates to 0/1, printed or
+  // granted, on either face).
+  it("R657 an Animated card with no printed stats fights as a 0/1", () => {
+    provenIn(657, "animated.test.ts");
   });
 
   // Proved by apps/web test/ux/drag-continue.test.tsx "R658 …" (a second drag from a pick, a backrow
@@ -4035,6 +4033,14 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/routes/almanac.test.tsx",
       "../../../apps/web/src/cards/art/convention.test.ts",
     );
+  });
+
+  // Proved by apps/web routes/landing.test.tsx "R671 …" (swaps below the threshold among Core's
+  // cards, the ghost over the new card for ROTATION_SWAP_MS and no control, the deal entry and the
+  // sheet's rules) and routes/landingFan.test.ts "R671 …" (the swap's pool below the threshold,
+  // drawn evenly).
+  it("R671 rotates the homescreen's hand from the first visit, a swap a fizzle and an apparition", () => {
+    provenIn(671, WEB_LANDING_TEST, WEB_LANDING_FAN_TEST);
   });
 });
 

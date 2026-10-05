@@ -47,7 +47,8 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(len([p for p in pool.ordered() if p.cli == "claude"]), 6)
         first = pool.get("claude-1")
         self.assertEqual(first.secret, "CLAUDE_CODE_OAUTH_TOKEN")
-        self.assertTrue(first.quiet_check)
+        # No subscription waits for quiet any more: the bot spends claude-1 like the rest.
+        self.assertFalse(any(p.quiet_check for p in pool.ordered()))
         seats = {p.id: [(s.model, s.tier, s.self_check) for s in pool.seats(p)]
                  for p in pool.ordered()}
         self.assertEqual(seats, {
@@ -627,33 +628,35 @@ class MatchingTests(unittest.TestCase):
                          ("review", "agy", "h1", "gpt"))
         self.assertEqual(gh.label_names(9), {LABEL_PR, LABEL_WORKING})
 
-    def test_the_shared_subscription_needs_the_gates_word(self):
-        gh = FakeGitHub()
-        gh.add_issue(3, labels=(LABEL_BUILD,))
+    def test_the_shared_subscription_takes_work_without_a_wait(self):
+        """claude-1 is spent like any other subscription now: no gate wait for quiet, so the
+        gate's word changes nothing."""
         env = secrets("CLAUDE_CODE_OAUTH_TOKEN")
-        self.assertIn("waits for its owner to be quiet",
-                      plan_mod.make(ctx_for(gh, env=env, machine=()), quiet_ok="")["reason"])
-        self.assertEqual(plan_mod.make(ctx_for(gh, env=env, machine=()),
-                                       quiet_ok="claude-1")["provider"],
-                         "claude-1")
+        for quiet_ok in ("", "claude-1"):
+            gh = FakeGitHub()
+            gh.add_issue(3, labels=(LABEL_BUILD,))
+            planned = plan_mod.make(ctx_for(gh, env=env, machine=()), quiet_ok=quiet_ok)
+            self.assertEqual((planned["action"], planned["provider"]), ("build", "claude-1"))
 
 
 class PeekTests(unittest.TestCase):
-    def test_the_gate_waits_for_quiet_only_when_the_shared_one_is_best(self):
+    def test_the_gate_never_waits_for_quiet(self):
+        """No subscription waits for quiet, so peek never names one: not with every secret,
+        not with only the shared subscription's, not by day."""
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD,))
-        # Another Claude account can take it now: no wait for the shared one.
         look = plan_mod.peek(ctx_for(gh))
         self.assertEqual((look.work, look.provider, look.quiet_provider), (True, "claude-3", ""))
-        # Opus is still worth the wait over another model, which stays the fallback.
         look = plan_mod.peek(ctx_for(gh, env=secrets("CLAUDE_CODE_OAUTH_TOKEN"), machine=("gpt",)))
         self.assertEqual((look.work, look.provider, look.quiet_provider, look.quiet_secret,
                           look.fallback),
-                         (True, "claude-1", "claude-1", "CLAUDE_CODE_OAUTH_TOKEN", True))
+                         (True, "claude-1", "", "", False))
         look = plan_mod.peek(ctx_for(gh, at=DAY))
         self.assertEqual((look.provider, look.quiet_provider), ("agy", ""))
 
-    def test_a_second_run_does_not_wait_for_quiet_too(self):
+    def test_runs_never_wait_for_quiet(self):
+        """Even a run sitting at the quiet step holds nothing back: with no subscription
+        waiting, a second run goes ahead on the shared one too."""
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD,))
         gh.runs["50"] = {"id": 50, "status": "in_progress"}
@@ -661,8 +664,7 @@ class PeekTests(unittest.TestCase):
         look = plan_mod.peek(ctx_for(gh))
         self.assertEqual((look.work, look.provider, look.quiet_provider), (True, "claude-3", ""))
         look = plan_mod.peek(ctx_for(gh, env=secrets("CLAUDE_CODE_OAUTH_TOKEN"), machine=()))
-        self.assertFalse(look.work)
-        self.assertIn("already waits for `claude-1`", look.reason)
+        self.assertEqual((look.work, look.provider, look.quiet_provider), (True, "claude-1", ""))
 
 
 class WhenTests(unittest.TestCase):
