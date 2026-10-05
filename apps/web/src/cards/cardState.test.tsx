@@ -662,7 +662,7 @@ describe("R512 the glossary beside a face explains the states it wears", () => {
       animated: {},
     });
     const ids = glossaryFor(face).map((entry) => entry.id);
-    expect(ids).toEqual(expect.arrayContaining(["Cry", "Brittle", "Upgrade", "Degrade", "Lifesteal", "Cast on draw", "Animated"]));
-    expect(glossaryFor(inPlay("core-004")).map((entry) => entry.id)).toEqual(["Cry"]);
+    expect(ids).toEqual(expect.arrayContaining(["Cry", "Divine Shield", "Rush", "Brittle", "Upgrade", "Degrade", "Lifesteal", "Cast on draw", "Animated"]));
+    expect(glossaryFor(inPlay("core-004")).map((entry) => entry.id)).toEqual(["Cry", "Divine Shield", "Rush"]);
   });
 });
