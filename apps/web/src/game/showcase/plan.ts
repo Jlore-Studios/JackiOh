@@ -14,6 +14,11 @@
 // of the redacted events (`castOnDraw.ts`), so a hidden one is a back that says a card was cast as it
 // was drawn, never which.
 //
+// Issue #124: so is every card another card casts (C+ #47 Jogg's Box's ten, Solarius-Prime's five, a
+// Cry that casts a card), on both seats, with the card that cast it and which of its casts it is: a
+// play the stream begins while another is still resolving (`runs.ts`). Nobody chose those either, and
+// ten of them in one action cannot be followed unless each is shown.
+//
 // Which events are new. `view.events` is §10.8's sliding window, and R97 re-judges its redaction on
 // every view by where each card sits NOW: the opponent's `drawn` reads as the sentinel while the card
 // is in their hand and names the card once it has been played. So two windows that share their
@@ -26,6 +31,7 @@ import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { castOnDrawAt } from "../../fx/castOnDraw.ts";
 import { chaosRollOf, type ChaosRoll } from "../../fx/chaos.ts";
 import { sideOf } from "../contract.ts";
+import { createPlayTracker, type PlayTracker } from "../runs.ts";
 import { HIDDEN_CARD, cardInView } from "../faces.ts";
 
 /** One card the showcase holds up. `defId` is null exactly when the view hides the card. */
@@ -50,6 +56,11 @@ export type ShowcasePlay = {
   cost?: number;
   /** R502: the card was cast the moment it was drawn (castOnDraw.ts). Absent for every other play. */
   castOnDraw?: true;
+  /**
+   * Issue #124: another card cast it: that card's definition (null when the view hides it) and which
+   * of its casts this is, 1 on. Absent for every other play.
+   */
+  castBy?: { defId: string | null; ordinal: number };
 };
 
 /** The fields a redacted event keeps as they are (R97): who, and where. Everything else may be the sentinel's. */
@@ -178,18 +189,31 @@ function tailOffset(fresh: readonly GameEvent[], window: readonly GameEvent[]): 
  * viewer did not choose it, and it never passed through their hand). A cast on draw is read off the
  * view's whole window, so a `drawn` that came in an earlier view still counts; a hidden one is a back
  * (R97, R202).
+ *
+ * Issue #124: and every card another card cast, on either seat, with `castBy`. `plays` is the tracker
+ * of the plays still resolving, which must read every event of the viewer's stream in order (the
+ * showcase keeps one per viewer); without one, only the casts inside `fresh` itself are found.
  */
-export function showcasePlays(fresh: readonly GameEvent[], view: PlayerView): ShowcaseItem[] {
+export function showcasePlays(
+  fresh: readonly GameEvent[],
+  view: PlayerView,
+  plays: PlayTracker = createPlayTracker(),
+): ShowcaseItem[] {
   const offset = tailOffset(fresh, view.events);
   const window = offset === null ? fresh : view.events;
   const base = offset ?? 0;
   const items: ShowcaseItem[] = [];
   fresh.forEach((event, at) => {
+    const cast = plays.see(event);
     if (event.type !== "cardPlayed") return;
     const onDraw = castOnDrawAt(window, base + at);
-    if (!onDraw && sideOf(view, event.player) !== "opponent") return;
+    if (!onDraw && cast === null && sideOf(view, event.player) !== "opponent") return;
     const play = playOf(event, at, fresh, view);
-    items.push({ play: onDraw ? { ...play, castOnDraw: true } : play, event });
+    if (onDraw) items.push({ play: { ...play, castOnDraw: true }, event });
+    else if (cast !== null) {
+      const by = cast.by.defId === HIDDEN_CARD ? null : cast.by.defId;
+      items.push({ play: { ...play, castBy: { defId: by, ordinal: cast.ordinal } }, event });
+    } else items.push({ play, event });
   });
   return items;
 }

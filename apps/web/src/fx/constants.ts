@@ -109,6 +109,23 @@ export const FX_CHAOS_STAGGER = 0.2;
 export const FX_CHAOS_LAND_LAST = 0.85;
 export const FX_CHAOS_REEL_DECOYS = 6;
 export const FX_CHAOS_DECOY_STEP = 3;          // how far apart in the names table a reel's decoys are
+// Issue #124: a sweep's fog rolls over its row (one entry, SWEEP_MS), each unit's hit landing as the
+// fog reaches its lane, from FX_FOG_HIT_FROM to FX_FOG_HIT_TO of the entry; a zone wave's count pops
+// at FX_ZONE_COUNT_AT. A fog is FX_FOG_PUFFS puffs of cloud and FX_FOG_ICONS icons, spread over the
+// row grown by FX_FOG_PAD of its height on every side; both trail FX_FOG_TAIL_MS after the entry.
+export const FX_FOG_HIT_FROM = 0.2;
+export const FX_FOG_HIT_TO = 0.75;
+export const FX_FOG_TAIL_MS = 500;
+export const FX_FOG_PUFFS = 7;
+export const FX_FOG_ICONS = 6;
+export const FX_FOG_PAD = 0.15;
+export const FX_ZONE_COUNT_AT = 0.35;
+export const FX_ZONE_TAIL_MS = 400;
+// Issue #124: a cast another card made flares at its caster's hero, bigger with each cast of the same
+// burst (FX_CAST_SCALE_STEP more per cast, up to FX_CAST_SCALE_MAX), and the hero jolts a little.
+export const FX_CAST_SCALE_STEP = 0.06;
+export const FX_CAST_SCALE_MAX = 1.6;
+export const FX_CAST_TRAUMA = 0.12;
 export const FX_SPEED_MIN = 0.25;              // R435: the slider runs from a quarter speed…
 export const FX_SPEED_MAX = 3;                 // …to three times the table's speed
 export const FX_SPEED_DEFAULT = 1;

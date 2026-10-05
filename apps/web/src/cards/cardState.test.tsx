@@ -9,6 +9,9 @@
 // overlays a hover and a long-press open. Each state is checked on each surface, and its absence
 // draws nothing.
 
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { CATALOG } from "@jackioh/cards";
 import { fillParams, type BackrowView, type CardDef, type PlayerView, type Tuning } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
@@ -453,6 +456,8 @@ describe("E21 a backrow pile shows its depth, as a unit pile does", () => {
     );
     const first = screen.getByTestId(testid.zone("you", "backrow", 1));
     const pile = must(first.querySelector<HTMLElement>(":scope > .backrow-pile"), "the first zone's depth");
+    // A press opens the pile as a wheel (issue #124), so the depth is a button, not a span.
+    expect(pile.tagName).toBe("BUTTON");
     expect(pile.getAttribute("data-buried")).toBe("2");
     expect(pile.textContent).toBe("2");
     expect(pile.getAttribute("title")).toBe(PILE_WORDS);
@@ -473,6 +478,33 @@ describe("E21 a backrow pile shows its depth, as a unit pile does", () => {
       }),
     );
     expect(document.querySelector(".backrow-pile")).toBeNull();
+  });
+});
+
+describe("E21 the pile badge's stylesheets", () => {
+  function sheet(fromWeb: string): string {
+    for (const candidate of [fromWeb, `apps/web/${fromWeb}`]) {
+      const path = resolve(process.cwd(), candidate);
+      if (existsSync(path)) return readFileSync(path, "utf8");
+    }
+    throw new Error(`${fromWeb} not found from ${process.cwd()}`);
+  }
+
+  function block(css: string, selector: string): string {
+    const at = css.indexOf(`${selector} {`);
+    expect(at, `a rule for ${selector}`).toBeGreaterThanOrEqual(0);
+    return css.slice(at, css.indexOf("}", at));
+  }
+
+  it("E21 the badge reads as the badge, not an app-shell button: board.css outranks index.css's padding", () => {
+    const rule = block(sheet("src/game/board.css"), ".board button.buried-badge");
+    expect(rule).toMatch(/padding:\s*0 3px/);
+    expect(rule).toMatch(/border:\s*0/);
+  });
+
+  it("E21 a backrow pile's badge takes a press: its rule sets no pointer-events: none", () => {
+    const rule = block(sheet("src/cards/cardstate.css"), ".zone > .backrow-pile");
+    expect(rule).not.toMatch(/pointer-events:\s*none/);
   });
 });
 
