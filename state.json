@@ -2619,12 +2619,15 @@
       "taken_asks": []
     },
     "294": {
+      "asks": [
+        "c:5995258732"
+      ],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
-      "queued_at": "2026-10-05T06:14:10Z",
+      "queued_at": "2026-10-05T13:18:25Z",
       "requested_by": "jgoetzmann",
       "stop_requested": false
     },
