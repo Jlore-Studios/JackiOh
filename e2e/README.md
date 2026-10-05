@@ -1,4 +1,4 @@
-# `e2e/` — the thirty-four specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, and the public Statistics page's `34`
+# `e2e/` — the thirty-five specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34` and the settings dialog's `35`, plus twelve component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
 a test server with fixture accounts for the networked ones. BUILD M8's house rules hold
@@ -15,15 +15,31 @@ everywhere in here:
 
 ```
 e2e/
-  cypress.config.ts        specPattern cypress/e2e, fixturesFolder fixtures, supportFile support/e2e.ts
-  cypress/e2e/*.cy.ts      the thirty-four specs (`99-online-smoke` is skipped unless enabled)
+  cypress.config.ts        e2e: specPattern cypress/e2e, fixturesFolder fixtures, supportFile support/e2e.ts;
+                           component: specPattern cypress/component, support/component.tsx, support/component-index.html
+  cypress/e2e/*.cy.ts      the thirty-five specs (`99-online-smoke` is skipped unless enabled); CI splits them
+                           over its e2e shards with scripts/shard-specs.mjs
+  cypress/e2e/01-hotseat-full-game.cy.ts  BUILD M8: a seeded game played to completion through the UI with two aggro decks
+  cypress/e2e/02-prompts.cy.ts  BUILD M8: each of the ten choice pickers rendered once and answered, whether it builds the `play` action or answers a `PendingChoice` (R81)
+  cypress/e2e/03-trap-opponent-turn.cy.ts  BUILD M8: p2's set Sheepish fires on p1's turn when p1 plays a unit
+  cypress/e2e/04-combat.cy.ts  BUILD M8: Taunt, Defense Position, First Strike and Divine Shield in combat
+  cypress/e2e/05-reconnect.cy.ts  BUILD M8, networked: the same view and the same open prompt after a reload, the clock kept running
+  cypress/e2e/06-room-code.cy.ts  BUILD M8, networked: a room created in the browser and joined by `wsPlayer`
+  cypress/e2e/07-my-pawn-ai.cy.ts  BUILD M8: p2's My Pawn cancels p1's lethal attack, and an AI plays out p1's turn (R44)
+  cypress/e2e/08-turn-cap-draw.cy.ts  BUILD M8: after the 60th player-turn, 30 each, the overlay says Draw (R2, R389)
+  cypress/e2e/09-deckbuilder.cy.ts  BUILD M8, networked: the deck workshop and the queue's rules (§9.4, R250–R253)
+  cypress/e2e/10-invite-gate.cy.ts  BUILD M8, networked: a pending account sees the code screen, three bad codes get one identical error, and a good code activates it
+  cypress/e2e/11-radiant.cy.ts  BUILD M8: Glowy Jelly Bean on a hand card and Knockoff Temu on a field unit make them Radiant
+  cypress/e2e/12-rotation-and-swaps.cy.ts  BUILD M8: Silly Silas moves every card one lane round the ring (R14), and Pocket Chaos's board swap flips the sides
+  cypress/e2e/13-practice-vs-ai.cy.ts  SPEC §9.9, R187: practice against the AI on `build:e2e` with no server: the AI's mulligan and turns, a few human turns, the browser's game folding to the same hash in Node, and Concede
+  cypress/e2e/14-landing-and-sign-in.cy.ts  polish 5: the landing page and the way in, every `/api` call answered by `cy.intercept`
   cypress/e2e/15-audio.cy.ts  polish 2 (SPEC §10.11): the first click unlocks audio, a unit played from hand logs its play line, mute survives a reload
+  cypress/e2e/16-drag-to-play.cy.ts  polish 7, B40: drag to play and to attack in a seeded hotseat game, and drag to play turned off in the settings panel
   cypress/e2e/17-card-showcase-and-hovers.cy.ts  the opponent's played card held up for about a second (a back for a face-down set), a log line's card on hover and click, and a graveyard browsed on hover and in a dialog, on /dev/hotseat and /practice
   cypress/e2e/18-deck-workshop.cy.ts  TASK 1 (R250–R252, R255, R256): an incomplete deck saves and survives a reload, an edit made while `PUT /api/decks/:id` fails at the network is kept on the device and saved once it answers, a copied deck code imports as a new deck and a damaged one is refused with a sentence, a trio marks the cards two decks share and is ready once they share none, and the deck cap
   cypress/e2e/19-queue-modes-and-series.cy.ts  TASK 1 (R257–R264, R330–R338): Best of 1 queues the chosen deck, All Random needs no saved deck, a Conquest series between the browser and `wsPlayer` (sealed picks chosen and locked in, the picked decks, a won deck locked and a lost one picked again, the last deck picked for you, a concede loses a game, three wins with three decks end it and rate it once), and a Conquest room refusing a Best-of-1 joiner
   cypress/e2e/20-mulligan-concede-draw.cy.ts  networked, like 06: both seats mulligan at once in either order (R265–R268), Concede's confirmation, and a draw offer declined and then accepted (R36, R269), asserted on the browser's DOM and on seat 2's socket alike
   cypress/e2e/21-radiant-marks.cy.ts  the Radiant pass (SPEC §10.10, R277, R279, R280): a hand card's computed value "{n}", a reference's face beside the preview and its tooltip in the touch sheet, and a card made Radiant in hand printing its change in gold, on /dev/hotseat
-  cypress/component/radiant-marks.cy.tsx  the Radiant pass: the gold mark's weight, underline and contrast on both backgrounds, a reference's tooltip in the detail view, and a computed value inside its rules box
   cypress/e2e/22-tutorial-lesson-one.cy.ts  SPEC §9.10: lesson 1 played to a win by doing, through the UI, what the coach asks; progress saved; the log replays with the tutorial handicap
   cypress/e2e/23-tutorial-path.cy.ts  SPEC §9.10: the lesson path (locked, open, completed), progress seeded, reloaded and corrupt, no Skip step and Exit (R314), a later lesson's fixed deal, the phone layout
   cypress/e2e/24-library-browse.cy.ts  R310–R314: on /dev/hotseat your own library (the "Deck" pile, "Your deck", R373) opens on hover, click and Enter, grouped with counts and "Order hidden", card for card what the library holds; the opponent's is a count; the other seat's opens after the hand-over; in a tutorial lesson there is no Skip step and the library opens there too
@@ -37,10 +53,19 @@ e2e/
   cypress/e2e/32-tribute-full-board.cy.ts  patch v0.2.0, R391, on /dev/hotseat: with all five of a seat's unit zones full, a card with a Tribute cost is playable because its own Tribute empties a zone, and it lands in the zone that Tribute emptied
   cypress/e2e/33-almanac.cy.ts  R630 on `/` and `/almanac`, against `build:e2e` with no server: signed out, the footer's "Card almanac" link (right after Patch notes) opens the almanac, read-only (no "Owned only", no "+", no draggable card), a cost chip keeps only cards of that cost, a card's detail view opens with no add action and closes, no `/api` call except the public stats block (R654) is made on the page, and Back returns to the landing page
   cypress/e2e/34-stats.cy.ts  R654 on `/` and `/stats`, against `build:e2e` with stubbed endpoints: signed out, the footer's "Stats" link opens `/stats`, the provisional banner displays live-game progress toward the gate, summary tiles, sortable cards table, search, card drill-down dialog, and players tab (with no Elo rating displayed); Back returns to the landing page
+  cypress/e2e/35-settings-dialog.cy.ts  #128, #129, R633, R634 (#263): the dialog's four tabs by click and arrow key, the tab it reopens on, Reduce motion applied at once, Reset this tab and Reset all, the background-music switch kept across a reload, the Account tab signed out, and signed in as `e2e-p1` a change reaching the account (`PUT /api/settings`), a fresh device taking the account's copy (`GET`), and a failed save sent again by Try again
   cypress/component/audio-recipes.cy.tsx  polish 2: every SFX recipe rendered in Chrome's OfflineAudioContext is finite, audible and quiet after its length, impact grows with damage, and through the real mix each effect sits in its band against the shipped voice lines
   cypress/component/audio-toggle.cy.tsx   polish 2: inside .app-shell the mute toggle is a 44 px circle with a 22 px icon
-  cypress/component/deckbuilder-layout.cy.tsx  B39/B29/B38 on the deck workshop (`DeckWorkshop`, a full deck open): no overflow at 390x844 and 1280x720, two pool columns on the phone, two whole pool rows at 1280x720, the first pool row on a phone's first screen, the verdict in the sidebar, every pool keyword bold in its rules box's ink (#85)
+  cypress/component/board-layout.cy.tsx  BUILD M5-T1's pixel acceptance: the fixture view with 10 units, 10 backrow cards and a stacked pile has no layout overflow at 1280x720 and 390x844
+  cypress/component/card-faces.cy.tsx  polish 6, B15 and B21: every face's name and rules text fit their boxes in a real layout engine, a clamp only past 260 characters and never under the reading floor
+  cypress/component/deckbuilder-layout.cy.tsx  B39/B29/B38 on the deck workshop (`DeckWorkshop`, a full deck open): no overflow at 390x844 and 1280x720, two pool columns on the phone, two whole pool rows at 1280x720, the first pool row on a phone's first screen, the verdict in the sidebar, every pool keyword bold in its rules box's ink (#85), and an off-screen pool card fitted only once it nears the screen (#263)
   cypress/component/emotes-layout.cy.tsx  #219 on the fixture board: the picker's emoji drawn at least 36 px square, every voice label at least 11 px, every item a 44 px touch target on a touch-sized screen, both menus and a voice line's bubble kept on the screen at six viewports
+  cypress/component/fx-layer.cy.tsx  polish 1: the effects layer's real device pixel ratio (B28), the board shake (B35), and B40's browser half: it takes no click, the canvas draws, the board still fits
+  cypress/component/keyword-visuals.cy.tsx  R438 (#40): the keyword visuals on a board minion as Chrome paints them
+  cypress/component/landing-and-code-field.cy.tsx  polish 5, B39: at 360, 390, 768 and 1280 px neither the landing page nor the invite code field overflows, and every CTA and the code input are on screen
+  cypress/component/mobile-ux.cy.tsx  polish 7: the glow colours from the computed box-shadow and the mobile layout only a real layout engine can measure
+  cypress/component/practice-table.cy.tsx  the practice table at the viewports practice is played on, on the M5-T1 fixture board with a hand of 4, 7 and 10 cards
+  cypress/component/radiant-marks.cy.tsx  the Radiant pass: the gold mark's weight, underline and contrast on both backgrounds, a reference's tooltip in the detail view, and a computed value inside its rules box
   fixtures/decks/*.json    scenario decks, named for the spec that uses them; a deck may carry the seat's
                            `handicap` (R180: deckSize, manaBonus, manaCap, extraOpeningCards,
                            extraDrawsPerTurn, heroHealth?), and then holds its deckSize cards (R184)
@@ -50,7 +75,7 @@ e2e/
                            freeAccount/concedeAs, dragCardToDeck)
     testids.ts             every selector the suite uses, in one file
     ux.ts                  polish 7: the pointer-drag gesture (spec 16) and the drag, glow and
-                           settings selectors it reads
+                           settings selectors (specs 16 and 35)
     tutorial.ts            specs 22 and 23: the lesson URL, seeded progress, the practice and
                            tutorial dev handles, and the driver that follows the coach by clicking
     config.ts              routes, endpoints, fixture accounts, the session key, timeouts,
@@ -59,6 +84,9 @@ e2e/
                            `classic-NNN`, `classicplus-NNN`), and the 49 Tokens
     types.ts               structural subsets of the engine types; `window.__jackioh`
     e2e.ts                 support file; enforces the no-fixed-wait rule
+    component.tsx          the component specs' support file (`cy.mount`); not e2e.ts, whose
+                           commands need `window.__jackioh`
+    component-index.html   the page the component specs mount into
     tasks/
       index.ts             registers the node tasks
       wsPlayer.ts          `cy.task("wsPlayer")`: the second player, driven from Node (specs 05, 06, 19), and
@@ -68,7 +96,10 @@ e2e/
       lessons.ts           `cy.task("tutorialLessons")`: the lessons, seeds and decks as apps/web states them
       lessons-runner.ts    runs under the repo's tsx; reads apps/web/src/tutorial/lessons.ts, AI_TUTORIAL and
                            the catalog's Quickdraw tag (excluded from tsconfig.json, like replay-runner.ts)
+      onlineReset.ts       spec 99's cleanup, and only its: leaves both accounts outside any live match
   scripts/check-fixtures.mjs  pre-flight for the deck fixtures; needs no browser and no client
+  scripts/shard-specs.mjs     `node scripts/shard-specs.mjs <k> <K>`: the specs CI's shard k of K runs,
+                              balanced by measured time; a new spec lands in exactly one shard
   artifacts/               recorded logs, screenshots, videos (git-ignored)
 ```
 
@@ -93,7 +124,7 @@ pnpm check:fixtures     # every deck fixture obeys L2/L3/L6 before a browser is 
 # 1. the client, in E2E mode
 E2E=1 pnpm --dir apps/web dev                  # must serve http://localhost:5173
 
-# 2. the server, in E2E mode, for specs 05, 06, 07(networked path), 09, 10, 18, 19, 20, 26, 27
+# 2. the server, in E2E mode, for specs 05, 06, 07(networked path), 09, 10, 18, 19, 20, 26, 27, 35
 E2E=1 pnpm --dir apps/server dev               # http://localhost:8787 and ws://…/ws/match (WS_PATH)
 
 # 3. the suite

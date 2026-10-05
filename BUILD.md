@@ -619,7 +619,7 @@ Cypress runs against `apps/web` in `E2E=1` mode (hotseat route and a test server
 | `33-almanac.cy.ts` | Signed out, against a built client with every API call stubbed: the landing page's site footer, then `/almanac` (R630) | the footer's "Card almanac" link opens `/almanac`; filtering by a cost keeps only cards of that cost; a card's detail view opens with no add action and closes; no API call is made on the page; Back returns to the landing page |
 | `34-stats.cy.ts` | Signed out, against a built client with stubbed API calls: the landing page's site footer, then `/stats` (R654) | the footer's "Stats" link opens `/stats`; provisional banner shows live game count; summary tiles render; cards table searches and filters; card drill-down opens CardFace modal; players tab renders public stats without Elo; Back returns to the landing page |
 
-**M8 gate.** Every spec in `e2e/cypress/e2e/` (01–34) green in CI on Chrome and Electron.
+**M8 gate.** Every spec in `e2e/cypress/e2e/` (01–35) green in CI on Chrome and Electron.
 
 ### M9 — Patch v0.2.0: Classic, Classic+, the new keywords and mechanics (issue #40)
 

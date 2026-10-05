@@ -68,7 +68,7 @@ E2E (Cypress). The root `pnpm install` covers `e2e/`, as CI relies on. `e2e/` al
 
 ```
 E2E=1 pnpm --dir apps/web dev       # http://localhost:5173, serves /dev/hotseat
-E2E=1 pnpm --dir apps/server dev    # :8787 + /ws/match; needed for networked specs 05, 06, 07, 09, 10, 18, 19, 20, 26, 27
+E2E=1 pnpm --dir apps/server dev    # :8787 + /ws/match; needed for networked specs 05, 06, 07, 09, 10, 18, 19, 20, 26, 27, 35
 cd e2e && pnpm exec cypress run --spec cypress/e2e/01-hotseat-full-game.cy.ts
 pnpm --dir e2e test:component       # component/pixel specs, no server needed; E2E_COMPONENT_PORT (default 5273) moves its dev server
 ```
@@ -80,7 +80,7 @@ CI (`.github/workflows/ci.yml`) reports five required checks. Each long one is a
 - `ai-gate`: `pnpm ai:gate`, every k-th game per shard (`JACKIOH_AI_GATE_SHARD=k/K`). `pnpm ai:gate:merge` holds the shards' wins together against `gateNeeded`.
 - `sql`: `test:sql`.
 - `db`: `test:db`, then `test:deploy`.
-- `e2e`: the thirty-four specs (`01`–`34`) on Chrome and on Electron, each browser split by `e2e/scripts/shard-specs.mjs` over jobs that boot their own server, plus the component specs on Chrome.
+- `e2e`: the thirty-five specs (`01`–`35`) on Chrome and on Electron, each browser split by `e2e/scripts/shard-specs.mjs` over jobs that boot their own server, plus the component specs on Chrome.
 
 `deploy-watch.yml` asks Render to deploy every push to main by its commit, through Render's API (the `RENDER_API_KEY` secret, with a job that follows the deploy through `Bounceapp/render-action`) or else its deploy hook (`RENDER_DEPLOY_HOOK_URL`; without either, Render's own auto-deploy is relied on), since Render takes "the latest commit" from a GitHub integration that has lost access before, polls the live server and opens an issue if it never serves render.yaml's catalog version on the pushed commit (`GET /api/catalog` reports the commit in its `x-deployed-commit` header, from Render's `RENDER_GIT_COMMIT`), which is what a failed Render deploy, or a Render that stopped receiving pushes, looks like from outside; the issue says which, and the run that finds the server live closes it. `ci-duration.yml` reads every CI run's job times and opens an issue (or comments on the open one) when a job went over seven minutes (`ALERT_MINUTES`), and hands the issue to the night bot (assigned to it and labelled `bot:build`; a fork's run is never handed over), which makes what it can of the fix outside `.github/` and asks a person for any `ci.yml` change; split that job further, usually by lengthening its matrix list, until it finishes under five (`TARGET_MINUTES`). A job between five and seven minutes is not reported, so it never costs a re-split on its own. `triage.yml` labels, assigns and titles each issue or pull request someone trusted opens. Devin classifies it on its own runner, with no write token, and a GitHub-hosted job applies the result. Human work goes to MaxGoetzmann and jgoetzmann with `human`, bot work to `jgoetzmann-bot`. Labels are only added, and only issue titles that break `docs/issues-and-patches.md` are changed (`bot/README.md`, Triage).
 
