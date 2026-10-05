@@ -586,6 +586,12 @@
       "lines": [
         "/harness build A fresh build, as asked when #203 was closed. The three failed runs were all Devin: it reported \"built\" but pushed nothing reviewable, and no model on its subscription may review it (the same failure as #290). So this is now `difficulty:medium`, which keeps it to a medium or strong builder. Start from the plan in the description and current `main`. Card data changes go live through a pending fragment: use the next free version after any pending ones on `main`, since #166 holds v0.2.15 and #170 v0.2.16."
       ]
+    },
+    "c:5999384029": {
+      "at": "2026-10-05T17:15:09Z",
+      "lines": [
+        "@jgoetzmann-bot raised difficulty to hard; try again"
+      ]
     }
   },
   "items": {
