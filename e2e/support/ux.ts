@@ -80,7 +80,7 @@ export const SETTINGS_RESET_TAB = "settings-reset-tab";
 export const SETTINGS_TABLIST = "settings-tablist";
 
 export type SettingKey = "dragToPlay" | "confirmEndTurn" | "hoverPreviews" | "reduceMotion";
-export type SettingsSection = "gameplay" | "visuals" | "audio";
+export type SettingsSection = "gameplay" | "visuals" | "audio" | "account";
 
 /** One `<input type="checkbox" role="switch">`: `setting-dragToPlay`, … */
 export function settingId(key: SettingKey): string {

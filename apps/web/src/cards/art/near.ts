@@ -13,6 +13,7 @@
 // would otherwise count as far until it was actually on screen.
 
 import { ART_DWELL_MS, ART_NEAR_MARGIN_PX } from "../constants.ts";
+import { SKIPPABLE_ATTRIBUTE } from "../fit.ts";
 
 type Watched = { onNear: () => void; dwell: ReturnType<typeof setTimeout> | null };
 type Watch = { observer: IntersectionObserver; windows: Map<Element, Watched> };
@@ -43,8 +44,14 @@ function scrolling(element: Element): boolean {
   return answer;
 }
 
+/**
+ * The walk starts above a skippable holder (fit.ts SKIPPABLE_ATTRIBUTE, #263): nothing inside one
+ * scrolls, and asking for the style of an element the browser is skipping lays it out on its own,
+ * which across the Almanac cost a second and a half.
+ */
 function scrollParent(element: Element): Element | null {
-  for (let parent = element.parentElement; parent !== null; parent = parent.parentElement) {
+  const start = element.closest(`[${SKIPPABLE_ATTRIBUTE}]`) ?? element;
+  for (let parent = start.parentElement; parent !== null; parent = parent.parentElement) {
     if (scrolling(parent)) return parent;
   }
   return null;
