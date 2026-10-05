@@ -2556,9 +2556,11 @@
     },
     "290": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:5994533459"
+      ],
       "died": 0,
-      "failures": 3,
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-10-05T07:52:15Z",
@@ -2576,8 +2578,8 @@
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "devin",
-      "queued_at": "2026-10-05T04:48:44Z",
-      "requested_by": "jgoetzmann",
+      "queued_at": "2026-10-05T12:34:14Z",
+      "requested_by": "MaxGoetzmann",
       "run_id": "37279183052",
       "started_at": "2026-10-05T07:44:18Z",
       "stop_requested": false,
