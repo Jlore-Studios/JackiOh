@@ -1,31 +1,41 @@
-"""Triage: a new issue or pull request gets its labels, its assignees, a title that follows
-`docs/issues-and-patches.md`, and an issue its dependencies, from a Devin call that classifies it
-(`.github/workflows/triage.yml`). A person can also call it on any thread (`workflow_dispatch`
-with its number), which triages it again whatever it already has.
+"""Triage: an issue a person hands to people or to the bot with a method label (#307), and every
+new pull request, gets its labels, its assignees, a title that follows `docs/issues-and-patches.md`,
+and an issue its dependencies, from a model call that classifies it (`.github/workflows/triage.yml`).
+A person can also call it on any thread (`workflow_dispatch` with its number).
+
+An issue is triaged only once it carries `method:manual` or `method:use-bot`, two minutes after
+the label goes on, so a person can set a difficulty and a priority first: `method:manual` makes it
+`human` and assigns both people; `method:use-bot` queues it for the bot (`bot:build`) and assigns
+the bot. The bot rates an issue's difficulty itself, when it plans it (#317 part 8), so triage
+gives none.
 
 Three steps, each its own job, so the model never holds a GitHub write token:
 
-1. `gate` (GitHub's runner, read-only) reads the event: is the author trusted, is there anything to
-   do, is Devin on? A stranger's text never reaches the machine.
-2. `classify` (Devin's own runner on the machine, `night-vm-devin`, read-only) fetches the thread's
-   title and body through the API, fences them as data in a prompt, runs Devin in an empty
-   directory with read-only tools, and writes Devin's answer to a file.
-3. `apply` (GitHub's runner, `issues: write`) re-reads the thread and holds Devin's answer against
+1. `gate` (GitHub's runner, read-only) reads the event: is the author trusted, is there a method
+   label, is the classifier on? A stranger's text never reaches the machine.
+2. `classify` (Muse's runner on the machine, `night-vm-muse`, read-only) fetches the thread's
+   title and body through the API, fences them as data in a prompt, runs Muse in an empty
+   directory, and writes its answer to a file. (It ran on Devin until #317: Devin failed every
+   call from 2026-10-05 and is switched off from 2026-10-15.)
+3. `apply` (GitHub's runner, `issues: write`) re-reads the thread and holds the model's answer against
    it (`decide`): labels only from the repository's own set (no `bot:*`), assignees only the two
    people or the bot, a title only when the old one breaks the convention and the new one keeps it
    and every version number. It adds, never removes: a label or an assignee a person set stays, and
    a group a person already chose from (a priority, a difficulty) gets nothing more. For an issue
    it also links, as GitHub issue dependencies, what must close first: the open issues its text
    names ("Blocked by #125"), the earlier parts of its patch, and the blocked-by, blocks and
-   parent (tracker) links Devin proposes, each only to an open issue, never itself, never one
+   parent (tracker) links the model proposes, each only to an open issue, never itself, never one
    already linked, at most `MAX_LINKS` of each. The night bot holds a build while it is blocked.
+   The one thing it removes is an assignee a method label moves: `method:manual` unassigns the
+   bot, `method:use-bot` both people.
 
 A human task is assigned to both people and labelled `human`, so the night bot skips it. A bot task
 on an issue is assigned to the bot, which queues it (the sweep answers the assignment). A pull
 request keeps its title, since that becomes the squash commit's subject, and is never assigned to
 the bot; it gets type labels, and the people when it is human work.
 
-Any failure, or Devin switched off (its `off_from` in providers.json), skips quietly.
+Any failure, or the classifier switched off (`enabled` or `off_from` in providers.json), skips
+quietly.
 """
 
 from __future__ import annotations
@@ -37,7 +47,7 @@ import tempfile
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterable, Mapping
 
 from harness import config as config_mod
 from harness.clock import zone
@@ -53,6 +63,16 @@ TYPE_LABELS: tuple[str, ...] = ("patch", "major version", "architecture", "night
 #: Labels only the night bot puts on, besides its `bot:` ones.
 BOT_ONLY: frozenset[str] = frozenset({config_mod.LABEL_READY})
 HUMAN_LABEL = "human"
+#: The method labels (#307): who does an issue. Triage takes no issue without exactly one.
+METHODS: tuple[str, ...] = (config_mod.LABEL_METHOD_MANUAL, config_mod.LABEL_METHOD_BOT)
+#: How long triage waits after a method label goes on, so a person can set a difficulty and a
+#: priority first.
+METHOD_WAIT = timedelta(minutes=2)
+#: Labels that mean the queue already has the issue, so `method:use-bot` adds no `bot:build`.
+IN_QUEUE = frozenset({config_mod.LABEL_BUILD, config_mod.LABEL_WORKING, config_mod.LABEL_PR_OPEN,
+                      config_mod.LABEL_BLOCKED})
+#: The subscription whose model classifies (`classifier_off`, `run_muse`).
+CLASSIFIER = "muse"
 #: Groups a thread carries at most one of; a person's choice from one is never added to.
 GROUPS: tuple[re.Pattern[str], ...] = (
     re.compile(r"^priority:", re.I),
@@ -61,10 +81,12 @@ GROUPS: tuple[re.Pattern[str], ...] = (
 MAX_LABELS = 5
 #: At most this many links of each kind (blocked by, blocks) from one triage.
 MAX_LINKS = 5
-#: How many open issues the prompt lists for Devin to link to, the newest first.
+#: How many open issues the prompt lists for the classifier to link to, the newest first.
 PROMPT_ISSUES = 120
 MAX_TITLE = 120
-DEVIN_TIMEOUT_S = 300
+CLASSIFY_TIMEOUT_S = 300
+#: Model steps the classifier may take: it answers in one, and is told to use no tools.
+CLASSIFY_STEPS = 4
 #: A title that already follows the convention.
 CONVENTION = re.compile(
     r"^(?:Patch v\d+\.\d+\.(?:\d+|X|Y)[a-z]?(?: \(part \d+ of \d+\))?"
@@ -95,11 +117,13 @@ class Plan:
     blocks: list[int] = field(default_factory=list)
     #: The tracker this issue is a part of, when it has none yet.
     parent: int = 0
+    #: Assignees a method label moves off it (#307).
+    unassign: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
     def empty(self) -> bool:
         return not (self.labels or self.assignees or self.title or self.issue_type
-                    or self.blocked_by or self.blocks or self.parent)
+                    or self.blocked_by or self.blocks or self.parent or self.unassign)
 
 
 # ------------------------------------------------------------------ the gate
@@ -115,40 +139,57 @@ def follows_convention(title: str) -> bool:
     return bool(CONVENTION.match(title.strip()))
 
 
-def devin_off(root: Path, at: datetime, zone_name: str) -> str:
-    """Why Devin cannot classify now, or "" when it can: its entry in providers.json, read as
-    plain JSON, its switch, and its `off_from` day in the bot's time zone."""
+def methods_on(names: Iterable[str]) -> list[str]:
+    """The method labels among `names` (whatever their case), in `METHODS` order."""
+    lowered = {str(name).lower() for name in names}
+    return [method for method in METHODS if method.lower() in lowered]
+
+
+def method_of(thread: Mapping[str, Any]) -> str:
+    """The thread's one method label, or "" with none or both."""
+    found = methods_on(str(label.get("name")) for label in thread.get("labels") or [])
+    return found[0] if len(found) == 1 else ""
+
+
+def _classifier(root: Path) -> Mapping[str, Any] | None:
     try:
         raw = json.loads((root / ".harness" / "providers.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return "providers.json cannot be read"
-    devin = (raw.get("providers") or {}).get("devin")
-    if not isinstance(devin, Mapping):
-        return "no devin subscription in providers.json"
-    if devin.get("enabled") is False:
-        return "devin is switched off in providers.json"
-    off = str(devin.get("off_from") or "")
+        return None
+    found = (raw.get("providers") or {}).get(CLASSIFIER)
+    return found if isinstance(found, Mapping) else None
+
+
+def classifier_off(root: Path, at: datetime, zone_name: str) -> str:
+    """Why the classifier cannot classify now, or "" when it can: its entry in providers.json,
+    read as plain JSON, its switch, and its `off_from` day in the bot's time zone."""
+    entry = _classifier(root)
+    if entry is None:
+        return f"no {CLASSIFIER} subscription in providers.json, or it cannot be read"
+    if entry.get("enabled") is False:
+        return f"{CLASSIFIER} is switched off in providers.json"
+    off = str(entry.get("off_from") or "")
     if off:
         try:
             if at.astimezone(zone(zone_name)).date() >= date.fromisoformat(off):
-                return f"devin is switched off from {off}"
+                return f"{CLASSIFIER} is switched off from {off}"
         except ValueError:
-            return f"devin's off_from {off!r} is not a date"
+            return f"{CLASSIFIER}'s off_from {off!r} is not a date"
     return ""
 
 
-def devin_model(root: Path) -> str:
-    try:
-        raw = json.loads((root / ".harness" / "providers.json").read_text(encoding="utf-8"))
-        return str(raw["providers"]["devin"]["model"])
-    except (OSError, ValueError, KeyError, TypeError):
-        return "swe-2-max"
+def classifier_model(root: Path) -> tuple[str, str]:
+    """The classifier's model and effort, from providers.json."""
+    entry = _classifier(root) or {}
+    return (str(entry.get("model") or "muse-spark-1.3-contributor"),
+            str(entry.get("effort") or ""))
 
 
 def gate(payload: Mapping[str, Any], trust: Trust, bot_login: str, root: Path, at: datetime,
          zone_name: str, *, asked: bool = False) -> tuple[bool, str]:
-    """Whether to classify this thread, and why not when not. `asked`: a person called triage on
-    it, so it goes even when it has everything already (its dependencies may still be missing)."""
+    """Whether to classify this thread, and why not when not. An issue goes only with exactly one
+    method label, and never to the bot when it is labelled `human` (#307). `asked`: a person
+    called triage on it, so a pull request goes even when it has everything already."""
     thread, is_pr = thread_of(payload)
     if not thread.get("number"):
         return False, "no issue or pull request in the event"
@@ -161,15 +202,17 @@ def gate(payload: Mapping[str, Any], trust: Trust, bot_login: str, root: Path, a
                                                                association) < 1:
         return False, f"@{login} is not trusted ({association or 'no association'})"
     labels = {str(label.get("name")) for label in thread.get("labels") or []}
-    titled = is_pr or follows_convention(str(thread.get("title") or ""))
-    typed = is_pr or bool(thread.get("type"))
-    # An issue whose text names a blocker, or that is a part of a patch, still has links to make.
-    links = not is_pr and bool(named_blockers(thread.get("body"))
-                               or part_of(str(thread.get("title") or "")))
-    if (not asked and not links and titled and typed and labels & set(TYPE_LABELS)
-            and thread.get("assignees")):
-        return False, "already labelled, assigned, titled and typed"
-    off = devin_off(root, at, zone_name)
+    if not is_pr:
+        found = methods_on(labels)
+        if not found:
+            return False, "no method:manual or method:use-bot label"
+        if len(found) > 1:
+            return False, "both method:manual and method:use-bot: a person keeps one"
+        if found == [config_mod.LABEL_METHOD_BOT] and HUMAN_LABEL in {n.lower() for n in labels}:
+            return False, "labelled human, so the bot leaves it alone"
+    if is_pr and not asked and labels & set(TYPE_LABELS) and thread.get("assignees"):
+        return False, "already labelled and assigned"
+    off = classifier_off(root, at, zone_name)
     if off:
         return False, off
     return True, f"#{thread['number']} by @{login}"
@@ -178,7 +221,7 @@ def gate(payload: Mapping[str, Any], trust: Trust, bot_login: str, root: Path, a
 # ------------------------------------------------------------------ classify (on the machine)
 
 #: The sweep's fallback (`fallback_type`): an issue someone opened gets this long for triage's
-#: Devin call to type it first, which can wait hours for a free Devin runner; one a bot opened
+#: classifier to type it first, which can wait hours for a free runner; one a bot opened
 #: never reaches triage, so it is typed at once.
 TYPE_GRACE = timedelta(hours=3)
 _BUG_WORDS = re.compile(
@@ -220,15 +263,16 @@ def issue_types(gh: Any) -> dict[str, str]:
 
 def _bot_only(name: str) -> bool:
     """A label the night bot keeps for itself, which triage never offers or adds: its `bot:`
-    ones, and the difficulty, which a medium or strong model rates when it plans the item, under
-    the easy rule (#317 part 8). A person may still set one."""
+    ones; the difficulty, which a medium or strong model rates when it plans the item, under the
+    easy rule (#317 part 8); and the method labels, which are a person's choice (#307). A person
+    may still set any of them."""
     return (name.startswith("bot:") or name in BOT_ONLY
-            or name.lower().startswith("difficulty:"))
+            or name.lower().startswith(("difficulty:", "method:")))
 
 
 def prompt(thread: Mapping[str, Any], is_pr: bool, repo_labels: list[Mapping[str, Any]],
            conventions: str, types: Mapping[str, str] | None = None,
-           open_issues: list[Mapping[str, Any]] | None = None) -> str:
+           open_issues: list[Mapping[str, Any]] | None = None, method: str = "") -> str:
     """The classification prompt: the conventions, the labels, the open issues it may depend on,
     then the thread fenced as data."""
     kind = "pull request" if is_pr else "issue"
@@ -252,6 +296,9 @@ def prompt(thread: Mapping[str, Any], is_pr: bool, repo_labels: list[Mapping[str
 - "parent": for a "part n of m" title, the number of the open tracker issue below that this is a
   part of (same patch, no "part" in its title); otherwise 0."""
     link_fields = "" if is_pr else ', "blocked_by": [], "blocks": [], "parent": 0'
+    chosen = ("always one priority label (priority:high, priority:medium, priority:low), since a "
+              "person handed it to the night bot" if method == config_mod.LABEL_METHOD_BOT
+              else "a priority label only if the text clearly asks for one")
     issues_block = "" if is_pr or not others else (
         "\n\nThe open issues it may depend on (data):\n\n" + data(listed, "open issues"))
     return f"""You triage a new {kind} in the JackiOh repository. Do not use any tools: read what is
@@ -270,8 +317,8 @@ Decide:
   an account, a secret, a design call, anything outside the repository, or any change to `bot/`,
   `.harness/` or `.github/`, which the bot may not touch.
 - "labels": every label that fits, at least one type label (patch, major version, architecture,
-  night bot); a priority label only if the text clearly asks for one. Never a `bot:` label,
-  and never a difficulty: the night bot rates that itself when it plans the work.
+  night bot); {chosen}. Never a `bot:` label, and never a difficulty: the night bot rates that
+  itself when it plans the work.
 - "title": the title the conventions give it (keep every version number exactly as written), or
   "" if the current title already follows them. A patch-sized change that is small — one fix,
   one feature, one card's numbers or text, one cosmetic or client tweak, with no new mechanic,
@@ -301,7 +348,7 @@ def conventions_text(root: Path) -> str:
 
 
 def parse(answer: str) -> dict[str, Any] | None:
-    """The last JSON object in Devin's answer, or None."""
+    """The last JSON object in the classifier's answer, or None."""
     for candidate in reversed(re.findall(r"\{.*\}", answer, re.S)):
         try:
             value = json.loads(candidate)
@@ -312,21 +359,26 @@ def parse(answer: str) -> dict[str, Any] | None:
     return None
 
 
-def run_devin(binary: str, model: str, text: str, timeout_s: int = DEVIN_TIMEOUT_S) -> str:
-    """Devin's printed answer to `text`, in an empty directory, with read-only tools and none of
-    the job's secrets. Raises on failure."""
-    from harness.runner import _devin_answer
+def run_muse(binary: str, model: str, effort: str, text: str,
+             timeout_s: int = CLASSIFY_TIMEOUT_S) -> str:
+    """Muse's answer to `text`, in an empty directory of its own, with no web tools and none of
+    the job's secrets. Raises on failure. The prompt asks for no tools; the directory holds
+    nothing but the prompt, so there is nothing to change."""
+    from harness.runner import stderr_error
     with tempfile.TemporaryDirectory(prefix="triage-") as tmp:
         prompt_file = Path(tmp) / "prompt.md"
         prompt_file.write_text(text, encoding="utf-8")
-        done = subprocess.run(
-            [binary, "-p", "--prompt-file", str(prompt_file), "--model", model,
-             "--permission-mode", "auto", "--respect-workspace-trust", "false"],
-            cwd=tmp, env=config_mod.child_env(), capture_output=True, text=True,
-            timeout=timeout_s, stdin=subprocess.DEVNULL, check=False)
+        argv = [binary, "exec", "--yolo", "--disable-web-tools", "--workspace", tmp,
+                "--model", model, "--prompt-file", str(prompt_file),
+                "--max-model-steps", str(CLASSIFY_STEPS)]
+        if effort:
+            argv += ["--reasoning-effort", effort]
+        done = subprocess.run(argv, cwd=tmp, env=config_mod.child_env(), capture_output=True,
+                              text=True, timeout=timeout_s, stdin=subprocess.DEVNULL, check=False)
     if done.returncode != 0:
-        raise RuntimeError(f"devin exited {done.returncode}: {done.stderr.strip()[-300:]}")
-    return _devin_answer(done.stdout)
+        raise RuntimeError(f"muse exited {done.returncode}: "
+                           f"{stderr_error(done.stderr, '')[-300:]}")
+    return done.stdout
 
 
 # ------------------------------------------------------------------ apply
@@ -336,6 +388,26 @@ def _group(name: str) -> int | None:
         if pattern.match(name):
             return index
     return None
+
+
+def _method(plan: Plan, method: str, thread: Mapping[str, Any], lowered: set[str],
+            bot_login: str) -> None:
+    """What a method label does by itself, with or without the model's answer (#307):
+    `method:manual` makes the issue `human` and moves it to both people; `method:use-bot` queues
+    it for the bot (`bot:build`, unless the queue has it already) and moves it to the bot."""
+    assigned = {str(a.get("login") or "").lower() for a in thread.get("assignees") or []}
+    if method == config_mod.LABEL_METHOD_MANUAL:
+        if HUMAN_LABEL not in lowered:
+            plan.labels.append(HUMAN_LABEL)
+        plan.assignees = [h for h in HUMANS if h.lower() not in assigned]
+        if bot_login.lower() in assigned:
+            plan.unassign = [bot_login]
+    elif method == config_mod.LABEL_METHOD_BOT:
+        if not lowered & {name.lower() for name in IN_QUEUE}:
+            plan.labels.append(config_mod.LABEL_BUILD)
+        if bot_login.lower() not in assigned:
+            plan.assignees = [bot_login]
+        plan.unassign = [h for h in HUMANS if h.lower() in assigned]
 
 
 def decide(verdict: Mapping[str, Any] | None, thread: Mapping[str, Any], is_pr: bool,
@@ -351,28 +423,45 @@ def decide(verdict: Mapping[str, Any] | None, thread: Mapping[str, Any], is_pr: 
     if thread.get("state") not in (None, "open"):
         plan.notes.append("closed meanwhile")
         return plan
-    if not is_pr and open_issues is not None:
-        _links(plan, verdict if isinstance(verdict, Mapping) else {}, thread, open_issues,
-               linked or {})
-    if not isinstance(verdict, Mapping):
-        plan.notes.append("no usable answer from Devin")
-        return plan
     present = {str(label.get("name")) for label in thread.get("labels") or []}
-    kind = str(verdict.get("kind") or "").lower()
-    if kind not in ("human", "bot"):
-        kind = ""
-    if HUMAN_LABEL in present:
-        kind = "human"  # a person said so
+    lowered = {name.lower() for name in present}
+    method = ""
+    if not is_pr:
+        found = methods_on(present)
+        if len(found) != 1:
+            plan.notes.append("it carries no single method:* label now, so triage changed nothing")
+            return plan
+        method = found[0]
+        if method == config_mod.LABEL_METHOD_BOT and HUMAN_LABEL in lowered:
+            plan.notes.append("labelled human, so the bot leaves it alone")
+            return plan
+        # The method's labels and assignees, and the links, need no model.
+        _method(plan, method, thread, lowered, bot_login)
+        if open_issues is not None:
+            _links(plan, verdict if isinstance(verdict, Mapping) else {}, thread, open_issues,
+                   linked or {})
+    if not isinstance(verdict, Mapping):
+        plan.notes.append("no usable answer from the classifier")
+        return plan
+    if is_pr:
+        kind = str(verdict.get("kind") or "").lower()
+        if kind not in ("human", "bot"):
+            kind = ""
+        if HUMAN_LABEL in present:
+            kind = "human"  # a person said so
+    else:
+        kind = "human" if method == config_mod.LABEL_METHOD_MANUAL else "bot"
     allowed = {name for name in repo_labels if not _bot_only(name)}
     if is_pr:
         allowed &= set(TYPE_LABELS)
-    wanted = [str(name) for name in verdict.get("labels") or [] if isinstance(name, str)]
-    if kind == "human" and not is_pr:
-        wanted.append(HUMAN_LABEL)
+    # A manual issue takes no labels from the model but its type and title: people choose.
+    wanted = ([str(name) for name in verdict.get("labels") or [] if isinstance(name, str)]
+              if is_pr or method == config_mod.LABEL_METHOD_BOT else [])
     taken = {_group(name) for name in present} - {None}
+    added = 0
     for name in wanted:
         if (name not in allowed or name in present or name in plan.labels
-                or (name == HUMAN_LABEL and kind != "human")):
+                or name == HUMAN_LABEL):
             continue
         group = _group(name)
         if group is not None:
@@ -380,13 +469,11 @@ def decide(verdict: Mapping[str, Any] | None, thread: Mapping[str, Any], is_pr: 
                 continue
             taken.add(group)
         plan.labels.append(name)
-        if len(plan.labels) >= MAX_LABELS:
+        added += 1
+        if added >= MAX_LABELS:
             break
-    if not thread.get("assignees"):
-        if kind == "human":
-            plan.assignees = list(HUMANS)
-        elif kind == "bot" and not is_pr:
-            plan.assignees = [bot_login]
+    if is_pr and not thread.get("assignees") and kind == "human":
+        plan.assignees = list(HUMANS)
     title = " ".join(str(verdict.get("title") or "").split())
     old = str(thread.get("title") or "")
     if title and not is_pr and title != old and not follows_convention(old):
@@ -409,7 +496,7 @@ def decide(verdict: Mapping[str, Any] | None, thread: Mapping[str, Any], is_pr: 
                               f"{', '.join(named.values())}")
     reason = str(verdict.get("reason") or "")[:300]
     if reason:
-        plan.notes.append(f"Devin: {reason}")
+        plan.notes.append(f"{CLASSIFIER}: {reason}")
     return plan
 
 
@@ -429,7 +516,7 @@ def _numbers(raw: Any) -> list[int]:
 def _links(plan: Plan, verdict: Mapping[str, Any], thread: Mapping[str, Any],
            open_issues: Mapping[int, Mapping[str, Any]], linked: Mapping[str, Any]) -> None:
     """The dependencies to add: the blockers the text names and the earlier parts of its patch
-    (no model needed), then Devin's, each to an open issue only, never the thread itself, never
+    (no model needed), then the classifier's, each to an open issue only, never the thread itself, never
     one linked already either way."""
     number = int(thread.get("number") or 0)
     blocked_now = set(linked.get("blocked_by") or ())
@@ -478,6 +565,9 @@ def apply(gh: Any, number: int, plan: Plan, ids: Mapping[int, int] | None = None
     if plan.assignees:
         steps.append((f"assigned {', '.join('@' + a for a in plan.assignees)}",
                       lambda: gh.add_assignees(number, plan.assignees)))
+    if plan.unassign:
+        steps.append((f"unassigned {', '.join('@' + a for a in plan.unassign)}",
+                      lambda: gh.remove_assignees(number, plan.unassign)))
     if plan.title:
         steps.append((f"retitled {plan.title!r}",
                       lambda: gh.update_issue(number, title=plan.title)))

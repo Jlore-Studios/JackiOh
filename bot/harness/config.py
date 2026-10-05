@@ -75,6 +75,9 @@ LABELS: dict[str, tuple[str, str]] = {
     "priority:high": ("d73a4a", "The night bot picks this up first"),
     "priority:medium": ("fbca04", "The night bot picks this up after priority:high"),
     "priority:low": ("0e8a16", "The night bot picks this up last, after unlabelled work"),
+    "Info": ("bfdadc", "For the record, nothing to build: migrations, statistics, the night bot's status"),
+    "method:manual": ("f9d0c4", "People handle it: two minutes after it goes on, triage labels it human, retitles it and assigns both people"),
+    "method:use-bot": ("c2e0c6", "The night bot takes it: two minutes after it goes on, triage labels, retitles and queues it and assigns the bot"),
 }
 
 LABEL_BUILD = "bot:build"
@@ -103,6 +106,10 @@ LABEL_STUCK = "bot:stuck"
 #: building. The bot never queues, plans, builds, labels or assigns it, and a request to build it
 #: gets a reply saying so.
 LABEL_HUMAN = "human"
+#: #307: a person's choice of who does an issue; triage takes no issue without one.
+LABEL_INFO = "Info"
+LABEL_METHOD_MANUAL = "method:manual"
+LABEL_METHOD_BOT = "method:use-bot"
 #: An item's difficulty decides which models may plan, build and review it; no label counts as
 #: medium, and with several the hardest counts. Like `human`, these match whatever their case.
 DIFFICULTIES = ("easy", "medium", "hard")

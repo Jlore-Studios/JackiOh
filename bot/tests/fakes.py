@@ -224,6 +224,12 @@ class FakeGitHub:
             if login not in current:
                 self.threads[number]["assignees"].append({"login": login})
 
+    def remove_assignees(self, number: int, logins: Any) -> None:
+        gone = {str(login).lower() for login in logins}
+        self.threads[number]["assignees"] = [
+            a for a in self.threads[number].get("assignees", [])
+            if str(a.get("login")).lower() not in gone]
+
     def remove_label(self, number: int, name: str) -> None:
         self.threads[number]["labels"] = [l for l in self.threads[number]["labels"] if l["name"] != name]
 

@@ -1,5 +1,5 @@
-"""Triage (bot/harness/triage.py): who gets triaged, what Devin is asked, and what of its answer
-is applied."""
+"""Triage (bot/harness/triage.py): who gets triaged (an issue only with a method label, #307),
+what the classifier is asked, and what of its answer is applied."""
 
 from __future__ import annotations
 
@@ -24,7 +24,8 @@ TRUST = Trust.parse("jgoetzmann 3 id:95732896\nMaxGoetzmann 3 id:87041877\nhelpe
 BEFORE_OFF = datetime(2026, 10, 3, 12, 0, tzinfo=timezone.utc)
 REPO_LABELS = {"patch", "major version", "architecture", "night bot", "human", "difficult",
                "shitter", "priority:high", "priority:medium", "priority:low", "bot:build",
-               "bot:pr", "ready for merge"}
+               "bot:pr", "ready for merge", "difficulty:easy", "method:manual", "method:use-bot"}
+USE_BOT, MANUAL = "method:use-bot", "method:manual"
 
 
 def event(*, login="MaxGoetzmann", user_id=87041877, association="OWNER", title="Fix the thing",
@@ -46,10 +47,22 @@ class GateTests(unittest.TestCase):
         return triage.gate(payload, TRUST, BOT, root, at, "America/Chicago")
 
     def test_a_trusted_author_goes(self):
-        self.assertEqual(self.go(event()), (True, "#40 by @MaxGoetzmann"))
+        self.assertEqual(self.go(event(labels=(USE_BOT,))), (True, "#40 by @MaxGoetzmann"))
         self.assertTrue(self.go(event(pr=True))[0])
         # A pinned trust line counts whatever GitHub calls the account.
-        self.assertTrue(self.go(event(login="jgoetzmann", user_id=95732896, association="NONE"))[0])
+        self.assertTrue(self.go(event(login="jgoetzmann", user_id=95732896, association="NONE",
+                                      labels=(MANUAL,)))[0])
+
+    def test_an_issue_goes_only_with_one_method_label(self):
+        self.assertEqual(self.go(event()), (False, "no method:manual or method:use-bot label"))
+        self.assertEqual(self.go(event(labels=(USE_BOT, MANUAL))),
+                         (False, "both method:manual and method:use-bot: a person keeps one"))
+        self.assertTrue(self.go(event(labels=("Method:Use-Bot",)))[0])  # whatever its case
+
+    def test_a_human_issue_never_goes_to_the_bot(self):
+        self.assertEqual(self.go(event(labels=("human", USE_BOT))),
+                         (False, "labelled human, so the bot leaves it alone"))
+        self.assertTrue(self.go(event(labels=("human", MANUAL)))[0])
 
     def test_a_stranger_never_reaches_the_model(self):
         go, why = self.go(event(login="someone", user_id=1, association="NONE"))
@@ -62,25 +75,27 @@ class GateTests(unittest.TestCase):
         self.assertFalse(self.go(event(login=BOT, association="COLLABORATOR"))[0])
         self.assertFalse(self.go(event(login="github-actions[bot]", association="NONE"))[0])
 
-    def test_nothing_left_to_do_skips(self):
-        done = event(title="Night bot: a thing", labels=("night bot",), assignees=("jgoetzmann",),
-                     issue_type="Task")
-        self.assertEqual(self.go(done), (False, "already labelled, assigned, titled and typed"))
-        # An issue with everything but a type still goes, for its type; a PR has none to give.
-        untyped = event(title="Night bot: a thing", labels=("night bot",), assignees=("jgoetzmann",))
-        self.assertTrue(self.go(untyped)[0])
+    def test_a_full_issue_with_a_method_label_still_goes_and_a_full_pr_skips(self):
+        done = event(title="Night bot: a thing", labels=("night bot", USE_BOT),
+                     assignees=("jgoetzmann",), issue_type="Task")
+        self.assertTrue(self.go(done)[0])
         pr = event(title="Anything", labels=("night bot",), assignees=("jgoetzmann",), pr=True)
-        self.assertFalse(self.go(pr)[0])
+        self.assertEqual(self.go(pr), (False, "already labelled and assigned"))
 
-    def test_devin_switched_off_skips_quietly(self):
-        go, why = self.go(event(), at=datetime(2026, 10, 15, 6, 0, tzinfo=timezone.utc))
-        self.assertFalse(go)
-        self.assertIn("switched off from 2026-10-15", why)
+    def test_the_classifier_switched_off_skips_quietly(self):
         with tempfile.TemporaryDirectory() as tmp:
             (Path(tmp) / ".harness").mkdir()
-            (Path(tmp) / ".harness" / "providers.json").write_text('{"providers": {}}')
-            self.assertEqual(self.go(event(), root=Path(tmp)),
-                             (False, "no devin subscription in providers.json"))
+            path = Path(tmp) / ".harness" / "providers.json"
+            path.write_text('{"providers": {}}')
+            self.assertEqual(self.go(event(labels=(USE_BOT,)), root=Path(tmp)),
+                             (False, "no muse subscription in providers.json, or it cannot be "
+                                     "read"))
+            path.write_text('{"providers": {"muse": {"enabled": false}}}')
+            self.assertEqual(self.go(event(labels=(USE_BOT,)), root=Path(tmp)),
+                             (False, "muse is switched off in providers.json"))
+            path.write_text('{"providers": {"muse": {"off_from": "2026-10-01"}}}')
+            self.assertIn("switched off from 2026-10-01",
+                          self.go(event(labels=(USE_BOT,)), root=Path(tmp))[1])
 
 
 class PromptTests(unittest.TestCase):
@@ -113,6 +128,16 @@ class PromptTests(unittest.TestCase):
         self.assertIn("Micro or normal", text)
         self.assertIn("when torn between `X`\n  and `Y`, choose `Y`", text)
 
+    def test_use_bot_asks_for_a_priority_and_method_and_difficulty_labels_are_never_offered(self):
+        labels = [{"name": "patch"}, {"name": MANUAL}, {"name": "difficulty:easy"}]
+        text = triage.prompt(thread(labels=(USE_BOT,)), False, labels, "", method=USE_BOT)
+        self.assertIn("always one priority label", text)
+        self.assertNotIn(f"- `{MANUAL}`", text)
+        self.assertNotIn("- `difficulty:easy`", text)
+        self.assertIn("never a difficulty", text)
+        plain = triage.prompt(thread(), False, labels, "")
+        self.assertIn("a priority label only if the text clearly asks for one", plain)
+
     def test_the_answer_is_the_last_json_object(self):
         answer = 'Sure.\n```json\n{"kind": "bot", "labels": ["patch"], "title": ""}\n```'
         self.assertEqual(triage.parse(answer)["kind"], "bot")
@@ -121,35 +146,69 @@ class PromptTests(unittest.TestCase):
 
 
 class DecideTests(unittest.TestCase):
-    def decide(self, verdict, pr=False, **fields):
-        return triage.decide(verdict, thread(pr=pr, **fields), pr, REPO_LABELS, BOT)
+    def decide(self, verdict, pr=False, labels=(USE_BOT,), **fields):
+        return triage.decide(verdict, thread(pr=pr, labels=labels, **fields), pr, REPO_LABELS,
+                             BOT)
 
-    def test_a_human_task_goes_to_both_people_and_the_bot_skips_it(self):
-        plan = self.decide({"kind": "human", "labels": ["architecture"], "title": ""})
-        self.assertEqual(plan.labels, ["architecture", "human"])
+    def test_method_manual_makes_it_human_work(self):
+        plan = self.decide({"kind": "bot", "labels": ["patch", "difficulty:easy"],
+                            "title": "Night bot: a thing"},
+                           labels=(MANUAL, "priority:high"), assignees=(BOT,), title="a thing")
+        self.assertEqual(plan.labels, ["human"])  # people choose its other labels
         self.assertEqual(plan.assignees, ["MaxGoetzmann", "jgoetzmann"])
+        self.assertEqual(plan.unassign, [BOT])
+        self.assertEqual(plan.title, "Night bot: a thing")
 
-    def test_a_bot_task_is_assigned_to_the_bot_which_queues_it(self):
-        plan = self.decide({"kind": "bot", "labels": ["patch", "human"], "title": ""})
-        self.assertEqual(plan.labels, ["patch"])  # no `human` on bot work
+    def test_method_use_bot_queues_it_and_moves_it_to_the_bot(self):
+        plan = self.decide({"kind": "human", "labels": ["patch", "difficulty:easy",
+                                                        "priority:low", "human", "bot:pr",
+                                                        MANUAL]},
+                           assignees=("MaxGoetzmann",))
+        # Never a difficulty: the bot rates it when it plans it (#317 part 8).
+        self.assertEqual(plan.labels, ["bot:build", "patch", "priority:low"])
         self.assertEqual(plan.assignees, [BOT])
+        self.assertEqual(plan.unassign, ["MaxGoetzmann"])
+
+    def test_use_bot_keeps_what_a_person_set_and_an_issue_already_queued(self):
+        plan = self.decide({"kind": "bot", "labels": ["priority:low"]},
+                           labels=(USE_BOT, "difficulty:hard", "priority:high", "bot:pr-open"),
+                           assignees=(BOT,))
+        self.assertEqual((plan.labels, plan.assignees, plan.unassign), ([], [], []))
+
+    def test_without_the_classifiers_answer_the_method_still_applies(self):
+        plan = self.decide(None, labels=(MANUAL,))
+        self.assertEqual((plan.labels, plan.assignees), (["human"], list(triage.HUMANS)))
+        plan = self.decide(None)
+        self.assertEqual((plan.labels, plan.assignees), (["bot:build"], [BOT]))
+
+    def test_without_a_method_label_it_changes_nothing(self):
+        plan = self.decide({"kind": "bot", "labels": ["patch"]}, labels=())
+        self.assertTrue(plan.empty())
+        self.assertIn("no single method:* label", plan.notes[0])
+        plan = self.decide({"kind": "bot", "labels": ["patch"]}, labels=("human", USE_BOT))
+        self.assertTrue(plan.empty())
 
     def test_only_the_repositorys_own_labels_and_never_bot_ones(self):
         plan = self.decide({"kind": "bot", "labels": ["bot:build", "invented", "bot:pr", "patch",
                                                        "ready for merge", "priority:high"]})
-        self.assertEqual(plan.labels, ["patch", "priority:high"])
+        self.assertEqual(plan.labels, ["bot:build", "patch", "priority:high"])
 
     def test_a_persons_choices_stay(self):
         plan = self.decide({"kind": "bot", "labels": ["priority:low", "shitter", "patch"]},
-                           labels=("priority:high", "difficult"), assignees=("jgoetzmann",))
-        self.assertEqual(plan.labels, ["patch"])  # a priority and a tier were already chosen
+                           labels=("priority:high", "difficult", USE_BOT), assignees=(BOT,))
+        self.assertEqual(plan.labels, ["bot:build", "patch"])  # a priority, a tier chosen
         self.assertEqual(plan.assignees, [])
-        # A person's `human` label wins over Devin's "bot".
-        plan = self.decide({"kind": "bot", "labels": ["patch"]}, labels=("human",))
-        self.assertEqual(plan.assignees, ["MaxGoetzmann", "jgoetzmann"])
-        # One of a group, even when Devin offers two.
+        # One of a group, even when the classifier offers two.
         plan = self.decide({"kind": "bot", "labels": ["priority:high", "priority:low"]})
-        self.assertEqual(plan.labels, ["priority:high"])
+        self.assertEqual(plan.labels, ["bot:build", "priority:high"])
+
+    def test_apply_unassigns(self):
+        gh = FakeGitHub()
+        gh.add_issue(41)
+        gh.threads[41]["assignees"] = [{"login": BOT}]
+        self.assertEqual(triage.apply(gh, 41, triage.Plan(unassign=[BOT])),
+                         [f"unassigned @{BOT}"])
+        self.assertEqual(gh.threads[41]["assignees"], [])
 
     def test_micro_patches_and_night_bot_titles_follow_the_convention(self):
         for title in ("Patch v0.2.Y: a faster Almanac", "Patch v0.2.5b: one more fix",
@@ -190,8 +249,8 @@ class DecideTests(unittest.TestCase):
         self.assertEqual(odd.issue_type, "")
         self.assertTrue(any("not one of Task, Bug, Feature" in note for note in odd.notes))
         # Only the organisation's own types count.
-        custom = triage.decide({"kind": "bot", "type": "Chore"}, thread(), False, REPO_LABELS,
-                               BOT, {"Chore": "upkeep"})
+        custom = triage.decide({"kind": "bot", "type": "Chore"}, thread(labels=(USE_BOT,)), False,
+                               REPO_LABELS, BOT, {"Chore": "upkeep"})
         self.assertEqual(custom.issue_type, "Chore")
 
     def test_the_issue_types_come_from_the_organisation_or_the_defaults(self):
@@ -204,22 +263,23 @@ class DecideTests(unittest.TestCase):
 
     def test_nothing_usable_changes_nothing(self):
         for verdict in (None, "a string", {"kind": "maybe", "labels": "patch", "title": 7}):
-            plan = self.decide(verdict)
+            plan = self.decide(verdict, labels=())
             self.assertEqual((plan.assignees, plan.title), ([], ""), verdict)
+        self.assertEqual(self.decide(None).assignees, [BOT])  # the method alone
         closed = triage.decide({"kind": "bot", "labels": ["patch"]},
                                {**thread(), "state": "closed"}, False, REPO_LABELS, BOT)
         self.assertTrue(closed.empty())
 
     def test_apply_makes_each_change(self):
         gh = FakeGitHub()
-        gh.add_issue(40, title="card almanac for v0.2.9")
+        gh.add_issue(40, title="card almanac for v0.2.9", labels=(MANUAL,))
         plan = triage.decide({"kind": "human", "labels": ["patch"],
                               "title": "Patch v0.2.9: a public Card Almanac"},
                              gh.get_issue(40), False, REPO_LABELS, BOT)
         self.assertEqual(plan.issue_type, "")  # the verdict named none
         plan.issue_type = "Bug"
         done = triage.apply(gh, 40, plan)
-        self.assertEqual(len(done), 4)
+        self.assertEqual(len(done), 4)  # labelled, assigned, retitled, typed
         self.assertIn("typed it Bug", done)
         self.assertEqual(gh.threads[40]["type"], "Bug")
         # A type GitHub drops without an error is reported, not claimed.
@@ -227,7 +287,7 @@ class DecideTests(unittest.TestCase):
         plan = triage.Plan(issue_type="Feature")
         self.assertEqual(triage.apply(gh, 40, plan),
                          ["could not do this: typed it Feature (GitHub did not keep it)"])
-        self.assertEqual(gh.label_names(40), {"patch", "human"})
+        self.assertEqual(gh.label_names(40), {MANUAL, "human"})
         self.assertEqual([a["login"] for a in gh.threads[40]["assignees"]],
                          ["MaxGoetzmann", "jgoetzmann"])
         self.assertEqual(gh.threads[40]["title"], "Patch v0.2.9: a public Card Almanac")
@@ -251,7 +311,8 @@ class LinkTests(unittest.TestCase):
 
     def decide(self, verdict, title="Patch v0.2.X (part 4 of 4): more card patches", body="",
                linked=None, pr=False):
-        subject = {**thread(title=title, number=126, pr=pr), "body": body}
+        subject = {**thread(title=title, number=126, pr=pr,
+                            labels=() if pr else (USE_BOT,)), "body": body}
         return triage.decide(verdict, subject, pr, REPO_LABELS, BOT, open_issues=self.open,
                              linked=linked or {})
 
@@ -259,7 +320,7 @@ class LinkTests(unittest.TestCase):
         plan = self.decide(None, body="**Blocked by #125.** Do not start until #125 has merged. "
                                       "See #131 for the page.")
         self.assertEqual(plan.blocked_by, [125, 124])  # named, then the earlier part
-        self.assertIn("no usable answer from Devin", plan.notes)
+        self.assertIn("no usable answer from the classifier", plan.notes)
         self.assertFalse(plan.empty())
 
     def test_devins_links_only_to_open_issues_never_itself_or_twice(self):
@@ -321,18 +382,14 @@ class LinkTests(unittest.TestCase):
         self.assertEqual(triage.apply(gh, 126, triage.Plan(blocked_by=[999]), ids),
                          ["could not do this: marked it blocked by #999 (no id for #999)"])
 
-    def test_the_gate_lets_a_fully_triaged_issue_through_for_its_links(self):
+    def test_the_gate_needs_a_method_label_even_when_asked(self):
         done = dict(title="Night bot: a thing", labels=("night bot",), assignees=("jgoetzmann",),
                     issue_type="Task")
         go = lambda payload, **kw: triage.gate(payload, TRUST, BOT, ROOT, BEFORE_OFF,
                                                "America/Chicago", **kw)
         self.assertFalse(go(event(**done))[0])
-        self.assertTrue(go(event(**done), asked=True)[0])  # a person called it
-        blocked = event(**done)
-        blocked["issue"]["body"] = "Blocked by #125."
-        self.assertTrue(go(blocked)[0])
-        part = event(**{**done, "title": "Patch v0.2.X (part 2 of 3): a part", "labels": ("patch",)})
-        self.assertTrue(go(part)[0])
+        self.assertFalse(go(event(**done), asked=True)[0])
+        self.assertTrue(go(event(**{**done, "labels": ("night bot", USE_BOT)}))[0])
 
     def test_the_prompt_lists_the_open_issues_as_data(self):
         listed = [issue(125, "Homescreen"), issue(126, "Itself"),
@@ -369,12 +426,12 @@ class CommandTests(unittest.TestCase):
 
     def test_a_dispatch_triages_the_thread_it_names_again(self):
         gh = FakeGitHub()
-        gh.add_issue(126, "Night bot: a thing", labels=("night bot",))
+        gh.add_issue(126, "Night bot: a thing", labels=("night bot", USE_BOT))
         gh.threads[126].update(assignees=[{"login": "jgoetzmann"}], type={"name": "Task"},
                                author_association="OWNER")
         payload = Path(tempfile.mkdtemp()) / "event.json"
         payload.write_text(json.dumps({"inputs": {"number": "#126"}}))
-        with mock.patch.object(triage, "devin_off", lambda *a: ""):
+        with mock.patch.object(triage, "classifier_off", lambda *a: ""):
             printed, written = self.run_step(gh, "gate", payload=str(payload))
         self.assertIn("go=true", written)
         self.assertIn("number=126", written)
@@ -387,45 +444,72 @@ class CommandTests(unittest.TestCase):
         gh = FakeGitHub()
         gh.add_issue(124, "Patch v0.2.X (part 2 of 4): animations")
         gh.add_issue(125, "Homescreen")
-        gh.add_issue(126, "Patch v0.2.X (part 4 of 4): more card patches", body="Blocked by #125.")
+        gh.add_issue(126, "Patch v0.2.X (part 4 of 4): more card patches", body="Blocked by #125.",
+                     labels=(USE_BOT,))
         printed, _ = self.run_step(gh, "apply", number="126",
                                    verdict=str(Path(tempfile.mkdtemp()) / "missing.json"))
         self.assertEqual(sorted(i["number"] for i in gh.blocked_by(126)), [124, 125])
         self.assertIn("marked it blocked by #125", printed)
-        self.assertIn("no usable answer from Devin", printed)
+        self.assertIn("no usable answer from the classifier", printed)
+        self.assertIn("bot:build", gh.label_names(126))
+
+    def test_a_method_label_waits_two_minutes_then_reads_the_issue_afresh(self):
+        import harness.__main__ as main_mod
+        gh = FakeGitHub()
+        gh.add_issue(126, labels=(USE_BOT, "difficulty:easy"))
+        gh.threads[126]["author_association"] = "OWNER"
+        payload = Path(tempfile.mkdtemp()) / "event.json"
+        payload.write_text(json.dumps({"action": "labeled", "label": {"name": USE_BOT},
+                                       "issue": {"number": 126, "labels": []}}))
+        sleep = mock.Mock()
+        with mock.patch.object(main_mod.time, "sleep", sleep), \
+                mock.patch.object(triage, "classifier_off", lambda *a: ""):
+            _, written = self.run_step(gh, "gate", payload=str(payload))
+            sleep.assert_called_once_with(120.0)
+            self.assertIn("go=true", written)
+            self.assertIn("number=126", written)
+            payload.write_text(json.dumps({"action": "labeled", "label": {"name": "patch"},
+                                           "issue": {"number": 126}}))
+            printed, written = self.run_step(gh, "gate", payload=str(payload))
+        self.assertIn("go=false", written)
+        self.assertIn("not a method label", printed)
+        sleep.assert_called_once()
 
 
-FAKE_DEVIN = textwrap.dedent('''\
+FAKE_MUSE = textwrap.dedent('''\
     #!{python}
     import json, os, sys
     argv = sys.argv[1:]
     with open(os.environ["FAKE_DUMP"], "w") as f:
         json.dump({{"argv": argv, "cwd": os.getcwd(), "files": os.listdir("."),
                    "env": sorted(os.environ)}}, f)
-    print("\\x1b[1mWelcome to Devin CLI!\\x1b[0m")
     print('{{"kind": "bot", "labels": ["patch"], "title": "", "reason": "game code"}}')
 ''')
 
 
-class RunDevinTests(unittest.TestCase):
-    def test_devin_runs_read_only_in_an_empty_directory_without_the_token(self):
+class RunMuseTests(unittest.TestCase):
+    def test_muse_runs_in_an_empty_directory_without_the_token(self):
         tmp = Path(tempfile.mkdtemp())
-        binary = tmp / "devin"
-        binary.write_text(FAKE_DEVIN.format(python=sys.executable))
+        binary = tmp / "muse"
+        binary.write_text(FAKE_MUSE.format(python=sys.executable))
         binary.chmod(0o755)
         dump = tmp / "dump.json"
         with mock.patch.dict(os.environ, {"FAKE_DUMP": str(dump), "GITHUB_TOKEN": "ghs_" + "x" * 30,
                                           "BOT_GITHUB_TOKEN": "ghp_" + "y" * 36}):
-            answer = triage.run_devin(str(binary), "swe-2-max", "THE PROMPT")
+            answer = triage.run_muse(str(binary), "muse-spark-1.3-contributor", "xhigh",
+                                     "THE PROMPT")
         self.assertEqual(triage.parse(answer)["kind"], "bot")
         seen = json.loads(dump.read_text())
         argv = seen["argv"]
-        self.assertEqual(argv[argv.index("--permission-mode") + 1], "auto")
-        self.assertEqual(argv[argv.index("--model") + 1], "swe-2-max")
+        self.assertEqual(argv[:2], ["exec", "--yolo"])
+        self.assertIn("--disable-web-tools", argv)
+        self.assertEqual(argv[argv.index("--model") + 1], "muse-spark-1.3-contributor")
+        self.assertEqual(Path(argv[argv.index("--workspace") + 1]).resolve(),
+                         Path(seen["cwd"]).resolve())
         self.assertEqual(seen["files"], ["prompt.md"])  # nothing of the repository
         self.assertNotIn("GITHUB_TOKEN", seen["env"])
         self.assertNotIn("BOT_GITHUB_TOKEN", seen["env"])
-
+        self.assertEqual(triage.classifier_model(ROOT), ("muse-spark-1.3-contributor", "xhigh"))
 
 if __name__ == "__main__":
     unittest.main()
