@@ -2809,12 +2809,22 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "cognition",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "37325988767",
+            "tier": "medium"
+          }
+        ],
         "sha": "f5d746365481c418ef3190a46644b9a26fe5f7bd",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "307": {
