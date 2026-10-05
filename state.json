@@ -2230,6 +2230,7 @@
       "ci_reruns": {
         "e0742c2b29d258a0bd3065cdf0ee052f7554202f": 1
       },
+      "cross_rounds": 0,
       "died": 1,
       "difficulty": "medium",
       "failures": 0,
