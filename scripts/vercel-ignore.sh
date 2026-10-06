@@ -39,7 +39,7 @@ files=$(git diff --name-only "$prev" HEAD 2>/dev/null) || exit 1
 set -f
 for file in $files; do
   case "$file" in
-    bot/* | .harness/* | .github/* | docs/* | reviews/* | e2e/* | apps/server/* | scripts/*) ;;
+    bot/* | .harness/* | .squishy/* | .github/* | docs/* | reviews/* | e2e/* | apps/server/* | scripts/*) ;;
     render.yaml) ;;
     apps/web/*.test.ts | apps/web/*.test.tsx | packages/*.test.ts | apps/web/src/test/* | apps/web/README.md) ;;
     packages/engine/test/* | packages/cards/test/* | packages/ai/test/* | packages/validator/test/* | packages/shared/test/*) ;;

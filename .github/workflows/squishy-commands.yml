@@ -1,0 +1,104 @@
+# Squishy's ears (bot/README.md, Squishy; #60): `/squishy` and `@squishy-squooby` comments, its
+# `squishy:` labels, assignment to it, reviews of its pull requests, and CI on its branches. The
+# night bot's harness handles them as Squishy (HARNESS_HOME=.squishy), with Squishy's token. No
+# model runs here: model work is queued for squishy-run, or started at once with --force.
+#
+# A sweep every twenty minutes answers anything an event never delivered, closes out a tree
+# whose sub-issues have all closed, and starts a squishy-run when a lane is free; the bot-status
+# loop also sweeps for Squishy every ten minutes and draws its section of the pinned
+# "Night bot status" issue.
+name: squishy-commands
+
+on:
+  schedule:
+    - cron: "3,23,43 * * * *"
+  workflow_dispatch: {}
+  issue_comment:
+    types: [created, edited]
+  pull_request_review_comment:
+    types: [created, edited]
+  issues:
+    types: [labeled, assigned]
+  # _target, so the job runs this repository's workflow with its secrets and never code from the
+  # pull request; it checks out the default branch and reads the event payload only.
+  pull_request_target:
+    types: [labeled, assigned, closed]
+  pull_request_review:
+    types: [submitted]
+  workflow_run:
+    workflows: [CI, bot selftest]
+    types: [completed]
+
+permissions: {}
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  HARNESS_HOME: .squishy
+
+jobs:
+  event:
+    name: event
+    # Wakes only for something Squishy answers. Its own comments and labels are skipped by actor;
+    # a CI run on its branch and a closed Squishy pull request are handled whoever caused them.
+    if: >-
+      github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'workflow_run'
+        && contains(fromJSON('["failure", "timed_out", "cancelled", "startup_failure"]'), github.event.workflow_run.conclusion)
+        && startsWith(github.event.workflow_run.head_branch, 'squishy/'))
+      || (github.event_name == 'pull_request_target' && github.event.action == 'closed'
+        && contains(github.event.pull_request.labels.*.name, 'squishy:pr'))
+      || (github.actor != 'squishy-squooby' && github.actor != 'github-actions[bot]' && (
+        ((github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment')
+          && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+          && (contains(github.event.comment.body, '/squishy')
+              || contains(github.event.comment.body, '@squishy-squooby')))
+        || (github.event_name == 'pull_request_review'
+          && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.review.author_association)
+          && (contains(github.event.review.body, '/squishy')
+              || contains(github.event.review.body, '@squishy-squooby')
+              || github.event.review.state == 'changes_requested'))
+        || ((github.event_name == 'issues' || github.event_name == 'pull_request_target')
+          && github.event.action == 'labeled' && startsWith(github.event.label.name, 'squishy:'))
+        || ((github.event_name == 'issues' || github.event_name == 'pull_request_target')
+          && github.event.action == 'assigned' && github.event.assignee.login == 'squishy-squooby')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write        # the state file on the squishy-state branch
+      issues: write
+      pull-requests: write
+      actions: write         # start a forced run; re-run failed CI jobs once
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch || 'main' }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Handle the event, or sweep for anything left unanswered
+        working-directory: bot
+        env:
+          BOT_GITHUB_TOKEN: ${{ secrets.SQUISHY_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          # Which provider secrets exist, never their values.
+          HARNESS_SECRETS_SET: >-
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && 'CLAUDE_CODE_OAUTH_TOKEN' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_2' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_3 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_3' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_4 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_4' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_5 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_5' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
+            ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
+            ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            python -m harness sweep
+          else
+            python -m harness event
+          fi

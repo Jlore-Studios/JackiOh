@@ -33,7 +33,7 @@ from datetime import datetime, timedelta
 from typing import Any, Callable, Mapping
 
 from harness.clock import human_delta, iso, parse_iso, zone
-from harness.config import NIGHT_WORKFLOW
+from harness.config import BRANCH_PREFIX, NIGHT_WORKFLOW
 from harness.context import Context
 from harness.errors import GitHubError
 
@@ -74,7 +74,7 @@ APPROVED_BY = re.compile(r"`([a-z][a-z0-9-]*)` \([a-z]+, `?[A-Za-z0-9][A-Za-z0-9
                          r"(?:, [a-z]+)?\),? (?:reviewed it adversarially and )?approved it")
 OPENED = re.compile(r"\bOpened #(\d+)")
 CLOSES = re.compile(r"(?i)\b(?:closes|fixes|resolves) #(\d+)")
-BRANCH_ISSUE = re.compile(r"^bot/issue-(\d+)$")
+BRANCH_ISSUE = re.compile(r"^" + re.escape(BRANCH_PREFIX) + r"issue-(\d+)$")
 
 #: What a comment says happened, tried in this order: (kind, words that mark it).
 OUTCOMES: tuple[tuple[str, tuple[str, ...]], ...] = (

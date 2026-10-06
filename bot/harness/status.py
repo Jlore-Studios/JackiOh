@@ -8,9 +8,8 @@ from typing import Any
 from harness import providers as providers_mod
 from harness import review_rule
 from harness.clock import human_delta, parse_iso
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN,
-                            LABEL_NEEDS_PLAN, LABEL_PR, LABEL_REVISE, LABEL_SUGGESTION,
-                            LABEL_WORKING)
+from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_NEEDS_PLAN,
+                            LABEL_PR, LABEL_REVISE, LABEL_SUGGESTION, LABEL_WORKING, SLASH, TITLE)
 from harness.context import Context
 from harness.plan import run_status, training_ids, working_threads
 from harness.providers import Provider
@@ -162,12 +161,12 @@ def provider_lines(ctx: Context, state: dict[str, Any], held: dict[int, str]) ->
 def report(ctx: Context) -> str:
     cfg = ctx.cfg
     state = ctx.store.load()
-    lines = ["**Night bot status**", ""]
+    lines = [f"**{TITLE} status**", ""]
     halt = state.get("halt") or {}
     if state.get("halted"):
         by = f" by @{halt.get('by')}" if halt.get("by") else ""
         why = f": {halt.get('reason')}" if halt.get("reason") else ""
-        lines.append(f"- **Halted**{by}{why}. `/harness start` resumes it.")
+        lines.append(f"- **Halted**{by}{why}. `{SLASH} start` resumes it.")
     else:
         lines.append("- Not halted.")
     if ctx.repo_halted():

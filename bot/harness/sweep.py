@@ -14,6 +14,8 @@ have used:
 - a label the bot uses (`config.LABELS`) that the repository does not have: a new one used to
   wait for a person to run `python3 -m harness setup`, so `method:manual` and `method:use-bot`
   (#307) shipped without existing, and no issue could be triaged;
+- a tree the bot split (`squishy:tree`, #60) whose sub-issues have all closed: its close-out is
+  queued, which checks the parent against `main` and closes it or opens what is missing;
 - last, a night run that should be going and is not: GitHub drops scheduled runs, sometimes a
   whole night of `bot-night`'s hourly ones, so when the gate's own question (`plan.peek`) finds
   work for a free lane and no `bot-night` run is on its way to take it, the sweep starts one.
@@ -36,10 +38,11 @@ from harness import commands, events, stepup, triage
 from harness import plan as plan_mod
 from harness.clock import iso, parse_iso
 from harness.config import (LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
-                            LABEL_REVISE, LABEL_WORKING, NIGHT_WORKFLOW)
+                            LABEL_REVISE, LABEL_TREE, LABEL_WORKING, MODES, NIGHT_WORKFLOW)
 from harness.context import Context
 from harness.errors import GitHubError
-from harness.queue import label_names, queue_build, queue_revise
+from harness.queue import is_human, label_names, queue_build, queue_revise
+from harness.state import item as state_item
 
 LOOKBACK = timedelta(days=3)
 #: Anything younger than this may still be in its handler's hands.
@@ -65,7 +68,7 @@ def sweep(ctx: Context) -> list[str]:
     since = max(first, now - LOOKBACK)
     notes: list[str] = []
     for part in (_labels, _comments, _reviews, _assignments, _failed_ci, _needs_plan,
-                 _green_heads, _night_run, _issue_types):
+                 _green_heads, _trees, _night_run, _issue_types):
         try:
             notes += part(ctx, since)
         except Exception as exc:  # noqa: BLE001 - one part failing never stops the rest
@@ -299,6 +302,42 @@ def _failed_ci(ctx: Context, since: datetime) -> list[str]:
         return f"CI on #{number}: {'; '.join(acted)}" if acted else None
 
     _each(pulls, act, notes)
+    return notes
+
+
+def _trees(ctx: Context, since: datetime) -> list[str]:
+    """A tree the bot split (#60) whose sub-issues have all closed is queued for its close-out:
+    the same split session, which checks the parent's end state against `main` and closes it, or
+    opens the sub-issues still missing. One stopped (`stop`) or blocked is left alone."""
+    splits = [mode for mode in MODES if mode.startswith("split")]
+    if not splits:
+        return []
+    state = ctx.store.load()
+    notes: list[str] = []
+
+    def act(thread: dict[str, Any]) -> str | None:
+        number = int(thread["number"])
+        names = label_names(thread)
+        if "pull_request" in thread or names & (QUEUE_LABELS | {LABEL_PR_OPEN}) or is_human(names):
+            return None
+        record = state["items"].get(str(number), {})
+        if record.get("stop_requested"):
+            return None
+        children = ctx.gh.list_sub_issues(number)
+        if not children or any(child.get("state") == "open" for child in children):
+            return None
+        tree = record.get("tree") if isinstance(record.get("tree"), dict) else {}
+        mode = str(tree.get("mode") or "")
+        mode = mode if mode in splits else splits[0]
+        reply = queue_build(ctx, number, by=ctx.cfg.bot_login, mode=mode)
+        ctx.store.update(lambda s: state_item(s, number).update(closeout=True),
+                         f"close-out #{number}")
+        ctx.gh.create_comment(number, "Every sub-issue of this has closed, so its close-out is "
+                              f"queued: it checks this issue against `main`, and closes it when its "
+                              f"end state holds or opens what is still missing. {reply}")
+        return f"#{number}: its sub-issues have all closed; queued its close-out"
+
+    _each(ctx.gh.list_issues(labels=LABEL_TREE), act, notes)
     return notes
 
 
