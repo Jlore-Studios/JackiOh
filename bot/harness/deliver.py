@@ -34,7 +34,8 @@ from harness import plan as plan_mod
 from harness import providers as providers_mod
 from harness import vault
 from harness.clock import iso, parse_iso
-from harness.config import (DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED, LABEL_BUILD,
+from harness.config import (DIFFICULTIES, DIFFICULTY_LABELS, LABEL_APPROVED, LABEL_BLOCKED,
+                            LABEL_BUILD,
                             LABEL_CROSS, PLAN_FLOOR,
                             LABEL_HUMAN, LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_STUCK,
                             LABEL_NEEDS_REVIEW, LABEL_PR, LABEL_PR_OPEN, LABEL_READY,
@@ -1677,8 +1678,9 @@ class Deliverer:
             if not title or not body:
                 continue
             footer = (f"\n\n---\nSuggested by @{self.cfg.bot_login} while the queue was empty. "
-                      "Add the `bot:build` label (or comment `/harness build`) to have it built; "
-                      "close it to say no.")
+                      f"Add the `{LABEL_APPROVED}` label to have it built: two minutes later "
+                      "triage titles, labels and queues it as it does `method:use-bot`, and the "
+                      "bot rates its difficulty when it plans it. Close it to say no.")
             issue = self.gh.create_issue(title, body + footer, [LABEL_SUGGESTION])
             made.append(issue.get("number"))
         self.log.append(f"opened suggestions: {made}")

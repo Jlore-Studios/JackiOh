@@ -14,7 +14,7 @@
 // of the redacted events (`castOnDraw.ts`), so a hidden one is a back that says a card was cast as it
 // was drawn, never which.
 //
-// Issue #124: so is every card another card casts (C+ #47 Jogg's Box's ten, Solarius-Prime's five, a
+// Issue #124: so is every card another card casts (C+ #47 Jogg's Box's ten, Solarius Prime's five, a
 // Cry that casts a card), on both seats, with the card that cast it and which of its casts it is: a
 // play the stream begins while another is still resolving (`runs.ts`). Nobody chose those either, and
 // ten of them in one action cannot be followed unless each is shown.

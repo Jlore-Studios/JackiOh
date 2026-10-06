@@ -1,4 +1,4 @@
-// C+ #38.1 Solarius-Prime (SPEC §8.7 row 38.1): (4) Unit, Token (printed Epic), 9/5 → 18/10.
+// C+ #38.1 Solarius Prime (SPEC §8.7 row 38.1): (4) Unit, Token (printed Epic), 9/5 → 18/10.
 //   Base:    "Spell Damage +3. Cry: Cast {casts} random Spells. Each aims at enemies when it harms
 //            and at your side when it helps."
 //   Radiant: "Spell Damage +7. Cry: Cast {casts} random Radiant Spells. Each aims at enemies when it
