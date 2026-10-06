@@ -2838,6 +2838,7 @@
     "365": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-06T08:13:27Z",
         "difficulty": "medium",
