@@ -4401,6 +4401,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R744 starts a disconnect grace for a seat that is not there when the first socket attaches", () => {
     provenIn(744, "../../../apps/server/test/match/recovery.test.ts", "../../../apps/server/test/match/clock.test.ts");
   });
+
+  // Proved by apps/web game/Log.test.tsx "R745 …" (windows joined in order with no line twice, one
+  // history per viewer, a new game empty, a kept line's name and no id, the cap, dividers, the gap line).
+  it("R745 keeps the whole game in the log, joined from the views' windows", () => {
+    provenIn(745, "../../../apps/web/src/game/Log.test.tsx");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {
