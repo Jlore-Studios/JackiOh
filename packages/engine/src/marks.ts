@@ -6,9 +6,9 @@
 // card it watches (R174) as it schedules itself. A delayed destroy of a scope (Classic #20's Radiant
 // face, R748) marks every card the scope names instead, kept in step with the board each time events
 // are collected (`syncMarks`), so a card that arrives while it waits is marked and one that leaves is
-// not. It lasts exactly as long as that delayed effect
-// does, so the record here is tied to the entry's id and holds nothing the entry does not: when the
-// effect resolves at its R62 point, fizzles, or is dropped because its card left the field
+// not. A mark lasts exactly as long as the delayed effect that made it does, so the record here is
+// tied to the entry's id and holds nothing the entry does not: when the effect resolves at its R62
+// point, fizzles, or is dropped because its card left the field
 // (`zones.forgetWatchers`, R76, R174), the entry is gone and so is the mark. `sweepMarks` notices it
 // at the next point the resolution loop collects events and says so with a `marked` event
 // (`added: false`), after whatever took the entry away; the one that made the mark said
