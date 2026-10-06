@@ -486,7 +486,7 @@ export function removeFromField(
 
 export type OffFieldZone = "hand" | "library" | "graveyard" | "exile";
 
-/** The pile a card lands in; off the field it always belongs to its owner (R12, R745's bounced hand excepted). */
+/** The pile a card lands in; off the field it always belongs to its owner (R12, R747's bounced hand excepted). */
 function pileFor(side: PlayerState, zone: OffFieldZone): CardInstance[] {
   if (zone === "hand") return side.hand;
   if (zone === "library") return side.library;
@@ -731,7 +731,7 @@ export function moveToZone(
   const landed = from === "resolving";
   if ((wasOnField || pileToPile || landed) && options.keepState !== true) resetInstance(instance);
 
-  // R745: a card landing in a hand goes to its holder's pile — its owner's, except a bounced
+  // R747: a card landing in a hand goes to its holder's pile — its owner's, except a bounced
   // card, which lands in its controller's hand. Every other pile stays its owner's (R12).
   const holder = zone === "hand" ? (options.holder ?? instance.owner) : instance.owner;
   const side = state.players[holder];

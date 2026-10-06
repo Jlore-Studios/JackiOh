@@ -56,7 +56,7 @@ const LABELS = [
 ];
 
 /**
- * R744 (issue #354): Bounce is a permanent's return from the field (R692). These faces return a card
+ * R746 (issue #354): Bounce is a permanent's return from the field (R692). These faces return a card
  * to hand from anywhere else (a Spell after it resolves or at the end of the turn, a card from the
  * graveyard or exile) and say "Return … to hand", as they did before patch v0.2.10.
  */
@@ -82,7 +82,7 @@ function failures(face: Face): string[] {
   if (/\(paid \d/i.test(text)) out.push('writes an embiggen price as "(paid N" rather than "Paid (N):"');
   // Vocabulary table (patch v0.2.1, issue #45; balance patch 1 retires "Return … to hand" for
   // Bounce, R692): a face that returns a permanent from the field says Bounce; only the faces that
-  // return a card from anywhere else keep "Return … to hand" (R744).
+  // return a card from anywhere else keep "Return … to hand" (R746).
   if (
     /\breturns?\b[^.\n]*\bto\b[^.\n]*\bhand\b/i.test(text) &&
     !RETURNS_OFF_THE_FIELD.includes(`${face.card.id} ${face.face}`)
@@ -162,7 +162,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     }
   });
 
-  it("R744 says \"Return … to hand\", never Bounce, where a card returns from the graveyard, exile or a resolved Spell (issue #354)", () => {
+  it("R746 says \"Return … to hand\", never Bounce, where a card returns from the graveyard, exile or a resolved Spell (issue #354)", () => {
     const faces = facesOf(ENTRIES);
     const returning = faces.filter((f) => /\breturns? [^.]*\bto hand\b/i.test(f.text)).map((f) => `${f.card.id} ${f.face}`);
     expect(returning.sort()).toEqual([...RETURNS_OFF_THE_FIELD].sort());

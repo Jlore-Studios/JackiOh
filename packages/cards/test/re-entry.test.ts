@@ -308,7 +308,7 @@ describe("§7, R41, R57: what a copy keeps", () => {
 });
 
 describe("§8 #52, R4, R78: a rider on a card that never reached the hand", () => {
-  it("R4 a card radiant Silly Silas bounces into a full hand is burned without its 'costing 0' (R78, R745)", () => {
+  it("R4 a card radiant Silly Silas bounces into a full hand is burned without its 'costing 0' (R78, R747)", () => {
     const fillers = Array.from({ length: 9 }, () => VANILLA);
     const g = scenario({
       p1: {
@@ -329,7 +329,7 @@ describe("§8 #52, R4, R78: a rider on a card that never reached the hand", () =
     expect(g.state.players.p1.hand).toHaveLength(10);
 
     // Rotating left, p1's lane 1 would move to p2's lane 1 in both rings — to the opponent — so
-    // radiant Silas bounces both cards to their controller's hand (R745), the unit ring first.
+    // radiant Silas bounces both cards to their controller's hand (R747), the unit ring first.
     // The Vanilla takes the last hand slot at cost 0; the Sheepish meets a full hand and burns
     // to its owner's graveyard instead (§2.4, R4), never reaching the hand, so R78 keeps no rider.
     g.play(SILAS, { zone: 3, modes: ["left"] });

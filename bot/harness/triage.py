@@ -7,12 +7,14 @@ An issue is triaged only once it carries `method:manual` or `method:use-bot`, tw
 the label goes on, so a person can set a difficulty and a priority first: `method:manual` makes it
 `human` and assigns both people; `method:use-bot` queues it for the bot (`bot:build`) and assigns
 the bot. The bot rates an issue's difficulty itself, when it plans it (#317 part 8), so triage
-gives none.
+gives none. `bot:approved` on one of the bot's own suggestions (`bot:suggestion`) is a person's yes
+to it and counts as `method:use-bot`: the same wait, labels, title, priority and queueing.
 
 Three steps, each its own job, so the model never holds a GitHub write token:
 
-1. `gate` (GitHub's runner, read-only) reads the event: is the author trusted, is there a method
-   label, is the classifier on? A stranger's text never reaches the machine.
+1. `gate` (GitHub's runner, read-only) reads the event: is the author trusted (or is it the
+   bot's own suggestion, which only a person with triage access can label `bot:approved`), is there
+   a method label, is the classifier on? A stranger's text never reaches the machine.
 2. `classify` (Muse's runner on the machine, `night-vm-muse`, read-only) fetches the thread's
    title and body through the API, fences them as data in a prompt, runs Muse in an empty
    directory, and writes its answer to a file. (It ran on Devin until #317: Devin failed every
@@ -65,6 +67,9 @@ BOT_ONLY: frozenset[str] = frozenset({config_mod.LABEL_READY})
 HUMAN_LABEL = "human"
 #: The method labels (#307): who does an issue. Triage takes no issue without exactly one.
 METHODS: tuple[str, ...] = (config_mod.LABEL_METHOD_MANUAL, config_mod.LABEL_METHOD_BOT)
+#: Labels that count as a method label: `bot:approved`, a person's yes to a suggestion, is
+#: `method:use-bot`.
+ALIASES: dict[str, str] = {config_mod.LABEL_APPROVED: config_mod.LABEL_METHOD_BOT}
 #: How long triage waits after a method label goes on, so a person can set a difficulty and a
 #: priority first.
 METHOD_WAIT = timedelta(minutes=2)
@@ -142,9 +147,17 @@ def follows_convention(title: str) -> bool:
 
 
 def methods_on(names: Iterable[str]) -> list[str]:
-    """The method labels among `names` (whatever their case), in `METHODS` order."""
+    """The method labels among `names` (whatever their case, an alias as its method), in
+    `METHODS` order."""
     lowered = {str(name).lower() for name in names}
+    lowered |= {method.lower() for alias, method in ALIASES.items() if alias.lower() in lowered}
     return [method for method in METHODS if method.lower() in lowered]
+
+
+def starts_triage(label: str) -> bool:
+    """Whether putting on `label` starts an issue's triage: a method label or an alias of one."""
+    name = label.lower()
+    return name.startswith("method:") or name in {alias.lower() for alias in ALIASES}
 
 
 def method_of(thread: Mapping[str, Any]) -> str:
@@ -190,20 +203,24 @@ def classifier_model(root: Path) -> tuple[str, str]:
 def gate(payload: Mapping[str, Any], trust: Trust, bot_login: str, root: Path, at: datetime,
          zone_name: str, *, asked: bool = False) -> tuple[bool, str]:
     """Whether to classify this thread, and why not when not. An issue goes only with exactly one
-    method label, and never to the bot when it is labelled `human` (#307). `asked`: a person
-    called triage on it, so a pull request goes even when it has everything already."""
+    method label, and never to the bot when it is labelled `human` (#307). The bot's own
+    suggestion goes too: its text is the bot's, and only a person with triage access can put the
+    method label on it. `asked`: a person called triage on it, so a pull request goes even when
+    it has everything already."""
     thread, is_pr = thread_of(payload)
     if not thread.get("number"):
         return False, "no issue or pull request in the event"
     user = thread.get("user") or {}
     login = str(user.get("login") or "")
-    if login.lower() == bot_login.lower() or login.endswith("[bot]"):
+    labels = {str(label.get("name")) for label in thread.get("labels") or []}
+    suggestion = (not is_pr and login.lower() == bot_login.lower()
+                  and config_mod.LABEL_SUGGESTION in labels)
+    if not suggestion and (login.lower() == bot_login.lower() or login.endswith("[bot]")):
         return False, f"opened by {login}, which labels its own"
     association = str(thread.get("author_association") or "").upper()
-    if association not in TRUSTED_ASSOCIATIONS and trust.level(login, user.get("id"),
-                                                               association) < 1:
+    if not suggestion and association not in TRUSTED_ASSOCIATIONS and trust.level(
+            login, user.get("id"), association) < 1:
         return False, f"@{login} is not trusted ({association or 'no association'})"
-    labels = {str(label.get("name")) for label in thread.get("labels") or []}
     if not is_pr:
         found = methods_on(labels)
         if not found:

@@ -24,8 +24,10 @@ TRUST = Trust.parse("jgoetzmann 3 id:95732896\nMaxGoetzmann 3 id:87041877\nhelpe
 BEFORE_OFF = datetime(2026, 10, 3, 12, 0, tzinfo=timezone.utc)
 REPO_LABELS = {"patch", "major version", "architecture", "night bot", "human", "difficult",
                "shitter", "priority:high", "priority:medium", "priority:low", "bot:build",
-               "bot:pr", "ready for merge", "difficulty:easy", "method:manual", "method:use-bot"}
+               "bot:pr", "ready for merge", "difficulty:easy", "method:manual", "method:use-bot",
+               "bot:suggestion", "bot:approved"}
 USE_BOT, MANUAL = "method:use-bot", "method:manual"
+SUGGESTION, APPROVED = "bot:suggestion", "bot:approved"
 
 
 def event(*, login="MaxGoetzmann", user_id=87041877, association="OWNER", title="Fix the thing",
@@ -74,6 +76,29 @@ class GateTests(unittest.TestCase):
     def test_the_bot_and_apps_label_their_own(self):
         self.assertFalse(self.go(event(login=BOT, association="COLLABORATOR"))[0])
         self.assertFalse(self.go(event(login="github-actions[bot]", association="NONE"))[0])
+
+    def test_a_suggestion_a_person_approved_goes_as_use_bot(self):
+        """The bot's own suggestion: its text is the bot's, and only a person with triage access
+        can label it `bot:approved`, which counts as `method:use-bot`."""
+        mine = dict(login=BOT, user_id=1, association="NONE")
+        self.assertEqual(self.go(event(labels=(SUGGESTION, APPROVED), **mine)),
+                         (True, f"#40 by @{BOT}"))
+        self.assertEqual(self.go(event(labels=(SUGGESTION,), **mine)),
+                         (False, "no method:manual or method:use-bot label"))
+        self.assertEqual(self.go(event(labels=(SUGGESTION, APPROVED, MANUAL), **mine)),
+                         (False, "both method:manual and method:use-bot: a person keeps one"))
+        self.assertEqual(self.go(event(labels=(SUGGESTION, APPROVED, "human"), **mine)),
+                         (False, "labelled human, so the bot leaves it alone"))
+        # Only the bot's own: another bot's, or a stranger's, still stops.
+        self.assertFalse(self.go(event(login="github-actions[bot]", association="NONE",
+                                       labels=(SUGGESTION, APPROVED)))[0])
+        self.assertIn("not trusted", self.go(event(login="someone", user_id=2, association="NONE",
+                                                   labels=(SUGGESTION, APPROVED)))[1])
+        # bot:approved is the bot method on any issue a trusted person opened, too.
+        self.assertTrue(self.go(event(labels=(APPROVED,)))[0])
+        self.assertTrue(triage.starts_triage("Bot:Approved"))
+        self.assertTrue(triage.starts_triage(MANUAL))
+        self.assertFalse(triage.starts_triage(SUGGESTION))
 
     def test_a_full_issue_with_a_method_label_still_goes_and_a_full_pr_skips(self):
         done = event(title="Night bot: a thing", labels=("night bot", USE_BOT),
@@ -137,6 +162,10 @@ class PromptTests(unittest.TestCase):
         self.assertIn("never a difficulty", text)
         plain = triage.prompt(thread(), False, labels, "")
         self.assertIn("a priority label only if the text clearly asks for one", plain)
+        approved = thread(labels=(SUGGESTION, APPROVED))
+        self.assertEqual(triage.method_of(approved), USE_BOT)
+        self.assertIn("always one priority label",
+                      triage.prompt(approved, False, labels, "", method=triage.method_of(approved)))
 
     def test_the_answer_is_the_last_json_object(self):
         answer = 'Sure.\n```json\n{"kind": "bot", "labels": ["patch"], "title": ""}\n```'
@@ -168,6 +197,19 @@ class DecideTests(unittest.TestCase):
         self.assertEqual(plan.labels, ["bot:build", "patch", "priority:low"])
         self.assertEqual(plan.assignees, [BOT])
         self.assertEqual(plan.unassign, ["MaxGoetzmann"])
+
+    def test_an_approved_suggestion_is_titled_labelled_and_queued_as_use_bot(self):
+        """#349's path: the patch label, a `Patch v0.2.Y:` title and a priority from the model,
+        `bot:build` and the bot from the method; the difficulty is left to the planner."""
+        plan = self.decide({"kind": "bot", "labels": ["patch", "priority:low", "difficulty:easy",
+                                                       APPROVED],
+                            "title": "Patch v0.2.Y: sample the AI's face-down traps at cost"},
+                           labels=(SUGGESTION, APPROVED),
+                           title="Sample the AI's unseen face-down traps at the cost the board "
+                                 "shows")
+        self.assertEqual(plan.labels, ["bot:build", "patch", "priority:low"])
+        self.assertEqual(plan.assignees, [BOT])
+        self.assertEqual(plan.title, "Patch v0.2.Y: sample the AI's face-down traps at cost")
 
     def test_use_bot_keeps_what_a_person_set_and_an_issue_already_queued(self):
         plan = self.decide({"kind": "bot", "labels": ["priority:low"]},
@@ -474,6 +516,22 @@ class CommandTests(unittest.TestCase):
         self.assertIn("go=false", written)
         self.assertIn("not a method label", printed)
         sleep.assert_called_once()
+
+    def test_bot_approved_on_a_suggestion_waits_two_minutes_and_goes(self):
+        import harness.__main__ as main_mod
+        gh = FakeGitHub()
+        gh.add_issue(349, "Sample the AI's unseen traps", labels=(SUGGESTION, APPROVED))
+        gh.threads[349]["user"] = {"login": BOT, "id": 1}
+        payload = Path(tempfile.mkdtemp()) / "event.json"
+        payload.write_text(json.dumps({"action": "labeled", "label": {"name": APPROVED},
+                                       "issue": {"number": 349, "labels": []}}))
+        sleep = mock.Mock()
+        with mock.patch.object(main_mod.time, "sleep", sleep), \
+                mock.patch.object(triage, "classifier_off", lambda *a: ""):
+            _, written = self.run_step(gh, "gate", payload=str(payload))
+        sleep.assert_called_once_with(120.0)
+        self.assertIn("go=true", written)
+        self.assertIn("number=349", written)
 
 
 FAKE_MUSE = textwrap.dedent('''\

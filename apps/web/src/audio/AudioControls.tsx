@@ -22,7 +22,7 @@ export type AudioControlsProps = { className?: string };
 const RANGE_MAX = 100;
 const RANGE_STEP = 5;
 
-type VolumeKey = "master" | "sfx" | "crowd" | "ambience" | "voice" | "music";
+type VolumeKey = "master" | "sfx" | "crowd" | "voice" | "music";
 
 function preview(key: VolumeKey): void {
   if (key === "voice") getAudioEngine().playVoice(VOICE_PREVIEW_DEF_ID, "play", 0, VOICE_PRIORITY.summon);
@@ -34,7 +34,6 @@ const VOLUMES: readonly { key: VolumeKey; label: string; testid: string }[] = [
   { key: "master", label: "Master volume", testid: "audio-master" },
   { key: "sfx", label: "SFX volume", testid: "audio-sfx" },
   { key: "crowd", label: "Crowd volume", testid: "audio-crowd" },
-  { key: "ambience", label: "Ambience volume", testid: "audio-ambience" },
   { key: "voice", label: "Voice volume", testid: "audio-voice" },
   { key: "music", label: "Music volume", testid: "audio-music" },
 ];

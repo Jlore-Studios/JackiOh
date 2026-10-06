@@ -237,7 +237,7 @@ describe("bounce (§6.3, M3-T1)", () => {
     expect(eventsOfType(events, "enteredGraveyard").map((e) => e.instanceId)).toEqual([victim.id]);
   });
 
-  it("R745 a stolen unit bounces to its controller's hand, not its owner's, without changing owner", () => {
+  it("R747 a stolen unit bounces to its controller's hand, not its owner's, without changing owner", () => {
     const state = game();
     const theirs = newInstance(state, "fx-4", "p2", { z: "hand", player: "p2" });
     expect(placeOnField(state, theirs, slot("p1", "units", 1))).toBe(true);
@@ -256,7 +256,7 @@ describe("bounce (§6.3, M3-T1)", () => {
     ]);
   });
 
-  it("R745 a stolen unit bounced into a full controller hand burns to its owner's graveyard", () => {
+  it("R747 a stolen unit bounced into a full controller hand burns to its owner's graveyard", () => {
     const state = game();
     inHand(state, "fx-2", "p1", HAND_CAP);
     const theirs = newInstance(state, "fx-4", "p2", { z: "hand", player: "p2" });

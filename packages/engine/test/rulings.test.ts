@@ -1572,7 +1572,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R147 keeps the first deadline when a second grace starts, so a flapping socket cannot extend it", () => {
     const source = sourceOf(SERVER_CLOCK);
     // The guard: a grace already counting down is left alone rather than re-armed.
-    expect(source).toMatch(/startGrace: \(player: PlayerId\): void => \{[\s\S]*?if \(countdown\.timer !== null\) return;/);
+    expect(source).toMatch(/startGrace: \(player: PlayerId, deadline\?: number\): void => \{[\s\S]*?if \(countdown\.timer !== null\) return;/);
   });
 
   // NOTE: no server test names this row; the index asserts the four codes, as R104 does its alphabet.
@@ -4302,7 +4302,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // Proved by packages/cards test/card-text.test.ts "R692 …" (every face that returns a permanent
-  // from the field says Bounce, and no face but R744's says "return … to hand") and apps/web
+  // from the field says Bounce, and no face but R746's says "return … to hand") and apps/web
   // src/cards/rules.test.ts "R692 …" (the glossary finds Bounce and "Bounced" where cards print them).
   it("R692 prints Bounce for a permanent's return to hand from the field", () => {
     provenIn(692, "../../cards/test/card-text.test.ts", "../../../apps/web/src/cards/rules.test.ts");
@@ -4394,18 +4394,32 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(743, "../../cards/test/patches.test.ts", "../../../apps/server/test/sql/14_patch_retcon.sql");
   });
 
-  // Proved by cards test/card-text.test.ts "R744 …" (the thirteen faces that return a card from the
-  // graveyard, exile or a resolved Spell say "Return … to hand", none says Bounce, and no other face
-  // says "return … to hand").
-  it("R744 prints Bounce only for a permanent on the field, and Return … to hand for every other return", () => {
-    provenIn(744, CARDS_CARD_TEXT_TEST);
+  // Proved by apps/server test/match/recovery.test.ts "R744 …" (an absent seat loses at its grace
+  // after a rebuild, a stored deadline is kept, a return cancels it, a fresh match's no-show loses,
+  // a normal start fires nothing, the reaper still draws a match nobody returns to) and
+  // test/match/clock.test.ts "R744 …" (a stored deadline is kept and never extended).
+  it("R744 starts a disconnect grace for a seat that is not there when the first socket attaches", () => {
+    provenIn(744, "../../../apps/server/test/match/recovery.test.ts", "../../../apps/server/test/match/clock.test.ts");
   });
 
-  // Proved by effects-move.test.ts "R745 …" (a stolen unit bounces to its controller's hand without
+  // Proved by apps/web game/Log.test.tsx "R745 …" (windows joined in order with no line twice, one
+  // history per viewer, a new game empty, a kept line's name and no id, the cap, dividers, the gap line).
+  it("R745 keeps the whole game in the log, joined from the views' windows", () => {
+    provenIn(745, "../../../apps/web/src/game/Log.test.tsx");
+  });
+
+  // Proved by cards test/card-text.test.ts "R746 …" (the thirteen faces that return a card from the
+  // graveyard, exile or a resolved Spell say "Return … to hand", none says Bounce, and no other face
+  // says "return … to hand").
+  it("R746 prints Bounce only for a permanent on the field, and Return … to hand for every other return", () => {
+    provenIn(746, CARDS_CARD_TEXT_TEST);
+  });
+
+  // Proved by effects-move.test.ts "R747 …" (a stolen unit bounces to its controller's hand without
   // changing owner, and into a full controller hand it burns to its owner's graveyard) and
-  // effects-boardwide.test.ts "R745 …" (the sweep returns each card to its controller's hand).
-  it("R745 bounces a permanent to its controller's hand, never the owner's", () => {
-    provenIn(745, "effects-move.test.ts", "effects-boardwide.test.ts");
+  // effects-boardwide.test.ts "R747 …" (the sweep returns each card to its controller's hand).
+  it("R747 bounces a permanent to its controller's hand, never the owner's", () => {
+    provenIn(747, "effects-move.test.ts", "effects-boardwide.test.ts");
   });
 });
 

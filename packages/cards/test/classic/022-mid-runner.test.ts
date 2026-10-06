@@ -2,7 +2,7 @@
 // resolution: in midlane (computed from the lane count, R685) it Tributes itself (a death), anywhere
 // else it stays; if you had 4 or more mana before paying for it (recorded as the play begins, §10.5
 // step 1), two different random enemy permanents (R60; fewer if fewer) return to their controllers'
-// hands (R745), tokens ceasing to exist (R11) and a full hand burning (R317); both may happen in one Cry;
+// hands (R747), tokens ceasing to exist (R11) and a full hand burning (R317); both may happen in one Cry;
 // `conditionMet` answers in hand whether your mana is 4 or more now (R195); a bounced face-down trap
 // is never named in your view (R97); radiant 4/2 returning 3; its tuned numbers (mana threshold,
 // bounces) read through `param()` (R386)".

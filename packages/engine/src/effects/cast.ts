@@ -13,7 +13,7 @@
 //    InfiniScepter's copy of the Spell it remembers; Classic+ #37 Wardrum's copies), which the caster
 //    owns and which lands in the caster's graveyard after it resolves (R87);
 //  - `castRandom` — random cards from a pool, every choice random (Classic+ #47 Jogg's Box, #38.1
-//    Solarius-Prime), never the casting card's own definition (B4.1, R387).
+//    Solarius Prime), never the casting card's own definition (B4.1, R387).
 //
 // A cast verb that would begin a cast past RANDOM_CAST_CHAIN_CAP inside a random cast's chain resolves
 // into nothing (R452), as R28's Call to Chaos cap does.
@@ -141,7 +141,7 @@ function castOneRandom(
  * E12, R452: cast `count` random cards from a pool (§5.1's `query`: no tokens unless it asks, never the
  * casting card's own definition), one after another, each a random cast — every choice random, its X
  * the caster's current mana (R453) — made and owned by the caster, landing in their graveyard (R87).
- * Classic+ #47 Jogg's Box: `{ query: { type: "Spell" }, count: 10 }`; #38.1 Solarius-Prime: five, with
+ * Classic+ #47 Jogg's Box: `{ query: { type: "Spell" }, count: 10 }`; #38.1 Solarius Prime: five, with
  * `targetEnemies` and, on its Radiant face, `radiant`. The casts are parts of the list read once as it
  * reaches them, so one the other player's prompt pauses is followed by the rest when it is answered.
  */

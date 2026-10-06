@@ -600,7 +600,7 @@
     "loc": 33,
     "base": {
       "keywords": [],
-      "text": "30% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
+      "text": "30% chance a random card in your hand becomes Radiant.\nEnd of turn: Bounce this."
     },
     "radiant": {
       "keywords": [
@@ -609,7 +609,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\n40% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
+      "text": "Lucky 1\n40% chance a random card in your hand becomes Radiant.\nEnd of turn: Bounce this."
     }
   },
   "core-024": {
@@ -625,11 +625,11 @@
     "loc": 46,
     "base": {
       "keywords": [],
-      "text": "Choose one: Deal X damage to a target, heal a target 2X, or gain floor(X/2) mana next turn.\nEnd of turn: Return this to hand."
+      "text": "Choose one: Deal X damage to a target, heal a target 2X, or gain floor(X/2) mana next turn.\nEnd of turn: Bounce this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Deal 2X damage to a target, heal a target 4X, or gain X mana next turn.\nEnd of turn: Return this to hand."
+      "text": "Choose one: Deal 2X damage to a target, heal a target 4X, or gain X mana next turn.\nEnd of turn: Bounce this."
     }
   },
   "core-025": {
@@ -790,11 +790,11 @@
     "loc": 56,
     "base": {
       "keywords": [],
-      "text": "Deal Fib(times played + 1) damage to a target.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
+      "text": "Deal Fib(times played + 1) damage to a target.\nEnd of turn: Bounce this. It costs (1) more, to a maximum of (4)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal Fib(times played + 3) damage to a target.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
+      "text": "Deal Fib(times played + 3) damage to a target.\nEnd of turn: Bounce this. It costs (1) more, to a maximum of (4)."
     }
   },
   "core-032": {
@@ -4053,11 +4053,11 @@
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Return {cards|random card|random cards} from your graveyard to hand."
+      "text": "Bounce {cards|random card|random cards} from your graveyard."
     },
     "radiant": {
       "keywords": [],
-      "text": "Return {cards|random card|random cards} from your graveyard or exile to hand."
+      "text": "Bounce {cards|random card|random cards} from your graveyard or exile."
     }
   },
   "classic-035": {
@@ -4521,13 +4521,13 @@
       "attack": 3,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps reveals, return this to hand."
+      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps reveals, Bounce this."
     },
     "radiant": {
       "attack": 6,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps reveals, return this to hand. It costs ({returnCost})."
+      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps reveals, Bounce this. It costs ({returnCost})."
     }
   },
   "classic-048": {
@@ -6718,11 +6718,11 @@
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "The next Spell you play gains \"After this resolves, return it to hand. This can't cost less than ({floor}).\""
+      "text": "The next Spell you play gains \"After this resolves, Bounce it. This can't cost less than ({floor}).\""
     },
     "radiant": {
       "keywords": [],
-      "text": "The next Spell you play gains \"After this resolves, return it to hand. This can't cost less than ({floor}).\""
+      "text": "The next Spell you play gains \"After this resolves, Bounce it. This can't cost less than ({floor}).\""
     }
   },
   "classicplus-015": {
@@ -7176,7 +7176,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Pierce\nDeal {damage} damage to all Units.\nEnd of turn: Return this to hand."
+      "text": "Pierce\nDeal {damage} damage to all Units.\nEnd of turn: Bounce this."
     }
   },
   "classicplus-022": {

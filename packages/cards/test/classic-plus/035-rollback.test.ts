@@ -377,7 +377,7 @@ describe("C+ #35 Rollback — base: both sides", () => {
     const timmy = s.unit("p2", 1)!;
     s.play(MIND_CONTROL, { targets: target(timmy.id) });
     s.endTurn(); // turn 12's snapshot holds Timmy on p1's side
-    s.play(FLOOD); // to its controller, p1 (R745); the turn has nothing left (R82)
+    s.play(FLOOD); // to its controller, p1 (R747); the turn has nothing left (R82)
     s.expectInZone(timmy, "hand");
     expect(s.hand("p1").map((card) => card.id)).toContain(timmy.id);
     expect(s.state.turn).toBe(13);
@@ -635,7 +635,7 @@ describe("C+ #35 Rollback — Radiant: your side, your opponent's or both", () =
     s.play(MIND_CONTROL, { targets: target(timmy.id) });
     toTurn13(s);
     s.play(ROLLBACK, { modes: ["2", "your side"] });
-    // p1's side as it was holds no Timmy, and p2's side is not restored: it goes to its controller's hand (R745).
+    // p1's side as it was holds no Timmy, and p2's side is not restored: it goes to its controller's hand (R747).
     expect(s.hand("p1").map((card) => card.id)).toContain(timmy.id);
   });
 });

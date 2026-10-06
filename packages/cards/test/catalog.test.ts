@@ -32,8 +32,8 @@
 //                    (issue #44) left them; B2.1's totals, 268 cards and 50 tokens in 318
 //                    entries (Glitch, issue #170, the fiftieth).
 //   tag vocabulary — SPEC §5/§6 tags as BUILD M4-T1 lists them, R278's Jlockeed, B2.4's Book,
-//                    Pancake and AI, and the mechanics patch's Plague (every card that uses
-//                    Plague Counters).
+//                    Pancake and AI, the mechanics patch's Plague (every card that uses
+//                    Plague Counters), and patch v0.2.Y's Catalyst, Prime and Acclaimed.
 //
 // Not asserted here: `keywords`, `text`, `params`, `refs` and `loc` (the per-card tests prove the
 // behaviour `keywords`, `text` and `params` describe, references.test.ts proves `refs`, loc.test.ts
@@ -252,7 +252,7 @@ const CLASSIC: readonly SpecRow[] = [
   { index: "77", name: "Anti-Magic Monkey", cost: 2, type: "Unit", tags: [], rarity: "Common", base: [5, 5], radiant: [10, 10] },
   { index: "78", name: "Mutate Spell", cost: 1, type: "Field Spell", tags: ["Plague"], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "79", name: "Risky Die", cost: 1, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
-  { index: "80", name: "BOOM! Big Max", cost: 4, type: "Unit", tags: [], rarity: "Legendary", base: [13, 8], radiant: [26, 16] },
+  { index: "80", name: "BOOM! Big Max", cost: 4, type: "Unit", tags: ["Acclaimed"], rarity: "Legendary", base: [13, 8], radiant: [26, 16] },
   { index: "81", name: "The Power to Thrive", cost: 2, type: "Field Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "82", name: "Sheeople", cost: 1, type: "Unit", tags: [], rarity: "Common", base: [1, 1], radiant: [2, 2] },
   { index: "83", name: "Flame Lance", cost: 3, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
@@ -321,9 +321,9 @@ const CLASSIC_PLUS: readonly SpecRow[] = [
   { index: "35", name: "Rollback", cost: 4, type: "Spell", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
   { index: "36", name: "Conjure Bones", cost: {base: 2, embiggen: 4}, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "36.1", name: "Bone Storm", cost: 1, type: "Spell", tags: ["Token"], rarity: "Token", base: [null, null], radiant: [null, null] },
-  { index: "37", name: "Wardrum", cost: 5, type: "Unit", tags: ["Quickdraw"], rarity: "Legendary", base: [5, 5], radiant: [10, 10] },
-  { index: "38", name: "Solarius", cost: 2, type: "Unit", tags: [], rarity: "Epic", base: [3, 2], radiant: [6, 4] },
-  { index: "38.1", name: "Solarius-Prime", cost: 4, type: "Unit", tags: ["Token"], rarity: "Token", base: [9, 5], radiant: [18, 10] },
+  { index: "37", name: "Wardrum", cost: 5, type: "Unit", tags: ["Quickdraw", "Acclaimed"], rarity: "Legendary", base: [5, 5], radiant: [10, 10] },
+  { index: "38", name: "Solarius", cost: 2, type: "Unit", tags: ["Catalyst"], rarity: "Epic", base: [3, 2], radiant: [6, 4] },
+  { index: "38.1", name: "Solarius Prime", cost: 4, type: "Unit", tags: ["Prime", "Token"], rarity: "Token", base: [9, 5], radiant: [18, 10] },
   { index: "39", name: "Book Worm", cost: 1, type: "Unit", tags: [], rarity: "Common", base: [1, 4], radiant: [2, 8] },
   { index: "40", name: "Appropriations", cost: "X", type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "41", name: "KY's Constant", cost: 1, type: "Spell", tags: ["KY"], rarity: "Rare", base: [null, null], radiant: [null, null] },
@@ -332,8 +332,8 @@ const CLASSIC_PLUS: readonly SpecRow[] = [
   { index: "43", name: "AI Slop", cost: 4, type: "Spell", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
   { index: "44", name: "Simplicity Audit", cost: 2, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "45", name: "Complexity Audit", cost: 2, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
-  { index: "46", name: "Felinor Flagbearer", cost: 2, type: "Unit", tags: ["Felinor"], rarity: "Legendary", base: [4, 4], radiant: [8, 8] },
-  { index: "46.1", name: "Felinor Flagbearer Prime", cost: 2, type: "Unit", tags: ["Felinor", "Token"], rarity: "Token", base: [5, 5], radiant: [10, 10] },
+  { index: "46", name: "Felinor Flagbearer", cost: 2, type: "Unit", tags: ["Felinor", "Catalyst"], rarity: "Legendary", base: [4, 4], radiant: [8, 8] },
+  { index: "46.1", name: "Felinor Flagbearer Prime", cost: 2, type: "Unit", tags: ["Felinor", "Prime", "Token"], rarity: "Token", base: [5, 5], radiant: [10, 10] },
   { index: "47", name: "Jogg's Box", cost: 4, type: "Spell", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
   { index: "48", name: "Jlockheed's Lobbyist", cost: 1, type: "Unit", tags: ["Jlockeed"], rarity: "Legendary", base: [0, 3], radiant: [0, 6] },
   { index: "49", name: "Jay Fungus", cost: 2, type: "Unit", tags: [], rarity: "Rare", base: [3, 6], radiant: [6, 12] },
@@ -393,7 +393,10 @@ const FIXTURES: readonly (readonly [SetName, readonly SpecRow[]])[] = [
   ["Classic+", CLASSIC_PLUS],
 ];
 
-/** BUILD M4-T1 and B2.4, plus the mechanics patch's Plague: the only tags any entry may carry. */
+/**
+ * BUILD M4-T1 and B2.4, plus the mechanics patch's Plague and patch v0.2.Y's Catalyst, Prime and
+ * Acclaimed: the only tags any entry may carry.
+ */
 const ALLOWED_TAGS: readonly string[] = [
   "Human",
   "Felinor",
@@ -407,6 +410,9 @@ const ALLOWED_TAGS: readonly string[] = [
   "Pancake",
   "AI",
   "Plague",
+  "Catalyst",
+  "Prime",
+  "Acclaimed",
   "Token",
 ];
 
@@ -711,7 +717,7 @@ describe("names (R381, B2.8)", () => {
 });
 
 describe("tag vocabulary (BUILD M4-T1, B2.4)", () => {
-  it("uses only Human, Felinor, KY, CN, Fruit, Call to Chaos, Quickdraw, Jlockeed, Book, Pancake, AI, Plague and Token", () => {
+  it("uses only Human, Felinor, KY, CN, Fruit, Call to Chaos, Quickdraw, Jlockeed, Book, Pancake, AI, Plague, Catalyst, Prime, Acclaimed and Token", () => {
     const wrong: string[] = [];
     for (const entry of ENTRIES) {
       for (const tag of entry.tags) {
@@ -742,6 +748,40 @@ describe("the Jlockeed tag (SPEC §5, §8, R278, B2.4)", () => {
     expect(named.sort(), "entries whose name names Jlockeed or Jlockheed").toEqual(
       tagged.filter((id) => id !== "classic-004").sort(),
     );
+  });
+});
+
+describe("the Catalyst, Prime and Acclaimed tags (SPEC §5, §7, §8.6, §8.7, patch v0.2.Y)", () => {
+  const tagged = (tag: Tag): string[] =>
+    ENTRIES.filter((entry) => entry.tags.includes(tag))
+      .map((entry) => entry.id)
+      .sort();
+
+  it("tags Classic+ #38 Solarius and #46 Felinor Flagbearer Catalyst, and no other entry", () => {
+    expect(tagged("Catalyst")).toEqual(["classicplus-038", "classicplus-046"]);
+  });
+
+  it("tags the two Prime tokens Prime, each named its Catalyst's name and a spaced Prime, and no other entry", () => {
+    expect(tagged("Prime")).toEqual(["classicplus-038-1", "classicplus-046-1"]);
+    // Every entry named "<card> Prime" carries the tag, and each is the token its Catalyst defines.
+    const named = ENTRIES.filter((entry) => / Prime$/.test(entry.name)).map((entry) => entry.id);
+    expect(named.sort(), "entries named <card> Prime").toEqual(tagged("Prime"));
+    for (const id of tagged("Prime")) {
+      const prime = CATALOG[id];
+      const catalyst = CATALOG[id.replace(/-1$/, "")];
+      expect(prime?.token, id).toBe(true);
+      expect(catalyst?.tags, id).toContain("Catalyst");
+      expect(prime?.name, id).toBe(`${catalyst?.name ?? "?"} Prime`);
+    }
+    // #322 spaces both: no name or face text writes a hyphenated Prime.
+    const hyphenated = ENTRIES.filter((entry) =>
+      [entry.name, entry.base.text, entry.radiant.text].some((text) => /-Prime\b/.test(text)),
+    ).map((entry) => entry.id);
+    expect(hyphenated).toEqual([]);
+  });
+
+  it("tags Classic #80 BOOM! Big Max and Classic+ #37 Wardrum Acclaimed, and no other entry", () => {
+    expect(tagged("Acclaimed")).toEqual(["classic-080", "classicplus-037"]);
   });
 });
 

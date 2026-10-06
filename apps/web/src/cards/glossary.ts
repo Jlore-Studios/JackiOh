@@ -271,7 +271,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Steal: verb("Steal", "Take control"),
   Unlock: verb("Unlock", "A Locked zone accepts plays again"),
   Flicker: verb("Flicker", "The card leaves the field then re-enters the same zone at once"),
-  // Balance patch 1 (R692): the printed word for a permanent's return from the field to its controller's hand (R744, R745).
+  // Balance patch 1 (R692): the printed word for a permanent's return from the field to its controller's hand (R746, R747).
   Bounce: verb("Bounce", "Return to controller's hand", ["Bounced"]),
   Degrade: verb("Degrade", DEGRADE_RULE),
   Upgrade: verb("Upgrade", UPGRADE_RULE),

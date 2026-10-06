@@ -71,7 +71,7 @@ function infiniteReservesSource(sink: EngineSink, player: PlayerId): CardInstanc
 /**
  * §2.4, R4: a card entering a full hand is burned to the graveyard; unit tokens vanish (R11).
  * `holder` is whose hand it enters — the card's owner, except a bounced card, which lands in its
- * controller's hand (R745). A burn still lands in the card's owner's graveyard (§3.2, R317).
+ * controller's hand (R747). A burn still lands in the card's owner's graveyard (§3.2, R317).
  */
 export function addToHand(sink: EngineSink, instance: CardInstance, holder: PlayerId = instance.owner): "hand" | "burned" {
   const side = sink.state.players[holder];

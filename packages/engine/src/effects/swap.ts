@@ -13,7 +13,7 @@
 //   that lands, a dormant Stack card and a backrow card included, takes this turn as its
 //   `summonedTurn` and a fresh exertion, so the units a player receives are summoning sick for the
 //   rest of the turn. `owner` does not change (R12), so the card still goes to its controller's
-//   hand (R745), or its owner's library, graveyard or exile, when it later leaves the field.
+//   hand (R747), or its owner's library, graveyard or exile, when it later leaves the field.
 //   Locks are zone flags, so they stay
 //   with their zones and never travel with a card (R73, §3.2). A face-down trap stays face-down and
 //   is readable by its new controller only: `viewFor` keys that on `controller`, so `faceUp` is
@@ -96,7 +96,7 @@ function placeContents(state: GameState, cards: readonly CardInstance[], to: Zon
 }
 
 /**
- * The bounce of the decision above: the card goes to its controller's hand (R745, shared with
+ * The bounce of the decision above: the card goes to its controller's hand (R747, shared with
  * §6.3 Bounce). The hand cap applies, so a full hand burns it (§2.4, R4), and a unit token ceases
  * to exist on the way and never reaches a hand (R11).
  */

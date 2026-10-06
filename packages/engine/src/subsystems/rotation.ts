@@ -10,7 +10,7 @@
 // line. That crossing is an entry (R171): the card takes this turn as its
 // `summonedTurn` and a fresh exertion, so it is summoning sick on its new side for the rest of the
 // turn. A card that moves along its own side has entered nothing and keeps both. The owner never
-// changes, so the card still goes to its controller's hand (R745), or its owner's library,
+// changes, so the card still goes to its controller's hand (R747), or its owner's library,
 // graveyard or exile (R12), whenever it later leaves the field. A face-down trap that crosses is read by its new controller and no
 // longer by the old one, which follows from `controller` alone, so `faceUp` is deliberately
 // untouched here (R33).
@@ -99,7 +99,7 @@ function placeContents(state: GameState, cards: readonly CardInstance[], to: Zon
 }
 
 /**
- * R14: the card goes to its controller's hand (R745, shared with §6.3 Bounce). The hand cap
+ * R14: the card goes to its controller's hand (R747, shared with §6.3 Bounce). The hand cap
  * applies, so a full hand burns it (§2.4, R4), and a unit token ceases to exist on the way and
  * never reaches a hand (R11).
  * `costOverride` is the radiant variant's "costing 0"; R78 keeps it while the card waits in hand.
@@ -155,7 +155,7 @@ export function rotateRings(sink: EngineSink, args: RotationArgs): RotationResul
     // their side. "The opponent" is the rotating player's (§8 Conventions: "your" is the
     // controller), so a card crossing the other way, onto the rotating player's side, is not one of
     // them: the base clause the radiant cell does not restate still holds for it, and it crosses and
-    // changes control like any other (R14, R171). The bounce goes to the card's controller's hand (R745).
+    // changes control like any other (R14, R171). The bounce goes to the card's controller's hand (R747).
     // A Locked destination would have bounced an outbound card anyway, so this also covers that case.
     if (radiant && crosses && entry.from.player === args.perspective) {
       for (const card of entry.cards) {

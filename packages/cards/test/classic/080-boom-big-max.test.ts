@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { legalActions } from "@jackioh/engine";
 import { hasKeyword } from "@jackioh/shared";
 import { scenario, type SideSetup } from "../_harness";
+import { def } from "../../src/scripts/classic/080-boom-big-max";
 
 const BOOM = "classic-080";
 const VANILLA = "core-008"; // 4/4
@@ -17,6 +18,10 @@ const STOCKPILE = "core-005";
 const SPARE: SideSetup = { hand: [STOCKPILE], library: [VANILLA, VANILLA] };
 
 describe("C #80 BOOM! Big Max", () => {
+  it("is tagged Acclaimed (SPEC §8.6 row 80, patch v0.2.Y)", () => {
+    expect(def.tags).toEqual(["Acclaimed"]);
+  });
+
   describe("base", () => {
     it("R101 Tribute 3: it can't be played without Units worth 3; two Units are not enough", () => {
       const none = scenario({ p1: { hand: [BOOM, STOCKPILE], library: SPARE.library }, p2: SPARE });

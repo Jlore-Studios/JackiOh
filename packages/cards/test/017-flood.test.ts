@@ -46,7 +46,7 @@ const TEN_CARDS = [
 ];
 
 describe("#17 Flood (base)", () => {
-  it("bounces every unit on both sides to its controller's hand (§6.3 Bounce, R745)", () => {
+  it("bounces every unit on both sides to its controller's hand (§6.3 Bounce, R747)", () => {
     const s = scenario({
       p1: { hand: ["core-017", "core-010"], field: ["core-012"], mana: 4 },
       p2: { field: ["core-019", "core-020"] },
@@ -65,7 +65,7 @@ describe("#17 Flood (base)", () => {
       expect(s.unit("p1", lane)).toBeNull();
       expect(s.unit("p2", lane)).toBeNull();
     }
-    // R745: each card goes to its CONTROLLER's hand, never the caster's.
+    // R747: each card goes to its CONTROLLER's hand, never the caster's.
     expect(s.pile("p1", "hand").some((card) => card.id === mine.id)).toBe(true);
     expect(s.pile("p2", "hand").map((card) => card.id)).toContain(theirs1.id);
   });

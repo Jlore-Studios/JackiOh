@@ -319,7 +319,6 @@ describe("B30 AudioControls", () => {
       ["audio-master", "80"],
       ["audio-sfx", "80"],
       ["audio-crowd", "50"],
-      ["audio-ambience", "5"],
       ["audio-voice", "100"],
     ] as const) {
       const range = input(id);
@@ -338,9 +337,15 @@ describe("B30 AudioControls", () => {
   it("B30 every input has a label", () => {
     render(<AudioControls />);
 
-    for (const id of ["audio-master", "audio-sfx", "audio-crowd", "audio-ambience", "audio-voice", "audio-mute", "audio-voice-on"]) {
+    for (const id of ["audio-master", "audio-sfx", "audio-crowd", "audio-voice", "audio-mute", "audio-voice-on"]) {
       expect(input(id).labels?.length ?? 0, id).toBeGreaterThan(0);
     }
+  });
+
+  it("#352 the panel offers no ambience volume", () => {
+    render(<AudioControls />);
+    expect(screen.queryByTestId("audio-ambience")).toBeNull();
+    expect(screen.queryByText(/ambience/i)).toBeNull();
   });
 
   it("B30 changing a range writes value / 100 to the store", () => {
@@ -349,14 +354,12 @@ describe("B30 AudioControls", () => {
     fireEvent.change(input("audio-master"), { target: { value: "35" } });
     fireEvent.change(input("audio-sfx"), { target: { value: "0" } });
     fireEvent.change(input("audio-crowd"), { target: { value: "65" } });
-    fireEvent.change(input("audio-ambience"), { target: { value: "10" } });
     fireEvent.change(input("audio-voice"), { target: { value: "55" } });
 
     const settings = readAudioSettings();
     expect(settings.master).toBeCloseTo(0.35, 6);
     expect(settings.sfx).toBe(0);
     expect(settings.crowd).toBeCloseTo(0.65, 6);
-    expect(settings.ambience).toBeCloseTo(0.1, 6);
     expect(settings.voice).toBeCloseTo(0.55, 6);
     expect(storedSettings()?.master).toBeCloseTo(0.35, 6);
     expect(input("audio-master").value).toBe("35");

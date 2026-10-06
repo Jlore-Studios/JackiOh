@@ -222,10 +222,8 @@ export type MusicStation = "tavern" | "edm" | "lofi" | "epic";
 export type AudioSettings = {
   master: number; // 0..1
   sfx: number; // 0..1
-  /** Match reactions, above the room bed. */
+  /** The crowd's reactions to big hits and heavy landings, 0..1. */
   crowd: number;
-  /** Low procedural venue bed, about -24 dB relative to the default SFX bus. */
-  ambience: number;
   voice: number; // 0..1
   muted: boolean;
   voiceOn: boolean;

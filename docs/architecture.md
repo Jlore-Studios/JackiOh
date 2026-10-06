@@ -191,7 +191,7 @@ What "operating a server" costs us, and the mitigation each cost already has in 
 
 | Cost | Mitigation |
 | --- | --- |
-| A restart drops every live match | `(seed, log)` rebuild on boot — SPEC §9.5: "A crashed actor rebuilds its state by folding `(seed, log)`". `app.live_matches()` is the query. |
+| A restart drops every live match | `(seed, log)` rebuild when the first socket for the match arrives, starting the grace of a seat that has not come back (R744) — SPEC §9.5: "A crashed actor rebuilds its state by folding `(seed, log)`". `app.live_matches()` is the reaper's query. |
 | One process is one point of failure | The hard ceiling and the reaper (§9.5) guarantee no match and no player is stuck forever, whatever happens to the process. |
 | Horizontal scale needs match affinity | Out of scope at this population (ARCHITECTURE-CCG §6.1: "single digits at 3am"). When it is needed, `matches.status` plus a claim column is the smallest change. |
 
@@ -320,7 +320,8 @@ Notes that matter:
 | Reconnect inside grace | fresh `viewFor`, never a replay (SPEC §9.5); cancel the grace timer |
 | Grace expires | submit `disconnectExpired` → a loss (R79) |
 | Terminal state | `recordResult` (`src/api/results.ts`) writes one `results` row, applies the rating move when the match is ranked (R604), clears both `profiles.current_match_id` and any queued ticket — all in one transaction — then the actor is dropped from the map |
-| Process boot | `app.live_matches()`, then for each: `fold({ seed, decks, log })` and re-arm the clocks from the stored deadlines |
+| Process boot | nothing: no actor is rebuilt until a socket for its match arrives, when `registry.ts` folds `(seed, decks, log)`; the rebuilt clock restarts the turn clock from full and keeps the ceiling from `started_at` |
+| First socket on an actor while the other seat has never attached to it (a restart, a no-show) | start that seat's grace at its stored `grace_deadline_at` if the restart left one (never later than a fresh window, at once if already past), else a fresh 60 s; it expires as a loss like any other. A match no socket returns to is the reaper's ceiling draw (R112, R744) |
 | Idle | The Node process has no hibernation; an actor with no sockets and an expired grace has already ended. On Durable Objects this row would read "hibernate". |
 
 The actor is written against a small interface — `now()`, `setAlarm()`, `appendAction()`,
@@ -359,10 +360,10 @@ row already recorded, so it needed no migration (R330, R337).
 
 What this buys, in the order it will be needed:
 
-1. **Crash recovery.** SPEC §9.5. The process restarts, reads `matches` where `status = 'live'`, folds
-   each log and re-arms the clocks. No snapshots to keep consistent, no half-written state. BUILD
-   M6-T4's acceptance is exactly this: "killing the actor mid-game and reconnecting yields the same
-   `viewFor` for both players."
+1. **Crash recovery.** SPEC §9.5. The process restarts; the first socket for a live match folds
+   its log back and re-arms its clocks, starting the grace of a seat that has not come back (R744).
+   No snapshots to keep consistent, no half-written state. BUILD M6-T4's acceptance is exactly this:
+   "killing the actor mid-game and reconnecting yields the same `viewFor` for both players."
 2. **Determinism as a test oracle.** `hashState(fold(seed, decks, log))` computed twice must match.
    BUILD's e2e `01` compares the final hash from a browser game against a vitest replay of the
    recorded actions; the fuzz gate folds 1,000 seeded games twice and compares.
@@ -592,8 +593,9 @@ step that is not yet implemented says which BUILD task delivers it.
    `0014_game_records.sql` → `0015_classic_sets_tags.sql` → `0016_catalog_growth_grants.sql` →
    `0017_last_boards.sql` → `0018_player_settings.sql` → `0019_hero_portraits.sql` →
    `0020_plague_tag.sql` → `0021_player_stats.sql` → `0022_ranked_ladder.sql` →
-   `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` — and records them
-   in `app.migrations`. Expected result: 25 tables
+   `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` →
+   `0026_catalyst_prime_acclaimed_tags.sql` — and records them in `app.migrations`. Expected
+   result: 25 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `db:seed-catalog` can
@@ -614,7 +616,8 @@ step that is not yet implemented says which BUILD task delivers it.
    nothing else in the bring-up changes. 0023 adds `matches.mode` and `matches.stake` for
    rematches (R672): only a rematch writes them, older rows keep deriving their mode. 0025 renames
    every row a database filed under the card patches' old names to their new ones (R743); on a new
-   project it changes nothing.
+   project it changes nothing. 0026 only widens the `cards` tag check again, with patch v0.2.Y's
+   Catalyst, Prime and Acclaimed, as 0020 did with Plague.
 5. **Verify the invariants before trusting anything.** `sh apps/server/test/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL

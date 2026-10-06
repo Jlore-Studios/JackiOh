@@ -47,8 +47,6 @@ export type Mix = {
   /** R669: the effects' duck under a voice line, after the effects bus. */
   sfxDuck: GainNode;
   crowd: GainNode;
-  ambience: GainNode;
-  ambienceDuck: GainNode;
   voice: GainNode;
   music: GainNode;
   musicDuck: GainNode;
@@ -96,8 +94,8 @@ function buildReverb(ctx: BaseAudioContext, from: { sfx: AudioNode; voice: Audio
 }
 
 /** Bus levels for a settings value: mute silences master, and voice lines off silence the voice bus. */
-export function mixLevels(s: AudioSettings): { master: number; sfx: number; crowd: number; ambience: number; voice: number; music: number } {
-  return { master: s.muted ? 0 : s.master, sfx: s.sfx, crowd: s.crowd, ambience: s.ambience, voice: s.voiceOn ? s.voice : 0, music: s.music };
+export function mixLevels(s: AudioSettings): { master: number; sfx: number; crowd: number; voice: number; music: number } {
+  return { master: s.muted ? 0 : s.master, sfx: s.sfx, crowd: s.crowd, voice: s.voiceOn ? s.voice : 0, music: s.music };
 }
 
 /** Builds the buses and the limiter into `ctx.destination`, at `settings`' levels. */
@@ -106,8 +104,6 @@ export function buildMix(ctx: BaseAudioContext, settings: AudioSettings): Mix {
   const sfx = ctx.createGain();
   const sfxDuck = ctx.createGain();
   const crowd = ctx.createGain();
-  const ambience = ctx.createGain();
-  const ambienceDuck = ctx.createGain();
   const voice = ctx.createGain();
   const music = ctx.createGain();
   const musicDuck = ctx.createGain();
@@ -120,8 +116,6 @@ export function buildMix(ctx: BaseAudioContext, settings: AudioSettings): Mix {
   sfx.connect(sfxDuck);
   sfxDuck.connect(master);
   crowd.connect(master);
-  ambience.connect(ambienceDuck);
-  ambienceDuck.connect(master);
   voice.connect(master);
   music.connect(musicDuck);
   musicDuck.connect(master);
@@ -132,8 +126,7 @@ export function buildMix(ctx: BaseAudioContext, settings: AudioSettings): Mix {
   master.gain.value = levels.master;
   sfx.gain.value = levels.sfx;
   crowd.gain.value = levels.crowd;
-  ambience.gain.value = levels.ambience;
   voice.gain.value = levels.voice;
   music.gain.value = levels.music;
-  return { master, sfx, sfxDuck, crowd, ambience, ambienceDuck, voice, music, musicDuck, limiter, reverb };
+  return { master, sfx, sfxDuck, crowd, voice, music, musicDuck, limiter, reverb };
 }

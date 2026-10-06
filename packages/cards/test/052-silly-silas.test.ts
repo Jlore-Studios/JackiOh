@@ -201,7 +201,7 @@ describe("#52 Silly Silas — radiant", () => {
     s.play("core-052", { zone: 1, modes: ["right"] });
 
     // "Cards that would move to the opponent": Reno would move from p1's lane 5 to p2's, so it goes
-    // home instead, at cost 0 (R745: the CONTROLLER's hand, R65).
+    // home instead, at cost 0 (R747: the CONTROLLER's hand, R65).
     s.expectInZone(reno, "hand");
     expect(s.card(reno).owner).toBe("p1");
     expect(s.card(reno).costOverride).toBe(0);
