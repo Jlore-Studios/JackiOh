@@ -54,7 +54,7 @@ services:
       # deploy-watch.yml, promote-production.yml and `pnpm test:deploy` read as the version main
       # should serve, and R388's test holds it equal to patches.json.
       - key: CATALOG_VERSION
-        value: v0.2.9
+        value: v0.2.10
       # SPEC §11 R190: how many X-Forwarded-For entries this deployment's own proxies append; the
       # per-IP limits key on the entry that many places from the right, never on what the caller
       # wrote to its left. The server's default is 0 (no proxy), so this must be set. 1 is a safe
