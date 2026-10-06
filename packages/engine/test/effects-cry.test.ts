@@ -113,6 +113,8 @@ describe("E13: trigger a Cry", () => {
       { pick: "instance", instanceId: enemy.id },
       { pick: "hero", player: "p2" },
     ]);
+    expect(pending.options.map((option) => option.label)).toEqual([plain.name, "Enemy hero"]);
+    expect(pending.options.map((option) => option.key)).toEqual([`instance:${enemy.id}`, "hero:p2"]);
     expect(viewFor(state, "p2").pending).toEqual({ forYou: false, pendingFor: "p1" });
     // Rewind's heal waits behind the Cry.
     expect(state.players.p1.hero.health).toBe(HERO_HEALTH);

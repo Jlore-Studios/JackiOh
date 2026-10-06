@@ -12,7 +12,7 @@
 
 import type { Selection } from "@jackioh/shared";
 import { defOf } from "../catalog";
-import { openPrompt, resumeSelf } from "../prompts";
+import { heroOptionLabel, openPrompt, resumeSelf } from "../prompts";
 import type { Effect, EffectContext } from "../script";
 import { findInstance, type CardInstance } from "../state";
 import { targetsInScope, type TargetScope } from "./choose";
@@ -54,7 +54,7 @@ export function chooseTargetWhere(args: {
             card !== undefined
               ? defOf(ctx.state, card.defId).name
               : selection.pick === "hero"
-                ? `${selection.player}'s hero`
+                ? heroOptionLabel(selection.player, ctx.controller)
                 : "nothing";
           return { key: keyOf(selection), label, selection };
         }),
