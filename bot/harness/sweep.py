@@ -11,6 +11,9 @@ have used:
 - a trusted review asking a bot pull request for changes, likewise unclaimed;
 - an open issue or PR assigned to the bot that nothing ever queued;
 - a failed CI run on the head of a bot PR that nothing reran or queued a fix for;
+- a label the bot uses (`config.LABELS`) that the repository does not have: a new one used to
+  wait for a person to run `python3 -m harness setup`, so `method:manual` and `method:use-bot`
+  (#307) shipped without existing, and no issue could be triaged;
 - last, a night run that should be going and is not: GitHub drops scheduled runs, sometimes a
   whole night of `bot-night`'s hourly ones, so when the gate's own question (`plan.peek`) finds
   work for a free lane and no `bot-night` run is on its way to take it, the sweep starts one.
@@ -23,6 +26,8 @@ One failure never stops the rest.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from datetime import datetime, timedelta
 from typing import Any, Callable
@@ -30,8 +35,8 @@ from typing import Any, Callable
 from harness import commands, events, stepup, triage
 from harness import plan as plan_mod
 from harness.clock import iso, parse_iso
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
-                            LABEL_WORKING, NIGHT_WORKFLOW)
+from harness.config import (LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
+                            LABEL_REVISE, LABEL_WORKING, NIGHT_WORKFLOW)
 from harness.context import Context
 from harness.queue import label_names, queue_build, queue_revise
 
@@ -58,8 +63,8 @@ def sweep(ctx: Context) -> list[str]:
         return ["the first sweep: requests from now on are swept"]
     since = max(first, now - LOOKBACK)
     notes: list[str] = []
-    for part in (_comments, _reviews, _assignments, _failed_ci, _needs_plan, _green_heads,
-                 _night_run, _issue_types):
+    for part in (_labels, _comments, _reviews, _assignments, _failed_ci, _needs_plan,
+                 _green_heads, _night_run, _issue_types):
         try:
             notes += part(ctx, since)
         except Exception as exc:  # noqa: BLE001 - one part failing never stops the rest
@@ -68,6 +73,20 @@ def sweep(ctx: Context) -> list[str]:
     ctx.store.update(lambda s: s.update(last_sweep={"at": iso(now), "since": iso(first),
                                                     "notes": notes[-20:]}), "sweep")
     return notes
+
+
+def _labels(ctx: Context, since: datetime) -> list[str]:
+    """Create every label in `config.LABELS` the repository lacks, once each time that list
+    changes (`labels_synced`, its fingerprint, in the state file), so a tick normally reads
+    nothing. A label a person deleted comes back with the next change to the list, or with
+    `python3 -m harness setup`."""
+    want = hashlib.sha256(json.dumps(sorted(LABELS.items())).encode("utf-8")).hexdigest()[:16]
+    if ctx.store.load().get("labels_synced") == want:
+        return []
+    made = [name for name, (color, description) in LABELS.items()
+            if ctx.gh.ensure_label(name, color, description)]
+    ctx.store.update(lambda s: s.update(labels_synced=want), "labels synced")
+    return [f"created the label `{name}`" for name in made]
 
 
 def _needs_plan(ctx: Context, since: datetime) -> list[str]:

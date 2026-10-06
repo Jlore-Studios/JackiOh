@@ -144,7 +144,10 @@ Every way of asking either gets an answer at once, or is found again later:
   - a trusted command (in a comment, a diff comment or a review) that nobody claimed;
   - an assignment nothing queued;
   - a review asking for changes on a bot pull request, newer than anything the bot acted on;
-  - a failed, cancelled or broken CI or `bot selftest` run on a bot pull request's head.
+  - a failed, cancelled or broken CI or `bot selftest` run on a bot pull request's head;
+  - a label the bot uses (`config.LABELS`) that the repository does not have. It checks each
+    time that list changes, so a new label exists within ten minutes of its merge, without
+    `harness setup` (`method:manual` and `method:use-bot` shipped in #328 without existing).
 
   It leaves anything younger than ten minutes to the handler that may still be running, so
   nothing is answered twice. Last, it starts a night run when one should be going and none is:
