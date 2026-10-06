@@ -32,22 +32,26 @@ import {
   usesAllowed,
   whyCannotActivateAbility,
 } from "../src/subsystems/activate";
+import { fuse } from "../src/subsystems/fuse";
 import { POWER_KEY, POWER_USED_KEY } from "../src/subsystems/heroPower";
 import { HIDDEN_ID, viewFor } from "../src/viewFor";
-import { scriptStepFor } from "../src/work";
+import { rememberOn, scriptStepFor } from "../src/work";
 import { moveToZone, placeOnField } from "../src/zones";
 import {
   ACTIVATE_SCRIPTS,
+  KEEPER_KEY,
   LOG_LANE,
   MERCHANT_PRICE,
   PICK_KEY,
   SCEPTER_KEY,
+  ZAPPER_DAMAGE,
   activateCatalog,
   asker,
   chooser,
   endless,
   ghost,
   heroic,
+  keeper,
   lockdown,
   logCard,
   merchant,
@@ -58,8 +62,10 @@ import {
   punisher,
   scepter,
   sentry,
+  spark,
   trapper,
   turtle,
+  zapper,
 } from "./fixtures/activate";
 import { vanillaDeck } from "./fixtures/catalog";
 import { eventsOfType, inHand, newGame, put, setLibrary, setupCatalog, sinkFor, slot } from "./fixtures/harness";
@@ -705,5 +711,92 @@ describe("B3.2 and §10.8: what each player sees (R384, R97)", () => {
     moveToZone(moved, moved.players.p1.backrow[0] as CardInstance, "hand");
     expect(seen("p2", moved)).toMatchObject({ instanceId: HIDDEN_ID, defId: HIDDEN_ID, ability: "ping" });
     expect(seen("p1", moved)).toMatchObject({ instanceId: card.id });
+  });
+});
+
+describe("R102: a fused card's abilities, each in its ingredient's place (R384)", () => {
+  it("R102 a card a Fuse kept still activates on what its own text remembered, and reads it back", () => {
+    const state = playing("fused-keeper");
+    const card = put(state, keeper.id, slot("p1", "backrow", 1));
+    rememberOn(card.memory, {}, KEEPER_KEY, "spell");
+    const [other] = inHand(state, endless.id, "p1");
+    if (other === undefined) throw new Error("no card");
+    expect(fuse(sinkFor(state), { ingredients: [other], target: card })?.id).toBe(card.id);
+    // R77: the kept card is the last ingredient, and what its text remembered moved to that place.
+    expect(card.memory[`${KEEPER_KEY}@1`]).toBe("spell");
+    expect(card.memory[KEEPER_KEY]).toBeUndefined();
+    expect(abilitiesOf(state, card).map((decl) => decl.id)).toEqual(["again", "recall"]);
+    expect(whyCannotActivateAbility(state, "p1", card.id, "recall")).toBeNull();
+    expect(notes(act(state, activate("p1", card.id, { ability: "recall" })).state)).toEqual(["recall:spell"]);
+  });
+
+  it("R102 two fused copies read their own memories: the one that remembered nothing can't be activated", () => {
+    const state = playing("fused-keepers");
+    const card = put(state, keeper.id, slot("p1", "backrow", 1));
+    rememberOn(card.memory, {}, KEEPER_KEY, "mine");
+    const [copy] = inHand(state, keeper.id, "p1");
+    if (copy === undefined) throw new Error("no card");
+    fuse(sinkFor(state), { ingredients: [copy], target: card });
+    expect(abilitiesOf(state, card).map((decl) => decl.id)).toEqual(["recall", "recall#2"]);
+    expect(whyCannotActivateAbility(state, "p1", card.id, "recall")).toBe("that ability can't be activated now");
+    expect(whyCannotActivateAbility(state, "p1", card.id, "recall#2")).toBeNull();
+    expect(
+      legalActions(state, "p1").flatMap((body) => (body.type === "activate" && body.instanceId === card.id ? [body.ability] : [])),
+    ).toEqual(["recall#2"]);
+    expect(notes(act(state, activate("p1", card.id, { ability: "recall#2" })).state)).toEqual(["recall:mine"]);
+  });
+
+  it("R102 a fused ability reads its own declared number, not one an ingredient ahead of it declares under the same key", () => {
+    const state = playing("fused-zapper");
+    const card = put(state, zapper.id, slot("p1", "backrow", 1));
+    const [first] = inHand(state, spark.id, "p1");
+    if (first === undefined) throw new Error("no card");
+    fuse(sinkFor(state), { ingredients: [first], target: card });
+    const after = act(state, activate("p1", card.id, { ability: "zap", targets: [{ pick: "hero", player: "p2" }] })).state;
+    expect(after.players.p2.hero.health).toBe(HERO_HEALTH - ZAPPER_DAMAGE);
+  });
+
+  it("R102 an ability's `has` on a fused card still reads the engine's own entry, which no Fuse moves", () => {
+    const state = playing("fused-chooser");
+    const card = put(state, chooser.id, slot("p1", "backrow", 1));
+    card.memory[PICK_KEY] = "beta";
+    const [other] = inHand(state, endless.id, "p1");
+    if (other === undefined) throw new Error("no card");
+    fuse(sinkFor(state), { ingredients: [other], target: card });
+    expect(abilitiesOf(state, card).map((decl) => decl.id)).toEqual(["again", "beta", "gamma"]);
+    expect(notes(act(state, activate("p1", card.id, { ability: "beta" })).state)).toEqual(["beta"]);
+  });
+
+  it("R102 R113 a fused card's activation survives JSON and replays to the same hash", () => {
+    const state = playing("fused-roundtrip");
+    const card = put(state, keeper.id, slot("p1", "backrow", 1));
+    rememberOn(card.memory, {}, KEEPER_KEY, "spell");
+    const [other] = inHand(state, endless.id, "p1");
+    if (other === undefined) throw new Error("no card");
+    fuse(sinkFor(state), { ingredients: [other], target: card });
+    const copy = roundTrip(state);
+    const live = act(state, activate("p1", card.id, { ability: "recall" })).state;
+    const restored = act(copy, activate("p1", card.id, { ability: "recall" })).state;
+    expect(notes(restored)).toEqual(["recall:spell"]);
+    expect(hashState(restored)).toBe(hashState(live));
+  });
+
+  it("R102 R113 a fused ability that asks mid-list parks its tail under its own hook, and the answer finishes it in its place", () => {
+    const state = playing("fused-asker");
+    const card = put(state, asker.id, slot("p1", "backrow", 1));
+    const [other] = inHand(state, endless.id, "p1");
+    if (other === undefined) throw new Error("no card");
+    fuse(sinkFor(state), { ingredients: [other], target: card });
+    const paused = act(state, activate("p1", card.id, { ability: "ask" })).state;
+
+    expect(notes(paused)).toEqual(["ask"]);
+    expect(paused.work.map((item) => item.resume.hook)).toEqual([activationHook("ask")]);
+    const copy = roundTrip(paused);
+    expect(copy).toEqual(paused);
+
+    const live = answer(paused).state;
+    expect(notes(live)).toEqual(["ask", "answered", "ask:tail"]);
+    expect(live.work).toEqual([]);
+    expect(hashState(answer(copy).state)).toBe(hashState(live));
   });
 });

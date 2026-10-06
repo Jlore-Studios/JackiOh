@@ -67,7 +67,7 @@ import type { EngineSink } from "../resolve";
 import { activeTargetDecls, selectionsPerDeclaration, storedDeclarationSlices } from "../playChoices";
 import { runStartOfGame } from "../prompts";
 import { lazyPart } from "../resolve";
-import type { AuraHook, CardScripts, Effect, EffectContext, Hook, Script, TargetCheck, TriggerDef } from "../script";
+import type { ActivationDecl, AuraHook, CardScripts, Effect, EffectContext, Hook, Script, TargetCheck, TriggerDef } from "../script";
 import {
   INGREDIENTS_KEY,
   asIngredient,
@@ -80,7 +80,7 @@ import {
 } from "../scripts";
 import { newInstance, type CardInstance, type GameState } from "../state";
 import { sumTunings } from "../tuning";
-import { PART_DEPTH_KEY, PART_KEY, partPathOf, rerootRemembered } from "../work";
+import { PART_DEPTH_KEY, PART_KEY, memoryOfPart, partPathOf, rerootRemembered } from "../work";
 import { ceaseToExist } from "../zones";
 
 /** R77: Craft a Card fuses "two or three cards", and #85 fuses two. Fewer is not a fusion. */
@@ -115,6 +115,9 @@ const WOULD_COUNTER_KEY = "wouldCounter";
 
 /** The script keys whose entries carry an `id` that has to stay unique across the ingredients. */
 const TRIGGER_KEYS = ["triggers", "handTriggers", "deckTriggers", "graveyardTriggers"] as const;
+
+/** `Script.activations` (R384): each ingredient's abilities, run in that ingredient's place (R102). */
+const ACTIVATIONS_KEY = "activations";
 
 /** §8's rarity ladder, lowest first, so a fusion can report the rarest ingredient's rarity. */
 const RARITY_ORDER: readonly Rarity[] = ["Token", "Common", "Rare", "Epic", "Legendary", "Mythic"];
@@ -671,7 +674,8 @@ function combineObjects(objects: readonly (Record<string, unknown> | undefined)[
  * fused cost at min(sum, 4) and a surviving Ceaseless Void hook would overrule it (R65); and with
  * its trigger ids namespaced, so two ingredients that both call a trigger "turn-end" stay two
  * distinct conditions on the fused card — each running in its ingredient's place (R102), so a
- * question it asks comes back to its own step.
+ * question it asks comes back to its own step — and its Activate abilities run in its place (R102,
+ * R384).
  */
 function scriptRecord(script: Script, defId: string, index: number): Record<string, unknown> {
   const out: Record<string, unknown> = { ...script };
@@ -690,7 +694,41 @@ function scriptRecord(script: Script, defId: string, index: number): Record<stri
         : trigger,
     );
   }
+  if (script.activations !== undefined) {
+    out[ACTIVATIONS_KEY] = script.activations.map((decl) => inActivationIngredient(decl, index));
+  }
   return out;
+}
+
+/**
+ * R102, R384: an ingredient's Activate ability in its place in the fusion. Its effect list builds
+ * and applies there, as a trigger's does (`inTriggerIngredient`), so it reads its own numbers
+ * (`param`) and what its own text remembered (`recalled`); its `canActivate` and `has`, which carry
+ * no context to name a place, read the card as that ingredient's text does (`asIngredientText`).
+ */
+function inActivationIngredient(decl: ActivationDecl, index: number): ActivationDecl {
+  const { canActivate, has, run } = decl;
+  return {
+    ...decl,
+    run: (ctx) => {
+      const patch = partData(ctx.data, index);
+      return run(inPlace(ctx, patch)).map((effect) => inIngredient(effect, patch));
+    },
+    ...(canActivate === undefined
+      ? {}
+      : { canActivate: (ctx) => canActivate({ ...ctx, self: asIngredientText(ctx.self, index) }) }),
+    ...(has === undefined ? {} : { has: (args) => has({ ...args, self: asIngredientText(args.self, index) }) }),
+  };
+}
+
+/**
+ * R102: the card as ingredient `index`'s text reads it from a hook with no context to name its
+ * place: at that ingredient's price (`scripts.asIngredient`), with what that text remembered under
+ * its own keys (`work.memoryOfPart`), so `recalled` with no part named reads it back.
+ */
+function asIngredientText(instance: CardInstance, index: number): CardInstance {
+  const card = asIngredient(instance, index);
+  return { ...card, memory: memoryOfPart(card.memory, index) };
 }
 
 /** A trigger's list, built and applied in its ingredient's place (R102). */

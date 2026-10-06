@@ -268,6 +268,32 @@ export function rerootRemembered(memory: Record<string, unknown>, index: number)
   }
 }
 
+/**
+ * R102, R384: the memory as ingredient `index`'s text reads it from a hook that carries no context
+ * to name its place (an Activate ability's `canActivate` and `has`) — the inverse of
+ * `rerootRemembered`: what that text remembered, `key@<index>`, under `key`, what the ingredients
+ * fused into it remembered, `key@<index>.<path>`, under `key@<path>`, and what the other ingredients
+ * remembered left out. The engine's own entries, which no text remembered, stay as they are.
+ */
+export function memoryOfPart(memory: Record<string, unknown>, index: number): Record<string, unknown> {
+  const noted = Array.isArray(memory[REMEMBERED_KEY])
+    ? (memory[REMEMBERED_KEY] as unknown[]).filter((key): key is string => typeof key === "string")
+    : [];
+  const out: Record<string, unknown> = { ...memory };
+  for (const key of noted) {
+    const own = `${key}@${index}`;
+    for (const stored of Object.keys(memory)) {
+      if (stored !== key && !stored.startsWith(`${key}@`)) continue;
+      delete out[stored];
+    }
+    for (const stored of Object.keys(memory)) {
+      if (stored === own) out[key] = memory[stored];
+      else if (stored.startsWith(`${own}.`)) out[`${key}@${stored.slice(own.length + 1)}`] = memory[stored];
+    }
+  }
+  return out;
+}
+
 /** The card's own captured data, with the control blocks taken back out. */
 export function cardData(data: Record<string, unknown>): Record<string, unknown> {
   const { [PAUSE_KEY]: _paused, [RUN_MARKS_KEY]: _run, [PART_DEPTH_KEY]: _depth, ...rest } = data;
