@@ -2399,6 +2399,11 @@
       "taken_asks": []
     },
     "344": {
+      "cleared": {
+        "at": "2026-10-06T01:05:13Z",
+        "by": "`claude` (strong)",
+        "sha": "288f81bef48f2c03a3a440c143bf8d07c3caf663"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-06T00:53:26Z",
