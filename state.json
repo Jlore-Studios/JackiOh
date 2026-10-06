@@ -2483,7 +2483,9 @@
     },
     "349": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6019142379"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -2505,7 +2507,7 @@
       "planned_tier": "strong",
       "provider": "muse",
       "question": "The blocking finding needs full `pnpm ai:gate` counts (100/50/50) transcribed into SPEC \u00a79.9, but this pass's harness forbids running `pnpm ai:gate` on the shared machine and inventing the numbers is forbidden. Should I run the ~30-minute full gate here against that guidance to fill in the counts, or should this merge on CI's ai-gate pass with the transcription done as a follow-up?",
-      "queued_at": "2026-10-06T04:14:35Z",
+      "queued_at": "2026-10-06T15:04:38Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37471010985",
       "started_at": "2026-10-06T13:28:40Z",
