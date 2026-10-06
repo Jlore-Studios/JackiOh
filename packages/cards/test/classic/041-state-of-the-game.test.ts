@@ -128,7 +128,7 @@ describe("C #41 State of the Game", () => {
       expect(s.unit("p1", 1)).toBeNull();
     });
 
-    it("§6.1 a bounce removes it to its owner's hand", () => {
+    it("§6.1 a bounce removes it to its controller's hand", () => {
       const s = scenario({
         p1: { hand: [FILLER], field: [STATE] },
         p2: { hand: [FLOOD, FILLER] },

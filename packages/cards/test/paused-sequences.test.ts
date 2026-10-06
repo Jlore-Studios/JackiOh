@@ -943,7 +943,7 @@ function askThenOnPlayed(s: Scenario, id: string, after: (playedId: string) => R
 
 
 describe("R174, R17: Sheepish owed the play behind a trap that took the unit off the field transforms nothing", () => {
-  it("R174 a unit the first trap's answer bounced to its owner's hand is not turned into a Sheep Token card there (R17, §8 #41)", () => {
+  it("R174 a unit the first trap's answer bounced to its controller's hand is not turned into a Sheep Token card there (R17, §8 #41)", () => {
     const s = scenario({
       p1: { hand: [TEMPO_TIMMY, RENO], mana: 4 },
       p2: { backrow: [{ def: SHEEPISH, lane: 2 }], hand: [RENO] },

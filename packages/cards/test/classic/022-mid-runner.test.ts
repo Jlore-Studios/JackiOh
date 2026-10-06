@@ -1,8 +1,8 @@
 // C #22 Mid Runner — SPEC §8.6 row 22, BUILD M9 Classic row C 22: "Cry, two independent checks at
 // resolution: in midlane (computed from the lane count, R685) it Tributes itself (a death), anywhere
 // else it stays; if you had 4 or more mana before paying for it (recorded as the play begins, §10.5
-// step 1), two different random enemy permanents (R60; fewer if fewer) return to their owners' hands,
-// tokens ceasing to exist (R11) and a full hand burning (R317); both may happen in one Cry;
+// step 1), two different random enemy permanents (R60; fewer if fewer) return to their controllers'
+// hands (R747), tokens ceasing to exist (R11) and a full hand burning (R317); both may happen in one Cry;
 // `conditionMet` answers in hand whether your mana is 4 or more now (R195); a bounced face-down trap
 // is never named in your view (R97); radiant 4/2 returning 3; its tuned numbers (mana threshold,
 // bounces) read through `param()` (R386)".
@@ -82,7 +82,7 @@ describe("C #22 Mid Runner", () => {
       expect(s.unit("p1", 2)?.defId).toBe(RUNNER);
     });
 
-    it("with 4 mana before paying it bounces two different random enemy permanents to their owner's hand", () => {
+    it("with 4 mana before paying it bounces two different random enemy permanents to their controller's hand", () => {
       const s = scenario({ p1: { hand: [RUNNER, ANCHOR] }, p2: { hand: [ANCHOR], field: [VANILLA, MENACE, TEMPO], backrow: [FIELD_SPELL] } });
       const before = enemyBoardIds(s);
 

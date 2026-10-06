@@ -6,7 +6,7 @@
 // the opponent's view; radiant 6/4: it returns and costs (0) (`costOverride`); its tuned number
 // (radiant cost) reads through `param()` (R386)".
 //
-// C #34 Ancient Acquisition ("Bounce 2 random cards from your graveyard") has its
+// C #34 Ancient Acquisition ("Return 2 random cards from your graveyard to hand") has its
 // own tests. The traps that fire are Core's Sheepish (a Trap answering a played Unit) and Bread and
 // Butter (a Field Trap answering a turn's end with mana unspent), and C #52 Final Gambit (a Trap that
 // fires as it replaces a lethal hit).

@@ -1,0 +1,15 @@
+{
+  "version": "v0.2.Y",
+  "title": "Patch v0.2.Y: Bounce keyword only applies to permanents",
+  "sources": "#354",
+  "notes": "Bounce only for a permanent returned from the field (R746): Reoccurring Dream, Efficiency Dividend, KY's Math Equation, Ancient Acquisition, Recurring Felinor, Forever& and Whirlwind's Radiant face say \"Return … to hand\" again, as before v0.2.10; these seven cards play as before (the bounce destination is R747, an engine change that touches no card text)",
+  "cards": [
+    "core-023",
+    "core-024",
+    "core-031",
+    "classic-034",
+    "classic-047",
+    "classicplus-014",
+    "classicplus-021"
+  ]
+}
