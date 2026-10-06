@@ -2822,11 +2822,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-06T07:19:49Z",
+        "at": "2026-10-06T08:13:27Z",
         "difficulty": "medium",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "line 5: the fix is display-only label strings with no rule-semantics change, which tempted easy, but the rule bars all of packages/engine/src/ rather than just rule logic, so it fails on the literal reading (also never-easy: engine work)"
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "it edits packages/engine/src, which the easy rule never allows; it stays medium, not hard, because only option label strings and one prompt key change, not a rule or the resolution loop"
       },
       "failures": 0,
       "forced": false,
