@@ -14,7 +14,7 @@
 // up; the runner going idle, draining or resetting lets it go at once, and it never waits longer than
 // SHOWCASE_GATE_MAX_MS. It listens to the runner and never answers it: nothing here paces the board.
 //
-// Issue #124: a card another card cast (C+ #47 Jogg's Box's ten random Spells, Solarius-Prime's five, a
+// Issue #124: a card another card cast (C+ #47 Jogg's Box's ten random Spells, Solarius Prime's five, a
 // Cry's cast) is shown on BOTH seats too, under "Cast by <the caster>" and a badge saying which of its
 // casts it is, so a burst of casts can be followed one card at a time. It waits for the runner to reach
 // its `cardPlayed`, as a cast on draw does, and the runner holds each cast up (`CAST_ENTRY_MS`); when

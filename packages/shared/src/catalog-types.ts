@@ -15,7 +15,9 @@ export type CardType = "Unit" | "Spell" | "Field Spell" | "Trap" | "Field Trap";
  * §5: tribes and tags. "Jlockeed" is Core #13 and #14's and the Classic+ Jlockheed cards' (R278);
  * patch v0.2.0 adds Book (every "Book of …" card), Pancake (Classic+ #12, #13 and the eight Pancake
  * tokens) and AI (the ten AI generated cards); the v0.2.x mechanics patch adds Plague (every card
- * that uses Plague Counters).
+ * that uses Plague Counters); patch v0.2.Y adds Catalyst (Classic+ #38 Solarius and #46 Felinor
+ * Flagbearer), Prime (their Prime tokens, Classic+ #38.1 Solarius Prime and #46.1 Felinor
+ * Flagbearer Prime) and Acclaimed (Classic #80 BOOM! Big Max and Classic+ #37 Wardrum).
  */
 export type Tag =
   | "Human"
@@ -30,6 +32,9 @@ export type Tag =
   | "Pancake"
   | "AI"
   | "Plague"
+  | "Catalyst"
+  | "Prime"
+  | "Acclaimed"
   | "Token";
 
 /** §8: Core's by mechanical complexity, Classic's and Classic+'s the designer's; every token carries "Token". */
