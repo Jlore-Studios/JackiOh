@@ -2562,6 +2562,13 @@
     "355": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-06T04:50:21Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the 'hard' line's 'engine rules (packages/engine/src/)': setup.ts deals and casts suspended cards, params.ts stops tuning, delay/marks reconcile marks, about 50 files in all"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
