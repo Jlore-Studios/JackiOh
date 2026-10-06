@@ -3828,9 +3828,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // Proved by setup-aside.test.ts "R635 …": nothing is cast in setup, the cards are shuffled in after
-  // the mulligans at random places and without a word to the other seat, an all-cast-on-draw deck
-  // deals an empty hand with no fatigue and turn 1's chain meets R58's cap, and a mulligan can be
-  // dealt fewer cards back than it returned; and by 021-hinder.test.ts's "R431, R635 …" (a real game).
+  // the mulligans at random places and without a word to the other seat, and a Quickdraw card that
+  // casts on draw is dealt as a Quickdraw card; and by 021-hinder.test.ts's "R431, R635 …" (a real
+  // game). A hand the other cards cannot fill is R745's.
   it("R635 sets cast-on-draw cards aside through setup and shuffles them in once the mulligans are done", () => {
     provenIn(635, "setup-aside.test.ts", "../../cards/test/021-hinder.test.ts");
   });

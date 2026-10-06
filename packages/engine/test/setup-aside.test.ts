@@ -1,9 +1,10 @@
-// What setup deals and what it sets aside (SPEC §2.1, §2.4, R9, R225, R635, R640; issue #152).
+// What setup deals and what it sets aside (SPEC §2.1, §2.4, R9, R225, R635, R640, R745; issues #152, #355).
 //
-//  - R635: a card that casts on draw is not dealt by setup. The opening draw and the mulligan's
-//    replacement draws skip it, it stays in its owner's library, and once both mulligans are
-//    resolved it is shuffled in. So nothing is cast before turn 1; and a deck with few cards besides
-//    cast-on-draw ones deals a short hand, an empty one at worst, and never a fatigue draw.
+//  - R635: a card that casts on draw is not dealt by setup while another card is left. The opening
+//    draw and the mulligan's replacement draws skip it, it stays in its owner's library, and once both
+//    mulligans are resolved it is shuffled in. Setup never deals a fatigue draw.
+//  - R745: a hand the other cards cannot fill takes cast-on-draw cards, uncast, and each one still in
+//    a hand is cast at the start of the game, before turn 1.
 //  - R640: a Quickdraw card replaces one of the opening draws, so a seat is dealt at most as many as
 //    its opening hand holds, and the others are ordinary cards in the library.
 //
@@ -16,6 +17,7 @@ import { registerCatalog, registeredCatalog } from "../src/catalog";
 import { AI_DIFFICULTY, CAST_ON_DRAW_CHAIN_CAP, DECK_SIZE, HAND_CAP, OPENING_DRAW, type Handicap } from "../src/config";
 import { beginGame, reduce } from "../src/reduce";
 import { fold, hashState } from "../src/replay";
+import { chooseMode } from "../src/effects";
 import type { CardScripts } from "../src/script";
 import { registerScripts, registeredScripts } from "../src/scripts";
 import { mulliganOwed, mulliganPromptFor } from "../src/setup";
@@ -26,6 +28,8 @@ import { setupCatalog } from "./fixtures/harness";
 
 const POOL = 30;
 const DUAL = "fx-dual";
+/** A cast-on-draw Spell whose cast asks its caster something (R745's casts at the start of the game). */
+const ASKS = "fx-cod-ask";
 
 const cod = (n: number): string => `fx-cod-${n}`;
 const qd = (n: number): string => `fx-qd-${n}`;
@@ -63,6 +67,13 @@ function register(): void {
     add(spell(qd(n), ["Quickdraw"], "Field Spell"), { quickdraw: true });
   }
   add(spell(DUAL, ["Quickdraw"], "Spell"), { castOnDraw: true, quickdraw: true });
+  defs[ASKS] = spell(ASKS, [], "Spell");
+  const asks = {
+    staticFlags: { castOnDraw: true },
+    cry: () => [chooseMode({ options: ["ok", "fine"], step: "ok", prompt: "R745" })],
+    resume: { ok: () => [] },
+  };
+  scripts[ASKS] = { base: asks, radiant: asks };
   registerCatalog({ ...registeredCatalog(), ...defs });
   registerScripts({ ...registeredScripts(), ...scripts });
 }
@@ -245,100 +256,169 @@ describe("R635: cast on draw cards sit out the deal and are shuffled in after th
   });
 });
 
-describe("R635: a deck with few cards besides cast-on-draw ones", () => {
-  it("R635 an all-cast-on-draw deck deals an empty hand, no fatigue, and the mulligan still closes", () => {
-    const { begun } = start("r635-all", [deckOf(0, DECK_SIZE), OTHER()]);
-    const state = begun.state;
+describe("R745: a hand the other cards cannot fill takes cast-on-draw cards, cast at the start of the game", () => {
+  /** The `cardPlayed` events, by instance id, in order. */
+  const playedIn = (events: readonly GameEvent[]): string[] =>
+    events.flatMap((event) => (event.type === "cardPlayed" ? [event.instanceId] : []));
+  const drawnBy = (events: readonly GameEvent[], player: PlayerId): GameEvent[] =>
+    events.filter((event) => event.type === "drawn" && event.player === player);
 
-    expect(state.players.p1.hand).toEqual([]);
-    expect(state.players.p1.library).toHaveLength(DECK_SIZE);
+  it("R745 an all-cast-on-draw deck deals a full hand of them, uncast, and casts them at the start of the game", () => {
+    const { begun } = start("r745-all", [deckOf(0, DECK_SIZE), OTHER()]);
+    const state = begun.state;
+    const hand = state.players.p1.hand;
+
+    // Three of them, each reported as a draw (R225), and none of them cast in the deal.
+    expect(hand).toHaveLength(OPENING_DRAW[0] as number);
+    expect(defsOf(hand).every(isCod)).toBe(true);
+    expect(drawnBy(begun.events, "p1")).toHaveLength(OPENING_DRAW[0] as number);
+    expect(state.players.p1.library).toHaveLength(DECK_SIZE - hand.length);
     expect(state.players.p1.fatigueCount).toBe(0);
-    expect(state.players.p1.hero.health).toBe(30);
     expect(count(begun.events, "fatigue")).toBe(0);
     expect(count(begun.events, "cardPlayed")).toBe(0);
-    // p2's deal is untouched, and both mulligans are open: p1's has nothing in it to return.
-    expect(state.players.p2.hand).toHaveLength(OPENING_DRAW[1] as number);
-    expect(mulliganOwed(state)).toEqual(["p1", "p2"]);
-    expect(mulliganPromptFor(state, "p1")?.options).toEqual([]);
+    // The mulligan offers them like any other card.
+    expect(mulliganPromptFor(state, "p1")?.options.map((option) => option.key)).toEqual(hand.map((card) => card.id));
 
     const answered = answerBoth(state);
-    // Turn 1 began, and p1 has nothing to do once the chain has run (R82 ends its turn for it).
-    expect(answered.state.turn).toBeGreaterThanOrEqual(1);
-    expect(answered.state.phase).toBe("main");
-    expect(answered.state.mulliganed).toEqual(["p1", "p2"]);
-    // Setup dealt p1 nothing and cast nothing. Turn 1's draw is what meets the library: it casts all
-    // twenty (R58's cap is twenty), and the draw that follows the last finds the library empty.
-    const turnOne = answered.events.slice(answered.events.findIndex((event) => event.type === "turnStarted"));
-    expect(count(beforeTurnOne(answered.events), "cardPlayed")).toBe(0);
+    // Once both mulligans are in, the three are cast before turn 1, in hand order, no draw repeated.
+    expect(playedIn(beforeTurnOne(answered.events))).toEqual(hand.map((card) => card.id));
     expect(count(beforeTurnOne(answered.events), "fatigue")).toBe(0);
-    expect(count(turnOne, "cardPlayed")).toBe(DECK_SIZE);
+    expect(drawnBy(beforeTurnOne(answered.events), "p1")).toEqual([]);
+    // Turn 1's draw meets the other seventeen: it casts them all, and the draw after the last one
+    // finds the library empty.
+    const turnOne = answered.events.slice(answered.events.findIndex((event) => event.type === "turnStarted"));
+    expect(answered.state.turn).toBeGreaterThanOrEqual(1);
+    expect(count(turnOne, "cardPlayed")).toBe(DECK_SIZE - hand.length);
     expect(answered.state.players.p1.graveyard).toHaveLength(DECK_SIZE);
     expect(answered.state.players.p1.library).toEqual([]);
     expect(answered.state.players.p1.fatigueCount).toBe(1);
     expect(answered.state.result).toBeNull();
   });
 
-  it("R635 turn 1 of an all-cast-on-draw library is bounded by R58's cap, as a chain mid-game is", () => {
+  it("R745 turn 1 of an all-cast-on-draw library is still bounded by R58's cap, as a chain mid-game is", () => {
     register();
-    const game = createGame({ seed: "r635-cap", decks: [deckOf(0, DECK_SIZE), OTHER()] });
-    // Two more, as a Unstable Clone Machine's or a CN-Virus's copies would add: 22 cards, none of
-    // them dealt, all of them cast on draw.
-    for (const defId of [cod(1), cod(2)]) {
+    const game = createGame({ seed: "r745-cap", decks: [deckOf(0, DECK_SIZE), OTHER()] });
+    // Five more, as a Unstable Clone Machine's or a CN-Virus's copies would add: 25 cards, all of them
+    // cast on draw.
+    for (const defId of [cod(1), cod(2), cod(3), cod(4), cod(5)]) {
       game.players.p1.library.push(newInstance(game, defId, "p1", { z: "library", player: "p1" }));
     }
     const begun = beginGame(game);
-    expect(begun.state.players.p1.hand).toEqual([]);
-    expect(begun.state.players.p1.library).toHaveLength(DECK_SIZE + 2);
+    expect(begun.state.players.p1.hand).toHaveLength(OPENING_DRAW[0] as number);
+    expect(begun.state.players.p1.library).toHaveLength(DECK_SIZE + 5 - (OPENING_DRAW[0] as number));
 
     const settled = answerBoth(begun.state).state;
-    // Twenty casts, then the twenty-first card goes to the hand uncast, which ends the chain.
-    expect(settled.players.p1.graveyard).toHaveLength(CAST_ON_DRAW_CHAIN_CAP);
+    // The hand's three at the start of the game, then turn 1's twenty casts; the next card goes to the
+    // hand uncast, which ends the chain.
+    expect(settled.players.p1.graveyard).toHaveLength((OPENING_DRAW[0] as number) + CAST_ON_DRAW_CHAIN_CAP);
     expect(settled.players.p1.hand).toHaveLength(1);
     expect(settled.players.p1.library).toHaveLength(1);
     expect(settled.players.p1.fatigueCount).toBe(0);
   });
 
-  it("R635 deals only the cards that do not cast on draw when there are fewer of them than the hand", () => {
-    // One other card in the deck, and an opening hand of three: the hand is that card.
-    const { begun } = start("r635-one", [deckOf(0, DECK_SIZE - 1), OTHER()]);
+  it("R745 one other card and two cast-on-draw cards fill the hand, and each seat's are cast, Player 1's first", () => {
+    // p1: one other card and a hand of three. p2: two other cards and a hand of four.
+    const { begun } = start("r745-one", [deckOf(0, DECK_SIZE - 1), deckOf(0, DECK_SIZE - 2)]);
     const state = begun.state;
-    expect(defsOf(state.players.p1.hand)).toEqual(["fx-1"]);
-    expect(state.players.p1.library).toHaveLength(DECK_SIZE - 1);
-    expect(state.players.p1.fatigueCount).toBe(0);
+    const p1 = state.players.p1.hand;
+    const p2 = state.players.p2.hand;
+    expect(defsOf(p1).filter((defId) => !isCod(defId))).toEqual(["fx-1"]);
+    expect(defsOf(p1).filter(isCod)).toHaveLength(2);
+    expect(defsOf(p2).filter((defId) => !isCod(defId))).toHaveLength(2);
+    expect(defsOf(p2).filter(isCod)).toHaveLength(2);
+    expect(state.players.p1.library).toHaveLength(DECK_SIZE - 3);
     expect(count(begun.events, "fatigue")).toBe(0);
     expect(count(begun.events, "cardPlayed")).toBe(0);
 
-    // Returned, there is nothing to draw for it: it is shuffled back, and the hand is empty. The
-    // replacement draw is short, not a fatigue draw.
-    const answered = answerBoth(state, { p1: [] });
-    const dealt = beforeTurnOne(answered.events);
-    expect(count(dealt, "fatigue")).toBe(0);
-    expect(dealt.filter((event) => event.type === "drawn" && event.player === "p1")).toEqual([]);
-    expect(answered.events.some((event) => event.type === "shuffledIn" && event.player === "p1")).toBe(true);
-    expect(answered.state.players.p1.hero.health).toBeGreaterThan(0);
-    // Back in the library, or already drawn by turn 1's draw.
-    const side = answered.state.players.p1;
-    expect([...side.library, ...side.hand].some((card) => card.defId === "fx-1")).toBe(true);
+    const answered = answerBoth(state);
+    const cast = [...p1, ...p2].filter((card) => isCod(card.defId)).map((card) => card.id);
+    expect(playedIn(beforeTurnOne(answered.events))).toEqual(cast);
+    // The other cards stay in the hands.
+    expect(answered.state.players.p2.hand.map((card) => card.id)).toEqual(
+      p2.filter((card) => !isCod(card.defId)).map((card) => card.id),
+    );
+    expect(answered.state.players.p1.hand.some((card) => card.defId === "fx-1")).toBe(true);
   });
 
-  it("R635 a mulligan that returns more than the library holds besides cast-on-draw cards is dealt fewer back", () => {
+  it("R745 a mulligan the other cards cannot replace is dealt cast-on-draw cards for the rest", () => {
     // Five other cards: three in the hand and two left in the library for the three replacements.
-    const { begun } = start("r635-short", [deckOf(0, DECK_SIZE - 5), OTHER()]);
+    const { begun } = start("r745-short", [deckOf(0, DECK_SIZE - 5), OTHER()]);
     const state = begun.state;
     expect(state.players.p1.hand).toHaveLength(3);
+    expect(defsOf(state.players.p1.hand).some(isCod)).toBe(false);
     expect(state.players.p1.library.filter((card) => !isCod(card.defId))).toHaveLength(2);
 
     const answered = answerBoth(state, { p1: [] });
     const dealt = beforeTurnOne(answered.events);
-    expect(dealt.filter((event) => event.type === "drawn" && event.player === "p1")).toHaveLength(2);
+    const replacements = drawnBy(dealt, "p1");
+    // Three back: the two other cards, and one cast-on-draw card dealt uncast, cast at the start.
+    expect(replacements).toHaveLength(3);
+    const filled = replacements.filter((event) => event.type === "drawn" && isCod(event.defId));
+    expect(filled).toHaveLength(1);
+    expect(playedIn(dealt)).toEqual(filled.map((event) => (event.type === "drawn" ? event.instanceId : "")));
     expect(count(dealt, "fatigue")).toBe(0);
-    expect(count(dealt, "cardPlayed")).toBe(0);
     expect(answered.state.players.p1.fatigueCount).toBe(0);
     expect(answered.state.players.p1.hero.health).toBe(30);
-    // Three went back, two came out: the library holds the twenty cards less the two now in hand. (Turn
-    // 1's own draw may have taken one more, or cast one.)
-    const held = answered.state.players.p1.hand.length + answered.state.players.p1.graveyard.length;
-    expect(answered.state.players.p1.library.length + held).toBe(DECK_SIZE);
+  });
+
+  it("R745 a cast-on-draw card dealt uncast that the mulligan returns goes back uncast", () => {
+    // p2 draws nothing on turn 1, so its library is as setup left it.
+    const { begun } = start("r745-returned", [OTHER(), deckOf(0, DECK_SIZE - 2)]);
+    const hand = begun.state.players.p2.hand;
+    const waiting = hand.filter((card) => isCod(card.defId));
+    expect(waiting).toHaveLength(2);
+    const [returned, kept] = waiting as [(typeof hand)[number], (typeof hand)[number]];
+
+    const answered = answerBoth(begun.state, {
+      p2: hand.filter((card) => card.id !== returned.id).map((card) => card.id),
+    });
+    const dealt = beforeTurnOne(answered.events);
+    // The replacement is another of them, uncast; the returned one is shuffled back and not cast.
+    const replacement = drawnBy(dealt, "p2");
+    expect(replacement).toHaveLength(1);
+    expect(replacement[0]?.type === "drawn" && isCod(replacement[0].defId)).toBe(true);
+    expect(dealt.some((event) => event.type === "shuffledIn" && event.instanceId === returned.id)).toBe(true);
+    const played = playedIn(dealt);
+    expect(played).not.toContain(returned.id);
+    expect(played).toEqual([kept.id, replacement[0]?.type === "drawn" ? replacement[0].instanceId : ""]);
+    const back = answered.state.players.p2.library.find((card) => card.id === returned.id);
+    expect(back?.memory).toEqual({});
+  });
+
+  it("R745 a cast at the start of the game that asks holds turn 1 until it is answered, and the game folds from its log", () => {
+    const decks: [string[], string[]] = [[ASKS, ...Array.from({ length: DECK_SIZE - 1 }, (_, at) => cod(at + 1))], OTHER()];
+    let seed = "";
+    let begun: ReturnType<typeof beginGame> | undefined;
+    for (let n = 0; n < 50 && begun === undefined; n += 1) {
+      const tried = start(`r745-asks-${n}`, decks).begun;
+      if (tried.state.players.p1.hand.some((card) => card.defId === ASKS)) {
+        seed = `r745-asks-${n}`;
+        begun = tried;
+      }
+    }
+    if (begun === undefined) throw new Error("no seed dealt the asking card");
+
+    const answered = answerBoth(begun.state);
+    const pending = answered.state.pending;
+    expect(pending?.kind).toBe("mode");
+    expect(pending?.playerId).toBe("p1");
+    expect(answered.state.turn).toBe(0);
+    expect(count(answered.events, "turnStarted")).toBe(0);
+    // A paused setup is plain data (R113).
+    expect(JSON.parse(JSON.stringify(answered.state))).toEqual(answered.state);
+
+    const done = act(answered.state, {
+      type: "answer",
+      choiceId: pending!.id,
+      selection: [{ pick: "mode", option: "ok" }],
+      playerId: "p1",
+    });
+    expect(done.state.turn).toBeGreaterThanOrEqual(1);
+    expect(done.state.players.p1.graveyard.length).toBeGreaterThanOrEqual(OPENING_DRAW[0] as number);
+
+    const replayed = fold({ seed, decks, log: [...answered.log, done.action] });
+    expect(replayed.errors).toEqual([]);
+    expect(hashState(replayed.state)).toBe(hashState(done.state));
   });
 });
 
@@ -428,13 +508,15 @@ describe("R640: a Quickdraw card replaces one of the opening draws", () => {
     expect(drawnSurplus).toBeGreaterThan(0);
   });
 
-  it("R640 Quickdraw and cast-on-draw cards together: the hand is the Quickdraw cards, never short of a draw's worth of fatigue", () => {
-    // Two Quickdraw cards, eighteen that cast on draw, and three draws: the two, and no third card.
+  it("R640, R745 two Quickdraw cards and one cast-on-draw card fill the hand, uncast", () => {
+    // Two Quickdraw cards, eighteen that cast on draw, and three draws: the two, and one of the
+    // eighteen for the third, cast at the start of the game.
     const { begun } = start("r636-mixed", [deckOf(2, 18), OTHER()]);
     const side = begun.state.players.p1;
     expect(defsOf(side.hand).filter(isQd)).toHaveLength(2);
-    expect(side.hand).toHaveLength(2);
-    expect(side.library).toHaveLength(18);
+    expect(defsOf(side.hand).filter(isCod)).toHaveLength(1);
+    expect(side.hand).toHaveLength(OPENING_DRAW[0] as number);
+    expect(side.library).toHaveLength(17);
     expect(side.fatigueCount).toBe(0);
     expect(count(begun.events, "fatigue")).toBe(0);
     expect(count(begun.events, "cardPlayed")).toBe(0);

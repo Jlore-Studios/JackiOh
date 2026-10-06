@@ -4,7 +4,7 @@
 // Cast on draw cards sit out the deal (R635): the opening draw and the mulligan's replacements take
 // one only when no other card is left, and once both mulligans are resolved the rest are shuffled
 // into their owner's library (`shuffleInSetAside`). One a hand had to take waits there uncast and is
-// cast at the start of the game, before turn 1 (R744). A Quickdraw card replaces an opening draw, so
+// cast at the start of the game, before turn 1 (R745). A Quickdraw card replaces an opening draw, so
 // a seat is dealt at most as many as it has draws (R640).
 //
 // The mulligan is concurrent (R265): once the opening deal is done both seats' prompts open at
@@ -122,13 +122,13 @@ export function whyMulliganRefused(state: GameState, player: PlayerId, keep: rea
 
 /**
  * R113: the `resume.hook` of what setup still owes when a clause asks during it. A card setup deals
- * is never cast while it deals (R635, R744), so what can still ask during the deal is a start-of-game
+ * is never cast while it deals (R635, R745), so what can still ask during the deal is a start-of-game
  * clause on arrival (R151): the opening draw and R9's replacement draws put cards in a hand, and a
  * clause that runs as one arrives can ask its owner something (R224). The question is state until it
  * is answered (§9.3), and §10.1 allows one prompt at a time, so setup cannot open the mulligans over
  * it, or go on resolving them: it owes the rest of itself — the other seats' opening draws and the
  * mulligans, or the shuffle-back, the seats still to resolve and the game — and the answer's drain
- * brings it back (R122). A start-of-game clause and R744's casts at the start of the game can ask
+ * brings it back (R122). A start-of-game clause and R745's casts at the start of the game can ask
  * too, and owe the clauses or casts after them and turn 1 the same way. Registered at module scope
  * below.
  */
@@ -141,13 +141,13 @@ export const SETUP_WORK = "@setup";
 const DEAL_STEP = "deal";
 const QUICKDRAW_STEP = "quickdraw";
 const MULLIGAN_STEP = "mulligan";
-/** §2.1 step 4: the start-of-game clauses from a card on, then R744's casts and turn 1. */
+/** §2.1 step 4: the start-of-game clauses from a card on, then R745's casts and turn 1. */
 const START_OF_GAME_STEP = "startOfGame";
-/** R744: the casts of the cards a hand had to take uncast, from the next one on, then turn 1. */
+/** R745: the casts of the cards a hand had to take uncast, from the next one on, then turn 1. */
 const SUSPENDED_STEP = "suspended";
 
 /**
- * R744: the mark on a cast-on-draw card setup dealt uncast because nothing else could fill the hand.
+ * R745: the mark on a cast-on-draw card setup dealt uncast because nothing else could fill the hand.
  * It is cast at the start of the game unless the mulligan returned it, which takes the mark off. On
  * the card's memory, which no view carries (§9.1), so it says nothing the `drawn` it was dealt with
  * did not (R225).
@@ -170,7 +170,7 @@ function isQuickdraw(card: CardInstance): boolean {
  * R635: how many cards setup may still draw from `player`'s library: all of it but the cards set
  * aside at its bottom, the ones that cast on draw. Setup draws no more than this, so it never draws a
  * set-aside card, which would cast it, and never draws from an empty library (R3's fatigue): what a
- * hand still lacks is dealt from the set-aside cards uncast (R744, `dealSuspended`).
+ * hand still lacks is dealt from the set-aside cards uncast (R745, `dealSuspended`).
  */
 function drawableCount(state: GameState, player: PlayerId): number {
   return state.players[player].library.filter((card) => !castsOnDraw(state, card)).length;
@@ -191,7 +191,7 @@ function drawableCount(state: GameState, player: PlayerId): number {
  *
  * R635: the cards that cast on draw wait just above them, at the bottom of the library, out of reach
  * of the draws. They stay in the library, so its count says nothing about them, and are shuffled in
- * once the mulligans are done. R744: when the library holds too few other cards for the hand, the
+ * once the mulligans are done. R745: when the library holds too few other cards for the hand, the
  * rest of it is dealt from them, uncast (`dealSuspended`), and they are cast at the start of the game;
  * the draw is `min` of the hand and what may be drawn, so setup still never deals a fatigue draw.
  */
@@ -210,7 +210,7 @@ function dealFrom(sink: EngineSink, seat: number): void {
     const drawable = rest.filter((card) => !castsOnDraw(state, card));
     side.library = [...drawable, ...setAside, ...quickdraw];
 
-    // R744: the other cards first; what the hand still lacks comes from the set-aside cards, uncast.
+    // R745: the other cards first; what the hand still lacks comes from the set-aside cards, uncast.
     const others = Math.max(0, Math.min(size - quickdraw.length, drawable.length));
     dealSuspended(sink, player, size - quickdraw.length - others);
     draw(sink, player, others);
@@ -256,7 +256,7 @@ function dealQuickdraw(sink: EngineSink, player: PlayerId): void {
 }
 
 /**
- * R744: `count` of the set-aside cards (`dealFrom`), dealt to fill a hand the other cards cannot: each
+ * R745: `count` of the set-aside cards (`dealFrom`), dealt to fill a hand the other cards cannot: each
  * goes to the hand uncast, as a draw (R225's report and count, as `dealQuickdraw` deals), and is
  * marked to be cast at the start of the game (`castSuspended`). The first ones in the library's order,
  * never a Quickdraw card, which is never cast (R635). Short only when the library runs out of them.
@@ -335,7 +335,7 @@ function resolveFrom(sink: EngineSink, sealed: readonly SealedMulligan[]): void 
     if (at >= 0) side.hand.splice(at, 1);
   }
 
-  // R635, R744: the replacements come off the cards setup may draw, so a seat that returns more than
+  // R635, R745: the replacements come off the cards setup may draw, so a seat that returns more than
   // the library holds besides the set-aside cards is dealt the rest from them, uncast, and never a
   // fatigue draw.
   const others = Math.min(returned.length, drawableCount(state, next.player));
@@ -370,7 +370,7 @@ function finishMulligan(
   const side = state.players[player];
 
   for (const card of returned) {
-    // R744: a card dealt uncast that the mulligan returned is a set-aside card again, shuffled in
+    // R745: a card dealt uncast that the mulligan returned is a set-aside card again, shuffled in
     // with the rest of them (R635), and not cast.
     delete card.memory[SUSPENDED_CAST_KEY];
     const position = sink.rng.int(side.library.length + 1);
@@ -518,7 +518,7 @@ function shuffleInSetAside(sink: EngineSink): void {
 }
 
 /**
- * R635's shuffle-in, R244's Coin, the start-of-game effects, R744's casts, then player 1 takes the
+ * R635's shuffle-in, R244's Coin, the start-of-game effects, R745's casts, then player 1 takes the
  * first turn and draws (§2.1, R10).
  */
 export function finishSetup(sink: EngineSink): void {
@@ -532,7 +532,7 @@ export function finishSetup(sink: EngineSink): void {
 }
 
 /**
- * §2.1 step 4 over the cards from `ids` on, then R744's casts and turn 1. A clause that asks pauses
+ * §2.1 step 4 over the cards from `ids` on, then R745's casts and turn 1. A clause that asks pauses
  * it (§9.3, `prompts.runStartOfGame`): the clauses after it and the first turn are owed behind its
  * tail (`START_OF_GAME_STEP`, R113, R117), so turn 1 never begins with a question of setup's still
  * open.
@@ -552,7 +552,7 @@ function startOfGameFrom(sink: EngineSink, ids: readonly string[]): void {
   castSuspended(sink);
 }
 
-/** R744: the next card still waiting in a hand to be cast, Player 1's hand first, in hand order. */
+/** R745: the next card still waiting in a hand to be cast, Player 1's hand first, in hand order. */
 function nextSuspended(state: GameState): CardInstance | null {
   for (const player of PLAYER_IDS) {
     const card = state.players[player].hand.find((c) => c.memory[SUSPENDED_CAST_KEY] === true);
@@ -562,7 +562,7 @@ function nextSuspended(state: GameState): CardInstance | null {
 }
 
 /**
- * R744: after the start-of-game clauses, each card a hand had to take uncast is cast as its draw
+ * R745: after the start-of-game clauses, each card a hand had to take uncast is cast as its draw
  * would have cast it (`draw.castDealtCard`), with a state check after each (R59) and no draw
  * repeated; a Unit with no open zone stays in the hand (R459). A cast that asks pauses the rest: the
  * casts after it and turn 1 are owed behind its tail (`SUSPENDED_STEP`, R113), so turn 1 waits for
@@ -587,7 +587,7 @@ function castSuspended(sink: EngineSink): void {
   startTurn(sink, PLAYER_IDS[0] as PlayerId);
 }
 
-/** R744: a cast that asked has resolved, so its state check runs (R59) and the casts go on. */
+/** R745: a cast that asked has resolved, so its state check runs (R59) and the casts go on. */
 function resumeSuspended(sink: EngineSink): void {
   stateCheck(sink);
   if (paused(sink)) {

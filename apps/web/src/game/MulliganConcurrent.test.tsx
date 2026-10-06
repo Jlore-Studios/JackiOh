@@ -70,9 +70,10 @@ describe("R265 the mulligan picker, while the viewer still owes its answer", () 
     }
   });
 
-  it("R635 a seat dealt an empty hand still has a mulligan to answer: Ready keeps nothing and returns nothing", () => {
-    // A deck of nothing but cast-on-draw cards deals no opening hand (they are set aside until the
-    // mulligans are done), so the picker has no cards, and the viewer still answers it.
+  it("R635, R745 a seat dealt an empty hand still has a mulligan to answer: Ready keeps nothing and returns nothing", () => {
+    // Setup deals no fatigue (R635) and fills a hand from the cast-on-draw cards when nothing else is
+    // left (R745), so only an empty library deals no opening hand. The picker has no cards, and the
+    // viewer still answers it.
     const onAction = vi.fn();
     const view = baseView({
       turn: 0,
