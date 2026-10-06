@@ -3225,9 +3225,9 @@
     "what": "review #362 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-06T08:00:52Z",
+    "at": "2026-10-06T08:09:48Z",
     "notes": [
-      "started a night run, as a lane was free: #364 (medium) is queued to build, for `claude-4`: plan on `claude-4` (claude, `opus`, strong)"
+      "started a night run, as a lane was free: #355 (hard) is queued to build, for `claude-2`: build on `claude-2` (claude, `opus`, strong); review on `claude-2` (claude, `opus`, strong)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
