@@ -3027,11 +3027,13 @@
     "377": {
       "action": "review",
       "asks": [],
+      "closed_at": "2026-10-06T13:41:04Z",
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-06T13:30:41Z",
       "issue": 375,
       "kind": "review",
+      "merged": false,
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-06T13:38:49Z",
