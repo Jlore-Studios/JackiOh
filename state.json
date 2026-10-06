@@ -2783,8 +2783,13 @@
     "what": "revise #334 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-06T03:35:40Z",
-    "notes": [],
+    "at": "2026-10-06T03:47:09Z",
+    "notes": [
+      "#350: typed it Task",
+      "#349: typed it Task",
+      "#348: typed it Task",
+      "#347: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
