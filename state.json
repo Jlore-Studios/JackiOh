@@ -2874,7 +2874,8 @@
     },
     "37": {
       "asks": [
-        "c:6016693342"
+        "c:6016693342",
+        "c:6016717540"
       ],
       "died": 0,
       "failures": 0,
@@ -2884,7 +2885,7 @@
       "pending_request": false,
       "pr": 141,
       "provider": "claude-3",
-      "queued_at": "2026-10-06T12:54:07Z",
+      "queued_at": "2026-10-06T12:55:32Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37112879404",
       "started_at": "2026-10-03T09:23:52Z",
