@@ -71,7 +71,8 @@ import { stateCheck } from "../src/stateCheck";
 import { findInstance, newInstance, type CardInstance, type GameState } from "../src/state";
 import { timesPlayedOf } from "../src/timesPlayed";
 import { AI_SKIPPED_ACTIONS, chooseAction, fuse, isLethal, policyActions, projectedDamage } from "../src/subsystems";
-import { ensurePower, powerCostOf, powerOf, usePower, whyCannotActivate } from "../src/subsystems/heroPower";
+import { activateAbility, whyCannotActivateAbility } from "../src/subsystems/activate";
+import { ensurePower, powerAbilities, powerOf } from "../src/subsystems/heroPower";
 import { isTrapType } from "../src/traps";
 import { cardsInTriggerOrder } from "../src/triggers";
 import { viewFor } from "../src/viewFor";
@@ -186,7 +187,7 @@ const modeSpell = cardDefOf("mode-spell", "Spell");
 const discoverSpell = cardDefOf("discover-spell", "Spell");
 const recycler = cardDefOf("recycler", "Field Spell");
 const logCardDef = cardDefOf("log", "Field Spell");
-const heroic = cardDefOf("heroic", "Field Spell", { cost: "X" });
+const heroic = cardDefOf("heroic", "Field Spell", { cost: 0 });
 const windowTrap = cardDefOf("window-trap", "Field Trap");
 const breadTrap = cardDefOf("bread-trap", "Field Trap");
 const emptyTrap = cardDefOf("empty-trap", "Trap");
@@ -322,8 +323,8 @@ const SCRIPTS: Record<string, CardScripts> = {
   [equation.id]: both({ staticFlags: { countsPlays: true }, cry: () => [] }),
   [fuseA.id]: both(pingEnemyHero(1)),
   [fuseB.id]: both(pingEnemyHero(2)),
-  // R43: the card's cost is the power's X, reported by the card's own `cost` script.
-  [heroic.id]: both({ cost: ({ instance }) => powerCostOf(instance) }),
+  // R752: each power is one of the card's Activate abilities, paying its X as it is activated.
+  [heroic.id]: both({ activations: powerAbilities(false) }),
   [recycler.id]: both({ endOfTurn: () => [rbCopyOthersPlayedThisTurn()] }),
   [clock.id]: both({
     startOfTurn: (ctx) => [rbNote(`start:lib${ctx.state.players.p1.library.length}`)],
@@ -452,10 +453,13 @@ const SERVER_CONSTANTS = [
 ];
 
 describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
-  it("R43 stores Heroic Power's power on the instance, costs its X, uses it once a turn and recruits a permanent", () => {
+  it("R43 stores Heroic Power's power on the instance, pays its X as it is used once a turn, and recruits a permanent", () => {
     const state = game("r43");
     const card = put(state, heroic.id, slot("p1", "backrow", 1));
     const sink = sinkFor(state);
+    state.active = "p1";
+    state.phase = "main";
+    state.players.p1.mana.current = 3;
 
     // The power lives on the instance, and one that arrives without a power rolls as it arrives.
     expect(card.memory.power).toBeUndefined();
@@ -464,21 +468,21 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     expect(card.memory.power).toBe(rolled?.name);
     expect(ensurePower(sink, card)?.name).toBe(rolled?.name);
 
-    // The cost is always the power's X, never a number the player chose.
+    // R752: the card costs (0); the power's X is the price of each use.
     card.memory.power = "recruit";
     expect(powerOf(card)?.x).toBe(3);
-    expect(powerCostOf(card)).toBe(3);
-    expect(effectiveCost(state, card)).toBe(3);
+    expect(effectiveCost(state, card)).toBe(0);
 
-    // "Recruit a card" recruits a permanent: the Spell on top of the library is skipped.
+    // Expedition Map's "Recruit a permanent": the Spell on top of the library is skipped.
     setLibrary(state, "p1", [noop.id, plain.id]);
-    applyEffects([usePower({ instanceId: card.id })], makeContext(sink, card, { controller: "p1" }));
+    expect(activateAbility(sink, "p1", { type: "activate", instanceId: card.id })).toBeNull();
+    expect(state.players.p1.mana.current).toBe(0);
     expect(activeUnitsOf(state, "p1").map((u) => u.defId)).toEqual([plain.id]);
     expect(state.players.p1.library.map((c) => c.defId)).toEqual([noop.id]);
 
     // And that activation is the turn's use.
-    expect(card.memory.usedTurn).toBe(state.turn);
-    expect(whyCannotActivate(state, "p1", card.id)).toBe("that power has already been used this turn");
+    state.players.p1.mana.current = 3;
+    expect(whyCannotActivateAbility(state, "p1", card.id)).toBe("that ability has already been used this turn");
   });
 
   it("R44 projects lethal after Armor, the cap and Trample excess, and the policy draws from legalActions", () => {

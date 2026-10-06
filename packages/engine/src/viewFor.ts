@@ -93,7 +93,7 @@ import { copiedTextOf, textFaceOf } from "./subsystems/copiedText";
 import { paramsView } from "./params";
 import { activationViewsFor } from "./subsystems/activate";
 import { syncFusedScripts } from "./subsystems/fuse";
-import { powerCostOf, powerOf, usedThisTurn } from "./subsystems/heroPower";
+import { powerOf, powerTitleOf, usedThisTurn } from "./subsystems/heroPower";
 import { questViewOf } from "./subsystems/quests";
 import { marksOn } from "./marks";
 import { ownLibraryView } from "./ownLibrary";
@@ -460,7 +460,8 @@ function heroPowersOf(state: GameState, player: PlayerId): HeroPowerView[] {
         instanceId: card.id,
         defId: card.defId,
         name: power.name,
-        x: powerCostOf(card),
+        title: powerTitleOf(power, card.radiant),
+        x: power.x,
         usedThisTurn: usedThisTurn(state, card),
       });
     }
@@ -525,6 +526,9 @@ function modifierLabel(state: GameState, mod: PlayerModifier, echo: number): str
     case "healToDamage":
       return "Healing on your enemies deals Pierce damage instead";
     // R449: Classic #23 Devil's Pact's replacement, named as the card every play becomes.
+    // R757: #98's Armor Up, until the player's next turn.
+    case "heroArmor":
+      return `Your hero has ${mod.amount} Armor until your next turn`;
     case "replacePlays":
       return `Each card you play becomes ${mod.radiant ? "a Radiant " : "a "}${findDef(state, mod.defId)?.name ?? mod.defId}`;
   }
@@ -851,7 +855,7 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
      * identity and always travel, which is the whole point of the row — the opponent animates the
      * flip in the right zone without being told which card it was.
      *
-     * R752: to its controller it follows R97, so a fired trap since shuffled into a library, or
+     * R763: to its controller it follows R97, so a fired trap since shuffled into a library, or
      * taken into the other player's hand, is the sentinel there too.
      */
     case "trapFired":

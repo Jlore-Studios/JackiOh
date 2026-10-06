@@ -122,7 +122,7 @@ class Limits:
     seven_day: float | None = None
     five_hour_minutes: int | None = None
     seven_day_minutes: int | None = None
-    #: How far under a cap a build or revision must be to start (`start_headroom` in
+    #: How far under a cap a build, a revision or a plan must be to start (`start_headroom` in
     #: providers.json): one that starts at 39% under a 40% cap is cut off almost at once.
     headroom: Mapping[str, float] = field(default_factory=dict)
 
@@ -745,8 +745,9 @@ def _duration(text: str) -> timedelta:
 def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime,
             zone_name: str | None = None, *, starting: bool = False) -> str | None:
     """Why this provider's usage says to start nothing now, or None. With the bot's time zone,
-    outside its window its `off_hours` caps hold too. `starting` (a build or a revision about to
-    start) leaves `start_headroom` under each cap; a run going on stops at the cap itself."""
+    outside its window its `off_hours` caps hold too. `starting` (a build, a revision or a plan
+    about to start) leaves `start_headroom` under each cap; a run going on stops at the cap
+    itself."""
     until = parse_iso(entry.get("refused_until"))
     if until is not None and until > at:
         return f"it refused a call; its limit resets at {iso(until)}"
@@ -770,7 +771,7 @@ def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime,
             where = " outside its hours" if outside else ""
             if stop < cap:
                 return (f"{WINDOW_NAMES[window]} usage is {utilization:.0%}, too close to its "
-                        f"{cap:.0%} cap{where} to start a build (it starts under {stop:.0%}); "
+                        f"{cap:.0%} cap{where} to start a long run (it starts under {stop:.0%}); "
                         f"it resets at {iso(resets)}")
             return (f"{WINDOW_NAMES[window]} usage is {utilization:.0%}, at or over its "
                     f"{stop:.0%} cap{where}; it resets at {iso(resets)}")

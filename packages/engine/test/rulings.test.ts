@@ -743,12 +743,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // M4 owns #98 Heroic Power: its card test proves the power list and the once-a-turn use.
-  // Proved by rulings-b.test.ts "R43 stores Heroic Power's power on the instance, costs its X, uses it once a
-  // turn and recruits a permanent"; setup.test.ts "R43: Heroic Power rolls its power during setup,
+  // Proved by rulings-b.test.ts "R43 stores Heroic Power's power on the instance, pays its X as it is used
+  // once a turn, and recruits a permanent"; setup.test.ts "R43: Heroic Power rolls its power during setup,
   // deterministically from the seed", "R43 rolls a power for a Heroic Power the mulligan returned to the
-  // library"; mana.test.ts "R43 gives Heroic Power the cost of its power".
-  it("R43 stores Heroic Power's rolled power on the instance and costs its X", () => {
-    provenIn(43, "rulings-b.test.ts", "setup.test.ts", "mana.test.ts");
+  // library"; heroPower.test.ts "R43 rolls a power at start of game for every copy in either player's
+  // hand or library", and 5 more.
+  it("R43 stores Heroic Power's rolled power on the instance and rolls it as the card arrives", () => {
+    provenIn(43, "rulings-b.test.ts", "setup.test.ts", "heroPower.test.ts");
   });
 
   // M4 owns #96 My Pawn: its card test proves the cancel on the real trap script.
@@ -1199,11 +1200,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // M4 owns #98 Heroic Power; R43's own clauses are heroPower.test.ts.
-  // Proved by rulings-c.test.ts "R103 stores the eight power names and costs 0 for a power that has
-  // not rolled", "R103 checks once-per-turn before mana, turn and phase", "R103 marks the use before
-  // the effects run, and fizzles a token power in silence when the token is absent".
-  it("R103 fixes the Heroic Power surface: seven names, cost 0 unrolled, once-per-turn checked first", () => {
-    provenIn(103, "rulings-c.test.ts");
+  // Proved by rulings-c.test.ts "R103 stores the thirteen power names, each its Activate ability's id; a
+  // card that has not rolled has none", "R103 refuses as Activate does: the turn and the phase before the
+  // uses, then the price", "R103 counts the use before the effects run, and fizzles a token power in
+  // silence when the token is absent"; heroPower.test.ts "R103 keeps the eight stored names and adds the
+  // patch's five at the end, each with its X".
+  it("R103 fixes the Heroic Power surface: thirteen stable names, each its ability's id, refused as Activate is", () => {
+    provenIn(103, "rulings-c.test.ts", "heroPower.test.ts");
   });
 
   // M7 owns apps/server/src/config.ts; the SQL evidence is BUILD M6-T1's lifecycle script.
@@ -1504,7 +1507,8 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(138, "rulings-c.test.ts");
   });
 
-  // R103's priority is rulings-c.test.ts "R103 checks once-per-turn before mana, turn and phase".
+  // R103's order is rulings-c.test.ts "R103 refuses as Activate does: the turn and the phase before the
+  // uses, then the price".
   // Proved by rulings-c.test.ts "R139 lapses a once-per-turn limit at the turn boundary, so a later
   // turn is told whose turn it is".
   it("R139 lapses a once-per-turn limit at the turn boundary", () => {
@@ -4455,9 +4459,73 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(751, CARDS_CARD_TEXT_TEST);
   });
 
-  // Proved by rulings-c.test.ts "R752 …" (a fired trap shuffled into its controller's library reads as the sentinel to both seats).
-  it("R752 names a fired trap to its controller only where the controller may read it now", () => {
-    provenIn(752, "rulings-c.test.ts");
+  // Proved by heroPower.test.ts "R752 each power is a once-per-turn Activate ability paying its X, the
+  // card's only while it rolled it", and 3 more; activate.test.ts "R752 a Heroic Power's power is its
+  // Activate ability"; mana.test.ts "R752 Heroic Power costs (0) to play"; the card's own test.
+  it("R752 makes Heroic Power cost (0) and each of its thirteen powers an Activate that pays its X", () => {
+    provenIn(752, "heroPower.test.ts", "activate.test.ts", "mana.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R753 Life Tap draws 1 and deals 2 to your own hero; Radiant draws the
+  // top card of each deck" and the card's own test.
+  it("R753 has Life Tap draw and deal 2 to its own hero, and its Radiant face draw from each deck", () => {
+    provenIn(753, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R754 Steady Shot deals {shot} to the enemy hero; on the Radiant face it
+  // then deals 2 more each use" and the card's own test.
+  it("R754 has Steady Shot deal its {shot}, which its Radiant face raises by 2 each use", () => {
+    provenIn(754, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by the card's own test, 098-heroic-power "R755 …" (a Felinor Token; a random non-token Felinor).
+  it("R755 has Cat Cafe summon a Felinor Token, and its Radiant face a random Felinor", () => {
+    provenIn(755, CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R756 Ping pierces Armor; on the Radiant face a Unit it kills leaves a
+  // Ghoul Token with its stats" and the card's own test.
+  it("R756 has Ping pierce, and its Radiant face leave a Ghoul Token of a Unit it kills", () => {
+    provenIn(756, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R757 Armor Up's 2 Armor holds through the opponent's turn and is gone
+  // when yours begins", "R757 Tank Up keeps 4 Armor, then refreshes …", and the card's own test.
+  it("R757 gives Armor Up's Armor until your next turn, and Tank Up its Armor and a refresh", () => {
+    provenIn(757, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R758 Die Insect deals 8 to a random enemy; the Radiant face's Lucky 1
+  // hits a Unit more often" and the card's own test.
+  it("R758 has Die Insect hit a random enemy for 8, its Lucky 1 keeping a Unit over the hero", () => {
+    provenIn(758, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by the card's own test, 098-heroic-power "R759 …".
+  it("R759 has KY Brainstorm add a KY card and take (1) off every Spell in your hand", () => {
+    provenIn(759, CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by the card's own test, 098-heroic-power "R760 …".
+  it("R760 has Pluck add a random Fruit costing (0)", () => {
+    provenIn(760, CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by the card's own test, 098-heroic-power "R761 …".
+  it("R761 has Terminus Tricks Discover a Trap and summon it face-down", () => {
+    provenIn(761, CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by packages/ai determinize-shown-cost.test.ts "R762 …" (every face-down card showing a cost is
+  // sampled at that cost, greedy's sampler is not, and the AI never takes the swing into a face-down Doom
+  // Shroom showing (3) as lethal) and observe.test.ts "R762 B12 …" (no unseen trap of the cost left: the pool).
+  it("R762 samples the AI's unseen face-down traps at the cost the board shows", () => {
+    provenIn(762, "../../ai/test/determinize-shown-cost.test.ts", AI_OBSERVE_TEST);
+  });
+
+  // Proved by rulings-c.test.ts "R763 …" (a fired trap shuffled into its controller's library reads as the sentinel to both seats).
+  it("R763 names a fired trap to its controller only where the controller may read it now", () => {
+    provenIn(763, "rulings-c.test.ts");
   });
 });
 

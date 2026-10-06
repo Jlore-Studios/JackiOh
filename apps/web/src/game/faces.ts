@@ -58,9 +58,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit === undefined && card.attack !== undefined && card.health !== undefined) {
     inPlay.handStats = { attack: card.attack, health: card.health };
   }
-  // R43, R243: in hand the power rides on the card and its X is the card's cost; on the field the
-  // hero's power list names it.
-  const power = card.power !== undefined ? { name: card.power, x: card.cost } : facts.fieldPower;
+  // R43, R243: in hand the power rides on the card; on the field the hero's power list names it.
+  const power = card.power !== undefined ? { name: card.power } : facts.fieldPower;
   if (power !== undefined) inPlay.power = power;
   // R243, §6.3 Vanilla: a backrow card's text can be gone too (`BackrowView.vanilla`), and the
   // face it draws reads it the same way a unit's does — the view is what the client renders (rule 7).

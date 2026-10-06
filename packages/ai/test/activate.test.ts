@@ -164,7 +164,7 @@ describe("B3.2: activations are first-class candidates", () => {
   });
 });
 
-describe("B3.2 rule 10: Heroic Power's activatePower is decided as before", () => {
+describe("B3.2 rule 10: Heroic Power's power is an Activate the AI decides like any other (R752)", () => {
   function heroicBoard(seed: string, p2Health: number): GameState {
     const s = scenario({
       seed,
@@ -173,28 +173,28 @@ describe("B3.2 rule 10: Heroic Power's activatePower is decided as before", () =
     });
     const power = s.backrow(AI, 1);
     if (power === null) throw new Error("setup");
-    // R43: the rolled power lives on the instance; "burn" deals 2 to the enemy hero for (1).
+    // R754: the rolled power lives on the instance; "burn" is Steady Shot, 2 to the enemy hero for (1).
     power.memory[subsystems.POWER_KEY] = "burn";
     return s.state;
   }
 
-  it("R43 activatePower is listed in the plays' tier and is the lethal when it is one", { timeout: PUZZLE_TIMEOUT }, () => {
+  it("R752 the power is listed in the plays' tier as its activate, and is the lethal when it is one", { timeout: PUZZLE_TIMEOUT }, () => {
     const state = heroicBoard("activate-heroic", 2);
     const power = state.players.p1.backrow[0];
     const reno = state.players.p1.hand[0];
     if (power === null || power === undefined || reno === undefined) throw new Error("setup");
-    const alias: ActionBody = { type: "activatePower", instanceId: power.id };
+    const shot: ActionBody = { type: "activate", instanceId: power.id, ability: "burn" };
     // Round-robin as ever: Reno's first lane (3), the power (its X, 1), Reno's second lane.
     const candidates = candidateActions(state, AI);
     expect(candidates.slice(0, 3).map(sourceOf)).toEqual([reno.id, power.id, reno.id]);
-    expect(actionKey(candidates[1] as ActionBody)).toBe(actionKey(alias));
-    // No `activate` for #98 in v0.2.0: its power is reached by the alias alone (reduce.ts).
-    expect(candidates.some((action) => action.type === "activate")).toBe(false);
+    expect(actionKey(candidates[1] as ActionBody)).toBe(actionKey(shot));
+    // R752: the alias is no longer listed; the power is the card's Activate ability.
+    expect(candidates.some((action) => action.type === "activatePower")).toBe(false);
 
     // The solver's first lethal may play Reno first; the power is in it either way, and legal now.
     const decision = decide(state, AI, { rng: createRng("activate-heroic") });
     expect(decision?.reason).toBe("lethal");
-    expect(decision?.line.map(actionKey)).toContain(actionKey(alias));
-    expect(isLegal(state, AI, alias)).toBe(true);
+    expect(decision?.line.map(actionKey)).toContain(actionKey(shot));
+    expect(isLegal(state, AI, shot)).toBe(true);
   });
 });

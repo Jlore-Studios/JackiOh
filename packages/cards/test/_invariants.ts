@@ -44,7 +44,7 @@
 //      view being checked, which could pair a hidden definition with any id it likes; the
 //      seat's own prompt may offer its options (§10.8), and `legalActions` may name a face-down trap
 //      by its bare id as a target (R177) and a hidden card by nothing else. The first run found one
-//      leak, R752 (`trapFired` named a fired trap to its controller after it was shuffled into a
+//      leak, R763 (`trapFired` named a fired trap to its controller after it was shuffled into a
 //      library), and five false positives, each fixed here and not in the engine:
 //        - R466's `stolen`: a card its viewer read where it was taken is named to them openly;
 //        - a `defs` body (R243): copied only for an id the rest of the view names, and it names its

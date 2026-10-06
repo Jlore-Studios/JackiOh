@@ -3,9 +3,9 @@
 // A card in the collection is its catalog definition, both faces printed in full. A card in a game
 // is the card as the view says it stands (R243), and three cards print something else there:
 //
-// - #98 Heroic Power rolled one of eight powers as it arrived (R43, R151, R352). In play its text is that
-//   power alone, read off the view's `power` (a hand card's `CardView.power`, a backrow card's
-//   `HeroPowerView`), with its X; the collection keeps the list of eight.
+// - #98 Heroic Power rolled one of thirteen powers as it arrived (R43, R151, R752). In play its text is
+//   that power alone, read off the view's `power` (a hand card's `CardView.power`, a backrow card's
+//   `HeroPowerView`), with its name and its X; the collection keeps the list of thirteen.
 // - A card with the Call to Chaos tag (Core #95, Classic+ #73) reads "???" in play. What it does is
 //   rolled when it resolves (§8 #95), and the game keeps it a mystery; the collection prints the real
 //   text, so a player building a deck can still read it. The Classic+ Edition's Radiant face reads
@@ -47,35 +47,91 @@ export function concealedText(defId: string, radiant: boolean): string {
 /** What a Vanilla unit's rules box reads (§6.3 Vanilla: "remove a unit's text"). */
 export const VANILLA_TEXT = "Vanilla: its text is gone";
 
-/** R43, R243: the power a #98 Heroic Power rolled, by the name the view gives it, and its X. */
-export type RolledPower = { name: string; x: number };
+/** R43, R243: the power a #98 Heroic Power rolled, by the name the view gives it (R103). */
+export type RolledPower = { name: string };
 
-type PowerWords = { base: string; radiant: string };
-
-/** §8 #98's eight clauses, base and radiant, by the power's name in the view (R243, R352). */
-export const POWER_WORDS: Readonly<Record<string, PowerWords>> = {
-  recruit: { base: "Recruit a permanent", radiant: "Recruit a permanent and make it Radiant" },
-  draw: { base: "Lose 2 health, draw 1", radiant: "Lose 2 health, draw 2" },
-  ping: { base: "Deal 1 damage", radiant: "Deal 2 damage" },
-  burn: { base: "Deal 2 damage to each opposing hero", radiant: "Deal 4 damage to each opposing hero" },
-  rush: { base: "Summon a Rush Token", radiant: "Summon two Rush Tokens" },
-  felinor: { base: "Summon a Felinor Token", radiant: "Summon two Felinor Tokens" },
-  discover: { base: "Discover a Unit", radiant: "Discover a Radiant Unit" },
-  stitching: {
-    base: "Stitching — Discover 2 (2) Cost or less Units. Fuse them and add the result to your hand",
-    radiant: "Stitching — Discover 2 Radiant (2) Cost or less Units. Fuse them and add the result to your hand",
-  },
-};
+type PowerWords = { x: number; title: string; radiantTitle: string; base: string; radiant: string };
 
 /**
- * A Heroic Power's text in play: its keyword line, then on a line of its own the one power it
- * rolled with its X, as §8 #98 words each power ("Once per turn, spend X") and R366 lays text out. Null for a name this table does not know,
- * which leaves the printed text in place rather than inventing one.
+ * §8 #98's thirteen powers (R752), by the power's name in the view (R243): each one's X, its name on
+ * each face (Armor Up is Tank Up on the Radiant one, R757) and its words, base and Radiant.
  */
-export function powerText(power: RolledPower, radiant: boolean, keywordLine: string): string | null {
+export const POWER_WORDS: Readonly<Record<string, PowerWords>> = {
+  recruit: { x: 3, title: "Expedition Map", radiantTitle: "Expedition Map", base: "Recruit a permanent.", radiant: "Recruit a permanent. Make it Radiant." },
+  draw: { x: 1, title: "Life Tap", radiantTitle: "Life Tap", base: "Draw 1. Take 2 damage.", radiant: "Draw 1 from each player's deck." },
+  ping: {
+    x: 1,
+    title: "Ping",
+    radiantTitle: "Ping",
+    base: "Pierce. Deal 1 damage.",
+    radiant: "Pierce. Deal 1 damage. If this kills a Unit, summon a Ghoul Token with its stats.",
+  },
+  burn: {
+    x: 1,
+    title: "Steady Shot",
+    radiantTitle: "Steady Shot",
+    base: "Deal {shot} damage to the enemy hero.",
+    radiant: "Deal {shot} damage to the enemy hero. Upgrade this permanently by +2 damage.",
+  },
+  rush: { x: 2, title: "Ranching", radiantTitle: "Ranching", base: "Summon a Rush Token.", radiant: "Summon a Radiant Rush Token." },
+  felinor: { x: 1, title: "Cat Cafe", radiantTitle: "Cat Cafe", base: "Summon a Felinor Token.", radiant: "Summon a random Felinor." },
+  discover: { x: 2, title: "Witness Value", radiantTitle: "Witness Value", base: "Discover a Unit.", radiant: "Discover a Radiant Unit." },
+  stitching: {
+    x: 2,
+    title: "Stitching",
+    radiantTitle: "Stitching",
+    base: "Discover two (2) Cost or less Units. Fuse them.",
+    radiant: "Discover two Radiant (2) Cost or less Units. Fuse them.",
+  },
+  armor: {
+    x: 1,
+    title: "Armor Up",
+    radiantTitle: "Tank Up",
+    base: "Your hero gains 2 Armor until your next turn.",
+    radiant: "Your hero gains 4 Armor, then this power refreshes.",
+  },
+  insect: { x: 2, title: "Die Insect", radiantTitle: "Die Insect", base: "Deal 8 damage to a random enemy.", radiant: "Lucky 1. Deal 8 damage to a random enemy." },
+  brainstorm: {
+    x: 2,
+    title: "KY Brainstorm",
+    radiantTitle: "KY Brainstorm",
+    base: "Add a random KY card to your hand. Reduce the cost of all Spells in your hand by (1).",
+    radiant: "Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by (1).",
+  },
+  pluck: {
+    x: 2,
+    title: "Pluck",
+    radiantTitle: "Pluck",
+    base: "Add a random Fruit to your hand. It costs (0).",
+    radiant: "Add a random Radiant Fruit to your hand. It costs (0).",
+  },
+  tricks: { x: 3, title: "Terminus Tricks", radiantTitle: "Terminus Tricks", base: "Discover a Trap to summon.", radiant: "Discover a Radiant Trap to summon." },
+};
+
+/** The power's name on a face (R752): what the hero panel and the card in play call it. */
+export function powerTitle(power: RolledPower, radiant: boolean): string {
   const words = POWER_WORDS[power.name];
-  if (words === undefined) return null;
-  const clause = `Once per turn, spend ${String(power.x)}: ${radiant ? words.radiant : words.base}. Playing it activates it once.`;
+  return words === undefined ? power.name : radiant ? words.radiantTitle : words.title;
+}
+
+/**
+ * A Heroic Power's text in play (R752): its keyword line, then the one power it rolled — its name,
+ * then on a line of its own its Activate and X and its words, R366's layout — with the card's
+ * numbers (`{shot}`) filled in from `values`. Only the rolled power shows, so the other twelve add no
+ * clutter. Null for a name this table does not know, which leaves the printed text in place.
+ */
+export function powerText(
+  power: RolledPower,
+  radiant: boolean,
+  keywordLine: string,
+  values: Readonly<Record<string, number>> = {},
+): string | null {
+  const entry = POWER_WORDS[power.name];
+  if (entry === undefined) return null;
+  const words = (radiant ? entry.radiant : entry.base).replace(/\{(\w+)\}/g, (whole, key: string) =>
+    values[key] === undefined ? whole : String(values[key]),
+  );
+  const clause = `${radiant ? entry.radiantTitle : entry.title}\nActivate: Spend (${String(entry.x)}): ${words}`;
   return keywordLine === "" ? clause : `${keywordLine}\n${clause}`;
 }
 

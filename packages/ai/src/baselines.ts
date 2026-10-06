@@ -32,8 +32,9 @@ export function greedyAction(state: GameState, seat: PlayerId, rng: Rng): Action
     return { type: "mulligan", keep: mulliganKeep(pub, seat, GREEDY_MULLIGAN.keepMaxCost) };
   }
 
-  // The only draws greedy takes from its rng: one determinization per decision.
-  const det = determinize(pub, seat, rng);
+  // The only draws greedy takes from its rng: one determinization per decision. R762's shown-cost match
+  // stays off: the gates were fixed on this sampler, as on GREEDY_EVAL, so the yardstick does not move.
+  const det = determinize(pub, seat, rng, { matchShownCost: false });
   const candidates = candidateActions(det, seat);
   if (candidates.length === 0) return null;
   if (candidates.length === 1) return candidates[0] ?? null;
