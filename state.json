@@ -2781,6 +2781,13 @@
     "364": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-06T07:24:45Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 5 of the easy rule (no card script) is the one I weighed most: a 3-line fix with no SPEC change tempted easy, but any card-script change is never easy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
