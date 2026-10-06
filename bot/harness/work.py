@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import json
 import os
+import signal
+import threading
 from string import Template as string_template
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -29,6 +31,7 @@ from harness import disk as disk_mod
 from harness import memory as memory_mod
 from harness import easy as easy_mod
 from harness import gates as gates_mod
+from harness import journal as journal_mod
 from harness import prompts, review_rule, verdicts
 from harness import providers as providers_mod
 from harness.clock import iso, now as clock_now
@@ -68,11 +71,26 @@ NOTES_ASK = f"""
 
 ## Keep notes for whoever picks this up
 
-Keep a short running log in `{NOTES_FILE}` at the top of this worktree (git ignores it, so it is
-never delivered): your plan, what is done, what is next, the decisions you made and why, and the
-dead ends you hit. Update it as you go, not only at the end. Your session can be cut off at any
-moment (a usage limit, the clock), and the next agent, possibly another model, starts from this
-file and the branch."""
+Keep `{NOTES_FILE}` at the top of this worktree (git ignores it, so it is never delivered) in two
+parts, and update it as you go, not only at the end:
+
+- `## State`, rewritten in place: the plan, what is done, what is next, the decisions you made
+  and why, and the dead ends you hit. Keep it short enough to read in a minute: it is what the
+  next agent reads first, so it must say where the work stands without the log.
+- `## Log`, added to: before each step that takes a while (a subagent, a test run, a merge, a
+  large edit), one line saying what you are about to do and why; after it, one line saying what
+  came of it.
+
+Your session can be cut off at any moment (a usage limit, the clock, a cancelled job), and the
+next agent, possibly another model, starts from this file, the journal of earlier runs and the
+branch."""
+#: How many earlier runs a first prompt lists from the journal (`_journal_text`); the file in
+#: the worktree has them all.
+JOURNAL_RUNS_SHOWN = 20
+#: What a killed job's last checkpoint says (`Worker._checkpoint`, #342): `result.json` holds this
+#: until the run's own end writes over it, so a job that never gets there still hands its work on.
+DIED_REASON = ("the model job stopped before it finished (cancelled, past its time limit, or its "
+               "runner was lost); this is its last checkpoint, after {calls} model call(s)")
 #: Rounds in a row the reviewer sends back while the builder runs on a lane's weaker model, before
 #: the run moves the builder to the lane's strongest one (`Worker._switch`): Sonnet gets two
 #: tries on a Claude account, then its Opus takes over on the same lane.
@@ -117,6 +135,39 @@ Probe = Callable[[dict | None], "tuple[str, str] | None"]
 
 def _is_manifest(path: str) -> bool:
     return path.rsplit("/", 1)[-1] in MANIFESTS
+
+
+def _fix_why(after: str, findings: list[Finding]) -> str:
+    """Why a fix pass runs: what sent the change back, and the first thing to fix."""
+    if not findings:
+        return f"{after} sent it back"
+    first = findings[0]
+    return (f"{after} sent it back with {len(findings)} blocking finding(s); first "
+            f"`{first.where}`: {first.claim}")
+
+
+def _verdict_outcome(review: verdicts.Review, result: RunResult) -> str:
+    """What a review call came to, for the journal: its verdict and its first finding."""
+    if not review.readable:
+        return "no verdict could be read: " + _call_outcome(result)
+    if not review.blocking:
+        return f"approve ({len(review.notes)} note(s))"
+    first = review.blocking[0]
+    return f"changes: {len(review.blocking)} blocking; first `{first.where}`: {first.claim}"
+
+
+def _call_outcome(result: RunResult) -> str:
+    """How one model call ended, in a few words, for the journal."""
+    turns = f", {result.turns} turns" if result.turns else ""
+    if result.extra.get("usage_stop"):
+        return f"cut off at its usage cap: {result.extra['usage_stop']}"
+    if result.rate_limited:
+        return "refused: the usage limit"
+    if result.timed_out:
+        return f"timed out{turns}"
+    if not result.ok:
+        return redact(f"failed{turns}: {result.error or 'no error given'}")[:300]
+    return f"ended{turns}"
 
 
 class Worker:
@@ -221,7 +272,17 @@ class Worker:
                       "self_check": self.self_check},
             #: Every move of the builder between the lane's models (`_switch`).
             "switches": [],
+            #: What the run did, step by step, for the item's journal (`_step`, #342).
+            "steps": [],
         }
+        self.steps: list[dict[str, Any]] = self.result["steps"]
+        #: A cancel or a kill arrived (`_on_signal`), or the run is saving what it has.
+        self.dying = False
+        #: The stop a signal asked for (`_on_signal`), kept so that one swallowed by a reading's
+        #: `except Exception` is raised again at the next checkpoint or call (`_signalled`).
+        self.signalled = ""
+        #: The signal handlers `_trap_signals` replaced, put back when the run ends.
+        self._trapped: dict[int, Any] = {}
 
     def _seat(self, seats: dict[str, Any] | None, role: str) -> Any:
         """The seat `plan` gave `role`, if it is one this subscription has."""
@@ -290,6 +351,7 @@ class Worker:
 
     def check(self) -> None:
         """Raise Interrupt when a halt, a stop, the usage stop or the clock says to stop."""
+        self._signalled()
         if self.seconds_left() < self.cfg.min_minutes_for_a_call * 60:
             raise Interrupt("the run's time budget is spent", "budget")
         if self.probe is not None:
@@ -312,7 +374,23 @@ class Worker:
             if tracked.returncode != 0:
                 target.unlink()
 
-    def call(self, role: str, prompt: str, cwd: Path, *, reader: bool) -> RunResult:
+    def _step(self, step: str, why: str = "", **fields: Any) -> dict[str, Any]:
+        """Record one step of the run for the item's journal (`journal.section`): a model call,
+        a check run, a merge of `main`. Returns the entry, which the caller may fill in."""
+        entry = {"at": iso(self.now()), "step": step, "why": why, **fields}
+        self.steps.append(entry)
+        return entry
+
+    def _came_of_it(self, outcome: str) -> None:
+        """What the last model call came to, once its caller knows (a verdict, a status)."""
+        for entry in reversed(self.steps):
+            if entry.get("step") == "call":
+                entry["outcome"] = outcome[:300]
+                return
+
+    def call(self, role: str, prompt: str, cwd: Path, *, reader: bool,
+             why: str = "") -> RunResult:
+        self._signalled()  # never start a call after a cancel
         self.calls += 1
         self._clear_settings(cwd)
         timeout = int(min(self.cfg.call_timeout_minutes * 60, self.seconds_left() - 300))
@@ -322,6 +400,7 @@ class Worker:
             prompt += NOTES_ASK + self._switch_ask()
             self.build_transcript = transcript
         seat = self.seat_for(role)
+        step = self._step("call", why or role, role=role, model=seat.model, n=self.calls)
         request = RunRequest(
             role=role,
             prompt=prompt,
@@ -340,6 +419,7 @@ class Worker:
             usage_stop=self._usage_stop if self.provider.limits.stops else None,
         )
         result = self.runner.run(request)
+        step.update(minutes=round(result.duration_s / 60, 1), outcome=_call_outcome(result))
         self._read_memory()
         if self.after_call is not None:
             self.after_call()
@@ -389,7 +469,9 @@ class Worker:
         found = proc.stdout.strip() if proc.returncode == 0 else ""
         return (found,) if found else ()
 
-    def write_result(self) -> Path:
+    def write_result(self, *, checkpoint: bool = False) -> Path:
+        """Write `result.json`: the run's end, or (`checkpoint`) what a job killed from here on
+        should hand on, as a pause of kind `died` (#342)."""
         self.out_dir.mkdir(parents=True, exist_ok=True)
         self.result["usage"] = self.last_usage
         self.result["finished_at"] = iso(self.now())
@@ -398,14 +480,71 @@ class Worker:
         handoff = self._handoff()
         if handoff:
             self.result["handoff"] = handoff
+        written = self.result
+        if checkpoint:
+            written = {**self.result, "status": "interrupted", "interrupt": "died",
+                       "reason": DIED_REASON.format(calls=self.calls), "checkpoint": True}
         path = self.out_dir / "result.json"
-        path.write_text(json.dumps(redact_json(self.result), indent=2) + "\n", encoding="utf-8")
+        temp = path.with_suffix(".json.tmp")
+        temp.write_text(json.dumps(redact_json(written), indent=2) + "\n", encoding="utf-8")
+        temp.replace(path)  # a kill mid-write leaves the last whole one
         return path
+
+    def _checkpoint(self) -> None:
+        """After a builder pass, a check run or a review: leave in `result.json` what this job
+        should hand on if it is killed before its end (#342), its commits bundled. The upload
+        step and the deliver job run whatever happens to this one (`if: always()`), and the
+        run's own end writes over it. A build or a revision only: nothing else has work to keep."""
+        if self.wt is None or self.dying or self.plan.get("action") not in ("build", "revise"):
+            return
+        try:
+            self._record_head()
+            self.write_result(checkpoint=True)
+        except Interrupt:
+            raise  # a cancel that arrived while it wrote
+        except Exception as exc:  # noqa: BLE001 - a checkpoint never stops the work
+            self.result["checkpoint_error"] = redact(str(exc))[:500]
+
+    def _on_signal(self, signum: int, _frame: Any) -> None:
+        """GitHub cancels a job (a person, or its time limit) with SIGINT, then SIGTERM, then a
+        kill. Stop as a pause, so the work is committed, bundled and handed on (`_interrupted`),
+        instead of ending as `failed` with nothing kept. A second signal waits for the save."""
+        if self.dying:
+            return
+        self.dying = True
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            signal.signal(sig, signal.SIG_IGN)
+        self.signalled = (f"the job was stopped ({signal.Signals(signum).name}): cancelled, or "
+                          "past its time limit")
+        raise Interrupt(self.signalled, "died")
+
+    def _signalled(self) -> None:
+        """Raise the stop a signal asked for again, if something caught it on the way."""
+        if self.signalled:
+            raise Interrupt(self.signalled, "died")
+
+    def _trap_signals(self) -> dict[int, Any]:
+        """Catch SIGINT and SIGTERM for the run (`_on_signal`). Only the main thread may."""
+        if threading.current_thread() is not threading.main_thread():
+            return {}
+        old = {}
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            old[sig] = signal.signal(sig, self._on_signal)
+        self._trapped = old
+        return old
+
+    def _hold_signals(self) -> None:
+        """While the run saves what it has (a pause, a failure, its end), a cancel waits: a stop
+        raised in the middle of the save would leave half of it."""
+        self.dying = True
+        for sig in self._trapped:
+            signal.signal(sig, signal.SIG_IGN)
 
     # ------------------------------------------------------------------ entry
 
     def run(self) -> dict[str, Any]:
         self.out_dir.mkdir(parents=True, exist_ok=True)
+        trapped = self._trap_signals()
         try:
             if self.on_machine:
                 self._read_memory()
@@ -425,6 +564,7 @@ class Worker:
         except Interrupt as stop:
             self._interrupted(stop)
         except Exception as exc:  # noqa: BLE001 - every failure must still leave a result
+            self._hold_signals()
             reason = redact(f"{type(exc).__name__}: {exc}")[:2000]
             if disk_mod.is_full(exc):
                 # The machine's disk, not the item: a pause that keeps what was built.
@@ -433,10 +573,15 @@ class Worker:
                 self.result.update(status="failed", reason=reason)
                 self._save_wip("the harness failed")
         finally:
-            if self.on_machine:
-                self._read_disk("end")
-                self._read_memory()
-            self.write_result()
+            self._hold_signals()
+            try:
+                if self.on_machine:
+                    self._read_disk("end")
+                    self._read_memory()
+                self.write_result()
+            finally:
+                for sig, handler in trapped.items():
+                    signal.signal(sig, handler)
         return self.result
 
     def _read_memory(self) -> None:
@@ -504,8 +649,13 @@ class Worker:
         self.result.update(branch=branch, base=self.base_sha, start=self.start_sha,
                            remote_branch_existed=has_remote)
         conflicts: list[str] = []
+        self._step("start", f"from `{begin}`" if begin != start else f"from `{start}`",
+                   outcome=f"at `{(self.wt.head() or '')[:12]}`")
         if has_remote and merge_main:
             conflicts = self.wt.merge(self.base_ref, self.who)
+            self._step("merge", "bring the branch up to date with `main`",
+                       outcome=(f"conflicts in {len(conflicts)} file(s): "
+                                + ", ".join(conflicts[:5])) if conflicts else "clean")
         if any(_is_manifest(p) for p in conflicts):
             return conflicts  # the builder resolves the manifests first; install runs after
         if not install:
@@ -538,7 +688,8 @@ class Worker:
         return start
 
     def _exclude_notes(self) -> None:
-        """Tell git to ignore the notes file in every worktree of this clone."""
+        """Tell git to ignore the notes file and the journal in every worktree of this clone
+        (the machine keeps its clone between jobs, so this lasts there)."""
         assert self.wt is not None
         common = self.wt.run("rev-parse", "--path-format=absolute", "--git-common-dir",
                              check=False).stdout.strip()
@@ -547,17 +698,24 @@ class Worker:
         exclude = Path(common) / "info" / "exclude"
         exclude.parent.mkdir(parents=True, exist_ok=True)
         lines = exclude.read_text(encoding="utf-8").splitlines() if exclude.exists() else []
-        if f"/{NOTES_FILE}" not in lines:
-            exclude.write_text("\n".join([*lines, f"/{NOTES_FILE}"]) + "\n", encoding="utf-8")
+        missing = [f"/{name}" for name in (NOTES_FILE, journal_mod.JOURNAL_FILE)
+                   if f"/{name}" not in lines]
+        if missing:
+            exclude.write_text("\n".join([*lines, *missing]) + "\n", encoding="utf-8")
 
     def _seed_notes(self) -> None:
         """Start the notes file from the handoff's notes (a planner's plan, or an earlier
-        builder's notes), so this run's builder keeps them going."""
+        builder's notes), so this run's builder keeps them going, and put the item's journal
+        beside it (#342)."""
         assert self.wt is not None
         handoff = self.plan.get("handoff")
         notes = str(handoff.get("notes") or "") if isinstance(handoff, dict) else ""
         if notes.strip():
             (self.wt.cwd / NOTES_FILE).write_text(notes.rstrip() + "\n", encoding="utf-8")
+        journal = str(self.plan.get("journal") or "")
+        if journal.strip():
+            (self.wt.cwd / journal_mod.JOURNAL_FILE).write_text(journal.rstrip() + "\n",
+                                                                encoding="utf-8")
 
     def _handoff(self) -> dict[str, Any] | None:
         """What the next agent needs if this run did not finish the item: the builder's notes
@@ -570,7 +728,8 @@ class Worker:
             notes = notes_path.read_text(encoding="utf-8", errors="replace")
             # A planning run's notes are its plan, which starts at the top; a builder's log is
             # newest at the end.
-            notes = notes[:NOTES_CHARS] if self.plan.get("action") == "plan" else notes[-NOTES_CHARS:]
+            notes = (notes[:NOTES_CHARS] if self.plan.get("action") == "plan"
+                     else journal_mod.compact(notes, NOTES_CHARS))
         trail = ""
         trail_of = getattr(self.runner, "trail", None)
         if self.build_transcript is not None and self.build_transcript.exists() and trail_of:
@@ -581,7 +740,33 @@ class Worker:
                 "at": iso(self.now()), "reason": str(self.result.get("reason") or ""),
                 "notes": redact(notes), "trail": redact(trail)}
 
-    def _handoff_text(self) -> str:
+    def _handoff_text(self, *, builder: bool = True) -> str:
+        """What a first prompt gets when other agents worked on this before: the last one's
+        handoff, and the journal of every earlier run (#342)."""
+        return self._handoff_section() + self._journal_text(builder=builder)
+
+    def _journal_text(self, *, builder: bool = True) -> str:
+        """The section a first prompt gets when earlier runs left a journal (`journal.py`)."""
+        runs = journal_mod.runs_in(str(self.plan.get("journal") or ""))
+        if not runs:
+            return ""
+        shown = runs[-JOURNAL_RUNS_SHOWN:]
+        listed = "\n".join(f"- {run}" for run in shown)
+        if len(runs) > len(shown):
+            listed = f"- … {len(runs) - len(shown)} earlier run(s)\n" + listed
+        text = (f"\n\n## The journal of earlier runs\n\n{len(runs)} earlier run(s) worked on "
+                f"this. `{journal_mod.JOURNAL_FILE}` at the top of your worktree (git ignores it) "
+                "holds what each one did, step by step, why, how it ended and the notes it left. "
+                "Read it before anything else.")
+        if builder:
+            text += (f" Then bring the `## State` part of `{NOTES_FILE}` up to date with it, "
+                     "in a few lines: what is done, what is left, and what was tried and did not "
+                     "work, so that you and whoever comes after you need not read the whole "
+                     "journal again. Then go on from where the last run stopped; do not redo "
+                     "what an earlier run finished.")
+        return text + "\n\n" + data(listed, "Earlier runs, oldest first")
+
+    def _handoff_section(self) -> str:
         """The section a first prompt gets when another agent worked on this before."""
         handoff = self.plan.get("handoff")
         if not isinstance(handoff, dict):
@@ -660,6 +845,24 @@ class Worker:
             return "No blocking findings were recorded."
         body = "\n".join(f.markdown() for f in findings)
         return data(body, label)
+
+    def _first_why(self, role: str, conflicts: list[str]) -> str:
+        """Why the run's first builder pass runs, for the journal."""
+        handoff = self.plan.get("handoff") if isinstance(self.plan.get("handoff"), dict) else {}
+        if role == "revise":
+            why = f"revise the pull request ({self.plan.get('source') or 'request'})"
+            if conflicts:
+                why += f"; `main` merged with conflicts in {len(conflicts)} file(s)"
+        else:
+            why = "build the issue"
+            if self.plan.get("plan_in_issue") or handoff.get("kind") == "plan":
+                why += " from its plan"
+        if handoff and handoff.get("kind") != "plan":
+            why += (f"; picking up from `{handoff.get('provider', '?')}`, which stopped: "
+                    f"{handoff.get('reason') or 'no reason recorded'}")
+        if self.wip_used:
+            why += f"; starting from `{self.wip_used}`"
+        return why
 
     def _first_prompt(self, conflicts: list[str]) -> tuple[str, str]:
         plan = self.plan
@@ -811,11 +1014,23 @@ class Worker:
                 results += [gates_mod.GateResult(g.name, g.run, False, -1, 0.0, "",
                                                  skipped="the install failed")
                             for g in self.gates]
+                self._checks_step(results)
                 return results
         results += gates_mod.run_all(self.gates, self.wt.cwd, self.env, self.seconds_left)
         self._read_memory()  # the install and the typecheck are what a machine job's memory goes on
         self._mark_pre_existing(results)
+        self._checks_step(results)
         return results
+
+    def _checks_step(self, results: list[gates_mod.GateResult]) -> None:
+        """A check run, for the journal, then a checkpoint."""
+        red = [r.name + (" (red on main too)" if r.pre_existing else "")
+               for r in results if not r.ok and not r.skipped]
+        took = sum(r.seconds for r in results)
+        self._step("checks", f"on `{self.wt.head()[:12]}`" if self.wt is not None else "",
+                   minutes=round(took / 60, 1),
+                   outcome=("red: " + ", ".join(red)) if red else "green")
+        self._checkpoint()
 
     def _mark_pre_existing(self, results: list[gates_mod.GateResult]) -> None:
         """Run each gate this change left red again on the untouched base. A gate that timed out
@@ -872,19 +1087,24 @@ class Worker:
         )
         head = self.wt.head()
         review = verdicts.Review(False, "unreadable")
-        for _ in range(2):
-            result = self.call(role, prompt, self.wt.cwd, reader=True)
+        what = "self check" if role == "self_check" else "review"
+        for attempt in range(2):
+            why = f"{what} of round {cycle}, on `{head[:12]}`" + (
+                ", again: the last answer could not be read" if attempt else "")
+            result = self.call(role, prompt, self.wt.cwd, reader=True, why=why)
             if self.wt.head() != head:
                 self.wt.run("reset", "--quiet", "--hard", head)
             if self.wt.dirty():
                 self.wt.discard_worktree_changes()
             review = verdicts.review(result.text)
+            self._came_of_it(_verdict_outcome(review, result))
             if review.readable:
                 break
             if not result.ok:
                 review.error = redact(str(result.error or "it failed without an error"))[:2000]
             self.check()
         review.reviewed_sha = head
+        self._checkpoint()
         return review
 
     def _planning(self) -> None:
@@ -902,9 +1122,10 @@ class Worker:
             difficulty=self.plan.get("difficulty") or "medium",
             rating=self._rating_ask(), easy_rule=self._easy_rule(),
             plan_words=f"{PLAN_WORDS:,}", plan_chars=f"{PLAN_CHARS:,}",
-        ) + self._handoff_text()
+        ) + self._handoff_text(builder=False)
         head = self.wt.head()
-        result = self.call("plan", prompt, self.wt.cwd, reader=True)
+        result = self.call("plan", prompt, self.wt.cwd, reader=True,
+                           why="plan the item before anyone builds it")
         if self.wt.head() != head:
             self.wt.run("reset", "--quiet", "--hard", head)
         if self.wt.dirty():
@@ -1005,12 +1226,14 @@ class Worker:
         self.result.update(status="planned", reason=f"planned on {self.seat_for('plan').model}")
         self._finish()
 
-    def _build_pass(self, cycle: int, role: str, prompt: str) -> tuple[Any, dict[str, Any]]:
+    def _build_pass(self, cycle: int, role: str, prompt: str,
+                    why: str = "") -> tuple[Any, dict[str, Any]]:
         """One builder session and its commit. Returns its report, or None when it stopped to
         ask a person (the run then ends as `blocked`), and the round's record."""
         assert self.wt is not None
         before = self.wt.head()
-        built = self.call(role, prompt, self.wt.cwd, reader=False)
+        built = self.call(role, prompt, self.wt.cwd, reader=False,
+                          why=why or f"round {cycle}: {role}")
         report = verdicts.build_report(built.text)
         entry: dict[str, Any] = {
             "n": cycle,
@@ -1038,11 +1261,16 @@ class Worker:
             return None, entry
         self._commit(f"bot: {role} pass {cycle} for #{self.plan['number']}")
         entry["builder"]["changed"] = self.wt.head() != before
+        if built.ok:
+            self._came_of_it(f"{report.status}; " + (
+                f"committed `{self.wt.head()[:12]}`" if entry["builder"]["changed"]
+                else "changed nothing"))
         if report.next_model and self.switchable:
             # Taken once this round is judged, so its review counts against the model that
             # built it (`_sent_back`).
             entry["builder"]["next_model"] = report.next_model
             self.asked = (report.next_model, cycle)
+        self._checkpoint()
         return report, entry
 
     def _self_check_loop(self, cycle: int, entry: dict[str, Any], report: Any,
@@ -1077,7 +1305,8 @@ class Worker:
             self.check()
             fixed, fix_entry = self._build_pass(
                 cycle, "fix", self._fix_prompt(cycle, flagged, gates_mod.failures_text(results),
-                                               label="Your self check's blocking findings"))
+                                               label="Your self check's blocking findings"),
+                why=_fix_why(f"self check {n} of round {cycle}", flagged))
             rounds[-1]["fix"] = fix_entry["builder"]
             if fixed is None:
                 return None, results, guard, flagged
@@ -1111,10 +1340,12 @@ class Worker:
                 self._switch(model, "the builder asked for it", asked_in)
             if cycle == 1:
                 role, prompt = self._first_prompt(conflicts)
+                why = self._first_why(role, conflicts)
             else:
                 role, prompt = "fix", self._fix_prompt(cycle, findings, failures)
+                why = _fix_why(f"round {cycle - 1}'s review", findings)
             built_on = self.build_seat
-            built, entry = self._build_pass(cycle, role, prompt)
+            built, entry = self._build_pass(cycle, role, prompt, why)
             self.result["cycles"].append(entry)
             if built is None:
                 return
@@ -1210,7 +1441,8 @@ class Worker:
                           "one, keeping both sides' meaning.", "git grep")
         if self.seconds_left() >= self.cfg.min_minutes_for_a_call * 60:
             fixed, fix = self._build_pass(cycle, "fix", self._fix_prompt(
-                cycle, [finding], "", label="Conflict markers left in the change"))
+                cycle, [finding], "", label="Conflict markers left in the change"),
+                why=_fix_why("the conflict-marker check", [finding]))
             entry["marker_fix"] = fix["builder"]
             if fixed is None:
                 return finding, None
@@ -1252,6 +1484,8 @@ class Worker:
         self.base_sha = now
         self._base_wt = None  # the checks red on `main` are `main`'s new self's now
         self._base_gate_cache = {}
+        self._step("merge", "`main` moved during the run; merged again before the review",
+                   outcome=f"clean, at `{now[:12]}`")
         return True
 
     def _only_forbidden(self) -> bool:
@@ -1348,6 +1582,8 @@ class Worker:
             pass
 
     def _interrupted(self, stop: Interrupt) -> None:
+        self._hold_signals()
+        self._step("stop", stop.reason[:300], kind=stop.kind)
         self._save_wip(stop.reason)
         self.result.update(status=KIND_STATUS.get(stop.kind, "interrupted"), reason=stop.reason,
                            interrupt=stop.kind, reset_at=stop.reset_at)
@@ -1365,17 +1601,27 @@ class Worker:
                 if self.wt.head() != self.approved_sha:
                     self.result["dropped_after_review"] = self.wt.log(self.approved_sha)
                     self.wt.run("reset", "--quiet", "--hard", self.approved_sha)
-            head = self.wt.head()
-            self.result["head"] = head
-            self.result["changed_paths"] = self.wt.changed_paths(self.base_ref)
-            self.result["diffstat"] = self.wt.diffstat(self.base_ref)[-4000:]
-            if head != self.start_sha:
-                bundle = self.out_dir / "branch.bundle"
-                exclude = [s for s in {self.base_sha, self.start_sha} if s]
-                self.wt.bundle(bundle, str(self.plan["branch"]), exclude)
-                self.result["bundle"] = bundle.name
+            self._record_head()
         except Exception as exc:  # noqa: BLE001
             self.result["bundle_error"] = redact(str(exc))[:500]
+
+    def _record_head(self) -> None:
+        """The branch's head, what it changed, and a bundle of what it has beyond where it
+        started, in the result: at the run's end (`_finish`) and at each checkpoint."""
+        assert self.wt is not None
+        head = self.wt.head()
+        self.result["head"] = head
+        self.result["changed_paths"] = self.wt.changed_paths(self.base_ref)
+        self.result["diffstat"] = self.wt.diffstat(self.base_ref)[-4000:]
+        bundle = self.out_dir / "branch.bundle"
+        if head != self.start_sha:
+            exclude = [s for s in {self.base_sha, self.start_sha} if s]
+            self.wt.bundle(bundle, str(self.plan["branch"]), exclude)
+            self.result["bundle"] = bundle.name
+        else:
+            # Back where it started (a guard put the change back): a checkpoint's bundle is stale.
+            self.result.pop("bundle", None)
+            bundle.unlink(missing_ok=True)
 
     # ------------------------------------------------------------------ suggestions
 
@@ -1392,7 +1638,8 @@ class Worker:
         self.check()
         prompt = self.render("suggest", repo=self.cfg.repo, count=count,
                              existing=self.plan.get("existing") or data("(none)", "Issues"))
-        result = self.call("suggest", prompt, wt.cwd, reader=True)
+        result = self.call("suggest", prompt, wt.cwd, reader=True,
+                           why="propose improvements while the queue is empty")
         found = verdicts.suggestions(result.text, count)
         self.result.update(
             status="suggested",
