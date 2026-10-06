@@ -31,6 +31,8 @@ export const DAMAGE_TIERS_DESCENDING: readonly DamageTier[] = ["giga", "big", "m
 /** Match-wide crowd timing, kept beside the impact tiers it responds to. */
 export const CROWD_FEEL = Object.freeze({
   reactionDebounceMs: 400,
+  patronMinMs: 6000,
+  patronMaxMs: 15000,
   cheerDelayMs: 180,
   applauseDelayMs: 700,
   applauseTailMs: 2500,

@@ -1,5 +1,5 @@
-// The crowd's reactions to public events. It owns no game data: callers pass damage amounts and
-// landing tiers already present in the rendered event stream.
+// The crowd's reactions to public events, and the patrons' murmurs between them. It owns no game
+// data: callers pass damage amounts and landing tiers already present in the rendered event stream.
 
 import { CROWD_FEEL, damageFeel, UNIT_SLAM, type SlamTier } from "../game/damageFeel.ts";
 import { noiseBuffer } from "./sfx.ts";
@@ -23,6 +23,7 @@ export type CrowdDirectorOptions = {
   later?: (ms: number, run: () => void) => Cancel;
 };
 
+const PATRON_VARIANTS = [0.82, 0.94, 1.06, 1.18] as const;
 type ReactionKind = keyof typeof CROWD_FEEL.reactionMs;
 /** The reactions an event can start; cheer and applause only ever follow one. */
 type CrowdReaction = "ooh" | "gasp" | "roar";
@@ -55,6 +56,32 @@ function spatialGain(output: CrowdOutput, gain: GainNode, pan: number): StereoPa
   gain.connect(panner);
   panner.connect(output.crowd);
   return panner;
+}
+
+function patron(output: CrowdOutput, variant: number, pan: number): void {
+  const { context } = output;
+  const length = 0.34;
+  const source = context.createBufferSource();
+  const filter = context.createBiquadFilter();
+  const gain = context.createGain();
+  source.buffer = noiseBuffer(context);
+  filter.type = "bandpass";
+  filter.frequency.value = 800 * variant;
+  filter.Q.value = 1.5;
+  gain.gain.setValueAtTime(0.0001, context.currentTime);
+  gain.gain.linearRampToValueAtTime(0.08, context.currentTime + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + length);
+  source.connect(filter);
+  filter.connect(gain);
+  const panner = spatialGain(output, gain, pan);
+  source.start();
+  source.stop(context.currentTime + length);
+  source.onended = () => {
+    source.disconnect();
+    filter.disconnect();
+    gain.disconnect();
+    panner.disconnect();
+  };
 }
 
 function reaction(output: CrowdOutput, kind: ReactionKind, pan: number): void {
@@ -91,11 +118,14 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
   let running = false;
   let ending = false;
   let output: CrowdOutput | null = null;
+  let timer: Cancel | null = null;
   let debounce: Cancel | null = null;
   const reactionTimers = new Set<Cancel>();
   let pending: { kind: CrowdReaction; tails: boolean } | null = null;
 
   const clearTimers = (): void => {
+    timer?.();
+    timer = null;
     debounce?.();
     debounce = null;
   };
@@ -108,7 +138,26 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
   const connect = (): void => {
     if (!running || ending || output !== null) return;
     output = (options.engine as Partial<CrowdCapableEngine>).crowdOutput?.() ?? null;
-    if (output !== null && output.context.state !== "running") output = null;
+    if (output === null || output.context.state !== "running") {
+      output = null;
+      return;
+    }
+    const schedulePatron = (): void => {
+      if (!running || ending || output === null) return;
+      const span = CROWD_FEEL.patronMaxMs - CROWD_FEEL.patronMinMs;
+      const wait = CROWD_FEEL.patronMinMs + Math.round(next() * span);
+      timer = later(wait, () => {
+        if (output !== null) {
+          patron(
+            output,
+            PATRON_VARIANTS[Math.floor(next() * PATRON_VARIANTS.length)] ?? PATRON_VARIANTS[0],
+            next() * 2 - 1,
+          );
+        }
+        schedulePatron();
+      });
+    };
+    schedulePatron();
   };
 
   // Reactions begin one after another as the animation queue reaches them. Resetting this quiet period

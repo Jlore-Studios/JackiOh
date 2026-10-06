@@ -15,7 +15,7 @@ afterEach(() => {
 });
 
 describe("issue #57 crowd director", () => {
-  it("#352 starts no ambience bed or patron, and resets the quiet period until a staggered damage burst settles", () => {
+  it("#352 plays no looping bed but keeps the patron murmurs, and resets the quiet period until a staggered damage burst settles", () => {
     const factory = fakeContextFactory({ state: "running" });
     const engine = createAudioEngine({ createContext: factory.create });
     engines.push(engine);
@@ -34,9 +34,22 @@ describe("issue #57 crowd director", () => {
 
     crowd.start();
     const audio = factory.last();
-    // #352: the ambience is gone, so a match starts with no looping bed and no patron timer.
+    // #352: the ambience bed is gone, so nothing loops. The patrons still murmur between hits.
     expect(audio.nodes.filter((node) => node.kind === "bufferSource")).toHaveLength(0);
-    expect(scheduled).toHaveLength(0);
+    expect(scheduled).toHaveLength(1);
+    const firstPatron = scheduled.at(0);
+    if (firstPatron === undefined) throw new Error("the crowd must schedule a patron");
+    expect(firstPatron.ms).toBeGreaterThanOrEqual(CROWD_FEEL.patronMinMs);
+    expect(firstPatron.ms).toBeLessThanOrEqual(CROWD_FEEL.patronMaxMs);
+    firstPatron.run();
+    // The patron is a one-shot murmur at an independent, non-centre position, and the next one is queued.
+    const patronPan = audio.nodesOf("stereoPanner").at(-1);
+    expect(patronPan).toBeDefined();
+    expect(patronPan?.param("pan").settled()).not.toBe(0);
+    expect(audio.nodes.filter((node) => node.kind === "bufferSource")).toHaveLength(1);
+    const patrons = scheduled.filter((task) => task.ms >= CROWD_FEEL.patronMinMs);
+    expect(patrons).toHaveLength(2);
+    expect(patrons.at(-1)?.cancelled).toBe(false);
 
     crowd.observeDamage(1);
     crowd.observeDamage(5);
@@ -50,7 +63,7 @@ describe("issue #57 crowd director", () => {
     // Each later hit replaces the earlier quiet-period deadline, so the last timer alone lives.
     expect(reaction.filter((task) => !task.cancelled)).toHaveLength(1);
     reaction.at(-1)?.run();
-    expect(audio.nodes.filter((node) => node.kind === "bufferSource")).toHaveLength(1);
+    expect(audio.nodes.filter((node) => node.kind === "bufferSource")).toHaveLength(2);
     const filters = audio.nodes.filter((node) => node.kind === "biquad");
     expect(filters.at(-1)?.param("frequency").settled()).toBe(270); // 25 is GIGA's roar, not 8's ooh.
     const reactionPan = audio.nodesOf("stereoPanner").at(-1);
@@ -61,13 +74,15 @@ describe("issue #57 crowd director", () => {
     const applause = scheduled.find((task) => task.ms === CROWD_FEEL.applauseDelayMs && !task.cancelled);
     if (applause === undefined) throw new Error("GIGA roar must schedule an applause tail");
     applause.run();
-    expect(audio.nodes.filter((node) => node.kind === "bufferSource")).toHaveLength(2);
+    expect(audio.nodes.filter((node) => node.kind === "bufferSource")).toHaveLength(3);
     expect(audio.nodes.some((node) => node.kind === "bufferSource" && node.loop)).toBe(false);
 
     const before = scheduled.length;
     crowd.end();
-    // #352: nothing to fade, so ending schedules nothing, and a hit after it draws no reaction.
+    // #352: nothing to fade, so ending schedules nothing. It stops the patrons, and a hit after it
+    // draws no reaction.
     expect(scheduled).toHaveLength(before);
+    expect(scheduled.filter((task) => task.ms >= CROWD_FEEL.patronMinMs).at(-1)?.cancelled).toBe(true);
     crowd.observeDamage(25);
     expect(scheduled).toHaveLength(before);
     crowd.dispose();
