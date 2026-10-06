@@ -2270,7 +2270,7 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
-      "question": "Main's pending patch v0.2.15 (#340, merged at d4ca767e) has not been promoted yet: there is no `patches ship: v0.2.15` on main at cd28fbbc. It claims C #80, C+ #38 and C+ #46, and this patch claims the same three. Can someone check that patches-ship.yml's promotion for #340 ran and merges? Once v0.2.15 is in patches.json on main, merging main into bot/issue-322 should turn both red checks green without changing anything on this branch. I ran that exact case in a scratch worktree and it passed. Until then this PR must not merge: `patches ship` itself refuses to promote the two fragments while both are pending.",
+      "question": "I've resolved the merge conflicts, but two checks stay red, and I can't fix that on this branch. Main's pending patch v0.2.10 (balance patch 1, renamed from v0.2.15 by #335) claims C #80, C+ #38 and C+ #46. This patch claims the same three cards, and R646 allows a card in only one pending patch, so `patches check` and card-text's \"R366 patch v0.2.10\" test fail here, though both pass on main. The harness pushes nothing while a check that passes on main fails here, and `patches ship` itself refuses two patches claiming one card. Can someone confirm that main's `patches ship: v0.2.10` promotion is open and will merge (or start patches-ship.yml if it isn't), then ask for a revision once it's on main? That revision only needs to merge main: the promotion changes only files this branch doesn't touch, and nothing else needs to change.",
       "queued_at": "2026-10-06T03:41:26Z",
       "requested_by": "jgoetzmann",
       "run_id": "37410472202",
