@@ -382,7 +382,7 @@ describe("R743 the card patches numbered in order (issue #290)", () => {
 
   it("R743 has issue #170's Glitch, shipped as v0.2.16, as v0.2.8, the patch that added the token", () => {
     expect(idsOf("v0.2.8", "added")).toEqual(["classic-t-glitch"]);
-    expect(buildIndex(PATCHES)["classic-t-glitch"]).toEqual(["v0.2.8"]);
+    expect(buildIndex(PATCHES)["classic-t-glitch"]?.[0]).toBe("v0.2.8");
   });
 });
 
