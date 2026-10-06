@@ -3804,15 +3804,19 @@
         {
           "at": "2026-10-06T07:35:49Z",
           "minutes": 31.3
+        },
+        {
+          "at": "2026-10-06T13:20:55Z",
+          "minutes": 20.3
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-06T10:40:00Z",
-          "utilization": 0.98
+          "resets_at": "2026-10-06T18:00:00Z",
+          "utilization": 0.4
         },
-        "observed_at": "2026-10-06T07:35:49Z",
-        "status": "allowed_warning"
+        "observed_at": "2026-10-06T13:20:55Z",
+        "status": "allowed"
       }
     },
     "claude-2": {
