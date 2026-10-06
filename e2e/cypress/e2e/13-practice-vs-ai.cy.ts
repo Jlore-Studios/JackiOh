@@ -9,6 +9,8 @@
 //     opponent's side of the board (mana, hand or units) between the human's mulligan and the
 //     human's first turn;
 //   * a few human turns end through the UI with no `action-error`;
+//   * after the AI's turns the log still holds the human's first End turn and the game's first
+//     turn (R744);
 //   * the game the browser played folds in Node, with the handicaps the page reports, to the
 //     browser's own hash (`cy.task("replayHash")`, R187);
 //   * conceding — `concede`, then Concede in the "Concede this game?" dialog it opens — shows the
@@ -40,6 +42,7 @@ import {
   BOARD,
   END_TURN,
   GAME,
+  LOG,
   MULLIGAN_OPPONENT_READY,
   MULLIGAN_OPPONENT_STATUS,
   PRACTICE_DECK,
@@ -439,6 +442,15 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
       });
     });
 
+    // R744: the turn the human ends first, read off the board, for the log's check below.
+    let firstEnded = "";
+    reachHumanTurn();
+    cy.get(ts(BOARD))
+      .invoke("attr", "data-turn")
+      .then((turn) => {
+        firstEnded = String(turn);
+      });
+
     endHumanTurns(HUMAN_TURNS);
 
     recorder().then((recorded) => {
@@ -451,6 +463,13 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
         "practice-thinking showed while the AI played its turns",
       ).to.eq(true);
     });
+
+    // R744: the log keeps the whole game, not only the view's last events.
+    reachHumanTurn();
+    cy.then(() => {
+      cy.get(`${ts(LOG)} .log-line[data-event="turnEnded"]`).should("contain.text", `You ended turn ${firstEnded} with`);
+    });
+    cy.get(`${ts(LOG)} .log-line[data-event="turnStarted"]`).should("contain.text", "Turn 1: Opponent");
 
     // Concede on the human's own turn: the overlay is viewer-relative (§10.8), so it says Loss. The
     // control only asks ("Concede this game?"); `cy.concede` confirms in the dialog it opens.

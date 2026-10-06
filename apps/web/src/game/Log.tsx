@@ -19,20 +19,26 @@
 // unit" opens nothing. What opens is the card in play (faces.ts, SPEC §10.10): as it stands where
 // the view still lists it, else its definition as the game shows it; and a match-made card (a
 // Fuse's, R243) is named and drawn from the definition the view carries for it.
+//
+// The window is not the whole game: the lines whose events have left it come from
+// `useLogHistory.ts` (R744), kept as they read when they arrived, with a definition's face and no
+// instance id. A divider stands before each turn's first line.
 
-import { useContext, useLayoutEffect, useRef, type MouseEvent, type ReactElement } from "react";
+import { Fragment, memo, useContext, useLayoutEffect, useRef, type MouseEvent, type ReactElement } from "react";
 
 import type { GameEvent, LibraryOverflowOutcome, PlayerId, PlayerView, PromptKind } from "@jackioh/shared";
 
-import { costPhrase, useInspectTrigger, type FaceModel } from "../cards/index.ts";
+import { costPhrase, useInspectTrigger } from "../cards/index.ts";
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { markWords } from "../cards/marks.ts";
 import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
-import { CatalogContext, withMatchDefs } from "./catalog.ts";
+import { CatalogContext, withMatchDefs, type CardLookup } from "./catalog.ts";
+import { LOG_HISTORY_LIMIT } from "./config.ts";
 import { sideOf, testid, touchHoldMode } from "./contract.ts";
 import { cardInView, namedFace } from "./faces.ts";
 import { outcomeFor, resultReason } from "./Result.tsx";
 import { CHAOS_TEXT } from "./showcase/constants.ts";
+import { useLogHistory, type KeptLine, type LoggedLine } from "./useLogHistory.ts";
 
 
 /** What a player is asked for, by prompt kind, in the log's words. */
@@ -364,6 +370,21 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
   }
 }
 
+/** The words a view's lines use for cards and seats, naming a card from the board, else from `remembered`. */
+function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: ReadonlyMap<string, string>): Naming {
+  return {
+    def: (defId) => (defId === HIDDEN_CARD ? "a hidden card" : (lookup?.(defId, false)?.name ?? defId)),
+    instance: (instanceId, unknown = "a unit") => {
+      if (instanceId === `hero-${view.you.player}`) return "your hero";
+      if (instanceId === `hero-${view.opponent.player}`) return "the opponent's hero";
+      const defId = defIdOfInstance(view, instanceId) ?? remembered.get(instanceId);
+      return defId === undefined ? unknown : (lookup?.(defId, false)?.name ?? defId);
+    },
+    seat: (player) => seatLabel(view, player),
+    whose: (player) => whoseLabel(view, player),
+  };
+}
+
 /** R676–R679: each Glitch outcome, as its log line ends. */
 const GLITCH_OUTCOME_LINE: Readonly<Record<Extract<GameEvent, { type: "glitched" }>["outcome"], string>> = {
   reset: "the match resets",
@@ -451,10 +472,29 @@ function cardOf(event: GameEvent, view: PlayerView, remembered: ReadonlyMap<stri
   }
 }
 
-type Line = { key: string; type: GameEvent["type"]; text: string; face: FaceModel | null };
+/**
+ * R744: an event's line as the log keeps it (useLogHistory.ts): this view's words, and the
+ * definition's face built without the instance, so it carries no instance id.
+ */
+export function keptLineFor(view: PlayerView, lookup: CardLookup | null): (event: GameEvent) => LoggedLine | null {
+  const remembered = publicNames(view.events);
+  const name = namingFor(view, lookup, remembered);
+  return (event) => {
+    const text = describe(event, view, name);
+    if (text === null) return null;
+    const card = cardOf(event, view, remembered);
+    return {
+      type: event.type,
+      text,
+      face: card === null ? null : namedFace(lookup, view, { defId: card.defId, radiant: card.radiant }),
+    };
+  };
+}
 
-/** One line; a line about a card is a button that opens it (see the header). */
-function LogLine({ line, touchHold }: { line: Line; touchHold?: "sheet" | "preview" }): ReactElement {
+type Line = KeptLine;
+
+/** One line; a line about a card is a button that opens it (see the header). Kept lines are the same objects from render to render, so they do not redraw. */
+const LogLine = memo(function LogLine({ line, touchHold }: { line: Line; touchHold?: "sheet" | "preview" }): ReactElement {
   const face = line.face;
   // Lines of code is a hidden stat in matches.
   const inspect = useInspectTrigger(face === null ? null : { key: `log-${line.key}`, face }, { touchHold, showLoc: false });
@@ -485,24 +525,15 @@ function LogLine({ line, touchHold }: { line: Line; touchHold?: "sheet" | "previ
       {inspect.overlay}
     </li>
   );
-}
+});
 
 export default function Log({ view, revealed = false }: LogProps): ReactElement {
   // R243: a match-made card is named from the definition the view carries for it.
   const lookup = withMatchDefs(useContext(CatalogContext), view.defs);
   const remembered = publicNames(view.events);
-
-  const name: Naming = {
-    def: (defId) => (defId === HIDDEN_CARD ? "a hidden card" : (lookup?.(defId, false)?.name ?? defId)),
-    instance: (instanceId, unknown = "a unit") => {
-      if (instanceId === `hero-${view.you.player}`) return "your hero";
-      if (instanceId === `hero-${view.opponent.player}`) return "the opponent's hero";
-      const defId = defIdOfInstance(view, instanceId) ?? remembered.get(instanceId);
-      return defId === undefined ? unknown : (lookup?.(defId, false)?.name ?? defId);
-    },
-    seat: (player) => seatLabel(view, player),
-    whose: (player) => whoseLabel(view, player),
-  };
+  const name = namingFor(view, lookup, remembered);
+  // R744: the lines that have left the window, and the key each window event keeps as it slides.
+  const history = useLogHistory(view, keptLineFor(view, lookup));
 
   // The newest line is the one worth reading, so a log taller than its box keeps its end in view
   // (polish task 7: on a desktop the log is a fixed box beside your seat and hand). A log that was
@@ -513,18 +544,23 @@ export default function Log({ view, revealed = false }: LogProps): ReactElement 
     if (list !== null) list.scrollTop = list.scrollHeight;
   }, [view.events, revealed]);
 
-  const lines = view.events.flatMap((event, index): Line[] => {
+  const windowLines = view.events.flatMap((event, index): Line[] => {
     const text = describe(event, view, name);
     if (text === null) return [];
     const card = cardOf(event, view, remembered);
     const face = card === null ? null : namedFace(lookup, view, card);
-    return [{ key: `${String(index)}-${event.type}`, type: event.type, text, face }];
+    return [{ key: history.keys[index] ?? `${view.viewer}-window-${String(index)}`, type: event.type, text, face }];
   });
+  const lines = [...history.kept, ...windowLines].slice(-LOG_HISTORY_LIMIT);
+  const touchHold = touchHoldMode(view);
 
   return (
     <ol ref={listRef} className="log" data-testid={testid.log} aria-label="Game log">
-      {lines.map((line) => (
-        <LogLine key={line.key} line={line} touchHold={touchHoldMode(view)} />
+      {lines.map((line, index) => (
+        <Fragment key={line.key}>
+          {index > 0 && line.type === "turnStarted" ? <li className="log-divider" role="separator" /> : null}
+          <LogLine line={line} touchHold={touchHold} />
+        </Fragment>
       ))}
     </ol>
   );

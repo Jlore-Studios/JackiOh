@@ -4393,6 +4393,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R743 numbers the card patches in order, and a database renames the rows filed under the old names", () => {
     provenIn(743, "../../cards/test/patches.test.ts", "../../../apps/server/test/sql/14_patch_retcon.sql");
   });
+
+  // Proved by apps/web game/Log.test.tsx "R744 …" (windows joined in order with no line twice, one
+  // history per viewer, a new game empty, a kept line's name and no id, the cap, dividers, the gap line).
+  it("R744 keeps the whole game in the log, joined from the views' windows", () => {
+    provenIn(744, "../../../apps/web/src/game/Log.test.tsx");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {
