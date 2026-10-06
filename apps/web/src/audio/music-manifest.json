@@ -338,6 +338,18 @@
       "loopEnd": 27.545455,
       "handoff": null
     },
+    "mythic-portal-to-the-past": {
+      "hash": "806ca64fc995e5f5",
+      "bytes": 312027,
+      "bpm": 80,
+      "beatsPerBar": 4,
+      "loop": true,
+      "intro": 3,
+      "duration": 30.5,
+      "loopStart": 6,
+      "loopEnd": 30,
+      "handoff": null
+    },
     "legendary-1": {
       "hash": "17cef050a63d98dd",
       "bytes": 295744,

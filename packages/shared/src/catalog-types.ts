@@ -15,7 +15,7 @@ export type CardType = "Unit" | "Spell" | "Field Spell" | "Trap" | "Field Trap";
  * §5: tribes and tags. "Jlockeed" is Core #13 and #14's and the Classic+ Jlockheed cards' (R278);
  * patch v0.2.0 adds Book (every "Book of …" card), Pancake (Classic+ #12, #13 and the eight Pancake
  * tokens) and AI (the ten AI generated cards); the v0.2.x mechanics patch adds Plague (every card
- * that uses Plague Tokens); patch v0.2.Y adds Catalyst (Classic+ #38 Solarius and #46 Felinor
+ * that uses Plague Counters); patch v0.2.Y adds Catalyst (Classic+ #38 Solarius and #46 Felinor
  * Flagbearer), Prime (their Prime tokens, Classic+ #38.1 Solarius Prime and #46.1 Felinor
  * Flagbearer Prime) and Acclaimed (Classic #80 BOOM! Big Max and Classic+ #37 Wardrum).
  */
@@ -353,7 +353,7 @@ export type TargetFilter = {
   costRange?: { min?: number; max?: number };
   /** A unit with damage above 0 (Classic+ #32.1 Execute). */
   damaged?: boolean;
-  /** A card with at least one Plague Token on it (Classic #78 Mutate Spell). */
+  /** A card with at least one Plague Counter on it (Classic #78 Mutate Spell). */
   plague?: boolean;
   /**
    * The name of a predicate in the declaring script's `targetChecks`, for a filter no field above

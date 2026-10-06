@@ -14,7 +14,7 @@ function standing(state: GameState, unit: CardInstance): boolean {
 
 /**
  * B5 E37: `amount` damage dealt as hits of `perHit` (1 unless the card says otherwise — Classic+ #3's
- * "1 damage for each Plague Token", which an Upgrade may make 2), each hit a damage instance of its
+ * "1 damage for each Plague Counter", which an Upgrade may make 2), each hit a damage instance of its
  * own (§4.4) on an enemy drawn from the match rng among the ones still standing as that hit is dealt:
  * the enemy hero ("an enemy"; left out for "an enemy Unit") and every enemy unit acting on the field
  * still standing — above 0 health and not marked destroyed, since the state check does not run

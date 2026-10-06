@@ -1,6 +1,6 @@
 // §4.5's check at a point of an effect list, then the rest on a stay that begins after it —
 // `afterStateCheck` (effects/afterCheck.ts), the verb Classic #43 Plague Nuke needs ("Destroy all
-// Units. Gain 1 mana for each Plague Token … Then summon … each of those Units … from its owner's
+// Units. Gain 1 mana for each Plague Counter … Then summon … each of those Units … from its owner's
 // graveyard"). SPEC §4.5; R59, R78, R113, R174. The real card's test (packages/cards/test/classic/
 // 043-plague-nuke.test.ts) covers the card's cases again through the card.
 //

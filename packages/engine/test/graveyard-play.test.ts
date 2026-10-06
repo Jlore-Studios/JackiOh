@@ -1,6 +1,6 @@
 // Playing cards from the graveyard (docs/classic-sets.md B5 E11; R454): the permissions, what
 // `legalActions` offers under them, §10.5 taking the card out of the graveyard, R65's prices, the
-// Plague Token payment, a pause mid-play surviving JSON, and what the other seat sees.
+// Plague Counter payment, a pause mid-play surviving JSON, and what the other seat sees.
 
 import { describe, expect, it } from "vitest";
 import { effectiveCost } from "../src/mana";
@@ -159,7 +159,7 @@ describe("E11 play from the graveyard (R454)", () => {
     expect(playsOf(state, one.id)).toEqual([]);
   });
 
-  it("R454 Corpse Plantation: Units only, paid with its Plague Tokens — at least 1, at most the tokens and the price, the rest in mana", () => {
+  it("R454 Corpse Plantation: Units only, paid with its Plague Counters — at least 1, at most the tokens and the price, the rest in mana", () => {
     const state = pbPlaying("r454-plague");
     const field = put(state, plantation.id, slot("p1", "backrow", 2));
     field.counters.plague = 2;
@@ -175,9 +175,9 @@ describe("E11 play from the graveyard (R454)", () => {
       { from: field.id, tokens: 1 },
       { from: field.id, tokens: 2 },
     ]);
-    expect(pbReduce(state, { type: "play", instanceId: body.id, playerId: "p1" }).error).toMatch(/spending Plague Tokens/);
+    expect(pbReduce(state, { type: "play", instanceId: body.id, playerId: "p1" }).error).toMatch(/spending Plague Counters/);
     expect(pbReduce(state, { type: "play", instanceId: body.id, plague: { from: field.id, tokens: 0 }, playerId: "p1" }).error).toMatch(
-      /at least 1 Plague Token/,
+      /at least 1 Plague Counter/,
     );
     expect(pbReduce(state, { type: "play", instanceId: body.id, plague: { from: field.id, tokens: 3 }, playerId: "p1" }).error).toMatch(
       /not that many/,
@@ -189,7 +189,7 @@ describe("E11 play from the graveyard (R454)", () => {
       plague: { from: field.id, tokens: 1 },
       playerId: "p1",
     });
-    expect(handPlay.error).toMatch(/only a play from your graveyard can spend Plague Tokens/);
+    expect(handPlay.error).toMatch(/only a play from your graveyard can spend Plague Counters/);
 
     const result = pbReduce(state, { type: "play", instanceId: body.id, plague: { from: field.id, tokens: 1 }, playerId: "p1" });
     expect(result.error).toBeUndefined();

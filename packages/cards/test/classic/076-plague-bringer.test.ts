@@ -1,5 +1,5 @@
 // C #76 Plague Bringer — SPEC §8.6 row 76, BUILD M9 Classic row C 76: "Rush; Cry: two placements of one
-// Plague Token, one prompt each, on any permanent either side (a face-down option carries only its id,
+// Plague Counter, one prompt each, on any permanent either side (a face-down option carries only its id,
 // R177), then draw 1; radiant 8/8: four placements, draw 2; its tuned numbers (tokens, draw) read
 // through `param()` (R386)".
 
@@ -10,7 +10,7 @@ import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/076-plague-bringer";
 
 const BRINGER = "classic-076";
-const CRAWLER = "classic-053"; // (1) Unit: whenever Plague Tokens are placed on this, draw 1.
+const CRAWLER = "classic-053"; // (1) Unit: whenever Plague Counters are placed on this, draw 1.
 const VANILLA = "core-008"; // (1) Unit 4/4.
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt.
 const PAWN = "core-096"; // (1) Trap: answers only an attack that would be lethal.

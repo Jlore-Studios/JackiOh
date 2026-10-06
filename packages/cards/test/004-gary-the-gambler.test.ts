@@ -1,13 +1,13 @@
 // SPEC §8.1 #4 Gary the Gambler. BUILD M4-T4 row 4: "Fixed seed → fixed stats; heads+tails = 5
-// (radiant 7 at +2 each); Lucky has no effect (R32)".
+// (radiant 7 at +2 each); second coin grants Divine Shield on heads, Rush on tails, identical on
+// both faces; Lucky has no effect (R32/R130)".
 //
 // The flips land as ONE permanent layer-4 buff (§10.4), so `buffs.attack` is the heads total and
 // `buffs.health` the tails total: the invariant the row asks for is that those two always account
 // for exactly 5 flips (radiant 7) at the card's per-flip rate, whatever the seed rolled. The exact
 // numbers under a fixed seed are asserted as determinism — the same seed twice gives the same
-// stats — because the seeded values themselves only exist once `flipCoins` does (see the report:
-// the verb is missing from the effects library, so this file cannot be green yet, and the literal
-// heads/tails for seed "core-004-base" should be pinned here as soon as it lands).
+// stats. After the stat flip, one more seeded coin grants Divine Shield on heads, Rush on tails
+// (§10.4 granted keywords), identical on both faces.
 
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "./_harness";
@@ -16,6 +16,11 @@ import { scenario, type Scenario } from "./_harness";
 function gains(s: Scenario, ref: string): { attack: number; health: number } {
   const gary = s.card(ref);
   return { attack: gary.buffs.attack, health: gary.buffs.health };
+}
+
+/** The keyword the rider coin granted, read back off the live instance. */
+function grantedKind(s: Scenario, ref: string): string | undefined {
+  return s.card(ref).grantedKeywords.map((k) => k.kind)[0];
 }
 
 describe("#4 Gary the Gambler", () => {
@@ -55,11 +60,11 @@ describe("#4 Gary the Gambler", () => {
     s.expectStats("core-004", { attack: 2 + attack, maxHealth: 2 + health });
   });
 
-  it("R32 Lucky has no effect: 5 coins take exactly 5 seeded rolls, with no reroll for a best", () => {
+  it("R32/R130 Lucky has no effect: 5 coins plus the rider coin take exactly 6 seeded rolls, with no reroll for a best", () => {
     // Lucky is `rng.lucky(x, roll, better)` (rng.ts): it rolls x extra times and keeps the best, so
     // a Lucky flip would show up as extra draws on the cursor. No Core card can put Lucky on a unit
-    // before its own Cry resolves, so counting the draws is what R32 is actually about: the flip
-    // never asks for a reroll. The control play cancels whatever a play costs in draws by itself.
+    // before its own Cry resolves, so counting the draws is what R32/R130 are actually about: the
+    // flips never ask for a reroll. The control play cancels whatever a play costs in draws by itself.
     const control = scenario({ seed: "core-004-r32", p1: { hand: ["core-008"] } });
     const controlBefore = control.state.rngCursor;
     control.play("core-008");
@@ -68,6 +73,58 @@ describe("#4 Gary the Gambler", () => {
     const s = scenario({ seed: "core-004-r32", p1: { hand: ["core-004"] } });
     const before = s.state.rngCursor;
     s.play("core-004");
-    expect(s.state.rngCursor - before - overhead).toBe(5);
+    // 5 stat flips + 1 keyword coin.
+    expect(s.state.rngCursor - before - overhead).toBe(6);
+  });
+
+  it("base: the second coin grants Divine Shield on heads, Rush on tails, deterministically", () => {
+    const seen = new Set<string>();
+    for (let n = 1; n <= 200; n += 1) {
+      const seed = `gary-key-${n}`;
+      const s = scenario({ seed, p1: { hand: ["core-004"] } });
+      s.play("core-004");
+
+      // The stat flip is untouched: heads + tails still accounts for all 5 coins.
+      const { attack, health } = gains(s, "core-004");
+      expect(attack + health).toBe(5);
+
+      // Exactly one granted keyword, on one face of the coin or the other.
+      const kind = grantedKind(s, "core-004");
+      expect(["Divine Shield", "Rush"]).toContain(kind);
+      seen.add(kind as string);
+
+      // The same seed played twice grants the same keyword.
+      const again = scenario({ seed, p1: { hand: ["core-004"] } });
+      again.play("core-004");
+      expect(grantedKind(again, "core-004")).toBe(kind);
+    }
+    // 200 seeds land on both faces: the rider really is a coin, not a fixed grant.
+    expect(seen).toEqual(new Set(["Divine Shield", "Rush"]));
+  });
+
+  it("radiant: the same exact rider on top of 7 coins at +2", () => {
+    const seen = new Set<string>();
+    for (let n = 1; n <= 200; n += 1) {
+      const seed = `gary-key-radiant-${n}`;
+      const s = scenario({ seed, p1: { hand: [{ def: "core-004", radiant: true }] } });
+      s.play("core-004");
+
+      // The stat flip is untouched: 7 coins at +2 a side, totalling 14.
+      const { attack, health } = gains(s, "core-004");
+      expect(attack + health).toBe(14);
+      expect(attack % 2).toBe(0);
+      expect(health % 2).toBe(0);
+
+      // Byte-identical rider: the same two keywords, one per face.
+      const kind = grantedKind(s, "core-004");
+      expect(["Divine Shield", "Rush"]).toContain(kind);
+      seen.add(kind as string);
+
+      // The same seed played twice grants the same keyword.
+      const again = scenario({ seed, p1: { hand: [{ def: "core-004", radiant: true }] } });
+      again.play("core-004");
+      expect(grantedKind(again, "core-004")).toBe(kind);
+    }
+    expect(seen).toEqual(new Set(["Divine Shield", "Rush"]));
   });
 });

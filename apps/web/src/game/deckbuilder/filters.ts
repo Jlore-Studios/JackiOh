@@ -58,7 +58,7 @@ export const FILTER_TAGS: readonly Tag[] = [
   // only the ten AI tokens carry it, and the pool never offers a Token.
   "Book",
   "Pancake",
-  // The mechanics patch: every card that uses Plague Tokens.
+  // The mechanics patch: every card that uses Plague Counters.
   "Plague",
   // Patch v0.2.Y: Classic+ #38 Solarius and #46 Felinor Flagbearer, and Classic #80 BOOM! Big Max
   // and Classic+ #37 Wardrum. "Prime" is left out with "AI": only the two Prime tokens carry it.

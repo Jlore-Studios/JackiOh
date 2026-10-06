@@ -1,5 +1,5 @@
 // C #87 Plague Chalice — SPEC §8.6 row 87, BUILD M9 Classic row C 87: "X chosen with the play, at least 1
-// (R348); it enters with X Plague Tokens; Aura: every card either player plays whose cost paid equals its
+// (R348); it enters with X Plague Counters; Aura: every card either player plays whose cost paid equals its
 // current token count is countered in the announce window (§10.5), treated as never played as C #17's
 // is; a free cast is countered only at a count of 0 (R70); the count moves (C #78 removes tokens,
 // placements add them); it isn't on the field during its own announce and never counters itself; a set
@@ -13,9 +13,9 @@ import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/087-plague-chalice";
 
 const CHALICE = "classic-087";
-const BRINGER = "classic-076"; // (2) Unit: Rush; Cry: place 2 Plague Tokens (two placements). Draw 1.
+const BRINGER = "classic-076"; // (2) Unit: Rush; Cry: place 2 Plague Counters (two placements). Draw 1.
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt.
-const MUTATE = "classic-078"; // (1) Field Spell: Activate ♾️: remove a Plague Token from a permanent …
+const MUTATE = "classic-078"; // (1) Field Spell: Activate ♾️: remove a Plague Counter from a permanent …
 const VANILLA = "core-008"; // (1) Unit 4/4.
 const POINTMASTER = "core-020"; // (2) Unit 7/1 First Strike.
 const HINDER = "core-021"; // (0) Spell: Cast on draw: your opponent has 1 less mana next turn. Discard 1.
@@ -68,7 +68,7 @@ describe("C #87 Plague Chalice", () => {
       expect(() => s.play(chalice)).toThrow();
     });
 
-    it("it enters with X Plague Tokens on it, one placement of X", () => {
+    it("it enters with X Plague Counters on it, one placement of X", () => {
       const s = scenario({ p1: { hand: [CHALICE, ANCHOR] }, p2: { hand: [ANCHOR] } });
 
       s.play(CHALICE, { x: 3 });

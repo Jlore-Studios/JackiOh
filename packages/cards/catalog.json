@@ -112,18 +112,18 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
-    "loc": 11,
+    "loc": 13,
     "base": {
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Flip 5 coins. Gain +1 attack per heads and +1 health per tails."
+      "text": "Cry: Flip 5 coins. Gain +1 attack per heads and +1 health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Flip 7 coins. Gain +2 attack per heads and +2 health per tails."
+      "text": "Cry: Flip 7 coins. Gain +2 attack per heads and +2 health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
     }
   },
   "core-005": {
@@ -696,7 +696,7 @@
     "set": "Core",
     "type": "Spell",
     "tags": [],
-    "rarity": "Common",
+    "rarity": "Rare",
     "token": false,
     "cost": 1,
     "loc": 13,
@@ -716,7 +716,7 @@
     "set": "Core",
     "type": "Spell",
     "tags": [],
-    "rarity": "Common",
+    "rarity": "Rare",
     "token": false,
     "cost": 2,
     "loc": 9,
@@ -983,7 +983,7 @@
     "set": "Core",
     "type": "Field Spell",
     "tags": [],
-    "rarity": "Common",
+    "rarity": "Rare",
     "token": false,
     "cost": 2,
     "loc": 18,
@@ -2206,18 +2206,18 @@
     "tags": [],
     "rarity": "Legendary",
     "token": false,
-    "cost": 2,
+    "cost": 4,
     "refs": [
       "core-087"
     ],
-    "loc": 20,
+    "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Choose one: Swap hero health, boards or decks with your opponent. Then add a Pocket Chaos to your opponent's hand. Exile this."
+      "text": "Choose one: Swap hero health, boards or decks with your opponent. Then add a Pocket Chaos with a base cost (1) less than this one's to your opponent's hand, unless its base cost would be (0). Exile this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Swap hero health, boards or decks with your opponent. Then you may add a Pocket Chaos to your opponent's hand. Exile this."
+      "text": "Choose one: Swap hero health, boards or decks with your opponent. Then you may add a Pocket Chaos with a base cost (1) less than this one's to your opponent's hand, unless its base cost would be (0). Exile this."
     }
   },
   "core-088": {
@@ -2345,7 +2345,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhenever this takes damage, it gets a Plague Token.\nStart of turn: +1 mana per Plague Token."
+      "text": "Rush\nWhenever this takes damage, it gets a Plague Counter.\nStart of turn: +1 mana per Plague Counter."
     },
     "radiant": {
       "attack": 2,
@@ -2355,7 +2355,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhenever this takes damage, it gets a Plague Token.\nStart of turn: +2 mana per Plague Token."
+      "text": "Rush\nWhenever this takes damage, it gets a Plague Counter.\nStart of turn: +2 mana per Plague Counter."
     }
   },
   "core-092": {
@@ -2932,7 +2932,7 @@
     "tags": [
       "Book"
     ],
-    "rarity": "Common",
+    "rarity": "Epic",
     "token": false,
     "cost": 1,
     "params": [
@@ -3025,7 +3025,7 @@
           "kind": "Lifesteal"
         }
       ],
-      "text": "Animated, Lifesteal\nActivates when your opponent summons a Unit: Deal {damage} damage to it. Then summon this as a Unit in Defense Position."
+      "text": "Animated, Lifesteal\nReveals when your opponent summons a Unit: Deal {damage} damage to it. Then summon this as a Unit in Defense Position."
     },
     "radiant": {
       "attack": 2,
@@ -3038,7 +3038,7 @@
           "kind": "Lifesteal"
         }
       ],
-      "text": "Animated, Lifesteal\nActivates when your opponent summons a Unit: Deal {damage} damage to it. Then summon this as a Unit in Defense Position."
+      "text": "Animated, Lifesteal\nReveals when your opponent summons a Unit: Deal {damage} damage to it. Then summon this as a Unit in Defense Position."
     }
   },
   "classic-006": {
@@ -3168,7 +3168,7 @@
     "set": "Classic",
     "type": "Trap",
     "tags": [],
-    "rarity": "Common",
+    "rarity": "Legendary",
     "token": false,
     "cost": 2,
     "params": [
@@ -3192,11 +3192,11 @@
     "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Activates when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand."
+      "text": "Reveals when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activates when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand. The cards you get cost ({discount}) less."
+      "text": "Reveals when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand. The cards you get cost ({discount}) less."
     }
   },
   "classic-010": {
@@ -3222,11 +3222,11 @@
     "loc": 45,
     "base": {
       "keywords": [],
-      "text": "Activates when your opponent plays a ({threshold}) Cost or less card: Counter and exile it."
+      "text": "Reveals when your opponent plays a ({threshold}) Cost or less card: Counter and exile it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activates when your opponent plays a ({threshold}) Cost or less card: Counter and exile it. Then exile random enemy permanents that together cost up to ({threshold}) minus its cost."
+      "text": "Reveals when your opponent plays a ({threshold}) Cost or less card: Counter and exile it. Then exile random enemy permanents that together cost up to ({threshold}) minus its cost."
     }
   },
   "classic-011": {
@@ -3268,7 +3268,7 @@
     "tags": [
       "Book"
     ],
-    "rarity": "Common",
+    "rarity": "Epic",
     "token": false,
     "cost": 1,
     "params": [
@@ -3374,11 +3374,11 @@
     "loc": 49,
     "base": {
       "keywords": [],
-      "text": "Activates when any of your Units die: Return them to hand. They cost ({setCost})."
+      "text": "Reveals when any of your Units die: Return them to hand. They cost ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activates when any of your Units would die: Flicker them instead, so they survive. Add a copy of each to your hand. The copies cost ({setCost})."
+      "text": "Reveals when any of your Units would die: Flicker them instead, so they survive. Add a copy of each to your hand. The copies cost ({setCost})."
     }
   },
   "classic-015": {
@@ -3426,7 +3426,7 @@
     "tags": [
       "Book"
     ],
-    "rarity": "Common",
+    "rarity": "Epic",
     "token": false,
     "cost": 1,
     "params": [
@@ -3472,11 +3472,11 @@
     "loc": 30,
     "base": {
       "keywords": [],
-      "text": "Activates when your opponent plays a Spell: Counter it."
+      "text": "Reveals when your opponent plays a Spell: Counter it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activates when your opponent plays a Spell: Counter it. Add a copy of it to your hand. The copy costs ({setCost})."
+      "text": "Reveals when your opponent plays a Spell: Counter it. Add a copy of it to your hand. The copy costs ({setCost})."
     }
   },
   "classic-018": {
@@ -3486,7 +3486,7 @@
     "set": "Classic",
     "type": "Spell",
     "tags": [],
-    "rarity": "Common",
+    "rarity": "Epic",
     "token": false,
     "cost": 3,
     "loc": 32,
@@ -3741,7 +3741,7 @@
     "set": "Classic",
     "type": "Spell",
     "tags": [],
-    "rarity": "Common",
+    "rarity": "Epic",
     "token": false,
     "cost": 0,
     "params": [
@@ -3829,13 +3829,13 @@
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Plague Tokens placed on this are multiplied by {multiplier}."
+      "text": "Plague Counters placed on this are multiplied by {multiplier}."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Plague Tokens placed on this are multiplied by {multiplier}."
+      "text": "Plague Counters placed on this are multiplied by {multiplier}."
     }
   },
   "classic-028": {
@@ -3845,7 +3845,7 @@
     "set": "Classic",
     "type": "Field Spell",
     "tags": [],
-    "rarity": "Epic",
+    "rarity": "Legendary",
     "token": false,
     "cost": 0,
     "params": [
@@ -4201,7 +4201,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nActivates when the cards a player has played in a turn reach {plays}: Summon this as a Unit.\nOnce this has activated: Whenever a player plays a card, draw {draw} and deal {damage} damage to the enemy hero."
+      "text": "Animated\nReveals when the cards a player has played in a turn reach {plays}: Summon this as a Unit.\nOnce this has revealed: Whenever a player plays a card, draw {draw} and deal {damage} damage to the enemy hero."
     },
     "radiant": {
       "attack": 8,
@@ -4211,7 +4211,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nActivates when the cards a player has played in a turn reach {plays}: Summon this as a Unit.\nOnce this has activated: Whenever a player plays a card, draw {draw} and deal {damage} damage to the enemy hero."
+      "text": "Animated\nReveals when the cards a player has played in a turn reach {plays}: Summon this as a Unit.\nOnce this has revealed: Whenever a player plays a card, draw {draw} and deal {damage} damage to the enemy hero."
     }
   },
   "classic-039": {
@@ -4239,11 +4239,11 @@
     "loc": 33,
     "base": {
       "keywords": [],
-      "text": "Place {tokens|Plague Token|Plague Tokens} on a permanent. If it's an enemy permanent with at least as many Plague Tokens as its cost, steal it. Otherwise, draw a card for each Plague Token on it."
+      "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy permanent with at least as many Plague Counters as its cost, steal it. Otherwise, draw a card for each Plague Counter on it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Place {tokens|Plague Token|Plague Tokens} on a permanent. If it's an enemy permanent with at least as many Plague Tokens as its cost, steal it. Otherwise, draw a card for each Plague Token on it."
+      "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy permanent with at least as many Plague Counters as its cost, steal it. Otherwise, draw a card for each Plague Counter on it."
     }
   },
   "classic-040": {
@@ -4348,11 +4348,11 @@
     "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Units have +{stats}/+{stats} for each Plague Token on them. Enemy Units have −{stats}/−{stats} for each Plague Token on them.\nActivate: Place a Plague Token on each of {tokens|random Unit|random Units}."
+      "text": "Aura: Your Units have +{stats}/+{stats} for each Plague Counter on them. Enemy Units have −{stats}/−{stats} for each Plague Counter on them.\nActivate: Place a Plague Counter on each of {tokens|random Unit|random Units}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Units have +{stats}/+{stats} for each Plague Token on them. Enemy Units have −{stats}/−{stats} for each Plague Token on them.\nActivate: Place a Plague Token on each of {tokens|random Unit|random Units}."
+      "text": "Aura: Your Units have +{stats}/+{stats} for each Plague Counter on them. Enemy Units have −{stats}/−{stats} for each Plague Counter on them.\nActivate: Place a Plague Counter on each of {tokens|random Unit|random Units}."
     }
   },
   "classic-043": {
@@ -4380,11 +4380,11 @@
     "loc": 35,
     "base": {
       "keywords": [],
-      "text": "Destroy all Units. Gain {mana} mana for each Plague Token that was on them."
+      "text": "Destroy all Units. Gain {mana} mana for each Plague Counter that was on them."
     },
     "radiant": {
       "keywords": [],
-      "text": "Destroy all Units. Gain {mana} mana for each Plague Token that was on them. Then summon, under your control, each of those Units that had a Plague Token from its owner's graveyard."
+      "text": "Destroy all Units. Gain {mana} mana for each Plague Counter that was on them. Then summon, under your control, each of those Units that had a Plague Counter from its owner's graveyard."
     }
   },
   "classic-044": {
@@ -4519,13 +4519,13 @@
       "attack": 3,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, return this to hand."
+      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps reveals, return this to hand."
     },
     "radiant": {
       "attack": 6,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, return this to hand. It costs ({returnCost})."
+      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps reveals, return this to hand. It costs ({returnCost})."
     }
   },
   "classic-048": {
@@ -4681,11 +4681,11 @@
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Activates when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw {draw}."
+      "text": "Reveals when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activates when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw your deck."
+      "text": "Reveals when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw your deck."
     }
   },
   "classic-053": {
@@ -4723,13 +4723,13 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Place {tokens|Plague Token|Plague Tokens} on another permanent.\nWhenever Plague Tokens are placed on this, draw {draw}."
+      "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on another permanent.\nWhenever Plague Counters are placed on this, draw {draw}."
     },
     "radiant": {
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Place {tokens|Plague Token|Plague Tokens} on another permanent.\nWhenever Plague Tokens are placed on this, draw {draw}."
+      "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on another permanent.\nWhenever Plague Counters are placed on this, draw {draw}."
     }
   },
   "classic-054": {
@@ -4906,13 +4906,13 @@
       "attack": 2,
       "health": 3,
       "keywords": [],
-      "text": "Cry: Deal damage equal to the number of Plague Tokens on the field."
+      "text": "Cry: Deal damage equal to the number of Plague Counters on the field."
     },
     "radiant": {
       "attack": 4,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Place {tokens|Plague Token|Plague Tokens} on this. Then deal damage equal to the number of Plague Tokens on the field."
+      "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this. Then deal damage equal to the number of Plague Counters on the field."
     }
   },
   "classic-060": {
@@ -4922,7 +4922,7 @@
     "set": "Classic",
     "type": "Spell",
     "tags": [],
-    "rarity": "Rare",
+    "rarity": "Epic",
     "token": false,
     "cost": 5,
     "loc": 6,
@@ -4944,7 +4944,7 @@
     "tags": [
       "Plague"
     ],
-    "rarity": "Legendary",
+    "rarity": "Rare",
     "token": false,
     "cost": 3,
     "params": [
@@ -4977,7 +4977,7 @@
           "kind": "Trample"
         }
       ],
-      "text": "Tribute 1, Rush, Trample\nCry: Place {tokens|Plague Token|Plague Tokens}. Draw {draw}."
+      "text": "Tribute 1, Rush, Trample\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
     },
     "radiant": {
       "attack": 14,
@@ -4990,7 +4990,7 @@
           "kind": "Trample"
         }
       ],
-      "text": "Tribute 1, Rush, Trample\nCry: Place {tokens|Plague Token|Plague Tokens}. Draw {draw}."
+      "text": "Tribute 1, Rush, Trample\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
     }
   },
   "classic-062": {
@@ -5008,11 +5008,11 @@
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "At the start of each player's turn: Destroy every permanent that player controls with a Plague Token on it."
+      "text": "At the start of each player's turn: Destroy every permanent that player controls with a Plague Counter on it."
     },
     "radiant": {
       "keywords": [],
-      "text": "At the start of your opponent's turn: Destroy every permanent they control with a Plague Token on it."
+      "text": "At the start of your opponent's turn: Destroy every permanent they control with a Plague Counter on it."
     }
   },
   "classic-063": {
@@ -5031,7 +5031,7 @@
       {
         "key": "tokens",
         "base": 1,
-        "radiant": 2,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
@@ -5039,7 +5039,7 @@
       {
         "key": "draw",
         "base": 1,
-        "radiant": 2,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
@@ -5048,11 +5048,11 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Place {tokens|Plague Token|Plague Tokens} on each permanent. Draw {draw}."
+      "text": "Start of turn: Reveal. Place {tokens|Plague Counter|Plague Counters} on each permanent. Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Place {tokens|Plague Token|Plague Tokens} on each permanent. Draw {draw}."
+      "text": "Start of turn: Reveal. Place {tokens|Plague Counter|Plague Counters} on each permanent. Draw {draw}."
     }
   },
   "classic-064": {
@@ -5098,11 +5098,11 @@
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "End of turn: Flip a coin. On heads, this activates: Recruit {recruits|card|cards}."
+      "text": "End of turn: Flip a coin. On heads, this reveals: Recruit {recruits|card|cards}."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Flip a coin. On tails, Recruit a card. On heads, this activates: Recruit {recruits|card|cards}."
+      "text": "End of turn: Flip a coin. On tails, Recruit a card. On heads, this reveals: Recruit {recruits|card|cards}."
     }
   },
   "classic-066": {
@@ -5245,7 +5245,7 @@
           "kind": "Charge"
         }
       ],
-      "text": "Charge\nHas First Strike while it has a Plague Token.\nHas +{attack} Attack for each Plague Token on it."
+      "text": "Charge\nHas First Strike while it has a Plague Counter.\nHas +{attack} Attack for each Plague Counter on it."
     },
     "radiant": {
       "attack": 8,
@@ -5255,7 +5255,7 @@
           "kind": "Charge"
         }
       ],
-      "text": "Charge\nHas First Strike while it has a Plague Token.\nHas +{attack} Attack for each Plague Token on it."
+      "text": "Charge\nHas First Strike while it has a Plague Counter.\nHas +{attack} Attack for each Plague Counter on it."
     }
   },
   "classic-070": {
@@ -5284,11 +5284,11 @@
     "loc": 3,
     "base": {
       "keywords": [],
-      "text": "Place {tokens|Plague Token|Plague Tokens}."
+      "text": "Place {tokens|Plague Counter|Plague Counters}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Place {tokens|Plague Token|Plague Tokens}."
+      "text": "Place {tokens|Plague Counter|Plague Counters}."
     }
   },
   "classic-071": {
@@ -5328,11 +5328,11 @@
     "loc": 19,
     "base": {
       "keywords": [],
-      "text": "Activates when your opponent plays a Spell, Field Spell, Trap or Field Trap: Counter it."
+      "text": "Reveals when your opponent plays a Spell, Field Spell, Trap or Field Trap: Counter it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activates when your opponent plays a Spell, Field Spell, Trap or Field Trap: Steal it."
+      "text": "Reveals when your opponent plays a Spell, Field Spell, Trap or Field Trap: Steal it."
     }
   },
   "classic-073": {
@@ -5404,11 +5404,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Cry: Place {tokens|Plague Token|Plague Tokens} on this.\nYou may play Units from your graveyard, paying with Plague Tokens from this: each token pays (1), and each such play spends at least 1 token."
+      "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this.\nYou may play Units from your graveyard, paying with Plague Counters from this: each counter pays (1), and each such play spends at least 1 counter."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cry: Place {tokens|Plague Token|Plague Tokens} on this.\nYou may play Units from your graveyard, paying with Plague Tokens from this: each token pays (1), and each such play spends at least 1 token."
+      "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this.\nYou may play Units from your graveyard, paying with Plague Counters from this: each counter pays (1), and each such play spends at least 1 counter."
     }
   },
   "classic-075": {
@@ -5450,7 +5450,7 @@
     "tags": [
       "Plague"
     ],
-    "rarity": "Common",
+    "rarity": "Rare",
     "token": false,
     "cost": 2,
     "params": [
@@ -5480,7 +5480,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nCry: Place {tokens|Plague Token|Plague Tokens}. Draw {draw}."
+      "text": "Rush\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
     },
     "radiant": {
       "attack": 8,
@@ -5490,7 +5490,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nCry: Place {tokens|Plague Token|Plague Tokens}. Draw {draw}."
+      "text": "Rush\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
     }
   },
   "classic-077": {
@@ -5568,11 +5568,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "Activate ♾️: Remove a Plague Token from a permanent. If it's an enemy permanent, exile it. If it's your backrow card, draw {draw}. If it's your Unit, it attacks a random enemy {attacks|time|times}."
+      "text": "Activate ♾️: Remove a Plague Counter from a permanent. If it's an enemy permanent, exile it. If it's your backrow card, draw {draw}. If it's your Unit, it attacks a random enemy {attacks|time|times}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate ♾️: Remove a Plague Token from a permanent. If it's an enemy permanent, fuse it onto a card of yours of its type on your field, in your hand or in your deck, or exile it if you have none. If it's your backrow card, draw {draw}. If it's your Unit, it attacks a random enemy {attacks|time|times}."
+      "text": "Activate ♾️: Remove a Plague Counter from a permanent. If it's an enemy permanent, fuse it onto a card of yours of its type on your field, in your hand or in your deck, or exile it if you have none. If it's your backrow card, draw {draw}. If it's your Unit, it attacks a random enemy {attacks|time|times}."
     }
   },
   "classic-079": {
@@ -5886,11 +5886,11 @@
     "loc": 28,
     "base": {
       "keywords": [],
-      "text": "This enters with X Plague Tokens on it.\nAura: Counter every card played whose cost equals the number of Plague Tokens on this."
+      "text": "This enters with X Plague Counters on it.\nAura: Counter every card played whose cost equals the number of Plague Counters on this."
     },
     "radiant": {
       "keywords": [],
-      "text": "This enters with X Plague Tokens on it.\nAura: Counter every card your opponent plays whose cost equals the number of Plague Tokens on this."
+      "text": "This enters with X Plague Counters on it.\nAura: Counter every card your opponent plays whose cost equals the number of Plague Counters on this."
     }
   },
   "classic-088": {
@@ -6033,11 +6033,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Activates when an enemy Unit attacks your hero: Exile all Units. Lock this zone."
+      "text": "Reveals when an enemy Unit attacks your hero: Exile all Units. Lock this zone."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activates when an enemy Unit attacks your hero: Exile all enemy Units. Lock this zone."
+      "text": "Reveals when an enemy Unit attacks your hero: Exile all enemy Units. Lock this zone."
     }
   },
   "classicplus-002": {
@@ -6055,11 +6055,11 @@
     "loc": 30,
     "base": {
       "keywords": [],
-      "text": "Activates when an enemy Unit attacks your hero: Fill your board with random Felinor Units. Give them Taunt."
+      "text": "Reveals when an enemy Unit attacks your hero: Fill your board with random Felinor Units. Give them Taunt."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activates when an enemy Unit attacks your hero: Fill your board with random Radiant Felinor Units. Give them Taunt."
+      "text": "Reveals when an enemy Unit attacks your hero: Fill your board with random Radiant Felinor Units. Give them Taunt."
     }
   },
   "classicplus-003": {
@@ -6097,13 +6097,13 @@
       "attack": 1,
       "health": 6,
       "keywords": [],
-      "text": "End of turn: Place {tokens|Plague Token|Plague Tokens} on this.\nDeath: Deal {damage} damage to a random enemy for each Plague Token on this."
+      "text": "End of turn: Place {tokens|Plague Counter|Plague Counters} on this.\nDeath: Deal {damage} damage to a random enemy for each Plague Counter on this."
     },
     "radiant": {
       "attack": 2,
       "health": 12,
       "keywords": [],
-      "text": "End of turn: Place {tokens|Plague Token|Plague Tokens} on this.\nDeath: Deal {damage} damage to a random enemy for each Plague Token on this."
+      "text": "End of turn: Place {tokens|Plague Counter|Plague Counters} on this.\nDeath: Deal {damage} damage to a random enemy for each Plague Counter on this."
     }
   },
   "classicplus-004": {
@@ -7198,12 +7198,12 @@
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Activates when an enemy would be healed: For the rest of this turn, healing on enemies deals that much Pierce damage to them instead."
+      "text": "Reveals when an enemy would be healed: For the rest of this turn, healing on enemies deals that much Pierce damage to them instead."
     },
     "radiant": {
       "type": "Field Trap",
       "keywords": [],
-      "text": "Activates when an enemy would be healed: From now on, healing on enemies deals that much Pierce damage to them instead."
+      "text": "Reveals when an enemy would be healed: From now on, healing on enemies deals that much Pierce damage to them instead."
     }
   },
   "classicplus-023": {
@@ -7413,7 +7413,7 @@
     "set": "Classic+",
     "type": "Spell",
     "tags": [],
-    "rarity": "Epic",
+    "rarity": "Mythic",
     "token": false,
     "cost": 3,
     "params": [
@@ -9540,7 +9540,7 @@
     "set": "Classic+",
     "type": "Spell",
     "tags": [],
-    "rarity": "Rare",
+    "rarity": "Epic",
     "token": false,
     "cost": 2,
     "params": [
@@ -9789,11 +9789,11 @@
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Activates when your opponent plays their 3rd card in a turn: After it resolves, their turn ends."
+      "text": "Reveals when your opponent plays their 3rd card in a turn: After it resolves, their turn ends."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activates when your opponent plays their 2nd card in a turn: After it resolves, their turn ends."
+      "text": "Reveals when your opponent plays their 2nd card in a turn: After it resolves, their turn ends."
     }
   },
   "classicplus-t-ai-09": {
@@ -9812,11 +9812,11 @@
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "Activates when your opponent plays a Spell that targets one of your Units: Counter it."
+      "text": "Reveals when your opponent plays a Spell that targets one of your Units: Counter it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activates when your opponent plays a Spell that targets you or one of your cards: Counter it. Draw 1."
+      "text": "Reveals when your opponent plays a Spell that targets you or one of your cards: Counter it. Draw 1."
     }
   },
   "classicplus-t-ai-10": {

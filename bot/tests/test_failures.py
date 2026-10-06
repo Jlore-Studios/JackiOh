@@ -37,6 +37,22 @@ def cycle(n, *, ok=True, error=None, red=(), review="blocked", claims=("It break
     return entry
 
 
+class CallErrorTests(unittest.TestCase):
+    """#314: a failed review or self-check call shows its error in the round-by-round table."""
+
+    def test_the_reviewers_and_the_self_checks_errors_are_printed(self):
+        failed = {"verdict": "unreadable", "readable": False, "findings": [],
+                  "error": "Your daily allowance is spent"}
+        rounds = [dict(cycle(1, review="none"), review=failed),
+                  dict(cycle(2, review="none"), self_check=[
+                      {"n": 1, "review": {"verdict": "unreadable", "readable": False,
+                                          "findings": [], "error": "model unavailable"},
+                       "flagged": 1}])]
+        text = failures.why(rounds, 10)
+        self.assertIn("**review unreadable**: Your daily allowance is spent", text)
+        self.assertIn("**self-check call failed**: model unavailable", text)
+
+
 class WhyTests(unittest.TestCase):
     def test_every_round_used_says_why_round_by_round(self):
         cycles = [cycle(1, red=("typecheck",)), cycle(2), cycle(3, claims=("It breaks replay.",

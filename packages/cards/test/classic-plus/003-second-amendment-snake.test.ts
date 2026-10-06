@@ -1,5 +1,5 @@
 // C+ #3 Second Amendment Snake — SPEC §8.7 row 3, BUILD M9 Classic+ row C+ 3: "At its controller's end
-// of turn places 2 Plague Tokens on itself as one placement (`counterChanged` with `plague`), not at the
+// of turn places 2 Plague Counters on itself as one placement (`counterChanged` with `plague`), not at the
 // opponent's end; Death reads its last-known tokens (R78) and deals that many hits of 1, each to a
 // random enemy (hero or Unit) still standing, so a unit an earlier hit brought to 0 is not picked again,
 // all before the state check (R59); 0 tokens deals nothing and draws nothing (R129); its hits are no
@@ -22,7 +22,7 @@ const MR_TOKEN = "core-015"; // (1) 1/1.
 const SOLARIUS = "classicplus-038"; // Spell Damage +2.
 const FILLER = "core-010";
 const STOCKPILE = "core-005";
-const HITS_LABEL = "for each Plague Token on this";
+const HITS_LABEL = "for each Plague Counter on this";
 
 type Damage = Extract<GameEvent, { type: "damage" }>;
 
@@ -64,7 +64,7 @@ describe("C+ #3 Second Amendment Snake", () => {
   });
 
   describe("base", () => {
-    it("E19 at its controller's end of turn places 2 Plague Tokens on itself in one placement, not at the opponent's", () => {
+    it("E19 at its controller's end of turn places 2 Plague Counters on itself in one placement, not at the opponent's", () => {
       const s = withSnake(0);
       const snake = s.card(SNAKE);
 
@@ -169,7 +169,7 @@ describe("C+ #3 Second Amendment Snake", () => {
   });
 
   describe("radiant", () => {
-    it("places 3 Plague Tokens at its controller's end of turn, and its Death deals 3 hits", () => {
+    it("places 3 Plague Counters at its controller's end of turn, and its Death deals 3 hits", () => {
       const s = withSnake(0, {}, { radiant: true });
       const snake = s.card(SNAKE);
 
