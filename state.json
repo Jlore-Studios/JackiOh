@@ -2747,6 +2747,14 @@
         }
       }
     },
+    "362": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-06T04:25:01Z",
+      "issue": 354,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "37": {
       "died": 0,
       "failures": 0,
