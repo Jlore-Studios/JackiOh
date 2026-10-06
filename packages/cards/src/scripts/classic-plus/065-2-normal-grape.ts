@@ -1,10 +1,11 @@
 // C+ #65.2 Normal Grape (SPEC §8.7 row 65.2). (1) Spell, Fruit, Token (printed Common).
-//   Base:    "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal
-//            it {amount}. Draw {draw}. Each costs (1) less."
-//   Radiant: the same text, amount 4 and draw 2.
+//   Base:    "Deal {amount} damage to an enemy or heal an ally {amount}. Draw {draw}. Reduce its cost
+//            by (1)."
+//   Radiant: the same text, amount 4 and draw 4: "… Draw {draw}. Reduce their cost by (1)."
 //   Engine:  "The target, any unit or hero, is declared at play (R81); an enemy is one the opponent
-//            controls, the heroes included. The drawn card gets `costMod` −1 (never an X-cost card,
-//            R65); a card cast on draw never reaches the hand (R58) and a burned one isn't there, so
+//            controls, the heroes included. Each drawn card gets `costMod` −1 (never an X-cost card,
+//            R65) — one card, "its cost", on the base face; four cards, "their cost", on the Radiant;
+//            a card cast on draw never reaches the hand (R58) and a burned one isn't there, so
 //            neither gets it. Tunes: amount 2 ↑; draw 1 ↑."
 //
 // The target travels in the play (R81): any Unit or hero on either side. Whether it is an enemy is read

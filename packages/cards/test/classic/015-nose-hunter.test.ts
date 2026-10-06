@@ -1,10 +1,11 @@
-// C #15 Nose Hunter — SPEC §8.6 row 15, BUILD M9 Classic row C 15: "Activate, once per turn (R392,
+// C #15 Nose Hunter — SPEC §8.6 row 15, BUILD M9 Classic row C 15: "Activate Infinity (R392,
 // R384): its cost, discarding a random card of yours, is paid as it activates, so with an empty hand
 // it can't activate and `legalActions` doesn't list it; then exile the bottom card of the opponent's
 // deck (an empty deck: nothing); usable the turn it is played (no sickness, no exertion), only in your
-// main phase; a second activation that turn is refused; not a play (R384); the discard is a discard
-// (C #64 sees it); no event carries a deck position; radiant 6/2: also exile a random card from their
-// hand (empty: nothing), public once in exile; its tuned number (exiled) reads through `param()` (R386)".
+// main phase; as many activations a turn as its cost can be paid; not a play (R384); the discard is a
+// discard (C #64 sees it); no event carries a deck position; radiant 6/2: also exile a random card from
+// their hand (empty: nothing), public once in exile; its tuned number (exiled) reads through `param()`
+// (R386)".
 
 import { describe, expect, it } from "vitest";
 import { legalActions, stepParam } from "@jackioh/engine";
@@ -40,11 +41,11 @@ function defsOf(cards: readonly { defId: string }[]): string[] {
 }
 
 describe("C #15 Nose Hunter", () => {
-  it("declares one Activate ability on each face, once per turn, whose cost is a random discard", () => {
+  it("declares one Activate Infinity ability on each face, whose cost is a random discard", () => {
     expect(def.id).toBe(NOSE);
     for (const face of [base, radiant]) {
       expect(face.activations).toHaveLength(1);
-      expect(face.activations?.[0]?.uses).toBe(1);
+      expect(face.activations?.[0]?.uses).toBe("unlimited");
       expect(face.activations?.[0]?.cost).toEqual({ discardRandom: 1 });
     }
   });
@@ -119,20 +120,15 @@ describe("C #15 Nose Hunter", () => {
       s.expectHealth("p2", 27);
     });
 
-    it("R384 a second activation that turn is refused and not listed; it is back next turn", () => {
+    it("Activate Infinity: a second activation that turn works too, each paying its own discard", () => {
       const s = setup({ hand: [FILLER, FILLER, FILLER], field: [NOSE] });
       const nose = s.card(NOSE);
 
       s.activate(nose);
-      expect(activations(s, "p1", nose.id)).toHaveLength(0);
-      expect(() => s.activate(nose)).toThrow();
-      expect(s.pile("p2", "exile")).toHaveLength(1);
-
-      s.endTurn().endTurn();
-      expect(s.state.active).toBe("p1");
       expect(activations(s, "p1", nose.id).length).toBeGreaterThan(0);
       s.activate(nose);
       expect(s.pile("p2", "exile")).toHaveLength(2);
+      expect(s.hand("p1")).toHaveLength(1);
     });
 
     it("R384 only its controller, in their own main phase: on the opponent's turn it can't be activated", () => {

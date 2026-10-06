@@ -75,7 +75,8 @@ function contentsOf(state: GameState, ref: ZoneSlot): CardInstance[] {
 }
 
 /**
- * Whether a destination can take a rotating card. A Locked zone never accepts one (§3.2, R14) and
+ * Whether a destination can take a rotating card. A Locked zone never accepts one (#52's
+ * card-specific override of R688, R14) and
  * a zone reserved for a dying Reborn unit counts as occupied for every other card (§3.2, R64).
  */
 function canAccept(state: GameState, ref: ZoneSlot): boolean {

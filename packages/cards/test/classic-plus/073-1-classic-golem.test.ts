@@ -37,16 +37,17 @@ function attackWith(s: Scenario): Scenario {
 }
 
 describe("C+ #73.1 Classic Golem", () => {
-  it("is a (4) Unit token printed Legendary: 10/10 Rush, First Strike, Trample; radiant 20/20 adds Divine Shield", () => {
+  it("is a (4) Unit token printed Legendary: 10/10 Rush, First Strike, Trample; radiant 20/20 trades First Strike for Divine Shield", () => {
     expect(def.token).toBe(true);
     expect(def.printedRarity).toBe("Legendary");
     expect(def.cost).toBe(4);
     expect([def.base.attack, def.base.health]).toEqual([10, 10]);
     expect(def.base.keywords.map((k) => k.kind)).toEqual(["Rush", "First Strike", "Trample"]);
     expect([def.radiant.attack, def.radiant.health]).toEqual([20, 20]);
-    expect(def.radiant.keywords.map((k) => k.kind)).toEqual(["Rush", "First Strike", "Trample", "Divine Shield"]);
+    expect(def.radiant.keywords.map((k) => k.kind)).toEqual(["Rush", "Trample", "Divine Shield"]);
     expect(base.afterAttack).toBeTypeOf("function");
-    expect(radiant).toBe(base);
+    expect(radiant.afterAttack).toBeTypeOf("function");
+    expect(radiant).not.toBe(base);
   });
 
   describe("base", () => {
@@ -174,13 +175,14 @@ describe("C+ #73.1 Classic Golem", () => {
   });
 
   describe("radiant", () => {
-    it("20/20 kills a 2/12 with First Strike, unhurt, and transforms on its base face, ready to attack again", () => {
+    it("20/20 kills a 2/12, its Divine Shield taking the hit, and transforms into a Radiant Unit, ready to attack again", () => {
       const s = attackWith(golem(FAUCI, { radiantFace: true }));
       s.expectInZone("core-091", "graveyard");
-      expect(s.events.some((event) => event.type === "divineShieldLost")).toBe(false);
+      // No First Strike on the Radiant face: the defender hits back, and the Shield absorbs it.
+      expect(s.events.some((event) => event.type === "divineShieldLost")).toBe(true);
       const [event] = transformed(s);
       expect(cardDef(event?.toDefId ?? "").set).not.toBe("Core");
-      expect(s.unit("p1", 1)?.radiant).toBe(false);
+      expect(s.unit("p1", 1)?.radiant).toBe(true);
       expect(s.unit("p1", 1)?.summonedTurn).toBeUndefined();
     });
 

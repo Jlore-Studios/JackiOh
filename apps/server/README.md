@@ -82,6 +82,13 @@ db:migrate` does what it looks like.
 `release` runs steps 1 and 2 together, and Render's start command runs it before every boot
 (`render.yaml`), so a deploy migrates and reseeds the database itself. Both steps are idempotent.
 
+**Migrations are append-only.** `db:migrate` refuses to start when a file the database already
+applied has changed, so an edit to an applied migration, even to a comment, stops every deploy
+at boot: #325's rename edited a comment in `0020_plague_tag.sql`, and Render served no deploy from
+`97a00bd6` until it was put back. Change the schema with a new file. `test/db/migrations-pinned.test.ts`
+pins every file's checksum, so CI fails on such an edit, and a new migration adds its line there
+(the test prints the checksum).
+
 Step 3 mints one code. Every account starts `pending` and a pending account can do nothing but
 look at the code screen (§9.4). `src/db/mint-code.ts` is a thin wrapper over `mintInviteCode` in
 `src/api/codes.ts`, which is the only thing that creates one: the plaintext goes to stdout exactly

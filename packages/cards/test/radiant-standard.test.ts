@@ -4,8 +4,8 @@
 // to it: a Radiant Unit's attack and health are each at least twice its base face's, a 0 staying 0
 // (#1 Big D-fender, #65.1 Spikey Pillow), and a token summoned X/X (the Bread Token's printed 0/0)
 // passing on its printed face because the card that summons it scales X itself. A card allowed
-// below it is named in `STAT_EXCEPTIONS` with its reason: Core has none, and patch v0.2.0 names the
-// two the designer's numbers keep (docs/classic-sets.md B9 #17 and #20). A "[3X/3X]" face (Classic+
+// below it is named in `STAT_EXCEPTIONS` with its reason: none remain, since patch v0.2.10 doubled
+// the two v0.2.0 exceptions (Joro 2/2, BOOM! Big Max 13/8 → 26/16). A "[3X/3X]" face (Classic+
 // #69 Buff Billy, B2.7) is held to the same factor on its X multiples. The effect half — 100–150% stronger, a broader scope, or an added rider — is a judgement, recorded
 // card by card in docs/radiant-audit.md, and this file proves that document covers every entry.
 //
@@ -24,17 +24,11 @@ const ENTRIES: readonly CardDef[] = Object.values(CATALOG);
 const STAT_FACTOR = 2;
 
 /**
- * R275's named exceptions to the stat half, by id, with the reason (docs/classic-sets.md B9, whose
- * defaults patch v0.2.0 adopts). Core has none.
+ * R275's named exceptions to the stat half, by id, with the reason. Core has none, and since patch
+ * v0.2.10 (issue #88) neither does Classic nor Classic+: Joro is 2/2 and BOOM! Big Max is 13/8 →
+ * 26/16, both doubling exactly, so the v0.2.0 exceptions are gone and the record stays empty.
  */
-const STAT_EXCEPTIONS: Readonly<Record<string, string>> = {
-  "classic-033":
-    "Joro stays 1/1 on its Radiant face, the designer's number (B9 #17): its Radiant adds Indestructible, " +
-    "which makes the decoy endless, instead of doubling a 1/1 body",
-  "classic-080":
-    "BOOM! Big Max keeps its 26 attack at 26/16, the designer's number (B9 #20): its health doubles and " +
-    "Charge replaces Rush as the Radiant rider",
-};
+const STAT_EXCEPTIONS: Readonly<Record<string, string>> = {};
 
 const AUDIT = new URL("../../../docs/radiant-audit.md", import.meta.url);
 
@@ -70,7 +64,7 @@ describe("R275 the Radiant power standard (SPEC §5.2)", () => {
       );
       expect(below, `${id} is below the stat half, or it needs no exception`).toBe(true);
     }
-    expect(Object.keys(STAT_EXCEPTIONS)).toEqual(["classic-033", "classic-080"]);
+    expect(Object.keys(STAT_EXCEPTIONS)).toEqual([]);
   });
 
   it("R275 is recorded card by card: docs/radiant-audit.md has one row for every catalog entry", () => {

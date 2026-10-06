@@ -29,6 +29,10 @@ MARKER = "<!-- jackioh-bot -->"
 
 STATE_BRANCH = "bot-state"
 STATE_FILE = "state.json"
+#: The files an orphan branch the bot writes to starts with beside its own: Vercel counts a
+#: deployment for every push to every branch and reads its settings from the commit pushed, so a
+#: branch with no `vercel.json` of its own deploys on every write (docs/architecture.md, §4.2).
+NO_DEPLOY = {"vercel.json": '{ "git": { "deploymentEnabled": false } }\n'}
 NIGHT_WORKFLOW = "bot-night.yml"
 
 #: The environment key a run's model job receives its provider's secret in (`providers.py`).
@@ -53,6 +57,9 @@ SECRET_KEYS: tuple[str, ...] = (
     "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
 )
 
+#: GitHub refuses a label whose description is longer than this (422), so `harness setup` and the
+#: sweep could never create `method:manual` and `method:use-bot` while theirs were 107 and 111.
+LABEL_DESCRIPTION_MAX = 100
 LABELS: dict[str, tuple[str, str]] = {
     # name: (color, description)
     "bot:build": ("1d76db", "Queued for the night bot to build"),
@@ -76,8 +83,8 @@ LABELS: dict[str, tuple[str, str]] = {
     "priority:medium": ("fbca04", "The night bot picks this up after priority:high"),
     "priority:low": ("0e8a16", "The night bot picks this up last, after unlabelled work"),
     "Info": ("bfdadc", "For the record, nothing to build: migrations, statistics, the night bot's status"),
-    "method:manual": ("f9d0c4", "People handle it: two minutes after it goes on, triage labels it human, retitles it and assigns both people"),
-    "method:use-bot": ("c2e0c6", "The night bot takes it: two minutes after it goes on, triage labels, retitles and queues it and assigns the bot"),
+    "method:manual": ("f9d0c4", "People do it: after two minutes, triage labels it human, fixes its title and assigns both people"),
+    "method:use-bot": ("c2e0c6", "The bot does it: after two minutes, triage labels, retitles and queues it, and assigns the bot"),
 }
 
 LABEL_BUILD = "bot:build"

@@ -1,5 +1,5 @@
 // C #33 Joro (SPEC §8.6 row 33, §6.2 Replacement, §6.3 Redirect; R64, R97, R121,
-// R177, R275, R347, R394, R450, R651). Unit, cost 0, Legendary, 1/1 → 1/1.
+// R177, R275, R347, R394, R450, R651). Unit, cost 0, Legendary, 1/1 → 2/2.
 //   Base:    "While this is in your hand: When your opponent targets one of your Units with a Spell,
 //            summon this and make it the new target."
 //   Radiant: "Indestructible\nWhile this is in your hand: …" (the same).
@@ -11,8 +11,7 @@
 //            Spell's prompted pick; random picks, "all" effects, attacks and forced attacks (R121)
 //            summon nothing. One Joro answers one targeting; a Spell that names several of your units
 //            redirects the first. Joro answers from the hand only, a Yu-Gi-Oh hand trap (R394). Its
-//            Radiant face keeps 1/1 and adds Indestructible, an endless decoy, and is named as the
-//            exception to R275's stat half. Tunes: none."
+//            Radiant face doubles to 2/2 and adds Indestructible, an endless decoy. Tunes: none."
 //
 // THE WHOLE CARD IS ONE REPLACEMENT, declared as data (B5 E5, `Script.replacements`): at "targeted",
 // standing in its controller's hand (`where: "hand"`), answering only a Spell's targeting
@@ -29,7 +28,7 @@
 // replacement is decided in the engine, not offered as a choice, so neither the opponent's view nor
 // their `legalActions` changes with a Joro in the hand.
 //
-// The Radiant face's Indestructible is the catalog's (R275's named exception keeps it 1/1), so the
+// The Radiant face's Indestructible is the catalog's (2/2, holding R275's doubling), so the
 // script is the same; it survives the hit it draws, and R347 keeps Taunt off it.
 
 import type { Script } from "@jackioh/engine";

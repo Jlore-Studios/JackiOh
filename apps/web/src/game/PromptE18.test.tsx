@@ -443,7 +443,7 @@ describe("prompts the other seat holds, and the opponent's hand", () => {
     { key: "instance:o2", label: "Big Felinor", instanceId: "o2", defId: "core-043", radiant: true },
   ];
 
-  it("C #8 the holder of the opponent's mode prompt sees an ordinary mode picker and answers it", () => {
+  it("C #8 the holder of the opponent's short mode prompt sees a Discover pop-up and answers it", () => {
     const onAction = renderPrompt(
       baseView({
         viewer: "p2",
@@ -457,7 +457,8 @@ describe("prompts the other seat holds, and the opponent's hand", () => {
         ]),
       }),
     );
-    expect(modal()).toHaveAttribute("data-prompt-kind", "mode");
+    // Three options is a Discover pop-up, not the plain mode list (DISCOVER_OPTION_LIMIT).
+    expect(modal()).toHaveAttribute("data-prompt-kind", "discover");
     fireEvent.click(screen.getByTestId("prompt-option-mode:draw"));
     answered(onAction, [{ pick: "mode", option: "draw" }]);
   });

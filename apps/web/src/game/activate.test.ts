@@ -313,42 +313,26 @@ describe("R384 Heroic Power is built through the same activation", () => {
 // The play's new payments
 // ---------------------------------------------------------------------------------------------
 
-describe("B5 E5 a target that costs discards (Classic #89): the discards are picked after the target", () => {
+describe("B5 E5 R682 a target that costs discards (Classic #89): random at pay time, nothing picked", () => {
   const ghost = "e2";
   const legal: ActionBody[] = [
     { type: "play", instanceId: "h1", targets: [at("e1")] },
-    { type: "play", instanceId: "h1", targets: [at(ghost)], discards: ["h2", "h3"] },
-    { type: "play", instanceId: "h1", targets: [at(ghost)], discards: ["h2", "h4"] },
-    { type: "play", instanceId: "h1", targets: [at(ghost)], discards: ["h3", "h4"] },
+    { type: "play", instanceId: "h1", targets: [at(ghost)] },
   ];
 
-  it("targeting the ghost asks for the discards, from the cards the listed sets name", () => {
+  it("targeting the ghost sends the listed body at once, carrying no discards", () => {
     const view = activateView();
     const picked = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
     expect(outstandingNeed(picked)?.kind).toBe("target");
 
     const atGhost = onClickTarget(view, legal, picked, { on: "unit", instanceId: ghost, side: "opponent", lane: 2 });
-    expect(atGhost.action).toBeUndefined();
-    expect(outstandingNeed(atGhost.interaction)).toEqual({ kind: "discard", min: 2, max: 2, instanceIds: ["h2", "h3", "h4"] });
-
-    const paid = pickInPlay(atGhost.interaction, { discards: ["h4", "h2"] });
-    expect(paid.action).toEqual(legal[2]);
+    expect(atGhost.action).toEqual(legal[1]);
   });
 
-  it("targeting anything else asks for no discards and sends the body without them", () => {
+  it("targeting anything else sends the body without discards too", () => {
     const view = activateView();
     const picked = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
     expect(onClickTarget(view, legal, picked, { on: "unit", instanceId: "e1", side: "opponent", lane: 1 }).action).toEqual(legal[0]);
-  });
-
-  it("a set of discards the engine did not list is refused, and the pick stays open", () => {
-    const view = activateView();
-    const picked = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
-    const atGhost = onClickTarget(view, legal, picked, { on: "unit", instanceId: ghost, side: "opponent", lane: 2 }).interaction;
-
-    const refused = pickInPlay(atGhost, { discards: ["h2"] });
-    expect(refused.action).toBeUndefined();
-    expect(refused.interaction).toBe(atGhost);
   });
 });
 

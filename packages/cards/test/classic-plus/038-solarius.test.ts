@@ -1,13 +1,13 @@
 // C+ #38 Solarius — SPEC §8.7 row 38, BUILD M9 Classic+ row C+ 38: "Spell Damage +2 while on the
 // field: each hit of a Spell you play or cast gains 2 (§4.4 step 0), every hit of a multi-hit Spell,
 // never a Field Spell's, a Trap's, a Unit's or an activation's hit, never the opponent's Spells; two
-// sources add; Cry draws 1 (only when played or cast, R1); Death shuffles a Solarius-Prime (C+ #38.1)
-// into your deck at a random position (R80's cap), shown in your library list; Spell Damage and draw
-// read through `param()`; radiant Spell Damage +5, draw 2, the Solarius-Prime Radiant".
+// sources add; no Cry on either face (balance patch 1); Death shuffles a Solarius-Prime (C+ #38.1)
+// into your deck at a random position (R80's cap), shown in your library list; radiant Spell Damage +5,
+// the Solarius-Prime Radiant".
 //
-// Spell Damage is a numbered keyword (§6.1), so B3.4's X change tunes it rather than a param (R482):
-// the draw is the declared number. A Trap's hit is proved in C+ #22 Blood Moon's test, the one Trap of
-// these sets whose text deals damage from itself.
+// Spell Damage is a numbered keyword (§6.1), so B3.4's X change tunes it rather than a param (R482).
+// A Trap's hit is proved in C+ #22 Blood Moon's test, the one Trap of these sets whose text deals
+// damage from itself.
 
 import { HERO_HEALTH, LIBRARY_CAP, stepParam, subsystems, type CardInstance } from "@jackioh/engine";
 import type { Selection } from "@jackioh/shared";
@@ -28,7 +28,7 @@ const AT_HERO: Selection[] = [{ pick: "hero", player: "p2" }];
 
 describe("C+ #38 Solarius", () => {
   describe("base", () => {
-    it("prints Spell Damage +2 (a keyword, not a param) and declares only its draw", () => {
+    it("prints Spell Damage +2 (a keyword, not a param) and declares nothing", () => {
       const s = scenario({ p1: { field: [SOLARIUS] } });
       expect(s.stats(SOLARIUS).keywords).toContainEqual({ kind: "Spell Damage", n: 2 });
     });
@@ -107,10 +107,10 @@ describe("C+ #38 Solarius", () => {
       s.expectHealth("p2", HERO_HEALTH - 3);
     });
 
-    it("R1 its Cry draws 1 when played", () => {
+    it("no Cry on either face: playing draws nothing", () => {
       const s = scenario({ p1: { hand: [SOLARIUS, FILLER], library: [LUNAR_ECLIPSE, FILLER] }, p2: { hand: [FILLER] } });
       s.play(SOLARIUS);
-      expect(s.hand("p1").map((card) => card.defId)).toEqual([FILLER, LUNAR_ECLIPSE]);
+      expect(s.hand("p1").map((card) => card.defId)).toEqual([FILLER]);
     });
 
     it("R1 summoned, not played, it draws nothing (a Recruit)", () => {
@@ -173,11 +173,11 @@ describe("C+ #38 Solarius", () => {
       s.expectHealth("p2", HERO_HEALTH - 6);
     });
 
-    it("R386 the draw reads through param(): an Upgrade draws 2", () => {
+    it("R386 no draw to tune: a draw tuning still draws nothing", () => {
       const s = scenario({ p1: { hand: [SOLARIUS, FILLER], library: [LUNAR_ECLIPSE, FILLER, FILLER] }, p2: { hand: [FILLER] } });
       stepParam(s.card(SOLARIUS), "draw", 1);
       s.play(SOLARIUS);
-      expect(s.hand("p1")).toHaveLength(3);
+      expect(s.hand("p1")).toHaveLength(1);
     });
   });
 
@@ -188,13 +188,13 @@ describe("C+ #38 Solarius", () => {
       s.expectHealth("p2", HERO_HEALTH - 8);
     });
 
-    it("its Cry draws 2", () => {
+    it("no Cry on the Radiant face either: playing draws nothing", () => {
       const s = scenario({
         p1: { hand: [{ def: SOLARIUS, radiant: true }, FILLER], library: [LUNAR_ECLIPSE, FILLER, FILLER] },
         p2: { hand: [FILLER] },
       });
       s.play(SOLARIUS);
-      expect(s.hand("p1")).toHaveLength(3);
+      expect(s.hand("p1")).toHaveLength(1);
     });
 
     it("Death shuffles a Radiant Solarius-Prime", () => {

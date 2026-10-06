@@ -1,10 +1,10 @@
 // C+ #48 Jlockheed's Lobbyist (SPEC §8.7 row 48). (1) Unit, Jlockeed, Legendary, 0/3 → 0/6.
 //   Base:    "Can't be in Defense Position. Death: Add a random Jlockheed card to your hand. It costs (0)."
 //   Radiant: "Death: Add a random Radiant Jlockheed card to your hand. It costs (0)."
-//   Engine:  "The pool is the non-token cards with the `Jlockeed` tag (#13, #14, C+ #48, C+ #51, C+ #52)
-//            but this one (R387): #13, #14, C+ #51 and C+ #52; `costOverride` 0; the hand cap burns it
-//            (§2.4). The Defense restriction is a position validator flag (as #65.1's), which the
-//            Radiant face drops. With 0 attack it never attacks. Tunes: none."
+//   Engine:  "The pool is the non-token cards with the `Jlockeed` tag (#13, #14, C #4, C+ #48, C+ #51,
+//            C+ #52) but this one (R387): #13, #14, C #4, C+ #51 and C+ #52; `costOverride` 0; the hand
+//            cap burns it (§2.4). The Defense restriction is a position validator flag (as #65.1's),
+//            which the Radiant face drops. With 0 attack it never attacks. Tunes: none."
 //
 // The restriction is #65.1's `neverDefense` flag, which the switch action, `legalActions` and a switch
 // made as an effect all honour (R20). The Death's pool is one tag (R278); `addRandomFromCatalog` leaves

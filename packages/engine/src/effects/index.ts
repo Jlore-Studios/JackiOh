@@ -223,6 +223,8 @@ export type { AnimateArgs } from "./animate";
 export { flicker, flickerCard } from "./flicker";
 // The Lock variants and Unlock (B5 E20; §3.2 Lock). The single-zone `unlock` sits with `lock`.
 export { unlock } from "./counters";
+// Reveal (R686): show a backrow Trap or Field Trap to both players while it stays armed.
+export { reveal } from "./reveal";
 export { lockLane, lockOwnZone, lockPlayedZone, lockRandomZone, unlockAll } from "./locks";
 export type { LaneSpec, ZoneScope } from "./locks";
 

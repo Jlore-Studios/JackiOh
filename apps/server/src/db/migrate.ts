@@ -44,12 +44,12 @@ comment on table app.migrations is
  * jackioh.retention_purge` clause, which only a superuser may create since Postgres 15, so it failed
  * on Supabase, whose migrating role is not one. Where a superuser applied it, it works as written.
  */
-const REWRITTEN: Readonly<Record<string, readonly string[]>> = {
+export const REWRITTEN: Readonly<Record<string, readonly string[]>> = {
   "0013_retention_purge.sql": ["16b93e4d"],
 };
 
 /** FNV-1a, so a changed file that was already applied is reported instead of silently skipped. */
-function checksum(text: string): string {
+export function checksum(text: string): string {
   let hash = 0x811c9dc5;
   for (let i = 0; i < text.length; i += 1) {
     hash ^= text.charCodeAt(i);

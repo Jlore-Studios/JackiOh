@@ -670,11 +670,40 @@ login breaks, or the bot is halted. A build's work so far is pushed to its branc
 `bot/wip/<pr>` (#317: before that a revision cut off kept nothing, and #143 lost 16 Opus runs so),
 never to the pull request's branch, which would start CI. The next revision starts its worktree
 from `bot/wip/<pr>` when the pull request has not moved since, and is told so; the wip branch goes
-once a revision delivers or the pull request closes. Every builder also keeps running notes in an
-ignored `.bot-notes.md` (plan, done, next, decisions, dead ends), and the harness keeps the end of
-its session. Both are saved on the item. The next run, on any subscription, starts with a
-"Picking up from another agent" section in its prompt. So a task agy started when its quota ran
-out can be finished by Codex the same hour. A cut-off run that moved its work on counts for
+once a revision delivers or the pull request closes. Every builder also keeps notes in an ignored
+`.bot-notes.md`, in two parts: a `## State` it rewrites in place (the plan, what is done, what is
+next, decisions and why, dead ends), and a `## Log` it adds a line to before each long step,
+saying what it is about to do and why, and after it, saying what came of it. The harness keeps
+the end of its session too. Both are saved on the item, cut to the State whole and the end of the
+Log (`journal.compact`), never to the last 8,000 characters, which lost the plan at the top. The
+next run, on any subscription, starts with a "Picking up from another agent" section in its
+prompt. So a task agy started when its quota ran out can be finished by Codex the same hour.
+
+**The journal** (#342). The handoff is one slot, which the next run overwrites, so every run also
+leaves a section in its item's **journal**: `<issue>.md` on the unprotected, orphan `bot-journal`
+branch ([`harness/journal.py`](harness/journal.py)), where a pull request's runs join the issue it
+closes. Deliver appends it whatever the run did and however it ended: the run, its subscription
+and models, how it ended, a line per step the harness took (each model call, why it ran, its
+minutes and what came of it; each check run and what was red; each merge of `main`; the stop),
+and the builder's notes. The pull request's description and every "Paused" comment link it. The
+plan job reads the end of the file into the plan, and the work job puts it in the worktree as
+`.bot-journal.md`, ignored like the notes, so the machine needs no GitHub credential to read it.
+The first prompt lists the earlier runs and asks the builder to bring its `## State` up to date
+from the journal before it goes on: that rewrite is the compression, with no model call of its
+own. Headless CLIs can resume a session only where the session's files are, and the next run is
+often another job, subscription and CLI, so the journal is the handover; a file over 300,000
+characters drops its oldest runs' notes first (the branch's history keeps them). The branch
+starts with a `vercel.json` that switches Vercel off for it, as `bot-state`'s does.
+
+**A job that is killed** keeps its work too (#342). After every builder pass, check run and review
+the work job rewrites `result.json` as a pause of kind `died`, with its head, a bundle of its
+commits, the handoff and the steps so far; the upload step and deliver run whatever happens to the
+job (`if: always()`), and the run's own end writes over it. A cancel (GitHub sends SIGINT, then
+SIGTERM, a person's or the job's time limit) stops the run as a pause, which commits, bundles and
+hands on what it has; before #342 a cancelled job wrote `failed`, kept nothing and took a strike.
+Deliver treats `died` as a pause: the work is kept, the item queued again, and a died run that
+moved nothing on counts toward the three-in-a-row block. A runner that vanishes outright leaves
+nothing to upload, and the item goes back as a run that died. A cut-off run that moved its work on counts for
 nothing; one that made no progress after a model call counts, whatever cut it off (a halt, the
 machine's disk and a stop before any call aside), and three in a row block the item. Since a pause
 loses nothing now, a build or revision starts only 5 points under a 5-hour cap
@@ -781,7 +810,9 @@ account.
    once, asking a person, since nothing of it could be delivered. A run whose issue or pull
    request is closed stops at its next checkpoint. Between steps it checks for a halt, a `stop`,
    the usage stop and the clock. When any of those says stop, it commits what it has as work in
-   progress so the next run can pick it up ([handing work over](#the-self-check-loop)). An item
+   progress so the next run can pick it up ([handing work over](#the-self-check-loop)); after
+   every builder pass, check run and review it leaves a checkpoint a killed job hands on, and a
+   cancel stops it the same way. An item
    cut off three runs in a row without its work moving on is blocked. A failure that is not the
    item's fault (an expired Claude token, the CLI refusing to start, a call that fails within a
    minute with nothing to show, dependencies that will not install on untouched `main`) leaves the
@@ -800,7 +831,8 @@ account.
    check, with the pull request's title (and number) as the squash commit's title; otherwise the change waits for a review run (`bot:cross-review`) or for you. A change
    the reviewer never approved becomes a draft PR labelled `bot:blocked`, with the findings, the
    rounds it really took and why it stopped, and never merges by itself. It records the subscription's usage and minutes, keeps a refreshed
-   login and a handoff, and starts the next run if a lane is free and there is work.
+   login and a handoff, appends the run to its item's journal ([handing work
+   over](#the-self-check-loop)), and starts the next run if a lane is free and there is work.
 
 ## Safety
 
@@ -956,3 +988,4 @@ workflows. The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `b
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
 | `dashboard.py` | the pinned status issue: opened and pinned once, rewritten every ten minutes by `bot-status.yml` (`harness dashboard --sweep --every 600 --for 19800`, which sweeps first each time) and after every sweep |
 | `state.py`, `status.py`, `clock.py` | the state file on `bot-state`, the status report, time and windows |
+| `journal.py` | each item's journal on `bot-journal`: a section per run, read into the next run's plan (#342) |

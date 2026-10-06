@@ -59,7 +59,7 @@ function summonFirstFree(defId: string): Effect {
   };
 }
 
-/** Lock (§3.2) this controller's unit lane 1, which is where the R47 test parks its Reborn unit. */
+/** Lock (§3.2) this controller's unit lane 1, which is where the R688 test parks its Reborn unit. */
 function lockOwnFirstLane(): Effect {
   return {
     kind: "statecheck:lockLane1",
@@ -117,7 +117,7 @@ const pinger = unitDefOf("pinger", 1, 1);
 const rebornSummoner = unitDefOf("reborn-summoner", 2, 2, [{ kind: "Reborn" }]);
 /** Reborn with a Cry, which §4.5 step 4 says must not fire on the way back. */
 const rebornCrier = unitDefOf("reborn-crier", 2, 2, [{ kind: "Reborn" }]);
-/** Reborn with no hooks at all, for the Locked-zone fizzle (R47). */
+/** Reborn with no hooks at all, for the Locked-zone return (R688). */
 const rebornPlain = unitDefOf("reborn-plain", 2, 2, [{ kind: "Reborn" }]);
 /** Its Death trigger Locks its controller's lane 1 while the state check is still running. */
 const locker = unitDefOf("locker", 1, 1);
@@ -294,7 +294,7 @@ describe("the state check (M2-T5)", () => {
     expect(eventsOfType(again, "enteredGraveyard").map((e) => e.instanceId)).toEqual([reborner.id]);
   });
 
-  it("R47: Reborn into a zone that was Locked meanwhile fails silently", () => {
+  it("R688: Reborn into a zone that was Locked meanwhile still returns — the return is no play", () => {
     const state = game("reborn-locked");
     state.turn = 2;
     state.active = "p1";
@@ -307,12 +307,12 @@ describe("the state check (M2-T5)", () => {
     stateCheck(sinkFor(state, events));
 
     // The locker's Death trigger fired after the Reborn unit was collected, so the zone it had
-    // reserved is Locked by the time step 4 tries to put it back.
+    // reserved is Locked by the time step 4 puts it back — and the body stands there anyway.
     expect(isLocked(state, slot("p1", "units", 1))).toBe(true);
-    expect(cardAt(state, slot("p1", "units", 1))).toBeNull();
-    expect(state.players.p1.graveyard.map((card) => card.id)).toContain(reborner.id);
+    expect(cardAt(state, slot("p1", "units", 1))?.id).toBe(reborner.id);
+    expect(state.players.p1.graveyard.map((card) => card.id)).not.toContain(reborner.id);
     expect(state.reserved).toHaveLength(0);
-    expect(eventsOfType(events, "summoned")).toHaveLength(0);
+    expect(eventsOfType(events, "summoned")).toHaveLength(1);
     expect(eventsOfType(events, "destroyed")).toHaveLength(2);
   });
 
@@ -538,7 +538,7 @@ describe("the state check (M2-T5)", () => {
     expect(cardAt(state, slot("p1", "units", 1))?.defId).toBe(spawn.id);
   });
 
-  it("R47 says so in the event stream when a Reborn return fizzles into a Locked zone", () => {
+  it("R688 the event stream shows the Reborn return into a Locked zone as a summon, not a graveyard stay", () => {
     const state = game("reborn-fizzle-event");
     const unit = put(state, rebornPlain.id, slot("p1", "units", 1));
     const lockerUnit = put(state, locker.id, slot("p1", "units", 3));
@@ -549,11 +549,10 @@ describe("the state check (M2-T5)", () => {
     stateCheck(sinkFor(state, events));
 
     expect(isLocked(state, slot("p1", "units", 1))).toBe(true);
-    expect(cardAt(state, slot("p1", "units", 1))).toBeNull();
-    expect(state.players.p1.graveyard.map((c) => c.id)).toContain(unit.id);
-    // The card really is in the graveyard, so the stream has to report it (§10.3).
-    expect(eventsOfType(events, "enteredGraveyard").map((e) => e.instanceId)).toContain(unit.id);
-    expect(eventsOfType(events, "summoned")).toEqual([]);
+    expect(cardAt(state, slot("p1", "units", 1))?.id).toBe(unit.id);
+    expect(state.players.p1.graveyard.map((c) => c.id)).not.toContain(unit.id);
+    expect(eventsOfType(events, "enteredGraveyard").map((e) => e.instanceId)).not.toContain(unit.id);
+    expect(eventsOfType(events, "summoned")).toHaveLength(1);
   });
 });
 

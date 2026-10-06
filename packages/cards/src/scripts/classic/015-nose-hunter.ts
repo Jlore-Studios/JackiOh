@@ -1,9 +1,9 @@
 // C #15 Nose Hunter (SPEC §8.6 row 15). Unit 3/1 → 6/2, Human, cost 1, Common.
-//   Base:    "Activate: Discard a random card. Exile the bottom {exile|card|cards} of your opponent's deck."
+//   Base:    "Activate ♾️: Discard a random card. Exile the bottom {exile|card|cards} of your opponent's deck."
 //   Radiant: "… Exile the bottom {exile|card|cards} of your opponent's deck and a random card from their hand."
 //
-// R392: the designer's "Discard a random card: Exile …" is an Activate ability used once per turn
-// (R384) — "cost: effect" is how a card is clicked to do an effect — so the random discard is the
+// R392: the designer's "Discard a random card: Exile …" is an Activate ♾️ ability (balance patch 1;
+// R384) — "cost: effect" is how a card is clicked to do an effect — so the random discard is the
 // ability's cost, paid as it is activated (`cost.discardRandom`), and with an empty hand it cannot be
 // activated at all (`subsystems/activate.ts` refuses it, and so `legalActions` never lists it). The
 // discard is an ordinary discard (§6.3), so C #64 Malzahar's Recycler sees it. "Each opponent" in the
@@ -36,7 +36,7 @@ function ability(fromHand: boolean): ActivationDecl {
     label: fromHand
       ? "Discard a random card. Exile the bottom of your opponent's deck and a random card from their hand"
       : "Discard a random card. Exile the bottom of your opponent's deck",
-    uses: 1,
+    uses: "unlimited",
     cost: { discardRandom: 1 },
     run: (ctx) => hunt(ctx, fromHand),
   };
