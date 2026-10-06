@@ -76,8 +76,11 @@ export type ClockExpiry =
 export type MatchClock = {
   /** Called once after `beginGame` and again after every state change. */
   sync: (view: ClockView) => void;
-  /** §9.5: the countdown is stored on the match so both clients show it. */
-  startGrace: (player: PlayerId) => void;
+  /**
+   * §9.5: the countdown is stored on the match so both clients show it. `deadline` is one stored
+   * before a restart (R744): kept, but never later than a fresh window would end (R147).
+   */
+  startGrace: (player: PlayerId, deadline?: number) => void;
   clearGrace: (player: PlayerId) => void;
   /** Deadlines for `matches.clocks` and the protocol's `clock` message. */
   snapshot: () => MatchClocks;

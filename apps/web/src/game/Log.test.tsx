@@ -256,7 +256,7 @@ describe("Log: a line about a card opens that card", () => {
   });
 });
 
-describe("R744 the log keeps the whole game, not only the view's window", () => {
+describe("R745 the log keeps the whole game, not only the view's window", () => {
   /** The engine's `VIEW_EVENT_LIMIT`: how many of the newest events a view carries (R168). */
   const WINDOW = 32;
 
@@ -267,7 +267,7 @@ describe("R744 the log keeps the whole game, not only the view's window", () => 
   const saidRange = (from: number, to: number): string[] => Array.from({ length: to - from + 1 }, (_, i) => said(from + i));
   const lines = (): string[] => [...screen.getByTestId(testid.log).querySelectorAll(".log-line")].map((li) => li.textContent ?? "");
 
-  it("R744 joins windows that slide past the view's last 32 events, in order, with no line shown twice", () => {
+  it("R745 joins windows that slide past the view's last 32 events, in order, with no line shown twice", () => {
     const events = game(80);
     const { rerender } = render(<Log view={withEvents(baseView(), windowOf(events, 8))} />);
     for (let end = 16; end <= 80; end += 8) {
@@ -276,7 +276,7 @@ describe("R744 the log keeps the whole game, not only the view's window", () => 
     expect(lines()).toEqual(saidRange(1, 80));
   });
 
-  it("R744 keeps a line that has left the window under the card name it was shown with, and stores no instance id", () => {
+  it("R745 keeps a line that has left the window under the card name it was shown with, and stores no instance id", () => {
     const lookup = lookupFromDefs(CATALOG);
     const name = CATALOG["core-002"]?.name ?? "core-002";
     const first: GameEvent = { type: "summoned", player: "p2", instanceId: "c46", defId: "core-002", row: "units", lane: 1 };
@@ -316,7 +316,7 @@ describe("R744 the log keeps the whole game, not only the view's window", () => 
     expect(JSON.stringify(seat?.window.map((entry) => entry.line))).not.toContain("c46");
   });
 
-  it("R744 keeps one history per viewer, and a new game starts with an empty one", () => {
+  it("R745 keeps one history per viewer, and a new game starts with an empty one", () => {
     const events = game(40);
     const p2View = baseView({
       viewer: "p2",
@@ -340,7 +340,7 @@ describe("R744 the log keeps the whole game, not only the view's window", () => 
     expect(lines()).toEqual([said(7)]);
   });
 
-  it("R744 holds at most LOG_HISTORY_LIMIT lines, dropping the oldest first", () => {
+  it("R745 holds at most LOG_HISTORY_LIMIT lines, dropping the oldest first", () => {
     const total = LOG_HISTORY_LIMIT + 40;
     const events = game(total);
     let end = WINDOW;
@@ -355,7 +355,7 @@ describe("R744 the log keeps the whole game, not only the view's window", () => 
     expect(read[read.length - 1]).toBe(said(total));
   });
 
-  it("R744 draws a divider before each turn's first line but the log's first", () => {
+  it("R745 draws a divider before each turn's first line but the log's first", () => {
     render(
       <Log
         view={withEvents(baseView(), [
@@ -372,7 +372,7 @@ describe("R744 the log keeps the whole game, not only the view's window", () => 
     expect(lines()).toEqual(["Turn 3: You", said(1), "Turn 4: Opponent", said(2)]);
   });
 
-  it("R744 says in one line where a view shares no event with the one before, and keeps what it had", () => {
+  it("R745 says in one line where a view shares no event with the one before, and keeps what it had", () => {
     const events = game(80);
     const { rerender } = render(<Log view={withEvents(baseView(), windowOf(events, 32))} />);
     rerender(<Log view={withEvents(baseView(), windowOf(events, 80))} />);

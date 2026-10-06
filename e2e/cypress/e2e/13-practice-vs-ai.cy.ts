@@ -10,7 +10,7 @@
 //     human's first turn;
 //   * a few human turns end through the UI with no `action-error`;
 //   * after the AI's turns the log still holds the human's first End turn and the game's first
-//     turn (R744);
+//     turn (R745);
 //   * the game the browser played folds in Node, with the handicaps the page reports, to the
 //     browser's own hash (`cy.task("replayHash")`, R187);
 //   * conceding — `concede`, then Concede in the "Concede this game?" dialog it opens — shows the
@@ -442,7 +442,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
       });
     });
 
-    // R744: the turn the human ends first, read off the board, for the log's check below.
+    // R745: the turn the human ends first, read off the board, for the log's check below.
     let firstEnded = "";
     reachHumanTurn();
     cy.get(ts(BOARD))
@@ -464,7 +464,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
       ).to.eq(true);
     });
 
-    // R744: the log keeps the whole game, not only the view's last events.
+    // R745: the log keeps the whole game, not only the view's last events.
     reachHumanTurn();
     cy.then(() => {
       cy.get(`${ts(LOG)} .log-line[data-event="turnEnded"]`).should("contain.text", `You ended turn ${firstEnded} with`);

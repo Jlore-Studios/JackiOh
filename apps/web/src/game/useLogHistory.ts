@@ -1,4 +1,4 @@
-// The game log's history (SPEC §10.10, R744).
+// The game log's history (SPEC §10.10, R745).
 //
 // `view.events` is a window sized for animation (§10.8, R168): after a busy turn the player's own
 // last play has left it. So the log joins each view's window to the last window the same viewer

@@ -21,7 +21,7 @@
 // Fuse's, R243) is named and drawn from the definition the view carries for it.
 //
 // The window is not the whole game: the lines whose events have left it come from
-// `useLogHistory.ts` (R744), kept as they read when they arrived, with a definition's face and no
+// `useLogHistory.ts` (R745), kept as they read when they arrived, with a definition's face and no
 // instance id. A divider stands before each turn's first line.
 
 import { Fragment, memo, useContext, useLayoutEffect, useRef, type MouseEvent, type ReactElement } from "react";
@@ -473,7 +473,7 @@ function cardOf(event: GameEvent, view: PlayerView, remembered: ReadonlyMap<stri
 }
 
 /**
- * R744: an event's line as the log keeps it (useLogHistory.ts): this view's words, and the
+ * R745: an event's line as the log keeps it (useLogHistory.ts): this view's words, and the
  * definition's face built without the instance, so it carries no instance id.
  */
 export function keptLineFor(view: PlayerView, lookup: CardLookup | null): (event: GameEvent) => LoggedLine | null {
@@ -532,7 +532,7 @@ export default function Log({ view, revealed = false }: LogProps): ReactElement 
   const lookup = withMatchDefs(useContext(CatalogContext), view.defs);
   const remembered = publicNames(view.events);
   const name = namingFor(view, lookup, remembered);
-  // R744: the lines that have left the window, and the key each window event keeps as it slides.
+  // R745: the lines that have left the window, and the key each window event keeps as it slides.
   const history = useLogHistory(view, keptLineFor(view, lookup));
 
   // The newest line is the one worth reading, so a log taller than its box keeps its end in view

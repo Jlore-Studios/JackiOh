@@ -1572,7 +1572,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R147 keeps the first deadline when a second grace starts, so a flapping socket cannot extend it", () => {
     const source = sourceOf(SERVER_CLOCK);
     // The guard: a grace already counting down is left alone rather than re-armed.
-    expect(source).toMatch(/startGrace: \(player: PlayerId\): void => \{[\s\S]*?if \(countdown\.timer !== null\) return;/);
+    expect(source).toMatch(/startGrace: \(player: PlayerId, deadline\?: number\): void => \{[\s\S]*?if \(countdown\.timer !== null\) return;/);
   });
 
   // NOTE: no server test names this row; the index asserts the four codes, as R104 does its alphabet.
@@ -4394,10 +4394,18 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(743, "../../cards/test/patches.test.ts", "../../../apps/server/test/sql/14_patch_retcon.sql");
   });
 
-  // Proved by apps/web game/Log.test.tsx "R744 …" (windows joined in order with no line twice, one
+  // Proved by apps/server test/match/recovery.test.ts "R744 …" (an absent seat loses at its grace
+  // after a rebuild, a stored deadline is kept, a return cancels it, a fresh match's no-show loses,
+  // a normal start fires nothing, the reaper still draws a match nobody returns to) and
+  // test/match/clock.test.ts "R744 …" (a stored deadline is kept and never extended).
+  it("R744 starts a disconnect grace for a seat that is not there when the first socket attaches", () => {
+    provenIn(744, "../../../apps/server/test/match/recovery.test.ts", "../../../apps/server/test/match/clock.test.ts");
+  });
+
+  // Proved by apps/web game/Log.test.tsx "R745 …" (windows joined in order with no line twice, one
   // history per viewer, a new game empty, a kept line's name and no id, the cap, dividers, the gap line).
-  it("R744 keeps the whole game in the log, joined from the views' windows", () => {
-    provenIn(744, "../../../apps/web/src/game/Log.test.tsx");
+  it("R745 keeps the whole game in the log, joined from the views' windows", () => {
+    provenIn(745, "../../../apps/web/src/game/Log.test.tsx");
   });
 });
 

@@ -1707,14 +1707,14 @@
   line-height: 1.3;
 }
 
-/* R744: a rule before each turn's first line; `display: block` keeps it out of the list's numbering. */
+/* R745: a rule before each turn's first line; `display: block` keeps it out of the list's numbering. */
 .log-divider {
   display: block;
   margin: 4px 0 2px;
   border-top: 1px solid var(--line);
 }
 
-/* R744: where two views' windows could not be joined. */
+/* R745: where two views' windows could not be joined. */
 .log-line[data-event="gap"] {
   font-style: italic;
 }

@@ -183,6 +183,30 @@ describe("match clock", () => {
     expect(clock.snapshot().graceDeadline.p1).toBe(timers.now() + graceMs);
   });
 
+  it("R744 starts a grace at a stored deadline, holds it to a fresh window, and fires one already past at once", () => {
+    const { timers, clock, expiries, graceMs } = harness();
+
+    // A deadline the restart left stored is kept, not replaced by a fresh window.
+    const stored = timers.now() + graceMs / 2;
+    clock.startGrace("p1", stored);
+    expect(clock.snapshot().graceDeadline.p1).toBe(stored);
+    timers.advance(graceMs / 2 - 1);
+    expect(expiries).toEqual([]);
+    timers.advance(1);
+    expect(expiries).toEqual([{ kind: "grace", player: "p1" }]);
+
+    // A stored deadline later than a fresh window would end is held to it (R147): a rebuild can
+    // shorten a grace, never extend one.
+    clock.startGrace("p2", timers.now() + graceMs * 2);
+    expect(clock.snapshot().graceDeadline.p2).toBe(timers.now() + graceMs);
+
+    // One that already ran out while the server was down fires at once.
+    clock.startGrace("p1", timers.now() - 1);
+    timers.advance(0);
+    expect(expiries.at(-1)).toEqual({ kind: "grace", player: "p1" });
+    expect(expiries.filter((expiry) => expiry.kind === "grace")).toHaveLength(2);
+  });
+
   it("cancels grace when the player returns inside the window", () => {
     const { timers, clock, expiries, graceMs } = harness();
     clock.startGrace("p1");
