@@ -38,7 +38,9 @@ import {
   targetsFollowModes,
 } from "./playChoices";
 import {
+  cellOptionLabel,
   closePrompt,
+  heroOptionLabel,
   inOfferedOrder,
   openPrompt,
   registerPromptAnswerer,
@@ -128,16 +130,16 @@ function resumeFor(run: CryRun): Resume {
   return { defId: "", hook: TRIGGER_CRY_HOOK, step: "choose", radiant: false, data: { [RUN_KEY]: run } };
 }
 
-function labelOf(state: GameState, selection: Selection): string {
+function labelOf(state: GameState, selection: Selection, chooser: PlayerId): string {
   switch (selection.pick) {
     case "instance": {
       const card = findInstance(state, selection.instanceId);
       return card === undefined ? selection.instanceId : defOf(state, card.defId).name;
     }
     case "hero":
-      return `${selection.player}'s hero`;
+      return heroOptionLabel(selection.player, chooser);
     case "zone":
-      return `${selection.player} ${selection.row} ${selection.lane}`;
+      return cellOptionLabel(selection.player, selection.row, selection.lane, chooser);
     case "mode":
       return selection.option;
     default:
@@ -203,7 +205,7 @@ function askTargets(sink: EngineSink, run: CryRun, card: CardInstance): boolean 
       player: run.controller,
       kind: decl.kind,
       prompt: `Cry: ${name}`,
-      options: options.map((selection) => ({ key: keyOf(selection), label: labelOf(sink.state, selection), selection })),
+      options: options.map((selection) => ({ key: keyOf(selection), label: labelOf(sink.state, selection, run.controller), selection })),
       min: decl.min,
       max: decl.max,
       resume: resumeFor(run),

@@ -8,6 +8,7 @@ import type { CardDef, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { registerCatalog, registeredCatalog } from "../src/catalog";
 import {
+  chooseCell,
   chooseFromHand,
   chooseMode,
   chooseTarget,
@@ -224,7 +225,7 @@ describe("the choose effects (§6.3, §10.6, M3-T1)", () => {
     const ctx = ctxFor(state, self);
     run(ctx, [effect]);
     expect(state.pending).toMatchObject({ kind: "target", prompt: "Choose a target", min: 1, max: 1 });
-    // Each option is labelled with the card's name, or the side whose hero it is, and keyed by what
+    // Each option is labelled with the card's name, or, for a hero, whose it is to the chooser, and keyed by what
     // it selects, so two cards of one name are still two keys (§10.6: the key is what is sent back).
     expect(state.pending?.options).toEqual([
       {
@@ -237,7 +238,7 @@ describe("the choose effects (§6.3, §10.6, M3-T1)", () => {
         label: fieldCard.name,
         selection: { pick: "instance", instanceId: enemyBackrow.id },
       },
-      { key: "hero:p2", label: "p2's hero", selection: { pick: "hero", player: "p2" } },
+      { key: "hero:p2", label: "Enemy hero", selection: { pick: "hero", player: "p2" } },
     ]);
 
     // An empty scope opens no prompt and emits nothing: the effect fizzles and the card resolves.
@@ -248,6 +249,41 @@ describe("the choose effects (§6.3, §10.6, M3-T1)", () => {
     run(quiet, [chooseTarget({ step: "zap", scope: { side: "enemy", of: ["unit"] }, prompt: "Zap what?" })]);
     expect(emptyBoard.pending).toBeNull();
     expect(quiet.events).toEqual([]);
+  });
+
+  it("§10.6 a target or cell prompt names heroes and cells to its chooser, Your or Enemy, never by seat", () => {
+    const state = game("choose-relative");
+    const mine = put(state, caller.id, slot("p1", "units", 1));
+    const theirs = put(state, caller.id, slot("p2", "units", 1));
+    const labels = (): string[] => (state.pending?.options ?? []).map((option) => option.label);
+    const keys = (): string[] => (state.pending?.options ?? []).map((option) => option.key);
+
+    run(ctxFor(state, mine), [chooseTarget({ step: "zap", scope: { side: "any", of: ["hero"] } })]);
+    expect(state.pending?.playerId).toBe("p1");
+    expect(labels()).toEqual(["Your hero", "Enemy hero"]);
+    expect(keys()).toEqual(["hero:p1", "hero:p2"]);
+
+    // The same prompt held by p2 reads the other way round; the keys name the seats and do not move.
+    clearPrompt(state);
+    run(ctxFor(state, theirs, { controller: "p2" }), [
+      chooseTarget({ step: "zap", scope: { side: "any", of: ["hero"] } }),
+    ]);
+    expect(state.pending?.playerId).toBe("p2");
+    expect(labels()).toEqual(["Enemy hero", "Your hero"]);
+    expect(keys()).toEqual(["hero:p1", "hero:p2"]);
+
+    clearPrompt(state);
+    run(ctxFor(state, mine), [chooseCell({ step: "cell", cells: { rows: ["units"], exceptLanes: [2, 3, 4, 5] } })]);
+    expect(labels()).toEqual(["Your Unit lane 1", "Enemy Unit lane 1"]);
+    expect(keys()).toEqual(["zone:p1:units:1", "zone:p2:units:1"]);
+
+    // A cell prompt the enemy holds names the cells to them: p1's are "Enemy", p2's are "Your".
+    clearPrompt(state);
+    run(ctxFor(state, mine), [
+      chooseCell({ step: "cell", by: "enemy", cells: { rows: ["units"], exceptLanes: [2, 3, 4, 5] } }),
+    ]);
+    expect(state.pending?.playerId).toBe("p2");
+    expect(labels()).toEqual(["Enemy Unit lane 1", "Your Unit lane 1"]);
   });
 
   it("#26 chooseFromHand offers your own hand only, and asks for what the hand can give", () => {
