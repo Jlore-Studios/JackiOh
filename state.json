@@ -2345,11 +2345,11 @@
         "reviews": [
           {
             "family": "claude",
-            "run": "37384084831",
+            "run": "37404067557",
             "tier": "strong"
           }
         ],
-        "sha": "80915a90444e5f89f3b3dfd05333c9fed328f255",
+        "sha": "718aed0ab64dbda4a19e8c75202d6bd3adbf6e20",
         "tiers": {
           "claude": "strong"
         }
