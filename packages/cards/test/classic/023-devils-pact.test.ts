@@ -2,15 +2,16 @@
 // your whole hand; Activate, once per turn (R384): for the rest of this turn each card you play is
 // replaced at §10.5 step 3 by a new Book of Flame (C #16, base face), which resolves as that play,
 // counts as a Book of Flame play and asks its target then; the old card ceases to exist (R35) and the
-// price paid was the old card's; a Unit or a trap replaced this way takes no zone; a cast (R70) is
-// replaced too; a card played before activating is not; the modifier expires at cleanup; activating is
-// not a play; the opponent's view never names a replaced card (it ceased to exist unread, R177);
+// price paid was the old card's; a Unit or a trap replaced this way takes no zone; a cast (R70) and
+// a play from the graveyard (R454) are replaced too; a card played before activating is not; the
+// modifier expires at cleanup; activating is not a play; the opponent's view never names a replaced
+// card (it ceased to exist unread, R177);
 // radiant: discard 6 cards at random (R682; all if fewer), and each replacement is a Radiant Book
 // of Flame; its tuned number (discards) reads through `param()` (R386)".
 
 import { describe, expect, it } from "vitest";
-import { heroOf, reduce, stepParam, type GameState } from "@jackioh/engine";
-import type { GameEvent, Selection } from "@jackioh/shared";
+import { findInstance, heroOf, legalActions, reduce, stepParam, zoneCards, type GameState } from "@jackioh/engine";
+import type { Action, GameEvent, Selection } from "@jackioh/shared";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/023-devils-pact";
 
@@ -24,6 +25,7 @@ const PANTHER = "core-032"; // Unit 5/4 Rush: after it attacks and survives, dra
 const HINDER = "core-021"; // (0) Spell, cast on draw.
 const FILLER = "core-010"; // (0) Spell Rapid Replenish.
 const MENACE = "core-019"; // (3) Unit 9/9.
+const WIND = "classic-028"; // Second Wind: Radiant Aura lets you play cards costing (1) or more from your graveyard.
 
 const AT_P2: readonly Selection[] = [{ pick: "hero", player: "p2" }];
 
@@ -164,6 +166,63 @@ describe("C #23 Devil's Pact", () => {
       s.expectInZone(hinder, "gone");
       s.expectHealth("p2", 26);
       expect(s.state.players.p2.mana.nextTurnMod).toBe(0);
+    });
+
+    it("R449 R454 a play from the graveyard is replaced too: it plays as from hand, so its card becomes a Book of Flame", () => {
+      const s = onField({ hand: [FILLER], backrow: [{ def: PACT, lane: 1 }, { def: WIND, radiant: true, lane: 2 }], graveyard: [VANILLA] });
+      const vanilla = s.card(VANILLA);
+      s.activate(PACT);
+      const play = legalActions(s.state, "p1").find((action) => action.type === "play" && action.instanceId === vanilla.id);
+      if (play === undefined) throw new Error("Second Wind offers no graveyard play");
+
+      const played = reduce(s.state, { ...play, playerId: "p1", nonce: "pact-graveyard-play" } as Action);
+      expect(played.error).toBeUndefined();
+      expect(played.events.map((event) => event.type)).toContain("transformed");
+      expect(played.state.pending?.playerId).toBe("p1");
+      const answered = reduce(played.state, {
+        type: "answer",
+        playerId: "p1",
+        choiceId: played.state.pending?.id ?? "",
+        selection: [...AT_P2],
+        nonce: "pact-graveyard-answer",
+      });
+
+      expect(answered.error).toBeUndefined();
+      // R35: the graveyard card ceased to exist.
+      expect(findInstance(answered.state, vanilla.id)).toBeUndefined();
+      expect([...played.events, ...answered.events].map((event) => event.type)).not.toContain("summoned");
+      expect(heroOf(answered.state, "p2").health).toBe(26);
+      expect(answered.events.find((event) => event.type === "cardPlayed")).toMatchObject({ defId: BOOK, costPaid: 1 });
+      expect(zoneCards(answered.state, "p1", "graveyard").map((card) => card.defId)).toEqual([BOOK]);
+    });
+
+    it("R449 R454 two live Pacts replace a graveyard play in turn: the Radiant one's Book of Flame resolves", () => {
+      const s = onField({
+        hand: [FILLER],
+        backrow: [{ def: PACT, lane: 1 }, { def: PACT, radiant: true, lane: 2 }, { def: WIND, radiant: true, lane: 3 }],
+        graveyard: [VANILLA],
+      });
+      const [first, second] = s.state.players.p1.backrow.filter((card) => card?.defId === PACT);
+      if (first === undefined || first === null || second === undefined || second === null) throw new Error("fixture");
+      s.activate(first).activate(second);
+      const vanilla = s.card(VANILLA);
+      const play = legalActions(s.state, "p1").find((action) => action.type === "play" && action.instanceId === vanilla.id);
+      if (play === undefined) throw new Error("Second Wind offers no graveyard play");
+
+      const played = reduce(s.state, { ...play, playerId: "p1", nonce: "pacts-graveyard-play" } as Action);
+      expect(played.events.filter((event) => event.type === "transformed")).toHaveLength(2);
+      const answered = reduce(played.state, {
+        type: "answer",
+        playerId: "p1",
+        choiceId: played.state.pending?.id ?? "",
+        selection: [...AT_P2],
+        nonce: "pacts-graveyard-answer",
+      });
+
+      expect(answered.error).toBeUndefined();
+      expect(heroOf(answered.state, "p2").health).toBe(22);
+      // The Book came from no graveyard: its play does not say it did.
+      expect(answered.events.find((event) => event.type === "cardPlayed")).not.toHaveProperty("from");
     });
 
     it("a card played before the activation is not replaced", () => {

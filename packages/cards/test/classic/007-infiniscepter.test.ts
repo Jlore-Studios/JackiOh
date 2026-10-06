@@ -14,7 +14,7 @@
 // cast with the X its caster picks as the cast begins, 1 to their current mana (R348), and not paid.
 
 import { describe, expect, it } from "vitest";
-import { legalActions, stepParam } from "@jackioh/engine";
+import { fusedIdParts, legalActions, stepParam } from "@jackioh/engine";
 import type { GameEvent, PlayerId, Selection } from "@jackioh/shared";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/007-infiniscepter";
@@ -30,6 +30,8 @@ const TIMMY = "core-011"; // (1) Unit.
 const VANILLA = "core-008";
 const FILLER = "core-010"; // (0) Spell Rapid Replenish.
 const TUTOR = "core-051"; // (1) Spell: opens a type prompt as it resolves.
+const MUTATE = "classic-078"; // (1) Field Spell: Radiant fuses an enemy permanent onto a card of yours of its type.
+const MANA_WELL = "core-006"; // (3) Field Spell.
 
 function setup(p1: SideSetup, radiantFace = false, p2: SideSetup = {}): Scenario {
   return scenario({
@@ -278,6 +280,35 @@ describe("C #7 InfiniScepter", () => {
       if (grave === undefined) throw new Error("fixture");
 
       expect(() => s.play(SCEPTER, { zone: 1, targets: pick(grave) })).toThrow();
+    });
+  });
+
+  describe("R102 fused", () => {
+    it("R102 a Fuse that keeps it still lets it cast the Spell its own Cry remembered", () => {
+      const s = setup(
+        { hand: [SCEPTER, STOCKPILE, FILLER], backrow: [{ def: MUTATE, radiant: true }] },
+        false,
+        { backrow: [{ def: MANA_WELL, counters: { plague: 1 } }] },
+      );
+      const scepter = s.card(SCEPTER).id;
+      s.play(SCEPTER, { zone: 2, targets: pick(s.card(STOCKPILE)) });
+      // Radiant Mutate Spell fuses the enemy Mana Well onto a Field Spell of yours you pick: this one.
+      s.activate(MUTATE, { targets: pick(s.card(MANA_WELL)) });
+      s.answer(scepter);
+      const fused = s.card(scepter);
+      expect(fusedIdParts(fused.defId)).toEqual([MANA_WELL, SCEPTER]);
+      // R77: what its Cry remembered moved with its text, to the place that text now runs at.
+      expect(fused.memory.scepter).toBeUndefined();
+      expect(fused.memory["scepter@1"]).toEqual({ defId: STOCKPILE, radiant: false });
+      expect(
+        legalActions(s.state, "p1").filter((action) => action.type === "activate" && action.instanceId === scepter),
+      ).toEqual([{ type: "activate", instanceId: scepter, ability: "cast-copy" }]);
+
+      s.activate(scepter);
+
+      expect(count(s.lastEvents, "drawn")).toBe(2);
+      s.expectHealth("p1", 22);
+      expect(s.pile("p1", "graveyard").filter((card) => card.defId === STOCKPILE)).toHaveLength(1);
     });
   });
 });

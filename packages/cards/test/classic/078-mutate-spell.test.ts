@@ -12,6 +12,7 @@
 
 import {
   ACTIVATE_UNLIMITED_CAP,
+  fusedIdParts,
   hashState,
   legalActions,
   reduce,
@@ -33,6 +34,7 @@ const TIMMY = "core-011"; // (1) Unit 3/3 Rush, First Strike.
 const PAWN = "core-096"; // (1) Trap: answers only an attack that would be lethal.
 const SHEEPISH = "core-041"; // (1) Trap.
 const MANA_WELL = "core-006"; // (3) Field Spell.
+const THRIVE = "classic-081"; // (2) Field Spell: Activate: Choose one: heal, draw 1 (Radiant 2), or mana.
 const FILLER = "core-005"; // (1) Spell (§2.5).
 const X = "core-020"; // library filler.
 
@@ -353,6 +355,24 @@ describe("C #78 Mutate Spell", () => {
       const s = scenario({ p1: { hand: [FILLER], backrow: [{ def: MUTATE, radiant: true, counters: { plague: 1 } }], library: lib(5) }, p2: { hand: [FILLER] } });
 
       s.activate(MUTATE, { targets: at(s.card(MUTATE)) });
+
+      expect(drawsBy(s.lastEvents, "p1")).toBe(4);
+    });
+
+    it("R102 fused onto itself, it still draws its own 4, not the 2 the fused Power to Thrive declares", () => {
+      const s = scenario({
+        p1: { hand: [FILLER], backrow: [{ def: MUTATE, radiant: true, counters: { plague: 1 } }], library: lib(5) },
+        p2: { hand: [FILLER], backrow: [{ def: THRIVE, counters: { plague: 1 } }] },
+      });
+      const mutate = s.card(MUTATE).id;
+      s.activate(MUTATE, { targets: at(s.card(THRIVE)) });
+      // It is the only Field Spell you have, so the prompt offers it alone.
+      expect(must(s.state.pending, "the fuse prompt").options.map((option) => option.key)).toEqual([`instance:${mutate}`]);
+      s.answer(mutate);
+      const fused = s.card(mutate);
+      expect(fusedIdParts(fused.defId)).toEqual([THRIVE, MUTATE]);
+
+      s.activate(mutate, { ability: "mutate", targets: at(fused) });
 
       expect(drawsBy(s.lastEvents, "p1")).toBe(4);
     });

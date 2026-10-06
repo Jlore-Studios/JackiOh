@@ -13,10 +13,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from harness import commands, config, dashboard, events, journal, sweep
+from harness import commands, config, dashboard, events, journal, stats, sweep
 from harness import plan as plan_mod
 from harness import queue as queue_mod
-from harness.config import LABEL_PR_OPEN, LABEL_TREE, LABELS, MODE_LABELS
+from harness.config import LABEL_PR_OPEN, LABEL_TREE, LABEL_WORKING, LABELS, MODE_LABELS
 from harness.deliver import Deliverer
 from harness.issueplan import START as PLAN_START
 from harness.runner import FakeRunner, RunRequest, RunResult
@@ -284,6 +284,57 @@ class SectionCases(unittest.TestCase):
         self.assertIn("| #51 | Parent | 1 of 2 closed", text)
         self.assertIn("`claude-squishy`", text)
         self.assertIn("### Last Squishy runs", text)
+
+    def test_its_section_draws_the_night_bots_charts_for_its_own_lanes(self):
+        """The timeline of runs going now and the lanes as boxes, as the night bot's part of the
+        issue has above it: one box for its one account, and no machine, which it never uses."""
+        world = World()
+        world.gh.add_issue(60, title="Busy", labels=(LABEL_WORKING,))
+        world.ctx.store.update(lambda s: s["items"].setdefault("60", {}).update(
+            kind="build", action="build", run_id="901", provider="claude-squishy",
+            started_at="2026-09-30T02:30:00Z"))
+        world.gh.runs["901"] = {"id": 901, "status": "in_progress"}
+        text = dashboard.section(world.ctx)
+        self.assertEqual(text.count("```mermaid"), 2)
+        self.assertIn("gantt", text)
+        self.assertIn("claude-squishy · building 60", text)
+        self.assertIn("Squishy's Claude account, on GitHub's runners: 1 of 1 working", text)
+        self.assertIn("🟢 building #60", text)
+        self.assertNotIn("subgraph machine", text)
+        self.assertNotIn("~~~", text)
+        idle = dashboard.section(World().ctx)
+        self.assertIn("Nothing is running right now.", idle)
+        self.assertEqual(idle.count("Nothing is running right now."), 1)
+        self.assertIn("<details><summary>Squishy's full status</summary>", text)
+        self.assertIn("**Squishy status**", text)
+
+    def test_its_section_of_the_statistics_issue(self):
+        world = World()
+        squishy = {"login": "squishy-squooby", "id": 334289562}
+        run = "https://github.com/Jlore-Studios/JackiOh/actions/runs"
+        for number in (60, 61):
+            world.gh.add_issue(number)
+
+        def say(number: int, body: str, at: str) -> None:
+            world.gh.add_comment(number, body, squishy, "COLLABORATOR", at)
+        say(60, f"Splitting this now ([run]({run}/1)), on `claude-squishy` (claude, `opus`, "
+                "strong): one session reads it.", "2026-09-29T23:00:00Z")
+        say(60, f"Split #60 into 3 sub-issue(s) ([run]({run}/1)), queued for me in this order",
+            "2026-09-29T23:30:00Z")
+        say(61, f"Starting a one-shot build of this now ([run]({run}/2)), on `claude-squishy` "
+                "(claude, `opus`, strong), with fullsend.", "2026-09-29T23:40:00Z")
+        say(60, f"Every sub-issue of this has closed, and its end state holds on `main` "
+                f"([run]({run}/3)), so I am closing it.", "2026-09-30T02:00:00Z")
+        text = stats.bot_section(world.ctx)
+        self.assertTrue(text.startswith(stats.SECTION_START))
+        self.assertIn("## 🫧 Squishy", text)
+        self.assertIn("| Runs started | 2 | 2 | 2 | 2 |", text)
+        self.assertIn("| One-shot builds started | 1 | 1 | 1 | 1 |", text)
+        self.assertIn("| Splits run | 1 | 1 | 1 | 1 |", text)
+        self.assertIn("| Sub-issues they opened | 3 | 3 | 3 | 3 |", text)
+        self.assertIn("| Trees closed, their end state holding | 1 | 1 | 1 | 1 |", text)
+        self.assertIn("`squishy-run.yml` workflow runs", text)
+        self.assertIn("### Its pull requests merged (0)", text)
 
 
 if __name__ == "__main__":

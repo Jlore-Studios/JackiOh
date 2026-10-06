@@ -1,7 +1,7 @@
 """The pinned "Night bot statistics" issue (bot/harness/stats.py): what the bot's comments, pull
 requests, commits and state file say it has done over the last six hours, the last day, the last
-week and all time, who planned, built, revised and approved each pull request, and the hourly
-rewrite."""
+week and all time, who planned, built, revised and approved each pull request, and the rewrite
+every 30 minutes."""
 
 from __future__ import annotations
 
@@ -274,7 +274,7 @@ class IssueTests(unittest.TestCase):
         self.assertIn(f"_… and {64 - stats.MERGES_SHOWN // 2} older ones._", body)
         self.assertTrue(body.endswith(stats.MARKER))
 
-    def test_it_is_opened_pinned_and_then_rewritten_every_hour(self):
+    def test_it_is_opened_pinned_and_then_rewritten_every_30_minutes(self):
         gh, ctx = world()
         note = stats.update(ctx)
         self.assertRegex(note, r"statistics: opened #\d+ and pinned it")
@@ -283,8 +283,8 @@ class IssueTests(unittest.TestCase):
         self.assertEqual(gh.pinned, [gh.threads[number]["node_id"]])
         self.assertEqual(stats.update(ctx), "statistics: not due")
         self.assertEqual(stats.update(ctx, force=True), f"statistics: rewrote #{number}")
-        self.assertEqual(stats.STATS_EVERY, timedelta(hours=1))
-        soon = make_ctx(gh, at=DAY + timedelta(minutes=50))
+        self.assertEqual(stats.STATS_EVERY, timedelta(minutes=30))
+        soon = make_ctx(gh, at=DAY + timedelta(minutes=20))
         self.assertEqual(stats.update(soon), "statistics: not due")
         later = make_ctx(gh, at=DAY + stats.STATS_EVERY + timedelta(minutes=1))
         self.assertEqual(stats.update(later), f"statistics: rewrote #{number}")
