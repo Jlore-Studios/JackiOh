@@ -368,9 +368,10 @@ export type Script = {
   /**
    * B5 E5, Classic #89 Paul Allen's Ghost: "to target this with anything but an attack, a player must
    * also discard N cards" — N now, read while the card is on the field (a pure read, so a Degrade or
-   * Upgrade of the declared number reaches it through `param`). 0 or absent is no cost. A declared
-   * target naming it carries the discards in the action; a prompt answer naming it asks for them next
-   * (`targeting.ts`, `targetingPoint.ts`).
+   * Upgrade of the declared number reaches it through `param`). 0 or absent is no cost. The discards
+   * are random at pay time (R682), so no action carries them: a play (§10.5 step 2) or an activation
+   * declaring it pays them as it pays its price, and a prompt answer naming it pays them before it
+   * goes on (`targeting.ts`, `targetingPoint.ts`).
    */
   targetingDiscards?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => number;
   /**

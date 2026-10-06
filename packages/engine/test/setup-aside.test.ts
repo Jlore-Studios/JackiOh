@@ -1,9 +1,9 @@
-// What setup deals and what it sets aside (SPEC §2.1, §2.4, R9, R225, R635, R640, R745; issues #152, #355).
+// What setup deals and what it sets aside (SPEC §2.1, §2.4, R9, R225, R635, R640, R746; issues #152, #355).
 //
 //  - R635: a card that casts on draw is not dealt by setup while another card is left. The opening
 //    draw and the mulligan's replacement draws skip it, it stays in its owner's library, and once both
 //    mulligans are resolved it is shuffled in. Setup never deals a fatigue draw.
-//  - R745: a hand the other cards cannot fill takes cast-on-draw cards, uncast, and each one still in
+//  - R746: a hand the other cards cannot fill takes cast-on-draw cards, uncast, and each one still in
 //    a hand is cast at the start of the game, before turn 1.
 //  - R640: a Quickdraw card replaces one of the opening draws, so a seat is dealt at most as many as
 //    its opening hand holds, and the others are ordinary cards in the library.
@@ -20,7 +20,7 @@ import { fold, hashState } from "../src/replay";
 import { chooseMode } from "../src/effects";
 import type { CardScripts } from "../src/script";
 import { registerScripts, registeredScripts } from "../src/scripts";
-import { mulliganOwed, mulliganPromptFor } from "../src/setup";
+import { mulliganPromptFor } from "../src/setup";
 import { createGame, newInstance, type GameState } from "../src/state";
 import { viewFor } from "../src/viewFor";
 import { vanillaDeck } from "./fixtures/catalog";
@@ -28,7 +28,7 @@ import { setupCatalog } from "./fixtures/harness";
 
 const POOL = 30;
 const DUAL = "fx-dual";
-/** A cast-on-draw Spell whose cast asks its caster something (R745's casts at the start of the game). */
+/** A cast-on-draw Spell whose cast asks its caster something (R746's casts at the start of the game). */
 const ASKS = "fx-cod-ask";
 
 const cod = (n: number): string => `fx-cod-${n}`;
@@ -70,7 +70,7 @@ function register(): void {
   defs[ASKS] = spell(ASKS, [], "Spell");
   const asks = {
     staticFlags: { castOnDraw: true },
-    cry: () => [chooseMode({ options: ["ok", "fine"], step: "ok", prompt: "R745" })],
+    cry: () => [chooseMode({ options: ["ok", "fine"], step: "ok", prompt: "R746" })],
     resume: { ok: () => [] },
   };
   scripts[ASKS] = { base: asks, radiant: asks };
@@ -256,14 +256,14 @@ describe("R635: cast on draw cards sit out the deal and are shuffled in after th
   });
 });
 
-describe("R745: a hand the other cards cannot fill takes cast-on-draw cards, cast at the start of the game", () => {
+describe("R746: a hand the other cards cannot fill takes cast-on-draw cards, cast at the start of the game", () => {
   /** The `cardPlayed` events, by instance id, in order. */
   const playedIn = (events: readonly GameEvent[]): string[] =>
     events.flatMap((event) => (event.type === "cardPlayed" ? [event.instanceId] : []));
   const drawnBy = (events: readonly GameEvent[], player: PlayerId): GameEvent[] =>
     events.filter((event) => event.type === "drawn" && event.player === player);
 
-  it("R745 an all-cast-on-draw deck deals a full hand of them, uncast, and casts them at the start of the game", () => {
+  it("R746 an all-cast-on-draw deck deals a full hand of them, uncast, and casts them at the start of the game", () => {
     const { begun } = start("r745-all", [deckOf(0, DECK_SIZE), OTHER()]);
     const state = begun.state;
     const hand = state.players.p1.hand;
@@ -295,7 +295,7 @@ describe("R745: a hand the other cards cannot fill takes cast-on-draw cards, cas
     expect(answered.state.result).toBeNull();
   });
 
-  it("R745 turn 1 of an all-cast-on-draw library is still bounded by R58's cap, as a chain mid-game is", () => {
+  it("R746 turn 1 of an all-cast-on-draw library is still bounded by R58's cap, as a chain mid-game is", () => {
     register();
     const game = createGame({ seed: "r745-cap", decks: [deckOf(0, DECK_SIZE), OTHER()] });
     // Five more, as a Unstable Clone Machine's or a CN-Virus's copies would add: 25 cards, all of them
@@ -316,7 +316,7 @@ describe("R745: a hand the other cards cannot fill takes cast-on-draw cards, cas
     expect(settled.players.p1.fatigueCount).toBe(0);
   });
 
-  it("R745 one other card and two cast-on-draw cards fill the hand, and each seat's are cast, Player 1's first", () => {
+  it("R746 one other card and two cast-on-draw cards fill the hand, and each seat's are cast, Player 1's first", () => {
     // p1: one other card and a hand of three. p2: two other cards and a hand of four.
     const { begun } = start("r745-one", [deckOf(0, DECK_SIZE - 1), deckOf(0, DECK_SIZE - 2)]);
     const state = begun.state;
@@ -340,7 +340,7 @@ describe("R745: a hand the other cards cannot fill takes cast-on-draw cards, cas
     expect(answered.state.players.p1.hand.some((card) => card.defId === "fx-1")).toBe(true);
   });
 
-  it("R745 a mulligan the other cards cannot replace is dealt cast-on-draw cards for the rest", () => {
+  it("R746 a mulligan the other cards cannot replace is dealt cast-on-draw cards for the rest", () => {
     // Five other cards: three in the hand and two left in the library for the three replacements.
     const { begun } = start("r745-short", [deckOf(0, DECK_SIZE - 5), OTHER()]);
     const state = begun.state;
@@ -361,7 +361,7 @@ describe("R745: a hand the other cards cannot fill takes cast-on-draw cards, cas
     expect(answered.state.players.p1.hero.health).toBe(30);
   });
 
-  it("R745 a cast-on-draw card dealt uncast that the mulligan returns goes back uncast", () => {
+  it("R746 a cast-on-draw card dealt uncast that the mulligan returns goes back uncast", () => {
     // p2 draws nothing on turn 1, so its library is as setup left it.
     const { begun } = start("r745-returned", [OTHER(), deckOf(0, DECK_SIZE - 2)]);
     const hand = begun.state.players.p2.hand;
@@ -385,7 +385,7 @@ describe("R745: a hand the other cards cannot fill takes cast-on-draw cards, cas
     expect(back?.memory).toEqual({});
   });
 
-  it("R745 a cast at the start of the game that asks holds turn 1 until it is answered, and the game folds from its log", () => {
+  it("R746 a cast at the start of the game that asks holds turn 1 until it is answered, and the game folds from its log", () => {
     const decks: [string[], string[]] = [[ASKS, ...Array.from({ length: DECK_SIZE - 1 }, (_, at) => cod(at + 1))], OTHER()];
     let seed = "";
     let begun: ReturnType<typeof beginGame> | undefined;
@@ -508,7 +508,7 @@ describe("R640: a Quickdraw card replaces one of the opening draws", () => {
     expect(drawnSurplus).toBeGreaterThan(0);
   });
 
-  it("R640, R745 two Quickdraw cards and one cast-on-draw card fill the hand, uncast", () => {
+  it("R640, R746 two Quickdraw cards and one cast-on-draw card fill the hand, uncast", () => {
     // Two Quickdraw cards, eighteen that cast on draw, and three draws: the two, and one of the
     // eighteen for the third, cast at the start of the game.
     const { begun } = start("r636-mixed", [deckOf(2, 18), OTHER()]);

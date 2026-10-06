@@ -117,7 +117,7 @@ export type Tuning = {
 
 /**
  * B5 E39: a lasting instruction that rides a card through every zone. `returnAfterResolve` is Classic+
- * #14 Forever&'s "After this resolves, return it to your hand. This can't cost less than (floor)";
+ * #14 Forever&'s "After this resolves, Bounce it. This can't cost less than (floor)";
  * `castOnDraw` and `targetEnemies` are Classic+ #40 Appropriations' "They have Cast on draw and aim
  * at enemies when they harm and at your side when they help". `swapsBook` is Classic #55's swap.
  */

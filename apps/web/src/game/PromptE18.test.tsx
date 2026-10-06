@@ -342,7 +342,7 @@ describe("reward (C #90)", () => {
 // pick
 // ---------------------------------------------------------------------------------------------
 
-describe("pick (C #34, C #44)", () => {
+describe("pick (C #44)", () => {
   /** C #44 Back from the GY: Units from your graveyard with a total cost of (5) or less. */
   function graveyardView(over: { min?: number; max?: number; budget?: number } = {}): PlayerView {
     return baseView({

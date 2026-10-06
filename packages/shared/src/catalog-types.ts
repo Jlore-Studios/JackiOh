@@ -181,6 +181,11 @@ export type Param = {
   min?: number;
   /** It never goes above this (100 for a percentage). */
   max?: number;
+  /**
+   * R747: the one face a Degrade, an Upgrade or KY's Constant may move it on, for a number only that
+   * face prints; on the other face it always reads its printed value. Absent, both faces.
+   */
+  tunedOn?: "radiant";
 };
 
 /**
@@ -309,7 +314,7 @@ export type CatalogQuery = {
  * §10.6. E18 adds: `number` (a number from a fixed range, Classic #18), `answer` (one of a
  * multiple-choice problem's options, Classic+ #42), `cell` (a board cell, Classic+ #62), `reward`
  * (a completed quest's reward, Classic #90) and `pick` (a budgeted pick of several cards from a pile,
- * Classic #34 and #44). A mode prompt the other player holds is a `mode` prompt with their id.
+ * Classic #44). A mode prompt the other player holds is a `mode` prompt with their id.
  */
 export type PromptKind =
   | "discover"

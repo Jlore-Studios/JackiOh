@@ -21,7 +21,7 @@ import {
   type Interaction,
 } from "./actions.ts";
 import { testid } from "./contract.ts";
-import { baseView, card, emptySide, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
+import { baseView, card, emptySide, faceUpBackrow, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
 
 /** A seat with three cards in hand, two of your units and one of theirs. */
 function seatedView(over: Partial<PlayerView> = {}): PlayerView {
@@ -459,6 +459,61 @@ describe("the click reducer builds a play out of the candidates (R81)", () => {
     expect(
       onClickTarget(view, legal, playing, { on: "unit", instanceId: "e1", side: "opponent", lane: 1 }).action,
     ).toBeUndefined();
+  });
+});
+
+describe("R446 a Unit placed on your Ivory Tower by clicking the Tower", () => {
+  // The Tower covers its backrow zone, so the zone itself is never clicked: its card is.
+  const view = seatedView({
+    you: emptySide("p1", {
+      hand: [card({ instanceId: "h1", defId: "core-008", cost: 1 })],
+      backrow: [
+        null,
+        faceUpBackrow("p1", { instanceId: "tower", defId: "classicplus-033" }),
+        null,
+        faceUpBackrow("p1", { instanceId: "well", defId: "core-006" }),
+        null,
+      ],
+    }),
+  });
+  const onTower: ActionBody = { type: "play", instanceId: "h1", zone: { row: "backrow", lane: 2 } };
+  const legal: ActionBody[] = [playZone("h1", 3), onTower];
+  const playing = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+
+  it("clicking the Tower card sends the backrow play", () => {
+    const result = onClickTarget(view, legal, playing, {
+      on: "backrow",
+      instanceId: "tower",
+      side: "you",
+      lane: 2,
+    });
+
+    expect(result.action).toEqual(onTower);
+    expect(result.interaction).toEqual(IDLE);
+  });
+
+  it("an opponent's backrow card changes nothing", () => {
+    const result = onClickTarget(view, legal, playing, {
+      on: "backrow",
+      instanceId: "tower",
+      side: "opponent",
+      lane: 2,
+    });
+
+    expect(result.action).toBeUndefined();
+    expect(result.interaction).toBe(playing);
+  });
+
+  it("a backrow lane no candidate names changes nothing", () => {
+    const result = onClickTarget(view, legal, playing, {
+      on: "backrow",
+      instanceId: "well",
+      side: "you",
+      lane: 4,
+    });
+
+    expect(result.action).toBeUndefined();
+    expect(result.interaction).toBe(playing);
   });
 });
 

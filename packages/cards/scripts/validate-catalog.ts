@@ -313,7 +313,7 @@ function validateParams(where: string, value: Record<string, unknown>): void {
         fail(at, `param must be an object (got ${describe(param)})`);
         return;
       }
-      const { key, base, radiant, better, step, min, max } = param;
+      const { key, base, radiant, better, step, min, max, tunedOn } = param;
       if (typeof key !== "string" || !/^[a-z][A-Za-z0-9]*$/.test(key)) {
         fail(at, `\`key\` must be a camelCase word (got ${describe(key)})`);
         return;
@@ -330,7 +330,14 @@ function validateParams(where: string, value: Record<string, unknown>): void {
         if (isInt(n) && isInt(min) && n < min) fail(at, `${key}: ${n} is below its min ${min}`);
         if (isInt(n) && isInt(max) && n > max) fail(at, `${key}: ${n} is above its max ${max}`);
       }
-      const extra = Object.keys(param).filter((k) => !["key", "base", "radiant", "better", "step", "min", "max"].includes(k));
+      // R747: a number tuned on the Radiant face only is one the base face does not print.
+      if (tunedOn !== undefined && tunedOn !== "radiant") fail(at, `${key}: \`tunedOn\` is "radiant" when present (got ${describe(tunedOn)})`);
+      if (tunedOn === "radiant" && paramPlaceholders(texts[0] ?? "").some((placeholder) => placeholder.key === key)) {
+        fail(at, `${key}: tuned on the Radiant face only, but the base face's text writes {${key}}`);
+      }
+      const extra = Object.keys(param).filter(
+        (k) => !["key", "base", "radiant", "better", "step", "min", "max", "tunedOn"].includes(k),
+      );
       if (extra.length > 0) fail(at, `unknown param field(s) ${extra.join(", ")}`);
       if (!texts.some((text) => paramPlaceholders(text).some((placeholder) => placeholder.key === key))) {
         fail(at, `${key}: no face's text writes {${key}}`);

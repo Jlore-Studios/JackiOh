@@ -23,8 +23,8 @@
 // it — traps first, then the other triggers the announce woke (§10.3). A countered play stops there:
 // step 4 never places it, so it is never counted, and step 8 settles. Step 1 is the targeting point
 // of the play's declared targets (B5 E5, E9, R450): an interception (Classic #33) moves a pick, and
-// step 2 pays the discards a costly target carries (Classic #89). Step 3 may replace the card being
-// played (Classic #23 Devil's Pact, R449), and step 4 counts what the play leaves for E4 (R451).
+// step 2 pays a costly target's discards, at random (Classic #89, R682). Step 3 may replace the card
+// being played (Classic #23 Devil's Pact, R449), and step 4 counts what the play leaves for E4 (R451).
 //
 // What is *not* here: which choices are legal (that is `playChoices.ts`, R90), what a cost is
 // (`mana.ts`, R65), what a card's text does (the card's script, which is a pure builder the engine
@@ -1697,7 +1697,7 @@ function finishStep(sink: EngineSink, run: PlayRun): void {
 }
 
 /**
- * E39, R410, R455 (Classic+ #14 Forever&: "After this resolves, return it to your hand"): a Spell
+ * E39, R410, R455 (Classic+ #14 Forever&: "After this resolves, Bounce it"): a Spell
  * carrying a `returnAfterResolve` enchantment that has resolved — played or cast — and that step 7 has
  * just landed goes back to its owner's hand from the graveyard or the exile pile it went to (its own
  * "exile this", a cast's "then exile it", a "would go to a graveyard" replacement), the hand cap

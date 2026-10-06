@@ -49,6 +49,7 @@ import { BACKROW_ZONES, CAST_ON_DRAW_CHAIN_CAP, LIBRARY_CAP, UNIT_ZONES } from "
 import { isAnnounceLive } from "./announce";
 import { grantedHandTriggers } from "./bookSwap";
 import { heldBack } from "./drawComplete";
+import { refreshScopeMarks } from "./effects/delay";
 import { sweepMarks } from "./marks";
 import { isFaceDown } from "./preview";
 import { applyResumable, runHookResumable } from "./prompts";
@@ -745,7 +746,9 @@ const collected = new WeakSet<GameEvent>();
  */
 function collectEvents(sink: SettleSink): void {
   const state = sink.state;
-  // R437: a mark whose effect has stopped waiting goes, and says so, before the frontier moves.
+  // R437: a mark whose effect has stopped waiting goes, and says so, before the frontier moves; R748:
+  // a delayed destroy of a scope marks the Units it names now.
+  refreshScopeMarks(sink);
   sweepMarks(sink);
   for (let at = sink.dispatched ?? 0; at < sink.events.length; at += 1) {
     sink.dispatched = at + 1;

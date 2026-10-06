@@ -489,7 +489,7 @@ export function completeDraw(
 }
 
 /**
- * R745: a cast-on-draw card setup dealt to a hand uncast, cast at the start of the game as its draw
+ * R746: a cast-on-draw card setup dealt to a hand uncast, cast at the start of the game as its draw
  * would have cast it: out of the hand into the resolving zone and through the cast, held as a draw
  * until the cast resolves, so the card knows it is cast on draw (R58, `castOnDrawNow`). Its draw was
  * made in setup, so nothing repeats and no chain begins (R58, R217). A card that no longer casts on

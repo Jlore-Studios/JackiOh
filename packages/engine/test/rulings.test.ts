@@ -3830,7 +3830,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Proved by setup-aside.test.ts "R635 …": nothing is cast in setup, the cards are shuffled in after
   // the mulligans at random places and without a word to the other seat, and a Quickdraw card that
   // casts on draw is dealt as a Quickdraw card; and by 021-hinder.test.ts's "R431, R635 …" (a real
-  // game). A hand the other cards cannot fill is R745's.
+  // game). A hand the other cards cannot fill is R746's.
   it("R635 sets cast-on-draw cards aside through setup and shuffles them in once the mulligans are done", () => {
     provenIn(635, "setup-aside.test.ts", "../../cards/test/021-hinder.test.ts");
   });
@@ -4400,6 +4400,37 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // test/match/clock.test.ts "R744 …" (a stored deadline is kept and never extended).
   it("R744 starts a disconnect grace for a seat that is not there when the first socket attaches", () => {
     provenIn(744, "../../../apps/server/test/match/recovery.test.ts", "../../../apps/server/test/match/clock.test.ts");
+  });
+
+  // Proved by setup-aside.test.ts "R746 …": an all-cast-on-draw deck deals a full hand of them uncast
+  // and casts them before turn 1, R58's cap still bounds turn 1, a hand or a mulligan the other cards
+  // cannot fill takes them, a returned one goes back uncast, and a cast that asks holds turn 1 and
+  // folds from its log.
+  it("R746 deals cast-on-draw cards to a hand the other cards cannot fill, uncast, and casts them at the start of the game", () => {
+    provenIn(746, "setup-aside.test.ts");
+  });
+
+  // Proved by params.test.ts "R747 …" (a number tuned on the Radiant face only reads its printed value
+  // on the base face and steps on the Radiant face), and by the cards' own tests, 046-divine-favor and
+  // 054-rewind "R747 …" (an Upgrade's menu offers no number on the base face).
+  it("R747 tunes a number the base face does not print on the Radiant face only", () => {
+    provenIn(
+      747,
+      "params.test.ts",
+      "../../cards/test/classic/046-divine-favor.test.ts",
+      "../../cards/test/classic/054-rewind.test.ts",
+    );
+  });
+
+  // Proved by cards test/classic/020-the-power-to-punish.test.ts "R748 …" (every enemy Unit marked in
+  // both views, one played later too, one that leaves unmarked, every mark gone when it resolves).
+  it("R748 marks every Unit a delayed destroy of a scope names while it waits", () => {
+    provenIn(748, "../../cards/test/classic/020-the-power-to-punish.test.ts");
+  });
+
+  // Proved by cards test/card-text.test.ts "R749 …" (no printed face names a target it picks).
+  it("R749 words the Core faces without a target they pick", () => {
+    provenIn(749, CARDS_CARD_TEXT_TEST);
   });
 });
 

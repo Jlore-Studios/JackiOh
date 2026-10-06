@@ -15,7 +15,8 @@
 //     field meanwhile, even if it came back (R174) — and on the Radiant face every enemy Unit on the
 //     field when it resolves, not a list fixed at activation. It resolves with the start-of-turn
 //     delayed effects (R62, R68) whether or not this card is still on the field (as R76), and it is a
-//     destroy, so an Indestructible Unit survives it (R46).
+//     destroy, so an Indestructible Unit survives it (R46). Either face's Units wear the red mark while
+//     it waits (R437; on the Radiant face every enemy Unit, those played meanwhile too, R748).
 // Activating is not a play (R384).
 
 import type { ActivationDecl, Effect, EffectContext, Script } from "@jackioh/engine";
@@ -51,7 +52,7 @@ function punish(ctx: EffectContext, radiant: boolean): Effect[] {
       // The unit marked for death wears #50 K-Pop Fanatic's aura, in red (R437).
       return radiant ? [] : [destroyAtNextTurnStart({ target: { of: "chosen" }, mark: { mark: "destroy", color: "red" } })];
     case DOOM_ALL_MODE:
-      return radiant ? [destroyAtNextTurnStart({ scope: { side: "enemy" } })] : [];
+      return radiant ? [destroyAtNextTurnStart({ scope: { side: "enemy" }, mark: { mark: "destroy", color: "red" } })] : [];
     default:
       return [];
   }

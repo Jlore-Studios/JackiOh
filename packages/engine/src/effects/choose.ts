@@ -508,8 +508,7 @@ function pickable(state: GameState, card: CardInstance, filter: PickFilter): boo
 /**
  * B5 E18: a pick of one card or several from a pile, or from cards across zones, budgeted by count
  * (`max`) or by cost (`budget`) — Classic #11 Mind Melt's "a card of your opponent's hand" (one
- * card), #34 Ancient Acquisition's "2 cards from your graveyard" (Radiant "4 from your graveyard or
- * exile"), #44 Back from the GY's "Units with a total cost of (5) or less", #56's "up to 3 Spells",
+ * card), #44 Back from the GY's "Units with a total cost of (5) or less", #56's "up to 3 Spells",
  * #78's Radiant "a card of yours of its type on your field, in your hand or in your deck". Every
  * matching card of the piles is an option — no Discover limit of three — carrying its cost as R65
  * reads it where it lies (`effectiveCost`: a hand card at its hand cost, any other at its own), and

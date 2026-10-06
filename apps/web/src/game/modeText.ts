@@ -18,7 +18,7 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   },
   // #24 Efficiency Dividend: "deal X damage to a target; heal a target 2X; gain floor(X/2) mana next turn".
   "core-024": {
-    damage: { label: "Deal X damage", detail: "Deal X damage to a target." },
+    damage: { label: "Deal X damage", detail: "Deal X damage." },
     heal: { label: "Heal 2X", detail: "Heal a target by twice X." },
     mana: { label: "Mana next turn", detail: "Gain half of X, rounded down, as mana next turn." },
   },
@@ -71,7 +71,7 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
   // #24 Efficiency Dividend, radiant: "deal 2X damage to a target; heal a target 4X; gain X mana
   // next turn" (§8 #24, R275), every mode doubled.
   "core-024": {
-    damage: { label: "Deal 2X damage", detail: "Deal twice X damage to a target." },
+    damage: { label: "Deal 2X damage", detail: "Deal twice X damage." },
     heal: { label: "Heal 4X", detail: "Heal a target by four times X." },
     mana: { label: "Mana next turn", detail: "Gain X mana next turn." },
   },

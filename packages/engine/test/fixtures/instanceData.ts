@@ -205,6 +205,17 @@ export const military = def("military", { type: "Spell", cost: 2, base: { keywor
 /** Classic+ #40's Education: every card in your hand gains Cast on draw (an enchantment). */
 export const educator = def("educator", { type: "Spell", base: { keywords: [], text: "Education" }, radiant: { keywords: [], text: "Education" } });
 
+/**
+ * R747: Classic #46 Divine Favor's and Classic #54 Rewind's shape: a number only the Radiant face prints
+ * (`times` 1 → 2, more is better), tuned on that face only.
+ */
+export const radiantNumber = def("radiant-number", {
+  type: "Spell",
+  params: [{ key: "times", base: 1, radiant: 2, better: "up", tunedOn: "radiant" }],
+  base: { keywords: [], text: "Do it." },
+  radiant: { keywords: [], text: "Do it {times|time|times}." },
+});
+
 export const INSTANCE_DEFS: CardDef[] = [
   brittleUnit,
   brittleTrap,
@@ -230,6 +241,7 @@ export const INSTANCE_DEFS: CardDef[] = [
   dropship,
   military,
   educator,
+  radiantNumber,
 ];
 
 /** The step `asker`'s Death opens and the answer re-enters. */

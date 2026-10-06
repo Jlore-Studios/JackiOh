@@ -178,6 +178,8 @@ export function numbersOn(state: GameState, card: CardInstance): NumberOnCard[] 
   }
   for (const entry of numberedKeywordsOn(state, card)) add({ kind: "keyword", key: entry.key }, entry.key, entry.value);
   for (const param of paramsOf(state, card.defId)) {
+    // R747: a number the base face does not print is not on it.
+    if (param.tunedOn === "radiant" && !card.radiant) continue;
     // The key as a word, never a raw `{key}` placeholder (a label is shown as it is).
     add({ kind: "param", key: param.key }, param.key, paramValue(state, card, param.key));
   }

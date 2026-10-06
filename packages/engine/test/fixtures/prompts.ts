@@ -210,7 +210,7 @@ const questScript: Script = {
   },
 };
 
-/** Classic #34 Ancient Acquisition's shape: up to 2 (Radiant 4, graveyard or exile) to your hand. */
+/** An up-to pick from a pile (C #34's shape before R684): up to 2 (Radiant 4, graveyard or exile) to hand. */
 export const acquire = def("acquire", "Spell", { cost: 1 });
 function returnPicks(ctx: EffectContext): Effect[] {
   return ctx.targets.map((_, index) => addToHand({ instance: { of: "chosen", index } }));

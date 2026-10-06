@@ -2,11 +2,13 @@
 // left your hand): draws one at a time until your hand holds as many cards as the opponent's; level or
 // ahead → no draw; a draw that adds no card (fatigue, a burn, a cast-on-draw card, a draw a limit
 // stops) ends it, so it never loops; its preview is the number of draws it asks for now (R280); radiant:
-// until you hold twice as many; its tuned number (multiplier) reads through `param()` (R386)".
+// until you hold twice as many; its tuned number (multiplier) reads through `param()` (R386)". The base
+// face prints no multiplier, so it is tuned on the Radiant face only (R747).
 //
 // The preview's proofs are in `test/preview.test.ts` (its C #46 section), with the set of hooked cards.
 
 import { stepParam, type GameState } from "@jackioh/engine";
+import { applicableChanges } from "@jackioh/engine/effects";
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { base, def, radiant } from "../../src/scripts/classic/046-divine-favor";
@@ -27,10 +29,10 @@ function drawn(events: readonly GameEvent[], player: PlayerId = "p1"): GameEvent
 const many = (count: number, defId: string = STOCKPILE): string[] => Array.from({ length: count }, () => defId);
 
 describe("C #46 Divine Favor", () => {
-  it("is a (1) Spell; its multiplier is a declared number (1, Radiant 2); it declares a preview", () => {
+  it("is a (1) Spell; its multiplier is a declared number (1, Radiant 2), tuned on the Radiant face only; it declares a preview", () => {
     expect(def.type).toBe("Spell");
     expect(def.cost).toBe(1);
-    expect(def.params).toEqual([{ key: "multiplier", base: 1, radiant: 2, better: "up", step: 1, min: 1 }]);
+    expect(def.params).toEqual([{ key: "multiplier", base: 1, radiant: 2, better: "up", step: 1, min: 1, tunedOn: "radiant" }]);
     expect(base.preview).toBeTypeOf("function");
     expect(radiant).toBe(base);
   });
@@ -102,11 +104,15 @@ describe("C #46 Divine Favor", () => {
       expect(drawn(s.lastEvents)).toHaveLength(2);
     });
 
-    it("R386 its multiplier is declared: an Upgrade's step makes it 2×", () => {
+    it("R747 the base face's multiplier is not tunable: an Upgrade's menu offers no number and a recorded step still draws 1×", () => {
       const s = scenario({ p1: { hand: [FAVOR, FILLER], library: many(6, MENACE) }, p2: { hand: many(3) } });
+      expect(applicableChanges(s.state, s.card(FAVOR), "upgrade")).not.toContain("number");
+      expect(applicableChanges(s.state, s.card(FAVOR), "degrade")).not.toContain("number");
       stepParam(s.card(FAVOR), "multiplier", 1);
       s.play(FAVOR);
-      expect(s.hand("p1")).toHaveLength(6);
+      // As many as the opponent's three, as the text says: the Filler and two draws.
+      expect(s.hand("p1")).toHaveLength(3);
+      expect(drawn(s.lastEvents)).toHaveLength(2);
     });
 
     it("R97 the drawn cards are never named in the opponent's view", () => {
@@ -134,6 +140,7 @@ describe("C #46 Divine Favor", () => {
 
     it("R386 its multiplier steps from 2: a Degrade's step makes it 1×", () => {
       const s = scenario({ p1: { hand: [{ def: FAVOR, radiant: true }], library: many(8, MENACE) }, p2: { hand: many(3) } });
+      expect(applicableChanges(s.state, s.card(FAVOR), "degrade")).toContain("number");
       stepParam(s.card(FAVOR), "multiplier", -1);
       s.play(FAVOR);
       expect(s.hand("p1")).toHaveLength(3);

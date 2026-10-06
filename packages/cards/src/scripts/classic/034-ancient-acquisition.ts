@@ -1,7 +1,7 @@
 // C #34 Ancient Acquisition (SPEC §8.6 row 34, §6.3 Add to hand; R4, R70, R97, R317, R684).
 // Spell, cost 1, Rare.
-//   Base:    "Return {cards|random card|random cards} from your graveyard to hand." (2)
-//   Radiant: "Return {cards|random card|random cards} from your graveyard or exile to hand." (4)
+//   Base:    "Bounce {cards|random card|random cards} from your graveyard." (2)
+//   Radiant: "Bounce {cards|random card|random cards} from your graveyard or exile." (4)
 //   Engine:  "That many random cards from the pile or piles, drawn uniformly through the match rng
 //            (balance patch 1: no pick prompt; R684); fewer cards than asked ends it; the hand cap
 //            applies (R4). C #47 Recurring Felinor casts it. Tunes: cards 2 ↑."

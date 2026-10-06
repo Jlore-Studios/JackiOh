@@ -118,8 +118,9 @@ and names its own id: `cardDef("classic-043")`, `cardDef("classicplus-012-1")`.
     display only, for the card frame and the summon sting. A token's `rarity` stays `"Token"`, so no
     pool ever finds one by rarity.
   - `params` — the numbers Degrade, Upgrade and KY's Constant may change (R386), per face:
-    `[{ key, base, radiant, better: "up" | "down", step?, min?, max? }]`. A face's text writes each
-    one as `{key}`; the view carries the instance's current value and the client fills it in, as it
+    `[{ key, base, radiant, better: "up" | "down", step?, min?, max?, tunedOn? }]`. A face's text writes each
+    one as `{key}`; `tunedOn: "radiant"` marks a number only the Radiant face prints, which is tuned
+    there alone and reads its printed value on the base face (R747); the view carries the instance's current value and the client fills it in, as it
     prints `preview` (R280); R277's diff reads each face with its own values filled in. A script never
     writes a declared number as a literal: it reads `param(ctx, key)` (§1's read surface). With no
     `step` the step is 1 for a number up to 5, 2 for 6–12 and a quarter (rounded) above that, and an

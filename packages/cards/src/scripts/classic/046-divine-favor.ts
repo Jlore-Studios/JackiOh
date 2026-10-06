@@ -1,12 +1,12 @@
 // C #46 Divine Favor (SPEC §8.6 row 46, BUILD M9 Classic row C 46). (1) Spell, Rare.
-//   Base:    "Draw until you have {multiplier}× as many cards in hand as your opponent." (1×)
+//   Base:    "Draw until you have as many cards in hand as your opponent." (1×, not tunable, R747)
 //   Radiant: the same, at 2× — "draw until you have twice as many cards in hand as your opponent".
 //   Engine:  "Read as it resolves, with this Spell already out of your hand: before each draw it
 //            compares your hand with the opponent's (Radiant: with twice the opponent's) and draws one
 //            card while yours is smaller; a draw that adds no card to your hand (a fatigue hit, a burn at
 //            the hand cap, a card cast on draw, R58, or a draw the draw limit stops, §2.4) ends it, so it
 //            can't loop; a hand already at the mark draws nothing. A `preview` (R280) shows how many
-//            cards it would draw now. Tunes: multiplier 1 ↑ (Radiant 2)."
+//            cards it would draw now. Tunes: multiplier 2 ↑, on the Radiant face only (R747)."
 //
 // The loop is the engine's `drawWhile`: the mark read before each draw, the first draw that adds no
 // card ending it. The Spell is resolving, out of the hand (§10.5 step 4). `preview` (R280, proved in
