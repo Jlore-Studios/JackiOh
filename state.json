@@ -2745,9 +2745,11 @@
     "362": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-06T07:36:42Z",
+      "forced": false,
       "handoff": {
         "at": "2026-10-06T07:34:17Z",
         "family": "claude",
