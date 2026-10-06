@@ -2265,7 +2265,7 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-1",
-      "question": "",
+      "question": "Main's pending patch v0.2.15 (#340, merged at d4ca767e) has not been promoted yet: there is no `patches ship: v0.2.15` on main at cd28fbbc. It claims C #80, C+ #38 and C+ #46, and this patch claims the same three. Can someone check that patches-ship.yml's promotion for #340 ran and merges? Once v0.2.15 is in patches.json on main, merging main into bot/issue-322 should turn both red checks green without changing anything on this branch. I ran that exact case in a scratch worktree and it passed. Until then this PR must not merge: `patches ship` itself refuses to promote the two fragments while both are pending.",
       "queued_at": "2026-10-06T01:10:04Z",
       "requested_by": "jgoetzmann",
       "run_id": "37402048333",
