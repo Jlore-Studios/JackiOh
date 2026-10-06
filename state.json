@@ -4211,13 +4211,13 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-06T11:50:00Z",
-          "utilization": 0.41
+          "resets_at": "2026-10-06T18:20:00Z",
+          "utilization": 0.19
         },
-        "observed_at": "2026-10-06T07:16:15Z",
+        "observed_at": "2026-10-06T13:28:58Z",
         "seven_day": {
           "resets_at": "2026-10-12T09:00:00Z",
-          "utilization": 0.56
+          "utilization": 0.61
         },
         "status": "allowed_warning"
       }
