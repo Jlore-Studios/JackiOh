@@ -312,22 +312,28 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> li
     claude = all(p.cli == "claude" for p in hosted)
     hosted_title = ("Claude accounts, on GitHub's runners" if claude and hosted
                     else "GitHub's runners")
+    if claude and len(hosted) == 1 and not pool.machine_parallel:
+        hosted_title = f"{BOT_TITLE}'s Claude account, on GitHub's runners"
+    # A pool that never runs on the machine (Squishy's, #60) draws no machine box.
+    machine_box = bool(pool.machine_parallel or machine)
     lines = ["```mermaid", "flowchart TB"]
     if hosted:
         lines += [f'    subgraph hosted["{hosted_title}: {busy_hosted} of {len(hosted)} working"]',
                   "        direction LR", *boxes,
-                  "        " + " ~~~ ".join(f"h{i}" for i in range(len(hosted))), "    end"]
+                  *(["        " + " ~~~ ".join(f"h{i}" for i in range(len(hosted)))]
+                    if len(hosted) > 1 else []), "    end"]
     night_title = "The night box" if training else "The machine"
-    lines += [f'    subgraph machine["{night_title}: {len(machine)} of {night_slots} '
-              'slots in use"]', "        direction LR", *slot_boxes,
-              "        " + " ~~~ ".join(f"m{i}" for i in range(slots)), "    end"]
+    if machine_box:
+        lines += [f'    subgraph machine["{night_title}: {len(machine)} of {night_slots} '
+                  'slots in use"]', "        direction LR", *slot_boxes,
+                  "        " + " ~~~ ".join(f"m{i}" for i in range(slots)), "    end"]
     if train_boxes:
         lines += ['    subgraph training["The training box: ladder training items only"]',
                   "        direction LR", *train_boxes]
         if len(train_boxes) > 1:
             lines.append("        " + " ~~~ ".join(f"t{i}" for i in range(len(train_boxes))))
         lines.append("    end")
-    if hosted:
+    if hosted and machine_box:
         lines.append("    hosted ~~~ machine")
     if train_boxes:
         lines.append("    machine ~~~ training")
@@ -432,8 +438,10 @@ def section(ctx: Context) -> str:
              f"{'🛑 **Halted.** ' if halted else ''}_@{ctx.cfg.bot_login}, on its own Claude "
              f"account and GitHub's runners. `{SLASH} status` gives the same facts on demand._",
              "", "### What it is working on", ""]
+    # The night bot's two charts, for this bot's runs and lanes: the timeline, then the boxes.
     running = running_table(ctx, state, live, issues)
-    lines += (running + [""]) if running else ["Nothing is running right now.", ""]
+    lines += (running + [""]) if running else []
+    lines += timeline(ctx, state, live) + [""] + lanes_boxes(ctx, state, live) + [""]
     lines += ["### Its account", ""] + subscription_table(ctx, state, live) + [""]
     lines += ["### Its queue", ""] + queue_table(issues) + [""]
     if MODES:
