@@ -2664,11 +2664,13 @@
         "by": "`claude` (strong)",
         "sha": "83565106c0a3572a1a0458e66e90d497017f7b44"
       },
+      "closed_at": "2026-10-06T05:07:28Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-06T04:16:56Z",
       "issue": 347,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
