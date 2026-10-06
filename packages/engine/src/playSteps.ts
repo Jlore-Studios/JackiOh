@@ -706,8 +706,9 @@ function giftedProgramStep(sink: EngineSink, run: PlayRun): void {
  * `replacePlays` modifier of the playing player replaces the card played, here at §10.5 step 3, by a
  * new instance of its definition (Radiant per the modifier) that is played in its place: it waits in
  * the resolving zone, makes its own choices as a cast does (R70) at the announce, and takes its zone
- * by R64 at step 4. The old card ceases to exist (R35), in its hand or in the resolving zone a cast
- * waited in, and the price paid was the old card's (its mana, Tribute and targeting cost stay paid).
+ * by R64 at step 4. The old card ceases to exist (R35), in its hand, in the graveyard a play under a
+ * permission takes it from (R454) or in the resolving zone a cast waited in, and the price paid was
+ * the old card's (its mana, Tribute and targeting cost stay paid).
  * Several modifiers replace in turn, in creation order, each re-reading the card; a card that already
  * is the named card on the named face is not replaced by itself.
  */
@@ -718,10 +719,15 @@ function replacePlayedCard(sink: EngineSink, run: PlayRun): void {
     const old = findInstance(state, run.instanceId);
     if (old === undefined) return;
     if (old.defId === mod.defId && old.radiant === mod.radiant) continue;
-    // R226: a card already taken out of the hand (or the resolving zone) is not played at all.
+    // R226: a card already taken out of the hand (or the resolving zone) is not played at all. R454: a
+    // play from the graveyard is a play as from hand, so its card is replaced there.
     const zone = old.zone;
-    if (zone.z !== "hand" && zone.z !== "resolving") return;
-    if (zone.z === "hand" && zone.player !== run.player) return;
+    if (run.source === "graveyard") {
+      if (!inOwnGraveyard(state, run.player, old)) return;
+    } else {
+      if (zone.z !== "hand" && zone.z !== "resolving") return;
+      if (zone.z === "hand" && zone.player !== run.player) return;
+    }
     // R177: a card replaced in a hand was never the other player's to read.
     const hiddenFrom = zone.z === "hand" ? [opponentOf(zone.player)] : [];
 
@@ -743,6 +749,8 @@ function replacePlayedCard(sink: EngineSink, run: PlayRun): void {
     run.targets = [];
     run.modes = [];
     run.replaced = true;
+    // R454: the new card waits in the resolving zone, taken from no graveyard.
+    delete run.source;
     delete run.targetSlices;
     delete run.castChosen;
     // R214: whether step 3 makes it Radiant is read for the card that is played, off the board now.
