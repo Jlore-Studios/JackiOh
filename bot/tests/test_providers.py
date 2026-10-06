@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import dataclasses
-
 import json
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -305,9 +303,7 @@ class MatchingTests(unittest.TestCase):
         """`off_from`: from that day (Central time) Devin takes no new work, forced or not, and
         the planner opens one issue asking a person what it should do now."""
         pool = providers.load(ROOT)
-        # Devin is off in the committed file since #311; the date holds once it is back on.
-        self.assertFalse(pool.get("devin").enabled)
-        devin = dataclasses.replace(pool.get("devin"), enabled=True)
+        devin = pool.get("devin")
         self.assertEqual(str(devin.off_from), "2026-10-15")
         self.assertIn("free on Devin's CLI only through 2026-10-16", devin.off_reason)
         everyone = Secrets.of(secrets(*providers.SECRETS))
@@ -775,8 +771,8 @@ class WhenTests(unittest.TestCase):
         text = providers.when_free(test_pool(), {}, DAY, "America/Chicago", only_claude)
         self.assertIn("when `claude-1` opens (21:00–07:00", text)
         text = providers.when_free(providers.load(ROOT), {}, DAY, "America/Chicago", only_claude)
-        # Devin and devin-train are off in the committed file (#311).
-        self.assertIn("`muse`, `agy`, `gpt` can take it now", text)
+        # devin-train is off in the committed file until the training box is built (#318).
+        self.assertIn("`muse`, `agy`, `gpt`, `devin` can take it now", text)
 
 
 if __name__ == "__main__":
