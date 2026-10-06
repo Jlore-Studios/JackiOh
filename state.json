@@ -2483,9 +2483,7 @@
     },
     "349": {
       "action": "build",
-      "asks": [
-        "c:6019142379"
-      ],
+      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -2505,14 +2503,16 @@
       "planned_at": "2026-10-06T05:01:13Z",
       "planned_by": "`claude-2` (claude, `opus`, strong)",
       "planned_tier": "strong",
-      "provider": "muse",
+      "provider": "claude-3",
       "question": "The blocking finding needs full `pnpm ai:gate` counts (100/50/50) transcribed into SPEC \u00a79.9, but this pass's harness forbids running `pnpm ai:gate` on the shared machine and inventing the numbers is forbidden. Should I run the ~30-minute full gate here against that guidance to fill in the counts, or should this merge on CI's ai-gate pass with the transcription done as a follow-up?",
       "queued_at": "2026-10-06T15:04:38Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37471010985",
-      "started_at": "2026-10-06T13:28:40Z",
+      "run_id": "37484426283",
+      "started_at": "2026-10-06T15:05:56Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6019142379"
+      ]
     },
     "350": {
       "action": "build",
@@ -3408,9 +3408,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-06T14:10:32Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37476624847",
-    "what": "build #348 on claude-3"
+    "at": "2026-10-06T15:05:56Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37484426283",
+    "what": "build #349 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-06T15:05:00Z",
