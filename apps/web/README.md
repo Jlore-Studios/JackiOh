@@ -263,8 +263,9 @@ otherwise it is greyed and its tooltip gives the view's `reason`. A press report
 listed body is sent at once; several wait for a target clicked on the board (or dragged to from the
 control, or from a card of yours that has nothing to attack and one ability), a Tribute, or a mode
 in the inline picker. Heroic Power is built the same way: `power` (the first power) and
-`power-<instanceId>` (any further one) report the power's activation, whichever of `activatePower`
-or `activate` `legal` lists. The control flashes (`data-flash="activated"`, a static ring under
+`power-<instanceId>` (any further one) report the power's activation: the `activate` naming the
+power the card rolled, which is all `legal` lists for it since R752 (an old `activatePower` still
+matches). The control flashes (`data-flash="activated"`, a static ring under
 reduced motion) while the `activated` row plays on its card.
 
 **A play's payments** (B5 E5, E11, E19). Plays that differ by `discards` (Classic #89's targeting

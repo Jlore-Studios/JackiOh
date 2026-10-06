@@ -245,13 +245,16 @@ export type BackrowView =
     }
   | null;
 
-/** A Heroic Power on the field (§8 #98, R43), as the client needs it to act. */
+/** A Heroic Power on the field (§8 #98, R43, R752), as the client needs it to act. */
 export type HeroPowerView = {
-  /** #98's instance, so `activatePower {instanceId}` is built from the view alone (§10.2). */
+  /** #98's instance, so its `activate {instanceId}` is built from the view alone (§10.2). */
   instanceId: string;
   defId: string;
+  /** The power's stored name (R103), the id of its Activate ability. */
   name: string;
-  /** "Once per turn, spend X" (§8 #98): the X, which is also the card's cost (R43, R65). */
+  /** The power's name on the card's face (R752): "Expedition Map", "Tank Up" on a Radiant Armor Up. */
+  title: string;
+  /** "Activate: Spend (X)" (R752): the mana each use pays. */
   x: number;
   usedThisTurn: boolean;
 };

@@ -132,12 +132,12 @@ describe("R65 cost calculation (M1-T6)", () => {
     expect(effectiveCost(state, card)).toBe(3);
   });
 
-  it("R43 gives Heroic Power the cost of its power", () => {
+  it("R752 Heroic Power costs (0) to play, whatever power it rolled", () => {
     const state = newGame("cost-power");
     const power = handCard(state, heroicPower.id);
-    expect(effectiveCost(state, power)).toBe(0); // no X chosen yet
-    power.x = 2;
-    expect(effectiveCost(state, power)).toBe(2);
+    expect(effectiveCost(state, power)).toBe(0);
+    power.memory.power = "tricks"; // X 3, paid as the power is activated, never to play the card
+    expect(effectiveCost(state, power)).toBe(0);
   });
 
   it("canAfford compares against current mana, temporary mana included", () => {

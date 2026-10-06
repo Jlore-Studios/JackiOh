@@ -1,0 +1,9 @@
+{
+  "version": "v0.2.11",
+  "title": "Patch v0.2.11: the Heroic Power rework",
+  "sources": "issue #37 (MaxGoetzmann, 2026-09-30; scope narrowed to the rework on 2026-10-06)",
+  "notes": "Heroic Power costs (0), and playing it uses nothing. Each of its thirteen powers is an Activate that spends its (X), once per turn: Expedition Map, Life Tap, Steady Shot, Ranching, Cat Cafe, Ping, Witness Value, Stitching, Armor Up (Tank Up on the Radiant face), Die Insect, KY Brainstorm, Pluck and Terminus Tricks, each with a Radiant face (R752–R761). Ping's target is chosen as it is activated, so it can be dragged onto its target. In play the card shows only the power it rolled.",
+  "cards": [
+    "core-098"
+  ]
+}

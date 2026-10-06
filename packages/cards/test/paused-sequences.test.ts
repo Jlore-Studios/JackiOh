@@ -1782,7 +1782,7 @@ function intoLibrary(s: Scenario, defId: string, at: number): CardInstance {
 
 
 describe("R102, R43: a fused Heroic Power's prompted power", () => {
-  it("R102 a Heroic Power fused onto a Heroic Power pings once when its target is picked at the prompt (R43, §10.6)", () => {
+  it("R102 a Heroic Power fused onto a Heroic Power Discovers once, its first ingredient's power answering the prompt (R43, R752, §10.6)", () => {
     const g = scenario({
       p1: { hand: [HEROIC_POWER], library: [RENO, RENO] },
       p2: {
@@ -1800,27 +1800,29 @@ describe("R102, R43: a fused Heroic Power's prompted power", () => {
     );
     played.memory[subsystems.POWER_KEY] = "burn";
     const kept: CardInstance = must(g.backrow("p2", 2), "p2's Heroic Power");
-    kept.memory[subsystems.POWER_KEY] = "ping";
+    kept.memory[subsystems.POWER_KEY] = "discover";
 
-    // p1 plays its Heroic Power (burn, 2 to p2's hero), and p2's #85 fuses it onto p2's own.
+    // p1 plays its Heroic Power (which uses nothing, R752), and p2's #85 fuses it onto p2's own.
     g.play(played, { zone: 1 });
     const fused = g.card(kept.id);
     expect(fused.defId.startsWith("t-")).toBe(true);
-    expect(subsystems.powerOf(fused)?.name).toBe("ping");
+    expect(subsystems.powerOf(fused)?.name).toBe("discover");
+    // Each ingredient's text has the rolled power (R102): the alias names the first ingredient's.
+    expect(subsystems.powerAbilityOf(g.state, fused)?.id).toBe("discover");
 
     if (g.state.active === "p1") g.endTurn();
     expect(g.state.active).toBe("p2");
     expect(g.state.phase).toBe("main");
-    const before = g.state.players.p1.hero.health;
-    // R43: one activation of the card's one power. With no target named, the ping asks (R103).
+    const handBefore = g.state.players.p2.hand.length;
+    // One activation of the card's power: Witness Value Discovers (§10.6), and the answer finishes it.
     g.activate(fused);
-    expect(g.state.pending?.kind).toBe("target");
-    g.answer([{ pick: "hero", player: "p1" }]);
+    expect(g.state.pending?.kind).toBe("discover");
+    const picked = must(g.state.pending?.options[0], "an offered Unit");
+    g.answer(picked.key);
 
-    // "Deal 1 damage to a target", once — as the same activation with the target named does.
-    const hits = g.lastEvents.filter((event) => event.type === "damage" && event.sourceId === fused.id);
-    expect(hits.map((event) => (event.type === "damage" ? event.amount : 0))).toEqual([1]);
-    expect(g.state.players.p1.hero.health).toBe(before - 1);
+    // Once: one Unit to hand, and the card's use is spent for both ingredients' copies of the power.
+    expect(g.state.players.p2.hand.length).toBe(handBefore + 1);
+    expect(subsystems.usedThisTurn(g.state, g.card(kept.id))).toBe(true);
   });
 });
 
