@@ -2466,7 +2466,7 @@
         "reason": "planned on opus",
         "trail": ""
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
