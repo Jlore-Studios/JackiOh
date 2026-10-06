@@ -5,7 +5,8 @@ A run that does not finish its item hands the next one its notes and the end of 
 it, a finished item drops it, and nobody can read it from the pull request. The journal keeps
 them all. Deliver appends one section per run to `<issue>.md`, whatever the run did and however it
 ended: what it was, a line per step the harness took (each model call, why it ran and what came of
-it; each check run; the merges of `main`), and the builder's notes as they stood at the end. A pull
+it; each check run; the merges of `main`), the builder's notes as they stood at the end, and a
+cut-off planner's draft (`work.PLAN_DRAFT_FILE`), so a plan's progress is never lost either. A pull
 request's runs go to the file of the issue it closes, so one file holds the build and every
 revision and review after it.
 
@@ -51,7 +52,8 @@ MAX_ATTEMPTS = 6
 #: What `compact` leaves where it cut the log.
 CUT = "(earlier lines of the log were cut here)\n"
 _LOG = re.compile(r"^##\s+Log\b.*$", re.M)
-_DETAILS = re.compile(r"\n<details><summary>The builder's notes.*?</details>\n", re.S)
+_DETAILS = re.compile(r"\n<details><summary>The (?:builder's notes|planner's draft).*?</details>\n",
+                      re.S)
 
 
 def path_for(number: int) -> str:
@@ -142,6 +144,10 @@ def section(result: dict[str, Any], *, provider: str, models: str, action: str, 
         notes = compact(notes, NOTES_CHARS)
         lines += ["", "<details><summary>The builder's notes when it stopped</summary>", "",
                   "````markdown", notes.replace("````", "``​``"), "````", "", "</details>"]
+    draft = redact(str(handoff.get("draft") or "")).strip()[:NOTES_CHARS]
+    if draft:
+        lines += ["", "<details><summary>The planner's draft when it stopped</summary>", "",
+                  "````markdown", draft.replace("````", "``​``"), "````", "", "</details>"]
     return "\n".join(lines).rstrip() + "\n"
 
 

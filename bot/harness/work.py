@@ -51,6 +51,9 @@ BUILDER_TOOLS = (
     "NotebookEdit", "TodoWrite", "EnterWorktree", "ExitWorktree",
 )
 READER_TOOLS = ("Agent", "Task", "Bash", "Read", "Glob", "Grep", "TodoWrite")
+#: A planner reads like a reviewer, and writes one file: its draft (`PLAN_DRAFT_FILE`). The
+#: harness puts back anything else it changes, as it always did.
+PLANNER_TOOLS = READER_TOOLS + ("Edit", "Write", "MultiEdit")
 #: Speed bumps, not a sandbox: a shell can always reach the network another way. The model job
 #: holds no GitHub write token, and the deliver job checks everything it publishes.
 NETWORK_DENY = tuple(f"Bash({tool}:*)" for tool in (
@@ -59,6 +62,7 @@ NETWORK_DENY = tuple(f"Bash({tool}:*)" for tool in (
 ))
 BUILDER_DENY = ("WebFetch", "WebSearch") + NETWORK_DENY
 READER_DENY = BUILDER_DENY + ("Edit", "Write", "MultiEdit", "NotebookEdit", "Bash(git commit:*)")
+PLANNER_DENY = BUILDER_DENY + ("NotebookEdit", "Bash(git commit:*)")
 
 DIFF_IN_PROMPT = 60_000
 #: A call that fails sooner than this with nothing to show (no text) is the subscription's failure,
@@ -86,6 +90,22 @@ parts, and update it as you go, not only at the end:
 Your session can be cut off at any moment (a usage limit, the clock, a cancelled job), and the
 next agent, possibly another model, starts from this file, the journal of earlier runs and the
 branch."""
+#: A planner's draft: the plan as it stands, which the planner keeps at the top of the worktree
+#: while it reads (`DRAFT_ASK`). A planning call cut off mid-way (a usage cap, the clock, a
+#: cancel) ended with nothing kept: #37 lost 20 Opus minutes of planning so, then another 4, and
+#: the next planner started from scratch each time. Its draft now goes into the handoff and the
+#: journal, and the next planner, on any subscription, goes on from it. Git ignores it.
+PLAN_DRAFT_FILE = ".bot-plan.md"
+DRAFT_ASK = f"""
+
+## Keep a draft as you go
+
+Keep your plan as it stands in `{PLAN_DRAFT_FILE}` at the top of this worktree (git ignores it,
+and it is the one file you may write): what you have read and found, the files to touch so far,
+and the plan's sections as far as you have got. Write it once you know the shape of the change,
+and update it after each step that takes a while, not only at the end. Your session can be cut
+off at any moment (a usage limit, the clock, a cancelled job): the next planner, possibly another
+model, starts from that file and this run's journal. Your final message is still the whole plan."""
 #: A one-shot's scratch (#60): fullsend's spec, notes and damage report, and the worktree each of
 #: its agents works in. Git ignores it in every worktree, and the path guard refuses it.
 FULLSEND_DIR = ".fullsend/"
@@ -117,6 +137,11 @@ reviewer would, and report each as a blocking finding. Self check {n} of at most
 SETTINGS_FILES = (".claude/settings.json", ".claude/settings.local.json", ".mcp.json")
 MANIFESTS = ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc")
 
+#: The runs that start only `start_headroom` under each cap (`_start_check`; the router holds
+#: the same line in `plan._usable` and `plan.lane_planners`): a build, a revision, and a plan,
+#: which an Opus planner can spend 20 minutes on (#37 was cut off 4 minutes into a plan that
+#: started just under its cap).
+LONG_ACTIONS = ("build", "revise", "plan")
 #: How an interruption ends the item: `stop` and `infra` have statuses of their own; the rest
 #: (`budget`, `usage`, `halt`, and `disk` for the machine's disk filling up during the work) are
 #: `interrupted` and requeue.
@@ -241,7 +266,10 @@ class Worker:
         self.asked: tuple[str, int] | None = None
         self.plan_text = ""
         self.minutes = 0.0
+        #: The last builder's or planner's transcript, whose end the handoff carries.
         self.build_transcript: Path | None = None
+        #: A planning session began (`_planning`); with no plan in the result, it was cut off.
+        self.planning = False
         self.who = Identity.bot(cfg.bot_login, cfg.bot_user_id)
         self.last_usage: dict | None = None
         #: A fresh usage reading taken just before the run (`cmd_work`'s ping), if any.
@@ -396,7 +424,10 @@ class Worker:
                 return
 
     def call(self, role: str, prompt: str, cwd: Path, *, reader: bool,
-             why: str = "") -> RunResult:
+             why: str = "", drafting: bool = False) -> RunResult:
+        """One model call. A `reader` may read and run things but not edit them; a `drafting`
+        reader (the planner) may also write its draft (`PLAN_DRAFT_FILE`), and the end of its
+        session goes into the handoff, as a builder's does."""
         self._signalled()  # never start a call after a cancel
         self.calls += 1
         self._clear_settings(cwd)
@@ -405,16 +436,21 @@ class Worker:
         transcript = where / "transcripts" / f"{self.calls:02d}-{role}.jsonl"
         if not reader:
             prompt += NOTES_ASK + self._switch_ask()
+        if not reader or drafting:
             self.build_transcript = transcript
+        if drafting:
+            prompt += DRAFT_ASK
         seat = self.seat_for(role)
         step = self._step("call", why or role, role=role, model=seat.model, n=self.calls)
+        tools, deny = ((PLANNER_TOOLS, PLANNER_DENY) if drafting
+                       else (READER_TOOLS, READER_DENY) if reader else (BUILDER_TOOLS, BUILDER_DENY))
         request = RunRequest(
             role=role,
             prompt=prompt,
             cwd=cwd,
             system_append=self.system,
-            allowed_tools=READER_TOOLS if reader else BUILDER_TOOLS,
-            disallowed_tools=READER_DENY if reader else BUILDER_DENY,
+            allowed_tools=tools,
+            disallowed_tools=deny,
             max_turns=int(self.cfg.max_turns.get(role) or self.cfg.max_turns["review"]),
             timeout_s=max(60, timeout),
             model=seat.model,
@@ -455,16 +491,17 @@ class Worker:
         return providers_mod.refusal(self.provider, entry, now, self.cfg.timezone)
 
     def _start_check(self) -> None:
-        """The fresh reading taken just before the run: a run over its cap, or a build or a
-        revision without `start_headroom` under it, ends here before any model work. Without it a
-        run started from whatever reading the last run left, none at all after a reset."""
+        """The fresh reading taken just before the run: a run over its cap, or a build, a
+        revision or a plan without `start_headroom` under it, ends here before any model work.
+        Without it a run started from whatever reading the last run left, none at all after a
+        reset."""
         if not self.start_usage:
             return
         self.last_usage = self.start_usage
         now = self.now()
         entry = {"usage": {**self.start_usage, "observed_at": iso(now)}}
         reason = providers_mod.refusal(self.provider, entry, now, self.cfg.timezone,
-                                       starting=self.plan.get("action") in ("build", "revise"))
+                                       starting=self.plan.get("action") in LONG_ACTIONS)
         if reason:
             raise Interrupt(f"`{self.provider.id}` stops before it starts: {reason}", "usage")
 
@@ -706,20 +743,25 @@ class Worker:
         exclude.parent.mkdir(parents=True, exist_ok=True)
         lines = exclude.read_text(encoding="utf-8").splitlines() if exclude.exists() else []
         # A one-shot's scratch and its agents' worktrees (`.fullsend/`, #60) never ship either.
-        missing = [f"/{name}" for name in (NOTES_FILE, journal_mod.JOURNAL_FILE, FULLSEND_DIR)
+        missing = [f"/{name}" for name in (NOTES_FILE, journal_mod.JOURNAL_FILE, FULLSEND_DIR,
+                                            PLAN_DRAFT_FILE)
                    if f"/{name}" not in lines]
         if missing:
             exclude.write_text("\n".join([*lines, *missing]) + "\n", encoding="utf-8")
 
     def _seed_notes(self) -> None:
         """Start the notes file from the handoff's notes (a planner's plan, or an earlier
-        builder's notes), so this run's builder keeps them going, and put the item's journal
-        beside it (#342)."""
+        builder's notes), so this run's builder keeps them going, and the draft file from a
+        cut-off planner's draft, so this run's planner does; and put the item's journal beside
+        them (#342)."""
         assert self.wt is not None
-        handoff = self.plan.get("handoff")
-        notes = str(handoff.get("notes") or "") if isinstance(handoff, dict) else ""
+        handoff = self.plan.get("handoff") if isinstance(self.plan.get("handoff"), dict) else {}
+        notes = str(handoff.get("notes") or "")
         if notes.strip():
             (self.wt.cwd / NOTES_FILE).write_text(notes.rstrip() + "\n", encoding="utf-8")
+        draft = str(handoff.get("draft") or "")
+        if draft.strip():
+            (self.wt.cwd / PLAN_DRAFT_FILE).write_text(draft.rstrip() + "\n", encoding="utf-8")
         journal = str(self.plan.get("journal") or "")
         if journal.strip():
             (self.wt.cwd / journal_mod.JOURNAL_FILE).write_text(journal.rstrip() + "\n",
@@ -742,16 +784,57 @@ class Worker:
         trail_of = getattr(self.runner, "trail", None)
         if self.build_transcript is not None and self.build_transcript.exists() and trail_of:
             trail = trail_of(self.build_transcript)
-        if not notes.strip() and not trail.strip():
+        draft = self._draft()
+        if not notes.strip() and not trail.strip() and not draft:
             return None
-        return {"provider": self.provider.id, "family": self.provider.family,
-                "at": iso(self.now()), "reason": str(self.result.get("reason") or ""),
-                "notes": redact(notes), "trail": redact(trail)}
+        handoff = {"provider": self.provider.id, "family": self.provider.family,
+                   "at": iso(self.now()), "reason": str(self.result.get("reason") or ""),
+                   "notes": redact(notes), "trail": redact(trail)}
+        if draft:
+            handoff["draft"] = redact(draft)
+        if draft or (self.planning and not isinstance(self.result.get("plan"), dict)):
+            # An unfinished plan: deliver keeps it as a `draft`, for the next planner only.
+            handoff["planning"] = True
+        return handoff
+
+    def _draft(self) -> str:
+        """The planner's draft, while no plan is finished: its beginning, where the goal and
+        the first steps are. A finished plan supersedes it, so a run that has one hands on none."""
+        path = self.wt.cwd / PLAN_DRAFT_FILE if self.wt is not None else None
+        if path is None or not path.is_file() or isinstance(self.result.get("plan"), dict):
+            return ""
+        text = path.read_text(encoding="utf-8", errors="replace").strip()
+        if len(text) > PLAN_CHARS:
+            text = text[:PLAN_CHARS - len(PLAN_CUT)].rstrip() + PLAN_CUT
+        return text
 
     def _handoff_text(self, *, builder: bool = True) -> str:
         """What a first prompt gets when other agents worked on this before: the last one's
         handoff, and the journal of every earlier run (#342)."""
-        return self._handoff_section() + self._journal_text(builder=builder)
+        return self._handoff_section(builder=builder) + self._journal_text(builder=builder)
+
+    def _draft_section(self, handoff: dict[str, Any]) -> str:
+        """What a planner is told when an earlier planning run was cut off before it finished:
+        where its draft is, and the end of its session."""
+        draft = str(handoff.get("draft") or "").strip()
+        trail = str(handoff.get("trail") or "").strip()
+        if not draft and not trail:
+            return ""
+        parts = [f"## An unfinished plan from an earlier run\n\nA planning run on "
+                 f"`{handoff.get('provider', '?')}` ({handoff.get('family', '?')}) was cut off "
+                 f"before it finished: {handoff.get('reason') or 'no reason recorded'}."]
+        if draft:
+            parts[0] += (f" It kept a draft as it went, which is now `{PLAN_DRAFT_FILE}` at the "
+                         "top of your worktree, and below. Go on from it rather than starting "
+                         "over: check what it says against the code before you keep it, finish "
+                         "what it had not reached, and keep the file up to date as you go.")
+            parts.append(data(draft, "Its draft"))
+        else:
+            parts[0] += (" It left no draft, only the end of its session below: use what it had "
+                         "found rather than reading it all again.")
+        if trail:
+            parts.append(data(trail, "The end of its session"))
+        return "\n\n" + "\n\n".join(parts)
 
     def _journal_text(self, *, builder: bool = True) -> str:
         """The section a first prompt gets when earlier runs left a journal (`journal.py`)."""
@@ -774,11 +857,15 @@ class Worker:
                      "what an earlier run finished.")
         return text + "\n\n" + data(listed, "Earlier runs, oldest first")
 
-    def _handoff_section(self) -> str:
+    def _handoff_section(self, *, builder: bool = True) -> str:
         """The section a first prompt gets when another agent worked on this before."""
         handoff = self.plan.get("handoff")
         if not isinstance(handoff, dict):
             return ""
+        if handoff.get("kind") == "draft":
+            # A builder starts from a finished plan (this run's planner's, or the issue's),
+            # never from a draft; a planner goes on from it.
+            return "" if builder else self._draft_section(handoff)
         if handoff.get("kind") == "plan":
             if not str(handoff.get("notes") or "").strip():
                 return ""
@@ -865,7 +952,7 @@ class Worker:
             why = "build the issue"
             if self.plan.get("plan_in_issue") or handoff.get("kind") == "plan":
                 why += " from its plan"
-        if handoff and handoff.get("kind") != "plan":
+        if handoff and handoff.get("kind") not in ("plan", "draft"):
             why += (f"; picking up from `{handoff.get('provider', '?')}`, which stopped: "
                     f"{handoff.get('reason') or 'no reason recorded'}")
         if self.wip_used:
@@ -1120,7 +1207,8 @@ class Worker:
     def _planning(self) -> None:
         """A planning session before any building: the planner reads the task and the code and
         writes the plan, which the harness puts at the top of the notes file (and so into the
-        handoff) for the builder, this run's or a later one's."""
+        handoff) for the builder, this run's or a later one's. It keeps a draft as it goes
+        (`PLAN_DRAFT_FILE`), which a cut-off run hands on (`_handoff`) for the next planner."""
         assert self.wt is not None
         self.check()
         seat = self.seat_for("plan")
@@ -1132,10 +1220,14 @@ class Worker:
             difficulty=self.plan.get("difficulty") or "medium",
             rating=self._rating_ask(), easy_rule=self._easy_rule(),
             plan_words=f"{PLAN_WORDS:,}", plan_chars=f"{PLAN_CHARS:,}",
+            draft_file=PLAN_DRAFT_FILE,
         ) + self._handoff_text(builder=False)
         head = self.wt.head()
-        result = self.call("plan", prompt, self.wt.cwd, reader=True,
-                           why="plan the item before anyone builds it")
+        self.planning = True
+        result = self.call("plan", prompt, self.wt.cwd, reader=True, drafting=True,
+                           why="plan the item before anyone builds it"
+                           + (", going on from the last planner's draft"
+                              if (self.wt.cwd / PLAN_DRAFT_FILE).is_file() else ""))
         if self.wt.head() != head:
             self.wt.run("reset", "--quiet", "--hard", head)
         if self.wt.dirty():
@@ -1156,6 +1248,8 @@ class Worker:
         self.result["plan"] = {"seat": seat.to_dict(), "text": text}
         if rated:
             self.result["plan"]["rating"] = rated
+        # The plan is finished: its draft is spent, and the builder never reads it.
+        (self.wt.cwd / PLAN_DRAFT_FILE).unlink(missing_ok=True)
 
     def _rating_source(self) -> str:
         rating = self.plan.get("rating") if isinstance(self.plan.get("rating"), dict) else {}

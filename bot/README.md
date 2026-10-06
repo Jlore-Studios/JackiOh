@@ -412,9 +412,10 @@ prints each one and whether it could start now, and `/harness status` does the s
     reading crosses a cap. A call may run 150 minutes, so checking only between steps let runs
     go to 100%. agy's and Muse's calls stream none, so their `/usage` is read every ten minutes
     during a call (`POLL_SECONDS`) and once after it.
-  - **Headroom to start.** A build or a revision starts only `start_headroom` under each cap
-    (top level: 15 points of the 5-hour window, 5 of the week); a plan or a review, which is
-    short, goes up to the cap.
+  - **Headroom to start.** A build, a revision or a plan starts only `start_headroom` under
+    each cap (top level: 5 points of the 5-hour window, 5 of the week); a review, which is
+    short, goes up to the cap. A plan went up to the cap too until #37, whose planner on
+    `claude-4` started just under its 70% cap and was stopped four minutes in.
   - **One run at a time** on a capped subscription, its planning run included: two runs
     deciding from one reading pass a cap together. A subscription given more `lanes` takes that
     many (Muse has two, on one login): each run takes its own reading before it starts and
@@ -512,8 +513,9 @@ else. Its builds still need a plan first, like Devin's, and their reviews float 
   takes the first that meets its floor (a medium planner takes only easy and unrated items). A
   subscription with usage caps plans only while it holds nothing else, and builds nothing while
   it plans. The lane takes the easy items first (Devin waits on those), then the rest in the usual
-  order, ahead of every build. The planner reads the task and the code, writes nothing, and must
-  leave a weak builder no gap to fill (`bot/prompts/plan.md`): the files to touch by path (the
+  order, ahead of every build. The planner reads the task and the code, writes nothing but its
+  draft ([handing work over](#the-self-check-loop)), and must leave a weak builder no gap to fill
+  (`bot/prompts/plan.md`): the files to touch by path (the
   **Files to touch** table, which the harness reads), the steps in order, the tests and commands,
   and a checklist for done, in under 2,500 words (`issueplan.PLAN_WORDS`; the harness keeps the
   first 30,000 characters, `PLAN_CHARS`, #208). Its plan goes into the issue's description, in a
@@ -693,6 +695,17 @@ the end of its session too. Both are saved on the item, cut to the State whole a
 Log (`journal.compact`), never to the last 8,000 characters, which lost the plan at the top. The
 next run, on any subscription, starts with a "Picking up from another agent" section in its
 prompt. So a task agy started when its quota ran out can be finished by Codex the same hour.
+
+A plan is handed over the same way. The planner keeps its plan as it stands in an ignored
+`.bot-plan.md` (`work.PLAN_DRAFT_FILE`, the one file it may write): what it has found, the files
+to touch so far, and the sections as far as it has got. A planning session cut off before its
+plan is done leaves that draft and the end of its session as a `draft` handoff, and in its run's
+journal section; the "Planning was cut short" comment says the draft is kept. The next planner,
+on any subscription, finds the draft in its worktree and an "An unfinished plan from an earlier
+run" section in its prompt, and goes on from it. A finished plan supersedes the draft, a plan a
+person writes into the description replaces it, and no builder is ever given one. Before this a
+cut-off plan kept nothing: #37 lost 20 Opus minutes on `claude-1` and 4 more on `claude-4` in
+one morning, and every planner started from scratch.
 
 **The journal** (#342). The handoff is one slot, which the next run overwrites, so every run also
 leaves a section in its item's **journal**: `<issue>.md` on the unprotected, orphan `bot-journal`
