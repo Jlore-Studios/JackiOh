@@ -9,8 +9,8 @@
 // bare id as a target (R177) and a `stolen` event naming a card its viewer could read where it was
 // taken (R466).
 
-import { HIDDEN_ID, legalActions, viewFor } from "@jackioh/engine";
-import type { ActionBody, GameEvent, PlayerId } from "@jackioh/shared";
+import { HIDDEN_ID, legalActions, viewFor, type PendingChoice } from "@jackioh/engine";
+import type { ActionBody, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario } from "./_harness";
 import { createInvariantMonitor, hiddenInformationViolations } from "./_invariants";
@@ -113,6 +113,48 @@ describe("I6: hidden information in what each seat is sent", () => {
     expect(hiddenInformationViolations(g.state, "p1", view, offer(trap.id))).toEqual([]);
     const found = hiddenInformationViolations(g.state, "p1", view, offer(secret.id));
     expect(found.some((message) => message.includes("in legalActions"))).toBe(true);
+  });
+
+  /** p1's own target prompt offering p2's face-down trap, as #49, #50 and an Echo repeat do (R177). */
+  function offerTrap(g: ReturnType<typeof scenario>, trapId: string): PendingChoice {
+    const prompt: PendingChoice = {
+      id: "i6-prompt",
+      playerId: "p1",
+      kind: "target",
+      prompt: "Choose a target",
+      options: [{ key: `instance:${trapId}`, label: "a trap", selection: { pick: "instance", instanceId: trapId } }],
+      min: 1,
+      max: 1,
+      resume: { defId: "", hook: "resume", step: "none", radiant: false, data: {} },
+    };
+    g.state.pending = prompt;
+    return prompt;
+  }
+
+  it("I6 lets p1's own prompt offer a face-down trap by its bare id, and still fires on any other mention (R177)", () => {
+    const { g, trap } = board();
+    offerTrap(g, trap.id);
+    expect(violations(g, "p1")).toEqual([]);
+    // The id outside the option, or the definition anywhere, is a leak the prompt does not excuse.
+    const found = violations(g, "p1", [{ type: "drawn", player: "p2", instanceId: trap.id, defId: trap.defId }]);
+    expect(found.some((message) => message.includes(`"${trap.id}"`))).toBe(true);
+    expect(found.some((message) => message.includes(`"${trap.defId}"`))).toBe(true);
+  });
+
+  it("I6 fires on a prompt option that carries a face-down trap's definition (R177)", () => {
+    const { g, trap } = board();
+    offerTrap(g, trap.id);
+    const view = viewFor(g.state, "p1");
+    if (view.pending === null || !view.pending.forYou) throw new Error("setup: p1 should hold the prompt");
+    const leaky: PlayerView = {
+      ...view,
+      pending: {
+        ...view.pending,
+        options: view.pending.options.map((option) => ({ ...option, defId: trap.defId, label: "a trap" })),
+      },
+    };
+    const found = hiddenInformationViolations(g.state, "p1", leaky, legalActions(g.state, "p1"));
+    expect(found.some((message) => message.includes(`"${trap.defId}"`))).toBe(true);
   });
 
   it("I6 lets a stolen event name a card its viewer could read where it was taken (R466)", () => {

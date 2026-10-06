@@ -93,6 +93,8 @@ type HiddenSet = {
   defs: Map<string, string>;
   /** Face-down traps' ids: R177 lets `legalActions` offer one as a bare target. */
   bare: Set<string>;
+  /** The bare ids the viewer's own prompt offers: R177 lets the view carry each as a bare option's `instanceId`, nowhere else. */
+  offeredBare: Set<string>;
 };
 
 /** R33, R686: another seat's armed Trap or Field Trap, not flipped (`faceUp`) and not revealed (R638). */
@@ -170,19 +172,23 @@ function hiddenFrom(state: GameState, viewer: PlayerId): HiddenSet {
   }
 
   // §10.8: the viewer's own prompt offers what it may choose among, a revealed library card included.
+  const offeredBare = new Set<string>();
   const prompt = state.pending?.playerId === viewer ? state.pending : mulliganPromptFor(state, viewer);
   for (const option of prompt?.options ?? []) {
     const selection = option.selection;
     if (selection.pick === "mode") defs.delete(selection.option);
     if (selection.pick !== "instance") continue;
-    ids.delete(selection.instanceId);
-    // R177: a face-down trap is offered by its id alone.
-    if (!bare.has(selection.instanceId)) {
-      const card = findInstance(state, selection.instanceId);
-      if (card !== undefined) defs.delete(card.defId);
+    // R177: a face-down trap is offered by its id alone: its id stays hidden everywhere but that
+    // option's `instanceId`, and its definition stays hidden everywhere.
+    if (bare.has(selection.instanceId)) {
+      offeredBare.add(selection.instanceId);
+      continue;
     }
+    ids.delete(selection.instanceId);
+    const card = findInstance(state, selection.instanceId);
+    if (card !== undefined) defs.delete(card.defId);
   }
-  return { ids, defs, bare };
+  return { ids, defs, bare, offeredBare };
 }
 
 /** R466: a `stolen` event reads openly to a viewer who could read the card in the zone it was taken from. */
@@ -226,7 +232,7 @@ export function hiddenInformationViolations(
   view: PlayerView,
   legal: readonly ActionBody[],
 ): string[] {
-  const { ids, defs, bare } = hiddenFrom(state, viewer);
+  const { ids, defs, bare, offeredBare } = hiddenFrom(state, viewer);
 
   // The view's events are the tail of the log's, in order: line them up to find a `stolen` among them.
   const raw = state.applied.flatMap((entry) => entry.events);
@@ -247,6 +253,8 @@ export function hiddenInformationViolations(
     scanned,
     "view",
     (text, at) => {
+      // R177: the viewer's own prompt names a face-down trap by its id, as a bare option.
+      if (offeredBare.has(text) && /^view\.pending\.options\[\d+\]\.instanceId$/.test(at)) return;
       if (!named.has(text)) named.set(text, at);
     },
     (object) => {
