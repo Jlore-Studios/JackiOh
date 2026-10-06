@@ -1,0 +1,28 @@
+# One-off: create the method labels (#307) that `harness setup` and the sweep could not, because
+# their descriptions ran past GitHub's 100-character limit. Runs only on a push to this branch;
+# removed from the branch right after it runs, and never merged.
+name: tmp create method labels
+
+on:
+  push:
+    branches: [claude/peaceful-thompson-6ch6bh]
+
+permissions: {}
+
+jobs:
+  labels:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Create or update the two labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh label create "method:manual" --repo "$REPO" --force --color f9d0c4 \
+            --description "People do it: after two minutes, triage labels it human, fixes its title and assigns both people"
+          gh label create "method:use-bot" --repo "$REPO" --force --color c2e0c6 \
+            --description "The bot does it: after two minutes, triage labels, retitles and queues it, and assigns the bot"
+          gh label list --repo "$REPO" --search method
