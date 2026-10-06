@@ -509,12 +509,16 @@ const SUMMED_FLAGS: readonly string[] = ["echoGrant", "quickstriker", "heroArmor
 
 /**
  * The context ingredient `index`'s text builds and applies with (R102): its place in the fusion
- * appended to the path the combined hooks above it have used (`work.PART_KEY`).
+ * appended to the path the combined hooks above it have used (`work.PART_KEY`). A re-entry names the
+ * whole path from the top (`work.PART_DEPTH_KEY`), so a path that already names this ingredient at
+ * this level keeps the rest of it, for the levels below to route by: a question asked two fusions
+ * down comes back to its own ingredient, not to the first one there that names its step the same.
  */
 function partData(data: Record<string, unknown>, index: number): Record<string, unknown> {
   const depth = typeof data[PART_DEPTH_KEY] === "number" ? (data[PART_DEPTH_KEY] as number) : 0;
-  const path = (partPathOf(data) ?? []).slice(0, depth);
-  return { [PART_KEY]: [...path, index], [PART_DEPTH_KEY]: depth + 1 };
+  const named = partPathOf(data) ?? [];
+  const path = named[depth] === index ? named : [...named.slice(0, depth), index];
+  return { [PART_KEY]: path, [PART_DEPTH_KEY]: depth + 1 };
 }
 
 /**

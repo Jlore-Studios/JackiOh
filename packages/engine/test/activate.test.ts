@@ -39,8 +39,10 @@ import { rememberOn, scriptStepFor } from "../src/work";
 import { moveToZone, placeOnField } from "../src/zones";
 import {
   ACTIVATE_SCRIPTS,
+  HIGH_TELL,
   KEEPER_KEY,
   LOG_LANE,
+  LOW_TELL,
   MERCHANT_PRICE,
   PICK_KEY,
   SCEPTER_KEY,
@@ -51,9 +53,11 @@ import {
   endless,
   ghost,
   heroic,
+  highTeller,
   keeper,
   lockdown,
   logCard,
+  lowTeller,
   merchant,
   mourner,
   nose,
@@ -798,5 +802,25 @@ describe("R102: a fused card's abilities, each in its ingredient's place (R384)"
     expect(notes(live)).toEqual(["ask", "answered", "ask:tail"]);
     expect(live.work).toEqual([]);
     expect(hashState(answer(copy).state)).toBe(hashState(live));
+  });
+
+  it("R102 R113 a question an ability asks two fusions down comes back to its own ingredient, not the first that names its step", () => {
+    const state = playing("fused-tellers");
+    const card = put(state, highTeller.id, slot("p1", "backrow", 1));
+    const [low] = inHand(state, lowTeller.id, "p1");
+    const [outer] = inHand(state, spark.id, "p1");
+    if (low === undefined || outer === undefined) throw new Error("no card");
+    // Low Teller + High Teller, then a Spark fused onto that: High Teller's text runs at place 1.1.
+    fuse(sinkFor(state), { ingredients: [low], target: card });
+    fuse(sinkFor(state), { ingredients: [outer], target: card });
+    expect(abilitiesOf(state, card).map((decl) => decl.id)).toEqual(["tell", "tell#2"]);
+    const before = roundTrip(state);
+
+    const paused = act(state, activate("p1", card.id, { ability: "tell#2" })).state;
+    const copy = roundTrip(paused);
+    const live = answer(paused).state;
+    expect(notes(live)).toEqual([`told:${HIGH_TELL}`]);
+    expect(hashState(answer(copy).state)).toBe(hashState(live));
+    expect(notes(answer(act(before, activate("p1", card.id, { ability: "tell" })).state).state)).toEqual([`told:${LOW_TELL}`]);
   });
 });

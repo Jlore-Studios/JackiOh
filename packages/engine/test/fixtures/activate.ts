@@ -226,6 +226,27 @@ export const spark = def("spark", "Field Spell", {
   params: [{ key: "damage", base: 1, radiant: 2, better: "up", step: 1, min: 1 }],
 });
 
+/**
+ * Two cards whose abilities ask the same step and answer with the number their own text declares,
+ * so a fusion holding both shows which ingredient a stored question comes back to (R102, R113).
+ */
+export const LOW_TELL = 1;
+export const HIGH_TELL = 5;
+export const lowTeller = def("low-teller", "Field Spell", {
+  params: [{ key: "tell", base: LOW_TELL, radiant: LOW_TELL * 2, better: "up", step: 1, min: 1 }],
+});
+export const highTeller = def("high-teller", "Field Spell", {
+  params: [{ key: "tell", base: HIGH_TELL, radiant: HIGH_TELL * 2, better: "up", step: 1, min: 1 }],
+});
+
+/** The tellers' script: "Activate: ask; the answer notes {tell}", read by the step the answer re-enters. */
+function teller(): CardScripts {
+  return faces({
+    activations: [{ id: "tell", label: "Ask, then tell {tell}", uses: 1, run: () => [askController("told")] }],
+    resume: { told: (ctx) => [note(`told:${param(ctx, "tell")}`)] },
+  });
+}
+
 export const ACTIVATE_DEFS: CardDef[] = [
   logCard,
   pinger,
@@ -246,6 +267,8 @@ export const ACTIVATE_DEFS: CardDef[] = [
   keeper,
   zapper,
   spark,
+  lowTeller,
+  highTeller,
 ];
 
 export const ACTIVATE_SCRIPTS: Record<string, CardScripts> = {
@@ -359,6 +382,8 @@ export const ACTIVATE_SCRIPTS: Record<string, CardScripts> = {
     ],
   }),
   [spark.id]: faces({}),
+  [lowTeller.id]: teller(),
+  [highTeller.id]: teller(),
 };
 
 export function activateCatalog(base: CardDefs = {}): CardDefs {
