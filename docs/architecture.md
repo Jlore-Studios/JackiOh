@@ -592,7 +592,7 @@ step that is not yet implemented says which BUILD task delivers it.
    `0014_game_records.sql` → `0015_classic_sets_tags.sql` → `0016_catalog_growth_grants.sql` →
    `0017_last_boards.sql` → `0018_player_settings.sql` → `0019_hero_portraits.sql` →
    `0020_plague_tag.sql` → `0021_player_stats.sql` → `0022_ranked_ladder.sql` →
-   `0023_rematch.sql` — and records them
+   `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` — and records them
    in `app.migrations`. Expected result: 25 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
@@ -612,7 +612,9 @@ step that is not yet implemented says which BUILD task delivers it.
    that already has players it also narrows the client grants on `profiles`, `tickets` and
    `results` to column whitelists, because the hidden rating may never reach the client (R612);
    nothing else in the bring-up changes. 0023 adds `matches.mode` and `matches.stake` for
-   rematches (R672): only a rematch writes them, older rows keep deriving their mode.
+   rematches (R672): only a rematch writes them, older rows keep deriving their mode. 0025 renames
+   every row a database filed under the card patches' old names to their new ones (R743); on a new
+   project it changes nothing.
 5. **Verify the invariants before trusting anything.** `sh apps/server/test/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL

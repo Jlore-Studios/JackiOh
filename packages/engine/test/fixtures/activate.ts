@@ -3,9 +3,9 @@
 // (Classic+ #76.1 Brother Ping), an "Activate 2" on a Unit, a ♾️ Tribute cost that reads the tributed
 // unit's Attack (Classic #21 Turtinator), a random-discard cost (Classic #15 Nose Hunter), "Tribute
 // this" on an Indestructible Field Spell (Classic #84 Lockdown), a mana price (Heroic Power's "spend
-// (X)", patch v0.2.1), modes with mode-bound targets and a delayed destroy (Classic #20 The Power to
+// (X)", the Heroic Power patch), modes with mode-bound targets and a delayed destroy (Classic #20 The Power to
 // Punish), a condition the text sets (Classic #7 InfiniScepter), an ability that asks mid-list, and
-// abilities a card has only on some instances (v0.2.1's rolled power). The engine never imports
+// abilities a card has only on some instances (the Heroic Power patch's rolled power). The engine never imports
 // `packages/cards`; the real cards' tests cover the same cases again.
 //
 // Ids are prefixed `act-` and indexed from 4100, so they cannot collide with another fixture file's.
@@ -136,7 +136,7 @@ export const lockdown = def("lockdown", "Field Spell", { keywords: [{ kind: "Ind
 /** Classic #89's shape: to target this, a player must also discard 2 cards (B5 E5, R450). */
 export const ghost = def("ghost", "Unit", { attack: 5, health: 6 });
 
-/** A mana price, patch v0.2.1's "Activate: Spend (2): Draw 1". */
+/** A mana price, the Heroic Power patch's "Activate: Spend (2): Draw 1". */
 export const merchant = def("merchant", "Field Spell");
 export const MERCHANT_PRICE = 2;
 
@@ -187,7 +187,7 @@ export const scepter = def("scepter", "Field Spell");
 export const SCEPTER_KEY = "stored";
 
 /**
- * Patch v0.2.1's Heroic Power shape: one ability per power, and a copy has only the one it rolled
+ * The Heroic Power patch's shape: one ability per power, and a copy has only the one it rolled
  * (`has`), beside one it always has. The rolled one is `memory.pick`.
  */
 export const chooser = def("chooser", "Field Spell");

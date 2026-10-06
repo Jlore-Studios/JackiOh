@@ -14,7 +14,7 @@
 // Both the buff (layer 4 of §10.4) and the grant (`grantedKeywords`) are permanent on the instance
 // and drop when the card leaves the field (R78).
 //
-// R81: the target travels in the `play` action, so resolution never pauses. R703 (patch v0.2.14,
+// R81: the target travels in the `play` action, so resolution never pauses. R703 (patch v0.2.7,
 // #126): the pick is `required`, so with no legal target on the board the card is not playable at
 // all, where R90 would let it play and fizzle. A cast still fizzles (R70, a cast is never refused),
 // which is why both effects resolve `{ of: "chosen" }` and do nothing when it is empty.

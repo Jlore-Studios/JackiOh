@@ -17,7 +17,7 @@
 // which R428 removed). SHORT_REMINDERS holds the two lines, and rules.test.ts pins them.
 //
 // `label` is what the rules-text tokenizer (rules.ts) looks for, case-sensitively, and `aliases`
-// are the other spellings cards use. Patch v0.2.4 (issue #45) retired spelled variants ("Start of
+// are the other spellings cards use. Patch v0.2.1 (issue #45) retired spelled variants ("Start of
 // your turn", "End of your turn", "Start of Game", "Once per Turn", "Cannot be in Defense Position",
 // "Trigger the Cry", "Set a hero's health", "End your turn"), keeping only grammatical plurals
 // ("Plague Counters") and specific prompts ("Look at your opponent's hand").
@@ -26,7 +26,7 @@
 // - §6.1's statuses that are not keyword kinds (StatusTermId): "Can't be in Defense Position" (the
 //   catalog's spelling of SPEC's "Cannot be in Defense Position", which stays an alias), "Can't be
 //   attacked", "Only Units in this lane can attack this" and Berserk. "Can't attack or be attacked"
-//   gets no row: no card prints it since patch v0.2.10 (it is the rule of a Unit a carrier holds,
+//   gets no row: no card prints it since patch v0.2.3 (it is the rule of a Unit a carrier holds,
 //   R446), and matching stays case-sensitive, as "may tribute enemy units" stays plain words.
 // - §6.2's Activate, one row for "Activate", "Activate X" and "Activate ♾️" (the tokenizer takes
 //   the count or the ♾️ with the label, as it takes "Armor 2").
@@ -120,7 +120,7 @@ export const SHORT_TERMS: readonly (keyof typeof SHORT_REMINDERS)[] = ["Cry", "T
 
 /**
  * R373: SPEC's rules vocabulary in the words a player reads — the rules' library is the Deck, and
- * to sacrifice is to tribute. Patch v0.2.4 (issue #45) adds the retired turn-trigger prose ("At the
+ * to sacrifice is to tribute. Patch v0.2.1 (issue #45) adds the retired turn-trigger prose ("At the
  * start of your turn" reads "At the start of turn"). Whole words only, keeping a leading capital.
  */
 const PLAYER_WORDS: readonly (readonly [RegExp, string])[] = [
@@ -132,7 +132,7 @@ const PLAYER_WORDS: readonly (readonly [RegExp, string])[] = [
   [/\bSacrific(e|es|ed|ing)\b/g, "Tribut$1"],
   [/\bbackrow zone\b/g, "backrow"],
   [/\bBackrow zone\b/g, "Backrow"],
-  // Patch v0.2.4 (issue #45): the retired turn-trigger prose reads label-style.
+  // Patch v0.2.1 (issue #45): the retired turn-trigger prose reads label-style.
   [/\bAt the start of your turn\b/g, "At the start of turn"],
   [/\bAt the end of your turn\b/g, "At the end of turn"],
   [/\bat the start of your turn\b/g, "at the start of turn"],
@@ -225,7 +225,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   // R636, R637: the keyword rules patch (SPEC §6.1).
   Windfury: keyword("Windfury", "Can attack twice each turn"),
   Temporary: keyword("Temporary", "Discarded from its owner's hand at the end of their turn"),
-  // Patch v0.2.11 (issue #181, R49): Deft, #45 Deft Duelist's keyword.
+  // Patch v0.2.4 (issue #181, R49): Deft, #45 Deft Duelist's keyword.
   Deft: keyword("Deft", "Can attack and switch position in the same turn"),
   // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
   "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense"),

@@ -40,6 +40,7 @@ const PINNED: Readonly<Record<string, string>> = {
   "0022_ranked_ladder.sql": "78ccc5b5",
   "0023_rematch.sql": "6e568bc0",
   "0024_glitch_boards.sql": "c82b008a",
+  "0025_patch_retcon.sql": "203f79a3",
 };
 
 function migrations(): string[] {

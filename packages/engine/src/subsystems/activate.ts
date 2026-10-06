@@ -26,7 +26,7 @@
 //      action give one reason.
 //  10. Heroic Power (Core #98) keeps its own power (R43) in v0.2.0; `reduce.ts` routes `activate` and
 //      `activatePower` on it to `heroPower.ts`, so `activatePower` is an alias and every old log
-//      replays. Patch v0.2.1 moves the powers onto this module as a card patch: an ability with a
+//      replays. The Heroic Power patch moves the powers onto this module as a card patch: an ability with a
 //      mana price and a declared target, and `ActivationDecl.has` for the one power a copy rolled.
 //
 // The sequence is resumable like every other that can ask (§9.3, R113): paying a Tribute runs the

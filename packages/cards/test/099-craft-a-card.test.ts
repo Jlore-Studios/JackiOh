@@ -3,7 +3,7 @@
 //
 // BUILD M4-T4 row 99: "Two Discovers, fused def in `transientDefs` with both forms fused, no
 // on-field target and the ingredients' shared type (R77), cost 0 in hand, making it Radiant later
-// switches to the fused radiant form; radiant three" (patch v0.2.14 took off the radiant draw).
+// switches to the fused radiant form; radiant three" (patch v0.2.7 took off the radiant draw).
 //
 //   Base:    "Discover a Unit, then Discover another; Fuse them; the result costs 0 and goes to
 //            your hand"
@@ -394,7 +394,7 @@ describe("#99 Craft a Card — the fused result (R77, R102)", () => {
   });
 });
 
-describe("#99 Craft a Card — the radiant face draws nothing (patch v0.2.14)", () => {
+describe("#99 Craft a Card — the radiant face draws nothing (patch v0.2.7)", () => {
   it("the radiant face draws nothing after the fusion, and the library is untouched", () => {
     const { s } = craft({ radiantFace: true, p1: { library: [TIMMY, MENACE], mana: 8 } });
     const fused = fusedDefOf(s.state);

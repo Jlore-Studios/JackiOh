@@ -243,7 +243,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // Designer patch v0.1.1: #55 Lava Golem's Radiant face is its base text less the drawback ("If
     // opposing Units are used, summon for your opponent."), so its text adds nothing to mark; its
     // doubled stats are what R277 marks on it.
-    // Classic #60 and Classic+ #5 drop words too, and patch v0.2.4's Classic+ #34 drops "Choose
+    // Classic #60 and Classic+ #5 drop words too, and patch v0.2.1's Classic+ #34 drops "Choose
     // one." Balance patch 1 gives Classic #28's base face the same minimum price as its Radiant
     // face, so its Radiant face is its base text less the exile replacement (radiantDiff.test.ts
     // names all five).

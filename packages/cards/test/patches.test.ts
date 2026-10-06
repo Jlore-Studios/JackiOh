@@ -57,10 +57,10 @@ describe("R388 card patch history (B4.2)", () => {
       "v0.1.0d",
       "v0.1.1",
       "v0.2.0",
-      "v0.2.4",
-      "v0.2.5",
+      "v0.2.1",
+      "v0.2.2",
     ]);
-    expect(VERSIONS).toContain("v0.2.10");
+    expect(VERSIONS).toContain("v0.2.3");
     expect(new Set(VERSIONS).size).toBe(VERSIONS.length);
     for (const patch of PATCHES) {
       expect(existsSync(snapshotPath(patch.version)), `${patch.version}.json`).toBe(true);
@@ -179,33 +179,33 @@ describe("R388 card patch history (B4.2)", () => {
     expect(changed?.kind === "changed" ? changed.fields : []).toContain("cost");
   });
 
-  it("R388 records patch v0.2.10: eighteen Field Spells Animated and Ivory Tower's text (issue #113)", () => {
-    expect(idsOf("v0.2.10", "added")).toEqual([]);
-    expect(idsOf("v0.2.10", "changed")).toEqual([
+  it("R388 records patch v0.2.3: eighteen Field Spells Animated and Ivory Tower's text (issue #113)", () => {
+    expect(idsOf("v0.2.3", "added")).toEqual([]);
+    expect(idsOf("v0.2.3", "changed")).toEqual([
       "core-014", "core-033", "core-038", "core-065", "core-073",
       "classic-004", "classic-007", "classic-052", "classic-062", "classic-064", "classic-087",
       "classicplus-007", "classicplus-012-5", "classicplus-012-7", "classicplus-031", "classicplus-033",
       "classicplus-061", "classicplus-063", "classicplus-070", "classicplus-078",
     ]);
-    const after = readSnapshot("v0.2.10");
+    const after = readSnapshot("v0.2.3");
     const keywords = (id: string): unknown => (after[id]?.["base"] as { keywords?: { kind: string }[] } | undefined)?.keywords?.[0]?.kind;
     expect(keywords("core-073")).toBe("Animated");
     expect((after["classicplus-033"]?.["base"] as { text?: string } | undefined)?.text).toBe("The first Unit you stack onto this is fused into it.");
     // Final Gambit's follow-up gained its R216 guard: the script's lines move, nothing printed does.
-    expect(changesOf("v0.2.10").find((change) => change.id === "classic-052")).toMatchObject({ kind: "changed", fields: ["loc"] });
+    expect(changesOf("v0.2.3").find((change) => change.id === "classic-052")).toMatchObject({ kind: "changed", fields: ["loc"] });
   });
 
-  it("R388 records patch v0.2.11: aimed random casts and the Deft keyword (issue #181), pending or shipped (R646)", () => {
+  it("R388 records patch v0.2.4: aimed random casts and the Deft keyword (issue #181), pending or shipped (R646)", () => {
     // Pending until `patches ship` promotes it, then shipped: either way the patch is these five
-    // cards' changes against v0.2.10's snapshot.
+    // cards' changes against v0.2.3's snapshot.
     const five = ["core-045", "classic-003", "classicplus-010", "classicplus-038-1", "classicplus-040"];
-    const shipped = VERSIONS.includes("v0.2.11");
-    const pending = readFragments().find(({ fragment }) => fragment.version === "v0.2.11")?.fragment;
-    expect(shipped || pending !== undefined, "v0.2.11 is pending or shipped").toBe(true);
+    const shipped = VERSIONS.includes("v0.2.4");
+    const pending = readFragments().find(({ fragment }) => fragment.version === "v0.2.4")?.fragment;
+    expect(shipped || pending !== undefined, "v0.2.4 is pending or shipped").toBe(true);
     if (!shipped) expect(pending?.cards).toEqual(five);
     const changes = shipped
-      ? changesOf("v0.2.11")
-      : diffCatalogs(readSnapshot("v0.2.10"), CATALOG as unknown as Catalog).filter((change) =>
+      ? changesOf("v0.2.4")
+      : diffCatalogs(readSnapshot("v0.2.3"), CATALOG as unknown as Catalog).filter((change) =>
           five.includes(change.id),
         );
     expect(changes.filter((change) => change.kind !== "changed")).toEqual([]);
@@ -221,29 +221,29 @@ describe("R388 card patch history (B4.2)", () => {
     expect(fieldsOf("classicplus-040")).toEqual(["base.text", "radiant.text"]);
   });
 
-  it("R388 records patch v0.2.13: Book of Wildfire becomes a different Book (issue #271)", () => {
-    // Shipped by `patches ship` (R646): Classic #55 changed against v0.2.12's snapshot.
-    expect(idsOf("v0.2.13", "added")).toEqual([]);
-    expect(idsOf("v0.2.13", "removed")).toEqual([]);
-    expect(idsOf("v0.2.13", "changed")).toEqual(["classic-055"]);
-    const change = changesOf("v0.2.13").find((entry) => entry.id === "classic-055");
+  it("R388 records patch v0.2.6: Book of Wildfire becomes a different Book (issue #271)", () => {
+    // Shipped by `patches ship` (R646): Classic #55 changed against v0.2.5's snapshot.
+    expect(idsOf("v0.2.6", "added")).toEqual([]);
+    expect(idsOf("v0.2.6", "removed")).toEqual([]);
+    expect(idsOf("v0.2.6", "changed")).toEqual(["classic-055"]);
+    const change = changesOf("v0.2.6").find((entry) => entry.id === "classic-055");
     expect(change?.kind === "changed" ? [...change.fields].sort() : []).toEqual(["base.text", "loc", "radiant.text"]);
   });
 
-  it("R388 records patch v0.2.15: Classic and Classic+ balance patch 1 (issue #88)", () => {
-    // Numbered v0.2.15 before main shipped v0.2.16, v0.2.16b and v0.2.17, so it ships after them:
-    // ship order is not name order (R646). Pending, the fragment claims the balance cards and the
-    // catalog differs from the newest shipped snapshot on exactly those; shipped, `patches ship`
-    // has recorded the same cards against the patch before it. The test holds on both sides of
-    // the promotion, which cannot edit it.
-    const fragment = readFragments().find(({ fragment }) => fragment.version === "v0.2.15")?.fragment;
-    const at = VERSIONS.indexOf("v0.2.15");
+  it("R388 records patch v0.2.10: Classic and Classic+ balance patch 1 (issue #88)", () => {
+    // Made as v0.2.15 while main shipped v0.2.16, v0.2.16b and v0.2.17 (now v0.2.8, v0.2.8b and
+    // v0.2.9), then numbered v0.2.10, the next number (R743). Pending, the fragment claims the
+    // balance cards and the catalog differs from the newest shipped snapshot on exactly those;
+    // shipped, `patches ship` has recorded the same cards against the patch before it. The test
+    // holds on both sides of the promotion, which cannot edit it.
+    const fragment = readFragments().find(({ fragment }) => fragment.version === "v0.2.10")?.fragment;
+    const at = VERSIONS.indexOf("v0.2.10");
     const before = readSnapshot(at === -1 ? VERSIONS[VERSIONS.length - 1]! : VERSIONS[at - 1]!);
-    const after = (fragment !== undefined ? CATALOG : readSnapshot("v0.2.15")) as unknown as Catalog;
-    const claimed = fragment !== undefined ? fragment.cards : idsOf("v0.2.15", "changed");
+    const after = (fragment !== undefined ? CATALOG : readSnapshot("v0.2.10")) as unknown as Catalog;
+    const claimed = fragment !== undefined ? fragment.cards : idsOf("v0.2.10", "changed");
     if (fragment === undefined) {
-      expect(idsOf("v0.2.15", "added")).toEqual([]);
-      expect(idsOf("v0.2.15", "removed")).toEqual([]);
+      expect(idsOf("v0.2.10", "added")).toEqual([]);
+      expect(idsOf("v0.2.10", "removed")).toEqual([]);
     }
     const changes = diffCatalogs(before, after).filter((change) => claimed.includes(change.id));
     expect(changes.filter((change) => change.kind !== "changed")).toEqual([]);
@@ -251,7 +251,7 @@ describe("R388 card patch history (B4.2)", () => {
     expect(claimed).toHaveLength(62);
   });
 
-  it("R388 records patch v0.2.12: Animated removed from eighteen Field Spells (issue #218)", () => {
+  it("R388 records patch v0.2.5: Animated removed from eighteen Field Spells (issue #218)", () => {
     // The eighteen, in catalog order — the order a fragment's `cards` and a patch's `changes` use.
     const unanimated = [
       "core-014", "core-033", "core-038", "core-065", "core-073",
@@ -266,36 +266,36 @@ describe("R388 card patch history (B4.2)", () => {
     // Pending, the fragment is the patch's whole record (R646); shipped, `patches ship` has
     // promoted it to the list with a snapshot of this catalog. The test holds on both sides
     // of the promotion, which cannot edit it.
-    const fragment = readFragments().find(({ fragment }) => fragment.version === "v0.2.12")?.fragment;
+    const fragment = readFragments().find(({ fragment }) => fragment.version === "v0.2.5")?.fragment;
     if (fragment !== undefined) expect(fragment.cards).toEqual(unanimated);
     else {
-      expect(idsOf("v0.2.12", "added")).toEqual([]);
-      expect(idsOf("v0.2.12", "removed")).toEqual([]);
-      expect(idsOf("v0.2.12", "changed")).toEqual(unanimated);
+      expect(idsOf("v0.2.5", "added")).toEqual([]);
+      expect(idsOf("v0.2.5", "removed")).toEqual([]);
+      expect(idsOf("v0.2.5", "changed")).toEqual(unanimated);
     }
   });
 
-  it("R388 records patch v0.2.4: card text pass (issue #45)", () => {
-    expect(idsOf("v0.2.4", "added")).toHaveLength(0);
-    expect(idsOf("v0.2.4", "removed")).toHaveLength(0);
-    expect(idsOf("v0.2.4", "changed")).toHaveLength(22);
+  it("R388 records patch v0.2.1: card text pass (issue #45)", () => {
+    expect(idsOf("v0.2.1", "added")).toHaveLength(0);
+    expect(idsOf("v0.2.1", "removed")).toHaveLength(0);
+    expect(idsOf("v0.2.1", "changed")).toHaveLength(22);
     expect(
-      changesOf("v0.2.4").every(
+      changesOf("v0.2.1").every(
         (change) => change.kind === "changed" && change.fields.every((f) => f === "base.text" || f === "radiant.text"),
       ),
     ).toBe(true);
   });
 
-  it("R388 records patch v0.2.5: small set of mechanics changes (issue #149)", () => {
-    expect(idsOf("v0.2.5", "added")).toHaveLength(0);
-    expect(idsOf("v0.2.5", "removed")).toHaveLength(0);
-    expect(idsOf("v0.2.5", "changed")).toHaveLength(22);
+  it("R388 records patch v0.2.2: small set of mechanics changes (issue #149)", () => {
+    expect(idsOf("v0.2.2", "added")).toHaveLength(0);
+    expect(idsOf("v0.2.2", "removed")).toHaveLength(0);
+    expect(idsOf("v0.2.2", "changed")).toHaveLength(22);
     const fieldsOf = (id: string): string[] => {
-      const change = changesOf("v0.2.5").find((c) => c.id === id);
+      const change = changesOf("v0.2.2").find((c) => c.id === id);
       return change?.kind === "changed" ? [...change.fields].sort() : [];
     };
     // Seventeen cards gain the Plague tag and nothing else.
-    const plague = idsOf("v0.2.5", "changed").filter((id) => fieldsOf(id).includes("tags"));
+    const plague = idsOf("v0.2.2", "changed").filter((id) => fieldsOf(id).includes("tags"));
     expect(plague).toHaveLength(17);
     expect(plague.every((id) => JSON.stringify(fieldsOf(id)) === JSON.stringify(["tags"]))).toBe(true);
     // The mechanics: Exile's threshold, Joro's Spell-only text, Blade Storm's Whirlwind cast and
@@ -307,8 +307,8 @@ describe("R388 card patch history (B4.2)", () => {
     expect(fieldsOf("classicplus-032-3")).toEqual(["base.text", "refs"]);
     expect(fieldsOf("classicplus-050")).toEqual(["base.text", "loc", "params", "radiant.text"]);
     expect(fieldsOf("classicplus-070")).toEqual(["base.text", "loc", "radiant.text"]);
-    const before = readSnapshot("v0.2.4");
-    const after = readSnapshot("v0.2.5");
+    const before = readSnapshot("v0.2.1");
+    const after = readSnapshot("v0.2.2");
     const param = (snapshot: Catalog, id: string, key: string): unknown =>
       (snapshot[id]?.["params"] as { key: string; base: number; radiant: number }[] | undefined)?.find(
         (p) => p.key === key,
@@ -343,6 +343,76 @@ describe("R388 card patch history (B4.2)", () => {
     // not a shipped patch yet, so the index does not name it (R646).
     const claimed = new Set(readFragments().flatMap(({ fragment }) => fragment.cards));
     expect(Object.keys(CATALOG).filter((id) => index[id] === undefined && !claimed.has(id))).toEqual([]);
+  });
+});
+
+// R743 (issue #290): the card patches are numbered in order, a normal patch taking the next number
+// and a micro patch the next letter. #290 renamed every card patch after v0.2.0 that way, its
+// snapshot, its shipping commit and blob and its title moving with it; commit messages keep the
+// names they were written with, which the shipping commits below tie to the new ones.
+describe("R743 the card patches numbered in order (issue #290)", () => {
+  /** Each renamed patch: its name before #290, its shipping commit and its source. */
+  const RENAMED: readonly { version: string; was: string; commit: string; source: string }[] = [
+    { version: "v0.2.1", was: "v0.2.4", commit: "9dcb65e481717a49bfc750b58ea67a11a1852f39", source: "#45" },
+    { version: "v0.2.2", was: "v0.2.5", commit: "9e030abd6e3f846fde1f3e5003518d76ad512043", source: "#149" },
+    { version: "v0.2.3", was: "v0.2.10", commit: "d26ab17eb8515eb35b9c3ca214c3343cb4fb1a8d", source: "Issue #113" },
+    { version: "v0.2.4", was: "v0.2.11", commit: "7f3458e41b6c54bf5d35e52f45c4b5c124c3844d", source: "#181, #206" },
+    { version: "v0.2.5", was: "v0.2.12", commit: "1be5a28e08c3b6ef94b95b3845c908adaa86d14e", source: "Issue #218" },
+    { version: "v0.2.6", was: "v0.2.13", commit: "b26b1b9dde3f723528e60739caf5aee359a16c20", source: "#271" },
+    { version: "v0.2.7", was: "v0.2.14", commit: "533b4e2db58eaae47b0edd0eee6da6d7e12439f3", source: "#126" },
+    { version: "v0.2.7b", was: "v0.2.14b", commit: "80e7960ccaef1a8c0bb5c463eadacd8fd402d858", source: "#260" },
+    { version: "v0.2.8", was: "v0.2.16", commit: "509e9a302ab71542a4e141fe7231c9743722bdba", source: "#170" },
+    { version: "v0.2.8b", was: "v0.2.16b", commit: "16724d26939a1a03779523f11461b41c57871ccb", source: "#323" },
+    { version: "v0.2.9", was: "v0.2.17", commit: "97a00bd613bd3adfaafdc4d1580f5d895d2b5e22", source: "#44" },
+  ];
+
+  it("R743 lists every card patch after v0.2.0 under the next number, or the next letter for a micro patch", () => {
+    // The shipped prefix (R646): promotions append after it and never move it.
+    expect(VERSIONS.slice(0, 17)).toEqual([
+      "v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.1", "v0.2.2", "v0.2.3",
+      "v0.2.4", "v0.2.5", "v0.2.6", "v0.2.7", "v0.2.7b", "v0.2.8", "v0.2.8b", "v0.2.9",
+    ]);
+    expect(VERSIONS.slice(6, 17)).toEqual(RENAMED.map((patch) => patch.version));
+  });
+
+  it("R743 keeps each renamed patch's shipping commit, source and snapshot, and no old name anywhere in the history", () => {
+    const shipped = readShipped();
+    for (const { version, was, commit, source } of RENAMED) {
+      expect(shipped.find((entry) => entry.version === version)?.commit, version).toBe(commit);
+      expect(PATCHES.find((patch) => patch.version === version)?.source, version).toBe(source);
+      // A promoted patch names its commit too, and the rename moved none of them.
+      const commits = PATCHES.find((patch) => patch.version === version)?.commits;
+      if (commits !== undefined) expect(commits, version).toEqual([commit]);
+      // The old name has no snapshot, unless a later patch has taken it in order (v0.2.4, v0.2.5).
+      if (!VERSIONS.includes(was)) expect(existsSync(snapshotPath(was)), `${was}.json`).toBe(false);
+    }
+    // Their titles and notes name no number #290 retired (v0.2.12's title named v0.2.10).
+    const retired = /\bv0\.2\.(1[0-4]b?|16b?|17)\b/u;
+    for (const { version } of RENAMED) {
+      const patch = PATCHES.find((entry) => entry.version === version);
+      expect(`${patch?.title ?? ""} ${patch?.notes ?? ""}`, version).not.toMatch(retired);
+    }
+  });
+
+  it("R743 titles each renamed normal patch with its new number", () => {
+    const titleOf = (version: string): string | undefined => PATCHES.find((patch) => patch.version === version)?.title;
+    expect(titleOf("v0.2.1")).toBe("Patch v0.2.1: card text pass");
+    expect(titleOf("v0.2.3")).toBe("Patch v0.2.3: Animated pass on Field Spells, Ivory Tower fuses");
+    expect(titleOf("v0.2.4")).toBe("Patch v0.2.4: aimed random casts and the Deft keyword");
+    expect(titleOf("v0.2.5")).toBe("Patch v0.2.5: undo the v0.2.3 animated additions");
+    expect(titleOf("v0.2.7")).toBe("Patch v0.2.7: More card patches");
+    expect(titleOf("v0.2.8")).toBe("Patch v0.2.8: Easter egg, Glitch");
+    expect(titleOf("v0.2.9")).toBe("Patch v0.2.9: rarity pass");
+    // The two whose titles named no number keep them, and the micro patches keep their Y (R650).
+    expect(titleOf("v0.2.2")).toBe("Small set of mechanics changes");
+    expect(titleOf("v0.2.6")).toBe("Book of Wildfire becomes a different Book at the end of your turn");
+    expect(titleOf("v0.2.7b")).toBe("Patch v0.2.Y: the yellow condition glow for ten Core cards");
+    expect(titleOf("v0.2.8b")).toBe("Patch v0.2.Y: Buff Gary the Gambler");
+  });
+
+  it("R743 has issue #170's Glitch, shipped as v0.2.16, as v0.2.8, the patch that added the token", () => {
+    expect(idsOf("v0.2.8", "added")).toEqual(["classic-t-glitch"]);
+    expect(buildIndex(PATCHES)["classic-t-glitch"]?.[0]).toBe("v0.2.8");
   });
 });
 

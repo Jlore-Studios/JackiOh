@@ -28,7 +28,7 @@
 //   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //                    being R349's fallback.
 //   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and B2.5's table for
-//                    Classic (35/26/18/10/1) and Classic+ (13/24/25/13/3), as patch v0.2.17
+//                    Classic (35/26/18/10/1) and Classic+ (13/24/25/13/3), as patch v0.2.9
 //                    (issue #44) left them; B2.1's totals, 268 cards and 50 tokens in 318
 //                    entries (Glitch, issue #170, the fiftieth).
 //   tag vocabulary — SPEC §5/§6 tags as BUILD M4-T1 lists them, R278's Jlockeed, B2.4's Book,

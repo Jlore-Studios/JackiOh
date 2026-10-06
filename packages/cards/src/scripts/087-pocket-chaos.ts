@@ -3,7 +3,7 @@
 // (4). Base: "Choose one: Swap hero health, boards or decks with your opponent. Then add a Pocket
 // Chaos with a base cost (1) less than this one's to your opponent's hand, unless its base cost
 // would be (0). Exile this." Radiant: "… Then you may add a Pocket Chaos …" (§8's cell "You may
-// skip adding it"; patch v0.1.1 removed the Radiant face's "draw 1"; patch v0.2.17 costs it at (4)
+// skip adding it"; patch v0.1.1 removed the Radiant face's "draw 1"; patch v0.2.9 costs it at (4)
 // and prices the gift, R742).
 //
 // §8's Conventions: the radiant cell restates the "add a Pocket Chaos" clause, so the Choose one and
