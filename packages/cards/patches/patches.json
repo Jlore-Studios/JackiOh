@@ -6621,5 +6621,70 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.2.10b",
+    "date": "2026-10-06",
+    "title": "Patch v0.2.Y: 3 new tags and naming conventions",
+    "source": "#322",
+    "notes": "Three new tags: Catalyst on Solarius and Felinor Flagbearer, Prime on the tokens their Deaths shuffle in, and Acclaimed on BOOM! Big Max and Wardrum. Solarius-Prime is now Solarius Prime, spaced like Felinor Flagbearer Prime, and Solarius's text names it so. No card plays differently.",
+    "commits": [
+      "ce4a741b706ac75a7104c73736cb568ddc40f33f"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "classic-080",
+        "name": "BOOM! Big Max",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-037",
+        "name": "Wardrum",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-038",
+        "name": "Solarius",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "refs",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-038-1",
+        "name": "Solarius Prime",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-046",
+        "name": "Felinor Flagbearer",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-046-1",
+        "name": "Felinor Flagbearer Prime",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      }
+    ]
   }
 ]
