@@ -1,11 +1,11 @@
 // C #27 Pestilent Slime — SPEC §8.6 row 27, BUILD M9 Classic row C 27: "Every placement onto it is
-// doubled: "place N Plague Tokens on this" puts 2N, and each one-token placement of a split puts 2,
-// still one placement for "whenever Plague Tokens are placed" triggers; `counterChanged` shows the
+// doubled: "place N Plague Counters on this" puts 2N, and each one-token placement of a split puts 2,
+// still one placement for "whenever Plague Counters are placed" triggers; `counterChanged` shows the
 // count; its tokens reset when it leaves (R78); radiant 2/2: tripled; its tuned number (multiplier)
 // reads through `param()` (R386)".
 //
-// The placements come from C #39 Outbreak ("Place {tokens} Plague Tokens on a permanent", one
-// placement) and, for the split, C #70 Book of Plague ("Place {tokens} Plague Tokens": one placement
+// The placements come from C #39 Outbreak ("Place {tokens} Plague Counters on a permanent", one
+// placement) and, for the split, C #70 Book of Plague ("Place {tokens} Plague Counters": one placement
 // per token, each a prompt), whose script (cards-classic-b) that case waits for.
 
 import { stepParam } from "@jackioh/engine";
@@ -16,7 +16,7 @@ import { base, def, radiant } from "../../src/scripts/classic/027-pestilent-slim
 
 const SLIME = "classic-027";
 const OUTBREAK = "classic-039"; // (1) Spell: place {tokens} on a permanent; own → draw per token.
-const BOOK_OF_PLAGUE = "classic-070"; // (1) Spell: Place 5 Plague Tokens (5 placements).
+const BOOK_OF_PLAGUE = "classic-070"; // (1) Spell: Place 5 Plague Counters (5 placements).
 const FLOOD = "core-017"; // (4) Spell: Bounce all Units.
 const VANILLA = "core-008";
 const POSTDOC = "core-061"; // Radiant: Cry: choose any Unit on the field, summon a Vanilla copy of it.

@@ -1,5 +1,5 @@
 // "…, then …" after the deaths a list's destroys caused (SPEC §4.5, R59, R113, R174): Classic #43
-// Plague Nuke's "Destroy all Units. Gain 1 mana for each Plague Token that was on them. Then summon …
+// Plague Nuke's "Destroy all Units. Gain 1 mana for each Plague Counter that was on them. Then summon …
 // each of those Units … from its owner's graveyard". A card-specific verb of the Classic #1–#45
 // workstream.
 //

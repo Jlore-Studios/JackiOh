@@ -7,10 +7,13 @@ Model work is only ever queued here; it happens in the night run, or at once whe
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
-from harness import asks, commands, stepup
 from datetime import timedelta
+
+from harness import asks, commands, stepup
+from harness import providers as providers_mod
 
 from harness.asks import Ask
 from harness.clock import iso, parse_iso
@@ -19,8 +22,9 @@ from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
                             LABEL_WORKING, MARKER)
 from harness.context import Context
 from harness.errors import GitHubError
+from harness.providers import Provider
 from harness.queue import (label_names, queue_build, queue_review, queue_revise, set_state_label,
-                           stop)
+                           stop, wip_branch)
 from harness.state import item as state_item
 from harness import threads
 from harness.status import report
@@ -223,6 +227,11 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
         return ("Halted. No new model work starts until `/harness start`; a run already going "
                 "stops at its next checkpoint and keeps its work.")
     if verb == "start":
+        # `resume <subscription>` (or `start <subscription>`) lifts that one's suspension; any
+        # other words after `start` are a note, and it lifts the halt as it always did.
+        if command.args and (_said_resume(command)
+                             or _subscription(ctx, command.args.split()[0])[0] is not None):
+            return _resume(ctx, command)
         ctx.store.update(lambda s: s.update(halted=False, halt={}), "start")
         extra = ""
         if ctx.repo_halted():
@@ -230,6 +239,20 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
         if command.force:
             return "Started. " + _run_now(ctx, None) + extra
         return "Started. The bot takes work again as soon as a subscription is free." + extra
+    if verb == "suspend":
+        word, _, rest = command.args.partition(" ")
+        if not word:
+            return ("`suspend` needs a subscription, as in `/harness suspend claude-3 using it "
+                    "myself`. Nothing was done.")
+        provider, problem = _subscription(ctx, word)
+        if provider is None:
+            return problem
+        held = {"by": by, "at": iso(ctx.now()), "reason": rest.strip()}
+        ctx.store.update(lambda s: providers_mod.record(s, provider.id).update(suspended=held),
+                         f"suspend {provider.id}")
+        return (f"Suspended `{provider.id}`. No new work starts on it until "
+                f"`/harness resume {provider.id}`; a run already going on it stops at its next "
+                "checkpoint, keeps its work and goes back to the queue for another subscription.")
     if verb == "run":
         target = command.args.lstrip("#")
         return _run_now(ctx, int(target) if target.isdigit() else None)
@@ -265,6 +288,38 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
             return queue_revise(ctx, number, by=by, force=command.force, ask=ask) + notes_line
         return queue_build(ctx, number, by=by, force=command.force, ask=ask) + notes_line
     return f"`{verb}` is not something I can do here."
+
+
+def _subscription(ctx: Context, word: str) -> tuple[Provider | None, str]:
+    """The subscription a `suspend` or `resume` names, or None and the reply saying why not."""
+    name = word.strip("`:,.!?").lower()
+    provider = ctx.cfg.pool.get(name)
+    if provider is not None:
+        return provider, ""
+    known = ", ".join(f"`{p.id}`" for p in ctx.cfg.pool.ordered())
+    return None, f"`{name}` is not a subscription; I know {known}. Nothing was done."
+
+
+def _said_resume(command: Command) -> bool:
+    """The line's verb was `resume`, the alias that always names a subscription."""
+    return re.search(r"(?:^|[\s/])resume\b", command.line.lower()) is not None
+
+
+def _resume(ctx: Context, command: Command) -> str:
+    """`start <subscription>` (`resume claude-3`): lift that one's suspension, and no halt."""
+    provider, problem = _subscription(ctx, command.args.split()[0])
+    if provider is None:
+        return problem + " `/harness start` alone lifts a halt."
+    if providers_mod.suspension(ctx.store.load(), provider.id) is None:
+        return f"`{provider.id}` is not suspended, so there was nothing to lift."
+    ctx.store.update(lambda s: providers_mod.record(s, provider.id).pop("suspended", None),
+                     f"resume {provider.id}")
+    reply = f"Resumed `{provider.id}`: the bot spends it again as soon as it is free."
+    if ctx.store.load().get("halted"):
+        reply += " The bot is still halted, though: `/harness start` lifts that."
+    if command.force:
+        reply += " " + _run_now(ctx, None)
+    return reply
 
 
 def _run_now(ctx: Context, item: int | None) -> str:
@@ -345,6 +400,18 @@ def on_issue_change(ctx: Context, payload: dict[str, Any], *, is_pr: bool) -> li
     return [reply]
 
 
+def _drop_wip(ctx: Context, number: int) -> None:
+    """A closed or merged bot pull request's unfinished revision (`bot/wip/<pr>`, #313) is done
+    with: delete the branch and drop the record's `wip`."""
+    if not ctx.store.load()["items"].get(str(number), {}).get("wip"):
+        return
+    try:
+        ctx.gh.delete_branch(wip_branch(number))
+    except GitHubError:
+        pass  # gone already
+    ctx.store.update(lambda s: state_item(s, number).pop("wip", None), f"wip #{number} closed")
+
+
 def on_pull_closed(ctx: Context, payload: dict[str, Any]) -> list[str]:
     pull = payload.get("pull_request") or {}
     if LABEL_PR not in label_names(pull):
@@ -354,6 +421,12 @@ def on_pull_closed(ctx: Context, payload: dict[str, Any]) -> list[str]:
     ctx.store.update(lambda s: state_item(s, number).update(closed_at=iso(ctx.now()),
                                                             merged=bool(pull.get("merged"))),
                      f"closed #{number}")
+    _drop_wip(ctx, number)
+    if pull.get("merged"):
+        try:
+            stepup.clear(ctx, number)  # merged: approved and green, so its strikes are over
+        except GitHubError:
+            pass
     if issue is None:
         return ["closed; no linked issue"]
     ctx.gh.remove_label(issue, LABEL_PR_OPEN)
@@ -406,15 +479,19 @@ def on_ci(ctx: Context, payload: dict[str, Any]) -> list[str]:
             continue
         fixes = int(record.get("ci_fixes", 0))
         link = f"[run]({run.get('html_url')})"
-        if fixes >= ctx.cfg.max_failures:
+        if fixes and str(record.get("ci_fixed_head") or "") == sha:
+            # Every CI fix that left it red is a strike of its own (#316), not only the last one:
+            # this is the head the last CI fix pushed (`deliver._revise`). A head some other
+            # revision made is no strike, whatever fixes came before.
             try:
-                stepped = stepup.strike(ctx, number, f"CI still failed after {fixes} fixes",
+                stepped = stepup.strike(ctx, number, f"CI still failed after {fixes} fix(es)",
                                         link=link)
             except GitHubError:
                 stepped = False
             if stepped:
                 out.append(f"#{number}: stepped up after {fixes} CI fixes")
                 continue
+        if fixes >= ctx.cfg.max_failures:
             set_state_label(ctx, number, names, LABEL_BLOCKED)
             if pull.get("auto_merge"):
                 try:

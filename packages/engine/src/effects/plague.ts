@@ -1,15 +1,15 @@
-// Plague Tokens as verbs (SPEC §6.3 Plague Token; docs/classic-sets.md B5 E19; R471).
+// Plague Counters as verbs (SPEC §6.3 Plague Counter; docs/classic-sets.md B5 E19; R471).
 //
 // The counter, the multiplier and the `counterChanged` report are `../plague`'s; this file names
 // where a placement goes and asks the questions:
-//   - `placePlague`: "Place N Plague Tokens on X" — ONE placement of N on the card named (Classic #39
+//   - `placePlague`: "Place N Plague Counters on X" — ONE placement of N on the card named (Classic #39
 //     Outbreak's target, #59 Plague Doctor's "on this", Classic+ #3's end of turn, #87's "enters with
 //     X");
 //   - `placePlagueEach`: one placement on each permanent a board scope names (Classic #63 Crop
 //     Dusting's "on each permanent", face-down ones included);
 //   - `placePlagueRandom`: one placement on each of N different random cards of a scope (Classic #42
 //     Transmutable Toxins, R60);
-//   - `placePlagueTokens`: "Place N Plague Tokens" with no card named — N placements, each on a
+//   - `placePlagueTokens`: "Place N Plague Counters" with no card named — N placements, each on a
 //     permanent the placer chooses in a prompt of their own over every permanent on the field, either
 //     side, face-down included, repeats allowed (Classic #61, #70, #76, #90 reward D);
 //   - `consumePlague`: take tokens off (Classic #78 Mutate Spell).
@@ -50,7 +50,7 @@ function onField(ctx: Pick<EffectContext, "state">, card: CardInstance | null): 
 }
 
 /**
- * "Place N Plague Tokens on X": one placement of `amount` on the card `target` names (default the
+ * "Place N Plague Counters on X": one placement of `amount` on the card `target` names (default the
  * running card), multiplied by that card's multiplier (R471). Nothing happens for a card that is not
  * a permanent on the field, or for an amount below 1.
  */
@@ -81,7 +81,7 @@ export function placePlagueEach(args: { scope: BoardScope; amount: number }): Ef
 
 /**
  * One placement of `amount` on each of `count` different random cards of a scope (Classic #42's "a
- * Plague Token on each of 2 random Units"): R60's random pick of N existing cards picks N different
+ * Plague Counter on each of 2 random Units"): R60's random pick of N existing cards picks N different
  * ones, or all of them if fewer exist. The cards are drawn with `ctx.rng` and placed in R68's order.
  * An empty scope draws nothing (R129).
  */
@@ -101,7 +101,7 @@ export function placePlagueRandom(args: { count: number; amount: number; scope?:
 }
 
 /**
- * Take up to `amount` Plague Tokens (default 1) off the card `target` names: "remove a Plague Token
+ * Take up to `amount` Plague Counters (default 1) off the card `target` names: "remove a Plague Counter
  * from a permanent" (Classic #78). The count floors at 0; a card with none changes nothing.
  */
 export function consumePlague(args: { target?: TargetSpec; amount?: number }): Effect {
@@ -116,7 +116,7 @@ export function consumePlague(args: { target?: TargetSpec; amount?: number }): E
 }
 
 // ---------------------------------------------------------------------------
-// "Place N Plague Tokens": N placements, each a prompt (R471, R113, R122).
+// "Place N Plague Counters": N placements, each a prompt (R471, R113, R122).
 // ---------------------------------------------------------------------------
 
 /** The hook every placement prompt names, answered by `answerPlacement` below (R122). */
@@ -163,7 +163,7 @@ function askPlacement(sink: EngineSink, player: PendingChoice["playerId"], resum
   const asked = openPrompt(sink, {
     player,
     kind: "target",
-    prompt: tokens === 1 ? "Place a Plague Token on a permanent" : `Place ${tokens} Plague Tokens on a permanent`,
+    prompt: tokens === 1 ? "Place a Plague Counter on a permanent" : `Place ${tokens} Plague Counters on a permanent`,
     options: cards.map((card) => ({
       key: `instance:${card.id}`,
       label: labelOf(sink, card),
@@ -175,7 +175,7 @@ function askPlacement(sink: EngineSink, player: PendingChoice["playerId"], resum
 }
 
 /**
- * "Place N Plague Tokens" (B5 E19, R471): `count` placements of `amount` (default 1), each on a
+ * "Place N Plague Counters" (B5 E19, R471): `count` placements of `amount` (default 1), each on a
  * permanent the running card's controller chooses — either side, face-down cards included, the same
  * card as often as they like — in a prompt of its own. The first prompt opens as this effect applies;
  * each answer places, then opens the next; with no permanent on the field the placements left do

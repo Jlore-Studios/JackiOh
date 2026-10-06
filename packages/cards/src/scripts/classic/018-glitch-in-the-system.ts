@@ -1,5 +1,5 @@
 // C #18 Glitch in the System (SPEC §8.6 row 18, §6.3 Exile, §10.6; R13, R65, R66, R81, R113, R135,
-// R396). Spell, cost 3, Common.
+// R396). Spell, cost 3, Epic.
 //   Base:    "Choose a number. Exile every card on the field, in hands and in decks that costs that
 //            much."
 //   Radiant: "Choose a number. Exile every card on your opponent's field, in their hand and in their

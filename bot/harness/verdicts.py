@@ -60,6 +60,9 @@ class BuildReport:
     title: str
     question: str
     body: str
+    #: The model the builder asks this run's next pass to run on (`"next_model"`), lowercased:
+    #: a lane with two models switches to it (`work.Worker._switch`). "" stays.
+    next_model: str = ""
 
 
 def build_report(text: str) -> BuildReport:
@@ -71,7 +74,8 @@ def build_report(text: str) -> BuildReport:
         status = "unknown"
     title = " ".join(str(value.get("title", "")).split())[:200]
     question = str(value.get("question", "")).strip()[:4000]
-    return BuildReport(status, title, question, rest)
+    next_model = str(value.get("next_model") or "").strip().strip("`").lower()[:40]
+    return BuildReport(status, title, question, rest, next_model)
 
 
 @dataclass

@@ -1,4 +1,4 @@
-// Plague Tokens, extended (docs/classic-sets.md B5 E19, R471): "Place N Plague Tokens" as N
+// Plague Counters, extended (docs/classic-sets.md B5 E19, R471): "Place N Plague Counters" as N
 // placements each asked in a prompt, "Place N on X" as one placement, placement multipliers, the
 // "placed on this" trigger, stats per token through the layers, removal, and what each player sees.
 
@@ -64,7 +64,7 @@ function heroHealth(state: GameState, player: "p1" | "p2"): number {
   return state.players[player].hero.health;
 }
 
-describe("E19 Place N Plague Tokens: a prompt per placement (R471)", () => {
+describe("E19 Place N Plague Counters: a prompt per placement (R471)", () => {
   it("R471 places each token where its own prompt says, over every permanent on either side, face-down included", () => {
     const { run: start, mine, theirs, trap } = board("plague-prompts");
     const book = handCard(start.state, plagueBook.id);
@@ -251,7 +251,7 @@ describe("E19 one placement, multipliers and the placed trigger (R471)", () => {
     expect(placePlagueOn(sink, fused, 1)).toBe(4);
   });
 
-  it("R471 'whenever Plague Tokens are placed on this' answers once per placement, never a removal", () => {
+  it("R471 'whenever Plague Counters are placed on this' answers once per placement, never a removal", () => {
     const { run: start } = board("plague-crawler");
     const state = start.state;
     const worm = put(state, crawler.id, slot("p1", "units", 3));
@@ -279,7 +279,7 @@ describe("E19 one placement, multipliers and the placed trigger (R471)", () => {
     expect(placements(sink.events)).toEqual([{ id: live.id, value: 3 }]);
   });
 
-  it("R471 every gain is a placement: Core #91's '+1 Plague Token' (`plague`) reports `placed` and is multiplied", () => {
+  it("R471 every gain is a placement: Core #91's '+1 Plague Counter' (`plague`) reports `placed` and is multiplied", () => {
     const { run: start } = board("plague-gain");
     const state = start.state;
     const onSlime = put(state, slime.id, slot("p1", "units", 3));

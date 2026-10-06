@@ -1,5 +1,5 @@
 // C #59 Plague Doctor — SPEC §8.6 row 59, BUILD M9 Classic row C 59: "Cry: one hit of N on a declared
-// target (Unit or hero), N = every Plague Token on the field, both sides and face-down cards included,
+// target (Unit or hero), N = every Plague Counter on the field, both sides and face-down cards included,
 // counted as it resolves; N = 0 → no hit (R63); its preview is N (R280); radiant 4/6: first place 2
 // tokens on itself, then count them too (its preview includes them); its tuned number (radiant tokens)
 // reads through `param()` (R386)".
@@ -46,7 +46,7 @@ describe("C #59 Plague Doctor", () => {
   });
 
   describe("base", () => {
-    it("is a 2/3; its Cry deals one hit of N, every Plague Token on both sides, face-down cards included", () => {
+    it("is a 2/3; its Cry deals one hit of N, every Plague Counter on both sides, face-down cards included", () => {
       const s = scenario({
         p1: { hand: [DOCTOR, ANCHOR], field: [{ def: VANILLA, counters: { plague: 2 } }], backrow: [{ def: MANA_WELL, counters: { plague: 1 } }] },
         p2: { hand: [ANCHOR], field: [{ def: MENACE, counters: { plague: 1 } }], backrow: [{ def: PAWN, faceUp: false, counters: { plague: 3 } }] },
@@ -87,7 +87,7 @@ describe("C #59 Plague Doctor", () => {
       expect(() => s.play(doctor, { targets: at(s.card(MANA_WELL)) })).toThrow();
     });
 
-    it("R63 N = 0 is no hit: with no Plague Token on the field nothing is dealt", () => {
+    it("R63 N = 0 is no hit: with no Plague Counter on the field nothing is dealt", () => {
       const s = scenario({ p1: { hand: [DOCTOR, ANCHOR] }, p2: { hand: [ANCHOR], field: [MENACE], health: 20 } });
 
       s.play(DOCTOR, { targets: ENEMY_HERO });
@@ -139,7 +139,7 @@ describe("C #59 Plague Doctor", () => {
   });
 
   describe("radiant", () => {
-    it("is a 4/6; its Cry first places 2 Plague Tokens on itself, then deals N counting them", () => {
+    it("is a 4/6; its Cry first places 2 Plague Counters on itself, then deals N counting them", () => {
       const s = scenario({ p1: { hand: [{ def: DOCTOR, radiant: true }, ANCHOR] }, p2: { hand: [ANCHOR], field: [{ def: MENACE, counters: { plague: 1 } }] } });
       const menace = s.card(MENACE);
 

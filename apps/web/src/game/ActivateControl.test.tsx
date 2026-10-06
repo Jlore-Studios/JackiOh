@@ -475,7 +475,7 @@ describe("B5 E11 a card in your graveyard that legal lists is played from the pi
     expect(onAction).toHaveBeenCalledWith(mana);
   });
 
-  it("B5 E19 a play that Plague Tokens may pay asks how many in a number picker, and sends the listed body", () => {
+  it("B5 E19 a play that Plague Counters may pay asks how many in a number picker, and sends the listed body", () => {
     const { onAction } = renderGame([mana, tokens]);
 
     fireEvent.click(el(testid.graveyard("you")));
@@ -486,9 +486,9 @@ describe("B5 E11 a card in your graveyard that legal lists is played from the pi
     expect(modal).toHaveAttribute("data-prompt-kind", "number");
     const options = within(modal).getAllByRole("button", { pressed: false }).map((button) => button.textContent);
     expect(options).toContain("Pay in mana only");
-    expect(options).toContain("Spend 2 Plague Tokens");
+    expect(options).toContain("Spend 2 Plague Counters");
 
-    fireEvent.click(within(modal).getByText("Spend 2 Plague Tokens"));
+    fireEvent.click(within(modal).getByText("Spend 2 Plague Counters"));
     expect(onAction).toHaveBeenCalledWith(tokens);
   });
 });

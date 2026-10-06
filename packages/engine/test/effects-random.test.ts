@@ -24,7 +24,7 @@ import type { CardDef, GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { registerCatalog, registeredCatalog } from "../src/catalog";
 import { FUSE_COST_CAP } from "../src/config";
-import { flipCoins } from "../src/effects/coins";
+import { flipCoinKeyword, flipCoins } from "../src/effects/coins";
 import { exile } from "../src/effects/move";
 import { fuseCards } from "../src/effects/fuse";
 import { radiantChance } from "../src/effects/radiant";
@@ -224,6 +224,71 @@ describe("flipCoins (§8.1 #4, §10.4 layer 4, §10.7, R32)", () => {
 
     expect(draws(sink)).toBe(5);
     expect(unit.buffs).toEqual({ attack: 2, health: 0 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// flipCoinKeyword (#4 Gary the Gambler's rider)
+// ---------------------------------------------------------------------------
+
+describe("flipCoinKeyword (§8.1 #4, §10.4, §10.7, R32/R130)", () => {
+  const rider = () =>
+    flipCoinKeyword({
+      target: { of: "self" },
+      headsKeyword: { kind: "Divine Shield" },
+      tailsKeyword: { kind: "Rush" },
+    });
+
+  it("§8.1 takes exactly one draw: tails at cursor 0 grants Rush", () => {
+    const state = game("coins-known");
+    const unit = put(state, gary.id, slot("p1", "units", 1));
+
+    const sink = run(state, [rider()], { self: unit });
+
+    // "coins-known" at cursor 0 flips T H H H H: the first flip is tails.
+    expect(draws(sink)).toBe(1);
+    expect(unit.grantedKeywords).toEqual([{ kind: "Rush" }]);
+    // §10.4: the grant is a granted keyword, cued by one `keywordGranted` event (§10.10).
+    expect(eventsOfType(sink.events, "keywordGranted")).toEqual([
+      { type: "keywordGranted", instanceId: unit.id, keyword: { kind: "Rush" } },
+    ]);
+  });
+
+  it("§8.1 heads at cursor 1 grants Divine Shield", () => {
+    const state = game("coins-known");
+    state.rngCursor = 1;
+    const unit = put(state, gary.id, slot("p1", "units", 1));
+
+    const sink = run(state, [rider()], { self: unit });
+
+    // The second flip of the "coins-known" stream is heads. The sink cursor is absolute, so
+    // one draw from cursor 1 leaves it at 2.
+    expect(draws(sink) - 1).toBe(1);
+    expect(unit.grantedKeywords).toEqual([{ kind: "Divine Shield" }]);
+  });
+
+  it("§10.7 takes NO draws at all when the target is missing, so the cursor is untouched", () => {
+    const state = game("coins-known");
+    expect(state.rngCursor).toBe(0);
+
+    // `{ of: "self" }` with no self: the coin is never flipped.
+    const sink = run(state, [rider()], { self: null, controller: "p1" });
+
+    expect(draws(sink)).toBe(0);
+    expect(sink.events).toEqual([]);
+    expect(state.rngCursor).toBe(0);
+  });
+
+  it("§9.3 the same seed and cursor grant the same keyword twice", () => {
+    const granted = (seed: string): readonly { kind: string }[] => {
+      const state = game(seed);
+      const unit = put(state, gary.id, slot("p1", "units", 1));
+      run(state, [rider()], { self: unit });
+      return unit.grantedKeywords;
+    };
+
+    expect(granted("gary-rider-a")).toEqual(granted("gary-rider-a"));
+    expect(granted("gary-rider-a")).toHaveLength(1);
   });
 });
 

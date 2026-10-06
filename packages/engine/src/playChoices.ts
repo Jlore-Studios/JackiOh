@@ -586,7 +586,7 @@ function checkAllows(
 }
 
 /**
- * A hero has no card type, no tags, no cost, no damage count and no Plague Tokens, so a filter that
+ * A hero has no card type, no tags, no cost, no damage count and no Plague Counters, so a filter that
  * names any of them cannot reach one; a named predicate is asked.
  */
 function heroAllowed(
@@ -1110,7 +1110,7 @@ export function offeredPlayCosts(state: GameState, player: PlayerId, card: CardI
  * R81, R90's enumeration with the payment left to the caller: for each price the card's X and embiggen
  * choices come to, `payments` answers the ways a play may pay it — none, and that price is not offered;
  * `{}` for a price paid in mana alone. A hand card pays in mana (`playActionsFor`); a card a permission
- * lets its player play from the graveyard may also pay with Plague Tokens (`graveyardPlay.ts`).
+ * lets its player play from the graveyard may also pay with Plague Counters (`graveyardPlay.ts`).
  *
  * R455: a price a ban forbids is never offered (`costRules.whyPlayBanned`). R391: each Tribute set is
  * paired with the zones it leaves open, the open ones and the ones it empties itself, and never with a

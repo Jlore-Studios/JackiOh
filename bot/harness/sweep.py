@@ -11,6 +11,9 @@ have used:
 - a trusted review asking a bot pull request for changes, likewise unclaimed;
 - an open issue or PR assigned to the bot that nothing ever queued;
 - a failed CI run on the head of a bot PR that nothing reran or queued a fix for;
+- a label the bot uses (`config.LABELS`) that the repository does not have: a new one used to
+  wait for a person to run `python3 -m harness setup`, so `method:manual` and `method:use-bot`
+  (#307) shipped without existing, and no issue could be triaged;
 - last, a night run that should be going and is not: GitHub drops scheduled runs, sometimes a
   whole night of `bot-night`'s hourly ones, so when the gate's own question (`plan.peek`) finds
   work for a free lane and no `bot-night` run is on its way to take it, the sweep starts one.
@@ -23,15 +26,17 @@ One failure never stops the rest.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from datetime import datetime, timedelta
 from typing import Any, Callable
 
-from harness import commands, events, triage
+from harness import commands, events, stepup, triage
 from harness import plan as plan_mod
 from harness.clock import iso, parse_iso
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
-                            LABEL_WORKING, NIGHT_WORKFLOW)
+from harness.config import (LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
+                            LABEL_REVISE, LABEL_WORKING, NIGHT_WORKFLOW)
 from harness.context import Context
 from harness.queue import label_names, queue_build, queue_revise
 
@@ -58,8 +63,8 @@ def sweep(ctx: Context) -> list[str]:
         return ["the first sweep: requests from now on are swept"]
     since = max(first, now - LOOKBACK)
     notes: list[str] = []
-    for part in (_comments, _reviews, _assignments, _failed_ci, _needs_plan, _night_run,
-                 _issue_types):
+    for part in (_labels, _comments, _reviews, _assignments, _failed_ci, _needs_plan,
+                 _green_heads, _night_run, _issue_types):
         try:
             notes += part(ctx, since)
         except Exception as exc:  # noqa: BLE001 - one part failing never stops the rest
@@ -70,11 +75,46 @@ def sweep(ctx: Context) -> list[str]:
     return notes
 
 
+def _labels(ctx: Context, since: datetime) -> list[str]:
+    """Create every label in `config.LABELS` the repository lacks, once each time that list
+    changes (`labels_synced`, its fingerprint, in the state file), so a tick normally reads
+    nothing. A label a person deleted comes back with the next change to the list, or with
+    `python3 -m harness setup`."""
+    want = hashlib.sha256(json.dumps(sorted(LABELS.items())).encode("utf-8")).hexdigest()[:16]
+    if ctx.store.load().get("labels_synced") == want:
+        return []
+    made = [name for name, (color, description) in LABELS.items()
+            if ctx.gh.ensure_label(name, color, description)]
+    ctx.store.update(lambda s: s.update(labels_synced=want), "labels synced")
+    return [f"created the label `{name}`" for name in made]
+
+
 def _needs_plan(ctx: Context, since: datetime) -> list[str]:
     """Every queued item with no plan its difficulty may build from, an unrated one included,
     carries `bot:needs-plan` within one sweep (#317 part 8), so nothing waits for a person to
     rate it: the planning lane rates and plans it, and `_night_run` starts that run."""
     return plan_mod.sync_needs_plan(ctx, ctx.store.load())
+
+
+def _green_heads(ctx: Context, since: datetime) -> list[str]:
+    """A bot pull request whose head met the review rule and then went green in CI ends its
+    item's strikes (#316). Only a head the review rule cleared is looked at, and its check runs
+    are read only when its item has strikes to clear."""
+    notes: list[str] = []
+    items = ctx.store.load()["items"]
+
+    def act(pull: dict[str, Any]) -> str | None:
+        if LABEL_PR not in label_names(pull):
+            return None
+        number = int(pull["number"])
+        record = items.get(str(number), {})
+        if not isinstance(record.get("cleared"), dict):
+            return None
+        if stepup.clear_if_green(ctx, number, str((pull.get("head") or {}).get("sha") or "")):
+            return f"#{number}: approved and green, so its strikes are cleared"
+        return None
+    _each(ctx.gh.list_pulls(state="open"), act, notes)
+    return notes
 
 
 def _issue_types(ctx: Context, since: datetime) -> list[str]:

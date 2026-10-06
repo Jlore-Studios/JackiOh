@@ -53,6 +53,8 @@ class InstantFailureTests(unittest.TestCase):
                   if "could not work 3 times in a row" in str(t.get("title"))]
         self.assertEqual(len(issues), 1)
         self.assertIn("model unavailable", issues[0]["body"])
+        self.assertLessEqual({"night bot", "human"},
+                             {label["name"] for label in issues[0]["labels"]})
 
     def test_a_builder_that_fails_after_working_a_while_but_changed_nothing_fails_the_run(self):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)

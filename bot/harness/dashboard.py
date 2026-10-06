@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from harness import disk as disk_mod
+from harness import memory as memory_mod
 from harness import plan as plan_mod
 from harness import providers as providers_mod
 from harness import status as status_mod
@@ -201,7 +202,8 @@ BOX_STYLES = (
     "    classDef free fill:#ffffff,stroke:#d0d7de,color:#6e7781,stroke-dasharray:4 3",
 )
 LEGEND = ("🟢 working · ⚪ open, waiting for work · ⏸️ at a usage cap · 🌙 outside its hours · "
-          "⛔ its last run could not work (a login or the CLI) · ⚫ off · ▫️ free slot")
+          "⛔ its last run could not work (a login or the CLI) · ⚫ off or suspended · "
+          "▫️ free slot")
 
 
 def _account(ctx: Context, state: dict[str, Any], provider: Any) -> tuple[str, str]:
@@ -213,6 +215,8 @@ def _account(ctx: Context, state: dict[str, Any], provider: Any) -> tuple[str, s
         return "open", "⚪ open"
     if not provider.enabled or providers_mod.switched_off_by_date(provider, now, cfg.timezone):
         return "off", "⚫ switched off"
+    if providers_mod.suspension(state, provider.id) is not None:
+        return "off", "⚫ suspended"
     if provider.login == "secret" and cfg.secrets.has(provider.secret) is False:
         return "off", "⚫ off: no secret set"
     window = provider.schedule.window(cfg.timezone)
@@ -430,6 +434,8 @@ def render(ctx: Context) -> str:
     lines += ["## Subscriptions", ""] + subscription_table(ctx, state, live) + [""]
     disk_line = disk_mod.line(state)
     lines += [disk_line, ""] if disk_line else []
+    memory_line = memory_mod.line(state, ctx.now())
+    lines += [memory_line, ""] if memory_line else []
     lines += ["## Queue", ""] + queue_table(issues) + [""]
     lines += ["## Last night-bot runs", ""] + runs_table(ctx) + [""]
     lines += ["<details><summary>The full status</summary>", "",

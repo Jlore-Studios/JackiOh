@@ -1,10 +1,10 @@
 // C #62 Living Bomb (SPEC §8.6 row 62). (1) Field Spell, Rare.
 //   Base:    "At the start of each player's turn: Destroy every permanent that player controls with a
-//            Plague Token on it."
+//            Plague Counter on it."
 //   Radiant: "At the start of your opponent's turn: Destroy every permanent they control with a Plague
 //            Token on it."
 //   Engine:  "A start-of-turn trigger on both players' turns (Radiant: the opponent's only), in R68's
-//            order; the designer's "Plague Counter" is the Plague Token. "They destroy all cards" is the
+//            order; the designer's "Plague Counter" is the Plague Counter. "They destroy all cards" is the
 //            turn player's own permanents, face-down ones included (R400): the only reading under which
 //            the Radiant face is the stronger one. Indestructible permanents stay (§6.1). Tunes: none."
 //
@@ -30,7 +30,7 @@ import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classic-062");
 
-/** R400: one destroy for each permanent `player` controls with a Plague Token on it, in R68's order. */
+/** R400: one destroy for each permanent `player` controls with a Plague Counter on it, in R68's order. */
 function destroyPlagued(ctx: EffectContext, player: PlayerId): Effect[] {
   return permanentsOnField(ctx.state, player)
     .filter((card) => card.controller === player && plagueOn(card) > 0)
