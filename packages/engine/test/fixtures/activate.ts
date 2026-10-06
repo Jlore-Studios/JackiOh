@@ -4,8 +4,9 @@
 // unit's Attack (Classic #21 Turtinator), a random-discard cost (Classic #15 Nose Hunter), "Tribute
 // this" on an Indestructible Field Spell (Classic #84 Lockdown), a mana price (Heroic Power's "spend
 // (X)", the Heroic Power patch), modes with mode-bound targets and a delayed destroy (Classic #20 The Power to
-// Punish), a condition the text sets (Classic #7 InfiniScepter), an ability that asks mid-list, and
-// abilities a card has only on some instances (the Heroic Power patch's rolled power). The engine never imports
+// Punish), a condition the text sets (Classic #7 InfiniScepter), an ability that asks mid-list,
+// abilities a card has only on some instances (the Heroic Power patch's rolled power), and abilities a
+// fused card carries, each read in its ingredient's place (R102). The engine never imports
 // `packages/cards`; the real cards' tests cover the same cases again.
 //
 // Ids are prefixed `act-` and indexed from 4100, so they cannot collide with another fixture file's.
@@ -18,7 +19,9 @@ import {
   draw,
   gainMana,
 } from "../../src/effects";
+import { param } from "../../src/params";
 import { openPrompt, resumeSelf } from "../../src/prompts";
+import { recalled } from "../../src/query";
 import type { ActivationDecl, CardScripts, Effect, EffectContext, Script } from "../../src/script";
 import { activationPaid } from "../../src/subsystems/activate";
 import { heroPower, powerCostOf, rollPower, usePower, POWER_RESUME } from "../../src/subsystems/heroPower";
@@ -205,6 +208,45 @@ export const endless = def("endless", "Field Spell");
 /** Heroic Power wired as Core #98 is (R43), so `activate` and its alias reach the real power. */
 export const heroic = def("heroic", "Field Spell", { cost: "X", tags: ["Quickdraw"] });
 
+/**
+ * Classic #7's shape read the way the real card reads it (R102): the ability is usable once its own
+ * text has remembered something (`recalled`), and notes what it remembered, so a fusion shows which
+ * ingredient's memory each of its abilities reads.
+ */
+export const keeper = def("keeper", "Field Spell");
+export const KEEPER_KEY = "kept";
+
+/** Classic #20's numbered shape (B3.4): "Activate: Deal {damage} damage", read through `param`. */
+export const ZAPPER_DAMAGE = 3;
+export const zapper = def("zapper", "Field Spell", {
+  params: [{ key: "damage", base: ZAPPER_DAMAGE, radiant: ZAPPER_DAMAGE * 2, better: "up", step: 1, min: 1 }],
+});
+/** A card that declares the same number, smaller, and has no ability: fused ahead of a zapper (R102). */
+export const spark = def("spark", "Field Spell", {
+  params: [{ key: "damage", base: 1, radiant: 2, better: "up", step: 1, min: 1 }],
+});
+
+/**
+ * Two cards whose abilities ask the same step and answer with the number their own text declares,
+ * so a fusion holding both shows which ingredient a stored question comes back to (R102, R113).
+ */
+export const LOW_TELL = 1;
+export const HIGH_TELL = 5;
+export const lowTeller = def("low-teller", "Field Spell", {
+  params: [{ key: "tell", base: LOW_TELL, radiant: LOW_TELL * 2, better: "up", step: 1, min: 1 }],
+});
+export const highTeller = def("high-teller", "Field Spell", {
+  params: [{ key: "tell", base: HIGH_TELL, radiant: HIGH_TELL * 2, better: "up", step: 1, min: 1 }],
+});
+
+/** The tellers' script: "Activate: ask; the answer notes {tell}", read by the step the answer re-enters. */
+function teller(): CardScripts {
+  return faces({
+    activations: [{ id: "tell", label: "Ask, then tell {tell}", uses: 1, run: () => [askController("told")] }],
+    resume: { told: (ctx) => [note(`told:${param(ctx, "tell")}`)] },
+  });
+}
+
 export const ACTIVATE_DEFS: CardDef[] = [
   logCard,
   pinger,
@@ -222,6 +264,11 @@ export const ACTIVATE_DEFS: CardDef[] = [
   trapper,
   endless,
   heroic,
+  keeper,
+  zapper,
+  spark,
+  lowTeller,
+  highTeller,
 ];
 
 export const ACTIVATE_SCRIPTS: Record<string, CardScripts> = {
@@ -312,6 +359,31 @@ export const ACTIVATE_SCRIPTS: Record<string, CardScripts> = {
       resume: { [POWER_RESUME]: heroPower },
     },
   ),
+  [keeper.id]: faces({
+    activations: [
+      {
+        id: "recall",
+        label: "Note what this remembered",
+        uses: 1,
+        canActivate: ({ self }) => recalled({ self, data: {} }, KEEPER_KEY) !== undefined,
+        run: (ctx) => [note(`recall:${String(recalled(ctx, KEEPER_KEY))}`)],
+      },
+    ],
+  }),
+  [zapper.id]: faces({
+    activations: [
+      {
+        id: "zap",
+        label: "Deal {damage} damage",
+        uses: 1,
+        targets: [{ ...ANY_TARGET, filter: { of: ["unit", "hero"] } }],
+        run: (ctx) => [damage({ to: { of: "chosen" }, amount: param(ctx, "damage") })],
+      },
+    ],
+  }),
+  [spark.id]: faces({}),
+  [lowTeller.id]: teller(),
+  [highTeller.id]: teller(),
 };
 
 export function activateCatalog(base: CardDefs = {}): CardDefs {
