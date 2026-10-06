@@ -269,9 +269,9 @@ type VoiceChannel = {
   stop: (() => void) | null;
 };
 
-/** The concrete browser engine exposes the room buses; generic test sinks remain plain AudioEngine. */
+/** The concrete browser engine exposes the crowd bus; generic test sinks remain plain AudioEngine. */
 export type MatchFeelAudioEngine = AudioEngine & {
-  ambienceOutput(): { context: AudioContext; ambience: AudioNode; crowd: AudioNode; ambienceDuck: GainNode } | null;
+  crowdOutput(): { context: AudioContext; crowd: AudioNode } | null;
 };
 
 export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAudioEngine {
@@ -361,7 +361,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     buses.master.gain.setTargetAtTime(levels.master, t, GAIN_SMOOTHING_S);
     buses.sfx.gain.setTargetAtTime(levels.sfx, t, GAIN_SMOOTHING_S);
     buses.crowd.gain.setTargetAtTime(levels.crowd, t, GAIN_SMOOTHING_S);
-    buses.ambience.gain.setTargetAtTime(levels.ambience, t, GAIN_SMOOTHING_S);
     buses.voice.gain.setTargetAtTime(levels.voice, t, GAIN_SMOOTHING_S);
     buses.music.gain.setTargetAtTime(levels.music, t, GAIN_SMOOTHING_S);
     // A line already speaking stops with the setting, speech fallback included: the bus gain
@@ -1074,10 +1073,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       };
     },
     musicOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.music }),
-    ambienceOutput: () =>
-      ctx === null || buses === null || disposed
-        ? null
-        : { context: ctx, ambience: buses.ambience, crowd: buses.crowd, ambienceDuck: buses.ambienceDuck },
+    crowdOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, crowd: buses.crowd }),
     subscribeState: (listener) => {
       stateListeners.add(listener);
       return () => {
