@@ -2766,6 +2766,18 @@
     "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37394689378",
     "runner": "night-vm-muse"
   },
+  "machine_memory": [
+    {
+      "at": "2026-10-06T00:43:37Z",
+      "high_swap": 0,
+      "low_available": 6855593984,
+      "runner": "night-vm-muse",
+      "stall_full": 0.0,
+      "stall_some": 0.0,
+      "swapped": 0,
+      "total": 8154001408
+    }
+  ],
   "providers": {
     "agy": {
       "refused_until": "2026-10-09T17:49:15Z",
