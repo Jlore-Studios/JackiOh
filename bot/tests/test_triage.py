@@ -321,18 +321,91 @@ class DecideTests(unittest.TestCase):
         self.assertEqual(plan.issue_type, "")  # the verdict named none
         plan.issue_type = "Bug"
         done = triage.apply(gh, 40, plan)
-        self.assertEqual(len(done), 4)  # labelled, assigned, retitled, typed
+        self.assertEqual(len(done), 5)  # labelled, assigned, retitled, typed, method label off
         self.assertIn("typed it Bug", done)
+        self.assertEqual(done[-1], f"took `{MANUAL}` off")
         self.assertEqual(gh.threads[40]["type"], "Bug")
         # A type GitHub drops without an error is reported, not claimed.
         gh.update_issue = lambda number, **fields: {"type": None}
         plan = triage.Plan(issue_type="Feature")
         self.assertEqual(triage.apply(gh, 40, plan),
                          ["could not do this: typed it Feature (GitHub did not keep it)"])
-        self.assertEqual(gh.label_names(40), {MANUAL, "human"})
+        self.assertEqual(gh.label_names(40), {"human"})
         self.assertEqual([a["login"] for a in gh.threads[40]["assignees"]],
                          ["MaxGoetzmann", "jgoetzmann"])
         self.assertEqual(gh.threads[40]["title"], "Patch v0.2.9: a public Card Almanac")
+
+
+class CleanUpTests(unittest.TestCase):
+    """Once triage has answered a method label it takes off the labels that asked for it and the
+    ones the method made stale, and says in a comment that it classified the thread."""
+
+    def decide(self, labels, verdict=None, **fields):
+        return triage.decide(verdict, thread(labels=labels, **fields), False, REPO_LABELS, BOT)
+
+    def test_use_bot_takes_its_method_label_off(self):
+        plan = self.decide((USE_BOT, "priority:high"))
+        self.assertEqual(plan.remove, [USE_BOT])
+        self.assertEqual(plan.method, USE_BOT)
+
+    def test_an_approved_suggestion_stops_being_a_suggestion(self):
+        """Its `bot:approved` and `bot:suggestion` go, so the queue builds it as any queued issue
+        (`queue.unapproved` holds back only a suggestion nobody approved)."""
+        from harness import queue as queue_mod
+        plan = self.decide((SUGGESTION, APPROVED))
+        self.assertEqual(sorted(plan.remove), [APPROVED, SUGGESTION])
+        gh = FakeGitHub()
+        gh.add_issue(349, labels=(SUGGESTION, APPROVED))
+        triage.apply(gh, 349, plan)
+        self.assertEqual(gh.label_names(349), {"bot:build"})
+        self.assertFalse(queue_mod.unapproved(gh.label_names(349)))
+
+    def test_manual_takes_the_bots_queue_labels_off_but_not_a_runs(self):
+        plan = self.decide((MANUAL, "bot:build", "bot:needs-plan", "Method:Use-Bot"))
+        self.assertEqual(plan.remove, [])  # two methods: triage changes nothing
+        plan = self.decide((MANUAL, "bot:build", "bot:needs-plan", "priority:low"))
+        self.assertEqual(plan.remove, [MANUAL, "bot:build", "bot:needs-plan"])
+        plan = self.decide((MANUAL, "bot:working", "bot:pr-open"))
+        self.assertEqual(plan.remove, [MANUAL])
+
+    def test_a_change_that_failed_keeps_the_method_label(self):
+        gh = FakeGitHub()
+        gh.add_issue(41, labels=(USE_BOT,))
+        plan = triage.Plan(labels=["bot:build"], remove=[USE_BOT], method=USE_BOT)
+
+        def refused(number, names):
+            raise triage.GitHubError("forbidden", 403)
+        gh.add_labels = refused
+        done = triage.apply(gh, 41, plan)
+        self.assertEqual(done, ["could not do this: labelled bot:build (403)",
+                                f"kept `{USE_BOT}`, so a run again can finish"])
+        self.assertEqual(gh.label_names(41), {USE_BOT})
+
+    def test_the_comment_says_it_was_classified_and_pings_nobody(self):
+        plan = triage.Plan(method=USE_BOT, classified=True)
+        text = triage.comment(plan, ["labelled bot:build, patch", f"assigned @{BOT}",
+                                     f"took `{USE_BOT}` off"], is_pr=False, answered=True)
+        self.assertEqual(text, f"Classified this issue (triage): `{USE_BOT}`, so it goes to the "
+                               f"night bot. Labelled bot:build, patch; assigned {BOT}; took "
+                               f"`{USE_BOT}` off.")
+        self.assertNotIn("@", text)
+        pr = triage.comment(triage.Plan(classified=True), [], is_pr=True, answered=False)
+        self.assertTrue(pr.startswith("Classified this pull request (triage). Nothing to change."))
+        self.assertIn("gave no answer", pr)
+
+    def test_an_issue_with_no_method_is_classified_when_asked_and_neither_queued_nor_assigned(self):
+        verdict = {"kind": "bot", "labels": ["patch", "priority:low"], "type": "Bug"}
+        plan = triage.decide(verdict, thread(labels=()), False, REPO_LABELS, BOT, asked=True)
+        self.assertTrue(plan.classified)
+        self.assertEqual((plan.labels, plan.assignees, plan.remove, plan.method),
+                         (["patch", "priority:low"], [], [], ""))
+        self.assertEqual(plan.issue_type, "Bug")
+        people = triage.decide(verdict, thread(labels=("human",)), False, REPO_LABELS, BOT,
+                               asked=True)
+        self.assertEqual(people.labels, [])  # people choose its labels
+        refused = triage.decide(verdict, thread(labels=()), False, REPO_LABELS, BOT)
+        self.assertFalse(refused.classified)
+        self.assertTrue(refused.empty())
 
 
 def issue(number: int, title: str = "An issue", body: str = "") -> dict:
@@ -424,14 +497,21 @@ class LinkTests(unittest.TestCase):
         self.assertEqual(triage.apply(gh, 126, triage.Plan(blocked_by=[999]), ids),
                          ["could not do this: marked it blocked by #999 (no id for #999)"])
 
-    def test_the_gate_needs_a_method_label_even_when_asked(self):
+    def test_an_issue_needs_a_method_label_unless_a_person_asked(self):
+        """Triage takes the method label off once it has answered it, so a person who calls it
+        again (`workflow_dispatch`) gets the issue classified without one; a label event still
+        needs one. A dispatch goes whoever opened the issue (a bot's too)."""
         done = dict(title="Night bot: a thing", labels=("night bot",), assignees=("jgoetzmann",),
                     issue_type="Task")
         go = lambda payload, **kw: triage.gate(payload, TRUST, BOT, ROOT, BEFORE_OFF,
                                                "America/Chicago", **kw)
         self.assertFalse(go(event(**done))[0])
-        self.assertFalse(go(event(**done), asked=True)[0])
+        self.assertTrue(go(event(**done), asked=True)[0])
         self.assertTrue(go(event(**{**done, "labels": ("night bot", USE_BOT)}))[0])
+        self.assertFalse(go(event(**{**done, "labels": (USE_BOT, MANUAL)}), asked=True)[0])
+        bots = dict(login="github-actions[bot]", user_id=3, association="NONE")
+        self.assertFalse(go(event(**bots, labels=(USE_BOT,)))[0])
+        self.assertTrue(go(event(**bots), asked=True)[0])
 
     def test_the_prompt_lists_the_open_issues_as_data(self):
         listed = [issue(125, "Homescreen"), issue(126, "Itself"),
@@ -494,6 +574,30 @@ class CommandTests(unittest.TestCase):
         self.assertIn("marked it blocked by #125", printed)
         self.assertIn("no usable answer from the classifier", printed)
         self.assertIn("bot:build", gh.label_names(126))
+
+    def test_apply_takes_the_method_label_off_and_comments_that_it_classified(self):
+        gh = FakeGitHub()
+        gh.add_issue(130, "card almanac for v0.2.9", labels=(USE_BOT,))
+        gh.ensure_label("patch", "ededed", "A release of the game")
+        verdict = Path(tempfile.mkdtemp()) / "verdict.json"
+        verdict.write_text(json.dumps({"number": 130, "verdict": {
+            "kind": "bot", "labels": ["patch"], "title": "Patch v0.2.9: a public Card Almanac",
+            "type": "Feature"}}))
+        printed, _ = self.run_step(gh, "apply", number="130", verdict=str(verdict))
+        self.assertEqual(gh.label_names(130), {"bot:build", "patch"})
+        [said] = [c["body"] for c in gh.comments[130]]
+        self.assertTrue(said.startswith(f"Classified this issue (triage): `{USE_BOT}`, so it goes "
+                                        "to the night bot."), said)
+        self.assertIn(f"took `{USE_BOT}` off", said)
+        self.assertIn(f"took `{USE_BOT}` off", printed)
+
+    def test_a_closed_issue_gets_no_comment(self):
+        gh = FakeGitHub()
+        gh.add_issue(131, labels=(USE_BOT,), state="closed")
+        self.run_step(gh, "apply", number="131",
+                      verdict=str(Path(tempfile.mkdtemp()) / "missing.json"))
+        self.assertEqual(gh.comments[131], [])
+        self.assertEqual(gh.label_names(131), {USE_BOT})
 
     def test_a_method_label_waits_two_minutes_then_reads_the_issue_afresh(self):
         import harness.__main__ as main_mod
