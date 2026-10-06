@@ -64,6 +64,10 @@ HUMANS: tuple[str, ...] = ("MaxGoetzmann", "jgoetzmann")
 TYPE_LABELS: tuple[str, ...] = ("patch", "major version", "architecture", "night bot")
 #: Labels only the night bot puts on, besides its `bot:` ones.
 BOT_ONLY: frozenset[str] = frozenset({config_mod.LABEL_READY})
+#: The prefixes of the bots' own labels: this bot's and every other bot's in the repository
+#: (`squishy:` beside `bot:`, #60), which triage never offers or adds.
+BOT_PREFIXES: tuple[str, ...] = (config_mod.LABEL_PREFIX,
+                                 *(other.label_prefix for other in config_mod.OTHERS))
 HUMAN_LABEL = "human"
 #: The method labels (#307): who does an issue. Triage takes no issue without exactly one.
 METHODS: tuple[str, ...] = (config_mod.LABEL_METHOD_MANUAL, config_mod.LABEL_METHOD_BOT)
@@ -285,7 +289,7 @@ def _bot_only(name: str) -> bool:
     ones; the difficulty, which a medium or strong model rates when it plans the item, under the
     easy rule (#317 part 8); and the method labels, which are a person's choice (#307). A person
     may still set any of them."""
-    return (name.startswith("bot:") or name in BOT_ONLY
+    return (name.startswith(BOT_PREFIXES) or name in BOT_ONLY
             or name.lower().startswith(("difficulty:", "method:")))
 
 

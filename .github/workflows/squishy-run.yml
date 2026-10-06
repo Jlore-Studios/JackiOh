@@ -1,30 +1,24 @@
-# The night bot (bot/README.md): gate -> plan -> work -> deliver.
+# Squishy (bot/README.md, Squishy; #60): the night bot's harness run as a second bot, from
+# `.squishy/` (HARNESS_HOME). gate -> plan -> work -> deliver, as in bot-night.yml.
 #
-# Each run takes one item on one subscription (.harness/providers.json): a Claude account, ChatGPT
-# through Codex, Google through Antigravity (agy), or Meta through Muse. Up to `max_parallel` runs
-# go at once, each on a different subscription; plan, serialized below, decides which.
+# Squishy has one subscription, its own Claude Max account (`claude-squishy`), and its model job
+# always runs on GitHub's ubuntu-latest: no job here touches the bot's machine. Its labels,
+# commands, branches, state and journal are its own (`squishy:build`, `/squishy`,
+# `squishy/issue-<n>`, `squishy-state`, `squishy-journal`), and it never takes an issue that is
+# the night bot's (`queue.owner`). Beside a plain build it has three modes: `oneshot` (the whole
+# issue in one run with fullsend), `split` (sub-issues it builds) and `split-bot` (sub-issues the
+# night bot builds).
 #
-# The model job runs where its subscription's `runs_on` says: GitHub's ubuntu-latest, or that
-# subscription's own runner on the bot's machine (night-vm-<id>, one Linux user each, holding
-# only its own login; bot/machine/README.md). The machine starts itself when such a job queues
-# and powers off when idle. gate, plan and deliver always run on GitHub's runners.
-#
-# gate starts nothing unless there is work a free subscription can take; it no longer waits
-# for the shared Claude subscription (claude-1) to be quiet, though a run on claude-1 still
-# names its model step so the partner bot (bright-bots-harness) excuses the spending.
-# plan and deliver hold the bot
-# account's token and run no model. gate and work hold a model secret and no GitHub write token;
-# work holds only the one secret of the subscription plan chose, and its output is a result file
-# and a git bundle that deliver checks for itself before pushing.
-name: bot-night
+# plan and deliver hold Squishy's account token (SQUISHY_GITHUB_TOKEN) and run no model; gate and
+# work hold no GitHub write token, and work holds only Squishy's Claude token. Its output is a
+# result file and a git bundle that deliver checks for itself before pushing.
+name: squishy-run
 
 on:
   schedule:
-    # Hourly at :17, all day. Each subscription has its own hours (providers.json), and a firing
-    # with nothing a free subscription can take ends in seconds. GitHub starts scheduled runs late
-    # and sometimes drops them, so the bot-commands sweep also starts a run every ten minutes when
-    # a lane is free, and a run that claims or finishes an item starts the next one itself.
-    - cron: "17 * * * *"
+    # Hourly. A run that claims or finishes an item starts the next one itself, and Squishy's
+    # sweep (squishy-commands, and the bot-status loop) starts one when a lane is free.
+    - cron: "47 * * * *"
   workflow_dispatch:
     inputs:
       item:
@@ -32,44 +26,39 @@ on:
         required: false
         default: ""
       force:
-        description: "Run even outside the subscriptions' hours"
+        description: "Run even outside the subscription's hours"
         type: boolean
         default: false
       mode:
         description: "What to do"
         type: choice
-        options: [auto, build, revise, review, suggest]
+        options: [auto, build, revise, review]
         default: auto
       dry_run:
         description: "Record GitHub writes instead of sending them"
         type: boolean
         default: false
 
-# No workflow-wide concurrency group: runs on different subscriptions go in parallel. The plan
-# job alone is serialized (below), so two runs never claim the same item or subscription.
-
 permissions: {}
 
 env:
   PYTHONUTF8: "1"
   PYTHONDONTWRITEBYTECODE: "1"
+  HARNESS_HOME: .squishy
   HARNESS_DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
 
 jobs:
   gate:
     name: gate
     runs-on: ubuntu-latest
-    timeout-minutes: 20     # no step waits any more (the quiet wait is retired): reads and a peek
+    timeout-minutes: 20
     permissions:
       contents: read         # the queue and the state file; no write of any kind
       actions: read          # whether a run that holds an item is still alive
     outputs:
-      # Go when there is work, unless it waits for the shared subscription and that is not quiet
-      # and no other subscription could take work instead.
-      go: ${{ steps.peek.outputs.work == 'true' && (steps.peek.outputs.quiet_check != 'true' || steps.quiet.outputs.quiet == 'true' || steps.peek.outputs.fallback == 'true') }}
-      quiet_ok: ${{ steps.quiet.outputs.quiet == 'true' && steps.peek.outputs.quiet_provider || '' }}
+      go: ${{ steps.peek.outputs.work == 'true' }}
     steps:
-      - name: HALT check (.harness/HALT on the default branch)
+      - name: HALT check (.squishy/HALT on the default branch)
         id: halt
         env:
           GH_TOKEN: ${{ github.token }}
@@ -78,9 +67,9 @@ jobs:
         run: |
           code="$(curl -sS -o /dev/null -w '%{http_code}' \
             -H "Authorization: Bearer ${GH_TOKEN}" \
-            "https://api.github.com/repos/${REPO}/contents/.harness/HALT?ref=${REF}" || echo 000)"
+            "https://api.github.com/repos/${REPO}/contents/.squishy/HALT?ref=${REF}" || echo 000)"
           if [ "${code}" = "200" ]; then
-            echo "halted by .harness/HALT"
+            echo "halted by .squishy/HALT"
             echo "halted=true" >> "$GITHUB_OUTPUT"
           else
             echo "halted=false" >> "$GITHUB_OUTPUT"
@@ -99,7 +88,6 @@ jobs:
         with:
           python-version: "3.13"
 
-      # Reads only. Nothing a free subscription can take means no usage reading and no wait.
       - name: Is there work? (harness peek)
         id: peek
         if: steps.halt.outputs.halted != 'true'
@@ -125,39 +113,18 @@ jobs:
           if [ "${INPUT_FORCE}" = "true" ]; then force="--force"; fi
           python -m harness peek --item "${INPUT_ITEM}" --mode "${INPUT_MODE:-auto}" ${force}
 
-      - name: Install the claude CLI
-        if: steps.peek.outputs.quiet_check == 'true'
-        run: |
-          npm install --global @anthropic-ai/claude-code
-          claude --version
-
-      # Skipped for forced work and for any subscription that is not shared. Usage readings ten
-      # minutes apart (a one-turn Haiku call each), for up to two hours; a rise that is not the
-      # partner bot's holds that subscription back. The step's name is what plan.quiet_waiting
-      # looks for, so only one run waits at a time.
-      - name: Wait until the subscription is quiet
-        id: quiet
-        if: steps.peek.outputs.quiet_check == 'true'
-        working-directory: bot
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets[steps.peek.outputs.quiet_secret] }}
-          GITHUB_TOKEN: ${{ github.token }}   # read-only: the partner's public runs
-        run: python -m harness quiet
-
   plan:
     name: plan
     needs: gate
     if: needs.gate.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # One plan at a time, across every run: claims and the lanes stay consistent. A plan that
-    # waits is not cancelled, though GitHub keeps only one waiting; one it drops loses nothing,
-    # since the queue is the labels.
+    # One plan at a time, across every Squishy run, so two never claim the same item.
     concurrency:
-      group: bot-night-plan
+      group: squishy-run-plan
       cancel-in-progress: false
     permissions:
-      contents: write        # the state file on the bot-state branch
+      contents: write        # the state file on the squishy-state branch
       issues: write
       pull-requests: write
       actions: write         # whether a run that holds an item is alive; start one more run
@@ -167,11 +134,8 @@ jobs:
       provider: ${{ steps.plan.outputs.provider }}
       cli: ${{ steps.plan.outputs.cli }}
       secret: ${{ steps.plan.outputs.secret }}
-      shared: ${{ steps.plan.outputs.shared }}
-      runs_on: ${{ steps.plan.outputs.runs_on }}
     steps:
-      # First, before anything else: a committed .harness/HALT stops the whole run.
-      - name: HALT check (.harness/HALT on the default branch)
+      - name: HALT check (.squishy/HALT on the default branch)
         id: halt
         env:
           GH_TOKEN: ${{ github.token }}
@@ -180,9 +144,9 @@ jobs:
         run: |
           code="$(curl -sS -o /dev/null -w '%{http_code}' \
             -H "Authorization: Bearer ${GH_TOKEN}" \
-            "https://api.github.com/repos/${REPO}/contents/.harness/HALT?ref=${REF}" || echo 000)"
+            "https://api.github.com/repos/${REPO}/contents/.squishy/HALT?ref=${REF}" || echo 000)"
           if [ "${code}" = "200" ]; then
-            echo "halted by .harness/HALT"
+            echo "halted by .squishy/HALT"
             echo "halted=true" >> "$GITHUB_OUTPUT"
           else
             echo "halted=false" >> "$GITHUB_OUTPUT"
@@ -206,10 +170,8 @@ jobs:
         if: steps.halt.outputs.halted != 'true'
         working-directory: bot
         env:
-          BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          BOT_GITHUB_TOKEN: ${{ secrets.SQUISHY_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
-          # Which provider secrets exist, never their values: a subscription without its secret
-          # takes nothing.
           HARNESS_SECRETS_SET: >-
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && 'CLAUDE_CODE_OAUTH_TOKEN' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_2' || '' }}
@@ -220,14 +182,13 @@ jobs:
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
-          QUIET_OK: ${{ needs.gate.outputs.quiet_ok }}
           INPUT_ITEM: ${{ github.event.inputs.item }}
           INPUT_MODE: ${{ github.event.inputs.mode }}
           INPUT_FORCE: ${{ github.event.inputs.force }}
         run: |
           force=""
           if [ "${INPUT_FORCE}" = "true" ]; then force="--force"; fi
-          python -m harness plan --out "$RUNNER_TEMP/plan/plan.json" --quiet-ok "${QUIET_OK}" \
+          python -m harness plan --out "$RUNNER_TEMP/plan/plan.json" \
             --item "${INPUT_ITEM}" --mode "${INPUT_MODE:-auto}" ${force}
 
       - name: Keep the plan for the next jobs
@@ -242,29 +203,13 @@ jobs:
   work:
     name: work
     needs: plan
-    if: contains(fromJSON('["plan", "build", "revise", "review", "suggest"]'), needs.plan.outputs.action)
-    # The subscription's runner (providers.json `runs_on`). On the machine the CLIs, Node, pnpm
-    # and Python are installed already, and a login there never leaves it.
-    runs-on: ${{ needs.plan.outputs.runs_on || 'ubuntu-latest' }}
+    if: contains(fromJSON('["plan", "build", "revise", "review"]'), needs.plan.outputs.action)
+    # Always GitHub's runners: Squishy's Claude account never runs on the bot's machine.
+    runs-on: ubuntu-latest
     timeout-minutes: 350
     permissions:
       contents: read         # the model job may read; it may not write anything to GitHub
     steps:
-      # On the machine the checkout stays between jobs, and the last model job's worktrees (in
-      # RUNNER_TEMP, emptied after every job) stay registered in it. Checkout then cannot reset a
-      # branch one of them claims ("used by worktree at ...") and clones the repository afresh.
-      - name: Forget the last job's worktrees
-        if: ${{ !startsWith(needs.plan.outputs.runs_on || 'ubuntu-latest', 'ubuntu-') }}
-        run: git -C "$GITHUB_WORKSPACE" worktree prune 2>/dev/null || true
-
-      # On the machine, the job's temporary files go in RUNNER_TEMP, which is emptied when the
-      # job ends, not in the /tmp every subscription's jobs share (bot/machine/README.md, Disk).
-      - name: Keep the job's temporary files with the job
-        if: ${{ !startsWith(needs.plan.outputs.runs_on || 'ubuntu-latest', 'ubuntu-') }}
-        run: |
-          mkdir -p "$RUNNER_TEMP/tmp"
-          echo "TMPDIR=$RUNNER_TEMP/tmp" >> "$GITHUB_ENV"
-
       - name: Checkout the default branch
         uses: actions/checkout@v4
         with:
@@ -272,47 +217,22 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # On GitHub's runners only: the machine has its own (bot/machine/setup.sh).
       - uses: pnpm/action-setup@v4
-        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
 
       - uses: actions/setup-node@v4
-        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
         with:
           node-version-file: .nvmrc
           cache: pnpm
 
       - uses: actions/setup-python@v5
-        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
         with:
           python-version: "3.13"
 
-      # Only the CLI of the subscription plan chose, and only on GitHub's runners. The provider
-      # and CLI come from plan's outputs, which providers.json decides; the model never sets them.
       - name: Install the claude CLI
-        if: needs.plan.outputs.cli == 'claude' && startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        if: needs.plan.outputs.cli == 'claude'
         run: |
           npm install --global @anthropic-ai/claude-code
           claude --version
-
-      - name: Install the codex CLI and its sandbox
-        if: needs.plan.outputs.cli == 'codex' && startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
-        run: |
-          npm install --global @openai/codex
-          codex --version
-          # Codex sandboxes commands with bubblewrap, which Ubuntu's AppArmor blocks by default
-          # (as openai/codex-action does on these runners).
-          sudo apt-get update -qq && sudo apt-get install -y -qq bubblewrap
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-
-      - name: Install the muse CLI
-        if: needs.plan.outputs.cli == 'muse' && startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
-        env:
-          MUSE_NO_AUTO_UPDATE: "1"
-        run: |
-          curl -fsSL https://dev.meta.ai/install.sh | sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          "$HOME/.local/bin/muse" --version
 
       - name: Fetch the plan
         uses: actions/download-artifact@v4
@@ -327,26 +247,14 @@ jobs:
           HARNESS_PROVIDER_SECRET: ${{ secrets[needs.plan.outputs.secret] }}
         run: python3 -m harness doctor --work --plan "$RUNNER_TEMP/plan/plan.json"
 
-      # bright-bots-harness reads a step named "Build, check and review" as this bot spending the
-      # shared Claude subscription (quiet.py), so only a run on it (claude-1) has that name; a run
-      # on any other subscription must not excuse a rise on the shared one.
-      - name: Build, check and review
-        if: needs.plan.outputs.shared == 'true'
+      # Not "Build, check and review": bright-bots-harness reads a step of that name as the night
+      # bot spending the shared Claude subscription (quiet.py), which Squishy never spends.
+      - name: Work on Squishy's account (build, check and review)
         working-directory: bot
         env:
           # The one secret of the subscription plan chose, picked by name; no other provider's.
           HARNESS_PROVIDER_SECRET: ${{ secrets[needs.plan.outputs.secret] }}
           GITHUB_TOKEN: ${{ github.token }}   # read-only: the checkpoints read HALT and the state
-        run: |
-          python3 -m harness work --plan "$RUNNER_TEMP/plan/plan.json" \
-            --out "$RUNNER_TEMP/out" --work-dir "$RUNNER_TEMP/work"
-
-      - name: Work on another subscription (build, check and review)
-        if: needs.plan.outputs.shared != 'true'
-        working-directory: bot
-        env:
-          HARNESS_PROVIDER_SECRET: ${{ secrets[needs.plan.outputs.secret] }}
-          GITHUB_TOKEN: ${{ github.token }}
         run: |
           python3 -m harness work --plan "$RUNNER_TEMP/plan/plan.json" \
             --out "$RUNNER_TEMP/out" --work-dir "$RUNNER_TEMP/work"
@@ -364,7 +272,7 @@ jobs:
   deliver:
     name: deliver
     needs: [plan, work]
-    if: always() && contains(fromJSON('["plan", "build", "revise", "review", "suggest"]'), needs.plan.outputs.action)
+    if: always() && contains(fromJSON('["plan", "build", "revise", "review"]'), needs.plan.outputs.action)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -402,7 +310,7 @@ jobs:
       - name: Deliver
         working-directory: bot
         env:
-          BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          BOT_GITHUB_TOKEN: ${{ secrets.SQUISHY_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
           HARNESS_SECRETS_SET: >-
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && 'CLAUDE_CODE_OAUTH_TOKEN' || '' }}

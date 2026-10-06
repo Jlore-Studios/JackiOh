@@ -54,10 +54,10 @@ from harness import asks, issueplan, review_rule, threads
 from harness import journal as journal_mod
 from harness import providers as providers_mod
 from harness.clock import iso, parse_iso
-from harness.config import (DIFFICULTIES, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
+from harness.config import (DIFFICULTIES, HALT_PATH, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
                             LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
-                            LABEL_SUGGESTION, LABEL_WORKING,
-                            MIN_TIER, NIGHT_WORKFLOW, STATE_BRANCH)
+                            LABEL_SUGGESTION, LABEL_WORKING, MIN_TIER, NIGHT_WORKFLOW, OTHERS,
+                            SLASH, STATE_BRANCH)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.prompts import data
@@ -121,9 +121,9 @@ def stops(ctx: Context, state: dict[str, Any], force: bool) -> str | None:
     """Why no run may start now, whatever is queued, or None. `make` and `peek` share it."""
     cfg = ctx.cfg
     if ctx.repo_halted():
-        return "halted by .harness/HALT on main"
+        return f"halted by {HALT_PATH} on main"
     if state.get("halted"):
-        return "halted by /harness halt"
+        return f"halted by {SLASH} halt"
     if cfg.secrets.known and not any(p.enabled and (p.login == "machine" or cfg.secrets.has(p.secret))
                                      for p in cfg.pool.ordered()):
         return "no subscription has its secret set, so no model can run"
@@ -791,7 +791,8 @@ def sync_needs_plan(ctx: Context, state: dict[str, Any]) -> list[str]:
         queued = [c for c in candidates(ctx, state) if c.kind == "build"]
         wanted = {c.number for c in queued if needs_plan(c)}
         labelled = ctx.gh.list_issues(labels=LABEL_NEEDS_PLAN)
-        planned = {c.number for c in queued if c.planned and not needs_plan(c)}
+        # A mode (#60) plans for itself: its item carries no `planned` label.
+        planned = {c.number for c in queued if c.planned and not needs_plan(c) and not c.mode}
         has_planned = {int(t["number"]) for t in ctx.gh.list_issues(labels=LABEL_PLANNED)}
     except GitHubError as exc:
         return [f"could not sync `{LABEL_NEEDS_PLAN}`: {exc}"]
@@ -994,11 +995,27 @@ def claim(ctx: Context, candidate: Candidate,
         planned["rating"] = {"difficulty": candidate.difficulty,
                              "source": rating_source(names, record),
                              "by": str(by.get("provider") or "")}
+        if candidate.mode:
+            planned["mode"] = candidate.mode
+            if candidate.mode.startswith("split"):
+                planned["children"] = tree_text(ctx, number)
+                planned["builders"] = split_builders(candidate.mode)
         if record.get("previous_pr"):
             planned["previous_pr"] = record["previous_pr"]
             planned["previous_branch"] = str(record.get("previous_branch") or "")
             planned["previous_why"] = str(record.get("previous_why") or "")
-        if assignment.action == "plan":
+        if candidate.mode.startswith("split"):
+            message = (f"Splitting this now{run_link(cfg)}, on {assignment.build.describe()}: "
+                       "one session reads it and the code and answers with sub-issues, each small "
+                       f"enough for one run. When the run ends I open them, queued for "
+                       f"{split_builders(candidate.mode)} in the order they depend on each other.")
+        elif candidate.mode == "oneshot":
+            message = (f"Starting a one-shot build of this now{run_link(cfg)}, on "
+                       f"{assignment.build.describe()}, with fullsend: a spec first, then many "
+                       "agents writing its parts at once, each in its own worktree and branch, "
+                       "reconciled against tests written from the spec. "
+                       f"{_start_message(assignment, cfg)}")
+        elif assignment.action == "plan":
             message = (f"Planning this now{run_link(cfg)}, on {assignment.plan.describe()} "
                        f"(`{LABEL_NEEDS_PLAN}`): it is difficulty:{candidate.difficulty}. The plan "
                        "goes into this issue's description, under **Plan**, and the builder starts "
@@ -1110,6 +1127,26 @@ def claim(ctx: Context, candidate: Candidate,
     ctx.gh.create_comment(number, message)
     asks.react(ctx.gh, taken, asks.WORKING)
     return planned
+
+
+def split_builders(mode: str) -> str:
+    """Who builds a split's sub-issues (#60): this bot for `split`, the other bot for `split-bot`."""
+    if mode == "split-bot" and OTHERS:
+        return f"{OTHERS[0].name} (@{OTHERS[0].login})"
+    return "me"
+
+
+def tree_text(ctx: Context, number: int) -> str:
+    """The sub-issues an issue already has, for a split that closes its tree out: what was done
+    and what is still open. Fenced as data; "" when it has none."""
+    try:
+        children = ctx.gh.list_sub_issues(number)
+    except GitHubError:
+        return ""
+    if not children:
+        return ""
+    lines = [f"- #{c.get('number')} [{c.get('state')}] {c.get('title', '')}" for c in children]
+    return data("\n".join(lines), f"The sub-issues #{number} has already")
 
 
 def ci_logs(ctx: Context, run_id: Any) -> str:

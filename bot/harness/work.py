@@ -33,9 +33,11 @@ from harness import easy as easy_mod
 from harness import gates as gates_mod
 from harness import journal as journal_mod
 from harness import prompts, review_rule, verdicts
+from harness import split as split_mod
 from harness import providers as providers_mod
 from harness.clock import iso, now as clock_now
-from harness.config import MIN_TIER, PLAN_FLOOR, Config, child_env
+from harness.config import (BRANCH_PREFIX, COMMIT_PREFIX, MIN_TIER, NAME, PLAN_FLOOR, SLASH, Config,
+                            child_env)
 from harness.git import MARKER_LINE, Git, Identity, worktree_add
 from harness.issueplan import PLAN_CHARS, PLAN_WORDS
 from harness.prompts import data
@@ -84,6 +86,9 @@ parts, and update it as you go, not only at the end:
 Your session can be cut off at any moment (a usage limit, the clock, a cancelled job), and the
 next agent, possibly another model, starts from this file, the journal of earlier runs and the
 branch."""
+#: A one-shot's scratch (#60): fullsend's spec, notes and damage report, and the worktree each of
+#: its agents works in. Git ignores it in every worktree, and the path guard refuses it.
+FULLSEND_DIR = ".fullsend/"
 #: How many earlier runs a first prompt lists from the journal (`_journal_text`); the file in
 #: the worktree has them all.
 JOURNAL_RUNS_SHOWN = 20
@@ -202,7 +207,9 @@ class Worker:
         self.started = self.now()
         self.deadline = self.started + timedelta(minutes=cfg.job_budget_minutes)
         self.templates = {name: prompts.load(name) for name in prompts.NAMES}
-        self.system = self.templates["system"].substitute(bot=cfg.bot_login, repo=cfg.repo)
+        self.system = self.templates["system"].substitute(
+            bot=cfg.bot_login, repo=cfg.repo, title=NAME.removeprefix("the "),
+            who=NAME if NAME.startswith("the ") else f"{NAME}, a bot")
         self.provider = cfg.pool.get(plan.get("provider")) or cfg.pool.ordered()[0]
         #: The checks this run runs. On the bot's machine, only those marked for it (`Gate.machine`):
         #: every job there shares two vCPUs, and CI on the pull request runs the rest anyway.
@@ -675,7 +682,7 @@ class Worker:
         wip = self.plan.get("wip")
         if not isinstance(wip, dict) or not wip.get("sha"):
             return start
-        ref = f"bot/wip/{int(number)}"
+        ref = f"{BRANCH_PREFIX}wip/{int(number)}"
         self.repo.run("fetch", "--quiet", "--no-tags", "origin",
                       f"+refs/heads/{ref}:refs/remotes/origin/{ref}", check=False)
         head = self.repo.rev(f"origin/{ref}")
@@ -698,7 +705,8 @@ class Worker:
         exclude = Path(common) / "info" / "exclude"
         exclude.parent.mkdir(parents=True, exist_ok=True)
         lines = exclude.read_text(encoding="utf-8").splitlines() if exclude.exists() else []
-        missing = [f"/{name}" for name in (NOTES_FILE, journal_mod.JOURNAL_FILE)
+        # A one-shot's scratch and its agents' worktrees (`.fullsend/`, #60) never ship either.
+        missing = [f"/{name}" for name in (NOTES_FILE, journal_mod.JOURNAL_FILE, FULLSEND_DIR)
                    if f"/{name}" not in lines]
         if missing:
             exclude.write_text("\n".join([*lines, *missing]) + "\n", encoding="utf-8")
@@ -805,7 +813,7 @@ class Worker:
         if self.wip_used:
             return ("\n\n## Unfinished work from the last run\n\nThe last revision run was cut "
                     "off before it finished. Your worktree starts from `" + self.wip_used + "`, "
-                    "which holds its commits (\"bot: work in progress …\") on top of the pull "
+                    f"which holds its commits (\"{COMMIT_PREFIX}: work in progress …\") on top of the pull "
                     "request: go on from where it stopped rather than starting over, and check "
                     "what it did against the task before you build on it.")
         found = self.result.get("wip")
@@ -907,12 +915,14 @@ class Worker:
                          f"it is also at the top of `{NOTES_FILE}`. Follow it unless the code "
                          "shows it is wrong, and say where you departed from it and why.\n\n"
                          + data(self.plan_text, "The plan"))
-        prompt = self.render(
-            "build",
-            number=number, repo=self.cfg.repo, branch=plan["branch"], base=self.base_sha,
-            thread=plan.get("thread", ""), branch_state=self._branch_state(), previous=previous,
-            gate_list=self._gate_list(),
-        )
+        values = dict(number=number, repo=self.cfg.repo, branch=plan["branch"], base=self.base_sha,
+                      thread=plan.get("thread", ""), branch_state=self._branch_state(),
+                      previous=previous, gate_list=self._gate_list())
+        if plan.get("mode") == "oneshot":
+            prompt = self.render("oneshot", **values,
+                                 slice_prefix=f"{BRANCH_PREFIX}oneshot-{number}/")
+        else:
+            prompt = self.render("build", **values)
         return "build", prompt + self._handoff_text()
 
     def _cleared_notes(self, conflicts: list[str]) -> tuple[str, str]:
@@ -985,7 +995,7 @@ class Worker:
         self.put_back = touched
         if touched:
             self.wt.restore_from(self._anchors(), touched)
-            self._commit("bot: put back paths the bot may not change")
+            self._commit(f"{COMMIT_PREFIX}: put back paths the bot may not change")
             found.append(Finding(
                 "blocking", touched[0],
                 f"The change edited {', '.join(touched)}, which the bot may not change "
@@ -1259,7 +1269,7 @@ class Worker:
                                reason="the builder needs a person to decide something")
             self._finish()
             return None, entry
-        self._commit(f"bot: {role} pass {cycle} for #{self.plan['number']}")
+        self._commit(f"{COMMIT_PREFIX}: {role} pass {cycle} for #{self.plan['number']}")
         entry["builder"]["changed"] = self.wt.head() != before
         if built.ok:
             self._came_of_it(f"{report.status}; " + (
@@ -1318,6 +1328,9 @@ class Worker:
         return report, results, guard, flagged
 
     def _item(self) -> None:
+        if str(self.plan.get("mode") or "").startswith("split"):
+            self._split()
+            return
         conflicts = self._prepare()
         assert self.wt is not None
         self.carry_build, self.carry_review = self._cleared_notes(conflicts)
@@ -1543,7 +1556,7 @@ class Worker:
                    "request before it can merge.")
         notes = str(self.plan.get("review_notes") or "").strip()
         if notes:
-            context += ("\n\nA person asked for this review (`/harness review`) with these "
+            context += (f"\n\nA person asked for this review (`{SLASH} review`) with these "
                         "notes:\n\n" + data(notes, "Their notes"))
         open_findings = [_finding(f) for f in self.plan.get("self_check_findings") or []]
         if open_findings:
@@ -1568,6 +1581,43 @@ class Worker:
                          "blocking problem(s)"),
         )
 
+    def _split(self) -> None:
+        """A split (#60): one session reads the issue and the code and answers with sub-issues,
+        each small enough for one run (`split.py`); nothing is built, installed or committed. The
+        deliver job opens them. With `children` in the plan, every sub-issue the issue had has
+        closed and this is its close-out: `done`, or what is still missing."""
+        self._prepare(merge_main=False, install=False)
+        assert self.wt is not None
+        self.check()
+        children = str(self.plan.get("children") or "")
+        prompt = self.render(
+            "split", number=self.plan["number"], repo=self.cfg.repo,
+            thread=self.plan.get("thread", ""),
+            builders=str(self.plan.get("builders") or "I"),
+            children=children or "The issue has no sub-issues yet.",
+            easy_rule=self._easy_rule(), max_issues=split_mod.MAX_ISSUES,
+        ) + self._handoff_text(builder=False)
+        head = self.wt.head()
+        why = ("close the tree out: check the issue against `main`" if children
+               else "split the issue into sub-issues")
+        result = self.call("plan", prompt, self.wt.cwd, reader=True, why=why)
+        if self.wt.head() != head:
+            self.wt.run("reset", "--quiet", "--hard", head)
+        if self.wt.dirty():
+            self.wt.discard_worktree_changes()
+        tree = split_mod.parse(redact(result.text or ""))
+        self.result["tree"] = tree.to_dict()
+        if not tree.ok:
+            problems = "; ".join(tree.problems) or "no tree"
+            self._came_of_it(f"no usable tree: {problems}")
+            self.result.update(status="failed", reason=(
+                f"the split could not be used: {problems}"
+                + (f" ({result.error})" if result.error else ""))[:2000])
+            return
+        said = "done" if tree.done else f"{len(tree.issues)} sub-issue(s)"
+        self._came_of_it(said)
+        self.result.update(status="split", reason=f"split: {said}")
+
     # ------------------------------------------------------------------ endings
 
     def _save_wip(self, reason: str) -> None:
@@ -1577,7 +1627,7 @@ class Worker:
         try:
             if self.wt.merge_in_progress() and self._unresolved_markers():
                 self.wt.run("merge", "--abort", check=False)
-            self._commit(f"bot: work in progress ({reason})")
+            self._commit(f"{COMMIT_PREFIX}: work in progress ({reason})")
         except Exception:  # noqa: BLE001 - a failed save leaves the branch as it was
             pass
 

@@ -10,6 +10,8 @@
 # which GitHub fires as late), so when the bot's chain of runs breaks, the next night run starts
 # within ten minutes, not hours. Each tick also settles the issue about the bot machine's disk
 # (bot/harness/disk.py): open while the disk is filling up, closed once it is not.
+# Each tick also runs Squishy (#60) in a process of its own (`--companions`): its sweep, with
+# Squishy's token, and its section of the status issue, which sits apart from the night bot's.
 # It holds no model secret and runs no model. Cancelling a run by hand stops the loop until the
 # next schedule; disable the workflow to stop it for good.
 name: bot-status
@@ -56,6 +58,9 @@ jobs:
         working-directory: bot
         env:
           BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          # Squishy's own token, for its sweep (`config.companion_env`); the night bot's
+          # process never writes with it.
+          SQUISHY_GITHUB_TOKEN: ${{ secrets.SQUISHY_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
           # Which provider secrets exist, never their values: the issue says when one is unset.
           HARNESS_SECRETS_SET: >-
@@ -67,7 +72,10 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
-        run: python -m harness dashboard --sweep --stats --every "${EVERY_SECONDS}" --for "${LOOP_SECONDS}"
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
+        run: |
+          python -m harness dashboard --sweep --stats --companions \
+            --every "${EVERY_SECONDS}" --for "${LOOP_SECONDS}"
 
       # Not after a cancellation, so a person can stop the loop.
       - name: Start the next loop

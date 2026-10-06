@@ -1,0 +1,52 @@
+{
+  "max_parallel": 2,
+  "machine_parallel": 0,
+  "plan_lanes": 0,
+  "start_headroom": {
+    "five_hour": 0.05,
+    "seven_day": 0.05
+  },
+  "priority": [
+    "claude-squishy"
+  ],
+  "tiers": {
+    "strong": [
+      {
+        "model": "opus",
+        "note": "Claude Opus on Squishy's own Max account: it plans, builds, splits and reviews everything."
+      }
+    ]
+  },
+  "providers": {
+    "claude-squishy": {
+      "note": "Squishy's own Claude Max 20x account (#60), on GitHub's runners: Opus for every role. Nothing else spends it, and Squishy spends nothing else. Two lanes, so it works two items at once.",
+      "enabled": true,
+      "cli": "claude",
+      "family": "claude",
+      "model": "opus",
+      "effort": "xhigh",
+      "fix_effort": "high",
+      "tier": "strong",
+      "login": "secret",
+      "secret": "CLAUDE_CODE_OAUTH_TOKEN_SQUISHY",
+      "runs_on": "ubuntu-latest",
+      "lanes": 2,
+      "roles": [
+        "plan",
+        "build",
+        "fix",
+        "revise",
+        "review"
+      ],
+      "schedule": {
+        "mode": "always"
+      },
+      "limits": {
+        "mode": "caps",
+        "five_hour": 0.95,
+        "seven_day": 0.95
+      },
+      "quiet_check": false
+    }
+  }
+}

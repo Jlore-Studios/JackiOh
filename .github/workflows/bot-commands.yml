@@ -99,6 +99,7 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
         run: |
           if [ "${GITHUB_EVENT_NAME}" = "schedule" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             python -m harness sweep
@@ -107,7 +108,8 @@ jobs:
           fi
 
       # The pinned "Night bot status" issue (bot/harness/dashboard.py), rewritten after every
-      # sweep: what each lane runs, the subscriptions' usage, the queue and the last runs. Editing
+      # sweep: what each lane runs, the subscriptions' usage, the queue and the last runs, and
+      # Squishy's section apart from them (`--companions`, drawn by its own process). Editing
       # its body notifies nobody; a failure only warns.
       - name: Rewrite the pinned status issue
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -125,4 +127,5 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
-        run: python -m harness dashboard
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
+        run: python -m harness dashboard --companions

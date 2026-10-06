@@ -35,8 +35,11 @@ from typing import Any, Mapping
 from harness import clock
 from harness.clock import human_delta, iso, parse_iso, zone
 from harness.errors import ConfigError
+from harness.identity import CURRENT, HOME
 
-PROVIDERS_PATH = Path(".harness") / "providers.json"
+#: The running bot's subscriptions (`identity.py`): `.harness/providers.json` for the night bot,
+#: `.squishy/providers.json` for Squishy.
+PROVIDERS_PATH = Path(HOME) / "providers.json"
 
 CLIS = ("claude", "codex", "agy", "muse", "devin")
 LOGINS = ("secret", "machine")
@@ -70,6 +73,8 @@ SECRETS: tuple[str, ...] = (
     "CLAUDE_CODE_OAUTH_TOKEN_6",
     "CODEX_AUTH_JSON",
     "MUSE_AUTH",
+    # Squishy's own Claude account (#60), in `.squishy/providers.json`.
+    "CLAUDE_CODE_OAUTH_TOKEN_SQUISHY",
 )
 
 #: After a run on a provider could not work (its login refused, its CLI would not install or
@@ -883,7 +888,7 @@ def availability(provider: Provider, state: dict[str, Any], at: datetime, zone_n
     if held is not None:
         by = f" by @{held['by']}" if held.get("by") else ""
         why = f" ({held['reason']})" if held.get("reason") else ""
-        return f"suspended{by}{why}; `/harness resume {provider.id}` lifts it"
+        return f"suspended{by}{why}; `{CURRENT.slash} resume {provider.id}` lifts it"
     if provider.login == "secret" and secrets.has(provider.secret) is False:
         return f"its secret `{provider.secret}` is not set"
     if not forced and not provider.off_hours and not provider.schedule.is_open(zone_name, at):
@@ -922,4 +927,4 @@ def when_free(pool: Pool, state: dict[str, Any], at: datetime, zone_name: str,
         opens, provider = soonest
         return (f"when `{provider.id}` opens ({provider.schedule.describe(zone_name)}, in "
                 f"{human_delta(opens - at)})")
-    return "when a subscription is free again (`/harness status` says why none is now)"
+    return f"when a subscription is free again (`{CURRENT.slash} status` says why none is now)"
