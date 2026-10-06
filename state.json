@@ -1058,7 +1058,6 @@
     },
     "166": {
       "action": "revise",
-      "asks": [],
       "ci_fixed_head": "b5bfca766277396f3a7c4e1f211e98cd3c9fbdb9",
       "ci_fixes": 3,
       "ci_reruns": {
@@ -1082,40 +1081,18 @@
       "interruptions": 0,
       "issue": 88,
       "kind": "revise",
-      "last_findings": [],
       "pending_at": "2026-10-05T09:58:47Z",
       "pending_by": "jgoetzmann",
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-05T23:34:36Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "37389126062",
-      "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-05T23:34:46Z",
       "stop_requested": true,
       "stopped_at": "2026-10-05T23:35:44Z",
-      "stopped_by": "jgoetzmann",
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "37383414439",
-            "tier": "medium"
-          }
-        ],
-        "sha": "b5bfca766277396f3a7c4e1f211e98cd3c9fbdb9",
-        "tiers": {
-          "muse": "medium"
-        }
-      }
+      "stopped_by": "jgoetzmann"
     },
     "167": {
       "action": "review",
@@ -1869,28 +1846,23 @@
     },
     "290": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-05T06:54:33Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 335,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-05T21:35:54Z",
       "requested_by": "jgoetzmann",
       "run_id": "37384084831",
       "started_at": "2026-10-05T22:42:39Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "291": {
       "action": "build",
@@ -1913,34 +1885,21 @@
     },
     "294": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-05T17:43:12Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "# Issue #294 notes (claude-3, opus)\n- Branch clean at start: the earlier devin run's bot/ edits were put back by the path guard; nothing delivered.\n- Whole change is under bot/ (forbidden_paths in .harness/config.json; prompt \"Never\" rule 1). Plan itself says a person must build it.\n- Nothing outside bot/ implements /harness commands. Decision: report blocked, no edits.\n",
-        "provider": "claude-3",
-        "reason": "the builder needs a person to decide something",
-        "trail": "- Bash: {\"command\": \"git status && git log --oneline -3 && git diff --stat origin/main 2>/dev/null | tail -5; ls; cat .bot-notes.md 2>/dev/null | head -50\", \"description\": \"Check worktree state and notes\"}\n- Bash: {\"command\": \"grep -n -A8 forbidden .harness/config.json; grep -rn \\\"A person has to make this change\\\" bot/harness/*.py | head\", \"description\": \"Check forbidden paths and the harness block reply\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-294/bot/harness/work.py\", \"offset\": 925, \"limit\": 40}\n- Bash: {\"command\": \"cat > .bot-notes.md <<'EOF'\\n# Issue #294 notes (claude-3, opus)\\n- Branch clean at start: the earlier devin run's bot/ edits were put back by the path guard; nothing delivered.\\n- Whole\u2026\n- Grep: {\"pattern\": \"VERB_HELP|def availability|harness halt\", \"glob\": \"!bot/**\", \"output_mode\": \"files_with_matches\"}\n- said: <!-- bot: {\"status\": \"blocked\", \"question\": \"Every line of #294 is under `bot/` (`bot/harness/providers.py`, `__main__.py`, `dashboard.py`, `commands.py`, `events.py`, a new `bot/tests/test_suspend.py`, `bot/README.md`). The bot may not change `bot/`: it is in `forbidden_paths` in `.harness/config.\u2026"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-05T13:28:11Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "claude-3",
-      "question": "Every line of #294 is under `bot/` (`bot/harness/providers.py`, `__main__.py`, `dashboard.py`, `commands.py`, `events.py`, a new `bot/tests/test_suspend.py`, `bot/README.md`). The bot may not change `bot/`: it is in `forbidden_paths` in `.harness/config.json`, the path guard puts such edits back, and that is why the earlier devin run delivered nothing. Raising the difficulty doesn't change this, because the limit is on the path, not the model tier. Which do you want? (a) Relabel #294 `human` and have a person apply the plan in the issue description. It still applies line for line: `git diff a6a6b63e 08bec482 -- bot/` is empty. (b) Have a person commit a change to `.harness/config.json` that lets the bot edit `bot/` for this item. I don't recommend this, because the `bot selftest` gate would then be judging the bot's own change to itself. (c) Narrow the issue to a part outside `bot/`. I found none, since `/harness` commands are handled only in `bot/harness/`.",
       "queued_at": "2026-10-05T17:15:16Z",
       "requested_by": "jgoetzmann",
       "run_id": "37350280220",
       "started_at": "2026-10-05T17:41:50Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "296": {
       "action": "review",
@@ -2032,19 +1991,6 @@
       "started_at": "2026-10-05T14:24:49Z",
       "stop_requested": false
     },
-    "31": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "pr": 33,
-      "queued_at": "2026-09-29T16:45:40Z",
-      "requested_by": "jgoetzmann",
-      "run_id": "",
-      "started_at": "2026-09-29T17:45:52Z",
-      "stop_requested": false
-    },
     "321": {
       "action": "review",
       "cleared": {
@@ -2073,57 +2019,46 @@
     },
     "322": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-05T18:28:05Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 334,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-05T21:59:46Z",
       "requested_by": "jgoetzmann",
       "run_id": "37384184362",
       "started_at": "2026-10-05T22:45:01Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "323": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-05T19:05:25Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_tier": "medium",
       "pr": 324,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-05T18:14:55Z",
       "requested_by": "jgoetzmann",
       "run_id": "37357986082",
       "started_at": "2026-10-05T18:43:22Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "324": {
       "action": "review",
-      "asks": [],
       "ci_fixes": 2,
       "ci_reruns": {
         "caa36ac0d05f4db84bc67eb986e18a0223b8f57d": 1,
@@ -2146,48 +2081,20 @@
       "interruptions": 0,
       "issue": 323,
       "kind": "review",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-05T23:04:19Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "run_id": "37386361152",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-05T23:05:33Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "37385480671",
-            "tier": "medium"
-          },
-          {
-            "family": "muse",
-            "run": "37386361152",
-            "tier": "medium"
-          }
-        ],
-        "sha": "bc37b0d8886b251db13166e29a982bfa15e8c6ed",
-        "tiers": {
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "325": {
       "action": "review",
-      "asks": [],
       "ci_fixes": 1,
       "ci_reruns": {
         "ee3b117b5ff516dce9292a400668383398e8c4fe": 1
@@ -2209,58 +2116,20 @@
       "interruptions": 0,
       "issue": 44,
       "kind": "review",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-05T22:34:03Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "run_id": "37383306778",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-05T22:36:00Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "37382220678",
-            "tier": "medium"
-          },
-          {
-            "family": "muse",
-            "run": "37383306778",
-            "tier": "medium"
-          }
-        ],
-        "sha": "e4fa81622a2fb7368bc0b7c41f540404992fd4d2",
-        "tiers": {
-          "muse": "medium"
-        }
-      }
-    },
-    "33": {
-      "closed_at": "2026-09-29T19:12:16Z",
-      "failures": 0,
-      "feedback_since": "2026-09-29T17:45:52Z",
-      "issue": 31,
-      "kind": "revise",
-      "merged": true
+      "stop_requested": false
     },
     "334": {
       "action": "revise",
-      "asks": [
-        "c:6009422503"
-      ],
       "cleared": {
         "at": "2026-10-06T01:08:36Z",
         "by": "`claude` (strong)",
@@ -2272,53 +2141,21 @@
       "failures": 0,
       "feedback_since": "2026-10-06T00:45:28Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-10-06T04:04:29Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n\nPass 3 (revise of PR #334, request: \"fix the merge conflicts\"). DONE in the worktree: main a065f26e merged, all 10 conflicted files resolved (main's balance-patch text kept, plus this branch's tags and the \"Solarius Prime\" rename); our migration renumbered 0025 -> 0026_catalyst_prime_acclaimed_tags.sql (main took 0025_patch_retcon), checksum 1d0838c1 pinned in migrations-pinned.test.ts; run.sh, CHECK 2/18, seed-catalog tests and architecture.md say 0026.\nGREEN: lint, typecheck, missing-tests, rulings:coverage, test:sql, test:db (142).\nRED (not fixable on this branch): main's pending v0.2.10 (balance patch 1, renamed from v0.2.15 by #335) claims classic-080, classicplus-038, classicplus-046, which v0.2.Y also claims -> `patches check` and card-text \"R366 patch v0.2.10\" fail. The harness approves only when gates are green or red on main too, so ANY report but blocked burns fix rounds and strikes. Reported blocked; the blocked path saves wip to bot/wip/334.\nNEXT: once main has v0.2.10 in patches.json (pending/v0.2.10.json gone), merge main (the promotion touches only patches/* and version sites, so no conflict expected) and rerun the gates; nothing else to change.\nRejected: folding the 3 cards into v0.2.10's fragment (ship refuses: the adding commit's catalog would differ on unclaimed cards); dropping the 3 cards from v0.2.Y (half the issue undone, Solarius's text would name a hyphenated token that no longer exists); loosening patches check or the v0.2.10 test (R646 change, main's test); `patches ship` on the branch (R646).\n\n## Log\n\n- start: reading conflicts\n- resolved 8 files' hunks: main's side + rename + branch tags (script /tmp/resolve/resolve.py)\n- added 0025 checksum 78198a3a to main's new migrations-pinned.test.ts PINNED (needed outside conflicted files)\n- validate:catalog: catalog OK, patches check red (double claims, above)\n- lint: exit 0\n- started related vitest in background -> /tmp/sim/vitest.log\n- related vitest: card-text.test.ts 'R366 patch v0.2.15 ... changes exactly the balance-patch cards' fails: same root cause (v0.2.15 pending, current catalog read as v0.2.15). Next: simulate v0.2.15 shipped in scratch worktree ../jackioh-wt/sim334 (branch wt/sim334, REMOVE after)\n- sim: ship v0.2.15 on main copy, overlay branch diff -> validate:catalog exit 0, card-text+catalog+patches tests 391 pass; then ship v0.2.Y -> 'shipped v0.2.15b'. Scratch worktree + branch removed.\n- related vitest done: 784 files, 13742 passed, 1 failed (card-text v0.2.15 test, pending-overlap cause), 1 expected fail\n- typecheck: exit 0. Done.\n- pass 2 start: reds = v0.2.15 pending on main overlapping v0.2.Y; re-simulating v0.2.15 shipped in ../jackioh-wt/sim334b (remove after)\n- sims done: shipped-first green; branch-first makes ship refuse. Removed scratch worktree. Reporting blocked.\n- pass 3 start: re-merge of main a065f26e left 10 conflicted files; resolving\n- resolved all 10 files (main's text + branch tags/rename; run.sh/arch now name 0026)\n- migration renamed 0025->0026 (checksum 1d0838c1 pinned); run.sh, CHECK 2/18, seed-catalog tests, architecture.md updated\n- running gates: lint+typecheck (bg, /tmp/res334/lt.log), validate:catalog, missing-tests, rulings:coverage\n- lint exit 0, missing-tests 0, rulings 0, no markers; validate:catalog red only on the 3 double claims. Starting related vitest -> /tmp/res334/vitest.log\n- typecheck exit 0; running test:sql (docker) -> /tmp/res334/sql.log\n- test:sql exit 0 (0025 then 0026 clean; CHECK 18 16 tags). running test:db -> /tmp/res334/db.log\n- test:db exit 0 (142 passed, 0026 applied)\n- decided: blocked (harness gates; see State). waiting on related vitest\n- related vitest: 806 files, 14141 passed, 1 failed (card-text R366 v0.2.10: reads pending v0.2.10 as the current catalog, sees Acclaimed on classic-080), 1 expected fail. Reporting blocked.\n",
-        "provider": "claude-3",
-        "reason": "the builder needs a person to decide something",
-        "trail": "t-audit.md; grep -n \\\"| 38 | Solarius\\\\|| 46 | Felinor Flag\\\\|| 80 | BOOM\\\" docs/radiant-audit.md | cut -c1-300; git show a065f26e:docs/radiant-audit.md |\u2026\n- Bash: {\"command\": \"git diff a065f26e -- SPEC.md BUILD.md packages/shared packages/cards/scripts packages/cards/catalog.json | cut -c1-700\", \"description\": \"Review SPEC, BUILD, types, validator and catalog \u2026\n- Bash: {\"command\": \"git diff --word-diff=plain --word-diff-regex='[^ |]+' -U0 a065f26e -- SPEC.md BUILD.md packages/shared packages/cards/scripts packages/cards/catalog.json | grep -v '^@@' | python3 -c \\\"\\\u2026\n- Bash: {\"command\": \"git diff a065f26e -- packages/cards/test packages/cards/src apps/web/src/game/deckbuilder | cut -c1-260\", \"description\": \"Review card tests and web filter diffs\"}\n- said: The diff reads correctly against main's new text. Running the gates now: lint and typecheck in the background, the catalog check in the foreground.\n- Bash: {\"command\": \"echo \\\"- running gates: lint+typecheck (bg, /tmp/res334/lt.log), validate:catalog, missing-tests, rulings:coverage\\\" >> .bot-notes.md; (pnpm lint > /tmp/res334/lint.log 2>&1; echo \\\"LINT\u2026\n- Bash: {\"command\": \"grep -n -i \\\"same card\\\\|one card ships\\\\|both claim\\\\|overlap\\\\|wait.*ship\\\\|until.*ship\\\\|promot\\\" docs/issues-and-patches.md packages/cards/README.md docs/ADDING_CARDS.md | cut -c1-30\u2026\n- Bash: {\"command\": \"sed -n 90,135p docs/issues-and-patches.md; sed -n 108,130p docs/ADDING_CARDS.md\", \"description\": \"Read patch going-live docs\"}\n- Bash: {\"command\": \"grep -n \\\"v0.2.10\\\\|pending\\\" packages/cards/test/card-text.test.ts | head -30\", \"description\": \"Find pending-patch assertions in card-text test\"}\n- Bash: {\"command\": \"sed -n 405,500p packages/cards/test/card-text.test.ts\", \"description\": \"Read the v0.2.10 card-text test\"}\n- Bash: {\"command\": \"sleep 60; tail -5 /tmp/res334/lint.log; tail -5 /tmp/res334/tc.log 2>/dev/null\", \"description\": \"Check lint and typecheck progress\", \"timeout\": 200000}\n- said: Lint passes; typecheck is still running. Meanwhile, the card-test and rulings gates:\n- Bash: {\"command\": \"pnpm exec tsx packages/cards/scripts/missing-tests.ts 2>&1 | tail -3; echo \\\"EXIT ${PIPESTATUS[0]}\\\"; pnpm rulings:coverage 2>&1 | tail -4; echo \\\"EXIT ${PIPESTATUS[0]}\\\"; git grep -n -E\u2026\n- said: No conflict markers left; missing-tests and rulings coverage pass. Starting the harness's related-tests run in the background (it took about 9 minutes last time):\n- Bash: {\"command\": \"echo \\\"- lint exit 0, missing-tests 0, rulings 0, no markers; validate:catalog red only on the 3 double claims. Starting related vitest -> /tmp/res334/vitest.log\\\" >> .bot-notes.md; pnpm\u2026\n- Bash: {\"command\": \"sleep 45; tail -3 /tmp/res334/tc.log; docker info >/dev/null 2>&1 && echo DOCKER_OK || echo NO_DOCKER\", \"description\": \"Check typecheck result and Docker availability\", \"timeout\": 200000}\n- said: Typecheck passes. Docker is available, so I'll run the Postgres suite too. It proves the renumbered migration applies after main's 0025:\n- Bash: {\"command\": \"echo \\\"- typecheck exit 0; running test:sql (docker) -> /tmp/res334/sql.log\\\" >> .bot-notes.md; pnpm test:sql > /tmp/res334/sql.log 2>&1; echo \\\"SQL EXIT $?\\\"; grep -n -E \\\"0025|0026|CHE\u2026\n- said: `test:sql` passes: 0025 then 0026 apply clean, and CHECK 18 admits all 16 tags. Now `test:db`, which seeds the real catalog through the new check:\n- Bash: {\"command\": \"echo \\\"- test:sql exit 0 (0025 then 0026 clean; CHECK 18 16 tags). running test:db -> /tmp/res334/db.log\\\" >> .bot-notes.md; docker rm -f jackioh-pg-test >/dev/null 2>&1; pnpm test:db > \u2026\n- Bash: {\"command\": \"echo \\\"- test:db exit 0 (142 passed, 0026 applied)\\\" >> .bot-notes.md; sleep 240; tail -c 1500 /tmp/res334/vitest.log\", \"description\": \"Wait and check related vitest progress\", \"timeout\"\u2026\n- Bash: {\"command\": \"grep -n -i \\\"blocked\\\" bot/harness/work.py bot/harness/deliver.py | head -40\", \"description\": \"Find blocked handling in harness\"}\n- Bash: {\"command\": \"sed -n 1100,1170p bot/harness/deliver.py\", \"description\": \"Read revision delivery handling\"}\n- Bash: {\"command\": \"grep -n -i \\\"turned red\\\\|baseline\\\\|red on main\\\\|already red\\\" bot/harness/*.py | head -30\", \"description\": \"Find red-check gating logic in harness\"}\n- Bash: {\"command\": \"sed -n 1285,1310p bot/harness/work.py; sed -n 1400,1420p bot/harness/work.py\", \"description\": \"Read how red checks block approval\"}\n- Bash: {\"command\": \"sed -n 1225,1270p bot/harness/work.py; grep -n \\\"def _last_checkpoint\\\\|def checkpoint\\\\|bot/wip\\\" bot/harness/work.py | head\", \"description\": \"Read blocked path and checkpoint logic\"}\n- Bash: {\"command\": \"sed -n 660,720p bot/harness/work.py\", \"description\": \"Read wip resume logic\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstate, log = s.split('## Log',1)\\nnew_state='''## State\\n\\nPass 3 (revise of PR #334, request: \\\"fix the merge conflicts\\\"). DONE \u2026\n- Bash: {\"command\": \"git status --short | grep -v '^[MARD] ' ; grep -rn -i \\\"FILTER_TAGS\\\\|ALMANAC_TAGS\\\\|db-filter-tag\\\" e2e/cypress --include=*.ts --include=*.tsx | head\", \"description\": \"Check unstaged st\u2026\n- said: No e2e spec reads the tag chips. Waiting for the related-tests run to finish.\n- Bash: {\"command\": \"sleep 200; grep -n \\\"VITEST EXIT\\\\|Test Files\\\\|Tests \\\\|\\u00d7\\\\|FAIL\\\" /tmp/res334/vitest.log | head -20\", \"description\": \"Check vitest completion\", \"timeout\": 400000}\n- Bash: {\"command\": \"sed -n 24,56p /tmp/res334/vitest.log | cut -c1-200\", \"description\": \"Show the failing test's assertion\"}\n- Bash: {\"command\": \"echo \\\"- related vitest: 806 files, 14141 passed, 1 failed (card-text R366 v0.2.10: reads pending v0.2.10 as the current catalog, sees Acclaimed on classic-080), 1 expected fail. Reporti\u2026\n- said: <!-- bot: {\"status\": \"blocked\", \"question\": \"I've resolved the merge conflicts, but two checks stay red, and I can't fix that on this branch. Main's pending patch v0.2.10 (balance patch 1, renamed from v0.2.15 by #335) claims C #80, C+ #38 and C+ #46. This patch claims the same three cards, and R64\u2026"
-      },
       "interruptions": 0,
       "issue": 322,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "I've resolved the merge conflicts, but two checks stay red, and I can't fix that on this branch. Main's pending patch v0.2.10 (balance patch 1, renamed from v0.2.15 by #335) claims C #80, C+ #38 and C+ #46. This patch claims the same three cards, and R646 allows a card in only one pending patch, so `patches check` and card-text's \"R366 patch v0.2.10\" test fail here, though both pass on main. The harness pushes nothing while a check that passes on main fails here, and `patches ship` itself refuses two patches claiming one card. Can someone confirm that main's `patches ship: v0.2.10` promotion is open and will merge (or start patches-ship.yml if it isn't), then ask for a revision once it's on main? That revision only needs to merge main: the promotion changes only files this branch doesn't touch, and nothing else needs to change.",
       "queued_at": "2026-10-06T04:46:37Z",
       "requested_by": "jgoetzmann",
       "run_id": "37410472202",
-      "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-06T03:46:49Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37395598172",
-            "tier": "strong"
-          }
-        ],
-        "sha": "5b44014a681c8d0e5b41bca6d550221529cc71b7",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "stop_requested": false
     },
     "335": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-06T03:12:29Z",
         "by": "`claude` (strong)",
@@ -2333,40 +2170,17 @@
       "interruptions": 0,
       "issue": 290,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-05T23:48:22Z",
       "run_id": "37404067557",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-06T02:26:14Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37404067557",
-            "tier": "strong"
-          }
-        ],
-        "sha": "718aed0ab64dbda4a19e8c75202d6bd3adbf6e20",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "stop_requested": false
     },
     "337": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-06T00:52:22Z",
@@ -2379,20 +2193,16 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-06T00:52:25Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 344,
       "provider": "claude-1",
-      "question": "",
       "run_id": "37396281008",
       "started_at": "2026-10-06T00:53:26Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "344": {
       "cleared": {
@@ -2406,136 +2216,95 @@
       "feedback_since": "2026-10-06T00:53:26Z",
       "issue": 337,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37396281008",
-            "tier": "strong"
-          }
-        ],
-        "sha": "288f81bef48f2c03a3a440c143bf8d07c3caf663",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "347": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-06T04:46:35Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 357,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-06T04:16:51Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37412912242",
       "started_at": "2026-10-06T04:16:56Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "348": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-06T14:08:45Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 388,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-06T04:15:35Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37501989294",
       "started_at": "2026-10-06T17:14:55Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "349": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-06T05:01:13Z",
       "planned_by": "`claude-2` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 385,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-06T15:04:38Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37484426283",
       "started_at": "2026-10-06T15:05:56Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "350": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-06T04:31:46Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 360,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-06T04:14:03Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37416530510",
       "started_at": "2026-10-06T05:10:12Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "352": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_at": "2026-10-06T04:19:06Z",
       "pending_by": "MaxGoetzmann",
       "pending_request": false,
@@ -2544,44 +2313,35 @@
       "planned_tier": "strong",
       "pr": 356,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-06T04:02:24Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37412969676",
       "started_at": "2026-10-06T04:17:30Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "354": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-06T04:23:22Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 362,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-06T04:12:27Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37413564015",
       "started_at": "2026-10-06T04:25:01Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "355": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-06T04:50:21Z",
@@ -2594,26 +2354,21 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-06T04:50:24Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 371,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-06T04:23:23Z",
       "requested_by": "jgoetzmann",
       "run_id": "37447468436",
       "started_at": "2026-10-06T10:06:19Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "356": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-06T04:44:32Z",
         "by": "`claude` (strong)",
@@ -2628,36 +2383,14 @@
       "interruptions": 0,
       "issue": 352,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-06T04:32:32Z",
       "run_id": "37414156011",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-06T04:32:43Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37414156011",
-            "tier": "strong"
-          }
-        ],
-        "sha": "811cc04da76e2167b8bae943244d58a41c71fb09",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "stop_requested": false
     },
     "357": {
       "cleared": {
@@ -2671,30 +2404,10 @@
       "feedback_since": "2026-10-06T04:16:56Z",
       "issue": 347,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37412912242",
-            "tier": "strong"
-          }
-        ],
-        "sha": "83565106c0a3572a1a0458e66e90d497017f7b44",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "360": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-06T05:34:04Z",
         "by": "`muse` (medium) twice",
@@ -2717,37 +2430,11 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "37418557453",
-      "self_check_findings": [],
       "started_at": "2026-10-06T05:30:01Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "37416530510",
-            "tier": "medium"
-          },
-          {
-            "family": "muse",
-            "run": "37418557453",
-            "tier": "medium"
-          }
-        ],
-        "sha": "69a392a76cc95bfea198161a0e8f0a2dd57b547b",
-        "tiers": {
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "362": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-06T08:17:06Z",
         "by": "`muse` (medium) twice",
@@ -2763,47 +2450,19 @@
       "interruptions": 0,
       "issue": 354,
       "kind": "review",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-06T08:08:19Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "37434139744",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-06T08:09:43Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "37430624368",
-            "tier": "medium"
-          },
-          {
-            "family": "muse",
-            "run": "37434139744",
-            "tier": "medium"
-          }
-        ],
-        "sha": "499a1f921b56b404fb7d7d0786fc1c15407e9491",
-        "tiers": {
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "364": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-06T08:45:43Z",
@@ -2816,26 +2475,21 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-06T08:45:45Z",
       "planned_by": "`claude-2` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 374,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-06T07:09:12Z",
       "requested_by": "jgoetzmann",
       "run_id": "37450145821",
       "started_at": "2026-10-06T10:30:25Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "365": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-06T08:13:27Z",
@@ -2848,29 +2502,21 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-06T08:13:30Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 370,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-06T07:10:23Z",
       "requested_by": "jgoetzmann",
       "run_id": "37434399259",
       "started_at": "2026-10-06T08:14:04Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "37": {
       "action": "plan",
-      "asks": [
-        "c:6016693342",
-        "c:6016717540"
-      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -2883,8 +2529,7 @@
       "requested_by": "MaxGoetzmann",
       "run_id": "37471174936",
       "started_at": "2026-10-06T13:29:53Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "370": {
       "cleared": {
@@ -2898,26 +2543,7 @@
       "feedback_since": "2026-10-06T08:14:04Z",
       "issue": 365,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37434399259",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ef5a1c4bc29e18432dda8ed12becc89f1819996d",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "371": {
       "cleared": {
@@ -2931,26 +2557,7 @@
       "feedback_since": "2026-10-06T10:06:19Z",
       "issue": 355,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37447468436",
-            "tier": "strong"
-          }
-        ],
-        "sha": "11f94a8a6423088bbbeb8f6c4727e8f78fbf72de",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "374": {
       "ci_reruns": {
@@ -2967,59 +2574,26 @@
       "feedback_since": "2026-10-06T10:30:25Z",
       "issue": 364,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37450145821",
-            "tier": "strong"
-          }
-        ],
-        "sha": "705fb508495067efd7784571400b7ebd62a7064f",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "375": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-06T13:37:39Z",
-        "family": "cognition",
-        "kind": "work",
-        "notes": "# Bot notes \u2014 issue #375\n\n## State\n\nThrowaway load test for #318: add `reverseWords` to `packages/validator` plus a\nvitest test. Plan (issue): new `src/loadtest-1.ts` with\n`export function reverseWords(text: string): string`, pure, no imports; new\n`test/loadtest-1.test.ts` checking `reverseWords(\"a  b c\") === \"c b a\"` and\n`reverseWords(\"\") === \"\"`. Do not touch `index.ts` or anything else.\n\nDone: both files written; test passes (2 tests) and `pnpm typecheck` exits 0.\nNothing left.\n\nDecisions: split on `/ +/` then `filter(Boolean)` \u2014 spec says \"runs of spaces\"\n(not all whitespace), and filtering drops the empties leading/trailing spaces\nproduce.\n\n## Log\n\n- Read validator layout, package.json, index.ts header, test style, vitest\n  config. No changes needed to index.ts per plan.\n- Wrote `src/loadtest-1.ts` and `test/loadtest-1.test.ts`.\n- `pnpm vitest run packages/validator/test/loadtest-1.test.ts`: 2/2 pass.\n- `pnpm typecheck`: exit 0 (cards gen unchanged).\n",
-        "provider": "devin",
-        "reason": "built; no model on this subscription may review it, so it waits for a review run",
-        "trail": "- ran `ls packages/validator packages/validator/src packages/validator/test 2>/dev/null`\n- ran `cat packages/validator/package.json 2>/dev/null; head -50 packages/validator/src/index.ts 2>/dev/null`\n- said: I'll start by looking at the validator package structure and conventions, then set up my notes file.\n- ran `head -40 packages/validator/test/validator.test.ts; cat packages/validator/vitest.config.ts`\n- said: Now let me check the test file conventions:\n- write: {\"file_path\": \"/home/agent-devin/actions-runner-5/_work/_temp/work/item-375/packages/validator/src/loadtest-1.ts\", \"content\": \"/**\\n * #375's load test for #318: reverse the order of the words in a s\u2026\n- write: {\"file_path\": \"/home/agent-devin/actions-runner-5/_work/_temp/work/item-375/packages/validator/test/loadtest-1.test.ts\", \"content\": \"// #375's load test for #318: `reverseWords` reverses word order, \u2026\n- write: {\"file_path\": \"/home/agent-devin/actions-runner-5/_work/_temp/work/item-375/.bot-notes.md\", \"content\": \"# Bot notes \\u2014 issue #375\\n\\n## State\\n\\nThrowaway load test for #318: add `reverseWords` t\u2026\n- said: Simple task. Writing the source file, the test file, and my notes file now.\n- ran `pnpm vitest run packages/validator/test/loadtest-1.test.ts 2>&1 | tail -15`\n- said: Now run the test and typecheck per the plan:\n- ran `pnpm typecheck 2>&1 | tail -15`\n- get_output: {\"shell_id\": \"9143d2\", \"timeout\": 240000}\n- ran `git log --oneline -8`\n- said: All green. Let me check the commit style for the PR title and update my notes.\n- edit: {\"file_path\": \"/home/agent-devin/actions-runner-5/_work/_temp/work/item-375/.bot-notes.md\", \"old_string\": \"Done: both files written. Next: run\\n`pnpm vitest run packages/validator/test/loadtest-1.tes\u2026\n- edit: {\"file_path\": \"/home/agent-devin/actions-runner-5/_work/_temp/work/item-375/.bot-notes.md\", \"old_string\": \"- Wrote `src/loadtest-1.ts` and `test/loadtest-1.test.ts`.\", \"new_string\": \"- Wrote `src/loa\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Night bot: load test for #318 (throwaway): `reverseWords` in the validator (#375)\"} --> Adds `reverseWords` to `packages/validator` as a throwaway build item for #318's machine-lane load test. The PR is meant to be closed unmerged once the build has run.\u2026\n- --- answer ---\n- I'll start by looking at the validator package structure and conventions, then set up my notes file.Now let me check the test file conventions:Simple task. Writing the source file, the test file, and my notes file now.Now run the test and typecheck per the plan:All green. Let me check the commit st\u2026\n- Adds `reverseWords` to `packages/validator` as a throwaway build item for #318's machine-lane load test. The PR is meant to be closed unmerged once the build has run.\n- ## What changed\n- - `packages/validator/src/loadtest-1.ts` (new): `export function reverseWords(text: string): string` \u2014 pure, no imports. Splits on runs of spaces (`/ +/`), drops the empties leading/trailing spaces produce, reverses, joins with one space.\n- - `packages/validator/test/loadtest-1.test.ts` (new): vitest covering `reverseWords(\"a b c\") === \"c b a\"` and `reverseWords(\"\") === \"\"`.\n- `index.ts` and every other file untouched, per the plan.\n- ## Tested\n- - `pnpm vitest run packages/validator/test/loadtest-1.test.ts` \u2014 1 file, 2 tests, all passed.\n- - `pnpm typecheck` \u2014 exit 0 across all projects (cards registry gen unchanged).\n- ## Decisions\n- - Split on `/ +/` rather than `/\\s+/`: the issue says \"runs of spaces\", not whitespace generally. Either satisfies the required assertions; this is the more literal reading.\n- - `filter(Boolean)` rather than `trim()`: equally short, and it also drops empty strings anywhere in the middle for a slightly more uniform result."
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "pr": 377,
       "provider": "devin",
-      "question": "",
       "queued_at": "2026-10-06T13:30:01Z",
       "requested_by": "jgoetzmann",
       "run_id": "37471270441",
       "started_at": "2026-10-06T13:30:41Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "377": {
       "action": "review",
-      "asks": [],
       "closed_at": "2026-10-06T13:41:04Z",
       "difficulty": "easy",
       "failures": 0,
@@ -3031,22 +2605,11 @@
       "provider": "claude-3",
       "queued_at": "2026-10-06T13:38:49Z",
       "run_id": "37472481049",
-      "self_check_findings": [],
       "started_at": "2026-10-06T13:40:07Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [],
-        "builder": "cognition",
-        "rejections": [],
-        "reviews": [],
-        "sha": "c5e0f8d1ffc162fa1de84810a0669d2deb9c706b",
-        "tiers": {}
-      }
+      "stop_requested": false
     },
     "385": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-06T16:31:44Z",
         "by": "`claude` (strong)",
@@ -3061,36 +2624,14 @@
       "interruptions": 0,
       "issue": 349,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-06T15:52:38Z",
       "run_id": "37490961536",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-06T15:52:49Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37490961536",
-            "tier": "strong"
-          }
-        ],
-        "sha": "9179b6b6f62ffd326bd37c7ae47d384208408712",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "stop_requested": false
     },
     "388": {
       "cleared": {
@@ -3104,26 +2645,7 @@
       "feedback_since": "2026-10-06T17:14:55Z",
       "issue": 348,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37501989294",
-            "tier": "strong"
-          }
-        ],
-        "sha": "bdb8293595e5e6c606729248e7b8e6b36a5ac0a4",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "39": {
       "died": 0,
@@ -3149,28 +2671,23 @@
     },
     "44": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-04T03:22:54Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 325,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-05T17:09:09Z",
       "requested_by": "jgoetzmann",
       "run_id": "37348674620",
       "started_at": "2026-10-05T17:30:10Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "45": {
       "action": "build",
@@ -3431,24 +2948,20 @@
     },
     "88": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-03T16:39:41Z",
       "pr": 166,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-04T14:50:30Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37253548709",
       "started_at": "2026-10-05T02:07:37Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "90": {
       "failures": 0,
@@ -5586,9 +5099,9 @@
     }
   },
   "pruned": {
-    "at": "2026-10-05T22:12:35Z",
-    "dropped": 0,
-    "shed": 72
+    "at": "2026-10-06T23:33:56Z",
+    "dropped": 2,
+    "shed": 34
   },
   "rate_limited_until": "2026-10-02T21:30:00Z",
   "run_requested": null,
