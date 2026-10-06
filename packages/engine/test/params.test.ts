@@ -1,7 +1,7 @@
 // Declared numbers (docs/classic-sets.md B3.4 rule 5, R386): `param(ctx, key)` in a card script, the
 // pure `paramValue` the view and a `preview` hook read, the default steps and the bounds, a number
 // KY's Constant set and the steps after it, a fused card's ingredients each reading their own
-// declaration (R102), a number tuned on the Radiant face only (R747), and a card resolving with the
+// declaration (R102), a number tuned on the Radiant face only (R749), and a card resolving with the
 // number as it stands.
 
 import type { Action, ActionInput } from "@jackioh/shared";
@@ -43,7 +43,7 @@ describe("B3.4 rule 5: declared numbers (R386)", () => {
     expect(card.tuning).toBeUndefined();
   });
 
-  it("R747 a number tunedOn radiant reads its printed value on the base face whatever its steps, and steps on the Radiant face", () => {
+  it("R749 a number tunedOn radiant reads its printed value on the base face whatever its steps, and steps on the Radiant face", () => {
     const state = game();
     const [card] = inHand(state, radiantNumber.id, "p1");
     if (card === undefined) throw new Error("no card");

@@ -1,5 +1,5 @@
 // C #54 Rewind (SPEC §8.6 row 54; §6.3 Trigger a Cry; R70, R81, R90, R386). Spell, cost 1, Common.
-//   Base:    "Trigger a Cry of one of your Units on the field or in your graveyard." (once, not tunable, R747)
+//   Base:    "Trigger a Cry of one of your Units on the field or in your graveyard." (once, not tunable, R749)
 //   Radiant: "Trigger the Cry of any Unit on the field or in a graveyard, {repeats|time|times}." (2)
 //   Engine:  the declared target (R81) is a Unit that has a Cry — the top of a pile on the field, or a
 //            Unit card in a graveyard; its Cry runs with that unit as `self`, under your control, its

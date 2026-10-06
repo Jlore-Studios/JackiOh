@@ -7,7 +7,7 @@
 //     Plain data (§9.3); `viewFor` never names it (§10.8). A card that takes a fresh id is renamed in it
 //     (`state.renameInBoardHistory`, R227), so it always names a card by the id it has now.
 //   - `restoreBoard` is R419's three steps, each on every restored side before the next: 1. a card there
-//     the restored part of the snapshot does not hold goes to its owner's hand (a Bounce: R78, §2.4, R11);
+//     the restored part of the snapshot does not hold goes to its controller's hand (a Bounce: R78, §2.4, R11, R747);
 //     2. each card it holds goes back to its zone and place, moved from wherever it is or recreated, with
 //     a fresh id when it goes face-down from anywhere but a face-down zone (R227); 3. the Locks become
 //     the snapshot's. R562 picks the snapshot, R563 the held zones, R566 what a card keeps of the present.
@@ -145,7 +145,7 @@ export function restoreBoard(sink: EngineSink, by: PlayerId, turnsAgo: number, o
         // R227: going face-down from anywhere but a face-down zone, it takes a fresh id as it goes.
         const formerId = ref.row === "backrow" && isFaceDown(state, card) && !placement.wasFaceDown ? freshFaceDownId(state, card) : undefined;
         // Every restored zone is empty and open now; only a carried Unit whose carrier is mid-play
-        // (left out above) can find no place, and it goes to its owner's hand as step 1's cards do.
+        // (left out above) can find no place, and it goes to its controller's hand as step 1's cards do.
         if (!placeOnField(state, card, ref, { stack: at > 0 })) {
           bounceCard(sink, card);
           return;

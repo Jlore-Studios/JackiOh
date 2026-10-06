@@ -3830,7 +3830,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Proved by setup-aside.test.ts "R635 …": nothing is cast in setup, the cards are shuffled in after
   // the mulligans at random places and without a word to the other seat, and a Quickdraw card that
   // casts on draw is dealt as a Quickdraw card; and by 021-hinder.test.ts's "R431, R635 …" (a real
-  // game). A hand the other cards cannot fill is R746's.
+  // game). A hand the other cards cannot fill is R748's.
   it("R635 sets cast-on-draw cards aside through setup and shuffles them in once the mulligans are done", () => {
     provenIn(635, "setup-aside.test.ts", "../../cards/test/021-hinder.test.ts");
   });
@@ -4301,10 +4301,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(691, "effects-transform.test.ts");
   });
 
-  // Proved by packages/cards test/card-text.test.ts "R692 …" (no face says "return … to hand"; the
-  // cards that return one say Bounce) and apps/web src/cards/rules.test.ts "R692 …" (the glossary
-  // finds Bounce and "Bounced" where cards print them).
-  it("R692 prints Bounce for every return to hand", () => {
+  // Proved by packages/cards test/card-text.test.ts "R692 …" (every face that returns a permanent
+  // from the field says Bounce, and no face but R746's says "return … to hand") and apps/web
+  // src/cards/rules.test.ts "R692 …" (the glossary finds Bounce and "Bounced" where cards print them).
+  it("R692 prints Bounce for a permanent's return to hand from the field", () => {
     provenIn(692, "../../cards/test/card-text.test.ts", "../../../apps/web/src/cards/rules.test.ts");
   });
 
@@ -4408,35 +4408,51 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(745, "../../../apps/web/src/game/Log.test.tsx");
   });
 
-  // Proved by setup-aside.test.ts "R746 …": an all-cast-on-draw deck deals a full hand of them uncast
+  // Proved by cards test/card-text.test.ts "R746 …" (the thirteen faces that return a card from the
+  // graveyard, exile or a resolved Spell say "Return … to hand", none says Bounce, and no other face
+  // says "return … to hand").
+  it("R746 prints Bounce only for a permanent on the field, and Return … to hand for every other return", () => {
+    provenIn(746, CARDS_CARD_TEXT_TEST);
+  });
+
+  // Proved by effects-move.test.ts "R747 …" (a stolen unit bounces to its controller's hand as the
+  // controller's card, and into a full controller hand it burns to the controller's graveyard),
+  // effects-boardwide.test.ts "R747 …" (the sweep returns each card to its controller's hand) and
+  // cards test/re-entry.test.ts "R747 …" (radiant Silly Silas's rotation bounce of a stolen card,
+  // which its controller then plays at cost 0).
+  it("R747 bounces a permanent to its controller's hand as the controller's card", () => {
+    provenIn(747, "effects-move.test.ts", "effects-boardwide.test.ts", "../../cards/test/re-entry.test.ts");
+  });
+
+  // Proved by setup-aside.test.ts "R748 …": an all-cast-on-draw deck deals a full hand of them uncast
   // and casts them before turn 1, R58's cap still bounds turn 1, a hand or a mulligan the other cards
   // cannot fill takes them, a returned one goes back uncast, and a cast that asks holds turn 1 and
   // folds from its log.
-  it("R746 deals cast-on-draw cards to a hand the other cards cannot fill, uncast, and casts them at the start of the game", () => {
-    provenIn(746, "setup-aside.test.ts");
+  it("R748 deals cast-on-draw cards to a hand the other cards cannot fill, uncast, and casts them at the start of the game", () => {
+    provenIn(748, "setup-aside.test.ts");
   });
 
-  // Proved by params.test.ts "R747 …" (a number tuned on the Radiant face only reads its printed value
+  // Proved by params.test.ts "R749 …" (a number tuned on the Radiant face only reads its printed value
   // on the base face and steps on the Radiant face), and by the cards' own tests, 046-divine-favor and
-  // 054-rewind "R747 …" (an Upgrade's menu offers no number on the base face).
-  it("R747 tunes a number the base face does not print on the Radiant face only", () => {
+  // 054-rewind "R749 …" (an Upgrade's menu offers no number on the base face).
+  it("R749 tunes a number the base face does not print on the Radiant face only", () => {
     provenIn(
-      747,
+      749,
       "params.test.ts",
       "../../cards/test/classic/046-divine-favor.test.ts",
       "../../cards/test/classic/054-rewind.test.ts",
     );
   });
 
-  // Proved by cards test/classic/020-the-power-to-punish.test.ts "R748 …" (every enemy Unit marked in
+  // Proved by cards test/classic/020-the-power-to-punish.test.ts "R750 …" (every enemy Unit marked in
   // both views, one played later too, one that leaves unmarked, every mark gone when it resolves).
-  it("R748 marks every Unit a delayed destroy of a scope names while it waits", () => {
-    provenIn(748, "../../cards/test/classic/020-the-power-to-punish.test.ts");
+  it("R750 marks every Unit a delayed destroy of a scope names while it waits", () => {
+    provenIn(750, "../../cards/test/classic/020-the-power-to-punish.test.ts");
   });
 
-  // Proved by cards test/card-text.test.ts "R749 …" (no printed face names a target it picks).
-  it("R749 words the Core faces without a target they pick", () => {
-    provenIn(749, CARDS_CARD_TEXT_TEST);
+  // Proved by cards test/card-text.test.ts "R751 …" (no printed face names a target it picks).
+  it("R751 words the Core faces without a target they pick", () => {
+    provenIn(751, CARDS_CARD_TEXT_TEST);
   });
 });
 

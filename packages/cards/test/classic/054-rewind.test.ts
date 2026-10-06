@@ -5,7 +5,7 @@
 // Unit with a Cry → it may still be played and fizzles, counting as played (§8's conventions, R90);
 // radiant: any Unit with a Cry on the field or in either graveyard, its Cry run twice, each run with
 // its own choices; its tuned number (repeats) reads through `param()` (R386)". The base face prints no
-// repeats, so it is tuned on the Radiant face only (R747).
+// repeats, so it is tuned on the Radiant face only (R749).
 //
 // The Cries are Core cards with their own tests: Gary the Gambler (flips coins to buff itself), Me and
 // Mr Token (summons a Rush Token), Duplicating Felinors (summons a copy of itself), Bigot (destroys a
@@ -171,7 +171,7 @@ describe("C #54 Rewind", () => {
       expect(live.state.players.p2.graveyard.map((card) => card.defId)).toEqual([MENACE]);
     });
 
-    it("R747 the base face's repeats is not tunable: an Upgrade's menu offers no number and a recorded step still triggers once", () => {
+    it("R749 the base face's repeats is not tunable: an Upgrade's menu offers no number and a recorded step still triggers once", () => {
       const s = scenario({ p1: { hand: [REWIND, FILLER], graveyard: [MR_TOKEN] }, p2: { hand: [FILLER] } });
       expect(applicableChanges(s.state, s.card(REWIND), "upgrade")).not.toContain("number");
       expect(applicableChanges(s.state, s.card(REWIND), "degrade")).not.toContain("number");

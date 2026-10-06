@@ -1,8 +1,8 @@
 {
   "version": "v0.2.10",
-  "title": "Patch v0.2.10c: balance patch 1 follow-up",
+  "title": "Patch v0.2.10d: balance patch 1 follow-up",
   "sources": "#355",
-  "notes": "Follow-up to balance patch 1 (#88). A deck too short of other cards fills an opening hand with its Cast on Draw cards, which wait uncast and are cast at the start of the game (R746). Divine Favor's and Rewind's numbers are tuned on the Radiant face only, the one that prints them (R747). The Power to Punish's Radiant face marks every enemy Unit it will destroy (R748). Core cards no longer say \"to a target\" or \"target <card>\" (R749).",
+  "notes": "Follow-up to balance patch 1 (#88). A deck too short of other cards fills an opening hand with its Cast on Draw cards, which wait uncast and are cast at the start of the game (R748). Divine Favor's and Rewind's numbers are tuned on the Radiant face only, the one that prints them (R749). The Power to Punish's Radiant face marks every enemy Unit it will destroy (R750). Core cards no longer say \"to a target\" or \"target <card>\" (R751).",
   "cards": [
     "core-002",
     "core-016",

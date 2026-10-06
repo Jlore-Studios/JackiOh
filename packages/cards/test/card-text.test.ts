@@ -55,6 +55,17 @@ const LABELS = [
   "Quest:",
 ];
 
+/**
+ * R746 (issue #354): Bounce is a permanent's return from the field (R692). These faces return a card
+ * to hand from anywhere else (a Spell after it resolves or at the end of the turn, a card from the
+ * graveyard or exile) and say "Return … to hand", as they did before patch v0.2.10.
+ */
+const RETURNS_OFF_THE_FIELD: readonly string[] = [
+  "core-023 base", "core-023 radiant", "core-024 base", "core-024 radiant", "core-031 base",
+  "core-031 radiant", "classic-034 base", "classic-034 radiant", "classic-047 base",
+  "classic-047 radiant", "classicplus-014 base", "classicplus-014 radiant", "classicplus-021 radiant",
+];
+
 /** Every R366 check a face fails, by name; empty when it passes them all. */
 function failures(face: Face): string[] {
   const { text, keywords } = face;
@@ -70,8 +81,14 @@ function failures(face: Face): string[] {
   if (/\b[A-Za-z]+-cost\b/.test(text)) out.push('writes a kind of cost as "odd-cost", not "odd Cost"');
   if (/\(paid \d/i.test(text)) out.push('writes an embiggen price as "(paid N" rather than "Paid (N):"');
   // Vocabulary table (patch v0.2.1, issue #45; balance patch 1 retires "Return … to hand" for
-  // Bounce, R692): a face that returns to hand says Bounce.
-  if (/\breturns?\b[^.\n]*\bto\b[^.\n]*\bhand\b/i.test(text)) out.push('says "Return … to hand", not Bounce');
+  // Bounce, R692): a face that returns a permanent from the field says Bounce; only the faces that
+  // return a card from anywhere else keep "Return … to hand" (R746).
+  if (
+    /\breturns?\b[^.\n]*\bto\b[^.\n]*\bhand\b/i.test(text) &&
+    !RETURNS_OFF_THE_FIELD.includes(`${face.card.id} ${face.face}`)
+  ) {
+    out.push('says "Return … to hand", not Bounce');
+  }
   if (/\bbackrow zone\b/i.test(text)) out.push("says backrow zone, not backrow");
   if (/\b(at the (start|end)( and end)? of your turn|(start|end) of your turn)\b/i.test(text)) {
     out.push("writes turn trigger as (Start|End) of your turn, not (Start|End) of turn:");
@@ -127,19 +144,31 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(wrong).toEqual([]);
   });
 
-  it("R692 prints Bounce for every return to hand, and no face says \"return … to hand\"", () => {
+  it("R692 prints Bounce for a permanent's return to hand from the field, and no other face says \"return … to hand\"", () => {
     const faces = facesOf(ENTRIES);
-    const stale = faces.filter((f) => /\breturns? [^.]*\bto (?:its owner's |their owner's |your )?hand\b/i.test(f.text));
+    const stale = faces.filter(
+      (f) =>
+        /\breturns? [^.]*\bto (?:its owner's |their owner's |your )?hand\b/i.test(f.text) &&
+        !RETURNS_OFF_THE_FIELD.includes(`${f.card.id} ${f.face}`),
+    );
     expect(stale.map((f) => `${f.card.id} ${f.face}: ${f.text}`)).toEqual([]);
     const bouncing: readonly (readonly [string, "base" | "radiant"])[] = [
-      ["core-017", "base"], ["core-017", "radiant"], ["core-023", "base"], ["core-024", "base"], ["core-031", "base"],
-      ["core-052", "radiant"], ["classic-014", "base"], ["classic-022", "base"], ["classic-022", "radiant"],
-      ["classic-034", "base"], ["classic-034", "radiant"], ["classic-047", "base"], ["classic-066", "base"],
-      ["classicplus-014", "base"], ["classicplus-014", "radiant"], ["classicplus-021", "radiant"],
+      ["core-017", "base"], ["core-017", "radiant"], ["core-052", "radiant"], ["classic-014", "base"],
+      ["classic-022", "base"], ["classic-022", "radiant"], ["classic-066", "base"], ["classic-066", "radiant"],
     ];
     for (const [id, face] of bouncing) {
       const text = faces.find((f) => f.card.id === id && f.face === face)?.text ?? "";
       expect(text, `${id} ${face}`).toMatch(/\bBounced?\b/);
+    }
+  });
+
+  it("R746 says \"Return … to hand\", never Bounce, where a card returns from the graveyard, exile or a resolved Spell (issue #354)", () => {
+    const faces = facesOf(ENTRIES);
+    const returning = faces.filter((f) => /\breturns? [^.]*\bto hand\b/i.test(f.text)).map((f) => `${f.card.id} ${f.face}`);
+    expect(returning.sort()).toEqual([...RETURNS_OFF_THE_FIELD].sort());
+    for (const key of RETURNS_OFF_THE_FIELD) {
+      const text = faces.find((f) => `${f.card.id} ${f.face}` === key)?.text ?? "";
+      expect(text, key).not.toMatch(/\bBounce/);
     }
   });
 
@@ -647,7 +676,7 @@ describe("patch v0.2.9 wording (issue #44)", () => {
     expect(wrong.map((face) => `${face.card.id} ${face.face}: ${face.text}`)).toEqual([]);
   });
 
-  it("R749 no printed face names a target it picks", () => {
+  it("R751 no printed face names a target it picks", () => {
     // Issue #355 swept Core as issue #88 swept Classic and Classic+: "Deal 3 damage.", "Destroy a
     // Unit.", "Steal an enemy permanent." "Heal a target N" stays, as Book of Heal's did, and so does
     // "target" the verb (R394), which no pattern here reads.

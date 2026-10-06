@@ -746,7 +746,7 @@ const collected = new WeakSet<GameEvent>();
  */
 function collectEvents(sink: SettleSink): void {
   const state = sink.state;
-  // R437: a mark whose effect has stopped waiting goes, and says so, before the frontier moves; R748:
+  // R437: a mark whose effect has stopped waiting goes, and says so, before the frontier moves; R750:
   // a delayed destroy of a scope marks the Units it names now.
   refreshScopeMarks(sink);
   sweepMarks(sink);

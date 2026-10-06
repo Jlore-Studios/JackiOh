@@ -187,7 +187,7 @@ function makerOf(ctx: EffectContext): { defId: string; radiant: boolean } {
  *
  * `scope` instead is "all enemy Units are destroyed at the start of your next turn" (the Radiant face):
  * the Units the scope names *then*, read as the delayed effect resolves, not a list fixed now — sides
- * relative to the controller who made it. R748: its `mark` goes on every Unit the scope names while it
+ * relative to the controller who made it. R750: its `mark` goes on every Unit the scope names while it
  * waits, those that arrive meanwhile too (`refreshScopeMarks`).
  */
 export function destroyAtNextTurnStart(
@@ -239,7 +239,7 @@ function scopeIn(data: Record<string, unknown>): BoardScope | null {
   return raw !== null && typeof raw === "object" && !Array.isArray(raw) ? (raw as BoardScope) : null;
 }
 
-/** R748: the mark a delayed destroy of a scope puts on the Units it names, if it was made with one. */
+/** R750: the mark a delayed destroy of a scope puts on the Units it names, if it was made with one. */
 function markIn(data: Record<string, unknown>): CardMark | null {
   const raw: unknown = data.mark;
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
@@ -248,7 +248,7 @@ function markIn(data: Record<string, unknown>): CardMark | null {
 }
 
 /**
- * R748, R437: every waiting delayed destroy of a scope made with a mark marks the Units its scope names
+ * R750, R437: every waiting delayed destroy of a scope made with a mark marks the Units its scope names
  * now — the read `runEngineDelayed` makes as it resolves — so a Unit that arrives while it waits is
  * marked and one that leaves is not. Called where the resolution loop collects events
  * (`triggers.collectEvents`), before `marks.sweepMarks` drops the marks of an effect that is gone.

@@ -73,7 +73,7 @@ function paramMax(param: Param): number {
 
 /**
  * A declared number's value on a face, as `tuning` moves it: the one formula every reader shares.
- * R747: a number tuned on the Radiant face only reads its printed value on the base face, whatever
+ * R749: a number tuned on the Radiant face only reads its printed value on the base face, whatever
  * its tuning, so `steppableParams` finds no step there.
  */
 function valueWith(param: Param, radiant: boolean, tuning: Pick<CardInstance, "tuning">["tuning"], steps?: number): number {

@@ -1,6 +1,6 @@
 // C+ #14 Forever& — SPEC §8.7 row 14, R410, BUILD M9 Classic+ row C+ 14: "Leaves a waiting player
 // modifier, not turn-scoped (it survives cleanup), that stamps the next Spell you play, never Forever&
-// itself, with "After this resolves, Bounce it. This can't cost less than (2)": the Spell
+// itself, with "After this resolves, return it to hand. This can't cost less than (2)": the Spell
 // resolves and comes back to your hand, and does so after every later play too, the enchantment riding
 // the card in every zone; its floor applies after every discount; a discarded or countered stamped
 // Spell does not come back (R410); a Unit, Field Spell or Trap play leaves the modifier waiting; a full

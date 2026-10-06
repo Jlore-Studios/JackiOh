@@ -4,7 +4,7 @@
 //
 // A mark is made by the effect that waits: `effects/delay.ts`'s `delay({ …, watch, mark })` marks the
 // card it watches (R174) as it schedules itself. A delayed destroy of a scope (Classic #20's Radiant
-// face, R748) marks every card the scope names instead, kept in step with the board each time events
+// face, R750) marks every card the scope names instead, kept in step with the board each time events
 // are collected (`syncMarks`), so a card that arrives while it waits is marked and one that leaves is
 // not. A mark lasts exactly as long as the delayed effect that made it does, so the record here is
 // tied to the entry's id and holds nothing the entry does not: when the effect resolves at its R62
@@ -42,7 +42,7 @@ export function markDelayed(sink: MarkSink, entry: DelayedEffect, mark: CardMark
 }
 
 /**
- * R748: the marks of a delayed effect that names every card of a scope (`delayedId`), made to match
+ * R750: the marks of a delayed effect that names every card of a scope (`delayedId`), made to match
  * `ids`, the cards the scope names now: a card that left it loses its mark and a card that came into
  * it gains one, each with a `marked` event, in that order. Nothing changes, and nothing is said, when
  * they already match.

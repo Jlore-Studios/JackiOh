@@ -182,7 +182,7 @@ export type Param = {
   /** It never goes above this (100 for a percentage). */
   max?: number;
   /**
-   * R747: the one face a Degrade, an Upgrade or KY's Constant may move it on, for a number only that
+   * R749: the one face a Degrade, an Upgrade or KY's Constant may move it on, for a number only that
    * face prints; on the other face it always reads its printed value. Absent, both faces.
    */
   tunedOn?: "radiant";

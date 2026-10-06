@@ -3,7 +3,7 @@
 // ahead → no draw; a draw that adds no card (fatigue, a burn, a cast-on-draw card, a draw a limit
 // stops) ends it, so it never loops; its preview is the number of draws it asks for now (R280); radiant:
 // until you hold twice as many; its tuned number (multiplier) reads through `param()` (R386)". The base
-// face prints no multiplier, so it is tuned on the Radiant face only (R747).
+// face prints no multiplier, so it is tuned on the Radiant face only (R749).
 //
 // The preview's proofs are in `test/preview.test.ts` (its C #46 section), with the set of hooked cards.
 
@@ -104,7 +104,7 @@ describe("C #46 Divine Favor", () => {
       expect(drawn(s.lastEvents)).toHaveLength(2);
     });
 
-    it("R747 the base face's multiplier is not tunable: an Upgrade's menu offers no number and a recorded step still draws 1×", () => {
+    it("R749 the base face's multiplier is not tunable: an Upgrade's menu offers no number and a recorded step still draws 1×", () => {
       const s = scenario({ p1: { hand: [FAVOR, FILLER], library: many(6, MENACE) }, p2: { hand: many(3) } });
       expect(applicableChanges(s.state, s.card(FAVOR), "upgrade")).not.toContain("number");
       expect(applicableChanges(s.state, s.card(FAVOR), "degrade")).not.toContain("number");

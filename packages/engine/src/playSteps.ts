@@ -1697,7 +1697,7 @@ function finishStep(sink: EngineSink, run: PlayRun): void {
 }
 
 /**
- * E39, R410, R455 (Classic+ #14 Forever&: "After this resolves, Bounce it"): a Spell
+ * E39, R410, R455 (Classic+ #14 Forever&: "After this resolves, return it to hand"): a Spell
  * carrying a `returnAfterResolve` enchantment that has resolved — played or cast — and that step 7 has
  * just landed goes back to its owner's hand from the graveyard or the exile pile it went to (its own
  * "exile this", a cast's "then exile it", a "would go to a graveyard" replacement), the hand cap

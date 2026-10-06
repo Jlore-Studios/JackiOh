@@ -253,7 +253,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "void" },
     target: (e, view) => instanceOrPile(view, e.instanceId, animTestid.exile(sideOf(view, e.owner))),
   },
-  // Card flies to its owner's hand.
+  // Card flies to its controller's hand: the event's owner is the hand's player (R747).
   bounced: {
     animation: "jk-bounce-to-hand",
     durationMs: 350,

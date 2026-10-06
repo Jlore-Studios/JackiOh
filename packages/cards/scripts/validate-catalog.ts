@@ -330,7 +330,7 @@ function validateParams(where: string, value: Record<string, unknown>): void {
         if (isInt(n) && isInt(min) && n < min) fail(at, `${key}: ${n} is below its min ${min}`);
         if (isInt(n) && isInt(max) && n > max) fail(at, `${key}: ${n} is above its max ${max}`);
       }
-      // R747: a number tuned on the Radiant face only is one the base face does not print.
+      // R749: a number tuned on the Radiant face only is one the base face does not print.
       if (tunedOn !== undefined && tunedOn !== "radiant") fail(at, `${key}: \`tunedOn\` is "radiant" when present (got ${describe(tunedOn)})`);
       if (tunedOn === "radiant" && paramPlaceholders(texts[0] ?? "").some((placeholder) => placeholder.key === key)) {
         fail(at, `${key}: tuned on the Radiant face only, but the base face's text writes {${key}}`);

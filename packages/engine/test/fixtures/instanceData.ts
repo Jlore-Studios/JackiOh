@@ -206,7 +206,7 @@ export const military = def("military", { type: "Spell", cost: 2, base: { keywor
 export const educator = def("educator", { type: "Spell", base: { keywords: [], text: "Education" }, radiant: { keywords: [], text: "Education" } });
 
 /**
- * R747: Classic #46 Divine Favor's and Classic #54 Rewind's shape: a number only the Radiant face prints
+ * R749: Classic #46 Divine Favor's and Classic #54 Rewind's shape: a number only the Radiant face prints
  * (`times` 1 → 2, more is better), tuned on that face only.
  */
 export const radiantNumber = def("radiant-number", {

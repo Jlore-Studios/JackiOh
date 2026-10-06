@@ -7,7 +7,7 @@
 // Indestructible target survives (R46); activating is not a play; radiant: 4 damage; discards 2; or
 // every enemy Unit on the field at the start of your next turn is destroyed, the Units there then
 // rather than a list fixed at activation; its tuned numbers (damage, discards) read through `param()`
-// (R386)". Every enemy Unit the Radiant destroy will take wears its red mark while it waits (R748).
+// (R386)". Every enemy Unit the Radiant destroy will take wears its red mark while it waits (R750).
 
 import { describe, expect, it } from "vitest";
 import { legalActions, stepParam } from "@jackioh/engine";
@@ -321,7 +321,7 @@ describe("C #20 The Power to Punish", () => {
       s.expectInZone(menace, "field");
     });
 
-    it("R748 every enemy Unit wears the red Destroy mark while the destroy waits, one played later too, and the marks go when it resolves", () => {
+    it("R750 every enemy Unit wears the red Destroy mark while the destroy waits, one played later too, and the marks go when it resolves", () => {
       const s = setup({ field: [MENACE], hand: [COLLATERAL, FILLER], mana: 10 }, { field: [VANILLA, POINTMASTER], hand: [TIMMY, FILLER] }, true);
       const vanilla = s.card(VANILLA);
       const pointmaster = s.card(POINTMASTER);
