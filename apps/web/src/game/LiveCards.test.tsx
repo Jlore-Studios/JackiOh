@@ -227,7 +227,7 @@ describe("R43 a Heroic Power in play prints the one power it rolled", () => {
       }),
     );
     const preview = hover(screen.getByTestId(testid.card("b1")));
-    expect(text(preview, ".card-text")).toBe("Indestructible\nOnce per turn, spend 1: Deal 1 damage to a target. Playing it activates it once.");
+    expect(text(preview, ".card-text")).toBe("Indestructible\nOnce per turn, spend 1: Deal 1 damage. Playing it activates it once.");
     expect(text(preview, `[data-testid="${INSPECT_PRINTED}"]`)).toContain("Gain one of 8 random powers");
   });
 

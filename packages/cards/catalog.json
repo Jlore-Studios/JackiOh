@@ -42,7 +42,7 @@
       "attack": 6,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Destroy target enemy non-Human Unit."
+      "text": "Cry: Destroy an enemy non-Human Unit."
     },
     "radiant": {
       "attack": 12,
@@ -421,11 +421,11 @@
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Destroy target Unit."
+      "text": "Destroy a Unit."
     },
     "radiant": {
       "keywords": [],
-      "text": "Destroy target Unit and the Units adjacent to it."
+      "text": "Destroy a Unit and the Units adjacent to it."
     }
   },
   "core-017": {
@@ -625,11 +625,11 @@
     "loc": 46,
     "base": {
       "keywords": [],
-      "text": "Choose one: Deal X damage to a target, heal a target 2X, or gain floor(X/2) mana next turn.\nEnd of turn: Return this to hand."
+      "text": "Choose one: Deal X damage, heal a target 2X, or gain floor(X/2) mana next turn.\nEnd of turn: Return this to hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Deal 2X damage to a target, heal a target 4X, or gain X mana next turn.\nEnd of turn: Return this to hand."
+      "text": "Choose one: Deal 2X damage, heal a target 4X, or gain X mana next turn.\nEnd of turn: Return this to hand."
     }
   },
   "core-025": {
@@ -790,11 +790,11 @@
     "loc": 56,
     "base": {
       "keywords": [],
-      "text": "Deal Fib(times played + 1) damage to a target.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
+      "text": "Deal Fib(times played + 1) damage.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal Fib(times played + 3) damage to a target.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
+      "text": "Deal Fib(times played + 3) damage.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
     }
   },
   "core-032": {
@@ -865,11 +865,11 @@
     "loc": 19,
     "base": {
       "keywords": [],
-      "text": "Exile target permanent and a random card from your opponent's deck."
+      "text": "Exile a permanent and a random card from your opponent's deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Exile target permanent, the permanents adjacent to it, and a random card from your opponent's deck."
+      "text": "Exile a permanent, the permanents adjacent to it, and a random card from your opponent's deck."
     }
   },
   "core-035": {
@@ -885,11 +885,11 @@
     "loc": 21,
     "base": {
       "keywords": [],
-      "text": "Deal 3 damage to a target. Your next Spell this turn costs (1) less."
+      "text": "Deal 3 damage. Your next Spell this turn costs (1) less."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal 6 damage to a target. Your next Spell this turn costs (2) less."
+      "text": "Deal 6 damage. Your next Spell this turn costs (2) less."
     }
   },
   "core-036": {
@@ -905,11 +905,11 @@
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Destroy target backrow card. Lock its zone."
+      "text": "Destroy a backrow card. Lock its zone."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal target backrow card. Lock the zone it was in."
+      "text": "Steal a backrow card. Lock the zone it was in."
     }
   },
   "core-037": {
@@ -1221,11 +1221,11 @@
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Steal target enemy permanent."
+      "text": "Steal an enemy permanent."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal target enemy permanent. It becomes Radiant."
+      "text": "Steal an enemy permanent. It becomes Radiant."
     }
   },
   "core-050": {
@@ -1622,11 +1622,11 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Give target Unit +3/+3 and 1 random keyword."
+      "text": "Give a Unit +3/+3 and 1 random keyword."
     },
     "radiant": {
       "keywords": [],
-      "text": "Give target Unit +6/+6 and 2 random keywords."
+      "text": "Give a Unit +6/+6 and 2 random keywords."
     }
   },
   "core-064": {
@@ -1781,13 +1781,13 @@
       "attack": 5,
       "health": 5,
       "keywords": [],
-      "text": "Cry: Deal 4 damage to a target, or 8 if your hero has less than 10 health."
+      "text": "Cry: Deal 4 damage, or 8 if your hero has less than 10 health."
     },
     "radiant": {
       "attack": 10,
       "health": 10,
       "keywords": [],
-      "text": "Cry: Deal 8 damage to a target, or 16 if your hero has less than 10 health."
+      "text": "Cry: Deal 8 damage, or 16 if your hero has less than 10 health."
     }
   },
   "core-069": {
@@ -1823,11 +1823,11 @@
     "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Deal 2 damage to a target, +1 per full 5 health your hero is below 30, +1 per card in your exile."
+      "text": "Deal 2 damage, +1 per full 5 health your hero is below 30, +1 per card in your exile."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal 4 damage to a target, +1 per full 3 health your hero is below 30, +2 per card in your exile."
+      "text": "Deal 4 damage, +1 per full 3 health your hero is below 30, +2 per card in your exile."
     }
   },
   "core-071": {
@@ -1906,11 +1906,11 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Deal X damage to a target. Heal your hero X. Draw X. Summon an X/X Ghoul Token."
+      "text": "Deal X damage. Heal your hero X. Draw X. Summon an X/X Ghoul Token."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal 2X damage to a target. Heal your hero 3X. Draw 2X. Summon a 3X/3X Ghoul Token."
+      "text": "Deal 2X damage. Heal your hero 3X. Draw 2X. Summon a 3X/3X Ghoul Token."
     }
   },
   "core-075": {
@@ -2608,7 +2608,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nStart of game: Gain one of 8 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent; (1) lose 2 health, draw 1; (1) deal 1 damage to a target; (1) deal 2 damage to each opposing hero; (2) summon a Rush Token; (1) summon a Felinor Token; (2) Discover a Unit; (2) Stitching — Discover 2 (2) Cost or less Units, Fuse them and add the result to your hand.\nPlaying it costs the power's X and activates it once."
+      "text": "Indestructible\nStart of game: Gain one of 8 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent; (1) lose 2 health, draw 1; (1) deal 1 damage; (1) deal 2 damage to each opposing hero; (2) summon a Rush Token; (1) summon a Felinor Token; (2) Discover a Unit; (2) Stitching — Discover 2 (2) Cost or less Units, Fuse them and add the result to your hand.\nPlaying it costs the power's X and activates it once."
     },
     "radiant": {
       "keywords": [
@@ -2616,7 +2616,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nStart of game: Gain one of 8 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent and make it Radiant; (1) lose 2 health, draw 2; (1) deal 2 damage to a target; (1) deal 4 damage to each opposing hero; (2) summon two Rush Tokens; (1) summon two Felinor Tokens; (2) Discover a Radiant Unit; (2) Stitching — Discover 2 Radiant (2) Cost or less Units, Fuse them and add the result to your hand.\nPlaying it costs the power's X and activates it once."
+      "text": "Indestructible\nStart of game: Gain one of 8 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent and make it Radiant; (1) lose 2 health, draw 2; (1) deal 2 damage; (1) deal 4 damage to each opposing hero; (2) summon two Rush Tokens; (1) summon two Felinor Tokens; (2) Discover a Radiant Unit; (2) Stitching — Discover 2 Radiant (2) Cost or less Units, Fuse them and add the result to your hand.\nPlaying it costs the power's X and activates it once."
     }
   },
   "core-099": {
@@ -4478,7 +4478,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 17,
@@ -4751,7 +4752,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 10,

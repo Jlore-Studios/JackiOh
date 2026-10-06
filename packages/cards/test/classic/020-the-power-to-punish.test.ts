@@ -7,11 +7,11 @@
 // Indestructible target survives (R46); activating is not a play; radiant: 4 damage; discards 2; or
 // every enemy Unit on the field at the start of your next turn is destroyed, the Units there then
 // rather than a list fixed at activation; its tuned numbers (damage, discards) read through `param()`
-// (R386)".
+// (R386)". Every enemy Unit the Radiant destroy will take wears its red mark while it waits (R750).
 
 import { describe, expect, it } from "vitest";
 import { legalActions, stepParam } from "@jackioh/engine";
-import type { PlayerId, Selection } from "@jackioh/shared";
+import type { GameEvent, PlayerId, Selection } from "@jackioh/shared";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/020-the-power-to-punish";
 
@@ -319,6 +319,50 @@ describe("C #20 The Power to Punish", () => {
       s.expectInZone(vanilla, "graveyard");
       s.expectInZone(timmy, "graveyard");
       s.expectInZone(menace, "field");
+    });
+
+    it("R750 every enemy Unit wears the red Destroy mark while the destroy waits, one played later too, and the marks go when it resolves", () => {
+      const s = setup({ field: [MENACE], hand: [COLLATERAL, FILLER], mana: 10 }, { field: [VANILLA, POINTMASTER], hand: [TIMMY, FILLER] }, true);
+      const vanilla = s.card(VANILLA);
+      const pointmaster = s.card(POINTMASTER);
+      const menace = s.card(MENACE);
+      const red = [{ mark: "destroy", color: "red" }];
+      const marked = (events: readonly GameEvent[], added: boolean): string[] =>
+        events.flatMap((event) => (event.type === "marked" && event.added === added ? [event.instanceId] : []));
+      const marksIn = (seat: PlayerId, id: string): unknown => {
+        const view = s.view(seat);
+        const card = [...view.you.units, ...view.opponent.units].flat().find((unit) => unit !== null && unit.instanceId === id);
+        return card?.marks ?? [];
+      };
+
+      punish(s, DOOM_ALL);
+      // The enemy Units, in both seats' views; p1's own Menace is not one.
+      expect(marked(s.lastEvents, true)).toEqual([vanilla.id, pointmaster.id]);
+      for (const seat of ["p1", "p2"] as const) {
+        expect(marksIn(seat, vanilla.id)).toEqual(red);
+        expect(marksIn(seat, pointmaster.id)).toEqual(red);
+        expect(marksIn(seat, menace.id)).toEqual([]);
+      }
+      // One that leaves the field is not one it will destroy, and loses its mark.
+      s.play(COLLATERAL, { targets: at(pointmaster) });
+      s.expectInZone(pointmaster, "exile");
+      expect(marked(s.lastEvents, false)).toEqual([pointmaster.id]);
+      expect(marked(s.lastEvents, true)).toEqual([]);
+
+      s.endTurn();
+      // A Unit played while it waits is one it will destroy, so it is marked as it lands.
+      s.play(TIMMY, { zone: 3 });
+      const timmy = s.card(TIMMY);
+      expect(marked(s.lastEvents, true)).toEqual([timmy.id]);
+      expect(marksIn("p1", timmy.id)).toEqual(red);
+      expect(marksIn("p2", timmy.id)).toEqual(red);
+      s.endTurn();
+
+      s.expectInZone(vanilla, "graveyard");
+      s.expectInZone(timmy, "graveyard");
+      s.expectInZone(menace, "field");
+      expect([...marked(s.lastEvents, false)].sort()).toEqual([vanilla.id, timmy.id].sort());
+      expect(s.state.marks).toBeUndefined();
     });
 
     it("R46 an Indestructible enemy Unit survives it", () => {

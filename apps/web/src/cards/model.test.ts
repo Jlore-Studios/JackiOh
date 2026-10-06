@@ -78,7 +78,7 @@ describe("B7: faceModel copies the def and picks the face", () => {
   it("B7 a base face prints its base text and marks nothing, even when the radiant text differs", () => {
     const f = face("core-002", false);
     expect(def("core-002").radiant.text).not.toBe(def("core-002").base.text);
-    expect(f.text).toEqual({ full: "Cry: Destroy target enemy non-Human Unit.", marks: [] });
+    expect(f.text).toEqual({ full: "Cry: Destroy an enemy non-Human Unit.", marks: [] });
   });
 
   it("R277 a radiant face that adds a keyword marks just the keyword (core-020)", () => {

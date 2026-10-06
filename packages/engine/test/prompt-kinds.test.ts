@@ -408,7 +408,7 @@ describe("E18: the reward kind (Classic #90)", () => {
   });
 });
 
-describe("E18: the pick kind (Classic #34, #44)", () => {
+describe("E18: the pick kind (an up-to pile pick; Classic #44)", () => {
   it("E18 an up-to pick from a pile offers every card with its cost, no Discover limit", () => {
     const state = board("acquire");
     const cards = [graveCard(state, "p1", plain.id), graveCard(state, "p1", prize.id), graveCard(state, "p1", grunt.id)];

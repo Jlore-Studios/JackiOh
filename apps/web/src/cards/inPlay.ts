@@ -56,7 +56,7 @@ type PowerWords = { base: string; radiant: string };
 export const POWER_WORDS: Readonly<Record<string, PowerWords>> = {
   recruit: { base: "Recruit a permanent", radiant: "Recruit a permanent and make it Radiant" },
   draw: { base: "Lose 2 health, draw 1", radiant: "Lose 2 health, draw 2" },
-  ping: { base: "Deal 1 damage to a target", radiant: "Deal 2 damage to a target" },
+  ping: { base: "Deal 1 damage", radiant: "Deal 2 damage" },
   burn: { base: "Deal 2 damage to each opposing hero", radiant: "Deal 4 damage to each opposing hero" },
   rush: { base: "Summon a Rush Token", radiant: "Summon two Rush Tokens" },
   felinor: { base: "Summon a Felinor Token", radiant: "Summon two Felinor Tokens" },

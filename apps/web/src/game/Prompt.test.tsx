@@ -313,12 +313,12 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     };
 
     pickerFor(false);
-    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal X damage to a target.");
+    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal X damage.");
     expect(screen.getByTestId("prompt-option-heal")).toHaveTextContent("Heal a target by twice X.");
     cleanup();
 
     pickerFor(true);
-    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal twice X damage to a target.");
+    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal twice X damage.");
     expect(screen.getByTestId("prompt-option-heal")).toHaveTextContent("Heal a target by four times X.");
     expect(screen.getByTestId("prompt-option-mana")).toHaveTextContent("Gain X mana next turn.");
   });

@@ -3,21 +3,21 @@
 //            {discard|card|cards}." (2)
 //   Radiant: "Divine Shield, Reborn / (the same)."
 //   Engine:  "A replacement at 'a friendly unit is targeted' (§6.2 Replacement) that adds a cost: a
-//            declared target (a play or an activation) naming it carries a 2-card discard pick in the
-//            action, as a Tribute carries its paying set (R101); a prompt answer naming it asks for the
-//            2 cards next. With fewer than 2 other cards in hand it is not a legal target. It binds both
-//            players, its controller included; the discarding player picks the cards (R16). 'Target' is
-//            as R394 reads it: a declared or prompted pick, while random picks and 'all' effects target
-//            nothing. Tunes: discard 2 ↑."
+//            declared target (a play or an activation) naming it costs 2 discards, random at pay time
+//            (balance patch 1, R682), and the action carries none; a prompt answer naming it pays them
+//            before it goes on. With fewer than 2 other cards in hand it is not a legal target. It binds
+//            both players, its controller included. 'Target' is as R394 reads it: a declared or
+//            prompted pick, while random picks and 'all' effects target nothing. Tunes: discard 2 ↑."
 //
 // The cost is B5 E5's targeting point (`Script.targetingDiscards`): a pure read of how many cards
 // targeting this card costs now, asked while it acts on the field. The engine does the rest: a play's
-// or an activation's declared pick naming it is offered only with each set of the chooser's other
-// hand cards that pays it (`legalActions`, as a Tribute's sets) and refused without one; a prompt's
-// pick naming it is offered only to a chooser who can pay, and the answer then asks for the cards; the
-// discards are §6.3 Discards (C #64 sees them). An attack is no targeting, nor is a random pick or an
-// "all" effect. The number is the declared one, `param(…, "discard")` (R386) — "↑" is better for its
-// controller, so an Upgrade raises it. Divine Shield, and Reborn on the Radiant face, are printed.
+// or an activation's declared pick naming it is offered only to a chooser who holds that many other
+// hand cards (`legalActions`, one action with no paying set) and refused otherwise, and §10.5 step 2
+// pays the cost in random discards (R682); a prompt's pick naming it is offered only to a chooser who
+// can pay, and the answer pays at random before it goes on; the discards are §6.3 Discards (C #64
+// sees them). An attack is no targeting, nor is a random pick or an "all" effect. The number is the
+// declared one, `param(…, "discard")` (R386) — "↑" is better for its controller, so an Upgrade
+// raises it. Divine Shield, and Reborn on the Radiant face, are printed.
 
 import type { Script } from "@jackioh/engine";
 import { param } from "@jackioh/engine";

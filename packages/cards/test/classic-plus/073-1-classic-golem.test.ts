@@ -4,7 +4,8 @@
 // fought and its Trample excess landed first (R424); the new Unit fires no Cry (R1); if the Golem
 // destroyed the defender (R42) the new Unit has a fresh exertion and no summoning sickness this turn, so
 // it may attack again; a Golem that dies in the combat, or attacks the hero, transforms nothing; radiant
-// 20/20 with Divine Shield too".
+// 20/20 with Divine Shield for First Strike, transforming into a random Radiant non-token Unit of
+// Classic or Classic+".
 
 import { legalActions } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
@@ -186,7 +187,7 @@ describe("C+ #73.1 Classic Golem", () => {
       expect(s.unit("p1", 1)?.summonedTurn).toBeUndefined();
     });
 
-    it("Divine Shield absorbs the hit of a defender that survives its First Strike; it still transforms, summoning sick", () => {
+    it("Divine Shield absorbs the hit of a defender that survives the Golem's 20; it still transforms, summoning sick", () => {
       const s = golem({ def: VANILLA, statsOverride: { attack: 5, health: 30 } }, { radiantFace: true });
       expect(s.stats(GOLEM).keywords.map((keyword) => keyword.kind)).toContain("Divine Shield");
       attackWith(s);

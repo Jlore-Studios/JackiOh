@@ -235,8 +235,11 @@ describe("R388 card patch history (B4.2)", () => {
     // v0.2.9), then numbered v0.2.10, the next number (R743). Pending, the fragment claims the
     // balance cards and the catalog differs from the newest shipped snapshot on exactly those;
     // shipped, `patches ship` has recorded the same cards against the patch before it. The test
-    // holds on both sides of the promotion, which cannot edit it.
-    const fragment = readFragments().find(({ fragment }) => fragment.version === "v0.2.10")?.fragment;
+    // holds on both sides of the promotion, which cannot edit it. A revision of v0.2.10 (#355's) is
+    // pending under the same version until it ships with a letter, so the fragment is #88's own.
+    const fragment = readFragments().find(
+      ({ fragment }) => fragment.version === "v0.2.10" && fragment.sources === "#88",
+    )?.fragment;
     const at = VERSIONS.indexOf("v0.2.10");
     const before = readSnapshot(at === -1 ? VERSIONS[VERSIONS.length - 1]! : VERSIONS[at - 1]!);
     const after = (fragment !== undefined ? CATALOG : readSnapshot("v0.2.10")) as unknown as Catalog;

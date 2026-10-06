@@ -17,7 +17,7 @@
 // than reaching back through `ctx.self`.
 
 import type { CardMark, PlayerId } from "@jackioh/shared";
-import { markDelayed } from "../marks";
+import { markDelayed, syncMarks } from "../marks";
 import { addStartOfTurnEffect, scheduleDelayed } from "../modifiers";
 import { SELF_KEY, resumeSelf } from "../prompts";
 import { makeContext, type EngineSink } from "../resolve";
@@ -26,7 +26,15 @@ import type { Effect, EffectContext } from "../script";
 import { isTurnOf, type DelayedEffect, type Resume } from "../state";
 import { destroy, destroyAll } from "./destroy";
 import { discardHand } from "./move";
-import { instanceOf, playerOf, standsSinceScriptBegan, type BoardScope, type PlayerSpec, type TargetSpec } from "./targets";
+import {
+  cardsInScope,
+  instanceOf,
+  playerOf,
+  standsSinceScriptBegan,
+  type BoardScope,
+  type PlayerSpec,
+  type TargetSpec,
+} from "./targets";
 
 /**
  * The `Script` key a delayed continuation lands on unless the card names another. `script.ts`
@@ -179,10 +187,11 @@ function makerOf(ctx: EffectContext): { defId: string; radiant: boolean } {
  *
  * `scope` instead is "all enemy Units are destroyed at the start of your next turn" (the Radiant face):
  * the Units the scope names *then*, read as the delayed effect resolves, not a list fixed now — sides
- * relative to the controller who made it.
+ * relative to the controller who made it. R750: its `mark` goes on every Unit the scope names while it
+ * waits, those that arrive meanwhile too (`refreshScopeMarks`).
  */
 export function destroyAtNextTurnStart(
-  args: { target: TargetSpec; mark?: CardMark } | { scope: BoardScope },
+  args: { target: TargetSpec; mark?: CardMark } | { scope: BoardScope; mark?: CardMark },
 ): Effect {
   return {
     kind: "destroyAtNextTurnStart",
@@ -190,7 +199,8 @@ export function destroyAtNextTurnStart(
       const maker = makerOf(ctx);
       const at = { phase: "start" as const, player: ctx.controller };
       if ("scope" in args) {
-        const resume: Resume = { ...maker, hook: DELAYED_DESTROY_HOOK, step: "scope", data: { scope: { ...args.scope } } };
+        const data = { scope: { ...args.scope }, ...(args.mark === undefined ? {} : { mark: { ...args.mark } }) };
+        const resume: Resume = { ...maker, hook: DELAYED_DESTROY_HOOK, step: "scope", data };
         scheduleDelayed(ctx, ctx.controller, at, resume);
         return;
       }
@@ -227,6 +237,31 @@ export function discardHandAtTurnEnd(args: { turn: "this" | "next" }): Effect {
 function scopeIn(data: Record<string, unknown>): BoardScope | null {
   const raw: unknown = data.scope;
   return raw !== null && typeof raw === "object" && !Array.isArray(raw) ? (raw as BoardScope) : null;
+}
+
+/** R750: the mark a delayed destroy of a scope puts on the Units it names, if it was made with one. */
+function markIn(data: Record<string, unknown>): CardMark | null {
+  const raw: unknown = data.mark;
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const { mark, color } = raw as Record<string, unknown>;
+  return typeof mark === "string" && typeof color === "string" ? { mark, color } : null;
+}
+
+/**
+ * R750, R437: every waiting delayed destroy of a scope made with a mark marks the Units its scope names
+ * now — the read `runEngineDelayed` makes as it resolves — so a Unit that arrives while it waits is
+ * marked and one that leaves is not. Called where the resolution loop collects events
+ * (`triggers.collectEvents`), before `marks.sweepMarks` drops the marks of an effect that is gone.
+ */
+export function refreshScopeMarks(sink: EngineSink): void {
+  for (const entry of sink.state.delayed) {
+    if (entry.resume.hook !== DELAYED_DESTROY_HOOK) continue;
+    const scope = scopeIn(entry.resume.data);
+    const mark = markIn(entry.resume.data);
+    if (scope === null || mark === null) continue;
+    const ctx = makeContext(sink, null, { controller: entry.owner });
+    syncMarks(sink, entry.id, mark, cardsInScope(ctx, scope).map((card) => card.id));
+  }
 }
 
 /**

@@ -2,9 +2,8 @@
 // Appropriations' Education shuffles in Books that "have Cast on draw and aim at enemies when they
 // harm and at your side when they help" — `enchant({ instanceId, enchantment: { kind: "castOnDraw" } })`
 // and `{ kind: "targetEnemies" }` on each Book it made — and #14 Forever&'s "after this resolves, return
-// it to your hand; it can't cost
-// less than (2)" is `{ kind: "returnAfterResolve", floor }` (which the play pipeline stamps on the next
-// Spell played, `enchantments.addEnchantment`).
+// it to hand; it can't cost less than (2)" is `{ kind: "returnAfterResolve", floor }` (which the play
+// pipeline stamps on the next Spell played, `enchantments.addEnchantment`).
 //
 // An enchantment is kept in every zone and never reset (R78 leaves it alone): each is read where its
 // rule acts, by the module that owns that rule (`enchantments.ts`). No event reports one: it names no
