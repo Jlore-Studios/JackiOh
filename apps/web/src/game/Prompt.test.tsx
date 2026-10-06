@@ -103,7 +103,7 @@ describe("prompt-driven pickers answer the open PendingChoice (§10.6)", () => {
     });
   });
 
-  it("mode shows buttons and answers with the option string", () => {
+  it("a short mode menu is a Discover pop-up and answers with the option string", () => {
     const onAction = vi.fn();
     const view = viewWith({
       pending: pendingFor("mode", [
@@ -114,7 +114,7 @@ describe("prompt-driven pickers answer the open PendingChoice (§10.6)", () => {
 
     render(<Prompt view={view} onAction={onAction} />);
 
-    expect(kindOfModal()).toBe("mode");
+    expect(kindOfModal()).toBe("discover");
 
     fireEvent.click(screen.getByTestId("prompt-option-mode:Draw a card"));
 
@@ -283,7 +283,7 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
 
     render(<Prompt view={view} interaction={interaction} onAction={onAction} />);
 
-    expect(kindOfModal()).toBe("mode");
+    expect(kindOfModal()).toBe("discover");
     expect(document.querySelector(".prompt-title-source")).not.toBeNull();
     expect(document.querySelector(".prompt-title-ask")).toHaveTextContent("Choose one");
     const board = screen.getByTestId("prompt-option-board");

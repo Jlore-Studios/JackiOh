@@ -1,14 +1,14 @@
-// C #34 Ancient Acquisition — SPEC §8.6 row 34, BUILD M9 Classic row C 34: "Your choice of up to 2
-// cards from your graveyard to your hand, a pick from the pile with no three-option limit (fewer if
-// fewer; an empty graveyard: nothing); the Spell is resolving and can't pick itself; a full hand burns
-// (R317); the returned cards follow R97 in the opponent's view once in your hand; cast by C #47 it is
-// your pick too; radiant: up to 4 from your graveyard or your exile; its tuned number (cards) reads
-// through `param()` (R386)".
+// C #34 Ancient Acquisition — SPEC §8.6 row 34, BUILD M9 Classic row C 34: "Return 2 random cards
+// from your graveyard to hand, with no prompt (R684; fewer if fewer; an empty graveyard: nothing);
+// the resolving Spell is never one of its own returns; a full hand burns the overflow (R317); the
+// returned cards follow R97 in the opponent's view once in your hand; cast by C #47 the returns are
+// still its caster's; radiant: up to 4 from your graveyard or your exile; its tuned number (cards)
+// reads through `param()` (R386)".
 //
 // The C #47 case casts this card from C #47 Recurring Felinor's Cry (B5 E12).
 
 import { describe, expect, it } from "vitest";
-import { reduce, stepParam, type GameState, type PendingChoice } from "@jackioh/engine";
+import { stepParam } from "@jackioh/engine";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/034-ancient-acquisition";
 
@@ -23,21 +23,6 @@ const VANILLA = "core-008"; // (1) Unit
 const REPLENISH = "core-010"; // (0) Spell
 const ECLIPSE = "core-035"; // (1) Spell
 const MANA_WELL = "core-006"; // (3) Field Spell
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`the scenario has no ${what}`);
-  return value;
-}
-
-function open(s: Scenario): PendingChoice {
-  return must(s.state.pending, "open prompt");
-}
-
-function offeredDefs(s: Scenario): string[] {
-  return open(s).options.map((option) =>
-    option.selection.pick === "instance" ? s.card(option.selection.instanceId).defId : "?",
-  );
-}
 
 function acquire(
   radiantFace: boolean,
@@ -61,53 +46,42 @@ describe("C #34 Ancient Acquisition", () => {
   });
 
   describe("base", () => {
-    it("E18 opens your pick over every card in your graveyard, with no three-option limit, up to 2", () => {
+    it("R684 returns 2 random cards with no prompt, from the graveyard", () => {
       const s = acquire(false);
       s.play(ACQUIRE);
-      const pending = open(s);
-      expect(pending.playerId).toBe("p1");
-      expect(pending.kind).toBe("pick");
-      expect(pending.min).toBe(0);
-      expect(pending.max).toBe(2);
-      expect(offeredDefs(s)).toEqual([MENACE, SEVEN, FELINORS, VANILLA, REPLENISH]);
-    });
-
-    it("returns the 2 cards you choose to your hand; the rest stay", () => {
-      const s = acquire(false);
-      s.play(ACQUIRE);
-      const menace = s.card(MENACE);
-      const replenish = s.card(REPLENISH);
-      s.answer([menace.id, replenish.id]);
-      s.expectInZone(menace, "hand");
-      s.expectInZone(replenish, "hand");
-      expect(s.pile("p1", "graveyard").map((card) => card.defId)).toEqual([SEVEN, FELINORS, VANILLA, ACQUIRE]);
       expect(s.state.pending).toBeNull();
+      expect(s.hand("p1")).toHaveLength(3);
+      const grave = s.pile("p1", "graveyard").map((card) => card.defId);
+      expect(grave).toHaveLength(4);
+      expect(grave).toContain(ACQUIRE);
+      // The two in hand came from the graveyard's five.
+      const inHand = s.hand("p1").filter((card) => card.defId !== FILLER).map((card) => card.defId);
+      expect(inHand).toHaveLength(2);
+      for (const defId of inHand) expect([MENACE, SEVEN, FELINORS, VANILLA, REPLENISH]).toContain(defId);
     });
 
-    it("up to: one card, or none, is a legal answer", () => {
-      const one = acquire(false);
-      one.play(ACQUIRE);
-      one.answer([one.card(VANILLA).id]);
-      one.expectInZone(VANILLA, "hand");
-
-      const none = acquire(false);
-      none.play(ACQUIRE);
-      none.answer([]);
-      expect(none.pile("p1", "graveyard")).toHaveLength(6);
-      expect(none.state.pending).toBeNull();
+    it("R684 the random returns come from the match rng: the same game returns the same cards", () => {
+      const first = acquire(false);
+      first.play(ACQUIRE);
+      const second = acquire(false);
+      second.play(ACQUIRE);
+      const ids = (s: Scenario): string[] =>
+        s.events.flatMap((event) =>
+          event.type === "addedToHand" && event.player === "p1" ? [event.instanceId] : [],
+        );
+      expect(ids(first)).toEqual(ids(second));
     });
 
-    it("more than 2 is refused", () => {
+    it("R684 each return is its own addedToHand event, naming the card to you", () => {
       const s = acquire(false);
       s.play(ACQUIRE);
-      expect(() => s.answer([s.card(MENACE).id, s.card(SEVEN).id, s.card(VANILLA).id])).toThrow();
+      expect(s.events.filter((event) => event.type === "addedToHand" && event.player === "p1")).toHaveLength(2);
     });
 
-    it("fewer if fewer: a graveyard of one card offers it alone, up to 1", () => {
+    it("fewer if fewer: a graveyard of one card returns it", () => {
       const s = acquire(false, { graveyard: [SEVEN] });
       s.play(ACQUIRE);
-      expect(open(s).max).toBe(1);
-      s.answer([s.card(SEVEN).id]);
+      expect(s.state.pending).toBeNull();
       s.expectInZone(SEVEN, "hand");
     });
 
@@ -118,146 +92,129 @@ describe("C #34 Ancient Acquisition", () => {
       expect(s.pile("p1", "graveyard").map((card) => card.defId)).toEqual([ACQUIRE]);
     });
 
-    it("the Spell is resolving, in no pile, so it can't pick itself", () => {
+    it("the resolving Spell is never one of its own returns", () => {
       const s = acquire(false, { graveyard: [VANILLA] });
-      const self = s.card(ACQUIRE);
       s.play(ACQUIRE);
-      const ids = open(s).options.map((option) => (option.selection.pick === "instance" ? option.selection.instanceId : ""));
-      expect(ids).not.toContain(self.id);
-      s.answer([]);
-      s.expectInZone(self, "graveyard");
+      expect(s.state.pending).toBeNull();
+      s.expectInZone(VANILLA, "hand");
+      s.expectInZone(ACQUIRE, "graveyard");
     });
 
-    it("R317 a full hand burns the second card back into your graveyard, both players reading which", () => {
+    it("R317 a full hand burns the overflow back into your graveyard, both players reading which", () => {
       const fillers = Array.from({ length: 9 }, () => FILLER);
       const s = acquire(false, { hand: fillers });
       s.play(ACQUIRE);
-      const menace = s.card(MENACE);
-      const seven = s.card(SEVEN);
-      s.answer([menace.id, seven.id]);
       expect(s.hand("p1")).toHaveLength(10);
-      s.expectInZone(menace, "hand");
-      s.expectInZone(seven, "graveyard");
       const burned = s.events.filter((event) => event.type === "burned");
-      expect(burned).toEqual([{ type: "burned", instanceId: seven.id, defId: SEVEN, owner: "p1" }]);
+      expect(burned).toHaveLength(1);
+      const burnedId = burned[0]?.type === "burned" ? burned[0].instanceId : "";
+      s.expectInZone(burnedId, "graveyard");
       expect(s.view("p2").events.filter((event) => event.type === "burned")).toEqual(burned);
     });
 
     it("R97 once in your hand, the returned cards are named in no event or pile of the opponent's view", () => {
       const s = acquire(false);
       s.play(ACQUIRE);
-      const menace = s.card(MENACE);
-      const felinors = s.card(FELINORS);
-      s.answer([menace.id, felinors.id]);
+      const returned = s.hand("p1").filter((card) => card.defId !== FILLER);
+      expect(returned).toHaveLength(2);
       const theirs = JSON.stringify(s.view("p2"));
-      for (const card of [menace, felinors]) {
+      for (const card of returned) {
         expect(theirs).not.toContain(`"${card.id}"`);
         expect(theirs).not.toContain(card.defId);
       }
       const mine = JSON.stringify(s.view("p1"));
-      expect(mine).toContain(`"${menace.id}"`);
+      expect(mine).toContain(`"${returned[0]?.id}"`);
     });
 
-    it("only your own graveyard: the opponent's graveyard and your exile are not offered", () => {
+    it("only your own graveyard: the opponent's graveyard and your exile are untouched", () => {
       const s = scenario({
         p1: { hand: [ACQUIRE, FILLER], graveyard: [MENACE], exile: [VANILLA] },
         p2: { hand: [FILLER], graveyard: [SEVEN, FELINORS] },
       });
       s.play(ACQUIRE);
-      expect(offeredDefs(s)).toEqual([MENACE]);
+      expect(s.state.pending).toBeNull();
+      // The one own-graveyard card is the only thing that could come: it did.
+      s.expectInZone(MENACE, "hand");
+      expect(s.pile("p2", "graveyard")).toHaveLength(2);
+      expect(s.pile("p1", "exile").map((card) => card.defId)).toEqual([VANILLA]);
     });
 
-    it("R177 the opponent reads only that a prompt is open for you", () => {
+    it("R177 R684 no prompt opens, so the opponent reads only the public events", () => {
       const s = acquire(false);
       s.play(ACQUIRE);
-      expect(s.view("p2").pending).toEqual({ forYou: false, pendingFor: "p1" });
-    });
-
-    it("§9.3 the open pick survives a JSON round trip and resumes through reduce", () => {
-      const s = acquire(false);
-      s.play(ACQUIRE);
-      const revived = JSON.parse(JSON.stringify(s.state)) as GameState;
-      expect(revived).toEqual(s.state);
-      const pending = must(revived.pending, "revived prompt");
-      const seven = s.card(SEVEN);
-      const result = reduce(revived, {
-        type: "answer",
-        playerId: "p1",
-        choiceId: pending.id,
-        selection: [{ pick: "instance", instanceId: seven.id }],
-        nonce: "acquisition-round-trip",
-      });
-      expect(result.error).toBeUndefined();
-      expect(result.state.pending).toBeNull();
-      expect(result.state.work).toEqual([]);
-      expect(result.events.some((event) => event.type === "addedToHand" && event.instanceId === seven.id)).toBe(true);
+      expect(s.state.pending).toBeNull();
+      expect(s.view("p2").pending).toBeNull();
     });
 
     it("R386 an Upgrade of cards lets it return 3", () => {
       const s = acquire(false);
       stepParam(s.card(ACQUIRE), "cards", 1);
       s.play(ACQUIRE);
-      expect(open(s).max).toBe(3);
-      s.answer([s.card(MENACE).id, s.card(SEVEN).id, s.card(VANILLA).id]);
-      expect(s.hand("p1").map((card) => card.defId)).toEqual([FILLER, MENACE, SEVEN, VANILLA]);
+      expect(s.state.pending).toBeNull();
+      expect(s.hand("p1")).toHaveLength(4);
+      expect(s.pile("p1", "graveyard")).toHaveLength(3);
     });
 
     it("R386 a Degrade of cards lets it return 1", () => {
       const s = acquire(false);
       stepParam(s.card(ACQUIRE), "cards", -1);
       s.play(ACQUIRE);
-      expect(open(s).max).toBe(1);
+      expect(s.state.pending).toBeNull();
+      expect(s.hand("p1")).toHaveLength(2);
+      expect(s.pile("p1", "graveyard")).toHaveLength(5);
     });
 
-    it("R70 cast by C #47 Recurring Felinor, the pick is its caster's", () => {
+    it("R70 cast by C #47 Recurring Felinor, the returns are still its caster's", () => {
       const s = scenario({
         p1: { hand: [RECURRING, FILLER], graveyard: [MENACE, VANILLA] },
         p2: { hand: [FILLER] },
       });
       s.play(RECURRING);
-      const pending = open(s);
-      expect(pending.playerId).toBe("p1");
-      expect(pending.kind).toBe("pick");
-      expect(pending.max).toBe(2);
-      s.answer([s.card(MENACE).id]);
-      s.expectInZone(MENACE, "hand");
+      expect(s.state.pending).toBeNull();
+      expect(s.hand("p1").map((card) => card.defId).sort()).toEqual([FILLER, MENACE, VANILLA].sort());
     });
   });
 
   describe("radiant", () => {
-    it("E18 offers every card of your graveyard and your exile, up to 4", () => {
+    it("R684 returns up to 4 at random from your graveyard and your exile", () => {
       const s = acquire(true, { graveyard: [MENACE, SEVEN, FELINORS], exile: [VANILLA, ECLIPSE, MANA_WELL] });
       s.play(ACQUIRE);
-      const pending = open(s);
-      expect(pending.kind).toBe("pick");
-      expect(pending.max).toBe(4);
-      expect(offeredDefs(s)).toEqual([MENACE, SEVEN, FELINORS, VANILLA, ECLIPSE, MANA_WELL]);
+      expect(s.state.pending).toBeNull();
+      expect(s.hand("p1")).toHaveLength(5);
+      // Six pooled cards, four taken: two stay, plus the spent Spell in the graveyard.
+      expect(s.pile("p1", "graveyard").length + s.pile("p1", "exile").length).toBe(3);
     });
 
     it("returns cards from both piles to your hand", () => {
       const s = acquire(true, { graveyard: [MENACE, SEVEN], exile: [VANILLA, MANA_WELL] });
       s.play(ACQUIRE);
-      const picks = [s.card(MENACE), s.card(VANILLA), s.card(MANA_WELL), s.card(SEVEN)];
-      s.answer(picks.map((card) => card.id));
-      for (const card of picks) s.expectInZone(card, "hand");
+      expect(s.state.pending).toBeNull();
+      // All four pooled cards come: both piles empty but for the spent Spell.
+      expect(s.hand("p1")).toHaveLength(5);
+      expect(s.pile("p1", "graveyard").map((card) => card.defId)).toEqual([ACQUIRE]);
       expect(s.pile("p1", "exile")).toEqual([]);
     });
 
-    it("an exile alone is enough to pick from", () => {
+    it("an exile alone returns from exile", () => {
       const s = acquire(true, { graveyard: [], exile: [ECLIPSE] });
       s.play(ACQUIRE);
-      expect(offeredDefs(s)).toEqual([ECLIPSE]);
-      s.answer([s.card(ECLIPSE).id]);
+      expect(s.state.pending).toBeNull();
       s.expectInZone(ECLIPSE, "hand");
+      expect(s.pile("p1", "exile")).toEqual([]);
     });
 
-    it("only your own piles: the opponent's graveyard and exile are not offered", () => {
+    it("only your own piles: the opponent's piles are untouched", () => {
       const s = scenario({
         p1: { hand: [{ def: ACQUIRE, radiant: true }, FILLER], graveyard: [MENACE], exile: [VANILLA] },
         p2: { hand: [FILLER], graveyard: [SEVEN], exile: [FELINORS] },
       });
       s.play(ACQUIRE);
-      expect(offeredDefs(s)).toEqual([MENACE, VANILLA]);
+      expect(s.state.pending).toBeNull();
+      // Both own cards come (2 of the 4 asked take all there is).
+      s.expectInZone(MENACE, "hand");
+      s.expectInZone(VANILLA, "hand");
+      expect(s.pile("p2", "graveyard")).toHaveLength(1);
+      expect(s.pile("p2", "exile")).toHaveLength(1);
     });
 
     it("both piles empty asks nothing", () => {
@@ -270,8 +227,9 @@ describe("C #34 Ancient Acquisition", () => {
     it("R97 a card returned from exile is hidden from the opponent once in your hand", () => {
       const s = acquire(true, { graveyard: [], exile: [MANA_WELL] });
       s.play(ACQUIRE);
+      expect(s.state.pending).toBeNull();
       const well = s.card(MANA_WELL);
-      s.answer([well.id]);
+      s.expectInZone(well, "hand");
       const theirs = JSON.stringify(s.view("p2"));
       expect(theirs).not.toContain(`"${well.id}"`);
       expect(theirs).not.toContain(MANA_WELL);
@@ -281,7 +239,8 @@ describe("C #34 Ancient Acquisition", () => {
       const s = acquire(true, { graveyard: [MENACE, SEVEN, FELINORS], exile: [VANILLA, ECLIPSE] });
       stepParam(s.card(ACQUIRE), "cards", -1);
       s.play(ACQUIRE);
-      expect(open(s).max).toBe(3);
+      expect(s.state.pending).toBeNull();
+      expect(s.hand("p1")).toHaveLength(4);
     });
   });
 });

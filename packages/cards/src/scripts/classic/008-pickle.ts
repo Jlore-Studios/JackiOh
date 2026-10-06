@@ -3,8 +3,8 @@
 //            the bottom {exile|card|cards} of their deck, or you draw {draw|card|cards}." (3; 1, 1, 1)
 //   Radiant: the same words with 3; 2, 2, 2.
 //   Engine:  "Three mode prompts held by the opponent (§10.6), one after another, repeats allowed;
-//            "discard" opens their own hand pick (R16). Only choices that would do something are
-//            offered, and "you draw" always is. The opponent answers during your turn, a non-active
+//            "discard" discards at random from their hand (R682). Only choices that would do something
+//            are offered, and "you draw" always is. The opponent answers during your turn, a non-active
 //            player's prompt on its own clock (R79); a timeout answers with the AI policy. Tunes:
 //            choices 3 ↑; discard 1 ↑; exile 1 ↑; draw 1 ↑."
 //
@@ -19,16 +19,15 @@
 // their hand holds a card, "exile" while their deck does, and "you draw" always — a draw from an
 // empty deck is fatigue (§2.4), which still does something. The options name no card.
 //
-// "DISCARD" is their own hand pick (R16: a discard is its player's choice unless it says "random"),
-// a hand prompt they hold over their own hand (`chooseFromHand({ of: "enemy", by: "enemy" })`), so
-// you read only that a prompt is open (R177). The next question follows once they have discarded.
+// "DISCARD" is random from their hand (R682: no "of your choice"), so no prompt opens and the next
+// question follows at once. You read only the discard events, never the cards (R177).
 //
 // THE CLOCK is not the card's: the engine runs a non-active player's prompt on its own clock, and a
 // timeout answers it with the AI policy (R79).
 
 import type { Effect, EffectContext, Script } from "@jackioh/engine";
 import { param, zoneCount } from "@jackioh/engine";
-import { chooseFromHand, chooseMode, chosenOptions, discard, draw, exileBottomOfLibrary } from "@jackioh/engine/effects";
+import { chooseMode, chosenOptions, discardRandom, draw, exileBottomOfLibrary } from "@jackioh/engine/effects";
 import { opponentOf } from "@jackioh/shared";
 import { cardDef } from "../../catalog-data";
 
@@ -118,19 +117,13 @@ const pickle: Script = {
       const next = { ...chain, n: chain.n + 1 };
       const enemy = opponentOf(ctx.controller);
       switch (chosenOptions(ctx)[0]) {
-        case DISCARD:
+        case DISCARD: {
           // A hand emptied since the question was asked has nothing to discard: on to the next one.
-          if (zoneCount(ctx.state, enemy, "hand") === 0) return ask(ctx, next);
-          return [
-            chooseFromHand({
-              of: "enemy",
-              by: "enemy",
-              count: chain.discard,
-              step: "discarded",
-              prompt: `Pickle: discard ${cards(chain.discard)}`,
-              data: { ...next },
-            }),
-          ];
+          // The random discard lands first in the list, so the next question subtracts it (Pending).
+          const handLoss = Math.min(chain.discard, zoneCount(ctx.state, enemy, "hand"));
+          if (handLoss === 0) return ask(ctx, next);
+          return [discardRandom({ count: chain.discard, player: "enemy" }), ...ask(ctx, next, { handLoss })];
+        }
         case EXILE: {
           const deckLoss = Math.min(chain.exile, zoneCount(ctx.state, enemy, "library"));
           return [exileBottomOfLibrary({ player: "enemy", count: chain.exile }), ...ask(ctx, next, { deckLoss })];
@@ -140,12 +133,6 @@ const pickle: Script = {
         default:
           return [];
       }
-    },
-    discarded: (ctx) => {
-      const chain = chainOf(ctx);
-      if (chain === null) return [];
-      const discards = ctx.targets.map((_, index) => discard({ target: { of: "chosen", index } }));
-      return [...discards, ...ask(ctx, chain, { handLoss: discards.length })];
     },
   },
 };

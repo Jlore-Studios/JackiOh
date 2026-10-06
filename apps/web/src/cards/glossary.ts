@@ -30,6 +30,7 @@
 //   R446), and matching stays case-sensitive, as "may tribute enemy units" stays plain words.
 // - §6.2's Activate, one row for "Activate", "Activate X" and "Activate ♾️" (the tokenizer takes
 //   the count or the ♾️ with the label, as it takes "Armor 2").
+// - Balance patch 1 adds §6.3's Bounce (R692), with "Bounced" as its alias.
 // - §6.3's Counter, Steal, Unlock, Flicker, Plague Counter (and "Plague Counters"), Redirect, Set health,
 //   End the turn, Trigger a Cry and Look at a hand ("Look at your opponent's hand"): each label is
 //   SPEC's row name and each alias the words cards print. Only capitalised spellings match, so "steal
@@ -77,6 +78,7 @@ export type VerbTermId =
   | "Steal"
   | "Unlock"
   | "Flicker"
+  | "Bounce"
   | "Degrade"
   | "Upgrade"
   | "Plague Counter"
@@ -262,13 +264,15 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Fuse: verb("Fuse", "Combine effects, stats and cost, cost capped at 4"),
   Transform: verb("Transform", "Replace a card with another in place"),
   Vanilla: verb("Vanilla", "Remove a unit's text"),
-  Lock: verb("Lock", "Zone can't be summoned into"),
+  Lock: verb("Lock", "Zone can't be played into"),
   "Choose one": verb("Choose one", "Modal effect"),
   // Patch v0.2.0's verbs (R512, see the header).
   Counter: verb("Counter", "Cancel a card being played or cast"),
   Steal: verb("Steal", "Take control"),
-  Unlock: verb("Unlock", "A Locked zone accepts summons again"),
+  Unlock: verb("Unlock", "A Locked zone accepts plays again"),
   Flicker: verb("Flicker", "The card leaves the field then re-enters the same zone at once"),
+  // Balance patch 1 (R692): the printed word for every return to its owner's hand.
+  Bounce: verb("Bounce", "Return to owner's hand", ["Bounced"]),
   Degrade: verb("Degrade", DEGRADE_RULE),
   Upgrade: verb("Upgrade", UPGRADE_RULE),
   "Plague Counter": verb("Plague Counter", "Counter on a permanent, any number, reset on leaving the field", ["Plague Counters"]),

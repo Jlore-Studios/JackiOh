@@ -7,7 +7,7 @@ import { mulliganOwed, mulliganPromptFor } from "../src/setup";
 import { createGame, type GameState } from "../src/state";
 import { vanillaDeck } from "./fixtures/catalog";
 import { newGame, setupCatalog } from "./fixtures/harness";
-import { goingLong, heroicPower, HERO_POWERS } from "./fixtures/scripts";
+import { goingLong, heroicPower, HERO_POWERS, hinder } from "./fixtures/scripts";
 
 function started(seed = "setup", decks?: [string[], string[]]): GameState {
   return beginGame(newGame(seed, decks)).state;
@@ -58,6 +58,22 @@ describe("setup (M1-T5)", () => {
     const quickdrawDeck = [goingLong.id, heroicPower.id, ...vanillaDeck(DECK_SIZE - 2, 1)];
     const state = started("qd-full", [vanillaDeck(DECK_SIZE, 21), quickdrawDeck]);
     expect(state.players.p2.hand).toHaveLength(OPENING_DRAW[1] as number);
+  });
+
+  it("R635 a cast-on-draw card sits out the opening deal while other cards remain", () => {
+    const deck = [hinder.id, ...vanillaDeck(DECK_SIZE - 1, 1)];
+    for (const seed of ["r635-a", "r635-b", "r635-c"]) {
+      const state = started(seed, [deck, vanillaDeck(DECK_SIZE, 21)]);
+      // No cast asks during the deal: both mulligans open at once, on every seed.
+      expect(state.pending).toBeNull();
+      expect(mulliganOwed(state)).toEqual(["p1", "p2"]);
+      expect(state.players.p1.hand.some((c) => c.defId === hinder.id)).toBe(false);
+      expect(state.players.p1.hand).toHaveLength(OPENING_DRAW[0] as number);
+      // It waits at the bottom of the library, behind every drawable card, to be shuffled in once
+      // the mulligans are done (the all-cast-on-draw fallback lives in setup-aside.test.ts).
+      const library = state.players.p1.library.map((c) => c.defId);
+      expect(library[library.length - 1]).toBe(hinder.id);
+    }
   });
 
   it("R9: replacements are drawn before the returned cards are shuffled back", () => {

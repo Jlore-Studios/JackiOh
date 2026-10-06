@@ -125,11 +125,11 @@ describe("B3.2: activations are first-class candidates", () => {
   });
 
   it("B3.2: the lethal solver finds a lethal that only an activation reaches", { timeout: PUZZLE_TIMEOUT }, () => {
-    // p2 stands at 5 behind Midrange Menace (9/9 Taunt), so no attack reaches the face; Turtinator
-    // tributes itself and deals its 5 Attack to p2's hero.
+    // p2 stands at 5 behind Midrange Menace (9/9 Taunt), so no attack reaches the face; a Turtinator
+    // tributes the other Turtinator (never itself, R683) and deals its 5 Attack to p2's hero.
     const state = scenario({
       seed: "activate-lethal",
-      p1: { field: [TURTINATOR] },
+      p1: { field: [TURTINATOR, TURTINATOR] },
       p2: { field: ["core-019"], health: 5, hand: ["core-005"] },
     }).state;
     const decision = decide(state, AI, { rng: createRng("activate-lethal") });
@@ -138,7 +138,7 @@ describe("B3.2: activations are first-class candidates", () => {
     expect(decision?.line.some((action) => action.type === "attack")).toBe(false);
 
     const run = runPuzzle("activate-lethal", {
-      p1: { field: [TURTINATOR] },
+      p1: { field: [TURTINATOR, TURTINATOR] },
       p2: { field: ["core-019"], health: 5, hand: ["core-005"] },
     });
     expect(run.end.result?.winner, trace(run.turn)).toBe(AI);

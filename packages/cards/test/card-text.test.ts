@@ -69,8 +69,9 @@ function failures(face: Face): string[] {
   if (/\bthat costs \(/i.test(text)) out.push('writes "that costs (N)", not "(N) Cost"');
   if (/\b[A-Za-z]+-cost\b/.test(text)) out.push('writes a kind of cost as "odd-cost", not "odd Cost"');
   if (/\(paid \d/i.test(text)) out.push('writes an embiggen price as "(paid N" rather than "Paid (N):"');
-  // Vocabulary table (patch v0.2.4, issue #45): retired words and variants.
-  if (/\bbounce(s|d)?\b/i.test(text)) out.push("says bounce, not Return to hand");
+  // Vocabulary table (patch v0.2.4, issue #45; balance patch 1 retires "Return … to hand" for
+  // Bounce, R692): a face that returns to hand says Bounce.
+  if (/\breturns?\b[^.\n]*\bto\b[^.\n]*\bhand\b/i.test(text)) out.push('says "Return … to hand", not Bounce');
   if (/\bbackrow zone\b/i.test(text)) out.push("says backrow zone, not backrow");
   if (/\b(at the (start|end)( and end)? of your turn|(start|end) of your turn)\b/i.test(text)) {
     out.push("writes turn trigger as (Start|End) of your turn, not (Start|End) of turn:");
@@ -124,6 +125,22 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
   it("R366 leads with the face's printed keywords on a line of their own, starts each labelled ability on its own line, and ends every other line with a full stop", () => {
     const wrong = swept.flatMap((face) => failures(face).map((why) => `${face.card.id} ${face.face} ${why}: ${face.text}`));
     expect(wrong).toEqual([]);
+  });
+
+  it("R692 prints Bounce for every return to hand, and no face says \"return … to hand\"", () => {
+    const faces = facesOf(ENTRIES);
+    const stale = faces.filter((f) => /\breturns? [^.]*\bto (?:its owner's |their owner's |your )?hand\b/i.test(f.text));
+    expect(stale.map((f) => `${f.card.id} ${f.face}: ${f.text}`)).toEqual([]);
+    const bouncing: readonly (readonly [string, "base" | "radiant"])[] = [
+      ["core-017", "base"], ["core-017", "radiant"], ["core-023", "base"], ["core-024", "base"], ["core-031", "base"],
+      ["core-052", "radiant"], ["classic-014", "base"], ["classic-022", "base"], ["classic-022", "radiant"],
+      ["classic-034", "base"], ["classic-034", "radiant"], ["classic-047", "base"], ["classic-066", "base"],
+      ["classicplus-014", "base"], ["classicplus-014", "radiant"], ["classicplus-021", "radiant"],
+    ];
+    for (const [id, face] of bouncing) {
+      const text = faces.find((f) => f.card.id === id && f.face === face)?.text ?? "";
+      expect(text, `${id} ${face}`).toMatch(/\bBounced?\b/);
+    }
   });
 
   it("R366 patch v0.2.4 only changes base.text and radiant.text between v0.2.0 and v0.2.4", () => {
@@ -387,6 +404,99 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     }
   });
 
+  it("R366 patch v0.2.15 (issue #88) changes exactly the balance-patch cards against the patch before it", () => {
+    // v0.2.15 ships after v0.2.17 (ship order is not name order, R646): its baseline is the newest
+    // shipped snapshot while it is pending and the patch before it once `patches ship` has
+    // promoted it, and the patch is the current catalog until then, its snapshot after.
+    const versions = readPatches().map((patch) => patch.version);
+    const at = versions.indexOf("v0.2.15");
+    const before = readSnapshot(at === -1 ? versions[versions.length - 1]! : versions[at - 1]!);
+    const after = (at === -1 ? CATALOG : readSnapshot("v0.2.15")) as unknown as Record<string, CardDef>;
+    // The top-level fields each balance card may move (balance patch 1, issue #88); every other
+    // field restores the baseline card, so no card smuggles an unlisted change.
+    const allowed: Record<string, readonly string[]> = {
+      "core-017": ["base", "radiant"],
+      "core-021": ["loc"],
+      "core-023": ["base", "radiant"],
+      "core-024": ["base", "radiant"],
+      "core-031": ["base", "radiant"],
+      "core-032": ["base", "radiant"],
+      "core-052": ["radiant"],
+      "classic-004": ["tags", "loc", "base"],
+      "classic-008": ["loc"],
+      "classic-010": ["cost"],
+      "classic-014": ["base"],
+      "classic-015": ["base", "radiant"],
+      "classic-018": ["loc", "base"],
+      "classic-020": ["loc"],
+      "classic-021": ["base", "radiant"],
+      "classic-022": ["params", "loc", "base", "radiant"],
+      "classic-023": ["loc"],
+      "classic-025": ["loc", "base"],
+      "classic-026": ["loc"],
+      "classic-028": ["base"],
+      "classic-033": ["radiant"],
+      "classic-034": ["loc", "base", "radiant"],
+      "classic-037": ["cost"],
+      "classic-038": ["base", "radiant"],
+      "classic-043": ["cost"],
+      "classic-046": ["base"],
+      "classic-047": ["base", "radiant"],
+      "classic-048": ["radiant"],
+      "classic-054": ["base"],
+      "classic-064": ["loc"],
+      "classic-065": ["loc", "radiant"],
+      "classic-066": ["base", "radiant"],
+      "classic-074": ["loc", "base", "radiant"],
+      "classic-075": ["cost"],
+      "classic-080": ["base", "radiant"],
+      "classic-083": ["params", "base", "radiant"],
+      "classic-088": ["loc", "base", "radiant"],
+      "classic-090": ["base", "radiant"],
+      "classicplus-007": ["base"],
+      "classicplus-012-6": ["type", "base", "radiant"],
+      "classicplus-014": ["params", "loc", "base", "radiant"],
+      "classicplus-019": ["loc"],
+      "classicplus-021": ["radiant"],
+      "classicplus-030": ["cost"],
+      "classicplus-031": ["base", "radiant"],
+      "classicplus-038": ["params", "loc", "base", "radiant"],
+      "classicplus-039": ["params", "loc", "base", "radiant"],
+      "classicplus-040": ["base", "radiant"],
+      "classicplus-042": ["refs", "base", "radiant"],
+      "classicplus-042-1": ["loc"],
+      "classicplus-046": ["params", "loc", "base", "radiant"],
+      "classicplus-053": ["params", "loc", "base", "radiant"],
+      "classicplus-056": ["loc"],
+      "classicplus-060": ["loc", "base", "radiant"],
+      "classicplus-063": ["params", "loc", "base", "radiant"],
+      "classicplus-065": ["refs", "params", "base", "radiant"],
+      "classicplus-065-2": ["params", "base", "radiant"],
+      "classicplus-065-4": ["radiant"],
+      "classicplus-066": ["refs", "base", "radiant"],
+      "classicplus-073-1": ["loc", "base", "radiant"],
+      "classicplus-074": ["base", "radiant"],
+      "classicplus-078": ["params", "loc", "base", "radiant"],
+    };
+    const changed: string[] = [];
+    for (const [id, currentCard] of Object.entries(after)) {
+      const priorCard = before[id] as unknown as CardDef | undefined;
+      expect(priorCard, `card ${id} is not new in v0.2.15`).toBeDefined();
+      if (!priorCard) continue;
+      if (JSON.stringify(priorCard) !== JSON.stringify(currentCard)) changed.push(id);
+      const fields = allowed[id];
+      if (fields === undefined) {
+        expect(currentCard, `card ${id} unchanged by v0.2.15`).toEqual(priorCard);
+        continue;
+      }
+      const restored = { ...currentCard } as unknown as Record<string, unknown>;
+      const prior = priorCard as unknown as Record<string, unknown>;
+      for (const field of fields) restored[field] = prior[field];
+      expect(restored, `only ${fields.join(", ")} differ on ${id}`).toEqual(priorCard);
+    }
+    expect(changed.sort()).toEqual(Object.keys(allowed).sort());
+  });
+
   it("R366 patch v0.2.12 removes Animated from the eighteen v0.2.10 Field Spells between v0.2.10 and v0.2.12", () => {
     const before = readSnapshot("v0.2.10");
     // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
@@ -483,7 +593,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     const wrong = swept.filter((face) =>
       failures(face).some(
         (why) =>
-          why.includes("bounce") ||
+          why.includes("not Bounce") ||
           why.includes("backrow zone") ||
           why.includes("turn trigger") ||
           why.includes("that costs") ||
@@ -502,7 +612,8 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
   it("R366 patch v0.2.4 the failure detector catches retired vocabulary terms", () => {
     const dummyCard = ENTRIES[0]!;
     const check = (text: string) => failures({ card: dummyCard, face: "base", text, keywords: [] });
-    expect(check("Bounce a target Unit.")).toContain("says bounce, not Return to hand");
+    expect(check("Return a target Unit to hand.")).toContain('says "Return … to hand", not Bounce');
+    expect(check("Bounce a target Unit.")).toEqual([]);
     expect(check("Destroy a backrow zone.")).toContain("says backrow zone, not backrow");
     expect(check("Start of your turn: Draw 1.")).toContain("writes turn trigger as (Start|End) of your turn, not (Start|End) of turn:");
     expect(check("End of your turn: Deal 1 damage.")).toContain("writes turn trigger as (Start|End) of your turn, not (Start|End) of turn:");

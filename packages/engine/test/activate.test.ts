@@ -491,33 +491,38 @@ describe("B3.2 rules 5, 8: choices and the list (R384, R81, R90)", () => {
     expect(legalActions(state, "p1").some((body) => body.type === "activate" && body.instanceId === merchantCard.id)).toBe(false);
   });
 
-  it("R450 a declared target that costs discards carries them in the action, listed whole, and they are paid with the costs", () => {
+  it("R450 R682 a declared target that costs discards lists one action carrying none, paid random with the costs", () => {
     const state = playing("ghost");
     const card = put(state, pinger.id, slot("p1", "backrow", 1));
     const costly = put(state, ghost.id, slot("p2", "units", 1));
     state.players.p1.hand = [];
     const [a, b, c] = inHand(state, sentry.id, "p1", 3);
+    const spareIds = [a?.id, b?.id, c?.id];
     const atGhost = { pick: "instance", instanceId: costly.id } as const;
 
     const listed = activateActionsFor(state, "p1", card).filter((body) => body.targets?.[0]?.pick === "instance" && body.targets[0].instanceId === costly.id);
-    expect(listed.map((body) => body.discards)).toEqual([
-      [a?.id, b?.id],
-      [a?.id, c?.id],
-      [b?.id, c?.id],
-    ]);
-    expect(activateActionsFor(state, "p1", card).filter((body) => body.targets?.[0]?.pick === "hero").every((body) => body.discards === undefined)).toBe(true);
-    // Refused without its discards, with too few, or with discards nothing owes.
-    expect(actResult(state, activate("p1", card.id, { ability: "ping", targets: [atGhost] })).error).toMatch(/discard/);
-    expect(actResult(state, activate("p1", card.id, { ability: "ping", targets: [atGhost], discards: [a?.id ?? ""] })).error).toMatch(/discard/);
-    expect(
-      actResult(state, activate("p1", card.id, { ability: "ping", targets: [{ pick: "hero", player: "p2" }], discards: [a?.id ?? "", b?.id ?? ""] })).error,
-    ).toMatch(/discard/);
+    // R682: the discards are random at pay time, so one action, carrying none.
+    expect(listed).toHaveLength(1);
+    expect(listed.every((body) => !("discards" in body))).toBe(true);
+    expect(activateActionsFor(state, "p1", card).filter((body) => body.targets?.[0]?.pick === "hero").every((body) => !("discards" in body))).toBe(true);
+    // Refused when too few other cards are held; a hero target asks nothing and succeeds.
+    const poor = playing("ghost-poor");
+    const poorCard = put(poor, pinger.id, slot("p1", "backrow", 1));
+    const poorCostly = put(poor, ghost.id, slot("p2", "units", 1));
+    poor.players.p1.hand = [];
+    inHand(poor, sentry.id, "p1", 1);
+    const poorGhost = { pick: "instance", instanceId: poorCostly.id } as const;
+    expect(actResult(poor, activate("p1", poorCard.id, { ability: "ping", targets: [poorGhost] })).error).toBeDefined();
+    expect(actResult(poor, activate("p1", poorCard.id, { ability: "ping", targets: [{ pick: "hero", player: "p2" }] })).error).toBeUndefined();
 
-    const { state: after, events } = act(state, activate("p1", card.id, { ability: "ping", targets: [atGhost], discards: [a?.id ?? "", b?.id ?? ""] }));
+    const { state: after, events } = act(state, activate("p1", card.id, { ability: "ping", targets: [atGhost] }));
     const order = events.map((event) => event.type);
-    expect(eventsOfType(events, "discarded").map((event) => event.instanceId)).toEqual([a?.id, b?.id]);
+    const discarded = eventsOfType(events, "discarded").map((event) => event.instanceId);
+    expect(discarded).toHaveLength(2);
+    for (const id of discarded) expect(spareIds).toContain(id);
     expect(order.lastIndexOf("discarded")).toBeLessThan(order.indexOf("damage"));
-    expect(after.players.p1.hand.map((held) => held.id)).toEqual([c?.id]);
+    expect(after.players.p1.hand).toHaveLength(1);
+    expect(spareIds).toContain(after.players.p1.hand[0]?.id);
     expect(after.players.p2.units[0]?.[0]?.damage).toBe(1);
 
     // With fewer than two cards in hand it is no legal target of the ability.

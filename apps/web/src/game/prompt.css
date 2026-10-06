@@ -527,6 +527,17 @@
   margin-top: 2px;
 }
 
+/* The modal scrolls (`overflow-y` above), so a long menu would push Confirm below the fold where no
+   player looks for it. The bar sticks to the modal's visible bottom instead: the options scroll
+   under it, and Confirm (and Cancel) stay visible and clickable whatever the menu holds. */
+.prompt-actions {
+  position: sticky;
+  bottom: 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--line-bright);
+  background: var(--bg-raised);
+}
+
 .prompt-board-note {
   margin: 0;
   color: var(--text-dim);
@@ -820,6 +831,10 @@
     > .prompt-actions {
     grid-area: actions;
     margin: 0;
+    /* The bar has no list to scroll under its buttons, so the sticky footer's rule and gap would
+       only make it taller and push it up into the hand (B44). */
+    padding-top: 0;
+    border-top: 0;
   }
 
   .game:has(> .board[data-drag="on"]) .prompt[data-prompt-source="play"]:is(

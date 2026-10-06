@@ -1,12 +1,11 @@
 // C #26 Rapid Draw — SPEC §8.6 row 26, BUILD M9 Classic row C 26: "Draw 4 (§2.4: burns, fatigue, a
-// draw limit), then discard 4 cards of your choice (R16; 4 or fewer in hand → all of them), a prompt
-// over your own hand whose options the opponent's view never names; radiant: draw 5, discard 4; its
-// tuned numbers (draw, discard) read through `param()` (R386)".
+// draw limit), then discard 4 cards at random (R682; 4 or fewer in hand → all of them), with no prompt;
+// radiant: draw 5, discard 4; its tuned numbers (draw, discard) read through `param()` (R386)".
 //
 // The draw-limit case puts C #4 Palantir in the opponent's backrow ("Aura: Your opponent can't draw
 // more than 1 card each turn", B5 E3, R457).
 
-import { reduce, stepParam, type GameState } from "@jackioh/engine";
+import { stepParam } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/026-rapid-draw";
@@ -35,46 +34,37 @@ function discardedDefs(s: Scenario): string[] {
   return s.events.flatMap((event) => (event.type === "discarded" ? [event.defId] : []));
 }
 
-/** The hand card ids of the given defs, in the order named. */
-function idsOf(s: Scenario, defs: readonly string[]): string[] {
-  const hand = s.hand("p1");
-  return defs.map((defId) => {
-    const card = hand.find((c) => c.defId === defId);
-    if (card === undefined) throw new Error(`${defId} is not in p1's hand`);
-    return card.id;
-  });
-}
-
 describe("C #26 Rapid Draw", () => {
-  it("runs one script on both faces, and its discard answers into the resume step", () => {
+  it("runs one script on both faces, with no resume step (R682: random, no prompt)", () => {
     expect(def.id).toBe(RAPID);
     expect(radiant).toBe(base);
-    expect(base.resume?.discard).toBeTypeOf("function");
+    expect(base.resume).toBeUndefined();
   });
 
   describe("base", () => {
-    it("draws 4, then R16 asks for exactly 4 cards of your own hand and discards those", () => {
+    it("draws 4, then R682 discards 4 at random with no prompt", () => {
       const s = scenario({ p1: { hand: [RAPID, FILLER, FILLER], library: [A, B, C, D, E] }, p2: { hand: [FILLER] } });
 
       s.play(RAPID);
 
-      expect(handDefs(s)).toEqual([FILLER, FILLER, A, B, C, D]);
-      const pending = s.state.pending;
-      expect(pending?.kind).toBe("hand");
-      expect(pending?.playerId).toBe("p1");
-      expect(pending?.min).toBe(4);
-      expect(pending?.max).toBe(4);
-      expect(pending?.options).toHaveLength(6);
-
-      s.answer(idsOf(s, [A, C, FILLER, D]));
-
-      expect(handDefs(s)).toEqual([FILLER, B]);
-      expect([...discardedDefs(s)].sort()).toEqual([A, C, FILLER, D].sort());
-      expect(graveDefs(s)).toEqual(expect.arrayContaining([A, C, FILLER, D, RAPID]));
       expect(s.state.pending).toBeNull();
+      expect(s.hand("p1")).toHaveLength(2);
+      const discarded = discardedDefs(s);
+      expect(discarded).toHaveLength(4);
+      for (const defId of discarded) expect([FILLER, A, B, C, D]).toContain(defId);
+      expect(graveDefs(s)).toEqual(expect.arrayContaining([...discarded, RAPID]));
     });
 
-    it("R16 with 4 or fewer cards in hand it discards all of them and asks nothing", () => {
+    it("R682 the random discards come from the match rng: the same game discards the same cards", () => {
+      const opts = { p1: { hand: [RAPID, FILLER, FILLER], library: [A, B, C, D, E] }, p2: { hand: [FILLER] } };
+      const first = scenario(opts);
+      first.play(RAPID);
+      const second = scenario(opts);
+      second.play(RAPID);
+      expect(discardedDefs(first)).toEqual(discardedDefs(second));
+    });
+
+    it("R682 with 4 or fewer cards in hand it discards all of them and asks nothing", () => {
       const s = scenario({ p1: { hand: [RAPID], library: [A, B, C, D, E] }, p2: { hand: [FILLER] } });
 
       s.play(RAPID);
@@ -91,10 +81,13 @@ describe("C #26 Rapid Draw", () => {
 
       // The CN-Virus cast itself in the first draw's chain, which then drew A.
       s.expectHealth("p1", 29);
-      expect(handDefs(s)).toEqual([FILLER, A, B, C, D]);
       expect(s.pile("p1", "library").map((card) => card.defId)).toEqual([E]);
-      expect(s.state.pending?.options).toHaveLength(5);
-      expect(s.state.pending?.min).toBe(4);
+      // Four drawn into a five-card hand, then four random discards: one card left, no prompt.
+      expect(s.state.pending).toBeNull();
+      expect(s.hand("p1")).toHaveLength(1);
+      const discarded = discardedDefs(s);
+      expect(discarded).toHaveLength(4);
+      for (const defId of discarded) expect([FILLER, A, B, C, D]).toContain(defId);
     });
 
     it("§2.4 fatigue: a deck of 2 draws 2 and fatigues twice, and the 2 cards in hand are discarded", () => {
@@ -107,7 +100,7 @@ describe("C #26 Rapid Draw", () => {
       expect(s.state.pending).toBeNull();
     });
 
-    it("R4 R317 a full hand burns the overflow, then the discard asks for 4 of the 10", () => {
+    it("R4 R317 a full hand burns the overflow, then the discard takes 4 at random", () => {
       const s = scenario({
         p1: { hand: [RAPID, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER], library: [A, B, C, D] },
         p2: { hand: [FILLER] },
@@ -115,12 +108,12 @@ describe("C #26 Rapid Draw", () => {
 
       s.play(RAPID);
 
-      expect(s.hand("p1")).toHaveLength(10);
+      // Three burned on the draw, four discarded at random: six cards left, no prompt.
+      expect(s.state.pending).toBeNull();
+      expect(s.hand("p1")).toHaveLength(6);
       expect(s.events.filter((event) => event.type === "burned")).toHaveLength(3);
       expect(graveDefs(s)).toEqual(expect.arrayContaining([B, C, D]));
-      expect(s.state.pending?.min).toBe(4);
-      s.answer(s.hand("p1").slice(0, 4).map((card) => card.id));
-      expect(s.hand("p1")).toHaveLength(6);
+      expect(discardedDefs(s)).toHaveLength(4);
     });
 
     it("§2.4 B5 E3 a draw limit stops the rest: under the opponent's Palantir it draws 1, and the discard takes it", () => {
@@ -133,69 +126,53 @@ describe("C #26 Rapid Draw", () => {
       expect(s.pile("p1", "library").map((card) => card.defId)).toEqual([B, C, D]);
     });
 
-    it("R97 R177 the prompt is over your own hand, and the opponent's view never names its options", () => {
+    it("R97 the card left in hand stays hidden from the opponent, while the discards are public", () => {
       const s = scenario({ p1: { hand: [RAPID, FILLER], library: [A, B, C, D] }, p2: { hand: [FILLER] } });
 
       s.play(RAPID);
 
-      expect(s.state.pending?.options.map((option) => option.selection)).toEqual(
-        s.hand("p1").map((card) => ({ pick: "instance", instanceId: card.id })),
-      );
+      expect(s.state.pending).toBeNull();
+      // Four drawn, four discarded at random: the one card left is hidden, the discards are not.
+      const [left] = s.hand("p1");
       const theirs = JSON.stringify(s.view("p2"));
-      for (const id of [A, B, C, D]) expect(theirs).not.toContain(id);
+      expect(theirs).not.toContain(left?.id ?? "no-card-in-hand");
+      for (const card of s.pile("p1", "graveyard")) expect(theirs).toContain(card.id);
       const mine = JSON.stringify(s.view("p1"));
-      for (const id of [A, B, C, D]) expect(mine).toContain(id);
+      for (const id of [A, B, C, D, FILLER]) expect(mine).toContain(id);
     });
 
-    it("R113 the paused discard survives a JSON round trip and resumes through reduce", () => {
-      const s = scenario({ p1: { hand: [RAPID, FILLER], library: [A, B, C, D] }, p2: { hand: [FILLER] } });
-      s.play(RAPID);
-      const paused = s.state;
-      const revived = JSON.parse(JSON.stringify(paused)) as GameState;
-      expect(revived).toEqual(paused);
-
-      const choiceId = revived.pending?.id ?? "";
-      const picks = idsOf(s, [A, B, C, D]).map((instanceId) => ({ pick: "instance" as const, instanceId }));
-      const result = reduce(revived, { type: "answer", playerId: "p1", choiceId, selection: picks, nonce: "rt-026" });
-
-      expect(result.error).toBeUndefined();
-      expect(result.state.pending).toBeNull();
-      expect(result.state.work).toEqual([]);
-      expect(result.events.filter((event) => event.type === "discarded").map((event) => (event.type === "discarded" ? event.defId : ""))).toEqual([A, B, C, D]);
-    });
-
-    it("R386 an Upgrade draws 5; a Degrade of discard asks for 5, an Upgrade of it for 3", () => {
+    it("R386 an Upgrade draws 5; a Degrade of discard takes 5, an Upgrade of it 3", () => {
       const drawUp = scenario({ p1: { hand: [RAPID], library: [A, B, C, D, E, F] }, p2: { hand: [FILLER] } });
       stepParam(drawUp.card(RAPID), "draw", 1);
       drawUp.play(RAPID);
-      expect(handDefs(drawUp)).toEqual([A, B, C, D, E]);
-      expect(drawUp.state.pending?.min).toBe(4);
+      expect(drawUp.state.pending).toBeNull();
+      expect(drawUp.hand("p1")).toHaveLength(1);
+      expect(discardedDefs(drawUp)).toHaveLength(4);
 
       const discardUp = scenario({ p1: { hand: [RAPID], library: [A, B, C, D, E] }, p2: { hand: [FILLER] } });
       stepParam(discardUp.card(RAPID), "discard", -1);
       discardUp.play(RAPID);
-      expect(discardUp.state.pending?.min).toBe(3);
+      expect(discardedDefs(discardUp)).toHaveLength(3);
 
       const discardDown = scenario({ p1: { hand: [RAPID, FILLER, FILLER], library: [A, B, C, D, E] }, p2: { hand: [FILLER] } });
       stepParam(discardDown.card(RAPID), "discard", 1);
       discardDown.play(RAPID);
-      expect(discardDown.state.pending?.min).toBe(5);
+      expect(discardedDefs(discardDown)).toHaveLength(5);
     });
   });
 
   describe("radiant", () => {
-    it("draws 5, then asks for 4", () => {
+    it("draws 5, then discards 4 at random", () => {
       const s = scenario({ p1: { hand: [{ def: RAPID, radiant: true }], library: [A, B, C, D, E, F] }, p2: { hand: [FILLER] } });
 
       s.play(RAPID);
 
-      expect(handDefs(s)).toEqual([A, B, C, D, E]);
-      expect(s.state.pending?.min).toBe(4);
-      s.answer(idsOf(s, [A, B, C, D]));
-      expect(handDefs(s)).toEqual([E]);
+      expect(s.state.pending).toBeNull();
+      expect(s.hand("p1")).toHaveLength(1);
+      expect(discardedDefs(s)).toHaveLength(4);
     });
 
-    it("R16 a deck of 3 leaves 3 in hand, all discarded without a prompt", () => {
+    it("R682 a deck of 3 leaves 3 in hand, all discarded without a prompt", () => {
       const s = scenario({ p1: { hand: [{ def: RAPID, radiant: true }], library: [A, B, C] }, p2: { hand: [FILLER] } });
 
       s.play(RAPID);

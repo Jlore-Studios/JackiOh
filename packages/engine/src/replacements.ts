@@ -51,7 +51,7 @@ import { pushWork } from "./work";
 import {
   activeUnitsOf,
   cardAt,
-  firstFreeZone,
+  firstEntryZone,
   isUnitToken,
   moveToZone,
   placeOnField,
@@ -568,8 +568,9 @@ export function answerTargeting(
     const def = answering(state, cand, "targeted", event);
     if (def === undefined) continue;
     const card = cand.card;
-    // §3.2, R64: the leftmost empty, unlocked, unreserved unit zone, which `placeOnField` accepts.
-    const ref = firstFreeZone(state, defender, "units");
+    // §3.2, R64, R688: the leftmost empty, unreserved unit zone (an unlocked one first), which
+    // `placeOnField` accepts: Joro is summoned, not played.
+    const ref = firstEntryZone(state, defender, "units");
     if (ref === null) continue;
     removeFromAnyZone(state, card);
     placeOnField(state, card, ref);

@@ -54,7 +54,7 @@ describe("R278 db:seed-catalog writes the real catalog, Jlockeed, Book, Pancake,
     await admin.end();
   });
 
-  it("R278 seeds every entry of Core, Classic and Classic+, with the five Jlockeed cards tagged and no other row", async () => {
+  it("R278 seeds every entry of Core, Classic and Classic+, with the six Jlockeed cards tagged and no other row", async () => {
     const entries = await readCatalog(REAL_CATALOG);
     const written = await seedCatalog(databaseUrl(), CATALOG_VERSION, entries);
     expect(written).toBe(entries.length);
@@ -66,6 +66,7 @@ describe("R278 db:seed-catalog writes the real catalog, Jlockeed, Book, Pancake,
     expect(rows).toHaveLength(entries.length);
     expect(rows.every((row) => row.catalog_version === CATALOG_VERSION)).toBe(true);
     expect(rows.filter((row) => row.tags.includes("Jlockeed")).map((row) => row.id)).toEqual([
+      "classic-004",
       "classicplus-048",
       "classicplus-051",
       "classicplus-052",

@@ -100,7 +100,7 @@ describe("transform (§6.3, R23, R35, M3-T1)", () => {
     old.position = "DEF";
     old.damage = 2;
 
-    const events = run(state, transform({ instanceId: old.id, defId: crier.id }), { controller: "p1" });
+    run(state, transform({ instanceId: old.id, defId: crier.id }), { controller: "p1" });
 
     const now = cardAt(state, slot("p1", "units", 3));
     expect(now).not.toBeNull();
@@ -118,6 +118,29 @@ describe("transform (§6.3, R23, R35, M3-T1)", () => {
 
     // R1: a Transform result never fires a Cry, so the enemy hero is untouched.
     expect(state.players.p2.hero.health).toBe(HERO_HEALTH);
+  });
+
+  it("R691 a transformed Unit keeps its battle position: DEF stays DEF", () => {
+    const state = game();
+    const old = put(state, plain.id, slot("p1", "units", 3));
+    old.position = "DEF";
+
+    run(state, transform({ instanceId: old.id, defId: crier.id }), { controller: "p1" });
+
+    const now = cardAt(state, slot("p1", "units", 3));
+    expect(now?.id).not.toBe(old.id);
+    expect(now?.position).toBe("DEF");
+  });
+
+  it("reports the Transform with a transformed event", () => {
+    const state = game();
+    const old = put(state, plain.id, slot("p1", "units", 3));
+    old.position = "DEF";
+    old.damage = 2;
+
+    const events = run(state, transform({ instanceId: old.id, defId: crier.id }), { controller: "p1" });
+    const now = cardAt(state, slot("p1", "units", 3));
+    expect(now?.id).not.toBe(old.id);
     expect(events).toEqual([
       {
         type: "transformed",

@@ -67,8 +67,10 @@ import {
   legalSelectionsFor,
   playMadeRadiant,
   playsOnStack,
+  playUses,
   resolvingFace,
   targetingDeclsOf,
+  targetingDiscardsRequired,
   targetsFollowModes,
   whyChoicesRefused,
 } from "./playChoices";
@@ -112,7 +114,6 @@ import { triggerHolderFor, triggerHoldersWithHook, type TriggerHolder } from "./
 import {
   interceptTargeting,
   payTargetingDiscards,
-  registerTargetedContinuation,
   targetAnswer,
   whyTargetAnswerRefused,
 } from "./targetingPoint";
@@ -182,6 +183,12 @@ export type PlayRun = {
   targets: Selection[];
   modes: string[];
   tributes: string[];
+  /**
+   * B5 E5, R450, R682: the targeting cost step 1 checked, owed whatever the step-1 interception did
+   * (Classic #33: the targeting happened). Step 2 pays this count at random — never recomputed off
+   * the redirected picks, whose costs nobody owes.
+   */
+  targetingOwed: number;
   /** Index into `PLAY_STEPS` of the step to run next. */
   at: number;
   /** Step 3's cursor: how many `onPlayHook` holders have run. */
@@ -318,11 +325,6 @@ export type PlayRun = {
   /** R453: the X its caster chose for a cast X card (the `number` prompt's answer), until it is set. */
   castX?: number;
   // ---- v0.2.0 play pipeline A (E1, E5, Devil's Pact) ----
-  /**
-   * B5 E5, R450: the cards the play's declared targets cost to target (Classic #89), carried in the
-   * action and discarded at step 2 with the rest of the price.
-   */
-  discards?: string[];
   /**
    * B5 E1, R448: the announce has gone out and the card waits in the resolving zone; what is left of
    * the step is its window, which a response's question can pause, so the step is re-entered there.
@@ -475,6 +477,9 @@ export function validatePlay(
       targets,
       modes,
       tributes: [...(action.tributes ?? [])],
+      // B5 E5, R450, R682: read against the picks as checked, before the step-1 interception moves
+      // any of them — a cost the targeting owes whatever answers it.
+      targetingOwed: targetingDiscardsRequired(state, player, resolvingFace(state, player, card, cost), targets, modes),
       at: 1,
       hookAt: 0,
       resolveAt: 0,
@@ -483,7 +488,6 @@ export function validatePlay(
       awaiting: null,
       gifted: playMadeRadiant(state, player, card, cost),
       ...slicesFor(state, player, card, cost, targets, modes),
-      ...((action.discards ?? []).length === 0 ? {} : { discards: [...(action.discards ?? [])] }),
       exitsFrom: exitMark(state),
       ...playBegins(state, player),
       manaBefore: state.players[player].mana.current,
@@ -605,8 +609,10 @@ function payStep(sink: EngineSink, run: PlayRun): void {
     const holder = findInstance(sink.state, run.plague.from);
     if (holder !== undefined) spendPlagueTokens(sink, holder, run.plague.tokens);
   }
-  // B5 E5, R450: a targeting cost is part of the price, paid with it (Classic #89).
-  if (run.discards !== undefined) payTargetingDiscards(sink, run.player, run.discards);
+  // B5 E5, R450, R682: a targeting cost is part of the price, paid with it (Classic #89) — random
+  // cards from the hand, drawn at pay time. Never the card being played or a hand card it picks.
+  // The count is step 1's, owed whatever the interception did to the picks.
+  if (run.targetingOwed > 0) payTargetingDiscards(sink, run.player, run.targetingOwed, playUses(card, run.targets));
   // R210: the zone step 1 accepted is the play's until step 4 puts the card in it. A Tribute is
   // paid here, and a tributed unit's Death — #3 radiant's summon, #22's copies, #86's steals — lands
   // cards by R64 and R15 in the very row the play is going to; held like a Reborn zone (R64), the
@@ -1924,6 +1930,8 @@ function castThroughPipeline(sink: EngineSink, instance: CardInstance, options: 
     ...(random ? { random: true } : {}),
     ...(targetEnemies ? { targetEnemies: true } : {}),
     manaBefore: state.players[player].mana.current,
+    // A cast starts past the pay step, so it owes no targeting cost (as before: casts never paid one).
+    targetingOwed: 0,
   });
 }
 
@@ -2002,10 +2010,9 @@ export function answerPlayPrompt(sink: EngineSink, answer: AnswerInput): string 
 
   // The answered prompt is this run's, so any tail owed for it earlier would repeat this step.
   dropWork(sink.state, (item) => isPlayResume(item.resume) && runOf(item.resume)?.instanceId === run.instanceId);
-  // B5 E5, E9, R450: the targeting point of an Echo repeat's or a cast's fresh pick — a cost it asks
-  // for first (its answer comes back through `continuePlayAnswer`), and an interception.
+  // B5 E5, E9, R450: the targeting point of an Echo repeat's or a cast's fresh pick — a random
+  // discard cost it pays first, and an interception.
   const targeted = targetAnswer(sink, pending, picks);
-  if (targeted === null) return null;
   continuePlayAnswer(sink, run, targeted);
   return null;
 }
@@ -2024,11 +2031,3 @@ function continuePlayAnswer(sink: EngineSink, run: PlayRun, picks: readonly Sele
 }
 
 registerPromptAnswerer(PLAY_WORK_KIND, answerPlayPrompt);
-
-// R450: a pick whose targeting cost was asked for first goes on here once the cost is paid.
-registerTargetedContinuation(PLAY_WORK_KIND, (sink, prompt, picks) => {
-  const run = runOf(resumeOf(prompt));
-  if (run === null) return;
-  dropWork(sink.state, (item) => isPlayResume(item.resume) && runOf(item.resume)?.instanceId === run.instanceId);
-  continuePlayAnswer(sink, run, picks);
-});

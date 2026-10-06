@@ -56,15 +56,15 @@ import { spellCannotReach } from "./restrictions";
 import { copiedChoosesX, copiesText, textFaceOf } from "./subsystems/copiedText";
 import {
   canPayToTarget,
-  targetingDiscardSets,
   targetingDiscardsOf,
-  whyTargetingDiscardsRefused,
+  whyTargetingDiscardsUnpayable,
 } from "./targeting";
 import {
   acceptsStackCard,
   activeUnitsOf,
   cardAt,
   carrierZonesFor,
+  firstEntryZone,
   firstFreeZone,
   isOpen,
   isLocked,
@@ -755,7 +755,7 @@ export function interceptorFitsDecl(
 ): boolean {
   const defender = interceptor.controller;
   if (!sidesFor(player, decl).includes(defender) || !pickKindsFor(decl).includes("unit")) return false;
-  const zone = firstFreeZone(state, defender, "units");
+  const zone = firstEntryZone(state, defender, "units");
   if (zone === null) return false;
   const probe: CardInstance = { ...interceptor, zone: { z: "field", player: defender, row: "units", lane: zone.lane } };
   return cardAllowed(state, decl.filter, probe, card, player) && !spellCannotReach(state, card, probe);
@@ -1141,23 +1141,23 @@ export function pricedPlayActions(
           if (bound && !tributePicksAgree(state, player, face, choices.targets ?? [], choices.modes ?? [], tributes)) {
             continue;
           }
-          // B5 E5, R450: each set of cards that pays the targets' discard cost, listed whole like a
-          // Tribute's paying sets (a price left off the list could never be paid).
+          // B5 E5, R450, R682: the targets' discard cost is random at pay time, so it lists no
+          // paying sets — one action, offered only when the cost can be paid at all.
           const owed = targetingDiscardsRequired(state, player, face, choices.targets ?? [], choices.modes ?? []);
-          for (const discards of targetingDiscardSets(state, player, owed, playUses(card, choices.targets ?? []))) {
-            for (const payment of paid) {
-              out.push({
-                type: "play",
-                instanceId: card.id,
-                ...(zone === undefined ? {} : { zone }),
-                ...(x === undefined ? {} : { x }),
-                ...(embiggen === undefined ? {} : { embiggen }),
-                ...(tributes.length === 0 ? {} : { tributes }),
-                ...choices,
-                ...payment,
-                ...(discards.length === 0 ? {} : { discards }),
-              });
-            }
+          if (whyTargetingDiscardsUnpayable(state, player, owed, playUses(card, choices.targets ?? [])) !== null) {
+            continue;
+          }
+          for (const payment of paid) {
+            out.push({
+              type: "play",
+              instanceId: card.id,
+              ...(zone === undefined ? {} : { zone }),
+              ...(x === undefined ? {} : { x }),
+              ...(embiggen === undefined ? {} : { embiggen }),
+              ...(tributes.length === 0 ? {} : { tributes }),
+              ...choices,
+              ...payment,
+            });
           }
         }
       }
@@ -1371,14 +1371,14 @@ export function whyChoicesRefused(
   if (!tributePicksAgree(state, player, face, action.targets ?? [], action.modes ?? [], action.tributes ?? [])) {
     return `${defOf(state, face.defId).name}'s Tribute pick must be a unit it tributes`;
   }
-  // B5 E5, R450: a declared target that costs discards carries them (Classic #89), as a Tribute
-  // carries its paying set (R101) — never the card being played.
+  // B5 E5, R450, R682: a declared target that costs discards needs that many other cards held —
+  // the discards are random at pay time, so the action carries none. Never the card being played.
   const required = targetingDiscardsRequired(state, player, face, action.targets ?? [], action.modes ?? []);
-  return whyTargetingDiscardsRefused(state, player, required, action.discards ?? [], playUses(card, action.targets ?? []));
+  return whyTargetingDiscardsUnpayable(state, player, required, playUses(card, action.targets ?? []));
 }
 
 /** R450: the hand cards a play itself uses — the card played and any hand card it picks — which pay no cost. */
-function playUses(card: CardInstance, targets: readonly Selection[]): string[] {
+export function playUses(card: CardInstance, targets: readonly Selection[]): string[] {
   return [card.id, ...targets.flatMap((selection) => (selection.pick === "instance" ? [selection.instanceId] : []))];
 }
 
