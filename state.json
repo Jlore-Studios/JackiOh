@@ -5,9 +5,24 @@
   "labels_synced": "5d828db324f4642a",
   "last_run": null,
   "last_sweep": {
-    "at": "2026-10-06T07:15:07Z",
+    "at": "2026-10-06T07:16:19Z",
     "notes": [
-      "the first sweep: from now on"
+      "created the label `squishy:build`",
+      "created the label `squishy:working`",
+      "created the label `squishy:pr-open`",
+      "created the label `squishy:revise`",
+      "created the label `squishy:blocked`",
+      "created the label `squishy:pr`",
+      "created the label `squishy:needs-review`",
+      "created the label `squishy:cross-review`",
+      "created the label `squishy:needs-plan`",
+      "created the label `squishy:planned`",
+      "created the label `squishy:stuck`",
+      "created the label `squishy:oneshot`",
+      "created the label `squishy:split`",
+      "created the label `squishy:split-bot`",
+      "created the label `squishy:tree`",
+      "#354: typed it Task"
     ],
     "since": "2026-10-06T07:15:07Z"
   },
