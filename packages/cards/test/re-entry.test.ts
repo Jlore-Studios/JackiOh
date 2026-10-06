@@ -311,40 +311,60 @@ describe("§7, R41, R57: what a copy keeps", () => {
 });
 
 describe("§8 #52, R4, R78: a rider on a card that never reached the hand", () => {
-  it("R4 a card radiant Silly Silas bounces into a full hand is burned without its 'costing 0' (R78)", () => {
+  it("R4 a stolen card radiant Silly Silas bounces into a full hand is burned without its 'costing 0' (R78, R747)", () => {
     const fillers = Array.from({ length: 9 }, () => VANILLA);
     const g = scenario({
       p1: {
-        hand: [MIND_CONTROL, { def: SILAS, radiant: true }, HIT_JOB],
+        // Two cards to play, then Reminisce and nine fillers: the hand is full when Silas bounces.
+        hand: [MIND_CONTROL, { def: SILAS, radiant: true }, REMINISCE, ...fillers],
         mana: 10,
         library: [...LIBRARY],
       },
-      p2: {
-        hand: [REMINISCE, ...fillers],
-        field: [{ def: SEVEN_SEVEN, lane: 1 }],
-        library: [...LIBRARY],
-      },
+      p2: { field: [{ def: SEVEN_SEVEN, lane: 1 }], library: [...LIBRARY] },
     });
     const seven = g.card(SEVEN_SEVEN);
-    expect(g.state.players.p2.hand).toHaveLength(10);
 
     // p1 steals the 7/7 into its own lane 1 (R15). Rotating left, p1's lane 1 would move to p2's
-    // lane 1 — to the opponent — so radiant Silas bounces it to its OWNER's hand "costing 0"
-    // (R12), but that hand is full, so it is burned instead (§2.4, R4).
+    // lane 1 — to the opponent — so radiant Silas bounces it "costing 0" to its CONTROLLER's hand
+    // (R747), but that hand is full, so it is burned instead (§2.4, R4) into the graveyard of the
+    // hand's player, p1, whose card it became.
     g.play(MIND_CONTROL, { targets: at(seven) });
     expect(g.unit("p1", 1)?.id).toBe(seven.id);
+    expect(g.state.players.p1.hand).toHaveLength(11);
     g.play(SILAS, { zone: 3, modes: ["left"] });
     g.expectInZone(seven, "graveyard");
+    expect(g.state.players.p1.graveyard.map((card) => card.id)).toContain(seven.id);
+    expect(g.card(seven).owner).toBe("p1");
     expect(g.card(seven).costOverride).toBeUndefined();
 
-    // p2 Reminisces it back: "it costs 1 less", so the printed 4 becomes 3.
-    g.endTurn();
-    expect(g.state.active).toBe("p2");
+    // p1 Reminisces it back: "it costs 1 less", so the printed 4 becomes 3.
     g.play(REMINISCE);
     g.answer(seven.id);
     g.expectInZone(seven, "hand");
     expect(effectiveCost(g.state, g.card(seven))).toBe(3);
     expect(g.card(seven).costOverride).toBeUndefined();
+  });
+
+  it("R747 a stolen card radiant Silly Silas bounces is its controller's card in their hand, at cost 0, and they can play it", () => {
+    const g = scenario({
+      p1: { hand: [MIND_CONTROL, { def: SILAS, radiant: true }], mana: 10, library: [...LIBRARY] },
+      p2: { field: [{ def: SEVEN_SEVEN, lane: 1 }], library: [...LIBRARY] },
+    });
+    const seven = g.card(SEVEN_SEVEN);
+
+    g.play(MIND_CONTROL, { targets: at(seven) });
+    g.play(SILAS, { zone: 3, modes: ["left"] });
+
+    g.expectInZone(seven, "hand");
+    expect(g.state.players.p1.hand.map((card) => card.id)).toContain(seven.id);
+    expect(g.state.players.p2.hand).toHaveLength(0);
+    expect(g.card(seven).owner).toBe("p1");
+    expect(g.card(seven).controller).toBe("p1");
+    expect(g.card(seven).costOverride).toBe(0);
+    // It is p1's own card now, so it is priced and played as one (a held card is read by its holder).
+    expect(effectiveCost(g.state, g.card(seven))).toBe(0);
+    g.play(SEVEN_SEVEN, { zone: 4 });
+    expect(g.unit("p1", 4)?.id).toBe(seven.id);
   });
 });
 

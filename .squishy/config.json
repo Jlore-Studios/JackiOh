@@ -1,0 +1,112 @@
+{
+  "repo": "jgoetzmann/JackiOh",
+  "default_branch": "main",
+  "bot_login": "squishy-squooby",
+  "bot_user_id": 334289562,
+  "operator": "jgoetzmann",
+  "timezone": "America/Chicago",
+  "identity": {
+    "name": "Squishy",
+    "title": "Squishy",
+    "command": "squishy",
+    "label_prefix": "squishy:",
+    "branch_prefix": "squishy/",
+    "state_branch": "squishy-state",
+    "journal_branch": "squishy-journal",
+    "workflow": "squishy-run.yml",
+    "marker": "<!-- jackioh-squishy -->",
+    "trust": ".harness/trust.txt",
+    "modes": ["oneshot", "split", "split-bot"],
+    "others": [{ "name": "the night bot", "login": "jgoetzmann-bot", "label_prefix": "bot:" }]
+  },
+  "max_turns": { "plan": 200, "build": 600, "fix": 300, "revise": 300, "review": 150, "suggest": 120 },
+  "call_timeout_minutes": 300,
+  "job_budget_minutes": 330,
+  "min_minutes_for_a_call": 25,
+  "max_review_cycles": 10,
+  "max_self_check_rounds": 3,
+  "easy": {
+    "max_files": 10,
+    "max_lines": 400,
+    "off_limits": [
+      "SPEC.md",
+      "BUILD.md",
+      "packages/engine/test/rulings.test.ts",
+      "packages/shared/src/events.ts",
+      "packages/engine/src/",
+      "packages/ai/src/",
+      "packages/cards/catalog.json",
+      "packages/cards/patches/",
+      "packages/cards/src/scripts/",
+      "apps/server/src/db/migrations/",
+      "e2e/"
+    ],
+    "generated": ["packages/cards/src/scripts/_generated.ts"]
+  },
+  "max_failures": 3,
+  "auto_merge": true,
+  "merge_method": "squash",
+  "ci_workflow": "CI",
+  "required_checks": [
+    "lint, typecheck, unit, fuzz, coverage",
+    "ai quality gates (full)",
+    "sql invariants (real Postgres)",
+    "store contract (real Postgres)",
+    "e2e (chrome)",
+    "e2e (electron)",
+    "bot selftest"
+  ],
+  "ci_reruns": 1,
+  "suggestions": { "enabled": false, "max_open": 0, "min_interval_hours": 20 },
+  "quiet": { "enabled": false, "interval_minutes": 10, "max_wait_minutes": 120, "ping_model": "haiku", "partners": [] },
+  "forbidden_paths": [
+    ".github/",
+    ".harness/",
+    ".squishy/",
+    "bot/",
+    ".claude/",
+    ".mcp.json",
+    ".vscode/",
+    ".devcontainer/",
+    ".husky/",
+    ".gitattributes",
+    ".gitmodules",
+    ".fullsend/"
+  ],
+  "review_paths": [
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    ".npmrc",
+    ".nvmrc",
+    "vitest.config.*",
+    "vitest.workspace.*",
+    "vite.config.*",
+    "eslint.config.*",
+    "tsconfig*.json",
+    "cypress.config.*",
+    "scripts/",
+    "vercel.json",
+    "render.yaml",
+    "apps/server/src/db/migrations/"
+  ],
+  "upload_transcripts": false,
+  "install": { "run": "pnpm install --frozen-lockfile", "timeout_minutes": 20 },
+  "gates": [
+    { "name": "lint", "run": "pnpm lint", "timeout_minutes": 15, "machine": false },
+    { "name": "typecheck", "run": "pnpm typecheck", "timeout_minutes": 15 },
+    { "name": "catalog", "run": "pnpm validate:catalog", "timeout_minutes": 5 },
+    {
+      "name": "card tests exist",
+      "run": "pnpm exec tsx packages/cards/scripts/missing-tests.ts",
+      "timeout_minutes": 5
+    },
+    { "name": "rulings coverage", "run": "pnpm rulings:coverage", "timeout_minutes": 5 },
+    {
+      "name": "related tests",
+      "run": "pnpm exec vitest run --changed origin/main --exclude '**/gate-*.test.ts' --exclude '**/fuzz*.test.ts'",
+      "timeout_minutes": 15,
+      "machine": false
+    }
+  ]
+}

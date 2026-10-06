@@ -1,5 +1,8 @@
 """Comment commands: `/harness <verb> [args]`, `/harness-<verb>` and `@<bot> <verb or request>`.
 
+The slash is the running bot's (`config.SLASH`): `/harness` for the night bot, `/squishy` for
+Squishy (#60), whose modes add `oneshot` and `split`.
+
 A command is a line of its own. Lines inside fenced code blocks and quoted lines (`> ...`) are
 never commands, so quoting the bot back at it cannot re-run anything. At most `MAX_COMMANDS` are
 read from one comment, top to bottom.
@@ -17,10 +20,11 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from harness.config import IDENTITY, MODES, SLASH
 from harness.trust import LEVEL_NAMES
 
 VERBS: tuple[str, ...] = ("build", "revise", "review", "rebuild", "stop", "status", "help", "halt",
-                          "start", "suggest", "run", "suspend")
+                          "start", "suggest", "run", "suspend", "oneshot", "split")
 
 ALIASES: dict[str, str] = {
     "work": "build",
@@ -39,6 +43,8 @@ LEVELS: dict[str, int] = {
     "help": 1,
     "typo": 1,
     "build": 2,
+    "oneshot": 2,
+    "split": 2,
     "revise": 2,
     "review": 2,
     "rebuild": 2,
@@ -57,7 +63,8 @@ FORCE_LEVEL = 3
 MAX_COMMANDS = 10
 
 _FENCE = re.compile(r"^\s*(```|~~~)")
-_SLASH = re.compile(r"^\s*(?:@[\w-]+\s+)*/harness(?:-|[ \t]+|$)(.*)$", re.IGNORECASE)
+_SLASH = re.compile(r"^\s*(?:@[\w-]+\s+)*" + re.escape(SLASH) + r"(?:-|[ \t]+|$)(.*)$",
+                    re.IGNORECASE)
 _ISSUE_REF = re.compile(r"^#\d+$")
 
 
@@ -153,6 +160,8 @@ _MENTION_ARGS: dict[str, re.Pattern[str]] = {
     "suggest": re.compile(r"^$"),
     "run": re.compile(r"^(#?\d+)?$"),
     "suspend": re.compile(r"^\S*$"),
+    "oneshot": re.compile(r"^$"),
+    "split": re.compile(r"^(?i:bot)?$"),
 }
 _LIST_MARK = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
 _WRAP = "`*_~"
@@ -203,7 +212,7 @@ def parse(body: str, bot_login: str) -> list[Command]:
         if not named:
             continue
         rest = named.group(1).strip()
-        if rest.lower().startswith("/harness"):
+        if rest.lower().startswith(SLASH):
             continue  # `@bot /harness verb` is matched by _SLASH above
         found.append(_read(rest, line, plain_words=True))
     return found
@@ -219,90 +228,131 @@ def names_the_bot(body: str, bot_login: str) -> bool:
     mid-sentence: a request that did not parse is answered with a hint, never ignored."""
     handle = re.compile(r"(?<![\w-])@" + re.escape(bot_login.lstrip("@")) + r"(?![\w-])",
                         re.IGNORECASE)
-    slash = re.compile(r"(?<![\w/])/harness\b", re.IGNORECASE)
+    slash = re.compile(r"(?<![\w/])" + re.escape(SLASH) + r"\b", re.IGNORECASE)
     return any(handle.search(line) or slash.search(line) for line in command_lines(body))
 
 
-HELP = """\
-**Commands.** Write one per line, starting with `/harness` or `@{bot}`; the two work the same way.
+#: The help table's rows, by verb. `oneshot` and `split` show only for a bot with those modes
+#: (Squishy), `suggest` only for one that makes suggestions (the night bot).
+HELP_ROWS: tuple[tuple[str, str], ...] = (
+    ("build", "| `build [notes]` | queue this issue for the bot | issue | 2 |"),
+    ("oneshot", "| `oneshot [notes]` | build this issue in one run, many agents at once (fullsend) | issue | 2 |"),
+    ("split", "| `split [bot] [notes]` | break this issue into sub-issues I build, or with `bot` that the night bot builds | issue | 2 |"),
+    ("revise", "| `revise <notes>` | queue a revision of this PR with your notes | pull request | 2 |"),
+    ("review", "| `review [strong\\|medium] [notes]` | queue a review run of this PR's head, by that tier or stronger; no revision | pull request | 2 |"),
+    ("rebuild", "| `rebuild` | close my PR and build its issue again from `main`, its branch kept | issue or PR | 2 |"),
+    ("stop", "| `stop` | take this issue or PR out of the queue and stop work on it | issue or PR | 2 |"),
+    ("suggest", "| `suggest` | ask for improvement suggestions when the queue is empty | anywhere | 2 |"),
+    ("status", "| `status` | halt state, each subscription, the queue | anywhere | 1 |"),
+    ("help", "| `help [verb]` | this list, or one command in detail | anywhere | 1 |"),
+    ("halt", "| `halt [reason]` | stop all model work until `start` | anywhere | 3 |"),
+    ("start", "| `start [subscription]` | lift a halt; with a subscription, lift its suspension instead | anywhere | 3 |"),
+    ("run", "| `run [#n]` | start a run now, outside a subscription's hours if need be | anywhere | 3 |"),
+    ("suspend", "| `suspend <subscription> [reason]` | start no new work on one subscription until `resume <subscription>` | anywhere | 3 |"),
+)
+
+
+def offered(verb: str) -> bool:
+    """Whether this bot has the verb: the modes only where they are, suggestions only where
+    they are made."""
+    if verb == "oneshot":
+        return "oneshot" in MODES
+    if verb == "split":
+        return any(mode.startswith("split") for mode in MODES)
+    if verb == "suggest":
+        return IDENTITY.suggestions
+    return True
+
+
+#: The verbs `--force` starts at once, as the help names them.
+FORCED = ("`build`, `revise` or `suggest`" if IDENTITY.suggestions
+          else "`build`, `oneshot`, `split` or `revise`" if MODES else "`build` or `revise`")
+
+HELP = ("""**Commands.** Write one per line, starting with `{slash}` or `@{bot}`; the two work the same way.
 
 | Verb | What it does | Where | Level |
 |---|---|---|---|
-| `build [notes]` | queue this issue for the bot | issue | 2 |
-| `revise <notes>` | queue a revision of this PR with your notes | pull request | 2 |
-| `review [strong\\|medium] [notes]` | queue a review run of this PR's head, by that tier or stronger; no revision | pull request | 2 |
-| `rebuild` | close my PR and build its issue again from `main`, its branch kept | issue or PR | 2 |
-| `stop` | take this issue or PR out of the queue and stop work on it | issue or PR | 2 |
-| `suggest` | ask for improvement suggestions when the queue is empty | anywhere | 2 |
-| `status` | halt state, each subscription, the queue | anywhere | 1 |
-| `help [verb]` | this list, or one command in detail | anywhere | 1 |
-| `halt [reason]` | stop all model work until `start` | anywhere | 3 |
-| `start [subscription]` | lift a halt; with a subscription, lift its suspension instead | anywhere | 3 |
-| `run [#n]` | start a run now, outside a subscription's hours if need be | anywhere | 3 |
-| `suspend <subscription> [reason]` | start no new work on one subscription until `resume <subscription>` | anywhere | 3 |
+""" + "\n".join(row for verb, row in HELP_ROWS if offered(verb)) + """
 
-Anything else after `/harness` or `@{bot}` is a request: a build on an issue, a revision on a PR, with your words as the notes. A single word that looks like a misspelt verb (`stauts`) runs nothing; I ask what you meant.
+Anything else after `{slash}` or `@{bot}` is a request: a build on an issue, a revision on a PR, with your words as the notes. A single word that looks like a misspelt verb (`stauts`) runs nothing; I ask what you meant.
 After `@{bot}`, a control verb followed by more words reads as plain English, so `@{bot} stop using the old sprite` is a request. Write the verb alone, or with a colon (`@{bot} halt: away this week`), for the command.
-Add `--force` (level 3) to `build`, `revise` or `suggest` to start now, outside a subscription's hours if need be. Label an issue `difficulty:easy`, `difficulty:medium` (the default) or `difficulty:hard` to set the weakest model tier that may build it; `difficulty:hard` keeps it for Opus.
-Labels do the same as the verbs: `bot:build` on an issue, `bot:revise` on a PR; assigning @{bot} queues the thread.
+Add `--force` (level 3) to {forced} to start now, outside a subscription's hours if need be. Label an issue `difficulty:easy`, `difficulty:medium` (the default) or `difficulty:hard` to set the weakest model tier that may build it; `difficulty:hard` keeps it for Opus.
+Labels do the same as the verbs: `{prefix}build` on an issue, `{prefix}revise` on a PR; assigning @{bot} queues the thread.
 On your comment: 👀 seen · 👍 a model will read it · 🚀 answered · ❤️ a run has it · 🎉 done · 😕 it ended without an answer.
-"""
+""")
 
 #: `help <verb>`: what it takes, what it does, and an example.
 VERB_HELP: dict[str, tuple[str, str, str]] = {
     "build": ("build [notes]", "Queue this issue for the bot; your notes join the request. On a "
-              "pull request it is the same as `revise`.", "/harness build make the Coin spin too"),
+              "pull request it is the same as `revise`.", "{slash} build make the Coin spin too"),
+    "oneshot": ("oneshot [notes]", "Build this issue in one run with fullsend: many agents write "
+                "its parts at once, each in its own worktree and branch, then the parts are "
+                "reconciled against tests written from the spec, and the change goes through the "
+                "checks and the review like any build. It falls back to a plain build, and says "
+                "why, when the issue does not suit it.", "{slash} oneshot"),
+    "split": ("split [bot] [notes]", "Break this issue into sub-issues, each small enough for one "
+              "run, linked by what blocks what: for me to build, or with `bot` for the night bot. "
+              "They are queued at once, in order; `stop` here stops them all. When the last one "
+              "closes, I check this issue's end state and close it or add what is missing.",
+              "{slash} split bot"),
     "revise": ("revise <notes>", "Queue a revision of this pull request with your notes. "
                "Auto-merge stays off until the revision lands.", "@{bot} revise rename the helper"),
     "review": ("review [strong|medium] [notes]", "Queue a review run of the head of one of my pull "
                "requests, and no revision: the head stays as it is. With `strong` or `medium` the "
                "review waits for a model of that tier or stronger rather than taking a weaker "
-               "one. Your notes reach the reviewer.", "/harness review strong check the replay"),
+               "one. Your notes reach the reviewer.", "{slash} review strong check the replay"),
     "rebuild": ("rebuild", "Close my pull request for this issue, keep its branch as "
                 "`bot/old/issue-<n>-<date>`, and queue the issue to build again from `main`, at "
                 "the same difficulty. The new build is told what went wrong with the old one.",
-                "/harness rebuild"),
+                "{slash} rebuild"),
     "stop": ("stop", "Take this issue or pull request out of the queue. A run working on it gives "
-             "up at its next checkpoint and keeps what it has.", "/harness stop"),
+             "up at its next checkpoint and keeps what it has.", "{slash} stop"),
     "suggest": ("suggest", "Ask for a suggestion survey the next time the queue is empty.",
                 "@{bot} suggest"),
     "status": ("status", "Halt state, which subscriptions are running what right now, each "
                "subscription (its hours, usage, and what it is doing), and what is queued.",
                "@{bot} status"),
     "help": ("help [verb]", "The list of commands, or one of them in detail.",
-             "/harness help build"),
+             "{slash} help build"),
     "halt": ("halt [reason]", "Stop all model work until `start`; a run already going stops at "
              "its next checkpoint. After `@{bot}`, a colon after the verb gives the reason.",
              "@{bot} halt: away this week"),
     "start": ("start [subscription]", "Lift a halt. `start --force` also starts a run now. With a "
               "subscription (`resume claude-3`), lift that one's suspension and leave a halt as it "
-              "is.", "/harness start --force"),
+              "is.", "{slash} start --force"),
     "run": ("run [#n]", "Start a run now, outside a subscription's hours if need be, for one item or "
             "whatever is next in the queue.", "@{bot} run #12"),
     "suspend": ("suspend <subscription> [reason]", "Start no new work on one subscription (an id "
-                "`status` lists, such as `claude-3` or `gpt`) until `/harness resume "
+                "`status` lists, such as `claude-3` or `gpt`) until `{slash} resume "
                 "<subscription>`; a run already going on it stops at its next checkpoint, keeps "
                 "its work and goes back to the queue for another subscription. `--force` does not "
                 "lift it. After `@{bot}`, a colon after the verb gives the reason.",
                 "@{bot} suspend: claude-3 using it myself"),
 }
 
-POINTER = "`/harness help` (or `@{bot} help`) lists the commands."
+POINTER = "`{slash} help` (or `@{bot} help`) lists the commands."
+
+
+def pointer(bot: str) -> str:
+    """The line that says where the commands are listed."""
+    return POINTER.format(bot=bot, slash=SLASH)
 
 
 def help_text(bot: str, topic: str = "") -> str:
     """The reply to `help`, or to `help <verb>`."""
     words = topic.split()
     word = words[0] if words else ""
+    said = {"bot": bot, "slash": SLASH, "prefix": IDENTITY.label_prefix,
+            "forced": FORCED}
     if not word:
-        return HELP.format(bot=bot)
+        return HELP.format(**said)
     verb = _canonical(word)
-    if verb is None:
-        return f"I do not know `{word}`. " + HELP.format(bot=bot)
+    if verb is None or not offered(verb):
+        return f"I do not know `{word}`. " + HELP.format(**said)
     usage, what, example = VERB_HELP[verb]
     level = LEVELS[verb]
     aliases = [name for name, target in ALIASES.items() if target == verb]
     also = f"; also written {', '.join(f'`{a}`' for a in aliases)}" if aliases else ""
     return (f"**`{usage}`** (level {level}, {LEVEL_NAMES.get(level, level)}{also})\n\n"
-            f"{what.format(bot=bot)}\n\nFor example: `{example.format(bot=bot)}`. "
-            + POINTER.format(bot=bot))
+            f"{what.format(**said)}\n\nFor example: `{example.format(**said)}`. "
+            + POINTER.format(**said))

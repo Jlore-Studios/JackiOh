@@ -4,6 +4,11 @@
 bot pull request means it waits for a review run; `bot:working` means a run holds it;
 `bot:blocked` means it waits for a person. Only one `bot:` state label is on a thread at a time,
 apart from `bot:pr` and `bot:pr-open`, which say what a thread is.
+
+The prefix is the running bot's (`config.LABEL_PREFIX`): Squishy's queue is `squishy:build` and the
+rest (#60). Beside its queue label, a mode label (`squishy:oneshot`, `squishy:split`,
+`squishy:split-bot`) says how a queued issue is built (`mode_of`). A thread that is another bot's
+(`owner`: its labels on it, or assigned to it) is left alone, so the two never take the same issue.
 """
 
 from __future__ import annotations
@@ -16,11 +21,12 @@ from harness import asks, issueplan, review_rule
 from harness import providers as providers_mod
 from harness.asks import Ask
 from harness.clock import iso
-from harness.config import (DEFAULT_DIFFICULTY, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_APPROVED,
-                            LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN,
-                            LABEL_METHOD_BOT, LABEL_PR, LABEL_PR_OPEN, LABEL_PRIORITY_HIGH,
-                            LABEL_PRIORITY_LOW, LABEL_PRIORITY_MEDIUM, LABEL_READY, LABEL_REVISE,
-                            LABEL_SUGGESTION, LABEL_WORKING, PLAN_FLOOR, UNRATED_PLAN_FLOOR)
+from harness.config import (BRANCH_PREFIX, DEFAULT_DIFFICULTY, DIFFICULTIES, DIFFICULTY_LABELS,
+                            LABEL_APPROVED, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN,
+                            LABEL_METHOD_BOT, LABEL_PR, LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW,
+                            LABEL_PRIORITY_MEDIUM, LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE,
+                            LABEL_SUGGESTION, LABEL_WORKING, MODES, MODE_LABELS, OTHERS, PLAN_FLOOR,
+                            SLASH, UNRATED_PLAN_FLOOR)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.state import item as state_item
@@ -45,13 +51,13 @@ def set_state_label(ctx: Context, number: int, current: set[str], wanted: str | 
 
 
 def branch_for_issue(number: int) -> str:
-    return f"bot/issue-{int(number)}"
+    return f"{BRANCH_PREFIX}issue-{int(number)}"
 
 
 def wip_branch(number: int) -> str:
     """Where a revision of pull request `number` that was cut off keeps its unfinished work
     (#317 part 3): never the pull request's own branch, which would start CI on it."""
-    return f"bot/wip/{int(number)}"
+    return f"{BRANCH_PREFIX}wip/{int(number)}"
 
 
 def open_pull_for_branch(ctx: Context, branch: str) -> dict[str, Any] | None:
@@ -65,12 +71,63 @@ def _when(ctx: Context, state: dict[str, Any]) -> str:
 
 
 def _halt_note(ctx: Context, state: dict[str, Any]) -> str:
-    return " The bot is halted, though: `/harness start` resumes it." if state.get("halted") else ""
+    return f" The bot is halted, though: `{SLASH} start` resumes it." if state.get("halted") else ""
 
 
 def is_human(names: set[str]) -> bool:
     """Labelled `human` (whatever its case): people do it, and the bot leaves it alone."""
     return LABEL_HUMAN in {name.lower() for name in names}
+
+
+#: What follows another bot's prefix on a label that makes the thread that bot's (#60): its queue
+#: and state labels, its pull request, and Squishy's modes and trees. A `planned` or `stuck` label
+#: left from an old run does not.
+OWNING = ("build", "revise", "cross-review", "working", "blocked", "pr-open", "pr", "needs-plan",
+          "oneshot", "split", "split-bot", "tree")
+
+
+def owner(thread: dict[str, Any]) -> Any:
+    """The other bot whose thread this is (`config.OTHERS`), or None: one of its owning labels is
+    on it, or it is assigned to that bot's account."""
+    names = {name.lower() for name in label_names(thread)}
+    assignees = {str(a.get("login") or "").lower() for a in thread.get("assignees") or []
+                 if isinstance(a, dict)}
+    for other in OTHERS:
+        if (any(f"{other.label_prefix}{suffix}" in names for suffix in OWNING)
+                or other.login.lower() in assignees):
+            return other
+    return None
+
+
+def owner_reply(number: int, other: Any) -> str:
+    return (f"#{number} is {other.name}'s (@{other.login}): it carries {other.name}'s labels or is "
+            f"assigned to it, so I leave it alone. Take its `{other.label_prefix}…` labels off "
+            f"(and unassign @{other.login}) to hand it to me.")
+
+
+def mode_of(names: set[str]) -> str:
+    """How a queued issue is built (#60): the first of the bot's modes whose label is on it
+    (`oneshot`, `split`, `split-bot`), or "" for a plain build."""
+    lowered = {name.lower() for name in names}
+    return next((mode for label, mode in MODE_LABELS.items() if label in lowered), "")
+
+
+def set_mode(ctx: Context, number: int, names: set[str], mode: str) -> set[str]:
+    """Leave exactly `mode`'s label (or none, for "") of the mode labels on the issue; the labels
+    it has after."""
+    wanted = {label for label, found in MODE_LABELS.items() if found == mode}
+    for label in MODE_LABELS:
+        if label in names and label not in wanted:
+            ctx.gh.remove_label(number, label)
+    if wanted - names:
+        ctx.gh.add_labels(number, sorted(wanted - names))
+    return (names - set(MODE_LABELS)) | wanted
+
+
+#: How each mode says what it will do, for the reply that queues it.
+MODE_WORDS = {"": "build it", "oneshot": "build it in one run with fullsend",
+              "split": "split it into sub-issues I build",
+              "split-bot": "split it into sub-issues the night bot builds"}
 
 
 def human_reply(number: int) -> str:
@@ -145,17 +202,38 @@ def rated(names: set[str], record: dict[str, Any]) -> bool:
 
 
 def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
-                label_present: bool = False, ask: Ask | None = None) -> str:
+                label_present: bool = False, ask: Ask | None = None,
+                mode: str | None = None) -> str:
     """Queue an issue for building. Returns the reply line. `ask` is the comment that asked, kept
-    on the record that ends up queued so later stages can react to it (`asks`)."""
+    on the record that ends up queued so later stages can react to it (`asks`). `mode` is how to
+    build it (#60): one of the bot's modes, "" for a plain build (its mode labels come off), or
+    None to leave its mode labels as they are."""
     issue = ctx.gh.get_issue(number)
     if "pull_request" in issue:
+        if mode:
+            return f"`{mode}` works on an issue; on a pull request, ask for a revision."
         return queue_revise(ctx, number, by=by, force=force, label_present=label_present, ask=ask)
     if issue.get("state") != "open":
         return f"#{number} is closed, so there is nothing to build. Reopen it first."
     names = label_names(issue)
     if is_human(names):
         return human_reply(number)
+    other = owner(issue)
+    if other is not None:
+        if label_present and LABEL_BUILD in names:
+            ctx.gh.remove_label(number, LABEL_BUILD)
+        return owner_reply(number, other)
+    if mode and mode not in MODES:
+        return (f"I have no `{mode}` mode." + (f" Mine: {', '.join(f'`{m}`' for m in MODES)}."
+                                               if MODES else ""))
+    if mode and LABEL_PR_OPEN in names and open_pull_for_branch(
+            ctx, branch_for_issue(number)) is not None:
+        return (f"#{number} has a pull request of mine open already, so I will not {MODE_WORDS[mode]}"
+                f" over it: `{SLASH} rebuild` closes it and builds again, or comment on the pull "
+                "request to change it.")
+    if mode is not None and MODES:
+        names = set_mode(ctx, number, names, mode)
+    words = MODE_WORDS.get(mode_of(names), "build it")
     if unapproved(names):
         if LABEL_BUILD in names:
             ctx.gh.remove_label(number, LABEL_BUILD)
@@ -175,7 +253,7 @@ def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
     if force:
         return (_start_now(ctx, number, "build", f"Queued #{number}") + _halt_note(ctx, state)
                 + _label_note(names))
-    return (f"Queued #{number}; I will build it {_when(ctx, state)}.{_halt_note(ctx, state)}"
+    return (f"Queued #{number}; I will {words} {_when(ctx, state)}.{_halt_note(ctx, state)}"
             f"{_label_note(names)}")
 
 
@@ -353,6 +431,9 @@ class Candidate:
     conflict: bool = False
     #: For a review: the weakest tier a person asked to review it (`/harness review strong`).
     review_floor: str = ""
+    #: For a build: how it is built (`mode_of`, #60): "" for a plain build, or `oneshot`,
+    #: `split` or `split-bot`.
+    mode: str = ""
 
 
 def cleared(record: dict[str, Any]) -> dict[str, Any]:
@@ -368,11 +449,15 @@ def carries(record: dict[str, Any]) -> bool:
     return record.get("source") == "conflict" and bool(cleared(record))
 
 
-def plan_of(record: dict[str, Any], thread: dict[str, Any], kind: str) -> dict[str, Any]:
+def plan_of(record: dict[str, Any], thread: dict[str, Any], kind: str,
+            mode: str = "") -> dict[str, Any]:
     """Whether a build is planned, and by what tier: the bot's own record of its planning run,
     or else a Plan section someone put in the issue's description (`issueplan.START` … `END`),
     which counts as a strong plan: a person, or a session they ran, wrote it on purpose, and the
-    bot must not plan over it."""
+    bot must not plan over it. A mode (#60) plans for itself: a split is the planning, and a
+    one-shot writes its own spec first, so neither waits for a plan."""
+    if kind == "build" and mode:
+        return {"planned": True, "plan_tier": "strong"}
     if record.get("planned_at"):
         return {"planned": True, "plan_tier": str(record.get("planned_tier") or "")}
     if kind == "build" and issueplan.plan_of(thread.get("body")):
@@ -492,12 +577,14 @@ def candidates(ctx: Context, state: dict[str, Any],
     found: dict[int, Candidate] = {}
     human: set[int] = set()
     suggested: set[int] = set()
+    others: dict[int, str] = {}
     builds: list[dict[str, Any]] = []
     for label in (LABEL_BUILD, LABEL_REVISE, LABEL_CROSS):
         for thread in ctx.gh.list_issues(labels=label):
             number = int(thread["number"])
             names = label_names(thread)
-            if LABEL_WORKING in names or number in found or number in human or number in suggested:
+            if (LABEL_WORKING in names or number in found or number in human
+                    or number in suggested or number in others):
                 continue
             is_pr = "pull_request" in thread
             if label == LABEL_CROSS and not (is_pr and LABEL_PR in names):
@@ -509,15 +596,20 @@ def candidates(ctx: Context, state: dict[str, Any],
             if not is_pr and unapproved(names):
                 suggested.add(number)
                 continue
+            other = owner(thread)
+            if other is not None:
+                others[number] = other.name
+                continue
             record = state["items"].get(str(number), {})
             kind = "review" if label == LABEL_CROSS else "revise" if is_pr else "build"
+            mode = mode_of(names) if kind == "build" else ""
             votes = record.get("votes") or {}
             found[number] = Candidate(
                 number, kind, str(thread.get("title", "")), bool(record.get("forced")),
                 str(record.get("queued_at") or thread.get("created_at") or ""),
                 difficulty=difficulty_of(names, carried_difficulty(record)),
                 builder=str(votes.get("builder") or ""),
-                priority=priority_tier(names), **plan_of(record, thread, kind),
+                priority=priority_tier(names), **plan_of(record, thread, kind, mode),
                 approved=tuple(votes.get("approvals") or ()),
                 approval_tiers=tuple(tier for _, tier in review_rule.approvals(
                     votes, ctx.cfg.pool.family_tier)),
@@ -525,7 +617,8 @@ def candidates(ctx: Context, state: dict[str, Any],
                 carries=kind == "revise" and LABEL_PR in names and carries(record),
                 labels=tuple(sorted(names)), rated=kind != "build" or rated(names, record),
                 conflict=kind == "revise" and record.get("source") == "conflict",
-                review_floor=str(record.get("review_floor") or "") if kind == "review" else "")
+                review_floor=str(record.get("review_floor") or "") if kind == "review" else "",
+                mode=mode)
             if kind == "build" and not found[number].forced:
                 builds.append(thread)
     waiting = waits_for(ctx, builds) if builds else {}
@@ -536,6 +629,7 @@ def candidates(ctx: Context, state: dict[str, Any],
                        "tier" for number in sorted(human))
         skipped.extend(f"#{number} skipped: a suggestion no person approved (`{LABEL_APPROVED}`)"
                        for number in sorted(suggested))
+        skipped.extend(f"#{number} skipped: it is {name}'s" for number, name in sorted(others.items()))
         skipped.extend(f"#{number} skipped: it waits for "
                        f"{', '.join(f'#{n}' for n in blockers)} to close first"
                        for number, blockers in sorted(waiting.items()))

@@ -4301,10 +4301,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(691, "effects-transform.test.ts");
   });
 
-  // Proved by packages/cards test/card-text.test.ts "R692 …" (no face says "return … to hand"; the
-  // cards that return one say Bounce) and apps/web src/cards/rules.test.ts "R692 …" (the glossary
-  // finds Bounce and "Bounced" where cards print them).
-  it("R692 prints Bounce for every return to hand", () => {
+  // Proved by packages/cards test/card-text.test.ts "R692 …" (every face that returns a permanent
+  // from the field says Bounce, and no face but R746's says "return … to hand") and apps/web
+  // src/cards/rules.test.ts "R692 …" (the glossary finds Bounce and "Bounced" where cards print them).
+  it("R692 prints Bounce for a permanent's return to hand from the field", () => {
     provenIn(692, "../../cards/test/card-text.test.ts", "../../../apps/web/src/cards/rules.test.ts");
   });
 
@@ -4400,6 +4400,28 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // test/match/clock.test.ts "R744 …" (a stored deadline is kept and never extended).
   it("R744 starts a disconnect grace for a seat that is not there when the first socket attaches", () => {
     provenIn(744, "../../../apps/server/test/match/recovery.test.ts", "../../../apps/server/test/match/clock.test.ts");
+  });
+
+  // Proved by apps/web game/Log.test.tsx "R745 …" (windows joined in order with no line twice, one
+  // history per viewer, a new game empty, a kept line's name and no id, the cap, dividers, the gap line).
+  it("R745 keeps the whole game in the log, joined from the views' windows", () => {
+    provenIn(745, "../../../apps/web/src/game/Log.test.tsx");
+  });
+
+  // Proved by cards test/card-text.test.ts "R746 …" (the thirteen faces that return a card from the
+  // graveyard, exile or a resolved Spell say "Return … to hand", none says Bounce, and no other face
+  // says "return … to hand").
+  it("R746 prints Bounce only for a permanent on the field, and Return … to hand for every other return", () => {
+    provenIn(746, CARDS_CARD_TEXT_TEST);
+  });
+
+  // Proved by effects-move.test.ts "R747 …" (a stolen unit bounces to its controller's hand as the
+  // controller's card, and into a full controller hand it burns to the controller's graveyard),
+  // effects-boardwide.test.ts "R747 …" (the sweep returns each card to its controller's hand) and
+  // cards test/re-entry.test.ts "R747 …" (radiant Silly Silas's rotation bounce of a stolen card,
+  // which its controller then plays at cost 0).
+  it("R747 bounces a permanent to its controller's hand as the controller's card", () => {
+    provenIn(747, "effects-move.test.ts", "effects-boardwide.test.ts", "../../cards/test/re-entry.test.ts");
   });
 });
 

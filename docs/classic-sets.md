@@ -1251,8 +1251,8 @@ base → Radiant.
 > **Designer:** Return 2 cards from your GY to your hand. ~~~ Return 4 cards from your GY or Exile to
 > your hand.
 
-- **Text:** Bounce 2 random cards from your graveyard.
-- **Radiant:** Bounce 4 random cards from your graveyard or exile.
+- **Text:** Return 2 random cards from your graveyard to hand.
+- **Radiant:** Return 4 random cards from your graveyard or exile to hand.
 - **Engine:** that many random cards from the pile or piles (R684).
 - **Numbers:** cards 2 ↑.
 - **Check:** #47 Recurring Felinor casts it.
@@ -1446,7 +1446,7 @@ base → Radiant.
 > Trap, return this to your hand. It costs (0).
 
 - **Text:** Cry: Cast Ancient Acquisition.
-  While this is in your graveyard: When one of your Traps reveals, Bounce this.
+  While this is in your graveyard: When one of your Traps reveals, return this to hand.
 - **Radiant:** the same, and it costs (0) when it returns.
 - **Engine:** E12: cast a generated #34 on its base face (goes to your graveyard afterwards, R87), your
   picks. A graveyard trigger (R68's graveyard triggers) on your `trapFired`; Radiant: `costOverride 0`.
@@ -2364,9 +2364,9 @@ The eight Pancake tokens (`classicplus-012-1` … `-8`), all Legendary by the de
 > hand (it can’t cost less than (2) mana)” ~~~ Then next spell you play gains “When this leaves your
 > hand, add it right back to your hand (it can’t cost less than (1) mana)” Draw 1 [fix wording]
 
-- **Text (the fixed wording asked for):** The next Spell you play gains "After this resolves, Bounce it.
+- **Text (the fixed wording asked for):** The next Spell you play gains "After this resolves, return it to hand.
   This can't cost less than (2)."
-- **Radiant:** The next Spell you play gains "After this resolves, Bounce it. This can't
+- **Radiant:** The next Spell you play gains "After this resolves, return it to hand. This can't
   cost less than (1)." Draw 1.
 - **Engine:** a player modifier, waiting until used (not turn-scoped), that stamps E39's enchantment on
   the next Spell as it is played. The enchantment rides the card in every zone, so it comes back every

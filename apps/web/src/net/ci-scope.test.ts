@@ -67,6 +67,8 @@ describe("scripts/ci-scope.sh", () => {
     expect(fullFor(".github/workflows/bot-night.yml", ".github/workflows/bot-commands.yml", "bot/tests/test_cross.py")).toBe("full=false");
     expect(fullFor(".github/workflows/triage.yml", ".github/workflows/deploy-watch.yml", ".github/workflows/ci-duration.yml")).toBe("full=false");
     expect(fullFor("CLAUDE.md", "AGENTS.md", "GEMINI.md", "bot/README.md")).toBe("full=false");
+    // Squishy (#60): its switches and its two workflows, which only the bot's harness reads.
+    expect(fullFor(".squishy/config.json", ".github/workflows/squishy-run.yml", ".github/workflows/squishy-commands.yml")).toBe("full=false");
   });
 
   it("runs everything the moment one changed file is read by a job", () => {
@@ -93,6 +95,8 @@ describe("scripts/ci-scope.sh", () => {
       "apps/bot/x.ts",
       "botany/x.ts",
       ".harness-copy/x.json",
+      ".squishy-copy/x.json",
+      ".github/workflows/squishy-run.yml-not",
     ]) {
       expect(fullFor(file), file).toBe("full=true");
       expect(fullFor("bot/harness/state.py", file), `bot + ${file}`).toBe("full=true");

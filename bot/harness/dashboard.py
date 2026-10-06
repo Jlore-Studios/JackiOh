@@ -9,6 +9,11 @@ it had been running when the issue was written. Editing an issue's body notifies
 rewrites stay quiet. The issue's number is kept in the state file; when it is missing or the
 issue was closed, an open issue with the title and the marker, opened by the bot or someone on
 the trust list, is adopted, or a new one is opened and pinned.
+
+Squishy (#60) has a section of its own in the same issue, apart from the night bot's: what it is
+working on, its account, its queue and its trees. Squishy's own process draws it (`section`), and
+the night bot's status loop runs that process each tick and puts the section in (`update`'s
+`extra`), so each bot's facts come from its own state and labels.
 """
 
 from __future__ import annotations
@@ -24,10 +29,11 @@ from harness import providers as providers_mod
 from harness import status as status_mod
 from harness.clock import human_delta, parse_iso, zone
 from harness.config import (LABEL_BUILD, LABEL_CROSS, LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_REVISE,
-                            NIGHT_WORKFLOW)
+                            LABEL_TREE, MODES, NIGHT_WORKFLOW, SLASH)
+from harness.config import TITLE as BOT_TITLE
 from harness.context import Context
 from harness.errors import GitHubError
-from harness.queue import difficulty_of, label_names, labelled_difficulty
+from harness.queue import difficulty_of, label_names, labelled_difficulty, mode_of
 
 TITLE = "Night bot status"
 MARKER = "<!-- jackioh-bot:dashboard -->"
@@ -367,6 +373,7 @@ def queue_table(issues: list[dict[str, Any]]) -> list[str]:
         is_pr = "pull_request" in issue
         if LABEL_BUILD in names and not is_pr:
             kind = ("**needs plan**" if LABEL_NEEDS_PLAN in names
+                    else MODE_KIND.get(mode_of(names), "") if mode_of(names)
                     else "build (planned)" if LABEL_PLANNED in names else "build")
         elif LABEL_REVISE in names and is_pr:
             kind = "revise"
@@ -384,6 +391,59 @@ def queue_table(issues: list[dict[str, Any]]) -> list[str]:
     more = len(rows) - QUEUE_ROWS
     return (["| Item | Kind | Difficulty | Priority | Title |", "|---|---|---|---|---|"]
             + rows[:QUEUE_ROWS] + ([f"\n…and {more} more."] if more > 0 else []))
+
+
+#: A queued issue's kind in a bot with modes (#60).
+MODE_KIND = {"oneshot": "one-shot (fullsend)", "split": "split", "split-bot": "split for the night bot"}
+
+
+def trees_table(ctx: Context, state: dict[str, Any]) -> list[str]:
+    """The trees the bot split (#60): each parent, how many of its sub-issues have closed, and
+    who builds them."""
+    rows = []
+    for issue in ctx.gh.list_issues(labels=LABEL_TREE):
+        if "pull_request" in issue:
+            continue
+        number = int(issue["number"])
+        try:
+            children = ctx.gh.list_sub_issues(number)
+        except GitHubError:
+            children = []
+        closed = sum(1 for child in children if child.get("state") == "closed")
+        record = status_mod.record_of(state, number)
+        tree = record.get("tree") if isinstance(record.get("tree"), dict) else {}
+        who = "the night bot" if tree.get("mode") == "split-bot" else BOT_TITLE
+        done = bar(closed / len(children)) if children else "—"
+        rows.append(f"| #{number} | {_cell(issue.get('title'), 50)} | {closed} of {len(children)} "
+                    f"closed {done} | {who} |")
+    if not rows:
+        return ["No open trees."]
+    return ["| Parent | Title | Sub-issues | Built by |", "|---|---|---|---|", *rows]
+
+
+def section(ctx: Context) -> str:
+    """This bot's section of the shared status issue (#60): Squishy's, drawn by its own process
+    and put into the night bot's issue apart from the night bot's own facts."""
+    state = ctx.store.load()
+    issues = ctx.gh.list_issues(labels="")
+    _, live = status_mod.lanes_now(ctx, state)
+    halted = state.get("halted") or ctx.repo_halted()
+    lines = [SECTION_START, f"## 🫧 {BOT_TITLE}", "",
+             f"{'🛑 **Halted.** ' if halted else ''}_@{ctx.cfg.bot_login}, on its own Claude "
+             f"account and GitHub's runners. `{SLASH} status` gives the same facts on demand._",
+             "", "### What it is working on", ""]
+    running = running_table(ctx, state, live, issues)
+    lines += (running + [""]) if running else ["Nothing is running right now.", ""]
+    lines += ["### Its account", ""] + subscription_table(ctx, state, live) + [""]
+    lines += ["### Its queue", ""] + queue_table(issues) + [""]
+    if MODES:
+        lines += ["### Its trees", ""] + trees_table(ctx, state) + [""]
+    lines += [f"### Last {BOT_TITLE} runs", ""] + runs_table(ctx) + ["", SECTION_END]
+    return "\n".join(lines)
+
+
+SECTION_START = "<!-- jackioh-bot:section -->"
+SECTION_END = "<!-- /jackioh-bot:section -->"
 
 
 def runs_table(ctx: Context) -> list[str]:
@@ -417,7 +477,9 @@ def _took(ctx: Context, run: dict[str, Any], created: datetime) -> str:
     return "took under a minute" if took == "now" else f"took {took}"
 
 
-def render(ctx: Context) -> str:
+def render(ctx: Context, extra: tuple[str, ...] = ()) -> str:
+    """The whole issue: the night bot's facts, then each other bot's section (`extra`), then the
+    full status folded."""
     state = ctx.store.load()
     issues = ctx.gh.list_issues(labels="")
     held, live = status_mod.lanes_now(ctx, state)
@@ -438,6 +500,8 @@ def render(ctx: Context) -> str:
     lines += [memory_line, ""] if memory_line else []
     lines += ["## Queue", ""] + queue_table(issues) + [""]
     lines += ["## Last night-bot runs", ""] + runs_table(ctx) + [""]
+    for part in extra:
+        lines += ["---", "", part.strip(), ""]
     lines += ["<details><summary>The full status</summary>", "",
               status_mod.report(ctx), "", "</details>", "", MARKER]
     return "\n".join(lines)
@@ -467,9 +531,10 @@ def find(ctx: Context, state: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
-def update(ctx: Context) -> str:
-    """Rewrite the status issue, opening and pinning it first if there is none."""
-    body = render(ctx)
+def update(ctx: Context, extra: tuple[str, ...] = ()) -> str:
+    """Rewrite the status issue, opening and pinning it first if there is none. `extra` are the
+    other bots' sections (`section`), drawn by their own processes."""
+    body = render(ctx, extra)
     state = ctx.store.load()
     issue = find(ctx, state)
     if issue is None:

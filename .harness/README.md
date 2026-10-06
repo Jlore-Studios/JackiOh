@@ -10,4 +10,8 @@ forbidden paths, so a change it makes here is reverted before review and refused
 | `trust.txt` | Who may command the bot, and at which level |
 | `HALT` | Absent normally. Commit a file here (any content) to stop every model call at once; delete it to allow them again. `/harness halt` and `/harness start` are the everyday switch; this file is the one nobody but a committer can lift |
 
+`config.json`'s `identity` names the other bot in the repository, Squishy (#60), whose issues the
+night bot leaves alone and whose section the status loop draws; Squishy's own switches are in
+[`.squishy/`](../.squishy/README.md).
+
 See [`bot/README.md`](../bot/README.md) for how the bot works.

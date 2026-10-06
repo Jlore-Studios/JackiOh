@@ -385,7 +385,7 @@ describe("#50 K-Pop Fanatic radiant — R282 the rider lands only on a card the 
     expect(g.state.delayed).toHaveLength(0);
   });
 
-  it("R282 a target bounced to its owner's hand is not made Radiant there, where p1 may not read it (R174)", () => {
+  it("R282 a target bounced to its controller's hand is not made Radiant there, where p1 may not read it (R174)", () => {
     const g = scenario({
       p1: { hand: [RADIANT_KPOP, FILLER], field: [{ def: VANILLA, lane: 1 }], library: [...LIBRARY] },
       p2: { hand: [FLOOD, FILLER], field: [{ def: SEVEN_SEVEN, lane: 2 }], library: [...LIBRARY] },

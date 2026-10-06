@@ -166,10 +166,10 @@ def make_probe(ctx: context_mod.Context, number: int | None,
 
     def probe(last_usage: dict | None):
         if ctx.repo_halted():
-            return ("halted by .harness/HALT on main", "halt")
+            return (f"halted by {config_mod.HALT_PATH} on main", "halt")
         state = ctx.store.load()
         if state.get("halted"):
-            return ("halted by /harness halt", "halt")
+            return (f"halted by {config_mod.SLASH} halt", "halt")
         held = providers_mod.suspension(state, provider.id)
         if held is not None:
             by = f" by @{held['by']}" if held.get("by") else ""
@@ -321,13 +321,64 @@ def _current(cfg: Config, since: Any) -> Config:
     return dataclasses.replace(cfg, pool=pool, secrets=secrets)
 
 
+def _companion(other: Any, *argv: str) -> subprocess.CompletedProcess[str]:
+    """Run `python -m harness <argv>` as another bot (`config.OTHERS`, #60): its home, its token.
+    One process is one bot, since the labels and branches are fixed when it starts."""
+    return subprocess.run([sys.executable, "-m", "harness", *argv],
+                          cwd=Path(__file__).resolve().parents[1],
+                          env=config_mod.companion_env(other), capture_output=True, text=True,
+                          timeout=COMPANION_TIMEOUT, check=False)
+
+
+#: How long a companion's sweep or section may take before the tick goes on without it.
+COMPANION_TIMEOUT = 300
+
+
+def _companions(cfg: Config, *, sweep: bool) -> tuple[str, ...]:
+    """Each other bot's section of the status issue (Squishy's, #60), after its sweep when the
+    loop sweeps: its own process draws it from its own state and labels. A bot that cannot be run
+    is a warning, and the issue goes on without its section."""
+    sections: list[str] = []
+    for other in config_mod.OTHERS:
+        if not other.home:
+            continue
+        if sweep and other.token_env and config_mod.companion_env(other).get("BOT_GITHUB_TOKEN"):
+            try:
+                done = _companion(other, "sweep")
+                for line in (done.stdout or "").splitlines():
+                    print(redact(f"{other.name}: {line}"), flush=True)
+                if done.returncode:
+                    print(redact(f"::warning::{other.name}'s sweep failed: "
+                                 f"{(done.stderr or '')[-500:]}"), flush=True)
+            except (OSError, subprocess.SubprocessError) as exc:
+                print(redact(f"::warning::{other.name}'s sweep did not run: {exc}"), flush=True)
+        try:
+            drawn = _companion(other, "dashboard", "--section-only")
+        except (OSError, subprocess.SubprocessError) as exc:
+            print(redact(f"::warning::{other.name}'s section was not drawn: {exc}"), flush=True)
+            continue
+        if drawn.returncode == 0 and drawn.stdout.strip():
+            sections.append(drawn.stdout)
+        else:
+            print(redact(f"::warning::{other.name}'s section was not drawn: "
+                         f"{(drawn.stderr or '')[-500:]}"), flush=True)
+    return tuple(sections)
+
+
 def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
     """The pinned status issue: once, or every `--every` seconds for `--for` seconds (the
     `bot-status` loop). With `--sweep` each tick sweeps first, so the bot does not wait hours
     for GitHub's late schedules to start its next run when its chain of runs breaks. Each tick
     reads the subscriptions and the secrets afresh (`_current`), so one added or changed while
     the loop runs shows within a tick, and settles the issue about the machine's disk
-    (`disk.alert`). A failure is only a warning: it never fails the sweep or the loop."""
+    (`disk.alert`). A failure is only a warning: it never fails the sweep or the loop.
+
+    With `--companions`, each other bot (Squishy, #60) is swept (with `--sweep`) and drawn by a
+    process of its own (`_companions`), and its section goes into the issue apart from the night
+    bot's. `--section-only` is that process: it prints this bot's section and writes nothing."""
+    if getattr(args, "section_only", False):
+        print(dashboard_mod.section(_ctx(cfg, write=False)))
+        return 0
     every = max(0, int(getattr(args, "every", 0) or 0))
     deadline = time.monotonic() + max(0, int(getattr(args, "for_seconds", 0) or 0))
     since = _run_created(cfg)
@@ -339,8 +390,10 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
                     print(redact(f"sweep: {line}"), flush=True)
             except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
                 print(redact(f"::warning::the sweep failed: {exc}"), flush=True)
+        extra = (_companions(cfg, sweep=bool(getattr(args, "sweep", False)))
+                 if getattr(args, "companions", False) else ())
         try:
-            note = dashboard_mod.update(_ctx(cfg))
+            note = dashboard_mod.update(_ctx(cfg), extra)
             print(redact(f"dashboard: {note}"), flush=True)
         except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
             print(redact(f"::warning::the status issue was not updated: {exc}"), flush=True)
@@ -604,13 +657,21 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
                       "parent": triage_mod.parent_number(thread)}
         plan = triage_mod.decide(written.get("verdict"), thread, is_pr, repo_labels,
                                  cfg.bot_login, triage_mod.issue_types(ctx.gh), open_issues,
-                                 linked)
+                                 linked, asked=bool(getattr(args, "asked", False)))
         ids = {n: int(i.get("id") or 0) for n, i in (open_issues or {}).items()}
         ids[number] = int(thread.get("id") or 0)
         done = triage_mod.apply(ctx.gh, number, plan, ids)
     except GitHubError as exc:
         print(redact(f"triage: could not triage #{number}: {exc}"))
         return 0
+    if plan.classified:
+        # Every thread triage classified says so (a closed one, or an issue whose method label
+        # went before the answer came, was not classified, and gets nothing).
+        try:
+            ctx.gh.create_comment(number, triage_mod.comment(
+                plan, done, is_pr=is_pr, answered=isinstance(written.get("verdict"), dict)))
+        except GitHubError as exc:
+            print(redact(f"triage: could not comment on #{number}: {exc}"))
     lines = done or ["nothing to change"]
     report = f"Triage of #{number}:\n" + _bullets(lines + plan.notes)
     print(report)
@@ -668,6 +729,12 @@ def parser() -> argparse.ArgumentParser:
                            help="sweep before each rewrite, as the ten-minute sweep does")
     dashboard.add_argument("--stats", action="store_true",
                            help="also rewrite the pinned statistics issue, every hour")
+    dashboard.add_argument("--companions", action="store_true",
+                           help="also sweep and draw each other bot (Squishy) in a process of "
+                           "its own, and put its section in the issue")
+    dashboard.add_argument("--section-only", action="store_true",
+                           help="print this bot's section of the status issue and write nothing "
+                           "(the night bot's loop runs this as Squishy)")
     p = sub.add_parser("stats", help="rewrite the pinned statistics issue now")
     p.add_argument("--force", action="store_true", help="even if it was rewritten under an hour ago")
     p = sub.add_parser("halt", help="stop all model work")
@@ -692,6 +759,9 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--payload", default="", help="gate: the event's payload file")
     p.add_argument("--number", default="0", help="classify, apply: the issue or pull request")
     p.add_argument("--verdict", default="", help="classify writes it, apply reads it")
+    p.add_argument("--asked", action="store_true",
+                   help="apply: a person called triage on it, so an issue with no method label "
+                   "is classified all the same")
     p = sub.add_parser("forget", help="clear an item's failure count")
     p.add_argument("number")
     return top

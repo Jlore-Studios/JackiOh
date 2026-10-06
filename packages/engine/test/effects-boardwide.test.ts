@@ -443,22 +443,27 @@ describe("damageAll (§6.3, §4.4, R59, M3-T1)", () => {
 // bounceAll
 // ---------------------------------------------------------------------------
 
-describe("bounceAll (§6.3, §3.2, R11, R12, R78, M3-T1)", () => {
-  it("R12 returns real cards to their owners' hands and R11 makes a unit token cease to exist (#17 Flood)", () => {
+describe("bounceAll (§6.3, §3.2, R11, R78, R747, M3-T1)", () => {
+  it("R747 returns real cards to their controllers' hands and R11 makes a unit token cease to exist (#17 Flood)", () => {
     const state = game("bounceAll-owners");
     const mine = put(state, beast.id, slot("p1", "units", 1));
     mine.damage = 1;
     mine.buffs = { attack: 3, health: 3 };
     const token = put(state, rushToken.id, slot("p1", "units", 2));
     const theirs = put(state, beast.id, slot("p2", "units", 1));
-    // R12: p1 owns it, p2 is standing it up; a bounce sends it to p1's hand, not p2's.
+    // R747: p1 owns it, p2 is standing it up; a bounce sends it to its controller p2's hand,
+    // not its owner's — bouncing an enemy permanent never fills your own hand.
     const stolen = stolenOnto(state, beast.id, "p1", slot("p2", "units", 2));
     const run = runner(state);
 
     run.apply(bounceAll({ side: "any" }));
 
-    expect(state.players.p1.hand.map((c) => c.id)).toEqual([mine.id, stolen.id]);
-    expect(state.players.p2.hand.map((c) => c.id)).toEqual([theirs.id]);
+    expect(state.players.p1.hand.map((c) => c.id)).toEqual([mine.id]);
+    expect(state.players.p2.hand.map((c) => c.id)).toEqual([theirs.id, stolen.id]);
+    // R747: it lands in p2's hand as p2's own card.
+    expect(stolen.owner).toBe("p2");
+    expect(stolen.controller).toBe("p2");
+    expect(stolen.zone).toEqual({ z: "hand", player: "p2" });
     // R11: the token reached no hand at all and is not in either player's pile.
     expect(token.zone.z).toBe("gone");
     expect(state.players.p1.hand.map((c) => c.id)).not.toContain(token.id);

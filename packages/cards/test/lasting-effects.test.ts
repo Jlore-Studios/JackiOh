@@ -48,7 +48,7 @@ function unitCarrying(g: Scenario, unitLane: number, backrowLane: number): CardI
 }
 
 describe("R209: Twinspell's grant ends when Twinspell leaves the field", () => {
-  it("R209 a Twinspell radiant Silly Silas bounces to its owner's hand takes its grant with it, so the next Spell resolves once (R30, §5.1)", () => {
+  it("R209 a Twinspell radiant Silly Silas bounces to its controller's hand takes its grant with it, so the next Spell resolves once (R30, §5.1)", () => {
     const g = scenario({
       p1: {
         hand: [TWINSPELL, { def: SILAS, radiant: true }, STOCKPILE, VANILLA],
@@ -62,7 +62,7 @@ describe("R209: Twinspell's grant ends when Twinspell leaves the field", () => {
     expect(echoRiders(g, "p1")).toHaveLength(1);
 
     // Backrow ring, rotating right from p1's seat: p1's lane 5 would cross to p2's lane 5, so the
-    // radiant face bounces Twinspell to its owner's hand costing 0 instead (§8 #52, R14).
+    // radiant face bounces Twinspell to its controller's hand costing 0 instead (§8 #52, R14, R747).
     g.play(SILAS, { zone: 1, modes: ["right"] });
     g.expectInZone(twin, "hand");
 

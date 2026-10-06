@@ -22,8 +22,8 @@ from typing import Any
 
 from harness import threads
 from harness.clock import iso
-from harness.config import (DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_PR,
-                            LABEL_PR_OPEN, LABEL_REVISE, STEP_UP_AFTER)
+from harness.config import (BRANCH_PREFIX, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED,
+                            LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE, SLASH, STEP_UP_AFTER)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.queue import (branch_for_issue, carried_difficulty, difficulty_of, is_human,
@@ -130,12 +130,12 @@ def step_up(ctx: Context, target: int, pr: int | None, *, reasons: list[str],
                                                    LABEL_BLOCKED))
         if current == DIFFICULTIES[-1]:
             ask = ("It is `difficulty:hard` already, so there is no stronger model to hand it to: "
-                   "it needs a person. Split it, or answer what blocks it, then `/harness build`.")
+                   f"it needs a person. Split it, or answer what blocks it, then `{SLASH} build`.")
         else:
             nxt = DIFFICULTIES[DIFFICULTIES.index(current) + 1]
             ask = (f"A person set `difficulty:{current}`, so I do not change it: should it be "
-                   f"`difficulty:{nxt}`? Relabel it if so, then `/harness build` (or "
-                   "`/harness rebuild` on its pull request) tries again.")
+                   f"`difficulty:{nxt}`? Relabel it if so, then `{SLASH} build` (or "
+                   f"`{SLASH} rebuild` on its pull request) tries again.")
         _try(lambda: ctx.gh.create_comment(target, f"This failed {STEP_UP_AFTER} times{where}: "
                                            f"{why}. {ask}"))
         return f"blocked #{target}"
@@ -188,7 +188,7 @@ def rebuild(ctx: Context, issue: int, pr: int, *, why: str, said: str = "") -> s
         _try(lambda: ctx.gh.update_pull(pr, state="closed"))
     old = ""
     if branch == branch_for_issue(issue) and sha:
-        old = f"bot/old/issue-{issue}-{ctx.now().strftime('%Y%m%d-%H%M')}"
+        old = f"{BRANCH_PREFIX}old/issue-{issue}-{ctx.now().strftime('%Y%m%d-%H%M')}"
         try:
             ctx.gh.create_branch(old, sha)
             ctx.gh.delete_branch(branch)
@@ -241,7 +241,7 @@ def rebuild_request(ctx: Context, number: int, by: str) -> str:
         found = open_pull_for_branch(ctx, branch_for_issue(number))
         pr = int(found["number"]) if found else None
         if pr is None:
-            return (f"#{number} has no open pull request of mine to rebuild; `/harness build` "
+            return (f"#{number} has no open pull request of mine to rebuild; `{SLASH} build` "
                     "queues it.")
-    rebuild(ctx, issue, pr, why=f"@{by} asked for it (`/harness rebuild`)")
+    rebuild(ctx, issue, pr, why=f"@{by} asked for it (`{SLASH} rebuild`)")
     return f"Closed #{pr} and queued #{issue} to build again from `main`."

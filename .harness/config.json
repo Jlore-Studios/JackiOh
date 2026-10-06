@@ -5,6 +5,17 @@
   "bot_user_id": 324324626,
   "operator": "jgoetzmann",
   "timezone": "America/Chicago",
+  "identity": {
+    "others": [
+      {
+        "name": "Squishy",
+        "login": "squishy-squooby",
+        "label_prefix": "squishy:",
+        "home": ".squishy",
+        "token_env": "SQUISHY_GITHUB_TOKEN"
+      }
+    ]
+  },
   "max_turns": { "plan": 150, "build": 400, "fix": 300, "revise": 300, "review": 150, "suggest": 120 },
   "call_timeout_minutes": 150,
   "job_budget_minutes": 330,
@@ -63,6 +74,7 @@
   "forbidden_paths": [
     ".github/",
     ".harness/",
+    ".squishy/",
     "bot/",
     ".claude/",
     ".mcp.json",

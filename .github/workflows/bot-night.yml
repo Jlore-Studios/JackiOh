@@ -116,6 +116,7 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
           INPUT_ITEM: ${{ github.event.inputs.item }}
           INPUT_MODE: ${{ github.event.inputs.mode }}
           INPUT_FORCE: ${{ github.event.inputs.force }}
@@ -218,6 +219,7 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
           QUIET_OK: ${{ needs.gate.outputs.quiet_ok }}
           INPUT_ITEM: ${{ github.event.inputs.item }}
           INPUT_MODE: ${{ github.event.inputs.mode }}
@@ -411,6 +413,7 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
           PLAN_ACTION: ${{ needs.plan.outputs.action }}
           PLAN_NUMBER: ${{ needs.plan.outputs.number }}
           PLAN_PROVIDER: ${{ needs.plan.outputs.provider }}
