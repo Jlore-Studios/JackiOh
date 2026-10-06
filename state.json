@@ -2786,9 +2786,9 @@
     "what": "revise #335 on claude-5"
   },
   "last_sweep": {
-    "at": "2026-10-06T01:50:06Z",
+    "at": "2026-10-06T02:00:34Z",
     "notes": [
-      "started a night run, as a lane was free: #335 (hard) is queued to revise, for `claude-5`: build on `claude-5` (claude, `opus`, strong); review on `claude-5` (claude, `opus`, strong)"
+      "started a night run, as a lane was free: #334 (hard) is queued to revise, for `claude-1`: build on `claude-1` (claude, `opus`, strong); review on `claude-1` (claude, `opus`, strong)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
