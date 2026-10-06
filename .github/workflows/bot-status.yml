@@ -1,5 +1,5 @@
 # The pinned "Night bot status" issue (bot/harness/dashboard.py), rewritten every ten minutes, and
-# the pinned "Night bot statistics" issue (bot/harness/stats.py), rewritten every hour.
+# the pinned "Night bot statistics" issue (bot/harness/stats.py), rewritten every 30 minutes.
 #
 # GitHub fires this repository's schedules late and rarely (the ten-minute sweep has gone hours
 # between runs), so a schedule alone cannot keep the issue current. Instead one job loops: it

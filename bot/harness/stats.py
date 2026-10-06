@@ -1,5 +1,5 @@
 """The pinned "Night bot statistics" issue: what the night bot has done over the last six hours, the
-last day, the last week and all time, rewritten every hour by the `bot-status` loop
+last day, the last week and all time, rewritten every 30 minutes by the `bot-status` loop
 (`dashboard --stats`).
 
 Where the status issue (`dashboard.py`) says what the bot is doing now, this one keeps the record.
@@ -25,7 +25,7 @@ each time, so it holds nothing of its own but the issue's number and when it was
 Squishy (#60) has a section of its own at the end, apart from the night bot's record: the same
 four windows from its own comments, pull requests, runs and state, and its modes (one-shot builds,
 splits, the sub-issues they opened, the trees closed). Squishy's own process draws it
-(`bot_section`), and the night bot's loop runs that process each hour and puts it in (`update`'s
+(`bot_section`), and the night bot's loop runs that process every 30 minutes and puts it in (`update`'s
 `extra`).
 """
 
@@ -48,7 +48,7 @@ TITLE = "Night bot statistics"
 MARKER = "<!-- jackioh-bot:statistics -->"
 LABELS = ("night bot",)
 #: How often the loop rewrites the issue: often enough that the six-hour window is current.
-STATS_EVERY = timedelta(hours=1)
+STATS_EVERY = timedelta(minutes=30)
 #: The four windows the issue reports, newest first; None is all time.
 WINDOWS: tuple[tuple[str, timedelta | None], ...] = (
     ("Last 6 hours", timedelta(hours=6)),
@@ -574,7 +574,8 @@ def render(ctx: Context, facts: Facts, *, shown: int = MERGES_SHOWN,
 
     lines = [f"# 📊 {TITLE}", "",
              f"_Updated {_local(ctx, now).strftime('%Y-%m-%d %H:%M %Z')} by `bot-status`, every "
-             "hour. What the bot is doing right now is in the pinned **Night bot status** issue._",
+             "30 minutes. What the bot is doing right now is in the pinned **Night bot status** "
+             "issue._",
              "", "## The four windows", ""]
     lines += summary(windows)
     lines += ["",
@@ -631,7 +632,7 @@ def due(ctx: Context, state: Mapping[str, Any]) -> bool:
 
 def update(ctx: Context, *, force: bool = False,
            extra: Callable[[], tuple[str, ...]] = tuple) -> str:
-    """Rewrite the statistics issue when an hour has passed (or `force`), opening and pinning it
+    """Rewrite the statistics issue when `STATS_EVERY` has passed (or `force`), opening and pinning it
     first if there is none. `extra` draws the other bots' sections (`bot_section`, each in a
     process of its own), and is called only when the issue is rewritten."""
     state = ctx.store.load()
