@@ -657,13 +657,21 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
                       "parent": triage_mod.parent_number(thread)}
         plan = triage_mod.decide(written.get("verdict"), thread, is_pr, repo_labels,
                                  cfg.bot_login, triage_mod.issue_types(ctx.gh), open_issues,
-                                 linked)
+                                 linked, asked=bool(getattr(args, "asked", False)))
         ids = {n: int(i.get("id") or 0) for n, i in (open_issues or {}).items()}
         ids[number] = int(thread.get("id") or 0)
         done = triage_mod.apply(ctx.gh, number, plan, ids)
     except GitHubError as exc:
         print(redact(f"triage: could not triage #{number}: {exc}"))
         return 0
+    if plan.classified:
+        # Every thread triage classified says so (a closed one, or an issue whose method label
+        # went before the answer came, was not classified, and gets nothing).
+        try:
+            ctx.gh.create_comment(number, triage_mod.comment(
+                plan, done, is_pr=is_pr, answered=isinstance(written.get("verdict"), dict)))
+        except GitHubError as exc:
+            print(redact(f"triage: could not comment on #{number}: {exc}"))
     lines = done or ["nothing to change"]
     report = f"Triage of #{number}:\n" + _bullets(lines + plan.notes)
     print(report)
@@ -751,6 +759,9 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--payload", default="", help="gate: the event's payload file")
     p.add_argument("--number", default="0", help="classify, apply: the issue or pull request")
     p.add_argument("--verdict", default="", help="classify writes it, apply reads it")
+    p.add_argument("--asked", action="store_true",
+                   help="apply: a person called triage on it, so an issue with no method label "
+                   "is classified all the same")
     p = sub.add_parser("forget", help="clear an item's failure count")
     p.add_argument("number")
     return top
