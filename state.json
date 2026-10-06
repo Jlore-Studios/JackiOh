@@ -2371,6 +2371,13 @@
     "337": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-06T00:43:58Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Easy line 7 bars e2e/Cypress changes and the rubric rates any e2e work medium: this edits e2e/scripts/shard-specs.mjs, so it cannot be easy"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
