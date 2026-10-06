@@ -4001,17 +4001,21 @@
         {
           "at": "2026-10-06T08:52:32Z",
           "minutes": 27.1
+        },
+        {
+          "at": "2026-10-06T13:40:42Z",
+          "minutes": 9.8
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-06T13:10:00Z",
+          "resets_at": "2026-10-06T18:30:00Z",
           "utilization": 0.9
         },
-        "observed_at": "2026-10-06T08:52:32Z",
+        "observed_at": "2026-10-06T13:40:42Z",
         "seven_day": {
           "resets_at": "2026-10-10T05:00:00Z",
-          "utilization": 0.28
+          "utilization": 0.33
         },
         "status": "allowed_warning"
       }
