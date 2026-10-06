@@ -31,7 +31,7 @@ import { createMatchRegistry, type MatchRegistry } from "../../src/match/registr
 import { createFakeEngine, decksTheEngineAccepts, fakeDeck } from "../fakes/engine";
 import { createFakeSocket, type FakeSocket } from "../fakes/socket";
 import { createTestDeps, TEST_CATALOG_VERSION } from "../fakes/deps";
-import { createVoidMatch } from "../../src/api/results";
+import { createVoidMatch, reapStuckMatches } from "../../src/api/results";
 
 const MATCH_ID = "match-recovery";
 
@@ -437,5 +437,186 @@ describe("M6-T4 crash recovery with the real engine (§9.3, §9.5)", () => {
     expect(views(backP2)).toHaveLength(1);
     expect(lastView(backP1)).toEqual(before.p1);
     expect(lastView(backP2)).toEqual(before.p2);
+  });
+});
+
+/**
+ * R744: a seat that is not there when the first socket reaches its match's actor starts its
+ * disconnect grace then (§2.5, §9.5). `registry.stop` is the restart: the log and the match row stay,
+ * the actor and every clock in memory go, and the next socket rebuilds both (docs/architecture.md
+ * §5.2). The scripted engine is enough: grace is the clock and the actor's, not a rule.
+ */
+describe("R744 disconnect grace for a seat that is not there (§9.5)", () => {
+  const graceOf = (deps: Harness["deps"]): number => deps.config.disconnectGraceSeconds * 1000;
+  const expired = (deps: Harness["deps"]): { action: Record<string, unknown> }[] =>
+    deps.store.tables.matchActions.filter((row) => row.action.type === "disconnectExpired");
+  const lossOf = (winner: "p1" | "p2") =>
+    expect.objectContaining({ outcome: { winner, reason: "disconnect" } });
+
+  /** Both seats play a while, then the server restarts: the actor is gone and no socket is open. */
+  async function joinedThenCrashed(): Promise<Harness> {
+    const harness = await startMatch();
+    const actor = await harness.registry.actorFor(MATCH_ID);
+    actor.attach("p1", createFakeSocket());
+    actor.attach("p2", createFakeSocket());
+    await actor.idle();
+    await harness.registry.stop(MATCH_ID);
+    return harness;
+  }
+
+  it("R744 a seat that never comes back to a rebuilt actor loses when its grace runs out", async () => {
+    const { deps, registry, recordResult } = await joinedThenCrashed();
+    const graceMs = graceOf(deps);
+
+    // Nothing runs at boot: with no socket there is no actor, and so no grace.
+    expect(registry.live()).toEqual([]);
+    expect(deps.store.tables.matches[0]?.clocks.graceDeadline).toEqual({ p1: null, p2: null });
+
+    // p2 comes back, p1 never does.
+    await registry.attach(MATCH_ID, "profile-2", createFakeSocket());
+    const revived = await registry.actorFor(MATCH_ID);
+    await revived.idle();
+    expect(revived.clocks().graceDeadline).toEqual({ p1: deps.timers.now() + graceMs, p2: null });
+    expect(deps.store.tables.matches[0]?.clocks.graceDeadline.p1).toBe(deps.timers.now() + graceMs);
+
+    deps.timers.advance(graceMs - 1);
+    await revived.idle();
+    expect(recordResult).not.toHaveBeenCalled();
+    expect(expired(deps)).toEqual([]);
+
+    deps.timers.advance(1);
+    await revived.idle();
+    expect(deps.store.tables.matchActions.at(-1)?.action).toMatchObject({
+      type: "disconnectExpired",
+      player: "p1",
+      playerId: "p1",
+    });
+    expect(recordResult).toHaveBeenCalledTimes(1);
+    expect(recordResult).toHaveBeenCalledWith(lossOf("p2"));
+  });
+
+  it("R744 a grace deadline stored before the restart fires at that deadline, not a fresh window later", async () => {
+    const { deps, registry } = await startMatch();
+    const graceMs = graceOf(deps);
+    const actor = await registry.actorFor(MATCH_ID);
+    const p1 = createFakeSocket();
+    actor.attach("p1", p1);
+    actor.attach("p2", createFakeSocket());
+    await actor.idle();
+
+    // p1's socket drops, and the countdown is stored on the match (§9.5).
+    const droppedAt = deps.timers.now();
+    p1.drop();
+    await actor.idle();
+    const stored = deps.store.tables.matches[0]?.clocks.graceDeadline.p1;
+    expect(stored).toBe(droppedAt + graceMs);
+
+    // Half the window passes, then the server restarts and p2 is the first back.
+    deps.timers.advance(graceMs / 2);
+    await registry.stop(MATCH_ID);
+    const revived = await registry.actorFor(MATCH_ID);
+    await revived.idle();
+    // The rebuilt actor's first write of its clocks must not erase the stored grace.
+    expect(deps.store.tables.matches[0]?.clocks.graceDeadline.p1).toBe(stored);
+
+    await registry.attach(MATCH_ID, "profile-2", createFakeSocket());
+    await revived.idle();
+    expect(revived.clocks().graceDeadline.p1).toBe(stored);
+
+    deps.timers.advance(graceMs / 2 - 1);
+    await revived.idle();
+    expect(expired(deps)).toEqual([]);
+    deps.timers.advance(1);
+    await revived.idle();
+    expect(expired(deps)).toHaveLength(1);
+    expect(deps.timers.now()).toBe(stored);
+  });
+
+  it("R744 a seat that attaches inside the window cancels its grace and the game goes on", async () => {
+    const { deps, registry, recordResult } = await joinedThenCrashed();
+    const graceMs = graceOf(deps);
+
+    await registry.attach(MATCH_ID, "profile-2", createFakeSocket());
+    const revived = await registry.actorFor(MATCH_ID);
+    await revived.idle();
+    expect(revived.clocks().graceDeadline.p1).not.toBeNull();
+
+    deps.timers.advance(graceMs - 1);
+    await revived.idle();
+    await registry.attach(MATCH_ID, "profile-1", createFakeSocket());
+    await revived.idle();
+    expect(revived.clocks().graceDeadline).toEqual({ p1: null, p2: null });
+    expect(deps.store.tables.matches[0]?.clocks.graceDeadline).toEqual({ p1: null, p2: null });
+
+    deps.timers.advance(1);
+    await revived.idle();
+    expect(expired(deps)).toEqual([]);
+    expect(recordResult).not.toHaveBeenCalled();
+    expect(revived.snapshot().result).toBeNull();
+  });
+
+  it("R744 a fresh match's seat that never opens its socket loses after the grace", async () => {
+    const { deps, registry, recordResult } = await startMatch();
+    const graceMs = graceOf(deps);
+
+    await registry.attach(MATCH_ID, "profile-1", createFakeSocket());
+    const actor = await registry.actorFor(MATCH_ID);
+    await actor.idle();
+    expect(actor.clocks().graceDeadline).toEqual({ p1: null, p2: deps.timers.now() + graceMs });
+
+    deps.timers.advance(graceMs);
+    await actor.idle();
+    expect(deps.store.tables.matchActions.at(-1)?.action).toMatchObject({
+      type: "disconnectExpired",
+      player: "p2",
+      playerId: "p2",
+    });
+    expect(recordResult).toHaveBeenCalledWith(lossOf("p1"));
+  });
+
+  it("R744 two seats that attach seconds apart, as at a normal start, fire no grace", async () => {
+    const { deps, registry, recordResult } = await startMatch();
+    const graceMs = graceOf(deps);
+
+    await registry.attach(MATCH_ID, "profile-1", createFakeSocket());
+    const actor = await registry.actorFor(MATCH_ID);
+    await actor.idle();
+    // The second client is still loading, and its seat is already counted away.
+    expect(actor.clocks().graceDeadline.p2).not.toBeNull();
+
+    deps.timers.advance(graceMs / 10);
+    await registry.attach(MATCH_ID, "profile-2", createFakeSocket());
+    await actor.idle();
+    expect(actor.clocks().graceDeadline).toEqual({ p1: null, p2: null });
+
+    deps.timers.advance(graceMs);
+    await actor.idle();
+    expect(expired(deps)).toEqual([]);
+    expect(recordResult).not.toHaveBeenCalled();
+  });
+
+  it("R744 a match no socket returns to after a restart is still drawn by the reaper (R112)", async () => {
+    const { deps, registry } = await startMatch();
+    deps.store.seedProfile({ id: "profile-1", inMatchId: MATCH_ID });
+    deps.store.seedProfile({ id: "profile-2", inMatchId: MATCH_ID });
+    const actor = await registry.actorFor(MATCH_ID);
+    const p1 = createFakeSocket();
+    actor.attach("p1", p1);
+    actor.attach("p2", createFakeSocket());
+    await actor.idle();
+    p1.drop();
+    await actor.idle();
+    await registry.stop(MATCH_ID);
+
+    // Nobody comes back: no actor is rebuilt, so no grace runs and nobody loses by it.
+    deps.timers.advance(deps.config.matchCeilingMinutes * 60_000);
+    expect(await reapStuckMatches(deps)).toEqual([MATCH_ID]);
+    expect(deps.store.tables.results[0]).toMatchObject({
+      matchId: MATCH_ID,
+      reason: "match-ceiling",
+      winnerProfileId: null,
+      turns: 0,
+    });
+    expect(expired(deps)).toEqual([]);
   });
 });

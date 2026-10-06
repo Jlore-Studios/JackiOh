@@ -146,8 +146,8 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
     };
   }, []);
 
-  // The venue belongs to this mounted match, not the page-level menu audio. It starts as soon as
-  // Web Audio is unlocked, fades on an ordinary match end, and is fully released on route leave.
+  // The crowd belongs to this mounted match, not the page-level menu audio. It connects as soon as
+  // Web Audio is unlocked, falls silent on an ordinary match end, and is released on route leave.
   useEffect(() => {
     const crowd = createCrowdDirector({ engine: getAudioEngine() });
     crowdRef.current = crowd;
