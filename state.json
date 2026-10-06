@@ -2323,6 +2323,7 @@
       "interruptions": 1,
       "issue": 290,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-05T23:48:22Z",
