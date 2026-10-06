@@ -2273,9 +2273,7 @@
       "source": "",
       "started_at": "2026-10-06T00:45:28Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6005748937"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "claude"
