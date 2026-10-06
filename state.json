@@ -5125,9 +5125,9 @@
   "suggest": {
     "asks": [],
     "last_run": "2026-10-06T23:34:54Z",
-    "provider": "claude-3",
+    "provider": null,
     "requested": false,
-    "run_id": "37547203901",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
