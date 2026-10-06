@@ -5,7 +5,8 @@
 // ever held the token, so the old oracle read attack number 2 as an extra attack.
 //
 // I6 (hidden information, issue #348) is proved by feeding the oracle a view or an event that names a
-// card the seat may not read, and by the exceptions §10.8 and its rulings make: a face-down trap's
+// card the seat may not read (a hidden definition beside any id, a former id, R227, or the seat's
+// own library card it was never shown, R312), and by the exceptions §10.8 and its rulings make: a face-down trap's
 // bare id as a target (R177) and a `stolen` event naming a card its viewer could read where it was
 // taken (R466).
 
@@ -105,6 +106,63 @@ describe("I6: hidden information in what each seat is sent", () => {
     const found = violations(g, "p1", [{ type: "drawn", player: "p2", instanceId: HIDDEN_ID, defId: secret.defId }]);
     expect(found.some((message) => message.includes(`"${secret.defId}"`))).toBe(true);
     expect(found.some((message) => message.includes(`"${secret.id}"`))).toBe(false);
+  });
+
+  it("I6 fires on a hidden definition beside an id that vouches for nothing: made up, a hero's, or another card's (R97)", () => {
+    const { g, unit, secret, trap } = board();
+    for (const instanceId of ["c900", "hero-p2", unit.id]) {
+      for (const defId of [secret.defId, trap.defId]) {
+        const found = violations(g, "p1", [{ type: "drawn", player: "p2", instanceId, defId }]);
+        expect(found.some((message) => message.includes(`"${defId}"`))).toBe(true);
+      }
+    }
+  });
+
+  it("I6 judges a former id by the card it became: a face-down trap's old id is hidden like the trap (R227)", () => {
+    const { g, trap } = board();
+    g.state.applied = [
+      {
+        nonce: "i6-former",
+        events: [{ type: "controlChanged", instanceId: trap.id, controller: "p2", row: "backrow", lane: 1, formerId: "c-former" }],
+      },
+    ];
+    expect(violations(g, "p1")).toEqual([]);
+    const byId = violations(g, "p1", [{ type: "drawn", player: "p2", instanceId: "c-former", defId: HIDDEN_ID }]);
+    expect(byId.some((message) => message.includes(`"c-former"`))).toBe(true);
+    const withDef = violations(g, "p1", [{ type: "drawn", player: "p2", instanceId: "c-former", defId: trap.defId }]);
+    expect(withDef.some((message) => message.includes(`"${trap.defId}"`))).toBe(true);
+  });
+
+  it("I6 lets a card Rollback recreated carry its old id once it reads, though it was transformed away unseen (R419, R227)", () => {
+    const { g, unit, trap } = board();
+    g.state.applied = [
+      {
+        nonce: "i6-rollback",
+        events: [
+          { type: "transformed", instanceId: "c-old", fromDefId: trap.defId, toDefId: VANILLA, newInstanceId: "c-new", hiddenFrom: ["p1"] },
+          { type: "controlChanged", instanceId: unit.id, controller: "p1", row: "units", lane: 1, formerId: "c-old" },
+        ],
+      },
+    ];
+    expect(JSON.stringify(viewFor(g.state, "p1").events)).toContain("c-old");
+    expect(violations(g, "p1")).toEqual([]);
+  });
+
+  it("I6 reads the seat's own library only as it was shown going in (R311, R312)", () => {
+    const g = scenario({ p1: { library: [SHEEPISH] } });
+    const card = g.state.players.p1.library[0];
+    if (card === undefined) throw new Error("setup: p1 should hold a library card");
+    const drawn: GameEvent = { type: "drawn", player: "p1", instanceId: HIDDEN_ID, defId: SHEEPISH };
+    expect(violations(g, "p1", [drawn])).toEqual([]);
+
+    // A card its owner was never shown (Pocket Chaos #87, Transmogulate #83) is an unknown count.
+    delete card.knownAs;
+    expect(violations(g, "p1")).toEqual([]);
+    expect(violations(g, "p1", [drawn]).some((message) => message.includes(`"${SHEEPISH}"`))).toBe(true);
+    const view = viewFor(g.state, "p1");
+    const listed: PlayerView = { ...view, you: { ...view.you, ownLibrary: { cards: [{ defId: SHEEPISH, radiant: false, count: 1 }], unknown: 0 } } };
+    const found = hiddenInformationViolations(g.state, "p1", listed, legalActions(g.state, "p1"));
+    expect(found.some((message) => message.includes(`"${SHEEPISH}"`))).toBe(true);
   });
 
   it("I6 lets a face-down trap through legalActions as a bare target and fires on a hidden hand card (R177)", () => {

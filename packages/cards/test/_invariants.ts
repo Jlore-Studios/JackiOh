@@ -37,7 +37,11 @@
 //      from `viewFor`'s rules: the other seat's hand while the game is live (R434), both libraries,
 //      the other seat's face-down traps (a dormant one under a backrow top too, B5 E21), a card the other seat is setting face-down (R448) and a
 //      mulligan return waiting for its shuffle (R224). The serialized view may not hold such a card's
-//      instance id, nor its definition id unless a card the seat reads carries the same one; the
+//      instance id, nor a former id it had (R227's `formerId`, a transform, a fuse, read off the log's
+//      raw events), nor its definition id unless a card the seat reads carries the same one: a card
+//      the state holds outside the hidden set, or one the raw events name that is readable where it
+//      is now, and the seat's own library only as `knownAs` records it (R311, R312). Never through the
+//      view being checked, which could pair a hidden definition with any id it likes; the
 //      seat's own prompt may offer its options (§10.8), and `legalActions` may name a face-down trap
 //      by its bare id as a target (R177) and a hidden card by nothing else. The first run found one
 //      leak, R752 (`trapFired` named a fired trap to its controller after it was shuffled into a
@@ -47,8 +51,11 @@
 //          ingredients and its `refs` (R279), the text of cards the seat reads;
 //        - a definition a hidden card shares with a readable one (a token, a copy, a Book, a fused
 //          card) is no secret, so a definition counts only while nothing readable carries it;
-//        - Echo's `copies` (R399) names the definition of the card it copied;
-//        - `swapsBook.from` (R671) names the Book a swap took the text from.
+//        - Echo's `copies` (R399) names the definition of the card it copied (read off the copier);
+//        - `swapsBook.from` (R671) names the Book a swap took the text from (read off the card).
+//      Judging former ids by the log found a sixth, fuzz seed 992: R419's Rollback recreated a
+//      face-down trap #83 had transformed away, and the `formerId` it carries goes with the card
+//      (R227) once that card is public, R177's mark on the old id notwithstanding.
 //      `I6_GATE_STRIDE` is how often the 1,000-seed gate runs it.
 //
 // Every message leads with its id, names the instance, its def and the turn, and cites the SPEC
@@ -57,16 +64,17 @@
 import type { ActionBody, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { PLAYER_IDS, hasKeyword, opponentOf } from "@jackioh/shared";
 import {
-  HIDDEN_ID,
   WINDFURY_ATTACKS,
   activeUnitsOf,
   announceOf,
   attackTargets,
   cardTypeOf,
+  enchantmentsOfKind,
   findInstance,
   legalActions,
   mulliganPromptFor,
   returnedAwaitingShuffle,
+  subsystems,
   unitView,
   viewFor,
   type CardInstance,
@@ -80,7 +88,8 @@ import {
  *
  * Measured on 2026-10-06 (four cores, idle). `pnpm fuzz`, seeds 1–1000, both files, before I6 and
  * with no monitor in fuzz-handicap: 342 s. With I1–I6 in both files and every state checked: 502 s
- * (×1.47, over the budget, and 0 violations). With this stride: 386 s (×1.13).
+ * (×1.47, over the budget, and 0 violations). With this stride: 386 s (×1.13). Once definitions
+ * were judged through the state and the log rather than the view: 411 s (×1.20).
  * `pnpm test --project cards fuzz`, seeds 1–100, every state: 38 s before, 55 s after (×1.45).
  */
 export const I6_GATE_STRIDE = 5;
@@ -120,14 +129,125 @@ function awaitingShuffle(state: GameState): CardInstance[] {
   });
 }
 
+/** Every card the state holds, in every pile (`findInstance`'s piles). */
+function cardsOf(state: GameState): CardInstance[] {
+  return PLAYER_IDS.flatMap((player) => {
+    const side = state.players[player];
+    const piles: readonly (CardInstance | null | undefined)[] = [
+      ...side.hand,
+      ...side.library,
+      ...side.graveyard,
+      ...side.exile,
+      ...side.units.flatMap((pile) => pile ?? []),
+      ...side.backrow,
+      ...(side.backrowPiles ?? []).flat(),
+      ...(side.carried ?? []),
+      ...side.resolving,
+    ];
+    return piles.filter((card): card is CardInstance => card !== null && card !== undefined);
+  });
+}
+
+/**
+ * What the log says of the cards it names, for one viewer: the state keeps no zone for a card that
+ * took a new id or ceased to exist, so the log's raw (unredacted) events are the only witness of it.
+ */
+type Lineage = {
+  /**
+   * Each vanished id's successor: R227's `formerId` (a card set face-down took a fresh id), §6.3's
+   * `transformed`, R77's `fused`, and R316's `copyOf` (a copy refused before it existed is that card's).
+   */
+  next: Map<string, string>;
+  /** R177: an id that ceased to exist where this viewer could not read it (`transformed.hiddenFrom`). */
+  unread: Set<string>;
+  /** Each id, and the definitions the engine's own events pair with it. */
+  ties: Map<string, Set<string>>;
+};
+
+function lineageOf(state: GameState, viewer: PlayerId): Lineage {
+  const next = new Map<string, string>();
+  const unread = new Set<string>();
+  const ties = new Map<string, Set<string>>();
+  const tie = (id: unknown, ...values: unknown[]): void => {
+    if (typeof id !== "string") return;
+    const tied = ties.get(id) ?? new Set<string>();
+    for (const def of stringsOf(...values)) tied.add(def);
+    ties.set(id, tied);
+  };
+  for (const event of state.applied.flatMap((entry) => entry.events)) {
+    walk(
+      event,
+      "event",
+      () => undefined,
+      (object) => {
+        const id = object["instanceId"];
+        const hiddenTo = object["hiddenFrom"];
+        const unreadHere = Array.isArray(hiddenTo) && hiddenTo.includes(viewer);
+        // A card transformed where the viewer could not read it was never this viewer's to read (R177).
+        tie(id, object["defId"], unreadHere ? undefined : object["fromDefId"]);
+        tie(object["newInstanceId"], object["toDefId"]);
+        tie(object["resultInstanceId"], object["defId"]);
+        if (typeof id !== "string") return;
+        const former = object["formerId"];
+        // R419: Classic+ #35 Rollback recreates a card transformed away under a fresh id whose
+        // `formerId` is the old one, so the card exists again and R177's mark is spent: its old id
+        // goes with it, a trap's that fired into exile included (fuzz seed 992).
+        if (typeof former === "string") {
+          next.set(former, id);
+          unread.delete(former);
+        }
+        const copyOf = object["copyOf"];
+        if (typeof copyOf === "string") next.set(id, copyOf);
+        const fresh = object["newInstanceId"];
+        if (object["type"] === "transformed" && typeof fresh === "string" && fresh !== id) {
+          next.set(id, fresh);
+          if (unreadHere) unread.add(id);
+        }
+      },
+    );
+    if (event.type === "fused") {
+      for (const id of event.instanceIds) if (id !== event.resultInstanceId) next.set(id, event.resultInstanceId);
+    }
+  }
+  return { next, unread, ties };
+}
+
+/**
+ * Whether this viewer reads the card an id names, judged by where the card is now: a card the state
+ * holds reads unless the hidden set has it, and a vanished one by its successor. A card that ceased
+ * to exist with none left the field or a public reveal (R11, R86: a token leaving the field, a card
+ * burned or discarded), so it reads. An id neither the state nor the log knows vouches for nothing.
+ */
+function standingOf(
+  state: GameState,
+  viewer: PlayerId,
+  ids: ReadonlyMap<string, string>,
+  lineage: Lineage,
+  start: string,
+): { reads: boolean; where: string } | null {
+  let id = start;
+  for (let hops = 0; hops <= lineage.next.size; hops += 1) {
+    const where = ids.get(id);
+    if (where !== undefined) return { reads: false, where };
+    if (findInstance(state, id) !== undefined) return { reads: true, where: "a pile it reads" };
+    if (lineage.unread.has(id)) return { reads: false, where: `a pile ${viewer} could not read when it was transformed` };
+    const successor = lineage.next.get(id);
+    if (successor === undefined) return lineage.ties.has(id) ? { reads: true, where: "no pile (it ceased to exist)" } : null;
+    id = successor;
+  }
+  return null;
+}
+
 /**
  * The hidden set, worked out from the state's zones on their own terms and never from `viewFor`'s
  * rules (the oracle must not be the fix restated): the other seat's hand while the game is live
- * (R434), both libraries (§9.1; the viewer's own definitions travel in `ownLibrary`, R310), the other
- * seat's face-down traps (dormant ones under a backrow top included, B5 E21), a card the other seat is setting face-down (R448) and mulligan returns
- * waiting for their shuffle (R224). Then it takes out every definition the viewer reads elsewhere
- * (its own cards, every public pile, the top of every unit pile) and the options of its own prompt
- * (§10.8, R177).
+ * (R434), both libraries (§9.1), the other seat's face-down traps (dormant ones under a backrow top
+ * included, B5 E21), a card the other seat is setting face-down (R448), mulligan returns waiting for
+ * their shuffle (R224), and every former id whose card is now one of these (R227, R177). Then it
+ * takes out every definition the viewer reads through a card: one the state holds and the viewer
+ * reads, one the log names that the viewer reads where it is now, its own library's cards as it was
+ * shown them going in (R311, R312), and the options of its own prompt (§10.8, R177). Never through
+ * the view being checked: a view may name a definition beside any id it likes.
  */
 function hiddenFrom(state: GameState, viewer: PlayerId): HiddenSet {
   const ids = new Map<string, string>();
@@ -143,7 +263,8 @@ function hiddenFrom(state: GameState, viewer: PlayerId): HiddenSet {
   }
   for (const player of PLAYER_IDS) {
     const side = state.players[player];
-    for (const card of side.library) hide(card, `${player}'s library`, player !== viewer);
+    // R312: the owner reads a library card's definition only as `knownAs` records it, below.
+    for (const card of side.library) hide(card, `${player}'s library`, true);
     for (const card of side.backrow) {
       if (card === null || !faceDownTo(state, card, viewer)) continue;
       hide(card, `${player}'s face-down trap`, true);
@@ -158,23 +279,8 @@ function hiddenFrom(state: GameState, viewer: PlayerId): HiddenSet {
       if (setFaceDownBy(state, card, viewer)) hide(card, `${player}'s card being set face-down`, true);
     }
   }
+  // The viewer's own mulligan returns are its opening hand, which it read (R224).
   for (const card of awaitingShuffle(state)) hide(card, "a mulligan return awaiting its shuffle", card.owner !== viewer);
-
-  // What the viewer may read: a definition one of these carries is no secret, whatever else carries it.
-  const readable = (cards: readonly (CardInstance | null | undefined)[]): void => {
-    for (const card of cards) if (card !== null && card !== undefined) defs.delete(card.defId);
-  };
-  readable([...state.players[viewer].hand, ...state.players[viewer].library]);
-  if (state.result !== null) readable(state.players[rival].hand);
-  for (const player of PLAYER_IDS) {
-    const side = state.players[player];
-    readable(side.graveyard);
-    readable(side.exile);
-    readable(side.units.map((pile) => pile?.[0]));
-    readable(side.carried ?? []);
-    readable(side.backrow.filter((card) => card !== null && !faceDownTo(state, card, viewer)));
-    readable(side.resolving.filter((card) => !setFaceDownBy(state, card, viewer)));
-  }
 
   // §10.8: the viewer's own prompt offers what it may choose among, a revealed library card included.
   const offeredBare = new Set<string>();
@@ -192,6 +298,30 @@ function hiddenFrom(state: GameState, viewer: PlayerId): HiddenSet {
     ids.delete(selection.instanceId);
     const card = findInstance(state, selection.instanceId);
     if (card !== undefined) defs.delete(card.defId);
+  }
+
+  // R227, R177: an id a card had before is that card, so it is hidden wherever the card is.
+  const lineage = lineageOf(state, viewer);
+  for (const id of [...lineage.next.keys(), ...lineage.unread]) {
+    const standing = ids.has(id) ? null : standingOf(state, viewer, ids, lineage, id);
+    if (standing !== null && !standing.reads) ids.set(id, `${standing.where} (a former id)`);
+  }
+
+  // A definition a card the viewer reads carries is no secret, whatever else carries it (a token, a
+  // copy, a Book, a fused card): every card the state holds outside the hidden set, with the Spell
+  // an Echo copies (R399) and the Book a swap took its text from (R671).
+  for (const card of cardsOf(state)) {
+    if (ids.has(card.id)) continue;
+    defs.delete(card.defId);
+    const copy = subsystems.copiedTextOf(state, card);
+    if (copy !== null) defs.delete(copy.defId);
+    for (const swap of enchantmentsOfKind(card, "swapsBook")) defs.delete(swap.from);
+  }
+  // R311, R312: the viewer's own library reads as it was shown going in, and a card never shown not at all.
+  for (const card of state.players[viewer].library) if (card.knownAs !== undefined) defs.delete(card.knownAs.defId);
+  // Every card the log names that the viewer reads where it is now, as the engine's events named it.
+  for (const [id, tied] of lineage.ties) {
+    if (standingOf(state, viewer, ids, lineage, id)?.reads === true) for (const def of tied) defs.delete(def);
   }
   return { ids, defs, bare, offeredBare };
 }
@@ -251,8 +381,6 @@ export function hiddenInformationViolations(
   const { defs: _definitions, ...rest } = view;
   const scanned = { ...rest, events };
 
-  // A definition a readable card carries is no secret: a token, a copy, a Book, a fused card.
-  const readableId = (value: unknown): boolean => typeof value === "string" && value !== HIDDEN_ID && !ids.has(value);
   const named = new Map<string, string>();
   walk(
     scanned,
@@ -262,26 +390,7 @@ export function hiddenInformationViolations(
       if (offeredBare.has(text) && /^view\.pending\.options\[\d+\]\.instanceId$/.test(at)) return;
       if (!named.has(text)) named.set(text, at);
     },
-    (object) => {
-      if (readableId(object["instanceId"])) {
-        const copies = object["copies"];
-        const enchantments = object["enchantments"];
-        const swapped = Array.isArray(enchantments)
-          ? enchantments.map((enchantment: unknown) => (enchantment as { from?: unknown } | null)?.from)
-          : [];
-        // R399: Echo's `copies`; R671: a swapped Book's `from`.
-        for (const def of stringsOf(
-          object["defId"],
-          object["fromDefId"],
-          (copies as { defId?: unknown } | null | undefined)?.defId,
-          ...swapped,
-        )) {
-          defs.delete(def);
-        }
-      }
-      if (readableId(object["newInstanceId"])) for (const def of stringsOf(object["toDefId"])) defs.delete(def);
-      if (readableId(object["resultInstanceId"])) for (const def of stringsOf(object["defId"])) defs.delete(def);
-    },
+    () => undefined,
   );
   const offered = new Map<string, string>();
   walk(
