@@ -747,7 +747,7 @@ def parser() -> argparse.ArgumentParser:
     dashboard.add_argument("--sweep", action="store_true",
                            help="sweep before each rewrite, as the ten-minute sweep does")
     dashboard.add_argument("--stats", action="store_true",
-                           help="also rewrite the pinned statistics issue, every hour")
+                           help="also rewrite the pinned statistics issue, every 30 minutes")
     dashboard.add_argument("--companions", action="store_true",
                            help="also sweep and draw each other bot (Squishy) in a process of "
                            "its own, and put its section in the issue")
