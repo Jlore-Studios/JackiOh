@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from "vitest";
 import { scenario } from "./_harness";
-import { LIBRARY_CAP, subsystems, type CardInstance } from "@jackioh/engine";
+import { LIBRARY_CAP, type CardInstance } from "@jackioh/engine";
 
 /** The copies of one def sitting in a library. */
 function copiesIn(cards: CardInstance[], defId: string): CardInstance[] {
@@ -269,29 +269,25 @@ describe("R316: what a full library turns away", () => {
 });
 
 describe("R119: a permanent does not answer the play that put it onto the field", () => {
-  it("R119 a Clone Machine a played Heroic Power's Recruit put on the field does not answer that play", () => {
+  it("R119 a Clone Machine a played card's Recruit put on the field does not answer that play", () => {
+    // Classic #60 Pile On's Radiant face: "Recruit every permanent in your deck", as it resolves.
     const s = scenario({
       seed: "edge-r8-hp-clone",
-      p1: { hand: ["core-098", "core-008"], library: ["core-033", "core-008", "core-008", "core-008"], mana: 8 },
+      p1: { hand: [{ def: "classic-060", radiant: true }, "core-008"], library: ["core-033", "core-005", "core-005"], mana: 8 },
       p2: { hand: ["core-008"], library: ["core-008", "core-008", "core-008", "core-008", "core-008", "core-008"] },
     });
-    // R43: the power lives on the instance; "(3) Recruit a permanent".
-    const hp = s.hand("p1")[0];
-    if (hp === undefined) throw new Error("expected the Heroic Power in hand");
-    hp.memory[subsystems.POWER_KEY] = "recruit";
 
-    s.play(hp);
+    s.play("classic-060");
 
-    // Playing it activated the power once (R43): the Recruit put the Clone Machine on p1's backrow
-    // while the Heroic Power's play was resolving.
+    // The Recruit put the Clone Machine on p1's backrow while Pile On's play was resolving.
     const backrow = [1, 2, 3, 4, 5].flatMap((lane) => {
       const card = s.backrow("p1", lane);
       return card === null ? [] : [card.defId];
     });
     expect(backrow).toContain("core-033");
     // R119: "does not fire on the play that put it onto the field: it starts counting from the next
-    // play". No copies of the Heroic Power are shuffled in.
-    expect(copiesIn(s.pile("p1", "library"), "core-098")).toHaveLength(0);
+    // play". No copies of Pile On are shuffled in.
+    expect(copiesIn(s.pile("p1", "library"), "classic-060")).toHaveLength(0);
   });
 });
 

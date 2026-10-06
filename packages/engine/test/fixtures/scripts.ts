@@ -6,6 +6,7 @@ import type { CardScripts } from "../../src/script";
 import type { Effect } from "../../src/script";
 import { dealDamage } from "../../src/damage";
 import { activeUnitsOf } from "../../src/zones";
+import { HERO_POWER_NAMES, POWER_RESUME, STEADY_SHOT_PARAM, heroPower, powerAbilities } from "../../src/subsystems/heroPower";
 import { opponentOf } from "@jackioh/shared";
 import {
   addRandomFromGraveyard,
@@ -147,24 +148,33 @@ const goingLongScripts: CardScripts = {
   radiant: { staticFlags: { quickdraw: true } },
 };
 
-/** #98 Heroic Power: rolls one of eight powers at start of game, and its cost is that power's X. */
-export const HERO_POWERS = ["recruit", "drain", "ping", "bolt", "rush-token", "felinor-token", "discover", "stitching"] as const;
+/**
+ * #98 Heroic Power (R752): costs (0), rolls one of the thirteen powers at start of game, and each power
+ * is one of its Activate abilities. The roll is the generic `rememberRandom` over the stored names
+ * (R103), which is all setup's tests need; the abilities are the subsystem's own.
+ */
+export const HERO_POWERS = HERO_POWER_NAMES;
 export const heroicPower = def({
   id: "fx-heroic-power",
   index: "98",
   name: "Heroic Power (fixture)",
   type: "Field Spell",
   tags: ["Quickdraw"],
-  cost: "X",
+  cost: 0,
+  params: [{ key: STEADY_SHOT_PARAM, base: 2, radiant: 4, better: "up", step: 2, min: 1 }],
 });
 const heroicPowerScripts: CardScripts = {
   base: {
     staticFlags: { quickdraw: true },
     startOfGame: () => [rememberRandom({ key: "power", options: HERO_POWERS })],
+    activations: powerAbilities(false),
+    resume: { [POWER_RESUME]: heroPower },
   },
   radiant: {
     staticFlags: { quickdraw: true },
     startOfGame: () => [rememberRandom({ key: "power", options: HERO_POWERS })],
+    activations: powerAbilities(true),
+    resume: { [POWER_RESUME]: heroPower },
   },
 };
 

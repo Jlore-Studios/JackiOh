@@ -3373,10 +3373,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-used="false"
         data-x="2"
         disabled=""
-        title="Heroic Power (X 2)"
+        title="Ranching: Activate, spend (2)"
         type="button"
       >
-        Heroic Power
+        Ranching
         <span
           class="power-x"
         >

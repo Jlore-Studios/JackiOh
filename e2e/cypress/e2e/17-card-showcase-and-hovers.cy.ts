@@ -18,7 +18,8 @@
 //     second and the AI takes no step while it is up (routes/practice.tsx holds it on
 //     `data-showcase`, as it does on `data-speaking`);
 //   * cards in play show what they are now (SPEC §10.10): a #98 Heroic Power in hand prints only the
-//     power it rolled, its X on the gem, with the printed list of eight beside its hover preview; a
+//     power it rolled, with its X, (0) on the gem, and the printed list of thirteen beside its hover
+//     preview (R752); a
 //     #95 Call to Chaos reads ???; and #82 KY's Trial's Discover offers three numbers on card backs,
 //     no faces, the pick arriving as the Radiant card with that index (R247).
 //
@@ -603,20 +604,17 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
       if (handle.seat !== "p1") cy.handOver();
     });
 
-    // #98: one power, the one it rolled, with its X on the gem and in the text; not the eight.
-    cy.get(`${inHand("core-098")} .cost-gem`)
-      .invoke("text")
-      .then((gem) => {
-        expect(gem, "the gem shows the rolled power's X, not X").to.match(/^\d+$/);
-        cy.get(`${inHand("core-098")} .card-text`)
-          .should("contain.text", `Once per turn, spend ${gem}:`)
-          .and("not.contain.text", "8 random powers");
-      });
+    // #98 (R752): the card costs (0), and its text is one power, the one it rolled, with its X; not
+    // the thirteen.
+    cy.get(`${inHand("core-098")} .cost-gem`).should("have.text", "0");
+    cy.get(`${inHand("core-098")} .card-text`)
+      .should("contain.text", "Activate: Spend (")
+      .and("not.contain.text", "13 random powers");
     // Its hover preview holds the printed card beside it, in a real layout: visible, on screen.
     cy.get(inHand("core-098")).trigger("pointerover", { pointerType: "mouse" });
     cy.get(`${ts(INSPECT_HOVER)} ${ts(INSPECT_PRINTED)}`, { timeout: timeouts.view })
       .should("be.visible")
-      .and("contain.text", "Gain one of 8 random powers");
+      .and("contain.text", "Gain one of 13 random powers");
     cy.get(inHand("core-098")).trigger("pointerout", { pointerType: "mouse" });
     cy.get(ts(INSPECT_HOVER)).should("not.exist");
 
