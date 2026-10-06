@@ -2874,7 +2874,10 @@
     },
     "37": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6016693342",
+        "c:6016717540"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -2888,10 +2891,7 @@
       "run_id": "37467281808",
       "started_at": "2026-10-06T12:59:44Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6016693342",
-        "c:6016717540"
-      ]
+      "taken_asks": []
     },
     "370": {
       "cleared": {
