@@ -3017,7 +3017,15 @@
       "feedback_since": "2026-10-06T13:30:41Z",
       "issue": 375,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "cognition",
+        "rejections": [],
+        "reviews": [],
+        "sha": "c5e0f8d1ffc162fa1de84810a0669d2deb9c706b",
+        "tiers": {}
+      }
     },
     "39": {
       "died": 0,
