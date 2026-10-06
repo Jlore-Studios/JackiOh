@@ -489,6 +489,31 @@ export function completeDraw(
 }
 
 /**
+ * R744: a cast-on-draw card setup dealt to a hand uncast, cast at the start of the game as its draw
+ * would have cast it: out of the hand into the resolving zone and through the cast, held as a draw
+ * until the cast resolves, so the card knows it is cast on draw (R58, `castOnDrawNow`). Its draw was
+ * made in setup, so nothing repeats and no chain begins (R58, R217). A card that no longer casts on
+ * draw, or a Unit with no open unit zone (R459), stays in the hand, and this returns false. The state
+ * check follows the cast (R59), unless the cast asked, when the answer's drain owes it.
+ */
+export function castDealtCard(sink: EngineSink, card: CardInstance): boolean {
+  const state = sink.state;
+  if (card.zone.z !== "hand") return false;
+  const player = card.zone.player;
+  if (!castsOnDraw(state, card) || !roomToCast(state, player, card)) return false;
+  const hand = state.players[player].hand;
+  const at = hand.findIndex((c) => c.id === card.id);
+  if (at < 0) return false;
+  hand.splice(at, 1);
+  card.zone = { z: "resolving", player };
+  holdDraw(state, card.id);
+  const before = state.pending;
+  castCard(sink, card, { data: { [CAST_ON_DRAW_KEY]: card.id } });
+  if (!stopped(sink, before)) stateCheck(sink);
+  return true;
+}
+
+/**
  * §2.4's repeat, after a cast-on-draw cast has resolved whole — its Echo repeats and its landing
  * included, since a cast is §10.5's pipeline (R70). §4.5 and R59 run the state check "after one
  * cast-on-draw cast", so a hero the cast brought to 0 ends the game here and the draw does not
