@@ -32,6 +32,8 @@ import {
   MAX_PROMPT_ANSWERS,
   PROMPT_KINDS,
   answerPrompt,
+  cellOptionLabel,
+  heroOptionLabel,
   openPrompt,
   promptAnswers,
   runHookResumable,
@@ -321,6 +323,36 @@ function deepValues(value: unknown, out: unknown[] = []): unknown[] {
 // ---------------------------------------------------------------------------
 
 describe("prompts (§10.6, M3-T3)", () => {
+  it("§10.6 a hero or a cell is named to the player the prompt is for, Your or Enemy, never by seat", () => {
+    expect(heroOptionLabel("p1", "p1")).toBe("Your hero");
+    expect(heroOptionLabel("p2", "p1")).toBe("Enemy hero");
+    expect(heroOptionLabel("p1", "p2")).toBe("Enemy hero");
+    expect(cellOptionLabel("p1", "units", 3, "p1")).toBe("Your Unit lane 3");
+    expect(cellOptionLabel("p2", "backrow", 2, "p1")).toBe("Enemy Backrow lane 2");
+
+    // A refusal names the pick the same way, to the player who made it.
+    const pending: PendingChoice = {
+      id: "q1",
+      playerId: "p2",
+      kind: "target",
+      prompt: "Choose a target",
+      options: [{ key: "hero:p1", label: heroOptionLabel("p1", "p2"), selection: { pick: "hero", player: "p1" } }],
+      min: 1,
+      max: 1,
+      resume: inertResume,
+    };
+    expect(
+      whyAnswerRefused(pending, { playerId: "p2", choiceId: "q1", selection: [{ pick: "hero", player: "p2" }] }),
+    ).toBe("Your hero is not one of the options offered");
+    expect(
+      whyAnswerRefused(pending, {
+        playerId: "p2",
+        choiceId: "q1",
+        selection: [{ pick: "zone", player: "p1", row: "units", lane: 4 }],
+      }),
+    ).toBe("Enemy Unit lane 4 is not one of the options offered");
+  });
+
   it("§10.6 a state with an open prompt survives a JSON round-trip and still answers", () => {
     const state = board("round-trip");
     const sink = sinkFor(state);
