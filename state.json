@@ -2248,7 +2248,9 @@
     },
     "334": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:6005748937"
+      ],
       "cleared": {
         "at": "2026-10-05T23:34:02Z",
         "by": "`claude` (strong)",
@@ -2282,9 +2284,7 @@
       "source": "request",
       "started_at": "2026-10-05T23:55:03Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6005748937"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "claude"
