@@ -68,7 +68,8 @@ LABELS: dict[str, tuple[str, str]] = {
     "bot:revise": ("5319e7", "Queued for the night bot to revise this PR"),
     "bot:blocked": ("b60205", "The night bot needs a person before it can go on"),
     "bot:pr": ("c5def5", "A pull request the night bot opened"),
-    "bot:suggestion": ("d4c5f9", "An improvement the night bot suggests; add bot:build to build it"),
+    "bot:suggestion": ("d4c5f9", "An improvement the night bot suggests; add bot:approved to have it built"),
+    "bot:approved": ("0e8a16", "A person approved this suggestion: after two minutes, triage treats it as method:use-bot"),
     "bot:needs-review": ("e99695", "A bot pull request that a person must merge: it touches review-only paths"),
     "ready for merge": ("0e8a16", "The night bot's reviews approved it, but auto-merge could not turn on: a person merges it"),
     "bot:cross-review": ("0052cc", "A night bot pull request waiting for its review: one strong model, or a second medium one"),
@@ -94,6 +95,9 @@ LABEL_REVISE = "bot:revise"
 LABEL_BLOCKED = "bot:blocked"
 LABEL_PR = "bot:pr"
 LABEL_SUGGESTION = "bot:suggestion"
+#: A person's yes to a suggestion: triage answers it as `method:use-bot` (labels, title,
+#: priority, the bot assigned, `bot:build`), and the queue builds no suggestion without it.
+LABEL_APPROVED = "bot:approved"
 LABEL_NEEDS_REVIEW = "bot:needs-review"
 #: A bot pull request whose head the review rule approved but which auto-merge could not take
 #: (a review-only path, `main`'s protection, GitHub refusing it, or `auto_merge` off), so it

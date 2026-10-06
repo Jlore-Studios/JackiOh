@@ -1,5 +1,6 @@
 # Triage (bot/harness/triage.py): an issue someone trusted labels `method:manual` or
-# `method:use-bot` (#307), two minutes after the label goes on, and each pull request someone
+# `method:use-bot` (#307), or a bot suggestion a person labels `bot:approved` (which counts as
+# `method:use-bot`), two minutes after the label goes on, and each pull request someone
 # trusted opens, gets its labels, its assignees, a title that follows docs/issues-and-patches.md
 # and, for an issue, its dependencies (blocked by, blocks, its patch's tracker as parent), from a
 # Muse call. `method:manual` makes an issue `human` and assigns both people; `method:use-bot`
@@ -30,11 +31,12 @@ on:
 
 permissions: {}
 
-# A run for any label but a method label gets a group of its own and is skipped at once, so a
-# `difficulty:*` or `priority:*` label a person adds during the two-minute wait never cancels the
-# method run. A newer method label cancels an older method run, and the wait starts again.
+# A run for any label but a method label (or bot:approved) gets a group of its own and is skipped
+# at once, so a `difficulty:*` or `priority:*` label a person adds during the two-minute wait never
+# cancels the method run. A newer method label cancels an older method run, and the wait starts
+# again.
 concurrency:
-  group: triage-${{ github.event.issue.number || github.event.pull_request.number || inputs.number }}${{ github.event_name == 'issues' && !startsWith(github.event.label.name, 'method:') && format('-{0}', github.run_id) || '' }}
+  group: triage-${{ github.event.issue.number || github.event.pull_request.number || inputs.number }}${{ github.event_name == 'issues' && !startsWith(github.event.label.name, 'method:') && github.event.label.name != 'bot:approved' && format('-{0}', github.run_id) || '' }}
   cancel-in-progress: ${{ github.event_name == 'issues' }}
 
 env:
@@ -44,7 +46,7 @@ env:
 jobs:
   gate:
     name: gate
-    if: github.event_name != 'issues' || startsWith(github.event.label.name, 'method:')
+    if: github.event_name != 'issues' || startsWith(github.event.label.name, 'method:') || github.event.label.name == 'bot:approved'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -65,9 +67,10 @@ jobs:
         with:
           python-version: "3.13"
 
-      # Trusted author (owner, member, collaborator or .harness/trust.txt), not the bot itself,
-      # an issue with exactly one method label (never `human` with method:use-bot), and Muse
-      # switched on (providers.json). A method label waits two minutes and reads the issue again;
+      # Trusted author (owner, member, collaborator or .harness/trust.txt), not the bot itself
+      # unless it is the bot's suggestion a person approved, an issue with exactly one method
+      # label (bot:approved counts as method:use-bot; never `human` with it), and Muse switched
+      # on (providers.json). A method label waits two minutes and reads the issue again;
       # a dispatch names the thread, which the gate reads read-only.
       - name: Should this be triaged?
         id: gate

@@ -51,7 +51,7 @@ flowchart TD
     R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on one strong approval,<br/>two medium ones, or (easy) a weak and a medium one"]
     D -- "not enough approvals yet" --> X["review run (bot:cross-review)<br/>a strong model, else a medium one,<br/>else (easy) a weak one"]
     X -- "approved" --> CI
-    PL -- "nothing queued" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues"]
+    PL -- "nothing queued" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues;<br/>a person's bot:approved goes to triage"]
   end
   D --> CI["CI on the PR: lint, typecheck, unit, fuzz,<br/>coverage, AI gates, Postgres, e2e, bot selftest"]
   CI -- "green" --> M["squash-merged into main;<br/>the issue closes"]
@@ -64,7 +64,10 @@ Any of these queues an issue for the next run a free subscription can take (the 
 when that is):
 
 - add the **`method:use-bot`** label: two minutes later triage queues it, assigns the bot and gives
-  it a priority ([Triage](#triage)); **`method:manual`** hands it to people instead;
+  it a priority ([Triage](#triage)); **`method:manual`** hands it to people instead. On one of the
+  bot's suggestions (`bot:suggestion`) add **`bot:approved`**, which triage takes as
+  `method:use-bot`: a suggestion is built only once a person approves it, so `bot:build`, an
+  assignment or `/harness build` on one gets a reply asking for `bot:approved` instead;
 - add the **`bot:build`** label;
 - **assign** `@jgoetzmann-bot`;
 - comment **`/harness build`**, or **`@jgoetzmann-bot <what you want>`**. Your words become part
@@ -259,13 +262,14 @@ needs level 3.
 | `bot:stuck` | beside `bot:blocked`: a build or revision used every review round (`max_review_cycles`, 10) without an approval. Its comment says why, round by round (`harness/failures.py`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
 | `bot:pr-open` | the issue has an open bot pull request |
 | `bot:pr` | a pull request the bot opened |
-| `bot:suggestion` | an improvement the bot proposes; add `bot:build` to have it built, close it to say no |
+| `bot:suggestion` | an improvement the bot proposes; add `bot:approved` to have it built, close it to say no. The queue never builds one without that approval |
+| `bot:approved` | a person's yes to a suggestion: two minutes later triage treats it as `method:use-bot`, so it gets its type labels (`patch`), a conventional title, a priority, `bot:build` and the bot, and the planner rates its difficulty ([Triage](#triage)) |
 | `bot:needs-review` | a bot pull request that touches a review-only path; a person merges it |
 | `ready for merge` | the reviews approved the pull request's head, but auto-merge could not turn on (a review-only path, `main`'s protection, GitHub refusing it, or `auto_merge` off), so the bot @-mentions the operator to merge it. It comes off when the pull request goes back into the queue (a revision, a review run, a run that holds it, `bot:blocked`); triage never adds it |
 | `difficulty:easy`, `difficulty:medium`, `difficulty:hard` | the weakest tier that may build it: weak, medium, strong. A person may set one; otherwise the planner rates the item, under [the easy rule](#the-easy-rule), and the bot labels it; three failures of its own raise it a step ([below](#rating-strikes-and-the-step-up)). With none it counts as medium, and with several the hardest counts |
 | `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
 | `human` | people do it; the bot never queues, plans, builds or labels it |
-| `method:manual`, `method:use-bot` | a person's choice of who does an issue: two minutes after one goes on, triage makes the issue `human` and assigns both people (`method:manual`), or queues it and assigns the bot (`method:use-bot`). Triage takes no issue without one ([Triage](#triage)) |
+| `method:manual`, `method:use-bot` | a person's choice of who does an issue: two minutes after one goes on, triage makes the issue `human` and assigns both people (`method:manual`), or queues it and assigns the bot (`method:use-bot`; `bot:approved` counts as it). Triage takes no issue without one ([Triage](#triage)) |
 | `Info` | for the record, nothing to build: migrations, statistics, the night bot's status |
 
 ## Triage
@@ -277,9 +281,11 @@ the triage workflow's Actions page); an issue still needs a method label.
 
 - **Who:** the author must be an owner, member or collaborator, or on `.harness/trust.txt`, and not
   the bot. Anyone else's issue or pull request is left alone, so a stranger's text never reaches
-  the machine.
+  the machine. The one issue of the bot's that goes is its own suggestion (`bot:suggestion`) once a
+  person approves it: its text is the bot's, and only someone with triage access can label it.
 - **When:** an issue is triaged only once it carries exactly one of `method:manual` and
-  `method:use-bot`, two minutes after the label goes on (`triage.METHOD_WAIT`): the issue is read
+  `method:use-bot` (`bot:approved`, a person's yes to a suggestion, counts as `method:use-bot`),
+  two minutes after the label goes on (`triage.METHOD_WAIT`): the issue is read
   again then, so a difficulty or a priority a person set in the meantime counts. Any other label
   starts a run of its own that ends at once, so it never cancels the method run; a newer method
   label cancels an older run and the wait starts again. An issue labelled `human` never goes to the
@@ -940,6 +946,7 @@ days.
 | look at the machine | `aws ssm start-session --target <instance>`; it powers off after 30 idle minutes and the starter wakes it within five minutes of a job |
 | set how hard an item is | label it `difficulty:easy`, `difficulty:medium` or `difficulty:hard` (Opus only), or leave it to the planner's rating ([the easy rule](#the-easy-rule)) |
 | hand an issue to people or to the bot | label it `method:manual` or `method:use-bot` ([Triage](#triage)) |
+| build one of the bot's suggestions | label it `bot:approved`; triage queues it as it does `method:use-bot` |
 | start a failing pull request over from `main` | `/harness rebuild` on it or its issue; three strikes do it by themselves, a step up ([below](#rating-strikes-and-the-step-up)) |
 | ask for a review only | `/harness review [strong\|medium] [notes]` on the bot's pull request |
 | keep the bot off an item altogether | label it `human` |

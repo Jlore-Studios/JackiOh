@@ -507,7 +507,8 @@ class FlowTests(unittest.TestCase):
         made = [t for t in h.gh.threads.values()
                 if LABEL_SUGGESTION in {l["name"] for l in t["labels"]} and t["user"] == BOT]
         self.assertEqual(len(made), 3)
-        self.assertIn("bot:build", made[0]["body"])
+        self.assertIn("`bot:approved`", made[0]["body"])  # a person's yes, not `bot:build`
+        self.assertNotIn("bot:build", made[0]["body"])
 
 
 def ask(h: Harness, number: int, body: str, cid: int) -> None:

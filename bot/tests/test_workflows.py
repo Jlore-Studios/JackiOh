@@ -275,11 +275,14 @@ class TriageWorkflowTests(unittest.TestCase):
         self.assertNotIn("secrets.", self.text)
 
     def test_a_label_that_is_no_method_label_never_cancels_the_method_run(self):
-        """#307: only a method label starts the gate, and a `difficulty:*` label a person adds in
-        the two-minute wait runs in a group of its own, so it cancels nothing."""
+        """#307: only a method label (or `bot:approved`, a person's yes to a suggestion) starts
+        the gate, and a `difficulty:*` label a person adds in the two-minute wait runs in a group
+        of its own, so it cancels nothing."""
         self.assertIn("if: github.event_name != 'issues' || startsWith(github.event.label.name, "
-                      "'method:')", job(self.text, "gate"))
+                      "'method:') || github.event.label.name == 'bot:approved'",
+                      job(self.text, "gate"))
         self.assertIn("!startsWith(github.event.label.name, 'method:') && "
+                      "github.event.label.name != 'bot:approved' && "
                       "format('-{0}', github.run_id)", self.text)
         self.assertIn("cancel-in-progress: ${{ github.event_name == 'issues' }}", self.text)
 
