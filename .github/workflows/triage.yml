@@ -155,9 +155,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           NUMBER: ${{ needs.gate.outputs.number }}
-          ASKED: ${{ github.event_name == 'workflow_dispatch' }}
+          FROM_DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          asked=""
-          if [ "${ASKED}" = "true" ]; then asked="--asked"; fi
+          flag=""
+          if [ "${FROM_DISPATCH}" = "true" ]; then flag="--asked"; fi
           python3 -m harness triage apply --number "${NUMBER}" \
-            --verdict "$RUNNER_TEMP/triage/verdict.json" ${asked}
+            --verdict "$RUNNER_TEMP/triage/verdict.json" ${flag}
