@@ -1,12 +1,11 @@
 // C #63 Crop Dusting (SPEC §8.6 row 63). (2) Trap, Common.
-//   Base:    "Activates at the start of your turn: Place {tokens|Plague Token|Plague Tokens} on each
-//            permanent. Draw {draw}." — 1 token, draw 1
-//   Radiant: the same text — 2 tokens, draw 2 (the adopted Radiant face, R275, R276)
+//   Base:    "Start of turn: Reveal. Place {tokens|Plague Counter|Plague Counters} on each
+//            permanent. Draw {draw}." — 1 counter, draw 1
+//   Radiant: the same text — 3 counters, draw 3 (the designer's Radiant face, issue #44)
 //   Engine:  "A Trap whose condition is its controller's start of turn, fired with the start-of-turn
 //            triggers (§2.2, R62); it fires once and goes to the graveyard. Each permanent on the field,
-//            both sides, face-down ones included, gets one placement (Plague Tokens, §6.3) of 1
-//            (Radiant 2). The designer wrote no Radiant face; this one doubles both numbers (R275,
-//            R276). Tunes: tokens 1 ↑; draw 1 ↑."
+//            both sides, face-down ones included, gets one placement (Plague Counters, §6.3) of 1
+//            (Radiant 3). Tunes: tokens 1 ↑; draw 1 ↑."
 //
 // A Trap is set face-down (R33) and fires by answering an event (§5.1, R99): this one answers its own
 // controller's `turnStarted`, so it stays set through the opponent's turn and fires at the start of its
@@ -17,7 +16,7 @@
 // "Each permanent" is one placement of {tokens} on every permanent on the field (`placePlagueEach`):
 // the top of each unit pile and every backrow card, both sides, face-down ones included, in R68's
 // order — each multiplied by the card that receives it (C #27) and each its own placement for "whenever
-// Plague Tokens are placed on this" (C #53). The firing trap is one of them too (R550); it is spent to
+// Plague Counters are placed on this" (C #53). The firing trap is one of them too (R550); it is spent to
 // the graveyard as its firing ends, and its tokens go with it (R78). A placement on a card a player may not
 // read never names it to them (R97). Then the draw.
 //
@@ -47,6 +46,6 @@ const dusting: TrapTrigger = {
 
 export const base: Script = { triggers: [dusting] };
 
-// The same script: the Radiant face's 2 tokens and draw 2 are its declared numbers, which `param` reads
+// The same script: the Radiant face's 3 counters and draw 3 are its declared numbers, which `param` reads
 // off the running face.
 export const radiant: Script = base;

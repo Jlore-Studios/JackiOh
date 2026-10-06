@@ -20,7 +20,7 @@
 // are the other spellings cards use. Patch v0.2.1 (issue #45) retired spelled variants ("Start of
 // your turn", "End of your turn", "Start of Game", "Once per Turn", "Cannot be in Defense Position",
 // "Trigger the Cry", "Set a hero's health", "End your turn"), keeping only grammatical plurals
-// ("Plague Tokens") and specific prompts ("Look at your opponent's hand").
+// ("Plague Counters") and specific prompts ("Look at your opponent's hand").
 //
 // Patch v0.2.0 adds the §6 rows its card texts print (R512):
 // - §6.1's statuses that are not keyword kinds (StatusTermId): "Can't be in Defense Position" (the
@@ -30,7 +30,7 @@
 //   R446), and matching stays case-sensitive, as "may tribute enemy units" stays plain words.
 // - §6.2's Activate, one row for "Activate", "Activate X" and "Activate ♾️" (the tokenizer takes
 //   the count or the ♾️ with the label, as it takes "Armor 2").
-// - §6.3's Counter, Steal, Unlock, Flicker, Plague Token (and "Plague Tokens"), Redirect, Set health,
+// - §6.3's Counter, Steal, Unlock, Flicker, Plague Counter (and "Plague Counters"), Redirect, Set health,
 //   End the turn, Trigger a Cry and Look at a hand ("Look at your opponent's hand"): each label is
 //   SPEC's row name and each alias the words cards print. Only capitalised spellings match, so "steal
 //   it" mid-sentence stays plain.
@@ -79,7 +79,7 @@ export type VerbTermId =
   | "Flicker"
   | "Degrade"
   | "Upgrade"
-  | "Plague Token"
+  | "Plague Counter"
   | "Set health"
   | "Redirect"
   | "End the turn"
@@ -271,7 +271,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Flicker: verb("Flicker", "The card leaves the field then re-enters the same zone at once"),
   Degrade: verb("Degrade", DEGRADE_RULE),
   Upgrade: verb("Upgrade", UPGRADE_RULE),
-  "Plague Token": verb("Plague Token", "Counter on a permanent, any number, reset on leaving the field", ["Plague Tokens"]),
+  "Plague Counter": verb("Plague Counter", "Counter on a permanent, any number, reset on leaving the field", ["Plague Counters"]),
   "Set health": verb("Set health", "A hero's health becomes N"),
   Redirect: verb("Redirect", "A hit, a chosen target or an attack moves to another"),
   "End the turn": verb("End the turn", "The turn ends from an effect"),

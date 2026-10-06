@@ -613,7 +613,7 @@ step that is not yet implemented says which BUILD task delivers it.
    `results` to column whitelists, because the hidden rating may never reach the client (R612);
    nothing else in the bring-up changes. 0023 adds `matches.mode` and `matches.stake` for
    rematches (R672): only a rematch writes them, older rows keep deriving their mode. 0025 renames
-   every row a database filed under the card patches' old names to their new ones (R739); on a new
+   every row a database filed under the card patches' old names to their new ones (R743); on a new
    project it changes nothing.
 5. **Verify the invariants before trusting anything.** `sh apps/server/test/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations

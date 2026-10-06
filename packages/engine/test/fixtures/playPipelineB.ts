@@ -65,7 +65,7 @@ function both(script: Script): CardScripts {
 
 /** Classic #28 Second Wind's shape: every card from your graveyard; Radiant, only a price of (1)+. */
 export const secondWind = def("second-wind", "Field Spell", { cost: 0 });
-/** Classic #74 Corpse Plantation's shape: Units from your graveyard, paid with its Plague Tokens. */
+/** Classic #74 Corpse Plantation's shape: Units from your graveyard, paid with its Plague Counters. */
 export const plantation = def("plantation", "Field Spell", { cost: 2 });
 /** Classic #90 In Too Deep's reward L: the same permission, while its memory says it was earned. */
 export const questCard = def("quest", "Field Spell", { cost: 1 });

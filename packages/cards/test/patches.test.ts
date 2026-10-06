@@ -316,11 +316,11 @@ describe("R388 card patch history (B4.2)", () => {
   });
 });
 
-// R739 (issue #290): the card patches are numbered in order, a normal patch taking the next number
+// R743 (issue #290): the card patches are numbered in order, a normal patch taking the next number
 // and a micro patch the next letter. #290 renamed every card patch after v0.2.0 that way, its
 // snapshot, its shipping commit and blob and its title moving with it; commit messages keep the
 // names they were written with, which the shipping commits below tie to the new ones.
-describe("R739 the card patches numbered in order (issue #290)", () => {
+describe("R743 the card patches numbered in order (issue #290)", () => {
   /** Each renamed patch: its name before #290, its shipping commit and its source. */
   const RENAMED: readonly { version: string; was: string; commit: string; source: string }[] = [
     { version: "v0.2.1", was: "v0.2.4", commit: "9dcb65e481717a49bfc750b58ea67a11a1852f39", source: "#45" },
@@ -332,18 +332,20 @@ describe("R739 the card patches numbered in order (issue #290)", () => {
     { version: "v0.2.7", was: "v0.2.14", commit: "533b4e2db58eaae47b0edd0eee6da6d7e12439f3", source: "#126" },
     { version: "v0.2.7b", was: "v0.2.14b", commit: "80e7960ccaef1a8c0bb5c463eadacd8fd402d858", source: "#260" },
     { version: "v0.2.8", was: "v0.2.16", commit: "509e9a302ab71542a4e141fe7231c9743722bdba", source: "#170" },
+    { version: "v0.2.8b", was: "v0.2.16b", commit: "16724d26939a1a03779523f11461b41c57871ccb", source: "#323" },
+    { version: "v0.2.9", was: "v0.2.17", commit: "97a00bd613bd3adfaafdc4d1580f5d895d2b5e22", source: "#44" },
   ];
 
-  it("R739 lists every card patch after v0.2.0 under the next number, or the next letter for a micro patch", () => {
+  it("R743 lists every card patch after v0.2.0 under the next number, or the next letter for a micro patch", () => {
     // The shipped prefix (R646): promotions append after it and never move it.
-    expect(VERSIONS.slice(0, 15)).toEqual([
-      "v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1",
-      "v0.2.0", "v0.2.1", "v0.2.2", "v0.2.3", "v0.2.4", "v0.2.5", "v0.2.6", "v0.2.7", "v0.2.7b", "v0.2.8",
+    expect(VERSIONS.slice(0, 17)).toEqual([
+      "v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.1", "v0.2.2", "v0.2.3",
+      "v0.2.4", "v0.2.5", "v0.2.6", "v0.2.7", "v0.2.7b", "v0.2.8", "v0.2.8b", "v0.2.9",
     ]);
-    expect(VERSIONS.slice(6, 15)).toEqual(RENAMED.map((patch) => patch.version));
+    expect(VERSIONS.slice(6, 17)).toEqual(RENAMED.map((patch) => patch.version));
   });
 
-  it("R739 keeps each renamed patch's shipping commit, source and snapshot, and no old name anywhere in the history", () => {
+  it("R743 keeps each renamed patch's shipping commit, source and snapshot, and no old name anywhere in the history", () => {
     const shipped = readShipped();
     for (const { version, was, commit, source } of RENAMED) {
       expect(shipped.find((entry) => entry.version === version)?.commit, version).toBe(commit);
@@ -355,14 +357,14 @@ describe("R739 the card patches numbered in order (issue #290)", () => {
       if (!VERSIONS.includes(was)) expect(existsSync(snapshotPath(was)), `${was}.json`).toBe(false);
     }
     // Their titles and notes name no number #290 retired (v0.2.12's title named v0.2.10).
-    const retired = /\bv0\.2\.(1[0-4]b?|16)\b/u;
+    const retired = /\bv0\.2\.(1[0-4]b?|16b?|17)\b/u;
     for (const { version } of RENAMED) {
       const patch = PATCHES.find((entry) => entry.version === version);
       expect(`${patch?.title ?? ""} ${patch?.notes ?? ""}`, version).not.toMatch(retired);
     }
   });
 
-  it("R739 titles each renamed normal patch with its new number", () => {
+  it("R743 titles each renamed normal patch with its new number", () => {
     const titleOf = (version: string): string | undefined => PATCHES.find((patch) => patch.version === version)?.title;
     expect(titleOf("v0.2.1")).toBe("Patch v0.2.1: card text pass");
     expect(titleOf("v0.2.3")).toBe("Patch v0.2.3: Animated pass on Field Spells, Ivory Tower fuses");
@@ -370,12 +372,15 @@ describe("R739 the card patches numbered in order (issue #290)", () => {
     expect(titleOf("v0.2.5")).toBe("Patch v0.2.5: undo the v0.2.3 animated additions");
     expect(titleOf("v0.2.7")).toBe("Patch v0.2.7: More card patches");
     expect(titleOf("v0.2.8")).toBe("Patch v0.2.8: Easter egg, Glitch");
-    // The two whose titles named no number keep them.
+    expect(titleOf("v0.2.9")).toBe("Patch v0.2.9: rarity pass");
+    // The two whose titles named no number keep them, and the micro patches keep their Y (R650).
     expect(titleOf("v0.2.2")).toBe("Small set of mechanics changes");
     expect(titleOf("v0.2.6")).toBe("Book of Wildfire becomes a different Book at the end of your turn");
+    expect(titleOf("v0.2.7b")).toBe("Patch v0.2.Y: the yellow condition glow for ten Core cards");
+    expect(titleOf("v0.2.8b")).toBe("Patch v0.2.Y: Buff Gary the Gambler");
   });
 
-  it("R739 has issue #170's Glitch, shipped as v0.2.16, as v0.2.8, the patch that added the token", () => {
+  it("R743 has issue #170's Glitch, shipped as v0.2.16, as v0.2.8, the patch that added the token", () => {
     expect(idsOf("v0.2.8", "added")).toEqual(["classic-t-glitch"]);
     expect(buildIndex(PATCHES)["classic-t-glitch"]).toEqual(["v0.2.8"]);
   });

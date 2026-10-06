@@ -1,6 +1,6 @@
 // C #39 Outbreak — SPEC §8.6 row 39, BUILD M9 Classic row C 39: "A declared target, any permanent
 // either side, face-down included; one placement of 1 (C #27 doubles it); then, if it is an enemy
-// permanent with at least as many Plague Tokens as its cost (R65 on the field; an X card its X, 0 with
+// permanent with at least as many Plague Counters as its cost (R65 on the field; an X card its X, 0 with
 // none chosen, R396), steal it (§6.3, R15), an entry (R171); no free zone → it stays with them and
 // nothing is drawn; otherwise draw one card per token on it (hand cap); your own permanent always
 // draws; a (0) Cost enemy permanent is always stolen; a stolen face-down trap is read by you alone
@@ -8,7 +8,7 @@
 // radiant: 2 tokens; its tuned number (tokens) reads through `param()` (R386)".
 //
 // The R396 cases read costs through the engine's `costNow`. A Plague Chalice played for X enters with
-// X Plague Tokens (SPEC §8.6 row 87), so any placement brings it to its X; the cases that need an X card
+// X Plague Counters (SPEC §8.6 row 87), so any placement brings it to its X; the cases that need an X card
 // played for 3 with fewer tokens than its X use C+ #69 Buff Billy, the other X permanent R396 names.
 
 import { stepParam } from "@jackioh/engine";
@@ -53,7 +53,7 @@ describe("C #39 Outbreak", () => {
   });
 
   describe("base", () => {
-    it("places 1 Plague Token on your own permanent, then draws one card per token on it", () => {
+    it("places 1 Plague Counter on your own permanent, then draws one card per token on it", () => {
       const s = scenario({ p1: { hand: [OUTBREAK, ANCHOR], field: [{ def: VANILLA, counters: { plague: 2 } }], library: lib(5) }, p2: { hand: [ANCHOR] } });
 
       s.play(OUTBREAK, { targets: at(s, VANILLA) });
@@ -177,7 +177,7 @@ describe("C #39 Outbreak", () => {
       expect(s.lastEvents.filter((event) => event.type === "drawn")).toHaveLength(1);
     });
 
-    it("R396 C #87 a Plague Chalice played for 3 enters with 3 Plague Tokens, so 1 more reaches its X and steals it", () => {
+    it("R396 C #87 a Plague Chalice played for 3 enters with 3 Plague Counters, so 1 more reaches its X and steals it", () => {
       const s = scenario({ active: "p2", p1: { hand: [OUTBREAK, ANCHOR], library: lib(4) }, p2: { hand: [CHALICE, ANCHOR], library: lib(2) } });
       s.play(CHALICE, { x: 3 });
       s.endTurn();

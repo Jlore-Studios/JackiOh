@@ -30,7 +30,11 @@ const CORE_SIX = ["core-052", "core-085", "core-087", "core-092", "core-093", "c
 const LEGENDARY_UNITS = catalog.pool(TRANSMOGULATE, { rarity: "Legendary", type: "Unit" }).map((def) => def.id);
 /** The Legendary Field Spells: Core #93 Combo-Index, Classic #4, #7, Classic+ #78. */
 const LEGENDARY_FIELD_SPELLS = catalog.pool(TRANSMOGULATE, { rarity: "Legendary", type: "Field Spell" }).map((def) => def.id);
-/** The only Legendary Trap of any set: #85 Unlicensed Experimentation — and "Field Trap counts as Trap". */
+/**
+ * The Legendary Trap this seed draws: #85 Unlicensed Experimentation — and "Field Trap counts as
+ * Trap". Since patch v0.2.9 (issue #44) there are two Legendary Traps of any set (#85 and Classic
+ * #9 Income Tax); the "transmogulate-1" seed draws #85 for both trap slots.
+ */
 const LEGENDARY_TRAP = "core-085";
 
 /** Board fixtures: #11 Tempo Timmy (Unit), a Radiant #19 Midrange Menace (Immutable Unit), #73
@@ -38,7 +42,9 @@ const LEGENDARY_TRAP = "core-085";
 const IMMUTABLE = "core-019";
 function board(radiantFace = false) {
   const s = scenario({
-    seed: "transmogulate",
+    // Pinned after patch v0.2.9 added Classic #9 to the Legendary Trap pool: this seed draws #85
+    // for both trap slots and no replacement casts (a Spell Tyrant draw cascades under other seeds).
+    seed: "transmogulate-1",
     p1: {
       hand: [TRANSMOGULATE, "core-056"],
       field: ["core-011", { def: IMMUTABLE, radiant: true }],

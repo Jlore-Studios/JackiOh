@@ -68,23 +68,24 @@ A pull request has no type.
 | Tooling | `CI: <…>` or `Architecture: <…>` |
 
 "What it does" is a short phrase, such as `Patch v0.2.4: aimed random casts and the Deft keyword`.
-Keep a version number as it was given; #290's renames (R739) were not carried into older titles.
+Keep a version number as it was given; #290's renames (R743) were not carried into older titles.
 `ci-duration.yml` finds its open issue by its exact title, so leave that title alone. Night bot
 suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you accept it.
 
 ## Version numbers
 
-- **Numbers run in order (R739).** A card patch takes the next number after the newest card patch on
-  `main`, shipped (`packages/cards/patches/patches.json`) or still pending (`pending/`): after v0.2.8
-  with nothing pending, a normal patch (`Patch v0.2.X: …`) is v0.2.9, and a micro patch
-  (`Patch v0.2.Y: …`) becomes v0.2.8b when it ships (below). Name the pending fragment that number
+- **Numbers run in order (R743).** A card patch takes the next number after the newest card patch on
+  `main`, shipped (`packages/cards/patches/patches.json`) or still pending (`pending/`): after v0.2.9
+  with nothing pending, a normal patch (`Patch v0.2.X: …`) is v0.2.10, and a micro patch
+  (`Patch v0.2.Y: …`) becomes v0.2.9b when it ships (below). Name the pending fragment that number
   when the branch makes it. Two normal patches in flight at once cannot both take it: the one that
   merges second renames its fragment to the number after, or `patches ship` would ship it as a
   revision letter of the first. A patch that changes no card data ships no version and takes no
   number, so it keeps its `X` or `Y` title and leaves no gap. The order is still `patches.json`'s,
   and nothing compares version strings (R105, R388). #290 renamed the history this way: v0.2.4,
-  v0.2.5, v0.2.10, v0.2.11, v0.2.12, v0.2.13, v0.2.14, v0.2.14b and v0.2.16 are now v0.2.1 to
-  v0.2.7, v0.2.7b and v0.2.8; commit messages and older titles keep the old names.
+  v0.2.5, v0.2.10, v0.2.11, v0.2.12, v0.2.13, v0.2.14, v0.2.14b, v0.2.16, v0.2.16b and v0.2.17 are
+  now v0.2.1 to v0.2.7, v0.2.7b, v0.2.8, v0.2.8b and v0.2.9; commit messages and older titles keep
+  the old names.
 - **A shipped version never reopens.** A follow-up to it takes the same number plus a letter:
   `vX.Y.Zb`, then `c`, then `d`. This replaces the old `-rN` suffix: #85 renamed the patch history's
   v0.1.0-r1, -r2 and -r3 to v0.1.0b, v0.1.0c and v0.1.0d.

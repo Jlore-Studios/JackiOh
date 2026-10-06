@@ -1,6 +1,6 @@
 // C #61 Plague Bringer Goliath — SPEC §8.6 row 61, BUILD M9 Classic row C 61: "Tribute 1, Rush, Trample:
 // can't be played without a Unit to Tribute, and may take the tributed Unit's zone on a full board
-// (R391); Cry: place 3 Plague Tokens as three placements, one prompt each, on any permanent either
+// (R391); Cry: place 3 Plague Counters as three placements, one prompt each, on any permanent either
 // side, face-down ones and repeats included (a face-down option carries only its id, R177), then draw 1;
 // Trample's excess hits the hero (R63); radiant 14/14: draw 3; its tuned numbers (tokens, draw) read
 // through `param()` (R386)".
@@ -12,7 +12,7 @@ import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/061-plague-bringer-goliath";
 
 const GOLIATH = "classic-061";
-const CRAWLER = "classic-053"; // (1) Unit: whenever Plague Tokens are placed on this, draw 1.
+const CRAWLER = "classic-053"; // (1) Unit: whenever Plague Counters are placed on this, draw 1.
 const VANILLA = "core-008"; // (1) Unit 4/4.
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt.
 const PAWN = "core-096"; // (1) Trap: answers only an attack that would be lethal.

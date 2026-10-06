@@ -294,7 +294,7 @@ describe("C #90 In Too Deep", () => {
       expect(s.pile("p1", "graveyard")).toEqual([]);
     });
 
-    it("R471 reward D: three Plague Token placements, each a prompt of yours over every permanent, then quest 5", () => {
+    it("R471 reward D: three Plague Counter placements, each a prompt of yours over every permanent, then quest 5", () => {
       const s = scenario({ p1: { backrow: [ITD], field: [VANILLA], ...SPARE }, p2: { field: [MENACE], ...SPARE } });
       onQuest(s, "2", 2);
       anyAction(s);

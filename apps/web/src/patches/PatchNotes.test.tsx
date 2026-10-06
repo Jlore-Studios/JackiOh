@@ -201,7 +201,7 @@ describe("R388 the Patch notes page over the real history", () => {
     // Only the newest opens on load (R507); an older patch's cards wait for its toggle, so v0.2.0
     // — the patch this test reads, frozen history — is opened by hand once it is no longer newest.
     // v0.2.3 added the Mask's faces, v0.2.4 aimed random casts and v0.2.5 removes the faces again
-    // (R739's names for issues #113, #181 and #218): whichever of the three is the newest opens with
+    // (R743's names for issues #113, #181 and #218): whichever of the three is the newest opens with
     // every card it changed.
     const newest = shipped.at(-1)?.version ?? "";
     await within(patchEntry(newest)).findByTestId(patchTestid.cards, undefined, SLOW);

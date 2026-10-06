@@ -2,7 +2,7 @@
 -- Migration 0020: the Plague tag
 -- ============================================================================
 -- Serves SPEC.md §5 (tags) and the v0.2.x mechanics patch: one new tag,
--- Plague (every card that uses Plague Tokens).
+-- Plague (every card that uses Plague Counters).
 --
 -- Why this exists: `db:seed-catalog` copies every catalog entry into
 -- public.cards in one transaction, and 0015's `cards_tags_check` does not admit

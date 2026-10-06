@@ -69,7 +69,7 @@ function view(): PlayerView {
           maxHealth: 6,
           health: 4,
           counters: { plague: 2 },
-          preview: [{ label: "+1 mana per Plague Token", value: 2 }],
+          preview: [{ label: "+1 mana per Plague Counter", value: 2 }],
         }),
         null,
         null,
@@ -111,7 +111,7 @@ describe("R280 what a formula comes to now", () => {
     vi.useFakeTimers();
     render(withCatalog(<Board view={view()} />));
     const fauci = hover(screen.getByTestId(testid.card("u91")));
-    expect(fauci.querySelector(".card-text")?.textContent).toContain("+1 mana per Plague Token {2}");
+    expect(fauci.querySelector(".card-text")?.textContent).toContain("+1 mana per Plague Counter {2}");
     act(() => closeInspect());
     const echoes = hover(screen.getByTestId(testid.card("b40")));
     expect(echoes.querySelector(".card-text")?.textContent).toContain("equal to twice the cards in your exile {6}");
@@ -126,8 +126,8 @@ describe("R280 what a formula comes to now", () => {
       radiant: false,
       inPlay: {
         preview: [
-          { label: "+1 mana per Plague Token", value: 2 },
-          { label: "+1 mana per Plague Token", value: 3 },
+          { label: "+1 mana per Plague Counter", value: 2 },
+          { label: "+1 mana per Plague Counter", value: 3 },
           { label: "not on this card", value: 9 },
         ],
       },
@@ -137,10 +137,10 @@ describe("R280 what a formula comes to now", () => {
     // Each ingredient's text is its own lines (R102, R366), so the lines that print the formula are
     // one per ingredient, in order, and the value the text does not print comes at the very end.
     const text = container.querySelector(".card-text")?.textContent ?? "";
-    const formulaLines = text.split("\n").filter((line) => line.includes("+1 mana per Plague Token"));
+    const formulaLines = text.split("\n").filter((line) => line.includes("+1 mana per Plague Counter"));
     expect(formulaLines).toHaveLength(2);
-    expect(formulaLines[0]).toContain("+1 mana per Plague Token {2}");
-    expect(formulaLines[1]).toContain("+1 mana per Plague Token {3}");
+    expect(formulaLines[0]).toContain("+1 mana per Plague Counter {2}");
+    expect(formulaLines[1]).toContain("+1 mana per Plague Counter {3}");
     expect(text.endsWith("{9}")).toBe(true);
   });
 
@@ -154,7 +154,7 @@ describe("R280 what a formula comes to now", () => {
   });
 
   it("R280 a card whose words in play are not its printed ones prints no value (a Vanilla unit, ???)", () => {
-    const preview = [{ label: "+1 mana per Plague Token", value: 2 }];
+    const preview = [{ label: "+1 mana per Plague Counter", value: 2 }];
     const vanilla = faceModel({ defId: "core-091", def: def("core-091"), radiant: false, inPlay: { vanilla: true, preview } });
     expect(vanilla.values).toEqual([]);
     const chaos = faceModel({ defId: "core-095", def: def("core-095"), radiant: false, inPlay: { preview } });

@@ -187,7 +187,7 @@ export const fighter = unit("fighter", 7, 2);
 export const topLoser = unit("top-loser", 5, 5, [{ kind: "Taunt" }], [{ kind: "Taunt" }, { kind: "Immune to Spells" }]);
 /** Neither attacks nor is attacked. */
 export const statue = unit("statue", 3, 3);
-/** Classic #69's shape: First Strike only while it carries a Plague Token. */
+/** Classic #69's shape: First Strike only while it carries a Plague Counter. */
 export const charger = unit("charger", 4, 2);
 /** Classic+ #19.5's shape: while Berserk, attacks its own hero at its controller's start of turn; Radiant can't go Berserk. */
 export const botLoser = unit("bot-loser", 5, 5);
@@ -198,7 +198,7 @@ export const warded = unit("warded", 2, 4, [{ kind: "Immune to Spells" }]);
 // E37 and backrow Death
 // ---------------------------------------------------------------------------
 
-/** Classic+ #3's shape: Death — deal 1 damage to a random enemy for each Plague Token on it. */
+/** Classic+ #3's shape: Death — deal 1 damage to a random enemy for each Plague Counter on it. */
 export const snake = unit("snake", 1, 6);
 /** Classic+ #61's shape: a Field Spell with a Death hook. */
 export const bauble = def("bauble", "Field Spell");

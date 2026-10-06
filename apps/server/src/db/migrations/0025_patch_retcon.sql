@@ -1,14 +1,15 @@
 -- ============================================================================
--- Migration 0025: the card patches' new names (issue #290, SPEC §11 R739)
+-- Migration 0025: the card patches' new names (issue #290, SPEC §11 R743)
 -- ============================================================================
 -- Issue #290 renamed every card patch after v0.2.0 to the next number in
 -- `packages/cards/patches/patches.json`'s order (a micro patch to the next
 -- letter): v0.2.4 is v0.2.1, v0.2.5 v0.2.2, v0.2.10 v0.2.3, v0.2.11 v0.2.4,
--- v0.2.12 v0.2.5, v0.2.13 v0.2.6, v0.2.14 v0.2.7, v0.2.14b v0.2.7b and
--- v0.2.16 v0.2.8. A database that served the old names files rows under them,
--- and two of them (v0.2.4, v0.2.5) now name other catalogs, so each row
--- carrying an old name takes the new one here, or the card statistics, decks
--- and rated games would mix two catalogs under one name (R105, R375, R376).
+-- v0.2.12 v0.2.5, v0.2.13 v0.2.6, v0.2.14 v0.2.7, v0.2.14b v0.2.7b, v0.2.16
+-- v0.2.8, v0.2.16b v0.2.8b and v0.2.17 v0.2.9. A database that served the old
+-- names files rows under them, and two of them (v0.2.4, v0.2.5) now name other
+-- catalogs, so each row carrying an old name takes the new one here, or the
+-- card statistics, decks and rated games would mix two catalogs under one name
+-- (R105, R375, R376).
 --
 -- What moves, for each name: the catalog version of `cards`, `decks`,
 -- `tickets`, `matches` and `series`; a game record's patch, with the copies in
@@ -36,7 +37,7 @@
 
 do $$
 declare
-  -- R739: each card patch's name before #290 and after it, oldest first.
+  -- R743: each card patch's name before #290 and after it, oldest first.
   renames constant text[] := array[
     'v0.2.4',   'v0.2.1',
     'v0.2.5',   'v0.2.2',
@@ -46,7 +47,9 @@ declare
     'v0.2.13',  'v0.2.6',
     'v0.2.14',  'v0.2.7',
     'v0.2.14b', 'v0.2.7b',
-    'v0.2.16',  'v0.2.8'
+    'v0.2.16',  'v0.2.8',
+    'v0.2.16b', 'v0.2.8b',
+    'v0.2.17',  'v0.2.9'
   ];
   was    text;
   is_now text;

@@ -109,7 +109,7 @@ describe("C+ #6 Wrong-House Attacker", () => {
 ## 3. The patch, and its order
 
 A change to card data is a patch (R388, R646). A normal patch (`Patch v0.2.X: …`) takes the next number
-after the newest card patch on `main`, shipped or pending (R739); a micro patch (`Patch v0.2.Y: …`)
+after the newest card patch on `main`, shipped or pending (R743); a micro patch (`Patch v0.2.Y: …`)
 keeps its `Y` until promotion names it with the next letter (R650); never reopen a shipped one. A branch claims its card changes with a pending fragment:
 
 ```

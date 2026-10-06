@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { isLocked, lockZone } from "@jackioh/engine";
 import { scenario } from "./_harness";
-import { base, radiant } from "../src/scripts/087-pocket-chaos";
+import { base, def, radiant } from "../src/scripts/087-pocket-chaos";
 
 const CHAOS = "core-087";
 
@@ -43,7 +43,7 @@ describe("#87 Pocket Chaos — base", () => {
   it("R73 swaps the two heroes' health and leaves each hero's armor where it was", () => {
     const s = scenario({
       seed: SEED,
-      p1: { hand: [CHAOS, FILLER], health: 12, armor: 2 },
+      p1: { hand: [CHAOS, FILLER], health: 12, armor: 2, mana: 10 }, // (4): keep mana after the play so the turn does not auto-end (R82)
       p2: { hand: [FILLER], health: 25, armor: 0 },
     });
     const self = s.card(CHAOS);
@@ -60,7 +60,7 @@ describe("#87 Pocket Chaos — base", () => {
   it("then adds a Pocket Chaos to the opponent's hand and exiles this one", () => {
     const s = scenario({
       seed: SEED,
-      p1: { hand: [CHAOS, FILLER], health: 12 },
+      p1: { hand: [CHAOS, FILLER], health: 12, mana: 10 }, // (4): keep mana after the play so the turn does not auto-end (R82)
       p2: { hand: [FILLER], health: 25 },
     });
     const self = s.card(CHAOS);
@@ -73,6 +73,8 @@ describe("#87 Pocket Chaos — base", () => {
     expect(gifts[0]?.owner).toBe("p2");
     expect(gifts[0]?.radiant).toBe(false);
     expect(gifts[0]?.id).not.toBe(self.id);
+    // R742: its base cost is (1) less than the (4) cast copy's.
+    expect(gifts[0]?.costOverride).toBe(3);
 
     // §8.5: "exile this". The play pipeline must not then send it on to the graveyard.
     s.expectInZone(self, "exile").expectEvents("swapped", "addedToHand", "exiled");
@@ -179,7 +181,7 @@ describe("#87 Pocket Chaos — base", () => {
   it("R73 swaps the libraries whole and in order, and each swapped card changes owner (R12)", () => {
     const s = scenario({
       seed: SEED,
-      p1: { hand: [CHAOS, FILLER], library: [GARY] },
+      p1: { hand: [CHAOS, FILLER], library: [GARY], mana: 10 }, // (4): keep mana after the play so the turn does not auto-end (R82)
       p2: { hand: [FILLER], library: [RENO, POSTDOC] },
     });
 
@@ -202,7 +204,7 @@ describe("#87 Pocket Chaos — base", () => {
   it("§6.3 a play naming no swap mode fizzles that clause; the gift and the exile still happen", () => {
     const s = scenario({
       seed: SEED,
-      p1: { hand: [CHAOS, FILLER], health: 12 },
+      p1: { hand: [CHAOS, FILLER], health: 12, mana: 10 }, // (4): keep mana after the play so the turn does not auto-end (R82)
       p2: { hand: [FILLER], health: 25 },
     });
     const self = s.card(CHAOS);
@@ -218,7 +220,7 @@ describe("#87 Pocket Chaos — radiant", () => {
   it("may skip adding it: the swap and the exile still happen, the opponent gains nothing", () => {
     const s = scenario({
       seed: SEED,
-      p1: { hand: [{ def: CHAOS, radiant: true }, FILLER], health: 12, library: [GARY] },
+      p1: { hand: [{ def: CHAOS, radiant: true }, FILLER], health: 12, library: [GARY], mana: 10 }, // (4): keep mana after the play
       p2: { hand: [FILLER], health: 25 },
     });
     const self = s.card(CHAOS);
@@ -234,7 +236,7 @@ describe("#87 Pocket Chaos — radiant", () => {
     for (const gift of ["gift", "skip"] as const) {
       const s = scenario({
         seed: SEED,
-        p1: { hand: [{ def: CHAOS, radiant: true }, FILLER], library: [GARY, RENO] },
+        p1: { hand: [{ def: CHAOS, radiant: true }, FILLER], library: [GARY, RENO], mana: 10 }, // (4): keep mana after the play
         p2: { hand: [FILLER] },
       });
 
@@ -249,7 +251,7 @@ describe("#87 Pocket Chaos — radiant", () => {
   it('"gift" is still an option, and the radiant copy hands over a base one', () => {
     const s = scenario({
       seed: SEED,
-      p1: { hand: [{ def: CHAOS, radiant: true }, FILLER], library: [GARY] },
+      p1: { hand: [{ def: CHAOS, radiant: true }, FILLER], library: [GARY], mana: 10 }, // (4): keep mana after the play
       p2: { hand: [FILLER], library: [RENO, POSTDOC] },
     });
     const self = s.card(CHAOS);
@@ -261,6 +263,8 @@ describe("#87 Pocket Chaos — radiant", () => {
     // R57's "a copy carries the radiant flag" is about copies of an existing card; the gift is a
     // fresh card, and neither #87's text nor its radiant cell makes it Radiant.
     expect(gifts[0]?.radiant).toBe(false);
+    // R742: the Radiant cast copy's base cost is still (4), so its gift costs (3) too.
+    expect(gifts[0]?.costOverride).toBe(3);
     // R73: the libraries swapped, whole and in order, each card now its new holder's (R12).
     expect(s.pile("p1", "library").map((card) => card.defId)).toEqual([RENO, POSTDOC]);
     expect(s.pile("p1", "library").every((card) => card.owner === "p1")).toBe(true);
@@ -289,11 +293,51 @@ describe("#87 Pocket Chaos — radiant", () => {
   });
 });
 
+describe("#87 Pocket Chaos — R742 the gift's base cost (patch v0.2.9, issue #44)", () => {
+  it("R742 costs (4), and the gift's base cost is (1) less than the cast copy's", () => {
+    expect(def.cost).toBe(4);
+  });
+
+  it("R742 the gifts chain down (4) → (3) → (2) → (1), and a (1) cast adds nothing", () => {
+    const deck = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
+    const s = scenario({
+      seed: SEED,
+      p1: { hand: [CHAOS, FILLER], library: [...deck], mana: 10 },
+      p2: { hand: [FILLER], library: [...deck], mana: 10 },
+    });
+
+    // (4) → (3).
+    s.play(CHAOS, { modes: ["health"] });
+    let gifts = s.hand("p2").filter((card) => card.defId === CHAOS);
+    expect(gifts).toHaveLength(1);
+    expect(gifts[0]?.costOverride).toBe(3);
+
+    // (3) → (2). Every cast copy exiles itself, so each side's hand holds only the new gift.
+    s.endTurn();
+    s.play(gifts[0]!, { modes: ["health"] });
+    gifts = s.hand("p1").filter((card) => card.defId === CHAOS);
+    expect(gifts).toHaveLength(1);
+    expect(gifts[0]?.costOverride).toBe(2);
+
+    // (2) → (1).
+    s.endTurn();
+    s.play(gifts[0]!, { modes: ["health"] });
+    gifts = s.hand("p2").filter((card) => card.defId === CHAOS);
+    expect(gifts).toHaveLength(1);
+    expect(gifts[0]?.costOverride).toBe(1);
+
+    // (1) → nothing: a copy whose base cost would be (0) is never added.
+    s.endTurn();
+    s.play(gifts[0]!, { modes: ["health"] });
+    expect(s.hand("p1").filter((card) => card.defId === CHAOS)).toHaveLength(0);
+  });
+});
+
 describe("#87 Pocket Chaos — R312 the owners' library lists", () => {
   it("R312 a swapped library is unknown to its new owner, on both sides", () => {
     const s = scenario({
       seed: SEED,
-      p1: { hand: [CHAOS, FILLER], library: [GARY] },
+      p1: { hand: [CHAOS, FILLER], library: [GARY], mana: 10 }, // (4): keep mana after the play so the turn does not auto-end (R82)
       p2: { hand: [FILLER], library: [RENO, POSTDOC] },
     });
     expect(s.view("p1").you.ownLibrary).toEqual({ cards: [{ defId: GARY, radiant: false, count: 1 }], unknown: 0 });

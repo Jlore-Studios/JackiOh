@@ -21,7 +21,7 @@
 // (game/Board.tsx reads `Highlight.legal`; this file decides nothing, CLAUDE.md rule 7). Such a
 // face carries a "Play" button under it, in the grid and in the face opened large; pressing it
 // reports the play to the board, which builds it as it builds a hand card's (zone, targets, the
-// Plague Tokens paying it), and closes the sheet so the board can be seen.
+// Plague Counters paying it), and closes the sheet so the board can be seen.
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";

@@ -523,3 +523,17 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
   });
 });
 
+describe("patch v0.2.9 wording (issue #44)", () => {
+  const swept = facesOf(ENTRIES);
+
+  it("R740 no printed face says Plague Token: every counter a player reads is a Plague Counter", () => {
+    const wrong = swept.filter((face) => /Plague Token/i.test(face.text));
+    expect(wrong.map((face) => `${face.card.id} ${face.face}: ${face.text}`)).toEqual([]);
+  });
+
+  it("R741 no Trap fires by activating: every trap condition reads Reveals", () => {
+    const wrong = swept.filter((face) => /activates? when|this activates|has activated|Traps activates/i.test(face.text));
+    expect(wrong.map((face) => `${face.card.id} ${face.face}: ${face.text}`)).toEqual([]);
+  });
+});
+

@@ -116,7 +116,7 @@ missing or malformed value rather than failing later at the first request.
 | `SUPABASE_SECRET_KEY` | yes | `sb_secret_…` (or the legacy `service_role` JWT). **Server only** — it bypasses every RLS policy. Never give it a `VITE_` alias |
 | `DATABASE_URL` | yes | Postgres connection string for the transactional work in §9.4 and §9.5 |
 | `CODE_PEPPER` | yes | ≥32 chars. Keys the HMAC over invite codes and IP addresses, so a stolen table cannot be brute-forced and no raw address is ever stored |
-| `CATALOG_VERSION` | yes | The latest patch's version, `v0.2.8` (R388). Must match what the client ships (`VITE_CATALOG_VERSION`), `CATALOG_VERSION` in `packages/cards`, and what `db:seed-catalog` stamped on `cards.catalog_version` and `app.settings` |
+| `CATALOG_VERSION` | yes | The latest patch's version, `v0.2.9` (R388). Must match what the client ships (`VITE_CATALOG_VERSION`), `CATALOG_VERSION` in `packages/cards`, and what `db:seed-catalog` stamped on `cards.catalog_version` and `app.settings` |
 | `SUPABASE_JWKS_URL` | no | Defaults to `${SUPABASE_URL}/auth/v1/.well-known/jwks.json` |
 | `SUPABASE_JWT_SECRET` | no | HS256 fallback, for a project not yet on asymmetric signing keys. Discouraged |
 | `PORT` | no | Defaults to 8787 |

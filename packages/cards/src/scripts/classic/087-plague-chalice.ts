@@ -1,7 +1,7 @@
 // C #87 Plague Chalice (SPEC §8.6 row 87). (X) Field Spell, Epic.
-//   Base:    "This enters with X Plague Tokens on it.
-//             Aura: Counter every card played whose cost equals the number of Plague Tokens on this."
-//   Radiant: "… Counter every card your opponent plays whose cost equals the number of Plague Tokens on this."
+//   Base:    "This enters with X Plague Counters on it.
+//             Aura: Counter every card played whose cost equals the number of Plague Counters on this."
+//   Radiant: "… Counter every card your opponent plays whose cost equals the number of Plague Counters on this."
 //   Engine:  "X is at least 1 (R348), and on the field it costs the X it was played for (R396). Counter
 //            (§6.3), in §10.5's announce window, on every announce whose cost paid equals the current count
 //            (both players'; Radiant: the opponent's). "Cost" is the cost paid, as #60 Bear Honeypot reads it

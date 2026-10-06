@@ -1,10 +1,10 @@
 // C #78 Mutate Spell (SPEC §8.6 row 78). (1) Field Spell (R402: the designer wrote Spell), Rare.
-//   Base:    "Activate ♾️: Remove a Plague Token from a permanent. If it's an enemy permanent, exile it. If
+//   Base:    "Activate ♾️: Remove a Plague Counter from a permanent. If it's an enemy permanent, exile it. If
 //            it's your backrow card, draw {draw}. If it's your Unit, it attacks a random enemy
 //            {attacks|time|times}." — draw 2, 1 attack
 //   Radiant: "… If it's an enemy permanent, fuse it onto a card of yours of its type on your field, in your
 //            hand or in your deck, or exile it if you have none. …" — draw 4, 2 attacks
-//   Engine:  "Activate ♾️ (§6.2, R384) with a declared target (a permanent with a Plague Token, either
+//   Engine:  "Activate ♾️ (§6.2, R384) with a declared target (a permanent with a Plague Counter, either
 //            side), bounded by `ACTIVATE_UNLIMITED_CAP` and by the tokens on the field; removing the token
 //            is the ability's cost. "Attacks a random enemy" is a forced attack (R53) on a random enemy,
 //            hero or unit, drawn from the targets it may attack (§4.2); the Radiant's second attack is its
@@ -36,7 +36,7 @@ function outcome(ctx: EffectContext, fuses: boolean): Effect[] {
 function mutate(fuses: boolean): Script {
   const ability: ActivationDecl = {
     id: "mutate",
-    label: "Remove a Plague Token",
+    label: "Remove a Plague Counter",
     uses: "unlimited",
     targets: [{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit", "backrow"], plague: true } }],
     canActivate: ({ state, controller }) => permanentsOnField(state, controller).some((card) => plagueOn(card) > 0),

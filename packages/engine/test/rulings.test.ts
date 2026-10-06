@@ -899,7 +899,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // Proved by rulings-b.test.ts "R63 tramples only the excess, cleaves past a stopped hit, ignores zero hits
-  // and lifesteals the total once"; damage.test.ts "R63 gives Fed Fauci one Plague Token per damage
+  // and lifesteals the total once"; damage.test.ts "R63 gives Fed Fauci one Plague Counter per damage
   // instance, and none for an instance Armor zeroed"; effects-damage.test.ts "R63 an amount of 0 or less is
   // not a damage instance at all".
   it("R63 tramples only the excess, cleaves past a stopped hit, and makes a zero hit no damage instance", () => {
@@ -2954,9 +2954,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(394, CLASSIC_033_TEST);
   });
 
-  // Proved by cards classic/038-jackiestan-auctioneer.test.ts "R395 …" (face-down only the activation
+  // Proved by cards classic/038-jackiestan-auctioneer.test.ts "R395 …" (face-down only the reveal
   // condition is live; the "whenever" starts with the next play).
-  it("R395 keeps C #38 Jackiestan Auctioneer's \"whenever\" text off until it has activated", () => {
+  it("R395 keeps C #38 Jackiestan Auctioneer's \"whenever\" text off until it has revealed", () => {
     provenIn(395, CLASSIC_038_TEST);
   });
 
@@ -3002,7 +3002,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
 
   // Proved by the engine's self-tribute.test.ts "R403 …" and cards classic/088-siphon-squad.test.ts "R403 …"
   // (live while face-down, the self-Tribute at every state check, the Radiant 0 set last).
-  it("R403 keeps a Trap with no activation condition live while face-down (C #88 Siphon Squad)", () => {
+  it("R403 keeps a Trap with no reveal condition live while face-down (C #88 Siphon Squad)", () => {
     provenIn(403, "self-tribute.test.ts", CLASSIC_088_TEST);
   });
 
@@ -3392,7 +3392,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // Proved by effects-plague.test.ts "R471 …".
-  it("R471 places Plague Tokens one placement at a time, on cards that act", () => {
+  it("R471 places Plague Counters one placement at a time, on cards that act", () => {
     provenIn(471, "effects-plague.test.ts");
   });
 
@@ -4259,12 +4259,34 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(738, "../../../apps/server/test/match/aim.test.ts", "../../../apps/web/src/game/aim/aim.test.tsx");
   });
 
-  // Proved by cards/test/patches.test.ts "R739 …" (the history in order under the new names, each
-  // renamed patch's shipping commit, source and title, Glitch's v0.2.16 among them as v0.2.8) and
-  // apps/server test/sql/14_patch_retcon.sql "### R739: … ###" (migration 0025 renames each row
+  // Proved by cards test/catalog.test.ts "R739 …" (every family shares one rarity, a bigger version
+  // is never a lower rarity, one name names one card).
+  it("R739 passes the rarity pass's criteria, families and consistency rules", () => {
+    provenIn(739, CARDS_CATALOG_TEST);
+  });
+
+  // Proved by cards test/card-text.test.ts "R740 …" (no printed face says Plague Token).
+  it("R740 reads Plague Counter everywhere a player reads a counter", () => {
+    provenIn(740, CARDS_CARD_TEXT_TEST);
+  });
+
+  // Proved by cards test/card-text.test.ts "R741 …" (no trap condition reads "activates").
+  it("R741 reveals every Trap instead of activating it", () => {
+    provenIn(741, CARDS_CARD_TEXT_TEST);
+  });
+
+  // Proved by cards test/087-pocket-chaos.test.ts "R742 …" (the (4) → (3) → (2) → (1) chain, none at (0)).
+  it("R742 costs Pocket Chaos at (4) and prices its gift a base (1) less", () => {
+    provenIn(742, "../../cards/test/087-pocket-chaos.test.ts");
+  });
+
+  // Proved by cards/test/patches.test.ts "R743 …" (the history in order under the new names, each
+  // renamed patch's shipping commit, source and title, Glitch's v0.2.16 as v0.2.8 and the rarity
+  // pass's v0.2.17 as v0.2.9 among them) and
+  // apps/server test/sql/14_patch_retcon.sql "### R743: … ###" (migration 0025 renames each row
   // filed under an old name once, oldest name first, the catalog stamp and the grants in step).
-  it("R739 numbers the card patches in order, and a database renames the rows filed under the old names", () => {
-    provenIn(739, "../../cards/test/patches.test.ts", "../../../apps/server/test/sql/14_patch_retcon.sql");
+  it("R743 numbers the card patches in order, and a database renames the rows filed under the old names", () => {
+    provenIn(743, "../../cards/test/patches.test.ts", "../../../apps/server/test/sql/14_patch_retcon.sql");
   });
 });
 

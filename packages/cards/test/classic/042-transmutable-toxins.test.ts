@@ -1,5 +1,5 @@
 // C #42 Transmutable Toxins — SPEC §8.6 row 42, BUILD M9 Classic row C 42: "Aura (§10.4 layer 5):
-// your Units have +1/+1 for each Plague Token on them and enemy Units −1/−1, recomputed on every
+// your Units have +1/+1 for each Plague Counter on them and enemy Units −1/−1, recomputed on every
 // change, so a token placed later applies at once; the −1/−1 lowers max health and an enemy can die of
 // it at the state check, an Indestructible one too once its max health reaches 0 (R69); gone when it
 // leaves; Activate, once per turn (R384): one token on each of two different random Units on the field,
@@ -12,8 +12,8 @@ import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/042-transmutable-toxins";
 
 const TOXINS = "classic-042";
-const SLIME = "classic-027"; // (0) Unit 1/1: "Plague Tokens placed on this are multiplied by {multiplier}." (2)
-const FAUCI = "core-091"; // (2) Unit 1/6: "Whenever this takes damage, it gets a Plague Token."
+const SLIME = "classic-027"; // (0) Unit 1/1: "Plague Counters placed on this are multiplied by {multiplier}." (2)
+const FAUCI = "core-091"; // (2) Unit 1/6: "Whenever this takes damage, it gets a Plague Counter."
 const ECLIPSE = "core-035"; // (1) Spell: "Deal 3 damage to a target."
 const COLLATERAL = "core-034"; // (4) Spell: "Exile target permanent and a random card from your opponent's deck."
 const STATE_OF_GAME = "classic-041"; // (1) Unit 3/3 Indestructible
@@ -48,13 +48,13 @@ describe("C #42 Transmutable Toxins", () => {
   });
 
   describe("base", () => {
-    it("Aura: your Units have +1/+1 for each Plague Token on them", () => {
+    it("Aura: your Units have +1/+1 for each Plague Counter on them", () => {
       const s = withToxins(false, [{ def: VANILLA, counters: { plague: 2 } }, TIMMY], []);
       s.expectStats(VANILLA, { attack: 6, health: 6, maxHealth: 6 });
       s.expectStats(TIMMY, { attack: 3, health: 3, maxHealth: 3 });
     });
 
-    it("Aura: enemy Units have −1/−1 for each Plague Token on them", () => {
+    it("Aura: enemy Units have −1/−1 for each Plague Counter on them", () => {
       const s = withToxins(false, [], [{ def: MENACE, counters: { plague: 3 } }]);
       s.expectStats(MENACE, { attack: 6, health: 6, maxHealth: 6 });
     });

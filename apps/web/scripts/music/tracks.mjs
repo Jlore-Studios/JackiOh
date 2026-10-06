@@ -12,7 +12,7 @@
 //
 // Each station has two in-game tracks (rotated across matches), a low-health variant (minor, faster,
 // with a low pulse and busier percussion) and a match-start sting. The menu theme, the three result
-// stings with their loops, the eight Mythic themes and the two shared Legendary themes are shared.
+// stings with their loops, the nine Mythic themes and the two shared Legendary themes are shared.
 
 import {
   DR, DRUMS, GM, KIT, RHYTHMS,
@@ -785,6 +785,26 @@ function twiceForward() {
   return { song };
 }
 
+/** Classic+ #29 Portal to the Past: a music box playing the last game's tune, viola and strings answering. */
+function portalToThePast() {
+  const song = createSong({ id: "mythic-portal-to-the-past", bpm: 80, key: key("Bb", "major") });
+  song.reverb = { room: 0.85, damp: 0.35, width: 1, level: 0.65 };
+  instrument(song, 0, GM.musicBox, { volume: 92, pan: 70, reverb: 75 });
+  instrument(song, 1, GM.viola, { volume: 80, pan: 46, reverb: 70 });
+  instrument(song, 2, GM.strings, { volume: 62, reverb: 75 });
+  instrument(song, 3, GM.cello, { volume: 84, reverb: 55 });
+  instrument(song, 4, GM.glock, { volume: 56, pan: 88, reverb: 80 });
+  const intro = section(song, "intro", 1, ["I"]);
+  arp(intro, { ch: 0, step: 0.25, pattern: [7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6, 7, 8], center: 70, vel: 54 });
+  const body = section(song, "body", 8, ["I", "vi", "IV", "V", "I", "vi", ["ii", "V"], "I"]);
+  melody(body, { ch: 0, rhythms: RHYTHMS.lofi, range: [7, 14], vel: 72, motifBars: [0, 4], start: 10, seed: 1 });
+  melody(body, { ch: 1, rhythms: RHYTHMS.folk, range: [0, 7], vel: 56, motifBars: [], start: 2, seed: 2 });
+  pad(body, { ch: 2, center: 62, vel: 36 });
+  bass(body, { ch: 3, pattern: [[0, "R", 1.9, 1], [2, "5", 1.9, 0.8]], octave: -1, vel: 64 });
+  arp(body, { ch: 4, step: 1, pattern: [4, 2, 0, 2], center: 79, vel: 34 });
+  return { song };
+}
+
 /* ------------------------------------------------------------------------------------------- *
  * Shared Legendary entrance themes (src/audio/music-cards.json names which cards play which).
  * One shape for both, brass-forward next to the Mythics' prismatic themes: a two-bar fanfare
@@ -905,6 +925,7 @@ export const TRACKS = [
   { id: "mythic-in-too-deep", loop: true, build: inTooDeep },
   { id: "mythic-zephrys-zealotism", loop: true, build: zephrysZealotism },
   { id: "mythic-twice-forward", loop: true, build: twiceForward },
+  { id: "mythic-portal-to-the-past", loop: true, build: portalToThePast },
   { id: "legendary-1", loop: true, build: legendaryTheme1 },
   { id: "legendary-2", loop: true, build: legendaryTheme2 },
 ];

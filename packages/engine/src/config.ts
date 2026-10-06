@@ -314,11 +314,11 @@ export const TUNE_MIN_AMOUNT = 1;
 // MIN_CHOSEN_X (R348, R453); the other numbers of these rules are cards' own (`params`).
 
 /**
- * B5 E11, R454: the fewest Plague Tokens a play from the graveyard that pays with tokens spends
- * (Classic #74 Corpse Plantation: "each such play spends at least 1 token").
+ * B5 E11, R454: the fewest Plague Counters a play from the graveyard that pays with tokens spends
+ * (Classic #74 Corpse Plantation: "each such play spends at least 1 counter").
  */
 export const MIN_PLAGUE_PAYMENT = 1;
-/** B5 E11, R454: what one Plague Token spent as mana pays of a price ("each token pays (1)"). */
+/** B5 E11, R454: what one Plague Counter spent as mana pays of a price ("each counter pays (1)"). */
 export const PLAGUE_TOKEN_MANA = 1;
 /**
  * B5 E12, R452: how many casts one random cast and every cast made inside its resolution may make in
@@ -338,7 +338,7 @@ export const LAST_FACE_UP_SKIPPED_TAGS: readonly Tag[] = ["AI"];
 /**
  * B3.2 rule 7, R384: "Activate ♾️" is any number of uses per card per turn, bounded here so a game
  * still ends (a fuzz game's random policy may keep activating). Every ♾️ card in the sets is bounded
- * by a resource too (units to Tribute, Plague Tokens to consume).
+ * by a resource too (units to Tribute, Plague Counters to consume).
  */
 export const ACTIVATE_UNLIMITED_CAP = 100;
 
@@ -363,7 +363,7 @@ export const BERSERK_MARK = { mark: "berserk", color: "red" } as const;
  * by a digest of that list instead (`t-<n>:#<hex>`), and its definition keeps the whole list.
  */
 export const FUSED_ID_CAP = 120;
-/** R471: the placement multiplier of a card that doubles nothing (the Plague Tokens placed as written). */
+/** R471: the placement multiplier of a card that doubles nothing (the Plague Counters placed as written). */
 export const PLAGUE_MULTIPLIER_NONE = 1;
 
 // ---- v0.2.0 constants: Core patches (R423, R426–R431) ----

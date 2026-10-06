@@ -1,4 +1,4 @@
-// R602 and R403: a face-down trap with no activation condition is live (C #88 Siphon Squad's aura
+// R602 and R403: a face-down trap with no reveal condition is live (C #88 Siphon Squad's aura
 // shrinks the enemy's Attack from the moment it is set), and the units it shrinks show it to both
 // players. `redact` hides the card (R185, R33), so without more the AI's determinizations would give
 // its units their Attack back and it would declare attacks the engine refuses. It keeps every unit's
