@@ -3017,6 +3017,7 @@
       "feedback_since": "2026-10-06T13:30:41Z",
       "issue": 375,
       "kind": "revise",
+      "queued_at": "2026-10-06T13:38:49Z",
       "self_check_findings": [],
       "votes": {
         "approvals": [],
