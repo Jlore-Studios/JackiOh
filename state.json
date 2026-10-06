@@ -2751,6 +2751,7 @@
       "interruptions": 0,
       "issue": 354,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-10-06T05:59:23Z",
