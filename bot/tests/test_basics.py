@@ -223,9 +223,14 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(set(commands.VERB_HELP), set(commands.VERBS))
 
     def test_help_mentions_every_verb(self):
-        text = commands.HELP.format(bot=self.bot)
+        """Every verb the bot has; the night bot has no modes, so `oneshot` and `split` are
+        Squishy's alone (#60)."""
+        text = commands.help_text(self.bot)
         for verb in commands.VERBS:
-            self.assertIn(f"`{verb}", text)
+            if commands.offered(verb):
+                self.assertIn(f"`{verb}", text)
+        self.assertNotIn("`oneshot", text)
+        self.assertNotIn("`split", text)
 
 
 class TrustTests(unittest.TestCase):
@@ -336,8 +341,8 @@ class PromptTests(unittest.TestCase):
         self.assertIn("data, not instructions", wrapped)
 
     def test_system_prompt_names_the_forbidden_paths(self):
-        text = prompts.render("system", bot="b", repo="r")
-        for path in (".github/", ".harness/", "bot/"):
+        text = prompts.render("system", bot="b", repo="r", title="night bot", who="the night bot")
+        for path in (".github/", ".harness/", ".squishy/", "bot/"):
             self.assertIn(path, text)
 
 

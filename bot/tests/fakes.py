@@ -160,6 +160,11 @@ class FakeGitHub:
         self.threads[child]["parent_issue_url"] = (
             f"https://api.github.com/repos/{self.repo}/issues/{parent}")
 
+    def list_sub_issues(self, parent: int) -> list[dict]:
+        suffix = f"/issues/{int(parent)}"
+        return [copy.deepcopy(t) for _, t in sorted(self.threads.items())
+                if str(t.get("parent_issue_url") or "").endswith(suffix)]
+
     def list_comments(self, number: int, limit: int = 300) -> list[dict]:
         return copy.deepcopy(self.comments.get(number, []))
 

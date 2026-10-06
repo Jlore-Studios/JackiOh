@@ -29,21 +29,22 @@ from harness import asks, disk, failures, issueplan, memory, review_rule
 from harness import easy as easy_mod
 from harness import journal as journal_mod
 from harness import stepup
+from harness import split as split_mod
 from harness import gates as gates_mod
 from harness import plan as plan_mod
 from harness import providers as providers_mod
 from harness import vault
 from harness.clock import iso, parse_iso
 from harness.config import (DIFFICULTIES, DIFFICULTY_LABELS, LABEL_APPROVED, LABEL_BLOCKED,
-                            LABEL_BUILD,
-                            LABEL_CROSS, PLAN_FLOOR,
-                            LABEL_HUMAN, LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_STUCK,
-                            LABEL_NEEDS_REVIEW, LABEL_PR, LABEL_PR_OPEN, LABEL_READY,
-                            LABEL_REVISE, LABEL_SUGGESTION, STATE_BRANCH)
+                            LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_NEEDS_PLAN,
+                            LABEL_NEEDS_REVIEW, LABEL_PLANNED, LABEL_PR, LABEL_PR_OPEN, LABEL_READY,
+                            LABEL_REVISE, LABEL_STUCK, LABEL_SUGGESTION, LABEL_TREE, OTHERS,
+                            PLAN_FLOOR, SLASH, STATE_BRANCH, TITLE)
 from harness.context import Context
 from harness.errors import GitError, GitHubError
 from harness.git import Git, matches
 from harness.queue import (PRIORITY_TIERS, branch_for_issue, cleared, difficulty_of, label_names,
+                           set_mode,
                            labelled_difficulty, open_pull_for_branch, rating_source,
                            set_state_label, wip_branch)
 from harness.state import item as state_item
@@ -59,6 +60,15 @@ DIED_LIMIT = 2
 VAULT_ATTEMPTS = 4
 NO_RESULT = ("the model job left no result: it failed before the model started (the doctor "
              "step, the install or the CLI setup), or it was cancelled")
+
+
+def _reserved_label(name: str) -> bool:
+    """A label a split's sub-issue may not be given from the model's answer: a bot's own, or one
+    the harness or a person sets (`human`, a difficulty, a priority, a method)."""
+    lowered = name.lower()
+    prefixes = (LABEL_BUILD.rsplit(":", 1)[0] + ":", *(o.label_prefix for o in OTHERS))
+    return (lowered.startswith(prefixes) or lowered == LABEL_HUMAN
+            or lowered.startswith(("difficulty:", "priority:", "method:")))
 
 
 def _cut(text: str, limit: int, *, head: bool) -> str:
@@ -395,6 +405,10 @@ class Deliverer:
         if status == "interrupted":
             self._interrupted(number, kind)
             return
+        if status == "split" and str(self.plan.get("mode") or "").startswith("split"):
+            self._split_out(number)
+            self._settle(number)
+            return
         if kind == "revise":
             self._revise(number, status)
         else:
@@ -541,7 +555,7 @@ class Deliverer:
         where = "pull request" if "pull_request" in thread else "issue"
         self.gh.create_comment(number, f"This {where} was closed while a run was working on it "
                                f"({self._link()}), so that run's work was not delivered. Reopen "
-                               f"it and ask again (`/harness build`) to have it done.")
+                               f"it and ask again (`{SLASH} build`) to have it done.")
         self.log.append(f"#{number} was closed during the run: nothing delivered")
 
     def _close_asks(self, number: int) -> None:
@@ -562,7 +576,7 @@ class Deliverer:
                 settled[:] = asks.pop_taken(entry)
 
         self.ctx.store.update(change, f"asks #{number}")
-        answered = not blocked and status in ("approved", "built", "reviewed")
+        answered = not blocked and status in ("approved", "built", "reviewed", "split")
         asks.react(self.gh, settled, asks.DONE if answered else asks.NO_ANSWER)
 
     def _keep_handoff(self, number: int) -> None:
@@ -570,7 +584,7 @@ class Deliverer:
         and the end of its session (`work.py`). A finished item's handoff is dropped."""
         status = str(self.result.get("status"))
         handoff = self.result.get("handoff")
-        finished = status in ("approved", "reviewed")
+        finished = status in ("approved", "reviewed", "split")
         if not finished and not isinstance(handoff, dict):
             return
         kept: dict[str, Any] | None = None
@@ -679,7 +693,7 @@ class Deliverer:
             self._remember(number, forced=False)
             self.gh.create_comment(number, f"The run working on this died {died} times in a row "
                                    f"({self._link()}), so I stopped trying: {reason}. It may be "
-                                   "too big or too heavy for one run; `/harness build` tries again.")
+                                   f"too big or too heavy for one run; `{SLASH} build` tries again.")
             return
         set_state_label(self.ctx, number, self._labels(number), label)
         self.gh.create_comment(number, f"The run working on this died {where} ({self._link()}): "
@@ -905,7 +919,7 @@ class Deliverer:
             self._remember(number, forced=False)
             self.gh.create_comment(number, f"This failed {failures} times in a row "
                                    f"({self._link()}), so I stopped trying. Last error: {reason}"
-                                   "\n\nFix the cause, then `/harness build` (or `revise`) "
+                                   f"\n\nFix the cause, then `{SLASH} build` (or `revise`) "
                                    "queues it again.")
         else:
             self._requeue_label(number, kind)
@@ -993,7 +1007,7 @@ class Deliverer:
             question = str(self.result.get("question") or self.result.get("reason") or "")
             kept = f" What I had is on `{branch}`." if pushed else ""
             self.gh.create_comment(number, f"I need a decision before I can build this.{kept}\n\n"
-                                   f"{question}\n\nAnswer here, then `/harness build` (or "
+                                   f"{question}\n\nAnswer here, then `{SLASH} build` (or "
                                    f"`@{self.cfg.bot_login} <your answer>`) queues it again.")
             self._remember(number, last_findings=[], question=question)
             return
@@ -1060,6 +1074,87 @@ class Deliverer:
                                    f"Comment `@{self.cfg.bot_login} <guidance>` here or on #{pr} "
                                    "to have me try again with your notes.")
             self._remember(number, last_findings=self.result.get("findings") or [], pr=pr)
+
+    # ------------------------------------------------------------------ a split (#60)
+
+    def _split_out(self, number: int) -> None:
+        """A split's end: open its sub-issues, or close a tree whose close-out found it done.
+
+        The tree is checked again here (`split.from_dict`), not trusted from the model job. The
+        sub-issues are opened in build order, each with its plan as the **Plan** section of its
+        description (which both bots build from without planning again), its type labels as far
+        as the repository has them, the parent's priority, its difficulty, and the queue label of
+        whoever builds it: this bot's for `split`, the other bot's for `split-bot`. Then they
+        become GitHub sub-issues of the parent, linked by "blocked by", and the parent becomes a
+        tree (`squishy:tree`) with a checklist."""
+        tree = split_mod.from_dict(self.result.get("tree"), DIFFICULTIES)
+        mode = str(self.plan.get("mode") or "split")
+        names = self._labels(number)
+        if not tree.ok:
+            self.result["reason"] = "the split could not be used: " + "; ".join(tree.problems)
+            self._fail(number, "build")
+            return
+        set_state_label(self.ctx, number, names, None)
+        set_mode(self.ctx, number, names, "")
+        if tree.done:
+            if LABEL_TREE in names:
+                self._try(lambda: self.gh.remove_label(number, LABEL_TREE))
+            self.gh.create_comment(number, f"Every sub-issue of this has closed, and its end state "
+                                   f"holds on `main` ({self._link()}), so I am closing it.\n\n"
+                                   f"{tree.summary}")
+            self._try(lambda: self.gh.update_issue(number, state="closed",
+                                                   state_reason="completed"))
+            self._remember(number, tree_done=iso(self.ctx.now()))
+            self.log.append(f"#{number}: its tree is done; closed it")
+            return
+        other = OTHERS[0] if mode == "split-bot" and OTHERS else None
+        queue = f"{other.label_prefix}build" if other else LABEL_BUILD
+        builder = f"{other.name} (@{other.login})" if other else "me"
+        who = f"{TITLE} (`{self.build_seat.model}`, {self._link()})"
+        repo_labels = {str(label.get("name")) for label in self.gh.list_labels()}
+        priority = [n for n in sorted(names) if n.lower() in PRIORITY_TIERS]
+        made: list[tuple[split_mod.SubIssue, int]] = []
+        ids: dict[str, int] = {}
+        numbers: dict[str, int] = {}
+        for issue in split_mod.ordered(tree.issues):
+            waits = [numbers[k] for k in issue.blocked_by if k in numbers]
+            waits += list(issue.blocked_by_issues)
+            text = split_mod.body(issue, number, who, waits)
+            if issue.plan:
+                text = issueplan.with_plan(text, redact(issue.plan), who)
+            labels = [label for label in issue.labels if label in repo_labels
+                      and not _reserved_label(label)]
+            if issue.difficulty:
+                labels.append(f"difficulty:{issue.difficulty}")
+            labels += [*priority, queue]
+            try:
+                created = self.gh.create_issue(issue.title, text, labels)
+            except GitHubError as exc:
+                self.log.append(f"could not open {issue.key!r}: {exc}")
+                continue
+            numbers[issue.key] = int(created.get("number") or 0)
+            ids[issue.key] = int(created.get("id") or 0)
+            made.append((issue, numbers[issue.key]))
+        for issue, child in made:
+            self._try(lambda c=ids[issue.key]: self.gh.add_sub_issue(number, c))
+            for key in issue.blocked_by:
+                if key in ids:
+                    self._try(lambda n=child, b=ids[key]: self.gh.add_blocked_by(n, b))
+            for blocker in issue.blocked_by_issues:
+                self._try(lambda n=child, b=blocker: self.gh.add_blocked_by(
+                    n, int(self.gh.get_issue(b).get("id") or 0)))
+        if not made:
+            self.result["reason"] = "none of the sub-issues could be opened"
+            self._fail(number, "build")
+            return
+        if LABEL_TREE not in self._labels(number):
+            self.gh.add_labels(number, [LABEL_TREE])
+        self.gh.create_comment(number, split_mod.checklist(
+            number, made, builder=builder, summary=tree.summary, link=self._link()))
+        children = [child for _, child in made]
+        self._remember(number, tree={"mode": mode, "children": children,
+                                     "at": iso(self.ctx.now())}, closeout=False)
+        self.log.append(f"#{number}: split into {', '.join(f'#{c}' for c in children)}")
 
     def _not_approved_head(self) -> str:
         """The first words of a comment on a build or revision that was not approved: the real
@@ -1640,8 +1735,8 @@ class Deliverer:
         run = f" ([run]({self.cfg.run_url}))" if self.cfg.run_url else ""
         parts.append(f"---\nBuilt overnight by @{self.cfg.bot_login}{run}; every run on it, "
                      f"step by step, is in its {self._journal_link(number)}. Comment "
-                     f"`@{self.cfg.bot_login} <what to change>` or `/harness revise <notes>` to ask "
-                     "for a revision, or `/harness stop` to stop it.")
+                     f"`@{self.cfg.bot_login} <what to change>` or `{SLASH} revise <notes>` to ask "
+                     f"for a revision, or `{SLASH} stop` to stop it.")
         return "\n".join(parts)
 
     # ------------------------------------------------------------------ suggestions

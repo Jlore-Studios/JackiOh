@@ -256,6 +256,10 @@ class GitHub:
         self.request("POST", f"{self._r}/issues/{int(parent)}/sub_issues",
                      {"sub_issue_id": int(child_id)})
 
+    def list_sub_issues(self, parent: int) -> list[dict]:
+        """The sub-issues of issue `parent`, open and closed (#60: a tree the bot split)."""
+        return self.paginate(f"{self._r}/issues/{int(parent)}/sub_issues", limit=100)
+
     def update_issue(self, number: int, **fields: Any) -> dict[str, Any]:
         if "body" in fields:
             fields["body"] = with_marker(fields["body"])

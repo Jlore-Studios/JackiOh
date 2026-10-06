@@ -101,6 +101,7 @@ describe("scripts/vercel-ignore.sh", () => {
   it("skips main when only the night bot, architecture, docs, the server, CI, tests or tooling changed", () => {
     for (const files of [
       ["bot/harness/state.py", ".harness/config.json"],
+      [".squishy/config.json", ".github/workflows/squishy-run.yml"],
       [".github/workflows/ci.yml", ".github/actions/setup/action.yml"],
       ["docs/architecture.md", "SPEC.md", "BUILD.md", "CLAUDE.md", "REVIEW.md", "README.md"],
       ["apps/server/src/index.ts", "apps/server/package.json", "render.yaml"],

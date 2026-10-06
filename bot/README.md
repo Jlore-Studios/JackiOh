@@ -959,6 +959,57 @@ days.
 | change the rounds, budgets or checks | edit `.harness/config.json` in a pull request |
 | let someone else command it | add a line to `.harness/trust.txt` |
 
+## Squishy
+
+`@squishy-squooby` is a second bot (#60): this harness again, run from `.squishy/` instead of
+`.harness/` (each of its workflows sets `HARNESS_HOME=.squishy`, `harness/identity.py`). It works
+like the night bot, under its own names, on its own Claude Max account, and it makes no
+suggestions. On top of a plain build it has three modes.
+
+| | Night bot | Squishy |
+|---|---|---|
+| Account | `@jgoetzmann-bot`, token `BOT_GITHUB_TOKEN` | `@squishy-squooby`, token `SQUISHY_GITHUB_TOKEN` |
+| Commands | `/harness <verb>`, `@jgoetzmann-bot <verb>` | `/squishy <verb>`, `@squishy-squooby <verb>` |
+| Labels | `bot:build`, `bot:working`, … | `squishy:build`, `squishy:working`, … |
+| Branches, state, journal | `bot/issue-<n>`, `bot-state`, `bot-journal` | `squishy/issue-<n>`, `squishy-state`, `squishy-journal` |
+| Switches | `.harness/` (`config.json`, `providers.json`, `HALT`) | `.squishy/` (the same; the trust list is `.harness/trust.txt`) |
+| Workflows | `bot-night.yml`, `bot-commands.yml` | `squishy-run.yml`, `squishy-commands.yml` |
+| Subscriptions | the pool above | `claude-squishy` only (`CLAUDE_CODE_OAUTH_TOKEN_SQUISHY`): Opus for every role, always on GitHub's runners |
+
+Everything else is the night bot's: the run's shape, the review loop and the review rule, CI
+fixes, handoffs, the rules about `human` and priorities, and the paths no change may touch.
+
+**Its modes.** Each is a command, or a label beside its queue label:
+
+| Label | Command | What it does |
+|---|---|---|
+| `squishy:build` | `/squishy build` | a plain build, as the night bot's (an explicit `build` takes a mode label off) |
+| `squishy:oneshot` | `/squishy oneshot` | the whole issue in one run with [fullsend](../.claude/skills/fullsend/SKILL.md): a spec first, then builders and spec-testers at once, each in its own git worktree and branch (`squishy/oneshot-<n>/<slice>`), merged back and reconciled against the tests, then the checks and the review as for any build (`prompts/oneshot.md`). Every phase is a commit, so a run that is cut off resumes from its last phase on the issue's branch. It builds the ordinary way, and says why, when fullsend does not fit. `.fullsend/` never ships |
+| `squishy:split` | `/squishy split` | one Opus session reads the issue and the code and answers with sub-issues (`prompts/split.md`, `harness/split.py`); deliver opens them as GitHub sub-issues of the issue, linked by "blocked by", each with its plan as its **Plan** section, its difficulty and the parent's priority, queued as `squishy:build` |
+| `squishy:split-bot` | `/squishy split bot` | the same, queued for the night bot as `bot:build`; a Plan section counts as a strong plan, so the night bot builds them without planning again |
+
+A split leaves the parent labelled `squishy:tree` with a checklist. When every sub-issue has
+closed, the sweep queues its close-out: the same session checks the parent's "Done when" against
+`main`, and closes it or opens what is missing. `/squishy stop` on a tree stops its open
+sub-issues too (for the night bot's, Squishy comments `@jgoetzmann-bot stop`).
+
+**One owner per issue.** Neither bot takes an issue that is the other's: the other's queue,
+state, pull request, mode or tree labels on it, or assigned to the other's account
+(`queue.owner`). Take those off to hand it over. A bot acts on the other's comment only when the
+line is a bare `stop`, and never answers it with a hint, so the two never talk for ever.
+
+**Status.** Squishy has a section of its own in the pinned **Night bot status** issue: the
+`bot-status` loop runs Squishy in a process of its own each tick (`harness dashboard --companions`),
+which sweeps for it with its token and draws its lanes, its account, its queue, its trees and its
+runs; that section sits after the night bot's facts. `/squishy status` gives the same on demand.
+
+**Setting it up.** The account `squishy-squooby` has write access and is on `.harness/trust.txt`.
+Two secrets: `SQUISHY_GITHUB_TOKEN`, a classic token of that account with `public_repo` and
+`workflow` (as the night bot's), and `CLAUDE_CODE_OAUTH_TOKEN_SQUISHY` from `claude setup-token`
+on its Max account. Its labels and `squishy-state` are made by its first sweep, or by
+`HARNESS_HOME=.squishy python3 -m harness setup`. `HARNESS_HOME=.squishy python3 -m harness doctor`
+checks the token belongs to `@squishy-squooby`.
+
 ## Working on the bot
 
 The bot is Python 3.12+ with the standard library only. The tests use fakes for GitHub and the
@@ -972,12 +1023,16 @@ python3 -m harness --help                     # every command
 
 `bot selftest` in CI runs the suite on Python 3.12 and 3.13 and runs actionlint over the bot's
 workflows. The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `build`, `fix`, `revise`,
-`review` and `suggest` (the self check runs `review` with a header saying it is a self check). The bot cannot edit anything in `bot/`, `.harness/` or
-`.github/workflows/`, so changes there come from people.
+`review` and `suggest` (the self check runs `review` with a header saying it is a self check), and
+Squishy's `oneshot` and `split`. The bots cannot edit anything in `bot/`, `.harness/`, `.squishy/` or
+`.github/workflows/`, so changes there come from people. Squishy's own cases run in a process
+started as Squishy (`tests/squishy_cases.py`, from `tests/test_squishy.py`).
 
 | Module | Job |
 |---|---|
-| `config.py` | `.harness/config.json` and the environment; the only reader of `os.environ` |
+| `config.py` | `<home>/config.json` and the environment; with `identity.py`, the only reader of `os.environ` |
+| `identity.py` | which bot this process is (`HARNESS_HOME`): the night bot's or Squishy's labels, command, branches, state, workflow, marker and modes |
+| `split.py` | Squishy's splits: the tree a split session answers with, checked, ordered and worded |
 | `gh.py` | the GitHub client; the only module that sends a token or writes to GitHub |
 | `trust.py`, `commands.py` | who may command it, and how a comment is read |
 | `events.py`, `queue.py` | the event workflow: commands, labels, assignment, reviews, CI |

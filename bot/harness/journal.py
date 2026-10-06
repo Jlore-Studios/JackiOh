@@ -28,11 +28,11 @@ import re
 import time
 from typing import Any, Callable
 
-from harness.config import NO_DEPLOY
+from harness.config import IDENTITY, NO_DEPLOY
 from harness.errors import GitHubError
 from harness.redact import redact
 
-BRANCH = "bot-journal"
+BRANCH = IDENTITY.journal_branch
 #: Where the work job puts the item's journal in its worktree: beside the notes, ignored by git.
 JOURNAL_FILE = ".bot-journal.md"
 #: Each run's section starts with this line, so the file can be cut at a run.
