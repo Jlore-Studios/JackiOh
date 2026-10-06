@@ -3,9 +3,12 @@
 // the mark's colour ("purple"), one effect reusable in other colours for other marks (SPEC §10.8).
 //
 // A mark is made by the effect that waits: `effects/delay.ts`'s `delay({ …, watch, mark })` marks the
-// card it watches (R174) as it schedules itself. It lasts exactly as long as that delayed effect
-// does, so the record here is tied to the entry's id and holds nothing the entry does not: when the
-// effect resolves at its R62 point, fizzles, or is dropped because its card left the field
+// card it watches (R174) as it schedules itself. A delayed destroy of a scope (Classic #20's Radiant
+// face, R750) marks every card the scope names instead, kept in step with the board each time events
+// are collected (`syncMarks`), so a card that arrives while it waits is marked and one that leaves is
+// not. A mark lasts exactly as long as the delayed effect that made it does, so the record here is
+// tied to the entry's id and holds nothing the entry does not: when the effect resolves at its R62
+// point, fizzles, or is dropped because its card left the field
 // (`zones.forgetWatchers`, R76, R174), the entry is gone and so is the mark. `sweepMarks` notices it
 // at the next point the resolution loop collects events and says so with a `marked` event
 // (`added: false`), after whatever took the entry away; the one that made the mark said
@@ -36,6 +39,27 @@ export function markDelayed(sink: MarkSink, entry: DelayedEffect, mark: CardMark
   const record: MarkRecord = { instanceId: entry.watch, mark: mark.mark, color: mark.color, delayedId: entry.id };
   sink.state.marks = [...(sink.state.marks ?? []), record];
   sink.events.push(markedEvent(record, true));
+}
+
+/**
+ * R750: the marks of a delayed effect that names every card of a scope (`delayedId`), made to match
+ * `ids`, the cards the scope names now: a card that left it loses its mark and a card that came into
+ * it gains one, each with a `marked` event, in that order. Nothing changes, and nothing is said, when
+ * they already match.
+ */
+export function syncMarks(sink: MarkSink, delayedId: string, mark: CardMark, ids: readonly string[]): void {
+  const marks = sink.state.marks ?? [];
+  const held = marks.filter((record) => record.delayedId === delayedId);
+  const gone = held.filter((record) => !ids.includes(record.instanceId));
+  const added = ids
+    .filter((id) => !held.some((record) => record.instanceId === id))
+    .map((instanceId): MarkRecord => ({ instanceId, mark: mark.mark, color: mark.color, delayedId }));
+  if (gone.length === 0 && added.length === 0) return;
+  const kept = [...marks.filter((record) => !gone.includes(record)), ...added];
+  for (const record of gone) sink.events.push(markedEvent(record, false));
+  for (const record of added) sink.events.push(markedEvent(record, true));
+  if (kept.length === 0) delete sink.state.marks;
+  else sink.state.marks = kept;
 }
 
 function waiting(state: GameState, record: MarkRecord): boolean {

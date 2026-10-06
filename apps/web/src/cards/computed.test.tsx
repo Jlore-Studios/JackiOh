@@ -99,7 +99,7 @@ describe("R280 what a formula comes to now", () => {
     render(withCatalog(<Board view={view()} />));
     const hand = screen.getByTestId(testid.handCard("h31"));
     expect(values(hand)).toEqual(["{2}"]);
-    expect(hand.querySelector(".card-text")?.textContent).toContain("Deal Fib(times played + 1) {2} damage to a target");
+    expect(hand.querySelector(".card-text")?.textContent).toContain("Deal Fib(times played + 1) {2} damage.");
     const value = hand.querySelector(".cf-value");
     expect(value).toHaveAttribute("title", "Fib(times played + 1): currently 2");
     expect(value).toHaveAttribute("data-label", "Fib(times played + 1)");

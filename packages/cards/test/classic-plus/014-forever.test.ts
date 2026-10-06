@@ -164,7 +164,7 @@ describe("C+ #14 Forever&", () => {
       expect(effectiveCost(s.state, s.card(id))).toBe(1);
     });
 
-    it("R386 the floor reads through param(): a Degrade keeps it at (2)", () => {
+    it("R386 the floor reads through param(): a Degrade raises the Radiant floor to (2)", () => {
       const s = scenario({ p1: { hand: [{ def: FOREVER, radiant: true }, LUNAR, FILLER], mana: 10 }, p2: { hand: [STOCKPILE] } });
       stepParam(s.card(FOREVER), "floor", 1);
       s.play(FOREVER);

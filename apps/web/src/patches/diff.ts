@@ -145,6 +145,7 @@ function paramText(param: Param): string {
   if (param.step !== undefined) parts.push(`step ${String(param.step)}`);
   if (param.min !== undefined) parts.push(`at least ${String(param.min)}`);
   if (param.max !== undefined) parts.push(`at most ${String(param.max)}`);
+  if (param.tunedOn === "radiant") parts.push("tuned on the Radiant face only");
   parts.push(param.better === "up" ? "more is better" : "less is better");
   return parts.join(", ");
 }

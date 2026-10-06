@@ -1,13 +1,15 @@
 // Declared numbers (docs/classic-sets.md B3.4 rule 5, R386): `param(ctx, key)` in a card script, the
 // pure `paramValue` the view and a `preview` hook read, the default steps and the bounds, a number
 // KY's Constant set and the steps after it, a fused card's ingredients each reading their own
-// declaration (R102), and a card resolving with the number as it stands.
+// declaration (R102), a number tuned on the Radiant face only (R749), and a card resolving with the
+// number as it stands.
 
 import type { Action, ActionInput } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { defOf } from "../src/catalog";
 import { PARAM_DEFAULT_STEP, TUNE_MIN_AMOUNT } from "../src/config";
-import { param, paramStep, paramValue, paramsOf, paramsView, setParam, stepParam } from "../src/params";
+import { numbersOn } from "../src/numbers";
+import { param, paramStep, paramValue, paramsOf, paramsView, setParam, stepParam, steppableParams } from "../src/params";
 import { makeContext } from "../src/resolve";
 import { beginGame, legalActions, reduce } from "../src/reduce";
 import type { GameState } from "../src/state";
@@ -15,7 +17,7 @@ import { fuse } from "../src/subsystems/fuse";
 import { viewFor } from "../src/viewFor";
 import { PART_KEY } from "../src/work";
 import { inHand, put, sinkFor, slot } from "./fixtures/harness";
-import { body, instanceGame, nerfer, numbered } from "./fixtures/instanceData";
+import { body, instanceGame, nerfer, numbered, radiantNumber } from "./fixtures/instanceData";
 
 function game(): GameState {
   const state = instanceGame("params");
@@ -39,6 +41,30 @@ describe("B3.4 rule 5: declared numbers (R386)", () => {
     stepParam(card, "damage", -1);
     // Steps that cancel out leave the card untuned (§9.3: it hashes as a card never touched).
     expect(card.tuning).toBeUndefined();
+  });
+
+  it("R749 a number tunedOn radiant reads its printed value on the base face whatever its steps, and steps on the Radiant face", () => {
+    const state = game();
+    const [card] = inHand(state, radiantNumber.id, "p1");
+    if (card === undefined) throw new Error("no card");
+    // The base face prints no number: no change finds one to move, KY's Constant lists none, and a
+    // step recorded anyway leaves it at its printed 1.
+    expect(steppableParams(state, card, "upgrade")).toEqual([]);
+    expect(steppableParams(state, card, "degrade")).toEqual([]);
+    expect(numbersOn(state, card).some((entry) => entry.id === "param:times")).toBe(false);
+    stepParam(card, "times", 1);
+    expect(paramValue(state, card, "times")).toBe(1);
+    setParam(card, "times", 3);
+    expect(paramValue(state, card, "times")).toBe(1);
+    // The Radiant face prints it, so it is tuned as any number is.
+    const [shining] = inHand(state, radiantNumber.id, "p1");
+    if (shining === undefined) throw new Error("no card");
+    shining.radiant = true;
+    expect(paramValue(state, shining, "times")).toBe(2);
+    expect(steppableParams(state, shining, "upgrade").map((entry) => entry.delta)).toEqual([1]);
+    expect(numbersOn(state, shining).find((entry) => entry.id === "param:times")?.value).toBe(2);
+    stepParam(shining, "times", 1);
+    expect(paramValue(state, shining, "times")).toBe(3);
   });
 
   it("R386 the default step is 1 up to 5, 2 from 6 to 12 and a quarter (rounded) above; a declared step wins", () => {

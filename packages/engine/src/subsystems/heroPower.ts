@@ -11,7 +11,7 @@
 // reads ahead of the printed "X", so the play validator, `legalActions` and the client all see the
 // same number without a special case for this card.
 //
-// Three powers pause. "Deal 1 damage to a target" takes a target, which R81 lets the `activatePower`
+// Three powers pause. "Deal 1 damage" takes a target, which R81 lets the `activatePower`
 // action carry, and "Discover a Unit" and Stitching's two Discovers are prompts by definition
 // (§6.3). Each is written as one builder that reads `ctx.targets`: with a selection it does the
 // work, without one it opens the prompt and names `POWER_RESUME` as the step to come back to. The answer re-enters `heroPower`
@@ -69,7 +69,7 @@ export const FELINOR_TOKEN_INDEX = "T-felinor";
 /** B2.2: the set whose indices those are, since an index is unique only within its set. */
 const TOKEN_SET = "Core";
 
-/** "Deal 1 damage to a target": any unit or hero, either side. */
+/** "Deal 1 damage": any unit or hero, either side. */
 const PING_SCOPE: TargetScope = { side: "any", of: ["unit", "hero"] };
 
 export type HeroPowerName = "recruit" | "draw" | "ping" | "burn" | "rush" | "felinor" | "discover" | "stitching";
@@ -216,8 +216,8 @@ export const HERO_POWERS: readonly HeroPower[] = [
   {
     name: "ping",
     x: 1,
-    label: "Deal 1 damage to a target",
-    radiantLabel: "Deal 2 damage to a target",
+    label: "Deal 1 damage",
+    radiantLabel: "Deal 2 damage",
     build: pingEffects,
   },
   {

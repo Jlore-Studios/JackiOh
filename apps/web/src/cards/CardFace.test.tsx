@@ -339,7 +339,7 @@ describe("B10: RulesText marks terms in bold", () => {
     const term = one(cry, ".card-text strong.cf-term");
     expect(term.getAttribute("data-term")).toBe("Cry");
     expect(term.textContent).toBe("Cry:");
-    expect(one(cry, ".cf-text-base").textContent).toBe("Cry: Destroy target enemy non-Human Unit.");
+    expect(one(cry, ".cf-text-base").textContent).toBe("Cry: Destroy an enemy non-Human Unit.");
     cleanup();
 
     const start = one(catalogFace("core-040"), '.card-text strong.cf-term[data-term="Start of turn"]');

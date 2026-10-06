@@ -39,6 +39,18 @@ describe("§10.6 chooseTargetWhere (C #32 Felinor Feelings)", () => {
     expect(events.map((event) => event.type)).toEqual(["promptOpened"]);
   });
 
+  it("names each hero to the controller as Your hero or Enemy hero, keyed by seat", () => {
+    const state = newGame("choose-where-heroes");
+
+    run(
+      state,
+      chooseTargetWhere({ step: "picked", scope: { side: "any", of: ["hero"] }, where: (_ctx, card) => card === null }),
+    );
+
+    expect(state.pending?.options.map((option) => option.label)).toEqual(["Your hero", "Enemy hero"]);
+    expect(state.pending?.options.map((option) => option.key)).toEqual(["hero:p1", "hero:p2"]);
+  });
+
   it("asks nothing when the condition admits no card: the effect fizzles", () => {
     const state = newGame("choose-where-none");
     put(state, "fx-1", slot("p2", "units", 1));

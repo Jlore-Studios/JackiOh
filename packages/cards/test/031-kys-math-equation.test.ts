@@ -160,7 +160,11 @@ describe("#31 KY's Math Equation — base", () => {
     s.play("31", { targets: AT_ENEMY_HERO });
     // The repeat asks its target afresh (§10.6).
     expect(s.state.pending?.kind).toBe("target");
-    s.answer("hero:p2's hero");
+    const labels = s.state.pending?.options.map((o) => o.label) ?? [];
+    expect(labels).toContain("Enemy hero");
+    expect(labels.some((l) => /^p[12]\b/.test(l))).toBe(false);
+    expect(s.state.pending?.options.map((o) => o.key)).toContain("hero:p2");
+    s.answer("hero:p2");
 
     s.expectHealth("p2", 28);
     expect(timesPlayedOf(s.card("31"))).toBe(1);

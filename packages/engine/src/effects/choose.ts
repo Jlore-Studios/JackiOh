@@ -5,7 +5,7 @@ import type { CardType, PlayerId, Row, Selection, Tag, ZoneRef } from "@jackioh/
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import { defOf, excludingDefId, query, type CatalogQueryArgs } from "../catalog";
 import { cardTypeOf } from "../faces";
-import { ANSWER_KEY, answerKeyOf, openPrompt, resumeSelf } from "../prompts";
+import { ANSWER_KEY, answerKeyOf, cellOptionLabel, heroOptionLabel, openPrompt, resumeSelf } from "../prompts";
 import type { Effect, EffectContext } from "../script";
 import { effectiveCost } from "../mana";
 import type { CardInstance, GameState, PromptOption } from "../state";
@@ -65,7 +65,7 @@ export function chosenOptions(ctx: EffectContext): string[] {
 }
 
 function label(ctx: EffectContext, selection: Selection): string {
-  if (selection.pick === "hero") return `${selection.player}'s hero`;
+  if (selection.pick === "hero") return heroOptionLabel(selection.player, ctx.controller);
   if (selection.pick === "instance") {
     const card = findOnBoard(ctx, selection.instanceId);
     return card === null ? selection.instanceId : defOf(ctx.state, card.defId).name;
@@ -402,7 +402,7 @@ export function chooseCell(args: {
           for (let lane = 1; lane <= rowSize(row); lane += 1) {
             if (except.has(lane)) continue;
             const selection: Selection = { pick: "zone", player, row, lane };
-            options.push({ key: keyOf(selection), label: `${player} ${row} ${lane}`, selection });
+            options.push({ key: keyOf(selection), label: cellOptionLabel(player, row, lane, chooser), selection });
           }
         }
       }
@@ -508,8 +508,7 @@ function pickable(state: GameState, card: CardInstance, filter: PickFilter): boo
 /**
  * B5 E18: a pick of one card or several from a pile, or from cards across zones, budgeted by count
  * (`max`) or by cost (`budget`) — Classic #11 Mind Melt's "a card of your opponent's hand" (one
- * card), #34 Ancient Acquisition's "2 cards from your graveyard" (Radiant "4 from your graveyard or
- * exile"), #44 Back from the GY's "Units with a total cost of (5) or less", #56's "up to 3 Spells",
+ * card), #44 Back from the GY's "Units with a total cost of (5) or less", #56's "up to 3 Spells",
  * #78's Radiant "a card of yours of its type on your field, in your hand or in your deck". Every
  * matching card of the piles is an option — no Discover limit of three — carrying its cost as R65
  * reads it where it lies (`effectiveCost`: a hand card at its hand cost, any other at its own), and

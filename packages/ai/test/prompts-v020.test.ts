@@ -233,9 +233,10 @@ describe("E18: the AI answers the new prompt kinds", () => {
 
 describe("E18: a whole game with the new prompts", () => {
   it("E18: playMatch finishes a short AI-vs-greedy game in which E18 prompts open, with no refusal, throw or fallback", { timeout: 300_000 }, () => {
-    // Pickle (mode prompts the opponent holds), Ancient Acquisition and Back from the GY (picks, one
-    // budgeted), Mind Melt (a pick of the opponent's hand), beside cheap Units: eight cards and a hero
-    // of 20, so that the game is short and the prompt cards are drawn. On this seed greedy's Pickle
+    // Pickle (mode prompts the opponent holds), Back from the GY (a budgeted pick), Mind Melt (a pick
+    // of the opponent's hand) and Ancient Acquisition (no prompt since R684: its returns are random),
+    // beside cheap Units: eight cards and a hero of 20, so that the game is short and the prompt cards
+    // are drawn. On this seed greedy's Pickle
     // hands the AI three mode prompts on greedy's turn, and the AI's Back from the GY asks a pick.
     const deck = [PICKLE, "classic-011", "classic-034", "classic-044", "core-008", "core-020", "core-030", "core-011"];
     const handicap = { ...HUMAN_HANDICAP, deckSize: deck.length, heroHealth: AI_TUTORIAL.heroHealth };

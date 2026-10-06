@@ -4,7 +4,8 @@
 // on "this" finds nothing when the Unit is in a graveyard; running a Cry is not a play of that Unit; no
 // Unit with a Cry → it may still be played and fizzles, counting as played (§8's conventions, R90);
 // radiant: any Unit with a Cry on the field or in either graveyard, its Cry run twice, each run with
-// its own choices; its tuned number (repeats) reads through `param()` (R386)".
+// its own choices; its tuned number (repeats) reads through `param()` (R386)". The base face prints no
+// repeats, so it is tuned on the Radiant face only (R749).
 //
 // The Cries are Core cards with their own tests: Gary the Gambler (flips coins to buff itself), Me and
 // Mr Token (summons a Rush Token), Duplicating Felinors (summons a copy of itself), Bigot (destroys a
@@ -12,6 +13,7 @@
 // Cry; Felinor Fiender's Stack buries a card beneath it.
 
 import { cardsPlayedThisTurn, legalActions, reduce, stepParam, type GameState } from "@jackioh/engine";
+import { applicableChanges } from "@jackioh/engine/effects";
 import type { Action, PlayerId, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
@@ -52,7 +54,7 @@ function tokensOf(s: Scenario, player: PlayerId): number {
 describe("C #54 Rewind", () => {
   it("declares one target, a Unit with a Cry on the field or in a graveyard: your side on the base face, either on the Radiant", () => {
     expect(def.id).toBe(REWIND);
-    expect(def.params).toEqual([{ key: "repeats", base: 1, radiant: 2, better: "up", step: 1, min: 1 }]);
+    expect(def.params).toEqual([{ key: "repeats", base: 1, radiant: 2, better: "up", step: 1, min: 1, tunedOn: "radiant" }]);
     expect(base.targets).toEqual([
       { kind: "target", min: 1, max: 1, filter: { side: "ally", of: ["unit", "graveyard"], check: "hasCry" } },
     ]);
@@ -169,11 +171,13 @@ describe("C #54 Rewind", () => {
       expect(live.state.players.p2.graveyard.map((card) => card.defId)).toEqual([MENACE]);
     });
 
-    it("R386 an Upgrade triggers the Cry twice: Me and Mr Token summons two Rush Tokens", () => {
+    it("R749 the base face's repeats is not tunable: an Upgrade's menu offers no number and a recorded step still triggers once", () => {
       const s = scenario({ p1: { hand: [REWIND, FILLER], graveyard: [MR_TOKEN] }, p2: { hand: [FILLER] } });
+      expect(applicableChanges(s.state, s.card(REWIND), "upgrade")).not.toContain("number");
+      expect(applicableChanges(s.state, s.card(REWIND), "degrade")).not.toContain("number");
       stepParam(s.card(REWIND), "repeats", 1);
       s.play(REWIND, { targets: pick(s.card(MR_TOKEN).id) });
-      expect(tokensOf(s, "p1")).toBe(2);
+      expect(tokensOf(s, "p1")).toBe(1);
     });
   });
 
@@ -240,6 +244,7 @@ describe("C #54 Rewind", () => {
 
     it("R386 a Degrade triggers the Cry once", () => {
       const s = scenario({ p1: { hand: [{ def: REWIND, radiant: true }, FILLER], graveyard: [MR_TOKEN] }, p2: { hand: [FILLER] } });
+      expect(applicableChanges(s.state, s.card(REWIND), "degrade")).toContain("number");
       stepParam(s.card(REWIND), "repeats", -1);
       s.play(REWIND, { targets: pick(s.card(MR_TOKEN).id) });
       expect(tokensOf(s, "p1")).toBe(1);

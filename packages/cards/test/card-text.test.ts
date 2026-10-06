@@ -675,5 +675,15 @@ describe("patch v0.2.9 wording (issue #44)", () => {
     const wrong = swept.filter((face) => /activates? when|this activates|has activated|Traps activates/i.test(face.text));
     expect(wrong.map((face) => `${face.card.id} ${face.face}: ${face.text}`)).toEqual([]);
   });
+
+  it("R751 no printed face names a target it picks", () => {
+    // Issue #355 swept Core as issue #88 swept Classic and Classic+: "Deal 3 damage.", "Destroy a
+    // Unit.", "Steal an enemy permanent." "Heal a target N" stays, as Book of Heal's did, and so does
+    // "target" the verb (R394), which no pattern here reads.
+    const wrong = swept.filter((face) =>
+      /\bto (a|any) target\b|\btarget (enemy|Unit|permanent|backrow|card)\b|targets are highlighted/i.test(face.text),
+    );
+    expect(wrong.map((face) => `${face.card.id} ${face.face}: ${face.text}`)).toEqual([]);
+  });
 });
 

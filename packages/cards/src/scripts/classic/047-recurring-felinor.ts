@@ -3,10 +3,10 @@
 //   Base:    "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps
 //            reveals, return this to hand."
 //   Radiant: "… return this to hand. It costs ({returnCost})." (0)
-//   Engine:  the Cry casts a generated C #34 on its base face, free, with your picks, then to your
-//            graveyard (R70, R87). The return is a graveyard trigger on your `trapFired`, a Field Trap's
-//            firing included, live only while this card is in your graveyard; the hand cap applies (R4).
-//            Radiant: it returns with `costOverride` 0, which persists in every zone (R78).
+//   Engine:  the Cry casts a generated C #34 on its base face, free, returning 2 random cards (R684),
+//            then to your graveyard (R70, R87). The return is a graveyard trigger on your `trapFired`, a
+//            Field Trap's firing included, live only while this card is in your graveyard; the hand cap
+//            applies (R4). Radiant: it returns with `costOverride` 0, which persists in every zone (R78).
 //
 // A graveyard trigger's `when` is not consulted outside the trap window, so "one of your Traps" is
 // checked in `run`, which answers anything else with no effects.
