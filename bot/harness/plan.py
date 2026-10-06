@@ -324,7 +324,9 @@ def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: 
     (at least medium), the strong ones first, each tier in the usage order. A planning run there
     takes no build lane, so a subscription plans one item while it builds another; one the quiet
     check guards plans only when it holds nothing else. Which item a planner may take is the
-    item's plan floor (`queue.plan_floor`): a medium one plans only easy or unrated items."""
+    item's plan floor (`queue.plan_floor`): a medium one plans only easy or unrated items. A plan
+    is no short call (an Opus planner spent 20 minutes on #37), so like a build it starts only
+    `start_headroom` under each cap."""
     if lanes.plan_free <= 0:
         return []
     cfg = ctx.cfg
@@ -341,7 +343,7 @@ def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: 
                 and quiet_ok not in (ANY_QUIET, provider.id)):
             continue
         if providers_mod.availability(provider, state, ctx.now(), cfg.timezone, cfg.secrets,
-                                      forced=forced) is None:
+                                      forced=forced, starting=True) is None:
             seats.append(seat)
     return sorted(ranked(cfg.pool, seats), key=lambda seat: -TIER_RANK[seat.tier])
 
@@ -1107,7 +1109,9 @@ def claim(ctx: Context, candidate: Candidate,
         planned["wip"] = record["wip"]  # the last cut-off revision's work (#317 part 3)
     if planned.get("plan_in_issue"):
         handoff = planned.get("handoff") if isinstance(planned.get("handoff"), dict) else {}
-        if not handoff or handoff.get("kind") == "plan":
+        if not handoff or handoff.get("kind") in ("plan", "draft"):
+            if handoff.get("kind") == "draft":
+                handoff = {}  # the plan in the description is the plan: a draft gives way
             planned["handoff"] = {**handoff, "kind": "plan",
                                   "provider": handoff.get("provider") or record.get("planned_by")
                                   or "the issue's description", "notes": planned["plan_in_issue"]}
