@@ -43,7 +43,7 @@ const USED: ActivationView = {
 };
 const PUNISH: ActivationView = { ...USED, usesLeft: 1, usable: true, reason: undefined } as ActivationView;
 
-const SECOND_POWER: HeroPowerView = { instanceId: "power-2", defId: "core-098", name: "Draw", x: 1, usedThisTurn: false };
+const SECOND_POWER: HeroPowerView = { instanceId: "power-2", defId: "core-098", name: "draw", title: "Life Tap", x: 1, usedThisTurn: false };
 
 /**
  * `act1` Brother Ping (one ability, its damage moved to 3), `act2` a Turtinator listing two

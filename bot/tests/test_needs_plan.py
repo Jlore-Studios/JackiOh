@@ -146,19 +146,26 @@ class PlanningLaneTests(unittest.TestCase):
         queue(gh, ctx, 4)
         self.assertEqual(plan_mod.make(ctx)["action"], "build")  # the free lane again
 
-    def test_headroom_holds_back_builds_but_not_plans(self):
-        """At 87% of its 5-hour window claude-2 (cap 90%, builds start under 85%) still plans,
-        which is short, but starts no build."""
+    def test_headroom_holds_back_plans_as_it_does_builds(self):
+        """At 87% of its 5-hour window claude-2 (cap 90%, long runs start under 85%) starts
+        neither a build nor a plan: #37's plan on claude-4 started just under its 70% cap and was
+        cut off four minutes in. Under 85% it plans."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh, machine=(), env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"))
         later = iso(NIGHT + timedelta(hours=2))
-        ctx.store.update(lambda s: s.setdefault("providers", {}).update({"claude-2": {"usage": {
-            "five_hour": {"utilization": 0.87, "resets_at": later},
-            "observed_at": iso(NIGHT)}}}))
+
+        def reading(utilization):
+            ctx.store.update(lambda s: s.setdefault("providers", {}).update({"claude-2": {
+                "usage": {"five_hour": {"utilization": utilization, "resets_at": later},
+                          "observed_at": iso(NIGHT)}}}))
+        reading(0.87)
         queue(gh, ctx, 3)                    # planned: a build
-        self.assertNotEqual(plan_mod.make(ctx)["action"], "build")
+        self.assertEqual(plan_mod.make(ctx)["action"], "none")
         queue(gh, ctx, 4, planned=False)     # not planned: a plan
-        self.assertEqual(plan_mod.make(ctx)["action"], "plan")
+        self.assertEqual(plan_mod.make(ctx)["action"], "none")
+        reading(0.8)
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["action"], planned["number"]), ("plan", 4))
 
     def test_a_planning_run_starts_with_every_build_lane_taken(self):
         gh = FakeGitHub()

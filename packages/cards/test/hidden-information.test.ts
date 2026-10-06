@@ -90,6 +90,8 @@ const GIFTED = "core-064";
 const SORCERER = "core-068";
 const MASK = "core-065";
 const HONEYPOT = "core-060";
+/** Classic #60 Pile On: "Recruit every permanent in your deck". */
+const PILE_ON = "classic-060";
 const CALL_TO_ARMS = "core-069";
 const MOTHS = "core-009";
 const BLOOD_RIDDEN = "core-027";
@@ -1044,14 +1046,14 @@ describe("R177: #23's chance on a hidden hand", () => {
 
 describe("R119: the arrivals a play's cardResolved names stay the engine's", () => {
   it("R119 cardResolved's arrivedDuring, which can name a face-down trap the play's Recruit set, reaches neither seat's view (§9.1, §10.8, R33, R97)", () => {
+    // Classic #60 Pile On's Radiant face, "Recruit every permanent in your deck": a play whose Recruit
+    // sets a trap as it resolves.
     const s = scenario({
       seed: "edge-r8-hp-honeypot",
-      p1: { hand: [HEROIC_POWER, MR_VANILLA], library: [HONEYPOT, MR_VANILLA, MR_VANILLA, MR_VANILLA], mana: 8 },
+      p1: { hand: [{ def: PILE_ON, radiant: true }, MR_VANILLA], library: [HONEYPOT, STOCKPILE, STOCKPILE], mana: 8 },
       p2: { hand: [MR_VANILLA], library: [MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA] },
     });
-    // R43: the power lives on the instance; "(3) Recruit a permanent".
-    const power = must(s.hand("p1")[0], "p1's Heroic Power");
-    power.memory[subsystems.POWER_KEY] = "recruit";
+    const power = must(s.hand("p1")[0], "p1's Pile On");
 
     s.play(power);
 
@@ -1390,8 +1392,8 @@ describe("R243: what the view carries of a card beyond its printed face", () => 
     const power = must(g.hand("p1").find((card) => card.defId === HEROIC_POWER), "the drawn Heroic Power");
     const rolled = must(subsystems.powerOf(power), "a rolled power on the drawn Heroic Power");
     const entry = handEntry(g.view("p1"), power.id);
-    // Four powers cost 1 and two cost 2 (§8 #98), so the cost in the view does not say which it is.
-    expect(entry["cost"]).toBe(rolled.x);
+    // The card costs (0) whatever it rolled (R752), so the cost in the view does not say which it is.
+    expect(entry["cost"]).toBe(0);
     expect(entry["power"], "p1's view of the card names its power").toBe(rolled.name);
   });
 

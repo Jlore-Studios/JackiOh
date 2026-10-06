@@ -99,15 +99,17 @@ describe("R43, R151: a Heroic Power created on the field rolls its power", () =>
     // Each one rolled its power as it arrived (R151).
     for (const power of powers) expect(typeof power.memory[subsystems.POWER_KEY]).toBe("string");
 
-    const offered = legalActions(g.state, "p1")
-      .filter((action) => action.type === "activatePower")
-      .map((action) => (action.type === "activatePower" ? action.instanceId : ""));
-    const affordable = powers.filter((power) => subsystems.powerCostOf(power) <= g.state.players.p1.mana.current);
+    // R752: each power is the card's Activate ability, listed as an `activate` (once per target for Ping).
+    const listedFor = (power: CardInstance): ActionBody[] =>
+      legalActions(g.state, "p1").filter((action) => action.type === "activate" && action.instanceId === power.id);
+    const affordable = powers.filter(
+      (power) => (subsystems.powerOf(power)?.x ?? Number.POSITIVE_INFINITY) <= g.state.players.p1.mana.current,
+    );
     expect(affordable.length).toBeGreaterThanOrEqual(1);
-    expect(offered.sort()).toEqual(expect.arrayContaining(affordable.map((power) => power.id)));
+    for (const power of affordable) expect(listedFor(power).length).toBeGreaterThanOrEqual(1);
 
-    const first = must(affordable[0], "an affordable power");
-    const used = act(g.state, { type: "activatePower", playerId: "p1", instanceId: first.id });
+    const first = must(listedFor(must(affordable[0], "an affordable power"))[0], "a listed activation");
+    const used = act(g.state, { ...first, playerId: "p1" });
     expect(used.error).toBeUndefined();
   });
 });

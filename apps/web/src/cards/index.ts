@@ -28,6 +28,7 @@ export {
   concealedInPlay,
   concealedText,
   powerText,
+  powerTitle,
 } from "./inPlay.ts";
 export type { RolledPower } from "./inPlay.ts";
 

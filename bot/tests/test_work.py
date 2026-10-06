@@ -113,7 +113,7 @@ class WorkTests(unittest.TestCase):
             "utilization": 0.87, "resets_at": "2099-01-01T00:00:00Z"}}
         result = worker.run()
         self.assertEqual(result["interrupt"], "usage")
-        self.assertIn("too close to its 90% cap to start a build (it starts under 85%)",
+        self.assertIn("too close to its 90% cap to start a long run (it starts under 85%)",
                       result["reason"])
         self.assertEqual(runner.calls, [])
         self.assertEqual(result["usage"]["five_hour"]["utilization"], 0.87)

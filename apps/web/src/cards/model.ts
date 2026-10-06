@@ -195,7 +195,7 @@ export type InPlay = {
   handStats?: { attack: number; health: number };
   /** R243: the unit's text is gone (`UnitView.vanilla`). */
   vanilla?: boolean;
-  /** R43, R243: the power a #98 Heroic Power rolled, with its X. */
+  /** R43, R243: the power a #98 Heroic Power rolled (R752). */
   power?: RolledPower;
   /** R280: what the card's formula comes to now (`CardView.preview`). */
   preview?: readonly PreviewValue[];
@@ -281,7 +281,7 @@ export function faceModel(source: FaceSource): FaceModel {
     set: def?.set ?? null,
     radiant: source.radiant,
     // Glitch's gem shows glyphs, never a number (glitch.ts); `data-cost` still carries the view's.
-    cost: isGlitch(source.defId) ? { ...costOf(def, source.liveCost, inPlay?.power), text: GLITCH_WORDS.cost, tone: "base", alt: null } : costOf(def, source.liveCost, inPlay?.power),
+    cost: isGlitch(source.defId) ? { ...costOf(def, source.liveCost), text: GLITCH_WORDS.cost, tone: "base", alt: null } : costOf(def, source.liveCost),
     stats: statsOf(type, def !== undefined, printed, source.live ?? handLive(inPlay?.handStats, printed), grewOf(def, source)),
     text,
     // The renderer links only the names that stand in the text, so play's own words link what they name.
@@ -398,14 +398,23 @@ function textInPlay(def: CardDef | undefined, radiant: boolean, printedText: Fac
   if (concealed(def)) return { full: concealedText(def.id, radiant), marks: [] };
   if (inPlay.power !== undefined && def.id === HEROIC_POWER_ID) {
     const face = radiant ? def.radiant : def.base;
-    const words = powerText(inPlay.power, radiant, face.keywords.map(keywordKey).join(", "));
+    // B3.4: Steady Shot's {shot} is the card's number as it stands (the view's), else as printed.
+    const values = inPlay.params ?? printedValues(def, radiant);
+    const words = powerText(inPlay.power, radiant, face.keywords.map(keywordKey).join(", "), values);
     if (words !== null) {
       // R277: a Radiant power is marked against the same power's base words.
-      const baseWords = radiant ? powerText(inPlay.power, false, def.base.keywords.map(keywordKey).join(", ")) : null;
+      const baseWords = radiant
+        ? powerText(inPlay.power, false, def.base.keywords.map(keywordKey).join(", "), printedValues(def, false))
+        : null;
       return { full: words, marks: baseWords === null ? [] : radiantMarks(baseWords, words) };
     }
   }
   return printedText;
+}
+
+/** A definition's declared numbers as printed on a face (B3.4 rule 5), by key. */
+function printedValues(def: CardDef, radiant: boolean): Record<string, number> {
+  return Object.fromEntries((def.params ?? []).map((param) => [param.key, radiant ? param.radiant : param.base]));
 }
 
 /**
@@ -433,7 +442,7 @@ function costTone(live: number | undefined, printed: number): FaceCost["tone"] {
   return "base";
 }
 
-function costOf(def: CardDef | undefined, liveCost: number | undefined, power?: RolledPower): FaceCost {
+function costOf(def: CardDef | undefined, liveCost: number | undefined): FaceCost {
   const live = liveCost === undefined ? undefined : String(liveCost);
 
   if (def === undefined) {
@@ -443,12 +452,6 @@ function costOf(def: CardDef | undefined, liveCost: number | undefined, power?: 
 
   const printed = def.cost;
   if (printed === "X") {
-    // A #98 Heroic Power's X is its rolled power's (R43), which the view names: in play, that is
-    // what the gem says, as its text does.
-    if (power !== undefined) {
-      const x = String(power.x);
-      return { text: x, value: live ?? x, tone: "base", alt: null };
-    }
     // An X card costs exactly X (R65): the gem says X, and `data-cost` carries whatever the view says.
     return { text: "X", value: live ?? "X", tone: "base", alt: null };
   }

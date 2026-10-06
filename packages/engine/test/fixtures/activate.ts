@@ -24,7 +24,7 @@ import { openPrompt, resumeSelf } from "../../src/prompts";
 import { recalled } from "../../src/query";
 import type { ActivationDecl, CardScripts, Effect, EffectContext, Script } from "../../src/script";
 import { activationPaid } from "../../src/subsystems/activate";
-import { heroPower, powerCostOf, rollPower, usePower, POWER_RESUME } from "../../src/subsystems/heroPower";
+import { heroPower, powerAbilities, rollPower, POWER_RESUME, STEADY_SHOT_PARAM } from "../../src/subsystems/heroPower";
 import type { GameState } from "../../src/state";
 
 let nextIndex = 4100;
@@ -205,8 +205,12 @@ export const trapper = def("trapper", "Trap");
 /** "Activate ♾️" with no cost, to reach the cap. */
 export const endless = def("endless", "Field Spell");
 
-/** Heroic Power wired as Core #98 is (R43), so `activate` and its alias reach the real power. */
-export const heroic = def("heroic", "Field Spell", { cost: "X", tags: ["Quickdraw"] });
+/** Heroic Power wired as Core #98 is (R752), so `activate` and its alias reach the real power. */
+export const heroic = def("heroic", "Field Spell", {
+  cost: 0,
+  tags: ["Quickdraw"],
+  params: [{ key: STEADY_SHOT_PARAM, base: 2, radiant: 4, better: "up", step: 2, min: 1 }],
+});
 
 /**
  * Classic #7's shape read the way the real card reads it (R102): the ability is usable once its own
@@ -346,16 +350,14 @@ export const ACTIVATE_SCRIPTS: Record<string, CardScripts> = {
   [heroic.id]: faces(
     {
       staticFlags: { quickdraw: true },
-      cost: ({ instance }) => powerCostOf(instance),
       startOfGame: () => [rollPower()],
-      cry: () => [usePower({ radiant: false })],
+      activations: powerAbilities(false),
       resume: { [POWER_RESUME]: heroPower },
     },
     {
       staticFlags: { quickdraw: true },
-      cost: ({ instance }) => powerCostOf(instance),
       startOfGame: () => [rollPower()],
-      cry: () => [usePower({ radiant: true })],
+      activations: powerAbilities(true),
       resume: { [POWER_RESUME]: heroPower },
     },
   ),

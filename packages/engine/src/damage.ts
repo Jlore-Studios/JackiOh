@@ -61,6 +61,7 @@ function controllerOf(target: DamageTarget): PlayerId {
  * Armor is a reduction, so they compose in opposite directions and are not unified.
  *
  * Nothing about the grant is stored, so it stops the moment the granting card leaves the backrow.
+ * R757: #98's Armor Up adds its player modifier's Armor while the modifier stands.
  * Every reader of hero Armor goes through here — the pipeline, `subsystems/lethal`'s projection,
  * `subsystems/scorer` and §10.8's hero block — so no projection can disagree with the hit (R44).
  */
@@ -76,7 +77,15 @@ export function heroArmorOf(state: GameState, player: PlayerId): number {
         const grants = text.flags.heroArmor === true ? 1 : typeof text.flags.heroArmor === "number" ? text.flags.heroArmor : 0;
         return total + Math.max(0, Math.trunc(grants)) * (text.embiggened ? side.embiggen : side.paid);
       }, sum);
-    }, state.players[player].hero.armor);
+    }, state.players[player].hero.armor + modifierArmorOf(state, player));
+}
+
+/** R757: the Armor a player's `heroArmor` modifiers add, each until its expiry takes it off. */
+function modifierArmorOf(state: GameState, player: PlayerId): number {
+  return state.players[player].mods.reduce(
+    (sum, mod) => (mod.kind === "heroArmor" ? sum + Math.max(0, Math.trunc(mod.amount)) : sum),
+    0,
+  );
 }
 
 /**

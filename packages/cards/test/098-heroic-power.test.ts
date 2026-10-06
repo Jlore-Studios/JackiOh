@@ -1,57 +1,47 @@
-// #98 Heroic Power — SPEC §8.5, §6.2 ("Start of Game", "Once per Turn", Quickdraw), §10.2, §10.6,
-// §10.8, R18, R43, R45, R46, R65, R81, R103, R352.
+// #98 Heroic Power — SPEC §8.5, §6.2 ("Start of Game", Quickdraw, Activate), §10.2, §10.6, §10.8;
+// R43, R46, R81, R103, R352, R752–R761 (the Heroic Power patch, issue #37).
 //
-// BUILD M4-T4 row 98: "In opening hand; power chosen at start of game from the seed; playing costs
-// the power's X and activates once; a copy created mid-game, mulliganed back into the library, or
-// bounced to hand still has a power (R43); once per turn afterwards; Indestructible; each radiant
-// power variant".
+// BUILD M4-T4 row 98: "In opening hand; costs (0) and playing it uses nothing; power chosen at start
+// of game from the seed; each power an Activate paying its X once per turn; Indestructible; each power
+// on both faces".
 //
-// HOW A POWER IS PINNED. R103 makes the power names state (`recruit`, `draw`, `ping`, `burn`,
-// `rush`, `felinor`, `discover`, and R352's `stitching`), so a test that wants a named one writes that name into
-// `memory.power` — which is exactly and only what `subsystems.ensurePower` writes, so the state is
-// one the engine produces. `HERO_POWERS` supplies the X and the pair of §8.5 clauses, and every
-// assertion below is then about what the card DID, never about the table it read.
+// HOW A POWER IS PINNED. R103 makes the power names state, so a test that wants a named one writes
+// that name into `memory.power` — which is exactly and only what `subsystems.ensurePower` writes, so
+// the state is one the engine produces. Every assertion below is then about what the card DID.
 //
 // What the harness cannot reach: `scenario()` skips §2.1, so `startOfGame` never runs and the
-// start-of-game roll of R43 has no card-level path. The roll itself is still covered here through
-// `usePower`, which rolls for a card that has none — same seed, same power; different seeds, more
-// than one power — and `packages/engine/test/heroPower.test.ts` covers the §2.1 placement by
-// calling `finishSetup` directly.
+// start-of-game roll has no card-level path; `packages/engine/test/heroPower.test.ts` covers the roll
+// by calling `finishSetup` directly, and the arrival roll (R151) with a bounce.
 
 import { describe, expect, it } from "vitest";
-import type { GameEvent, PlayerId, Selection } from "@jackioh/shared";
-import { effectiveCost, subsystems } from "@jackioh/engine";
+import type { ActionBody, GameEvent, PlayerId, Selection } from "@jackioh/shared";
+import { effectiveCost, legalActions, subsystems } from "@jackioh/engine";
 import type { CardInstance } from "@jackioh/engine";
 import { cardDef } from "../src/catalog-data";
 import { query } from "../src/query";
 import { base as hpBase, radiant as hpRadiant } from "../src/scripts/098-heroic-power";
 import { scenario, type Scenario, type SideSetup } from "./_harness";
 
-const HEROIC = "core-098"; // Field Spell, cost X, Mythic, tag Quickdraw, Indestructible
+const HEROIC = "core-098"; // Field Spell, cost (0), Mythic, tag Quickdraw, Indestructible
 const RUSH_TOKEN = "core-t-rush";
 const FELINOR_TOKEN = "core-t-felinor";
+const GHOUL_TOKEN = "core-t-ghoul";
 
 /** #53 Reno, a 3-cost Unit: the spare card that keeps §2.5's auto-end away from the assertions. */
 const SPARE = "core-053";
 /** #36 Magic Jammed, a 1-cost Spell that destroys a chosen backrow card (R46's test). */
 const JAMMED = "core-036";
-/** #19 Midrange Menace, a 3-cost 9/9 Unit — the permanent the recruit power finds in a library. */
+/** #19 Midrange Menace, a 3-cost 9/9 Unit — the permanent Expedition Map finds in a library. */
 const MENACE = "core-019";
-/** #72 Reminisce, a 1-cost Spell that Discovers a card out of your graveyard into your hand. */
-const REMINISCE = "core-072";
-/**
- * #93.1 Combo-Fodder, a 0-cost spell token: the spare card for a side with no mana at all, so
- * §2.5's auto-end (which would refresh the mana the assertion is about) never fires.
- */
+/** #93.1 Combo-Fodder, a 0-cost Spell token: a card p2 can always play, so its turn never auto-ends. */
 const FREE = "core-093-1";
+/** Both sides' turns pass with cards to draw and, for p2, a card to play (§2.5's auto-end aside). */
+const TURNS: { p1: SideSetup; p2: SideSetup } = {
+  p1: { hand: [SPARE], mana: 8, library: [JAMMED, JAMMED, JAMMED] },
+  p2: { hand: [FREE], library: [JAMMED, JAMMED, JAMMED] },
+};
 
 type PowerName = (typeof subsystems.HERO_POWERS)[number]["name"];
-
-function powerX(name: PowerName): number {
-  const power = subsystems.HERO_POWERS.find((entry) => entry.name === name);
-  if (power === undefined) throw new Error(`no hero power named "${name}"`);
-  return power.x;
-}
 
 function must<T>(value: T | null | undefined, what: string): T {
   if (value === null || value === undefined) throw new Error(`expected ${what}`);
@@ -59,7 +49,7 @@ function must<T>(value: T | null | undefined, what: string): T {
 }
 
 function eventsOf<T extends GameEvent["type"]>(s: Scenario, type: T): Extract<GameEvent, { type: T }>[] {
-  return s.events.filter((event): event is Extract<GameEvent, { type: T }> => event.type === type);
+  return s.lastEvents.filter((event): event is Extract<GameEvent, { type: T }> => event.type === type);
 }
 
 function unitsOf(s: Scenario, player: PlayerId): CardInstance[] {
@@ -69,10 +59,6 @@ function unitsOf(s: Scenario, player: PlayerId): CardInstance[] {
   });
 }
 
-/**
- * R43: the power is stored on the instance. Writing `memory.power` is what `ensurePower` does and
- * the only thing it does, so a fixture that names a power is a state the engine reaches.
- */
 function setPower(card: CardInstance, name: PowerName): CardInstance {
   card.memory[subsystems.POWER_KEY] = name;
   return card;
@@ -81,10 +67,10 @@ function setPower(card: CardInstance, name: PowerName): CardInstance {
 /** A #98 on p1's backrow with a named power, mana to spend and a spare card in hand. */
 function onField(
   name: PowerName,
-  opts: { radiantFace?: boolean; p1?: SideSetup; p2?: SideSetup } = {},
+  opts: { radiantFace?: boolean; p1?: SideSetup; p2?: SideSetup; seed?: string } = {},
 ): { s: Scenario; power: CardInstance } {
   const s = scenario({
-    seed: `hp-${name}`,
+    seed: opts.seed ?? `hp-${name}`,
     p1: {
       hand: [SPARE],
       mana: 8,
@@ -96,405 +82,9 @@ function onField(
   return { s, power: setPower(must(s.backrow("p1", 1), "the Heroic Power"), name) };
 }
 
-/** A #98 in p1's hand with a named power (or none at all, for R103's unrolled card). */
-function inHand(
-  name: PowerName | null,
-  opts: { radiantFace?: boolean; p1?: SideSetup; p2?: SideSetup } = {},
-): { s: Scenario; power: CardInstance } {
-  const s = scenario({
-    seed: `hp-hand-${String(name)}`,
-    p1: {
-      mana: 8,
-      ...(opts.p1 ?? {}),
-      hand: [{ def: HEROIC, radiant: opts.radiantFace === true }, SPARE, ...(opts.p1?.hand ?? [])],
-    },
-    ...(opts.p2 === undefined ? {} : { p2: opts.p2 }),
-  });
-  const card = must(s.hand("p1")[0], "the Heroic Power in hand");
-  return { s, power: name === null ? card : setPower(card, name) };
-}
-
 function unitPick(card: CardInstance): Selection[] {
   return [{ pick: "instance", instanceId: card.id }];
 }
-
-// ---------------------------------------------------------------------------
-// The card: its data, its wiring and its keyword.
-// ---------------------------------------------------------------------------
-
-describe("#98 Heroic Power — the card", () => {
-  it("§8.5 is a Mythic X-cost Field Spell tagged Quickdraw, Indestructible on both faces", () => {
-    const def = cardDef(HEROIC);
-    expect(def.type).toBe("Field Spell");
-    expect(def.cost).toBe("X");
-    expect(def.rarity).toBe("Mythic");
-    expect(def.tags).toContain("Quickdraw");
-    for (const face of [def.base, def.radiant]) {
-      expect(face.keywords.map((keyword) => keyword.kind)).toContain("Indestructible");
-    }
-  });
-
-  it("§6.2 Quickdraw: both faces carry the flag `setup.ts` reads for the opening hand", () => {
-    // Step 2 of §2.1 swaps one opening draw for a Quickdraw card; that placement is the engine's
-    // own setup test. What this card owes is the flag, on both faces.
-    expect(hpBase.staticFlags?.quickdraw).toBe(true);
-    expect(hpRadiant.staticFlags?.quickdraw).toBe(true);
-  });
-
-  it("§10.9 both faces wire the same six members to the subsystem, and nothing more", () => {
-    // R43 makes this card a subsystem: Quickdraw, the cost, the roll, the play's activation, the
-    // §10.2 action and the prompted powers' continuation. A rule written here would be a second
-    // source of truth for something `subsystems/heroPower.ts` already owns.
-    const members = ["staticFlags", "cost", "startOfGame", "cry", "activate", "resume"];
-    expect(Object.keys(hpBase).sort()).toEqual([...members].sort());
-    expect(Object.keys(hpRadiant).sort()).toEqual([...members].sort());
-    expect(Object.keys(hpBase.resume ?? {})).toEqual([subsystems.POWER_RESUME]);
-  });
-
-  it("R46 Indestructible: a Field Spell that is destroyed simply stays", () => {
-    const { s, power } = onField("burn", { p1: { hand: [JAMMED], mana: 8 } });
-    expect(s.stats(power).keywords.map((keyword) => keyword.kind)).toContain("Indestructible");
-
-    // #36 Magic Jammed locks the zone and destroys the backrow card in it (§8.2).
-    s.play(JAMMED, { targets: unitPick(power) });
-    // §4.5 step 1 drops the destroy mark: the card keeps its zone, and it is not a unit, so there
-    // is no position or Taunt clause to apply.
-    s.expectInZone(power, "field");
-    expect(s.backrow("p1", 1)?.id).toBe(power.id);
-    expect(s.state.players.p1.locks.backrow[0]).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// The cost (R43, R65, R103).
-// ---------------------------------------------------------------------------
-
-describe("#98 Heroic Power — the cost is the power's X (R43, R65, R103)", () => {
-  it("R43 the cost the validator reads is the power's X, for every one of the eight", () => {
-    // R103: "The stored power names are `recruit`, `draw`, `ping`, `burn`, `rush`, `felinor`,
-    // `discover` and `stitching`" (R352 added the eighth), in §8.5's order, each with the X that
-    // row prints in brackets.
-    expect(subsystems.HERO_POWER_NAMES).toEqual([
-      "recruit",
-      "draw",
-      "ping",
-      "burn",
-      "rush",
-      "felinor",
-      "discover",
-      "stitching",
-    ]);
-    expect(subsystems.HERO_POWERS.map((entry) => entry.x)).toEqual([3, 1, 1, 1, 2, 1, 2, 2]);
-
-    const { s, power } = inHand("burn");
-    for (const entry of subsystems.HERO_POWERS) {
-      setPower(power, entry.name);
-      expect(subsystems.powerCostOf(power)).toBe(entry.x);
-      // R65 starts from the `cost` hook, so `effectiveCost` is the number the play pays.
-      expect(effectiveCost(s.state, power)).toBe(entry.x);
-    }
-  });
-
-  it("R103 a Heroic Power that has not rolled yet costs 0, and is playable with no mana", () => {
-    const { s, power } = inHand(null, { p1: { mana: 0, hand: [FREE] } });
-    expect(power.memory[subsystems.POWER_KEY]).toBeUndefined();
-    expect(effectiveCost(s.state, power)).toBe(0);
-
-    s.play(power);
-    s.expectMana("p1", 0);
-    expect(eventsOf(s, "cardPlayed")[0]?.costPaid).toBe(0);
-    // Using it rolls one, so a power that reaches play always has one (R43's idempotent roll).
-    expect(subsystems.HERO_POWER_NAMES).toContain(s.card(power).memory[subsystems.POWER_KEY]);
-  });
-
-  it("R43 the X is never the player's: an x named in the play action changes nothing", () => {
-    for (const x of [0, 4]) {
-      const { s, power } = inHand("recruit", { p1: { library: [MENACE], mana: 8 } });
-      s.play(power, { x });
-      // "recruit" is X 3, whatever the action asked for.
-      s.expectMana("p1", 5);
-      expect(eventsOf(s, "cardPlayed")[0]?.costPaid).toBe(powerX("recruit"));
-    }
-  });
-
-  it("R65 cost modifiers never apply to an X-cost card, so a discount leaves the X alone", () => {
-    // `costMod` is what `setCostMod` writes and R78 keeps it in every zone; R65 then rules that an
-    // X-cost card "costs exactly X: `costMod` and discounts don't change it".
-    const { s, power } = inHand("recruit");
-    power.costMod = -2;
-    expect(effectiveCost(s.state, power)).toBe(powerX("recruit"));
-  });
-
-  it("§10.8 the view names the power, its X and whether it is spent (R43)", () => {
-    const { s, power } = onField("discover");
-    const powers = s.view("p1").you.hero.powers;
-    expect(powers).toHaveLength(1);
-    expect(powers[0]).toMatchObject({
-      instanceId: power.id,
-      defId: HEROIC,
-      name: "discover",
-      x: powerX("discover"),
-      usedThisTurn: false,
-    });
-    // The opponent sees it as theirs to fear, not theirs to use.
-    expect(s.view("p2").you.hero.powers).toEqual([]);
-    expect(s.view("p2").opponent.hero.powers).toHaveLength(1);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Playing it, and the once-per-turn limit (R43, R103).
-// ---------------------------------------------------------------------------
-
-describe("#98 Heroic Power — playing it and once per turn (R43, R103)", () => {
-  it("R43 playing it pays X, activates the power once, and that is the turn's use", () => {
-    const { s, power } = inHand("burn", { p2: { health: 30 } });
-    s.play(power);
-
-    s.expectMana("p1", 7); // 8 − 1
-    s.expectHealth("p2", 28); // the power went off exactly once
-    s.expectInZone(power, "field");
-    expect(s.card(power).memory[subsystems.POWER_USED_KEY]).toBe(s.state.turn);
-    expect(subsystems.whyCannotActivate(s.state, "p1", power.id)).toBe(
-      "that power has already been used this turn",
-    );
-    expect(() => s.activate(power)).toThrow(/already been used this turn/);
-    s.expectHealth("p2", 28); // the refusal spent nothing
-    s.expectMana("p1", 7);
-  });
-
-  it("§10.2 legalActions offers activatePower until it is used, and not after", () => {
-    const { s, power } = onField("burn");
-    expect(subsystems.whyCannotActivate(s.state, "p1", power.id)).toBeNull();
-
-    s.activate(power);
-    s.expectMana("p1", 7);
-    s.expectHealth("p2", 28);
-    expect(s.view("p1").you.hero.powers[0]?.usedThisTurn).toBe(true);
-    expect(() => s.activate(power)).toThrow(/already been used this turn/);
-  });
-
-  it("§6.2 Once per Turn: the next turn is a fresh use", () => {
-    const { s, power } = onField("burn", { p1: { library: [SPARE, SPARE], hand: [SPARE] } });
-    s.activate(power);
-    s.expectHealth("p2", 28);
-
-    // `startTurn()` runs the engine's own start of turn for p1: the turn counter goes up, so the
-    // stored `usedTurn` no longer matches (§6.2's "the instance stores the turn it was last used").
-    s.startTurn();
-    expect(subsystems.usedThisTurn(s.state, s.card(power))).toBe(false);
-    s.activate(power);
-    s.expectHealth("p2", 26);
-  });
-
-  it("R103 once per turn is checked BEFORE the mana, so a spent power says so", () => {
-    const { s, power } = onField("recruit", { p1: { library: [MENACE], hand: [SPARE], mana: 8 } });
-    s.activate(power);
-    // 8 − 3 = 5, still affordable, so drop below the X to make the two refusals compete.
-    s.state.players.p1.mana.current = 0;
-    expect(subsystems.whyCannotActivate(s.state, "p1", power.id)).toBe(
-      "that power has already been used this turn",
-    );
-
-    // …and an unspent power on no mana reports the mana, which is the other half of the priority.
-    const fresh = onField("recruit", { p1: { hand: [SPARE], mana: 0 } });
-    expect(subsystems.whyCannotActivate(fresh.s.state, "p1", fresh.power.id)).toBe(
-      `that power costs ${powerX("recruit")}, more than your mana`,
-    );
-  });
-
-  it("R103 once per turn is checked BEFORE the open prompt, so a spent power still says so", () => {
-    // The other half of R103's message priority. The Discover power leaves a prompt open, and the
-    // player who tries the power again is told the power is spent, not to answer the prompt.
-    const { s, power } = onField("discover", {
-      p1: { hand: [SPARE], mana: 8, backrow: [HEROIC] },
-    });
-    s.activate(power);
-    expect(s.state.pending).not.toBeNull();
-    expect(subsystems.whyCannotActivate(s.state, "p1", power.id)).toBe(
-      "that power has already been used this turn",
-    );
-    // …while an UNSPENT power in the same state is told about the prompt, which is what makes the
-    // first message a priority rather than the only message.
-    const other = setPower(must(s.backrow("p1", 2), "a second Heroic Power"), "burn");
-    expect(subsystems.whyCannotActivate(s.state, "p1", other.id)).toBe("answer the open prompt first");
-  });
-
-  it("§6.2 once the turn has passed the power is no longer spent, so the refusal is the turn", () => {
-    const { s, power } = onField("burn", { p1: { hand: [SPARE] }, p2: { hand: [SPARE] } });
-    s.activate(power);
-    expect(subsystems.usedThisTurn(s.state, s.card(power))).toBe(true);
-
-    s.endTurn();
-    expect(s.state.active).toBe("p2");
-    // "The instance stores the turn it was last used" (§6.2), so a new turn number clears it and
-    // what stands between p1 and the power is whose turn it is.
-    expect(subsystems.usedThisTurn(s.state, s.card(power))).toBe(false);
-    expect(subsystems.whyCannotActivate(s.state, "p1", power.id)).toBe("it is not your turn");
-  });
-
-  it("R103 the use is marked BEFORE the effects run, so a prompted power cannot be spent twice", () => {
-    // The Discover power pauses on a prompt (§10.6). If the use were marked after the effects, the
-    // answer would arrive with the turn's use still unspent and buy a second activation.
-    const { s, power } = onField("discover", { p1: { hand: [SPARE], mana: 8 } });
-    s.activate(power);
-
-    expect(s.state.pending?.kind).toBe("discover");
-    expect(subsystems.usedThisTurn(s.state, s.card(power))).toBe(true);
-    expect(subsystems.whyCannotActivate(s.state, "p1", power.id)).toBe(
-      "that power has already been used this turn",
-    );
-
-    s.answer(must(s.state.pending?.options[0], "an offered Unit").key);
-    expect(s.state.pending).toBeNull();
-    expect(() => s.activate(power)).toThrow(/already been used this turn/);
-    // Exactly one Unit reached the hand, so the power really only went off once.
-    expect(eventsOf(s, "addedToHand")).toHaveLength(1);
-  });
-
-  it("R103 two Heroic Powers are two independent uses in one turn", () => {
-    // Reachable through #36 radiant or #49: a player can control their own plus a stolen one, and
-    // §10.8's `powers` is a list for exactly that reason.
-    const s = scenario({
-      seed: "hp-two",
-      p1: { backrow: [HEROIC, HEROIC], hand: [SPARE], mana: 8 },
-      p2: { health: 30 },
-    });
-    const first = setPower(must(s.backrow("p1", 1), "the first power"), "burn");
-    const second = setPower(must(s.backrow("p1", 2), "the second power"), "felinor");
-
-    expect(s.view("p1").you.hero.powers.map((entry) => entry.name)).toEqual(["burn", "felinor"]);
-
-    s.activate(first);
-    s.expectHealth("p2", 28);
-    // The second one is untouched: the flag is on the instance, never in a module (R43, §10.1).
-    expect(subsystems.usedThisTurn(s.state, s.card(second))).toBe(false);
-    s.activate(second);
-    expect(unitsOf(s, "p1").map((unit) => unit.defId)).toEqual([FELINOR_TOKEN]);
-    s.expectMana("p1", 6); // 8 − 1 − 1
-    expect(s.view("p1").you.hero.powers.every((entry) => entry.usedThisTurn)).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// The eight powers, base clause and radiant clause (§8.5, R43, R352).
-// ---------------------------------------------------------------------------
-
-describe("#98 Heroic Power — the eight powers, base", () => {
-  it("R43 (3) Recruit a permanent: the library's first permanent, top down, not Radiant", () => {
-    const { s, power } = onField("recruit", {
-      p1: { library: [JAMMED, MENACE], hand: [SPARE], mana: 8 },
-    });
-    s.activate(power);
-
-    // §6.3 Recruit scans top down for a Unit, Field Spell, Trap or Field Trap: the Spell is skipped.
-    expect(unitsOf(s, "p1").map((unit) => unit.defId)).toEqual([MENACE]);
-    expect(unitsOf(s, "p1")[0]?.radiant).toBe(false);
-    expect(s.pile("p1", "library").map((card) => card.defId)).toEqual([JAMMED]);
-    s.expectMana("p1", 5); // 8 − 3
-  });
-
-  it("R43 (1) lose 2 health, draw 1 — a loss, not damage (R18)", () => {
-    const { s, power } = onField("draw", {
-      p1: { library: [MENACE, SPARE], hand: [SPARE], armor: 5, mana: 8 },
-    });
-    s.activate(power);
-
-    s.expectHealth("p1", 30 - subsystems.POWER_HEALTH_COST);
-    expect(s.hand("p1").map((card) => card.defId)).toEqual([SPARE, MENACE]);
-    // R18: losing health is not damage, so Armor never applies and no damage pipeline runs.
-    expect(eventsOf(s, "healthLost")).toHaveLength(1);
-    expect(eventsOf(s, "damage")).toHaveLength(0);
-    s.expectMana("p1", 7);
-  });
-
-  it("R43 (1) deal 1 damage to a target the action named (R81), any unit or hero either side", () => {
-    const { s, power } = onField("ping", { p2: { field: [MENACE] } });
-    const victim = must(s.unit("p2", 1), "the enemy #19");
-
-    s.activate(power, { targets: unitPick(victim) });
-    s.expectStats(victim, { health: 8 }); // 9 − 1
-    expect(s.state.pending).toBeNull(); // the target was named, so nothing was asked
-    s.expectMana("p1", 7);
-  });
-
-  it("R103 the ping reaches any unit or hero on either side, prompting when no target is given", () => {
-    const { s, power } = onField("ping", {
-      p1: { field: [MENACE], hand: [SPARE], mana: 8 },
-      p2: { field: [SPARE] },
-    });
-    s.activate(power);
-
-    const pending = must(s.state.pending, "a target prompt");
-    expect(pending.kind).toBe("target");
-    expect(pending.playerId).toBe("p1");
-    const offered = pending.options.map((option) => option.selection);
-    expect(offered).toContainEqual({ pick: "instance", instanceId: must(s.unit("p1", 1), "ally").id });
-    expect(offered).toContainEqual({ pick: "instance", instanceId: must(s.unit("p2", 1), "enemy").id });
-    expect(offered).toContainEqual({ pick: "hero", player: "p1" });
-    expect(offered).toContainEqual({ pick: "hero", player: "p2" });
-
-    s.answer([{ pick: "hero", player: "p2" }]);
-    s.expectHealth("p2", 29);
-  });
-
-  it("R43 (1) deal 2 damage to each opposing hero: the enemy hero only (R45)", () => {
-    const { s, power } = onField("burn", { p1: { hand: [SPARE], health: 30 }, p2: { health: 30 } });
-    s.activate(power);
-    s.expectHealth("p2", 28);
-    s.expectHealth("p1", 30);
-    // "each opposing hero" future-proofs multiplayer: with two players it is the one enemy hero.
-    expect(eventsOf(s, "damage")).toHaveLength(1);
-  });
-
-  it("R43 (2) summon a Rush Token: §7's 3/3 with Rush, placed per R64", () => {
-    const { s, power } = onField("rush");
-    s.activate(power);
-    const tokens = unitsOf(s, "p1");
-    expect(tokens.map((unit) => unit.defId)).toEqual([RUSH_TOKEN]);
-    s.expectStats(must(tokens[0], "the token"), { attack: 3, health: 3 });
-    expect(s.stats(must(tokens[0], "the token")).keywords.map((k) => k.kind)).toContain("Rush");
-    s.expectMana("p1", 6); // 8 − 2
-  });
-
-  it("R43 (1) summon a Felinor Token: §7's 1/1 Felinor", () => {
-    const { s, power } = onField("felinor");
-    s.activate(power);
-    const tokens = unitsOf(s, "p1");
-    expect(tokens.map((unit) => unit.defId)).toEqual([FELINOR_TOKEN]);
-    s.expectStats(must(tokens[0], "the token"), { attack: 1, health: 1 });
-    expect(cardDef(FELINOR_TOKEN).tags).toContain("Felinor");
-    s.expectMana("p1", 7);
-  });
-
-  it("R43 (2) Discover a Unit: three Units offered, the pick goes to hand and is not Radiant", () => {
-    const { s, power } = onField("discover");
-    s.activate(power);
-
-    const pending = must(s.state.pending, "a discover prompt");
-    expect(pending.kind).toBe("discover");
-    expect(pending.playerId).toBe("p1");
-    expect(pending.options).toHaveLength(3);
-
-    const offered = pending.options.flatMap((option) =>
-      option.selection.pick === "mode" ? [option.selection.option] : [],
-    );
-    const units = query({ type: "Unit" }).map((def) => def.id);
-    for (const id of offered) {
-      expect(units).toContain(id);
-      expect(cardDef(id).type).toBe("Unit");
-      expect(cardDef(id).token).toBe(false);
-    }
-    expect(new Set(offered).size).toBe(3); // drawn without replacement (§6.3 Discover)
-
-    const picked = must(offered[0], "an offered Unit");
-    s.answer(picked);
-    const added = s.hand("p1").filter((card) => card.defId === picked);
-    expect(added).toHaveLength(1);
-    expect(added[0]?.radiant).toBe(false);
-    s.expectMana("p1", 6); // 8 − 2
-  });
-});
 
 /** The def ids a Discover prompt offers (§6.3), in the order offered. */
 function offeredIds(s: Scenario): string[] {
@@ -503,259 +93,358 @@ function offeredIds(s: Scenario): string[] {
   );
 }
 
-/** Activate Stitching and answer both Discovers with their first option; returns the two picks. */
-function stitch(s: Scenario, power: CardInstance): [string, string] {
-  s.activate(power);
-  const first = must(offeredIds(s)[0], "a first Unit");
-  s.answer(first);
-  const second = must(offeredIds(s)[0], "a second Unit");
-  s.answer(second);
-  return [first, second];
+/** The power's activations `legalActions` lists for p1 now. */
+function listed(s: Scenario, card: CardInstance): ActionBody[] {
+  return legalActions(s.state, "p1").filter((body) => body.type === "activate" && body.instanceId === card.id);
 }
 
-describe("#98 Heroic Power — Stitching (R352)", () => {
-  it("R352 (2) Stitching: each of its two Discovers offers three Units that cost (2) or less", () => {
-    const { s, power } = onField("stitching");
-    s.activate(power);
+// ---------------------------------------------------------------------------
+// The card: its data, its wiring and its keyword.
+// ---------------------------------------------------------------------------
 
+describe("#98 Heroic Power — the card (R752)", () => {
+  it("R752 is a Mythic Field Spell costing (0), tagged Quickdraw, Indestructible on both faces", () => {
+    const def = cardDef(HEROIC);
+    expect(def.type).toBe("Field Spell");
+    expect(def.cost).toBe(0);
+    expect(def.rarity).toBe("Mythic");
+    expect(def.tags).toContain("Quickdraw");
+    for (const face of [def.base, def.radiant]) {
+      expect(face.keywords.map((keyword) => keyword.kind)).toContain("Indestructible");
+      expect(face.text).toContain("Gain one of 13 random powers. Each is an Activate that spends its (X).");
+      expect(face.text).not.toMatch(/Playing it|Once per turn, spend/);
+    }
+    expect(def.params).toEqual([{ key: "shot", base: 2, radiant: 4, better: "up", step: 2, min: 1 }]);
+    expect(def.refs).toEqual([RUSH_TOKEN, FELINOR_TOKEN, GHOUL_TOKEN]);
+  });
+
+  it("R752 each power's line on each face is its ability's words, after its X and its name", () => {
+    const def = cardDef(HEROIC);
+    for (const entry of subsystems.HERO_POWERS) {
+      expect(def.base.text).toContain(`(${entry.x}) ${entry.title}: ${entry.label}`);
+      expect(def.radiant.text).toContain(`(${entry.x}) ${entry.radiantTitle}: ${entry.radiantLabel}`);
+    }
+    expect(def.radiant.text).toContain("(1) Tank Up: Your hero gains 4 Armor, then this power refreshes.");
+  });
+
+  it("§6.2 Quickdraw: both faces carry the flag `setup.ts` reads for the opening hand", () => {
+    expect(hpBase.staticFlags?.quickdraw).toBe(true);
+    expect(hpRadiant.staticFlags?.quickdraw).toBe(true);
+  });
+
+  it("R752 both faces wire the roll, the thirteen abilities and the Discover step — no cost hook, no Cry", () => {
+    const members = ["staticFlags", "startOfGame", "activations", "resume"];
+    expect(Object.keys(hpBase).sort()).toEqual([...members].sort());
+    expect(Object.keys(hpRadiant).sort()).toEqual([...members].sort());
+    expect(hpBase.activations?.map((decl) => decl.id)).toEqual(subsystems.HERO_POWER_NAMES);
+    expect(hpRadiant.activations?.map((decl) => decl.cost?.mana)).toEqual(subsystems.HERO_POWERS.map((entry) => entry.x));
+    expect(Object.keys(hpBase.resume ?? {})).toEqual([subsystems.POWER_RESUME]);
+  });
+
+  it("R46 Indestructible: a Field Spell that is destroyed simply stays", () => {
+    const { s, power: card } = onField("burn", { p1: { hand: [JAMMED], mana: 8 } });
+    s.play(JAMMED, { targets: unitPick(card) });
+    s.expectInZone(card, "field");
+    expect(s.backrow("p1", 1)?.id).toBe(card.id);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Playing it, and using a power (R752).
+// ---------------------------------------------------------------------------
+
+describe("#98 Heroic Power — costs (0); each power an Activate (R752)", () => {
+  it("R752 playing it costs (0) and uses nothing; the power is then one activation a turn for its X", () => {
+    const s = scenario({ seed: "hp-play", p1: { hand: [HEROIC, SPARE], mana: 8 } });
+    const card = setPower(must(s.hand("p1")[0], "the Heroic Power"), "burn");
+    expect(effectiveCost(s.state, card)).toBe(0);
+    s.play(card, { zone: 1 });
+    s.expectMana("p1", 8).expectHealth("p2", 30);
+    expect(eventsOf(s, "activated")).toEqual([]);
+
+    s.activate(card);
+    s.expectMana("p1", 7).expectHealth("p2", 28);
+    expect(eventsOf(s, "activated")).toHaveLength(1);
+    expect(listed(s, card)).toEqual([]);
+    expect(() => s.activate(card)).toThrow(/already been used this turn/);
+  });
+
+  it("R752 a power its controller cannot pay for is neither listed nor accepted", () => {
+    const { s, power: card } = onField("tricks", { p1: { hand: [SPARE], mana: 2 } }); // X 3
+    expect(listed(s, card)).toEqual([]);
+    expect(() => s.activate(card)).toThrow(/costs 3, more than your mana/);
+  });
+
+  it("R752 R81 Ping is listed once per unit or hero it may hit, so the client can drag it onto one", () => {
+    const { s, power: card } = onField("ping", { p2: { field: [FELINOR_TOKEN] } });
+    const aims = listed(s, card).map((body) => (body.type === "activate" ? body.targets : undefined));
+    expect(aims).toContainEqual([{ pick: "hero", player: "p2" }]);
+    expect(aims).toContainEqual([{ pick: "hero", player: "p1" }]);
+    expect(aims.length).toBe(3);
+  });
+
+  it("R752 the hero panel names the power by its name on the card, with its X and its use", () => {
+    const { s, power: card } = onField("armor", { radiantFace: true });
+    expect(s.view("p1").you.hero.power).toMatchObject({ instanceId: card.id, name: "armor", title: "Tank Up", x: 1, usedThisTurn: false });
+    expect(s.view("p2").opponent.hero.power).toMatchObject({ name: "armor", title: "Tank Up" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The thirteen powers, base face.
+// ---------------------------------------------------------------------------
+
+describe("#98 Heroic Power — the powers (R752–R761)", () => {
+  it("R43 (3) Expedition Map recruits a permanent", () => {
+    const { s, power: card } = onField("recruit", { p1: { library: [MENACE], hand: [SPARE], mana: 8 } });
+    s.activate(card);
+    expect(unitsOf(s, "p1").map((unit) => unit.defId)).toEqual([MENACE]);
+    expect(unitsOf(s, "p1")[0]?.radiant).toBe(false);
+    s.expectMana("p1", 5);
+  });
+
+  it("R753 (1) Life Tap draws 1, then deals 2 damage to your own hero", () => {
+    const { s, power: card } = onField("draw", { p1: { library: [MENACE, JAMMED], hand: [SPARE], mana: 8 } });
+    s.activate(card);
+    expect(s.hand("p1").map((entry) => entry.defId)).toEqual([SPARE, MENACE]);
+    s.expectHealth("p1", 28).expectMana("p1", 7);
+    expect(eventsOf(s, "damage").map((event) => event.targetId)).toEqual(["hero-p1"]);
+  });
+
+  it("R754 (1) Steady Shot deals {shot}, 2, to the enemy hero", () => {
+    const { s, power: card } = onField("burn");
+    s.activate(card);
+    s.expectHealth("p2", 28);
+  });
+
+  it("R752 (2) Ranching summons a Rush Token", () => {
+    const { s, power: card } = onField("rush");
+    s.activate(card);
+    expect(unitsOf(s, "p1").map((unit) => [unit.defId, unit.radiant])).toEqual([[RUSH_TOKEN, false]]);
+  });
+
+  it("R755 (1) Cat Cafe summons a Felinor Token", () => {
+    const { s, power: card } = onField("felinor");
+    s.activate(card);
+    expect(unitsOf(s, "p1").map((unit) => unit.defId)).toEqual([FELINOR_TOKEN]);
+  });
+
+  it("R756 (1) Ping deals 1 Pierce damage to the unit or hero declared with it", () => {
+    const { s, power: card } = onField("ping");
+    s.activate(card, { targets: [{ pick: "hero", player: "p2" }] });
+    s.expectHealth("p2", 29);
+    expect(s.state.pending).toBeNull();
+    // R81: the target travels with the activation; a Ping that names none is refused.
+    const bare = onField("ping", { seed: "hp-ping-bare" });
+    expect(() => bare.s.activate(bare.power)).toThrow();
+  });
+
+  it("R103 (2) Witness Value Discovers a Unit, which goes to hand", () => {
+    const { s, power: card } = onField("discover");
+    s.activate(card);
+    const offered = offeredIds(s);
+    expect(offered).toHaveLength(3);
+    for (const id of offered) expect(cardDef(id).type).toBe("Unit");
+    s.answer(must(offered[0], "an offered Unit"));
+    expect(s.hand("p1").filter((entry) => entry.defId === offered[0]).map((entry) => entry.radiant)).toEqual([false]);
+    s.expectMana("p1", 6);
+  });
+
+  it("R352 (2) Stitching Discovers two Units that cost (2) or less and fuses them into your hand", () => {
+    const { s, power: card } = onField("stitching");
+    const before = s.hand("p1").length;
+    s.activate(card);
     for (const step of [1, 2]) {
-      const pending = must(s.state.pending, `Discover ${step}`);
-      expect(pending.kind).toBe("discover");
-      expect(pending.playerId).toBe("p1");
       const offered = offeredIds(s);
-      expect(offered).toHaveLength(3);
-      expect(new Set(offered).size).toBe(3);
+      expect(offered, `Discover ${step}`).toHaveLength(3);
       for (const id of offered) {
         const offeredDef = cardDef(id);
-        expect(offeredDef.type).toBe("Unit");
-        expect(offeredDef.token).toBe(false);
         expect(typeof offeredDef.cost === "number" && offeredDef.cost <= subsystems.STITCHING_MAX_COST).toBe(true);
       }
       s.answer(must(offered[0], "an offered Unit"));
     }
-    expect(s.state.pending).toBeNull();
-    s.expectMana("p1", 6); // 8 − 2
-  });
-
-  it("R352 R77 the two picks are fused into one hand card at R77's fused cost, not free, and not Radiant", () => {
-    const { s, power } = onField("stitching");
-    const handBefore = s.hand("p1").length;
-    const [first, second] = stitch(s, power);
-
-    const hand = s.hand("p1");
-    expect(hand).toHaveLength(handBefore + 1);
-    const result = must(hand[hand.length - 1], "the fused card");
-    const fusedDef = must(s.state.transientDefs[result.defId], "a fused definition");
-    expect(result.defId).toBe(`t-1:${first}+${second}`);
-    expect(fusedDef.type).toBe("Unit");
-    const a = cardDef(first);
-    const b = cardDef(second);
-    expect(fusedDef.base.attack).toBe((a.base.attack ?? 0) + (b.base.attack ?? 0));
-    expect(fusedDef.base.health).toBe((a.base.health ?? 0) + (b.base.health ?? 0));
-    // "Fuse them and add the result to your hand": no price is stated, so R77's min(sum, 4) stands.
-    const sum = (a.cost as number) + (b.cost as number);
-    expect(result.costOverride).toBeUndefined();
-    expect(effectiveCost(s.state, result)).toBe(Math.min(sum, 4));
-    expect(result.radiant).toBe(false);
+    expect(s.hand("p1")).toHaveLength(before + 1);
     expect(eventsOf(s, "fused")).toHaveLength(1);
-    // The ingredients were only ever definitions: nothing else reached a pile.
-    expect(s.hand("p1").filter((card) => card.defId === first || card.defId === second)).toEqual([]);
+    expect(() => s.activate(card)).toThrow(/already been used this turn/);
   });
 
-  it("R352 R103 the use is spent with the activation, so the answers cannot buy a second one", () => {
-    const { s, power } = onField("stitching");
-    stitch(s, power);
-    expect(() => s.activate(power)).toThrow(/already been used this turn/);
+  it("R757 (1) Armor Up gives your hero 2 Armor until your next turn", () => {
+    const { s, power: card } = onField("armor", TURNS);
+    s.activate(card);
+    expect(s.view("p1").you.hero.armor).toBe(2);
+    s.endTurn();
+    expect(s.state.active).toBe("p2");
+    expect(s.view("p1").you.hero.armor).toBe(2);
+    s.endTurn();
+    expect(s.state.active).toBe("p1");
+    expect(s.view("p1").you.hero.armor).toBe(0);
   });
 
-  it("R352 played from hand, Stitching activates once like any power (R43)", () => {
-    const { s, power } = inHand("stitching");
-    s.play(power, { zone: 1 });
-    expect(must(s.state.pending, "the first Discover").kind).toBe("discover");
-    s.answer(must(offeredIds(s)[0], "a first Unit"));
-    s.answer(must(offeredIds(s)[0], "a second Unit"));
-    expect(Object.keys(s.state.transientDefs)).toHaveLength(1);
-    s.expectMana("p1", 6);
+  it("R758 (2) Die Insect deals 8 damage to a random enemy", () => {
+    const { s, power: card } = onField("insect", { p2: { field: [MENACE] } });
+    s.activate(card);
+    const hits = eventsOf(s, "damage");
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.amount).toBe(8);
+    const menace = must(s.unit("p2", 1), "the enemy Menace");
+    expect([`hero-p2`, menace.id]).toContain(hits[0]?.targetId);
+  });
+
+  it("R759 (2) KY Brainstorm adds a random KY card, then every Spell in your hand costs (1) less", () => {
+    const { s, power: card } = onField("brainstorm", { p1: { hand: [SPARE, JAMMED], mana: 8 } });
+    s.activate(card);
+    const hand = s.hand("p1");
+    const added = must(hand[hand.length - 1], "the KY card");
+    expect(cardDef(added.defId).tags).toContain("KY");
+    expect(cardDef(added.defId).token).toBe(false);
+    expect(added.radiant).toBe(false);
+    expect(effectiveCost(s.state, added)).toBe(Math.max(0, (cardDef(added.defId).cost as number) - 1));
+    expect(effectiveCost(s.state, must(hand.find((entry) => entry.defId === JAMMED), "Magic Jammed"))).toBe(0);
+    expect(effectiveCost(s.state, must(hand.find((entry) => entry.defId === SPARE), "Reno"))).toBe(3);
+  });
+
+  it("R760 (2) Pluck adds a random Fruit to your hand, costing (0)", () => {
+    const { s, power: card } = onField("pluck");
+    s.activate(card);
+    const hand = s.hand("p1");
+    const fruit = must(hand[hand.length - 1], "the Fruit");
+    expect(cardDef(fruit.defId).tags).toContain("Fruit");
+    expect(effectiveCost(s.state, fruit)).toBe(0);
+    expect(fruit.radiant).toBe(false);
+  });
+
+  it("R761 (3) Terminus Tricks Discovers a Trap and summons it face-down into your backrow", () => {
+    const { s, power: card } = onField("tricks");
+    s.activate(card);
+    const offered = offeredIds(s);
+    expect(offered).toHaveLength(3);
+    const traps = query({ type: ["Trap", "Field Trap"] }).map((def) => def.id);
+    for (const id of offered) expect(traps).toContain(id);
+    s.answer(must(offered[0], "an offered Trap"));
+    const set = must(s.backrow("p1", 2), "the summoned Trap");
+    expect(set.defId).toBe(offered[0]);
+    expect(set.radiant).toBe(false);
+    expect(s.view("p2").opponent.backrow[1]).toMatchObject({ faceDown: true });
+    s.expectMana("p1", 5);
   });
 });
 
-describe("#98 Heroic Power — the eight powers, radiant (§8.5's radiant cell)", () => {
-  it("§8.5 Recruit and make it Radiant", () => {
-    const { s, power } = onField("recruit", {
+// ---------------------------------------------------------------------------
+// The thirteen powers, Radiant face.
+// ---------------------------------------------------------------------------
+
+describe("#98 Heroic Power — the powers, Radiant (R752–R761)", () => {
+  it("R43 Expedition Map makes the permanent Radiant", () => {
+    const { s, power: card } = onField("recruit", { radiantFace: true, p1: { library: [MENACE], hand: [SPARE], mana: 8 } });
+    s.activate(card);
+    expect(must(unitsOf(s, "p1")[0], "the recruited #19").radiant).toBe(true);
+  });
+
+  it("R753 Life Tap draws the top card of each player's deck, and deals no damage", () => {
+    const { s, power: card } = onField("draw", {
       radiantFace: true,
       p1: { library: [MENACE], hand: [SPARE], mana: 8 },
+      p2: { library: [JAMMED] },
     });
-    s.activate(power);
-    const recruited = must(unitsOf(s, "p1")[0], "the recruited #19");
-    expect(recruited.defId).toBe(MENACE);
-    expect(recruited.radiant).toBe(true);
-    // §5.2: the radiant face is what a Radiant #19 uses, so its printed stats are the radiant ones.
-    s.expectStats(recruited, { attack: 18, health: 18 });
-  });
-
-  it("§8.5 lose 2, draw 2", () => {
-    const { s, power } = onField("draw", {
-      radiantFace: true,
-      p1: { library: [MENACE, SPARE, JAMMED], hand: [SPARE], mana: 8 },
-    });
-    s.activate(power);
-    s.expectHealth("p1", 30 - subsystems.POWER_HEALTH_COST); // still 2, not 4
-    expect(s.hand("p1").map((card) => card.defId)).toEqual([SPARE, MENACE, SPARE]);
-  });
-
-  it("§8.5 deal 2 (the ping), to a named target and through the prompt alike", () => {
-    const named = onField("ping", { radiantFace: true, p2: { field: [MENACE] } });
-    const victim = must(named.s.unit("p2", 1), "the enemy #19");
-    named.s.activate(named.power, { targets: unitPick(victim) });
-    named.s.expectStats(victim, { health: 7 }); // 9 − 2
-
-    const prompted = onField("ping", { radiantFace: true, p1: { hand: [SPARE], mana: 8 } });
-    prompted.s.activate(prompted.power);
-    expect(prompted.s.state.pending?.prompt).toBe("Deal 2 damage to a target");
-    prompted.s.answer([{ pick: "hero", player: "p2" }]);
-    prompted.s.expectHealth("p2", 28);
-  });
-
-  it("§8.5 4 to each opposing hero", () => {
-    const { s, power } = onField("burn", { radiantFace: true });
-    s.activate(power);
-    s.expectHealth("p2", 26);
+    s.activate(card);
+    expect(s.hand("p1").map((entry) => entry.defId)).toEqual([SPARE, MENACE, JAMMED]);
     s.expectHealth("p1", 30);
   });
 
-  it("§8.5 two Rush Tokens", () => {
-    const { s, power } = onField("rush", { radiantFace: true });
-    s.activate(power);
-    expect(unitsOf(s, "p1").map((unit) => unit.defId)).toEqual([RUSH_TOKEN, RUSH_TOKEN]);
+  it("R754 Steady Shot deals {shot}, 4, then upgrades itself by +2 damage for good", () => {
+    const { s, power: card } = onField("burn", { radiantFace: true, ...TURNS });
+    s.activate(card);
+    s.expectHealth("p2", 26);
+    expect(eventsOf(s, "numberChanged")).toMatchObject([{ key: "shot", value: 6 }]);
+    s.endTurn().endTurn();
+    s.activate(card);
+    expect(eventsOf(s, "damage").map((event) => [event.targetId, event.amount])).toEqual([["hero-p2", 6]]);
+    expect(eventsOf(s, "numberChanged")).toMatchObject([{ key: "shot", value: 8 }]);
   });
 
-  it("§8.5 two Felinor Tokens", () => {
-    const { s, power } = onField("felinor", { radiantFace: true });
-    s.activate(power);
-    expect(unitsOf(s, "p1").map((unit) => unit.defId)).toEqual([FELINOR_TOKEN, FELINOR_TOKEN]);
+  it("R752 Ranching summons a Radiant Rush Token", () => {
+    const { s, power: card } = onField("rush", { radiantFace: true });
+    s.activate(card);
+    expect(unitsOf(s, "p1").map((unit) => [unit.defId, unit.radiant])).toEqual([[RUSH_TOKEN, true]]);
   });
 
-  it("§8.5 Discover a Radiant Unit: the pick arrives with the flag set (R103)", () => {
-    const { s, power } = onField("discover", { radiantFace: true });
-    s.activate(power);
-    const pending = must(s.state.pending, "a discover prompt");
-    expect(pending.prompt).toBe("Discover a Radiant Unit");
+  it("R755 Cat Cafe summons a random non-token Felinor", () => {
+    const { s, power: card } = onField("felinor", { radiantFace: true });
+    s.activate(card);
+    const [summoned] = unitsOf(s, "p1");
+    const def = cardDef(must(summoned, "a Felinor").defId);
+    expect(def.tags).toContain("Felinor");
+    expect(def.token).toBe(false);
+  });
 
-    const picked = must(
-      pending.options.flatMap((option) =>
-        option.selection.pick === "mode" ? [option.selection.option] : [],
-      )[0],
-      "an offered Unit",
-    );
+  it("R756 Ping, killing a Unit, summons a Ghoul Token with its stats", () => {
+    const { s, power: card } = onField("ping", { radiantFace: true, p2: { field: [FELINOR_TOKEN] } });
+    const kitten = must(s.unit("p2", 1), "the enemy Felinor Token");
+    s.activate(card, { targets: unitPick(kitten) });
+    expect(s.unit("p2", 1)).toBeNull();
+    const [ghoul] = unitsOf(s, "p1");
+    expect(must(ghoul, "a Ghoul Token").defId).toBe(GHOUL_TOKEN);
+    s.expectStats(must(ghoul, "a Ghoul Token"), { attack: 1, health: 1 });
+  });
+
+  it("R103 Witness Value Discovers a Radiant Unit", () => {
+    const { s, power: card } = onField("discover", { radiantFace: true });
+    s.activate(card);
+    const picked = must(offeredIds(s)[0], "an offered Unit");
     s.answer(picked);
-    const added = must(s.hand("p1").find((card) => card.defId === picked), "the discovered Unit");
+    expect(s.hand("p1").filter((entry) => entry.defId === picked).map((entry) => entry.radiant)).toEqual([true]);
+  });
+
+  it("R352 Stitching fuses two Radiant Units into a Radiant card", () => {
+    const { s, power: card } = onField("stitching", { radiantFace: true });
+    s.activate(card);
+    s.answer(must(offeredIds(s)[0], "a first Unit"));
+    s.answer(must(offeredIds(s)[0], "a second Unit"));
+    const hand = s.hand("p1");
+    expect(must(hand[hand.length - 1], "the fused card").radiant).toBe(true);
+  });
+
+  it("R757 Tank Up keeps 4 Armor, then refreshes into a different power you may use this turn", () => {
+    const { s, power: card } = onField("armor", { radiantFace: true, ...TURNS });
+    s.activate(card);
+    expect(s.state.players.p1.hero.armor).toBe(4);
+    const now = must(s.backrow("p1", 1), "the Heroic Power");
+    const next = must(subsystems.powerOf(now), "the new power");
+    expect(next.name).not.toBe("armor");
+    const panel = must(s.view("p1").you.hero.power, "the hero panel's power");
+    expect(panel).toMatchObject({ name: next.name, usedThisTurn: false });
+    s.endTurn().endTurn();
+    expect(s.view("p1").you.hero.armor).toBeGreaterThanOrEqual(4);
+  });
+
+  it("R758 Die Insect is Lucky 1, and still deals 8", () => {
+    const { s, power: card } = onField("insect", { radiantFace: true, p2: { field: [MENACE] } });
+    s.activate(card);
+    expect(eventsOf(s, "damage").map((event) => event.amount)).toEqual([8]);
+  });
+
+  it("R759 KY Brainstorm's KY card is Radiant", () => {
+    const { s, power: card } = onField("brainstorm", { radiantFace: true });
+    s.activate(card);
+    const hand = s.hand("p1");
+    const added = must(hand[hand.length - 1], "the KY card");
+    expect(cardDef(added.defId).tags).toContain("KY");
     expect(added.radiant).toBe(true);
   });
 
-  it("R352 radiant Stitching: Discover 2 Radiant Units that cost (2) or less, and the fused card is Radiant", () => {
-    const { s, power } = onField("stitching", { radiantFace: true });
-    s.activate(power);
-    expect(must(s.state.pending, "the first Discover").prompt).toBe("Discover a Radiant Unit that costs (2) or less");
-    const first = must(offeredIds(s)[0], "a first Unit");
-    s.answer(first);
-    const second = must(offeredIds(s)[0], "a second Unit");
-    s.answer(second);
-
-    const result = must(s.hand("p1").find((card) => card.defId.startsWith("t-")), "the fused card");
-    expect(result.radiant).toBe(true);
-    const fusedDef = must(s.state.transientDefs[result.defId], "a fused definition");
-    // R77: the fused Radiant face sums the ingredients' Radiant faces, and that is the face it wears.
-    expect(fusedDef.radiant.attack).toBe((cardDef(first).radiant.attack ?? 0) + (cardDef(second).radiant.attack ?? 0));
-    const hand = s.view("p1").you.hand;
-    const shown = Array.isArray(hand) ? hand.find((card) => card.instanceId === result.id) : undefined;
-    expect(shown?.attack).toBe(fusedDef.radiant.attack);
-    expect(result.costOverride).toBeUndefined();
+  it("R760 Pluck's Fruit is Radiant and costs (0)", () => {
+    const { s, power: card } = onField("pluck", { radiantFace: true });
+    s.activate(card);
+    const hand = s.hand("p1");
+    const fruit = must(hand[hand.length - 1], "the Fruit");
+    expect(fruit.radiant).toBe(true);
+    expect(effectiveCost(s.state, fruit)).toBe(0);
   });
 
-  it("§8 Conventions the radiant cell restates only the powers: X, once per turn and the play's own activation are kept", () => {
-    const { s, power } = inHand("burn", { radiantFace: true });
-    // The X is still the power's, not doubled with the clause.
-    expect(effectiveCost(s.state, power)).toBe(powerX("burn"));
-    s.play(power);
-    s.expectMana("p1", 7);
-    s.expectHealth("p2", 26); // the radiant clause, once
-    expect(() => s.activate(power)).toThrow(/already been used this turn/);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// The roll (R43).
-// ---------------------------------------------------------------------------
-
-describe("#98 Heroic Power — the roll (R43)", () => {
-  it("R43 the roll comes from the match rng: one of the eight, the same for the same seed", () => {
-    const rolled = (seed: string): unknown => {
-      const s = scenario({ seed, p1: { hand: [HEROIC, SPARE], mana: 8 } });
-      const card = must(s.hand("p1")[0], "the Heroic Power");
-      s.play(card);
-      return s.card(card).memory[subsystems.POWER_KEY];
-    };
-
-    const first = rolled("hp-roll-a");
-    expect(subsystems.HERO_POWER_NAMES).toContain(first);
-    expect(rolled("hp-roll-a")).toBe(first);
-
-    // …and it is a real eight-way roll rather than a constant.
-    const seen = new Set<unknown>();
-    for (let n = 0; n < 24; n += 1) seen.add(rolled(`hp-roll-${n}`));
-    expect(seen.size).toBeGreaterThan(1);
-  });
-
-  it("R43 one that reaches a hand with no memory.power rolls as it arrives (R78)", () => {
-    // #72 Reminisce moves a graveyard card into your hand, which is one of the arrivals R43 names:
-    // "one that ends up in a hand or library with no `memory.power` (a bounced or reset instance,
-    // R78) rolls as it arrives".
-    //
-    // KNOWN FAILING, and the gap is the engine's, not this card's: `startOfGame` covers the copies
-    // §2.1 sees, and `usePower` rolls for one that is activated, but nothing in `zones.moveToZone`,
-    // `draw.addToHand`, `state.newInstance` or `transform` calls `ensurePower`, so a copy that
-    // ARRIVES later never rolls. #98's own script header reports it; no effect in the barrel can
-    // reach an instance the card never saw, so the arrival hook has to be engine-side.
-    const s = scenario({
-      seed: "hp-arrival",
-      p1: { hand: [REMINISCE, SPARE], graveyard: [HEROIC], mana: 8 },
-    });
-    const buried = must(s.pile("p1", "graveyard")[0], "the Heroic Power in the graveyard");
-    expect(buried.memory[subsystems.POWER_KEY]).toBeUndefined();
-
-    s.play(REMINISCE);
-    s.answer(buried.id);
-    const arrived = must(s.hand("p1").find((card) => card.id === buried.id), "it in hand");
-    expect(
-      arrived.memory[subsystems.POWER_KEY],
-      "R43: a Heroic Power arriving in a hand with no memory.power must roll one as it arrives; " +
-        "nothing in the engine's arrival paths calls ensurePower, so it arrives powerless and " +
-        "costs 0 for ever",
-    ).toBeDefined();
-    expect(subsystems.HERO_POWER_NAMES).toContain(arrived.memory[subsystems.POWER_KEY]);
-    expect(effectiveCost(s.state, arrived)).toBe(subsystems.powerCostOf(arrived));
-  });
-});
-
-describe("#98 Heroic Power — every visible change is announced (§10.3)", () => {
-  it("§10.3 radiant #98's Recruit reports the Make Radiant half with radiantSet (§10.10, §6.3 Make Radiant)", () => {
-    // Radiant #98 reads "Recruit and make it Radiant". The recruited card reaches the field and is
-    // made Radiant, and §10.10 animates that from `radiantSet` (the glow), as it does every other
-    // Make Radiant. The polish-4 hunt's round 5 (lens "engine invariants") found the flag set inside
-    // the summon with only `summoned` to say so.
-    const s = scenario({
-      seed: "inv-r5-recruit-radiant",
-      p1: { hand: [MENACE], library: [MENACE], mana: 8, backrow: [{ def: HEROIC, radiant: true }] },
-    });
-    const power = s.backrow("p1", 1) as CardInstance;
-    s.card(power).memory[subsystems.POWER_KEY] = "recruit";
-    const recruit = s.pile("p1", "library")[0] as CardInstance;
-    expect(recruit.radiant).toBe(false);
-    s.activate(power);
-
-    s.expectInZone(recruit, "field");
-    expect(s.card(recruit).radiant).toBe(true);
-    const cue = s.lastEvents.find((event) => event.type === "radiantSet" && event.instanceId === recruit.id);
-    expect(cue).toBeDefined();
+  it("R761 Terminus Tricks summons a Radiant Trap", () => {
+    const { s, power: card } = onField("tricks", { radiantFace: true });
+    s.activate(card);
+    s.answer(must(offeredIds(s)[0], "an offered Trap"));
+    expect(must(s.backrow("p1", 2), "the summoned Trap").radiant).toBe(true);
   });
 });

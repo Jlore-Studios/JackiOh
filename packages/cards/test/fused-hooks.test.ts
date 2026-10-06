@@ -461,21 +461,22 @@ describe("R43, R151, R77: a Heroic Power's text fused onto another permanent has
     power.memory[subsystems.POWER_KEY] = "burn";
     const well = must(g.backrow("p2", 2), "p2's Mana Well");
 
-    // p1 plays it (it activates once, R43), and after it resolves p2's #85 fuses it onto the Mana Well
+    // p1 plays it (which uses nothing, R752), and after it resolves p2's #85 fuses it onto the Mana Well
     // (R61, R77): the Mana Well's instance is kept and now carries the Heroic Power's text.
     g.play(power, { zone: 1 });
     const fused: CardInstance = g.card(well);
     expect(fused.defId.startsWith("t-")).toBe(true);
     g.expectInZone(power, "gone");
 
-    // R43: "Once per turn, spend X" is the card's text, and "one created later rolls when it is
-    // created"; R151 has a Heroic Power roll as it arrives anywhere a card can be looked at, so no
+    // R43: each power is an Activate of the card's text (R752), and "one created later rolls when it
+    // is created"; R151 has a Heroic Power roll as it arrives anywhere a card can be looked at, so no
     // copy of the text is left "carrying no power … for ever". The fused card has a power, and p2
     // may use it on their own turn.
     expect(subsystems.powerOf(fused)).not.toBeNull();
     g.endTurn();
     expect(g.state.active).toBe("p2");
-    expect(subsystems.whyCannotActivate(g.state, "p2", fused.id)).toBeNull();
+    const ability = must(subsystems.powerAbilityOf(g.state, fused), "the fused card's power").id;
+    expect(subsystems.whyCannotActivateAbility(g.state, "p2", fused.id, ability)).toBeNull();
   });
 });
 

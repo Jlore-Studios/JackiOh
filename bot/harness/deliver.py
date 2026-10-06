@@ -428,8 +428,15 @@ class Deliverer:
         if status != "planned":
             if status == "interrupted":
                 self._requeue_label(number, "build")
+                handoff = self.result.get("handoff")
+                handoff = handoff if isinstance(handoff, dict) else {}
+                kept = (" Its draft so far is kept, and the next planning run goes on from it."
+                        if str(handoff.get("draft") or "").strip()
+                        else " The end of its session is kept for the next planning run."
+                        if handoff.get("planning") and str(handoff.get("trail") or "").strip()
+                        else "")
                 self.gh.create_comment(number, f"Planning was cut short ({self._link()}): "
-                                       f"{self.result.get('reason')}. It stays queued.")
+                                       f"{self.result.get('reason')}.{kept} It stays queued.")
                 return
             self._fail(number, "build")
             return
@@ -581,7 +588,11 @@ class Deliverer:
 
     def _keep_handoff(self, number: int) -> None:
         """Keep what a run that did not finish the item leaves for the next agent: its notes
-        and the end of its session (`work.py`). A finished item's handoff is dropped."""
+        and the end of its session (`work.py`). A finished item's handoff is dropped.
+
+        A planning session cut off before its plan was done leaves its draft (`work.
+        PLAN_DRAFT_FILE`) and the end of its session: that handoff is a `draft`, which the next
+        planner goes on from and no builder reads. Before this a cut-off plan kept nothing (#37)."""
         status = str(self.result.get("status"))
         handoff = self.result.get("handoff")
         finished = status in ("approved", "reviewed", "split")
@@ -590,13 +601,18 @@ class Deliverer:
         kept: dict[str, Any] | None = None
         if not finished and isinstance(handoff, dict):
             notes = redact(str(handoff.get("notes") or ""))
+            draft = redact(str(handoff.get("draft") or "")).strip()
+            kind = ("plan" if status == "planned"
+                    else "draft" if draft or handoff.get("planning") else "work")
             kept = {"provider": self.provider.id, "family": self.provider.family,
-                    "kind": "plan" if status == "planned" else "work",
+                    "kind": kind,
                     "at": str(handoff.get("at") or ""),
                     "reason": redact(str(self.result.get("reason") or ""))[:500],
                     "notes": (_cut(notes, HANDOFF_NOTES, head=True) if status == "planned"
                               else journal_mod.compact(notes, HANDOFF_NOTES)),
                     "trail": redact(str(handoff.get("trail") or ""))[-HANDOFF_TRAIL:]}
+            if kind == "draft" and draft:
+                kept["draft"] = _cut(draft, issueplan.PLAN_CHARS, head=True)
         def change(state: dict[str, Any]) -> None:
             entry = state_item(state, number)
             if kept is None:

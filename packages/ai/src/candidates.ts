@@ -98,7 +98,8 @@ function sourceCost(state: GameState, action: Source): number {
   const card = findInstance(state, action.instanceId);
   if (card === undefined) return 0;
   if (action.type === "play") return effectiveCost(state, card);
-  if (action.type === "activatePower") return subsystems.powerCostOf(card);
+  // R752: a Heroic Power's power is one of its Activate abilities; the alias names the rolled one.
+  if (action.type === "activatePower") return subsystems.powerAbilityOf(state, card)?.cost?.mana ?? 0;
   return subsystems.abilitiesOf(state, card).find((decl) => decl.id === action.ability)?.cost?.mana ?? 0;
 }
 

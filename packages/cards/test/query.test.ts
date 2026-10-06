@@ -279,9 +279,10 @@ describe("R35 the Transmogulate pool (#83): every non-token Legendary but #83 (B
 
 describe("R65 pools and filters read a definition's cost out of play", () => {
   it("R65 an X-cost card's queryCost is 0 and it answers a cost-0 query", () => {
-    // Core #24 Efficiency Dividend, #74 Adaptive UI, #98 Heroic Power, Classic #87 Plague Chalice,
-    // Classic+ #40 Appropriations and #69 Buff Billy are the catalog's X-cost cards.
-    const xCards = ["core-024", "core-074", "core-098", "classic-087", "classicplus-040", "classicplus-069"];
+    // Core #24 Efficiency Dividend, #74 Adaptive UI, Classic #87 Plague Chalice, Classic+ #40
+    // Appropriations and #69 Buff Billy are the catalog's X-cost cards (#98 Heroic Power costs (0)
+    // since R752).
+    const xCards = ["core-024", "core-074", "classic-087", "classicplus-040", "classicplus-069"];
     expect(ids(query({}).filter((def) => def.cost === "X"))).toEqual(xCards);
     const cost0 = ids(query({ cost: 0 }));
     for (const id of xCards) {

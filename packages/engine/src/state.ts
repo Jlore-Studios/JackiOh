@@ -215,6 +215,12 @@ export type PlayerModifier = {
    * its graveyard, and `endOrphanedModifiers` ends a `sourceId` modifier whose card left the field.
    */
   | { kind: "healToDamage"; converterId: string }
+  /**
+   * R757: #98's Armor Up — Armor on this player's hero, added to `damage.heroArmorOf`'s total from the
+   * moment it is gained until the cleanup that ends the opponent's next turn takes it off (expiry
+   * `nextTurnOf` the opponent), so it is gone when this player's next turn begins.
+   */
+  | { kind: "heroArmor"; amount: number }
 );
 
 export type DelayedEffect = {

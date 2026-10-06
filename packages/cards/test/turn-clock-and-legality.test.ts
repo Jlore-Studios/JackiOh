@@ -46,6 +46,7 @@ const CRAFT = "core-099"; // two chained Discovers
 const FELINORS = "core-012";
 const JELLY_BEAN = "core-026"; // Choose a card in your hand; it becomes Radiant (radiant: choose 2)
 const TWINSPELL = "core-079"; // the next Spell you play gains Echo +1
+const MC_TECH = "classic-040"; // Radiant: "Cry: … steal one of your choice", a prompt at resolution
 const CHAOS_GOLEM = "core-095-1"; // a Token: no random pool or Discover may ever offer it (§5.1)
 const LIBRARY = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
@@ -60,7 +61,7 @@ function must<T>(value: T | null | undefined, what: string): T {
   return value;
 }
 
-/** R103: the seven power names are state, so pinning one is writing what `ensurePower` writes. */
+/** R103: the power names are state, so pinning one is writing what `ensurePower` writes. */
 function withPower(card: CardInstance, name: string): CardInstance {
   card.memory[subsystems.POWER_KEY] = name;
   return card;
@@ -189,7 +190,7 @@ describe("R43 and R103: what an activatePower or a Heroic Power play may carry",
     expect(result.state.players.p1.hand.map((card) => card.defId)).toEqual(handBefore);
   });
 
-  it("R43 Heroic Power's X is its power's X: legalActions offers no X choice and a play records none (§2.3, R65)", () => {
+  it("R752 Heroic Power costs (0): legalActions offers no X choice, a play naming one is refused, and a play pays 0 (§2.3, R65)", () => {
     const g = scenario({ p1: { hand: [HEROIC, RENO], mana: 4 } });
     const card = withPower(must(g.state.players.p1.hand[0], "the Heroic Power in hand"), "ping");
 
@@ -200,16 +201,13 @@ describe("R43 and R103: what an activatePower or a Heroic Power play may carry",
     expect(plays.length).toBe(perZone.size);
     expect(plays.filter((play) => play.x !== undefined)).toEqual([]);
 
-    const result = act(g.state, {
-      type: "play",
-      playerId: "p1",
-      instanceId: card.id,
-      zone: { row: "backrow", lane: 2 },
-      x: 4,
-    });
+    const zone = { row: "backrow", lane: 2 } as const;
+    const withX = act(g.state, { type: "play", playerId: "p1", instanceId: card.id, zone, x: 4 });
+    expect(withX.error).toBe("Heroic Power does not cost X");
+    const result = act(g.state, { type: "play", playerId: "p1", instanceId: card.id, zone });
     expect(result.error).toBeUndefined();
     const played = result.events.find((e) => e.type === "cardPlayed");
-    expect(played !== undefined && "x" in played ? played.x : undefined).toBeUndefined();
+    expect(played !== undefined && "costPaid" in played ? played.costPaid : undefined).toBe(0);
   });
 });
 
@@ -238,19 +236,17 @@ describe("§6.2: 'this turn' on the opponent's turn", () => {
 });
 
 describe("§10.6: a prompt's options can each be picked through the view", () => {
-  it("§10.6 a target prompt's options have distinct keys, so each of two same-named units can be picked (§10.8, R81, R103)", () => {
-    // Two Duplicating Felinors — #12's own copy makes this an ordinary board — and #98's ping power
-    // with no target named, which opens the power's target prompt (R81, R103).
+  it("§10.6 a target prompt's options have distinct keys, so each of two same-named units can be picked (§10.8, R81)", () => {
+    // Two Duplicating Felinors — #12's own copy makes this an ordinary board — among the four
+    // permanents Classic #40 MC Tech's Radiant face picks from in a prompt its Cry opens (§10.6).
     const s = scenario({
       seed: "inv-r4-prompt-keys",
-      p1: { hand: [RENO], mana: 8, backrow: [HEROIC] },
-      p2: { field: [FELINORS, FELINORS] },
+      p1: { hand: [{ def: MC_TECH, radiant: true }, RENO], mana: 8 },
+      p2: { field: [FELINORS, FELINORS, MENACE], backrow: [{ def: SHEEPISH, faceUp: false }] },
     });
-    const power = must(s.backrow("p1", 1), "p1's Heroic Power");
-    withPower(power, "ping");
-    s.activate(power);
+    s.play(MC_TECH, { zone: 1 });
 
-    const pending = must(s.view("p1").pending, "the ping's target prompt");
+    const pending = must(s.view("p1").pending, "MC Tech's target prompt");
     if (!pending.forYou) throw new Error("the prompt should be p1's");
     expect(pending.options.filter((option) => option.defId === FELINORS)).toHaveLength(2);
     // The view's contract (`PendingOption.key` in packages/shared/src/view.ts) is that the key is

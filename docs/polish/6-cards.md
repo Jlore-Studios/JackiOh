@@ -933,7 +933,9 @@ The deck builder does the same for its own buttons by scoping every button rule 
   `useFitText` changes nothing without layout (jsdom). In Chrome, for every catalog card and both
   faces, `.card-name` and `.card-text` stay within their boxes, with scroll ≤ client + 1 on both
   axes (Cypress component):
-  - at 270 px wide, no element carries `data-clamped`;
+  - at 270 px wide, no element carries `data-clamped`, but for #98 Heroic Power's printed faces,
+    whose thirteen powers (R752) fit no 270 px box at the reading floor: the detail view prints
+    them whole at reading size, and in play the face is only the rolled power, which fits;
   - at 170 px wide, only faces whose printed text exceeds 260 characters may carry
     `data-clamped="true"`, and a clamped rules box stays inside the face at `FIT_FLOOR_PX`.
   - Since the integration QA, the rules text has a reading floor (`FIT_FLOOR_PX`, 9 px): a text

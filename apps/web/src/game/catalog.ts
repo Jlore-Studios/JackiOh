@@ -93,7 +93,7 @@ export const MatchCardsContext = createContext<MatchCards>(NO_MATCH_CARDS);
 export function matchCardsOf(view: PlayerView): MatchCards {
   const powers = new Map<string, RolledPower>();
   for (const seat of [view.you, view.opponent]) {
-    for (const power of seat.hero.powers ?? []) powers.set(power.instanceId, { name: power.name, x: power.x });
+    for (const power of seat.hero.powers ?? []) powers.set(power.instanceId, { name: power.name });
   }
   return { defs: view.defs ?? {}, powers };
 }
