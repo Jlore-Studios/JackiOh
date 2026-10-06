@@ -2804,11 +2804,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-06T07:24:45Z",
-        "difficulty": "medium",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "line 5 of the easy rule (no card script) is the one I weighed most: a 3-line fix with no SPEC change tempted easy, but any card-script change is never easy"
+        "at": "2026-10-06T08:45:43Z",
+        "difficulty": "hard",
+        "provider": "claude-2",
+        "tier": "strong",
+        "why": "the fix is in packages/engine/src/subsystems/fuse.ts and work.ts (engine rules: a fused card's Activate abilities must run in their ingredient's place, R102), and the hard line names packages/engine/src/"
       },
       "failures": 0,
       "forced": false,
