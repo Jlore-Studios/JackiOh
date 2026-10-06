@@ -2314,6 +2314,7 @@
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-05T22:42:39Z",
+      "interruptions": 1,
       "issue": 290,
       "kind": "revise",
       "pending_request": false,
