@@ -101,7 +101,7 @@ import { HIDDEN_ID, viewFor } from "../src/viewFor";
 import { endTurn, startTurn } from "../src/turn";
 import { triggerHoldersWithHook } from "../src/triggers";
 import { beginWorkCascade, pushWork, runWorkItem, takeWork } from "../src/work";
-import { activeUnitsOf, cardAt, firstFreeZone, placeOnField, removeFromAnyZone } from "../src/zones";
+import { activeUnitsOf, cardAt, firstFreeZone, moveToZone, placeOnField, removeFromAnyZone } from "../src/zones";
 import { stacker } from "./fixtures/combat";
 import { eventsOfType, inHand, newGame, put, sinkFor, slot } from "./fixtures/harness";
 
@@ -2257,6 +2257,28 @@ describe("SPEC §11 R150 and R154: summing reads and the trapFired payload (M3 g
     };
     expect(seenBy(owner)).toEqual({ instanceId: trap.id, defId: trap.defId });
     expect(seenBy(other)).toEqual({ instanceId: HIDDEN_ID, defId: HIDDEN_ID });
+  });
+
+  it("R752 hides a fired trap from its controller once it is shuffled into a library", () => {
+    const state = game("r752-trap-to-library");
+    const trap = put(state, bareTrap.id, slot("p1", "backrow", 3));
+    const sink = sinkFor(state);
+    expect(fireTrapsFor(sink, played("p2")).fired).toEqual([trap.id]);
+    state.applied = [{ nonce: "r752", events: sink.events }];
+    const seenBy = (view: ReturnType<typeof viewFor>): { instanceId: string; defId: string } => {
+      const event = view.events.find((entry) => entry.type === "trapFired");
+      if (event === undefined || event.type !== "trapFired") throw new Error("no trapFired in view");
+      return { instanceId: event.instanceId, defId: event.defId };
+    };
+
+    // The control: the fired trap sits in a public pile, where R154 lets its controller read it.
+    expect(seenBy(viewFor(state, "p1"))).toEqual({ instanceId: trap.id, defId: trap.defId });
+
+    // C #17 Counterspell Trap shuffled back into its owner's deck: §10.8 and R310 never send the id
+    // of a library card, so the event that announced the flip reads as the sentinel to both seats.
+    moveToZone(state, must(findInstance(state, trap.id), "the fired trap"), "library");
+    expect(seenBy(viewFor(state, "p1"))).toEqual({ instanceId: HIDDEN_ID, defId: HIDDEN_ID });
+    expect(seenBy(viewFor(state, "p2"))).toEqual({ instanceId: HIDDEN_ID, defId: HIDDEN_ID });
   });
 });
 

@@ -850,9 +850,12 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
      * face-down trap no instance id to hang that on. `row`, `lane` and `controller` are not
      * identity and always travel, which is the whole point of the row — the opponent animates the
      * flip in the right zone without being told which card it was.
+     *
+     * R752: to its controller it follows R97, so a fired trap since shuffled into a library, or
+     * taken into the other player's hand, is the sentinel there too.
      */
     case "trapFired":
-      return event.controller === viewer
+      return event.controller === viewer && !hidden(event.instanceId)
         ? event
         : { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID };
 

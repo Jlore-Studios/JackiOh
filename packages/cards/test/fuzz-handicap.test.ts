@@ -12,6 +12,9 @@
 // It is its own file so that `pnpm fuzz` (`vitest run --project cards fuzz`) picks it up by name,
 // and it sizes its wave the way fuzz.test.ts does: the full 1,000 seeds under `pnpm fuzz`, the
 // first 100 under `pnpm test`, and `JACKIOH_FUZZ_FROM` / `JACKIOH_FUZZ_SEEDS` to replay a seed.
+//
+// Each game also runs fuzz.test.ts's invariant monitor (`_invariants.ts`, I1–I6) the same way: every
+// state under `pnpm test`, I6 every I6_GATE_STRIDE-th state under the 1,000-seed gate.
 
 import { describe, expect, it } from "vitest";
 import type { Action, ActionBody, PlayerId } from "@jackioh/shared";
@@ -31,10 +34,17 @@ import {
   mulliganOwed,
 } from "@jackioh/engine";
 import { CATALOG, registerAll } from "../src/index";
+import { I6_GATE_STRIDE, createInvariantMonitor } from "./_invariants";
 
 /** fuzz.test.ts's gate size and smoke size (its WAVE_SEEDS and SWEEP_SEEDS). */
 const WAVE_SEEDS = 1000;
 const SWEEP_SEEDS = 100;
+
+/** fuzz.test.ts's `isWholeSuiteSweep`: only a positively identified `pnpm test` shortens the wave. */
+function isWholeSuiteSweep(): boolean {
+  const script = process.env["npm_lifecycle_event"];
+  return script === "test" || script === "test:coverage";
+}
 
 function waveSize(): number {
   const raw = process.env["JACKIOH_FUZZ_SEEDS"];
@@ -42,8 +52,7 @@ function waveSize(): number {
     const parsed = Number.parseInt(raw, 10);
     if (Number.isFinite(parsed) && parsed >= 1) return Math.min(parsed, WAVE_SEEDS);
   }
-  const script = process.env["npm_lifecycle_event"];
-  return script === "test" || script === "test:coverage" ? SWEEP_SEEDS : WAVE_SEEDS;
+  return isWholeSuiteSweep() ? SWEEP_SEEDS : WAVE_SEEDS;
 }
 
 function firstSeed(): number {
@@ -88,12 +97,17 @@ function playSeed(seed: number): Outcome {
 
   try {
     registerAll();
-    let state = beginGame(createGame({ seed: gameSeed, decks, handicaps })).state;
+    const begun = beginGame(createGame({ seed: gameSeed, decks, handicaps }));
+    let state = begun.state;
     const policy = createRng(`jackioh-fuzz-handicap-policy-${seed}`);
     // R265: while both mulligans are open either seat may answer first; a stream of its own picks
     // which, so the fuzz plays both orders (the game is the same either way, R265).
     const order = createRng(`jackioh-fuzz-handicap-policy-order-${seed}`);
     const log: Action[] = [];
+    const monitor = createInvariantMonitor(state);
+    const stride = isWholeSuiteSweep() ? 1 : I6_GATE_STRIDE;
+    const setup = [...monitor.after(begun.events, state), ...monitor.hidden(state)];
+    if (setup[0] !== undefined) return fail(`invariant at setup: ${setup[0]}`);
 
     while (state.result === null) {
       if (log.length >= MAX_ACTIONS_PER_GAME) return fail(`no ending within ${MAX_ACTIONS_PER_GAME} actions`);
@@ -101,10 +115,17 @@ function playSeed(seed: number): Outcome {
       const chosen: ActionBody | null = subsystems.chooseAction(state, player, policy);
       if (chosen === null) return fail(`no legal action for ${player} on turn ${state.turn}`);
       const action = { ...chosen, playerId: player, nonce: `fuzz-${log.length}` } as Action;
+      const unsound = monitor.before(state, player, chosen);
+      if (unsound[0] !== undefined) return fail(`invariant on turn ${state.turn}: ${unsound[0]}`);
       const result = reduce(state, action);
       if (result.error !== undefined) return fail(`legalActions offered "${action.type}" but reduce refused it: ${result.error}`);
       log.push(action);
       state = result.state;
+      const broken = [
+        ...monitor.after(result.events, state),
+        ...(log.length % stride === 0 || state.result !== null ? monitor.hidden(state) : []),
+      ];
+      if (broken[0] !== undefined) return fail(`invariant after action ${log.length}: ${broken[0]}`);
     }
 
     const ending = state.result;

@@ -4454,6 +4454,11 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R751 words the Core faces without a target they pick", () => {
     provenIn(751, CARDS_CARD_TEXT_TEST);
   });
+
+  // Proved by rulings-c.test.ts "R752 …" (a fired trap shuffled into its controller's library reads as the sentinel to both seats).
+  it("R752 names a fired trap to its controller only where the controller may read it now", () => {
+    provenIn(752, "rulings-c.test.ts");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {
