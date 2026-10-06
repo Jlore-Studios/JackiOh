@@ -108,7 +108,7 @@ export const RANDOM_POOL = ["pb-target-spell", "pb-mode-spell", "pb-discover-spe
 
 /** Classic+ #47 Jogg's Box's shape: cast 3 random Spells from `RANDOM_POOL` (itself excluded). */
 export const joggBox = def("jogg-box", "Spell", { cost: 4 });
-/** Classic+ #38.1 Solarius-Prime's shape: its Cry casts 2 random Spells that target enemies. */
+/** Classic+ #38.1 Solarius Prime's shape: its Cry casts 2 random Spells that target enemies. */
 export const solarius = unit("solarius", 9, 5, { cost: 4 });
 /** A random caster whose pool is itself and a Jogg's Box: random casts that cast at random (R452). */
 export const chainCaster = def("chain-caster", "Spell", { cost: 1 });

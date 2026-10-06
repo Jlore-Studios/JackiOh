@@ -41,6 +41,7 @@ const PINNED: Readonly<Record<string, string>> = {
   "0023_rematch.sql": "6e568bc0",
   "0024_glitch_boards.sql": "c82b008a",
   "0025_patch_retcon.sql": "203f79a3",
+  "0026_catalyst_prime_acclaimed_tags.sql": "1d0838c1",
 };
 
 function migrations(): string[] {

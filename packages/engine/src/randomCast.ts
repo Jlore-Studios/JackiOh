@@ -3,13 +3,13 @@
 // A cast (R70) is §10.5's pipeline entered at step 3 (`playSteps.castThroughPipeline`). Two things
 // can change how its choices are made:
 //
-//  - a random cast (Classic+ #47 Jogg's Box, #38.1 Solarius-Prime) makes every choice its caster
+//  - a random cast (Classic+ #47 Jogg's Box, #38.1 Solarius Prime) makes every choice its caster
 //    would make at random: its declared targets and modes, its Echo repeats' fresh picks, and every
 //    prompt opened for its caster while it resolves — Discover picks included — answered at once from
 //    the match rng, so its caster is never asked. Its X is the caster's current mana, at least 1, as
 //    every cast's is. A cast made while it resolves is random too, and the whole chain is capped
 //    (RANDOM_CAST_CHAIN_CAP). The other player's prompts are theirs and are asked as usual.
-//  - a cast that targets enemies when it can (Solarius-Prime's "Each aims at enemies when it harms
+//  - a cast that targets enemies when it can (Solarius Prime's "Each aims at enemies when it harms
 //    and at your side when it helps", the `targetEnemies` enchantment Classic+ #40 Appropriations
 //    gives its Books, E39) aims each target pick by its declaration (R656): a harmful pick narrows
 //    to the enemies among its options, a helpful one to the friends, when there is one — its declared

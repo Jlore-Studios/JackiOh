@@ -149,6 +149,8 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   );
 
   const sockets: Record<PlayerId, Socket | null> = { p1: null, p2: null };
+  /** R744: which accounts (keyed by home, like `sockets`) have had a socket on this actor. */
+  const attachedOnce: Record<PlayerId, boolean> = { p1: false, p2: false };
   /** One window per seat; see `floodExceeded`. */
   const recentActions: Record<PlayerId, number[]> = { p1: [], p2: [] };
   /**
@@ -176,6 +178,12 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   let finished = match.status === "finished";
   let stopped = false;
   let persistedClocks = match.clocks;
+  /**
+   * R744: the grace deadlines the match row held when this actor was built, keyed by engine seat
+   * as stored, until the first attach hands them to the clock (`startAbsentGrace`). Until then a
+   * write of the clocks keeps them, so the arm task's first `persistClocks` cannot erase them.
+   */
+  let storedGrace: MatchClocks["graceDeadline"] | null = match.clocks.graceDeadline;
   const opening = deps.engine.snapshot(state);
   /**
    * R677: whether the accounts hold each other's seat, as of the last state change. Every socket is
@@ -340,8 +348,21 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     };
   }
 
-  async function persistClocks(): Promise<void> {
+  /** The clocks as stored: the clock's own, plus any stored grace not yet handed to it (R744). */
+  function clocksToStore(): MatchClocks {
     const clocks = clock.snapshot();
+    if (storedGrace === null) return clocks;
+    return {
+      ...clocks,
+      graceDeadline: {
+        p1: clocks.graceDeadline.p1 ?? storedGrace.p1,
+        p2: clocks.graceDeadline.p2 ?? storedGrace.p2,
+      },
+    };
+  }
+
+  async function persistClocks(): Promise<void> {
+    const clocks = clocksToStore();
     if (JSON.stringify(clocks) === JSON.stringify(persistedClocks)) return;
     persistedClocks = clocks;
     try {
@@ -734,6 +755,23 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     }, "disconnect");
   }
 
+  /**
+   * R744: an account that has had no socket on this actor (the actor was rebuilt after a restart, or
+   * the player never opened the match) is disconnected, so its grace starts with the first socket
+   * that does attach, on the seat it plays (R677): at the deadline stored on the match when there
+   * is one, else a fresh window. Nothing starts at boot, so a match no socket returns to stays the
+   * reaper's draw (R112) and nobody loses by seat order. Safe to repeat: a running grace keeps its
+   * deadline (R147).
+   */
+  function startAbsentGrace(): void {
+    for (const home of PLAYERS) {
+      if (attachedOnce[home]) continue;
+      const player = playing(home);
+      clock.startGrace(player, storedGrace?.[player] ?? undefined);
+    }
+    storedGrace = null;
+  }
+
   function attach(home: PlayerId, socket: Socket): void {
     if (voided) {
       // R679: the match no longer exists; a socket that arrives late hears only that.
@@ -742,6 +780,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     }
     const previous = sockets[home];
     sockets[home] = socket;
+    attachedOnce[home] = true;
     socket.attach({
       message: (text) => {
         onFrame(home, text);
@@ -756,6 +795,8 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     fireAndForget(async () => {
       const player = playing(home);
       clock.clearGrace(player);
+      // R744: an account that has not been here yet is away from now.
+      startAbsentGrace();
       await persistClocks();
       // §9.5: a fresh full view, never a log replay. R642: the portraits ride with it.
       pushView(player);

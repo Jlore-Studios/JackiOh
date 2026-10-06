@@ -17,8 +17,8 @@ import type { AudioSettings } from "./types.ts";
 
 /** R631: the music's settings, which every value saved before them reads as. */
 const MUSIC_DEFAULTS = { music: 0.5, station: "tavern", dynamicMusic: true, duckMusic: true, playMusicInBackground: false } as const;
-/** Issue #57: crowd is an audible reaction layer; ambience is -24 dB below full-scale SFX. */
-const MATCH_FEEL_DEFAULTS = { crowd: 0.5, ambience: 0.05 } as const;
+/** Issue #57: crowd is an audible reaction layer (#352 removed the ambience bed). */
+const MATCH_FEEL_DEFAULTS = { crowd: 0.5 } as const;
 const DEFAULTS: AudioSettings = { master: 0.8, sfx: 0.8, voice: 1, muted: false, voiceOn: true, ...MATCH_FEEL_DEFAULTS, ...MUSIC_DEFAULTS };
 
 function stored(): unknown {
@@ -120,9 +120,9 @@ describe("B12 reading the settings", () => {
     for (const raw of [undefined, null, 0, 1, "x", true, [], [0.5, 0.5], () => 0, { master: {} }, { muted: 1, voiceOn: "false" }]) {
       const parsed = parseAudioSettings(raw);
       expect(Object.keys(parsed).sort(), String(raw)).toEqual([
-        "ambience", "crowd", "duckMusic", "dynamicMusic", "master", "music", "muted", "playMusicInBackground", "sfx", "station", "voice", "voiceOn",
+        "crowd", "duckMusic", "dynamicMusic", "master", "music", "muted", "playMusicInBackground", "sfx", "station", "voice", "voiceOn",
       ]);
-      for (const key of ["master", "sfx", "crowd", "ambience", "voice", "music"] as const) {
+      for (const key of ["master", "sfx", "crowd", "voice", "music"] as const) {
         expect(Number.isFinite(parsed[key]), `${String(raw)}.${key}`).toBe(true);
         expect(parsed[key]).toBeGreaterThanOrEqual(0);
         expect(parsed[key]).toBeLessThanOrEqual(1);
@@ -179,6 +179,14 @@ describe("B12 reading the settings", () => {
   it("R631 settings saved before the music existed keep their own values and gain the music's defaults", () => {
     storeRaw(JSON.stringify({ master: 0.3, sfx: 0.6, voice: 0.9, muted: false, voiceOn: false }));
     expect(readAudioSettings()).toEqual({ master: 0.3, sfx: 0.6, voice: 0.9, muted: false, voiceOn: false, ...MATCH_FEEL_DEFAULTS, ...MUSIC_DEFAULTS });
+  });
+
+  it("#352 an ambience volume saved before its removal is dropped on read and never written back", () => {
+    storeRaw(JSON.stringify({ ...DEFAULTS, ambience: 0.4 }));
+    expect(readAudioSettings()).toEqual(DEFAULTS);
+    expect(readAudioSettings()).not.toHaveProperty("ambience");
+    writeAudioSettings({ master: 0.3 });
+    expect(stored()).toEqual({ ...DEFAULTS, master: 0.3 });
   });
 });
 

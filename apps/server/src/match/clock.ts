@@ -90,7 +90,7 @@ export const createMatchClock: CreateMatchClock = ({ timers, config, startedAt, 
   // arms a fresh full deadline, exactly as the turn clock restarts from full on a rebuild. A
   // crash in the window therefore gives both seats at most one more `mulliganClockSeconds`; reading
   // the stored `promptDeadline` back instead would be stricter, but the stored row is written after
-  // the fact and may be stale, and no clock here trusts it yet.
+  // the fact and may be stale, and only the disconnect grace reads its stored deadline back (R744).
   const mulligan: Countdown & { open: boolean; expired: boolean } = {
     ...idle(),
     open: false,
@@ -238,15 +238,18 @@ export const createMatchClock: CreateMatchClock = ({ timers, config, startedAt, 
     // §9.5: "Disconnect grace (60 s) and concede end the match as a loss" and "the grace countdown
     // is stored on the match so both clients show it". It runs beside the turn clock, never
     // instead of it.
-    startGrace: (player: PlayerId): void => {
+    startGrace: (player: PlayerId, deadline?: number): void => {
       if (stopped) return;
       const countdown = grace[player];
       // SPEC §11 R147: "A second disconnect grace starting before the first is cleared keeps the
       // first deadline, so a socket that flaps cannot extend its own grace indefinitely and stall
       // the match."
       if (countdown.timer !== null) return;
-      countdown.deadline = timers.now() + graceMs;
-      countdown.timer = timers.after(graceMs, () => {
+      // R744: a deadline stored before a restart is kept but held to the end of a fresh window, so a
+      // rebuild can shorten a grace and never extend one (R147). One already past fires at once.
+      const fresh = timers.now() + graceMs;
+      countdown.deadline = deadline === undefined ? fresh : Math.min(deadline, fresh);
+      countdown.timer = timers.after(Math.max(0, countdown.deadline - timers.now()), () => {
         countdown.timer = null;
         countdown.deadline = null;
         report({ kind: "grace", player });
