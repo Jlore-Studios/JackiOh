@@ -152,6 +152,9 @@ describe("vercel.json deployment flag", () => {
     for (const branch of [
       "bot-state",
       "bot/issue-63",
+      // Squishy (#60): its state and its issue branches.
+      "squishy-state",
+      "squishy/issue-63",
       "claude/stoic-tesla-837kse",
       "copilot/fix-1",
       "dependabot/npm_and_yarn/vite-7",

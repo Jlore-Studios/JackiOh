@@ -18,8 +18,9 @@ from harness import providers as providers_mod
 from harness.asks import Ask
 from harness.clock import iso, parse_iso
 from harness.commands import Command
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
-                            LABEL_WORKING, MARKER)
+from harness.config import (IDENTITY, LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
+                            LABEL_REVISE, LABEL_TREE, LABEL_WORKING, MARKER, MODES, MODE_LABELS,
+                            OTHERS, SLASH)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.providers import Provider
@@ -70,6 +71,17 @@ def handle(ctx: Context, name: str, payload: dict[str, Any]) -> list[str]:
     return [f"ignored: {name}.{action}"]
 
 
+#: What one bot may ask of another in a comment (#60): Squishy stops the sub-issues of a tree it
+#: split that are queued for the night bot.
+OTHER_BOT_VERBS = ("stop",)
+
+
+def from_other_bot(user: dict[str, Any]) -> bool:
+    """The comment's author is another bot in the repository (`config.OTHERS`)."""
+    login = str(user.get("login") or "").lower()
+    return any(other.login.lower() == login for other in OTHERS)
+
+
 def _is_own(body: str) -> bool:
     """True for a comment the bot wrote (a person quoting it keeps the marker behind `>`)."""
     lines = [line for line in str(body or "").splitlines() if MARKER in line]
@@ -97,7 +109,7 @@ def answered(ctx: Context, comment_id: int, *, review_comment: bool = False) -> 
 
 
 NUDGE = ("I saw my name, but no request I could act on. Start a line with "
-         "`@{bot} <what you want>` or `/harness build`; `/harness help` lists the rest.")
+         "`@{bot} <what you want>` or `" + SLASH + " build`; `" + SLASH + " help` lists the rest.")
 
 
 #: How long a claim is kept: longer than the sweep looks back.
@@ -146,6 +158,12 @@ def on_comment(ctx: Context, payload: dict[str, Any], *, review_comment: bool = 
         return ["ignored: the bot's own comment"]
     found = commands.parse(body, ctx.cfg.bot_login)
     nudge = not found and commands.names_the_bot(body, ctx.cfg.bot_login)
+    if from_other_bot(comment.get("user") or {}):
+        # The bots name each other in their replies (#60): only a bare `stop`, which Squishy
+        # sends to stop a tree it split, is acted on, and nothing is answered with a hint, so
+        # two bots never talk to each other for ever.
+        found = [c for c in found if c.verb in OTHER_BOT_VERBS and not c.args]
+        nudge = False
     if not found and not nudge:
         return ["no command"]
     if review_comment:
@@ -193,7 +211,7 @@ def run_commands(ctx: Context, found: list[Command], thread: dict[str, Any], use
             word = command.args.split()[0] if command.args.split() else command.args
             replies.append(head + f"`{word}` is not a command; did you mean `{command.meant}`? "
                            "I did nothing. Say it again spelt that way, or with more words for a "
-                           "request. " + commands.POINTER.format(bot=ctx.cfg.bot_login))
+                           "request. " + commands.pointer(ctx.cfg.bot_login))
             continue
         if level < command.level:
             need = LEVEL_NAMES.get(command.level, str(command.level))
@@ -217,14 +235,14 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
     by = str(user.get("login", ""))
     verb = command.verb
     if verb == "status":
-        return report(ctx) + "\n\n" + commands.POINTER.format(bot=ctx.cfg.bot_login)
+        return report(ctx) + "\n\n" + commands.pointer(ctx.cfg.bot_login)
     if verb == "help":
         return commands.help_text(ctx.cfg.bot_login, command.args)
     if verb == "halt":
         reason = command.args or "no reason given"
         ctx.store.update(lambda s: s.update(halted=True, halt={
             "by": by, "at": iso(ctx.now()), "reason": reason}), "halt")
-        return ("Halted. No new model work starts until `/harness start`; a run already going "
+        return (f"Halted. No new model work starts until `{SLASH} start`; a run already going "
                 "stops at its next checkpoint and keeps its work.")
     if verb == "start":
         # `resume <subscription>` (or `start <subscription>`) lifts that one's suspension; any
@@ -242,7 +260,7 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
     if verb == "suspend":
         word, _, rest = command.args.partition(" ")
         if not word:
-            return ("`suspend` needs a subscription, as in `/harness suspend claude-3 using it "
+            return (f"`suspend` needs a subscription, as in `{SLASH} suspend claude-3 using it "
                     "myself`. Nothing was done.")
         provider, problem = _subscription(ctx, word)
         if provider is None:
@@ -251,11 +269,13 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
         ctx.store.update(lambda s: providers_mod.record(s, provider.id).update(suspended=held),
                          f"suspend {provider.id}")
         return (f"Suspended `{provider.id}`. No new work starts on it until "
-                f"`/harness resume {provider.id}`; a run already going on it stops at its next "
+                f"`{SLASH} resume {provider.id}`; a run already going on it stops at its next "
                 "checkpoint, keeps its work and goes back to the queue for another subscription.")
     if verb == "run":
         target = command.args.lstrip("#")
         return _run_now(ctx, int(target) if target.isdigit() else None)
+    if verb in ("suggest", "oneshot", "split") and not commands.offered(verb):
+        return _not_mine(verb)
     if verb == "suggest":
         def wanted(state: dict[str, Any]) -> None:
             state["suggest"].update(requested=True)
@@ -269,13 +289,16 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
     if not number:
         return f"`{verb}` needs an issue or a pull request to act on."
     if verb == "stop":
-        return stop(ctx, number, by=by)
+        reply = stop(ctx, number, by=by)
+        if LABEL_TREE in label_names(ctx.gh.get_issue(number)):
+            reply += " " + stop_tree(ctx, number, by=by)
+        return reply
     if verb == "rebuild":
         return stepup.rebuild_request(ctx, number, by)
     if verb == "review":
         if not is_pr:
             return ("`review` asks for a review run of one of my pull requests; on an issue, "
-                    "`/harness build` queues it.")
+                    f"`{SLASH} build` queues it.")
         first, _, rest = command.args.partition(" ")
         floor = first.lower() if first.lower() in ("strong", "medium") else ""
         notes = rest.strip() if floor else command.args.strip()
@@ -283,11 +306,64 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
     notes_line = ""
     if command.args:
         notes_line = " I will read your notes with the rest of the thread."
+    if verb in ("oneshot", "split"):
+        if is_pr:
+            return f"`{verb}` works on an issue; on a pull request, ask for a revision."
+        first, _, rest = command.args.partition(" ")
+        mode = verb
+        if verb == "split" and first.lower() == "bot":
+            mode = "split-bot"
+            notes_line = " I will read your notes with the rest of the thread." if rest else ""
+        if mode not in MODES:
+            return _not_mine(mode)
+        return queue_build(ctx, number, by=by, force=command.force, ask=ask,
+                           mode=mode) + notes_line
     if verb in ("build", "revise", "request"):
         if is_pr:
             return queue_revise(ctx, number, by=by, force=command.force, ask=ask) + notes_line
-        return queue_build(ctx, number, by=by, force=command.force, ask=ask) + notes_line
+        # An explicit `build` is a plain build: a mode the issue was queued in comes off.
+        mode = "" if verb == "build" and MODES else None
+        return queue_build(ctx, number, by=by, force=command.force, ask=ask,
+                           mode=mode) + notes_line
     return f"`{verb}` is not something I can do here."
+
+
+def _not_mine(verb: str) -> str:
+    """The reply to a verb this bot does not have, naming the bot that does (#60)."""
+    if verb == "suggest":
+        return f"{IDENTITY.title} makes no suggestions."
+    names = ", ".join(f"{o.name} (@{o.login})" for o in OTHERS)
+    hint = f" {names} may: ask there." if names else ""
+    return f"I have no `{verb}` mode.{hint}"
+
+
+def stop_tree(ctx: Context, parent: int, *, by: str) -> str:
+    """`stop` on a parent the bot split (#60): its open sub-issues leave the queue too. Its own
+    are stopped here; one queued for another bot gets that bot's own `stop` command, so it stops
+    its work the way it always does."""
+    stopped: list[str] = []
+    try:
+        children = ctx.gh.list_sub_issues(parent)
+    except GitHubError as exc:
+        return f"Its sub-issues could not be read ({str(exc)[:200]}), so they are still queued."
+    for child in children:
+        if child.get("state") != "open":
+            continue
+        number = int(child["number"])
+        other = None
+        names = {n.lower() for n in label_names(child)}
+        for candidate in OTHERS:
+            if any(n.startswith(candidate.label_prefix) for n in names):
+                other = candidate
+        if other is None:
+            stop(ctx, number, by=by)
+        else:
+            ctx.gh.create_comment(number, f"@{other.login} stop\n\n{by} stopped the tree this "
+                                  f"belongs to (#{parent}).")
+        stopped.append(f"#{number}")
+    if not stopped:
+        return "It has no open sub-issues."
+    return f"Its open sub-issues leave the queue too: {', '.join(stopped)}."
 
 
 def _subscription(ctx: Context, word: str) -> tuple[Provider | None, str]:
@@ -309,14 +385,14 @@ def _resume(ctx: Context, command: Command) -> str:
     """`start <subscription>` (`resume claude-3`): lift that one's suspension, and no halt."""
     provider, problem = _subscription(ctx, command.args.split()[0])
     if provider is None:
-        return problem + " `/harness start` alone lifts a halt."
+        return problem + f" `{SLASH} start` alone lifts a halt."
     if providers_mod.suspension(ctx.store.load(), provider.id) is None:
         return f"`{provider.id}` is not suspended, so there was nothing to lift."
     ctx.store.update(lambda s: providers_mod.record(s, provider.id).pop("suspended", None),
                      f"resume {provider.id}")
     reply = f"Resumed `{provider.id}`: the bot spends it again as soon as it is free."
     if ctx.store.load().get("halted"):
-        reply += " The bot is still halted, though: `/harness start` lifts that."
+        reply += f" The bot is still halted, though: `{SLASH} start` lifts that."
     if command.force:
         reply += " " + _run_now(ctx, None)
     return reply
@@ -345,6 +421,8 @@ def on_review(ctx: Context, payload: dict[str, Any]) -> list[str]:
     level = _level(ctx, user, review.get("author_association"))
     if level <= 0:
         return [f"ignored: @{user.get('login')} is not on the trust list"]
+    if from_other_bot(user):
+        return ["ignored: another bot's review"]
     body = str(review.get("body") or "")
     found = commands.parse(body, ctx.cfg.bot_login)
     changes = (LABEL_PR in label_names(pull) and level >= 2
@@ -376,12 +454,15 @@ def on_issue_change(ctx: Context, payload: dict[str, Any], *, is_pr: bool) -> li
     number = int(thread.get("number") or 0)
     action = payload.get("action")
     wanted = False
+    mode: str | None = None
     if action == "labeled":
         name = str((payload.get("label") or {}).get("name", ""))
-        # Either queue label works on either kind of thread: an issue builds, a PR revises.
-        wanted = name in (LABEL_BUILD, LABEL_REVISE)
+        # Either queue label works on either kind of thread: an issue builds, a PR revises. A
+        # mode's label (#60) queues the issue in that mode.
+        wanted = name in (LABEL_BUILD, LABEL_REVISE) or (name in MODE_LABELS and not is_pr)
         if not wanted:
             return [f"ignored: label {name}"]
+        mode = MODE_LABELS.get(name)
     elif action == "assigned":
         assignee = str((payload.get("assignee") or {}).get("login", ""))
         wanted = assignee.lower() == ctx.cfg.bot_login.lower()
@@ -395,7 +476,7 @@ def on_issue_change(ctx: Context, payload: dict[str, Any], *, is_pr: bool) -> li
     if is_pr:
         reply = queue_revise(ctx, number, by=by, label_present=action == "labeled")
     else:
-        reply = queue_build(ctx, number, by=by, label_present=action == "labeled")
+        reply = queue_build(ctx, number, by=by, label_present=action == "labeled", mode=mode)
     ctx.gh.create_comment(number, f"@{by} {reply}")
     return [reply]
 
@@ -434,7 +515,7 @@ def on_pull_closed(ctx: Context, payload: dict[str, Any]) -> list[str]:
         return [f"#{number} closed to build #{issue} again"]  # `stepup.rebuild` said why
     if not pull.get("merged"):
         ctx.gh.create_comment(issue, f"#{number} was closed without merging. Comment "
-                              f"`/harness build` to have me try again.")
+                              f"`{SLASH} build` to have me try again.")
         return [f"#{number} closed unmerged"]
     # "Closes #N" in the body should do this, but GitHub doesn't always: #43 merged and left #39 open.
     if ((pull.get("base") or {}).get("ref") == ctx.cfg.default_branch

@@ -231,8 +231,8 @@ class StatusLoopWorkflowTests(unittest.TestCase):
         refresh = job(self.text, "refresh")
         self.assertIn("runs-on: ubuntu-latest", refresh)
         self.assertIn('EVERY_SECONDS: "600"', self.text)
-        self.assertIn('python -m harness dashboard --sweep --stats --every "${EVERY_SECONDS}" '
-                      '--for "${LOOP_SECONDS}"', refresh)
+        self.assertIn('python -m harness dashboard --sweep --stats --companions \\\n'
+                      '            --every "${EVERY_SECONDS}" --for "${LOOP_SECONDS}"', refresh)
         # The loop ends inside GitHub's six-hour cap, ahead of its own timeout.
         loop = int(re.search(r'LOOP_SECONDS: "(\d+)"', self.text).group(1))
         timeout = int(re.search(r"timeout-minutes: (\d+)", refresh).group(1))

@@ -1,6 +1,9 @@
-"""Configuration: `.harness/config.json` for the knobs, the environment for secrets and run facts.
+"""Configuration: `<home>/config.json` for the knobs, the environment for secrets and run facts.
 
-This is the only module that reads `os.environ`. Everything else receives a `Config`.
+The home is `.harness/` for the night bot and `.squishy/` for Squishy (`identity.py`, #60): the
+labels, the slash command, the branches, the state branch, the workflow and the marker below are
+the running bot's. This module and `identity.py` are the only ones that read `os.environ`.
+Everything else receives a `Config`.
 """
 
 from __future__ import annotations
@@ -11,29 +14,48 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
+from harness import identity as identity_mod
 from harness import providers as providers_mod
 from harness.errors import ConfigError
 from harness.providers import Pool, Secrets
 
 #: The repository root: `bot/harness/config.py` sits two directories below it.
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = identity_mod.REPO_ROOT
 
-CONFIG_PATH = Path(".harness") / "config.json"
-TRUST_PATH = Path(".harness") / "trust.txt"
-HALT_PATH = ".harness/HALT"
+#: Which bot this process is (`identity.py`): the night bot's, or Squishy's.
+HOME = identity_mod.HOME
+IDENTITY = identity_mod.CURRENT
+#: How the bot names itself: "the night bot" in a sentence, "Night bot" at the head of a title.
+NAME = IDENTITY.name
+TITLE = IDENTITY.title
+#: Its slash command (`/harness`, `/squishy`).
+SLASH = IDENTITY.slash
+#: The modes it has beyond a plain build (`identity.MODES`): Squishy's `oneshot`, `split` and
+#: `split-bot`; none for the night bot.
+MODES = IDENTITY.modes
+#: The other bots in the repository, whose issues this one leaves alone (`queue.owner`).
+OTHERS = IDENTITY.others
+#: What the bot's branches start with: `bot/issue-<n>`, `bot/wip/<pr>`, `bot/old/…`.
+BRANCH_PREFIX = IDENTITY.branch_prefix
+#: What its commits' messages start with (`bot: build pass 1 for #85`).
+COMMIT_PREFIX = IDENTITY.commit_prefix
+
+CONFIG_PATH = Path(HOME) / "config.json"
+TRUST_PATH = Path(IDENTITY.trust)
+HALT_PATH = f"{HOME}/HALT"
 PROMPTS_DIR = Path(__file__).resolve().parents[1] / "prompts"
 
 #: Every comment, issue and PR body the harness writes carries this, so the event workflow can
 #: tell the bot's own words from a person's.
-MARKER = "<!-- jackioh-bot -->"
+MARKER = IDENTITY.marker
 
-STATE_BRANCH = "bot-state"
+STATE_BRANCH = IDENTITY.state_branch
 STATE_FILE = "state.json"
 #: The files an orphan branch the bot writes to starts with beside its own: Vercel counts a
 #: deployment for every push to every branch and reads its settings from the commit pushed, so a
 #: branch with no `vercel.json` of its own deploys on every write (docs/architecture.md, §4.2).
 NO_DEPLOY = {"vercel.json": '{ "git": { "deploymentEnabled": false } }\n'}
-NIGHT_WORKFLOW = "bot-night.yml"
+NIGHT_WORKFLOW = IDENTITY.workflow
 
 #: The environment key a run's model job receives its provider's secret in (`providers.py`).
 PROVIDER_SECRET_KEY = "HARNESS_PROVIDER_SECRET"
@@ -42,6 +64,7 @@ PROVIDER_SECRET_KEY = "HARNESS_PROVIDER_SECRET"
 #: writes and stripped from the model's environment; a backend puts back only its own login.
 SECRET_KEYS: tuple[str, ...] = (
     "BOT_GITHUB_TOKEN",
+    "SQUISHY_GITHUB_TOKEN",
     "GITHUB_TOKEN",
     "GH_TOKEN",
     PROVIDER_SECRET_KEY,
@@ -60,22 +83,46 @@ SECRET_KEYS: tuple[str, ...] = (
 #: GitHub refuses a label whose description is longer than this (422), so `harness setup` and the
 #: sweep could never create `method:manual` and `method:use-bot` while theirs were 107 and 111.
 LABEL_DESCRIPTION_MAX = 100
-LABELS: dict[str, tuple[str, str]] = {
-    # name: (color, description)
-    "bot:build": ("1d76db", "Queued for the night bot to build"),
-    "bot:working": ("fbca04", "The night bot is working on this now"),
-    "bot:pr-open": ("0e8a16", "The night bot opened a PR for this"),
-    "bot:revise": ("5319e7", "Queued for the night bot to revise this PR"),
-    "bot:blocked": ("b60205", "The night bot needs a person before it can go on"),
-    "bot:pr": ("c5def5", "A pull request the night bot opened"),
-    "bot:suggestion": ("d4c5f9", "An improvement the night bot suggests; add bot:approved to have it built"),
-    "bot:approved": ("0e8a16", "A person approved this suggestion: after two minutes, triage treats it as method:use-bot"),
-    "bot:needs-review": ("e99695", "A bot pull request that a person must merge: it touches review-only paths"),
+#: The prefix of the labels that are the bot's own (`bot:`, `squishy:`).
+LABEL_PREFIX = IDENTITY.label_prefix
+
+
+def said(text: str) -> str:
+    """A sentence the night bot says of itself, said by the running bot: "the night bot" becomes
+    "Squishy" in Squishy's process, and stays itself in the night bot's."""
+    plain = NAME[4:] if NAME.startswith("the ") else NAME
+    return (text.replace("The night bot", NAME[:1].upper() + NAME[1:])
+            .replace("the night bot", NAME).replace("night bot", plain)
+            .replace("bot:approved", f"{LABEL_PREFIX}approved"))
+
+
+#: The bot's own labels, by what follows the prefix.
+_OWN: dict[str, tuple[str, str]] = {
+    "build": ("1d76db", "Queued for the night bot to build"),
+    "working": ("fbca04", "The night bot is working on this now"),
+    "pr-open": ("0e8a16", "The night bot opened a PR for this"),
+    "revise": ("5319e7", "Queued for the night bot to revise this PR"),
+    "blocked": ("b60205", "The night bot needs a person before it can go on"),
+    "pr": ("c5def5", "A pull request the night bot opened"),
+    "suggestion": ("d4c5f9", "An improvement the night bot suggests; add bot:approved to have it built"),
+    "approved": ("0e8a16", "A person approved this suggestion: after two minutes, triage treats it as method:use-bot"),
+    "needs-review": ("e99695", "A bot pull request that a person must merge: it touches review-only paths"),
+    "cross-review": ("0052cc", "A night bot pull request waiting for its review: one strong model, or a second medium one"),
+    "needs-plan": ("1d76db", "Queued for the night bot: a strong model plans it first, into the description"),
+    "planned": ("0075ca", "It has a plan: in its description, which the builder starts from"),
+    "stuck": ("d93f0b", "It failed every review round it had: a comment says why, for a person to review"),
+}
+#: The labels of the modes (`identity.MODES`), for a bot that has them, and of a parent whose
+#: sub-issues the bot made (`squishy:tree`).
+_MODE_LABELS: dict[str, tuple[str, str]] = {
+    "oneshot": ("5319e7", "Queued for Squishy to build in one run, many agents at once (fullsend)"),
+    "split": ("1d76db", "Queued for Squishy to break into sub-issues that Squishy builds"),
+    "split-bot": ("0e8a16", "Queued for Squishy to break into sub-issues that the night bot builds"),
+    "tree": ("c5def5", "A parent whose sub-issues Squishy made and watches; it closes when they are done"),
+}
+#: Labels both bots use, kept as the night bot wrote them whichever bot creates them.
+_SHARED: dict[str, tuple[str, str]] = {
     "ready for merge": ("0e8a16", "The night bot's reviews approved it, but auto-merge could not turn on: a person merges it"),
-    "bot:cross-review": ("0052cc", "A night bot pull request waiting for its review: one strong model, or a second medium one"),
-    "bot:needs-plan": ("1d76db", "Queued for the night bot: a strong model plans it first, into the description"),
-    "bot:planned": ("0075ca", "It has a plan: in its description, which the builder starts from"),
-    "bot:stuck": ("d93f0b", "It failed every review round it had: a comment says why, for a person to review"),
     "human": ("ededed", "People do this: the night bot never queues, plans, builds or labels it"),
     "difficulty:easy": ("c2e0c6", "Any model may build it, the weakest first (Sonnet, Devin)"),
     "difficulty:medium": ("fef2c0", "A medium model or stronger builds it (the default with no difficulty label)"),
@@ -87,31 +134,46 @@ LABELS: dict[str, tuple[str, str]] = {
     "method:manual": ("f9d0c4", "People do it: after two minutes, triage labels it human, fixes its title and assigns both people"),
     "method:use-bot": ("c2e0c6", "The bot does it: after two minutes, triage labels, retitles and queues it, and assigns the bot"),
 }
+#: A bot without suggestions (Squishy) has no labels for them.
+_NO_SUGGESTIONS = ("suggestion", "approved")
+LABELS: dict[str, tuple[str, str]] = {
+    # name: (color, description)
+    **{f"{LABEL_PREFIX}{name}": (color, said(text)) for name, (color, text) in _OWN.items()
+       if IDENTITY.suggestions or name not in _NO_SUGGESTIONS},
+    **{f"{LABEL_PREFIX}{name}": entry for name, entry in _MODE_LABELS.items()
+       if name == "tree" and MODES or name in MODES},
+    **_SHARED,
+}
 
-LABEL_BUILD = "bot:build"
-LABEL_WORKING = "bot:working"
-LABEL_PR_OPEN = "bot:pr-open"
-LABEL_REVISE = "bot:revise"
-LABEL_BLOCKED = "bot:blocked"
-LABEL_PR = "bot:pr"
-LABEL_SUGGESTION = "bot:suggestion"
+LABEL_BUILD = f"{LABEL_PREFIX}build"
+LABEL_WORKING = f"{LABEL_PREFIX}working"
+LABEL_PR_OPEN = f"{LABEL_PREFIX}pr-open"
+LABEL_REVISE = f"{LABEL_PREFIX}revise"
+LABEL_BLOCKED = f"{LABEL_PREFIX}blocked"
+LABEL_PR = f"{LABEL_PREFIX}pr"
+LABEL_SUGGESTION = f"{LABEL_PREFIX}suggestion"
 #: A person's yes to a suggestion: triage answers it as `method:use-bot` (labels, title,
 #: priority, the bot assigned, `bot:build`), and the queue builds no suggestion without it.
-LABEL_APPROVED = "bot:approved"
-LABEL_NEEDS_REVIEW = "bot:needs-review"
+LABEL_APPROVED = f"{LABEL_PREFIX}approved"
+LABEL_NEEDS_REVIEW = f"{LABEL_PREFIX}needs-review"
 #: A bot pull request whose head the review rule approved but which auto-merge could not take
 #: (a review-only path, `main`'s protection, GitHub refusing it, or `auto_merge` off), so it
 #: waits for a person to merge it. It comes off when the pull request goes back into the queue (`queue.set_state_label`).
 LABEL_READY = "ready for merge"
-LABEL_CROSS = "bot:cross-review"
+LABEL_CROSS = f"{LABEL_PREFIX}cross-review"
 #: The Needs plan stage: a queued item (still `bot:build`) waiting for a strong model's plan, which
 #: goes into its description (`issueplan.py`). Not a state label: it sits beside `bot:build`.
-LABEL_NEEDS_PLAN = "bot:needs-plan"
+LABEL_NEEDS_PLAN = f"{LABEL_PREFIX}needs-plan"
 #: A plan is in the description (`issueplan.py`): beside `bot:build` while queued, and kept after.
-LABEL_PLANNED = "bot:planned"
+LABEL_PLANNED = f"{LABEL_PREFIX}planned"
 #: A build or revision used every review round (`max_review_cycles`) without an approval; its
 #: comment says why, round by round (`failures.py`), for a person to review.
-LABEL_STUCK = "bot:stuck"
+LABEL_STUCK = f"{LABEL_PREFIX}stuck"
+#: A mode's label beside the queue label (`queue.mode_of`): `squishy:oneshot`, `squishy:split`
+#: and `squishy:split-bot` say how the queued item is built (#60). `squishy:tree` marks a parent
+#: whose sub-issues the bot made, until they are all closed and it closes too.
+MODE_LABELS = {f"{LABEL_PREFIX}{mode}": mode for mode in MODES}
+LABEL_TREE = f"{LABEL_PREFIX}tree"
 #: People do a thread labelled `human` (#96): a decision, an account or a secret, or repository
 #: work the bot may not do (a change to bot/, .harness/ or .github/) or that a person is already
 #: building. The bot never queues, plans, builds, labels or assigns it, and a request to build it
@@ -286,8 +348,9 @@ _REQUIRED = (
 )
 
 _ROLES = ("plan", "build", "fix", "revise", "review", "suggest")
-#: Keys `.harness/config.json` may leave out, with their defaults.
-_OPTIONAL = {"max_self_check_rounds": 3, "easy": {}}
+#: Keys `.harness/config.json` may leave out, with their defaults. `identity` is read once, when
+#: the process starts (`identity.py`); `parse` only checks it.
+_OPTIONAL = {"max_self_check_rounds": 3, "easy": {}, "identity": None}
 
 
 def _easy(raw: Any) -> EasyRule:
@@ -362,6 +425,10 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str],
     self_checks = int(raw.get("max_self_check_rounds", _OPTIONAL["max_self_check_rounds"]))
     if self_checks < 1:
         raise ConfigError("max_self_check_rounds: must be at least 1")
+    try:
+        identity_mod.parse(raw.get("identity"))
+    except ValueError as exc:
+        raise ConfigError(str(exc)) from exc
     repo = env.get("GITHUB_REPOSITORY") or str(raw["repo"])
     backend = env.get("HARNESS_BACKEND", "cli") or "cli"
     if backend not in ("cli", "fake"):
@@ -437,6 +504,20 @@ def child_env(env: Mapping[str, str] | None = None, keep: tuple[str, ...] = ()) 
     """The environment for a child process: every secret key removed except those in `keep`."""
     source = os.environ if env is None else env
     return {k: v for k, v in source.items() if k not in SECRET_KEYS or k in keep}
+
+
+def companion_env(other: identity_mod.Other, env: Mapping[str, str] | None = None) -> dict[str, str]:
+    """The environment for a process run as another bot (`__main__._companion`, #60): this one's,
+    with that bot's home and that bot's GitHub token in `BOT_GITHUB_TOKEN`. Without its token the
+    process reads with the job's own and writes nothing as that bot."""
+    source = dict(os.environ if env is None else env)
+    source["HARNESS_HOME"] = other.home
+    token = source.get(other.token_env, "") if other.token_env else ""
+    if token:
+        source["BOT_GITHUB_TOKEN"] = token
+    else:
+        source.pop("BOT_GITHUB_TOKEN", None)
+    return source
 
 
 def github_env() -> dict[str, str]:

@@ -37,9 +37,10 @@ fi
 full=false
 for file in $files; do
   case "$file" in
-    bot/* | .harness/*) ;;
+    bot/* | .harness/* | .squishy/*) ;;
     CLAUDE.md | AGENTS.md | GEMINI.md) ;;
     .github/workflows/bot-commands.yml | .github/workflows/bot-night.yml | .github/workflows/bot-selftest.yml) ;;
+    .github/workflows/squishy-run.yml | .github/workflows/squishy-commands.yml) ;;
     .github/workflows/triage.yml | .github/workflows/deploy-watch.yml | .github/workflows/ci-duration.yml) ;;
     *)
       echo "ci-scope: $file is not on the skip list, running everything" >&2

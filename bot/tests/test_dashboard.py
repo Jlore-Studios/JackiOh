@@ -173,7 +173,7 @@ class DashboardTests(unittest.TestCase):
         clock = [1000.0]
         ticks = []
 
-        def update(ctx):
+        def update(ctx, extra=()):
             ticks.append(clock[0])
             if len(ticks) == 2:
                 raise RuntimeError("network down")
@@ -207,7 +207,7 @@ class DashboardTests(unittest.TestCase):
                 raise RuntimeError("rate limited")
             return ["started a night run"]
 
-        def update(ctx):
+        def update(ctx, extra=()):
             order.append(("rewrite", clock[0]))
             return "rewrote #148"
 
@@ -280,7 +280,7 @@ class FreshEachTickTests(unittest.TestCase):
         seen = []
         clock = [0.0]
 
-        def update(ctx):
+        def update(ctx, extra=()):
             seen.append(ctx.cfg)
             between(len(seen))
             return "rewrote #148"

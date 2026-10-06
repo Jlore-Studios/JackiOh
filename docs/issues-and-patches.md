@@ -2,7 +2,9 @@
 
 How an issue is titled and labelled, how a patch is numbered, and how a patch that takes several
 pull requests is split up. It binds people and agents alike. The night bot's own `bot:*` labels are
-in [`bot/README.md`](../bot/README.md#labels).
+in [`bot/README.md`](../bot/README.md#labels), and Squishy's `squishy:*` ones (the same, plus its
+modes `squishy:oneshot`, `squishy:split`, `squishy:split-bot` and a split's parent, `squishy:tree`)
+in [its section](../bot/README.md#squishy).
 
 ## Labels
 
@@ -13,7 +15,7 @@ Every issue carries at least one type label:
 | `patch` | A numbered release of the game: cards, rules, the client, the server's features |
 | `major version` | A `vX.Y.0` release that changes the game or the codebase broadly enough to bump the minor or major version (v0.2.0, v0.3.0, v1.0.0), and each of its parts |
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
-| `night bot` | The night bot itself: `bot/`, `.harness/` and its workflows |
+| `night bot` | The night bot and Squishy themselves: `bot/`, `.harness/`, `.squishy/` and their workflows |
 | `Info` | For the record, nothing to build: migrations, statistics, the night bot's status |
 | `production merge` | The countdown issue `promote-production.yml` keeps open (`Merging to production in N hours`) and the pull requests that merge main into production. The workflow opens, retitles and closes them and finds the open one by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Comments `/hold`, `/resume`, `/delay 3h` and `/fast-forward` steer it (`docs/deploy-cloudflare.md`, section 2.3) |
 
