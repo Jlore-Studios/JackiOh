@@ -30,7 +30,8 @@ add `bot:build` while retitling or relabelling, because it queues a build.
 set a difficulty and a priority first, triage reads it again: `method:manual` adds `human` and
 assigns MaxGoetzmann and jgoetzmann (unassigning the bot); `method:use-bot` adds `bot:build`, a
 priority and its type labels, and assigns the bot (unassigning both people). An issue labelled
-`human` never goes to the bot.
+`human` never goes to the bot. A suggestion the bot opened (`bot:suggestion`) is approved with
+`bot:approved`, which triage treats as `method:use-bot`; the bot builds no suggestion without it.
 
 **How hard it is.** A person may set a `difficulty:*` label, and the bot never changes it.
 Otherwise the night bot's planner rates the issue when it plans it, and it counts as medium until

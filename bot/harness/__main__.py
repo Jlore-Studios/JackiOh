@@ -538,10 +538,10 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
                 print(redact(f"triage: skip: #{asked} could not be read: {exc}"))
                 return 0
         elif payload.get("action") == "labeled" and (payload.get("issue") or {}).get("number"):
-            # #307: a method label starts triage. A person gets METHOD_WAIT to set a difficulty
-            # and a priority, and then the issue is read again, so their labels count.
-            if not str((payload.get("label") or {}).get("name") or "").lower().startswith(
-                    "method:"):
+            # #307: a method label (or `bot:approved` on a suggestion) starts triage. A person
+            # gets METHOD_WAIT to set a difficulty and a priority, and then the issue is read
+            # again, so their labels count.
+            if not triage_mod.starts_triage(str((payload.get("label") or {}).get("name") or "")):
                 _output({"go": "false", "number": ""})
                 print("triage: skip: not a method label")
                 return 0
