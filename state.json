@@ -3182,12 +3182,8 @@
     "what": "build #364 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-06T07:10:37Z",
-    "notes": [
-      "#364 needs a plan",
-      "#365 needs a plan",
-      "started a night run, as a lane was free: #364 (medium) is queued to build, for `claude-5`: plan on `claude-5` (claude, `opus`, strong)"
-    ],
+    "at": "2026-10-06T07:18:02Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
