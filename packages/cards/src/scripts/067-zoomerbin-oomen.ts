@@ -11,18 +11,19 @@
 // row from the def's type (`rowOf`: everything but a Unit and a Spell goes to the backrow), so
 // naming the lane is the whole placement.
 //
-// R47: a lane-targeted summon into an occupied or Locked zone fizzles, and §8's Conventions keep
-// the unit on the field regardless — "the unit still enters". `summon`'s `zoneFor`/`canPlace`
-// already implements exactly that (Locked, reserved or occupied → no zone → nothing created), so
-// this card needs no check of its own and must not grow one.
+// R47: a lane-targeted summon into an occupied zone fizzles, and §8's Conventions keep the unit on
+// the field regardless — "the unit still enters". A Locked zone takes the summon since balance patch
+// 1 (R688: a Lock refuses only plays; this card's text says nothing of Locks). `summon`'s
+// `zoneFor`/`canPlace` already implements exactly that (reserved or occupied → no zone → nothing
+// created; Locked → the trap lands), so this card needs no check of its own and must not grow one.
 //
 // §3.2 and R33: `summonOnto` leaves anything that is not a Field Spell face-down, and only the
 // current controller may read a face-down trap. R1: a summon fires no Cry and pays nothing, so the
 // trap arrives unpaid and dormant until its own trigger condition is met.
 //
 // THE POOL. The Engine cell: the base pool is the Cost (1) traps, #18, #41, #60, #71, #96 (patch
-// v0.1.1 made #85 cost 2), and the radiant face's is every Core trap, #85 included, summoned
-// Radiant; zone occupied or Locked → fizzles. `TRAP_TYPES` is `["Trap", "Field Trap"]` because the
+// v0.1.1 made #85 cost 2; balance patch 1 adds Classic #10 Exile at (1)), and the radiant face's is
+// every Core trap, #85 included, summoned Radiant; zone occupied → fizzles. `TRAP_TYPES` is `["Trap", "Field Trap"]` because the
 // filters match `def.type` exactly while SPEC reads "Field Trap counts as Trap" (§8 #51, R35, R61) —
 // `test/query.test.ts` pins both pools. The radiant form drops the cost, keeps the types and sets the
 // §5.2 flag on the trap it makes. §5.1 keeps tokens out

@@ -1,10 +1,10 @@
-// C #74 Corpse Plantation — SPEC §8.6 row 74, BUILD M9 Classic row C 74: "Cry: one placement of 2 Plague
-// Tokens on itself; while it has tokens, `legalActions` offers `play` for Units in your graveyard, the
-// action carrying how many tokens pay, at least 1 and at most the tokens on it and the price, each paying
-// (1) and the rest paid in mana; it is a play (the Unit's Cry fires and it counts as played), not a free
-// cast; a (0) Cost Unit can't use it; with no tokens left it offers nothing; tokens others place add to
-// it, and leaving the field resets them (R78); radiant: 4 tokens; its tuned number (tokens) reads through
-// `param()` (R386)".
+// C #74 Corpse Plantation — SPEC §8.6 row 74, BUILD M9 Classic row C 74: "Activate: one placement of 2
+// Plague Counters on itself, once per turn; while it has tokens, `legalActions` offers `play` for Units in
+// your graveyard, the action carrying how many tokens pay, at least 1 and at most the tokens on it and
+// the price, each paying (1) and the rest paid in mana; it is a play (the Unit's Cry fires and it counts
+// as played), not a free cast; a (0) Cost Unit can't use it; with no tokens left it offers nothing;
+// tokens others place add to it, and leaving the field resets them (R78); radiant: 4 tokens; its tuned
+// number (tokens) reads through `param()` (R386)".
 //
 // The harness's `play` takes a card from a hand, so a graveyard play is sent to `reduce` as
 // `legalActions` offers it and read back off its result (as C #28 Second Wind's test does).
@@ -77,16 +77,20 @@ describe("C #74 Corpse Plantation", () => {
   });
 
   describe("base", () => {
-    it("Cry: one placement of 2 Plague Counters on itself", () => {
+    it("Activate: one placement of 2 Plague Counters on itself, once per turn", () => {
       const s = scenario({ p1: { hand: [PLANTATION, ANCHOR] }, p2: { hand: [ANCHOR] } });
 
       s.play(PLANTATION);
 
       const plantation = s.card(PLANTATION);
-      expect(plantation.counters.plague).toBe(2);
+      expect(plantation.counters.plague).toBeUndefined();
+      s.activate(plantation);
+
+      expect(s.card(PLANTATION).counters.plague).toBe(2);
       expect(s.events.filter((event) => event.type === "counterChanged")).toEqual([
         { type: "counterChanged", instanceId: plantation.id, counter: "plague", value: 2, placed: 2 },
       ]);
+      expect(() => s.activate(plantation)).toThrow();
     });
 
     it("while it has tokens, legalActions offers each graveyard Unit with 1 up to min(tokens, price) tokens paying, and no Spell", () => {
@@ -230,16 +234,18 @@ describe("C #74 Corpse Plantation", () => {
       stepParam(s.card(PLANTATION), "tokens", 1);
 
       s.play(PLANTATION);
+      s.activate(s.card(PLANTATION));
 
       expect(s.card(PLANTATION).counters.plague).toBe(3);
     });
   });
 
   describe("radiant", () => {
-    it("Cry: one placement of 4 on itself, and a 3 Cost Unit may be paid wholly in tokens", () => {
+    it("Activate: one placement of 4 on itself, and a 3 Cost Unit may be paid wholly in tokens", () => {
       const s = scenario({ p1: { hand: [{ def: PLANTATION, radiant: true }, ANCHOR], graveyard: [MENACE], mana: 2 }, p2: { hand: [ANCHOR] } });
 
       s.play(PLANTATION);
+      s.activate(s.card(PLANTATION));
 
       const plantation = s.card(PLANTATION);
       expect(plantation.counters.plague).toBe(4);
@@ -255,6 +261,7 @@ describe("C #74 Corpse Plantation", () => {
       stepParam(s.card(PLANTATION), "tokens", -1);
 
       s.play(PLANTATION);
+      s.activate(s.card(PLANTATION));
 
       expect(s.card(PLANTATION).counters.plague).toBe(3);
     });

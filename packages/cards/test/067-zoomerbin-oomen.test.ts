@@ -24,7 +24,7 @@ const SIPHON_SQUAD = "classic-088"; // Field Trap that Tributes itself while the
  * The base face's pool, by catalog id: the Cost (1) traps of every set (R380) — Core #18, #41, #60,
  * #71, #96 and Classic+ #22 Blood Moon, the one new Cost (1) Trap (docs/classic-sets.md B2.6).
  */
-const TRAP_POOL = ["core-018", "core-041", "core-060", "core-071", "core-096", "classicplus-022"];
+const TRAP_POOL = ["core-018", "core-041", "core-060", "core-071", "core-096", "classic-010", "classicplus-022"];
 /** The radiant face's pool: every trap of every set, Core #85 (Cost (2)) included. */
 const RADIANT_TRAP_POOL = catalog.query({ type: TRAP_TYPES }).map((def) => def.id);
 
@@ -138,7 +138,7 @@ describe("#67 Zoomerbin Oomen", () => {
     expect(backrowIds(s)).toEqual([null, null, MANA_WELL, null, null]);
   });
 
-  it("R47 a Locked backrow zone fizzles the summon, and the unit still enters", () => {
+  it("R688 a Locked backrow zone takes the summon: a Lock refuses only plays, and this text names none", () => {
     const s = board({ p1: { hand: [OOMEN] } });
     // §3.2 Lock is a zone flag. The harness exposes no way to lock a zone (reported as a harness
     // gap: `SideSetup.locks` or `s.lock(player, row, lane)`), and #36 Magic Jammed only locks the
@@ -147,7 +147,8 @@ describe("#67 Zoomerbin Oomen", () => {
     s.play(OOMEN, { zone: LANE });
 
     s.expectInZone(OOMEN, "field");
-    expect(backrowIds(s)).toEqual([null, null, null, null, null]);
+    expect(TRAP_POOL).toContain(s.backrow("p1", LANE)?.defId);
+    expect(s.backrow("p1", LANE)?.faceUp).not.toBe(true);
   });
 
   it("§3.1 lane 1 and lane 5 are read as the unit's own column too", () => {
@@ -237,12 +238,12 @@ describe("#67 Zoomerbin Oomen", () => {
     expect(s.backrow("p1", LANE)?.radiant).toBe(false);
   });
 
-  it("R47 the radiant face fizzles on a Locked zone too, and the unit still enters", () => {
+  it("R688 the radiant face summons into a Locked zone too, and the unit still enters", () => {
     const s = board({ p1: { hand: [{ def: OOMEN, radiant: true }] } });
     s.state.players.p1.locks.backrow[LANE - 1] = true;
     s.play(OOMEN, { zone: LANE });
 
     s.expectInZone(OOMEN, "field").expectStats(OOMEN, { attack: 2, health: 4 });
-    expect(backrowIds(s)).toEqual([null, null, null, null, null]);
+    expect(RADIANT_TRAP_POOL).toContain(s.backrow("p1", LANE)?.defId);
   });
 });

@@ -293,7 +293,7 @@ describe("#87 Pocket Chaos — radiant", () => {
   });
 });
 
-describe("#87 Pocket Chaos — R742 the gift's base cost (patch v0.2.17, issue #44)", () => {
+describe("#87 Pocket Chaos — R742 the gift's base cost (patch v0.2.9, issue #44)", () => {
   it("R742 costs (4), and the gift's base cost is (1) less than the cast copy's", () => {
     expect(def.cost).toBe(4);
   });

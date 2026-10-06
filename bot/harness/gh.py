@@ -452,12 +452,15 @@ class GitHub:
             raise
         return (data.get("object") or {}).get("sha") if isinstance(data, dict) else None
 
-    def create_orphan_branch(self, branch: str, path: str, text: str, message: str) -> None:
-        """A new branch whose only commit holds one file."""
+    def create_orphan_branch(self, branch: str, path: str, text: str, message: str,
+                             extra: dict[str, str] | None = None) -> None:
+        """A new branch whose only commit holds one file, and any `extra` ones."""
+        files = {**(extra or {}), path: text}
         tree = self.request(
             "POST",
             f"{self._r}/git/trees",
-            {"tree": [{"path": path, "mode": "100644", "type": "blob", "content": text}]},
+            {"tree": [{"path": name, "mode": "100644", "type": "blob", "content": body}
+                      for name, body in files.items()]},
         )
         commit = self.request(
             "POST",

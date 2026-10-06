@@ -76,6 +76,11 @@ export type CardInstance = {
   /** A backrow card whose identity is public, e.g. a Field Trap that has fired (R33). */
   faceUp?: boolean;
   /**
+   * R638: a backrow Trap or Field Trap both players may read while it stays armed — revealed, not
+   * face-up, so it still fires. Cleared by R78's reset with the card leaving the field.
+   */
+  revealed?: boolean;
+  /**
    * Instance id of the source whose damage instance was lethal — the hit that took this unit from
    * above 0 health to 0 or less, or a Poisonous hit — for "destroys a unit" (R42, R89). Unset while
    * no hit has killed it (`damage.creditKiller`).

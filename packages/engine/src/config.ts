@@ -49,8 +49,6 @@ export const POOL_TOKEN_TAGS: readonly Tag[] = ["Fruit"];
 export const UNIT_ZONES = 5;
 /** §3 */
 export const BACKROW_ZONES = 5;
-/** §3.1: "midlane", the middle lane of UNIT_ZONES — Classic #22 Mid Runner's lane 3 (SPEC §8.6 row 22, BUILD §2). */
-export const MID_LANE = 3;
 /**
  * Classic #18 Glitch in the System's number choice (SPEC §8.6 row 18, BUILD §2): the numbers 0 to 10,
  * the same eleven options every time, so the options reveal nothing about any hand or deck.
@@ -126,7 +124,7 @@ export const WINDFURY_ATTACKS = 2;
 /**
  * R21: Plastic Surgery and Zao Gao draw from this pool; a unit never gets a keyword it has. R346:
  * patch v0.1.1 added Pierce, at the end. R636 added Windfury after it; Deft (R49) was added by
- * patch v0.2.11; Temporary (R637) stays out, since a card on the field is never in a hand to be discarded.
+ * patch v0.2.4; Temporary (R637) stays out, since a card on the field is never in a hand to be discarded.
  */
 export const RANDOM_KEYWORD_POOL = [
   "Taunt",

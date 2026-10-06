@@ -18,6 +18,7 @@ import {
   ringNeighbor,
   ringOrder,
   slotsOf,
+  takesMove,
   type ZoneSlot,
 } from "../src/zones";
 import { spellDef, tokenDef, unitDef, vanillaCatalog, vanillaDeck } from "./fixtures/catalog";
@@ -99,7 +100,7 @@ describe("locks and free zones (M1-T4)", () => {
     expect(state.players.p1.units).toEqual(before.players.p1.units);
   });
 
-  it("a locked zone refuses a summon and stays locked after its occupant leaves", () => {
+  it("R688 a locked zone takes a summon but no play, and stays locked after its occupant leaves", () => {
     const state = game();
     const card = put(state, "fx-1", unitSlot("p1", 2));
     lockZone(state, unitSlot("p1", 2));
@@ -107,7 +108,8 @@ describe("locks and free zones (M1-T4)", () => {
 
     expect(cardAt(state, unitSlot("p1", 2))).toBeNull();
     expect(isOpen(state, unitSlot("p1", 2))).toBe(false);
-    expect(placeOnField(state, newInstance(state, "fx-3", "p1", { z: "hand", player: "p1" }), unitSlot("p1", 2))).toBe(false);
+    expect(takesMove(state, unitSlot("p1", 2))).toBe(true);
+    expect(placeOnField(state, newInstance(state, "fx-3", "p1", { z: "hand", player: "p1" }), unitSlot("p1", 2))).toBe(true);
     expect(openZones(state, "p1", "units").map((s) => s.lane)).toEqual([1, 3, 4, 5]);
     expect(firstFreeZone(state, "p1", "units")).toEqual(unitSlot("p1", 1));
   });

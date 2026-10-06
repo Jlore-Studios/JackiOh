@@ -128,7 +128,7 @@ describe("R432 a cost is \"(N) Cost\" as a noun and \"costs (N)\" as a verb", ()
   });
 });
 
-/** Vocabulary table (patch v0.2.4, issue #45): retired words and variants. */
+/** Vocabulary table (patch v0.2.1, issue #45): retired words and variants. */
 const RETIRED_VOCABULARY: readonly { name: string; pattern: RegExp }[] = [
   { name: "bounce", pattern: /\bbounce(s|d)?\b/i },
   { name: "backrow zone", pattern: /\bbackrow zone\b/i },
@@ -145,7 +145,7 @@ const RETIRED_VOCABULARY: readonly { name: string; pattern: RegExp }[] = [
   { name: "Cannot be in Defense Position", pattern: /\bCannot be in Defense Position\b/i },
 ];
 
-describe("patch v0.2.4 vocabulary table (SPEC §11 R366)", () => {
+describe("patch v0.2.1 vocabulary table (SPEC §11 R366)", () => {
   it("no tutorial script line uses a word the vocabulary table retired", () => {
     const tutorialFiles = sources(join(SRC, "tutorial/scripts"));
     expect(tutorialFiles.length).toBeGreaterThan(0);

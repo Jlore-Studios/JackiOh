@@ -13,7 +13,7 @@ import type { Effect, EffectContext } from "../script";
 import type { CardInstance } from "../state";
 import {
   cardAt,
-  firstFreeZone,
+  firstEntryZone,
   isOpen,
   placeOnField,
   removeFromField,
@@ -42,7 +42,7 @@ function instanceOf(ctx: EffectContext, args: StealTarget): CardInstance | null 
 function destinationFor(ctx: EffectContext, thief: PlayerId, from: ZoneSlot): ZoneSlot | null {
   const sameLane: ZoneSlot = { player: thief, row: from.row, lane: from.lane };
   if (isOpen(ctx.state, sameLane)) return sameLane;
-  return firstFreeZone(ctx.state, thief, from.row);
+  return firstEntryZone(ctx.state, thief, from.row);
 }
 
 /**

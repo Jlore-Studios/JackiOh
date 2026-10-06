@@ -568,6 +568,9 @@ function finishPlay(play: PlayAction, view: PlayerViewLike, remaining: number): 
         }
         break;
       }
+      // A play's mode of at most five options is drawn as a Discover pop-up (#88), the only
+      // Discover a play picker draws.
+      case "discover":
       case "mode":
       case "direction":
         for (const mode of play.modes ?? []) cy.get(inPicker(mode)).click();

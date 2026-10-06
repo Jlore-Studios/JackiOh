@@ -64,16 +64,17 @@ describe("the Activate control on real views", () => {
     expect(sent(s, legal, onAction)).toEqual({ type: "activate", instanceId: pact.id, ability: "pact" });
   });
 
-  it("C #21 Turtinator: the press asks for the Tribute, then the target, and sends a body the engine lists", () => {
+  it("C #21 Turtinator: the Tribute is forced (R683 excludes itself), so the press asks for the target and sends a body the engine lists", () => {
     const s = scenario({ p1: { field: ["classic-021", "core-011"] }, p2: { field: ["core-008"] } });
     const turtle = s.unit("p1", 1);
     const timmy = s.unit("p1", 2);
     if (turtle === null || timmy === null) throw new Error("the board is not set");
     const { legal, onAction } = renderReal(s);
 
+    // Only Timmy can pay the Tribute, so no tribute picker opens: the target comes first and the
+    // forced Tribute rides along in the sent body.
     fireEvent.click(el(testid.activate(turtle.id)));
-    expect(el("prompt-modal")).toHaveAttribute("data-prompt-kind", "tribute");
-    fireEvent.click(el(testid.card(timmy.id)));
+    expect(el("prompt-modal")).toHaveAttribute("data-prompt-kind", "target");
     fireEvent.click(el(testid.hero("opponent")));
     expect(sent(s, legal, onAction)).toEqual(
       expect.objectContaining({ type: "activate", instanceId: turtle.id, ability: "eat", tributes: [timmy.id], targets: [{ pick: "hero", player: "p2" }] }),

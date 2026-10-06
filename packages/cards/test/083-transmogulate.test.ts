@@ -32,7 +32,7 @@ const LEGENDARY_UNITS = catalog.pool(TRANSMOGULATE, { rarity: "Legendary", type:
 const LEGENDARY_FIELD_SPELLS = catalog.pool(TRANSMOGULATE, { rarity: "Legendary", type: "Field Spell" }).map((def) => def.id);
 /**
  * The Legendary Trap this seed draws: #85 Unlicensed Experimentation — and "Field Trap counts as
- * Trap". Since patch v0.2.17 (issue #44) there are two Legendary Traps of any set (#85 and Classic
+ * Trap". Since patch v0.2.9 (issue #44) there are two Legendary Traps of any set (#85 and Classic
  * #9 Income Tax); the "transmogulate-1" seed draws #85 for both trap slots.
  */
 const LEGENDARY_TRAP = "core-085";
@@ -42,7 +42,7 @@ const LEGENDARY_TRAP = "core-085";
 const IMMUTABLE = "core-019";
 function board(radiantFace = false) {
   const s = scenario({
-    // Pinned after patch v0.2.17 added Classic #9 to the Legendary Trap pool: this seed draws #85
+    // Pinned after patch v0.2.9 added Classic #9 to the Legendary Trap pool: this seed draws #85
     // for both trap slots and no replacement casts (a Spell Tyrant draw cascades under other seeds).
     seed: "transmogulate-1",
     p1: {

@@ -14,7 +14,8 @@
 // HOW THE PROMPT IS OPENED. `05-reconnect-a` puts SPEC §8 #65 Masochism Mask in seat 1's opening
 // hand for every seed (Quickdraw, §6.2), a 2-cost Field Spell whose base script is "Start of
 // turn: choose one: ...". Played on seat 1's second turn (§2.3: max mana = turns started, so 2 on
-// player-turn 3), it opens one `mode` PendingChoice at the start of EVERY later seat-1 turn —
+// player-turn 3), it opens one `mode` PendingChoice at the start of EVERY later seat-1 turn (its
+// three options drawn as a Discover pop-up, #88) —
 // seat 1's own turn, which is what the fixture was built for: R79 arms the separate
 // `PROMPT_CLOCK_SECONDS` clock only for a prompt held by the *non-active* player, so the clock
 // under test here is the active player's `TURN_CLOCK_SECONDS` turn clock.
@@ -392,11 +393,11 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
     // and while a `PendingChoice` is open `legalActions` for its holder is `['answer']` alone — no
     // `endTurn` — so `end-turn` is correctly disabled and waiting for it to enable can never
     // succeed. `waitForPrompt` is the right wait for a turn that begins with a question.
-    cy.waitForPrompt("mode");
+    cy.waitForPrompt("discover");
     // `first: 1` is the first option offered, which for #65 base is "exile the bottom card of your
     // library" — the one of the three that touches neither hero's health, so nothing later in this
     // file reads differently for having answered it.
-    cy.answerPrompt("mode", { first: 1 });
+    cy.answerPrompt("discover", { first: 1 });
     cy.noPrompt();
     // …and the freed mana buys the badge. R48 makes the discount cover seat 1's NEXT turn, which
     // is player-turn 7 — the turn this file reloads on.
@@ -406,7 +407,7 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
     seatTwoEndsTurn();
 
     // --- player-turn 7: the Mask asks again, and now the view under the prompt has a badge ----
-    cy.waitForPrompt("mode");
+    cy.waitForPrompt("discover");
 
     // Stated rather than assumed, because the fingerprint below is a self-comparison and would be
     // just as green over an empty list. R169's badge is on screen, and R48's suffix is gone
@@ -416,9 +417,10 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
 
     fingerprint().then((print) => {
       before = print;
-      expect(print.promptKind, "the Mask's start-of-turn choice is a `mode` prompt (§10.6)").to.eq(
-        "mode",
-      );
+      expect(
+        print.promptKind,
+        "the Mask's start-of-turn `mode` choice (§10.6) of three is drawn as a Discover pop-up (#88)",
+      ).to.eq("discover");
       expect(
         optionKeysOf(print).length,
         '#65 base offers three options: "exile the bottom card of your library, lose 3 health, or summon a Spikey Pillow"',
@@ -462,7 +464,7 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
     // clears the grace and pushes a clock to both seats.
     cy.reload();
 
-    cy.waitForPrompt("mode");
+    cy.waitForPrompt("discover");
 
     // The read runs INSIDE the `.should`, not in a `.then`: a `.then` snapshot is one fixed read,
     // so the ranks the match bar fetches after the view (R612's `match-ranks` banner, the only
@@ -562,7 +564,7 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
     cy.then(() => {
       const [first] = optionKeysOf(before);
       expect(first, "an option key to answer with").to.be.a("string");
-      cy.answerPrompt("mode", { options: [first ?? ""] });
+      cy.answerPrompt("discover", { options: [first ?? ""] });
       cy.noPrompt();
       waitForMyTurn();
     });

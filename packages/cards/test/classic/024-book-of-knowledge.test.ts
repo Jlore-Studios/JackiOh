@@ -3,8 +3,9 @@
 // draw limit stopping the rest (§2.4); the drawn cards are never named in the opponent's view;
 // radiant: draw 6; its tuned number (draw) reads through `param()` (R386)".
 //
-// The draw-limit case puts C #4 Palantir in the opponent's backrow ("Aura: Your opponent can't draw
-// more than 1 card each turn", B5 E3, R457).
+// The steal case puts C #4 Palantir in the opponent's backrow: the base face steals a Book with
+// no "you may" (balance patch 1, mandatory), so the Book never resolves while Palantir stands.
+// (The draw-limit half, B5 E3, is proved in C #4's own test file.)
 
 import { stepParam } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
@@ -13,7 +14,6 @@ import { base, def, radiant } from "../../src/scripts/classic/024-book-of-knowle
 
 const BOOK = "classic-024";
 const PALANTIR = "classic-004"; // Field Spell; Aura: Your opponent can't draw more than 1 card each turn.
-const PALANTIR_PASS = "mode:pass"; // its "you may Tribute this to steal it", declined
 const VIRUS = "core-090-1"; // CN-Virus: Cast on draw: take 1 damage.
 const FILLER = "core-005";
 // Library cards nobody else holds, so the opponent's view can be searched for their ids.
@@ -88,17 +88,17 @@ describe("C #24 Book of Knowledge", () => {
       expect(theirs).not.toContain(A);
     });
 
-    it("§2.4 B5 E3 a draw limit stops the rest: under the opponent's Palantir only the first draw happens", () => {
+    it("Palantir's base face steals a Book with no prompt: Tributed at once, nothing resolves", () => {
       const s = scenario({ p1: { hand: [BOOK], library: [A, B, C] }, p2: { hand: [FILLER], backrow: [{ def: PALANTIR, faceUp: true }] } });
+      const book = s.card(BOOK);
 
-      // Palantir's other line answers a Book: its controller may Tribute it to steal the play. Declined.
+      // The base steal is mandatory (balance patch 1): no prompt opens.
       s.play(BOOK);
-      expect(s.state.pending?.playerId).toBe("p2");
-      s.answer(PALANTIR_PASS);
-
-      expect(handDefs(s)).toEqual([A]);
-      expect(count(s, "drawLimited")).toBe(2);
-      expect(s.pile("p1", "library").map((card) => card.defId)).toEqual([B, C]);
+      expect(s.state.pending).toBeNull();
+      s.expectInZone(PALANTIR, "graveyard");
+      expect(s.card(book.id)).toMatchObject({ owner: "p2", zone: { z: "hand", player: "p2" } });
+      expect(s.pile("p1", "library")).toHaveLength(3);
+      expect(handDefs(s)).toEqual([]);
     });
 
     it("R97 the drawn cards are never named in the opponent's view", () => {

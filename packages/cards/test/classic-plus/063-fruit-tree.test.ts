@@ -1,7 +1,7 @@
 // C+ #63 Fruit Tree — SPEC §8.7 row 63, BUILD M9 Classic+ row C+ 63: "Field Spell: at each start of
 // your turn adds a random card of the Fruit pool (R382) that costs (0), never Fruit Tree (R387); nothing
-// at the opponent's start of turn; a full hand burns; hidden from the opponent (R97); the count reads
-// through `param()`; radiant the Fruit is Radiant".
+// at the opponent's start of turn; a full hand burns; hidden from the opponent (R97); the count is
+// fixed at 1 with no tunable (balance patch 1); radiant the Fruit is Radiant".
 
 import { defOf, stepParam, type GameState } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
@@ -126,11 +126,11 @@ describe("C+ #63 Fruit Tree", () => {
       expect(Array.isArray(mine) && mine.some((card) => card.instanceId === fruit?.instanceId)).toBe(true);
     });
 
-    it("R386 an Upgrade of its count adds 2 Fruits; a Degrade never takes it below 1", () => {
+    it("R386 the count is fixed at 1: an Upgrade or a Degrade still adds exactly one Fruit", () => {
       const up = grown();
       stepParam(up.card(TREE), "fruits", 1);
       up.endTurn();
-      expect(fruitsAdded(up)).toHaveLength(2);
+      expect(fruitsAdded(up)).toHaveLength(1);
 
       const down = grown();
       stepParam(down.card(TREE), "fruits", -1);
@@ -175,11 +175,11 @@ describe("C+ #63 Fruit Tree", () => {
       expect(seen.some((entry) => GRAPES.includes(entry.defId))).toBe(true);
     });
 
-    it("R386 the Radiant count steps the same way", () => {
+    it("R386 the Radiant count is fixed at 1 too", () => {
       const s = grown({ radiant: true });
       stepParam(s.card(TREE), "fruits", 1);
       s.endTurn();
-      expect(fruitsAdded(s)).toHaveLength(2);
+      expect(fruitsAdded(s)).toHaveLength(1);
       expect(fruitsAdded(s).every((event) => s.card(event.instanceId).radiant)).toBe(true);
     });
 

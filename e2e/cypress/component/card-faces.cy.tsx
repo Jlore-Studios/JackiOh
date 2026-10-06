@@ -145,11 +145,13 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
 }
 
 describe("B15: every catalog face fits its name and rules text at 270 px and 170 px", () => {
-  it("B15 the premise: the clamp allowance covers exactly the longest texts (Core's #93, #95, #98 and five Classic and Classic+ faces)", () => {
+  it("B15 the premise: the clamp allowance covers exactly the longest texts (Core's #93, #95, #98 and three Classic and Classic+ faces)", () => {
     const long = DEFS.flatMap((def) =>
       FACES.filter((face) => printedLength(def, face.radiant) > TEXT_TIER_MAX.xl).map((face) => `${def.id} ${face.label}`),
     );
     expect(TEXT_TIER_MAX.xl).to.eq(260);
+    // Balance patch 1 (issue #88) rewords C+ #40 Appropriations and C+ #42 KY's Test onto short
+    // faces, so they leave the allowance; nothing else crosses the tier either way.
     expect(long).to.have.members([
       "core-093 base",
       "core-093 radiant",
@@ -158,10 +160,6 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
       "core-098 base",
       "core-098 radiant",
       "classic-078 radiant",
-      "classicplus-040 base",
-      "classicplus-040 radiant",
-      "classicplus-042 base",
-      "classicplus-042 radiant",
       "classicplus-073 base",
       "classicplus-073 radiant",
     ]);

@@ -5,11 +5,11 @@
 // price paid was the old card's; a Unit or a trap replaced this way takes no zone; a cast (R70) is
 // replaced too; a card played before activating is not; the modifier expires at cleanup; activating is
 // not a play; the opponent's view never names a replaced card (it ceased to exist unread, R177);
-// radiant: discard 6 cards of your choice (R16; all if fewer), and each replacement is a Radiant Book
+// radiant: discard 6 cards at random (R682; all if fewer), and each replacement is a Radiant Book
 // of Flame; its tuned number (discards) reads through `param()` (R386)".
 
 import { describe, expect, it } from "vitest";
-import { heroOf, reduce, stepParam, zoneCount, type GameState } from "@jackioh/engine";
+import { heroOf, reduce, stepParam, type GameState } from "@jackioh/engine";
 import type { GameEvent, Selection } from "@jackioh/shared";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/023-devils-pact";
@@ -219,47 +219,31 @@ describe("C #23 Devil's Pact", () => {
   });
 
   describe("radiant", () => {
-    it("R16 Cry: discard 6 cards of your choice", () => {
+    it("R682 Cry: discard 6 cards at random, with no prompt", () => {
       const eight = [VANILLA, VANILLA, TIMMY, TIMMY, STOCKPILE, STOCKPILE, FILLER, BEAR];
       const s = scenario({ p1: { hand: [{ def: PACT, radiant: true }, ...eight] }, p2: { hand: [FILLER] } });
 
       s.play(PACT, { zone: 1 });
 
-      expect(s.state.pending?.min).toBe(6);
-      expect(s.state.pending?.max).toBe(6);
-      const keep = new Set([s.card(BEAR).id, s.card(FILLER).id]);
-      const picks = s.hand("p1").filter((card) => !keep.has(card.id)).map((card) => card.id);
-      s.answer(picks);
-
-      expect(s.hand("p1").map((card) => card.defId).sort()).toEqual([BEAR, FILLER].sort());
+      expect(s.state.pending).toBeNull();
+      expect(s.hand("p1")).toHaveLength(2);
       expect(count(s.lastEvents, "discarded")).toBe(6);
     });
 
-    it("§9.3 the Cry's open discard pick survives a JSON round trip and resumes through reduce", () => {
+    it("R682 the random discards come from the match rng: the same game discards the same cards", () => {
       const eight = [VANILLA, VANILLA, TIMMY, TIMMY, STOCKPILE, STOCKPILE, FILLER, BEAR];
-      const s = scenario({ p1: { hand: [{ def: PACT, radiant: true }, ...eight] }, p2: { hand: [FILLER] } });
-      s.play(PACT, { zone: 1 });
-      const paused = s.state;
-      const revived = JSON.parse(JSON.stringify(paused)) as GameState;
-      expect(revived).toEqual(paused);
-      const picks = s.hand("p1").slice(0, 6).map((card) => card.id);
-
-      const result = reduce(revived, {
-        type: "answer",
-        playerId: "p1",
-        choiceId: revived.pending?.id ?? "",
-        selection: picks.map((instanceId) => ({ pick: "instance", instanceId })),
-        nonce: "pact-round-trip",
-      });
-
-      expect(result.error).toBeUndefined();
-      expect(result.state.pending).toBeNull();
-      expect(result.state.work).toEqual([]);
-      expect(result.events.filter((event) => event.type === "discarded")).toHaveLength(6);
-      expect(zoneCount(result.state, "p1", "hand")).toBe(2);
+      const mk = (): Scenario =>
+        scenario({ p1: { hand: [{ def: PACT, radiant: true }, ...eight] }, p2: { hand: [FILLER] } });
+      const first = mk();
+      first.play(PACT, { zone: 1 });
+      const second = mk();
+      second.play(PACT, { zone: 1 });
+      const ids = (s: Scenario): string[] =>
+        s.lastEvents.flatMap((event) => (event.type === "discarded" ? [event.instanceId] : []));
+      expect(ids(first)).toEqual(ids(second));
     });
 
-    it("R16 with 6 or fewer in hand it discards all of them, asking nothing", () => {
+    it("R682 with 6 or fewer in hand it discards all of them, asking nothing", () => {
       const s = scenario({ p1: { hand: [{ def: PACT, radiant: true }, VANILLA, TIMMY] }, p2: { hand: [FILLER] } });
 
       s.play(PACT, { zone: 1 });
@@ -286,8 +270,9 @@ describe("C #23 Devil's Pact", () => {
 
       s.play(PACT, { zone: 1 });
 
-      expect(s.state.pending?.min).toBe(1);
-      expect(s.state.pending?.max).toBe(1);
+      expect(s.state.pending).toBeNull();
+      expect(count(s.lastEvents, "discarded")).toBe(1);
+      expect(s.hand("p1")).toHaveLength(7);
     });
   });
 });

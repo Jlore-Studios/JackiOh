@@ -26,7 +26,7 @@ import { isSpent } from "../src/traps";
 import { runHooksInTriggerOrder, settle } from "../src/triggers";
 import { unitView } from "../src/layers";
 import { viewFor, HIDDEN_ID } from "../src/viewFor";
-import { activeUnitsOf, cardAt, homeOf, isReserved, lockZone, placeOnField, unlockZone } from "../src/zones";
+import { activeUnitsOf, cardAt, homeOf, isReserved, lockZone, placeOnField } from "../src/zones";
 import { plain, stacker } from "./fixtures/combat";
 import {
   act,
@@ -310,18 +310,15 @@ describe("B3.1 Animated Field Spells and 'Animated on your turn' (R383)", () => 
     expect(eventsOfType(sink.events, "animated")).toEqual([]);
   });
 
-  it("R383 rule 6: a Lock on its home since stops the return; it stays a Unit and goes back once the zone is unlocked", () => {
+  it("R688 rule 6: a Lock on its home since no longer stops the return — the return is a move, not a play", () => {
     const state = playing("animated-home-locked");
     const card = put(state, spatula.id, slot("p1", "backrow", 3));
     const sink = sinkFor(state);
     animateAtTurnStart(sink, "p1");
     lockZone(state, slot("p1", "backrow", 3));
     returnAtCleanup(sink, "p1");
-    expect(cardAt(state, slot("p1", "units", 3))?.id).toBe(card.id);
-    expect(homeOf(state, card.id)).toEqual({ instanceId: card.id, zone: { player: "p1", row: "backrow", lane: 3 } });
-    unlockZone(state, slot("p1", "backrow", 3));
-    returnAtCleanup(sink, "p1");
     expect(cardAt(state, slot("p1", "backrow", 3))?.id).toBe(card.id);
+    expect(homeOf(state, card.id)).toBeUndefined();
   });
 
   it("R383 rule 6: a card that changed sides has no home on the new side, going to its controller's leftmost open backrow zone", () => {

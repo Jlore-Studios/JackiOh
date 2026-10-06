@@ -284,7 +284,7 @@ describe("R388 — GET /api/catalog/:version serves the catalog as each patch le
     expect(patches.map((patch) => patch.version).slice(0, 6)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     expect(patches.length, "patches.json is the shipped history").toBeGreaterThan(0);
     expect(patches.map((patch) => patch.version)).toEqual(
-      expect.arrayContaining(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4", "v0.2.10"]),
+      expect.arrayContaining(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.1", "v0.2.3"]),
     );
 
     for (const { version } of patches) {

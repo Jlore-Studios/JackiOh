@@ -14,9 +14,10 @@
 //     waiting on an answer, and what they submit is a `play`, never an `answer`. §10.6 keeps the
 //     `x`, `embiggen`, `zone`, `tribute` and `direction` prompt kinds for later sets, so both
 //     routes render the same picker with the same `data-prompt-kind`. An activation (R384) is
-//     built on this route too — its targets, modes and Tribute — and submits an `activate`; so are
-//     a play's payments: the cards a targeting cost discards (Classic #89, the `hand` picker) and
-//     the Plague Counters paying a graveyard play (Classic #74, a `number` picker of chips).
+//     built on this route too — its targets, modes and Tribute — and submits an `activate`; so is
+//     a play's payment: the Plague Counters paying a graveyard play (Classic #74, a `number` picker
+//     of chips). A targeting cost's discards (Classic #89) are random at pay time (R682) and need
+//     no picker.
 //
 // A card option is drawn as the card in play (faces.ts, SPEC §10.10): a card the view lists — a hand
 // card in a mulligan or a hand pick, a unit a target reaches — as it stands, and a Discover's card as
@@ -82,7 +83,7 @@ import {
 import { CardBack, CardFace, faceModel, useInspectTrigger } from "../cards/index.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
-import { sideOf, testid } from "./contract.ts";
+import { DISCOVER_OPTION_LIMIT, sideOf, testid } from "./contract.ts";
 import { modeText } from "./modeText.ts";
 import "./prompt.css";
 
@@ -294,8 +295,10 @@ function pickerForPending(
     return base;
   });
 
+  // A short "Choose one" menu is a Discover pop-up; more options keep the plain mode list.
+  const chrome = pending.kind === "mode" && pending.options.length <= DISCOVER_OPTION_LIMIT ? "discover" : pending.kind;
   const picker: Picker = {
-    chrome: pending.kind,
+    chrome,
     title: pending.kind === "reward" ? pending.prompt.replace(QUEST_COMPLETE_PREFIX, "") : pending.prompt,
     items,
     min: pending.min,
@@ -351,10 +354,6 @@ function isHandPick(need: PlayNeed, view: PlayerView): boolean {
       selection.pick === "instance" &&
       hand.some((card) => card.instanceId === selection.instanceId),
   );
-}
-
-function cardsWord(count: number): string {
-  return count === 1 ? "1 card" : `${String(count)} cards`;
 }
 
 /** "Pay in mana only", "Spend 2 Plague Counters", and where they come from when several cards pay. */
@@ -467,16 +466,6 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         },
       };
     }
-    case "discard":
-      // B5 E5 (Classic #89 Paul Allen's Ghost): the hand cards a targeting cost discards, picked from
-      // the sets the engine listed; the discarding player picks them (R16).
-      return {
-        ...common,
-        chrome: "hand",
-        title: need.min === need.max ? `Discard ${cardsWord(need.min)} to target it` : "Choose cards to discard",
-        items: need.instanceIds.map((id) => itemForInstance(view, id, id)),
-        submit: (keys) => play({ discards: [...keys] }),
-      };
     case "mode": {
       // The card being played (or activated, R384) is the one asking; its options read as that
       // card's words, on the face it is played with (#24's radiant 2X, 4X and X).
@@ -485,9 +474,11 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       const radiant = played?.radiant === true;
       // B5 E18, R81: C #18's number travels in the play's modes, every option a whole number.
       const numbers = need.options.length > 0 && need.options.every((option) => NUMBER_OPTION.test(option));
+      // A short "Choose one" menu is a Discover pop-up; more options keep the plain mode list.
+      const discover = !numbers && !isDirection(need.options) && need.options.length <= DISCOVER_OPTION_LIMIT;
       const picker: Picker = {
         ...common,
-        chrome: numbers ? "number" : isDirection(need.options) ? "direction" : "mode",
+        chrome: numbers ? "number" : isDirection(need.options) ? "direction" : discover ? "discover" : "mode",
         title: numbers ? "Choose a number" : isDirection(need.options) ? "Choose a direction" : "Choose one",
         items: need.options.map((option): PickerItem => {
           const arrow = DIRECTIONS.find((d) => d === option);
@@ -550,7 +541,8 @@ function CardOption(props: {
   // R247: a number names no card here, so it is drawn on a card back and nothing opens it.
   const number = face === null && NUMBER_OPTION.test(props.item.label) ? props.item.label : null;
   const testId = `prompt-option-${props.item.key}`;
-  const inspect = useInspectTrigger(face === null ? null : { key: testId, face }, { prefer: "above" });
+  // Lines of code is a hidden stat in matches.
+  const inspect = useInspectTrigger(face === null ? null : { key: testId, face }, { prefer: "above", showLoc: false });
   const verdict = props.verdicts === true ? (props.pressed ? "keep" : "redraw") : undefined;
   // The name, then the cost the gem shows, so a screen reader hears what a sighted player reads, in
   // R432's words ("costs (3)").
@@ -582,7 +574,12 @@ function CardOption(props: {
         ) : face === null ? (
           <>
             <span className="prompt-card-name">{name}</span>
-            {info.text === "" ? null : <span className="prompt-card-text">{info.text}</span>}
+            {/* A Discover menu's text option (a card's modes): the effect rides `detail`. */}
+            {props.item.detail === undefined ? (
+              info.text === "" ? null : <span className="prompt-card-text">{info.text}</span>
+            ) : (
+              <span className="prompt-card-text">{props.item.detail}</span>
+            )}
           </>
         ) : (
           <span className="cf-option">

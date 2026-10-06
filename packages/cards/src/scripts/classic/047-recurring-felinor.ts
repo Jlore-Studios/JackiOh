@@ -1,7 +1,7 @@
 // C #47 Recurring Felinor (SPEC §8.6 row 47; §6.3 Cast; R4, R68, R70, R78, R87, R386). Unit, Felinor,
 // 3/2 → 6/4, cost 2, Rare.
 //   Base:    "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps
-//            reveals, return this to hand."
+//            reveals, Bounce this."
 //   Radiant: "… return this to hand. It costs ({returnCost})." (0)
 //   Engine:  the Cry casts a generated C #34 on its base face, free, with your picks, then to your
 //            graveyard (R70, R87). The return is a graveyard trigger on your `trapFired`, a Field Trap's

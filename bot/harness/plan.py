@@ -51,6 +51,7 @@ from itertools import islice
 from typing import Any, Iterator
 
 from harness import asks, issueplan, review_rule, threads
+from harness import journal as journal_mod
 from harness import providers as providers_mod
 from harness.clock import iso, parse_iso
 from harness.config import (DIFFICULTIES, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
@@ -1081,6 +1082,10 @@ def claim(ctx: Context, candidate: Candidate,
         planned["self_check_findings"] = record["self_check_findings"]
     if record.get("handoff"):
         planned["handoff"] = record["handoff"]
+    # Every earlier run on the item, for the work job to put in its worktree (#342).
+    journal = journal_mod.read(ctx.gh, journal_mod.key(planned) or number)
+    if journal:
+        planned["journal"] = journal
     if kind == "revise" and isinstance(record.get("wip"), dict):
         planned["wip"] = record["wip"]  # the last cut-off revision's work (#317 part 3)
     if planned.get("plan_in_issue"):

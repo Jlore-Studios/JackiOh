@@ -181,7 +181,9 @@ function makerOf(ctx: EffectContext): { defId: string; radiant: boolean } {
  * the Units the scope names *then*, read as the delayed effect resolves, not a list fixed now — sides
  * relative to the controller who made it.
  */
-export function destroyAtNextTurnStart(args: { target: TargetSpec } | { scope: BoardScope }): Effect {
+export function destroyAtNextTurnStart(
+  args: { target: TargetSpec; mark?: CardMark } | { scope: BoardScope },
+): Effect {
   return {
     kind: "destroyAtNextTurnStart",
     apply(ctx): void {
@@ -195,7 +197,9 @@ export function destroyAtNextTurnStart(args: { target: TargetSpec } | { scope: B
       const unit = instanceOf(ctx, args.target);
       if (unit === null || unit.zone.z !== "field") return;
       const resume: Resume = { ...maker, hook: DELAYED_DESTROY_HOOK, step: "unit", data: { instanceId: unit.id } };
-      scheduleDelayed(ctx, ctx.controller, at, resume, unit.id);
+      const entry = scheduleDelayed(ctx, ctx.controller, at, resume, unit.id);
+      // R437: the watched unit carries the mark while the destroy waits (Classic #20's red aura).
+      if (args.mark !== undefined) markDelayed(ctx, entry, args.mark);
     },
   };
 }

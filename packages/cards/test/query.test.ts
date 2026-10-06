@@ -193,13 +193,14 @@ describe("the trap pool (#67 Zoomerbin Oomen's Radiant face): every set's Traps 
     expect(ids(catalog.pool("core-067", { type: TRAP_TYPES }))).toEqual(TRAP_POOL);
   });
 
-  it("§8 #67 base asks for a (1) Cost Trap: every Core trap but #85, and Classic+ #22 Blood Moon, the one new one (B2.6)", () => {
+  it("§8 #67 base asks for a (1) Cost Trap: every Core trap but #85, Classic #10 Exile, and Classic+ #22 Blood Moon", () => {
     expect(ids(catalog.query({ type: TRAP_TYPES, cost: 1 }))).toEqual([
       "core-018",
       "core-041",
       "core-060",
       "core-071",
       "core-096",
+      "classic-010",
       "classicplus-022",
     ]);
   });
@@ -269,7 +270,7 @@ describe("R35 the Transmogulate pool (#83): every non-token Legendary but #83 (B
   });
 
   it("R35 narrowed by type for a board replacement, with Field Trap counting as Trap", () => {
-    // Core #85 and Classic #9 (Legendary since patch v0.2.17, issue #44) are the Legendary traps,
+    // Core #85 and Classic #9 (Legendary since patch v0.2.9, issue #44) are the Legendary traps,
     // so a board trap — Trap or Field Trap — is replaced by one of them.
     expect(ids(catalog.pool("core-083", { rarity: "Legendary", type: TRAP_TYPES }))).toEqual(["core-085", "classic-009"]);
     expect(coreIndices(catalog.pool("core-083", { rarity: "Legendary", type: "Unit" }))).toEqual(["52", "92"]);

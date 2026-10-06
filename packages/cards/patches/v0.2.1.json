@@ -1111,19 +1111,16 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "loc": 3,
+    "loc": 6,
     "base": {
       "attack": 4,
       "health": 3,
       "keywords": [
         {
           "kind": "Charge"
-        },
-        {
-          "kind": "Deft"
         }
       ],
-      "text": "Charge, Deft"
+      "text": "Charge\nCan attack and switch position in the same turn."
     },
     "radiant": {
       "attack": 8,
@@ -1135,12 +1132,9 @@
         {
           "kind": "Armor",
           "n": 1
-        },
-        {
-          "kind": "Deft"
         }
       ],
-      "text": "Charge, Armor 1, Deft"
+      "text": "Charge, Armor 1\nCan attack and switch position in the same turn."
     }
   },
   "core-046": {
@@ -2330,8 +2324,7 @@
     "set": "Core",
     "type": "Unit",
     "tags": [
-      "Human",
-      "Plague"
+      "Human"
     ],
     "rarity": "Rare",
     "token": false,
@@ -2945,7 +2938,7 @@
         "min": 1
       }
     ],
-    "loc": 9,
+    "loc": 7,
     "base": {
       "keywords": [],
       "text": "Heal a target {heal}."
@@ -3212,7 +3205,7 @@
     "params": [
       {
         "key": "threshold",
-        "base": 2,
+        "base": 1,
         "radiant": 3,
         "better": "up",
         "step": 1,
@@ -3808,9 +3801,7 @@
     "name": "Pestilent Slime",
     "set": "Classic",
     "type": "Unit",
-    "tags": [
-      "Plague"
-    ],
+    "tags": [],
     "rarity": "Common",
     "token": false,
     "cost": 0,
@@ -4015,7 +4006,7 @@
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "While this is in your hand: When your opponent targets one of your Units with a Spell, summon this and make it the new target."
+      "text": "While this is in your hand: When your opponent targets one of your Units, summon this and make it the new target."
     },
     "radiant": {
       "attack": 1,
@@ -4025,7 +4016,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nWhile this is in your hand: When your opponent targets one of your Units with a Spell, summon this and make it the new target."
+      "text": "Indestructible\nWhile this is in your hand: When your opponent targets one of your Units, summon this and make it the new target."
     }
   },
   "classic-034": {
@@ -4220,9 +4211,7 @@
     "name": "Outbreak",
     "set": "Classic",
     "type": "Spell",
-    "tags": [
-      "Plague"
-    ],
+    "tags": [],
     "rarity": "Epic",
     "token": false,
     "cost": 1,
@@ -4321,9 +4310,7 @@
     "name": "Transmutable Toxins",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [
-      "Plague"
-    ],
+    "tags": [],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
@@ -4361,9 +4348,7 @@
     "name": "Plague Nuke",
     "set": "Classic",
     "type": "Spell",
-    "tags": [
-      "Plague"
-    ],
+    "tags": [],
     "rarity": "Epic",
     "token": false,
     "cost": 3,
@@ -4678,7 +4663,7 @@
         "min": 1
       }
     ],
-    "loc": 16,
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Activates when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw {draw}."
@@ -4694,9 +4679,7 @@
     "name": "Plague Crawler",
     "set": "Classic",
     "type": "Unit",
-    "tags": [
-      "Plague"
-    ],
+    "tags": [],
     "rarity": "Common",
     "token": false,
     "cost": 1,
@@ -4885,8 +4868,7 @@
     "set": "Classic",
     "type": "Unit",
     "tags": [
-      "Human",
-      "Plague"
+      "Human"
     ],
     "rarity": "Common",
     "token": false,
@@ -4941,9 +4923,7 @@
     "name": "Plague Bringer Goliath",
     "set": "Classic",
     "type": "Unit",
-    "tags": [
-      "Plague"
-    ],
+    "tags": [],
     "rarity": "Legendary",
     "token": false,
     "cost": 3,
@@ -4999,9 +4979,7 @@
     "name": "Living Bomb",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [
-      "Plague"
-    ],
+    "tags": [],
     "rarity": "Rare",
     "token": false,
     "cost": 1,
@@ -5021,9 +4999,7 @@
     "name": "Crop Dusting",
     "set": "Classic",
     "type": "Trap",
-    "tags": [
-      "Plague"
-    ],
+    "tags": [],
     "rarity": "Common",
     "token": false,
     "cost": 2,
@@ -5220,9 +5196,7 @@
     "name": "Plague Charger",
     "set": "Classic",
     "type": "Unit",
-    "tags": [
-      "Plague"
-    ],
+    "tags": [],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
@@ -5265,8 +5239,7 @@
     "set": "Classic",
     "type": "Spell",
     "tags": [
-      "Book",
-      "Plague"
+      "Book"
     ],
     "rarity": "Epic",
     "token": false,
@@ -5385,9 +5358,7 @@
     "name": "Corpse Plantation",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [
-      "Plague"
-    ],
+    "tags": [],
     "rarity": "Epic",
     "token": false,
     "cost": 2,
@@ -5447,9 +5418,7 @@
     "name": "Plague Bringer",
     "set": "Classic",
     "type": "Unit",
-    "tags": [
-      "Plague"
-    ],
+    "tags": [],
     "rarity": "Common",
     "token": false,
     "cost": 2,
@@ -5541,9 +5510,7 @@
     "name": "Mutate Spell",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [
-      "Plague"
-    ],
+    "tags": [],
     "rarity": "Rare",
     "token": false,
     "cost": 1,
@@ -5875,9 +5842,7 @@
     "name": "Plague Chalice",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [
-      "Plague"
-    ],
+    "tags": [],
     "rarity": "Epic",
     "token": false,
     "cost": "X",
@@ -6044,9 +6009,7 @@
     "name": "Second Amendment Snake",
     "set": "Classic+",
     "type": "Unit",
-    "tags": [
-      "Plague"
-    ],
+    "tags": [],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
@@ -6286,7 +6249,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 0,
-    "loc": 7,
+    "loc": 5,
     "base": {
       "keywords": [],
       "text": "Give a Unit Reborn."
@@ -7542,9 +7505,6 @@
     "printedRarity": "Epic",
     "token": true,
     "cost": 1,
-    "refs": [
-      "classicplus-021"
-    ],
     "params": [
       {
         "key": "rounds",
@@ -7558,7 +7518,7 @@
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Cast Whirlwind until a Unit dies."
+      "text": "Deal 1 damage to all Units. Repeat until a Unit dies, up to {rounds|time|times}."
     },
     "radiant": {
       "keywords": [],
@@ -7575,14 +7535,14 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "loc": 38,
+    "loc": 24,
     "base": {
       "keywords": [],
-      "text": "The first Unit you stack onto this is fused into it."
+      "text": "Aura: Your cards have Stack.\nA Unit may be played on top of this. That Unit can't attack or be attacked."
     },
     "radiant": {
       "keywords": [],
-      "text": "The first Unit you stack onto this becomes Radiant and is fused into it."
+      "text": "Aura: Your cards have Stack.\nA Unit may be played on top of this. That Unit can't attack or be attacked, and it becomes Radiant."
     }
   },
   "classicplus-034": {
@@ -7818,7 +7778,7 @@
           "n": 3
         }
       ],
-      "text": "Spell Damage +3\nCry: Cast {casts|random Spell|random Spells}. Each aims at enemies when it harms and at your side when it helps."
+      "text": "Spell Damage +3\nCry: Cast {casts|random Spell|random Spells}. Each targets enemies when it can."
     },
     "radiant": {
       "attack": 18,
@@ -7829,7 +7789,7 @@
           "n": 7
         }
       ],
-      "text": "Spell Damage +7\nCry: Cast {casts|random Radiant Spell|random Radiant Spells}. Each aims at enemies when it harms and at your side when it helps."
+      "text": "Spell Damage +7\nCry: Cast {casts|random Radiant Spell|random Radiant Spells}. Each targets enemies when it can."
     }
   },
   "classicplus-039": {
@@ -7879,11 +7839,11 @@
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +2X Attack and Rush.\nEducation: Shuffle 2X random Radiant Books into your deck. They have Cast on draw and aim at enemies when they harm and at your side when they help.\nCulture: Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +2X Health and Armor X."
+      "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +2X Attack and Rush.\nEducation: Shuffle 2X random Radiant Books into your deck. They have Cast on draw and target enemies when they can.\nCulture: Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +2X Health and Armor X."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +5X Attack and Rush.\nEducation: Shuffle 5X random Radiant Books into your deck. They have Cast on draw and aim at enemies when they harm and at your side when they help.\nCulture: Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X."
+      "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +5X Attack and Rush.\nEducation: Shuffle 5X random Radiant Books into your deck. They have Cast on draw and target enemies when they can.\nCulture: Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X."
     }
   },
   "classicplus-041": {
@@ -8281,17 +8241,17 @@
       },
       {
         "key": "debuff",
-        "base": 2,
-        "radiant": 3,
+        "base": 4,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
       }
     ],
-    "loc": 24,
+    "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: If you control fewer Units than your opponent, give all Units −{debuff}/−{debuff}. Otherwise, give all Units +{buff}/+{buff}."
+      "text": "Cast on draw: If you control fewer Units than your opponent, give all Units −3/−3. Otherwise, give all Units +{buff}/+{buff}."
     },
     "radiant": {
       "keywords": [],
@@ -9155,14 +9115,14 @@
         "min": 1
       }
     ],
-    "loc": 10,
+    "loc": 7,
     "base": {
       "keywords": [],
-      "text": "Start of turn and end of turn: Upgrade {cards|random other card|random other cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
+      "text": "Start of turn and end of turn: Upgrade {cards|random card|random cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn and end of turn: Upgrade {cards|random other card|random other cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
+      "text": "Start of turn and end of turn: Upgrade {cards|random card|random cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
     }
   },
   "classicplus-071": {

@@ -111,7 +111,7 @@ const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.str
  * The fields of one entry that differ, one level into its faces ("base.text", "cost"). A face's
  * text is compared as it prints, its `{key}` numbers filled in (`fillParams`, as the patch-notes
  * diff does): a patch that moves only a param's value still rewords the faces that print it
- * (v0.2.5's Exile threshold), so the face counts as changed.
+ * (v0.2.2's Exile threshold), so the face counts as changed.
  */
 export function changedFields(before: Record<string, unknown>, after: Record<string, unknown>): string[] {
   const fields: string[] = [];

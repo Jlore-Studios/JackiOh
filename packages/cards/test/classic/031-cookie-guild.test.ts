@@ -1,5 +1,6 @@
 // C #31 Cookie Guild — SPEC §8.6 row 31, BUILD M9 Classic row C 31: "Cry: Recruit the first (2) Cost
-// or less Unit from the top of your deck (its cost in the deck per R65: an X Unit 0), summoned without
+// or less Unit from the top of your deck (its cost in the deck per R65: an X Unit 0, skipped unless the
+// only valid target per R690), summoned without
 // a Cry into your leftmost open zone; none, or a full unit row, → nothing; the deck otherwise keeps its
 // order and no event carries a position; radiant 4/8: three scans, stopping when the row fills (as
 // #69); its tuned numbers (cost limit, units) read through `param()` (R386)".
@@ -82,13 +83,23 @@ describe("C #31 Cookie Guild", () => {
       expect(libraryDefs(s)).toEqual([TEMPO]);
     });
 
-    it("R396 an X Unit costs (0) in the deck, so it is recruited", () => {
+    it("R690 an X Unit is skipped when a non-X match sits further down: it recruits that one instead", () => {
       const s = scenario({ p1: { hand: [GUILD, ANCHOR], library: [MENACE, BUFF_BILLY, TEMPO] }, p2: { hand: [ANCHOR] } });
 
       s.play(GUILD);
 
+      expect(summonedDefs(s)).toContain(TEMPO);
+      expect(summonedDefs(s)).not.toContain(BUFF_BILLY);
+      expect(libraryDefs(s)).toEqual([MENACE, BUFF_BILLY]);
+    });
+
+    it("R396 R690 an X Unit costs (0) in the deck, so it is recruited when it is the only valid target", () => {
+      const s = scenario({ p1: { hand: [GUILD, ANCHOR], library: [MENACE, BUFF_BILLY] }, p2: { hand: [ANCHOR] } });
+
+      s.play(GUILD);
+
       expect(summonedDefs(s)).toContain(BUFF_BILLY);
-      expect(libraryDefs(s)).toEqual([MENACE, TEMPO]);
+      expect(libraryDefs(s)).toEqual([MENACE]);
     });
 
     it("with no match in the deck nothing happens, and the deck keeps its order", () => {

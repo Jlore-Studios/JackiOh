@@ -84,11 +84,11 @@ describe("R388 the patch source", () => {
     // Promotions only ever append (R646): the six versions the brief checked stay the prefix.
     expect(patches.map((patch) => patch.version).slice(0, 6)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     expect(shipped.map((patch) => patch.version)).toEqual(
-      expect.arrayContaining(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4", "v0.2.5", "v0.2.10"]),
+      expect.arrayContaining(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.1", "v0.2.2", "v0.2.3"]),
     );
     const index = await realPatchSource.index();
     // A promotion that touches the card appends to its line (R646), so the shipped part is the prefix.
-    expect(index["core-065"]?.slice(0, 5)).toEqual(["v0.1.0", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.10"]);
+    expect(index["core-065"]?.slice(0, 5)).toEqual(["v0.1.0", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.3"]);
     for (const patch of patches) {
       const snapshot = await realPatchSource.snapshot(patch.version);
       expect(snapshot, patch.version).not.toBeNull();
@@ -96,7 +96,7 @@ describe("R388 the patch source", () => {
         expect(snapshot?.[change.id]?.name, `${patch.version} ${change.id}`).toBe(change.name);
       }
     }
-    expect(Object.keys((await realPatchSource.snapshot("v0.2.4")) ?? {})).toHaveLength(317);
+    expect(Object.keys((await realPatchSource.snapshot("v0.2.1")) ?? {})).toHaveLength(317);
   });
 
   it("R388 the index lists, for every card, exactly the versions whose snapshot differs from the one before", async () => {

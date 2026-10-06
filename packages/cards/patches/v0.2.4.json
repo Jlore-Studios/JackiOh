@@ -371,12 +371,24 @@
     "cost": 4,
     "loc": 12,
     "base": {
-      "keywords": [],
-      "text": "Aura: Your Units have +4 attack, Rush and First Strike."
+      "attack": 1,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nAura: Your Units have +4 attack, Rush and First Strike."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Aura: Your Units have +10 attack, Rush and First Strike."
+      "attack": 2,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nAura: Your Units have +10 attack, Rush and First Strike."
     }
   },
   "core-015": {
@@ -844,12 +856,24 @@
     "cost": 2,
     "loc": 26,
     "base": {
-      "keywords": [],
-      "text": "After you play a card, shuffle 3 copies of it into your deck."
+      "attack": 2,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nAfter you play a card, shuffle 3 copies of it into your deck."
     },
     "radiant": {
-      "keywords": [],
-      "text": "After you play a card, shuffle 3 Radiant copies of it into your deck."
+      "attack": 4,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nAfter you play a card, shuffle 3 Radiant copies of it into your deck."
     }
   },
   "core-034": {
@@ -948,12 +972,24 @@
     "cost": 3,
     "loc": 7,
     "base": {
-      "keywords": [],
-      "text": "Your cards gain \"Combo X: Deal X damage to the enemy hero.\" X = cards you played earlier this turn."
+      "attack": 3,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nYour cards gain \"Combo X: Deal X damage to the enemy hero.\" X = cards you played earlier this turn."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Your cards gain \"Combo X: Deal 2X damage to the enemy hero.\" X = cards you played earlier this turn."
+      "attack": 6,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nYour cards gain \"Combo X: Deal 2X damage to the enemy hero.\" X = cards you played earlier this turn."
     }
   },
   "core-039": {
@@ -1111,16 +1147,19 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 3,
     "base": {
       "attack": 4,
       "health": 3,
       "keywords": [
         {
           "kind": "Charge"
+        },
+        {
+          "kind": "Deft"
         }
       ],
-      "text": "Charge\nCan attack and switch position in the same turn."
+      "text": "Charge, Deft"
     },
     "radiant": {
       "attack": 8,
@@ -1132,9 +1171,12 @@
         {
           "kind": "Armor",
           "n": 1
+        },
+        {
+          "kind": "Deft"
         }
       ],
-      "text": "Charge, Armor 1\nCan attack and switch position in the same turn."
+      "text": "Charge, Armor 1, Deft"
     }
   },
   "core-046": {
@@ -1660,12 +1702,24 @@
     ],
     "loc": 49,
     "base": {
-      "keywords": [],
-      "text": "Start of turn: Choose one: Exile the bottom card of your deck, lose 3 health, or summon a Spikey Pillow."
+      "attack": 1,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nStart of turn: Choose one: Exile the bottom card of your deck, lose 3 health, or summon a Spikey Pillow."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Start of turn: Choose twice: Nothing, exile the bottom card of your deck, lose 3 health, or summon a Spikey Pillow."
+      "attack": 2,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nStart of turn: Choose twice: Nothing, exile the bottom card of your deck, lose 3 health, or summon a Spikey Pillow."
     }
   },
   "core-065-1": {
@@ -1876,12 +1930,24 @@
     "cost": 2,
     "loc": 11,
     "base": {
-      "keywords": [],
-      "text": "Your hero can't take more than 5 damage at once.\nCry: Draw 1."
+      "attack": 1,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nYour hero can't take more than 5 damage at once.\nCry: Draw 1."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Your hero can't take more than 3 damage at once.\nCry: Draw 2."
+      "attack": 2,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nYour hero can't take more than 3 damage at once.\nCry: Draw 2."
     }
   },
   "core-074": {
@@ -2324,7 +2390,8 @@
     "set": "Core",
     "type": "Unit",
     "tags": [
-      "Human"
+      "Human",
+      "Plague"
     ],
     "rarity": "Rare",
     "token": false,
@@ -2938,7 +3005,7 @@
         "min": 1
       }
     ],
-    "loc": 7,
+    "loc": 9,
     "base": {
       "keywords": [],
       "text": "Heal a target {heal}."
@@ -2978,12 +3045,24 @@
     ],
     "loc": 57,
     "base": {
-      "keywords": [],
-      "text": "Aura: Your opponent can't draw more than {drawLimit|card|cards} each turn.\nWhen your opponent plays a Book, you may Tribute this to steal it."
+      "attack": 0,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nAura: Your opponent can't draw more than {drawLimit|card|cards} each turn.\nWhen your opponent plays a Book, you may Tribute this to steal it."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Aura: Your opponent can't draw more than {drawLimit|card|cards} each turn.\nWhen your opponent plays a Spell, steal it. Once the Spells this has stolen cost ({threshold}) or more in total, Tribute this."
+      "attack": 0,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nAura: Your opponent can't draw more than {drawLimit|card|cards} each turn.\nWhen your opponent plays a Spell, steal it. Once the Spells this has stolen cost ({threshold}) or more in total, Tribute this."
     }
   },
   "classic-005": {
@@ -3092,12 +3171,24 @@
     ],
     "loc": 38,
     "base": {
-      "keywords": [],
-      "text": "Cry: Exile a ({costLimit}) Cost or less Spell from your hand.\nActivate: Cast a copy of that Spell."
+      "attack": 1,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nCry: Exile a ({costLimit}) Cost or less Spell from your hand.\nActivate: Cast a copy of that Spell."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Cry: Exile a ({costLimit}) Cost or less Spell from your hand.\nActivate: Cast a copy of that Spell."
+      "attack": 2,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nCry: Exile a ({costLimit}) Cost or less Spell from your hand.\nActivate: Cast a copy of that Spell."
     }
   },
   "classic-008": {
@@ -3205,7 +3296,7 @@
     "params": [
       {
         "key": "threshold",
-        "base": 1,
+        "base": 2,
         "radiant": 3,
         "better": "up",
         "step": 1,
@@ -3801,7 +3892,9 @@
     "name": "Pestilent Slime",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 0,
@@ -4006,7 +4099,7 @@
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "While this is in your hand: When your opponent targets one of your Units, summon this and make it the new target."
+      "text": "While this is in your hand: When your opponent targets one of your Units with a Spell, summon this and make it the new target."
     },
     "radiant": {
       "attack": 1,
@@ -4016,7 +4109,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nWhile this is in your hand: When your opponent targets one of your Units, summon this and make it the new target."
+      "text": "Indestructible\nWhile this is in your hand: When your opponent targets one of your Units with a Spell, summon this and make it the new target."
     }
   },
   "classic-034": {
@@ -4211,7 +4304,9 @@
     "name": "Outbreak",
     "set": "Classic",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": 1,
@@ -4310,7 +4405,9 @@
     "name": "Transmutable Toxins",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
@@ -4348,7 +4445,9 @@
     "name": "Plague Nuke",
     "set": "Classic",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": 3,
@@ -4663,7 +4762,7 @@
         "min": 1
       }
     ],
-    "loc": 15,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Activates when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw {draw}."
@@ -4679,7 +4778,9 @@
     "name": "Plague Crawler",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 1,
@@ -4868,7 +4969,8 @@
     "set": "Classic",
     "type": "Unit",
     "tags": [
-      "Human"
+      "Human",
+      "Plague"
     ],
     "rarity": "Common",
     "token": false,
@@ -4923,7 +5025,9 @@
     "name": "Plague Bringer Goliath",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Legendary",
     "token": false,
     "cost": 3,
@@ -4979,18 +5083,32 @@
     "name": "Living Bomb",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 1,
     "loc": 10,
     "base": {
-      "keywords": [],
-      "text": "At the start of each player's turn: Destroy every permanent that player controls with a Plague Token on it."
+      "attack": 2,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nAt the start of each player's turn: Destroy every permanent that player controls with a Plague Token on it."
     },
     "radiant": {
-      "keywords": [],
-      "text": "At the start of your opponent's turn: Destroy every permanent they control with a Plague Token on it."
+      "attack": 4,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nAt the start of your opponent's turn: Destroy every permanent they control with a Plague Token on it."
     }
   },
   "classic-063": {
@@ -4999,7 +5117,9 @@
     "name": "Crop Dusting",
     "set": "Classic",
     "type": "Trap",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 2,
@@ -5043,12 +5163,24 @@
     "cost": 2,
     "loc": 29,
     "base": {
-      "keywords": [],
-      "text": "End of turn: Discard 2 cards.\nWhenever you discard cards, draw that many."
+      "attack": 2,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nEnd of turn: Discard 2 cards.\nWhenever you discard cards, draw that many."
     },
     "radiant": {
-      "keywords": [],
-      "text": "End of turn: Discard 2 cards.\nWhenever you discard cards, draw your deck."
+      "attack": 4,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nEnd of turn: Discard 2 cards.\nWhenever you discard cards, draw your deck."
     }
   },
   "classic-065": {
@@ -5196,7 +5328,9 @@
     "name": "Plague Charger",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
@@ -5239,7 +5373,8 @@
     "set": "Classic",
     "type": "Spell",
     "tags": [
-      "Book"
+      "Book",
+      "Plague"
     ],
     "rarity": "Epic",
     "token": false,
@@ -5358,7 +5493,9 @@
     "name": "Corpse Plantation",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": 2,
@@ -5418,7 +5555,9 @@
     "name": "Plague Bringer",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 2,
@@ -5510,7 +5649,9 @@
     "name": "Mutate Spell",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 1,
@@ -5842,18 +5983,32 @@
     "name": "Plague Chalice",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": "X",
     "loc": 21,
     "base": {
-      "keywords": [],
-      "text": "This enters with X Plague Tokens on it.\nAura: Counter every card played whose cost equals the number of Plague Tokens on this."
+      "attack": 0,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nThis enters with X Plague Tokens on it.\nAura: Counter every card played whose cost equals the number of Plague Tokens on this."
     },
     "radiant": {
-      "keywords": [],
-      "text": "This enters with X Plague Tokens on it.\nAura: Counter every card your opponent plays whose cost equals the number of Plague Tokens on this."
+      "attack": 0,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nThis enters with X Plague Tokens on it.\nAura: Counter every card your opponent plays whose cost equals the number of Plague Tokens on this."
     }
   },
   "classic-088": {
@@ -6009,7 +6164,9 @@
     "name": "Second Amendment Snake",
     "set": "Classic+",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
@@ -6173,12 +6330,24 @@
     ],
     "loc": 11,
     "base": {
-      "keywords": [],
-      "text": "Cry and start of turn: Summon a Right-house defender (2 in 3) or a Wrong-House Attacker (1 in 3)."
+      "attack": 0,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nCry and start of turn: Summon a Right-house defender (2 in 3) or a Wrong-House Attacker (1 in 3)."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Cry and start of turn: Summon a Right-house defender and a Wrong-House Attacker."
+      "attack": 0,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nCry and start of turn: Summon a Right-house defender and a Wrong-House Attacker."
     }
   },
   "classicplus-008": {
@@ -6249,7 +6418,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 0,
-    "loc": 5,
+    "loc": 7,
     "base": {
       "keywords": [],
       "text": "Give a Unit Reborn."
@@ -6483,12 +6652,24 @@
     ],
     "loc": 15,
     "base": {
-      "keywords": [],
-      "text": "Cry: Give your Units Divine Shield.\nAura: Your Units have +{aura}/+{aura}."
+      "attack": 0,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nCry: Give your Units Divine Shield.\nAura: Your Units have +{aura}/+{aura}."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Cry: Give your Units Divine Shield.\nAura: Your Units have +{aura}/+{aura}."
+      "attack": 0,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nCry: Give your Units Divine Shield.\nAura: Your Units have +{aura}/+{aura}."
     }
   },
   "classicplus-012-6": {
@@ -6541,12 +6722,24 @@
     ],
     "loc": 15,
     "base": {
-      "keywords": [],
-      "text": "Cry: Exile {cards|random card|random cards} from your deck. Summon the Units among them."
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nCry: Exile {cards|random card|random cards} from your deck. Summon the Units among them."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Cry: Exile {cards|random card|random cards} from your deck. Summon the Units among them and make them Radiant."
+      "attack": 4,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nCry: Exile {cards|random card|random cards} from your deck. Summon the Units among them and make them Radiant."
     }
   },
   "classicplus-012-8": {
@@ -7413,12 +7606,24 @@
     "cost": 2,
     "loc": 21,
     "base": {
-      "keywords": [],
-      "text": "Cry and end of turn: Choose a card in your hand. Fuse a random card into it. Its cost doesn't change."
+      "attack": 1,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nCry and end of turn: Choose a card in your hand. Fuse a random card into it. Its cost doesn't change."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Cry and end of turn: Choose a card in your hand. Fuse a random Radiant card into it. Its cost doesn't change."
+      "attack": 2,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nCry and end of turn: Choose a card in your hand. Fuse a random Radiant card into it. Its cost doesn't change."
     }
   },
   "classicplus-032": {
@@ -7505,6 +7710,9 @@
     "printedRarity": "Epic",
     "token": true,
     "cost": 1,
+    "refs": [
+      "classicplus-021"
+    ],
     "params": [
       {
         "key": "rounds",
@@ -7518,7 +7726,7 @@
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Deal 1 damage to all Units. Repeat until a Unit dies, up to {rounds|time|times}."
+      "text": "Cast Whirlwind until a Unit dies."
     },
     "radiant": {
       "keywords": [],
@@ -7535,14 +7743,14 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "loc": 24,
+    "loc": 38,
     "base": {
       "keywords": [],
-      "text": "Aura: Your cards have Stack.\nA Unit may be played on top of this. That Unit can't attack or be attacked."
+      "text": "The first Unit you stack onto this is fused into it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your cards have Stack.\nA Unit may be played on top of this. That Unit can't attack or be attacked, and it becomes Radiant."
+      "text": "The first Unit you stack onto this becomes Radiant and is fused into it."
     }
   },
   "classicplus-034": {
@@ -7778,7 +7986,7 @@
           "n": 3
         }
       ],
-      "text": "Spell Damage +3\nCry: Cast {casts|random Spell|random Spells}. Each targets enemies when it can."
+      "text": "Spell Damage +3\nCry: Cast {casts|random Spell|random Spells}. Each aims at enemies when it harms and at your side when it helps."
     },
     "radiant": {
       "attack": 18,
@@ -7789,7 +7997,7 @@
           "n": 7
         }
       ],
-      "text": "Spell Damage +7\nCry: Cast {casts|random Radiant Spell|random Radiant Spells}. Each targets enemies when it can."
+      "text": "Spell Damage +7\nCry: Cast {casts|random Radiant Spell|random Radiant Spells}. Each aims at enemies when it harms and at your side when it helps."
     }
   },
   "classicplus-039": {
@@ -7839,11 +8047,11 @@
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +2X Attack and Rush.\nEducation: Shuffle 2X random Radiant Books into your deck. They have Cast on draw and target enemies when they can.\nCulture: Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +2X Health and Armor X."
+      "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +2X Attack and Rush.\nEducation: Shuffle 2X random Radiant Books into your deck. They have Cast on draw and aim at enemies when they harm and at your side when they help.\nCulture: Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +2X Health and Armor X."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +5X Attack and Rush.\nEducation: Shuffle 5X random Radiant Books into your deck. They have Cast on draw and target enemies when they can.\nCulture: Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X."
+      "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +5X Attack and Rush.\nEducation: Shuffle 5X random Radiant Books into your deck. They have Cast on draw and aim at enemies when they harm and at your side when they help.\nCulture: Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X."
     }
   },
   "classicplus-041": {
@@ -8241,17 +8449,17 @@
       },
       {
         "key": "debuff",
-        "base": 4,
-        "radiant": 4,
+        "base": 2,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
       }
     ],
-    "loc": 25,
+    "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: If you control fewer Units than your opponent, give all Units −3/−3. Otherwise, give all Units +{buff}/+{buff}."
+      "text": "Cast on draw: If you control fewer Units than your opponent, give all Units −{debuff}/−{debuff}. Otherwise, give all Units +{buff}/+{buff}."
     },
     "radiant": {
       "keywords": [],
@@ -8639,12 +8847,24 @@
     ],
     "loc": 10,
     "base": {
-      "keywords": [],
-      "text": "Death: Add {cards|Stockpile|Stockpiles} to your hand. Each costs (0)."
+      "attack": 1,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nDeath: Add {cards|Stockpile|Stockpiles} to your hand. Each costs (0)."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Death: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs (0)."
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nDeath: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs (0)."
     }
   },
   "classicplus-062": {
@@ -8694,12 +8914,24 @@
     ],
     "loc": 15,
     "base": {
-      "keywords": [],
-      "text": "Start of turn: Add {fruits|random Fruit|random Fruits} to your hand. Each costs (0)."
+      "attack": 1,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nStart of turn: Add {fruits|random Fruit|random Fruits} to your hand. Each costs (0)."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Start of turn: Add {fruits|random Radiant Fruit|random Radiant Fruits} to your hand. Each costs (0)."
+      "attack": 2,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nStart of turn: Add {fruits|random Radiant Fruit|random Radiant Fruits} to your hand. Each costs (0)."
     }
   },
   "classicplus-064": {
@@ -9115,14 +9347,26 @@
         "min": 1
       }
     ],
-    "loc": 7,
+    "loc": 10,
     "base": {
-      "keywords": [],
-      "text": "Start of turn and end of turn: Upgrade {cards|random card|random cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nStart of turn and end of turn: Upgrade {cards|random other card|random other cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Start of turn and end of turn: Upgrade {cards|random card|random cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
+      "attack": 4,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nStart of turn and end of turn: Upgrade {cards|random other card|random other cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
     }
   },
   "classicplus-071": {
@@ -9514,12 +9758,24 @@
     ],
     "loc": 12,
     "base": {
-      "keywords": [],
-      "text": "End of turn: Add {cards|random AI generated card|random AI generated cards} to your hand. Each costs (0)."
+      "attack": 0,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nEnd of turn: Add {cards|random AI generated card|random AI generated cards} to your hand. Each costs (0)."
     },
     "radiant": {
-      "keywords": [],
-      "text": "End of turn: Add {cards|random Radiant AI generated card|random Radiant AI generated cards} to your hand. Each costs (0)."
+      "attack": 0,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nEnd of turn: Add {cards|random Radiant AI generated card|random Radiant AI generated cards} to your hand. Each costs (0)."
     }
   },
   "classicplus-t-ai-01": {

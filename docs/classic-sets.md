@@ -711,7 +711,7 @@ through a fixture script, as CLAUDE.md asks of engine behaviour, before any card
 | E16 | **Cards between players' piles** | Give cards from one hand to the other (C #9), draw from the opponent's deck (C #58), take a card from the opponent's deck (C+ #12.3) — all E2's ownership change; swap decks is R73's library swap. | C #9, #58, #85; C+ #12.3 |
 | E17 | **Show the opponent's hand in a prompt** | Their hand cards are the options, seen by the chooser only, as KY's Private Tutor reveals library cards (§10.8, R310). | C #11 |
 | E18 | **New prompt kinds** | `number` (pick a number from a fixed range: C #18), a mode prompt held by the *other* player (C #8), a multiple-choice answer (C+ #42), board cells (C+ #62), a quest reward (C #90), a budgeted multi-pick from a pile (C #44). The existing kinds stay. | as listed |
-| E19 | **Plague Counters, extended** | "Place N Plague Counters" with no card named is N placements, each on a permanent (either side, face-down cards included) the placer chooses, repeats allowed, one prompt per counter; "Place N Plague Counters on X" is one placement of N. Placement multipliers (×2, ×3); "when a Plague Counter is placed on this" (once per placement); stats per counter (aura or self); tokens spent as mana; tokens consumed. `counterChanged` already carries `plague`. | C #27, #39, #42, #43, #53, #59, #61, #62, #63, #69, #70, #74, #76, #78, #87; C+ #3 |
+| E19 | **Plague Counters, extended** | "Place N Plague Counters" with no card named is N placements, all on the one permanent a single prompt names (either side, face-down cards included) (balance patch 1, R689); "Place N Plague Counters on X" is one placement of N. Placement multipliers (×2, ×3); "when a Plague Counter is placed on this" (once per placement); stats per token (aura or self); tokens spent as mana; tokens consumed. `counterChanged` already carries `plague`. | C #27, #39, #42, #43, #53, #59, #61, #62, #63, #69, #70, #74, #76, #78, #87; C+ #3 |
 | E20 | **Lock variants, Unlock** | Lock a whole lane, the zone a permanent was just played into, a random zone, the firing trap's own zone; unlock every zone (event `unlocked`). | C #71, #84; C+ #1, #34, #77 |
 | E21 | **Backrow piles** | §3.2 already lets a Stack card onto an occupied zone "of the right row", but no backrow card has had Stack, so no backrow pile has ever existed and nothing handles one. Once something gives backrow cards Stack, backrow zones hold piles; only the top acts, so a face-down trap under a pile cannot fire and an aura under one is off. Ivory Tower is the one backrow pile a Unit may top (CL39). | C+ #33, #77 |
 | E22 | **Flicker** | The card leaves the field and re-enters the same zone at once: R78's reset, summoning sick, no Cry, no Death. It counts as summoned. | C #14 r |
@@ -1251,10 +1251,9 @@ base → Radiant.
 > **Designer:** Return 2 cards from your GY to your hand. ~~~ Return 4 cards from your GY or Exile to
 > your hand.
 
-- **Text:** Return 2 cards from your graveyard to your hand.
-- **Radiant:** Return 4 cards from your graveyard or exile to your hand.
-- **Engine:** your choice of up to 2 (4) from the pile or piles (an E18 pick from a pile, without
-  Discover's three-option limit).
+- **Text:** Bounce 2 random cards from your graveyard.
+- **Radiant:** Bounce 4 random cards from your graveyard or exile.
+- **Engine:** that many random cards from the pile or piles (R684).
 - **Numbers:** cards 2 ↑.
 - **Check:** #47 Recurring Felinor casts it.
 
@@ -1447,7 +1446,7 @@ base → Radiant.
 > Trap, return this to your hand. It costs (0).
 
 - **Text:** Cry: Cast Ancient Acquisition.
-  While this is in your graveyard: When one of your Traps reveals, return this to hand.
+  While this is in your graveyard: When one of your Traps reveals, Bounce this.
 - **Radiant:** the same, and it costs (0) when it returns.
 - **Engine:** E12: cast a generated #34 on its base face (goes to your graveyard afterwards, R87), your
   picks. A graveyard trigger (R68's graveyard triggers) on your `trapFired`; Radiant: `costOverride 0`.
@@ -2075,10 +2074,10 @@ base → Radiant.
 > current reward options}
 
 - **Text:** Indestructible
-  Quest: Draw 2 cards. Each quest you complete offers rewards; the reward you choose sets your next
-  quest.
+  Each quest you complete offers rewards; the reward you choose sets your next quest. (Quest 1's text
+  lives in the quest line, not the card text: it appears on the card face only after the card is played.)
 - **Radiant:** Indestructible
-  Quest: Draw 2 cards. Each quest you complete gives every reward it offers, and you follow every path.
+  Each quest you complete gives every reward it offers, and you follow every path.
 - **The tree** (data in the card file, so it is testable):
 
   | Quest | Done when, counted from the moment it opens | Rewards → next quest |
@@ -2365,9 +2364,9 @@ The eight Pancake tokens (`classicplus-012-1` … `-8`), all Legendary by the de
 > hand (it can’t cost less than (2) mana)” ~~~ Then next spell you play gains “When this leaves your
 > hand, add it right back to your hand (it can’t cost less than (1) mana)” Draw 1 [fix wording]
 
-- **Text (the fixed wording asked for):** The next Spell you play gains "After this resolves, return it
-  to your hand. This can't cost less than (2)."
-- **Radiant:** The next Spell you play gains "After this resolves, return it to your hand. This can't
+- **Text (the fixed wording asked for):** The next Spell you play gains "After this resolves, Bounce it.
+  This can't cost less than (2)."
+- **Radiant:** The next Spell you play gains "After this resolves, Bounce it. This can't
   cost less than (1)." Draw 1.
 - **Engine:** a player modifier, waiting until used (not turn-scoped), that stamps E39's enchantment on
   the next Spell as it is played. The enchantment rides the card in every zone, so it comes back every

@@ -5,8 +5,8 @@
 // and exiled ones are public; radiant: only those that cost (2) or more are exiled; its tuned numbers
 // (draw, kept threshold) read through `param()` (R386)".
 
-import { reduce, stepParam, type GameState } from "@jackioh/engine";
-import type { Action, GameEvent, PlayerId } from "@jackioh/shared";
+import { stepParam, type GameState } from "@jackioh/engine";
+import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { base, def, radiant } from "../../src/scripts/classic/079-risky-die";
 import { scenario, type Scenario } from "../_harness";
@@ -109,25 +109,15 @@ describe("C #79 Risky Die", () => {
       expect(s.pile("p1", "library").map((card) => card.defId)).toEqual([STOCKPILE, FILLER]);
     });
 
-    it("§9.3 a cast on draw that asks pauses the draws; after a JSON round trip they finish, and only the drawn cards are judged", () => {
+    it("§9.3 a cast on draw resolves inside the draws (R682: no prompt); after a JSON round trip they finish, and only the drawn cards are judged", () => {
       const s = scenario({ p1: { hand: [RISKY, VANILLA], library: [HINDER, MENACE, STOCKPILE, FILLER] } });
       s.play(RISKY);
-      // Hinder is cast on the first draw and asks for its discard (R16).
-      expect(s.state.pending?.kind).toBe("hand");
-      const vanilla = s.card(VANILLA);
+      // Hinder is cast on the first draw; its discard is random (R682), so with one card held the
+      // Vanilla goes with no prompt opening.
+      expect(s.state.pending).toBeNull();
       const round = JSON.parse(JSON.stringify(s.state)) as GameState;
-      const action: Action = {
-        type: "answer",
-        playerId: "p1",
-        nonce: "c79-round-trip",
-        choiceId: s.state.pending?.id ?? "",
-        selection: [{ pick: "instance", instanceId: vanilla.id }],
-      };
-      const live = reduce(s.state, action);
-      const revived = reduce(round, action);
-      expect(live.error).toBeUndefined();
-      expect(revived.state).toEqual(live.state);
-      const after = live.state;
+      expect(round).toEqual(s.state);
+      const after = s.state;
       const where = (defId: string): string | undefined =>
         [...after.players.p1.hand, ...after.players.p1.exile, ...after.players.p1.graveyard, ...after.players.p1.library].find(
           (card) => card.defId === defId,
