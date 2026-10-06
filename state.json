@@ -2493,9 +2493,7 @@
     },
     "352": {
       "action": "build",
-      "asks": [
-        "c:6009245487"
-      ],
+      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -2572,6 +2570,9 @@
       "taken_asks": []
     },
     "356": {
+      "asks": [
+        "c:6009245487"
+      ],
       "cleared": {
         "at": "2026-10-06T04:32:24Z",
         "by": "`claude` (strong)",
