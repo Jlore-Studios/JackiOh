@@ -2481,7 +2481,9 @@
     },
     "352": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6009245487"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -2495,7 +2497,9 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "pending_request": false,
+      "pending_at": "2026-10-06T04:19:06Z",
+      "pending_by": "MaxGoetzmann",
+      "pending_request": true,
       "planned_at": "2026-10-06T04:13:31Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
