@@ -276,6 +276,62 @@ class StatusSectionTests(unittest.TestCase):
             self.assertEqual(main_mod.cmd_dashboard(make_config(), argparse.Namespace()), 0)
 
 
+class StatisticsSectionTests(unittest.TestCase):
+    """Squishy's record has a section of its own in the night bot's statistics issue, drawn by
+    its own process, and only when the issue is rewritten."""
+
+    def test_the_section_goes_after_the_night_bots_record(self):
+        from harness import stats
+        from tests.support import DAY
+        ctx = make_ctx(FakeGitHub(), at=DAY)
+        drawn: list[int] = []
+
+        def extra():
+            drawn.append(1)
+            return ("<!-- s -->\n## 🫧 Squishy\n\nIts record.",)
+        stats.update(ctx, extra=extra)
+        [issue] = [t for t in ctx.gh.threads.values() if t["title"] == stats.TITLE]
+        body = issue["body"]
+        self.assertLess(body.index("## All time"), body.index("## 🫧 Squishy"))
+        self.assertLess(body.index("## 🫧 Squishy"), body.index(stats.MARKER))
+        self.assertEqual(stats.update(ctx, extra=extra), "statistics: not due")
+        self.assertEqual(drawn, [1])  # not drawn again when nothing is rewritten
+
+    def test_the_loop_draws_squishys_record_in_a_process_of_its_own(self):
+        calls: list[list[str]] = []
+
+        def run(argv, **kwargs):
+            calls.append(argv[3:])
+            return subprocess.CompletedProcess(argv, 0, "## 🫧 Squishy\n", "")
+        seen: list[tuple[str, ...]] = []
+
+        def update(ctx, *, force=False, extra=tuple):
+            seen.append(extra())
+            return "statistics: rewrote #190"
+        with mock.patch.object(main_mod.subprocess, "run", run), offline(), \
+                mock.patch.object(main_mod.stats_mod, "update", update), \
+                mock.patch.object(dashboard, "update", lambda ctx, extra=(): "rewrote #148"), \
+                contextlib.redirect_stdout(io.StringIO()):
+            main_mod.cmd_dashboard(make_config(), argparse.Namespace(stats=True, companions=True))
+        self.assertEqual(seen, [("## 🫧 Squishy\n",)])
+        self.assertIn(["stats", "--section-only"], calls)
+        self.assertIn(["dashboard", "--section-only"], calls)
+
+    def test_squishys_runs_and_modes_are_read_from_its_comments(self):
+        from harness import stats
+        run = "https://github.com/Jlore-Studios/JackiOh/actions/runs/5"
+        start = stats.parse({"body": f"Starting a one-shot build of this now ([run]({run})), on "
+                                     "`claude-squishy` (claude, `opus`, strong)", "issue_url": "x/7"})
+        self.assertEqual((start.kind, start.action, start.provider), ("start", "oneshot",
+                                                                     "claude-squishy"))
+        self.assertEqual(stats.parse({"body": f"Splitting this now ([run]({run}))"}).action, "split")
+        split_ = stats.parse({"body": f"Split #40 into 3 sub-issue(s) ([run]({run})), queued for me"})
+        self.assertEqual((split_.kind, split_.count), ("split", 3))
+        done = stats.parse({"body": "Every sub-issue of this has closed, and its end state holds "
+                                    "on `main` (the run), so I am closing it."})
+        self.assertEqual(done.kind, "closed tree")
+
+
 class SquishyWorkflowTests(unittest.TestCase):
     run_text = read("squishy-run.yml")
     commands_text = read("squishy-commands.yml")
