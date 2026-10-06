@@ -365,7 +365,10 @@ an expiry becomes an ordinary server-only action — `timeout`, `disconnectExpir
   does is refused as malformed (R270): the actor answers a known nonce with its stored ack, so a
   client that sent the next expiry's nonce first would swallow it. What a seat kept is sealed (R266) and travels in no frame but its own view.
 - Disconnect grace runs per player and is stored on the match, so both clients can show the
-  countdown. The turn clock keeps running while a player is away.
+  countdown. The turn clock keeps running while a player is away. A seat that has had no socket on
+  the actor when the first socket attaches (a rebuild after a restart, or a player who never opened
+  the match) starts its grace then, at the deadline stored on the match if there is one, never a
+  later one (R744).
 - Reaching the ceiling is a draw. A reaper resolves anything past it.
 - Every terminal reason — hero death, draw accepted, turn cap, concede, disconnect, ceiling —
   writes exactly one `results` row, applies the Glicko-2 rating move once when the match is
