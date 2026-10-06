@@ -264,7 +264,7 @@ describe("R746: a hand the other cards cannot fill takes cast-on-draw cards, cas
     events.filter((event) => event.type === "drawn" && event.player === player);
 
   it("R746 an all-cast-on-draw deck deals a full hand of them, uncast, and casts them at the start of the game", () => {
-    const { begun } = start("r745-all", [deckOf(0, DECK_SIZE), OTHER()]);
+    const { begun } = start("r746-all", [deckOf(0, DECK_SIZE), OTHER()]);
     const state = begun.state;
     const hand = state.players.p1.hand;
 
@@ -297,7 +297,7 @@ describe("R746: a hand the other cards cannot fill takes cast-on-draw cards, cas
 
   it("R746 turn 1 of an all-cast-on-draw library is still bounded by R58's cap, as a chain mid-game is", () => {
     register();
-    const game = createGame({ seed: "r745-cap", decks: [deckOf(0, DECK_SIZE), OTHER()] });
+    const game = createGame({ seed: "r746-cap", decks: [deckOf(0, DECK_SIZE), OTHER()] });
     // Five more, as a Unstable Clone Machine's or a CN-Virus's copies would add: 25 cards, all of them
     // cast on draw.
     for (const defId of [cod(1), cod(2), cod(3), cod(4), cod(5)]) {
@@ -318,7 +318,7 @@ describe("R746: a hand the other cards cannot fill takes cast-on-draw cards, cas
 
   it("R746 one other card and two cast-on-draw cards fill the hand, and each seat's are cast, Player 1's first", () => {
     // p1: one other card and a hand of three. p2: two other cards and a hand of four.
-    const { begun } = start("r745-one", [deckOf(0, DECK_SIZE - 1), deckOf(0, DECK_SIZE - 2)]);
+    const { begun } = start("r746-one", [deckOf(0, DECK_SIZE - 1), deckOf(0, DECK_SIZE - 2)]);
     const state = begun.state;
     const p1 = state.players.p1.hand;
     const p2 = state.players.p2.hand;
@@ -342,7 +342,7 @@ describe("R746: a hand the other cards cannot fill takes cast-on-draw cards, cas
 
   it("R746 a mulligan the other cards cannot replace is dealt cast-on-draw cards for the rest", () => {
     // Five other cards: three in the hand and two left in the library for the three replacements.
-    const { begun } = start("r745-short", [deckOf(0, DECK_SIZE - 5), OTHER()]);
+    const { begun } = start("r746-short", [deckOf(0, DECK_SIZE - 5), OTHER()]);
     const state = begun.state;
     expect(state.players.p1.hand).toHaveLength(3);
     expect(defsOf(state.players.p1.hand).some(isCod)).toBe(false);
@@ -363,7 +363,7 @@ describe("R746: a hand the other cards cannot fill takes cast-on-draw cards, cas
 
   it("R746 a cast-on-draw card dealt uncast that the mulligan returns goes back uncast", () => {
     // p2 draws nothing on turn 1, so its library is as setup left it.
-    const { begun } = start("r745-returned", [OTHER(), deckOf(0, DECK_SIZE - 2)]);
+    const { begun } = start("r746-returned", [OTHER(), deckOf(0, DECK_SIZE - 2)]);
     const hand = begun.state.players.p2.hand;
     const waiting = hand.filter((card) => isCod(card.defId));
     expect(waiting).toHaveLength(2);
@@ -390,9 +390,9 @@ describe("R746: a hand the other cards cannot fill takes cast-on-draw cards, cas
     let seed = "";
     let begun: ReturnType<typeof beginGame> | undefined;
     for (let n = 0; n < 50 && begun === undefined; n += 1) {
-      const tried = start(`r745-asks-${n}`, decks).begun;
+      const tried = start(`r746-asks-${n}`, decks).begun;
       if (tried.state.players.p1.hand.some((card) => card.defId === ASKS)) {
-        seed = `r745-asks-${n}`;
+        seed = `r746-asks-${n}`;
         begun = tried;
       }
     }

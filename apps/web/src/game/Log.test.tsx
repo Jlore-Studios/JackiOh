@@ -4,14 +4,17 @@
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { INSPECT_CLOSE, INSPECT_HOVER, INSPECT_SHEET, closeInspect } from "../cards/index.ts";
 import { HOVER_DELAY_MS } from "../cards/inspect/index.ts";
-import Log, { LOG_CARD_TESTID } from "./Log.tsx";
+import Log, { LOG_CARD_TESTID, keptLineFor } from "./Log.tsx";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
+import { LOG_HISTORY_LIMIT } from "./config.ts";
 import { testid } from "./contract.ts";
-import { baseView, fullBoardView, withEvents } from "../test/fixtures.ts";
+import { EMPTY_LOG_HISTORY, LOG_GAP_TEXT, advanceLogHistory } from "./useLogHistory.ts";
+import { baseView, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
 
 afterEach(() => {
   cleanup();
@@ -250,5 +253,130 @@ describe("Log: a line about a card opens that card", () => {
     });
     expect(screen.getByTestId(INSPECT_HOVER)).toHaveTextContent(nameOf("core-005"));
     expect(screen.getByTestId(INSPECT_HOVER).querySelector(".cf")).toHaveAttribute("data-radiant-face", "true");
+  });
+});
+
+describe("R745 the log keeps the whole game, not only the view's window", () => {
+  /** The engine's `VIEW_EVENT_LIMIT`: how many of the newest events a view carries (R168). */
+  const WINDOW = 32;
+
+  const lost = (n: number): GameEvent => ({ type: "healthLost", player: "p1", amount: n });
+  const game = (count: number): GameEvent[] => Array.from({ length: count }, (_, i) => lost(i + 1));
+  const windowOf = (events: readonly GameEvent[], end: number): GameEvent[] => events.slice(Math.max(0, end - WINDOW), end);
+  const said = (n: number): string => `You lost ${String(n)} health`;
+  const saidRange = (from: number, to: number): string[] => Array.from({ length: to - from + 1 }, (_, i) => said(from + i));
+  const lines = (): string[] => [...screen.getByTestId(testid.log).querySelectorAll(".log-line")].map((li) => li.textContent ?? "");
+
+  it("R745 joins windows that slide past the view's last 32 events, in order, with no line shown twice", () => {
+    const events = game(80);
+    const { rerender } = render(<Log view={withEvents(baseView(), windowOf(events, 8))} />);
+    for (let end = 16; end <= 80; end += 8) {
+      rerender(<Log view={withEvents(baseView(), windowOf(events, end))} />);
+    }
+    expect(lines()).toEqual(saidRange(1, 80));
+  });
+
+  it("R745 keeps a line that has left the window under the card name it was shown with, and stores no instance id", () => {
+    const lookup = lookupFromDefs(CATALOG);
+    const name = CATALOG["core-002"]?.name ?? "core-002";
+    const first: GameEvent = { type: "summoned", player: "p2", instanceId: "c46", defId: "core-002", row: "units", lane: 1 };
+    const second: GameEvent = { type: "attackDeclared", attackerId: "c46", targetId: "hero-p1", forced: false };
+    const filler = game(WINDOW);
+    const views = [
+      withEvents(baseView(), [first, second]),
+      withEvents(baseView(), [first, second, ...filler.slice(0, WINDOW - 2)]),
+      withEvents(baseView(), filler),
+    ];
+    const [one, two, three] = views;
+    if (one === undefined || two === undefined || three === undefined) throw new Error("three views");
+    const at = (view: PlayerView): ReactElement => (
+      <CatalogContext.Provider value={lookup}>
+        <Log view={view} />
+      </CatalogContext.Provider>
+    );
+    const { rerender } = render(at(one));
+    rerender(at(two));
+    rerender(at(three));
+
+    const log = screen.getByTestId(testid.log);
+    const [entered, attacked] = [...log.querySelectorAll(".log-line")];
+    expect(entered?.textContent).toBe(`${name} entered the opponent's lane 1`);
+    expect(attacked?.textContent).toBe(`${name} attacked your hero`);
+    expect(within(log).getAllByTestId(LOG_CARD_TESTID).map((line) => line.getAttribute("data-def-id"))).toEqual([
+      "core-002",
+      "core-002",
+    ]);
+    expect(log.innerHTML).not.toMatch(/\bc46\b/);
+
+    const history = views.reduce((h, view) => advanceLogHistory(h, view, keptLineFor(view, lookup)), EMPTY_LOG_HISTORY);
+    const seat = history.seats.p1;
+    expect(seat?.kept.map((line) => line.text)).toEqual([`${name} entered the opponent's lane 1`, `${name} attacked your hero`]);
+    expect(seat?.kept.map((line) => line.face?.defId)).toEqual(["core-002", "core-002"]);
+    expect(JSON.stringify(seat?.kept)).not.toContain("c46");
+    expect(JSON.stringify(seat?.window.map((entry) => entry.line))).not.toContain("c46");
+  });
+
+  it("R745 keeps one history per viewer, and a new game starts with an empty one", () => {
+    const events = game(40);
+    const p2View = baseView({
+      viewer: "p2",
+      active: "p2",
+      you: emptySide("p2"),
+      opponent: emptySide("p1", { hand: { count: 4 } }),
+    });
+    const { rerender } = render(<Log view={withEvents(baseView(), windowOf(events, 20))} />);
+    expect(lines()).toEqual(saidRange(1, 20));
+
+    rerender(<Log view={withEvents(p2View, [{ type: "healthLost", player: "p1", amount: 500 }])} />);
+    expect(lines()).toEqual(["Opponent lost 500 health"]);
+
+    rerender(<Log view={withEvents(baseView(), windowOf(events, 40))} />);
+    expect(lines()).toEqual(saidRange(1, 40));
+    expect(lines().join("\n")).not.toContain("500");
+
+    // A view with a result, then one without: the next game, with nothing of the last.
+    rerender(<Log view={{ ...withEvents(baseView(), windowOf(events, 40)), result: { winner: "p1", reason: "concede" } }} />);
+    rerender(<Log view={withEvents(baseView(), [lost(7)])} />);
+    expect(lines()).toEqual([said(7)]);
+  });
+
+  it("R745 holds at most LOG_HISTORY_LIMIT lines, dropping the oldest first", () => {
+    const total = LOG_HISTORY_LIMIT + 40;
+    const events = game(total);
+    let end = WINDOW;
+    const { rerender } = render(<Log view={withEvents(baseView(), windowOf(events, end))} />);
+    while (end < total) {
+      end = Math.min(end + WINDOW - 1, total);
+      rerender(<Log view={withEvents(baseView(), windowOf(events, end))} />);
+    }
+    const read = lines();
+    expect(read).toHaveLength(LOG_HISTORY_LIMIT);
+    expect(read[0]).toBe(said(total - LOG_HISTORY_LIMIT + 1));
+    expect(read[read.length - 1]).toBe(said(total));
+  });
+
+  it("R745 draws a divider before each turn's first line but the log's first", () => {
+    render(
+      <Log
+        view={withEvents(baseView(), [
+          { type: "turnStarted", player: "p1", turn: 3 },
+          lost(1),
+          { type: "turnStarted", player: "p2", turn: 4 },
+          lost(2),
+        ])}
+      />,
+    );
+    const dividers = screen.getAllByRole("separator");
+    expect(dividers).toHaveLength(1);
+    expect(dividers[0]?.nextElementSibling?.textContent).toBe("Turn 4: Opponent");
+    expect(lines()).toEqual(["Turn 3: You", said(1), "Turn 4: Opponent", said(2)]);
+  });
+
+  it("R745 says in one line where a view shares no event with the one before, and keeps what it had", () => {
+    const events = game(80);
+    const { rerender } = render(<Log view={withEvents(baseView(), windowOf(events, 32))} />);
+    rerender(<Log view={withEvents(baseView(), windowOf(events, 80))} />);
+    expect(lines()).toEqual([...saidRange(1, 32), LOG_GAP_TEXT, ...saidRange(49, 80)]);
+    expect(screen.getByText(LOG_GAP_TEXT)).toHaveAttribute("data-event", "gap");
   });
 });

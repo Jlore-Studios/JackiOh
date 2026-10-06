@@ -16,7 +16,7 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     "bounce all enemy units": { label: "Bounce enemy units", detail: "Your opponent's units return to their hand. Then draw 1." },
     "destroy all enemy units": { label: "Destroy enemy units", detail: "Destroy every enemy unit. Then draw 1." },
   },
-  // #24 Efficiency Dividend: "deal X damage to a target; heal a target 2X; gain floor(X/2) mana next turn".
+  // #24 Efficiency Dividend: "Deal X damage, heal a target 2X, or gain floor(X/2) mana next turn".
   "core-024": {
     damage: { label: "Deal X damage", detail: "Deal X damage." },
     heal: { label: "Heal 2X", detail: "Heal a target by twice X." },
@@ -68,8 +68,8 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
     Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant." },
     Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X." },
   },
-  // #24 Efficiency Dividend, radiant: "deal 2X damage to a target; heal a target 4X; gain X mana
-  // next turn" (§8 #24, R275), every mode doubled.
+  // #24 Efficiency Dividend, radiant: "Deal 2X damage, heal a target 4X, or gain X mana next turn"
+  // (§8 #24, R275), every mode doubled.
   "core-024": {
     damage: { label: "Deal 2X damage", detail: "Deal twice X damage." },
     heal: { label: "Heal 4X", detail: "Heal a target by four times X." },

@@ -4402,6 +4402,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(744, "../../../apps/server/test/match/recovery.test.ts", "../../../apps/server/test/match/clock.test.ts");
   });
 
+  // Proved by apps/web game/Log.test.tsx "R745 …" (windows joined in order with no line twice, one
+  // history per viewer, a new game empty, a kept line's name and no id, the cap, dividers, the gap line).
+  it("R745 keeps the whole game in the log, joined from the views' windows", () => {
+    provenIn(745, "../../../apps/web/src/game/Log.test.tsx");
+  });
+
   // Proved by setup-aside.test.ts "R746 …": an all-cast-on-draw deck deals a full hand of them uncast
   // and casts them before turn 1, R58's cap still bounds turn 1, a hand or a mulligan the other cards
   // cannot fill takes them, a returned one goes back uncast, and a cast that asks holds turn 1 and
