@@ -1010,7 +1010,11 @@ line is a bare `stop`, and never answers it with a hint, so the two never talk f
 **Status.** Squishy has a section of its own in the pinned **Night bot status** issue: the
 `bot-status` loop runs Squishy in a process of its own each tick (`harness dashboard --companions`),
 which sweeps for it with its token and draws its lanes, its account, its queue, its trees and its
-runs; that section sits after the night bot's facts. `/squishy status` gives the same on demand.
+runs, with its full `/squishy status` report folded underneath; that section sits after the night
+bot's facts. The pinned **Night bot statistics** issue has a Squishy section too, drawn the same
+way each hour (`harness stats --companions`): its four windows, its modes (one-shot builds,
+splits, the sub-issues they opened, the trees closed) and its merged pull requests.
+`/squishy status` gives what it is doing now on demand.
 
 **Setting it up.** The account `squishy-squooby` has write access and is on `.harness/trust.txt`.
 Two secrets: `SQUISHY_GITHUB_TOKEN`, a classic token of that account with `public_repo` and

@@ -334,10 +334,13 @@ def _companion(other: Any, *argv: str) -> subprocess.CompletedProcess[str]:
 COMPANION_TIMEOUT = 300
 
 
-def _companions(cfg: Config, *, sweep: bool) -> tuple[str, ...]:
-    """Each other bot's section of the status issue (Squishy's, #60), after its sweep when the
-    loop sweeps: its own process draws it from its own state and labels. A bot that cannot be run
-    is a warning, and the issue goes on without its section."""
+def _companions(cfg: Config, *, sweep: bool,
+                argv: tuple[str, ...] = ("dashboard", "--section-only"),
+                what: str = "section") -> tuple[str, ...]:
+    """Each other bot's section (Squishy's, #60), after its sweep when the loop sweeps: its own
+    process draws it from its own state and labels, `argv` saying which (its section of the
+    status issue, or with `("stats", "--section-only")` of the statistics issue). A bot that
+    cannot be run is a warning, and the issue goes on without its section."""
     sections: list[str] = []
     for other in config_mod.OTHERS:
         if not other.home:
@@ -353,14 +356,14 @@ def _companions(cfg: Config, *, sweep: bool) -> tuple[str, ...]:
             except (OSError, subprocess.SubprocessError) as exc:
                 print(redact(f"::warning::{other.name}'s sweep did not run: {exc}"), flush=True)
         try:
-            drawn = _companion(other, "dashboard", "--section-only")
+            drawn = _companion(other, *argv)
         except (OSError, subprocess.SubprocessError) as exc:
-            print(redact(f"::warning::{other.name}'s section was not drawn: {exc}"), flush=True)
+            print(redact(f"::warning::{other.name}'s {what} was not drawn: {exc}"), flush=True)
             continue
         if drawn.returncode == 0 and drawn.stdout.strip():
             sections.append(drawn.stdout)
         else:
-            print(redact(f"::warning::{other.name}'s section was not drawn: "
+            print(redact(f"::warning::{other.name}'s {what} was not drawn: "
                          f"{(drawn.stderr or '')[-500:]}"), flush=True)
     return tuple(sections)
 
@@ -405,7 +408,8 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
             print(redact(f"::warning::the disk issue was not settled: {exc}"), flush=True)
         if getattr(args, "stats", False):
             try:
-                print(redact(stats_mod.update(_ctx(cfg))), flush=True)
+                print(redact(stats_mod.update(_ctx(cfg), extra=_stats_sections(cfg, args))),
+                      flush=True)
             except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
                 print(redact(f"::warning::the statistics issue was not updated: {exc}"),
                       flush=True)
@@ -414,9 +418,24 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
         time.sleep(every)
 
 
+def _stats_sections(cfg: Config, args: argparse.Namespace) -> Any:
+    """What draws the other bots' sections of the statistics issue: their own processes with
+    `--companions` (#60), nothing without. Called only when the issue is rewritten."""
+    if not getattr(args, "companions", False):
+        return tuple
+    return lambda: _companions(cfg, sweep=False, argv=("stats", "--section-only"),
+                               what="statistics")
+
+
 def cmd_stats(cfg: Config, args: argparse.Namespace) -> int:
-    """The pinned "Night bot statistics" issue (stats.py): rewritten when due, or now with --force."""
-    print(redact(stats_mod.update(_ctx(cfg), force=bool(getattr(args, "force", False)))))
+    """The pinned "Night bot statistics" issue (stats.py): rewritten when due, or now with --force.
+    `--section-only` prints this bot's section of it (Squishy's, which the night bot's loop puts
+    in) and writes nothing; `--companions` puts the other bots' sections in."""
+    if getattr(args, "section_only", False):
+        print(stats_mod.bot_section(_ctx(cfg, write=False)))
+        return 0
+    print(redact(stats_mod.update(_ctx(cfg), force=bool(getattr(args, "force", False)),
+                                  extra=_stats_sections(cfg, args))))
     return 0
 
 
@@ -737,6 +756,10 @@ def parser() -> argparse.ArgumentParser:
                            "(the night bot's loop runs this as Squishy)")
     p = sub.add_parser("stats", help="rewrite the pinned statistics issue now")
     p.add_argument("--force", action="store_true", help="even if it was rewritten under an hour ago")
+    p.add_argument("--companions", action="store_true",
+                   help="also put in each other bot's section (Squishy's), drawn by its own process")
+    p.add_argument("--section-only", action="store_true",
+                   help="print this bot's section of the statistics issue and write nothing")
     p = sub.add_parser("halt", help="stop all model work")
     p.add_argument("reason", nargs="*")
     sub.add_parser("start", help="lift a halt")

@@ -21,6 +21,12 @@ each time, so it holds nothing of its own but the issue's number and when it was
   issues from their `Closes #n` lines; commits on the default branch from the commit list.
 - **Model minutes** come from each subscription's `spent` record in the state file. Every entry is
   dated, so a window sums the entries in it; all time is its last `providers.SPENT_KEEP` runs.
+
+Squishy (#60) has a section of its own at the end, apart from the night bot's record: the same
+four windows from its own comments, pull requests, runs and state, and its modes (one-shot builds,
+splits, the sub-issues they opened, the trees closed). Squishy's own process draws it
+(`bot_section`), and the night bot's loop runs that process each hour and puts it in (`update`'s
+`extra`).
 """
 
 from __future__ import annotations
@@ -33,7 +39,8 @@ from datetime import datetime, timedelta
 from typing import Any, Callable, Mapping
 
 from harness.clock import human_delta, iso, parse_iso, zone
-from harness.config import BRANCH_PREFIX, NIGHT_WORKFLOW
+from harness.config import BRANCH_PREFIX, MODES, NIGHT_WORKFLOW, SLASH
+from harness.config import TITLE as BOT_TITLE
 from harness.context import Context
 from harness.errors import GitHubError
 
@@ -73,16 +80,21 @@ SEAT = re.compile(r"`([a-z][a-z0-9-]*)` \(([a-z]+), `?([A-Za-z0-9][A-Za-z0-9.\-]
 APPROVED_BY = re.compile(r"`([a-z][a-z0-9-]*)` \([a-z]+, `?[A-Za-z0-9][A-Za-z0-9.\-]*`?"
                          r"(?:, [a-z]+)?\),? (?:reviewed it adversarially and )?approved it")
 OPENED = re.compile(r"\bOpened #(\d+)")
+#: A split's checklist: "Split #40 into 3 sub-issue(s) (…)".
+SPLIT_INTO = re.compile(r"\bSplit #\d+ into (\d+) sub-issue")
 CLOSES = re.compile(r"(?i)\b(?:closes|fixes|resolves) #(\d+)")
 BRANCH_ISSUE = re.compile(r"^" + re.escape(BRANCH_PREFIX) + r"issue-(\d+)$")
 
 #: What a comment says happened, tried in this order: (kind, words that mark it).
 OUTCOMES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("start", ("Starting work on this now", "Starting a revision now", "Starting a review now",
-               "Planning this now")),
+               "Planning this now", "Starting a one-shot build", "Splitting this now")),
     ("opened", ("Opened #",)),
     ("revised", ("Revision pushed",)),
     ("planned", ("Planned on",)),
+    # Squishy's splits (#60): the checklist of a split, and a tree whose close-out found it done.
+    ("split", ("sub-issue(s) (",)),
+    ("closed tree", ("end state holds on",)),
     ("approved", ("approved it. Auto-merge", "approved it, so")),
     ("paused", ("Paused:", "was cut short", "reached its usage limit", "stops mid-call")),
     ("not approved", ("did not pass review after", "still had blocking findings")),
@@ -91,9 +103,10 @@ OUTCOMES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("queued", ("Queued",)),
 )
 ACTIONS = (("Starting work on this now", "build"), ("Starting a revision now", "revise"),
-           ("Starting a review now", "review"), ("Planning this now", "plan"))
+           ("Starting a review now", "review"), ("Planning this now", "plan"),
+           ("Starting a one-shot build", "oneshot"), ("Splitting this now", "split"))
 #: The outcomes that count as work done, and the ones that are not.
-DONE = ("opened", "revised", "planned", "approved")
+DONE = ("opened", "revised", "planned", "approved", "split", "closed tree")
 NOT_DONE = ("paused", "not approved", "failed", "infra")
 
 
@@ -108,6 +121,8 @@ class Event:
     action: str = ""
     pr: int | None = None
     approvers: tuple[str, ...] = ()
+    #: For a split: how many sub-issues it opened.
+    count: int = 0
 
 
 @dataclass
@@ -140,10 +155,12 @@ def parse(comment: Mapping[str, Any]) -> Event:
     opened = OPENED.search(body)
     action = next((name for words, name in ACTIONS if words in body), "")
     approvers = tuple(dict.fromkeys(m.group(1) for m in APPROVED_BY.finditer(body)))
+    split = SPLIT_INTO.search(body)
     return Event(at=str(comment.get("created_at") or ""), number=number, kind=kind,
                  run=run.group(1) if run else "", provider=seat.group(1) if seat else "",
                  model=seat.group(3) if seat else "", action=action,
-                 pr=int(opened.group(1)) if opened else None, approvers=approvers)
+                 pr=int(opened.group(1)) if opened else None, approvers=approvers,
+                 count=int(split.group(1)) if split else 0)
 
 
 def joined(events: list[Event]) -> list[Event]:
@@ -487,7 +504,65 @@ def section(ctx: Context, w: Window, who: Credits, facts: Facts, *, shown: int) 
     return lines
 
 
-def render(ctx: Context, facts: Facts, *, shown: int = MERGES_SHOWN) -> str:
+def modes(windows: list[Window]) -> list[str]:
+    """Squishy's modes (#60), one row each, one column per window."""
+    rows: list[tuple[str, Callable[[Window], str]]] = [
+        ("One-shot builds started",
+         lambda w: str(sum(1 for e in w.starts if e.action == "oneshot"))),
+        ("Splits run", lambda w: str(sum(1 for e in w.starts if e.action == "split"))),
+        ("Sub-issues they opened", lambda w: str(sum(e.count for e in w.events
+                                                     if e.kind == "split"))),
+        ("Trees closed, their end state holding",
+         lambda w: str(sum(1 for e in w.events if e.kind == "closed tree"))),
+    ]
+    lines = ["| | " + " | ".join(w.name for w in windows) + " |",
+             "|---|" + "---|" * len(windows)]
+    lines += [f"| {label} | " + " | ".join(cell(w) for w in windows) + " |" for label, cell in rows]
+    return lines
+
+
+SECTION_START = "<!-- jackioh-bot:statistics-section -->"
+SECTION_END = "<!-- /jackioh-bot:statistics-section -->"
+#: How many of its merged pull requests a bot's section lists.
+SECTION_MERGES = 10
+
+
+def bot_section(ctx: Context) -> str:
+    """This bot's section of the night bot's statistics issue (#60): Squishy's record, drawn by
+    its own process from its own comments, pull requests, runs and state."""
+    facts = collect(ctx)
+    now = ctx.now()
+    who = credits(facts.events, facts.pulls)
+    windows = [window(name, span, now, facts) for name, span in WINDOWS]
+    lines = [SECTION_START, f"## 🫧 {BOT_TITLE}", "",
+             f"_What @{ctx.cfg.bot_login} has done, read the same way as the night bot's record "
+             f"above. What it is doing now is in its section of the **Night bot status** issue, "
+             f"and `{SLASH} status`._", "", "### The four windows", ""]
+    lines += summary(windows) + [""]
+    if MODES:
+        lines += ["### Its modes", ""] + modes(windows) + [""]
+    merged = windows[-1].merged
+    lines += [f"### Its pull requests merged ({len(merged)})", ""]
+    if not merged:
+        lines += ["None yet.", ""]
+    else:
+        lines += ["| Pull request | Built | Approved | Open for | Lines |", "|---|---|---|---|---|"]
+        for p in merged[:SECTION_MERGES]:
+            number = int(p["number"])
+            took = parse_iso(p["merged_at"]) - parse_iso(p["created_at"])
+            built = who.builder(p)
+            lines.append(f"| #{number} {_title(p)} "
+                         f"| {f'`{built}`' if built != UNRECORDED else UNRECORDED} "
+                         f"| {_who(who.approved.get(number, []))} | {human_delta(took)} "
+                         f"| {_lines([p])} |")
+        if len(merged) > SECTION_MERGES:
+            lines.append(f"\n_… and {len(merged) - SECTION_MERGES} older ones._")
+        lines.append("")
+    return "\n".join(lines + [SECTION_END])
+
+
+def render(ctx: Context, facts: Facts, *, shown: int = MERGES_SHOWN,
+           extra: tuple[str, ...] = ()) -> str:
     now = ctx.now()
     who = credits(facts.events, facts.pulls)
     windows = [window(name, span, now, facts) for name, span in WINDOWS]
@@ -517,14 +592,17 @@ def render(ctx: Context, facts: Facts, *, shown: int = MERGES_SHOWN) -> str:
               "pull request in the window it was opened or merged in.", ""]
     for w in windows:
         lines += section(ctx, w, who, facts, shown=shown)
+    for part in extra:
+        lines += ["---", "", part.strip(), ""]
     lines += [MARKER]
     return "\n".join(lines)
 
 
-def fit(ctx: Context, facts: Facts) -> str:
-    """The body, listing fewer merged pull requests per window if it would pass GitHub's limit."""
+def fit(ctx: Context, facts: Facts, extra: tuple[str, ...] = ()) -> str:
+    """The body, listing fewer merged pull requests per window if it would pass GitHub's limit.
+    The other bots' sections (`extra`) are kept whole."""
     for shown in (MERGES_SHOWN, MERGES_SHOWN // 2, 10, 0):
-        body = render(ctx, facts, shown=shown)
+        body = render(ctx, facts, shown=shown, extra=extra)
         if len(body) <= MAX_BODY:
             return body
     return body[:MAX_BODY - len(MARKER) - 1] + "\n" + MARKER
@@ -551,13 +629,15 @@ def due(ctx: Context, state: Mapping[str, Any]) -> bool:
     return last is None or ctx.now() - last >= STATS_EVERY
 
 
-def update(ctx: Context, *, force: bool = False) -> str:
+def update(ctx: Context, *, force: bool = False,
+           extra: Callable[[], tuple[str, ...]] = tuple) -> str:
     """Rewrite the statistics issue when an hour has passed (or `force`), opening and pinning it
-    first if there is none."""
+    first if there is none. `extra` draws the other bots' sections (`bot_section`, each in a
+    process of its own), and is called only when the issue is rewritten."""
     state = ctx.store.load()
     if not force and not due(ctx, state):
         return "statistics: not due"
-    body = fit(ctx, collect(ctx))
+    body = fit(ctx, collect(ctx), extra())
     issue = find(ctx, state)
     if issue is None:
         issue = ctx.gh.create_issue(TITLE, body, LABELS)
