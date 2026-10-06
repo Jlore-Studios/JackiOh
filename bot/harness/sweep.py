@@ -38,6 +38,7 @@ from harness.clock import iso, parse_iso
 from harness.config import (LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
                             LABEL_REVISE, LABEL_WORKING, NIGHT_WORKFLOW)
 from harness.context import Context
+from harness.errors import GitHubError
 from harness.queue import label_names, queue_build, queue_revise
 
 LOOKBACK = timedelta(days=3)
@@ -83,10 +84,17 @@ def _labels(ctx: Context, since: datetime) -> list[str]:
     want = hashlib.sha256(json.dumps(sorted(LABELS.items())).encode("utf-8")).hexdigest()[:16]
     if ctx.store.load().get("labels_synced") == want:
         return []
-    made = [name for name, (color, description) in LABELS.items()
-            if ctx.gh.ensure_label(name, color, description)]
-    ctx.store.update(lambda s: s.update(labels_synced=want), "labels synced")
-    return [f"created the label `{name}`" for name in made]
+    notes, refused = [], False
+    for name, (color, description) in LABELS.items():
+        try:
+            if ctx.gh.ensure_label(name, color, description):
+                notes.append(f"created the label `{name}`")
+        except GitHubError as exc:  # one GitHub refuses never stops the rest
+            refused = True
+            notes.append(f"could not create the label `{name}`: {str(exc)[:200]}")
+    if not refused:  # a refused one is tried again next tick
+        ctx.store.update(lambda s: s.update(labels_synced=want), "labels synced")
+    return notes
 
 
 def _needs_plan(ctx: Context, since: datetime) -> list[str]:
