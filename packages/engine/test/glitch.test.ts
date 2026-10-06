@@ -15,6 +15,7 @@ import { createRng } from "../src/rng";
 import { registerScripts, registeredScripts } from "../src/scripts";
 import { cloneState, createGame, newInstance, type GameState } from "../src/state";
 import { countSystemPlay, seatPlayedBy, seatsSwapped } from "../src/subsystems/glitch";
+import { HIDDEN_ID, viewFor } from "../src/viewFor";
 import { cardAt, slotsOf } from "../src/zones";
 import { spellDef } from "./fixtures/catalog";
 import { inHand, newGame, put, sinkFor, slot } from "./fixtures/harness";
@@ -214,5 +215,40 @@ describe("R679 the void", () => {
     glitch().apply(makeContext(sink, null, { controller: "p1" }));
     expect(state.result?.reason).toBe("voided");
     expect(findDef(null, GLITCH_DEF_ID)).toBe(GLITCH);
+  });
+});
+
+describe("R764 a Glitch's reset or boards leaves no public trace of the cards it took unseen", () => {
+  const TRAP: CardDef = { ...spellDef(9002, { id: "fx-glitch-trap", index: "T-trap", name: "Fx Trap" }), type: "Trap" };
+
+  /** The `player`'s events that p1's view names, as `[instanceId, defId]`, apart from p1's own Glitch. */
+  function namedBy(state: GameState, player: "p2", type: GameEvent["type"]): (string | undefined)[] {
+    const event = viewFor(state, "p1").events.find((entry) => entry.type === type && "player" in entry && entry.player === player);
+    return event !== undefined && "instanceId" in event ? [event.instanceId, "defId" in event ? event.defId : undefined] : [];
+  }
+
+  it("R764 boards: a face-down trap the board took still reads as the sentinel in the events that named it", () => {
+    const state = game(seedFor("boards"));
+    registerCatalog({ ...registeredCatalog(), [TRAP.id]: TRAP });
+    const trap = put(state, TRAP.id, slot("p2", "backrow", 1));
+    state.applied = [{ nonce: "before", events: [{ type: "cardPlayed", player: "p2", instanceId: trap.id, defId: trap.defId, costPaid: 1 }] }];
+    // The control: while it stands face-down, p1 reads the sentinel.
+    expect(namedBy(state, "p2", "cardPlayed")).toEqual([HIDDEN_ID, HIDDEN_ID]);
+
+    const { state: after } = playGlitch(state);
+    expect(cardAt(after, slot("p2", "backrow", 1))).toBeNull();
+    expect(namedBy(after, "p2", "cardPlayed")).toEqual([HIDDEN_ID, HIDDEN_ID]);
+  });
+
+  it("R764 reset: a card the other player drew in the old game still reads as the sentinel after the match began again", () => {
+    const state = game(seedFor("reset"));
+    const [drawn] = inHand(state, "fx-1", "p2");
+    if (drawn === undefined) throw new Error("no hand card");
+    state.applied = [{ nonce: "before", events: [{ type: "drawn", player: "p2", instanceId: drawn.id, defId: drawn.defId, turnDraw: 1 }] }];
+    expect(namedBy(state, "p2", "drawn")).toEqual([HIDDEN_ID, HIDDEN_ID]);
+
+    const { state: after } = playGlitch(state);
+    expect(after.resets).toBe(1);
+    expect(namedBy(after, "p2", "drawn")).toEqual([HIDDEN_ID, HIDDEN_ID]);
   });
 });

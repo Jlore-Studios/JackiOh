@@ -4522,6 +4522,16 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R762 samples the AI's unseen face-down traps at the cost the board shows", () => {
     provenIn(762, "../../ai/test/determinize-shown-cost.test.ts", AI_OBSERVE_TEST);
   });
+
+  // Proved by rulings-c.test.ts "R763 …" (a fired trap shuffled into its controller's library reads as the sentinel to both seats).
+  it("R763 names a fired trap to its controller only where the controller may read it now", () => {
+    provenIn(763, "rulings-c.test.ts");
+  });
+
+  // Proved by glitch.test.ts "R764 …" (a face-down trap a boards Glitch took, and a card drawn before a reset, read as the sentinel after it).
+  it("R764 leaves no public trace of the cards a Glitch's reset or boards took unseen", () => {
+    provenIn(764, "glitch.test.ts");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

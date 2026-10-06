@@ -18,6 +18,8 @@
 //     it is open and whose it is, nothing more.
 //   - R97: the event stream is redacted, not truncated. An event that names a card the viewer may
 //     not read keeps its type and its animation fields and shows `HIDDEN_ID` for that card.
+//   - R764: a Glitch's reset or boards (R676, R678) takes cards out of the match unseen, so the events
+//     up to the end of its action read as the sentinel for each card the state no longer holds.
 //   - R227: a card set face-down took a fresh id, so the events that named its old id follow it to
 //     its zone through the `formerId` that set it, and `formerId` itself travels only with the card.
 //   - R177: more fields follow R97 — a prompt option offering a face-down card names it by id only,
@@ -156,6 +158,12 @@ type Replacements = {
    * pile (`setup.returnedAwaitingShuffle`). They are on their way to a library, so nobody reads them.
    */
   toLibrary?: ReadonlySet<string>;
+  /**
+   * R764: set for the events up to the end of the action of a Glitch's reset or boards (R676, R678): a
+   * card they name that the state no longer holds ceased to exist out of that Glitch, unseen, and
+   * reads to nobody.
+   */
+  voided?: true;
 };
 
 function replacementsOf(events: readonly GameEvent[], state?: GameState): Replacements {
@@ -211,7 +219,8 @@ function mayRead(state: GameState, viewer: PlayerId, instanceId: string, replace
     card = findInstance(state, id);
   }
   // R224: a card the mulligan returned waits for its shuffle-back in no pile, and is a library card.
-  if (card === undefined) return replaced.toLibrary?.has(id) !== true;
+  // R764: so is one a Glitch took off the board or out of the match before it was ever revealed.
+  if (card === undefined) return replaced.toLibrary?.has(id) !== true && replaced.voided !== true;
   const zone = card.zone;
   if (zone.z === "library") return false;
   if (zone.z === "hand") return zone.player === viewer;
@@ -854,9 +863,12 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
      * face-down trap no instance id to hang that on. `row`, `lane` and `controller` are not
      * identity and always travel, which is the whole point of the row — the opponent animates the
      * flip in the right zone without being told which card it was.
+     *
+     * R763: to its controller it follows R97, so a fired trap since shuffled into a library, or
+     * taken into the other player's hand, is the sentinel there too.
      */
     case "trapFired":
-      return event.controller === viewer
+      return event.controller === viewer && !hidden(event.instanceId)
         ? event
         : { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID };
 
@@ -1109,9 +1121,22 @@ function recentEvents(state: GameState, viewer: PlayerId): GameEvent[] {
   const newest = state.applied[state.applied.length - 1]?.events.length ?? 0;
   const window = Math.max(VIEW_EVENT_LIMIT, newest);
   const replaced = replacementsOf(all, state);
+  // R764: a Glitch's reset or boards (R676, R678) took cards out of the match without a word, so what
+  // the events up to the end of its action name of one the state no longer holds is not public, as a
+  // token's was (R11). The reset's own setup events end that action and name only the cards it holds.
+  let voidedUntil = 0;
+  let end = 0;
+  for (const entry of state.applied) {
+    end += entry.events.length;
+    if (entry.events.some((event) => event.type === "glitched" && (event.outcome === "reset" || event.outcome === "boards"))) {
+      voidedUntil = end;
+    }
+  }
+  const earlier: Replacements = { ...replaced, voided: true };
+  const from = Math.max(0, all.length - window);
   return all
-    .slice(Math.max(0, all.length - window))
-    .map((event) => redactEvent(state, viewer, event, replaced));
+    .slice(from)
+    .map((event, at) => redactEvent(state, viewer, event, from + at < voidedUntil ? earlier : replaced));
 }
 
 // ---------------------------------------------------------------------------
