@@ -76,7 +76,7 @@ function hasAura(defId: string): boolean {
 }
 
 /**
- * R752: the cost a trap of `defId` would show in the zone `card` holds, read as the board reads a
+ * R762: the cost a trap of `defId` would show in the zone `card` holds, read as the board reads a
  * face-down card's (R65, R351), without the shown number `redact` parked on the placeholder.
  */
 function costIn(state: GameState, card: CardInstance, defId: string): number {
@@ -87,7 +87,7 @@ function costIn(state: GameState, card: CardInstance, defId: string): number {
 
 /** How a determinization samples. `greedyAction` keeps the sampler the quality gates were fixed on. */
 export type DeterminizeOptions = {
-  /** R752: a face-down card showing a cost takes a trap of that cost while an unseen one is left. Default true. */
+  /** R762: a face-down card showing a cost takes a trap of that cost while an unseen one is left. Default true. */
   readonly matchShownCost?: boolean;
 };
 
@@ -123,7 +123,7 @@ export function determinize(publicState: GameState, seat: PlayerId, rng: Rng, op
     };
     const open = auraTraps.length === 0 ? trapPool : trapPool.filter((id) => !auraTraps.includes(id) || agrees(id));
     const pool = open.length > 0 ? open : trapPool;
-    // R752: the board shows this card's cost (R351), so a trap that would show another is no world the
+    // R762: the board shows this card's cost (R351), so a trap that would show another is no world the
     // seat could be in; with no unseen trap of that cost left, the pool falls back as before.
     if (matchShownCost && shownCost !== undefined) {
       const priced = pool.filter((id) => costIn(next, card, id) === shownCost);
@@ -136,7 +136,7 @@ export function determinize(publicState: GameState, seat: PlayerId, rng: Rng, op
     const tops = next.players[side].backrow;
     const backrow = [...tops, ...(next.players[side].backrowPiles ?? []).flat()];
     for (const card of backrow) {
-      // R752: a top card shows its cost (R351); a dormant one beneath shows only that it is there (R447).
+      // R762: a top card shows its cost (R351); a dormant one beneath shows only that it is there (R447).
       if (card !== null && isPlaceholder(card)) card.defId = trapFor(card, tops.includes(card) ? card.costOverride : undefined);
     }
     // R448: a card being set face-down waits in the resolving zone as a placeholder; it is a trap too.

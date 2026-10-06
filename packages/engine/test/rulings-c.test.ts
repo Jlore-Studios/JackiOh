@@ -78,20 +78,20 @@ import { registerScripts, registeredScripts, scriptsFor } from "../src/scripts";
 import { findInstance, newInstance, type CardInstance, type GameState, type Resume } from "../src/state";
 import { gradeOf, gradeRises, playedCardsThisTurn } from "../src/subsystems/comboIndex";
 import { fuse } from "../src/subsystems/fuse";
+import { ACTIVATIONS_MEMORY_KEY, activateAbility, whyCannotActivateAbility } from "../src/subsystems/activate";
 import {
   HERO_POWERS,
   HERO_POWER_NAMES,
   POWER_KEY,
   POWER_RESUME,
-  POWER_USED_KEY,
   RUSH_TOKEN_INDEX,
+  STEADY_SHOT_PARAM,
   heroPower,
-  powerCostOf,
+  powerAbilities,
+  powerAbilityOf,
   powerOf,
   rollPower,
-  usePower,
   usedThisTurn,
-  whyCannotActivate,
 } from "../src/subsystems/heroPower";
 import { TRAP_FIRING_WORK, fireTrapsFor, isTrapWindowEvent, runTrapWindow, trapsWatching } from "../src/traps";
 import { playedIdsThisTurn } from "../src/query";
@@ -235,7 +235,12 @@ const fuseHostA = unit("fuse-host-a", 1, 1);
 const fuseHostB = unit("fuse-host-b", 2, 2);
 
 /** R103's stand-in for §8 #98: cost is the power's X, and a prompted power resumes into `heroPower`. */
-const heroic = def("heroic", "Field Spell", { cost: "X", tags: ["Quickdraw"], rarity: "Mythic" });
+const heroic = def("heroic", "Field Spell", {
+  cost: 0,
+  tags: ["Quickdraw"],
+  rarity: "Mythic",
+  params: [{ key: STEADY_SHOT_PARAM, base: 2, radiant: 4, better: "up", step: 2, min: 1 }],
+});
 
 /** R114: a small body, so one hit can leave it at exactly 0 health with a Trample hit still to come. */
 const frail = unit("frail", 1, 3);
@@ -401,11 +406,9 @@ function askController(): Effect {
 }
 
 const heroicScript: Script = {
-  cost: ({ instance }) => powerCostOf(instance),
   staticFlags: { quickdraw: true },
   startOfGame: () => [rollPower()],
-  cry: () => [usePower()],
-  activate: () => [usePower()],
+  activations: powerAbilities(false),
   resume: { [POWER_RESUME]: heroPower },
 };
 
@@ -1198,70 +1201,75 @@ describe("SPEC §11 R102–R103: Fuse and the Heroic Power surface (M3 gate)", (
   // R103: the Heroic Power surface (§8 #98, R43).
   // ---------------------------------------------------------------------------
 
-  it("R103 stores the eight power names and costs 0 for a power that has not rolled", () => {
-    // §11 R103 writes them out, and they are state, so they stay stable across versions: R352
-    // added `stitching` at the end and moved none of the seven before it.
-    expect([...HERO_POWER_NAMES]).toEqual(["recruit", "draw", "ping", "burn", "rush", "felinor", "discover", "stitching"]);
+  it("R103 stores the thirteen power names, each its Activate ability's id; a card that has not rolled has none", () => {
+    // §11 R103 writes them out, and they are state, so they stay stable across versions: R352 added
+    // `stitching` and R752 the five after it, each at the end, and the reworked powers kept theirs.
+    expect([...HERO_POWER_NAMES]).toEqual([
+      "recruit",
+      "draw",
+      "ping",
+      "burn",
+      "rush",
+      "felinor",
+      "discover",
+      "stitching",
+      "armor",
+      "insect",
+      "brainstorm",
+      "pluck",
+      "tricks",
+    ]);
     expect(HERO_POWERS.map((power) => power.name)).toEqual([...HERO_POWER_NAMES]);
-    // A ping reaches any unit or hero on either side.
+    // Ping reaches any unit or hero on either side, declared with the activation (R81).
     const ping = must(HERO_POWERS.find((power) => power.name === "ping"), "the ping power");
     expect(ping.x).toBe(1);
+    expect(ping.targets?.[0]?.filter).toEqual({ side: "any", of: ["unit", "hero"] });
 
     const state = game("r103-unrolled");
     const card = put(state, heroic.id, slot("p1", "backrow", 1));
     expect(card.memory[POWER_KEY]).toBeUndefined();
-
-    // A Heroic Power that has not yet rolled costs 0, and the printed "X" is answered by the card's
-    // own `cost` hook rather than by a special case in the cost rules (R65).
-    expect(powerCostOf(card)).toBe(0);
-    expect(defOf(state, card.defId).cost).toBe("X");
     expect(printedCost(state, card)).toBe(0);
-    expect(whyCannotActivate(state, "p1", card.id)).toBe("that card has no power");
+    expect(powerAbilityOf(state, card)).toBeNull();
+    expect(whyCannotActivateAbility(state, "p1", card.id)).toBe("that card has no Activate ability");
 
-    // Once it has rolled, the same hook answers that power's X.
+    // Once it has rolled, the card has that power's ability, by its stored name.
     card.memory[POWER_KEY] = "recruit";
-    expect(powerCostOf(card)).toBe(3);
-    expect(printedCost(state, card)).toBe(3);
+    expect(powerAbilityOf(state, card)?.id).toBe("recruit");
+    expect(powerAbilityOf(state, card)?.cost?.mana).toBe(3);
+    expect(printedCost(state, card)).toBe(0);
   });
 
-  it("R103 checks once-per-turn before mana, turn and phase", () => {
+  it("R103 refuses as Activate does: the turn and the phase before the uses, then the price", () => {
     const state = game("r103-order");
     const card = put(state, heroic.id, slot("p1", "backrow", 1));
     card.memory[POWER_KEY] = "recruit"; // X 3
 
-    // Every one of the other three refusals is also true: no mana, not this player's turn, not the
-    // main phase. R103 fixes which one the player hears.
     state.players.p1.mana.current = 0;
     state.active = "p2";
     state.phase = "end";
-    card.memory[POWER_USED_KEY] = state.turn;
-    expect(whyCannotActivate(state, "p1", card.id)).toBe("that power has already been used this turn");
-
-    // With the use cleared the others surface, in the order the function checks them.
-    delete card.memory[POWER_USED_KEY];
-    expect(whyCannotActivate(state, "p1", card.id)).toBe("it is not your turn");
+    card.memory[ACTIVATIONS_MEMORY_KEY] = { turn: state.turn, count: 1 };
+    expect(whyCannotActivateAbility(state, "p1", card.id)).toBe("it is not your turn");
     state.active = "p1";
-    expect(whyCannotActivate(state, "p1", card.id)).toBe("a power is activated in the main phase");
+    expect(whyCannotActivateAbility(state, "p1", card.id)).toBe("an ability is activated in the main phase");
     state.phase = "main";
-    expect(whyCannotActivate(state, "p1", card.id)).toBe("that power costs 3, more than your mana");
+    expect(whyCannotActivateAbility(state, "p1", card.id)).toBe("that ability has already been used this turn");
+    delete card.memory[ACTIVATIONS_MEMORY_KEY];
+    expect(whyCannotActivateAbility(state, "p1", card.id)).toBe("that ability costs 3, more than your mana");
     state.players.p1.mana.current = 3;
-    expect(whyCannotActivate(state, "p1", card.id)).toBeNull();
+    expect(whyCannotActivateAbility(state, "p1", card.id)).toBeNull();
   });
 
-  it("R103 marks the use before the effects run, and fizzles a token power in silence when the token is absent", () => {
+  it("R103 counts the use before the effects run, and fizzles a token power in silence when the token is absent", () => {
     // A power that pauses on a prompt has already spent the turn's activation.
     const state = game("r103-marked");
     const sink = sinkFor(state);
     const card = put(state, heroic.id, slot("p1", "backrow", 1));
-    card.memory[POWER_KEY] = "ping";
-    const victim = put(state, body.id, slot("p2", "units", 1));
-
-    const ctx = makeContext(sink, card, { controller: "p1" });
-    applyEffects([usePower({ instanceId: card.id })], ctx);
-    expect(must(state.pending, "a target prompt").kind).toBe("target");
+    card.memory[POWER_KEY] = "discover";
+    expect(activateAbility(sink, "p1", { type: "activate", instanceId: card.id })).toBeNull();
+    expect(must(state.pending, "the Discover").kind).toBe("discover");
     expect(usedThisTurn(state, card)).toBe(true);
-    expect(whyCannotActivate(state, "p1", card.id)).toBe("that power has already been used this turn");
-    expect(victim.damage).toBe(0);
+    state.pending = null;
+    expect(whyCannotActivateAbility(state, "p1", card.id)).toBe("that ability has already been used this turn");
 
     // A power that summons a token resolves it by catalog index and fizzles in silence when the
     // catalog has no such token (§5.3, §7).
@@ -1276,12 +1284,10 @@ describe("SPEC §11 R102–R103: Fuse and the Heroic Power surface (M3 gate)", (
     const tokenSink = sinkFor(missing);
     const rusher = put(missing, heroic.id, slot("p1", "backrow", 1));
     rusher.memory[POWER_KEY] = "rush";
-    const tokenCtx = makeContext(tokenSink, rusher, { controller: "p1" });
-    expect(() => applyEffects([usePower({ instanceId: rusher.id })], tokenCtx)).not.toThrow();
-
+    expect(activateAbility(tokenSink, "p1", { type: "activate", instanceId: rusher.id })).toBeNull();
     expect(eventsOfType(tokenSink.events, "summoned")).toEqual([]);
     expect(missing.pending).toBeNull();
-    // The use is still spent: it was marked before the effects that found nothing to do.
+    // The use is still spent: it was counted before the effects that found nothing to do.
     expect(usedThisTurn(missing, rusher)).toBe(true);
   });
 });
@@ -2303,27 +2309,26 @@ describe("SPEC §11 R138–R140 and R152: plays, limits and lockouts (M3 gate)",
     const state = game("r139-lapse");
     const card = put(state, heroic.id, slot("p1", "backrow", 1));
     card.memory[POWER_KEY] = "burn"; // X 1
-    state.players.p1.mana.current = 0; // unaffordable, so R103's priority is observable
+    state.players.p1.mana.current = 0; // unaffordable, so the order of the checks is observable
 
-    // Used this turn: R103 puts the per-turn limit ahead of mana, turn and phase.
+    // Used this turn: the uses are counted against the turn they were made on (R384).
     const usedOn = state.turn;
-    card.memory[POWER_USED_KEY] = usedOn;
+    card.memory[ACTIVATIONS_MEMORY_KEY] = { turn: usedOn, count: 1 };
     expect(usedThisTurn(state, card)).toBe(true);
-    expect(whyCannotActivate(state, "p1", card.id)).toBe("that power has already been used this turn");
+    expect(whyCannotActivateAbility(state, "p1", card.id)).toBe("that ability has already been used this turn");
 
-    // R139: the limit is stored as the turn it was used on, so it is spent only while the game is
+    // R139: the count is stored with the turn it was made on, so it is spent only while the game is
     // still on that turn. The stored value does not move — the turn does.
     state.turn += 1;
     state.active = "p2";
-    expect(card.memory[POWER_USED_KEY]).toBe(usedOn);
+    expect(card.memory[ACTIVATIONS_MEMORY_KEY]).toEqual({ turn: usedOn, count: 1 });
     expect(usedThisTurn(state, card)).toBe(false);
 
-    // So the player is told whose turn it is, not that the ability is spent: the per-turn limit has
-    // already lapsed by the time the turn check could lose to it.
-    expect(whyCannotActivate(state, "p1", card.id)).toBe("it is not your turn");
-    // And on their own turn it is the mana, which is the next check R103 names.
+    // So the player is told whose turn it is, not that the ability is spent.
+    expect(whyCannotActivateAbility(state, "p1", card.id)).toBe("it is not your turn");
+    // And on their own turn it is the mana, the check after the uses.
     state.active = "p1";
-    expect(whyCannotActivate(state, "p1", card.id)).toBe("that power costs 1, more than your mana");
+    expect(whyCannotActivateAbility(state, "p1", card.id)).toBe("that ability costs 1, more than your mana");
   });
 
   it("R140 gives a zone-less Stack play the leftmost empty zone, and lifts occupancy only when named", () => {
@@ -2400,16 +2405,15 @@ describe("SPEC §11 R151 and R153: arrivals and zone-gated hooks (M3 gate)", () 
     state.players.p1.graveyard.push(card);
     expect(card.memory[POWER_KEY]).toBeUndefined();
     expect(powerOf(card)).toBeNull();
-    expect(powerCostOf(card)).toBe(0);
 
     // It arrives somewhere a card can be looked at.
     expect(arriveInHand(sink, card)).toBe("hand");
 
-    // R151: it rolls on arrival, so it has a power and its X again (R43, R78).
+    // R151: it rolls on arrival, so it has a power again (R43, R78).
     const rolled = card.memory[POWER_KEY];
     expect(typeof rolled).toBe("string");
     expect(HERO_POWER_NAMES).toContain(rolled);
-    expect(powerCostOf(card)).toBeGreaterThan(0);
+    expect(powerOf(card)?.x).toBeGreaterThan(0);
 
     // And the roll is idempotent: a card that already has one keeps it when it arrives again.
     const kept = must(powerOf(card), "the rolled power");

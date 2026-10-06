@@ -33,7 +33,7 @@ import {
   whyCannotActivateAbility,
 } from "../src/subsystems/activate";
 import { fuse } from "../src/subsystems/fuse";
-import { POWER_KEY, POWER_USED_KEY } from "../src/subsystems/heroPower";
+import { POWER_KEY } from "../src/subsystems/heroPower";
 import { HIDDEN_ID, viewFor } from "../src/viewFor";
 import { rememberOn, scriptStepFor } from "../src/work";
 import { moveToZone, placeOnField } from "../src/zones";
@@ -641,33 +641,34 @@ describe("B3.2 and §9.3: an activation across a prompt (R384, R113, R117)", () 
   });
 });
 
-describe("B3.2 rule 10: activatePower is an alias of activate (R384, R43)", () => {
+describe("B3.2 rule 10: activatePower is an alias of activate (R384, R752)", () => {
   function withPower(state: GameState, lane: number): CardInstance {
     const card = put(state, heroic.id, slot("p1", "backrow", lane));
-    // R43: "burn" is "deal 2 damage to each opposing hero" for (1).
+    // R754: "burn" is Steady Shot, "Deal {shot} damage to the enemy hero" for (1).
     card.memory[POWER_KEY] = "burn";
     return card;
   }
 
-  it("R384 an activate that names no ability uses a Heroic Power's power, and activatePower still does", () => {
+  it("R752 a Heroic Power's power is its Activate ability: listed as an activate, and activatePower names it", () => {
     const state = playing("alias");
     const card = withPower(state, 1);
     const listed = legalActions(state, "p1").filter((body) => "instanceId" in body && body.instanceId === card.id);
-    // The power is listed as the activatePower it has always been, and only once.
-    expect(listed).toEqual([{ type: "activatePower", instanceId: card.id }]);
+    // The rolled power is the card's one ability, listed once, by its stored name (R103).
+    expect(listed).toEqual([{ type: "activate", instanceId: card.id, ability: "burn" }]);
 
     const viaActivate = act(state, activate("p1", card.id)).state;
     expect(viaActivate.players.p2.hero.health).toBe(HERO_HEALTH - 2);
-    expect(viaActivate.players.p1.backrow[0]?.memory[POWER_USED_KEY]).toBe(state.turn);
+    expect(viaActivate.players.p1.mana.current).toBe(state.players.p1.mana.current - 1);
+    expect(viaActivate.players.p1.backrow[0]?.memory["activations"]).toEqual({ turn: state.turn, count: 1 });
     expect(actResult(viaActivate, { type: "activatePower", instanceId: card.id, playerId: "p1" }).error).toBe(
-      "that power has already been used this turn",
+      "that ability has already been used this turn",
     );
 
     const viaAlias = act(state, { type: "activatePower", instanceId: card.id, playerId: "p1" }).state;
     expect(hashState(viaAlias)).toBe(hashState(viaActivate));
 
-    expect(actResult(state, activate("p1", card.id, { modes: ["x"] })).error).toBe("that power takes no mode choices");
-    expect(actResult(state, activate("p1", card.id, { ability: "x" })).error).toBe("that card has no Activate ability");
+    expect(actResult(state, activate("p1", card.id, { modes: ["x"] })).error).not.toBeNull();
+    expect(actResult(state, activate("p1", card.id, { ability: "ping" })).error).toBe('that card has no ability "ping"');
   });
 
   it("R384 activatePower on a card with an Activate ability uses that ability", () => {

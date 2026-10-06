@@ -1,4 +1,4 @@
-// R752: the AI samples an unseen face-down trap at the cost the board shows.
+// R762: the AI samples an unseen face-down trap at the cost the board shows.
 //
 // Since R351 every face-down Trap shows its cost to both players, and `redact` keeps that number
 // on the placeholder — but `determinize` filled each placeholder from every Trap and Field Trap,
@@ -57,8 +57,8 @@ function faceDown(state: GameState): CardInstance[] {
   return state.players[HUMAN].backrow.flatMap((card) => (card === null ? [] : [card]));
 }
 
-describe("determinize at the shown cost (R752)", () => {
-  it("R752 every face-down card showing a cost is sampled as a trap of that cost, over 100 seeds", () => {
+describe("determinize at the shown cost (R762)", () => {
+  it("R762 every face-down card showing a cost is sampled as a trap of that cost, over 100 seeds", () => {
     const state = oneOfEachCost();
     const lanes = faceDown(state);
     const shown = lanes.map((card) => effectiveCost(state, card));
@@ -76,7 +76,7 @@ describe("determinize at the shown cost (R752)", () => {
     expect(picked.has(GROOM_SHROOM)).toBe(true);
   });
 
-  it("R752 the greedy baseline's sampler (matchShownCost: false) still fills a back with a trap of any cost", () => {
+  it("R762 the greedy baseline's sampler (matchShownCost: false) still fills a back with a trap of any cost", () => {
     const state = oneOfEachCost();
     const lanes = faceDown(state);
     const seen = redact(state, AI);
@@ -89,11 +89,11 @@ describe("determinize at the shown cost (R752)", () => {
     expect(costs.size).toBeGreaterThan(1);
   });
 
-  it("R752 with no face-down card the two swings are a lethal the AI takes", () => {
+  it("R762 with no face-down card the two swings are a lethal the AI takes", () => {
     expect(decide(shroomed(false), AI, { rng: createRng("shown-cost-doom:control") })?.reason).toBe("lethal");
   });
 
-  it("R752 never returns the swing into a face-down Doom Shroom showing (3) as lethal, on AI seeds 1-20", { timeout: 60_000 }, () => {
+  it("R762 never returns the swing into a face-down Doom Shroom showing (3) as lethal, on AI seeds 1-20", { timeout: 60_000 }, () => {
     const state = shroomed(true);
     for (let seed = 1; seed <= 20; seed += 1) {
       const decision = decide(state, AI, { rng: createRng(`shown-cost-doom:${seed}`) });

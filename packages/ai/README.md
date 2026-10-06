@@ -32,7 +32,7 @@ whose seed is the AI's own. A hidden backrow card is sampled from the Traps and 
 any whose live face-down aura (R403) would change a unit's shown stats (R602), so a world never holds a
 Siphon Squad the board rules out. A face-down card on top of a backrow zone shows its cost (R351), so it
 is sampled from the traps of that cost while the opponent has an unseen one left, and from the trap pool
-as before once it has none (R752). `greedyAction` passes `{ matchShownCost: false }` and keeps the sampler
+as before once it has none (R762). `greedyAction` passes `{ matchShownCost: false }` and keeps the sampler
 the quality gates were fixed on. So two states that differ only in hidden cards give the same decision
 under the same rng, and no simulation can foresee a real draw or a real coin flip.
 

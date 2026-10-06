@@ -550,7 +550,7 @@ describe("determinize (B12)", () => {
     }
   });
 
-  it("R752 B12: each face-down card takes an unseen trap of the cost it shows; with none of that cost left, the sampler falls back to the trap pool", () => {
+  it("R762 B12: each face-down card takes an unseen trap of the cost it shows; with none of that cost left, the sampler falls back to the trap pool", () => {
     const faceDown = ["core-018", "core-041", "core-060", "core-071", "core-085"];
     // Every trap of every set is shown but four, so four unseen traps are left for five lanes.
     const shown = trapPool().filter((id) => !["core-018", "core-060", "core-071", "core-085"].includes(id));

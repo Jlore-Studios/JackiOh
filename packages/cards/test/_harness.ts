@@ -126,15 +126,15 @@
 //   `expect(() => s.play(x)).toThrow(/tribute/)`.
 //
 // ---------------------------------------------------------------------------------------------
-// THREE ACTIONS `reduce` HAS NOT WIRED YET
+// TWO ACTIONS `reduce` HAS NOT WIRED YET
 // ---------------------------------------------------------------------------------------------
-// `packages/engine/src/reduce.ts` still answers three action types with a placeholder string,
-// although the modules behind all three are written. For those EXACT messages — and for no other
+// `packages/engine/src/reduce.ts` once answered these action types with a placeholder string,
+// although the modules behind them were written. For those EXACT messages — and for no other
 // refusal — the harness calls the engine function `reduce` will call, so a card test can be written
 // against the documented API today and needs no change when the wiring lands:
 //   attack         "combat arrives with M2"    → `declareAttack(sink, attacker, target)` (combat.ts)
 //   answer         "prompts arrive with M3"    → `answerPrompt(sink, {…})`               (prompts.ts)
-//   activate       "hero powers arrive with M3"→ `subsystems.activatePower(sink, player, {…})`
+// (`activate` had one too until the Heroic Power patch moved #98 onto Activate, R752.)
 // These are the engine's own complete implementations — validation, payment, damage pipeline and
 // state check included — not a harness re-implementation of any rule, and each fallback stops
 // being reachable the moment its `reduce` case returns something else. A genuine rules refusal is
@@ -166,7 +166,6 @@ import {
   showToOwner,
   startTurn as engineStartTurn,
   stateCheck,
-  subsystems,
   unitView,
   viewFor,
   answerPrompt,
@@ -197,7 +196,6 @@ export const DEFAULT_TURN = 9;
  */
 const PLACEHOLDERS = {
   attack: "combat arrives with M2",
-  power: "hero powers arrive with M3",
   prompt: "prompts arrive with M3",
 } as const;
 
@@ -985,20 +983,15 @@ class Harness implements Scenario {
       );
       return this;
     }
-    this.actionOrEngine(
+    // R752: `activatePower`, the alias that names a Heroic Power's rolled power, or a card's only ability.
+    this.action(
       {
         type: "activatePower",
         playerId: who,
         instanceId: source.id,
         ...(opts.targets === undefined ? {} : { targets: [...opts.targets] }),
       },
-      PLACEHOLDERS.power,
       `activate ${describeInstance(this.current, source)}`,
-      (sink) =>
-        subsystems.activatePower(sink, who, {
-          instanceId: source.id,
-          ...(opts.targets === undefined ? {} : { targets: opts.targets }),
-        }),
     );
     return this;
   }

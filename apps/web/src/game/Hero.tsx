@@ -16,8 +16,8 @@
 // view does not carry is not drawn. Reconstructing badges from the event window would be a guess —
 // it is the last N events (§10.8), so a badge could appear and never leave.
 //
-// The Heroic Powers (R43, R384, R510). The view carries every Heroic Power a player controls, each
-// separately once per turn, with its `instanceId`. Each of the viewer's own is a button that
+// The Heroic Powers (R43, R384, R510, R752). The view carries every Heroic Power a player controls,
+// each separately once per turn, with its `instanceId`, its name on the card (`title`) and its X. Each of the viewer's own is a button that
 // reports `{ on: "activate", instanceId }`, the click every Activate control reports
 // (ActivateControl.tsx), so `actions.ts` builds a power exactly as it builds any activation:
 // whichever of `activatePower` (R43's alias) or `activate` `legalActions` lists for it, sent at
@@ -133,7 +133,7 @@ export default function Hero(props: HeroProps): ReactElement {
           <PowerButton power={hero.power} testId={testid.power} props={props} />
         ) : (
           <span className="power-tag" data-used={hero.power.usedThisTurn ? "true" : "false"} data-x={hero.power.x}>
-            {hero.power.name}
+            {hero.power.title}
             <span className="power-x">{hero.power.x}</span>
           </span>
         ))}
@@ -152,7 +152,7 @@ export default function Hero(props: HeroProps): ReactElement {
               data-used={power.usedThisTurn ? "true" : "false"}
               data-x={power.x}
             >
-              {power.name}
+              {power.title}
               <span className="power-x">{power.x}</span>
             </span>
           ),
@@ -218,14 +218,14 @@ function PowerButton({
       data-flash={flashing ? ACTIVATED_EVENT : undefined}
       aria-disabled={live ? undefined : "true"}
       disabled={!live}
-      title={`${power.name} (X ${power.x})`}
+      title={`${power.title}: Activate, spend (${power.x})`}
       onClick={(event) => {
         event.stopPropagation();
         if (!live) return;
         props.onClick?.({ on: "activate", instanceId: power.instanceId });
       }}
     >
-      {power.name}
+      {power.title}
       <span className="power-x">{power.x}</span>
     </button>
   );

@@ -7,11 +7,12 @@
 //
 //   B15  every catalog card, base and radiant face, as a full CardFace in a 5:7 box 270 px wide
 //        and 170 px wide: `.card-name` and `.card-text` stay inside their own boxes on both axes
-//        (scroll <= client + 1). At 270 px nothing may clamp; at 170 px only a face whose printed
-//        text (base plus radiant clause) runs past 260 characters may carry `data-clamped`, and a
-//        clamped rules box instead stays inside the face at the reading floor (FIT_FLOOR_PX).
+//        (scroll <= client + 1). At 270 px nothing may clamp but #98's thirteen powers (R752); at
+//        170 px only a face whose printed text (base plus radiant clause) runs past 260 characters
+//        may carry `data-clamped`, and a clamped rules box instead stays inside the face at the
+//        reading floor (FIT_FLOOR_PX).
 //   §10.10  faces in play (the live card, `faceModel` with `inPlay`): a fused card's text a line
-//        per ingredient, each of #98's eight rolled powers on both faces, Call to Chaos's ???, a
+//        per ingredient, each of #98's thirteen rolled powers on both faces, Call to Chaos's ???, a
 //        Vanilla unit with the keywords it kept — all inside their boxes at 270 and 170 px; and
 //        #82's Discover of numbers (R247) drawn inside its options at both viewports.
 //   B21  `Game` rendering `fullBoardView()` inside `.app-shell.app-shell--wide`, WITH the real
@@ -52,6 +53,19 @@ const FIT_BOXES: readonly FitBox[] = [
   { width: 270, clampAllowed: false },
   { width: 170, clampAllowed: true },
 ];
+
+/**
+ * R752: #98 Heroic Power prints its thirteen powers, a line each on both faces, which no 270 px box
+ * holds at the reading floor (FIT_FLOOR_PX). Its printed faces may clamp at 270 px too, as the
+ * longest texts may at 170 px: the detail view prints its rules whole at reading size (a long
+ * text's `.inspect-rules`, CardDetail.tsx), and in play its face is only the power it rolled, which
+ * fits at both widths (the §10.10 block below). No other card is excused.
+ */
+const CLAMPS_AT_EVERY_WIDTH: ReadonlySet<string> = new Set(["core-098"]);
+
+function clampAllowedFor(def: CardDef, box: FitBox): boolean {
+  return box.clampAllowed || CLAMPS_AT_EVERY_WIDTH.has(def.id);
+}
 
 const FACES = [
   { label: "base", radiant: false },
@@ -104,7 +118,7 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
     // A rules box that may clamp and did is cut at a line with an ellipsis, by design: the rest of
     // its text is scrollable overflow it never paints (fit.ts). It must still stay inside the face
     // and print at the reading floor, which is what is checked for it instead.
-    if (selector === ".card-text" && el.getAttribute("data-clamped") === "true" && box.clampAllowed) {
+    if (selector === ".card-text" && el.getAttribute("data-clamped") === "true" && clampAllowedFor(def, box)) {
       const face = cf.getBoundingClientRect();
       const own = el.getBoundingClientRect();
       if (own.bottom > face.bottom + 1 || own.top < face.top - 1) problems.push(`${where}: a clamped .card-text runs off the face`);
@@ -133,7 +147,7 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
   }
 
   const clamped = [...cf.querySelectorAll<HTMLElement>("[data-clamped]")];
-  const mayClamp = box.clampAllowed && printedLength(def, radiant) > TEXT_TIER_MAX.xl;
+  const mayClamp = clampAllowedFor(def, box) && printedLength(def, radiant) > TEXT_TIER_MAX.xl;
   if (clamped.length > 0 && !mayClamp) {
     const which = clamped.map((el) => `.${(el.getAttribute("class") ?? "").split(/\s+/).join(".")}`).join(", ");
     problems.push(`${where}: data-clamped on ${which} (printed text is ${printedLength(def, radiant)} characters)`);
@@ -555,7 +569,7 @@ describe("faces in play fit their boxes (SPEC §10.10)", () => {
     ...Object.keys(POWER_WORDS).flatMap((name) =>
       [false, true].map((radiant) => ({
         key: `power-${name}-${String(radiant)}`,
-        face: faceModel({ defId: heroic.id, def: heroic, radiant, liveCost: 3, inPlay: { power: { name, x: 3 } } }),
+        face: faceModel({ defId: heroic.id, def: heroic, radiant, liveCost: 0, inPlay: { power: { name } } }),
       })),
     ),
     { key: "chaos", face: faceModel({ defId: "core-095", def: catalogDef("core-095"), radiant: true, inPlay: {} }) },

@@ -58,7 +58,7 @@ describe("R602 the AI's view keeps what a live face-down card visibly does", () 
 });
 
 describe("R602 a determinization agrees with the board it was dealt from", () => {
-  /** The same board as `siphoned`, but p2's face-down trap is a plain (2) one, Counterspell: no unit is shrunk. It shows (2), as Siphon Squad does, so R752 leaves Siphon Squad in the pool and R602 alone keeps it out. */
+  /** The same board as `siphoned`, but p2's face-down trap is a plain (2) one, Counterspell: no unit is shrunk. It shows (2), as Siphon Squad does, so R762 leaves Siphon Squad in the pool and R602 alone keeps it out. */
   function plain(): GameState {
     return scenario({
       seed: "determinize-live-face-down",
@@ -90,7 +90,7 @@ describe("R602 a determinization agrees with the board it was dealt from", () =>
       expect(shownBy(world), `seed ${k}, ${hidden.defId}`).toEqual(truth);
     }
     for (const id of auras) expect(picked.has(id), id).toBe(false);
-    // R752 keeps every sample at the shown (2); of those, only the ones R602 rules out are gone.
+    // R762 keeps every sample at the shown (2); of those, only the ones R602 rules out are gone.
     expect([...picked].sort()).toEqual(trapPool().filter((id) => defOf(state, id).cost === 2 && !auras.includes(id)));
   });
 });

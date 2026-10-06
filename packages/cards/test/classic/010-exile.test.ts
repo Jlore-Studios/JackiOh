@@ -28,7 +28,7 @@ const STOCKPILE = "core-005"; // (1) Spell.
 const BEAR = "core-060"; // (1) Trap.
 const HINDER = "core-021"; // (0) Spell, cast on draw.
 const SLIME = "classic-027"; // (0) Unit 1/1.
-const HEROIC = "core-098"; // (X) Field Spell.
+const CHALICE = "classic-087"; // (X) Field Spell, Plague Chalice.
 const ROCK = "core-066"; // (4) Unit 10/10, Tribute 1, Indestructible.
 
 function armed(radiantFace = false, lane = 2): { def: string; radiant: boolean; faceUp: boolean; lane: number } {
@@ -279,16 +279,16 @@ describe("C #10 Exile", () => {
     });
 
     it("R396 an X card on the field costs the X it was played for, and 0 with none chosen", () => {
-      const s = setup({ backrow: [{ def: HEROIC, faceUp: true, lane: 1 }], field: [MENACE] }, true);
-      const heroic = s.card(HEROIC);
-      heroic.x = 3;
+      const s = setup({ backrow: [{ def: CHALICE, faceUp: true, lane: 1 }], field: [MENACE] }, true);
+      const chalice = s.card(CHALICE);
+      chalice.x = 3;
 
-      // Budget 2: a Heroic Power played for 3 does not fit.
+      // Budget 2: a Plague Chalice played for 3 does not fit.
       s.play(TIMMY, { zone: 2 });
-      s.expectInZone(heroic, "field");
+      s.expectInZone(chalice, "field");
 
-      const t = setup({ backrow: [{ def: HEROIC, faceUp: true, lane: 1 }], field: [MENACE] }, true);
-      const none = t.card(HEROIC);
+      const t = setup({ backrow: [{ def: CHALICE, faceUp: true, lane: 1 }], field: [MENACE] }, true);
+      const none = t.card(CHALICE);
       delete none.x;
       t.play(TIMMY, { zone: 2 });
       t.expectInZone(none, "exile");
