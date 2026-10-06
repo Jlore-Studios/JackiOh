@@ -35,7 +35,7 @@
 //      fuzz reaches, setup's included, for both seats: `viewFor` and `legalActions` do not throw, and
 //      neither names a hidden card. Hidden is read off the state's zones on their own terms, never
 //      from `viewFor`'s rules: the other seat's hand while the game is live (R434), both libraries,
-//      the other seat's face-down traps, a card the other seat is setting face-down (R448) and a
+//      the other seat's face-down traps (a dormant one under a backrow top too, B5 E21), a card the other seat is setting face-down (R448) and a
 //      mulligan return waiting for its shuffle (R224). The serialized view may not hold such a card's
 //      instance id, nor its definition id unless a card the seat reads carries the same one; the
 //      seat's own prompt may offer its options (§10.8), and `legalActions` may name a face-down trap
@@ -124,7 +124,7 @@ function awaitingShuffle(state: GameState): CardInstance[] {
  * The hidden set, worked out from the state's zones on their own terms and never from `viewFor`'s
  * rules (the oracle must not be the fix restated): the other seat's hand while the game is live
  * (R434), both libraries (§9.1; the viewer's own definitions travel in `ownLibrary`, R310), the other
- * seat's face-down traps, a card the other seat is setting face-down (R448) and mulligan returns
+ * seat's face-down traps (dormant ones under a backrow top included, B5 E21), a card the other seat is setting face-down (R448) and mulligan returns
  * waiting for their shuffle (R224). Then it takes out every definition the viewer reads elsewhere
  * (its own cards, every public pile, the top of every unit pile) and the options of its own prompt
  * (§10.8, R177).
@@ -148,6 +148,11 @@ function hiddenFrom(state: GameState, viewer: PlayerId): HiddenSet {
       if (card === null || !faceDownTo(state, card, viewer)) continue;
       hide(card, `${player}'s face-down trap`, true);
       bare.add(card.id);
+    }
+    // B5 E21: the dormant cards under a backrow top keep their backrow zone, so a Trap among them is
+    // face-down as a top one is. They are not on the field for effects, so none is a bare target.
+    for (const card of (side.backrowPiles ?? []).flat()) {
+      if (faceDownTo(state, card, viewer)) hide(card, `${player}'s dormant face-down trap`, true);
     }
     for (const card of side.resolving) {
       if (setFaceDownBy(state, card, viewer)) hide(card, `${player}'s card being set face-down`, true);

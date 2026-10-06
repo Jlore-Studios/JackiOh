@@ -19,6 +19,7 @@ const VANILLA = "core-008";
 const BIGOT = "core-002";
 const HIT_JOB = "core-016";
 const MY_PAWN = "core-096";
+const SHEEPISH = "core-041";
 
 describe("I2: a Windfury granted inside one action's events", () => {
   it("two declarations after a mid-action Windfury grant are one legal Windfury turn (R636, R44)", () => {
@@ -155,6 +156,23 @@ describe("I6: hidden information in what each seat is sent", () => {
     };
     const found = hiddenInformationViolations(g.state, "p1", leaky, legalActions(g.state, "p1"));
     expect(found.some((message) => message.includes(`"${trap.defId}"`))).toBe(true);
+  });
+
+  it("I6 fires on an event naming a face-down trap dormant under a backrow top (B5 E21, R97)", () => {
+    const g = scenario({
+      p2: {
+        backrow: [
+          { def: SHEEPISH, lane: 1 },
+          { def: MY_PAWN, lane: 1, stack: true },
+        ],
+      },
+    });
+    const dormant = g.state.players.p2.backrowPiles?.[0]?.[0];
+    if (dormant === undefined) throw new Error("setup: p2 should hold a dormant trap under lane 1's top");
+    expect(violations(g, "p1")).toEqual([]);
+    const found = violations(g, "p1", [{ type: "drawn", player: "p2", instanceId: dormant.id, defId: dormant.defId }]);
+    expect(found.some((message) => message.includes(`"${dormant.id}"`))).toBe(true);
+    expect(found.some((message) => message.includes(`"${dormant.defId}"`))).toBe(true);
   });
 
   it("I6 lets a stolen event name a card its viewer could read where it was taken (R466)", () => {
