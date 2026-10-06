@@ -2797,6 +2797,13 @@
     "365": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-06T07:19:49Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 5: the fix is display-only label strings with no rule-semantics change, which tempted easy, but the rule bars all of packages/engine/src/ rather than just rule logic, so it fails on the literal reading (also never-easy: engine work)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
