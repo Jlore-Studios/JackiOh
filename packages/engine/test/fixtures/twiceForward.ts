@@ -10,7 +10,7 @@ import type { CardScripts } from "../../src/script";
 import { twiceForwardTrigger } from "../../src/subsystems/twiceForward";
 import { spellDef, unitDef } from "./catalog";
 
-/** #74's stand-in: a (2) Field Trap printing Brittle 4 (Radiant 10), every 2 plays, +1 Brittle. */
+/** #74's stand-in: a (2) Field Trap printing Brittle 2 (Radiant 4), every 2 plays, +1 Brittle. */
 export const forward = spellDef(960, {
   id: "fx-tf-forward",
   name: "Fixture Twice Forward",
@@ -20,8 +20,8 @@ export const forward = spellDef(960, {
     { key: "plays", base: 2, radiant: 2, better: "down", step: 1, min: 2 },
     { key: "brittleGain", base: 1, radiant: 1, better: "up", step: 1, min: 1 },
   ],
-  base: { keywords: [{ kind: "Brittle", n: 4 }], text: "Brittle 4" },
-  radiant: { keywords: [{ kind: "Brittle", n: 10 }], text: "Brittle 10" },
+  base: { keywords: [{ kind: "Brittle", n: 2 }], text: "Brittle 2" },
+  radiant: { keywords: [{ kind: "Brittle", n: 4 }], text: "Brittle 4" },
 });
 
 /** The opponent's plays: a Spell that stays in the graveyard, one that exiles itself, a Trap. */

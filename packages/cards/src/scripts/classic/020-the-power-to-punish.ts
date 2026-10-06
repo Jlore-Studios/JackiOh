@@ -7,9 +7,9 @@
 // Activate (R384), once per turn: the mode and, for the modes that take one, the target are declared
 // in the `activate` action (R81), each target bound to its mode (`forModes`, R90).
 //   - "deal damage": one hit of {damage} from this card on a Unit or hero, either side.
-//   - "opponent discards": the discard is the opponent's choice (R16), so it is a pick of their own hand
-//     that they answer (the prompt the other player holds, §10.6); the continuation discards each card
-//     they picked. With fewer cards than asked they discard all they have; an empty hand asks nothing.
+//   - "opponent discards": the discard is random from their hand (R682: no "of your choice"), so no
+//     prompt opens. With fewer cards than asked they discard all they have; an empty hand discards
+//     nothing.
 //   - the delayed destroy (a delayed effect, §10.1, `destroyAtNextTurnStart`): on the base face the
 //     chosen Unit, on either side, keyed to that stay on the field — it fizzles if the Unit left the
 //     field meanwhile, even if it came back (R174) — and on the Radiant face every enemy Unit on the
@@ -20,7 +20,7 @@
 
 import type { ActivationDecl, Effect, EffectContext, Script } from "@jackioh/engine";
 import { param } from "@jackioh/engine";
-import { chooseFromHand, damage, destroyAtNextTurnStart, discard } from "@jackioh/engine/effects";
+import { damage, destroyAtNextTurnStart, discardRandom } from "@jackioh/engine/effects";
 import type { TargetDecl } from "@jackioh/shared";
 import { cardDef } from "../../catalog-data";
 
@@ -30,9 +30,6 @@ const DAMAGE_MODE = "deal damage";
 const DISCARD_MODE = "opponent discards";
 const DOOM_MODE = "destroy a Unit at the start of your next turn";
 const DOOM_ALL_MODE = "destroy all enemy Units at the start of your next turn";
-
-/** The continuation the opponent's discard pick re-enters. */
-const DISCARDED = "punish-discarded";
 
 const DAMAGE_TARGET: TargetDecl = {
   kind: "target",
@@ -49,19 +46,15 @@ function punish(ctx: EffectContext, radiant: boolean): Effect[] {
     case DAMAGE_MODE:
       return [damage({ to: { of: "chosen" }, amount: param(ctx, "damage") })];
     case DISCARD_MODE:
-      return [chooseFromHand({ step: DISCARDED, of: "enemy", by: "enemy", count: param(ctx, "discards"), prompt: "Discard" })];
+      return [discardRandom({ count: param(ctx, "discards"), player: "enemy" })];
     case DOOM_MODE:
-      return radiant ? [] : [destroyAtNextTurnStart({ target: { of: "chosen" } })];
+      // The unit marked for death wears #50 K-Pop Fanatic's aura, in red (R437).
+      return radiant ? [] : [destroyAtNextTurnStart({ target: { of: "chosen" }, mark: { mark: "destroy", color: "red" } })];
     case DOOM_ALL_MODE:
       return radiant ? [destroyAtNextTurnStart({ scope: { side: "enemy" } })] : [];
     default:
       return [];
   }
-}
-
-/** R16: the cards the opponent picked, each discarded. */
-function discardPicked(ctx: EffectContext): Effect[] {
-  return ctx.targets.map((_, index) => discard({ target: { of: "chosen", index } }));
 }
 
 function face(radiant: boolean): Script {
@@ -73,7 +66,7 @@ function face(radiant: boolean): Script {
     targets: radiant ? [DAMAGE_TARGET] : [DAMAGE_TARGET, DOOM_TARGET],
     run: (ctx) => punish(ctx, radiant),
   };
-  return { activations: [ability], resume: { [DISCARDED]: discardPicked } };
+  return { activations: [ability] };
 }
 
 export const base: Script = face(false);

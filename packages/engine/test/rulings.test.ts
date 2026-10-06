@@ -777,12 +777,11 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(46, "rulings-b.test.ts", "statecheck.test.ts", "effects-destroy.test.ts");
   });
 
-  // Proved by rulings-b.test.ts "R47 fizzles a lane-targeted summon into an occupied or Locked zone, and
-  // holds a Reborn unit's zone"; statecheck.test.ts "R47: Reborn into a zone that was Locked meanwhile
-  // fails silently", "R47 says so in the event stream when a Reborn return fizzles into a Locked zone";
-  // effects-summon.test.ts "R47 a lane-named summon fizzles on an occupied or a Locked zone".
-  it("R47 fizzles a lane-targeted summon into an occupied or Locked zone", () => {
-    provenIn(47, "rulings-b.test.ts", "statecheck.test.ts", "effects-summon.test.ts");
+  // Proved by rulings-b.test.ts "R47 …" (occupied fizzles, Locked lands, the Reborn zone holds) and
+  // effects-summon.test.ts "R47 …" (a lane-named summon fizzles on an occupied zone). Reborn into a
+  // zone Locked meanwhile is R660's proof now (statecheck.test.ts "R660 …").
+  it("R47 fails an aimed summon on an occupied zone; a Locked zone takes it unless the card says otherwise", () => {
+    provenIn(47, "rulings-b.test.ts", "effects-summon.test.ts");
   });
 
   // M4 owns #77 Professor Curvature: its card test proves the discount on the real script.
@@ -3130,7 +3129,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // Proved by after-attack.test.ts, 032-prem-panther.test.ts "R426 …".
-  it("R426 draws for Prem Panther only after it attacks and survives", () => {
+  it("R426 draws for Prem Panther after it attacks, even when it dies", () => {
     provenIn(426, "after-attack.test.ts", "../../cards/test/032-prem-panther.test.ts");
   });
 
@@ -3155,7 +3154,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // Proved by 021-hinder.test.ts "R431 …".
-  it("R431 makes Hinder's base face discard 1 card of its caster's choice", () => {
+  it("R431 makes Hinder's base face discard 1 random card of its caster's hand", () => {
     provenIn(431, "../../cards/test/021-hinder.test.ts");
   });
 
@@ -4215,6 +4214,112 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(679, "glitch.test.ts", CARDS_GLITCH_TEST, SERVER_GLITCH_TEST, SERVER_CONTRACT_TEST, WEB_PRACTICE_GLITCH_TEST, WEB_NET_TEST);
   });
 
+  // Proved by targeting.test.ts "R682 …" (no play carries discards, the exact cost pays both with no
+  // prompt, the kept cards never pay) and the card side in packages/cards
+  // test/classic/089-paul-allens-ghost.test.ts "R682 …" (one play, two random others, the interception
+  // stays paid).
+  it("R682 discards are random by default, paid at pay time with no choice", () => {
+    provenIn(682, "targeting.test.ts", "../../cards/test/classic/089-paul-allens-ghost.test.ts");
+  });
+
+  // Proved by the card side in packages/cards/test/classic/021-turtinator.test.ts "R683 …" (alone, no
+  // activation is listed and naming itself is refused, on both faces).
+  it("R683 lets Turtinator Tribute anything but itself", () => {
+    provenIn(683, "../../cards/test/classic/021-turtinator.test.ts");
+  });
+
+  // Proved by the card side in packages/cards/test/classic/034-ancient-acquisition.test.ts "R684 …"
+  // (two random returns with no prompt, the same game returning the same cards).
+  it("R684 returns Ancient Acquisition's cards at random, with no pick", () => {
+    provenIn(684, "../../cards/test/classic/034-ancient-acquisition.test.ts");
+  });
+
+  // Proved by the card side in packages/cards/test/classic/022-mid-runner.test.ts "R685 …" (the lane
+  // count's center, odd and even, and the Radiant three bounces).
+  it("R685 computes Mid Runner's midlane from the lane count", () => {
+    provenIn(685, "../../cards/test/classic/022-mid-runner.test.ts");
+  });
+
+  // Proved by effects-reveal.test.ts "R686 …" (a revealed Trap reads face-up but still fires) and the
+  // card side in packages/cards/test/classic/065-ace-in-the-hole.test.ts and
+  // test/classic/088-siphon-squad.test.ts "R686 …" (Revealed on tails, revealed at the start of turn).
+  it("R686 reveals a backrow card's face without firing it", () => {
+    provenIn(
+      686,
+      "effects-reveal.test.ts",
+      "../../cards/test/classic/065-ace-in-the-hole.test.ts",
+      "../../cards/test/classic/088-siphon-squad.test.ts",
+    );
+  });
+
+  // Proved by twiceForward.test.ts "R687 …" (no count while face-down, shown when destroyed
+  // unrevealed) and the card side in packages/cards
+  // test/classic-plus/074-twice-forward-one-step-backwards.test.ts "R687 …".
+  it("R687 starts no Brittle count while a backrow Trap is unrevealed", () => {
+    provenIn(687, "twiceForward.test.ts", "../../cards/test/classic-plus/074-twice-forward-one-step-backwards.test.ts");
+  });
+
+  // Proved by zones.test.ts "R688 …" (a Locked zone takes a summon but no play),
+  // statecheck.test.ts "R688 …" (Reborn still returns into one) and animated.test.ts "R688 …"
+  // (the home return is a move, not a play), and the card side in packages/cards
+  // test/067-zoomerbin-oomen.test.ts and test/classic-plus/019-league-of-losers.test.ts "R688 …"
+  // (the cards' own overrides: a fizzle and a skip).
+  it("R688 refuses only plays into a Locked zone: summons, moves and returns still land", () => {
+    provenIn(
+      688,
+      "zones.test.ts",
+      "statecheck.test.ts",
+      "animated.test.ts",
+      "effects-summon.test.ts",
+      "../../cards/test/067-zoomerbin-oomen.test.ts",
+      "../../cards/test/classic-plus/019-league-of-losers.test.ts",
+    );
+  });
+
+  // Proved by effects-plague.test.ts "R689 …" (every token on the one pick, the Radiant count, the
+  // −X/−X death after the whole effect) and the card side in packages/cards
+  // test/classic/070-book-of-plague.test.ts and test/classic/061-plague-bringer-goliath.test.ts
+  // "R689 …" (no spreading: the whole effect lands on the one pick).
+  it("R689 places every Plague Counter of one effect on the single permanent one prompt names", () => {
+    provenIn(
+      689,
+      "effects-plague.test.ts",
+      "../../cards/test/classic/070-book-of-plague.test.ts",
+      "../../cards/test/classic/061-plague-bringer-goliath.test.ts",
+    );
+  });
+
+  // Proved by recruit-variants.test.ts "R690 …" (the scan prefers a non-X match; only-X still recruits;
+  // recruitAll leaves X-cost cards the same way). No card script needed it: the skip lives in the
+  // Recruit scan itself.
+  it("R690 skips (X)-cost cards in a Recruit scan unless they are the only valid targets", () => {
+    provenIn(690, "recruit-variants.test.ts");
+  });
+
+  // Proved by effects-transform.test.ts "R691 …" (DEF stays DEF on the new instance).
+  it("R691 keeps a transformed Unit's battle position", () => {
+    provenIn(691, "effects-transform.test.ts");
+  });
+
+  // Proved by packages/cards test/card-text.test.ts "R692 …" (no face says "return … to hand"; the
+  // cards that return one say Bounce) and apps/web src/cards/rules.test.ts "R692 …" (the glossary
+  // finds Bounce and "Bounced" where cards print them).
+  it("R692 prints Bounce for every return to hand", () => {
+    provenIn(692, "../../cards/test/card-text.test.ts", "../../../apps/web/src/cards/rules.test.ts");
+  });
+
+  // Proved by apps/web src/cards/inspect/inspect.test.tsx "R693 …" (showLoc false shows no LocLine,
+  // the default shows it) and src/game/Card.test.tsx "R693 …" (a board card's hover preview ends
+  // with no lines of code); the collection half is CardDetail.test.tsx's E36 meta-line tests, which
+  // still print the count outside a match.
+  it("R693 hides lines of code in matches but keeps it on collection views", () => {
+    provenIn(
+      693,
+      "../../../apps/web/src/cards/inspect/inspect.test.tsx",
+      "../../../apps/web/src/game/Card.test.tsx",
+    );
+  });
+
   // Proved by apps/web game/slam.test.ts "R700 …" (what slams and what never does, the stats read off
   // the newest view and the printed Tribute, both seats alike) and game/unitSlam.test.ts (the tiers'
   // boundaries and the weights).
@@ -4317,5 +4422,6 @@ describe("SPEC §11 index completeness", () => {
     expect(rows.length).toBeGreaterThan(0);
     // Ascending, no duplicates, and exactly the rows §11 has: a new row makes this red.
     expect(named).toEqual(rows);
+
   });
 });

@@ -23,14 +23,14 @@
 // this module narrows a list it was given.
 //
 // R81: zone, X, embiggen, Tribute and a card's declared targets and modes are NOT prompts. They
-// travel inside the `play` action, and `legalActions` enumerates them; so do a play's new payments,
-// the cards a targeting cost discards (`discards`, Classic #89) and the Plague Counters that pay part
-// of a graveyard play's price (`plague`, Classic #74). R384: an activation is built the same way —
-// its targets, modes and Tribute travel in the `activate` action — so a play and an activation are
-// one "build" here (`BuildBody`), narrowed by one set of functions. Everything chosen during
-// resolution — Discover, chained steps, Echo repeats, casts, triggers, the mulligan — arrives as a
-// `PendingChoice` and is answered with an `answer` action (or, for the mulligan, its own `mulligan`
-// action).
+// travel inside the `play` action, and `legalActions` enumerates them; so does a play's new payment,
+// the Plague Counters that pay part of a graveyard play's price (`plague`, Classic #74) — while a
+// targeting cost's discards (Classic #89) are random at pay time (R682) and travel nowhere. R384: an
+// activation is built the same way — its targets, modes and Tribute travel in the `activate`
+// action — so a play and an activation are one "build" here (`BuildBody`), narrowed by one set of
+// functions. Everything chosen during resolution — Discover, chained steps, Echo repeats, casts,
+// triggers, the mulligan — arrives as a `PendingChoice` and is answered with an `answer` action (or,
+// for the mulligan, its own `mulligan` action).
 //
 // R391 (B4.5): a Tribute may pay for its own zone, and `legalActions` pairs each zone with the
 // Tribute sets that leave it open. Narrowing keeps whole candidates, never a field on its own, so a
@@ -40,8 +40,8 @@
 // *picker* chose for it (`pickInPlay`), carried into the emitted action verbatim and validated by
 // the engine per R90: the client reports the player's pick, it does not rule on it. A *board
 // click* is never carried through — a click no candidate accounts for changes nothing, so the board
-// can never be clicked into an illegal play. The payments (`discards`, `plague`) are never carried:
-// a candidate without them pays none, which is what the engine listed it to mean.
+// can never be clicked into an illegal play. The `plague` payment is never carried: a candidate
+// without it pays none, which is what the engine listed it to mean.
 
 import type {
   Action,
@@ -90,8 +90,6 @@ export type PlayBuild = {
   tributes?: string[];
   targets?: Selection[];
   modes?: string[];
-  /** B5 E5: the hand cards a targeting cost discards (Classic #89 Paul Allen's Ghost). */
-  discards?: string[];
   /** B5 E11, E19: how a graveyard play's price is paid in Plague Counters. */
   plague?: PlagueChoice;
 };
@@ -129,7 +127,6 @@ export type PlayNeed =
   | { kind: "plague"; min: number; max: number; options: PlagueChoice[] }
   | { kind: "tribute"; min: number; max: number; instanceIds: string[] }
   | { kind: "target"; min: number; max: number; selections: Selection[] }
-  | { kind: "discard"; min: number; max: number; instanceIds: string[] }
   | { kind: "mode"; min: number; max: number; options: string[] };
 
 export type ClickResult = { interaction: Interaction; action?: ActionBody };
@@ -327,7 +324,6 @@ type BuildFields = {
   tributes?: string[];
   targets?: Selection[];
   modes?: string[];
-  discards?: string[];
   plague?: PlagueSpend;
 };
 
@@ -363,7 +359,6 @@ function matches(candidate: BuildBody, picked: Partial<PlayBuild>): boolean {
   if (picked.modes !== undefined && fixed.modes !== undefined) {
     if (!containsAll(fixed.modes, picked.modes)) return false;
   }
-  if (picked.discards !== undefined && listKey(fixed.discards ?? []) !== listKey(picked.discards)) return false;
   if (picked.plague !== undefined && plagueKey(fixed.plague) !== plagueKey(picked.plague)) return false;
   return true;
 }
@@ -383,7 +378,7 @@ function mergePicked(candidate: BuildBody, picked: Partial<PlayBuild>): BuildBod
   const modes = nonEmpty(candidate.type === "activatePower" ? undefined : (candidate.modes ?? picked.modes));
   switch (candidate.type) {
     case "play": {
-      const { tributes: _t, targets: _g, modes: _m, discards, ...rest } = candidate;
+      const { tributes: _t, targets: _g, modes: _m, ...rest } = candidate;
       const body: PlayBody = { ...rest };
       const zone = candidate.zone ?? picked.zone;
       const x = candidate.x ?? picked.x;
@@ -394,8 +389,6 @@ function mergePicked(candidate: BuildBody, picked: Partial<PlayBuild>): BuildBod
       if (tributes !== undefined) body.tributes = tributes;
       if (targets !== undefined) body.targets = targets;
       if (modes !== undefined) body.modes = modes;
-      const paidWith = nonEmpty(discards);
-      if (paidWith !== undefined) body.discards = paidWith;
       return body;
     }
     case "activate": {
@@ -429,8 +422,11 @@ function distinctBy<T>(values: readonly T[], key: (value: T) => string): T[] {
  * The next choice the build still needs, or null when the candidates agree on everything. Derived
  * purely from the candidate array: two candidates that differ only in `x` mean the player must
  * pick an X, and nothing else. Asked in cost order (X, embiggen and the Plague Counters change what
- * is paid), then the Tribute, the targets and the discards a target costs (Classic #89), the
- * modes, and the board-driven zone last so a zone click finishes the play.
+ * is paid), then the Tribute, the targets, the modes, and the board-driven zone last so a zone
+ * click finishes the play — except that the modes come before the targets when some candidate
+ * wants no target at all: a target-first order would force a target pick and strand the targetless
+ * mode where no click can reach it (Classic #20's Discard, which is shown but could never be
+ * selected).
  */
 export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   if (!isBuilding(interaction)) return null;
@@ -473,6 +469,25 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
     };
   }
 
+  // Classic #20: when a targetless candidate shares the build with targeted ones, the modes
+  // decide which targets even exist, so they are asked first. Otherwise the target order below
+  // stands, and a mode shared by every remaining candidate is never asked twice.
+  if (fields.some((c) => c.targets === undefined)) {
+    const mixedModes = distinctBy(
+      fields.flatMap((c) => (c.modes === undefined ? [] : [c.modes])),
+      listKey,
+    );
+    if (mixedModes.length > 1) {
+      const lengths = mixedModes.map((list) => list.length);
+      return {
+        kind: "mode",
+        min: Math.min(...lengths),
+        max: Math.max(...lengths),
+        options: [...new Set(mixedModes.flat())],
+      };
+    }
+  }
+
   const targetLists = distinctBy(
     fields.flatMap((c) => (c.targets === undefined ? [] : [c.targets])),
     targetsKey,
@@ -485,22 +500,6 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
       max: Math.max(...lengths),
       selections: distinctBy(targetLists.flat(), selectionKey),
     };
-  }
-
-  if (interaction.picked.discards === undefined) {
-    const discardSets = distinctBy(
-      fields.map((c) => c.discards ?? []),
-      listKey,
-    );
-    if (discardSets.length > 1) {
-      const lengths = discardSets.map((set) => set.length);
-      return {
-        kind: "discard",
-        min: Math.min(...lengths),
-        max: Math.max(...lengths),
-        instanceIds: [...new Set(discardSets.flat())],
-      };
-    }
   }
 
   const modeLists = distinctBy(
@@ -879,7 +878,17 @@ export function onClickTarget(
         const asTribute = target.on === "unit" ? narrowByTribute(interaction, target.instanceId) : null;
         if (asTribute !== null) return settle(asTribute);
         const asTarget = narrowByTarget(interaction, { pick: "instance", instanceId: target.instanceId });
-        return asTarget === null ? { interaction } : settle(asTarget);
+        if (asTarget !== null) return settle(asTarget);
+        // R446: a backrow card covers its zone, so a click on a carrier's card is a click on its
+        // zone — otherwise a Unit could never be placed on an Ivory Tower by tapping the Tower.
+        if (target.on === "backrow" && target.side === "you") {
+          const zone: ZoneChoice = { row: "backrow", lane: target.lane };
+          if (someCandidateFixesZone(interaction, zone)) {
+            const next = narrowedBy(interaction, { zone });
+            return next === null ? { interaction } : settle(next);
+          }
+        }
+        return { interaction };
       }
       const candidates = attacksBy(legal, target.instanceId);
       if (candidates.length === 0) return { interaction };

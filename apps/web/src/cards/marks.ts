@@ -70,6 +70,8 @@ export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
   steal: { name: "Steal", text: "Marked: stolen at the start of its marker's next turn" },
   // B5 E35: the mark a unit going Berserk is announced with (C+ #19.2, C+ #19.5).
   berserk: { name: "Berserk", text: BERSERK_WORDS },
+  // Classic #20 The Power to Punish: the unit marked for death wears #50's aura, in red (R437).
+  destroy: { name: "Destroy", text: "Marked: destroyed at the start of its marker's next turn" },
 };
 
 /** The words for a mark the table does not know. */

@@ -139,15 +139,21 @@ describe("summon (§6.3, M3-T1)", () => {
     expect(lanesOf(state, "p1", "units")).toEqual(["fx-1", "fx-1", "fx-1", "fx-1", "fx-1"]);
   });
 
-  it("R47 a lane-named summon fizzles on an occupied or a Locked zone", () => {
+  it("R47 a lane-named summon fizzles on an occupied zone", () => {
     const state = game();
     put(state, "fx-1", slot("p1", "units", 2));
-    lockZone(state, slot("p1", "units", 4));
 
     expect(eventsOfType(run(state, summon({ defId: "fx-5", lane: 2 })), "summoned")).toEqual([]);
-    expect(eventsOfType(run(state, summon({ defId: "fx-5", lane: 4 })), "summoned")).toEqual([]);
     expect(eventsOfType(run(state, summon({ defId: "fx-5", lane: 5 })), "summoned")).toHaveLength(1);
     expect(lanesOf(state, "p1", "units")).toEqual([null, "fx-1", null, null, "fx-5"]);
+  });
+
+  it("R688 a lane-named summon enters a Locked zone — only plays refuse one", () => {
+    const state = game();
+    lockZone(state, slot("p1", "units", 4));
+
+    expect(eventsOfType(run(state, summon({ defId: "fx-5", lane: 4 })), "summoned")).toHaveLength(1);
+    expect(lanesOf(state, "p1", "units")).toEqual([null, null, null, "fx-5", null]);
   });
 
   it("emits summoned with the zone it landed in and gives the card summoning sickness", () => {

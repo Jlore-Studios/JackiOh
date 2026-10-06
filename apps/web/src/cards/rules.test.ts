@@ -133,6 +133,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Steal",
   "Unlock",
   "Flicker",
+  "Bounce",
   "Degrade",
   "Upgrade",
   "Plague Counter",
@@ -528,6 +529,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
         expect(entry.aliases, key).toEqual(["Plague Counters"]);
       } else if (key === "Look at a hand") {
         expect(entry.aliases, key).toEqual(["Look at your opponent's hand"]);
+      } else if (key === "Bounce") {
+        expect(entry.aliases, key).toEqual(["Bounced"]);
       } else {
         expect(entry.aliases, key).toEqual([]);
       }
@@ -589,12 +592,19 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
     expect(termsIn(played("classicplus-019-1", "radiant"))).toContain("Immune to Spells");
     expect(termsOf(played("classicplus-019-5"))).toContainEqual({ text: "Berserk:", term: "Berserk" });
     expect(termsIn(played("classicplus-019-2"))).toContain("Berserk");
-    expect(termsOf(played("classicplus-074"))).toContainEqual({ text: "Brittle 4", term: "Brittle" });
+    expect(termsOf(played("classicplus-074"))).toContainEqual({ text: "Brittle 2", term: "Brittle" });
     expect(termsIn(played("classicplus-038"))).toContain("Spell Damage");
     expect(termsIn(played("classic-005"))).toContain("Animated");
     expect(termsIn(played("classicplus-012-8"))).toContain("Animated on your turn");
     // Aliases are empty: SPEC's "Cannot" is plain words without the alias.
     expect(termsOf("Cannot be in Defense Position.")).toEqual([]);
+  });
+
+  it("R692 Bounce is a glossary term wherever a card prints it, \"Bounced\" included", () => {
+    expect(termsOf(played("core-017"))).toContainEqual({ text: "Bounce", term: "Bounce" });
+    expect(termsOf(played("classic-022", "radiant"))).toContainEqual({ text: "Bounce 3", term: "Bounce" });
+    expect(termsOf(played("core-052", "radiant"))).toContainEqual({ text: "Bounced", term: "Bounce" });
+    expect(termsIn("bounce all units")).toEqual([]);
   });
 
   it("R512 matching stays case-sensitive: a lower-case \"steal it\" or \"can't attack or be attacked\" is plain words", () => {

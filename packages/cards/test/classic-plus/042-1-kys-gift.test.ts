@@ -1,8 +1,8 @@
-// C+ #42.1 KY's Gift — SPEC §8.7 row 42.1, R16, R62, R97, R177, R380, R386, BUILD M9 row C+ 42.1.
+// C+ #42.1 KY's Gift — SPEC §8.7 row 42.1, R682, R62, R97, R177, R380, R386, BUILD M9 row C+ 42.1.
 // p2 is active in each scenario, so its `endTurn()` starts p1's turn, where the Gift fires.
 
-import { HERO_HEALTH, MAX_MANA, hashState, queryCost, reduce, stepParam, type GameState } from "@jackioh/engine";
-import type { Action, GameEvent } from "@jackioh/shared";
+import { HERO_HEALTH, MAX_MANA, queryCost, stepParam } from "@jackioh/engine";
+import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { cardDef } from "../../src/index";
 import { base, def, radiant } from "../../src/scripts/classic-plus/042-1-kys-gift";
@@ -57,22 +57,24 @@ describe("C+ #42.1 KY's Gift", () => {
   });
 
   describe("base", () => {
-    it("R62 at the start of your turn: 1 mana above the cap, then your opponent's discard prompt", () => {
+    it("R62 at the start of your turn: 1 mana above the cap, then the random discard lands with no prompt", () => {
       const s = gift().endTurn();
       expect(s.state.active).toBe("p1");
       s.expectMana("p1", MAX_MANA + 1);
-      const pending = s.state.pending;
-      expect(pending?.kind).toBe("hand");
-      expect(pending?.playerId).toBe("p2");
-      expect(pending?.min).toBe(1);
-      expect(pending?.max).toBe(1);
-      expect(pending?.options).toHaveLength(2);
+      // R682: no prompt opens — the random discard landed and the rest followed.
+      expect(s.state.pending).toBeNull();
+      expect(s.hand("p2")).toHaveLength(1);
+      expect(s.pile("p2", "graveyard")).toHaveLength(1);
+      s.expectHealth("p1", HERO_HEALTH + 5);
+      expectTheFour(added(s), false);
     });
 
-    it("R16 the opponent discards the card they choose; then your hero heals 5, past 30, and the four cards arrive at (0)", () => {
+    it("R682 the opponent discards 1 at random; then your hero heals 5, past 30, and the four cards arrive at (0)", () => {
       const s = gift().endTurn();
-      s.answer(s.card(TIMMY).id);
-      s.expectInZone(TIMMY, "graveyard").expectInZone(MENACE, "hand");
+      const grave = s.pile("p2", "graveyard").map((card) => card.defId);
+      expect(grave).toHaveLength(1);
+      expect([MENACE, TIMMY]).toContain(grave[0]);
+      expect(s.hand("p2")).toHaveLength(1);
       s.expectHealth("p1", HERO_HEALTH + 5);
       expectTheFour(added(s), false);
       s.expectEvents("discarded", "healed", "addedToHand");
@@ -101,7 +103,6 @@ describe("C+ #42.1 KY's Gift", () => {
 
     it("R62 it does nothing at the opponent's start of turn", () => {
       const s = gift().endTurn();
-      s.answer(s.card(TIMMY).id);
       const health = s.state.players.p1.hero.health;
       s.endTurn();
       expect(s.state.active).toBe("p2");
@@ -109,46 +110,36 @@ describe("C+ #42.1 KY's Gift", () => {
       s.expectHealth("p1", health);
     });
 
-    it("R177 the prompt's options reach only the discarding player; the discard is public, the four cards hidden (R97)", () => {
+    it("R177 R682 no prompt opens: the opponent's remaining hand stays hidden, the discard is public, the four cards hidden (R97)", () => {
       const s = gift().endTurn();
-      expect(s.view("p1").pending).toEqual({ forYou: false, pendingFor: "p2" });
-      const theirs = s.view("p2").pending;
-      expect(theirs?.forYou === true ? theirs.options.length : 0).toBe(2);
-      s.answer(s.card(TIMMY).id);
+      expect(s.state.pending).toBeNull();
+      expect(s.view("p1").pending).toBeNull();
+      const mine = JSON.stringify(s.view("p1"));
+      for (const card of s.hand("p2")) {
+        expect(mine).not.toContain(`"${card.id}"`);
+        expect(mine).not.toContain(card.defId);
+      }
       const p2Events: GameEvent[] = s.view("p2").events;
       const discarded = p2Events.find((event) => event.type === "discarded");
-      expect(discarded?.type === "discarded" ? discarded.defId : "").toBe(TIMMY);
+      expect(discarded?.type === "discarded" && [MENACE, TIMMY].includes(discarded.defId)).toBe(true);
       const p1Discard = s.view("p1").events.find((event) => event.type === "discarded");
-      expect(p1Discard?.type === "discarded" ? p1Discard.defId : "").toBe(TIMMY);
+      expect(p1Discard?.type === "discarded" && [MENACE, TIMMY].includes(p1Discard.defId)).toBe(true);
       // The four, and the turn's draw: every card reaching p1's hand is the sentinel to p2.
       const adds = p2Events.filter((event) => event.type === "addedToHand" && event.player === "p1");
       expect(adds.length).toBeGreaterThanOrEqual(4);
       for (const event of adds) expect(event.type === "addedToHand" ? event.defId : "").toBe("hidden");
     });
 
-    it("R113 §9.3 paused on the discard prompt, the start of turn resumes where it stopped and survives JSON", () => {
-      const s = gift().endTurn();
-      expect(s.state.players.p1.hero.health).toBe(HERO_HEALTH);
-      const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
-      expect(hashState(thawed)).toBe(hashState(s.state));
-      const answer = {
-        type: "answer",
-        playerId: "p2",
-        choiceId: s.state.pending?.id ?? "",
-        selection: [{ pick: "instance", instanceId: s.card(MENACE).id }],
-        nonce: "gift-json",
-      } as Action;
-      const live = reduce(s.state, answer);
-      const frozen = reduce(thawed, answer);
-      expect(live.error).toBeUndefined();
-      expect(hashState(frozen.state)).toBe(hashState(live.state));
-      expect(live.state.players.p1.hero.health).toBe(HERO_HEALTH + 5);
-      expect(live.state.players.p1.hand.filter((card) => card.costOverride === 0)).toHaveLength(4);
+    it("R682 the random discard comes from the match rng: the same game discards the same card", () => {
+      const first = gift().endTurn();
+      const second = gift().endTurn();
+      const ids = (s: Scenario): string[] =>
+        s.events.flatMap((event) => (event.type === "discarded" ? [event.instanceId] : []));
+      expect(ids(first)).toEqual(ids(second));
     });
 
     it("§2.4 a full hand burns what does not fit", () => {
       const s = gift({ p1: { hand: Array.from({ length: 8 }, () => FILLER), library: [FILLER] } }).endTurn();
-      s.answer(s.card(TIMMY).id);
       // Start-of-turn triggers come before the draw (§2): two of the four fit beside the 8, two are
       // burned, and then the turn's draw is burned too.
       expect(s.hand("p1")).toHaveLength(10);
@@ -165,29 +156,29 @@ describe("C+ #42.1 KY's Gift", () => {
       stepParam(card, "heal", 1);
       s.endTurn();
       s.expectMana("p1", MAX_MANA + 2);
-      expect(s.state.pending?.max).toBe(2);
-      s.answer([s.card(TIMMY).id, s.card(MENACE).id]);
+      expect(s.state.pending).toBeNull();
+      expect(s.pile("p2", "graveyard")).toHaveLength(2);
       expect(s.hand("p2")).toHaveLength(0);
       s.expectHealth("p1", HERO_HEALTH + 6);
     });
   });
 
   describe("radiant", () => {
-    it("2 mana, 2 discards of the opponent's choice, heal 10, and the four cards are Radiant", () => {
+    it("2 mana, 2 random discards, heal 10, and the four cards are Radiant", () => {
       const s = gift({ radiant: true }).endTurn();
       s.expectMana("p1", MAX_MANA + 2);
-      expect(s.state.pending?.min).toBe(2);
-      s.answer([s.card(TIMMY).id, s.card(MENACE).id]);
-      s.expectInZone(TIMMY, "graveyard").expectInZone(MENACE, "graveyard");
+      expect(s.state.pending).toBeNull();
+      expect(s.hand("p2")).toHaveLength(0);
+      expect(s.pile("p2", "graveyard")).toHaveLength(2);
       s.expectHealth("p1", HERO_HEALTH + 10);
       expectTheFour(added(s), true);
     });
 
-    it("R16 fewer cards than asked: the opponent discards all they have", () => {
+    it("R682 fewer cards than asked: the opponent discards all they have", () => {
       const s = gift({ radiant: true, p2: { hand: [TIMMY], library: [FILLER] } }).endTurn();
-      expect(s.state.pending?.max).toBe(1);
-      s.answer(s.card(TIMMY).id);
+      expect(s.state.pending).toBeNull();
       expect(s.hand("p2")).toHaveLength(0);
+      expect(s.pile("p2", "graveyard").map((card) => card.defId)).toEqual([TIMMY]);
       s.expectHealth("p1", HERO_HEALTH + 10);
     });
 

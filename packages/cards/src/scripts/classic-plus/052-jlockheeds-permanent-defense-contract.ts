@@ -5,7 +5,8 @@
 //            — cards 1, discount 1
 //   Engine:  "A player effect for the rest of the game (§10.1): a `never`-expiry player modifier on the
 //            caster that acts at their start of turn, among the start-of-turn triggers (R62). The pool
-//            is the non-token `Jlockeed` cards but this one (R387): #13, #14, C+ #48, C+ #51. Several
+//            is the non-token `Jlockeed` cards but this one (R387): #13, #14, C #4, C+ #48, C+ #51.
+//            Several
 //            contracts stack, one card each. Radiant: `costMod` −1 on the card. The hand cap burns
 //            extras (§2.4). Tunes: cards 1 ↑; Radiant discount 1 ↑."
 //

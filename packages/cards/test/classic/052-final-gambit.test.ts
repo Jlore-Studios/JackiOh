@@ -11,15 +11,14 @@
 // and Midrange Menace (9/9), Lunar Eclipse's 3, and fatigue on an empty deck. Going Long (Armor 2),
 // C #75 Argusland (halved) and Anti-oneshot Armor (a cap of 5) stand on either hero's side. Blood
 // Ridden Glowy Jelly Bean loses health on draw (R18), C #29 Book of Vital Kill sets a hero's health to
-// 13, and Hinder, drawn by the follow-up, asks its caster to discard (R158) — the pause the round trip
-// is taken across.
+// 13, and Hinder, drawn by the follow-up, discards at random with no prompt (R682).
 //
 // "A draw if both heroes are at 0" (§2.5) needs a second hit inside the same effect, after the trap is
 // spent: Prem Panther's "draw 2" into an empty deck, whose first fatigue the trap re-aims at a 1-health
 // opponent and whose second then lands on you.
 
-import { reduce, stepParam, type GameState } from "@jackioh/engine";
-import type { Action, GameEvent, PlayerId } from "@jackioh/shared";
+import { stepParam, type GameState } from "@jackioh/engine";
+import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/052-final-gambit";
@@ -35,7 +34,7 @@ const GARY = "core-004"; // 1/1
 const LUNAR = "core-035"; // (1) Spell: deal 3 damage to a target.
 const STOCKPILE = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
 const BLOOD_BEAN = "core-027"; // Cast on draw: make a random hand card Radiant. Lose 5 health.
-const HINDER = "core-021"; // Cast on draw: their next refresh −1. Discard 1 (a hand prompt, R158).
+const HINDER = "core-021"; // Cast on draw: their next refresh −1. Discard 1 at random (R682).
 const GOING_LONG = "core-084"; // Field Spell: your hero has Armor 2.
 const ANTI_ONESHOT = "core-073"; // Field Spell: your hero can't take more than 5 damage at once.
 const FILLER = "core-005";
@@ -324,32 +323,16 @@ describe("C #52 Final Gambit", () => {
       expect(s.events.filter((event) => event.type === "burned")).toHaveLength(2);
     });
 
-    it("a prompt its draws open pauses the follow-up, and a round-tripped state answers to the same game", () => {
+    it("its draws resolve with no prompt (R682), and the follow-up runs to the same game", () => {
       const s = lethalAttack({ attacker: VANILLA, health: 4, p1: { library: [HINDER, FILLER, FILLER, FILLER] } });
-      const pending = s.state.pending;
-      expect(pending).not.toBeNull();
-      expect(pending?.playerId).toBe("p1");
+      // Hinder's discard is random (R682): no prompt opens and the follow-up runs straight through.
+      expect(s.state.pending).toBeNull();
       s.expectHealth("p1", 14);
-      expect(s.view("p2").pending).toEqual({ forYou: false, pendingFor: "p1" });
 
       const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
       expect(thawed).toEqual(s.state);
-      const pick = s.hand("p1")[0];
-      if (pick === undefined) throw new Error("p1 should hold a card to discard");
-      const answer = {
-        type: "answer",
-        choiceId: pending?.id ?? "",
-        selection: [{ pick: "instance", instanceId: pick.id }],
-        playerId: "p1",
-        nonce: "gambit-roundtrip",
-      } as Action;
-      const live = reduce(s.state, answer);
-      const frozen = reduce(thawed, answer);
-      expect(live.error).toBeUndefined();
-      expect(frozen.state).toEqual(live.state);
-      expect(frozen.events).toEqual(live.events);
-      // The rest of the follow-up ran: Hinder's draw-again and the two draws after it.
-      expect(live.state.players.p1.library).toHaveLength(0);
+      // The whole follow-up ran: Hinder's draw-again and the two draws after it.
+      expect(s.state.players.p1.library).toHaveLength(0);
     });
 
     it("R386 an Upgrade heals 12 and draws 4", () => {

@@ -1,9 +1,10 @@
-// C #25 Lag in the System — SPEC §8.6 row 25, BUILD M9 Classic row C 25: "Exiles every (1) Cost or
-// less card on both fields, in both hands and in both decks, costs read per R65 at resolution: an X
-// card in a hand or deck costs 0 and goes, one on the field costs its X (0 with none chosen, R396);
-// face-down and Indestructible cards (C #90 In Too Deep) included; graveyards and exile untouched; the
-// Spell itself is resolving and spared; no event carries a deck position; radiant: the opponent's
-// field, hand and deck only; its tuned number (threshold) reads through `param()` (R386)".
+// C #25 Lag in the System — SPEC §8.6 row 25, BUILD M9 Classic row C 25: "Exile every (1) Cost or
+// less card on both fields" (balance patch 1: the Field alone — units and backrow, both sides; hands
+// and decks stay). Costs read per R65 at resolution; an X card on the field costs the X it was played
+// for (0 with none chosen, R396); face-down and Indestructible cards (C #90 In Too Deep) included;
+// graveyards and exile untouched; the Spell itself is resolving and spared; radiant: the opponent's
+// field, hand and deck only (an X card in a hand or deck costs 0 and goes); its tuned number
+// (threshold) reads through `param()` (R386)".
 //
 // An X card on the field "played for X": the test stands a C+ #69 Buff Billy on the field with its
 // stats given (`statsOverride`) and records the X it was played for on the instance, as a play would
@@ -67,19 +68,9 @@ describe("C #25 Lag in the System", () => {
   });
 
   describe("base", () => {
-    it("exiles every (1) Cost or less card on both fields, in both hands and in both decks", () => {
+    it("exiles every (1) Cost or less card on both fields, and nothing in either hand or deck", () => {
       const s = lagBoard();
-      const gone = [
-        s.unit("p1", 1),
-        s.backrow("p1", 1),
-        s.pile("p1", "hand")[2],
-        s.pile("p1", "library")[0],
-        s.unit("p2", 1),
-        s.backrow("p2", 1),
-        s.pile("p2", "hand")[1],
-        s.pile("p2", "library")[0],
-        s.pile("p2", "library")[2],
-      ].map((card) => {
+      const gone = [s.unit("p1", 1), s.backrow("p1", 1), s.unit("p2", 1), s.backrow("p2", 1)].map((card) => {
         if (card === null || card === undefined) throw new Error("setup: a card is missing");
         return card;
       });
@@ -88,12 +79,13 @@ describe("C #25 Lag in the System", () => {
       // What costs more stays where it was.
       expect(s.unit("p1", 2)?.defId).toBe(MENACE);
       expect(s.backrow("p1", 2)?.defId).toBe(MANA_WELL);
-      expect(s.hand("p1").map((card) => card.defId)).toEqual([FELINORS]);
-      expect(s.pile("p1", "library").map((card) => card.defId)).toEqual([SEVEN]);
       expect(s.unit("p2", 2)?.defId).toBe(SEVEN);
       expect(s.backrow("p2", 2)?.defId).toBe(EXPERIMENT);
-      expect(s.hand("p2").map((card) => card.defId)).toEqual([FELINORS]);
-      expect(s.pile("p2", "library").map((card) => card.defId)).toEqual([MENACE]);
+      // Hands and decks are out of scope now.
+      expect(s.hand("p1").map((card) => card.defId)).toEqual([FELINORS, VANILLA]);
+      expect(s.pile("p1", "library").map((card) => card.defId)).toEqual([REPLENISH, SEVEN]);
+      expect(s.hand("p2").map((card) => card.defId)).toEqual([FELINORS, STOCKPILE]);
+      expect(s.pile("p2", "library").map((card) => card.defId)).toEqual([INFINITE, MENACE, SHEEPISH]);
     });
 
     it("graveyards and exile are untouched", () => {
@@ -127,30 +119,16 @@ describe("C #25 Lag in the System", () => {
       s.expectInZone(trap, "exile");
     });
 
-    it("R65 a hand card is read at its hand cost: a (2) Trap under Cloaked Toe Cracker costs (0) and goes", () => {
+    it("R65 a set card is read at its own cost: a (2) Trap under Toe Cracker costs (2) and stays", () => {
       const s = scenario({
-        p1: { hand: [LAG, EXPERIMENT, { def: FELINORS, costMod: -1 }, MENACE], field: [TOE_CRACKER] },
+        p1: { hand: [LAG, FELINORS], field: [TOE_CRACKER], backrow: [{ def: EXPERIMENT, faceUp: false }] },
         p2: { hand: [STOCKPILE] },
       });
       const trap = s.card(EXPERIMENT);
-      const felinors = s.card(FELINORS);
       s.play(LAG);
-      s.expectInZone(trap, "exile");
-      s.expectInZone(felinors, "exile");
-      // The Toe Cracker itself costs (2) and stays.
+      // The aura prices plays from the hand, not set cards: the (2) Trap stays.
+      s.expectInZone(trap, "field");
       s.expectInZone(TOE_CRACKER, "field");
-      s.expectInZone(MENACE, "hand");
-    });
-
-    it("R396 an X card in a hand or a deck costs 0 and goes", () => {
-      const s = scenario({
-        p1: { hand: [LAG, DIVIDEND, FELINORS], library: [DIVIDEND] },
-        p2: { hand: [STOCKPILE, BILLY], library: [BILLY] },
-      });
-      const xCards = [...s.hand("p1").filter((c) => c.defId === DIVIDEND), ...s.pile("p1", "library")];
-      const billys = [...s.hand("p2").filter((c) => c.defId === BILLY), ...s.pile("p2", "library")];
-      s.play(LAG);
-      for (const card of [...xCards, ...billys]) s.expectInZone(card, "exile");
     });
 
     it("R396 an X card on the field costs the X it was played for: played for 3 it stays", () => {
@@ -217,19 +195,21 @@ describe("C #25 Lag in the System", () => {
       const s = lagBoard();
       stepParam(s.card(LAG), "threshold", -1);
       s.play(LAG);
-      // A (1) Cost card still goes: the Vanilla in your hand and the Timmy on your field.
-      expect(s.hand("p1").map((card) => card.defId)).toEqual([FELINORS]);
+      // A (1) Cost card still goes: the Timmy on your field. Hands are out of scope.
+      expect(s.hand("p1").map((card) => card.defId)).toEqual([FELINORS, VANILLA]);
       expect(s.unit("p1", 1)).toBeNull();
     });
 
-    it("R386 an Upgrade of the threshold reaches (2) Cost cards", () => {
+    it("R386 an Upgrade of the threshold reaches (2) Cost cards on the fields", () => {
       const s = lagBoard();
       stepParam(s.card(LAG), "threshold", 1);
       s.play(LAG);
-      expect(s.hand("p1")).toEqual([]);
-      expect(s.hand("p2")).toEqual([]);
+      expect(s.unit("p1", 1)).toBeNull();
       expect(s.backrow("p2", 2)).toBeNull();
       expect(s.unit("p1", 2)?.defId).toBe(MENACE);
+      // Hands and decks stay whatever the threshold is.
+      expect(s.hand("p1").map((card) => card.defId)).toEqual([FELINORS, VANILLA]);
+      expect(s.hand("p2").map((card) => card.defId)).toEqual([FELINORS, STOCKPILE]);
     });
   });
 
@@ -269,6 +249,28 @@ describe("C #25 Lag in the System", () => {
       expect(s.hand("p2")).toEqual([]);
       expect(s.backrow("p2", 2)).toBeNull();
       expect(s.hand("p1").map((card) => card.defId)).toEqual([FELINORS, VANILLA]);
+    });
+
+    it("R65 their hand card is read at its hand cost: a (2) Trap under their Toe Cracker costs (0) and goes", () => {
+      const s = scenario({
+        p1: { hand: [{ def: LAG, radiant: true }, FELINORS] },
+        p2: { hand: [EXPERIMENT, STOCKPILE], field: [TOE_CRACKER], library: [FELINORS] },
+      });
+      s.play(LAG);
+      s.expectInZone(EXPERIMENT, "exile");
+      s.expectInZone(STOCKPILE, "exile");
+      s.expectInZone(TOE_CRACKER, "field");
+    });
+
+    it("R396 an X card in their hand or deck costs 0 and goes", () => {
+      const s = scenario({
+        p1: { hand: [{ def: LAG, radiant: true }, FELINORS] },
+        p2: { hand: [DIVIDEND, FELINORS], library: [BILLY] },
+      });
+      s.play(LAG);
+      s.expectInZone(DIVIDEND, "exile");
+      s.expectInZone(BILLY, "exile");
+      s.expectInZone(FELINORS, "hand");
     });
   });
 });

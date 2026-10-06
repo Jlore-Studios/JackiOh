@@ -98,8 +98,10 @@ describe("R277 the word diff", () => {
     // Pile On's (no longer returns to the deck) and Classic+ #5 Guy Att's (destroys every backrow
     // card, not only yours), the brief's own Radiant texts (docs/classic-sets.md, B6, B7). Patch
     // v0.2.4 adds Classic+ #34 Memory Leak: its Radiant face is its base text less "Choose one."
-    // (both modes, no choice).
-    expect(silent).toEqual(["core-055", "classic-060", "classicplus-005", "classicplus-034"]);
+    // (both modes, no choice). Balance patch 1 gives Classic #28 Second Wind's base face the same
+    // minimum price as its Radiant face, so its Radiant face is its base text less the exile
+    // replacement.
+    expect(silent).toEqual(["core-055", "classic-028", "classic-060", "classicplus-005", "classicplus-034"]);
   });
 });
 

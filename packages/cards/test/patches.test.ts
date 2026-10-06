@@ -221,6 +221,36 @@ describe("R388 card patch history (B4.2)", () => {
     expect(fieldsOf("classicplus-040")).toEqual(["base.text", "radiant.text"]);
   });
 
+  it("R388 records patch v0.2.13: Book of Wildfire becomes a different Book (issue #271)", () => {
+    // Shipped by `patches ship` (R646): Classic #55 changed against v0.2.12's snapshot.
+    expect(idsOf("v0.2.13", "added")).toEqual([]);
+    expect(idsOf("v0.2.13", "removed")).toEqual([]);
+    expect(idsOf("v0.2.13", "changed")).toEqual(["classic-055"]);
+    const change = changesOf("v0.2.13").find((entry) => entry.id === "classic-055");
+    expect(change?.kind === "changed" ? [...change.fields].sort() : []).toEqual(["base.text", "loc", "radiant.text"]);
+  });
+
+  it("R388 records patch v0.2.15: Classic and Classic+ balance patch 1 (issue #88)", () => {
+    // Numbered v0.2.15 before main shipped v0.2.16, v0.2.16b and v0.2.17, so it ships after them:
+    // ship order is not name order (R646). Pending, the fragment claims the balance cards and the
+    // catalog differs from the newest shipped snapshot on exactly those; shipped, `patches ship`
+    // has recorded the same cards against the patch before it. The test holds on both sides of
+    // the promotion, which cannot edit it.
+    const fragment = readFragments().find(({ fragment }) => fragment.version === "v0.2.15")?.fragment;
+    const at = VERSIONS.indexOf("v0.2.15");
+    const before = readSnapshot(at === -1 ? VERSIONS[VERSIONS.length - 1]! : VERSIONS[at - 1]!);
+    const after = (fragment !== undefined ? CATALOG : readSnapshot("v0.2.15")) as unknown as Catalog;
+    const claimed = fragment !== undefined ? fragment.cards : idsOf("v0.2.15", "changed");
+    if (fragment === undefined) {
+      expect(idsOf("v0.2.15", "added")).toEqual([]);
+      expect(idsOf("v0.2.15", "removed")).toEqual([]);
+    }
+    const changes = diffCatalogs(before, after).filter((change) => claimed.includes(change.id));
+    expect(changes.filter((change) => change.kind !== "changed")).toEqual([]);
+    expect(changes.map((change) => change.id)).toEqual(claimed);
+    expect(claimed).toHaveLength(62);
+  });
+
   it("R388 records patch v0.2.12: Animated removed from eighteen Field Spells (issue #218)", () => {
     // The eighteen, in catalog order — the order a fragment's `cards` and a patch's `changes` use.
     const unanimated = [

@@ -96,12 +96,13 @@ describe("C #71 Lane Eater", () => {
       expect(locked(s, "p2", "units", 2)).toBe(true);
     });
 
-    it("R47 a destroyed Reborn Unit cannot return to its now-Locked zone", () => {
+    it("R47 R688 a destroyed Reborn Unit returns to its now-Locked zone: a Lock refuses plays, not the return", () => {
       const s = scenario({ p1: { hand: [LANE_EATER, STOCKPILE], library: SPARE.library, mana: 10 }, p2: { field: [{ def: DEFENDER, lane: 2 }], ...SPARE } });
-      const defender = s.unit("p2", 2)!;
+      const defenderId = s.unit("p2", 2)!.id;
       s.play(LANE_EATER, { zone: 2 });
-      s.expectInZone(defender, "graveyard");
-      expect(s.unit("p2", 2)).toBeNull();
+      expect(s.unit("p2", 2)?.id).toBe(defenderId);
+      expect(s.unit("p2", 2)?.defId).toBe(DEFENDER);
+      expect(locked(s, "p2", "units", 2)).toBe(true);
     });
 
     it("R13 a backrow pile: only its top is destroyed, and the card beneath resumes in the Locked zone", () => {

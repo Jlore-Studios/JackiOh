@@ -277,7 +277,8 @@ export default function Card(props: CardProps): ReactElement {
               ),
           }
         : null;
-  const inspect = useInspectTrigger(subject, { prefer: form === "full" ? "above" : "beside", touchHold: props.touchHold });
+  // Lines of code is a hidden stat in matches.
+  const inspect = useInspectTrigger(subject, { prefer: form === "full" ? "above" : "beside", touchHold: props.touchHold, showLoc: false });
 
   const legal = isLegal(props.highlight, testId);
   const selected = isSelected(props.highlight, testId);

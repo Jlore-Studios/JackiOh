@@ -26,12 +26,6 @@ export type ActionBody =
       targets?: Selection[];
       modes?: string[];
       /**
-       * B5 E5: the cards discarded to pay a targeting cost the play's declared targets carry (Classic
-       * #89 Paul Allen's Ghost: "to target this, a player must also discard 2 cards"), as a Tribute
-       * carries its paying set (R101).
-       */
-      discards?: string[];
-      /**
        * B5 E11, E19: Plague Counters paying part of the price of a play from the graveyard (Classic #74
        * Corpse Plantation): `from` is the card they come off, `tokens` how many — each pays (1).
        */
@@ -51,8 +45,6 @@ export type ActionBody =
       targets?: Selection[];
       modes?: string[];
       tributes?: string[];
-      /** B5 E5, R450: the cards a costly declared target (Classic #89) is paid with, as a play's `discards`. */
-      discards?: string[];
     }
   /** R43, R384: Heroic Power's activation, kept as an alias of `activate` so old logs replay. */
   | { type: "activatePower"; instanceId: string; targets?: Selection[] }

@@ -1,7 +1,7 @@
 // C+ #78 Claude's Datacenter — SPEC §8.7 row 78, BUILD M9 Classic+ row C+ 78: "Field Spell: at each end
 // of your turn adds a random AI generated card (T-AI-1 to T-AI-10, the pool its text names) that costs
 // (0) to your hand; nothing at the opponent's end; a full hand burns it; hidden from the opponent (R97);
-// the count reads through `param()`; radiant the card is Radiant".
+// the count is fixed at 1 with no tunable (balance patch 1); radiant the card is Radiant".
 
 import { stepParam } from "@jackioh/engine";
 import type { CardView } from "@jackioh/shared";
@@ -33,11 +33,11 @@ function aiCardsIn(s: Scenario): ReturnType<Scenario["hand"]> {
 }
 
 describe("C+ #78 Claude's Datacenter", () => {
-  it("is a (2) Legendary Field Spell declaring cards 1", () => {
+  it("is a (2) Legendary Field Spell with no tunable count", () => {
     expect(def.type).toBe("Field Spell");
     expect(def.cost).toBe(2);
     expect(def.rarity).toBe("Legendary");
-    expect(def.params).toEqual([{ key: "cards", base: 1, radiant: 1, better: "up", step: 1, min: 1 }]);
+    expect(def.params).toBeUndefined();
     expect(base.endOfTurn).toBeTypeOf("function");
     expect(radiant.endOfTurn).toBeTypeOf("function");
   });
@@ -102,11 +102,11 @@ describe("C+ #78 Claude's Datacenter", () => {
       expect(theirs).not.toContain(added?.defId ?? "?");
     });
 
-    it("R386 the count reads through param(): an Upgrade adds 2", () => {
+    it("R386 the count is fixed at 1: an Upgrade still adds exactly one card", () => {
       const s = setup();
       stepParam(s.card(DATACENTER), "cards", 1);
       s.endTurn();
-      expect(aiCardsIn(s)).toHaveLength(2);
+      expect(aiCardsIn(s)).toHaveLength(1);
       expect(aiCardsIn(s).every((card) => card.costOverride === 0)).toBe(true);
     });
   });

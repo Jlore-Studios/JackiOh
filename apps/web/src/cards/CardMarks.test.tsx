@@ -104,6 +104,18 @@ describe("R437 the mark on the board", () => {
     expect(aura(root, ids.theirs ?? "")?.querySelector(".card-marks__aura")?.getAttribute("aria-hidden")).toBe("true");
   });
 
+  it("R437 Classic #20's death mark wears #50's aura in red, with its own words", () => {
+    const { view, ids } = markedView([{ mark: "destroy", color: "red" }]);
+    const root = renderBoard(view);
+    const marks = aura(root, ids.theirs ?? "");
+    expect(marks?.getAttribute("data-marks")).toBe("destroy");
+    expect(marks?.getAttribute("data-mark-color")).toBe("red");
+    expect(marks?.style.getPropertyValue("--mark-rim")).toBe(MARK_PALETTES.red.rim);
+    const badge = marks?.querySelector<HTMLElement>(".card-mark-badge");
+    expect(badge?.getAttribute("title")).toBe(MARK_WORDS.destroy?.text);
+    expect(badge?.querySelector(".card-mark-badge__text")?.textContent).toBe(MARK_WORDS.destroy?.text);
+  });
+
   it("R437 the colour key maps through the palette table, one badge per mark, and an unknown key falls back to the default", () => {
     const { view, ids } = markedView([
       { mark: "steal", color: "green" },

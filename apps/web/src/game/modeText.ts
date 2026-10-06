@@ -10,10 +10,10 @@
 type ModeText = { label: string; detail: string };
 
 export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText>>>> = {
-  // #17 Flood (radiant): "Choose one: Return all Units, return all enemy Units, or destroy all enemy Units. Then draw 1."
+  // #17 Flood (radiant): "Choose one: Bounce all Units, Bounce all enemy Units, or destroy all enemy Units. Then draw 1."
   "core-017": {
-    "bounce all units": { label: "Return all units", detail: "Every unit returns to its owner's hand. Then draw 1." },
-    "bounce all enemy units": { label: "Return enemy units", detail: "Your opponent's units return to their hand. Then draw 1." },
+    "bounce all units": { label: "Bounce all units", detail: "Every unit returns to its owner's hand. Then draw 1." },
+    "bounce all enemy units": { label: "Bounce enemy units", detail: "Your opponent's units return to their hand. Then draw 1." },
     "destroy all enemy units": { label: "Destroy enemy units", detail: "Destroy every enemy unit. Then draw 1." },
   },
   // #24 Efficiency Dividend: "deal X damage to a target; heal a target 2X; gain floor(X/2) mana next turn".
@@ -46,6 +46,14 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     enemy: { label: "Enemy permanents", detail: "Destroy every enemy permanent." },
     all: { label: "All permanents", detail: "Destroy every permanent on both sides." },
   },
+  // C+ #40 Appropriations (X spell): "Choose one: Military, Education, Culture, or Healthcare" —
+  // the effects the Discover menu shows, X filled in on play.
+  "classicplus-040": {
+    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +2X Attack and Rush." },
+    Education: { label: "Education", detail: "Shuffle 2X random Radiant Books into your deck. They have Cast on draw." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant." },
+    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +2X Health and Armor X." },
+  },
 };
 
 /**
@@ -53,6 +61,13 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
  * missing here reads the same on both faces.
  */
 export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText>>>> = {
+  // C+ #40 Appropriations, radiant: every multiple quintupled, the Armor doubled.
+  "classicplus-040": {
+    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +5X Attack and Rush." },
+    Education: { label: "Education", detail: "Shuffle 5X random Radiant Books into your deck. They have Cast on draw." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant." },
+    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X." },
+  },
   // #24 Efficiency Dividend, radiant: "deal 2X damage to a target; heal a target 4X; gain X mana
   // next turn" (§8 #24, R275), every mode doubled.
   "core-024": {

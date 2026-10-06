@@ -33,7 +33,7 @@ const DREAM = "core-023"; // (1) Spell: … End of turn: Return this to your han
 const CN_VIRUS = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage.
 const MENACE = "core-019"; // (3) Unit 9/9
 const VANILLA = "core-008"; // (1) Unit 4/4
-const PALANTIR = "classic-004"; // Base: when your opponent plays a Book, you may Tribute this to steal it.
+const PALANTIR = "classic-004"; // Base: when your opponent plays a Book, Tribute this to steal it (mandatory, no prompt).
 
 const AT_P2: Selection[] = [{ pick: "hero", player: "p2" }];
 
@@ -165,17 +165,20 @@ describe("C #57 Echo", () => {
     });
 
     it("R546 it keeps its own name, cost, type and tags: copying a Book makes no Book play, and C #4 Palantir does not ask", () => {
-      const s = scenario({ p1: { hand: [WILDFIRE, ECHO, VANILLA] }, p2: { backrow: [PALANTIR], hand: [VANILLA] } });
-      s.play(WILDFIRE, { targets: AT_P2 });
-      expect(s.state.pending?.playerId).toBe("p2");
-      s.answer("pass");
+      // p2's own Book: Palantir answers only the opponent's Books, so it resolves.
+      const s = scenario({ active: "p2", p1: { hand: [ECHO, VANILLA] }, p2: { hand: [WILDFIRE, VANILLA], backrow: [PALANTIR] } });
+      s.play(WILDFIRE, { targets: [{ pick: "hero", player: "p1" }] });
+      expect(s.state.pending).toBeNull();
+      s.expectInZone(PALANTIR, "field");
       expect(ownView(s)).toMatchObject({ defId: ECHO, cost: 1, copies: { defId: WILDFIRE } });
+      s.endTurn();
+      // p1's Echo copies the resolved Book: the copy is no Book play, so Palantir does not answer.
       s.play(ECHO, { targets: AT_P2 });
       expect(s.state.pending).toBeNull();
-      expect(s.lastEvents.find((event) => event.type === "cardPlayed")).toMatchObject({ defId: ECHO, costPaid: 1 });
-      expect(hits(s.events, "hero-p2")).toEqual([4, 4]);
-      expect(playedThisGameWithTag(s.state, "p1", "Book")).toBe(1);
       s.expectInZone(PALANTIR, "field");
+      expect(s.lastEvents.find((event) => event.type === "cardPlayed")).toMatchObject({ defId: ECHO, costPaid: 1 });
+      expect(hits(s.events, "hero-p2")).toEqual([4]);
+      expect(playedThisGameWithTag(s.state, "p1", "Book")).toBe(0);
     });
 
     it("R545 an X-cost text: X is chosen with the play, from 1 up to the mana left once Echo's (1) is paid", () => {

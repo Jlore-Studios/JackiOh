@@ -421,6 +421,9 @@ function backrowView(state: GameState, card: CardInstance | null, viewer: Player
     controller: card.controller,
     // R351, R371: the controller reads a face-down trap, and the view says the other player cannot.
     ...(isFaceDown(state, card) ? { unrevealed: true as const } : {}),
+    // R243, §6.3 Vanilla: a backrow card's text can be gone too, and the stamp renders off the
+    // unit prop, so the flag travels here as it does on a unit view.
+    ...(card.vanilla === true ? { vanilla: true as const } : {}),
     ...buried,
   };
 }

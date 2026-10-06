@@ -1,8 +1,8 @@
 // C+ #48 Jlockheed's Lobbyist — SPEC §8.7 row 48, BUILD M9 Classic+ row C+ 48: "0/3: cannot be in
 // Defense Position (a switch is refused, a switch-all effect leaves it in Attack) and never attacks
 // with 0 attack; Death adds a random non-token Jlockeed card that costs (0), the pool exactly Core #13,
-// #14 and C+ #51, #52 (one tag, never itself, R387); a full hand burns it; hidden from the opponent
-// (R97); radiant 0/6, may go to Defense Position, and the card is Radiant".
+// #14, Classic #4 and C+ #51, #52 (one tag, never itself, R387); a full hand burns it; hidden from the
+// opponent (R97); radiant 0/6, may go to Defense Position, and the card is Radiant".
 
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
@@ -13,7 +13,7 @@ const HIT_JOB = "core-016"; // (3) Spell: destroy target Unit
 const SWITCH_ALL = "core-048"; // (0) Spell: switch the position of every Unit
 const VANILLA = "core-008"; // Mr. Vanilla 4/4
 const FILLER = "core-005";
-const POOL = ["classicplus-051", "classicplus-052", "core-013", "core-014"];
+const POOL = ["classic-004", "classicplus-051", "classicplus-052", "core-013", "core-014"];
 
 function board(opts: { radiant?: boolean; seed?: string; hand?: readonly string[] } = {}): Scenario {
   return scenario({
@@ -94,7 +94,7 @@ describe("C+ #48 Jlockheed's Lobbyist", () => {
       expect(card.costOverride).toBe(0);
     });
 
-    it("R278 R387 the pool is exactly Core #13, #14 and C+ #51, #52 — one tag, never itself", () => {
+    it("R278 R387 the pool is exactly Core #13, #14, Classic #4 and C+ #51, #52 — one tag, never itself", () => {
       const seen = new Set<string>();
       for (let i = 0; i < 80; i += 1) {
         const s = board({ seed: `lobby-${i}` });

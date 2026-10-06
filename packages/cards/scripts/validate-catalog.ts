@@ -150,7 +150,7 @@ const EXPECTED_TAG_COUNTS: Readonly<Record<(typeof TAGS)[number], number>> = {
   Fruit: 15,
   "Call to Chaos": 2,
   Quickdraw: 5,
-  Jlockeed: 5,
+  Jlockeed: 6,
   Book: 14,
   Pancake: 10,
   AI: 10,
