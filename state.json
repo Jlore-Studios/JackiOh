@@ -1,0 +1,14 @@
+{
+  "halt": {},
+  "halted": false,
+  "items": {},
+  "last_run": null,
+  "providers": {},
+  "rate_limited_until": null,
+  "suggest": {
+    "last_run": null,
+    "requested": false
+  },
+  "usage": null,
+  "version": 1
+}
