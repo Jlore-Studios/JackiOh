@@ -208,7 +208,7 @@ def read(gh: Any, number: int, limit: int = READ_CHARS) -> str:
     """The end of an item's journal, from the start of a run, or "" (none yet, or unreadable)."""
     try:
         text, _ = gh.get_file(path_for(number), BRANCH)
-    except GitHubError:
+    except Exception:  # noqa: BLE001 - a journal that cannot be read never stops a claim
         return ""
     if not text:
         return ""

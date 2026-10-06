@@ -607,8 +607,8 @@ class Deliverer:
         try:
             journal_mod.append(self.gh, key, text)
             self.log.append(f"added this run to the journal of #{key}")
-        except GitHubError as exc:
-            self.log.append(f"the journal of #{key} could not be written: {exc}")
+        except Exception as exc:  # noqa: BLE001 - the delivery already stands
+            self.log.append(f"the journal of #{key} could not be written: {redact(str(exc))}")
 
     def _journal_link(self, number: int) -> str:
         key = journal_mod.key(self.plan) or number

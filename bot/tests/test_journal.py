@@ -208,6 +208,24 @@ class OpusLaneTests(unittest.TestCase):
         pr = h.gh.list_pulls(head="bot/issue-12")[0]
         self.assertIn("blob/bot-journal/12.md", pr["body"])
 
+    def test_a_journal_that_fails_never_stops_the_run(self):
+        """The journal is a record, never a gate: a read that fails in the claim and a write that
+        fails in deliver leave the run as it would have been."""
+        h = Harness(self, env=ALL, machine=MACHINE)
+        h.gh.add_issue(12, labels=(LABEL_BUILD, "difficulty:hard"))
+        real = h.gh.get_file
+
+        def down(path, ref):
+            if ref == journal.BRANCH:
+                raise RuntimeError("the Contents API is down")
+            return real(path, ref)
+        h.gh.get_file = down
+        planned, result = h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
+                                              "review": reviewer(APPROVE)}))
+        self.assertNotIn("journal", planned)
+        self.assertEqual(result["status"], "approved")
+        self.assertTrue(h.gh.list_pulls(head="bot/issue-12"))
+
     def test_a_pull_requests_runs_go_to_its_issues_journal(self):
         h = Harness(self, env=ALL, machine=MACHINE)
         h.gh.add_issue(12, labels=(LABEL_BUILD, "difficulty:hard"))
