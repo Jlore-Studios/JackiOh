@@ -438,7 +438,9 @@ def section(ctx: Context) -> str:
     lines += ["### Its queue", ""] + queue_table(issues) + [""]
     if MODES:
         lines += ["### Its trees", ""] + trees_table(ctx, state) + [""]
-    lines += [f"### Last {BOT_TITLE} runs", ""] + runs_table(ctx) + ["", SECTION_END]
+    lines += [f"### Last {BOT_TITLE} runs", ""] + runs_table(ctx) + [""]
+    lines += [f"<details><summary>{BOT_TITLE}'s full status</summary>", "",
+              status_mod.report(ctx), "", "</details>", "", SECTION_END]
     return "\n".join(lines)
 
 
