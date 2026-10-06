@@ -10,22 +10,20 @@
 // line. That crossing is an entry (R171): the card takes this turn as its
 // `summonedTurn` and a fresh exertion, so it is summoning sick on its new side for the rest of the
 // turn. A card that moves along its own side has entered nothing and keeps both. The owner never
-// changes, so the card still goes to its owner's hand, library, graveyard or exile whenever it
-// later leaves the field (R12). A face-down trap that crosses is read by its new controller and no
+// changes, so the card still goes to its controller's hand (R745), or its owner's library,
+// graveyard or exile (R12), whenever it later leaves the field. A face-down trap that crosses is read by its new controller and no
 // longer by the old one, which follows from `controller` alone, so `faceUp` is deliberately
 // untouched here (R33).
 
 import type { PlayerId, Row } from "@jackioh/shared";
 import { enterNewSide } from "../combat";
-import { addToHand } from "../draw";
+import { bounceCard } from "../effects/move";
 import { effectiveCost } from "../mana";
 import type { EngineSink } from "../resolve";
 import type { CardInstance, GameState } from "../state";
 import {
   isLocked,
   isReserved,
-  isUnitToken,
-  moveToZone,
   placeOnField,
   removeFromField,
   ringNeighbor,
@@ -44,8 +42,8 @@ export type RotationArgs = {
   /** Whose seat "left" and "right" are read from: the rotating player (§3.1, §8 #52). */
   perspective: PlayerId;
   /**
-   * #52 radiant: a card that would cross to the opponent of `perspective` bounces to its owner's
-   * hand at cost 0 instead; one crossing towards `perspective` still crosses (R14).
+   * #52 radiant: a card that would cross to the opponent of `perspective` bounces to its
+   * controller's hand at cost 0 instead; one crossing towards `perspective` still crosses (R14).
    */
   radiant?: boolean;
 };
@@ -58,7 +56,7 @@ export type RotationResult = {
    * entered its new side on this turn (R171).
    */
   crossed: string[];
-  /** Cards sent to their owner's hand: a Locked destination, or the radiant bounce (R14). */
+  /** Cards sent to their controller's hand: a Locked destination, or the radiant bounce (R14). */
   bounced: string[];
 };
 
@@ -101,29 +99,15 @@ function placeContents(state: GameState, cards: readonly CardInstance[], to: Zon
 }
 
 /**
- * R14: the card goes to its owner's hand (R12). The hand cap applies, so a full hand burns it
- * (§2.4, R4), and a unit token ceases to exist on the way and never reaches a hand (R11).
+ * R14: the card goes to its controller's hand (R745, shared with §6.3 Bounce). The hand cap
+ * applies, so a full hand burns it (§2.4, R4), and a unit token ceases to exist on the way and
+ * never reaches a hand (R11).
  * `costOverride` is the radiant variant's "costing 0"; R78 keeps it while the card waits in hand.
  */
 function bounceHome(sink: EngineSink, card: CardInstance, costOverride?: number): void {
-  const token = isUnitToken(sink.state, card);
-  const event = {
-    type: "bounced" as const,
-    instanceId: card.id,
-    defId: card.defId,
-    owner: card.owner,
-  };
-
-  if (token) {
-    moveToZone(sink.state, card, "hand");
-    sink.events.push(event);
-    return;
-  }
-
-  sink.events.push(event);
-  addToHand(sink, card);
-  // §8 #52 radiant: "bounced to their owner's hand costing 0" is a rider on a card that reaches the
-  // hand. A full hand burns it instead (§2.4, R4), and a burned card is an ordinary graveyard card
+  bounceCard(sink, card);
+  // §8 #52 radiant: "bounced to their controller's hand costing 0" is a rider on a card that reaches
+  // the hand. A full hand burns it instead (§2.4, R4), and a burned card is an ordinary graveyard card
   // that R78 would otherwise have carry the 0 into every later zone.
   if (costOverride === undefined || card.zone.z !== "hand") return;
   card.costOverride = costOverride;
@@ -166,12 +150,12 @@ export function rotateRings(sink: EngineSink, args: RotationArgs): RotationResul
   for (const entry of entries) {
     const crosses = entry.to.player !== entry.from.player;
 
-    // #52 radiant: "cards that would move to the opponent are bounced to their owner's hand
+    // #52 radiant: "cards that would move to the opponent are bounced to their controller's hand
     // costing 0 instead" — the cards the rotating player would lose, which are the ones leaving
     // their side. "The opponent" is the rotating player's (§8 Conventions: "your" is the
     // controller), so a card crossing the other way, onto the rotating player's side, is not one of
     // them: the base clause the radiant cell does not restate still holds for it, and it crosses and
-    // changes control like any other (R14, R171). The bounce goes to the card's owner's hand (R12).
+    // changes control like any other (R14, R171). The bounce goes to the card's controller's hand (R745).
     // A Locked destination would have bounced an outbound card anyway, so this also covers that case.
     if (radiant && crosses && entry.from.player === args.perspective) {
       for (const card of entry.cards) {
@@ -181,7 +165,7 @@ export function rotateRings(sink: EngineSink, args: RotationArgs): RotationResul
       continue;
     }
 
-    // R14: a card whose destination is Locked is bounced to its owner's hand instead.
+    // R14: a card whose destination is Locked is bounced to its controller's hand instead.
     if (!canAccept(state, entry.to)) {
       for (const card of entry.cards) {
         bounceHome(sink, card);

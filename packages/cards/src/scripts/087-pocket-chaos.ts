@@ -32,7 +32,7 @@
 //     placed, so control changes for everything including face-down traps — which stay face-down
 //     and become readable by their new controller only (R33) — while ownership does not (R12).
 //     Locks are zone flags and stay with their zones, and a card whose destination is Locked or
-//     reserved bounces to its owner's hand (R88, R4, R11).
+//     reserved bounces to its controller's hand (R88, R4, R11, R745).
 //   - library: the two piles change places whole and in order, and each swapped card's owner
 //     becomes the player now holding it — R12's one exception (R73). Fatigue stays with the player.
 //

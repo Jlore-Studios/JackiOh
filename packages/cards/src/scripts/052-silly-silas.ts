@@ -2,7 +2,7 @@
 // R14, R33, R78, R81, R88). Unit 4/4 → 8/8, Human, cost 3, Legendary. BUILD wave 3 (rotation).
 //   Base:    "Cry: choose left or right; rotate every card on the field one step around its ring
 //            (3.1); cards crossing sides change control"
-//   Radiant: "Cards that would move to the opponent are bounced to their owner's hand costing 0
+//   Radiant: "Cards that would move to the opponent are bounced to their controller's hand costing 0
 //            instead" — §8 Conventions: the cell restates only what happens to a crossing card, so
 //            the direction choice and the rotation itself are kept.
 //
@@ -33,11 +33,12 @@
 //   * a card that crosses the centre line has entered its new controller's side (R171): it takes
 //     this turn as its `summonedTurn`, so it is summoning sick there, and a fresh exertion;
 //   * `controller` changes only when the destination is on the other side of the centre line, and
-//     `owner` never changes (R12), so a crossed card still leaves to its OWNER's piles later; a
+//     `owner` never changes (R12), so a crossed card still leaves to its controller's hand (R745),
+//     or its owner's other piles, later; a
 //     face-down trap that crosses is read by its new controller alone, which follows from
 //     `controller` and is why `faceUp` is untouched (R33);
-//   * a Locked or Reborn-reserved destination bounces the card to its owner's hand instead (R14,
-//     R88), where the hand cap applies (R4) and a unit token ceases to exist on the way (R11);
+//   * a Locked or Reborn-reserved destination bounces the card to its controller's hand instead
+//     (R14, R88, R745), where the hand cap applies (R4) and a unit token ceases to exist on the way (R11);
 //   * `radiant: true` replaces an OUTBOUND crossing — a card leaving this player's side for the
 //     opponent's, "cards that would move to the opponent" — with that same bounce at
 //     `costOverride: 0`. The opponent's cards crossing onto this side are not moving "to the

@@ -22,8 +22,9 @@
 //
 // The pick arrives in `ctx.targets` as `{ pick: "instance", instanceId }` (that is what
 // `discoverFromGraveyard` offers, R50), so `{ of: "chosen" }` names it. Two verbs finish the job:
-//   - `bounce` moves the named card to its owner's hand. §6.3 Bounce is "return to owner's hand"
-//     with no zone restriction, the hand cap burns it when the hand is full (§2.4, R4), and #72
+//   - `bounce` moves the named card to its controller's hand — its owner's, out of a graveyard
+//     (R745). §6.3 Bounce is "return to controller's hand" with no zone restriction, the hand cap
+//     burns it when the hand is full (§2.4, R4), and #72
 //     Reminisce's Engine cell prints this same move as "chosen card moves GY → hand"; #23
 //     Reoccurring Dream already uses it to come back out of the graveyard. There is no
 //     `moveToHand` verb and there should not be: §6.3's Add to hand row is one verb that "Creates

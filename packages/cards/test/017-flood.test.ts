@@ -46,7 +46,7 @@ const TEN_CARDS = [
 ];
 
 describe("#17 Flood (base)", () => {
-  it("bounces every unit on both sides to its owner's hand (§6.3 Bounce, R12)", () => {
+  it("bounces every unit on both sides to its controller's hand (§6.3 Bounce, R745)", () => {
     const s = scenario({
       p1: { hand: ["core-017", "core-010"], field: ["core-012"], mana: 4 },
       p2: { field: ["core-019", "core-020"] },
@@ -65,7 +65,7 @@ describe("#17 Flood (base)", () => {
       expect(s.unit("p1", lane)).toBeNull();
       expect(s.unit("p2", lane)).toBeNull();
     }
-    // R12: off the field a card always goes to its OWNER's hand, never the caster's.
+    // R745: each card goes to its CONTROLLER's hand, never the caster's.
     expect(s.pile("p1", "hand").some((card) => card.id === mine.id)).toBe(true);
     expect(s.pile("p2", "hand").map((card) => card.id)).toContain(theirs1.id);
   });
@@ -87,7 +87,7 @@ describe("#17 Flood (base)", () => {
     s.expectInZone(real, "hand");
   });
 
-  it("R4 a bounced unit is burned to the graveyard when its owner's hand is full", () => {
+  it("R4 a bounced unit is burned to the graveyard when its controller's hand is full", () => {
     const s = scenario({
       // Eleven cards: playing Flood leaves exactly HAND_CAP (10) behind, so the bounce has no room.
       p1: { hand: ["core-017", ...TEN_CARDS], field: ["core-012"], mana: 4 },
@@ -101,7 +101,7 @@ describe("#17 Flood (base)", () => {
     expect(s.pile("p1", "hand")).toHaveLength(10);
     s.expectInZone(mine, "graveyard");
     s.expectEvents("burned", "enteredGraveyard");
-    // The opponent's hand is empty, so their unit is not burned: the cap is per owner.
+    // The opponent's hand is empty, so their unit is not burned: the cap is the entering hand's.
     s.expectInZone(theirs, "hand");
   });
 

@@ -4301,10 +4301,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(691, "effects-transform.test.ts");
   });
 
-  // Proved by packages/cards test/card-text.test.ts "R692 …" (no face says "return … to hand"; the
-  // cards that return one say Bounce) and apps/web src/cards/rules.test.ts "R692 …" (the glossary
-  // finds Bounce and "Bounced" where cards print them).
-  it("R692 prints Bounce for every return to hand", () => {
+  // Proved by packages/cards test/card-text.test.ts "R692 …" (every face that returns a permanent
+  // from the field says Bounce, and no face but R744's says "return … to hand") and apps/web
+  // src/cards/rules.test.ts "R692 …" (the glossary finds Bounce and "Bounced" where cards print them).
+  it("R692 prints Bounce for a permanent's return to hand from the field", () => {
     provenIn(692, "../../cards/test/card-text.test.ts", "../../../apps/web/src/cards/rules.test.ts");
   });
 
@@ -4392,6 +4392,20 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // filed under an old name once, oldest name first, the catalog stamp and the grants in step).
   it("R743 numbers the card patches in order, and a database renames the rows filed under the old names", () => {
     provenIn(743, "../../cards/test/patches.test.ts", "../../../apps/server/test/sql/14_patch_retcon.sql");
+  });
+
+  // Proved by cards test/card-text.test.ts "R744 …" (the thirteen faces that return a card from the
+  // graveyard, exile or a resolved Spell say "Return … to hand", none says Bounce, and no other face
+  // says "return … to hand").
+  it("R744 prints Bounce only for a permanent on the field, and Return … to hand for every other return", () => {
+    provenIn(744, CARDS_CARD_TEXT_TEST);
+  });
+
+  // Proved by effects-move.test.ts "R745 …" (a stolen unit bounces to its controller's hand without
+  // changing owner, and into a full controller hand it burns to its owner's graveyard) and
+  // effects-boardwide.test.ts "R745 …" (the sweep returns each card to its controller's hand).
+  it("R745 bounces a permanent to its controller's hand, never the owner's", () => {
+    provenIn(745, "effects-move.test.ts", "effects-boardwide.test.ts");
   });
 });
 

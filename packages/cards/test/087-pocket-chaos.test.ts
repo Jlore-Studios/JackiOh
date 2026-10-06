@@ -168,7 +168,7 @@ describe("#87 Pocket Chaos — base", () => {
 
     s.play(CHAOS, { modes: ["board"] });
 
-    // R88, following R14: an ordinary return to the owner's hand.
+    // R88, following R14: an ordinary return to the controller's hand (R745).
     s.expectInZone(gary, "hand");
     expect(s.hand("p1").some((card) => card.id === gary.id)).toBe(true);
     expect(s.unit("p2", 1)).toBeNull();

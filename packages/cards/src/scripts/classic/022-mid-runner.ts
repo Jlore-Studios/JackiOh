@@ -6,8 +6,8 @@
 //   Engine:  "Two independent checks. Midlane is computed from the lane count (R685: an odd count's
 //            center lane, an even count's both center lanes). "When you played this" is the
 //            mana before paying for it, recorded as the play begins (§10.5 step 1). Two different
-//            random enemy permanents (R60; Radiant: three) go to their owners' hands (Bounce, §6.3:
-//            the hand cap applies and tokens vanish). Tunes: mana threshold 4 ↓; bounces 2 ↑."
+//            random enemy permanents (R60; Radiant: three) go to their controllers' hands (Bounce,
+//            §6.3, R745: the hand cap applies and tokens vanish). Tunes: mana threshold 4 ↓; bounces 2 ↑."
 //
 // The two checks are read as the Cry begins and act in the text's order. In midlane the card
 // Tributes itself: §6.3's Sacrifice, a death (Death, Reborn and the destroyed count), which bypasses
@@ -20,7 +20,7 @@
 //
 // The bounce: that many DIFFERENT enemy permanents (R60), fewer if fewer exist — the tops of their
 // unit piles (R13) and their backrow cards, face-down ones included — drawn from the match rng as the
-// Cry reaches it, each to its owner's hand: the hand cap burns one that does not fit (R4, R317) and
+// Cry reaches it, each to its controller's hand (R745): the hand cap burns one that does not fit (R4, R317) and
 // a unit token ceases to exist (R11). A bounced face-down card lands in a hand its bouncer may not
 // read, so no view of theirs names it (R97).
 //

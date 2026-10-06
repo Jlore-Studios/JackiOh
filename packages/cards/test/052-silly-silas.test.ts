@@ -153,7 +153,7 @@ describe("#52 Silly Silas — base, rotating left", () => {
 });
 
 describe("#52 Silly Silas — a Locked destination (R14, R88)", () => {
-  it("R14 bounces the card to its owner's hand instead, reset per R78", () => {
+  it("R14 bounces the card to its controller's hand instead, reset per R78", () => {
     const s = scenario({
       p1: { hand: ["core-052"], field: [{ def: "core-053", lane: 5, damage: 2, position: "DEF" }] },
     });
@@ -187,7 +187,7 @@ describe("#52 Silly Silas — a Locked destination (R14, R88)", () => {
 });
 
 describe("#52 Silly Silas — radiant", () => {
-  it("R14 every card that would move to the opponent is bounced to its owner's hand costing 0 instead, and a card crossing to its side still crosses", () => {
+  it("R14 every card that would move to the opponent is bounced to its controller's hand costing 0 instead, and a card crossing to its side still crosses", () => {
     const s = scenario({
       p1: { hand: ["core-052"], field: [{ def: "core-053", lane: 5, damage: 2 }] },
       p2: { field: [{ def: "core-019", lane: 1 }] },
@@ -201,7 +201,7 @@ describe("#52 Silly Silas — radiant", () => {
     s.play("core-052", { zone: 1, modes: ["right"] });
 
     // "Cards that would move to the opponent": Reno would move from p1's lane 5 to p2's, so it goes
-    // home instead, at cost 0 (R12: the OWNER's hand, R65).
+    // home instead, at cost 0 (R745: the CONTROLLER's hand, R65).
     s.expectInZone(reno, "hand");
     expect(s.card(reno).owner).toBe("p1");
     expect(s.card(reno).costOverride).toBe(0);

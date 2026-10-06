@@ -12,8 +12,9 @@
 //   destination is on the other side of the centre line, and that is an entry (R171): every card
 //   that lands, a dormant Stack card and a backrow card included, takes this turn as its
 //   `summonedTurn` and a fresh exertion, so the units a player receives are summoning sick for the
-//   rest of the turn. `owner` does not change (R12), so the card still goes to its owner's hand,
-//   library, graveyard or exile when it later leaves the field. Locks are zone flags, so they stay
+//   rest of the turn. `owner` does not change (R12), so the card still goes to its controller's
+//   hand (R745), or its owner's library, graveyard or exile, when it later leaves the field.
+//   Locks are zone flags, so they stay
 //   with their zones and never travel with a card (R73, §3.2). A face-down trap stays face-down and
 //   is readable by its new controller only: `viewFor` keys that on `controller`, so `faceUp` is
 //   deliberately untouched here (R33).
@@ -25,15 +26,12 @@
 import type { PlayerId, Row } from "@jackioh/shared";
 import { opponentOf } from "@jackioh/shared";
 import { enterNewSide } from "../combat";
-import { addToHand } from "../draw";
 import type { Effect, EffectContext } from "../script";
 import { hideFromOwner } from "../ownLibrary";
 import type { CardInstance, GameState } from "../state";
 import {
   isLocked,
   isReserved,
-  isUnitToken,
-  moveToZone,
   placeOnField,
   removeFromField,
   slotsOf,
@@ -41,6 +39,7 @@ import {
   type ZoneSlot,
 } from "../zones";
 import { chosenOptions } from "./choose";
+import { bounceCard } from "./move";
 
 /** The three things #87 can swap; the values are the `swapped` event's `what` (§10.3). */
 export type SwapWhat = "health" | "board" | "library";
@@ -72,7 +71,7 @@ function mirrorOf(ref: ZoneSlot): ZoneSlot {
  *
  * R73 says locks stay with their zones but not what happens to a card whose destination is Locked,
  * or reserved for a dying Reborn unit (R64). R88 settles it, following R14, which answers the same
- * question for the other whole-board move: the card bounces to its owner's hand. The bounce is
+ * question for the other whole-board move: the card bounces to its controller's hand. The bounce is
  * #87's card-specific override of R688 (moves enter Locked zones unless the card says otherwise).
  */
 function canAccept(state: GameState, ref: ZoneSlot): boolean {
@@ -97,27 +96,12 @@ function placeContents(state: GameState, cards: readonly CardInstance[], to: Zon
 }
 
 /**
- * The bounce of the decision above: the card goes to its owner's hand (R12). The hand cap applies,
- * so a full hand burns it (§2.4, R4), and a unit token ceases to exist on the way and never reaches
- * a hand (R11).
+ * The bounce of the decision above: the card goes to its controller's hand (R745, shared with
+ * §6.3 Bounce). The hand cap applies, so a full hand burns it (§2.4, R4), and a unit token ceases
+ * to exist on the way and never reaches a hand (R11).
  */
 function bounceHome(ctx: EffectContext, card: CardInstance): void {
-  const token = isUnitToken(ctx.state, card);
-  const event = {
-    type: "bounced" as const,
-    instanceId: card.id,
-    defId: card.defId,
-    owner: card.owner,
-  };
-
-  if (token) {
-    moveToZone(ctx.state, card, "hand");
-    ctx.events.push(event);
-    return;
-  }
-
-  ctx.events.push(event);
-  addToHand(ctx, card);
+  bounceCard(ctx, card);
 }
 
 /** R73 health: the two values change places; armor stays with its hero. */
