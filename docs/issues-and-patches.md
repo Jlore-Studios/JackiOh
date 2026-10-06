@@ -34,6 +34,9 @@ assigns MaxGoetzmann and jgoetzmann (unassigning the bot); `method:use-bot` adds
 priority and its type labels, and assigns the bot (unassigning both people). An issue labelled
 `human` never goes to the bot. A suggestion the bot opened (`bot:suggestion`) is approved with
 `bot:approved`, which triage treats as `method:use-bot`; the bot builds no suggestion without it.
+Once triage has done this it takes the method label off (with `bot:approved` and `bot:suggestion`,
+and for `method:manual` the bot's queue labels) and comments that it classified the issue, so the
+labels left say who does it and what it is, not how it was handed on.
 
 **How hard it is.** A person may set a `difficulty:*` label, and the bot never changes it.
 Otherwise the night bot's planner rates the issue when it plans it, and it counts as medium until

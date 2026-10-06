@@ -263,13 +263,13 @@ needs level 3.
 | `bot:pr-open` | the issue has an open bot pull request |
 | `bot:pr` | a pull request the bot opened |
 | `bot:suggestion` | an improvement the bot proposes; add `bot:approved` to have it built, close it to say no. The queue never builds one without that approval |
-| `bot:approved` | a person's yes to a suggestion: two minutes later triage treats it as `method:use-bot`, so it gets its type labels (`patch`), a conventional title, a priority, `bot:build` and the bot, and the planner rates its difficulty ([Triage](#triage)) |
+| `bot:approved` | a person's yes to a suggestion: two minutes later triage treats it as `method:use-bot`, so it gets its type labels (`patch`), a conventional title, a priority, `bot:build` and the bot, and the planner rates its difficulty; then triage takes `bot:approved` and `bot:suggestion` off ([Triage](#triage)) |
 | `bot:needs-review` | a bot pull request that touches a review-only path; a person merges it |
 | `ready for merge` | the reviews approved the pull request's head, but auto-merge could not turn on (a review-only path, `main`'s protection, GitHub refusing it, or `auto_merge` off), so the bot @-mentions the operator to merge it. It comes off when the pull request goes back into the queue (a revision, a review run, a run that holds it, `bot:blocked`); triage never adds it |
 | `difficulty:easy`, `difficulty:medium`, `difficulty:hard` | the weakest tier that may build it: weak, medium, strong. A person may set one; otherwise the planner rates the item, under [the easy rule](#the-easy-rule), and the bot labels it; three failures of its own raise it a step ([below](#rating-strikes-and-the-step-up)). With none it counts as medium, and with several the hardest counts |
 | `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
 | `human` | people do it; the bot never queues, plans, builds or labels it |
-| `method:manual`, `method:use-bot` | a person's choice of who does an issue: two minutes after one goes on, triage makes the issue `human` and assigns both people (`method:manual`), or queues it and assigns the bot (`method:use-bot`; `bot:approved` counts as it). Triage takes no issue without one ([Triage](#triage)) |
+| `method:manual`, `method:use-bot` | a person's choice of who does an issue: two minutes after one goes on, triage makes the issue `human` and assigns both people (`method:manual`), or queues it and assigns the bot (`method:use-bot`; `bot:approved` counts as it), then takes the method label off and comments that it classified the issue. Triage takes no issue without one unless a person calls it ([Triage](#triage)) |
 | `Info` | for the record, nothing to build: migrations, statistics, the night bot's status |
 
 ## Triage
@@ -277,7 +277,16 @@ needs level 3.
 `triage.yml` labels, assigns, titles, types and links an issue once a person hands it on with a
 method label, and every pull request someone trusted opens, from a Muse call (`triage.py`, #307).
 To run it on a thread again: `gh workflow run triage.yml -f number=<n>` (or **Run workflow** on
-the triage workflow's Actions page); an issue still needs a method label.
+the triage workflow's Actions page). Called that way it classifies an issue with no method label
+too (its labels, type, title and links), without queueing or assigning it.
+
+- **Afterwards:** once everything else is done, triage takes off the labels that asked for it:
+  the method label, `bot:approved`, the `bot:suggestion` of a suggestion a person decided on
+  (so an approved one is built as any queued issue), and for `method:manual` the bot's queue
+  labels (`bot:build`, `bot:needs-plan`; never a run's `bot:working` or `bot:pr-open`). If any
+  change failed it keeps them, so a run again can finish. Then it comments on the thread that it
+  classified it: the method, and what it changed (account names without `@`, so it pings
+  nobody). Every thread it classifies, issue or pull request, gets that comment.
 
 - **Who:** the author must be an owner, member or collaborator, or on `.harness/trust.txt`, and not
   the bot. Anyone else's issue or pull request is left alone, so a stranger's text never reaches
@@ -350,9 +359,9 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-6` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | 100% of the week (Codex reports it) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, all of the week (its own `agy -p /usage`, the Gemini pool's row) |
-| `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16); **off since 2026-10-05** (#311: every call failed in seconds), with devin-train, until `devin -p` answers on the machine | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
+| `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16); off from 2026-10-05 to 2026-10-06 (#311: every call failed in seconds), on again since a `devin -p` call answered on the machine (#318) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
 | `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on two lanes | on the machine, as `agent-muse` | any time | 95% of 5 hours, all of the week (its TUI's `/usage` panel) |
-| `devin-train` | a second Devin login, `swe-2-max`, for ladder training only | on the training box, as `agent-devin-train` | any time | none: until it refuses |
+| `devin-train` | a second Devin login, `swe-2-max`, for ladder training only; **off** until the training box is built (#318) | on the training box, as `agent-devin-train` | any time | none: until it refuses |
 
 The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
 CLI each time; every other subscription's runs on its own runner on the machine, `night-vm-<id>`.

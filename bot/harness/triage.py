@@ -28,13 +28,21 @@ Three steps, each its own job, so the model never holds a GitHub write token:
    names ("Blocked by #125"), the earlier parts of its patch, and the blocked-by, blocks and
    parent (tracker) links the model proposes, each only to an open issue, never itself, never one
    already linked, at most `MAX_LINKS` of each. The night bot holds a build while it is blocked.
-   The one thing it removes is an assignee a method label moves: `method:manual` unassigns the
-   bot, `method:use-bot` both people.
+   What it removes: an assignee a method label moves (`method:manual` unassigns the bot,
+   `method:use-bot` both people), and, once everything else is done, the labels that asked for
+   the triage (`removals`): the method label, `bot:approved`, the `bot:suggestion` of a suggestion
+   a person decided on, and for `method:manual` the bot's queue labels. A change that failed keeps
+   them, so a run again can finish. Last it says in a comment what it did (`comment`), so every
+   thread it classifies says it was classified.
 
 A human task is assigned to both people and labelled `human`, so the night bot skips it. A bot task
 on an issue is assigned to the bot, which queues it (the sweep answers the assignment). A pull
 request keeps its title, since that becomes the squash commit's subject, and is never assigned to
 the bot; it gets type labels, and the people when it is human work.
+
+A person can call triage on any issue (`workflow_dispatch`), with a method label or not: after a
+triage has taken its method label off, a run again still classifies it (labels, type, title,
+links), and with no method it neither queues nor assigns it.
 
 Any failure, or the classifier switched off (`enabled` or `off_from` in providers.json), skips
 quietly.
@@ -80,6 +88,9 @@ METHOD_WAIT = timedelta(minutes=2)
 #: Labels that mean the queue already has the issue, so `method:use-bot` adds no `bot:build`.
 IN_QUEUE = frozenset({config_mod.LABEL_BUILD, config_mod.LABEL_WORKING, config_mod.LABEL_PR_OPEN,
                       config_mod.LABEL_BLOCKED})
+#: The bot's queue labels `method:manual` takes off: people do the issue now. A run that holds it
+#: (`bot:working`) or a pull request it opened keep theirs.
+QUEUED = frozenset({config_mod.LABEL_BUILD, config_mod.LABEL_NEEDS_PLAN})
 #: The subscription whose model classifies (`classifier_off`, `run_muse`).
 CLASSIFIER = "muse"
 #: Groups a thread carries at most one of; a person's choice from one is never added to.
@@ -130,11 +141,20 @@ class Plan:
     parent: int = 0
     #: Assignees a method label moves off it (#307).
     unassign: list[str] = field(default_factory=list)
+    #: Labels to take off once the rest is done (`removals`): the ones that asked for triage, and
+    #: those the method makes stale.
+    remove: list[str] = field(default_factory=list)
+    #: The method label this triage answered ("" with none).
+    method: str = ""
+    #: It got past the checks and was classified (`comment` says so); False when triage changed
+    #: nothing because the thread was closed, or its labels say not to.
+    classified: bool = False
     notes: list[str] = field(default_factory=list)
 
     def empty(self) -> bool:
         return not (self.labels or self.assignees or self.title or self.issue_type
-                    or self.blocked_by or self.blocks or self.parent or self.unassign)
+                    or self.blocked_by or self.blocks or self.parent or self.unassign
+                    or self.remove)
 
 
 # ------------------------------------------------------------------ the gate
@@ -209,8 +229,10 @@ def gate(payload: Mapping[str, Any], trust: Trust, bot_login: str, root: Path, a
     """Whether to classify this thread, and why not when not. An issue goes only with exactly one
     method label, and never to the bot when it is labelled `human` (#307). The bot's own
     suggestion goes too: its text is the bot's, and only a person with triage access can put the
-    method label on it. `asked`: a person called triage on it, so a pull request goes even when
-    it has everything already."""
+    method label on it. `asked`: a person with write access called triage on it, so it goes
+    whoever opened it, an issue goes with no method label (it is classified without one: triage
+    takes the label off once it has answered it), and a pull request goes even when it has
+    everything already."""
     thread, is_pr = thread_of(payload)
     if not thread.get("number"):
         return False, "no issue or pull request in the event"
@@ -219,15 +241,16 @@ def gate(payload: Mapping[str, Any], trust: Trust, bot_login: str, root: Path, a
     labels = {str(label.get("name")) for label in thread.get("labels") or []}
     suggestion = (not is_pr and login.lower() == bot_login.lower()
                   and config_mod.LABEL_SUGGESTION in labels)
-    if not suggestion and (login.lower() == bot_login.lower() or login.endswith("[bot]")):
+    if not (suggestion or asked) and (login.lower() == bot_login.lower()
+                                      or login.endswith("[bot]")):
         return False, f"opened by {login}, which labels its own"
     association = str(thread.get("author_association") or "").upper()
-    if not suggestion and association not in TRUSTED_ASSOCIATIONS and trust.level(
+    if not (suggestion or asked) and association not in TRUSTED_ASSOCIATIONS and trust.level(
             login, user.get("id"), association) < 1:
         return False, f"@{login} is not trusted ({association or 'no association'})"
     if not is_pr:
         found = methods_on(labels)
-        if not found:
+        if not found and not asked:
             return False, "no method:manual or method:use-bot label"
         if len(found) > 1:
             return False, "both method:manual and method:use-bot: a person keeps one"
@@ -419,6 +442,8 @@ def _method(plan: Plan, method: str, thread: Mapping[str, Any], lowered: set[str
     `method:manual` makes the issue `human` and moves it to both people; `method:use-bot` queues
     it for the bot (`bot:build`, unless the queue has it already) and moves it to the bot."""
     assigned = {str(a.get("login") or "").lower() for a in thread.get("assignees") or []}
+    plan.method = method
+    plan.remove = removals(method, thread)
     if method == config_mod.LABEL_METHOD_MANUAL:
         if HUMAN_LABEL not in lowered:
             plan.labels.append(HUMAN_LABEL)
@@ -433,15 +458,30 @@ def _method(plan: Plan, method: str, thread: Mapping[str, Any], lowered: set[str
         plan.unassign = [h for h in HUMANS if h.lower() in assigned]
 
 
+def removals(method: str, thread: Mapping[str, Any]) -> list[str]:
+    """The labels to take off an issue once its method is answered, as the issue spells them: the
+    method labels and their aliases (`bot:approved`), whose work is done; `bot:suggestion`, since
+    a person has decided on the suggestion; and for `method:manual` the bot's queue labels
+    (`QUEUED`), since people do it now."""
+    stale = {m.lower() for m in METHODS} | {a.lower() for a in ALIASES}
+    stale.add(config_mod.LABEL_SUGGESTION.lower())
+    if method == config_mod.LABEL_METHOD_MANUAL:
+        stale |= {name.lower() for name in QUEUED}
+    return [str(label.get("name")) for label in thread.get("labels") or []
+            if str(label.get("name")).lower() in stale]
+
+
 def decide(verdict: Mapping[str, Any] | None, thread: Mapping[str, Any], is_pr: bool,
            repo_labels: set[str], bot_login: str,
            types: Mapping[str, str] | None = None,
            open_issues: Mapping[int, Mapping[str, Any]] | None = None,
-           linked: Mapping[str, Any] | None = None) -> Plan:
+           linked: Mapping[str, Any] | None = None, *, asked: bool = False) -> Plan:
     """What to change on `thread`, from an untrusted `verdict`. Adds only; a person's labels,
     assignees, conventional title and links stay. `open_issues` are the open issues (no pull
     requests) by number; `linked` what the thread is linked to already (`blocked_by` and
-    `blocking`, sets of numbers, and `parent`, a number or 0)."""
+    `blocking`, sets of numbers, and `parent`, a number or 0). `asked`: a person called triage
+    on it, so an issue with no method label is classified all the same, without a method's
+    labels or assignees."""
     plan = Plan()
     if thread.get("state") not in (None, "open"):
         plan.notes.append("closed meanwhile")
@@ -451,18 +491,21 @@ def decide(verdict: Mapping[str, Any] | None, thread: Mapping[str, Any], is_pr: 
     method = ""
     if not is_pr:
         found = methods_on(present)
-        if len(found) != 1:
+        if len(found) > 1 or (not found and not asked):
             plan.notes.append("it carries no single method:* label now, so triage changed nothing")
             return plan
-        method = found[0]
+        method = found[0] if found else ""
         if method == config_mod.LABEL_METHOD_BOT and HUMAN_LABEL in lowered:
             plan.notes.append("labelled human, so the bot leaves it alone")
             return plan
+        plan.classified = True
         # The method's labels and assignees, and the links, need no model.
-        _method(plan, method, thread, lowered, bot_login)
+        if method:
+            _method(plan, method, thread, lowered, bot_login)
         if open_issues is not None:
             _links(plan, verdict if isinstance(verdict, Mapping) else {}, thread, open_issues,
                    linked or {})
+    plan.classified = True
     if not isinstance(verdict, Mapping):
         plan.notes.append("no usable answer from the classifier")
         return plan
@@ -472,14 +515,17 @@ def decide(verdict: Mapping[str, Any] | None, thread: Mapping[str, Any], is_pr: 
             kind = ""
         if HUMAN_LABEL in present:
             kind = "human"  # a person said so
-    else:
+    elif method:
         kind = "human" if method == config_mod.LABEL_METHOD_MANUAL else "bot"
+    else:
+        kind = "human" if HUMAN_LABEL in lowered else "bot"
     allowed = {name for name in repo_labels if not _bot_only(name)}
     if is_pr:
         allowed &= set(TYPE_LABELS)
-    # A manual issue takes no labels from the model but its type and title: people choose.
+    # A manual issue, or one people do, takes no labels from the model but its type and title:
+    # people choose.
     wanted = ([str(name) for name in verdict.get("labels") or [] if isinstance(name, str)]
-              if is_pr or method == config_mod.LABEL_METHOD_BOT else [])
+              if is_pr or kind == "bot" else [])
     taken = {_group(name) for name in present} - {None}
     added = 0
     for name in wanted:
@@ -605,15 +651,51 @@ def apply(gh: Any, number: int, plan: Plan, ids: Mapping[int, int] | None = None
     if plan.parent:
         steps.append((f"made it a sub-issue of #{plan.parent}",
                       lambda: gh.add_sub_issue(plan.parent, _id(ids, number))))
+    failed = False
     for what, step in steps:
         try:
             step()
             done.append(what)
         except GitHubError as exc:
+            failed = True
             done.append(f"could not do this: {what} ({exc.status})")
         except ValueError as exc:
+            failed = True
             done.append(f"could not do this: {what} ({exc})")
+    if plan.remove and failed:
+        # Its method label stays, so a run again finishes what this one could not.
+        done.append(f"kept {', '.join(f'`{n}`' for n in plan.remove)}, so a run again can finish")
+    elif plan.remove:
+        gone = []
+        for name in plan.remove:
+            try:
+                gh.remove_label(number, name)
+                gone.append(f"`{name}`")
+            except GitHubError as exc:
+                done.append(f"could not take `{name}` off ({exc.status})")
+        if gone:
+            done.append(f"took {', '.join(gone)} off")
     return done
+
+
+#: What triage's comment says the method handed the issue to.
+HANDED = {config_mod.LABEL_METHOD_MANUAL: "people (`human`)",
+          config_mod.LABEL_METHOD_BOT: "the night bot"}
+
+
+def comment(plan: Plan, done: list[str], *, is_pr: bool, answered: bool) -> str:
+    """The short comment triage leaves on every thread it classified: who it went to and what
+    changed. Account names are written without `@`, so it pings nobody an assignment did not."""
+    kind = "pull request" if is_pr else "issue"
+    head = f"Classified this {kind} (triage)"
+    if plan.method:
+        head += f": `{plan.method}`, so it goes to {HANDED.get(plan.method, plan.method)}"
+    changes = "; ".join(line.replace("@", "") for line in done) or "nothing to change"
+    text = f"{head}. {changes[0].upper()}{changes[1:]}."
+    if not answered:
+        text += (" The classifier gave no answer, so only what needs no model was done; "
+                 "`gh workflow run triage.yml -f number=<n>` runs it again.")
+    return text
 
 
 def _id(ids: Mapping[int, int], number: int) -> int:
