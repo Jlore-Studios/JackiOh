@@ -3056,6 +3056,14 @@
         "tiers": {}
       }
     },
+    "385": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-06T15:05:56Z",
+      "issue": 349,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "39": {
       "died": 0,
       "failures": 0,
