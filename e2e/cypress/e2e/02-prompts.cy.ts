@@ -24,6 +24,10 @@
 //     (Silly Silas — a declared direction travels in `modes`), `x` (Efficiency Dividend) and
 //     `embiggen` (Suppressive Aura).
 //
+// A `mode` of at most five options is drawn as a Discover pop-up (#88), so radiant Flood's and
+// Efficiency Dividend's menus carry `data-prompt-kind="discover"`; the plain `mode` list is kept
+// for a longer menu, which no card in this deck has.
+//
 // Both halves render the same picker with the same `data-prompt-kind`, which is why one assertion
 // covers both: the picker for the kind under test is open exactly once, it is answered through the
 // UI, it closes, and the effect the answer asked for is visible on the board afterwards. The last
@@ -376,15 +380,17 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
       toP1Turn(4);
       cy.fieldCardByName("Mr. Vanilla").then((vanilla) => {
         select("Flood");
-        pickerOpensOnce("mode");
+        // A "Choose one" of at most five options is drawn as a Discover pop-up (#88), so the
+        // mode picker opens with the discover chrome; only a longer menu keeps the plain list.
+        pickerOpensOnce("discover");
         cy.gameState().should((state) => {
           expect(state.pending, "R81: a declared mode travels in the play action").to.eq(null);
         });
 
         // The option strings are the card's own public interface, word for word from §8.1:
         // "Choose one: bounce all units, bounce all enemy units, destroy all enemy units".
-        cy.answerPrompt("mode", { options: ["bounce all units"] });
-        pickerAnswered("mode");
+        cy.answerPrompt("discover", { options: ["bounce all units"] });
+        pickerAnswered("discover");
 
         cy.get(ts(cardId(vanilla))).should("not.exist");
         cy.get(ts(handCardId(vanilla))).should("exist");
@@ -479,7 +485,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     });
   });
 
-  it("R81 x — Efficiency Dividend asks for X, a target and a mode, and deals exactly X", () => {
+  it("R81 x — Efficiency Dividend asks for X, a mode and a target, and deals exactly X", () => {
     openGame(SEEDS.x);
     // #24 costs X: 0 ≤ X ≤ current mana (§2.3), so a two-mana turn offers 0, 1 and 2.
     toP1Turn(2);
@@ -491,14 +497,15 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     });
     cy.answerPrompt("x", { x: 2 });
 
-    // The same play still owes its declared target and mode, in the order the client asks them.
+    // The same play still owes its declared mode and target, in the order the client asks them:
+    // the mana mode wants no target, so the mode comes first and decides whether one is asked.
+    // §8.2: "Choose one: deal X damage to a target; heal a target 2X; gain floor(X/2) mana next
+    // turn" — the card's declared option for the first of those, in a Discover pop-up (#88).
+    pickerOpensOnce("discover");
+    cy.answerPrompt("discover", { options: ["damage"] });
+    pickerAnswered("discover");
     pickerOpensOnce("target");
     cy.answerPrompt("target", { hero: "opponent" });
-    pickerOpensOnce("mode");
-    // §8.2: "Choose one: deal X damage to a target; heal a target 2X; gain floor(X/2) mana next
-    // turn" — the card's declared option for the first of those.
-    cy.answerPrompt("mode", { options: ["damage"] });
-    pickerAnswered("mode");
 
     // X = 2 through the §4.4 pipeline with no Armor and no cap in the way: 30 − 2 = 28.
     cy.get(ts(heroId("opponent"))).find(healthIs(28)).should("exist");

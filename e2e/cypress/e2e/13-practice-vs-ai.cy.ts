@@ -67,7 +67,7 @@ import type { Action, Lane, PlayerId } from "../../support/types.ts";
  * Every spec sets a seed (BUILD M8); `--expose seed=…` overrides it. The human here only ends turns,
  * so the seed has to be a game the Easy AI takes more than `HUMAN_TURNS` of its turns to win: with a
  * random deck, R635 re-dealt the old seed (`13-practice`) into a game the human lost after its third
- * turn, and patch v0.2.17's Pocket Chaos (2)→(4) re-dealt `13-practice-n` the same way (the AI-deck
+ * turn, and patch v0.2.9's Pocket Chaos (2)→(4) re-dealt `13-practice-n` the same way (the AI-deck
  * draw is cost-bucket weighted), into a game the Easy AI wins on turn 7, before the human's fourth.
  * This one survives six human turns with the human answering nothing but the mulligan, and the AI
  * plays on its first turn — found by playing each candidate through the practice core, the same

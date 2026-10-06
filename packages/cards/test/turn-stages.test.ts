@@ -590,8 +590,9 @@ describe("R169, R240: what the start of a turn changes, it reports (§10.3)", ()
     });
     s.endTurn(); // p2's turn
     s.endTurn(); // p1's draw casts Hinder: p2's next refresh is 1 lower (§8 #21)
-    // R431: the base face then discards 1, p1's choice: the cast asks in the middle of the draw.
-    s.answer(s.card(HIT_JOB).id);
+    // R431 (balance patch 1): the base face then discards 1 at random with no prompt — here p1's
+    // only card left in hand, HIT_JOB.
+    s.expectInZone(s.card(HIT_JOB), "graveyard");
 
     // BUILD M5-T4: `modifierChanged` is the badge by the hero appearing or fading, and "badge list
     // equals the view's modifiers"; R169 puts that list on both seats under the id the event names.

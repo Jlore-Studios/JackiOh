@@ -22,6 +22,7 @@ import {
   closeInspect,
   writeCardSettings,
 } from "../cards/index.ts";
+import { INSPECT_LOC } from "../cards/inspect/testids.ts";
 import Board from "./Board.tsx";
 import Card, * as CardModule from "./Card.tsx";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
@@ -666,7 +667,7 @@ describe("B18: Card picks its form from its props", () => {
     const root = cardRoot(flood.instanceId);
     expect(screen.getByTestId("resolving-you").contains(root)).toBe(true);
     expect(root.getAttribute("data-face")).toBe("full");
-    expect(inside(root, ".card-text").textContent).toContain("Return all Units to hand.");
+    expect(inside(root, ".card-text").textContent).toContain("Bounce all Units.");
   });
 });
 
@@ -902,6 +903,27 @@ describe("B20: one .card per card, and the name lookups still land", () => {
     }
     for (const c of handOf(view)) {
       expect(resolve("hand-card-", nameOf(c.defId)), nameOf(c.defId)).toBe(handRoot(c.instanceId));
+    }
+  });
+});
+
+describe("R693: lines of code is a hidden stat in matches", () => {
+  it("R693 a board card's hover preview ends with no lines of code", () => {
+    vi.useFakeTimers();
+    const view = fullBoardView();
+    renderBoard(view);
+    // A hand card and a unit on the field: both open a preview, neither ends with its lines of code.
+    for (const root of [
+      handRoot(must(handOf(view)[0], "a hand card").instanceId),
+      cardRoot(yourUnit(view, 1).instanceId),
+    ]) {
+      fireEvent.pointerEnter(root, { pointerType: "mouse" });
+      act(() => {
+        vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
+      });
+      expect(screen.getByTestId(INSPECT_HOVER)).toBeInTheDocument();
+      expect(screen.queryByTestId(INSPECT_LOC)).toBeNull();
+      fireEvent.pointerLeave(root, { pointerType: "mouse" });
     }
   });
 });

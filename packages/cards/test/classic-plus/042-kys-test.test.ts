@@ -114,10 +114,11 @@ describe("C+ #42 KY's Test", () => {
       expect(labelOf(s, "Hard")).toBe("Hard: KY's Gift, which costs (0)");
     });
 
-    it("R420 every label is the reward as the card's text prints it", () => {
+    it("R420 the card's text names no reward: the rewards live in the Discover menu", () => {
       const text = cardDef(TEST).base.text;
+      expect(text).toBe("Offer an easy, a medium, and a hard problem, each with a random reward.");
       for (const difficulty of ["Easy", "Medium", "Hard"] as const) {
-        for (const reward of KY_TEST_REWARDS[difficulty]) expect(text).toContain(reward.label);
+        for (const reward of KY_TEST_REWARDS[difficulty]) expect(text).not.toContain(reward.label);
       }
     });
 

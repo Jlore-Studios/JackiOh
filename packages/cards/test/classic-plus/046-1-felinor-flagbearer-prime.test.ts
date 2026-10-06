@@ -1,5 +1,6 @@
 // C+ #46.1 Felinor Flagbearer Prime — SPEC §8.7 row 46.1, BUILD M9 Classic+ row C+ 46.1: "Rush; Cry
-// fills every empty, unlocked, unreserved unit zone of yours with copies of itself (R57: face, buffs and
+// fills every empty, unreserved unit zone of yours with copies of itself (R688: a Locked zone takes
+// one; R57: face, buffs and
 // granted keywords, not damage), none firing a Cry (R1), so nothing loops; each copy's aura gives your
 // other Felinors +1/+1, so each of n Primes has +(n − 1)/+(n − 1) from the rest; a full board makes
 // none; the copies are Tokens and cease to exist when they leave (R11); the aura reads through
@@ -67,12 +68,12 @@ describe("C+ #46.1 Felinor Flagbearer Prime", () => {
       s.expectStats(s.unit("p2", 1) ?? "", { attack: 3, health: 4 });
     });
 
-    it("§3.2 Locked and reserved zones are skipped", () => {
+    it("R688 a Locked zone takes a copy; a reserved zone is still skipped", () => {
       const s = muster();
       lockZone(s.state, { player: "p1", row: "units", lane: 3 });
       s.state.reserved.push({ player: "p1", row: "units", lane: 4 });
       s.play(PRIME);
-      expect([1, 2, 3, 4, 5].map((lane) => s.unit("p1", lane)?.defId ?? null)).toEqual([PRIME, PRIME, null, null, PRIME]);
+      expect([1, 2, 3, 4, 5].map((lane) => s.unit("p1", lane)?.defId ?? null)).toEqual([PRIME, PRIME, PRIME, null, PRIME]);
     });
 
     it("§3.2 a full board makes no copy", () => {

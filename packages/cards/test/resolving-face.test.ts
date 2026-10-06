@@ -146,7 +146,7 @@ describe("R213: Gifted Program's first cheap card is its controller's first of t
 describe("R214: a play's choices are the choices of the face it resolves with", () => {
   it("R214 a Pocket Chaos that radiant Gifted Program will make Radiant is offered, and may carry, the choice to skip the gift (§8 #87 radiant, R81)", () => {
     const g = scenario({
-      // Patch v0.2.17 costs Pocket Chaos at (4): a −2 costMod puts the play at (2), inside
+      // Patch v0.2.9 costs Pocket Chaos at (4): a −2 costMod puts the play at (2), inside
       // radiant Gifted Program's threshold, while its base cost stays (4).
       p1: { hand: [{ def: POCKET_CHAOS, costMod: -2 }, STOCKPILE], library: [STOCKPILE], backrow: [{ def: GIFTED, radiant: true }], health: 20 },
       p2: { hand: [STOCKPILE] },

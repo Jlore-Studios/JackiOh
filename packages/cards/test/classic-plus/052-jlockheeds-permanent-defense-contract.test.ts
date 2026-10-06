@@ -1,9 +1,9 @@
 // C+ #52 Jlockheed's Permanent Defense Contract — SPEC §8.7 row 52, BUILD M9 Classic+ row C+ 52: "Leaves
 // a player modifier for the rest of the game (nothing on the field to remove) that adds, at each start
-// of your turn, a random non-token Jlockeed card to your hand: Core #13, #14, C+ #48 or #51, never this
-// card (R387); two Contracts add two; a full hand burns; the cards are hidden from the opponent (R97);
-// count and discount read through `param()`; radiant the card is Radiant and costs (1) less (`costMod`
-// −1, floor 0)".
+// of your turn, a random non-token Jlockeed card to your hand: Core #13, #14, Classic #4 or C+ #48,
+// C+ #51, never this card (R387); two Contracts add two; a full hand burns; the cards are hidden from
+// the opponent (R97); count and discount read through `param()`; radiant the card is Radiant and costs
+// (1) less (`costMod` −1, floor 0)".
 
 import { effectiveCost, hashState, reduce, stepParam, type GameState } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
@@ -14,7 +14,7 @@ import { def } from "../../src/scripts/classic-plus/052-jlockheeds-permanent-def
 const CONTRACT = "classicplus-052";
 const NETHER = "core-088"; // (4) Spell: destroy all permanents
 const FILLER = "core-005";
-const POOL = ["classicplus-048", "classicplus-051", "core-013", "core-014"];
+const POOL = ["classic-004", "classicplus-048", "classicplus-051", "core-013", "core-014"];
 
 function signed(opts: { radiant?: boolean; seed?: string; contracts?: number; fillers?: number } = {}): Scenario {
   const contract = { def: CONTRACT, ...(opts.radiant === true ? { radiant: true } : {}) };
@@ -88,7 +88,7 @@ describe("C+ #52 Jlockheed's Permanent Defense Contract", () => {
       expect(delivered(s)).toEqual([]);
     });
 
-    it("R278 R387 the pool is exactly Core #13, #14 and C+ #48, #51 — never this card", () => {
+    it("R278 R387 the pool is exactly Core #13, #14, Classic #4 and C+ #48, #51 — never this card", () => {
       const seen = new Set<string>();
       for (let i = 0; i < 60; i += 1) {
         const s = signed({ seed: `contract-${i}` });

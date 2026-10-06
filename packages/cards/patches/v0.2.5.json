@@ -1111,16 +1111,19 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 3,
     "base": {
       "attack": 4,
       "health": 3,
       "keywords": [
         {
           "kind": "Charge"
+        },
+        {
+          "kind": "Deft"
         }
       ],
-      "text": "Charge\nCan attack and switch position in the same turn."
+      "text": "Charge, Deft"
     },
     "radiant": {
       "attack": 8,
@@ -1132,9 +1135,12 @@
         {
           "kind": "Armor",
           "n": 1
+        },
+        {
+          "kind": "Deft"
         }
       ],
-      "text": "Charge, Armor 1\nCan attack and switch position in the same turn."
+      "text": "Charge, Armor 1, Deft"
     }
   },
   "core-046": {
@@ -2939,7 +2945,7 @@
         "min": 1
       }
     ],
-    "loc": 7,
+    "loc": 9,
     "base": {
       "keywords": [],
       "text": "Heal a target {heal}."
@@ -4672,7 +4678,7 @@
         "min": 1
       }
     ],
-    "loc": 15,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Activates when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw {draw}."
@@ -6280,7 +6286,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 0,
-    "loc": 5,
+    "loc": 7,
     "base": {
       "keywords": [],
       "text": "Give a Unit Reborn."
@@ -7569,14 +7575,14 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "loc": 24,
+    "loc": 38,
     "base": {
       "keywords": [],
-      "text": "Aura: Your cards have Stack.\nA Unit may be played on top of this. That Unit can't attack or be attacked."
+      "text": "The first Unit you stack onto this is fused into it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your cards have Stack.\nA Unit may be played on top of this. That Unit can't attack or be attacked, and it becomes Radiant."
+      "text": "The first Unit you stack onto this becomes Radiant and is fused into it."
     }
   },
   "classicplus-034": {
@@ -7812,7 +7818,7 @@
           "n": 3
         }
       ],
-      "text": "Spell Damage +3\nCry: Cast {casts|random Spell|random Spells}. Each targets enemies when it can."
+      "text": "Spell Damage +3\nCry: Cast {casts|random Spell|random Spells}. Each aims at enemies when it harms and at your side when it helps."
     },
     "radiant": {
       "attack": 18,
@@ -7823,7 +7829,7 @@
           "n": 7
         }
       ],
-      "text": "Spell Damage +7\nCry: Cast {casts|random Radiant Spell|random Radiant Spells}. Each targets enemies when it can."
+      "text": "Spell Damage +7\nCry: Cast {casts|random Radiant Spell|random Radiant Spells}. Each aims at enemies when it harms and at your side when it helps."
     }
   },
   "classicplus-039": {
@@ -7873,11 +7879,11 @@
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +2X Attack and Rush.\nEducation: Shuffle 2X random Radiant Books into your deck. They have Cast on draw and target enemies when they can.\nCulture: Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +2X Health and Armor X."
+      "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +2X Attack and Rush.\nEducation: Shuffle 2X random Radiant Books into your deck. They have Cast on draw and aim at enemies when they harm and at your side when they help.\nCulture: Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +2X Health and Armor X."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +5X Attack and Rush.\nEducation: Shuffle 5X random Radiant Books into your deck. They have Cast on draw and target enemies when they can.\nCulture: Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X."
+      "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +5X Attack and Rush.\nEducation: Shuffle 5X random Radiant Books into your deck. They have Cast on draw and aim at enemies when they harm and at your side when they help.\nCulture: Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X."
     }
   },
   "classicplus-041": {

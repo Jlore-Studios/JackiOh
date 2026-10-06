@@ -154,15 +154,12 @@ describe("C #28 Second Wind", () => {
       expect(played).toMatchObject({ from: "graveyard", costPaid: 1 });
     });
 
-    it("R65 a play from the graveyard takes the player's discounts: a Trap under Cloaked Toe Cracker costs (0)", () => {
+    it("R65 a play from the graveyard takes the player's discounts, but never below the (1) minimum price", () => {
       const s = standing(false, [SHEEPISH], { field: [TOE_CRACKER] });
       const trap = s.card(SHEEPISH);
-      expect(playsOfCard(s, trap.id)).not.toEqual([]);
-      const after = playFromGraveyard(s, trap, { zone: { row: "backrow", lane: 2 } });
-      expect(unspentManaOf(after.state, "p1")).toBe(4);
-      // R227: set face-down, it takes a fresh id.
-      expect(cardAt(after.state, { player: "p1", row: "backrow", lane: 2 })?.defId).toBe(SHEEPISH);
-      expect(zoneCards(after.state, "p1", "graveyard")).toEqual([]);
+      // The discount takes it to (0): below the minimum price, so nothing is offered and the play is refused.
+      expect(playsOfCard(s, trap.id)).toEqual([]);
+      expect(() => playFromGraveyard(s, trap, { zone: { row: "backrow", lane: 2 } })).toThrow();
     });
 
     it("a card it can't afford is not offered", () => {

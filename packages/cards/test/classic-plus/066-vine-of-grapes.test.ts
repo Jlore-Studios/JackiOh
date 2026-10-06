@@ -31,11 +31,11 @@ function played(opts: { radiant?: boolean; seed?: string; hand?: number } = {}):
 }
 
 describe("C+ #66 Vine of Grapes", () => {
-  it("is a (3) Fruit Spell naming the five Grapes; the Radiant face prints Lucky 1", () => {
+  it("is a (3) Fruit Spell with no refs ('Grape' names the five Grapes, R480); the Radiant face prints Lucky 1", () => {
     expect(def.id).toBe(VINE);
     expect(def.cost).toBe(3);
     expect(def.tags).toContain("Fruit");
-    expect(def.refs).toEqual(GRAPE_IDS);
+    expect(def.refs).toBeUndefined();
     expect(def.radiant.keywords).toEqual([{ kind: "Lucky", n: 1 }]);
     expect(typeof base.cry).toBe("function");
     expect(typeof radiant.cry).toBe("function");

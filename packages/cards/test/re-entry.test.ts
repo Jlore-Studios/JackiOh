@@ -419,7 +419,7 @@ describe("R35, §3.2: a Transform replaces the occupant of a Locked zone", () =>
     expect(g.state.players.p1.locks.backrow[0]).toBe(true);
 
     // R35: every board card but an Immutable one is replaced in place; the lock only stops summons
-    // and "the current occupant is unaffected" (§3.2). Since patch v0.2.17 (issue #44) the Legendary
+    // and "the current occupant is unaffected" (§3.2). Since patch v0.2.9 (issue #44) the Legendary
     // Field Spell pool holds #93, Classic #4 and #7, Classic #28 and Classic+ #78; this seed draws
     // Classic #4 Palantir.
     g.play(TRANSMOGULATE);

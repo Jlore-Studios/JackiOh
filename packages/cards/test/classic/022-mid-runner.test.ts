@@ -1,15 +1,15 @@
 // C #22 Mid Runner — SPEC §8.6 row 22, BUILD M9 Classic row C 22: "Cry, two independent checks at
-// resolution: in lane 3 (`MID_LANE`) it Tributes itself (a death), anywhere else it stays; if you had 4
-// or more mana before paying for it (recorded as the play begins, §10.5 step 1), two different random
-// enemy permanents (R60; fewer if fewer) are bounced to their owners' hands, tokens ceasing to exist
-// (R11) and a full hand burning (R317); both may happen in one Cry; `conditionMet` answers in hand
-// whether your mana is 4 or more now (R195); a bounced face-down trap is never named in your view
-// (R97); radiant 4/2 with the same text, recorded in `docs/radiant-audit.md` as an exception to R275;
-// its tuned numbers (mana threshold, bounces) read through `param()` (R386)".
+// resolution: in midlane (computed from the lane count, R685) it Tributes itself (a death), anywhere
+// else it stays; if you had 4 or more mana before paying for it (recorded as the play begins, §10.5
+// step 1), two different random enemy permanents (R60; fewer if fewer) return to their owners' hands,
+// tokens ceasing to exist (R11) and a full hand burning (R317); both may happen in one Cry;
+// `conditionMet` answers in hand whether your mana is 4 or more now (R195); a bounced face-down trap
+// is never named in your view (R97); radiant 4/2 returning 3; its tuned numbers (mana threshold,
+// bounces) read through `param()` (R386)".
 //
 // The `conditionMet` proofs (R195) are in `../condition-active.test.ts`, with the other cards'.
 
-import { MID_LANE, stepParam } from "@jackioh/engine";
+import { midlaneLanes, stepParam } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/022-mid-runner";
@@ -43,10 +43,18 @@ function enemyBoardIds(s: Scenario): string[] {
 }
 
 describe("C #22 Mid Runner", () => {
-  it("runs one script on both faces, and midlane is MID_LANE, lane 3", () => {
+  it("runs one script on both faces, and midlane of 5 lanes is lane 3 (R685)", () => {
     expect(def.id).toBe(RUNNER);
     expect(radiant).toBe(base);
-    expect(MID_LANE).toBe(3);
+    expect(midlaneLanes(5)).toEqual([3]);
+  });
+
+  it("R685 computes midlane from the lane count: odd counts center, even counts both centers", () => {
+    expect(midlaneLanes(5)).toEqual([3]);
+    expect(midlaneLanes(3)).toEqual([2]);
+    expect(midlaneLanes(1)).toEqual([1]);
+    expect(midlaneLanes(4)).toEqual([2, 3]);
+    expect(midlaneLanes(6)).toEqual([3, 4]);
   });
 
   describe("base", () => {
@@ -201,13 +209,13 @@ describe("C #22 Mid Runner", () => {
       expect(def.radiant.text).toBe(def.base.text);
     });
 
-    it("in lane 3 it Tributes itself, and with 4 mana it bounces two", () => {
+    it("in lane 3 it Tributes itself, and with 4 mana it bounces three", () => {
       const s = scenario({ p1: { hand: [{ def: RUNNER, radiant: true }, ANCHOR] }, p2: { hand: [ANCHOR], field: [VANILLA, MENACE, TEMPO] } });
 
       s.play(RUNNER, { zone: 3 });
 
       s.expectInZone(RUNNER, "graveyard");
-      expect(new Set(bouncedIds(s)).size).toBe(2);
+      expect(new Set(bouncedIds(s)).size).toBe(3);
     });
 
     it("with 3 mana it stays out of lane 3 and bounces nothing", () => {

@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0025: the Catalyst, Prime and Acclaimed tags
+-- Migration 0026: the Catalyst, Prime and Acclaimed tags
 -- ============================================================================
 -- Serves SPEC.md §5 (tags) and patch v0.2.Y (#322): three new tags, Catalyst
 -- (C+ #38 Solarius, C+ #46 Felinor Flagbearer), Prime (their Prime tokens,
@@ -17,7 +17,7 @@
 -- point at (0002's comment on the table). No existing row is rewritten. Every
 -- row 0020 admitted, this check admits too.
 --
--- Apply order: 0002 (`public.cards`) -> ... -> 0020 -> ... -> 0025 (this file).
+-- Apply order: 0002 (`public.cards`) -> ... -> 0020 -> ... -> 0026 (this file).
 -- Safe to re-apply: drop-constraint-if-exists-then-add, as 0020 does.
 -- ============================================================================
 
@@ -36,4 +36,4 @@ comment on constraint cards_tags_check on public.cards is
   v0.2.Y: every tag is one of Human, Felinor, KY, CN, Fruit, 'Call to Chaos',
   Quickdraw, Jlockeed, Book, Pancake, AI, Plague, Catalyst, Prime, Acclaimed,
   Token. First defined in 0002; 0010 re-added it with Jlockeed, 0015 with Book,
-  Pancake and AI, 0020 with Plague, 0025 with Catalyst, Prime and Acclaimed.$$;
+  Pancake and AI, 0020 with Plague, 0026 with Catalyst, Prime and Acclaimed.$$;

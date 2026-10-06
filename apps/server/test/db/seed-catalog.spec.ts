@@ -4,7 +4,7 @@
  *
  * Before migration 0010, `cards_tags_check` (0002) did not admit 'Jlockeed', the tag R278 puts on
  * #13 and #14, before 0015 it did not admit patch v0.2.0's Book, Pancake and AI (B2.4), before
- * 0020 it did not admit the mechanics patch's Plague, and before 0025 it did not admit patch
+ * 0020 it did not admit the mechanics patch's Plague, and before 0026 it did not admit patch
  * v0.2.Y's Catalyst, Prime and Acclaimed. The seed runs in one transaction, so one such row failed
  * the whole catalog.
  * `seed-catalog.test.ts` compares the tags with the migrations' text in `pnpm test`; this spec
@@ -55,7 +55,7 @@ describe("R278 db:seed-catalog writes the real catalog, Jlockeed, Book, Pancake,
     await admin.end();
   });
 
-  it("R278 seeds every entry of Core, Classic and Classic+, with the five Jlockeed cards tagged and no other row", async () => {
+  it("R278 seeds every entry of Core, Classic and Classic+, with the six Jlockeed cards tagged and no other row", async () => {
     const entries = await readCatalog(REAL_CATALOG);
     const written = await seedCatalog(databaseUrl(), CATALOG_VERSION, entries);
     expect(written).toBe(entries.length);
@@ -67,6 +67,7 @@ describe("R278 db:seed-catalog writes the real catalog, Jlockeed, Book, Pancake,
     expect(rows).toHaveLength(entries.length);
     expect(rows.every((row) => row.catalog_version === CATALOG_VERSION)).toBe(true);
     expect(rows.filter((row) => row.tags.includes("Jlockeed")).map((row) => row.id)).toEqual([
+      "classic-004",
       "classicplus-048",
       "classicplus-051",
       "classicplus-052",

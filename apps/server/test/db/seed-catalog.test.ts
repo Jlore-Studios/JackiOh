@@ -22,7 +22,7 @@ const MIGRATIONS = resolve(import.meta.dirname, "../../src/db/migrations");
 /**
  * The tags `public.cards.cards_tags_check` admits once every migration has run: the array in the
  * last migration, in apply order, that adds the check. 0002 defines it, 0010 re-adds it with
- * Jlockeed, 0015 with Book, Pancake and AI, 0020 with Plague, and 0025 with Catalyst, Prime and
+ * Jlockeed, 0015 with Book, Pancake and AI, 0020 with Plague, and 0026 with Catalyst, Prime and
  * Acclaimed.
  */
 function admittedTags(): { file: string; tags: string[] } {
@@ -110,7 +110,7 @@ describe("R278 the catalog's tags and the cards table's tag check", () => {
   it("R278 every tag the real catalog carries, Jlockeed, Book, Pancake, AI, Plague, Catalyst, Prime and Acclaimed included, is one the latest cards_tags_check admits", async () => {
     const entries = await readCatalog(REAL_CATALOG);
     const { file, tags } = admittedTags();
-    expect(file, "0025 re-adds the check with Catalyst, Prime and Acclaimed").toBe("0025_catalyst_prime_acclaimed_tags.sql");
+    expect(file, "0026 re-adds the check with Catalyst, Prime and Acclaimed").toBe("0026_catalyst_prime_acclaimed_tags.sql");
     const carried = [...new Set(entries.flatMap((entry) => entry.tags))].sort();
     expect(carried).toContain("Jlockeed");
     expect(carried).toEqual(expect.arrayContaining(["Book", "Pancake", "AI", "Plague", "Catalyst", "Prime", "Acclaimed"]));

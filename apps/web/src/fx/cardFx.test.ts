@@ -259,7 +259,7 @@ function wallsOf(cues: readonly FxCue[]): Extract<FxCue, { kind: "walls" }>[] {
   return cues.filter((cue): cue is Extract<FxCue, { kind: "walls" }> => cue.kind === "walls");
 }
 
-describe("Patch v0.2.14: Classic+ #24 Crushing Walls closes in", () => {
+describe("Patch v0.2.7: Classic+ #24 Crushing Walls closes in", () => {
   it("the walls close in once, on the board, at the first card the play destroys, lasting D + their tail", () => {
     const D = 400;
     const results = planAll(wallsStream(4), fullBoardView(), envOf(), D);

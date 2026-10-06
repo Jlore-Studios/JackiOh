@@ -15,7 +15,7 @@ import type { FieldSink } from "./animated";
 import {
   cardAt,
   carriedAt,
-  firstFreeZone,
+  firstEntryZone,
   isCarrier,
   isOpen,
   slotsOf,
@@ -48,7 +48,7 @@ export function settleCarried(sink: FieldSink): void {
       const top = cardAt(state, ref);
       if (top !== null && isCarrier(top)) continue;
       const same: ZoneSlot = { player, row: "units", lane: ref.lane };
-      const to = isOpen(state, same) ? same : firstFreeZone(state, player, "units");
+      const to = isOpen(state, same) ? same : firstEntryZone(state, player, "units");
       if (to === null) {
         if (unit.memory[STRANDED_KEY] === true) continue;
         unit.memory[STRANDED_KEY] = true;

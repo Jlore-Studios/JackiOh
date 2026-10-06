@@ -12,7 +12,7 @@
 // `cardAnnounced` whose `costPaid` equals the tokens on it now — the count moves as tokens are placed and
 // removed (C #78) — by countering that play to its owner's graveyard (`counterPlay`).
 //
-// Patch v0.2.14 (#126, R667): `wouldCounter` is the same match asked ahead of any play, so the engine
+// Patch v0.2.7 (#126, R667): `wouldCounter` is the same match asked ahead of any play, so the engine
 // can warn the viewer off a hand card the Chalice would counter (`counteredOnPlay`). Both halves call
 // `counters`, so the warning and the counter cannot disagree.
 

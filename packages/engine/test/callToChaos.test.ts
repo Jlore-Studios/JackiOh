@@ -612,7 +612,7 @@ describe("Call to Chaos (§8 #95, R28, M3-T7)", () => {
     expect(state.players.p2.backrow.every((card) => card === null)).toBe(true);
   });
 
-  it("R64 a locked or reserved zone is skipped, so the summons fill what is left", () => {
+  it("R688 a reserved zone is skipped but a Locked zone takes an unaimed summon once no unlocked zone is open", () => {
     const state = game("chaos-locked");
     const events: GameEvent[] = [];
     const sink = sinkFor(state, events);
@@ -621,9 +621,10 @@ describe("Call to Chaos (§8 #95, R28, M3-T7)", () => {
 
     run(sink, summonRushTokens());
 
-    // Five were asked for; lanes 3, 4 and 5 are all that can take one.
-    expect(eventsOfType(events, "summoned").map((event) => event.lane)).toEqual([3, 4, 5]);
-    expect(state.players.p1.units[0]).toBeNull();
+    // Five were asked for: lanes 3, 4 and 5 take the unlocked ones, then the Locked lane 1;
+    // the reserved lane 2 is still skipped, so the fifth summon fizzles.
+    expect(eventsOfType(events, "summoned").map((event) => event.lane)).toEqual([3, 4, 5, 1]);
+    expect(state.players.p1.units[0]).not.toBeNull();
     expect(state.players.p1.units[1]).toBeNull();
   });
 });

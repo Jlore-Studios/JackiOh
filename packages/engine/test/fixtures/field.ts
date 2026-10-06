@@ -74,10 +74,10 @@ export const wisp = def("wisp", "Field Spell", {
   radiant: { keywords: [ANIMATED], text: "wisp" },
 });
 
-/** A carrier whose aura gives its controller's cards Stack: Classic+ #33 Ivory Tower's shape before patch v0.2.10. */
+/** A carrier whose aura gives its controller's cards Stack: Classic+ #33 Ivory Tower's shape before patch v0.2.3. */
 export const tower = def("tower", "Field Spell", { cost: 2 });
 
-/** Classic+ #33 Ivory Tower's shape since patch v0.2.10: a carrier that takes one Unit a stay (R653). */
+/** Classic+ #33 Ivory Tower's shape since patch v0.2.3: a carrier that takes one Unit a stay (R653). */
 export const fuser = def("fuser", "Field Spell", { cost: 2 });
 
 /** A Field Spell that prints Stack, so it tops an occupied backrow zone without any aura (B5 E21). */

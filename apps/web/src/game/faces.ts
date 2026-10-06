@@ -62,7 +62,11 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   // hero's power list names it.
   const power = card.power !== undefined ? { name: card.power, x: card.cost } : facts.fieldPower;
   if (power !== undefined) inPlay.power = power;
-  if (unit?.vanilla === true) inPlay.vanilla = true;
+  // R243, §6.3 Vanilla: a backrow card's text can be gone too (`BackrowView.vanilla`), and the
+  // face it draws reads it the same way a unit's does — the view is what the client renders (rule 7).
+  if (unit?.vanilla === true || (unit === undefined && "vanilla" in card && card.vanilla === true)) {
+    inPlay.vanilla = true;
+  }
   // R280: what the card's formula comes to now, where the view says (never in the collection).
   if (card.preview !== undefined && card.preview.length > 0) inPlay.preview = card.preview;
   // B3.4, R386: the numbers the card has now fill its text's `{key}`s, and what changed is marked.

@@ -18,6 +18,7 @@ import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 import { fillParams, type CardDef, type CardType, type Rarity } from "@jackioh/shared";
 
 import { CardFace } from "./CardFace.tsx";
+import { RulesText } from "./RulesText.tsx";
 import {
   FACE_ASPECT,
   FACE_TEXT_MIN_HEIGHT_PX,
@@ -369,7 +370,7 @@ describe("B10: RulesText marks terms in bold", () => {
       [...catalogFace(id).querySelectorAll(".card-text strong.cf-term")].map((term) => `${term.getAttribute("data-term") ?? ""}=${term.textContent ?? ""}`);
     expect(termsOf("classic-078")).toContain("Activate=Activate ♾️:");
     cleanup();
-    expect(termsOf("classicplus-074")).toContain("Brittle=Brittle 4");
+    expect(termsOf("classicplus-074")).toContain("Brittle=Brittle");
     cleanup();
     expect(termsOf("classic-038")[0]).toBe("Animated=Animated");
     cleanup();
@@ -406,6 +407,23 @@ describe("B10: RulesText marks terms in bold", () => {
     const tavern = rules("../auth/tavern.css").find((rule) => rule.selector === ".tavern.app-shell strong");
     expect(tavern?.body).toMatch(/color:\s*var\(--tavern-gold-pale\)/);
     expect(outranks(specificity(term[0]?.selector ?? ""), specificity(tavern?.selector ?? ""))).toBe(true);
+  });
+
+  it("R280 two values sharing one label group in one helper block after it, not one mid-text and one at the end", () => {
+    const { container } = render(
+      <RulesText
+        text="Deal 4 damage. Your two largest piles add their effects."
+        values={[
+          { label: "Your two largest piles", value: 5, display: "Deck" },
+          { label: "Your two largest piles", value: 3, display: "Graveyard" },
+        ]}
+      />,
+    );
+    const chips = [...container.querySelectorAll(".cf-value")];
+    expect(chips.map((chip) => chip.getAttribute("data-value"))).toEqual(["Deck", "Graveyard"]);
+    // Both chips sit after the label and before the words that follow it — one block, mid-text.
+    expect(container.textContent).toBe("Deal 4 damage. Your two largest piles {Deck} {Graveyard} add their effects.");
+    cleanup();
   });
 
   it("B10 lower-case or glued words are not bolded", () => {

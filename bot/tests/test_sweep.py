@@ -347,7 +347,7 @@ class LabelTests(unittest.TestCase):
                                          "created the label `method:manual`",
                                          "created the label `method:use-bot`"])
         self.assertEqual(gh.labels["method:use-bot"]["color"], LABELS["method:use-bot"][0])
-        self.assertIn("two minutes after it goes on", gh.labels["method:manual"]["description"])
+        self.assertIn("after two minutes", gh.labels["method:manual"]["description"])
         # The list has not changed since: the next tick reads nothing.
         calls = []
         gh.ensure_label = lambda *a: calls.append(a) or False
@@ -361,3 +361,29 @@ class LabelTests(unittest.TestCase):
         notes = sweep.sweep(ctx)
         self.assertIn("created the label `method:manual`", notes)
         self.assertIn("method:use-bot", gh.labels)
+
+    def test_every_description_fits_githubs_limit(self):
+        """GitHub refuses a longer one, so the label could never be created (#307's two)."""
+        from harness.config import LABEL_DESCRIPTION_MAX
+        too_long = {name: len(description) for name, (_, description) in LABELS.items()
+                    if len(description) > LABEL_DESCRIPTION_MAX}
+        self.assertEqual(too_long, {})
+
+    def test_a_label_github_refuses_never_stops_the_rest_and_is_tried_again(self):
+        gh = FakeGitHub()
+        real = gh.ensure_label
+
+        def refusing(name, color, description):
+            if name == "method:manual":
+                raise GitHubError("422 description is too long", 422)
+            return real(name, color, description)
+        gh.ensure_label = refusing
+        ctx = make_ctx(gh, at=DAY)
+        notes = sweep._labels(ctx, DAY)
+        self.assertIn("method:use-bot", gh.labels)
+        self.assertTrue(any("could not create the label `method:manual`" in n for n in notes))
+        self.assertNotIn("labels_synced", ctx.store.load())  # so the next tick tries again
+        gh.ensure_label = real
+        sweep._labels(ctx, DAY)
+        self.assertIn("method:manual", gh.labels)
+        self.assertIn("labels_synced", ctx.store.load())

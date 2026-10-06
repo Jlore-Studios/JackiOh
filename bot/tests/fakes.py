@@ -336,9 +336,11 @@ class FakeGitHub:
     def branch_sha(self, branch: str) -> str | None:
         return f"head-of-{branch}" if branch in self.branches else None
 
-    def create_orphan_branch(self, branch: str, path: str, text: str, message: str) -> None:
+    def create_orphan_branch(self, branch: str, path: str, text: str, message: str,
+                             extra: dict[str, str] | None = None) -> None:
         self.branches.add(branch)
-        self.files[(branch, path)] = (text, f"sha{next(self._shas)}")
+        for name, body in {**(extra or {}), path: text}.items():
+            self.files[(branch, name)] = (body, f"sha{next(self._shas)}")
 
     def create_branch(self, branch: str, sha: str) -> None:
         if branch in self.branches:

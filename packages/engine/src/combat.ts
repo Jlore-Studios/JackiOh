@@ -55,7 +55,7 @@ export type SwitchPositionOptions = {
 /**
  * R49: a unit with Deft has two exertions, one attack and one switch, where every other unit has
  * one. The keyword is read through §10.4's layers, so a granted Deft counts the same as a printed
- * one (patch v0.2.11 made R49's flag a keyword).
+ * one (patch v0.2.4 made R49's flag a keyword).
  */
 function hasTwoExertions(state: GameState, unit: CardInstance): boolean {
   return unitHas(state, unit, "Deft");

@@ -11,7 +11,7 @@
 // cues never says how many of the deck's cards could — it is padded with `none` cues on cards no change
 // reaches, up to {cards} (or the deck's size).
 
-import { reduce, stepParam, type CardInstance, type GameState } from "@jackioh/engine";
+import { stepParam, type CardInstance, type GameState } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario, type PileSetup } from "../_harness";
@@ -21,7 +21,7 @@ const STORM = "classicplus-008";
 const VANILLA = "core-008"; // (1) 4/4: a Degrade can change its cost or its stats.
 const IMMUTABLE = { def: "core-019", radiant: true } as const; // Radiant Midrange Menace: Immutable.
 const NETHER = "core-088"; // (4) Spell, no keywords, no numbers: no Degrade reaches it.
-const HINDER = "core-021"; // Cast on draw: … Discard 1 (a hand prompt during the draw, R431).
+const HINDER = "core-021"; // Cast on draw: … Discard 1 at random with no prompt (R682).
 const FILLER = "core-010";
 const STOCKPILE = "core-005";
 
@@ -155,22 +155,23 @@ describe("C+ #8 Withering Storm", () => {
       expect(JSON.stringify(s.view("p2").you.ownLibrary)).toBe(listBefore);
     });
 
-    it("R113 a prompt the draw opens survives a JSON round trip, and the Degrades are not made again", () => {
+    it("R682 the draw's cast asks nothing, and the Degrades are still made once", () => {
       const s = setup([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA], false, undefined, [HINDER, STOCKPILE]);
 
       s.play(STORM);
 
-      expect(s.state.pending?.kind).toBe("hand");
+      // Base Hinder's discard is random (R682): the draw's cast opens no prompt.
+      expect(s.state.pending).toBeNull();
       const revived = JSON.parse(JSON.stringify(s.state)) as GameState;
-      const pick = revived.pending?.options[0]?.selection;
-      if (pick === undefined) throw new Error("no option to discard");
-      const result = reduce(revived, { type: "answer", playerId: "p1", choiceId: revived.pending?.id ?? "", selection: [pick], nonce: "rt-008" });
+      expect(revived).toEqual(s.state);
+      expect(s.state.work).toEqual([]);
 
-      expect(result.error).toBeUndefined();
-      expect(result.state.pending).toBeNull();
-      expect(result.state.work).toEqual([]);
-      expect(cues(result.events)).toHaveLength(0);
-      expect(result.state.players.p2.library.filter(wasChanged)).toHaveLength(4);
+      // Hinder was cast (its victim the one card held) and the repeat drew Stockpile: the Degrades
+      // were made once, and answering nothing makes none again.
+      expect(s.card(HINDER).zone.z).toBe("graveyard");
+      expect(s.card(STOCKPILE).zone.z).toBe("hand");
+      expect(changed(s.events)).toHaveLength(4);
+      expect(s.state.players.p2.library.filter(wasChanged)).toHaveLength(4);
     });
 
     it("R386 card count and draw read through param(): an Upgrade of each moves what resolves", () => {

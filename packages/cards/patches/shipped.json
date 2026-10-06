@@ -30,58 +30,63 @@
     "blob": "1901fa023b1c4bec3cba95f552635f3d1f7bbf04"
   },
   {
-    "version": "v0.2.4",
+    "version": "v0.2.1",
     "commit": "9dcb65e481717a49bfc750b58ea67a11a1852f39",
     "blob": "09981874ad3c44007d9deb31dc22634cdd5cb795"
   },
   {
-    "version": "v0.2.5",
+    "version": "v0.2.2",
     "commit": "9e030abd6e3f846fde1f3e5003518d76ad512043",
     "blob": "e0067f7b94b18415e65a3c13a6d27c0f56c9cca7"
   },
   {
-    "version": "v0.2.10",
+    "version": "v0.2.3",
     "commit": "d26ab17eb8515eb35b9c3ca214c3343cb4fb1a8d",
     "blob": "41fc80fc0a96fc3e2515ffc0315de0ebc9196924"
   },
   {
-    "version": "v0.2.11",
+    "version": "v0.2.4",
     "commit": "7f3458e41b6c54bf5d35e52f45c4b5c124c3844d",
     "blob": "d88a02a739152264d8586ed36c004088bc611bff"
   },
   {
-    "version": "v0.2.12",
+    "version": "v0.2.5",
     "commit": "1be5a28e08c3b6ef94b95b3845c908adaa86d14e",
     "blob": "13c1ef7f14d6ec6026d96fcd362e2703147164ee"
   },
   {
-    "version": "v0.2.13",
+    "version": "v0.2.6",
     "commit": "b26b1b9dde3f723528e60739caf5aee359a16c20",
     "blob": "2835b1852a5e98df585e2cbb2a99db541dcc9294"
   },
   {
-    "version": "v0.2.14",
+    "version": "v0.2.7",
     "commit": "533b4e2db58eaae47b0edd0eee6da6d7e12439f3",
     "blob": "677aa3cd5cc0d8b38c8a34d232d161ac6d7eeb5e"
   },
   {
-    "version": "v0.2.14b",
+    "version": "v0.2.7b",
     "commit": "80e7960ccaef1a8c0bb5c463eadacd8fd402d858",
     "blob": "5f39769f74c0956708eb7d28d457e63bca616267"
   },
   {
-    "version": "v0.2.16",
+    "version": "v0.2.8",
     "commit": "509e9a302ab71542a4e141fe7231c9743722bdba",
     "blob": "2744936c1447a032911fbf6a8cc9e327a97f7503"
   },
   {
-    "version": "v0.2.16b",
+    "version": "v0.2.8b",
     "commit": "16724d26939a1a03779523f11461b41c57871ccb",
     "blob": "bad0d6f931ef9524a21f6ede29872396e7922467"
   },
   {
-    "version": "v0.2.17",
+    "version": "v0.2.9",
     "commit": "97a00bd613bd3adfaafdc4d1580f5d895d2b5e22",
     "blob": "0ed895027c145f1f0815ef07cf9998f9712d1fb5"
+  },
+  {
+    "version": "v0.2.10",
+    "commit": "a065f26ebfebf33dbf25801d4e06e6e334a80d96",
+    "blob": "507b7c107993d44cc1bdac24b05751f5655e4e90"
   }
 ]

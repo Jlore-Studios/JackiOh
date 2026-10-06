@@ -82,6 +82,13 @@ db:migrate` does what it looks like.
 `release` runs steps 1 and 2 together, and Render's start command runs it before every boot
 (`render.yaml`), so a deploy migrates and reseeds the database itself. Both steps are idempotent.
 
+**Migrations are append-only.** `db:migrate` refuses to start when a file the database already
+applied has changed, so an edit to an applied migration, even to a comment, stops every deploy
+at boot: #325's rename edited a comment in `0020_plague_tag.sql`, and Render served no deploy from
+`97a00bd6` until it was put back. Change the schema with a new file. `test/db/migrations-pinned.test.ts`
+pins every file's checksum, so CI fails on such an edit, and a new migration adds its line there
+(the test prints the checksum).
+
 Step 3 mints one code. Every account starts `pending` and a pending account can do nothing but
 look at the code screen (§9.4). `src/db/mint-code.ts` is a thin wrapper over `mintInviteCode` in
 `src/api/codes.ts`, which is the only thing that creates one: the plaintext goes to stdout exactly
@@ -116,7 +123,7 @@ missing or malformed value rather than failing later at the first request.
 | `SUPABASE_SECRET_KEY` | yes | `sb_secret_…` (or the legacy `service_role` JWT). **Server only** — it bypasses every RLS policy. Never give it a `VITE_` alias |
 | `DATABASE_URL` | yes | Postgres connection string for the transactional work in §9.4 and §9.5 |
 | `CODE_PEPPER` | yes | ≥32 chars. Keys the HMAC over invite codes and IP addresses, so a stolen table cannot be brute-forced and no raw address is ever stored |
-| `CATALOG_VERSION` | yes | The latest patch's version, `v0.2.10` (R388). Must match what the client ships (`VITE_CATALOG_VERSION`), `CATALOG_VERSION` in `packages/cards`, and what `db:seed-catalog` stamped on `cards.catalog_version` and `app.settings` |
+| `CATALOG_VERSION` | yes | The latest patch's version, `v0.2.9` (R388). Must match what the client ships (`VITE_CATALOG_VERSION`), `CATALOG_VERSION` in `packages/cards`, and what `db:seed-catalog` stamped on `cards.catalog_version` and `app.settings` |
 | `SUPABASE_JWKS_URL` | no | Defaults to `${SUPABASE_URL}/auth/v1/.well-known/jwks.json` |
 | `SUPABASE_JWT_SECRET` | no | HS256 fallback, for a project not yet on asymmetric signing keys. Discouraged |
 | `PORT` | no | Defaults to 8787 |
