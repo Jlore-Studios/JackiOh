@@ -1048,7 +1048,7 @@
       play: { voice: "sapi-hero", text: "The sun rises with me." },
       death: { voice: "sapi-hero", text: "Eclipse..." },
     },
-    "classicplus-038-1": { // Solarius-Prime
+    "classicplus-038-1": { // Solarius Prime
       play: { voice: "sapi-giant", text: "Behold, the prime of the sun!" },
       death: { voice: "sapi-giant", text: "Supernova..." },
     },

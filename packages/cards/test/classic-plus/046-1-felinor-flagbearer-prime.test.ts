@@ -34,9 +34,9 @@ function muster(opts: { radiant?: boolean; field?: readonly (string | { def: str
 }
 
 describe("C+ #46.1 Felinor Flagbearer Prime", () => {
-  it("is a (2) Felinor unit-token card (printed Legendary), 5/5 Rush; both faces run one script", () => {
+  it("is a (2) Felinor Prime unit-token card (printed Legendary), 5/5 Rush; both faces run one script", () => {
     expect(def.token).toBe(true);
-    expect(def.tags).toEqual(["Felinor", "Token"]);
+    expect(def.tags).toEqual(["Felinor", "Prime", "Token"]);
     expect(def.printedRarity).toBe("Legendary");
     expect(radiant).toBe(base);
   });

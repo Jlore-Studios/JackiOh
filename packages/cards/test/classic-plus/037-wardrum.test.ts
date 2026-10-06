@@ -15,6 +15,7 @@ import { DECK_SIZE, beginGame, createGame, query, reduce, stepParam, type GameSt
 import type { Action, CardView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
+import { def } from "../../src/scripts/classic-plus/037-wardrum";
 
 const WARDRUM = "classicplus-037";
 const REPLENISH = "core-010"; // (0) Spell: Combo 3: draw 3.
@@ -59,6 +60,10 @@ function glows(s: Scenario): boolean {
 }
 
 describe("C+ #37 Wardrum", () => {
+  it("is tagged Quickdraw and Acclaimed (SPEC §8.7 row 37, patch v0.2.Y)", () => {
+    expect(def.tags).toEqual(["Quickdraw", "Acclaimed"]);
+  });
+
   describe("base", () => {
     it("Quickdraw: dealt a deck holding it, it starts in the opening hand (§2.1)", () => {
       const others = query({})
