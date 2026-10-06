@@ -4,8 +4,11 @@
 # trusted opens, gets its labels, its assignees, a title that follows docs/issues-and-patches.md
 # and, for an issue, its dependencies (blocked by, blocks, its patch's tracker as parent), from a
 # Muse call. `method:manual` makes an issue `human` and assigns both people; `method:use-bot`
-# queues it for the bot and assigns the bot. Call it on any thread with
-# `gh workflow run triage.yml -f number=<n>` (an issue still needs a method label).
+# queues it for the bot and assigns the bot. Then it takes the labels that asked for it off (the
+# method label, `bot:approved`, a decided suggestion's `bot:suggestion`, and for `method:manual`
+# the bot's queue labels) and comments that it classified the thread. Call it on any thread with
+# `gh workflow run triage.yml -f number=<n>`: an issue with no method label (one triage already
+# answered) is classified again without one.
 #
 # gate -> classify -> apply. Only classify runs a model, on Muse's runner on the bot's machine
 # (night-vm-muse; it ran on Devin's until #317), and it holds no write token: it reads the thread's
@@ -143,14 +146,18 @@ jobs:
 
       # Labels from the repository's own set (no bot:*), assignees only the two people or the
       # bot, a title only when the old one breaks the convention, dependencies only to open
-      # issues; removes only the assignee a method label moves. The method label's own labels
-      # and assignees, and the links the issue's own text gives, are made even when Muse gave
-      # no answer.
-      - name: Label, assign, title and link
+      # issues; removes the assignee a method label moves, then the labels that asked for the
+      # triage, and comments that it classified the thread. The method label's own labels and
+      # assignees, and the links the issue's own text gives, are made even when Muse gave no
+      # answer. A dispatch (`--asked`) classifies an issue that has no method label.
+      - name: Label, assign, title, link and say so
         working-directory: bot
         env:
           GITHUB_TOKEN: ${{ github.token }}
           NUMBER: ${{ needs.gate.outputs.number }}
+          FROM_DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
+          flag=""
+          if [ "${FROM_DISPATCH}" = "true" ]; then flag="--asked"; fi
           python3 -m harness triage apply --number "${NUMBER}" \
-            --verdict "$RUNNER_TEMP/triage/verdict.json"
+            --verdict "$RUNNER_TEMP/triage/verdict.json" ${flag}
