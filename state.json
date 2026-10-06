@@ -2748,6 +2748,7 @@
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-06T04:25:01Z",
+      "interruptions": 0,
       "issue": 354,
       "kind": "revise",
       "pending_request": false,
