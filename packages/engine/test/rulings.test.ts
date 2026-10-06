@@ -4454,6 +4454,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R751 words the Core faces without a target they pick", () => {
     provenIn(751, CARDS_CARD_TEXT_TEST);
   });
+
+  // Proved by packages/ai determinize-shown-cost.test.ts "R752 …" (every face-down card showing a cost is
+  // sampled at that cost, greedy's sampler is not, and the AI never takes the swing into a face-down Doom
+  // Shroom showing (3) as lethal) and observe.test.ts "R752 B12 …" (no unseen trap of the cost left: the pool).
+  it("R752 samples the AI's unseen face-down traps at the cost the board shows", () => {
+    provenIn(752, "../../ai/test/determinize-shown-cost.test.ts", AI_OBSERVE_TEST);
+  });
 });
 
 describe("SPEC §11 index completeness", () => {
