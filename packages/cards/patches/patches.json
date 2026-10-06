@@ -6761,5 +6761,150 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.2.10d",
+    "date": "2026-10-06",
+    "title": "Patch v0.2.10d: balance patch 1 follow-up",
+    "source": "#355",
+    "notes": "Follow-up to balance patch 1 (#88). A deck too short of other cards fills an opening hand with its Cast on Draw cards, which wait uncast and are cast at the start of the game (R748). Divine Favor's and Rewind's numbers are tuned on the Radiant face only, the one that prints them (R749). The Power to Punish's Radiant face marks every enemy Unit it will destroy (R750). Core cards no longer say \"to a target\" or \"target <card>\" (R751).",
+    "commits": [
+      "ada067c48f78173e6b472fc9860b960b1ff30f15"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-002",
+        "name": "Bigot",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "core-016",
+        "name": "Hit Job",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-031",
+        "name": "KY's Math Equation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-034",
+        "name": "Collateral Damage",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-035",
+        "name": "Lunar Eclipse",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-036",
+        "name": "Magic Jammed",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-049",
+        "name": "Snom Bunny Mind Control",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-063",
+        "name": "Plastic Surgery",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-068",
+        "name": "Twisted Sorcerer",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-070",
+        "name": "Spiteful Stab",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-074",
+        "name": "Adaptive UI",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-046",
+        "name": "Divine Favor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-054",
+        "name": "Rewind",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      }
+    ]
   }
 ]
