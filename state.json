@@ -2703,6 +2703,8 @@
       "pending_request": false,
       "provider": "muse",
       "queued_at": "2026-10-06T05:26:27Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "37418557453",
       "self_check_findings": [],
       "started_at": "2026-10-06T05:30:01Z",
