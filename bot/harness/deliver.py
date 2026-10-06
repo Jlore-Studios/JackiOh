@@ -27,6 +27,7 @@ from typing import Any
 
 from harness import asks, disk, failures, issueplan, memory, review_rule
 from harness import easy as easy_mod
+from harness import journal as journal_mod
 from harness import stepup
 from harness import gates as gates_mod
 from harness import plan as plan_mod
@@ -363,6 +364,7 @@ class Deliverer:
                 self._try(lambda: self.gh.create_comment(number, self.rating_note))
         self._deliver_item(number)
         self._keep_handoff(number)
+        self._journal(number)
         self._close_asks(number)
 
     def _deliver_item(self, number: int) -> None:
@@ -572,12 +574,13 @@ class Deliverer:
             return
         kept: dict[str, Any] | None = None
         if not finished and isinstance(handoff, dict):
+            notes = redact(str(handoff.get("notes") or ""))
             kept = {"provider": self.provider.id, "family": self.provider.family,
                     "kind": "plan" if status == "planned" else "work",
                     "at": str(handoff.get("at") or ""),
                     "reason": redact(str(self.result.get("reason") or ""))[:500],
-                    "notes": _cut(redact(str(handoff.get("notes") or "")), HANDOFF_NOTES,
-                                  head=status == "planned"),
+                    "notes": (_cut(notes, HANDOFF_NOTES, head=True) if status == "planned"
+                              else journal_mod.compact(notes, HANDOFF_NOTES)),
                     "trail": redact(str(handoff.get("trail") or ""))[-HANDOFF_TRAIL:]}
         def change(state: dict[str, Any]) -> None:
             entry = state_item(state, number)
@@ -586,6 +589,30 @@ class Deliverer:
             else:
                 entry["handoff"] = kept
         self.ctx.store.update(change, f"handoff #{number}")
+
+    def _journal(self, number: int) -> None:
+        """Append this run to the item's journal on `bot-journal` (#342): what it was, each step
+        the work job took and why, how it ended, and the builder's notes. A record, never a gate:
+        a failure is logged and the delivery stands."""
+        key = journal_mod.key(self.plan) or number
+        seats = [f"`{s.model}` ({s.tier})" for s in (self.build_seat, self.review_seat) if s]
+        models = ", ".join(dict.fromkeys(seats)) or self.provider.cli
+        text = journal_mod.section(
+            self.result, provider=self.provider.id, models=models,
+            action=str(self.plan.get("action") or "?"), number=number, at=iso(self.ctx.now()),
+            run_url=self.cfg.run_url)
+        if self.cfg.dry_run:
+            self.log.append(f"dry run: would add this run to the journal of #{key}")
+            return
+        try:
+            journal_mod.append(self.gh, key, text)
+            self.log.append(f"added this run to the journal of #{key}")
+        except Exception as exc:  # noqa: BLE001 - the delivery already stands
+            self.log.append(f"the journal of #{key} could not be written: {redact(str(exc))}")
+
+    def _journal_link(self, number: int) -> str:
+        key = journal_mod.key(self.plan) or number
+        return f"[journal]({journal_mod.url(self.cfg.server_url, self.cfg.repo, key)})"
 
     def _labels(self, number: int) -> set[str]:
         return label_names(self.gh.get_issue(number))
@@ -763,7 +790,7 @@ class Deliverer:
         # failure; one that made none counts, whatever cut it off, except a halt, the machine's
         # disk, or a run stopped before any model call (#317 part 3). Before this only the time
         # budget counted, so a usage pause could repeat for ever.
-        if interrupt in ("budget", "usage") and calls:
+        if interrupt in ("budget", "usage", "died") and calls:
             def count(s: dict[str, Any]) -> None:
                 entry = state_item(s, number)
                 entry["interruptions"] = 0 if moved else int(entry.get("interruptions", 0)) + 1
@@ -784,7 +811,9 @@ class Deliverer:
                  if kind == "revise" else "on the branch")
         kept = f" The work so far is {where}." if pushed else ""
         self.gh.create_comment(number, f"Paused: {reason}.{kept} It stays queued and the next "
-                               "run picks it up." + (f"\n\n{problem}" if problem else ""))
+                               "run picks it up from its notes and its "
+                               f"{self._journal_link(number)}."
+                               + (f"\n\n{problem}" if problem else ""))
 
     def _builder_worked(self) -> bool:
         """Some builder session of the run worked: it ended well, or it changed something."""
@@ -1608,7 +1637,8 @@ class Deliverer:
         parts += ["", "<details><summary>Rounds and checks</summary>", "", *rows, "",
                   gates_mod.table(results), "", "</details>", ""]
         run = f" ([run]({self.cfg.run_url}))" if self.cfg.run_url else ""
-        parts.append(f"---\nBuilt overnight by @{self.cfg.bot_login}{run}. Comment "
+        parts.append(f"---\nBuilt overnight by @{self.cfg.bot_login}{run}; every run on it, "
+                     f"step by step, is in its {self._journal_link(number)}. Comment "
                      f"`@{self.cfg.bot_login} <what to change>` or `/harness revise <notes>` to ask "
                      "for a revision, or `/harness stop` to stop it.")
         return "\n".join(parts)

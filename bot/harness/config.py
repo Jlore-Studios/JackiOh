@@ -29,6 +29,10 @@ MARKER = "<!-- jackioh-bot -->"
 
 STATE_BRANCH = "bot-state"
 STATE_FILE = "state.json"
+#: The files an orphan branch the bot writes to starts with beside its own: Vercel counts a
+#: deployment for every push to every branch and reads its settings from the commit pushed, so a
+#: branch with no `vercel.json` of its own deploys on every write (docs/architecture.md, §4.2).
+NO_DEPLOY = {"vercel.json": '{ "git": { "deploymentEnabled": false } }\n'}
 NIGHT_WORKFLOW = "bot-night.yml"
 
 #: The environment key a run's model job receives its provider's secret in (`providers.py`).

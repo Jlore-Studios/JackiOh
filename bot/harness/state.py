@@ -13,7 +13,7 @@ import random
 import time
 from typing import Any, Callable
 
-from harness.config import STATE_BRANCH, STATE_FILE
+from harness.config import NO_DEPLOY, STATE_BRANCH, STATE_FILE
 from harness.errors import GitHubError, StateConflict
 
 MAX_ATTEMPTS = 6
@@ -74,7 +74,8 @@ class StateStore:
         if self.gh.branch_sha(self.branch) is not None:
             return False
         self.gh.create_orphan_branch(
-            self.branch, self.path, _dump(default_state()), "state: start [skip ci]"
+            self.branch, self.path, _dump(default_state()), "state: start [skip ci]",
+            extra=NO_DEPLOY,
         )
         return True
 
