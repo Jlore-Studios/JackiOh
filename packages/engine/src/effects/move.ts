@@ -53,13 +53,20 @@ function exileCard(ctx: EffectContext, card: CardInstance): void {
 }
 
 /**
- * One card back to its owner's hand: the whole of §6.3 Bounce for a single card, shared by
- * `bounce` and `bounceAll`. A unit token vanishes (R11), the hand cap applies so a full hand burns
- * it (§2.4), and the instance resets on the way out (R78).
+ * One card back to its controller's hand: the whole of §6.3 Bounce for a single card, shared by
+ * `bounce` and `bounceAll`. A steal on the field changes control only (R15, R171), so for a card
+ * another player controls the hand it returns to is the controller's, not the owner's — and it
+ * lands there as the controller's own card, as a card taken off the field's reach by a steal does
+ * (R12, R747): ownership moves with it, so every pile it reaches afterwards, and every hand rule
+ * that reads the owner, is the holder's. A unit token vanishes (R11), the hand cap applies to the
+ * hand it enters so a full hand burns it (§2.4), and the instance resets on the way out (R78).
  */
 export function bounceCard(ctx: EngineSink, card: CardInstance): void {
   if (card.zone.z === "hand") return;
 
+  // R747: off the field control means nothing (R12), so only a card on the field can be controlled by
+  // another player. It joins its controller's cards before the R78 reset makes them one again.
+  if (card.zone.z === "field") card.owner = card.controller;
   const token = isUnitToken(ctx.state, card);
   const event = {
     type: "bounced" as const,
@@ -188,7 +195,7 @@ export function exileMatching(
   };
 }
 
-/** §6.3 Bounce: return the card to its owner's hand (R12). */
+/** §6.3 Bounce: return the card to its controller's hand (R747). */
 export function bounce(args: { target: TargetSpec }): Effect {
   return {
     kind: "bounce",
