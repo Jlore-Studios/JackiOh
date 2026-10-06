@@ -8,8 +8,8 @@ from datetime import timedelta
 from harness import events, sweep
 from harness.clock import iso
 from datetime import timedelta as _td  # noqa: F401
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_NEEDS_PLAN, LABEL_PR, LABEL_PR_OPEN,
-                            LABEL_REVISE)
+from harness.config import (LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_NEEDS_PLAN, LABEL_PR,
+                            LABEL_PR_OPEN, LABEL_REVISE)
 from harness.errors import GitHubError, StateConflict
 from harness.state import item as state_item
 
@@ -27,6 +27,8 @@ class Base(unittest.TestCase):
         self.gh = FakeGitHub()
         self.gh.add_issue(5, "Make the Coin shiny")["type"] = {"name": "Task"}  # typed already
         self.ctx = make_ctx(self.gh, at=DAY, trust_text=TRUST)
+        # The repository has every label the bot uses, as it does once the sweep made them.
+        self.gh.labels.update({name: {"name": name} for name in LABELS})
         # The first sweep ever only sets its baseline; these tests start from a later one.
         self.ctx.store.update(lambda s: s.update(last_sweep={"since": "2026-09-01T00:00:00Z"}))
 
@@ -328,3 +330,34 @@ class IssueTypeTests(Base):
         self.assertEqual(kind("Ranked: a new leaderboard page"), "Feature")
         self.assertEqual(kind("Patch v0.2.X: a settings page", "architecture"), "Task")
         self.assertEqual(triage.fallback_type({"title": "x"}, {"Chore": "upkeep"}), "")
+
+
+class LabelTests(unittest.TestCase):
+    """The sweep creates the labels the bot uses that the repository lacks: `method:manual` and
+    `method:use-bot` (#307) shipped in #328 without existing, waiting for a person to run
+    `python3 -m harness setup`, so no issue could be triaged."""
+
+    def test_missing_labels_are_created_once_per_change_to_the_list(self):
+        gh = FakeGitHub()
+        gh.labels = {name: {"name": name} for name in LABELS
+                     if name not in ("method:manual", "method:use-bot", "Info")}
+        ctx = make_ctx(gh, at=DAY)
+        notes = sweep._labels(ctx, DAY)
+        self.assertEqual(sorted(notes), ["created the label `Info`",
+                                         "created the label `method:manual`",
+                                         "created the label `method:use-bot`"])
+        self.assertEqual(gh.labels["method:use-bot"]["color"], LABELS["method:use-bot"][0])
+        self.assertIn("two minutes after it goes on", gh.labels["method:manual"]["description"])
+        # The list has not changed since: the next tick reads nothing.
+        calls = []
+        gh.ensure_label = lambda *a: calls.append(a) or False
+        self.assertEqual(sweep._labels(ctx, DAY), [])
+        self.assertEqual(calls, [])
+
+    def test_every_sweep_runs_it(self):
+        gh = FakeGitHub()
+        ctx = make_ctx(gh, at=DAY)
+        ctx.store.update(lambda s: s.update(last_sweep={"at": iso(DAY), "since": iso(DAY)}))
+        notes = sweep.sweep(ctx)
+        self.assertIn("created the label `method:manual`", notes)
+        self.assertIn("method:use-bot", gh.labels)
