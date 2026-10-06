@@ -28,14 +28,11 @@ export const DAMAGE_FEEL: Readonly<Record<DamageTier, DamageFeel>> = Object.free
 
 export const DAMAGE_TIERS_DESCENDING: readonly DamageTier[] = ["giga", "big", "moderate", "normal", "tiny"];
 
-/** Match-wide crowd and room timing, kept beside the impact tiers it responds to. */
+/** Match-wide crowd timing, kept beside the impact tiers it responds to. */
 export const CROWD_FEEL = Object.freeze({
   reactionDebounceMs: 400,
-  ambientDuckDb: 4,
-  ambientFadeOutMs: 1500,
   patronMinMs: 6000,
   patronMaxMs: 15000,
-  bedLoopSeconds: [47, 73] as const,
   cheerDelayMs: 180,
   applauseDelayMs: 700,
   applauseTailMs: 2500,
