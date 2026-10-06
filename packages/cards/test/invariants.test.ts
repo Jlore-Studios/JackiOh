@@ -10,10 +10,10 @@
 // bare id as a target (R177) and a `stolen` event naming a card its viewer could read where it was
 // taken (R466).
 
-import { HIDDEN_ID, legalActions, viewFor, type PendingChoice } from "@jackioh/engine";
+import { GLITCH_DEF_ID, HIDDEN_ID, ceaseToExist, legalActions, viewFor, type PendingChoice } from "@jackioh/engine";
 import type { ActionBody, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
-import { scenario } from "./_harness";
+import { scenario, type Scenario } from "./_harness";
 import { createInvariantMonitor, hiddenInformationViolations } from "./_invariants";
 
 const VANILLA = "core-008";
@@ -21,6 +21,7 @@ const BIGOT = "core-002";
 const HIT_JOB = "core-016";
 const MY_PAWN = "core-096";
 const SHEEPISH = "core-041";
+const RUSH_TOKEN = "core-t-rush";
 
 describe("I2: a Windfury granted inside one action's events", () => {
   it("two declarations after a mid-action Windfury grant are one legal Windfury turn (R636, R44)", () => {
@@ -139,7 +140,7 @@ describe("I6: hidden information in what each seat is sent", () => {
       {
         nonce: "i6-rollback",
         events: [
-          { type: "transformed", instanceId: "c-old", fromDefId: trap.defId, toDefId: VANILLA, newInstanceId: "c-new", hiddenFrom: ["p1"] },
+          { type: "transformed", instanceId: "c-old", fromDefId: trap.defId, toDefId: VANILLA, newInstanceId: unit.id, hiddenFrom: ["p1"] },
           { type: "controlChanged", instanceId: unit.id, controller: "p1", row: "units", lane: 1, formerId: "c-old" },
         ],
       },
@@ -245,5 +246,68 @@ describe("I6: hidden information in what each seat is sent", () => {
     ];
     expect(JSON.stringify(viewFor(g.state, "p1").events)).toContain(secret.id);
     expect(violations(g, "p1")).toEqual([]);
+  });
+
+  /**
+   * p2 sets My Pawn face-down and holds a card, p1 ends the turn and plays Glitch, once per seed until
+   * it draws `outcome` (R676): the cards it takes off the board or out of the match go unseen.
+   */
+  function glitched(outcome: "boards" | "reset"): Scenario {
+    for (let n = 0; n < 300; n += 1) {
+      const g = scenario({
+        seed: `i6-glitch-${outcome}-${n}`,
+        active: "p2",
+        turn: 8,
+        p1: { hand: [GLITCH_DEF_ID], mana: 0 },
+        p2: { hand: [MY_PAWN, HIT_JOB], library: [HIT_JOB], mana: 5 },
+        glitchBoards: [[], []],
+      });
+      g.play(MY_PAWN).endTurn().play(GLITCH_DEF_ID);
+      const event = g.lastEvents.find((e): e is Extract<GameEvent, { type: "glitched" }> => e.type === "glitched");
+      if (event?.outcome === outcome) return g;
+    }
+    throw new Error(`no seed draws ${outcome}`);
+  }
+
+  /** The instance ids the log's raw events pair with a definition, which no pile holds once a Glitch has taken them. */
+  function idsNaming(g: Scenario, defId: string): string[] {
+    return g.state.applied
+      .flatMap((entry) => entry.events)
+      .flatMap((event) => ("instanceId" in event && "defId" in event && event.defId === defId ? [event.instanceId] : []));
+  }
+
+  /** What an engine that left the log's events unredacted would send p1. */
+  function unredacted(g: Scenario): PlayerView {
+    return { ...viewFor(g.state, "p1"), events: g.state.applied.flatMap((entry) => entry.events) };
+  }
+
+  it("I6 fires on a face-down trap a boards Glitch took, named openly in the events before it (R678, R764)", () => {
+    const g = glitched("boards");
+    const found = hiddenInformationViolations(g.state, "p1", unredacted(g), legalActions(g.state, "p1"));
+    expect(found.some((message) => message.startsWith("I6") && idsNaming(g, MY_PAWN).some((id) => message.includes(`"${id}"`)))).toBe(true);
+    // The engine's own view is clean (R764), and so is the monitor over both seats.
+    expect(hiddenInformationViolations(g.state, "p1", viewFor(g.state, "p1"), legalActions(g.state, "p1"))).toEqual([]);
+    expect(createInvariantMonitor(g.state).hidden(g.state)).toEqual([]);
+  });
+
+  it("I6 fires on a card the other seat drew in a game a Glitch's reset took, named openly after it (R676, R764)", () => {
+    const g = glitched("reset");
+    const found = hiddenInformationViolations(g.state, "p1", unredacted(g), legalActions(g.state, "p1"));
+    expect(found.some((message) => message.startsWith("I6") && idsNaming(g, HIT_JOB).some((id) => message.includes(`"${id}"`)))).toBe(true);
+    expect(hiddenInformationViolations(g.state, "p1", viewFor(g.state, "p1"), legalActions(g.state, "p1"))).toEqual([]);
+    expect(createInvariantMonitor(g.state).hidden(g.state)).toEqual([]);
+  });
+
+  it("I6 lets a token that ceased to exist be named openly, as it was public when it went (R11)", () => {
+    const g = scenario({ p2: { hand: [RUSH_TOKEN, RUSH_TOKEN] } });
+    const [gone] = g.hand("p2");
+    if (gone === undefined) throw new Error("setup: p2 should hold the tokens");
+    g.state.applied = [
+      { nonce: "i6-token", events: [{ type: "drawn", player: "p2", instanceId: gone.id, defId: gone.defId, turnDraw: 1 }] },
+    ];
+    ceaseToExist(g.state, gone);
+    const view = { ...viewFor(g.state, "p1"), events: g.state.applied.flatMap((entry) => entry.events) };
+    expect(JSON.stringify(view.events)).toContain(gone.id);
+    expect(hiddenInformationViolations(g.state, "p1", view, legalActions(g.state, "p1"))).toEqual([]);
   });
 });

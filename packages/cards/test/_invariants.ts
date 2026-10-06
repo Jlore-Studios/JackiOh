@@ -53,6 +53,9 @@
 //          card) is no secret, so a definition counts only while nothing readable carries it;
 //        - Echo's `copies` (R399) names the definition of the card it copied (read off the copier);
 //        - `swapsBook.from` (R671) names the Book a swap took the text from (read off the card).
+//      A card in no pile that has no successor (no Transform or Fuse made it another, R177) reads only
+//      when it is a token (R11); a Glitch's reset or boards (R676, R678) takes the rest unseen, and
+//      the first oracle excused it, which was the engine's own R97 rule restated: R764 fixed it.
 //      Judging former ids by the log found a sixth, fuzz seed 992: R419's Rollback recreated a
 //      face-down trap #83 had transformed away, and the `formerId` it carries goes with the card
 //      (R227) once that card is public, R177's mark on the old id notwithstanding.
@@ -69,6 +72,7 @@ import {
   announceOf,
   attackTargets,
   cardTypeOf,
+  defOf,
   enchantmentsOfKind,
   findInstance,
   legalActions,
@@ -89,7 +93,8 @@ import {
  * Measured on 2026-10-06 (four cores, idle). `pnpm fuzz`, seeds 1–1000, both files, before I6 and
  * with no monitor in fuzz-handicap: 342 s. With I1–I6 in both files and every state checked: 502 s
  * (×1.47, over the budget, and 0 violations). With this stride: 386 s (×1.13). Once definitions
- * were judged through the state and the log rather than the view: 411 s (×1.20).
+ * were judged through the state and the log rather than the view: 411 s (×1.20), and with a card in no pile
+ * judged hidden unless it is a token: 419 s (×1.23).
  * `pnpm test --project cards fuzz`, seeds 1–100, every state: 38 s before, 55 s after (×1.45).
  */
 export const I6_GATE_STRIDE = 5;
@@ -214,12 +219,15 @@ function lineageOf(state: GameState, viewer: PlayerId): Lineage {
 
 /**
  * Whether this viewer reads the card an id names, judged by where the card is now: a card the state
- * holds reads unless the hidden set has it, and a vanished one by its successor. A card that ceased
- * to exist with none left the field or a public reveal (R11, R86: a token leaving the field, a card
- * burned or discarded), so it reads. An id neither the state nor the log knows vouches for nothing.
+ * holds reads unless the hidden set has it, and a vanished one by its successor. A vanished card with
+ * none reads only when every definition the log pairs with it is a token's: R11's tokens go public
+ * (leaving the field, discarded, burned), where any other card in no pile went unseen, out of a
+ * Glitch's reset or boards (R676, R678), and stays as hidden as it was. An id neither the state nor
+ * the log knows vouches for nothing.
  */
 function standingOf(
   state: GameState,
+  held: ReadonlySet<string>,
   viewer: PlayerId,
   ids: ReadonlyMap<string, string>,
   lineage: Lineage,
@@ -229,10 +237,18 @@ function standingOf(
   for (let hops = 0; hops <= lineage.next.size; hops += 1) {
     const where = ids.get(id);
     if (where !== undefined) return { reads: false, where };
-    if (findInstance(state, id) !== undefined) return { reads: true, where: "a pile it reads" };
+    if (held.has(id)) return { reads: true, where: "a pile it reads" };
     if (lineage.unread.has(id)) return { reads: false, where: `a pile ${viewer} could not read when it was transformed` };
     const successor = lineage.next.get(id);
-    if (successor === undefined) return lineage.ties.has(id) ? { reads: true, where: "no pile (it ceased to exist)" } : null;
+    if (successor === undefined) {
+      const defs = lineage.ties.get(id);
+      if (defs === undefined) return null;
+      // R11: a token that ceased to exist (it left the field, was discarded or burned) was public when
+      // it went. Any other card in no pile went unseen (a Glitch's reset or boards, R676, R678) and
+      // stays as hidden as it was.
+      const token = [...defs].every((def) => defOf(state, def).token);
+      return { reads: token, where: "no pile (it ceased to exist)" };
+    }
     id = successor;
   }
   return null;
@@ -302,8 +318,11 @@ function hiddenFrom(state: GameState, viewer: PlayerId): HiddenSet {
 
   // R227, R177: an id a card had before is that card, so it is hidden wherever the card is.
   const lineage = lineageOf(state, viewer);
-  for (const id of [...lineage.next.keys(), ...lineage.unread]) {
-    const standing = ids.has(id) ? null : standingOf(state, viewer, ids, lineage, id);
+  // The end of a chain counts too (a card that ceased to exist where the viewer could not read it).
+  const held = new Set(cardsOf(state).map((card) => card.id));
+  for (const id of new Set([...lineage.next.keys(), ...lineage.unread, ...lineage.ties.keys()])) {
+    if (held.has(id)) continue;
+    const standing = ids.has(id) ? null : standingOf(state, held, viewer, ids, lineage, id);
     if (standing !== null && !standing.reads) ids.set(id, `${standing.where} (a former id)`);
   }
 
@@ -321,7 +340,7 @@ function hiddenFrom(state: GameState, viewer: PlayerId): HiddenSet {
   for (const card of state.players[viewer].library) if (card.knownAs !== undefined) defs.delete(card.knownAs.defId);
   // Every card the log names that the viewer reads where it is now, as the engine's events named it.
   for (const [id, tied] of lineage.ties) {
-    if (standingOf(state, viewer, ids, lineage, id)?.reads === true) for (const def of tied) defs.delete(def);
+    if (standingOf(state, held, viewer, ids, lineage, id)?.reads === true) for (const def of tied) defs.delete(def);
   }
   return { ids, defs, bare, offeredBare };
 }
