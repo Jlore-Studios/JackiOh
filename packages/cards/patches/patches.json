@@ -6037,5 +6037,589 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.2.15",
+    "date": "2026-10-06",
+    "title": "Patch v0.2.15: Classic and Classic+ balance patch 1",
+    "source": "#88",
+    "notes": "Classic and Classic+ balance patch 1: random discards unless a card says of your choice (R682), a Bounce keyword for every return to hand (R692), Plague Counters of one effect on one chosen permanent (R689), Recruit skipping (X)-cost cards (R690), Locked zones refusing only plays (R688), Transform keeping battle position (R691), Reveal (R686), and per-card balance and text changes across Classic and Classic+.",
+    "commits": [
+      "d4ca767eef047a414baacfda56604730fcca3d94"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-017",
+        "name": "Flood",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-021",
+        "name": "Hinder",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-023",
+        "name": "Reoccurring Dream",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-031",
+        "name": "KY's Math Equation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-032",
+        "name": "Prem Panther",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-052",
+        "name": "Silly Silas",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-004",
+        "name": "Palantir",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "loc",
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-008",
+        "name": "Pickle",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classic-010",
+        "name": "Exile",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-014",
+        "name": "Shadowstep",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-015",
+        "name": "Nose Hunter",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-018",
+        "name": "Glitch in the System",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-020",
+        "name": "The Power to Punish",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classic-021",
+        "name": "Turtinator",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-022",
+        "name": "Mid Runner",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-023",
+        "name": "Devil's Pact",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classic-025",
+        "name": "Lag in the System",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-026",
+        "name": "Rapid Draw",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classic-028",
+        "name": "Second Wind",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-033",
+        "name": "Joro",
+        "kind": "changed",
+        "fields": [
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-034",
+        "name": "Ancient Acquisition",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-037",
+        "name": "Last Hurrah",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-038",
+        "name": "Jackiestan Auctioneer",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-043",
+        "name": "Plague Nuke",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-046",
+        "name": "Divine Favor",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-047",
+        "name": "Recurring Felinor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-048",
+        "name": "Hired Shrimp",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-054",
+        "name": "Rewind",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-064",
+        "name": "Malzahar's Recycler",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classic-065",
+        "name": "Ace in the Hole",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-066",
+        "name": "EU Striker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-074",
+        "name": "Corpse Plantation",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-075",
+        "name": "Argusland",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-080",
+        "name": "BOOM! Big Max",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-083",
+        "name": "Flame Lance",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-088",
+        "name": "Siphon Squad",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-090",
+        "name": "In Too Deep",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-007",
+        "name": "The House",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classicplus-012-6",
+        "name": "Frozen Wastes",
+        "kind": "changed",
+        "fields": [
+          "type",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-014",
+        "name": "Forever&",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-019",
+        "name": "League of Losers",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classicplus-021",
+        "name": "Whirlwind",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-030",
+        "name": "Felinor Fuser",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-031",
+        "name": "Fusion Lab",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-038",
+        "name": "Solarius",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-039",
+        "name": "Book Worm",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-040",
+        "name": "Appropriations",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-042",
+        "name": "KY's Test",
+        "kind": "changed",
+        "fields": [
+          "refs",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-042-1",
+        "name": "KY's Gift",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classicplus-046",
+        "name": "Felinor Flagbearer",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-053",
+        "name": "Book of Tokens",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-056",
+        "name": "Book of Pain",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classicplus-060",
+        "name": "Doctors Orders",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-063",
+        "name": "Fruit Tree",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-065",
+        "name": "Two Grapes",
+        "kind": "changed",
+        "fields": [
+          "refs",
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-065-2",
+        "name": "Normal Grape",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-065-4",
+        "name": "Golden Grape",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-066",
+        "name": "Vine of Grapes",
+        "kind": "changed",
+        "fields": [
+          "refs",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-073-1",
+        "name": "Classic Golem",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-074",
+        "name": "Twice Forward One Step Backwards",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-078",
+        "name": "Claude's Datacenter",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]
