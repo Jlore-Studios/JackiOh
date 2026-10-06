@@ -200,7 +200,7 @@ function run({ board, verbs }: Case): { state: GameState; start: Map<string, Sna
 // ---------------------------------------------------------------------------
 
 describe("R171 over random boards and random control changes (fast-check)", () => {
-  it("R171 P1: only a card that changed sides takes this turn and a fresh exertion, and no owner changes", () => {
+  it("R171 P1: only a card that changed sides takes this turn and a fresh exertion, and no owner changes but a bounce's (R747)", () => {
     fc.assert(
       fc.property(caseArb, (sample) => {
         const { state, start, crossed } = run(sample);
@@ -219,7 +219,11 @@ describe("R171 over random boards and random control changes (fast-check)", () =
           }
         }
         for (const [id, before] of start) {
-          expect(findInstance(state, id)?.owner, `${id} owner`).toBe(before.owner);
+          const card = findInstance(state, id);
+          // R747: a card a bounce took off the field is in its controller's hand and theirs now (R12);
+          // every other card is still its first owner's.
+          if (card?.zone.z === "hand") expect(card.owner, `${id} owner in a hand`).toBe(card.zone.player);
+          else expect(card?.owner, `${id} owner`).toBe(before.owner);
         }
       }),
       { seed: PROPERTY_SEED, numRuns: BOOKKEEPING_RUNS },

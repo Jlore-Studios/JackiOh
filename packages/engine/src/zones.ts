@@ -486,7 +486,7 @@ export function removeFromField(
 
 export type OffFieldZone = "hand" | "library" | "graveyard" | "exile";
 
-/** The pile a card lands in; off the field it always belongs to its owner (R12, R747's bounced hand excepted). */
+/** The pile a card lands in; off the field it always belongs to its owner (R12). */
 function pileFor(side: PlayerState, zone: OffFieldZone): CardInstance[] {
   if (zone === "hand") return side.hand;
   if (zone === "library") return side.library;
@@ -693,7 +693,7 @@ export function moveToZone(
   state: GameState,
   instance: CardInstance,
   zone: OffFieldZone,
-  options: { position?: "top" | "bottom" | number; keepState?: boolean; holder?: PlayerId } = {},
+  options: { position?: "top" | "bottom" | number; keepState?: boolean } = {},
 ): MoveResult {
   const from = instance.zone.z;
   const wasOnField = from === "field";
@@ -731,10 +731,7 @@ export function moveToZone(
   const landed = from === "resolving";
   if ((wasOnField || pileToPile || landed) && options.keepState !== true) resetInstance(instance);
 
-  // R747: a card landing in a hand goes to its holder's pile — its owner's, except a bounced
-  // card, which lands in its controller's hand. Every other pile stays its owner's (R12).
-  const holder = zone === "hand" ? (options.holder ?? instance.owner) : instance.owner;
-  const side = state.players[holder];
+  const side = state.players[instance.owner];
   // B5 E5, R460: a card that would go to a graveyard may be sent elsewhere instead — asked now that it
   // has left the zone it was in. It lands the way the graveyard would have had it land (the reset
   // above), and an exile counts like any other (R55). A unit token never gets here (R11).
@@ -762,7 +759,7 @@ export function moveToZone(
   } else {
     pile.push(instance);
   }
-  instance.zone = { z: zone, player: holder };
+  instance.zone = { z: zone, player: instance.owner };
   return "moved";
 }
 

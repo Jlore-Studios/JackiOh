@@ -4415,11 +4415,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(746, CARDS_CARD_TEXT_TEST);
   });
 
-  // Proved by effects-move.test.ts "R747 …" (a stolen unit bounces to its controller's hand without
-  // changing owner, and into a full controller hand it burns to its owner's graveyard) and
-  // effects-boardwide.test.ts "R747 …" (the sweep returns each card to its controller's hand).
-  it("R747 bounces a permanent to its controller's hand, never the owner's", () => {
-    provenIn(747, "effects-move.test.ts", "effects-boardwide.test.ts");
+  // Proved by effects-move.test.ts "R747 …" (a stolen unit bounces to its controller's hand as the
+  // controller's card, and into a full controller hand it burns to the controller's graveyard),
+  // effects-boardwide.test.ts "R747 …" (the sweep returns each card to its controller's hand) and
+  // cards test/re-entry.test.ts "R747 …" (radiant Silly Silas's rotation bounce of a stolen card,
+  // which its controller then plays at cost 0).
+  it("R747 bounces a permanent to its controller's hand as the controller's card", () => {
+    provenIn(747, "effects-move.test.ts", "effects-boardwide.test.ts", "../../cards/test/re-entry.test.ts");
   });
 });
 

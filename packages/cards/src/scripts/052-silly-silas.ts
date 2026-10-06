@@ -33,9 +33,9 @@
 //   * a card that crosses the centre line has entered its new controller's side (R171): it takes
 //     this turn as its `summonedTurn`, so it is summoning sick there, and a fresh exertion;
 //   * `controller` changes only when the destination is on the other side of the centre line, and
-//     `owner` never changes (R12), so a crossed card still leaves to its controller's hand (R747),
-//     or its owner's other piles, later; a
-//     face-down trap that crosses is read by its new controller alone, which follows from
+//     `owner` changes only when a bounce takes the card to its controller's hand as theirs
+//     (R747) and never on a crossing (R12), so a crossed card still leaves to its owner's other
+//     piles later; a face-down trap that crosses is read by its new controller alone, which follows from
 //     `controller` and is why `faceUp` is untouched (R33);
 //   * a Locked or Reborn-reserved destination bounces the card to its controller's hand instead
 //     (R14, R88, R747), where the hand cap applies (R4) and a unit token ceases to exist on the way (R11);
@@ -88,6 +88,6 @@ export const base: Script = { modes: [DIRECTION_DECL], cry: silas };
 
 /**
  * The same declaration and the same hook: the radiant difference is `ctx.radiant`, which the
- * rotation subsystem reads for itself (R14's "radiant bounces go to the card's owner's hand").
+ * rotation subsystem reads for itself (R14's "radiant bounces go to the card's controller's hand", R747).
  */
 export const radiant: Script = { modes: [DIRECTION_DECL], cry: silas };

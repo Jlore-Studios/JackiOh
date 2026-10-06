@@ -460,8 +460,9 @@ describe("bounceAll (§6.3, §3.2, R11, R78, R747, M3-T1)", () => {
 
     expect(state.players.p1.hand.map((c) => c.id)).toEqual([mine.id]);
     expect(state.players.p2.hand.map((c) => c.id)).toEqual([theirs.id, stolen.id]);
-    // R747: the bounce moved no ownership — the stolen card is still p1's, standing in p2's hand.
-    expect(stolen.owner).toBe("p1");
+    // R747: it lands in p2's hand as p2's own card.
+    expect(stolen.owner).toBe("p2");
+    expect(stolen.controller).toBe("p2");
     expect(stolen.zone).toEqual({ z: "hand", player: "p2" });
     // R11: the token reached no hand at all and is not in either player's pile.
     expect(token.zone.z).toBe("gone");

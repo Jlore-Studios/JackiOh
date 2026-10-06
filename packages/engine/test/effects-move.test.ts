@@ -237,7 +237,7 @@ describe("bounce (§6.3, M3-T1)", () => {
     expect(eventsOfType(events, "enteredGraveyard").map((e) => e.instanceId)).toEqual([victim.id]);
   });
 
-  it("R747 a stolen unit bounces to its controller's hand, not its owner's, without changing owner", () => {
+  it("R747 a stolen unit bounces to its controller's hand and becomes the controller's card", () => {
     const state = game();
     const theirs = newInstance(state, "fx-4", "p2", { z: "hand", player: "p2" });
     expect(placeOnField(state, theirs, slot("p1", "units", 1))).toBe(true);
@@ -246,17 +246,18 @@ describe("bounce (§6.3, M3-T1)", () => {
 
     expect(state.players.p1.hand.map((c) => c.id)).toEqual([theirs.id]);
     expect(state.players.p2.hand).toHaveLength(0);
-    expect(theirs.owner).toBe("p2");
+    expect(theirs.owner).toBe("p1");
+    expect(theirs.controller).toBe("p1");
     expect(theirs.zone).toEqual({ z: "hand", player: "p1" });
     expect(eventsOfType(events, "bounced")).toEqual([
-      { type: "bounced", instanceId: theirs.id, defId: "fx-4", owner: "p2" },
+      { type: "bounced", instanceId: theirs.id, defId: "fx-4", owner: "p1" },
     ]);
     expect(eventsOfType(events, "addedToHand")).toEqual([
       { type: "addedToHand", player: "p1", instanceId: theirs.id, defId: "fx-4" },
     ]);
   });
 
-  it("R747 a stolen unit bounced into a full controller hand burns to its owner's graveyard", () => {
+  it("R747 a stolen unit bounced into a full controller hand burns to the controller's graveyard", () => {
     const state = game();
     inHand(state, "fx-2", "p1", HAND_CAP);
     const theirs = newInstance(state, "fx-4", "p2", { z: "hand", player: "p2" });
@@ -265,7 +266,8 @@ describe("bounce (§6.3, M3-T1)", () => {
     const events = run(state, bounce({ target: chosen }), theirs, { controller: "p1" });
 
     expect(state.players.p1.hand).toHaveLength(HAND_CAP);
-    expect(state.players.p2.graveyard.map((c) => c.id)).toEqual([theirs.id]);
+    expect(state.players.p1.graveyard.map((c) => c.id)).toEqual([theirs.id]);
+    expect(state.players.p2.graveyard).toHaveLength(0);
     expect(eventsOfType(events, "bounced").map((e) => e.instanceId)).toEqual([theirs.id]);
     expect(eventsOfType(events, "burned").map((e) => e.instanceId)).toEqual([theirs.id]);
   });

@@ -54,19 +54,19 @@ function exileCard(ctx: EffectContext, card: CardInstance): void {
 
 /**
  * One card back to its controller's hand: the whole of §6.3 Bounce for a single card, shared by
- * `bounce` and `bounceAll`. For a card its owner controls that is its owner's hand; for a card
- * another player controls (a steal on the field changes control only, R15/R171), it is the
- * controller's hand — bouncing an enemy permanent never fills your own hand (R747). Ownership does
- * not move with it: a later death or burn still lands in its owner's piles (§3.2). A unit token
- * vanishes (R11), the hand cap applies to the hand it enters so a full hand burns it (§2.4), and
- * the instance resets on the way out (R78).
+ * `bounce` and `bounceAll`. A steal on the field changes control only (R15, R171), so for a card
+ * another player controls the hand it returns to is the controller's, not the owner's — and it
+ * lands there as the controller's own card, as a card taken off the field's reach by a steal does
+ * (R12, R747): ownership moves with it, so every pile it reaches afterwards, and every hand rule
+ * that reads the owner, is the holder's. A unit token vanishes (R11), the hand cap applies to the
+ * hand it enters so a full hand burns it (§2.4), and the instance resets on the way out (R78).
  */
 export function bounceCard(ctx: EngineSink, card: CardInstance): void {
   if (card.zone.z === "hand") return;
 
-  // R747: read the destination before the move — the R78 reset below makes the controller its
-  // owner again, but the card lands where it was controlled from.
-  const holder = card.controller;
+  // R747: off the field control means nothing (R12), so only a card on the field can be controlled by
+  // another player. It joins its controller's cards before the R78 reset makes them one again.
+  if (card.zone.z === "field") card.owner = card.controller;
   const token = isUnitToken(ctx.state, card);
   const event = {
     type: "bounced" as const,
@@ -83,7 +83,7 @@ export function bounceCard(ctx: EngineSink, card: CardInstance): void {
   }
 
   ctx.events.push(event);
-  addToHand(ctx, card, holder);
+  addToHand(ctx, card);
 }
 
 /** §6.3 Exile: to the exile pile from anywhere, with no Death trigger. */
