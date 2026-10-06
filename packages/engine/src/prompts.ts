@@ -32,7 +32,7 @@
 // leave a Spell short of its graveyard. The drain is `work.drainWork`, so the order is R113's and
 // the queue is still the one `work.ts` owns; `settle` drains again and finds nothing left.
 
-import type { ActionBody, PlayerId, PromptKind, Selection } from "@jackioh/shared";
+import type { ActionBody, PlayerId, PromptKind, Row, Selection } from "@jackioh/shared";
 import { castModeForPrompt, preferEnemies, preferFriends } from "./randomCast";
 import { makeContext, type EngineSink } from "./resolve";
 import type { Effect, EffectContext, Hook, Script } from "./script";
@@ -350,16 +350,31 @@ function sameSelection(a: Selection, b: Selection): boolean {
   }
 }
 
-function nameOf(selection: Selection): string {
+/**
+ * §10.6: how a prompt names a hero or a board cell to the player it is for: theirs ("Your") or the
+ * other player's ("Enemy"), never by seat id, which no player sees anywhere else. Only that player
+ * is sent the options (R81), so "Your" always reads as the reader's own; the client's pickers word a
+ * play's own choices the same way (`selectionLabel` in apps/web/src/game/Prompt.tsx).
+ */
+export function heroOptionLabel(player: PlayerId, chooser: PlayerId): string {
+  return `${player === chooser ? "Your" : "Enemy"} hero`;
+}
+
+/** §10.6: a board cell, named to its chooser as `heroOptionLabel` names a hero ("Enemy Unit lane 3"). */
+export function cellOptionLabel(player: PlayerId, row: Row, lane: number, chooser: PlayerId): string {
+  return `${player === chooser ? "Your" : "Enemy"} ${row === "units" ? "Unit" : "Backrow"} lane ${lane}`;
+}
+
+function nameOf(selection: Selection, chooser: PlayerId): string {
   switch (selection.pick) {
     case "instance":
       return selection.instanceId;
     case "hero":
-      return `${selection.player}'s hero`;
+      return heroOptionLabel(selection.player, chooser);
     case "mode":
       return selection.option;
     case "zone":
-      return `${selection.player} ${selection.row} ${selection.lane}`;
+      return cellOptionLabel(selection.player, selection.row, selection.lane, chooser);
     case "none":
       return "nothing";
     default:
@@ -390,9 +405,9 @@ export function whyAnswerRefused(pending: PendingChoice, answer: AnswerInput): s
     const matches = pending.options.flatMap((option, index) =>
       sameSelection(option.selection, pick) ? [index] : [],
     );
-    if (matches.length === 0) return `${nameOf(pick)} is not one of the options offered`;
+    if (matches.length === 0) return `${nameOf(pick, pending.playerId)} is not one of the options offered`;
     const free = matches.find((index) => !used.has(index));
-    if (free === undefined) return `${nameOf(pick)} is picked twice`;
+    if (free === undefined) return `${nameOf(pick, pending.playerId)} is picked twice`;
     used.add(free);
   }
   // B5 E18: a `pick` prompt's picks may cost no more than its budget together (Classic #44).

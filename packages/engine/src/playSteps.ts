@@ -76,7 +76,9 @@ import {
 } from "./playChoices";
 import { recordPlay } from "./playCounts";
 import {
+  cellOptionLabel,
   closePrompt,
+  heroOptionLabel,
   inOfferedOrder,
   openPrompt,
   registerPromptAnswerer,
@@ -1415,14 +1417,30 @@ function castXChosen(sink: EngineSink, run: PlayRun, card: CardInstance, step: P
 // Step 6 — Echo (§10.5 step 6, R30)
 // ---------------------------------------------------------------------------
 
-function labelOf(selection: Selection): string {
+/** An option's key, built from the selection and never from its label (§10.6, R177): what the client sends back. */
+function keyOf(selection: Selection): string {
+  switch (selection.pick) {
+    case "instance":
+      return `instance:${selection.instanceId}`;
+    case "hero":
+      return `hero:${selection.player}`;
+    case "zone":
+      return `zone:${selection.player}:${selection.row}:${selection.lane}`;
+    case "mode":
+      return `mode:${selection.option}`;
+    default:
+      return "none";
+  }
+}
+
+function labelOf(selection: Selection, chooser: PlayerId): string {
   switch (selection.pick) {
     case "instance":
       return selection.instanceId;
     case "hero":
-      return `${selection.player}'s hero`;
+      return heroOptionLabel(selection.player, chooser);
     case "zone":
-      return `${selection.player} ${selection.row} ${selection.lane}`;
+      return cellOptionLabel(selection.player, selection.row, selection.lane, chooser);
     case "mode":
       return selection.option;
     default:
@@ -1512,8 +1530,8 @@ function askRepeatTargets(
       aim: decl.aim,
       prompt: askLabel(step, name, run),
       options: options.map((selection) => ({
-        key: `${selection.pick}:${labelOf(selection)}`,
-        label: labelOf(selection),
+        key: keyOf(selection),
+        label: labelOf(selection, run.player),
         selection,
       })),
       min: decl.min,
