@@ -2917,6 +2917,11 @@
       }
     },
     "371": {
+      "cleared": {
+        "at": "2026-10-06T11:16:40Z",
+        "by": "`claude` (strong)",
+        "sha": "11f94a8a6423088bbbeb8f6c4727e8f78fbf72de"
+      },
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-06T10:06:19Z",
