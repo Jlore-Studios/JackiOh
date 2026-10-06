@@ -2695,6 +2695,11 @@
     "360": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-06T05:34:04Z",
+        "by": "`muse` (medium) twice",
+        "sha": "69a392a76cc95bfea198161a0e8f0a2dd57b547b"
+      },
       "cross_rounds": 0,
       "difficulty": "medium",
       "failures": 0,
