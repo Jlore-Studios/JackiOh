@@ -19,6 +19,8 @@ export default defineConfig(
       "**/dist/**",
       "**/coverage/**",
       "**/test/fixtures/lint/**",
+      // wasm-bindgen's glue, written by scripts/build-wasm.sh and gitignored (SURFACE §10.2).
+      "apps/web/src/wasm/pkg/**",
       // Agent worktrees are whole checkouts of this same repo (see scripts/worktree.sh). Linting
       // them lints every file twice and reports another agent's in-progress work as this tree's.
       ".claude/**",
