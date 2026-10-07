@@ -279,7 +279,8 @@ mod r383_b3_1_an_animated_card_is_a_unit_for_every_rule {
         assert_eq!(card_type_of(&state, &card), CardType::Unit);
         assert!(unit_ids(&state, P2).contains(&trap.id));
         {
-            let ctx = make_context(sink_for(&mut state), None, by(P1));
+            let mut sink = sink_for(&mut state);
+            let ctx = make_context(&mut sink, None, by(P1));
             assert!(ids(&cards_in_scope(&ctx, &json_as(json!({ "side": "enemy" })))).contains(&trap.id));
             assert!(
                 !ids(&cards_in_scope(&ctx, &json_as(json!({ "side": "enemy", "rows": ["backrow"] }))))
@@ -432,7 +433,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         // it, and a backrow effect does (rule 7).
         assert!(!unit_ids(sink.state, P1).contains(&card.id));
         {
-            let ctx = make_context(sink.reborrow(), None, by(P2));
+            let ctx = make_context(&mut sink, None, by(P2));
             assert!(!ids(&cards_in_scope(&ctx, &json_as(json!({ "side": "enemy" })))).contains(&card.id));
             assert!(
                 ids(&cards_in_scope(&ctx, &json_as(json!({ "side": "enemy", "rows": ["backrow"] }))))
@@ -502,7 +503,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         animate_at_turn_start(&mut sink, P1);
         put(sink.state, &banner.id, slot(P2, Row::Backrow, 1), Default::default());
         (steal(json_as(json!({ "target": { "of": "instance", "instanceId": card.id } }))).apply)(&mut make_context(
-            sink.reborrow(),
+            &mut sink,
             None,
             by(P2),
         ));
@@ -556,7 +557,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         let mut sink = sink_for(&mut state);
         animate_at_turn_start(&mut sink, P2);
         by_id_mut(sink.state, &card.id).damage = 5;
-        settle(&mut sink);
+        settle(&mut sink, SettleOptions::default());
         assert!(graveyard_ids(sink.state, P2).contains(&card.id));
         assert!(home_of(sink.state, &card.id).is_none());
         assert!(!is_reserved(sink.state, slot(P2, Row::Backrow, 1)));
@@ -590,7 +591,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         assert_eq!(unit_view(sink.state, by_id(sink.state, &granted.id)).attack, 0);
         assert_eq!(unit_view(sink.state, by_id(sink.state, &granted.id)).max_health, 1);
         // All three survive the state check in their unit zones.
-        settle(&mut sink);
+        settle(&mut sink, SettleOptions::default());
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(base.id.clone()));
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 3)), Some(radiant.id.clone()));
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 4)), Some(granted.id.clone()));

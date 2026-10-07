@@ -103,7 +103,8 @@ impl Bench {
     /// `applyEffects(effects, makeContext(sink, self, options))`, `self` read as it stands now.
     fn apply(&mut self, me: Option<&CardInstance>, options: HookOptions, effects: Vec<Effect>) {
         let me = me.map(|card| find_instance(&self.state, &card.id).cloned().unwrap_or_else(|| card.clone()));
-        let mut ctx = make_context(self.sink(), me, options);
+        let mut sink = self.sink();
+        let mut ctx = make_context(&mut sink, me.as_ref(), options);
         apply_effects(&effects, &mut ctx);
     }
 }
@@ -284,8 +285,9 @@ mod e35_immune_to_spells_a_spells_effects_pass_it_by {
         let top = live(&state, &radiant_top).clone();
         let mut b = Bench::sink_for(state);
         // TS `{ ...makeContext(sink, null, { controller: "p1" }), defId: bolt.id, radiant: false }`.
+        let mut sink = b.sink();
         let mut gone = make_context(
-            b.sink(),
+            &mut sink,
             None,
             HookOptions {
                 controller: Some(PlayerId::P1),

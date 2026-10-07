@@ -78,7 +78,7 @@ mod r446_a_carried_unit_takes_damage {
         let (mut state, rider) = carried("carried-sweep");
         let mut sink = sink_for(&mut state);
         (damage_all(json_as(json!({ "amount": 1, "side": "enemy" }))).apply)(&mut make_context(
-            sink.reborrow(),
+            &mut sink,
             None,
             by(P2),
         ));
@@ -106,7 +106,7 @@ mod r53_r446_a_carried_unit_is_out_of_a_random_forced_attack {
         let mut sink = sink_for(&mut state);
         let cursor = sink.rng.cursor();
         (forced_attack_random(json_as(json!({ "attacker": { "of": "self" }, "among": "enemyUnits" }))).apply)(
-            &mut make_context(sink.reborrow(), Some(&striker), Default::default()),
+            &mut make_context(&mut sink, Some(&striker), Default::default()),
         );
         assert!(sink.events.is_empty());
         assert_eq!(sink.rng.cursor(), cursor);

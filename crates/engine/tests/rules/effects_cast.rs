@@ -143,8 +143,8 @@ fn run(state: &mut GameState, effects: Vec<Effect>, self_id: Option<&str>) -> Ve
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     {
-        let sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(sink, self_, HookOptions { controller: Some(PlayerId::P1), ..Default::default() });
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        let mut ctx = make_context(&mut sink, self_.as_ref(), HookOptions { controller: Some(PlayerId::P1), ..Default::default() });
         apply_effects(&effects, &mut ctx);
         settle(&mut ctx.sink, Default::default());
     }

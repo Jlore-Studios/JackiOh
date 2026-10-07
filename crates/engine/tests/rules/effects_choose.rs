@@ -112,8 +112,8 @@ fn with_ctx<R>(
     let self_ = self_.map(|card| find_instance(state, &card.id).cloned().unwrap_or_else(|| card.clone()));
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    let sink = EngineSink::new(state, &mut events, &mut rng);
-    let mut ctx = make_context(sink, self_, HookOptions { controller: Some(PlayerId::P1), ..Default::default() });
+    let mut sink = EngineSink::new(state, &mut events, &mut rng);
+    let mut ctx = make_context(&mut sink, self_.as_ref(), HookOptions { controller: Some(PlayerId::P1), ..Default::default() });
     extra(&mut ctx);
     f(&mut ctx)
 }
@@ -216,11 +216,11 @@ mod target_scopes_s10_6_r13 {
 
         // §3.2 and R13: a card dormant under a Stack is not on the field, so it is never offered.
         let buried = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let top = new_instance(&mut state, &stacker.id, PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
-        assert!(place_on_field(&mut state, top.clone(), slot(PlayerId::P2, Row::Units, 1), json_as(json!({ "stack": true }))));
+        let mut top = new_instance(&mut state, &stacker.id, PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
+        assert!(place_on_field(&mut state, &mut top, slot(PlayerId::P2, Row::Units, 1), json_as(json!({ "stack": true }))));
 
         let self_ = Some(&mine_a);
-        let offered = with_ctx(&mut state, self_, |_ctx| {}, |ctx| targets_in_scope(ctx, &TargetScope::default()));
+        let offered = with_ctx(&mut state, self_, |_ctx| {}, |ctx| targets_in_scope(ctx, None));
         assert_eq!(ids(&offered), vec![mine_a.id.clone(), mine_b.id.clone(), top.id.clone(), theirs.id.clone()]);
         assert!(!ids(&offered).contains(&buried.id));
     }
@@ -235,20 +235,20 @@ mod target_scopes_s10_6_r13 {
         let their_backrow = put(&mut state, &field_card().id, slot(PlayerId::P2, Row::Backrow, 5), json!({}));
         let self_ = Some(&mine);
         with_ctx(&mut state, self_, |_ctx| {}, |ctx| {
-            assert_eq!(ids(&targets_in_scope(ctx, &scope(json!({ "side": "ally" })))), vec![mine.id.clone()]);
-            assert_eq!(ids(&targets_in_scope(ctx, &scope(json!({ "side": "enemy" })))), vec![theirs.id.clone()]);
+            assert_eq!(ids(&targets_in_scope(ctx, Some(&scope(json!({ "side": "ally" }))))), vec![mine.id.clone()]);
+            assert_eq!(ids(&targets_in_scope(ctx, Some(&scope(json!({ "side": "enemy" }))))), vec![theirs.id.clone()]);
             assert_eq!(
-                targets_in_scope(ctx, &scope(json!({ "of": ["hero"] }))),
+                targets_in_scope(ctx, Some(&scope(json!({ "of": ["hero"] })))),
                 vec![Selection::Hero { player: PlayerId::P1 }, Selection::Hero { player: PlayerId::P2 }]
             );
             assert_eq!(
-                ids(&targets_in_scope(ctx, &scope(json!({ "of": ["backrow"] })))),
+                ids(&targets_in_scope(ctx, Some(&scope(json!({ "of": ["backrow"] }))))),
                 vec![my_backrow.id.clone(), their_backrow.id.clone()]
             );
             // Within one side the kinds come in the order the scope lists them in the module: units,
             // backrow, then the hero.
             assert_eq!(
-                targets_in_scope(ctx, &scope(json!({ "side": "enemy", "of": ["unit", "backrow", "hero"] }))),
+                targets_in_scope(ctx, Some(&scope(json!({ "side": "enemy", "of": ["unit", "backrow", "hero"] })))),
                 vec![
                     Selection::Instance { instance_id: theirs.id.clone() },
                     Selection::Instance { instance_id: their_backrow.id.clone() },
@@ -270,11 +270,11 @@ mod target_scopes_s10_6_r13 {
         let unit_self = Some(&self_card);
         with_ctx(&mut state, unit_self, |_ctx| {}, |ctx| {
             assert_eq!(
-                ids(&targets_in_scope(ctx, &scope(json!({ "side": "ally", "excludeSelf": true })))),
+                ids(&targets_in_scope(ctx, Some(&scope(json!({ "side": "ally", "excludeSelf": true }))))),
                 vec![other.id.clone()]
             );
             assert_eq!(
-                ids(&targets_in_scope(ctx, &scope(json!({ "side": "ally" })))),
+                ids(&targets_in_scope(ctx, Some(&scope(json!({ "side": "ally" }))))),
                 vec![self_card.id.clone(), other.id.clone()]
             );
         });
@@ -282,14 +282,14 @@ mod target_scopes_s10_6_r13 {
         let backrow_self = Some(&self_backrow);
         with_ctx(&mut state, backrow_self, |_ctx| {}, |ctx| {
             assert_eq!(
-                ids(&targets_in_scope(ctx, &scope(json!({ "side": "ally", "of": ["backrow"], "excludeSelf": true })))),
+                ids(&targets_in_scope(ctx, Some(&scope(json!({ "side": "ally", "of": ["backrow"], "excludeSelf": true }))))),
                 vec![other_backrow.id.clone()]
             );
         });
         // With no instance running the script the flag excludes nothing (a Spell resolving).
         with_ctx(&mut state, None, |_ctx| {}, |ctx| {
             assert_eq!(
-                ids(&targets_in_scope(ctx, &scope(json!({ "side": "ally", "excludeSelf": true })))),
+                ids(&targets_in_scope(ctx, Some(&scope(json!({ "side": "ally", "excludeSelf": true }))))),
                 vec![self_card.id.clone(), other.id.clone()]
             );
         });
