@@ -345,7 +345,8 @@ struct DeckDraftRequest {
     portrait: Option<String>,
     #[serde(default)]
     portrait_known: Option<bool>,
-    name_max_length: i32,
+    /// Read into whatever integer type `DeckDraftInput.name_max_length` is, below.
+    name_max_length: Value,
 }
 
 fn check_deck_draft(input_json: &str) -> Result<String, JsError> {
@@ -361,11 +362,9 @@ fn check_deck_draft(input_json: &str) -> Result<String, JsError> {
         cards: request.cards,
         is_deckable: &is_deckable,
         portrait: request.portrait,
-        is_portrait: match request.portrait_known {
-            Some(_) => Some(&is_portrait as &dyn Fn(&str) -> bool),
-            None => None,
-        },
-        name_max_length: request.name_max_length,
+        is_portrait: request.portrait_known.map(|_| &is_portrait as &dyn Fn(&str) -> bool),
+        name_max_length: serde_json::from_value(request.name_max_length)
+            .map_err(|error| JsError::new(&format!("checkDeckDraft: nameMaxLength: {error}")))?,
     };
     to_json(&validator::check_deck_draft(&input))
 }

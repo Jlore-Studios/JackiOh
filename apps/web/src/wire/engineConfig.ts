@@ -16,6 +16,7 @@ export const DRAWS_PER_TURN = 1;
 export const GLITCH_DEF_ID = "classic-t-glitch";
 export const HERO_HEALTH = 30;
 export const HUMAN_HANDICAP: Handicap = {"deckSize":20,"manaBonus":0,"manaCap":4,"extraOpeningCards":0,"extraDrawsPerTurn":0};
+export const LIBRARY_CAP = 60;
 export const MAX_COPIES = 1;
 export const MAX_MANA = 4;
 export const TURN_CAP_PLAYER_TURNS = 60;

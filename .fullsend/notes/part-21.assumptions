@@ -1,0 +1,21 @@
+id.instance: String (TS "c<n>")
+num.game: i32
+num.cursor: u32
+map.ordered: IndexMap
+bag.data: IndexMap<String, serde_json::Value>
+error.style: Result<_, EngineError> with TS's message; panic only on invariants. The WASM bindings return Result<String, JsError>: JS sees the SURFACE return type and an Error thrown with TS's message where TS threw (bad JSON, a setup create_game/fold would panic on, an unknown validator call)
+null.optional: Option + skip_serializing_if
+null.nullable: Option, serialised null
+case.json: camelCase via serde rename_all
+case.rust: snake_case
+state.mut: &mut GameState writes, &GameState reads, &mut EngineSink for TS sink mutators
+rng.source: Rng::new(&state.seed, state.rng_cursor) and write the cursor back; a caller's own stream crosses WASM as (rngSeed, rngCursor) and the TS Rng is drawn forward to the returned cursor (apps/web/src/wire/rng.ts advanceTo)
+hook.style: Arc<dyn Fn + Send + Sync> via hook(); no fn pointers, no Box
+registry.style: OnceLock set once by register_all; fused scripts built on lookup from state; the WASM init() calls jackioh_cards::register_all()
+async.style: tokio in crates/server only; none in pure crates
+log.style: tracing JSON to stdout, server only
+wasm.clock: ai_decide's should_stop = js_sys::Date::now() >= deadline_ms when deadline_ms > 0; the practice core passes env.now() + PRACTICE_AI_CLOCK_MS with env.now = Date.now, and no deadline when env.now() reads 0 (the tests' frozen clock)
+wasm.load: loadWasm() (fetch, idempotent) before the first render (main.tsx) and before the worker's first request; loadWasmSync(bytes) in apps/web/src/test/setup.ts; nothing touches the module at import time (wire/ai.ts's AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS are live bindings filled by whenWasmLoaded)
+web.aliases: apps/web/vite.config.ts exports jackiohAliases (exact-match regexes); vitest.config.ts and e2e/cypress.config.ts (component) import it; tsconfig paths in apps/web, e2e and e2e/cypress/component state the same map
+web.server_config: apps/web/src imports @jackioh/server-config; e2e/cypress/e2e specs import ../../../apps/web/src/wire/serverConfig.ts by path (Cypress bundles them without the aliases); component specs use the alias
+web.types: apps/web/src/wire/index.ts re-exports each generated type by name from ./generated/<Name>.ts (never export *), hand-keeps CardDefs, BackrowView (| null), DistributiveOmit, GAME_EVENT_TYPES; codes/emotes/aim/stats types come from the hand-kept copies, not from generated/
