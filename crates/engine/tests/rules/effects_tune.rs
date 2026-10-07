@@ -550,6 +550,9 @@ mod b3_4_the_menu_row_by_row_r386 {
             once(&mut state, &held.id, TuneDirection::Upgrade);
         }
         assert_eq!(x_tuning(&live(&state, &held.id), "Brittle"), Some(1));
+        // TS placed `held`, the one object that is still in the hand too (`placeOnField` takes nothing
+        // out of the hand), and read `held.brittle`. Rust's hand keeps its own copy, so the object TS
+        // read is the copy `place_on_field` leaves as it landed.
         let mut held_now = live(&state, &held.id);
         assert!(place_on_field(
             &mut state,
@@ -557,7 +560,7 @@ mod b3_4_the_menu_row_by_row_r386 {
             slot(PlayerId::P1, Row::Units, 2),
             PlaceOnFieldOptions::default(),
         ));
-        assert_eq!(live(&state, &held.id).brittle.map(|brittle| brittle.count), Some(3));
+        assert_eq!(held_now.brittle.map(|brittle| brittle.count), Some(3));
     }
 
     #[test]

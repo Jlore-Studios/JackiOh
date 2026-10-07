@@ -21,11 +21,11 @@
 //! identical on a second run.
 //!
 //! Port of `packages/engine/test/pauses.test.ts`. The TS file registers a fixture engine sequence
-//! with `registerWorkHandler` and re-registers the default handler; SURFACE §6.6 drops the
-//! registration hooks (`work.rs` dispatches by a `match`, and its default arm re-enters a card's own
-//! continuation), so the two tests that drive the fixture sequence through a drain, and the
-//! sequence's own helpers, are in `.fullsend/notes/spec-gaps-part-25-3.md`. The spinning-sequence
-//! test owes a card continuation instead of a registered handler (same file).
+//! with `registerWorkHandler`; here that is `testkit::register_work_handler` (part 32's test seam,
+//! SURFACE §17 on §8), registered by `game()` on the test's own thread. TS also re-registered the
+//! default handler; in Rust that is `work.rs`'s default arm and needs no registering. The
+//! spinning-sequence test owes a card continuation instead of a registered handler
+//! (`.fullsend/notes/spec-gaps-part-25-3.md`).
 
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -34,7 +34,7 @@ use jackioh_engine::effects::{choose_mode, damage};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use crate::rules::fixtures::harness::{events_of_type, new_game, sink_for};
+use crate::rules::fixtures::harness::{events_of_type, new_game, put, sink_for, slot};
 
 // ---------------------------------------------------------------------------
 // The handlers the engine registers, registered here too
@@ -43,11 +43,37 @@ use crate::rules::fixtures::harness::{events_of_type, new_game, sink_for};
 // TS registered `prompts.ts`'s default handler (re-enter a card's own continuation) here too; in
 // Rust it is `work.rs`'s default arm and needs no registering (SURFACE §6.6).
 
-/// A fixture engine sequence's hook: three steps, the middle one of which asks. Only its name is used
-/// here (the queue tests); a hook no engine sequence and no card claims (spec-gaps-part-25-3.md).
+/// A fixture engine sequence: three steps, the middle one of which asks (see `drive_sequence`).
 const SEQUENCE_HOOK: &str = "__pausesTestSequence";
 /// Where the fixture sequence's cursor sits inside `resume.data`, as a play run does (§10.5).
 const AT_KEY: &str = "__at";
+
+/// TS `SequenceRun`.
+#[derive(Clone, Copy)]
+struct SequenceRun {
+    at: usize,
+    owner: PlayerId,
+}
+
+fn sequence_resume(run: SequenceRun) -> Resume {
+    let mut data: IndexMap<String, Value> = IndexMap::new();
+    data.insert(AT_KEY.to_string(), json!(run.at));
+    resume_at(ResumeAtArgs {
+        def_id: String::new(),
+        hook: Some(SEQUENCE_HOOK.to_string()),
+        step: format!("step{}", run.at),
+        data: Some(data),
+        ..Default::default()
+    })
+}
+
+fn sequence_run_of(item: &WorkItem) -> SequenceRun {
+    let at = item.resume.data.get(AT_KEY).and_then(Value::as_u64);
+    SequenceRun {
+        at: at.map_or(0, |at| at as usize),
+        owner: item.owner,
+    }
+}
 
 fn mode_option(option: &str) -> PromptOption {
     PromptOption {
@@ -84,6 +110,42 @@ fn ask(sink: &mut EngineSink<'_>, player: PlayerId) {
             }),
         },
     );
+}
+
+/// TS `SEQUENCE_STEPS`: hit for 1, ask, hit for 2.
+const SEQUENCE_STEPS: usize = 3;
+
+fn sequence_step(sink: &mut EngineSink<'_>, at: usize, run: SequenceRun) {
+    match at {
+        0 => hit(sink, 1),
+        1 => ask(sink, run.owner),
+        _ => hit(sink, 2),
+    }
+}
+
+/// The §10.5 discipline (`playSteps.drive`): run the steps in order and owe the rest *only* when a
+/// step actually pauses, never in advance. Two reasons, both R113's: while this loop is on the stack
+/// the steps are its own, so a nested drain must not find them owed and run them a second time; and
+/// the scope that noticed the prompt — the tail of the paused step's own effect list — has already
+/// parked at the cursor, so parking here lands behind it and resumes after it. A paused step leaves
+/// the tail owed and `drain_work` re-enters here at the cursor the item carries.
+fn drive_sequence(sink: &mut EngineSink<'_>, run: SequenceRun) {
+    for at in run.at..SEQUENCE_STEPS {
+        sequence_step(sink, at, run);
+        if !paused(sink) {
+            continue;
+        }
+        // Nothing to owe when the step that paused was the last one.
+        if at + 1 < SEQUENCE_STEPS {
+            push_work(sink, sequence_resume(SequenceRun { at: at + 1, ..run }), Some(run.owner));
+        }
+        return;
+    }
+}
+
+/// TS `registerWorkHandler(SEQUENCE_HOOK, …)`'s handler.
+fn sequence_handler(sink: &mut EngineSink<'_>, item: &WorkItem) {
+    drive_sequence(sink, sequence_run_of(item));
 }
 
 // ---------------------------------------------------------------------------
@@ -227,6 +289,9 @@ fn scripts() -> Vec<(String, CardScripts)> {
 }
 
 fn game(seed: &str) -> GameState {
+    // TS registered the fixture sequence's handler once, at the top of the file; the seam is per
+    // thread, and each test is its own thread.
+    register_work_handler(SEQUENCE_HOOK, sequence_handler);
     let mut state = new_game(seed, None);
     let mut catalog = registered_catalog().clone();
     for entry in defs() {
@@ -249,6 +314,21 @@ fn resolving(state: &mut GameState, def_id: &str) -> CardInstance {
     let card = new_instance(state, def_id, P1, Zone::Resolving { player: P1 });
     state.players.p1.resolving.push(card.clone());
     card
+}
+
+/// TS `hit(sink, amount)`: the enemy hero takes `amount` in a context of the sink's own (R136: its
+/// event window starts at the sink's current end, as `make_context` gives it).
+fn hit(sink: &mut EngineSink<'_>, amount: i32) {
+    let effect = enemy_hero(amount);
+    let mut ctx = make_context(
+        sink,
+        None,
+        HookOptions {
+            controller: Some(P1),
+            ..HookOptions::default()
+        },
+    );
+    (effect.apply)(&mut ctx);
 }
 
 /// One action's worth of work, with its own event list, as `reduce` gives each action (§9.3): run
@@ -426,11 +506,61 @@ mod a_prompt_in_the_middle_of_an_effect_list_9_3_10_6 {
 // ---------------------------------------------------------------------------
 
 mod a_prompt_in_the_middle_of_an_engine_sequence_10_3_10_5 {
-    // Both TS tests here ("§9.3 resumes a three-step sequence at the step after the one that asked",
-    // "§9.3 finishes a pause nested inside an owed sequence before the sequence's own tail") drain
-    // work owed under `__pausesTestSequence`, which only TS's `registerWorkHandler` could make
-    // runnable. SURFACE §6.6 drops the registration; they are listed in
-    // `.fullsend/notes/spec-gaps-part-25-3.md`.
+    use super::*;
+
+    #[test]
+    fn s9_3_resumes_a_three_step_sequence_at_the_step_after_the_one_that_asked() {
+        let mut state = game("sequence-pause");
+
+        let started = act(&mut state, |sink| {
+            drive_sequence(sink, SequenceRun { at: 0, owner: P1 });
+        });
+
+        // Step 2 asked, so step 3 is owed as a work item naming the sequence and its cursor.
+        assert_eq!(amounts(&started), vec![1]);
+        assert!(is_owed(&state, SEQUENCE_HOOK));
+        assert_eq!(state.work.len(), 1);
+        assert_eq!(peek_work(&state).and_then(|item| item.resume.data.get(AT_KEY)), Some(&json!(2)));
+
+        let answered = answer(&mut state, "a");
+
+        assert_eq!(amounts(&answered), vec![2]);
+        assert!(state.work.is_empty());
+        assert_eq!(enemy_health(&state), 27);
+    }
+
+    #[test]
+    fn s9_3_finishes_a_pause_nested_inside_an_owed_sequence_before_the_sequence_s_own_tail() {
+        let mut state = game("sequence-nested");
+        let unit = put(&mut state, &crier().id, slot(P1, Row::Units, 1), json!({}));
+
+        // The sequence pauses first, so its tail is owed while the board does something else.
+        act(&mut state, |sink| {
+            drive_sequence(sink, SequenceRun { at: 0, owner: P1 });
+        });
+        assert_eq!(state.work.len(), 1);
+
+        // A trigger fires inside the open prompt's answer — the case §10.3 describes, a response
+        // resolving to completion inside an action — and its own Cry asks in the middle of its list, so
+        // its tail is parked while the sequence's own tail is still owed. Nothing is registered under
+        // the answered step, so closing the prompt is the whole of that answer (§10.6).
+        let answered = act(&mut state, |sink| {
+            close_prompt(sink);
+            run_hook_resumable(sink, &unit, "cry", HookResumableOptions::default());
+        });
+        assert_eq!(amounts(&answered), vec![8]);
+        assert!(state.pending.is_some());
+        // The Cry's pause happened during the answer, so R113 puts its tail in front of the sequence's.
+        let hooks: Vec<String> = state.work.iter().map(|item| item.resume.hook.clone()).collect();
+        assert_eq!(hooks, vec!["cry", SEQUENCE_HOOK]);
+
+        let last = answer(&mut state, "b");
+
+        // The Cry's tail (16) runs before the sequence's remaining step (2): the newer pause happened
+        // inside the older one, so it is the innermost thing owed.
+        assert_eq!(amounts(&last), vec![16, 2]);
+        assert!(state.work.is_empty());
+    }
 }
 
 // ---------------------------------------------------------------------------
