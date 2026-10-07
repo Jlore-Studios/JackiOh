@@ -5,10 +5,11 @@
 //! server. Part 21 points those imports at `@jackioh/server-config`, the alias for this file; CI runs
 //! this test and fails on a diff.
 //!
-//! The list is the 42 names `grep -rhoE 'import \{[^}]*\} from "[./]*server/src/config(\.ts)?"'
-//! apps/web/src e2e` found (multi-line imports and `export { … } from` included), web tests and e2e
-//! specs among them. A name added to it needs a constant in `config.rs`; a name the client stops
-//! importing can leave it.
+//! The list is the 50 names `apps/web/src` and `e2e/` imported from it (multi-line imports and
+//! `export { … } from` included), web tests and e2e specs among them: the 42 a one-line grep found,
+//! and the 8 the e2e specs import in multi-line lists (`05-reconnect`, `06-room-code`,
+//! `10-invite-gate`, `19-queue-modes-and-series`; v0.3.0 part 36). A name added to it needs a
+//! constant in `config.rs`; a name the client stops importing can leave it.
 
 use serde_json::{Value, json};
 
@@ -41,6 +42,7 @@ fn constants() -> Vec<(&'static str, Value)> {
             }),
         ),
         ("CODE_ALPHABET", json!(c::CODE_ALPHABET)),
+        ("CODE_ATTEMPTS_PER_PROFILE_PER_HOUR", json!(c::CODE_ATTEMPTS_PER_PROFILE_PER_HOUR)),
         ("CODE_ATTEMPT_RETENTION_DAYS", json!(c::CODE_ATTEMPT_RETENTION_DAYS)),
         ("CODE_ATTEMPT_WINDOW_SECONDS", json!(c::CODE_ATTEMPT_WINDOW_SECONDS)),
         ("CODE_STATUS_RECHECK_FLOOR_SECONDS", json!(c::CODE_STATUS_RECHECK_FLOOR_SECONDS)),
@@ -51,6 +53,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("DECK_CODE_VERSION", json!(c::DECK_CODE_VERSION)),
         ("DECK_NAME_MAX_LENGTH", json!(c::DECK_NAME_MAX_LENGTH)),
         ("DISCONNECT_GRACE_MS", json!(c::DISCONNECT_GRACE_MS)),
+        ("DISCONNECT_GRACE_SECONDS", json!(c::DISCONNECT_GRACE_SECONDS)),
         ("GATE_SLOW_NOTICE_SECONDS", json!(c::GATE_SLOW_NOTICE_SECONDS)),
         (
             "INVITE_CODE_FORMAT",
@@ -65,6 +68,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("INVITE_CODE_GROUP_SIZE", json!(c::INVITE_CODE_GROUP_SIZE)),
         ("INVITE_CODE_LENGTH", json!(c::INVITE_CODE_LENGTH)),
         ("INVITE_CODE_SEPARATOR", json!(c::INVITE_CODE_SEPARATOR)),
+        ("MATCHMAKER_SWEEP_INTERVAL_SECONDS", json!(c::MATCHMAKER_SWEEP_INTERVAL_SECONDS)),
         ("MATCH_ACTION_RETENTION_DAYS", json!(c::MATCH_ACTION_RETENTION_DAYS)),
         ("MATCH_CEILING_MS", json!(c::MATCH_CEILING_MS)),
         ("MATCH_FOUND_NAV_DELAY_MS", json!(c::MATCH_FOUND_NAV_DELAY_MS)),
@@ -72,7 +76,11 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("MAX_SAVED_TRIOS", json!(c::MAX_SAVED_TRIOS)),
         ("MULLIGAN_CLOCK_MS", json!(c::MULLIGAN_CLOCK_MS)),
         ("PROMPT_CLOCK_MS", json!(c::PROMPT_CLOCK_MS)),
+        ("PROMPT_CLOCK_SECONDS", json!(c::PROMPT_CLOCK_SECONDS)),
+        ("RATING_WINDOW_UNCAPPED_AFTER_SECONDS", json!(c::RATING_WINDOW_UNCAPPED_AFTER_SECONDS)),
         ("REDEMPTION_IDENTICAL_ERROR", json!(c::REDEMPTION_IDENTICAL_ERROR)),
+        ("REDEMPTION_RESPONSE_FLOOR_MS", json!(c::REDEMPTION_RESPONSE_FLOOR_MS)),
+        ("ROOM_CODE_LENGTH", json!(c::ROOM_CODE_LENGTH)),
         ("SERIES_MAX_GAMES", json!(c::SERIES_MAX_GAMES)),
         ("SERIES_PICK_SECONDS", json!(c::SERIES_PICK_SECONDS)),
         ("SERIES_POLL_SECONDS", json!(c::SERIES_POLL_SECONDS)),
@@ -81,6 +89,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("TRIO_CODE_MAX_INPUT_LENGTH", json!(c::TRIO_CODE_MAX_INPUT_LENGTH)),
         ("TRIO_CODE_VERSION", json!(c::TRIO_CODE_VERSION)),
         ("TURN_CLOCK_MS", json!(c::TURN_CLOCK_MS)),
+        ("TURN_CLOCK_SECONDS", json!(c::TURN_CLOCK_SECONDS)),
     ]
 }
 
@@ -101,7 +110,7 @@ fn every_name_is_listed_once() {
     names.sort_unstable();
     names.dedup();
     assert_eq!(names.len(), listed, "a constant is listed twice");
-    assert_eq!(listed, 42, "the 42 names the client imported from apps/server/src/config.ts");
+    assert_eq!(listed, 50, "the 50 names the client imported from apps/server/src/config.ts");
 }
 
 #[test]
