@@ -8,21 +8,40 @@ against a practice AI.
 
 | Read | For |
 |---|---|
-| [`SPEC.md`](SPEC.md) | The rules, all 100 Core cards and 11 tokens, the architecture and the engine design. The only source of rules |
+| [`SPEC.md`](SPEC.md), [`spec/`](spec/README.md) | The rules, all 268 cards and 50 tokens of Core, Classic and Classic+, the architecture and the engine design, one note per section and per ruling. The only source of rules |
 | [`BUILD.md`](BUILD.md) | The work order: milestones, acceptance criteria, the definition of done |
 | [`REVIEW.md`](REVIEW.md) | The audit procedure |
-| [`CLAUDE.md`](CLAUDE.md) | How the codebase is laid out and the rules every change follows |
+| [`CLAUDE.md`](CLAUDE.md) | How the codebase is laid out, the rules every change follows, and every command |
 | [`bot/README.md`](bot/README.md) | The night bot that builds issues while nobody is awake |
+
+## How it is built
+
+The rules engine, the 318 card scripts, the deck validator, the practice AI, the server and every
+tool are Rust, in one Cargo workspace; the browser client is TypeScript and React, and runs the
+engine and the AI as WebAssembly.
+
+| Path | What |
+|---|---|
+| [`crates/engine`](crates/engine/README.md) | the rules, the wire types and the deck validator: pure and seeded |
+| [`crates/cards`](crates/cards/README.md) | `catalog.json`, one script per card with its tests, the patch history |
+| [`crates/ai`](crates/ai/README.md) | the practice opponent |
+| [`crates/wasm`](crates/wasm/README.md) | the engine, cards and AI as WebAssembly for the browser |
+| [`crates/server`](crates/server/README.md) | the HTTP API and the match actors, one binary in a Docker image |
+| [`crates/tools`](crates/tools/README.md) | `jackioh`: fuzz, replay, the catalog and spec checks, the AI's gates, the training arena |
+| [`apps/web`](apps/web/README.md) | the client (Vite, React) |
+| [`e2e`](e2e/README.md) | the Cypress specs |
+| [`training`](training/README.md) | the AI training lanes |
 
 ## Running it
 
-Node 22.13 or newer and pnpm 11.
+Rust 1.97 (pinned in `rust-toolchain.toml`), Node 22.13 or newer and pnpm 11.
 
 ```sh
+cargo test --workspace --features jackioh-engine/testkit   # every crate's tests
+cargo jackioh fuzz --seeds 200                              # seeded random games, each replayed to its hash
 pnpm install
-pnpm dev          # the client at http://localhost:5173 (hotseat at /dev/hotseat, AI at /practice)
-pnpm test         # every vitest project
-pnpm lint && pnpm typecheck
+pnpm --dir apps/web dev        # the client at http://localhost:5173 (hotseat at /dev/hotseat, AI at /practice)
+pnpm --dir apps/web test       # the client's tests
 ```
 
 `CLAUDE.md` lists every command, including the server, the database suites and the Cypress specs.
