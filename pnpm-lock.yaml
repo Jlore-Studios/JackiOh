@@ -81,21 +81,6 @@ importers:
 
   apps/web:
     dependencies:
-      '@jackioh/ai':
-        specifier: workspace:*
-        version: link:../../packages/ai
-      '@jackioh/cards':
-        specifier: workspace:*
-        version: link:../../packages/cards
-      '@jackioh/engine':
-        specifier: workspace:*
-        version: link:../../packages/engine
-      '@jackioh/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
-      '@jackioh/validator':
-        specifier: workspace:*
-        version: link:../../packages/validator
       json5:
         specifier: 2.2.3
         version: 2.2.3
