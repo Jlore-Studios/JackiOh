@@ -38,7 +38,6 @@ use jackioh_ai::{
     at_risk_ids, pass2_keep_out, pass2_stats, sweep_at_risk, sweep_card, sweep_verdict,
 };
 use jackioh_engine::catalog::{CatalogQueryArgs, query};
-use jackioh_engine::config::Difficulty;
 
 use crate::arena::utc_date;
 use crate::gate::{MS_PER_SECOND, literal};
