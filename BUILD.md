@@ -7,93 +7,112 @@ Work order for implementing JackiOh from `SPEC.md` (the master game specificatio
 - Read SPEC.md end to end before writing code. Re-read the relevant section before each task.
 - Tasks are `M<milestone>-T<n>`. Each lists **Files** and **Acceptance**. A task is done when every acceptance item is a green automated test (or a lint rule), not when the code exists.
 - Milestones are gates. Do not start M(n+1) until the M(n) gate passes.
-- Rulings: every SPEC §11 row (R1–R168 as of 2026-09-17; R380–R439 are patch v0.2.0's) is implemented exactly as written. Rows marked "decide" (R1, R4, R5, R14, R26, R39) live behind named constants in `packages/engine/src/config.ts` so a designer can flip them in one line; R2's cap stays a constant there, though patch v0.2.0 decided it (R389). Every ruling has a test whose name starts with its id, e.g. `it("R8 Death fires on both deaths of a Reborn unit")`.
-- If SPEC.md is silent on something you hit, follow Hearthstone semantics, add a row to SPEC §11 (next R-number) in the same PR, and name the test after it.
-- M1–M3 acceptance items that name a card (Gravedigger, Hinder, CN-Virus, Twinspell, Mana Well, Jlockeed Shredder, Big D-fender, Moths to the Flame, Big Felinor, Hit Job, Right-house defender and others) are tested with a test-only fixture script under `packages/engine/test/fixtures/` that reproduces just that behaviour; the real card test in M4 covers the same case again.
-- Stack: TypeScript strict; pnpm workspaces; vitest; eslint with `no-restricted-properties` banning `Math.random`, `Date.now`, `new Date()` inside `packages/engine` and `packages/cards`; React + Vite for `apps/web`; Cypress for `e2e`; Postgres for `apps/server`; one stateful actor per match (Cloudflare Durable Objects or an equivalent single-threaded actor runtime).
-- No card script mutates state directly. Scripts return `Effect[]` built from `packages/engine/src/effects/*`. A PR that adds a primitive to a card file instead of the effects library is rejected.
+- Rulings: every SPEC §11 row (R1–R168 as of 2026-09-17; R380–R439 are patch v0.2.0's) is implemented exactly as written. Rows marked "decide" (R1, R4, R5, R14, R26, R39) live behind named constants in `crates/engine/src/config.rs` so a designer can flip them in one line; R2's cap stays a constant there, though patch v0.2.0 decided it (R389). Every ruling has a test named after it, e.g. `fn r8_death_fires_on_both_deaths_of_a_reborn_unit` (in TypeScript, `it("R8 …")`), listed in its note's `proven_in` (CLAUDE.md rule 3).
+- If SPEC.md is silent on something you hit, follow Hearthstone semantics, add a ruling note to `spec/rulings/` (next R-number) in the same PR, and name the test after it.
+- M1–M3 acceptance items that name a card (Gravedigger, Hinder, CN-Virus, Twinspell, Mana Well, Jlockeed Shredder, Big D-fender, Moths to the Flame, Big Felinor, Hit Job, Right-house defender and others) are tested with a test-only fixture script under `crates/engine/tests/rules/fixtures/` that reproduces just that behaviour; the real card test in M4 covers the same case again.
+- Stack (since v0.3.0): Rust 2024 in one Cargo workspace (`crates/`) for the engine, the cards, the AI, the server and the tools, with `clippy.toml` banning clocks, I/O, environment reads, threads, hash-ordered collections and interior mutability inside `crates/engine`, `crates/cards` and `crates/ai`; the engine as WebAssembly in the browser; TypeScript strict, React + Vite and vitest for `apps/web`; Cypress for `e2e`; Postgres (Supabase) for `crates/server`, which hosts one stateful actor per match in one long-running process (`docs/architecture.md` §5).
+- No card script mutates state directly. Scripts return `Vec<Effect>` built from `crates/engine/src/effects/*`. A PR that adds a primitive to a card file instead of the effects library is rejected.
 
 ## 1. Repository layout
 
+Since v0.3.0 (#306) everything but the browser UI is Rust, in one Cargo workspace; `docs/v0.3.0/PORT-MAP.md` maps each file of the TypeScript layout this section used to describe to the Rust file it became.
+
 ```
 jackioh/
-  package.json                 pnpm workspaces, root scripts: lint, test, test:e2e, typecheck
-  pnpm-workspace.yaml
-  tsconfig.base.json           strict, noUncheckedIndexedAccess
-  eslint.config.js             flat config (ESLint 10); bans Math.random / Date in engine + cards
-  SPEC.md  BUILD.md  REVIEW.md CLAUDE.md
-  JackiOh_Mechanics.md  JackiOh_Core_Cards.md  ARCHITECTURE-CCG.md   source design notes (REVIEW Part A inputs)
-  packages/
-    shared/                    types shared by engine, server, web
-      src/actions.ts           Action union (§10.2) with playerId + nonce
-      src/events.ts            GameEvent union (§10.3)
-      src/catalog-types.ts     CardDef, Script hook types, Keyword enum
-      src/view.ts              PlayerView type returned by viewFor
-    engine/                    pure rules engine, zero I/O
-      src/config.ts            all constants (section 2 below)
-      src/catalog.ts           static catalog registry: registerCatalog, defOf, defByIndex (§5.1)
-      src/script.ts            Effect, EffectContext, Script and hook types (§10.9)
-      src/scripts.ts           script registry: registerScripts, scriptOf, flagsOf
-      src/resolve.ts           run a hook, apply effects, cast a card (R70)
-      src/state.ts             GameState, PlayerState, CardInstance (§10.1); createGame()
-      src/rng.ts               seeded PRNG + helpers (§10.7)
-      src/reduce.ts            reduce(state, action, rng) -> {state, events, error?}; legalActions()
-      src/zones.ts             zone moves, lanes, adjacency, ring rotation, locks, stack piles
-      src/mana.ts              refresh, temporary mana, cost calculation with modifiers
-      src/draw.ts              draw, cast-on-draw, fatigue, hand cap, Infinite Reserves hook
-      src/setup.ts             shuffle, opening draw table, Quickdraw, mulligan, start-of-game
-      src/turn.ts              phases, start/end-of-turn trigger dispatch, cleanup, turn cap
-      src/combat.ts            attack validation, forced attacks, combat resolution (§4.2–4.3)
-      src/damage.ts            the damage pipeline (§4.4, steps 0–10 and 4a); heal; lose-health
-      src/stateCheck.ts        deaths, Reborn, Death triggers, hero check loop (§4.5)
-      src/layers.ts            stat and keyword layer computation (§10.4)
-      src/events.ts            emit helpers
-      src/triggers.ts          trigger registry, queue, ordering (§10.3)
-      src/traps.ts             trap matching and immediate resolution
-      src/prompts.ts           PendingChoice open/answer/resume (§10.6)
-      src/modifiers.ts         player modifiers, delayed effects, expiry
-      src/effects/             one file per primitive (section 3, M3-T1)
-      src/subsystems/          fuse.ts, rotation.ts, scorer.ts, aiPolicy.ts, heroPower.ts,
-                               comboIndex.ts, callToChaos.ts, lethal.ts
-      src/viewFor.ts           filtered per-player view (§10.8)
-      src/replay.ts            fold(seed, log) -> state; state hash
-      test/                    unit + property tests
-    cards/
+  Cargo.toml  Cargo.lock       the workspace: members crates/*, every third-party crate pinned in [workspace.dependencies]
+  rust-toolchain.toml          Rust 1.97.0 with rustfmt, clippy and the wasm32-unknown-unknown target
+  rustfmt.toml                 max_width 110
+  .cargo/config.toml           `cargo jackioh <command>` = `cargo run --release -p jackioh-tools -- <command>`
+  package.json  pnpm-workspace.yaml  eslint.config.js  vitest.config.ts   the pnpm workspace of apps/web and e2e
+  SPEC.md (→ spec/)  BUILD.md  REVIEW.md  CLAUDE.md
+  JackiOh_Mechanics.md  JackiOh_Core_Cards.md  JackiOh_Classic_Cards.md  ARCHITECTURE-CCG.md   source design notes (REVIEW Part A inputs)
+  spec/                        the specification: NN-<slug>.md per section, rulings/R<nnnn>.md per §11 row, INDEX.md (generated)
+  scripts/build-wasm.sh        builds crates/wasm into apps/web/src/wasm/pkg
+  crates/
+    engine/                    jackioh-engine: pure rules engine, zero I/O
+      clippy.toml              the purity lint (CLAUDE.md rule 4); cards and ai carry the same file
+      src/wire/                types shared by every layer: Action (§10.2) with playerId + nonce, GameEvent (§10.3),
+                               the catalog types, PlayerView, the game record (§9.11)
+      src/config.rs            all constants (section 2 below)
+      src/catalog.rs           the registered catalog: def_of, def_by_index, query (§5.1)
+      src/script.rs            Effect, EffectContext, Script and hook types (§10.9)
+      src/scripts.rs           the script registry: script_of, flags_of
+      src/prelude.rs           everything a card script may name
+      src/resolve.rs           run a hook, apply effects, cast a card (R70)
+      src/state.rs             GameState, PlayerState, CardInstance (§10.1); create_game
+      src/rng.rs               seeded PRNG + helpers (§10.7)
+      src/reduce.rs            reduce(state, action) -> { state, events, error? }; legal_actions; seat_to_act
+      src/zones.rs             zone moves, lanes, adjacency, ring rotation, locks, stack piles
+      src/mana.rs              refresh, temporary mana, cost calculation with modifiers
+      src/draw.rs              draw, cast-on-draw, fatigue, hand cap
+      src/setup.rs             shuffle, opening draw table, Quickdraw, mulligan, start-of-game
+      src/turn.rs              phases, start/end-of-turn trigger dispatch, cleanup, turn cap
+      src/combat.rs            attack validation, forced attacks, combat resolution (§4.2–4.3)
+      src/damage.rs            the damage pipeline (§4.4, steps 0–10 and 4a); heal; lose-health
+      src/state_check.rs       deaths, Reborn, Death triggers, hero check loop (§4.5)
+      src/layers.rs            stat and keyword layer computation (§10.4)
+      src/triggers.rs          trigger registry, queue, ordering, the resolution loop (§10.3)
+      src/traps.rs             trap matching and immediate resolution
+      src/prompts.rs           PendingChoice open/answer/resume (§10.6)
+      src/work.rs              the resumable-work queue (R113)
+      src/modifiers.rs         player modifiers, delayed effects, expiry
+      src/query.rs             the board facts a card script reads
+      src/effects/             one module per primitive family (section 3, M3-T1), re-exported by effects/mod.rs
+      src/subsystems/          fuse, rotation, scorer, ai_policy, hero_power, combo_index, call_to_chaos, lethal, …
+      src/view_for.rs          filtered per-player view (§10.8)
+      src/replay.rs            fold(seed, log) -> state; the state hash
+      src/validator.rs         deck, trio and queue rules (D1–D4, T1–T3, L1–L6, §9.4), used by the server and, as WASM, the client
+      src/testkit/             feature `testkit`: scenario() and its verbs, the I1–I4 invariant monitor, the glow helpers
+      tests/rules.rs, rules/   the engine's tests; rules/fixtures/ holds test-only card scripts
+      tests/golden.rs, golden/ the golden traces recorded from the TypeScript engine before it was deleted
+      tests/export_config.rs   writes apps/web/src/wire/engineConfig.ts
+    cards/                     jackioh-cards
       catalog.json             268 cards + 50 tokens over Core, Classic and Classic+ (schema in M4-T1, M9-T1)
-      patches/                 patches.json and one whole-catalog snapshot per card patch (M9-T2, R388)
-      src/index.ts             registry: defId -> {def, base, radiant}
-      src/scripts/NNN-slug.ts  one file per Core card, NNN = zero-padded index, tokens as NNN-1-slug.ts
-      src/scripts/classic/NNN-slug.ts        Classic cards
-      src/scripts/classic-plus/NNN-slug.ts   Classic+ cards, tokens NNN-k-slug.ts, AI cards t-ai-NN-slug.ts
-      test/NNN-slug.test.ts    one test file per card; test/classic/ and test/classic-plus/ likewise
-      test/catalog.test.ts     shape test (M4-T1 acceptance)
-    validator/
-      src/index.ts             loadout rules L1–L6 (§9.4), used by web and server
+      flavour.json             flavour lines and artist credits (R660)
+      patches/                 patches.json and one whole-catalog snapshot per card patch (M9-T2, R388); pending/ fragments (R646)
+      build.rs                 the registry, generated from src/scripts/**; the compiled-in catalog version
+      src/lib.rs               CATALOG, CATALOG_VERSION, card_def, register_all, REGISTRY
+      src/query.rs             catalog.query, the only random-pool source (§5.1)
+      src/scripts/core/cNNN_slug.rs          one file per Core card (NNN = zero-padded index) with its tests; tokens cNNN_k_slug.rs, t_slug.rs
+      src/scripts/classic/cNNN_slug.rs       Classic cards
+      src/scripts/classic_plus/cNNN_slug.rs  Classic+ cards, tokens cNNN_k_slug.rs, AI cards t_ai_NN_slug.rs
+      tests/cards.rs, cross/   the cross-card tests: catalog.rs (M4-T1 acceptance), query.rs, references.rs, radiant_standard.rs, …
+    ai/                        jackioh-ai: the practice opponent (§9.9); generation.json, the training lanes' record
+    wasm/                      jackioh-wasm: the engine, cards, AI and validator as WebAssembly for apps/web
+    server/                    jackioh-server: the HTTP API and the match actors, one binary
+      Dockerfile               the image Render runs (render.yaml)
+      migrations/              profiles, invite_codes, code_attempts, cards, collection, collection_grants, loadouts,
+                               loadout_decks, loadout_deck_cards, tickets, matches, match_actions, results, decks, trios,
+                               series, tutorial_progress, game_records, …; compiled into the binary
+      src/api/                 codes, collection, decks, queue, series, results, … (one handler per route)
+      src/actor/match_actor.rs one actor per match: state, WS, clock, action log
+      src/actor/protocol.rs    WS messages: hello, view, action, ack, error, prompt, clock
+      src/db/                  the store over Postgres and the in-memory fake; the migration runner
+      src/config.rs, env.rs    the server's constants and its environment
+      tests/server.rs          the server suite (api, actor, store) on the fake store; sql/, db/, deploy/ need Docker
+    tools/                     jackioh-tools: the `jackioh` CLI (fuzz, replay, catalog, patches, gate, sweep, stats, golden, spec, arena, agent, promote)
   apps/
     web/                       React client
       src/game/Board.tsx Hand.tsx Zone.tsx Hero.tsx Backrow.tsx Prompt.tsx Log.tsx
       src/game/animations.ts   eventType -> animation table (section 5)
+      src/game/engine.ts       the hotseat's engine port over the WASM module
       src/game/hotseat.ts      local loop: reduce in-browser, seat switching, seeded
       src/game/net.ts          WebSocket client, reconnect, view refresh
-      src/deckbuilder/         loadout editor using packages/validator
-      src/routes/dev/hotseat   /dev/hotseat?seed=&a=&b= for tests
-    server/
-      src/api/                 codes, collection, loadouts, queue (stateless functions)
-      src/match/actor.ts       one actor per match: state, WS, clock alarm, action log
-      src/match/protocol.ts    WS messages: hello, view, action, ack, error, prompt, clock
-      src/db/migrations/       profiles, invite_codes, code_attempts, cards, collection,
-                               collection_grants, loadouts, loadout_decks, loadout_deck_cards,
-                               tickets, matches, match_actions, results
+      src/game/deckbuilder/    the deck workshop, its verdicts from the validator
+      src/routes/dev/hotseat.tsx   /dev/hotseat?seed=&a=&b= for tests
+      src/wasm/index.ts        the only caller of the WASM module
+      src/wire/                the generated types and constants, and the @jackioh/* imports the client resolves to
   e2e/
     cypress.config.ts
     cypress/e2e/*.cy.ts        section 6.4
     fixtures/decks/*.json      scenario decks
-    support/                   commands: seedGame, playCard, attack, answerPrompt, endTurn
+    support/                   commands: seedGame, playCard, attack, answerPrompt, endTurn; tasks/ (the Node player, the replay fold)
+  training/                    the AI training lanes: prompts, loop.sh, history/
 ```
 
-## 2. Constants (`packages/engine/src/config.ts`)
+## 2. Constants (`crates/engine/src/config.rs`)
 
-Every number below is a named export. Nothing in the engine hard-codes them.
+Every number below is a named constant, under the name it had in TypeScript (`pub const DECK_SIZE: i32 = 20;`; an object becomes a struct constant). Nothing in the engine hard-codes them. The ones the client reads are exported to `apps/web/src/wire/engineConfig.ts` by `crates/engine/tests/export_config.rs`.
 
 | Constant | Value | Spec |
 | --- | --- | --- |
@@ -150,25 +169,27 @@ Every number below is a named export. Nothing in the engine hard-codes them.
 | `CALL_TO_CHAOS_RADIANT_EFFECTS` | 3: the different effects a Radiant Call to Chaos of either edition resolves | §8 #95, §8.7 C+ #73, R423 |
 | `CHAOS_PLUS_FRUITS` / `CHAOS_PLUS_BOOKS` / `CHAOS_PLUS_CLASSIC_CARDS` | 5 / 3 / 3: the cards C+ #73's first, second and fourth entries add | §8.7 C+ #73 |
 | `CHAOS_PLUS_UPGRADES` / `CHAOS_PLUS_DEGRADES` | 2 per card of your hand and deck / 3 per card of the opponent's field and hand | §8.7 C+ #73, R386 |
-| _(removed)_ `MID_LANE` | Balance patch 1 computes midlane from the lane count (`midlaneLanes` in `zones.ts`: odd count → center lane, even count → both center lanes; R685) instead of hard-coding lane 3 | §3.1, §8.6 C #22 |
+| _(removed)_ `MID_LANE` | Balance patch 1 computes midlane from the lane count (`midlane_lanes` in `zones.rs`: odd count → center lane, even count → both center lanes; R685) instead of hard-coding lane 3 | §3.1, §8.6 C #22 |
 | `GLITCH_NUMBERS` | 0 to 10: C #18's number prompt | §8.6 C #18, §10.6 |
 | `BLADE_STORM_ROUNDS` | 30: the printed round cap, C+ #32.3's `rounds` param, which a Degrade or Upgrade moves on that card | §4.5, §8.7 C+ #32.3, R59 |
 | `ROLLBACK_MAX_TURNS` / `BOARD_HISTORY_DEPTH` | 3 / 4 (this turn's snapshot and the three before it) | §10.1, §8.7 C+ #35, R419 |
 | `GRAPE_ODDS` | Rotten 12, Normal 60, Large 20, Golden 7, Mythic 1 percent, in Lucky's order worst to best | §8.7 C+ #65, C+ #66, R382 |
-| `KY_TEST_DIFFICULTIES` / `KY_TEST_OPTIONS` / `KY_TEST_MIN_PROBLEMS` | Easy, Medium, Hard / 4 / 30 per difficulty (the bank test's floor, in `packages/cards`) | §8.7 C+ #42, R420 |
+| `KY_TEST_DIFFICULTIES` / `KY_TEST_OPTIONS` / `KY_TEST_MIN_PROBLEMS` | Easy, Medium, Hard / 4 / 30 per difficulty (the bank test's floor, in `crates/cards`) | §8.7 C+ #42, R420 |
 | `KY_TEST_REWARDS` | Easy: 3 The Coins; a random (2) Cost KY card; a random Legendary card that costs (0); 2 random Books. Medium: 2 random (4) Cost cards that cost (1); 5 random Books; 5 random KY cards; random Books up to `HAND_CAP`. Hard: KY's Gift that costs (0) | §8.7 C+ #42, R420 |
 | `KY_TEST_EASY_ADDENDS` / `KY_TEST_EASY_MISSES` | 10 ≤ a, b ≤ 99 for an Easy problem's a + b / +1, −1, +2, −2, +10, −10: the three wrong options are a + b moved by three different ones of these | §8.7 C+ #42, R420 |
 | `PAPAYA_ROWS` / `PAPAYA_MAX_CELLS` | 4 (y 0 your backrow, 1 your units, 2 their units, 3 their backrow) / 4 (degree at most 3), so one cell prompt lists at most 21 answers | §10.6, §8.7 C+ #62, R422 |
-| `MAX_PROMPT_ANSWERS` | 256 (exported from `prompts.ts` today) | §10.6, §8.7 C+ #62 |
+| `MAX_PROMPT_ANSWERS` | 256 | §10.6, §8.7 C+ #62 |
 | `CHAIN_OF_THOUGHT_REPEATS` | 4: repeats after the first draw, a termination bound | §8.7 T-AI-4 |
 
 A card's own printed numbers that nothing outside its script reads (C+ #7's 2 in 3, C+ #41's 3, #31's return cap of (4), every "costs (0)") stay named constants in its script, as Core's do; the numbers Degrade, Upgrade and KY's Constant may tune are the card's `params` (§5), not constants. In Too Deep's quest tree (C #90) is card data in its file.
 
-Server constants (`apps/server/src/config.ts`, added in M7) carry R79's values: `TURN_CLOCK_SECONDS` 75, `PROMPT_CLOCK_SECONDS` 30, `MULLIGAN_CLOCK_SECONDS` 45 (R268), `DISCONNECT_GRACE_SECONDS` 60, `MATCH_CEILING_MINUTES` 120 (R389), `ROOM_CODE_LENGTH` 6, and the ranked ladder's: `RATING_START` 1000, `RATING_DEVIATION_START` 350, `RATING_VOLATILITY_START` 0.06, `GLICKO_TAU` 0.5, `GLICKO_SCALE` 400/ln 10, `GLICKO_CONVERGENCE` 1e-6 and `GLICKO_MAX_ITERATIONS` 100 (R603); `RANK_TIER_PERCENTS` Rotten 12, Normal 60, Large 20, Golden 7, Mythic 1, `RANK_DIVISIONS_PER_TIER` 3, `RANK_PIPS_PER_DIVISION` 3 and `RANK_PLACEMENT_GAMES` 5 (R605); `RANK_WIN_PIPS` 1, `RANK_LOSS_PIPS` 1, `RANK_STREAK_LENGTH` 3, `RANK_STREAK_BONUS_PIPS` 1, `RANK_CONVERGENCE_GAP_PIPS` 3 and `RANK_CONVERGENCE_PIPS` 1 (R606); `JLORIOUS_SIZE` 100 (R608) and `PLAYER_TAG_LENGTH` 6 (R612); `SEASON_RESET_STRENGTH` 0.5 and `SEASON_RESET_DEVIATION_BOOST` 150 (R609); and since patch v0.2.0 `DECK_CODE_VERSION` 2 and `TRIO_CODE_VERSION` 2 with the per-set number offsets Core 0, Classic 1000, Classic+ 2000 (R255, R339).
+Server constants (`crates/server/src/config.rs`, added in M7; the ones the client and e2e read are exported to `apps/web/src/wire/serverConfig.ts`) carry R79's values: `TURN_CLOCK_SECONDS` 75, `PROMPT_CLOCK_SECONDS` 30, `MULLIGAN_CLOCK_SECONDS` 45 (R268), `DISCONNECT_GRACE_SECONDS` 60, `MATCH_CEILING_MINUTES` 120 (R389), `ROOM_CODE_LENGTH` 6, and the ranked ladder's: `RATING_START` 1000, `RATING_DEVIATION_START` 350, `RATING_VOLATILITY_START` 0.06, `GLICKO_TAU` 0.5, `GLICKO_SCALE` 400/ln 10, `GLICKO_CONVERGENCE` 1e-6 and `GLICKO_MAX_ITERATIONS` 100 (R603); `RANK_TIER_PERCENTS` Rotten 12, Normal 60, Large 20, Golden 7, Mythic 1, `RANK_DIVISIONS_PER_TIER` 3, `RANK_PIPS_PER_DIVISION` 3 and `RANK_PLACEMENT_GAMES` 5 (R605); `RANK_WIN_PIPS` 1, `RANK_LOSS_PIPS` 1, `RANK_STREAK_LENGTH` 3, `RANK_STREAK_BONUS_PIPS` 1, `RANK_CONVERGENCE_GAP_PIPS` 3 and `RANK_CONVERGENCE_PIPS` 1 (R606); `JLORIOUS_SIZE` 100 (R608) and `PLAYER_TAG_LENGTH` 6 (R612); `SEASON_RESET_STRENGTH` 0.5 and `SEASON_RESET_DEVIATION_BOOST` 150 (R609); and since patch v0.2.0 `DECK_CODE_VERSION` 2 and `TRIO_CODE_VERSION` 2 with the per-set number offsets Core 0, Classic 1000, Classic+ 2000 (R255, R339).
 
-The AI's sweep constants (`packages/ai/src/config.ts`, R186, R390): `seedsPerCardAtRisk` 24, `atRiskBoost` 4, pass-2 `minAffordableTurns` 6 and `selfHarm` plays 8 (pass 1 keeps 3 and 4), at-risk at half of a flag's condition, and `SHADOW_WATCH` in `shadowBan.ts`. The client's (`apps/web`): `FX_SPEED_MIN` 0.25 and `FX_SPEED_MAX` 3 (R201, R435), and the last-30-seconds threshold of the turn-clock visual (R439).
+The AI's sweep constants (`AI_SWEEP` in `crates/ai/src/sweep.rs`, R186, R390): `seeds_per_card_at_risk` 24, `at_risk_boost` 4, pass 2's `ban_affordable_turns` 6 and `ban_harm_plays` 8 (pass 1's `min_affordable_turns` 3 and `min_harm_plays` 4), at-risk at half of a flag's condition, and `SHADOW_WATCH` in `shadow_ban.rs`. The training lanes' gate (`TRAINING_GAMES`, `TRAINING_IMPROVE`, `TRAINING_UNBAN`) sits in the engine's `config.rs` beside `AI_DIFFICULTY`. The client's (`apps/web`): `FX_SPEED_MIN` 0.25 and `FX_SPEED_MAX` 3 (R201, R435), and the last-30-seconds threshold of the turn-clock visual (R439).
 
 ## 3. Milestones
+
+> **History.** M1–M9 were built in TypeScript, before v0.3.0 (#306) ported every package to Rust. The paths the tasks below name (`packages/engine/src/*.ts`, `packages/cards/test/*.test.ts`, `apps/server/src/*`, `pnpm …` commands) are that layout's; `docs/v0.3.0/PORT-MAP.md` gives each one's Rust file, and §1, §4 and §5 are the current layout, tests and gates. The acceptance items and the per-card must-pass tables stand as written: the Rust tests port them one for one.
 
 ### M1 — Engine core (`packages/engine`)
 
@@ -900,21 +921,23 @@ Acceptance: `test:sql`, `test:db` and the API tests; a finished game writes both
 
 ## 4. Test strategy summary
 
-- Unit: every engine module, every effect, every subsystem, every card (base and radiant), every validator rule, every server endpoint.
-- Property: random combats (M2), random legal-action games per wave (M4), random loadouts against the validator.
-- Determinism: every recorded game in CI is replayed by `replay.fold(seed, log)` and hashed; any mismatch fails the run.
-- Rulings: `rulings.test.ts` has one named test per §11 row; the review greps for `R<n>` coverage.
-- Catalog: `catalog.test.ts` diffs `catalog.json` against a fixture transcribed from SPEC §8.
-- Coverage floor: 90% lines in `packages/engine` and `packages/cards`; 100% of card script files have a test file.
-- E2E: the specs above, run headless in CI, plus a nightly run of `01` over 20 seeds.
+- Unit: every engine module, every effect, every subsystem, every card (base and radiant, in the `mod tests` of its own file), every validator rule, every server endpoint: `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`.
+- Property: random combats (M2), random legal-action games (`cargo jackioh fuzz`: the I1–I4 invariants checked at every step), random loadouts against the validator.
+- Determinism: every fuzz game is folded back from `(seed, decks, log)` and hashed against the live game; any mismatch fails the run. The golden traces (`crates/engine/tests/golden/`) replay 240 games recorded from the TypeScript engine before it was deleted, the state, both views, the events and the legal actions hashed at every step, so the Rust engine is held to the TypeScript one's behaviour.
+- Rulings: every SPEC §11 row is a note in `spec/rulings/` whose `proven_in` names the tests that prove it; `cargo jackioh spec check` fails on a note without a proof and on an `R<n>` cited in code without a note.
+- Catalog: `crates/cards/tests/cross/catalog.rs` diffs `catalog.json` against a fixture transcribed from SPEC §8; `cargo jackioh catalog check` holds its shape and census.
+- Wire: the client's TypeScript types and constants are generated from the Rust (`--features ts`, each crate's `tests/export_config.rs`), and CI fails when they differ from what is committed.
+- Coverage floor: 90% lines over `crates/engine`, `crates/cards` and `crates/ai` (`cargo llvm-cov`, `.github/coverage-floor.txt`, in the daily super run); every catalog id has a script file with its tests (`crates/cards/build.rs` fails the build on a missing one).
+- E2E: the specs above, headless on Chrome: specs 01, 06, 10, 13 and 19 on every pull request, all of them daily.
 
 ## 5. Definition of done
 
-- `pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e` all green in CI.
-- `catalog.test.ts` passes: 268 cards and 50 tokens; Core 100 and 11 with rarity counts 32/40/16/7/5, Classic 90 and 1 with 35/26/18/10/1, Classic+ 78 and 38 with 13/24/25/13/3 (§8).
-- `missing-tests.ts` prints nothing.
-- `rulings.test.ts` covers every SPEC §11 row, R1–R439 and the blocks the workstreams used (script `rulings-coverage.ts` lists any missing id).
-- Fuzz gate: `pnpm fuzz` runs 1,000 seeds with the full card pool and prints its own counts (seeds, throws, non-terminations, replay mismatches, endings). `pnpm test` sweeps the same file at a reduced seed count as a smoke wave; the card pool is never reduced, and any exclusion must be a named entry in `POOL_EXCLUSIONS` with a reason, printed on every run so a narrowing cannot be hidden.
+- CI green on the pull request, its four checks (`rust`, `web`, `e2e smoke`, `db`) and `bot selftest`: `cargo fmt --check`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` with no change to `apps/web/src/wire/`; `cargo jackioh catalog check`, `patches check`, `spec check` and `fuzz --seeds 200`; the web's typecheck, eslint and unit tests; the e2e smoke specs; the db suites when the change touches what they test. The daily super run (`super.yml`) green on the result.
+- `crates/cards/tests/cross/catalog.rs` passes: 268 cards and 50 tokens; Core 100 and 11 with rarity counts 32/40/16/7/5, Classic 90 and 1 with 35/26/18/10/1, Classic+ 78 and 38 with 13/24/25/13/3 (§8).
+- Every catalog id has its script file and every script file names a catalog id (`crates/cards/build.rs` refuses to build otherwise).
+- `cargo jackioh spec check` is clean: every SPEC §11 row, R1–R439 and the blocks the workstreams used, has a ruling note with a proving test.
+- Fuzz gate: `cargo jackioh fuzz` runs 1,000 seeds with the full card pool and prints its own counts (seeds, panics, games over the action bound, replay mismatches, invariant violations, endings). CI plays seeds 1–200 on every pull request and the daily run 10,000, plain and with `--handicap`. The card pool is never reduced, and any exclusion must be a named entry in `POOL_EXCLUSIONS` (`crates/tools/src/fuzz.rs`) with a reason, printed on every run so a narrowing cannot be hidden.
+- `cargo jackioh golden check` replays every golden trace with the same hashes.
 - `animations.test.ts` passes: every event type animated, reduced-motion path drains synchronously.
 - A networked room-code game between two browsers completes and records a result.
-- SPEC.md has a §11 row for every ruling the code makes; no ruling exists only in code comments.
+- The spec has a ruling note for every ruling the code makes; no ruling exists only in code comments.
