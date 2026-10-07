@@ -17,7 +17,7 @@
 use std::sync::OnceLock;
 
 use jackioh_engine::effects::{choose_mode, damage, draw};
-use jackioh_engine::subsystems::ai_policy::{PolicyOptions, choose_action};
+use jackioh_engine::subsystems::ai_policy::choose_action;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::setup_catalog;
@@ -465,7 +465,7 @@ fn play_scripted_game(seed: &str) -> (Walk, Vec<Action>) {
             panic!("scripted game {seed} did not finish");
         }
         let player = seat_to_act(&state).expect("a seat to act");
-        let Some(chosen) = choose_action(&state, player, &mut policy, PolicyOptions::default()) else {
+        let Some(chosen) = choose_action(&state, player, &mut policy) else {
             panic!("no legal action for {player} in game {seed}");
         };
 

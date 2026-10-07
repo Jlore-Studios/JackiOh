@@ -1048,7 +1048,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         let result = {
             let mut sink = sink_for(&mut state);
-            rotate_rings(&mut sink, json_as(json!({ "direction": "right", "perspective": "p1" })))
+            rotate_rings(&mut sink, &json_as(json!({ "direction": "right", "perspective": "p1" })))
         };
         assert_eq!(must(card_at(&state, slot(P2, UNITS, 5)), "crossed unit").id, crosser.id);
         let crossed = instance_in(&state, &crosser.id);
@@ -1069,7 +1069,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         lock_zone(&mut locked, slot(P1, UNITS, 3));
         let locked_result = {
             let mut sink = sink_for(&mut locked);
-            rotate_rings(&mut sink, json_as(json!({ "direction": "right", "perspective": "p1" })))
+            rotate_rings(&mut sink, &json_as(json!({ "direction": "right", "perspective": "p1" })))
         };
         assert_eq!(locked_result.bounced, vec![blocked.id.clone()]);
         assert!(ids(&locked.players.p1.hand).contains(&blocked.id));
@@ -1081,7 +1081,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             let mut sink = sink_for(&mut radiant);
             rotate_rings(
                 &mut sink,
-                json_as(json!({ "direction": "right", "perspective": "p1", "radiant": true })),
+                &json_as(json!({ "direction": "right", "perspective": "p1", "radiant": true })),
             )
         };
         assert_eq!(radiant_result.bounced, vec![bouncer.id.clone()]);

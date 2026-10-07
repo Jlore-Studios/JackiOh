@@ -65,7 +65,8 @@ impl Bench {
     /// `applyEffects(effects, makeContext(sink, self, options))`, `self` read as it stands now.
     fn apply(&mut self, me: Option<&CardInstance>, options: HookOptions, effects: Vec<Effect>) {
         let me = me.map(|card| find_instance(&self.state, &card.id).cloned().unwrap_or_else(|| card.clone()));
-        let mut ctx = make_context(self.sink(), me, options);
+        let mut sink = self.sink();
+        let mut ctx = make_context(&mut sink, me.as_ref(), options);
         apply_effects(&effects, &mut ctx);
     }
 
@@ -575,11 +576,14 @@ mod e5_would_die {
         live_mut(&mut state, &unit).marked_destroyed = Some(true);
         let mut b = Bench::sink_for(state);
         state_check(&mut b.sink());
-        let record = b
-            .state
-            .work
-            .first()
-            .and_then(|owed| replacement_of(&owed.resume.data))
+        // TS `replacementOf({ data: owed.resume.data })`: a context carrying that data.
+        let data = b.state.work.first().map(|owed| owed.resume.data.clone());
+        let record = data
+            .and_then(|data| {
+                let mut sink = b.sink();
+                let ctx = make_context(&mut sink, None, HookOptions { data: Some(data), ..Default::default() });
+                replacement_of(&ctx)
+            })
             .expect("a replacement record");
         assert_eq!(
             serde_json::to_value(&record.flickered).unwrap(),
@@ -873,23 +877,9 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
         let mut b = Bench::sink_for(state);
         // Its own controller's pick is no opponent's targeting.
         let target = live(&b.state, &chosen).clone();
-        let own = answer_targeting(
-            &mut b.sink(),
-            AnswerTargetingArgs {
-                target: target.clone(),
-                by: P2,
-                what: TargetedWhat::Target,
-            },
-        );
+        let own = answer_targeting(&mut b.sink(), &target, P2, TargetedWhat::Target);
         assert!(own.is_none());
-        let moved = answer_targeting(
-            &mut b.sink(),
-            AnswerTargetingArgs {
-                target,
-                by: P1,
-                what: TargetedWhat::Target,
-            },
-        );
+        let moved = answer_targeting(&mut b.sink(), &target, P1, TargetedWhat::Target);
         assert_eq!(moved.map(|card| card.id), Some(decoy.id.clone()));
         assert_eq!(
             of_type(&b.events, GameEventType::Redirected),

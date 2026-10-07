@@ -107,8 +107,8 @@ mod shuffle_random_from_catalog_e39 {
         assert_eq!(defs, vec![pages().id, pages().id, pages().id]);
         for card in library {
             assert!(card.radiant);
-            assert!(has_enchantment(card, "castOnDraw"));
-            assert!(has_enchantment(card, "targetEnemies"));
+            assert!(has_enchantment(card, EnchantmentKind::CastOnDraw));
+            assert!(has_enchantment(card, EnchantmentKind::TargetEnemies));
             assert!(card.known_as.is_some());
         }
     }
