@@ -37,7 +37,10 @@ use crate::api::http::{json as json_response, ApiError, ApiErrorCode, ApiResult,
 use crate::api::queue::seed_override_of;
 use crate::api::series::start_series;
 use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
-use crate::app::App;
+// `now_ms`: the server's one clock in epoch milliseconds (TS `deps.timers.now()`; SURFACE §11.3:
+// `Timers` → `tokio::time`), read through tokio's clock so a test that pauses and advances it moves
+// every module's "now" together.
+use crate::app::{now_ms, App};
 use crate::config::{ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use crate::db::store::{MatchSeat, QueueMode, Room, SeriesRow, StartMatchInput};
 
@@ -144,22 +147,6 @@ fn api_error(code: ApiErrorCode, message: &str, details: Option<Value>) -> ApiEr
 fn wiring_fault(message: String) -> ApiError {
     tracing::warn!(event = "handler.threw", message = %message);
     api_error(ApiErrorCode::Internal, "something went wrong", None)
-}
-
-/// The server's clock in epoch milliseconds (TS `deps.timers.now()`; SURFACE §11.3: `Timers` →
-/// `tokio::time`). Read through tokio's clock so a test that pauses and advances it
-/// (`tokio::time::pause()`, `advance`) moves this too: the wall clock is sampled once, and every
-/// later reading adds tokio's elapsed time to it.
-fn now_ms() -> i64 {
-    static ANCHOR: LazyLock<(std::time::SystemTime, tokio::time::Instant)> =
-        LazyLock::new(|| (std::time::SystemTime::now(), tokio::time::Instant::now()));
-    let (wall, mono) = *ANCHOR;
-    let elapsed = tokio::time::Instant::now().duration_since(mono);
-    let at = wall + elapsed;
-    match at.duration_since(std::time::UNIX_EPOCH) {
-        Ok(since) => i64::try_from(since.as_millis()).unwrap_or(i64::MAX),
-        Err(_) => 0,
-    }
 }
 
 /// A new id for a match or a series (TS `deps.ids.uuid()`, `systemIds.uuid` = `randomUUID()`).
