@@ -100,7 +100,7 @@ fn cost_discount(amount: i32, only_type: Option<CardType>) -> ModifierKind {
     ModifierKind::CostDiscount { amount, only_type, min_current_cost: None, once_per_turn: None }
 }
 
-mod e11_play_from_the_graveyard_r454 {
+mod r454_e11_play_from_the_graveyard {
     use super::*;
 
     #[test]
@@ -143,7 +143,7 @@ mod e11_play_from_the_graveyard_r454 {
     }
 
     #[test]
-    fn r454_a_unit_played_from_the_graveyard_is_placed_summoning_sick_and_its_cry_fires_r1_played_from_anywhere() {
+    fn r454_r1_a_unit_played_from_the_graveyard_is_placed_summoning_sick_and_its_cry_fires_played_from_anywhere() {
         let mut state = pb_playing("r454-unit");
         put(&mut state, &second_wind().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
         let body = in_graveyard(&mut state, &grave_unit().id, PlayerId::P1);
@@ -178,7 +178,7 @@ mod e11_play_from_the_graveyard_r454 {
     }
 
     #[test]
-    fn r454_r65s_player_prices_reach_a_graveyard_play_a_next_spell_discount_prices_and_is_spent_and_an_auras_surcharge_prices_it() {
+    fn r454_r65_player_prices_reach_a_graveyard_play_a_next_spell_discount_prices_and_is_spent_and_an_auras_surcharge_prices_it() {
         let mut state = pb_playing("r454-prices");
         put(&mut state, &second_wind().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
         let spell = in_graveyard(&mut state, &three_spell().id, PlayerId::P1);
@@ -365,7 +365,7 @@ mod e11_play_from_the_graveyard_r454 {
     }
 
     #[test]
-    fn r454_a_card_no_longer_in_the_graveyard_at_step_4_is_not_played_r226s_rule_from_the_graveyard() {
+    fn r454_r226_a_card_no_longer_in_the_graveyard_at_step_4_is_not_played_the_rule_from_the_graveyard() {
         let mut state = pb_playing("r454-lost");
         put(&mut state, &second_wind().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
         let titan_card = in_graveyard(&mut state, &titan().id, PlayerId::P1);

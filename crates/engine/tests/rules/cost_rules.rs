@@ -109,7 +109,7 @@ fn refusal(result: &ReduceResult) -> String {
     result.error.clone().unwrap_or_default()
 }
 
-mod e15_price_rules_from_auras_r455 {
+mod r455_e15_price_rules_from_auras {
     use super::*;
 
     #[test]
@@ -135,7 +135,7 @@ mod e15_price_rules_from_auras_r455 {
     }
 
     #[test]
-    fn r455_classic_77s_aura_both_players_spells_cost_1_more_2_on_its_radiant_face_an_x_card_is_untouched_r65() {
+    fn r455_r65_classic_77s_aura_both_players_spells_cost_1_more_2_on_its_radiant_face_an_x_card_is_untouched() {
         let mut state = pb_playing("r455-spells");
         let monkey_card = put(&mut state, &monkey().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
         let mine = hand_card(&mut state, &grave_spell().id, PlayerId::P1);
@@ -156,7 +156,7 @@ mod e15_price_rules_from_auras_r455 {
     }
 
     #[test]
-    fn r455_classic_68s_3_plus_surcharge_reads_the_price_the_flat_rules_left_as_r363_reads_curvature() {
+    fn r455_r363_classic_68s_3_plus_surcharge_reads_the_price_the_flat_rules_left_as_it_reads_curvature() {
         let mut state = pb_playing("r455-threshold");
         put(&mut state, &lobbyist().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
         let two = hand_card(&mut state, &two_field().id, PlayerId::P1);
@@ -214,7 +214,7 @@ mod e15_price_rules_from_auras_r455 {
     }
 }
 
-mod e15_price_rules_on_a_player_r455 {
+mod r455_e15_price_rules_on_a_player {
     use super::*;
 
     #[test]
@@ -284,7 +284,7 @@ mod e15_price_rules_on_a_player_r455 {
     }
 
     #[test]
-    fn r455_ai_alignment_tax_the_opponents_cards_cost_1_more_during_their_next_turn_only_r48s_timing_turned_outward() {
+    fn r455_r48_ai_alignment_tax_the_opponents_cards_cost_1_more_during_their_next_turn_only_its_timing_turned_outward() {
         let mut state = manual_turns(&pb_playing("r455-tax"));
         let card = hand_card(&mut state, &tax().id, PlayerId::P1);
         let theirs = hand_card(&mut state, &grave_spell().id, PlayerId::P2);
@@ -320,7 +320,7 @@ mod e15_price_rules_on_a_player_r455 {
     }
 }
 
-mod e39_return_after_resolving_and_its_floor_r455 {
+mod r455_e39_return_after_resolving_and_its_floor {
     use super::*;
 
     #[test]
@@ -398,7 +398,7 @@ mod e39_return_after_resolving_and_its_floor_r455 {
     }
 
     #[test]
-    fn r455_forevers_radiant_face_floors_at_1_and_a_cast_spell_takes_the_rider_too_r70() {
+    fn r455_r70_forevers_radiant_face_floors_at_1_and_a_cast_spell_takes_the_rider_too() {
         let mut state = pb_playing("r455-forever-radiant");
         let card = hand_card(&mut state, &forever().id, PlayerId::P1);
         find_instance_mut(&mut state, &card.id).expect("the hand card").radiant = true;

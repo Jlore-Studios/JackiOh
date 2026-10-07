@@ -79,7 +79,7 @@ mod draw_m1_t7 {
     }
 
     #[test]
-    fn deals_1_2_then_3_fatigue_damage_on_three_empty_draws_r3() {
+    fn r3_deals_1_2_then_3_fatigue_damage_on_three_empty_draws() {
         let mut state = new_game("engine-test", None);
         let events = draw_from(&mut state, &[], 3);
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH - 6);
@@ -90,7 +90,7 @@ mod draw_m1_t7 {
     }
 
     #[test]
-    fn burns_the_eleventh_card_to_the_graveyard_while_still_counting_the_draw_r4() {
+    fn r4_burns_the_eleventh_card_to_the_graveyard_while_still_counting_the_draw() {
         let mut state = new_game("engine-test", None);
         let library: Vec<String> = (0..HAND_CAP + 1).map(|i| format!("fx-{}", i + 1)).collect();
         let events = draw_from(&mut state, &library, HAND_CAP + 1);
@@ -114,7 +114,7 @@ mod draw_m1_t7 {
     }
 
     #[test]
-    fn anti_oneshot_armor_caps_the_heros_damage_and_armor_can_reduce_a_virus_to_nothing_r63() {
+    fn r63_anti_oneshot_armor_caps_the_heros_damage_and_armor_can_reduce_a_virus_to_nothing() {
         let mut state = new_game("engine-test", None);
         put(&mut state, &anti_oneshot().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
         state.players.p1.hero.armor = 2;
@@ -126,7 +126,7 @@ mod draw_m1_t7 {
     }
 
     #[test]
-    fn stops_a_cast_on_draw_chain_at_the_cap_and_leaves_the_next_card_in_hand_r58() {
+    fn r58_stops_a_cast_on_draw_chain_at_the_cap_and_leaves_the_next_card_in_hand() {
         let mut state = new_game("engine-test", None);
         state.players.p1.hero.armor = 5; // keep the hero alive; the cap is what ends the chain
         let library: Vec<String> = (0..40).map(|_| cn_virus().id).collect();
@@ -216,7 +216,7 @@ mod draw_m1_t7 {
     }
 }
 
-mod library_cap_r80_m1_t7 {
+mod r80_library_cap_m1_t7 {
     use super::*;
 
     #[test]

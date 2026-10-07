@@ -278,7 +278,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
     }
 
     #[test]
-    fn r448_a_countered_card_goes_to_exile_when_the_counter_says_so_classic_10_and_exile_counts_it_r55() {
+    fn r448_r55_a_countered_card_goes_to_exile_when_the_counter_says_so_classic_10_and_exile_counts_it() {
         let mut state = game("r448-exile");
         put(&mut state, &PA.exile_trap.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
         let ping = hand(&mut state, PlayerId::P1, &PA.ping.id);
@@ -353,7 +353,7 @@ mod r448_where_the_card_waits_the_resolving_zone_out_of_every_hands_reach {
     }
 }
 
-mod r448_a_cast_is_announced_and_can_be_countered_r70 {
+mod r448_r70_a_cast_is_announced_and_can_be_countered {
     use super::*;
 
     #[test]
@@ -617,7 +617,7 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
     }
 }
 
-mod r448_a_card_being_set_face_down_is_its_players_alone_while_it_waits_r97_r227 {
+mod r448_r97_r227_a_card_being_set_face_down_is_its_players_alone_while_it_waits {
     use super::*;
 
     /// TS `setting(seed, trapDef)`: `{ state, trap }`.

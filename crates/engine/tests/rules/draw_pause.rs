@@ -306,7 +306,7 @@ fn burned_count(events: &[GameEvent]) -> usize {
 
 // ---------------------------------------------------------------------------
 
-mod a_prompt_inside_s2_4s_cast_on_draw_chain_r58_r113_r117_r122 {
+mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
     use super::*;
 
     #[test]
@@ -476,7 +476,7 @@ mod a_prompt_inside_s2_4s_cast_on_draw_chain_r58_r113_r117_r122 {
     }
 }
 
-mod a_prompt_inside_s2_4s_draw_n_loop_r58_r113_r117_r122 {
+mod r58_r113_r117_r122_a_prompt_inside_s2_4s_draw_n_loop {
     use super::*;
 
     #[test]

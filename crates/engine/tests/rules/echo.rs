@@ -275,7 +275,7 @@ fn in_pile(pile: &[CardInstance], id: &str) -> bool {
 
 // ---------------------------------------------------------------------------
 
-mod echo_and_twinspell_s6_3_s10_5_step_6_r30_r70 {
+mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
     use super::*;
 
     #[test]
@@ -372,7 +372,7 @@ mod echo_and_twinspell_s6_3_s10_5_step_6_r30_r70 {
     }
 
     #[test]
-    fn s10_5_step_6_asks_fresh_prompts_inside_each_echo_repeat_and_one_pauses_the_repeats_behind_it_r81() {
+    fn r81_s10_5_step_6_asks_fresh_prompts_inside_each_echo_repeat_and_one_pauses_the_repeats_behind_it() {
         // §6.3: "the same instance re-resolves X times with fresh mode/target prompts … a prompt inside
         // one repeat pauses the rest until it is answered". With Echo 2 there are three resolutions and
         // three Discovers, each its own prompt, and the repeat still owed waits in the queue meanwhile.
@@ -472,7 +472,7 @@ mod echo_and_twinspell_s6_3_s10_5_step_6_r30_r70 {
     }
 
     #[test]
-    fn s6_3_repeats_a_cast_permanents_printed_echo_and_leaves_it_on_the_field_not_in_the_gy_r70() {
+    fn r70_s6_3_repeats_a_cast_permanents_printed_echo_and_leaves_it_on_the_field_not_in_the_gy() {
         let mut state = playing("r70-cast-permanent-echo");
         let card = hand_card(&mut state, &echo_unit().id, PlayerId::P1);
 

@@ -123,7 +123,7 @@ fn first_card(state: &mut GameState, player: PlayerId, def_id: &str) -> CardInst
     in_hand(state, def_id, player, 1).into_iter().next().expect("a card in hand")
 }
 
-mod b5_e4_draws_counted_per_player_per_turn_r457 {
+mod r457_b5_e4_draws_counted_per_player_per_turn {
     use super::*;
 
     #[test]
@@ -149,7 +149,7 @@ mod b5_e4_draws_counted_per_player_per_turn_r457 {
     }
 
     #[test]
-    fn r457_setup_is_no_players_turn_the_opening_deal_and_the_mulligan_count_nothing_and_number_no_draw_r225() {
+    fn r457_r225_setup_is_no_players_turn_the_opening_deal_and_the_mulligan_count_nothing_and_number_no_draw() {
         let opened = begin_game(&new_game("draw-limit-setup", None));
         assert!(!of_type(&opened.events, GameEventType::Drawn).is_empty());
         assert!(of_type(&opened.events, GameEventType::Drawn).iter().all(|event| event.get("turnDraw").is_none()));
@@ -158,7 +158,7 @@ mod b5_e4_draws_counted_per_player_per_turn_r457 {
     }
 
     #[test]
-    fn r457_a_drawn_events_number_is_public_though_the_card_it_names_is_not_r97() {
+    fn r457_r97_a_drawn_events_number_is_public_though_the_card_it_names_is_not() {
         let mut state = playing("public-count");
         set_library(&mut state, PlayerId::P2, &strings(&["fx-25", "fx-26"]));
         let (after, _) = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
@@ -212,7 +212,7 @@ mod b5_e4_draws_counted_per_player_per_turn_r457 {
     }
 }
 
-mod b5_e3_draw_limits_r457 {
+mod r457_b5_e3_draw_limits {
     use super::*;
 
     #[test]
@@ -420,7 +420,7 @@ mod b5_e3_draw_limits_r457 {
     }
 }
 
-mod b5_e39_and_classic_plus_26_cast_on_draw_r459 {
+mod r459_b5_e39_and_classic_plus_26_cast_on_draw {
     use super::*;
 
     #[test]
