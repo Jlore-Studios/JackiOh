@@ -99,7 +99,7 @@ pub fn write(state: &mut GameState, entry: &str) {
 pub fn note(entry: impl Into<String>) -> Effect {
     let entry = entry.into();
     Effect::new("tn:note", move |ctx| {
-        write(ctx.state, &entry);
+        write(&mut *ctx.state, &entry);
     })
 }
 

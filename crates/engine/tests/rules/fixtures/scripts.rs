@@ -23,7 +23,7 @@ fn spread(mut base: Value, extra: Value) -> Value {
 fn damage_all_enemies(amount: i32) -> Effect {
     Effect::new("fixture:damageAllEnemies", move |ctx| {
         let enemy = opponent_of(ctx.controller);
-        let units: Vec<CardInstance> = zones::active_units_of(ctx.state, enemy)
+        let units: Vec<CardInstance> = zones::active_units_of(&*ctx.state, enemy)
             .iter()
             .map(|unit| CardInstance::clone(unit))
             .collect();
