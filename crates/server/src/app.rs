@@ -81,10 +81,12 @@ pub fn now_ms() -> i64 {
         (std::time::Instant::now(), wall)
     });
     let now = tokio::time::Instant::now().into_std();
-    match now.checked_duration_since(at) {
-        Some(after) => epoch_ms + after.as_millis() as i64,
-        None => epoch_ms - at.duration_since(now).as_millis() as i64,
-    }
+    let nanos: i128 = match now.checked_duration_since(at) {
+        Some(after) => after.as_nanos() as i128,
+        None => -(at.duration_since(now).as_nanos() as i128),
+    };
+    // Floored on both sides of the anchor, so a clock moved by `n` ms always reads `n` ms later.
+    epoch_ms + nanos.div_euclid(1_000_000) as i64
 }
 
 // ---------------------------------------------------------------------------

@@ -725,7 +725,7 @@ mod r194_an_ended_sessions_access_token_is_refused_here_too {
 /// (SURFACE §11.3: `sign_in` answers unavailable, and `/api/auth/signup` is gone), so the doors R160
 /// guards are the E2E fixture sign-in (`/api/auth/signin`, under `E2E=1` only) and the absent
 /// sign-up route.
-mod r160_the_identical_sign_up_and_sign_in_error {
+mod r160_r145_the_identical_sign_up_and_sign_in_error {
     use super::*;
 
     async fn sign_in(app: &Arc<App>, email: &str, password: &str) -> (u16, String) {

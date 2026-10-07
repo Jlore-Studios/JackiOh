@@ -18,9 +18,9 @@
 //! a "process" is an app over the same store whose predecessor's actors are stopped (the crash),
 //! a start that fails is the store refusing the match row's insert (TS's `store.onCall`), and every
 //! trio holds legal decks of real cards so the real engine can begin the game. TS's three
-//! compare-and-set races (`store.series.update` replaced to lose, or to land a rival write first)
-//! need a seam the fake store does not have; they are listed under GAPS in
-//! `.fullsend/notes/part-19-6.md`.
+//! compare-and-set races replaced `store.series.update` to lose, or to land a rival write first;
+//! here the fake store's race hook (`FakeData.before_call`) runs before the update with the tables
+//! in hand, writes the rival row, or makes the update lose.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -36,7 +36,7 @@ use jackioh_server::config::{
     MATCH_CEILING_MINUTES, RATING_DEVIATION_START, RATING_VOLATILITY_START, SERIES_START_GIVE_UP_SECONDS,
     SERIES_START_GRACE_SECONDS,
 };
-use jackioh_server::db::fake::FakeData;
+use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
 use jackioh_server::db::store::{Db, SeriesRow, StoreError};
 use jackioh_server::ranked::glicko2::{rate_game, Glicko};
 
@@ -634,6 +634,77 @@ mod r263_a_series_survives_a_restart {
 
 mod r263_every_write_is_a_compare_and_set {
     use super::*;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    /// TS's `store.series.update = async (next) => { if (!raced) { raced = true; … } return
+    /// update(next); }`: `rival` rewrites the series row once, just before the first update runs.
+    async fn race_first_update(app: &App, rival: impl Fn(&SeriesRow) -> SeriesRow + Send + Sync + 'static) {
+        let raced = AtomicBool::new(false);
+        fake(app).lock().await.before_call = Some(Arc::new(move |method: &str, tables: &mut FakeTables| {
+            if method == "series.update" && !raced.swap(true, Ordering::SeqCst)
+                && let Some(current) = tables.series.iter_mut().find(|row| row.id == SERIES_ID)
+            {
+                let next = rival(current);
+                // The rival's own update, which wins: the version it read, plus one.
+                assert_eq!(next.version, current.version + 1, "the rival write is a compare-and-set that wins");
+                *current = next;
+            }
+            CallOutcome::Proceed
+        }));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r263_a_pick_that_loses_the_compare_and_set_is_re_applied_to_the_row_that_won_and_completes_the_game() {
+        let mut a = boot(None).await;
+        begin(&mut a).await;
+        let clock = a.clock;
+        // Bob's pick lands between alice's read and her write.
+        race_first_update(&a.app, move |current| {
+            pick_deck(current, PlayerId::P2, 2, clock.now(), None).expect("bob's pick")
+        })
+        .await;
+
+        let (status, answer) = pick(&a, &a.alice, 1).await;
+        assert_eq!(status, 200, "{answer}");
+        assert_eq!(answer["status"], "playing", "{answer}");
+        assert_eq!(answer["currentMatchId"], FIRST_MATCH, "{answer}");
+        let series = row(&a.app).await;
+        assert_eq!(series["games"][0]["slots"], json!([1, 2]));
+        assert_eq!(series["version"], json!(3));
+        assert_eq!(a.started().await.len(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r263_a_write_that_keeps_losing_is_refused_with_409_and_writes_nothing() {
+        let mut a = boot(None).await;
+        let series = begin(&mut a).await;
+        fake(&a.app).lock().await.before_call = Some(Arc::new(|method: &str, _: &mut FakeTables| {
+            if method == "series.update" { CallOutcome::Lose } else { CallOutcome::Proceed }
+        }));
+
+        let (status, answer) = pick(&a, &a.alice, 0).await;
+
+        assert_eq!(status, 409, "{answer}");
+        assert_eq!(row(&a.app).await, series);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r263_a_result_whose_series_write_loses_the_compare_and_set_re_reads_the_series_and_records_the_game() {
+        let mut a = boot(None).await;
+        begin(&mut a).await;
+        pick_both(&a, [0, 0]).await;
+        // Another writer touched the row (same state, next version) just before this one.
+        race_first_update(&a.app, |current| SeriesRow { version: current.version + 1, ..current.clone() }).await;
+        let before = row(&a.app).await;
+
+        finish_game(&a, BOB).await.expect("the result is recorded");
+
+        let after = row(&a.app).await;
+        assert_eq!(after["status"], "picking");
+        assert_eq!(after["version"], json!(before["version"].as_i64().expect("a version") + 2));
+        assert_eq!(after["games"][0]["winner"], "p2");
+        assert_eq!(table(&a.app, |data| json!(data.tables.results)).await.len(), 1);
+    }
 
     #[tokio::test(start_paused = true)]
     async fn r263_two_starts_racing_for_one_game_make_one_match_the_loser_finds_the_winners_row_and_stops() {

@@ -192,6 +192,22 @@ pub type Clock = Arc<dyn Fn() -> i64 + Send + Sync>;
 /// transaction it ran in rolls back when it is dropped.
 pub type OnCall = Arc<dyn Fn(&str) -> Result<(), StoreError> + Send + Sync>;
 
+/// What a `before_call` hook tells the method it ran before.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CallOutcome {
+    /// The method runs on the tables as the hook left them.
+    Proceed,
+    /// A compare-and-set (`series.update`) loses: it writes nothing and answers `false`, as TS's
+    /// tests made it by replacing the method with `async () => false`. Any other method proceeds.
+    Lose,
+}
+
+/// The unit fake's race seam, beside `OnCall`: called with the port method's TS name and the tables
+/// it is about to read, before each operation, inside its transaction. It may change them — a rival
+/// writer landing between a read and a write, as TS's tests did by wrapping `store.series.update`
+/// — and may make a compare-and-set lose.
+pub type BeforeCall = Arc<dyn Fn(&str, &mut FakeTables) -> CallOutcome + Send + Sync>;
+
 /// The wall clock in epoch milliseconds: the default `now` of a store built without one (TS
 /// `options.now ?? (() => Date.now())`).
 pub fn system_now() -> i64 {
@@ -227,6 +243,8 @@ pub struct FakeData {
     pub catalog: Option<FakeCatalog>,
     /// The unit tests' fault-injection hook; `None` charges nothing.
     pub on_call: Option<OnCall>,
+    /// The unit tests' race hook (`BeforeCall`); `None` changes nothing.
+    pub before_call: Option<BeforeCall>,
 }
 
 /// TS `E2EStoreOptions`.
@@ -247,6 +265,7 @@ impl std::fmt::Debug for FakeData {
             .field("next_profile", &self.next_profile)
             .field("catalog", &self.catalog.as_ref().map(|catalog| catalog.card_ids.len()))
             .field("on_call", &self.on_call.is_some())
+            .field("before_call", &self.before_call.is_some())
             .finish_non_exhaustive()
     }
 }
@@ -262,7 +281,7 @@ impl Default for FakeData {
 impl FakeData {
     /// An empty store with the given clock, redemption settings and (for `E2E=1`) catalog.
     pub fn new(now: Clock, redemption: RedemptionSettings, catalog: Option<FakeCatalog>) -> FakeData {
-        FakeData { tables: empty_tables(), next_profile: 1, now, redemption, catalog, on_call: None }
+        FakeData { tables: empty_tables(), next_profile: 1, now, redemption, catalog, on_call: None, before_call: None }
     }
 
     /// R144: "the server reseeds its fixture accounts and invite codes at boot". The reseed is a
@@ -372,12 +391,20 @@ pub fn commit(mut f: FakeTx<'_>) {
     f.snapshot = None;
 }
 
-/// Charges `method` to the fault-injection hook, if one is set.
+/// Charges `method` to the fault-injection hook, then runs the race hook, if either is set.
 fn call(f: &mut FakeTx<'_>, method: &str) -> Result<(), StoreError> {
-    match f.guard.on_call.clone() {
-        Some(hook) => hook(method),
-        None => Ok(()),
+    call_cas(f, method).map(|_| ())
+}
+
+/// `call` for a compare-and-set method, which the race hook may make lose.
+fn call_cas(f: &mut FakeTx<'_>, method: &str) -> Result<CallOutcome, StoreError> {
+    if let Some(hook) = f.guard.on_call.clone() {
+        hook(method)?;
     }
+    Ok(match f.guard.before_call.clone() {
+        Some(hook) => hook(method, &mut f.guard.tables),
+        None => CallOutcome::Proceed,
+    })
 }
 
 /// TS `new DuplicateResultError(matchId)`: `results_insert`'s refusal of a second row for one match.
@@ -1279,7 +1306,9 @@ pub fn series_get(f: &mut FakeTx<'_>, series_id: &str) -> Result<Option<SeriesRo
 
 /// Compare-and-set: writes `next` only when the stored row's `version` is `next.version - 1`.
 pub fn series_update(f: &mut FakeTx<'_>, next: &SeriesRow) -> Result<bool, StoreError> {
-    call(f, "series.update")?;
+    if call_cas(f, "series.update")? == CallOutcome::Lose {
+        return Ok(false);
+    }
     let t = f.tables();
     let Some(current) = t.series.iter_mut().find(|existing| existing.id == next.id) else {
         return Ok(false);

@@ -23,6 +23,7 @@
 //! `create` (`POST /api/rooms`) and `join` (`POST /api/rooms/:code/join`), with SURFACE §11.2's
 //! shape; `app.rs`'s `ROUTES` lists them where `createRoomRoutes()` put them in `allRoutes()`.
 
+use std::cell::RefCell;
 use std::sync::{Arc, LazyLock, Mutex};
 
 use indexmap::IndexMap;
@@ -105,6 +106,58 @@ fn take_seed_for_room(code: &str, joiner_seed: Option<String>) -> Option<String>
         Some(entry) => Some(entry.seed),
         None => joiner_seed,
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R149 — where a room code comes from
+// ---------------------------------------------------------------------------------------------
+
+thread_local! {
+    /// Not in SPEC, and no R-row: the test seam for R149's bound (TS's `deps.ids.code`, which
+    /// `rooms.test.ts` scripted to collide). Absent, as everywhere outside a test, codes are random.
+    static SCRIPTED_CODES: RefCell<Option<ScriptedCodes>> = const { RefCell::new(None) };
+}
+
+/// The codes a test scripted, and how many have been minted from them.
+struct ScriptedCodes {
+    codes: Vec<String>,
+    minted: usize,
+}
+
+/// Not in SPEC, and no R-row: scripts the room codes `create` mints on the calling thread, in order,
+/// the last one repeating once the list runs out (TS `roomIds(codes)`), until the guard drops. A
+/// `#[tokio::test]` runs the handlers on its own thread, so the script reaches its requests and no
+/// other test's.
+pub fn script_room_codes(codes: &[&str]) -> ScriptedRoomCodes {
+    let codes = codes.iter().map(|code| (*code).to_string()).collect();
+    SCRIPTED_CODES.with(|scripted| *scripted.borrow_mut() = Some(ScriptedCodes { codes, minted: 0 }));
+    ScriptedRoomCodes { _private: () }
+}
+
+/// `script_room_codes`' guard: dropped, the thread mints random codes again.
+pub struct ScriptedRoomCodes {
+    _private: (),
+}
+
+impl Drop for ScriptedRoomCodes {
+    fn drop(&mut self) {
+        SCRIPTED_CODES.with(|scripted| *scripted.borrow_mut() = None);
+    }
+}
+
+/// R79, §9.5: a room code, 6 characters from the invite-code alphabet — or the next scripted one.
+fn mint_code() -> String {
+    SCRIPTED_CODES.with(|scripted| {
+        let mut scripted = scripted.borrow_mut();
+        match scripted.as_mut() {
+            Some(script) if !script.codes.is_empty() => {
+                let code = script.codes[script.minted.min(script.codes.len() - 1)].clone();
+                script.minted += 1;
+                code
+            }
+            _ => random_code(ROOM_CODE_LENGTH),
+        }
+    })
 }
 
 /// R264: a join in another mode than the room's is refused with the room's mode named, so the lobby
@@ -275,7 +328,7 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
 
     for _attempt in 0..CODE_ATTEMPTS {
         // R79, §9.5: 6 characters from the invite-code alphabet.
-        let code = random_code(ROOM_CODE_LENGTH);
+        let code = mint_code();
         let room = Room {
             code: code.clone(),
             host_profile_id: profile_id.clone(),

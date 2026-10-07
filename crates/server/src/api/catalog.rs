@@ -229,7 +229,9 @@ pub const DEPLOYED_COMMIT_HEADER: &str = "x-deployed-commit";
 ///
 /// `apps/web/src/net/api.ts` already calls exactly this shape:
 ///
-///     export type CatalogResponse = { version: string; defs: CardDefs };
+/// ```text
+/// export type CatalogResponse = { version: string; defs: CardDefs };
+/// ```
 ///
 /// `commit` is the git commit this deploy runs (`env.rs` deployed_commit), sent as a header so the
 /// body stays the same bytes for everybody (R163). `deploy-watch.yml` reads it to tell a server that

@@ -20,8 +20,8 @@
 //! the match row it wrote, read off the store, where TS read its fake directory's `started` list),
 //! and a minted seed or code that is the server's own (TS scripted both through `Ids`). The legacy
 //! `{ deckIndex }` body is gone (SURFACE §11.3), so a Best-of-1 choice names its deck by id.
-//! R149's two tests scripted the code mint to collide, which nothing can do to the server's own
-//! random codes; they are listed under GAPS in `.fullsend/notes/part-19-6.md`.
+//! R149's two tests script the code mint to collide through `actor::rooms::script_room_codes`, the
+//! seam that stands where TS's `roomIds(codes)` did.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -30,13 +30,13 @@ use serde_json::{json, Value};
 
 use jackioh_engine::wire::{pick_portrait_from_seed, DEFAULT_PORTRAIT};
 use jackioh_server::actor::engine::deal_random_deck;
-use jackioh_server::actor::rooms::e2e_room_seed_count;
+use jackioh_server::actor::rooms::{e2e_room_seed_count, script_room_codes};
 use jackioh_server::app::App;
 use jackioh_server::config::{MAX_SAVED_DECKS, MAX_SAVED_TRIOS, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{CollectionEntry, Db};
 
-use crate::support::deps::{add_user, call, test_app, test_app_with, TestAppOptions};
+use crate::support::deps::{add_user, call, record_logs, test_app, test_app_with, TestAppOptions};
 
 const HOST: &str = "host";
 const GUEST: &str = "guest";
@@ -360,6 +360,52 @@ mod r143_the_optional_seed_on_the_room_endpoints {
         let (status, joined) = h.join(&code, json!({})).await;
         assert_eq!(status, 200, "{joined}");
         assert_eq!(started(&h.app).await.pop().expect("a started match")["seed"], "the-live-one");
+    }
+}
+
+mod r149_the_bounded_room_code_mint {
+    //! R149 — the bounded room-code mint (§9.5, R110).
+    use super::*;
+
+    #[tokio::test]
+    async fn r149_retries_past_a_code_that_is_already_in_use_and_mints_the_next_one() {
+        let _turn = ROOMS.lock().await;
+        // The first two attempts collide with the room the host already opened; the third is free.
+        let _codes = script_room_codes(&["AAA234", "AAA234", "AAA234", "BBB234"]);
+        let h = harness(false).await;
+
+        let (status, first) = h.create(json!({})).await;
+        assert_eq!(status, 200, "{first}");
+        assert_eq!(first["code"], "AAA234");
+
+        let (status, second) = h.create_as_guest(json!({})).await;
+        assert_eq!(status, 200, "{second}");
+        assert_eq!(second["code"], "BBB234");
+    }
+
+    #[tokio::test]
+    async fn r149_gives_up_after_a_bounded_number_of_collisions_and_says_no_code_is_available() {
+        let _turn = ROOMS.lock().await;
+        let log = record_logs();
+        // Every attempt mints the same code, which the host's room already holds.
+        let _codes = script_room_codes(&["AAA234"]);
+        let h = harness(false).await;
+        let (status, first) = h.create(json!({})).await;
+        assert_eq!(status, 200, "{first}");
+
+        let (status, body) = h.create_as_guest(json!({})).await;
+
+        assert_eq!(status, 503);
+        assert_eq!(body["error"]["code"], "unavailable");
+        assert!(
+            body["error"]["message"].as_str().unwrap_or_default().contains("could not allocate a room code"),
+            "{body}"
+        );
+        // Bounded, and loud: an exhausted code space is an operator's problem, not a silent retry loop.
+        let alerts = log.named("room.code.exhausted");
+        assert_eq!(alerts.len(), 1, "{alerts:?}");
+        assert_eq!(alerts[0].level, "alert");
+        assert_eq!(h.rooms().await.len(), 1);
     }
 }
 

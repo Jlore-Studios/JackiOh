@@ -427,7 +427,7 @@ mod r165_queueing_with_no_saved_deck_at_all {
 // R166
 // ---------------------------------------------------------------------------------------------
 
-mod r166_which_qualifying_opponent_a_sweep_pairs {
+mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
     use super::*;
 
     #[tokio::test(start_paused = true)]
@@ -546,7 +546,7 @@ mod r166_which_qualifying_opponent_a_sweep_pairs {
 // R167
 // ---------------------------------------------------------------------------------------------
 
-mod r167_how_a_player_leaves_the_queue {
+mod r167_r108_r143_how_a_player_leaves_the_queue {
     use super::*;
 
     #[tokio::test(start_paused = true)]

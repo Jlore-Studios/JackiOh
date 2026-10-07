@@ -16,8 +16,10 @@
 //! NOTHING HERE IS REACHABLE IN PRODUCTION. `app.rs` builds these only when `env.e2e` is true, and
 //! `env.rs` already refuses `E2E` together with `NODE_ENV=production`:
 //!
-//!     "E2E: must not be set together with NODE_ENV=production — BUILD M8's fixture accounts and
-//!      seeded games must never be reachable in a production deployment."
+//! ```text
+//! "E2E: must not be set together with NODE_ENV=production — BUILD M8's fixture accounts and
+//!  seeded games must never be reachable in a production deployment."
+//! ```
 //!
 //! THE VALUES BELOW ARE A CONTRACT WITH `e2e/support/config.ts`, which is the suite's own source of
 //! truth and cannot be imported from here. They are transcribed from its defaults. That file also
