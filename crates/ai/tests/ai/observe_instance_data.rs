@@ -35,7 +35,11 @@ mod r185_the_ai_never_reads_a_hidden_cards_instance_data {
         let mut changed = clone(&base);
         let side = &mut changed.players[PlayerId::P2];
         for card in side.hand.iter_mut().chain(side.library.iter_mut()) {
-            card.brittle = Some(BrittleCounter { count: 2, since: 1, printed: None });
+            card.brittle = Some(BrittleCounter {
+                count: 2,
+                since: 1,
+                printed: None,
+            });
             card.tuning = Some(json_as(json!({ "attack": 3, "numbers": { "damage": 1 } })));
             card.enchantments = Some(vec![json_as(json!({ "kind": "castOnDraw" }))]);
         }
@@ -45,7 +49,10 @@ mod r185_the_ai_never_reads_a_hidden_cards_instance_data {
             let card = card_by_id(&public, id);
             assert!(card.as_ref().is_none_or(|card| card.tuning.is_none()), "{id}");
             assert!(card.as_ref().is_none_or(|card| card.brittle.is_none()), "{id}");
-            assert!(card.as_ref().is_none_or(|card| card.enchantments.is_none()), "{id}");
+            assert!(
+                card.as_ref().is_none_or(|card| card.enchantments.is_none()),
+                "{id}"
+            );
         }
         assert_eq!(hash_state(&redact(&changed, AI)), hash_state(&redact(&base, AI)));
     }
@@ -54,9 +61,10 @@ mod r185_the_ai_never_reads_a_hidden_cards_instance_data {
     #[test]
     fn r185_a_public_cards_instance_data_stays_since_the_seat_reads_it() {
         jackioh_cards::register_all();
-        let mut state = scenario(json!({ "seed": "observe-instance-public", "p1": p1_side(), "p2": p2_side() }))
-            .state()
-            .clone();
+        let mut state =
+            scenario(json!({ "seed": "observe-instance-public", "p1": p1_side(), "p2": p2_side() }))
+                .state()
+                .clone();
         let unit_id = state.players[PlayerId::P2]
             .units
             .iter()
@@ -69,7 +77,11 @@ mod r185_the_ai_never_reads_a_hidden_cards_instance_data {
         {
             let unit = find_instance_mut(&mut state, &unit_id).expect("the unit is on the field");
             unit.tuning = Some(json_as(json!({ "attack": 1 })));
-            unit.brittle = Some(BrittleCounter { count: 1, since: 1, printed: None });
+            unit.brittle = Some(BrittleCounter {
+                count: 1,
+                since: 1,
+                printed: None,
+            });
         }
         let public = redact(&state, AI);
         assert_eq!(

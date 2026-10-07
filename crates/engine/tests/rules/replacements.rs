@@ -29,7 +29,10 @@ fn hero(state: &GameState, player: PlayerId) -> i32 {
 }
 
 fn backrow_at(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardInstance> {
-    state.players[player].backrow.get(lane - 1).and_then(Option::as_ref)
+    state.players[player]
+        .backrow
+        .get(lane - 1)
+        .and_then(Option::as_ref)
 }
 
 fn unit_at(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardInstance> {
@@ -64,7 +67,11 @@ impl Bench {
 
     /// `applyEffects(effects, makeContext(sink, self, options))`, `self` read as it stands now.
     fn apply(&mut self, me: Option<&CardInstance>, options: HookOptions, effects: Vec<Effect>) {
-        let me = me.map(|card| find_instance(&self.state, &card.id).cloned().unwrap_or_else(|| card.clone()));
+        let me = me.map(|card| {
+            find_instance(&self.state, &card.id)
+                .cloned()
+                .unwrap_or_else(|| card.clone())
+        });
         let mut sink = self.sink();
         let mut ctx = make_context(&mut sink, me.as_ref(), options);
         apply_effects(&effects, &mut ctx);
@@ -139,8 +146,18 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
     fn r460_a_lethal_hit_is_redirected_once_the_first_final_gambit_fires_and_the_second_stays_set() {
         let mut state = playing("dc-gambit-two");
         let attacker = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), Default::default());
-        let first = put(&mut state, &gambit.id, slot(P2, Row::Backrow, 1), Default::default());
-        let second = put(&mut state, &gambit.id, slot(P2, Row::Backrow, 2), Default::default());
+        let first = put(
+            &mut state,
+            &gambit.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
+        let second = put(
+            &mut state,
+            &gambit.id,
+            slot(P2, Row::Backrow, 2),
+            Default::default(),
+        );
         state.players.p2.hero.health = 2;
         let hand_before = state.players.p2.hand.len();
         let mut game = recorder(&state);
@@ -158,7 +175,9 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         assert_eq!(notes(&after), strings(&["gambit:after:p1"]));
         assert_eq!(
             of_type(&result.events, GameEventType::Redirected),
-            vec![json!({ "type": "redirected", "what": "damage", "fromId": "hero-p2", "toId": "hero-p1", "byInstanceId": first.id })]
+            vec![
+                json!({ "type": "redirected", "what": "damage", "fromId": "hero-p2", "toId": "hero-p1", "byInstanceId": first.id })
+            ]
         );
         assert_eq!(
             field_of(&result.events, GameEventType::TrapFired, "instanceId"),
@@ -166,7 +185,10 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         );
         // The first is spent to its owner's graveyard; the second re-checked the changed hit and stays set.
         assert!(in_pile(&after, P2, ZoneName::Graveyard, &first.id));
-        assert_eq!(backrow_at(&after, P2, 2).map(|c| c.id.clone()), Some(second.id.clone()));
+        assert_eq!(
+            backrow_at(&after, P2, 2).map(|c| c.id.clone()),
+            Some(second.id.clone())
+        );
         assert!(backrow_at(&after, P2, 2).and_then(|c| c.face_up).is_none());
         assert!(after.work.is_empty());
         assert!(replays_to(&game.start, &game.log, &after));
@@ -176,8 +198,18 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
     fn r460_a_redirected_hit_meets_the_other_heros_replacements_as_a_new_instance_each_card_once() {
         let mut state = playing("dc-gambit-both");
         let attacker = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), Default::default());
-        let theirs = put(&mut state, &gambit.id, slot(P2, Row::Backrow, 1), Default::default());
-        let mine = put(&mut state, &gambit.id, slot(P1, Row::Backrow, 1), Default::default());
+        let theirs = put(
+            &mut state,
+            &gambit.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
+        let mine = put(
+            &mut state,
+            &gambit.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         state.players.p1.hero.health = 1;
         state.players.p2.hero.health = 2;
         let mut game = recorder(&state);
@@ -194,7 +226,10 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
             .collect();
         assert_eq!(
             moves,
-            vec![json!(["hero-p2", "hero-p1", theirs.id]), json!(["hero-p1", "hero-p2", mine.id])]
+            vec![
+                json!(["hero-p2", "hero-p1", theirs.id]),
+                json!(["hero-p1", "hero-p2", mine.id])
+            ]
         );
         assert_eq!(hero(&after, P2), 0);
         assert_eq!(hero(&after, P1), 1);
@@ -208,10 +243,21 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
     }
 
     #[test]
-    fn two_field_traps_that_redirect_for_ever_stop_at_damage_redirect_cap_and_the_hit_lands_where_it_stands() {
+    fn two_field_traps_that_redirect_for_ever_stop_at_damage_redirect_cap_and_the_hit_lands_where_it_stands()
+    {
         let mut state = playing("dc-gambit-loop");
-        put(&mut state, &echo_gambit.id, slot(P1, Row::Backrow, 1), Default::default());
-        put(&mut state, &echo_gambit.id, slot(P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &echo_gambit.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        put(
+            &mut state,
+            &echo_gambit.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
         state.players.p1.hero.health = 1;
         state.players.p2.hero.health = 1;
         let mut b = Bench::sink_for(state);
@@ -229,7 +275,12 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
     #[test]
     fn a_hit_that_is_not_lethal_and_losing_health_leave_a_final_gambit_set() {
         let mut state = playing("dc-gambit-quiet");
-        let trap = put(&mut state, &gambit.id, slot(P2, Row::Backrow, 1), Default::default());
+        let trap = put(
+            &mut state,
+            &gambit.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
         state.players.p2.hero.health = 5;
         let mut b = Bench::sink_for(state);
         b.deal(None, hero_target(P2), 4);
@@ -237,14 +288,22 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         // R18: lose health is not damage, so no replacement answers it, lethal or not.
         lose_health(&mut b.sink(), P2, 3);
         assert_eq!(hero(&b.state, P2), -2);
-        assert_eq!(backrow_at(&b.state, P2, 1).map(|c| c.id.clone()), Some(trap.id.clone()));
+        assert_eq!(
+            backrow_at(&b.state, P2, 1).map(|c| c.id.clone()),
+            Some(trap.id.clone())
+        );
         assert!(!event_types(&b.events).contains(&"trapFired".to_string()));
     }
 
     #[test]
     fn fatigue_is_damage_a_lethal_fatigue_draw_is_redirected_and_the_follow_up_waits_for_the_draw_to_end() {
         let mut state = playing("dc-gambit-fatigue");
-        put(&mut state, &gambit.id, slot(P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &gambit.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
         state.players.p2.library = Vec::new();
         state.players.p2.hero.health = 1;
         let mut b = Bench::sink_for(state);
@@ -264,9 +323,24 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
     #[test]
     fn e9_the_redirected_hit_goes_through_the_other_heros_armor_divisor_and_cap() {
         let mut state = playing("dc-gambit-guarded");
-        put(&mut state, &gambit.id, slot(P2, Row::Backrow, 1), Default::default());
-        put(&mut state, &argus.id, slot(P1, Row::Backrow, 1), Default::default());
-        put(&mut state, &anti_oneshot().id, slot(P1, Row::Backrow, 2), Default::default());
+        put(
+            &mut state,
+            &gambit.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
+        put(
+            &mut state,
+            &argus.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        put(
+            &mut state,
+            &anti_oneshot().id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
         state.players.p1.hero.armor = 1;
         state.players.p2.hero.health = 9;
         let mut b = Bench::sink_for(state);
@@ -276,19 +350,37 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         assert_eq!(hero(&b.state, P1), 25);
         assert_eq!(hero(&b.state, P2), 9);
         // And a cap alone keeps a hit from being lethal in the first place.
-        put(&mut b.state, &anime_armor.id, slot(P2, Row::Units, 1), Default::default());
+        put(
+            &mut b.state,
+            &anime_armor.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
         b.state.players.p2.hero.health = 2;
-        let second = put(&mut b.state, &gambit.id, slot(P2, Row::Backrow, 3), Default::default());
+        let second = put(
+            &mut b.state,
+            &gambit.id,
+            slot(P2, Row::Backrow, 3),
+            Default::default(),
+        );
         b.deal(None, hero_target(P2), 12);
         assert_eq!(hero(&b.state, P2), 1);
-        assert_eq!(backrow_at(&b.state, P2, 3).map(|c| c.id.clone()), Some(second.id.clone()));
+        assert_eq!(
+            backrow_at(&b.state, P2, 3).map(|c| c.id.clone()),
+            Some(second.id.clone())
+        );
     }
 
     #[test]
     fn r113_a_follow_up_that_asks_pauses_after_the_replaced_event_survives_a_round_trip_and_replays() {
         let mut state = playing("dc-gambit-pause");
         let attacker = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), Default::default());
-        put(&mut state, &gambit_asker.id, slot(P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &gambit_asker.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
         state.players.p2.hero.health = 2;
         let mut game = recorder(&state);
 
@@ -305,7 +397,10 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         assert_eq!(work_again, paused.work);
 
         let resumed = answer(&round_trip(&paused)).state;
-        assert_eq!(notes(&resumed), strings(&["asker:before", "asker:answered", "asker:tail"]));
+        assert_eq!(
+            notes(&resumed),
+            strings(&["asker:before", "asker:answered", "asker:tail"])
+        );
         assert_eq!(hero(&resumed, P2), 12);
         assert!(resumed.work.is_empty());
         assert!(resumed.pending.is_none());
@@ -323,14 +418,38 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
     fn r177_a_face_down_final_gambit_that_declines_a_hit_tells_the_other_seat_nothing() {
         let mut with_gambit = playing("dc-gambit-hidden");
         let mut with_other = playing("dc-gambit-hidden");
-        let a = put(&mut with_gambit, &grunt.id, slot(P1, Row::Units, 1), Default::default());
-        put(&mut with_gambit, &gambit.id, slot(P2, Row::Backrow, 1), Default::default());
-        let b = put(&mut with_other, &grunt.id, slot(P1, Row::Units, 1), Default::default());
-        put(&mut with_other, &shadowstep.id, slot(P2, Row::Backrow, 1), Default::default());
+        let a = put(
+            &mut with_gambit,
+            &grunt.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        put(
+            &mut with_gambit,
+            &gambit.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
+        let b = put(
+            &mut with_other,
+            &grunt.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        put(
+            &mut with_other,
+            &shadowstep.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let mut one = recorder(&with_gambit);
         let mut two = recorder(&with_other);
-        one.play(input(json!({ "type": "attack", "attackerId": a.id, "targetId": "hero-p2", "playerId": "p1" })));
-        two.play(input(json!({ "type": "attack", "attackerId": b.id, "targetId": "hero-p2", "playerId": "p1" })));
+        one.play(input(
+            json!({ "type": "attack", "attackerId": a.id, "targetId": "hero-p2", "playerId": "p1" }),
+        ));
+        two.play(input(
+            json!({ "type": "attack", "attackerId": b.id, "targetId": "hero-p2", "playerId": "p1" }),
+        ));
         assert_eq!(view_json(one.state(), P1), view_json(two.state(), P1));
     }
 }
@@ -345,7 +464,12 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
     #[test]
     fn r462_an_enemys_heal_sets_blood_moon_off_and_is_converted_and_the_rest_of_the_turn_converts_too() {
         let mut state = playing("dc-moon");
-        let moon = put(&mut state, &blood_moon.id, slot(P2, Row::Backrow, 1), Default::default());
+        let moon = put(
+            &mut state,
+            &blood_moon.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let first_mend = first_in_hand(&mut state, &mend.id, P1);
         let second_mend = first_in_hand(&mut state, &mend.id, P1);
         let third_mend = first_in_hand(&mut state, &mend.id, P1);
@@ -360,7 +484,9 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
         assert_eq!(hero(&now, P1), 25);
         assert_eq!(
             of_type(&first.events, GameEventType::Damage),
-            vec![json!({ "type": "damage", "sourceId": moon.id, "targetId": "hero-p1", "amount": 5, "combat": false })]
+            vec![
+                json!({ "type": "damage", "sourceId": moon.id, "targetId": "hero-p1", "amount": 5, "combat": false })
+            ]
         );
         assert!(of_type(&first.events, GameEventType::Healed).is_empty());
         assert!(in_pile(&now, P2, ZoneName::Graveyard, &moon.id));
@@ -399,9 +525,15 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
     }
 
     #[test]
-    fn r462_lifesteal_heal_up_to_and_heal_to_full_are_heals_a_heal_on_an_undamaged_unit_converts_its_stated_amount() {
+    fn r462_lifesteal_heal_up_to_and_heal_to_full_are_heals_a_heal_on_an_undamaged_unit_converts_its_stated_amount()
+     {
         let mut state = playing("dc-moon-kinds");
-        put(&mut state, &blood_moon.id, slot(P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &blood_moon.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let sucker = put(&mut state, &leech.id, slot(P1, Row::Units, 1), Default::default());
         let target = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
         let mut b = Bench::sink_for(state);
@@ -415,7 +547,9 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
         b.apply(
             Some(&sucker),
             HookOptions::default(),
-            vec![heal(json_as(json!({ "target": { "of": "selfHero" }, "upTo": 30 })))],
+            vec![heal(json_as(
+                json!({ "target": { "of": "selfHero" }, "upTo": 30 }),
+            ))],
         );
         assert_eq!(hero(&b.state, P1), 24);
         // Heal to full on the leech's 2 damage: 2.
@@ -423,11 +557,18 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
         b.apply(
             Some(&sucker),
             HookOptions::default(),
-            vec![heal(json_as(json!({ "target": { "of": "self" }, "toFull": true })))],
+            vec![heal(json_as(
+                json!({ "target": { "of": "self" }, "toFull": true }),
+            ))],
         );
         assert_eq!(live(&b.state, &sucker).damage, 4);
         // Heal 5 on an undamaged unit: 5, though it would restore nothing.
-        let fresh = put(&mut b.state, &grunt.id, slot(P1, Row::Units, 2), Default::default());
+        let fresh = put(
+            &mut b.state,
+            &grunt.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
         b.apply(
             Some(&sucker),
             HookOptions::default(),
@@ -437,7 +578,12 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
         );
         assert_eq!(live(&b.state, &fresh).damage, 5);
         // A heal of nothing (heal to full on an undamaged unit) is no heal at all: nothing converts.
-        let whole = put(&mut b.state, &grunt.id, slot(P1, Row::Units, 3), Default::default());
+        let whole = put(
+            &mut b.state,
+            &grunt.id,
+            slot(P1, Row::Units, 3),
+            Default::default(),
+        );
         let before = b.events.len();
         b.apply(
             Some(&sucker),
@@ -453,7 +599,12 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
     #[test]
     fn e7_set_health_is_no_heal_blood_moon_stays_set() {
         let mut state = playing("dc-moon-set");
-        let moon = put(&mut state, &blood_moon.id, slot(P2, Row::Backrow, 1), Default::default());
+        let moon = put(
+            &mut state,
+            &blood_moon.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
         state.players.p1.hero.health = 5;
         let spell = first_in_hand(&mut state, &vital_kill.id, P1);
         let mut game = recorder(&state);
@@ -508,22 +659,45 @@ mod e5_would_die {
     use super::*;
 
     #[test]
-    fn r460_its_controllers_dying_units_flicker_instead_one_firing_for_them_all_a_second_shadowstep_stays_set() {
+    fn r460_its_controllers_dying_units_flicker_instead_one_firing_for_them_all_a_second_shadowstep_stays_set()
+     {
         let mut state = playing("dc-shadowstep");
         let mine = vec![
-            put(&mut state, &rattle.id, slot(P1, Row::Units, 1), Default::default()),
+            put(
+                &mut state,
+                &rattle.id,
+                slot(P1, Row::Units, 1),
+                Default::default(),
+            ),
             put(&mut state, &grunt.id, slot(P1, Row::Units, 2), Default::default()),
         ];
-        let theirs = put(&mut state, &rattle.id, slot(P2, Row::Units, 1), Default::default());
-        let trap = put(&mut state, &shadowstep.id, slot(P1, Row::Backrow, 1), Default::default());
-        let spare = put(&mut state, &shadowstep.id, slot(P1, Row::Backrow, 2), Default::default());
+        let theirs = put(
+            &mut state,
+            &rattle.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
+        let trap = put(
+            &mut state,
+            &shadowstep.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        let spare = put(
+            &mut state,
+            &shadowstep.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
         for unit in &mine {
             live_mut(&mut state, unit).buffs = AttackHealth { attack: 1, health: 0 };
         }
         let spell = first_in_hand(&mut state, &storm.id, P1);
         let mut game = recorder(&state);
 
-        let result = game.play(input(json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })));
+        let result = game.play(input(
+            json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
+        ));
         let after = game.state().clone();
 
         // Back in their zones at once, reset (no buff, no damage) and summoning sick.
@@ -535,7 +709,10 @@ mod e5_would_die {
             assert_eq!(back.summoned_turn, Some(after.turn));
         }
         let mine_ids: Vec<Value> = mine.iter().map(|u| json!(u.id)).collect();
-        assert_eq!(field_of(&result.events, GameEventType::Flickered, "instanceId"), mine_ids);
+        assert_eq!(
+            field_of(&result.events, GameEventType::Flickered, "instanceId"),
+            mine_ids
+        );
         // No death for them: no `destroyed`, no Death hook; the enemy's rattle dies as ever.
         assert_eq!(
             field_of(&result.events, GameEventType::Destroyed, "instanceId"),
@@ -550,7 +727,10 @@ mod e5_would_die {
             field_of(&result.events, GameEventType::TrapFired, "instanceId"),
             vec![json!(trap.id)]
         );
-        assert_eq!(backrow_at(&after, P1, 2).map(|c| c.id.clone()), Some(spare.id.clone()));
+        assert_eq!(
+            backrow_at(&after, P1, 2).map(|c| c.id.clone()),
+            Some(spare.id.clone())
+        );
         assert_eq!(after.counters.destroyed, 1);
         assert!(replays_to(&game.start, &game.log, &after));
     }
@@ -558,21 +738,39 @@ mod e5_would_die {
     #[test]
     fn r462_a_sacrifice_is_not_offered_the_would_die_window() {
         let mut state = playing("dc-shadowstep-sacrifice");
-        let unit = put(&mut state, &rattle.id, slot(P1, Row::Units, 1), Default::default());
-        let trap = put(&mut state, &shadowstep.id, slot(P1, Row::Backrow, 1), Default::default());
+        let unit = put(
+            &mut state,
+            &rattle.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        let trap = put(
+            &mut state,
+            &shadowstep.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         let mut b = Bench::sink_for(state);
         let victim = live(&b.state, &unit).clone();
         sacrifice_now(&mut b.sink(), &victim);
         assert!(in_pile(&b.state, P1, ZoneName::Graveyard, &unit.id));
         assert_eq!(notes(&b.state), strings(&["rattle:death:p1"]));
-        assert_eq!(backrow_at(&b.state, P1, 1).map(|c| c.id.clone()), Some(trap.id.clone()));
+        assert_eq!(
+            backrow_at(&b.state, P1, 1).map(|c| c.id.clone()),
+            Some(trap.id.clone())
+        );
     }
 
     #[test]
     fn the_follow_up_reads_what_it_flickered_from_its_record() {
         let mut state = playing("dc-shadowstep-record");
         let unit = put(&mut state, &grunt.id, slot(P1, Row::Units, 3), Default::default());
-        put(&mut state, &shadowstep.id, slot(P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &shadowstep.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         live_mut(&mut state, &unit).marked_destroyed = Some(true);
         let mut b = Bench::sink_for(state);
         state_check(&mut b.sink());
@@ -581,7 +779,14 @@ mod e5_would_die {
         let record = data
             .and_then(|data| {
                 let mut sink = b.sink();
-                let ctx = make_context(&mut sink, None, HookOptions { data: Some(data), ..Default::default() });
+                let ctx = make_context(
+                    &mut sink,
+                    None,
+                    HookOptions {
+                        data: Some(data),
+                        ..Default::default()
+                    },
+                );
                 replacement_of(&ctx)
             })
             .expect("a replacement record");
@@ -606,14 +811,31 @@ mod e5_would_go_to_a_graveyard {
     #[test]
     fn r461_a_unit_exiled_instead_of_dying_has_not_died_no_death_no_reborn_no_destroyed_count() {
         let mut state = playing("dc-void");
-        put(&mut state, &voidwalker.id, slot(P1, Row::Units, 1), Default::default());
-        let bird = put(&mut state, &phoenix.id, slot(P2, Row::Units, 1), Default::default());
-        let bell = put(&mut state, &rattle.id, slot(P1, Row::Units, 2), Default::default());
+        put(
+            &mut state,
+            &voidwalker.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        let bird = put(
+            &mut state,
+            &phoenix.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
+        let bell = put(
+            &mut state,
+            &rattle.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
         let spell = first_in_hand(&mut state, &storm.id, P1);
         let exiled_before = state.counters.exiled;
         let mut game = recorder(&state);
 
-        let result = game.play(input(json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })));
+        let result = game.play(input(
+            json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
+        ));
         let after = game.state().clone();
 
         assert!(in_pile(&after, P2, ZoneName::Exile, &bird.id));
@@ -641,8 +863,18 @@ mod e5_would_go_to_a_graveyard {
     #[test]
     fn r463_a_voidwalkers_own_card_reaches_its_graveyard_and_so_does_every_card_that_dies_with_it() {
         let mut state = playing("dc-void-together");
-        let walker = put(&mut state, &voidwalker.id, slot(P1, Row::Units, 1), Default::default());
-        let bell = put(&mut state, &rattle.id, slot(P2, Row::Units, 1), Default::default());
+        let walker = put(
+            &mut state,
+            &voidwalker.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        let bell = put(
+            &mut state,
+            &rattle.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
         live_mut(&mut state, &walker).marked_destroyed = Some(true);
         live_mut(&mut state, &bell).marked_destroyed = Some(true);
         let mut b = Bench::sink_for(state);
@@ -661,8 +893,18 @@ mod e5_would_go_to_a_graveyard {
             slot(P1, Row::Units, 1),
             json_as(json!({ "radiant": true })),
         );
-        let own = put(&mut state, &rattle.id, slot(P1, Row::Units, 2), Default::default());
-        let foe = put(&mut state, &rattle.id, slot(P2, Row::Units, 2), Default::default());
+        let own = put(
+            &mut state,
+            &rattle.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
+        let foe = put(
+            &mut state,
+            &rattle.id,
+            slot(P2, Row::Units, 2),
+            Default::default(),
+        );
         live_mut(&mut state, &own).marked_destroyed = Some(true);
         live_mut(&mut state, &foe).marked_destroyed = Some(true);
         let mut b = Bench::sink_for(state);
@@ -675,8 +917,18 @@ mod e5_would_go_to_a_graveyard {
     #[test]
     fn a_fired_trap_on_its_way_to_its_graveyard_is_exiled_under_a_voidwalker() {
         let mut state = playing("dc-void-trap");
-        put(&mut state, &voidwalker.id, slot(P1, Row::Units, 1), Default::default());
-        let trap = put(&mut state, &gambit.id, slot(P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &voidwalker.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        let trap = put(
+            &mut state,
+            &gambit.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
         state.players.p2.hero.health = 3;
         let mut b = Bench::sink_for(state);
         b.deal(None, hero_target(P2), 5);
@@ -690,7 +942,12 @@ mod e5_would_go_to_a_graveyard {
     #[test]
     fn second_wind_exiles_its_controllers_own_cards_and_no_one_elses() {
         let mut state = playing("dc-wind");
-        put(&mut state, &second_wind.id, slot(P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &second_wind.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         let own = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), Default::default());
         let foe = put(&mut state, &grunt.id, slot(P2, Row::Units, 1), Default::default());
         live_mut(&mut state, &own).marked_destroyed = Some(true);
@@ -706,7 +963,9 @@ mod e5_would_go_to_a_graveyard {
         let mut state = playing("dc-pile");
         let spell = first_in_hand(&mut state, &pile_on.id, P1);
         let mut game = recorder(&state);
-        let result = game.play(input(json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })));
+        let result = game.play(input(
+            json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
+        ));
         let after = game.state().clone();
         let library = &after.players.p1.library;
         let bottom = library.len() - 1;
@@ -732,7 +991,10 @@ mod e5_would_go_to_a_graveyard {
             .into_iter()
             .find(|event| event.event_type() == GameEventType::ShuffledIn);
         let seen_json = seen.as_ref().map(|event| serde_json::to_value(event).unwrap());
-        assert_eq!(seen_json.as_ref().map(|e| e["type"].clone()), Some(json!("shuffledIn")));
+        assert_eq!(
+            seen_json.as_ref().map(|e| e["type"].clone()),
+            Some(json!("shuffledIn"))
+        );
         assert_eq!(seen_json.as_ref().map(|e| e["player"].clone()), Some(json!("p1")));
         let position = match &seen {
             Some(GameEvent::ShuffledIn { position, .. }) => Some(*position),
@@ -750,7 +1012,9 @@ mod e5_would_go_to_a_graveyard {
                 controller: Some(P1),
                 ..Default::default()
             },
-            vec![discard(json_as(json!({ "target": { "of": "instance", "instanceId": held.id } })))],
+            vec![discard(json_as(
+                json!({ "target": { "of": "instance", "instanceId": held.id } }),
+            ))],
         );
         let lib = &b.state.players.p1.library;
         assert_eq!(lib.last().map(|c| c.id.clone()), Some(held.id.clone()));
@@ -766,28 +1030,54 @@ mod e5_would_go_to_a_graveyard {
         // p1 active: p1's Voidwalker (a unit) comes before p1's Second Wind (backrow) and before the card
         // itself — exiled, and nothing after it re-checks a card no longer on its way to a graveyard.
         let mut one = playing("dc-order-one");
-        put(&mut one, &voidwalker.id, slot(P1, Row::Units, 1), Default::default());
-        put(&mut one, &second_wind.id, slot(P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut one,
+            &voidwalker.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        put(
+            &mut one,
+            &second_wind.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         let first = first_in_hand(&mut one, &pile_on.id, P1);
         let mut a = recorder(&one);
-        a.play(input(json!({ "type": "play", "instanceId": first.id, "playerId": "p1" })));
+        a.play(input(
+            json!({ "type": "play", "instanceId": first.id, "playerId": "p1" }),
+        ));
         assert!(in_pile(a.state(), P1, ZoneName::Exile, &first.id));
 
         // The opponent's Voidwalker comes after the active side, Pile On's own clause included.
         let mut two = playing("dc-order-two");
-        put(&mut two, &voidwalker.id, slot(P2, Row::Units, 1), Default::default());
+        put(
+            &mut two,
+            &voidwalker.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
         let second = first_in_hand(&mut two, &pile_on.id, P1);
         let mut b = recorder(&two);
-        b.play(input(json!({ "type": "play", "instanceId": second.id, "playerId": "p1" })));
+        b.play(input(
+            json!({ "type": "play", "instanceId": second.id, "playerId": "p1" }),
+        ));
         let library = &b.state().players.p1.library;
         assert_eq!(library.last().map(|c| c.id.clone()), Some(second.id.clone()));
 
         // Second Wind (backrow) comes before the card itself on the same side.
         let mut three = playing("dc-order-three");
-        put(&mut three, &second_wind.id, slot(P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut three,
+            &second_wind.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         let third = first_in_hand(&mut three, &pile_on.id, P1);
         let mut c = recorder(&three);
-        c.play(input(json!({ "type": "play", "instanceId": third.id, "playerId": "p1" })));
+        c.play(input(
+            json!({ "type": "play", "instanceId": third.id, "playerId": "p1" }),
+        ));
         assert!(in_pile(c.state(), P1, ZoneName::Exile, &third.id));
     }
 }
@@ -805,7 +1095,12 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
         let attacker = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), Default::default());
         let chosen = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
         let decoy = first_in_hand(&mut state, &joro.id, P2);
-        put(&mut state, &watcher.id, slot(P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &watcher.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let mut game = recorder(&state);
 
         let result = game.play(input(
@@ -823,7 +1118,9 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
         assert_eq!(entry["lane"], json!(2));
         assert_eq!(
             of_type(&result.events, GameEventType::Redirected),
-            vec![json!({ "type": "redirected", "what": "attack", "fromId": chosen.id, "toId": decoy.id, "byInstanceId": decoy.id })]
+            vec![
+                json!({ "type": "redirected", "what": "attack", "fromId": chosen.id, "toId": decoy.id, "byInstanceId": decoy.id })
+            ]
         );
         assert_eq!(
             field_of(&result.events, GameEventType::AttackDeclared, "targetId").first(),
@@ -837,7 +1134,10 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
         // interposer's summon reached them in that window too, before the combat.
         assert_eq!(
             notes(&after),
-            vec![format!("watch:attack:{}", decoy.id), format!("watch:summon:{}", decoy.id)]
+            vec![
+                format!("watch:attack:{}", decoy.id),
+                format!("watch:summon:{}", decoy.id)
+            ]
         );
         assert!(replays_to(&game.start, &game.log, &after));
     }
@@ -848,7 +1148,12 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
         let attacker = put(&mut full, &grunt.id, slot(P1, Row::Units, 1), Default::default());
         let chosen = put(&mut full, &wall.id, slot(P2, Row::Units, 1), Default::default());
         for lane in [2, 3, 4, 5] {
-            put(&mut full, &wall.id, slot(P2, Row::Units, lane), Default::default());
+            put(
+                &mut full,
+                &wall.id,
+                slot(P2, Row::Units, lane),
+                Default::default(),
+            );
         }
         let decoy = first_in_hand(&mut full, &joro.id, P2);
         let mut one = recorder(&full);
@@ -883,7 +1188,9 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
         assert_eq!(moved.map(|card| card.id), Some(decoy.id.clone()));
         assert_eq!(
             of_type(&b.events, GameEventType::Redirected),
-            vec![json!({ "type": "redirected", "what": "target", "fromId": chosen.id, "toId": decoy.id, "byInstanceId": decoy.id })]
+            vec![
+                json!({ "type": "redirected", "what": "target", "fromId": chosen.id, "toId": decoy.id, "byInstanceId": decoy.id })
+            ]
         );
         assert_eq!(
             unit_at(&b.state, P2, 2).and_then(|c| c.summoned_turn),
@@ -922,7 +1229,12 @@ mod r97_r177_the_replacement_events_in_both_views {
     fn a_redirect_a_flicker_and_the_trap_that_did_them_are_public_to_both_seats_once_fired() {
         let mut state = playing("dc-views");
         let attacker = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), Default::default());
-        let trap = put(&mut state, &gambit.id, slot(P2, Row::Backrow, 1), Default::default());
+        let trap = put(
+            &mut state,
+            &gambit.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
         state.players.p2.hero.health = 2;
         let mut game = recorder(&state);
         game.play(input(
@@ -933,41 +1245,66 @@ mod r97_r177_the_replacement_events_in_both_views {
             let events = &view.events;
             assert_eq!(
                 of_type(events, GameEventType::Redirected),
-                vec![json!({ "type": "redirected", "what": "damage", "fromId": "hero-p2", "toId": "hero-p1", "byInstanceId": trap.id })]
+                vec![
+                    json!({ "type": "redirected", "what": "damage", "fromId": "hero-p2", "toId": "hero-p1", "byInstanceId": trap.id })
+                ]
             );
             // `trapFired` names the trap to its controller only, as every firing does; the other seat reads
             // the card where it went, its owner's graveyard.
-            let fired = if viewer == P2 { gambit.id.clone() } else { "hidden".to_string() };
+            let fired = if viewer == P2 {
+                gambit.id.clone()
+            } else {
+                "hidden".to_string()
+            };
             assert_eq!(
                 field_of(events, GameEventType::TrapFired, "defId"),
                 vec![json!(fired)]
             );
             let side = if viewer == P2 { &view.you } else { &view.opponent };
-            let graveyard: Vec<String> = side.graveyard.iter().map(|card| card.instance_id.clone()).collect();
+            let graveyard: Vec<String> = side
+                .graveyard
+                .iter()
+                .map(|card| card.instance_id.clone())
+                .collect();
             assert!(graveyard.contains(&trap.id));
         }
 
         let mut flick = playing("dc-views-flicker");
         let unit = put(&mut flick, &grunt.id, slot(P1, Row::Units, 1), Default::default());
-        put(&mut flick, &shadowstep.id, slot(P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut flick,
+            &shadowstep.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         let spell = first_in_hand(&mut flick, &storm.id, P1);
         let mut other = recorder(&flick);
-        other.play(input(json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })));
+        other.play(input(
+            json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
+        ));
         for viewer in [P1, P2] {
             let flickered = of_type(&view_for(other.state(), viewer).events, GameEventType::Flickered);
             assert_eq!(
                 flickered,
-                vec![json!({ "type": "flickered", "player": "p1", "instanceId": unit.id, "defId": grunt.id, "row": "units", "lane": 1 })]
+                vec![
+                    json!({ "type": "flickered", "player": "p1", "instanceId": unit.id, "defId": grunt.id, "row": "units", "lane": 1 })
+                ]
             );
         }
     }
 
     #[test]
-    fn r177_a_face_down_blood_moon_or_shadowstep_that_declines_leaves_the_other_seats_view_as_another_trap_would() {
+    fn r177_a_face_down_blood_moon_or_shadowstep_that_declines_leaves_the_other_seats_view_as_another_trap_would()
+     {
         let build = |trap_id: &str| -> GameState {
             let mut state = playing("dc-views-decline");
             put(&mut state, trap_id, slot(P1, Row::Backrow, 1), Default::default());
-            let foe = put(&mut state, &rattle.id, slot(P2, Row::Units, 1), Default::default());
+            let foe = put(
+                &mut state,
+                &rattle.id,
+                slot(P2, Row::Units, 1),
+                Default::default(),
+            );
             live_mut(&mut state, &foe).marked_destroyed = Some(true);
             // TS put the Mend in the recorder's live state (the same object as `state`) right after making
             // the recorder; the recorder's start copy is never read here, so it goes in first.

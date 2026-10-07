@@ -34,7 +34,12 @@ fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
 /// p1 plays a plain body on top of a Tower in backrow lane 2; the state after, and the carried Unit.
 fn carried(seed: &str) -> (GameState, CardInstance) {
     let mut state = playing(seed);
-    put(&mut state, &tower.id, slot(P1, Row::Backrow, 2), Default::default());
+    put(
+        &mut state,
+        &tower.id,
+        slot(P1, Row::Backrow, 2),
+        Default::default(),
+    );
     let card = in_hand(&mut state, &plain.id, P1, 1)
         .into_iter()
         .next()
@@ -49,7 +54,9 @@ fn carried(seed: &str) -> (GameState, CardInstance) {
     if let Some(error) = &result.error {
         panic!("{error}");
     }
-    let rider = find_instance(&result.state, &card.id).expect("the rider is gone").clone();
+    let rider = find_instance(&result.state, &card.id)
+        .expect("the rider is gone")
+        .clone();
     (result.state, rider)
 }
 
@@ -63,7 +70,9 @@ mod r446_a_carried_unit_takes_damage {
             &mut sink_for(&mut state),
             DamageArgs {
                 source: None,
-                target: DamageTarget::Unit { instance: rider.clone() },
+                target: DamageTarget::Unit {
+                    instance: rider.clone(),
+                },
                 amount: 2,
                 flags: None,
             },
@@ -105,9 +114,10 @@ mod r53_r446_a_carried_unit_is_out_of_a_random_forced_attack {
         );
         let mut sink = sink_for(&mut state);
         let cursor = sink.rng.cursor();
-        (forced_attack_random(json_as(json!({ "attacker": { "of": "self" }, "among": "enemyUnits" }))).apply)(
-            &mut make_context(&mut sink, Some(&striker), Default::default()),
-        );
+        (forced_attack_random(json_as(
+            json!({ "attacker": { "of": "self" }, "among": "enemyUnits" }),
+        ))
+        .apply)(&mut make_context(&mut sink, Some(&striker), Default::default()));
         assert!(sink.events.is_empty());
         assert_eq!(sink.rng.cursor(), cursor);
         assert_eq!(by_id(sink.state, &rider.id).damage, 0);
@@ -117,6 +127,8 @@ mod r53_r446_a_carried_unit_is_out_of_a_random_forced_attack {
     fn carried_it_draws_no_target_of_its_own() {
         let (mut state, rider) = carried("carried-random-attacker");
         put(&mut state, &plain.id, slot(P2, Row::Units, 3), Default::default());
-        assert!(random_attack_targets(&state, by_id(&state, &rider.id), json_as(json!("enemies"))).is_empty());
+        assert!(
+            random_attack_targets(&state, by_id(&state, &rider.id), json_as(json!("enemies"))).is_empty()
+        );
     }
 }

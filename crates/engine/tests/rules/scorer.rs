@@ -60,7 +60,10 @@ fn def(name: &str, args: Value) -> CardDef {
             if let Some(health) = radiant.get("health").cloned().or(health) {
                 face.insert("health".to_string(), health);
             }
-            face.insert("keywords".to_string(), radiant.get("keywords").cloned().unwrap_or(keywords));
+            face.insert(
+                "keywords".to_string(),
+                radiant.get("keywords").cloned().unwrap_or(keywords),
+            );
             face.insert("text".to_string(), json!(format!("{name} radiant")));
             Value::Object(face)
         }
@@ -83,26 +86,41 @@ fn def(name: &str, args: Value) -> CardDef {
 /// Charge: the printed signal that a card can hit the hero on the turn it arrives (§6.1).
 const CHARGER: &str = "sco-charger";
 fn charger() -> CardDef {
-    def("charger", json!({ "index": "10", "cost": 1, "attack": 4, "health": 4, "keywords": [{ "kind": "Charge" }] }))
+    def(
+        "charger",
+        json!({ "index": "10", "cost": 1, "attack": 4, "health": 4, "keywords": [{ "kind": "Charge" }] }),
+    )
 }
 /// The best stats per mana in the pool, and the control case for every priority test.
 const BIG_BODY: &str = "sco-big-body";
 fn big_body() -> CardDef {
-    def("big-body", json!({ "index": "20", "cost": 2, "attack": 9, "health": 9 }))
+    def(
+        "big-body",
+        json!({ "index": "20", "cost": 2, "attack": 9, "health": 9 }),
+    )
 }
 /// Poisonous destroys any unit it damages, whatever its health (§6.1).
 const POISON_SNAKE: &str = "sco-poison";
 fn poison_snake() -> CardDef {
-    def("poison", json!({ "index": "30", "cost": 1, "attack": 1, "health": 1, "keywords": [{ "kind": "Poisonous" }] }))
+    def(
+        "poison",
+        json!({ "index": "30", "cost": 1, "attack": 1, "health": 1, "keywords": [{ "kind": "Poisonous" }] }),
+    )
 }
 /// Lifesteal: the one heal printed on a card face (§6.1, §4.4 step 8).
 const HEALER: &str = "sco-healer";
 fn healer() -> CardDef {
-    def("healer", json!({ "index": "40", "cost": 1, "attack": 3, "health": 3, "keywords": [{ "kind": "Lifesteal" }] }))
+    def(
+        "healer",
+        json!({ "index": "40", "cost": 1, "attack": 3, "health": 3, "keywords": [{ "kind": "Lifesteal" }] }),
+    )
 }
 const VANILLA: &str = "sco-vanilla";
 fn vanilla() -> CardDef {
-    def("vanilla", json!({ "index": "50", "cost": 1, "attack": 2, "health": 2 }))
+    def(
+        "vanilla",
+        json!({ "index": "50", "cost": 1, "attack": 2, "health": 2 }),
+    )
 }
 /// A spell prints no stats, and its text is not machine-readable, so it scores nothing.
 const CHEAP_SPELL: &str = "sco-spell";
@@ -117,7 +135,10 @@ fn trap_card() -> CardDef {
 /// Reborn is a second body from one card.
 const REBORNER: &str = "sco-reborn";
 fn reborner() -> CardDef {
-    def("reborn", json!({ "index": "80", "cost": 2, "attack": 2, "health": 2, "keywords": [{ "kind": "Reborn" }] }))
+    def(
+        "reborn",
+        json!({ "index": "80", "cost": 2, "attack": 2, "health": 2, "keywords": [{ "kind": "Reborn" }] }),
+    )
 }
 /// Charge the viewer cannot afford in these states, so it never makes lethal available.
 const BIG_CHARGER: &str = "sco-big-charger";
@@ -139,23 +160,35 @@ fn sleeper() -> CardDef {
 /// R29: the scorer never offers Zephyrs itself.
 const ZEPHYRS: &str = "sco-zephyrs";
 fn zephyrs() -> CardDef {
-    def("zephyrs", json!({ "index": ZEPHYRS_INDEX, "cost": 0, "type": "Spell" }))
+    def(
+        "zephyrs",
+        json!({ "index": ZEPHYRS_INDEX, "cost": 0, "type": "Spell" }),
+    )
 }
 /// §5.1: `query` never returns a token.
 const TOKEN: &str = "sco-token";
 fn token() -> CardDef {
-    def("token", json!({ "index": "T-scorer", "cost": 1, "attack": 9, "health": 9, "token": true }))
+    def(
+        "token",
+        json!({ "index": "T-scorer", "cost": 1, "attack": 9, "health": 9, "token": true }),
+    )
 }
 /// R29: Core only.
 const OFF_SET: &str = "sco-off-set";
 fn off_set() -> CardDef {
-    def("off-set", json!({ "index": "1", "cost": 1, "attack": 9, "health": 9, "set": "Classic" }))
+    def(
+        "off-set",
+        json!({ "index": "1", "cost": 1, "attack": 9, "health": 9, "set": "Classic" }),
+    )
 }
 
 /// A 12-health body for the enemy board: only Poisonous answers it from printed data (§6.1).
 const WALL: &str = "sco-wall";
 fn wall() -> CardDef {
-    def("wall", json!({ "index": "95", "cost": 1, "attack": 2, "health": 12 }))
+    def(
+        "wall",
+        json!({ "index": "95", "cost": 1, "attack": 2, "health": 12 }),
+    )
 }
 
 fn pool() -> Vec<CardDef> {
@@ -205,7 +238,9 @@ fn radiant_picks() -> ScorerOptions {
 }
 
 fn index_of(list: &[String], id: &str) -> usize {
-    list.iter().position(|entry| entry == id).unwrap_or_else(|| panic!("{id} is not ranked"))
+    list.iter()
+        .position(|entry| entry == id)
+        .unwrap_or_else(|| panic!("{id} is not ranked"))
 }
 
 mod the_zephyrs_scorer_r29_m3_t7 {
@@ -297,7 +332,11 @@ mod the_zephyrs_scorer_r29_m3_t7 {
         state.players.p1.mana.current = 4;
         state.players.p2.hero.armor = 2;
         assert_eq!(projected_board_damage(&state, P1), 0);
-        assert!(rank(&state, P1, &no_options()).iter().all(|entry| entry.priority != ScorePriority::Lethal));
+        assert!(
+            rank(&state, P1, &no_options())
+                .iter()
+                .all(|entry| entry.priority != ScorePriority::Lethal)
+        );
     }
 
     #[test]
@@ -309,7 +348,10 @@ mod the_zephyrs_scorer_r29_m3_t7 {
         assert_eq!(ranked[0].def.id, POISON_SNAKE);
         assert_eq!(ranked[0].priority, ScorePriority::Clear);
         // The biggest body in the pool cannot answer a 12-health unit, so it is back on the fallback.
-        let big = ranked.iter().find(|entry| entry.def.id == BIG_BODY).expect("the big body is ranked");
+        let big = ranked
+            .iter()
+            .find(|entry| entry.def.id == BIG_BODY)
+            .expect("the big body is ranked");
         assert_eq!(big.priority, ScorePriority::Value);
         let order = ids(&ranked);
         assert!(index_of(&order, POISON_SNAKE) < index_of(&order, BIG_BODY));
@@ -322,8 +364,14 @@ mod the_zephyrs_scorer_r29_m3_t7 {
         put(&mut state, WALL, slot(P2, Row::Units, 3));
 
         let ranked = rank(&state, P1, &no_options());
-        let poison = ranked.iter().find(|entry| entry.def.id == POISON_SNAKE).expect("the snake is ranked");
-        let plain = ranked.iter().find(|entry| entry.def.id == VANILLA).expect("the vanilla body is ranked");
+        let poison = ranked
+            .iter()
+            .find(|entry| entry.def.id == POISON_SNAKE)
+            .expect("the snake is ranked");
+        let plain = ranked
+            .iter()
+            .find(|entry| entry.def.id == VANILLA)
+            .expect("the vanilla body is ranked");
 
         // One kill out of two is not a clear, but it still beats a body that answers nothing.
         assert_eq!(poison.priority, ScorePriority::Value);
@@ -386,6 +434,9 @@ mod the_zephyrs_scorer_r29_m3_t7 {
         assert_eq!(rank(&state, P1, &no_options())[0].def.id, BIG_BODY);
         // The sleeper is a 0/1 that prints a 20/20 radiant face, so radiant picks put it first (§5.2).
         assert_eq!(rank(&state, P1, &radiant_picks())[0].def.id, SLEEPER);
-        assert_eq!(ids(&top_three(&state, P1, &radiant_picks())), vec![SLEEPER, BIG_BODY, CHARGER]);
+        assert_eq!(
+            ids(&top_three(&state, P1, &radiant_picks())),
+            vec![SLEEPER, BIG_BODY, CHARGER]
+        );
     }
 }

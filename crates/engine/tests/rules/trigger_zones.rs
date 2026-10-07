@@ -174,7 +174,12 @@ fn notes(state: &GameState) -> Vec<String> {
     log_of(state)
         .and_then(|log| log.memory.get("steps"))
         .and_then(Value::as_array)
-        .map(|steps| steps.iter().filter_map(|step| step.as_str().map(str::to_string)).collect())
+        .map(|steps| {
+            steps
+                .iter()
+                .filter_map(|step| step.as_str().map(str::to_string))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -227,7 +232,10 @@ fn scripts() -> Vec<(String, CardScripts)> {
             sleeper().id,
             both(Script {
                 start_of_turn: Some(hook(|ctx| {
-                    let id = ctx.self_.as_ref().map_or_else(|| "none".to_string(), |card| card.id.clone());
+                    let id = ctx
+                        .self_
+                        .as_ref()
+                        .map_or_else(|| "none".to_string(), |card| card.id.clone());
                     vec![note(format!("sleeper:{id}"))]
                 })),
                 ..Script::default()
@@ -286,7 +294,11 @@ fn act(state: &GameState, body: Value) -> GameState {
 }
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|card| card.id.clone()).collect()
+    state.players[player]
+        .hand
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 /// Past the mulligans, in p1's main phase, with the note log parked in p1's backrow lane 5.
@@ -300,7 +312,12 @@ fn playing(seed: &str) -> GameState {
         &state,
         json!({ "type": "mulligan", "keep": hand_ids(&state, PlayerId::P2), "playerId": "p2" }),
     );
-    put(&mut state, &log_card().id, slot(PlayerId::P1, Row::Backrow, NOTE_LANE as i32), json!({}));
+    put(
+        &mut state,
+        &log_card().id,
+        slot(PlayerId::P1, Row::Backrow, NOTE_LANE as i32),
+        json!({}),
+    );
     state
 }
 
@@ -375,12 +392,24 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
         assert!(notes(&after_hand).is_empty());
         // The observable damage the bug did: a unit in a lane, from a card that was never on the board.
         assert_eq!(tokens_of(&after_hand, PlayerId::P1), 0);
-        assert!(after_hand.players.p1.hand.iter().any(|in_hand_now| in_hand_now.id == card.id));
+        assert!(
+            after_hand
+                .players
+                .p1
+                .hand
+                .iter()
+                .any(|in_hand_now| in_hand_now.id == card.id)
+        );
 
         // The backrow half, which is what stops the assertions above passing on a card that never
         // fires: the same fixture, the same turn cycle, on the board.
         let mut placed = playing("tz-start-field");
-        put(&mut placed, &farm().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(
+            &mut placed,
+            &farm().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         assert_eq!(
             holder_def_ids(&trigger_holders_with_hook(
                 &placed,
@@ -415,7 +444,12 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
         assert!(notes(&after_hand).is_empty());
 
         let mut placed = playing("tz-onplay-field");
-        put(&mut placed, &gifter().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(
+            &mut placed,
+            &gifter().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         assert_eq!(
             holder_def_ids(&trigger_holders_with_hook(&placed, HookName::OnPlayHook, None)),
             vec![gifter().id]
@@ -442,7 +476,11 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
         // `returnToHandAtEndOfTurn` when they are played". This is that flag, and nothing else.
         card_mut(&mut state, &spell.id).return_to_hand_at_end_of_turn = Some(true);
         assert_eq!(
-            holder_ids(&trigger_holders_with_hook(&state, HookName::EndOfTurn, Some(PlayerId::P1))),
+            holder_ids(&trigger_holders_with_hook(
+                &state,
+                HookName::EndOfTurn,
+                Some(PlayerId::P1)
+            )),
             vec![spell.id.clone()]
         );
 
@@ -498,7 +536,8 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
     }
 
     #[test]
-    fn r153_a_unit_that_died_on_the_turn_it_was_played_does_not_fire_its_end_of_turn_hook_from_the_graveyard() {
+    fn r153_a_unit_that_died_on_the_turn_it_was_played_does_not_fire_its_end_of_turn_hook_from_the_graveyard()
+    {
         // #13 Jlockeed Shredder-10's shape. It is in the graveyard and in this turn's play log, so the
         // log alone would let it shred from there; the §5.1 return belongs to spells.
         let mut dead = playing("tz-gy-unit");
@@ -509,7 +548,12 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
 
         // On the field the same unit fires, so the assertion above is about the zone and not the card.
         let mut alive = playing("tz-field-unit");
-        put(&mut alive, &shredder().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(
+            &mut alive,
+            &shredder().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         assert_eq!(
             notes(&act(&alive, json!({ "type": "endTurn", "playerId": "p1" }))),
             strings(&["shredder:end"])
@@ -519,7 +563,12 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
     #[test]
     fn r153_r13_a_card_dormant_under_a_stack_answers_nothing_while_the_top_of_the_pile_fires() {
         let mut state = playing("tz-stack");
-        let dormant = put(&mut state, &sleeper().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let dormant = put(
+            &mut state,
+            &sleeper().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let top = stack_onto(&mut state, &sleeper().id, PlayerId::P1, 1);
         assert_eq!(
             state.players.p1.units[0]
@@ -530,7 +579,11 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
 
         // §3.2: cards under a Stack are not on the field, so only the top of the pile is a holder.
         assert_eq!(
-            holder_ids(&trigger_holders_with_hook(&state, HookName::StartOfTurn, Some(PlayerId::P1))),
+            holder_ids(&trigger_holders_with_hook(
+                &state,
+                HookName::StartOfTurn,
+                Some(PlayerId::P1)
+            )),
             vec![top.id.clone()]
         );
 
@@ -547,14 +600,24 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
         );
 
         let mut hidden = playing("tz-hidden-hook");
-        put(&mut hidden, &hidden_hook().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(
+            &mut hidden,
+            &hidden_hook().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         let after_hidden = act(&hidden, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(notes(&after_hidden), strings(&["hidden:end"]));
         assert_eq!(after_hidden.next_seq, bare.next_seq);
 
         // The public half, so the count above measures something: the same hook on a Field Spell is numbered.
         let mut shown = playing("tz-hidden-hook");
-        put(&mut shown, &shown_hook().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(
+            &mut shown,
+            &shown_hook().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         let after_shown = act(&shown, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(notes(&after_shown), strings(&["shown:end"]));
         assert_eq!(after_shown.next_seq, bare.next_seq + 1);

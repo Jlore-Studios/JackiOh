@@ -87,8 +87,14 @@ async fn send(app: &Arc<App>, method: &str, path: &str, token: Option<&str>, ip:
         .expect("the router answers");
     let status = response.status().as_u16();
     let headers = response.headers().clone();
-    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.expect("body");
-    Reply { status, headers, text: String::from_utf8_lossy(&bytes).into_owned() }
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("body");
+    Reply {
+        status,
+        headers,
+        text: String::from_utf8_lossy(&bytes).into_owned(),
+    }
 }
 
 /// The fake store behind the test app (TS `deps.store`).
@@ -101,7 +107,8 @@ async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
 
 /// The test app with another auth provider in place of the fixture one.
 async fn app_with_auth(auth: Auth) -> Arc<App> {
-    let app = Arc::try_unwrap(test_app().await).unwrap_or_else(|_| panic!("test_app() hands back its only reference"));
+    let app = Arc::try_unwrap(test_app().await)
+        .unwrap_or_else(|_| panic!("test_app() hands back its only reference"));
     Arc::new(App { auth, ..app })
 }
 
@@ -122,7 +129,10 @@ impl Logged {
         lines
             .iter()
             .filter(|line| {
-                line.get("event").or_else(|| line.get("message")).map(|event| event.trim_matches('"')) == Some(name)
+                line.get("event")
+                    .or_else(|| line.get("message"))
+                    .map(|event| event.trim_matches('"'))
+                    == Some(name)
             })
             .cloned()
             .collect()
@@ -136,7 +146,9 @@ impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for Logged {
         // `api::http::log_warn(event, data)` writes TS's data object as one `data` field of JSON
         // text; its keys are the line's fields, as TS's logger kept them.
         let mut line = fields.0;
-        if let Some(Ok(Value::Object(data))) = line.get("data").map(|text| serde_json::from_str::<Value>(text)) {
+        if let Some(Ok(Value::Object(data))) =
+            line.get("data").map(|text| serde_json::from_str::<Value>(text))
+        {
             line.shift_remove("data");
             for (key, value) in data {
                 line.insert(key, value.to_string());
@@ -163,7 +175,9 @@ impl tracing::field::Visit for Fields {
 async fn sign_in(app: &App, id: &str) -> String {
     let user_id = format!("user-{id}");
     let token = add_user(app, &user_id, &format!("{id}@example.test"), true);
-    fake(app).await.seed_profile(json!({ "id": id, "userId": user_id, "status": "active" }));
+    fake(app)
+        .await
+        .seed_profile(json!({ "id": id, "userId": user_id, "status": "active" }));
     token
 }
 
@@ -195,7 +209,11 @@ mod the_per_account_api_rate_limit_r109 {
         let token = sign_in(&app, "regular").await;
 
         let inside = burst(&app, LIMIT, MINE, Some(&token), None).await;
-        assert_eq!(count(&inside, 200), LIMIT, "every request inside the allowance is served");
+        assert_eq!(
+            count(&inside, 200),
+            LIMIT,
+            "every request inside the allowance is served"
+        );
 
         let overflow = send(&app, "GET", MINE, Some(&token), None).await;
         assert_eq!(overflow.status, 429);
@@ -249,7 +267,9 @@ mod the_per_account_api_rate_limit_r109 {
         let app = test_app().await;
         let user_id = "user-pending";
         let token = add_user(&app, user_id, "pending@example.test", true);
-        fake(&app).await.seed_profile(json!({ "id": "pending", "userId": user_id, "status": "pending" }));
+        fake(&app)
+            .await
+            .seed_profile(json!({ "id": "pending", "userId": user_id, "status": "pending" }));
 
         let statuses = burst(&app, LIMIT + 1, GATED, Some(&token), None).await;
         // 403 while the gate is what refuses them (§9.4), then 429 once the budget is gone.
@@ -338,15 +358,22 @@ mod a_flood_of_bad_tokens_costs_the_auth_provider_nothing_past_the_address_budge
                     let counted = counted.clone();
                     async move {
                         counted.fetch_add(1, Ordering::SeqCst);
-                        (StatusCode::UNAUTHORIZED, axum::Json(json!({ "msg": "invalid JWT" })))
+                        (
+                            StatusCode::UNAUTHORIZED,
+                            axum::Json(json!({ "msg": "invalid JWT" })),
+                        )
                     }
                 }),
             )
             .fallback(|| async { StatusCode::NOT_FOUND });
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("a free port");
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("a free port");
         let url = format!("http://{}", listener.local_addr().expect("bound"));
         tokio::spawn(async move {
-            axum::serve(listener, project).await.expect("the stand-in project serves");
+            axum::serve(listener, project)
+                .await
+                .expect("the stand-in project serves");
         });
         (url, calls)
     }

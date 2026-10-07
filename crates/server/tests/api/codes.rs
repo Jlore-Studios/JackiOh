@@ -36,7 +36,8 @@ use jackioh_server::api::codes::{DEFAULT_INVITE_CODE_MAX_USES, MintDeps, MintInp
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
     CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_IP_PER_HOUR, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
-    INVITE_CODE_LENGTH, REDEMPTION_CIRCUIT_FAILURE_THRESHOLD, REDEMPTION_IDENTICAL_ERROR, REDEMPTION_RESPONSE_FLOOR_MS,
+    INVITE_CODE_LENGTH, REDEMPTION_CIRCUIT_FAILURE_THRESHOLD, REDEMPTION_IDENTICAL_ERROR,
+    REDEMPTION_RESPONSE_FLOOR_MS,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, StoreError};
@@ -65,10 +66,18 @@ const WINDOW_MS: i64 = CODE_ATTEMPT_WINDOW_SECONDS * 1000;
 /// Render's edge, whose entry `json_request` writes.
 fn test_env() -> IndexMap<String, String> {
     let mut source = IndexMap::new();
-    for (name, value) in [("E2E", "1"), ("NODE_ENV", "test"), ("CODE_PEPPER", PEPPER), ("TRUSTED_PROXY_HOPS", "1")] {
+    for (name, value) in [
+        ("E2E", "1"),
+        ("NODE_ENV", "test"),
+        ("CODE_PEPPER", PEPPER),
+        ("TRUSTED_PROXY_HOPS", "1"),
+    ] {
         source.insert(name.to_string(), value.to_string());
     }
-    source.insert("CATALOG_VERSION".to_string(), jackioh_cards::catalog_version().to_string());
+    source.insert(
+        "CATALOG_VERSION".to_string(),
+        jackioh_cards::catalog_version().to_string(),
+    );
     source
 }
 
@@ -90,23 +99,41 @@ impl Reply {
     }
 
     fn error_code(&self) -> String {
-        self.json()["error"]["code"].as_str().unwrap_or_default().to_string()
+        self.json()["error"]["code"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string()
     }
 
     fn error_message(&self) -> String {
-        self.json()["error"]["message"].as_str().unwrap_or_default().to_string()
+        self.json()["error"]["message"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string()
     }
 }
 
 async fn read(response: Response<Body>) -> Reply {
     let status = response.status().as_u16();
-    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.expect("the body reads");
-    Reply { status, text: String::from_utf8(bytes.to_vec()).expect("the body is UTF-8") }
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("the body reads");
+    Reply {
+        status,
+        text: String::from_utf8(bytes.to_vec()).expect("the body is UTF-8"),
+    }
 }
 
 impl Server {
     async fn send(&self, request: Request<Body>) -> Reply {
-        read(self.router.clone().oneshot(request).await.expect("the router always answers")).await
+        read(
+            self.router
+                .clone()
+                .oneshot(request)
+                .await
+                .expect("the router always answers"),
+        )
+        .await
     }
 }
 
@@ -117,7 +144,10 @@ async fn code_server() -> Server {
     let env = app::load_server_env(&test_env()).expect("the test environment loads");
     let app = app::build(env).await.expect("the test app builds");
     store_of(&app).lock().await.reset();
-    Server { router: app::router(app.clone()), app }
+    Server {
+        router: app::router(app.clone()),
+        app,
+    }
 }
 
 /// A second App over `store`: TS's second `createRouter(createCodesRoutes(), deps)` on the same deps.
@@ -126,8 +156,14 @@ async fn server_sharing(store: Arc<Mutex<FakeData>>) -> Server {
     let built = Arc::try_unwrap(app::build(env).await.expect("the test app builds"))
         .ok()
         .expect("app::build keeps no second handle on the App it returns");
-    let app = Arc::new(App { db: Db::Fake(store), ..built });
-    Server { router: app::router(app.clone()), app }
+    let app = Arc::new(App {
+        db: Db::Fake(store),
+        ..built
+    });
+    Server {
+        router: app::router(app.clone()),
+        app,
+    }
 }
 
 fn store_of(app: &App) -> Arc<Mutex<FakeData>> {
@@ -142,7 +178,9 @@ fn from_json<T: DeserializeOwned>(value: Value) -> T {
 }
 
 fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
-    rows.iter().map(|row| serde_json::to_value(row).expect("a row serialises")).collect()
+    rows.iter()
+        .map(|row| serde_json::to_value(row).expect("a row serialises"))
+        .collect()
 }
 
 async fn attempts(server: &Server) -> Vec<Value> {
@@ -159,7 +197,12 @@ async fn profiles(server: &Server) -> Vec<Value> {
 
 /// `tables.profiles.find((row) => row.id === id)?.status`.
 async fn status_of(server: &Server, id: &str) -> Value {
-    profiles(server).await.into_iter().find(|row| row["id"] == json!(id)).map(|row| row["status"].clone()).unwrap_or(Value::Null)
+    profiles(server)
+        .await
+        .into_iter()
+        .find(|row| row["id"] == json!(id))
+        .map(|row| row["status"].clone())
+        .unwrap_or(Value::Null)
 }
 
 /// The server's clock (`app::now_ms`, TS `deps.timers.now()`): what it stamps rows with and counts
@@ -187,7 +230,11 @@ fn hmac_sha256_hex(key: &str, message: &str) -> String {
     let mut outer = Sha256::new();
     outer.update(&outer_pad);
     outer.update(&inner[..]);
-    outer.finalize().iter().map(|byte| format!("{byte:02x}")).collect()
+    outer
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 /// `deps.hashes.ip(raw)`: `crypto.ts`'s `createHashes`, keyed as `index.ts` keys it.
@@ -209,16 +256,27 @@ struct Minted {
 /// `mintInviteCode(deps, { maxUses, expiresAt })`.
 async fn mint(server: &Server, max_uses: Option<i64>, expires_at: Option<i64>) -> Minted {
     let max_uses = max_uses.map(|uses| i32::try_from(uses).expect("a use count"));
-    let minted = mint_invite_code(MintDeps { db: &server.app.db, code_pepper: &server.app.env.code_pepper }, MintInput { max_uses, expires_at })
-        .await
-        .expect("the code is minted");
-    Minted { id: minted.id, formatted: minted.formatted }
+    let minted = mint_invite_code(
+        MintDeps {
+            db: &server.app.db,
+            code_pepper: &server.app.env.code_pepper,
+        },
+        MintInput { max_uses, expires_at },
+    )
+    .await
+    .expect("the code is minted");
+    Minted {
+        id: minted.id,
+        formatted: minted.formatted,
+    }
 }
 
 /// `deps.store.codes.logAttempt(attempt)`.
 async fn log_attempt(server: &Server, attempt: Value) {
     let mut tx = server.app.db.begin(None).await.expect("a transaction opens");
-    tx.codes_log_attempt(&from_json(attempt)).await.expect("the attempt is logged");
+    tx.codes_log_attempt(&from_json(attempt))
+        .await
+        .expect("the attempt is logged");
     tx.commit().await.expect("the transaction commits");
 }
 
@@ -230,10 +288,21 @@ struct Seeded {
 /// An auth user (`deps.auth.addUser`) and a profile row for them (`deps.store.seedProfile`).
 async fn seed_caller(server: &Server, id: &str, status: &str, email_verified: bool) -> Seeded {
     let user_id = format!("user-{id}");
-    let token = deps::add_user(&server.app, &user_id, &format!("{id}@example.test"), email_verified);
+    let token = deps::add_user(
+        &server.app,
+        &user_id,
+        &format!("{id}@example.test"),
+        email_verified,
+    );
     // `resolve_caller` finds a profile by auth user id, so the seeded row must carry the same one.
-    let _ = store_of(&server.app).lock().await.seed_profile(json!({ "id": id, "userId": user_id, "status": status }));
-    Seeded { token, profile_id: id.to_string() }
+    let _ = store_of(&server.app)
+        .lock()
+        .await
+        .seed_profile(json!({ "id": id, "userId": user_id, "status": status }));
+    Seeded {
+        token,
+        profile_id: id.to_string(),
+    }
 }
 
 async fn pending_caller(server: &Server, id: &str) -> Seeded {
@@ -241,8 +310,17 @@ async fn pending_caller(server: &Server, id: &str) -> Seeded {
 }
 
 /// `jsonRequest(method, path, body, { token, ip })`.
-fn json_request(method: &str, path: &str, body: Option<Value>, token: Option<&str>, ip: &str) -> Request<Body> {
-    let mut builder = Request::builder().method(method).uri(path).header("content-type", "application/json");
+fn json_request(
+    method: &str,
+    path: &str,
+    body: Option<Value>,
+    token: Option<&str>,
+    ip: &str,
+) -> Request<Body> {
+    let mut builder = Request::builder()
+        .method(method)
+        .uri(path)
+        .header("content-type", "application/json");
     if let Some(token) = token {
         builder = builder.header("authorization", format!("Bearer {token}"));
     }
@@ -252,7 +330,13 @@ fn json_request(method: &str, path: &str, body: Option<Value>, token: Option<&st
 }
 
 fn redeem_request(token: &str, code: &str, ip: &str) -> Request<Body> {
-    json_request("POST", "/api/codes/redeem", Some(json!({ "code": code })), Some(token), ip)
+    json_request(
+        "POST",
+        "/api/codes/redeem",
+        Some(json!({ "code": code })),
+        Some(token),
+        ip,
+    )
 }
 
 async fn redeem(server: &Server, token: &str, code: &str, ip: &str) -> Reply {
@@ -271,7 +355,13 @@ struct Recording(Arc<std::sync::Mutex<Vec<Entry>>>);
 
 impl Recording {
     fn named(&self, event: &str) -> Vec<Entry> {
-        self.0.lock().expect("the recording").iter().filter(|entry| entry.event == event).cloned().collect()
+        self.0
+            .lock()
+            .expect("the recording")
+            .iter()
+            .filter(|entry| entry.event == event)
+            .cloned()
+            .collect()
     }
 }
 
@@ -304,7 +394,10 @@ impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for Recording {
         let mut name = EventName::default();
         event.record(&mut name);
         let event_name = name.event.or(name.message).unwrap_or_default();
-        self.0.lock().expect("the recording").push(Entry { level: *event.metadata().level(), event: event_name });
+        self.0.lock().expect("the recording").push(Entry {
+            level: *event.metadata().level(),
+            event: event_name,
+        });
     }
 }
 
@@ -412,7 +505,11 @@ mod r145_section_9_4_step_1_pending_account_with_a_verified_email {
         let store = store_of(&server.app);
 
         let held = store.lock().await;
-        let in_flight = tokio::spawn(server.router.clone().oneshot(redeem_request(&caller.token, &minted.formatted, DEFAULT_IP)));
+        let in_flight = tokio::spawn(server.router.clone().oneshot(redeem_request(
+            &caller.token,
+            &minted.formatted,
+            DEFAULT_IP,
+        )));
         // The request runs until it waits for the store: `resolve_caller`'s transaction.
         for _ in 0..8 {
             tokio::task::yield_now().await;
@@ -423,7 +520,13 @@ mod r145_section_9_4_step_1_pending_account_with_a_verified_email {
             let mut between = store.lock().await;
             between.tables.profiles.retain(|row| row.id != caller.profile_id);
         }
-        let response = read(in_flight.await.expect("the request ran").expect("the router always answers")).await;
+        let response = read(
+            in_flight
+                .await
+                .expect("the request ran")
+                .expect("the router always answers"),
+        )
+        .await;
 
         // 409, not the 401 the six-step version answered here: the token verified and the caller was
         // resolved, so nothing about their authorization failed — the state the request was about
@@ -641,7 +744,12 @@ mod section_9_4_step_5_the_lookup {
         {
             let store = store_of(&server.app);
             let mut data = store.lock().await;
-            let stored = data.tables.codes.iter_mut().find(|row| row.id == minted.id).expect("the minted code was stored");
+            let stored = data
+                .tables
+                .codes
+                .iter_mut()
+                .find(|row| row.id == minted.id)
+                .expect("the minted code was stored");
             stored.revoked = true;
         }
 
@@ -672,7 +780,12 @@ mod section_9_4_step_5_the_lookup {
         let second = pending_caller(&server, "second").await;
         let minted = mint(&server, Some(1), None).await;
 
-        assert_eq!(redeem(&server, &first.token, &minted.formatted, DEFAULT_IP).await.status, 200);
+        assert_eq!(
+            redeem(&server, &first.token, &minted.formatted, DEFAULT_IP)
+                .await
+                .status,
+            200
+        );
         let response = redeem(&server, &second.token, &minted.formatted, DEFAULT_IP).await;
 
         assert_eq!(response.status, 400);
@@ -688,7 +801,12 @@ mod section_9_4_step_5_the_lookup {
         let caller = pending_caller(&server, "twice").await;
         let minted = mint(&server, Some(1), None).await;
 
-        assert_eq!(redeem(&server, &caller.token, &minted.formatted, DEFAULT_IP).await.status, 200);
+        assert_eq!(
+            redeem(&server, &caller.token, &minted.formatted, DEFAULT_IP)
+                .await
+                .status,
+            200
+        );
         let response = redeem(&server, &caller.token, &minted.formatted, DEFAULT_IP).await;
 
         // Step 1 now catches it: the account is already active, which is not a code failure.
@@ -713,7 +831,10 @@ mod section_9_4_step_6_claiming_the_code {
         let response = redeem(&server, &caller.token, &minted.formatted, DEFAULT_IP).await;
 
         assert_eq!(response.status, 200);
-        assert_eq!(response.json(), json!({ "status": "active", "needsInviteCode": false }));
+        assert_eq!(
+            response.json(),
+            json!({ "status": "active", "needsInviteCode": false })
+        );
         assert_eq!(status_of(&server, &caller.profile_id).await, json!("active"));
         assert_eq!(codes(&server).await[0]["uses"], json!(1));
     }
@@ -725,7 +846,13 @@ mod section_9_4_step_6_claiming_the_code {
         let minted = mint(&server, None, None).await;
 
         // §9.4 formats codes `XXXX-XXXX-XXXX-XXXX`; R191's reading accepts what a human types.
-        let response = redeem(&server, &caller.token, &format!(" {} ", minted.formatted.to_lowercase()), DEFAULT_IP).await;
+        let response = redeem(
+            &server,
+            &caller.token,
+            &format!(" {} ", minted.formatted.to_lowercase()),
+            DEFAULT_IP,
+        )
+        .await;
 
         assert_eq!(response.status, 200);
     }
@@ -745,7 +872,13 @@ mod section_9_4_step_6_claiming_the_code {
         assert_eq!(groups.len(), 4, "{}", minted.formatted);
         for group in &groups {
             assert_eq!(group.len(), 4, "{}", minted.formatted);
-            assert!(group.chars().all(|ch| ch.is_ascii_digit() || ch.is_ascii_uppercase()), "{}", minted.formatted);
+            assert!(
+                group
+                    .chars()
+                    .all(|ch| ch.is_ascii_digit() || ch.is_ascii_uppercase()),
+                "{}",
+                minted.formatted
+            );
         }
         assert_eq!(minted.formatted.replace('-', "").len(), INVITE_CODE_LENGTH);
     }
@@ -768,7 +901,12 @@ mod r145_the_identical_error_for_every_code_dependent_refusal_section_9_4 {
 
         let expired_code = mint(&server, None, Some(now_ms() - 1_000)).await;
         let used_code = mint(&server, Some(1), None).await;
-        assert_eq!(redeem(&server, &winner.token, &used_code.formatted, DEFAULT_IP).await.status, 200);
+        assert_eq!(
+            redeem(&server, &winner.token, &used_code.formatted, DEFAULT_IP)
+                .await
+                .status,
+            200
+        );
 
         let responses = [
             redeem(&server, &missing.token, UNMINTED_CODE, DEFAULT_IP).await,
@@ -777,11 +915,17 @@ mod r145_the_identical_error_for_every_code_dependent_refusal_section_9_4 {
         ];
 
         assert!(responses.iter().all(|response| response.status == 400));
-        assert!(responses.iter().all(|response| response.text == responses[0].text));
+        assert!(
+            responses
+                .iter()
+                .all(|response| response.text == responses[0].text)
+        );
         assert_eq!(
             responses[0].text,
-            serde_json::to_string(&json!({ "error": { "code": "invalid_code", "message": REDEMPTION_IDENTICAL_ERROR } }))
-                .expect("the body serialises")
+            serde_json::to_string(
+                &json!({ "error": { "code": "invalid_code", "message": REDEMPTION_IDENTICAL_ERROR } })
+            )
+            .expect("the body serialises")
         );
     }
 }
@@ -820,10 +964,11 @@ async fn timing_server() -> Timed {
     let server = code_server().await;
     let calls = Arc::new(AtomicU64::new(0));
     let counter = calls.clone();
-    store_of(&server.app).lock().await.on_call = Some(Arc::new(move |_method: &str| -> Result<(), StoreError> {
-        counter.fetch_add(1, Ordering::SeqCst);
-        Ok(())
-    }));
+    store_of(&server.app).lock().await.on_call =
+        Some(Arc::new(move |_method: &str| -> Result<(), StoreError> {
+            counter.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }));
     Timed { server, calls }
 }
 
@@ -833,7 +978,10 @@ impl Timed {
     async fn work_since_last(&self, looked_up: Option<&str>) -> u64 {
         let calls = self.calls.swap(0, Ordering::SeqCst);
         let found = match looked_up {
-            Some(code) => codes(&self.server).await.iter().any(|row| row["codeHash"] == json!(code_hash(code))),
+            Some(code) => codes(&self.server)
+                .await
+                .iter()
+                .any(|row| row["codeHash"] == json!(code_hash(code))),
             None => false,
         };
         calls * STORE_CALL_MS + if found { ROW_FETCH_MS } else { 0 }
@@ -851,7 +999,12 @@ mod r107_the_constant_time_failure_floor_build_m6_t1 {
         let expired_code = mint(server, None, Some(now_ms() - 1_000)).await;
         let used_code = mint(server, Some(1), None).await;
         let consumer = pending_caller(server, "timing-consumer").await;
-        assert_eq!(redeem(server, &consumer.token, &used_code.formatted, DEFAULT_IP).await.status, 200);
+        assert_eq!(
+            redeem(server, &consumer.token, &used_code.formatted, DEFAULT_IP)
+                .await
+                .status,
+            200
+        );
 
         let kinds = [
             ("missing", UNMINTED_CODE.to_string()),
@@ -859,7 +1012,8 @@ mod r107_the_constant_time_failure_floor_build_m6_t1 {
             ("exhausted", used_code.formatted.clone()),
         ];
 
-        let mut elapsed: IndexMap<&str, Vec<u64>> = kinds.iter().map(|(name, _)| (*name, Vec::new())).collect();
+        let mut elapsed: IndexMap<&str, Vec<u64>> =
+            kinds.iter().map(|(name, _)| (*name, Vec::new())).collect();
         let mut work: IndexMap<&str, Vec<u64>> = kinds.iter().map(|(name, _)| (*name, Vec::new())).collect();
 
         // Interleaved, and a fresh profile and address per sample: §9.4's per-profile (5/h) and per-IP
@@ -932,8 +1086,15 @@ mod section_9_4_the_global_circuit_breaker {
         assert_eq!(blocked.error_code(), "unavailable");
 
         // Blocked before step 1, so nothing more was logged.
-        assert_eq!(attempts(&server).await.len(), REDEMPTION_CIRCUIT_FAILURE_THRESHOLD as usize);
-        let own = attempts(&server).await.into_iter().filter(|row| row["profileId"] == json!(caller.profile_id)).count();
+        assert_eq!(
+            attempts(&server).await.len(),
+            REDEMPTION_CIRCUIT_FAILURE_THRESHOLD as usize
+        );
+        let own = attempts(&server)
+            .await
+            .into_iter()
+            .filter(|row| row["profileId"] == json!(caller.profile_id))
+            .count();
         assert_eq!(own, threshold);
 
         let again = redeem(&server, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
@@ -967,14 +1128,35 @@ mod section_9_4_the_global_circuit_breaker {
         let caller = pending_caller(&server, "watcher").await;
         near_threshold(&server, 1).await;
 
-        let before = server.send(json_request("GET", "/api/codes/status", None, Some(&caller.token), DEFAULT_IP)).await.json();
+        let before = server
+            .send(json_request(
+                "GET",
+                "/api/codes/status",
+                None,
+                Some(&caller.token),
+                DEFAULT_IP,
+            ))
+            .await
+            .json();
         assert_eq!(before["redemptionEnabled"], json!(true));
 
         redeem(&server, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
 
-        let after = server.send(json_request("GET", "/api/codes/status", None, Some(&caller.token), DEFAULT_IP)).await.json();
+        let after = server
+            .send(json_request(
+                "GET",
+                "/api/codes/status",
+                None,
+                Some(&caller.token),
+                DEFAULT_IP,
+            ))
+            .await
+            .json();
         assert_eq!(after["redemptionEnabled"], json!(false));
-        assert!(after["retryAfterMs"].as_f64().unwrap_or_default() > 0.0, "{after}");
+        assert!(
+            after["retryAfterMs"].as_f64().unwrap_or_default() > 0.0,
+            "{after}"
+        );
     }
 
     /// TS: "is per-router, not module state: fresh routes start closed". The breaker belongs to the
@@ -986,10 +1168,20 @@ mod section_9_4_the_global_circuit_breaker {
         near_threshold(&first, 1).await;
 
         redeem(&first, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
-        assert_eq!(redeem(&first, &caller.token, UNMINTED_CODE, DEFAULT_IP).await.status, 503);
+        assert_eq!(
+            redeem(&first, &caller.token, UNMINTED_CODE, DEFAULT_IP)
+                .await
+                .status,
+            503
+        );
 
         let second = server_sharing(store_of(&first.app)).await;
-        let token = deps::add_user(&second.app, "user-second-router", "second-router@example.test", true);
+        let token = deps::add_user(
+            &second.app,
+            "user-second-router",
+            "second-router@example.test",
+            true,
+        );
         // Same store, so the failures are still on record; the new App's breaker re-opens on the
         // next failure rather than inheriting an open one.
         let response = redeem(&second, &token, UNMINTED_CODE, DEFAULT_IP).await;
@@ -1022,7 +1214,12 @@ mod r161_how_many_accounts_one_invite_code_activates_section_9_4_section_9_8 {
         assert_eq!(codes(&server).await[0]["uses"], json!(0));
 
         // The one account the code is worth.
-        assert_eq!(redeem(&server, &first.token, &leaked.formatted, DEFAULT_IP).await.status, 200);
+        assert_eq!(
+            redeem(&server, &first.token, &leaked.formatted, DEFAULT_IP)
+                .await
+                .status,
+            200
+        );
         assert_eq!(status_of(&server, "first-holder").await, json!("active"));
 
         // The second caller is refused — through R145's identical error, so the refusal itself says
@@ -1036,7 +1233,12 @@ mod r161_how_many_accounts_one_invite_code_activates_section_9_4_section_9_8 {
         // CONTROL: the second caller is not refused for some reason of their own. A code with a use
         // left activates them on the spot, so what the first redemption consumed was the *code*.
         let another = mint(&server, None, None).await;
-        assert_eq!(redeem(&server, &second.token, &another.formatted, DEFAULT_IP).await.status, 200);
+        assert_eq!(
+            redeem(&server, &second.token, &another.formatted, DEFAULT_IP)
+                .await
+                .status,
+            200
+        );
         assert_eq!(status_of(&server, "second-holder").await, json!("active"));
     }
 
@@ -1052,7 +1254,12 @@ mod r161_how_many_accounts_one_invite_code_activates_section_9_4_section_9_8 {
         assert_eq!(codes(&server).await[0]["maxUses"], json!(3));
 
         for caller in &callers[0..3] {
-            assert_eq!(redeem(&server, &caller.token, &batch.formatted, DEFAULT_IP).await.status, 200);
+            assert_eq!(
+                redeem(&server, &caller.token, &batch.formatted, DEFAULT_IP)
+                    .await
+                    .status,
+                200
+            );
         }
         assert_eq!(codes(&server).await[0]["uses"], json!(3));
 
@@ -1077,7 +1284,10 @@ mod r161_how_many_accounts_one_invite_code_activates_section_9_4_section_9_8 {
                 && spaced.starts_with(&wanted)
                 && !spaced[wanted.len()..].starts_with(|ch: char| ch.is_ascii_alphanumeric() || ch == '_')
         });
-        assert!(found, "max_uses int not null default {DEFAULT_INVITE_CODE_MAX_USES}");
+        assert!(
+            found,
+            "max_uses int not null default {DEFAULT_INVITE_CODE_MAX_USES}"
+        );
     }
 }
 
@@ -1094,12 +1304,28 @@ mod section_9_4_the_gate_around_everything_else {
         let caller = pending_caller(&server, "gated").await;
 
         // The real `GET /api/collection`, which declares `auth: active` like every M6-T2/T3/T4 route.
-        let gated = server.send(json_request("GET", "/api/collection", None, Some(&caller.token), DEFAULT_IP)).await;
+        let gated = server
+            .send(json_request(
+                "GET",
+                "/api/collection",
+                None,
+                Some(&caller.token),
+                DEFAULT_IP,
+            ))
+            .await;
         assert_eq!(gated.status, 403);
         assert_eq!(gated.error_code(), "account_pending");
 
         // The code screen itself stays reachable (§9.4).
-        let allowed = server.send(json_request("GET", "/api/codes/status", None, Some(&caller.token), DEFAULT_IP)).await;
+        let allowed = server
+            .send(json_request(
+                "GET",
+                "/api/codes/status",
+                None,
+                Some(&caller.token),
+                DEFAULT_IP,
+            ))
+            .await;
         assert_eq!(allowed.status, 200);
     }
 }

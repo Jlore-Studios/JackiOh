@@ -19,9 +19,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::{
-    JLORIOUS_SIZE, RANK_CONVERGENCE_GAP_PIPS, RANK_CONVERGENCE_PIPS, RANK_DIVISIONS_PER_TIER,
-    RANK_LOSS_PIPS, RANK_PIPS_PER_DIVISION, RANK_PLACEMENT_GAMES, RANK_STREAK_BONUS_PIPS,
-    RANK_STREAK_LENGTH, RANK_TIER_PERCENTS, RANK_WIN_PIPS,
+    JLORIOUS_SIZE, RANK_CONVERGENCE_GAP_PIPS, RANK_CONVERGENCE_PIPS, RANK_DIVISIONS_PER_TIER, RANK_LOSS_PIPS,
+    RANK_PIPS_PER_DIVISION, RANK_PLACEMENT_GAMES, RANK_STREAK_BONUS_PIPS, RANK_STREAK_LENGTH,
+    RANK_TIER_PERCENTS, RANK_WIN_PIPS,
 };
 
 /// One Grape tier (TS `GrapeTier`, `(typeof GRAPE_TIERS)[number]`). Declared lowest first, so a
@@ -124,11 +124,17 @@ const _: () = {
     let mut index = 0;
     while index < GRAPE_TIERS.len() {
         let share = percent_of(GRAPE_TIERS[index]);
-        assert!(share > 0, "RANK_TIER_PERCENTS must be positive whole percents that sum to 100 (R606)");
+        assert!(
+            share > 0,
+            "RANK_TIER_PERCENTS must be positive whole percents that sum to 100 (R606)"
+        );
         total += share;
         index += 1;
     }
-    assert!(total == PERCENT, "RANK_TIER_PERCENTS must be positive whole percents that sum to 100 (R606)");
+    assert!(
+        total == PERCENT,
+        "RANK_TIER_PERCENTS must be positive whole percents that sum to 100 (R606)"
+    );
 };
 
 /// A game's result for one side.
@@ -193,7 +199,10 @@ pub fn fresh_rank(season_id: &str, profile_id: &str, at: i64) -> SeasonRank {
 
 /// The Grape tier (an index into `GRAPE_TIERS`) a ladder position is in.
 pub fn tier_index_of(ladder: i32) -> i32 {
-    ladder.div_euclid(PIPS_PER_TIER).max(0).min(GRAPE_TIERS.len() as i32 - 1)
+    ladder
+        .div_euclid(PIPS_PER_TIER)
+        .max(0)
+        .min(GRAPE_TIERS.len() as i32 - 1)
 }
 
 /// The lowest ladder position of a Grape tier: its Division III with no pip.
@@ -203,7 +212,11 @@ pub fn tier_bottom(tier_index: i32) -> i32 {
 
 /// `GRAPE_TIERS[index] ?? fallback`.
 fn grape_at(index: i32, fallback: GrapeTier) -> GrapeTier {
-    usize::try_from(index).ok().and_then(|at| GRAPE_TIERS.get(at)).copied().unwrap_or(fallback)
+    usize::try_from(index)
+        .ok()
+        .and_then(|at| GRAPE_TIERS.get(at))
+        .copied()
+        .unwrap_or(fallback)
 }
 
 /// A position inside a Grape tier, as the client draws it: division III to I, and pips.
@@ -248,7 +261,10 @@ pub fn percentile_of(rating: f64, others: &[f64]) -> Percentile {
             level += 1;
         }
     }
-    Percentile { numerator: 2 * below + level + 1, denominator: 2 * (others.len() as i64 + 1) }
+    Percentile {
+        numerator: 2 * below + level + 1,
+        denominator: 2 * (others.len() as i64 + 1),
+    }
 }
 
 /// R606: the ladder position a percentile calls for. The tiers take `RANK_TIER_PERCENTS` of the
@@ -291,7 +307,11 @@ pub fn pip_delta(input: &PipDeltaInput) -> i32 {
     match input.result {
         GameResult::Draw => 0,
         GameResult::Win => {
-            let lean = if gap >= RANK_CONVERGENCE_GAP_PIPS { RANK_CONVERGENCE_PIPS } else { 0 };
+            let lean = if gap >= RANK_CONVERGENCE_GAP_PIPS {
+                RANK_CONVERGENCE_PIPS
+            } else {
+                0
+            };
             let bonus = if input.streak >= RANK_STREAK_LENGTH && tier_index_of(input.ladder) < MYTHIC {
                 RANK_STREAK_BONUS_PIPS
             } else {
@@ -300,7 +320,11 @@ pub fn pip_delta(input: &PipDeltaInput) -> i32 {
             RANK_WIN_PIPS + lean + bonus
         }
         GameResult::Loss => {
-            let lean = if gap <= -RANK_CONVERGENCE_GAP_PIPS { RANK_CONVERGENCE_PIPS } else { 0 };
+            let lean = if gap <= -RANK_CONVERGENCE_GAP_PIPS {
+                RANK_CONVERGENCE_PIPS
+            } else {
+                0
+            };
             -(RANK_LOSS_PIPS + lean)
         }
     }
@@ -348,8 +372,13 @@ pub fn apply_ranked_game(rank: &SeasonRank, input: &ApplyRankedGameInput) -> Sea
         };
     };
 
-    let moved =
-        current + pip_delta(&PipDeltaInput { result: input.result, ladder: current, target: input.target, streak });
+    let moved = current
+        + pip_delta(&PipDeltaInput {
+            result: input.result,
+            ladder: current,
+            target: input.target,
+            streak,
+        });
     let ladder = LADDER_TOP.min(tier_bottom(rank.floor).max(moved));
     SeasonRank {
         ladder: Some(ladder),
@@ -365,7 +394,11 @@ pub fn apply_ranked_game(rank: &SeasonRank, input: &ApplyRankedGameInput) -> Sea
 pub fn jlorious_order(standings: &[Standing]) -> Vec<String> {
     let mut mythic: Vec<&Standing> = standings
         .iter()
-        .filter(|standing| standing.ladder.is_some_and(|ladder| tier_index_of(ladder) == MYTHIC))
+        .filter(|standing| {
+            standing
+                .ladder
+                .is_some_and(|ladder| tier_index_of(ladder) == MYTHIC)
+        })
         .collect();
     // TS `b.rating - a.rating || (a.profileId < b.profileId ? -1 : …)`: a difference of 0 (or NaN)
     // falls through to the id. Stable, as `Array.prototype.sort` is.
@@ -375,7 +408,11 @@ pub fn jlorious_order(standings: &[Standing]) -> Vec<String> {
             .unwrap_or(std::cmp::Ordering::Equal)
             .then_with(|| a.profile_id.cmp(&b.profile_id))
     });
-    mythic.into_iter().take(JLORIOUS_SIZE).map(|standing| standing.profile_id.clone()).collect()
+    mythic
+        .into_iter()
+        .take(JLORIOUS_SIZE)
+        .map(|standing| standing.profile_id.clone())
+        .collect()
 }
 
 /// R608: the rank row with a Jlorious position it has just held, kept if it is its best.
@@ -383,7 +420,10 @@ pub fn with_jlorious_peak(rank: &SeasonRank, position: i32) -> SeasonRank {
     if rank.peak_jlorious.is_some_and(|peak| peak <= position) {
         return rank.clone();
     }
-    SeasonRank { peak_jlorious: Some(position), ..rank.clone() }
+    SeasonRank {
+        peak_jlorious: Some(position),
+        ..rank.clone()
+    }
 }
 
 /// What a player is shown as (R612): Raisin with their placements, a Grape tier with its division,
@@ -396,9 +436,20 @@ pub fn with_jlorious_peak(rank: &SeasonRank, position: i32) -> SeasonRank {
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(into = "VisibleRankWire", try_from = "VisibleRankWire")]
 pub enum VisibleRank {
-    Raisin { placements_played: i32, placement_games: i32 },
-    Grape { tier: GrapeTier, division: i32, pips: i32, pips_per_division: i32, floor: GrapeTier },
-    Jlorious { position: i32 },
+    Raisin {
+        placements_played: i32,
+        placement_games: i32,
+    },
+    Grape {
+        tier: GrapeTier,
+        division: i32,
+        pips: i32,
+        pips_per_division: i32,
+        floor: GrapeTier,
+    },
+    Jlorious {
+        position: i32,
+    },
 }
 
 /// The JSON shape of [`VisibleRank`] and [`PeakBadge`]: every arm's fields, each present only on its
@@ -444,12 +495,21 @@ impl VisibleRankWire {
 impl From<VisibleRank> for VisibleRankWire {
     fn from(rank: VisibleRank) -> VisibleRankWire {
         match rank {
-            VisibleRank::Raisin { placements_played, placement_games } => VisibleRankWire {
+            VisibleRank::Raisin {
+                placements_played,
+                placement_games,
+            } => VisibleRankWire {
                 placements_played: Some(placements_played),
                 placement_games: Some(placement_games),
                 ..VisibleRankWire::tier_only(None, RankTier::Raisin)
             },
-            VisibleRank::Grape { tier, division, pips, pips_per_division, floor } => VisibleRankWire {
+            VisibleRank::Grape {
+                tier,
+                division,
+                pips,
+                pips_per_division,
+                floor,
+            } => VisibleRankWire {
                 division: Some(division),
                 pips: Some(pips),
                 pips_per_division: Some(pips_per_division),
@@ -471,12 +531,14 @@ impl TryFrom<VisibleRankWire> for VisibleRank {
         let missing = |field: &str| format!("a {:?} rank needs `{field}`", wire.tier);
         match wire.tier {
             RankTier::Raisin => Ok(VisibleRank::Raisin {
-                placements_played: wire.placements_played.ok_or_else(|| missing("placementsPlayed"))?,
+                placements_played: wire
+                    .placements_played
+                    .ok_or_else(|| missing("placementsPlayed"))?,
                 placement_games: wire.placement_games.ok_or_else(|| missing("placementGames"))?,
             }),
-            RankTier::Jlorious => {
-                Ok(VisibleRank::Jlorious { position: wire.position.ok_or_else(|| missing("position"))? })
-            }
+            RankTier::Jlorious => Ok(VisibleRank::Jlorious {
+                position: wire.position.ok_or_else(|| missing("position"))?,
+            }),
             grape => Ok(VisibleRank::Grape {
                 tier: grape.grape().ok_or_else(|| missing("tier"))?,
                 division: wire.division.ok_or_else(|| missing("division"))?,
@@ -515,8 +577,15 @@ pub fn visible_rank(rank: Option<&SeasonRank>, jlorious_position: Option<i32>) -
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(into = "VisibleRankWire", try_from = "VisibleRankWire")]
 pub enum PeakBadge {
-    Jlorious { season_id: String, position: i32 },
-    Grape { season_id: String, tier: GrapeTier, division: i32 },
+    Jlorious {
+        season_id: String,
+        position: i32,
+    },
+    Grape {
+        season_id: String,
+        tier: GrapeTier,
+        division: i32,
+    },
 }
 
 impl From<PeakBadge> for VisibleRankWire {
@@ -526,7 +595,11 @@ impl From<PeakBadge> for VisibleRankWire {
                 position: Some(position),
                 ..VisibleRankWire::tier_only(Some(season_id), RankTier::Jlorious)
             },
-            PeakBadge::Grape { season_id, tier, division } => VisibleRankWire {
+            PeakBadge::Grape {
+                season_id,
+                tier,
+                division,
+            } => VisibleRankWire {
                 division: Some(division),
                 ..VisibleRankWire::tier_only(Some(season_id), tier.into())
             },
@@ -541,9 +614,10 @@ impl TryFrom<VisibleRankWire> for PeakBadge {
         let missing = |field: &str| format!("a {:?} badge needs `{field}`", wire.tier);
         let season_id = wire.season_id.clone().ok_or_else(|| missing("seasonId"))?;
         match wire.tier {
-            RankTier::Jlorious => {
-                Ok(PeakBadge::Jlorious { season_id, position: wire.position.ok_or_else(|| missing("position"))? })
-            }
+            RankTier::Jlorious => Ok(PeakBadge::Jlorious {
+                season_id,
+                position: wire.position.ok_or_else(|| missing("position"))?,
+            }),
             other => Ok(PeakBadge::Grape {
                 season_id,
                 tier: other.grape().ok_or_else(|| missing("tier"))?,
@@ -556,9 +630,16 @@ impl TryFrom<VisibleRankWire> for PeakBadge {
 /// The season's badge, or `None` for a season whose placements were never finished.
 pub fn peak_badge(rank: &SeasonRank) -> Option<PeakBadge> {
     if let Some(position) = rank.peak_jlorious {
-        return Some(PeakBadge::Jlorious { season_id: rank.season_id.clone(), position });
+        return Some(PeakBadge::Jlorious {
+            season_id: rank.season_id.clone(),
+            position,
+        });
     }
     let peak = rank.peak_ladder?;
     let place = place_of(peak);
-    Some(PeakBadge::Grape { season_id: rank.season_id.clone(), tier: place.tier, division: place.division })
+    Some(PeakBadge::Grape {
+        season_id: rank.season_id.clone(),
+        tier: place.tier,
+        division: place.division,
+    })
 }

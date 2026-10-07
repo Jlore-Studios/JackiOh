@@ -103,7 +103,9 @@ mod r43_r151_a_heroic_power_created_on_the_field_rolls_its_power {
         // backrow pick follows it, from the pool of every set (R380).
         let seed = "r151-chaos";
         let pool = catalog::query(&json_as(json!({ "type": ["Field Spell", "Trap", "Field Trap"] })));
-        let backrow = subsystems::CHAOS_EFFECTS.iter().position(|effect| effect.name == "backrow");
+        let backrow = subsystems::CHAOS_EFFECTS
+            .iter()
+            .position(|effect| effect.name == "backrow");
         let mut cursor: Option<u32> = None;
         let mut at: u32 = 0;
         while at < 200_000 && cursor.is_none() {
@@ -119,7 +121,10 @@ mod r43_r151_a_heroic_power_created_on_the_field_rolls_its_power {
         }
         // TS `expect(cursor).toBeGreaterThanOrEqual(0)`: a cursor was found.
         assert!(cursor.is_some());
-        let cursor = must(cursor, "a cursor that rolls the backrow effect and picks a Heroic Power first");
+        let cursor = must(
+            cursor,
+            "a cursor that rolls the backrow effect and picks a Heroic Power first",
+        );
 
         let mut g = scenario(json!({
             "seed": seed,
@@ -146,7 +151,12 @@ mod r43_r151_a_heroic_power_created_on_the_field_rolls_its_power {
         assert!(!powers.is_empty());
         // Each one rolled its power as it arrived (R151).
         for power in &powers {
-            assert!(power.memory.get(subsystems::POWER_KEY).is_some_and(Value::is_string));
+            assert!(
+                power
+                    .memory
+                    .get(subsystems::POWER_KEY)
+                    .is_some_and(Value::is_string)
+            );
         }
 
         // R752: each power is the card's Activate ability, listed as an `activate` (once per target for Ping).
@@ -169,7 +179,10 @@ mod r43_r151_a_heroic_power_created_on_the_field_rolls_its_power {
         }
 
         let first_power = must(affordable.first(), "an affordable power");
-        let first = must(listed_for(g.state(), first_power).first().cloned(), "a listed activation");
+        let first = must(
+            listed_for(g.state(), first_power).first().cloned(),
+            "a listed activation",
+        );
         let used = act(g.state(), first, P1);
         assert_eq!(used.error, None);
     }
@@ -196,19 +209,24 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
         g.answer(json!(BIGOT));
         g.answer(json!(TWISTED_SORCERER));
         let crafted = must(
-            g.hand(P1).iter().find(|card| card.def_id.starts_with("t-")).cloned(),
+            g.hand(P1)
+                .iter()
+                .find(|card| card.def_id.starts_with("t-"))
+                .cloned(),
             "the crafted card",
         );
         let panther = must(g.unit(P2, 1), "p2's Prem Panther (not a Human)");
 
         // Bigot's declaration first, the Sorcerer's second: both targets travel in the one play.
         let choice = vec![
-            Selection::Instance { instance_id: panther.id.clone() },
+            Selection::Instance {
+                instance_id: panther.id.clone(),
+            },
             Selection::Hero { player: P2 },
         ];
-        assert!(plays_of(g.state(), &crafted)
-            .iter()
-            .any(|play| matches!(play, ActionBody::Play { targets: Some(targets), .. } if *targets == choice)));
+        assert!(plays_of(g.state(), &crafted).iter().any(
+            |play| matches!(play, ActionBody::Play { targets: Some(targets), .. } if *targets == choice)
+        ));
 
         g.play(&crafted.id, json!({ "zone": 2, "targets": choice }));
 
@@ -227,7 +245,8 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
     }
 
     #[test]
-    fn r102_a_crafted_archivist_silly_silas_draws_by_archivist_s_mode_and_rotates_by_silas_s_direction_r81_r90() {
+    fn r102_a_crafted_archivist_silly_silas_draws_by_archivist_s_mode_and_rotates_by_silas_s_direction_r81_r90()
+     {
         register_all();
         let mut g = scenario(json!({
             "seed": "craft-446", // the first Discover offers Archivist, the second Silly Silas (pools of every set, R380)
@@ -238,16 +257,21 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
         g.answer(json!(ARCHIVIST));
         g.answer(json!(SILLY_SILAS));
         let crafted = must(
-            g.hand(P1).iter().find(|card| card.def_id.starts_with("t-")).cloned(),
+            g.hand(P1)
+                .iter()
+                .find(|card| card.def_id.starts_with("t-"))
+                .cloned(),
             "the crafted card",
         );
         let theirs = must(g.unit(P2, 1), "p2's Mr. Vanilla");
 
         // Archivist's declaration first, Silas's second: "highest", then "right".
         let wanted = vec!["highest".to_string(), "right".to_string()];
-        assert!(plays_of(g.state(), &crafted)
-            .iter()
-            .any(|play| matches!(play, ActionBody::Play { modes: Some(modes), .. } if *modes == wanted)));
+        assert!(
+            plays_of(g.state(), &crafted)
+                .iter()
+                .any(|play| matches!(play, ActionBody::Play { modes: Some(modes), .. } if *modes == wanted))
+        );
 
         g.play(&crafted.id, json!({ "zone": 2, "modes": ["highest", "right"] }));
 
@@ -286,13 +310,17 @@ mod s8_conventions_r90_a_mode_that_deals_damage_or_heals_needs_its_target {
 
         let untargeted: Vec<ActionBody> = plays_of(g.state(), &dividend)
             .into_iter()
-            .filter(|play| modes_of(play).first().map(String::as_str) != Some("mana") && targets_of(play).is_empty())
+            .filter(|play| {
+                modes_of(play).first().map(String::as_str) != Some("mana") && targets_of(play).is_empty()
+            })
             .collect();
         assert_eq!(untargeted, Vec::<ActionBody>::new());
 
         let refused = act(
             g.state(),
-            body(json!({ "type": "play", "instanceId": dividend.id, "x": 3, "modes": ["damage"], "targets": [] })),
+            body(
+                json!({ "type": "play", "instanceId": dividend.id, "x": 3, "modes": ["damage"], "targets": [] }),
+            ),
             P1,
         );
         assert!(refused.error.is_some());
@@ -323,7 +351,8 @@ mod r211_concede_is_on_offer_while_a_prompt_is_open {
     use super::*;
 
     #[test]
-    fn r211_legalactions_offers_concede_to_both_players_while_a_prompt_is_open_as_reduce_accepts_it_2_5_10_2() {
+    fn r211_legalactions_offers_concede_to_both_players_while_a_prompt_is_open_as_reduce_accepts_it_2_5_10_2()
+    {
         register_all();
         // KY's Private Tutor opens a type prompt for p1. reduce accepts a concede from either seat while
         // it is open (BUILD M1-T3), so legalActions — which the client's Concede button reads (§10.2) —
@@ -333,11 +362,18 @@ mod r211_concede_is_on_offer_while_a_prompt_is_open {
             "p2": { "field": [{ "def": MR_VANILLA, "lane": 1 }], "library": [RENO] },
         }));
         g.play(KYS_TUTOR, json!({}));
-        assert_eq!(g.state().pending.as_ref().map(|pending| pending.player_id), Some(P1));
+        assert_eq!(
+            g.state().pending.as_ref().map(|pending| pending.player_id),
+            Some(P1)
+        );
 
         for player in [P1, P2] {
             assert_eq!(
-                reduce(g.state(), &Action::new(ActionBody::Concede, player, format!("c-{player}"))).error,
+                reduce(
+                    g.state(),
+                    &Action::new(ActionBody::Concede, player, format!("c-{player}"))
+                )
+                .error,
                 None
             );
             let types: Vec<ActionType> = legal_actions(g.state(), player)
@@ -347,9 +383,11 @@ mod r211_concede_is_on_offer_while_a_prompt_is_open {
             assert!(types.contains(&ActionType::Concede));
         }
         // The holder is still offered its answers; the other seat nothing else.
-        assert!(legal_actions(g.state(), P1)
-            .iter()
-            .any(|action| action.action_type() == ActionType::Answer));
+        assert!(
+            legal_actions(g.state(), P1)
+                .iter()
+                .any(|action| action.action_type() == ActionType::Answer)
+        );
         assert_eq!(legal_actions(g.state(), P2), vec![ActionBody::Concede]);
     }
 }
@@ -396,7 +434,13 @@ mod r81_r90_r101_every_tribute_a_play_may_pay_is_one_legalactions_offers {
             "p2": { "field": [MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA], "hand": [MR_VANILLA] },
         }));
         let golem = must(
-            s.state().players.p1.hand.iter().find(|card| card.def_id == LAVA_GOLEM).cloned(),
+            s.state()
+                .players
+                .p1
+                .hand
+                .iter()
+                .find(|card| card.def_id == LAVA_GOLEM)
+                .cloned(),
             "the Lava Golem in hand",
         );
         let enemies: Vec<String> = units_of(&s, P2).into_iter().map(|unit| unit.id).collect();
@@ -414,7 +458,10 @@ mod r81_r90_r101_every_tribute_a_play_may_pay_is_one_legalactions_offers {
                 "tributes": all_enemy,
             })),
         );
-        assert_eq!(accepted.error, None, "reduce accepts Lava Golem tributing three enemy units");
+        assert_eq!(
+            accepted.error, None,
+            "reduce accepts Lava Golem tributing three enemy units"
+        );
 
         // …so legalActions, which the client narrows and the AI policy draws from (§10.2, CLAUDE.md
         // rule 7), must offer it. The Tribute sets are enumerated own units first and cut at
@@ -433,7 +480,10 @@ mod r81_r90_r101_every_tribute_a_play_may_pay_is_one_legalactions_offers {
         let exact = offered
             .iter()
             .any(|play| sorted_key(&tributes_of(play)) == sorted_key(&all_enemy));
-        assert!(exact, "the accepted all-enemy Tribute set is among the offered plays");
+        assert!(
+            exact,
+            "the accepted all-enemy Tribute set is among the offered plays"
+        );
     }
 }
 
@@ -469,11 +519,23 @@ mod r81_r90_r102_every_pick_a_crafted_card_s_declaration_may_make_is_one_legalac
             },
         }));
         let sorcerer = must(
-            s.state().players.p1.hand.iter().find(|card| card.def_id == TWISTED_SORCERER).cloned(),
+            s.state()
+                .players
+                .p1
+                .hand
+                .iter()
+                .find(|card| card.def_id == TWISTED_SORCERER)
+                .cloned(),
             "the Sorcerer",
         );
         let kpop = must(
-            s.state().players.p1.hand.iter().find(|card| card.def_id == KPOP_FANATIC).cloned(),
+            s.state()
+                .players
+                .p1
+                .hand
+                .iter()
+                .find(|card| card.def_id == KPOP_FANATIC)
+                .cloned(),
             "the K-Pop Fanatic",
         );
         // §8 #99: "Discover a Unit, then Discover another; Fuse them; the result costs 0 and goes to your
@@ -484,10 +546,20 @@ mod r81_r90_r102_every_pick_a_crafted_card_s_declaration_may_make_is_one_legalac
             let mut events: Vec<GameEvent> = Vec::new();
             let mut rng = Rng::new(&state.seed, state.rng_cursor);
             let mut sink = EngineSink::new(state, &mut events, &mut rng);
-            subsystems::fuse(&mut sink, json_as(json!({ "ingredients": [sorcerer, kpop], "toHand": "p1" })))
+            subsystems::fuse(
+                &mut sink,
+                json_as(json!({ "ingredients": [sorcerer, kpop], "toHand": "p1" })),
+            )
         };
         let crafted = must(crafted, "the crafted card");
-        let hand_ids: Vec<String> = s.state().players.p1.hand.iter().map(|card| card.id.clone()).collect();
+        let hand_ids: Vec<String> = s
+            .state()
+            .players
+            .p1
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
         assert!(hand_ids.contains(&crafted.id));
 
         let enemy_units: Vec<String> = units_of(&s, P2).into_iter().map(|unit| unit.id).collect();
@@ -501,7 +573,10 @@ mod r81_r90_r102_every_pick_a_crafted_card_s_declaration_may_make_is_one_legalac
         }));
         // reduce accepts it: the Sorcerer's part names the enemy hero, Kpop's an enemy unit (R90, R102).
         let accepted = reduce(s.state(), &play);
-        assert_eq!(accepted.error, None, "reduce accepts the crafted card's play at the enemy hero");
+        assert_eq!(
+            accepted.error, None,
+            "reduce accepts the crafted card's play at the enemy hero"
+        );
         assert_eq!(
             accepted.state.players.p2.hero.health, 26,
             "the Sorcerer's part dealt its 4 to the enemy hero"
@@ -518,7 +593,10 @@ mod r81_r90_r102_every_pick_a_crafted_card_s_declaration_may_make_is_one_legalac
             "an offered play aims the Sorcerer's part at the enemy hero"
         );
         for id in &enemy_units {
-            assert!(first_picks.contains(id), "an offered play aims the Sorcerer's part at {id}");
+            assert!(
+                first_picks.contains(id),
+                "an offered play aims the Sorcerer's part at {id}"
+            );
         }
     }
 }

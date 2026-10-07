@@ -40,7 +40,10 @@ fn game(seed: &str) -> GameState {
 
 fn attempt(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    reduce(state, &Action::new(json_as(body), player_id, format!("pa-tg-{nonce}")))
+    reduce(
+        state,
+        &Action::new(json_as(body), player_id, format!("pa-tg-{nonce}")),
+    )
 }
 
 fn must(state: &GameState, player_id: PlayerId, body: Value) -> (GameState, Vec<GameEvent>) {
@@ -56,7 +59,10 @@ fn hand(state: &mut GameState, player: PlayerId, def_id: &str, count: i32) -> Ve
 }
 
 fn one(state: &mut GameState, player: PlayerId, def_id: &str) -> CardInstance {
-    hand(state, player, def_id, 1).into_iter().next().expect("no card")
+    hand(state, player, def_id, 1)
+        .into_iter()
+        .next()
+        .expect("no card")
 }
 
 fn at(card: &CardInstance) -> Selection {
@@ -66,12 +72,19 @@ fn at(card: &CardInstance) -> Selection {
 }
 
 fn offered(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<Selection> {
-    let decl = declared_targets(state, card).into_iter().next().expect("no declaration");
+    let decl = declared_targets(state, card)
+        .into_iter()
+        .next()
+        .expect("no declaration");
     legal_selections_for(state, player, card, &decl)
 }
 
 fn answer(state: &GameState, player_id: PlayerId, selection: Vec<Selection>) -> (GameState, Vec<GameEvent>) {
-    let choice_id = state.pending.as_ref().map(|pending| pending.id.clone()).unwrap_or_default();
+    let choice_id = state
+        .pending
+        .as_ref()
+        .map(|pending| pending.id.clone())
+        .unwrap_or_default();
     must(
         state,
         player_id,
@@ -99,7 +112,10 @@ fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
 
 /// `eventsOfType(events, kind).map((event) => event[field])`.
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
-    of_type(events, kind).into_iter().map(|event| event[field].clone()).collect()
+    of_type(events, kind)
+        .into_iter()
+        .map(|event| event[field].clone())
+        .collect()
 }
 
 /// `toMatchObject`: every key of `expected` is in `actual` with a matching value.
@@ -110,7 +126,10 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
         (Value::Array(actual), Value::Array(expected)) => {
             actual.len() == expected.len()
-                && actual.iter().zip(expected).all(|(found, value)| matches_object(found, value))
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(found, value)| matches_object(found, value))
         }
         _ => actual == expected,
     }
@@ -123,10 +142,16 @@ fn says(error: &Option<String>, text: &str) -> bool {
 
 /// `Array.prototype.indexOf` / `lastIndexOf`: -1 when absent.
 fn index_of(order: &[GameEventType], wanted: GameEventType) -> i64 {
-    order.iter().position(|kind| *kind == wanted).map_or(-1, |at| at as i64)
+    order
+        .iter()
+        .position(|kind| *kind == wanted)
+        .map_or(-1, |at| at as i64)
 }
 fn last_index_of(order: &[GameEventType], wanted: GameEventType) -> i64 {
-    order.iter().rposition(|kind| *kind == wanted).map_or(-1, |at| at as i64)
+    order
+        .iter()
+        .rposition(|kind| *kind == wanted)
+        .map_or(-1, |at| at as i64)
 }
 
 /// A play as its JSON, so its `targets` and the absence of `discards` read as TS reads them.
@@ -159,7 +184,10 @@ mod r450_the_v0_2_0_filter_fields_10_6 {
         state.players.p1.graveyard.push(spell);
         let raiser = one(&mut state, PlayerId::P1, &PA.grave_raiser.id);
 
-        assert_eq!(offered(&state, PlayerId::P1, &raiser), vec![at(&mine), at(&theirs)]);
+        assert_eq!(
+            offered(&state, PlayerId::P1, &raiser),
+            vec![at(&mine), at(&theirs)]
+        );
     }
 
     #[test]
@@ -186,9 +214,19 @@ mod r450_the_v0_2_0_filter_fields_10_6 {
         let hurt = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
         let whole = put(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 2), json!({}));
         live_mut(&mut state, &hurt).damage = 1;
-        let plagued = put(&mut state, &PA.field.id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let plagued = put(
+            &mut state,
+            &PA.field.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
         live_mut(&mut state, &plagued).counters.plague = Some(2);
-        let clean = put(&mut state, &PA.chalice.id, slot(PlayerId::P2, Row::Backrow, 2), json!({}));
+        let clean = put(
+            &mut state,
+            &PA.chalice.id,
+            slot(PlayerId::P2, Row::Backrow, 2),
+            json!({}),
+        );
         let medic = one(&mut state, PlayerId::P1, &PA.medic.id);
         let hunter = one(&mut state, PlayerId::P1, &PA.plague_hunter.id);
 
@@ -232,16 +270,25 @@ mod r450_immune_to_spells_e35_a_spells_declarations_never_offer_it {
     #[test]
     fn r450_a_spell_cannot_name_an_immune_unit_and_a_units_cry_can() {
         let mut state = game("r450-immune");
-        let immune = put(&mut state, &PA.immune.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let immune = put(
+            &mut state,
+            &PA.immune.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let bolt = one(&mut state, PlayerId::P1, &PA.bolt.id);
         let zapper = one(&mut state, PlayerId::P1, &PA.zapper.id);
 
         assert!(!offered(&state, PlayerId::P1, &bolt).contains(&at(&immune)));
         assert!(offered(&state, PlayerId::P1, &zapper).contains(&at(&immune)));
         assert!(
-            attempt(&state, PlayerId::P1, json!({ "type": "play", "instanceId": bolt.id, "targets": [at(&immune)] }))
-                .error
-                .is_some()
+            attempt(
+                &state,
+                PlayerId::P1,
+                json!({ "type": "play", "instanceId": bolt.id, "targets": [at(&immune)] })
+            )
+            .error
+            .is_some()
         );
         let (after, _) = must(
             &state,
@@ -256,16 +303,24 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
     use super::*;
 
     #[test]
-    fn r450_r682_a_declared_target_naming_it_lists_one_play_with_no_discards_carried_offered_only_when_payable() {
+    fn r450_r682_a_declared_target_naming_it_lists_one_play_with_no_discards_carried_offered_only_when_payable()
+     {
         let mut state = game("r450-ghost-list");
-        let ghost = put(&mut state, &PA.ghost.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let ghost = put(
+            &mut state,
+            &PA.ghost.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let other = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 2), json!({}));
         let bolt = one(&mut state, PlayerId::P1, &PA.bolt.id);
         hand(&mut state, PlayerId::P1, "fx-5", 3);
 
         assert_eq!(targeting_discards_of(&state, &ghost), 2);
-        let plays: Vec<Value> =
-            play_actions_for(&state, PlayerId::P1, &bolt).iter().map(play_json).collect();
+        let plays: Vec<Value> = play_actions_for(&state, PlayerId::P1, &bolt)
+            .iter()
+            .map(play_json)
+            .collect();
         let at_ghost: Vec<&Value> = plays.iter().filter(|play| names_first(play, &ghost)).collect();
         let at_other: Vec<&Value> = plays.iter().filter(|play| names_first(play, &other)).collect();
         // R682: the discards are random at pay time, so one play, carrying none.
@@ -276,16 +331,24 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
         assert_eq!(
             legal_actions(&state, PlayerId::P1)
                 .iter()
-                .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == bolt.id))
+                .filter(
+                    |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == bolt.id)
+                )
                 .count(),
             plays.len()
         );
     }
 
     #[test]
-    fn r682_a_targeting_cost_is_never_a_choice_with_exactly_the_cost_held_the_play_pays_both_with_no_prompt() {
+    fn r682_a_targeting_cost_is_never_a_choice_with_exactly_the_cost_held_the_play_pays_both_with_no_prompt()
+    {
         let mut state = game("r640-exact-cost");
-        let ghost = put(&mut state, &PA.ghost.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let ghost = put(
+            &mut state,
+            &PA.ghost.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let bolt = one(&mut state, PlayerId::P1, &PA.bolt.id);
         let spares = hand(&mut state, PlayerId::P1, "fx-5", 2);
         let (after, events) = must(
@@ -308,14 +371,23 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
     #[test]
     fn r450_r682_refuses_a_play_naming_it_when_too_few_other_cards_are_held_and_takes_none_otherwise() {
         let mut state = game("r450-ghost-refuse");
-        let ghost = put(&mut state, &PA.ghost.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let ghost = put(
+            &mut state,
+            &PA.ghost.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let bolt = one(&mut state, PlayerId::P1, &PA.bolt.id);
         hand(&mut state, PlayerId::P1, "fx-5", 1);
         // Bolt plus one other: only one card outside the played card, fewer than the two owed — no legal target.
         assert!(
-            attempt(&state, PlayerId::P1, json!({ "type": "play", "instanceId": bolt.id, "targets": [at(&ghost)] }))
-                .error
-                .is_some()
+            attempt(
+                &state,
+                PlayerId::P1,
+                json!({ "type": "play", "instanceId": bolt.id, "targets": [at(&ghost)] })
+            )
+            .error
+            .is_some()
         );
         assert_eq!(
             attempt(
@@ -328,7 +400,12 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
         );
 
         let mut rich = game("r450-ghost-afford");
-        let rich_ghost = put(&mut rich, &PA.ghost.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let rich_ghost = put(
+            &mut rich,
+            &PA.ghost.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let rich_bolt = one(&mut rich, PlayerId::P1, &PA.bolt.id);
         hand(&mut rich, PlayerId::P1, "fx-5", 2);
         assert_eq!(
@@ -345,8 +422,18 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
     #[test]
     fn r450_r682_two_costly_picks_each_payable_alone_but_not_together_are_refused_as_a_cost() {
         let mut state = game("r450-ghost-sum");
-        let first = put(&mut state, &PA.ghost.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let second = put(&mut state, &PA.ghost.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let first = put(
+            &mut state,
+            &PA.ghost.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        let second = put(
+            &mut state,
+            &PA.ghost.id,
+            slot(PlayerId::P2, Row::Units, 2),
+            json!({}),
+        );
         let twin = one(&mut state, PlayerId::P1, &PA.twin.id);
         hand(&mut state, PlayerId::P1, "fx-5", 3);
         // Each pick is offered alone (three others pay either two), but the pair owes four.
@@ -363,7 +450,12 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
     #[test]
     fn r450_with_fewer_than_two_other_cards_in_hand_it_is_no_legal_target() {
         let mut state = game("r450-ghost-few");
-        let ghost = put(&mut state, &PA.ghost.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let ghost = put(
+            &mut state,
+            &PA.ghost.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let bolt = one(&mut state, PlayerId::P1, &PA.bolt.id);
         hand(&mut state, PlayerId::P1, "fx-5", 1);
         assert!(!can_pay_to_target(&state, PlayerId::P1, &ghost, Some(&bolt.id)));
@@ -373,7 +465,12 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
     #[test]
     fn r450_r682_two_random_other_cards_are_paid_at_step_2_with_the_mana_and_the_play_resolves_at_the_card() {
         let mut state = game("r450-ghost-pay");
-        let ghost = put(&mut state, &PA.ghost.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let ghost = put(
+            &mut state,
+            &PA.ghost.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let bolt = one(&mut state, PlayerId::P1, &PA.bolt.id);
         let spares = hand(&mut state, PlayerId::P1, "fx-5", 3);
         let spare_ids = ids(&spares);
@@ -396,9 +493,18 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
         }
         assert_eq!(discarded.iter().collect::<IndexSet<_>>().len(), 2);
         assert!(index_of(&order, GameEventType::ManaChanged) < index_of(&order, GameEventType::Discarded));
-        assert!(last_index_of(&order, GameEventType::Discarded) < index_of(&order, GameEventType::CardAnnounced));
+        assert!(
+            last_index_of(&order, GameEventType::Discarded) < index_of(&order, GameEventType::CardAnnounced)
+        );
         assert_eq!(after.players.p1.hand.len(), 1);
-        assert!(after.players.p1.hand.first().is_some_and(|card| spare_ids.contains(&card.id)));
+        assert!(
+            after
+                .players
+                .p1
+                .hand
+                .first()
+                .is_some_and(|card| spare_ids.contains(&card.id))
+        );
         assert_eq!(
             card_at(&after, slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
             Some(2)
@@ -408,19 +514,33 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
     #[test]
     fn r450_r682_it_binds_its_own_controller_too() {
         let mut state = game("r450-ghost-own");
-        let ghost = put(&mut state, &PA.ghost.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let ghost = put(
+            &mut state,
+            &PA.ghost.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let bolt = one(&mut state, PlayerId::P1, &PA.bolt.id);
         hand(&mut state, PlayerId::P1, "fx-5", 1);
         // Bolt plus one other: unpayable even for its controller — no legal target.
         assert!(
-            attempt(&state, PlayerId::P1, json!({ "type": "play", "instanceId": bolt.id, "targets": [at(&ghost)] }))
-                .error
-                .is_some()
+            attempt(
+                &state,
+                PlayerId::P1,
+                json!({ "type": "play", "instanceId": bolt.id, "targets": [at(&ghost)] })
+            )
+            .error
+            .is_some()
         );
         assert!(!offered(&state, PlayerId::P1, &bolt).contains(&at(&ghost)));
 
         let mut rich = game("r450-ghost-own-rich");
-        let own_ghost = put(&mut rich, &PA.ghost.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let own_ghost = put(
+            &mut rich,
+            &PA.ghost.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let rich_bolt = one(&mut rich, PlayerId::P1, &PA.bolt.id);
         hand(&mut rich, PlayerId::P1, "fx-5", 2);
         // Payable — and the two random discards land on its controller all the same.
@@ -435,19 +555,31 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
     #[test]
     fn r450_r682_a_prompt_answer_naming_it_pays_two_random_discards_at_once_and_goes_on() {
         let mut state = game("r450-ghost-prompt");
-        let ghost = put(&mut state, &PA.ghost.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let ghost = put(
+            &mut state,
+            &PA.ghost.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let chooser = one(&mut state, PlayerId::P1, &PA.chooser.id);
         let spares = hand(&mut state, PlayerId::P1, "fx-5", 2);
         let spare_ids = ids(&spares);
 
-        let (asked, _) = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": chooser.id }));
-        assert_eq!(asked.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Target));
-        assert!(
-            asked
-                .pending
-                .as_ref()
-                .is_some_and(|pending| pending.options.iter().any(|option| option.selection == at(&ghost)))
+        let (asked, _) = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": chooser.id }),
         );
+        assert_eq!(
+            asked.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Target)
+        );
+        assert!(asked.pending.as_ref().is_some_and(|pending| {
+            pending
+                .options
+                .iter()
+                .any(|option| option.selection == at(&ghost))
+        }));
 
         let (done, events) = answer(&asked, PlayerId::P1, vec![at(&ghost)]);
         // R682: no follow-up hand prompt — the cost is paid at once, at random.
@@ -470,15 +602,30 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
     #[test]
     fn r450_a_prompt_never_offers_it_to_a_chooser_who_cannot_pay() {
         let mut state = game("r450-ghost-prompt-few");
-        let ghost = put(&mut state, &PA.ghost.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let ghost = put(
+            &mut state,
+            &PA.ghost.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let other = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 2), json!({}));
         let chooser = one(&mut state, PlayerId::P1, &PA.chooser.id);
         hand(&mut state, PlayerId::P1, "fx-5", 1);
-        let (asked, _) = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": chooser.id }));
+        let (asked, _) = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": chooser.id }),
+        );
         let picks: Vec<Selection> = asked
             .pending
             .as_ref()
-            .map(|pending| pending.options.iter().map(|option| option.selection.clone()).collect())
+            .map(|pending| {
+                pending
+                    .options
+                    .iter()
+                    .map(|option| option.selection.clone())
+                    .collect()
+            })
             .unwrap_or_default();
         assert!(picks.contains(&at(&other)));
         assert!(!picks.contains(&at(&ghost)));
@@ -487,7 +634,12 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
     #[test]
     fn r450_r682_an_echo_repeats_fresh_pick_of_it_pays_the_discards_too_the_pipelines_own_prompt() {
         let mut state = game("r450-ghost-echo");
-        let ghost = put(&mut state, &PA.ghost.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let ghost = put(
+            &mut state,
+            &PA.ghost.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let other = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 2), json!({}));
         let echo = one(&mut state, PlayerId::P1, &PA.echo_bolt.id);
         hand(&mut state, PlayerId::P1, "fx-5", 2);
@@ -497,7 +649,13 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
             PlayerId::P1,
             json!({ "type": "play", "instanceId": echo.id, "targets": [at(&other)] }),
         );
-        assert_eq!(repeat.pending.as_ref().map(|pending| pending.resume.hook.as_str()), Some("play"));
+        assert_eq!(
+            repeat
+                .pending
+                .as_ref()
+                .map(|pending| pending.resume.hook.as_str()),
+            Some("play")
+        );
         let (done, events) = answer(&repeat, PlayerId::P1, vec![at(&ghost)]);
         assert_eq!(done.pending, None);
         assert_eq!(events_of_type(&events, GameEventType::Discarded).len(), 2);
@@ -515,8 +673,18 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
     #[test]
     fn r450_an_answer_whose_picks_cost_more_cards_than_its_chooser_holds_is_refused() {
         let mut state = game("r450-ghost-sum");
-        let first = put(&mut state, &PA.ghost.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let second = put(&mut state, &PA.ghost.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let first = put(
+            &mut state,
+            &PA.ghost.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        let second = put(
+            &mut state,
+            &PA.ghost.id,
+            slot(PlayerId::P2, Row::Units, 2),
+            json!({}),
+        );
         hand(&mut state, PlayerId::P1, "fx-5", 3);
         let pending = PendingChoice {
             id: "q-test".to_string(),
@@ -572,17 +740,27 @@ mod r450_an_interception_classic_33_joro {
         // Its Cry would have hit p1's hero for 5: a summon fires none (R1).
         assert_eq!(after.players.p1.hero.health, HERO_HEALTH);
         assert_eq!(
-            of_type(&events, GameEventType::CardAnnounced).first().map(|event| event["targets"].clone()),
+            of_type(&events, GameEventType::CardAnnounced)
+                .first()
+                .map(|event| event["targets"].clone()),
             Some(json!([joro.id]))
         );
-        assert_eq!(field_of(&events, GameEventType::Damage, "targetId"), vec![json!(joro.id)]);
+        assert_eq!(
+            field_of(&events, GameEventType::Damage, "targetId"),
+            vec![json!(joro.id)]
+        );
         assert_eq!(
             card_at(&after, slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
             Some(0)
         );
         // The redirect is public on both seats.
         assert_eq!(
-            field_of(&view_for(&after, PlayerId::P1).events, GameEventType::Redirected, "toId").first(),
+            field_of(
+                &view_for(&after, PlayerId::P1).events,
+                GameEventType::Redirected,
+                "toId"
+            )
+            .first(),
             Some(&json!(joro.id))
         );
     }
@@ -599,10 +777,19 @@ mod r450_an_interception_classic_33_joro {
             json!({ "type": "play", "instanceId": zapper.id, "targets": [at(&unit)] }),
         );
         let standing = card_at(&after, slot(PlayerId::P2, Row::Units, 2)).cloned();
-        assert_eq!(standing.as_ref().map(|card| card.id.clone()), Some(joro.id.clone()));
-        assert_eq!(standing.as_ref().and_then(|card| card.summoned_turn), Some(after.turn));
+        assert_eq!(
+            standing.as_ref().map(|card| card.id.clone()),
+            Some(joro.id.clone())
+        );
+        assert_eq!(
+            standing.as_ref().and_then(|card| card.summoned_turn),
+            Some(after.turn)
+        );
         assert_eq!(standing.as_ref().map(|card| card.damage), Some(1));
-        assert_eq!(top(&after.players.p2.units[1]).map(|card| card.id.clone()), Some(joro.id.clone()));
+        assert_eq!(
+            top(&after.players.p2.units[1]).map(|card| card.id.clone()),
+            Some(joro.id.clone())
+        );
     }
 
     #[test]
@@ -642,7 +829,10 @@ mod r450_an_interception_classic_33_joro {
             json!({ "type": "play", "instanceId": full_bolt.id, "targets": [at(&target)] }),
         );
         assert!(events_of_type(&blocked.1, GameEventType::Redirected).is_empty());
-        assert_eq!(field_of(&blocked.1, GameEventType::Damage, "targetId"), vec![json!(target.id)]);
+        assert_eq!(
+            field_of(&blocked.1, GameEventType::Damage, "targetId"),
+            vec![json!(target.id)]
+        );
 
         let mut unfit = game("r450-joro-unfit");
         let hurt = put(&mut unfit, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
@@ -702,10 +892,20 @@ mod r450_an_interception_classic_33_joro {
         let unit = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
         let joro = one(&mut state, PlayerId::P2, &PA.joro.id);
         let chooser = one(&mut state, PlayerId::P1, &PA.chooser.id);
-        let (asked, _) = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": chooser.id }));
+        let (asked, _) = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": chooser.id }),
+        );
         let (after, events) = answer(&asked, PlayerId::P1, vec![at(&unit)]);
-        assert_eq!(field_of(&events, GameEventType::Redirected, "toId"), vec![json!(joro.id)]);
-        assert_eq!(field_of(&events, GameEventType::Damage, "targetId"), vec![json!(joro.id)]);
+        assert_eq!(
+            field_of(&events, GameEventType::Redirected, "toId"),
+            vec![json!(joro.id)]
+        );
+        assert_eq!(
+            field_of(&events, GameEventType::Damage, "targetId"),
+            vec![json!(joro.id)]
+        );
         assert_eq!(
             card_at(&after, slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
             Some(0)
@@ -715,7 +915,12 @@ mod r450_an_interception_classic_33_joro {
     #[test]
     fn r450_r682_a_cost_already_owed_for_the_first_pick_stays_paid_when_an_interceptor_takes_the_pick() {
         let mut state = game("r450-joro-ghost");
-        let ghost = put(&mut state, &PA.ghost.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let ghost = put(
+            &mut state,
+            &PA.ghost.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let joro = one(&mut state, PlayerId::P2, &PA.joro.id);
         let bolt = one(&mut state, PlayerId::P1, &PA.bolt.id);
         hand(&mut state, PlayerId::P1, "fx-5", 2);

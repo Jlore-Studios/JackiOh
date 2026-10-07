@@ -13,9 +13,11 @@ use jackioh_engine::effects::{bounce, counter, damage, discard, discard_random, 
 use jackioh_engine::play_choices::gifted_makes_radiant;
 use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
-use jackioh_engine::script::{CardScripts, EngineSink, Effect, Script, hook};
+use jackioh_engine::script::{CardScripts, Effect, EngineSink, Script, hook};
 use jackioh_engine::scripts::registered_scripts;
-use jackioh_engine::state::{AnnounceRecord, CardInstance, GameState, find_instance, find_instance_mut, new_instance};
+use jackioh_engine::state::{
+    AnnounceRecord, CardInstance, GameState, find_instance, find_instance_mut, new_instance,
+};
 use jackioh_engine::zones::{PlaceOnFieldOptions, card_at, place_on_field};
 
 use super::fixtures::catalog::token_def;
@@ -82,8 +84,16 @@ fn local_scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         noisy().id,
         both(Script {
-            cry: Some(hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 4 })))])),
-            death: Some(hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 6 })))])),
+            cry: Some(hook(|_ctx| {
+                vec![damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 4 }),
+                ))]
+            })),
+            death: Some(hook(|_ctx| {
+                vec![damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 6 }),
+                ))]
+            })),
             ..Script::default()
         }),
     );
@@ -120,7 +130,12 @@ struct RunOptions {
 }
 
 /// Apply one effect the way a script's hook would, and hand back the events it emitted.
-fn run(state: &mut GameState, effect: Effect, target: Option<&CardInstance>, options: RunOptions) -> Vec<GameEvent> {
+fn run(
+    state: &mut GameState,
+    effect: Effect,
+    target: Option<&CardInstance>,
+    options: RunOptions,
+) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();
     {
@@ -179,7 +194,12 @@ fn ids_of_type(events: &[GameEvent], kind: &str) -> Vec<String> {
 fn types(events: &[GameEvent]) -> Vec<String> {
     events
         .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises")["type"].as_str().unwrap_or_default().to_string())
+        .map(|event| {
+            serde_json::to_value(event).expect("an event serialises")["type"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string()
+        })
         .collect()
 }
 
@@ -229,7 +249,12 @@ mod exile_s6_3_m3_t1 {
         let mut state = game("effects-move");
         let victim = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2), json!({}));
 
-        let events = run(&mut state, exile(json_as(chosen())), Some(&victim), RunOptions::default());
+        let events = run(
+            &mut state,
+            exile(json_as(chosen())),
+            Some(&victim),
+            RunOptions::default(),
+        );
 
         assert_eq!(at(&state, PlayerId::P1, Row::Units, 2), None);
         assert_eq!(ids(&state.players.p1.exile), vec![victim.id.clone()]);
@@ -245,16 +270,37 @@ mod exile_s6_3_m3_t1 {
     fn s6_3_exiles_from_anywhere_a_hand_card_and_a_graveyard_card_both_reach_the_pile() {
         let mut state = game("effects-move");
         let from_hand = first(in_hand(&mut state, "fx-1", PlayerId::P1, 1));
-        let from_graveyard = new_instance(&mut state, "fx-2", PlayerId::P1, Zone::Graveyard { player: PlayerId::P1 });
+        let from_graveyard = new_instance(
+            &mut state,
+            "fx-2",
+            PlayerId::P1,
+            Zone::Graveyard { player: PlayerId::P1 },
+        );
         state.players.p1.graveyard.push(from_graveyard.clone());
 
-        run(&mut state, exile(json_as(chosen())), Some(&from_hand), RunOptions::default());
-        run(&mut state, exile(json_as(chosen())), Some(&from_graveyard), RunOptions::default());
+        run(
+            &mut state,
+            exile(json_as(chosen())),
+            Some(&from_hand),
+            RunOptions::default(),
+        );
+        run(
+            &mut state,
+            exile(json_as(chosen())),
+            Some(&from_graveyard),
+            RunOptions::default(),
+        );
 
         assert_eq!(state.players.p1.hand.len(), 0);
         assert_eq!(state.players.p1.graveyard.len(), 0);
         assert_eq!(
-            state.players.p1.exile.iter().map(|c| c.def_id.clone()).collect::<Vec<_>>(),
+            state
+                .players
+                .p1
+                .exile
+                .iter()
+                .map(|c| c.def_id.clone())
+                .collect::<Vec<_>>(),
             vec!["fx-1", "fx-2"]
         );
         assert_eq!(state.counters.exiled, 2);
@@ -263,9 +309,19 @@ mod exile_s6_3_m3_t1 {
     #[test]
     fn s6_3_fires_no_death_trigger() {
         let mut state = game("effects-move");
-        let victim = put(&mut state, &noisy().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let victim = put(
+            &mut state,
+            &noisy().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
 
-        let events = run(&mut state, exile(json_as(chosen())), Some(&victim), RunOptions::default());
+        let events = run(
+            &mut state,
+            exile(json_as(chosen())),
+            Some(&victim),
+            RunOptions::default(),
+        );
 
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
         assert!(of_type(&events, "damage").is_empty());
@@ -275,9 +331,19 @@ mod exile_s6_3_m3_t1 {
     #[test]
     fn r11_an_exiled_unit_token_vanishes_and_never_enters_the_exile_pile() {
         let mut state = game("effects-move");
-        let token = put(&mut state, &rush_token().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let token = put(
+            &mut state,
+            &rush_token().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
 
-        let events = run(&mut state, exile(json_as(chosen())), Some(&token), RunOptions::default());
+        let events = run(
+            &mut state,
+            exile(json_as(chosen())),
+            Some(&token),
+            RunOptions::default(),
+        );
 
         assert_eq!(at(&state, PlayerId::P1, Row::Units, 1), None);
         assert_eq!(state.players.p1.exile.len(), 0);
@@ -291,7 +357,12 @@ mod exile_s6_3_m3_t1 {
         let mut state = game("effects-move");
         let theirs = placed_from_hand_of(&mut state, "fx-4", PlayerId::P2);
 
-        run(&mut state, exile(json_as(chosen())), Some(&theirs), as_controller(PlayerId::P1));
+        run(
+            &mut state,
+            exile(json_as(chosen())),
+            Some(&theirs),
+            as_controller(PlayerId::P1),
+        );
 
         assert_eq!(ids(&state.players.p2.exile), vec![theirs.id.clone()]);
         assert_eq!(state.players.p1.exile.len(), 0);
@@ -309,7 +380,12 @@ mod exile_s6_3_m3_t1 {
             card.cost_mod = -2;
         }
 
-        run(&mut state, exile(json_as(chosen())), Some(&victim), RunOptions::default());
+        run(
+            &mut state,
+            exile(json_as(chosen())),
+            Some(&victim),
+            RunOptions::default(),
+        );
 
         let now = live(&state, &victim.id);
         assert_eq!(now.damage, 0);
@@ -343,7 +419,12 @@ mod bounce_s6_3_m3_t1 {
             card.radiant = true;
         }
 
-        let events = run(&mut state, bounce(json_as(chosen())), Some(&victim), RunOptions::default());
+        let events = run(
+            &mut state,
+            bounce(json_as(chosen())),
+            Some(&victim),
+            RunOptions::default(),
+        );
 
         assert_eq!(at(&state, PlayerId::P1, Row::Units, 3), None);
         assert_eq!(ids(&state.players.p1.hand), vec![victim.id.clone()]);
@@ -364,9 +445,19 @@ mod bounce_s6_3_m3_t1 {
     #[test]
     fn r11_a_bounced_unit_token_vanishes_instead_of_reaching_a_hand() {
         let mut state = game("effects-move");
-        let token = put(&mut state, &rush_token().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let token = put(
+            &mut state,
+            &rush_token().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
 
-        let events = run(&mut state, bounce(json_as(chosen())), Some(&token), RunOptions::default());
+        let events = run(
+            &mut state,
+            bounce(json_as(chosen())),
+            Some(&token),
+            RunOptions::default(),
+        );
 
         assert_eq!(at(&state, PlayerId::P1, Row::Units, 1), None);
         assert_eq!(state.players.p1.hand.len(), 0);
@@ -381,7 +472,12 @@ mod bounce_s6_3_m3_t1 {
         in_hand(&mut state, "fx-2", PlayerId::P1, HAND_CAP);
         let victim = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
 
-        let events = run(&mut state, bounce(json_as(chosen())), Some(&victim), RunOptions::default());
+        let events = run(
+            &mut state,
+            bounce(json_as(chosen())),
+            Some(&victim),
+            RunOptions::default(),
+        );
 
         assert_eq!(state.players.p1.hand.len(), HAND_CAP as usize);
         assert_eq!(ids(&state.players.p1.graveyard), vec![victim.id.clone()]);
@@ -395,7 +491,12 @@ mod bounce_s6_3_m3_t1 {
         let mut state = game("effects-move");
         let theirs = placed_from_hand_of(&mut state, "fx-4", PlayerId::P2);
 
-        let events = run(&mut state, bounce(json_as(chosen())), Some(&theirs), as_controller(PlayerId::P1));
+        let events = run(
+            &mut state,
+            bounce(json_as(chosen())),
+            Some(&theirs),
+            as_controller(PlayerId::P1),
+        );
 
         assert_eq!(ids(&state.players.p1.hand), vec![theirs.id.clone()]);
         assert_eq!(state.players.p2.hand.len(), 0);
@@ -419,7 +520,12 @@ mod bounce_s6_3_m3_t1 {
         in_hand(&mut state, "fx-2", PlayerId::P1, HAND_CAP);
         let theirs = placed_from_hand_of(&mut state, "fx-4", PlayerId::P2);
 
-        let events = run(&mut state, bounce(json_as(chosen())), Some(&theirs), as_controller(PlayerId::P1));
+        let events = run(
+            &mut state,
+            bounce(json_as(chosen())),
+            Some(&theirs),
+            as_controller(PlayerId::P1),
+        );
 
         assert_eq!(state.players.p1.hand.len(), HAND_CAP as usize);
         assert_eq!(ids(&state.players.p1.graveyard), vec![theirs.id.clone()]);
@@ -431,9 +537,19 @@ mod bounce_s6_3_m3_t1 {
     #[test]
     fn s6_3_fires_no_death_trigger() {
         let mut state = game("effects-move");
-        let victim = put(&mut state, &noisy().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let victim = put(
+            &mut state,
+            &noisy().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
 
-        let events = run(&mut state, bounce(json_as(chosen())), Some(&victim), RunOptions::default());
+        let events = run(
+            &mut state,
+            bounce(json_as(chosen())),
+            Some(&victim),
+            RunOptions::default(),
+        );
 
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
         assert!(of_type(&events, "damage").is_empty());
@@ -444,7 +560,12 @@ mod bounce_s6_3_m3_t1 {
         let mut state = game("effects-move");
         let card = first(in_hand(&mut state, "fx-1", PlayerId::P1, 1));
 
-        let events = run(&mut state, bounce(json_as(chosen())), Some(&card), RunOptions::default());
+        let events = run(
+            &mut state,
+            bounce(json_as(chosen())),
+            Some(&card),
+            RunOptions::default(),
+        );
 
         assert_eq!(ids(&state.players.p1.hand), vec![card.id.clone()]);
         assert!(events.is_empty());
@@ -464,7 +585,12 @@ mod r16_discard_s6_3_m3_t1 {
         let pair = in_hand(&mut state, "fx-1", PlayerId::P1, 2);
         let (keep, toss) = (pair[0].clone(), pair[1].clone());
 
-        let events = run(&mut state, discard(json_as(chosen())), Some(&toss), RunOptions::default());
+        let events = run(
+            &mut state,
+            discard(json_as(chosen())),
+            Some(&toss),
+            RunOptions::default(),
+        );
 
         assert_eq!(ids(&state.players.p1.hand), vec![keep.id.clone()]);
         assert_eq!(ids(&state.players.p1.graveyard), vec![toss.id.clone()]);
@@ -478,7 +604,12 @@ mod r16_discard_s6_3_m3_t1 {
         let hand = ids(&in_hand(&mut state, "fx-1", PlayerId::P1, 5));
         let expected = hand[Rng::new(&state.seed, state.rng_cursor).int(hand.len() as i32) as usize].clone();
 
-        let events = run(&mut state, discard_random(Default::default()), None, RunOptions::default());
+        let events = run(
+            &mut state,
+            discard_random(Default::default()),
+            None,
+            RunOptions::default(),
+        );
 
         assert_eq!(ids(&state.players.p1.graveyard), vec![expected.clone()]);
         assert_eq!(ids_of_type(&events, "discarded"), vec![expected]);
@@ -489,13 +620,26 @@ mod r16_discard_s6_3_m3_t1 {
     fn r16_the_random_form_replays_identically_from_the_same_seed() {
         let mut first_game = game("replay-seed");
         in_hand(&mut first_game, "fx-1", PlayerId::P1, 4);
-        run(&mut first_game, discard_random(json_as(json!({ "count": 2 }))), None, RunOptions::default());
+        run(
+            &mut first_game,
+            discard_random(json_as(json!({ "count": 2 }))),
+            None,
+            RunOptions::default(),
+        );
 
         let mut second = game("replay-seed");
         in_hand(&mut second, "fx-1", PlayerId::P1, 4);
-        run(&mut second, discard_random(json_as(json!({ "count": 2 }))), None, RunOptions::default());
+        run(
+            &mut second,
+            discard_random(json_as(json!({ "count": 2 }))),
+            None,
+            RunOptions::default(),
+        );
 
-        assert_eq!(ids(&first_game.players.p1.graveyard), ids(&second.players.p1.graveyard));
+        assert_eq!(
+            ids(&first_game.players.p1.graveyard),
+            ids(&second.players.p1.graveyard)
+        );
         assert_eq!(first_game.players.p1.graveyard.len(), 2);
     }
 
@@ -504,7 +648,12 @@ mod r16_discard_s6_3_m3_t1 {
         let mut state = game("effects-move");
         in_hand(&mut state, "fx-1", PlayerId::P1, 2);
 
-        run(&mut state, discard_random(json_as(json!({ "count": 5 }))), None, RunOptions::default());
+        run(
+            &mut state,
+            discard_random(json_as(json!({ "count": 5 }))),
+            None,
+            RunOptions::default(),
+        );
 
         assert_eq!(state.players.p1.hand.len(), 0);
         assert_eq!(state.players.p1.graveyard.len(), 2);
@@ -515,7 +664,12 @@ mod r16_discard_s6_3_m3_t1 {
         let mut state = game("effects-move");
         let token = first(in_hand(&mut state, &hand_token().id, PlayerId::P1, 1));
 
-        let events = run(&mut state, discard(json_as(chosen())), Some(&token), RunOptions::default());
+        let events = run(
+            &mut state,
+            discard(json_as(chosen())),
+            Some(&token),
+            RunOptions::default(),
+        );
 
         assert_eq!(state.players.p1.hand.len(), 0);
         assert_eq!(state.players.p1.graveyard.len(), 0);
@@ -544,7 +698,12 @@ mod r16_discard_s6_3_m3_t1 {
         let mut state = game("effects-move");
         let unit = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
 
-        let events = run(&mut state, discard(json_as(chosen())), Some(&unit), RunOptions::default());
+        let events = run(
+            &mut state,
+            discard(json_as(chosen())),
+            Some(&unit),
+            RunOptions::default(),
+        );
 
         assert_eq!(at(&state, PlayerId::P1, Row::Units, 1), Some(unit.id.clone()));
         assert_eq!(state.players.p1.graveyard.len(), 0);
@@ -593,7 +752,12 @@ mod r448_counter_s6_3_m3_t1_b5_e1 {
         let held = first_in_hand(&mut state, &noisy().id, PlayerId::P1);
         let card = announced(&mut state, held);
 
-        let events = run(&mut state, counter(json_as(chosen())), Some(&card), RunOptions::default());
+        let events = run(
+            &mut state,
+            counter(json_as(chosen())),
+            Some(&card),
+            RunOptions::default(),
+        );
 
         assert_eq!(state.players.p1.resolving.len(), 0);
         assert_eq!(ids(&state.players.p1.graveyard), vec![card.id.clone()]);
@@ -608,7 +772,12 @@ mod r448_counter_s6_3_m3_t1_b5_e1 {
         let held = first_in_hand(&mut state, &noisy().id, PlayerId::P1);
         let card = announced(&mut state, held);
 
-        run(&mut state, counter(json_as(chosen())), Some(&card), RunOptions::default());
+        run(
+            &mut state,
+            counter(json_as(chosen())),
+            Some(&card),
+            RunOptions::default(),
+        );
 
         let side = &state.players.p1;
         assert_eq!(side.turn_log.played_ids, Vec::<String>::new());
@@ -617,9 +786,15 @@ mod r448_counter_s6_3_m3_t1_b5_e1 {
     }
 
     #[test]
-    fn r213_a_countered_play_leaves_the_turns_costs_as_they_were_so_the_next_cheap_card_is_still_gifted_programs_first() {
+    fn r213_a_countered_play_leaves_the_turns_costs_as_they_were_so_the_next_cheap_card_is_still_gifted_programs_first()
+     {
         let mut state = game("effects-move");
-        put(&mut state, &gifted().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(
+            &mut state,
+            &gifted().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let earlier = first_in_hand(&mut state, &noisy().id, PlayerId::P1);
         let held = first_in_hand(&mut state, &noisy().id, PlayerId::P1);
         let card = announced(&mut state, held);
@@ -633,7 +808,12 @@ mod r448_counter_s6_3_m3_t1_b5_e1 {
         }
         state.counters.played = 1;
 
-        run(&mut state, counter(json_as(chosen())), Some(&card), RunOptions::default());
+        run(
+            &mut state,
+            counter(json_as(chosen())),
+            Some(&card),
+            RunOptions::default(),
+        );
 
         let side = &state.players.p1;
         assert_eq!(side.turn_log.played_ids, vec![earlier_id]);
@@ -649,7 +829,12 @@ mod r448_counter_s6_3_m3_t1_b5_e1 {
         let held = first_in_hand(&mut state, &noisy().id, PlayerId::P1);
         let inner = announced(&mut state, held);
 
-        run(&mut state, counter(Default::default()), None, RunOptions::default());
+        run(
+            &mut state,
+            counter(Default::default()),
+            None,
+            RunOptions::default(),
+        );
 
         assert_eq!(ids(&state.players.p1.graveyard), vec![inner.id.clone()]);
         assert_eq!(live(&state, &outer.id).zone.z(), ZoneName::Resolving);
@@ -662,10 +847,31 @@ mod r448_counter_s6_3_m3_t1_b5_e1 {
         let held = first_in_hand(&mut state, &noisy().id, PlayerId::P1);
         let card = announced(&mut state, held);
 
-        assert!(run(&mut state, counter(json_as(chosen())), Some(&in_hand_card), RunOptions::default()).is_empty());
+        assert!(
+            run(
+                &mut state,
+                counter(json_as(chosen())),
+                Some(&in_hand_card),
+                RunOptions::default()
+            )
+            .is_empty()
+        );
         assert_eq!(ids(&state.players.p1.hand), vec![in_hand_card.id.clone()]);
-        run(&mut state, counter(json_as(chosen())), Some(&card), RunOptions::default());
-        assert!(run(&mut state, counter(json_as(chosen())), Some(&card), RunOptions::default()).is_empty());
+        run(
+            &mut state,
+            counter(json_as(chosen())),
+            Some(&card),
+            RunOptions::default(),
+        );
+        assert!(
+            run(
+                &mut state,
+                counter(json_as(chosen())),
+                Some(&card),
+                RunOptions::default()
+            )
+            .is_empty()
+        );
     }
 
     #[test]
@@ -674,7 +880,12 @@ mod r448_counter_s6_3_m3_t1_b5_e1 {
         let held = first_in_hand(&mut state, &hand_token().id, PlayerId::P1);
         let token = announced(&mut state, held);
 
-        let events = run(&mut state, counter(json_as(chosen())), Some(&token), RunOptions::default());
+        let events = run(
+            &mut state,
+            counter(json_as(chosen())),
+            Some(&token),
+            RunOptions::default(),
+        );
 
         assert_eq!(state.players.p1.resolving.len(), 0);
         assert_eq!(state.players.p1.graveyard.len(), 0);
@@ -696,7 +907,12 @@ mod r448_counter_s6_3_m3_t1_b5_e1 {
         let held = first_in_hand(&mut state, "fx-4", PlayerId::P2);
         let theirs = announced(&mut state, held);
 
-        run(&mut state, counter(json_as(chosen())), Some(&theirs), as_controller(PlayerId::P1));
+        run(
+            &mut state,
+            counter(json_as(chosen())),
+            Some(&theirs),
+            as_controller(PlayerId::P1),
+        );
 
         assert_eq!(ids(&state.players.p2.graveyard), vec![theirs.id.clone()]);
         assert_eq!(state.players.p1.graveyard.len(), 0);

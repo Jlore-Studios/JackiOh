@@ -111,7 +111,16 @@ fn decoy() -> CardDef {
 }
 
 fn defs() -> Vec<CardDef> {
-    vec![tutor(), crafter(), mid_list(), asker(), director(), tributer(), prize(), decoy()]
+    vec![
+        tutor(),
+        crafter(),
+        mid_list(),
+        asker(),
+        director(),
+        tributer(),
+        prize(),
+        decoy(),
+    ]
 }
 
 // ---------------------------------------------------------------------------
@@ -121,7 +130,10 @@ fn defs() -> Vec<CardDef> {
 /// The picks every step of a chain has made so far, oldest first (§10.6's "captured data").
 fn picked_so_far(ctx: &EffectContext<'_>) -> Vec<String> {
     let mut picked: Vec<String> = match ctx.data.get("picked") {
-        Some(Value::Array(held)) => held.iter().filter_map(|value| value.as_str().map(str::to_string)).collect(),
+        Some(Value::Array(held)) => held
+            .iter()
+            .filter_map(|value| value.as_str().map(str::to_string))
+            .collect(),
         _ => Vec::new(),
     };
     picked.extend(chosen_options(ctx).into_iter().map(|option| option.to_string()));
@@ -159,8 +171,12 @@ fn tutor_script() -> Script {
             let all = picked_so_far(ctx);
             let as_expected = all.join("+") == "tutor-b+tutor-c+tutor-f";
             vec![
-                add_to_hand(json_as(json!({ "defId": if as_expected { prize().id } else { decoy().id } }))),
-                damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": all.len() }))),
+                add_to_hand(json_as(
+                    json!({ "defId": if as_expected { prize().id } else { decoy().id } }),
+                )),
+                damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": all.len() }),
+                )),
             ]
         }),
     );
@@ -182,7 +198,10 @@ fn crafter_script() -> Script {
     resume.insert(
         "second",
         hook(|ctx| {
-            let first = chosen_options(ctx).first().map(|option| option.to_string()).unwrap_or_default();
+            let first = chosen_options(ctx)
+                .first()
+                .map(|option| option.to_string())
+                .unwrap_or_default();
             vec![discover_from_catalog(json_as(json!({
                 "step": "made",
                 "query": { "type": "Spell" },
@@ -194,8 +213,16 @@ fn crafter_script() -> Script {
     resume.insert(
         "made",
         hook(|ctx| {
-            let first = ctx.data.get("first").and_then(Value::as_str).unwrap_or_default().to_string();
-            let second = chosen_options(ctx).first().map(|option| option.to_string()).unwrap_or_default();
+            let first = ctx
+                .data
+                .get("first")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string();
+            let second = chosen_options(ctx)
+                .first()
+                .map(|option| option.to_string())
+                .unwrap_or_default();
             vec![
                 add_to_hand(json_as(json!({ "defId": first }))),
                 add_to_hand(json_as(json!({ "defId": second }))),
@@ -219,13 +246,19 @@ fn mid_list_script() -> Script {
     let mut resume: IndexMap<&'static str, Hook> = IndexMap::new();
     resume.insert(
         "after",
-        hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 4 })))]),
+        hook(|_ctx| {
+            vec![damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": 4 }),
+            ))]
+        }),
     );
     Script {
         cry: Some(hook(|_ctx| {
             vec![
                 damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 }))),
-                choose_mode(json_as(json!({ "options": ["left", "right"], "step": "after", "prompt": "mid-list" }))),
+                choose_mode(json_as(
+                    json!({ "options": ["left", "right"], "step": "after", "prompt": "mid-list" }),
+                )),
                 // The tail: it must run after the answer, not before it and not never.
                 damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 }))),
             ]
@@ -276,8 +309,14 @@ fn director_script() -> Script {
             options: vec!["left".to_string(), "right".to_string()],
         }],
         cry: Some(hook(|ctx| {
-            let amount = if ctx.modes.first().map(String::as_str) == Some("right") { 3 } else { 1 };
-            vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))]
+            let amount = if ctx.modes.first().map(String::as_str) == Some("right") {
+                3
+            } else {
+                1
+            };
+            vec![damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": amount }),
+            ))]
         })),
         ..Script::default()
     }
@@ -360,20 +399,35 @@ static SEQ: AtomicU32 = AtomicU32::new(0);
 
 fn act(state: &GameState, body: Value) -> ReduceResult {
     let seq = SEQ.fetch_add(1, Ordering::Relaxed) + 1;
-    reduce(state, &json_as::<ActionInput>(body).with_nonce(format!("pr{seq}")))
+    reduce(
+        state,
+        &json_as::<ActionInput>(body).with_nonce(format!("pr{seq}")),
+    )
 }
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|card| card.id.clone()).collect()
+    state.players[player]
+        .hand
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 /// Past both mulligans, in p1's main phase, the way playChoices-filters.test.ts sets up.
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep = hand_ids(&state, P1);
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" })).state;
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+    )
+    .state;
     let keep = hand_ids(&state, P2);
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" })).state;
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+    )
+    .state;
     register();
     state.players.p1.mana = four_mana();
     state
@@ -439,7 +493,12 @@ fn inert_resume() -> Resume {
     }
 }
 
-fn prompt_args(player: PlayerId, kind: PromptKind, prompt: &str, options: Vec<PromptOption>) -> OpenPromptArgs {
+fn prompt_args(
+    player: PlayerId,
+    kind: PromptKind,
+    prompt: &str,
+    options: Vec<PromptOption>,
+) -> OpenPromptArgs {
     OpenPromptArgs {
         player,
         kind,
@@ -463,8 +522,15 @@ fn answer_input(player: PlayerId, choice_id: &str, selection: Vec<Selection>) ->
 }
 
 /// `whyAnswerRefused(pending, { playerId, choiceId, selection })`.
-fn refusal(pending: &PendingChoice, player: PlayerId, choice_id: &str, selection: Vec<Selection>) -> Option<String> {
-    why_answer_refused(pending, &answer_input(player, choice_id, selection)).err().map(|why| why.to_string())
+fn refusal(
+    pending: &PendingChoice,
+    player: PlayerId,
+    choice_id: &str,
+    selection: Vec<Selection>,
+) -> Option<String> {
+    why_answer_refused(pending, &answer_input(player, choice_id, selection))
+        .err()
+        .map(|why| why.to_string())
 }
 
 /// Answer the open prompt by option key, the way a client would send back what it was offered.
@@ -481,7 +547,9 @@ fn answer(sink: &mut EngineSink<'_>, pending: &PendingChoice, keys: &[&str]) -> 
                 .clone()
         })
         .collect();
-    answer_prompt(sink, &answer_input(pending.player_id, &pending.id, selection)).err().map(|error| error.to_string())
+    answer_prompt(sink, &answer_input(pending.player_id, &pending.id, selection))
+        .err()
+        .map(|error| error.to_string())
 }
 
 /// TS `makeContext(sink, null, { controller })`'s options.
@@ -568,7 +636,11 @@ fn error_text(result: &ReduceResult) -> String {
 }
 
 fn hand_defs(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|card| card.def_id.clone()).collect()
+    state.players[player]
+        .hand
+        .iter()
+        .map(|card| card.def_id.clone())
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -640,13 +712,23 @@ mod prompts_s10_6_m3_t3 {
 
         // And the clone still answers: the continuation was data, so nothing was left behind.
         with_sink(&mut clone, |clone_sink| {
-            let clone_pending = clone_sink.state.pending.clone().expect("the round-tripped prompt");
+            let clone_pending = clone_sink
+                .state
+                .pending
+                .clone()
+                .expect("the round-tripped prompt");
             assert_eq!(answer(clone_sink, &clone_pending, &["mode:tutor-b"]), None);
-            assert_eq!(clone_sink.state.pending.as_ref().expect("the next prompt").prompt, "Private Tutor 2");
+            assert_eq!(
+                clone_sink.state.pending.as_ref().expect("the next prompt").prompt,
+                "Private Tutor 2"
+            );
         });
 
         // Answering the clone left the original alone, which is what makes a replay reproducible.
-        assert_eq!(state.pending.as_ref().expect("the original prompt").prompt, "Private Tutor 1");
+        assert_eq!(
+            state.pending.as_ref().expect("the original prompt").prompt,
+            "Private Tutor 1"
+        );
     }
 
     #[test]
@@ -676,7 +758,12 @@ mod prompts_s10_6_m3_t3 {
                 "instanceId": card.id,
             })
         ));
-        let mut names: Vec<String> = resume.as_object().expect("a resume is an object").keys().cloned().collect();
+        let mut names: Vec<String> = resume
+            .as_object()
+            .expect("a resume is an object")
+            .keys()
+            .cloned()
+            .collect();
         names.sort();
         assert_eq!(names, ["data", "defId", "hook", "instanceId", "radiant", "step"]);
         assert!(resume["step"].is_string());
@@ -689,7 +776,12 @@ mod prompts_s10_6_m3_t3 {
         with_sink(&mut state, |sink| {
             let pending = open_prompt(
                 sink,
-                prompt_args(P1, PromptKind::Mode, "Choose one", vec![mode_option("burn"), mode_option("freeze")]),
+                prompt_args(
+                    P1,
+                    PromptKind::Mode,
+                    "Choose one",
+                    vec![mode_option("burn"), mode_option("freeze")],
+                ),
             )
             .expect("the mode prompt");
             let offered = pending.options[0].selection.clone();
@@ -728,16 +820,27 @@ mod prompts_s10_6_m3_t3 {
                     .unwrap_or_default()
                     .contains("no prompt q999 is open")
             );
-            assert!(refusal(&pending, P1, &pending.id, vec![]).unwrap_or_default().contains("exactly 1 pick"));
             assert!(
-                refusal(&pending, P1, &pending.id, vec![offered.clone(), pending.options[1].selection.clone()])
+                refusal(&pending, P1, &pending.id, vec![])
                     .unwrap_or_default()
                     .contains("exactly 1 pick")
+            );
+            assert!(
+                refusal(
+                    &pending,
+                    P1,
+                    &pending.id,
+                    vec![offered.clone(), pending.options[1].selection.clone()]
+                )
+                .unwrap_or_default()
+                .contains("exactly 1 pick")
             );
 
             // The option the prompt did offer is accepted, and the prompt closes.
             assert_eq!(
-                answer_prompt(sink, &answer_input(P1, &pending.id, vec![offered])).err().map(|error| error.to_string()),
+                answer_prompt(sink, &answer_input(P1, &pending.id, vec![offered]))
+                    .err()
+                    .map(|error| error.to_string()),
                 None
             );
             assert!(sink.state.pending.is_none());
@@ -750,7 +853,9 @@ mod prompts_s10_6_m3_t3 {
         let hand = in_hand(&mut state, &plain.id, P1, 3);
         run(
             &mut state,
-            choose_from_hand(json_as(json!({ "step": "none", "count": 2, "prompt": "Choose two" }))),
+            choose_from_hand(json_as(
+                json!({ "step": "none", "count": 2, "prompt": "Choose two" }),
+            )),
             P1,
         );
         let pending = state.pending.clone().expect("the two-card hand prompt");
@@ -764,7 +869,10 @@ mod prompts_s10_6_m3_t3 {
                 .unwrap_or_default()
                 .contains("picked twice")
         );
-        assert_eq!(refusal(&pending, P1, &pending.id, vec![first, instance(&hand[1].id)]), None);
+        assert_eq!(
+            refusal(&pending, P1, &pending.id, vec![first, instance(&hand[1].id)]),
+            None
+        );
         assert_eq!(state.pending.as_ref(), Some(&pending));
         // The sink is over this very state (TS: `sink.state` is `state`).
         let state_at: *const GameState = &state;
@@ -823,7 +931,14 @@ mod prompts_s10_6_m3_t3 {
                 .collect();
             assert_eq!(
                 picks,
-                vec![vec!["a"], vec!["b"], vec!["c"], vec!["a", "b"], vec!["a", "c"], vec!["b", "c"]]
+                vec![
+                    vec!["a"],
+                    vec!["b"],
+                    vec!["c"],
+                    vec!["a", "b"],
+                    vec!["a", "c"],
+                    vec!["b", "c"]
+                ]
             );
             assert!(prompt_answers(&up_to_two).len() <= MAX_PROMPT_ANSWERS);
         });
@@ -883,14 +998,20 @@ mod prompts_s10_6_m3_t3 {
             );
         });
 
-        assert_eq!(json_of(&view_for(&state, P2).pending), json!({ "forYou": false, "pendingFor": "p1" }));
+        assert_eq!(
+            json_of(&view_for(&state, P2).pending),
+            json!({ "forYou": false, "pendingFor": "p1" })
+        );
         let theirs = serde_json::to_string(&view_for(&state, P2)).expect("a view");
         for option in ["first", "second", "third", "Discover a card"] {
             assert!(!theirs.contains(option));
         }
         // The chooser gets the whole prompt, which is the half that makes the hiding meaningful.
         let mine = json_of(&view_for(&state, P1).pending);
-        assert!(matches_object(&mine, &json!({ "forYou": true, "kind": "discover", "min": 1, "max": 1 })));
+        assert!(matches_object(
+            &mine,
+            &json!({ "forYou": true, "kind": "discover", "min": 1, "max": 1 })
+        ));
     }
 
     #[test]
@@ -1060,7 +1181,11 @@ mod prompts_s10_6_m3_t3 {
         // the card object itself; here it is nowhere in the state, and nothing in the state remembers.
         assert!(!card.memory.contains_key("sawSelf"));
         assert!(find_instance(&state, &card.id).is_none());
-        assert!(!serde_json::to_string(&state).expect("a state").contains("sawSelf"));
+        assert!(
+            !serde_json::to_string(&state)
+                .expect("a state")
+                .contains("sawSelf")
+        );
         // The step still ran, on what the Cry captured in `resume.data` rather than on the instance.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 2);
         assert!(state.pending.is_none());
@@ -1070,10 +1195,16 @@ mod prompts_s10_6_m3_t3 {
     fn s10_1_a_second_ask_never_overwrites_an_unanswered_prompt_and_no_options_is_no_prompt() {
         let mut state = board("one-prompt");
         with_sink(&mut state, |sink| {
-            let first = open_prompt(sink, prompt_args(P1, PromptKind::Mode, "first", vec![mode_option("a")]))
-                .expect("the first prompt");
+            let first = open_prompt(
+                sink,
+                prompt_args(P1, PromptKind::Mode, "first", vec![mode_option("a")]),
+            )
+            .expect("the first prompt");
             assert_eq!(
-                open_prompt(sink, prompt_args(P2, PromptKind::Mode, "second", vec![mode_option("b")])),
+                open_prompt(
+                    sink,
+                    prompt_args(P2, PromptKind::Mode, "second", vec![mode_option("b")])
+                ),
                 None
             );
             assert_eq!(sink.state.pending.as_ref(), Some(&first));
@@ -1081,14 +1212,20 @@ mod prompts_s10_6_m3_t3 {
 
         // §6.3: with nothing to offer the effect fizzles and no prompt opens at all.
         let mut empty = board("no-options");
-        let opened =
-            with_sink(&mut empty, |sink| open_prompt(sink, prompt_args(P1, PromptKind::Target, "nothing to pick", vec![])));
+        let opened = with_sink(&mut empty, |sink| {
+            open_prompt(
+                sink,
+                prompt_args(P1, PromptKind::Target, "nothing to pick", vec![]),
+            )
+        });
         assert_eq!(opened, None);
         assert!(empty.pending.is_none());
         // The same through the effects library: an empty board offers no target (§6.3, §10.6).
         run(
             &mut empty,
-            choose_target(json_as(json!({ "step": "none", "scope": { "side": "any", "of": ["unit"] } }))),
+            choose_target(json_as(
+                json!({ "step": "none", "scope": { "side": "any", "of": ["unit"] } }),
+            )),
             P1,
         );
         assert!(empty.pending.is_none());
@@ -1122,17 +1259,28 @@ mod prompts_s10_6_m3_t3 {
         );
 
         let openers: Vec<(&str, Effect)> = vec![
-            ("chooseMode", choose_mode(json_as(json!({ "options": ["a", "b"], "step": "none" })))),
+            (
+                "chooseMode",
+                choose_mode(json_as(json!({ "options": ["a", "b"], "step": "none" }))),
+            ),
             (
                 "chooseTarget",
-                choose_target(json_as(json!({ "step": "none", "scope": { "side": "any", "of": ["unit", "hero"] } }))),
+                choose_target(json_as(
+                    json!({ "step": "none", "scope": { "side": "any", "of": ["unit", "hero"] } }),
+                )),
             ),
-            ("chooseFromHand", choose_from_hand(json_as(json!({ "step": "none" })))),
+            (
+                "chooseFromHand",
+                choose_from_hand(json_as(json!({ "step": "none" }))),
+            ),
             (
                 "discoverFromCatalog",
                 discover_from_catalog(json_as(json!({ "step": "none", "query": { "type": "Unit" } }))),
             ),
-            ("discoverFromGraveyard", discover_from_graveyard(json_as(json!({ "step": "none" })))),
+            (
+                "discoverFromGraveyard",
+                discover_from_graveyard(json_as(json!({ "step": "none" }))),
+            ),
         ];
 
         let mut kinds: IndexSet<PromptKind> = IndexSet::new();
@@ -1144,14 +1292,23 @@ mod prompts_s10_6_m3_t3 {
             let buried = new_instance(&mut state, &plain.id, P1, Zone::Graveyard { player: P1 });
             state.players.p1.graveyard.push(buried);
             run(&mut state, effect.clone(), P1);
-            kinds.insert(state.pending.as_ref().unwrap_or_else(|| panic!("{name}'s prompt")).kind);
+            kinds.insert(
+                state
+                    .pending
+                    .as_ref()
+                    .unwrap_or_else(|| panic!("{name}'s prompt"))
+                    .kind,
+            );
         }
         // Every kind the effects library can open, plus the mulligan §2.1 opens for itself.
         let mut opened: Vec<String> = kinds.iter().map(|kind| kind.to_string()).collect();
         opened.sort();
         assert_eq!(opened, ["discover", "hand", "mode", "target"]);
         let started = begin_game(&new_game("kind-mulligan", None)).state;
-        assert_eq!(mulligan_prompt_for(&started, P1).expect("the mulligan").kind, PromptKind::Mulligan);
+        assert_eq!(
+            mulligan_prompt_for(&started, P1).expect("the mulligan").kind,
+            PromptKind::Mulligan
+        );
 
         // R81: "No Core card opens an `x`, `embiggen`, `zone`, `tribute` or `direction` prompt, since
         // all five are play choices." Nothing in the effects library can, so nothing built from it can.
@@ -1171,7 +1328,10 @@ mod prompts_s10_6_m3_t3 {
         // X: the value travels in `play.x` and is the cost, never a prompt (R65).
         let mut x_state = playing("r81-x");
         let bolt = in_hand(&mut x_state, &x_bolt().id, P1, 1).remove(0);
-        let x_played = act(&x_state, json!({ "type": "play", "instanceId": bolt.id, "x": 2, "playerId": "p1" }));
+        let x_played = act(
+            &x_state,
+            json!({ "type": "play", "instanceId": bolt.id, "x": 2, "playerId": "p1" }),
+        );
         assert_eq!(x_played.error, None);
         assert!(x_played.state.pending.is_none());
         assert_eq!(x_played.state.players.p2.hero.health, HERO_HEALTH - 2);
@@ -1179,8 +1339,10 @@ mod prompts_s10_6_m3_t3 {
         // Embiggen: the price travels in `play.embiggen`.
         let mut big_state = playing("r81-embiggen");
         let long = in_hand(&mut big_state, &going_long().id, P1, 1).remove(0);
-        let big_played =
-            act(&big_state, json!({ "type": "play", "instanceId": long.id, "embiggen": true, "playerId": "p1" }));
+        let big_played = act(
+            &big_state,
+            json!({ "type": "play", "instanceId": long.id, "embiggen": true, "playerId": "p1" }),
+        );
         assert_eq!(big_played.error, None);
         assert!(big_played.state.pending.is_none());
         assert_eq!(big_played.state.players.p1.mana.current, 0);
@@ -1200,15 +1362,20 @@ mod prompts_s10_6_m3_t3 {
         assert_eq!(zone_played.error, None);
         assert!(zone_played.state.pending.is_none());
         assert_eq!(
-            zone_played.state.players.p1.units[3].as_ref().and_then(|pile| pile.first()).map(|card| card.id.clone()),
+            zone_played.state.players.p1.units[3]
+                .as_ref()
+                .and_then(|pile| pile.first())
+                .map(|card| card.id.clone()),
             Some(body.id.clone())
         );
 
         // Direction: a declared `direction` pick travels in `play.modes` (R81's second sentence).
         let mut dir_state = playing("r81-direction");
         let silas = in_hand(&mut dir_state, &director().id, P1, 1).remove(0);
-        let dir_played =
-            act(&dir_state, json!({ "type": "play", "instanceId": silas.id, "modes": ["right"], "playerId": "p1" }));
+        let dir_played = act(
+            &dir_state,
+            json!({ "type": "play", "instanceId": silas.id, "modes": ["right"], "playerId": "p1" }),
+        );
         assert_eq!(dir_played.error, None);
         assert!(dir_played.state.pending.is_none());
         assert_eq!(dir_played.state.players.p2.hero.health, HERO_HEALTH - 3);
@@ -1251,7 +1418,10 @@ mod prompts_s10_6_m3_t3 {
     fn s10_2_the_reducer_answers_the_open_prompt_and_refuses_an_option_it_did_not_offer() {
         let mut state = playing("reducer-answer");
         let card = in_hand(&mut state, &tutor().id, P1, 1).remove(0);
-        let played = act(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }));
+        let played = act(
+            &state,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        );
         assert_eq!(played.error, None);
         let pending = played.state.pending.clone().expect("the prompt the Cry opened");
         assert_eq!(pending.prompt, "Private Tutor 1");
@@ -1274,7 +1444,13 @@ mod prompts_s10_6_m3_t3 {
         assert_eq!(bad.state, played.state);
 
         // A prompt blocks every other action while it is open (§9.3).
-        assert!(error_text(&act(&played.state, json!({ "type": "endTurn", "playerId": "p1" }))).contains("a prompt is open"));
+        assert!(
+            error_text(&act(
+                &played.state,
+                json!({ "type": "endTurn", "playerId": "p1" })
+            ))
+            .contains("a prompt is open")
+        );
         // And it is answerable only by its own player (§10.6).
         assert!(
             error_text(&act(
@@ -1300,6 +1476,9 @@ mod prompts_s10_6_m3_t3 {
             }),
         );
         assert_eq!(good.error, None);
-        assert_eq!(good.state.pending.as_ref().expect("step 2").prompt, "Private Tutor 2");
+        assert_eq!(
+            good.state.pending.as_ref().expect("step 2").prompt,
+            "Private Tutor 2"
+        );
     }
 }

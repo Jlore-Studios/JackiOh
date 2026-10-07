@@ -50,14 +50,14 @@ use indexmap::IndexMap;
 use jackioh_engine::config::{DECK_SIZE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::effects::{choose_mode, lose_health};
 use jackioh_engine::game_over::end_game;
-use jackioh_engine::script::Effect;
-use jackioh_engine::wire::{GameEvent, GameOverReason, GlitchOutcome, Winner};
 use jackioh_engine::prelude::json_as;
+use jackioh_engine::script::Effect;
 use jackioh_engine::state::validate_deck;
 use jackioh_engine::testkit::{register_catalog, register_scripts};
+use jackioh_engine::wire::{GameEvent, GameOverReason, GlitchOutcome, Winner};
 use jackioh_engine::{
-    Action, ActionBody, CardDef, CardDefs, CardScripts, CreateGameOptions, GameState, Phase, PlayerId, Script,
-    StaticFlags, begin_game, create_game, hook, mulligan_owed, reduce,
+    Action, ActionBody, CardDef, CardDefs, CardScripts, CreateGameOptions, GameState, Phase, PlayerId,
+    Script, StaticFlags, begin_game, create_game, hook, mulligan_owed, reduce,
 };
 use serde_json::{Value, json};
 
@@ -116,25 +116,52 @@ fn test_def(id: &str, index: i32, text: &str) -> CardDef {
 /// `DECK_SIZE` fillers `fake_deck` deals from.
 pub fn test_card_defs() -> Vec<CardDef> {
     let mut defs = vec![
-        test_def(TEST_PROMPT_SELF, FIRST_TEST_INDEX, "Quickdraw. Choose one: keep or pass."),
-        test_def(TEST_PROMPT_ENEMY, FIRST_TEST_INDEX + 1, "Quickdraw. Your opponent chooses: keep or pass."),
-        test_def(TEST_LETHAL, FIRST_TEST_INDEX + 2, "Quickdraw. Your opponent loses the game."),
-        test_def(TEST_MUTUAL_LETHAL, FIRST_TEST_INDEX + 3, "Quickdraw. Both heroes die."),
+        test_def(
+            TEST_PROMPT_SELF,
+            FIRST_TEST_INDEX,
+            "Quickdraw. Choose one: keep or pass.",
+        ),
+        test_def(
+            TEST_PROMPT_ENEMY,
+            FIRST_TEST_INDEX + 1,
+            "Quickdraw. Your opponent chooses: keep or pass.",
+        ),
+        test_def(
+            TEST_LETHAL,
+            FIRST_TEST_INDEX + 2,
+            "Quickdraw. Your opponent loses the game.",
+        ),
+        test_def(
+            TEST_MUTUAL_LETHAL,
+            FIRST_TEST_INDEX + 3,
+            "Quickdraw. Both heroes die.",
+        ),
     ];
     let fillers = FIRST_TEST_INDEX + defs.len() as i32;
     for n in 0..DECK_SIZE {
-        defs.push(test_def(&format!("{FILLER_PREFIX}{n}"), fillers + n, "Does nothing."));
+        defs.push(test_def(
+            &format!("{FILLER_PREFIX}{n}"),
+            fillers + n,
+            "Does nothing.",
+        ));
     }
     // After the fillers, so the indexes above stay where they were.
     let glitches = fillers + DECK_SIZE;
     defs.push(test_def(TEST_GLITCH_SWAP, glitches, "Quickdraw. Glitch: swap."));
-    defs.push(test_def(TEST_GLITCH_VOID, glitches + 1, "Quickdraw. Glitch: void."));
+    defs.push(test_def(
+        TEST_GLITCH_VOID,
+        glitches + 1,
+        "Quickdraw. Glitch: void.",
+    ));
     defs
 }
 
 /// §6.2: "Starts in the opening hand instead of a draw".
 fn quickdraw() -> Option<StaticFlags> {
-    Some(StaticFlags { quickdraw: Some(true), ..StaticFlags::default() })
+    Some(StaticFlags {
+        quickdraw: Some(true),
+        ..StaticFlags::default()
+    })
 }
 
 /// A scripted prompt (`choose_mode`, §6.3), answered by `by` (`"self"` or `"enemy"`).
@@ -163,13 +190,18 @@ fn glitch_script(outcome: GlitchOutcome) -> Script {
         static_flags: quickdraw(),
         cry: Some(hook(move |_ctx| {
             vec![Effect::new("test-glitch", move |ctx| {
-                ctx.sink.events.push(GameEvent::Glitched { player: ctx.controller, outcome });
+                ctx.sink.events.push(GameEvent::Glitched {
+                    player: ctx.controller,
+                    outcome,
+                });
                 match outcome {
                     GlitchOutcome::Swap => {
                         ctx.sink.state.seat_swaps = Some(ctx.sink.state.seat_swaps.unwrap_or(0) + 1);
                     }
                     GlitchOutcome::Void => end_game(&mut ctx.sink, Winner::Draw, GameOverReason::Voided),
-                    GlitchOutcome::Reset | GlitchOutcome::Boards => unreachable!("the server tests force swap and void only"),
+                    GlitchOutcome::Reset | GlitchOutcome::Boards => {
+                        unreachable!("the server tests force swap and void only")
+                    }
                 }
             })]
         })),
@@ -188,7 +220,9 @@ fn test_card_scripts() -> Vec<(String, Script)> {
             Script {
                 static_flags: quickdraw(),
                 cry: Some(hook(move |_ctx| {
-                    vec![lose_health(json_as(json!({ "player": "enemy", "amount": lethal })))]
+                    vec![lose_health(json_as(
+                        json!({ "player": "enemy", "amount": lethal }),
+                    ))]
                 })),
                 ..Script::default()
             },
@@ -231,7 +265,13 @@ pub fn test_catalog() -> CardDefs {
 pub fn test_scripts() -> IndexMap<String, CardScripts> {
     let mut scripts = jackioh_cards::scripts_of();
     for (id, script) in test_card_scripts() {
-        scripts.insert(id, CardScripts { base: script.clone(), radiant: script });
+        scripts.insert(
+            id,
+            CardScripts {
+                base: script.clone(),
+                radiant: script,
+            },
+        );
     }
     scripts
 }
@@ -282,7 +322,11 @@ pub fn real_pool() -> Vec<String> {
 
 /// A created, not yet begun, game on two decks (the test catalog's, which holds the real one).
 pub fn new_game(seed: &str, decks: (Vec<String>, Vec<String>)) -> GameState {
-    create_game(&CreateGameOptions { seed: seed.to_string(), decks, ..CreateGameOptions::default() })
+    create_game(&CreateGameOptions {
+        seed: seed.to_string(),
+        decks,
+        ..CreateGameOptions::default()
+    })
 }
 
 /// A begun game: `begin_game(create_game(...))`, panicking on a refusal.
@@ -322,7 +366,10 @@ pub fn decks_the_engine_accepts(pool: &[String], seed: &str) -> (GameState, (Vec
         }
         size += 1;
     }
-    panic!("the real engine refused every deck size built from the catalog:\n  {}", refusals.join("\n  "));
+    panic!(
+        "the real engine refused every deck size built from the catalog:\n  {}",
+        refusals.join("\n  ")
+    );
 }
 
 /// `decks_the_engine_accepts`, narrowed to the decks whose opening deal, under `seed`, opens straight
@@ -347,17 +394,27 @@ pub fn decks_that_open_on_the_mulligans(pool: &[String], seed: &str) -> (Vec<Str
         }
         from += 1;
     }
-    panic!("under seed {seed} no second deck lets the deal open on both mulligans: p1's own deal asks first (R224)");
+    panic!(
+        "under seed {seed} no second deck lets the deal open on both mulligans: p1's own deal asks first (R224)"
+    );
 }
 
 /// The instance ids of a seat's hand, in hand order.
 pub fn hand_ids(state: &GameState, seat: PlayerId) -> Vec<String> {
-    state.players[seat].hand.iter().map(|card| card.id.clone()).collect()
+    state.players[seat]
+        .hand
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 /// The instance id of the first card of `def_id` in a seat's hand, or `None`.
 pub fn hand_card(state: &GameState, seat: PlayerId, def_id: &str) -> Option<String> {
-    state.players[seat].hand.iter().find(|card| card.def_id == def_id).map(|card| card.id.clone())
+    state.players[seat]
+        .hand
+        .iter()
+        .find(|card| card.def_id == def_id)
+        .map(|card| card.id.clone())
 }
 
 /// The instance id of the first card of `def_id` in the viewer's own hand of a `view` frame's
@@ -373,14 +430,23 @@ pub fn hand_card_in_view(view: &Value, def_id: &str) -> Option<String> {
 
 /// R265: the mulligan that keeps a seat's whole opening hand.
 pub fn keep_whole_hand(state: &GameState, seat: PlayerId, nonce: &str) -> Action {
-    Action::new(ActionBody::Mulligan { keep: hand_ids(state, seat) }, seat, nonce)
+    Action::new(
+        ActionBody::Mulligan {
+            keep: hand_ids(state, seat),
+        },
+        seat,
+        nonce,
+    )
 }
 
 /// Both mulligans answered by keeping the whole hand, p1 first: the state at the start of turn 1,
 /// for a test that is not about the mulligan (TS's fake opened there unless asked not to).
 pub fn past_the_mulligans(state: &GameState) -> GameState {
     let mut state = state.clone();
-    for (seat, nonce) in [(PlayerId::P1, "test-mulligan-p1"), (PlayerId::P2, "test-mulligan-p2")] {
+    for (seat, nonce) in [
+        (PlayerId::P1, "test-mulligan-p1"),
+        (PlayerId::P2, "test-mulligan-p2"),
+    ] {
         if !mulligan_owed(&state).contains(&seat) {
             continue;
         }

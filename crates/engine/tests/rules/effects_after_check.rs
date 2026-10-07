@@ -11,7 +11,9 @@
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use jackioh_engine::effects::{ForEachCardArgs, after_state_check, destroy_all, for_each_card, gain_mana, summon};
+use jackioh_engine::effects::{
+    ForEachCardArgs, after_state_check, destroy_all, for_each_card, gain_mana, summon,
+};
 use std::sync::Arc;
 
 use jackioh_engine::testkit::*;
@@ -64,19 +66,36 @@ fn defs() -> Vec<CardDef> {
 const NOTE_LANE: usize = 5;
 
 fn write(state: &mut GameState, entry: &str) {
-    let Some(log) = state.players[PlayerId::P1].backrow.get_mut(NOTE_LANE - 1).and_then(|slot| slot.as_mut()) else {
+    let Some(log) = state.players[PlayerId::P1]
+        .backrow
+        .get_mut(NOTE_LANE - 1)
+        .and_then(|slot| slot.as_mut())
+    else {
         return;
     };
-    let mut steps: Vec<Value> = log.memory.get("steps").and_then(|steps| steps.as_array()).cloned().unwrap_or_default();
+    let mut steps: Vec<Value> = log
+        .memory
+        .get("steps")
+        .and_then(|steps| steps.as_array())
+        .cloned()
+        .unwrap_or_default();
     steps.push(json!(entry));
     log.memory.insert("steps".to_string(), Value::Array(steps));
 }
 
 fn notes(state: &GameState) -> Vec<String> {
-    let log = state.players[PlayerId::P1].backrow.get(NOTE_LANE - 1).and_then(|slot| slot.as_ref());
+    let log = state.players[PlayerId::P1]
+        .backrow
+        .get(NOTE_LANE - 1)
+        .and_then(|slot| slot.as_ref());
     log.and_then(|log| log.memory.get("steps"))
         .and_then(|steps| steps.as_array())
-        .map(|steps| steps.iter().filter_map(|step| step.as_str().map(str::to_string)).collect())
+        .map(|steps| {
+            steps
+                .iter()
+                .filter_map(|step| step.as_str().map(str::to_string))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -116,7 +135,10 @@ fn ask_controller() -> Effect {
 }
 
 fn both(script: Script) -> CardScripts {
-    CardScripts { base: script.clone(), radiant: script }
+    CardScripts {
+        base: script.clone(),
+        radiant: script,
+    }
 }
 
 /// The ids of `player`'s graveyard cards that are this file's Units.
@@ -232,14 +254,26 @@ fn act_result(state: &GameState, body: Value) -> ReduceResult {
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&game(seed)).state;
     for player_id in [PlayerId::P1, PlayerId::P2] {
-        let keep: Vec<String> = state.players[player_id].hand.iter().map(|card| card.id.clone()).collect();
-        let result = act_result(&state, json!({ "type": "mulligan", "keep": keep, "playerId": player_id }));
+        let keep: Vec<String> = state.players[player_id]
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
+        let result = act_result(
+            &state,
+            json!({ "type": "mulligan", "keep": keep, "playerId": player_id }),
+        );
         if let Some(error) = result.error {
             panic!("{error}");
         }
         state = result.state;
     }
-    put(&mut state, LOG_CARD, slot(PlayerId::P1, Row::Backrow, NOTE_LANE as i32), json!({}));
+    put(
+        &mut state,
+        LOG_CARD,
+        slot(PlayerId::P1, Row::Backrow, NOTE_LANE as i32),
+        json!({}),
+    );
     state
 }
 
@@ -247,7 +281,10 @@ fn play_spell(state: &mut GameState, def_id: &str) -> ReduceResult {
     let Some(card) = in_hand(state, def_id, PlayerId::P1, 1).into_iter().next() else {
         panic!("no spell");
     };
-    let result = act_result(state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }));
+    let result = act_result(
+        state,
+        json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+    );
     if let Some(error) = &result.error {
         panic!("{error}");
     }
@@ -261,25 +298,31 @@ fn last_index_of(kinds: &[GameEventType], kind: GameEventType) -> i64 {
 
 /// `state.players[player].units[lane - 1]?.[0]?.id`.
 fn top_id(state: &GameState, player: PlayerId, lane: usize) -> Option<String> {
-    state.players[player].units[lane - 1].as_ref().and_then(|pile| pile.first()).map(|card| card.id.clone())
+    state.players[player].units[lane - 1]
+        .as_ref()
+        .and_then(|pile| pile.first())
+        .map(|card| card.id.clone())
 }
 
 mod after_state_check_c_43_plague_nuke {
     use super::*;
 
     #[test]
-    fn r59_runs_the_check_at_its_point_of_the_list_the_rest_finds_the_destroyed_units_in_their_graveyard_after_their_deaths(
-    ) {
+    fn r59_runs_the_check_at_its_point_of_the_list_the_rest_finds_the_destroyed_units_in_their_graveyard_after_their_deaths()
+     {
         let mut state = playing("after-check-order");
         put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 1), json!({}));
         put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 2), json!({}));
 
-        let ReduceResult { state: after, events, .. } = play_spell(&mut state, SWEEP);
+        let ReduceResult {
+            state: after, events, ..
+        } = play_spell(&mut state, SWEEP);
 
         assert_eq!(notes(&after), vec!["rest:2".to_string()]);
         let kinds: Vec<GameEventType> = events.iter().map(|event| event.event_type()).collect();
         assert!(
-            last_index_of(&kinds, GameEventType::Destroyed) < last_index_of(&kinds, GameEventType::ManaChanged)
+            last_index_of(&kinds, GameEventType::Destroyed)
+                < last_index_of(&kinds, GameEventType::ManaChanged)
         );
         assert_eq!(events_of_type(&events, GameEventType::Destroyed).len(), 2);
     }
@@ -294,25 +337,41 @@ mod after_state_check_c_43_plague_nuke {
 
         assert_eq!(top_id(&after, PlayerId::P1, 1), Some(a.id.clone()));
         assert_eq!(top_id(&after, PlayerId::P1, 2), Some(b.id.clone()));
-        let quiet_in_graveyard: Vec<&CardInstance> =
-            after.players[PlayerId::P2].graveyard.iter().filter(|card| card.def_id == QUIET).collect();
+        let quiet_in_graveyard: Vec<&CardInstance> = after.players[PlayerId::P2]
+            .graveyard
+            .iter()
+            .filter(|card| card.def_id == QUIET)
+            .collect();
         assert_eq!(quiet_in_graveyard, Vec::<&CardInstance>::new());
     }
 
     #[test]
-    fn the_control_without_the_check_in_between_the_same_summon_finds_the_units_still_on_the_field_and_takes_nothing() {
+    fn the_control_without_the_check_in_between_the_same_summon_finds_the_units_still_on_the_field_and_takes_nothing()
+     {
         let mut state = playing("after-check-control");
         put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 1), json!({}));
 
         let after = play_spell(&mut state, SWEEP_NO_CHECK).state;
 
-        assert!(after.players[PlayerId::P1].units.iter().all(|pile| pile.is_none()));
-        assert_eq!(after.players[PlayerId::P2].graveyard.iter().filter(|card| card.def_id == QUIET).count(), 1);
+        assert!(
+            after.players[PlayerId::P1]
+                .units
+                .iter()
+                .all(|pile| pile.is_none())
+        );
+        assert_eq!(
+            after.players[PlayerId::P2]
+                .graveyard
+                .iter()
+                .filter(|card| card.def_id == QUIET)
+                .count(),
+            1
+        );
     }
 
     #[test]
-    fn r113_a_death_hook_asking_inside_the_check_parks_the_rest_behind_the_pass_after_the_answer_the_rest_runs_once_and_the_pause_survives_json(
-    ) {
+    fn r113_a_death_hook_asking_inside_the_check_parks_the_rest_behind_the_pass_after_the_answer_the_rest_runs_once_and_the_pause_survives_json()
+     {
         let mut state = playing("after-check-pause");
         put(&mut state, ASKER, slot(PlayerId::P2, Row::Units, 1), json!({}));
         put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 2), json!({}));
@@ -342,7 +401,12 @@ mod after_state_check_c_43_plague_nuke {
         assert_eq!(answered.error, None);
         assert_eq!(
             notes(&answered.state),
-            vec!["ask".to_string(), "answered".to_string(), "tail".to_string(), "rest:2".to_string()]
+            vec![
+                "ask".to_string(),
+                "answered".to_string(),
+                "tail".to_string(),
+                "rest:2".to_string()
+            ]
         );
         assert!(answered.state.pending.is_none());
         assert!(answered.state.work.is_empty());

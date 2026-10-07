@@ -131,9 +131,21 @@ pub struct AiGate {
 pub const AI_GATE: AiGate = AiGate {
     seed_series: "gate:v3",
     smoke_seeds: 20,
-    full_seeds: ByMatchup { ai_vs_random: 100, ai_vs_greedy: 50, hard_vs_easy: 50 },
-    brief_rate: ByMatchup { ai_vs_random: 0.95, ai_vs_greedy: 0.7, hard_vs_easy: 0.8 },
-    measured_rate: ByMatchup { ai_vs_random: 0.945, ai_vs_greedy: 0.68, hard_vs_easy: 0.913 },
+    full_seeds: ByMatchup {
+        ai_vs_random: 100,
+        ai_vs_greedy: 50,
+        hard_vs_easy: 50,
+    },
+    brief_rate: ByMatchup {
+        ai_vs_random: 0.95,
+        ai_vs_greedy: 0.7,
+        hard_vs_easy: 0.8,
+    },
+    measured_rate: ByMatchup {
+        ai_vs_random: 0.945,
+        ai_vs_greedy: 0.68,
+        hard_vs_easy: 0.913,
+    },
     false_alarm: 0.05,
     max_decision_ms: 1500.0,
     perf_smoke_games: 1,
@@ -222,14 +234,21 @@ pub fn game_config(matchup: Matchup, n: i32, budget: SearchBudget, series: &str)
     let subject_seat = subject_seat_of(n);
     let other_seat = subject_seat.opponent();
 
-    let subject_handicap = if matchup == Matchup::HardVsEasy { AI_DIFFICULTY.hard } else { AI_DIFFICULTY.easy };
+    let subject_handicap = if matchup == Matchup::HardVsEasy {
+        AI_DIFFICULTY.hard
+    } else {
+        AI_DIFFICULTY.easy
+    };
     let other_handicap = AI_DIFFICULTY.easy;
 
     let deck_for = |seat: PlayerId, handicap: &Handicap| -> Vec<String> {
         build_ai_deck(
             &mut Rng::new(&format!("{seed}:deck:{}", seat.as_str()), 0),
             handicap.deck_size,
-            &AiDeckOptions { mana_cap: Some(handicap.mana_cap), ..AiDeckOptions::default() },
+            &AiDeckOptions {
+                mana_cap: Some(handicap.mana_cap),
+                ..AiDeckOptions::default()
+            },
         )
     };
     let subject_deck = deck_for(subject_seat, &subject_handicap);
@@ -238,17 +257,33 @@ pub fn game_config(matchup: Matchup, n: i32, budget: SearchBudget, series: &str)
     let subject_controller = SeatController::Ai { budget: Some(budget) };
     let subject_first = subject_seat == PlayerId::P1;
     let controllers = if subject_first {
-        PerPlayer { p1: subject_controller, p2: opponent_controller(matchup, budget) }
+        PerPlayer {
+            p1: subject_controller,
+            p2: opponent_controller(matchup, budget),
+        }
     } else {
-        PerPlayer { p1: opponent_controller(matchup, budget), p2: subject_controller }
+        PerPlayer {
+            p1: opponent_controller(matchup, budget),
+            p2: subject_controller,
+        }
     };
 
     MatchConfig {
-        decks: if subject_first { (subject_deck, other_deck) } else { (other_deck, subject_deck) },
-        handicaps: Some(if subject_first {
-            PerPlayerOpt { p1: Some(subject_handicap), p2: Some(other_handicap) }
+        decks: if subject_first {
+            (subject_deck, other_deck)
         } else {
-            PerPlayerOpt { p1: Some(other_handicap), p2: Some(subject_handicap) }
+            (other_deck, subject_deck)
+        },
+        handicaps: Some(if subject_first {
+            PerPlayerOpt {
+                p1: Some(subject_handicap),
+                p2: Some(other_handicap),
+            }
+        } else {
+            PerPlayerOpt {
+                p1: Some(other_handicap),
+                p2: Some(subject_handicap),
+            }
         }),
         controllers,
         max_actions: None,
@@ -281,7 +316,9 @@ pub fn run_gate_games(matchup: Matchup, numbers: &[i32], budget: SearchBudget) -
             ..FoldArgs::default()
         });
 
-        let won = record.result.is_some_and(|result| result.winner.player() == Some(subject_seat));
+        let won = record
+            .result
+            .is_some_and(|result| result.winner.player() == Some(subject_seat));
         games.push(GateGame {
             seed: config.seed,
             subject_seat,
@@ -296,13 +333,23 @@ pub fn run_gate_games(matchup: Matchup, numbers: &[i32], budget: SearchBudget) -
     let turn_cap_draws = games
         .iter()
         .filter(|game| {
-            game.record
-                .result
-                .is_some_and(|result| result.winner == Winner::Draw && result.reason == GameOverReason::TurnCap)
+            game.record.result.is_some_and(|result| {
+                result.winner == Winner::Draw && result.reason == GameOverReason::TurnCap
+            })
         })
         .count() as i32;
-    let rate = if !games.is_empty() { f64::from(wins) / games.len() as f64 } else { 0.0 };
-    GateReport { matchup, games, wins, turn_cap_draws, rate }
+    let rate = if !games.is_empty() {
+        f64::from(wins) / games.len() as f64
+    } else {
+        0.0
+    };
+    GateReport {
+        matchup,
+        games,
+        wins,
+        turn_cap_draws,
+        rate,
+    }
 }
 
 /// Shard `index` of `count` (1-based) of a gate run of `total` games: games index, index + count,

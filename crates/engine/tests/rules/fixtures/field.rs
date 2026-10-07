@@ -16,8 +16,8 @@ use std::cell::Cell;
 use std::sync::LazyLock;
 
 use jackioh_engine::effects::{
-    animate, choose_target, damage, destroy_all, flicker, lock_lane, lock_own_zone, lock_played_zone, lock_random_zone,
-    unlock_all,
+    animate, choose_target, damage, destroy_all, flicker, lock_lane, lock_own_zone, lock_played_zone,
+    lock_random_zone, unlock_all,
 };
 use jackioh_engine::testkit::*;
 
@@ -131,10 +131,12 @@ pub static wisp: LazyLock<CardDef> = LazyLock::new(|| {
 });
 
 /// A carrier whose aura gives its controller's cards Stack: Classic+ #33 Ivory Tower's shape before patch v0.2.3.
-pub static tower: LazyLock<CardDef> = LazyLock::new(|| def("tower", 9407, "Field Spell", json!({ "cost": 2 })));
+pub static tower: LazyLock<CardDef> =
+    LazyLock::new(|| def("tower", 9407, "Field Spell", json!({ "cost": 2 })));
 
 /// Classic+ #33 Ivory Tower's shape since patch v0.2.3: a carrier that takes one Unit a stay (R653).
-pub static fuser: LazyLock<CardDef> = LazyLock::new(|| def("fuser", 9408, "Field Spell", json!({ "cost": 2 })));
+pub static fuser: LazyLock<CardDef> =
+    LazyLock::new(|| def("fuser", 9408, "Field Spell", json!({ "cost": 2 })));
 
 /// A Field Spell that prints Stack, so it tops an occupied backrow zone without any aura (B5 E21).
 pub static cover: LazyLock<CardDef> = LazyLock::new(|| {
@@ -175,7 +177,8 @@ pub static wrecker: LazyLock<CardDef> = LazyLock::new(|| def("wrecker", 9414, "S
 pub static leak: LazyLock<CardDef> = LazyLock::new(|| def("leak", 9415, "Spell", json!({})));
 
 /// Classic #84 Lockdown's shape: after a permanent is played, Lock its zone (either player's play).
-pub static lockdown: LazyLock<CardDef> = LazyLock::new(|| def("lockdown", 9416, "Field Spell", json!({ "cost": 2 })));
+pub static lockdown: LazyLock<CardDef> =
+    LazyLock::new(|| def("lockdown", 9416, "Field Spell", json!({ "cost": 2 })));
 
 /// Classic+ #1 Doom Shroom's shape: fires on an enemy play and Locks its own zone.
 pub static doom: LazyLock<CardDef> = LazyLock::new(|| def("doom", 9417, "Trap", json!({})));
@@ -260,8 +263,15 @@ pub fn note(name: impl Into<String>) -> Effect {
 /// A card's notes, or none (TS `notesOf(card: CardInstance | undefined | null)`: pass `&card`,
 /// `Some(&card)` or `None`).
 pub fn notes_of<'a>(card: impl Into<Option<&'a CardInstance>>) -> Vec<String> {
-    match card.into().and_then(|card| card.memory.get(NOTES)).and_then(Value::as_array) {
-        Some(entries) => entries.iter().filter_map(|entry| entry.as_str().map(str::to_string)).collect(),
+    match card
+        .into()
+        .and_then(|card| card.memory.get(NOTES))
+        .and_then(Value::as_array)
+    {
+        Some(entries) => entries
+            .iter()
+            .filter_map(|entry| entry.as_str().map(str::to_string))
+            .collect(),
         None => vec![],
     }
 }
@@ -291,14 +301,16 @@ fn tesla_face(amount: i32) -> Script {
 /// A trigger on an enemy play whose list is `notes` then, when `animates`, `animate()`.
 fn enemy_play_noter(id: &'static str, entry: &'static str, animates: bool) -> Script {
     Script {
-        triggers: vec![TriggerDef::new(id, &[GameEventType::CardPlayed], move |_ctx, _event| {
-            let mut effects = vec![note(entry)];
-            if animates {
-                effects.push(animate(Default::default()));
-            }
-            effects
-        })
-        .with_when(enemy_play)],
+        triggers: vec![
+            TriggerDef::new(id, &[GameEventType::CardPlayed], move |_ctx, _event| {
+                let mut effects = vec![note(entry)];
+                if animates {
+                    effects.push(animate(Default::default()));
+                }
+                effects
+            })
+            .with_when(enemy_play),
+        ],
         ..Script::default()
     }
 }
@@ -533,9 +545,15 @@ pub fn act(state: &GameState, body: impl serde::Serialize) -> GameState {
 pub fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&field_game(seed)).state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|card| card.id.clone()).collect();
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+    );
     let keep: Vec<String> = state.players.p2.hand.iter().map(|card| card.id.clone()).collect();
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+    );
     state
 }
 

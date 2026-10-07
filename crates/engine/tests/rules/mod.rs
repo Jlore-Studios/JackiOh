@@ -2,7 +2,6 @@
 //! the test-only scripts and catalogs in `fixtures`. Each file starts with
 //! `use jackioh_engine::testkit::*;`. Written once by part 1; the files are parts 24–27's.
 
-pub mod fixtures;
 pub mod activate;
 pub mod after_attack;
 pub mod ai_policy;
@@ -92,6 +91,7 @@ pub mod effects_tune;
 pub mod effects_turn_end;
 pub mod endgame;
 pub mod faces;
+pub mod fixtures;
 pub mod fuse;
 pub mod fuse_registry;
 pub mod fuse_variants;

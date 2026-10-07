@@ -34,12 +34,24 @@ fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     state = reduce(
         &state,
-        &Action::new(ActionBody::Mulligan { keep: hand_ids(&state, P1) }, P1, nonce()),
+        &Action::new(
+            ActionBody::Mulligan {
+                keep: hand_ids(&state, P1),
+            },
+            P1,
+            nonce(),
+        ),
     )
     .state;
     state = reduce(
         &state,
-        &Action::new(ActionBody::Mulligan { keep: hand_ids(&state, P2) }, P2, nonce()),
+        &Action::new(
+            ActionBody::Mulligan {
+                keep: hand_ids(&state, P2),
+            },
+            P2,
+            nonce(),
+        ),
     )
     .state;
     state
@@ -71,7 +83,10 @@ mod reduce_m1_t3 {
     #[test]
     fn lets_the_non_active_player_concede_and_answer_a_draw_offer() {
         let state = playing("non-active");
-        assert_eq!(reduce(&state, &Action::new(ActionBody::Concede, P2, nonce())).error, None);
+        assert_eq!(
+            reduce(&state, &Action::new(ActionBody::Concede, P2, nonce())).error,
+            None
+        );
 
         let offered = reduce(&state, &Action::new(ActionBody::OfferDraw, P1, nonce())).state;
         let answered = reduce(
@@ -87,7 +102,13 @@ mod reduce_m1_t3 {
         assert!(state.pending.is_none());
         assert_eq!(mulligan_owed(&state), vec![P1, P2]);
 
-        let first_card = state.players.p1.hand.first().map(|c| c.id.clone()).unwrap_or_default();
+        let first_card = state
+            .players
+            .p1
+            .hand
+            .first()
+            .map(|c| c.id.clone())
+            .unwrap_or_default();
         let played = reduce(
             &state,
             &action(json!({ "type": "play", "instanceId": first_card, "playerId": "p1", "nonce": nonce() })),
@@ -103,7 +124,10 @@ mod reduce_m1_t3 {
         );
 
         // Either seat answers its own first; a second answer from the same seat is refused.
-        let p2_first = reduce(&state, &Action::new(ActionBody::Mulligan { keep: vec![] }, P2, nonce()));
+        let p2_first = reduce(
+            &state,
+            &Action::new(ActionBody::Mulligan { keep: vec![] }, P2, nonce()),
+        );
         assert_eq!(p2_first.error, None);
         assert_eq!(mulligan_owed(&p2_first.state), vec![P1]);
         let again = reduce(
@@ -152,13 +176,21 @@ mod reduce_m1_t3 {
         assert_error(
             &reduce(
                 &state,
-                &action(json!({ "type": "play", "instanceId": ghost.id, "playerId": "p1", "nonce": nonce() })),
+                &action(
+                    json!({ "type": "play", "instanceId": ghost.id, "playerId": "p1", "nonce": nonce() }),
+                ),
             )
             .error,
             "no card",
         );
 
-        let card = state.players.p1.hand.first().map(|c| c.id.clone()).unwrap_or_default();
+        let card = state
+            .players
+            .p1
+            .hand
+            .first()
+            .map(|c| c.id.clone())
+            .unwrap_or_default();
         let mut played = reduce(
             &state,
             &action(json!({
@@ -171,7 +203,14 @@ mod reduce_m1_t3 {
         );
         assert_eq!(played.error, None);
 
-        let second = played.state.players.p1.hand.first().map(|c| c.id.clone()).unwrap_or_default();
+        let second = played
+            .state
+            .players
+            .p1
+            .hand
+            .first()
+            .map(|c| c.id.clone())
+            .unwrap_or_default();
         played.state.players.p1.mana.current = 4; // enough mana, so the zone is what refuses
         let blocked = reduce(
             &played.state,
@@ -228,11 +267,15 @@ mod reduce_m1_t3 {
                 let walkable: Vec<&ActionBody> = actions
                     .iter()
                     .filter(|listed| {
-                        listed.action_type() != ActionType::Concede && listed.action_type() != ActionType::AnswerDraw
+                        listed.action_type() != ActionType::Concede
+                            && listed.action_type() != ActionType::AnswerDraw
                     })
                     .collect();
                 let at = rng.int(walkable.len() as i32) as usize;
-                let chosen = walkable.get(at).or_else(|| walkable.first()).map(|body| (*body).clone());
+                let chosen = walkable
+                    .get(at)
+                    .or_else(|| walkable.first())
+                    .map(|body| (*body).clone());
                 let chosen = chosen.expect("a walkable action");
                 state = reduce(&state, &Action::new(chosen, player, nonce())).state;
             }
@@ -249,20 +292,31 @@ mod reduce_m1_t3 {
         // R265: both seats owe a mulligan at once, so both are offered theirs and concede.
         for player in [P1, P2] {
             let legal = legal_actions(&begun, player);
-            assert!(legal
-                .iter()
-                .all(|a| matches!(a.action_type(), ActionType::Mulligan | ActionType::Concede)));
+            assert!(
+                legal
+                    .iter()
+                    .all(|a| matches!(a.action_type(), ActionType::Mulligan | ActionType::Concede))
+            );
             assert_eq!(
-                legal.iter().filter(|a| a.action_type() == ActionType::Mulligan).count(),
+                legal
+                    .iter()
+                    .filter(|a| a.action_type() == ActionType::Mulligan)
+                    .count(),
                 1usize << begun.players[player].hand.len()
             );
         }
         // Once p1 has answered, p1 has nothing left to answer and is offered concede alone.
-        let state = reduce(&begun, &Action::new(ActionBody::Mulligan { keep: vec![] }, P1, "r211-m")).state;
+        let state = reduce(
+            &begun,
+            &Action::new(ActionBody::Mulligan { keep: vec![] }, P1, "r211-m"),
+        )
+        .state;
         assert_eq!(legal_actions(&state, P1), vec![ActionBody::Concede]);
-        assert!(legal_actions(&state, P2)
-            .iter()
-            .all(|a| matches!(a.action_type(), ActionType::Mulligan | ActionType::Concede)));
+        assert!(
+            legal_actions(&state, P2)
+                .iter()
+                .all(|a| matches!(a.action_type(), ActionType::Mulligan | ActionType::Concede))
+        );
         // And `reduce` agrees: a concede is accepted from the seat that owes nothing.
         assert_eq!(
             reduce(&state, &Action::new(ActionBody::Concede, P1, "r211-concede")).error,
@@ -273,7 +327,13 @@ mod reduce_m1_t3 {
     #[test]
     fn offers_one_play_per_open_zone_for_a_unit() {
         let state = playing("zones-listed");
-        let unit_id = state.players.p1.hand.first().map(|c| c.id.clone()).unwrap_or_default();
+        let unit_id = state
+            .players
+            .p1
+            .hand
+            .first()
+            .map(|c| c.id.clone())
+            .unwrap_or_default();
         let plays = legal_actions(&state, P1)
             .into_iter()
             .filter(|a| matches!(a, ActionBody::Play { instance_id, .. } if *instance_id == unit_id))

@@ -127,7 +127,10 @@ fn tier_game(tier: Tier, n: i32) -> MatchConfig {
         build_ai_deck(
             &mut create_rng(&format!("{seed}:deck:{seat}"), 0),
             handicap.deck_size,
-            &AiDeckOptions { mana_cap: Some(handicap.mana_cap), ..Default::default() },
+            &AiDeckOptions {
+                mana_cap: Some(handicap.mana_cap),
+                ..Default::default()
+            },
         )
     };
     let human_deck = deck_for(human_seat, &HUMAN_HANDICAP);
@@ -136,15 +139,27 @@ fn tier_game(tier: Tier, n: i32) -> MatchConfig {
     // The greedy seat plays with no handicap (R180); at Easy the AI seat stores none either.
     let mut handicaps: PerPlayerOpt<Handicap> = PerPlayerOpt::default();
     *handicaps.slot(ai_seat) = Some(ai_handicap);
-    let ai = SeatController::Ai { budget: Some(AI_GATE_BUDGET) };
+    let ai = SeatController::Ai {
+        budget: Some(AI_GATE_BUDGET),
+    };
     MatchConfig {
         seed,
-        decks: if human_seat == PlayerId::P1 { (human_deck, ai_deck) } else { (ai_deck, human_deck) },
+        decks: if human_seat == PlayerId::P1 {
+            (human_deck, ai_deck)
+        } else {
+            (ai_deck, human_deck)
+        },
         handicaps: Some(handicaps),
         controllers: if human_seat == PlayerId::P1 {
-            PerPlayer { p1: SeatController::Greedy, p2: ai }
+            PerPlayer {
+                p1: SeatController::Greedy,
+                p2: ai,
+            }
         } else {
-            PerPlayer { p1: ai, p2: SeatController::Greedy }
+            PerPlayer {
+                p1: ai,
+                p2: SeatController::Greedy,
+            }
         },
         max_actions: None,
     }
@@ -174,7 +189,10 @@ fn play_tier(tier: Tier) -> Vec<TierGame> {
             "log": record.log,
             "handicaps": config.handicaps,
         })));
-        let human_won = record.result.as_ref().is_some_and(|result| result.winner == Winner::from(human_seat_of(n)));
+        let human_won = record
+            .result
+            .as_ref()
+            .is_some_and(|result| result.winner == Winner::from(human_seat_of(n)));
         games.push(TierGame {
             n,
             replay_hash: hash_state(&replayed.state),
@@ -199,7 +217,10 @@ fn run(tier: Tier) -> &'static [TierGame] {
 /// Greedy's wins among games 1..upTo (all of them when `up_to` is `None`).
 fn wins_of(games: &[TierGame], up_to: Option<i32>) -> i32 {
     let up_to = up_to.unwrap_or(games.len() as i32);
-    games.iter().filter(|game| game.n <= up_to && game.human_won).count() as i32
+    games
+        .iter()
+        .filter(|game| game.n <= up_to && game.human_won)
+        .count() as i32
 }
 
 fn not_won(games: &[TierGame]) -> String {
@@ -223,7 +244,8 @@ mod r290_the_tutorial_tier_by_play {
 
     /// R290 tierGame seats greedy at a human's resources against the AI at AI_TUTORIAL or Easy, on the same seed, seats alternating
     #[test]
-    fn r290_tier_game_seats_greedy_at_a_humans_resources_against_the_ai_at_ai_tutorial_or_easy_on_the_same_seed_seats_alternating() {
+    fn r290_tier_game_seats_greedy_at_a_humans_resources_against_the_ai_at_ai_tutorial_or_easy_on_the_same_seed_seats_alternating()
+     {
         const { assert!(TUTORIAL_TIER.easy_games <= TUTORIAL_TIER.tutorial_games) };
         for n in [1, 2, 3] {
             let human_seat = human_seat_of(n);
@@ -235,27 +257,50 @@ mod r290_the_tutorial_tier_by_play {
             assert_eq!(easy.seed, tutorial.seed);
             for config in [&tutorial, &easy] {
                 assert_eq!(config.controllers[human_seat], SeatController::Greedy);
-                assert_eq!(config.controllers[ai_seat], SeatController::Ai { budget: Some(AI_GATE_BUDGET) });
-                let human_handicap =
-                    config.handicaps.as_ref().and_then(|handicaps| handicaps.get(human_seat)).copied().unwrap_or(HUMAN_HANDICAP);
+                assert_eq!(
+                    config.controllers[ai_seat],
+                    SeatController::Ai {
+                        budget: Some(AI_GATE_BUDGET)
+                    }
+                );
+                let human_handicap = config
+                    .handicaps
+                    .as_ref()
+                    .and_then(|handicaps| handicaps.get(human_seat))
+                    .copied()
+                    .unwrap_or(HUMAN_HANDICAP);
                 assert_eq!(human_handicap, HUMAN_HANDICAP);
                 assert_eq!(deck_at(config, human_seat).len(), DECK_SIZE as usize);
             }
             // The greedy seat's deck is the same at both tiers; only the AI seat's differs.
             assert_eq!(deck_at(&easy, human_seat), deck_at(&tutorial, human_seat));
 
-            assert_eq!(tutorial.handicaps.as_ref().and_then(|handicaps| handicaps.get(ai_seat)).copied(), Some(AI_TUTORIAL));
+            assert_eq!(
+                tutorial
+                    .handicaps
+                    .as_ref()
+                    .and_then(|handicaps| handicaps.get(ai_seat))
+                    .copied(),
+                Some(AI_TUTORIAL)
+            );
             assert_eq!(deck_at(&tutorial, ai_seat).len(), AI_TUTORIAL.deck_size as usize);
             assert_eq!(
                 *deck_at(&tutorial, ai_seat),
                 build_ai_deck(
                     &mut create_rng(&format!("{}:deck:{ai_seat}", tutorial.seed), 0),
                     AI_TUTORIAL.deck_size,
-                    &AiDeckOptions { mana_cap: Some(AI_TUTORIAL.mana_cap), ..Default::default() },
+                    &AiDeckOptions {
+                        mana_cap: Some(AI_TUTORIAL.mana_cap),
+                        ..Default::default()
+                    },
                 )
             );
-            let easy_ai_handicap =
-                easy.handicaps.as_ref().and_then(|handicaps| handicaps.get(ai_seat)).copied().unwrap_or(HUMAN_HANDICAP);
+            let easy_ai_handicap = easy
+                .handicaps
+                .as_ref()
+                .and_then(|handicaps| handicaps.get(ai_seat))
+                .copied()
+                .unwrap_or(HUMAN_HANDICAP);
             assert_eq!(easy_ai_handicap, AI_DIFFICULTY.easy);
             assert_eq!(deck_at(&easy, ai_seat).len(), DECK_SIZE as usize);
         }
@@ -263,7 +308,8 @@ mod r290_the_tutorial_tier_by_play {
 
     /// R290 the greedy baseline at a human's resources beats the AI at AI_TUTORIAL in at least 6 of 13 games
     #[test]
-    fn r290_the_greedy_baseline_at_a_humans_resources_beats_the_ai_at_ai_tutorial_in_at_least_6_of_13_games() {
+    fn r290_the_greedy_baseline_at_a_humans_resources_beats_the_ai_at_ai_tutorial_in_at_least_6_of_13_games()
+    {
         let games = run(Tier::Tutorial);
         assert_eq!(games.len() as i32, TUTORIAL_TIER.tutorial_games);
         let wins = wins_of(games, None);
@@ -275,12 +321,17 @@ mod r290_the_tutorial_tier_by_play {
             games.len(),
             TUTORIAL_TIER.greedy_wins_vs_tutorial
         );
-        assert!(wins >= TUTORIAL_TIER.greedy_wins_vs_tutorial, "not won: {}", not_won(games));
+        assert!(
+            wins >= TUTORIAL_TIER.greedy_wins_vs_tutorial,
+            "not won: {}",
+            not_won(games)
+        );
     }
 
     /// R290 on seeds 1–8 the same greedy wins more games against AI_TUTORIAL than against Easy, by at least 1
     #[test]
-    fn r290_on_seeds_1_8_the_same_greedy_wins_more_games_against_ai_tutorial_than_against_easy_by_at_least_1() {
+    fn r290_on_seeds_1_8_the_same_greedy_wins_more_games_against_ai_tutorial_than_against_easy_by_at_least_1()
+    {
         let easy_games = run(Tier::Easy);
         assert_eq!(easy_games.len() as i32, TUTORIAL_TIER.easy_games);
         let tutorial = wins_of(run(Tier::Tutorial), Some(TUTORIAL_TIER.easy_games));
@@ -299,7 +350,8 @@ mod r290_the_tutorial_tier_by_play {
 
     /// R290 every game at either tier is clean: nothing rejected or thrown, no fallback, a result, and a replay that matches
     #[test]
-    fn r290_every_game_at_either_tier_is_clean_nothing_rejected_or_thrown_no_fallback_a_result_and_a_replay_that_matches() {
+    fn r290_every_game_at_either_tier_is_clean_nothing_rejected_or_thrown_no_fallback_a_result_and_a_replay_that_matches()
+     {
         for tier in [Tier::Tutorial, Tier::Easy] {
             let games = run(tier);
             assert_eq!(games.len() as i32, tier_games(tier), "{}", tier.name());

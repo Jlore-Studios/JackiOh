@@ -43,7 +43,9 @@ pub struct CatalogEntry {
 }
 
 fn is_entry(value: &Value) -> bool {
-    let Some(row) = value.as_object() else { return false };
+    let Some(row) = value.as_object() else {
+        return false;
+    };
     let text = |key: &str| row.get(key).is_some_and(Value::is_string);
     text("id")
         && text("index")
@@ -69,7 +71,12 @@ fn entry_of(value: &Value) -> CatalogEntry {
         type_: text("type"),
         tags: value["tags"]
             .as_array()
-            .map(|tags| tags.iter().filter_map(Value::as_str).map(str::to_string).collect())
+            .map(|tags| {
+                tags.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_string)
+                    .collect()
+            })
             .unwrap_or_default(),
         rarity: text("rarity"),
         token: value["token"].as_bool().unwrap_or(false),
@@ -91,7 +98,9 @@ fn catalog_rows(parsed: &Value, text: &str, path: &str) -> Result<Option<Vec<Val
     if let Some(rows) = parsed.as_array() {
         return Ok(Some(rows.clone()));
     }
-    let Some(object) = parsed.as_object() else { return Ok(None) };
+    let Some(object) = parsed.as_object() else {
+        return Ok(None);
+    };
 
     if let Some(wrapped) = object.get("cards").and_then(Value::as_array) {
         return Ok(Some(wrapped.clone()));
@@ -164,7 +173,11 @@ pub async fn seed_catalog(
     Ok(written)
 }
 
-async fn write_catalog(client: &mut PgConnection, catalog_version: &str, entries: &[CatalogEntry]) -> Result<usize> {
+async fn write_catalog(
+    client: &mut PgConnection,
+    catalog_version: &str,
+    entries: &[CatalogEntry],
+) -> Result<usize> {
     // One transaction: either the whole catalog version is present or none of it is, so a queue or
     // save request can never see half a catalog (§9.4, "stale catalog version is rejected"). An
     // error drops `tx` uncommitted, which rolls it back.
@@ -215,7 +228,9 @@ async fn write_catalog(client: &mut PgConnection, catalog_version: &str, entries
 pub async fn run(args: Vec<String>) -> Result<()> {
     let connection_string = std::env::var("DATABASE_URL").unwrap_or_default();
     if connection_string.is_empty() {
-        return Err(anyhow!("DATABASE_URL is not set (see docs/architecture.md, env-var contract)."));
+        return Err(anyhow!(
+            "DATABASE_URL is not set (see docs/architecture.md, env-var contract)."
+        ));
     }
     let configured = std::env::var("CATALOG_VERSION").unwrap_or_default();
 
@@ -229,7 +244,10 @@ pub async fn run(args: Vec<String>) -> Result<()> {
                      so nothing is seeded: set CATALOG_VERSION={compiled}, or leave it unset."
                 ));
             }
-            (compiled.to_string(), parse_catalog(jackioh_cards::catalog_json(), COMPILED_CATALOG)?)
+            (
+                compiled.to_string(),
+                parse_catalog(jackioh_cards::catalog_json(), COMPILED_CATALOG)?,
+            )
         }
         Some(path) => {
             if configured.is_empty() {
@@ -245,4 +263,3 @@ pub async fn run(args: Vec<String>) -> Result<()> {
     println!("seed-catalog: wrote {count} cards at catalog version {catalog_version}");
     Ok(())
 }
-

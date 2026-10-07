@@ -174,15 +174,30 @@ fn resolving_self(state: &mut GameState, def_id: &str, player: PlayerId) -> Card
 
 /// TS `run(state, effects, { controller, self })`: the effects applied in order through one context on
 /// a fresh sink over `state`; its events. Like TS's, the rng is not written back.
-fn run(state: &mut GameState, effects: Vec<Effect>, controller: Option<PlayerId>, self_: Option<&CardInstance>) -> Vec<GameEvent> {
+fn run(
+    state: &mut GameState,
+    effects: Vec<Effect>,
+    controller: Option<PlayerId>,
+    self_: Option<&CardInstance>,
+) -> Vec<GameEvent> {
     // TS passed the live object; here the card as it stands now.
-    let self_: Option<CardInstance> =
-        self_.map(|card| find_instance(&*state, &card.id).cloned().unwrap_or_else(|| card.clone()));
+    let self_: Option<CardInstance> = self_.map(|card| {
+        find_instance(&*state, &card.id)
+            .cloned()
+            .unwrap_or_else(|| card.clone())
+    });
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     {
         let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(&mut sink, self_.as_ref(), HookOptions { controller, ..Default::default() });
+        let mut ctx = make_context(
+            &mut sink,
+            self_.as_ref(),
+            HookOptions {
+                controller,
+                ..Default::default()
+            },
+        );
         for effect in &effects {
             (effect.apply)(&mut ctx);
         }
@@ -198,7 +213,11 @@ fn must<T>(value: Option<T>, what: &str) -> T {
 }
 
 fn hand_defs(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|card| card.def_id.clone()).collect()
+    state.players[player]
+        .hand
+        .iter()
+        .map(|card| card.def_id.clone())
+        .collect()
 }
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {
@@ -215,7 +234,10 @@ fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
 
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
     match serde_json::to_value(events).expect("events serialise") {
-        Value::Array(items) => items.into_iter().map(|item| item.get(key).cloned().unwrap_or(Value::Null)).collect(),
+        Value::Array(items) => items
+            .into_iter()
+            .map(|item| item.get(key).cloned().unwrap_or(Value::Null))
+            .collect(),
         other => panic!("expected a list of events, got {other}"),
     }
 }
@@ -235,11 +257,23 @@ mod add_to_hand_moves_an_existing_card_51_72 {
     #[test]
     fn moves_a_library_card_and_a_graveyard_card_into_the_hand_leaving_no_copy_behind() {
         let mut state = game("move-to-hand");
-        let from_library = set_library(&mut state, PlayerId::P1, &[alpha().id, beta().id]).into_iter().next();
+        let from_library = set_library(&mut state, PlayerId::P1, &[alpha().id, beta().id])
+            .into_iter()
+            .next();
         let library = must(from_library, "the library card");
 
-        let mut buried = must(in_hand(&mut state, &gamma().id, PlayerId::P1, 1).into_iter().next(), "the graveyard card");
-        move_to_zone(&mut state, &mut buried, OffFieldZone::Graveyard, Default::default());
+        let mut buried = must(
+            in_hand(&mut state, &gamma().id, PlayerId::P1, 1)
+                .into_iter()
+                .next(),
+            "the graveyard card",
+        );
+        move_to_zone(
+            &mut state,
+            &mut buried,
+            OffFieldZone::Graveyard,
+            Default::default(),
+        );
 
         // §10.6: a Discover's pick arrives in `ctx.targets`, which is what `{ of: "chosen" }` reads.
         let self_ = resolving_self(&mut state, &generator().id, PlayerId::P1);
@@ -263,14 +297,27 @@ mod add_to_hand_moves_an_existing_card_51_72 {
         );
 
         // One instance each, in the hand and nowhere else: a move, not a copy.
-        assert_eq!(ids(&state.players[PlayerId::P1].hand), vec![library.id.clone(), buried.id.clone()]);
+        assert_eq!(
+            ids(&state.players[PlayerId::P1].hand),
+            vec![library.id.clone(), buried.id.clone()]
+        );
         assert_eq!(
             ids(&state.players[PlayerId::P1].library),
-            vec![must(state.players[PlayerId::P1].library.first(), "the untouched library card").id.clone()]
+            vec![
+                must(
+                    state.players[PlayerId::P1].library.first(),
+                    "the untouched library card"
+                )
+                .id
+                .clone()
+            ]
         );
         assert_eq!(state.players[PlayerId::P1].library.len(), 1);
         assert_eq!(state.players[PlayerId::P1].graveyard.len(), 0);
-        assert_eq!(live(&state, &library.id).zone, Zone::Hand { player: PlayerId::P1 });
+        assert_eq!(
+            live(&state, &library.id).zone,
+            Zone::Hand { player: PlayerId::P1 }
+        );
         assert_eq!(live(&state, &buried.id).zone, Zone::Hand { player: PlayerId::P1 });
         assert_eq!(
             pluck(&events_of_type(&moved, GameEventType::AddedToHand), "instanceId"),
@@ -282,7 +329,12 @@ mod add_to_hand_moves_an_existing_card_51_72 {
     #[test]
     fn does_nothing_when_the_instance_it_names_is_already_in_a_hand() {
         let mut state = game("already-in-hand");
-        let held = must(in_hand(&mut state, &alpha().id, PlayerId::P1, 1).into_iter().next(), "the held card");
+        let held = must(
+            in_hand(&mut state, &alpha().id, PlayerId::P1, 1)
+                .into_iter()
+                .next(),
+            "the held card",
+        );
 
         let events = run(
             &mut state,
@@ -299,15 +351,21 @@ mod add_to_hand_moves_an_existing_card_51_72 {
     #[test]
     fn r65_cost_mod_adds_to_the_instance_s_cost_mod_while_cost_override_replaces_the_printed_cost() {
         let mut state = game("cost-riders");
-        let library_card = set_library(&mut state, PlayerId::P1, &[pricey().id]).into_iter().next();
+        let library_card = set_library(&mut state, PlayerId::P1, &[pricey().id])
+            .into_iter()
+            .next();
         let carried = must(library_card, "the library card");
         // Something already discounted this card; the verb must stack with it, not clobber it.
-        find_instance_mut(&mut state, &carried.id).expect("the card is in the state").cost_mod = -2;
+        find_instance_mut(&mut state, &carried.id)
+            .expect("the card is in the state")
+            .cost_mod = -2;
 
         run(
             &mut state,
             vec![
-                add_to_hand(json_as(json!({ "instance": instance(&carried.id), "costMod": -1 }))),
+                add_to_hand(json_as(
+                    json!({ "instance": instance(&carried.id), "costMod": -1 }),
+                )),
                 add_to_hand(json_as(json!({ "defId": pricey().id, "costMod": -1 }))),
                 add_to_hand(json_as(json!({ "defId": pricey().id, "costOverride": 1 }))),
             ],
@@ -339,7 +397,9 @@ mod add_to_hand_moves_an_existing_card_51_72 {
     #[test]
     fn r4_a_moved_card_added_to_a_full_hand_is_burned_instead() {
         let mut state = game("move-into-full-hand");
-        let library_card = set_library(&mut state, PlayerId::P1, &[alpha().id]).into_iter().next();
+        let library_card = set_library(&mut state, PlayerId::P1, &[alpha().id])
+            .into_iter()
+            .next();
         let card = must(library_card, "the library card");
         in_hand(&mut state, &beta().id, PlayerId::P1, HAND_CAP);
 
@@ -353,7 +413,10 @@ mod add_to_hand_moves_an_existing_card_51_72 {
         assert_eq!(state.players[PlayerId::P1].hand.len(), HAND_CAP as usize);
         assert_eq!(state.players[PlayerId::P1].library.len(), 0);
         assert_eq!(ids(&state.players[PlayerId::P1].graveyard), vec![card.id.clone()]);
-        assert_eq!(pluck(&events_of_type(&events, GameEventType::Burned), "instanceId"), vec![json!(card.id)]);
+        assert_eq!(
+            pluck(&events_of_type(&events, GameEventType::Burned), "instanceId"),
+            vec![json!(card.id)]
+        );
         assert_eq!(events_of_type(&events, GameEventType::AddedToHand).len(), 0);
     }
 }
@@ -374,7 +437,9 @@ mod add_random_from_catalog_54_57_59 {
         let self_ = resolving_self(&mut state, &pool_a().id, PlayerId::P1);
         run(
             &mut state,
-            vec![add_random_from_catalog(json_as(json!({ "query": { "set": "Boss" }, "count": 4 })))],
+            vec![add_random_from_catalog(json_as(
+                json!({ "query": { "set": "Boss" }, "count": 4 }),
+            ))],
             Some(PlayerId::P1),
             Some(&self_),
         );
@@ -389,7 +454,9 @@ mod add_random_from_catalog_54_57_59 {
         let other_self = resolving_self(&mut other, &pool_b().id, PlayerId::P1);
         run(
             &mut other,
-            vec![add_random_from_catalog(json_as(json!({ "query": { "set": "Boss" }, "count": 4 })))],
+            vec![add_random_from_catalog(json_as(
+                json!({ "query": { "set": "Boss" }, "count": 4 }),
+            ))],
             Some(PlayerId::P1),
             Some(&other_self),
         );
@@ -405,20 +472,30 @@ mod add_random_from_catalog_54_57_59 {
         // A one-card pool drawn three times gives three cards: with replacement, per #57's engine cell.
         run(
             &mut state,
-            vec![add_random_from_catalog(json_as(json!({ "query": { "set": "Boss-X" }, "count": 3 })))],
+            vec![add_random_from_catalog(json_as(
+                json!({ "query": { "set": "Boss-X" }, "count": 3 }),
+            ))],
             Some(PlayerId::P1),
             Some(&self_),
         );
-        assert_eq!(hand_defs(&state, PlayerId::P1), vec![solo().id, solo().id, solo().id]);
+        assert_eq!(
+            hand_defs(&state, PlayerId::P1),
+            vec![solo().id, solo().id, solo().id]
+        );
 
         // The same pool through §6.3's Discover row offers one option, not three: without replacement.
         let events = run(
             &mut state,
-            vec![discover_from_catalog(json_as(json!({ "step": "pick", "query": { "set": "Boss-X" }, "count": 3 })))],
+            vec![discover_from_catalog(json_as(
+                json!({ "step": "pick", "query": { "set": "Boss-X" }, "count": 3 }),
+            ))],
             Some(PlayerId::P1),
             Some(&self_),
         );
-        assert_eq!(must(state.pending.as_ref(), "the discover prompt").options.len(), 1);
+        assert_eq!(
+            must(state.pending.as_ref(), "the discover prompt").options.len(),
+            1
+        );
         assert_eq!(events_of_type(&events, GameEventType::PromptOpened).len(), 1);
     }
 
@@ -451,7 +528,9 @@ mod add_random_from_catalog_54_57_59 {
         let self_ = resolving_self(&mut state, &generator().id, PlayerId::P1);
         let events = run(
             &mut state,
-            vec![add_random_from_catalog(json_as(json!({ "query": { "set": "Classic" }, "count": 3 })))],
+            vec![add_random_from_catalog(json_as(
+                json!({ "query": { "set": "Classic" }, "count": 3 }),
+            ))],
             Some(PlayerId::P1),
             Some(&self_),
         );
@@ -515,7 +594,9 @@ mod exile_random_from_library_34_42 {
 
         run(
             &mut state,
-            vec![exile_random_from_library(json_as(json!({ "count": 1, "player": "enemy" })))],
+            vec![exile_random_from_library(json_as(
+                json!({ "count": 1, "player": "enemy" }),
+            ))],
             Some(PlayerId::P1),
             None,
         );
@@ -532,15 +613,24 @@ mod exile_random_from_library_34_42 {
         let mut state = game("exile-random-short");
         set_library(&mut state, PlayerId::P1, &[alpha().id, beta().id]);
 
-        run(&mut state, vec![exile_random_from_library(json_as(json!({ "count": 8 })))], Some(PlayerId::P1), None);
+        run(
+            &mut state,
+            vec![exile_random_from_library(json_as(json!({ "count": 8 })))],
+            Some(PlayerId::P1),
+            None,
+        );
 
         assert_eq!(state.players[PlayerId::P1].library.len(), 0);
         assert_eq!(state.players[PlayerId::P1].exile.len(), 2);
         assert_eq!(state.counters.exiled, 2);
 
         // An empty library fizzles rather than throwing, and the card still resolves (§6.3).
-        let again =
-            run(&mut state, vec![exile_random_from_library(json_as(json!({ "count": 8 })))], Some(PlayerId::P1), None);
+        let again = run(
+            &mut state,
+            vec![exile_random_from_library(json_as(json!({ "count": 8 })))],
+            Some(PlayerId::P1),
+            None,
+        );
         assert_eq!(again, Vec::<GameEvent>::new());
         assert_eq!(state.counters.exiled, 2);
     }
@@ -548,11 +638,19 @@ mod exile_random_from_library_34_42 {
     #[test]
     fn r11_a_unit_token_library_card_ceases_to_exist_instead_of_reaching_the_exile_pile() {
         let mut state = game("exile-random-token");
-        let library = set_library(&mut state, PlayerId::P1, &[unit_token().id, alpha().id, beta().id]);
+        let library = set_library(
+            &mut state,
+            PlayerId::P1,
+            &[unit_token().id, alpha().id, beta().id],
+        );
         let token = must(library.first().cloned(), "the token card");
 
-        let events =
-            run(&mut state, vec![exile_random_from_library(json_as(json!({ "count": 3 })))], Some(PlayerId::P1), None);
+        let events = run(
+            &mut state,
+            vec![exile_random_from_library(json_as(json!({ "count": 3 })))],
+            Some(PlayerId::P1),
+            None,
+        );
 
         assert_eq!(state.players[PlayerId::P1].library.len(), 0);
         // R11/R86: it is in no pile and its zone says so. (The zone half, `{ z: "gone" }` on TS's live
@@ -589,11 +687,22 @@ mod exile_bottom_of_library_40_65 {
             None,
         );
         assert_eq!(ids(&state.players[PlayerId::P1].exile), vec![bottom.clone()]);
-        assert_eq!(ids(&state.players[PlayerId::P1].library), vec![top.clone(), middle.clone()]);
-        assert_eq!(pluck(&events_of_type(&events, GameEventType::Exiled), "instanceId"), vec![json!(bottom)]);
+        assert_eq!(
+            ids(&state.players[PlayerId::P1].library),
+            vec![top.clone(), middle.clone()]
+        );
+        assert_eq!(
+            pluck(&events_of_type(&events, GameEventType::Exiled), "instanceId"),
+            vec![json!(bottom)]
+        );
 
         // Again: bottom-upward, so the new bottom goes next and the top is still untouched.
-        run(&mut state, vec![exile_bottom_of_library(json_as(json!({ "player": "self" })))], Some(PlayerId::P1), None);
+        run(
+            &mut state,
+            vec![exile_bottom_of_library(json_as(json!({ "player": "self" })))],
+            Some(PlayerId::P1),
+            None,
+        );
         assert_eq!(ids(&state.players[PlayerId::P1].exile), vec![bottom, middle]);
         assert_eq!(ids(&state.players[PlayerId::P1].library), vec![top]);
         assert_eq!(state.counters.exiled, 2);
@@ -629,7 +738,12 @@ mod exile_bottom_of_library_40_65 {
         let library = set_library(&mut state, PlayerId::P1, &[alpha().id, unit_token().id]);
         let token = must(library.get(1).cloned(), "the token at the bottom");
 
-        run(&mut state, vec![exile_bottom_of_library(json_as(json!({ "player": "self" })))], Some(PlayerId::P1), None);
+        run(
+            &mut state,
+            vec![exile_bottom_of_library(json_as(json!({ "player": "self" })))],
+            Some(PlayerId::P1),
+            None,
+        );
 
         // TS: `token.zone` is `{ z: "gone", player: "p1" }`. A card that is gone is in no pile, so it is
         // no longer reachable from the state (`.fullsend/notes/spec-gaps-part-24-3.md`).
@@ -706,10 +820,16 @@ mod discover_from_library_51_ky_s_private_tutor {
         let pending = must(state.pending.clone(), "the discover prompt");
         assert_eq!(pending.kind, PromptKind::Discover);
         assert_eq!(pending.player_id, PlayerId::P1);
-        assert_eq!(pending.prompt, "Reveal 3 cards from your library; choose one to add to your hand");
+        assert_eq!(
+            pending.prompt,
+            "Reveal 3 cards from your library; choose one to add to your hand"
+        );
         // Only the cost-2 Spell matches: the cost-5 Spell is out of the bracket, the X Spell reads 0
         // (R65), and no Trap, Field Trap, Field Spell or Unit is a Spell.
-        assert_eq!(offered_ids(&state), vec![must(library.first(), "the cost-2 spell").id.clone()]);
+        assert_eq!(
+            offered_ids(&state),
+            vec![must(library.first(), "the cost-2 spell").id.clone()]
+        );
         assert_eq!(pending.min, 1);
         assert_eq!(pending.max, 1);
         assert_eq!(pending.resume.step, "take");
@@ -733,7 +853,10 @@ mod discover_from_library_51_ky_s_private_tutor {
             Some(PlayerId::P1),
             Some(&self_),
         );
-        assert_eq!(offered_ids(&zero_bracket), vec![must(library.get(2), "the X-cost spell").id.clone()]);
+        assert_eq!(
+            offered_ids(&zero_bracket),
+            vec![must(library.get(2), "the X-cost spell").id.clone()]
+        );
 
         let mut high_bracket = game("discover-library-4plus");
         let other = tutor_library(&mut high_bracket);
@@ -746,7 +869,10 @@ mod discover_from_library_51_ky_s_private_tutor {
             Some(PlayerId::P1),
             Some(&self_),
         );
-        assert_eq!(offered_ids(&high_bracket), vec![must(other.get(1), "the cost-5 spell").id.clone()]);
+        assert_eq!(
+            offered_ids(&high_bracket),
+            vec![must(other.get(1), "the cost-5 spell").id.clone()]
+        );
     }
 
     /// TS: "#51 a Field Trap counts as a Trap for type matching".
@@ -758,7 +884,9 @@ mod discover_from_library_51_ky_s_private_tutor {
 
         run(
             &mut state,
-            vec![discover_from_library(json_as(json!({ "step": "take", "count": 3, "filter": { "type": "Trap" } })))],
+            vec![discover_from_library(json_as(
+                json!({ "step": "take", "count": 3, "filter": { "type": "Trap" } }),
+            ))],
             Some(PlayerId::P1),
             Some(&self_),
         );
@@ -778,18 +906,27 @@ mod discover_from_library_51_ky_s_private_tutor {
             Some(PlayerId::P1),
             Some(&self_),
         );
-        assert_eq!(offered_ids(&narrow), vec![must(narrow_library.get(4), "the field trap").id.clone()]);
+        assert_eq!(
+            offered_ids(&narrow),
+            vec![must(narrow_library.get(4), "the field trap").id.clone()]
+        );
     }
 
     #[test]
     fn r60_reveals_count_different_cards_drawn_without_replacement() {
         let mut state = game("discover-library-distinct");
-        set_library(&mut state, PlayerId::P1, &[alpha().id, alpha().id, beta().id, beta().id, gamma().id]);
+        set_library(
+            &mut state,
+            PlayerId::P1,
+            &[alpha().id, alpha().id, beta().id, beta().id, gamma().id],
+        );
         let self_ = resolving_self(&mut state, &generator().id, PlayerId::P1);
 
         run(
             &mut state,
-            vec![discover_from_library(json_as(json!({ "step": "take", "count": 3, "filter": { "type": "Unit" } })))],
+            vec![discover_from_library(json_as(
+                json!({ "step": "take", "count": 3, "filter": { "type": "Unit" } }),
+            ))],
             Some(PlayerId::P1),
             Some(&self_),
         );
@@ -811,7 +948,9 @@ mod discover_from_library_51_ky_s_private_tutor {
 
         let events = run(
             &mut state,
-            vec![discover_from_library(json_as(json!({ "step": "take", "filter": { "type": "Field Spell" } })))],
+            vec![discover_from_library(json_as(
+                json!({ "step": "take", "filter": { "type": "Field Spell" } }),
+            ))],
             Some(PlayerId::P1),
             Some(&self_),
         );
@@ -823,7 +962,12 @@ mod discover_from_library_51_ky_s_private_tutor {
         // An empty library is the same fizzle, which is the branch #51 answers with its Notebook.
         set_library(&mut state, PlayerId::P1, &[] as &[&str]);
         assert_eq!(
-            run(&mut state, vec![discover_from_library(json_as(json!({ "step": "take" })))], Some(PlayerId::P1), None),
+            run(
+                &mut state,
+                vec![discover_from_library(json_as(json!({ "step": "take" })))],
+                Some(PlayerId::P1),
+                None
+            ),
             Vec::<GameEvent>::new()
         );
         assert!(state.pending.is_none());
@@ -848,6 +992,9 @@ mod discover_from_library_51_ky_s_private_tutor {
 
         let pending = must(state.pending.as_ref(), "the discover prompt");
         assert_eq!(pending.player_id, PlayerId::P1);
-        assert_eq!(offered_ids(&state), vec![must(theirs.first(), "their spell").id.clone()]);
+        assert_eq!(
+            offered_ids(&state),
+            vec![must(theirs.first(), "their spell").id.clone()]
+        );
     }
 }

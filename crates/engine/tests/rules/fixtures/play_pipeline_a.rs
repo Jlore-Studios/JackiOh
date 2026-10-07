@@ -147,8 +147,18 @@ pub static PA: LazyLock<Pa> = LazyLock::new(|| Pa {
     hidden_trap: def(5013, "hidden-trap", "Trap", json!({})),
     hidden_field_trap: def(5014, "hidden-field-trap", "Field Trap", json!({})),
     joro: def(5015, "joro", "Unit", json!({ "attack": 1, "health": 3 })),
-    ghost: def(5016, "ghost", "Unit", json!({ "cost": 2, "attack": 5, "health": 6 })),
-    immune: def(5017, "immune", "Unit", json!({ "keywords": [{ "kind": "Immune to Spells" }] })),
+    ghost: def(
+        5016,
+        "ghost",
+        "Unit",
+        json!({ "cost": 2, "attack": 5, "health": 6 }),
+    ),
+    immune: def(
+        5017,
+        "immune",
+        "Unit",
+        json!({ "keywords": [{ "kind": "Immune to Spells" }] }),
+    ),
     chooser: def(5018, "chooser", "Spell", json!({ "cost": 1 })),
     echo_bolt: def(5019, "echo-bolt", "Spell", json!({ "cost": 1 })),
     grave_raiser: def(5020, "grave-raiser", "Spell", json!({ "cost": 1 })),
@@ -220,7 +230,9 @@ pub static PA_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
 
 /// `{ of: "instance", instanceId }` aimed at the announced play.
 fn counter_instance(instance_id: &str) -> Effect {
-    effects::counter_play(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+    effects::counter_play(json_as(
+        json!({ "target": { "of": "instance", "instanceId": instance_id } }),
+    ))
 }
 
 /// The trigger every counter Trap here shares: an opponent's `cardAnnounced`, with `when` (R99).
@@ -256,14 +268,18 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
             base: Script {
                 targets: any_target(),
                 cry: Some(hook(|_ctx| {
-                    vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 2 })))]
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "chosen" }, "amount": 2 }),
+                    ))]
                 })),
                 ..Script::default()
             },
             radiant: Script {
                 targets: any_target(),
                 cry: Some(hook(|_ctx| {
-                    vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 4 })))]
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "chosen" }, "amount": 4 }),
+                    ))]
                 })),
                 ..Script::default()
             },
@@ -273,7 +289,9 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
         pa.ping.id.clone(),
         both(Script {
             cry: Some(hook(|_ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -282,7 +300,9 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
         pa.crier.id.clone(),
         both(Script {
             cry: Some(hook(|_ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 3 })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 3 }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -292,7 +312,9 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
         both(Script {
             targets: vec![TargetDecl::target(1, 1, Value::Null)],
             cry: Some(hook(|_ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "chosen" }, "amount": 1 }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -301,10 +323,14 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
         pa.counter_trap.id.clone(),
         both(Script {
             triggers: vec![
-                TriggerDef::new("counter", &[GameEventType::CardAnnounced], |_ctx, event| match event {
-                    GameEvent::CardAnnounced { instance_id, .. } => vec![counter_instance(instance_id)],
-                    _ => vec![],
-                })
+                TriggerDef::new(
+                    "counter",
+                    &[GameEventType::CardAnnounced],
+                    |_ctx, event| match event {
+                        GameEvent::CardAnnounced { instance_id, .. } => vec![counter_instance(instance_id)],
+                        _ => vec![],
+                    },
+                )
                 .with_when(|ctx, event| announced_by_the_opponent(ctx, event)),
             ],
             ..Script::default()
@@ -326,13 +352,19 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
         pa.exile_trap.id.clone(),
         both(Script {
             triggers: vec![
-                TriggerDef::new("exile", &[GameEventType::CardAnnounced], |_ctx, event| match event {
-                    GameEvent::CardAnnounced { instance_id, .. } => vec![effects::counter_play(json_as(json!({
-                        "to": "exile",
-                        "target": { "of": "instance", "instanceId": instance_id },
-                    })))],
-                    _ => vec![],
-                })
+                TriggerDef::new(
+                    "exile",
+                    &[GameEventType::CardAnnounced],
+                    |_ctx, event| match event {
+                        GameEvent::CardAnnounced { instance_id, .. } => {
+                            vec![effects::counter_play(json_as(json!({
+                                "to": "exile",
+                                "target": { "of": "instance", "instanceId": instance_id },
+                            })))]
+                        }
+                        _ => vec![],
+                    },
+                )
                 .with_when(|ctx, event| {
                     matches!(
                         event,
@@ -364,7 +396,13 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
                     vec![effects::counter_play(Default::default())]
                 })
                 .with_when(|ctx, event| {
-                    let GameEvent::CardAnnounced { player, card_type, targets, .. } = event else {
+                    let GameEvent::CardAnnounced {
+                        player,
+                        card_type,
+                        targets,
+                        ..
+                    } = event
+                    else {
                         return false;
                     };
                     if *player == ctx.controller || *card_type != CardType::Spell {
@@ -391,7 +429,11 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
                 "chalice",
                 &[GameEventType::CardAnnounced],
                 |_ctx, event| match event {
-                    GameEvent::CardAnnounced { cost_paid: 1, instance_id, .. } => {
+                    GameEvent::CardAnnounced {
+                        cost_paid: 1,
+                        instance_id,
+                        ..
+                    } => {
                         vec![counter_instance(instance_id)]
                     }
                     _ => vec![],
@@ -401,11 +443,16 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
         }),
     );
     let palantir = Script {
-        triggers: vec![TriggerDef::new("palantir", &[GameEventType::CardAnnounced], |ctx, event| {
-            match event {
-                GameEvent::CardAnnounced { player, card_type, instance_id, .. }
-                    if *player != ctx.controller && *card_type == CardType::Spell =>
-                {
+        triggers: vec![TriggerDef::new(
+            "palantir",
+            &[GameEventType::CardAnnounced],
+            |ctx, event| match event {
+                GameEvent::CardAnnounced {
+                    player,
+                    card_type,
+                    instance_id,
+                    ..
+                } if *player != ctx.controller && *card_type == CardType::Spell => {
                     vec![effects::choose_mode(json_as(json!({
                         "options": ["steal", "pass"],
                         "step": "decide",
@@ -413,12 +460,15 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
                     })))]
                 }
                 _ => vec![],
-            }
-        })],
+            },
+        )],
         resume: IndexMap::from([(
             "decide",
             hook(|ctx| {
-                if effects::chosen_options(ctx).iter().any(|option| option == "steal") {
+                if effects::chosen_options(ctx)
+                    .iter()
+                    .any(|option| option == "steal")
+                {
                     let stolen = js_string(ctx.data.get("stolen"));
                     vec![
                         effects::sacrifice(json_as(json!({ "target": { "of": "self" } }))),
@@ -438,13 +488,17 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
     table.insert(
         pa.shredder.id.clone(),
         both(Script {
-            triggers: vec![TriggerDef::new("shred", &[GameEventType::CardAnnounced], |ctx, event| {
-                if announced_by_the_opponent(ctx, event) {
-                    vec![effects::discard_hand(json_as(json!({ "player": "enemy" })))]
-                } else {
-                    vec![]
-                }
-            })],
+            triggers: vec![TriggerDef::new(
+                "shred",
+                &[GameEventType::CardAnnounced],
+                |ctx, event| {
+                    if announced_by_the_opponent(ctx, event) {
+                        vec![effects::discard_hand(json_as(json!({ "player": "enemy" })))]
+                    } else {
+                        vec![]
+                    }
+                },
+            )],
             ..Script::default()
         }),
     );
@@ -465,7 +519,9 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
                 by: None,
             }],
             cry: Some(hook(|_ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 5 })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 5 }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -488,7 +544,11 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
             })),
             resume: IndexMap::from([(
                 "hit",
-                hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 2 })))]),
+                hook(|_ctx| {
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "chosen" }, "amount": 2 }),
+                    ))]
+                }),
             )]),
             ..Script::default()
         }),
@@ -502,7 +562,9 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
             }),
             targets: vec![TargetDecl::target(1, 1, Value::Null)],
             cry: Some(hook(|_ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "chosen" }, "amount": 1 }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -534,7 +596,11 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
     table.insert(
         pa.medic.id.clone(),
         both(Script {
-            targets: vec![TargetDecl::target(1, 1, json!({ "of": ["unit", "hero"], "damaged": true }))],
+            targets: vec![TargetDecl::target(
+                1,
+                1,
+                json!({ "of": ["unit", "hero"], "damaged": true }),
+            )],
             cry: Some(hook(|_ctx| vec![])),
             ..Script::default()
         }),
@@ -542,7 +608,11 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
     table.insert(
         pa.plague_hunter.id.clone(),
         both(Script {
-            targets: vec![TargetDecl::target(1, 1, json!({ "of": ["unit", "backrow"], "plague": true }))],
+            targets: vec![TargetDecl::target(
+                1,
+                1,
+                json!({ "of": ["unit", "backrow"], "plague": true }),
+            )],
             cry: Some(hook(|_ctx| vec![])),
             ..Script::default()
         }),
@@ -605,14 +675,18 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
             base: Script {
                 targets: any_target(),
                 cry: Some(hook(|_ctx| {
-                    vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 4 })))]
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "chosen" }, "amount": 4 }),
+                    ))]
                 })),
                 ..Script::default()
             },
             radiant: Script {
                 targets: any_target(),
                 cry: Some(hook(|_ctx| {
-                    vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 8 })))]
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "chosen" }, "amount": 8 }),
+                    ))]
                 })),
                 ..Script::default()
             },
@@ -636,7 +710,9 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
             radiant: Script {
                 targets: any_target(),
                 cry: Some(hook(|_ctx| {
-                    vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 3 })))]
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "chosen" }, "amount": 3 }),
+                    ))]
                 })),
                 ..Script::default()
             },
@@ -648,8 +724,12 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
             targets: vec![TargetDecl::target(2, 2, Value::Null)],
             cry: Some(hook(|_ctx| {
                 vec![
-                    effects::damage(json_as(json!({ "to": { "of": "chosen", "index": 0 }, "amount": 1 }))),
-                    effects::damage(json_as(json!({ "to": { "of": "chosen", "index": 1 }, "amount": 1 }))),
+                    effects::damage(json_as(
+                        json!({ "to": { "of": "chosen", "index": 0 }, "amount": 1 }),
+                    )),
+                    effects::damage(json_as(
+                        json!({ "to": { "of": "chosen", "index": 1 }, "amount": 1 }),
+                    )),
                 ]
             })),
             ..Script::default()
@@ -658,13 +738,19 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
     table.insert(
         pa.watcher.id.clone(),
         both(Script {
-            triggers: vec![TriggerDef::new("watch", &[GameEventType::CardAnnounced], |ctx, event| {
-                if announced_by_the_opponent(ctx, event) {
-                    vec![effects::choose_mode(json_as(json!({ "options": ["noted"], "step": "noted" })))]
-                } else {
-                    vec![]
-                }
-            })],
+            triggers: vec![TriggerDef::new(
+                "watch",
+                &[GameEventType::CardAnnounced],
+                |ctx, event| {
+                    if announced_by_the_opponent(ctx, event) {
+                        vec![effects::choose_mode(json_as(
+                            json!({ "options": ["noted"], "step": "noted" }),
+                        ))]
+                    } else {
+                        vec![]
+                    }
+                },
+            )],
             resume: IndexMap::from([("noted", hook(|_ctx| vec![]))]),
             ..Script::default()
         }),
@@ -705,7 +791,10 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
 
 /// This file's definitions, by id (the brief's `catalog()`).
 pub fn catalog() -> CardDefs {
-    PA_DEFS.iter().map(|card| (card.id.clone(), card.clone())).collect()
+    PA_DEFS
+        .iter()
+        .map(|card| (card.id.clone(), card.clone()))
+        .collect()
 }
 
 /// This file's scripts, by id (the brief's `scripts()`).

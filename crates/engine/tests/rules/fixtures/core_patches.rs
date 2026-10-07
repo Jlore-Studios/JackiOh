@@ -63,8 +63,14 @@ pub static marker: LazyLock<CardDef> = LazyLock::new(|| def("marker", 4403, "Uni
 /// A Trap that watches nothing: a face-down card to mark (R33).
 pub static quiet_trap: LazyLock<CardDef> = LazyLock::new(|| def("quiet-trap", 4404, "Trap", json!({})));
 
-pub static CORE_PATCH_DEFS: LazyLock<Vec<CardDef>> =
-    LazyLock::new(|| vec![counted.clone(), uncounted.clone(), marker.clone(), quiet_trap.clone()]);
+pub static CORE_PATCH_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
+    vec![
+        counted.clone(),
+        uncounted.clone(),
+        marker.clone(),
+        quiet_trap.clone(),
+    ]
+});
 
 pub fn core_patch_catalog() -> CardDefs {
     CORE_PATCH_DEFS
@@ -83,7 +89,11 @@ const HIT: &str = "hit";
 
 fn marker_script() -> Script {
     Script {
-        targets: vec![TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit", "backrow"] }))],
+        targets: vec![TargetDecl::target(
+            1,
+            1,
+            json!({ "side": "enemy", "of": ["unit", "backrow"] }),
+        )],
         cry: Some(hook(|ctx| {
             let Some(Selection::Instance { instance_id }) = ctx.targets.first() else {
                 return vec![];

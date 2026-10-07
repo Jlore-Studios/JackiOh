@@ -84,7 +84,10 @@ pub fn run(_args: Args) -> anyhow::Result<()> {
         let request: Request = match serde_json::from_str(&line) {
             Ok(request) => request,
             Err(error) => {
-                reply(&mut stdout, &json!({ "error": format!("agent: not a request: {error}") }))?;
+                reply(
+                    &mut stdout,
+                    &json!({ "error": format!("agent: not a request: {error}") }),
+                )?;
                 continue;
             }
         };
@@ -92,7 +95,10 @@ pub fn run(_args: Args) -> anyhow::Result<()> {
             "info" => reply(&mut stdout, &serde_json::to_value(own_info())?)?,
             "decide" => reply(&mut stdout, &answer_decide(request))?,
             "quit" => break,
-            other => reply(&mut stdout, &json!({ "error": format!("agent: unknown op \"{other}\"") }))?,
+            other => reply(
+                &mut stdout,
+                &json!({ "error": format!("agent: unknown op \"{other}\"") }),
+            )?,
         }
     }
     Ok(())
@@ -196,7 +202,8 @@ mod tests {
 
     #[test]
     fn a_decide_without_a_state_is_answered_with_an_error() {
-        let request: Request = serde_json::from_str(r#"{"op":"decide","seat":"p1","rngSeed":"s","rngCursor":0}"#).unwrap();
+        let request: Request =
+            serde_json::from_str(r#"{"op":"decide","seat":"p1","rngSeed":"s","rngCursor":0}"#).unwrap();
         let answer = answer_decide(request);
         assert_eq!(answer["error"], json!("agent: decide needs a state"));
     }

@@ -54,7 +54,10 @@ fn best_first_lines(mut lines: Vec<Line>) -> Vec<Line> {
 /// The first `width` candidates that are not endTurn, plus endTurn when it is legal.
 fn expansion(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody> {
     let candidates = candidate_actions(state, seat);
-    let end = candidates.iter().find(|action| matches!(action, ActionBody::EndTurn)).cloned();
+    let end = candidates
+        .iter()
+        .find(|action| matches!(action, ActionBody::EndTurn))
+        .cloned();
     let mut moves: Vec<ActionBody> = candidates
         .into_iter()
         .filter(|action| !matches!(action, ActionBody::EndTurn))
@@ -72,7 +75,12 @@ fn expansion(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody>
 /// terminalScore; the best beamWidth open children (stable) form the next frontier. The loop stops at
 /// maxDepth (open lines are closed by terminalScore) or when the counter refuses. Returns complete
 /// lines, best first.
-pub fn beam_search(det: &GameState, seat: PlayerId, counter: &dyn NodeCounter, budget: SearchBudget) -> Vec<Line> {
+pub fn beam_search(
+    det: &GameState,
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+    budget: SearchBudget,
+) -> Vec<Line> {
     let root_turn = det.turn;
     let mut complete: Vec<Line> = Vec::new();
     let mut frontier: Vec<OpenLine> = vec![OpenLine {
@@ -87,7 +95,11 @@ pub fn beam_search(det: &GameState, seat: PlayerId, counter: &dyn NodeCounter, b
     while depth < budget.max_depth && !frontier.is_empty() {
         let mut children: Vec<OpenLine> = Vec::new();
         let mut seen: IndexSet<String> = IndexSet::new();
-        let width = if depth == 0 { budget.root_branching } else { budget.branching };
+        let width = if depth == 0 {
+            budget.root_branching
+        } else {
+            budget.branching
+        };
 
         for line in &frontier {
             if stopped {
@@ -108,7 +120,12 @@ pub fn beam_search(det: &GameState, seat: PlayerId, counter: &dyn NodeCounter, b
                 let status = line_status(&next, seat, root_turn);
                 if status != LineStatus::Open {
                     let score = static_score(&next, seat, root_turn);
-                    complete.push(Line { actions, score, status, end: next });
+                    complete.push(Line {
+                        actions,
+                        score,
+                        status,
+                        end: next,
+                    });
                     continue;
                 }
                 // Two orders of the same moves reach the same position: keep the first, which ranks higher.
@@ -118,7 +135,11 @@ pub fn beam_search(det: &GameState, seat: PlayerId, counter: &dyn NodeCounter, b
                 }
                 seen.insert(signature);
                 let score = evaluate(&next, seat, NextSwing::Enemy, &AI_EVAL);
-                children.push(OpenLine { state: next, actions, score });
+                children.push(OpenLine {
+                    state: next,
+                    actions,
+                    score,
+                });
             }
         }
 
@@ -151,7 +172,12 @@ pub fn beam_search(det: &GameState, seat: PlayerId, counter: &dyn NodeCounter, b
             static_score(&end, seat, root_turn)
         };
         let status = line_status(&end, seat, root_turn);
-        complete.push(Line { actions: line.actions, score, status, end });
+        complete.push(Line {
+            actions: line.actions,
+            score,
+            status,
+            end,
+        });
     }
 
     best_first_lines(complete)
@@ -177,7 +203,10 @@ pub fn score_line(
             break;
         }
         let key = action_key(action);
-        if !candidate_actions(&state, seat).iter().any(|candidate| action_key(candidate) == key) {
+        if !candidate_actions(&state, seat)
+            .iter()
+            .any(|candidate| action_key(candidate) == key)
+        {
             break;
         }
         match simulate(&state, seat, action, counter) {

@@ -206,10 +206,14 @@ mod r673_glitchs_odds {
     #[test]
     fn r674_no_pool_holds_glitch_not_even_one_that_takes_every_token_naming_it_by_id_still_finds_it() {
         game("pools");
-        let ids = |body: Value| -> Vec<String> { catalog_query(body).into_iter().map(|def| def.id).collect() };
+        let ids =
+            |body: Value| -> Vec<String> { catalog_query(body).into_iter().map(|def| def.id).collect() };
         assert!(!ids(json!({ "withTokens": true })).contains(&GLITCH_DEF_ID.to_string()));
         assert!(!ids(json!({ "tags": ["Token"] })).contains(&GLITCH_DEF_ID.to_string()));
-        assert_eq!(ids(json!({ "defId": GLITCH_DEF_ID })), vec![GLITCH_DEF_ID.to_string()]);
+        assert_eq!(
+            ids(json!({ "defId": GLITCH_DEF_ID })),
+            vec![GLITCH_DEF_ID.to_string()]
+        );
     }
 }
 
@@ -253,7 +257,10 @@ mod r676_glitchs_outcome_and_the_reset {
                 .map(json_of)
                 .filter(|event| event["type"] == json!("glitched"))
                 .collect();
-            assert_eq!(glitched, vec![json!({ "type": "glitched", "player": "p1", "outcome": outcome })]);
+            assert_eq!(
+                glitched,
+                vec![json!({ "type": "glitched", "player": "p1", "outcome": outcome })]
+            );
         }
     }
 
@@ -278,10 +285,27 @@ mod r676_glitchs_outcome_and_the_reset {
         assert_eq!(state.resets, Some(1));
         assert_eq!(state.opening, before.opening);
         assert!(state.applied.iter().any(|entry| entry.nonce == "glitch"));
-        let dealt: Vec<&CardInstance> = state.players.p1.hand.iter().chain(state.players.p1.library.iter()).collect();
-        assert_eq!(dealt.len(), before.opening.as_ref().map(|opening| opening.decks.0.len()).unwrap_or(0));
+        let dealt: Vec<&CardInstance> = state
+            .players
+            .p1
+            .hand
+            .iter()
+            .chain(state.players.p1.library.iter())
+            .collect();
+        assert_eq!(
+            dealt.len(),
+            before
+                .opening
+                .as_ref()
+                .map(|opening| opening.decks.0.len())
+                .unwrap_or(0)
+        );
         assert!(!dealt.iter().any(|card| old_ids.contains(&card.id)));
-        assert!(events.iter().any(|event| json_of(event)["type"] == json!("glitched")));
+        assert!(
+            events
+                .iter()
+                .any(|event| json_of(event)["type"] == json!("glitched"))
+        );
     }
 
     #[test]
@@ -318,7 +342,8 @@ mod r678_other_games_boards {
     use super::*;
 
     #[test]
-    fn r678_replaces_both_fields_with_the_frozen_boards_units_to_the_unit_zones_and_the_rest_to_the_backrow() {
+    fn r678_replaces_both_fields_with_the_frozen_boards_units_to_the_unit_zones_and_the_rest_to_the_backrow()
+    {
         let seed = seed_for(GlitchOutcome::Boards);
         let mut state = game(&seed);
         put(&mut state, "fx-1", slot(P1, Row::Units, 1), json!({}));
@@ -354,7 +379,13 @@ mod r678_other_games_boards {
         // An entry this match cannot rebuild was dropped when it was frozen (R564), so p2's field is empty.
         assert!(units(P2).is_empty());
         assert_eq!(
-            after.players.p1.graveyard.iter().map(|card| card.def_id.clone()).collect::<Vec<_>>(),
+            after
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .map(|card| card.def_id.clone())
+                .collect::<Vec<_>>(),
             vec![GLITCH_DEF_ID.to_string()]
         );
     }
@@ -367,7 +398,10 @@ mod r679_the_void {
     fn r679_ends_the_game_with_no_winner_and_reason_voided() {
         let mut start = game(&seed_for(GlitchOutcome::Void));
         let ReduceResult { state, events, .. } = play_glitch(&mut start);
-        assert_eq!(json_of(state.result), json!({ "winner": "draw", "reason": "voided" }));
+        assert_eq!(
+            json_of(state.result),
+            json!({ "winner": "draw", "reason": "voided" })
+        );
         assert_eq!(
             events.last().map(json_of),
             Some(json!({ "type": "gameOver", "winner": "draw", "reason": "voided" }))
@@ -391,8 +425,14 @@ mod r679_the_void {
             );
             (glitch().apply)(&mut ctx);
         }
-        assert_eq!(state.result.map(|result| json_of(result.reason)), Some(json!("voided")));
-        assert_eq!(find_def(None, GLITCH_DEF_ID).map(json_of), Some(json_of(glitch_def())));
+        assert_eq!(
+            state.result.map(|result| json_of(result.reason)),
+            Some(json!("voided"))
+        );
+        assert_eq!(
+            find_def(None, GLITCH_DEF_ID).map(json_of),
+            Some(json_of(glitch_def()))
+        );
     }
 }
 
@@ -420,7 +460,10 @@ mod r764_a_glitchs_reset_or_boards_leaves_no_public_trace_of_the_cards_it_took_u
             .cloned();
         match event {
             Some(event) if event.get("instanceId").is_some() => {
-                vec![event["instanceId"].clone(), event.get("defId").cloned().unwrap_or(Value::Null)]
+                vec![
+                    event["instanceId"].clone(),
+                    event.get("defId").cloned().unwrap_or(Value::Null),
+                ]
             }
             _ => vec![],
         }
@@ -438,15 +481,22 @@ mod r764_a_glitchs_reset_or_boards_leaves_no_public_trace_of_the_cards_it_took_u
             "events": [{ "type": "cardPlayed", "player": "p2", "instanceId": trap.id, "defId": trap.def_id, "costPaid": 1 }],
         }))];
         // The control: while it stands face-down, p1 reads the sentinel.
-        assert_eq!(named_by(&state, P2, "cardPlayed"), vec![json!(HIDDEN_ID), json!(HIDDEN_ID)]);
+        assert_eq!(
+            named_by(&state, P2, "cardPlayed"),
+            vec![json!(HIDDEN_ID), json!(HIDDEN_ID)]
+        );
 
         let after = play_glitch(&mut state).state;
         assert!(card_at(&after, slot(P2, Row::Backrow, 1)).is_none());
-        assert_eq!(named_by(&after, P2, "cardPlayed"), vec![json!(HIDDEN_ID), json!(HIDDEN_ID)]);
+        assert_eq!(
+            named_by(&after, P2, "cardPlayed"),
+            vec![json!(HIDDEN_ID), json!(HIDDEN_ID)]
+        );
     }
 
     #[test]
-    fn r764_reset_a_card_the_other_player_drew_in_the_old_game_still_reads_as_the_sentinel_after_the_match_began_again() {
+    fn r764_reset_a_card_the_other_player_drew_in_the_old_game_still_reads_as_the_sentinel_after_the_match_began_again()
+     {
         let mut state = game(&seed_for(GlitchOutcome::Reset));
         let drawn = in_hand(&mut state, "fx-1", P2, 1)
             .into_iter()
@@ -456,10 +506,16 @@ mod r764_a_glitchs_reset_or_boards_leaves_no_public_trace_of_the_cards_it_took_u
             "nonce": "before",
             "events": [{ "type": "drawn", "player": "p2", "instanceId": drawn.id, "defId": drawn.def_id, "turnDraw": 1 }],
         }))];
-        assert_eq!(named_by(&state, P2, "drawn"), vec![json!(HIDDEN_ID), json!(HIDDEN_ID)]);
+        assert_eq!(
+            named_by(&state, P2, "drawn"),
+            vec![json!(HIDDEN_ID), json!(HIDDEN_ID)]
+        );
 
         let after = play_glitch(&mut state).state;
         assert_eq!(after.resets, Some(1));
-        assert_eq!(named_by(&after, P2, "drawn"), vec![json!(HIDDEN_ID), json!(HIDDEN_ID)]);
+        assert_eq!(
+            named_by(&after, P2, "drawn"),
+            vec![json!(HIDDEN_ID), json!(HIDDEN_ID)]
+        );
     }
 }

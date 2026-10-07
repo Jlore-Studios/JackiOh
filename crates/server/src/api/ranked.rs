@@ -61,7 +61,9 @@ pub struct SeasonDeps {
 impl SeasonDeps {
     /// This build's: TS's `deps.patchVersion`, read at boot by `src/index.ts`.
     pub fn current() -> SeasonDeps {
-        SeasonDeps { patch_version: load_patch_version() }
+        SeasonDeps {
+            patch_version: load_patch_version(),
+        }
     }
 }
 
@@ -91,20 +93,45 @@ pub async fn open_season_in_tx(t: &mut Tx<'_>, deps: &SeasonDeps) -> Result<Open
     t.ranked_lock_seasons().await?;
     let seasons = t.ranked_seasons().await?;
     if let Some(existing) = seasons.iter().find(|season| season.id == id) {
-        return Ok(OpenedSeason { season: existing.clone(), opened: false, reset: None });
+        return Ok(OpenedSeason {
+            season: existing.clone(),
+            opened: false,
+            reset: None,
+        });
     }
 
-    let season = Season { id: id.clone(), patch_version: deps.patch_version.clone(), started_at: now_ms() };
+    let season = Season {
+        id: id.clone(),
+        patch_version: deps.patch_version.clone(),
+        started_at: now_ms(),
+    };
     if !t.ranked_create_season(&season).await? {
-        let raced = t.ranked_seasons().await?.into_iter().find(|candidate| candidate.id == id);
+        let raced = t
+            .ranked_seasons()
+            .await?
+            .into_iter()
+            .find(|candidate| candidate.id == id);
         let Some(raced) = raced else {
-            return Err(StoreError::Other(format!("season {id} was neither created nor found")));
+            return Err(StoreError::Other(format!(
+                "season {id} was neither created nor found"
+            )));
         };
-        return Ok(OpenedSeason { season: raced, opened: false, reset: None });
+        return Ok(OpenedSeason {
+            season: raced,
+            opened: false,
+            reset: None,
+        });
     }
     if seasons.is_empty() {
-        log_info("season.opened", json!({ "seasonId": id, "patchVersion": deps.patch_version, "reset": null }));
-        return Ok(OpenedSeason { season, opened: true, reset: None });
+        log_info(
+            "season.opened",
+            json!({ "seasonId": id, "patchVersion": deps.patch_version, "reset": null }),
+        );
+        return Ok(OpenedSeason {
+            season,
+            opened: true,
+            reset: None,
+        });
     }
     let players = t.ranked_rated_players().await?;
     let reset = soft_reset(&players);
@@ -117,7 +144,11 @@ pub async fn open_season_in_tx(t: &mut Tx<'_>, deps: &SeasonDeps) -> Result<Open
             "reset": serde_json::to_value(&reset.report).unwrap_or(Value::Null),
         }),
     );
-    Ok(OpenedSeason { season, opened: true, reset: Some(reset.report) })
+    Ok(OpenedSeason {
+        season,
+        opened: true,
+        reset: Some(reset.report),
+    })
 }
 
 /// R609: opens the build's season in a transaction of its own (boot, SURFACE §11.2: `app.rs` calls
@@ -229,7 +260,10 @@ fn standings_of(standings: &[SeasonStanding]) -> Vec<Standing> {
 
 /// A 1-based position in Jlorious, or none.
 fn position_in(order: &[String], profile_id: &str) -> Option<i32> {
-    order.iter().position(|candidate| candidate == profile_id).map(|at| at as i32 + 1)
+    order
+        .iter()
+        .position(|candidate| candidate == profile_id)
+        .map(|at| at as i32 + 1)
 }
 
 /// A side's rating and rated-game count going into the game.
@@ -249,26 +283,40 @@ async fn before_of(
         RankedSideInput::Bot { bot_id } => {
             let bot = t.ranked_bot(bot_id).await?;
             Ok(match bot {
-                Some(bot) => Before { glicko: bot.glicko, games: bot.games },
-                None => Before { glicko: START_GLICKO, games: 0 },
+                Some(bot) => Before {
+                    glicko: bot.glicko,
+                    games: bot.games,
+                },
+                None => Before {
+                    glicko: START_GLICKO,
+                    games: 0,
+                },
             })
         }
-        RankedSideInput::Player { profile_id } => match profiles.iter().find(|candidate| candidate.id == *profile_id) {
-            None => {
-                // A ranked game cannot outlive its players (the foreign keys say so): rate it from the
-                // start and shout, as `results.rs` always has.
-                log_alert("ranked.profile_missing", json!({ "gameId": game_id, "profileId": profile_id }));
-                Ok(Before { glicko: START_GLICKO, games: 0 })
+        RankedSideInput::Player { profile_id } => {
+            match profiles.iter().find(|candidate| candidate.id == *profile_id) {
+                None => {
+                    // A ranked game cannot outlive its players (the foreign keys say so): rate it from the
+                    // start and shout, as `results.rs` always has.
+                    log_alert(
+                        "ranked.profile_missing",
+                        json!({ "gameId": game_id, "profileId": profile_id }),
+                    );
+                    Ok(Before {
+                        glicko: START_GLICKO,
+                        games: 0,
+                    })
+                }
+                Some(profile) => Ok(Before {
+                    glicko: Glicko {
+                        rating: profile.rating,
+                        deviation: profile.rating_deviation,
+                        volatility: profile.rating_volatility,
+                    },
+                    games: 0,
+                }),
             }
-            Some(profile) => Ok(Before {
-                glicko: Glicko {
-                    rating: profile.rating,
-                    deviation: profile.rating_deviation,
-                    volatility: profile.rating_volatility,
-                },
-                games: 0,
-            }),
-        },
+        }
     }
 }
 
@@ -283,16 +331,28 @@ struct RankChange {
 /// each player's season moved toward the rank their new rating calls for, and the Jlorious peaks it
 /// gave anyone. Both targets are read from the season as it stood before the game, with both new
 /// ratings in it, so neither side's placement depends on which of the two is computed first.
-pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInput) -> Result<RankedPlan, StoreError> {
+pub async fn plan_ranked_game(
+    t: &mut Tx<'_>,
+    _app: &App,
+    input: &RankedGameInput,
+) -> Result<RankedPlan, StoreError> {
     if let Some(recorded) = t.ranked_game(&input.id).await? {
-        return Ok(RankedPlan { row: recorded, writes: None });
+        return Ok(RankedPlan {
+            row: recorded,
+            writes: None,
+        });
     }
 
     let (first, second) = (&input.sides.0, &input.sides.1);
-    if let (RankedSideInput::Player { profile_id: a }, RankedSideInput::Player { profile_id: b }) = (first, second)
-        && a == b {
-            return Err(StoreError::Other(format!("rated game {} names one profile on both sides", input.id)));
-        }
+    if let (RankedSideInput::Player { profile_id: a }, RankedSideInput::Player { profile_id: b }) =
+        (first, second)
+        && a == b
+    {
+        return Err(StoreError::Other(format!(
+            "rated game {} names one profile on both sides",
+            input.id
+        )));
+    }
     let sides = [first, second];
 
     let deps = SeasonDeps::current();
@@ -311,7 +371,11 @@ pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInpu
         before_of(t, &profiles, first, &input.id).await?,
         before_of(t, &profiles, second, &input.id).await?,
     ];
-    let rated = rate_game(&before[0].glicko, &before[1].glicko, score_of(input.winner_side, 0));
+    let rated = rate_game(
+        &before[0].glicko,
+        &before[1].glicko,
+        score_of(input.winner_side, 0),
+    );
     // R672: a double-or-nothing rematch doubles each side's rating movement around its own before:
     // one update, then the delta twice. Deviation and volatility are the single update's — a doubled
     // game moves the rating twice without sharpening the confidence twice.
@@ -354,7 +418,9 @@ pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInpu
         let RankedSideInput::Player { profile_id } = side else {
             continue;
         };
-        let standing = standings.iter().find(|candidate| candidate.rank.profile_id == *profile_id);
+        let standing = standings
+            .iter()
+            .find(|candidate| candidate.rank.profile_id == *profile_id);
         let row_before = standing.map(row_of);
         let others: Vec<f64> = re_rated
             .iter()
@@ -362,17 +428,32 @@ pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInpu
             .map(|candidate| candidate.rating)
             .collect();
         let target = target_ladder(&percentile_of(after[index].rating, &others));
-        let start = row_before.clone().unwrap_or_else(|| fresh_rank(&season.id, profile_id, input.at));
+        let start = row_before
+            .clone()
+            .unwrap_or_else(|| fresh_rank(&season.id, profile_id, input.at));
         let row_after = apply_ranked_game(
             &start,
-            &ApplyRankedGameInput { result: result_of(input.winner_side, index), target, at: input.at },
+            &ApplyRankedGameInput {
+                result: result_of(input.winner_side, index),
+                target,
+                at: input.at,
+            },
         );
-        ranks.insert(profile_id.clone(), RankChange { before: row_before, after: row_after });
+        ranks.insert(
+            profile_id.clone(),
+            RankChange {
+                before: row_before,
+                after: row_after,
+            },
+        );
     }
 
     // Jlorious after the game, and the peak it gave each member who now stands higher than ever.
-    let mut standings_after: Vec<SeasonStanding> =
-        re_rated.iter().filter(|standing| !ranks.contains_key(&standing.rank.profile_id)).cloned().collect();
+    let mut standings_after: Vec<SeasonStanding> = re_rated
+        .iter()
+        .filter(|standing| !ranks.contains_key(&standing.rank.profile_id))
+        .cloned()
+        .collect();
     for (profile_id, change) in &ranks {
         standings_after.push(SeasonStanding {
             rank: change.after.clone(),
@@ -387,11 +468,17 @@ pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInpu
             own.after = with_jlorious_peak(&own.after, position);
             continue;
         }
-        let standing = standings_after.iter().find(|candidate| candidate.rank.profile_id == *profile_id);
+        let standing = standings_after
+            .iter()
+            .find(|candidate| candidate.rank.profile_id == *profile_id);
         if let Some(standing) = standing
-            && standing.rank.peak_jlorious.is_none_or(|peak| position < peak) {
-                peaks.push(PeakWrite { profile_id: profile_id.clone(), position });
-            }
+            && standing.rank.peak_jlorious.is_none_or(|peak| position < peak)
+        {
+            peaks.push(PeakWrite {
+                profile_id: profile_id.clone(),
+                position,
+            });
+        }
     }
 
     let side_of = |side: &RankedSideInput, index: usize| -> RatedSide {
@@ -448,7 +535,11 @@ pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInpu
         .collect();
     Ok(RankedPlan {
         row,
-        writes: Some(RankedWrites { glickos, ranks: ranks.values().map(|rank| rank.after.clone()).collect(), peaks }),
+        writes: Some(RankedWrites {
+            glickos,
+            ranks: ranks.values().map(|rank| rank.after.clone()).collect(),
+            peaks,
+        }),
     })
 }
 
@@ -459,7 +550,9 @@ pub async fn commit_ranked_game(t: &mut Tx<'_>, plan: &RankedPlan, at: i64) -> R
     };
     for write in &writes.glickos {
         match &write.side {
-            RankedSideInput::Player { profile_id } => t.profiles_set_glicko(profile_id, &write.glicko).await?,
+            RankedSideInput::Player { profile_id } => {
+                t.profiles_set_glicko(profile_id, &write.glicko).await?
+            }
             RankedSideInput::Bot { bot_id } => {
                 t.ranked_put_bot(&BotRating {
                     bot_id: bot_id.clone(),
@@ -475,14 +568,19 @@ pub async fn commit_ranked_game(t: &mut Tx<'_>, plan: &RankedPlan, at: i64) -> R
         t.ranked_put_rank(rank).await?;
     }
     for peak in &writes.peaks {
-        t.ranked_note_peak_jlorious(&plan.row.season_id, &peak.profile_id, i64::from(peak.position)).await?;
+        t.ranked_note_peak_jlorious(&plan.row.season_id, &peak.profile_id, i64::from(peak.position))
+            .await?;
     }
     t.ranked_record_game(&plan.row).await?;
     Ok(())
 }
 
 /// Plans and writes one ranked game inside `t`. Rating the same id again changes nothing.
-pub async fn rate_ranked_game(t: &mut Tx<'_>, app: &App, input: &RankedGameInput) -> Result<RatedGameRow, StoreError> {
+pub async fn rate_ranked_game(
+    t: &mut Tx<'_>,
+    app: &App,
+    input: &RankedGameInput,
+) -> Result<RatedGameRow, StoreError> {
     let plan = plan_ranked_game(t, app, input).await?;
     commit_ranked_game(t, &plan, input.at).await?;
     Ok(plan.row)
@@ -494,8 +592,13 @@ pub async fn rate_ranked_game(t: &mut Tx<'_>, app: &App, input: &RankedGameInput
 
 /// One profile's rank in a season it has standings for.
 fn rank_in(standings: &[SeasonStanding], jlorious: &[String], profile_id: &str) -> VisibleRank {
-    let standing = standings.iter().find(|candidate| candidate.rank.profile_id == profile_id);
-    visible_rank(standing.map(|standing| &standing.rank), position_in(jlorious, profile_id))
+    let standing = standings
+        .iter()
+        .find(|candidate| candidate.rank.profile_id == profile_id);
+    visible_rank(
+        standing.map(|standing| &standing.rank),
+        position_in(jlorious, profile_id),
+    )
 }
 
 /// The caller's record this season.
@@ -529,7 +632,10 @@ pub async fn own_rank(app: &App, profile_id: &str) -> Result<OwnRankBody, ApiErr
     let history = tx.ranked_ranks_of(profile_id).await?;
     tx.commit().await?;
     let jlorious = jlorious_order(&standings_of(&standings));
-    let mine = standings.iter().find(|standing| standing.rank.profile_id == profile_id).map(|standing| &standing.rank);
+    let mine = standings
+        .iter()
+        .find(|standing| standing.rank.profile_id == profile_id)
+        .map(|standing| &standing.rank);
     Ok(OwnRankBody {
         season: season_id,
         tag: player_tag(profile_id),
@@ -686,7 +792,11 @@ pub struct MatchRanksBody {
     pub seats: PerPlayer<SeatRank>,
 }
 
-pub async fn match_ranks(app: &App, match_id: &str, viewer_id: &str) -> Result<Option<MatchRanksBody>, ApiError> {
+pub async fn match_ranks(
+    app: &App,
+    match_id: &str,
+    viewer_id: &str,
+) -> Result<Option<MatchRanksBody>, ApiError> {
     let mut tx = app.db.begin(Some(viewer_id)).await?;
     let Some(row) = tx.matches_get(match_id).await? else {
         return Ok(None);
@@ -694,7 +804,9 @@ pub async fn match_ranks(app: &App, match_id: &str, viewer_id: &str) -> Result<O
     if row.players.0 != viewer_id && row.players.1 != viewer_id {
         return Ok(None);
     }
-    let standings = tx.ranked_standings(&build_season_id(&SeasonDeps::current())).await?;
+    let standings = tx
+        .ranked_standings(&build_season_id(&SeasonDeps::current()))
+        .await?;
     tx.commit().await?;
     let jlorious = jlorious_order(&standings_of(&standings));
     let seat = |profile_id: &str| SeatRank {
@@ -705,7 +817,10 @@ pub async fn match_ranks(app: &App, match_id: &str, viewer_id: &str) -> Result<O
     // A missing flag is unranked (a pre-0022 row, or a room's), so this game moved nothing.
     Ok(Some(MatchRanksBody {
         ranked: row.ranked.unwrap_or(false),
-        seats: PerPlayer { p1: seat(&row.players.0), p2: seat(&row.players.1) },
+        seats: PerPlayer {
+            p1: seat(&row.players.0),
+            p2: seat(&row.players.1),
+        },
     }))
 }
 

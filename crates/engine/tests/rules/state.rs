@@ -97,7 +97,13 @@ mod create_game_m1_t1 {
             .collect();
         let unique: IndexSet<&String> = ids.iter().collect();
         assert_eq!(unique.len(), ids.len());
-        let p1_defs: Vec<String> = state.players.p1.library.iter().map(|c| c.def_id.clone()).collect();
+        let p1_defs: Vec<String> = state
+            .players
+            .p1
+            .library
+            .iter()
+            .map(|c| c.def_id.clone())
+            .collect();
         assert_eq!(p1_defs, deck_a());
         assert!(
             state
@@ -133,7 +139,10 @@ mod create_game_m1_t1 {
         let mut with_duplicate = vanilla_deck(19, 1);
         with_duplicate.push("fx-1".into());
         let message = refusal((with_duplicate, deck_b()));
-        assert!(matches_in_order(&message, "appears twice", "§2.6 L3"), "{message}");
+        assert!(
+            matches_in_order(&message, "appears twice", "§2.6 L3"),
+            "{message}"
+        );
     }
 
     #[test]
@@ -142,7 +151,10 @@ mod create_game_m1_t1 {
         let mut with_token = vanilla_deck(19, 1);
         with_token.push(token.id);
         let message = refusal((with_token, deck_b()));
-        assert!(matches_in_order(&message, "is a Token card", "§2.6 L3"), "{message}");
+        assert!(
+            matches_in_order(&message, "is a Token card", "§2.6 L3"),
+            "{message}"
+        );
     }
 
     #[test]

@@ -89,7 +89,10 @@ fn r21_draws_random_keywords_from_the_fourteen_entry_pool_and_never_repeats_one_
 fn r25_clamps_the_fib_index_at_fib_11_89() {
     assert_eq!(config::FIB.len(), 12);
     assert_eq!([config::fib(11), config::fib(12), config::fib(99)], [89, 89, 89]);
-    assert_eq!([config::fib(0), config::fib(1), config::fib(2), config::fib(7)], [0, 1, 1, 13]);
+    assert_eq!(
+        [config::fib(0), config::fib(1), config::fib(2), config::fib(7)],
+        [0, 1, 1, 13]
+    );
 }
 
 #[test]
@@ -210,13 +213,22 @@ fn r290_gives_the_tutorial_opponent_a_handicap_below_easy_12_cards_3_mana_a_hero
         })
     );
     let tiers = json_of(&config::DIFFICULTIES);
-    assert!(!tiers.as_array().expect("the tiers are a list").contains(&json!("tutorial")));
+    assert!(
+        !tiers
+            .as_array()
+            .expect("the tiers are a list")
+            .contains(&json!("tutorial"))
+    );
 }
 
 #[test]
 fn r346_makes_a_pierce_sources_damage_skip_armor_and_adds_pierce_to_the_random_keyword_pool() {
     let pool = json_of(&config::RANDOM_KEYWORD_POOL);
-    assert!(pool.as_array().expect("the pool is a list").contains(&json!("Pierce")));
+    assert!(
+        pool.as_array()
+            .expect("the pool is a list")
+            .contains(&json!("Pierce"))
+    );
 }
 
 #[test]

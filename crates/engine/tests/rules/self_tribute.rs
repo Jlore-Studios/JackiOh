@@ -148,15 +148,35 @@ mod r403_section_10_4_an_aura_that_sets_attack_applies_after_every_other_layer_c
     #[test]
     fn r403_a_buff_and_a_3_aura_do_not_lift_it_the_unit_reads_0_raw_and_floored() {
         let mut state = game("set");
-        put(&mut state, &zeroer().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
-        put(&mut state, &booster().id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
-        let enemy = put(&mut state, &body().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
+        put(
+            &mut state,
+            &zeroer().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        put(
+            &mut state,
+            &booster().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
+        let enemy = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            Default::default(),
+        );
         live_mut(&mut state, &enemy).buffs.attack += 5;
 
         assert_eq!(unit_view(&state, live(&state, &enemy)).attack, 0);
         assert_eq!(unclamped_attack(&state, live(&state, &enemy)), 0);
         // Its own side is untouched by it.
-        let mine = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        let mine = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            Default::default(),
+        );
         assert_eq!(unit_view(&state, live(&state, &mine)).attack, 4);
     }
 }
@@ -167,7 +187,12 @@ mod r403_when_tribute_this_is_read_at_every_state_check_c88 {
     #[test]
     fn r403_while_the_condition_holds_the_card_is_sacrificed_face_down_at_the_next_check() {
         let mut state = game("tribute");
-        let trap = put(&mut state, &zeroer().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
+        let trap = put(
+            &mut state,
+            &zeroer().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            Default::default(),
+        );
         live_mut(&mut state, &trap).face_up = Some(false);
         let mut b = Bench::sink_for(state);
 
@@ -184,8 +209,18 @@ mod r403_when_tribute_this_is_read_at_every_state_check_c88 {
     #[test]
     fn r403_while_the_opponent_has_a_unit_it_stays_once_it_has_none_the_next_check_takes_it() {
         let mut state = game("stays");
-        let trap = put(&mut state, &zeroer().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
-        let enemy = put(&mut state, &body().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
+        let trap = put(
+            &mut state,
+            &zeroer().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        let enemy = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            Default::default(),
+        );
         let mut b = Bench::sink_for(state);
 
         state_check(&mut b.sink());
@@ -203,10 +238,21 @@ mod r77_r102_r403_a_fusion_keeps_both_additions_of_its_ingredients {
     use super::*;
 
     #[test]
-    fn r403_a_field_trap_fused_onto_the_zeroer_still_zeroes_enemy_attack_and_is_tributed_when_they_have_no_unit() {
+    fn r403_a_field_trap_fused_onto_the_zeroer_still_zeroes_enemy_attack_and_is_tributed_when_they_have_no_unit()
+     {
         let mut state = game("fused");
-        let target = put(&mut state, &zeroer().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
-        let enemy = put(&mut state, &body().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
+        let target = put(
+            &mut state,
+            &zeroer().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        let enemy = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            Default::default(),
+        );
         let mut b = Bench::sink_for(state);
         let ingredient = in_hand(&mut b.state, &blank().id, PlayerId::P1, 1)
             .into_iter()

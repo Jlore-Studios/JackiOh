@@ -160,7 +160,21 @@ pub struct RatedGame {
 pub fn rate_game(a: &Glicko, b: &Glicko, score_a: Score) -> RatedGame {
     let score_b: Score = 1.0 - score_a;
     RatedGame {
-        a: glicko2_period(a, &[RatedOpponent { opponent: *b, score: score_a }], GLICKO_TAU),
-        b: glicko2_period(b, &[RatedOpponent { opponent: *a, score: score_b }], GLICKO_TAU),
+        a: glicko2_period(
+            a,
+            &[RatedOpponent {
+                opponent: *b,
+                score: score_a,
+            }],
+            GLICKO_TAU,
+        ),
+        b: glicko2_period(
+            b,
+            &[RatedOpponent {
+                opponent: *a,
+                score: score_b,
+            }],
+            GLICKO_TAU,
+        ),
     }
 }

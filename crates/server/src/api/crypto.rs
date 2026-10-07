@@ -11,14 +11,22 @@ use hmac::{Hmac, KeyInit, Mac};
 use jackioh_engine::wire::codes::{canonical_code, normalize_code_text};
 use sha2::{Digest, Sha256};
 
-use crate::config::{CODE_ALPHABET, INVITE_CODE_FORMAT, INVITE_CODE_GROUP_SIZE, INVITE_CODE_SEPARATOR, PLAYER_TAG_LENGTH};
+use crate::config::{
+    CODE_ALPHABET, INVITE_CODE_FORMAT, INVITE_CODE_GROUP_SIZE, INVITE_CODE_SEPARATOR, PLAYER_TAG_LENGTH,
+};
 
-const _: () = assert!(CODE_ALPHABET.len() == 32, "CODE_ALPHABET must hold exactly 32 symbols (§9.4)");
+const _: () = assert!(
+    CODE_ALPHABET.len() == 32,
+    "CODE_ALPHABET must hold exactly 32 symbols (§9.4)"
+);
 
 /// Uniform because 256 is a multiple of 32: a byte masked to 5 bits has no modulo bias.
 pub fn code_from_bytes(bytes: &[u8]) -> String {
     let alphabet = CODE_ALPHABET.as_bytes();
-    bytes.iter().map(|byte| alphabet[(byte & 31) as usize] as char).collect()
+    bytes
+        .iter()
+        .map(|byte| alphabet[(byte & 31) as usize] as char)
+        .collect()
 }
 
 /// `length` bytes from the operating system's random source.
@@ -36,7 +44,10 @@ pub fn random_code(length: usize) -> String {
 pub fn format_code(raw: &str) -> String {
     let characters: Vec<char> = raw.chars().collect();
     let size = INVITE_CODE_GROUP_SIZE.max(1);
-    let groups: Vec<String> = characters.chunks(size).map(|group| group.iter().collect()).collect();
+    let groups: Vec<String> = characters
+        .chunks(size)
+        .map(|group| group.iter().collect())
+        .collect();
     groups.join(INVITE_CODE_SEPARATOR)
 }
 
@@ -81,7 +92,8 @@ impl std::fmt::Debug for Hashes {
 
 /// HMAC-SHA256 of `value` under `key`, as lower-case hex.
 fn digest(key: &str, value: &str) -> String {
-    let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(key.as_bytes()).expect("HMAC takes a key of any length");
+    let mut mac =
+        <Hmac<Sha256> as KeyInit>::new_from_slice(key.as_bytes()).expect("HMAC takes a key of any length");
     mac.update(value.as_bytes());
     hex(&mac.finalize().into_bytes())
 }
@@ -107,7 +119,10 @@ impl Hashes {
 /// stolen table from being brute-forced offline. The two arguments are TS's `peppers.code` and
 /// `peppers.ip`, each already in its domain (`hashes_for_pepper` builds both from one pepper).
 pub fn create_hashes(code_pepper: &str, ip_pepper: &str) -> Hashes {
-    Hashes { code_pepper: code_pepper.to_string(), ip_pepper: ip_pepper.to_string() }
+    Hashes {
+        code_pepper: code_pepper.to_string(),
+        ip_pepper: ip_pepper.to_string(),
+    }
 }
 
 /// §9.4, §9.8: one pepper in the environment (`CODE_PEPPER`), two domains, `<pepper>:code` and
@@ -135,7 +150,10 @@ pub fn safe_equal(a: &str, b: &str) -> bool {
     if left.len() != right.len() {
         return false;
     }
-    left.iter().zip(right.iter()).fold(0_u8, |diff, (x, y)| diff | (x ^ y)) == 0
+    left.iter()
+        .zip(right.iter())
+        .fold(0_u8, |diff, (x, y)| diff | (x ^ y))
+        == 0
 }
 
 /// TS `Ids`: every id and every seed comes from here.

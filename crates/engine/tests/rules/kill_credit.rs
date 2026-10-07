@@ -13,7 +13,9 @@
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::damage_combat::{answer, death_asker, grunt, playing, recorder, replays_to, round_trip};
+use crate::rules::fixtures::damage_combat::{
+    answer, death_asker, grunt, playing, recorder, replays_to, round_trip,
+};
 use crate::rules::fixtures::harness::{in_hand, put, set_library, slot};
 use crate::rules::fixtures::kill_credit::{bot, jungle, register_kill_credit, tempo};
 
@@ -30,12 +32,17 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
     card.radiant = true;
     let placed = zones::place_on_field(state, &mut card, at, Default::default());
     assert!(placed, "could not place {def_id} in {} {}", at.row, at.lane);
-    find_instance(state, &card.id).expect("the card was just placed").clone()
+    find_instance(state, &card.id)
+        .expect("the card was just placed")
+        .clone()
 }
 
 /// `{ ...body, playerId }`.
 fn input(player: PlayerId, body: ActionBody) -> ActionInput {
-    ActionInput { body, player_id: player }
+    ActionInput {
+        body,
+        player_id: player,
+    }
 }
 
 /// Every `destroyed` event as `(instanceId, killerId)`.
@@ -43,7 +50,11 @@ fn destroyed(events: &[GameEvent]) -> Vec<(String, Option<String>)> {
     events
         .iter()
         .filter_map(|event| match event {
-            GameEvent::Destroyed { instance_id, killer_id, .. } => Some((instance_id.clone(), killer_id.clone())),
+            GameEvent::Destroyed {
+                instance_id,
+                killer_id,
+                ..
+            } => Some((instance_id.clone(), killer_id.clone())),
             _ => None,
         })
         .collect()
@@ -57,14 +68,23 @@ mod r42_r412_with_kill_credit {
     use super::*;
 
     #[test]
-    fn with_a_transfer_the_paired_unit_is_the_killer_the_destroyed_event_names_it_and_its_kill_trigger_fires() {
+    fn with_a_transfer_the_paired_unit_is_the_killer_the_destroyed_event_names_it_and_its_kill_trigger_fires()
+    {
         let mut state = game("kc-transfer");
         let striker = put_radiant(&mut state, &jungle.id, slot(PlayerId::P1, Row::Units, 2));
         let credited = put(&mut state, &bot.id, slot(PlayerId::P1, Row::Units, 4), json!({}));
-        let victim = put(&mut state, &grunt.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
+        let victim = put(
+            &mut state,
+            &grunt.id,
+            slot(PlayerId::P2, Row::Units, 4),
+            json!({}),
+        );
         let mut play = recorder(&state);
         let ended = play.play(input(PlayerId::P1, ActionBody::EndTurn));
-        assert_eq!(destroyed(&ended.events), vec![(victim.id.clone(), Some(credited.id.clone()))]);
+        assert_eq!(
+            destroyed(&ended.events),
+            vec![(victim.id.clone(), Some(credited.id.clone()))]
+        );
         // The hit was the striker's: its damage event names it as the source.
         assert!(ended.events.iter().any(|event| matches!(
             event,
@@ -74,9 +94,11 @@ mod r42_r412_with_kill_credit {
         let after = play.state().clone();
         assert_eq!(attack_of(&after, &credited.id), Some(5));
         assert_eq!(attack_of(&after, &striker.id), Some(0));
-        assert!(find_instance(&after, &striker.id)
-            .and_then(|card| card.memory.get(kill_credit::KILL_CREDIT_KEY))
-            .is_none());
+        assert!(
+            find_instance(&after, &striker.id)
+                .and_then(|card| card.memory.get(kill_credit::KILL_CREDIT_KEY))
+                .is_none()
+        );
         assert!(replays_to(&play.start, &play.log, &after));
     }
 
@@ -85,34 +107,64 @@ mod r42_r412_with_kill_credit {
         let mut state = game("kc-unpaired");
         let striker = put_radiant(&mut state, &jungle.id, slot(PlayerId::P1, Row::Units, 2));
         let credited = put(&mut state, &bot.id, slot(PlayerId::P1, Row::Units, 4), json!({}));
-        let victim = put(&mut state, &grunt.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let victim = put(
+            &mut state,
+            &grunt.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let result = recorder(&state).play(input(PlayerId::P1, ActionBody::EndTurn));
-        assert_eq!(destroyed(&result.events), vec![(victim.id.clone(), Some(striker.id.clone()))]);
+        assert_eq!(
+            destroyed(&result.events),
+            vec![(victim.id.clone(), Some(striker.id.clone()))]
+        );
         assert_eq!(attack_of(&result.state, &credited.id), Some(0));
     }
 
     #[test]
     fn without_a_transfer_the_striker_keeps_the_kill_and_the_follow_up_runs_for_the_pair_whose_victim_died() {
         let mut state = game("kc-follow");
-        let striker = put(&mut state, &jungle.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let striker = put(
+            &mut state,
+            &jungle.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         let credited = put(&mut state, &bot.id, slot(PlayerId::P1, Row::Units, 4), json!({}));
-        let victim = put(&mut state, &grunt.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
+        let victim = put(
+            &mut state,
+            &grunt.id,
+            slot(PlayerId::P2, Row::Units, 4),
+            json!({}),
+        );
         let result = recorder(&state).play(input(PlayerId::P1, ActionBody::EndTurn));
-        assert_eq!(destroyed(&result.events), vec![(victim.id.clone(), Some(striker.id.clone()))]);
+        assert_eq!(
+            destroyed(&result.events),
+            vec![(victim.id.clone(), Some(striker.id.clone()))]
+        );
         let live = find_instance(&result.state, &credited.id);
         assert_eq!(live.map(|card| card.buffs.attack), Some(0));
         assert!(live.is_some_and(restrictions::is_berserk));
     }
 
     #[test]
-    fn r113_a_death_that_asks_during_the_watched_attack_the_credit_already_landed_and_the_pause_survives_json() {
+    fn r113_a_death_that_asks_during_the_watched_attack_the_credit_already_landed_and_the_pause_survives_json()
+     {
         let mut state = game("kc-pause");
         put_radiant(&mut state, &jungle.id, slot(PlayerId::P1, Row::Units, 2));
         let credited = put(&mut state, &bot.id, slot(PlayerId::P1, Row::Units, 4), json!({}));
-        let victim = put(&mut state, &death_asker.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
+        let victim = put(
+            &mut state,
+            &death_asker.id,
+            slot(PlayerId::P2, Row::Units, 4),
+            json!({}),
+        );
         let mut play = recorder(&state);
         let ended = play.play(input(PlayerId::P1, ActionBody::EndTurn));
-        assert_eq!(destroyed(&ended.events), vec![(victim.id.clone(), Some(credited.id.clone()))]);
+        assert_eq!(
+            destroyed(&ended.events),
+            vec![(victim.id.clone(), Some(credited.id.clone()))]
+        );
         let paused = play.state().clone();
         assert!(paused.pending.is_some());
         assert_eq!(round_trip(&paused), paused);
@@ -124,16 +176,34 @@ mod r42_r412_with_kill_credit {
     #[test]
     fn credited_killer_id_reads_the_record_and_falls_back_to_the_striker() {
         let mut state = game("kc-read");
-        let striker = put(&mut state, &jungle.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
-        let victim = put(&mut state, &grunt.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let striker = put(
+            &mut state,
+            &jungle.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        let victim = put(
+            &mut state,
+            &grunt.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         assert_eq!(kill_credit::credited_killer_id(&striker, &victim), striker.id);
         find_instance_mut(&mut state, &striker.id)
             .expect("the striker is on the field")
             .memory
-            .insert(kill_credit::KILL_CREDIT_KEY.to_string(), json!([{ "victimId": victim.id, "toId": "c999" }]));
-        let striker = find_instance(&state, &striker.id).expect("the striker is on the field").clone();
+            .insert(
+                kill_credit::KILL_CREDIT_KEY.to_string(),
+                json!([{ "victimId": victim.id, "toId": "c999" }]),
+            );
+        let striker = find_instance(&state, &striker.id)
+            .expect("the striker is on the field")
+            .clone();
         assert_eq!(kill_credit::credited_killer_id(&striker, &victim), "c999");
-        let other = CardInstance { id: "c1000".to_string(), ..victim.clone() };
+        let other = CardInstance {
+            id: "c1000".to_string(),
+            ..victim.clone()
+        };
         assert_eq!(kill_credit::credited_killer_id(&striker, &other), striker.id);
     }
 }

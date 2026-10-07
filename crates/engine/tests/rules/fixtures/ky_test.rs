@@ -43,7 +43,12 @@ fn def(index: u32, id: &str, type_: &str, extra: Value) -> CardDef {
 }
 
 fn pooled(index: u32, id: &str, tags: Value, cost: i32, rarity: &str) -> CardDef {
-    def(index, id, "Spell", json!({ "tags": tags, "cost": cost, "rarity": rarity }))
+    def(
+        index,
+        id,
+        "Spell",
+        json!({ "tags": tags, "cost": cost, "rarity": rarity }),
+    )
 }
 
 /// Two Medium problems and one Hard one: enough to tell a bank draw from a fixed pick.
@@ -56,7 +61,12 @@ pub static FIXTURE_BANK: LazyLock<Vec<KyTestProblem>> = LazyLock::new(|| {
 });
 
 pub fn ky_test() -> CardDef {
-    def(3301, "kt-test", "Spell", json!({ "tags": ["KY"], "rarity": "Legendary" }))
+    def(
+        3301,
+        "kt-test",
+        "Spell",
+        json!({ "tags": ["KY"], "rarity": "Legendary" }),
+    )
 }
 
 pub fn coin() -> CardDef {
@@ -99,7 +109,16 @@ pub fn ky_test_qd() -> CardDef {
 }
 
 fn defs() -> Vec<CardDef> {
-    vec![ky_test(), ky_test_qd(), coin(), gift(), book(), ky_two(), legend(), four()]
+    vec![
+        ky_test(),
+        ky_test_qd(),
+        coin(),
+        gift(),
+        book(),
+        ky_two(),
+        legend(),
+        four(),
+    ]
 }
 
 fn scripts_table() -> IndexMap<String, CardScripts> {

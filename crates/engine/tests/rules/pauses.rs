@@ -137,7 +137,11 @@ fn drive_sequence(sink: &mut EngineSink<'_>, run: SequenceRun) {
         }
         // Nothing to owe when the step that paused was the last one.
         if at + 1 < SEQUENCE_STEPS {
-            push_work(sink, sequence_resume(SequenceRun { at: at + 1, ..run }), Some(run.owner));
+            push_work(
+                sink,
+                sequence_resume(SequenceRun { at: at + 1, ..run }),
+                Some(run.owner),
+            );
         }
         return;
     }
@@ -257,7 +261,10 @@ fn scripts() -> Vec<(String, CardScripts)> {
             both(Script {
                 cry: Some(hook(|_ctx| vec![enemy_hero(1), choose("second"), enemy_hero(2)])),
                 resume: resume_table(vec![
-                    ("second", hook(|_ctx| vec![enemy_hero(3), choose("third"), enemy_hero(4)])),
+                    (
+                        "second",
+                        hook(|_ctx| vec![enemy_hero(3), choose("third"), enemy_hero(4)]),
+                    ),
                     ("third", hook(|_ctx| vec![enemy_hero(5)])),
                 ]),
                 ..Script::default()
@@ -417,7 +424,10 @@ fn panics_with(run: impl FnOnce(), text: &str) {
         .cloned()
         .or_else(|| payload.downcast_ref::<&str>().map(|text| text.to_string()))
         .unwrap_or_default();
-    assert!(message.contains(text), "panic message {message:?} does not contain {text:?}");
+    assert!(
+        message.contains(text),
+        "panic message {message:?} does not contain {text:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -450,7 +460,8 @@ mod a_prompt_in_the_middle_of_an_effect_list_9_3_10_6 {
         // The continuation names where to pick up — the effect after the one that asked — and nothing
         // else: the remaining effects themselves are closures and never enter the state (§9.3).
         assert_eq!(
-            owed.and_then(|item| paused_of(&item.resume.data)).map(|step| step.from),
+            owed.and_then(|item| paused_of(&item.resume.data))
+                .map(|step| step.from),
             Some(2)
         );
 
@@ -520,7 +531,10 @@ mod a_prompt_in_the_middle_of_an_engine_sequence_10_3_10_5 {
         assert_eq!(amounts(&started), vec![1]);
         assert!(is_owed(&state, SEQUENCE_HOOK));
         assert_eq!(state.work.len(), 1);
-        assert_eq!(peek_work(&state).and_then(|item| item.resume.data.get(AT_KEY)), Some(&json!(2)));
+        assert_eq!(
+            peek_work(&state).and_then(|item| item.resume.data.get(AT_KEY)),
+            Some(&json!(2))
+        );
 
         let answered = answer(&mut state, "a");
 
@@ -696,7 +710,10 @@ mod the_work_queue_9_3_r68 {
         owe(&mut sink, item.clone());
         assert_eq!(sink.state.work, vec![item.clone()]);
         // Same id and same `seq`: re-queueing is not a new piece of work (R68's order is kept).
-        assert_eq!(sink.state.work.first().map(|owed| owed.id.clone()), Some(item.id.clone()));
+        assert_eq!(
+            sink.state.work.first().map(|owed| owed.id.clone()),
+            Some(item.id.clone())
+        );
         assert_eq!(sink.state.next_seq, item.seq + 1);
     }
 

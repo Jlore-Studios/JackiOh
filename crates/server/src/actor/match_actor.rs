@@ -42,12 +42,12 @@ use crate::actor::contracts::{
     SocketHandlers, VoidMatchInput, one_tx,
 };
 use crate::actor::engine::{self, EngineState, LastBoards, MatchSnapshot};
-use crate::actor::ws_server::Socket;
 use crate::actor::protocol::{
-    ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage, SocketErrorCode, ack_message,
-    aim_relay_message, clock_message, emote_relay_message, encode, error_message, parse_client_message,
-    portraits_message, prompt_for_opponent, prompt_for_you, view_message,
+    ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage, SocketErrorCode,
+    ack_message, aim_relay_message, clock_message, emote_relay_message, encode, error_message,
+    parse_client_message, portraits_message, prompt_for_opponent, prompt_for_you, view_message,
 };
+use crate::actor::ws_server::Socket;
 use crate::app::now_ms;
 use crate::config::{AIM_RELAY_INTERVAL_MS, MATCH_ACTIONS_PER_SECOND, MATCH_VOIDED_CLOSE_CODE};
 use crate::db::store::{MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus};
@@ -81,12 +81,27 @@ pub fn last_boards_of(match_row: &MatchRow) -> (Option<LastBoards>, Option<LastB
 enum Task {
     /// The clock has to be armed before the first action (R79).
     Arm,
-    Hello { home: PlayerId },
-    Action { home: PlayerId, nonce: String, body: ActionBody },
-    Submit { player: PlayerId, nonce: String, body: ActionBody, reply: oneshot::Sender<ServerMessage> },
+    Hello {
+        home: PlayerId,
+    },
+    Action {
+        home: PlayerId,
+        nonce: String,
+        body: ActionBody,
+    },
+    Submit {
+        player: PlayerId,
+        nonce: String,
+        body: ActionBody,
+        reply: oneshot::Sender<ServerMessage>,
+    },
     Expire(ClockExpiry),
-    Disconnect { home: PlayerId },
-    Attach { home: PlayerId },
+    Disconnect {
+        home: PlayerId,
+    },
+    Attach {
+        home: PlayerId,
+    },
     /// TS `idle()`: answered once every task queued before it has run.
     Idle(oneshot::Sender<()>),
 }
@@ -193,7 +208,9 @@ pub struct MatchActor {
 
 impl std::fmt::Debug for MatchActor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("MatchActor").field("match_id", &self.shared.match_row.id).finish()
+        f.debug_struct("MatchActor")
+            .field("match_id", &self.shared.match_row.id)
+            .finish()
     }
 }
 
@@ -204,7 +221,10 @@ fn playing(core: &Core, home: PlayerId) -> PlayerId {
 }
 
 fn mulligan_key(owed: &[PlayerId]) -> String {
-    owed.iter().map(|player| player.as_str()).collect::<Vec<_>>().join(",")
+    owed.iter()
+        .map(|player| player.as_str())
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 fn panic_message(error: tokio::task::JoinError) -> String {
@@ -263,8 +283,15 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         None => {
             let (last_boards, glitch_boards) = last_boards_of(&match_row);
             let actions = log.iter().map(|row| row.action.clone()).collect();
-            engine::fold(&engine::fold_args(&match_row.seed, &match_row.decks, actions, last_boards, glitch_boards, None))
-                .state
+            engine::fold(&engine::fold_args(
+                &match_row.seed,
+                &match_row.decks,
+                actions,
+                last_boards,
+                glitch_boards,
+                None,
+            ))
+            .state
         }
     };
 
@@ -366,7 +393,11 @@ impl MatchActor {
                 self.push_view(&core, player);
                 self.push_clock(&core, player);
                 // R642: portraits ride again on a reconnect, as on join.
-                self.send_to_home(&core, home, &portraits_message(self.shared.portraits.0, self.shared.portraits.1));
+                self.send_to_home(
+                    &core,
+                    home,
+                    &portraits_message(self.shared.portraits.0, self.shared.portraits.1),
+                );
             }
             Task::Action { home, nonce, body } => {
                 // R677: the seat is the one this account plays when the action runs — a swap queued
@@ -410,7 +441,11 @@ impl MatchActor {
                 let core = self.lock();
                 self.push_view(&core, player);
                 self.push_clock(&core, player);
-                self.send_to_home(&core, home, &portraits_message(self.shared.portraits.0, self.shared.portraits.1));
+                self.send_to_home(
+                    &core,
+                    home,
+                    &portraits_message(self.shared.portraits.0, self.shared.portraits.1),
+                );
                 self.push_clock(&core, player.opponent());
             }
             Task::Idle(done) => {
@@ -442,7 +477,11 @@ impl MatchActor {
         // component that knows. Nothing else about the view is touched.
         let view = engine::view_for(&core.state, player);
         PlayerView {
-            clock_ms: self.shared.clock.remaining_for(player).map(|ms| i32::try_from(ms).unwrap_or(i32::MAX)),
+            clock_ms: self
+                .shared
+                .clock
+                .remaining_for(player)
+                .map(|ms| i32::try_from(ms).unwrap_or(i32::MAX)),
             ..view
         }
     }
@@ -457,12 +496,19 @@ impl MatchActor {
     /// Both are read off the same `state` under the same lock, so the array is always true of the
     /// view it travels with — the actor's queue means no `reduce` can land between them.
     fn push_view(&self, core: &Core, player: PlayerId) {
-        let message = view_message(self.view_of(core, player), &engine::legal_actions(&core.state, player));
+        let message = view_message(
+            self.view_of(core, player),
+            &engine::legal_actions(&core.state, player),
+        );
         self.send(core, player, &message);
     }
 
     fn push_clock(&self, core: &Core, player: PlayerId) {
-        self.send(core, player, &clock_message(now_ms(), self.shared.clock.snapshot()));
+        self.send(
+            core,
+            player,
+            &clock_message(now_ms(), self.shared.clock.snapshot()),
+        );
     }
 
     // ---------------------------------------------------------------------
@@ -476,15 +522,18 @@ impl MatchActor {
     fn server_actions_for(&self, core: &Core, expiry: ClockExpiry) -> Vec<(PlayerId, ActionBody)> {
         let snapshot = engine::snapshot(&core.state);
         match expiry {
-            ClockExpiry::Turn { player } | ClockExpiry::Prompt { player } => vec![(player, ActionBody::Timeout)],
+            ClockExpiry::Turn { player } | ClockExpiry::Prompt { player } => {
+                vec![(player, ActionBody::Timeout)]
+            }
             // R268: one clock for both seats, so on expiry every seat still owing is timed out — read
             // when the expiry runs, since a seat may have answered between the alarm and this task — in
             // seat order, each stamped with its own seat (R146: a timeout belongs to the player whose
             // clock ran out). What a timed-out mulligan keeps is the engine's business (R268: the whole
             // hand); a seat that has already answered is owed nothing and gets no row.
-            ClockExpiry::Mulligan => {
-                mulligan_window(&snapshot).into_iter().map(|player| (player, ActionBody::Timeout)).collect()
-            }
+            ClockExpiry::Mulligan => mulligan_window(&snapshot)
+                .into_iter()
+                .map(|player| (player, ActionBody::Timeout))
+                .collect(),
             // SPEC §11 R146: "a disconnect timeout belongs to the player who disconnected, because the
             // loss is theirs". `disconnectExpired` names the player in its body (§10.2), so the seat
             // the action is *stamped* with would otherwise be free; R146 fixes it so folding the log
@@ -527,8 +576,13 @@ impl MatchActor {
     /// The clocks as stored: the clock's own, plus any stored grace not yet handed to it (R744).
     fn clocks_to_store(&self, core: &Core) -> MatchClocks {
         let clocks = self.shared.clock.snapshot();
-        let Some(stored) = &core.stored_grace else { return clocks };
-        let grace = PerPlayer::new(clocks.grace_deadline.p1.or(stored.p1), clocks.grace_deadline.p2.or(stored.p2));
+        let Some(stored) = &core.stored_grace else {
+            return clocks;
+        };
+        let grace = PerPlayer::new(
+            clocks.grace_deadline.p1.or(stored.p1),
+            clocks.grace_deadline.p2.or(stored.p2),
+        );
         MatchClocks {
             grace_deadline: grace,
             ..clocks
@@ -546,7 +600,9 @@ impl MatchActor {
             clocks
         };
         // §9.5: "the grace countdown is stored on the match so both clients show it".
-        let written = one_tx!(self.shared.deps.db, |t| t.matches_set_clocks(self.match_id_str(), &clocks).await?);
+        let written = one_tx!(self.shared.deps.db, |t| t
+            .matches_set_clocks(self.match_id_str(), &clocks)
+            .await?);
         if let Err(error) = written {
             tracing::warn!(event = "match.clocks.persistFailed", matchId = %self.match_id_str(), message = %error);
         }
@@ -604,7 +660,11 @@ impl MatchActor {
                 }
                 let view = engine::view_for(&core.state, player);
                 if let Some(PendingView::ForYou(pending)) = &view.pending {
-                    self.send(core, player, &prompt_for_you(player, &pending.choice_id, pending.kind, deadline));
+                    self.send(
+                        core,
+                        player,
+                        &prompt_for_you(player, &pending.choice_id, pending.kind, deadline),
+                    );
                 }
             }
         }
@@ -613,13 +673,18 @@ impl MatchActor {
         // §10.6: one prompt at a time; the player who does not hold it learns only that it is open.
         let pending_for = snapshot.pending_for;
         if let Some(holder) = pending_for
-            && Some(holder) != core.last_pending_for {
-                let view = engine::view_for(&core.state, holder);
-                if let Some(PendingView::ForYou(pending)) = &view.pending {
-                    self.send(core, holder, &prompt_for_you(holder, &pending.choice_id, pending.kind, deadline));
-                }
-                self.send(core, holder.opponent(), &prompt_for_opponent(holder, deadline));
+            && Some(holder) != core.last_pending_for
+        {
+            let view = engine::view_for(&core.state, holder);
+            if let Some(PendingView::ForYou(pending)) = &view.pending {
+                self.send(
+                    core,
+                    holder,
+                    &prompt_for_you(holder, &pending.choice_id, pending.kind, deadline),
+                );
             }
+            self.send(core, holder.opponent(), &prompt_for_opponent(holder, deadline));
+        }
         core.last_pending_for = pending_for;
     }
 
@@ -627,7 +692,10 @@ impl MatchActor {
     /// other seat. A disconnect grace belongs to the account, so one running moves with it to the seat
     /// it plays now (restarted there: the clock keeps one deadline per seat, not per account).
     fn on_seats_swapped(&self, core: &mut Core, now: bool) {
-        let away: Vec<PlayerId> = PLAYERS.into_iter().filter(|home| core.sockets[*home].is_none()).collect();
+        let away: Vec<PlayerId> = PLAYERS
+            .into_iter()
+            .filter(|home| core.sockets[*home].is_none())
+            .collect();
         for home in &away {
             self.shared.clock.clear_grace(playing(core, *home));
         }
@@ -730,7 +798,9 @@ impl MatchActor {
             tracing::error!(event = "match.recordResult.failed", matchId = %self.match_id_str(), message = %error);
         }
 
-        let finished = one_tx!(self.shared.deps.db, |t| t.matches_finish(self.match_id_str(), at).await?);
+        let finished = one_tx!(self.shared.deps.db, |t| t
+            .matches_finish(self.match_id_str(), at)
+            .await?);
         if let Err(error) = finished {
             tracing::warn!(event = "match.finish.failed", matchId = %self.match_id_str(), message = %error);
         }
@@ -753,7 +823,11 @@ impl MatchActor {
                 return existing.clone();
             }
             if core.finished {
-                return error_message(SocketErrorCode::MatchOver, "this match already has a result", Some(&nonce));
+                return error_message(
+                    SocketErrorCode::MatchOver,
+                    "this match already has a result",
+                    Some(&nonce),
+                );
             }
             // §9.1: the seat is the server's, never the client's.
             let action = Action::new(body, player, nonce.clone());
@@ -781,11 +855,16 @@ impl MatchActor {
             action,
             at: now_ms(),
         };
-        let appended =
-            one_tx!(self.shared.deps.db, |t| t.matches_append_actions(std::slice::from_ref(&row)).await?);
+        let appended = one_tx!(self.shared.deps.db, |t| t
+            .matches_append_actions(std::slice::from_ref(&row))
+            .await?);
         if let Err(error) = appended {
             tracing::error!(event = "match.append.failed", matchId = %self.match_id_str(), seq = seq, message = %error);
-            return error_message(SocketErrorCode::Internal, "the action could not be recorded; try again", Some(&nonce));
+            return error_message(
+                SocketErrorCode::Internal,
+                "the action could not be recorded; try again",
+                Some(&nonce),
+            );
         }
 
         let ack = ack_message(&nonce, seq);
@@ -814,7 +893,11 @@ impl MatchActor {
             Err(malformed) => {
                 // A bad frame is answered, not fatal: the actor stays up and the other seat is untouched.
                 tracing::warn!(event = "match.frame.malformed", matchId = %self.match_id_str(), player = %player, reason = %malformed.reason);
-                self.send_to_home(&core, home, &error_message(SocketErrorCode::Malformed, &malformed.reason, None));
+                self.send_to_home(
+                    &core,
+                    home,
+                    &error_message(SocketErrorCode::Malformed, &malformed.reason, None),
+                );
             }
             Ok(ClientMessage::Hello(_)) => {
                 // §9.5: "Reconnect gets a fresh full view, never a log replay."
@@ -831,7 +914,11 @@ impl MatchActor {
                 let mut sent_at = gate.sent_at;
                 sent_at.push(now);
                 core.emote_history[home] = sent_at;
-                self.send(&core, player.opponent(), &emote_relay_message(player, emote.emote));
+                self.send(
+                    &core,
+                    player.opponent(),
+                    &emote_relay_message(player, emote.emote),
+                );
             }
             Ok(ClientMessage::Aim(aim)) => self.receive_aim(&mut core, player, aim.aim),
             Ok(ClientMessage::Action(action)) => {
@@ -842,7 +929,11 @@ impl MatchActor {
                     self.send_to_home(
                         &core,
                         home,
-                        &error_message(SocketErrorCode::RateLimited, "too many actions; slow down", Some(&action.nonce)),
+                        &error_message(
+                            SocketErrorCode::RateLimited,
+                            "too many actions; slow down",
+                            Some(&action.nonce),
+                        ),
                     );
                     return;
                 }
@@ -899,7 +990,9 @@ impl MatchActor {
     /// and the opponent's arrow is cleared instead if it showed one (R738, R97). A repeat of what
     /// the opponent was last told is not sent again.
     fn flush_aim(&self, core: &mut Core, player: PlayerId) {
-        let Some(aim) = core.aims[player].pending.take() else { return };
+        let Some(aim) = core.aims[player].pending.take() else {
+            return;
+        };
         if core.finished || core.stopped {
             return;
         }
@@ -992,7 +1085,10 @@ impl MatchActor {
     /// began in p1 plays p2, and the actor routes its socket there (`playing`).
     pub fn seat_of(&self, profile_id: &str) -> Option<PlayerId> {
         let (first, second) = &self.shared.seats;
-        [first, second].into_iter().find(|seat| seat.profile_id == profile_id).map(|seat| seat.player)
+        [first, second]
+            .into_iter()
+            .find(|seat| seat.profile_id == profile_id)
+            .map(|seat| seat.player)
     }
 
     /// Hands a connection to the account that began in `home` (`seat_of`). Replaces (and closes) a
@@ -1029,9 +1125,10 @@ impl MatchActor {
             }),
         });
         if let Some(previous) = previous
-            && previous != socket {
-                previous.close(Some(1000), Some("replaced by a new socket"));
-            }
+            && previous != socket
+        {
+            previous.close(Some(1000), Some("replaced by a new socket"));
+        }
 
         let player = playing(&self.lock(), home);
         tracing::info!(event = "match.socket.attached", matchId = %self.match_id_str(), player = %player, home = %home);
@@ -1053,7 +1150,11 @@ impl MatchActor {
     /// client (§9.1). Answers the `ack` or the `error` the client is sent.
     pub async fn submit(&self, player: PlayerId, nonce: String, body: ActionBody) -> ServerMessage {
         let (reply, answer) = oneshot::channel();
-        let failed = error_message(SocketErrorCode::Internal, "the match is not running", Some(&nonce));
+        let failed = error_message(
+            SocketErrorCode::Internal,
+            "the match is not running",
+            Some(&nonce),
+        );
         self.enqueue(Task::Submit {
             player,
             nonce,
@@ -1163,7 +1264,11 @@ pub fn aim_is_public(aim: &Aim, sender: PlayerId, view: &PlayerView) -> bool {
             if *player != sender {
                 return false;
             }
-            let hand = if sender == view.viewer { &view.you.hand } else { &view.opponent.hand };
+            let hand = if sender == view.viewer {
+                &view.you.hand
+            } else {
+                &view.opponent.hand
+            };
             let count = match hand {
                 HandView::Cards(cards) => cards.len(),
                 HandView::Count { count } => usize::try_from(*count).unwrap_or(0),
@@ -1190,7 +1295,11 @@ fn end_is_public(end: &AimEnd, view: &PlayerView) -> bool {
         AimEnd::Hand { .. } => false,
         AimEnd::Hero { .. } => true,
         AimEnd::Zone { player, row, lane } => {
-            let side = if *player == view.viewer { &view.you } else { &view.opponent };
+            let side = if *player == view.viewer {
+                &view.you
+            } else {
+                &view.opponent
+            };
             i64::from(*lane) <= side.locks.row(*row).len() as i64
         }
     }

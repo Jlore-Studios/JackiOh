@@ -132,7 +132,11 @@ fn clone_db(db: &Db) -> Db {
 /// is the reset.
 async fn memory_harness() -> Harness {
     let app = test_app().await;
-    Harness { name: "fake store (in memory)", db: clone_db(&app.db), admin: None }
+    Harness {
+        name: "fake store (in memory)",
+        db: clone_db(&app.db),
+        admin: None,
+    }
 }
 
 /// The Postgres end, emptied: TS's `postgresHarness()` and its `reset()` before the case.
@@ -142,9 +146,17 @@ async fn postgres_harness(url: &str) -> Harness {
     seed_cards(&admin).await;
     // `app.settings` is not truncated (migration 0001 seeds it once), so the redemption switch
     // is put back by hand rather than left flipped for whatever test runs next.
-    sqlx::query(REDEMPTION_ENABLED_SQL).bind(true).execute(&admin).await.expect("redemption on");
+    sqlx::query(REDEMPTION_ENABLED_SQL)
+        .bind(true)
+        .execute(&admin)
+        .await
+        .expect("redemption on");
     let pool = PgPool::connect(url).await.expect("the store's pool");
-    Harness { name: "postgres store (src/db/pg.rs)", db: Db::Pg(pool), admin: Some(admin) }
+    Harness {
+        name: "postgres store (src/db/pg.rs)",
+        db: Db::Pg(pool),
+        admin: Some(admin),
+    }
 }
 
 /// The fake always; Postgres as well when there is one.
@@ -162,12 +174,17 @@ impl Harness {
     /// references.
     async fn new_user_id(&self, email: &str) -> String {
         let Some(admin) = &self.admin else { return uuid() };
-        let rows = sqlx::query("insert into auth.users (email, email_confirmed_at) values ($1, now()) returning id")
-            .bind(email)
-            .fetch_all(admin)
-            .await
-            .expect("insert the auth user");
-        let id: uuid::Uuid = rows.first().expect("auth.users insert returned no id").try_get("id").expect("id");
+        let rows =
+            sqlx::query("insert into auth.users (email, email_confirmed_at) values ($1, now()) returning id")
+                .bind(email)
+                .fetch_all(admin)
+                .await
+                .expect("insert the auth user");
+        let id: uuid::Uuid = rows
+            .first()
+            .expect("auth.users insert returned no id")
+            .try_get("id")
+            .expect("id");
         // Migration 0001's `on_auth_user_created` trigger has just made the pending profile row.
         // The contract exercises `profiles.create` itself — the path `resolve_caller` takes for a
         // user whose row is missing — so the trigger's row is removed here and asserted separately
@@ -234,7 +251,10 @@ async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
         if pending { Poll::Pending } else { Poll::Ready(()) }
     })
     .await;
-    outputs.into_iter().map(|output| output.expect("every future finished")).collect()
+    outputs
+        .into_iter()
+        .map(|output| output.expect("every future finished"))
+        .collect()
 }
 
 /// §9.4: pending until a code is redeemed, with a verified email (the harness default). Answers
@@ -242,14 +262,16 @@ async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
 async fn pending_profile(h: &Harness) -> String {
     let email = format!("{}@example.test", uuid());
     let user_id = h.new_user_id(&email).await;
-    let existing = once!(h.db, Some(user_id.as_str()), |tx| tx.profiles_get_by_user_id(&user_id))
-        .expect("profiles.getByUserId");
+    let existing = once!(h.db, Some(user_id.as_str()), |tx| tx
+        .profiles_get_by_user_id(&user_id))
+    .expect("profiles.getByUserId");
     if let Some(profile) = existing {
         return js(&profile)["id"].as_str().expect("a profile id").to_string();
     }
     let input = json!({ "userId": user_id, "email": email, "rating": 1000, "at": now_ms() });
-    let created = once!(h.db, Some(user_id.as_str()), |tx| tx.profiles_create(&de(input.clone())))
-        .expect("profiles.create");
+    let created = once!(h.db, Some(user_id.as_str()), |tx| tx
+        .profiles_create(&de(input.clone())))
+    .expect("profiles.create");
     js(&created)["id"].as_str().expect("a profile id").to_string()
 }
 
@@ -277,8 +299,12 @@ async fn uses_of(h: &Harness, code_hash: &str) -> i64 {
 }
 
 async fn status_of(h: &Harness, profile_id: &str) -> String {
-    let profile = once!(h.db, Some(profile_id), |tx| tx.profiles_get_by_id(profile_id)).expect("profiles.getById");
-    js(&must(profile, "the profile"))["status"].as_str().unwrap_or_default().to_string()
+    let profile =
+        once!(h.db, Some(profile_id), |tx| tx.profiles_get_by_id(profile_id)).expect("profiles.getById");
+    js(&must(profile, "the profile"))["status"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string()
 }
 
 /// `Tx::redeem` in its own transaction: what it answers (`RedeemResult`), as its string.
@@ -331,7 +357,8 @@ mod b14_concurrent_redemptions {
     }
 
     #[tokio::test]
-    async fn b14_one_pending_profile_redeeming_two_good_codes_at_once_is_activated_once_and_spends_one_code() {
+    async fn b14_one_pending_profile_redeeming_two_good_codes_at_once_is_activated_once_and_spends_one_code()
+    {
         for h in harnesses().await {
             one_profile_racing_its_own_codes(&h, 2, "ip-race").await;
             h.close().await;
@@ -422,7 +449,12 @@ mod b14_concurrent_redemptions {
             .await;
 
             assert_eq!(count(&results, "ok"), 1, "{}: {results:?}", h.name);
-            assert_eq!(count(&results, "invalid_code"), profiles.len() - 1, "{}: {results:?}", h.name);
+            assert_eq!(
+                count(&results, "invalid_code"),
+                profiles.len() - 1,
+                "{}: {results:?}",
+                h.name
+            );
             assert_eq!(uses_of(&h, &code_hash).await, 1, "{}", h.name);
             let mut active = 0;
             for profile in &profiles {
@@ -436,7 +468,8 @@ mod b14_concurrent_redemptions {
     }
 
     #[tokio::test]
-    async fn b14_at_the_per_ip_boundary_concurrent_redemptions_from_different_profiles_get_exactly_one_more_lookup() {
+    async fn b14_at_the_per_ip_boundary_concurrent_redemptions_from_different_profiles_get_exactly_one_more_lookup()
+     {
         for h in harnesses().await {
             let ip_hash = format!("ip-boundary-{}", uuid());
             // Exactly at the limit, one account at a time: §9.4 step 3 refuses "more than" it.
@@ -462,8 +495,20 @@ mod b14_concurrent_redemptions {
 
             // The first to get through sees the limit (not more than it) and reaches the lookup; every
             // other one then sees one more than the limit.
-            assert_eq!(count(&results, "invalid_code"), 1, "{}: {}", h.name, results.join(","));
-            assert_eq!(count(&results, "rate_limited_ip"), burst.len() - 1, "{}: {}", h.name, results.join(","));
+            assert_eq!(
+                count(&results, "invalid_code"),
+                1,
+                "{}: {}",
+                h.name,
+                results.join(",")
+            );
+            assert_eq!(
+                count(&results, "rate_limited_ip"),
+                burst.len() - 1,
+                "{}: {}",
+                h.name,
+                results.join(",")
+            );
             h.close().await;
         }
     }
@@ -507,14 +552,21 @@ mod b14_concurrent_redemptions {
                 raced
                     .iter()
                     .enumerate()
-                    .map(|(index, (_, code_hash))| redeem(&h, &racer, code_hash, format!("ip-settle-{index}")))
+                    .map(|(index, (_, code_hash))| {
+                        redeem(&h, &racer, code_hash, format!("ip-settle-{index}"))
+                    })
                     .collect(),
             )
             .await;
 
             let later = pending_profile(&h).await;
             let (_, fresh) = mint(&h, 1).await;
-            assert_eq!(redeem(&h, &later, &fresh, "ip-later".to_string()).await, "ok", "{}", h.name);
+            assert_eq!(
+                redeem(&h, &later, &fresh, "ip-later".to_string()).await,
+                "ok",
+                "{}",
+                h.name
+            );
             assert_eq!(status_of(&h, &later).await, "active", "{}", h.name);
             assert_eq!(uses_of(&h, &fresh).await, 1, "{}", h.name);
             h.close().await;

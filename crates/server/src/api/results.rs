@@ -36,23 +36,28 @@ use std::time::Duration;
 use indexmap::IndexMap;
 use jackioh_engine::{GameOverReason, PlayerId, Winner};
 
-use crate::api::queue::json_list;
 use crate::actor::contracts::{RecordResultInput, TerminalOutcome, VoidMatchInput};
 use crate::api::game_records::record_live_game;
 use crate::api::http::{ApiError, ApiErrorCode};
+use crate::api::queue::json_list;
 use crate::api::ranked::{RankedGameInput, RankedSideInput, rate_ranked_game};
 use crate::api::series::{SeriesGameResult, advance_series_in_tx, resume_series};
 use crate::app::{App, now_ms};
 use crate::config::{MATCH_REAPER_INTERVAL_SECONDS, RATING_START, RESULT_WRITE_ATTEMPTS};
 use crate::db::store::{
-    LastBoardKind, MatchRow, MatchSeat, Profile, RatedGameKind, RatedReason, ResultRow, SeriesRow, SeriesStatus,
-    StoreError, Tx,
+    LastBoardKind, MatchRow, MatchSeat, Profile, RatedGameKind, RatedReason, ResultRow, SeriesRow,
+    SeriesStatus, StoreError, Tx,
 };
 
 /// A failure this file reports to its caller (the actor, the reaper): TS rethrew the error itself,
 /// so the sentence is the error's own.
 fn failure(error: impl std::fmt::Display) -> ApiError {
-    ApiError { code: ApiErrorCode::Internal, message: error.to_string(), details: None, retry_after_ms: None }
+    ApiError {
+        code: ApiErrorCode::Internal,
+        message: error.to_string(),
+        details: None,
+        retry_after_ms: None,
+    }
 }
 
 /// The literal a series status is written as.
@@ -172,7 +177,10 @@ async fn write_once(
     // committed rows, though — two first writers can both pass it, which is what the retry above
     // is for: the loser's insert meets `results_pkey` instead.
     if let Some(already) = tx.results_get_by_match(&input.match_id).await.map_err(failed)? {
-        return Ok(Written { row: already, series: None });
+        return Ok(Written {
+            row: already,
+            series: None,
+        });
     }
 
     // R262: a game of a Conquest series is recorded but not rated — the series moves the rating
@@ -182,7 +190,11 @@ async fn write_once(
     let series = tx.series_by_match(&input.match_id).await.map_err(failed)?;
     let match_row: Option<MatchRow> = tx.matches_get(&input.match_id).await.map_err(failed)?;
     let ranked_match = match_row.as_ref().is_some_and(|row| row.ranked == Some(true));
-    let rating_policy = if series.is_none() && ranked_match { input_policy } else { RatingPolicy::Unchanged };
+    let rating_policy = if series.is_none() && ranked_match {
+        input_policy
+    } else {
+        RatingPolicy::Unchanged
+    };
 
     // A ranked series reaches its rating move — and so open_season_in_tx's `lock_seasons` — inside
     // `advance_series_in_tx` below, AFTER `results_insert`, `set_in_match` and the rest have already
@@ -199,8 +211,10 @@ async fn write_once(
         .profiles_get_many(&[seat_a.profile_id.clone(), seat_b.profile_id.clone()])
         .await
         .map_err(failed)?;
-    let by_id: IndexMap<String, Profile> =
-        profiles.into_iter().map(|profile| (profile.id.clone(), profile)).collect();
+    let by_id: IndexMap<String, Profile> = profiles
+        .into_iter()
+        .map(|profile| (profile.id.clone(), profile))
+        .collect();
     let rating_of = |seat: &MatchSeat| -> f64 {
         if let Some(profile) = by_id.get(&seat.profile_id) {
             return profile.rating;
@@ -218,34 +232,43 @@ async fn write_once(
     let mut before: (f64, f64) = (rating_of(seat_a), rating_of(seat_b));
     let mut after: (f64, f64) = (before.0, before.1);
     if rating_policy == RatingPolicy::Rated
-        && let Some(match_row) = &match_row {
-            // R603–R611: both hidden ratings, both ranks and the record of the rated game, in this
-            // transaction, so the result and its rating move commit together or not at all.
-            let rated = rate_ranked_game(
-                tx,
-                app,
-                &RankedGameInput {
-                    id: input.match_id.clone(),
-                    kind: RatedGameKind::Match,
-                    catalog_version: match_row.catalog_version.clone(),
-                    sides: (
-                        RankedSideInput::Player { profile_id: seat_a.profile_id.clone() },
-                        RankedSideInput::Player { profile_id: seat_b.profile_id.clone() },
-                    ),
-                    winner_side: winner_side_of(&input.outcome, &input.seats),
-                    reason: RatedReason::Game(input.outcome.reason),
-                    at: input.at,
-                    // R672: a double-or-nothing rematch's stakes ride on its row; absent is a normal game.
-                    stake: if match_row.stake == Some(2) { Some(2) } else { None },
-                },
-            )
-            .await
-            .map_err(failed)?;
-            before = (rated.sides.0.before.rating, rated.sides.1.before.rating);
-            after = (rated.sides.0.after.rating, rated.sides.1.after.rating);
-        }
+        && let Some(match_row) = &match_row
+    {
+        // R603–R611: both hidden ratings, both ranks and the record of the rated game, in this
+        // transaction, so the result and its rating move commit together or not at all.
+        let rated = rate_ranked_game(
+            tx,
+            app,
+            &RankedGameInput {
+                id: input.match_id.clone(),
+                kind: RatedGameKind::Match,
+                catalog_version: match_row.catalog_version.clone(),
+                sides: (
+                    RankedSideInput::Player {
+                        profile_id: seat_a.profile_id.clone(),
+                    },
+                    RankedSideInput::Player {
+                        profile_id: seat_b.profile_id.clone(),
+                    },
+                ),
+                winner_side: winner_side_of(&input.outcome, &input.seats),
+                reason: RatedReason::Game(input.outcome.reason),
+                at: input.at,
+                // R672: a double-or-nothing rematch's stakes ride on its row; absent is a normal game.
+                stake: if match_row.stake == Some(2) { Some(2) } else { None },
+            },
+        )
+        .await
+        .map_err(failed)?;
+        before = (rated.sides.0.before.rating, rated.sides.1.before.rating);
+        after = (rated.sides.0.after.rating, rated.sides.1.after.rating);
+    }
 
-    let winner_profile_id = input.outcome.winner.player().map(|winner| (if winner == seat_a.player { seat_a } else { seat_b }).profile_id.clone());
+    let winner_profile_id = input.outcome.winner.player().map(|winner| {
+        (if winner == seat_a.player { seat_a } else { seat_b })
+            .profile_id
+            .clone()
+    });
     let row = ResultRow {
         match_id: input.match_id.clone(),
         players: (seat_a.profile_id.clone(), seat_b.profile_id.clone()),
@@ -274,11 +297,17 @@ async fn write_once(
         // rated path above made the only one there is.
         // §9.5: "Every ending records a result and clears both players' in-match state." Both, for
         // every reason — M7-T1's "past grace they have lost and both can queue again".
-        tx.profiles_set_in_match(&seat.profile_id, None).await.map_err(failed)?;
+        tx.profiles_set_in_match(&seat.profile_id, None)
+            .await
+            .map_err(failed)?;
         // A profile can be queued *and* in a match (it accepted a room challenge while waiting), and
         // an open ticket would block the re-queue that M7-T1 promises, so the ending clears that
         // too. This mirrors `app.end_match` in migration 0004, which cancels the same stray ticket.
-        if let Some(ticket) = tx.tickets_open_for_profile(&seat.profile_id).await.map_err(failed)? {
+        if let Some(ticket) = tx
+            .tickets_open_for_profile(&seat.profile_id)
+            .await
+            .map_err(failed)?
+        {
             tx.tickets_cancel(&ticket.id, input.at).await.map_err(failed)?;
         }
     }
@@ -286,7 +315,9 @@ async fn write_once(
     // The match row may be gone; a missing match must not lose the result, so it is checked rather
     // than assumed.
     if match_row.is_some() {
-        tx.matches_finish(&input.match_id, input.at).await.map_err(failed)?;
+        tx.matches_finish(&input.match_id, input.at)
+            .await
+            .map_err(failed)?;
     }
 
     // R263: the series' record of this game, and R262's rating move if it ends the series, in this
@@ -320,7 +351,10 @@ async fn write_once(
         seriesId = advanced.as_ref().map(|series| series.id.as_str()),
         seriesStatus = advanced.as_ref().map(|series| series_status_name(series.status)),
     );
-    Ok(Written { row, series: advanced })
+    Ok(Written {
+        row,
+        series: advanced,
+    })
 }
 
 /// The `RecordResult` port the actor holds (TS `ActorDeps.recordResult`, made by
@@ -397,7 +431,10 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
         let input = RecordResultInput {
             match_id: match_row.id.clone(),
             seats: seats_of(&match_row),
-            outcome: TerminalOutcome { winner: Winner::Draw, reason: GameOverReason::MatchCeiling },
+            outcome: TerminalOutcome {
+                winner: Winner::Draw,
+                reason: GameOverReason::MatchCeiling,
+            },
             turns: REAPER_TURNS,
             at: now,
             last_boards: None,

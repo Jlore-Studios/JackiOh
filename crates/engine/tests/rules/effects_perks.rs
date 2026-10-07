@@ -11,7 +11,7 @@ use jackioh_engine::effects::{discount_random_in_hand, gain_hero_armor};
 use jackioh_engine::mana::effective_cost;
 use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
-use jackioh_engine::script::{EngineSink, Effect};
+use jackioh_engine::script::{Effect, EngineSink};
 use jackioh_engine::state::{CardInstance, GameState, find_instance};
 
 use super::fixtures::catalog::{spell_def, unit_def, vanilla_catalog};
@@ -96,7 +96,10 @@ mod gain_hero_armor_c_plus_c46 {
     #[test]
     fn names_the_other_hero_with_player_enemy_and_ignores_a_non_positive_amount() {
         let mut state = game("perks-armor-enemy");
-        run(&mut state, gain_hero_armor(json_as(json!({ "amount": 2, "player": "enemy" }))));
+        run(
+            &mut state,
+            gain_hero_armor(json_as(json!({ "amount": 2, "player": "enemy" }))),
+        );
         run(&mut state, gain_hero_armor(json_as(json!({ "amount": 0 }))));
         run(&mut state, gain_hero_armor(json_as(json!({ "amount": -3 }))));
         assert_eq!(state.players.p2.hero.armor, 2);
@@ -113,7 +116,10 @@ mod discount_random_in_hand_c_plus_c49 {
         let zero = first(in_hand(&mut state, &free().id, PlayerId::P1, 1));
         let x = first(in_hand(&mut state, &x_spell().id, PlayerId::P1, 1));
         let three = first(in_hand(&mut state, &pricey().id, PlayerId::P1, 1));
-        let events = run(&mut state, discount_random_in_hand(json_as(json!({ "amount": 2 }))));
+        let events = run(
+            &mut state,
+            discount_random_in_hand(json_as(json!({ "amount": 2 }))),
+        );
         assert_eq!(live(&state, &three.id).cost_mod, -2);
         assert_eq!(live(&state, &zero.id).cost_mod, 0);
         assert_eq!(live(&state, &x.id).cost_mod, 0);
@@ -127,9 +133,15 @@ mod discount_random_in_hand_c_plus_c49 {
     fn s2_3_a_discount_past_the_price_floors_the_cost_at_0() {
         let mut state = game("perks-floor");
         let three = first(in_hand(&mut state, &pricey().id, PlayerId::P1, 1));
-        run(&mut state, discount_random_in_hand(json_as(json!({ "amount": 20 }))));
+        run(
+            &mut state,
+            discount_random_in_hand(json_as(json!({ "amount": 20 }))),
+        );
         assert_eq!(live(&state, &three.id).cost_mod, -20);
-        assert_eq!(effective_cost(&state, live(&state, &three.id), Default::default()), 0);
+        assert_eq!(
+            effective_cost(&state, live(&state, &three.id), Default::default()),
+            0
+        );
     }
 
     #[test]
@@ -139,7 +151,10 @@ mod discount_random_in_hand_c_plus_c49 {
         in_hand(&mut state, &x_spell().id, PlayerId::P1, 1);
         let before = state.rng_cursor;
         assert_eq!(
-            run(&mut state, discount_random_in_hand(json_as(json!({ "amount": 2 })))),
+            run(
+                &mut state,
+                discount_random_in_hand(json_as(json!({ "amount": 2 })))
+            ),
             Vec::<GameEvent>::new()
         );
         assert_eq!(state.rng_cursor, before);
@@ -151,7 +166,10 @@ mod discount_random_in_hand_c_plus_c49 {
         for i in 0..300 {
             let mut state = game(&format!("perks-uniform-{i}"));
             let cards = in_hand(&mut state, &pricey().id, PlayerId::P1, 3);
-            run(&mut state, discount_random_in_hand(json_as(json!({ "amount": 1 }))));
+            run(
+                &mut state,
+                discount_random_in_hand(json_as(json!({ "amount": 1 }))),
+            );
             let hit = cards
                 .iter()
                 .position(|card| live(&state, &card.id).cost_mod == -1)
@@ -166,4 +184,3 @@ mod discount_random_in_hand_c_plus_c49 {
         }
     }
 }
-

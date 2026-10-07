@@ -40,7 +40,10 @@ const CHAOS: &str = "cc-chaos-fixture";
 const BOX: &str = "cc-box-fixture";
 
 fn chaos() -> CardDef {
-    spell(CHAOS, json!({ "tags": ["Call to Chaos"], "rarity": "Legendary", "cost": 4 }))
+    spell(
+        CHAOS,
+        json!({ "tags": ["Call to Chaos"], "rarity": "Legendary", "cost": 4 }),
+    )
 }
 
 fn box_def() -> CardDef {
@@ -58,8 +61,14 @@ fn game(seed: &str, cry: Hook) -> GameState {
     scripts.insert(
         CHAOS.to_string(),
         CardScripts {
-            base: Script { cry: Some(cry.clone()), ..Script::default() },
-            radiant: Script { cry: Some(cry), ..Script::default() },
+            base: Script {
+                cry: Some(cry.clone()),
+                ..Script::default()
+            },
+            radiant: Script {
+                cry: Some(cry),
+                ..Script::default()
+            },
         },
     );
     register_scripts(scripts);
@@ -76,9 +85,18 @@ fn cast_from_box(state: &mut GameState) -> Vec<GameEvent> {
     let self_ = new_instance(state, BOX, PlayerId::P1, Zone::Resolving { player: PlayerId::P1 });
     {
         let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(&mut sink, Some(&self_), HookOptions { controller: Some(PlayerId::P1), ..Default::default() });
+        let mut ctx = make_context(
+            &mut sink,
+            Some(&self_),
+            HookOptions {
+                controller: Some(PlayerId::P1),
+                ..Default::default()
+            },
+        );
         apply_effects(
-            &[cast_random(json_as(json!({ "query": { "tags": ["Call to Chaos"] }, "count": 1 })))],
+            &[cast_random(json_as(
+                json!({ "query": { "tags": ["Call to Chaos"] }, "count": 1 }),
+            ))],
             &mut ctx,
         );
     }
@@ -114,7 +132,13 @@ mod cast_random_and_r28_s_call_to_chaos_chain_classic_47 {
             }),
         );
         let events = cast_from_box(&mut state);
-        assert_eq!(events_of_type(&events, GameEventType::CardPlayed).len(), CALL_TO_CHAOS_CHAIN_CAP as usize);
-        assert_eq!(seen.try_iter().collect::<Vec<i32>>(), (1..=CALL_TO_CHAOS_CHAIN_CAP).collect::<Vec<i32>>());
+        assert_eq!(
+            events_of_type(&events, GameEventType::CardPlayed).len(),
+            CALL_TO_CHAOS_CHAIN_CAP as usize
+        );
+        assert_eq!(
+            seen.try_iter().collect::<Vec<i32>>(),
+            (1..=CALL_TO_CHAOS_CHAIN_CAP).collect::<Vec<i32>>()
+        );
     }
 }

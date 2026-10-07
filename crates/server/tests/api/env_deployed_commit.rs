@@ -5,7 +5,7 @@
 //! Port of `apps/server/test/env-deployed-commit.test.ts` (part 18).
 
 use indexmap::IndexMap;
-use jackioh_server::env::{load_env, SERVER_ONLY_ENV_VARS};
+use jackioh_server::env::{SERVER_ONLY_ENV_VARS, load_env};
 use serde_json::json;
 
 /// A complete, valid environment for the server (apps/server/README.md's table).
@@ -15,8 +15,14 @@ use serde_json::json;
 fn valid_env() -> IndexMap<String, String> {
     [
         ("SUPABASE_URL", "https://project.supabase.test"),
-        ("SUPABASE_SECRET_KEY", "sb_secret_0123456789abcdefghijklmnopqrstuv"),
-        ("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/jackioh"),
+        (
+            "SUPABASE_SECRET_KEY",
+            "sb_secret_0123456789abcdefghijklmnopqrstuv",
+        ),
+        (
+            "DATABASE_URL",
+            "postgres://postgres:postgres@localhost:5432/jackioh",
+        ),
         ("CODE_PEPPER", "a-pepper-of-at-least-thirty-two-characters"),
         ("CATALOG_VERSION", jackioh_cards::catalog_version()),
         ("PUBLIC_ORIGINS", "https://play.jackioh.test"),
@@ -39,7 +45,12 @@ mod render_git_commit {
 
     #[test]
     fn is_unset_not_a_problem_when_the_server_is_not_on_render() {
-        assert_eq!(load_env(&valid_env()).expect("a valid environment").deployed_commit, None);
+        assert_eq!(
+            load_env(&valid_env())
+                .expect("a valid environment")
+                .deployed_commit,
+            None
+        );
     }
 
     #[test]
@@ -52,7 +63,14 @@ mod render_git_commit {
     #[test]
     fn drops_anything_that_is_not_a_git_sha_instead_of_failing_the_boot() {
         let forty_gs = "g".repeat(40);
-        for value in ["", "main", "not a sha", "abc123", "71dfdb6\r\nx-injected: 1", forty_gs.as_str()] {
+        for value in [
+            "",
+            "main",
+            "not a sha",
+            "abc123",
+            "71dfdb6\r\nx-injected: 1",
+            forty_gs.as_str(),
+        ] {
             let env = load_env(&with_commit(value)).expect("a valid environment");
             assert_eq!(env.deployed_commit, None, "{}", json!(value));
         }

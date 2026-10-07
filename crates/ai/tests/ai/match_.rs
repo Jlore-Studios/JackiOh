@@ -13,17 +13,18 @@ use std::panic::catch_unwind;
 
 use indexmap::IndexMap;
 use jackioh_ai::{
-    AI_GATE, AI_GATE_BUDGET, AI_EVAL, AI_MULLIGAN, MatchConfig, MatchHooks, MatchRecord, Matchup, NextSwing,
-    SeatController, action_key, candidate_actions, evaluate, game_config, greedy_action, play_match, random_action,
+    AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, MatchConfig, MatchHooks, MatchRecord, Matchup, NextSwing,
+    SeatController, action_key, candidate_actions, evaluate, game_config, greedy_action, play_match,
+    random_action,
 };
 use jackioh_engine::testkit::{
-    AI_DIFFICULTY, Action, ActionBody, ActionType, FoldArgs, GameState, PerPlayer, PerPlayerOpt, PlayerId, Value,
-    create_rng, def_of, fold, hash_state, json, json_as, query_cost, reduce, seat_to_act, subsystems,
+    AI_DIFFICULTY, Action, ActionBody, ActionType, FoldArgs, GameState, PerPlayer, PerPlayerOpt, PlayerId,
+    Value, create_rng, def_of, fold, hash_state, json, json_as, query_cost, reduce, seat_to_act, subsystems,
 };
 
 use super::support::{
-    AI, HUMAN, act, dealt_game, is_legal, random_decks, random_decks_sized, random_policy_states, register_cards,
-    scenario,
+    AI, HUMAN, act, dealt_game, is_legal, random_decks, random_decks_sized, random_policy_states,
+    register_cards, scenario,
 };
 
 fn random_vs_random(seed: &str) -> MatchConfig {
@@ -159,7 +160,10 @@ mod play_match_b26 {
                 assert_eq!(hash_state(before), hash_state(&seen[at - 1].1), "action {at}");
             }
         }
-        assert_eq!(seen.last().map(|call| hash_state(&call.1)), Some(record.hash.clone()));
+        assert_eq!(
+            seen.last().map(|call| hash_state(&call.1)),
+            Some(record.hash.clone())
+        );
     }
 
     #[test]
@@ -188,7 +192,9 @@ mod play_match_b26 {
 /// p1 to act, nothing hidden anywhere and no card with a random effect.
 fn open_board(p1: Value, p2: Value) -> GameState {
     register_cards();
-    scenario(json!({ "seed": "match-greedy", "p1": p1, "p2": p2 })).state().clone()
+    scenario(json!({ "seed": "match-greedy", "p1": p1, "p2": p2 }))
+        .state()
+        .clone()
 }
 
 fn eval(state: &GameState) -> f64 {
@@ -255,7 +261,10 @@ mod the_baselines_b27 {
         let chosen = expect_greedy(&state, "winning");
         assert_eq!(chosen.action_type(), ActionType::Attack);
         let result = reduce(&state, &Action::new(chosen, AI, "greedy-win"));
-        assert_eq!(result.state.result.and_then(|result| result.winner.player()), Some(AI));
+        assert_eq!(
+            result.state.result.and_then(|result| result.winner.player()),
+            Some(AI)
+        );
     }
 
     #[test]
@@ -328,7 +337,10 @@ mod the_baselines_b27 {
         }))
         .state()
         .clone();
-        assert_eq!(greedy_action(&humans_turn, AI, &mut create_rng("match-greedy-null", 0)), None);
+        assert_eq!(
+            greedy_action(&humans_turn, AI, &mut create_rng("match-greedy-null", 0)),
+            None
+        );
     }
 
     #[test]
@@ -342,17 +354,28 @@ mod the_baselines_b27 {
         }))
         .state()
         .clone();
-        assert_eq!(random_action(&humans_turn, AI, &mut create_rng("match-random-null", 0)), None);
+        assert_eq!(
+            random_action(&humans_turn, AI, &mut create_rng("match-random-null", 0)),
+            None
+        );
         // R265: both seats owe a mulligan at once, so p2 owes nothing only once it has answered its own.
         let dealt = dealt_game("match-random-null-mulligan");
         assert_eq!(
-            random_action(&dealt, PlayerId::P2, &mut create_rng("match-random-null-mulligan", 0))
-                .map(|action| action.action_type()),
+            random_action(
+                &dealt,
+                PlayerId::P2,
+                &mut create_rng("match-random-null-mulligan", 0)
+            )
+            .map(|action| action.action_type()),
             Some(ActionType::Mulligan)
         );
         let answered = act(&dealt, PlayerId::P2, ActionBody::Mulligan { keep: vec![] });
         assert_eq!(
-            random_action(&answered, PlayerId::P2, &mut create_rng("match-random-null-mulligan", 0)),
+            random_action(
+                &answered,
+                PlayerId::P2,
+                &mut create_rng("match-random-null-mulligan", 0)
+            ),
             None
         );
     }
@@ -366,14 +389,21 @@ mod the_baselines_b27 {
         assert!(states.len() > 5);
         for (at, state) in states.iter().enumerate() {
             let seat = seat_to_act(state).expect("a live game has a seat to act");
-            let chosen = greedy_action(state, seat, &mut create_rng(&format!("match-greedy-real:{at}"), 0));
+            let chosen = greedy_action(
+                state,
+                seat,
+                &mut create_rng(&format!("match-greedy-real:{at}"), 0),
+            );
             let action = chosen.unwrap_or_else(|| panic!("state {at}"));
             assert!(
                 is_legal(state, seat, &action),
                 "state {at}: {}",
                 serde_json::to_string(&action).unwrap()
             );
-            assert!(!matches!(action.action_type(), ActionType::Concede | ActionType::OfferDraw));
+            assert!(!matches!(
+                action.action_type(),
+                ActionType::Concede | ActionType::OfferDraw
+            ));
             if let ActionBody::AnswerDraw { accept } = action {
                 assert!(!accept);
             }

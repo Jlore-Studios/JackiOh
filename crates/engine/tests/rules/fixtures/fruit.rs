@@ -10,7 +10,9 @@
 
 use std::sync::LazyLock;
 
-use jackioh_engine::effects::{add_rolled_grapes, damage_enemy_or_heal_friend, draw_priced, replace_hand_with_random};
+use jackioh_engine::effects::{
+    add_rolled_grapes, damage_enemy_or_heal_friend, draw_priced, replace_hand_with_random,
+};
 use jackioh_engine::testkit::*;
 
 use super::catalog::spell_def;
@@ -44,19 +46,33 @@ pub static grape_roller: LazyLock<CardDef> = LazyLock::new(|| {
 });
 
 /// Normal Grape's stand-in: a target, then one draw priced −1.
-pub static priced_draw: LazyLock<CardDef> =
-    LazyLock::new(|| spell_def(911, json!({ "id": "fx-fruit-priced", "name": "Fixture Priced Draw" })));
+pub static priced_draw: LazyLock<CardDef> = LazyLock::new(|| {
+    spell_def(
+        911,
+        json!({ "id": "fx-fruit-priced", "name": "Fixture Priced Draw" }),
+    )
+});
 
 /// A cast-on-draw Spell that does nothing, to end a priced draw with no card in hand (R58).
-pub static cast_on_draw: LazyLock<CardDef> =
-    LazyLock::new(|| spell_def(912, json!({ "id": "fx-fruit-cod", "name": "Fixture Cast On Draw" })));
+pub static cast_on_draw: LazyLock<CardDef> = LazyLock::new(|| {
+    spell_def(
+        912,
+        json!({ "id": "fx-fruit-cod", "name": "Fixture Cast On Draw" }),
+    )
+});
 
 /// Mythic Grape's stand-in, and the one non-token "Mythic" its pool holds besides.
 pub static replacer: LazyLock<CardDef> = LazyLock::new(|| {
-    spell_def(913, json!({ "id": "fx-fruit-replacer", "name": "Fixture Replacer", "rarity": "Mythic" }))
+    spell_def(
+        913,
+        json!({ "id": "fx-fruit-replacer", "name": "Fixture Replacer", "rarity": "Mythic" }),
+    )
 });
 pub static mythic: LazyLock<CardDef> = LazyLock::new(|| {
-    spell_def(914, json!({ "id": "fx-fruit-mythic", "name": "Fixture Mythic", "rarity": "Mythic" }))
+    spell_def(
+        914,
+        json!({ "id": "fx-fruit-mythic", "name": "Fixture Mythic", "rarity": "Mythic" }),
+    )
 });
 
 /// The five Grape stand-ins (under `GRAPE_ODDS`' ids, in its order) and the fixtures above, on top of `base`.
@@ -65,14 +81,24 @@ pub fn fruit_catalog(base: CardDefs) -> CardDefs {
     for (at, odds) in GRAPE_ODDS.iter().enumerate() {
         defs.insert(odds.def_id.to_string(), grape_def(odds.def_id, at as i32));
     }
-    for entry in [&*grape_roller, &*priced_draw, &*cast_on_draw, &*replacer, &*mythic] {
+    for entry in [
+        &*grape_roller,
+        &*priced_draw,
+        &*cast_on_draw,
+        &*replacer,
+        &*mythic,
+    ] {
         defs.insert(entry.id.clone(), entry.clone());
     }
     defs
 }
 
 fn priced_draw_targets() -> Vec<TargetDecl> {
-    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+    vec![TargetDecl::target(
+        1,
+        1,
+        json!({ "side": "any", "of": ["unit", "hero"] }),
+    )]
 }
 
 fn cast_on_draw_script() -> Script {
@@ -91,11 +117,15 @@ pub static FRUIT_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::ne
             grape_roller.id.clone(),
             CardScripts {
                 base: Script {
-                    cry: Some(hook(|_ctx| vec![add_rolled_grapes(json_as(json!({ "count": 3 })))])),
+                    cry: Some(hook(|_ctx| {
+                        vec![add_rolled_grapes(json_as(json!({ "count": 3 })))]
+                    })),
                     ..Script::default()
                 },
                 radiant: Script {
-                    cry: Some(hook(|_ctx| vec![add_rolled_grapes(json_as(json!({ "count": 3, "radiant": true })))])),
+                    cry: Some(hook(|_ctx| {
+                        vec![add_rolled_grapes(json_as(json!({ "count": 3, "radiant": true })))]
+                    })),
                     ..Script::default()
                 },
             },

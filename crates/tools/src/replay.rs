@@ -36,7 +36,9 @@ fn replay_json(input: Value) -> Result<Value> {
 /// `cargo jackioh replay`.
 pub fn run(_args: Args) -> Result<()> {
     let mut text = String::new();
-    std::io::stdin().read_to_string(&mut text).context("reading stdin")?;
+    std::io::stdin()
+        .read_to_string(&mut text)
+        .context("reading stdin")?;
     let input: Value = serde_json::from_str(&text).context("stdin is not JSON")?;
     jackioh_cards::register_all();
     println!("{}", serde_json::to_string(&replay_json(input)?)?);
@@ -48,7 +50,10 @@ mod tests {
     use super::*;
 
     /// The hotseat game e2e spec 01 recorded (SURFACE §13), committed beside the golden traces.
-    const HOTSEAT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../engine/tests/golden/01-hotseat-full-game.json");
+    const HOTSEAT: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../engine/tests/golden/01-hotseat-full-game.json"
+    );
     /// Its pinned hash (`packages/cards/test/hotseat-replay.test.ts`).
     const HOTSEAT_HASH: &str = "a798906b";
 
@@ -76,7 +81,10 @@ mod tests {
         let errors = answer["errors"].as_array().unwrap();
         assert_eq!(errors.len(), 1, "{errors:?}");
         assert_eq!(errors[0]["nonce"], "refused-1");
-        assert!(errors[0]["error"].as_str().is_some_and(|error| !error.is_empty()), "{errors:?}");
+        assert!(
+            errors[0]["error"].as_str().is_some_and(|error| !error.is_empty()),
+            "{errors:?}"
+        );
     }
 
     #[test]

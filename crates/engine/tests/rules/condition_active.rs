@@ -101,11 +101,19 @@ fn glow_field_spell() -> CardDef {
 }
 /// A hooked Stack unit, to sit on top of a pile.
 fn glow_stack() -> CardDef {
-    unit_def("glow-stack", 1956, json!({ "base": stack_face(1, 1), "radiant": stack_face(2, 2) }))
+    unit_def(
+        "glow-stack",
+        1956,
+        json!({ "base": stack_face(1, 1), "radiant": stack_face(2, 2) }),
+    )
 }
 /// A Stack unit with no hook, to bury a hooked card under.
 fn plain_stack() -> CardDef {
-    unit_def("plain-stack", 1957, json!({ "base": stack_face(1, 1), "radiant": stack_face(2, 2) }))
+    unit_def(
+        "plain-stack",
+        1957,
+        json!({ "base": stack_face(1, 1), "radiant": stack_face(2, 2) }),
+    )
 }
 /// A registered script that declares no `conditionMet`.
 fn quiet_unit() -> CardDef {
@@ -226,7 +234,14 @@ impl Hooks {
             radiant: Script::default(),
         };
         let mut scripts: IndexMap<String, CardScripts> = IndexMap::new();
-        for def in [glow_unit(), glow_spell(), glow_trap(), glow_field_trap(), glow_field_spell(), glow_stack()] {
+        for def in [
+            glow_unit(),
+            glow_spell(),
+            glow_trap(),
+            glow_field_trap(),
+            glow_field_spell(),
+            glow_stack(),
+        ] {
             scripts.insert(def.id, hooked.clone());
         }
         scripts.insert(plain_stack().id, empty());
@@ -259,7 +274,10 @@ impl Hooks {
 
     /// `<hook>.mock.calls`, as contexts.
     fn calls(&self, which: Which) -> Vec<Asked> {
-        self.pulled().into_iter().filter(|call| call.which == which).collect()
+        self.pulled()
+            .into_iter()
+            .filter(|call| call.which == which)
+            .collect()
     }
 
     /// `<hook>.mockClear()`.
@@ -287,7 +305,10 @@ impl Hooks {
     }
 
     fn asked_about(&self, instance_id: &str) -> Vec<Asked> {
-        self.asked().into_iter().filter(|ctx| ctx.self_.id == instance_id).collect()
+        self.asked()
+            .into_iter()
+            .filter(|ctx| ctx.self_.id == instance_id)
+            .collect()
     }
 }
 
@@ -367,7 +388,11 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .iter()
             .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
         (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(got, want)| matches_object(got, want))
+            actual.len() == expected.len()
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(got, want)| matches_object(got, want))
         }
         _ => actual == expected,
     }
@@ -390,7 +415,9 @@ fn inert_resume() -> Resume {
 }
 
 fn mode_option(option: &str) -> PromptOption {
-    json_as(json!({ "key": format!("mode:{option}"), "label": option, "selection": { "pick": "mode", "option": option } }))
+    json_as(
+        json!({ "key": format!("mode:{option}"), "label": option, "selection": { "pick": "mode", "option": option } }),
+    )
 }
 
 fn open_mode_prompt(state: &mut GameState, player: PlayerId) {
@@ -476,7 +503,11 @@ mod r195_condition_active_in_the_viewer_s_hand_b1 {
 
         assert!(glows(Some(&hand_card(&view, &shiny.id))));
         assert!(!glows(Some(&hand_card(&view, &plain.id))));
-        let radiant_asked: Vec<String> = hooks.calls(Which::Radiant).iter().map(|ctx| ctx.self_.id.clone()).collect();
+        let radiant_asked: Vec<String> = hooks
+            .calls(Which::Radiant)
+            .iter()
+            .map(|ctx| ctx.self_.id.clone())
+            .collect();
         assert!(radiant_asked.contains(&shiny.id));
         assert!(!radiant_asked.contains(&plain.id));
         for ctx in hooks.calls(Which::Radiant) {
@@ -488,11 +519,17 @@ mod r195_condition_active_in_the_viewer_s_hand_b1 {
     }
 
     #[test]
-    fn r195_b1_condition_active_hands_the_hook_the_card_its_controller_its_face_the_zone_and_the_turn_and_asks_once() {
+    fn r195_b1_condition_active_hands_the_hook_the_card_its_controller_its_face_the_zone_and_the_turn_and_asks_once()
+     {
         let (mut state, hooks) = game("r195-direct-hand");
         let spell = one(in_hand(&mut state, &glow_spell().id, P1, 1));
 
-        assert!(condition_active(&state, live(&state, &spell.id), P1, ConditionZone::Hand));
+        assert!(condition_active(
+            &state,
+            live(&state, &spell.id),
+            P1,
+            ConditionZone::Hand
+        ));
 
         let calls = hooks.calls(Which::Base);
         assert_eq!(calls.len(), 1);
@@ -507,7 +544,12 @@ mod r195_condition_active_in_the_viewer_s_hand_b1 {
         assert!(ctx.your_turn);
 
         hooks.answer(Which::Base, false);
-        assert!(!condition_active(&state, live(&state, &spell.id), P1, ConditionZone::Hand));
+        assert!(!condition_active(
+            &state,
+            live(&state, &spell.id),
+            P1,
+            ConditionZone::Hand
+        ));
     }
 
     #[test]
@@ -534,7 +576,11 @@ mod r195_condition_active_stays_off_a_hand_card_outside_its_playable_window_b2 {
     use super::*;
 
     fn hand_call_count(hooks: &Hooks) -> usize {
-        hooks.asked().iter().filter(|ctx| ctx.zone == ConditionZone::Hand).count()
+        hooks
+            .asked()
+            .iter()
+            .filter(|ctx| ctx.zone == ConditionZone::Hand)
+            .count()
     }
 
     #[test]
@@ -570,7 +616,10 @@ mod r195_condition_active_stays_off_a_hand_card_outside_its_playable_window_b2 {
 
             let view = view_for(&state, P1);
 
-            assert!(!has_key(&hand_card(&view, &spell.id), "conditionActive"), "{phase}");
+            assert!(
+                !has_key(&hand_card(&view, &spell.id), "conditionActive"),
+                "{phase}"
+            );
             assert_eq!(hand_call_count(&hooks), 0, "{phase}");
         }
     }
@@ -625,13 +674,28 @@ mod r195_condition_active_stays_off_a_hand_card_outside_its_playable_window_b2 {
         let spell = one(in_hand(&mut state, &glow_spell().id, P1, 1));
 
         state.active = P2;
-        assert!(!condition_active(&state, live(&state, &spell.id), P1, ConditionZone::Hand));
+        assert!(!condition_active(
+            &state,
+            live(&state, &spell.id),
+            P1,
+            ConditionZone::Hand
+        ));
         state.active = P1;
         state.phase = Phase::Mulligan;
-        assert!(!condition_active(&state, live(&state, &spell.id), P1, ConditionZone::Hand));
+        assert!(!condition_active(
+            &state,
+            live(&state, &spell.id),
+            P1,
+            ConditionZone::Hand
+        ));
         state.phase = Phase::Main;
         open_mode_prompt(&mut state, P1);
-        assert!(!condition_active(&state, live(&state, &spell.id), P1, ConditionZone::Hand));
+        assert!(!condition_active(
+            &state,
+            live(&state, &spell.id),
+            P1,
+            ConditionZone::Hand
+        ));
 
         assert!(hooks.calls(Which::Base).is_empty());
     }
@@ -646,7 +710,8 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     use super::*;
 
     #[test]
-    fn r195_b3_a_unit_the_viewer_controls_carries_the_flag_on_the_viewer_s_turn_asked_as_field_with_yourturn_true() {
+    fn r195_b3_a_unit_the_viewer_controls_carries_the_flag_on_the_viewer_s_turn_asked_as_field_with_yourturn_true()
+     {
         let (mut state, hooks) = game("r195-b3-unit-own-turn");
         let unit = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 2), json!({}));
 
@@ -686,15 +751,28 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
             hooks.clear(Which::Base);
             state.active = active;
             let trap = put(&mut state, &glow_trap().id, slot(P1, Row::Backrow, 1), json!({}));
-            let field_trap = put(&mut state, &glow_field_trap().id, slot(P1, Row::Backrow, 2), json!({}));
-            let field_spell = put(&mut state, &glow_field_spell().id, slot(P1, Row::Backrow, 3), json!({}));
+            let field_trap = put(
+                &mut state,
+                &glow_field_trap().id,
+                slot(P1, Row::Backrow, 2),
+                json!({}),
+            );
+            let field_spell = put(
+                &mut state,
+                &glow_field_spell().id,
+                slot(P1, Row::Backrow, 3),
+                json!({}),
+            );
 
             let view = view_for(&state, P1);
 
             for (lane, card) in [(0usize, &trap), (1, &field_trap), (2, &field_spell)] {
                 let entry = view.you.backrow[lane].as_ref();
                 assert!(
-                    matches_object(&to_json(&entry), &json!({ "faceDown": false, "instanceId": card.id })),
+                    matches_object(
+                        &to_json(&entry),
+                        &json!({ "faceDown": false, "instanceId": card.id })
+                    ),
                     "{} on {active}'s turn",
                     card.def_id
                 );
@@ -708,7 +786,8 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     }
 
     #[test]
-    fn r195_b3_a_field_card_is_asked_outside_the_main_phase_and_with_a_prompt_open_and_still_carries_the_flag() {
+    fn r195_b3_a_field_card_is_asked_outside_the_main_phase_and_with_a_prompt_open_and_still_carries_the_flag()
+     {
         let (mut state, _hooks) = game("r195-b3-field-prompt");
         put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1), json!({}));
         put(&mut state, &glow_trap().id, slot(P1, Row::Backrow, 1), json!({}));
@@ -743,7 +822,9 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     fn r195_b3_a_unit_the_viewer_controls_but_does_not_own_carries_it_its_owner_s_view_does_not() {
         let (mut state, hooks) = game("r195-b3-stolen");
         let stolen = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 3), json!({}));
-        find_instance_mut(&mut state, &stolen.id).expect("on the field").owner = P2;
+        find_instance_mut(&mut state, &stolen.id)
+            .expect("on the field")
+            .owner = P2;
 
         assert!(glows(view_for(&state, P1).you.units[2].as_ref()));
 
@@ -764,13 +845,29 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
 
         let view = view_for(&state, P1);
 
-        for card in view.you.graveyard.iter().chain(&view.you.exile).chain(&view.you.resolving) {
+        for card in view
+            .you
+            .graveyard
+            .iter()
+            .chain(&view.you.exile)
+            .chain(&view.you.resolving)
+        {
             assert!(!has_key(card, "conditionActive"), "{}", card.instance_id);
         }
         // Not vacuous: all three piles really travelled.
-        assert!(view.you.graveyard.iter().any(|card| card.instance_id == in_grave.id));
+        assert!(
+            view.you
+                .graveyard
+                .iter()
+                .any(|card| card.instance_id == in_grave.id)
+        );
         assert!(view.you.exile.iter().any(|card| card.instance_id == in_exile.id));
-        assert!(view.you.resolving.iter().any(|card| card.instance_id == resolving.id));
+        assert!(
+            view.you
+                .resolving
+                .iter()
+                .any(|card| card.instance_id == resolving.id)
+        );
         for card in [&in_grave, &in_exile, &resolving] {
             assert!(hooks.asked_about(&card.id).is_empty());
         }
@@ -830,7 +927,12 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
         state.active = P2;
         let unit = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1), json!({}));
 
-        assert!(condition_active(&state, live(&state, &unit.id), P1, ConditionZone::Field));
+        assert!(condition_active(
+            &state,
+            live(&state, &unit.id),
+            P1,
+            ConditionZone::Field
+        ));
         let calls = hooks.calls(Which::Base);
         assert_eq!(calls.len(), 1);
         let ctx = &calls[0];
@@ -850,14 +952,27 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
     use super::*;
 
     #[test]
-    fn r195_b4_the_opponent_s_view_of_p1_s_glowing_cards_carries_no_key_anywhere_and_p1_s_cards_are_not_asked() {
+    fn r195_b4_the_opponent_s_view_of_p1_s_glowing_cards_carries_no_key_anywhere_and_p1_s_cards_are_not_asked()
+     {
         let (mut state, hooks) = game("r195-b4-opponent-view");
         let hand = one(in_hand(&mut state, &glow_spell().id, P1, 1));
         let unit = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1), json!({}));
         let trap = put(&mut state, &glow_trap().id, slot(P1, Row::Backrow, 1), json!({}));
-        let field_spell = put(&mut state, &glow_field_spell().id, slot(P1, Row::Backrow, 2), json!({}));
-        let fired_field_trap = put(&mut state, &glow_field_trap().id, slot(P1, Row::Backrow, 3), json!({}));
-        find_instance_mut(&mut state, &fired_field_trap.id).expect("in the backrow").face_up = Some(true);
+        let field_spell = put(
+            &mut state,
+            &glow_field_spell().id,
+            slot(P1, Row::Backrow, 2),
+            json!({}),
+        );
+        let fired_field_trap = put(
+            &mut state,
+            &glow_field_trap().id,
+            slot(P1, Row::Backrow, 3),
+            json!({}),
+        );
+        find_instance_mut(&mut state, &fired_field_trap.id)
+            .expect("in the backrow")
+            .face_up = Some(true);
         // p2's own hooked unit, so p2's view is not simply a view with nothing to ask about.
         let their_unit = put(&mut state, &glow_unit().id, slot(P2, Row::Units, 2), json!({}));
 
@@ -877,7 +992,10 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
 
         assert_eq!(to_json(&theirs.opponent.hand), json!({ "count": 1 }));
         assert!(!glows(theirs.opponent.units[0].as_ref()));
-        assert_eq!(to_json(&theirs.opponent.backrow[0]), json!({ "faceDown": true, "cost": 1 }));
+        assert_eq!(
+            to_json(&theirs.opponent.backrow[0]),
+            json!({ "faceDown": true, "cost": 1 })
+        );
         assert!(matches_object(
             &to_json(&theirs.opponent.backrow[1]),
             &json!({ "faceDown": false, "instanceId": field_spell.id })
@@ -908,13 +1026,19 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
         let (mut state, hooks) = game("r195-b4-direct");
         let theirs = put(&mut state, &glow_unit().id, slot(P2, Row::Units, 1), json!({}));
 
-        assert!(!condition_active(&state, live(&state, &theirs.id), P1, ConditionZone::Field));
+        assert!(!condition_active(
+            &state,
+            live(&state, &theirs.id),
+            P1,
+            ConditionZone::Field
+        ));
         assert!(hooks.calls(Which::Base).is_empty());
         assert!(hooks.calls(Which::Radiant).is_empty());
     }
 
     #[test]
-    fn r195_b4_cards_with_no_hook_never_carry_the_key_on_either_seat_a_transient_def_with_no_script_included() {
+    fn r195_b4_cards_with_no_hook_never_carry_the_key_on_either_seat_a_transient_def_with_no_script_included()
+    {
         let (mut state, _hooks) = game("r195-b4-no-hook");
         state.transient_defs.insert(transient_unit().id, transient_unit());
 
@@ -924,9 +1048,24 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
             in_hand(&mut state, &transient_unit().id, player, 1);
         }
         put(&mut state, &quiet_unit().id, slot(P1, Row::Units, 1), json!({}));
-        put(&mut state, &unscripted_unit().id, slot(P1, Row::Units, 2), json!({}));
-        let transient = put(&mut state, &transient_unit().id, slot(P1, Row::Units, 3), json!({}));
-        put(&mut state, &transient_unit().id, slot(P2, Row::Units, 1), json!({}));
+        put(
+            &mut state,
+            &unscripted_unit().id,
+            slot(P1, Row::Units, 2),
+            json!({}),
+        );
+        let transient = put(
+            &mut state,
+            &transient_unit().id,
+            slot(P1, Row::Units, 3),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &transient_unit().id,
+            slot(P2, Row::Units, 1),
+            json!({}),
+        );
         put(&mut state, &quiet_unit().id, slot(P2, Row::Units, 2), json!({}));
 
         for active in [P1, P2] {
@@ -939,10 +1078,20 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
                 );
             }
         }
-        assert!(!condition_active(&state, live(&state, &transient.id), P1, ConditionZone::Field));
+        assert!(!condition_active(
+            &state,
+            live(&state, &transient.id),
+            P1,
+            ConditionZone::Field
+        ));
         state.active = P1;
         let transient_in_hand = one(in_hand(&mut state, &transient_unit().id, P1, 1));
-        assert!(!condition_active(&state, live(&state, &transient_in_hand.id), P1, ConditionZone::Hand));
+        assert!(!condition_active(
+            &state,
+            live(&state, &transient_in_hand.id),
+            P1,
+            ConditionZone::Hand
+        ));
     }
 }
 
@@ -956,7 +1105,10 @@ mod r196_a_fusion_s_condition_met_is_its_ingredients_hooks_or_ed {
 
     /// Craft a fusion of `def_ids` into p1's hand through the real R77 `fuse`, the path #99 takes.
     fn craft(state: &mut GameState, def_ids: &[String]) -> CardInstance {
-        let ingredients: Vec<CardInstance> = def_ids.iter().map(|def_id| one(in_hand(state, def_id, P1, 1))).collect();
+        let ingredients: Vec<CardInstance> = def_ids
+            .iter()
+            .map(|def_id| one(in_hand(state, def_id, P1, 1)))
+            .collect();
         let fused = with_sink(state, |sink| {
             fuse(
                 sink,
@@ -994,7 +1146,8 @@ mod r196_a_fusion_s_condition_met_is_its_ingredients_hooks_or_ed {
     }
 
     #[test]
-    fn r196_each_ingredient_s_hook_is_asked_about_the_fused_card_itself_and_only_an_answer_of_exactly_true_counts() {
+    fn r196_each_ingredient_s_hook_is_asked_about_the_fused_card_itself_and_only_an_answer_of_exactly_true_counts()
+     {
         let (mut state, hooks) = game("r196-context");
         let fused = craft(&mut state, &[glow_a().id, glow_b().id]);
 
@@ -1003,7 +1156,12 @@ mod r196_a_fusion_s_condition_met_is_its_ingredients_hooks_or_ed {
         // or-ed hook must still ask both ingredients.
         hooks.answer(Which::A, false);
         hooks.answer(Which::B, false);
-        assert!(!condition_active(&state, live(&state, &fused.id), P1, ConditionZone::Hand));
+        assert!(!condition_active(
+            &state,
+            live(&state, &fused.id),
+            P1,
+            ConditionZone::Hand
+        ));
         let asked_a = hooks.calls(Which::A);
         let asked_b = hooks.calls(Which::B);
         assert!(!asked_a.is_empty());
@@ -1017,7 +1175,8 @@ mod r196_a_fusion_s_condition_met_is_its_ingredients_hooks_or_ed {
     }
 
     #[test]
-    fn r196_one_hooked_ingredient_s_hook_is_the_fusion_s_and_a_fusion_with_no_hooked_ingredient_never_glows() {
+    fn r196_one_hooked_ingredient_s_hook_is_the_fusion_s_and_a_fusion_with_no_hooked_ingredient_never_glows()
+    {
         let (mut state, hooks) = game("r196-one-hook");
         let with_hook = craft(&mut state, &[glow_a().id, quiet_unit().id]);
         let without_hook = craft(&mut state, &[quiet_unit().id, plain_stack().id]);
@@ -1027,7 +1186,12 @@ mod r196_a_fusion_s_condition_met_is_its_ingredients_hooks_or_ed {
         hooks.answer(Which::A, false);
         assert!(!glows(Some(&hand_card(&view_for(&state, P1), &with_hook.id))));
         assert!(!glows(Some(&hand_card(&view_for(&state, P1), &without_hook.id))));
-        assert!(!condition_active(&state, live(&state, &without_hook.id), P1, ConditionZone::Hand));
+        assert!(!condition_active(
+            &state,
+            live(&state, &without_hook.id),
+            P1,
+            ConditionZone::Hand
+        ));
     }
 
     #[test]

@@ -79,7 +79,11 @@ fn number_then_noun(text: &str, accept: impl Fn(&str) -> bool, nouns: &[&str]) -
 
 /// `/\b1 (cards|times|Plague Counters|Units|Spells)\b/`: a lone 1 before a plural noun.
 fn one_with_a_plural(text: &str) -> bool {
-    number_then_noun(text, |n| n == "1", &["cards", "times", "Plague Counters", "Units", "Spells"])
+    number_then_noun(
+        text,
+        |n| n == "1",
+        &["cards", "times", "Plague Counters", "Units", "Spells"],
+    )
 }
 
 /// `/\b([2-9]|\d{2,}) (card|time|Plague Counter|Unit|Spell)\b(?!s)/`: a number above 1 before a
@@ -108,7 +112,10 @@ mod b3_4_params_the_numbers_a_card_declares {
         let flame = card_def("classic-016");
         assert_eq!(filled_with(&flame, FaceKind::Base, "damage", 5), "Deal 5 damage.");
         let none: IndexMap<String, i32> = IndexMap::new();
-        assert_eq!(fill_params(&flame, FaceKind::Radiant, Some(&none)), "Deal 8 damage.");
+        assert_eq!(
+            fill_params(&flame, FaceKind::Radiant, Some(&none)),
+            "Deal 8 damage."
+        );
         let vanilla = card_def("core-008");
         assert!(vanilla.params.is_none());
         assert_eq!(fill_params(&vanilla, FaceKind::Base, None), vanilla.base.text);
@@ -122,7 +129,11 @@ mod b3_4_params_the_numbers_a_card_declares {
             let keys: IndexSet<String> = declared.iter().map(|param| param.key.clone()).collect();
             let written: IndexSet<String> = [&card.base.text, &card.radiant.text]
                 .into_iter()
-                .flat_map(|text| param_placeholders(text).into_iter().map(|placeholder| placeholder.key))
+                .flat_map(|text| {
+                    param_placeholders(text)
+                        .into_iter()
+                        .map(|placeholder| placeholder.key)
+                })
                 .collect();
             for key in &written {
                 if !keys.contains(key) {
@@ -200,7 +211,12 @@ mod b3_4_params_the_numbers_a_card_declares {
     #[test]
     fn r482_never_makes_a_numbered_keyword_an_echo_or_an_activate_count_a_param_the_x_change_tunes_those() {
         let keys = |id: &str| -> Vec<String> {
-            card_def(id).params.unwrap_or_default().into_iter().map(|param| param.key).collect()
+            card_def(id)
+                .params
+                .unwrap_or_default()
+                .into_iter()
+                .map(|param| param.key)
+                .collect()
         };
         // Solarius prints Spell Damage +2; its Cry (which drew 1) is gone on both faces (balance
         // patch 1), so no number is a param.
@@ -211,7 +227,10 @@ mod b3_4_params_the_numbers_a_card_declares {
         assert_eq!(keys("classicplus-038"), Vec::<String>::new());
         // Top Loser's Armor, Twice Forward's printed Brittle, Brother Ping's Activate, Echo's Echo 1.
         assert_eq!(keys("classicplus-019-1"), Vec::<String>::new());
-        assert_eq!(keys("classicplus-074"), vec!["plays".to_string(), "brittleGain".to_string()]);
+        assert_eq!(
+            keys("classicplus-074"),
+            vec!["plays".to_string(), "brittleGain".to_string()]
+        );
         assert_eq!(keys("classicplus-076-1"), vec!["damage".to_string()]);
         assert!(card_def("classic-057").params.is_none());
         // No param shares its name with a keyword kind.

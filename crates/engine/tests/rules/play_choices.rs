@@ -134,7 +134,8 @@ fn record_choices() -> Effect {
         let got_modes = json!(ctx.modes.clone());
         // TS wrote through the live `ctx.self`; here through the card under that id.
         if let Some(card) = find_instance_mut(ctx.state, &self_id) {
-            card.memory.insert("gotTargets".to_string(), Value::Array(got_targets));
+            card.memory
+                .insert("gotTargets".to_string(), Value::Array(got_targets));
             card.memory.insert("gotModes".to_string(), got_modes);
         }
     })
@@ -158,7 +159,9 @@ fn nothing() -> Option<Hook> {
 
 fn damage_chosen(amount: i32) -> Option<Hook> {
     Some(hook(move |_ctx| {
-        vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
+        vec![effects::damage(json_as(
+            json!({ "to": { "of": "chosen" }, "amount": amount }),
+        ))]
     }))
 }
 
@@ -254,16 +257,28 @@ fn act_result(state: &GameState, body: Value) -> ReduceResult {
 }
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|card| card.id.clone()).collect()
+    state.players[player]
+        .hand
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 /// Past the mulligans, in p1's main phase, with this file's fixtures registered and 4 mana.
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep = hand_ids(&state, PlayerId::P1);
-    state = act_result(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" })).state;
+    state = act_result(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+    )
+    .state;
     let keep = hand_ids(&state, PlayerId::P2);
-    state = act_result(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" })).state;
+    state = act_result(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+    )
+    .state;
     let mut catalog = registered_catalog().clone();
     for card in defs() {
         catalog.insert(card.id.clone(), card);
@@ -370,8 +385,18 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
     #[test]
     fn r90_r13_offers_only_the_top_of_a_stack_pile_and_refuses_a_card_dormant_under_it() {
         let mut state = playing("stack-dormant");
-        let buried = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let mut top = put(&mut state, &stacker.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let buried = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let mut top = put(
+            &mut state,
+            &stacker.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         // Move the Stack card onto the occupied lane, which turns it into a pile (§3.2).
         assert!(zones::place_on_field(
             &mut state,
@@ -389,13 +414,19 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         let decl = first_decl(&state, &card);
         // R13: a dormant card is not "on the field" for effects, so it is never offered.
         assert_eq!(
-            ids(&play_choices::legal_selections_for(&state, PlayerId::P1, &card, &decl)),
+            ids(&play_choices::legal_selections_for(
+                &state,
+                PlayerId::P1,
+                &card,
+                &decl
+            )),
             vec![top.id.clone()]
         );
-        let combos: Vec<Vec<String>> = play_choices::play_choice_combinations(&state, PlayerId::P1, &card, None)
-            .iter()
-            .map(|combo| ids(combo.targets.as_deref().unwrap_or(&[])))
-            .collect();
+        let combos: Vec<Vec<String>> =
+            play_choices::play_choice_combinations(&state, PlayerId::P1, &card, None)
+                .iter()
+                .map(|combo| ids(combo.targets.as_deref().unwrap_or(&[])))
+                .collect();
         assert_eq!(combos, vec![vec![top.id.clone()]]);
 
         // Naming it anyway is refused rather than silently retargeted: a client may not reach it.
@@ -419,7 +450,11 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         );
 
         let refused = act_result(&state, targeting(&card.id, vec![on_instance(&buried.id)]));
-        assert!(error_of(&refused).contains("not a legal target"), "{:?}", refused.error);
+        assert!(
+            error_of(&refused).contains("not a legal target"),
+            "{:?}",
+            refused.error
+        );
         assert_eq!(refused.state, state);
         assert_eq!(find_instance(&state, &buried.id).map(|card| card.damage), Some(0));
     }
@@ -435,7 +470,12 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         let decl = first_decl(&state, &card);
 
         // §9.1: a hand pick only ever offers the chooser's own hand, and never the card leaving it.
-        let offered = ids(&play_choices::legal_selections_for(&state, PlayerId::P1, &card, &decl));
+        let offered = ids(&play_choices::legal_selections_for(
+            &state,
+            PlayerId::P1,
+            &card,
+            &decl,
+        ));
         assert!(offered.contains(&mine.id));
         assert!(!offered.contains(&card.id));
         for held in &state.players.p2.hand {
@@ -452,26 +492,52 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
             "not a legal target",
         ));
         assert!(
-            error_of(&act_result(&state, targeting(&card.id, vec![on_instance(&theirs.id)])))
-                .contains("not a legal target")
+            error_of(&act_result(
+                &state,
+                targeting(&card.id, vec![on_instance(&theirs.id)])
+            ))
+            .contains("not a legal target")
         );
         // The hand pick the chooser does own goes through.
-        assert_eq!(act_result(&state, targeting(&card.id, vec![on_instance(&mine.id)])).error, None);
+        assert_eq!(
+            act_result(&state, targeting(&card.id, vec![on_instance(&mine.id)])).error,
+            None
+        );
     }
 
     /// "R90 refuses fewer picks than a declaration's minimum and more than its maximum"
     #[test]
     fn r90_refuses_fewer_picks_than_a_declarations_minimum_and_more_than_its_maximum() {
         let mut state = playing("counts");
-        let a = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let b = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
-        let c = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let a = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let b = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        let c = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let card = hand_card(&mut state, &one_to_two().id, PlayerId::P1);
         let decl = first_decl(&state, &card);
         assert_eq!(decl.min, 1);
         assert_eq!(decl.max, 2);
         assert_eq!(
-            ids(&play_choices::legal_selections_for(&state, PlayerId::P1, &card, &decl)),
+            ids(&play_choices::legal_selections_for(
+                &state,
+                PlayerId::P1,
+                &card,
+                &decl
+            )),
             vec![a.id.clone(), b.id.clone(), c.id.clone()]
         );
 
@@ -487,13 +553,17 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         assert!(play(&[]).unwrap_or_default().contains("needs 1 target"));
         assert_eq!(play(&[on_instance(&a.id)]), None);
         assert_eq!(play(&[on_instance(&a.id), on_instance(&c.id)]), None);
-        assert!(play(&[on_instance(&a.id), on_instance(&b.id), on_instance(&c.id)])
-            .unwrap_or_default()
-            .contains("at most 2 targets"));
+        assert!(
+            play(&[on_instance(&a.id), on_instance(&b.id), on_instance(&c.id)])
+                .unwrap_or_default()
+                .contains("at most 2 targets")
+        );
         // Within one declaration the same card twice is not two picks (R90).
-        assert!(play(&[on_instance(&a.id), on_instance(&a.id)])
-            .unwrap_or_default()
-            .contains("same target twice"));
+        assert!(
+            play(&[on_instance(&a.id), on_instance(&a.id)])
+                .unwrap_or_default()
+                .contains("same target twice")
+        );
 
         // The enumeration offers exactly the answers the validator accepts: 3 singles and 3 pairs.
         let combos = play_choices::play_choice_combinations(&state, PlayerId::P1, &card, None);
@@ -515,7 +585,12 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         assert!(combos.len() <= MAX_CHOICE_COMBINATIONS);
         for combo in &combos {
             assert_eq!(
-                refusal(play_choices::why_choices_refused(&state, PlayerId::P1, &card, &combo_action(&card.id, combo))),
+                refusal(play_choices::why_choices_refused(
+                    &state,
+                    PlayerId::P1,
+                    &card,
+                    &combo_action(&card.id, combo)
+                )),
                 None
             );
         }
@@ -527,11 +602,22 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
     #[test]
     fn r90_gives_a_card_that_declared_nothing_nothing_a_target_or_a_mode_it_never_asked_for_is_refused() {
         let mut state = playing("declared-nothing");
-        let victim = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let victim = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let card = hand_card(&mut state, &declares_nothing().id, PlayerId::P1);
 
-        assert_eq!(play_choices::declared_targets(&state, &card), Vec::<TargetDecl>::new());
-        assert_eq!(play_choices::declared_modes(&state, &card), Vec::<ModeDecl>::new());
+        assert_eq!(
+            play_choices::declared_targets(&state, &card),
+            Vec::<TargetDecl>::new()
+        );
+        assert_eq!(
+            play_choices::declared_modes(&state, &card),
+            Vec::<ModeDecl>::new()
+        );
         // One answer, and it is the empty one, so the card is still offered exactly once.
         assert!(is_one_empty_answer(&play_choices::play_choice_combinations(
             &state,
@@ -541,7 +627,12 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         )));
 
         assert_eq!(
-            refusal(play_choices::why_choices_refused(&state, PlayerId::P1, &card, &play_action(&card.id, None, None))),
+            refusal(play_choices::why_choices_refused(
+                &state,
+                PlayerId::P1,
+                &card,
+                &play_action(&card.id, None, None)
+            )),
             None
         );
         assert!(refused_with(
@@ -564,14 +655,19 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         ));
 
         assert!(
-            error_of(&act_result(&state, targeting(&card.id, vec![on_instance(&victim.id)]))).contains("takes no targets")
+            error_of(&act_result(
+                &state,
+                targeting(&card.id, vec![on_instance(&victim.id)])
+            ))
+            .contains("takes no targets")
         );
     }
 
     /// "R81 carries a declared hand pick in targets and a declared direction in modes, in the play
     /// action itself"
     #[test]
-    fn r81_carries_a_declared_hand_pick_in_targets_and_a_declared_direction_in_modes_in_the_play_action_itself() {
+    fn r81_carries_a_declared_hand_pick_in_targets_and_a_declared_direction_in_modes_in_the_play_action_itself()
+     {
         let mut state = playing("choices-travel");
         let spare = hand_card(&mut state, &candidate().id, PlayerId::P1);
         let card = hand_card(&mut state, &traveller().id, PlayerId::P1);
@@ -588,22 +684,32 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
             .collect();
         assert_eq!(mode_kinds, vec![PromptKind::Direction]);
         let combos = play_choices::play_choice_combinations(&state, PlayerId::P1, &card, None);
-        assert!(combos
-            .iter()
-            .all(|combo| combo.targets.as_ref().map_or(0, |targets| targets.len()) == 1));
+        assert!(
+            combos
+                .iter()
+                .all(|combo| combo.targets.as_ref().map_or(0, |targets| targets.len()) == 1)
+        );
         let directions: BTreeSet<String> = combos
             .iter()
             .map(|combo| only(combo.modes.clone().unwrap_or_default()))
             .collect();
-        assert_eq!(directions, BTreeSet::from(["left".to_string(), "right".to_string()]));
+        assert_eq!(
+            directions,
+            BTreeSet::from(["left".to_string(), "right".to_string()])
+        );
 
         let plays: Vec<ActionBody> = legal_actions(&state, PlayerId::P1)
             .into_iter()
-            .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
+            .filter(
+                |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id),
+            )
             .collect();
         assert!(!plays.is_empty());
         for play in &plays {
-            let ActionBody::Play { zone, targets, modes, .. } = play else {
+            let ActionBody::Play {
+                zone, targets, modes, ..
+            } = play
+            else {
                 continue;
             };
             // A unit takes a zone, so zone, targets and modes ride in the one action (R81).
@@ -611,7 +717,15 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
             assert!(targets.is_some());
             assert!(modes.is_some());
             let action: PlayAction = json_as(json!(play));
-            assert_eq!(refusal(play_choices::why_choices_refused(&state, PlayerId::P1, &card, &action)), None);
+            assert_eq!(
+                refusal(play_choices::why_choices_refused(
+                    &state,
+                    PlayerId::P1,
+                    &card,
+                    &action
+                )),
+                None
+            );
         }
 
         let played = act_result(
@@ -629,11 +743,15 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         // The script saw both answers, and resolution never paused for either (R81).
         let resolved = top_of(&played.state, PlayerId::P1, 0);
         assert_eq!(
-            resolved.as_ref().and_then(|card| card.memory.get("gotTargets").cloned()),
+            resolved
+                .as_ref()
+                .and_then(|card| card.memory.get("gotTargets").cloned()),
             Some(json!([spare.id]))
         );
         assert_eq!(
-            resolved.as_ref().and_then(|card| card.memory.get("gotModes").cloned()),
+            resolved
+                .as_ref()
+                .and_then(|card| card.memory.get("gotModes").cloned()),
             Some(json!(["right"]))
         );
         assert!(played.state.pending.is_none());
@@ -646,8 +764,14 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         let card = hand_card(&mut state, &discoverer().id, PlayerId::P1);
 
         // The card declares nothing, so nothing travels in the play …
-        assert_eq!(play_choices::declared_targets(&state, &card), Vec::<TargetDecl>::new());
-        assert_eq!(play_choices::declared_modes(&state, &card), Vec::<ModeDecl>::new());
+        assert_eq!(
+            play_choices::declared_targets(&state, &card),
+            Vec::<TargetDecl>::new()
+        );
+        assert_eq!(
+            play_choices::declared_modes(&state, &card),
+            Vec::<ModeDecl>::new()
+        );
         assert!(is_one_empty_answer(&play_choices::play_choice_combinations(
             &state,
             PlayerId::P1,
@@ -656,7 +780,10 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         )));
 
         // … and its Discover, made while the card resolves, becomes the one open prompt of §10.1.
-        let played = act_result(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }));
+        let played = act_result(
+            &state,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        );
         assert_eq!(played.error, None);
         let pending = played.state.pending.clone().expect("a prompt is open");
         assert_eq!(pending.kind, PromptKind::Discover);
@@ -668,7 +795,12 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         // And a prompt is never something a `play` action could have answered up front.
         let key = only(pending.options.clone()).key;
         assert!(refused_with(
-            play_choices::why_choices_refused(&state, PlayerId::P1, &card, &play_action(&card.id, None, Some(&[key]))),
+            play_choices::why_choices_refused(
+                &state,
+                PlayerId::P1,
+                &card,
+                &play_action(&card.id, None, Some(&[key]))
+            ),
             "takes no mode choices",
         ));
     }
@@ -700,10 +832,18 @@ mod r703_a_pick_the_play_needs {
         assert!(play_choices::play_choice_combinations(&state, PlayerId::P1, &needed, None).is_empty());
         assert!(!offers(&state, &needed));
         assert!(refused_with(
-            play_choices::why_choices_refused(&state, PlayerId::P1, &needed, &play_action(&needed.id, None, None)),
+            play_choices::why_choices_refused(
+                &state,
+                PlayerId::P1,
+                &needed,
+                &play_action(&needed.id, None, None)
+            ),
             "cannot be played without 1 legal target",
         ));
-        let refused = act_result(&state, json!({ "type": "play", "instanceId": needed.id, "playerId": "p1" }));
+        let refused = act_result(
+            &state,
+            json!({ "type": "play", "instanceId": needed.id, "playerId": "p1" }),
+        );
         assert!(
             error_of(&refused).contains("cannot be played without 1 legal target"),
             "{:?}",
@@ -712,16 +852,25 @@ mod r703_a_pick_the_play_needs {
         assert_eq!(refused.state, state);
 
         // A unit on either side satisfies it: offered once per unit, and the play goes through.
-        let foe = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let combos: Vec<Vec<String>> = play_choices::play_choice_combinations(&state, PlayerId::P1, &needed, None)
-            .iter()
-            .map(|combo| ids(combo.targets.as_deref().unwrap_or(&[])))
-            .collect();
+        let foe = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        let combos: Vec<Vec<String>> =
+            play_choices::play_choice_combinations(&state, PlayerId::P1, &needed, None)
+                .iter()
+                .map(|combo| ids(combo.targets.as_deref().unwrap_or(&[])))
+                .collect();
         assert_eq!(combos, vec![vec![foe.id.clone()]]);
         assert!(offers(&state, &needed));
         let played = act_result(&state, targeting(&needed.id, vec![on_instance(&foe.id)]));
         assert_eq!(played.error, None);
-        assert_eq!(top_of(&played.state, PlayerId::P2, 0).map(|card| card.damage), Some(1));
+        assert_eq!(
+            top_of(&played.state, PlayerId::P2, 0).map(|card| card.damage),
+            Some(1)
+        );
     }
 
     /// "R703 a cast is never refused (R70): cast with no unit on the board, the needed pick fizzles"

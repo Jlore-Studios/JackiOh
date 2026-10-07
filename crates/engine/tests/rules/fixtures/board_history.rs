@@ -58,7 +58,9 @@ fn rewind_script() -> Script {
         }],
         cry: Some(hook(|ctx| {
             let turns_ago = chosen_number(&*ctx).unwrap_or(ROLLBACK_MAX_TURNS);
-            vec![roll_back(json_as(json!({ "turnsAgo": turns_ago, "sides": "both" })))]
+            vec![roll_back(json_as(
+                json!({ "turnsAgo": turns_ago, "sides": "both" }),
+            ))]
         })),
         ..Script::default()
     }
@@ -66,7 +68,9 @@ fn rewind_script() -> Script {
 
 fn phoenix_script() -> Script {
     Script {
-        death: Some(hook(|_ctx| vec![roll_back(json_as(json!({ "turnsAgo": 1, "sides": "both" })))])),
+        death: Some(hook(|_ctx| {
+            vec![roll_back(json_as(json!({ "turnsAgo": 1, "sides": "both" })))]
+        })),
         ..Script::default()
     }
 }

@@ -227,7 +227,10 @@ pub struct SeriesRefusal {
 
 impl SeriesRefusal {
     pub fn new(reason: SeriesRefusalReason, message: impl Into<String>) -> SeriesRefusal {
-        SeriesRefusal { reason, message: message.into() }
+        SeriesRefusal {
+            reason,
+            message: message.into(),
+        }
     }
 }
 
@@ -255,12 +258,20 @@ pub fn seat_index(seat: SeriesSeat) -> usize {
 }
 
 pub fn other_seat(seat: SeriesSeat) -> SeriesSeat {
-    if seat == SeriesSeat::P1 { SeriesSeat::P2 } else { SeriesSeat::P1 }
+    if seat == SeriesSeat::P1 {
+        SeriesSeat::P2
+    } else {
+        SeriesSeat::P1
+    }
 }
 
 /// A series seat as the `Winner` it is when it wins (`SeriesSeat | "draw"` is `Winner`'s literals).
 fn winner_of_seat(seat: SeriesSeat) -> Winner {
-    if seat == SeriesSeat::P1 { Winner::P1 } else { Winner::P2 }
+    if seat == SeriesSeat::P1 {
+        Winner::P1
+    } else {
+        Winner::P2
+    }
 }
 
 /// The caller's seat in this series, or null when they are not one of its two players.
@@ -276,11 +287,19 @@ pub fn seat_of(series: &SeriesRow, profile_id: &str) -> Option<SeriesSeat> {
 
 /// `series.sides[index]` (the sides are a pair, SURFACE §4.3).
 fn side_at(series: &SeriesRow, index: usize) -> &SeriesSide {
-    if index == 0 { &series.sides.0 } else { &series.sides.1 }
+    if index == 0 {
+        &series.sides.0
+    } else {
+        &series.sides.1
+    }
 }
 
 fn side_at_mut(series: &mut SeriesRow, index: usize) -> &mut SeriesSide {
-    if index == 0 { &mut series.sides.0 } else { &mut series.sides.1 }
+    if index == 0 {
+        &mut series.sides.0
+    } else {
+        &mut series.sides.1
+    }
 }
 
 fn side_of(series: &SeriesRow, seat: SeriesSeat) -> &SeriesSide {
@@ -315,7 +334,11 @@ fn slot_count(series: &SeriesRow, seat: SeriesSeat) -> usize {
 pub fn won_slots(seat: SeriesSeat, games: &[SeriesGame]) -> IndexSet<usize> {
     let index = seat_index(seat);
     let won = Some(winner_of_seat(seat));
-    games.iter().filter(|game| game.winner == won).map(|game| slot_at(game, index)).collect()
+    games
+        .iter()
+        .filter(|game| game.winner == won)
+        .map(|game| slot_at(game, index))
+        .collect()
 }
 
 /// The slots this seat may still pick: every slot of its trio whose deck has not won (R330).
@@ -344,19 +367,31 @@ pub fn both_picked(series: &SeriesRow) -> bool {
 
 /// R335: series `p1` goes first in odd games, `p2` in even ones, drawn games counted.
 fn first_seat_of(game_no: i32) -> SeriesSeat {
-    if game_no % 2 == 1 { SeriesSeat::P1 } else { SeriesSeat::P2 }
+    if game_no % 2 == 1 {
+        SeriesSeat::P1
+    } else {
+        SeriesSeat::P2
+    }
 }
 
 /// The game in play: the last recorded one, while it has no result.
 fn game_in_play(series: &SeriesRow) -> Option<&SeriesGame> {
     let last = series.games.last()?;
-    if series.status == SeriesStatus::Playing && last.winner.is_none() { Some(last) } else { None }
+    if series.status == SeriesStatus::Playing && last.winner.is_none() {
+        Some(last)
+    } else {
+        None
+    }
 }
 
 /// R332: a seat with exactly one deck left that has not won has its pick made for it.
 fn automatic_pick(series: &SeriesRow, seat: SeriesSeat) -> Option<usize> {
     let open = unwon_slots(series, seat, &series.games);
-    if open.len() == 1 { open.first().copied() } else { None }
+    if open.len() == 1 {
+        open.first().copied()
+    } else {
+        None
+    }
 }
 
 /// R262: series `p1`'s score once the series is over — 1 for a series win, 0 for a loss, 0.5
@@ -398,17 +433,21 @@ fn pick_deadline_from(now: i64) -> i64 {
 /// stored, so this is the last word, not the first.
 fn begin(series: &mut SeriesRow) -> Result<(), SeriesRefusal> {
     let (Some(a_pick), Some(b_pick)) = (series.sides.0.pick, series.sides.1.pick) else {
-        return refuse(SeriesRefusalReason::PicksMissing, "A game cannot start before both players have picked.");
+        return refuse(
+            SeriesRefusalReason::PicksMissing,
+            "A game cannot start before both players have picked.",
+        );
     };
     for seat in SEATS {
         let pick = side_of(series, seat).pick;
         if let Some(pick) = pick
-            && won_slots(seat, &series.games).contains(&(pick as usize)) {
-                return refuse(
-                    SeriesRefusalReason::SlotWon,
-                    "That deck has already won a game in this series, so it is locked.",
-                );
-            }
+            && won_slots(seat, &series.games).contains(&(pick as usize))
+        {
+            return refuse(
+                SeriesRefusalReason::SlotWon,
+                "That deck has already won a game in this series, so it is locked.",
+            );
+        }
     }
     let game_no = series.games.len() as i32 + FIRST_GAME;
     let match_id = series.next_match_id.clone();
@@ -531,25 +570,39 @@ pub fn pick_deck(
     now: i64,
     game_no: Option<i32>,
 ) -> Result<SeriesRow, SeriesRefusal> {
-    assert_picking(series, "A game of this series is being played; pick your next deck when it ends.")?;
+    assert_picking(
+        series,
+        "A game of this series is being played; pick your next deck when it ends.",
+    )?;
     let picking_for = series.games.len() as i32 + FIRST_GAME;
     if let Some(game_no) = game_no
-        && game_no != picking_for {
-            return refuse(
-                SeriesRefusalReason::StalePick,
-                format!("That pick was for game {game_no}; this is game {picking_for}'s pick."),
-            );
-        }
+        && game_no != picking_for
+    {
+        return refuse(
+            SeriesRefusalReason::StalePick,
+            format!("That pick was for game {game_no}; this is game {picking_for}'s pick."),
+        );
+    }
     let side = side_of(series, seat);
     if side.pick.is_some() {
-        return refuse(SeriesRefusalReason::PickSealed, "Your pick for this game is already in, and it is final.");
+        return refuse(
+            SeriesRefusalReason::PickSealed,
+            "Your pick for this game is already in, and it is final.",
+        );
     }
     if let Some(deadline) = series.pick_deadline
-        && now >= deadline {
-            return refuse(SeriesRefusalReason::PickClosed, "The pick clock has run out for this game.");
-        }
+        && now >= deadline
+    {
+        return refuse(
+            SeriesRefusalReason::PickClosed,
+            "The pick clock has run out for this game.",
+        );
+    }
     if slot < 0 || slot as usize >= trio_decks(&side.trio).len() {
-        return refuse(SeriesRefusalReason::SlotOutOfRange, "Pick one of the three decks in your trio.");
+        return refuse(
+            SeriesRefusalReason::SlotOutOfRange,
+            "Pick one of the three decks in your trio.",
+        );
     }
     let slot = slot as usize;
     if won_slots(seat, &series.games).contains(&slot) {
@@ -592,17 +645,27 @@ pub fn game_ended(
         return refuse(SeriesRefusalReason::Over, OVER_MESSAGE);
     }
     if game_in_play(series).is_none() {
-        return refuse(SeriesRefusalReason::NotPlaying, "No game of this series is being played.");
+        return refuse(
+            SeriesRefusalReason::NotPlaying,
+            "No game of this series is being played.",
+        );
     }
 
     let mut next = copy(series);
     let Some(game) = next.games.last_mut() else {
-        return refuse(SeriesRefusalReason::NotPlaying, "No game of this series is being played.");
+        return refuse(
+            SeriesRefusalReason::NotPlaying,
+            "No game of this series is being played.",
+        );
     };
     game.winner = Some(winner);
     game.reason = Some(reason);
     if let Some(player) = winner.player() {
-        let seat = if player == PlayerId::P1 { SeriesSeat::P1 } else { SeriesSeat::P2 };
+        let seat = if player == PlayerId::P1 {
+            SeriesSeat::P1
+        } else {
+            SeriesSeat::P2
+        };
         side_of_mut(&mut next, seat).wins += 1;
     }
 
@@ -610,7 +673,11 @@ pub fn game_ended(
     let p1_wins = next.sides.0.wins;
     let p2_wins = next.sides.1.wins;
     if p1_wins >= wins_needed || p2_wins >= wins_needed {
-        let taker = if p1_wins >= wins_needed { Winner::P1 } else { Winner::P2 };
+        let taker = if p1_wins >= wins_needed {
+            Winner::P1
+        } else {
+            Winner::P2
+        };
         end(&mut next, Some(taker), SeriesEnd::Decided, now);
     } else if next.games.len() >= SERIES_MAX_GAMES as usize {
         let taker = if p1_wins > p2_wins {
@@ -648,7 +715,10 @@ pub fn timeout_picks(series: &SeriesRow, now: i64) -> Result<SeriesRow, SeriesRe
             continue;
         }
         let Some(slot) = first_unwon(&next, seat, &next.games) else {
-            return refuse(SeriesRefusalReason::PicksMissing, "Every deck of this trio has already won.");
+            return refuse(
+                SeriesRefusalReason::PicksMissing,
+                "Every deck of this trio has already won.",
+            );
         };
         side_of_mut(&mut next, seat).pick = Some(slot as i64);
     }
@@ -665,14 +735,20 @@ pub fn abandon_unstarted(series: &SeriesRow, now: i64) -> Result<SeriesRow, Seri
         return refuse(SeriesRefusalReason::Over, OVER_MESSAGE);
     }
     if series.status != SeriesStatus::Playing {
-        return refuse(SeriesRefusalReason::NotPlaying, "No game of this series is waiting to start.");
+        return refuse(
+            SeriesRefusalReason::NotPlaying,
+            "No game of this series is waiting to start.",
+        );
     }
     let waiting = match series.games.last() {
         Some(current) => current.match_id == series.next_match_id && current.winner.is_none(),
         None => false,
     };
     if !waiting {
-        return refuse(SeriesRefusalReason::NotPlaying, "No game of this series is waiting to start.");
+        return refuse(
+            SeriesRefusalReason::NotPlaying,
+            "No game of this series is waiting to start.",
+        );
     }
     let mut next = copy(series);
     next.games.pop();
@@ -688,7 +764,12 @@ pub fn forfeit_series(series: &SeriesRow, seat: SeriesSeat, now: i64) -> Result<
         "A game is being played: concede the game instead. You can forfeit the series between games.",
     )?;
     let mut next = copy(series);
-    end(&mut next, Some(winner_of_seat(other_seat(seat))), SeriesEnd::Forfeit, now);
+    end(
+        &mut next,
+        Some(winner_of_seat(other_seat(seat))),
+        SeriesEnd::Forfeit,
+        now,
+    );
     Ok(stamp(next, series, now))
 }
 
@@ -734,7 +815,10 @@ pub struct GameSeats {
 /// trio slot they picked, and the seed is `{seed_base}:{game_no}`.
 pub fn game_seats(series: &SeriesRow) -> Result<GameSeats, SeriesRefusal> {
     let Some(game) = game_in_play(series) else {
-        return refuse(SeriesRefusalReason::NotPlaying, "No game of this series is being played.");
+        return refuse(
+            SeriesRefusalReason::NotPlaying,
+            "No game of this series is being played.",
+        );
     };
     let first_index = seat_index(game.first);
     let second_index = seat_index(other_seat(game.first));
@@ -753,7 +837,10 @@ pub fn game_seats(series: &SeriesRow) -> Result<GameSeats, SeriesRefusal> {
         }
     };
     Ok(GameSeats {
-        seats: (seat_for(first_index, PlayerId::P1), seat_for(second_index, PlayerId::P2)),
+        seats: (
+            seat_for(first_index, PlayerId::P1),
+            seat_for(second_index, PlayerId::P2),
+        ),
         seed: format!("{}:{}", series.seed_base, game.game_no),
     })
 }
@@ -765,7 +852,11 @@ pub fn game_seats(series: &SeriesRow) -> Result<GameSeats, SeriesRefusal> {
 pub fn already_picked(series: &SeriesRow, seat: SeriesSeat, slot: i32, game_no: Option<i32>) -> bool {
     let wanted = if slot < 0 { None } else { Some(slot as usize) };
     if let Some(game_no) = game_no {
-        if let Some(begun) = series.games.iter().find(|game| game.game_no == i64::from(game_no)) {
+        if let Some(begun) = series
+            .games
+            .iter()
+            .find(|game| game.game_no == i64::from(game_no))
+        {
             return wanted == Some(slot_at(begun, seat_index(seat)));
         }
         return series.status == SeriesStatus::Picking
@@ -843,18 +934,31 @@ pub fn project_series(series: &SeriesRow, viewer_profile_id: &str, now: i64) -> 
                     name: deck.name.clone(),
                     cards: deck.cards.clone(),
                     won: my_won.contains(&slot),
-                    games: series.games.iter().filter(|game| slot_at(game, mine) == slot).count(),
+                    games: series
+                        .games
+                        .iter()
+                        .filter(|game| slot_at(game, mine) == slot)
+                        .count(),
                 })
                 .collect(),
-            pick: if picking { you.pick.map(|pick| pick as usize) } else { None },
-            auto_pick: picking && you.pick.is_some() && automatic_pick(series, seat) == you.pick.map(|pick| pick as usize),
+            pick: if picking {
+                you.pick.map(|pick| pick as usize)
+            } else {
+                None
+            },
+            auto_pick: picking
+                && you.pick.is_some()
+                && automatic_pick(series, seat) == you.pick.map(|pick| pick as usize),
         },
         opponent: SeriesViewOpponent {
             wins: opponent.wins as i32,
             decks: trio_decks(&opponent.trio)
                 .iter()
                 .enumerate()
-                .map(|(slot, _deck)| SeriesViewOpponentDeck { slot, won: their_won.contains(&slot) })
+                .map(|(slot, _deck)| SeriesViewOpponentDeck {
+                    slot,
+                    won: their_won.contains(&slot),
+                })
                 .collect(),
             picked: picking && opponent.pick.is_some(),
         },

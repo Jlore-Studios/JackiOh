@@ -82,7 +82,11 @@ mod r275_the_radiant_power_standard_spec_5_2 {
     fn r275_names_its_exceptions_and_each_one_is_a_unit_that_really_is_below_the_stat_half() {
         for (id, reason) in STAT_EXCEPTIONS {
             let card = CATALOG.get(*id);
-            assert_eq!(card.map(|card| card.type_), Some(CardType::Unit), "{id}: {reason}");
+            assert_eq!(
+                card.map(|card| card.type_),
+                Some(CardType::Unit),
+                "{id}: {reason}"
+            );
             let below = card.is_some_and(|card| {
                 card.radiant.attack.unwrap_or(0) < STAT_FACTOR * card.base.attack.unwrap_or(0)
                     || card.radiant.health.unwrap_or(0) < STAT_FACTOR * card.base.health.unwrap_or(0)

@@ -344,20 +344,8 @@ pub(crate) mod js {
     pub fn is_js_space(c: char) -> bool {
         matches!(
             c,
-            '\t' | '\n'
-                | '\u{000B}'
-                | '\u{000C}'
-                | '\r'
-                | ' '
-                | '\u{00A0}'
-                | '\u{1680}'
-                | '\u{2000}'..='\u{200A}'
-                | '\u{2028}'
-                | '\u{2029}'
-                | '\u{202F}'
-                | '\u{205F}'
-                | '\u{3000}'
-                | '\u{FEFF}'
+            '\t' | '\n' | '\u{000B}' | '\u{000C}' | '\r' | ' ' | '\u{00A0}' | '\u{1680}' | '\u{2000}'
+                ..='\u{200A}' | '\u{2028}' | '\u{2029}' | '\u{202F}' | '\u{205F}' | '\u{3000}' | '\u{FEFF}'
         )
     }
 
@@ -549,14 +537,20 @@ pub mod naming {
 
     /// The set segment a folder holds (`""` -> `core`), or `None` for a folder that holds none.
     pub fn segment_of_folder(folder: &str) -> Option<SetSegment> {
-        SET_SEGMENTS.iter().copied().find(|segment| folder_for(*segment) == folder)
+        SET_SEGMENTS
+            .iter()
+            .copied()
+            .find(|segment| folder_for(*segment) == folder)
     }
 
     /// Catalog order of the sets (Core, Classic, Classic+), for sorting; an unknown set sorts last.
     pub fn set_rank(id: Option<&str>) -> usize {
         match id.and_then(set_segment_of) {
             None => SET_SEGMENTS.len(),
-            Some(segment) => SET_SEGMENTS.iter().position(|each| *each == segment).unwrap_or(SET_SEGMENTS.len()),
+            Some(segment) => SET_SEGMENTS
+                .iter()
+                .position(|each| *each == segment)
+                .unwrap_or(SET_SEGMENTS.len()),
         }
     }
 
@@ -574,7 +568,10 @@ pub mod naming {
     /// `051-1` and `t-rush` are token prefixes; `051` is a card prefix. Nothing nests deeper.
     pub fn is_token_prefix(prefix: &str) -> bool {
         // /^t-/ or /^\d+-\d+$/
-        prefix.starts_with("t-") || prefix.split_once('-').is_some_and(|(main, sub)| is_digits(main) && is_digits(sub))
+        prefix.starts_with("t-")
+            || prefix
+                .split_once('-')
+                .is_some_and(|(main, sub)| is_digits(main) && is_digits(sub))
     }
 
     /// A shared token's prefix (`t-rush`, `t-ai-01`): a token no one card defines. Core's (SPEC §7's
@@ -628,7 +625,11 @@ pub mod naming {
     pub fn expected_rel_path(id: &str, name: &str) -> String {
         let folder = folder_of(id);
         let basename = expected_basename(id, name);
-        if folder.is_empty() { basename } else { format!("{folder}/{basename}") }
+        if folder.is_empty() {
+            basename
+        } else {
+            format!("{folder}/{basename}")
+        }
     }
 
     /// `001-big-d-fender.ts` -> `001-big-d-fender`; also strips `.test.ts`.
@@ -660,7 +661,10 @@ pub mod naming {
         if basename == prefix {
             return true; // the slugless form: `t-rush.ts`
         }
-        let Some(rest) = basename.strip_prefix(prefix).and_then(|rest| rest.strip_prefix('-')) else {
+        let Some(rest) = basename
+            .strip_prefix(prefix)
+            .and_then(|rest| rest.strip_prefix('-'))
+        else {
             return false;
         };
         if rest.is_empty() {
@@ -671,7 +675,8 @@ pub mod naming {
         }
         // !/^\d(-|$)/.test(rest)
         let mut chars = rest.chars();
-        let lone_digit = chars.next().is_some_and(|c| c.is_ascii_digit()) && matches!(chars.next(), None | Some('-'));
+        let lone_digit =
+            chars.next().is_some_and(|c| c.is_ascii_digit()) && matches!(chars.next(), None | Some('-'));
         !lone_digit
     }
 
@@ -771,12 +776,20 @@ pub mod naming {
         }
         if a.2 != b.2 {
             // Infinity - Infinity is NaN, so compare, don't subtract
-            return if a.2 < b.2 { Ordering::Less } else { Ordering::Greater };
+            return if a.2 < b.2 {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            };
         }
         if a.3 == b.3 {
             return Ordering::Equal;
         }
-        if a.3 < b.3 { Ordering::Less } else { Ordering::Greater }
+        if a.3 < b.3 {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        }
     }
 
     /// A legal, unique JS identifier for the namespace import of a script file: paths are unique
@@ -894,18 +907,21 @@ pub mod patch {
                 starts.push(at + c.len_utf8());
             }
         }
-        starts.into_iter().find(|start| text[*start..].starts_with(key)).map(|start| {
-            let value_start = start + key.len();
-            let end = text[value_start..]
-                .char_indices()
-                .find(|(_, c)| is_line_terminator(*c))
-                .map_or(text.len(), |(at, _)| value_start + at);
-            SiteMatch {
-                start,
-                value_start,
-                end,
-            }
-        })
+        starts
+            .into_iter()
+            .find(|start| text[*start..].starts_with(key))
+            .map(|start| {
+                let value_start = start + key.len();
+                let end = text[value_start..]
+                    .char_indices()
+                    .find(|(_, c)| is_line_terminator(*c))
+                    .map_or(text.len(), |(at, _)| value_start + at);
+                SiteMatch {
+                    start,
+                    value_start,
+                    end,
+                }
+            })
     }
 
     /// `/(- key: CATALOG_VERSION\n\s+value: )\S+/`. `\s+` is greedy and `value: ` opens with a
@@ -943,7 +959,9 @@ pub mod patch {
 
     /// The length of the `\S+` run at the start of `text` (0 when there is none).
     fn non_space_length(text: &str) -> usize {
-        text.char_indices().find(|(_, c)| is_js_space(*c)).map_or(text.len(), |(at, _)| at)
+        text.char_indices()
+            .find(|(_, c)| is_js_space(*c))
+            .map_or(text.len(), |(at, _)| at)
     }
 
     /// TS's `/"([^"]+)"|=(\S+)|value: (\S+)/.exec(match)`: the version a site's match carries, the
@@ -1273,7 +1291,11 @@ pub mod patches_io {
         for placeholder in js::placeholder_spans(text) {
             out.push_str(&text[at..placeholder.start]);
             let param = params.iter().find(|param| {
-                param.as_object().and_then(|param| param.get("key")).and_then(Json::as_str) == Some(placeholder.key)
+                param
+                    .as_object()
+                    .and_then(|param| param.get("key"))
+                    .and_then(Json::as_str)
+                    == Some(placeholder.key)
             });
             match param {
                 None => out.push_str(&text[placeholder.start..placeholder.end]),
@@ -1282,7 +1304,11 @@ pub mod patches_io {
                     out.push_str(&js::to_js_string(value));
                     if let Some((one, many)) = placeholder.words {
                         out.push(' ');
-                        out.push_str(if value == Some(&Json::Number(1.0)) { one } else { many });
+                        out.push_str(if value == Some(&Json::Number(1.0)) {
+                            one
+                        } else {
+                            many
+                        });
                     }
                 }
             }
@@ -1307,7 +1333,10 @@ pub mod patches_io {
                 let inner: IndexSet<&String> = face_a.keys().chain(face_b.keys()).collect();
                 for field in inner {
                     let (was, now) = (face_a.get(field), face_b.get(field));
-                    if field == "text" && was.and_then(Json::as_str).is_some() && now.and_then(Json::as_str).is_some() {
+                    if field == "text"
+                        && was.and_then(Json::as_str).is_some()
+                        && now.and_then(Json::as_str).is_some()
+                    {
                         if fill_params(before, key) != fill_params(after, key) {
                             fields.push(format!("{key}.{field}"));
                         }
@@ -1325,7 +1354,10 @@ pub mod patches_io {
     /// What `after` changed against `before`, in `after`'s order, removals last.
     pub fn diff_catalogs(before: Option<&Catalog>, after: &Catalog) -> Vec<PatchChange> {
         let name_of = |def: Option<&Object>, id: &str| -> String {
-            def.and_then(|def| def.get("name")).and_then(Json::as_str).unwrap_or(id).to_string()
+            def.and_then(|def| def.get("name"))
+                .and_then(Json::as_str)
+                .unwrap_or(id)
+                .to_string()
         };
         let mut out = Vec::new();
         for (id, def) in after {
@@ -1357,7 +1389,10 @@ pub mod patches_io {
                 if change.kind == ChangeKind::Removed {
                     continue;
                 }
-                index.entry(change.id.clone()).or_default().push(patch.version.clone());
+                index
+                    .entry(change.id.clone())
+                    .or_default()
+                    .push(patch.version.clone());
             }
         }
         index
@@ -1503,7 +1538,8 @@ pub mod patches_io {
         if !well_formed {
             bail!("shipped.json is not a list of {{ version, commit, blob }}");
         }
-        serde_json::from_str(&text).map_err(|_| anyhow!("shipped.json is not a list of {{ version, commit, blob }}"))
+        serde_json::from_str(&text)
+            .map_err(|_| anyhow!("shipped.json is not a list of {{ version, commit, blob }}"))
     }
 
     /// Removes a file that is there, and never complains about one that is not.
@@ -1539,7 +1575,12 @@ pub mod patches_io {
                     40..=59 => ((b & c) | (b & d) | (c & d), 0x8F1B_BCDC),
                     _ => (b ^ c ^ d, 0xCA62_C1D6),
                 };
-                let next = a.rotate_left(5).wrapping_add(f).wrapping_add(e).wrapping_add(k).wrapping_add(*word);
+                let next = a
+                    .rotate_left(5)
+                    .wrapping_add(f)
+                    .wrapping_add(e)
+                    .wrapping_add(k)
+                    .wrapping_add(*word);
                 e = d;
                 d = c;
                 c = b.rotate_left(30);
@@ -1601,7 +1642,10 @@ pub mod patches_io {
         if a.len() != b.len() {
             return false;
         }
-        a.iter().all(|(id, def)| b.get(id).is_some_and(|other| js::stringify(def) == js::stringify(other)))
+        a.iter().all(|(id, def)| {
+            b.get(id)
+                .is_some_and(|other| js::stringify(def) == js::stringify(other))
+        })
     }
 
     /// The working catalog with every pending-claimed entry reverted to the newest shipped
@@ -1659,12 +1703,16 @@ pub mod patches_io {
                 ("notes", &fragment.notes),
             ] {
                 if value.trim().is_empty() {
-                    problems.push(format!("pending/{name} has an empty {field}, but a shipped patch needs one"));
+                    problems.push(format!(
+                        "pending/{name} has an empty {field}, but a shipped patch needs one"
+                    ));
                 }
             }
             // A patch is a catalog change; one with none would bump the version over nothing (R650).
             if fragment.cards.is_empty() {
-                problems.push(format!("pending/{name} claims no cards, but a patch ships a catalog change"));
+                problems.push(format!(
+                    "pending/{name} claims no cards, but a patch ships a catalog change"
+                ));
             }
         }
         let differed: IndexSet<String> = differing_ids(args.newest, args.catalog).into_iter().collect();
@@ -1853,7 +1901,10 @@ pub fn write_fragment(repo_root: &Path, args: &FragmentArgs) -> anyhow::Result<P
     };
     fs::create_dir_all(&paths.pending_dir)
         .with_context(|| format!("{} cannot be created", paths.pending_dir.display()))?;
-    write_json(&patches_io::pending_path(&args.version, &paths.pending_dir)?, &fragment)?;
+    write_json(
+        &patches_io::pending_path(&args.version, &paths.pending_dir)?,
+        &fragment,
+    )?;
     Ok(fragment)
 }
 
@@ -1904,17 +1955,30 @@ pub(crate) fn git(repo_root: &Path, args: &[&str], extra_env: &[(&str, &str)]) -
             String::from_utf8_lossy(&output.stderr).trim()
         );
     }
-    String::from_utf8(output.stdout).with_context(|| format!("git {} printed text that is not UTF-8", args.join(" ")))
+    String::from_utf8(output.stdout)
+        .with_context(|| format!("git {} printed text that is not UTF-8", args.join(" ")))
 }
 
 /// The first-parent commit on main that added a file, or "" when history does not hold it.
 pub fn adding_commit(repo_root: &Path, rel_path: &str) -> anyhow::Result<String> {
     let log = git(
         repo_root,
-        &["log", "--first-parent", "--format=%H", "--diff-filter=A", "--", rel_path],
+        &[
+            "log",
+            "--first-parent",
+            "--format=%H",
+            "--diff-filter=A",
+            "--",
+            rel_path,
+        ],
         &[],
     )?;
-    Ok(log.split('\n').map(str::trim).find(|line| !line.is_empty()).unwrap_or_default().to_string())
+    Ok(log
+        .split('\n')
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .unwrap_or_default()
+        .to_string())
 }
 
 /// A unix timestamp as a UTC YYYY-MM-DD. Arithmetic over days (Howard Hinnant's civil_from_days),
@@ -1995,7 +2059,9 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
         let rel = format!("{PATCHES_REL}/pending/{name}");
         let commit = adding_commit(repo_root, &rel)?;
         if commit.is_empty() {
-            bail!("pending/{name} was not added on this history's first-parent line (ship needs full history)");
+            bail!(
+                "pending/{name} was not added on this history's first-parent line (ship needs full history)"
+            );
         }
         let Some(&at) = order.get(&commit) else {
             bail!("pending/{name} was added by {commit}, which is not on this history's first-parent line");
@@ -2031,7 +2097,10 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     let mut sequence: Vec<String> = patches.iter().map(|patch| patch.version.clone()).collect();
     let mut planned = Vec::with_capacity(queued.len());
     for Queued {
-        name, fragment, commit, ..
+        name,
+        fragment,
+        commit,
+        ..
     } in queued
     {
         let version = next_ship_name(&taken, &resolve_version(&fragment.version, &sequence)?)?;
@@ -2050,7 +2119,11 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     let mut previous = read_snapshot(&newest.version, &paths.dir)?;
     let mut proved = Vec::with_capacity(planned.len());
     for plan in planned {
-        let raw = git(repo_root, &["show", &format!("{}:{CATALOG_REL}", plan.commit)], &[])?;
+        let raw = git(
+            repo_root,
+            &["show", &format!("{}:{CATALOG_REL}", plan.commit)],
+            &[],
+        )?;
         let snapshot: Catalog = serde_json::from_str(&raw)
             .with_context(|| format!("{CATALOG_REL} at {} is not a catalog", plan.commit))?;
         let changed = differing_ids(&previous, &snapshot);
@@ -2070,7 +2143,8 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     let Some(last) = proved.last() else {
         bail!("no pending fragment to ship");
     };
-    let current = fs::read_to_string(&paths.catalog).with_context(|| format!("{} cannot be read", paths.catalog.display()))?;
+    let current = fs::read_to_string(&paths.catalog)
+        .with_context(|| format!("{} cannot be read", paths.catalog.display()))?;
     if last.raw != current {
         bail!(
             "catalog.json changed after {} added pending/{}, so the newest snapshot would not be catalog.json; nothing was shipped",
@@ -2107,7 +2181,8 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             reconstructed: Some(false),
             changes: Vec::new(),
         });
-        let written = fs::read_to_string(&path).with_context(|| format!("{} cannot be read", path.display()))?;
+        let written =
+            fs::read_to_string(&path).with_context(|| format!("{} cannot be read", path.display()))?;
         shipped.push(ShippedEntry {
             version: version.clone(),
             commit,
@@ -2126,10 +2201,17 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
 fn is_iso_date(text: &str) -> bool {
     let bytes = text.as_bytes();
     bytes.len() == 10
-        && bytes.iter().enumerate().all(|(i, b)| if i == 4 || i == 7 { *b == b'-' } else { b.is_ascii_digit() })
+        && bytes.iter().enumerate().all(|(i, b)| {
+            if i == 4 || i == 7 {
+                *b == b'-'
+            } else {
+                b.is_ascii_digit()
+            }
+        })
 }
 
-const FRAGMENT_USAGE: &str = "usage: patches <version> [date] \"<title>\" [--source …] [--notes …] [--cards <id,...>]";
+const FRAGMENT_USAGE: &str =
+    "usage: patches <version> [date] \"<title>\" [--source …] [--notes …] [--cards <id,...>]";
 
 fn parse_fragment_args(argv: &[String]) -> anyhow::Result<FragmentArgs> {
     let mut positional: Vec<&str> = Vec::new();
@@ -2155,7 +2237,9 @@ fn parse_fragment_args(argv: &[String]) -> anyhow::Result<FragmentArgs> {
         bail!(FRAGMENT_USAGE);
     }
     if !is_fragment_version(version) {
-        bail!("\"{version}\" is not a fragment version (a bare patch number ^v\\d+\\.\\d+\\.\\d+$ or a micro vA.B.Y)");
+        bail!(
+            "\"{version}\" is not a fragment version (a bare patch number ^v\\d+\\.\\d+\\.\\d+$ or a micro vA.B.Y)"
+        );
     }
     // The old calling shape kept the date between the version and the title; promotion dates the
     // patch by its merge commit instead, so a given date is validated and not stored.
@@ -2175,7 +2259,12 @@ fn parse_fragment_args(argv: &[String]) -> anyhow::Result<FragmentArgs> {
         sources: flags.get("source").map(|source| (*source).to_string()),
         notes: flags.get("notes").map(|notes| (*notes).to_string()),
         cards: flags.get("cards").map(|cards| {
-            cards.split(',').map(str::trim).filter(|id| !id.is_empty()).map(str::to_string).collect()
+            cards
+                .split(',')
+                .map(str::trim)
+                .filter(|id| !id.is_empty())
+                .map(str::to_string)
+                .collect()
         }),
     })
 }
@@ -2187,7 +2276,11 @@ struct CheckFailed(Vec<String>);
 
 impl fmt::Display for CheckFailed {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let lines: Vec<String> = self.0.iter().map(|problem| format!("patches check: {problem}")).collect();
+        let lines: Vec<String> = self
+            .0
+            .iter()
+            .map(|problem| format!("patches check: {problem}"))
+            .collect();
         f.write_str(&lines.join("\n"))
     }
 }
@@ -2227,7 +2320,11 @@ fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
     } else {
         format!(" ({})", fragment.cards.join(", "))
     };
-    println!("fragment {}: claims {} card(s){listed}", fragment.version, fragment.cards.len());
+    println!(
+        "fragment {}: claims {} card(s){listed}",
+        fragment.version,
+        fragment.cards.len()
+    );
     Ok(())
 }
 
@@ -2242,7 +2339,11 @@ pub struct Args {
 
 pub fn run(args: Args) -> anyhow::Result<()> {
     main(&repo_root(), &args.argv).map_err(|error| {
-        if error.is::<CheckFailed>() { error } else { anyhow!("patches: {error:#}") }
+        if error.is::<CheckFailed>() {
+            error
+        } else {
+            anyhow!("patches: {error:#}")
+        }
     })
 }
 
@@ -2283,7 +2384,10 @@ mod tests {
 
     /// An object literal, keys in the order written.
     pub(super) fn object(pairs: Vec<(&str, Json)>) -> Object {
-        pairs.into_iter().map(|(key, value)| (key.to_string(), value)).collect()
+        pairs
+            .into_iter()
+            .map(|(key, value)| (key.to_string(), value))
+            .collect()
     }
 
     pub(super) fn strings(items: &[&str]) -> Vec<String> {
@@ -2316,10 +2420,19 @@ mod tests {
         #[test]
         fn expected_rel_path_files_each_set_in_its_folder_and_cores_shared_tokens_bare() {
             assert_eq!(expected_rel_path("core-001", "Big D-fender"), "001-big-d-fender");
-            assert_eq!(expected_rel_path("core-051-1", "KY's Empty Notebook"), "051-1-kys-empty-notebook");
+            assert_eq!(
+                expected_rel_path("core-051-1", "KY's Empty Notebook"),
+                "051-1-kys-empty-notebook"
+            );
             assert_eq!(expected_rel_path("core-t-rush", "Rush Token"), "t-rush");
-            assert_eq!(expected_rel_path("classic-043", "Plague Nuke"), "classic/043-plague-nuke");
-            assert_eq!(expected_rel_path("classicplus-012-1", "Devour"), "classic-plus/012-1-devour");
+            assert_eq!(
+                expected_rel_path("classic-043", "Plague Nuke"),
+                "classic/043-plague-nuke"
+            );
+            assert_eq!(
+                expected_rel_path("classicplus-012-1", "Devour"),
+                "classic-plus/012-1-devour"
+            );
             assert_eq!(
                 expected_rel_path("classicplus-t-ai-01", "Helpful Assistant"),
                 "classic-plus/t-ai-01-helpful-assistant"
@@ -2332,16 +2445,27 @@ mod tests {
             assert!(matches_card("051-1-kys-empty-notebook", "core-051-1", None));
             assert!(matches_card("t-rush", "core-t-rush", None));
             let ids = strings(&["core-051", "core-051-1", "core-025"]);
-            assert_eq!(resolve_basename("051-1-kys-empty-notebook", &ids, "").as_deref(), Some("core-051-1"));
+            assert_eq!(
+                resolve_basename("051-1-kys-empty-notebook", &ids, "").as_deref(),
+                Some("core-051-1")
+            );
             // #25's slug opens with a digit segment: only the exact answer gets it right.
             assert!(!matches_card("025-4-mana-7-7", "core-025", None));
             assert!(matches_card("025-4-mana-7-7", "core-025", Some(ids.as_slice())));
-            assert_eq!(resolve_rel_path("classic/043-plague-nuke", &strings(&["classic-043", "core-043"])).as_deref(), Some("classic-043"));
+            assert_eq!(
+                resolve_rel_path("classic/043-plague-nuke", &strings(&["classic-043", "core-043"]))
+                    .as_deref(),
+                Some("classic-043")
+            );
         }
 
         #[test]
         fn set_subfolders_are_the_folders_that_are_not_the_root() {
-            let derived: Vec<&str> = SET_FOLDERS.iter().map(|(_, folder)| *folder).filter(|folder| !folder.is_empty()).collect();
+            let derived: Vec<&str> = SET_FOLDERS
+                .iter()
+                .map(|(_, folder)| *folder)
+                .filter(|folder| !folder.is_empty())
+                .collect();
             assert_eq!(derived, SET_SUBFOLDERS);
         }
 
@@ -2360,7 +2484,10 @@ mod tests {
             keys.sort_by(compare_sort_keys);
             let order: Vec<&str> = keys.iter().map(|key| key.3.as_str()).collect();
             assert_eq!(order, ["051-a", "051-1-b", "t-rush", "classic/001-a", "x"]);
-            assert_eq!(module_alias_of("classic/043-plague-nuke"), "mclassic_043_plague_nuke");
+            assert_eq!(
+                module_alias_of("classic/043-plague-nuke"),
+                "mclassic_043_plague_nuke"
+            );
             assert_eq!(basename_of("001-big-d-fender.test.ts"), "001-big-d-fender");
         }
     }
@@ -2372,21 +2499,39 @@ mod tests {
             use crate::patches::versions::resolve_version;
 
             fn refused(asked: &str, shipped: &[&str]) -> String {
-                format!("{:#}", resolve_version(asked, &strings(shipped)).expect_err("refused"))
+                format!(
+                    "{:#}",
+                    resolve_version(asked, &strings(shipped)).expect_err("refused")
+                )
             }
 
             #[test]
             fn r650_names_a_micro_patch_after_the_newest_version_with_the_next_letter() {
-                assert_eq!(resolve_version("v0.2.Y", &strings(&["v0.1.1", "v0.2.0", "v0.2.5"])).unwrap(), "v0.2.5b");
-                assert_eq!(resolve_version("v0.2.Y", &strings(&["v0.2.5", "v0.2.7c"])).unwrap(), "v0.2.7d");
+                assert_eq!(
+                    resolve_version("v0.2.Y", &strings(&["v0.1.1", "v0.2.0", "v0.2.5"])).unwrap(),
+                    "v0.2.5b"
+                );
+                assert_eq!(
+                    resolve_version("v0.2.Y", &strings(&["v0.2.5", "v0.2.7c"])).unwrap(),
+                    "v0.2.7d"
+                );
                 // The newest is the last entry in patches.json, whatever its name (R388), never the largest.
-                assert_eq!(resolve_version("v0.2.Y", &strings(&["v0.2.9", "v0.2.4"])).unwrap(), "v0.2.4b");
+                assert_eq!(
+                    resolve_version("v0.2.Y", &strings(&["v0.2.9", "v0.2.4"])).unwrap(),
+                    "v0.2.4b"
+                );
             }
 
             #[test]
             fn leaves_a_version_the_designer_named_as_it_is() {
-                assert_eq!(resolve_version("v0.2.6", &strings(&["v0.2.5"])).unwrap(), "v0.2.6");
-                assert_eq!(resolve_version("v0.2.5b", &strings(&["v0.2.5"])).unwrap(), "v0.2.5b");
+                assert_eq!(
+                    resolve_version("v0.2.6", &strings(&["v0.2.5"])).unwrap(),
+                    "v0.2.6"
+                );
+                assert_eq!(
+                    resolve_version("v0.2.5b", &strings(&["v0.2.5"])).unwrap(),
+                    "v0.2.5b"
+                );
             }
 
             #[test]
@@ -2428,7 +2573,14 @@ mod tests {
                 .collect()
         }
 
-        fn named(name: &str, version: &str, title: &str, sources: &str, notes: &str, cards: &[&str]) -> NamedFragment {
+        fn named(
+            name: &str,
+            version: &str,
+            title: &str,
+            sources: &str,
+            notes: &str,
+            cards: &[&str],
+        ) -> NamedFragment {
             NamedFragment {
                 name: name.to_string(),
                 fragment: PendingFragment {
@@ -2446,7 +2598,11 @@ mod tests {
         }
 
         fn check(files: &[NamedFragment], catalog: &Catalog, newest: &Catalog) -> Vec<String> {
-            check_fragments(&CheckFragmentsArgs { files, catalog, newest })
+            check_fragments(&CheckFragmentsArgs {
+                files,
+                catalog,
+                newest,
+            })
         }
 
         mod r646_pending_fragments_and_the_check_that_proves_them {
@@ -2458,28 +2614,39 @@ mod tests {
                 let newest = catalog_of(vec![card("aaa", 1), card("bbb", 1)]);
                 let files = vec![named("v0.2.5.json", "v0.2.5", "t", "s", "n", &["aaa"])];
                 // Changed and claimed: clean.
-                assert_eq!(check(&files, &catalog_of(vec![card("aaa", 2), card("bbb", 1)]), &newest), Vec::<String>::new());
+                assert_eq!(
+                    check(&files, &catalog_of(vec![card("aaa", 2), card("bbb", 1)]), &newest),
+                    Vec::<String>::new()
+                );
                 // Changed and unclaimed: names the card.
                 assert_eq!(
                     check(&[], &catalog_of(vec![card("aaa", 2), card("bbb", 1)]), &newest),
-                    strings(&["\"aaa\" differs from the newest shipped snapshot but no pending fragment claims it"])
+                    strings(&[
+                        "\"aaa\" differs from the newest shipped snapshot but no pending fragment claims it"
+                    ])
                 );
                 // Removed and unclaimed: names the card too.
                 assert_eq!(
                     check(&[], &catalog_of(vec![card("aaa", 1)]), &newest),
-                    strings(&["\"bbb\" differs from the newest shipped snapshot but no pending fragment claims it"])
+                    strings(&[
+                        "\"bbb\" differs from the newest shipped snapshot but no pending fragment claims it"
+                    ])
                 );
                 // Claimed twice: names the card and both fragments.
                 let mut twice = files.clone();
                 twice.push(named("v0.2.0.json", "v0.2.0", "t", "s", "n", &["aaa"]));
                 assert_eq!(
                     check(&twice, &catalog_of(vec![card("aaa", 2), card("bbb", 1)]), &newest),
-                    strings(&["\"aaa\" is claimed by \"v0.2.5\" and \"v0.2.0\", but one card ships in one patch"])
+                    strings(&[
+                        "\"aaa\" is claimed by \"v0.2.5\" and \"v0.2.0\", but one card ships in one patch"
+                    ])
                 );
                 // Claimed but unchanged: names the card.
                 assert_eq!(
                     check(&files, &catalog_of(vec![card("aaa", 1), card("bbb", 1)]), &newest),
-                    strings(&["\"aaa\" is claimed by \"v0.2.5\" but identical to the newest shipped snapshot"])
+                    strings(&[
+                        "\"aaa\" is claimed by \"v0.2.5\" but identical to the newest shipped snapshot"
+                    ])
                 );
             }
 
@@ -2490,7 +2657,11 @@ mod tests {
                 let bad = vec![named("v9.json", "9.9", "t", "s", "n", &[])];
                 assert!(check(&bad, &catalog, &newest).join("\n").contains("\"9.9\""));
                 let renamed = vec![named("v0.2.5.json", "v0.2.0", "t", "s", "n", &[])];
-                assert!(check(&renamed, &catalog, &newest).join("\n").contains("its file names"));
+                assert!(
+                    check(&renamed, &catalog, &newest)
+                        .join("\n")
+                        .contains("its file names")
+                );
             }
 
             #[test]
@@ -2500,7 +2671,11 @@ mod tests {
                 let micro = vec![named("v0.2.Y.json", "v0.2.Y", "t", "s", "n", &["aaa"])];
                 assert_eq!(check(&micro, &catalog, &newest), Vec::<String>::new());
                 let placeholder = vec![named("v0.2.X.json", "v0.2.X", "t", "s", "n", &["aaa"])];
-                assert!(check(&placeholder, &catalog, &newest).join("\n").contains("v0.2.X"));
+                assert!(
+                    check(&placeholder, &catalog, &newest)
+                        .join("\n")
+                        .contains("v0.2.X")
+                );
             }
 
             #[test]
@@ -2528,7 +2703,8 @@ mod tests {
             }
 
             #[test]
-            fn r646_counts_an_entry_whose_bytes_moved_as_changed_key_order_included_so_every_catalog_has_a_legal_state() {
+            fn r646_counts_an_entry_whose_bytes_moved_as_changed_key_order_included_so_every_catalog_has_a_legal_state()
+             {
                 let newest = catalog_of(vec![object(vec![
                     ("id", Json::from("aaa")),
                     ("name", Json::from("Card aaa")),
@@ -2543,10 +2719,15 @@ mod tests {
                 assert_eq!(differing_ids(&newest, &reordered), strings(&["aaa"]));
                 assert_eq!(
                     check(&[], &reordered, &newest),
-                    strings(&["\"aaa\" differs from the newest shipped snapshot but no pending fragment claims it"])
+                    strings(&[
+                        "\"aaa\" differs from the newest shipped snapshot but no pending fragment claims it"
+                    ])
                 );
                 assert_eq!(check(&files, &reordered, &newest), Vec::<String>::new());
-                assert!(same_catalog(&revert_pending(&reordered, &newest, &set(&["aaa"])), &newest));
+                assert!(same_catalog(
+                    &revert_pending(&reordered, &newest, &set(&["aaa"])),
+                    &newest
+                ));
             }
 
             #[test]
@@ -2557,7 +2738,10 @@ mod tests {
                 let reverted = revert_pending(&catalog, &newest, &set(&["aaa", "bbb", "ccc"]));
                 assert!(same_catalog(&reverted, &newest));
                 assert!(!same_catalog(&catalog, &newest));
-                assert!(!same_catalog(&revert_pending(&catalog, &newest, &set(&[])), &newest));
+                assert!(!same_catalog(
+                    &revert_pending(&catalog, &newest, &set(&[])),
+                    &newest
+                ));
                 assert!(same_catalog(&newest, &newest));
             }
 
@@ -2565,7 +2749,10 @@ mod tests {
             fn r646_ships_a_taken_version_as_the_next_revision_letter_never_by_reopening_it() {
                 assert_eq!(next_ship_name(&set(&[]), "v0.2.0").unwrap(), "v0.2.0");
                 assert_eq!(next_ship_name(&set(&["v0.2.0"]), "v0.2.0").unwrap(), "v0.2.0b");
-                assert_eq!(next_ship_name(&set(&["v0.2.0", "v0.2.0b"]), "v0.2.0").unwrap(), "v0.2.0c");
+                assert_eq!(
+                    next_ship_name(&set(&["v0.2.0", "v0.2.0b"]), "v0.2.0").unwrap(),
+                    "v0.2.0c"
+                );
                 assert_eq!(next_ship_name(&set(&["v0.2.5"]), "v0.2.0").unwrap(), "v0.2.0");
             }
 
@@ -2580,7 +2767,10 @@ mod tests {
 
             #[test]
             fn r646_hashes_a_snapshots_bytes_the_way_git_does() {
-                assert_eq!(git_blob_hash("test\n"), "9daeafb9864cf43055ae93beb0afd6c7d144bfa4");
+                assert_eq!(
+                    git_blob_hash("test\n"),
+                    "9daeafb9864cf43055ae93beb0afd6c7d144bfa4"
+                );
                 assert_eq!(git_blob_hash(""), "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391");
             }
         }
@@ -2612,7 +2802,9 @@ mod tests {
                 let mut command = Command::new("git");
                 command.args(args).current_dir(root).envs(IDENT.iter().copied());
                 if let Some(date) = date {
-                    command.env("GIT_AUTHOR_DATE", date).env("GIT_COMMITTER_DATE", date);
+                    command
+                        .env("GIT_AUTHOR_DATE", date)
+                        .env("GIT_COMMITTER_DATE", date);
                 }
                 let output = command.output().expect("git runs");
                 assert!(
@@ -2636,14 +2828,23 @@ mod tests {
             }
 
             fn cost_of(snapshot: &Catalog, id: &str) -> Option<f64> {
-                snapshot.get(id).and_then(|def| def.get("cost")).and_then(Json::as_f64)
+                snapshot
+                    .get(id)
+                    .and_then(|def| def.get("cost"))
+                    .and_then(Json::as_f64)
             }
 
             fn read(path: &Path) -> String {
                 fs::read_to_string(path).expect("a file")
             }
 
-            fn fragment_args(version: &str, title: &str, sources: &str, notes: &str, cards: Option<&[&str]>) -> FragmentArgs {
+            fn fragment_args(
+                version: &str,
+                title: &str,
+                sources: &str,
+                notes: &str,
+                cards: Option<&[&str]>,
+            ) -> FragmentArgs {
                 FragmentArgs {
                     version: version.to_string(),
                     title: title.to_string(),
@@ -2676,19 +2877,30 @@ mod tests {
             }
 
             fn index_of(pairs: Vec<(&str, Vec<&str>)>) -> IndexMap<String, Vec<String>> {
-                pairs.into_iter().map(|(id, versions)| (id.to_string(), strings(&versions))).collect()
+                pairs
+                    .into_iter()
+                    .map(|(id, versions)| (id.to_string(), strings(&versions)))
+                    .collect()
             }
 
             /// The version sites as a fixture tree carries them at `version`.
             fn version_sites(version: &str) -> Vec<(&'static str, String)> {
                 vec![
-                    ("crates/server/.env.example", format!("CATALOG_VERSION={version}\n")),
-                    ("render.yaml", format!("x:\n- key: CATALOG_VERSION\n  value: {version}\n")),
+                    (
+                        "crates/server/.env.example",
+                        format!("CATALOG_VERSION={version}\n"),
+                    ),
+                    (
+                        "render.yaml",
+                        format!("x:\n- key: CATALOG_VERSION\n  value: {version}\n"),
+                    ),
                 ]
             }
 
             fn shipped_of(names: &[&str]) -> ShipResult {
-                ShipResult { shipped: strings(names) }
+                ShipResult {
+                    shipped: strings(names),
+                }
             }
 
             // The issue's acceptance scenario on a three-card catalog: branch A adds fragment v0.2.5
@@ -2696,7 +2908,8 @@ mod tests {
             // merges with no conflict under pending/, and promotion ships v0.2.5 before v0.2.0
             // whatever the names say. A later fragment named v0.2.0 ships as v0.2.0b, then v0.2.0c.
             #[test]
-            fn r646_ships_pending_fragments_oldest_merge_first_snapshots_each_merges_catalog_and_letters_revisions() {
+            fn r646_ships_pending_fragments_oldest_merge_first_snapshots_each_merges_catalog_and_letters_revisions()
+             {
                 let temp = TempDir::new("jackioh-ship-");
                 let root = temp.path();
                 let dir = root.join("crates/cards/patches");
@@ -2718,16 +2931,27 @@ mod tests {
                     ("crates/cards/patches/v0.1.1.json", json(&base)),
                     (
                         "crates/cards/patches/index.json",
-                        json(&index_of(vec![("aaa", vec!["v0.1.1"]), ("bbb", vec!["v0.1.1"]), ("ccc", vec!["v0.1.1"])])),
+                        json(&index_of(vec![
+                            ("aaa", vec!["v0.1.1"]),
+                            ("bbb", vec!["v0.1.1"]),
+                            ("ccc", vec!["v0.1.1"]),
+                        ])),
                     ),
                     ("crates/cards/patches/shipped.json", json(&unshipped("v0.1.1"))),
                     // The optional site: rewritten when the web build names the version.
-                    ("apps/web/.env.production", "VITE_SERVER_HTTP_URL=x\nVITE_CATALOG_VERSION=v0.1.1\n".to_string()),
+                    (
+                        "apps/web/.env.production",
+                        "VITE_SERVER_HTTP_URL=x\nVITE_CATALOG_VERSION=v0.1.1\n".to_string(),
+                    ),
                 ];
                 files.extend(version_sites("v0.1.1"));
                 write_files(root, &files);
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "base"], Some("2026-09-27T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "base"],
+                    Some("2026-09-27T12:00:00+00:00"),
+                );
                 let c0 = git(root, &["rev-parse", "HEAD"], None).trim().to_string();
                 write_files(
                     root,
@@ -2745,20 +2969,35 @@ mod tests {
                 let mut after_a = base.clone();
                 after_a.insert("aaa".to_string(), card("aaa", 2));
                 write_files(root, &[("crates/cards/catalog.json", json(&after_a))]);
-                let written =
-                    write_fragment(root, &fragment_args("v0.2.5", "Patch v0.2.5", "issue #48", "X", None)).unwrap();
+                let written = write_fragment(
+                    root,
+                    &fragment_args("v0.2.5", "Patch v0.2.5", "issue #48", "X", None),
+                )
+                .unwrap();
                 assert_eq!(written.cards, strings(&["aaa"]));
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "fragment v0.2.5"], Some("2026-10-01T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "fragment v0.2.5"],
+                    Some("2026-10-01T12:00:00+00:00"),
+                );
                 let c1 = git(root, &["rev-parse", "HEAD"], None).trim().to_string();
 
                 // Branch B merges: card bbb changes, fragment v0.2.0 claims it (cards listed).
                 let mut after_b = after_a.clone();
                 after_b.insert("bbb".to_string(), card("bbb", 3));
                 write_files(root, &[("crates/cards/catalog.json", json(&after_b))]);
-                write_fragment(root, &fragment_args("v0.2.0", "Patch v0.2.0", "issue #40", "Y", Some(&["bbb"][..]))).unwrap();
+                write_fragment(
+                    root,
+                    &fragment_args("v0.2.0", "Patch v0.2.0", "issue #40", "Y", Some(&["bbb"][..])),
+                )
+                .unwrap();
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "fragment v0.2.0"], Some("2026-10-02T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "fragment v0.2.0"],
+                    Some("2026-10-02T12:00:00+00:00"),
+                );
                 let c2 = git(root, &["rev-parse", "HEAD"], None).trim().to_string();
 
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
@@ -2767,13 +3006,27 @@ mod tests {
                 let patches = read_patches(&dir.join("patches.json")).unwrap();
                 let versions: Vec<&str> = patches.iter().map(|patch| patch.version.as_str()).collect();
                 assert_eq!(versions, ["v0.1.1", "v0.2.5", "v0.2.0"]);
-                let v25 = patches.iter().find(|patch| patch.version == "v0.2.5").expect("v0.2.5");
-                let v20 = patches.iter().find(|patch| patch.version == "v0.2.0").expect("v0.2.0");
+                let v25 = patches
+                    .iter()
+                    .find(|patch| patch.version == "v0.2.5")
+                    .expect("v0.2.5");
+                let v20 = patches
+                    .iter()
+                    .find(|patch| patch.version == "v0.2.0")
+                    .expect("v0.2.0");
                 assert_eq!(
-                    (v25.date.as_str(), v25.title.as_str(), v25.source.as_str(), v25.notes.as_str()),
+                    (
+                        v25.date.as_str(),
+                        v25.title.as_str(),
+                        v25.source.as_str(),
+                        v25.notes.as_str()
+                    ),
                     ("2026-10-01", "Patch v0.2.5", "issue #48", "X")
                 );
-                assert_eq!((v25.commits.clone(), v25.reconstructed), (Some(vec![c1.clone()]), Some(false)));
+                assert_eq!(
+                    (v25.commits.clone(), v25.reconstructed),
+                    (Some(vec![c1.clone()]), Some(false))
+                );
                 assert_eq!(v20.date, "2026-10-02");
                 // Each snapshot is the catalog as its merge left it: v0.2.0 carries v0.2.5's change.
                 assert_eq!(cost_of(&read_snapshot("v0.2.5", &dir).unwrap(), "aaa"), Some(2.0));
@@ -2781,8 +3034,12 @@ mod tests {
                 assert_eq!(cost_of(&read_snapshot("v0.2.0", &dir).unwrap(), "aaa"), Some(2.0));
                 assert_eq!(cost_of(&read_snapshot("v0.2.0", &dir).unwrap(), "bbb"), Some(3.0));
                 // …so v0.2.0's card-by-card changes list only its own card.
-                assert_eq!(v20.changes, vec![PatchChange::changed("bbb", "Card bbb", strings(&["cost"]))]);
-                let index: IndexMap<String, Vec<String>> = serde_json::from_str(&read(&dir.join("index.json"))).unwrap();
+                assert_eq!(
+                    v20.changes,
+                    vec![PatchChange::changed("bbb", "Card bbb", strings(&["cost"]))]
+                );
+                let index: IndexMap<String, Vec<String>> =
+                    serde_json::from_str(&read(&dir.join("index.json"))).unwrap();
                 assert_eq!(
                     index,
                     index_of(vec![
@@ -2792,9 +3049,13 @@ mod tests {
                     ])
                 );
                 // The fragments are gone, the provenance is recorded, the version sites moved together.
-                assert_eq!(read_fragments(&dir.join("pending")).unwrap(), Vec::<NamedFragment>::new());
+                assert_eq!(
+                    read_fragments(&dir.join("pending")).unwrap(),
+                    Vec::<NamedFragment>::new()
+                );
                 let shipped = read_shipped(&dir.join("shipped.json")).unwrap();
-                let shipped_versions: Vec<&str> = shipped.iter().map(|entry| entry.version.as_str()).collect();
+                let shipped_versions: Vec<&str> =
+                    shipped.iter().map(|entry| entry.version.as_str()).collect();
                 assert_eq!(shipped_versions, ["v0.1.1", "v0.2.5", "v0.2.0"]);
                 assert_eq!(
                     shipped[1],
@@ -2809,7 +3070,8 @@ mod tests {
                 assert!(read(&root.join("render.yaml")).contains("value: v0.2.0"));
                 assert!(read(&root.join("apps/web/.env.production")).contains("VITE_CATALOG_VERSION=v0.2.0"));
                 // Promotion leaves the working catalog alone, and the tree is shippable again.
-                let working: Catalog = serde_json::from_str(&read(&root.join("crates/cards/catalog.json"))).unwrap();
+                let working: Catalog =
+                    serde_json::from_str(&read(&root.join("crates/cards/catalog.json"))).unwrap();
                 assert_eq!(working, after_b);
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
 
@@ -2821,7 +3083,11 @@ mod tests {
                 // The promotion is committed, as the workflow's pull request would commit it: the
                 // next fragment under a shipped name is added again, not modified.
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "ship v0.2.5 and v0.2.0"], Some("2026-10-02T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "ship v0.2.5 and v0.2.0"],
+                    Some("2026-10-02T12:00:00+00:00"),
+                );
 
                 // A later fragment under a shipped name ships as the next revision letter, appended last.
                 let mut after_c = after_b.clone();
@@ -2829,29 +3095,60 @@ mod tests {
                 write_files(root, &[("crates/cards/catalog.json", json(&after_c))]);
                 write_fragment(root, &fragment_args("v0.2.0", "follow-up", "issue", "Z", None)).unwrap();
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "fragment v0.2.0 again"], Some("2026-10-03T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "fragment v0.2.0 again"],
+                    Some("2026-10-03T12:00:00+00:00"),
+                );
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.2.0b"]));
                 let patches = read_patches(&dir.join("patches.json")).unwrap();
                 let versions: Vec<&str> = patches.iter().map(|patch| patch.version.as_str()).collect();
                 assert_eq!(versions, ["v0.1.1", "v0.2.5", "v0.2.0", "v0.2.0b"]);
-                let v20b = patches.iter().find(|patch| patch.version == "v0.2.0b").expect("v0.2.0b");
+                let v20b = patches
+                    .iter()
+                    .find(|patch| patch.version == "v0.2.0b")
+                    .expect("v0.2.0b");
                 assert_eq!(v20b.date, "2026-10-03");
-                assert_eq!(cost_of(&read_snapshot("v0.2.0b", &dir).unwrap(), "ccc"), Some(5.0));
-                assert_eq!(v20b.changes, vec![PatchChange::changed("ccc", "Card ccc", strings(&["cost"]))]);
+                assert_eq!(
+                    cost_of(&read_snapshot("v0.2.0b", &dir).unwrap(), "ccc"),
+                    Some(5.0)
+                );
+                assert_eq!(
+                    v20b.changes,
+                    vec![PatchChange::changed("ccc", "Card ccc", strings(&["cost"]))]
+                );
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "ship v0.2.0b"], Some("2026-10-03T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "ship v0.2.0b"],
+                    Some("2026-10-03T12:00:00+00:00"),
+                );
 
                 // …and the one after that is v0.2.0c.
                 let mut after_d = after_c.clone();
                 after_d.insert("ccc".to_string(), card("ccc", 6));
                 write_files(root, &[("crates/cards/catalog.json", json(&after_d))]);
-                write_fragment(root, &fragment_args("v0.2.0", "another follow-up", "issue", "Z2", None)).unwrap();
+                write_fragment(
+                    root,
+                    &fragment_args("v0.2.0", "another follow-up", "issue", "Z2", None),
+                )
+                .unwrap();
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "fragment v0.2.0 a third time"], Some("2026-10-04T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "fragment v0.2.0 a third time"],
+                    Some("2026-10-04T12:00:00+00:00"),
+                );
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.2.0c"]));
-                let versions: Vec<String> =
-                    read_patches(&dir.join("patches.json")).unwrap().into_iter().map(|patch| patch.version).collect();
-                assert_eq!(versions, strings(&["v0.1.1", "v0.2.5", "v0.2.0", "v0.2.0b", "v0.2.0c"]));
+                let versions: Vec<String> = read_patches(&dir.join("patches.json"))
+                    .unwrap()
+                    .into_iter()
+                    .map(|patch| patch.version)
+                    .collect();
+                assert_eq!(
+                    versions,
+                    strings(&["v0.1.1", "v0.2.5", "v0.2.0", "v0.2.0b", "v0.2.0c"])
+                );
             }
 
             // A micro `vA.B.Y` fragment keeps its Y until promotion names it after the then-newest
@@ -2870,36 +3167,68 @@ mod tests {
                         "crates/cards/patches/patches.json",
                         json(&[base_patch(
                             "base notes",
-                            vec![PatchChange::added("aaa", "Card aaa"), PatchChange::added("bbb", "Card bbb")],
+                            vec![
+                                PatchChange::added("aaa", "Card aaa"),
+                                PatchChange::added("bbb", "Card bbb"),
+                            ],
                         )]),
                     ),
                     ("crates/cards/patches/v0.1.1.json", json(&base)),
-                    ("crates/cards/patches/index.json", json(&index_of(vec![("aaa", vec!["v0.1.1"]), ("bbb", vec!["v0.1.1"])]))),
+                    (
+                        "crates/cards/patches/index.json",
+                        json(&index_of(vec![("aaa", vec!["v0.1.1"]), ("bbb", vec!["v0.1.1"])])),
+                    ),
                     ("crates/cards/patches/shipped.json", json(&unshipped("v0.1.1"))),
                 ];
                 files.extend(version_sites("v0.1.1"));
                 write_files(root, &files);
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "base"], Some("2026-09-27T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "base"],
+                    Some("2026-09-27T12:00:00+00:00"),
+                );
 
                 let mut micro = base.clone();
                 micro.insert("aaa".to_string(), card("aaa", 2));
                 write_files(root, &[("crates/cards/catalog.json", json(&micro))]);
                 assert_eq!(
-                    write_fragment(root, &fragment_args("v0.1.Y", "micro", "issue", "m", None)).unwrap().cards,
+                    write_fragment(root, &fragment_args("v0.1.Y", "micro", "issue", "m", None))
+                        .unwrap()
+                        .cards,
                     strings(&["aaa"])
                 );
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "fragment v0.1.Y"], Some("2026-10-05T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "fragment v0.1.Y"],
+                    Some("2026-10-05T12:00:00+00:00"),
+                );
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b"]));
                 let patches = read_patches(&dir.join("patches.json")).unwrap();
-                let first = patches.iter().find(|patch| patch.version == "v0.1.1b").expect("v0.1.1b");
-                assert_eq!(first.changes, vec![PatchChange::changed("aaa", "Card aaa", strings(&["cost"]))]);
-                assert_eq!(cost_of(&read_snapshot("v0.1.1b", &dir).unwrap(), "aaa"), Some(2.0));
-                assert_eq!(cost_of(&read_snapshot("v0.1.1b", &dir).unwrap(), "bbb"), Some(1.0));
+                let first = patches
+                    .iter()
+                    .find(|patch| patch.version == "v0.1.1b")
+                    .expect("v0.1.1b");
+                assert_eq!(
+                    first.changes,
+                    vec![PatchChange::changed("aaa", "Card aaa", strings(&["cost"]))]
+                );
+                assert_eq!(
+                    cost_of(&read_snapshot("v0.1.1b", &dir).unwrap(), "aaa"),
+                    Some(2.0)
+                );
+                assert_eq!(
+                    cost_of(&read_snapshot("v0.1.1b", &dir).unwrap(), "bbb"),
+                    Some(1.0)
+                );
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "ship v0.1.1b"], Some("2026-10-05T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "ship v0.1.1b"],
+                    Some("2026-10-05T12:00:00+00:00"),
+                );
 
                 // The next micro follows the new newest, not the old one.
                 let mut again = micro.clone();
@@ -2907,10 +3236,17 @@ mod tests {
                 write_files(root, &[("crates/cards/catalog.json", json(&again))]);
                 write_fragment(root, &fragment_args("v0.1.Y", "micro again", "issue", "m2", None)).unwrap();
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "fragment v0.1.Y again"], Some("2026-10-06T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "fragment v0.1.Y again"],
+                    Some("2026-10-06T12:00:00+00:00"),
+                );
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1c"]));
-                let versions: Vec<String> =
-                    read_patches(&dir.join("patches.json")).unwrap().into_iter().map(|patch| patch.version).collect();
+                let versions: Vec<String> = read_patches(&dir.join("patches.json"))
+                    .unwrap()
+                    .into_iter()
+                    .map(|patch| patch.version)
+                    .collect();
                 assert_eq!(versions, strings(&["v0.1.1", "v0.1.1b", "v0.1.1c"]));
             }
 
@@ -2924,11 +3260,17 @@ mod tests {
                 write_files(
                     root,
                     &[
-                        ("crates/cards/catalog.json", json(&catalog_of(vec![card("aaa", 2)]))),
+                        (
+                            "crates/cards/catalog.json",
+                            json(&catalog_of(vec![card("aaa", 2)])),
+                        ),
                         ("crates/cards/patches/patches.json", json(&[patch])),
                         ("crates/cards/patches/v0.3.0.json", json(&base)),
                         ("crates/cards/patches/index.json", json(&index_of(Vec::new()))),
-                        ("crates/cards/patches/shipped.json", json(&Vec::<ShippedEntry>::new())),
+                        (
+                            "crates/cards/patches/shipped.json",
+                            json(&Vec::<ShippedEntry>::new()),
+                        ),
                     ],
                 );
                 write_fragment(root, &fragment_args("v0.2.Y", "t", "s", "n", None)).unwrap();
@@ -2942,7 +3284,10 @@ mod tests {
                 git(root, &["init", "-q", "-b", "main"], None);
                 let mut files = vec![
                     ("crates/cards/catalog.json", json(base)),
-                    ("crates/cards/patches/patches.json", json(&[base_patch("n", Vec::new())])),
+                    (
+                        "crates/cards/patches/patches.json",
+                        json(&[base_patch("n", Vec::new())]),
+                    ),
                     ("crates/cards/patches/v0.1.1.json", json(base)),
                     ("crates/cards/patches/index.json", json(&index_of(Vec::new()))),
                     ("crates/cards/patches/shipped.json", json(&unshipped("v0.1.1"))),
@@ -2950,7 +3295,11 @@ mod tests {
                 files.extend(version_sites("v0.1.1"));
                 write_files(root, &files);
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "base"], Some("2026-09-27T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "base"],
+                    Some("2026-09-27T12:00:00+00:00"),
+                );
                 temp
             }
 
@@ -2966,11 +3315,19 @@ mod tests {
                 write_files(root, &[("crates/cards/catalog.json", json(&changed))]);
                 write_fragment(root, &fragment_args("v0.2.5", "t", "s", "n", None)).unwrap();
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "fragment v0.2.5"], Some("2026-10-01T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "fragment v0.2.5"],
+                    Some("2026-10-01T12:00:00+00:00"),
+                );
                 git(root, &["checkout", "-q", "main"], None);
                 write_files(root, &[("README.md", "unrelated\n".to_string())]);
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "meanwhile on main"], Some("2026-10-01T13:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "meanwhile on main"],
+                    Some("2026-10-01T13:00:00+00:00"),
+                );
                 git(
                     root,
                     &["merge", "-q", "--no-ff", "patch", "-m", "Merge pull request"],
@@ -2979,9 +3336,15 @@ mod tests {
                 let merge = git(root, &["rev-parse", "HEAD"], None).trim().to_string();
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.2.5"]));
                 let patches = read_patches(&dir.join("patches.json")).unwrap();
-                let v25 = patches.iter().find(|patch| patch.version == "v0.2.5").expect("v0.2.5");
+                let v25 = patches
+                    .iter()
+                    .find(|patch| patch.version == "v0.2.5")
+                    .expect("v0.2.5");
                 // The merge commit is on main's first-parent line; the branch's own commit is not.
-                assert_eq!((v25.date.as_str(), v25.commits.clone()), ("2026-10-02", Some(vec![merge])));
+                assert_eq!(
+                    (v25.date.as_str(), v25.commits.clone()),
+                    ("2026-10-02", Some(vec![merge]))
+                );
                 assert_eq!(cost_of(&read_snapshot("v0.2.5", &dir).unwrap(), "aaa"), Some(2.0));
             }
 
@@ -2997,28 +3360,55 @@ mod tests {
                     }
                     catalog
                 };
-                write_files(root, &[("crates/cards/catalog.json", json(&with(vec![card("aaa", 2)])))]);
+                write_files(
+                    root,
+                    &[("crates/cards/catalog.json", json(&with(vec![card("aaa", 2)])))],
+                );
                 write_fragment(root, &fragment_args("v0.2.5", "t", "s", "n", None)).unwrap();
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "fragment v0.2.5"], Some("2026-10-01T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "fragment v0.2.5"],
+                    Some("2026-10-01T12:00:00+00:00"),
+                );
                 // A later merge moves the claimed card again without touching the fragment: check
                 // passes, but no snapshot of the fragment's commit is today's catalog.
-                write_files(root, &[("crates/cards/catalog.json", json(&with(vec![card("aaa", 3)])))]);
+                write_files(
+                    root,
+                    &[("crates/cards/catalog.json", json(&with(vec![card("aaa", 3)])))],
+                );
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "aaa again"], Some("2026-10-02T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "aaa again"],
+                    Some("2026-10-02T12:00:00+00:00"),
+                );
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
                 let refused = format!("{:#}", ship_patches(root).expect_err("refused"));
                 assert!(refused.contains("catalog.json changed after"), "{refused}");
                 assert_eq!(git(root, &["status", "--porcelain"], None), "");
 
                 // A fragment edited to claim a card its commit did not change is refused the same way.
-                write_files(root, &[("crates/cards/catalog.json", json(&with(vec![card("aaa", 3), card("bbb", 2)])))]);
+                write_files(
+                    root,
+                    &[(
+                        "crates/cards/catalog.json",
+                        json(&with(vec![card("aaa", 3), card("bbb", 2)])),
+                    )],
+                );
                 write_fragment(root, &fragment_args("v0.2.5", "t", "s", "n", None)).unwrap();
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "fragment v0.2.5 claims bbb too"], Some("2026-10-03T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "fragment v0.2.5 claims bbb too"],
+                    Some("2026-10-03T12:00:00+00:00"),
+                );
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
                 let refused = format!("{:#}", ship_patches(root).expect_err("refused"));
-                assert!(refused.contains("but the fragment claims [\"aaa\",\"bbb\"]"), "{refused}");
+                assert!(
+                    refused.contains("but the fragment claims [\"aaa\",\"bbb\"]"),
+                    "{refused}"
+                );
                 assert_eq!(git(root, &["status", "--porcelain"], None), "");
             }
 
@@ -3030,13 +3420,20 @@ mod tests {
                 write_files(
                     root,
                     &[
-                        ("crates/cards/catalog.json", json(&catalog_of(vec![card("aaa", 2)]))),
+                        (
+                            "crates/cards/catalog.json",
+                            json(&catalog_of(vec![card("aaa", 2)])),
+                        ),
                         ("render.yaml", "x: {}\n".to_string()),
                     ],
                 );
                 write_fragment(root, &fragment_args("v0.2.5", "t", "s", "n", None)).unwrap();
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "fragment v0.2.5"], Some("2026-10-01T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "fragment v0.2.5"],
+                    Some("2026-10-01T12:00:00+00:00"),
+                );
                 let refused = format!("{:#}", ship_patches(root).expect_err("refused"));
                 assert!(refused.contains("render.yaml: no CATALOG_VERSION"), "{refused}");
                 assert_eq!(git(root, &["status", "--porcelain"], None), "");
@@ -3050,16 +3447,27 @@ mod tests {
                 write_files(
                     root,
                     &[
-                        ("crates/cards/catalog.json", json(&catalog_of(vec![card("aaa", 2)]))),
-                        ("crates/cards/patches/patches.json", json(&[base_patch("n", Vec::new())])),
+                        (
+                            "crates/cards/catalog.json",
+                            json(&catalog_of(vec![card("aaa", 2)])),
+                        ),
+                        (
+                            "crates/cards/patches/patches.json",
+                            json(&[base_patch("n", Vec::new())]),
+                        ),
                         ("crates/cards/patches/v0.1.1.json", json(&base)),
                         ("crates/cards/patches/index.json", json(&index_of(Vec::new()))),
-                        ("crates/cards/patches/shipped.json", json(&Vec::<ShippedEntry>::new())),
+                        (
+                            "crates/cards/patches/shipped.json",
+                            json(&Vec::<ShippedEntry>::new()),
+                        ),
                     ],
                 );
                 assert_eq!(
                     check_patches(root).unwrap(),
-                    strings(&["\"aaa\" differs from the newest shipped snapshot but no pending fragment claims it"])
+                    strings(&[
+                        "\"aaa\" differs from the newest shipped snapshot but no pending fragment claims it"
+                    ])
                 );
                 write_fragment(root, &fragment_args("v0.2.5", "t", "s", "n", None)).unwrap();
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
@@ -3097,11 +3505,19 @@ mod tests {
         }
 
         fn changes_of(patches: &[PatchEntry], version: &str) -> Vec<PatchChange> {
-            patches.iter().find(|patch| patch.version == version).map(|patch| patch.changes.clone()).unwrap_or_default()
+            patches
+                .iter()
+                .find(|patch| patch.version == version)
+                .map(|patch| patch.changes.clone())
+                .unwrap_or_default()
         }
 
         fn ids_of(patches: &[PatchEntry], version: &str, kind: ChangeKind) -> Vec<String> {
-            changes_of(patches, version).into_iter().filter(|change| change.kind == kind).map(|change| change.id).collect()
+            changes_of(patches, version)
+                .into_iter()
+                .filter(|change| change.kind == kind)
+                .map(|change| change.id)
+                .collect()
         }
 
         /// TS `CATALOG`: the catalog the cards crate compiles in, each entry's fields in order.
@@ -3132,7 +3548,10 @@ mod tests {
         }
 
         fn is_hex40(text: &str) -> bool {
-            text.len() == 40 && text.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+            text.len() == 40
+                && text
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
         }
 
         mod r388_card_patch_history_b4_2 {
@@ -3152,7 +3571,9 @@ mod tests {
                 // shipped.
                 assert_eq!(
                     versions[..8],
-                    strings(&["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.1", "v0.2.2"])
+                    strings(&[
+                        "v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.1", "v0.2.2"
+                    ])
                 );
                 assert!(versions.iter().any(|version| version == "v0.2.3"));
                 assert_eq!(versions.iter().collect::<IndexSet<_>>().len(), versions.len());
@@ -3167,7 +3588,8 @@ mod tests {
             }
 
             #[test]
-            fn r388_makes_the_catalog_version_the_newest_patch_and_catalog_json_its_snapshot_apart_from_pending_fragments_r646() {
+            fn r388_makes_the_catalog_version_the_newest_patch_and_catalog_json_its_snapshot_apart_from_pending_fragments_r646()
+             {
                 let versions = versions(&patches());
                 // Never a literal: `patches ship` moves the newest patch, and its pull request cannot
                 // edit tests.
@@ -3176,8 +3598,10 @@ mod tests {
                 // Pending fragments hold the catalog ahead of the newest snapshot on exactly their
                 // claimed cards (R646): reverted to the snapshot, the catalog is the snapshot. With no
                 // fragments pending this is the old equality, entry for entry.
-                let claimed: IndexSet<String> =
-                    fragments().into_iter().flat_map(|named| named.fragment.cards).collect();
+                let claimed: IndexSet<String> = fragments()
+                    .into_iter()
+                    .flat_map(|named| named.fragment.cards)
+                    .collect();
                 let catalog = catalog();
                 let reverted = revert_pending(&catalog, &snapshot, &claimed);
                 assert!(
@@ -3192,17 +3616,23 @@ mod tests {
             }
 
             #[test]
-            fn r646_lists_every_shipped_patch_once_in_shipped_json_with_the_commit_that_shipped_it_and_its_snapshots_blob() {
+            fn r646_lists_every_shipped_patch_once_in_shipped_json_with_the_commit_that_shipped_it_and_its_snapshots_blob()
+             {
                 let shipped = read_shipped(&shipped_json()).unwrap();
-                let shipped_versions: Vec<String> = shipped.iter().map(|entry| entry.version.clone()).collect();
+                let shipped_versions: Vec<String> =
+                    shipped.iter().map(|entry| entry.version.clone()).collect();
                 assert_eq!(shipped_versions, versions(&patches()));
-                assert_eq!(shipped_versions.iter().collect::<IndexSet<_>>().len(), shipped.len());
+                assert_eq!(
+                    shipped_versions.iter().collect::<IndexSet<_>>().len(),
+                    shipped.len()
+                );
                 for entry in &shipped {
                     assert!(is_hex40(&entry.commit), "{} commit", entry.version);
                     assert!(is_hex40(&entry.blob), "{} blob", entry.version);
                     // The blob is the snapshot file's bytes as git hashes them, so a rewritten
                     // snapshot fails.
-                    let bytes = fs::read_to_string(snapshot_path(&entry.version, &patches_dir()).unwrap()).unwrap();
+                    let bytes =
+                        fs::read_to_string(snapshot_path(&entry.version, &patches_dir()).unwrap()).unwrap();
                     assert_eq!(entry.blob, git_blob_hash(&bytes), "{}.json", entry.version);
                 }
             }
@@ -3215,7 +3645,12 @@ mod tests {
                 assert!(sites.iter().any(|site| site.file == "render.yaml"));
                 assert!(sites.iter().any(|site| site.file == "crates/server/.env.example"));
                 for site in sites {
-                    assert_eq!(site.version.as_deref(), Some(jackioh_cards::CATALOG_VERSION), "{}", site.file);
+                    assert_eq!(
+                        site.version.as_deref(),
+                        Some(jackioh_cards::CATALOG_VERSION),
+                        "{}",
+                        site.file
+                    );
                 }
             }
 
@@ -3224,29 +3659,46 @@ mod tests {
             // refuses to boot on a different `CATALOG_VERSION` (SURFACE §11.3), and `cargo jackioh
             // catalog-version` prints the same newest patch for the workflows that read it.
             #[test]
-            fn r388_serves_the_catalog_version_from_the_patch_list_so_a_stale_dashboard_value_is_never_served() {
+            fn r388_serves_the_catalog_version_from_the_patch_list_so_a_stale_dashboard_value_is_never_served()
+             {
                 // The version a deploy serves and stamps is the newest patch, which is CATALOG_VERSION.
-                assert_eq!(crate::catalog::newest_version(&patches_json()).unwrap(), jackioh_cards::CATALOG_VERSION);
+                assert_eq!(
+                    crate::catalog::newest_version(&patches_json()).unwrap(),
+                    jackioh_cards::CATALOG_VERSION
+                );
 
                 // render.yaml leaves the start to the image, so no command can override the version.
                 let render = fs::read_to_string(repo_root().join("render.yaml")).unwrap();
-                assert!(!render.lines().any(|line| line.trim_start().starts_with("startCommand:")));
+                assert!(
+                    !render
+                        .lines()
+                        .any(|line| line.trim_start().starts_with("startCommand:"))
+                );
 
                 // A patch list that names no newest version stops the chain with nothing printed.
                 let temp = TempDir::new("catalog-version-");
                 let empty = temp.path().join("patches.json");
                 fs::write(&empty, "[]").unwrap();
-                let refused = format!("{:#}", crate::catalog::newest_version(&empty).expect_err("refused"));
+                let refused = format!(
+                    "{:#}",
+                    crate::catalog::newest_version(&empty).expect_err("refused")
+                );
                 assert!(refused.contains("names no newest version"), "{refused}");
             }
 
             #[test]
-            fn r388_derives_each_patchs_card_by_card_changes_and_the_per_card_index_from_the_snapshots_alone() {
+            fn r388_derives_each_patchs_card_by_card_changes_and_the_per_card_index_from_the_snapshots_alone()
+            {
                 let patches = patches();
                 let mut previous: Option<Catalog> = None;
                 for patch in &patches {
                     let snapshot = snapshot(&patch.version);
-                    assert_eq!(patch.changes, diff_catalogs(previous.as_ref(), &snapshot), "{} changes", patch.version);
+                    assert_eq!(
+                        patch.changes,
+                        diff_catalogs(previous.as_ref(), &snapshot),
+                        "{} changes",
+                        patch.version
+                    );
                     previous = Some(snapshot);
                 }
                 let index: IndexMap<String, Vec<String>> =
@@ -3264,15 +3716,32 @@ mod tests {
                 // Radiant faces.
                 assert_eq!(
                     ids_of(&patches, "v0.1.0b", ChangeKind::Changed),
-                    strings(&["core-003", "core-068", "core-081", "core-t-rush", "core-t-sheep", "core-t-felinor", "core-t-bread"])
+                    strings(&[
+                        "core-003",
+                        "core-068",
+                        "core-081",
+                        "core-t-rush",
+                        "core-t-sheep",
+                        "core-t-felinor",
+                        "core-t-bread"
+                    ])
                 );
                 // v0.1.0c: #95's text; The Coin added.
-                assert_eq!(ids_of(&patches, "v0.1.0c", ChangeKind::Changed), strings(&["core-095"]));
-                assert_eq!(ids_of(&patches, "v0.1.0c", ChangeKind::Added), strings(&["core-t-coin"]));
+                assert_eq!(
+                    ids_of(&patches, "v0.1.0c", ChangeKind::Changed),
+                    strings(&["core-095"])
+                );
+                assert_eq!(
+                    ids_of(&patches, "v0.1.0c", ChangeKind::Added),
+                    strings(&["core-t-coin"])
+                );
                 // v0.1.0d: the Radiant pass, 99 entries.
                 assert_eq!(ids_of(&patches, "v0.1.0d", ChangeKind::Changed).len(), 99);
                 // v0.1.1: the Ghoul Token added and 105 entries changed.
-                assert_eq!(ids_of(&patches, "v0.1.1", ChangeKind::Added), strings(&["core-t-ghoul"]));
+                assert_eq!(
+                    ids_of(&patches, "v0.1.1", ChangeKind::Added),
+                    strings(&["core-t-ghoul"])
+                );
                 assert_eq!(ids_of(&patches, "v0.1.1", ChangeKind::Changed).len(), 105);
                 // Nothing has ever been removed.
                 let removed: Vec<&PatchChange> = patches
@@ -3289,32 +3758,67 @@ mod tests {
                 assert_eq!(ids_of(&patches, "v0.2.0", ChangeKind::Added).len(), 206);
                 let before = snapshot("v0.1.1");
                 let after = snapshot("v0.2.0");
-                let cost = |snapshot: &Catalog, id: &str| snapshot.get(id).and_then(|def| def.get("cost")).cloned();
-                let ids: Vec<String> = [16, 17, 34, 43, 49, 65, 88].iter().map(|n| format!("core-0{n:02}")).collect();
-                let costs = |snapshot: &Catalog| -> Vec<Option<Json>> { ids.iter().map(|id| cost(snapshot, id)).collect() };
-                let numbers = |list: &[i32]| -> Vec<Option<Json>> { list.iter().map(|n| Some(Json::from(*n))).collect() };
+                let cost =
+                    |snapshot: &Catalog, id: &str| snapshot.get(id).and_then(|def| def.get("cost")).cloned();
+                let ids: Vec<String> = [16, 17, 34, 43, 49, 65, 88]
+                    .iter()
+                    .map(|n| format!("core-0{n:02}"))
+                    .collect();
+                let costs = |snapshot: &Catalog| -> Vec<Option<Json>> {
+                    ids.iter().map(|id| cost(snapshot, id)).collect()
+                };
+                let numbers = |list: &[i32]| -> Vec<Option<Json>> {
+                    list.iter().map(|n| Some(Json::from(*n))).collect()
+                };
                 assert_eq!(costs(&before), numbers(&[2, 3, 3, 3, 3, 2, 3]));
                 assert_eq!(costs(&after), numbers(&[3, 4, 4, 4, 4, 1, 4]));
                 let changes = changes_of(&patches, "v0.2.0");
-                let changed = changes.iter().find(|change| change.id == "core-016").expect("core-016 changed");
+                let changed = changes
+                    .iter()
+                    .find(|change| change.id == "core-016")
+                    .expect("core-016 changed");
                 assert!(changed.fields().iter().any(|field| field == "cost"));
             }
 
             #[test]
             fn r388_records_patch_v0_2_3_eighteen_field_spells_animated_and_ivory_towers_text_issue_113() {
                 let patches = patches();
-                assert_eq!(ids_of(&patches, "v0.2.3", ChangeKind::Added), Vec::<String>::new());
+                assert_eq!(
+                    ids_of(&patches, "v0.2.3", ChangeKind::Added),
+                    Vec::<String>::new()
+                );
                 assert_eq!(
                     ids_of(&patches, "v0.2.3", ChangeKind::Changed),
                     strings(&[
-                        "core-014", "core-033", "core-038", "core-065", "core-073",
-                        "classic-004", "classic-007", "classic-052", "classic-062", "classic-064", "classic-087",
-                        "classicplus-007", "classicplus-012-5", "classicplus-012-7", "classicplus-031", "classicplus-033",
-                        "classicplus-061", "classicplus-063", "classicplus-070", "classicplus-078",
+                        "core-014",
+                        "core-033",
+                        "core-038",
+                        "core-065",
+                        "core-073",
+                        "classic-004",
+                        "classic-007",
+                        "classic-052",
+                        "classic-062",
+                        "classic-064",
+                        "classic-087",
+                        "classicplus-007",
+                        "classicplus-012-5",
+                        "classicplus-012-7",
+                        "classicplus-031",
+                        "classicplus-033",
+                        "classicplus-061",
+                        "classicplus-063",
+                        "classicplus-070",
+                        "classicplus-078",
                     ])
                 );
                 let after = snapshot("v0.2.3");
-                let base_of = |id: &str| after.get(id).and_then(|def| def.get("base")).and_then(Json::as_object);
+                let base_of = |id: &str| {
+                    after
+                        .get(id)
+                        .and_then(|def| def.get("base"))
+                        .and_then(Json::as_object)
+                };
                 let keyword = base_of("core-073")
                     .and_then(|face| face.get("keywords"))
                     .and_then(Json::as_array)
@@ -3324,27 +3828,48 @@ mod tests {
                     .and_then(Json::as_str);
                 assert_eq!(keyword, Some("Animated"));
                 assert_eq!(
-                    base_of("classicplus-033").and_then(|face| face.get("text")).and_then(Json::as_str),
+                    base_of("classicplus-033")
+                        .and_then(|face| face.get("text"))
+                        .and_then(Json::as_str),
                     Some("The first Unit you stack onto this is fused into it.")
                 );
                 // Final Gambit's follow-up gained its R216 guard: the script's lines move, nothing
                 // printed does.
                 let changes = changes_of(&patches, "v0.2.3");
-                let gambit = changes.iter().find(|change| change.id == "classic-052").expect("classic-052");
-                assert_eq!((gambit.kind, gambit.fields()), (ChangeKind::Changed, &strings(&["loc"])[..]));
+                let gambit = changes
+                    .iter()
+                    .find(|change| change.id == "classic-052")
+                    .expect("classic-052");
+                assert_eq!(
+                    (gambit.kind, gambit.fields()),
+                    (ChangeKind::Changed, &strings(&["loc"])[..])
+                );
             }
 
             #[test]
-            fn r388_records_patch_v0_2_4_aimed_random_casts_and_the_deft_keyword_issue_181_pending_or_shipped_r646() {
+            fn r388_records_patch_v0_2_4_aimed_random_casts_and_the_deft_keyword_issue_181_pending_or_shipped_r646()
+             {
                 // Pending until `patches ship` promotes it, then shipped: either way the patch is
                 // these five cards' changes against v0.2.3's snapshot.
-                let five = strings(&["core-045", "classic-003", "classicplus-010", "classicplus-038-1", "classicplus-040"]);
+                let five = strings(&[
+                    "core-045",
+                    "classic-003",
+                    "classicplus-010",
+                    "classicplus-038-1",
+                    "classicplus-040",
+                ]);
                 let patches = patches();
                 let shipped = versions(&patches).iter().any(|version| version == "v0.2.4");
-                let pending = fragments().into_iter().find(|named| named.fragment.version == "v0.2.4").map(|named| named.fragment);
+                let pending = fragments()
+                    .into_iter()
+                    .find(|named| named.fragment.version == "v0.2.4")
+                    .map(|named| named.fragment);
                 assert!(shipped || pending.is_some(), "v0.2.4 is pending or shipped");
                 if !shipped {
-                    assert_eq!(pending.as_ref().map(|fragment| fragment.cards.clone()), Some(five.clone()));
+                    assert_eq!(
+                        pending.as_ref().map(|fragment| fragment.cards.clone()),
+                        Some(five.clone())
+                    );
                 }
                 let changes: Vec<PatchChange> = if shipped {
                     changes_of(&patches, "v0.2.4")
@@ -3355,24 +3880,48 @@ mod tests {
                         .collect()
                 };
                 assert!(changes.iter().all(|change| change.kind == ChangeKind::Changed));
-                assert_eq!(changes.iter().map(|change| change.id.clone()).collect::<Vec<_>>(), five);
+                assert_eq!(
+                    changes.iter().map(|change| change.id.clone()).collect::<Vec<_>>(),
+                    five
+                );
                 assert_eq!(
                     fields_of(&changes, "core-045"),
-                    strings(&["base.keywords", "base.text", "loc", "radiant.keywords", "radiant.text"])
+                    strings(&[
+                        "base.keywords",
+                        "base.text",
+                        "loc",
+                        "radiant.keywords",
+                        "radiant.text"
+                    ])
                 );
                 assert_eq!(fields_of(&changes, "classic-003"), strings(&["loc"]));
                 assert_eq!(fields_of(&changes, "classicplus-010"), strings(&["loc"]));
-                assert_eq!(fields_of(&changes, "classicplus-038-1"), strings(&["base.text", "radiant.text"]));
-                assert_eq!(fields_of(&changes, "classicplus-040"), strings(&["base.text", "radiant.text"]));
+                assert_eq!(
+                    fields_of(&changes, "classicplus-038-1"),
+                    strings(&["base.text", "radiant.text"])
+                );
+                assert_eq!(
+                    fields_of(&changes, "classicplus-040"),
+                    strings(&["base.text", "radiant.text"])
+                );
             }
 
             #[test]
             fn r388_records_patch_v0_2_6_book_of_wildfire_becomes_a_different_book_issue_271() {
                 // Shipped by `patches ship` (R646): Classic #55 changed against v0.2.5's snapshot.
                 let patches = patches();
-                assert_eq!(ids_of(&patches, "v0.2.6", ChangeKind::Added), Vec::<String>::new());
-                assert_eq!(ids_of(&patches, "v0.2.6", ChangeKind::Removed), Vec::<String>::new());
-                assert_eq!(ids_of(&patches, "v0.2.6", ChangeKind::Changed), strings(&["classic-055"]));
+                assert_eq!(
+                    ids_of(&patches, "v0.2.6", ChangeKind::Added),
+                    Vec::<String>::new()
+                );
+                assert_eq!(
+                    ids_of(&patches, "v0.2.6", ChangeKind::Removed),
+                    Vec::<String>::new()
+                );
+                assert_eq!(
+                    ids_of(&patches, "v0.2.6", ChangeKind::Changed),
+                    strings(&["classic-055"])
+                );
                 assert_eq!(
                     fields_of(&changes_of(&patches, "v0.2.6"), "classic-055"),
                     strings(&["base.text", "loc", "radiant.text"])
@@ -3399,19 +3948,34 @@ mod tests {
                     None => versions.last().expect("a newest patch"),
                     Some(at) => &versions[at - 1],
                 });
-                let after = if fragment.is_some() { catalog() } else { snapshot("v0.2.10") };
+                let after = if fragment.is_some() {
+                    catalog()
+                } else {
+                    snapshot("v0.2.10")
+                };
                 let claimed = match &fragment {
                     Some(fragment) => fragment.cards.clone(),
                     None => ids_of(&patches, "v0.2.10", ChangeKind::Changed),
                 };
                 if fragment.is_none() {
-                    assert_eq!(ids_of(&patches, "v0.2.10", ChangeKind::Added), Vec::<String>::new());
-                    assert_eq!(ids_of(&patches, "v0.2.10", ChangeKind::Removed), Vec::<String>::new());
+                    assert_eq!(
+                        ids_of(&patches, "v0.2.10", ChangeKind::Added),
+                        Vec::<String>::new()
+                    );
+                    assert_eq!(
+                        ids_of(&patches, "v0.2.10", ChangeKind::Removed),
+                        Vec::<String>::new()
+                    );
                 }
-                let changes: Vec<PatchChange> =
-                    diff_catalogs(Some(&before), &after).into_iter().filter(|change| claimed.contains(&change.id)).collect();
+                let changes: Vec<PatchChange> = diff_catalogs(Some(&before), &after)
+                    .into_iter()
+                    .filter(|change| claimed.contains(&change.id))
+                    .collect();
                 assert!(changes.iter().all(|change| change.kind == ChangeKind::Changed));
-                assert_eq!(changes.iter().map(|change| change.id.clone()).collect::<Vec<_>>(), claimed);
+                assert_eq!(
+                    changes.iter().map(|change| change.id.clone()).collect::<Vec<_>>(),
+                    claimed
+                );
                 assert_eq!(claimed.len(), 62);
             }
 
@@ -3420,25 +3984,52 @@ mod tests {
                 // The eighteen, in catalog order — the order a fragment's `cards` and a patch's
                 // `changes` use.
                 let unanimated = strings(&[
-                    "core-014", "core-033", "core-038", "core-065", "core-073",
-                    "classic-004", "classic-007", "classic-062", "classic-064", "classic-087",
-                    "classicplus-007", "classicplus-012-5", "classicplus-012-7", "classicplus-031",
-                    "classicplus-061", "classicplus-063", "classicplus-070", "classicplus-078",
+                    "core-014",
+                    "core-033",
+                    "core-038",
+                    "core-065",
+                    "core-073",
+                    "classic-004",
+                    "classic-007",
+                    "classic-062",
+                    "classic-064",
+                    "classic-087",
+                    "classicplus-007",
+                    "classicplus-012-5",
+                    "classicplus-012-7",
+                    "classicplus-031",
+                    "classicplus-061",
+                    "classicplus-063",
+                    "classicplus-070",
+                    "classicplus-078",
                 ]);
                 // The undo is in the catalog either way: no stats and no Animated on either face.
                 let catalog = catalog();
-                let face = catalog.get("core-073").and_then(|def| def.get("base")).and_then(Json::as_object).expect("core-073");
+                let face = catalog
+                    .get("core-073")
+                    .and_then(|def| def.get("base"))
+                    .and_then(Json::as_object)
+                    .expect("core-073");
                 assert_eq!(face.get("attack"), None);
                 assert_eq!(face.get("keywords"), Some(&Json::Array(Vec::new())));
                 // Pending, the fragment is the patch's whole record (R646); shipped, `patches ship`
                 // has promoted it to the list with a snapshot of this catalog. The test holds on both
                 // sides of the promotion, which cannot edit it.
                 let patches = patches();
-                match fragments().into_iter().find(|named| named.fragment.version == "v0.2.5") {
+                match fragments()
+                    .into_iter()
+                    .find(|named| named.fragment.version == "v0.2.5")
+                {
                     Some(named) => assert_eq!(named.fragment.cards, unanimated),
                     None => {
-                        assert_eq!(ids_of(&patches, "v0.2.5", ChangeKind::Added), Vec::<String>::new());
-                        assert_eq!(ids_of(&patches, "v0.2.5", ChangeKind::Removed), Vec::<String>::new());
+                        assert_eq!(
+                            ids_of(&patches, "v0.2.5", ChangeKind::Added),
+                            Vec::<String>::new()
+                        );
+                        assert_eq!(
+                            ids_of(&patches, "v0.2.5", ChangeKind::Removed),
+                            Vec::<String>::new()
+                        );
                         assert_eq!(ids_of(&patches, "v0.2.5", ChangeKind::Changed), unanimated);
                     }
                 }
@@ -3452,7 +4043,10 @@ mod tests {
                 assert_eq!(ids_of(&patches, "v0.2.1", ChangeKind::Changed).len(), 22);
                 assert!(changes_of(&patches, "v0.2.1").iter().all(|change| {
                     change.kind == ChangeKind::Changed
-                        && change.fields().iter().all(|field| field == "base.text" || field == "radiant.text")
+                        && change
+                            .fields()
+                            .iter()
+                            .all(|field| field == "base.text" || field == "radiant.text")
                 }));
             }
 
@@ -3469,16 +4063,35 @@ mod tests {
                     .filter(|id| fields_of(&changes, id).iter().any(|field| field == "tags"))
                     .collect();
                 assert_eq!(plague.len(), 17);
-                assert!(plague.iter().all(|id| fields_of(&changes, id) == strings(&["tags"])));
+                assert!(
+                    plague
+                        .iter()
+                        .all(|id| fields_of(&changes, id) == strings(&["tags"]))
+                );
                 // The mechanics: Exile's threshold, Joro's Spell-only text, Blade Storm's Whirlwind
                 // cast and refs, Adaptive Growth's numbers, Chaos Machine's other-card text. A face
                 // counts as changed when its printed words move, even when only a param's value
                 // moved (Exile's base face, Adaptive Growth's Radiant face).
-                assert_eq!(fields_of(&changes, "classic-010"), strings(&["base.text", "params"]));
-                assert_eq!(fields_of(&changes, "classic-033"), strings(&["base.text", "radiant.text"]));
-                assert_eq!(fields_of(&changes, "classicplus-032-3"), strings(&["base.text", "refs"]));
-                assert_eq!(fields_of(&changes, "classicplus-050"), strings(&["base.text", "loc", "params", "radiant.text"]));
-                assert_eq!(fields_of(&changes, "classicplus-070"), strings(&["base.text", "loc", "radiant.text"]));
+                assert_eq!(
+                    fields_of(&changes, "classic-010"),
+                    strings(&["base.text", "params"])
+                );
+                assert_eq!(
+                    fields_of(&changes, "classic-033"),
+                    strings(&["base.text", "radiant.text"])
+                );
+                assert_eq!(
+                    fields_of(&changes, "classicplus-032-3"),
+                    strings(&["base.text", "refs"])
+                );
+                assert_eq!(
+                    fields_of(&changes, "classicplus-050"),
+                    strings(&["base.text", "loc", "params", "radiant.text"])
+                );
+                assert_eq!(
+                    fields_of(&changes, "classicplus-070"),
+                    strings(&["base.text", "loc", "radiant.text"])
+                );
                 let before = snapshot("v0.2.1");
                 let after = snapshot("v0.2.2");
                 // `toMatchObject({ base, radiant })`: the param's two printed values.
@@ -3491,13 +4104,28 @@ mod tests {
                         .filter_map(Json::as_object)
                         .find(|param| param.get("key").and_then(Json::as_str) == Some(key))
                         .map(|param| {
-                            (param.get("base").and_then(Json::as_f64), param.get("radiant").and_then(Json::as_f64))
+                            (
+                                param.get("base").and_then(Json::as_f64),
+                                param.get("radiant").and_then(Json::as_f64),
+                            )
                         })
                 };
-                assert_eq!(param(&before, "classic-010", "threshold"), Some((Some(1.0), Some(3.0))));
-                assert_eq!(param(&after, "classic-010", "threshold"), Some((Some(2.0), Some(3.0))));
-                assert_eq!(param(&before, "classicplus-050", "debuff"), Some((Some(4.0), Some(4.0))));
-                assert_eq!(param(&after, "classicplus-050", "debuff"), Some((Some(2.0), Some(3.0))));
+                assert_eq!(
+                    param(&before, "classic-010", "threshold"),
+                    Some((Some(1.0), Some(3.0)))
+                );
+                assert_eq!(
+                    param(&after, "classic-010", "threshold"),
+                    Some((Some(2.0), Some(3.0)))
+                );
+                assert_eq!(
+                    param(&before, "classicplus-050", "debuff"),
+                    Some((Some(4.0), Some(4.0)))
+                );
+                assert_eq!(
+                    param(&after, "classicplus-050", "debuff"),
+                    Some((Some(2.0), Some(3.0)))
+                );
             }
 
             #[test]
@@ -3516,7 +4144,12 @@ mod tests {
                             "base",
                             Json::Object(object(vec![
                                 ("keywords", Json::Array(Vec::new())),
-                                ("text", Json::from(format!("Counter a ({{threshold}}) Cost or less card. {tail}"))),
+                                (
+                                    "text",
+                                    Json::from(format!(
+                                        "Counter a ({{threshold}}) Cost or less card. {tail}"
+                                    )),
+                                ),
                             ])),
                         ),
                         (
@@ -3529,9 +4162,15 @@ mod tests {
                     ])
                 };
                 // Only the value moved: the template is untouched, but the printed base face is reworded.
-                assert_eq!(changed_fields(&face(1, ""), &face(2, "")), strings(&["params", "base.text"]));
+                assert_eq!(
+                    changed_fields(&face(1, ""), &face(2, "")),
+                    strings(&["params", "base.text"])
+                );
                 // The template moved: the raw and the printed faces differ together.
-                assert_eq!(changed_fields(&face(1, "Draw 1."), &face(1, "Draw 2.")), strings(&["base.text"]));
+                assert_eq!(
+                    changed_fields(&face(1, "Draw 1."), &face(1, "Draw 2.")),
+                    strings(&["base.text"])
+                );
                 // Nothing moved: no fields.
                 assert_eq!(changed_fields(&face(1, ""), &face(1, "")), Vec::<String>::new());
             }
@@ -3539,17 +4178,31 @@ mod tests {
             #[test]
             fn r388_indexes_each_card_by_the_versions_that_added_or_changed_it() {
                 let index = build_index(&patches());
-                let first = |id: &str| index.get(id).and_then(|versions| versions.first()).map(String::as_str);
+                let first = |id: &str| {
+                    index
+                        .get(id)
+                        .and_then(|versions| versions.first())
+                        .map(String::as_str)
+                };
                 assert_eq!(first("core-t-coin"), Some("v0.1.0c"));
                 assert_eq!(first("core-t-ghoul"), Some("v0.1.1"));
                 assert_eq!(first("classic-001"), Some("v0.2.0"));
-                assert!(index.get("core-016").is_some_and(|versions| versions.iter().any(|v| v == "v0.2.0")));
+                assert!(
+                    index
+                        .get("core-016")
+                        .is_some_and(|versions| versions.iter().any(|v| v == "v0.2.0"))
+                );
                 // Every catalog entry was added by some patch, or is claimed by a pending fragment —
                 // which is not a shipped patch yet, so the index does not name it (R646).
-                let claimed: IndexSet<String> = fragments().into_iter().flat_map(|named| named.fragment.cards).collect();
+                let claimed: IndexSet<String> = fragments()
+                    .into_iter()
+                    .flat_map(|named| named.fragment.cards)
+                    .collect();
                 let catalog = catalog();
-                let unindexed: Vec<&String> =
-                    catalog.keys().filter(|id| !index.contains_key(*id) && !claimed.contains(*id)).collect();
+                let unindexed: Vec<&String> = catalog
+                    .keys()
+                    .filter(|id| !index.contains_key(*id) && !claimed.contains(*id))
+                    .collect();
                 assert!(unindexed.is_empty(), "{unindexed:?}");
             }
         }
@@ -3564,17 +4217,72 @@ mod tests {
 
             /// Each renamed patch: its name before #290, its shipping commit and its source.
             const RENAMED: &[(&str, &str, &str, &str)] = &[
-                ("v0.2.1", "v0.2.4", "9dcb65e481717a49bfc750b58ea67a11a1852f39", "#45"),
-                ("v0.2.2", "v0.2.5", "9e030abd6e3f846fde1f3e5003518d76ad512043", "#149"),
-                ("v0.2.3", "v0.2.10", "d26ab17eb8515eb35b9c3ca214c3343cb4fb1a8d", "Issue #113"),
-                ("v0.2.4", "v0.2.11", "7f3458e41b6c54bf5d35e52f45c4b5c124c3844d", "#181, #206"),
-                ("v0.2.5", "v0.2.12", "1be5a28e08c3b6ef94b95b3845c908adaa86d14e", "Issue #218"),
-                ("v0.2.6", "v0.2.13", "b26b1b9dde3f723528e60739caf5aee359a16c20", "#271"),
-                ("v0.2.7", "v0.2.14", "533b4e2db58eaae47b0edd0eee6da6d7e12439f3", "#126"),
-                ("v0.2.7b", "v0.2.14b", "80e7960ccaef1a8c0bb5c463eadacd8fd402d858", "#260"),
-                ("v0.2.8", "v0.2.16", "509e9a302ab71542a4e141fe7231c9743722bdba", "#170"),
-                ("v0.2.8b", "v0.2.16b", "16724d26939a1a03779523f11461b41c57871ccb", "#323"),
-                ("v0.2.9", "v0.2.17", "97a00bd613bd3adfaafdc4d1580f5d895d2b5e22", "#44"),
+                (
+                    "v0.2.1",
+                    "v0.2.4",
+                    "9dcb65e481717a49bfc750b58ea67a11a1852f39",
+                    "#45",
+                ),
+                (
+                    "v0.2.2",
+                    "v0.2.5",
+                    "9e030abd6e3f846fde1f3e5003518d76ad512043",
+                    "#149",
+                ),
+                (
+                    "v0.2.3",
+                    "v0.2.10",
+                    "d26ab17eb8515eb35b9c3ca214c3343cb4fb1a8d",
+                    "Issue #113",
+                ),
+                (
+                    "v0.2.4",
+                    "v0.2.11",
+                    "7f3458e41b6c54bf5d35e52f45c4b5c124c3844d",
+                    "#181, #206",
+                ),
+                (
+                    "v0.2.5",
+                    "v0.2.12",
+                    "1be5a28e08c3b6ef94b95b3845c908adaa86d14e",
+                    "Issue #218",
+                ),
+                (
+                    "v0.2.6",
+                    "v0.2.13",
+                    "b26b1b9dde3f723528e60739caf5aee359a16c20",
+                    "#271",
+                ),
+                (
+                    "v0.2.7",
+                    "v0.2.14",
+                    "533b4e2db58eaae47b0edd0eee6da6d7e12439f3",
+                    "#126",
+                ),
+                (
+                    "v0.2.7b",
+                    "v0.2.14b",
+                    "80e7960ccaef1a8c0bb5c463eadacd8fd402d858",
+                    "#260",
+                ),
+                (
+                    "v0.2.8",
+                    "v0.2.16",
+                    "509e9a302ab71542a4e141fe7231c9743722bdba",
+                    "#170",
+                ),
+                (
+                    "v0.2.8b",
+                    "v0.2.16b",
+                    "16724d26939a1a03779523f11461b41c57871ccb",
+                    "#323",
+                ),
+                (
+                    "v0.2.9",
+                    "v0.2.17",
+                    "97a00bd613bd3adfaafdc4d1580f5d895d2b5e22",
+                    "#44",
+                ),
             ];
 
             /// TS's `/\bv0\.2\.(1[0-4]b?|16b?|17)\b/u`: a number #290 retired, as a word.
@@ -3586,7 +4294,9 @@ mod tests {
                 text.match_indices("v0.2.").any(|(at, prefix)| {
                     let rest = &text[at + prefix.len()..];
                     !word(text[..at].chars().next_back())
-                        && TAILS.iter().any(|tail| rest.starts_with(tail) && !word(rest[tail.len()..].chars().next()))
+                        && TAILS
+                            .iter()
+                            .any(|tail| rest.starts_with(tail) && !word(rest[tail.len()..].chars().next()))
                 })
             }
 
@@ -3595,32 +4305,45 @@ mod tests {
             }
 
             #[test]
-            fn r743_lists_every_card_patch_after_v0_2_0_under_the_next_number_or_the_next_letter_for_a_micro_patch() {
+            fn r743_lists_every_card_patch_after_v0_2_0_under_the_next_number_or_the_next_letter_for_a_micro_patch()
+             {
                 let versions = versions(&patches());
                 // The shipped prefix (R646): promotions append after it and never move it.
                 assert_eq!(
                     versions[..17],
                     strings(&[
-                        "v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.1", "v0.2.2", "v0.2.3",
-                        "v0.2.4", "v0.2.5", "v0.2.6", "v0.2.7", "v0.2.7b", "v0.2.8", "v0.2.8b", "v0.2.9",
+                        "v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.1", "v0.2.2",
+                        "v0.2.3", "v0.2.4", "v0.2.5", "v0.2.6", "v0.2.7", "v0.2.7b", "v0.2.8", "v0.2.8b",
+                        "v0.2.9",
                     ])
                 );
-                let renamed: Vec<String> = RENAMED.iter().map(|(version, ..)| (*version).to_string()).collect();
+                let renamed: Vec<String> = RENAMED
+                    .iter()
+                    .map(|(version, ..)| (*version).to_string())
+                    .collect();
                 assert_eq!(versions[6..17], renamed[..]);
             }
 
             #[test]
-            fn r743_keeps_each_renamed_patchs_shipping_commit_source_and_snapshot_and_no_old_name_anywhere_in_the_history() {
+            fn r743_keeps_each_renamed_patchs_shipping_commit_source_and_snapshot_and_no_old_name_anywhere_in_the_history()
+             {
                 let patches = patches();
                 let versions = versions(&patches);
                 let shipped = read_shipped(&shipped_json()).unwrap();
                 for (version, was, commit, source) in RENAMED {
                     assert_eq!(
-                        shipped.iter().find(|entry| entry.version == *version).map(|entry| entry.commit.as_str()),
+                        shipped
+                            .iter()
+                            .find(|entry| entry.version == *version)
+                            .map(|entry| entry.commit.as_str()),
                         Some(*commit),
                         "{version}"
                     );
-                    assert_eq!(patch(&patches, version).map(|patch| patch.source.as_str()), Some(*source), "{version}");
+                    assert_eq!(
+                        patch(&patches, version).map(|patch| patch.source.as_str()),
+                        Some(*source),
+                        "{version}"
+                    );
                     // A promoted patch names its commit too, and the rename moved none of them.
                     if let Some(commits) = patch(&patches, version).and_then(|patch| patch.commits.clone()) {
                         assert_eq!(commits, strings(&[*commit]), "{version}");
@@ -3628,7 +4351,10 @@ mod tests {
                     // The old name has no snapshot, unless a later patch has taken it in order
                     // (v0.2.4, v0.2.5).
                     if !versions.iter().any(|each| each == was) {
-                        assert!(!snapshot_path(was, &patches_dir()).unwrap().exists(), "{was}.json");
+                        assert!(
+                            !snapshot_path(was, &patches_dir()).unwrap().exists(),
+                            "{was}.json"
+                        );
                     }
                 }
                 // Their titles and notes name no number #290 retired (v0.2.12's title named v0.2.10).
@@ -3649,26 +4375,47 @@ mod tests {
                 let title_of = |version: &str| patch(&patches, version).map(|patch| patch.title.clone());
                 let title = |text: &str| Some(text.to_string());
                 assert_eq!(title_of("v0.2.1"), title("Patch v0.2.1: card text pass"));
-                assert_eq!(title_of("v0.2.3"), title("Patch v0.2.3: Animated pass on Field Spells, Ivory Tower fuses"));
-                assert_eq!(title_of("v0.2.4"), title("Patch v0.2.4: aimed random casts and the Deft keyword"));
-                assert_eq!(title_of("v0.2.5"), title("Patch v0.2.5: undo the v0.2.3 animated additions"));
+                assert_eq!(
+                    title_of("v0.2.3"),
+                    title("Patch v0.2.3: Animated pass on Field Spells, Ivory Tower fuses")
+                );
+                assert_eq!(
+                    title_of("v0.2.4"),
+                    title("Patch v0.2.4: aimed random casts and the Deft keyword")
+                );
+                assert_eq!(
+                    title_of("v0.2.5"),
+                    title("Patch v0.2.5: undo the v0.2.3 animated additions")
+                );
                 assert_eq!(title_of("v0.2.7"), title("Patch v0.2.7: More card patches"));
                 assert_eq!(title_of("v0.2.8"), title("Patch v0.2.8: Easter egg, Glitch"));
                 assert_eq!(title_of("v0.2.9"), title("Patch v0.2.9: rarity pass"));
                 // The two whose titles named no number keep them, and the micro patches keep their Y
                 // (R650).
                 assert_eq!(title_of("v0.2.2"), title("Small set of mechanics changes"));
-                assert_eq!(title_of("v0.2.6"), title("Book of Wildfire becomes a different Book at the end of your turn"));
-                assert_eq!(title_of("v0.2.7b"), title("Patch v0.2.Y: the yellow condition glow for ten Core cards"));
+                assert_eq!(
+                    title_of("v0.2.6"),
+                    title("Book of Wildfire becomes a different Book at the end of your turn")
+                );
+                assert_eq!(
+                    title_of("v0.2.7b"),
+                    title("Patch v0.2.Y: the yellow condition glow for ten Core cards")
+                );
                 assert_eq!(title_of("v0.2.8b"), title("Patch v0.2.Y: Buff Gary the Gambler"));
             }
 
             #[test]
             fn r743_has_issue_170s_glitch_shipped_as_v0_2_16_as_v0_2_8_the_patch_that_added_the_token() {
                 let patches = patches();
-                assert_eq!(ids_of(&patches, "v0.2.8", ChangeKind::Added), strings(&["classic-t-glitch"]));
                 assert_eq!(
-                    build_index(&patches).get("classic-t-glitch").and_then(|versions| versions.first()).map(String::as_str),
+                    ids_of(&patches, "v0.2.8", ChangeKind::Added),
+                    strings(&["classic-t-glitch"])
+                );
+                assert_eq!(
+                    build_index(&patches)
+                        .get("classic-t-glitch")
+                        .and_then(|versions| versions.first())
+                        .map(String::as_str),
                     Some("v0.2.8")
                 );
             }
@@ -3683,8 +4430,14 @@ mod tests {
             #[test]
             fn r375_keeps_v0_1_0_v0_1_0b_v0_1_0c_v0_1_0d_and_v0_1_1_in_that_order_before_v0_2_0() {
                 let versions = versions(&patches());
-                let cut = versions.iter().position(|version| version == "v0.2.0").expect("v0.2.0");
-                assert_eq!(versions[..cut], strings(&["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1"]));
+                let cut = versions
+                    .iter()
+                    .position(|version| version == "v0.2.0")
+                    .expect("v0.2.0");
+                assert_eq!(
+                    versions[..cut],
+                    strings(&["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1"])
+                );
             }
 
             #[test]

@@ -82,16 +82,34 @@ const GOAL_KINDS: [GoalKind; 9] = [
 pub static GOALS: LazyLock<IndexMap<GoalKind, QuestGoal>> = LazyLock::new(|| {
     let goals: [(GoalKind, Value); 9] = [
         ("draws", json!({ "kind": "draws", "count": 2 })),
-        ("enemyPermanentsDestroyed", json!({ "kind": "enemyPermanentsDestroyed", "count": 2 })),
-        ("unspentManaAtTurnEnd", json!({ "kind": "unspentManaAtTurnEnd", "mana": 3 })),
-        ("damageToEnemies", json!({ "kind": "damageToEnemies", "amount": 5 })),
+        (
+            "enemyPermanentsDestroyed",
+            json!({ "kind": "enemyPermanentsDestroyed", "count": 2 }),
+        ),
+        (
+            "unspentManaAtTurnEnd",
+            json!({ "kind": "unspentManaAtTurnEnd", "mana": 3 }),
+        ),
+        (
+            "damageToEnemies",
+            json!({ "kind": "damageToEnemies", "amount": 5 }),
+        ),
         ("cardsExiled", json!({ "kind": "cardsExiled", "count": 2 })),
         ("deckEmptiedByDraw", json!({ "kind": "deckEmptiedByDraw" })),
-        ("permanentsControlled", json!({ "kind": "permanentsControlled", "count": 3 })),
+        (
+            "permanentsControlled",
+            json!({ "kind": "permanentsControlled", "count": 3 }),
+        ),
         ("unitTotals", json!({ "kind": "unitTotals", "total": 6 })),
-        ("unitsInGraveyard", json!({ "kind": "unitsInGraveyard", "count": 2 })),
+        (
+            "unitsInGraveyard",
+            json!({ "kind": "unitsInGraveyard", "count": 2 }),
+        ),
     ];
-    goals.into_iter().map(|(kind, goal)| (kind, json_as::<QuestGoal>(goal))).collect()
+    goals
+        .into_iter()
+        .map(|(kind, goal)| (kind, json_as::<QuestGoal>(goal)))
+        .collect()
 });
 
 /// The id of the one quest each goal card has.
@@ -122,7 +140,17 @@ pub static GOAL_CARDS: LazyLock<IndexMap<GoalKind, CardDef>> = LazyLock::new(|| 
     GOAL_KINDS
         .iter()
         .enumerate()
-        .map(|(at, kind)| (*kind, def(3301 + at as u32, &format!("goal-{kind}"), "Field Spell", json!({ "cost": 1 }))))
+        .map(|(at, kind)| {
+            (
+                *kind,
+                def(
+                    3301 + at as u32,
+                    &format!("goal-{kind}"),
+                    "Field Spell",
+                    json!({ "cost": 1 }),
+                ),
+            )
+        })
         .collect()
 });
 
@@ -168,13 +196,17 @@ const TARGET_STEP: &str = "aimed";
 /// A reward's own effects, before the quest it opens.
 fn reward_effects(id: &str) -> Vec<Effect> {
     match id {
-        "heal" => vec![effects::heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": TREE_HEAL })))],
+        "heal" => vec![effects::heal(json_as(
+            json!({ "target": { "of": "selfHero" }, "amount": TREE_HEAL }),
+        ))],
         "ask" => vec![effects::choose_target(json_as(json!({
             "step": TARGET_STEP,
             "scope": { "side": "any", "of": ["unit", "hero"] },
             "prompt": "Deal 1 damage",
         })))],
-        "both" => vec![effects::buff_random_unit(json_as(json!({ "attack": TREE_BUFF, "health": TREE_BUFF })))],
+        "both" => vec![effects::buff_random_unit(json_as(
+            json!({ "attack": TREE_BUFF, "health": TREE_BUFF }),
+        ))],
         "hand" => vec![effects::draw(json_as(json!({ "count": 2 })))],
         "aura" => vec![hold_quest_aura("aura")],
         _ => vec![],
@@ -191,9 +223,9 @@ fn next_of(id: &str) -> Vec<Effect> {
 
 fn completed_quest(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
     match event {
-        GameEvent::QuestCompleted { instance_id, quest, .. }
-            if ctx.self_.as_ref().map(|card| card.id.as_str()) == Some(instance_id.as_str()) =>
-        {
+        GameEvent::QuestCompleted {
+            instance_id, quest, ..
+        } if ctx.self_.as_ref().map(|card| card.id.as_str()) == Some(instance_id.as_str()) => {
             Some(quest.clone())
         }
         _ => None,
@@ -201,33 +233,41 @@ fn completed_quest(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String>
 }
 
 fn tree_script(radiant: bool) -> Script {
-    let answer = TriggerDef::new("quest-completed", &[GameEventType::QuestCompleted], move |ctx, event| {
-        let quest = completed_quest(ctx, event).and_then(|id| quest_def_of(&TREE, &id).cloned());
-        let Some(quest) = quest else {
-            return vec![];
-        };
-        if radiant {
-            // Every reward, then every path.
-            let mut list: Vec<Effect> = quest.rewards.iter().flat_map(|reward| reward_effects(reward)).collect();
-            list.extend(quest.rewards.iter().flat_map(|reward| next_of(reward)));
-            return list;
-        }
-        let rewards: Vec<Value> = quest
-            .rewards
-            .iter()
-            .map(|reward| {
-                let label = quest_reward_of(&TREE, reward)
-                    .map(|found| found.text.clone())
-                    .unwrap_or_else(|| reward.clone());
-                json!({ "id": reward, "label": label })
-            })
-            .collect();
-        vec![effects::choose_reward(json_as(json!({
-            "step": "reward",
-            "rewards": rewards,
-            "prompt": format!("{}: choose a reward", quest.text),
-        })))]
-    });
+    let answer = TriggerDef::new(
+        "quest-completed",
+        &[GameEventType::QuestCompleted],
+        move |ctx, event| {
+            let quest = completed_quest(ctx, event).and_then(|id| quest_def_of(&TREE, &id).cloned());
+            let Some(quest) = quest else {
+                return vec![];
+            };
+            if radiant {
+                // Every reward, then every path.
+                let mut list: Vec<Effect> = quest
+                    .rewards
+                    .iter()
+                    .flat_map(|reward| reward_effects(reward))
+                    .collect();
+                list.extend(quest.rewards.iter().flat_map(|reward| next_of(reward)));
+                return list;
+            }
+            let rewards: Vec<Value> = quest
+                .rewards
+                .iter()
+                .map(|reward| {
+                    let label = quest_reward_of(&TREE, reward)
+                        .map(|found| found.text.clone())
+                        .unwrap_or_else(|| reward.clone());
+                    json!({ "id": reward, "label": label })
+                })
+                .collect();
+            vec![effects::choose_reward(json_as(json!({
+                "step": "reward",
+                "rewards": rewards,
+                "prompt": format!("{}: choose a reward", quest.text),
+            })))]
+        },
+    );
     Script {
         // Quickdraw, so a replayable game deals it in the opening hand (§2.1, R225).
         static_flags: Some(StaticFlags {
@@ -250,7 +290,11 @@ fn tree_script(radiant: bool) -> Script {
             ),
             (
                 TARGET_STEP,
-                hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": TREE_PING })))]),
+                hook(|_ctx| {
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "chosen" }, "amount": TREE_PING }),
+                    ))]
+                }),
             ),
         ]),
         aura: Some(aura_hook(|a| {
@@ -331,11 +375,19 @@ fn unit_target() -> Vec<TargetDecl> {
 }
 
 fn backrow_target() -> Vec<TargetDecl> {
-    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["backrow"] }))]
+    vec![TargetDecl::target(
+        1,
+        1,
+        json!({ "side": "any", "of": ["backrow"] }),
+    )]
 }
 
 fn any_target() -> Vec<TargetDecl> {
-    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+    vec![TargetDecl::target(
+        1,
+        1,
+        json!({ "side": "any", "of": ["unit", "hero"] }),
+    )]
 }
 
 fn helper_scripts() -> IndexMap<String, CardScripts> {
@@ -362,7 +414,10 @@ fn helper_scripts() -> IndexMap<String, CardScripts> {
         draw_then_recruit().id,
         both(Script {
             cry: Some(hook(|_ctx| {
-                vec![effects::draw(json_as(json!({ "count": 2 }))), effects::recruit(Default::default())]
+                vec![
+                    effects::draw(json_as(json!({ "count": 2 }))),
+                    effects::recruit(Default::default()),
+                ]
             })),
             ..Script::default()
         }),
@@ -371,7 +426,9 @@ fn helper_scripts() -> IndexMap<String, CardScripts> {
         banish_any().id,
         both(Script {
             targets: backrow_target(),
-            cry: Some(hook(|_ctx| vec![effects::exile(json_as(json!({ "target": { "of": "chosen" } })))])),
+            cry: Some(hook(|_ctx| {
+                vec![effects::exile(json_as(json!({ "target": { "of": "chosen" } })))]
+            })),
             ..Script::default()
         }),
     );
@@ -379,7 +436,9 @@ fn helper_scripts() -> IndexMap<String, CardScripts> {
         slay().id,
         both(Script {
             targets: unit_target(),
-            cry: Some(hook(|_ctx| vec![effects::destroy(json_as(json!({ "target": { "of": "chosen" } })))])),
+            cry: Some(hook(|_ctx| {
+                vec![effects::destroy(json_as(json!({ "target": { "of": "chosen" } })))]
+            })),
             ..Script::default()
         }),
     );
@@ -387,7 +446,9 @@ fn helper_scripts() -> IndexMap<String, CardScripts> {
         banish().id,
         both(Script {
             targets: unit_target(),
-            cry: Some(hook(|_ctx| vec![effects::exile(json_as(json!({ "target": { "of": "chosen" } })))])),
+            cry: Some(hook(|_ctx| {
+                vec![effects::exile(json_as(json!({ "target": { "of": "chosen" } })))]
+            })),
             ..Script::default()
         }),
     );
@@ -396,7 +457,9 @@ fn helper_scripts() -> IndexMap<String, CardScripts> {
         both(Script {
             targets: any_target(),
             cry: Some(hook(|_ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": BOLT })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "chosen" }, "amount": BOLT }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -404,7 +467,9 @@ fn helper_scripts() -> IndexMap<String, CardScripts> {
     table.insert(
         mill().id,
         both(Script {
-            cry: Some(hook(|_ctx| vec![effects::exile_bottom_of_library(json_as(json!({ "count": 1 })))])),
+            cry: Some(hook(|_ctx| {
+                vec![effects::exile_bottom_of_library(json_as(json!({ "count": 1 })))]
+            })),
             ..Script::default()
         }),
     );
@@ -474,7 +539,9 @@ pub fn quest_scripts() -> IndexMap<String, CardScripts> {
         recall().id,
         both(Script {
             cry: Some(hook(|_ctx| {
-                vec![effects::return_random_from_graveyard(json_as(json!({ "count": RECALL })))]
+                vec![effects::return_random_from_graveyard(json_as(
+                    json!({ "count": RECALL }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -482,7 +549,11 @@ pub fn quest_scripts() -> IndexMap<String, CardScripts> {
     table.insert(
         bless().id,
         both(Script {
-            cry: Some(hook(|_ctx| vec![effects::buff_random_unit(json_as(json!({ "attack": 1, "health": 1 })))])),
+            cry: Some(hook(|_ctx| {
+                vec![effects::buff_random_unit(json_as(
+                    json!({ "attack": 1, "health": 1 }),
+                ))]
+            })),
             ..Script::default()
         }),
     );
@@ -500,7 +571,10 @@ pub fn quest_scripts() -> IndexMap<String, CardScripts> {
 
 /// This file's definitions, by id (the brief's `catalog()`).
 pub fn catalog() -> CardDefs {
-    QUEST_DEFS.iter().map(|card| (card.id.clone(), card.clone())).collect()
+    QUEST_DEFS
+        .iter()
+        .map(|card| (card.id.clone(), card.clone()))
+        .collect()
 }
 
 /// This file's scripts, by id (the brief's `scripts()`).

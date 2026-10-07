@@ -87,7 +87,13 @@ fn spellproof() -> CardDef {
     unit("spellproof", 5910, 1, 1, json!([{ "kind": "Immune to Spells" }]))
 }
 fn spell_damage() -> CardDef {
-    unit("spell-damage", 5911, 1, 9, json!([{ "kind": "Spell Damage", "n": 1 }]))
+    unit(
+        "spell-damage",
+        5911,
+        1,
+        9,
+        json!([{ "kind": "Spell Damage", "n": 1 }]),
+    )
 }
 /// Death: its controller chooses "left" or "right" — a Death hook that asks inside a round's check.
 fn ask_on_death() -> CardDef {
@@ -133,7 +139,9 @@ fn both(script: Script) -> CardScripts {
 
 fn storm_cry(rounds: i32, side: &'static str) -> Option<Hook> {
     Some(hook(move |_ctx| {
-        vec![damage_rounds_until_death(json_as(json!({ "amount": 1, "rounds": rounds, "side": side })))]
+        vec![damage_rounds_until_death(json_as(
+            json!({ "amount": 1, "rounds": rounds, "side": side }),
+        ))]
     }))
 }
 
@@ -174,7 +182,9 @@ fn local_scripts() -> IndexMap<String, CardScripts> {
         ask_on_death().id,
         both(Script {
             death: Some(hook(|_ctx| {
-                vec![choose_mode(json_as(json!({ "options": ["left", "right"], "step": "asked" })))]
+                vec![choose_mode(json_as(
+                    json!({ "options": ["left", "right"], "step": "asked" }),
+                ))]
             })),
             resume: asked,
             ..Script::default()
@@ -215,8 +225,16 @@ fn act(state: &GameState, body: Value) -> ReduceResult {
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     for player_id in [PlayerId::P1, PlayerId::P2] {
-        let keep: Vec<String> = state.players[player_id].hand.iter().map(|c| c.id.clone()).collect();
-        state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": player_id })).state;
+        let keep: Vec<String> = state.players[player_id]
+            .hand
+            .iter()
+            .map(|c| c.id.clone())
+            .collect();
+        state = act(
+            &state,
+            json!({ "type": "mulligan", "keep": keep, "playerId": player_id }),
+        )
+        .state;
     }
     let mut catalog = registered_catalog().clone();
     for def in defs() {
@@ -241,7 +259,11 @@ struct StormOptions {
 
 /// p1 casts a storm onto the board `setup` builds (a spare hand card keeps the turn going). What
 /// `setup` hands back is handed back beside the play's result (TS's closures assigned outer `let`s).
-fn stormed<T>(seed: &str, setup: impl FnOnce(&mut GameState) -> T, options: StormOptions) -> (T, ReduceResult) {
+fn stormed<T>(
+    seed: &str,
+    setup: impl FnOnce(&mut GameState) -> T,
+    options: StormOptions,
+) -> (T, ReduceResult) {
     let mut state = playing(seed);
     let built = setup(&mut state);
     let def_id = options.def_id.unwrap_or_else(|| storm().id);
@@ -249,9 +271,14 @@ fn stormed<T>(seed: &str, setup: impl FnOnce(&mut GameState) -> T, options: Stor
         .into_iter()
         .next()
         .expect("the storm");
-    find_instance_mut(&mut state, &card.id).expect("the storm").radiant = options.radiant;
+    find_instance_mut(&mut state, &card.id)
+        .expect("the storm")
+        .radiant = options.radiant;
     in_hand(&mut state, &plain().id, PlayerId::P1, 1);
-    let played = act(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }));
+    let played = act(
+        &state,
+        json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+    );
     (built, played)
 }
 
@@ -295,7 +322,9 @@ fn count_of(events: &[GameEvent], kind: &str) -> usize {
 
 /// The top card of `player`'s unit lane `lane` (TS `state.players[player].units[lane - 1]?.[0]`).
 fn top_of(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardInstance> {
-    state.players[player].units[lane - 1].as_ref().and_then(|pile| pile.first())
+    state.players[player].units[lane - 1]
+        .as_ref()
+        .and_then(|pile| pile.first())
 }
 
 fn thaw(state: &GameState) -> GameState {
@@ -323,7 +352,8 @@ mod r59_damage_rounds_until_death_each_round_checks_state_and_the_storm_stops_af
     }
 
     #[test]
-    fn r59_each_rounds_check_comes_before_the_next_rounds_hits_the_death_sits_between_round_3_and_nothing_after() {
+    fn r59_each_rounds_check_comes_before_the_next_rounds_hits_the_death_sits_between_round_3_and_nothing_after()
+     {
         let (small, played) = stormed(
             "pcv-order",
             |s| {
@@ -334,8 +364,14 @@ mod r59_damage_rounds_until_death_each_round_checks_state_and_the_storm_stops_af
             StormOptions::default(),
         );
         let kinds = kinds(&played.events);
-        let last_damage = kinds.iter().rposition(|k| k == "damage").map_or(-1, |at| at as i64);
-        let first_death = kinds.iter().position(|k| k == "destroyed").map_or(-1, |at| at as i64);
+        let last_damage = kinds
+            .iter()
+            .rposition(|k| k == "damage")
+            .map_or(-1, |at| at as i64);
+        let first_death = kinds
+            .iter()
+            .position(|k| k == "destroyed")
+            .map_or(-1, |at| at as i64);
         assert!(last_damage < first_death);
         assert!(!small.id.is_empty());
     }
@@ -357,7 +393,8 @@ mod r59_damage_rounds_until_death_each_round_checks_state_and_the_storm_stops_af
     }
 
     #[test]
-    fn r59_a_board_no_round_can_kill_armor_1_indestructible_runs_out_its_rounds_and_stops_no_hit_lands_nothing_dies() {
+    fn r59_a_board_no_round_can_kill_armor_1_indestructible_runs_out_its_rounds_and_stops_no_hit_lands_nothing_dies()
+     {
         let ((), played) = stormed(
             "pcv-walls",
             |s| {
@@ -382,7 +419,10 @@ mod r59_damage_rounds_until_death_each_round_checks_state_and_the_storm_stops_af
             StormOptions::default(),
         );
         assert_eq!(rounds_run(&played.events, &counter), BLADE_STORM_ROUNDS as usize);
-        assert_eq!(top_of(&played.state, PlayerId::P1, 1).map(|c| c.damage), Some(BLADE_STORM_ROUNDS));
+        assert_eq!(
+            top_of(&played.state, PlayerId::P1, 1).map(|c| c.damage),
+            Some(BLADE_STORM_ROUNDS)
+        );
         assert_eq!(deaths(&played.events), Vec::<String>::new());
     }
 
@@ -413,7 +453,10 @@ mod r59_damage_rounds_until_death_each_round_checks_state_and_the_storm_stops_af
         assert!(!back.id.is_empty());
         assert_eq!(deaths(&played.events), vec![reborn().id]);
         assert_eq!(rounds_run(&played.events, &wall), 2);
-        assert_eq!(top_of(&played.state, PlayerId::P2, 1).map(|c| c.def_id.clone()), Some(reborn().id));
+        assert_eq!(
+            top_of(&played.state, PlayerId::P2, 1).map(|c| c.def_id.clone()),
+            Some(reborn().id)
+        );
     }
 
     #[test]
@@ -434,7 +477,12 @@ mod r59_damage_rounds_until_death_each_round_checks_state_and_the_storm_stops_af
         let (target, played) = stormed(
             "pcv-spell-damage",
             |s| {
-                put(s, &spell_damage().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+                put(
+                    s,
+                    &spell_damage().id,
+                    slot(PlayerId::P1, Row::Units, 1),
+                    json!({}),
+                );
                 put(s, &body5().id, slot(PlayerId::P2, Row::Units, 1), json!({}))
             },
             StormOptions::default(),
@@ -461,17 +509,26 @@ mod r59_damage_rounds_until_death_each_round_checks_state_and_the_storm_stops_af
     }
 
     #[test]
-    fn r113_a_death_hook_asking_inside_a_rounds_check_pauses_the_storm_the_pause_survives_json_and_nothing_more_hits_after_the_answer() {
+    fn r113_a_death_hook_asking_inside_a_rounds_check_pauses_the_storm_the_pause_survives_json_and_nothing_more_hits_after_the_answer()
+     {
         let (wall, played) = stormed(
             "pcv-ask",
             |s| {
-                put(s, &ask_on_death().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+                put(
+                    s,
+                    &ask_on_death().id,
+                    slot(PlayerId::P2, Row::Units, 1),
+                    json!({}),
+                );
                 put(s, &tank().id, slot(PlayerId::P1, Row::Units, 1), json!({}))
             },
             StormOptions::default(),
         );
         let state = played.state;
-        assert_eq!(state.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Mode));
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Mode)
+        );
         assert_eq!(rounds_run(&played.events, &wall), 1);
         let thawed = thaw(&state);
         assert_eq!(thawed, state);
@@ -497,9 +554,21 @@ mod r59_damage_rounds_until_death_each_round_checks_state_and_the_storm_stops_af
     #[test]
     fn s9_3_a_storm_replays_to_the_same_hash_from_a_json_copy() {
         let mut state = playing("pcv-replay");
-        put(&mut state, &body3().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        put(&mut state, &armored().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let card = in_hand(&mut state, &storm().id, PlayerId::P1, 1).into_iter().next();
+        put(
+            &mut state,
+            &body3().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &armored().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let card = in_hand(&mut state, &storm().id, PlayerId::P1, 1)
+            .into_iter()
+            .next();
         let action: Action = json_as(json!({
             "type": "play",
             "instanceId": card.map(|c| c.id).unwrap_or_default(),
@@ -507,7 +576,10 @@ mod r59_damage_rounds_until_death_each_round_checks_state_and_the_storm_stops_af
             "nonce": "pcv-replay",
         }));
         let thawed = thaw(&state);
-        assert_eq!(hash_state(&reduce(&thawed, &action).state), hash_state(&reduce(&state, &action).state));
+        assert_eq!(
+            hash_state(&reduce(&thawed, &action).state),
+            hash_state(&reduce(&state, &action).state)
+        );
     }
 }
 
@@ -516,7 +588,12 @@ mod r23_choose_from_hands_where_only_the_cards_it_admits_are_offered {
 
     fn at_end_of_turn(seed: &str, hand: &[String]) -> (Vec<CardInstance>, ReduceResult) {
         let mut state = playing(seed);
-        put(&mut state, &picker().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &picker().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         let held: Vec<CardInstance> = hand
             .iter()
             .flat_map(|def_id| in_hand(&mut state, def_id, PlayerId::P1, 1))
@@ -540,12 +617,19 @@ mod r23_choose_from_hands_where_only_the_cards_it_admits_are_offered {
                 .map(|card| format!("instance:{}", card.id))
                 .collect::<Vec<_>>()
         );
-        let theirs = serde_json::to_string(&view_for(&state, PlayerId::P2).pending).expect("a view serialises");
+        let theirs =
+            serde_json::to_string(&view_for(&state, PlayerId::P2).pending).expect("a view serialises");
         assert!(!theirs.contains(held.get(1).map_or("none", |card| card.id.as_str())));
     }
 
     #[test]
     fn r23_with_no_admitted_card_it_asks_nothing() {
-        assert!(at_end_of_turn("pcv-none", &[immutable().id]).1.state.pending.is_none());
+        assert!(
+            at_end_of_turn("pcv-none", &[immutable().id])
+                .1
+                .state
+                .pending
+                .is_none()
+        );
     }
 }

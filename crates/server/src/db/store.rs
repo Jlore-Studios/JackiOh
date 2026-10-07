@@ -120,7 +120,10 @@ pub type StoreResult<T> = Result<T, StoreError>;
 pub(crate) mod absent_or_null {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-    pub fn serialize<S: Serializer, T: Serialize>(value: &Option<Option<T>>, serializer: S) -> Result<S::Ok, S::Error> {
+    pub fn serialize<S: Serializer, T: Serialize>(
+        value: &Option<Option<T>>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         match value {
             Some(inner) => inner.serialize(serializer),
             None => serializer.serialize_none(),
@@ -1113,7 +1116,8 @@ const ACTING_ROLE: &str = "service_role";
 /// is exactly how a driver ends up quietly running as a superuser with RLS bypassed. `Db::begin`
 /// is therefore the only way to a `Tx`: it issues `BEGIN` before it issues the role switch, and
 /// nothing executes SQL outside a `Tx` (store.ts's rule 2).
-const SESSION_SQL: &str = "select set_config('role', $1, true), set_config('request.jwt.claim.sub', $2, true)";
+const SESSION_SQL: &str =
+    "select set_config('role', $1, true), set_config('request.jwt.claim.sub', $2, true)";
 
 /// The store: Postgres behind a pool, or the fake's tables behind one lock (unit tests and
 /// `E2E=1`). Cloning shares the pool or the tables.
@@ -1274,7 +1278,11 @@ impl Tx<'_> {
     }
 
     /// Pass `None` to clear. §9.5: every terminal reason clears both players'.
-    pub async fn profiles_set_in_match(&mut self, profile_id: &str, match_id: Option<&str>) -> StoreResult<()> {
+    pub async fn profiles_set_in_match(
+        &mut self,
+        profile_id: &str,
+        match_id: Option<&str>,
+    ) -> StoreResult<()> {
         dispatch!(self, profiles_set_in_match(profile_id, match_id))
     }
 
@@ -1314,7 +1322,11 @@ impl Tx<'_> {
         dispatch!(self, codes_log_attempt(attempt))
     }
 
-    pub async fn codes_count_attempts_by_profile(&mut self, profile_id: &str, since: i64) -> StoreResult<i64> {
+    pub async fn codes_count_attempts_by_profile(
+        &mut self,
+        profile_id: &str,
+        since: i64,
+    ) -> StoreResult<i64> {
         dispatch!(self, codes_count_attempts_by_profile(profile_id, since))
     }
 
@@ -1531,7 +1543,13 @@ impl Tx<'_> {
 
     /// §9.5: "both tickets are claimed in one atomic statement". Returns false unless both were
     /// still open, so two concurrent matchers cannot pair the same ticket twice.
-    pub async fn tickets_claim_pair(&mut self, a_id: &str, b_id: &str, match_id: &str, at: i64) -> StoreResult<bool> {
+    pub async fn tickets_claim_pair(
+        &mut self,
+        a_id: &str,
+        b_id: &str,
+        match_id: &str,
+        at: i64,
+    ) -> StoreResult<bool> {
         dispatch!(self, tickets_claim_pair(a_id, b_id, match_id, at))
     }
 
@@ -1638,7 +1656,11 @@ impl Tx<'_> {
         dispatch!(self, ranked_standings(season_id))
     }
 
-    pub async fn ranked_rank(&mut self, season_id: &str, profile_id: &str) -> StoreResult<Option<SeasonRank>> {
+    pub async fn ranked_rank(
+        &mut self,
+        season_id: &str,
+        profile_id: &str,
+    ) -> StoreResult<Option<SeasonRank>> {
         dispatch!(self, ranked_rank(season_id, profile_id))
     }
 

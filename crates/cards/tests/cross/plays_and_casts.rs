@@ -76,7 +76,12 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         // Both resolutions ran: 5 health each (R18), and the grant was spent (R30).
         g.expect_health(P1, 20);
         g.expect_in_zone(BLOOD_RIDDEN, "graveyard");
-        let drawn_after: Vec<CardInstance> = g.hand(P1).iter().filter(|card| card.def_id == VANILLA).cloned().collect();
+        let drawn_after: Vec<CardInstance> = g
+            .hand(P1)
+            .iter()
+            .filter(|card| card.def_id == VANILLA)
+            .cloned()
+            .collect();
         assert_eq!(drawn_after.len(), 1);
         assert_eq!(drawn_after.first().map(|card| card.radiant), Some(false));
 
@@ -109,7 +114,10 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
 
         g.end_turn(); // p2 → p1: the draw casts Blood Ridden
 
-        assert_eq!(g.state().result.as_ref().map(|result| result.winner), Some(Winner::P2));
+        assert_eq!(
+            g.state().result.as_ref().map(|result| result.winner),
+            Some(Winner::P2)
+        );
         assert_eq!(g.hand(P1).iter().filter(|card| card.def_id == VANILLA).count(), 0);
         assert_eq!(g.pile(P1, "library").len(), 2);
     }
@@ -186,7 +194,8 @@ mod r17_unstable_clone_machine_copies_the_card_after_it_resolves {
     use super::*;
 
     #[test]
-    fn r17_unstable_clone_machine_shuffles_its_copies_in_after_the_played_spell_resolves_not_before_10_5_step_7() {
+    fn r17_unstable_clone_machine_shuffles_its_copies_in_after_the_played_spell_resolves_not_before_10_5_step_7()
+     {
         register_all();
         // p1 has Unstable Clone Machine and an empty library, and plays Stockpile ("Draw 2; heal your
         // hero 2"). R17 and §10.5 step 7: the Clone Machine fires after the card resolves. So Stockpile's
@@ -200,14 +209,19 @@ mod r17_unstable_clone_machine_copies_the_card_after_it_resolves {
         g.play(STOCKPILE, json!({}));
 
         assert_eq!(g.hand(P1).len(), 0);
-        let library: Vec<String> = g.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect();
+        let library: Vec<String> = g
+            .pile(P1, "library")
+            .iter()
+            .map(|card| card.def_id.clone())
+            .collect();
         assert_eq!(library, vec![STOCKPILE, STOCKPILE, STOCKPILE]);
         assert_eq!(g.state().players.p1.fatigue_count, 2);
         g.expect_health(P1, 30 - 1 - 2 + 2);
     }
 
     #[test]
-    fn r57_unstable_clone_machine_copies_a_radiant_tempo_timmy_that_sheepish_turned_into_a_sheep_as_radiant_r34() {
+    fn r57_unstable_clone_machine_copies_a_radiant_tempo_timmy_that_sheepish_turned_into_a_sheep_as_radiant_r34()
+     {
         register_all();
         let mut g = scenario(json!({
             "p1": {
@@ -220,15 +234,22 @@ mod r17_unstable_clone_machine_copies_the_card_after_it_resolves {
         let timmy = g.card(TIMMY).clone();
         g.play(TIMMY, json!({ "zone": 1 }));
         // Sheepish answered the play first: the Timmy is gone and a Sheep Token stands in its zone.
-        assert!(g
-            .events()
-            .iter()
-            .any(|event| matches!(event, GameEvent::Transformed { instance_id, .. } if *instance_id == timmy.id)));
+        assert!(g.events().iter().any(
+            |event| matches!(event, GameEvent::Transformed { instance_id, .. } if *instance_id == timmy.id)
+        ));
 
-        let copies: Vec<CardInstance> = g.pile(P1, "library").iter().filter(|card| card.def_id == TIMMY).cloned().collect();
+        let copies: Vec<CardInstance> = g
+            .pile(P1, "library")
+            .iter()
+            .filter(|card| card.def_id == TIMMY)
+            .cloned()
+            .collect();
         assert_eq!(copies.len(), 3);
         // "Copies of it": the card played was Radiant, so its copies are (R34, R57).
-        assert_eq!(copies.iter().map(|card| card.radiant).collect::<Vec<_>>(), vec![true, true, true]);
+        assert_eq!(
+            copies.iter().map(|card| card.radiant).collect::<Vec<_>>(),
+            vec![true, true, true]
+        );
     }
 }
 
@@ -243,11 +264,17 @@ mod r65_x_is_chosen_for_one_play {
             "p2": { "hand": [VANILLA], "library": LIBRARY },
         }));
         let dividend = g.card(DIVIDEND).clone();
-        g.play(DIVIDEND, json!({ "x": 3, "modes": ["damage"], "targets": [{ "pick": "hero", "player": "p2" }] }));
+        g.play(
+            DIVIDEND,
+            json!({ "x": 3, "modes": ["damage"], "targets": [{ "pick": "hero", "player": "p2" }] }),
+        );
         g.end_turn();
         g.expect_in_zone(&dividend.id, "hand");
         // R65: "Outside play (library, hand, GY …) an X-cost card's [printed cost] is 0".
-        assert_eq!(effective_cost(g.state(), g.card(&dividend.id), CostOptions::default()), 0);
+        assert_eq!(
+            effective_cost(g.state(), g.card(&dividend.id), CostOptions::default()),
+            0
+        );
         let hand = g.view(P1).you.hand;
         let in_view = match &hand {
             HandView::Cards(cards) => cards.iter().find(|card| card.instance_id == dividend.id).cloned(),
@@ -261,7 +288,8 @@ mod r210_the_tribute_a_play_pays {
     use super::*;
 
     #[test]
-    fn r210_a_right_house_defender_tributed_to_the_rock_returns_through_reborn_since_a_sacrifice_is_a_death_6_1_6_3() {
+    fn r210_a_right_house_defender_tributed_to_the_rock_returns_through_reborn_since_a_sacrifice_is_a_death_6_1_6_3()
+     {
         register_all();
         let mut g = scenario(json!({
             "p1": { "hand": [ROCK, VANILLA], "field": [{ "def": RIGHT_HOUSE, "lane": 1 }], "library": LIBRARY },
@@ -307,7 +335,11 @@ mod r210_the_tribute_a_play_pays {
             .flat_map(|pile| pile.iter().flatten())
             .cloned()
             .collect();
-        assert!(units.iter().any(|card| card.def_id == RIGHT_HOUSE && card.id != guard.id));
+        assert!(
+            units
+                .iter()
+                .any(|card| card.def_id == RIGHT_HOUSE && card.id != guard.id)
+        );
     }
 }
 
@@ -359,9 +391,13 @@ const MENACE: &str = "core-019"; // #19 Midrange Menace, a spare 3-cost Unit, so
 const CHAOS_SEED: &str = "chaos-card";
 fn chaos_cursor_for(effect: &str) -> u32 {
     for cursor in 0..500 {
-        let rolled = subsystems::roll_chaos_effects(&mut Rng::new(CHAOS_SEED, cursor), false, Some(subsystems::CHAOS_EFFECTS))
-            .first()
-            .map(|rolled| rolled.name.to_string());
+        let rolled = subsystems::roll_chaos_effects(
+            &mut Rng::new(CHAOS_SEED, cursor),
+            false,
+            Some(subsystems::CHAOS_EFFECTS),
+        )
+        .first()
+        .map(|rolled| rolled.name.to_string());
         if rolled.as_deref() == Some(effect) {
             return cursor;
         }
@@ -409,13 +445,24 @@ mod r58_10_3_the_resolution_loop_runs_until_the_rules_say_it_is_done {
             .count();
         assert!(casts > 0);
         assert!(casts <= 55);
-        assert!(!s.events().iter().any(|event| matches!(event, GameEvent::ShuffledIn { .. })));
+        assert!(
+            !s.events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::ShuffledIn { .. }))
+        );
         // The draws past the empty library are §2.4's fatigue, which Going Long's Armor 2 cannot hold.
         // (TS `filter(fatigue).length > 0`.)
-        assert!(s.events().iter().any(|event| matches!(event, GameEvent::Fatigue { .. })));
+        assert!(
+            s.events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::Fatigue { .. }))
+        );
         assert_eq!(
             s.state().result,
-            Some(GameResult { winner: Winner::P2, reason: GameOverReason::HeroDeath })
+            Some(GameResult {
+                winner: Winner::P2,
+                reason: GameOverReason::HeroDeath
+            })
         );
     }
 }

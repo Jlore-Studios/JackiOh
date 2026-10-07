@@ -42,7 +42,12 @@ fn snake_dies(state: &mut GameState) -> Vec<GameEvent> {
 }
 
 /// `applyEffects([effect], makeContext(sinkFor(state), self, options))`, handing back the events.
-fn split_from(state: &mut GameState, self_: Option<&CardInstance>, options: HookOptions, args: Value) -> Vec<GameEvent> {
+fn split_from(
+    state: &mut GameState,
+    self_: Option<&CardInstance>,
+    options: HookOptions,
+    args: Value,
+) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();
     {
@@ -64,7 +69,12 @@ mod e37_damage_split {
 
     fn build() -> Built {
         let mut state = playing("dc-split");
-        let dying = put(&mut state, &snake.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let dying = put(
+            &mut state,
+            &snake.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         {
             let live = find_instance_mut(&mut state, &dying.id).expect("the snake");
             live.counters.plague = Some(3);
@@ -103,8 +113,18 @@ mod e37_damage_split {
     fn an_enemy_an_earlier_hit_killed_is_no_longer_standing_so_no_later_hit_lands_on_it() {
         for seed in ["dc-split-a", "dc-split-b", "dc-split-c", "dc-split-d"] {
             let mut state = playing(seed);
-            let source = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-            let victim = put(&mut state, &rattle.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+            let source = put(
+                &mut state,
+                &grunt.id,
+                slot(PlayerId::P1, Row::Units, 1),
+                json!({}),
+            );
+            let victim = put(
+                &mut state,
+                &rattle.id,
+                slot(PlayerId::P2, Row::Units, 1),
+                json!({}),
+            );
             let events = split_from(
                 &mut state,
                 Some(&source),
@@ -113,8 +133,16 @@ mod e37_damage_split {
             );
             let hits = of_type(&events, "damage");
             assert_eq!(hits.len(), 6);
-            assert!(hits.iter().filter(|hit| text(hit, "targetId") == victim.id).count() <= 1);
-            let on_hero = hits.iter().filter(|hit| text(hit, "targetId") == "hero-p2").count() as i32;
+            assert!(
+                hits.iter()
+                    .filter(|hit| text(hit, "targetId") == victim.id)
+                    .count()
+                    <= 1
+            );
+            let on_hero = hits
+                .iter()
+                .filter(|hit| text(hit, "targetId") == "hero-p2")
+                .count() as i32;
             assert_eq!(state.players.p2.hero.health, 30 - on_hero);
         }
     }
@@ -122,7 +150,12 @@ mod e37_damage_split {
     #[test]
     fn hits_of_more_than_1_the_last_taking_what_is_left_an_enemy_unit_pool_leaves_the_hero_out() {
         let mut state = playing("dc-split-per-hit");
-        let source = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let source = put(
+            &mut state,
+            &grunt.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let target = put(&mut state, &wall.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let events = split_from(
             &mut state,
@@ -135,7 +168,11 @@ mod e37_damage_split {
                 .iter()
                 .map(|hit| json!([hit["targetId"], hit["amount"]]))
                 .collect::<Vec<_>>(),
-            vec![json!([target.id, 2]), json!([target.id, 2]), json!([target.id, 1])]
+            vec![
+                json!([target.id, 2]),
+                json!([target.id, 2]),
+                json!([target.id, 1])
+            ]
         );
         // With no enemy unit standing there is nothing to hit.
         let mut empty = clone_state(&state);
@@ -157,7 +194,12 @@ mod e37_damage_split {
     #[test]
     fn e35_a_spells_split_passes_a_unit_immune_to_spells_by() {
         let mut state = playing("dc-split-immune");
-        put(&mut state, &warded.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        put(
+            &mut state,
+            &warded.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let spell = in_hand(&mut state, &bolt.id, PlayerId::P1, 1)
             .into_iter()
             .next()

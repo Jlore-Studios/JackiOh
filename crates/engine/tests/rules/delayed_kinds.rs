@@ -17,13 +17,15 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::turn::START_OF_TURN_WORK;
 use jackioh_engine::view_for::view_for;
 use jackioh_engine::wire::PlayerId::{P1, P2};
-use jackioh_engine::zones::{MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions, move_to_zone, place_on_field};
+use jackioh_engine::zones::{
+    MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions, move_to_zone, place_on_field,
+};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, setup_catalog, slot};
 use crate::rules::fixtures::turn::{
-    LOG_LANE, contract, contract_ask, doom, doom_all, hurrah, later, log_card, notes, reminder, turn_catalog,
-    TURN_SCRIPTS,
+    LOG_LANE, TURN_SCRIPTS, contract, contract_ask, doom, doom_all, hurrah, later, log_card, notes, reminder,
+    turn_catalog,
 };
 
 fn register() {
@@ -75,9 +77,18 @@ fn playing(seed: &str) -> GameState {
     register();
     for player in [P1, P2] {
         let keep = ids(&state.players[player].hand);
-        state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": player })).state;
+        state = act(
+            &state,
+            json!({ "type": "mulligan", "keep": keep, "playerId": player }),
+        )
+        .state;
     }
-    put(&mut state, &log_card().id, slot(P2, Row::Backrow, LOG_LANE), json!({}));
+    put(
+        &mut state,
+        &log_card().id,
+        slot(P2, Row::Backrow, LOG_LANE),
+        json!({}),
+    );
     state.players.p1.auto_end_turn = Some(false);
     state.players.p2.auto_end_turn = Some(false);
     state
@@ -86,7 +97,10 @@ fn playing(seed: &str) -> GameState {
 /// Put `def_id` in `player`'s hand and play it, `extra` merged into the action. (TS also handed back
 /// the card it put in hand, which no test here reads.)
 fn play(state: &mut GameState, player: PlayerId, def_id: &str, extra: Value) -> ReduceResult {
-    let card = in_hand(state, def_id, player, 1).into_iter().next().expect("a card to play");
+    let card = in_hand(state, def_id, player, 1)
+        .into_iter()
+        .next()
+        .expect("a card to play");
     let mut body = json!({ "type": "play", "instanceId": card.id, "playerId": player });
     if let (Some(body), Some(extra)) = (body.as_object_mut(), extra.as_object()) {
         for (key, value) in extra {
@@ -103,10 +117,11 @@ fn pass(state: &GameState) -> ReduceResult {
 
 fn on_field(state: &GameState, id: &str) -> bool {
     [P1, P2].iter().any(|&player| {
-        state.players[player]
-            .units
-            .iter()
-            .any(|pile| pile.as_ref().and_then(|pile| pile.first()).is_some_and(|card| card.id == id))
+        state.players[player].units.iter().any(|pile| {
+            pile.as_ref()
+                .and_then(|pile| pile.first())
+                .is_some_and(|card| card.id == id)
+        })
     })
 }
 
@@ -140,8 +155,11 @@ mod b5_e27_a_destroy_at_the_start_of_your_next_turn_r458 {
             json!({ "targets": [{ "pick": "instance", "instanceId": victim.id }] }),
         )
         .state;
-        let entries: Vec<Value> =
-            cast.delayed.iter().map(|entry| json!([entry.resume.hook, entry.at, entry.watch])).collect();
+        let entries: Vec<Value> = cast
+            .delayed
+            .iter()
+            .map(|entry| json!([entry.resume.hook, entry.at, entry.watch]))
+            .collect();
         assert_eq!(
             entries,
             vec![json!([DELAYED_DESTROY_HOOK, { "phase": "start", "player": "p1" }, victim.id])]
@@ -151,11 +169,16 @@ mod b5_e27_a_destroy_at_the_start_of_your_next_turn_r458 {
         assert_eq!(theirs.active, P2);
         assert!(on_field(&theirs, &victim.id));
 
-        let ReduceResult { state: mine, events, .. } = pass(&theirs);
+        let ReduceResult {
+            state: mine, events, ..
+        } = pass(&theirs);
         assert_eq!(mine.active, P1);
         assert!(!on_field(&mine, &victim.id));
         assert!(ids(&mine.players.p2.graveyard).contains(&victim.id));
-        assert_eq!(instance_ids(&events, GameEventType::Destroyed), vec![json!(victim.id)]);
+        assert_eq!(
+            instance_ids(&events, GameEventType::Destroyed),
+            vec![json!(victim.id)]
+        );
         assert!(mine.delayed.is_empty());
     }
 
@@ -163,8 +186,9 @@ mod b5_e27_a_destroy_at_the_start_of_your_next_turn_r458 {
     fn r458_it_is_a_destroy_indestructible_ignores_it_r46() {
         let mut state = playing("doom-indestructible");
         let victim = put(&mut state, "fx-25", slot(P2, Row::Units, 1), json!({}));
-        find_instance_mut(&mut state, &victim.id).expect("the victim").granted_keywords =
-            vec![json_as(json!({ "kind": "Indestructible" }))];
+        find_instance_mut(&mut state, &victim.id)
+            .expect("the victim")
+            .granted_keywords = vec![json_as(json!({ "kind": "Indestructible" }))];
         let cast = play(
             &mut state,
             P1,
@@ -192,9 +216,19 @@ mod b5_e27_a_destroy_at_the_start_of_your_next_turn_r458 {
             .and_then(|pile| pile.first())
             .cloned()
             .expect("the victim on the field");
-        move_to_zone(&mut cast, &mut card, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(
+            &mut cast,
+            &mut card,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
         assert!(cast.delayed.is_empty());
-        assert!(place_on_field(&mut cast, &mut card, slot(P2, Row::Units, 1), PlaceOnFieldOptions::default()));
+        assert!(place_on_field(
+            &mut cast,
+            &mut card,
+            slot(P2, Row::Units, 1),
+            PlaceOnFieldOptions::default()
+        ));
         let mine = pass(&pass(&cast).state).state;
         assert!(on_field(&mine, &victim.id));
     }
@@ -205,7 +239,11 @@ mod b5_e27_a_destroy_at_the_start_of_your_next_turn_r458 {
         let early = put(&mut state, "fx-25", slot(P2, Row::Units, 1), json!({}));
         let mine = put(&mut state, "fx-5", slot(P1, Row::Units, 1), json!({}));
         let cast = play(&mut state, P1, &doom_all().id, json!({})).state;
-        let entries: Vec<Value> = cast.delayed.iter().map(|entry| json!([entry.resume.hook, entry.watch])).collect();
+        let entries: Vec<Value> = cast
+            .delayed
+            .iter()
+            .map(|entry| json!([entry.resume.hook, entry.watch]))
+            .collect();
         assert_eq!(entries, vec![json!([DELAYED_DESTROY_HOOK, null])]);
 
         let mut theirs = pass(&cast).state;
@@ -221,13 +259,16 @@ mod b5_e27_your_hand_discarded_at_the_end_of_this_turn_or_your_next_r458 {
     use super::*;
 
     #[test]
-    fn r458_this_turn_at_the_end_of_the_turn_it_was_made_on_the_makers_hand_is_discarded_the_other_hand_kept() {
+    fn r458_this_turn_at_the_end_of_the_turn_it_was_made_on_the_makers_hand_is_discarded_the_other_hand_kept()
+    {
         let mut state = playing("hurrah");
         let cast = play(&mut state, P1, &hurrah().id, json!({})).state;
         let held = cast.players.p1.hand.len();
         assert!(held > 0);
         let other = cast.players.p2.hand.len();
-        let ReduceResult { state: after, events, .. } = pass(&cast);
+        let ReduceResult {
+            state: after, events, ..
+        } = pass(&cast);
         let discarded = discarded_of(&events, P1);
         assert_eq!(discarded.len(), held);
         assert!(after.players.p1.hand.is_empty());
@@ -236,20 +277,35 @@ mod b5_e27_your_hand_discarded_at_the_end_of_this_turn_or_your_next_r458 {
     }
 
     #[test]
-    fn r458_your_next_turn_the_end_of_the_turn_it_was_made_on_passes_it_by_the_end_of_your_next_one_discards() {
+    fn r458_your_next_turn_the_end_of_the_turn_it_was_made_on_passes_it_by_the_end_of_your_next_one_discards()
+    {
         let mut state = playing("hurrah-next");
-        let card = in_hand(&mut state, &hurrah().id, P1, 1).into_iter().next().expect("the hurrah");
-        find_instance_mut(&mut state, &card.id).expect("the hurrah").radiant = true;
-        let cast = act(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" })).state;
-        let entries: Vec<Value> =
-            cast.delayed.iter().map(|entry| json!([entry.resume.hook, entry.not_before])).collect();
+        let card = in_hand(&mut state, &hurrah().id, P1, 1)
+            .into_iter()
+            .next()
+            .expect("the hurrah");
+        find_instance_mut(&mut state, &card.id)
+            .expect("the hurrah")
+            .radiant = true;
+        let cast = act(
+            &state,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        )
+        .state;
+        let entries: Vec<Value> = cast
+            .delayed
+            .iter()
+            .map(|entry| json!([entry.resume.hook, entry.not_before]))
+            .collect();
         assert_eq!(entries, vec![json!([DELAYED_DISCARD_HAND_HOOK, state.turn + 1])]);
 
         let after_first = pass(&cast).state;
         assert_eq!(after_first.players.p1.hand.len(), cast.players.p1.hand.len());
         let mine = pass(&after_first).state;
         assert!(!mine.players.p1.hand.is_empty());
-        let ReduceResult { state: after, events, .. } = pass(&mine);
+        let ReduceResult {
+            state: after, events, ..
+        } = pass(&mine);
         assert!(after.players.p1.hand.is_empty());
         assert!(!discarded_of(&events, P1).is_empty());
     }
@@ -274,8 +330,11 @@ mod b5_e27_your_hand_discarded_at_the_end_of_this_turn_or_your_next_r458 {
             (discard_hand_at_turn_end(json_as(json!({ "turn": "this" }))).apply)(&mut ctx);
             (discard_hand_at_turn_end(json_as(json!({ "turn": "next" }))).apply)(&mut ctx);
         }
-        let entries: Vec<Value> =
-            theirs.delayed.iter().map(|entry| json!([entry.owner, entry.at, entry.not_before])).collect();
+        let entries: Vec<Value> = theirs
+            .delayed
+            .iter()
+            .map(|entry| json!([entry.owner, entry.at, entry.not_before]))
+            .collect();
         assert_eq!(
             entries,
             vec![
@@ -284,7 +343,9 @@ mod b5_e27_your_hand_discarded_at_the_end_of_this_turn_or_your_next_r458 {
             ]
         );
         let held = theirs.players.p1.hand.len();
-        let ReduceResult { state: mine, events, .. } = pass(&theirs);
+        let ReduceResult {
+            state: mine, events, ..
+        } = pass(&theirs);
         // Discarded at the end of p2's turn; the one card left is the draw of p1's own turn.
         assert_eq!(discarded_of(&events, P1).len(), held);
         let drawn: Vec<Value> = events_of_type(&events, GameEventType::Drawn)
@@ -294,10 +355,19 @@ mod b5_e27_your_hand_discarded_at_the_end_of_this_turn_or_your_next_r458 {
             .map(|event| event["instanceId"].clone())
             .collect();
         assert_eq!(
-            mine.players.p1.hand.iter().map(|card| json!(card.id)).collect::<Vec<_>>(),
+            mine.players
+                .p1
+                .hand
+                .iter()
+                .map(|card| json!(card.id))
+                .collect::<Vec<_>>(),
             drawn
         );
-        let hooks: Vec<String> = mine.delayed.iter().map(|entry| entry.resume.hook.clone()).collect();
+        let hooks: Vec<String> = mine
+            .delayed
+            .iter()
+            .map(|entry| entry.resume.hook.clone())
+            .collect();
         assert_eq!(hooks, vec![DELAYED_DISCARD_HAND_HOOK.to_string()]);
     }
 
@@ -323,7 +393,8 @@ mod b5_e28_for_the_rest_of_the_game_at_the_start_of_your_turn_r458 {
     }
 
     #[test]
-    fn r458_it_runs_at_each_start_of_its_players_turn_from_the_next_one_as_the_players_effect_and_shows_as_a_badge() {
+    fn r458_it_runs_at_each_start_of_its_players_turn_from_the_next_one_as_the_players_effect_and_shows_as_a_badge()
+     {
         let mut state = playing("contract");
         let cast = play(&mut state, P1, &contract().id, json!({})).state;
         let label = json!("At the start of your turn, take a note");
@@ -378,7 +449,8 @@ mod b5_e28_for_the_rest_of_the_game_at_the_start_of_your_turn_r458 {
     }
 
     #[test]
-    fn r458_one_that_asks_pauses_the_start_of_the_turn_runs_once_that_turn_and_the_pause_survives_json_and_replay() {
+    fn r458_one_that_asks_pauses_the_start_of_the_turn_runs_once_that_turn_and_the_pause_survives_json_and_replay()
+     {
         let seed = "delayed-kinds-replay";
         let mut first_deck = vec![contract_ask().id];
         first_deck.extend(vanilla_deck(DECK_SIZE - 1, 1));
@@ -394,7 +466,11 @@ mod b5_e28_for_the_rest_of_the_game_at_the_start_of_your_turn_r458 {
         let mut log: Vec<Action> = Vec::new();
         for player in [P1, P2] {
             let keep = ids(&state.players[player].hand);
-            step(&mut state, &mut log, json!({ "type": "mulligan", "keep": keep, "playerId": player }));
+            step(
+                &mut state,
+                &mut log,
+                json!({ "type": "mulligan", "keep": keep, "playerId": player }),
+            );
         }
         // The note log is not part of an action-built game, so this one reads the prompt and the work.
         let held = state
@@ -405,9 +481,21 @@ mod b5_e28_for_the_rest_of_the_game_at_the_start_of_your_turn_r458 {
             .find(|card| card.def_id == contract_ask().id)
             .cloned()
             .expect("the asking contract in hand");
-        step(&mut state, &mut log, json!({ "type": "play", "instanceId": held.id, "playerId": "p1" }));
-        step(&mut state, &mut log, json!({ "type": "endTurn", "playerId": "p1" }));
-        step(&mut state, &mut log, json!({ "type": "endTurn", "playerId": "p2" }));
+        step(
+            &mut state,
+            &mut log,
+            json!({ "type": "play", "instanceId": held.id, "playerId": "p1" }),
+        );
+        step(
+            &mut state,
+            &mut log,
+            json!({ "type": "endTurn", "playerId": "p1" }),
+        );
+        step(
+            &mut state,
+            &mut log,
+            json!({ "type": "endTurn", "playerId": "p2" }),
+        );
 
         // p1's start of turn 3 is asking, before its draw and main phase.
         assert_eq!(state.active, P1);

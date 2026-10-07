@@ -46,8 +46,16 @@ fn all_cards(state: &GameState) -> Vec<&CardInstance> {
 
 /// One def id, uniformly, from `pool` minus `seen` minus what this determinization already sampled;
 /// with replacement from the whole pool once that is empty.
-fn sample_def(pool: &[String], seen: &IndexSet<String>, sampled: &mut IndexSet<String>, rng: &mut Rng) -> String {
-    let open: Vec<&String> = pool.iter().filter(|id| !seen.contains(*id) && !sampled.contains(*id)).collect();
+fn sample_def(
+    pool: &[String],
+    seen: &IndexSet<String>,
+    sampled: &mut IndexSet<String>,
+    rng: &mut Rng,
+) -> String {
+    let open: Vec<&String> = pool
+        .iter()
+        .filter(|id| !seen.contains(*id) && !sampled.contains(*id))
+        .collect();
     if !open.is_empty() {
         let at = rng.int(open.len() as i32) as usize;
         let pick = open.get(at).map(|id| (*id).clone()).unwrap_or_default();
@@ -117,9 +125,11 @@ fn slot_card(state: &GameState, side: PlayerId, slot: TrapSlot) -> Option<&CardI
     let player = &state.players[side];
     match slot {
         TrapSlot::Top(lane) => player.backrow.get(lane).and_then(|card| card.as_ref()),
-        TrapSlot::Dormant(lane, depth) => {
-            player.backrow_piles.as_ref().and_then(|piles| piles.get(lane)).and_then(|pile| pile.get(depth))
-        }
+        TrapSlot::Dormant(lane, depth) => player
+            .backrow_piles
+            .as_ref()
+            .and_then(|piles| piles.get(lane))
+            .and_then(|pile| pile.get(depth)),
         TrapSlot::Resolving(at) => player.resolving.get(at),
     }
 }
@@ -128,9 +138,11 @@ fn slot_card_mut(state: &mut GameState, side: PlayerId, slot: TrapSlot) -> Optio
     let player = &mut state.players[side];
     match slot {
         TrapSlot::Top(lane) => player.backrow.get_mut(lane).and_then(|card| card.as_mut()),
-        TrapSlot::Dormant(lane, depth) => {
-            player.backrow_piles.as_mut().and_then(|piles| piles.get_mut(lane)).and_then(|pile| pile.get_mut(depth))
-        }
+        TrapSlot::Dormant(lane, depth) => player
+            .backrow_piles
+            .as_mut()
+            .and_then(|piles| piles.get_mut(lane))
+            .and_then(|pile| pile.get_mut(depth)),
         TrapSlot::Resolving(at) => player.resolving.get_mut(at),
     }
 }
@@ -180,7 +192,11 @@ impl TrapSampler<'_> {
             }
             open
         };
-        let pool: Vec<String> = if !open.is_empty() { open } else { self.trap_pool.to_vec() };
+        let pool: Vec<String> = if !open.is_empty() {
+            open
+        } else {
+            self.trap_pool.to_vec()
+        };
         // R762: the board shows this card's cost (R351), so a trap that would show another is no world the
         // seat could be in; with no unseen trap of that cost left, the pool falls back as before.
         if self.match_shown_cost
@@ -188,10 +204,17 @@ impl TrapSampler<'_> {
         {
             let board: &GameState = next;
             let priced: Vec<String> = match slot_card(board, side, slot) {
-                Some(card) => pool.iter().filter(|id| cost_in(board, card, id) == shown_cost).cloned().collect(),
+                Some(card) => pool
+                    .iter()
+                    .filter(|id| cost_in(board, card, id) == shown_cost)
+                    .cloned()
+                    .collect(),
                 None => Vec::new(),
             };
-            if priced.iter().any(|id| !seen.contains(id) && !sampled.contains(id)) {
+            if priced
+                .iter()
+                .any(|id| !seen.contains(id) && !sampled.contains(id))
+            {
                 return sample_def(&priced, seen, sampled, rng);
             }
         }
@@ -213,7 +236,12 @@ fn query_ids(args: serde_json::Value) -> Vec<String> {
 }
 
 /// R185: one concrete world consistent with `public_state` (the output of redact). Pure given rng.
-pub fn determinize(public_state: &GameState, seat: PlayerId, rng: &mut Rng, options: DeterminizeOptions) -> GameState {
+pub fn determinize(
+    public_state: &GameState,
+    seat: PlayerId,
+    rng: &mut Rng,
+    options: DeterminizeOptions,
+) -> GameState {
     let opp = seat.opponent();
     let mut next = public_state.clone();
 
@@ -234,8 +262,16 @@ pub fn determinize(public_state: &GameState, seat: PlayerId, rng: &mut Rng, opti
     // face-down Trap's aura is live (R403) and the units it changes are on the board for the seat to read,
     // so a candidate whose aura would change any unit's shown stats is not in the pool for that card.
     let trap_pool = query_ids(json!({ "type": ["Trap", "Field Trap"] }));
-    let aura_traps: Vec<String> = trap_pool.iter().filter(|id| has_aura(&next, id)).cloned().collect();
-    let shown = if !aura_traps.is_empty() { shown_units(&next) } else { String::new() };
+    let aura_traps: Vec<String> = trap_pool
+        .iter()
+        .filter(|id| has_aura(&next, id))
+        .cloned()
+        .collect();
+    let shown = if !aura_traps.is_empty() {
+        shown_units(&next)
+    } else {
+        String::new()
+    };
     let sampler = TrapSampler {
         trap_pool: &trap_pool,
         aura_traps: &aura_traps,
@@ -256,7 +292,11 @@ pub fn determinize(public_state: &GameState, seat: PlayerId, rng: &mut Rng, opti
                 continue;
             }
             // R762: a top card shows its cost (R351); a dormant one beneath shows only that it is there (R447).
-            let shown_cost = if matches!(slot, TrapSlot::Top(_)) { card.cost_override } else { None };
+            let shown_cost = if matches!(slot, TrapSlot::Top(_)) {
+                card.cost_override
+            } else {
+                None
+            };
             let def_id = sampler.trap_for(&mut next, side, slot, shown_cost, &seen, &mut sampled, rng);
             set_slot_def(&mut next, side, slot, &def_id);
         }

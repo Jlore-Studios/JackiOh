@@ -18,11 +18,11 @@ use std::time::Duration;
 
 use jackioh_server::app::App;
 use jackioh_server::config::{
-    PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, PLAYER_SETTINGS_KEYS_MAX, PLAYER_SETTINGS_NAME_MAX_LENGTH,
-    PLAYER_SETTINGS_TEXT_MAX_LENGTH,
+    PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, PLAYER_SETTINGS_KEYS_MAX,
+    PLAYER_SETTINGS_NAME_MAX_LENGTH, PLAYER_SETTINGS_TEXT_MAX_LENGTH,
 };
 use serde::de::DeserializeOwned;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::support::deps::{call, test_app};
 
@@ -52,7 +52,12 @@ async fn setup() -> Fixture {
     let profile = profile_id_of(&app, USER).await;
     let other = profile_id_of(&app, OTHER_USER).await;
     let pending = profile_id_of(&app, PENDING_USER).await;
-    Fixture { app, profile, other, pending }
+    Fixture {
+        app,
+        profile,
+        other,
+        pending,
+    }
 }
 
 /// A store value built from TS's own object literal.
@@ -87,7 +92,11 @@ fn is_match(actual: &Value, expected: &Value) -> bool {
             .iter()
             .all(|(key, value)| actual.get(key).is_some_and(|held| is_match(held, value))),
         (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(held, value)| is_match(held, value))
+            actual.len() == expected.len()
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(held, value)| is_match(held, value))
         }
         _ => actual == expected,
     }
@@ -106,7 +115,9 @@ async fn profile_id_of(app: &App, user_id: &str) -> String {
 
 async fn set_status(app: &App, profile_id: &str, status: &str) {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
-    tx.profiles_set_status(profile_id, from(json!(status))).await.expect("profiles.setStatus");
+    tx.profiles_set_status(profile_id, from(json!(status)))
+        .await
+        .expect("profiles.setStatus");
     tx.commit().await.expect("commit");
 }
 
@@ -116,7 +127,10 @@ async fn stored(fixture: &Fixture) -> Vec<String> {
     let mut held = Vec::new();
     for profile_id in [&fixture.profile, &fixture.other, &fixture.pending] {
         let mut tx = fixture.app.db.begin(None).await.expect("a store transaction");
-        let row = tx.player_settings_get(profile_id).await.expect("playerSettings.get");
+        let row = tx
+            .player_settings_get(profile_id)
+            .await
+            .expect("playerSettings.get");
         tx.commit().await.expect("commit");
         if row.is_some() {
             held.push(profile_id.clone());
@@ -178,7 +192,8 @@ mod r633_the_routes_an_active_account_and_only_about_itself {
     }
 
     #[tokio::test]
-    async fn r633_reads_an_account_with_no_settings_yet_as_none_and_writes_land_on_the_callers_own_row_only() {
+    async fn r633_reads_an_account_with_no_settings_yet_as_none_and_writes_land_on_the_callers_own_row_only()
+    {
         let f = setup().await;
         assert_eq!(settings_of(get(&f.app, TOKEN).await), json!({ "groups": {} }));
 
@@ -196,7 +211,10 @@ mod r633_the_routes_an_active_account_and_only_about_itself {
             settings_of(get(&f.app, TOKEN).await),
             json!({ "groups": { "audio": { "at": 5, "values": { "master": 0.5 } } } })
         );
-        assert_eq!(settings_of(get(&f.app, OTHER_TOKEN).await), json!({ "groups": {} }));
+        assert_eq!(
+            settings_of(get(&f.app, OTHER_TOKEN).await),
+            json!({ "groups": {} })
+        );
         assert_eq!(stored(&f).await, std::slice::from_ref(&f.profile));
     }
 }
@@ -205,26 +223,49 @@ mod r634_a_write_replaces_a_group_only_with_a_strictly_later_one {
     use super::*;
 
     #[tokio::test]
-    async fn r634_a_later_group_replaces_the_stored_one_whole_an_older_or_tied_one_changes_nothing_the_answer_is_what_is_stored() {
+    async fn r634_a_later_group_replaces_the_stored_one_whole_an_older_or_tied_one_changes_nothing_the_answer_is_what_is_stored()
+     {
         let f = setup().await;
         let t = wall_ms() - 60_000;
         settings_of(
-            put(&f.app, json!({ "groups": { "audio": { "at": t, "values": { "master": 0.5, "muted": false } } } }), TOKEN)
-                .await,
+            put(
+                &f.app,
+                json!({ "groups": { "audio": { "at": t, "values": { "master": 0.5, "muted": false } } } }),
+                TOKEN,
+            )
+            .await,
         );
 
         let later = settings_of(
-            put(&f.app, json!({ "groups": { "audio": { "at": t + 1000, "values": { "master": 0.9 } } } }), TOKEN).await,
+            put(
+                &f.app,
+                json!({ "groups": { "audio": { "at": t + 1000, "values": { "master": 0.9 } } } }),
+                TOKEN,
+            )
+            .await,
         );
-        assert_eq!(later["groups"]["audio"], json!({ "at": t + 1000, "values": { "master": 0.9 } }));
+        assert_eq!(
+            later["groups"]["audio"],
+            json!({ "at": t + 1000, "values": { "master": 0.9 } })
+        );
 
         // A device that last changed the audio before that, and one that did so at the same moment.
         let older = settings_of(
-            put(&f.app, json!({ "groups": { "audio": { "at": t + 500, "values": { "master": 0.1 } } } }), TOKEN).await,
+            put(
+                &f.app,
+                json!({ "groups": { "audio": { "at": t + 500, "values": { "master": 0.1 } } } }),
+                TOKEN,
+            )
+            .await,
         );
         assert_eq!(older, later);
         let tied = settings_of(
-            put(&f.app, json!({ "groups": { "audio": { "at": t + 1000, "values": { "master": 0.2 } } } }), TOKEN).await,
+            put(
+                &f.app,
+                json!({ "groups": { "audio": { "at": t + 1000, "values": { "master": 0.2 } } } }),
+                TOKEN,
+            )
+            .await,
         );
         assert_eq!(tied, later);
         assert_eq!(settings_of(get(&f.app, TOKEN).await), later);
@@ -262,29 +303,58 @@ mod r634_a_write_replaces_a_group_only_with_a_strictly_later_one {
             .await,
         );
 
-        assert_eq!(merged["groups"]["audio"], json!({ "at": t + 200, "values": { "master": 0.7 } }));
-        assert_eq!(merged["groups"]["gameplay"], json!({ "at": t + 100, "values": { "dragToPlay": false } }));
+        assert_eq!(
+            merged["groups"]["audio"],
+            json!({ "at": t + 200, "values": { "master": 0.7 } })
+        );
+        assert_eq!(
+            merged["groups"]["gameplay"],
+            json!({ "at": t + 100, "values": { "dragToPlay": false } })
+        );
         // And a write that names neither leaves both.
-        let with_fx =
-            settings_of(put(&f.app, json!({ "groups": { "fx": { "at": t, "values": { "speed": 2 } } } }), TOKEN).await);
+        let with_fx = settings_of(
+            put(
+                &f.app,
+                json!({ "groups": { "fx": { "at": t, "values": { "speed": 2 } } } }),
+                TOKEN,
+            )
+            .await,
+        );
         let expected = json!({ "groups": { "audio": { "at": t + 200 }, "gameplay": { "at": t + 100 }, "fx": { "at": t } } });
         assert!(is_match(&with_fx, &expected), "{with_fx}");
         let unchanged = settings_of(put(&f.app, json!({ "groups": {} }), TOKEN).await);
-        assert!(is_match(&unchanged, &json!({ "groups": { "audio": {}, "gameplay": {}, "fx": {} } })), "{unchanged}");
+        assert!(
+            is_match(
+                &unchanged,
+                &json!({ "groups": { "audio": {}, "gameplay": {}, "fx": {} } })
+            ),
+            "{unchanged}"
+        );
     }
 
     #[tokio::test]
-    async fn r634_takes_a_group_timed_after_the_servers_clock_as_made_now_so_a_clock_running_ahead_cannot_pin_it() {
+    async fn r634_takes_a_group_timed_after_the_servers_clock_as_made_now_so_a_clock_running_ahead_cannot_pin_it()
+     {
         let f = setup().await;
         let before = wall_ms();
         let ahead = settings_of(
-            put(&f.app, json!({ "groups": { "audio": { "at": before + 86_400_000, "values": { "master": 0.1 } } } }), TOKEN)
-                .await,
+            put(
+                &f.app,
+                json!({ "groups": { "audio": { "at": before + 86_400_000, "values": { "master": 0.1 } } } }),
+                TOKEN,
+            )
+            .await,
         );
         let after = wall_ms();
         let now = ahead["groups"]["audio"]["at"].as_i64().expect("a stored time");
-        assert!((before..=after).contains(&now), "{now} is the server's now, between {before} and {after}");
-        assert_eq!(ahead["groups"]["audio"], json!({ "at": now, "values": { "master": 0.1 } }));
+        assert!(
+            (before..=after).contains(&now),
+            "{now} is the server's now, between {before} and {after}"
+        );
+        assert_eq!(
+            ahead["groups"]["audio"],
+            json!({ "at": now, "values": { "master": 0.1 } })
+        );
 
         // A moment later, a change from a device whose clock is right wins over it. (TS moved its
         // manual clock a minute; the wall clock is waited on until it has moved past `now`.)
@@ -292,18 +362,36 @@ mod r634_a_write_replaces_a_group_only_with_a_strictly_later_one {
             tokio::time::sleep(Duration::from_millis(1)).await;
         }
         let device = wall_ms();
-        let later =
-            settings_of(put(&f.app, json!({ "groups": { "audio": { "at": device, "values": { "master": 0.8 } } } }), TOKEN).await);
-        assert_eq!(later["groups"]["audio"], json!({ "at": device, "values": { "master": 0.8 } }));
+        let later = settings_of(
+            put(
+                &f.app,
+                json!({ "groups": { "audio": { "at": device, "values": { "master": 0.8 } } } }),
+                TOKEN,
+            )
+            .await,
+        );
+        assert_eq!(
+            later["groups"]["audio"],
+            json!({ "at": device, "values": { "master": 0.8 } })
+        );
     }
 
     #[tokio::test]
     async fn r634_keeps_a_group_the_client_no_longer_has_and_hands_back_every_value_it_was_given() {
         let f = setup().await;
         let values = json!({ "on": true, "level": 0.25, "station": "lofi", "count": 3, "negative": -2 });
-        let answer =
-            settings_of(put(&f.app, json!({ "groups": { "old-store": { "at": 1, "values": values } } }), TOKEN).await);
-        assert_eq!(answer["groups"]["old-store"], json!({ "at": 1, "values": values }));
+        let answer = settings_of(
+            put(
+                &f.app,
+                json!({ "groups": { "old-store": { "at": 1, "values": values } } }),
+                TOKEN,
+            )
+            .await,
+        );
+        assert_eq!(
+            answer["groups"]["old-store"],
+            json!({ "at": 1, "values": values })
+        );
     }
 }
 
@@ -319,7 +407,13 @@ mod r633_the_body_is_checked_before_anything_is_stored {
     #[tokio::test]
     async fn r633_refuses_a_body_whose_groups_are_not_an_object() {
         let f = setup().await;
-        for body in [json!({}), json!({ "groups": null }), json!({ "groups": [] }), json!({ "groups": "audio" }), json!({ "groups": 1 })] {
+        for body in [
+            json!({}),
+            json!({ "groups": null }),
+            json!({ "groups": [] }),
+            json!({ "groups": "audio" }),
+            json!({ "groups": 1 }),
+        ] {
             assert_eq!(refused(&f.app, body).await["error"]["code"], "bad_request");
         }
         assert!(stored(&f).await.is_empty());
@@ -331,7 +425,11 @@ mod r633_the_body_is_checked_before_anything_is_stored {
         let group = json!({ "at": 1, "values": {} });
         let too_long = "a".repeat(count(PLAYER_SETTINGS_NAME_MAX_LENGTH) + 1);
         for id in ["Audio", "a b", "1a", "-a", "a--b", "a-", "", too_long.as_str()] {
-            refused(&f.app, json!({ "groups": object([(id.to_string(), group.clone())]) })).await;
+            refused(
+                &f.app,
+                json!({ "groups": object([(id.to_string(), group.clone())]) }),
+            )
+            .await;
         }
         let longest = "a".repeat(count(PLAYER_SETTINGS_NAME_MAX_LENGTH));
         let answer = settings_of(put(&f.app, json!({ "groups": object([(longest, group)]) }), TOKEN).await);
@@ -356,27 +454,51 @@ mod r633_the_body_is_checked_before_anything_is_stored {
             json!({ "at": 1, "values": [] }),
             json!({ "at": 1, "values": null }),
         ] {
-            assert_eq!(refused(&f.app, json!({ "groups": { "audio": group } })).await["error"]["code"], "bad_request");
+            assert_eq!(
+                refused(&f.app, json!({ "groups": { "audio": group } })).await["error"]["code"],
+                "bad_request"
+            );
         }
         assert!(stored(&f).await.is_empty());
     }
 
     #[tokio::test]
-    async fn r633_refuses_values_that_are_not_flat_booleans_finite_numbers_and_short_texts_and_names_that_are_not_words() {
+    async fn r633_refuses_values_that_are_not_flat_booleans_finite_numbers_and_short_texts_and_names_that_are_not_words()
+     {
         let f = setup().await;
         let too_long = "x".repeat(count(PLAYER_SETTINGS_TEXT_MAX_LENGTH) + 1);
-        for value in [json!(null), json!([]), json!({}), json!([1]), json!({ "a": 1 }), json!(too_long)] {
-            refused(&f.app, json!({ "groups": { "audio": { "at": 1, "values": { "master": value } } } })).await;
+        for value in [
+            json!(null),
+            json!([]),
+            json!({}),
+            json!([1]),
+            json!({ "a": 1 }),
+            json!(too_long),
+        ] {
+            refused(
+                &f.app,
+                json!({ "groups": { "audio": { "at": 1, "values": { "master": value } } } }),
+            )
+            .await;
         }
         let long_name = "x".repeat(count(PLAYER_SETTINGS_NAME_MAX_LENGTH) + 1);
         for name in ["", "1a", "a b", "a-b", "a.b", "__proto__x!", long_name.as_str()] {
             let values = object([(name.to_string(), json!(1))]);
-            refused(&f.app, json!({ "groups": { "audio": { "at": 1, "values": values } } })).await;
+            refused(
+                &f.app,
+                json!({ "groups": { "audio": { "at": 1, "values": values } } }),
+            )
+            .await;
         }
         // JSON cannot carry NaN or Infinity, so a number the parser keeps is finite; the longest text is fine.
         let longest = "x".repeat(count(PLAYER_SETTINGS_TEXT_MAX_LENGTH));
         let answer = settings_of(
-            put(&f.app, json!({ "groups": { "audio": { "at": 1, "values": { "station": longest } } } }), TOKEN).await,
+            put(
+                &f.app,
+                json!({ "groups": { "audio": { "at": 1, "values": { "station": longest } } } }),
+                TOKEN,
+            )
+            .await,
         );
         assert_eq!(answer["groups"]["audio"]["values"], json!({ "station": longest }));
     }
@@ -389,14 +511,40 @@ mod r633_the_body_is_checked_before_anything_is_stored {
                 .map(|at| (format!("group-{at}"), json!({ "at": 1, "values": {} }))),
         );
         let message = refused(&f.app, json!({ "groups": many })).await["error"]["message"].clone();
-        assert!(message.as_str().unwrap_or_default().contains(&PLAYER_SETTINGS_GROUPS_MAX.to_string()), "{message}");
-        let values = object((0..count(PLAYER_SETTINGS_KEYS_MAX) + 1).map(|at| (format!("k{at}"), json!(true))));
-        let message =
-            refused(&f.app, json!({ "groups": { "audio": { "at": 1, "values": values } } })).await["error"]["message"].clone();
-        assert!(message.as_str().unwrap_or_default().contains(&PLAYER_SETTINGS_KEYS_MAX.to_string()), "{message}");
+        assert!(
+            message
+                .as_str()
+                .unwrap_or_default()
+                .contains(&PLAYER_SETTINGS_GROUPS_MAX.to_string()),
+            "{message}"
+        );
+        let values =
+            object((0..count(PLAYER_SETTINGS_KEYS_MAX) + 1).map(|at| (format!("k{at}"), json!(true))));
+        let message = refused(
+            &f.app,
+            json!({ "groups": { "audio": { "at": 1, "values": values } } }),
+        )
+        .await["error"]["message"]
+            .clone();
+        assert!(
+            message
+                .as_str()
+                .unwrap_or_default()
+                .contains(&PLAYER_SETTINGS_KEYS_MAX.to_string()),
+            "{message}"
+        );
         let fits = object((0..count(PLAYER_SETTINGS_KEYS_MAX)).map(|at| (format!("k{at}"), json!(true))));
-        let answer = settings_of(put(&f.app, json!({ "groups": { "audio": { "at": 1, "values": fits } } }), TOKEN).await);
-        let held = answer["groups"]["audio"]["values"].as_object().map_or(0, Map::len);
+        let answer = settings_of(
+            put(
+                &f.app,
+                json!({ "groups": { "audio": { "at": 1, "values": fits } } }),
+                TOKEN,
+            )
+            .await,
+        );
+        let held = answer["groups"]["audio"]["values"]
+            .as_object()
+            .map_or(0, Map::len);
         assert_eq!(held, count(PLAYER_SETTINGS_KEYS_MAX));
     }
 
@@ -404,12 +552,19 @@ mod r633_the_body_is_checked_before_anything_is_stored {
     async fn r633_answers_a_result_past_the_accounts_caps_with_409_and_writes_nothing() {
         let f = setup().await;
         // Groups: fill the account to its group cap, then name one more.
-        let filled = object(
-            (0..count(PLAYER_SETTINGS_GROUPS_MAX))
-                .map(|at| (format!("group-{at}"), json!({ "at": 1, "values": { "on": true } }))),
-        );
+        let filled = object((0..count(PLAYER_SETTINGS_GROUPS_MAX)).map(|at| {
+            (
+                format!("group-{at}"),
+                json!({ "at": 1, "values": { "on": true } }),
+            )
+        }));
         settings_of(put(&f.app, json!({ "groups": filled }), TOKEN).await);
-        let (status, body) = put(&f.app, json!({ "groups": { "one-more": { "at": 1, "values": {} } } }), TOKEN).await;
+        let (status, body) = put(
+            &f.app,
+            json!({ "groups": { "one-more": { "at": 1, "values": {} } } }),
+            TOKEN,
+        )
+        .await;
         assert_eq!(status, 409, "{body}");
         assert_eq!(
             body["error"]["details"],
@@ -420,18 +575,52 @@ mod r633_the_body_is_checked_before_anything_is_stored {
     }
 
     #[tokio::test]
-    async fn r633_answers_a_result_past_the_byte_cap_with_409_and_a_group_already_held_can_still_be_replaced() {
+    async fn r633_answers_a_result_past_the_byte_cap_with_409_and_a_group_already_held_can_still_be_replaced()
+    {
         let f = setup().await;
         let text = "x".repeat(count(PLAYER_SETTINGS_TEXT_MAX_LENGTH));
-        let wide =
-            |prefix: &str| object((0..count(PLAYER_SETTINGS_KEYS_MAX)).map(|at| (format!("{prefix}{at}"), json!(text))));
+        let wide = |prefix: &str| {
+            object((0..count(PLAYER_SETTINGS_KEYS_MAX)).map(|at| (format!("{prefix}{at}"), json!(text))))
+        };
         // Each of these groups is about 1.7 kB of text, so the third pushes the account past 4 kB.
-        settings_of(put(&f.app, json!({ "groups": { "first": { "at": 1, "values": wide("a") } } }), TOKEN).await);
-        settings_of(put(&f.app, json!({ "groups": { "second": { "at": 1, "values": wide("b") } } }), TOKEN).await);
-        assert_eq!(put(&f.app, json!({ "groups": { "third": { "at": 1, "values": wide("c") } } }), TOKEN).await.0, 409);
+        settings_of(
+            put(
+                &f.app,
+                json!({ "groups": { "first": { "at": 1, "values": wide("a") } } }),
+                TOKEN,
+            )
+            .await,
+        );
+        settings_of(
+            put(
+                &f.app,
+                json!({ "groups": { "second": { "at": 1, "values": wide("b") } } }),
+                TOKEN,
+            )
+            .await,
+        );
+        assert_eq!(
+            put(
+                &f.app,
+                json!({ "groups": { "third": { "at": 1, "values": wide("c") } } }),
+                TOKEN
+            )
+            .await
+            .0,
+            409
+        );
         // Replacing a held group with a smaller one is fine.
-        let shrunk =
-            settings_of(put(&f.app, json!({ "groups": { "first": { "at": 2, "values": { "a0": true } } } }), TOKEN).await);
-        assert_eq!(shrunk["groups"]["first"], json!({ "at": 2, "values": { "a0": true } }));
+        let shrunk = settings_of(
+            put(
+                &f.app,
+                json!({ "groups": { "first": { "at": 2, "values": { "a0": true } } } }),
+                TOKEN,
+            )
+            .await,
+        );
+        assert_eq!(
+            shrunk["groups"]["first"],
+            json!({ "at": 2, "values": { "a0": true } })
+        );
     }
 }

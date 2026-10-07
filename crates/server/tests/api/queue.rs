@@ -41,18 +41,18 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
-use serde::de::DeserializeOwned;
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde::de::DeserializeOwned;
+use serde_json::{Value, json};
 use tokio::sync::MutexGuard;
 
-use jackioh_engine::{pick_portrait_from_seed, DEFAULT_PORTRAIT};
+use jackioh_engine::{DEFAULT_PORTRAIT, pick_portrait_from_seed};
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::api::collection::grant_entire_catalog;
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::api::queue::{e2e_seed_count, try_pair};
-use jackioh_server::app::{now_ms, App, ROUTES};
-use jackioh_server::config::{rating_window, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
+use jackioh_server::app::{App, ROUTES, now_ms};
+use jackioh_server::config::{MAX_SAVED_DECKS, MAX_SAVED_TRIOS, rating_window};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, StoreError};
 
@@ -127,29 +127,45 @@ fn deck_size() -> usize {
 /// The catalog's playable ids (no tokens), in catalog order.
 fn pool() -> Vec<String> {
     jackioh_cards::register_all();
-    jackioh_cards::CATALOG.values().filter(|def| !def.token).map(|def| def.id.clone()).collect()
+    jackioh_cards::CATALOG
+        .values()
+        .filter(|def| !def.token)
+        .map(|def| def.id.clone())
+        .collect()
 }
 
 /// The playable ids, sliced into three disjoint legal decks.
 fn decks_from() -> [Vec<String>; 3] {
     let pool = pool();
     let size = deck_size();
-    [pool[..size].to_vec(), pool[size..size * 2].to_vec(), pool[size * 2..size * 3].to_vec()]
+    [
+        pool[..size].to_vec(),
+        pool[size..size * 2].to_vec(),
+        pool[size * 2..size * 3].to_vec(),
+    ]
 }
 
 /// An active profile with a token that verifies as it, owning every card (R111).
 async fn active_profile(app: &App, id: &str, rating: f64) -> String {
     let user_id = format!("user-{id}");
-    fake(app).await.seed_profile(json!({ "id": id, "userId": user_id, "status": "active", "rating": rating }));
-    grant_entire_catalog(app, id, None).await.expect("the launch grant");
+    fake(app)
+        .await
+        .seed_profile(json!({ "id": id, "userId": user_id, "status": "active", "rating": rating }));
+    grant_entire_catalog(app, id, None)
+        .await
+        .expect("the launch grant");
     add_user(app, &user_id, &format!("{id}@example.test"), true)
 }
 
 /// A pending profile with a token that verifies as it (§9.4).
 async fn pending_profile(app: &App, id: &str) -> String {
     let user_id = format!("user-{id}");
-    fake(app).await.seed_profile(json!({ "id": id, "userId": user_id, "status": "pending" }));
-    grant_entire_catalog(app, id, None).await.expect("the launch grant");
+    fake(app)
+        .await
+        .seed_profile(json!({ "id": id, "userId": user_id, "status": "pending" }));
+    grant_entire_catalog(app, id, None)
+        .await
+        .expect("the launch grant");
     add_user(app, &user_id, &format!("{id}@example.test"), true)
 }
 
@@ -191,7 +207,12 @@ async fn save_deck_for(app: &App, profile_id: &str, cards: &[String], name: &str
 }
 
 /// Saves a trio for the profile over the given decks (or three fresh ones) and returns its id.
-async fn save_trio_for(app: &App, profile_id: &str, deck_ids: Option<[Option<String>; 3]>, name: &str) -> String {
+async fn save_trio_for(
+    app: &App,
+    profile_id: &str,
+    deck_ids: Option<[Option<String>; 3]>,
+    name: &str,
+) -> String {
     let slots = match deck_ids {
         Some(slots) => slots,
         None => {
@@ -229,19 +250,30 @@ async fn open_count(app: &App) -> i64 {
 }
 
 async fn ticket(app: &App, id: &str) -> Value {
-    q!(app, tickets_get(id)).map(|row| to_json(&row)).unwrap_or(Value::Null)
+    q!(app, tickets_get(id))
+        .map(|row| to_json(&row))
+        .unwrap_or(Value::Null)
 }
 
 async fn tickets_table(app: &App) -> Vec<Value> {
-    to_json(&fake(app).await.tables.tickets).as_array().cloned().unwrap_or_default()
+    to_json(&fake(app).await.tables.tickets)
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
 }
 
 async fn matches_table(app: &App) -> Vec<Value> {
-    to_json(&fake(app).await.tables.matches).as_array().cloned().unwrap_or_default()
+    to_json(&fake(app).await.tables.matches)
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
 }
 
 async fn series_table(app: &App) -> Vec<Value> {
-    to_json(&fake(app).await.tables.series).as_array().cloned().unwrap_or_default()
+    to_json(&fake(app).await.tables.series)
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
 }
 
 async fn in_match_of(app: &App, profile_id: &str) -> Value {
@@ -257,8 +289,12 @@ fn nullable(row: &Value, key: &str) -> Value {
 
 /// The deck the started match gave this profile's seat (TS read the match directory's `started`).
 async fn seat_deck(app: &App, match_id: &str, profile_id: &str) -> Value {
-    let row = q!(app, matches_get(match_id)).map(|row| to_json(&row)).unwrap_or(Value::Null);
-    let seat = row["players"].as_array().and_then(|players| players.iter().position(|id| id == profile_id));
+    let row = q!(app, matches_get(match_id))
+        .map(|row| to_json(&row))
+        .unwrap_or(Value::Null);
+    let seat = row["players"]
+        .as_array()
+        .and_then(|players| players.iter().position(|id| id == profile_id));
     match seat {
         Some(seat) => row["decks"][seat].clone(),
         None => Value::Null,
@@ -282,8 +318,16 @@ async fn seed_ticket(app: &App, input: SeedTicket<'_>) -> Value {
         .await
         .seed_profile(json!({ "id": input.profile_id, "status": "active", "rating": input.rating }));
     let [deck, ..] = decks_from();
-    let deck = if input.mode == "bo1" { json!(deck) } else { json!([]) };
-    let trio = if input.mode == "bo3" { trio_named(input.profile_id) } else { Value::Null };
+    let deck = if input.mode == "bo1" {
+        json!(deck)
+    } else {
+        json!([])
+    };
+    let trio = if input.mode == "bo3" {
+        trio_named(input.profile_id)
+    } else {
+        Value::Null
+    };
     let ticket = json!({
         "id": input.id,
         "profileId": input.profile_id,
@@ -309,7 +353,11 @@ fn trio_named(owner: &str) -> Value {
 
 /// The two profile ids of every match the sweeps created, in seat order.
 async fn paired_profiles(app: &App) -> Vec<Value> {
-    matches_table(app).await.iter().map(|row| row["players"].clone()).collect()
+    matches_table(app)
+        .await
+        .iter()
+        .map(|row| row["players"].clone())
+        .collect()
 }
 
 /// §9.5's mutual-window test, spelled out: the gap has to sit inside *both* windows.
@@ -354,11 +402,16 @@ async fn save(app: &Arc<App>, token: &str, deck_id: &str, cards: &[String], port
     if let Some(portrait) = portrait {
         body["portrait"] = json!(portrait);
     }
-    request(app, "PUT", &format!("/api/decks/{deck_id}"), token, Some(body)).await.0
+    request(app, "PUT", &format!("/api/decks/{deck_id}"), token, Some(body))
+        .await
+        .0
 }
 
 /// The store's call log and a fault to raise in it, as TS's `onCall` gave both.
-fn record_calls(app_data: &mut FakeData, fail: impl Fn(&[String], &str) -> bool + Send + Sync + 'static) -> Arc<StdMutex<Vec<String>>> {
+fn record_calls(
+    app_data: &mut FakeData,
+    fail: impl Fn(&[String], &str) -> bool + Send + Sync + 'static,
+) -> Arc<StdMutex<Vec<String>>> {
     let calls: Arc<StdMutex<Vec<String>>> = Arc::default();
     let seen = Arc::clone(&calls);
     app_data.on_call = Some(Arc::new(move |method: &str| {
@@ -454,7 +507,13 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
         // …and `near` is the better rating match by a wide margin, which is what it must not win on.
         assert!((oldest.0 - near.0).abs() < (oldest.0 - mid.0).abs());
 
-        let t = |id, profile_id, (rating, waited_ms): (i64, i64)| SeedTicket { id, profile_id, rating, waited_ms, mode: "bo1" };
+        let t = |id, profile_id, (rating, waited_ms): (i64, i64)| SeedTicket {
+            id,
+            profile_id,
+            rating,
+            waited_ms,
+            mode: "bo1",
+        };
         seed_ticket(&app, t("t-oldest", "oldest", oldest)).await;
         seed_ticket(&app, t("t-mid", "mid", mid)).await;
         seed_ticket(&app, t("t-near", "near", near)).await;
@@ -477,17 +536,33 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
     async fn r166_pairs_the_oldest_ticket_first_when_two_pairs_are_available_in_one_sweep() {
         // Four tickets, all mutually in window, so the only question is the order the sweep works in.
         let app = test_app().await;
-        for (id, profile_id, rating, waited_ms) in
-            [("t-1", "first", 1000, 40_000), ("t-2", "second", 1010, 30_000), ("t-3", "third", 1020, 20_000), ("t-4", "fourth", 1030, 10_000)]
-        {
-            seed_ticket(&app, SeedTicket { id, profile_id, rating, waited_ms, mode: "bo1" }).await;
+        for (id, profile_id, rating, waited_ms) in [
+            ("t-1", "first", 1000, 40_000),
+            ("t-2", "second", 1010, 30_000),
+            ("t-3", "third", 1020, 20_000),
+            ("t-4", "fourth", 1030, 10_000),
+        ] {
+            seed_ticket(
+                &app,
+                SeedTicket {
+                    id,
+                    profile_id,
+                    rating,
+                    waited_ms,
+                    mode: "bo1",
+                },
+            )
+            .await;
         }
 
         let made = try_pair(&app).await.expect("a sweep");
 
         assert_eq!(made, 2);
         // The oldest pair is made first, and each ticket takes the oldest opponent left to it.
-        assert_eq!(paired_profiles(&app).await, vec![json!(["first", "second"]), json!(["third", "fourth"])]);
+        assert_eq!(
+            paired_profiles(&app).await,
+            vec![json!(["first", "second"]), json!(["third", "fourth"])]
+        );
         assert_eq!(open_count(&app).await, 0);
     }
 
@@ -504,7 +579,13 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
         expect_qualifies(oldest, zebra);
         expect_qualifies(oldest, alpha);
 
-        let t = |id, profile_id, (rating, waited_ms): (i64, i64)| SeedTicket { id, profile_id, rating, waited_ms, mode: "bo1" };
+        let t = |id, profile_id, (rating, waited_ms): (i64, i64)| SeedTicket {
+            id,
+            profile_id,
+            rating,
+            waited_ms,
+            mode: "bo1",
+        };
         seed_ticket(&app, t("t-oldest", "oldest", oldest)).await;
         seed_ticket(&app, t("t-zebra", "zebra", zebra)).await;
         seed_ticket(&app, t("t-alpha", "alpha", alpha)).await;
@@ -527,8 +608,28 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
         // The control on "oldest first": it never drags in someone the window excludes. Both have
         // waited under 10 s, so both windows are ±100 and a gap of 300 is outside them.
         let app = test_app().await;
-        seed_ticket(&app, SeedTicket { id: "t-low", profile_id: "low", rating: 1000, waited_ms: 1_000, mode: "bo1" }).await;
-        seed_ticket(&app, SeedTicket { id: "t-high", profile_id: "high", rating: 1300, waited_ms: 500, mode: "bo1" }).await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-low",
+                profile_id: "low",
+                rating: 1000,
+                waited_ms: 1_000,
+                mode: "bo1",
+            },
+        )
+        .await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-high",
+                profile_id: "high",
+                rating: 1300,
+                waited_ms: 500,
+                mode: "bo1",
+            },
+        )
+        .await;
 
         assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
         assert!(matches_table(&app).await.is_empty());
@@ -586,7 +687,10 @@ mod r167_r108_r143_how_a_player_leaves_the_queue {
 
         // PREMISE, again: cancel the real thing first, so "cancelled: false" below means "already
         // gone" rather than "nothing was ever queued".
-        let ticket_id = enqueue(&app, &token, &deck_id).await.1["ticketId"].as_str().unwrap_or("").to_string();
+        let ticket_id = enqueue(&app, &token, &deck_id).await.1["ticketId"]
+            .as_str()
+            .unwrap_or("")
+            .to_string();
         assert_eq!(cancel(&app, &token).await.1["cancelled"], true);
 
         let (status, second) = cancel(&app, &token).await;
@@ -607,7 +711,10 @@ mod r167_r108_r143_how_a_player_leaves_the_queue {
         let deck_one = save_deck_for(&app, "p-one", &first_deck, "p-one's deck").await;
         let deck_two = save_deck_for(&app, "p-two", &second_deck, "p-two's deck").await;
 
-        let first_ticket = enqueue(&app, &one, &deck_one).await.1["ticketId"].as_str().unwrap_or("").to_string();
+        let first_ticket = enqueue(&app, &one, &deck_one).await.1["ticketId"]
+            .as_str()
+            .unwrap_or("")
+            .to_string();
         let (_, paired) = enqueue(&app, &two, &deck_two).await;
 
         // PREMISE: the race R167 is about really happened — the sweeper on enqueue paired them.
@@ -678,7 +785,10 @@ mod section_94s_gate_on_the_queue {
             .collect();
         // `src/api/queue.rs` says the gate "is §9.4's gate ... so a pending account gets 403 here
         // without this handler saying anything about it". That is only true while these say `Active`.
-        assert_eq!(declared, vec![("POST".to_string(), true), ("DELETE".to_string(), true)]);
+        assert_eq!(
+            declared,
+            vec![("POST".to_string(), true), ("DELETE".to_string(), true)]
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -759,7 +869,9 @@ mod section_98_decks_are_frozen_into_the_queue_ticket {
         assert_eq!(save(&app, &swapper, &deck_id, &substitute, None).await, 200);
         // PREMISE: the save really landed. A rejected save would make every assertion below pass for
         // the wrong reason — there would be nothing to leak into the match.
-        let saved = q!(app, decks_get(&deck_id)).map(|deck| to_json(&deck)).unwrap_or(Value::Null);
+        let saved = q!(app, decks_get(&deck_id))
+            .map(|deck| to_json(&deck))
+            .unwrap_or(Value::Null);
         assert_eq!(saved["cards"], json!(substitute));
         // …and the ticket is untouched by it.
         assert_eq!(ticket(&app, &ticket_id).await["deck"], json!(frozen));
@@ -772,8 +884,14 @@ mod section_98_decks_are_frozen_into_the_queue_ticket {
         // §9.4, §9.5: the match runs the deck the ticket froze, not the one the player is holding now.
         assert_eq!(seat_deck(&app, &match_id, "swapper").await, json!(frozen));
         // The substitute deck reached neither the match row nor anything stored with it.
-        let row = q!(app, matches_get(&match_id)).map(|row| to_json(&row)).unwrap_or(Value::Null);
-        assert!(!row["decks"].to_string().contains(&format!("\"{}\"", substitute[0])));
+        let row = q!(app, matches_get(&match_id))
+            .map(|row| to_json(&row))
+            .unwrap_or(Value::Null);
+        assert!(
+            !row["decks"]
+                .to_string()
+                .contains(&format!("\"{}\"", substitute[0]))
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -791,7 +909,10 @@ mod section_98_decks_are_frozen_into_the_queue_ticket {
         assert_eq!(save(&app, &swapper, &deck_id, &substitute, None).await, 200);
 
         let (_, queued) = enqueue_with(&app, &swapper, json!({ "mode": "bo1", "deckId": deck_id })).await;
-        assert_eq!(ticket(&app, queued["ticketId"].as_str().unwrap_or("")).await["deck"], json!(substitute));
+        assert_eq!(
+            ticket(&app, queued["ticketId"].as_str().unwrap_or("")).await["deck"],
+            json!(substitute)
+        );
 
         let (_, paired) = enqueue_with(&app, &rival, json!({ "mode": "bo1", "deckId": rival_deck })).await;
         assert_eq!(paired["status"], "matched");
@@ -835,9 +956,14 @@ mod r257_queue_modes {
         assert_eq!(second["mode"], "bo1");
         assert_eq!(second["seriesId"], Value::Null);
         let match_id = second["matchId"].as_str().expect("a match id").to_string();
-        assert_eq!(matches_table(&app).await.first().map(|row| row["id"].clone()), Some(json!(match_id)));
+        assert_eq!(
+            matches_table(&app).await.first().map(|row| row["id"].clone()),
+            Some(json!(match_id))
+        );
         // R604: a match the queue paired is ranked.
-        let row = q!(app, matches_get(&match_id)).map(|row| to_json(&row)).unwrap_or(Value::Null);
+        let row = q!(app, matches_get(&match_id))
+            .map(|row| to_json(&row))
+            .unwrap_or(Value::Null);
         assert_eq!(row["ranked"], true);
         // R376: the mode its game record is filed under is read off the tickets it was paired from.
         assert_eq!(to_json(&q!(app, matches_mode_of(&match_id))), json!("bo1"));
@@ -855,9 +981,39 @@ mod r257_queue_modes {
         // Same rating, long waits: every window admits every other ticket, so only the mode can stop a
         // pairing.
         let app = test_app().await;
-        seed_ticket(&app, SeedTicket { id: "t-bo1", profile_id: "one", rating: 1000, waited_ms: 90_000, mode: "bo1" }).await;
-        seed_ticket(&app, SeedTicket { id: "t-bo3", profile_id: "three", rating: 1000, waited_ms: 80_000, mode: "bo3" }).await;
-        seed_ticket(&app, SeedTicket { id: "t-rnd", profile_id: "random", rating: 1000, waited_ms: 70_000, mode: "random" }).await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-bo1",
+                profile_id: "one",
+                rating: 1000,
+                waited_ms: 90_000,
+                mode: "bo1",
+            },
+        )
+        .await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-bo3",
+                profile_id: "three",
+                rating: 1000,
+                waited_ms: 80_000,
+                mode: "bo3",
+            },
+        )
+        .await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-rnd",
+                profile_id: "random",
+                rating: 1000,
+                waited_ms: 70_000,
+                mode: "random",
+            },
+        )
+        .await;
 
         assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
         assert!(matches_table(&app).await.is_empty());
@@ -866,8 +1022,17 @@ mod r257_queue_modes {
 
         // The control: a second All Random ticket pairs with the first one, and only with it — even
         // though the Best-of-1 and Best-of-3 tickets are older.
-        seed_ticket(&app, SeedTicket { id: "t-rnd-2", profile_id: "random-2", rating: 1000, waited_ms: 10_000, mode: "random" })
-            .await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-rnd-2",
+                profile_id: "random-2",
+                rating: 1000,
+                waited_ms: 10_000,
+                mode: "random",
+            },
+        )
+        .await;
         assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
         assert_eq!(paired_profiles(&app).await, vec![json!(["random", "random-2"])]);
         assert_eq!(ticket(&app, "t-bo1").await["status"], "open");
@@ -877,15 +1042,48 @@ mod r257_queue_modes {
     #[tokio::test(start_paused = true)]
     async fn r257_reports_the_queue_population_in_total_and_per_mode() {
         let app = test_app().await;
-        seed_ticket(&app, SeedTicket { id: "t-a", profile_id: "a", rating: 1000, waited_ms: 0, mode: "bo1" }).await;
-        seed_ticket(&app, SeedTicket { id: "t-b", profile_id: "b", rating: 1500, waited_ms: 0, mode: "bo3" }).await;
-        seed_ticket(&app, SeedTicket { id: "t-c", profile_id: "c", rating: 2000, waited_ms: 0, mode: "bo3" }).await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-a",
+                profile_id: "a",
+                rating: 1000,
+                waited_ms: 0,
+                mode: "bo1",
+            },
+        )
+        .await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-b",
+                profile_id: "b",
+                rating: 1500,
+                waited_ms: 0,
+                mode: "bo3",
+            },
+        )
+        .await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-c",
+                profile_id: "c",
+                rating: 2000,
+                waited_ms: 0,
+                mode: "bo3",
+            },
+        )
+        .await;
         let token = active_profile(&app, "watcher", 1000.0).await;
 
         let (status, body) = request(&app, "GET", "/api/queue/population", &token, None).await;
 
         assert_eq!(status, 200);
-        assert_eq!(body, json!({ "population": 3, "byMode": { "bo1": 1, "bo3": 2, "random": 0 } }));
+        assert_eq!(
+            body,
+            json!({ "population": 3, "byMode": { "bo1": 1, "bo3": 2, "random": 0 } })
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -897,8 +1095,12 @@ mod r257_queue_modes {
         let older_trio = save_trio_for(&app, "older", None, "older's trio").await;
         let younger_trio = save_trio_for(&app, "younger", None, "younger's trio").await;
 
-        let (_, first) =
-            enqueue_with(&app, &older, json!({ "mode": "bo3", "trioId": older_trio, "seed": "series-seed" })).await;
+        let (_, first) = enqueue_with(
+            &app,
+            &older,
+            json!({ "mode": "bo3", "trioId": older_trio, "seed": "series-seed" }),
+        )
+        .await;
         assert_eq!(first["status"], "open");
         assert_eq!(first["mode"], "bo3");
         assert_eq!(first["seriesId"], Value::Null);
@@ -910,10 +1112,14 @@ mod r257_queue_modes {
             .as_array()
             .map(|decks| decks.iter().map(|deck| deck["name"].clone()).collect())
             .unwrap_or_default();
-        assert_eq!(names, vec![json!("older one"), json!("older two"), json!("older three")]);
+        assert_eq!(
+            names,
+            vec![json!("older one"), json!("older two"), json!("older three")]
+        );
 
         tokio::time::advance(Duration::from_millis(1_000)).await;
-        let (_, second) = enqueue_with(&app, &younger, json!({ "mode": "bo3", "trioId": younger_trio })).await;
+        let (_, second) =
+            enqueue_with(&app, &younger, json!({ "mode": "bo3", "trioId": younger_trio })).await;
 
         let series = series_table(&app).await;
         let series = series.first().cloned().expect("a series");
@@ -931,14 +1137,25 @@ mod r257_queue_modes {
         assert_eq!(series["sides"][0]["trio"], frozen["trio"]);
         assert_eq!(series["sides"][1]["trio"]["name"], "younger's trio");
         // R263: game 1's match id is the one the claim reserved on both tickets.
-        assert_eq!(series["nextMatchId"], ticket(&app, &first_ticket).await["matchId"]);
+        assert_eq!(
+            series["nextMatchId"],
+            ticket(&app, &first_ticket).await["matchId"]
+        );
         // R143: the seed the older ticket brought is the series' seed base.
         assert_eq!(series["seedBase"], "series-seed");
         assert_eq!(e2e_seed_count(), 0);
         // Nobody is in a match yet: the series opens on its pick phase.
-        assert!(to_json(&q!(app, matches_live())).as_array().is_some_and(Vec::is_empty));
+        assert!(
+            to_json(&q!(app, matches_live()))
+                .as_array()
+                .is_some_and(Vec::is_empty)
+        );
         let profiles = to_json(&fake(&app).await.tables.profiles);
-        assert!(profiles.as_array().is_some_and(|rows| rows.iter().all(|row| nullable(row, "inMatchId").is_null())));
+        assert!(
+            profiles
+                .as_array()
+                .is_some_and(|rows| rows.iter().all(|row| nullable(row, "inMatchId").is_null()))
+        );
     }
 }
 
@@ -956,13 +1173,20 @@ mod r258_all_random {
         let two = active_profile(&app, "rng-two", 1000.0).await;
         // PREMISE: neither player has saved anything; a Best-of-1 enqueue would be refused (R165).
         for id in ["rng-one", "rng-two"] {
-            assert!(to_json(&q!(app, decks_list(id))).as_array().is_some_and(Vec::is_empty));
+            assert!(
+                to_json(&q!(app, decks_list(id)))
+                    .as_array()
+                    .is_some_and(Vec::is_empty)
+            );
         }
 
         let (_, first) = enqueue_with(&app, &one, json!({ "mode": "random" })).await;
         assert_eq!(first["status"], "open");
         assert_eq!(first["mode"], "random");
-        assert_eq!(ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["deck"], json!([]));
+        assert_eq!(
+            ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["deck"],
+            json!([])
+        );
         // The older ticket is p1 (R166: oldest first, ties on the ticket id). TS's fake ids rose with
         // each enqueue, so its tie went to the first; the server's ids are random, so the first
         // enqueue is made older by a millisecond of the paused clock instead.
@@ -974,7 +1198,9 @@ mod r258_all_random {
         assert_eq!(second["seriesId"], Value::Null);
 
         let match_id = second["matchId"].as_str().expect("a match id").to_string();
-        let row = q!(app, matches_get(&match_id)).map(|row| to_json(&row)).expect("the match row");
+        let row = q!(app, matches_get(&match_id))
+            .map(|row| to_json(&row))
+            .expect("the match row");
         // R604: a match the queue paired is ranked — All Random included.
         assert_eq!(row["ranked"], true);
         assert_eq!(to_json(&q!(app, matches_mode_of(&match_id))), json!("random"));
@@ -1004,10 +1230,18 @@ mod r258_all_random {
         let (_, paired) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
         let match_id = paired["matchId"].as_str().expect("a match id").to_string();
 
-        let row = q!(app, matches_get(&match_id)).map(|row| to_json(&row)).expect("the match row");
+        let row = q!(app, matches_get(&match_id))
+            .map(|row| to_json(&row))
+            .expect("the match row");
         assert_eq!(row["seed"], "spec-seed");
-        assert_eq!(seat_deck(&app, &match_id, "pin-one").await, json!(deal_random_deck("spec-seed:p1-deck")));
-        assert_eq!(seat_deck(&app, &match_id, "pin-two").await, json!(deal_random_deck("spec-seed:p2-deck")));
+        assert_eq!(
+            seat_deck(&app, &match_id, "pin-one").await,
+            json!(deal_random_deck("spec-seed:p1-deck"))
+        );
+        assert_eq!(
+            seat_deck(&app, &match_id, "pin-two").await,
+            json!(deal_random_deck("spec-seed:p2-deck"))
+        );
     }
 }
 
@@ -1034,8 +1268,19 @@ mod a_paired_match_whose_start_fails {
 
         // The claim won, the in-match transaction committed, and then the start failed — the pair
         // is lost either way; what must NOT be lost is the players.
-        assert_eq!(enqueue_with(&app, &two, json!({ "mode": "bo1", "deckId": deck_b })).await.0, 500);
-        assert!(calls.lock().expect("calls").iter().any(|method| method == "matches.discardOpen"));
+        assert_eq!(
+            enqueue_with(&app, &two, json!({ "mode": "bo1", "deckId": deck_b }))
+                .await
+                .0,
+            500
+        );
+        assert!(
+            calls
+                .lock()
+                .expect("calls")
+                .iter()
+                .any(|method| method == "matches.discardOpen")
+        );
         for id in ["starter-a", "starter-b"] {
             assert_eq!(in_match_of(&app, id).await, Value::Null);
         }
@@ -1066,10 +1311,21 @@ mod a_paired_match_whose_start_fails {
             seen.last().is_some_and(|previous| previous == "series.create")
         });
 
-        assert_eq!(enqueue_with(&app, &two, json!({ "mode": "bo3", "trioId": trio_b })).await.0, 500);
+        assert_eq!(
+            enqueue_with(&app, &two, json!({ "mode": "bo3", "trioId": trio_b }))
+                .await
+                .0,
+            500
+        );
         let seen = calls.lock().expect("calls").clone();
-        assert!(seen.iter().any(|method| method == "series.create"), "calls: {seen:?}");
-        assert!(seen.iter().any(|method| method == "matches.discardOpen"), "calls: {seen:?}");
+        assert!(
+            seen.iter().any(|method| method == "series.create"),
+            "calls: {seen:?}"
+        );
+        assert!(
+            seen.iter().any(|method| method == "matches.discardOpen"),
+            "calls: {seen:?}"
+        );
         // The transaction's half: nothing of the series remains, and no in-match flag was ever set.
         fake(&app).await.on_call = None;
         assert!(series_table(&app).await.is_empty());
@@ -1103,7 +1359,10 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         let rival_deck_id = uuid();
         let [mine, theirs, _] = decks_from();
         assert_eq!(save(&app, &swapper, &deck_id, &mine, Some("gary")).await, 200);
-        assert_eq!(save(&app, &rival, &rival_deck_id, &theirs, Some("shredder")).await, 200);
+        assert_eq!(
+            save(&app, &rival, &rival_deck_id, &theirs, Some("shredder")).await,
+            200
+        );
 
         // 1. Queue with the deck: its portrait freezes into the ticket here and nowhere else.
         let (_, queued) = enqueue_with(&app, &swapper, json!({ "mode": "bo1", "deckId": deck_id })).await;
@@ -1114,7 +1373,9 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         // 2. The re-save, while the ticket is still open. It lands — and the ticket does not move.
         assert_eq!(save(&app, &swapper, &deck_id, &mine, Some("timmy")).await, 200);
         // PREMISE: the new portrait really is what the deck holds now, so there is something to leak.
-        let deck = q!(app, decks_get(&deck_id)).map(|deck| to_json(&deck)).unwrap_or(Value::Null);
+        let deck = q!(app, decks_get(&deck_id))
+            .map(|deck| to_json(&deck))
+            .unwrap_or(Value::Null);
         assert_eq!(deck["portrait"], "timmy");
         assert_eq!(ticket(&app, &ticket_id).await["portrait"], "gary");
         // The older ticket is p1 (R166: oldest first, ties on the ticket id). TS's fake ids rose with
@@ -1147,7 +1408,11 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         let (_, paired) = enqueue_with(&app, &two, json!({ "mode": "bo1", "deckId": b })).await;
         assert_eq!(paired["status"], "matched");
 
-        let portraits: Vec<Value> = tickets_table(&app).await.iter().map(|row| nullable(row, "portrait")).collect();
+        let portraits: Vec<Value> = tickets_table(&app)
+            .await
+            .iter()
+            .map(|row| nullable(row, "portrait"))
+            .collect();
         assert_eq!(portraits, vec![Value::Null, Value::Null]);
         let row = matches_table(&app).await.last().cloned().expect("the match row");
         assert_eq!(row["portraits"], json!([DEFAULT_PORTRAIT, DEFAULT_PORTRAIT]));
@@ -1169,7 +1434,11 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         assert_eq!(paired["status"], "matched");
 
         // An All Random ticket freezes no deck and no portrait: both are the match's to deal.
-        let portraits: Vec<Value> = tickets_table(&app).await.iter().map(|row| nullable(row, "portrait")).collect();
+        let portraits: Vec<Value> = tickets_table(&app)
+            .await
+            .iter()
+            .map(|row| nullable(row, "portrait"))
+            .collect();
         assert_eq!(portraits, vec![Value::Null, Value::Null]);
 
         let row = matches_table(&app).await.last().cloned().expect("the match row");
@@ -1200,14 +1469,20 @@ mod r264_a_series_that_is_not_over_holds_its_players_out_of_the_queue {
         active_profile(&app, "opponent", 1000.0).await;
         let [deck, ..] = decks_from();
         let deck_id = save_deck_for(&app, "mid-series", &deck, "mid-series's deck").await;
-        q!(app, series_create(&from(series_with(&app, "mid-series", "opponent", "picking"))));
+        q!(
+            app,
+            series_create(&from(series_with(&app, "mid-series", "opponent", "picking")))
+        );
 
         let (status, body) = enqueue(&app, &token, &deck_id).await;
 
         assert_eq!(status, 409);
         assert_eq!(body["error"]["code"], "already_in_match");
         assert_eq!(body["error"]["message"], "Finish your Conquest series first.");
-        assert_eq!(body["error"]["details"], json!({ "seriesId": "series-of-mid-series" }));
+        assert_eq!(
+            body["error"]["details"],
+            json!({ "seriesId": "series-of-mid-series" })
+        );
         assert!(tickets_table(&app).await.is_empty());
 
         // The control: once the series is over the same request queues.
@@ -1220,11 +1495,34 @@ mod r264_a_series_that_is_not_over_holds_its_players_out_of_the_queue {
     #[tokio::test(start_paused = true)]
     async fn r264_never_pairs_a_ticket_whose_owner_entered_a_series_after_queueing() {
         let app = test_app().await;
-        seed_ticket(&app, SeedTicket { id: "t-left", profile_id: "left", rating: 1000, waited_ms: 5_000, mode: "bo1" }).await;
-        seed_ticket(&app, SeedTicket { id: "t-right", profile_id: "right", rating: 1000, waited_ms: 4_000, mode: "bo1" }).await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-left",
+                profile_id: "left",
+                rating: 1000,
+                waited_ms: 5_000,
+                mode: "bo1",
+            },
+        )
+        .await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-right",
+                profile_id: "right",
+                rating: 1000,
+                waited_ms: 4_000,
+                mode: "bo1",
+            },
+        )
+        .await;
         active_profile(&app, "room-rival", 1000.0).await;
         // `left` joined a Best-of-3 room while the ticket sat open.
-        q!(app, series_create(&from(series_with(&app, "left", "room-rival", "picking"))));
+        q!(
+            app,
+            series_create(&from(series_with(&app, "left", "room-rival", "picking")))
+        );
 
         assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
         assert_eq!(ticket(&app, "t-right").await["status"], "open");
@@ -1255,7 +1553,12 @@ mod r253_what_may_be_queued_through_the_real_validator {
     async fn real_wiring() -> Real {
         let app = test_app().await;
         let token = active_profile(&app, "real", 1000.0).await;
-        Real { app, token, pool: pool(), size: deck_size() }
+        Real {
+            app,
+            token,
+            pool: pool(),
+            size: deck_size(),
+        }
     }
 
     /// PREMISE: the shared module really refuses this, and first for the rule named.
@@ -1263,9 +1566,19 @@ mod r253_what_may_be_queued_through_the_real_validator {
         let (status, refused) = enqueue_with(&w.app, &w.token, body).await;
         assert_eq!(status, 422, "{refused}");
         assert_eq!(refused["error"]["code"], "loadout_invalid");
-        let details = refused["error"]["details"].as_array().cloned().unwrap_or_default();
-        assert_eq!(details.first().map(|issue| issue["rule"].clone()), Some(json!(rule)), "{refused}");
-        assert_eq!(Some(&refused["error"]["message"]), details.first().map(|issue| &issue["message"]));
+        let details = refused["error"]["details"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(
+            details.first().map(|issue| issue["rule"].clone()),
+            Some(json!(rule)),
+            "{refused}"
+        );
+        assert_eq!(
+            Some(&refused["error"]["message"]),
+            details.first().map(|issue| &issue["message"])
+        );
         assert!(tickets_table(&w.app).await.is_empty());
         refused
     }
@@ -1277,7 +1590,10 @@ mod r253_what_may_be_queued_through_the_real_validator {
         let deck_id = save_deck_for(&w.app, "real", &deck, "Midrange").await;
         let (status, _) = enqueue_with(&w.app, &w.token, json!({ "mode": "bo1", "deckId": deck_id })).await;
         assert_eq!(status, 200);
-        assert_eq!(tickets_table(&w.app).await.first().map(|row| row["deck"].clone()), Some(json!(deck)));
+        assert_eq!(
+            tickets_table(&w.app).await.first().map(|row| row["deck"].clone()),
+            Some(json!(deck))
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -1288,13 +1604,22 @@ mod r253_what_may_be_queued_through_the_real_validator {
         let deck_id = save_deck_for(&w.app, "real", &short, "Midrange").await;
 
         let refused = expect_refused(&w, json!({ "mode": "bo1", "deckId": deck_id }), "L2").await;
-        assert!(refused["error"]["message"].as_str().unwrap_or("").contains("Midrange"));
+        assert!(
+            refused["error"]["message"]
+                .as_str()
+                .unwrap_or("")
+                .contains("Midrange")
+        );
     }
 
     #[tokio::test(start_paused = true)]
     async fn r253_refuses_a_best_of_1_deck_holding_a_token_l3_and_one_the_collection_no_longer_covers_l5() {
         let w = real_wiring().await;
-        let token = jackioh_cards::CATALOG.values().find(|def| def.token).map(|def| def.id.clone()).unwrap_or_default();
+        let token = jackioh_cards::CATALOG
+            .values()
+            .find(|def| def.token)
+            .map(|def| def.id.clone())
+            .unwrap_or_default();
         assert!(!token.is_empty());
         let mut with_token = vec![token];
         with_token.extend(w.pool[1..w.size].iter().cloned());
@@ -1305,7 +1630,12 @@ mod r253_what_may_be_queued_through_the_real_validator {
         let legal = save_deck_for(&w.app, "real", &w.pool[..w.size], "Legal").await;
         fake(&w.app).await.tables.collection.clear();
         let refused = expect_refused(&w, json!({ "mode": "bo1", "deckId": legal }), "L5").await;
-        assert!(refused["error"]["message"].as_str().unwrap_or("").contains("Legal"));
+        assert!(
+            refused["error"]["message"]
+                .as_str()
+                .unwrap_or("")
+                .contains("Legal")
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -1352,7 +1682,9 @@ mod r253_what_may_be_queued_through_the_real_validator {
     async fn r253_queues_a_legal_trio_of_real_cards_freezing_its_three_decks_with_their_names() {
         let w = real_wiring().await;
         let size = w.size;
-        let decks: Vec<Vec<String>> = (0..3).map(|n| w.pool[size * n..size * (n + 1)].to_vec()).collect();
+        let decks: Vec<Vec<String>> = (0..3)
+            .map(|n| w.pool[size * n..size * (n + 1)].to_vec())
+            .collect();
         let ids = [
             Some(save_deck_for(&w.app, "real", &decks[0], "Aggro").await),
             Some(save_deck_for(&w.app, "real", &decks[1], "Control").await),
@@ -1363,7 +1695,11 @@ mod r253_what_may_be_queued_through_the_real_validator {
         let (status, _) = enqueue_with(&w.app, &w.token, json!({ "mode": "bo3", "trioId": trio_id })).await;
 
         assert_eq!(status, 200);
-        let trio = tickets_table(&w.app).await.first().map(|row| row["trio"].clone()).unwrap_or(Value::Null);
+        let trio = tickets_table(&w.app)
+            .await
+            .first()
+            .map(|row| row["trio"].clone())
+            .unwrap_or(Value::Null);
         assert_eq!(trio["name"], "Main");
         for (n, name) in ["Aggro", "Control", "Tempo"].iter().enumerate() {
             let deck = &trio["decks"][n];

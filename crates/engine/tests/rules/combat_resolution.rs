@@ -25,11 +25,18 @@ fn on_unit(instance: &CardInstance) -> AttackTarget {
 }
 
 fn graveyard_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].graveyard.iter().map(|card| card.id.clone()).collect()
+    state.players[player]
+        .graveyard
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 fn field_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    active_units_of(state, player).iter().map(|unit| unit.id.clone()).collect()
+    active_units_of(state, player)
+        .iter()
+        .map(|unit| unit.id.clone())
+        .collect()
 }
 
 /// The refusal a check gives, or `None` when it allows (TS `string | null`, `{ error?: string }`).
@@ -119,7 +126,12 @@ mod combat_resolution_m2_t4 {
     #[test]
     fn a_first_strike_attacker_survives_a_defender_it_kills_4_3() {
         let mut state = board("first-strike-kill");
-        let attacker = put(&mut state, &first_striker.id, slot(P1, Row::Units, 1), Default::default()); // 4/4 First Strike
+        let attacker = put(
+            &mut state,
+            &first_striker.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        ); // 4/4 First Strike
         let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default()); // 3/3
 
         let (refused, events) = run(&mut state, |sink| declare(sink, &attacker.id, Some(&defender.id)));
@@ -139,8 +151,18 @@ mod combat_resolution_m2_t4 {
     #[test]
     fn two_first_strikers_strike_simultaneously_in_step_1_and_both_die_4_3() {
         let mut state = board("first-strike-trade");
-        let attacker = put(&mut state, &first_striker.id, slot(P1, Row::Units, 1), Default::default());
-        let defender = put(&mut state, &first_striker.id, slot(P2, Row::Units, 1), Default::default());
+        let attacker = put(
+            &mut state,
+            &first_striker.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        let defender = put(
+            &mut state,
+            &first_striker.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
 
         let (refused, events) = run(&mut state, |sink| declare(sink, &attacker.id, Some(&defender.id)));
         assert_eq!(refused, None);
@@ -163,7 +185,12 @@ mod combat_resolution_m2_t4 {
     fn a_defender_in_defense_position_strikes_back_at_full_attack_4_3() {
         let mut state = board("defense-strikes-back");
         let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default()); // 3/3
-        let defender = put(&mut state, &big_body.id, slot(P2, Row::Units, 1), Default::default()); // 5/10
+        let defender = put(
+            &mut state,
+            &big_body.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        ); // 5/10
         let (switched, _) = run(&mut state, |sink| {
             let now = live(sink.state, &defender.id);
             refusal(switch_position(
@@ -200,7 +227,12 @@ mod combat_resolution_m2_t4 {
     #[test]
     fn a_hero_never_strikes_back_4_3() {
         let mut state = board("hero-target");
-        let attacker = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), Default::default()); // 5/10
+        let attacker = put(
+            &mut state,
+            &big_body.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        ); // 5/10
         let enemy_hero = state.players.p2.hero.health;
         let own_hero = state.players.p1.hero.health;
 
@@ -209,7 +241,10 @@ mod combat_resolution_m2_t4 {
 
         let hits = hits(&events);
         assert_eq!(hits.len(), 1);
-        assert_eq!(hits[0], (Some(attacker.id.clone()), "hero-p2".to_string(), 5, true));
+        assert_eq!(
+            hits[0],
+            (Some(attacker.id.clone()), "hero-p2".to_string(), 5, true)
+        );
 
         assert_eq!(state.players.p2.hero.health, enemy_hero - 5);
         assert_eq!(state.players.p1.hero.health, own_hero);
@@ -253,8 +288,18 @@ mod combat_resolution_m2_t4 {
 #[test]
 fn a_defender_with_first_strike_hits_first_and_a_surviving_attacker_strikes_back_4_3() {
     let mut state = board("defender-first-strike");
-    let attacker = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), Default::default()); // 5/10, no First Strike
-    let defender = put(&mut state, &first_striker.id, slot(P2, Row::Units, 1), Default::default()); // 4/4 First Strike
+    let attacker = put(
+        &mut state,
+        &big_body.id,
+        slot(P1, Row::Units, 1),
+        Default::default(),
+    ); // 5/10, no First Strike
+    let defender = put(
+        &mut state,
+        &first_striker.id,
+        slot(P2, Row::Units, 1),
+        Default::default(),
+    ); // 4/4 First Strike
 
     let (_, events) = run(&mut state, |sink| declare(sink, &attacker.id, Some(&defender.id)));
 
@@ -262,8 +307,14 @@ fn a_defender_with_first_strike_hits_first_and_a_surviving_attacker_strikes_back
     let damage = hits(&events);
     let amounts: Vec<i32> = damage.iter().map(|hit| hit.2).collect();
     assert_eq!(amounts, vec![4, 5]);
-    assert_eq!(damage.first().and_then(|hit| hit.0.clone()), Some(defender.id.clone()));
-    assert_eq!(damage.get(1).and_then(|hit| hit.0.clone()), Some(attacker.id.clone()));
+    assert_eq!(
+        damage.first().and_then(|hit| hit.0.clone()),
+        Some(defender.id.clone())
+    );
+    assert_eq!(
+        damage.get(1).and_then(|hit| hit.0.clone()),
+        Some(attacker.id.clone())
+    );
     assert_eq!(unit_view(&state, by_id(&state, &attacker.id)).health, 6);
     assert_eq!(graveyard_ids(&state, P2), vec![defender.id.clone()]);
 }
@@ -272,7 +323,12 @@ fn a_defender_with_first_strike_hits_first_and_a_surviving_attacker_strikes_back
 fn a_defender_with_first_strike_that_kills_the_attacker_takes_nothing_back_4_3() {
     let mut state = board("defender-first-strike-kill");
     let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default()); // 3/3
-    let defender = put(&mut state, &first_striker.id, slot(P2, Row::Units, 1), Default::default()); // 4/4 First Strike
+    let defender = put(
+        &mut state,
+        &first_striker.id,
+        slot(P2, Row::Units, 1),
+        Default::default(),
+    ); // 4/4 First Strike
 
     let (_, events) = run(&mut state, |sink| declare(sink, &attacker.id, Some(&defender.id)));
 
@@ -295,7 +351,11 @@ mod r53_forced_attacks_m2_t4 {
 
         assert!(is_sick(&state, by_id(&state, &sick.id)));
         assert_eq!(
-            refusal(why_cannot_attack(&state, by_id(&state, &sick.id), &on_unit(by_id(&state, &flame.id)))),
+            refusal(why_cannot_attack(
+                &state,
+                by_id(&state, &sick.id),
+                &on_unit(by_id(&state, &flame.id))
+            )),
             Some("that unit is summoning sick".to_string())
         );
 
@@ -310,13 +370,22 @@ mod r53_forced_attacks_m2_t4 {
 
         // No exertion spent: the unit is still free to act on its own turn (§4.2, R53).
         assert_eq!(by_id(&state, &sick.id).exertion, exertion(false, false));
-        assert!(has_exertion(&state, by_id(&state, &sick.id), ExertionKind::Attack));
+        assert!(has_exertion(
+            &state,
+            by_id(&state, &sick.id),
+            ExertionKind::Attack
+        ));
     }
 
     #[test]
     fn r53_a_forced_attack_ignores_position_sickness_and_the_taunt_rule() {
         let mut state = board("forced-ignores-rules");
-        let guard = put(&mut state, &taunter.id, slot(P1, Row::Units, 1), Default::default()); // 2/5 Taunt
+        let guard = put(
+            &mut state,
+            &taunter.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        ); // 2/5 Taunt
         let flame = put(&mut state, &moths.id, slot(P1, Row::Units, 2), Default::default()); // 1/14
         let defending = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
         let sick = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default());
@@ -365,7 +434,10 @@ mod r53_forced_attacks_m2_t4 {
 
         let declared = attack_declared(&events);
         let attackers: Vec<String> = declared.iter().map(|(attacker, ..)| attacker.clone()).collect();
-        assert_eq!(attackers, vec![defending.id.clone(), sick.id.clone(), blocked.id.clone()]);
+        assert_eq!(
+            attackers,
+            vec![defending.id.clone(), sick.id.clone(), blocked.id.clone()]
+        );
         assert!(declared.iter().all(|(.., forced)| *forced));
 
         // All three struck for their full 3, the Defense-Position one included.
@@ -378,8 +450,18 @@ mod r53_forced_attacks_m2_t4 {
     #[test]
     fn r53_an_ordinary_attack_spends_the_attackers_exertion_and_a_forced_one_does_not() {
         let mut state = board("forced-exertion");
-        let ordinary = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), Default::default()); // 5/10
-        let forced = put(&mut state, &big_body.id, slot(P1, Row::Units, 2), Default::default()); // 5/10
+        let ordinary = put(
+            &mut state,
+            &big_body.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        ); // 5/10
+        let forced = put(
+            &mut state,
+            &big_body.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        ); // 5/10
         let first = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
         let second = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default());
         let third = put(&mut state, &plain.id, slot(P2, Row::Units, 3), Default::default());
@@ -387,7 +469,11 @@ mod r53_forced_attacks_m2_t4 {
         let mut sink = sink_for(&mut state);
         assert_eq!(declare(&mut sink, &ordinary.id, Some(&first.id)), None);
         assert!(by_id(sink.state, &ordinary.id).exertion.attacked);
-        assert!(!has_exertion(sink.state, by_id(sink.state, &ordinary.id), ExertionKind::Attack));
+        assert!(!has_exertion(
+            sink.state,
+            by_id(sink.state, &ordinary.id),
+            ExertionKind::Attack
+        ));
         assert_eq!(
             declare(&mut sink, &ordinary.id, Some(&second.id)),
             Some("that unit has already acted this turn".to_string())
@@ -395,7 +481,11 @@ mod r53_forced_attacks_m2_t4 {
 
         force(&mut sink, &forced.id, &second.id);
         assert_eq!(by_id(sink.state, &forced.id).exertion, exertion(false, false));
-        assert!(has_exertion(sink.state, by_id(sink.state, &forced.id), ExertionKind::Attack));
+        assert!(has_exertion(
+            sink.state,
+            by_id(sink.state, &forced.id),
+            ExertionKind::Attack
+        ));
 
         // The exertion is still there, so the same unit can still make its own attack this turn.
         assert_eq!(declare(&mut sink, &forced.id, Some(&third.id)), None);
@@ -409,13 +499,20 @@ mod r53_forced_attacks_m2_t4 {
     #[test]
     fn r53_each_forced_attack_is_its_own_combat_followed_by_its_own_state_check() {
         let mut state = board("forced-own-combat");
-        let target = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), Default::default()); // 5/10
+        let target = put(
+            &mut state,
+            &big_body.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        ); // 5/10
         let first = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default()); // 3/3
         let second = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default()); // 3/3
 
         let attackers = vec![live(&state, &first.id), live(&state, &second.id)];
         let on_target = on_unit(by_id(&state, &target.id));
-        let (_, events) = run(&mut state, |sink| force_attacks_on(sink, &attackers, &on_target, None));
+        let (_, events) = run(&mut state, |sink| {
+            force_attacks_on(sink, &attackers, &on_target, None)
+        });
 
         // A state check between the two combats, so the first attacker is already dead and buried
         // when the second attack is declared (§4.5, R53).
@@ -434,7 +531,10 @@ mod r53_forced_attacks_m2_t4 {
             ]
         );
 
-        assert_eq!(graveyard_ids(&state, P2), vec![first.id.clone(), second.id.clone()]);
+        assert_eq!(
+            graveyard_ids(&state, P2),
+            vec![first.id.clone(), second.id.clone()]
+        );
         assert_eq!(by_id(&state, &target.id).damage, 6);
         assert_eq!(unit_view(&state, by_id(&state, &target.id)).health, 4);
     }
@@ -442,17 +542,30 @@ mod r53_forced_attacks_m2_t4 {
     #[test]
     fn r53_a_sequence_of_forced_attackers_stops_once_the_target_is_gone() {
         let mut state = board("forced-stops-when-gone");
-        let target = put(&mut state, &taunter.id, slot(P1, Row::Units, 1), Default::default()); // 2/5
+        let target = put(
+            &mut state,
+            &taunter.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        ); // 2/5
         let first = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
         let second = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default());
         let third = put(&mut state, &plain.id, slot(P2, Row::Units, 3), Default::default());
 
-        let attackers: Vec<CardInstance> = active_units_of(&state, P2).iter().map(|unit| (*unit).clone()).collect();
+        let attackers: Vec<CardInstance> = active_units_of(&state, P2)
+            .iter()
+            .map(|unit| (*unit).clone())
+            .collect();
         let on_target = on_unit(by_id(&state, &target.id));
-        let (_, events) = run(&mut state, |sink| force_attacks_on(sink, &attackers, &on_target, None));
+        let (_, events) = run(&mut state, |sink| {
+            force_attacks_on(sink, &attackers, &on_target, None)
+        });
 
         // Two 3-attack hits finish a 5-health target, so the third attacker is never pulled in.
-        let declared: Vec<String> = attack_declared(&events).into_iter().map(|(attacker, ..)| attacker).collect();
+        let declared: Vec<String> = attack_declared(&events)
+            .into_iter()
+            .map(|(attacker, ..)| attacker)
+            .collect();
         assert_eq!(declared, vec![first.id.clone(), second.id.clone()]);
         assert_eq!(graveyard_ids(&state, P1), vec![target.id.clone()]);
         assert_eq!(by_id(&state, &third.id).damage, 0);

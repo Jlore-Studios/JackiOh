@@ -47,7 +47,8 @@ mod config_constants_build_s2 {
     }
 
     #[test]
-    fn r21_r346_r636_r49_random_keyword_pool_has_the_fourteen_listed_keywords_pierce_windfury_and_deft_last() {
+    fn r21_r346_r636_r49_random_keyword_pool_has_the_fourteen_listed_keywords_pierce_windfury_and_deft_last()
+    {
         assert_eq!(
             RANDOM_KEYWORD_POOL.to_vec(),
             vec![
@@ -71,7 +72,10 @@ mod config_constants_build_s2 {
 
     #[test]
     fn r25_fib_index_clamps_at_11_89() {
-        assert_eq!([0, 1, 2, 3, 4, 5, 11].map(fib).to_vec(), vec![0, 1, 1, 2, 3, 5, 89]);
+        assert_eq!(
+            [0, 1, 2, 3, 4, 5, 11].map(fib).to_vec(),
+            vec![0, 1, 1, 2, 3, 5, 89]
+        );
         assert_eq!(fib(12), 89);
         assert_eq!(fib(40), 89);
         assert_eq!(fib(-1), 0);

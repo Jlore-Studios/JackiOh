@@ -31,7 +31,9 @@ use jackioh_engine::effects::{rotate, steal, steal_all, swap_board};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use crate::rules::fixtures::combat::{charger, deft_duelist, pacifist, plain, rusher, stacker, taunter, zero_attack};
+use crate::rules::fixtures::combat::{
+    charger, deft_duelist, pacifist, plain, rusher, stacker, taunter, zero_attack,
+};
 use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
 
 /// The one seed every property runs from, so a failure reproduces exactly.
@@ -45,7 +47,15 @@ const AGREEMENT_RUNS: u32 = 60;
 
 /// The keyword bodies of `fixtures/combat` a unit zone is filled from.
 fn bodies() -> Vec<CardDef> {
-    vec![plain.clone(), rusher.clone(), charger.clone(), deft_duelist.clone(), taunter.clone(), pacifist.clone(), zero_attack.clone()]
+    vec![
+        plain.clone(),
+        rusher.clone(),
+        charger.clone(),
+        deft_duelist.clone(),
+        taunter.clone(),
+        pacifist.clone(),
+        zero_attack.clone(),
+    ]
 }
 
 const FRESH: Exertion = Exertion {
@@ -164,8 +174,12 @@ fn verb_arb(rng: &mut Rng) -> Verb {
             actor: actor_arb(rng),
             pick: rng.int(UNIT_ZONES) as usize,
         },
-        1 => Verb::StealAll { actor: actor_arb(rng) },
-        2 => Verb::SwapBoard { actor: actor_arb(rng) },
+        1 => Verb::StealAll {
+            actor: actor_arb(rng),
+        },
+        2 => Verb::SwapBoard {
+            actor: actor_arb(rng),
+        },
         _ => Verb::Rotate {
             actor: actor_arb(rng),
             direction: if rng.coin() {
@@ -204,7 +218,10 @@ fn playing() -> GameState {
     let mut state = begin_game(&new_game("control-change-property", None)).state;
     for player in PLAYER_IDS {
         let keep: Vec<String> = state.players[player].hand.iter().map(|c| c.id.clone()).collect();
-        let result = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": player }));
+        let result = act(
+            &state,
+            json!({ "type": "mulligan", "keep": keep, "playerId": player }),
+        );
         if let Some(error) = result.error {
             panic!("{error}");
         }
@@ -275,10 +292,19 @@ fn build(base: &GameState, board: &Board) -> (GameState, IndexMap<String, Snapsh
             };
             let mut top = new_instance(&mut state, &stacker.id, player, Zone::Hand { player });
             let top_id = top.id.clone();
-            if !place_on_field(&mut state, &mut top, slot(player, Row::Units, lane), json_as(json!({ "stack": true }))) {
+            if !place_on_field(
+                &mut state,
+                &mut top,
+                slot(player, Row::Units, lane),
+                json_as(json!({ "stack": true })),
+            ) {
                 panic!("could not stack");
             }
-            mark(find_instance_mut(&mut state, &top_id).expect("stacked"), top_marks, turn);
+            mark(
+                find_instance_mut(&mut state, &top_id).expect("stacked"),
+                top_marks,
+                turn,
+            );
         }
     }
     let start: IndexMap<String, Snapshot> = field_cards(&state)
@@ -312,7 +338,9 @@ fn effect_of(state: &GameState, verb: &Verb) -> Option<Effect> {
         Verb::SwapBoard { .. } => Some(swap_board()),
         Verb::Rotate {
             direction, radiant, ..
-        } => Some(rotate(json_as(json!({ "direction": direction, "radiant": radiant })))),
+        } => Some(rotate(json_as(
+            json!({ "direction": direction, "radiant": radiant }),
+        ))),
     }
 }
 
@@ -357,7 +385,11 @@ struct Ran {
 fn run(base: &GameState, sample: &Case) -> Ran {
     let (mut state, start) = build(base, &sample.board);
     let (_, crossed) = apply(&mut state, &sample.verbs);
-    Ran { state, start, crossed }
+    Ran {
+        state,
+        start,
+        crossed,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -369,12 +401,16 @@ mod r171_over_random_boards_and_random_control_changes_fast_check {
     use super::*;
 
     #[test]
-    fn r171_r747_p1_only_a_card_that_changed_sides_takes_this_turn_and_a_fresh_exertion_and_no_owner_changes_but_a_bounce_s(
-    ) {
+    fn r171_r747_p1_only_a_card_that_changed_sides_takes_this_turn_and_a_fresh_exertion_and_no_owner_changes_but_a_bounce_s()
+     {
         let base = base();
         for case in 0..BOOKKEEPING_RUNS {
             let sample = case_arb(case);
-            let Ran { state, start, crossed } = run(&base, &sample);
+            let Ran {
+                state,
+                start,
+                crossed,
+            } = run(&base, &sample);
             let turn = state.turn;
             for card in field_cards(&state) {
                 let Some(before) = start.get(&card.id) else {
@@ -387,13 +423,21 @@ mod r171_over_random_boards_and_random_control_changes_fast_check {
                     card.id
                 );
                 if card.controller != before.controller {
-                    assert!(crossed.contains(&card.id), "run {case}: {} changed side silently", card.id);
+                    assert!(
+                        crossed.contains(&card.id),
+                        "run {case}: {} changed side silently",
+                        card.id
+                    );
                 }
                 if crossed.contains(&card.id) {
                     assert_eq!(card.summoned_turn, Some(turn), "run {case}: {} crossed", card.id);
                     assert_eq!(card.exertion, FRESH, "run {case}: {} crossed", card.id);
                 } else {
-                    assert_eq!(card.summoned_turn, before.summoned_turn, "run {case}: {} stayed", card.id);
+                    assert_eq!(
+                        card.summoned_turn, before.summoned_turn,
+                        "run {case}: {} stayed",
+                        card.id
+                    );
                     assert_eq!(card.exertion, before.exertion, "run {case}: {} stayed", card.id);
                 }
             }
@@ -405,18 +449,27 @@ mod r171_over_random_boards_and_random_control_changes_fast_check {
                     Some(card) if card.zone.z() == ZoneName::Hand => {
                         assert_eq!(card.owner, card.zone.player(), "run {case}: {id} owner in a hand");
                     }
-                    _ => assert_eq!(card.map(|c| c.owner), Some(before.owner), "run {case}: {id} owner"),
+                    _ => assert_eq!(
+                        card.map(|c| c.owner),
+                        Some(before.owner),
+                        "run {case}: {id} owner"
+                    ),
                 }
             }
         }
     }
 
     #[test]
-    fn r171_p2_a_unit_that_crossed_is_sick_like_one_summoned_this_turn_and_a_charge_unit_that_crossed_can_attack() {
+    fn r171_p2_a_unit_that_crossed_is_sick_like_one_summoned_this_turn_and_a_charge_unit_that_crossed_can_attack()
+     {
         let base = base();
         for case in 0..ORACLE_RUNS {
             let sample = case_arb(case);
-            let Ran { state, start, crossed } = run(&base, &sample);
+            let Ran {
+                state,
+                start,
+                crossed,
+            } = run(&base, &sample);
             let turn = state.turn;
             let units: Vec<CardInstance> = active_units_of(&state, state.active)
                 .iter()
@@ -427,7 +480,10 @@ mod r171_over_random_boards_and_random_control_changes_fast_check {
                 let rush = has_keyword(&view.keywords, KeywordKind::Rush);
                 let charge = has_keyword(&view.keywords, KeywordKind::Charge);
                 let moved = crossed.contains(&unit.id);
-                let sick = moved || start.get(&unit.id).is_some_and(|before| before.summoned_turn == Some(turn));
+                let sick = moved
+                    || start
+                        .get(&unit.id)
+                        .is_some_and(|before| before.summoned_turn == Some(turn));
                 let targets = attack_targets(&state, unit);
                 let who = format!("run {case}: {} ({})", unit.id, unit.def_id);
                 if sick && !rush && !charge {
@@ -435,7 +491,9 @@ mod r171_over_random_boards_and_random_control_changes_fast_check {
                 }
                 if sick && !charge {
                     assert!(
-                        !targets.iter().any(|target| matches!(target, AttackTarget::Hero { .. })),
+                        !targets
+                            .iter()
+                            .any(|target| matches!(target, AttackTarget::Hero { .. })),
                         "{who} aims at the hero"
                     );
                 }
@@ -469,8 +527,10 @@ mod r171_over_random_boards_and_random_control_changes_fast_check {
                     _ => None,
                 })
                 .collect();
-            let mut target_ids: Vec<String> =
-                active_units_of(&state, enemy).iter().map(|card| card.id.clone()).collect();
+            let mut target_ids: Vec<String> = active_units_of(&state, enemy)
+                .iter()
+                .map(|card| card.id.clone())
+                .collect();
             target_ids.push(format!("hero-{enemy}"));
             let attackers: Vec<(String, String)> = active_units_of(&state, player)
                 .iter()

@@ -159,7 +159,7 @@ mod stays_a_stack_note_belongs_to_one_removal_r212_s3_2 {
 
     #[test]
     fn r212_a_card_that_moves_on_before_the_loop_reaches_its_removals_report_keeps_the_note_for_that_report_alone()
-    {
+     {
         let mut state = new_game("stays-uncovered-moved", None);
         note_uncovered(&mut state, "c1", Some("c4"));
         note_moved(&mut state, "c1");
@@ -174,7 +174,8 @@ mod stays_a_stack_note_belongs_to_one_removal_r212_s3_2 {
     }
 
     #[test]
-    fn r212_a_removal_that_uncovers_nothing_still_ends_the_note_of_an_earlier_one_once_that_one_is_reported() {
+    fn r212_a_removal_that_uncovers_nothing_still_ends_the_note_of_an_earlier_one_once_that_one_is_reported()
+    {
         let mut state = new_game("stays-uncovered-again", None);
         note_uncovered(&mut state, "c1", Some("c4"));
         note_reported(&mut state, &stolen("c1", PlayerId::P2));

@@ -123,7 +123,10 @@ pub fn papaya_scripts() -> IndexMap<String, CardScripts> {
 
 /// This file's definitions, by id (the brief's `catalog()`).
 pub fn catalog() -> CardDefs {
-    PAPAYA_DEFS.iter().map(|card| (card.id.clone(), card.clone())).collect()
+    PAPAYA_DEFS
+        .iter()
+        .map(|card| (card.id.clone(), card.clone()))
+        .collect()
 }
 
 /// This file's scripts, by id (the brief's `scripts()`).

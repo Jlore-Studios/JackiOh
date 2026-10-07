@@ -40,7 +40,9 @@ use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{Value, json};
 use sha2::Sha256;
 
-use crate::api::crypto::{canonical_invite_code, format_code, is_well_formed_code, normalize_code, random_code};
+use crate::api::crypto::{
+    canonical_invite_code, format_code, is_well_formed_code, normalize_code, random_code,
+};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json, lock, rate_limited};
 use crate::app::App;
 use crate::config::{
@@ -128,7 +130,11 @@ fn code_hash(code_pepper: &str, plain: &str) -> String {
     let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(key.as_bytes())
         .unwrap_or_else(|error| panic!("an HMAC key of any length: {error}"));
     mac.update(normalize_code(plain).as_bytes());
-    mac.finalize().into_bytes().iter().map(|byte| format!("{byte:02x}")).collect()
+    mac.finalize()
+        .into_bytes()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -177,7 +183,9 @@ pub enum MintError {
 pub async fn mint_invite_code(deps: MintDeps<'_>, input: MintInput) -> Result<MintedCode, MintError> {
     let max_uses = input.max_uses.unwrap_or(DEFAULT_INVITE_CODE_MAX_USES);
     if max_uses < 1 {
-        return Err(MintError::Invalid(format!("maxUses must be a positive integer (got {max_uses})")));
+        return Err(MintError::Invalid(format!(
+            "maxUses must be a positive integer (got {max_uses})"
+        )));
     }
 
     let plain = random_code(INVITE_CODE_LENGTH as _);
@@ -198,10 +206,21 @@ pub async fn mint_invite_code(deps: MintDeps<'_>, input: MintInput) -> Result<Mi
         expires_at: input.expires_at,
         created_at: crate::app::now_ms(),
     };
-    let mut tx = deps.db.begin(None).await.map_err(|error| MintError::Store(format!("{error:?}")))?;
-    tx.codes_insert(&code).await.map_err(|error| MintError::Store(format!("{error:?}")))?;
-    tx.commit().await.map_err(|error| MintError::Store(format!("{error:?}")))?;
-    Ok(MintedCode { id: code.id, formatted: format_code(&plain) })
+    let mut tx = deps
+        .db
+        .begin(None)
+        .await
+        .map_err(|error| MintError::Store(format!("{error:?}")))?;
+    tx.codes_insert(&code)
+        .await
+        .map_err(|error| MintError::Store(format!("{error:?}")))?;
+    tx.commit()
+        .await
+        .map_err(|error| MintError::Store(format!("{error:?}")))?;
+    Ok(MintedCode {
+        id: code.id,
+        formatted: format_code(&plain),
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -222,7 +241,10 @@ pub struct BreakerState {
 }
 
 pub fn create_breaker_state() -> BreakerState {
-    BreakerState { open_until: 0, openings: 0 }
+    BreakerState {
+        open_until: 0,
+        openings: 0,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -268,7 +290,10 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
     // R106's breaker, checked before step 1: while it is open nothing touches the profile, the
     // attempt log or the code table, which is the point of having it.
     if now < lock(breaker).open_until {
-        return Ok(RedeemOutcome::Refused(ApiError::new(ApiErrorCode::Unavailable, BREAKER_MESSAGE)));
+        return Ok(RedeemOutcome::Refused(ApiError::new(
+            ApiErrorCode::Unavailable,
+            BREAKER_MESSAGE,
+        )));
     }
 
     // R145's three account-shaped refusals, which `Tx::redeem` answers as one `NotPending` and
@@ -277,18 +302,27 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
     // that changes between here and there is still caught — as `NotPending`, below.
     let profile = input.profile;
     if matches!(profile.status, ProfileStatus::Banned) {
-        return Ok(RedeemOutcome::Refused(ApiError::new(ApiErrorCode::AccountBanned, BANNED_MESSAGE)));
+        return Ok(RedeemOutcome::Refused(ApiError::new(
+            ApiErrorCode::AccountBanned,
+            BANNED_MESSAGE,
+        )));
     }
     if matches!(profile.status, ProfileStatus::Active) {
         // Not a code failure — §9.4 only makes redemption the pending → active transition, so an
         // active account asking again is a conflict, and it is told so plainly.
-        return Ok(RedeemOutcome::Refused(ApiError::new(ApiErrorCode::Conflict, ALREADY_ACTIVE_MESSAGE)));
+        return Ok(RedeemOutcome::Refused(ApiError::new(
+            ApiErrorCode::Conflict,
+            ALREADY_ACTIVE_MESSAGE,
+        )));
     }
     // §9.4 step 1's "verified email", from the access token (R159). The store asks the managed-auth
     // table the same question and may still answer `EmailUnverified`; refusing here first is what
     // keeps an unverified caller from spending a row in the attempt log.
     if !input.email_verified {
-        return Ok(RedeemOutcome::Refused(ApiError::new(ApiErrorCode::EmailUnverified, EMAIL_UNVERIFIED_MESSAGE)));
+        return Ok(RedeemOutcome::Refused(ApiError::new(
+            ApiErrorCode::EmailUnverified,
+            EMAIL_UNVERIFIED_MESSAGE,
+        )));
     }
 
     // §9.4: codes are "stored hashed", so the plaintext is read and hashed here and the store is
@@ -298,7 +332,8 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
     // code that could never exist travels as `None` rather than being refused early, because §9.4
     // logs the attempt (step 4) before it looks anything up (step 5): a malformed code must cost the
     // same row a wrong one does, or it would be the one cheap probe in this endpoint.
-    let code_hash = canonical_invite_code(input.plain_code).map(|canonical| code_hash(&app.env.code_pepper, &canonical));
+    let code_hash =
+        canonical_invite_code(input.plain_code).map(|canonical| code_hash(&app.env.code_pepper, &canonical));
 
     // §9.4: "Redemption is one server-side transaction." This is it.
     let mut tx = app.db.begin(Some(&profile.id)).await?;
@@ -308,8 +343,7 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
             code_hash,
             ip_hash: input.ip_hash.to_string(),
         })
-        .await
-        ?;
+        .await?;
     tx.commit().await?;
     let failed = !matches!(result, RedeemResult::Ok);
 
@@ -345,10 +379,13 @@ fn outcome_for(result: RedeemResult, limits: &Limits) -> RedeemOutcome {
         // authorization failed; what changed is the state the request was about. The pending →
         // active flip is also the only transition §9.4 gives redemption, so it is what almost always
         // happened.
-        RedeemResult::NotPending => RedeemOutcome::Refused(ApiError::new(ApiErrorCode::Conflict, ALREADY_ACTIVE_MESSAGE)),
-        RedeemResult::EmailUnverified => {
-            RedeemOutcome::Refused(ApiError::new(ApiErrorCode::EmailUnverified, EMAIL_UNVERIFIED_MESSAGE))
+        RedeemResult::NotPending => {
+            RedeemOutcome::Refused(ApiError::new(ApiErrorCode::Conflict, ALREADY_ACTIVE_MESSAGE))
         }
+        RedeemResult::EmailUnverified => RedeemOutcome::Refused(ApiError::new(
+            ApiErrorCode::EmailUnverified,
+            EMAIL_UNVERIFIED_MESSAGE,
+        )),
         // §9.4 steps 2 and 3. Which of the two windows refused is not told apart: the per-IP one
         // would say something about the other accounts behind the same address.
         //
@@ -358,7 +395,9 @@ fn outcome_for(result: RedeemResult, limits: &Limits) -> RedeemOutcome {
         RedeemResult::RateLimitedProfile | RedeemResult::RateLimitedIp => {
             RedeemOutcome::Refused(rate_limited(RATE_LIMITED_MESSAGE, limits.redeem_window_ms))
         }
-        RedeemResult::CircuitOpen => RedeemOutcome::Refused(ApiError::new(ApiErrorCode::Unavailable, BREAKER_MESSAGE)),
+        RedeemResult::CircuitOpen => {
+            RedeemOutcome::Refused(ApiError::new(ApiErrorCode::Unavailable, BREAKER_MESSAGE))
+        }
         RedeemResult::InvalidCode => RedeemOutcome::Refused(identical_code_error()),
     }
 }
@@ -412,15 +451,25 @@ async fn pad_to(started_at: tokio::time::Instant, floor_ms: u64) {
 fn plain_code_of(body: &Value) -> Result<String, ApiError> {
     match body.get("code") {
         Some(Value::String(value)) => Ok(value.clone()),
-        _ => Err(ApiError::new(ApiErrorCode::BadRequest, "\"code\" must be a string")),
+        _ => Err(ApiError::new(
+            ApiErrorCode::BadRequest,
+            "\"code\" must be a string",
+        )),
     }
 }
 
 /// Never answers a refusal as an `Err`: every rejection comes back as a value, so it can be padded.
-async fn redeem_for_request(app: &App, req: &Req, breaker: &Mutex<BreakerState>) -> Result<RedeemOutcome, ApiError> {
+async fn redeem_for_request(
+    app: &App,
+    req: &Req,
+    breaker: &Mutex<BreakerState>,
+) -> Result<RedeemOutcome, ApiError> {
     // `AuthLevel::User` guarantees the caller; the guard is here because `Req` types it optional.
     let Some(caller) = req.caller.as_ref() else {
-        return Ok(RedeemOutcome::Refused(ApiError::new(ApiErrorCode::Unauthorized, "sign in first")));
+        return Ok(RedeemOutcome::Refused(ApiError::new(
+            ApiErrorCode::Unauthorized,
+            "sign in first",
+        )));
     };
     let plain_code = match plain_code_of(&req.body) {
         Ok(plain_code) => plain_code,

@@ -143,7 +143,10 @@ fn legal_text(state: &GameState, actor: PlayerId) -> String {
 
 /// The recorded hash at `key` (a string), or a description of what is there instead.
 fn recorded(snapshot: &Value, key: &str) -> String {
-    snapshot[key].as_str().map(str::to_string).unwrap_or_else(|| format!("<no `{key}` in the line>"))
+    snapshot[key]
+        .as_str()
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("<no `{key}` in the line>"))
 }
 
 /// Checks `s`, `v` and `e` of one snapshot (`begin`, or the state a step left with its events).
@@ -173,7 +176,10 @@ fn check_snapshot(
         return Err(mismatch("s", expected, s, &hashed_state_text(state)));
     }
 
-    for (index, (player, which)) in [(PlayerId::P1, "v-p1"), (PlayerId::P2, "v-p2")].into_iter().enumerate() {
+    for (index, (player, which)) in [(PlayerId::P1, "v-p1"), (PlayerId::P2, "v-p2")]
+        .into_iter()
+        .enumerate()
+    {
         let view = serde_json::to_value(view_for(state, player)).expect("a PlayerView serialises");
         let text = canonical(&view);
         let hash = fnv1a32_utf16(&text);
@@ -227,7 +233,9 @@ fn replay_line(index: usize, line: &str) -> Result<usize, Box<Mismatch>> {
     let mut state = begun.state;
     check_snapshot(&seed, "begin", None, &game["begin"], &state, &begun.events)?;
 
-    let steps = game["steps"].as_array().unwrap_or_else(|| panic!("{seed}: no `steps`"));
+    let steps = game["steps"]
+        .as_array()
+        .unwrap_or_else(|| panic!("{seed}: no `steps`"));
     for (n, step) in steps.iter().enumerate() {
         let label = n.to_string();
         let action_json = step["a"].to_string();
@@ -311,7 +319,11 @@ fn replay_shard(shard: usize) {
         "golden shard {shard}: {} of {games} games diverged from their TypeScript trace \
          ({steps} steps of the others replayed identically):\n{}",
         failures.len(),
-        failures.iter().map(|mismatch| mismatch.report()).collect::<Vec<_>>().join("\n")
+        failures
+            .iter()
+            .map(|mismatch| mismatch.report())
+            .collect::<Vec<_>>()
+            .join("\n")
     );
 }
 
@@ -321,13 +333,22 @@ mod golden_traces {
     #[test]
     fn the_file_holds_every_recorded_game_once() {
         let lines = golden_lines();
-        assert_eq!(lines.len(), GOLDEN_GAMES, "SURFACE §13.1: 200 games and 40 handicapped");
+        assert_eq!(
+            lines.len(),
+            GOLDEN_GAMES,
+            "SURFACE §13.1: 200 games and 40 handicapped"
+        );
         let mut seen = BTreeSet::new();
         for (index, line) in lines.iter().enumerate() {
             let game: Value = serde_json::from_str(line)
                 .unwrap_or_else(|error| panic!("games.jsonl line {}: not JSON: {error}", index + 1));
             let seed = game["seed"].as_str().unwrap_or_default().to_string();
-            assert_eq!(game["args"]["seed"].as_str(), Some(seed.as_str()), "line {}: args.seed", index + 1);
+            assert_eq!(
+                game["args"]["seed"].as_str(),
+                Some(seed.as_str()),
+                "line {}: args.seed",
+                index + 1
+            );
             assert!(seen.insert(seed.clone()), "{seed} is recorded twice");
         }
     }
@@ -423,7 +444,10 @@ const COMMITTED: &str = include_str!("golden/01-hotseat-full-game.json");
 const COMMITTED_PATH: &str = "crates/engine/tests/golden/01-hotseat-full-game.json";
 
 /// Where Cypress leaves its copy. Gitignored, so it is present only after a local `pnpm test:e2e`.
-const RECORDED: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../e2e/artifacts/01-hotseat-full-game.json");
+const RECORDED: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../e2e/artifacts/01-hotseat-full-game.json"
+);
 
 /// The final state hash of the recorded game.
 ///
@@ -489,7 +513,10 @@ const RECORDED: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../e2e/artifacts
 const EXPECTED_HASH: &str = "a798906b";
 
 /// What the recorded game ends in — a second anchor, so the hash is not the only witness.
-const EXPECTED_RESULT: GameResult = GameResult { winner: Winner::P1, reason: GameOverReason::HeroDeath };
+const EXPECTED_RESULT: GameResult = GameResult {
+    winner: Winner::P1,
+    reason: GameOverReason::HeroDeath,
+};
 const EXPECTED_ACTIONS: usize = 37;
 
 fn read(path: &str, text: &str) -> Recording {
@@ -527,8 +554,11 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
 
         // Every recorded action is legal against a fold from scratch. A rejection would mean the log
         // and the engine have parted company, and the hash below would be a hash of a shorter game.
-        let refusals: Vec<String> =
-            replayed.errors.iter().map(|error| format!("{}: {}", error.nonce, error.error)).collect();
+        let refusals: Vec<String> = replayed
+            .errors
+            .iter()
+            .map(|error| format!("{}: {}", error.nonce, error.error))
+            .collect();
         assert_eq!(refusals, Vec::<String>::new());
         assert_eq!(hash_state(&replayed.state), EXPECTED_HASH);
 
@@ -546,7 +576,11 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
         // the log, or the hash ignored the state, these two would agree.
         register_all();
         let recording = recording();
-        let short = fold_recording(&recording.seed, &recording.decks, &recording.log[..recording.log.len() - 1]);
+        let short = fold_recording(
+            &recording.seed,
+            &recording.decks,
+            &recording.log[..recording.log.len() - 1],
+        );
 
         assert_ne!(hash_state(&short.state), EXPECTED_HASH);
         assert_eq!(short.state.result, None);
@@ -556,7 +590,11 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
     fn is_a_fold_of_that_seed_another_seed_is_a_different_hash() {
         register_all();
         let recording = recording();
-        let other = fold_recording(&format!("{}-not", recording.seed), &recording.decks, &recording.log);
+        let other = fold_recording(
+            &format!("{}-not", recording.seed),
+            &recording.decks,
+            &recording.log,
+        );
         assert_ne!(hash_state(&other.state), EXPECTED_HASH);
     }
 
@@ -577,7 +615,10 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
         // The typed log cannot lack a nonce or a seat, so read the recording's own JSON for them.
         let raw: Value = serde_json::from_str(COMMITTED).expect("the recording is JSON");
         for action in raw["log"].as_array().expect("the recording has a log") {
-            assert!(action["nonce"].is_string(), "every action carries a nonce: {action}");
+            assert!(
+                action["nonce"].is_string(),
+                "every action carries a nonce: {action}"
+            );
             assert!(
                 ["p1", "p2"].contains(&action["playerId"].as_str().unwrap_or_default()),
                 "every action names its seat: {action}"

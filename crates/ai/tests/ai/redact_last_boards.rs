@@ -23,7 +23,9 @@ fn js<T: serde::Serialize>(value: T) -> Value {
 
 fn with_last_boards(boards: Value) -> GameState {
     jackioh_cards::register_all();
-    scenario(json!({ "active": "p1", "lastBoards": boards })).state().clone()
+    scenario(json!({ "active": "p1", "lastBoards": boards }))
+        .state()
+        .clone()
 }
 
 mod redact_keeps_only_the_seats_own_last_board_r185_r417 {
@@ -44,6 +46,10 @@ mod redact_keeps_only_the_seats_own_last_board_r185_r417 {
         let one = with_last_boards(json!([mine(), theirs()]));
         let other = with_last_boards(json!([mine(), []]));
         assert_eq!(hash_state(&redact(&one, AI)), hash_state(&redact(&other, AI)));
-        assert!(redact(&with_last_boards(json!([[], theirs()])), AI).last_boards.is_none());
+        assert!(
+            redact(&with_last_boards(json!([[], theirs()])), AI)
+                .last_boards
+                .is_none()
+        );
     }
 }

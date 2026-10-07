@@ -50,7 +50,11 @@ const SPARE_COUNT: usize = DECK_LEN;
 const POOL_SIZE: usize = LOADOUT_LEN * DECK_LEN + SPARE_COUNT;
 
 /// TS's `NAMED` record: the three pool cards the messages name, by id.
-const NAMED: &[(&str, &str)] = &[(HIT_JOB, "Hit Job"), (ARCHIVIST, "Archivist"), (JELLY_BEAN, "Glowy Jelly Bean")];
+const NAMED: &[(&str, &str)] = &[
+    (HIT_JOB, "Hit Job"),
+    (ARCHIVIST, "Archivist"),
+    (JELLY_BEAN, "Glowy Jelly Bean"),
+];
 
 fn named(id: &str) -> Option<&'static str> {
     NAMED.iter().find(|(key, _)| *key == id).map(|(_, name)| *name)
@@ -104,7 +108,10 @@ pub fn catalog() -> CatalogSnapshot {
     }
     let token = token_def();
     cards.insert(token.id.clone(), token);
-    cards.insert(CEASELESS_VOID.to_string(), vanilla_def(CEASELESS_VOID, "100", "Ceaseless Void"));
+    cards.insert(
+        CEASELESS_VOID.to_string(),
+        vanilla_def(CEASELESS_VOID, "100", "Ceaseless Void"),
+    );
     CatalogSnapshot {
         version: CATALOG_VERSION.to_string(),
         cards,
@@ -147,7 +154,10 @@ pub fn legal_decks() -> Vec<Vec<CardId>> {
 /// A loadout that breaks none of L1–L6.
 pub fn legal_loadout() -> LoadoutInput {
     LoadoutInput {
-        decks: legal_decks().into_iter().map(|cards| LoadoutDeck { name: None, cards }).collect(),
+        decks: legal_decks()
+            .into_iter()
+            .map(|cards| LoadoutDeck { name: None, cards })
+            .collect(),
         catalog: catalog(),
         collection: collection(),
     }
@@ -173,7 +183,10 @@ fn map_deck(input: &LoadoutInput, index: usize, f: impl Fn(&[CardId]) -> Vec<Car
             .enumerate()
             .map(|(i, deck)| {
                 if i == index {
-                    LoadoutDeck { name: deck.name.clone(), cards: f(&deck.cards) }
+                    LoadoutDeck {
+                        name: deck.name.clone(),
+                        cards: f(&deck.cards),
+                    }
                 } else {
                     deck.clone()
                 }
@@ -188,12 +201,22 @@ fn substitute(cards: &[CardId], replacement: &str) -> Vec<CardId> {
     cards
         .iter()
         .enumerate()
-        .map(|(i, id)| if Some(i) == at { replacement.to_string() } else { id.clone() })
+        .map(|(i, id)| {
+            if Some(i) == at {
+                replacement.to_string()
+            } else {
+                id.clone()
+            }
+        })
         .collect()
 }
 
 fn deck_holding(input: &LoadoutInput, card_id: &str) -> usize {
-    match input.decks.iter().position(|deck| deck.cards.iter().any(|id| id == card_id)) {
+    match input
+        .decks
+        .iter()
+        .position(|deck| deck.cards.iter().any(|id| id == card_id))
+    {
         Some(index) => index,
         None => panic!("fixture error: no deck holds {card_id}"),
     }
@@ -218,7 +241,10 @@ pub fn add_deck(input: &LoadoutInput) -> LoadoutInput {
         panic!("fixture error: not enough spares for one more deck");
     }
     let mut decks = input.decks.clone();
-    decks.push(LoadoutDeck { name: None, cards: spares });
+    decks.push(LoadoutDeck {
+        name: None,
+        cards: spares,
+    });
     with_decks(input, decks)
 }
 
@@ -242,7 +268,9 @@ pub fn add_spare_card(input: &LoadoutInput) -> LoadoutInput {
 
 /// L3: a second copy of the Jelly Bean in its own deck. The profile owns 2, so L5 stays quiet.
 pub fn duplicate_in_deck(input: &LoadoutInput) -> LoadoutInput {
-    map_deck(input, deck_holding(input, JELLY_BEAN), |cards| substitute(cards, JELLY_BEAN))
+    map_deck(input, deck_holding(input, JELLY_BEAN), |cards| {
+        substitute(cards, JELLY_BEAN)
+    })
 }
 
 /// L3: a Token card in the last deck. It is catalogued and owned, so only the token rule fires.
@@ -292,14 +320,54 @@ pub struct Injection {
 
 /// Every single-rule injection, for the no-cascade table and the property test.
 pub const INJECTIONS: &[Injection] = &[
-    Injection { rule: LoadoutRule::L1, label: "a missing deck", apply: drop_deck },
-    Injection { rule: LoadoutRule::L1, label: "a fourth deck", apply: add_deck },
-    Injection { rule: LoadoutRule::L2, label: "a deck one card short", apply: drop_card },
-    Injection { rule: LoadoutRule::L2, label: "a deck one card over", apply: add_spare_card },
-    Injection { rule: LoadoutRule::L3, label: "a second copy in one deck", apply: duplicate_in_deck },
-    Injection { rule: LoadoutRule::L3, label: "a Token card in a deck", apply: insert_token },
-    Injection { rule: LoadoutRule::L4, label: "a card in two decks", apply: cross_deck },
-    Injection { rule: LoadoutRule::L5, label: "a card the profile does not own", apply: unown_card },
-    Injection { rule: LoadoutRule::L6, label: "a card missing from the catalog", apply: unknown_card },
-    Injection { rule: LoadoutRule::L6, label: "a banned card", apply: banned_card },
+    Injection {
+        rule: LoadoutRule::L1,
+        label: "a missing deck",
+        apply: drop_deck,
+    },
+    Injection {
+        rule: LoadoutRule::L1,
+        label: "a fourth deck",
+        apply: add_deck,
+    },
+    Injection {
+        rule: LoadoutRule::L2,
+        label: "a deck one card short",
+        apply: drop_card,
+    },
+    Injection {
+        rule: LoadoutRule::L2,
+        label: "a deck one card over",
+        apply: add_spare_card,
+    },
+    Injection {
+        rule: LoadoutRule::L3,
+        label: "a second copy in one deck",
+        apply: duplicate_in_deck,
+    },
+    Injection {
+        rule: LoadoutRule::L3,
+        label: "a Token card in a deck",
+        apply: insert_token,
+    },
+    Injection {
+        rule: LoadoutRule::L4,
+        label: "a card in two decks",
+        apply: cross_deck,
+    },
+    Injection {
+        rule: LoadoutRule::L5,
+        label: "a card the profile does not own",
+        apply: unown_card,
+    },
+    Injection {
+        rule: LoadoutRule::L6,
+        label: "a card missing from the catalog",
+        apply: unknown_card,
+    },
+    Injection {
+        rule: LoadoutRule::L6,
+        label: "a banned card",
+        apply: banned_card,
+    },
 ];

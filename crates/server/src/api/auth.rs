@@ -39,8 +39,10 @@ use crate::auth::{ACCOUNT_DELETION_UNAVAILABLE_MESSAGE, AuthError, Session};
 const SIGN_IN_FAILED_MESSAGE: &str = "That email and password do not match an account.";
 
 // Not in SPEC, and no R-row: wording only, for `DELETE /api/account`.
-const ACCOUNT_DELETION_IN_MATCH_MESSAGE: &str = "Finish or concede your match before you delete your account.";
-const ACCOUNT_DELETION_IN_SERIES_MESSAGE: &str = "Finish your Conquest series before you delete your account.";
+const ACCOUNT_DELETION_IN_MATCH_MESSAGE: &str =
+    "Finish or concede your match before you delete your account.";
+const ACCOUNT_DELETION_IN_SERIES_MESSAGE: &str =
+    "Finish your Conquest series before you delete your account.";
 
 fn unauthorized() -> ApiError {
     ApiError::new(ApiErrorCode::Unauthorized, "sign in first")
@@ -50,7 +52,10 @@ fn unauthorized() -> ApiError {
 fn required_str(body: &Value, key: &str) -> Result<String, ApiError> {
     match body.get(key) {
         Some(Value::String(value)) if !value.is_empty() => Ok(value.clone()),
-        _ => Err(ApiError::new(ApiErrorCode::BadRequest, format!("\"{key}\" must be a string"))),
+        _ => Err(ApiError::new(
+            ApiErrorCode::BadRequest,
+            format!("\"{key}\" must be a string"),
+        )),
     }
 }
 
@@ -94,7 +99,12 @@ fn session_body(session: &Session) -> Value {
 pub async fn sign_in(app: &Arc<App>, req: Req) -> ApiResult {
     let email = required_str(&req.body, "email")?;
     let password = required_str(&req.body, "password")?;
-    let session = call_provider("auth.signin_rejected", SIGN_IN_FAILED_MESSAGE, app.auth.sign_in(&email, &password)).await?;
+    let session = call_provider(
+        "auth.signin_rejected",
+        SIGN_IN_FAILED_MESSAGE,
+        app.auth.sign_in(&email, &password),
+    )
+    .await?;
     Ok(json(
         200,
         json!({
@@ -151,16 +161,25 @@ pub async fn delete_account(app: &Arc<App>, req: Req) -> ApiResult {
     let caller = caller_of(&req)?;
     let profile = &caller.profile;
     if !app.auth.can_delete_users() {
-        return Err(ApiError::new(ApiErrorCode::Unavailable, ACCOUNT_DELETION_UNAVAILABLE_MESSAGE));
+        return Err(ApiError::new(
+            ApiErrorCode::Unavailable,
+            ACCOUNT_DELETION_UNAVAILABLE_MESSAGE,
+        ));
     }
     if profile.in_match_id.is_some() {
-        return Err(ApiError::new(ApiErrorCode::AlreadyInMatch, ACCOUNT_DELETION_IN_MATCH_MESSAGE));
+        return Err(ApiError::new(
+            ApiErrorCode::AlreadyInMatch,
+            ACCOUNT_DELETION_IN_MATCH_MESSAGE,
+        ));
     }
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let series = tx.series_active_for(&profile.id).await?;
     tx.commit().await?;
     if series.is_some() {
-        return Err(ApiError::new(ApiErrorCode::Conflict, ACCOUNT_DELETION_IN_SERIES_MESSAGE));
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            ACCOUNT_DELETION_IN_SERIES_MESSAGE,
+        ));
     }
 
     let mut tx = app.db.begin(Some(&profile.id)).await?;
@@ -168,14 +187,18 @@ pub async fn delete_account(app: &Arc<App>, req: Req) -> ApiResult {
     tx.commit().await?;
     match app.auth.delete_user(&caller.user.user_id).await {
         Ok(()) => {}
-        Err(AuthError::Unavailable(message)) => return Err(ApiError::new(ApiErrorCode::Unavailable, message)),
+        Err(AuthError::Unavailable(message)) => {
+            return Err(ApiError::new(ApiErrorCode::Unavailable, message));
+        }
         Err(error) => return Err(ApiError::new(ApiErrorCode::Unavailable, error.to_string())),
     }
     // No id in the line: the account is gone, and so is the reason to name it.
     tracing::info!(event = "account.deleted");
     let mut response = Response::new(Body::empty());
     *response.status_mut() = axum::http::StatusCode::NO_CONTENT;
-    response.headers_mut().insert("cache-control", axum::http::HeaderValue::from_static("no-store"));
+    response
+        .headers_mut()
+        .insert("cache-control", axum::http::HeaderValue::from_static("no-store"));
     Ok(response)
 }
 

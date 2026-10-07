@@ -77,12 +77,19 @@ impl Client {
 
     /// Every frame the server sent, parsed, in order.
     fn messages(&self) -> Vec<Value> {
-        self.0.sent().iter().map(|text| serde_json::from_str(text).expect("every frame is JSON")).collect()
+        self.0
+            .sent()
+            .iter()
+            .map(|text| serde_json::from_str(text).expect("every frame is JSON"))
+            .collect()
     }
 
     /// Frames of one `type`, parsed.
     fn of_type(&self, kind: &str) -> Vec<Value> {
-        self.messages().into_iter().filter(|message| message["type"] == kind).collect()
+        self.messages()
+            .into_iter()
+            .filter(|message| message["type"] == kind)
+            .collect()
     }
 
     /// Simulate the client sending JSON.
@@ -149,7 +156,9 @@ async fn match_actions(app: &App, match_id: &str) -> Vec<Value> {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
     let rows = tx.matches_actions(match_id).await.expect("matches.actions");
     tx.commit().await.expect("commit");
-    rows.iter().map(|row| serde_json::to_value(row).expect("MatchActionRow serialises")).collect()
+    rows.iter()
+        .map(|row| serde_json::to_value(row).expect("MatchActionRow serialises"))
+        .collect()
 }
 
 fn relays(socket: &Client) -> Vec<Value> {
@@ -157,7 +166,10 @@ fn relays(socket: &Client) -> Vec<Value> {
 }
 
 fn relayed_aims(socket: &Client) -> Vec<Value> {
-    relays(socket).into_iter().map(|frame| frame["aim"].clone()).collect()
+    relays(socket)
+        .into_iter()
+        .map(|frame| frame["aim"].clone())
+        .collect()
 }
 
 fn errors(socket: &Client) -> Vec<Value> {
@@ -188,7 +200,10 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         h.p1.receive_json(json!({ "type": "aim", "aim": at_hero() }));
         h.idle().await;
 
-        assert_eq!(relays(&h.p2), vec![json!({ "type": "aim", "from": "p1", "aim": at_hero() })]);
+        assert_eq!(
+            relays(&h.p2),
+            vec![json!({ "type": "aim", "from": "p1", "aim": at_hero() })]
+        );
         assert_eq!(relays(&h.p1), Vec::<Value>::new());
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
         assert_eq!(h.p1.of_type("ack"), Vec::<Value>::new());
@@ -200,7 +215,10 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         advance(aim_interval()).await;
         h.p1.receive_json(json!({ "type": "aim", "aim": null }));
         h.idle().await;
-        assert_eq!(relays(&h.p2).last(), Some(&json!({ "type": "aim", "from": "p1", "aim": null })));
+        assert_eq!(
+            relays(&h.p2).last(),
+            Some(&json!({ "type": "aim", "from": "p1", "aim": null }))
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -219,7 +237,10 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         }
         h.p1.receive_json(json!({ "type": "aim" }));
         h.idle().await;
-        let codes: Vec<Value> = errors(&h.p1).into_iter().map(|error| error["code"].clone()).collect();
+        let codes: Vec<Value> = errors(&h.p1)
+            .into_iter()
+            .map(|error| error["code"].clone())
+            .collect();
         assert_eq!(codes, vec![json!("malformed"); 8]);
         assert_eq!(relays(&h.p2), Vec::<Value>::new());
     }
@@ -237,7 +258,9 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
             })
             .to_string(),
         );
-        let Ok(ClientMessage::Aim(AimMessage { aim })) = parsed else { panic!("the frame did not parse as an aim") };
+        let Ok(ClientMessage::Aim(AimMessage { aim })) = parsed else {
+            panic!("the frame did not parse as an aim")
+        };
         assert_eq!(
             serde_json::to_value(aim).expect("Aim serialises"),
             json!({
@@ -276,12 +299,16 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
     #[tokio::test(start_paused = true)]
     async fn r738_keeps_a_window_per_seat_one_seats_aims_never_spend_the_others() {
         let h = harness().await;
-        let from_p2 = json!({ "source": { "at": "hero", "player": "p2" }, "target": { "at": "hero", "player": "p1" } });
+        let from_p2 =
+            json!({ "source": { "at": "hero", "player": "p2" }, "target": { "at": "hero", "player": "p1" } });
         h.p1.receive_json(json!({ "type": "aim", "aim": at_hero() }));
         h.p2.receive_json(json!({ "type": "aim", "aim": from_p2 }));
         h.idle().await;
         assert_eq!(relays(&h.p2).len(), 1);
-        assert_eq!(relays(&h.p1), vec![json!({ "type": "aim", "from": "p2", "aim": from_p2 })]);
+        assert_eq!(
+            relays(&h.p1),
+            vec![json!({ "type": "aim", "from": "p2", "aim": from_p2 })]
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -291,9 +318,7 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         let count = hand_count(&p2_view, "opponent");
         assert!(count > 0);
 
-        let from_hand = |player: &str, index: i64| {
-            json!({ "source": { "at": "hand", "player": player, "index": index }, "target": { "at": "hero", "player": "p2" } })
-        };
+        let from_hand = |player: &str, index: i64| json!({ "source": { "at": "hand", "player": player, "index": index }, "target": { "at": "hero", "player": "p2" } });
         h.p1.receive_json(json!({ "type": "aim", "aim": from_hand("p1", count) }));
         h.idle().await;
         advance(aim_interval()).await;
@@ -333,7 +358,8 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
             ..jackioh_engine::CreateGameArgs::default()
         });
         let begun = jackioh_engine::begin_game(&state).state;
-        let mut view = serde_json::to_value(jackioh_engine::view_for(&begun, viewer)).expect("PlayerView serialises");
+        let mut view =
+            serde_json::to_value(jackioh_engine::view_for(&begun, viewer)).expect("PlayerView serialises");
         let locks = json!({ "units": [false, false], "backrow": [false] });
         view["viewer"] = json!(viewer.as_str());
         view["you"]["hand"] = json!([]);
@@ -348,7 +374,9 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         let view = cut_down_view(PlayerId::P2);
         let aim = |value: Value| -> Aim { serde_json::from_value(value).expect("an Aim") };
         let at = |lane: i64| {
-            aim(json!({ "source": { "at": "hero", "player": "p1" }, "target": { "at": "zone", "player": "p2", "row": "backrow", "lane": lane } }))
+            aim(
+                json!({ "source": { "at": "hero", "player": "p1" }, "target": { "at": "zone", "player": "p2", "row": "backrow", "lane": lane } }),
+            )
         };
         assert!(aim_is_public(&at(1), PlayerId::P1, &view));
         assert!(!aim_is_public(&at(2), PlayerId::P1, &view));

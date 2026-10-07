@@ -141,12 +141,18 @@ pub(crate) fn gate_failures(lane: Lane, counts: &GateCounts) -> Vec<String> {
 /// The candidate's wins over games given as (result, the candidate's seat). A draw is not a win, and
 /// a game without a result (the action ceiling, a controller that threw) is nobody's.
 pub(crate) fn wins_of(games: &[(Option<GameResult>, PlayerId)]) -> i32 {
-    games.iter().filter(|(result, seat)| arena::won_by(*result, *seat)).count() as i32
+    games
+        .iter()
+        .filter(|(result, seat)| arena::won_by(*result, *seat))
+        .count() as i32
 }
 
 /// The (result, candidate seat) pairs of a series in which the candidate is agent `a`.
 fn results_of(outcomes: &[ArenaOutcome]) -> Vec<(Option<GameResult>, PlayerId)> {
-    outcomes.iter().map(|outcome| (outcome.result, outcome.game.a_seat)).collect()
+    outcomes
+        .iter()
+        .map(|outcome| (outcome.result, outcome.game.a_seat))
+        .collect()
 }
 
 /// Game `k`'s seed: `"<lane>:<tree>:<k>"`.
@@ -156,20 +162,26 @@ pub(crate) fn game_seed(lane: Lane, tree: &str, k: i32) -> String {
 
 /// SURFACE §14.2's `<tree>`: `git rev-parse HEAD:crates/ai/src`.
 pub(crate) fn ai_tree(repo: &Path) -> anyhow::Result<String> {
-    Ok(git(repo, &["rev-parse", &format!("HEAD:{AI_SOURCE}")], &[])?.trim().to_string())
+    Ok(git(repo, &["rev-parse", &format!("HEAD:{AI_SOURCE}")], &[])?
+        .trim()
+        .to_string())
 }
 
 /// Whether `crates/ai/src` differs from HEAD (staged, unstaged or untracked).
 fn ai_source_dirty(repo: &Path) -> anyhow::Result<bool> {
-    Ok(!git(repo, &["status", "--porcelain", "--", AI_SOURCE], &[])?.trim().is_empty())
+    Ok(!git(repo, &["status", "--porcelain", "--", AI_SOURCE], &[])?
+        .trim()
+        .is_empty())
 }
 
 /// The `main` commit the parent is: the branch's merge base with `origin/main` (a lane's branch is
 /// cut from it and rebased on it), else with `main`; `None` when neither is known.
 fn parent_commit(repo: &Path) -> Option<String> {
-    ["origin/main", "main"]
-        .into_iter()
-        .find_map(|base| git(repo, &["merge-base", "HEAD", base], &[]).ok().map(|commit| commit.trim().to_string()))
+    ["origin/main", "main"].into_iter().find_map(|base| {
+        git(repo, &["merge-base", "HEAD", base], &[])
+            .ok()
+            .map(|commit| commit.trim().to_string())
+    })
 }
 
 /// A promotion's record: `crates/ai/generation.json` and its history line, in SURFACE §14.2's key order.
@@ -376,12 +388,19 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         date: arena::utc_date(),
     };
     let failures = gate_failures(args.lane, &counts);
-    print!("{}", report(args.lane, mode, &record, &counts, &parent, vs_random, vs_parent, &failures)?);
+    print!(
+        "{}",
+        report(
+            args.lane, mode, &record, &counts, &parent, vs_random, vs_parent, &failures
+        )?
+    );
 
     if args.verify {
         let path = repo.join(GENERATION_PATH);
-        let text = std::fs::read_to_string(&path).with_context(|| format!("promote: cannot read {}", path.display()))?;
-        let claimed: Value = serde_json::from_str(&text).with_context(|| format!("promote: {} is not JSON", path.display()))?;
+        let text = std::fs::read_to_string(&path)
+            .with_context(|| format!("promote: cannot read {}", path.display()))?;
+        let claimed: Value = serde_json::from_str(&text)
+            .with_context(|| format!("promote: {} is not JSON", path.display()))?;
         let mismatches = verify_mismatches(&claimed, &record);
         if !mismatches.is_empty() {
             println!("\nVerification failed:\n");
@@ -399,7 +418,11 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         }
     }
     if !failures.is_empty() {
-        bail!("promote: the {} gate is not passed: {}", args.lane.as_str(), failures.join("; "));
+        bail!(
+            "promote: the {} gate is not passed: {}",
+            args.lane.as_str(),
+            failures.join("; ")
+        );
     }
     if mode == "promotion" {
         write_generation(&repo.join(GENERATION_PATH), &record)?;
@@ -483,7 +506,8 @@ mod tests {
         assert_eq!(wins_of(&games), 2);
 
         // 89 wins and 11 draws against random is a failed gate: the draws are not wins.
-        let mut series: Vec<(Option<GameResult>, PlayerId)> = (0..89).map(|_| (result(Winner::P1), PlayerId::P1)).collect();
+        let mut series: Vec<(Option<GameResult>, PlayerId)> =
+            (0..89).map(|_| (result(Winner::P1), PlayerId::P1)).collect();
         series.extend((0..11).map(|_| (draw, PlayerId::P1)));
         let measured = counts(wins_of(&series), 85, 11, 11);
         assert_eq!(measured.vs_random, 89);
@@ -512,7 +536,11 @@ mod tests {
             .args(args)
             .output()
             .expect("git runs");
-        assert!(output.status.success(), "git {args:?}: {}", String::from_utf8_lossy(&output.stderr));
+        assert!(
+            output.status.success(),
+            "git {args:?}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
         String::from_utf8_lossy(&output.stdout).trim().to_string()
     }
 
@@ -539,10 +567,17 @@ mod tests {
         git_in(&dir, &["add", "-A"]);
         git_in(&dir, &["commit", "-q", "-m", "AI gen 1 (improve): record"]);
         assert_eq!(ai_tree(&dir).unwrap(), tree);
-        assert_eq!(game_seed(Lane::Improve, &ai_tree(&dir).unwrap(), 1), game_seed(Lane::Improve, &tree, 1));
+        assert_eq!(
+            game_seed(Lane::Improve, &ai_tree(&dir).unwrap(), 1),
+            game_seed(Lane::Improve, &tree, 1)
+        );
 
         // A change to the AI's source is another AI: other seeds, and dirty until it is committed.
-        std::fs::write(dir.join(AI_SOURCE).join("lib.rs"), "pub fn decide() { let _ = 1; }\n").unwrap();
+        std::fs::write(
+            dir.join(AI_SOURCE).join("lib.rs"),
+            "pub fn decide() { let _ = 1; }\n",
+        )
+        .unwrap();
         assert!(ai_source_dirty(&dir).unwrap());
         assert_eq!(ai_tree(&dir).unwrap(), tree);
         git_in(&dir, &["commit", "-q", "-am", "AI change"]);

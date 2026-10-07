@@ -19,7 +19,9 @@ use serde_json::json;
 
 use crate::api::http::{log_info, log_warn, now_ms};
 use crate::app::App;
-use crate::config::{CODE_ATTEMPT_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS, RETENTION_PURGE_INTERVAL_SECONDS};
+use crate::config::{
+    CODE_ATTEMPT_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS, RETENTION_PURGE_INTERVAL_SECONDS,
+};
 use crate::db::store::{RetentionPurgeInput, RetentionPurgeResult, StoreError};
 
 /// Unit conversion, not configuration.

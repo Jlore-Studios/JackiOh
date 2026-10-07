@@ -17,9 +17,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use jackioh_server::app::App;
-use jackioh_server::config::{TUTORIAL_LESSONS_MAX, TUTORIAL_LESSON_ID_MAX_LENGTH};
+use jackioh_server::config::{TUTORIAL_LESSON_ID_MAX_LENGTH, TUTORIAL_LESSONS_MAX};
 use serde::de::DeserializeOwned;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::support::deps::{call, test_app};
 
@@ -49,7 +49,12 @@ async fn setup() -> Fixture {
     let profile = profile_id_of(&app, USER).await;
     let other = profile_id_of(&app, OTHER_USER).await;
     let pending = profile_id_of(&app, PENDING_USER).await;
-    Fixture { app, profile, other, pending }
+    Fixture {
+        app,
+        profile,
+        other,
+        pending,
+    }
 }
 
 /// A store value built from TS's own object literal.
@@ -85,7 +90,9 @@ async fn profile_id_of(app: &App, user_id: &str) -> String {
 
 async fn set_status(app: &App, profile_id: &str, status: &str) {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
-    tx.profiles_set_status(profile_id, from(json!(status))).await.expect("profiles.setStatus");
+    tx.profiles_set_status(profile_id, from(json!(status)))
+        .await
+        .expect("profiles.setStatus");
     tx.commit().await.expect("commit");
 }
 
@@ -147,7 +154,10 @@ mod r320_the_routes_an_active_account_and_only_about_itself {
             assert_eq!(body["error"]["code"], "not_found");
         }
         assert_eq!(get(&f.app, PENDING_TOKEN).await.0, 403);
-        assert_eq!(put(&f.app, json!({ "completed": [] }), PENDING_TOKEN).await.0, 403);
+        assert_eq!(
+            put(&f.app, json!({ "completed": [] }), PENDING_TOKEN).await.0,
+            403
+        );
     }
 
     #[tokio::test]
@@ -167,15 +177,32 @@ mod r320_the_routes_an_active_account_and_only_about_itself {
     }
 
     #[tokio::test]
-    async fn r320_reads_an_account_with_no_progress_yet_as_none_and_writes_land_on_the_callers_own_row_only() {
+    async fn r320_reads_an_account_with_no_progress_yet_as_none_and_writes_land_on_the_callers_own_row_only()
+    {
         let f = setup().await;
-        assert_eq!(progress_of(get(&f.app, TOKEN).await), json!({ "completed": [], "hiddenChoice": null }));
+        assert_eq!(
+            progress_of(get(&f.app, TOKEN).await),
+            json!({ "completed": [], "hiddenChoice": null })
+        );
 
         // A body naming another profile changes nothing about whose row is written: the profile is the
         // verified token's, never a field of the request.
-        progress_of(put(&f.app, json!({ "completed": ["basics"], "profileId": f.other }), TOKEN).await);
-        assert_eq!(progress_of(get(&f.app, TOKEN).await), json!({ "completed": ["basics"], "hiddenChoice": null }));
-        assert_eq!(progress_of(get(&f.app, OTHER_TOKEN).await), json!({ "completed": [], "hiddenChoice": null }));
+        progress_of(
+            put(
+                &f.app,
+                json!({ "completed": ["basics"], "profileId": f.other }),
+                TOKEN,
+            )
+            .await,
+        );
+        assert_eq!(
+            progress_of(get(&f.app, TOKEN).await),
+            json!({ "completed": ["basics"], "hiddenChoice": null })
+        );
+        assert_eq!(
+            progress_of(get(&f.app, OTHER_TOKEN).await),
+            json!({ "completed": [], "hiddenChoice": null })
+        );
         assert_eq!(stored(&f).await, std::slice::from_ref(&f.profile));
     }
 }
@@ -184,13 +211,23 @@ mod r320_a_write_merges_into_the_account_and_never_takes_anything_away {
     use super::*;
 
     #[tokio::test]
-    async fn r320_unions_the_lessons_a_stale_devices_write_removes_none_and_the_answer_is_the_merged_progress() {
+    async fn r320_unions_the_lessons_a_stale_devices_write_removes_none_and_the_answer_is_the_merged_progress()
+     {
         let f = setup().await;
         let put_completed = |completed: Value| put(&f.app, json!({ "completed": completed }), TOKEN);
-        assert_eq!(completed_of(&progress_of(put_completed(json!(["spells", "basics"])).await)), ["basics", "spells"]);
+        assert_eq!(
+            completed_of(&progress_of(put_completed(json!(["spells", "basics"])).await)),
+            ["basics", "spells"]
+        );
         // A device that has won only lesson 1, or nothing at all.
-        assert_eq!(completed_of(&progress_of(put_completed(json!(["basics"])).await)), ["basics", "spells"]);
-        assert_eq!(completed_of(&progress_of(put_completed(json!([])).await)), ["basics", "spells"]);
+        assert_eq!(
+            completed_of(&progress_of(put_completed(json!(["basics"])).await)),
+            ["basics", "spells"]
+        );
+        assert_eq!(
+            completed_of(&progress_of(put_completed(json!([])).await)),
+            ["basics", "spells"]
+        );
         // Another device's lesson joins them; the same write again is the same answer.
         let merged = progress_of(put_completed(json!(["traps", "traps"])).await);
         assert_eq!(completed_of(&merged), ["basics", "spells", "traps"]);
@@ -202,20 +239,42 @@ mod r320_a_write_merges_into_the_account_and_never_takes_anything_away {
     async fn r320_keeps_the_newest_hide_show_choice_show_made_later_is_not_undone_by_an_older_hide() {
         let f = setup().await;
         let t0 = wall_ms() - 60_000;
-        let hide =
-            progress_of(put(&f.app, json!({ "completed": [], "hiddenChoice": { "hidden": true, "at": t0 } }), TOKEN).await);
+        let hide = progress_of(
+            put(
+                &f.app,
+                json!({ "completed": [], "hiddenChoice": { "hidden": true, "at": t0 } }),
+                TOKEN,
+            )
+            .await,
+        );
         assert_eq!(hide["hiddenChoice"], json!({ "hidden": true, "at": t0 }));
 
         let show = progress_of(
-            put(&f.app, json!({ "completed": [], "hiddenChoice": { "hidden": false, "at": t0 + 30_000 } }), TOKEN).await,
+            put(
+                &f.app,
+                json!({ "completed": [], "hiddenChoice": { "hidden": false, "at": t0 + 30_000 } }),
+                TOKEN,
+            )
+            .await,
         );
-        assert_eq!(show["hiddenChoice"], json!({ "hidden": false, "at": t0 + 30_000 }));
+        assert_eq!(
+            show["hiddenChoice"],
+            json!({ "hidden": false, "at": t0 + 30_000 })
+        );
 
         // The first device, still holding its older Hide, writes again.
         let stale = progress_of(
-            put(&f.app, json!({ "completed": ["basics"], "hiddenChoice": { "hidden": true, "at": t0 } }), TOKEN).await,
+            put(
+                &f.app,
+                json!({ "completed": ["basics"], "hiddenChoice": { "hidden": true, "at": t0 } }),
+                TOKEN,
+            )
+            .await,
         );
-        assert_eq!(stale, json!({ "completed": ["basics"], "hiddenChoice": { "hidden": false, "at": t0 + 30_000 } }));
+        assert_eq!(
+            stale,
+            json!({ "completed": ["basics"], "hiddenChoice": { "hidden": false, "at": t0 + 30_000 } })
+        );
 
         // A write with no choice (absent or null) leaves the stored one alone.
         assert_eq!(
@@ -229,16 +288,24 @@ mod r320_a_write_merges_into_the_account_and_never_takes_anything_away {
     }
 
     #[tokio::test]
-    async fn r320_takes_a_choice_timed_after_the_servers_clock_as_made_now_so_a_clock_running_ahead_cannot_pin_it() {
+    async fn r320_takes_a_choice_timed_after_the_servers_clock_as_made_now_so_a_clock_running_ahead_cannot_pin_it()
+     {
         let f = setup().await;
         let before = wall_ms();
         let ahead = progress_of(
-            put(&f.app, json!({ "completed": [], "hiddenChoice": { "hidden": true, "at": before + 86_400_000 } }), TOKEN)
-                .await,
+            put(
+                &f.app,
+                json!({ "completed": [], "hiddenChoice": { "hidden": true, "at": before + 86_400_000 } }),
+                TOKEN,
+            )
+            .await,
         );
         let after = wall_ms();
         let now = ahead["hiddenChoice"]["at"].as_i64().expect("a stored time");
-        assert!((before..=after).contains(&now), "{now} is the server's now, between {before} and {after}");
+        assert!(
+            (before..=after).contains(&now),
+            "{now} is the server's now, between {before} and {after}"
+        );
         assert_eq!(ahead["hiddenChoice"], json!({ "hidden": true, "at": now }));
 
         // A moment later, a choice from a device whose clock is right wins over it. (TS moved its
@@ -247,8 +314,14 @@ mod r320_a_write_merges_into_the_account_and_never_takes_anything_away {
             tokio::time::sleep(Duration::from_millis(1)).await;
         }
         let device = wall_ms();
-        let later =
-            progress_of(put(&f.app, json!({ "completed": [], "hiddenChoice": { "hidden": false, "at": device } }), TOKEN).await);
+        let later = progress_of(
+            put(
+                &f.app,
+                json!({ "completed": [], "hiddenChoice": { "hidden": false, "at": device } }),
+                TOKEN,
+            )
+            .await,
+        );
         assert_eq!(later["hiddenChoice"], json!({ "hidden": false, "at": device }));
     }
 }
@@ -289,19 +362,36 @@ mod r320_the_body_is_checked_before_anything_is_stored {
         }
         // The longest id allowed is fine.
         let longest = "a".repeat(count(TUTORIAL_LESSON_ID_MAX_LENGTH));
-        assert_eq!(completed_of(&progress_of(put(&f.app, json!({ "completed": [longest] }), TOKEN).await)).len(), 1);
+        assert_eq!(
+            completed_of(&progress_of(
+                put(&f.app, json!({ "completed": [longest] }), TOKEN).await
+            ))
+            .len(),
+            1
+        );
     }
 
     #[tokio::test]
     async fn r320_refuses_more_distinct_lessons_than_an_account_holds_counting_a_repeat_once() {
         let f = setup().await;
-        let many: Vec<String> = (0..count(TUTORIAL_LESSONS_MAX) + 1).map(|at| format!("lesson-{at}")).collect();
+        let many: Vec<String> = (0..count(TUTORIAL_LESSONS_MAX) + 1)
+            .map(|at| format!("lesson-{at}"))
+            .collect();
         let message = refused(&f.app, json!({ "completed": many })).await["error"]["message"].clone();
-        assert!(message.as_str().unwrap_or_default().contains(&TUTORIAL_LESSONS_MAX.to_string()), "{message}");
+        assert!(
+            message
+                .as_str()
+                .unwrap_or_default()
+                .contains(&TUTORIAL_LESSONS_MAX.to_string()),
+            "{message}"
+        );
         let first = &many[..count(TUTORIAL_LESSONS_MAX)];
         let repeated: Vec<&String> = first.iter().chain(first).collect();
         assert_eq!(
-            completed_of(&progress_of(put(&f.app, json!({ "completed": repeated }), TOKEN).await)).len(),
+            completed_of(&progress_of(
+                put(&f.app, json!({ "completed": repeated }), TOKEN).await
+            ))
+            .len(),
             count(TUTORIAL_LESSONS_MAX)
         );
         assert_eq!(stored(&f).await.len(), 1);
@@ -310,7 +400,9 @@ mod r320_the_body_is_checked_before_anything_is_stored {
     #[tokio::test]
     async fn r320_answers_a_union_past_the_cap_with_409_and_writes_nothing() {
         let f = setup().await;
-        let first: Vec<String> = (0..count(TUTORIAL_LESSONS_MAX)).map(|at| format!("lesson-{at}")).collect();
+        let first: Vec<String> = (0..count(TUTORIAL_LESSONS_MAX))
+            .map(|at| format!("lesson-{at}"))
+            .collect();
         progress_of(put(&f.app, json!({ "completed": first }), TOKEN).await);
         let (status, body) = put(&f.app, json!({ "completed": ["one-more"] }), TOKEN).await;
         assert_eq!(status, 409, "{body}");

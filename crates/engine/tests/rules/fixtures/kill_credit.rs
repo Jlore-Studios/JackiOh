@@ -10,7 +10,9 @@
 
 use std::sync::{Arc, LazyLock};
 
-use jackioh_engine::effects::{WithKillCreditArgs, buff, forced_attack_random, go_berserk, remember, with_kill_credit};
+use jackioh_engine::effects::{
+    WithKillCreditArgs, buff, forced_attack_random, go_berserk, remember, with_kill_credit,
+};
 use jackioh_engine::testkit::*;
 
 /// TS `unit(name, attack, health)`: a Core Common Unit at cost 0, both faces alike.
@@ -74,7 +76,9 @@ fn jungle_face(transfer: bool) -> Script {
                     across_from_bots(ctx.state, ctx.controller)
                 }),
                 transfer,
-                during: forced_attack_random(json_as(json!({ "attacker": { "of": "self" }, "among": "enemyUnits" }))),
+                during: forced_attack_random(json_as(
+                    json!({ "attacker": { "of": "self" }, "among": "enemyUnits" }),
+                )),
                 then: if transfer {
                     None
                 } else {
@@ -92,17 +96,23 @@ fn jungle_face(transfer: bool) -> Script {
 
 fn bot_script() -> Script {
     Script {
-        triggers: vec![TriggerDef::new("kc-bot-kill", &[GameEventType::Destroyed], |ctx, event| {
-            let killed_by_self = match (event, ctx.self_.as_ref()) {
-                (GameEvent::Destroyed { killer_id, .. }, Some(me)) => killer_id.as_deref() == Some(me.id.as_str()),
-                _ => false,
-            };
-            if killed_by_self {
-                vec![buff(json_as(json!({ "target": { "of": "self" }, "attack": 5 })))]
-            } else {
-                vec![]
-            }
-        })],
+        triggers: vec![TriggerDef::new(
+            "kc-bot-kill",
+            &[GameEventType::Destroyed],
+            |ctx, event| {
+                let killed_by_self = match (event, ctx.self_.as_ref()) {
+                    (GameEvent::Destroyed { killer_id, .. }, Some(me)) => {
+                        killer_id.as_deref() == Some(me.id.as_str())
+                    }
+                    _ => false,
+                };
+                if killed_by_self {
+                    vec![buff(json_as(json!({ "target": { "of": "self" }, "attack": 5 })))]
+                } else {
+                    vec![]
+                }
+            },
+        )],
         ..Script::default()
     }
 }

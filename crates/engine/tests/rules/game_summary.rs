@@ -27,11 +27,20 @@ fn decks() -> (Vec<String>, Vec<String>) {
 }
 
 fn fold_args(seed: &str, decks: (Vec<String>, Vec<String>), log: Vec<Action>) -> FoldArgs {
-    FoldArgs { seed: seed.to_string(), decks, log, ..Default::default() }
+    FoldArgs {
+        seed: seed.to_string(),
+        decks,
+        log,
+        ..Default::default()
+    }
 }
 
 fn hand(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|card| card.def_id.clone()).collect()
+    state.players[player]
+        .hand
+        .iter()
+        .map(|card| card.def_id.clone())
+        .collect()
 }
 
 fn sorted(ids: &[String]) -> Vec<String> {
@@ -56,7 +65,11 @@ fn splice_last_index_of(list: &mut Vec<String>, card: &str) {
 /// JS `events.slice(from)`: a negative start counts from the end.
 fn slice_from(events: &[GameEvent], from: isize) -> &[GameEvent] {
     let len = events.len() as isize;
-    let start = if from < 0 { (len + from).max(0) } else { from.min(len) };
+    let start = if from < 0 {
+        (len + from).max(0)
+    } else {
+        from.min(len)
+    };
     &events[start as usize..]
 }
 
@@ -72,8 +85,20 @@ struct Step<'a> {
 fn draws_kept(step: &Step<'_>, from: isize) -> PerPlayer<Vec<String>> {
     let mut drawn: PerPlayer<Vec<String>> = PerPlayer::new(vec![], vec![]);
     for event in slice_from(step.events, from) {
-        let GameEvent::Drawn { player, instance_id, def_id, .. } = event else { continue };
-        if step.after.players[*player].hand.iter().any(|card| card.id == *instance_id) {
+        let GameEvent::Drawn {
+            player,
+            instance_id,
+            def_id,
+            ..
+        } = event
+        else {
+            continue;
+        };
+        if step.after.players[*player]
+            .hand
+            .iter()
+            .any(|card| card.id == *instance_id)
+        {
             drawn[*player].push(def_id.clone());
         }
     }
@@ -121,11 +146,18 @@ impl Stepper {
 
 fn stepper(seed: &str, decks: (Vec<String>, Vec<String>)) -> Stepper {
     let begun = begin_game(&new_game(seed, Some(decks)));
-    Stepper { state: begun.state, log: Vec::new(), steps: Vec::new() }
+    Stepper {
+        state: begun.state,
+        log: Vec::new(),
+        steps: Vec::new(),
+    }
 }
 
 fn step_of(recorded: &Recorded) -> Step<'_> {
-    Step { events: &recorded.events, after: &recorded.after }
+    Step {
+        events: &recorded.events,
+        after: &recorded.after,
+    }
 }
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {
@@ -150,10 +182,19 @@ mod summarize_game_s9_11 {
         game.act(
             PlayerId::P1,
             ActionBody::Mulligan {
-                keep: p1_dealt.iter().filter(|card| card.id != returned.id).map(|card| card.id.clone()).collect(),
+                keep: p1_dealt
+                    .iter()
+                    .filter(|card| card.id != returned.id)
+                    .map(|card| card.id.clone())
+                    .collect(),
             },
         );
-        game.act(PlayerId::P2, ActionBody::Mulligan { keep: ids(&dealt.players.p2.hand) });
+        game.act(
+            PlayerId::P2,
+            ActionBody::Mulligan {
+                keep: ids(&dealt.players.p2.hand),
+            },
+        );
 
         // The step that resolved both mulligans also began turn 1 and drew its card.
         let resolved = game.steps.get(1).expect("no resolving step");
@@ -165,8 +206,21 @@ mod summarize_game_s9_11 {
             .into_iter()
             .find(|action| matches!(action, ActionBody::Play { .. }))
             .expect("p1 has no play on turn 1");
-        let ActionBody::Play { instance_id: played_id, .. } = &play else { unreachable!("a play") };
-        let played_def = game.state.players.p1.hand.iter().find(|card| card.id == *played_id).map(|card| card.def_id.clone());
+        let ActionBody::Play {
+            instance_id: played_id,
+            ..
+        } = &play
+        else {
+            unreachable!("a play")
+        };
+        let played_def = game
+            .state
+            .players
+            .p1
+            .hand
+            .iter()
+            .find(|card| card.id == *played_id)
+            .map(|card| card.def_id.clone());
         game.act(PlayerId::P1, play.clone());
         game.act(PlayerId::P1, ActionBody::EndTurn);
         game.act(PlayerId::P2, ActionBody::EndTurn);
@@ -193,7 +247,17 @@ mod summarize_game_s9_11 {
         assert_eq!(summary.seats.p1.opening.len(), hand(&dealt, PlayerId::P1).len());
         assert_eq!(summary.seats.p2.opening, hand(&dealt, PlayerId::P2));
 
-        assert_eq!(summary.seats.p1.played.iter().cloned().map(Some).collect::<Vec<_>>(), vec![played_def]);
+        assert_eq!(
+            summary
+                .seats
+                .p1
+                .played
+                .iter()
+                .cloned()
+                .map(Some)
+                .collect::<Vec<_>>(),
+            vec![played_def]
+        );
         assert_eq!(summary.seats.p2.played, Vec::<String>::new());
         // Turn 1's draw, then p2's on turn 2 and p1's on turn 3, each drawn by the endTurn before it.
         let (Some(end_one), Some(end_two)) = (game.steps.get(3), game.steps.get(4)) else {
@@ -226,7 +290,10 @@ mod summarize_game_s9_11 {
             let mut begun = false;
             for action in &live.log {
                 if let ActionBody::Play { instance_id, .. } = &action.body {
-                    let card = state.players[action.player_id].hand.iter().find(|instance| instance.id == *instance_id);
+                    let card = state.players[action.player_id]
+                        .hand
+                        .iter()
+                        .find(|instance| instance.id == *instance_id);
                     if let Some(card) = card {
                         plays[action.player_id].push(card.def_id.clone());
                     }
@@ -242,8 +309,18 @@ mod summarize_game_s9_11 {
                 // p1's is its opening hand plus turn 1's draws.
                 let from = if begun { 0 } else { turn_start_in(&result.events) };
                 if from >= 0 {
-                    let kept = draws_kept(&Step { events: &result.events, after: &result.state }, from);
-                    if !begun && state.phase == Phase::Mulligan && result.state.phase != Phase::Mulligan && result.state.turn == 1 {
+                    let kept = draws_kept(
+                        &Step {
+                            events: &result.events,
+                            after: &result.state,
+                        },
+                        from,
+                    );
+                    if !begun
+                        && state.phase == Phase::Mulligan
+                        && result.state.phase != Phase::Mulligan
+                        && result.state.turn == 1
+                    {
                         let mut p1 = hand(&result.state, PlayerId::P1);
                         for card in &kept.p1 {
                             splice_last_index_of(&mut p1, card);
@@ -261,7 +338,11 @@ mod summarize_game_s9_11 {
             assert_eq!(summary.seats.p2.played, plays.p2, "{seed}");
             assert_eq!(summary.seats.p1.drawn, drawn.p1, "{seed}");
             assert_eq!(summary.seats.p2.drawn, drawn.p2, "{seed}");
-            assert_eq!(Some(summary.winner), live.state.result.as_ref().map(|result| result.winner), "{seed}");
+            assert_eq!(
+                Some(summary.winner),
+                live.state.result.as_ref().map(|result| result.winner),
+                "{seed}"
+            );
             if let Some(opening) = &opening {
                 checked += 1;
                 assert_eq!(sorted(&summary.seats.p1.opening), sorted(&opening.p1), "{seed}");
@@ -269,8 +350,11 @@ mod summarize_game_s9_11 {
             }
             // Every card drawn into a hand came out of that seat's library: its own deck.
             for player in PLAYER_IDS {
-                let deck: IndexSet<String> =
-                    if player == PlayerId::P1 { live.decks.0.iter().cloned().collect() } else { live.decks.1.iter().cloned().collect() };
+                let deck: IndexSet<String> = if player == PlayerId::P1 {
+                    live.decks.0.iter().cloned().collect()
+                } else {
+                    live.decks.1.iter().cloned().collect()
+                };
                 for card in &summary.seats[player].drawn {
                     assert!(deck.contains(card), "{seed} {player} {card}");
                 }
@@ -288,7 +372,14 @@ mod summarize_game_s9_11 {
         // past it burns (R4) until the game ends.
         let seed = "summary-burn-and-cast-1";
         let mut game = stepper(seed, decks());
-        assert!(game.state.players.p1.library.iter().any(|card| card.def_id == "fx-hinder"));
+        assert!(
+            game.state
+                .players
+                .p1
+                .library
+                .iter()
+                .any(|card| card.def_id == "fx-hinder")
+        );
         let keep = ids(&game.state.players.p1.hand);
         game.act(PlayerId::P1, ActionBody::Mulligan { keep });
         let keep = ids(&game.state.players.p2.hand);
@@ -301,7 +392,8 @@ mod summarize_game_s9_11 {
             game.act(active, ActionBody::EndTurn);
         }
 
-        let summary = summarize_game(&fold_args(seed, decks(), game.log.clone())).expect("no summary of a finished game");
+        let summary = summarize_game(&fold_args(seed, decks(), game.log.clone()))
+            .expect("no summary of a finished game");
 
         let mut kept: PerPlayer<Vec<String>> = PerPlayer::new(vec![], vec![]);
         let mut draws: PerPlayer<usize> = PerPlayer::new(0, 0);
@@ -375,10 +467,19 @@ mod summarize_game_s9_11 {
         let refused = Action::new(ActionBody::EndTurn, PlayerId::P2, "refused-0");
         let mut log = vec![refused];
         log.extend(live.log.iter().cloned());
-        assert_eq!(fold(&fold_args("summary-refused", live.decks.clone(), log.clone())).errors.len(), 1);
+        assert_eq!(
+            fold(&fold_args("summary-refused", live.decks.clone(), log.clone()))
+                .errors
+                .len(),
+            1
+        );
         assert_eq!(
             summarize_game(&fold_args("summary-refused", live.decks.clone(), log)),
-            summarize_game(&fold_args("summary-refused", live.decks.clone(), live.log.clone()))
+            summarize_game(&fold_args(
+                "summary-refused",
+                live.decks.clone(),
+                live.log.clone()
+            ))
         );
     }
 }

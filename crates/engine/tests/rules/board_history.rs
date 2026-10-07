@@ -74,7 +74,10 @@ fn ids_of<C: std::borrow::Borrow<CardInstance>>(cards: &[C]) -> Vec<String> {
 }
 
 fn instance_ids<E: serde::Serialize>(events: &[E]) -> Vec<Value> {
-    events.iter().map(|event| json_of(event)["instanceId"].clone()).collect()
+    events
+        .iter()
+        .map(|event| json_of(event)["instanceId"].clone())
+        .collect()
 }
 
 fn history_turns(state: &GameState) -> Option<Vec<i32>> {
@@ -110,7 +113,9 @@ mod e29_the_record_r419_r62 {
             .expect("a snapshot");
         assert_eq!(snapshot.turn, 3);
         assert_eq!(
-            snapshot.sides.p1.backrow[1].as_ref().map(|card| card.def_id.clone()),
+            snapshot.sides.p1.backrow[1]
+                .as_ref()
+                .map(|card| card.def_id.clone()),
             Some(spatula.id.clone())
         );
         assert_eq!(
@@ -189,12 +194,42 @@ mod e29_the_restore_r419 {
         lock_zone(&mut state, slot(P2, Row::Units, 5));
         record_board_snapshot(&mut state);
 
-        move_to_zone(&mut state, &mut from_library, OffFieldZone::Library, MoveToZoneOptions::default());
-        move_to_zone(&mut state, &mut from_hand, OffFieldZone::Hand, MoveToZoneOptions::default());
-        move_to_zone(&mut state, &mut from_graveyard, OffFieldZone::Graveyard, MoveToZoneOptions::default());
-        move_to_zone(&mut state, &mut from_exile, OffFieldZone::Exile, MoveToZoneOptions::default());
-        move_to_zone(&mut state, &mut carried, OffFieldZone::Hand, MoveToZoneOptions::default());
-        move_to_zone(&mut state, &mut over, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(
+            &mut state,
+            &mut from_library,
+            OffFieldZone::Library,
+            MoveToZoneOptions::default(),
+        );
+        move_to_zone(
+            &mut state,
+            &mut from_hand,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
+        move_to_zone(
+            &mut state,
+            &mut from_graveyard,
+            OffFieldZone::Graveyard,
+            MoveToZoneOptions::default(),
+        );
+        move_to_zone(
+            &mut state,
+            &mut from_exile,
+            OffFieldZone::Exile,
+            MoveToZoneOptions::default(),
+        );
+        move_to_zone(
+            &mut state,
+            &mut carried,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
+        move_to_zone(
+            &mut state,
+            &mut over,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
         assert_eq!(
             card_at(&state, slot(P1, Row::Backrow, 2)).map(|card| card.id.clone()),
             Some(under.id.clone())
@@ -252,7 +287,9 @@ mod e29_the_restore_r419 {
             json!([{ "type": "unlocked", "player": "p1", "row": "units", "lane": 3 }])
         );
         // The face-down trap never moved: no fresh id and no event names it.
-        assert!(!instance_ids(&events_of_type(&events, GameEventType::ControlChanged)).contains(&json!(trap.id)));
+        assert!(
+            !instance_ids(&events_of_type(&events, GameEventType::ControlChanged)).contains(&json!(trap.id))
+        );
     }
 
     #[test]
@@ -262,7 +299,12 @@ mod e29_the_restore_r419 {
         let mut trap = put(&mut state, &watcher.id, slot(P1, Row::Backrow, 2), json!({}));
         let first = trap.id.clone();
         record_board_snapshot(&mut state);
-        move_to_zone(&mut state, &mut trap, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(
+            &mut state,
+            &mut trap,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
         // TS renamed and placed the very object the hand held; Rust takes that card out of the hand
         // first, so it is "a card that is in no pile" as `freshFaceDownId` asks, and is placed once.
         let at = state
@@ -275,14 +317,18 @@ mod e29_the_restore_r419 {
         let mut moved = state.players.p1.hand.remove(at);
         fresh_face_down_id(&mut state, &mut moved);
         let trap_id = moved.id.clone();
-        place_on_field(&mut state, &mut moved, slot(P1, Row::Backrow, 4), PlaceOnFieldOptions::default());
+        place_on_field(
+            &mut state,
+            &mut moved,
+            slot(P1, Row::Backrow, 4),
+            PlaceOnFieldOptions::default(),
+        );
         assert_eq!(
-            state.board_history.as_ref().and_then(|history| history.first()).and_then(|snapshot| snapshot
-                .sides
-                .p1
-                .backrow[1]
+            state
+                .board_history
                 .as_ref()
-                .map(|card| card.id.clone())),
+                .and_then(|history| history.first())
+                .and_then(|snapshot| snapshot.sides.p1.backrow[1].as_ref().map(|card| card.id.clone())),
             Some(trap_id.clone())
         );
         assert_ne!(trap_id, first);
@@ -297,11 +343,17 @@ mod e29_the_restore_r419 {
     }
 
     #[test]
-    fn r227_r97_a_card_going_back_face_down_from_a_public_zone_takes_a_fresh_id_its_views_follow_it_by_former_id() {
+    fn r227_r97_a_card_going_back_face_down_from_a_public_zone_takes_a_fresh_id_its_views_follow_it_by_former_id()
+     {
         let mut state = board("bh-fresh");
         let mut trap = put(&mut state, &watcher.id, slot(P2, Row::Backrow, 1), json!({}));
         record_board_snapshot(&mut state);
-        move_to_zone(&mut state, &mut trap, OffFieldZone::Graveyard, MoveToZoneOptions::default());
+        move_to_zone(
+            &mut state,
+            &mut trap,
+            OffFieldZone::Graveyard,
+            MoveToZoneOptions::default(),
+        );
         let old = trap.id.clone();
         let mut events: Vec<GameEvent> = Vec::new();
         restore(&mut state, &mut events, P1, 1, &[P2]);
@@ -316,14 +368,20 @@ mod e29_the_restore_r419 {
             nonce: "bh-fresh".into(),
             events: events.clone(),
         });
-        let seen = json_of(events_of_type(&view_for(&state, P1).events, GameEventType::ControlChanged));
+        let seen = json_of(events_of_type(
+            &view_for(&state, P1).events,
+            GameEventType::ControlChanged,
+        ));
         assert_eq!(
             seen,
             json!([{ "type": "controlChanged", "instanceId": "hidden", "controller": "p2", "row": "backrow", "lane": 1 }])
         );
         let theirs = view_for(&state, P2);
         let theirs = events_of_type(&theirs.events, GameEventType::ControlChanged);
-        assert_eq!(theirs.first().map(|event| json_of(event)["formerId"].clone()), Some(json!(old)));
+        assert_eq!(
+            theirs.first().map(|event| json_of(event)["formerId"].clone()),
+            Some(json!(old))
+        );
     }
 
     #[test]
@@ -338,7 +396,9 @@ mod e29_the_restore_r419 {
         let old = trap.id.clone();
         let mut events: Vec<GameEvent> = Vec::new();
         restore(&mut state, &mut events, P1, 1, &[P1]);
-        let back = card_at(&state, slot(P1, Row::Backrow, 2)).cloned().expect("a card went back");
+        let back = card_at(&state, slot(P1, Row::Backrow, 2))
+            .cloned()
+            .expect("a card went back");
         assert_ne!(back.id, old);
         assert_eq!(back.face_up, None);
         assert_eq!(back.summoned_turn, Some(state.turn));
@@ -363,7 +423,10 @@ mod e29_the_restore_r419 {
         state = act(&state, input(json!({ "type": "endTurn", "playerId": "p1" })));
         state = act(&state, input(json!({ "type": "endTurn", "playerId": "p2" })));
         // Turn 3, p1's: recorded first, then the tick (R62) took the live count down.
-        assert_eq!(card(&state, &unit.id).brittle.map(|brittle| brittle.count), Some(2));
+        assert_eq!(
+            card(&state, &unit.id).brittle.map(|brittle| brittle.count),
+            Some(2)
+        );
         let recorded = state
             .board_history
             .as_ref()
@@ -402,7 +465,12 @@ mod e29_the_restore_r419 {
             live.memory = IndexMap::from([("meal".to_string(), json!("kept"))]);
         }
         record_board_snapshot(&mut state);
-        move_to_zone(&mut state, &mut unit, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(
+            &mut state,
+            &mut unit,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
         // Since, in the hand (B3.4, §6.3): what R78 leaves alone on the way out, the restore still takes back.
         {
             let live = card_mut(&mut state, &unit.id);
@@ -432,7 +500,12 @@ mod e29_the_restore_r419 {
         );
         record_board_snapshot(&mut state);
         // Since: both went back to the hand, and the carrier is being played again (§10.5's resolving zone).
-        move_to_zone(&mut state, &mut rider, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(
+            &mut state,
+            &mut rider,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
         let mut resolving = card(&state, &carrier.id).clone();
         remove_from_any_zone(&mut state, &mut carrier);
         resolving.zone = Zone::Resolving { player: P1 };
@@ -444,7 +517,13 @@ mod e29_the_restore_r419 {
         assert!(zone_contents(&state, slot(P1, Row::Backrow, 1)).is_empty());
         assert_eq!(card(&state, &rider.id).zone.z(), ZoneName::Hand);
         assert_eq!(
-            state.players.p1.hand.iter().filter(|held| held.id == rider.id).count(),
+            state
+                .players
+                .p1
+                .hand
+                .iter()
+                .filter(|held| held.id == rider.id)
+                .count(),
             1
         );
         assert_eq!(
@@ -465,7 +544,12 @@ mod e29_the_restore_r419 {
             switched: false,
             attacks: None,
         };
-        move_to_zone(&mut state, &mut away, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(
+            &mut state,
+            &mut away,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
         let mut events: Vec<GameEvent> = Vec::new();
         restore(&mut state, &mut events, P1, 1, &[P1]);
         assert!(card(&state, &stayed.id).exertion.attacked);
@@ -487,7 +571,12 @@ mod r563_e29_held_zones {
         state.turn = 2;
         let mut occupant = put(&mut state, PLAIN_UNIT, slot(P1, Row::Units, 1), json!({}));
         record_board_snapshot(&mut state);
-        move_to_zone(&mut state, &mut occupant, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(
+            &mut state,
+            &mut occupant,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
         let bird = put(&mut state, &phoenix.id, slot(P1, Row::Units, 1), json!({}));
         card_mut(&mut state, &bird.id).damage = 2;
 
@@ -507,7 +596,8 @@ mod r563_e29_held_zones {
     }
 
     #[test]
-    fn r563_only_a_restored_sides_holds_are_let_go_the_other_sides_reborn_zone_and_animated_cards_home_stay_held() {
+    fn r563_only_a_restored_sides_holds_are_let_go_the_other_sides_reborn_zone_and_animated_cards_home_stay_held()
+     {
         let mut state = board("bh-holds");
         let animated = put(&mut state, &spatula.id, slot(P1, Row::Units, 2), json!({}));
         record_board_snapshot(&mut state);
@@ -612,7 +702,14 @@ mod e29_through_reduce_s9_3 {
             &mut log,
             input(json!({ "type": "play", "playerId": "p1", "instanceId": held, "modes": ["2"] })),
         );
-        assert!(state.players.p1.graveyard.iter().any(|card| card.def_id == rewind_id));
+        assert!(
+            state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .any(|card| card.def_id == rewind_id)
+        );
 
         let replayed = fold(&FoldArgs {
             seed: "bh-fold".into(),
@@ -622,6 +719,10 @@ mod e29_through_reduce_s9_3 {
         });
         assert!(replayed.errors.is_empty());
         assert_eq!(hash_state(&replayed.state), hash_state(&state));
-        assert!(!serde_json::to_string(&view_for(&state, P2)).unwrap().contains("boardHistory"));
+        assert!(
+            !serde_json::to_string(&view_for(&state, P2))
+                .unwrap()
+                .contains("boardHistory")
+        );
     }
 }

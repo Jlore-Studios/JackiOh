@@ -37,7 +37,9 @@ fn config(seed: &str, p1: SeatController) -> MatchConfig {
 }
 
 fn expect_folds(cfg: &MatchConfig, record: &MatchRecord) {
-    let replayed = fold(&json_as::<FoldArgs>(json!({ "seed": cfg.seed, "decks": cfg.decks, "log": record.log })));
+    let replayed = fold(&json_as::<FoldArgs>(
+        json!({ "seed": cfg.seed, "decks": cfg.decks, "log": record.log }),
+    ));
     assert!(replayed.errors.is_empty());
     assert_eq!(hash_state(&replayed.state), record.hash);
 }
@@ -58,7 +60,8 @@ fn scripted<'a>(
         let controller = &cfg.controllers[seat];
         let random = matches!(controller, SeatController::Random);
         let greedy = matches!(controller, SeatController::Greedy);
-        if random && matches!(mode, Misbehaviour::Refuse | Misbehaviour::Throw) && due(fired_on, state, seat) {
+        if random && matches!(mode, Misbehaviour::Refuse | Misbehaviour::Throw) && due(fired_on, state, seat)
+        {
             let _ = fired_on.set(state.clone());
             if mode == Misbehaviour::Throw {
                 panic!("scripted controller failure");
@@ -80,7 +83,8 @@ mod surface_play_match_when_a_controller_misbehaves {
     use super::*;
 
     #[test]
-    fn a_refused_action_is_recorded_in_rejected_and_replaced_by_end_turn_and_the_match_plays_on_and_replays() {
+    fn a_refused_action_is_recorded_in_rejected_and_replaced_by_end_turn_and_the_match_plays_on_and_replays()
+    {
         let cfg = config("refusal-endturn", SeatController::Random);
         let fired_on: OnceCell<GameState> = OnceCell::new();
         let mut replacement: Option<ActionBody> = None;

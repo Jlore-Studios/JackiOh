@@ -65,7 +65,11 @@ fn grant_catalog() -> FakeCatalog {
 
 /// End-to-end mode's store over `grant_catalog()`, on the server's clock.
 fn e2e_store() -> Db {
-    create_e2e_store(E2eStoreOptions { catalog: grant_catalog(), now: Arc::new(now_ms), redemption: None })
+    create_e2e_store(E2eStoreOptions {
+        catalog: grant_catalog(),
+        now: Arc::new(now_ms),
+        redemption: None,
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -103,7 +107,10 @@ async fn bare_app() -> App {
 /// swapped for one over `grant_catalog()`, so the launch grant is four cards.
 async fn harness() -> Arc<App> {
     let app = bare_app().await;
-    Arc::new(App { db: e2e_store(), ..app })
+    Arc::new(App {
+        db: e2e_store(),
+        ..app
+    })
 }
 
 /// §9.4's code hash as the server takes it (TS `createHashes(...).code`, peppered as `index.ts`
@@ -114,15 +121,21 @@ struct Hashes {
 
 impl Hashes {
     fn code(&self, plain: &str) -> String {
-        let mut mac =
-            <Hmac<Sha256> as KeyInit>::new_from_slice(format!("{}:code", self.pepper).as_bytes()).expect("any key length");
+        let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(format!("{}:code", self.pepper).as_bytes())
+            .expect("any key length");
         mac.update(normalize_code(plain).as_bytes());
-        mac.finalize().into_bytes().iter().map(|byte| format!("{byte:02x}")).collect()
+        mac.finalize()
+            .into_bytes()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect()
     }
 }
 
 fn hashes(app: &App) -> Hashes {
-    Hashes { pepper: app.env.code_pepper.clone() }
+    Hashes {
+        pepper: app.env.code_pepper.clone(),
+    }
 }
 
 /// One store call in a transaction of its own (TS called the store's methods bare).
@@ -165,14 +178,21 @@ fn p1() -> &'static E2EAccount {
 /// TS `store.grantsFor(profileId)`.
 async fn grants_for(db: &Db, profile_id: &str) -> Vec<Value> {
     match db {
-        Db::Fake(data) => data.lock().await.grants_for(profile_id).iter().map(json_of).collect(),
+        Db::Fake(data) => data
+            .lock()
+            .await
+            .grants_for(profile_id)
+            .iter()
+            .map(json_of)
+            .collect(),
         Db::Pg(_) => panic!("the API tests run on the fake store"),
     }
 }
 
 async fn create_profile(db: &Db, user_id: &str) -> Value {
-    let input: ProfileCreateInput =
-        from(json!({ "userId": user_id, "email": format!("{user_id}@example.test"), "rating": 1000, "at": 1 }));
+    let input: ProfileCreateInput = from(
+        json!({ "userId": user_id, "email": format!("{user_id}@example.test"), "rating": 1000, "at": 1 }),
+    );
     json_of(&store!(db, profiles_create(&input)))
 }
 
@@ -189,8 +209,14 @@ async fn set_status(db: &Db, profile_id: &str, status: &str) {
 }
 
 async fn redeem(app: &Arc<App>, code: &str) -> (u16, Value) {
-    let (status, _headers, body) =
-        call(app, "POST", "/api/codes/redeem", Some(pending().token), json!({ "code": code })).await;
+    let (status, _headers, body) = call(
+        app,
+        "POST",
+        "/api/codes/redeem",
+        Some(pending().token),
+        json!({ "code": code }),
+    )
+    .await;
     (status, body)
 }
 
@@ -202,7 +228,9 @@ struct Reply {
 
 impl Reply {
     fn header(&self, name: &str) -> Option<&str> {
-        self.headers.get(name).map(|value| value.to_str().expect("an ASCII header"))
+        self.headers
+            .get(name)
+            .map(|value| value.to_str().expect("an ASCII header"))
     }
 }
 
@@ -216,7 +244,10 @@ async fn send(app: &Arc<App>, method: &str, path: &str, headers: &[(&str, &str)]
         .oneshot(request.body(Body::empty()).expect("request"))
         .await
         .expect("the router answers");
-    Reply { status: response.status().as_u16(), headers: response.headers().clone() }
+    Reply {
+        status: response.status().as_u16(),
+        headers: response.headers().clone(),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -234,9 +265,13 @@ mod the_end_to_end_store {
 
         {
             let mut t = db.begin(None).await.expect("begin");
-            t.profiles_set_in_match(&id, Some("match-1")).await.expect("profiles.setInMatch");
+            t.profiles_set_in_match(&id, Some("match-1"))
+                .await
+                .expect("profiles.setInMatch");
             let entries: Vec<CollectionEntry> = from(json!([{ "cardId": "core-001", "quantity": 3 }]));
-            t.collection_upsert_quantities(&id, &entries).await.expect("collection.upsertQuantities");
+            t.collection_upsert_quantities(&id, &entries)
+                .await
+                .expect("collection.upsertQuantities");
             // "the second write failed": TS threw out of the callback; here the transaction is
             // dropped without a commit, which is the Rust store's rollback (SURFACE §11.2).
             drop(t);
@@ -256,15 +291,25 @@ mod the_end_to_end_store {
         // transaction (a second `begin` would wait on the first's lock).
         async fn inner(t: &mut Tx<'_>, id: &str) {
             let entries: Vec<CollectionEntry> = from(json!([{ "cardId": "core-001", "quantity": 2 }]));
-            t.collection_upsert_quantities(id, &entries).await.expect("collection.upsertQuantities");
+            t.collection_upsert_quantities(id, &entries)
+                .await
+                .expect("collection.upsertQuantities");
         }
         let mut t = db.begin(None).await.expect("begin");
-        t.profiles_set_in_match(&id, Some("match-1")).await.expect("profiles.setInMatch");
+        t.profiles_set_in_match(&id, Some("match-1"))
+            .await
+            .expect("profiles.setInMatch");
         inner(&mut t, &id).await;
         t.commit().await.expect("commit");
 
-        assert_eq!(json_of(&store!(db, profiles_get_by_id(&id)))["inMatchId"], json!("match-1"));
-        assert_eq!(collection_of(&db, &id).await, json!([{ "cardId": "core-001", "quantity": 2 }]));
+        assert_eq!(
+            json_of(&store!(db, profiles_get_by_id(&id)))["inMatchId"],
+            json!("match-1")
+        );
+        assert_eq!(
+            collection_of(&db, &id).await,
+            json!([{ "cardId": "core-001", "quantity": 2 }])
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -283,7 +328,10 @@ mod the_end_to_end_store {
         let claim = || async { store!(db, codes_claim("code-1", 10)) };
         let (first, second) = tokio::join!(claim(), claim());
         assert_eq!([first, second].iter().filter(|won| **won).count(), 1);
-        assert_eq!(json_of(&store!(db, codes_find_by_hash("hash-1")))["uses"], json!(1));
+        assert_eq!(
+            json_of(&store!(db, codes_find_by_hash("hash-1")))["uses"],
+            json!(1)
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -374,7 +422,10 @@ mod r111_the_launch_grant_on_pending_active {
 
         let entries = collection_of(&db, &id).await;
         let entries = entries.as_array().expect("a list");
-        let mut ids: Vec<&str> = entries.iter().map(|entry| entry["cardId"].as_str().expect("an id")).collect();
+        let mut ids: Vec<&str> = entries
+            .iter()
+            .map(|entry| entry["cardId"].as_str().expect("an id"))
+            .collect();
         ids.sort();
         assert_eq!(ids, PLAYABLE.to_vec());
         for entry in entries {
@@ -441,8 +492,17 @@ mod r144_the_reseed_at_boot {
             assert_eq!(profile["status"], json_of(&fixture.status));
             let owned = collection_of(&app.db, profile["id"].as_str().unwrap_or("")).await;
             // A6: `e2e-p1` and `e2e-p2` "own every card"; `e2e-pending` owns nothing until it redeems.
-            let expected = if profile["status"] == json!("active") { PLAYABLE.len() } else { 0 };
-            assert_eq!(owned.as_array().map_or(0, Vec::len), expected, "{}", fixture.user_id);
+            let expected = if profile["status"] == json!("active") {
+                PLAYABLE.len()
+            } else {
+                0
+            };
+            assert_eq!(
+                owned.as_array().map_or(0, Vec::len),
+                expected,
+                "{}",
+                fixture.user_id
+            );
         }
     }
 
@@ -483,16 +543,27 @@ mod r144_the_reseed_at_boot {
         assert_eq!(first.granted_cards as usize, PLAYABLE.len());
 
         let pending_profile = json_of(&store!(app.db, profiles_get_by_user_id(&pending().user_id)));
-        assert_eq!(pending_profile["status"], json!("pending"), "the reseed put it back to pending");
+        assert_eq!(
+            pending_profile["status"],
+            json!("pending"),
+            "the reseed put it back to pending"
+        );
 
         // Spec 10's three failure kinds first, which is also §9.4's per-profile attempt budget being
         // respected: three failures plus one success is four logged attempts.
-        for code in [E2E_INVITE_CODES.missing, E2E_INVITE_CODES.expired, E2E_INVITE_CODES.exhausted] {
+        for code in [
+            E2E_INVITE_CODES.missing,
+            E2E_INVITE_CODES.expired,
+            E2E_INVITE_CODES.exhausted,
+        ] {
             let (status, body) = redeem(&app, code).await;
             assert_eq!(status, 400, "{code}");
             assert_eq!(body["error"]["code"], json!("invalid_code"));
             assert_eq!(body["error"]["message"], json!(REDEMPTION_IDENTICAL_ERROR));
-            assert!(body["error"].get("details").is_none(), "§9.4 keeps the operator-facing reason out of the client");
+            assert!(
+                body["error"].get("details").is_none(),
+                "§9.4 keeps the operator-facing reason out of the client"
+            );
         }
 
         let (status, body) = redeem(&app, E2E_INVITE_CODES.good).await;
@@ -520,10 +591,15 @@ mod r144_the_reseed_at_boot {
     async fn refuses_a_fixture_code_that_9_4_would_call_malformed_rather_than_seeding_a_dead_code() {
         let app = harness().await;
         let options = E2ESeedOptions {
-            codes: E2EInviteCodes { good: "OOOO-OOOO-OOOO-OOOO", ..E2E_INVITE_CODES },
+            codes: E2EInviteCodes {
+                good: "OOOO-OOOO-OOOO-OOOO",
+                ..E2E_INVITE_CODES
+            },
             ..E2ESeedOptions::default()
         };
-        let refused = seed_e2e_fixtures_with(&app, options).await.expect_err("a malformed fixture code");
+        let refused = seed_e2e_fixtures_with(&app, options)
+            .await
+            .expect_err("a malformed fixture code");
         assert!(refused.to_string().contains("CODE_ALPHABET"), "{refused}");
     }
 
@@ -531,10 +607,15 @@ mod r144_the_reseed_at_boot {
     async fn refuses_two_fixture_codes_that_are_the_same_code() {
         let app = harness().await;
         let options = E2ESeedOptions {
-            codes: E2EInviteCodes { missing: E2E_INVITE_CODES.good, ..E2E_INVITE_CODES },
+            codes: E2EInviteCodes {
+                missing: E2E_INVITE_CODES.good,
+                ..E2E_INVITE_CODES
+            },
             ..E2ESeedOptions::default()
         };
-        let refused = seed_e2e_fixtures_with(&app, options).await.expect_err("two equal fixture codes");
+        let refused = seed_e2e_fixtures_with(&app, options)
+            .await
+            .expect_err("two equal fixture codes");
         assert!(refused.to_string().contains("same code"), "{refused}");
     }
 }
@@ -550,7 +631,11 @@ mod the_fixture_auth_provider {
     async fn verifies_each_static_token_from_e2e_support_config_ts_and_nothing_else() {
         let app = test_app().await;
         for fixture in E2E_ACCOUNTS.iter() {
-            let user = app.auth.verify(fixture.token).await.unwrap_or_else(|_| panic!("{} verifies", fixture.token));
+            let user = app
+                .auth
+                .verify(fixture.token)
+                .await
+                .unwrap_or_else(|_| panic!("{} verifies", fixture.token));
             assert_eq!(user.user_id, fixture.user_id);
             assert_eq!(user.email.as_deref(), Some(fixture.email));
             // §9.4 makes a verified email a precondition of redemption, and spec 10 asserts it on the
@@ -565,12 +650,21 @@ mod the_fixture_auth_provider {
     #[tokio::test(start_paused = true)]
     async fn signs_in_with_the_fixture_email_and_password_and_refuses_anything_else() {
         let app = test_app().await;
-        let session = app.auth.sign_in(p1().email, p1().password).await.expect("the fixture signs in");
+        let session = app
+            .auth
+            .sign_in(p1().email, p1().password)
+            .await
+            .expect("the fixture signs in");
         assert_eq!(session.access_token, p1().token);
         assert_eq!(session.user.user_id, p1().user_id);
 
         assert!(app.auth.sign_in(p1().email, "wrong").await.is_err());
-        assert!(app.auth.sign_in("nobody@jackioh.test", p1().password).await.is_err());
+        assert!(
+            app.auth
+                .sign_in("nobody@jackioh.test", p1().password)
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -588,7 +682,8 @@ mod the_fixture_auth_provider {
     async fn carries_a_pending_account_through_api_auth_me_exactly_as_the_code_screen_reads_it() {
         let app = harness().await;
         seed_e2e_fixtures(&app).await.expect("the reseed");
-        let (status, _headers, body) = call(&app, "GET", "/api/auth/me", Some(pending().token), Value::Null).await;
+        let (status, _headers, body) =
+            call(&app, "GET", "/api/auth/me", Some(pending().token), Value::Null).await;
         assert_eq!(status, 200);
         assert_matches(
             &body,
@@ -614,12 +709,28 @@ mod the_fixture_auth_provider {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../e2e/support/config.ts");
         let source = std::fs::read_to_string(path).expect("e2e/support/config.ts");
         for fixture in E2E_ACCOUNTS.iter() {
-            assert!(source.contains(&format!("\"{}\"", fixture.email)), "{}'s email", fixture.user_id);
-            assert!(source.contains(&format!("\"{}\"", fixture.password)), "{}'s password", fixture.user_id);
-            assert!(source.contains(&format!("\"{}\"", fixture.token)), "{}'s token", fixture.user_id);
+            assert!(
+                source.contains(&format!("\"{}\"", fixture.email)),
+                "{}'s email",
+                fixture.user_id
+            );
+            assert!(
+                source.contains(&format!("\"{}\"", fixture.password)),
+                "{}'s password",
+                fixture.user_id
+            );
+            assert!(
+                source.contains(&format!("\"{}\"", fixture.token)),
+                "{}'s token",
+                fixture.user_id
+            );
         }
-        let codes =
-            [E2E_INVITE_CODES.good, E2E_INVITE_CODES.missing, E2E_INVITE_CODES.expired, E2E_INVITE_CODES.exhausted];
+        let codes = [
+            E2E_INVITE_CODES.good,
+            E2E_INVITE_CODES.missing,
+            E2E_INVITE_CODES.expired,
+            E2E_INVITE_CODES.exhausted,
+        ];
         for code in codes {
             assert!(source.contains(&format!("\"{code}\"")), "the {code} invite code");
         }
@@ -663,14 +774,21 @@ mod r143_the_optional_seed {
         let cards = legal_deck();
         let mut tokens = Vec::new();
         let mut decks = Vec::new();
-        for (index, fixture) in E2E_ACCOUNTS.iter().filter(|candidate| json_of(&candidate.status) == json!("active")).enumerate()
+        for (index, fixture) in E2E_ACCOUNTS
+            .iter()
+            .filter(|candidate| json_of(&candidate.status) == json!("active"))
+            .enumerate()
         {
             let profile = json_of(&store!(app.db, profiles_get_by_user_id(&fixture.user_id)));
             let id = profile["id"].as_str().unwrap_or("").to_string();
             // One saved deck each, owned card for card, so `{ mode: "bo1", deckId }` below is a legal
             // Best of 1 on it (R257). TS sent the legacy `{ deckIndex: 0 }`, which SURFACE §11.3 drops.
-            let owned: Vec<CollectionEntry> =
-                from(json!(cards.iter().map(|card| json!({ "cardId": card, "quantity": 1 })).collect::<Vec<_>>()));
+            let owned: Vec<CollectionEntry> = from(json!(
+                cards
+                    .iter()
+                    .map(|card| json!({ "cardId": card, "quantity": 1 }))
+                    .collect::<Vec<_>>()
+            ));
             store!(app.db, collection_upsert_quantities(&id, &owned));
             let deck: SavedDeck = from(json!({
                 "id": uuid(index + 1),
@@ -701,7 +819,14 @@ mod r143_the_optional_seed {
 
     async fn started_seeds(app: &App) -> Vec<String> {
         match &app.db {
-            Db::Fake(data) => data.lock().await.tables.matches.iter().map(|row| row.seed.clone()).collect(),
+            Db::Fake(data) => data
+                .lock()
+                .await
+                .tables
+                .matches
+                .iter()
+                .map(|row| row.seed.clone())
+                .collect(),
             Db::Pg(_) => panic!("the API tests run on the fake store"),
         }
     }
@@ -746,7 +871,13 @@ mod r143_the_optional_seed {
         assert_eq!(seeds.len(), 1);
         // TS's fake ids minted `seed-<n>`; the server's own are 16 random bytes in hex (`crypto.rs`).
         assert_eq!(seeds[0].len(), 32, "{}", seeds[0]);
-        assert!(seeds[0].chars().all(|ch| ch.is_ascii_hexdigit() && !ch.is_ascii_uppercase()), "{}", seeds[0]);
+        assert!(
+            seeds[0]
+                .chars()
+                .all(|ch| ch.is_ascii_hexdigit() && !ch.is_ascii_uppercase()),
+            "{}",
+            seeds[0]
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -780,7 +911,10 @@ mod cors {
     #[test]
     fn matches_an_origin_regardless_of_a_trailing_slash_and_nothing_else() {
         assert!(is_origin_allowed(&origins(), Some(ALLOWED)));
-        assert!(is_origin_allowed(&["http://localhost:5173/".to_string()], Some(ALLOWED)));
+        assert!(is_origin_allowed(
+            &["http://localhost:5173/".to_string()],
+            Some(ALLOWED)
+        ));
         assert!(!is_origin_allowed(&origins(), Some(EVIL)));
         assert!(!is_origin_allowed(&origins(), None));
     }
@@ -804,7 +938,12 @@ mod cors {
         let allowed_headers = response.header("access-control-allow-headers").unwrap_or("");
         assert!(allowed_headers.contains("authorization"), "{allowed_headers}");
         assert!(allowed_headers.contains("content-type"), "{allowed_headers}");
-        assert!(response.header("access-control-allow-methods").unwrap_or("").contains("PUT"));
+        assert!(
+            response
+                .header("access-control-allow-methods")
+                .unwrap_or("")
+                .contains("PUT")
+        );
         assert_eq!(response.header("vary"), Some("Origin"));
     }
 
@@ -823,8 +962,13 @@ mod cors {
         assert_eq!(response.status, 200);
         assert_eq!(response.header("access-control-allow-origin"), None);
 
-        let preflight =
-            send(&app, "OPTIONS", OPEN_ROUTE, &[("origin", EVIL), ("access-control-request-method", "GET")]).await;
+        let preflight = send(
+            &app,
+            "OPTIONS",
+            OPEN_ROUTE,
+            &[("origin", EVIL), ("access-control-request-method", "GET")],
+        )
+        .await;
         assert_eq!(preflight.header("access-control-allow-origin"), None);
     }
 
@@ -848,6 +992,9 @@ mod get_api_catalog {
         let (status, _headers, body) = call(&app, "GET", "/api/catalog", None, Value::Null).await;
         assert_eq!(status, 200);
         let defs: Value = serde_json::from_str(jackioh_cards::catalog_json()).expect("catalog.json");
-        assert_eq!(body, json!({ "version": jackioh_cards::catalog_version(), "defs": defs }));
+        assert_eq!(
+            body,
+            json!({ "version": jackioh_cards::catalog_version(), "defs": defs })
+        );
     }
 }

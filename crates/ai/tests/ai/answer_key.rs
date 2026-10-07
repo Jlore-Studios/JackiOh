@@ -9,9 +9,9 @@
 use indexmap::{IndexMap, IndexSet};
 use jackioh_ai::{AiOptions, decide, redact};
 use jackioh_engine::testkit::{
-    ANSWER_KEY, ActionBody, CardScripts, EngineSink, GameEvent, GameState, HookOptions, PlayerId, PromptKind, Script,
-    Selection, answer_key_of, create_rng, effects, hash_state, hook, json, json_as, legal_actions, make_context,
-    register_scripts,
+    ANSWER_KEY, ActionBody, CardScripts, EngineSink, GameEvent, GameState, HookOptions, PlayerId, PromptKind,
+    Script, Selection, answer_key_of, create_rng, effects, hash_state, hook, json, json_as, legal_actions,
+    make_context, register_scripts,
 };
 
 use super::support::{act, clone, dealt_game, register_cards, scenario};
@@ -25,7 +25,9 @@ fn quiz() -> Script {
         "answered",
         hook(|ctx| {
             if effects::answered_correctly(ctx) {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 10 })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 10 }),
+                ))]
             } else {
                 vec![]
             }
@@ -94,7 +96,8 @@ mod r465_the_ai_never_reads_a_problems_key {
     use super::*;
 
     #[test]
-    fn r465_redaction_strips_the_key_from_the_ais_own_prompt_and_states_that_differ_only_in_it_redact_alike() {
+    fn r465_redaction_strips_the_key_from_the_ais_own_prompt_and_states_that_differ_only_in_it_redact_alike()
+    {
         let first = asked("r465-a", 0);
         let second = asked("r465-a", 3);
         assert_eq!(key_of(&first), Some("A".to_string()));
@@ -120,7 +123,11 @@ mod r465_the_ai_never_reads_a_problems_key {
             .into_iter()
             .map(|right| {
                 let state = asked("r465-b", right);
-                let decision = decide(&clone(&state), PlayerId::P1, &mut AiOptions::new(create_rng("r465-decide", 0)));
+                let decision = decide(
+                    &clone(&state),
+                    PlayerId::P1,
+                    &mut AiOptions::new(create_rng("r465-decide", 0)),
+                );
                 assert!(decision.is_some());
                 let legal: Vec<String> = legal_actions(&state, PlayerId::P1)
                     .iter()
@@ -145,7 +152,11 @@ mod r465_the_ai_never_reads_a_problems_key {
         s.play("classicplus-042", json!({}));
         for difficulty in ["Easy", "Medium", "Hard"] {
             let offer = clone(s.state());
-            let choice_id = offer.pending.as_ref().map(|pending| pending.id.clone()).unwrap_or_default();
+            let choice_id = offer
+                .pending
+                .as_ref()
+                .map(|pending| pending.id.clone())
+                .unwrap_or_default();
             let answered = act(
                 &offer,
                 PlayerId::P1,
@@ -156,11 +167,18 @@ mod r465_the_ai_never_reads_a_problems_key {
                     }],
                 },
             );
-            assert_eq!(answered.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Answer));
+            assert_eq!(
+                answered.pending.as_ref().map(|pending| pending.kind),
+                Some(PromptKind::Answer)
+            );
             assert!(key_of(&answered).is_some());
             for state in [&offer, &answered] {
                 for seat in [PlayerId::P1, PlayerId::P2] {
-                    assert!(!serde_json::to_string(&redact(state, seat)).unwrap().contains(ANSWER_KEY));
+                    assert!(
+                        !serde_json::to_string(&redact(state, seat))
+                            .unwrap()
+                            .contains(ANSWER_KEY)
+                    );
                 }
             }
         }

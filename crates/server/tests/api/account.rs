@@ -50,7 +50,10 @@ const USER_A: &str = "aaaaaaaa-0000-4000-8000-000000000001";
 /// TS `profileWith`: a profile row seeded with the profile's user id and a token that verifies as it.
 async fn profile_with(h: &Harness, app: &Arc<App>, id: &str, status: &str) -> String {
     let user_id = user_of(id);
-    fake_of(app).lock().await.seed_profile(json!({ "id": id, "userId": user_id, "status": status }));
+    fake_of(app)
+        .lock()
+        .await
+        .seed_profile(json!({ "id": id, "userId": user_id, "status": status }));
     h.token_for(&user_id)
 }
 
@@ -149,7 +152,12 @@ mod delete_api_account {
         assert!(tx.decks_list(PROFILE).await.expect("a read").is_empty());
         assert!(tx.tutorial_get(PROFILE).await.expect("a read").is_none());
         assert!(tx.collection_get(PROFILE).await.expect("a read").is_empty());
-        assert!(tx.tickets_open_for_profile(PROFILE).await.expect("a read").is_none());
+        assert!(
+            tx.tickets_open_for_profile(PROFILE)
+                .await
+                .expect("a read")
+                .is_none()
+        );
         assert!(tx.rooms_get("ROOM22").await.expect("a read").is_none());
         tx.commit().await.expect("a commit");
         assert!(app.auth.verify(&setup.token).await.is_err());
@@ -207,14 +215,22 @@ mod delete_api_account {
         let setup = setup().await;
         let app = &setup.app;
         let mut tx = app.db.begin(Some(PROFILE)).await.expect("a transaction");
-        tx.profiles_set_in_match(PROFILE, Some("match-live")).await.expect("a write");
+        tx.profiles_set_in_match(PROFILE, Some("match-live"))
+            .await
+            .expect("a write");
         tx.commit().await.expect("a commit");
 
         let (status, body) = remove(app, Some(&setup.token)).await;
         assert_eq!(status, 409);
         let error = error_of(&body);
         assert_eq!(error["code"], json!("already_in_match"));
-        assert!(error["message"].as_str().expect("a message").to_lowercase().contains("concede"));
+        assert!(
+            error["message"]
+                .as_str()
+                .expect("a message")
+                .to_lowercase()
+                .contains("concede")
+        );
         assert!(profile_exists(app, PROFILE).await);
         assert!(app.auth.verify(&setup.token).await.is_ok());
     }
@@ -275,7 +291,12 @@ mod delete_api_account {
         assert_eq!(status, 503);
         assert_eq!(body["error"]["code"], json!("unavailable"));
         let mut tx = app.db.begin(None).await.expect("a transaction");
-        assert!(tx.profiles_get_by_user_id("e2e-p1").await.expect("a read").is_some());
+        assert!(
+            tx.profiles_get_by_user_id("e2e-p1")
+                .await
+                .expect("a read")
+                .is_some()
+        );
         tx.commit().await.expect("a commit");
     }
 
@@ -292,7 +313,12 @@ mod delete_api_account {
         setup.h.gotrue.answer_deletion(DeletionReply::Deleted);
         assert_eq!(remove(app, Some(&setup.token)).await.0, 204);
         let mut tx = app.db.begin(None).await.expect("a transaction");
-        assert!(tx.profiles_get_by_user_id(&user_of(PROFILE)).await.expect("a read").is_none());
+        assert!(
+            tx.profiles_get_by_user_id(&user_of(PROFILE))
+                .await
+                .expect("a read")
+                .is_none()
+        );
         tx.commit().await.expect("a commit");
         assert!(app.auth.verify(&setup.token).await.is_err());
     }
@@ -305,7 +331,8 @@ mod the_supabase_providers_delete_user {
     /// TS `provider(deletion)`: the admin lookup answers `user-a` (`USER_A`), confirmed.
     async fn provider(deletion: DeletionReply) -> Harness {
         let h = Harness::new().await;
-        h.gotrue.answer_admin(|user_id| AdminReply::Ok(confirmed_user(user_id)));
+        h.gotrue
+            .answer_admin(|user_id| AdminReply::Ok(confirmed_user(user_id)));
         h.gotrue.answer_deletion(deletion);
         h
     }
@@ -315,7 +342,13 @@ mod the_supabase_providers_delete_user {
         let h = provider(DeletionReply::Deleted).await;
         let token = h.token_for(USER_A);
         // Verified once, so the confirmed email is remembered for a while.
-        assert!(h.auth.verify(&token).await.expect("user-a verifies").email_verified);
+        assert!(
+            h.auth
+                .verify(&token)
+                .await
+                .expect("user-a verifies")
+                .email_verified
+        );
 
         h.auth.delete_user(USER_A).await.expect("deleted");
         assert_eq!(h.gotrue.deleted(), vec![USER_A.to_string()]);

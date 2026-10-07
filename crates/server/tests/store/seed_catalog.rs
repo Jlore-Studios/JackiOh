@@ -19,7 +19,7 @@
 use std::path::{Path, PathBuf};
 
 use indexmap::{IndexMap, IndexSet};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use jackioh_server::cli::seed_catalog::read_catalog;
 
@@ -128,7 +128,14 @@ fn admitted_tags() -> (String, Vec<String>) {
 
 /// A card that satisfies the M4-T1 subset `is_entry` checks.
 fn card(id: &str) -> Value {
-    let index: String = id.chars().rev().take(3).collect::<Vec<_>>().into_iter().rev().collect();
+    let index: String = id
+        .chars()
+        .rev()
+        .take(3)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
     json!({
         "id": id,
         "index": index,
@@ -152,7 +159,10 @@ fn file_holding(contents: &Value) -> String {
 }
 
 async fn refusal(path: &str) -> String {
-    read_catalog(path).await.expect_err("the file is refused").to_string()
+    read_catalog(path)
+        .await
+        .expect_err("the file is refused")
+        .to_string()
 }
 
 mod read_catalog_ {
@@ -163,20 +173,29 @@ mod read_catalog_ {
         let raw: IndexMap<String, Value> =
             serde_json::from_str(&std::fs::read_to_string(REAL_CATALOG).expect("the real catalog reads"))
                 .expect("the real catalog is a record");
-        let entries = read_catalog(REAL_CATALOG).await.expect("the real catalog is read");
+        let entries = read_catalog(REAL_CATALOG)
+            .await
+            .expect("the real catalog is read");
         assert_eq!(entries.len(), raw.len());
         assert_eq!(
             entries.iter().filter(|entry| entry.token).count(),
             raw.values().filter(|entry| entry["token"] == json!(true)).count()
         );
         assert!(entries.iter().any(|entry| entry.id == "core-001"));
-        let sets: Vec<String> = entries.iter().map(|entry| entry.set.clone()).collect::<IndexSet<_>>().into_iter().collect();
+        let sets: Vec<String> = entries
+            .iter()
+            .map(|entry| entry.set.clone())
+            .collect::<IndexSet<_>>()
+            .into_iter()
+            .collect();
         assert_eq!(sets, vec!["Core", "Classic", "Classic+"]);
     }
 
     #[tokio::test]
     async fn accepts_a_bare_array_and_a_cards_wrapper_too() {
-        let bare = read_catalog(&file_holding(&json!([card("core-001")]))).await.expect("a bare array is read");
+        let bare = read_catalog(&file_holding(&json!([card("core-001")])))
+            .await
+            .expect("a bare array is read");
         assert_eq!(bare.len(), 1);
         let wrapped = read_catalog(&file_holding(&json!({ "cards": [card("core-001")] })))
             .await
@@ -189,20 +208,35 @@ mod read_catalog_ {
         let entries = read_catalog(&file_holding(&json!({ "core-001": card("core-001") })))
             .await
             .expect("a record keyed by id is read");
-        assert_eq!(entries.iter().map(|entry| entry.id.clone()).collect::<Vec<_>>(), vec!["core-001"]);
+        assert_eq!(
+            entries.iter().map(|entry| entry.id.clone()).collect::<Vec<_>>(),
+            vec!["core-001"]
+        );
     }
 
     /// `seed_catalog` inserts `card.id`, so a key that disagrees would seed the wrong row.
     #[tokio::test]
     async fn refuses_a_record_whose_key_disagrees_with_the_entry_s_own_id() {
         let path = file_holding(&json!({ "core-002": card("core-001") }));
-        assert!(refusal(&path).await.contains("keyed \"core-002\" carries id \"core-001\""));
+        assert!(
+            refusal(&path)
+                .await
+                .contains("keyed \"core-002\" carries id \"core-001\"")
+        );
     }
 
     #[tokio::test]
     async fn still_refuses_a_shape_that_is_none_of_the_three() {
-        assert!(refusal(&file_holding(&json!({}))).await.contains("expected an array of cards"));
-        assert!(refusal(&file_holding(&json!(7))).await.contains("expected an array of cards"));
+        assert!(
+            refusal(&file_holding(&json!({})))
+                .await
+                .contains("expected an array of cards")
+        );
+        assert!(
+            refusal(&file_holding(&json!(7)))
+                .await
+                .contains("expected an array of cards")
+        );
     }
 
     #[tokio::test]
@@ -220,9 +254,11 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     use super::*;
 
     #[tokio::test]
-    async fn r278_every_tag_the_real_catalog_carries_jlockeed_book_pancake_ai_plague_catalyst_prime_and_acclaimed_included_is_one_the_latest_cards_tags_check_admits(
-    ) {
-        let entries = read_catalog(REAL_CATALOG).await.expect("the real catalog is read");
+    async fn r278_every_tag_the_real_catalog_carries_jlockeed_book_pancake_ai_plague_catalyst_prime_and_acclaimed_included_is_one_the_latest_cards_tags_check_admits()
+     {
+        let entries = read_catalog(REAL_CATALOG)
+            .await
+            .expect("the real catalog is read");
         let (file, tags) = admitted_tags();
         assert_eq!(
             file, "0026_catalyst_prime_acclaimed_tags.sql",
@@ -236,8 +272,19 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .collect();
         carried.sort();
         assert!(carried.iter().any(|tag| tag == "Jlockeed"));
-        for tag in ["Book", "Pancake", "AI", "Plague", "Catalyst", "Prime", "Acclaimed"] {
-            assert!(carried.iter().any(|carried| carried == tag), "the catalog carries {tag}");
+        for tag in [
+            "Book",
+            "Pancake",
+            "AI",
+            "Plague",
+            "Catalyst",
+            "Prime",
+            "Acclaimed",
+        ] {
+            assert!(
+                carried.iter().any(|carried| carried == tag),
+                "the catalog carries {tag}"
+            );
         }
         let refused: Vec<&String> = carried.iter().filter(|tag| !tags.contains(tag)).collect();
         assert!(refused.is_empty(), "tags the schema would refuse: {refused:?}");
@@ -300,8 +347,14 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
     /// every non-token card in `public.cards`. So this puts the fixture rows back, whichever file
     /// runs next.
     async fn restore_fixture_catalog(admin: &PgPool) {
-        sqlx::query(TRUNCATE).execute(admin).await.expect("the tables are emptied");
-        sqlx::query("delete from public.cards").execute(admin).await.expect("the real catalog is removed");
+        sqlx::query(TRUNCATE)
+            .execute(admin)
+            .await
+            .expect("the tables are emptied");
+        sqlx::query("delete from public.cards")
+            .execute(admin)
+            .await
+            .expect("the real catalog is removed");
         seed_cards(admin).await;
     }
 
@@ -309,8 +362,12 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         url: &str,
         admin: &PgPool,
     ) {
-        let entries = read_catalog(REAL_CATALOG).await.expect("the real catalog is read");
-        let written = seed_catalog(url, CATALOG_VERSION, &entries).await.expect("the catalog is seeded");
+        let entries = read_catalog(REAL_CATALOG)
+            .await
+            .expect("the real catalog is read");
+        let written = seed_catalog(url, CATALOG_VERSION, &entries)
+            .await
+            .expect("the catalog is seeded");
         assert_eq!(written, entries.len());
 
         let ids: Vec<String> = entries.iter().map(|entry| entry.id.clone()).collect();
@@ -330,10 +387,26 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             .collect();
         assert_eq!(
             jlockeed,
-            vec!["classic-004", "classicplus-048", "classicplus-051", "classicplus-052", "core-013", "core-014"]
+            vec![
+                "classic-004",
+                "classicplus-048",
+                "classicplus-051",
+                "classicplus-052",
+                "core-013",
+                "core-014"
+            ]
         );
-        let tagged = |tag: &str| entries.iter().filter(|entry| entry.tags.iter().any(|t| t == tag)).count();
-        let rows_tagged = |tag: &str| rows.iter().filter(|(_, tags, _)| tags.iter().any(|t| t == tag)).count();
+        let tagged = |tag: &str| {
+            entries
+                .iter()
+                .filter(|entry| entry.tags.iter().any(|t| t == tag))
+                .count()
+        };
+        let rows_tagged = |tag: &str| {
+            rows.iter()
+                .filter(|(_, tags, _)| tags.iter().any(|t| t == tag))
+                .count()
+        };
         for tag in ["Book", "Pancake", "AI", "Plague"] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
         }
@@ -343,7 +416,10 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             assert_eq!(tagged(tag), 2, "{tag}");
         }
         // Each row's tags are the catalog's, so the check admitted them and nothing rewrote them.
-        let by_id: IndexMap<&str, &Vec<String>> = entries.iter().map(|entry| (entry.id.as_str(), &entry.tags)).collect();
+        let by_id: IndexMap<&str, &Vec<String>> = entries
+            .iter()
+            .map(|entry| (entry.id.as_str(), &entry.tags))
+            .collect();
         for (id, tags, _) in &rows {
             assert_eq!(Some(&tags), by_id.get(id.as_str()), "{id}");
         }
@@ -353,14 +429,20 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         url: &str,
         admin: &PgPool,
     ) {
-        let entries = read_catalog(REAL_CATALOG).await.expect("the real catalog is read");
-        let again = seed_catalog(url, CATALOG_VERSION, &entries).await.expect("a second seed succeeds");
+        let entries = read_catalog(REAL_CATALOG)
+            .await
+            .expect("the real catalog is read");
+        let again = seed_catalog(url, CATALOG_VERSION, &entries)
+            .await
+            .expect("a second seed succeeds");
         assert_eq!(again, entries.len());
 
         let first = entries.first().expect("the catalog is not empty").clone();
         let mut misspelt = first.clone();
         misspelt.tags = vec!["Jlocked".to_owned()];
-        let refused = seed_catalog(url, CATALOG_VERSION, &[misspelt]).await.expect_err("the unknown tag is refused");
+        let refused = seed_catalog(url, CATALOG_VERSION, &[misspelt])
+            .await
+            .expect_err("the unknown tag is refused");
         assert!(format!("{refused:#}").contains("cards_tags_check"), "{refused:#}");
         // One transaction: the refused seed left the row as the real catalog wrote it.
         let (tags,): (Vec<String>,) = sqlx::query_as("select tags from public.cards where id = $1")
@@ -373,7 +455,9 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
 
     #[tokio::test]
     async fn r278_seeds_the_real_catalog_and_reseeds_it_in_place() {
-        let Ok(url) = std::env::var("DATABASE_URL") else { return };
+        let Ok(url) = std::env::var("DATABASE_URL") else {
+            return;
+        };
         if url.is_empty() {
             return;
         }
@@ -383,7 +467,10 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             .connect(&url)
             .await
             .expect("the admin connection opens");
-        sqlx::query(TRUNCATE).execute(&admin).await.expect("the tables are emptied");
+        sqlx::query(TRUNCATE)
+            .execute(&admin)
+            .await
+            .expect("the tables are emptied");
 
         r278_seeds_every_entry_of_core_classic_and_classic_plus_with_the_six_jlockeed_cards_tagged_and_no_other_row(
             &url, &admin,

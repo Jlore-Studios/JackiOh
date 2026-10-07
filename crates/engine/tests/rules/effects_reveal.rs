@@ -26,7 +26,11 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .iter()
             .all(|(key, value)| have.get(key).is_some_and(|got| matches_object(got, value))),
         (Value::Array(have), Value::Array(want)) => {
-            have.len() == want.len() && have.iter().zip(want).all(|(got, value)| matches_object(got, value))
+            have.len() == want.len()
+                && have
+                    .iter()
+                    .zip(want)
+                    .all(|(got, value)| matches_object(got, value))
         }
         _ => actual == expected,
     }
@@ -59,7 +63,12 @@ mod r686_reveal {
     #[test]
     fn r686_a_revealed_trap_reads_face_up_to_the_opponent_but_is_not_spent_so_it_still_fires() {
         let mut state = playing("reveal-trap");
-        let trap = put(&mut state, &doom.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let trap = put(
+            &mut state,
+            &doom.id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         reveal_as(&mut state, &trap);
 
         assert_eq!(live(&state, &trap.id).revealed, Some(true));
@@ -75,7 +84,12 @@ mod r686_reveal {
     #[test]
     fn r686_a_revealed_field_trap_stays_live_the_opponent_reads_it_and_it_keeps_firing() {
         let mut state = playing("reveal-field-trap");
-        let trap = put(&mut state, &listener.id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        let trap = put(
+            &mut state,
+            &listener.id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
         reveal_as(&mut state, &trap);
 
         assert_eq!(live(&state, &trap.id).revealed, Some(true));
@@ -89,7 +103,12 @@ mod r686_reveal {
     #[test]
     fn r686_reveal_touches_only_a_backrow_card_a_unit_is_unchanged() {
         let mut state = playing("reveal-unit");
-        let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         reveal_as(&mut state, &unit);
 
         assert_eq!(live(&state, &unit.id).revealed, None);

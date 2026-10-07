@@ -30,7 +30,9 @@ const GIFTED: &str = "core-064";
 const TWISTED_SORCERER: &str = "core-068";
 const POCKET_CHAOS: &str = "core-087";
 const CRAFT_A_CARD: &str = "core-099";
-const LIBRARY: [&str; 8] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
+const LIBRARY: [&str; 8] = [
+    VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
+];
 
 /// TS `at(card)`: the one-instance selection list naming `id`.
 fn at(id: &str) -> Value {
@@ -77,7 +79,9 @@ fn modes(list: &[&str]) -> Option<Vec<String>> {
 /// The face the card's `cardResolved` says resolved, or `None` when there is none or it says nothing.
 fn resolved_face(g: &Scenario, id: &str) -> Option<bool> {
     g.events().iter().find_map(|event| match event {
-        GameEvent::CardResolved { instance_id, radiant, .. } if instance_id == id => Some(*radiant),
+        GameEvent::CardResolved {
+            instance_id, radiant, ..
+        } if instance_id == id => Some(*radiant),
         _ => None,
     })?
 }
@@ -124,7 +128,9 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
             .find(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == HINDER))
             .cloned();
         match hinder {
-            Some(GameEvent::CardPlayed { player, cost_paid, .. }) => {
+            Some(GameEvent::CardPlayed {
+                player, cost_paid, ..
+            }) => {
                 assert_eq!(player, PlayerId::P2);
                 assert_eq!(cost_paid, 0);
             }
@@ -145,7 +151,8 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
     }
 
     #[test]
-    fn r213_a_gifted_program_bounced_and_replayed_does_not_make_a_second_cheap_card_radiant_in_the_same_turn_r174() {
+    fn r213_a_gifted_program_bounced_and_replayed_does_not_make_a_second_cheap_card_radiant_in_the_same_turn_r174()
+     {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
             "p1": {
@@ -158,7 +165,10 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
         }));
         let gifted = g.card(GIFTED).id.clone();
         let first = must(
-            g.hand(PlayerId::P1).iter().find(|c| c.def_id == VANILLA).map(|c| c.id.clone()),
+            g.hand(PlayerId::P1)
+                .iter()
+                .find(|c| c.def_id == VANILLA)
+                .map(|c| c.id.clone()),
             "setup: hand",
         );
         let second = g.card(STOCKPILE).id.clone();
@@ -226,10 +236,26 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
 
         assert_eq!(resolved_face(&g, &chaos), Some(true));
         g.expect_health(PlayerId::P1, 30);
-        assert_eq!(g.hand(PlayerId::P2).iter().filter(|card| card.def_id == POCKET_CHAOS).count(), 0);
+        assert_eq!(
+            g.hand(PlayerId::P2)
+                .iter()
+                .filter(|card| card.def_id == POCKET_CHAOS)
+                .count(),
+            0
+        );
         // The radiant face draws nothing since patch v0.1.1: the library's Stockpile stays there.
-        assert_eq!(g.hand(PlayerId::P1).iter().filter(|card| card.def_id == STOCKPILE).count(), 1);
-        let library: Vec<String> = g.pile(PlayerId::P1, "library").iter().map(|card| card.def_id.clone()).collect();
+        assert_eq!(
+            g.hand(PlayerId::P1)
+                .iter()
+                .filter(|card| card.def_id == STOCKPILE)
+                .count(),
+            1
+        );
+        let library: Vec<String> = g
+            .pile(PlayerId::P1, "library")
+            .iter()
+            .map(|card| card.def_id.clone())
+            .collect();
         assert_eq!(library, vec![STOCKPILE.to_string()]);
     }
 
@@ -247,8 +273,14 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
         g.play(pek.as_str(), json!({ "modes": ["enemy"] }));
 
         assert_eq!(resolved_face(&g, &pek), Some(true));
-        assert_eq!(g.unit(PlayerId::P1, 1).and_then(|card| card.position), Some(Position::Atk));
-        assert_eq!(g.unit(PlayerId::P2, 1).and_then(|card| card.position), Some(Position::Def));
+        assert_eq!(
+            g.unit(PlayerId::P1, 1).and_then(|card| card.position),
+            Some(Position::Atk)
+        );
+        assert_eq!(
+            g.unit(PlayerId::P2, 1).and_then(|card| card.position),
+            Some(Position::Def)
+        );
     }
 
     #[test]
@@ -264,7 +296,10 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
         g.answer(json!(BIGOT));
         g.answer(json!(TWISTED_SORCERER));
         let card = must(
-            g.hand(PlayerId::P1).iter().find(|held| held.def_id.starts_with("t-")).map(|held| held.id.clone()),
+            g.hand(PlayerId::P1)
+                .iter()
+                .find(|held| held.def_id.starts_with("t-"))
+                .map(|held| held.id.clone()),
             "setup: the crafted card",
         );
         let panther = unit_at(&g, PlayerId::P2, 1).id;
@@ -273,10 +308,9 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
         // It costs 0, so it is the first card costing 1 or less this turn: step 3 makes it Radiant, and
         // radiant Bigot destroys all enemy non-Humans with no target. The flat list is the Sorcerer's
         // alone, so a list built for the base face (Bigot's target, then the Sorcerer's) is refused.
-        let refused = json!({ "zone": 2, "targets": [{ "pick": "instance", "instanceId": panther }, hero.clone()] });
-        g.expect_refused(|g| {
-            g.play(card.as_str(), refused.clone())
-        });
+        let refused =
+            json!({ "zone": 2, "targets": [{ "pick": "instance", "instanceId": panther }, hero.clone()] });
+        g.expect_refused(|g| g.play(card.as_str(), refused.clone()));
         g.play(card.as_str(), json!({ "zone": 2, "targets": [hero] }));
 
         // Radiant Twisted Sorcerer deals 8 to the target the player named for it: p2's hero, 30 → 22.
@@ -325,14 +359,22 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
             let gifted_unit = must(
                 subsystems::fuse(
                     &mut sink,
-                    FuseArgs { ingredients: vec![vanilla.clone(), gifted], target: Some(vanilla.clone()), ..FuseArgs::default() },
+                    FuseArgs {
+                        ingredients: vec![vanilla.clone(), gifted],
+                        target: Some(vanilla.clone()),
+                        ..FuseArgs::default()
+                    },
                 ),
                 "the Mr. Vanilla carrying Gifted Program",
             );
             let crafted = must(
                 subsystems::fuse(
                     &mut sink,
-                    FuseArgs { ingredients: vec![lava_golem, bigot], to_hand: Some(PlayerId::P1), ..FuseArgs::default() },
+                    FuseArgs {
+                        ingredients: vec![lava_golem, bigot],
+                        to_hand: Some(PlayerId::P1),
+                        ..FuseArgs::default()
+                    },
                 ),
                 "the crafted Lava Golem + Bigot",
             );
@@ -340,11 +382,23 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
         };
         // #22 eats the Unit carrying the Gifted Program's text (R41, R428), so none stands on p1's side
         // any more; its Death will summon two copies of it.
-        s.play(CARNIVOROUS_CUBE, json!({ "targets": [{ "pick": "instance", "instanceId": gifted_unit.id }] }));
+        s.play(
+            CARNIVOROUS_CUBE,
+            json!({ "targets": [{ "pick": "instance", "instanceId": gifted_unit.id }] }),
+        );
         s.expect_in_zone(gifted_unit.id.as_str(), "graveyard");
-        let cube = must(s.unit(PlayerId::P1, 4).map(|card| card.id.clone()), "p1's Carnivorous Cube");
-        let felinor = must(s.unit(PlayerId::P2, 1).map(|card| card.id.clone()), "p2's Big Felinor");
-        let seven_seven = must(s.unit(PlayerId::P2, 2).map(|card| card.id.clone()), "p2's 4-mana 7/7");
+        let cube = must(
+            s.unit(PlayerId::P1, 4).map(|card| card.id.clone()),
+            "p1's Carnivorous Cube",
+        );
+        let felinor = must(
+            s.unit(PlayerId::P2, 1).map(|card| card.id.clone()),
+            "p2's Big Felinor",
+        );
+        let seven_seven = must(
+            s.unit(PlayerId::P2, 2).map(|card| card.id.clone()),
+            "p2's 4-mana 7/7",
+        );
 
         // Step 1 sees no Gifted Program, so the face that answers the play's choices is the base one
         // (R214), and legalActions offers its single-target Cry with the Tribute paid by the Cube.
@@ -355,20 +409,27 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
         ];
         let mut wanted = tributes.clone();
         wanted.sort();
-        let offered = legal_actions(s.state(), PlayerId::P1).into_iter().any(|action| match action {
-            ActionBody::Play { instance_id, targets, tributes: paid, .. } => {
-                let mut paid = paid.unwrap_or_default();
-                paid.sort();
-                instance_id == crafted.id
-                    && targets.as_ref().map(Vec::len) == Some(1)
-                    && matches!(
-                        targets.as_ref().and_then(|list| list.first()),
-                        Some(Selection::Instance { instance_id }) if *instance_id == felinor
-                    )
-                    && paid.join(",") == wanted.join(",")
-            }
-            _ => false,
-        });
+        let offered = legal_actions(s.state(), PlayerId::P1)
+            .into_iter()
+            .any(|action| match action {
+                ActionBody::Play {
+                    instance_id,
+                    targets,
+                    tributes: paid,
+                    ..
+                } => {
+                    let mut paid = paid.unwrap_or_default();
+                    paid.sort();
+                    instance_id == crafted.id
+                        && targets.as_ref().map(Vec::len) == Some(1)
+                        && matches!(
+                            targets.as_ref().and_then(|list| list.first()),
+                            Some(Selection::Instance { instance_id }) if *instance_id == felinor
+                        )
+                        && paid.join(",") == wanted.join(",")
+                }
+                _ => false,
+            });
         assert!(offered);
 
         // Step 2 pays the Tribute: the Cube's Death summons two copies of the Unit it ate, each carrying
@@ -380,7 +441,9 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
         let copies = s
             .events()
             .iter()
-            .filter(|event| matches!(event, GameEvent::Summoned { def_id, .. } if *def_id == gifted_unit.def_id))
+            .filter(
+                |event| matches!(event, GameEvent::Summoned { def_id, .. } if *def_id == gifted_unit.def_id),
+            )
             .count();
         assert_eq!(copies, 2);
 

@@ -74,10 +74,18 @@ const PEPPER: &str = "client-address-test-pepper-of-32-characters-or-more";
 /// behind Render's edge (`render.yaml`).
 fn test_env() -> IndexMap<String, String> {
     let mut source = IndexMap::new();
-    for (name, value) in [("E2E", "1"), ("NODE_ENV", "test"), ("CODE_PEPPER", PEPPER), ("TRUSTED_PROXY_HOPS", "1")] {
+    for (name, value) in [
+        ("E2E", "1"),
+        ("NODE_ENV", "test"),
+        ("CODE_PEPPER", PEPPER),
+        ("TRUSTED_PROXY_HOPS", "1"),
+    ] {
         source.insert(name.to_string(), value.to_string());
     }
-    source.insert("CATALOG_VERSION".to_string(), jackioh_cards::catalog_version().to_string());
+    source.insert(
+        "CATALOG_VERSION".to_string(),
+        jackioh_cards::catalog_version().to_string(),
+    );
     source
 }
 
@@ -114,7 +122,10 @@ impl Reply {
     }
 
     fn error_code(&self) -> String {
-        self.json()["error"]["code"].as_str().unwrap_or_default().to_string()
+        self.json()["error"]["code"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string()
     }
 }
 
@@ -124,7 +135,10 @@ async fn server_from(source: &IndexMap<String, String>) -> Server {
     let env = app::load_server_env(source).expect("the test environment loads");
     let app = app::build(env).await.expect("the test app builds");
     store_of(&app).lock().await.reset();
-    Server { router: app::router(app.clone()), app }
+    Server {
+        router: app::router(app.clone()),
+        app,
+    }
 }
 
 impl Server {
@@ -133,12 +147,24 @@ impl Server {
     async fn send(&self, mut request: Request<Body>, peer: Option<&str>) -> Reply {
         if let Some(peer) = peer {
             let ip: IpAddr = peer.parse().expect("a peer address");
-            request.extensions_mut().insert(ConnectInfo(SocketAddr::new(ip, 0)));
+            request
+                .extensions_mut()
+                .insert(ConnectInfo(SocketAddr::new(ip, 0)));
         }
-        let response = self.router.clone().oneshot(request).await.expect("the router always answers");
+        let response = self
+            .router
+            .clone()
+            .oneshot(request)
+            .await
+            .expect("the router always answers");
         let status = response.status().as_u16();
-        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.expect("the body reads");
-        Reply { status, text: String::from_utf8(bytes.to_vec()).expect("the body is UTF-8") }
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("the body reads");
+        Reply {
+            status,
+            text: String::from_utf8(bytes.to_vec()).expect("the body is UTF-8"),
+        }
     }
 }
 
@@ -154,7 +180,9 @@ fn from_json<T: DeserializeOwned>(value: Value) -> T {
 }
 
 fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
-    rows.iter().map(|row| serde_json::to_value(row).expect("a row serialises")).collect()
+    rows.iter()
+        .map(|row| serde_json::to_value(row).expect("a row serialises"))
+        .collect()
 }
 
 /// The server's clock (`app::now_ms`, TS `deps.timers.now()`): what it stamps rows with and counts
@@ -182,7 +210,11 @@ fn hmac_sha256_hex(key: &str, message: &str) -> String {
     let mut outer = Sha256::new();
     outer.update(&outer_pad);
     outer.update(&inner[..]);
-    outer.finalize().iter().map(|byte| format!("{byte:02x}")).collect()
+    outer
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 /// `deps.hashes.ip(raw)`: `crypto.ts`'s `createHashes`, keyed as `index.ts` keys it.
@@ -202,7 +234,11 @@ fn headers(entries: &[(&str, &str)]) -> HeaderMap {
 }
 
 fn request(method: &str, path: &str, entries: &[(&str, &str)], body: Body) -> Request<Body> {
-    let mut built = Request::builder().method(method).uri(path).body(body).expect("a well-formed request");
+    let mut built = Request::builder()
+        .method(method)
+        .uri(path)
+        .body(body)
+        .expect("a well-formed request");
     *built.headers_mut() = headers(entries);
     built
 }
@@ -210,9 +246,17 @@ fn request(method: &str, path: &str, entries: &[(&str, &str)], body: Body) -> Re
 /// A redemption request with exactly the headers given, and nothing added.
 fn redeem_request(token: &str, extra: &[(&str, &str)]) -> Request<Body> {
     let bearer = format!("Bearer {token}");
-    let mut entries = vec![("content-type", "application/json"), ("authorization", bearer.as_str())];
+    let mut entries = vec![
+        ("content-type", "application/json"),
+        ("authorization", bearer.as_str()),
+    ];
     entries.extend_from_slice(extra);
-    request("POST", "/api/codes/redeem", &entries, Body::from(json!({ "code": UNMINTED_CODE }).to_string()))
+    request(
+        "POST",
+        "/api/codes/redeem",
+        &entries,
+        Body::from(json!({ "code": UNMINTED_CODE }).to_string()),
+    )
 }
 
 /// A request to an `auth: none` route, with exactly the headers given.
@@ -234,8 +278,14 @@ struct Seeded {
 async fn seed_caller(server: &Server, id: &str) -> Seeded {
     let user_id = format!("user-{id}");
     let token = deps::add_user(&server.app, &user_id, &format!("{id}@example.test"), true);
-    let _ = store_of(&server.app).lock().await.seed_profile(json!({ "id": id, "userId": user_id, "status": "pending" }));
-    Seeded { token, profile_id: id.to_string() }
+    let _ = store_of(&server.app)
+        .lock()
+        .await
+        .seed_profile(json!({ "id": id, "userId": user_id, "status": "pending" }));
+    Seeded {
+        token,
+        profile_id: id.to_string(),
+    }
 }
 
 /// An `auth: none` router: TS's one-route `openRouter`, here the App's own router, whose
@@ -295,7 +345,10 @@ impl Recording {
     }
 
     fn forwarded(&self) -> Vec<Entry> {
-        self.entries().into_iter().filter(|entry| entry.event == "api.forwarded_for").collect()
+        self.entries()
+            .into_iter()
+            .filter(|entry| entry.event == "api.forwarded_for")
+            .collect()
     }
 }
 
@@ -364,7 +417,11 @@ impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for Recording {
             data.extend(object);
         }
         let level = event.metadata().level().to_string().to_lowercase();
-        self.0.lock().expect("the recording").push(Entry { level, event: name, data });
+        self.0.lock().expect("the recording").push(Entry {
+            level,
+            event: name,
+            data,
+        });
     }
 }
 
@@ -413,7 +470,12 @@ mod r190_client_address {
 
     #[test]
     fn r190_b10_gives_the_same_answer_whatever_the_caller_writes_to_the_left() {
-        for spoofed in ["1.1.1.1", "10.0.0.1, 10.0.0.2", "not-an-address", "::1, 127.0.0.1"] {
+        for spoofed in [
+            "1.1.1.1",
+            "10.0.0.1, 10.0.0.2",
+            "not-an-address",
+            "::1, 127.0.0.1",
+        ] {
             let forwarded = headers(&[("x-forwarded-for", &format!("{spoofed}, {CLIENT}"))]);
             assert_eq!(client_address(&forwarded, Some(PEER), 1), CLIENT, "{spoofed}");
         }
@@ -438,12 +500,18 @@ mod r190_client_address {
 
     #[test]
     fn r190_b11_treats_an_x_forwarded_for_of_only_commas_and_spaces_as_none() {
-        assert_eq!(client_address(&headers(&[("x-forwarded-for", " , ,, ")]), Some(PEER), 1), PEER);
+        assert_eq!(
+            client_address(&headers(&[("x-forwarded-for", " , ,, ")]), Some(PEER), 1),
+            PEER
+        );
     }
 
     #[test]
     fn r190_b11_never_reads_cf_connecting_ip_or_x_real_ip() {
-        let vendor = [("cf-connecting-ip", "198.51.100.66"), ("x-real-ip", "198.51.100.77")];
+        let vendor = [
+            ("cf-connecting-ip", "198.51.100.66"),
+            ("x-real-ip", "198.51.100.77"),
+        ];
         assert_eq!(client_address(&headers(&vendor), Some(PEER), 1), PEER);
         assert_eq!(client_address(&headers(&vendor), None, 1), UNKNOWN_CLIENT_ADDRESS);
         let mut with_forwarded = vendor.to_vec();
@@ -472,14 +540,34 @@ mod r190_the_per_ip_keys_behind_a_proxy {
         let first = seed_caller(&server, "left-one").await;
         let second = seed_caller(&server, "left-two").await;
 
-        server.send(redeem_request(&first.token, &[("x-forwarded-for", &format!("198.51.100.1, {CLIENT}"))]), Some(PEER)).await;
         server
-            .send(redeem_request(&second.token, &[("x-forwarded-for", &format!("198.51.100.2, 10.9.8.7, {CLIENT}"))]), Some(PEER))
+            .send(
+                redeem_request(
+                    &first.token,
+                    &[("x-forwarded-for", &format!("198.51.100.1, {CLIENT}"))],
+                ),
+                Some(PEER),
+            )
+            .await;
+        server
+            .send(
+                redeem_request(
+                    &second.token,
+                    &[("x-forwarded-for", &format!("198.51.100.2, 10.9.8.7, {CLIENT}"))],
+                ),
+                Some(PEER),
+            )
             .await;
 
         assert_eq!(attempt_ip_hash(&server, &first.profile_id).await, ip_hash(CLIENT));
-        assert_eq!(attempt_ip_hash(&server, &second.profile_id).await, ip_hash(CLIENT));
-        assert_ne!(attempt_ip_hash(&server, &first.profile_id).await, ip_hash("198.51.100.1"));
+        assert_eq!(
+            attempt_ip_hash(&server, &second.profile_id).await,
+            ip_hash(CLIENT)
+        );
+        assert_ne!(
+            attempt_ip_hash(&server, &first.profile_id).await,
+            ip_hash("198.51.100.1")
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -489,14 +577,26 @@ mod r190_the_per_ip_keys_behind_a_proxy {
         flood_address(&server, CLIENT).await;
 
         let spoofed = server
-            .send(redeem_request(&caller.token, &[("x-forwarded-for", &format!("198.51.100.250, {CLIENT}"))]), Some(PEER))
+            .send(
+                redeem_request(
+                    &caller.token,
+                    &[("x-forwarded-for", &format!("198.51.100.250, {CLIENT}"))],
+                ),
+                Some(PEER),
+            )
             .await;
         assert_eq!(spoofed.status, 429);
         assert_eq!(spoofed.error_code(), "rate_limited");
 
         // CONTROL: the same caller from an address with room reaches the lookup and fails there.
         let elsewhere = server
-            .send(redeem_request(&caller.token, &[("x-forwarded-for", &format!("{CLIENT}, 203.0.113.21"))]), Some(PEER))
+            .send(
+                redeem_request(
+                    &caller.token,
+                    &[("x-forwarded-for", &format!("{CLIENT}, 203.0.113.21"))],
+                ),
+                Some(PEER),
+            )
             .await;
         assert_eq!(elsewhere.status, 400);
         let body = elsewhere.json();
@@ -513,7 +613,13 @@ mod r190_the_per_ip_keys_behind_a_proxy {
         // Ours: `CLIENT` as the edge saw it, then the edge as the load balancer saw it.
         let spoofed = server
             .send(
-                redeem_request(&caller.token, &[("x-forwarded-for", &format!("198.51.100.251, 198.51.100.252, {CLIENT}, 10.0.0.5"))]),
+                redeem_request(
+                    &caller.token,
+                    &[(
+                        "x-forwarded-for",
+                        &format!("198.51.100.251, 198.51.100.252, {CLIENT}, 10.0.0.5"),
+                    )],
+                ),
                 Some(PEER),
             )
             .await;
@@ -528,7 +634,12 @@ mod r190_the_per_ip_keys_behind_a_proxy {
         let caller = seed_caller(&server, "real-ip-spoofer").await;
         flood_address(&server, PEER).await;
 
-        let response = server.send(redeem_request(&caller.token, &[("x-real-ip", "198.51.100.253")]), Some(PEER)).await;
+        let response = server
+            .send(
+                redeem_request(&caller.token, &[("x-real-ip", "198.51.100.253")]),
+                Some(PEER),
+            )
+            .await;
 
         assert_eq!(response.status, 429);
         assert_eq!(response.error_code(), "rate_limited");
@@ -540,7 +651,12 @@ mod r190_the_per_ip_keys_behind_a_proxy {
         let caller = seed_caller(&server, "cf-spoofer").await;
         flood_address(&server, PEER).await;
 
-        let response = server.send(redeem_request(&caller.token, &[("cf-connecting-ip", "198.51.100.254")]), Some(PEER)).await;
+        let response = server
+            .send(
+                redeem_request(&caller.token, &[("cf-connecting-ip", "198.51.100.254")]),
+                Some(PEER),
+            )
+            .await;
 
         assert_eq!(response.status, 429);
         assert_eq!(response.error_code(), "rate_limited");
@@ -552,16 +668,31 @@ mod r190_the_per_ip_keys_behind_a_proxy {
 
         for i in 0..LIMIT {
             let spoofed = format!("10.{}.{}.1", i % 250, i / 250);
-            let response = server.send(open_request(&[("x-forwarded-for", &format!("{spoofed}, {CLIENT}"))]), Some(PEER)).await;
+            let response = server
+                .send(
+                    open_request(&[("x-forwarded-for", &format!("{spoofed}, {CLIENT}"))]),
+                    Some(PEER),
+                )
+                .await;
             assert_eq!(response.status, 200, "request {i}");
         }
 
-        let next = server.send(open_request(&[("x-forwarded-for", &format!("172.16.0.1, {CLIENT}"))]), Some(PEER)).await;
+        let next = server
+            .send(
+                open_request(&[("x-forwarded-for", &format!("172.16.0.1, {CLIENT}"))]),
+                Some(PEER),
+            )
+            .await;
         assert_eq!(next.status, 429);
         assert_eq!(next.error_code(), "rate_limited");
 
         // CONTROL: a different client behind the same proxy has its own bucket.
-        let other = server.send(open_request(&[("x-forwarded-for", "172.16.0.1, 203.0.113.21")]), Some(PEER)).await;
+        let other = server
+            .send(
+                open_request(&[("x-forwarded-for", "172.16.0.1, 203.0.113.21")]),
+                Some(PEER),
+            )
+            .await;
         assert_eq!(other.status, 200);
     }
 
@@ -571,7 +702,16 @@ mod r190_the_per_ip_keys_behind_a_proxy {
         let caller = seed_caller(&server, "direct").await;
 
         server
-            .send(redeem_request(&caller.token, &[("cf-connecting-ip", "198.51.100.66"), ("x-real-ip", "198.51.100.77")]), Some(PEER))
+            .send(
+                redeem_request(
+                    &caller.token,
+                    &[
+                        ("cf-connecting-ip", "198.51.100.66"),
+                        ("x-real-ip", "198.51.100.77"),
+                    ],
+                ),
+                Some(PEER),
+            )
             .await;
 
         assert_eq!(attempt_ip_hash(&server, &caller.profile_id).await, ip_hash(PEER));
@@ -583,12 +723,21 @@ mod r190_the_per_ip_keys_behind_a_proxy {
 
         for i in 0..LIMIT {
             let spoofed = format!("10.{}.{}.2", i % 250, i / 250);
-            let response =
-                server.send(open_request(&[("cf-connecting-ip", &spoofed), ("x-real-ip", &spoofed)]), Some(PEER)).await;
+            let response = server
+                .send(
+                    open_request(&[("cf-connecting-ip", &spoofed), ("x-real-ip", &spoofed)]),
+                    Some(PEER),
+                )
+                .await;
             assert_eq!(response.status, 200, "request {i}");
         }
 
-        let next = server.send(open_request(&[("cf-connecting-ip", "172.16.0.2"), ("x-real-ip", "172.16.0.2")]), Some(PEER)).await;
+        let next = server
+            .send(
+                open_request(&[("cf-connecting-ip", "172.16.0.2"), ("x-real-ip", "172.16.0.2")]),
+                Some(PEER),
+            )
+            .await;
         assert_eq!(next.status, 429);
 
         // CONTROL: a different peer is a different bucket.
@@ -602,11 +751,24 @@ mod r190_the_per_ip_keys_behind_a_proxy {
         let without_context = seed_caller(&server, "no-context").await;
         let null_peer = seed_caller(&server, "null-peer").await;
 
-        server.send(redeem_request(&without_context.token, &[]), None).await;
-        server.send(redeem_request(&null_peer.token, &[("x-real-ip", "198.51.100.77")]), None).await;
+        server
+            .send(redeem_request(&without_context.token, &[]), None)
+            .await;
+        server
+            .send(
+                redeem_request(&null_peer.token, &[("x-real-ip", "198.51.100.77")]),
+                None,
+            )
+            .await;
 
-        assert_eq!(attempt_ip_hash(&server, &without_context.profile_id).await, ip_hash(UNKNOWN_CLIENT_ADDRESS));
-        assert_eq!(attempt_ip_hash(&server, &null_peer.profile_id).await, ip_hash(UNKNOWN_CLIENT_ADDRESS));
+        assert_eq!(
+            attempt_ip_hash(&server, &without_context.profile_id).await,
+            ip_hash(UNKNOWN_CLIENT_ADDRESS)
+        );
+        assert_eq!(
+            attempt_ip_hash(&server, &null_peer.profile_id).await,
+            ip_hash(UNKNOWN_CLIENT_ADDRESS)
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -615,8 +777,21 @@ mod r190_the_per_ip_keys_behind_a_proxy {
         let short = seed_caller(&server, "one-entry").await;
         let full = seed_caller(&server, "two-entries").await;
 
-        server.send(redeem_request(&short.token, &[("x-forwarded-for", CLIENT)]), Some(PEER)).await;
-        server.send(redeem_request(&full.token, &[("x-forwarded-for", &format!("{CLIENT}, 10.0.0.5"))]), Some(PEER)).await;
+        server
+            .send(
+                redeem_request(&short.token, &[("x-forwarded-for", CLIENT)]),
+                Some(PEER),
+            )
+            .await;
+        server
+            .send(
+                redeem_request(
+                    &full.token,
+                    &[("x-forwarded-for", &format!("{CLIENT}, 10.0.0.5"))],
+                ),
+                Some(PEER),
+            )
+            .await;
 
         assert_eq!(attempt_ip_hash(&server, &short.profile_id).await, ip_hash(PEER));
         assert_eq!(attempt_ip_hash(&server, &full.profile_id).await, ip_hash(CLIENT));
@@ -627,7 +802,15 @@ mod r190_the_per_ip_keys_behind_a_proxy {
         let server = server_from(&env_with_hops("0")).await;
         let caller = seed_caller(&server, "zero-hops").await;
 
-        server.send(redeem_request(&caller.token, &[("x-forwarded-for", &format!("198.51.100.1, {CLIENT}"))]), Some(PEER)).await;
+        server
+            .send(
+                redeem_request(
+                    &caller.token,
+                    &[("x-forwarded-for", &format!("198.51.100.1, {CLIENT}"))],
+                ),
+                Some(PEER),
+            )
+            .await;
 
         assert_eq!(attempt_ip_hash(&server, &caller.profile_id).await, ip_hash(PEER));
     }
@@ -654,8 +837,14 @@ fn valid_env() -> IndexMap<String, String> {
     let mut source = IndexMap::new();
     for (name, value) in [
         ("SUPABASE_URL", "https://project.supabase.test"),
-        ("SUPABASE_SECRET_KEY", "sb_secret_0123456789abcdefghijklmnopqrstuv"),
-        ("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/jackioh"),
+        (
+            "SUPABASE_SECRET_KEY",
+            "sb_secret_0123456789abcdefghijklmnopqrstuv",
+        ),
+        (
+            "DATABASE_URL",
+            "postgres://postgres:postgres@localhost:5432/jackioh",
+        ),
         ("CODE_PEPPER", "a-pepper-of-at-least-thirty-two-characters"),
         ("PUBLIC_ORIGINS", "https://play.jackioh.test"),
         ("NODE_ENV", "test"),
@@ -663,7 +852,10 @@ fn valid_env() -> IndexMap<String, String> {
         source.insert(name.to_string(), value.to_string());
     }
     // SURFACE §11.3: the server refuses any version but the one it was compiled with.
-    source.insert("CATALOG_VERSION".to_string(), jackioh_cards::catalog_version().to_string());
+    source.insert(
+        "CATALOG_VERSION".to_string(),
+        jackioh_cards::catalog_version().to_string(),
+    );
     source
 }
 
@@ -717,7 +909,10 @@ mod r190_b12_trusted_proxy_hops {
     #[test]
     fn r190_b12_lists_a_value_that_is_not_a_number_as_a_problem() {
         for value in ["one", "NaN", "1 hop"] {
-            assert!(problems(&with_hops(valid_env(), value)).contains("TRUSTED_PROXY_HOPS"), "{value}");
+            assert!(
+                problems(&with_hops(valid_env(), value)).contains("TRUSTED_PROXY_HOPS"),
+                "{value}"
+            );
         }
     }
 
@@ -744,17 +939,39 @@ mod r190_b12_the_api_forwarded_for_log {
     use super::*;
 
     #[tokio::test(start_paused = true)]
-    async fn r190_b12_logs_the_fewest_entries_seen_so_far_each_time_a_request_carries_fewer_and_never_an_address() {
+    async fn r190_b12_logs_the_fewest_entries_seen_so_far_each_time_a_request_carries_fewer_and_never_an_address()
+     {
         let (log, _guard) = record();
         let server = open_server(&test_env()).await;
         let chain = ["198.51.100.61", "198.51.100.62", "203.0.113.63"];
 
-        server.send(open_request(&[("x-forwarded-for", &chain.join(", "))]), Some(PEER)).await;
-        server.send(open_request(&[("x-forwarded-for", "198.51.100.64, 203.0.113.65, 203.0.113.60")]), Some(PEER)).await;
-        server.send(open_request(&[("x-forwarded-for", "203.0.113.66")]), Some(PEER)).await;
-        server.send(open_request(&[("x-forwarded-for", "198.51.100.64, 203.0.113.65")]), Some(PEER)).await;
+        server
+            .send(
+                open_request(&[("x-forwarded-for", &chain.join(", "))]),
+                Some(PEER),
+            )
+            .await;
+        server
+            .send(
+                open_request(&[("x-forwarded-for", "198.51.100.64, 203.0.113.65, 203.0.113.60")]),
+                Some(PEER),
+            )
+            .await;
+        server
+            .send(open_request(&[("x-forwarded-for", "203.0.113.66")]), Some(PEER))
+            .await;
+        server
+            .send(
+                open_request(&[("x-forwarded-for", "198.51.100.64, 203.0.113.65")]),
+                Some(PEER),
+            )
+            .await;
 
-        let data: Vec<Value> = log.forwarded().into_iter().map(|entry| Value::Object(entry.data)).collect();
+        let data: Vec<Value> = log
+            .forwarded()
+            .into_iter()
+            .map(|entry| Value::Object(entry.data))
+            .collect();
         assert_eq!(
             data,
             vec![
@@ -773,7 +990,9 @@ mod r190_b12_the_api_forwarded_for_log {
 
         // A second router reports for itself: a second App (TS kept the minimum per router).
         let second = open_server(&test_env()).await;
-        second.send(open_request(&[("x-forwarded-for", "203.0.113.67")]), Some(PEER)).await;
+        second
+            .send(open_request(&[("x-forwarded-for", "203.0.113.67")]), Some(PEER))
+            .await;
         assert_eq!(log.forwarded().len(), 3);
     }
 
@@ -785,10 +1004,20 @@ mod r190_b12_the_api_forwarded_for_log {
         let (log, _guard) = record();
         let server = open_server(&test_env()).await;
 
-        server.send(open_request(&[("x-forwarded-for", "10.0.0.1, 10.0.0.2, 10.0.0.3, 203.0.113.70")]), Some(PEER)).await;
-        server.send(open_request(&[("x-forwarded-for", "203.0.113.71")]), Some(PEER)).await;
+        server
+            .send(
+                open_request(&[("x-forwarded-for", "10.0.0.1, 10.0.0.2, 10.0.0.3, 203.0.113.70")]),
+                Some(PEER),
+            )
+            .await;
+        server
+            .send(open_request(&[("x-forwarded-for", "203.0.113.71")]), Some(PEER))
+            .await;
 
-        let latest = log.forwarded().last().map(|entry| entry.data["fewestEntries"].clone());
+        let latest = log
+            .forwarded()
+            .last()
+            .map(|entry| entry.data["fewestEntries"].clone());
         assert_eq!(latest, Some(json!(1)));
     }
 
@@ -799,12 +1028,28 @@ mod r190_b12_the_api_forwarded_for_log {
 
         // Every request one entry shorter than the one before, from far more entries than any proxy.
         for count in (1..=40).rev() {
-            let chain: Vec<String> = (0..count).map(|i| format!("10.0.{}.{}", i / 250, i % 250)).collect();
-            server.send(open_request(&[("x-forwarded-for", &chain.join(", "))]), Some(PEER)).await;
+            let chain: Vec<String> = (0..count)
+                .map(|i| format!("10.0.{}.{}", i / 250, i % 250))
+                .collect();
+            server
+                .send(
+                    open_request(&[("x-forwarded-for", &chain.join(", "))]),
+                    Some(PEER),
+                )
+                .await;
         }
 
-        assert!(log.forwarded().len() <= MAX_TRUSTED_PROXY_HOPS + 2, "{:?}", log.forwarded());
-        assert_eq!(log.forwarded().last().map(|entry| entry.data["fewestEntries"].clone()), Some(json!(1)));
+        assert!(
+            log.forwarded().len() <= MAX_TRUSTED_PROXY_HOPS + 2,
+            "{:?}",
+            log.forwarded()
+        );
+        assert_eq!(
+            log.forwarded()
+                .last()
+                .map(|entry| entry.data["fewestEntries"].clone()),
+            Some(json!(1))
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -813,15 +1058,25 @@ mod r190_b12_the_api_forwarded_for_log {
         let server = open_server(&test_env()).await;
 
         server.send(open_request(&[]), Some(PEER)).await;
-        server.send(open_request(&[("x-real-ip", "198.51.100.77")]), Some(PEER)).await;
+        server
+            .send(open_request(&[("x-real-ip", "198.51.100.77")]), Some(PEER))
+            .await;
         assert_eq!(log.forwarded().len(), 0);
 
-        server.send(open_request(&[("x-forwarded-for", "198.51.100.68, 203.0.113.69")]), Some(PEER)).await;
+        server
+            .send(
+                open_request(&[("x-forwarded-for", "198.51.100.68, 203.0.113.69")]),
+                Some(PEER),
+            )
+            .await;
         let forwarded = log.forwarded();
         assert_eq!(forwarded.len(), 1);
         assert_eq!(forwarded[0].level, "info");
         assert_eq!(forwarded[0].event, "api.forwarded_for");
-        assert_eq!(Value::Object(forwarded[0].data.clone()), json!({ "fewestEntries": 2, "trustedProxyHops": 1 }));
+        assert_eq!(
+            Value::Object(forwarded[0].data.clone()),
+            json!({ "fewestEntries": 2, "trustedProxyHops": 1 })
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -829,15 +1084,33 @@ mod r190_b12_the_api_forwarded_for_log {
         let (log, _guard) = record();
         let hops = std::cmp::min(MAX_TRUSTED_PROXY_HOPS as i64, 2);
         let server = open_server(&env_with_hops(&hops.to_string())).await;
-        server.send(open_request(&[("x-forwarded-for", "198.51.100.70")]), Some(PEER)).await;
-        let data: Vec<Value> = log.forwarded().into_iter().map(|entry| Value::Object(entry.data)).collect();
-        assert_eq!(data, vec![json!({ "fewestEntries": 1, "trustedProxyHops": hops })]);
+        server
+            .send(open_request(&[("x-forwarded-for", "198.51.100.70")]), Some(PEER))
+            .await;
+        let data: Vec<Value> = log
+            .forwarded()
+            .into_iter()
+            .map(|entry| Value::Object(entry.data))
+            .collect();
+        assert_eq!(
+            data,
+            vec![json!({ "fewestEntries": 1, "trustedProxyHops": hops })]
+        );
 
         let (unset_log, _unset_guard) = record();
         let unset = open_server(&env_without_hops()).await;
-        unset.send(open_request(&[("x-forwarded-for", "198.51.100.70")]), Some(PEER)).await;
-        let data: Vec<Value> = unset_log.forwarded().into_iter().map(|entry| Value::Object(entry.data)).collect();
-        assert_eq!(data, vec![json!({ "fewestEntries": 1, "trustedProxyHops": DEFAULT_TRUSTED_PROXY_HOPS as i64 })]);
+        unset
+            .send(open_request(&[("x-forwarded-for", "198.51.100.70")]), Some(PEER))
+            .await;
+        let data: Vec<Value> = unset_log
+            .forwarded()
+            .into_iter()
+            .map(|entry| Value::Object(entry.data))
+            .collect();
+        assert_eq!(
+            data,
+            vec![json!({ "fewestEntries": 1, "trustedProxyHops": DEFAULT_TRUSTED_PROXY_HOPS as i64 })]
+        );
     }
 }
 
@@ -854,15 +1127,25 @@ mod r190_the_default_number_of_trusted_hops {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r190_a_direct_caller_rotating_x_forwarded_for_stays_in_its_peer_s_r157_bucket_under_the_default() {
+    async fn r190_a_direct_caller_rotating_x_forwarded_for_stays_in_its_peer_s_r157_bucket_under_the_default()
+    {
         let server = open_server(&env_without_hops()).await;
         let direct = Some("198.51.100.200");
 
         for i in 0..LIMIT {
             let spoofed = format!("10.{}.{}.9", i % 250, i / 250);
-            assert_eq!(server.send(open_request(&[("x-forwarded-for", &spoofed)]), direct).await.status, 200, "request {i}");
+            assert_eq!(
+                server
+                    .send(open_request(&[("x-forwarded-for", &spoofed)]), direct)
+                    .await
+                    .status,
+                200,
+                "request {i}"
+            );
         }
-        let next = server.send(open_request(&[("x-forwarded-for", "172.16.9.9")]), direct).await;
+        let next = server
+            .send(open_request(&[("x-forwarded-for", "172.16.9.9")]), direct)
+            .await;
         assert_eq!(next.status, 429);
     }
 }
@@ -894,8 +1177,14 @@ mod r190_rate_limit_address {
     #[test]
     fn r190_one_host_s_56_delegation_cannot_be_split_into_a_bucket_per_64() {
         // The panel's pair: two /64s of one typical home /56.
-        assert_eq!(rate_limit_address("2a02:8108:1:abff::1"), rate_limit_address("2a02:8108:1:ab00::1"));
-        assert_eq!(rate_limit_address("2a02:8108:1:ab00::1"), format!("2a02:8108:1:ab00:0:0:0:0/{IPV6_RATE_LIMIT_PREFIX_BITS}"));
+        assert_eq!(
+            rate_limit_address("2a02:8108:1:abff::1"),
+            rate_limit_address("2a02:8108:1:ab00::1")
+        );
+        assert_eq!(
+            rate_limit_address("2a02:8108:1:ab00::1"),
+            format!("2a02:8108:1:ab00:0:0:0:0/{IPV6_RATE_LIMIT_PREFIX_BITS}")
+        );
     }
 
     #[test]
@@ -918,7 +1207,12 @@ mod r190_rate_limit_address {
         let caller = seed_caller(&server, "rotator").await;
         flood_address(&server, &rate_limit_address("2001:db8:1:2::1")).await;
 
-        let rotated = server.send(redeem_request(&caller.token, &[("x-forwarded-for", "2001:db8:1:ee::2")]), Some("10.0.0.1")).await;
+        let rotated = server
+            .send(
+                redeem_request(&caller.token, &[("x-forwarded-for", "2001:db8:1:ee::2")]),
+                Some("10.0.0.1"),
+            )
+            .await;
 
         assert_eq!(rotated.status, 429);
         assert_eq!(rotated.error_code(), "rate_limited");
@@ -929,8 +1223,13 @@ mod r190_rate_limit_address {
         let server = code_server().await;
         let caller = seed_caller(&server, "dual-stack").await;
 
-        server.send(redeem_request(&caller.token, &[]), Some("::ffff:192.0.2.10")).await;
+        server
+            .send(redeem_request(&caller.token, &[]), Some("::ffff:192.0.2.10"))
+            .await;
 
-        assert_eq!(attempt_ip_hash(&server, &caller.profile_id).await, ip_hash("192.0.2.10"));
+        assert_eq!(
+            attempt_ip_hash(&server, &caller.profile_id).await,
+            ip_hash("192.0.2.10")
+        );
     }
 }

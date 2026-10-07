@@ -105,7 +105,8 @@ mod the_audits_sweep_e36 {
     use super::*;
 
     #[test]
-    fn e36_fewer_every_permanent_below_the_audits_loc_on_both_sides_the_active_side_first_an_equal_one_stays() {
+    fn e36_fewer_every_permanent_below_the_audits_loc_on_both_sides_the_active_side_first_an_equal_one_stays()
+    {
         let mut state = board();
         put(&mut state, &small().id, slot(P2, Row::Units, 1), json!({}));
         put(&mut state, &even().id, slot(P1, Row::Units, 1), json!({}));
@@ -125,7 +126,10 @@ mod the_audits_sweep_e36 {
         put(&mut state, &small().id, slot(P1, Row::Units, 1), json!({}));
         put(&mut state, &even().id, slot(P2, Row::Units, 1), json!({}));
         put(&mut state, &big().id, slot(P2, Row::Units, 2), json!({}));
-        assert_eq!(ids(&audit_targets(&state, args(P1, P1, 10, true, false))), vec![big().id]);
+        assert_eq!(
+            ids(&audit_targets(&state, args(P1, P1, 10, true, false))),
+            vec![big().id]
+        );
     }
 
     #[test]
@@ -149,8 +153,14 @@ mod the_audits_sweep_e36 {
             slot(P2, Row::Units, 1),
             PlaceOnFieldOptions { stack: Some(true) }
         ));
-        assert_eq!(ids(&audit_targets(&state, args(P1, P1, 10, false, false))), vec![trap().id]);
-        assert_eq!(ids(&audit_targets(&state, args(P1, P1, 10, true, false))), vec![stacker().id]);
+        assert_eq!(
+            ids(&audit_targets(&state, args(P1, P1, 10, false, false))),
+            vec![trap().id]
+        );
+        assert_eq!(
+            ids(&audit_targets(&state, args(P1, P1, 10, true, false))),
+            vec![stacker().id]
+        );
     }
 
     #[test]
@@ -174,7 +184,10 @@ mod the_audits_sweep_e36 {
         };
         let fused_def = fused.as_ref().map(|card| card.def_id.clone()).unwrap_or_default();
         assert_eq!(lines_of_code(&state, &fused_def), 23);
-        assert_eq!(ids(&audit_targets(&state, args(P2, P1, 23, false, false))), Vec::<String>::new());
+        assert_eq!(
+            ids(&audit_targets(&state, args(P2, P1, 23, false, false))),
+            Vec::<String>::new()
+        );
         assert_eq!(audit_targets(&state, args(P2, P1, 24, false, false)).len(), 1);
     }
 }

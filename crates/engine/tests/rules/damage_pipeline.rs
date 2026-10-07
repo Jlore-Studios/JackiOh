@@ -11,8 +11,8 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::damage_combat::{
-    anime_armor, argus, bolt, grunt, hidden_argus, hidden_lens, lance, lens, playing, recorder, replays_to, solar,
-    sweep, wall,
+    anime_armor, argus, bolt, grunt, hidden_argus, hidden_lens, lance, lens, playing, recorder, replays_to,
+    solar, sweep, wall,
 };
 use crate::rules::fixtures::harness::{events_of_type, in_hand, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
@@ -29,7 +29,9 @@ fn damage_hits(events: &[GameEvent]) -> Vec<(String, i32)> {
     events_of_type(events, GameEventType::Damage)
         .iter()
         .map(|hit| match hit {
-            GameEvent::Damage { target_id, amount, .. } => (target_id.clone(), *amount),
+            GameEvent::Damage {
+                target_id, amount, ..
+            } => (target_id.clone(), *amount),
             other => panic!("not a damage event: {other:?}"),
         })
         .collect()
@@ -47,14 +49,24 @@ mod e6_spell_damage_s4_4_step_0 {
     fn a_spell_s_hit_is_raised_by_the_sum_of_the_spell_damage_on_its_controller_s_units_once_per_hit() {
         let mut state = playing("dc-spell-damage");
         put(&mut state, &solar.id, slot(P1, Row::Units, 1), json!({}));
-        put(&mut state, &solar.id, slot(P1, Row::Units, 2), json!({ "radiant": true }));
+        put(
+            &mut state,
+            &solar.id,
+            slot(P1, Row::Units, 2),
+            json!({ "radiant": true }),
+        );
         // The opponent's Spell Damage is theirs; a Field Spell and a face-down Trap printing it are no units.
         put(&mut state, &solar.id, slot(P2, Row::Units, 1), json!({}));
         put(&mut state, &lens.id, slot(P1, Row::Backrow, 1), json!({}));
         put(&mut state, &hidden_lens.id, slot(P1, Row::Backrow, 2), json!({}));
         assert_eq!(spell_damage_of(&state, P1), 2 + 5);
         let target = put(&mut state, &wall.id, slot(P2, Row::Units, 2), json!({}));
-        find_instance_mut(&mut state, &target.id).expect("on the field").buffs = AttackHealth { attack: 0, health: 20 };
+        find_instance_mut(&mut state, &target.id)
+            .expect("on the field")
+            .buffs = AttackHealth {
+            attack: 0,
+            health: 20,
+        };
         let spell = spell_in(&mut state, &bolt.id);
         let mut game = recorder(&state);
 
@@ -80,11 +92,15 @@ mod e6_spell_damage_s4_4_step_0 {
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
         apply_effects(
-            &[damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 })))],
+            &[damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": 2 }),
+            ))],
             &mut make_context(&mut sink, Some(&mage), HookOptions::default()),
         );
         apply_effects(
-            &[damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 })))],
+            &[damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": 2 }),
+            ))],
             &mut make_context(&mut sink, Some(&field), HookOptions::default()),
         );
         assert_eq!(sink.state.players[P2].hero.health, 26);
@@ -205,13 +221,23 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
         assert_eq!(hero_hit_amount(&state, P2, 5, true), 3);
         state.players[P2].hero.armor = 0;
         // Radiant (4) beside base (2): 8, and 5 / 8 rounds up to 1 — once, not at each divisor.
-        put(&mut state, &argus.id, slot(P2, Row::Backrow, 2), json!({ "radiant": true }));
+        put(
+            &mut state,
+            &argus.id,
+            slot(P2, Row::Backrow, 2),
+            json!({ "radiant": true }),
+        );
         assert_eq!(hero_damage_divisor(&state, P2), 8);
         assert_eq!(hero_hit_amount(&state, P2, 5, false), 1);
         assert_eq!(hero_hit_amount(&state, P2, 17, false), 3);
         // Caps: Anti-oneshot's 5 and Anime Armor's 1 — the lowest wins.
         let mut capped = playing("dc-caps");
-        put(&mut capped, &anti_oneshot().id, slot(P2, Row::Backrow, 1), json!({}));
+        put(
+            &mut capped,
+            &anti_oneshot().id,
+            slot(P2, Row::Backrow, 1),
+            json!({}),
+        );
         assert_eq!(hero_damage_cap(&capped, P2), Some(5));
         put(&mut capped, &anime_armor.id, slot(P2, Row::Units, 1), json!({}));
         assert_eq!(hero_damage_cap(&capped, P2), Some(1));
@@ -219,7 +245,12 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
         // A divisor comes before the cap: 30 / 2 = 15, capped at 1 either way; with only Anti-oneshot, 5.
         let mut both = playing("dc-caps-order");
         put(&mut both, &argus.id, slot(P2, Row::Backrow, 1), json!({}));
-        put(&mut both, &anti_oneshot().id, slot(P2, Row::Backrow, 2), json!({}));
+        put(
+            &mut both,
+            &anti_oneshot().id,
+            slot(P2, Row::Backrow, 2),
+            json!({}),
+        );
         assert_eq!(hero_hit_amount(&both, P2, 8, false), 4);
         assert_eq!(hero_hit_amount(&both, P2, 30, false), 5);
     }
@@ -229,7 +260,9 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
         let mut state = playing("dc-hidden-guard");
         let trap = put(&mut state, &hidden_argus.id, slot(P2, Row::Backrow, 1), json!({}));
         assert_eq!(hero_hit_amount(&state, P2, 6, false), 6);
-        find_instance_mut(&mut state, &trap.id).expect("in the backrow").face_up = Some(true);
+        find_instance_mut(&mut state, &trap.id)
+            .expect("in the backrow")
+            .face_up = Some(true);
         assert_eq!(hero_hit_amount(&state, P2, 6, false), 3);
     }
 
@@ -238,7 +271,12 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
         let mut state = playing("dc-divisor-hits");
         put(&mut state, &argus.id, slot(P1, Row::Backrow, 1), json!({}));
         let body = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), json!({}));
-        find_instance_mut(&mut state, &body.id).expect("on the field").buffs = AttackHealth { attack: 0, health: 10 };
+        find_instance_mut(&mut state, &body.id)
+            .expect("on the field")
+            .buffs = AttackHealth {
+            attack: 0,
+            health: 10,
+        };
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
@@ -252,7 +290,9 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
             },
         );
         assert_eq!(sink.state.players[P1].hero.health, 26);
-        let body_now = find_instance(sink.state, &body.id).cloned().expect("on the field");
+        let body_now = find_instance(sink.state, &body.id)
+            .cloned()
+            .expect("on the field");
         deal_damage(
             &mut sink,
             DamageArgs {
@@ -262,7 +302,10 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
                 flags: None,
             },
         );
-        assert_eq!(find_instance(sink.state, &body.id).expect("on the field").damage, 7);
+        assert_eq!(
+            find_instance(sink.state, &body.id).expect("on the field").damage,
+            7
+        );
         sink.state.players[P1].library = vec![];
         sink.state.players[P1].fatigue_count = 2;
         draw_one(&mut sink, P1, None);

@@ -108,7 +108,11 @@ pub struct AiDeckOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub include: Option<Vec<String>>,
     /// A tag to lean on; `None` (TS undefined) = roll one (AI_DECK.themeChance), `Some(None)` (TS null) = none.
-    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "present")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "present"
+    )]
     pub theme: Option<Option<String>>,
     /// The seat's handicap manaCap; default MAX_MANA. Shifts the curve and the uncastable test.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -147,7 +151,12 @@ pub struct AiDeck {
 }
 
 pub const AI_DECK: AiDeck = AiDeck {
-    curve: ByBucket { zero_one: 0.3, two: 0.33, three: 0.22, four_plus: 0.15 },
+    curve: ByBucket {
+        zero_one: 0.3,
+        two: 0.33,
+        three: 0.22,
+        four_plus: 0.15,
+    },
     curve_shift_per_mana: 0.025,
     curve_tolerance: 0.08,
     min_unit_share: 0.45,
@@ -164,10 +173,19 @@ pub const AI_DECK: AiDeck = AiDeck {
 };
 
 /// The buckets in curve order; the last one, "4+", takes every cost above the others' ceilings.
-const BUCKET_ORDER: [CostBucket; 4] = [CostBucket::ZeroOne, CostBucket::Two, CostBucket::Three, CostBucket::FourPlus];
+const BUCKET_ORDER: [CostBucket; 4] = [
+    CostBucket::ZeroOne,
+    CostBucket::Two,
+    CostBucket::Three,
+    CostBucket::FourPlus,
+];
 
 /// The highest queryCost each bucket below "4+" holds, in curve order.
-const BUCKET_CEILINGS: [(CostBucket, i32); 3] = [(CostBucket::ZeroOne, 1), (CostBucket::Two, 2), (CostBucket::Three, 3)];
+const BUCKET_CEILINGS: [(CostBucket, i32); 3] = [
+    (CostBucket::ZeroOne, 1),
+    (CostBucket::Two, 2),
+    (CostBucket::Three, 3),
+];
 
 /// The tag every token carries; never a theme (the pool holds no tokens anyway, §2.6 L3).
 const TOKEN_TAG: Tag = Tag::Token;
@@ -201,7 +219,12 @@ pub fn curve_targets(size: i32, mana_cap: i32) -> ByBucket<i32> {
         order: usize,
     }
     let shares = curve_shares(mana_cap);
-    let mut targets: ByBucket<i32> = ByBucket { zero_one: 0, two: 0, three: 0, four_plus: 0 };
+    let mut targets: ByBucket<i32> = ByBucket {
+        zero_one: 0,
+        two: 0,
+        three: 0,
+        four_plus: 0,
+    };
     let mut remainders: Vec<Remainder> = Vec::new();
     let mut assigned = 0;
     for (order, bucket) in BUCKET_ORDER.into_iter().enumerate() {
@@ -209,7 +232,11 @@ pub fn curve_targets(size: i32, mana_cap: i32) -> ByBucket<i32> {
         let whole = raw.floor();
         targets[bucket] = whole as i32;
         assigned += whole as i32;
-        remainders.push(Remainder { bucket, fraction: raw - whole, order });
+        remainders.push(Remainder {
+            bucket,
+            fraction: raw - whole,
+            order,
+        });
     }
     // Largest fractional part first; a tie goes to the cheaper bucket, so the result is a total order.
     remainders.sort_by(|a, b| {
@@ -327,11 +354,17 @@ pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<S
         include_defs.push(def);
     }
     if include_defs.len() as i32 > size {
-        panic!("buildAiDeck: {} included cards do not fit a {size}-card deck", include_defs.len());
+        panic!(
+            "buildAiDeck: {} included cards do not fit a {size}-card deck",
+            include_defs.len()
+        );
     }
 
-    let pool: Vec<&CardDef> =
-        every.iter().copied().filter(|def| !banned.contains(&def.id) && !include_ids.contains(&def.id)).collect();
+    let pool: Vec<&CardDef> = every
+        .iter()
+        .copied()
+        .filter(|def| !banned.contains(&def.id) && !include_ids.contains(&def.id))
+        .collect();
     if ((include_defs.len() + pool.len()) as i32) < size {
         panic!(
             "buildAiDeck: a {size}-card deck needs {size} distinct cards, but only {} non-token cards are unbanned",
@@ -346,21 +379,38 @@ pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<S
             let mut both: Vec<&CardDef> = include_defs.clone();
             both.extend(pool.iter().copied());
             let candidates = theme_candidates(&both);
-            if rolled && !candidates.is_empty() { rng.pick(&candidates).cloned() } else { None }
+            if rolled && !candidates.is_empty() {
+                rng.pick(&candidates).cloned()
+            } else {
+                None
+            }
         }
         Some(theme) => theme.clone(),
     };
 
     let targets = curve_targets(size, mana_cap);
     let units_needed = (f64::from(size) * AI_DECK.min_unit_share).ceil() as i32;
-    let theme_needed = if theme.is_none() { 0 } else { (f64::from(size) * AI_DECK.theme_min_share).ceil() as i32 };
+    let theme_needed = if theme.is_none() {
+        0
+    } else {
+        (f64::from(size) * AI_DECK.theme_min_share).ceil() as i32
+    };
     let castable_ceiling = mana_cap + AI_DECK.cost_slack;
-    let boosted: IndexSet<String> = options.boost.as_ref().map(|boost| boost.ids.iter().cloned().collect()).unwrap_or_default();
+    let boosted: IndexSet<String> = options
+        .boost
+        .as_ref()
+        .map(|boost| boost.ids.iter().cloned().collect())
+        .unwrap_or_default();
     let boost_by = options.boost.as_ref().map_or(1.0, |boost| boost.by);
 
     let mut deck: Vec<&CardDef> = include_defs.clone();
     let mut tally = Tally {
-        counts: ByBucket { zero_one: 0, two: 0, three: 0, four_plus: 0 },
+        counts: ByBucket {
+            zero_one: 0,
+            two: 0,
+            three: 0,
+            four_plus: 0,
+        },
         units: 0,
         themed: 0,
         theme: theme.as_deref(),
@@ -377,7 +427,11 @@ pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<S
         if let Some(theme) = theme.as_deref()
             && theme_needed - tally.themed >= slots_left
         {
-            let themed_cards: Vec<&CardDef> = eligible.iter().copied().filter(|def| has_tag(def, theme)).collect();
+            let themed_cards: Vec<&CardDef> = eligible
+                .iter()
+                .copied()
+                .filter(|def| has_tag(def, theme))
+                .collect();
             if !themed_cards.is_empty() {
                 eligible = themed_cards;
             }
@@ -394,7 +448,11 @@ pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<S
             .map(|def| {
                 let mut weight = 1.0;
                 let bucket = cost_bucket(def);
-                weight *= if tally.counts[bucket] < targets[bucket] { AI_DECK.curve_boost } else { AI_DECK.curve_overflow };
+                weight *= if tally.counts[bucket] < targets[bucket] {
+                    AI_DECK.curve_boost
+                } else {
+                    AI_DECK.curve_overflow
+                };
                 if is_unit(def) && tally.units < units_needed {
                     weight *= AI_DECK.unit_boost;
                 }

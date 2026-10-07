@@ -6,10 +6,11 @@
 //! Port of `packages/engine/test/callToChaos.test.ts`.
 
 use jackioh_engine::subsystems::call_to_chaos::{
-    CHAOS_CHAIN_KEY, CHAOS_EFFECTS, CHAOS_RECURSION, CallToChaosArgs, ChaosEffectDef, add_random_zero_cost_cards, call_to_chaos,
-    cast_random_call_to_chaos, chaos_chain_cap_reached, chaos_chain_of, discount_hand_and_library,
-    draw_library_and_gain_mana, heal_hero_thirty, make_hand_radiant, roll_chaos_effects, summon_chaos_golem,
-    summon_random_backrow, summon_random_three_cost_units, summon_rush_tokens,
+    CHAOS_CHAIN_KEY, CHAOS_EFFECTS, CHAOS_RECURSION, CallToChaosArgs, ChaosEffectDef,
+    add_random_zero_cost_cards, call_to_chaos, cast_random_call_to_chaos, chaos_chain_cap_reached,
+    chaos_chain_of, discount_hand_and_library, draw_library_and_gain_mana, heal_hero_thirty,
+    make_hand_radiant, roll_chaos_effects, summon_chaos_golem, summon_random_backrow,
+    summon_random_three_cost_units, summon_rush_tokens,
 };
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -230,13 +231,18 @@ fn sink_events(state: &mut GameState, events: &mut Vec<GameEvent>, f: impl FnOnc
 }
 
 fn names_of<D: std::borrow::Borrow<ChaosEffectDef>>(effects: &[D]) -> Vec<String> {
-    effects.iter().map(|effect| effect.borrow().name.to_string()).collect()
+    effects
+        .iter()
+        .map(|effect| effect.borrow().name.to_string())
+        .collect()
 }
 
 fn labels_of<D: std::borrow::Borrow<ChaosEffectDef>>(effects: &[D]) -> Vec<String> {
-    effects.iter().map(|effect| effect.borrow().label.to_string()).collect()
+    effects
+        .iter()
+        .map(|effect| effect.borrow().label.to_string())
+        .collect()
 }
-
 
 mod r28_call_to_chaos_s8_95_m3_t7 {
     use super::*;
@@ -252,8 +258,15 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         let summoned = events_of_type(&events, GameEventType::Summoned);
         assert_eq!(summoned.len(), 3);
         // R64: no zone is named, so they take the leftmost empty unlocked zones in order.
-        assert_eq!(field_of(&events, GameEventType::Summoned, "lane"), vec![json!(1), json!(2), json!(3)]);
-        assert!(field_of(&events, GameEventType::Summoned, "row").iter().all(|row| *row == json!("units")));
+        assert_eq!(
+            field_of(&events, GameEventType::Summoned, "lane"),
+            vec![json!(1), json!(2), json!(3)]
+        );
+        assert!(
+            field_of(&events, GameEventType::Summoned, "row")
+                .iter()
+                .all(|row| *row == json!("units"))
+        );
         for card_def in summoned_defs(&state, &events) {
             assert_eq!(card_def.type_, CardType::Unit);
             assert_eq!(query_cost(&card_def), 3);
@@ -393,8 +406,14 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         assert_eq!(now(&enemy.id).cost_mod, 0); // "your" hand and library only
         // R65 floors the result at 0, and the discount travels with the card between zones (R78).
         assert_eq!(effective_cost(&state, &now(&cheap.id), CostOptions::default()), 0);
-        assert_eq!(effective_cost(&state, &now(&pricey.id), CostOptions::default()), 2);
-        assert_eq!(effective_cost(&state, &now(&in_library.id), CostOptions::default()), 2);
+        assert_eq!(
+            effective_cost(&state, &now(&pricey.id), CostOptions::default()),
+            2
+        );
+        assert_eq!(
+            effective_cost(&state, &now(&in_library.id), CostOptions::default()),
+            2
+        );
     }
 
     #[test]
@@ -426,7 +445,11 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
             });
 
             assert_eq!(events_of_type(&events, GameEventType::Summoned).len(), 5);
-            assert!(field_of(&events, GameEventType::Summoned, "row").iter().all(|row| *row == json!("backrow")));
+            assert!(
+                field_of(&events, GameEventType::Summoned, "row")
+                    .iter()
+                    .all(|row| *row == json!("backrow"))
+            );
             assert_eq!(
                 field_of(&events, GameEventType::Summoned, "lane"),
                 vec![json!(1), json!(2), json!(3), json!(4), json!(5)]
@@ -437,9 +460,15 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
                 let Some(card) = card else { continue };
                 let card_def = def_of(Some(&state), &card.def_id);
                 seen.insert(card_def.type_);
-                assert!([CardType::FieldSpell, CardType::Trap, CardType::FieldTrap].contains(&card_def.type_));
+                assert!(
+                    [CardType::FieldSpell, CardType::Trap, CardType::FieldTrap].contains(&card_def.type_)
+                );
                 // §3.2 and R33: a Field Spell is public, a Trap or Field Trap stays face-down.
-                let expected = if card_def.type_ == CardType::FieldSpell { Some(true) } else { None };
+                let expected = if card_def.type_ == CardType::FieldSpell {
+                    Some(true)
+                } else {
+                    None
+                };
                 assert_eq!(card.face_up, expected);
             }
         }
@@ -466,7 +495,11 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         assert_eq!(played.len(), 1);
         let first = json_of(&played[0]);
         assert_eq!(
-            (first["player"].clone(), first["defId"].clone(), first["costPaid"].clone()),
+            (
+                first["player"].clone(),
+                first["defId"].clone(),
+                first["costPaid"].clone()
+            ),
             (json!("p1"), json!(chaos().id), json!(0))
         );
         // R70: a cast counts as a play for everything that counts plays, and pays nothing.
@@ -490,10 +523,18 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
     fn r28_the_base_form_rolls_exactly_one_of_the_ten_effects_and_all_ten_are_reachable() {
         let mut rolled: IndexSet<String> = IndexSet::new();
         for seed in 0..200 {
-            let effects = roll_chaos_effects(&mut Rng::new(&format!("base-{seed}"), 0), false, Some(CHAOS_EFFECTS));
+            let effects = roll_chaos_effects(
+                &mut Rng::new(&format!("base-{seed}"), 0),
+                false,
+                Some(CHAOS_EFFECTS),
+            );
             assert_eq!(effects.len(), 1);
             let name = names_of(&effects).first().cloned();
-            assert!(CHAOS_EFFECTS.iter().any(|effect| Some(effect.name.to_string()) == name));
+            assert!(
+                CHAOS_EFFECTS
+                    .iter()
+                    .any(|effect| Some(effect.name.to_string()) == name)
+            );
             if let Some(name) = name {
                 rolled.insert(name);
             }
@@ -507,11 +548,18 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         let mut reached: IndexSet<String> = IndexSet::new();
         let mut with_recursion = 0;
         for seed in 0..300 {
-            let effects = roll_chaos_effects(&mut Rng::new(&format!("radiant-{seed}"), 0), true, Some(CHAOS_EFFECTS));
+            let effects = roll_chaos_effects(
+                &mut Rng::new(&format!("radiant-{seed}"), 0),
+                true,
+                Some(CHAOS_EFFECTS),
+            );
             assert_eq!(effects.len() as i32, CALL_TO_CHAOS_RADIANT_EFFECTS);
             let names = names_of(&effects);
             // Three different entries: none comes up twice.
-            assert_eq!(names.iter().collect::<IndexSet<_>>().len() as i32, CALL_TO_CHAOS_RADIANT_EFFECTS);
+            assert_eq!(
+                names.iter().collect::<IndexSet<_>>().len() as i32,
+                CALL_TO_CHAOS_RADIANT_EFFECTS
+            );
             // In list order, whatever order they were drawn in.
             let order: Vec<i64> = names
                 .iter()
@@ -550,10 +598,16 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
     #[test]
     fn r423_a_radiant_call_to_chaos_runs_all_three_rolled_effects_the_recursion_only_when_rolled() {
         // A seed whose three are the hero heal, the Chaos Golem and the recursion: all three visible at once.
-        let seed = (0..3000).map(|i| format!("chaos-radiant-run-{i}")).find(|candidate| {
-            let names = names_of(&roll_chaos_effects(&mut Rng::new(candidate, 0), true, Some(CHAOS_EFFECTS)));
-            names.join(",") == ["heal", "golem", CHAOS_RECURSION.as_str()].join(",")
-        });
+        let seed = (0..3000)
+            .map(|i| format!("chaos-radiant-run-{i}"))
+            .find(|candidate| {
+                let names = names_of(&roll_chaos_effects(
+                    &mut Rng::new(candidate, 0),
+                    true,
+                    Some(CHAOS_EFFECTS),
+                ));
+                names.join(",") == ["heal", "golem", CHAOS_RECURSION.as_str()].join(",")
+            });
         assert!(seed.is_some());
         let Some(seed) = seed else { return };
 
@@ -567,10 +621,19 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         });
 
         assert_eq!(state.players.p1.hero.health, 60);
-        assert_eq!(field_of(&events, GameEventType::Summoned, "defId"), vec![json!(golem().id)]);
+        assert_eq!(
+            field_of(&events, GameEventType::Summoned, "defId"),
+            vec![json!(golem().id)]
+        );
         assert_eq!(events_of_type(&events, GameEventType::CardPlayed).len(), 1);
         assert_eq!(
-            state.players.p1.graveyard.iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
+            state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .map(|card| card.def_id.clone())
+                .collect::<Vec<String>>(),
             vec![chaos().id]
         );
         // In list order: the heal, then the Golem, then the recursion's cast (R87's "where it falls").
@@ -579,18 +642,29 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         assert!(index_of(&types, GameEventType::Summoned) < index_of(&types, GameEventType::CardPlayed));
 
         // A seed whose three leave the recursion out casts nothing at all.
-        let no_recursion = (0..400).map(|i| format!("chaos-radiant-none-{i}")).find(|candidate| {
-            !names_of(&roll_chaos_effects(&mut Rng::new(candidate, 0), true, Some(CHAOS_EFFECTS)))
+        let no_recursion = (0..400)
+            .map(|i| format!("chaos-radiant-none-{i}"))
+            .find(|candidate| {
+                !names_of(&roll_chaos_effects(
+                    &mut Rng::new(candidate, 0),
+                    true,
+                    Some(CHAOS_EFFECTS),
+                ))
                 .iter()
                 .any(|name| name == CHAOS_RECURSION.as_str())
-        });
+            });
         assert!(no_recursion.is_some());
         let Some(no_recursion) = no_recursion else { return };
         let mut quiet = game(&no_recursion, Some(hook(|_ctx| vec![])));
         let mut quiet_events: Vec<GameEvent> = Vec::new();
         let quiet_card = chaos_card(&mut quiet, true, None);
         sink_events(&mut quiet, &mut quiet_events, |sink| {
-            run(sink, call_to_chaos(CallToChaosArgs::default()), Some(&quiet_card), P1);
+            run(
+                sink,
+                call_to_chaos(CallToChaosArgs::default()),
+                Some(&quiet_card),
+                P1,
+            );
         });
         assert!(events_of_type(&quiet_events, GameEventType::CardPlayed).is_empty());
     }
@@ -598,15 +672,24 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
     #[test]
     fn r436_names_what_it_rolled_to_both_players_by_the_printed_clauses_before_any_of_it_resolves() {
         let seed = (0..400).map(|i| format!("chaos-announce-{i}")).find(|candidate| {
-            let names = names_of(&roll_chaos_effects(&mut Rng::new(candidate, 0), true, Some(CHAOS_EFFECTS)));
-            names.iter().any(|name| name == "heal") && !names.iter().any(|name| name == CHAOS_RECURSION.as_str())
+            let names = names_of(&roll_chaos_effects(
+                &mut Rng::new(candidate, 0),
+                true,
+                Some(CHAOS_EFFECTS),
+            ));
+            names.iter().any(|name| name == "heal")
+                && !names.iter().any(|name| name == CHAOS_RECURSION.as_str())
         });
         assert!(seed.is_some());
         let Some(seed) = seed else { return };
         let mut state = game(&seed, None);
         let mut events: Vec<GameEvent> = Vec::new();
         let me = chaos_card(&mut state, true, None);
-        let expected = labels_of(&roll_chaos_effects(&mut Rng::new(&seed, 0), true, Some(CHAOS_EFFECTS)));
+        let expected = labels_of(&roll_chaos_effects(
+            &mut Rng::new(&seed, 0),
+            true,
+            Some(CHAOS_EFFECTS),
+        ));
 
         sink_events(&mut state, &mut events, |sink| {
             run(sink, call_to_chaos(CallToChaosArgs::default()), Some(&me), P1);
@@ -617,9 +700,16 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
             json!([{ "type": "chaosRolled", "player": "p1", "instanceId": me.id, "defId": chaos().id, "effects": expected }])
         );
         // First, before the first rolled effect lands anything.
-        assert_eq!(events.first().map(|event| event.event_type()), Some(GameEventType::ChaosRolled));
+        assert_eq!(
+            events.first().map(|event| event.event_type()),
+            Some(GameEventType::ChaosRolled)
+        );
         // Every label is a clause of the card's printed list, readable as it stands.
-        assert!(expected.iter().all(|label| CHAOS_EFFECTS.iter().any(|effect| effect.label == label.as_str())));
+        assert!(
+            expected
+                .iter()
+                .all(|label| CHAOS_EFFECTS.iter().any(|effect| effect.label == label.as_str()))
+        );
         assert!(expected.contains(&"Heal your hero 30".to_string()));
 
         // The base face names its one.
@@ -627,13 +717,22 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         let mut base_events: Vec<GameEvent> = Vec::new();
         let base_card = chaos_card(&mut base_state, false, None);
         sink_events(&mut base_state, &mut base_events, |sink| {
-            run(sink, call_to_chaos(CallToChaosArgs::default()), Some(&base_card), P1);
+            run(
+                sink,
+                call_to_chaos(CallToChaosArgs::default()),
+                Some(&base_card),
+                P1,
+            );
         });
         let one = events_of_type(&base_events, GameEventType::ChaosRolled);
         assert_eq!(one.len(), 1);
-        let base_label = labels_of(&roll_chaos_effects(&mut Rng::new("chaos-announce-base", 0), false, Some(CHAOS_EFFECTS)))
-            .first()
-            .cloned();
+        let base_label = labels_of(&roll_chaos_effects(
+            &mut Rng::new("chaos-announce-base", 0),
+            false,
+            Some(CHAOS_EFFECTS),
+        ))
+        .first()
+        .cloned();
         assert_eq!(json_of(&one[0])["effects"], json!([base_label]));
     }
 
@@ -646,7 +745,9 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         let mut state = game(
             "chaos-chain",
             Some(hook(move |ctx| {
-                sender.send(chaos_chain_of(ctx.self_.as_ref())).expect("the test is listening");
+                sender
+                    .send(chaos_chain_of(ctx.self_.as_ref()))
+                    .expect("the test is listening");
                 vec![cast_random_call_to_chaos()]
             })),
         );
@@ -658,14 +759,24 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         });
         let depths: Vec<i32> = receiver.try_iter().collect();
 
-        assert_eq!(events_of_type(&events, GameEventType::CardPlayed).len() as i32, CALL_TO_CHAOS_CHAIN_CAP);
+        assert_eq!(
+            events_of_type(&events, GameEventType::CardPlayed).len() as i32,
+            CALL_TO_CHAOS_CHAIN_CAP
+        );
         assert_eq!(state.counters.played, CALL_TO_CHAOS_CHAIN_CAP);
         assert_eq!(state.players.p1.graveyard.len() as i32, CALL_TO_CHAOS_CHAIN_CAP);
 
         // The player's card cast link 1, which cast link 2, and so on to the cap.
         assert_eq!(depths, (1..=CALL_TO_CHAOS_CHAIN_CAP).collect::<Vec<i32>>());
         // R215: each landed in the graveyard (§10.5 step 7, R87) as the printed card again.
-        assert!(state.players.p1.graveyard.iter().all(|card| chaos_chain_of(Some(card)) == 0));
+        assert!(
+            state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .all(|card| chaos_chain_of(Some(card)) == 0)
+        );
         assert_eq!(depths.iter().copied().max(), Some(CALL_TO_CHAOS_CHAIN_CAP));
         assert!(chaos_chain_cap_reached(CALL_TO_CHAOS_CHAIN_CAP));
         assert!(!chaos_chain_cap_reached(CALL_TO_CHAOS_CHAIN_CAP - 1));
@@ -691,7 +802,10 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
 
     #[test]
     fn r28_the_chain_counter_is_instance_state_so_two_calls_in_one_turn_do_not_share_it() {
-        let mut state = game("chaos-two-calls", Some(hook(|_ctx| vec![cast_random_call_to_chaos()])));
+        let mut state = game(
+            "chaos-two-calls",
+            Some(hook(|_ctx| vec![cast_random_call_to_chaos()])),
+        );
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         {
@@ -704,7 +818,10 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
 
         assert_eq!(state.counters.played, CALL_TO_CHAOS_CHAIN_CAP * 2);
         // §9.3: the counter lives on the instance, so a serialized game resumes with the same chain.
-        assert_eq!(serde_json::from_value::<GameState>(json_of(&state)).unwrap(), state);
+        assert_eq!(
+            serde_json::from_value::<GameState>(json_of(&state)).unwrap(),
+            state
+        );
     }
 
     #[test]
@@ -724,15 +841,29 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
 
         let names: IndexSet<Option<String>> = (0..20)
             .map(|i| {
-                names_of(&roll_chaos_effects(&mut Rng::new(&format!("spread-{i}"), 0), false, Some(CHAOS_EFFECTS)))
-                    .first()
-                    .cloned()
+                names_of(&roll_chaos_effects(
+                    &mut Rng::new(&format!("spread-{i}"), 0),
+                    false,
+                    Some(CHAOS_EFFECTS),
+                ))
+                .first()
+                .cloned()
             })
             .collect();
         assert!(names.len() > 1);
         assert_eq!(
-            names_of(&roll_chaos_effects(&mut Rng::new("one", 0), false, Some(CHAOS_EFFECTS))).first(),
-            names_of(&roll_chaos_effects(&mut Rng::new("one", 0), false, Some(CHAOS_EFFECTS))).first()
+            names_of(&roll_chaos_effects(
+                &mut Rng::new("one", 0),
+                false,
+                Some(CHAOS_EFFECTS)
+            ))
+            .first(),
+            names_of(&roll_chaos_effects(
+                &mut Rng::new("one", 0),
+                false,
+                Some(CHAOS_EFFECTS)
+            ))
+            .first()
         );
     }
 
@@ -813,7 +944,8 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
     }
 
     #[test]
-    fn r688_a_reserved_zone_is_skipped_but_a_locked_zone_takes_an_unaimed_summon_once_no_unlocked_zone_is_open() {
+    fn r688_a_reserved_zone_is_skipped_but_a_locked_zone_takes_an_unaimed_summon_once_no_unlocked_zone_is_open()
+     {
         let mut state = game("chaos-locked", None);
         let mut events: Vec<GameEvent> = Vec::new();
         state.players.p1.locks.units[0] = true; // lane 1 Locked (§3.2)
@@ -846,7 +978,11 @@ mod r28_r87_r423_what_r28_leaves_open_m3_t7 {
      {
         // 1. Written order: the recursion is the list's last entry, so when it is rolled it resolves last.
         for seed in 0..50 {
-            let names = names_of(&roll_chaos_effects(&mut Rng::new(&format!("r87-{seed}"), 0), true, Some(CHAOS_EFFECTS)));
+            let names = names_of(&roll_chaos_effects(
+                &mut Rng::new(&format!("r87-{seed}"), 0),
+                true,
+                Some(CHAOS_EFFECTS),
+            ));
             if names.iter().any(|name| name == CHAOS_RECURSION.as_str()) {
                 assert_eq!(names.last().map(String::as_str), Some(CHAOS_RECURSION.as_str()));
             }
@@ -860,16 +996,26 @@ mod r28_r87_r423_what_r28_leaves_open_m3_t7 {
             run(sink, cast_random_call_to_chaos(), Some(&cast), P1);
         });
         assert_eq!(
-            state.players.p1.graveyard.iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
+            state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .map(|card| card.def_id.clone())
+                .collect::<Vec<String>>(),
             vec![chaos().id]
         );
 
         // 3. At the cap the recursion does nothing and nothing is rolled in its place: a radiant Call
         // at the cap runs only its other two effects.
         let seed = (0..400).map(|i| format!("r87-cap-{i}")).find(|candidate| {
-            names_of(&roll_chaos_effects(&mut Rng::new(candidate, 0), true, Some(CHAOS_EFFECTS)))
-                .iter()
-                .any(|name| name == CHAOS_RECURSION.as_str())
+            names_of(&roll_chaos_effects(
+                &mut Rng::new(candidate, 0),
+                true,
+                Some(CHAOS_EFFECTS),
+            ))
+            .iter()
+            .any(|name| name == CHAOS_RECURSION.as_str())
         });
         assert!(seed.is_some());
         let Some(seed) = seed else { return };
@@ -888,7 +1034,10 @@ mod r28_r87_r423_what_r28_leaves_open_m3_t7 {
         let rolled = roll_chaos_effects(&mut Rng::new(&capped.seed, 0), true, Some(CHAOS_EFFECTS));
         let others: Vec<&ChaosEffectDef> = CHAOS_EFFECTS
             .iter()
-            .filter(|effect| names_of(&rolled).contains(&effect.name.to_string()) && effect.name != CHAOS_RECURSION.as_str())
+            .filter(|effect| {
+                names_of(&rolled).contains(&effect.name.to_string())
+                    && effect.name != CHAOS_RECURSION.as_str()
+            })
             .collect();
         assert_eq!(others.len() as i32, CALL_TO_CHAOS_RADIANT_EFFECTS - 1);
 
@@ -928,8 +1077,14 @@ mod r28_r87_r423_what_r28_leaves_open_m3_t7 {
         });
 
         assert_eq!(
-            capped_events[1..].iter().map(|event| event.event_type()).collect::<Vec<GameEventType>>(),
-            alone_events.iter().map(|event| event.event_type()).collect::<Vec<GameEventType>>()
+            capped_events[1..]
+                .iter()
+                .map(|event| event.event_type())
+                .collect::<Vec<GameEventType>>(),
+            alone_events
+                .iter()
+                .map(|event| event.event_type())
+                .collect::<Vec<GameEventType>>()
         );
     }
 }

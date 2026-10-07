@@ -12,10 +12,10 @@
 
 use jackioh_ai::{AI_EVAL, EvalWeights, GREEDY_EVAL, NextSwing, evaluate, face_threat, unit_worth};
 use jackioh_engine::testkit::{
-    AnimateOptions, CardDef, CardInstance, CardScripts, EngineSink, GameEvent, GameState, Keyword, KeywordKind,
-    PlayerId, Position, Script, StaticFlags, Value, active_units_of, animate_card, cannot_attack, create_rng,
-    find_instance_mut, give_brittle_count, json, json_as, register_catalog_as, register_scripts, tuning_of,
-    unit_view,
+    AnimateOptions, CardDef, CardInstance, CardScripts, EngineSink, GameEvent, GameState, Keyword,
+    KeywordKind, PlayerId, Position, Script, StaticFlags, Value, active_units_of, animate_card,
+    cannot_attack, create_rng, find_instance_mut, give_brittle_count, json, json_as, register_catalog_as,
+    register_scripts, tuning_of, unit_view,
 };
 
 use super::support::{AI, HUMAN, clone, register_cards, scenario};
@@ -89,15 +89,32 @@ fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 }
 
 fn first_unit(state: &GameState, player: PlayerId) -> CardInstance {
-    units_of(state, player).into_iter().next().expect("setup: nothing there")
+    units_of(state, player)
+        .into_iter()
+        .next()
+        .expect("setup: nothing there")
 }
 
 fn first_backrow(state: &GameState) -> CardInstance {
-    state.players.p1.backrow.iter().flatten().next().cloned().expect("setup: nothing there")
+    state
+        .players
+        .p1
+        .backrow
+        .iter()
+        .flatten()
+        .next()
+        .cloned()
+        .expect("setup: nothing there")
 }
 
 fn first_hand(state: &GameState) -> CardInstance {
-    state.players.p1.hand.first().cloned().expect("setup: nothing there")
+    state
+        .players
+        .p1
+        .hand
+        .first()
+        .cloned()
+        .expect("setup: nothing there")
 }
 
 /// A clone of `state` with `change` applied to it.
@@ -139,7 +156,8 @@ mod evaluate_patch_v0_2_0s_mechanics {
     use super::*;
 
     #[test]
-    fn b3_3_a_brittle_card_is_worth_less_the_nearer_it_is_to_crumbling_on_the_field_in_the_backrow_and_in_hand() {
+    fn b3_3_a_brittle_card_is_worth_less_the_nearer_it_is_to_crumbling_on_the_field_in_the_backrow_and_in_hand()
+     {
         let base = board(json!({
             "p1": { "field": [VANILLA], "backrow": ["core-006"], "hand": ["core-053"] },
             "p2": { "hand": ["core-005"] },
@@ -175,20 +193,27 @@ mod evaluate_patch_v0_2_0s_mechanics {
     }
 
     #[test]
-    fn b3_1_a_readable_animated_backrow_card_is_partly_a_unit_already_worth_animated_share_of_its_unit_face() {
+    fn b3_1_a_readable_animated_backrow_card_is_partly_a_unit_already_worth_animated_share_of_its_unit_face()
+    {
         let mut no_share: EvalWeights = AI_EVAL;
         no_share.animated_share = 0.0;
         const { assert!(AI_EVAL.animated_share > 0.0) };
         for def_id in [TESLA, FROSTSPATULA] {
-            let state = board(json!({ "p1": { "backrow": [def_id], "hand": ["core-053"] }, "p2": { "hand": ["core-005"] } }));
+            let state = board(
+                json!({ "p1": { "backrow": [def_id], "hand": ["core-053"] }, "p2": { "hand": ["core-005"] } }),
+            );
             let card = first_backrow(&state);
             let gain = eval(&state, AI) - evaluate(&state, AI, NextSwing::Enemy, &no_share);
             assert_close(gain, AI_EVAL.animated_share * worth(&state, &card), 10, def_id);
             assert!(gain > 0.0, "{def_id}");
         }
         // Tesla against a Trap of the same cost with no unit face: the same backrow value, plus the share.
-        let tesla = board(json!({ "p1": { "backrow": [TESLA], "hand": ["core-053"] }, "p2": { "hand": ["core-005"] } }));
-        let trap = board(json!({ "p1": { "backrow": [SAME_COST_TRAP], "hand": ["core-053"] }, "p2": { "hand": ["core-005"] } }));
+        let tesla = board(
+            json!({ "p1": { "backrow": [TESLA], "hand": ["core-053"] }, "p2": { "hand": ["core-005"] } }),
+        );
+        let trap = board(
+            json!({ "p1": { "backrow": [SAME_COST_TRAP], "hand": ["core-053"] }, "p2": { "hand": ["core-005"] } }),
+        );
         assert_close(
             evaluate(&tesla, AI, NextSwing::Enemy, &no_share),
             evaluate(&trap, AI, NextSwing::Enemy, &no_share),
@@ -201,7 +226,9 @@ mod evaluate_patch_v0_2_0s_mechanics {
     #[test]
     fn b3_1_an_animated_card_standing_in_a_unit_zone_is_a_unit_counted_once() {
         let state = changed(
-            &board(json!({ "p1": { "backrow": [TESLA], "hand": ["core-053"] }, "p2": { "hand": ["core-005"] } })),
+            &board(
+                json!({ "p1": { "backrow": [TESLA], "hand": ["core-053"] }, "p2": { "hand": ["core-005"] } }),
+            ),
             |out| {
                 let tesla = first_backrow(out);
                 let mut events: Vec<GameEvent> = Vec::new();
@@ -222,7 +249,10 @@ mod evaluate_patch_v0_2_0s_mechanics {
         // The backrow term is gone with it: the share no longer moves the score.
         let mut no_share: EvalWeights = AI_EVAL;
         no_share.animated_share = 0.0;
-        assert_eq!(eval(&state, AI), evaluate(&state, AI, NextSwing::Enemy, &no_share));
+        assert_eq!(
+            eval(&state, AI),
+            evaluate(&state, AI, NextSwing::Enemy, &no_share)
+        );
     }
 
     #[test]
@@ -260,13 +290,19 @@ mod evaluate_patch_v0_2_0s_mechanics {
         let mut none: EvalWeights = AI_EVAL;
         none.keyword.immune_to_spells = 0.0;
         assert!(weight > 0.0);
-        assert_close(worth(&state, radiant) - unit_worth(&state, radiant, &none), weight, 10, "radiant");
+        assert_close(
+            worth(&state, radiant) - unit_worth(&state, radiant, &none),
+            weight,
+            10,
+            "radiant",
+        );
         // The base face prints no immunity.
         assert_eq!(worth(&state, base), unit_worth(&state, base, &none));
     }
 
     #[test]
-    fn e35_a_unit_a_status_bars_from_attacking_counts_no_attack_and_threatens_nothing_exactly_as_cant_attack() {
+    fn e35_a_unit_a_status_bars_from_attacking_counts_no_attack_and_threatens_nothing_exactly_as_cant_attack()
+    {
         let barred = board(json!({ "p1": { "hand": ["core-053"] }, "p2": { "field": [IDLE] } }));
         let plain = board(json!({ "p1": { "hand": ["core-053"] }, "p2": { "field": [VANILLA] } }));
         let idle_unit = first_unit(&barred, HUMAN);
@@ -350,7 +386,7 @@ mod evaluate_patch_v0_2_0s_mechanics {
 
     #[test]
     fn b3_4_r65_an_own_hand_card_made_dearer_scores_lower_and_one_made_cheaper_higher_x_cost_and_enemy_cards_do_not_move()
-    {
+     {
         let hand = |cost_mod: i32, extra: Value| {
             let mut p2 = json!({ "hand": ["core-005"] });
             if let (Some(base), Value::Object(more)) = (p2.as_object_mut(), extra) {
@@ -362,13 +398,25 @@ mod evaluate_patch_v0_2_0s_mechanics {
         };
         let plain = eval(&hand(0, json!({})), AI);
         const { assert!(AI_EVAL.hand_cost_delta > 0.0) };
-        assert_close(plain - eval(&hand(1, json!({})), AI), AI_EVAL.hand_cost_delta, 10, "dearer");
-        assert_close(eval(&hand(-1, json!({})), AI) - plain, AI_EVAL.hand_cost_delta, 10, "cheaper");
+        assert_close(
+            plain - eval(&hand(1, json!({})), AI),
+            AI_EVAL.hand_cost_delta,
+            10,
+            "dearer",
+        );
+        assert_close(
+            eval(&hand(-1, json!({})), AI) - plain,
+            AI_EVAL.hand_cost_delta,
+            10,
+            "cheaper",
+        );
 
         // A price floors at 0: Mr. Vanilla (1) two crystals cheaper is one crystal cheaper.
         let vanilla = |cost_mod: i32| {
             eval(
-                &board(json!({ "p1": { "hand": [{ "def": VANILLA, "costMod": cost_mod }] }, "p2": { "hand": ["core-005"] } })),
+                &board(
+                    json!({ "p1": { "hand": [{ "def": VANILLA, "costMod": cost_mod }] }, "p2": { "hand": ["core-005"] } }),
+                ),
                 AI,
             )
         };
@@ -376,7 +424,9 @@ mod evaluate_patch_v0_2_0s_mechanics {
         // R65: no modifier reaches an X-cost card, so its costMod is no change.
         let dividend = |cost_mod: i32| {
             eval(
-                &board(json!({ "p1": { "hand": [{ "def": "core-024", "costMod": cost_mod }] }, "p2": { "hand": ["core-005"] } })),
+                &board(
+                    json!({ "p1": { "hand": [{ "def": "core-024", "costMod": cost_mod }] }, "p2": { "hand": ["core-005"] } }),
+                ),
                 AI,
             )
         };
@@ -384,7 +434,9 @@ mod evaluate_patch_v0_2_0s_mechanics {
         // The opponent's hand is placeholders to the AI: its cards' costs are no term.
         let enemy = |cost_mod: i32| {
             eval(
-                &board(json!({ "p1": { "hand": ["core-053"] }, "p2": { "hand": [{ "def": "core-005", "costMod": cost_mod }] } })),
+                &board(
+                    json!({ "p1": { "hand": ["core-053"] }, "p2": { "hand": [{ "def": "core-005", "costMod": cost_mod }] } }),
+                ),
                 AI,
             )
         };
@@ -422,8 +474,12 @@ mod evaluate_patch_v0_2_0s_mechanics {
         });
         assert_eq!(greedy(&dearer), greedy(&field));
 
-        let tesla = board(json!({ "p1": { "backrow": [TESLA], "hand": ["core-053"] }, "p2": { "hand": ["core-005"] } }));
-        let trap = board(json!({ "p1": { "backrow": [SAME_COST_TRAP], "hand": ["core-053"] }, "p2": { "hand": ["core-005"] } }));
+        let tesla = board(
+            json!({ "p1": { "backrow": [TESLA], "hand": ["core-053"] }, "p2": { "hand": ["core-005"] } }),
+        );
+        let trap = board(
+            json!({ "p1": { "backrow": [SAME_COST_TRAP], "hand": ["core-053"] }, "p2": { "hand": ["core-005"] } }),
+        );
         assert_eq!(greedy(&tesla), greedy(&trap));
     }
 }

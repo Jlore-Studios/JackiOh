@@ -22,7 +22,11 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .iter()
             .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
         (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(got, want)| matches_object(got, want))
+            actual.len() == expected.len()
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(got, want)| matches_object(got, want))
         }
         _ => actual == expected,
     }
@@ -34,7 +38,9 @@ fn to_json<T: serde::Serialize>(value: &T) -> Value {
 
 /// The instance as the state holds it now (TS reads its live object).
 fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id).cloned().unwrap_or_else(|| panic!("{id} is in no zone"))
+    find_instance(state, id)
+        .cloned()
+        .unwrap_or_else(|| panic!("{id} is in no zone"))
 }
 
 fn game() -> GameState {
@@ -56,13 +62,21 @@ mod b2_7_a_face_with_its_own_type {
         let (Some(base), Some(radiant)) = (cards.first().cloned(), cards.get(1).cloned()) else {
             panic!("no card");
         };
-        find_instance_mut(&mut state, &radiant.id).expect("in hand").radiant = true;
+        find_instance_mut(&mut state, &radiant.id)
+            .expect("in hand")
+            .radiant = true;
         let radiant = live(&state, &radiant.id);
         assert_eq!(running_face(&state, &radiant).type_, Some(CardType::FieldTrap));
         assert_eq!(card_type_of(&state, &base), CardType::Trap);
         assert_eq!(card_type_of(&state, &radiant), CardType::FieldTrap);
-        assert_eq!([is_trap_type(&state, &base), is_trap_type(&state, &radiant)], [true, true]);
-        assert_eq!([is_field_trap(&state, &base), is_field_trap(&state, &radiant)], [false, true]);
+        assert_eq!(
+            [is_trap_type(&state, &base), is_trap_type(&state, &radiant)],
+            [true, true]
+        );
+        assert_eq!(
+            [is_field_trap(&state, &base), is_field_trap(&state, &radiant)],
+            [false, true]
+        );
         assert_eq!(
             [
                 lands_face_down(&state, &base, Row::Backrow),
@@ -77,7 +91,12 @@ mod b2_7_a_face_with_its_own_type {
     fn b2_7_a_radiant_blood_moon_stays_on_the_field_after_it_fires_as_a_field_trap_does_the_base_one_goes() {
         let mut state = game();
         let base = put(&mut state, &blood_moon.id, slot(P1, Row::Backrow, 1), json!({}));
-        let radiant = put(&mut state, &blood_moon.id, slot(P1, Row::Backrow, 2), json!({ "radiant": true }));
+        let radiant = put(
+            &mut state,
+            &blood_moon.id,
+            slot(P1, Row::Backrow, 2),
+            json!({ "radiant": true }),
+        );
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         {
@@ -107,7 +126,9 @@ mod b2_7_a_face_with_its_own_type {
         let Some(radiant) = cards.first().cloned() else {
             panic!("no card");
         };
-        find_instance_mut(&mut state, &radiant.id).expect("in hand").radiant = true;
+        find_instance_mut(&mut state, &radiant.id)
+            .expect("in hand")
+            .radiant = true;
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
@@ -129,10 +150,17 @@ mod b2_7_a_face_with_its_own_type {
         .collect();
         assert_eq!(field_traps, vec![radiant.id.clone()]);
         assert!(
-            cards_in_card_scope(&ctx, &json_as(json!({ "zones": ["hand"], "types": ["Trap"] })), Default::default())
-                .is_empty()
+            cards_in_card_scope(
+                &ctx,
+                &json_as(json!({ "zones": ["hand"], "types": ["Trap"] })),
+                Default::default()
+            )
+            .is_empty()
         );
-        let trap_ids: Vec<String> = query(&json_as(json!({ "type": "Trap" }))).iter().map(|def| def.id.clone()).collect();
+        let trap_ids: Vec<String> = query(&json_as(json!({ "type": "Trap" })))
+            .iter()
+            .map(|def| def.id.clone())
+            .collect();
         assert!(trap_ids.contains(&blood_moon.id));
     }
 
@@ -140,10 +168,21 @@ mod b2_7_a_face_with_its_own_type {
     fn b2_7_the_view_names_the_type_only_where_it_differs_from_the_definition_s() {
         let mut state = game();
         put(&mut state, &blood_moon.id, slot(P1, Row::Backrow, 1), json!({}));
-        put(&mut state, &blood_moon.id, slot(P1, Row::Backrow, 2), json!({ "radiant": true }));
+        put(
+            &mut state,
+            &blood_moon.id,
+            slot(P1, Row::Backrow, 2),
+            json!({ "radiant": true }),
+        );
         let own = view_for(&state, P1).you.backrow;
-        assert!(matches_object(&to_json(&own[0]), &json!({ "faceDown": false, "type": "Trap" })));
-        assert!(matches_object(&to_json(&own[1]), &json!({ "faceDown": false, "type": "Field Trap" })));
+        assert!(matches_object(
+            &to_json(&own[0]),
+            &json!({ "faceDown": false, "type": "Trap" })
+        ));
+        assert!(matches_object(
+            &to_json(&own[1]),
+            &json!({ "faceDown": false, "type": "Field Trap" })
+        ));
         let HandView::Cards(hand) = view_for(&state, P1).you.hand else {
             panic!("own hand is a list");
         };
@@ -159,7 +198,10 @@ mod b2_7_a_face_with_its_own_type {
             panic!("own hand is a list");
         };
         assert_eq!(
-            after.iter().find(|card| card.instance_id == held.id).and_then(|card| card.type_),
+            after
+                .iter()
+                .find(|card| card.instance_id == held.id)
+                .and_then(|card| card.type_),
             Some(CardType::FieldTrap)
         );
         // The other player reads the face-down cards as zones only (R351).
@@ -284,7 +326,10 @@ mod b2_7_x_in_the_stats_buff_billy {
                 );
                 (effect.apply)(&mut ctx);
             }
-            let unit = sink.state.players[P1].units[0].as_ref().and_then(|pile| pile.first()).cloned();
+            let unit = sink.state.players[P1].units[0]
+                .as_ref()
+                .and_then(|pile| pile.first())
+                .cloned();
             let Some(unit) = unit else {
                 panic!("expected a summon");
             };

@@ -26,9 +26,9 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use jackioh_engine::wire::{pick_portrait_from_seed, DEFAULT_PORTRAIT};
+use jackioh_engine::wire::{DEFAULT_PORTRAIT, pick_portrait_from_seed};
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::actor::rooms::{e2e_room_seed_count, script_room_codes};
 use jackioh_server::app::App;
@@ -36,7 +36,7 @@ use jackioh_server::config::{MAX_SAVED_DECKS, MAX_SAVED_TRIOS, ROOM_CODE_LENGTH,
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{CollectionEntry, Db};
 
-use crate::support::deps::{add_user, call, record_logs, test_app, test_app_with, TestAppOptions};
+use crate::support::deps::{TestAppOptions, add_user, call, record_logs, test_app, test_app_with};
 
 const HOST: &str = "host";
 const GUEST: &str = "guest";
@@ -51,7 +51,11 @@ static ROOMS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 /// One store call in its own transaction, as TS's `deps.store.<sub>.<method>(…)` was.
 macro_rules! store {
     ($app:expr, $t:ident => $call:expr) => {{
-        let mut $t = $app.db.begin(None).await.expect("the fake store opens a transaction");
+        let mut $t = $app
+            .db
+            .begin(None)
+            .await
+            .expect("the fake store opens a transaction");
         let out = $call;
         $t.commit().await.expect("the fake store commits");
         out
@@ -88,11 +92,16 @@ async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
 /// past its `open` reservation (a room's claim reserves the row; the join's start completes it).
 /// Seat order is the row's: index 0 of `players` and `decks` is p1.
 async fn started(app: &App) -> Vec<Value> {
-    table(app, |data| json!(data.tables.matches)).await.into_iter().filter(|row| row["status"] != "open").collect()
+    table(app, |data| json!(data.tables.matches))
+        .await
+        .into_iter()
+        .filter(|row| row["status"] != "open")
+        .collect()
 }
 
 async fn in_match_of(app: &Arc<App>, profile: &str) -> Value {
-    let row = store!(app, t => t.profiles_get_by_id(profile).await.expect("profiles.getById")).expect("the profile");
+    let row = store!(app, t => t.profiles_get_by_id(profile).await.expect("profiles.getById"))
+        .expect("the profile");
     to_json(&row)["inMatchId"].clone()
 }
 
@@ -106,7 +115,12 @@ fn playable() -> Vec<String> {
     jackioh_cards::register_all();
     jackioh_cards::CATALOG
         .iter()
-        .filter(|(_, def)| !def.token && !to_json(&def.tags).as_array().is_some_and(|tags| tags.contains(&json!("Token"))))
+        .filter(|(_, def)| {
+            !def.token
+                && !to_json(&def.tags)
+                    .as_array()
+                    .is_some_and(|tags| tags.contains(&json!("Token")))
+        })
         .map(|(id, _)| id.clone())
         .collect()
 }
@@ -150,7 +164,10 @@ async fn save_deck(app: &Arc<App>, profile_id: &str, id: &str, cards: &[String],
 /// Every playable card in the profile's collection, so the real validator's L5 passes (TS's
 /// permissive validator checked no ownership).
 async fn own_everything(app: &Arc<App>, profile_id: &str) {
-    let rows: Vec<Value> = playable().iter().map(|id| json!({ "cardId": id, "quantity": 1 })).collect();
+    let rows: Vec<Value> = playable()
+        .iter()
+        .map(|id| json!({ "cardId": id, "quantity": 1 }))
+        .collect();
     let entries: Vec<CollectionEntry> = from(Value::Array(rows));
     store!(app, t => t.collection_upsert_quantities(profile_id, &entries).await.expect("collection.upsertQuantities"));
 }
@@ -158,7 +175,10 @@ async fn own_everything(app: &Arc<App>, profile_id: &str) {
 /// Seeds an active profile for a fresh user and answers its token.
 async fn player(app: &Arc<App>, profile_id: &str, user_id: &str, email: &str) -> String {
     let token = add_user(app, user_id, email, true);
-    fake(app).lock().await.seed_profile(json!({ "id": profile_id, "userId": user_id, "status": "active" }));
+    fake(app)
+        .lock()
+        .await
+        .seed_profile(json!({ "id": profile_id, "userId": user_id, "status": "active" }));
     own_everything(app, profile_id).await;
     token
 }
@@ -173,7 +193,12 @@ struct Harness {
 
 async fn harness(e2e: bool) -> Harness {
     // TS `createTestDeps({ e2e })`: the empty store either way, end-to-end mode only when asked.
-    let app = test_app_with(TestAppOptions { e2e, skip_fixtures: true, ..TestAppOptions::default() }).await;
+    let app = test_app_with(TestAppOptions {
+        e2e,
+        skip_fixtures: true,
+        ..TestAppOptions::default()
+    })
+    .await;
     let host = player(&app, HOST, "user-host", "host@example.test").await;
     let guest = player(&app, GUEST, "user-guest", "guest@example.test").await;
     save_deck(&app, HOST, &uuid(1), &deck(), "host's deck").await;
@@ -276,7 +301,13 @@ mod r143_the_optional_seed_on_the_room_endpoints {
 
         assert_eq!(status, 400);
         assert_eq!(body["error"]["code"], "bad_request");
-        assert!(body["error"]["message"].as_str().unwrap_or_default().contains("seed"), "{body}");
+        assert!(
+            body["error"]["message"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("seed"),
+            "{body}"
+        );
         // Refused, never ignored: the request bought nothing.
         assert!(h.rooms().await.is_empty());
     }
@@ -291,7 +322,13 @@ mod r143_the_optional_seed_on_the_room_endpoints {
         let (status, body) = h.join(&code, json!({ "seed": "05-reconnect" })).await;
 
         assert_eq!(status, 400);
-        assert!(body["error"]["message"].as_str().unwrap_or_default().contains("seed"), "{body}");
+        assert!(
+            body["error"]["message"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("seed"),
+            "{body}"
+        );
         assert!(started(&h.app).await.is_empty());
     }
 
@@ -311,12 +348,23 @@ mod r143_the_optional_seed_on_the_room_endpoints {
     async fn r143_takes_the_joiners_seed_when_the_host_supplied_none_and_the_hosts_when_both_did() {
         let _turn = ROOMS.lock().await;
         let joiner_only = harness(true).await;
-        assert_eq!(play_through(&joiner_only, json!({}), json!({ "seed": "from-the-joiner" })).await.1, "from-the-joiner");
+        assert_eq!(
+            play_through(&joiner_only, json!({}), json!({ "seed": "from-the-joiner" }))
+                .await
+                .1,
+            "from-the-joiner"
+        );
 
         // Both: the room was created first, so its seed is the one the match runs on.
         let both = harness(true).await;
         assert_eq!(
-            play_through(&both, json!({ "seed": "from-the-host" }), json!({ "seed": "from-the-joiner" })).await.1,
+            play_through(
+                &both,
+                json!({ "seed": "from-the-host" }),
+                json!({ "seed": "from-the-joiner" })
+            )
+            .await
+            .1,
             "from-the-host"
         );
         assert_eq!(e2e_room_seed_count() as i64, 0);
@@ -359,7 +407,10 @@ mod r143_the_optional_seed_on_the_room_endpoints {
         let code = live["code"].as_str().expect("a code").to_string();
         let (status, joined) = h.join(&code, json!({})).await;
         assert_eq!(status, 200, "{joined}");
-        assert_eq!(started(&h.app).await.pop().expect("a started match")["seed"], "the-live-one");
+        assert_eq!(
+            started(&h.app).await.pop().expect("a started match")["seed"],
+            "the-live-one"
+        );
     }
 }
 
@@ -398,7 +449,10 @@ mod r149_the_bounded_room_code_mint {
         assert_eq!(status, 503);
         assert_eq!(body["error"]["code"], "unavailable");
         assert!(
-            body["error"]["message"].as_str().unwrap_or_default().contains("could not allocate a room code"),
+            body["error"]["message"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("could not allocate a room code"),
             "{body}"
         );
         // Bounded, and loud: an exhausted code space is an operator's problem, not a silent retry loop.
@@ -447,7 +501,12 @@ mod the_hosts_deck_is_frozen_into_the_room {
         let app = test_app().await;
         let host = player(&app, HOST, "user-host", "host@example.test").await;
         let guest = player(&app, GUEST, "user-guest", "guest@example.test").await;
-        Freeze { app, host, guest, decks: decks_of() }
+        Freeze {
+            app,
+            host,
+            guest,
+            decks: decks_of(),
+        }
     }
 
     async fn save(h: &Freeze, token: &str, deck_id: &str, cards: &[String]) -> u16 {
@@ -465,7 +524,10 @@ mod the_hosts_deck_is_frozen_into_the_room {
     /// The deck the started match gave this profile's seat.
     async fn deck_in_match_for(h: &Freeze, profile_id: &str) -> Option<Value> {
         let row = started(&h.app).await.pop()?;
-        let seat = row["players"].as_array()?.iter().position(|player| player == profile_id)?;
+        let seat = row["players"]
+            .as_array()?
+            .iter()
+            .position(|player| player == profile_id)?;
         Some(row["decks"][seat].clone())
     }
 
@@ -484,7 +546,8 @@ mod the_hosts_deck_is_frozen_into_the_room {
         assert_eq!(save(&h, &h.guest, &guest_deck(), &b).await, 200);
 
         // 1. The host opens a room on the deck. The freeze happens here.
-        let (status, created) = create(&h.app, &h.host, json!({ "mode": "bo1", "deckId": host_deck() })).await;
+        let (status, created) =
+            create(&h.app, &h.host, json!({ "mode": "bo1", "deckId": host_deck() })).await;
         assert_eq!(status, 200, "{created}");
         let code = created["code"].as_str().expect("a code").to_string();
         let rooms = table(&h.app, |data| json!(data.tables.rooms)).await;
@@ -493,14 +556,21 @@ mod the_hosts_deck_is_frozen_into_the_room {
         // 2. The swap, while the room sits open waiting for somebody to type the code.
         assert_eq!(save(&h, &h.host, &host_deck(), &c).await, 200);
         // PREMISE: the save landed — otherwise there is nothing that could leak into the match.
-        let saved = store!(h.app, t => t.decks_get(&host_deck()).await.expect("decks.get")).expect("the saved deck");
+        let saved =
+            store!(h.app, t => t.decks_get(&host_deck()).await.expect("decks.get")).expect("the saved deck");
         assert_eq!(to_json(&saved)["cards"], json!(c));
         // …and the room is untouched by it.
         let rooms = table(&h.app, |data| json!(data.tables.rooms)).await;
         assert_eq!(rooms.last().expect("the room")["hostDeck"], json!(a));
 
         // 3. The guest joins on their own deck, so each seat is identifiable.
-        let (status, joined) = join(&h.app, &h.guest, &code, json!({ "mode": "bo1", "deckId": guest_deck() })).await;
+        let (status, joined) = join(
+            &h.app,
+            &h.guest,
+            &code,
+            json!({ "mode": "bo1", "deckId": guest_deck() }),
+        )
+        .await;
         assert_eq!(status, 200, "{joined}");
 
         assert_eq!(deck_in_match_for(&h, HOST).await, Some(json!(a)));
@@ -527,7 +597,13 @@ mod the_hosts_deck_is_frozen_into_the_room {
         let rooms = table(&h.app, |data| json!(data.tables.rooms)).await;
         assert_eq!(rooms.last().expect("the room")["hostDeck"], json!(c));
 
-        let (status, _) = join(&h.app, &h.guest, &code, json!({ "mode": "bo1", "deckId": guest_deck() })).await;
+        let (status, _) = join(
+            &h.app,
+            &h.guest,
+            &code,
+            json!({ "mode": "bo1", "deckId": guest_deck() }),
+        )
+        .await;
         assert_eq!(status, 200);
         assert_eq!(deck_in_match_for(&h, HOST).await, Some(json!(c)));
     }
@@ -546,7 +622,14 @@ mod r264_rooms_carry_a_mode {
     async fn save_trio(app: &Arc<App>, profile_id: &str, base: u32) -> String {
         let ids = [uuid(base), uuid(base + 1), uuid(base + 2)];
         for (index, id) in ids.iter().enumerate() {
-            save_deck(app, profile_id, id, &deck_at(index), &format!("{profile_id} {}", index + 1)).await;
+            save_deck(
+                app,
+                profile_id,
+                id,
+                &deck_at(index),
+                &format!("{profile_id} {}", index + 1),
+            )
+            .await;
         }
         let trio_id = uuid(base + 3);
         let outcome = store!(app, t => t
@@ -584,7 +667,10 @@ mod r264_rooms_carry_a_mode {
         let (_, body) = create(&h.app, &h.host, json!({ "mode": "bo1", "deckId": uuid(1) })).await;
         let room = h.rooms().await.remove(0);
         // `CreateRoomResponse` in apps/web's api.ts, exactly.
-        assert_eq!(body, json!({ "code": room["code"], "expiresAt": room["expiresAt"], "mode": "bo1" }));
+        assert_eq!(
+            body,
+            json!({ "code": room["code"], "expiresAt": room["expiresAt"], "mode": "bo1" })
+        );
         assert_eq!(room["mode"], "bo1");
         assert_eq!(room["hostDeck"], json!(deck()));
         assert_eq!(room["hostTrio"], Value::Null);
@@ -599,11 +685,17 @@ mod r264_rooms_carry_a_mode {
 
         // A Best-of-1 joiner and an All Random one (TS also sent a legacy body with no mode, which
         // SURFACE §11.3 retires).
-        for body in [json!({ "mode": "bo1", "deckId": uuid(2) }), json!({ "mode": "random" })] {
+        for body in [
+            json!({ "mode": "bo1", "deckId": uuid(2) }),
+            json!({ "mode": "random" }),
+        ] {
             let (status, refused) = join_with(&h, &code, body).await;
             assert_eq!(status, 409);
             assert_eq!(refused["error"]["code"], "conflict");
-            assert_eq!(refused["error"]["message"], "This room plays Conquest: pick one of your trios.");
+            assert_eq!(
+                refused["error"]["message"],
+                "This room plays Conquest: pick one of your trios."
+            );
             assert_eq!(refused["error"]["details"], json!({ "mode": "bo3" }));
         }
         // Refused before anything was claimed: the room is still open to the right choice.
@@ -622,21 +714,38 @@ mod r264_rooms_carry_a_mode {
         let h = harness(true).await;
         let host_trio = save_trio(&h.app, HOST, 20).await;
         let guest_trio = save_trio(&h.app, GUEST, 30).await;
-        let code = create_in(&h, json!({ "mode": "bo3", "trioId": host_trio, "seed": "room-series" })).await;
+        let code = create_in(
+            &h,
+            json!({ "mode": "bo3", "trioId": host_trio, "seed": "room-series" }),
+        )
+        .await;
         let room = h.rooms().await.remove(0);
         assert_eq!(room["mode"], "bo3");
         assert_eq!(room["hostDeck"], json!([]));
-        let names: Vec<Value> =
-            room["hostTrio"]["decks"].as_array().into_iter().flatten().map(|deck| deck["name"].clone()).collect();
+        let names: Vec<Value> = room["hostTrio"]["decks"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|deck| deck["name"].clone())
+            .collect();
         assert_eq!(names, vec![json!("host 1"), json!("host 2"), json!("host 3")]);
 
         let (status, answer) = join_with(&h, &code, json!({ "mode": "bo3", "trioId": guest_trio })).await;
         assert_eq!(status, 200, "{answer}");
 
         let series = table(&h.app, |data| json!(data.tables.series)).await.remove(0);
-        assert_eq!(answer, json!({ "matchId": null, "seriesId": series["id"], "code": code, "seat": "p2", "mode": "bo3" }));
+        assert_eq!(
+            answer,
+            json!({ "matchId": null, "seriesId": series["id"], "code": code, "seat": "p2", "mode": "bo3" })
+        );
         let sides = series["sides"].as_array().cloned().unwrap_or_default();
-        assert_eq!(sides.iter().map(|side| side["profileId"].clone()).collect::<Vec<_>>(), vec![json!(HOST), json!(GUEST)]);
+        assert_eq!(
+            sides
+                .iter()
+                .map(|side| side["profileId"].clone())
+                .collect::<Vec<_>>(),
+            vec![json!(HOST), json!(GUEST)]
+        );
         assert_eq!(sides[0]["trio"], room["hostTrio"]);
         assert_eq!(sides[1]["trio"]["name"], "guest's trio");
         // R604: a room's series is never ranked either.
@@ -669,13 +778,19 @@ mod r264_rooms_carry_a_mode {
         let row = started(&h.app).await.remove(0);
         let seed = row["seed"].as_str().unwrap_or_default().to_string();
         let match_id = row["id"].as_str().expect("a match id").to_string();
-        assert_eq!(answer, json!({ "matchId": match_id, "seriesId": null, "code": code, "seat": "p2", "mode": "random" }));
+        assert_eq!(
+            answer,
+            json!({ "matchId": match_id, "seriesId": null, "code": code, "seat": "p2", "mode": "random" })
+        );
         assert_eq!(row["players"], json!([HOST, GUEST]));
         let mode = store!(h.app, t => t.matches_mode_of(&match_id).await.expect("matches.modeOf"));
         assert_eq!(to_json(&mode), "random");
         assert_eq!(
             row["decks"],
-            json!([deal_random_deck(&format!("{seed}:p1-deck")), deal_random_deck(&format!("{seed}:p2-deck"))])
+            json!([
+                deal_random_deck(&format!("{seed}:p1-deck")),
+                deal_random_deck(&format!("{seed}:p2-deck"))
+            ])
         );
         assert_eq!(in_match_of(&h.app, HOST).await, json!(match_id));
         assert_eq!(in_match_of(&h.app, GUEST).await, json!(match_id));
@@ -724,7 +839,8 @@ mod r264_rooms_carry_a_mode {
     }
 
     #[tokio::test]
-    async fn r264_a_player_queued_before_joining_a_best_of_3_room_leaves_the_queue_so_a_series_that_ends_before_game_1_pairs_no_one_later() {
+    async fn r264_a_player_queued_before_joining_a_best_of_3_room_leaves_the_queue_so_a_series_that_ends_before_game_1_pairs_no_one_later()
+     {
         let _turn = ROOMS.lock().await;
         let h = harness(false).await;
         // TS put the room, queue and series routes on one router; the app's router serves them all.
@@ -732,7 +848,13 @@ mod r264_rooms_carry_a_mode {
         save_deck(&h.app, "third", &uuid(90), &deck(), "third's deck").await;
 
         // The guest waits in the Best-of-1 queue, alone, and meanwhile takes a Best-of-3 challenge.
-        let (status, queued) = post(&h.app, &h.guest, "/api/queue", Some(json!({ "mode": "bo1", "deckId": uuid(2) }))).await;
+        let (status, queued) = post(
+            &h.app,
+            &h.guest,
+            "/api/queue",
+            Some(json!({ "mode": "bo1", "deckId": uuid(2) })),
+        )
+        .await;
         assert_eq!(status, 200, "{queued}");
         let host_trio = save_trio(&h.app, HOST, 20).await;
         let guest_trio = save_trio(&h.app, GUEST, 30).await;
@@ -742,17 +864,32 @@ mod r264_rooms_carry_a_mode {
         let series_id = joined["seriesId"].as_str().expect("a series id").to_string();
 
         // The series ends before its first game: the guest forfeits at the pick.
-        let (status, forfeited) = post(&h.app, &h.guest, &format!("/api/series/{series_id}/forfeit"), None).await;
+        let (status, forfeited) = post(
+            &h.app,
+            &h.guest,
+            &format!("/api/series/{series_id}/forfeit"),
+            None,
+        )
+        .await;
         assert_eq!(status, 200, "{forfeited}");
 
         // Someone queues for Best of 1. The ticket the guest left behind must not become a match.
-        let (status, other) = post(&h.app, &third, "/api/queue", Some(json!({ "mode": "bo1", "deckId": uuid(90) }))).await;
+        let (status, other) = post(
+            &h.app,
+            &third,
+            "/api/queue",
+            Some(json!({ "mode": "bo1", "deckId": uuid(90) })),
+        )
+        .await;
         assert_eq!(status, 200, "{other}");
         assert_eq!(other["status"], "open");
         assert_eq!(other["matchId"], Value::Null);
         assert!(started(&h.app).await.is_empty());
         assert_eq!(in_match_of(&h.app, GUEST).await, Value::Null);
-        assert!(store!(h.app, t => t.tickets_open_for_profile(GUEST).await.expect("tickets.openForProfile")).is_none());
+        assert!(
+            store!(h.app, t => t.tickets_open_for_profile(GUEST).await.expect("tickets.openForProfile"))
+                .is_none()
+        );
     }
 
     #[tokio::test]
@@ -791,7 +928,9 @@ mod r642_the_portraits_on_a_rooms_match {
     async fn r642_deals_an_all_random_rooms_portraits_from_the_seed_seat_by_seat_like_the_decks() {
         let _turn = ROOMS.lock().await;
         let h = harness(true).await;
-        let (status, created) = h.create(json!({ "mode": "random", "seed": "room-portraits" })).await;
+        let (status, created) = h
+            .create(json!({ "mode": "random", "seed": "room-portraits" }))
+            .await;
         assert_eq!(status, 200, "{created}");
         let code = created["code"].as_str().expect("a code").to_string();
 
@@ -844,7 +983,8 @@ mod r642_the_portraits_on_a_rooms_match {
         // The host re-saves under another portrait while the room waits for its guest: the room's copy
         // does not move (the §9.8 freeze, one field wider).
         assert_eq!(put_portrait(h.host.clone(), uuid(1), "timmy").await, 200);
-        let saved = store!(h.app, t => t.decks_get(&uuid(1)).await.expect("decks.get")).expect("the saved deck");
+        let saved =
+            store!(h.app, t => t.decks_get(&uuid(1)).await.expect("decks.get")).expect("the saved deck");
         assert_eq!(to_json(&saved)["portrait"], "timmy");
         assert_eq!(h.rooms().await[0]["hostPortrait"], "gary");
 
@@ -853,7 +993,10 @@ mod r642_the_portraits_on_a_rooms_match {
 
         // The host's seat carries the frozen one, not "timmy"; the guest's carries what the join
         // froze. Both land on the match row in seat order.
-        assert_eq!(started(&h.app).await.remove(0)["portraits"], json!(["gary", "shredder"]));
+        assert_eq!(
+            started(&h.app).await.remove(0)["portraits"],
+            json!(["gary", "shredder"])
+        );
     }
 
     #[tokio::test]
@@ -865,6 +1008,9 @@ mod r642_the_portraits_on_a_rooms_match {
         play_through(&h, json!({}), json!({})).await;
 
         assert_eq!(h.rooms().await[0]["hostPortrait"], Value::Null);
-        assert_eq!(started(&h.app).await.remove(0)["portraits"], json!([DEFAULT_PORTRAIT, DEFAULT_PORTRAIT]));
+        assert_eq!(
+            started(&h.app).await.remove(0)["portraits"],
+            json!([DEFAULT_PORTRAIT, DEFAULT_PORTRAIT])
+        );
     }
 }

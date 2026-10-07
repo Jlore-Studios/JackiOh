@@ -221,7 +221,12 @@ mod b5_e30_the_reader_the_server_calls_as_a_game_ends_r417 {
             slot(P2, Row::Backrow, 2),
             json!({ "radiant": true }),
         );
-        let fired = put(&mut state, FIELD_TRAP, slot(P2, Row::Backrow, 3), Default::default());
+        let fired = put(
+            &mut state,
+            FIELD_TRAP,
+            slot(P2, Row::Backrow, 3),
+            Default::default(),
+        );
         find_instance_mut(&mut state, &fired.id)
             .expect("the fired Field Trap")
             .face_up = Some(true);
@@ -284,7 +289,12 @@ mod b5_e30_the_reader_the_server_calls_as_a_game_ends_r417 {
             let shown: Vec<String> = sides
                 .iter()
                 .flat_map(|side| {
-                    let mut ids: Vec<String> = side.units.iter().flatten().map(|unit| unit.def_id.clone()).collect();
+                    let mut ids: Vec<String> = side
+                        .units
+                        .iter()
+                        .flatten()
+                        .map(|unit| unit.def_id.clone())
+                        .collect();
                     for (lane, card) in side.backrow.iter().enumerate() {
                         if let Some(carried) = side
                             .carried
@@ -337,7 +347,8 @@ mod b5_e30_c_29s_verbs_over_the_frozen_board_r417_r564 {
     }
 
     #[test]
-    fn r564_the_candidates_are_each_different_card_once_radiant_if_any_entry_was_never_the_generating_card_r387() {
+    fn r564_the_candidates_are_each_different_card_once_radiant_if_any_entry_was_never_the_generating_card_r387()
+     {
         let state = created(Some((p1_board(), p2_board())));
         assert_eq!(
             last_board_candidates(&state, P1, &[PORTAL.to_string()]),
@@ -380,9 +391,11 @@ mod b5_e30_c_29s_verbs_over_the_frozen_board_r417_r564 {
             json_of(view_for(&state, P2).pending),
             json!({ "forYou": false, "pendingFor": "p1" })
         );
-        assert!(!serde_json::to_string(&view_for(&state, P2))
-            .expect("a view serialises")
-            .contains("fx-token-rush"));
+        assert!(
+            !serde_json::to_string(&view_for(&state, P2))
+                .expect("a view serialises")
+                .contains("fx-token-rush")
+        );
     }
 
     #[test]
@@ -391,10 +404,11 @@ mod b5_e30_c_29s_verbs_over_the_frozen_board_r417_r564 {
         let mut run = portal_game("lb-pick", Some((vec![entry("fx-25", true)], p2_board())));
         let mut state = play(&run.state, &mut run.log);
         assert_eq!(
-            state
-                .pending
-                .as_ref()
-                .map(|pending| pending.options.iter().map(|option| option.radiant).collect::<Vec<_>>()),
+            state.pending.as_ref().map(|pending| pending
+                .options
+                .iter()
+                .map(|option| option.radiant)
+                .collect::<Vec<_>>()),
             Some(vec![Some(true)])
         );
         state = answer_with(&state, &mut run.log, "fx-25");
@@ -431,7 +445,14 @@ mod b5_e30_c_29s_verbs_over_the_frozen_board_r417_r564 {
         assert!(state.pending.is_none());
         assert_eq!(state.rng_cursor, before);
         assert_eq!(state.counters.played, played + 1);
-        assert!(state.players.p1.graveyard.iter().any(|card| card.def_id == PORTAL));
+        assert!(
+            state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .any(|card| card.def_id == PORTAL)
+        );
     }
 
     #[test]
@@ -473,7 +494,11 @@ mod b5_e30_c_29s_verbs_over_the_frozen_board_r417_r564 {
             .collect();
         assert_eq!(added.len(), PORTAL_RADIANT_CARDS as usize);
         assert_eq!(
-            added.iter().map(|card| card.def_id.clone()).collect::<IndexSet<_>>().len(),
+            added
+                .iter()
+                .map(|card| card.def_id.clone())
+                .collect::<IndexSet<_>>()
+                .len(),
             PORTAL_RADIANT_CARDS as usize
         );
         for card in &added {
@@ -482,7 +507,8 @@ mod b5_e30_c_29s_verbs_over_the_frozen_board_r417_r564 {
     }
 
     #[test]
-    fn r417_paused_mid_prompt_the_state_survives_json_and_folds_from_seed_decks_last_boards_log_to_the_same_hash() {
+    fn r417_paused_mid_prompt_the_state_survives_json_and_folds_from_seed_decks_last_boards_log_to_the_same_hash()
+     {
         let mut first = p1_board();
         first.push(entry(FUSED, true));
         let boards: LastBoardInput = (first, p2_board());

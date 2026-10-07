@@ -128,7 +128,8 @@ pub async fn grant_cards(app: &App, input: GrantInput) -> Result<(), ApiError> {
             at,
         });
     }
-    tx.collection_upsert_quantities(&input.profile_id, &quantities).await?;
+    tx.collection_upsert_quantities(&input.profile_id, &quantities)
+        .await?;
     tx.collection_append_grants(&grants).await?;
     tx.commit().await?;
 
@@ -157,7 +158,10 @@ pub async fn grant_entire_catalog(app: &App, profile_id: &str, reason: Option<&s
         }
         let missing = LAUNCH_COPIES - owned.get(card_id).copied().unwrap_or(0);
         if missing > 0 {
-            entries.push(CollectionEntry { card_id: card_id.clone(), quantity: missing });
+            entries.push(CollectionEntry {
+                card_id: card_id.clone(),
+                quantity: missing,
+            });
         }
     }
     if entries.is_empty() {
@@ -212,5 +216,8 @@ pub async fn get_collection(app: &Arc<App>, req: Req) -> ApiResult {
         .iter()
         .map(|entry| json!({ "cardId": entry.card_id, "quantity": entry.quantity }))
         .collect();
-    Ok(json(200, json!({ "catalogVersion": app.catalog.version, "entries": entries })))
+    Ok(json(
+        200,
+        json!({ "catalogVersion": app.catalog.version, "entries": entries }),
+    ))
 }

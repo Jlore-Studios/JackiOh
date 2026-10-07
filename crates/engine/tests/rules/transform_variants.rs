@@ -68,7 +68,10 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
         (Value::Array(actual), Value::Array(expected)) => {
             actual.len() == expected.len()
-                && actual.iter().zip(expected).all(|(found, value)| matches_object(found, value))
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(found, value)| matches_object(found, value))
         }
         _ => actual == expected,
     }
@@ -76,20 +79,32 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
 
 /// `state.players.p1.units[index]?.[0]`.
 fn top_of(state: &GameState, index: usize) -> Option<CardInstance> {
-    state.players.p1.units[index].as_ref().and_then(|cards| cards.first()).cloned()
+    state.players.p1.units[index]
+        .as_ref()
+        .and_then(|cards| cards.first())
+        .cloned()
 }
 
 mod e24_the_cards_beneath_a_stack_become_copies_of_its_top_classic_plus_4 {
     use super::*;
 
     #[test]
-    fn r57_each_dormant_card_is_replaced_by_a_copy_of_the_top_its_face_and_buffs_the_old_cards_owner_place_and_position() {
+    fn r57_each_dormant_card_is_replaced_by_a_copy_of_the_top_its_face_and_buffs_the_old_cards_owner_place_and_position()
+     {
         let mut start = playing("transform-beneath");
-        let below = pile(&mut start.state, &[fuse_a.id.clone(), body.id.clone()], PlayerId::P2);
+        let below = pile(
+            &mut start.state,
+            &[fuse_a.id.clone(), body.id.clone()],
+            PlayerId::P2,
+        );
         // The bottom card is the opponent's, stolen onto p1's lane long ago: the copy keeps that owner.
         let bottom_card = must(below.first().cloned(), "the bottom card");
         let middle_card = must(below.get(1).cloned(), "the middle card");
-        must(find_instance_mut(&mut start.state, &middle_card.id), "the middle card").position = Some(Position::Def);
+        must(
+            find_instance_mut(&mut start.state, &middle_card.id),
+            "the middle card",
+        )
+        .position = Some(Position::Def);
         let top = hand_card(&mut start.state, &juhan.id, PlayerId::P1);
         {
             let card = must(find_instance_mut(&mut start.state, &top.id), "the top");
@@ -117,7 +132,12 @@ mod e24_the_cards_beneath_a_stack_become_copies_of_its_top_classic_plus_4 {
         assert!(find_instance(&run1.state, &bottom_card.id).is_none());
         assert!(find_instance(&run1.state, &middle_card.id).is_none());
         assert!(run1.state.players.p2.graveyard.is_empty());
-        let applied = run1.state.applied.last().map(|applied| applied.events.clone()).unwrap_or_default();
+        let applied = run1
+            .state
+            .applied
+            .last()
+            .map(|applied| applied.events.clone())
+            .unwrap_or_default();
         assert_eq!(
             of_type(&applied, GameEventType::Transformed)
                 .into_iter()
@@ -137,9 +157,18 @@ mod e24_the_cards_beneath_a_stack_become_copies_of_its_top_classic_plus_4 {
     #[test]
     fn r23_an_immutable_card_beneath_stays_as_it_is() {
         let mut start = playing("transform-beneath-immutable");
-        let below = pile(&mut start.state, &[immutable.id.clone(), body.id.clone()], PlayerId::P1);
+        let below = pile(
+            &mut start.state,
+            &[immutable.id.clone(), body.id.clone()],
+            PlayerId::P1,
+        );
         let (locked, unlocked) = (below[0].clone(), must(below.get(1).cloned(), "a card"));
-        let top = must(pile(&mut start.state, std::slice::from_ref(&juhan.id), PlayerId::P1).first().cloned(), "the top");
+        let top = must(
+            pile(&mut start.state, std::slice::from_ref(&juhan.id), PlayerId::P1)
+                .first()
+                .cloned(),
+            "the top",
+        );
         {
             let mut sink = sink_for(&mut start.state);
             run(&mut sink, transform_beneath(Default::default()), Some(&top));
@@ -156,7 +185,11 @@ mod e24_the_cards_beneath_a_stack_become_copies_of_its_top_classic_plus_4 {
     #[test]
     fn e24_a_card_that_is_not_the_top_of_a_unit_pile_changes_nothing() {
         let mut start = playing("transform-beneath-not-top");
-        let below = pile(&mut start.state, &[body.id.clone(), juhan.id.clone()], PlayerId::P1);
+        let below = pile(
+            &mut start.state,
+            &[body.id.clone(), juhan.id.clone()],
+            PlayerId::P1,
+        );
         let under = must(below.first().cloned(), "the dormant card");
         let mut sink = sink_for(&mut start.state);
         run(&mut sink, transform_beneath(Default::default()), Some(&under));
@@ -170,9 +203,15 @@ mod e24_a_card_becomes_a_random_card_of_a_pool_classic_plus_73_1 {
     use super::*;
 
     #[test]
-    fn r35_on_the_field_only_a_card_of_its_row_a_unit_becomes_a_random_classic_or_classic_plus_unit_never_a_spell_of_the_pool() {
+    fn r35_on_the_field_only_a_card_of_its_row_a_unit_becomes_a_random_classic_or_classic_plus_unit_never_a_spell_of_the_pool()
+     {
         let mut start = playing("transform-random");
-        let golem = put(&mut start.state, &fuse_b.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let golem = put(
+            &mut start.state,
+            &fuse_b.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         must(find_instance_mut(&mut start.state, &golem.id), "the golem").damage = 1;
         let golem = live(&start.state, &golem);
         let events = {
@@ -238,18 +277,32 @@ mod e24_a_card_becomes_a_random_card_of_a_pool_classic_plus_73_1 {
     #[test]
     fn r129_a_refusal_draws_nothing_an_immutable_card_an_empty_pool_a_pool_with_nothing_of_its_row() {
         let mut start = playing("transform-random-refused");
-        let locked = put(&mut start.state, &immutable.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let unlocked = put(&mut start.state, &body.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let locked = put(
+            &mut start.state,
+            &immutable.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let unlocked = put(
+            &mut start.state,
+            &body.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         let mut sink = sink_for(&mut start.state);
         let cursor = sink.rng.cursor();
         run(
             &mut sink,
-            transform_random(json_as(json!({ "instanceId": locked.id, "query": { "set": "Classic" } }))),
+            transform_random(json_as(
+                json!({ "instanceId": locked.id, "query": { "set": "Classic" } }),
+            )),
             None,
         );
         run(
             &mut sink,
-            transform_random(json_as(json!({ "instanceId": unlocked.id, "query": { "tags": ["Pancake"] } }))),
+            transform_random(json_as(
+                json!({ "instanceId": unlocked.id, "query": { "tags": ["Pancake"] } }),
+            )),
             None,
         );
         run(
@@ -261,15 +314,27 @@ mod e24_a_card_becomes_a_random_card_of_a_pool_classic_plus_73_1 {
         );
         assert_eq!(sink.rng.cursor(), cursor);
         assert!(sink.events.is_empty());
-        assert_eq!(top_of(&start.state, 0).map(|card| card.id), Some(locked.id.clone()));
-        assert_eq!(top_of(&start.state, 1).map(|card| card.id), Some(unlocked.id.clone()));
+        assert_eq!(
+            top_of(&start.state, 0).map(|card| card.id),
+            Some(locked.id.clone())
+        );
+        assert_eq!(
+            top_of(&start.state, 1).map(|card| card.id),
+            Some(unlocked.id.clone())
+        );
     }
 
     #[test]
-    fn b4_1_the_running_card_never_becomes_itself_and_a_card_in_hand_is_replaced_there_hidden_from_the_other_player() {
+    fn b4_1_the_running_card_never_becomes_itself_and_a_card_in_hand_is_replaced_there_hidden_from_the_other_player()
+     {
         let mut start = playing("transform-random-hand");
         let held = hand_card(&mut start.state, &body.id, PlayerId::P1);
-        let running = put(&mut start.state, &body.id, slot(PlayerId::P1, Row::Units, 4), json!({}));
+        let running = put(
+            &mut start.state,
+            &body.id,
+            slot(PlayerId::P1, Row::Units, 4),
+            json!({}),
+        );
         let events = {
             let mut sink = sink_for(&mut start.state);
             // The pool names the running card's own definition; it is excluded (R387).

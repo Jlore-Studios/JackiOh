@@ -68,17 +68,30 @@ pub fn log_card() -> CardDef {
 pub const LOG_LANE: i32 = 5;
 
 fn log_of(state: &GameState) -> Option<&CardInstance> {
-    state.players.p2.backrow.get((LOG_LANE - 1) as usize).and_then(|slot| slot.as_ref())
+    state
+        .players
+        .p2
+        .backrow
+        .get((LOG_LANE - 1) as usize)
+        .and_then(|slot| slot.as_ref())
 }
 
 fn log_of_mut(state: &mut GameState) -> Option<&mut CardInstance> {
-    state.players.p2.backrow.get_mut((LOG_LANE - 1) as usize).and_then(|slot| slot.as_mut())
+    state
+        .players
+        .p2
+        .backrow
+        .get_mut((LOG_LANE - 1) as usize)
+        .and_then(|slot| slot.as_mut())
 }
 
 /// The steps the log card's memory holds, in order (empty without a log card).
 pub fn notes(state: &GameState) -> Vec<String> {
     match log_of(state).and_then(|log| log.memory.get("steps")) {
-        Some(Value::Array(steps)) => steps.iter().map(|step| step.as_str().unwrap_or_default().to_string()).collect(),
+        Some(Value::Array(steps)) => steps
+            .iter()
+            .map(|step| step.as_str().unwrap_or_default().to_string())
+            .collect(),
         _ => Vec::new(),
     }
 }
@@ -160,7 +173,12 @@ pub fn cut_asker() -> CardDef {
 
 /// Classic+ #26's base: a Unit with Cast on draw: End your turn. Radiant: one more action.
 pub fn tempo() -> CardDef {
-    def(4304, "tempo", "Unit", json!({ "attack": 9, "health": 9, "keywords": [{ "kind": "Taunt" }] }))
+    def(
+        4304,
+        "tempo",
+        "Unit",
+        json!({ "attack": 9, "health": 9, "keywords": [{ "kind": "Taunt" }] }),
+    )
 }
 
 /// "You may take N more actions, then your turn ends" as a Spell, for the count's own tests.
@@ -348,7 +366,9 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
     table.insert(
         cutter().id,
         faces(Script {
-            cry: Some(hook(|_ctx| vec![effects::end_turn(Default::default()), note("after the cut")])),
+            cry: Some(hook(|_ctx| {
+                vec![effects::end_turn(Default::default()), note("after the cut")]
+            })),
             ..Script::default()
         }),
     );
@@ -357,7 +377,11 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
         faces(Script {
             static_flags: quickdraw(),
             cry: Some(hook(|_ctx| {
-                vec![effects::end_turn(Default::default()), ask_controller("asked"), note("cut:tail")]
+                vec![
+                    effects::end_turn(Default::default()),
+                    ask_controller("asked"),
+                    note("cut:tail"),
+                ]
             })),
             resume: IndexMap::from([("asked", hook(|_ctx| vec![note("cut:answered")]))]),
             ..Script::default()
@@ -383,14 +407,18 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
     table.insert(
         one_more().id,
         faces(Script {
-            cry: Some(hook(|_ctx| vec![effects::end_turn_after_actions(json_as(json!({ "actions": 1 })))])),
+            cry: Some(hook(|_ctx| {
+                vec![effects::end_turn_after_actions(json_as(json!({ "actions": 1 })))]
+            })),
             ..Script::default()
         }),
     );
     table.insert(
         two_more().id,
         faces(Script {
-            cry: Some(hook(|_ctx| vec![effects::end_turn_after_actions(json_as(json!({ "actions": 2 })))])),
+            cry: Some(hook(|_ctx| {
+                vec![effects::end_turn_after_actions(json_as(json!({ "actions": 2 })))]
+            })),
             ..Script::default()
         }),
     );
@@ -480,7 +508,11 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
         faces(Script {
             // A Field Spell's trigger reads its condition in `run` (`when` is a trap's, R99).
             triggers: vec![TriggerDef::new("tax", &[GameEventType::Drawn], |ctx, event| {
-                if second_draw(ctx, event) { vec![note("taxed")] } else { vec![] }
+                if second_draw(ctx, event) {
+                    vec![note("taxed")]
+                } else {
+                    vec![]
+                }
             })],
             ..Script::default()
         }),
@@ -490,7 +522,9 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
         faces(Script {
             targets: vec![TargetDecl::target(1, 1, json!({ "of": ["unit"] }))],
             cry: Some(hook(|_ctx| {
-                vec![effects::destroy_at_next_turn_start(json_as(json!({ "target": { "of": "chosen" } })))]
+                vec![effects::destroy_at_next_turn_start(json_as(
+                    json!({ "target": { "of": "chosen" } }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -499,7 +533,9 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
         doom_all().id,
         faces(Script {
             cry: Some(hook(|_ctx| {
-                vec![effects::destroy_at_next_turn_start(json_as(json!({ "scope": { "side": "enemy" } })))]
+                vec![effects::destroy_at_next_turn_start(json_as(
+                    json!({ "scope": { "side": "enemy" } }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -509,13 +545,17 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
         faces_with(
             Script {
                 cry: Some(hook(|_ctx| {
-                    vec![effects::discard_hand_at_turn_end(json_as(json!({ "turn": "this" })))]
+                    vec![effects::discard_hand_at_turn_end(json_as(
+                        json!({ "turn": "this" }),
+                    ))]
                 })),
                 ..Script::default()
             },
             Script {
                 cry: Some(hook(|_ctx| {
-                    vec![effects::discard_hand_at_turn_end(json_as(json!({ "turn": "next" })))]
+                    vec![effects::discard_hand_at_turn_end(json_as(
+                        json!({ "turn": "next" }),
+                    ))]
                 })),
                 ..Script::default()
             },
@@ -567,7 +607,9 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
                     "label": "At the start of your turn, answer",
                 })))]
             })),
-            delayed: Some(hook(|_ctx| vec![note("ask-tick"), ask_controller("ticked"), note("ask-tick:tail")])),
+            delayed: Some(hook(|_ctx| {
+                vec![note("ask-tick"), ask_controller("ticked"), note("ask-tick:tail")]
+            })),
             resume: IndexMap::from([("ticked", hook(|_ctx| vec![note("ask-tick:answered")]))]),
             ..Script::default()
         }),
@@ -588,7 +630,9 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
     table.insert(
         clock().id,
         faces(Script {
-            start_of_turn: Some(hook(|ctx| vec![note(format!("start-of-turn:{}", ctx.controller))])),
+            start_of_turn: Some(hook(|ctx| {
+                vec![note(format!("start-of-turn:{}", ctx.controller))]
+            })),
             end_of_turn: Some(hook(|ctx| vec![note(format!("end-of-turn:{}", ctx.controller))])),
             ..Script::default()
         }),
@@ -596,9 +640,11 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
     table.insert(
         crumble_watcher().id,
         faces(Script {
-            triggers: vec![TriggerDef::new("watch", &[GameEventType::Crumbled], |_ctx, _event| {
-                vec![note("crumble-seen"), ask_controller("seen")]
-            })],
+            triggers: vec![TriggerDef::new(
+                "watch",
+                &[GameEventType::Crumbled],
+                |_ctx, _event| vec![note("crumble-seen"), ask_controller("seen")],
+            )],
             resume: IndexMap::from([("seen", hook(|_ctx| vec![note("crumble-answered")]))]),
             ..Script::default()
         }),

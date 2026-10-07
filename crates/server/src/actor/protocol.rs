@@ -100,8 +100,11 @@ pub const CLIENT_MESSAGE_TYPES: &[&str] = &["hello", "action", "emote", "aim"];
 /// R79: `timeout`, `disconnectExpired` and `ceilingReached` are server-only — "never sent by a
 /// client" (`wire/actions.rs`). Accepting one from a socket would let a player end their
 /// opponent's turn or the match, so parsing rejects them outright.
-pub const SERVER_ONLY_ACTION_TYPES: &[ActionType] =
-    &[ActionType::Timeout, ActionType::DisconnectExpired, ActionType::CeilingReached];
+pub const SERVER_ONLY_ACTION_TYPES: &[ActionType] = &[
+    ActionType::Timeout,
+    ActionType::DisconnectExpired,
+    ActionType::CeilingReached,
+];
 
 /// Everything else in the §10.2 union that a socket may carry.
 pub const CLIENT_ACTION_TYPES: &[ActionType] = &[
@@ -164,7 +167,10 @@ pub enum ServerMessage {
     /// targets the same `PlayerView` already shows. The actor passes the viewer as the player
     /// (`push_view`), so a socket never sees the other seat's array — which would leak the
     /// opponent's hand by naming every `play` in it (§9.1's "Hidden: ... opponent hand").
-    View { view: Box<PlayerView>, legal: Vec<ActionBody> },
+    View {
+        view: Box<PlayerView>,
+        legal: Vec<ActionBody>,
+    },
     /// §9.3: the nonce that was accepted and the append-only log seq it was written at.
     Ack { nonce: String, seq: i64 },
     /// `nonce` is present exactly when the failure belongs to an action the client sent.
@@ -203,7 +209,16 @@ pub enum ServerMessage {
 }
 
 /// TS `SERVER_MESSAGE_TYPES`.
-pub const SERVER_MESSAGE_TYPES: &[&str] = &["view", "ack", "error", "prompt", "clock", "portraits", "emote", "aim"];
+pub const SERVER_MESSAGE_TYPES: &[&str] = &[
+    "view",
+    "ack",
+    "error",
+    "prompt",
+    "clock",
+    "portraits",
+    "emote",
+    "aim",
+];
 
 // ---------------------------------------------------------------------------
 // Builders
@@ -249,7 +264,12 @@ pub fn aim_relay_message(from: PlayerId, aim: Option<Aim>) -> ServerMessage {
 }
 
 /// For the holder of the prompt: the choiceId it must answer and the kind to render.
-pub fn prompt_for_you(pending_for: PlayerId, choice_id: &str, kind: PromptKind, deadline: Option<i64>) -> ServerMessage {
+pub fn prompt_for_you(
+    pending_for: PlayerId,
+    choice_id: &str,
+    kind: PromptKind,
+    deadline: Option<i64>,
+) -> ServerMessage {
     ServerMessage::Prompt {
         for_you: true,
         pending_for,
@@ -294,7 +314,9 @@ fn is_string(value: Option<&Value>) -> Option<&str> {
 
 fn is_string_list(value: Option<&Value>) -> Option<Vec<String>> {
     let list = value?.as_array()?;
-    list.iter().map(|entry| entry.as_str().map(str::to_string)).collect()
+    list.iter()
+        .map(|entry| entry.as_str().map(str::to_string))
+        .collect()
 }
 
 fn is_bool(value: Option<&Value>) -> Option<bool> {
@@ -329,7 +351,9 @@ fn is_player_id(value: Option<&Value>) -> Option<PlayerId> {
 }
 
 fn malformed(reason: impl Into<String>) -> MalformedMessage {
-    MalformedMessage { reason: reason.into() }
+    MalformedMessage {
+        reason: reason.into(),
+    }
 }
 
 /// A non-negative whole number as the `i32` the action types hold (a value past `i32::MAX`
@@ -457,7 +481,8 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
             })
         }
         ActionType::Attack => {
-            let (Some(attacker_id), Some(target_id)) = (is_string(raw.get("attackerId")), is_string(raw.get("targetId")))
+            let (Some(attacker_id), Some(target_id)) =
+                (is_string(raw.get("attackerId")), is_string(raw.get("targetId")))
             else {
                 return Err(malformed(r#""attack" needs "attackerId" and "targetId""#));
             };
@@ -518,9 +543,10 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
             Ok(ActionBody::SetAutoEndTurn { enabled })
         }
         // Unreachable: `CLIENT_ACTION_TYPES` admitted none of these.
-        ActionType::Activate | ActionType::Timeout | ActionType::DisconnectExpired | ActionType::CeilingReached => {
-            Err(malformed(format!(r#""{type_}" is not an action type"#)))
-        }
+        ActionType::Activate
+        | ActionType::Timeout
+        | ActionType::DisconnectExpired
+        | ActionType::CeilingReached => Err(malformed(format!(r#""{type_}" is not an action type"#))),
     }
 }
 
@@ -583,7 +609,9 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
         // SURFACE §11.3: joining a room is `POST /api/rooms/:code/join` (`rooms.rs`), because the
         // atomic single-claim and the loadout re-check are HTTP concerns and a socket is opened for a
         // match that already exists. The frame is answered `malformed`, with the pointer TS gave.
-        "joinRoom" => Err(malformed("join a room with POST /api/rooms/:code/join, not over the socket")),
+        "joinRoom" => Err(malformed(
+            "join a room with POST /api/rooms/:code/join, not over the socket",
+        )),
         "action" => {
             let Some(raw) = parsed.get("action").and_then(Value::as_object) else {
                 return Err(malformed(r#""action" must be an object"#));
@@ -611,7 +639,11 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
             // R643: the ten emote ids are the whole vocabulary; anything else is malformed, and there
             // is nothing else on the frame to validate (no nonce, no seat — the actor stamps the seat).
             let value = parsed.get("emote").unwrap_or(&Value::Null);
-            let emote = if is_emote_id(value) { value.as_str().and_then(|text| text.parse::<EmoteId>().ok()) } else { None };
+            let emote = if is_emote_id(value) {
+                value.as_str().and_then(|text| text.parse::<EmoteId>().ok())
+            } else {
+                None
+            };
             match emote {
                 Some(emote) => Ok(ClientMessage::Emote(EmoteMessage { emote })),
                 None => Err(malformed(r#""emote" must be a known emote id"#)),
@@ -623,7 +655,9 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
             // missing `aim` is TS's `undefined`, not `null`: malformed.
             match parsed.get("aim").and_then(parse_aim) {
                 Some(aim) => Ok(ClientMessage::Aim(AimMessage { aim })),
-                None => Err(malformed(r#""aim" must be null or { source, target } of public handles"#)),
+                None => Err(malformed(
+                    r#""aim" must be null or { source, target } of public handles"#,
+                )),
             }
         }
         other => Err(malformed(format!(r#""{other}" is not a client message"#))),

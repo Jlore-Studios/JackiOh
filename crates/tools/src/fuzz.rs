@@ -69,9 +69,9 @@ use indexmap::{IndexMap, IndexSet};
 use jackioh_cards::{CATALOG, register_all};
 use jackioh_engine::testkit::{I6_GATE_STRIDE, create_invariant_monitor};
 use jackioh_engine::{
-    AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, CreateGameOptions, DECK_SIZE, Difficulty, FoldArgs,
-    GameState, Handicap, PerPlayerOpt, Phase, PlayerId, Rng, TURN_CAP_PLAYER_TURNS, Tag, begin_game, create_game,
-    fold, hash_state, mulligan_owed, reduce, seat_to_act, subsystems,
+    AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, CreateGameOptions, DECK_SIZE, Difficulty,
+    FoldArgs, GameState, Handicap, PerPlayerOpt, Phase, PlayerId, Rng, TURN_CAP_PLAYER_TURNS, Tag,
+    begin_game, create_game, fold, hash_state, mulligan_owed, reduce, seat_to_act, subsystems,
 };
 use rayon::prelude::*;
 
@@ -567,7 +567,10 @@ fn boundary_at(chars: &[char], at: usize) -> bool {
 }
 
 fn starts_with_at(chars: &[char], at: usize, needle: &str) -> bool {
-    needle.chars().enumerate().all(|(offset, expected)| chars.get(at + offset) == Some(&expected))
+    needle
+        .chars()
+        .enumerate()
+        .all(|(offset, expected)| chars.get(at + offset) == Some(&expected))
 }
 
 /// `.replace(/"[^"]*"/g, '"…"')`.
@@ -688,7 +691,8 @@ fn blank_numbers(text: &str) -> String {
             continue;
         }
         // \bR\d+\b
-        if chars[at] == 'R' && boundary_at(&chars, at) && chars.get(at + 1).is_some_and(char::is_ascii_digit) {
+        if chars[at] == 'R' && boundary_at(&chars, at) && chars.get(at + 1).is_some_and(char::is_ascii_digit)
+        {
             let end = digits_from(at + 1);
             if boundary_at(&chars, end) {
                 out.extend(&chars[at..end]);
@@ -714,9 +718,9 @@ fn blank_numbers(text: &str) -> String {
 /// references survive the blanking, because "§9.3" and "R81" are the most identifying part of an
 /// engine error message.
 fn signature_of(stage: FailureStage, message: &str) -> String {
-    let shape = blank_numbers(&blank_hashes(&blank_instance_ids(&blank_card_ids(&blank_quoted(
-        message,
-    )))));
+    let shape = blank_numbers(&blank_hashes(&blank_instance_ids(&blank_card_ids(
+        &blank_quoted(message),
+    ))));
     format!("[{}] {}", stage.as_str(), shape.trim())
 }
 
@@ -747,7 +751,9 @@ fn record_panic_locations() {
 /// the first `packages/` frame of the stack that is not the fuzz test's own).
 fn origin_of(location: Option<&str>) -> String {
     match location {
-        Some(at) if at.contains("crates/") && !at.contains("crates/tools/src/fuzz.rs") => format!(" [at {at}]"),
+        Some(at) if at.contains("crates/") && !at.contains("crates/tools/src/fuzz.rs") => {
+            format!(" [at {at}]")
+        }
         _ => String::new(),
     }
 }
@@ -832,12 +838,17 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
         lines.push(format!("  seeds: {}{more}", shown.join(", ")));
         if bucket.len() > 1 {
             lines.push(if always.is_empty() {
-                "  in EVERY failing seed of this group: none — the cause is shared, not a single card".to_string()
+                "  in EVERY failing seed of this group: none — the cause is shared, not a single card"
+                    .to_string()
             } else {
                 format!(
                     "  in EVERY failing seed of this group ({}): {}",
                     always.len(),
-                    always.iter().map(|id| describe_card(id)).collect::<Vec<_>>().join("; ")
+                    always
+                        .iter()
+                        .map(|id| describe_card(id))
+                        .collect::<Vec<_>>()
+                        .join("; ")
                 )
             });
             lines.push(format!(
@@ -929,7 +940,11 @@ fn fuzz_seed(seed: u32) -> Result<Passed, Failure> {
             let location = PANIC_AT.with(|cell| cell.borrow_mut().take());
             (
                 FailureStage::Play,
-                format!("panic: {}{}", panic_message(&*payload), origin_of(location.as_deref())),
+                format!(
+                    "panic: {}{}",
+                    panic_message(&*payload),
+                    origin_of(location.as_deref())
+                ),
                 reached.map_or(-1, |at| i64::from(at.turn)),
                 reached.map_or(-1, |at| i64::try_from(at.actions).unwrap_or(i64::MAX)),
             )
@@ -1027,7 +1042,11 @@ impl Wave {
             max_actions_per_game(),
             stage("replay"),
             stage("invariant"),
-            if endings.is_empty() { "none".to_string() } else { endings },
+            if endings.is_empty() {
+                "none".to_string()
+            } else {
+                endings
+            },
             self.actions_max,
             self.turn_max,
             FUZZ_POOL.len(),
@@ -1063,8 +1082,16 @@ pub struct SeedHandicap {
 
 /// Which seat is handicapped, and how: seeds rotate over Medium and Hard and over p1 and p2.
 pub fn handicap_for_seed(seed: u32) -> SeedHandicap {
-    let tier = if seed % 2 == 1 { Difficulty::Hard } else { Difficulty::Medium };
-    let seat = if (seed / 2).is_multiple_of(2) { PlayerId::P1 } else { PlayerId::P2 };
+    let tier = if seed % 2 == 1 {
+        Difficulty::Hard
+    } else {
+        Difficulty::Medium
+    };
+    let seat = if (seed / 2).is_multiple_of(2) {
+        PlayerId::P1
+    } else {
+        PlayerId::P2
+    };
     SeedHandicap {
         seat,
         tier,
@@ -1074,8 +1101,13 @@ pub fn handicap_for_seed(seed: u32) -> SeedHandicap {
 
 /// One shuffle of the pool: the handicapped seat takes its deckSize cards, the other seat the next 20
 /// (TS `decksForSeed` of fuzz-handicap.test.ts, renamed beside the gate's own).
-pub(crate) fn handicap_decks_for_seed(seed: u32, seat: PlayerId, handicap: &Handicap) -> (Vec<String>, Vec<String>) {
-    let shuffled = Rng::new(&format!("jackioh-fuzz-handicap-decks-{seed}"), 0).shuffle(HANDICAP_POOL.as_slice());
+pub(crate) fn handicap_decks_for_seed(
+    seed: u32,
+    seat: PlayerId,
+    handicap: &Handicap,
+) -> (Vec<String>, Vec<String>) {
+    let shuffled =
+        Rng::new(&format!("jackioh-fuzz-handicap-decks-{seed}"), 0).shuffle(HANDICAP_POOL.as_slice());
     let big_size = usize::try_from(handicap.deck_size).unwrap_or(0);
     let small_size = usize::try_from(DECK_SIZE).unwrap_or(0);
     let big = shuffled[..big_size].to_vec();
@@ -1188,7 +1220,10 @@ fn play_seed(seed: u32) -> Outcome {
             return Err(format!(
                 "replay rejected {} action(s): {}",
                 replayed.errors.len(),
-                replayed.errors.first().map_or(String::new(), |first| first.error.clone())
+                replayed
+                    .errors
+                    .first()
+                    .map_or(String::new(), |first| first.error.clone())
             ));
         }
         if hash_state(&replayed.state) != hash_state(&state) {
@@ -1234,16 +1269,22 @@ impl HandicapWave {
         self.outcomes
             .iter()
             .filter_map(|outcome| {
-                outcome
-                    .error
-                    .as_ref()
-                    .map(|error| format!("seed {} ({} {}): {error}", outcome.seed, outcome.tier, outcome.seat))
+                outcome.error.as_ref().map(|error| {
+                    format!(
+                        "seed {} ({} {}): {error}",
+                        outcome.seed, outcome.tier, outcome.seat
+                    )
+                })
             })
             .collect()
     }
 
     fn summary(&self) -> String {
-        let failed = self.outcomes.iter().filter(|outcome| outcome.error.is_some()).count();
+        let failed = self
+            .outcomes
+            .iter()
+            .filter(|outcome| outcome.error.is_some())
+            .count();
         let mut endings: IndexMap<String, usize> = IndexMap::new();
         for outcome in &self.outcomes {
             if let Some(reason) = &outcome.reason {
@@ -1272,7 +1313,11 @@ mod tests {
             assert!(FUZZ_POOL.len() >= deck_size * 2);
             for seed in [1, 500, 1000] {
                 let (p1, p2) = decks_for_seed(seed);
-                assert_eq!(decks_for_seed(seed), (p1.clone(), p2.clone()), "seed {seed} must redraw identically");
+                assert_eq!(
+                    decks_for_seed(seed),
+                    (p1.clone(), p2.clone()),
+                    "seed {seed} must redraw identically"
+                );
                 assert_eq!(p1.len(), deck_size);
                 assert_eq!(p2.len(), deck_size);
                 // §2.6 L3: no duplicate ids inside a deck, and one shuffle keeps the pair disjoint too.
@@ -1312,7 +1357,10 @@ mod tests {
                 signature_of(FailureStage::Replay, "  turn 12/60, R2x and c3a  "),
                 "[replay] turn N/N, RNx and cNa"
             );
-            assert_eq!(origin_of(Some("crates/engine/src/zones.rs:10:5")), " [at crates/engine/src/zones.rs:10:5]");
+            assert_eq!(
+                origin_of(Some("crates/engine/src/zones.rs:10:5")),
+                " [at crates/engine/src/zones.rs:10:5]"
+            );
             assert_eq!(origin_of(Some("crates/tools/src/fuzz.rs:10:5")), "");
             assert_eq!(origin_of(None), "");
         }

@@ -53,9 +53,14 @@ mod r448_the_ai_never_reads_a_card_being_set_face_down {
         let (state, id) = setting(true);
         assert!(hidden_instance_ids(&state, AI).contains(&id));
         let seen = redact(&state, AI);
-        assert_eq!(card_by_id(&seen, &id).map(|card| card.def_id.clone()), Some(HIDDEN_DEF_ID.to_string()));
+        assert_eq!(
+            card_by_id(&seen, &id).map(|card| card.def_id.clone()),
+            Some(HIDDEN_DEF_ID.to_string())
+        );
         let world = det(&seen, AI, &mut create_rng("redact-announce-world", 0));
-        let sampled = card_by_id(&world, &id).map(|card| card.def_id.clone()).unwrap_or_default();
+        let sampled = card_by_id(&world, &id)
+            .map(|card| card.def_id.clone())
+            .unwrap_or_default();
         assert!(trap_pool().contains(&sampled), "{sampled}");
     }
 

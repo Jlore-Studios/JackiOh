@@ -58,7 +58,13 @@ fn pinned(name: &str) -> Option<&'static str> {
 fn migrations() -> Vec<String> {
     let mut names: Vec<String> = std::fs::read_dir(migrations_dir())
         .expect("crates/server/migrations is readable")
-        .map(|entry| entry.expect("a directory entry").file_name().to_string_lossy().into_owned())
+        .map(|entry| {
+            entry
+                .expect("a directory entry")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
         .filter(|name| name.ends_with(".sql"))
         .collect();
     names.sort();
@@ -80,7 +86,11 @@ mod migrations_are_append_only {
             .filter(|name| pinned(name).is_none())
             .map(|name| format!("(\"{name}\", \"{}\"),", checksum(&read(&name))))
             .collect();
-        assert_eq!(unpinned, Vec::<String>::new(), "add each new migration's line to PINNED");
+        assert_eq!(
+            unpinned,
+            Vec::<String>::new(),
+            "add each new migration's line to PINNED"
+        );
     }
 
     #[test]
@@ -94,7 +104,11 @@ mod migrations_are_append_only {
             .filter(|(name, now)| pinned(name).is_some_and(|sum| sum != now))
             .map(|(name, now)| format!("{name}: {} -> {now}", pinned(&name).unwrap_or_default()))
             .collect();
-        assert_eq!(changed, Vec::<String>::new(), "add a new migration instead of editing an applied one");
+        assert_eq!(
+            changed,
+            Vec::<String>::new(),
+            "add a new migration instead of editing an applied one"
+        );
     }
 
     #[test]
@@ -120,7 +134,11 @@ mod migrations_are_append_only {
         );
         for (name, text) in MIGRATIONS {
             assert_eq!(*text, read(name), "{name}: the embedded text is not the file's");
-            assert_eq!(Some(checksum(text).as_str()), pinned(name), "{name}: the embedded text's checksum");
+            assert_eq!(
+                Some(checksum(text).as_str()),
+                pinned(name),
+                "{name}: the embedded text's checksum"
+            );
         }
     }
 }

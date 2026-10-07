@@ -37,13 +37,17 @@ async fn world() -> Arc<App> {
 
 /// TS `deps.store.seedProfile(...)`: a profile row written straight into the fake store.
 async fn seed_profile(app: &App, profile: Value) {
-    let Db::Fake(data) = &app.db else { panic!("the test app runs on the fake store") };
+    let Db::Fake(data) = &app.db else {
+        panic!("the test app runs on the fake store")
+    };
     data.lock().await.seed_profile(profile);
 }
 
 /// The two queue tickets a match in `mode` was paired from (§9.5): what tells the registry its mode.
 async fn paired_tickets(app: &App, match_id: &str, mode: &str) {
-    let Db::Fake(data) = &app.db else { panic!("the test app runs on the fake store") };
+    let Db::Fake(data) = &app.db else {
+        panic!("the test app runs on the fake store")
+    };
     let mut data = data.lock().await;
     for profile_id in [P1, P2] {
         let ticket: Ticket = serde_json::from_value(json!({
@@ -89,19 +93,27 @@ async fn view_of(app: &Arc<App>, match_id: &str, player: PlayerId) -> Value {
 fn listed(view: &Value) -> i64 {
     view["you"]["ownLibrary"]["cards"]
         .as_array()
-        .map(|cards| cards.iter().map(|entry| entry["count"].as_i64().unwrap_or(0)).sum())
+        .map(|cards| {
+            cards
+                .iter()
+                .map(|entry| entry["count"].as_i64().unwrap_or(0))
+                .sum()
+        })
         .unwrap_or(0)
 }
 
 fn library_count(view: &Value) -> i64 {
-    view["you"]["libraryCount"].as_i64().expect("libraryCount is a number")
+    view["you"]["libraryCount"]
+        .as_i64()
+        .expect("libraryCount is a number")
 }
 
 mod r433_a_dealt_deck_lists_only_the_cards_its_owner_has_been_shown {
     use super::*;
 
     #[tokio::test]
-    async fn r433_an_all_random_match_lists_neither_seats_starting_library_and_a_rebuilt_actor_folds_the_same_game() {
+    async fn r433_an_all_random_match_lists_neither_seats_starting_library_and_a_rebuilt_actor_folds_the_same_game()
+     {
         let app = world().await;
         paired_tickets(&app, "m-random", "random").await;
         start(&app, "m-random", "r433-random").await;
@@ -110,16 +122,26 @@ mod r433_a_dealt_deck_lists_only_the_cards_its_owner_has_been_shown {
         for player in PLAYER_IDS {
             let view = serde_json::to_value(actor.view_for(player)).expect("PlayerView serialises");
             assert!(library_count(&view) > 0);
-            assert_eq!(view["you"]["ownLibrary"], json!({ "cards": [], "unknown": library_count(&view) }));
+            assert_eq!(
+                view["you"]["ownLibrary"],
+                json!({ "cards": [], "unknown": library_count(&view) })
+            );
         }
 
         let live = jackioh_engine::hash_state(&actor.engine_state());
         app.matches.stop("m-random").await;
-        let rebuilt = app.matches.actor_for(&app, "m-random").await.expect("the rebuilt actor");
+        let rebuilt = app
+            .matches
+            .actor_for(&app, "m-random")
+            .await
+            .expect("the rebuilt actor");
         assert_eq!(jackioh_engine::hash_state(&rebuilt.engine_state()), live);
         for player in PLAYER_IDS {
             let view = serde_json::to_value(rebuilt.view_for(player)).expect("PlayerView serialises");
-            assert_eq!(view["you"]["ownLibrary"], json!({ "cards": [], "unknown": library_count(&view) }));
+            assert_eq!(
+                view["you"]["ownLibrary"],
+                json!({ "cards": [], "unknown": library_count(&view) })
+            );
         }
     }
 

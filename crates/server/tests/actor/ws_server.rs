@@ -18,13 +18,13 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
 use jackioh_server::actor::protocol::MAX_FRAME_BYTES;
 use jackioh_server::actor::ws_server::{WS_PATH, WS_SUBPROTOCOL};
-use jackioh_server::app::{router, App};
+use jackioh_server::app::{App, router};
 use jackioh_server::config::WS_MAX_CONNECTIONS_PER_ADDRESS;
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::Db;
@@ -59,7 +59,11 @@ fn playable() -> Vec<String> {
     jackioh_cards::CATALOG
         .iter()
         .filter(|(_, def)| {
-            !def.token && !serde_json::to_value(&def.tags).expect("tags").as_array().is_some_and(|tags| tags.contains(&json!("Token")))
+            !def.token
+                && !serde_json::to_value(&def.tags)
+                    .expect("tags")
+                    .as_array()
+                    .is_some_and(|tags| tags.contains(&json!("Token")))
         })
         .map(|(id, _)| id.clone())
         .collect()
@@ -113,7 +117,11 @@ async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
                 "status": "active",
                 "inMatchId": match_id,
             }));
-            let deck: Vec<String> = if seat == "p1" { pool[..size].to_vec() } else { pool[size..size * 2].to_vec() };
+            let deck: Vec<String> = if seat == "p1" {
+                pool[..size].to_vec()
+            } else {
+                pool[size..size * 2].to_vec()
+            };
             seats.push(json!({ "profileId": profile_id, "player": seat, "deck": deck }));
         }
         app.matches
@@ -178,7 +186,9 @@ struct Client {
 
 /// Opens `ws://127.0.0.1:<port>/ws/match?<query>`, offering `protocols`.
 async fn open(port: u16, query: &str, protocols: &[&str]) -> Opened {
-    let mut stream = TcpStream::connect(("127.0.0.1", port)).await.expect("the listener accepts");
+    let mut stream = TcpStream::connect(("127.0.0.1", port))
+        .await
+        .expect("the listener accepts");
     let mut request = format!(
         "GET {WS_PATH}?{query} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\
          Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n"
@@ -187,7 +197,10 @@ async fn open(port: u16, query: &str, protocols: &[&str]) -> Opened {
         request.push_str(&format!("Sec-WebSocket-Protocol: {}\r\n", protocols.join(", ")));
     }
     request.push_str("\r\n");
-    stream.write_all(request.as_bytes()).await.expect("the handshake is written");
+    stream
+        .write_all(request.as_bytes())
+        .await
+        .expect("the handshake is written");
 
     let mut head = Vec::new();
     let mut byte = [0u8; 1];
@@ -202,13 +215,19 @@ async fn open(port: u16, query: &str, protocols: &[&str]) -> Opened {
         head.push(byte[0]);
     }
     let text = String::from_utf8_lossy(&head).to_string();
-    let status: u16 = text.split_whitespace().nth(1).and_then(|code| code.parse().ok()).unwrap_or(0);
+    let status: u16 = text
+        .split_whitespace()
+        .nth(1)
+        .and_then(|code| code.parse().ok())
+        .unwrap_or(0);
     if status != 101 {
         return Opened::Refused(status);
     }
     let protocol = text.lines().find_map(|line| {
         let (name, value) = line.split_once(':')?;
-        name.trim().eq_ignore_ascii_case("sec-websocket-protocol").then(|| value.trim().to_string())
+        name.trim()
+            .eq_ignore_ascii_case("sec-websocket-protocol")
+            .then(|| value.trim().to_string())
     });
     Opened::Open(Client { stream, protocol })
 }
@@ -285,7 +304,11 @@ impl Client {
         loop {
             match self.read_frame(READ_TIMEOUT).await {
                 Read::Frame(0x8, payload) => {
-                    return if payload.len() >= 2 { u16::from_be_bytes([payload[0], payload[1]]) } else { 1005 };
+                    return if payload.len() >= 2 {
+                        u16::from_be_bytes([payload[0], payload[1]])
+                    } else {
+                        1005
+                    };
                 }
                 Read::Frame(..) => continue,
                 Read::Ended => return 1006,
@@ -308,7 +331,10 @@ impl Client {
     /// The first `view` frame: the actor pushes one when the registry attaches the socket (§9.5).
     async fn first_view(&mut self) -> Value {
         loop {
-            let message = self.next_message(READ_TIMEOUT).await.expect("a view frame after the attach");
+            let message = self
+                .next_message(READ_TIMEOUT)
+                .await
+                .expect("a view frame after the attach");
             if message["type"] == "view" {
                 return message["view"].clone();
             }
@@ -363,7 +389,9 @@ mod a_frame_is_capped_before_it_is_buffered {
     async fn closes_with_1009_on_a_65_kib_text_frame() {
         let _serial = SERIAL.lock().await;
         let (listening, token) = listen().await;
-        let mut client = open(listening.port, &query("match-1", &token), &[WS_SUBPROTOCOL]).await.open();
+        let mut client = open(listening.port, &query("match-1", &token), &[WS_SUBPROTOCOL])
+            .await
+            .open();
         // The registry attached the socket: its seat's first view arrives.
         assert_eq!(client.first_view().await["viewer"], "p1");
 
@@ -377,7 +405,9 @@ mod a_frame_is_capped_before_it_is_buffered {
     async fn still_takes_a_frame_at_the_cap() {
         let _serial = SERIAL.lock().await;
         let (listening, token) = listen().await;
-        let mut client = open(listening.port, &query("match-1", &token), &[WS_SUBPROTOCOL]).await.open();
+        let mut client = open(listening.port, &query("match-1", &token), &[WS_SUBPROTOCOL])
+            .await
+            .open();
         assert_eq!(client.first_view().await["viewer"], "p1");
 
         client.send_text(&"x".repeat(MAX_FRAME_BYTES)).await;
@@ -399,7 +429,9 @@ mod sockets_per_client_address {
         let mut held = Vec::new();
         for (k, token) in tokens.iter().enumerate().take(cap) {
             let match_id = format!("match-{}", k / 2 + 1);
-            let mut client = open(listening.port, &query(&match_id, token), &[WS_SUBPROTOCOL]).await.open();
+            let mut client = open(listening.port, &query(&match_id, token), &[WS_SUBPROTOCOL])
+                .await
+                .open();
             client.first_view().await;
             held.push(client);
         }
@@ -409,7 +441,8 @@ mod sockets_per_client_address {
 
         let mut first = held.remove(0);
         first.close().await;
-        let mut fourth = open_when_free(listening.port, &query("match-1", &tokens[0]), &[WS_SUBPROTOCOL]).await;
+        let mut fourth =
+            open_when_free(listening.port, &query("match-1", &tokens[0]), &[WS_SUBPROTOCOL]).await;
         assert_eq!(fourth.first_view().await["viewer"], "p1");
     }
 
@@ -421,7 +454,12 @@ mod sockets_per_client_address {
         // More refused sockets than the cap, one after another: each holds its slot only until it
         // closes, so none of them meets a 429.
         for _ in 0..=cap {
-            let mut refused = open_when_free(listening.port, &query("match-1", "not-a-token"), &[WS_SUBPROTOCOL]).await;
+            let mut refused = open_when_free(
+                listening.port,
+                &query("match-1", "not-a-token"),
+                &[WS_SUBPROTOCOL],
+            )
+            .await;
             assert_eq!(refused.close_code().await, 4401);
         }
     }
@@ -437,7 +475,9 @@ mod the_token_on_the_handshake {
     async fn authenticates_the_socket_and_echoes_only_the_protocol_name() {
         let _serial = SERIAL.lock().await;
         let (listening, token) = listen().await;
-        let mut client = open(listening.port, &query("match-1", &token), &[WS_SUBPROTOCOL]).await.open();
+        let mut client = open(listening.port, &query("match-1", &token), &[WS_SUBPROTOCOL])
+            .await
+            .open();
         assert_eq!(client.protocol.as_deref(), Some(WS_SUBPROTOCOL));
         // attach("match-1", "profile-1", …): profile-1 holds seat p1 of match-1.
         let view = client.first_view().await;
@@ -450,9 +490,14 @@ mod the_token_on_the_handshake {
         let (listening, token) = listen().await;
         // A token offered beside the protocol name is not a credential any more: the socket is
         // refused as one with no token at all, and the token is never echoed.
-        let mut client = open(listening.port, "matchId=match-1", &[WS_SUBPROTOCOL, &token]).await.open();
+        let mut client = open(listening.port, "matchId=match-1", &[WS_SUBPROTOCOL, &token])
+            .await
+            .open();
         assert_eq!(client.protocol.as_deref(), Some(WS_SUBPROTOCOL));
-        let refusal = client.next_message(READ_TIMEOUT).await.expect("an error frame before the close");
+        let refusal = client
+            .next_message(READ_TIMEOUT)
+            .await
+            .expect("an error frame before the close");
         assert_eq!(refusal["type"], "error");
         assert_eq!(client.close_code().await, 4401);
 

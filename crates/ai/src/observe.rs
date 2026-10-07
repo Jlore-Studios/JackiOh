@@ -17,9 +17,10 @@ use std::cmp::Ordering;
 
 use indexmap::IndexSet;
 use jackioh_engine::{
-    ANSWER_KEY, AttackHealth, CardInstance, CardType, Counters, GameEvent, GameState, PLAYER_IDS, PendingChoice,
-    PlayerId, Resume, Row, SETUP_WORK, Selection, Zone, active_units_of, announced_face_down_to, effective_cost,
-    find_def, find_instance, find_instance_mut, handicap_of, mulligan_prompt_for, unclamped_attack, unit_view,
+    ANSWER_KEY, AttackHealth, CardInstance, CardType, Counters, GameEvent, GameState, PLAYER_IDS,
+    PendingChoice, PlayerId, Resume, Row, SETUP_WORK, Selection, Zone, active_units_of,
+    announced_face_down_to, effective_cost, find_def, find_instance, find_instance_mut, handicap_of,
+    mulligan_prompt_for, unclamped_attack, unit_view,
 };
 use jackioh_engine::{CostOptions, subsystems};
 use serde_json::Value;
@@ -85,12 +86,22 @@ fn card_at(state: &GameState, player: PlayerId, place: Place) -> Option<&CardIns
         Place::Graveyard(at) => side.graveyard.get(at),
         Place::Exile(at) => side.exile.get(at),
         Place::Resolving(at) => side.resolving.get(at),
-        Place::Unit(lane, depth) => side.units.get(lane).and_then(|pile| pile.as_ref()).and_then(|pile| pile.get(depth)),
+        Place::Unit(lane, depth) => side
+            .units
+            .get(lane)
+            .and_then(|pile| pile.as_ref())
+            .and_then(|pile| pile.get(depth)),
         Place::Backrow(lane) => side.backrow.get(lane).and_then(|card| card.as_ref()),
-        Place::BackrowPile(lane, depth) => {
-            side.backrow_piles.as_ref().and_then(|piles| piles.get(lane)).and_then(|pile| pile.get(depth))
-        }
-        Place::Carried(lane) => side.carried.as_ref().and_then(|row| row.get(lane)).and_then(|card| card.as_ref()),
+        Place::BackrowPile(lane, depth) => side
+            .backrow_piles
+            .as_ref()
+            .and_then(|piles| piles.get(lane))
+            .and_then(|pile| pile.get(depth)),
+        Place::Carried(lane) => side
+            .carried
+            .as_ref()
+            .and_then(|row| row.get(lane))
+            .and_then(|card| card.as_ref()),
     }
 }
 
@@ -102,16 +113,22 @@ fn card_at_mut(state: &mut GameState, player: PlayerId, place: Place) -> Option<
         Place::Graveyard(at) => side.graveyard.get_mut(at),
         Place::Exile(at) => side.exile.get_mut(at),
         Place::Resolving(at) => side.resolving.get_mut(at),
-        Place::Unit(lane, depth) => {
-            side.units.get_mut(lane).and_then(|pile| pile.as_mut()).and_then(|pile| pile.get_mut(depth))
-        }
+        Place::Unit(lane, depth) => side
+            .units
+            .get_mut(lane)
+            .and_then(|pile| pile.as_mut())
+            .and_then(|pile| pile.get_mut(depth)),
         Place::Backrow(lane) => side.backrow.get_mut(lane).and_then(|card| card.as_mut()),
-        Place::BackrowPile(lane, depth) => {
-            side.backrow_piles.as_mut().and_then(|piles| piles.get_mut(lane)).and_then(|pile| pile.get_mut(depth))
-        }
-        Place::Carried(lane) => {
-            side.carried.as_mut().and_then(|row| row.get_mut(lane)).and_then(|card| card.as_mut())
-        }
+        Place::BackrowPile(lane, depth) => side
+            .backrow_piles
+            .as_mut()
+            .and_then(|piles| piles.get_mut(lane))
+            .and_then(|pile| pile.get_mut(depth)),
+        Place::Carried(lane) => side
+            .carried
+            .as_mut()
+            .and_then(|row| row.get_mut(lane))
+            .and_then(|card| card.as_mut()),
     }
 }
 
@@ -129,12 +146,20 @@ fn by_instance_id(a: &CardInstance, b: &CardInstance) -> Ordering {
     let na = instance_number(&a.id);
     let nb = instance_number(&b.id);
     if na != nb {
-        return if na < nb { Ordering::Less } else { Ordering::Greater };
+        return if na < nb {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        };
     }
     if a.id == b.id {
         return Ordering::Equal;
     }
-    if a.id < b.id { Ordering::Less } else { Ordering::Greater }
+    if a.id < b.id {
+        Ordering::Less
+    } else {
+        Ordering::Greater
+    }
 }
 
 /// §10.8 and R33, as `view_for` reads them: a backrow Trap or Field Trap is readable by its current
@@ -201,7 +226,10 @@ pub fn hidden_instance_ids(state: &GameState, seat: PlayerId) -> IndexSet<String
         }
     }
 
-    let pending: Option<&PendingChoice> = state.pending.as_ref().or_else(|| mulligan_prompt_for(state, seat));
+    let pending: Option<&PendingChoice> = state
+        .pending
+        .as_ref()
+        .or_else(|| mulligan_prompt_for(state, seat));
     if let Some(pending) = pending
         && pending.player_id == seat
     {
@@ -251,7 +279,10 @@ fn to_placeholder_json(card: &mut Value) {
     object.insert("memory".to_string(), Value::Object(serde_json::Map::new()));
     object.insert("counters".to_string(), Value::Object(serde_json::Map::new()));
     object.insert("grantedKeywords".to_string(), Value::Array(Vec::new()));
-    object.insert("buffs".to_string(), serde_json::json!({ "attack": 0, "health": 0 }));
+    object.insert(
+        "buffs".to_string(),
+        serde_json::json!({ "attack": 0, "health": 0 }),
+    );
     object.insert("damage".to_string(), Value::from(0));
     for key in [
         "costOverride",
@@ -406,7 +437,13 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         if !hidden.contains(&card.id) {
             continue;
         }
-        let shown_cost = if matches!(card.zone, Zone::Field { row: Row::Backrow, .. }) {
+        let shown_cost = if matches!(
+            card.zone,
+            Zone::Field {
+                row: Row::Backrow,
+                ..
+            }
+        ) {
             Some(effective_cost(&next, card, CostOptions::default()))
         } else {
             None
@@ -425,7 +462,8 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     next.players[seat].library.sort_by(by_instance_id);
 
     // Step 5: queue entries of hidden cards go; events naming one lose the definition.
-    next.trigger_queue.retain(|entry| !belongs_to_hidden(Some(entry.instance_id.as_str()), Some(&entry.resume), &hidden));
+    next.trigger_queue
+        .retain(|entry| !belongs_to_hidden(Some(entry.instance_id.as_str()), Some(&entry.resume), &hidden));
     for entry in next.trigger_queue.iter_mut() {
         scrub_resume(&mut entry.resume, &hidden);
         without_answer_key(&mut entry.resume);
@@ -448,8 +486,10 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     next.work_cursor = cursor.min(kept_work.len() as i64).max(0) as usize;
     next.work = kept_work;
 
-    next.echo_queue.retain(|entry| !belongs_to_hidden(Some(entry.instance_id.as_str()), None, &hidden));
-    next.delayed.retain(|entry| !belongs_to_hidden(None, Some(&entry.resume), &hidden));
+    next.echo_queue
+        .retain(|entry| !belongs_to_hidden(Some(entry.instance_id.as_str()), None, &hidden));
+    next.delayed
+        .retain(|entry| !belongs_to_hidden(None, Some(&entry.resume), &hidden));
     for entry in next.delayed.iter_mut() {
         scrub_resume(&mut entry.resume, &hidden);
         without_answer_key(&mut entry.resume);
@@ -475,8 +515,10 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     // definition stays too: the id already says what it is, and its faces are public, summed into
     // the kept def's own.
     let mut transient: IndexSet<String> = IndexSet::new();
-    let mut keep: Vec<String> =
-        referenced.into_iter().filter(|def_id| next.transient_defs.contains_key(def_id)).collect();
+    let mut keep: Vec<String> = referenced
+        .into_iter()
+        .filter(|def_id| next.transient_defs.contains_key(def_id))
+        .collect();
     while let Some(def_id) = keep.pop() {
         if !next.transient_defs.contains_key(&def_id) || transient.contains(&def_id) {
             continue;
@@ -494,7 +536,10 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     // Attack and Health are on the board for both players to read, so every unit keeps the stats it
     // shows: the difference its placeholder made goes on the unit's buffs.
     for player in PLAYER_IDS {
-        let ids: Vec<String> = active_units_of(&next, player).iter().map(|unit| unit.id.clone()).collect();
+        let ids: Vec<String> = active_units_of(&next, player)
+            .iter()
+            .map(|unit| unit.id.clone())
+            .collect();
         for id in ids {
             let Some(shown) = find_instance(state, &id) else {
                 continue;

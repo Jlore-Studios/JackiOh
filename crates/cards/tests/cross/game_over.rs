@@ -13,8 +13,8 @@
 //!
 //! Port of `packages/cards/test/game-over.test.ts` (SURFACE §4.1, §8).
 
-use jackioh_engine::testkit::*;
 use jackioh_engine::PlayerId::{P1, P2};
+use jackioh_engine::testkit::*;
 
 const STOCKPILE: &str = "core-005";
 const SHREDDER: &str = "core-013";
@@ -38,12 +38,19 @@ fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
 /// TS `types.slice(types.indexOf("gameOver") + 1)`: what follows the first `gameOver` (the whole list
 /// when there is none, as `indexOf`'s -1 + 1 = 0 gives).
 fn after_game_over(types: &[GameEventType]) -> Vec<GameEventType> {
-    let from = types.iter().position(|kind| *kind == GameEventType::GameOver).map_or(0, |at| at + 1);
+    let from = types
+        .iter()
+        .position(|kind| *kind == GameEventType::GameOver)
+        .map_or(0, |at| at + 1);
     types[from..].to_vec()
 }
 
 fn joined(types: &[GameEventType]) -> String {
-    types.iter().map(|kind| kind.as_str()).collect::<Vec<_>>().join(", ")
+    types
+        .iter()
+        .map(|kind| kind.as_str())
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 mod r216_nothing_happens_after_the_game_is_over {
@@ -63,7 +70,10 @@ mod r216_nothing_happens_after_the_game_is_over {
 
         assert_eq!(
             s.state().result,
-            Some(GameResult { winner: Winner::P2, reason: GameOverReason::HeroDeath })
+            Some(GameResult {
+                winner: Winner::P2,
+                reason: GameOverReason::HeroDeath
+            })
         );
         let types = types_of(s.last_events());
         // gameOver is the last thing that happens: no heal, draw or anything else after it.
@@ -87,7 +97,10 @@ mod r216_nothing_happens_after_the_game_is_over {
 
         assert_eq!(
             s.state().result,
-            Some(GameResult { winner: Winner::P2, reason: GameOverReason::HeroDeath })
+            Some(GameResult {
+                winner: Winner::P2,
+                reason: GameOverReason::HeroDeath
+            })
         );
         let types = types_of(s.last_events());
         assert!(types.contains(&GameEventType::TrapFired));
@@ -95,7 +108,8 @@ mod r216_nothing_happens_after_the_game_is_over {
     }
 
     #[test]
-    fn r216_fullsends_combo_draws_stop_once_a_cast_on_draw_draw_inside_them_has_ended_the_game_2_5_2_4_10_5_step_5() {
+    fn r216_fullsends_combo_draws_stop_once_a_cast_on_draw_draw_inside_them_has_ended_the_game_2_5_2_4_10_5_step_5()
+     {
         // Two Radiant /fullsends (the face with the Combo rider since patch v0.1.1) make two "Combo:
         // draw 1" riders. The Vanilla played after them owes two draws;
         // the first draws Hinder, which is cast (R70) and owes the same two draws of its own, both from an
@@ -111,7 +125,12 @@ mod r216_nothing_happens_after_the_game_is_over {
             },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
         }));
-        let fullsends: Vec<CardInstance> = g.hand(P1).iter().filter(|card| card.def_id == FULLSEND).cloned().collect();
+        let fullsends: Vec<CardInstance> = g
+            .hand(P1)
+            .iter()
+            .filter(|card| card.def_id == FULLSEND)
+            .cloned()
+            .collect();
         let (Some(first), Some(second)) = (fullsends.first(), fullsends.get(1)) else {
             panic!("setup: two /fullsends in hand");
         };
@@ -122,7 +141,12 @@ mod r216_nothing_happens_after_the_game_is_over {
         let types = types_of(g.last_events());
         let over = types.iter().position(|kind| *kind == GameEventType::GameOver);
         assert!(over.is_some(), "{}", joined(&types));
-        assert_eq!(after_game_over(&types), Vec::<GameEventType>::new(), "{}", joined(&types));
+        assert_eq!(
+            after_game_over(&types),
+            Vec::<GameEventType>::new(),
+            "{}",
+            joined(&types)
+        );
         assert_eq!(g.state().players.p1.fatigue_count, 2);
     }
 }
@@ -145,7 +169,10 @@ mod r216_a_question_still_open_when_the_game_ends_is_closed_with_it {
         assert_eq!(over.error, None);
         assert_eq!(
             over.state.result,
-            Some(GameResult { winner: Winner::P1, reason: GameOverReason::Concede })
+            Some(GameResult {
+                winner: Winner::P1,
+                reason: GameOverReason::Concede
+            })
         );
         // Nothing can answer the Discover any more: legalActions offers nothing once the game is over...
         assert_eq!(legal_actions(&over.state, P1), Vec::<ActionBody>::new());
@@ -154,6 +181,9 @@ mod r216_a_question_still_open_when_the_game_ends_is_closed_with_it {
         assert!(over.state.pending.is_none());
         assert!(view_for(&over.state, P1).pending.is_none());
         assert!(view_for(&over.state, P2).pending.is_none());
-        assert_eq!(over.events.last().map(GameEvent::event_type), Some(GameEventType::GameOver));
+        assert_eq!(
+            over.events.last().map(GameEvent::event_type),
+            Some(GameEventType::GameOver)
+        );
     }
 }

@@ -7,7 +7,8 @@
 
 use jackioh_engine::effects::choose_mode;
 use jackioh_engine::subsystems::ai_policy::{
-    AI_SKIPPED_ACTIONS, PlayoutResult, PlayoutStop, PolicyOptions, choose_action, play_out_turn, policy_actions,
+    AI_SKIPPED_ACTIONS, PlayoutResult, PlayoutStop, PolicyOptions, choose_action, play_out_turn,
+    policy_actions,
 };
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -35,7 +36,9 @@ fn endless_question() -> CardDef {
 }
 
 fn ask() -> Effect {
-    choose_mode(json_as(json!({ "options": ["again", "and again"], "step": "ask" })))
+    choose_mode(json_as(
+        json!({ "options": ["again", "and again"], "step": "ask" }),
+    ))
 }
 
 fn ask_again() -> Script {
@@ -126,9 +129,7 @@ fn target_prompt(player: PlayerId, prompt: &str, options: &[&str]) -> OpenPrompt
 
 fn sequence(state: &GameState, seed: &str, steps: usize) -> Vec<Option<ActionBody>> {
     let mut rng = Rng::new(seed, 0);
-    (0..steps)
-        .map(|_| choose_action(state, P1, &mut rng))
-        .collect()
+    (0..steps).map(|_| choose_action(state, P1, &mut rng)).collect()
 }
 
 /// TS `playout(seed)`: the board the sink drove (the sink's own state, moved in place), the events
@@ -161,7 +162,10 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
         );
         assert_eq!(sequence(&state, "policy", 12), sequence(&state, "policy", 12));
         // A different seed walks a different sequence, so the seed is really what decides.
-        assert_ne!(sequence(&state, "other-policy", 12), sequence(&state, "policy", 12));
+        assert_ne!(
+            sequence(&state, "other-policy", 12),
+            sequence(&state, "policy", 12)
+        );
     }
 
     #[test]
@@ -180,8 +184,13 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
         // The filter is doing work: `legalActions` does offer those, and `skip: []` is the literal set.
         assert!(types_of(&offered).contains(&ActionType::Concede));
         assert!(types_of(&offered).contains(&ActionType::OfferDraw));
-        assert!(!types_of(&policy_actions(&state, P1, PolicyOptions::default())).contains(&ActionType::Concede));
-        assert_eq!(policy_actions(&state, P1, PolicyOptions { skip: Some(vec![]) }), offered);
+        assert!(
+            !types_of(&policy_actions(&state, P1, PolicyOptions::default())).contains(&ActionType::Concede)
+        );
+        assert_eq!(
+            policy_actions(&state, P1, PolicyOptions { skip: Some(vec![]) }),
+            offered
+        );
     }
 
     #[test]
@@ -189,11 +198,11 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
         let state = board("only-end-turn"); // empty hand, empty board
         let mut rng = Rng::new("unused", 0);
 
-        assert_eq!(policy_actions(&state, P1, PolicyOptions::default()), vec![ActionBody::EndTurn]);
         assert_eq!(
-            choose_action(&state, P1, &mut rng),
-            Some(ActionBody::EndTurn)
+            policy_actions(&state, P1, PolicyOptions::default()),
+            vec![ActionBody::EndTurn]
         );
+        assert_eq!(choose_action(&state, P1, &mut rng), Some(ActionBody::EndTurn));
         assert_eq!(rng.cursor(), 0);
 
         // With other actions available it ends the turn only on the AI_END_TURN_PROBABILITY roll.
@@ -217,11 +226,17 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
         let mut picked: IndexSet<String> = IndexSet::new();
         for i in 0..40 {
             let chosen = choose_action(sink.state, P1, &mut Rng::new(&format!("answer-{i}"), 0));
-            assert_eq!(chosen.as_ref().map(|action| action.action_type()), Some(ActionType::Answer));
+            assert_eq!(
+                chosen.as_ref().map(|action| action.action_type()),
+                Some(ActionType::Answer)
+            );
             let Some(ActionBody::Answer { choice_id, selection }) = chosen else {
                 continue;
             };
-            assert_eq!(Some(choice_id), sink.state.pending.as_ref().map(|pending| pending.id.clone()));
+            assert_eq!(
+                Some(choice_id),
+                sink.state.pending.as_ref().map(|pending| pending.id.clone())
+            );
             if let Some(Selection::Mode { option }) = selection.first() {
                 picked.insert(option.clone());
             }
@@ -232,15 +247,15 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
         assert_eq!(sorted, vec!["a", "b", "c"]);
 
         // The prompt is not p2's, so p2 has nothing to do (§9.3).
-        assert_eq!(
-            choose_action(sink.state, P2, &mut Rng::new("p2", 0)),
-            None
-        );
+        assert_eq!(choose_action(sink.state, P2, &mut Rng::new("p2", 0)), None);
 
         // A playout answers it, and the answer the reducer gets is a legal one.
         let result = play_out_turn(&mut sink, P1, PolicyOptions::default());
         assert_eq!(result.error, None);
-        assert_eq!(result.actions.first().map(|action| action.action_type()), Some(ActionType::Answer));
+        assert_eq!(
+            result.actions.first().map(|action| action.action_type()),
+            Some(ActionType::Answer)
+        );
         assert!(sink.state.pending.is_none());
     }
 
@@ -335,15 +350,25 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
 
         // Every step after the first is an answer to a prompt the last answer re-opened, so the policy
         // is never offered an `endTurn`: only the guard stops it.
-        assert_eq!(result.actions.first().map(|action| action.action_type()), Some(ActionType::Play));
+        assert_eq!(
+            result.actions.first().map(|action| action.action_type()),
+            Some(ActionType::Play)
+        );
         assert_eq!(result.stopped, PlayoutStop::StepCap);
         assert_eq!(result.actions.len(), AI_PLAYOUT_STEP_CAP);
         assert_eq!(result.error, None);
-        assert_eq!(sink.state.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Mode));
+        assert_eq!(
+            sink.state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Mode)
+        );
         assert!(sink.state.result.is_none());
 
         // Nonces are unique, so no action was silently deduped into an earlier one's events.
-        let nonces: IndexSet<&str> = result.actions.iter().map(|action| action.nonce.as_str()).collect();
+        let nonces: IndexSet<&str> = result
+            .actions
+            .iter()
+            .map(|action| action.nonce.as_str())
+            .collect();
         assert_eq!(nonces.len(), result.actions.len());
     }
 }

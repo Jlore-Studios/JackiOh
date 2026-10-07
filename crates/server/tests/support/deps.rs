@@ -85,7 +85,10 @@ pub fn test_env(overrides: &[(&str, &str)]) -> Env {
     let mut source: IndexMap<String, String> = IndexMap::new();
     source.insert("E2E".to_string(), "1".to_string());
     source.insert("NODE_ENV".to_string(), "test".to_string());
-    source.insert("TRUSTED_PROXY_HOPS".to_string(), TEST_TRUSTED_PROXY_HOPS.to_string());
+    source.insert(
+        "TRUSTED_PROXY_HOPS".to_string(),
+        TEST_TRUSTED_PROXY_HOPS.to_string(),
+    );
     for (key, value) in overrides {
         source.insert((*key).to_string(), (*value).to_string());
     }
@@ -115,7 +118,14 @@ pub struct TestAppOptions {
 
 impl Default for TestAppOptions {
     fn default() -> TestAppOptions {
-        TestAppOptions { e2e: true, env: Vec::new(), catalog: None, skip_fixtures: false, deletion: None, db: None }
+        TestAppOptions {
+            e2e: true,
+            env: Vec::new(),
+            catalog: None,
+            skip_fixtures: false,
+            deletion: None,
+            db: None,
+        }
     }
 }
 
@@ -128,21 +138,32 @@ pub async fn test_app() -> Arc<App> {
 /// server's; a test that seeds its own profiles (`profile-1`, `profile-2`, …, the ids the fake store
 /// also gives the fixtures) and reads whole tables starts from none, as TS's did.
 pub async fn empty_test_app() -> Arc<App> {
-    test_app_with(TestAppOptions { skip_fixtures: true, ..TestAppOptions::default() }).await
+    test_app_with(TestAppOptions {
+        skip_fixtures: true,
+        ..TestAppOptions::default()
+    })
+    .await
 }
 
 /// TS `createTestDeps(overrides)`: the test app with the overrides `TestAppOptions` names.
 pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
-    let overrides: Vec<(&str, &str)> = options.env.iter().map(|(key, value)| (key.as_str(), value.as_str())).collect();
+    let overrides: Vec<(&str, &str)> = options
+        .env
+        .iter()
+        .map(|(key, value)| (key.as_str(), value.as_str()))
+        .collect();
     let mut env = test_env(&overrides);
     // Outside end-to-end mode `load_env` would demand Supabase and Postgres; the test app keeps the
     // fake store and the fixture auth either way, so the flag is the one thing that changes.
     env.e2e = options.e2e;
     let mut catalog = match options.catalog {
         Some(catalog) => catalog,
-        None => load_catalog(LoadCatalogOptions { version: Some(env.catalog_version.to_string()), json: None })
-            .await
-            .unwrap_or_else(|error| panic!("the catalog: {error}")),
+        None => load_catalog(LoadCatalogOptions {
+            version: Some(env.catalog_version.to_string()),
+            json: None,
+        })
+        .await
+        .unwrap_or_else(|error| panic!("the catalog: {error}")),
     };
     if catalog.commit.is_none() {
         catalog.commit = env.deployed_commit.clone();
@@ -183,7 +204,11 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
 /// its first token, enough for L3/L6 tests without the whole catalog.
 pub fn create_test_catalog(version: &str, count: usize) -> Catalog {
     let mut defs = jackioh_engine::CardDefs::new();
-    for (id, def) in jackioh_cards::CATALOG.iter().filter(|(id, def)| id.starts_with("core-") && !def.token).take(count) {
+    for (id, def) in jackioh_cards::CATALOG
+        .iter()
+        .filter(|(id, def)| id.starts_with("core-") && !def.token)
+        .take(count)
+    {
         defs.insert(id.clone(), def.clone());
     }
     if let Some((id, def)) = jackioh_cards::CATALOG.iter().find(|(_, def)| def.token) {
@@ -237,7 +262,13 @@ impl<T: AppHandle> AppHandle for &T {
 
 /// TS `jsonRequest(method, path, body, { token, ip })`. `body` is sent when it is not `null`;
 /// `ip` is the `X-Forwarded-For` entry, `DEFAULT_TEST_IP` when absent.
-pub fn json_request(method: &str, path: &str, body: &Value, token: Option<&str>, ip: Option<&str>) -> Request {
+pub fn json_request(
+    method: &str,
+    path: &str,
+    body: &Value,
+    token: Option<&str>,
+    ip: Option<&str>,
+) -> Request {
     let mut builder = axum::http::Request::builder()
         .method(method)
         .uri(format!("https://server.test{path}"))
@@ -246,8 +277,14 @@ pub fn json_request(method: &str, path: &str, body: &Value, token: Option<&str>,
     if let Some(token) = token {
         builder = builder.header("authorization", format!("Bearer {token}"));
     }
-    let body = if body.is_null() { Body::empty() } else { Body::from(body.to_string()) };
-    builder.body(body).unwrap_or_else(|error| panic!("a test request: {error}"))
+    let body = if body.is_null() {
+        Body::empty()
+    } else {
+        Body::from(body.to_string())
+    };
+    builder
+        .body(body)
+        .unwrap_or_else(|error| panic!("a test request: {error}"))
 }
 
 /// The request as it would arrive on a socket from `peer` (R190's fallback address).
@@ -265,7 +302,8 @@ pub async fn read_json(response: Response) -> Value {
     if bytes.is_empty() {
         return Value::Null;
     }
-    serde_json::from_slice(&bytes).unwrap_or_else(|_| Value::String(String::from_utf8_lossy(&bytes).into_owned()))
+    serde_json::from_slice(&bytes)
+        .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(&bytes).into_owned()))
 }
 
 /// One request through the real router (`app::router`, CORS and `api::http::dispatch` included).
@@ -324,25 +362,39 @@ pub struct RecordingLogger {
 
 impl RecordingLogger {
     pub fn entries(&self) -> Vec<LogEntry> {
-        self.entries.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).clone()
+        self.entries
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone()
     }
 
     /// The lines with this event name, in order.
     pub fn named(&self, event: &str) -> Vec<LogEntry> {
-        self.entries().into_iter().filter(|entry| entry.event == event).collect()
+        self.entries()
+            .into_iter()
+            .filter(|entry| entry.event == event)
+            .collect()
     }
 
     pub fn clear(&self) {
-        self.entries.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).clear();
+        self.entries
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clear();
     }
 }
 
 /// Starts recording this thread's log lines (keep the value alive for as long as you read them).
 pub fn record_logs() -> RecordingLogger {
     let entries = Arc::new(Mutex::new(Vec::new()));
-    let subscriber = tracing_subscriber::registry().with(Recorder { entries: entries.clone() });
+    let subscriber = tracing_subscriber::registry().with(Recorder {
+        entries: entries.clone(),
+    });
     let guard = set_log_default(subscriber);
-    RecordingLogger { entries, _guard: guard }
+    RecordingLogger {
+        entries,
+        _guard: guard,
+    }
 }
 
 /// `tracing::subscriber::set_default` for a test's recorder, after a process-wide subscriber that
@@ -391,7 +443,11 @@ impl<S: tracing::Subscriber> Layer<S> for Recorder {
         self.entries
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .push(LogEntry { level, event: name, data: Value::Object(data) });
+            .push(LogEntry {
+                level,
+                event: name,
+                data: Value::Object(data),
+            });
     }
 }
 
@@ -402,7 +458,8 @@ struct FieldVisitor {
 
 impl Visit for FieldVisitor {
     fn record_str(&mut self, field: &Field, value: &str) {
-        self.fields.insert(field.name().to_string(), Value::String(value.to_string()));
+        self.fields
+            .insert(field.name().to_string(), Value::String(value.to_string()));
     }
 
     fn record_i64(&mut self, field: &Field, value: i64) {

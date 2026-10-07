@@ -83,7 +83,9 @@ impl FakeSocket {
     /// The server half of this connection, for `Registry::attach`. Taken once: one WebSocket is one
     /// socket, and a reconnect is a new `FakeSocket`.
     pub fn socket(&self) -> Socket {
-        lock(&self.socket).take().expect("this fake socket's server half was already attached")
+        lock(&self.socket)
+            .take()
+            .expect("this fake socket's server half was already attached")
     }
 
     /// Moves every frame the server has sent so far into `sent`, and notes its close. A frame sent
@@ -131,7 +133,10 @@ impl FakeSocket {
 
     /// Frames of one `type`, parsed.
     pub fn of_type(&self, frame_type: &str) -> Vec<Value> {
-        self.messages().into_iter().filter(|message| message["type"] == frame_type).collect()
+        self.messages()
+            .into_iter()
+            .filter(|message| message["type"] == frame_type)
+            .collect()
     }
 
     /// Simulate the client sending a frame.
@@ -196,7 +201,8 @@ impl FakeSocket {
 }
 
 fn parse(text: &str) -> Value {
-    serde_json::from_str(text).unwrap_or_else(|error| panic!("the server sent a frame that is not JSON ({error}): {text}"))
+    serde_json::from_str(text)
+        .unwrap_or_else(|error| panic!("the server sent a frame that is not JSON ({error}): {text}"))
 }
 
 pub fn create_fake_socket() -> FakeSocket {
@@ -205,7 +211,12 @@ pub fn create_fake_socket() -> FakeSocket {
     FakeSocket {
         socket: Mutex::new(Some(Socket::new(outgoing_tx, incoming_rx))),
         outgoing: tokio::sync::Mutex::new(outgoing_rx),
-        state: Mutex::new(State { incoming: Some(incoming_tx), sent: Vec::new(), close_code: None, close_reason: None }),
+        state: Mutex::new(State {
+            incoming: Some(incoming_tx),
+            sent: Vec::new(),
+            close_code: None,
+            close_reason: None,
+        }),
     }
 }
 
@@ -217,5 +228,8 @@ pub struct SocketPair {
 
 /// Two fake sockets, one per seat, for a two-client test.
 pub fn create_socket_pair() -> SocketPair {
-    SocketPair { p1: create_fake_socket(), p2: create_fake_socket() }
+    SocketPair {
+        p1: create_fake_socket(),
+        p2: create_fake_socket(),
+    }
 }

@@ -47,14 +47,16 @@ fn sorted_join(ids: &[String]) -> String {
 
 /// Whether `legalActions` offers a play of `card` whose `tributes` are the set `pair` names.
 fn offers_tribute_set(state: &GameState, card: &CardInstance, pair: &str) -> bool {
-    legal_actions(state, PlayerId::P1).iter().any(|action| match action {
-        ActionBody::Play {
-            instance_id,
-            tributes,
-            ..
-        } => *instance_id == card.id && sorted_join(tributes.as_deref().unwrap_or(&[])) == pair,
-        _ => false,
-    })
+    legal_actions(state, PlayerId::P1)
+        .iter()
+        .any(|action| match action {
+            ActionBody::Play {
+                instance_id,
+                tributes,
+                ..
+            } => *instance_id == card.id && sorted_join(tributes.as_deref().unwrap_or(&[])) == pair,
+            _ => false,
+        })
 }
 
 /// The ids of the three units `tribute_game` lists for its Tribute.
@@ -104,7 +106,9 @@ mod r68_a_tribute_s_deaths_resolve_in_lane_order_whatever_order_the_play_lists_t
         for g in [&in_lane_order, &defender_first] {
             // The summoned base defender takes the leftmost free zone, the Saintess's lane 1 (R64); the
             // Reborn body keeps lane 2.
-            let summoned = g.unit(PlayerId::P1, 1).map(|card| (card.def_id.clone(), card.radiant));
+            let summoned = g
+                .unit(PlayerId::P1, 1)
+                .map(|card| (card.def_id.clone(), card.radiant));
             assert_eq!(summoned, Some((RIGHT_HOUSE.to_string(), false)));
             assert_eq!(g.unit(PlayerId::P1, 2).map(|card| card.radiant), Some(true));
         }
@@ -134,7 +138,10 @@ mod r174_a_target_the_play_s_own_tribute_sacrificed_is_no_longer_a_target {
         g.answer(json!(LAVA_GOLEM));
         g.answer(json!(TWISTED_SORCERER));
         let card: CardInstance = must(
-            g.hand(PlayerId::P1).iter().find(|held| held.def_id.starts_with("t-")).cloned(),
+            g.hand(PlayerId::P1)
+                .iter()
+                .find(|held| held.def_id.starts_with("t-"))
+                .cloned(),
             "the crafted card",
         );
         let first = must(g.unit(PlayerId::P1, 1), "Gary").id.clone();
@@ -146,17 +153,17 @@ mod r174_a_target_the_play_s_own_tribute_sacrificed_is_no_longer_a_target {
         // Lava Golem may tribute enemy units (§8 #55), and the Sorcerer may target any unit. Step 1
         // checks the two declarations each on its own (R90), so the play is legal; step 2 sacrifices
         // the Reno before step 5 resolves the Sorcerer's damage, which then has no unit to hit.
-        g.play(&card.id, json!({ "zone": 3, "tributes": [first, second, reno.id], "targets": target }));
+        g.play(
+            &card.id,
+            json!({ "zone": 3, "tributes": [first, second, reno.id], "targets": target }),
+        );
 
         let hits = g.events()[before..]
             .iter()
             .filter(|event| matches!(event, GameEvent::Damage { target_id, .. } if *target_id == reno.id))
             .count();
         let now = g.card(&reno.id);
-        assert_eq!(
-            (now.zone.z(), now.damage, hits),
-            (ZoneName::Graveyard, 0, 0)
-        );
+        assert_eq!((now.zone.z(), now.damage, hits), (ZoneName::Graveyard, 0, 0));
     }
 }
 
@@ -181,7 +188,10 @@ mod s6_3_vanilla_a_vanilla_sheep_token_has_no_text_so_it_is_worth_1_tribute {
         assert_eq!(tribute_value_of(s.state(), &sheep), 2);
 
         // Radiant Prejudiced Postdoc: "any unit" → a Vanilla copy of the Sheep in lane 3.
-        s.play(POSTDOC, json!({ "zone": 4, "targets": [{ "pick": "instance", "instanceId": sheep.id }] }));
+        s.play(
+            POSTDOC,
+            json!({ "zone": 4, "targets": [{ "pick": "instance", "instanceId": sheep.id }] }),
+        );
         let copy = must(s.unit(PlayerId::P1, 3), "the Vanilla copy");
         assert_eq!((copy.def_id.clone(), copy.vanilla), (SHEEP.to_string(), true));
 
@@ -191,7 +201,10 @@ mod s6_3_vanilla_a_vanilla_sheep_token_has_no_text_so_it_is_worth_1_tribute {
 
         // The copy and Gary pay 2 of the 3: R101 refuses the play, and `legalActions` does not offer it.
         let golem = must(
-            s.hand(PlayerId::P1).iter().find(|card| card.def_id == LAVA_GOLEM).cloned(),
+            s.hand(PlayerId::P1)
+                .iter()
+                .find(|card| card.def_id == LAVA_GOLEM)
+                .cloned(),
             "Lava Golem in hand",
         );
         let pair = sorted_join(&[copy.id.clone(), gary.id.clone()]);
@@ -264,14 +277,25 @@ mod r102_3_2_a_sheep_s_worth_is_its_text_and_a_fuse_keeps_it {
 
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
-        let Some(golem) = g.hand(PlayerId::P1).iter().find(|card| card.def_id == LAVA_GOLEM).cloned() else {
+        let Some(golem) = g
+            .hand(PlayerId::P1)
+            .iter()
+            .find(|card| card.def_id == LAVA_GOLEM)
+            .cloned()
+        else {
             panic!("setup: Lava Golem in hand");
         };
         let pair = sorted_join(&[fused.id.clone(), vanilla.id.clone()]);
         let offered = offers_tribute_set(g.state(), &golem, &pair);
         assert!(offered);
-        g.play(&golem.id, json!({ "zone": 3, "tributes": [fused.id, vanilla.id] }));
-        assert_eq!(g.unit(PlayerId::P1, 3).map(|card| card.def_id.clone()), Some(LAVA_GOLEM.to_string()));
+        g.play(
+            &golem.id,
+            json!({ "zone": 3, "tributes": [fused.id, vanilla.id] }),
+        );
+        assert_eq!(
+            g.unit(PlayerId::P1, 3).map(|card| card.def_id.clone()),
+            Some(LAVA_GOLEM.to_string())
+        );
     }
 }
 
@@ -289,7 +313,9 @@ const SHEEPISH: &str = "core-041";
 const THE_ROCK: &str = "core-066";
 const SHEEP_TOKEN: &str = "core-t-sheep";
 
-const R119_LIBRARY: [&str; 6] = [MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA];
+const R119_LIBRARY: [&str; 6] = [
+    MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA,
+];
 
 /// `ofType(events, "summoned")`, as the def id each summoned.
 fn summoned_defs(events: &[GameEvent]) -> Vec<String> {
@@ -304,7 +330,11 @@ fn summoned_defs(events: &[GameEvent]) -> Vec<String> {
 
 /// `ofType(events, type)`: the events of one type.
 fn of_type(events: &[GameEvent], type_: GameEventType) -> Vec<GameEvent> {
-    events.iter().filter(|event| event.event_type() == type_).cloned().collect()
+    events
+        .iter()
+        .filter(|event| event.event_type() == type_)
+        .cloned()
+        .collect()
 }
 
 fn backrow_defs(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
@@ -328,7 +358,10 @@ fn quickstrikers_of(s: &Scenario, player: PlayerId) -> Vec<String> {
 /// R428: Carnivorous Cube eats Units only, so a backrow card reaches its Death's copies as the text of
 /// a Unit it was fused onto (R77: the target keeps its instance and its type, and carries the text).
 fn unit_carrying(s: &mut Scenario, player: PlayerId, unit_lane: i32, backrow_lane: i32) -> CardInstance {
-    let unit = must(s.unit(player, unit_lane), &format!("{player}'s lane-{unit_lane} unit"));
+    let unit = must(
+        s.unit(player, unit_lane),
+        &format!("{player}'s lane-{unit_lane} unit"),
+    );
     let carried = must(
         s.backrow(player, backrow_lane),
         &format!("{player}'s backrow card in lane {backrow_lane}"),
@@ -388,27 +421,54 @@ mod r119_r210_what_a_tribute_s_death_puts_on_the_field_does_not_answer_the_play_
         let cube = must(s.unit(PlayerId::P2, 1), "p2's Carnivorous Cube");
         s.end_turn();
         assert_eq!(s.state().active, PlayerId::P1);
-        assert_eq!(s.state().players.p2.units.iter().filter(|pile| pile.is_some()).count(), 1);
+        assert_eq!(
+            s.state()
+                .players
+                .p2
+                .units
+                .iter()
+                .filter(|pile| pile.is_some())
+                .count(),
+            1
+        );
 
         // §8 #55: Lava Golem "can use opposing Units as Tributes", so the Cube is one of its three.
         let golem = must(
-            s.hand(PlayerId::P1).iter().find(|card| card.def_id == LAVA_GOLEM).cloned(),
+            s.hand(PlayerId::P1)
+                .iter()
+                .find(|card| card.def_id == LAVA_GOLEM)
+                .cloned(),
             "p1's Lava Golem",
         );
         let first = must(s.unit(PlayerId::P1, 1), "p1's lane-1 Mr. Vanilla");
         let second = must(s.unit(PlayerId::P1, 2), "p1's lane-2 Mr. Vanilla");
-        s.play(&golem.id, json!({ "zone": 4, "tributes": [cube.id, first.id, second.id] }));
+        s.play(
+            &golem.id,
+            json!({ "zone": 4, "tributes": [cube.id, first.id, second.id] }),
+        );
 
         // Step 2 paid the Tribute and the Cube's Death summoned its two copies (R41, R210).
         assert_eq!(
-            summoned_defs(s.last_events()).iter().filter(|def_id| **def_id == carrier.def_id).count(),
+            summoned_defs(s.last_events())
+                .iter()
+                .filter(|def_id| **def_id == carrier.def_id)
+                .count(),
             2
         );
         // R119: those copies arrived while this play resolved, so they start counting from the next play:
         // nothing answers the Golem's resolution, and the Golem lands as itself.
-        assert_eq!(of_type(s.last_events(), GameEventType::Transformed), Vec::<GameEvent>::new());
-        assert_eq!(s.unit(PlayerId::P1, 4).map(|card| card.def_id.clone()), Some(LAVA_GOLEM.to_string()));
-        assert_ne!(s.unit(PlayerId::P1, 4).map(|card| card.def_id.clone()), Some(SHEEP_TOKEN.to_string()));
+        assert_eq!(
+            of_type(s.last_events(), GameEventType::Transformed),
+            Vec::<GameEvent>::new()
+        );
+        assert_eq!(
+            s.unit(PlayerId::P1, 4).map(|card| card.def_id.clone()),
+            Some(LAVA_GOLEM.to_string())
+        );
+        assert_ne!(
+            s.unit(PlayerId::P1, 4).map(|card| card.def_id.clone()),
+            Some(SHEEP_TOKEN.to_string())
+        );
     }
 
     #[test]
@@ -432,18 +492,27 @@ mod r119_r210_what_a_tribute_s_death_puts_on_the_field_does_not_answer_the_play_
             json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": carrier.id }] }),
         );
         let cube = must(s.unit(PlayerId::P1, 1), "p1's Carnivorous Cube");
-        assert_eq!(backrow_defs(&s, PlayerId::P1), vec![None::<String>, None, None, None, None]);
+        assert_eq!(
+            backrow_defs(&s, PlayerId::P1),
+            vec![None::<String>, None, None, None, None]
+        );
         let library = s.pile(PlayerId::P1, "library").len();
 
         // §8 #66: The Rock's Tribute 1 is the Cube, whose Death summons two copies of its meal.
         s.play(THE_ROCK, json!({ "zone": 4, "tributes": [cube.id] }));
 
         assert_eq!(
-            summoned_defs(s.last_events()).iter().filter(|def_id| **def_id == carrier.def_id).count(),
+            summoned_defs(s.last_events())
+                .iter()
+                .filter(|def_id| **def_id == carrier.def_id)
+                .count(),
             2
         );
         // R119: "After you play a card" — both copies arrived during this play, so neither answers it.
-        assert_eq!(of_type(s.last_events(), GameEventType::ShuffledIn), Vec::<GameEvent>::new());
+        assert_eq!(
+            of_type(s.last_events(), GameEventType::ShuffledIn),
+            Vec::<GameEvent>::new()
+        );
         assert_eq!(s.pile(PlayerId::P1, "library").len(), library);
     }
 
@@ -475,7 +544,10 @@ mod r119_r210_what_a_tribute_s_death_puts_on_the_field_does_not_answer_the_play_
         // Two Units carrying Quickstriker's text arrived at step 2; The Rock is the third card played this
         // turn (X = 2).
         assert_eq!(
-            summoned_defs(s.last_events()).iter().filter(|def_id| **def_id == carrier.def_id).count(),
+            summoned_defs(s.last_events())
+                .iter()
+                .filter(|def_id| **def_id == carrier.def_id)
+                .count(),
             2
         );
         // R119: they start counting from the next play, so The Rock's step 5 deals no Combo damage.

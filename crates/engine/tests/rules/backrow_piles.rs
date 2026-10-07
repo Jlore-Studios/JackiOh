@@ -52,7 +52,10 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
         (Value::Array(actual), Value::Array(expected)) => {
             actual.len() == expected.len()
-                && actual.iter().zip(expected).all(|(got, want)| matches_object(got, want))
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(got, want)| matches_object(got, want))
         }
         _ => actual == expected,
     }
@@ -60,7 +63,10 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
 
 fn expect_match(actual: impl Serialize, expected: Value) {
     let actual = json_of(actual);
-    assert!(matches_object(&actual, &expected), "{actual} does not match {expected}");
+    assert!(
+        matches_object(&actual, &expected),
+        "{actual} does not match {expected}"
+    );
 }
 
 /// `events.map((event) => event.instanceId)`, read off the events' JSON.
@@ -93,7 +99,11 @@ fn beneath_ids(state: &GameState, at: ZoneSlot) -> Vec<String> {
 }
 
 fn graveyard_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].graveyard.iter().map(|card| card.id.clone()).collect()
+    state.players[player]
+        .graveyard
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 fn zone(row: Row, lane: i32) -> ZoneChoice {
@@ -132,7 +142,12 @@ fn stack_onto(state: &mut GameState, top_def: &str, under: &CardInstance) -> Car
         panic!("not on the field")
     };
     let mut top = new_instance(state, top_def, player, Zone::Hand { player });
-    if !place_on_field(state, &mut top, slot(player, Row::Backrow, lane), json_as(json!({ "stack": true }))) {
+    if !place_on_field(
+        state,
+        &mut top,
+        slot(player, Row::Backrow, lane),
+        json_as(json!({ "stack": true })),
+    ) {
         panic!("no stack");
     }
     live(state, &top.id)
@@ -153,10 +168,18 @@ mod r447_b5_e21_backrow_piles {
     use super::*;
 
     #[test]
-    fn r447_a_backrow_card_with_stack_may_be_played_onto_an_occupied_backrow_zone_the_card_beneath_goes_dormant() {
+    fn r447_a_backrow_card_with_stack_may_be_played_onto_an_occupied_backrow_zone_the_card_beneath_goes_dormant()
+     {
         let mut state = playing("piles-play");
-        let flag = put(&mut state, &banner.id, slot(P1, Row::Backrow, 1), Default::default());
-        let Some(card) = in_hand(&mut state, &cover.id, P1, 1).into_iter().next() else { return };
+        let flag = put(
+            &mut state,
+            &banner.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        let Some(card) = in_hand(&mut state, &cover.id, P1, 1).into_iter().next() else {
+            return;
+        };
         flush(&mut state, P1, 10);
         assert!(plays_on_stack(&state, &card));
         assert!(legal_zones_for(&state, P1, &card, &[]).contains(&zone(Row::Backrow, 1)));
@@ -167,7 +190,10 @@ mod r447_b5_e21_backrow_piles {
             })),
         );
         assert_eq!(id_at(&next, slot(P1, Row::Backrow, 1)), Some(card.id.clone()));
-        assert_eq!(beneath_ids(&next, slot(P1, Row::Backrow, 1)), vec![flag.id.clone()]);
+        assert_eq!(
+            beneath_ids(&next, slot(P1, Row::Backrow, 1)),
+            vec![flag.id.clone()]
+        );
         assert!(is_buried(&next, by_id(&next, &flag.id)));
         for viewer in [P1, P2] {
             let view = view_for(&next, viewer);
@@ -175,18 +201,31 @@ mod r447_b5_e21_backrow_piles {
             expect_match(&side.backrow[0], json!({ "defId": cover.id, "buried": 1 }));
         }
         // A card without Stack still needs an empty zone.
-        let Some(plain_card) = in_hand(&mut next, &banner.id, P1, 1).into_iter().next() else { return };
+        let Some(plain_card) = in_hand(&mut next, &banner.id, P1, 1).into_iter().next() else {
+            return;
+        };
         assert!(!legal_zones_for(&next, P1, &plain_card, &[]).contains(&zone(Row::Backrow, 1)));
     }
 
     #[test]
     fn r447_an_aura_under_a_pile_is_off_and_on_again_once_the_top_leaves() {
         let mut state = playing("piles-aura");
-        let flag = put(&mut state, &banner.id, slot(P1, Row::Backrow, 2), Default::default());
+        let flag = put(
+            &mut state,
+            &banner.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
         let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
-        assert_eq!(view_for(&state, P1).you.units[0].as_ref().map(|unit| unit.attack), Some(5));
+        assert_eq!(
+            view_for(&state, P1).you.units[0].as_ref().map(|unit| unit.attack),
+            Some(5)
+        );
         let top = stack_onto(&mut state, &cover.id, &flag);
-        assert_eq!(view_for(&state, P1).you.units[0].as_ref().map(|unit| unit.attack), Some(3));
+        assert_eq!(
+            view_for(&state, P1).you.units[0].as_ref().map(|unit| unit.attack),
+            Some(3)
+        );
         // The top leaves: the banner resumes acting.
         let mut sink = sink_for(&mut state);
         (destroy_all(json_as(json!({ "side": "self", "rows": ["backrow"] }))).apply)(&mut make_context(
@@ -196,8 +235,16 @@ mod r447_b5_e21_backrow_piles {
         ));
         settle(&mut sink, SettleOptions::default());
         assert!(graveyard_ids(sink.state, P1).contains(&top.id));
-        assert_eq!(id_at(sink.state, slot(P1, Row::Backrow, 2)), Some(flag.id.clone()));
-        assert_eq!(view_for(sink.state, P1).you.units[0].as_ref().map(|unit| unit.attack), Some(5));
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(flag.id.clone())
+        );
+        assert_eq!(
+            view_for(sink.state, P1).you.units[0]
+                .as_ref()
+                .map(|unit| unit.attack),
+            Some(5)
+        );
         assert_eq!(by_id(sink.state, &unit.id).zone.z(), ZoneName::Field);
     }
 
@@ -205,7 +252,12 @@ mod r447_b5_e21_backrow_piles {
     fn r447_a_face_down_trap_under_a_pile_never_fires_once_uncovered_it_answers_only_what_happens_after() {
         let mut state = playing("piles-trap");
         state.active = P2;
-        let trap = put(&mut state, &watcher.id, slot(P2, Row::Backrow, 3), Default::default());
+        let trap = put(
+            &mut state,
+            &watcher.id,
+            slot(P2, Row::Backrow, 3),
+            Default::default(),
+        );
         let top = stack_onto(&mut state, &cover.id, &trap);
         state.active = P1;
         let first = play_from(&mut state, &plain.id, Some(json!({ "row": "units", "lane": 1 })));
@@ -221,7 +273,10 @@ mod r447_b5_e21_backrow_piles {
             by(P1),
         ));
         settle(&mut sink, SettleOptions::default());
-        assert_eq!(id_at(sink.state, slot(P2, Row::Backrow, 3)), Some(trap.id.clone()));
+        assert_eq!(
+            id_at(sink.state, slot(P2, Row::Backrow, 3)),
+            Some(trap.id.clone())
+        );
         assert!(graveyard_ids(sink.state, P2).contains(&top.id));
         let second = play_from(&mut state, &plain.id, Some(json!({ "row": "units", "lane": 2 })));
         assert_eq!(
@@ -233,7 +288,12 @@ mod r447_b5_e21_backrow_piles {
     #[test]
     fn r447_r212_a_card_that_resumes_answers_nothing_of_the_removal_that_uncovered_it_and_what_comes_after() {
         let mut state = playing("piles-uncovered");
-        let under = put(&mut state, &mourner.id, slot(P1, Row::Backrow, 4), Default::default());
+        let under = put(
+            &mut state,
+            &mourner.id,
+            slot(P1, Row::Backrow, 4),
+            Default::default(),
+        );
         let top = stack_onto(&mut state, &cover.id, &under);
         let unit = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
         let mut sink = sink_for(&mut state);
@@ -243,7 +303,10 @@ mod r447_b5_e21_backrow_piles {
             by(P1),
         ));
         settle(&mut sink, SettleOptions::default());
-        assert_eq!(id_at(sink.state, slot(P1, Row::Backrow, 4)), Some(under.id.clone()));
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 4)),
+            Some(under.id.clone())
+        );
         assert!(graveyard_ids(sink.state, P1).contains(&top.id));
         assert!(notes_of(find_instance(sink.state, &under.id)).is_empty());
         by_id_mut(sink.state, &unit.id).damage = 3;
@@ -254,7 +317,12 @@ mod r447_b5_e21_backrow_piles {
     #[test]
     fn r447_hidden_information_a_face_down_card_beneath_is_a_count_to_both_seats_never_an_identity() {
         let mut state = playing("piles-hidden");
-        let trap = put(&mut state, &watcher.id, slot(P2, Row::Backrow, 1), Default::default());
+        let trap = put(
+            &mut state,
+            &watcher.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
         stack_onto(&mut state, &cover.id, &trap);
         let mine = view_for(&state, P2);
         let theirs = view_for(&state, P1);
@@ -267,7 +335,12 @@ mod r447_b5_e21_backrow_piles {
         assert!(!text.contains(&trap.id));
         assert!(!text.contains(&watcher.id));
         // A face-down top shows its back and the count.
-        let deep = put(&mut state, &watcher.id, slot(P2, Row::Backrow, 4), Default::default());
+        let deep = put(
+            &mut state,
+            &watcher.id,
+            slot(P2, Row::Backrow, 4),
+            Default::default(),
+        );
         let upper = stack_onto(&mut state, &watcher.id, &deep);
         assert_eq!(
             json_of(&view_for(&state, P1).opponent.backrow[3]),
@@ -279,15 +352,37 @@ mod r447_b5_e21_backrow_piles {
     #[test]
     fn r447_a_locked_zone_a_held_zone_and_a_zone_carrying_a_unit_take_no_stack_card() {
         let mut state = playing("piles-refusals");
-        put(&mut state, &banner.id, slot(P1, Row::Backrow, 1), Default::default());
-        put(&mut state, &banner.id, slot(P1, Row::Backrow, 2), Default::default());
-        put(&mut state, &tower.id, slot(P1, Row::Backrow, 3), Default::default());
+        put(
+            &mut state,
+            &banner.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        put(
+            &mut state,
+            &banner.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        put(
+            &mut state,
+            &tower.id,
+            slot(P1, Row::Backrow, 3),
+            Default::default(),
+        );
         lock_zone(&mut state, slot(P1, Row::Backrow, 1));
         reserve_zone(&mut state, slot(P1, Row::Backrow, 2));
         let mut rider = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
         state.players.p1.units[0] = None;
-        assert!(place_on_field(&mut state, &mut rider, slot(P1, Row::Backrow, 3), Default::default()));
-        let Some(card) = in_hand(&mut state, &cover.id, P1, 1).into_iter().next() else { return };
+        assert!(place_on_field(
+            &mut state,
+            &mut rider,
+            slot(P1, Row::Backrow, 3),
+            Default::default()
+        ));
+        let Some(card) = in_hand(&mut state, &cover.id, P1, 1).into_iter().next() else {
+            return;
+        };
         let zones = legal_zones_for(&state, P1, &card, &[]);
         assert!(!zones.contains(&zone(Row::Backrow, 1)));
         assert!(!zones.contains(&zone(Row::Backrow, 2)));
@@ -298,12 +393,20 @@ mod r447_b5_e21_backrow_piles {
     #[test]
     fn r447_a_board_swap_carries_a_backrow_pile_whole_top_on_top_to_the_other_side() {
         let mut state = playing("piles-swap");
-        let flag = put(&mut state, &banner.id, slot(P1, Row::Backrow, 5), Default::default());
+        let flag = put(
+            &mut state,
+            &banner.id,
+            slot(P1, Row::Backrow, 5),
+            Default::default(),
+        );
         let top = stack_onto(&mut state, &cover.id, &flag);
         let mut sink = sink_for(&mut state);
         (swap_board().apply)(&mut make_context(&mut sink, None, by(P1)));
         assert_eq!(id_at(sink.state, slot(P2, Row::Backrow, 5)), Some(top.id.clone()));
-        assert_eq!(beneath_ids(sink.state, slot(P2, Row::Backrow, 5)), vec![flag.id.clone()]);
+        assert_eq!(
+            beneath_ids(sink.state, slot(P2, Row::Backrow, 5)),
+            vec![flag.id.clone()]
+        );
         assert_eq!(by_id(sink.state, &flag.id).controller, P2);
         assert!(sink.state.players.p1.backrow_piles.is_none());
     }
@@ -311,12 +414,20 @@ mod r447_b5_e21_backrow_piles {
     #[test]
     fn r447_a_card_dormant_under_a_backrow_pile_does_not_act_a_buried_heroic_power_cannot_be_used() {
         let mut state = playing("piles-power");
-        let power = put(&mut state, &heroic_power().id, slot(P1, Row::Backrow, 3), Default::default());
+        let power = put(
+            &mut state,
+            &heroic_power().id,
+            slot(P1, Row::Backrow, 3),
+            Default::default(),
+        );
         by_id_mut(&mut state, &power.id)
             .memory
             .insert("power".to_string(), json!("ping"));
         flush(&mut state, P1, 10);
-        assert_eq!(refusal(why_cannot_activate_ability(&state, P1, &power.id, None)), None);
+        assert_eq!(
+            refusal(why_cannot_activate_ability(&state, P1, &power.id, None)),
+            None
+        );
         stack_onto(&mut state, &cover.id, &power);
         assert_eq!(
             refusal(why_cannot_activate_ability(&state, P1, &power.id, None)),
@@ -334,7 +445,12 @@ mod r447_b5_e21_backrow_piles {
         assert!(plain_state.players.p1.backrow_piles.is_none());
         assert!(plain_state.players.p1.carried.is_none());
         let mut state = playing("piles-json");
-        let flag = put(&mut state, &banner.id, slot(P1, Row::Backrow, 1), Default::default());
+        let flag = put(
+            &mut state,
+            &banner.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         stack_onto(&mut state, &cover.id, &flag);
         let round = json_round_trip(&state);
         assert_eq!(hash_state(&round), hash_state(&state));
@@ -355,8 +471,17 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
 
     fn tower_game(seed: &str) -> TowerGame {
         let mut state = playing(seed);
-        let holder = put(&mut state, &tower.id, slot(P1, Row::Backrow, 2), Default::default());
-        let result = play_from(&mut state, &plain.id, Some(json!({ "row": "backrow", "lane": 2 })));
+        let holder = put(
+            &mut state,
+            &tower.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let result = play_from(
+            &mut state,
+            &plain.id,
+            Some(json!({ "row": "backrow", "lane": 2 })),
+        );
         if let Some(error) = &result.error {
             panic!("{error}");
         }
@@ -382,8 +507,15 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
     #[test]
     fn r446_a_unit_may_be_played_on_top_of_a_carrier_offered_placed_there_with_the_carrier_acting_beneath() {
         let mut state = playing("carrier-play");
-        put(&mut state, &tower.id, slot(P1, Row::Backrow, 2), Default::default());
-        let Some(card) = in_hand(&mut state, &plain.id, P1, 1).into_iter().next() else { return };
+        put(
+            &mut state,
+            &tower.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let Some(card) = in_hand(&mut state, &plain.id, P1, 1).into_iter().next() else {
+            return;
+        };
         flush(&mut state, P1, 10);
         assert!(legal_zones_for(&state, P1, &card, &[]).contains(&zone(Row::Backrow, 2)));
         assert!(legal_actions(&state, P1).contains(&json_as(json!({
@@ -417,10 +549,17 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
             json!([{ "instanceId": card.id, "row": "backrow", "lane": 2 }]),
         );
         // The carrier's aura keeps working: the Unit in hand has Stack.
-        let Some(held) = in_hand(&mut next, &plain.id, P1, 1).into_iter().next() else { return };
+        let Some(held) = in_hand(&mut next, &plain.id, P1, 1).into_iter().next() else {
+            return;
+        };
         assert!(plays_on_stack(&next, &held));
         // Only a carrier's zone: a plain backrow card takes no Unit.
-        put(&mut next, &banner.id, slot(P1, Row::Backrow, 4), Default::default());
+        put(
+            &mut next,
+            &banner.id,
+            slot(P1, Row::Backrow, 4),
+            Default::default(),
+        );
         let refused = act_result(
             &next,
             input(json!({
@@ -441,11 +580,17 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
         assert!(!can_attack(
             &state,
             by_id(&state, &enemy.id),
-            &AttackTarget::Unit { instance: live(&state, &rider) }
+            &AttackTarget::Unit {
+                instance: live(&state, &rider)
+            }
         ));
         let taunt = taunter.base.keywords.first().cloned().unwrap_or(Keyword::Taunt);
         by_id_mut(&mut state, &rider).granted_keywords.push(taunt);
-        assert!(can_attack(&state, by_id(&state, &enemy.id), &AttackTarget::Hero { player: P1 }));
+        assert!(can_attack(
+            &state,
+            by_id(&state, &enemy.id),
+            &AttackTarget::Hero { player: P1 }
+        ));
         let names: Vec<String> = attack_targets(&state, by_id(&state, &enemy.id))
             .iter()
             .map(|target| match target {
@@ -457,20 +602,33 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
         // It may still switch position, a unit's own action.
         state.active = P1;
         state.phase = Phase::Main;
-        assert!(legal_actions(&state, P1).contains(&json_as(json!({ "type": "switchPosition", "instanceId": rider }))));
-        let switched = act(&state, input(json!({ "type": "switchPosition", "instanceId": rider, "playerId": "p1" })));
+        assert!(
+            legal_actions(&state, P1)
+                .contains(&json_as(json!({ "type": "switchPosition", "instanceId": rider })))
+        );
+        let switched = act(
+            &state,
+            input(json!({ "type": "switchPosition", "instanceId": rider, "playerId": "p1" })),
+        );
         assert_eq!(by_id(&switched, &rider).position, Some(Position::Def));
     }
 
     #[test]
     fn r446_it_is_a_unit_for_every_rule_all_units_reach_it_and_backrow_effects_find_the_carrier_instead() {
-        let TowerGame { mut state, tower: holder, rider } = tower_game("carrier-scopes");
+        let TowerGame {
+            mut state,
+            tower: holder,
+            rider,
+        } = tower_game("carrier-scopes");
         {
             let mut sink = sink_for(&mut state);
             let ctx = make_context(&mut sink, None, by(P2));
             assert!(ids(&cards_in_scope(&ctx, &json_as(json!({ "side": "enemy" })))).contains(&rider));
             assert_eq!(
-                ids(&cards_in_scope(&ctx, &json_as(json!({ "side": "enemy", "rows": ["backrow"] })))),
+                ids(&cards_in_scope(
+                    &ctx,
+                    &json_as(json!({ "side": "enemy", "rows": ["backrow"] }))
+                )),
                 vec![holder.id.clone()]
             );
         }
@@ -484,7 +642,11 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
 
     #[test]
     fn r446_a_transform_replaces_a_carried_unit_where_it_stands_on_its_carrier() {
-        let TowerGame { mut state, tower: holder, rider } = tower_game("carrier-transform");
+        let TowerGame {
+            mut state,
+            tower: holder,
+            rider,
+        } = tower_game("carrier-transform");
         let mut sink = sink_for(&mut state);
         (transform(json_as(json!({ "instanceId": rider, "defId": taunter.id }))).apply)(&mut make_context(
             &mut sink,
@@ -492,9 +654,15 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
             by(P2),
         ));
         let now = carried_at(sink.state, slot(P1, Row::Backrow, 2)).cloned();
-        assert_eq!(now.as_ref().map(|unit| unit.def_id.clone()), Some(taunter.id.clone()));
+        assert_eq!(
+            now.as_ref().map(|unit| unit.def_id.clone()),
+            Some(taunter.id.clone())
+        );
         assert_ne!(now.as_ref().map(|unit| unit.id.clone()), Some(rider.clone()));
-        assert_eq!(id_at(sink.state, slot(P1, Row::Backrow, 2)), Some(holder.id.clone()));
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(holder.id.clone())
+        );
         assert_eq!(events_of_type(sink.events, GameEventType::Transformed).len(), 1);
     }
 
@@ -502,12 +670,21 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
     fn r446_when_its_carrier_leaves_the_unit_steps_down_into_its_lanes_unit_zone_without_leaving_the_field() {
         let TowerGame { mut state, rider, .. } = tower_game("carrier-step-down");
         by_id_mut(&mut state, &rider).damage = 1;
-        let exits = state.field_exits.as_ref().and_then(|exits| exits.last.get(&rider).copied());
+        let exits = state
+            .field_exits
+            .as_ref()
+            .and_then(|exits| exits.last.get(&rider).copied());
         let events = destroy_own_backrow(&mut state);
         assert_eq!(id_at(&state, slot(P1, Row::Units, 2)), Some(rider.clone()));
         assert!(!is_carried(&state, by_id(&state, &rider)));
         assert_eq!(by_id(&state, &rider).damage, 1);
-        assert_eq!(state.field_exits.as_ref().and_then(|exits| exits.last.get(&rider).copied()), exits);
+        assert_eq!(
+            state
+                .field_exits
+                .as_ref()
+                .and_then(|exits| exits.last.get(&rider).copied()),
+            exits
+        );
         assert_eq!(
             json_of(events_of_type(&events, GameEventType::Animated)),
             json!([{
@@ -519,7 +696,8 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
     }
 
     #[test]
-    fn r446_its_lane_taken_it_goes_to_the_leftmost_open_unit_zone_with_none_it_is_destroyed_and_an_indestructible_one_waits() {
+    fn r446_its_lane_taken_it_goes_to_the_leftmost_open_unit_zone_with_none_it_is_destroyed_and_an_indestructible_one_waits()
+     {
         let TowerGame { mut state, rider, .. } = tower_game("carrier-no-room");
         put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
         destroy_own_backrow(&mut state);
@@ -527,14 +705,24 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
 
         let mut full = tower_game("carrier-full");
         for lane in 1..=5 {
-            put(&mut full.state, &plain.id, slot(P1, Row::Units, lane), Default::default());
+            put(
+                &mut full.state,
+                &plain.id,
+                slot(P1, Row::Units, lane),
+                Default::default(),
+            );
         }
         destroy_own_backrow(&mut full.state);
         assert!(graveyard_ids(&full.state, P1).contains(&full.rider));
 
         let mut tough = tower_game("carrier-indestructible");
         for lane in 1..=5 {
-            put(&mut tough.state, &plain.id, slot(P1, Row::Units, lane), Default::default());
+            put(
+                &mut tough.state,
+                &plain.id,
+                slot(P1, Row::Units, lane),
+                Default::default(),
+            );
         }
         by_id_mut(&mut tough.state, &tough.rider).def_id = indestructible.id.clone();
         let mut tough_sink = sink_for(&mut tough.state);
@@ -544,7 +732,10 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
             by(P1),
         ));
         settle(&mut tough_sink, SettleOptions::default());
-        assert!(is_carried(tough_sink.state, by_id(tough_sink.state, &tough.rider)));
+        assert!(is_carried(
+            tough_sink.state,
+            by_id(tough_sink.state, &tough.rider)
+        ));
         // It is destroyed once, not again at every check while it waits.
         let destroyed_before = tough_sink.state.counters.destroyed;
         settle(&mut tough_sink, SettleOptions::default());
@@ -552,21 +743,32 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
         // A unit zone opens: it steps down at the next check.
         tough_sink.state.players.p1.units[3] = None;
         settle(&mut tough_sink, SettleOptions::default());
-        assert_eq!(id_at(tough_sink.state, slot(P1, Row::Units, 4)), Some(tough.rider.clone()));
+        assert_eq!(
+            id_at(tough_sink.state, slot(P1, Row::Units, 4)),
+            Some(tough.rider.clone())
+        );
     }
 
     #[test]
     fn r446_a_vanilla_carrier_carries_no_more_its_unit_steps_down() {
-        let TowerGame { mut state, tower: placed, rider } = tower_game("carrier-vanilla");
+        let TowerGame {
+            mut state,
+            tower: placed,
+            rider,
+        } = tower_game("carrier-vanilla");
         by_id_mut(&mut state, &placed.id).vanilla = true;
         let mut sink = sink_for(&mut state);
         settle(&mut sink, SettleOptions::default());
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(rider.clone()));
-        assert_eq!(id_at(sink.state, slot(P1, Row::Backrow, 2)), Some(placed.id.clone()));
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(placed.id.clone())
+        );
     }
 
     #[test]
-    fn r446_a_pause_after_the_carrier_left_keeps_the_unit_carried_until_the_list_is_whole_through_a_round_trip_and_a_replay() {
+    fn r446_a_pause_after_the_carrier_left_keeps_the_unit_carried_until_the_list_is_whole_through_a_round_trip_and_a_replay()
+     {
         let run = |seed: &str, round_trip: bool| -> (String, String) {
             let TowerGame { mut state, rider, .. } = tower_game(seed);
             let cast = play_from(&mut state, &wrecker.id, None);
@@ -581,7 +783,11 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
             if round_trip {
                 paused = json_round_trip(&paused);
             }
-            let choice_id = paused.pending.as_ref().map(|pending| pending.id.clone()).unwrap_or_default();
+            let choice_id = paused
+                .pending
+                .as_ref()
+                .map(|pending| pending.id.clone())
+                .unwrap_or_default();
             let done = act(
                 &paused,
                 input(json!({
@@ -590,7 +796,13 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
                 })),
             );
             assert_eq!(id_at(&done, slot(P1, Row::Units, 2)), Some(rider.clone()));
-            assert!(done.players.p1.graveyard.iter().any(|card| card.def_id == tower.id));
+            assert!(
+                done.players
+                    .p1
+                    .graveyard
+                    .iter()
+                    .any(|card| card.def_id == tower.id)
+            );
             (paused_hash, hash_state(&done))
         };
         let live = run("carrier-pause", false);
@@ -603,11 +815,21 @@ mod r653_a_carrier_that_fuses_its_unit_takes_one_unit_a_stay {
     use super::*;
 
     #[test]
-    fn r653_the_first_unit_to_stand_on_it_is_noted_and_no_other_may_name_its_zone_even_once_that_one_has_gone() {
+    fn r653_the_first_unit_to_stand_on_it_is_noted_and_no_other_may_name_its_zone_even_once_that_one_has_gone()
+     {
         let mut state = playing("fuser-once");
-        let holder = put(&mut state, &fuser.id, slot(P1, Row::Backrow, 2), Default::default());
+        let holder = put(
+            &mut state,
+            &fuser.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
         assert_eq!(stacked_onto(&holder).map(|id| id.to_string()), None);
-        let result = play_from(&mut state, &plain.id, Some(json!({ "row": "backrow", "lane": 2 })));
+        let result = play_from(
+            &mut state,
+            &plain.id,
+            Some(json!({ "row": "backrow", "lane": 2 })),
+        );
         assert_eq!(result.error, None);
         let rider = first_played(&result.events);
         let mut next = result.state;
@@ -628,10 +850,22 @@ mod r653_a_carrier_that_fuses_its_unit_takes_one_unit_a_stay {
         ));
         settle(&mut sink, SettleOptions::default());
         assert!(carried_at(sink.state, slot(P1, Row::Backrow, 2)).is_none());
-        let Some(held) = in_hand(sink.state, &plain.id, P1, 1).into_iter().next() else { return };
+        let Some(held) = in_hand(sink.state, &plain.id, P1, 1).into_iter().next() else {
+            return;
+        };
         assert!(!legal_zones_for(sink.state, P1, &held, &[]).contains(&zone(Row::Backrow, 2)));
-        let refused = play_from(sink.state, &plain.id, Some(json!({ "row": "backrow", "lane": 2 })));
-        assert!(refused.error.as_deref().unwrap_or_default().contains("taken its one Unit"));
+        let refused = play_from(
+            sink.state,
+            &plain.id,
+            Some(json!({ "row": "backrow", "lane": 2 })),
+        );
+        assert!(
+            refused
+                .error
+                .as_deref()
+                .unwrap_or_default()
+                .contains("taken its one Unit")
+        );
         // Leaving the field clears the note (R78): back on the field, it is a new arrival and takes one again.
         let gone = live(sink.state, &holder.id);
         bounce_card(&mut sink, &gone);
@@ -643,11 +877,24 @@ mod r653_a_carrier_that_fuses_its_unit_takes_one_unit_a_stay {
     #[test]
     fn r653_r23_an_immutable_one_takes_none_since_its_text_could_not_take_the_unit_in() {
         let mut state = playing("fuser-immutable");
-        let holder = put(&mut state, &fuser.id, slot(P1, Row::Backrow, 2), Default::default());
-        by_id_mut(&mut state, &holder.id).granted_keywords.push(Keyword::Immutable);
-        let Some(card) = in_hand(&mut state, &plain.id, P1, 1).into_iter().next() else { return };
+        let holder = put(
+            &mut state,
+            &fuser.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        by_id_mut(&mut state, &holder.id)
+            .granted_keywords
+            .push(Keyword::Immutable);
+        let Some(card) = in_hand(&mut state, &plain.id, P1, 1).into_iter().next() else {
+            return;
+        };
         assert!(!legal_zones_for(&state, P1, &card, &[]).contains(&zone(Row::Backrow, 2)));
-        let refused = play_from(&mut state, &plain.id, Some(json!({ "row": "backrow", "lane": 2 })));
+        let refused = play_from(
+            &mut state,
+            &plain.id,
+            Some(json!({ "row": "backrow", "lane": 2 })),
+        );
         assert!(refused.error.as_deref().unwrap_or_default().contains("Immutable"));
         by_id_mut(&mut state, &holder.id).granted_keywords.clear();
         assert!(legal_zones_for(&state, P1, &card, &[]).contains(&zone(Row::Backrow, 2)));

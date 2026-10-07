@@ -19,7 +19,7 @@
 use std::any::Any;
 use std::sync::Arc;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use jackioh_engine::wire::PlayerId;
 use jackioh_engine::{CreateGameArgs, LastBoardEntry};
@@ -33,7 +33,7 @@ use jackioh_server::db::store::Db;
 
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
-use crate::support::socket::{create_fake_socket, FakeSocket};
+use crate::support::socket::{FakeSocket, create_fake_socket};
 
 const MATCH_ID: &str = "match-glitch";
 const P1: &str = "profile-1";
@@ -48,7 +48,11 @@ const BOARD_AT: i64 = 1_700_000_000_000;
 /// One store call in its own transaction, as TS's `deps.store.<sub>.<method>(…)` was.
 macro_rules! store {
     ($app:expr, $t:ident => $call:expr) => {{
-        let mut $t = $app.db.begin(None).await.expect("the fake store opens a transaction");
+        let mut $t = $app
+            .db
+            .begin(None)
+            .await
+            .expect("the fake store opens a transaction");
         let out = $call;
         $t.commit().await.expect("the fake store commits");
         out
@@ -126,19 +130,28 @@ impl Logs {
 
     fn entries(&self) -> Vec<Value> {
         let bytes = self.0.lock().expect("the log buffer").clone();
-        String::from_utf8_lossy(&bytes).lines().filter_map(|line| serde_json::from_str(line).ok()).collect()
+        String::from_utf8_lossy(&bytes)
+            .lines()
+            .filter_map(|line| serde_json::from_str(line).ok())
+            .collect()
     }
 
     /// The lines that name `event` (SURFACE §11.3 keeps TS's event names), whichever field the
     /// server wrote the name in.
     fn of(&self, event: &str) -> Vec<Value> {
-        self.entries().into_iter().filter(|entry| event_of(entry) == Some(event)).collect()
+        self.entries()
+            .into_iter()
+            .filter(|entry| event_of(entry) == Some(event))
+            .collect()
     }
 }
 
 fn event_of(entry: &Value) -> Option<&str> {
     ["event", "message"].iter().find_map(|key| {
-        entry.get(*key).or_else(|| entry.get("fields").and_then(|fields| fields.get(*key))).and_then(Value::as_str)
+        entry
+            .get(*key)
+            .or_else(|| entry.get("fields").and_then(|fields| fields.get(*key)))
+            .and_then(Value::as_str)
     })
 }
 
@@ -170,7 +183,9 @@ struct WorldOptions {
 
 /// Whether `def_id` is in the seat's own hand, as its view lists it.
 fn hand_holds(view: &Value, def_id: &str) -> bool {
-    view["you"]["hand"].as_array().is_some_and(|cards| cards.iter().any(|card| card["defId"] == def_id))
+    view["you"]["hand"]
+        .as_array()
+        .is_some_and(|cards| cards.iter().any(|card| card["defId"] == def_id))
 }
 
 /// The first seed `<prefix>-<k>` whose opening deal puts each `(seat, card)` in that seat's hand:
@@ -181,7 +196,10 @@ fn seed_dealing(prefix: &str, decks: &(Vec<String>, Vec<String>), wanted: &[(Pla
         let seed = format!("{prefix}-{k}");
         let args: CreateGameArgs = from(json!({ "seed": seed, "decks": [first, second] }));
         let state = jackioh_engine::begin_game(&jackioh_engine::create_game(&args)).state;
-        if wanted.iter().all(|(seat, def_id)| hand_holds(&to_json(&jackioh_engine::view_for(&state, *seat)), def_id)) {
+        if wanted
+            .iter()
+            .all(|(seat, def_id)| hand_holds(&to_json(&jackioh_engine::view_for(&state, *seat)), def_id))
+        {
             return seed;
         }
     }
@@ -194,7 +212,15 @@ async fn open_turn_one(actor: &MatchActor) -> usize {
     let owed = actor.snapshot().mulligan_owed;
     for seat in &owed {
         let keep = hand_ids(&to_json(&actor.view_for(*seat)));
-        let reply = to_json(&actor.submit(*seat, format!("keep-{seat}"), from(json!({ "type": "mulligan", "keep": keep }))).await);
+        let reply = to_json(
+            &actor
+                .submit(
+                    *seat,
+                    format!("keep-{seat}"),
+                    from(json!({ "type": "mulligan", "keep": keep })),
+                )
+                .await,
+        );
         assert_eq!(reply["type"], "ack", "the opening mulligan was refused: {reply}");
     }
     owed.len()
@@ -203,7 +229,12 @@ async fn open_turn_one(actor: &MatchActor) -> usize {
 fn hand_ids(view: &Value) -> Vec<String> {
     view["you"]["hand"]
         .as_array()
-        .map(|cards| cards.iter().filter_map(|card| card["instanceId"].as_str().map(str::to_string)).collect())
+        .map(|cards| {
+            cards
+                .iter()
+                .filter_map(|card| card["instanceId"].as_str().map(str::to_string))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -232,7 +263,9 @@ async fn world(options: WorldOptions) -> World {
         store!(app, t => t.last_boards_put(profile, from(json!(kind)), &board, BOARD_AT as _).await.expect("lastBoards.put"));
     }
 
-    let p1_extras = options.p1_deck.unwrap_or_else(|| vec!["test-glitch-swap", "test-lethal"]);
+    let p1_extras = options
+        .p1_deck
+        .unwrap_or_else(|| vec!["test-glitch-swap", "test-lethal"]);
     let p2_extras = options.p2_deck.unwrap_or_default();
     let decks = (fake_deck(&p1_extras), fake_deck(&p2_extras));
     let wanted: Vec<(PlayerId, &str)> = p1_extras.iter().map(|card| (PlayerId::P1, *card)).collect();
@@ -254,19 +287,40 @@ async fn world(options: WorldOptions) -> World {
         .await
         .expect("the registry starts the match");
 
-    let actor = app.matches.actor_for(&app, MATCH_ID).await.expect("the match's actor");
+    let actor = app
+        .matches
+        .actor_for(&app, MATCH_ID)
+        .await
+        .expect("the match's actor");
     let opening = open_turn_one(&actor).await;
     let a = create_fake_socket();
     let b = create_fake_socket();
-    app.matches.attach(&app, MATCH_ID, P1, a.socket()).await.expect("P1 attaches");
-    app.matches.attach(&app, MATCH_ID, P2, b.socket()).await.expect("P2 attaches");
+    app.matches
+        .attach(&app, MATCH_ID, P1, a.socket())
+        .await
+        .expect("P1 attaches");
+    app.matches
+        .attach(&app, MATCH_ID, P2, b.socket())
+        .await
+        .expect("P2 attaches");
     actor.idle().await;
-    World { app, a, b, opening, _engine: engine }
+    World {
+        app,
+        a,
+        b,
+        opening,
+        _engine: engine,
+    }
 }
 
 /// One client frame, and the actor's queue drained behind it.
 async fn frame(w: &World, socket: &FakeSocket, nonce: &str, body: Value) -> Option<Value> {
-    let actor = w.app.matches.actor_for(&w.app, MATCH_ID).await.expect("the match's actor");
+    let actor = w
+        .app
+        .matches
+        .actor_for(&w.app, MATCH_ID)
+        .await
+        .expect("the match's actor");
     socket.clear();
     let mut action = body;
     action["nonce"] = json!(nonce);
@@ -278,17 +332,30 @@ async fn frame(w: &World, socket: &FakeSocket, nonce: &str, body: Value) -> Opti
 }
 
 fn last_view(socket: &FakeSocket) -> Value {
-    socket.of_type("view").last().map(|frame| frame["view"].clone()).expect("no view was sent")
+    socket
+        .of_type("view")
+        .last()
+        .map(|frame| frame["view"].clone())
+        .expect("no view was sent")
 }
 
 /// The seat every logged action of the game was stamped with, after the opening.
 async fn stamped(w: &World) -> Vec<Value> {
     let rows = table(&w.app, |data| json!(data.tables.match_actions)).await;
-    rows.iter().skip(w.opening).map(|row| row["action"]["playerId"].clone()).collect()
+    rows.iter()
+        .skip(w.opening)
+        .map(|row| row["action"]["playerId"].clone())
+        .collect()
 }
 
 async fn idle(w: &World) {
-    w.app.matches.actor_for(&w.app, MATCH_ID).await.expect("the match's actor").idle().await;
+    w.app
+        .matches
+        .actor_for(&w.app, MATCH_ID)
+        .await
+        .expect("the match's actor")
+        .idle()
+        .await;
 }
 
 async fn match_row(app: &Arc<App>, match_id: &str) -> Option<Value> {
@@ -300,20 +367,27 @@ mod glitchs_swap {
     use super::*;
 
     #[tokio::test]
-    async fn r677_routes_each_accounts_socket_to_the_seat_it_now_plays_views_legal_actions_and_accepted_actions() {
+    async fn r677_routes_each_accounts_socket_to_the_seat_it_now_plays_views_legal_actions_and_accepted_actions()
+     {
         let w = world(WorldOptions::default()).await;
         assert_eq!(last_view(&w.a)["viewer"], "p1");
 
         // P1 plays Glitch as p1: the seats swap.
         let glitch = hand_card(&last_view(&w.a), "test-glitch-swap");
-        let played = frame(&w, &w.a, "n1", json!({ "type": "play", "instanceId": glitch })).await.expect("a reply");
+        let played = frame(&w, &w.a, "n1", json!({ "type": "play", "instanceId": glitch }))
+            .await
+            .expect("a reply");
         assert_eq!(played["type"], "ack");
         assert_eq!(last_view(&w.a)["viewer"], "p2");
         assert_eq!(last_view(&w.b)["viewer"], "p1");
         // The legal actions travel with the view of the seat played now: P2 (p1, the active seat) may
         // play p1's hand, P1 (p2) only concede.
         let legal_of = |socket: &FakeSocket| -> Value {
-            socket.of_type("view").last().map(|frame| frame["legal"].clone()).unwrap_or_else(|| json!([]))
+            socket
+                .of_type("view")
+                .last()
+                .map(|frame| frame["legal"].clone())
+                .unwrap_or_else(|| json!([]))
         };
         let lethal = hand_card(&last_view(&w.b), "test-lethal");
         assert!(
@@ -327,18 +401,23 @@ mod glitchs_swap {
         assert_eq!(legal_of(&w.a), json!([{ "type": "concede" }]));
 
         // An action from P1 is stamped p2 now — it is not p2's turn — and the same from P2 is p1's.
-        let refused = frame(&w, &w.a, "n2", json!({ "type": "endTurn" })).await.expect("a reply");
+        let refused = frame(&w, &w.a, "n2", json!({ "type": "endTurn" }))
+            .await
+            .expect("a reply");
         assert_eq!(refused["type"], "error");
         assert_eq!(refused["code"], "illegal_action");
         assert_eq!(stamped(&w).await, vec![json!("p1")]);
-        let ended = frame(&w, &w.b, "n3", json!({ "type": "endTurn" })).await.expect("a reply");
+        let ended = frame(&w, &w.b, "n3", json!({ "type": "endTurn" }))
+            .await
+            .expect("a reply");
         assert_eq!(ended["type"], "ack");
         assert_eq!(stamped(&w).await, vec![json!("p1"), json!("p1")]);
         assert_eq!(last_view(&w.a)["active"], "p2");
     }
 
     #[tokio::test]
-    async fn r677_a_client_frame_cannot_move_an_account_a_player_id_on_the_wire_is_discarded_before_and_after_a_swap() {
+    async fn r677_a_client_frame_cannot_move_an_account_a_player_id_on_the_wire_is_discarded_before_and_after_a_swap()
+     {
         let w = world(WorldOptions::default()).await;
         w.a.receive_json(json!({
             "type": "action",
@@ -352,7 +431,9 @@ mod glitchs_swap {
         // p2's turn: P2 plays nothing that swaps, and P1's smuggled seat still does not move it.
         frame(&w, &w.b, "x2", json!({ "type": "endTurn" })).await;
         let glitch = hand_card(&last_view(&w.a), "test-glitch-swap");
-        let played = frame(&w, &w.a, "x3", json!({ "type": "play", "instanceId": glitch })).await.expect("a reply");
+        let played = frame(&w, &w.a, "x3", json!({ "type": "play", "instanceId": glitch }))
+            .await
+            .expect("a reply");
         assert_eq!(played["type"], "ack");
         assert_eq!(last_view(&w.a)["viewer"], "p2");
         w.a.receive_json(json!({
@@ -371,13 +452,16 @@ mod glitchs_swap {
     }
 
     #[tokio::test]
-    async fn r677_credits_the_result_by_the_seats_as_they_are_played_at_the_end_the_winning_seats_current_account_wins_elo_included() {
+    async fn r677_credits_the_result_by_the_seats_as_they_are_played_at_the_end_the_winning_seats_current_account_wins_elo_included()
+     {
         let w = world(WorldOptions::default()).await;
         let glitch = hand_card(&last_view(&w.a), "test-glitch-swap");
         frame(&w, &w.a, "n1", json!({ "type": "play", "instanceId": glitch })).await;
         // P2 now plays p1, whose hand holds test-lethal: seat p1 wins.
         let lethal = hand_card(&last_view(&w.b), "test-lethal");
-        let played = frame(&w, &w.b, "n2", json!({ "type": "play", "instanceId": lethal })).await.expect("a reply");
+        let played = frame(&w, &w.b, "n2", json!({ "type": "play", "instanceId": lethal }))
+            .await
+            .expect("a reply");
         assert_eq!(played["type"], "ack");
 
         let results = table(&w.app, |data| json!(data.tables.results)).await;
@@ -400,7 +484,12 @@ mod glitchs_swap {
         let w = world(WorldOptions::default()).await;
         let glitch = hand_card(&last_view(&w.a), "test-glitch-swap");
         frame(&w, &w.a, "n1", json!({ "type": "play", "instanceId": glitch })).await;
-        let actor = w.app.matches.actor_for(&w.app, MATCH_ID).await.expect("the match's actor");
+        let actor = w
+            .app
+            .matches
+            .actor_for(&w.app, MATCH_ID)
+            .await
+            .expect("the match's actor");
         actor.detach(PlayerId::P1); // P1's connection: the account that began in p1
         actor.idle().await;
         let clocks = to_json(&actor.clocks());
@@ -416,7 +505,11 @@ mod glitchs_swap {
         w.app.matches.stop(MATCH_ID).await;
         let fresh = create_fake_socket();
         // TS: the attach resolves with the seat P1 began in, "p1" (SURFACE §11.2 answers `()`).
-        w.app.matches.attach(&w.app, MATCH_ID, P1, fresh.socket()).await.expect("P1 attaches to the rebuilt actor");
+        w.app
+            .matches
+            .attach(&w.app, MATCH_ID, P1, fresh.socket())
+            .await
+            .expect("P1 attaches to the rebuilt actor");
         idle(&w).await;
         assert_eq!(last_view(&fresh)["viewer"], "p2");
     }
@@ -458,7 +551,11 @@ mod glitchs_boards {
         let row = match_row(&w.app, MATCH_ID).await.expect("the match row");
         let frozen = row["glitchBoards"].as_array().cloned().unwrap_or_default();
         assert_eq!(frozen.len(), 2);
-        let others = [json!(board(OTHER_5)), json!(board(OTHER_6)), json!(board(OTHER_7))];
+        let others = [
+            json!(board(OTHER_5)),
+            json!(board(OTHER_6)),
+            json!(board(OTHER_7)),
+        ];
         for entry in &frozen {
             assert!(others.contains(entry), "{entry} is not another player's board");
         }
@@ -466,23 +563,51 @@ mod glitchs_boards {
 
         // A rebuild folds with the same boards (§9.3): TS spied on the port's `fold`; the rebuilt
         // state holds exactly the boards it was folded with, and folds to the same game.
-        let actor = w.app.matches.actor_for(&w.app, MATCH_ID).await.expect("the match's actor");
+        let actor = w
+            .app
+            .matches
+            .actor_for(&w.app, MATCH_ID)
+            .await
+            .expect("the match's actor");
         let live = actor.engine_state();
         w.app.matches.stop(MATCH_ID).await;
-        let rebuilt = w.app.matches.actor_for(&w.app, MATCH_ID).await.expect("the rebuilt actor").engine_state();
-        assert_eq!(to_json(&rebuilt)["glitchBoards"], json!({ "p1": frozen[0], "p2": frozen[1] }));
-        assert_eq!(jackioh_engine::hash_state(&rebuilt), jackioh_engine::hash_state(&live));
+        let rebuilt = w
+            .app
+            .matches
+            .actor_for(&w.app, MATCH_ID)
+            .await
+            .expect("the rebuilt actor")
+            .engine_state();
+        assert_eq!(
+            to_json(&rebuilt)["glitchBoards"],
+            json!({ "p1": frozen[0], "p2": frozen[1] })
+        );
+        assert_eq!(
+            jackioh_engine::hash_state(&rebuilt),
+            jackioh_engine::hash_state(&live)
+        );
     }
 
     #[tokio::test]
     async fn r678_passes_what_exists_one_other_board_leaves_the_second_seats_empty_none_omits_the_field() {
-        let one = world(WorldOptions { boards: vec![("profile-5", "server", board(OTHER_5))], ..WorldOptions::default() }).await;
+        let one = world(WorldOptions {
+            boards: vec![("profile-5", "server", board(OTHER_5))],
+            ..WorldOptions::default()
+        })
+        .await;
         let row = match_row(&one.app, MATCH_ID).await.expect("the match row");
         assert_eq!(row["glitchBoards"], json!([board(OTHER_5), []]));
 
-        let none = world(WorldOptions { boards: vec![(P1, "server", board(OWN_1))], ..WorldOptions::default() }).await;
+        let none = world(WorldOptions {
+            boards: vec![(P1, "server", board(OWN_1))],
+            ..WorldOptions::default()
+        })
+        .await;
         let row = match_row(&none.app, MATCH_ID).await.expect("the match row");
-        assert!(row.get("glitchBoards").is_none_or(Value::is_null), "no other board, no field: {row}");
+        assert!(
+            row.get("glitchBoards").is_none_or(Value::is_null),
+            "no other board, no field: {row}"
+        );
     }
 }
 
@@ -491,7 +616,10 @@ mod glitchs_void {
     use super::*;
 
     fn void_decks() -> WorldOptions {
-        WorldOptions { p1_deck: Some(vec!["test-glitch-void"]), ..WorldOptions::default() }
+        WorldOptions {
+            p1_deck: Some(vec!["test-glitch-void"]),
+            ..WorldOptions::default()
+        }
     }
 
     async fn play_the_void(w: &World) {
@@ -506,16 +634,43 @@ mod glitchs_void {
         let w = world(void_decks()).await;
         play_the_void(&w).await;
 
-        assert_eq!(table(&w.app, |data| json!(data.tables.results)).await, Vec::<Value>::new());
-        assert_eq!(table(&w.app, |data| json!(data.tables.game_records)).await, Vec::<Value>::new());
-        assert_eq!(table(&w.app, |data| json!(data.tables.last_boards)).await, Vec::<Value>::new());
-        assert_eq!(table(&w.app, |data| json!(data.tables.rated_games)).await, Vec::<Value>::new());
+        assert_eq!(
+            table(&w.app, |data| json!(data.tables.results)).await,
+            Vec::<Value>::new()
+        );
+        assert_eq!(
+            table(&w.app, |data| json!(data.tables.game_records)).await,
+            Vec::<Value>::new()
+        );
+        assert_eq!(
+            table(&w.app, |data| json!(data.tables.last_boards)).await,
+            Vec::<Value>::new()
+        );
+        assert_eq!(
+            table(&w.app, |data| json!(data.tables.rated_games)).await,
+            Vec::<Value>::new()
+        );
         let profiles = table(&w.app, |data| json!(data.tables.profiles)).await;
-        assert_eq!(profiles.iter().map(|row| row["rating"].as_f64()).collect::<Vec<_>>(), vec![Some(1000.0), Some(1000.0)]);
+        assert_eq!(
+            profiles
+                .iter()
+                .map(|row| row["rating"].as_f64())
+                .collect::<Vec<_>>(),
+            vec![Some(1000.0), Some(1000.0)]
+        );
         // As if it never existed: no row, no log, and both players free to queue.
         assert_eq!(match_row(&w.app, MATCH_ID).await, None);
-        assert_eq!(table(&w.app, |data| json!(data.tables.match_actions)).await, Vec::<Value>::new());
-        assert_eq!(profiles.iter().map(|row| row["inMatchId"].clone()).collect::<Vec<_>>(), vec![Value::Null, Value::Null]);
+        assert_eq!(
+            table(&w.app, |data| json!(data.tables.match_actions)).await,
+            Vec::<Value>::new()
+        );
+        assert_eq!(
+            profiles
+                .iter()
+                .map(|row| row["inMatchId"].clone())
+                .collect::<Vec<_>>(),
+            vec![Value::Null, Value::Null]
+        );
         assert!(!w.app.matches.has(MATCH_ID));
     }
 
@@ -527,9 +682,16 @@ mod glitchs_void {
             assert!(!socket.is_open());
             assert_eq!(socket.close_code(), Some(MATCH_VOIDED_CLOSE_CODE));
         }
-        assert_eq!(last_view(&w.b)["result"], json!({ "winner": "draw", "reason": "voided" }));
+        assert_eq!(
+            last_view(&w.b)["result"],
+            json!({ "winner": "draw", "reason": "voided" })
+        );
         // A socket that arrives later finds no match.
-        let late = w.app.matches.attach(&w.app, MATCH_ID, P1, create_fake_socket().socket()).await;
+        let late = w
+            .app
+            .matches
+            .attach(&w.app, MATCH_ID, P1, create_fake_socket().socket())
+            .await;
         let refusal = late.expect_err("a voided match takes no socket");
         assert!(format!("{refusal:?}").contains("no such match"), "{refusal:?}");
     }
@@ -561,7 +723,12 @@ mod glitchs_void {
                 "status": "active",
                 "rating": 1000,
             }));
-            tokens.push(add_user(&app, &format!("user-{id}"), &format!("{id}@example.test"), true));
+            tokens.push(add_user(
+                &app,
+                &format!("user-{id}"),
+                &format!("{id}@example.test"),
+                true,
+            ));
         }
         // TS's trios held one-card decks that the scripted directory never built a game from; the
         // real registry starts the game, so each deck is a legal one of real cards.
@@ -596,8 +763,14 @@ mod glitchs_void {
         .expect("the series starts");
         tx.commit().await.expect("the series commits");
         for token in &tokens {
-            let (status, _, body) =
-                call(&app, "POST", "/api/series/series-glitch/pick", Some(token.as_str()), json!({ "slot": 0 })).await;
+            let (status, _, body) = call(
+                &app,
+                "POST",
+                "/api/series/series-glitch/pick",
+                Some(token.as_str()),
+                json!({ "slot": 0 }),
+            )
+            .await;
             assert_eq!(status, 200, "{body}");
         }
         assert_eq!(logs.of("match.started").len(), 1);
@@ -606,24 +779,38 @@ mod glitchs_void {
 
         // The actor's void: the registry has let the actor go, then `voidMatch`.
         app.matches.stop(MATCH_ID).await;
-        void_match(&app, from(json!({ "matchId": MATCH_ID, "players": [P1, P2], "at": first_start["createdAt"] })))
-            .await
-            .expect("the void lands");
+        void_match(
+            &app,
+            from(json!({ "matchId": MATCH_ID, "players": [P1, P2], "at": first_start["createdAt"] })),
+        )
+        .await
+        .expect("the void lands");
 
         let after = series_row(&app).await;
         assert_eq!(after["status"], "playing");
         assert_eq!(after["games"], before["games"]);
         assert_eq!(after["nextMatchId"], MATCH_ID);
-        assert_eq!(table(&app, |data| json!(data.tables.results)).await, Vec::<Value>::new());
+        assert_eq!(
+            table(&app, |data| json!(data.tables.results)).await,
+            Vec::<Value>::new()
+        );
         // Started again: the same id, seats and seed, and both players are in it.
         assert_eq!(logs.of("match.started").len(), 2);
-        let again = match_row(&app, MATCH_ID).await.expect("the game's match, started again");
+        let again = match_row(&app, MATCH_ID)
+            .await
+            .expect("the game's match, started again");
         for field in ["id", "seed", "players", "decks", "catalogVersion", "ranked"] {
             assert_eq!(again[field], first_start[field], "{field}");
         }
         assert_eq!(again["status"], "live");
         let profiles = table(&app, |data| json!(data.tables.profiles)).await;
-        assert_eq!(profiles.iter().map(|row| row["inMatchId"].clone()).collect::<Vec<_>>(), vec![json!(MATCH_ID), json!(MATCH_ID)]);
+        assert_eq!(
+            profiles
+                .iter()
+                .map(|row| row["inMatchId"].clone())
+                .collect::<Vec<_>>(),
+            vec![json!(MATCH_ID), json!(MATCH_ID)]
+        );
     }
 
     /// Every playable catalog id, in `catalog.json` order.
@@ -631,12 +818,20 @@ mod glitchs_void {
         jackioh_cards::register_all();
         jackioh_cards::CATALOG
             .iter()
-            .filter(|(_, def)| !def.token && !to_json(&def.tags).as_array().is_some_and(|tags| tags.contains(&json!("Token"))))
+            .filter(|(_, def)| {
+                !def.token
+                    && !to_json(&def.tags)
+                        .as_array()
+                        .is_some_and(|tags| tags.contains(&json!("Token")))
+            })
             .map(|(id, _)| id.clone())
             .collect()
     }
 
     async fn series_row(app: &Arc<App>) -> Value {
-        to_json(&store!(app, t => t.series_get("series-glitch").await.expect("series.get")).expect("the series row"))
+        to_json(
+            &store!(app, t => t.series_get("series-glitch").await.expect("series.get"))
+                .expect("the series row"),
+        )
     }
 }

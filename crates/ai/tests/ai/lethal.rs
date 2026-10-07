@@ -13,15 +13,17 @@
 use indexmap::IndexSet;
 use jackioh_ai::{
     AI_BUDGET, AI_GATE, AI_GATE_BUDGET, AI_SEARCH, DecisionReason, DeterminizeOptions, MatchHooks, Matchup,
-    NodeCounter, create_node_counter, damage_past_taunts, determinize, find_lethal, find_lethal_with_quick_nodes,
-    game_config, play_match, ready_gap, redact, simulate,
+    NodeCounter, create_node_counter, damage_past_taunts, determinize, find_lethal,
+    find_lethal_with_quick_nodes, game_config, play_match, ready_gap, redact, simulate,
 };
 use jackioh_engine::testkit::{
-    ActionBody, ActionType, CardInstance, GameState, PLAYER_IDS, PlayerId, Row, Value, Winner, ZoneChoice, create_rng,
-    find_instance, json, legal_actions, opponent_of, unit_view,
+    ActionBody, ActionType, CardInstance, GameState, PLAYER_IDS, PlayerId, Row, Value, Winner, ZoneChoice,
+    create_rng, find_instance, json, legal_actions, opponent_of, unit_view,
 };
 
-use super::support::{AI, HUMAN, every_card, random_policy_states, register_cards, run_puzzle, scenario, trace};
+use super::support::{
+    AI, HUMAN, every_card, random_policy_states, register_cards, run_puzzle, scenario, trace,
+};
 
 /// p1 (the AI) on turn 9 with 4 crystals: Pointmaster 7/1, Mr. Vanilla 4/4 and Tempo Timmy 3/3
 /// ready on the field, a Radiant Lava Golem, Lunar Eclipse and KY's Math Equation in hand. p2 stands
@@ -103,7 +105,10 @@ fn play_out(state: &GameState, line: &[ActionBody]) -> GameState {
     for action in line {
         match simulate(&current, AI, action, &counter) {
             Some(Ok(next)) => current = next,
-            _ => panic!("the line was refused at {}", serde_json::to_string(action).unwrap()),
+            _ => panic!(
+                "the line was refused at {}",
+                serde_json::to_string(action).unwrap()
+            ),
         }
     }
     current
@@ -132,7 +137,11 @@ mod the_lethal_solvers_walks {
                 }),
                 x: None,
                 embiggen: None,
-                tributes: Some(vec![vanilla.id.clone(), menace.id.clone(), enemy_golem.id.clone()]),
+                tributes: Some(vec![
+                    vanilla.id.clone(),
+                    menace.id.clone(),
+                    enemy_golem.id.clone(),
+                ]),
                 targets: None,
                 modes: None,
                 plague: None,
@@ -196,7 +205,10 @@ mod the_lethal_solvers_walks {
         let first = line.first();
         assert_eq!(first.map(ActionBody::action_type), Some(ActionType::Play));
         let state = wide_board();
-        let enemy_taunts = [mine(&state, HUMAN, "core-019").id, mine(&state, HUMAN, "core-055").id];
+        let enemy_taunts = [
+            mine(&state, HUMAN, "core-019").id,
+            mine(&state, HUMAN, "core-055").id,
+        ];
         let tributes: Vec<String> = match first {
             Some(ActionBody::Play { tributes, .. }) => tributes.clone().unwrap_or_default(),
             _ => vec![],
@@ -206,7 +218,9 @@ mod the_lethal_solvers_walks {
         }
         for det in &dets {
             assert_eq!(
-                play_out(det, &line).result.and_then(|result| result.winner.player()),
+                play_out(det, &line)
+                    .result
+                    .and_then(|result| result.winner.player()),
                 Some(AI)
             );
         }
@@ -219,7 +233,14 @@ mod the_lethal_solvers_walks {
         let dets = worlds(&wide_board(), "lethal-wide", 2);
         let counter = create_node_counter(AI_BUDGET.nodes, None);
         assert!(
-            find_lethal_with_quick_nodes(&dets, AI, &counter, AI_BUDGET.lethal_nodes, AI_BUDGET.lethal_nodes).is_none()
+            find_lethal_with_quick_nodes(
+                &dets,
+                AI,
+                &counter,
+                AI_BUDGET.lethal_nodes,
+                AI_BUDGET.lethal_nodes
+            )
+            .is_none()
         );
         assert_eq!(counter.used(), AI_BUDGET.lethal_nodes);
     }
@@ -236,7 +257,15 @@ mod the_lethal_solvers_walks {
             "p2": { "field": ["core-008"], "library": ["core-008", "core-011"], "health": 20 },
         }));
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        assert!(find_lethal(&worlds(s.state(), "lethal-small", 2), AI, &counter, AI_BUDGET.lethal_nodes).is_none());
+        assert!(
+            find_lethal(
+                &worlds(s.state(), "lethal-small", 2),
+                AI,
+                &counter,
+                AI_BUDGET.lethal_nodes
+            )
+            .is_none()
+        );
         assert!(counter.used() > 0);
         assert!(counter.used() < AI_SEARCH.lethal_quick_nodes as usize);
     }

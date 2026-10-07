@@ -22,7 +22,11 @@ static NONCE: AtomicU32 = AtomicU32::new(0);
 fn game(seed: &str) -> GameState {
     let mut ready = begin_game(&with_play_a(new_game(seed, None))).state;
     for player in PLAYER_IDS {
-        let keep: Vec<String> = ready.players[player].hand.iter().map(|card| card.id.clone()).collect();
+        let keep: Vec<String> = ready.players[player]
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
         ready = must(&ready, player, json!({ "type": "mulligan", "keep": keep })).state;
     }
     for player in PLAYER_IDS {
@@ -47,9 +51,16 @@ fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
 
 /// TS `one`: a card put in `player`'s hand with the face asked for; answers its copy as it stands.
 fn one(state: &mut GameState, player: PlayerId, def_id: &str, radiant: bool) -> CardInstance {
-    let card = in_hand(state, def_id, player, 1).into_iter().next().expect("no card");
-    find_instance_mut(state, &card.id).expect("the card is in the hand").radiant = radiant;
-    find_instance(state, &card.id).cloned().expect("the card is in the hand")
+    let card = in_hand(state, def_id, player, 1)
+        .into_iter()
+        .next()
+        .expect("no card");
+    find_instance_mut(state, &card.id)
+        .expect("the card is in the hand")
+        .radiant = radiant;
+    find_instance(state, &card.id)
+        .cloned()
+        .expect("the card is in the hand")
 }
 
 const ENEMY_HERO: Selection = Selection::Hero { player: PlayerId::P2 };
@@ -58,7 +69,12 @@ const ENEMY_HERO: Selection = Selection::Hero { player: PlayerId::P2 };
 fn pacted(seed: &str, radiant: bool) -> GameState {
     let mut state = game(seed);
     let pact = one(&mut state, PlayerId::P1, &PA.pact.id, radiant);
-    must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": pact.id })).state
+    must(
+        &state,
+        PlayerId::P1,
+        json!({ "type": "play", "instanceId": pact.id }),
+    )
+    .state
 }
 
 fn values(events: &[GameEvent]) -> Vec<Value> {
@@ -70,7 +86,10 @@ fn values(events: &[GameEvent]) -> Vec<Value> {
 
 /// TS `eventsOfType`, over JSON.
 fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
-    values(events).into_iter().filter(|event| event["type"] == kind).collect()
+    values(events)
+        .into_iter()
+        .filter(|event| event["type"] == kind)
+        .collect()
 }
 
 /// `eventsOfType(events, kind)[0]?.[field]`: `Null` when there is no such event.
@@ -90,18 +109,26 @@ fn pluck(events: &[Value], field: &str) -> Vec<Value> {
 /// element and of the same length.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected.iter().all(|(key, want)| {
-            actual.get(key).is_some_and(|got| matches_object(got, want))
-        }),
+        (Value::Object(actual), Value::Object(expected)) => expected
+            .iter()
+            .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
         (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(got, want)| matches_object(got, want))
+            actual.len() == expected.len()
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(got, want)| matches_object(got, want))
         }
         _ => actual == expected,
     }
 }
 
 fn pending_id(state: &GameState) -> String {
-    state.pending.as_ref().map(|pending| pending.id.clone()).unwrap_or_default()
+    state
+        .pending
+        .as_ref()
+        .map(|pending| pending.id.clone())
+        .unwrap_or_default()
 }
 
 /// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does, lent with the
@@ -152,7 +179,10 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         );
         let (asked, events) = (played.state, played.events);
 
-        let replaced = of_type(&events, "transformed").first().cloned().unwrap_or(Value::Null);
+        let replaced = of_type(&events, "transformed")
+            .first()
+            .cloned()
+            .unwrap_or(Value::Null);
         assert!(
             matches_object(
                 &replaced,
@@ -165,10 +195,24 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         assert_eq!(asked.players.p1.mana.current, mana - 1);
         assert!(!asked.players.p1.hand.iter().any(|card| card.id == crier.id));
         // The Book of Flame asks for its target now, before the announce.
-        assert_eq!(asked.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Target));
-        assert!(asked.pending.as_ref().is_some_and(|pending| pending.prompt.contains("Play:")));
+        assert_eq!(
+            asked.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Target)
+        );
+        assert!(
+            asked
+                .pending
+                .as_ref()
+                .is_some_and(|pending| pending.prompt.contains("Play:"))
+        );
         assert_eq!(of_type(&events, "cardAnnounced"), Vec::<Value>::new());
-        let resolving: Vec<String> = asked.players.p1.resolving.iter().map(|card| card.id.clone()).collect();
+        let resolving: Vec<String> = asked
+            .players
+            .p1
+            .resolving
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
         assert_eq!(resolving, vec![book_id.clone()]);
 
         let answered = must(
@@ -177,7 +221,10 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
             json!({ "type": "answer", "choiceId": pending_id(&asked), "selection": [ENEMY_HERO] }),
         );
         let (after, resolved) = (answered.state, answered.events);
-        let announced = of_type(&resolved, "cardAnnounced").first().cloned().unwrap_or(Value::Null);
+        let announced = of_type(&resolved, "cardAnnounced")
+            .first()
+            .cloned()
+            .unwrap_or(Value::Null);
         assert!(
             matches_object(
                 &announced,
@@ -199,7 +246,10 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 4);
         // The crier's Cry never happened and nothing stands in lane 3.
         assert!(zones::card_at(&after, slot(PlayerId::P1, Row::Units, 3)).is_none());
-        assert_eq!(json!(after.players.p1.turn_log.played_by_type), json!({ "Spell": 2 }));
+        assert_eq!(
+            json!(after.players.p1.turn_log.played_by_type),
+            json!({ "Spell": 2 })
+        );
         assert!(after.players.p1.graveyard.iter().any(|card| card.id == book_id));
     }
 
@@ -208,10 +258,16 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
     fn r449_r177_the_other_player_never_reads_the_card_that_was_replaced_in_the_hand() {
         let mut state = pacted("r449-hidden", false);
         let crier = one(&mut state, PlayerId::P1, &PA.crier.id, false);
-        let asked = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": crier.id })).state;
+        let asked = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": crier.id }),
+        )
+        .state;
         let theirs = view_for(&asked, PlayerId::P2).events;
         assert_eq!(first_field(&theirs, "transformed", "fromDefId"), json!(HIDDEN_ID));
-        let text = serde_json::to_string(&view_for(&asked, PlayerId::P2).events).expect("the events serialise");
+        let text =
+            serde_json::to_string(&view_for(&asked, PlayerId::P2).events).expect("the events serialise");
         assert!(!text.contains(PA.crier.id.as_str()), "{text}");
     }
 
@@ -220,7 +276,12 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
     fn r449_the_radiant_modifier_replaces_with_the_radiant_card() {
         let mut state = pacted("r449-radiant", true);
         let ping = one(&mut state, PlayerId::P1, &PA.ping.id, false);
-        let asked = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": ping.id })).state;
+        let asked = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": ping.id }),
+        )
+        .state;
         let after = must(
             &asked,
             PlayerId::P1,
@@ -241,10 +302,20 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
     #[test]
     fn r449_r70_a_cast_is_a_play_and_is_replaced_too() {
         let mut state = pacted("r449-cast", false);
-        let ping = new_instance(&mut state, &PA.ping.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let ping = new_instance(
+            &mut state,
+            &PA.ping.id,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
         let events = cast_and_settle(&mut state, &ping);
         assert_eq!(first_field(&events, "transformed", "toDefId"), json!(PA.book.id));
-        assert!(state.pending.as_ref().is_some_and(|pending| pending.prompt.contains("Cast:")));
+        assert!(
+            state
+                .pending
+                .as_ref()
+                .is_some_and(|pending| pending.prompt.contains("Cast:"))
+        );
         let after = must(
             &state,
             PlayerId::P1,
@@ -265,7 +336,10 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
             json!({ "type": "play", "instanceId": book.id, "targets": [ENEMY_HERO] }),
         );
         assert_eq!(of_type(&played.events, "transformed"), Vec::<Value>::new());
-        assert_eq!(pluck(&of_type(&played.events, "cardPlayed"), "instanceId"), vec![json!(book.id)]);
+        assert_eq!(
+            pluck(&of_type(&played.events, "cardPlayed"), "instanceId"),
+            vec![json!(book.id)]
+        );
         assert_eq!(played.state.players.p2.hero.health, HERO_HEALTH - 4);
     }
 
@@ -284,7 +358,12 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
             },
         });
         let ping = one(&mut state, PlayerId::P1, &PA.ping.id, false);
-        let after = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": ping.id })).state;
+        let after = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": ping.id }),
+        )
+        .state;
         assert_eq!(
             zones::card_at(&after, slot(PlayerId::P1, Row::Units, 2)).map(|card| card.def_id.clone()),
             Some(PA.crier.id.clone())
@@ -300,7 +379,11 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         after = must(&after, PlayerId::P2, json!({ "type": "endTurn" })).state;
         after.players.p1.mana.current = 8;
         let ping = one(&mut after, PlayerId::P1, &PA.ping.id, false);
-        let played = must(&after, PlayerId::P1, json!({ "type": "play", "instanceId": ping.id }));
+        let played = must(
+            &after,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": ping.id }),
+        );
         assert_eq!(of_type(&played.events, "transformed"), Vec::<Value>::new());
         assert!(
             !after
@@ -320,7 +403,12 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         fn run() -> (String, String, String) {
             let mut state = pacted("r449-pause", false);
             let crier = one(&mut state, PlayerId::P1, &PA.crier.id, false);
-            let asked = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": crier.id })).state;
+            let asked = must(
+                &state,
+                PlayerId::P1,
+                json!({ "type": "play", "instanceId": crier.id }),
+            )
+            .state;
             let action: Action = json_as(json!({
                 "type": "answer",
                 "choiceId": pending_id(&asked),
@@ -333,7 +421,11 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
                     .expect("the state parses back");
             let live = reduce(&asked, &action);
             let revived = reduce(&round, &action);
-            (hash_state(&asked), hash_state(&live.state), hash_state(&revived.state))
+            (
+                hash_state(&asked),
+                hash_state(&live.state),
+                hash_state(&revived.state),
+            )
         }
         let first = run();
         let second = run();
@@ -345,10 +437,20 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
     #[test]
     fn r449_a_counter_reads_the_replacements_announce_and_cancels_it() {
         let mut state = pacted("r449-counter", false);
-        put(&mut state, &PA.refusal.id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &PA.refusal.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
         let mine = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
         let ping = one(&mut state, PlayerId::P1, &PA.ping.id, false);
-        let asked = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": ping.id })).state;
+        let asked = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": ping.id }),
+        )
+        .state;
         let answered = must(
             &asked,
             PlayerId::P1,
@@ -358,7 +460,10 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
                 "selection": [{ "pick": "instance", "instanceId": mine.id }],
             }),
         );
-        assert_eq!(first_field(&answered.events, "countered", "defId"), json!(PA.book.id));
+        assert_eq!(
+            first_field(&answered.events, "countered", "defId"),
+            json!(PA.book.id)
+        );
         assert_eq!(
             zones::card_at(&answered.state, slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
             Some(0)
@@ -373,17 +478,33 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
     #[test]
     fn r449_every_fruit_its_controller_plays_becomes_radiant_as_it_is_played_and_nothing_else_does() {
         let mut state = game("r213-produce");
-        put(&mut state, &PA.produce.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &PA.produce.id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         let pear = one(&mut state, PlayerId::P1, &PA.pear.id, false);
         let ping = one(&mut state, PlayerId::P1, &PA.ping.id, false);
 
-        let first = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": pear.id }));
-        assert_eq!(pluck(&of_type(&first.events, "radiantSet"), "instanceId"), vec![json!(pear.id)]);
+        let first = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": pear.id }),
+        );
+        assert_eq!(
+            pluck(&of_type(&first.events, "radiantSet"), "instanceId"),
+            vec![json!(pear.id)]
+        );
         assert_eq!(
             zones::card_at(&first.state, slot(PlayerId::P1, Row::Units, 1)).map(|card| card.radiant),
             Some(true)
         );
-        let second = must(&first.state, PlayerId::P1, json!({ "type": "play", "instanceId": ping.id }));
+        let second = must(
+            &first.state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": ping.id }),
+        );
         assert_eq!(of_type(&second.events, "radiantSet"), Vec::<Value>::new());
     }
 
@@ -391,14 +512,22 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
     #[test]
     fn r449_r214_step_1_reads_the_radiant_face_so_the_play_carries_that_faces_choices() {
         let mut state = game("r214-produce");
-        put(&mut state, &PA.produce.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &PA.produce.id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         let apple = one(&mut state, PlayerId::P1, &PA.apple.id, false);
         assert!(play_choices::resolving_face(&state, PlayerId::P1, &apple, 1).radiant);
         let plays = play_choices::play_actions_for(&state, PlayerId::P1, &apple);
-        assert!(plays
-            .iter()
-            .all(|play| play.targets.as_ref().map_or(0, |targets| targets.len()) == 1));
-        let wanted: ActionBody = json_as(json!({ "type": "play", "instanceId": apple.id, "targets": [ENEMY_HERO] }));
+        assert!(
+            plays
+                .iter()
+                .all(|play| play.targets.as_ref().map_or(0, |targets| targets.len()) == 1)
+        );
+        let wanted: ActionBody =
+            json_as(json!({ "type": "play", "instanceId": apple.id, "targets": [ENEMY_HERO] }));
         assert!(legal_actions(&state, PlayerId::P1).contains(&wanted));
         let after = must(
             &state,
@@ -414,17 +543,40 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
     #[test]
     fn r449_r70_the_opponents_organic_produce_does_nothing_for_this_player_and_a_cast_fruit_is_radiant_too() {
         let mut state = game("r213-produce-theirs");
-        put(&mut state, &PA.produce.id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &PA.produce.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
         let pear = one(&mut state, PlayerId::P1, &PA.pear.id, false);
-        let mut after = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": pear.id })).state;
+        let mut after = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": pear.id }),
+        )
+        .state;
         assert_eq!(
             zones::card_at(&after, slot(PlayerId::P1, Row::Units, 1)).map(|card| card.radiant),
             Some(false)
         );
 
-        put(&mut after, &PA.produce.id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
-        let cast = new_instance(&mut after, &PA.pear.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        put(
+            &mut after,
+            &PA.produce.id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
+        let cast = new_instance(
+            &mut after,
+            &PA.pear.id,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
         let events = cast_and_settle(&mut after, &cast);
-        assert_eq!(pluck(&of_type(&events, "radiantSet"), "instanceId"), vec![json!(cast.id)]);
+        assert_eq!(
+            pluck(&of_type(&events, "radiantSet"), "instanceId"),
+            vec![json!(cast.id)]
+        );
     }
 }

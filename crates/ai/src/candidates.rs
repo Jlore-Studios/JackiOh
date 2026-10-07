@@ -6,8 +6,8 @@
 
 use indexmap::IndexMap;
 use jackioh_engine::{
-    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, ZoneChoice, canonical,
-    effective_cost, find_instance, has_keyword, legal_actions, subsystems, unit_view,
+    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, ZoneChoice,
+    canonical, effective_cost, find_instance, has_keyword, legal_actions, subsystems, unit_view,
 };
 use serde_json::Value;
 
@@ -24,8 +24,14 @@ fn zone_group_key(play: &ActionBody) -> String {
     match play {
         ActionBody::Play { zone: Some(zone), .. } => {
             let mut blanked = play.clone();
-            if let ActionBody::Play { zone: blanked_zone, .. } = &mut blanked {
-                *blanked_zone = Some(ZoneChoice { row: zone.row, lane: -1 });
+            if let ActionBody::Play {
+                zone: blanked_zone, ..
+            } = &mut blanked
+            {
+                *blanked_zone = Some(ZoneChoice {
+                    row: zone.row,
+                    lane: -1,
+                });
             }
             action_key(&blanked)
         }
@@ -57,7 +63,10 @@ fn collapse_zones(actions: &[ActionBody]) -> Vec<ActionBody> {
             let Some(lane) = play_lane(action) else {
                 return true;
             };
-            let list = lanes.get(&zone_group_key(action)).map(Vec::as_slice).unwrap_or(&[]);
+            let list = lanes
+                .get(&zone_group_key(action))
+                .map(Vec::as_slice)
+                .unwrap_or(&[]);
             // TS's `Math.min(...list)`; the list always holds this play's own lane.
             let low = list.iter().copied().min().unwrap_or(lane);
             let high = list.iter().copied().max().unwrap_or(lane);
@@ -75,7 +84,9 @@ fn collapse_zones(actions: &[ActionBody]) -> Vec<ActionBody> {
 fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardInstance) -> bool {
     let a = unit_view(state, attacker);
     let t = unit_view(state, target);
-    if has_keyword(&t.keywords, KeywordKind::DivineShield) || has_keyword(&t.keywords, KeywordKind::Indestructible) {
+    if has_keyword(&t.keywords, KeywordKind::DivineShield)
+        || has_keyword(&t.keywords, KeywordKind::Indestructible)
+    {
         return false;
     }
     let dealt = (a.attack - t.armor).max(0);
@@ -86,10 +97,14 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
     if !kills {
         return false;
     }
-    if has_keyword(&a.keywords, KeywordKind::FirstStrike) && !has_keyword(&t.keywords, KeywordKind::FirstStrike) {
+    if has_keyword(&a.keywords, KeywordKind::FirstStrike)
+        && !has_keyword(&t.keywords, KeywordKind::FirstStrike)
+    {
         return true;
     }
-    if has_keyword(&a.keywords, KeywordKind::DivineShield) || has_keyword(&a.keywords, KeywordKind::Indestructible) {
+    if has_keyword(&a.keywords, KeywordKind::DivineShield)
+        || has_keyword(&a.keywords, KeywordKind::Indestructible)
+    {
         return true;
     }
     let taken = (t.attack - a.armor).max(0);
@@ -172,7 +187,10 @@ fn round_robin(state: &GameState, actions: &[ActionBody]) -> Vec<ActionBody> {
         let at = match by_id.get(id) {
             Some(at) => *at,
             None => {
-                sources.push(Source { cost: source_cost(state, action), variants: Vec::new() });
+                sources.push(Source {
+                    cost: source_cost(state, action),
+                    variants: Vec::new(),
+                });
                 by_id.insert(id.to_string(), sources.len() - 1);
                 sources.len() - 1
             }
@@ -183,7 +201,11 @@ fn round_robin(state: &GameState, actions: &[ActionBody]) -> Vec<ActionBody> {
     }
     let mut ordered: Vec<(usize, Source)> = sources.into_iter().enumerate().collect();
     ordered.sort_by(|(ia, a), (ib, b)| b.cost.cmp(&a.cost).then(ia.cmp(ib)));
-    let rounds = ordered.iter().map(|(_, source)| source.variants.len()).max().unwrap_or(0);
+    let rounds = ordered
+        .iter()
+        .map(|(_, source)| source.variants.len())
+        .max()
+        .unwrap_or(0);
     let mut out: Vec<ActionBody> = Vec::new();
     for round in 0..rounds {
         for (_, source) in &ordered {
@@ -219,7 +241,10 @@ pub fn candidate_actions(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
 
     for action in actions {
         match &action {
-            ActionBody::Attack { attacker_id, target_id } => {
+            ActionBody::Attack {
+                attacker_id,
+                target_id,
+            } => {
                 let tier = attack_tier(state, seat, attacker_id, target_id);
                 if tier == 0 {
                     hero_attacks.push(action);

@@ -46,8 +46,15 @@ fn attack_via(state: &GameState, attacker_id: &str, target_id: &str) -> ReduceRe
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     for player in [P1, P2] {
-        let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
-        state = act(&state, input(json!({ "type": "mulligan", "keep": keep, "playerId": player })));
+        let keep: Vec<String> = state.players[player]
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
+        state = act(
+            &state,
+            input(json!({ "type": "mulligan", "keep": keep, "playerId": player })),
+        );
     }
     state
 }
@@ -86,7 +93,10 @@ fn target_name(target: &AttackTarget) -> String {
 }
 
 fn names(state: &GameState, attacker_id: &str) -> Vec<String> {
-    attack_targets(state, instance(state, attacker_id)).iter().map(target_name).collect()
+    attack_targets(state, instance(state, attacker_id))
+        .iter()
+        .map(target_name)
+        .collect()
 }
 
 /// `whyCannotAttack(state, attacker, target)` with the attacker as it stands now: its refusal, or
@@ -121,7 +131,11 @@ mod attack_validation_the_attacker_4_2_step_1_m2_t2 {
 
         assert_eq!(why(&state, &attacker.id, &unit(&state, &defender.id)), None);
         assert_eq!(why(&state, &attacker.id, &on_hero(P2)), None);
-        assert!(can_attack(&state, instance(&state, &attacker.id), &unit(&state, &defender.id)));
+        assert!(can_attack(
+            &state,
+            instance(&state, &attacker.id),
+            &unit(&state, &defender.id)
+        ));
         assert!(can_attack(&state, instance(&state, &attacker.id), &on_hero(P2)));
     }
 
@@ -130,7 +144,12 @@ mod attack_validation_the_attacker_4_2_step_1_m2_t2 {
         let mut state = new_game("exertion-spent", None);
         let attacked = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
         let switched = put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
-        let duelist = put(&mut state, &deft_duelist.id, slot(P1, Row::Units, 3), Default::default());
+        let duelist = put(
+            &mut state,
+            &deft_duelist.id,
+            slot(P1, Row::Units, 3),
+            Default::default(),
+        );
         let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
 
         instance_mut(&mut state, &attacked.id).exertion.attacked = true;
@@ -187,16 +206,32 @@ mod attack_validation_the_attacker_4_2_step_1_m2_t2 {
         let mut state = new_game("summoning-sick", None);
         let placed = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
         let sick = make_sick(&mut state, placed);
-        let placed = put(&mut state, &rusher.id, slot(P1, Row::Units, 2), Default::default());
+        let placed = put(
+            &mut state,
+            &rusher.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
         let sick_rusher = make_sick(&mut state, placed);
-        let placed = put(&mut state, &charger.id, slot(P1, Row::Units, 3), Default::default());
+        let placed = put(
+            &mut state,
+            &charger.id,
+            slot(P1, Row::Units, 3),
+            Default::default(),
+        );
         let sick_charger = make_sick(&mut state, placed);
         let placed = put(&mut state, &plain.id, slot(P1, Row::Units, 4), Default::default());
         let granted = make_sick(&mut state, placed);
         let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
 
-        assert_eq!(why(&state, &sick.id, &unit(&state, &defender.id)), refused("that unit is summoning sick"));
-        assert_eq!(why(&state, &sick.id, &on_hero(P2)), refused("that unit is summoning sick"));
+        assert_eq!(
+            why(&state, &sick.id, &unit(&state, &defender.id)),
+            refused("that unit is summoning sick")
+        );
+        assert_eq!(
+            why(&state, &sick.id, &on_hero(P2)),
+            refused("that unit is summoning sick")
+        );
         assert!(targets_of(&state, &sick.id).is_empty());
 
         // §6.1: Rush lifts sickness for unit targets, Charge for units and the hero.
@@ -204,14 +239,21 @@ mod attack_validation_the_attacker_4_2_step_1_m2_t2 {
         assert_eq!(why(&state, &sick_charger.id, &unit(&state, &defender.id)), None);
 
         // A granted keyword counts the same as a printed one (§10.4).
-        instance_mut(&mut state, &granted.id).granted_keywords.push(Keyword::Rush);
+        instance_mut(&mut state, &granted.id)
+            .granted_keywords
+            .push(Keyword::Rush);
         assert_eq!(why(&state, &granted.id, &unit(&state, &defender.id)), None);
     }
 
     #[test]
     fn r7_refuses_a_unit_with_0_attack() {
         let mut state = new_game("zero-attack", None);
-        let zero = put(&mut state, &zero_attack.id, slot(P1, Row::Units, 1), Default::default());
+        let zero = put(
+            &mut state,
+            &zero_attack.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         let drained = put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
         let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
 
@@ -219,7 +261,10 @@ mod attack_validation_the_attacker_4_2_step_1_m2_t2 {
             why(&state, &zero.id, &unit(&state, &defender.id)),
             refused("a unit with 0 attack cannot attack")
         );
-        assert_eq!(why(&state, &zero.id, &on_hero(P2)), refused("a unit with 0 attack cannot attack"));
+        assert_eq!(
+            why(&state, &zero.id, &on_hero(P2)),
+            refused("a unit with 0 attack cannot attack")
+        );
         assert!(targets_of(&state, &zero.id).is_empty());
 
         // A 3/3 whose attack was dragged to 0 is refused the same way (§10.4 layer 4).
@@ -235,7 +280,12 @@ mod attack_validation_the_attacker_4_2_step_1_m2_t2 {
     #[test]
     fn r7_never_lets_big_d_fender_0_attack_be_an_attacker() {
         let mut state = new_game("big-dfender", None);
-        let big_d = put(&mut state, &big_dfender.id, slot(P1, Row::Units, 1), Default::default());
+        let big_d = put(
+            &mut state,
+            &big_dfender.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         let radiant_big_d = put(
             &mut state,
             &big_dfender.id,
@@ -249,7 +299,10 @@ mod attack_validation_the_attacker_4_2_step_1_m2_t2 {
                 why(&state, unit_id, &unit(&state, &defender.id)),
                 refused("a unit with 0 attack cannot attack")
             );
-            assert_eq!(why(&state, unit_id, &on_hero(P2)), refused("a unit with 0 attack cannot attack"));
+            assert_eq!(
+                why(&state, unit_id, &on_hero(P2)),
+                refused("a unit with 0 attack cannot attack")
+            );
             assert!(targets_of(&state, unit_id).is_empty());
 
             // Not even with the sickness exemptions or a fresh turn's exertion.
@@ -266,7 +319,12 @@ mod attack_validation_the_attacker_4_2_step_1_m2_t2 {
 
         // And the action layer never offers it an attack.
         let mut game = playing("big-dfender-actions");
-        let on_board = put(&mut game, &big_dfender.id, slot(P1, Row::Units, 1), Default::default());
+        let on_board = put(
+            &mut game,
+            &big_dfender.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         put(&mut game, &plain.id, slot(P2, Row::Units, 1), Default::default());
         assert!(!legal_actions(&game, P1).iter().any(|action| matches!(
             action,
@@ -277,18 +335,34 @@ mod attack_validation_the_attacker_4_2_step_1_m2_t2 {
     #[test]
     fn refuses_a_unit_with_cant_attack_6_1() {
         let mut state = new_game("cant-attack", None);
-        let stuck = put(&mut state, &pacifist.id, slot(P1, Row::Units, 1), Default::default());
+        let stuck = put(
+            &mut state,
+            &pacifist.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
 
-        assert_eq!(why(&state, &stuck.id, &unit(&state, &defender.id)), refused("that unit cannot attack"));
-        assert_eq!(why(&state, &stuck.id, &on_hero(P2)), refused("that unit cannot attack"));
+        assert_eq!(
+            why(&state, &stuck.id, &unit(&state, &defender.id)),
+            refused("that unit cannot attack")
+        );
+        assert_eq!(
+            why(&state, &stuck.id, &on_hero(P2)),
+            refused("that unit cannot attack")
+        );
         assert!(targets_of(&state, &stuck.id).is_empty());
 
         // Granting it to a plain unit refuses that unit too.
         let granted = put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
         assert_eq!(why(&state, &granted.id, &unit(&state, &defender.id)), None);
-        instance_mut(&mut state, &granted.id).granted_keywords.push(Keyword::CantAttack);
-        assert_eq!(why(&state, &granted.id, &unit(&state, &defender.id)), refused("that unit cannot attack"));
+        instance_mut(&mut state, &granted.id)
+            .granted_keywords
+            .push(Keyword::CantAttack);
+        assert_eq!(
+            why(&state, &granted.id, &unit(&state, &defender.id)),
+            refused("that unit cannot attack")
+        );
     }
 
     #[test]
@@ -299,10 +373,21 @@ mod attack_validation_the_attacker_4_2_step_1_m2_t2 {
         assert_eq!(why(&state, &under.id, &unit(&state, &defender.id)), None);
 
         let mut top = new_instance(&mut state, &stacker.id, P1, Zone::Hand { player: P1 });
-        assert!(place_on_field(&mut state, &mut top, slot(P1, Row::Units, 1), json_as(json!({ "stack": true }))));
+        assert!(place_on_field(
+            &mut state,
+            &mut top,
+            slot(P1, Row::Units, 1),
+            json_as(json!({ "stack": true }))
+        ));
 
-        assert_eq!(why(&state, &under.id, &unit(&state, &defender.id)), refused("that unit is not on the field"));
-        assert_eq!(why(&state, &under.id, &on_hero(P2)), refused("that unit is not on the field"));
+        assert_eq!(
+            why(&state, &under.id, &unit(&state, &defender.id)),
+            refused("that unit is not on the field")
+        );
+        assert_eq!(
+            why(&state, &under.id, &on_hero(P2)),
+            refused("that unit is not on the field")
+        );
         assert!(targets_of(&state, &under.id).is_empty());
 
         // Only the top of the pile acts.
@@ -320,19 +405,41 @@ mod attack_validation_the_target_4_2_steps_2_and_3_m2_t2 {
         let friend = put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
         let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
 
-        assert_eq!(why(&state, &attacker.id, &unit(&state, &friend.id)), refused("that target is not an enemy"));
-        assert_eq!(why(&state, &attacker.id, &on_hero(P1)), refused("that target is not an enemy"));
-        assert_eq!(why(&state, &attacker.id, &unit(&state, &attacker.id)), refused("that target is not an enemy"));
+        assert_eq!(
+            why(&state, &attacker.id, &unit(&state, &friend.id)),
+            refused("that target is not an enemy")
+        );
+        assert_eq!(
+            why(&state, &attacker.id, &on_hero(P1)),
+            refused("that target is not an enemy")
+        );
+        assert_eq!(
+            why(&state, &attacker.id, &unit(&state, &attacker.id)),
+            refused("that target is not an enemy")
+        );
         assert_eq!(why(&state, &attacker.id, &unit(&state, &defender.id)), None);
-        assert_eq!(names(&state, &attacker.id), vec![defender.id.clone(), "hero-p2".to_string()]);
+        assert_eq!(
+            names(&state, &attacker.id),
+            vec![defender.id.clone(), "hero-p2".to_string()]
+        );
     }
 
     #[test]
     fn refuses_rush_against_the_hero_on_its_summon_turn_while_charge_may_hit_it_6_1() {
         let mut state = new_game("rush-vs-charge", None);
-        let placed = put(&mut state, &rusher.id, slot(P1, Row::Units, 1), Default::default());
+        let placed = put(
+            &mut state,
+            &rusher.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         let sick_rusher = make_sick(&mut state, placed);
-        let placed = put(&mut state, &charger.id, slot(P1, Row::Units, 2), Default::default());
+        let placed = put(
+            &mut state,
+            &charger.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
         let sick_charger = make_sick(&mut state, placed);
         let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
 
@@ -344,7 +451,10 @@ mod attack_validation_the_target_4_2_steps_2_and_3_m2_t2 {
         assert_eq!(names(&state, &sick_rusher.id), vec![defender.id.clone()]);
 
         assert_eq!(why(&state, &sick_charger.id, &on_hero(P2)), None);
-        assert_eq!(names(&state, &sick_charger.id), vec![defender.id.clone(), "hero-p2".to_string()]);
+        assert_eq!(
+            names(&state, &sick_charger.id),
+            vec![defender.id.clone(), "hero-p2".to_string()]
+        );
 
         // The next turn the Rush unit is no longer sick and may go face.
         instance_mut(&mut state, &sick_rusher.id).summoned_turn = None;
@@ -356,20 +466,32 @@ mod attack_validation_the_target_4_2_steps_2_and_3_m2_t2 {
         let mut state = new_game("taunt-filter", None);
         let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
         let bystander = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
-        let wall = put(&mut state, &taunter.id, slot(P2, Row::Units, 2), Default::default());
+        let wall = put(
+            &mut state,
+            &taunter.id,
+            slot(P2, Row::Units, 2),
+            Default::default(),
+        );
 
         assert_eq!(
             why(&state, &attacker.id, &unit(&state, &bystander.id)),
             refused("a Taunt unit must be attacked first")
         );
-        assert_eq!(why(&state, &attacker.id, &on_hero(P2)), refused("a Taunt unit must be attacked first"));
+        assert_eq!(
+            why(&state, &attacker.id, &on_hero(P2)),
+            refused("a Taunt unit must be attacked first")
+        );
         assert_eq!(why(&state, &attacker.id, &unit(&state, &wall.id)), None);
         assert_eq!(names(&state, &attacker.id), vec![wall.id.clone()]);
 
         // A granted Taunt filters exactly the same way, and a Taunt on your own side does not.
         let own = put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
-        instance_mut(&mut state, &own.id).granted_keywords.push(Keyword::Taunt);
-        instance_mut(&mut state, &bystander.id).granted_keywords.push(Keyword::Taunt);
+        instance_mut(&mut state, &own.id)
+            .granted_keywords
+            .push(Keyword::Taunt);
+        instance_mut(&mut state, &bystander.id)
+            .granted_keywords
+            .push(Keyword::Taunt);
         let mut listed = names(&state, &attacker.id);
         listed.sort();
         let mut expected = vec![bystander.id.clone(), wall.id.clone()];
@@ -391,7 +513,10 @@ mod attack_validation_the_target_4_2_steps_2_and_3_m2_t2 {
             why(&state, &attacker.id, &unit(&state, &bystander.id)),
             refused("a Taunt unit must be attacked first")
         );
-        assert_eq!(why(&state, &attacker.id, &on_hero(P2)), refused("a Taunt unit must be attacked first"));
+        assert_eq!(
+            why(&state, &attacker.id, &on_hero(P2)),
+            refused("a Taunt unit must be attacked first")
+        );
         assert_eq!(why(&state, &attacker.id, &unit(&state, &defending.id)), None);
         assert_eq!(names(&state, &attacker.id), vec![defending.id.clone()]);
 
@@ -412,7 +537,10 @@ mod attack_validation_the_target_4_2_steps_2_and_3_m2_t2 {
         let far = put(&mut state, &plain.id, slot(P2, Row::Units, 5), Default::default());
 
         assert_eq!(why(&state, &attacker.id, &unit(&state, &far.id)), None);
-        assert_eq!(names(&state, &attacker.id), vec![far.id.clone(), "hero-p2".to_string()]);
+        assert_eq!(
+            names(&state, &attacker.id),
+            vec![far.id.clone(), "hero-p2".to_string()]
+        );
     }
 
     #[test]
@@ -427,7 +555,9 @@ mod attack_validation_the_target_4_2_steps_2_and_3_m2_t2 {
             vec![first.id.clone(), third.id.clone(), "hero-p2".to_string()]
         );
 
-        instance_mut(&mut state, &third.id).granted_keywords.push(Keyword::Taunt);
+        instance_mut(&mut state, &third.id)
+            .granted_keywords
+            .push(Keyword::Taunt);
         assert_eq!(names(&state, &attacker.id), vec![third.id.clone()]);
 
         instance_mut(&mut state, &attacker.id).exertion.attacked = true;
@@ -441,7 +571,12 @@ fn r13_refuses_a_dormant_card_under_a_stack_as_a_target_too_3_2() {
     let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
     let buried = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
     let mut top = new_instance(&mut state, &stacker.id, P2, Zone::Hand { player: P2 });
-    assert!(place_on_field(&mut state, &mut top, slot(P2, Row::Units, 1), json_as(json!({ "stack": true }))));
+    assert!(place_on_field(
+        &mut state,
+        &mut top,
+        slot(P2, Row::Units, 1),
+        json_as(json!({ "stack": true }))
+    ));
 
     // The pile's top is a legal target; the card underneath is not (§3.2 "not targetable").
     assert_eq!(why(&state, &attacker.id, &unit(&state, &top.id)), None);
@@ -463,8 +598,18 @@ mod attack_validation_through_the_action_layer_9_3_m2_t2 {
         let mut state = playing("attack-action-errors");
         let spent = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
         let defending = put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
-        let stuck = put(&mut state, &pacifist.id, slot(P1, Row::Units, 3), Default::default());
-        let zero = put(&mut state, &zero_attack.id, slot(P1, Row::Units, 4), Default::default());
+        let stuck = put(
+            &mut state,
+            &pacifist.id,
+            slot(P1, Row::Units, 3),
+            Default::default(),
+        );
+        let zero = put(
+            &mut state,
+            &zero_attack.id,
+            slot(P1, Row::Units, 4),
+            Default::default(),
+        );
         let placed = put(&mut state, &plain.id, slot(P1, Row::Units, 5), Default::default());
         let sick = make_sick(&mut state, placed);
         let enemy = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
@@ -481,7 +626,11 @@ mod attack_validation_through_the_action_layer_9_3_m2_t2 {
             (sick.id.as_str(), "hero-p2"),
         ];
         for (attacker, target_id) in cases {
-            let target = if target_id == "hero-p2" { on_hero(P2) } else { unit(&state, &enemy.id) };
+            let target = if target_id == "hero-p2" {
+                on_hero(P2)
+            } else {
+                unit(&state, &enemy.id)
+            };
             let expected = why(&state, attacker, &target);
             assert!(expected.is_some());
             assert_eq!(attack_via(&state, attacker, target_id).error, expected);
@@ -491,7 +640,12 @@ mod attack_validation_through_the_action_layer_9_3_m2_t2 {
         let mut other = playing("attack-action-taunt");
         let free = put(&mut other, &plain.id, slot(P1, Row::Units, 1), Default::default());
         let bystander = put(&mut other, &plain.id, slot(P2, Row::Units, 1), Default::default());
-        put(&mut other, &taunter.id, slot(P2, Row::Units, 2), Default::default());
+        put(
+            &mut other,
+            &taunter.id,
+            slot(P2, Row::Units, 2),
+            Default::default(),
+        );
         assert_eq!(
             why(&other, &free.id, &unit(&other, &bystander.id)),
             refused("a Taunt unit must be attacked first")
@@ -503,7 +657,10 @@ mod attack_validation_through_the_action_layer_9_3_m2_t2 {
 
         // A friendly target never reaches the validator: the action layer looks it up among the
         // enemy's units and the enemy hero only.
-        assert_eq!(attack_via(&other, &free.id, "hero-p1").error, refused("no target hero-p1"));
+        assert_eq!(
+            attack_via(&other, &free.id, "hero-p1").error,
+            refused("no target hero-p1")
+        );
         assert_eq!(
             attack_via(&other, &free.id, &free.id).error,
             Some(format!("no target {}", free.id))
@@ -519,7 +676,10 @@ mod attack_validation_through_the_action_layer_9_3_m2_t2 {
         // The hero never strikes back (§4.3), so the attacker is still there for the second attempt.
         let first = attack_via(&state, &attacker.id, "hero-p2");
         assert_eq!(first.error, None);
-        assert_eq!(events_of_type(&first.events, GameEventType::AttackDeclared).len(), 1);
+        assert_eq!(
+            events_of_type(&first.events, GameEventType::AttackDeclared).len(),
+            1
+        );
         let forced = first.events.iter().find_map(|event| match event {
             GameEvent::AttackDeclared { forced, .. } => Some(*forced),
             _ => None,
@@ -534,38 +694,75 @@ mod attack_validation_through_the_action_layer_9_3_m2_t2 {
     fn never_lists_an_attack_that_why_cannot_attack_refuses_and_lists_every_one_it_allows() {
         let mut state = playing("legal-actions-agree");
         let fresh = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
-        let placed = put(&mut state, &rusher.id, slot(P1, Row::Units, 2), Default::default());
+        let placed = put(
+            &mut state,
+            &rusher.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
         make_sick(&mut state, placed);
-        put(&mut state, &pacifist.id, slot(P1, Row::Units, 3), Default::default());
-        put(&mut state, &zero_attack.id, slot(P1, Row::Units, 4), Default::default());
+        put(
+            &mut state,
+            &pacifist.id,
+            slot(P1, Row::Units, 3),
+            Default::default(),
+        );
+        put(
+            &mut state,
+            &zero_attack.id,
+            slot(P1, Row::Units, 4),
+            Default::default(),
+        );
         let defending = put(&mut state, &plain.id, slot(P1, Row::Units, 5), Default::default());
         instance_mut(&mut state, &defending.id).position = Some(Position::Def);
 
         put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
-        put(&mut state, &taunter.id, slot(P2, Row::Units, 2), Default::default());
+        put(
+            &mut state,
+            &taunter.id,
+            slot(P2, Row::Units, 2),
+            Default::default(),
+        );
         let enemy_defending = put(&mut state, &plain.id, slot(P2, Row::Units, 3), Default::default());
         instance_mut(&mut state, &enemy_defending.id).position = Some(Position::Def);
 
         let listed: Vec<(String, String)> = legal_actions(&state, P1)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Attack { attacker_id, target_id } => Some((attacker_id, target_id)),
+                ActionBody::Attack {
+                    attacker_id,
+                    target_id,
+                } => Some((attacker_id, target_id)),
                 _ => None,
             })
             .collect();
         assert!(!listed.is_empty());
 
         for (attacker_id, target_id) in &listed {
-            let target = if target_id == "hero-p2" { on_hero(P2) } else { unit(&state, target_id) };
+            let target = if target_id == "hero-p2" {
+                on_hero(P2)
+            } else {
+                unit(&state, target_id)
+            };
             assert_eq!(why(&state, attacker_id, &target), None);
         }
 
         // The other direction: every pair the validator allows is offered.
         let attackers: Vec<CardInstance> = (0..5)
-            .filter_map(|lane| state.players.p1.units[lane].as_ref().and_then(|pile| pile.first()).cloned())
+            .filter_map(|lane| {
+                state.players.p1.units[lane]
+                    .as_ref()
+                    .and_then(|pile| pile.first())
+                    .cloned()
+            })
             .collect();
         let mut targets: Vec<AttackTarget> = (0..5)
-            .filter_map(|lane| state.players.p2.units[lane].as_ref().and_then(|pile| pile.first()).map(on_unit))
+            .filter_map(|lane| {
+                state.players.p2.units[lane]
+                    .as_ref()
+                    .and_then(|pile| pile.first())
+                    .map(on_unit)
+            })
             .collect();
         targets.push(on_hero(P2));
         let mut allowed: Vec<String> = attackers

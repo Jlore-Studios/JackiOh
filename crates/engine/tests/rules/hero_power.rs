@@ -28,9 +28,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, new_game, put, set_library, sink_for, slot,
-};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, sink_for, slot};
 use crate::rules::fixtures::scripts::{HERO_POWERS as FIXTURE_POWER_NAMES, heroic_power};
 
 // ---------------------------------------------------------------------------
@@ -329,7 +327,11 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
                 let power = HERO_POWERS.get(index).expect("a power");
                 assert_eq!(decl.uses, ActivationUses::Count(1));
                 assert_eq!(decl.cost.and_then(|cost| cost.mana), Some(power.x));
-                let title = if radiant { &power.radiant_title } else { &power.title };
+                let title = if radiant {
+                    &power.radiant_title
+                } else {
+                    &power.title
+                };
                 assert!(decl.label.starts_with(&format!("{title}: ")));
                 let has = decl.has.as_ref().map(|has| {
                     has(HookArgs {
@@ -411,7 +413,8 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
         assert!(!lists_activation_of(&state, &card));
 
         state.players.p1.mana.current = 4;
-        let recruit: ActionBody = json_as(json!({ "type": "activate", "instanceId": card.id, "ability": "recruit" }));
+        let recruit: ActionBody =
+            json_as(json!({ "type": "activate", "instanceId": card.id, "ability": "recruit" }));
         assert!(legal_actions(&state, P1).contains(&recruit));
         let used = act(
             &state,
@@ -552,12 +555,19 @@ mod heroic_power_the_powers_r753_r758 {
     fn r756_ping_pierces_armor_on_the_radiant_face_a_unit_it_kills_leaves_a_ghoul_token_with_its_stats() {
         let mut state = game("r756-ping");
         let card = powered(&mut state, "ping", false, 1);
-        let victim = put(&mut state, &armored().id, slot(P2, Row::Units, 1), Default::default());
+        let victim = put(
+            &mut state,
+            &armored().id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
         keep_turn(&mut state);
         // R81: the target is declared with the activation; legalActions lists one per target.
         let listed = legal_actions(&state, P1)
             .into_iter()
-            .filter(|body| matches!(body, ActionBody::Activate { instance_id, .. } if *instance_id == card.id))
+            .filter(
+                |body| matches!(body, ActionBody::Activate { instance_id, .. } if *instance_id == card.id),
+            )
             .count();
         assert!(listed > 2);
         assert!(use_power(&state, &card, None).error.is_some());
@@ -573,15 +583,22 @@ mod heroic_power_the_powers_r753_r758 {
                 .map(|event| event["amount"].clone()),
             Some(json!(1))
         );
-        assert!(hit.state.players.p2.units[0]
-            .as_ref()
-            .and_then(|pile| pile.first())
-            .is_none());
+        assert!(
+            hit.state.players.p2.units[0]
+                .as_ref()
+                .and_then(|pile| pile.first())
+                .is_none()
+        );
         assert!(active_units_of(&hit.state, P1).is_empty());
 
         let mut shining = game("r756-ping-radiant");
         let radiant = powered(&mut shining, "ping", true, 1);
-        let prey = put(&mut shining, &armored().id, slot(P2, Row::Units, 1), Default::default());
+        let prey = put(
+            &mut shining,
+            &armored().id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
         keep_turn(&mut shining);
         let killed = use_power(
             &shining,
@@ -597,9 +614,18 @@ mod heroic_power_the_powers_r753_r758 {
         );
 
         // A hero hit, or a Unit the hit leaves standing, summons nothing.
-        let face = use_power(&shining, &radiant, Some(json!([{ "pick": "hero", "player": "p2" }])));
+        let face = use_power(
+            &shining,
+            &radiant,
+            Some(json!([{ "pick": "hero", "player": "p2" }])),
+        );
         assert!(active_units_of(&face.state, P1).is_empty());
-        let sturdy = put(&mut shining, &plain.id, slot(P2, Row::Units, 2), Default::default());
+        let sturdy = put(
+            &mut shining,
+            &plain.id,
+            slot(P2, Row::Units, 2),
+            Default::default(),
+        );
         let survived = use_power(
             &shining,
             &radiant,
@@ -822,9 +848,23 @@ mod heroic_power_rolling_the_power_r43_r78 {
         }))
         .state;
         let keep: Vec<String> = begun.players.p1.hand.iter().map(|card| card.id.clone()).collect();
-        let mut playing = act(&begun, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" })).state;
-        let keep: Vec<String> = playing.players.p2.hand.iter().map(|card| card.id.clone()).collect();
-        playing = act(&playing, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" })).state;
+        let mut playing = act(
+            &begun,
+            json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+        )
+        .state;
+        let keep: Vec<String> = playing
+            .players
+            .p2
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
+        playing = act(
+            &playing,
+            json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+        )
+        .state;
         let card = playing
             .players
             .p1

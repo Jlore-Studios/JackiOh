@@ -60,17 +60,28 @@ fn play_body(player: PlayerId, instance_id: &str) -> Value {
 
 /// `state.applied.at(-1)?.events ?? []`.
 fn last_applied_events(state: &GameState) -> Vec<GameEvent> {
-    state.applied.last().map(|applied| applied.events.clone()).unwrap_or_default()
+    state
+        .applied
+        .last()
+        .map(|applied| applied.events.clone())
+        .unwrap_or_default()
 }
 
 /// The top card of a unit zone, by its index in the row (TS `state.players.p1.units[i]?.[0]`).
 fn unit_top(state: &GameState, player: PlayerId, index: usize) -> Option<CardInstance> {
-    state.players[player].units.get(index).and_then(|pile| pile.as_ref()).and_then(|pile| pile.first()).cloned()
+    state.players[player]
+        .units
+        .get(index)
+        .and_then(|pile| pile.as_ref())
+        .and_then(|pile| pile.first())
+        .cloned()
 }
 
 /// TS `list.indexOf(x)`: the first position, or -1.
 fn index_of(list: &[String], id: &str) -> i64 {
-    list.iter().position(|entry| entry == id).map_or(-1, |at| at as i64)
+    list.iter()
+        .position(|entry| entry == id)
+        .map_or(-1, |at| at as i64)
 }
 
 fn ids_of(cards: &[CardInstance]) -> Vec<String> {
@@ -109,7 +120,8 @@ mod e26_deck_and_graveyard_triggers_in_r68_order_r464 {
     use super::*;
 
     #[test]
-    fn r464_deck_triggers_come_after_the_hands_and_before_the_graveyards_in_creation_order_never_library_order() {
+    fn r464_deck_triggers_come_after_the_hands_and_before_the_graveyards_in_creation_order_never_library_order()
+     {
         let mut state = board("r464-order");
         let hand = in_hand(&mut state, &prompts_fx::striker().id, PlayerId::P1, 1).remove(0);
         // Created first, then second — and laid in the library the other way round.
@@ -119,8 +131,18 @@ mod e26_deck_and_graveyard_triggers_in_r68_order_r464 {
             PlayerId::P1,
             Zone::Library { player: PlayerId::P1 },
         );
-        let newer = new_instance(&mut state, &prompts_fx::wardrum().id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
-        let filler = new_instance(&mut state, &combat_fx::plain.id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+        let newer = new_instance(
+            &mut state,
+            &prompts_fx::wardrum().id,
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
+        let filler = new_instance(
+            &mut state,
+            &combat_fx::plain.id,
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
         state.players.p1.library = vec![newer.clone(), filler.clone(), older.clone()];
         let grave = grave_card(&mut state, PlayerId::P1, &prompts_fx::grave_watcher().id);
         let enemy_deck = new_instance(
@@ -132,7 +154,10 @@ mod e26_deck_and_graveyard_triggers_in_r68_order_r464 {
         state.players.p2.library = vec![enemy_deck.clone()];
 
         // The registry: a library card is a holder only when it declares deck triggers.
-        let order: Vec<String> = cards_in_trigger_order(&state).iter().map(|holder| holder.card.id.clone()).collect();
+        let order: Vec<String> = cards_in_trigger_order(&state)
+            .iter()
+            .map(|holder| holder.card.id.clone())
+            .collect();
         assert!(index_of(&order, &hand.id) < index_of(&order, &older.id));
         assert!(index_of(&order, &older.id) < index_of(&order, &newer.id));
         assert!(index_of(&order, &newer.id) < index_of(&order, &grave.id));
@@ -157,7 +182,11 @@ mod e26_deck_and_graveyard_triggers_in_r68_order_r464 {
             dispatch_event(sink, &event);
         });
         assert_eq!(
-            state.trigger_queue.iter().map(|entry| entry.instance_id.clone()).collect::<Vec<_>>(),
+            state
+                .trigger_queue
+                .iter()
+                .map(|entry| entry.instance_id.clone())
+                .collect::<Vec<_>>(),
             vec![hand.id, older.id, newer.id, grave.id, enemy_deck.id]
         );
     }
@@ -180,10 +209,19 @@ mod e26_deck_and_graveyard_triggers_in_r68_order_r464 {
         });
         let deck_entry = state.trigger_queue.first().cloned();
         let grave_entry = state.trigger_queue.get(1).cloned();
-        assert_eq!(deck_entry.as_ref().map(|entry| entry.instance_id.clone()), Some(hidden.id.clone()));
-        assert_eq!(deck_entry.as_ref().map(|entry| entry.id.starts_with('h')), Some(true));
+        assert_eq!(
+            deck_entry.as_ref().map(|entry| entry.instance_id.clone()),
+            Some(hidden.id.clone())
+        );
+        assert_eq!(
+            deck_entry.as_ref().map(|entry| entry.id.starts_with('h')),
+            Some(true)
+        );
         // The public graveyard card's entry is numbered; the hidden one's took none.
-        assert_eq!(grave_entry.as_ref().map(|entry| entry.instance_id.clone()), Some(grave.id.clone()));
+        assert_eq!(
+            grave_entry.as_ref().map(|entry| entry.instance_id.clone()),
+            Some(grave.id.clone())
+        );
         assert_eq!(state.next_seq, before + 1);
     }
 }
@@ -194,15 +232,33 @@ mod e26_summon_this_from_your_hand_or_deck {
     #[test]
     fn e26_a_deck_trigger_summons_its_card_no_cry_summoning_sick_the_leftmost_open_zone() {
         let mut state = board("deck-summon");
-        put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let drum = new_instance(&mut state, &prompts_fx::wardrum().id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
-        let first = new_instance(&mut state, &combat_fx::plain.id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+        put(
+            &mut state,
+            &combat_fx::plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let drum = new_instance(
+            &mut state,
+            &prompts_fx::wardrum().id,
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
+        let first = new_instance(
+            &mut state,
+            &combat_fx::plain.id,
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
         state.players.p1.library = vec![first, drum.clone()];
         let card = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
         state = act(&state, play_body(PlayerId::P1, &card.id), None);
         let found = unit_top(&state, PlayerId::P1, 1);
         assert_eq!(found.as_ref().map(|unit| unit.id.clone()), Some(drum.id.clone()));
-        assert_eq!(found.as_ref().and_then(|unit| unit.summoned_turn), Some(state.turn));
+        assert_eq!(
+            found.as_ref().and_then(|unit| unit.summoned_turn),
+            Some(state.turn)
+        );
         assert_eq!(state.players.p1.library.len(), 1);
         let events = last_applied_events(&state);
         assert_eq!(summoned_ids(&events), vec![drum.id.clone()]);
@@ -236,7 +292,10 @@ mod e26_summon_this_from_your_hand_or_deck {
             }),
             None,
         );
-        assert_eq!(unit_top(&state, PlayerId::P1, 1).map(|unit| unit.id), Some(eu.id.clone()));
+        assert_eq!(
+            unit_top(&state, PlayerId::P1, 1).map(|unit| unit.id),
+            Some(eu.id.clone())
+        );
         // Its Cry (9 to the enemy hero) did not fire: only the spark's 1 landed.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
     }
@@ -245,9 +304,19 @@ mod e26_summon_this_from_your_hand_or_deck {
     fn e26_with_no_open_zone_the_card_stays_where_it_is() {
         let mut state = board("deck-full");
         for lane in 1..=5 {
-            put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, lane), json!({}));
+            put(
+                &mut state,
+                &combat_fx::plain.id,
+                slot(PlayerId::P1, Row::Units, lane),
+                json!({}),
+            );
         }
-        let drum = new_instance(&mut state, &prompts_fx::wardrum().id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+        let drum = new_instance(
+            &mut state,
+            &prompts_fx::wardrum().id,
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
         state.players.p1.library = vec![drum.clone()];
         let card = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
         state = act(&state, play_body(PlayerId::P1, &card.id), None);
@@ -258,7 +327,12 @@ mod e26_summon_this_from_your_hand_or_deck {
     #[test]
     fn e26_r113_a_deck_trigger_that_asks_parks_its_tail_under_its_id_and_the_answer_finishes_it() {
         let mut state = board("deck-asks");
-        let asker = new_instance(&mut state, &prompts_fx::deck_asker().id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+        let asker = new_instance(
+            &mut state,
+            &prompts_fx::deck_asker().id,
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
         state.players.p1.library = vec![asker.clone()];
         let card = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
         state = act(&state, play_body(PlayerId::P1, &card.id), None);
@@ -273,7 +347,10 @@ mod e26_summon_this_from_your_hand_or_deck {
         answer_keys(&mut state, &["mode:come"]);
         answer_keys(&mut copy, &["mode:come"]);
         assert_eq!(hash_state(&copy), hash_state(&state));
-        assert_eq!(unit_top(&state, PlayerId::P1, 0).map(|unit| unit.id), Some(asker.id.clone()));
+        assert_eq!(
+            unit_top(&state, PlayerId::P1, 0).map(|unit| unit.id),
+            Some(asker.id.clone())
+        );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 2);
     }
 
@@ -295,7 +372,10 @@ mod e26_summon_this_from_your_hand_or_deck {
         let zap_id = hand_card(&state, PlayerId::P1, &zap).id.clone();
         state = act(&state, play_body(PlayerId::P1, &zap_id), Some(&mut log));
         // From the hand or the deck, wherever the deal left it, it answered the Spell.
-        assert_eq!(unit_top(&state, PlayerId::P1, 0).map(|unit| unit.id), drum.map(|card| card.id));
+        assert_eq!(
+            unit_top(&state, PlayerId::P1, 0).map(|unit| unit.id),
+            drum.map(|card| card.id)
+        );
         expect_replays("wardrum-replay", &decks, &log, &state);
     }
 }
@@ -309,12 +389,26 @@ mod e26_graveyard_triggers_classic_47 {
         let mut state = board(seed);
         let mut card = grave_card(&mut state, PlayerId::P1, &prompts_fx::recurring().id);
         card.radiant = radiant;
-        find_instance_mut(&mut state, &card.id).expect("in the graveyard").radiant = radiant;
-        put(&mut state, &prompts_fx::snare().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        find_instance_mut(&mut state, &card.id)
+            .expect("in the graveyard")
+            .radiant = radiant;
+        put(
+            &mut state,
+            &prompts_fx::snare().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         state.active = PlayerId::P2;
         let zap = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P2, 1).remove(0);
         let state = act(&state, play_body(PlayerId::P2, &zap.id), None);
-        let moved = state.players.p1.hand.iter().find(|held| held.id == card.id).cloned().unwrap_or(card);
+        let moved = state
+            .players
+            .p1
+            .hand
+            .iter()
+            .find(|held| held.id == card.id)
+            .cloned()
+            .unwrap_or(card);
         (state, moved)
     }
 
@@ -324,7 +418,10 @@ mod e26_graveyard_triggers_classic_47 {
         // (p2's play ended their turn by itself, R82, so p1 has drawn for the new turn as well.)
         assert!(ids_of(&state.players.p1.hand).contains(&card.id));
         assert_eq!(card.zone.z(), ZoneName::Hand);
-        assert_eq!(def_ids_of(&state.players.p1.graveyard), vec![prompts_fx::snare().id]);
+        assert_eq!(
+            def_ids_of(&state.players.p1.graveyard),
+            vec![prompts_fx::snare().id]
+        );
         assert_eq!(card.cost_override, None);
     }
 
@@ -339,10 +436,18 @@ mod e26_graveyard_triggers_classic_47 {
     fn e26_the_other_players_trap_does_not_return_it_and_a_card_elsewhere_has_no_graveyard_trigger() {
         let mut state = board("recur-theirs");
         let card = grave_card(&mut state, PlayerId::P1, &prompts_fx::recurring().id);
-        put(&mut state, &prompts_fx::snare().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &prompts_fx::snare().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
         let zap = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
         state = act(&state, play_body(PlayerId::P1, &zap.id), None);
-        assert_eq!(events_of_type(&last_applied_events(&state), GameEventType::TrapFired).len(), 1);
+        assert_eq!(
+            events_of_type(&last_applied_events(&state), GameEventType::TrapFired).len(),
+            1
+        );
         assert!(ids_of(&state.players.p1.graveyard).contains(&card.id));
 
         // In a hand the graveyard trigger is not registered.
@@ -365,16 +470,27 @@ mod e26_a_fused_card_keeps_its_deck_and_graveyard_triggers_r102 {
         let a = in_hand(&mut state, &prompts_fx::wardrum().id, PlayerId::P1, 1).remove(0);
         let b = in_hand(&mut state, &prompts_fx::recurring().id, PlayerId::P1, 1).remove(0);
         let fused = with_sink(&mut state, |sink| {
-            jackioh_engine::subsystems::fuse::fuse(sink, json_as(json!({ "ingredients": [a, b], "toHand": "p1" })))
+            jackioh_engine::subsystems::fuse::fuse(
+                sink,
+                json_as(json!({ "ingredients": [a, b], "toHand": "p1" })),
+            )
         });
         let fused_def_id = fused.map(|card| card.def_id).unwrap_or_default();
         let script: Script = scripts_for(&state, &fused_def_id).base;
         assert_eq!(
-            script.deck_triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<_>>(),
+            script
+                .deck_triggers
+                .iter()
+                .map(|trigger| trigger.id.clone())
+                .collect::<Vec<_>>(),
             vec![format!("{}:wardrum-arrive", prompts_fx::wardrum().id)]
         );
         assert_eq!(
-            script.graveyard_triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<_>>(),
+            script
+                .graveyard_triggers
+                .iter()
+                .map(|trigger| trigger.id.clone())
+                .collect::<Vec<_>>(),
             vec![format!("{}:recur", prompts_fx::recurring().id)]
         );
     }

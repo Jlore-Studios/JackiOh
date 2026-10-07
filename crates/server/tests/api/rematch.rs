@@ -29,9 +29,9 @@
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
-use serde::de::DeserializeOwned;
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde::de::DeserializeOwned;
+use serde_json::{Value, json};
 use tokio::sync::MutexGuard;
 
 use jackioh_engine::PlayerId;
@@ -40,7 +40,7 @@ use jackioh_server::actor::ws_server::Socket;
 use jackioh_server::api::ranked::rate_ranked_game;
 use jackioh_server::api::rematch::{STAKE_DOUBLE, STAKE_NORMAL};
 use jackioh_server::api::results::record_result;
-use jackioh_server::app::{now_ms, App};
+use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::REMATCH_OFFER_TTL_MS;
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, MatchSeat, StartMatchInput};
@@ -101,7 +101,9 @@ fn names(tag: &str) -> (String, String, String) {
 /// An active profile with a token that verifies as it (`queue.rs`'s fixture).
 async fn active_profile(app: &App, id: &str, rating: f64) -> String {
     let user_id = format!("user-{id}");
-    fake(app).await.seed_profile(json!({ "id": id, "userId": user_id, "status": "active", "rating": rating }));
+    fake(app)
+        .await
+        .seed_profile(json!({ "id": id, "userId": user_id, "status": "active", "rating": rating }));
     add_user(app, &user_id, &format!("{id}@example.test"), true)
 }
 
@@ -109,8 +111,11 @@ async fn active_profile(app: &App, id: &str, rating: f64) -> String {
 fn real_decks() -> (Vec<String>, Vec<String>) {
     jackioh_cards::register_all();
     let size = usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size");
-    let pool: Vec<String> =
-        jackioh_cards::CATALOG.values().filter(|def| !def.token).map(|def| def.id.clone()).collect();
+    let pool: Vec<String> = jackioh_cards::CATALOG
+        .values()
+        .filter(|def| !def.token)
+        .map(|def| def.id.clone())
+        .collect();
     (pool[..size].to_vec(), pool[size..size * 2].to_vec())
 }
 
@@ -173,24 +178,45 @@ async fn paired_tickets(app: &App, match_id: &str, profiles: [&str; 2], mode: &s
 }
 
 async fn offer(app: &Arc<App>, token: &str, match_id: &str, stakes: impl Serialize) -> (u16, Value) {
-    request(app, "POST", &format!("/api/matches/{match_id}/rematch"), token, Some(json!({ "stakes": stakes }))).await
+    request(
+        app,
+        "POST",
+        &format!("/api/matches/{match_id}/rematch"),
+        token,
+        Some(json!({ "stakes": stakes })),
+    )
+    .await
 }
 
 async fn status(app: &Arc<App>, token: &str, match_id: &str) -> (u16, Value) {
-    request(app, "GET", &format!("/api/matches/{match_id}/rematch"), token, None).await
+    request(
+        app,
+        "GET",
+        &format!("/api/matches/{match_id}/rematch"),
+        token,
+        None,
+    )
+    .await
 }
 
 async fn in_match_of(app: &App, profile_id: &str) -> Value {
     let profile = q!(app, profiles_get_by_id(profile_id)).map(|profile| to_json(&profile));
-    profile.map(|profile| profile["inMatchId"].clone()).unwrap_or(Value::Null)
+    profile
+        .map(|profile| profile["inMatchId"].clone())
+        .unwrap_or(Value::Null)
 }
 
 async fn live_ids(app: &App) -> Vec<Value> {
-    q!(app, matches_live()).iter().map(|row| to_json(row)["id"].clone()).collect()
+    q!(app, matches_live())
+        .iter()
+        .map(|row| to_json(row)["id"].clone())
+        .collect()
 }
 
 async fn match_row(app: &App, match_id: &str) -> Value {
-    q!(app, matches_get(match_id)).map(|row| to_json(&row)).unwrap_or(Value::Null)
+    q!(app, matches_get(match_id))
+        .map(|row| to_json(&row))
+        .unwrap_or(Value::Null)
 }
 
 /// A live match on the real registry, A as p1 and B as p2.
@@ -205,8 +231,18 @@ async fn start_live(app: &Arc<App>, match_id: &str, a: &str, b: &str) {
                 catalog_version: app.catalog.version.clone(),
                 ranked: false,
                 seats: (
-                    MatchSeat { profile_id: a.to_string(), player: PlayerId::P1, deck: one, portrait: None },
-                    MatchSeat { profile_id: b.to_string(), player: PlayerId::P2, deck: two, portrait: None },
+                    MatchSeat {
+                        profile_id: a.to_string(),
+                        player: PlayerId::P1,
+                        deck: one,
+                        portrait: None,
+                    },
+                    MatchSeat {
+                        profile_id: b.to_string(),
+                        player: PlayerId::P2,
+                        deck: two,
+                        portrait: None,
+                    },
                 ),
                 mode: None,
                 stake: None,
@@ -234,9 +270,7 @@ mod r672_double_or_nothing {
                 data.seed_profile(json!({ "id": profile_id }));
             }
         }
-        let sides = |x: &str, y: &str| {
-            json!([{ "kind": "player", "profileId": x }, { "kind": "player", "profileId": y }])
-        };
+        let sides = |x: &str, y: &str| json!([{ "kind": "player", "profileId": x }, { "kind": "player", "profileId": y }]);
         let single = {
             let mut tx = app.db.begin(None).await.expect("begin");
             let rated = rate_ranked_game(
@@ -280,15 +314,22 @@ mod r672_double_or_nothing {
         };
 
         for side in [0usize, 1] {
-            let rating = |row: &Value, when: &str| row["sides"][side][when]["rating"].as_f64().expect("a rating");
+            let rating =
+                |row: &Value, when: &str| row["sides"][side][when]["rating"].as_f64().expect("a rating");
             let before = rating(&single, "before");
             let single_delta = rating(&single, "after") - before;
             // The same starting ratings, so the single update's delta is the doubled game's unit.
             assert_eq!(before, rating(&doubled, "before"));
             assert!(((rating(&doubled, "after") - before) - 2.0 * single_delta).abs() < 1e-10);
             // Confidence is not doubled: the same update's deviation and volatility.
-            assert_eq!(doubled["sides"][side]["after"]["deviation"], single["sides"][side]["after"]["deviation"]);
-            assert_eq!(doubled["sides"][side]["after"]["volatility"], single["sides"][side]["after"]["volatility"]);
+            assert_eq!(
+                doubled["sides"][side]["after"]["deviation"],
+                single["sides"][side]["after"]["deviation"]
+            );
+            assert_eq!(
+                doubled["sides"][side]["after"]["volatility"],
+                single["sides"][side]["after"]["volatility"]
+            );
         }
     }
 
@@ -307,7 +348,11 @@ mod r672_double_or_nothing {
                 data.seed_profile(json!({ "id": p1 }));
                 data.seed_profile(json!({ "id": p2 }));
             }
-            let extra = if stake == STAKE_DOUBLE { json!({ "stake": stake }) } else { json!({}) };
+            let extra = if stake == STAKE_DOUBLE {
+                json!({ "stake": stake })
+            } else {
+                json!({})
+            };
             finished_match(&app, id, p1, p2, extra).await;
             record_result(
                 &app,
@@ -371,7 +416,10 @@ mod rematch_offers {
         let token_b = active_profile(&app, &b, 1000.0).await;
         finished_match(&app, &finished, &a, &b, json!({})).await;
 
-        assert_eq!(offer(&app, &token_a, &finished, STAKE_NORMAL).await.1["matchId"], Value::Null);
+        assert_eq!(
+            offer(&app, &token_a, &finished, STAKE_NORMAL).await.1["matchId"],
+            Value::Null
+        );
 
         let (_, seen_by_a) = status(&app, &token_a, &finished).await;
         assert_eq!(seen_by_a["youOffered"], json!(STAKE_NORMAL));
@@ -384,7 +432,8 @@ mod rematch_offers {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn matching_offers_create_exactly_one_match_with_the_finished_decks_a_fresh_seed_and_the_same_seats() {
+    async fn matching_offers_create_exactly_one_match_with_the_finished_decks_a_fresh_seed_and_the_same_seats()
+     {
         let app = test_app().await;
         let (a, b, finished_id) = names("matching");
         let token_a = active_profile(&app, &a, 1000.0).await;
@@ -392,7 +441,10 @@ mod rematch_offers {
         let finished = finished_match(&app, &finished_id, &a, &b, json!({})).await;
         paired_tickets(&app, &finished_id, [&a, &b], "bo1").await;
 
-        assert_eq!(offer(&app, &token_a, &finished_id, STAKE_NORMAL).await.1["matchId"], Value::Null);
+        assert_eq!(
+            offer(&app, &token_a, &finished_id, STAKE_NORMAL).await.1["matchId"],
+            Value::Null
+        );
         let (_, created) = offer(&app, &token_b, &finished_id, STAKE_NORMAL).await;
         let rematch_id = created["matchId"].as_str().expect("a match id").to_string();
 
@@ -402,7 +454,11 @@ mod rematch_offers {
         assert_eq!(rematch["ranked"], true);
         assert_eq!(rematch["mode"], "bo1");
         assert_eq!(rematch["status"], "live");
-        assert!(rematch.get("stake").is_none_or(Value::is_null), "stake: {}", rematch["stake"]);
+        assert!(
+            rematch.get("stake").is_none_or(Value::is_null),
+            "stake: {}",
+            rematch["stake"]
+        );
         assert_ne!(rematch["seed"], finished["seed"]);
         // Both seats are in the new game.
         assert_eq!(in_match_of(&app, &a).await, json!(rematch_id));
@@ -415,7 +471,10 @@ mod rematch_offers {
         assert_eq!(again["matchId"], json!(rematch_id));
         assert_eq!(live_ids(&app).await, vec![json!(rematch_id)]);
         // A late poller still learns where to go.
-        assert_eq!(status(&app, &token_a, &finished_id).await.1["matchId"], json!(rematch_id));
+        assert_eq!(
+            status(&app, &token_a, &finished_id).await.1["matchId"],
+            json!(rematch_id)
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -443,8 +502,14 @@ mod rematch_offers {
         let token_b = active_profile(&app, &b, 1000.0).await;
         finished_match(&app, &finished, &a, &b, json!({})).await;
 
-        assert_eq!(offer(&app, &token_a, &finished, STAKE_NORMAL).await.1["matchId"], Value::Null);
-        assert_eq!(offer(&app, &token_b, &finished, STAKE_DOUBLE).await.1["matchId"], Value::Null);
+        assert_eq!(
+            offer(&app, &token_a, &finished, STAKE_NORMAL).await.1["matchId"],
+            Value::Null
+        );
+        assert_eq!(
+            offer(&app, &token_b, &finished, STAKE_DOUBLE).await.1["matchId"],
+            Value::Null
+        );
         assert!(live_ids(&app).await.is_empty());
     }
 
@@ -459,13 +524,22 @@ mod rematch_offers {
 
         offer(&app, &token_a, &finished_id, STAKE_NORMAL).await;
         let (_, created) = offer(&app, &token_b, &finished_id, STAKE_NORMAL).await;
-        let rematch = match_row(&app, created["matchId"].as_str().expect("premise: the rematch was created")).await;
+        let rematch = match_row(
+            &app,
+            created["matchId"]
+                .as_str()
+                .expect("premise: the rematch was created"),
+        )
+        .await;
         assert_eq!(rematch["mode"], "random");
         // Fresh decks from the new seed (`queue.rs`'s suffix scheme), not the finished ones.
         let seed = rematch["seed"].as_str().expect("a seed").to_string();
         assert_eq!(
             rematch["decks"],
-            json!([deal_random_deck(&format!("{seed}:p1-deck")), deal_random_deck(&format!("{seed}:p2-deck"))])
+            json!([
+                deal_random_deck(&format!("{seed}:p1-deck")),
+                deal_random_deck(&format!("{seed}:p2-deck"))
+            ])
         );
         assert_ne!(rematch["decks"], finished["decks"]);
     }
@@ -479,12 +553,21 @@ mod rematch_offers {
         finished_match(&app, &finished, &a, &b, json!({})).await;
 
         offer(&app, &token_a, &finished, STAKE_NORMAL).await;
-        tokio::time::advance(Duration::from_millis(u64::try_from(REMATCH_OFFER_TTL_MS).expect("a ttl") + 1)).await;
+        tokio::time::advance(Duration::from_millis(
+            u64::try_from(REMATCH_OFFER_TTL_MS).expect("a ttl") + 1,
+        ))
+        .await;
 
         // A's offer lapsed, so B's is the first live one: no game, and A must offer again.
-        assert_eq!(offer(&app, &token_b, &finished, STAKE_NORMAL).await.1["matchId"], Value::Null);
+        assert_eq!(
+            offer(&app, &token_b, &finished, STAKE_NORMAL).await.1["matchId"],
+            Value::Null
+        );
         assert!(live_ids(&app).await.is_empty());
-        assert_eq!(status(&app, &token_a, &finished).await.1["youOffered"], Value::Null);
+        assert_eq!(
+            status(&app, &token_a, &finished).await.1["youOffered"],
+            Value::Null
+        );
 
         offer(&app, &token_a, &finished, STAKE_NORMAL).await;
         let (_, created) = status(&app, &token_b, &finished).await;
@@ -526,7 +609,10 @@ mod rematch_creation_guards {
         let created_at = calls.iter().position(|method| method == "matches.create");
         let flagged_at = calls.iter().position(|method| method == "profiles.setInMatch");
         assert!(created_at.is_some() && flagged_at.is_some(), "calls: {calls:?}");
-        assert!(created_at < flagged_at, "a seat was flagged before its match row existed: {calls:?}");
+        assert!(
+            created_at < flagged_at,
+            "a seat was flagged before its match row existed: {calls:?}"
+        );
         assert_eq!(in_match_of(&app, &a).await, json!(created_id));
         assert_eq!(in_match_of(&app, &b).await, json!(created_id));
     }
@@ -626,7 +712,14 @@ mod rematch_refusals {
         let (a, b, finished) = names("unfinished");
         let token_a = active_profile(&app, &a, 1000.0).await;
         active_profile(&app, &b, 1000.0).await;
-        finished_match(&app, &finished, &a, &b, json!({ "status": "live", "finishedAt": null })).await;
+        finished_match(
+            &app,
+            &finished,
+            &a,
+            &b,
+            json!({ "status": "live", "finishedAt": null }),
+        )
+        .await;
 
         let (code, refused) = offer(&app, &token_a, &finished, STAKE_NORMAL).await;
         assert_eq!(code, 422);
@@ -722,8 +815,14 @@ mod rematch_presence {
         start_live(&app, &finished, &a, &b).await;
         let (p1, _p1_frames) = Socket::channel();
         let (p2, _p2_frames) = Socket::channel();
-        app.matches.attach(&app, &finished, &a, p1.clone()).await.expect("A attaches");
-        app.matches.attach(&app, &finished, &b, p2.clone()).await.expect("B attaches");
+        app.matches
+            .attach(&app, &finished, &a, p1.clone())
+            .await
+            .expect("A attaches");
+        app.matches
+            .attach(&app, &finished, &b, p2.clone())
+            .await
+            .expect("B attaches");
         q!(app, matches_finish(&finished, now_ms()));
         settle().await;
         assert_eq!(status(&app, &token_a, &finished).await.1["opponentHere"], true);
@@ -748,21 +847,36 @@ mod rematch_presence {
         start_live(&app, match_id, &a, &b).await;
 
         // No sockets yet: neither seat is here.
-        assert_eq!(app.matches.presence_of(match_id).map(|seats| to_json(&seats)), Some(json!({ "p1": false, "p2": false })));
+        assert_eq!(
+            app.matches.presence_of(match_id).map(|seats| to_json(&seats)),
+            Some(json!({ "p1": false, "p2": false }))
+        );
         // An id with no actor is nobody, not an empty room.
         assert!(app.matches.presence_of("no-such-match").is_none());
 
         let (p1, _p1_frames) = Socket::channel();
         let (p2, _p2_frames) = Socket::channel();
-        app.matches.attach(&app, match_id, &a, p1.clone()).await.expect("A attaches");
-        app.matches.attach(&app, match_id, &b, p2.clone()).await.expect("B attaches");
+        app.matches
+            .attach(&app, match_id, &a, p1.clone())
+            .await
+            .expect("A attaches");
+        app.matches
+            .attach(&app, match_id, &b, p2.clone())
+            .await
+            .expect("B attaches");
         settle().await;
-        assert_eq!(app.matches.presence_of(match_id).map(|seats| to_json(&seats)), Some(json!({ "p1": true, "p2": true })));
+        assert_eq!(
+            app.matches.presence_of(match_id).map(|seats| to_json(&seats)),
+            Some(json!({ "p1": true, "p2": true }))
+        );
 
         // The opponent closes the tab: their seat reads as gone.
         p2.transport_closed();
         settle().await;
-        assert_eq!(app.matches.presence_of(match_id).map(|seats| to_json(&seats)), Some(json!({ "p1": true, "p2": false })));
+        assert_eq!(
+            app.matches.presence_of(match_id).map(|seats| to_json(&seats)),
+            Some(json!({ "p1": true, "p2": false }))
+        );
 
         app.matches.stop(match_id).await;
         assert!(app.matches.presence_of(match_id).is_none());

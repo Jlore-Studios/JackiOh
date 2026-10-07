@@ -39,8 +39,8 @@ use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, log_info, now_ms, ok_of};
 use crate::app::App;
 use crate::config::{
-    PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, PLAYER_SETTINGS_KEYS_MAX, PLAYER_SETTINGS_NAME_MAX_LENGTH,
-    PLAYER_SETTINGS_TEXT_MAX_LENGTH,
+    PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, PLAYER_SETTINGS_KEYS_MAX,
+    PLAYER_SETTINGS_NAME_MAX_LENGTH, PLAYER_SETTINGS_TEXT_MAX_LENGTH,
 };
 use crate::db::store::{
     PlayerSettingValue, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
@@ -62,7 +62,12 @@ fn is_group_id_shape(id: &str) -> bool {
     if !head_chars.all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit()) {
         return false;
     }
-    words.all(|word| !word.is_empty() && word.chars().all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit()))
+    words.all(|word| {
+        !word.is_empty()
+            && word
+                .chars()
+                .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit())
+    })
 }
 
 /// R633: a setting's name is a camelCase or lower-case word (`dragToPlay`, `master`).
@@ -87,12 +92,22 @@ pub struct PlayerSettingsView {
 
 fn settings_view(row: Option<&PlayerSettingsRow>) -> PlayerSettingsView {
     match row {
-        None => PlayerSettingsView { groups: IndexMap::new() },
+        None => PlayerSettingsView {
+            groups: IndexMap::new(),
+        },
         Some(row) => PlayerSettingsView {
             groups: row
                 .groups
                 .iter()
-                .map(|(id, group)| (id.clone(), PlayerSettingsGroup { at: group.at, values: group.values.clone() }))
+                .map(|(id, group)| {
+                    (
+                        id.clone(),
+                        PlayerSettingsGroup {
+                            at: group.at,
+                            values: group.values.clone(),
+                        },
+                    )
+                })
                 .collect(),
         },
     }
@@ -130,11 +145,17 @@ fn epoch_ms_of(value: Option<&Value>) -> Option<i64> {
 /// own clock is taken as now, as R320 does for a choice: a device whose clock runs ahead could
 /// otherwise make its settings win over every later change for as long as its clock stays ahead.
 pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSettingsGroup>, ApiError> {
-    let Some(raw) = body.get("groups").filter(|raw| (raw).is_object()).and_then(Value::as_object) else {
+    let Some(raw) = body
+        .get("groups")
+        .filter(|raw| (raw).is_object())
+        .and_then(Value::as_object)
+    else {
         return Err(bad_request("\"groups\" must be an object of setting groups"));
     };
     if raw.len() > PLAYER_SETTINGS_GROUPS_MAX {
-        return Err(bad_request(format!("at most {PLAYER_SETTINGS_GROUPS_MAX} setting groups can be saved")));
+        return Err(bad_request(format!(
+            "at most {PLAYER_SETTINGS_GROUPS_MAX} setting groups can be saved"
+        )));
     }
     let mut groups: IndexMap<String, PlayerSettingsGroup> = IndexMap::new();
     for (id, group) in raw {
@@ -143,15 +164,24 @@ pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSett
                 "every group id must be a lower-case slug of at most {PLAYER_SETTINGS_NAME_MAX_LENGTH} characters"
             )));
         }
-        let values_raw = group.get("values").filter(|values| (values).is_object()).and_then(Value::as_object);
+        let values_raw = group
+            .get("values")
+            .filter(|values| (values).is_object())
+            .and_then(Value::as_object);
         let Some(values_raw) = values_raw.filter(|_| (group).is_object()) else {
-            return Err(bad_request(format!("\"{id}\" must be {{ at: epoch milliseconds, values: an object }}")));
+            return Err(bad_request(format!(
+                "\"{id}\" must be {{ at: epoch milliseconds, values: an object }}"
+            )));
         };
         let Some(at) = epoch_ms_of(group.get("at")) else {
-            return Err(bad_request(format!("\"{id}.at\" must be a whole number of epoch milliseconds")));
+            return Err(bad_request(format!(
+                "\"{id}.at\" must be a whole number of epoch milliseconds"
+            )));
         };
         if values_raw.len() > PLAYER_SETTINGS_KEYS_MAX {
-            return Err(bad_request(format!("\"{id}\" can hold at most {PLAYER_SETTINGS_KEYS_MAX} settings")));
+            return Err(bad_request(format!(
+                "\"{id}\" can hold at most {PLAYER_SETTINGS_KEYS_MAX} settings"
+            )));
         }
         let mut values: IndexMap<String, PlayerSettingValue> = IndexMap::new();
         for (name, value) in values_raw {
@@ -162,7 +192,13 @@ pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSett
             }
             values.insert(name.clone(), read_value(id, name, value)?);
         }
-        groups.insert(id.clone(), PlayerSettingsGroup { at: at.min(now), values });
+        groups.insert(
+            id.clone(),
+            PlayerSettingsGroup {
+                at: at.min(now),
+                values,
+            },
+        );
     }
     Ok(groups)
 }
@@ -190,7 +226,11 @@ pub async fn put_settings(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let outcome = tx
         .player_settings_merge(
-            &PlayerSettingsMergeInput { profile_id: profile.id.clone(), groups, at: now },
+            &PlayerSettingsMergeInput {
+                profile_id: profile.id.clone(),
+                groups,
+                at: now,
+            },
             &PlayerSettingsLimits {
                 max_groups: PLAYER_SETTINGS_GROUPS_MAX as i64,
                 max_bytes: PLAYER_SETTINGS_BYTES_MAX as i64,

@@ -16,7 +16,10 @@
 
 use anyhow::Result;
 
-use jackioh_ai::{AI_BUDGET, AI_EVAL, AI_GATE_BUDGET, AI_TUNING_SERIES, MatchHooks, NextSwing, evaluate, game_config, play_match};
+use jackioh_ai::{
+    AI_BUDGET, AI_EVAL, AI_GATE_BUDGET, AI_TUNING_SERIES, MatchHooks, NextSwing, evaluate, game_config,
+    play_match,
+};
 use jackioh_engine::layers::unit_view;
 use jackioh_engine::state::find_instance;
 use jackioh_engine::zones::active_units_of;
@@ -60,8 +63,11 @@ fn board(state: &GameState, p: PlayerId) -> String {
         .iter()
         .map(|u| {
             let v = unit_view(state, u);
-            let kw: String =
-                v.keywords.iter().filter_map(|keyword| keyword.kind().as_str().chars().next()).collect();
+            let kw: String = v
+                .keywords
+                .iter()
+                .filter_map(|keyword| keyword.kind().as_str().chars().next())
+                .collect();
             format!(
                 "{}{} {}/{}{}{}",
                 name_of(state, &u.def_id),
@@ -69,12 +75,21 @@ fn board(state: &GameState, p: PlayerId) -> String {
                 v.attack,
                 v.health,
                 if v.position == Position::Def { " DEF" } else { "" },
-                if kw.is_empty() { String::new() } else { format!(" [{kw}]") }
+                if kw.is_empty() {
+                    String::new()
+                } else {
+                    format!(" [{kw}]")
+                }
             )
         })
         .collect();
     let side = &state.players[p];
-    let back: Vec<String> = side.backrow.iter().flatten().map(|card| name_of(state, &card.def_id)).collect();
+    let back: Vec<String> = side
+        .backrow
+        .iter()
+        .flatten()
+        .map(|card| name_of(state, &card.def_id))
+        .collect();
     format!(
         "{p} hp {} mana {}/{} hand {} lib {} | {}{}",
         side.hero.health,
@@ -83,14 +98,20 @@ fn board(state: &GameState, p: PlayerId) -> String {
         side.hand.len(),
         side.library.len(),
         units.join(", "),
-        if back.is_empty() { String::new() } else { format!(" || {}", back.join(", ")) }
+        if back.is_empty() {
+            String::new()
+        } else {
+            format!(" || {}", back.join(", "))
+        }
     )
 }
 
 /// An action in words: what is played, what attacks what, what switches; anything else as its JSON.
 fn describe(state: &GameState, _seat: PlayerId, action: &ActionBody) -> String {
     match action {
-        ActionBody::Play { instance_id, targets, .. } => {
+        ActionBody::Play {
+            instance_id, targets, ..
+        } => {
             let card = find_instance(state, instance_id);
             let targets = match targets {
                 Some(targets) => serde_json::to_string(targets).unwrap_or_default(),
@@ -99,18 +120,23 @@ fn describe(state: &GameState, _seat: PlayerId, action: &ActionBody) -> String {
             let name = card.map_or_else(|| instance_id.clone(), |card| name_of(state, &card.def_id));
             format!("play {name} {targets}")
         }
-        ActionBody::Attack { attacker_id, target_id } => {
+        ActionBody::Attack {
+            attacker_id,
+            target_id,
+        } => {
             let attacker = find_instance(state, attacker_id)
                 .map_or_else(|| attacker_id.clone(), |card| name_of(state, &card.def_id));
             let target = if target_id.starts_with("hero") {
                 target_id.clone()
             } else {
-                find_instance(state, target_id).map_or_else(|| target_id.clone(), |card| name_of(state, &card.def_id))
+                find_instance(state, target_id)
+                    .map_or_else(|| target_id.clone(), |card| name_of(state, &card.def_id))
             };
             format!("attack {attacker} -> {target}")
         }
         ActionBody::SwitchPosition { instance_id } => {
-            let name = find_instance(state, instance_id).map_or_else(String::new, |card| name_of(state, &card.def_id));
+            let name = find_instance(state, instance_id)
+                .map_or_else(String::new, |card| name_of(state, &card.def_id));
             format!("switch {name}")
         }
         other => serde_json::to_string(other).unwrap_or_default(),
@@ -126,7 +152,11 @@ pub fn run(args: Args) -> Result<()> {
         .series
         .or_else(|| std::env::var("SERIES").ok())
         .unwrap_or_else(|| AI_TUNING_SERIES.to_string());
-    let budget = if args.budget.as_deref() == Some("full") { AI_BUDGET } else { AI_GATE_BUDGET };
+    let budget = if args.budget.as_deref() == Some("full") {
+        AI_BUDGET
+    } else {
+        AI_GATE_BUDGET
+    };
     let config = game_config(matchup, n, budget, &series);
     let subject = subject_seat_of(n);
     println!("subject {subject}; decks:");
@@ -140,26 +170,31 @@ pub fn run(args: Args) -> Result<()> {
 
     let mut last_turn: i32 = -1;
     let mut hooks = MatchHooks {
-        after_action: Some(Box::new(|before: &GameState, _after: &GameState, seat: PlayerId, action: &ActionBody| {
-            if before.turn != last_turn && before.phase == Phase::Main {
-                last_turn = before.turn;
-                let eval = evaluate(before, subject, NextSwing::Enemy, &AI_EVAL);
-                println!(
-                    "\n== turn {} active {} (eval for subject {})",
-                    before.turn,
-                    before.active,
-                    to_fixed(eval, EVAL_DECIMALS)
-                );
-                for p in PLAYER_IDS {
-                    println!("   {}", board(before, p));
+        after_action: Some(Box::new(
+            |before: &GameState, _after: &GameState, seat: PlayerId, action: &ActionBody| {
+                if before.turn != last_turn && before.phase == Phase::Main {
+                    last_turn = before.turn;
+                    let eval = evaluate(before, subject, NextSwing::Enemy, &AI_EVAL);
+                    println!(
+                        "\n== turn {} active {} (eval for subject {})",
+                        before.turn,
+                        before.active,
+                        to_fixed(eval, EVAL_DECIMALS)
+                    );
+                    for p in PLAYER_IDS {
+                        println!("   {}", board(before, p));
+                    }
+                    let hand: Vec<String> = before.players[before.active]
+                        .hand
+                        .iter()
+                        .map(|card| name_of(before, &card.def_id))
+                        .collect();
+                    println!("   hand({}): {}", before.active, hand.join(", "));
                 }
-                let hand: Vec<String> =
-                    before.players[before.active].hand.iter().map(|card| name_of(before, &card.def_id)).collect();
-                println!("   hand({}): {}", before.active, hand.join(", "));
-            }
-            let who = if seat == subject { "AI " } else { "OPP" };
-            println!("  {who} {}", describe(before, seat, action));
-        })),
+                let who = if seat == subject { "AI " } else { "OPP" };
+                println!("  {who} {}", describe(before, seat, action));
+            },
+        )),
         ..MatchHooks::default()
     };
     let record = play_match(&config, &mut hooks);

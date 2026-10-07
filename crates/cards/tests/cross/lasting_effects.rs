@@ -25,7 +25,9 @@ const MANA_WELL: &str = "core-006";
 const HIT_JOB: &str = "core-016";
 const CUBE: &str = "core-022";
 const UNLICENSED: &str = "core-085";
-const LIBRARY: [&str; 8] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
+const LIBRARY: [&str; 8] = [
+    VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
+];
 
 fn echo_riders(g: &Scenario, player: PlayerId) -> Vec<PlayerModifier> {
     g.state().players[player]
@@ -141,7 +143,10 @@ mod r209_twinspells_grant_ends_when_twinspell_leaves_the_field {
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P2);
 
-        g.play(MAGIC_JAMMED, json!({ "targets": [{ "pick": "instance", "instanceId": twin.id }] }));
+        g.play(
+            MAGIC_JAMMED,
+            json!({ "targets": [{ "pick": "instance", "instanceId": twin.id }] }),
+        );
         g.expect_in_zone(&twin, "graveyard");
         assert!(echo_riders(&g, PlayerId::P1).is_empty());
 
@@ -182,7 +187,10 @@ mod r209_twinspells_grant_follows_its_current_face {
 
         // "Steal target enemy permanent; it also becomes Radiant". Twinspell is p1's now, and Radiant
         // on the field, where §5.2 has its text be the radiant one from then on: "Echo +2".
-        g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": twin.id }] }));
+        g.play(
+            MIND_CONTROL,
+            json!({ "targets": [{ "pick": "instance", "instanceId": twin.id }] }),
+        );
         assert_eq!(g.card(&twin).controller, PlayerId::P1);
         assert!(g.card(&twin).radiant);
         // R169's badge says so too.
@@ -222,13 +230,19 @@ mod r209_twinspells_grant_is_the_permanents_however_it_came_to_stand_on_the_fiel
         g.play(TWINSPELL, json!({ "zone": 1 }));
         // R428: the Cube eats Units only, so its meal is a Mr. Vanilla carrying Twinspell's text (R77).
         let eaten = unit_carrying(&mut g, 2, 1);
-        g.play(CUBE, json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": eaten.id }] }));
+        g.play(
+            CUBE,
+            json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": eaten.id }] }),
+        );
         let cube = g.unit("p1", 1).expect("setup: p1's Cube");
         g.expect_in_zone(&eaten, "graveyard");
 
         // Hit Job kills the Cube, whose Death summons two copies of the Unit it ate, Twinspell's text
         // and all, into p1's unit row (R41, R64). A summon fires no Cry (§6.2).
-        g.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": cube.id }] }));
+        g.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": cube.id }] }),
+        );
         let copies = g
             .last_events()
             .iter()
@@ -244,7 +258,8 @@ mod r209_twinspells_grant_is_the_permanents_however_it_came_to_stand_on_the_fiel
     }
 
     #[test]
-    fn r209_r77_twinspell_fused_by_85_onto_the_trap_controllers_field_spell_grants_its_echo_to_that_controller() {
+    fn r209_r77_twinspell_fused_by_85_onto_the_trap_controllers_field_spell_grants_its_echo_to_that_controller()
+     {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
             "active": "p2",

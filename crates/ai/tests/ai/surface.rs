@@ -28,7 +28,11 @@ fn eval(state: &GameState, seat: PlayerId) -> f64 {
 
 /// TS's `{ rng: createRng(seed), budget }`, with no clock.
 fn ai_options(seed: &str, budget: SearchBudget) -> AiOptions<'static> {
-    AiOptions { rng: create_rng(seed, 0), budget, should_stop: None }
+    AiOptions {
+        rng: create_rng(seed, 0),
+        budget,
+        should_stop: None,
+    }
 }
 
 /// A value as its JSON, for comparisons that pin the wire shape rather than a Rust type's name.
@@ -94,7 +98,10 @@ fn passed_value(ended: &GameState) -> f64 {
 
 /// TS's module constant `BOGUS`: an attack by a unit that does not exist.
 fn bogus() -> ActionBody {
-    ActionBody::Attack { attacker_id: "no-such-unit".to_string(), target_id: format!("hero-{HUMAN}") }
+    ActionBody::Attack {
+        attacker_id: "no-such-unit".to_string(),
+        target_id: format!("hero-{HUMAN}"),
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -106,7 +113,8 @@ mod surface_line_status {
 
     /// is open in the seat's own turn, passed once the turn moved on, yielded on the other seat's turn and over at a result
     #[test]
-    fn is_open_in_the_seats_own_turn_passed_once_the_turn_moved_on_yielded_on_the_other_seats_turn_and_over_at_a_result() {
+    fn is_open_in_the_seats_own_turn_passed_once_the_turn_moved_on_yielded_on_the_other_seats_turn_and_over_at_a_result()
+     {
         let state = quiet_turn();
         assert!(state.pending.is_none());
         assert_eq!(line_status(&state, AI, TURN), LineStatus::Open);
@@ -160,7 +168,10 @@ mod surface_terminal_score {
     #[test]
     fn an_open_line_with_no_node_left_for_its_end_turn_is_scored_where_it_stands() {
         let state = quiet_turn();
-        assert_eq!(terminal_score(&state, AI, TURN, &create_node_counter(0, None)), eval(&state, AI));
+        assert_eq!(
+            terminal_score(&state, AI, TURN, &create_node_counter(0, None)),
+            eval(&state, AI)
+        );
     }
 }
 
@@ -177,7 +188,14 @@ mod surface_score_line {
         let state = quiet_turn();
         assert!(!is_legal(&state, AI, bogus()));
         assert_eq!(
-            score_line(&state, AI, &[bogus()], &create_node_counter(20, None), false, None),
+            score_line(
+                &state,
+                AI,
+                &[bogus()],
+                &create_node_counter(20, None),
+                false,
+                None
+            ),
             Some(terminal_score(&state, AI, TURN, &create_node_counter(20, None))),
         );
     }
@@ -194,7 +212,14 @@ mod surface_score_line {
         let expected = passed_value(&ended_turn(&stepped));
 
         assert_eq!(
-            score_line(&state, AI, std::slice::from_ref(&attack), &create_node_counter(20, None), false, None),
+            score_line(
+                &state,
+                AI,
+                std::slice::from_ref(&attack),
+                &create_node_counter(20, None),
+                false,
+                None
+            ),
             Some(expected)
         );
         assert_eq!(
@@ -215,8 +240,28 @@ mod surface_score_line {
     fn is_null_when_the_counter_runs_out_before_the_line_is_scored() {
         let state = quiet_turn();
         let attack = hero_attack(&state);
-        assert!(score_line(&state, AI, std::slice::from_ref(&attack), &create_node_counter(0, None), false, None).is_none());
-        assert!(score_line(&state, AI, std::slice::from_ref(&attack), &create_node_counter(1, None), false, None).is_none());
+        assert!(
+            score_line(
+                &state,
+                AI,
+                std::slice::from_ref(&attack),
+                &create_node_counter(0, None),
+                false,
+                None
+            )
+            .is_none()
+        );
+        assert!(
+            score_line(
+                &state,
+                AI,
+                std::slice::from_ref(&attack),
+                &create_node_counter(1, None),
+                false,
+                None
+            )
+            .is_none()
+        );
     }
 }
 
@@ -227,7 +272,10 @@ mod surface_beam_search {
     #[test]
     fn returns_complete_lines_best_first_each_starting_with_a_candidate_within_the_counter_and_max_depth() {
         let state = quiet_turn();
-        let det = worlds(&state, "surface-beam", 1).into_iter().next().unwrap_or_else(|| panic!("no determinization"));
+        let det = worlds(&state, "surface-beam", 1)
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| panic!("no determinization"));
         let counter = create_node_counter(AI_GATE_BUDGET.nodes, None);
         let lines = beam_search(&det, AI, &counter, AI_GATE_BUDGET);
 
@@ -243,7 +291,11 @@ mod surface_beam_search {
             }
         }
         // endTurn is expanded at the root on top of the branching, so ending at once is always a line.
-        assert!(lines.iter().any(|line| line.actions.len() == 1 && line.actions[0] == ActionBody::EndTurn));
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.actions.len() == 1 && line.actions[0] == ActionBody::EndTurn)
+        );
     }
 
     /// with no node to spend there is no line
@@ -336,7 +388,8 @@ mod surface_decides_searched_decisions {
             "p2": { "hand": ["core-005"], "field": ["core-008"] },
         }));
         s.play("core-072", json!({}));
-        let decision = decide(s.state(), AI, &mut ai_options("surface-prompt", AI_GATE_BUDGET)).expect("a decision");
+        let decision =
+            decide(s.state(), AI, &mut ai_options("surface-prompt", AI_GATE_BUDGET)).expect("a decision");
         assert_eq!(decision.reason, DecisionReason::Prompt);
         assert!(matches!(decision.action, ActionBody::Answer { .. }));
         assert_eq!(decision.line.first(), Some(&decision.action));
@@ -370,7 +423,10 @@ mod surface_play_ai_turn {
         for (n, action) in turn.actions.iter().enumerate() {
             assert_eq!(action.nonce, format!("t{n}"));
             assert_eq!(action.player_id, AI);
-            assert_eq!(Some(&action.body), turn.decisions.get(n).map(|decision| &decision.action));
+            assert_eq!(
+                Some(&action.body),
+                turn.decisions.get(n).map(|decision| &decision.action)
+            );
         }
         assert!(!ai_to_act(&turn.state, AI));
     }
@@ -392,10 +448,21 @@ mod surface_sweep_cards_clock {
             t.set(t.get() + AI_SWEEP.decision_ms as f64 + 1.0);
             t.get()
         };
-        let result = sweep_card("core-011", &SweepOptions { seeds: Some(1), now: Some(&slow), tier: None });
+        let result = sweep_card(
+            "core-011",
+            &SweepOptions {
+                seeds: Some(1),
+                now: Some(&slow),
+                tier: None,
+            },
+        );
         let result = js(&result);
         assert_eq!(result["games"], json!(1));
         assert!(result["timeouts"].as_i64().unwrap_or(0) > 0);
-        assert!(result["flags"].as_array().is_some_and(|flags| flags.contains(&json!("timeout"))));
+        assert!(
+            result["flags"]
+                .as_array()
+                .is_some_and(|flags| flags.contains(&json!("timeout")))
+        );
     }
 }

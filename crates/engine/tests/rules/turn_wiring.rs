@@ -28,8 +28,8 @@ use jackioh_engine::testkit::{mock_animate_at_turn_start, mock_brittle_tick, moc
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{in_hand, new_game, put, set_library, setup_catalog, slot};
 use crate::rules::fixtures::turn::{
-    LOG_LANE, cast_spell, clock, crumble_watcher, log_card, note, notes, reminder, turn_catalog, TURN_SCRIPTS,
-    write,
+    LOG_LANE, TURN_SCRIPTS, cast_spell, clock, crumble_watcher, log_card, note, notes, reminder,
+    turn_catalog, write,
 };
 
 /// The log card also answers the doubles' prompts, and holds a delayed step for them.
@@ -93,7 +93,10 @@ fn recording_doubles() -> StageCalls {
     mock_return_at_cleanup(move |sink: &mut EngineSink<'_>, player: PlayerId| {
         let _ = return_tx.send(player);
         let open = sink.state.players[player].turn_log.unspent_at_end.is_none();
-        write(sink.state, &format!("return:{player}:{}", if open { "open" } else { "closed" }));
+        write(
+            sink.state,
+            &format!("return:{player}:{}", if open { "open" } else { "closed" }),
+        );
     });
     StageCalls { brittle, returned }
 }
@@ -120,9 +123,18 @@ fn playing(seed: &str) -> GameState {
     register();
     for player in [PlayerId::P1, PlayerId::P2] {
         let keep = ids(&state.players[player].hand);
-        state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": player })).0;
+        state = act(
+            &state,
+            json!({ "type": "mulligan", "keep": keep, "playerId": player }),
+        )
+        .0;
     }
-    put(&mut state, &log_card().id, slot(PlayerId::P2, Row::Backrow, LOG_LANE), Default::default());
+    put(
+        &mut state,
+        &log_card().id,
+        slot(PlayerId::P2, Row::Backrow, LOG_LANE),
+        Default::default(),
+    );
     state.players.p1.auto_end_turn = Some(false);
     state.players.p2.auto_end_turn = Some(false);
     state
@@ -132,9 +144,18 @@ fn playing(seed: &str) -> GameState {
 /// turn, and a cast-on-draw card on top of their library: every stage of p1's next start leaves a note.
 fn staged(seed: &str) -> GameState {
     let mut state = playing(seed);
-    put(&mut state, &clock().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
+    put(
+        &mut state,
+        &clock().id,
+        slot(PlayerId::P1, Row::Backrow, 1),
+        Default::default(),
+    );
     let card = in_hand(&mut state, &reminder().id, PlayerId::P1, 1)[0].clone();
-    state = act(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" })).0;
+    state = act(
+        &state,
+        json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+    )
+    .0;
     set_library(&mut state, PlayerId::P1, &[cast_spell().id, "fx-9".to_string()]);
     state
 }
@@ -164,12 +185,19 @@ fn since(state: &GameState, from: usize) -> Vec<String> {
 
 /// The entries that are not p2's (`!entry.includes("p2")`).
 fn without_p2(entries: Vec<String>) -> Vec<String> {
-    entries.into_iter().filter(|entry| !entry.contains("p2")).collect()
+    entries
+        .into_iter()
+        .filter(|entry| !entry.contains("p2"))
+        .collect()
 }
 
 /// `work.map((item) => [item.resume.hook, item.resume.step])`.
 fn work_steps(state: &GameState) -> Vec<(String, String)> {
-    state.work.iter().map(|item| (item.resume.hook.clone(), item.resume.step.clone())).collect()
+    state
+        .work
+        .iter()
+        .map(|item| (item.resume.hook.clone(), item.resume.step.clone()))
+        .collect()
 }
 
 /// `toMatchObject`: every key of `expected` is in `actual` with a matching value.
@@ -180,7 +208,10 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
         (Value::Array(actual), Value::Array(expected)) => {
             actual.len() == expected.len()
-                && actual.iter().zip(expected).all(|(found, value)| matches_object(found, value))
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(found, value)| matches_object(found, value))
         }
         _ => actual == expected,
     }
@@ -190,7 +221,8 @@ mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {
     use super::*;
 
     #[test]
-    fn r62_refresh_then_the_brittle_tick_then_the_animated_stage_then_delayed_effects_triggers_and_the_draw() {
+    fn r62_refresh_then_the_brittle_tick_then_the_animated_stage_then_delayed_effects_triggers_and_the_draw()
+    {
         let calls = recording_doubles();
         let state = staged("order");
         let before = notes(&state).len();
@@ -214,14 +246,18 @@ mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {
         );
         // And the other player's turn ran the same stages for p2, on p2's turn only.
         assert_eq!(
-            since(&after, before).into_iter().filter(|entry| entry.contains("p2")).collect::<Vec<_>>(),
+            since(&after, before)
+                .into_iter()
+                .filter(|entry| entry.contains("p2"))
+                .collect::<Vec<_>>(),
             vec!["brittle:p2:1", "animate:p2", "return:p2:closed"]
         );
         assert!(calls.brittle.try_iter().any(|player| player == PlayerId::P1));
     }
 
     #[test]
-    fn r62_a_prompt_inside_the_brittle_stage_parks_the_rest_of_the_start_the_answer_runs_each_later_stage_once() {
+    fn r62_a_prompt_inside_the_brittle_stage_parks_the_rest_of_the_start_the_answer_runs_each_later_stage_once()
+     {
         let _calls = recording_doubles();
         let state = staged("brittle-asks");
         mock_brittle_tick(|sink: &mut EngineSink<'_>, player: PlayerId| {
@@ -233,9 +269,15 @@ mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {
         let before = notes(&state).len();
         let paused = to_turn_three(&state).0;
 
-        assert_eq!(paused.pending.as_ref().map(|pending| pending.player_id), Some(PlayerId::P1));
+        assert_eq!(
+            paused.pending.as_ref().map(|pending| pending.player_id),
+            Some(PlayerId::P1)
+        );
         assert_eq!(paused.phase, Phase::Start);
-        assert_eq!(work_steps(&paused), vec![(START_OF_TURN_WORK.to_string(), "brittle".to_string())]);
+        assert_eq!(
+            work_steps(&paused),
+            vec![(START_OF_TURN_WORK.to_string(), "brittle".to_string())]
+        );
         assert_eq!(
             without_p2(since(&paused, before)),
             vec!["end-of-turn:p1", "return:p1:closed", "brittle:p1"]
@@ -263,10 +305,16 @@ mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {
     }
 
     #[test]
-    fn r62_a_trigger_the_brittle_stages_own_events_wake_may_ask_too_the_stages_settle_pauses_and_the_rest_waits() {
+    fn r62_a_trigger_the_brittle_stages_own_events_wake_may_ask_too_the_stages_settle_pauses_and_the_rest_waits()
+     {
         let _calls = recording_doubles();
         let mut state = staged("brittle-event");
-        put(&mut state, &crumble_watcher().id, slot(PlayerId::P1, Row::Backrow, 2), Default::default());
+        put(
+            &mut state,
+            &crumble_watcher().id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            Default::default(),
+        );
         mock_brittle_tick(|sink: &mut EngineSink<'_>, player: PlayerId| {
             write(sink.state, &format!("brittle:{player}"));
             let Some(card) = sink.state.players[player].hand.first().cloned() else {
@@ -284,15 +332,22 @@ mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {
         });
         let before = notes(&state).len();
         let paused = to_turn_three(&state).0;
-        assert_eq!(paused.pending.as_ref().map(|pending| pending.player_id), Some(PlayerId::P1));
+        assert_eq!(
+            paused.pending.as_ref().map(|pending| pending.player_id),
+            Some(PlayerId::P1)
+        );
         assert_eq!(
             without_p2(since(&paused, before)),
             vec!["end-of-turn:p1", "return:p1:closed", "brittle:p1", "crumble-seen"]
         );
-        let last = paused.work.last().map(|item| serde_json::to_value(&item.resume).expect("serialises"));
-        assert!(
-            last.is_some_and(|resume| matches_object(&resume, &json!({ "hook": START_OF_TURN_WORK, "step": "brittle" })))
-        );
+        let last = paused
+            .work
+            .last()
+            .map(|item| serde_json::to_value(&item.resume).expect("serialises"));
+        assert!(last.is_some_and(|resume| matches_object(
+            &resume,
+            &json!({ "hook": START_OF_TURN_WORK, "step": "brittle" })
+        )));
 
         let live = answer(&paused).0;
         assert_eq!(
@@ -323,7 +378,10 @@ mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {
         });
         let before = notes(&state).len();
         let paused = to_turn_three(&state).0;
-        assert_eq!(work_steps(&paused), vec![(START_OF_TURN_WORK.to_string(), "animate".to_string())]);
+        assert_eq!(
+            work_steps(&paused),
+            vec![(START_OF_TURN_WORK.to_string(), "animate".to_string())]
+        );
         let copy = round_trip(&paused);
         let live = answer(&paused).0;
         assert_eq!(
@@ -343,7 +401,8 @@ mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {
     }
 
     #[test]
-    fn r62_the_delayed_effects_due_at_a_start_are_the_ones_that_existed_as_the_turn_began_not_one_a_stage_made() {
+    fn r62_the_delayed_effects_due_at_a_start_are_the_ones_that_existed_as_the_turn_began_not_one_a_stage_made()
+     {
         let _calls = recording_doubles();
         let state = playing("late-delayed");
         mock_brittle_tick(|sink: &mut EngineSink<'_>, player: PlayerId| {
@@ -374,7 +433,13 @@ mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {
         assert!(!notes(&three).contains(&"late-delayed".to_string()));
         assert_eq!(three.delayed.len(), 1);
         let five = to_turn_three(&three).0;
-        assert_eq!(notes(&five).iter().filter(|entry| *entry == "late-delayed").count(), 1);
+        assert_eq!(
+            notes(&five)
+                .iter()
+                .filter(|entry| *entry == "late-delayed")
+                .count(),
+            1
+        );
         assert!(five.delayed.is_empty());
     }
 }
@@ -383,25 +448,40 @@ mod r62_s_cleanup_with_the_animated_return_as_its_last_step_b3_1 {
     use super::*;
 
     #[test]
-    fn r62_the_return_runs_after_every_end_of_turn_step_and_cleanups_own_steps_before_the_turn_cap_and_the_next_turn() {
+    fn r62_the_return_runs_after_every_end_of_turn_step_and_cleanups_own_steps_before_the_turn_cap_and_the_next_turn()
+     {
         let calls = recording_doubles();
         let mut state = playing("return-order");
-        put(&mut state, &clock().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &clock().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            Default::default(),
+        );
         let (after, events) = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(
-            notes(&after).into_iter().filter(|entry| entry.contains("p1")).collect::<Vec<_>>(),
+            notes(&after)
+                .into_iter()
+                .filter(|entry| entry.contains("p1"))
+                .collect::<Vec<_>>(),
             vec!["end-of-turn:p1", "return:p1:closed"]
         );
         let types: Vec<GameEventType> = events.iter().map(GameEvent::event_type).collect();
-        let first_ended = types.iter().position(|kind| *kind == GameEventType::TurnEnded).map_or(-1, |at| at as i64);
-        let last_started =
-            types.iter().rposition(|kind| *kind == GameEventType::TurnStarted).map_or(-1, |at| at as i64);
+        let first_ended = types
+            .iter()
+            .position(|kind| *kind == GameEventType::TurnEnded)
+            .map_or(-1, |at| at as i64);
+        let last_started = types
+            .iter()
+            .rposition(|kind| *kind == GameEventType::TurnStarted)
+            .map_or(-1, |at| at as i64);
         assert!(first_ended < last_started);
         assert_eq!(calls.returned.try_iter().last(), Some(PlayerId::P1));
     }
 
     #[test]
-    fn r62_a_prompt_inside_the_return_parks_the_turn_cap_and_the_next_turn_the_answer_starts_the_next_turn_once() {
+    fn r62_a_prompt_inside_the_return_parks_the_turn_cap_and_the_next_turn_the_answer_starts_the_next_turn_once()
+     {
         let _calls = recording_doubles();
         let state = playing("return-asks");
         mock_return_at_cleanup(|sink: &mut EngineSink<'_>, player: PlayerId| {
@@ -413,16 +493,25 @@ mod r62_s_cleanup_with_the_animated_return_as_its_last_step_b3_1 {
         let paused = act(&state, json!({ "type": "endTurn", "playerId": "p1" })).0;
         assert_eq!(paused.active, PlayerId::P1);
         assert_eq!(paused.phase, Phase::End);
-        assert_eq!(work_steps(&paused), vec![(END_OF_TURN_WORK.to_string(), "next".to_string())]);
+        assert_eq!(
+            work_steps(&paused),
+            vec![(END_OF_TURN_WORK.to_string(), "next".to_string())]
+        );
         let copy = round_trip(&paused);
         let (live, events) = answer(&paused);
         assert_eq!(live.active, PlayerId::P2);
         assert_eq!(live.phase, Phase::Main);
         assert_eq!(
-            events.iter().filter(|event| event.event_type() == GameEventType::TurnStarted).count(),
+            events
+                .iter()
+                .filter(|event| event.event_type() == GameEventType::TurnStarted)
+                .count(),
             1
         );
-        assert_eq!(notes(&live), vec!["return:p1", "return:answered", "brittle:p2:1", "animate:p2"]);
+        assert_eq!(
+            notes(&live),
+            vec!["return:p1", "return:answered", "brittle:p2:1", "animate:p2"]
+        );
         assert_eq!(hash_state(&answer(&copy).0), hash_state(&live));
     }
 
@@ -490,12 +579,20 @@ mod r62_s_cleanup_with_the_animated_return_as_its_last_step_b3_1 {
         game.step(json!({ "type": "endTurn", "playerId": "p1" }));
         game.step(json!({ "type": "endTurn", "playerId": "p2" }));
         assert_eq!(
-            game.state.work.iter().map(|item| item.resume.hook.clone()).collect::<Vec<_>>(),
+            game.state
+                .work
+                .iter()
+                .map(|item| item.resume.hook.clone())
+                .collect::<Vec<_>>(),
             vec![END_OF_TURN_WORK]
         );
         game.answer_open();
         assert_eq!(
-            game.state.work.iter().map(|item| item.resume.hook.clone()).collect::<Vec<_>>(),
+            game.state
+                .work
+                .iter()
+                .map(|item| item.resume.hook.clone())
+                .collect::<Vec<_>>(),
             vec![START_OF_TURN_WORK]
         );
         game.answer_open();

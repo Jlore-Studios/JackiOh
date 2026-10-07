@@ -166,11 +166,21 @@ fn defs() -> Vec<CardDef> {
 const NOTE_LANE: usize = 5;
 
 fn log_of(state: &GameState) -> Option<&CardInstance> {
-    state.players.p1.backrow.get(NOTE_LANE - 1).and_then(Option::as_ref)
+    state
+        .players
+        .p1
+        .backrow
+        .get(NOTE_LANE - 1)
+        .and_then(Option::as_ref)
 }
 
 fn log_of_mut(state: &mut GameState) -> Option<&mut CardInstance> {
-    state.players.p1.backrow.get_mut(NOTE_LANE - 1).and_then(Option::as_mut)
+    state
+        .players
+        .p1
+        .backrow
+        .get_mut(NOTE_LANE - 1)
+        .and_then(Option::as_mut)
 }
 
 fn note(name: impl Into<String>) -> Effect {
@@ -194,7 +204,12 @@ fn notes(state: &GameState) -> Vec<String> {
     log_of(state)
         .and_then(|log| log.memory.get("steps"))
         .and_then(Value::as_array)
-        .map(|steps| steps.iter().filter_map(|step| step.as_str().map(str::to_string)).collect())
+        .map(|steps| {
+            steps
+                .iter()
+                .filter_map(|step| step.as_str().map(str::to_string))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -246,7 +261,9 @@ fn scripts() -> Vec<(String, CardScripts)> {
         (
             closer().id,
             both(Script {
-                end_of_turn: Some(hook(|ctx| vec![note(format!("end:lane{}", lane_of(ctx.self_.as_ref())))])),
+                end_of_turn: Some(hook(|ctx| {
+                    vec![note(format!("end:lane{}", lane_of(ctx.self_.as_ref())))]
+                })),
                 ..Script::default()
             }),
         ),
@@ -291,7 +308,9 @@ fn scripts() -> Vec<(String, CardScripts)> {
                     &[GameEventType::Summoned],
                     |_ctx, _event| vec![ask_controller()],
                 )],
-                resume: [("asked", hook(|_ctx| vec![note("answered")]))].into_iter().collect(),
+                resume: [("asked", hook(|_ctx| vec![note("answered")]))]
+                    .into_iter()
+                    .collect(),
                 ..Script::default()
             }),
         ),
@@ -360,7 +379,11 @@ fn act(state: &GameState, body: Value) -> GameState {
 }
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|card| card.id.clone()).collect()
+    state.players[player]
+        .hand
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 /// Past the mulligans, in p1's main phase, with the note log parked in p1's backrow lane 5.
@@ -374,7 +397,12 @@ fn playing(seed: &str) -> GameState {
         &state,
         json!({ "type": "mulligan", "keep": hand_ids(&state, PlayerId::P2), "playerId": "p2" }),
     );
-    put(&mut state, &log_card().id, slot(PlayerId::P1, Row::Backrow, NOTE_LANE as i32), json!({}));
+    put(
+        &mut state,
+        &log_card().id,
+        slot(PlayerId::P1, Row::Backrow, NOTE_LANE as i32),
+        json!({}),
+    );
     state
 }
 
@@ -389,7 +417,9 @@ fn hand_card(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInsta
 
 /// `Number(id.slice(1))`: an instance id's number (NaN when it has none, as in TS).
 fn id_number(id: &str) -> f64 {
-    id.get(1..).and_then(|digits| digits.parse::<f64>().ok()).unwrap_or(f64::NAN)
+    id.get(1..)
+        .and_then(|digits| digits.parse::<f64>().ok())
+        .unwrap_or(f64::NAN)
 }
 
 fn strings(items: &[&str]) -> Vec<String> {
@@ -419,8 +449,18 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     fn r68_two_end_of_turn_triggers_on_one_side_resolve_in_lane_order_not_in_creation_order() {
         let mut state = playing("r68-lane-order");
         // Created lane 3 first, so the instance order and the lane order disagree.
-        let later = put(&mut state, &closer().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
-        let earlier = put(&mut state, &closer().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let later = put(
+            &mut state,
+            &closer().id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
+        let earlier = put(
+            &mut state,
+            &closer().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         assert!(id_number(&later.id) < id_number(&earlier.id));
 
         // The registry itself reads lane 1 before lane 3 (R68's within-a-side order).
@@ -439,8 +479,18 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     fn s10_3_fires_a_trap_before_a_queued_trigger_because_a_trap_is_a_response() {
         let mut state = playing("trap-before-trigger");
         // Lane order alone would run the Field Spell first: it is the trap's response status that wins.
-        put(&mut state, &watcher().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        put(&mut state, &snap_trap().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        put(
+            &mut state,
+            &watcher().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &snap_trap().id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
         let watched: Vec<String> = cards_in_trigger_order(&state)
             .iter()
             .map(|holder| holder.card.def_id.clone())
@@ -462,7 +512,14 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
         settle(&mut sink.on(&mut state), SettleOptions::default());
         assert_eq!(notes(&state), strings(&["trap", "trigger"]));
         // §5.1: the Trap is spent and public; the Field Spell that answered is untouched.
-        assert!(state.players.p1.graveyard.iter().any(|card| card.def_id == snap_trap().id));
+        assert!(
+            state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .any(|card| card.def_id == snap_trap().id)
+        );
         let fired: Vec<String> = events_of_type(&sink.events, GameEventType::TrapFired)
             .iter()
             .filter_map(|event| match event {
@@ -477,9 +534,24 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     #[test]
     fn r62_holds_the_end_of_turn_trap_window_back_to_its_scheduled_point_after_the_end_of_turn_triggers() {
         let mut state = playing("r62-window");
-        put(&mut state, &closer().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        put(&mut state, &window_trap().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        put(&mut state, &window_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &closer().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &window_trap().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &window_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
 
         // `turnEnded` is the one event the immediate dispatch withholds: the window owns it (R62).
         let turn_ended = GameEvent::TurnEnded {
@@ -498,16 +570,33 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
         // At its scheduled point it fires on both sides, the ending player's traps first (R68).
         let mut scheduled = sink_for(&state);
         assert_eq!(
-            run_trap_window(&mut scheduled.on(&mut state), &turn_ended).fired.len(),
+            run_trap_window(&mut scheduled.on(&mut state), &turn_ended)
+                .fired
+                .len(),
             2
         );
         assert_eq!(notes(&state), strings(&["window:p1", "window:p2"]));
 
         // And in the turn loop the window comes after the end-of-turn triggers, never before them.
         let mut live = playing("r62-window-live");
-        put(&mut live, &closer().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        put(&mut live, &window_trap().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        put(&mut live, &window_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        put(
+            &mut live,
+            &closer().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        put(
+            &mut live,
+            &window_trap().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        put(
+            &mut live,
+            &window_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
         let ended = act(&live, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(notes(&ended), strings(&["end:lane1", "window:p1", "window:p2"]));
     }
@@ -568,8 +657,18 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     fn s10_3_pauses_the_loop_where_it_stands_when_a_trap_prompts_its_owner_keeping_the_queue_behind_it() {
         let mut state = playing("trap-prompt-pause");
         assert_eq!(state.active, PlayerId::P1);
-        let waiting = put(&mut state, &watcher().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        put(&mut state, &ask_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let waiting = put(
+            &mut state,
+            &watcher().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &ask_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
 
         let mut sink = sink_for(&state);
         {
@@ -604,7 +703,12 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     #[test]
     fn r118_pauses_the_opponents_action_until_the_traps_prompt_is_answered_without_eating_the_cry_s10_3() {
         let mut state = playing("trap-prompt-blocks-action");
-        put(&mut state, &ask_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &ask_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
         let crier_id = hand_card(&mut state, &crier().id, PlayerId::P1).id;
         let played = act_result(
             &state,
@@ -713,7 +817,14 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
         }
         assert_eq!(notes(&state), strings(&["cry:onDraw"]));
         assert_eq!(state.counters.played, before + 1);
-        assert!(!state.players.p1.hand.iter().any(|card| card.def_id == draw_caster().id));
+        assert!(
+            !state
+                .players
+                .p1
+                .hand
+                .iter()
+                .any(|card| card.def_id == draw_caster().id)
+        );
         assert_eq!(cost_paid_of_plays(&sink.events), vec![0]);
 
         // A Call to Chaos cast: free, counts as a play, fires the script (R70).

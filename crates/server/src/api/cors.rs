@@ -83,7 +83,10 @@ pub fn is_origin_allowed(origins: &[String], origin: Option<&str>) -> bool {
 
 /// The headers an allowed origin gets on every response, preflight or not.
 fn cors_headers(origin: &str) -> Vec<(&'static str, String)> {
-    vec![("access-control-allow-origin", canonical_origin(origin)), ("vary", "Origin".to_string())]
+    vec![
+        ("access-control-allow-origin", canonical_origin(origin)),
+        ("vary", "Origin".to_string()),
+    ]
 }
 
 fn set_header(response: &mut Response, name: &'static str, value: &str) {
@@ -94,7 +97,8 @@ fn set_header(response: &mut Response, name: &'static str, value: &str) {
 
 fn empty(status: u16) -> Response {
     let mut response = Response::new(Body::empty());
-    *response.status_mut() = axum::http::StatusCode::from_u16(status).unwrap_or(axum::http::StatusCode::NO_CONTENT);
+    *response.status_mut() =
+        axum::http::StatusCode::from_u16(status).unwrap_or(axum::http::StatusCode::NO_CONTENT);
     response
 }
 
@@ -109,13 +113,21 @@ where
     F: FnOnce(Request) -> Fut,
     Fut: Future<Output = Response>,
 {
-    let origins: Vec<String> =
-        options.origins.iter().map(|origin| canonical_origin(origin)).filter(|origin| !origin.is_empty()).collect();
-    let origin: Option<String> =
-        request.headers().get("origin").and_then(|value| value.to_str().ok()).map(str::to_string);
+    let origins: Vec<String> = options
+        .origins
+        .iter()
+        .map(|origin| canonical_origin(origin))
+        .filter(|origin| !origin.is_empty())
+        .collect();
+    let origin: Option<String> = request
+        .headers()
+        .get("origin")
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_string);
     let allowed = is_origin_allowed(&origins, origin.as_deref());
 
-    if request.method() == Method::OPTIONS && request.headers().contains_key("access-control-request-method") {
+    if request.method() == Method::OPTIONS && request.headers().contains_key("access-control-request-method")
+    {
         if !allowed {
             tracing::warn!(
                 event = "cors.preflight_refused",
@@ -136,7 +148,11 @@ where
         }
         set_header(&mut response, "access-control-allow-methods", ALLOWED_METHODS);
         set_header(&mut response, "access-control-allow-headers", ALLOWED_HEADERS);
-        set_header(&mut response, "access-control-max-age", &PREFLIGHT_MAX_AGE_SECONDS.to_string());
+        set_header(
+            &mut response,
+            "access-control-max-age",
+            &PREFLIGHT_MAX_AGE_SECONDS.to_string(),
+        );
         return response;
     }
 

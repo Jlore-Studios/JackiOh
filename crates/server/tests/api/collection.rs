@@ -30,7 +30,9 @@ use tokio::sync::Mutex;
 use tower::ServiceExt;
 
 use jackioh_server::api::catalog::Catalog;
-use jackioh_server::api::collection::{GrantInput, LAUNCH_GRANT_REASON, grant_cards, grant_entire_catalog, owned_map};
+use jackioh_server::api::collection::{
+    GrantInput, LAUNCH_GRANT_REASON, grant_cards, grant_entire_catalog, owned_map,
+};
 use jackioh_server::api::http::{ApiError, ApiErrorCode, AuthLevel};
 use jackioh_server::app::{self, App};
 use jackioh_server::db::fake::FakeData;
@@ -48,7 +50,10 @@ fn test_env() -> IndexMap<String, String> {
     for (name, value) in [("E2E", "1"), ("NODE_ENV", "test"), ("TRUSTED_PROXY_HOPS", "1")] {
         source.insert(name.to_string(), value.to_string());
     }
-    source.insert("CATALOG_VERSION".to_string(), jackioh_cards::catalog_version().to_string());
+    source.insert(
+        "CATALOG_VERSION".to_string(),
+        jackioh_cards::catalog_version().to_string(),
+    );
     source
 }
 
@@ -73,7 +78,9 @@ impl Reply {
 async fn built_app() -> App {
     let env = app::load_server_env(&test_env()).expect("the test environment loads");
     let built = app::build(env).await.expect("the test app builds");
-    Arc::try_unwrap(built).ok().expect("app::build keeps no second handle on the App it returns")
+    Arc::try_unwrap(built)
+        .ok()
+        .expect("app::build keeps no second handle on the App it returns")
 }
 
 /// `createTestDeps(overrides)`: an App, with R144's fixtures wiped so its store starts as empty as
@@ -82,7 +89,10 @@ async fn built_app() -> App {
 async fn serve(app: App) -> Server {
     let app = Arc::new(app);
     store_of(&app).lock().await.reset();
-    Server { router: app::router(app.clone()), app }
+    Server {
+        router: app::router(app.clone()),
+        app,
+    }
 }
 
 async fn fresh_server() -> Server {
@@ -97,10 +107,20 @@ async fn server_holding(catalog: Catalog) -> Server {
 
 impl Server {
     async fn send(&self, request: Request<Body>) -> Reply {
-        let response = self.router.clone().oneshot(request).await.expect("the router always answers");
+        let response = self
+            .router
+            .clone()
+            .oneshot(request)
+            .await
+            .expect("the router always answers");
         let status = response.status().as_u16();
-        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.expect("the body reads");
-        Reply { status, text: String::from_utf8(bytes.to_vec()).expect("the body is UTF-8") }
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("the body reads");
+        Reply {
+            status,
+            text: String::from_utf8(bytes.to_vec()).expect("the body is UTF-8"),
+        }
     }
 }
 
@@ -130,7 +150,9 @@ fn from_json<T: DeserializeOwned>(value: Value) -> T {
 }
 
 fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
-    rows.iter().map(|row| serde_json::to_value(row).expect("a row serialises")).collect()
+    rows.iter()
+        .map(|row| serde_json::to_value(row).expect("a row serialises"))
+        .collect()
 }
 
 /// `deps.store.tables.collection`, as TS's rows read.
@@ -151,7 +173,10 @@ fn now_ms() -> i64 {
 
 /// An active profile row and an auth user who verifies as it; answers the bearer token.
 async fn active_profile(server: &Server, id: &str, user_id: &str) -> String {
-    let _ = store_of(&server.app).lock().await.seed_profile(json!({ "id": id, "userId": user_id, "status": "active" }));
+    let _ = store_of(&server.app)
+        .lock()
+        .await
+        .seed_profile(json!({ "id": id, "userId": user_id, "status": "active" }));
     deps::add_user(&server.app, user_id, &format!("{id}@example.test"), true)
 }
 
@@ -166,7 +191,11 @@ async fn setup() -> (Server, String) {
 async fn grant(server: &Server, profile_id: &str, entries: Value, reason: &str) -> Result<(), ApiError> {
     grant_cards(
         &server.app,
-        GrantInput { profile_id: profile_id.to_string(), entries: from_json(entries), reason: reason.to_string() },
+        GrantInput {
+            profile_id: profile_id.to_string(),
+            entries: from_json(entries),
+            reason: reason.to_string(),
+        },
     )
     .await
 }
@@ -182,9 +211,14 @@ async fn owned(server: &Server, profile_id: &str) -> IndexMap<String, i64> {
 
 /// `deps.store.onCall = (method) => { if (method === failing) throw new Error("injected fault"); }`.
 async fn fail_on(server: &Server, failing: &'static str) {
-    store_of(&server.app).lock().await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
-        if method == failing { Err(StoreError::Other("injected fault".to_string())) } else { Ok(()) }
-    }));
+    store_of(&server.app).lock().await.on_call =
+        Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
+            if method == failing {
+                Err(StoreError::Other("injected fault".to_string()))
+            } else {
+                Ok(())
+            }
+        }));
 }
 
 /// The row without its `at`, which the server stamps from its own clock.
@@ -198,7 +232,10 @@ fn without_at(row: &Value) -> Value {
 
 /// A ban held as server state: the catalog data is untouched, only the handle answers differently.
 fn with_ban(catalog: &Catalog, banned_id: &str) -> Catalog {
-    Catalog { banned: [banned_id.to_string()].into_iter().collect(), ..catalog.clone() }
+    Catalog {
+        banned: [banned_id.to_string()].into_iter().collect(),
+        ..catalog.clone()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -213,9 +250,14 @@ mod grant_cards_section_9_4_one_transaction_both_tables {
         let (server, _token) = setup().await;
         fail_on(&server, "collection.appendGrants").await;
 
-        let error = grant(&server, PROFILE, json!([{ "cardId": "core-001", "quantity": 1 }]), "reward")
-            .await
-            .expect_err("the injected fault fails the grant");
+        let error = grant(
+            &server,
+            PROFILE,
+            json!([{ "cardId": "core-001", "quantity": 1 }]),
+            "reward",
+        )
+        .await
+        .expect_err("the injected fault fails the grant");
         assert!(format!("{error:?}").contains("injected fault"), "{error:?}");
 
         assert_eq!(collection_rows(&server).await, Vec::<Value>::new());
@@ -227,9 +269,14 @@ mod grant_cards_section_9_4_one_transaction_both_tables {
         let (server, _token) = setup().await;
         fail_on(&server, "collection.upsertQuantities").await;
 
-        let error = grant(&server, PROFILE, json!([{ "cardId": "core-001", "quantity": 1 }]), "reward")
-            .await
-            .expect_err("the injected fault fails the grant");
+        let error = grant(
+            &server,
+            PROFILE,
+            json!([{ "cardId": "core-001", "quantity": 1 }]),
+            "reward",
+        )
+        .await
+        .expect_err("the injected fault fails the grant");
         assert!(format!("{error:?}").contains("injected fault"), "{error:?}");
 
         assert_eq!(grant_rows(&server).await, Vec::<Value>::new());
@@ -237,15 +284,28 @@ mod grant_cards_section_9_4_one_transaction_both_tables {
     }
 
     #[tokio::test]
-    async fn the_mirror_case_cannot_pass_by_accident_a_fault_on_either_write_rolls_back_an_existing_row_too() {
+    async fn the_mirror_case_cannot_pass_by_accident_a_fault_on_either_write_rolls_back_an_existing_row_too()
+    {
         let (server, _token) = setup().await;
-        grant(&server, PROFILE, json!([{ "cardId": "core-001", "quantity": 1 }]), "reward").await.expect("the grant");
+        grant(
+            &server,
+            PROFILE,
+            json!([{ "cardId": "core-001", "quantity": 1 }]),
+            "reward",
+        )
+        .await
+        .expect("the grant");
         let before = collection_rows(&server).await;
 
         fail_on(&server, "collection.appendGrants").await;
-        let error = grant(&server, PROFILE, json!([{ "cardId": "core-001", "quantity": 1 }]), "reward")
-            .await
-            .expect_err("the injected fault fails the grant");
+        let error = grant(
+            &server,
+            PROFILE,
+            json!([{ "cardId": "core-001", "quantity": 1 }]),
+            "reward",
+        )
+        .await
+        .expect_err("the injected fault fails the grant");
         assert!(format!("{error:?}").contains("injected fault"), "{error:?}");
 
         assert_eq!(collection_rows(&server).await, before);
@@ -282,20 +342,37 @@ mod grant_cards_section_9_4_one_transaction_both_tables {
             ]
         );
         // TS stamped `deps.timers.now()` on both; the server's own clock is read once per grant.
-        let stamps: Vec<i64> = grants.iter().map(|row| row["at"].as_i64().expect("an epoch-ms stamp")).collect();
+        let stamps: Vec<i64> = grants
+            .iter()
+            .map(|row| row["at"].as_i64().expect("an epoch-ms stamp"))
+            .collect();
         assert_eq!(stamps[0], stamps[1]);
-        assert!(stamps[0] >= before && stamps[0] <= after, "{stamps:?} not in {before}..={after}");
+        assert!(
+            stamps[0] >= before && stamps[0] <= after,
+            "{stamps:?} not in {before}..={after}"
+        );
     }
 
     #[tokio::test]
     async fn the_ledger_accumulates_a_second_grant_adds_to_the_quantity_and_appends_its_own_row() {
         let (server, _token) = setup().await;
         let entries = json!([{ "cardId": "core-001", "quantity": 1 }]);
-        grant(&server, PROFILE, entries.clone(), "reward").await.expect("the first grant");
-        grant(&server, PROFILE, entries, "admin").await.expect("the second grant");
+        grant(&server, PROFILE, entries.clone(), "reward")
+            .await
+            .expect("the first grant");
+        grant(&server, PROFILE, entries, "admin")
+            .await
+            .expect("the second grant");
 
-        assert_eq!(owned(&server, PROFILE).await, IndexMap::from([("core-001".to_string(), 2)]));
-        let reasons: Vec<Value> = grant_rows(&server).await.iter().map(|row| row["reason"].clone()).collect();
+        assert_eq!(
+            owned(&server, PROFILE).await,
+            IndexMap::from([("core-001".to_string(), 2)])
+        );
+        let reasons: Vec<Value> = grant_rows(&server)
+            .await
+            .iter()
+            .map(|row| row["reason"].clone())
+            .collect();
         assert_eq!(reasons, vec![json!("reward"), json!("admin")]);
     }
 
@@ -311,7 +388,10 @@ mod grant_cards_section_9_4_one_transaction_both_tables {
         .await
         .expect("the grant");
 
-        assert_eq!(collection_rows(&server).await, vec![json!({ "profileId": PROFILE, "cardId": "core-001", "quantity": 3 })]);
+        assert_eq!(
+            collection_rows(&server).await,
+            vec![json!({ "profileId": PROFILE, "cardId": "core-001", "quantity": 3 })]
+        );
         assert_eq!(grant_rows(&server).await.len(), 1);
     }
 
@@ -321,10 +401,18 @@ mod grant_cards_section_9_4_one_transaction_both_tables {
     async fn refuses_a_delta_that_is_not_a_positive_whole_number_and_writes_nothing() {
         let (server, _token) = setup().await;
         for quantity in [0, -1] {
-            let error = grant(&server, PROFILE, json!([{ "cardId": "core-001", "quantity": quantity }]), "reward")
-                .await
-                .expect_err("the grant is refused");
-            assert!(matches!(error.code, ApiErrorCode::BadRequest), "{quantity}: {error:?}");
+            let error = grant(
+                &server,
+                PROFILE,
+                json!([{ "cardId": "core-001", "quantity": quantity }]),
+                "reward",
+            )
+            .await
+            .expect_err("the grant is refused");
+            assert!(
+                matches!(error.code, ApiErrorCode::BadRequest),
+                "{quantity}: {error:?}"
+            );
         }
         assert_eq!(collection_rows(&server).await, Vec::<Value>::new());
         assert_eq!(grant_rows(&server).await, Vec::<Value>::new());
@@ -335,11 +423,14 @@ mod grant_cards_section_9_4_one_transaction_both_tables {
         let (server, _token) = setup().await;
         let calls = Arc::new(AtomicUsize::new(0));
         let counter = calls.clone();
-        store_of(&server.app).lock().await.on_call = Some(Arc::new(move |_method: &str| -> Result<(), StoreError> {
-            counter.fetch_add(1, Ordering::SeqCst);
-            Ok(())
-        }));
-        grant(&server, PROFILE, json!([]), "reward").await.expect("an empty grant is no error");
+        store_of(&server.app).lock().await.on_call =
+            Some(Arc::new(move |_method: &str| -> Result<(), StoreError> {
+                counter.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            }));
+        grant(&server, PROFILE, json!([]), "reward")
+            .await
+            .expect("an empty grant is no error");
         assert_eq!(calls.load(Ordering::SeqCst), 0);
         assert_eq!(grant_rows(&server).await, Vec::<Value>::new());
     }
@@ -360,11 +451,17 @@ mod grant_entire_catalog_build_m6_t2_launch_mode_grants_every_card {
         let local = server_holding(catalog).await;
         active_profile(&local, PROFILE, USER).await;
 
-        grant_entire_catalog(&local.app, PROFILE, Some(LAUNCH_GRANT_REASON)).await.expect("the launch grant");
+        grant_entire_catalog(&local.app, PROFILE, Some(LAUNCH_GRANT_REASON))
+            .await
+            .expect("the launch grant");
 
         let catalog = &local.app.catalog;
-        let mut expected: Vec<String> =
-            catalog.card_ids.iter().filter(|id| !catalog.is_token(id) && id.as_str() != banned).cloned().collect();
+        let mut expected: Vec<String> = catalog
+            .card_ids
+            .iter()
+            .filter(|id| !catalog.is_token(id) && id.as_str() != banned)
+            .cloned()
+            .collect();
         let owned = owned(&local, PROFILE).await;
         let mut keys: Vec<String> = owned.keys().cloned().collect();
         keys.sort();
@@ -377,10 +474,16 @@ mod grant_entire_catalog_build_m6_t2_launch_mode_grants_every_card {
     #[tokio::test]
     async fn skips_tokens_section_9_4_l3_bans_them_from_a_deck_so_owning_one_is_meaningless() {
         let (server, _token) = setup().await;
-        grant_entire_catalog(&server.app, PROFILE, Some(LAUNCH_GRANT_REASON)).await.expect("the launch grant");
+        grant_entire_catalog(&server.app, PROFILE, Some(LAUNCH_GRANT_REASON))
+            .await
+            .expect("the launch grant");
         let owned = owned(&server, PROFILE).await;
         let catalog = &server.app.catalog;
-        let tokens: Vec<&String> = catalog.card_ids.iter().filter(|id| catalog.is_token(id)).collect();
+        let tokens: Vec<&String> = catalog
+            .card_ids
+            .iter()
+            .filter(|id| catalog.is_token(id))
+            .collect();
         assert!(!tokens.is_empty());
         for card_id in tokens {
             assert!(!owned.contains_key(card_id.as_str()), "{card_id}");
@@ -390,11 +493,15 @@ mod grant_entire_catalog_build_m6_t2_launch_mode_grants_every_card {
     #[tokio::test]
     async fn is_idempotent_a_second_call_neither_doubles_a_quantity_nor_appends_a_duplicate_row() {
         let (server, _token) = setup().await;
-        grant_entire_catalog(&server.app, PROFILE, Some(LAUNCH_GRANT_REASON)).await.expect("the launch grant");
+        grant_entire_catalog(&server.app, PROFILE, Some(LAUNCH_GRANT_REASON))
+            .await
+            .expect("the launch grant");
         let collection = collection_rows(&server).await;
         let grants = grant_rows(&server).await;
 
-        grant_entire_catalog(&server.app, PROFILE, Some(LAUNCH_GRANT_REASON)).await.expect("the second launch grant");
+        grant_entire_catalog(&server.app, PROFILE, Some(LAUNCH_GRANT_REASON))
+            .await
+            .expect("the second launch grant");
 
         assert_eq!(collection_rows(&server).await, collection);
         assert_eq!(grant_rows(&server).await, grants);
@@ -403,11 +510,23 @@ mod grant_entire_catalog_build_m6_t2_launch_mode_grants_every_card {
     #[tokio::test]
     async fn tops_up_a_profile_that_already_owns_part_of_the_catalog_without_re_granting_the_rest() {
         let (server, _token) = setup().await;
-        grant(&server, PROFILE, json!([{ "cardId": "core-001", "quantity": 1 }]), "reward").await.expect("the grant");
-        grant_entire_catalog(&server.app, PROFILE, Some(LAUNCH_GRANT_REASON)).await.expect("the launch grant");
+        grant(
+            &server,
+            PROFILE,
+            json!([{ "cardId": "core-001", "quantity": 1 }]),
+            "reward",
+        )
+        .await
+        .expect("the grant");
+        grant_entire_catalog(&server.app, PROFILE, Some(LAUNCH_GRANT_REASON))
+            .await
+            .expect("the launch grant");
 
-        let for_core_001: Vec<Value> =
-            grant_rows(&server).await.into_iter().filter(|row| row["cardId"] == json!("core-001")).collect();
+        let for_core_001: Vec<Value> = grant_rows(&server)
+            .await
+            .into_iter()
+            .filter(|row| row["cardId"] == json!("core-001"))
+            .collect();
         assert_eq!(for_core_001.len(), 1);
         assert_eq!(for_core_001[0]["reason"], json!("reward"));
         assert_eq!(owned(&server, PROFILE).await.get("core-001"), Some(&1));
@@ -416,8 +535,14 @@ mod grant_entire_catalog_build_m6_t2_launch_mode_grants_every_card {
     #[tokio::test]
     async fn records_the_reason_it_was_given_so_the_ledger_distinguishes_a_launch_grant() {
         let (server, _token) = setup().await;
-        grant_entire_catalog(&server.app, PROFILE, Some("admin")).await.expect("the grant");
-        let mut reasons: Vec<Value> = grant_rows(&server).await.iter().map(|row| row["reason"].clone()).collect();
+        grant_entire_catalog(&server.app, PROFILE, Some("admin"))
+            .await
+            .expect("the grant");
+        let mut reasons: Vec<Value> = grant_rows(&server)
+            .await
+            .iter()
+            .map(|row| row["reason"].clone())
+            .collect();
         reasons.dedup();
         assert_eq!(reasons, vec![json!("admin")]);
     }
@@ -439,10 +564,23 @@ mod owned_map_section_9_4_l5_s_input {
     #[tokio::test]
     async fn does_not_leak_another_profile_s_entitlements() {
         let (server, _token) = setup().await;
-        let _ = store_of(&server.app).lock().await.seed_profile(json!({ "id": "p2", "userId": "u2", "status": "active" }));
-        grant(&server, "p2", json!([{ "cardId": "core-001", "quantity": 1 }]), "reward").await.expect("the grant");
+        let _ = store_of(&server.app)
+            .lock()
+            .await
+            .seed_profile(json!({ "id": "p2", "userId": "u2", "status": "active" }));
+        grant(
+            &server,
+            "p2",
+            json!([{ "cardId": "core-001", "quantity": 1 }]),
+            "reward",
+        )
+        .await
+        .expect("the grant");
         assert_eq!(owned(&server, PROFILE).await, IndexMap::<String, i64>::new());
-        assert_eq!(owned(&server, "p2").await, IndexMap::from([("core-001".to_string(), 1)]));
+        assert_eq!(
+            owned(&server, "p2").await,
+            IndexMap::from([("core-001".to_string(), 1)])
+        );
     }
 }
 
@@ -460,7 +598,10 @@ mod the_routes_section_9_4_no_client_path_writes_the_collection {
             .filter(|(_, path, _, _)| path.starts_with("/api/collection"))
             .map(|(method, path, auth, _)| (format!("{method} {path}"), matches!(auth, AuthLevel::Active)))
             .collect();
-        assert_eq!(routes.iter().map(|(route, _)| route.as_str()).collect::<Vec<_>>(), vec!["GET /api/collection"]);
+        assert_eq!(
+            routes.iter().map(|(route, _)| route.as_str()).collect::<Vec<_>>(),
+            vec!["GET /api/collection"]
+        );
         assert!(routes.iter().all(|(route, _)| route.starts_with("GET ")));
         assert!(routes.iter().all(|(_, active)| *active));
     }
@@ -477,7 +618,11 @@ mod the_routes_section_9_4_no_client_path_writes_the_collection {
                     Some(&token),
                 ))
                 .await;
-            assert!([404, 405].contains(&response.status), "{method}: {}", response.status);
+            assert!(
+                [404, 405].contains(&response.status),
+                "{method}: {}",
+                response.status
+            );
             assert_eq!(collection_rows(&server).await, Vec::<Value>::new());
             assert_eq!(grant_rows(&server).await, Vec::<Value>::new());
         }
@@ -495,7 +640,9 @@ mod the_routes_section_9_4_no_client_path_writes_the_collection {
         .await
         .expect("the grant");
 
-        let response = server.send(json_request("GET", "/api/collection", None, Some(&token))).await;
+        let response = server
+            .send(json_request("GET", "/api/collection", None, Some(&token)))
+            .await;
         assert_eq!(response.status, 200);
         assert_eq!(
             response.json(),
@@ -512,10 +659,15 @@ mod the_routes_section_9_4_no_client_path_writes_the_collection {
     #[tokio::test]
     async fn a_pending_account_gets_403_section_9_4_no_collection_before_an_invite_code_is_redeemed() {
         let local = fresh_server().await;
-        let _ = store_of(&local.app).lock().await.seed_profile(json!({ "id": PROFILE, "userId": USER, "status": "pending" }));
+        let _ = store_of(&local.app)
+            .lock()
+            .await
+            .seed_profile(json!({ "id": PROFILE, "userId": USER, "status": "pending" }));
         let pending_token = deps::add_user(&local.app, USER, "pending@example.test", true);
 
-        let response = local.send(json_request("GET", "/api/collection", None, Some(&pending_token))).await;
+        let response = local
+            .send(json_request("GET", "/api/collection", None, Some(&pending_token)))
+            .await;
         assert_eq!(response.status, 403);
         assert_eq!(response.json()["error"]["code"], json!("account_pending"));
     }
@@ -523,7 +675,9 @@ mod the_routes_section_9_4_no_client_path_writes_the_collection {
     #[tokio::test]
     async fn an_unauthenticated_request_gets_401() {
         let (server, _token) = setup().await;
-        let response = server.send(json_request("GET", "/api/collection", None, None)).await;
+        let response = server
+            .send(json_request("GET", "/api/collection", None, None))
+            .await;
         assert_eq!(response.status, 401);
     }
 }

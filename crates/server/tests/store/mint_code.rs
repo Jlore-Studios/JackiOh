@@ -38,7 +38,9 @@ mod parse_mint_args {
     }
 
     fn refusal(argv: &[&str]) -> String {
-        parse_mint_args(&args(argv)).expect_err("the arguments are refused").to_string()
+        parse_mint_args(&args(argv))
+            .expect_err("the arguments are refused")
+            .to_string()
     }
 
     #[test]
@@ -59,8 +61,8 @@ mod parse_mint_args {
 }
 
 mod the_pepper_derivation_the_script_shares_with_app_rs {
-    use jackioh_server::api::codes::{mint_invite_code, MintDeps, MintInput};
-    use jackioh_server::api::crypto::{create_hashes, Hashes};
+    use jackioh_server::api::codes::{MintDeps, MintInput, mint_invite_code};
+    use jackioh_server::api::crypto::{Hashes, create_hashes};
     use jackioh_server::db::store::{Db, InviteCode};
 
     const CODE_PEPPER: &str = "a-pepper-of-at-least-thirty-two-characters";
@@ -81,11 +83,22 @@ mod the_pepper_derivation_the_script_shares_with_app_rs {
     async fn stores_a_hash_that_the_same_pepper_finds_again_by_the_printed_plaintext() {
         let db = Db::fake();
         let hashes = mint_hashes();
-        let minted = mint_invite_code(MintDeps { db: &db, code_pepper: CODE_PEPPER }, MintInput { max_uses: Some(2), ..Default::default() })
-            .await
-            .expect("a code is minted");
+        let minted = mint_invite_code(
+            MintDeps {
+                db: &db,
+                code_pepper: CODE_PEPPER,
+            },
+            MintInput {
+                max_uses: Some(2),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("a code is minted");
 
-        let found = find(&db, &hashes.code(&minted.formatted)).await.expect("the code is found by its hash");
+        let found = find(&db, &hashes.code(&minted.formatted))
+            .await
+            .expect("the code is found by its hash");
         assert_eq!(found.id, minted.id);
         assert_eq!(found.max_uses, 2);
     }
@@ -94,7 +107,15 @@ mod the_pepper_derivation_the_script_shares_with_app_rs {
     #[tokio::test]
     async fn stores_a_hash_a_different_pepper_cannot_find() {
         let db = Db::fake();
-        let minted = mint_invite_code(MintDeps { db: &db, code_pepper: CODE_PEPPER }, MintInput::default()).await.expect("a code is minted");
+        let minted = mint_invite_code(
+            MintDeps {
+                db: &db,
+                code_pepper: CODE_PEPPER,
+            },
+            MintInput::default(),
+        )
+        .await
+        .expect("a code is minted");
 
         let other = create_hashes("a-different-pepper-of-thirty-two-plus", "x");
         assert_eq!(find(&db, &other.code(&minted.formatted)).await, None);

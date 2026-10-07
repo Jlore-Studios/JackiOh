@@ -75,7 +75,9 @@ fn draft_issues(
         is_deckable: &*is_deckable,
         name_max_length: NAME_MAX,
         portrait: portrait.map(str::to_string),
-        is_portrait: is_portrait.as_deref().map(|known| -> &dyn Fn(&str) -> bool { known }),
+        is_portrait: is_portrait
+            .as_deref()
+            .map(|known| -> &dyn Fn(&str) -> bool { known }),
     };
     issues_of(&input)
 }
@@ -194,15 +196,27 @@ mod r250_a_saved_deck_is_a_draft_d1_d4_are_all_a_save_checks {
         assert_eq!(refused_as("Ag\u{00ad}gro"), control);
         // A name made only of characters that draw nothing is no name at all.
         assert_eq!(refused_as("\u{200d}"), Some("A deck needs a name.".to_string()));
-        assert_eq!(refused_as("\u{fe0f}\u{200d}\u{fe0f}"), Some("A deck needs a name.".to_string()));
-        // The joiners that emoji and several scripts are written with stay legal, as does a flag.
-        assert_eq!(draft(&[], "\u{1f468}\u{200d}\u{1f469}\u{200d}\u{1f467} family"), json!([]));
         assert_eq!(
-            draft(&[], "\u{0645}\u{06cc}\u{200c}\u{062e}\u{0648}\u{0627}\u{0647}\u{0645}"),
+            refused_as("\u{fe0f}\u{200d}\u{fe0f}"),
+            Some("A deck needs a name.".to_string())
+        );
+        // The joiners that emoji and several scripts are written with stay legal, as does a flag.
+        assert_eq!(
+            draft(&[], "\u{1f468}\u{200d}\u{1f469}\u{200d}\u{1f467} family"),
             json!([])
         );
         assert_eq!(
-            draft(&[], "\u{1f3f4}\u{e0067}\u{e0062}\u{e0073}\u{e0063}\u{e0074}\u{e007f} Scot"),
+            draft(
+                &[],
+                "\u{0645}\u{06cc}\u{200c}\u{062e}\u{0648}\u{0627}\u{0647}\u{0645}"
+            ),
+            json!([])
+        );
+        assert_eq!(
+            draft(
+                &[],
+                "\u{1f3f4}\u{e0067}\u{e0062}\u{e0073}\u{e0063}\u{e0074}\u{e007f} Scot"
+            ),
             json!([])
         );
         assert_eq!(draft(&[], "\u{2764}\u{fe0f} Aggro"), json!([]));
@@ -249,10 +263,7 @@ mod r641_d5_a_saved_decks_portrait_is_null_or_a_known_portrait_id {
     use super::*;
 
     /// A draft carrying `portrait`, D5-checked against the shared roster as the caller passes it.
-    fn portrait_draft(
-        portrait: Option<&str>,
-        is_portrait: Option<PortraitCheck>,
-    ) -> Value {
+    fn portrait_draft(portrait: Option<&str>, is_portrait: Option<PortraitCheck>) -> Value {
         draft_issues("Aggro", &[], portrait, is_portrait)
     }
 
@@ -273,7 +284,12 @@ mod r641_d5_a_saved_decks_portrait_is_null_or_a_known_portrait_id {
         );
         // D5 is collected with the other rules' failures, not instead of them.
         assert_eq!(
-            rule_list(&draft_issues("", &[], Some("not-a-portrait"), Some(is_portrait()))),
+            rule_list(&draft_issues(
+                "",
+                &[],
+                Some("not-a-portrait"),
+                Some(is_portrait())
+            )),
             vec!["D1", "D5"]
         );
     }
@@ -301,8 +317,14 @@ mod r251_a_card_is_its_catalog_id_across_a_trio {
         let mut c_shared: Vec<String> = c[1..].iter().map(|id| id.to_string()).collect();
         c_shared.push(shared.clone());
         let decks = json!([{ "cards": a }, { "cards": b_shared }, { "cards": c_shared }]);
-        assert_eq!(conflicts(decks), json!([{ "cardId": shared, "decks": [0, 1, 2] }]));
-        let all: Vec<Value> = legal_decks().iter().map(|cards| json!({ "cards": cards })).collect();
+        assert_eq!(
+            conflicts(decks),
+            json!([{ "cardId": shared, "decks": [0, 1, 2] }])
+        );
+        let all: Vec<Value> = legal_decks()
+            .iter()
+            .map(|cards| json!({ "cards": cards }))
+            .collect();
         assert_eq!(conflicts(Value::Array(all)), json!([]));
     }
 
@@ -380,7 +402,11 @@ mod r253_what_may_be_queued_a_best_of_1_deck_passes_l2_l3_l5_and_l6 {
             "catalog": snapshot(),
             "collection": owned(),
         }));
-        let errors = if short["ok"] == json!(true) { json!([]) } else { short["errors"].clone() };
+        let errors = if short["ok"] == json!(true) {
+            json!([])
+        } else {
+            short["errors"].clone()
+        };
         assert_eq!(
             errors,
             json!([{
@@ -436,7 +462,10 @@ mod r253_what_may_be_queued_a_best_of_1_deck_passes_l2_l3_l5_and_l6 {
     fn r253_checks_a_trio_with_l1_l6_a_trio_is_s9_4s_loadout() {
         // TS: `expect(validateTrio).toBe(validateLoadout)`. Rust compares the two functions by what
         // they answer, on a legal trio and on a short one.
-        let all: Vec<Value> = legal_decks().iter().map(|cards| json!({ "cards": cards })).collect();
+        let all: Vec<Value> = legal_decks()
+            .iter()
+            .map(|cards| json!({ "cards": cards }))
+            .collect();
         let legal = json!({ "decks": all, "catalog": snapshot(), "collection": owned() });
         assert_eq!(
             trio_result(legal.clone()),
@@ -450,7 +479,8 @@ mod r253_what_may_be_queued_a_best_of_1_deck_passes_l2_l3_l5_and_l6 {
         let short = json!({ "decks": two, "catalog": snapshot(), "collection": owned() });
         assert_eq!(
             trio_result(short.clone()),
-            serde_json::to_value(validate_loadout(&json_as(short.clone()))).expect("a loadout result serialises")
+            serde_json::to_value(validate_loadout(&json_as(short.clone())))
+                .expect("a loadout result serialises")
         );
         assert_eq!(rules(&trio_result(short)), vec!["L1"]);
     }
@@ -477,18 +507,27 @@ mod r340_room_for_an_imported_trio {
     #[test]
     fn r340_an_import_that_fits_under_both_caps_is_ok() {
         assert_eq!(
-            room(json!({ "decks": 7, "trios": 4 }), json!({ "decks": 3, "trios": 1 })),
+            room(
+                json!({ "decks": 7, "trios": 4 }),
+                json!({ "decks": 3, "trios": 1 })
+            ),
             json!({ "ok": true })
         );
         assert_eq!(
-            room(json!({ "decks": 0, "trios": 0 }), json!({ "decks": 3, "trios": 1 })),
+            room(
+                json!({ "decks": 0, "trios": 0 }),
+                json!({ "decks": 3, "trios": 1 })
+            ),
             json!({ "ok": true })
         );
     }
 
     #[test]
     fn r340_says_exactly_how_many_deck_slots_are_missing() {
-        let room = room(json!({ "decks": 9, "trios": 1 }), json!({ "decks": 3, "trios": 1 }));
+        let room = room(
+            json!({ "decks": 9, "trios": 1 }),
+            json!({ "decks": 3, "trios": 1 }),
+        );
         assert_eq!(
             room,
             json!({
@@ -502,7 +541,10 @@ mod r340_room_for_an_imported_trio {
 
     #[test]
     fn r340_says_exactly_how_many_trio_slots_are_missing_and_both_at_once() {
-        let trios = room(json!({ "decks": 0, "trios": 5 }), json!({ "decks": 3, "trios": 1 }));
+        let trios = room(
+            json!({ "decks": 0, "trios": 5 }),
+            json!({ "decks": 3, "trios": 1 }),
+        );
         assert!(matches_object(
             &trios,
             &json!({ "ok": false, "decksShort": 0, "triosShort": 1 })
@@ -513,7 +555,10 @@ mod r340_room_for_an_imported_trio {
                 "Importing this trio needs 1 free trio slot, and you have no free trio slot. Delete 1 trio, then import it again."
             )
         );
-        let both = room(json!({ "decks": 10, "trios": 5 }), json!({ "decks": 3, "trios": 1 }));
+        let both = room(
+            json!({ "decks": 10, "trios": 5 }),
+            json!({ "decks": 3, "trios": 1 }),
+        );
         assert!(matches_object(
             &both,
             &json!({ "ok": false, "decksShort": 3, "triosShort": 1 })
@@ -528,7 +573,10 @@ mod r340_room_for_an_imported_trio {
 
     #[test]
     fn r340_counts_a_profile_already_past_a_cap_as_having_no_room_at_all() {
-        let room = room(json!({ "decks": 12, "trios": 0 }), json!({ "decks": 1, "trios": 1 }));
+        let room = room(
+            json!({ "decks": 12, "trios": 0 }),
+            json!({ "decks": 1, "trios": 1 }),
+        );
         assert!(matches_object(
             &room,
             &json!({ "ok": false, "decksShort": 1, "triosShort": 0 })

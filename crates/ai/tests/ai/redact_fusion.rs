@@ -48,11 +48,19 @@ fn with_chain(where_: Where) -> GameState {
     state.transient_defs.insert(outer(), fused_def(&outer()));
     let side = &state.players[HUMAN];
     let card_id = match where_ {
-        Where::Field => side.units.iter().flatten().flatten().next().map(|card| card.id.clone()),
+        Where::Field => side
+            .units
+            .iter()
+            .flatten()
+            .flatten()
+            .next()
+            .map(|card| card.id.clone()),
         Where::Hand => side.hand.first().map(|card| card.id.clone()),
     }
     .unwrap_or_else(|| panic!("the scenario placed no p2 card"));
-    find_instance_mut(&mut state, &card_id).expect("the p2 card").def_id = outer();
+    find_instance_mut(&mut state, &card_id)
+        .expect("the p2 card")
+        .def_id = outer();
     state
 }
 

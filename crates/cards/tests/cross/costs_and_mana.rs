@@ -72,7 +72,11 @@ mod r65_one_cost_calculation_in_play_and_out_of_it {
                 },
                 "p2": { "hand": [STOCKPILE], "field": [MENACE], "library": LIBRARY },
             }));
-            let order = if radiant_first { [true, false] } else { [false, true] };
+            let order = if radiant_first {
+                [true, false]
+            } else {
+                [false, true]
+            };
             for radiant in order {
                 let card = s
                     .hand("p1")
@@ -92,7 +96,8 @@ mod r65_one_cost_calculation_in_play_and_out_of_it {
     }
 
     #[test]
-    fn r65_r24_r66_r78_call_to_arms_recruits_a_library_unit_whose_cost_is_1_as_archivist_and_genns_greed_read_it() {
+    fn r65_r24_r66_r78_call_to_arms_recruits_a_library_unit_whose_cost_is_1_as_archivist_and_genns_greed_read_it()
+     {
         let mut s = setup(json!({
             "p1": {
                 "hand": [CALL_TO_ARMS, RAPID],

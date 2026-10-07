@@ -104,7 +104,12 @@ fn fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script, stats: O
 
 fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lane: i32) -> CardInstance {
     let mut card = new_instance(s.state_mut(), def_id, player, Zone::Hand { player });
-    if !place_on_field(s.state_mut(), &mut card, ZoneSlot { player, row, lane }, Default::default()) {
+    if !place_on_field(
+        s.state_mut(),
+        &mut card,
+        ZoneSlot { player, row, lane },
+        Default::default(),
+    ) {
         panic!("could not place {def_id}");
     }
     let live = find_instance_mut(s.state_mut(), &card.id).expect("the placed fixture");
@@ -151,13 +156,17 @@ mod r62_10_3_a_stage_of_the_turn_loop_settles_its_events_before_the_next_stage {
             "edge-r6-juggler",
             CardType::Unit,
             Script {
-                triggers: vec![TriggerDef::new("edge-r6-juggle", &[GameEventType::Summoned], |ctx, event| {
-                    if matches!(event, GameEvent::Summoned { player, .. } if *player == ctx.controller) {
-                        vec![hit_enemy_hero(1)]
-                    } else {
-                        vec![]
-                    }
-                })],
+                triggers: vec![TriggerDef::new(
+                    "edge-r6-juggle",
+                    &[GameEventType::Summoned],
+                    |ctx, event| {
+                        if matches!(event, GameEvent::Summoned { player, .. } if *player == ctx.controller) {
+                            vec![hit_enemy_hero(1)]
+                        } else {
+                            vec![]
+                        }
+                    },
+                )],
                 ..Script::default()
             },
             None,
@@ -170,16 +179,23 @@ mod r62_10_3_a_stage_of_the_turn_loop_settles_its_events_before_the_next_stage {
         // resolves before R62 moves on to the delayed effects, cleanup and the turn cap; p2 is at 0 in
         // that check and loses (§4.5 step 2) at the end of p1's turn. p2's turn never starts, so
         // Echoes never fires (R216).
-        assert!(any_event(&s, |event| matches!(event, GameEvent::TrapFired { .. })));
+        assert!(any_event(&s, |event| matches!(
+            event,
+            GameEvent::TrapFired { .. }
+        )));
         assert_eq!(winner(&s), Some(Winner::P1));
         assert!(!any_event(&s, |event| matches!(
             event,
-            GameEvent::TurnStarted { player: PlayerId::P2, .. }
+            GameEvent::TurnStarted {
+                player: PlayerId::P2,
+                ..
+            }
         )));
     }
 
     #[test]
-    fn r62_r68_a_trigger_answering_a_start_of_turn_delayed_effect_resolves_before_the_start_of_turn_triggers_6_2() {
+    fn r62_r68_a_trigger_answering_a_start_of_turn_delayed_effect_resolves_before_the_start_of_turn_triggers_6_2()
+     {
         // p1's K-Pop Fanatic steals p2's Tempo Timmy at the start of p1's next turn. p1's fixture unit
         // answers the change of control with 1 damage to p2's hero, which is at 1. p1's Masochism Mask
         // (backrow) asks p1 something at the start of the turn.
@@ -196,7 +212,8 @@ mod r62_10_3_a_stage_of_the_turn_loop_settles_its_events_before_the_next_stage {
                     "edge-r6-bounty",
                     &[GameEventType::ControlChanged],
                     |ctx, event| {
-                        if matches!(event, GameEvent::ControlChanged { controller, .. } if *controller == ctx.controller) {
+                        if matches!(event, GameEvent::ControlChanged { controller, .. } if *controller == ctx.controller)
+                        {
                             vec![hit_enemy_hero(1)]
                         } else {
                             vec![]
@@ -232,7 +249,8 @@ mod r44_r152_my_pawn_s_ai_plays_the_rest_of_the_turn {
     use super::*;
 
     #[test]
-    fn r44_r152_the_ai_turn_goes_on_after_the_other_player_answers_a_prompt_one_of_its_actions_opened_10_3_8_96() {
+    fn r44_r152_the_ai_turn_goes_on_after_the_other_player_answers_a_prompt_one_of_its_actions_opened_10_3_8_96()
+     {
         // p1's 3/3 Timmy swings at p2's hero at 3: lethal, so p2's My Pawn cancels it and hands the
         // rest of p1's turn to the AI (R44). p2's fixture trap asks p2 something when p1 plays a card.
         let mut s = scenario(json!({
@@ -267,11 +285,13 @@ mod r44_r152_my_pawn_s_ai_plays_the_rest_of_the_turn {
         s.attack(TEMPO_TIMMY, "hero");
         // The AI took p1's turn and played a card, and p2's trap is asking p2 about it.
         assert!(s.state().players.p1.ai_turn);
-        assert!(
-            s.last_events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::CardPlayed { player: PlayerId::P1, .. }))
-        );
+        assert!(s.last_events().iter().any(|event| matches!(
+            event,
+            GameEvent::CardPlayed {
+                player: PlayerId::P1,
+                ..
+            }
+        )));
         assert_eq!(
             s.state().pending.as_ref().map(|pending| pending.prompt.clone()),
             Some("edge-r6: asked".to_string())
@@ -317,7 +337,9 @@ mod r44_r152_a_locked_out_player_is_never_handed_back_the_turn_my_pawn_gave_the_
             CardType::Unit,
             Script {
                 death: Some(hook(|_ctx| {
-                    vec![effects::choose_mode(json_as(json!({ "options": ["keep", "drop"], "step": "picked" })))]
+                    vec![effects::choose_mode(json_as(
+                        json!({ "options": ["keep", "drop"], "step": "picked" }),
+                    ))]
                 })),
                 resume: IndexMap::from([("picked", hook(|_ctx| vec![]))]),
                 ..Script::default()
@@ -354,7 +376,10 @@ mod r44_r152_a_locked_out_player_is_never_handed_back_the_turn_my_pawn_gave_the_
             s.state(),
             &json_as::<Action>(json!({ "type": "endTurn", "playerId": "p1", "nonce": "edge-r6-locked-out" })),
         );
-        assert!(own.error.is_some(), "reduce accepted an action from the locked-out player");
+        assert!(
+            own.error.is_some(),
+            "reduce accepted an action from the locked-out player"
+        );
     }
 }
 
@@ -362,7 +387,8 @@ mod r68_10_3_a_trap_answers_a_delayed_effect_before_the_next_delayed_effect_runs
     use super::*;
 
     #[test]
-    fn r68_r59_r76_a_trap_answering_the_first_of_two_start_of_turn_delayed_steals_fires_before_the_second_steal_10_3() {
+    fn r68_r59_r76_a_trap_answering_the_first_of_two_start_of_turn_delayed_steals_fires_before_the_second_steal_10_3()
+     {
         // p1 plays two K-Pop Fanatics: one on p2's Mr. Vanilla, one on p2's Tempo Timmy. Both steals are
         // due at the start of p1's next turn, in that order (R68). p2's fixture trap answers the
         // opponent taking one of p2's permanents by returning all of p2's units to p2's hand.
@@ -408,7 +434,10 @@ mod r68_10_3_a_trap_answers_a_delayed_effect_before_the_next_delayed_effect_runs
         // a delayed effect is a whole effect like any other (R59), and a trap is a response — so p2's
         // trap returns Tempo Timmy to p2's hand before the second delayed effect runs, and that steal
         // fizzles on a target that has left the field (R76, R174).
-        assert!(any_event(&s, |event| matches!(event, GameEvent::TrapFired { .. })));
+        assert!(any_event(&s, |event| matches!(
+            event,
+            GameEvent::TrapFired { .. }
+        )));
         s.expect_in_zone(&timmy.id, "hand");
         assert_eq!(s.card(&timmy.id).owner, PlayerId::P2);
         assert!(
@@ -444,7 +473,8 @@ mod r62_10_3_cleanup_s_events_are_answered_before_the_turn_cap_check_and_the_nex
                     "edge-r7-grave-watch",
                     &[GameEventType::EnteredGraveyard],
                     |ctx, event| {
-                        if matches!(event, GameEvent::EnteredGraveyard { owner, .. } if *owner == ctx.controller) {
+                        if matches!(event, GameEvent::EnteredGraveyard { owner, .. } if *owner == ctx.controller)
+                        {
                             vec![hit_enemy_hero(1)]
                         } else {
                             vec![]
@@ -471,7 +501,10 @@ mod r62_10_3_cleanup_s_events_are_answered_before_the_turn_cap_check_and_the_nex
         assert!(
             !any_event(&s, |event| matches!(
                 event,
-                GameEvent::TurnStarted { player: PlayerId::P2, .. }
+                GameEvent::TurnStarted {
+                    player: PlayerId::P2,
+                    ..
+                }
             )),
             "p2's turn started before the trigger answering p1's cleanup resolved"
         );
@@ -540,7 +573,10 @@ mod r68_4_5_a_delayed_effect_s_check_is_answered_before_the_next_delayed_effect 
             event,
             GameEvent::Destroyed { instance_id, .. } if *instance_id == timmy.id
         )));
-        assert!(any_event(&s, |event| matches!(event, GameEvent::TrapFired { .. })));
+        assert!(any_event(&s, |event| matches!(
+            event,
+            GameEvent::TrapFired { .. }
+        )));
         assert!(
             !any_event(&s, |event| matches!(
                 event,
@@ -600,7 +636,10 @@ mod r62_2_2_a_this_turn_effect_made_after_cleanup_ends_with_that_turn {
         );
         place_fixture(&mut s, "edge-r8-afterglow", PlayerId::P1, Row::Units, 3);
 
-        s.play(LUNAR_ECLIPSE, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+        s.play(
+            LUNAR_ECLIPSE,
+            json!({ "targets": [{ "pick": "hero", "player": "p2" }] }),
+        );
         // p1 keeps 3 mana for Reno (no R82 auto-end), ends turn N; p2 ends turn N+1.
         s.end_turn();
         assert_eq!(s.state().turn, turn_n + 1);
@@ -627,7 +666,10 @@ mod r62_2_2_a_this_turn_effect_made_after_cleanup_ends_with_that_turn {
             "a turn-N 'this turn' discount is still live on turn N+2"
         );
         let reno = must(
-            s.hand(PlayerId::P1).iter().find(|card| card.def_id == RENO).cloned(),
+            s.hand(PlayerId::P1)
+                .iter()
+                .find(|card| card.def_id == RENO)
+                .cloned(),
             "p1's Reno",
         );
         assert_eq!(effective_cost(s.state(), &reno, CostOptions::default()), 3);
@@ -721,7 +763,10 @@ mod r155_a_return_spell_cast_after_cleanup_does_not_come_back_on_a_later_turn {
         place_fixture(&mut s, "edge-r9-cleanup-reader", PlayerId::P1, Row::Units, 3);
         let boomerang = on_top_of_library(&mut s, "edge-r9-boomerang", PlayerId::P1);
 
-        s.play(LUNAR_ECLIPSE, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+        s.play(
+            LUNAR_ECLIPSE,
+            json!({ "targets": [{ "pick": "hero", "player": "p2" }] }),
+        );
         s.end_turn();
         assert_eq!(s.state().turn, turn_n + 1);
         // Cast at cleanup on turn N: it is in p1's graveyard, not back in hand.
@@ -929,11 +974,13 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
         // `damage` of 0 from no source on p2's hero, once, and by nothing else: R3 draws no card, so
         // there is no `drawn` for p2.
         assert_eq!(hits_on_p2_hero(s.last_events()), vec![zero_fatigue_report()]);
-        assert!(
-            !s.last_events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::Drawn { player: PlayerId::P2, .. }))
-        );
+        assert!(!s.last_events().iter().any(|event| matches!(
+            event,
+            GameEvent::Drawn {
+                player: PlayerId::P2,
+                ..
+            }
+        )));
     }
 
     /// TS `onHeroHit(ctx)`: a `damage` event whose target is a hero.
@@ -954,9 +1001,17 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
             "fixture:r11-hero-hit-watcher",
             CardType::Unit,
             Script {
-                triggers: vec![TriggerDef::new("on-hero-hit", &[GameEventType::Damage], |_ctx, event| {
-                    if on_hero_hit(event) { vec![hit_enemy_hero(1)] } else { vec![] }
-                })],
+                triggers: vec![TriggerDef::new(
+                    "on-hero-hit",
+                    &[GameEventType::Damage],
+                    |_ctx, event| {
+                        if on_hero_hit(event) {
+                            vec![hit_enemy_hero(1)]
+                        } else {
+                            vec![]
+                        }
+                    },
+                )],
                 ..Script::default()
             },
             None,
@@ -967,16 +1022,26 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
             CardType::Trap,
             Script {
                 triggers: vec![
-                    TriggerDef::new("on-hero-hit", &[GameEventType::Damage], |_ctx, _event| vec![hit_enemy_hero(1)])
-                        .with_when(|_ctx, event| on_hero_hit(event)),
+                    TriggerDef::new("on-hero-hit", &[GameEventType::Damage], |_ctx, _event| {
+                        vec![hit_enemy_hero(1)]
+                    })
+                    .with_when(|_ctx, event| on_hero_hit(event)),
                 ],
                 ..Script::default()
             },
             None,
         );
-        let watcher = place_fixture(&mut s, "fixture:r11-hero-hit-watcher", PlayerId::P1, Row::Units, 3);
+        let watcher = place_fixture(
+            &mut s,
+            "fixture:r11-hero-hit-watcher",
+            PlayerId::P1,
+            Row::Units,
+            3,
+        );
         let trap = place_fixture(&mut s, "fixture:r11-hero-hit-trap", PlayerId::P1, Row::Backrow, 3);
-        find_instance_mut(s.state_mut(), &trap.id).expect("the fixture trap").face_up = Some(false);
+        find_instance_mut(s.state_mut(), &trap.id)
+            .expect("the fixture trap")
+            .face_up = Some(false);
 
         s.end_turn(); // p2's draw meets an empty library; Going Long's Armor 2 takes the whole 1
 
@@ -992,7 +1057,10 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
                 .iter()
                 .any(|event| matches!(event, GameEvent::TrapFired { .. }))
         );
-        assert_eq!(s.backrow(PlayerId::P1, 3).map(|card| card.id.clone()), Some(trap.id.clone()));
+        assert_eq!(
+            s.backrow(PlayerId::P1, 3).map(|card| card.id.clone()),
+            Some(trap.id.clone())
+        );
         assert_eq!(s.state().players.p2.hero.health, 30);
     }
 }

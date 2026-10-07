@@ -277,7 +277,8 @@ mod summarize_game_over_real_cards_s9_11 {
                         GameEvent::Drawn { instance_id, .. } => {
                             unplaced.insert(instance_id.clone());
                         }
-                        GameEvent::AddedToHand { instance_id, .. } | GameEvent::Burned { instance_id, .. } => {
+                        GameEvent::AddedToHand { instance_id, .. }
+                        | GameEvent::Burned { instance_id, .. } => {
                             unplaced.shift_remove(instance_id);
                         }
                         GameEvent::CardPlayed {

@@ -162,7 +162,8 @@ pub(crate) fn query_info(path: &Path) -> anyhow::Result<AgentInfo> {
     if let Some(error) = answer.get("error") {
         bail!("{}: info answered an error: {error}", path.display());
     }
-    serde_json::from_value(answer).with_context(|| format!("{}: info's answer is not an AgentInfo", path.display()))
+    serde_json::from_value(answer)
+        .with_context(|| format!("{}: info's answer is not an AgentInfo", path.display()))
 }
 
 /// One game, set up and not yet played.
@@ -236,7 +237,10 @@ pub(crate) fn setups(
 pub(crate) fn game_setup(seed: String, n: i32, a: &Entrant, b: &Entrant) -> anyhow::Result<ArenaGame> {
     let a_seat = if n % 2 == 1 { PlayerId::P1 } else { PlayerId::P2 };
     let (p1, p2) = if a_seat == PlayerId::P1 { (a, b) } else { (b, a) };
-    let decks = (deck_for(&seed, PlayerId::P1, p1)?, deck_for(&seed, PlayerId::P2, p2)?);
+    let decks = (
+        deck_for(&seed, PlayerId::P1, p1)?,
+        deck_for(&seed, PlayerId::P2, p2)?,
+    );
     Ok(ArenaGame {
         n,
         seed,
@@ -257,8 +261,16 @@ fn deck_for(seed: &str, seat: PlayerId, entrant: &Entrant) -> anyhow::Result<Vec
         mana_cap: Some(handicap.mana_cap),
         ..Default::default()
     };
-    catch_unwind(AssertUnwindSafe(|| build_ai_deck(&mut rng, handicap.deck_size, &options)))
-        .map_err(|panic| anyhow!("{seed}: {} deck: {}", seat.as_str(), agent::panic_message(&*panic)))
+    catch_unwind(AssertUnwindSafe(|| {
+        build_ai_deck(&mut rng, handicap.deck_size, &options)
+    }))
+    .map_err(|panic| {
+        anyhow!(
+            "{seed}: {} deck: {}",
+            seat.as_str(),
+            agent::panic_message(&*panic)
+        )
+    })
 }
 
 /// Plays every game, in parallel on rayon's pool, and hands the outcomes back in game order. An agent
@@ -326,8 +338,14 @@ impl BinAgent {
             .stderr(Stdio::inherit())
             .spawn()
             .with_context(|| format!("arena: cannot start `{} agent`", path.display()))?;
-        let stdin = child.stdin.take().ok_or_else(|| anyhow!("arena: {} has no stdin", path.display()))?;
-        let stdout = child.stdout.take().ok_or_else(|| anyhow!("arena: {} has no stdout", path.display()))?;
+        let stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| anyhow!("arena: {} has no stdin", path.display()))?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| anyhow!("arena: {} has no stdout", path.display()))?;
         Ok(BinAgent {
             path: path.to_path_buf(),
             child,
@@ -339,11 +357,19 @@ impl BinAgent {
     /// One request line out, one answer line back.
     pub(crate) fn call(&mut self, request: &impl Serialize) -> anyhow::Result<Value> {
         let path = self.path.display().to_string();
-        serde_json::to_writer(&mut self.stdin, request).with_context(|| format!("arena: writing to {path}"))?;
-        self.stdin.write_all(b"\n").with_context(|| format!("arena: writing to {path}"))?;
-        self.stdin.flush().with_context(|| format!("arena: writing to {path}"))?;
+        serde_json::to_writer(&mut self.stdin, request)
+            .with_context(|| format!("arena: writing to {path}"))?;
+        self.stdin
+            .write_all(b"\n")
+            .with_context(|| format!("arena: writing to {path}"))?;
+        self.stdin
+            .flush()
+            .with_context(|| format!("arena: writing to {path}"))?;
         let mut line = String::new();
-        let read = self.stdout.read_line(&mut line).with_context(|| format!("arena: reading from {path}"))?;
+        let read = self
+            .stdout
+            .read_line(&mut line)
+            .with_context(|| format!("arena: reading from {path}"))?;
         if read == 0 {
             bail!("arena: {path} closed its stdout");
         }
@@ -361,7 +387,13 @@ impl BinAgent {
 
     /// The agent's move on `redact(state, seat)` from the seat's stream; the stream is moved to the
     /// cursor the agent answers with.
-    fn decide(&mut self, state: &GameState, seat: PlayerId, rng_seed: &str, rng: &mut Rng) -> Result<Option<ActionBody>, String> {
+    fn decide(
+        &mut self,
+        state: &GameState,
+        seat: PlayerId,
+        rng_seed: &str,
+        rng: &mut Rng,
+    ) -> Result<Option<ActionBody>, String> {
         let view = redact(state, seat);
         let request = DecideRequest {
             op: "decide",
@@ -382,8 +414,9 @@ impl BinAgent {
             .and_then(Value::as_u64)
             .and_then(|cursor| u32::try_from(cursor).ok())
             .ok_or_else(|| "the answer has no rngCursor".to_string())?;
-        let action: Option<ActionBody> = serde_json::from_value(answer.get("action").cloned().unwrap_or(Value::Null))
-            .map_err(|error| format!("the answer's action is not an ActionBody: {error}"))?;
+        let action: Option<ActionBody> =
+            serde_json::from_value(answer.get("action").cloned().unwrap_or(Value::Null))
+                .map_err(|error| format!("the answer's action is not an ActionBody: {error}"))?;
         *rng = Rng::new(rng_seed, cursor);
         Ok(action)
     }
@@ -421,11 +454,21 @@ fn replacements_for(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
         .into_iter()
         .filter(|action| !subsystems::AI_SKIPPED_ACTIONS.contains(&action.action_type()))
         .collect();
-    let is_answer = |action: &ActionBody| matches!(action, ActionBody::Answer { .. } | ActionBody::Mulligan { .. });
+    let is_answer =
+        |action: &ActionBody| matches!(action, ActionBody::Answer { .. } | ActionBody::Mulligan { .. });
     let is_end_turn = |action: &ActionBody| matches!(action, ActionBody::EndTurn);
-    let mut out: Vec<ActionBody> = legal.iter().filter(|&action| is_end_turn(action)).cloned().collect();
+    let mut out: Vec<ActionBody> = legal
+        .iter()
+        .filter(|&action| is_end_turn(action))
+        .cloned()
+        .collect();
     out.extend(legal.iter().filter(|&action| is_answer(action)).cloned());
-    out.extend(legal.iter().filter(|&action| !is_end_turn(action) && !is_answer(action)).cloned());
+    out.extend(
+        legal
+            .iter()
+            .filter(|&action| !is_end_turn(action) && !is_answer(action))
+            .cloned(),
+    );
     out
 }
 
@@ -469,8 +512,14 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
         decks: game.decks.clone(),
         ..Default::default()
     };
-    let mut state = catch_unwind(AssertUnwindSafe(|| begin_game(&create_game(&options)).state))
-        .map_err(|panic| anyhow!("{}: the game cannot start: {}", game.seed, agent::panic_message(&*panic)))?;
+    let mut state =
+        catch_unwind(AssertUnwindSafe(|| begin_game(&create_game(&options)).state)).map_err(|panic| {
+            anyhow!(
+                "{}: the game cannot start: {}",
+                game.seed,
+                agent::panic_message(&*panic)
+            )
+        })?;
 
     let ctl = PerPlayer::new(format!("{}:ctl:p1", game.seed), format!("{}:ctl:p2", game.seed));
     let mut rngs = PerPlayer::new(Rng::new(&ctl.p1, 0), Rng::new(&ctl.p2, 0));
@@ -484,7 +533,10 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
 
     while state.result.is_none() && log.len() < ARENA_MAX_ACTIONS {
         let Some(seat) = seat_to_act(&state) else {
-            thrown.push(format!("no seat to act while the game is live (turn {})", state.turn));
+            thrown.push(format!(
+                "no seat to act while the game is live (turn {})",
+                state.turn
+            ));
             break;
         };
 
@@ -494,7 +546,11 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
         let chosen = match choice {
             Ok(chosen) => chosen,
             Err(message) => {
-                thrown.push(format!("{}: controller {} threw: {message}", seat.as_str(), live[seat].label()));
+                thrown.push(format!(
+                    "{}: controller {} threw: {message}",
+                    seat.as_str(),
+                    live[seat].label()
+                ));
                 break;
             }
         };
@@ -519,7 +575,9 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
 
         let nonce = format!("m{}", log.len());
         let current = &state;
-        let step = catch_unwind(AssertUnwindSafe(|| accept(current, seat, &chosen, &nonce, &mut rejected)));
+        let step = catch_unwind(AssertUnwindSafe(|| {
+            accept(current, seat, &chosen, &nonce, &mut rejected)
+        }));
         let accepted = match step {
             Ok(accepted) => accepted,
             Err(panic) => {
@@ -583,7 +641,10 @@ pub(crate) fn replays(outcome: &ArenaOutcome) -> anyhow::Result<bool> {
 /// a promotion's games against random and against the parent, which share their seeds, are other
 /// records, and the same seeds played for another patch are others again.
 pub(crate) fn record_id(patch: &str, game: &ArenaGame) -> String {
-    format!("{DEV_RECORD_ID_PREFIX}{patch}:arena:{}-vs-{}:{}", game.labels.0, game.labels.1, game.seed)
+    format!(
+        "{DEV_RECORD_ID_PREFIX}{patch}:arena:{}-vs-{}:{}",
+        game.labels.0, game.labels.1, game.seed
+    )
 }
 
 /// R376, R378: a finished game filed as a development record (`source: "dev"`, `mode: "random"`,
@@ -604,7 +665,9 @@ pub(crate) fn game_record(outcome: &ArenaOutcome) -> anyhow::Result<Option<GameR
         "pilots": { "p1": "ai", "p2": "ai" },
         "game": game,
     });
-    Ok(Some(serde_json::from_value(record).context("arena: a game record does not parse as a GameRecord")?))
+    Ok(Some(serde_json::from_value(record).context(
+        "arena: a game record does not parse as a GameRecord",
+    )?))
 }
 
 /// Where the records go: `<out>/<date>.jsonl`, else `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else `None`.
@@ -634,13 +697,17 @@ pub(crate) fn append_records(path: &Path, records: &[GameRecord]) -> anyhow::Res
         text.push_str(&serde_json::to_string(record)?);
         text.push('\n');
     }
-    file.write_all(text.as_bytes()).with_context(|| format!("arena: cannot write {}", path.display()))?;
+    file.write_all(text.as_bytes())
+        .with_context(|| format!("arena: cannot write {}", path.display()))?;
     Ok(())
 }
 
 /// Today's date in UTC, `YYYY-MM-DD`.
 pub(crate) fn utc_date() -> String {
-    let seconds = SystemTime::now().duration_since(UNIX_EPOCH).map(|elapsed| elapsed.as_secs()).unwrap_or(0);
+    let seconds = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_secs())
+        .unwrap_or(0);
     utc_date_of(i64::try_from(seconds).unwrap_or(i64::MAX))
 }
 
@@ -804,7 +871,10 @@ mod tests {
     fn agents_parse_as_surface_writes_them() {
         assert_eq!(parse_agent("self"), Ok(AgentSpec::SelfAi));
         assert_eq!(parse_agent("random"), Ok(AgentSpec::Random));
-        assert_eq!(parse_agent("bin:/opt/jackioh"), Ok(AgentSpec::Bin(PathBuf::from("/opt/jackioh"))));
+        assert_eq!(
+            parse_agent("bin:/opt/jackioh"),
+            Ok(AgentSpec::Bin(PathBuf::from("/opt/jackioh")))
+        );
         assert!(parse_agent("bin:").is_err());
         assert!(parse_agent("greedy").is_err());
     }
@@ -816,7 +886,10 @@ mod tests {
         let b = entrant(&AgentSpec::Random).unwrap();
         let games = setups(&a, &b, 4, |n| format!("arena-test:{n}")).unwrap();
         let seats: Vec<PlayerId> = games.iter().map(|game| game.a_seat).collect();
-        assert_eq!(seats, vec![PlayerId::P1, PlayerId::P2, PlayerId::P1, PlayerId::P2]);
+        assert_eq!(
+            seats,
+            vec![PlayerId::P1, PlayerId::P2, PlayerId::P1, PlayerId::P2]
+        );
         assert_eq!(games[0].seats.p1, AgentSpec::SelfAi);
         assert_eq!(games[1].seats.p1, AgentSpec::Random);
         assert_eq!(games[2].seed, "arena-test:3");
@@ -830,7 +903,12 @@ mod tests {
         let games = setups(&a, &b, 4, |n| format!("arena-determinism:{n}")).unwrap();
         let first = play_games(&games).unwrap();
         let second = play_games(&games).unwrap();
-        let hashes = |outcomes: &[ArenaOutcome]| outcomes.iter().map(|outcome| outcome.hash.clone()).collect::<Vec<_>>();
+        let hashes = |outcomes: &[ArenaOutcome]| {
+            outcomes
+                .iter()
+                .map(|outcome| outcome.hash.clone())
+                .collect::<Vec<_>>()
+        };
         assert_eq!(hashes(&first), hashes(&second));
         let records_first = records_of(&first).unwrap();
         let records_second = records_of(&second).unwrap();
@@ -840,7 +918,11 @@ mod tests {
             serde_json::to_string(&records_second).unwrap()
         );
         for outcome in &first {
-            assert!(replays(outcome).unwrap(), "{} does not replay to its hash", outcome.game.seed);
+            assert!(
+                replays(outcome).unwrap(),
+                "{} does not replay to its hash",
+                outcome.game.seed
+            );
         }
     }
 
@@ -871,7 +953,10 @@ mod tests {
             a_seat: PlayerId::P1,
             labels: ("self".to_string(), "random".to_string()),
         };
-        assert_eq!(record_id("0.2.0", &game), "dev:0.2.0:arena:self-vs-random:improve:abc:1");
+        assert_eq!(
+            record_id("0.2.0", &game),
+            "dev:0.2.0:arena:self-vs-random:improve:abc:1"
+        );
     }
 
     #[test]

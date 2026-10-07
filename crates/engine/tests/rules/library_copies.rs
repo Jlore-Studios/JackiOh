@@ -52,7 +52,11 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .iter()
             .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
         (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(got, want)| matches_object(got, want))
+            actual.len() == expected.len()
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(got, want)| matches_object(got, want))
         }
         _ => actual == expected,
     }
@@ -98,7 +102,10 @@ mod add_library_copies_t_ai_3 {
             });
             live.cost_mod = 1;
         }
-        run(&mut state, copies(json!({ "of": "enemy", "count": 1, "brittle": 2 })));
+        run(
+            &mut state,
+            copies(json!({ "of": "enemy", "count": 1, "brittle": 2 })),
+        );
         let copy = state.players.p1.hand.last().cloned().expect("a copy in hand");
         let copy_json = serde_json::to_value(&copy).expect("serialises");
         assert!(
@@ -126,7 +133,13 @@ mod add_library_copies_t_ai_3 {
             })
         );
         assert_eq!(
-            state.players.p2.library.iter().map(|card| card.id.clone()).collect::<Vec<_>>(),
+            state
+                .players
+                .p2
+                .library
+                .iter()
+                .map(|card| card.id.clone())
+                .collect::<Vec<_>>(),
             vec![source.id.clone()]
         );
     }
@@ -136,12 +149,23 @@ mod add_library_copies_t_ai_3 {
         let mut orders: BTreeSet<String> = BTreeSet::new();
         for seed in 1..=12 {
             let mut state = game(&format!("copies-order-{seed}"));
-            let deck = set_library(&mut state, P2, &["fx-21", "fx-22", "fx-23", "fx-24", "fx-25", "fx-26"]);
+            let deck = set_library(
+                &mut state,
+                P2,
+                &["fx-21", "fx-22", "fx-23", "fx-24", "fx-25", "fx-26"],
+            );
             let before = state.players.p1.hand.len();
             run(&mut state, copies(json!({ "of": "enemy", "count": 2 })));
             let copies: Vec<CardInstance> = state.players.p1.hand[before..].to_vec();
             assert_eq!(copies.len(), 2);
-            assert_eq!(copies.iter().map(|card| card.def_id.clone()).collect::<BTreeSet<_>>().len(), 2);
+            assert_eq!(
+                copies
+                    .iter()
+                    .map(|card| card.def_id.clone())
+                    .collect::<BTreeSet<_>>()
+                    .len(),
+                2
+            );
             let positions: Vec<usize> = copies
                 .iter()
                 .map(|copy| {
@@ -150,22 +174,39 @@ mod add_library_copies_t_ai_3 {
                         .expect("a copy of a deck card")
                 })
                 .collect();
-            orders.insert(if positions[0] < positions[1] { "deck order" } else { "reversed" }.to_string());
+            orders.insert(
+                if positions[0] < positions[1] {
+                    "deck order"
+                } else {
+                    "reversed"
+                }
+                .to_string(),
+            );
         }
         // Not the deck's order: it would tell the caster where the sources lay.
         assert_eq!(
             orders,
-            ["deck order", "reversed"].into_iter().map(String::from).collect::<BTreeSet<_>>()
+            ["deck order", "reversed"]
+                .into_iter()
+                .map(String::from)
+                .collect::<BTreeSet<_>>()
         );
     }
 
     #[test]
-    fn r129_an_empty_deck_gives_nothing_and_draws_nothing_a_deck_of_no_more_than_n_cards_gives_each_with_no_draw() {
+    fn r129_an_empty_deck_gives_nothing_and_draws_nothing_a_deck_of_no_more_than_n_cards_gives_each_with_no_draw()
+     {
         let mut empty = game("copies-empty");
         set_library(&mut empty, P2, &[] as &[&str]);
         let cursor = empty.rng_cursor;
         let before = empty.players.p1.hand.len();
-        assert_eq!(run(&mut empty, copies(json!({ "of": "enemy", "count": 2, "brittle": 2 }))), Vec::<GameEvent>::new());
+        assert_eq!(
+            run(
+                &mut empty,
+                copies(json!({ "of": "enemy", "count": 2, "brittle": 2 }))
+            ),
+            Vec::<GameEvent>::new()
+        );
         assert_eq!(empty.players.p1.hand.len(), before);
         assert_eq!(empty.rng_cursor, cursor);
 
@@ -173,19 +214,26 @@ mod add_library_copies_t_ai_3 {
         set_library(&mut short, P2, &["fx-30"]);
         let at = short.rng_cursor;
         run(&mut short, copies(json!({ "of": "enemy", "count": 2 })));
-        assert_eq!(short.players.p1.hand.last().map(|card| card.def_id.as_str()), Some("fx-30"));
+        assert_eq!(
+            short.players.p1.hand.last().map(|card| card.def_id.as_str()),
+            Some("fx-30")
+        );
         assert_eq!(short.rng_cursor, at);
     }
 
     #[test]
-    fn r586_a_deck_of_no_more_than_n_cards_is_copied_whole_in_definition_order_so_the_hand_never_shows_the_deck_s_order() {
+    fn r586_a_deck_of_no_more_than_n_cards_is_copied_whole_in_definition_order_so_the_hand_never_shows_the_deck_s_order()
+     {
         let mut state = game("copies-whole");
         set_library(&mut state, P2, &["fx-35", "fx-31"]);
         let before = state.players.p1.hand.len();
         let cursor = state.rng_cursor;
         run(&mut state, copies(json!({ "of": "enemy", "count": 2 })));
         assert_eq!(
-            state.players.p1.hand[before..].iter().map(|card| card.def_id.clone()).collect::<Vec<_>>(),
+            state.players.p1.hand[before..]
+                .iter()
+                .map(|card| card.def_id.clone())
+                .collect::<Vec<_>>(),
             vec!["fx-31", "fx-35"]
         );
         assert_eq!(state.rng_cursor, cursor);
@@ -197,19 +245,28 @@ mod add_library_copies_t_ai_3 {
         let room = HAND_CAP - state.players.p1.hand.len() as i32;
         in_hand(&mut state, "fx-1", P1, room);
         set_library(&mut state, P2, &["fx-31"]);
-        let events = run(&mut state, copies(json!({ "of": "enemy", "count": 1, "brittle": 2 })));
+        let events = run(
+            &mut state,
+            copies(json!({ "of": "enemy", "count": 1, "brittle": 2 })),
+        );
         let burned = state.players.p1.graveyard.last().cloned();
         assert_eq!(burned.as_ref().map(|card| card.def_id.as_str()), Some("fx-31"));
         assert_eq!(burned.and_then(|card| card.brittle), None);
         assert_eq!(events_of_type(&events, GameEventType::Burned).len(), 1);
-        assert_eq!(events_of_type(&events, GameEventType::CounterChanged), Vec::<GameEvent>::new());
+        assert_eq!(
+            events_of_type(&events, GameEventType::CounterChanged),
+            Vec::<GameEvent>::new()
+        );
     }
 
     #[test]
     fn r97_the_other_player_reads_only_that_a_card_reached_the_hand_their_deck_is_untouched() {
         let mut state = game("copies-view");
         let deck = set_library(&mut state, P2, &["fx-32", "fx-33", "fx-34"]);
-        let events = run(&mut state, copies(json!({ "of": "enemy", "count": 1, "brittle": 2 })));
+        let events = run(
+            &mut state,
+            copies(json!({ "of": "enemy", "count": 1, "brittle": 2 })),
+        );
         state.applied = vec![AppliedAction {
             nonce: "lc".to_string(),
             events,
@@ -222,9 +279,17 @@ mod add_library_copies_t_ai_3 {
             );
         }
         assert_eq!(events_of_type(&theirs, GameEventType::AddedToHand).len(), 1);
-        assert!(!names_a_source(&serde_json::to_string(&theirs).expect("serialises")));
+        assert!(!names_a_source(
+            &serde_json::to_string(&theirs).expect("serialises")
+        ));
         assert_eq!(
-            state.players.p2.library.iter().map(|card| card.id.clone()).collect::<Vec<_>>(),
+            state
+                .players
+                .p2
+                .library
+                .iter()
+                .map(|card| card.id.clone())
+                .collect::<Vec<_>>(),
             deck.iter().map(|card| card.id.clone()).collect::<Vec<_>>()
         );
         let mine = added_to_hand(&view_for(&state, P1).events);

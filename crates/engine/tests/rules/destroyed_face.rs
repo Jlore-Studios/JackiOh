@@ -13,7 +13,12 @@ use crate::rules::fixtures::harness::{put, slot};
 
 fn killed(radiant: bool) -> Option<GameEvent> {
     let mut state = playing(&format!("destroyed-face-{radiant}"));
-    let unit = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({ "radiant": radiant }));
+    let unit = put(
+        &mut state,
+        &plain.id,
+        slot(P2, Row::Units, 1),
+        json!({ "radiant": radiant }),
+    );
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
@@ -41,7 +46,13 @@ mod r89_a_destroyed_unit_s_face {
     fn r89_a_radiant_unit_s_destroyed_event_says_so() {
         let event = killed(true);
         assert!(
-            matches!(event, Some(GameEvent::Destroyed { radiant: Some(true), .. })),
+            matches!(
+                event,
+                Some(GameEvent::Destroyed {
+                    radiant: Some(true),
+                    ..
+                })
+            ),
             "expected a destroyed event with radiant: true, got {event:?}"
         );
     }
@@ -49,9 +60,15 @@ mod r89_a_destroyed_unit_s_face {
     #[test]
     fn r89_a_base_face_unit_s_event_carries_no_flag() {
         let event = killed(false);
-        assert_eq!(event.as_ref().map(|e| e.event_type()), Some(GameEventType::Destroyed));
+        assert_eq!(
+            event.as_ref().map(|e| e.event_type()),
+            Some(GameEventType::Destroyed)
+        );
         let carries_flag = match &event {
-            Some(event) => serde_json::to_value(event).expect("event serialises").get("radiant").is_some(),
+            Some(event) => serde_json::to_value(event)
+                .expect("event serialises")
+                .get("radiant")
+                .is_some(),
             None => false,
         };
         assert!(!carries_flag);

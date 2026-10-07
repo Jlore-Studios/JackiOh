@@ -33,8 +33,8 @@ use jackioh_engine::wire::emotes::is_portrait_id;
 
 use crate::api::collection::{caller_profile, owned_in};
 use crate::api::http::{
-    ApiError, ApiErrorCode, ApiResult, Req, bad_request, log_info, now_ms, ok_of, optional_str, str, string_list,
-    to_json,
+    ApiError, ApiErrorCode, ApiResult, Req, bad_request, log_info, now_ms, ok_of, optional_str, str,
+    string_list, to_json,
 };
 use crate::app::App;
 use crate::config::{DECK_NAME_MAX_LENGTH, DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
@@ -63,7 +63,11 @@ fn is_uuid_shape(raw: &str) -> bool {
 
 fn saved_id_of(raw: Option<&Value>) -> Option<String> {
     let text = raw?.as_str()?;
-    if is_uuid_shape(text) { Some(text.to_ascii_lowercase()) } else { None }
+    if is_uuid_shape(text) {
+        Some(text.to_ascii_lowercase())
+    } else {
+        None
+    }
 }
 
 fn path_id_of(raw: Option<&String>, what: &str) -> Result<String, ApiError> {
@@ -163,7 +167,9 @@ fn not_found(what: &str) -> ApiError {
 fn issues_json<T: Serialize>(issues: &T) -> Result<Vec<Value>, ApiError> {
     match to_json(issues)? {
         Value::Array(entries) => Ok(entries),
-        _ => Err(ApiError::internal("a validator check answered something other than a list of issues")),
+        _ => Err(ApiError::internal(
+            "a validator check answered something other than a list of issues",
+        )),
     }
 }
 
@@ -245,8 +251,9 @@ fn deck_draft_issues(
 
 /// R252's T1–T3: the shared module's `check_trio_draft`.
 fn trio_draft_issues(name: &str, deck_ids: &[Option<String>]) -> Result<Vec<Value>, ApiError> {
-    let input: validator::TrioDraftInput =
-        serde_json::from_value(json!({ "name": name, "deckIds": deck_ids, "nameMaxLength": DECK_NAME_MAX_LENGTH }))?;
+    let input: validator::TrioDraftInput = serde_json::from_value(
+        json!({ "name": name, "deckIds": deck_ids, "nameMaxLength": DECK_NAME_MAX_LENGTH }),
+    )?;
     issues_json(&validator::check_trio_draft(&input))
 }
 
@@ -254,7 +261,10 @@ fn trio_draft_issues(name: &str, deck_ids: &[Option<String>]) -> Result<Vec<Valu
 fn trio_slots_of(deck_ids: &[Option<String>]) -> Result<TrioSlots, ApiError> {
     match deck_ids {
         [first, second, third] => Ok((first.clone(), second.clone(), third.clone())),
-        _ => Err(ApiError::internal(format!("T2 passed a trio of {} slots", deck_ids.len()))),
+        _ => Err(ApiError::internal(format!(
+            "T2 passed a trio of {} slots",
+            deck_ids.len()
+        ))),
     }
 }
 
@@ -319,12 +329,19 @@ fn import_of(body: &Value) -> Result<TrioImportInput, ApiError> {
             let (Some(id), Some(name)) = (id, name) else {
                 return Err(bad_request(IMPORT_SHAPE));
             };
-            Ok(Some(ImportedDeckInput { id, name: name.to_string(), cards: string_list(raw, "cards")? }))
+            Ok(Some(ImportedDeckInput {
+                id,
+                name: name.to_string(),
+                cards: string_list(raw, "cards")?,
+            }))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(TrioImportInput {
         catalog_version,
-        trio: ImportedTrioInput { id: trio_id, name: trio_name.to_string() },
+        trio: ImportedTrioInput {
+            id: trio_id,
+            name: trio_name.to_string(),
+        },
         slots,
     })
 }
@@ -346,8 +363,15 @@ async fn assert_import_room(
     let decks = t.decks_list(profile_id).await?;
     let trios = t.trios_list(profile_id).await?;
     let held_decks: IndexSet<&str> = decks.iter().map(|deck| deck.id.as_str()).collect();
-    let adding_decks = deck_ids.iter().filter(|id| !held_decks.contains(id.as_str())).count();
-    let adding_trios = if trios.iter().any(|trio| trio.id == trio_id) { 0 } else { 1 };
+    let adding_decks = deck_ids
+        .iter()
+        .filter(|id| !held_decks.contains(id.as_str()))
+        .count();
+    let adding_trios = if trios.iter().any(|trio| trio.id == trio_id) {
+        0
+    } else {
+        1
+    };
     let input: validator::ImportRoomInput = serde_json::from_value(json!({
         "saved": { "decks": decks.len(), "trios": trios.len() },
         "limits": { "decks": MAX_SAVED_DECKS, "trios": MAX_SAVED_TRIOS },
@@ -568,7 +592,10 @@ pub async fn put_trio(app: &Arc<App>, req: Req) -> ApiResult {
     let Some(saved) = saved.filter(|trio| trio.profile_id == profile.id) else {
         return Err(not_found("trio"));
     };
-    log_info("trio.saved", json!({ "profileId": profile.id, "trioId": id, "outcome": trio_outcome_name(&outcome) }));
+    log_info(
+        "trio.saved",
+        json!({ "profileId": profile.id, "trioId": id, "outcome": trio_outcome_name(&outcome) }),
+    );
     ok_of(&json!({ "trio": trio_view(&saved) }))
 }
 
@@ -594,11 +621,21 @@ pub async fn import_trio(app: &Arc<App>, req: Req) -> ApiResult {
         let name = validator::normalize_name(&deck.name);
         let issues = deck_draft_issues(app, &name, &deck.cards, None, false)?;
         if let Some(first) = first_message(&issues) {
-            return Err(draft_refused(&format!("{}: {}", imported_deck_label(slot, &name), first), &issues));
+            return Err(draft_refused(
+                &format!("{}: {}", imported_deck_label(slot, &name), first),
+                &issues,
+            ));
         }
-        decks.push(Some(ImportedDeckInput { id: deck.id.clone(), name, cards: deck.cards.clone() }));
+        decks.push(Some(ImportedDeckInput {
+            id: deck.id.clone(),
+            name,
+            cards: deck.cards.clone(),
+        }));
     }
-    let deck_ids: Vec<Option<String>> = decks.iter().map(|deck| deck.as_ref().map(|deck| deck.id.clone())).collect();
+    let deck_ids: Vec<Option<String>> = decks
+        .iter()
+        .map(|deck| deck.as_ref().map(|deck| deck.id.clone()))
+        .collect();
     let trio_name = validator::normalize_name(&input.trio.name);
     let trio_issues = trio_draft_issues(&trio_name, &deck_ids)?;
     if let Some(first) = first_message(&trio_issues) {
@@ -719,12 +756,16 @@ pub fn read_mode_choice(body: &Value) -> Result<ModeChoiceInput, ApiError> {
         Some("random") => Ok(ModeChoiceInput::Random),
         Some("bo3") => match saved_id_of(body.get("trioId")) {
             Some(trio_id) => Ok(ModeChoiceInput::Bo3 { trio_id }),
-            None => Err(bad_request("Conquest needs \"trioId\", the id of one of your trios")),
+            None => Err(bad_request(
+                "Conquest needs \"trioId\", the id of one of your trios",
+            )),
         },
         Some("bo1") => {
             let raw_deck_id = body.get("deckId").filter(|value| !value.is_null());
             let Some(raw_deck_id) = raw_deck_id else {
-                return Err(bad_request("Best of 1 needs \"deckId\", the id of one of your decks"));
+                return Err(bad_request(
+                    "Best of 1 needs \"deckId\", the id of one of your decks",
+                ));
             };
             match saved_id_of(Some(raw_deck_id)) {
                 Some(deck_id) => Ok(ModeChoiceInput::Bo1 { deck_id }),
@@ -752,7 +793,9 @@ async fn own_deck(t: &mut Tx<'_>, profile_id: &str, deck_id: &str) -> Result<Opt
 }
 
 async fn chosen_deck(t: &mut Tx<'_>, profile_id: &str, deck_id: &str) -> Result<SavedDeck, ApiError> {
-    own_deck(t, profile_id, deck_id).await?.ok_or_else(|| refused(DECK_GONE))
+    own_deck(t, profile_id, deck_id)
+        .await?
+        .ok_or_else(|| refused(DECK_GONE))
 }
 
 /// R253's two rule sets.
@@ -779,15 +822,25 @@ fn assert_legal(
     decks: &[SavedDeck],
     scope: LoadoutScope,
 ) -> Result<(), ApiError> {
-    let banned: Vec<&String> = app.catalog.card_ids.iter().filter(|card_id| app.catalog.is_banned(card_id)).collect();
-    let catalog = json!({ "version": app.catalog.version, "cards": to_json(&app.catalog.defs)?, "banned": banned });
+    let banned: Vec<&String> = app
+        .catalog
+        .card_ids
+        .iter()
+        .filter(|card_id| app.catalog.is_banned(card_id))
+        .collect();
+    let catalog =
+        json!({ "version": app.catalog.version, "cards": to_json(&app.catalog.defs)?, "banned": banned });
     let collection = to_json(owned)?;
     let deck_at = |deck: &SavedDeck| json!({ "name": deck.name, "cards": deck.cards });
     let result = match scope {
         LoadoutScope::Deck => {
-            let deck = decks.first().map(deck_at).unwrap_or_else(|| json!({ "cards": [] }));
-            let input: validator::DeckInput =
-                serde_json::from_value(json!({ "deck": deck, "catalog": catalog, "collection": collection }))?;
+            let deck = decks
+                .first()
+                .map(deck_at)
+                .unwrap_or_else(|| json!({ "cards": [] }));
+            let input: validator::DeckInput = serde_json::from_value(
+                json!({ "deck": deck, "catalog": catalog, "collection": collection }),
+            )?;
             to_json(&validator::validate_deck(&input))?
         }
         LoadoutScope::Trio => {
@@ -810,8 +863,14 @@ fn assert_legal(
                 .iter()
                 .map(|error| {
                     let mut issue = Map::new();
-                    issue.insert("rule".to_string(), error.get("rule").cloned().unwrap_or(Value::Null));
-                    issue.insert("message".to_string(), error.get("message").cloned().unwrap_or(Value::Null));
+                    issue.insert(
+                        "rule".to_string(),
+                        error.get("rule").cloned().unwrap_or(Value::Null),
+                    );
+                    issue.insert(
+                        "message".to_string(),
+                        error.get("message").cloned().unwrap_or(Value::Null),
+                    );
                     if let Some(deck) = error.get("deck").filter(|deck| !deck.is_null()) {
                         issue.insert("deck".to_string(), deck.clone());
                     }
@@ -824,15 +883,25 @@ fn assert_legal(
         })
         .unwrap_or_default();
     let Some(first) = first_message(&errors) else {
-        return Err(ApiError::internal("the validator refused a loadout without saying why"));
+        return Err(ApiError::internal(
+            "the validator refused a loadout without saying why",
+        ));
     };
-    Err(ApiError::with_details(ApiErrorCode::LoadoutInvalid, first, Value::Array(errors)))
+    Err(ApiError::with_details(
+        ApiErrorCode::LoadoutInvalid,
+        first,
+        Value::Array(errors),
+    ))
 }
 
 /// A copy, so a frozen deck can never alias the stored one.
 fn freeze(deck: &SavedDeck) -> FrozenDeck {
     // R642: the portrait freezes with the deck, present (a saved deck always has one, or null).
-    FrozenDeck { name: deck.name.clone(), cards: deck.cards.clone(), portrait: Some(deck.portrait.clone()) }
+    FrozenDeck {
+        name: deck.name.clone(),
+        cards: deck.cards.clone(),
+        portrait: Some(deck.portrait.clone()),
+    }
 }
 
 /// Loads the chosen deck or trio, checks it by R253 and returns the frozen copy the ticket or the
@@ -841,7 +910,11 @@ fn freeze(deck: &SavedDeck) -> FrozenDeck {
 ///
 /// An empty trio slot is not skipped: the filled decks go to the validator as they are, so a trio
 /// with two decks fails L1 in the shared module's own words. All Random freezes nothing (R258).
-pub async fn freeze_choice(app: &App, profile_id: &str, choice: &ModeChoiceInput) -> Result<FrozenChoice, ApiError> {
+pub async fn freeze_choice(
+    app: &App,
+    profile_id: &str,
+    choice: &ModeChoiceInput,
+) -> Result<FrozenChoice, ApiError> {
     let (deck_id, trio_id) = match choice {
         ModeChoiceInput::Random => return Ok(FrozenChoice::Random),
         ModeChoiceInput::Bo1 { deck_id } => (Some(deck_id), None),
@@ -874,10 +947,17 @@ pub async fn freeze_choice(app: &App, profile_id: &str, choice: &ModeChoiceInput
 
     let [first, second, third] = filled.as_slice() else {
         // L1 passed, so the validator is not the shared module: a wiring fault, not a player's.
-        return Err(ApiError::internal(format!("the validator passed trio {} with {} decks", trio.id, filled.len())));
+        return Err(ApiError::internal(format!(
+            "the validator passed trio {} with {} decks",
+            trio.id,
+            filled.len()
+        )));
     };
     Ok(FrozenChoice::Bo3 {
-        trio: FrozenTrio { name: trio.name.clone(), decks: (freeze(first), freeze(second), freeze(third)) },
+        trio: FrozenTrio {
+            name: trio.name.clone(),
+            decks: (freeze(first), freeze(second), freeze(third)),
+        },
     })
 }
 

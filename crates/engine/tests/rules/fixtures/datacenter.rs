@@ -24,7 +24,10 @@ pub static runner: LazyLock<CardDef> = LazyLock::new(|| {
 
 /// Field Spells: a plain one, an Indestructible one (#98's keyword), and one whose Death hits the enemy hero.
 pub static field: LazyLock<CardDef> = LazyLock::new(|| {
-    spell_def(941, json!({ "id": "fx-dc-field", "name": "Fixture Field Spell", "type": "Field Spell" }))
+    spell_def(
+        941,
+        json!({ "id": "fx-dc-field", "name": "Fixture Field Spell", "type": "Field Spell" }),
+    )
 });
 pub static hard_field: LazyLock<CardDef> = LazyLock::new(|| {
     spell_def(
@@ -39,7 +42,10 @@ pub static hard_field: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 pub static dying_field: LazyLock<CardDef> = LazyLock::new(|| {
-    spell_def(943, json!({ "id": "fx-dc-dying", "name": "Fixture Dying Field Spell", "type": "Field Spell" }))
+    spell_def(
+        943,
+        json!({ "id": "fx-dc-dying", "name": "Fixture Dying Field Spell", "type": "Field Spell" }),
+    )
 });
 /// DYING_FIELD's Death: 3 damage to the enemy hero of its controller.
 pub const DYING_FIELD_DAMAGE: i32 = 3;
@@ -59,27 +65,58 @@ pub static animated_field: LazyLock<CardDef> = LazyLock::new(|| {
 });
 
 /// The backrow cards that are no Field Spells.
-pub static trap: LazyLock<CardDef> =
-    LazyLock::new(|| spell_def(944, json!({ "id": "fx-dc-trap", "name": "Fixture Trap", "type": "Trap" })));
+pub static trap: LazyLock<CardDef> = LazyLock::new(|| {
+    spell_def(
+        944,
+        json!({ "id": "fx-dc-trap", "name": "Fixture Trap", "type": "Trap" }),
+    )
+});
 pub static field_trap: LazyLock<CardDef> = LazyLock::new(|| {
-    spell_def(945, json!({ "id": "fx-dc-ftrap", "name": "Fixture Field Trap", "type": "Field Trap" }))
+    spell_def(
+        945,
+        json!({ "id": "fx-dc-ftrap", "name": "Fixture Field Trap", "type": "Field Trap" }),
+    )
 });
 
 /// Library cards for the chained draw: (0), (1), (2) and (X) Spells, a (2) Unit and a cast-on-draw Spell.
-pub static free: LazyLock<CardDef> =
-    LazyLock::new(|| spell_def(946, json!({ "id": "fx-dc-free", "name": "Fixture (0) Spell", "cost": 0 })));
-pub static one: LazyLock<CardDef> =
-    LazyLock::new(|| spell_def(947, json!({ "id": "fx-dc-one", "name": "Fixture (1) Spell", "cost": 1 })));
-pub static two: LazyLock<CardDef> =
-    LazyLock::new(|| unit_def(948, json!({ "id": "fx-dc-two", "name": "Fixture (2) Unit", "cost": 2 })));
-pub static x_cost: LazyLock<CardDef> =
-    LazyLock::new(|| spell_def(949, json!({ "id": "fx-dc-x", "name": "Fixture (X) Spell", "cost": "X" })));
-pub static cast_on_draw: LazyLock<CardDef> =
-    LazyLock::new(|| spell_def(950, json!({ "id": "fx-dc-cod", "name": "Fixture Cast On Draw", "cost": 0 })));
+pub static free: LazyLock<CardDef> = LazyLock::new(|| {
+    spell_def(
+        946,
+        json!({ "id": "fx-dc-free", "name": "Fixture (0) Spell", "cost": 0 }),
+    )
+});
+pub static one: LazyLock<CardDef> = LazyLock::new(|| {
+    spell_def(
+        947,
+        json!({ "id": "fx-dc-one", "name": "Fixture (1) Spell", "cost": 1 }),
+    )
+});
+pub static two: LazyLock<CardDef> = LazyLock::new(|| {
+    unit_def(
+        948,
+        json!({ "id": "fx-dc-two", "name": "Fixture (2) Unit", "cost": 2 }),
+    )
+});
+pub static x_cost: LazyLock<CardDef> = LazyLock::new(|| {
+    spell_def(
+        949,
+        json!({ "id": "fx-dc-x", "name": "Fixture (X) Spell", "cost": "X" }),
+    )
+});
+pub static cast_on_draw: LazyLock<CardDef> = LazyLock::new(|| {
+    spell_def(
+        950,
+        json!({ "id": "fx-dc-cod", "name": "Fixture Cast On Draw", "cost": 0 }),
+    )
+});
 
 /// A Unit whose aura caps each hit on its hero at 1, as C+ #11 Anime Armor's does (E6, `heroGuard`).
-pub static guard: LazyLock<CardDef> =
-    LazyLock::new(|| unit_def(952, json!({ "id": "fx-dc-guard", "name": "Fixture Hero Guard", "cost": 2 })));
+pub static guard: LazyLock<CardDef> = LazyLock::new(|| {
+    unit_def(
+        952,
+        json!({ "id": "fx-dc-guard", "name": "Fixture Hero Guard", "cost": 2 }),
+    )
+});
 pub const GUARD_CAP: i32 = 1;
 
 /// Every fixture above on top of `base`.
@@ -108,7 +145,9 @@ pub fn datacenter_catalog(base: CardDefs) -> CardDefs {
 fn dying_field_script() -> Script {
     Script {
         death: Some(hook(|_ctx| {
-            vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": DYING_FIELD_DAMAGE })))]
+            vec![damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": DYING_FIELD_DAMAGE }),
+            ))]
         })),
         ..Script::default()
     }

@@ -168,7 +168,10 @@ fn is_match(actual: &Value, expected: &Value) -> bool {
             .all(|(key, value)| actual.get(key).is_some_and(|found| is_match(found, value))),
         (Value::Array(actual), Value::Array(expected)) => {
             actual.len() == expected.len()
-                && actual.iter().zip(expected).all(|(found, value)| is_match(found, value))
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(found, value)| is_match(found, value))
         }
         _ => actual == expected,
     }
@@ -204,12 +207,18 @@ impl Client {
 
     /// Every frame the server sent, parsed.
     fn messages(&self) -> Vec<Value> {
-        self.sent().iter().map(|text| serde_json::from_str(text).expect("every frame is JSON")).collect()
+        self.sent()
+            .iter()
+            .map(|text| serde_json::from_str(text).expect("every frame is JSON"))
+            .collect()
     }
 
     /// Frames of one `type`, parsed.
     fn of_type(&self, kind: &str) -> Vec<Value> {
-        self.messages().into_iter().filter(|message| message["type"] == kind).collect()
+        self.messages()
+            .into_iter()
+            .filter(|message| message["type"] == kind)
+            .collect()
     }
 
     /// Simulate the client sending a frame.
@@ -261,7 +270,8 @@ mod log_capture {
         /// `#[tokio::test]` runs its actor tasks on this thread too (its runtime is current-thread).
         pub fn install() -> (Recorder, DefaultGuard) {
             let recorder = Recorder::default();
-            let guard = crate::support::deps::set_log_default(tracing_subscriber::registry().with(recorder.clone()));
+            let guard =
+                crate::support::deps::set_log_default(tracing_subscriber::registry().with(recorder.clone()));
             (recorder, guard)
         }
 
@@ -307,8 +317,13 @@ mod log_capture {
             }
             let mut name = EventName::default();
             event.record(&mut name);
-            let Some(event_name) = name.event.or(name.message) else { return };
-            self.entries.lock().expect("the log").push(LogEntry { event: event_name });
+            let Some(event_name) = name.event.or(name.message) else {
+                return;
+            };
+            self.entries
+                .lock()
+                .expect("the log")
+                .push(LogEntry { event: event_name });
         }
     }
 }
@@ -317,7 +332,9 @@ mod log_capture {
 
 /// TS `deps.store.seedProfile(...)`: a profile row written straight into the fake store.
 async fn seed_profile(app: &App, profile: Value) {
-    let Db::Fake(data) = &app.db else { panic!("the test app runs on the fake store") };
+    let Db::Fake(data) = &app.db else {
+        panic!("the test app runs on the fake store")
+    };
     data.lock().await.seed_profile(profile);
 }
 
@@ -326,13 +343,19 @@ async fn match_actions(app: &App, match_id: &str) -> Vec<Value> {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
     let rows = tx.matches_actions(match_id).await.expect("matches.actions");
     tx.commit().await.expect("commit");
-    rows.iter().map(|row| serde_json::to_value(row).expect("MatchActionRow serialises")).collect()
+    rows.iter()
+        .map(|row| serde_json::to_value(row).expect("MatchActionRow serialises"))
+        .collect()
 }
 
 /// TS `deps.store.tables.matches[0]`: the match row, as JSON.
 async fn match_row(app: &App, match_id: &str) -> Value {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
-    let row = tx.matches_get(match_id).await.expect("matches.get").expect("the match row");
+    let row = tx
+        .matches_get(match_id)
+        .await
+        .expect("matches.get")
+        .expect("the match row");
     tx.commit().await.expect("commit");
     serde_json::to_value(&row).expect("MatchRow serialises")
 }
@@ -349,7 +372,10 @@ async fn create_match_row(app: &App, row: Value) {
 /// counted the stub writer's calls, the writer's row is what is counted here.
 async fn result_row(app: &App, match_id: &str) -> Option<Value> {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
-    let row = tx.results_get_by_match(match_id).await.expect("results.getByMatch");
+    let row = tx
+        .results_get_by_match(match_id)
+        .await
+        .expect("results.getByMatch");
     tx.commit().await.expect("commit");
     row.map(|row| serde_json::to_value(&row).expect("ResultRow serialises"))
 }
@@ -360,7 +386,9 @@ async fn profiles(app: &App, ids: &[&str]) -> Vec<Value> {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
     let rows = tx.profiles_get_many(&ids).await.expect("profiles.getMany");
     tx.commit().await.expect("commit");
-    rows.iter().map(|row| serde_json::to_value(row).expect("Profile serialises")).collect()
+    rows.iter()
+        .map(|row| serde_json::to_value(row).expect("Profile serialises"))
+        .collect()
 }
 
 // --- decks -------------------------------------------------------------------------------------
@@ -373,11 +401,19 @@ fn is_token(def: &CardDef) -> bool {
 /// TS `loadCatalog()`'s `cardIds`, tokens filtered out: every deckable §8 id, in catalog order.
 fn deckable_pool() -> Vec<String> {
     jackioh_cards::register_all();
-    jackioh_cards::CATALOG.iter().filter(|(_, def)| !is_token(def)).map(|(id, _)| id.clone()).collect()
+    jackioh_cards::CATALOG
+        .iter()
+        .filter(|(_, def)| !is_token(def))
+        .map(|(id, _)| id.clone())
+        .collect()
 }
 
 fn game_args(seed: &str, decks: &(Vec<String>, Vec<String>)) -> CreateGameArgs {
-    CreateGameArgs { seed: seed.to_string(), decks: decks.clone(), ..CreateGameArgs::default() }
+    CreateGameArgs {
+        seed: seed.to_string(),
+        decks: decks.clone(),
+        ..CreateGameArgs::default()
+    }
 }
 
 /// `test/fakes/engine.ts`'s `decksTheEngineAccepts`, a private copy (it is the engine's own
@@ -389,7 +425,9 @@ fn decks_the_engine_accepts(pool: &[String], seed: &str) -> (Vec<String>, Vec<St
     while size * 2 <= pool.len() {
         let decks = (pool[..size].to_vec(), pool[size..size * 2].to_vec());
         let args = game_args(seed, &decks);
-        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| jackioh_engine::create_game(&args))) {
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            jackioh_engine::create_game(&args)
+        })) {
             Ok(_) => return decks,
             Err(payload) => {
                 let refusal = payload
@@ -404,7 +442,10 @@ fn decks_the_engine_accepts(pool: &[String], seed: &str) -> (Vec<String>, Vec<St
         }
         size += 1;
     }
-    panic!("the real engine refused every deck size built from the catalog:\n  {}", refusals.join("\n  "));
+    panic!(
+        "the real engine refused every deck size built from the catalog:\n  {}",
+        refusals.join("\n  ")
+    );
 }
 
 /// `decksTheEngineAccepts`, narrowed to the decks whose opening deal, under `seed`, opens straight
@@ -430,7 +471,9 @@ fn decks_that_open_on_the_mulligans(pool: &[String], seed: &str) -> (Vec<String>
         }
         from += 1;
     }
-    panic!("under seed {seed} no second deck lets the deal open on both mulligans: p1's own deal asks first (R224)");
+    panic!(
+        "under seed {seed} no second deck lets the deal open on both mulligans: p1's own deal asks first (R224)"
+    );
 }
 
 /// The def ids a seat holds once the deal is done, read through its own view (§10.8).
@@ -444,11 +487,17 @@ fn dealt_def_ids(state: &jackioh_engine::GameState, player: PlayerId) -> Vec<Str
 /// whose opening hands hold every seat's extras. The search reads the real engine's own deal.
 fn seed_dealing(decks: &(Vec<String>, Vec<String>), wants: [&[&str]; 2]) -> String {
     for attempt in 0..SEED_SEARCH_LIMIT {
-        let seed = if attempt == 0 { SEED.to_string() } else { format!("{SEED}-{attempt}") };
+        let seed = if attempt == 0 {
+            SEED.to_string()
+        } else {
+            format!("{SEED}-{attempt}")
+        };
         let begun = jackioh_engine::begin_game(&jackioh_engine::create_game(&game_args(&seed, decks))).state;
         let holds = |player: PlayerId, wanted: &[&str]| {
             let dealt = dealt_def_ids(&begun, player);
-            wanted.iter().all(|def_id| dealt.iter().any(|held| held == def_id))
+            wanted
+                .iter()
+                .all(|def_id| dealt.iter().any(|held| held == def_id))
         };
         if holds(P1, wants[0]) && holds(P2, wants[1]) {
             return seed;
@@ -463,7 +512,10 @@ fn seed_dealing(decks: &(Vec<String>, Vec<String>), wants: [&[&str]; 2]) -> Stri
 #[derive(Clone)]
 enum Decks {
     /// `support::engine`'s scripted cards: `fake_deck(extra)` per seat (TS `createFakeEngine()`).
-    Scripted { p1: Vec<&'static str>, p2: Vec<&'static str> },
+    Scripted {
+        p1: Vec<&'static str>,
+        p2: Vec<&'static str>,
+    },
     /// Real §8 ids (TS `engine: enginePort()`), dealt under `SEED`.
     Real(Vec<String>, Vec<String>),
 }
@@ -496,7 +548,10 @@ struct Options {
 impl Default for Options {
     fn default() -> Options {
         Options {
-            decks: Decks::Scripted { p1: vec!["test-prompt-self"], p2: vec!["test-prompt-enemy", "test-lethal"] },
+            decks: Decks::Scripted {
+                p1: vec!["test-prompt-self"],
+                p2: vec!["test-prompt-enemy", "test-lethal"],
+            },
             portraits: None,
             attach: true,
             walk: Walk::ToTurnOne,
@@ -507,7 +562,11 @@ impl Default for Options {
 
 /// The real catalog's decks, left as dealt (TS `harness({ engine: enginePort(), p1Deck, p2Deck })`).
 fn real(decks: (Vec<String>, Vec<String>)) -> Options {
-    Options { decks: Decks::Real(decks.0, decks.1), walk: Walk::AsDealt, ..Options::default() }
+    Options {
+        decks: Decks::Real(decks.0, decks.1),
+        walk: Walk::AsDealt,
+        ..Options::default()
+    }
 }
 
 struct Harness {
@@ -538,7 +597,11 @@ impl Harness {
 
     /// The rows the test itself caused: everything after the harness's walk.
     async fn rows(&self) -> Vec<Value> {
-        match_actions(&self.app, MATCH_ID).await.into_iter().skip(self.base).collect()
+        match_actions(&self.app, MATCH_ID)
+            .await
+            .into_iter()
+            .skip(self.base)
+            .collect()
     }
 
     async fn last_row(&self) -> Value {
@@ -565,7 +628,11 @@ async fn submit_ok(actor: &MatchActor, player: PlayerId, nonce: &str, body: Valu
     let body: ActionBody = serde_json::from_value(body).expect("an ActionBody");
     let reply = actor.submit(player, nonce.to_string(), body).await;
     let reply = serde_json::to_value(&reply).expect("ServerMessage serialises");
-    assert_eq!(reply["type"], json!("ack"), "the walk's {nonce} was refused: {reply}");
+    assert_eq!(
+        reply["type"],
+        json!("ack"),
+        "the walk's {nonce} was refused: {reply}"
+    );
 }
 
 /// Brings the game to where TS's scripted port held it, through the actor's own `submit`, before any
@@ -576,15 +643,25 @@ async fn walk_setup(actor: &MatchActor, walk: Walk) -> usize {
     }
     let mut rows = 0;
     for player in PLAYER_IDS {
-        submit_ok(actor, player, &format!("setup-auto-{player}"), json!({ "type": "setAutoEndTurn", "enabled": false }))
-            .await;
+        submit_ok(
+            actor,
+            player,
+            &format!("setup-auto-{player}"),
+            json!({ "type": "setAutoEndTurn", "enabled": false }),
+        )
+        .await;
         rows += 1;
     }
     if walk == Walk::ToTurnOne {
         for player in PLAYER_IDS {
             let keep = hand_ids(&view_json(actor, player).await);
-            submit_ok(actor, player, &format!("setup-mulligan-{player}"), json!({ "type": "mulligan", "keep": keep }))
-                .await;
+            submit_ok(
+                actor,
+                player,
+                &format!("setup-mulligan-{player}"),
+                json!({ "type": "mulligan", "keep": keep }),
+            )
+            .await;
             rows += 1;
         }
         let at = actor.snapshot();
@@ -613,8 +690,16 @@ async fn harness(options: Options) -> Harness {
     };
     let app = empty_test_app().await;
     let [first, second] = options.ratings;
-    seed_profile(&app, json!({ "id": "profile-1", "rating": first, "inMatchId": MATCH_ID })).await;
-    seed_profile(&app, json!({ "id": "profile-2", "rating": second, "inMatchId": MATCH_ID })).await;
+    seed_profile(
+        &app,
+        json!({ "id": "profile-1", "rating": first, "inMatchId": MATCH_ID }),
+    )
+    .await;
+    seed_profile(
+        &app,
+        json!({ "id": "profile-2", "rating": second, "inMatchId": MATCH_ID }),
+    )
+    .await;
 
     let mut seats = json!([
         { "profileId": "profile-1", "player": "p1", "deck": decks.0 },
@@ -638,7 +723,15 @@ async fn harness(options: Options) -> Harness {
     let actor = app.matches.actor_for(&app, MATCH_ID).await.expect("the actor");
     actor.idle().await;
     let base = walk_setup(&actor, options.walk).await;
-    let h = Harness { app, actor, p1: Client::new(), p2: Client::new(), base, log, _log: log_guard };
+    let h = Harness {
+        app,
+        actor,
+        p1: Client::new(),
+        p2: Client::new(),
+        base,
+        log,
+        _log: log_guard,
+    };
     if options.attach {
         h.actor.attach(P1, h.p1.socket());
         h.actor.attach(P2, h.p2.socket());
@@ -665,7 +758,11 @@ async fn send(h: &Harness, socket: &Client, nonce: &str, body: Value) {
 }
 
 fn views(socket: &Client) -> Vec<Value> {
-    socket.of_type("view").into_iter().map(|frame| frame["view"].clone()).collect()
+    socket
+        .of_type("view")
+        .into_iter()
+        .map(|frame| frame["view"].clone())
+        .collect()
 }
 
 fn last_view(socket: &Client) -> Value {
@@ -710,7 +807,10 @@ fn in_hand(socket: &Client, def_id: &str) -> String {
 
 fn open_choice(socket: &Client) -> String {
     let pending = last_view(socket)["pending"].clone();
-    assert!(pending["forYou"] == json!(true), "no prompt is open for this player");
+    assert!(
+        pending["forYou"] == json!(true),
+        "no prompt is open for this player"
+    );
     pending["choiceId"].as_str().expect("a choice id").to_string()
 }
 
@@ -725,12 +825,22 @@ fn acks(socket: &Client) -> Vec<Value> {
 }
 
 fn legal_of(socket: &Client) -> Vec<Value> {
-    let frame = socket.of_type("view").last().cloned().expect("no view frame was sent");
-    frame["legal"].as_array().cloned().expect("the view frame's legal array")
+    let frame = socket
+        .of_type("view")
+        .last()
+        .cloned()
+        .expect("no view frame was sent");
+    frame["legal"]
+        .as_array()
+        .cloned()
+        .expect("the view frame's legal array")
 }
 
 fn legal_types(socket: &Client) -> Vec<String> {
-    legal_of(socket).iter().map(|action| action["type"].as_str().unwrap_or_default().to_string()).collect()
+    legal_of(socket)
+        .iter()
+        .map(|action| action["type"].as_str().unwrap_or_default().to_string())
+        .collect()
 }
 
 /// The answer to the seat's open prompt. TS sent `{ type: "answer", choiceId, selection: [{ pick:
@@ -792,9 +902,10 @@ fn scan(sent: &[String], secrets: &[String]) -> (Vec<String>, Vec<String>) {
                 state_shaped.push(format!("{key} in {}", frame.chars().take(40).collect::<String>()));
             }
             if let Some(text) = value.as_str()
-                && secrets.iter().any(|secret| secret == text) {
-                    leaked.push(text.to_string());
-                }
+                && secrets.iter().any(|secret| secret == text)
+            {
+                leaked.push(text.to_string());
+            }
         });
     }
     (leaked, state_shaped)
@@ -818,9 +929,18 @@ mod m6_t4_the_match_actor {
         assert_eq!(last_view(&h.p2)["viewer"], json!("p2"));
 
         // p1 plays a card that opens a prompt for itself, answers it, and ends the turn.
-        send(&h, &h.p1, "n1", json!({ "type": "play", "instanceId": in_hand(&h.p1, "test-prompt-self") })).await;
+        send(
+            &h,
+            &h.p1,
+            "n1",
+            json!({ "type": "play", "instanceId": in_hand(&h.p1, "test-prompt-self") }),
+        )
+        .await;
         assert_match(&last_view(&h.p1)["pending"], &json!({ "forYou": true }));
-        assert_match(&last_view(&h.p2)["pending"], &json!({ "forYou": false, "pendingFor": "p1" }));
+        assert_match(
+            &last_view(&h.p2)["pending"],
+            &json!({ "forYou": false, "pendingFor": "p1" }),
+        );
         assert_eq!(answer_of(&h.p1)["choiceId"], json!(open_choice(&h.p1)));
         send(&h, &h.p1, "n2", answer_of(&h.p1)).await;
         send(&h, &h.p1, "n3", json!({ "type": "endTurn" })).await;
@@ -828,14 +948,32 @@ mod m6_t4_the_match_actor {
 
         // p2 plays a card that opens a prompt for p1 (a trap firing on your turn, R79), p1 answers,
         // and p2 then plays lethal.
-        send(&h, &h.p2, "n4", json!({ "type": "play", "instanceId": in_hand(&h.p2, "test-prompt-enemy") })).await;
+        send(
+            &h,
+            &h.p2,
+            "n4",
+            json!({ "type": "play", "instanceId": in_hand(&h.p2, "test-prompt-enemy") }),
+        )
+        .await;
         assert_match(&last_view(&h.p1)["pending"], &json!({ "forYou": true }));
         send(&h, &h.p1, "n5", answer_of(&h.p1)).await;
-        send(&h, &h.p2, "n6", json!({ "type": "play", "instanceId": in_hand(&h.p2, "test-lethal") })).await;
+        send(
+            &h,
+            &h.p2,
+            "n6",
+            json!({ "type": "play", "instanceId": in_hand(&h.p2, "test-lethal") }),
+        )
+        .await;
 
         // Both sockets see the game through to its result.
-        assert_eq!(last_view(&h.p1)["result"], json!({ "winner": "p2", "reason": "hero-death" }));
-        assert_eq!(last_view(&h.p2)["result"], json!({ "winner": "p2", "reason": "hero-death" }));
+        assert_eq!(
+            last_view(&h.p1)["result"],
+            json!({ "winner": "p2", "reason": "hero-death" })
+        );
+        assert_eq!(
+            last_view(&h.p2)["result"],
+            json!({ "winner": "p2", "reason": "hero-death" })
+        );
 
         // §9.3: one append-only row per accepted action, gapless.
         let base = i64::try_from(h.base).expect("a small base");
@@ -843,9 +981,25 @@ mod m6_t4_the_match_actor {
         let seqs: Vec<i64> = log.iter().map(seq_of).collect();
         assert_eq!(seqs, (1..=6).map(|n| base + n).collect::<Vec<i64>>());
         let nonces: Vec<Value> = log.iter().map(|row| row["action"]["nonce"].clone()).collect();
-        assert_eq!(nonces, vec![json!("n1"), json!("n2"), json!("n3"), json!("n4"), json!("n5"), json!("n6")]);
-        assert_eq!(acks(&h.p1).iter().map(seq_of).collect::<Vec<i64>>(), vec![base + 1, base + 2, base + 3, base + 5]);
-        assert_eq!(acks(&h.p2).iter().map(seq_of).collect::<Vec<i64>>(), vec![base + 4, base + 6]);
+        assert_eq!(
+            nonces,
+            vec![
+                json!("n1"),
+                json!("n2"),
+                json!("n3"),
+                json!("n4"),
+                json!("n5"),
+                json!("n6")
+            ]
+        );
+        assert_eq!(
+            acks(&h.p1).iter().map(seq_of).collect::<Vec<i64>>(),
+            vec![base + 1, base + 2, base + 3, base + 5]
+        );
+        assert_eq!(
+            acks(&h.p2).iter().map(seq_of).collect::<Vec<i64>>(),
+            vec![base + 4, base + 6]
+        );
 
         // §9.5: every ending records exactly one result.
         let result = result_row(&h.app, MATCH_ID).await.expect("the result row");
@@ -872,7 +1026,10 @@ mod m6_t4_the_match_actor {
         let first_ack = acks(&h.p1).last().cloned().expect("an ack");
         let views_after_first = views(&h.p1).len();
         let base = i64::try_from(h.base).expect("a small base");
-        assert_eq!(first_ack, json!({ "type": "ack", "nonce": "same-nonce", "seq": base + 1 }));
+        assert_eq!(
+            first_ack,
+            json!({ "type": "ack", "nonce": "same-nonce", "seq": base + 1 })
+        );
 
         send(&h, &h.p1, "same-nonce", body).await;
 
@@ -896,10 +1053,20 @@ mod m6_t4_the_match_actor {
         // decks are real §8 ones, walked to p1's turn 1 as the scripted port opened.
         let pool = deckable_pool();
         let decks = decks_that_open_on_the_mulligans(&pool, SEED);
-        let h = harness(Options { walk: Walk::ToTurnOne, ..real(decks) }).await;
+        let h = harness(Options {
+            walk: Walk::ToTurnOne,
+            ..real(decks)
+        })
+        .await;
 
-        let p1_hand: Vec<String> = hand(&last_view(&h.p1)).into_iter().map(|card| card.def_id).collect();
-        let p2_hand: Vec<String> = hand(&last_view(&h.p2)).into_iter().map(|card| card.def_id).collect();
+        let p1_hand: Vec<String> = hand(&last_view(&h.p1))
+            .into_iter()
+            .map(|card| card.def_id)
+            .collect();
+        let p2_hand: Vec<String> = hand(&last_view(&h.p2))
+            .into_iter()
+            .map(|card| card.def_id)
+            .collect();
         assert!(!p1_hand.is_empty());
         assert!(!p2_hand.is_empty());
 
@@ -925,8 +1092,14 @@ mod m6_t4_the_match_actor {
         assert_eq!(state_shaped, Vec::<String>::new());
         // What the opponent does get is a count (§10.8), and it is the other hand's size now (the real
         // engine draws at each turn's start, where the scripted port drew nothing after the deal).
-        assert_eq!(last_view(&h.p2)["opponent"]["hand"], json!({ "count": hand(&last_view(&h.p1)).len() }));
-        assert_eq!(last_view(&h.p1)["opponent"]["hand"], json!({ "count": hand(&last_view(&h.p2)).len() }));
+        assert_eq!(
+            last_view(&h.p2)["opponent"]["hand"],
+            json!({ "count": hand(&last_view(&h.p1)).len() })
+        );
+        assert_eq!(
+            last_view(&h.p1)["opponent"]["hand"],
+            json!({ "count": hand(&last_view(&h.p2)).len() })
+        );
         assert!(last_view(&h.p2)["opponent"]["libraryCount"].as_i64().unwrap_or(0) > 0);
     }
 
@@ -964,7 +1137,9 @@ mod m6_t4_the_match_actor {
         send(&h, &h.p2, "out-of-turn", json!({ "type": "endTurn" })).await;
         assert_eq!(
             errors(&h.p2).last(),
-            Some(&json!({ "type": "error", "code": "illegal_action", "message": refusal, "nonce": "out-of-turn" }))
+            Some(
+                &json!({ "type": "error", "code": "illegal_action", "message": refusal, "nonce": "out-of-turn" })
+            )
         );
         assert_eq!(h.rows().await.len(), 1);
     }
@@ -972,12 +1147,19 @@ mod m6_t4_the_match_actor {
     #[tokio::test(start_paused = true)]
     async fn r79_refuses_a_server_only_action_sent_by_a_client() {
         let h = harness(Options::default()).await;
-        h.p1.receive_json(json!({ "type": "action", "action": { "type": "ceilingReached", "nonce": "cheat" } }));
+        h.p1.receive_json(
+            json!({ "type": "action", "action": { "type": "ceilingReached", "nonce": "cheat" } }),
+        );
         h.idle().await;
 
         let last = errors(&h.p1).last().cloned().expect("an error frame");
         assert_eq!(last["code"], json!("malformed"));
-        assert!(last["message"].as_str().unwrap_or_default().contains("server-only"));
+        assert!(
+            last["message"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("server-only")
+        );
         assert_eq!(h.rows().await, Vec::<Value>::new());
         assert_eq!(h.actor.snapshot().result, None);
     }
@@ -992,12 +1174,18 @@ mod m6_t4_the_match_actor {
         h.idle().await;
 
         let codes: Vec<Value> = errors(&h.p1).iter().map(|error| error["code"].clone()).collect();
-        assert_eq!(codes, vec![json!("malformed"), json!("malformed"), json!("malformed")]);
+        assert_eq!(
+            codes,
+            vec![json!("malformed"), json!("malformed"), json!("malformed")]
+        );
 
         // The actor still works.
         send(&h, &h.p1, "after-garbage", json!({ "type": "endTurn" })).await;
         let base = i64::try_from(h.base).expect("a small base");
-        assert_eq!(acks(&h.p1).last(), Some(&json!({ "type": "ack", "nonce": "after-garbage", "seq": base + 1 })));
+        assert_eq!(
+            acks(&h.p1).last(),
+            Some(&json!({ "type": "ack", "nonce": "after-garbage", "seq": base + 1 }))
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -1024,7 +1212,10 @@ mod m6_t4_the_match_actor {
 
         let overflow = errors(&h.p1);
         assert_eq!(overflow.len(), 1);
-        assert_match(&overflow[0], &json!({ "code": "rate_limited", "nonce": format!("flood-{budget}") }));
+        assert_match(
+            &overflow[0],
+            &json!({ "code": "rate_limited", "nonce": format!("flood-{budget}") }),
+        );
         assert_eq!(i64::try_from(h.rows().await.len()).expect("a small log"), budget);
         // §9.8: reject the overflow, do not drop the socket.
         assert!(h.p1.is_open());
@@ -1034,12 +1225,18 @@ mod m6_t4_the_match_actor {
         // p1 is over budget — and the match's aggregate ceiling is twice R109's number, not once.
         send(&h, &h.p2, "opponent-click", filler()).await;
         assert_eq!(errors(&h.p2), Vec::<Value>::new());
-        assert_eq!(acks(&h.p2).last().map(|ack| ack["nonce"].clone()), Some(json!("opponent-click")));
+        assert_eq!(
+            acks(&h.p2).last().map(|ack| ack["nonce"].clone()),
+            Some(json!("opponent-click"))
+        );
 
         // A second later the budget is back.
         advance(SECOND).await;
         send(&h, &h.p1, "after-window", filler()).await;
-        assert_eq!(acks(&h.p1).last().map(|ack| ack["nonce"].clone()), Some(json!("after-window")));
+        assert_eq!(
+            acks(&h.p1).last().map(|ack| ack["nonce"].clone()),
+            Some(json!("after-window"))
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -1079,16 +1276,27 @@ mod m6_t4_the_match_actor {
         // clock fires when the deadline passes.)
         advance(turn_ms()).await;
         h.idle().await;
-        assert_match(&h.last_row().await["action"], &json!({ "type": "timeout", "playerId": "p1" }));
+        assert_match(
+            &h.last_row().await["action"],
+            &json!({ "type": "timeout", "playerId": "p1" }),
+        );
         assert_eq!(h.actor.snapshot().active, P2);
 
         // A prompt expiry answers only that prompt (the holder is the non-active player here).
-        send(&h, &h.p2, "prompt-enemy", json!({ "type": "play", "instanceId": in_hand(&h.p2, "test-prompt-enemy") }))
-            .await;
+        send(
+            &h,
+            &h.p2,
+            "prompt-enemy",
+            json!({ "type": "play", "instanceId": in_hand(&h.p2, "test-prompt-enemy") }),
+        )
+        .await;
         assert_eq!(h.actor.snapshot().pending_for, Some(P1));
         advance(prompt_ms()).await;
         h.idle().await;
-        assert_match(&h.last_row().await["action"], &json!({ "type": "timeout", "playerId": "p1" }));
+        assert_match(
+            &h.last_row().await["action"],
+            &json!({ "type": "timeout", "playerId": "p1" }),
+        );
         assert_eq!(h.actor.snapshot().pending_for, None);
         // R79: the non-active player's prompt clock does not end the active player's turn.
         assert_eq!(h.actor.snapshot().active, P2);
@@ -1103,8 +1311,14 @@ mod m6_t4_the_match_actor {
         // R146: p2 is the active player by now, and the loss is still p1's — the result is stamped
         // with the seat it belongs to, never with whoever happened to be active.
         assert_eq!(h.actor.snapshot().active, P2);
-        assert_match(&h.last_row().await["action"], &json!({ "type": "disconnectExpired", "player": "p1" }));
-        assert_eq!(h.actor.snapshot().result, result_of(Winner::P2, GameOverReason::Disconnect));
+        assert_match(
+            &h.last_row().await["action"],
+            &json!({ "type": "disconnectExpired", "player": "p1" }),
+        );
+        assert_eq!(
+            h.actor.snapshot().result,
+            result_of(Winner::P2, GameOverReason::Disconnect)
+        );
         assert!(result_row(&h.app, MATCH_ID).await.is_some());
         // The clock stopped: no deadline is armed any more (TS read its stub's `stopped` flag).
         let clocks = h.clocks().await;
@@ -1129,8 +1343,16 @@ mod m6_t4_the_match_actor {
         let (_log, _guard) = Recorder::install();
         install_test_cards();
         let app = empty_test_app().await;
-        seed_profile(&app, json!({ "id": "profile-1", "rating": 1000, "inMatchId": MATCH_ID })).await;
-        seed_profile(&app, json!({ "id": "profile-2", "rating": 1000, "inMatchId": MATCH_ID })).await;
+        seed_profile(
+            &app,
+            json!({ "id": "profile-1", "rating": 1000, "inMatchId": MATCH_ID }),
+        )
+        .await;
+        seed_profile(
+            &app,
+            json!({ "id": "profile-2", "rating": 1000, "inMatchId": MATCH_ID }),
+        )
+        .await;
         let created_at = now() - ceiling_ms() + SECOND;
         create_match_row(
             &app,
@@ -1153,7 +1375,11 @@ mod m6_t4_the_match_actor {
             }),
         )
         .await;
-        let actor = app.matches.actor_for(&app, MATCH_ID).await.expect("the rebuilt actor");
+        let actor = app
+            .matches
+            .actor_for(&app, MATCH_ID)
+            .await
+            .expect("the rebuilt actor");
         actor.idle().await;
         let active = actor.snapshot().active;
 
@@ -1167,7 +1393,10 @@ mod m6_t4_the_match_actor {
             &log.last().cloned().expect("a log row")["action"],
             &json!({ "type": "ceilingReached", "playerId": active.as_str() }),
         );
-        assert_eq!(actor.snapshot().result, result_of(Winner::Draw, GameOverReason::MatchCeiling));
+        assert_eq!(
+            actor.snapshot().result,
+            result_of(Winner::Draw, GameOverReason::MatchCeiling)
+        );
         assert!(result_row(&app, MATCH_ID).await.is_some());
     }
 
@@ -1190,7 +1419,10 @@ mod m6_t4_the_match_actor {
         h.p1.receive_json(json!({ "type": "joinRoom", "roomCode": "ABCDEF" }));
         h.idle().await;
         // SURFACE §11.3: a `joinRoom` frame is answered `malformed` (TS answered `unsupported`).
-        assert_match(&errors(&h.p1).last().cloned().expect("an error frame"), &json!({ "code": "malformed" }));
+        assert_match(
+            &errors(&h.p1).last().cloned().expect("an error frame"),
+            &json!({ "code": "malformed" }),
+        );
     }
 }
 
@@ -1222,7 +1454,12 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         h.rows()
             .await
             .into_iter()
-            .filter(|row| !row["action"]["nonce"].as_str().unwrap_or_default().starts_with("srv-"))
+            .filter(|row| {
+                !row["action"]["nonce"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .starts_with("srv-")
+            })
             .collect()
     }
 
@@ -1235,7 +1472,10 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         h.p1.receive_json(json!({ "type": "emote", "emote": "laugh" }));
         h.idle().await;
 
-        assert_eq!(relays(&h.p2), vec![json!({ "type": "emote", "from": "p1", "emote": "laugh" })]);
+        assert_eq!(
+            relays(&h.p2),
+            vec![json!({ "type": "emote", "from": "p1", "emote": "laugh" })]
+        );
         // The sender sees their own locally: nothing comes back — no relay, no ack, no error.
         assert_eq!(relays(&h.p1), Vec::<Value>::new());
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
@@ -1245,7 +1485,10 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         // windows, so p2's send immediately after p1's is still inside no cooldown.
         h.p2.receive_json(json!({ "type": "emote", "emote": "thanks" }));
         h.idle().await;
-        assert_eq!(relays(&h.p1), vec![json!({ "type": "emote", "from": "p2", "emote": "thanks" })]);
+        assert_eq!(
+            relays(&h.p1),
+            vec![json!({ "type": "emote", "from": "p2", "emote": "thanks" })]
+        );
         assert_eq!(relays(&h.p2).len(), 1);
         assert_eq!(errors(&h.p2), Vec::<Value>::new());
     }
@@ -1278,7 +1521,12 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         assert_eq!(client_rows(&h).await, Vec::<Value>::new());
         assert_eq!(acks(&h.p1), Vec::<Value>::new());
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
-        assert!(!h.log.events().iter().any(|event| event == "match.action.rejected"));
+        assert!(
+            !h.log
+                .events()
+                .iter()
+                .any(|event| event == "match.action.rejected")
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -1315,7 +1563,12 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         let logged: Vec<String> = h.log.events().into_iter().skip(entries_before).collect();
         assert_eq!(logged.len(), 5);
         assert!(logged.iter().all(|event| event == "match.frame.malformed"));
-        assert!(!h.log.events().iter().any(|event| event == "match.action.rejected"));
+        assert!(
+            !h.log
+                .events()
+                .iter()
+                .any(|event| event == "match.action.rejected")
+        );
         assert_eq!(client_rows(&h).await, Vec::<Value>::new());
     }
 
@@ -1327,7 +1580,10 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
 
         h.p1.receive_json(json!({ "type": "emote", "emote": "greetings" }));
         h.idle().await;
-        assert_eq!(relays(&h.p2), vec![json!({ "type": "emote", "from": "p1", "emote": "greetings" })]);
+        assert_eq!(
+            relays(&h.p2),
+            vec![json!({ "type": "emote", "from": "p1", "emote": "greetings" })]
+        );
 
         // Inside EMOTE_COOLDOWN_MS the shared gate says no: nothing reaches the opponent, no error
         // reaches the sender, and nothing is written — silence is what a drop needs (R643).
@@ -1342,7 +1598,12 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         // The gate's own `retry_after_ms` is the wait — derived from the shared constant, not restated.
         let gate = emote_gate(&[now()], now());
         assert!(!gate.ok);
-        advance(if gate.ok { 0 } else { gate.retry_after_ms.unwrap_or(0) }).await;
+        advance(if gate.ok {
+            0
+        } else {
+            gate.retry_after_ms.unwrap_or(0)
+        })
+        .await;
         h.p1.receive_json(json!({ "type": "emote", "emote": "laugh" }));
         h.idle().await;
         let sent: Vec<Value> = relays(&h.p2).iter().map(|frame| frame["emote"].clone()).collect();
@@ -1380,7 +1641,12 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         // one relays again.
         let gate = emote_gate(&sent_at, now());
         assert!(!gate.ok);
-        advance(if gate.ok { 0 } else { gate.retry_after_ms.unwrap_or(0) }).await;
+        advance(if gate.ok {
+            0
+        } else {
+            gate.retry_after_ms.unwrap_or(0)
+        })
+        .await;
         h.p1.receive_json(json!({ "type": "emote", "emote": "thanks" }));
         h.idle().await;
         assert_eq!(relays(&h.p2).len(), EMOTE_WINDOW_MAX + 1);
@@ -1407,7 +1673,10 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         // does not see it and its own limit — the shared gate — still admits the first send.
         h.p1.receive_json(json!({ "type": "emote", "emote": "oops" }));
         h.idle().await;
-        assert_eq!(relays(&h.p2), vec![json!({ "type": "emote", "from": "p1", "emote": "oops" })]);
+        assert_eq!(
+            relays(&h.p2),
+            vec![json!({ "type": "emote", "from": "p1", "emote": "oops" })]
+        );
     }
 }
 
@@ -1427,13 +1696,23 @@ mod r642_the_portraits_frame_9_5 {
 
     #[tokio::test(start_paused = true)]
     async fn r642_sends_both_seats_portraits_on_attach_in_their_own_frame_never_on_the_view() {
-        let h = harness(Options { portraits: Some(["gary", "shredder"]), ..Options::default() }).await;
+        let h = harness(Options {
+            portraits: Some(["gary", "shredder"]),
+            ..Options::default()
+        })
+        .await;
 
         // PREMISE: the row really did freeze the pair the seats were dealt, seat order like `decks`.
-        assert_eq!(match_row(&h.app, MATCH_ID).await["portraits"], json!(["gary", "shredder"]));
+        assert_eq!(
+            match_row(&h.app, MATCH_ID).await["portraits"],
+            json!(["gary", "shredder"])
+        );
 
         for socket in [&h.p1, &h.p2] {
-            assert_eq!(portraits_sent(socket), vec![json!({ "type": "portraits", "p1": "gary", "p2": "shredder" })]);
+            assert_eq!(
+                portraits_sent(socket),
+                vec![json!({ "type": "portraits", "p1": "gary", "p2": "shredder" })]
+            );
             // …and the view frame carries neither key: `PlayerView` is a rules surface (R641, R642).
             let view = socket.of_type("view").last().cloned().expect("a view frame");
             assert!(view["view"].get("portrait").is_none());
@@ -1443,7 +1722,11 @@ mod r642_the_portraits_frame_9_5 {
 
     #[tokio::test(start_paused = true)]
     async fn r642_sends_them_again_on_a_reconnects_fresh_view_and_again_on_hello() {
-        let h = harness(Options { portraits: Some(["timmy", "dfender"]), ..Options::default() }).await;
+        let h = harness(Options {
+            portraits: Some(["timmy", "dfender"]),
+            ..Options::default()
+        })
+        .await;
         assert_eq!(portraits_sent(&h.p1).len(), 1);
 
         h.p1.drop_transport();
@@ -1453,7 +1736,10 @@ mod r642_the_portraits_frame_9_5 {
         h.idle().await;
         // §9.5's fresh full view rides with the portraits again, as on the first attach.
         assert_eq!(views(&revived).len(), 1);
-        assert_eq!(portraits_sent(&revived), vec![json!({ "type": "portraits", "p1": "timmy", "p2": "dfender" })]);
+        assert_eq!(
+            portraits_sent(&revived),
+            vec![json!({ "type": "portraits", "p1": "timmy", "p2": "dfender" })]
+        );
 
         revived.receive_json(json!({ "type": "hello" }));
         h.idle().await;
@@ -1496,14 +1782,24 @@ mod r642_the_portraits_frame_9_5 {
         .await;
 
         let socket = Client::new();
-        app.matches.attach(&app, "legacy-match", "profile-1", socket.socket()).await.expect("registry.attach");
-        let actor = app.matches.actor_for(&app, "legacy-match").await.expect("the actor");
+        app.matches
+            .attach(&app, "legacy-match", "profile-1", socket.socket())
+            .await
+            .expect("registry.attach");
+        let actor = app
+            .matches
+            .actor_for(&app, "legacy-match")
+            .await
+            .expect("the actor");
         settle().await;
         actor.idle().await;
         settle().await;
 
         let default = serde_json::to_value(DEFAULT_PORTRAIT).expect("PortraitId serialises");
-        assert_eq!(portraits_sent(&socket), vec![json!({ "type": "portraits", "p1": default, "p2": default })]);
+        assert_eq!(
+            portraits_sent(&socket),
+            vec![json!({ "type": "portraits", "p1": default, "p2": default })]
+        );
     }
 }
 
@@ -1573,22 +1869,30 @@ mod the_legal_action_array_on_the_view_frame_build_m5_t2_10_2 {
         let h = harness(Options::default()).await;
 
         // `test-prompt-self` opens a prompt for the player who played it.
-        send(&h, &h.p1, "prompt", json!({ "type": "play", "instanceId": in_hand(&h.p1, "test-prompt-self") })).await;
+        send(
+            &h,
+            &h.p1,
+            "prompt",
+            json!({ "type": "play", "instanceId": in_hand(&h.p1, "test-prompt-self") }),
+        )
+        .await;
 
         let choice_id = open_choice(&h.p1);
         // The holder's array is that prompt's answers and nothing else but concede, which R211 offers
         // both seats at every moment of a live game (TS's scripted port offered the answer alone).
         let mine = legal_of(&h.p1);
         assert!(mine.iter().any(|action| action["type"] == "answer"));
-        assert!(
-            mine.iter()
-                .all(|action| (action["type"] == "answer" && action["choiceId"] == json!(choice_id))
-                    || *action == json!({ "type": "concede" }))
-        );
+        assert!(mine.iter().all(|action| (action["type"] == "answer"
+            && action["choiceId"] == json!(choice_id))
+            || *action == json!({ "type": "concede" })));
         // §10.6: the opponent "sees only that a prompt is open". Not even the choiceId reaches it —
         // concede, R211's way out, is the whole of what p2 may do (TS's scripted port offered nothing).
         assert_eq!(legal_of(&h.p2), vec![json!({ "type": "concede" })]);
-        assert!(!Value::Array(legal_of(&h.p2)).to_string().contains(choice_id.as_str()));
+        assert!(
+            !Value::Array(legal_of(&h.p2))
+                .to_string()
+                .contains(choice_id.as_str())
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -1681,11 +1985,23 @@ mod m6_t4_acceptance_4_with_the_real_engine_10_8_claude_md_rule_7 {
         // dealt is still in the hand it was dealt to when the scan runs — a card returned to the library
         // would be one the scan could not reason about, and a card played would be public (§10.8). p2
         // answers first, so the scan also covers the frames sent while p2's answer was sealed (R266).
-        assert_match(&last_view(&h.p1)["pending"], &json!({ "forYou": true, "kind": "mulligan" }));
-        assert_match(&last_view(&h.p2)["pending"], &json!({ "forYou": true, "kind": "mulligan" }));
+        assert_match(
+            &last_view(&h.p1)["pending"],
+            &json!({ "forYou": true, "kind": "mulligan" }),
+        );
+        assert_match(
+            &last_view(&h.p2)["pending"],
+            &json!({ "forYou": true, "kind": "mulligan" }),
+        );
         send(&h, &h.p2, "mull-2", keep_everything(&h.p2)).await;
-        assert_match(&last_view(&h.p1)["pending"], &json!({ "forYou": true, "kind": "mulligan" }));
-        assert_eq!(last_view(&h.p2)["pending"], json!({ "forYou": false, "pendingFor": "p1" }));
+        assert_match(
+            &last_view(&h.p1)["pending"],
+            &json!({ "forYou": true, "kind": "mulligan" }),
+        );
+        assert_eq!(
+            last_view(&h.p2)["pending"],
+            json!({ "forYou": false, "pendingFor": "p1" })
+        );
         send(&h, &h.p1, "mull-1", keep_everything(&h.p1)).await;
 
         // Out of setup and into the first real turn (§2.1, R10: p1 draws), then a reconnect-style full
@@ -1695,8 +2011,14 @@ mod m6_t4_acceptance_4_with_the_real_engine_10_8_claude_md_rule_7 {
         h.p2.receive_json(json!({ "type": "hello" }));
         h.idle().await;
 
-        let p1_hand: Vec<String> = hand(&last_view(&h.p1)).into_iter().map(|card| card.def_id).collect();
-        let p2_hand: Vec<String> = hand(&last_view(&h.p2)).into_iter().map(|card| card.def_id).collect();
+        let p1_hand: Vec<String> = hand(&last_view(&h.p1))
+            .into_iter()
+            .map(|card| card.def_id)
+            .collect();
+        let p2_hand: Vec<String> = hand(&last_view(&h.p2))
+            .into_iter()
+            .map(|card| card.def_id)
+            .collect();
         // PREMISE: both hands really hold real cards. Empty sets would make every scan below vacuous.
         assert!(!p1_hand.is_empty());
         assert!(!p2_hand.is_empty());
@@ -1710,7 +2032,13 @@ mod m6_t4_acceptance_4_with_the_real_engine_10_8_claude_md_rule_7 {
 
         // PREMISE: the frames really carry the events the scripted port never produced, so the R97 half
         // of the scan is exercising something.
-        assert!(!last_view(&h.p1)["events"].as_array().cloned().unwrap_or_default().is_empty());
+        assert!(
+            !last_view(&h.p1)["events"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default()
+                .is_empty()
+        );
 
         let mut leaked = Vec::new();
         let mut state_shaped = Vec::new();
@@ -1724,8 +2052,14 @@ mod m6_t4_acceptance_4_with_the_real_engine_10_8_claude_md_rule_7 {
         assert_eq!(state_shaped, Vec::<String>::new());
 
         // What the opponent does get is a count (§10.8), and the count is right.
-        assert_eq!(last_view(&h.p2)["opponent"]["hand"], json!({ "count": p1_hand.len() }));
-        assert_eq!(last_view(&h.p1)["opponent"]["hand"], json!({ "count": p2_hand.len() }));
+        assert_eq!(
+            last_view(&h.p2)["opponent"]["hand"],
+            json!({ "count": p1_hand.len() })
+        );
+        assert_eq!(
+            last_view(&h.p1)["opponent"]["hand"],
+            json!({ "count": p2_hand.len() })
+        );
         assert!(last_view(&h.p2)["opponent"]["libraryCount"].as_i64().unwrap_or(0) > 0);
         // §9.1: a library is a count for both players — the viewer's own included.
         assert!(last_view(&h.p2)["you"]["libraryCount"].as_i64().unwrap_or(0) > 0);
@@ -1748,9 +2082,14 @@ mod m6_t4_acceptance_4_with_the_real_engine_10_8_claude_md_rule_7 {
             assert_eq!(pending["kind"], json!("mulligan"));
             let options = pending["options"].as_array().cloned().unwrap_or_default();
             assert!(!options.is_empty());
-            let option_defs: Vec<String> =
-                options.iter().map(|option| option["defId"].as_str().unwrap_or_default().to_string()).collect();
-            let hand_defs: Vec<String> = hand(&last_view(holder)).into_iter().map(|card| card.def_id).collect();
+            let option_defs: Vec<String> = options
+                .iter()
+                .map(|option| option["defId"].as_str().unwrap_or_default().to_string())
+                .collect();
+            let hand_defs: Vec<String> = hand(&last_view(holder))
+                .into_iter()
+                .map(|card| card.def_id)
+                .collect();
             assert_eq!(option_defs, hand_defs);
 
             // §10.6, R81: the other seat is shown its own prompt, never this one — not the choiceId, not
@@ -1842,8 +2181,14 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
             // concede on its legal array (R211) — and one clock between them (R268).
             for seat in PLAYER_IDS {
                 let socket = h.socket(seat);
-                assert_match(&last_view(socket)["pending"], &json!({ "forYou": true, "kind": "mulligan" }));
-                assert_eq!(last_view(socket)["mulligan"], json!({ "youReady": false, "opponentReady": false }));
+                assert_match(
+                    &last_view(socket)["pending"],
+                    &json!({ "forYou": true, "kind": "mulligan" }),
+                );
+                assert_eq!(
+                    last_view(socket)["mulligan"],
+                    json!({ "youReady": false, "opponentReady": false })
+                );
                 assert_eq!(last_view(socket)["clockMs"].as_i64(), Some(mulligan_ms()));
                 let legal = legal_of(socket);
                 assert!(legal.iter().any(|action| action["type"] == "mulligan"));
@@ -1864,9 +2209,18 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
             let second_choice = choice_of(h.socket(second));
             h.p1.clear();
             h.p2.clear();
-            send(&h, h.socket(first), &format!("mull-{first}"), json!({ "type": "mulligan", "keep": first_keep })).await;
+            send(
+                &h,
+                h.socket(first),
+                &format!("mull-{first}"),
+                json!({ "type": "mulligan", "keep": first_keep }),
+            )
+            .await;
 
-            assert_eq!(last_view(h.socket(first))["pending"], json!({ "forYou": false, "pendingFor": second.as_str() }));
+            assert_eq!(
+                last_view(h.socket(first))["pending"],
+                json!({ "forYou": false, "pendingFor": second.as_str() })
+            );
             assert_eq!(
                 last_view(h.socket(first))["mulligan"],
                 json!({ "youReady": true, "opponentReady": false, "kept": first_keep })
@@ -1878,13 +2232,18 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
                 &json!({ "forYou": true, "choiceId": second_choice }),
             );
             // That the other seat is ready is all the second seat is told: no `kept` of anyone's.
-            assert_eq!(last_view(h.socket(second))["mulligan"], json!({ "youReady": false, "opponentReady": true }));
+            assert_eq!(
+                last_view(h.socket(second))["mulligan"],
+                json!({ "youReady": false, "opponentReady": true })
+            );
             assert_eq!(h.actor.snapshot().mulligan_owed, vec![second]);
 
             // Each seat's prompt frame is the one that fits it, and both carry the one deadline, unmoved.
             assert_eq!(
                 prompts(h.socket(first)),
-                vec![json!({ "type": "prompt", "forYou": false, "pendingFor": second.as_str(), "deadline": deadline })]
+                vec![
+                    json!({ "type": "prompt", "forYou": false, "pendingFor": second.as_str(), "deadline": deadline })
+                ]
             );
             assert_eq!(
                 prompts(h.socket(second)),
@@ -1903,22 +2262,40 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
             // with nothing to do ends itself inside the same action (§2.5, R82), so whose turn is at rest
             // depends on the hands dealt — which is why the seats below are read, not assumed.
             let keep = ids(h.socket(second));
-            send(&h, h.socket(second), &format!("mull-{second}"), json!({ "type": "mulligan", "keep": keep })).await;
+            send(
+                &h,
+                h.socket(second),
+                &format!("mull-{second}"),
+                json!({ "type": "mulligan", "keep": keep }),
+            )
+            .await;
             let active = h.actor.snapshot().active;
             for seat in PLAYER_IDS {
                 let view = last_view(h.socket(seat));
-                assert_match(&view, &json!({ "phase": "main", "active": active.as_str(), "pending": null }));
+                assert_match(
+                    &view,
+                    &json!({ "phase": "main", "active": active.as_str(), "pending": null }),
+                );
                 assert!(view["turn"].as_i64().unwrap_or(0) >= 1);
                 assert!(view.get("mulligan").is_none());
             }
             assert_eq!(h.actor.snapshot().mulligan_owed, Vec::<PlayerId>::new());
             // The first seat's two returned cards were replaced: same count, two new ids.
-            assert!(ids(h.socket(first)).iter().filter(|id| !first_keep.contains(*id)).count() >= 2);
+            assert!(
+                ids(h.socket(first))
+                    .iter()
+                    .filter(|id| !first_keep.contains(*id))
+                    .count()
+                    >= 2
+            );
 
             // One row per answer, in the order they came, stamped with the seat that sent it (§9.1, §9.3).
             assert_eq!(
                 rows_by_type_and_seat(&h.rows().await),
-                vec![pair("mulligan", first.as_str()), pair("mulligan", second.as_str())]
+                vec![
+                    pair("mulligan", first.as_str()),
+                    pair("mulligan", second.as_str())
+                ]
             );
             // The mulligan clock is gone, and the active seat's turn clock runs from full.
             let clocks = h.clocks().await;
@@ -1935,10 +2312,20 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         let h = mulligan_match().await;
         let before = last_view(&h.p1);
         let p2_hand = hand(&last_view(&h.p2));
-        let p2_keep: Vec<String> = p2_hand.iter().take(2).map(|card| card.instance_id.clone()).collect();
+        let p2_keep: Vec<String> = p2_hand
+            .iter()
+            .take(2)
+            .map(|card| card.instance_id.clone())
+            .collect();
         assert!(p2_hand.len() > 2);
 
-        send(&h, &h.p2, "sealed", json!({ "type": "mulligan", "keep": p2_keep })).await;
+        send(
+            &h,
+            &h.p2,
+            "sealed",
+            json!({ "type": "mulligan", "keep": p2_keep }),
+        )
+        .await;
 
         // Everything p1 is shown is what it was shown before, but that p2 is ready (and the public
         // `promptAnswered` that says so). No part of the view depends on what p2 kept.
@@ -1952,21 +2339,30 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
             rest
         };
         assert_eq!(strip(&after), strip(&before));
-        assert_eq!(after["mulligan"], json!({ "youReady": false, "opponentReady": true }));
+        assert_eq!(
+            after["mulligan"],
+            json!({ "youReady": false, "opponentReady": true })
+        );
         assert_match(
-            &after["events"].as_array().and_then(|events| events.last().cloned()).unwrap_or_default(),
+            &after["events"]
+                .as_array()
+                .and_then(|events| events.last().cloned())
+                .unwrap_or_default(),
             &json!({ "type": "promptAnswered", "player": "p2" }),
         );
 
         // And no frame p1's socket ever received names one of p2's cards, by instance or by definition.
-        let secrets: Vec<String> =
-            p2_hand.iter().flat_map(|card| [card.instance_id.clone(), card.def_id.clone()]).collect();
+        let secrets: Vec<String> = p2_hand
+            .iter()
+            .flat_map(|card| [card.instance_id.clone(), card.def_id.clone()])
+            .collect();
         let (leaked, _) = scan(&h.p1.sent(), &secrets);
         assert_eq!(leaked, Vec::<String>::new());
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r268_the_mulligan_clock_is_one_deadline_for_both_seats_not_re_armed_when_one_answers_and_times_out_the_seat_left() {
+    async fn r268_the_mulligan_clock_is_one_deadline_for_both_seats_not_re_armed_when_one_answers_and_times_out_the_seat_left()
+     {
         let h = mulligan_match().await;
         let armed_at = now();
         let deadline = h.clocks().await["promptDeadline"].as_i64();
@@ -1974,18 +2370,33 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         // One deadline, stored on the match so both clients render it (§9.5), and no turn clock under it.
         assert_eq!(deadline, Some(armed_at + mulligan_ms()));
         assert!(h.clocks().await["turnDeadline"].is_null());
-        assert_eq!(match_row(&h.app, MATCH_ID).await["clocks"]["promptDeadline"].as_i64(), deadline);
+        assert_eq!(
+            match_row(&h.app, MATCH_ID).await["clocks"]["promptDeadline"].as_i64(),
+            deadline
+        );
 
         // p1 answers 10 s in. Both seats are still on the same deadline, the one that answered included.
         advance(10 * SECOND).await;
-        send(&h, &h.p1, "p1-first", json!({ "type": "mulligan", "keep": ids(&h.p1) })).await;
+        send(
+            &h,
+            &h.p1,
+            "p1-first",
+            json!({ "type": "mulligan", "keep": ids(&h.p1) }),
+        )
+        .await;
         assert_eq!(h.clocks().await["promptDeadline"].as_i64(), deadline);
         for socket in [&h.p1, &h.p2] {
             let shown = socket.of_type("clock").last().cloned().expect("a clock frame");
             assert_eq!(shown["clocks"]["promptDeadline"].as_i64(), deadline);
         }
-        assert_eq!(last_view(&h.p1)["clockMs"].as_i64(), Some(mulligan_ms() - 10 * SECOND));
-        assert_eq!(last_view(&h.p2)["clockMs"].as_i64(), Some(mulligan_ms() - 10 * SECOND));
+        assert_eq!(
+            last_view(&h.p1)["clockMs"].as_i64(),
+            Some(mulligan_ms() - 10 * SECOND)
+        );
+        assert_eq!(
+            last_view(&h.p2)["clockMs"].as_i64(),
+            Some(mulligan_ms() - 10 * SECOND)
+        );
 
         let pending = last_view(&h.p2)["pending"].clone();
         assert!(pending["forYou"] == json!(true), "p2 owes no mulligan");
@@ -2006,26 +2417,42 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
 
         let log = h.rows().await;
         assert_eq!(log.len(), 2);
-        assert_match(&log[1]["action"], &json!({ "type": "timeout", "playerId": "p2", "nonce": "srv-mulligan-2" }));
+        assert_match(
+            &log[1]["action"],
+            &json!({ "type": "timeout", "playerId": "p2", "nonce": "srv-mulligan-2" }),
+        );
         // R268: a timed-out mulligan keeps the whole hand — every card p2 was offered is still there.
         for id in &offered {
             assert!(ids(&h.p2).contains(id));
         }
         let at = h.actor.snapshot();
-        assert_eq!((at.phase, at.mulligan_owed.len(), at.result), (Phase::Main, 0, None));
+        assert_eq!(
+            (at.phase, at.mulligan_owed.len(), at.result),
+            (Phase::Main, 0, None)
+        );
 
         // And the mulligan clock hands over to the ordinary turn clock, from full.
         let clocks = h.clocks().await;
         assert!(clocks["promptDeadline"].is_null());
         assert_eq!(clocks["turnDeadline"].as_i64(), Some(now() + turn_ms()));
-        assert_eq!(last_view(h.socket(at.active))["clockMs"].as_i64(), Some(turn_ms()));
+        assert_eq!(
+            last_view(h.socket(at.active))["clockMs"].as_i64(),
+            Some(turn_ms())
+        );
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r270_a_client_may_not_send_a_nonce_the_server_mints_so_it_cannot_swallow_the_clocks_own_timeout() {
+    async fn r270_a_client_may_not_send_a_nonce_the_server_mints_so_it_cannot_swallow_the_clocks_own_timeout()
+    {
         let h = mulligan_match().await;
         // p1 answers with the very nonce the mulligan expiry would mint for p2's timeout (seq 2).
-        send(&h, &h.p1, "srv-mulligan-2", json!({ "type": "mulligan", "keep": ids(&h.p1) })).await;
+        send(
+            &h,
+            &h.p1,
+            "srv-mulligan-2",
+            json!({ "type": "mulligan", "keep": ids(&h.p1) }),
+        )
+        .await;
         let refused = errors(&h.p1).last().cloned().expect("an error frame");
         assert_match(&refused, &json!({ "code": "malformed" }));
         assert!(refused["message"].as_str().unwrap_or_default().contains("R270"));
@@ -2033,7 +2460,13 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         assert_eq!(h.actor.snapshot().mulligan_owed, vec![P1, P2]);
 
         // Under any other nonce the answer stands, and the expiry still times out the seat left.
-        send(&h, &h.p1, "p1-ready", json!({ "type": "mulligan", "keep": ids(&h.p1) })).await;
+        send(
+            &h,
+            &h.p1,
+            "p1-ready",
+            json!({ "type": "mulligan", "keep": ids(&h.p1) }),
+        )
+        .await;
         assert_eq!(h.actor.snapshot().mulligan_owed, vec![P2]);
         advance(mulligan_ms()).await;
         h.idle().await;
@@ -2056,8 +2489,14 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
 
         let log = h.rows().await;
         assert_eq!(log.len(), 2);
-        assert_match(&log[0]["action"], &json!({ "type": "timeout", "playerId": "p1", "nonce": "srv-mulligan-1" }));
-        assert_match(&log[1]["action"], &json!({ "type": "timeout", "playerId": "p2", "nonce": "srv-mulligan-2" }));
+        assert_match(
+            &log[0]["action"],
+            &json!({ "type": "timeout", "playerId": "p1", "nonce": "srv-mulligan-1" }),
+        );
+        assert_match(
+            &log[1]["action"],
+            &json!({ "type": "timeout", "playerId": "p2", "nonce": "srv-mulligan-2" }),
+        );
         assert_eq!(log.iter().map(seq_of).collect::<Vec<i64>>(), vec![1, 2]);
         // Both kept everything (R268); what else is in each hand is turn 1's draw (R10) and The Coin (R244).
         for id in &hands.0 {
@@ -2067,7 +2506,10 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
             assert!(ids(&h.p2).contains(id));
         }
         let at = h.actor.snapshot();
-        assert_eq!((at.phase, at.mulligan_owed.len(), at.result), (Phase::Main, 0, None));
+        assert_eq!(
+            (at.phase, at.mulligan_owed.len(), at.result),
+            (Phase::Main, 0, None)
+        );
         assert_eq!(h.clocks().await["turnDeadline"].as_i64(), Some(now() + turn_ms()));
     }
 
@@ -2077,16 +2519,26 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         // and the hand-over could be read exactly: the real clock, the actor's two timeouts, then p1's
         // turn. The scripted cards run under the real engine here, so the walk turns R345's automatic
         // turn end off for both seats first (its two rows are `base`).
-        let h = harness(Options { walk: Walk::AutoEndOff, ..Options::default() }).await;
+        let h = harness(Options {
+            walk: Walk::AutoEndOff,
+            ..Options::default()
+        })
+        .await;
         assert_eq!(last_view(&h.p1)["clockMs"].as_i64(), Some(mulligan_ms()));
         assert_eq!(last_view(&h.p2)["clockMs"].as_i64(), Some(mulligan_ms()));
 
         advance(mulligan_ms()).await;
         h.idle().await;
 
-        assert_eq!(rows_by_type_and_seat(&h.rows().await), vec![pair("timeout", "p1"), pair("timeout", "p2")]);
+        assert_eq!(
+            rows_by_type_and_seat(&h.rows().await),
+            vec![pair("timeout", "p1"), pair("timeout", "p2")]
+        );
         let at = h.actor.snapshot();
-        assert_eq!((at.phase, at.turn, at.active, at.mulligan_owed.len()), (Phase::Main, 1, P1, 0));
+        assert_eq!(
+            (at.phase, at.turn, at.active, at.mulligan_owed.len()),
+            (Phase::Main, 1, P1, 0)
+        );
         let clocks = h.clocks().await;
         assert!(clocks["promptDeadline"].is_null());
         assert_eq!(clocks["turnDeadline"].as_i64(), Some(now() + turn_ms()));
@@ -2096,7 +2548,10 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         // And it is an ordinary turn clock: it runs out in `turnClockSeconds` and ends p1's turn.
         advance(turn_ms()).await;
         h.idle().await;
-        assert_match(&h.last_row().await["action"], &json!({ "type": "timeout", "playerId": "p1" }));
+        assert_match(
+            &h.last_row().await["action"],
+            &json!({ "type": "timeout", "playerId": "p1" }),
+        );
         let at = h.actor.snapshot();
         assert_eq!((at.turn, at.active), (2, P2));
     }
@@ -2106,7 +2561,11 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         // The scripted cards, left on both mulligans with the automatic turn end off (TS
         // `createFakeEngine({ mulligan: true })`). TS's stub clock fired the expiry on demand; the real
         // one fires at its deadline, and once only.
-        let h = harness(Options { walk: Walk::AutoEndOff, ..Options::default() }).await;
+        let h = harness(Options {
+            walk: Walk::AutoEndOff,
+            ..Options::default()
+        })
+        .await;
         // The actor hands the clock the window, both seats owing, before anyone acts.
         let at = h.actor.snapshot();
         assert_eq!((at.mulligan_owed.clone(), at.pending_for), (vec![P1, P2], None));
@@ -2115,7 +2574,10 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         assert_eq!(h.actor.snapshot().mulligan_owed, vec![P1]);
         advance(mulligan_ms()).await;
         h.idle().await;
-        assert_eq!(rows_by_type_and_seat(&h.rows().await), vec![pair("mulligan", "p2"), pair("timeout", "p1")]);
+        assert_eq!(
+            rows_by_type_and_seat(&h.rows().await),
+            vec![pair("mulligan", "p2"), pair("timeout", "p1")]
+        );
         let at = h.actor.snapshot();
         assert_eq!((at.mulligan_owed.len(), at.phase, at.turn), (0, Phase::Main, 1));
 
@@ -2129,7 +2591,8 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r265_refuses_anything_but_a_mulligan_or_a_way_out_while_the_mulligans_are_open_relaying_the_engine() {
+    async fn r265_refuses_anything_but_a_mulligan_or_a_way_out_while_the_mulligans_are_open_relaying_the_engine()
+     {
         let h = mulligan_match().await;
 
         send(&h, &h.p1, "too-soon", json!({ "type": "endTurn" })).await;
@@ -2144,24 +2607,45 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
             &errors(&h.p2).last().cloned().expect("an error frame"),
             &json!({ "code": "illegal_action", "nonce": "twice" }),
         );
-        let nonces: Vec<Value> = h.rows().await.iter().map(|row| row["action"]["nonce"].clone()).collect();
+        let nonces: Vec<Value> = h
+            .rows()
+            .await
+            .iter()
+            .map(|row| row["action"]["nonce"].clone())
+            .collect();
         assert_eq!(nonces, vec![json!("once")]);
     }
 
     #[tokio::test(start_paused = true)]
     async fn r265_a_seat_may_concede_during_the_mulligan_and_the_loss_is_recorded_exactly_once_9_5() {
-        let h = harness(Options { ratings: [1000.0, 1000.0], ..real(real_decks()) }).await;
+        let h = harness(Options {
+            ratings: [1000.0, 1000.0],
+            ..real(real_decks())
+        })
+        .await;
 
         send(&h, &h.p1, "p1-ready", json!({ "type": "mulligan", "keep": [] })).await;
         send(&h, &h.p2, "gg", json!({ "type": "concede" })).await;
-        assert_eq!(last_view(&h.p1)["result"], json!({ "winner": "p1", "reason": "concede" }));
-        assert_eq!(last_view(&h.p2)["result"], json!({ "winner": "p1", "reason": "concede" }));
+        assert_eq!(
+            last_view(&h.p1)["result"],
+            json!({ "winner": "p1", "reason": "concede" })
+        );
+        assert_eq!(
+            last_view(&h.p2)["result"],
+            json!({ "winner": "p1", "reason": "concede" })
+        );
 
         // Once, however many more times anyone asks.
         send(&h, &h.p2, "gg-again", json!({ "type": "concede" })).await;
         send(&h, &h.p1, "gg-too", json!({ "type": "concede" })).await;
-        assert_match(&errors(&h.p2).last().cloned().expect("an error"), &json!({ "code": "match_over", "nonce": "gg-again" }));
-        assert_match(&errors(&h.p1).last().cloned().expect("an error"), &json!({ "code": "match_over", "nonce": "gg-too" }));
+        assert_match(
+            &errors(&h.p2).last().cloned().expect("an error"),
+            &json!({ "code": "match_over", "nonce": "gg-again" }),
+        );
+        assert_match(
+            &errors(&h.p1).last().cloned().expect("an error"),
+            &json!({ "code": "match_over", "nonce": "gg-too" }),
+        );
 
         let (won_a, won_b) = rating_move(1000.0, 1000.0, 1.0);
         let result = result_row(&h.app, MATCH_ID).await.expect("the result row");
@@ -2218,18 +2702,31 @@ mod draw_offers_and_concede_through_the_actor_r36_r269_9_5 {
 
     async fn draw_match(ratings: Option<[f64; 2]>) -> DrawHarness {
         let decks = decks_that_open_on_the_mulligans(&deckable_pool(), SEED);
-        let h = harness(Options { ratings: ratings.unwrap_or([1000.0, 1000.0]), ..real(decks) }).await;
+        let h = harness(Options {
+            ratings: ratings.unwrap_or([1000.0, 1000.0]),
+            ..real(decks)
+        })
+        .await;
         // Past both mulligans (R265), keeping everything, into the first main phase at rest.
         for player in PLAYER_IDS {
             let socket = h.socket(player);
             let keep = hand_ids(&last_view(socket));
-            send(&h, socket, &format!("mull-{player}"), json!({ "type": "mulligan", "keep": keep })).await;
+            send(
+                &h,
+                socket,
+                &format!("mull-{player}"),
+                json!({ "type": "mulligan", "keep": keep }),
+            )
+            .await;
         }
         // A turn with nothing to do ends itself (§2.5, R82), so whose turn is at rest depends on the
         // hands dealt. Whose it is does not matter to R36, so it is read rather than assumed.
         let at = h.actor.snapshot();
         assert_eq!((at.phase, at.pending_for, at.result), (Phase::Main, None, None));
-        DrawHarness { offerer_seat: at.active, h }
+        DrawHarness {
+            offerer_seat: at.active,
+            h,
+        }
     }
 
     /// Ends the turn of whoever is active, and says so if the engine refused.
@@ -2237,7 +2734,10 @@ mod draw_offers_and_concede_through_the_actor_r36_r269_9_5 {
         let active = h.actor.snapshot().active;
         let socket = h.socket(active);
         send(h, socket, nonce, json!({ "type": "endTurn" })).await;
-        let refused: Vec<Value> = errors(socket).into_iter().filter(|error| error["nonce"] == nonce).collect();
+        let refused: Vec<Value> = errors(socket)
+            .into_iter()
+            .filter(|error| error["nonce"] == nonce)
+            .collect();
         assert_eq!(refused, Vec::<Value>::new());
         assert_eq!(h.actor.snapshot().pending_for, None);
     }
@@ -2256,7 +2756,8 @@ mod draw_offers_and_concede_through_the_actor_r36_r269_9_5 {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r269_a_standing_offer_is_on_both_seats_views_and_accepting_it_ends_the_match_as_a_draw_rated_0_5_each() {
+    async fn r269_a_standing_offer_is_on_both_seats_views_and_accepting_it_ends_the_match_as_a_draw_rated_0_5_each()
+     {
         let ratings = [1200.0, 1000.0];
         let d = draw_match(Some(ratings)).await;
         let h = &d.h;
@@ -2268,13 +2769,31 @@ mod draw_offers_and_concede_through_the_actor_r36_r269_9_5 {
 
         send(h, d.offerer(), "offer", json!({ "type": "offerDraw" })).await;
         // R269: public to both seats, so the offerer can see it is waiting and the other seat can answer.
-        assert_eq!(last_view(d.offerer())["drawOffer"], json!({ "by": d.offerer_seat.as_str() }));
-        assert_eq!(last_view(d.answerer())["drawOffer"], json!({ "by": d.offerer_seat.as_str() }));
+        assert_eq!(
+            last_view(d.offerer())["drawOffer"],
+            json!({ "by": d.offerer_seat.as_str() })
+        );
+        assert_eq!(
+            last_view(d.answerer())["drawOffer"],
+            json!({ "by": d.offerer_seat.as_str() })
+        );
         assert!(legal_types(d.answerer()).contains(&"answerDraw".to_string()));
 
-        send(h, d.answerer(), "accept", json!({ "type": "answerDraw", "accept": true })).await;
-        assert_eq!(last_view(d.offerer())["result"], json!({ "winner": "draw", "reason": "draw-accepted" }));
-        assert_eq!(last_view(d.answerer())["result"], json!({ "winner": "draw", "reason": "draw-accepted" }));
+        send(
+            h,
+            d.answerer(),
+            "accept",
+            json!({ "type": "answerDraw", "accept": true }),
+        )
+        .await;
+        assert_eq!(
+            last_view(d.offerer())["result"],
+            json!({ "winner": "draw", "reason": "draw-accepted" })
+        );
+        assert_eq!(
+            last_view(d.answerer())["result"],
+            json!({ "winner": "draw", "reason": "draw-accepted" })
+        );
         assert!(last_view(d.offerer()).get("drawOffer").is_none());
 
         // §9.5: one result, through the writer every ending goes through, rated as a draw — 0.5 each,
@@ -2298,17 +2817,27 @@ mod draw_offers_and_concede_through_the_actor_r36_r269_9_5 {
             .iter()
             .map(|profile| (profile["rating"].clone(), profile["inMatchId"].clone()))
             .collect();
-        assert_eq!(rows, vec![(json!(drawn_a), Value::Null), (json!(drawn_b), Value::Null)]);
+        assert_eq!(
+            rows,
+            vec![(json!(drawn_a), Value::Null), (json!(drawn_b), Value::Null)]
+        );
         assert_eq!(match_row(&h.app, MATCH_ID).await["status"], json!("finished"));
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r36_a_declined_offer_leaves_the_match_live_and_blocks_the_offerer_by_the_engines_rule_and_in_its_words() {
+    async fn r36_a_declined_offer_leaves_the_match_live_and_blocks_the_offerer_by_the_engines_rule_and_in_its_words()
+     {
         let d = draw_match(None).await;
         let h = &d.h;
 
         send(h, d.offerer(), "offer", json!({ "type": "offerDraw" })).await;
-        send(h, d.answerer(), "decline", json!({ "type": "answerDraw", "accept": false })).await;
+        send(
+            h,
+            d.answerer(),
+            "decline",
+            json!({ "type": "answerDraw", "accept": false }),
+        )
+        .await;
         assert_eq!(h.actor.snapshot().result, None);
         assert!(last_view(d.offerer()).get("drawOffer").is_none());
         assert!(last_view(d.answerer()).get("drawOffer").is_none());
@@ -2342,14 +2871,23 @@ mod draw_offers_and_concede_through_the_actor_r36_r269_9_5 {
         let h = &d.h;
 
         send(h, d.offerer(), "offer", json!({ "type": "offerDraw" })).await;
-        assert_eq!(last_view(d.answerer())["drawOffer"], json!({ "by": d.offerer_seat.as_str() }));
+        assert_eq!(
+            last_view(d.answerer())["drawOffer"],
+            json!({ "by": d.offerer_seat.as_str() })
+        );
 
         end_turn(h, "end-1").await;
         // Gone from both views and from the array of the seat that could have answered it.
         assert!(last_view(d.offerer()).get("drawOffer").is_none());
         assert!(last_view(d.answerer()).get("drawOffer").is_none());
         assert!(!legal_types(d.answerer()).contains(&"answerDraw".to_string()));
-        send(h, d.answerer(), "late", json!({ "type": "answerDraw", "accept": true })).await;
+        send(
+            h,
+            d.answerer(),
+            "late",
+            json!({ "type": "answerDraw", "accept": true }),
+        )
+        .await;
         assert_match(
             &errors(d.answerer()).last().cloned().expect("an error frame"),
             &json!({ "code": "illegal_action", "message": "there is no draw offer to answer", "nonce": "late" }),
@@ -2368,7 +2906,10 @@ mod draw_offers_and_concede_through_the_actor_r36_r269_9_5 {
 
         // Conceded by p1, whoever's turn it is (concede is open to both seats at all times, §2.5).
         send(h, &h.p1, "resign", json!({ "type": "concede" })).await;
-        assert_eq!(last_view(&h.p2)["result"], json!({ "winner": "p2", "reason": "concede" }));
+        assert_eq!(
+            last_view(&h.p2)["result"],
+            json!({ "winner": "p2", "reason": "concede" })
+        );
         send(h, &h.p1, "resign-again", json!({ "type": "concede" })).await;
         assert_match(
             &errors(&h.p1).last().cloned().expect("an error frame"),
@@ -2416,12 +2957,17 @@ impl WsClient {
     async fn connect(addr: SocketAddr, path_and_query: &str) -> Result<WsClient, u16> {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-        let mut stream = tokio::net::TcpStream::connect(addr).await.expect("the test server listens");
+        let mut stream = tokio::net::TcpStream::connect(addr)
+            .await
+            .expect("the test server listens");
         let request = format!(
             "GET {path_and_query} HTTP/1.1\r\nHost: {addr}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\
              Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n"
         );
-        stream.write_all(request.as_bytes()).await.expect("the upgrade request is written");
+        stream
+            .write_all(request.as_bytes())
+            .await
+            .expect("the upgrade request is written");
         let mut buffer: Vec<u8> = Vec::new();
         let head_end = loop {
             if let Some(at) = buffer.windows(4).position(|window| window == b"\r\n\r\n") {
@@ -2436,7 +2982,11 @@ impl WsClient {
             buffer.extend_from_slice(&chunk[..read]);
         };
         let head = String::from_utf8_lossy(&buffer[..head_end]).to_string();
-        let status: u16 = head.split_whitespace().nth(1).and_then(|code| code.parse().ok()).unwrap_or(0);
+        let status: u16 = head
+            .split_whitespace()
+            .nth(1)
+            .and_then(|code| code.parse().ok())
+            .unwrap_or(0);
         if status != 101 {
             return Err(status);
         }
@@ -2566,11 +3116,15 @@ struct Listening {
 async fn listen() -> Listening {
     jackioh_cards::register_all();
     let app = test_app().await;
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("a free port");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("a free port");
     let addr = listener.local_addr().expect("the listener's address");
     let service = router(Arc::clone(&app)).into_make_service_with_connect_info::<SocketAddr>();
     tokio::spawn(async move {
-        axum::serve(listener, service).await.expect("the test server runs");
+        axum::serve(listener, service)
+            .await
+            .expect("the test server runs");
     });
     Listening { app, addr }
 }
@@ -2589,7 +3143,9 @@ async fn profile_id_of(app: &App, user_id: &str) -> String {
 
 async fn set_in_match(app: &App, profile_id: &str, match_id: Option<&str>) {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
-    tx.profiles_set_in_match(profile_id, match_id).await.expect("profiles.setInMatch");
+    tx.profiles_set_in_match(profile_id, match_id)
+        .await
+        .expect("profiles.setInMatch");
     tx.commit().await.expect("commit");
 }
 
@@ -2642,19 +3198,28 @@ mod the_automatic_turn_end_is_each_players_to_turn_off_r82_r345 {
                 jackioh_cards::CATALOG.get(*card_id).is_some_and(|def| {
                     matches!(def.cost, CardCost::Fixed(cost) if cost >= 2)
                         && !def.tags.iter().any(|tag| tag.as_str() == "Quickdraw")
-                        && !format!("{} {}", def.base.text, def.radiant.text).to_lowercase().contains("cast on draw")
+                        && !format!("{} {}", def.base.text, def.radiant.text)
+                            .to_lowercase()
+                            .contains("cast on draw")
                 })
             })
             .cloned()
             .collect();
         let p1_deck: Vec<String> = dear.iter().take(first.len()).cloned().collect();
-        let p2_deck: Vec<String> =
-            pool.iter().filter(|card_id| !p1_deck.contains(*card_id)).take(first.len()).cloned().collect();
+        let p2_deck: Vec<String> = pool
+            .iter()
+            .filter(|card_id| !p1_deck.contains(*card_id))
+            .take(first.len())
+            .cloned()
+            .collect();
         assert_eq!(p1_deck.len(), first.len(), "enough cards that cost two or more");
         let h = harness(real((p1_deck, p2_deck))).await;
         // PREMISE: the deal asks nothing (R635), so both mulligans are open.
         let at = h.actor.snapshot();
-        assert_eq!((at.phase, at.pending_for, at.mulligan_owed.clone()), (Phase::Mulligan, None, vec![P1, P2]));
+        assert_eq!(
+            (at.phase, at.pending_for, at.mulligan_owed.clone()),
+            (Phase::Mulligan, None, vec![P1, P2])
+        );
         h
     }
 
@@ -2662,21 +3227,37 @@ mod the_automatic_turn_end_is_each_players_to_turn_off_r82_r345 {
         for player in PLAYER_IDS {
             let socket = h.socket(player);
             let keep = hand_ids(&last_view(socket));
-            send(h, socket, &format!("mull-{player}"), json!({ "type": "mulligan", "keep": keep })).await;
+            send(
+                h,
+                socket,
+                &format!("mull-{player}"),
+                json!({ "type": "mulligan", "keep": keep }),
+            )
+            .await;
         }
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r345_a_seat_that_turned_it_off_during_the_mulligan_keeps_a_turn_it_has_nothing_to_do_on_and_only_its_own_view_says_so() {
+    async fn r345_a_seat_that_turned_it_off_during_the_mulligan_keeps_a_turn_it_has_nothing_to_do_on_and_only_its_own_view_says_so()
+     {
         // With these decks p1 has nothing to do on turn 1 (`real_match`), so R82 would end that turn by
         // itself.
         let h = real_match().await;
-        send(&h, &h.p1, "auto-off", json!({ "type": "setAutoEndTurn", "enabled": false })).await;
+        send(
+            &h,
+            &h.p1,
+            "auto-off",
+            json!({ "type": "setAutoEndTurn", "enabled": false }),
+        )
+        .await;
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
         keep_hands(&h).await;
 
         let at = h.actor.snapshot();
-        assert_eq!((at.phase, at.active, at.pending_for, at.result), (Phase::Main, P1, None, None));
+        assert_eq!(
+            (at.phase, at.active, at.pending_for, at.result),
+            (Phase::Main, P1, None, None)
+        );
         // PREMISE: nothing to do but what R82 discounts, so it is the preference alone that keeps the turn.
         assert!(legal_types(&h.p1).contains(&"endTurn".to_string()));
         let others: Vec<String> = legal_types(&h.p1)
@@ -2692,10 +3273,20 @@ mod the_automatic_turn_end_is_each_players_to_turn_off_r82_r345 {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r345_without_it_the_same_turn_1_ends_by_itself_and_a_malformed_preference_is_answered_not_applied() {
+    async fn r345_without_it_the_same_turn_1_ends_by_itself_and_a_malformed_preference_is_answered_not_applied()
+     {
         let h = real_match().await;
-        send(&h, &h.p1, "bad", json!({ "type": "setAutoEndTurn", "enabled": "no" })).await;
-        assert_eq!(errors(&h.p1).last().map(|error| error["code"].clone()), Some(json!("malformed")));
+        send(
+            &h,
+            &h.p1,
+            "bad",
+            json!({ "type": "setAutoEndTurn", "enabled": "no" }),
+        )
+        .await;
+        assert_eq!(
+            errors(&h.p1).last().map(|error| error["code"].clone()),
+            Some(json!("malformed"))
+        );
         keep_hands(&h).await;
         let at = h.actor.snapshot();
         assert_eq!((at.phase, at.active), (Phase::Main, P2));
@@ -2714,9 +3305,12 @@ mod the_ws_adapter {
     async fn turns_a_ws_connection_into_the_actors_socket_text_frames_only() {
         let server = listen().await;
         live_fixture_match(&server.app, MATCH_ID).await;
-        let mut ws = WsClient::connect(server.addr, &format!("{WS_PATH}?token=e2e-token-p1&matchId={MATCH_ID}"))
-            .await
-            .expect("the upgrade is accepted");
+        let mut ws = WsClient::connect(
+            server.addr,
+            &format!("{WS_PATH}?token=e2e-token-p1&matchId={MATCH_ID}"),
+        )
+        .await
+        .expect("the upgrade is accepted");
 
         // The socket is open, and what the actor sends reaches the client as text: the attach's view.
         let view = ws.next_of_type("view").await;
@@ -2735,7 +3329,11 @@ mod the_ws_adapter {
         ws.close(1000).await;
         let mut present = true;
         for _ in 0..100 {
-            present = server.app.matches.presence_of(MATCH_ID).is_some_and(|presence| presence.p1);
+            present = server
+                .app
+                .matches
+                .presence_of(MATCH_ID)
+                .is_some_and(|presence| presence.p1);
             if !present {
                 break;
             }
@@ -2750,14 +3348,19 @@ mod the_ws_adapter {
         let profile = profile_id_of(&server.app, "e2e-p1").await;
         set_in_match(&server.app, &profile, Some("other")).await;
 
-        let mut refused = WsClient::connect(server.addr, &format!("{WS_PATH}?token=e2e-token-p1&matchId={MATCH_ID}"))
-            .await
-            .expect("the upgrade happens before the checks");
+        let mut refused = WsClient::connect(
+            server.addr,
+            &format!("{WS_PATH}?token=e2e-token-p1&matchId={MATCH_ID}"),
+        )
+        .await
+        .expect("the upgrade happens before the checks");
         let (refused_texts, refused_code) = refused.until_close().await;
         assert_eq!(refused_code.map(i64::from), Some(code(WS_CLOSE.forbidden)));
         assert!(!server.app.matches.has(MATCH_ID));
 
-        let mut anonymous = WsClient::connect(server.addr, WS_PATH).await.expect("the upgrade happens");
+        let mut anonymous = WsClient::connect(server.addr, WS_PATH)
+            .await
+            .expect("the upgrade happens");
         let (anonymous_texts, anonymous_code) = anonymous.until_close().await;
         assert_eq!(anonymous_code.map(i64::from), Some(code(WS_CLOSE.unauthorized)));
 
@@ -2766,19 +3369,32 @@ mod the_ws_adapter {
         assert_eq!(code(WS_CLOSE.unauthorized), 4401);
         assert_eq!(code(WS_CLOSE.forbidden), 4403);
         for texts in [&refused_texts, &anonymous_texts] {
-            assert!(texts.last().is_some_and(|text| text.contains("\"code\":\"forbidden\"")));
+            assert!(
+                texts
+                    .last()
+                    .is_some_and(|text| text.contains("\"code\":\"forbidden\""))
+            );
         }
 
         // In the match it asks for, the same account is attached to its seat (TS: the registry's
         // `attach` was called with `match-1` and the profile): its seat's view arrives.
         let (first, _) = live_fixture_match(&server.app, MATCH_ID).await;
         assert_eq!(first, profile);
-        let mut accepted = WsClient::connect(server.addr, &format!("{WS_PATH}?matchId={MATCH_ID}&token=e2e-token-p1"))
-            .await
-            .expect("the upgrade is accepted");
+        let mut accepted = WsClient::connect(
+            server.addr,
+            &format!("{WS_PATH}?matchId={MATCH_ID}&token=e2e-token-p1"),
+        )
+        .await
+        .expect("the upgrade is accepted");
         let view = accepted.next_of_type("view").await;
         assert_eq!(view["view"]["viewer"], json!("p1"));
-        assert!(server.app.matches.presence_of(MATCH_ID).is_some_and(|presence| presence.p1));
+        assert!(
+            server
+                .app
+                .matches
+                .presence_of(MATCH_ID)
+                .is_some_and(|presence| presence.p1)
+        );
     }
 
     #[tokio::test]
@@ -2787,9 +3403,12 @@ mod the_ws_adapter {
         let profile = profile_id_of(&server.app, "e2e-pending").await;
         set_in_match(&server.app, &profile, Some(MATCH_ID)).await;
 
-        let mut ws = WsClient::connect(server.addr, &format!("{WS_PATH}?token=e2e-token-pending&matchId={MATCH_ID}"))
-            .await
-            .expect("the upgrade happens before the checks");
+        let mut ws = WsClient::connect(
+            server.addr,
+            &format!("{WS_PATH}?token=e2e-token-pending&matchId={MATCH_ID}"),
+        )
+        .await
+        .expect("the upgrade happens before the checks");
         let (_, close) = ws.until_close().await;
         assert_eq!(close.map(i64::from), Some(code(WS_CLOSE.forbidden)));
         // Refused before the registry was asked: no actor was made for the match.

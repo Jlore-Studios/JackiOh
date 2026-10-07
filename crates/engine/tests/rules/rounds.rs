@@ -72,7 +72,15 @@ fn plain() -> CardDef {
 }
 
 fn defs() -> Vec<CardDef> {
-    vec![ping_all(), cast_storm(), long_storm(), body1(), body5(), tank(), plain()]
+    vec![
+        ping_all(),
+        cast_storm(),
+        long_storm(),
+        body1(),
+        body5(),
+        tank(),
+        plain(),
+    ]
 }
 
 fn both(script: Script) -> CardScripts {
@@ -93,7 +101,9 @@ fn scripts() -> Vec<(String, CardScripts)> {
     vec![
         (
             ping_all().id,
-            both(cry(|_ctx| vec![damage_all(json_as(json!({ "amount": 1, "side": "any" })))])),
+            both(cry(|_ctx| {
+                vec![damage_all(json_as(json!({ "amount": 1, "side": "any" })))]
+            })),
         ),
         (
             cast_storm().id,
@@ -132,7 +142,11 @@ fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     for player in [PlayerId::P1, PlayerId::P2] {
         let keep: Vec<String> = state.players[player].hand.iter().map(|c| c.id.clone()).collect();
-        state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": player })).state;
+        state = act(
+            &state,
+            json!({ "type": "mulligan", "keep": keep, "playerId": player }),
+        )
+        .state;
     }
     let mut catalog = registered_catalog().clone();
     for def in defs() {
@@ -209,8 +223,18 @@ mod r652_cast_rounds_until_death_each_round_casts_and_the_storm_stops_after_a_ro
         let Casted { events, .. } = casted(
             "pcr-basic",
             |s| {
-                put(s, &body1().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
-                put(s, &body5().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+                put(
+                    s,
+                    &body1().id,
+                    slot(PlayerId::P2, Row::Units, 1),
+                    Default::default(),
+                );
+                put(
+                    s,
+                    &body5().id,
+                    slot(PlayerId::P1, Row::Units, 1),
+                    Default::default(),
+                );
             },
             Some(long.as_str()),
         );
@@ -223,7 +247,12 @@ mod r652_cast_rounds_until_death_each_round_casts_and_the_storm_stops_after_a_ro
         let Casted { events, .. } = casted(
             "pcr-real",
             |s| {
-                put(s, &tank().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
+                put(
+                    s,
+                    &tank().id,
+                    slot(PlayerId::P2, Row::Units, 1),
+                    Default::default(),
+                );
             },
             None,
         );
@@ -231,7 +260,9 @@ mod r652_cast_rounds_until_death_each_round_casts_and_the_storm_stops_after_a_ro
         assert_eq!(resolved(&events) as i32, SHORT_ROUNDS);
         let announced = events
             .iter()
-            .filter(|event| matches!(event, GameEvent::CardAnnounced { def_id, .. } if *def_id == ping_all().id))
+            .filter(
+                |event| matches!(event, GameEvent::CardAnnounced { def_id, .. } if *def_id == ping_all().id),
+            )
             .count();
         assert_eq!(announced as i32, SHORT_ROUNDS);
     }
@@ -242,7 +273,12 @@ mod r652_cast_rounds_until_death_each_round_casts_and_the_storm_stops_after_a_ro
         let Casted { state, events } = casted(
             "pcr-cap",
             |s| {
-                counter = Some(put(s, &tank().id, slot(PlayerId::P1, Row::Units, 1), Default::default()));
+                counter = Some(put(
+                    s,
+                    &tank().id,
+                    slot(PlayerId::P1, Row::Units, 1),
+                    Default::default(),
+                ));
             },
             None,
         );
@@ -256,7 +292,11 @@ mod r652_cast_rounds_until_death_each_round_casts_and_the_storm_stops_after_a_ro
     fn r652_with_no_unit_left_it_casts_nothing() {
         let Casted { events, .. } = casted("pcr-empty", |_| {}, None);
         assert_eq!(casts(&events), 0);
-        assert!(!events.iter().any(|event| event.event_type() == GameEventType::Damage));
+        assert!(
+            !events
+                .iter()
+                .any(|event| event.event_type() == GameEventType::Damage)
+        );
         assert!(deaths(&events).is_empty());
     }
 }

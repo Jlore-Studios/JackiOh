@@ -143,7 +143,11 @@ fn is_rules_word(id: &str) -> bool {
 fn naming(phrase: &str) -> Vec<String> {
     entries()
         .into_iter()
-        .filter(|card| [&card.base.text, &card.radiant.text].iter().any(|text| text.contains(phrase)))
+        .filter(|card| {
+            [&card.base.text, &card.radiant.text]
+                .iter()
+                .any(|text| text.contains(phrase))
+        })
         .map(|card| card.id.clone())
         .collect()
 }
@@ -189,9 +193,11 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             .collect();
         // R480: a card whose text names a token pool by its tag names every member of it.
         for pool in TOKEN_POOLS {
-            let named_by_tag = entries()
-                .into_iter()
-                .any(|card| [&card.base.text, &card.radiant.text].iter().any(|text| text.contains(pool.phrase)));
+            let named_by_tag = entries().into_iter().any(|card| {
+                [&card.base.text, &card.radiant.text]
+                    .iter()
+                    .any(|text| text.contains(pool.phrase))
+            });
             if !named_by_tag {
                 continue;
             }
@@ -228,15 +234,25 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         assert_eq!(
             indices_of(Tag::Ai),
             strings(&[
-                "T-AI-1", "T-AI-2", "T-AI-3", "T-AI-4", "T-AI-5", "T-AI-6", "T-AI-7", "T-AI-8", "T-AI-9", "T-AI-10",
+                "T-AI-1", "T-AI-2", "T-AI-3", "T-AI-4", "T-AI-5", "T-AI-6", "T-AI-7", "T-AI-8", "T-AI-9",
+                "T-AI-10",
             ])
         );
-        assert_eq!(naming("Pancake token"), strings(&["classicplus-012", "classicplus-013"]));
+        assert_eq!(
+            naming("Pancake token"),
+            strings(&["classicplus-012", "classicplus-013"])
+        );
         // AI Slop and Claude's Datacenter make them; Scaling Law counts them.
-        assert_eq!(naming("AI generated card"), strings(&["classicplus-043", "classicplus-t-ai-02"]));
+        assert_eq!(
+            naming("AI generated card"),
+            strings(&["classicplus-043", "classicplus-t-ai-02"])
+        );
         // Balance patch 1 reworded Claude's Datacenter to "AI Generated card".
         assert_eq!(naming("AI Generated card"), strings(&["classicplus-078"]));
-        assert_eq!(indices_of(Tag::Fruit), strings(&["65.1", "65.2", "65.3", "65.4", "65.5"]));
+        assert_eq!(
+            indices_of(Tag::Fruit),
+            strings(&["65.1", "65.2", "65.3", "65.4", "65.5"])
+        );
         // Balance patch 1 hid the odds and the reward lists: "Grape" names the five
         // Grapes, and "a random reward" names KY's Gift.
         assert_eq!(naming("Grape"), strings(&["classicplus-065", "classicplus-066"]));
@@ -248,7 +264,11 @@ mod r279_the_reference_map_spec_5_7_10_10 {
      {
         for word in RULES_WORDS {
             let card = entries().into_iter().find(|entry| entry.name == *word);
-            assert_eq!(card.map(|card| card.set), Some(SetName::Classic), "{word} is a Classic card");
+            assert_eq!(
+                card.map(|card| card.set),
+                Some(SetName::Classic),
+                "{word} is a Classic card"
+            );
         }
         // They are all over the texts as rules words — and no card lists them.
         let uses_exile = entries()
@@ -278,7 +298,10 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         assert!(!names("Shuffle a CN-Viral Injection", "CN-Virus"));
         assert!(!names("summon a Vanilla copy", "Mr. Vanilla"));
         assert!(names("fill your board with Rush Tokens; if", "Rush Token"));
-        assert!(names("your units other than Spikey Pillows have", "Spikey Pillow"));
+        assert!(names(
+            "your units other than Spikey Pillows have",
+            "Spikey Pillow"
+        ));
     }
 
     #[test]
@@ -293,8 +316,14 @@ mod r279_the_reference_map_spec_5_7_10_10 {
 
     #[test]
     fn the_parenthetical_cut_reads_as_its_regular_expression() {
-        assert_eq!(without_parenthetical("Call to Chaos (Core Edition)"), "Call to Chaos");
-        assert_eq!(without_parenthetical("Call to Chaos (Classic+ Edition)"), "Call to Chaos");
+        assert_eq!(
+            without_parenthetical("Call to Chaos (Core Edition)"),
+            "Call to Chaos"
+        );
+        assert_eq!(
+            without_parenthetical("Call to Chaos (Classic+ Edition)"),
+            "Call to Chaos"
+        );
         assert_eq!(without_parenthetical("Mr. Vanilla"), "Mr. Vanilla");
         assert_eq!(without_parenthetical("A (b) c"), "A (b) c");
     }

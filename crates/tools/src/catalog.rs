@@ -29,7 +29,9 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail};
 use indexmap::{IndexMap, IndexSet};
-use jackioh_engine::wire::{CardType, KEYWORD_KINDS, PrintedRarity, Rarity, SetName, Tag, param_placeholders};
+use jackioh_engine::wire::{
+    CardType, KEYWORD_KINDS, PrintedRarity, Rarity, SetName, Tag, param_placeholders,
+};
 
 use crate::patches::js::{self, Json, Object};
 use crate::patches::repo_root;
@@ -105,7 +107,13 @@ fn sets() -> Vec<SetExpectation> {
             cards: 100,
             card_defined_tokens: texts(&["51.1", "65.1", "90.1", "93.1", "95.1"]),
             shared_tokens: texts(&["T-rush", "T-sheep", "T-felinor", "T-bread", "T-coin", "T-ghoul"]),
-            rarities: &[("Common", 32), ("Rare", 40), ("Epic", 16), ("Legendary", 7), ("Mythic", 5)],
+            rarities: &[
+                ("Common", 32),
+                ("Rare", 40),
+                ("Epic", 16),
+                ("Legendary", 7),
+                ("Mythic", 5),
+            ],
         },
         // B2.1, B2.5: 90 cards and one shared token; the designer's rarities, as patch v0.2.9
         // (issue #44) left them: 35/26/18/10/1. Issue #170 adds the shared token, Glitch, which only
@@ -116,7 +124,13 @@ fn sets() -> Vec<SetExpectation> {
             cards: 90,
             card_defined_tokens: Vec::new(),
             shared_tokens: texts(&["T-glitch"]),
-            rarities: &[("Common", 35), ("Rare", 26), ("Epic", 18), ("Legendary", 10), ("Mythic", 1)],
+            rarities: &[
+                ("Common", 35),
+                ("Rare", 26),
+                ("Epic", 18),
+                ("Legendary", 10),
+                ("Mythic", 1),
+            ],
         },
         // B2.1, B2.3, B2.5, B8: 78 cards, 28 tokens a card defines and the ten AI generated cards,
         // as patch v0.2.9 (issue #44) left them: 13/24/25/13/3.
@@ -134,7 +148,13 @@ fn sets() -> Vec<SetExpectation> {
             ]
             .concat(),
             shared_tokens: range("T-AI-", 1, 10),
-            rarities: &[("Common", 13), ("Rare", 24), ("Epic", 25), ("Legendary", 13), ("Mythic", 3)],
+            rarities: &[
+                ("Common", 13),
+                ("Rare", 24),
+                ("Epic", 25),
+                ("Legendary", 13),
+                ("Mythic", 3),
+            ],
         },
     ]
 }
@@ -172,7 +192,10 @@ fn expected_tag_count(tag: Tag) -> usize {
 
 /// `EXPECTED_TAG_COUNTS`, in `TAGS` order.
 fn expected_tag_counts() -> Vec<(&'static str, usize)> {
-    Tag::ALL.iter().map(|tag| (tag.as_str(), expected_tag_count(*tag))).collect()
+    Tag::ALL
+        .iter()
+        .map(|tag| (tag.as_str(), expected_tag_count(*tag)))
+        .collect()
 }
 
 /// B2.5: a token's printed rarity is one a card could carry.
@@ -197,7 +220,9 @@ fn id_for_index(segment: &str, index: &str) -> String {
         // index.toLowerCase().replace(/-(\d+)$/, (_, n) => `-${n.padStart(2, "0")}`)
         let lower = index.to_lowercase();
         let name = match lower.rfind('-') {
-            Some(cut) if js::is_digits(&lower[cut + 1..]) => format!("{}-{:0>2}", &lower[..cut], &lower[cut + 1..]),
+            Some(cut) if js::is_digits(&lower[cut + 1..]) => {
+                format!("{}-{:0>2}", &lower[..cut], &lower[cut + 1..])
+            }
             _ => lower,
         };
         return format!("{segment}-{name}");
@@ -258,15 +283,28 @@ fn repeats_a_value(items: &[Json]) -> bool {
         (Json::String(a), Json::String(b)) => a == b,
         _ => false,
     };
-    items.iter().enumerate().any(|(i, a)| items[i + 1..].iter().any(|b| same(a, b)))
+    items
+        .iter()
+        .enumerate()
+        .any(|(i, a)| items[i + 1..].iter().any(|b| same(a, b)))
 }
 
 /* ---------------------------------------------------------------------------------------- faces */
 
-fn validate_face(failures: &mut Vec<String>, at_card: &str, face_name: &str, face: Option<&Json>, card_type: Option<&Json>) {
+fn validate_face(
+    failures: &mut Vec<String>,
+    at_card: &str,
+    face_name: &str,
+    face: Option<&Json>,
+    card_type: Option<&Json>,
+) {
     let at = format!("{at_card}.{face_name}");
     if !is_plain_object(face) {
-        fail(failures, &at, &format!("face is not an object (got {})", describe(face)));
+        fail(
+            failures,
+            &at,
+            &format!("face is not an object (got {})", describe(face)),
+        );
         return;
     }
     let Some(Json::Object(face)) = face else {
@@ -282,11 +320,18 @@ fn validate_face(failures: &mut Vec<String>, at_card: &str, face_name: &str, fac
                     fail(
                         failures,
                         &at,
-                        &format!("`type` repeats the card's own type {}; leave it out", describe(card_type)),
+                        &format!(
+                            "`type` repeats the card's own type {}; leave it out",
+                            describe(card_type)
+                        ),
                     );
                 }
             }
-            _ => fail(failures, &at, &format!("`type` is not a CardType (got {})", describe(Some(face_type)))),
+            _ => fail(
+                failures,
+                &at,
+                &format!("`type` is not a CardType (got {})", describe(Some(face_type))),
+            ),
         }
     }
     // `(faceType ?? cardType) === "Unit"`: a face's `null` type falls back like a missing one.
@@ -302,9 +347,10 @@ fn validate_face(failures: &mut Vec<String>, at_card: &str, face_name: &str, fac
             .collect(),
         _ => Vec::new(),
     };
-    let animated = kinds_written
-        .iter()
-        .any(|kind| kind.and_then(Json::as_str).is_some_and(|kind| ANIMATED_KEYWORDS.contains(&kind)));
+    let animated = kinds_written.iter().any(|kind| {
+        kind.and_then(Json::as_str)
+            .is_some_and(|kind| ANIMATED_KEYWORDS.contains(&kind))
+    });
 
     // Stats: present on both faces of every Unit and every Animated backrow card (B3.1), absent on
     // every other non-Unit (§5, §8).
@@ -316,11 +362,18 @@ fn validate_face(failures: &mut Vec<String>, at_card: &str, face_name: &str, fac
                 fail(
                     failures,
                     &at,
-                    &format!("{what} face must carry an integer `{stat}` (got {})", describe(value)),
+                    &format!(
+                        "{what} face must carry an integer `{stat}` (got {})",
+                        describe(value)
+                    ),
                 );
             }
         } else if value.is_some() {
-            fail(failures, &at, &format!("non-Unit face must not carry `{stat}` (got {})", describe(value)));
+            fail(
+                failures,
+                &at,
+                &format!("non-Unit face must not carry `{stat}` (got {})", describe(value)),
+            );
         }
     }
 
@@ -344,7 +397,10 @@ fn validate_face(failures: &mut Vec<String>, at_card: &str, face_name: &str, fac
             fail(
                 failures,
                 &at,
-                &format!("`xStats` must be {{ attack, health }} of positive integers (got {})", describe(Some(x_stats))),
+                &format!(
+                    "`xStats` must be {{ attack, health }} of positive integers (got {})",
+                    describe(Some(x_stats))
+                ),
             );
         }
         let zero = Json::Number(0.0);
@@ -354,36 +410,71 @@ fn validate_face(failures: &mut Vec<String>, at_card: &str, face_name: &str, fac
     }
 
     if !matches!(face.get("text"), Some(Json::String(_))) {
-        fail(failures, &at, &format!("`text` must be a string (got {})", describe(face.get("text"))));
+        fail(
+            failures,
+            &at,
+            &format!("`text` must be a string (got {})", describe(face.get("text"))),
+        );
     }
 
     let Some(Json::Array(keywords)) = face.get("keywords") else {
-        fail(failures, &at, &format!("`keywords` must be an array (got {})", describe(face.get("keywords"))));
+        fail(
+            failures,
+            &at,
+            &format!(
+                "`keywords` must be an array (got {})",
+                describe(face.get("keywords"))
+            ),
+        );
         return;
     };
     let kinds = keyword_kinds();
     for (i, keyword) in keywords.iter().enumerate() {
         let kw_at = format!("{at}.keywords[{i}]");
         let Json::Object(keyword) = keyword else {
-            fail(failures, &kw_at, &format!("keyword must be an object (got {})", describe(Some(keyword))));
+            fail(
+                failures,
+                &kw_at,
+                &format!("keyword must be an object (got {})", describe(Some(keyword))),
+            );
             continue;
         };
         let kind = keyword.get("kind");
         let Some(kind_text) = kind.and_then(Json::as_str).filter(|kind| kinds.contains(kind)) else {
-            fail(failures, &kw_at, &format!("`kind` is not a Keyword kind (got {})", describe(kind)));
+            fail(
+                failures,
+                &kw_at,
+                &format!("`kind` is not a Keyword kind (got {})", describe(kind)),
+            );
             continue;
         };
         let numbered = NUMBERED_KEYWORDS.contains(&kind_text);
         let n = keyword.get("n");
         if numbered && !is_int(n) {
-            fail(failures, &kw_at, &format!("{kind_text} must carry an integer `n` (got {})", describe(n)));
+            fail(
+                failures,
+                &kw_at,
+                &format!("{kind_text} must carry an integer `n` (got {})", describe(n)),
+            );
         }
         if !numbered && n.is_some() {
-            fail(failures, &kw_at, &format!("{kind_text} must not carry `n` (got {})", describe(n)));
+            fail(
+                failures,
+                &kw_at,
+                &format!("{kind_text} must not carry `n` (got {})", describe(n)),
+            );
         }
-        let extra: Vec<&str> = keyword.keys().map(String::as_str).filter(|k| *k != "kind" && *k != "n").collect();
+        let extra: Vec<&str> = keyword
+            .keys()
+            .map(String::as_str)
+            .filter(|k| *k != "kind" && *k != "n")
+            .collect();
         if !extra.is_empty() {
-            fail(failures, &kw_at, &format!("unknown keyword field(s) {}", extra.join(", ")));
+            fail(
+                failures,
+                &kw_at,
+                &format!("unknown keyword field(s) {}", extra.join(", ")),
+            );
         }
         // TS narrowed the object to `Keyword` here; the checks above are that shape.
     }
@@ -394,7 +485,11 @@ fn validate_face(failures: &mut Vec<String>, at_card: &str, face_name: &str, fac
         .filter(|k| !["type", "attack", "health", "xStats", "keywords", "text"].contains(k))
         .collect();
     if !unknown_fields.is_empty() {
-        fail(failures, &at, &format!("unknown face field(s) {}", unknown_fields.join(", ")));
+        fail(
+            failures,
+            &at,
+            &format!("unknown face field(s) {}", unknown_fields.join(", ")),
+        );
     }
 }
 
@@ -406,11 +501,19 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
     let texts: Vec<String> = ["base", "radiant"]
         .iter()
         .map(|face| match value.get(*face) {
-            Some(Json::Object(face)) => face.get("text").and_then(Json::as_str).unwrap_or_default().to_string(),
+            Some(Json::Object(face)) => face
+                .get("text")
+                .and_then(Json::as_str)
+                .unwrap_or_default()
+                .to_string(),
             _ => String::new(),
         })
         .collect();
-    let writes = |text: &str, key: &str| param_placeholders(text).iter().any(|placeholder| placeholder.key == key);
+    let writes = |text: &str, key: &str| {
+        param_placeholders(text)
+            .iter()
+            .any(|placeholder| placeholder.key == key)
+    };
     let mut declared: IndexSet<String> = IndexSet::new();
     if let Some(params) = params {
         let list = match params {
@@ -419,7 +522,10 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
                 fail(
                     failures,
                     at,
-                    &format!("`params` must be a non-empty array when present (got {})", describe(Some(params))),
+                    &format!(
+                        "`params` must be a non-empty array when present (got {})",
+                        describe(Some(params))
+                    ),
                 );
                 return;
             }
@@ -427,12 +533,20 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
         for (i, param) in list.iter().enumerate() {
             let p_at = format!("{at}.params[{i}]");
             let Json::Object(param) = param else {
-                fail(failures, &p_at, &format!("param must be an object (got {})", describe(Some(param))));
+                fail(
+                    failures,
+                    &p_at,
+                    &format!("param must be an object (got {})", describe(Some(param))),
+                );
                 continue;
             };
             let key_value = param.get("key");
             let Some(key) = key_value.and_then(Json::as_str).filter(|key| is_camel_word(key)) else {
-                fail(failures, &p_at, &format!("`key` must be a camelCase word (got {})", describe(key_value)));
+                fail(
+                    failures,
+                    &p_at,
+                    &format!("`key` must be a camelCase word (got {})", describe(key_value)),
+                );
                 continue;
             };
             if declared.contains(key) {
@@ -443,7 +557,11 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
             let (better, step) = (param.get("better"), param.get("step"));
             let (min, max, tuned_on) = (param.get("min"), param.get("max"), param.get("tunedOn"));
             if !is_int(base) || !is_int(radiant) {
-                fail(failures, &p_at, &format!("{key}: `base` and `radiant` must be integers"));
+                fail(
+                    failures,
+                    &p_at,
+                    &format!("{key}: `base` and `radiant` must be integers"),
+                );
             }
             if !matches!(better.and_then(Json::as_str), Some("up" | "down")) {
                 fail(
@@ -452,8 +570,14 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
                     &format!("{key}: `better` is \"up\" or \"down\" (got {})", describe(better)),
                 );
             }
-            if step.is_some() && (!is_int(step) || step.and_then(Json::as_f64).is_some_and(|step| step <= 0.0)) {
-                fail(failures, &p_at, &format!("{key}: `step` must be a positive integer"));
+            if step.is_some()
+                && (!is_int(step) || step.and_then(Json::as_f64).is_some_and(|step| step <= 0.0))
+            {
+                fail(
+                    failures,
+                    &p_at,
+                    &format!("{key}: `step` must be a positive integer"),
+                );
             }
             if min.is_some() && !is_int(min) {
                 fail(failures, &p_at, &format!("{key}: `min` must be an integer"));
@@ -484,26 +608,44 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
                 fail(
                     failures,
                     &p_at,
-                    &format!("{key}: `tunedOn` is \"radiant\" when present (got {})", describe(tuned_on)),
+                    &format!(
+                        "{key}: `tunedOn` is \"radiant\" when present (got {})",
+                        describe(tuned_on)
+                    ),
                 );
             }
             if radiant_only && writes(&texts[0], key) {
                 fail(
                     failures,
                     &p_at,
-                    &format!("{key}: tuned on the Radiant face only, but the base face's text writes {{{key}}}"),
+                    &format!(
+                        "{key}: tuned on the Radiant face only, but the base face's text writes {{{key}}}"
+                    ),
                 );
             }
             let extra: Vec<&str> = param
                 .keys()
                 .map(String::as_str)
-                .filter(|k| !["key", "base", "radiant", "better", "step", "min", "max", "tunedOn"].contains(k))
+                .filter(|k| {
+                    ![
+                        "key", "base", "radiant", "better", "step", "min", "max", "tunedOn",
+                    ]
+                    .contains(k)
+                })
                 .collect();
             if !extra.is_empty() {
-                fail(failures, &p_at, &format!("unknown param field(s) {}", extra.join(", ")));
+                fail(
+                    failures,
+                    &p_at,
+                    &format!("unknown param field(s) {}", extra.join(", ")),
+                );
             }
             if !texts.iter().any(|text| writes(text, key)) {
-                fail(failures, &p_at, &format!("{key}: no face's text writes {{{key}}}"));
+                fail(
+                    failures,
+                    &p_at,
+                    &format!("{key}: no face's text writes {{{key}}}"),
+                );
             }
         }
     }
@@ -518,7 +660,11 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
             if let Some(one) = &placeholder.one
                 && (one.is_empty() || Some(one) == placeholder.many.as_ref())
             {
-                fail(failures, &t_at, &format!("{{{key}|…}} needs a singular and a different plural wording"));
+                fail(
+                    failures,
+                    &t_at,
+                    &format!("{{{key}|…}} needs a singular and a different plural wording"),
+                );
             }
         }
         // A brace that is no placeholder is a typo in one.
@@ -536,14 +682,18 @@ fn validate_fallback(failures: &mut Vec<String>, at: &str, value: &Object) {
         fail(
             failures,
             at,
-            &format!("`radiantFallback` is `true` when present (got {})", describe(value.get("radiantFallback"))),
+            &format!(
+                "`radiantFallback` is `true` when present (got {})",
+                describe(value.get("radiantFallback"))
+            ),
         );
         return;
     }
     if value.get("type").and_then(Json::as_str) != Some("Unit") {
         fail(failures, at, "`radiantFallback` is a Unit's (R349)");
     }
-    let (Some(Json::Object(base)), Some(Json::Object(radiant))) = (value.get("base"), value.get("radiant")) else {
+    let (Some(Json::Object(base)), Some(Json::Object(radiant))) = (value.get("base"), value.get("radiant"))
+    else {
         return;
     };
     // `{ ...base, attack: doubled(base.attack), health: doubled(base.health) }`: a stat the base
@@ -587,7 +737,10 @@ pub struct CatalogReport {
 pub fn check_catalog(catalog: &Object) -> CatalogReport {
     let sets = sets();
     let expected_non_token: usize = sets.iter().map(|set| set.cards).sum();
-    let expected_token: usize = sets.iter().map(|set| set.card_defined_tokens.len() + set.shared_tokens.len()).sum();
+    let expected_token: usize = sets
+        .iter()
+        .map(|set| set.card_defined_tokens.len() + set.shared_tokens.len())
+        .sum();
     let expected_total = expected_non_token + expected_token;
     let (type_union, set_union, tag_union, rarity_union) = (card_types(), set_names(), tags(), rarities());
     let printed_union = printed_rarities();
@@ -597,7 +750,11 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
     // 1. 111 entries. (TS checks the total here and again after the loop, so a wrong total fails
     // twice; kept.)
     if entries != expected_total {
-        fail(&mut failures, "catalog", &format!("expected {expected_total} entries, found {entries}"));
+        fail(
+            &mut failures,
+            "catalog",
+            &format!("expected {expected_total} entries, found {entries}"),
+        );
     }
 
     let mut non_token_count = 0;
@@ -615,7 +772,11 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
     for (key, value) in catalog {
         let at = format!("catalog[\"{key}\"]");
         let Json::Object(value) = value else {
-            fail(&mut failures, &at, &format!("entry is not an object (got {})", describe(Some(value))));
+            fail(
+                &mut failures,
+                &at,
+                &format!("entry is not an object (got {})", describe(Some(value))),
+            );
             continue;
         };
 
@@ -624,22 +785,38 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
 
         // The object must be keyed by the card's own id (integration decision 1).
         match id {
-            Some(Json::String(id)) if id != key => fail(&mut failures, &at, &format!("key does not match `id` \"{id}\"")),
+            Some(Json::String(id)) if id != key => {
+                fail(&mut failures, &at, &format!("key does not match `id` \"{id}\""))
+            }
             Some(Json::String(_)) => {}
-            _ => fail(&mut failures, &at, &format!("`id` must be a string (got {})", describe(id))),
+            _ => fail(
+                &mut failures,
+                &at,
+                &format!("`id` must be a string (got {})", describe(id)),
+            ),
         }
 
         // 4. `id` follows the index convention of its set (§5, B2.2).
         let set_value = value.get("set");
-        let set_of = sets.iter().find(|expectation| set_value.and_then(Json::as_str) == Some(expectation.set));
+        let set_of = sets
+            .iter()
+            .find(|expectation| set_value.and_then(Json::as_str) == Some(expectation.set));
         match (index.and_then(Json::as_str), set_of) {
-            (None, _) => fail(&mut failures, &at, &format!("`index` must be a string (got {})", describe(index))),
+            (None, _) => fail(
+                &mut failures,
+                &at,
+                &format!("`index` must be a string (got {})", describe(index)),
+            ),
             (Some(_), None) => {
                 let shipping: Vec<&str> = sets.iter().map(|set| set.set).collect();
                 fail(
                     &mut failures,
                     &at,
-                    &format!("`set` {} is not a set that ships ({})", describe(set_value), shipping.join(", ")),
+                    &format!(
+                        "`set` {} is not a set that ships ({})",
+                        describe(set_value),
+                        shipping.join(", ")
+                    ),
                 );
             }
             (Some(index), Some(set_of)) => {
@@ -648,26 +825,52 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
                     fail(
                         &mut failures,
                         &at,
-                        &format!("index \"{index}\" implies id \"{expected_id}\", found {}", describe(id)),
+                        &format!(
+                            "index \"{index}\" implies id \"{expected_id}\", found {}",
+                            describe(id)
+                        ),
                     );
                 }
-                seen_indices.entry(set_of.set).or_default().entry(index.to_string()).or_default().push(key.clone());
+                seen_indices
+                    .entry(set_of.set)
+                    .or_default()
+                    .entry(index.to_string())
+                    .or_default()
+                    .push(key.clone());
             }
         }
 
         let name = value.get("name");
         if !name.and_then(Json::as_str).is_some_and(|name| !name.is_empty()) {
-            fail(&mut failures, &at, &format!("`name` must be a non-empty string (got {})", describe(name)));
+            fail(
+                &mut failures,
+                &at,
+                &format!("`name` must be a non-empty string (got {})", describe(name)),
+            );
         }
 
         // 5. `type`, `tags`, `set`, `rarity` are in the unions the wire's catalog types declare.
         let card_type = value.get("type");
-        if !card_type.and_then(Json::as_str).is_some_and(|t| type_union.contains(&t)) {
-            fail(&mut failures, &at, &format!("`type` is not a CardType (got {})", describe(card_type)));
+        if !card_type
+            .and_then(Json::as_str)
+            .is_some_and(|t| type_union.contains(&t))
+        {
+            fail(
+                &mut failures,
+                &at,
+                &format!("`type` is not a CardType (got {})", describe(card_type)),
+            );
         }
 
-        if !set_value.and_then(Json::as_str).is_some_and(|s| set_union.contains(&s)) {
-            fail(&mut failures, &at, &format!("`set` is not a SetName (got {})", describe(set_value)));
+        if !set_value
+            .and_then(Json::as_str)
+            .is_some_and(|s| set_union.contains(&s))
+        {
+            fail(
+                &mut failures,
+                &at,
+                &format!("`set` is not a SetName (got {})", describe(set_value)),
+            );
         }
 
         let mut tag_list: Vec<String> = Vec::new();
@@ -679,19 +882,38 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
                 }
                 for (i, tag) in tags.iter().enumerate() {
                     if !tag.as_str().is_some_and(|tag| tag_union.contains(&tag)) {
-                        fail(&mut failures, &at, &format!("tags[{i}] is not a Tag (got {})", describe(Some(tag))));
+                        fail(
+                            &mut failures,
+                            &at,
+                            &format!("tags[{i}] is not a Tag (got {})", describe(Some(tag))),
+                        );
                     }
                 }
                 if tag_list.iter().collect::<IndexSet<_>>().len() != tag_list.len() {
-                    fail(&mut failures, &at, &format!("`tags` repeats a tag ({})", tag_list.join(", ")));
+                    fail(
+                        &mut failures,
+                        &at,
+                        &format!("`tags` repeats a tag ({})", tag_list.join(", ")),
+                    );
                 }
             }
-            other => fail(&mut failures, &at, &format!("`tags` must be an array (got {})", describe(other))),
+            other => fail(
+                &mut failures,
+                &at,
+                &format!("`tags` must be an array (got {})", describe(other)),
+            ),
         }
 
         let rarity = value.get("rarity");
-        if !rarity.and_then(Json::as_str).is_some_and(|r| rarity_union.contains(&r)) {
-            fail(&mut failures, &at, &format!("`rarity` is not a Rarity (got {})", describe(rarity)));
+        if !rarity
+            .and_then(Json::as_str)
+            .is_some_and(|r| rarity_union.contains(&r))
+        {
+            fail(
+                &mut failures,
+                &at,
+                &format!("`rarity` is not a Rarity (got {})", describe(rarity)),
+            );
         }
 
         // 8. token === (rarity === "Token"); 2. the token/non-token split.
@@ -713,16 +935,30 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
                     token_count += 1;
                     // 9. every token carries the Token tag (§5.1: random pools filter on it).
                     if !tagged_token {
-                        let listed = if tag_list.is_empty() { "none".to_string() } else { tag_list.join(", ") };
-                        fail(&mut failures, &at, &format!("token is missing the \"Token\" tag (tags: {listed})"));
+                        let listed = if tag_list.is_empty() {
+                            "none".to_string()
+                        } else {
+                            tag_list.join(", ")
+                        };
+                        fail(
+                            &mut failures,
+                            &at,
+                            &format!("token is missing the \"Token\" tag (tags: {listed})"),
+                        );
                     }
                 } else {
                     non_token_count += 1;
                     if tagged_token {
                         fail(&mut failures, &at, "non-token carries the \"Token\" tag");
                     }
-                    if let (Some(rarity), Some(set)) = (rarity.and_then(Json::as_str), set_value.and_then(Json::as_str)) {
-                        *rarity_counts.entry(set.to_string()).or_default().entry(rarity.to_string()).or_default() += 1;
+                    if let (Some(rarity), Some(set)) =
+                        (rarity.and_then(Json::as_str), set_value.and_then(Json::as_str))
+                    {
+                        *rarity_counts
+                            .entry(set.to_string())
+                            .or_default()
+                            .entry(rarity.to_string())
+                            .or_default() += 1;
                     }
                 }
                 // B2.5: a token may print the rarity the designer gave it, for display only; a card
@@ -731,16 +967,26 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
                     if !token {
                         fail(&mut failures, &at, "`printedRarity` is a token's (B2.5)");
                     }
-                    if !printed.as_str().is_some_and(|printed| printed_union.contains(&printed)) {
+                    if !printed
+                        .as_str()
+                        .is_some_and(|printed| printed_union.contains(&printed))
+                    {
                         fail(
                             &mut failures,
                             &at,
-                            &format!("`printedRarity` is not a printed rarity (got {})", describe(Some(printed))),
+                            &format!(
+                                "`printedRarity` is not a printed rarity (got {})",
+                                describe(Some(printed))
+                            ),
                         );
                     }
                 }
             }
-            other => fail(&mut failures, &at, &format!("`token` must be a boolean (got {})", describe(other))),
+            other => fail(
+                &mut failures,
+                &at,
+                &format!("`token` must be a boolean (got {})", describe(other)),
+            ),
         }
 
         // §5: cost is 0..6, 100, "X", or {base, embiggen}.
@@ -750,7 +996,10 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
                     fail(
                         &mut failures,
                         &at,
-                        &format!("numeric `cost` must be a non-negative integer (got {})", js::number_string(*cost)),
+                        &format!(
+                            "numeric `cost` must be a non-negative integer (got {})",
+                            js::number_string(*cost)
+                        ),
                     );
                 }
             }
@@ -769,13 +1018,24 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
                         ),
                     );
                 }
-                let extra: Vec<&str> =
-                    cost.keys().map(String::as_str).filter(|k| *k != "base" && *k != "embiggen").collect();
+                let extra: Vec<&str> = cost
+                    .keys()
+                    .map(String::as_str)
+                    .filter(|k| *k != "base" && *k != "embiggen")
+                    .collect();
                 if !extra.is_empty() {
-                    fail(&mut failures, &at, &format!("unknown cost field(s) {}", extra.join(", ")));
+                    fail(
+                        &mut failures,
+                        &at,
+                        &format!("unknown cost field(s) {}", extra.join(", ")),
+                    );
                 }
             }
-            other => fail(&mut failures, &at, &format!("`cost` is not a CardCost (got {})", describe(other))),
+            other => fail(
+                &mut failures,
+                &at,
+                &format!("`cost` is not a CardCost (got {})", describe(other)),
+            ),
         }
 
         // 6, 7. Faces: valid keywords, stats on Units (and Animated backrow cards) only.
@@ -796,7 +1056,10 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
                 fail(
                     &mut failures,
                     &at,
-                    &format!("`loc` must be a non-negative integer (got {})", describe(Some(loc))),
+                    &format!(
+                        "`loc` must be a non-negative integer (got {})",
+                        describe(Some(loc))
+                    ),
                 );
             }
         }
@@ -830,15 +1093,27 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
             "base",
             "radiant",
         ];
-        let unknown_fields: Vec<&str> = value.keys().map(String::as_str).filter(|k| !known.contains(k)).collect();
+        let unknown_fields: Vec<&str> = value
+            .keys()
+            .map(String::as_str)
+            .filter(|k| !known.contains(k))
+            .collect();
         if !unknown_fields.is_empty() {
-            fail(&mut failures, &at, &format!("unknown field(s) {}", unknown_fields.join(", ")));
+            fail(
+                &mut failures,
+                &at,
+                &format!("unknown field(s) {}", unknown_fields.join(", ")),
+            );
         }
     }
 
     // 1, 2. The totals: B2.1's 268 cards and, with Glitch (issue #170), 50 tokens, 318 entries.
     if entries != expected_total {
-        fail(&mut failures, "catalog", &format!("expected {expected_total} entries, found {entries}"));
+        fail(
+            &mut failures,
+            "catalog",
+            &format!("expected {expected_total} entries, found {entries}"),
+        );
     }
     if non_token_count != expected_non_token {
         fail(
@@ -848,7 +1123,11 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
         );
     }
     if token_count != expected_token {
-        fail(&mut failures, "catalog", &format!("expected {expected_token} tokens, found {token_count}"));
+        fail(
+            &mut failures,
+            "catalog",
+            &format!("expected {expected_token} tokens, found {token_count}"),
+        );
     }
 
     for expectation in &sets {
@@ -858,18 +1137,30 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
         let seen = seen_indices.get(expectation.set).unwrap_or(&empty);
         for index in &indices {
             match seen.get(index) {
-                None => fail(&mut failures, expectation.set, &format!("index \"{index}\" is missing")),
+                None => fail(
+                    &mut failures,
+                    expectation.set,
+                    &format!("index \"{index}\" is missing"),
+                ),
                 Some(keys) if keys.len() > 1 => fail(
                     &mut failures,
                     expectation.set,
-                    &format!("index \"{index}\" appears {} times ({})", keys.len(), keys.join(", ")),
+                    &format!(
+                        "index \"{index}\" appears {} times ({})",
+                        keys.len(),
+                        keys.join(", ")
+                    ),
                 ),
                 Some(_) => {}
             }
         }
         for index in seen.keys() {
             if !indices.contains(index) {
-                fail(&mut failures, expectation.set, &format!("unexpected index \"{index}\""));
+                fail(
+                    &mut failures,
+                    expectation.set,
+                    &format!("unexpected index \"{index}\""),
+                );
             }
         }
 
@@ -891,7 +1182,9 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
                 fail(
                     &mut failures,
                     expectation.set,
-                    &format!("{found} non-token card(s) carry rarity \"{rarity}\", which the set does not distribute"),
+                    &format!(
+                        "{found} non-token card(s) carry rarity \"{rarity}\", which the set does not distribute"
+                    ),
                 );
             }
         }
@@ -901,7 +1194,11 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
     for (tag, expected) in expected_tag_counts() {
         let found = tag_counts.get(tag).copied().unwrap_or(0);
         if found != expected {
-            fail(&mut failures, "catalog", &format!("expected {expected} entries tagged \"{tag}\", found {found}"));
+            fail(
+                &mut failures,
+                "catalog",
+                &format!("expected {expected} entries tagged \"{tag}\", found {found}"),
+            );
         }
     }
 
@@ -916,17 +1213,31 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
                 fail(
                     &mut failures,
                     &at,
-                    &format!("must be a non-empty array of card ids when present (got {})", describe(Some(*other))),
+                    &format!(
+                        "must be a non-empty array of card ids when present (got {})",
+                        describe(Some(*other))
+                    ),
                 );
                 continue;
             }
         };
         if repeats_a_value(refs) {
-            fail(&mut failures, &at, &format!("repeats an id ({})", js::join(refs, ", ")));
+            fail(
+                &mut failures,
+                &at,
+                &format!("repeats an id ({})", js::join(refs, ", ")),
+            );
         }
         for reference in refs {
-            if !reference.as_str().is_some_and(|reference| catalog.contains_key(reference)) {
-                fail(&mut failures, &at, &format!("{} is not a catalog id", describe(Some(reference))));
+            if !reference
+                .as_str()
+                .is_some_and(|reference| catalog.contains_key(reference))
+            {
+                fail(
+                    &mut failures,
+                    &at,
+                    &format!("{} is not a catalog id", describe(Some(reference))),
+                );
             }
         }
     }
@@ -996,7 +1307,8 @@ fn starts_use(code: &str) -> bool {
             None => after,
         };
     }
-    rest.strip_prefix("use").is_some_and(|tail| tail.is_empty() || tail.starts_with(|c: char| c.is_whitespace() || c == '{'))
+    rest.strip_prefix("use")
+        .is_some_and(|tail| tail.is_empty() || tail.starts_with(|c: char| c.is_whitespace() || c == '{'))
 }
 
 /// SURFACE §7.5: the lines of code in one card script — every line that holds code once comments
@@ -1123,10 +1435,16 @@ pub fn newest_version(path: &Path) -> anyhow::Result<String> {
         .map_err(anyhow::Error::from)
         .and_then(|text| js::parse(&text).map_err(anyhow::Error::from))
         .map_err(|cause| {
-            anyhow!("catalog-version: the patch list could not be read from {}: {cause}", path.display())
+            anyhow!(
+                "catalog-version: the patch list could not be read from {}: {cause}",
+                path.display()
+            )
         })?;
     let newest = match &list {
-        Json::Array(entries) => entries.last().and_then(Json::as_object).and_then(|entry| entry.get("version")),
+        Json::Array(entries) => entries
+            .last()
+            .and_then(Json::as_object)
+            .and_then(|entry| entry.get("version")),
         _ => None,
     };
     match newest.and_then(Json::as_str) {
@@ -1179,10 +1497,14 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 /// `catalog check`: validate-catalog's verdict.
 fn run_check() -> anyhow::Result<()> {
     let catalog_path = repo_root().join("crates/cards/catalog.json");
-    let text = fs::read_to_string(&catalog_path).map_err(|error| anyhow!("{}: {error}", catalog_path.display()))?;
+    let text =
+        fs::read_to_string(&catalog_path).map_err(|error| anyhow!("{}: {error}", catalog_path.display()))?;
     let raw = js::parse(&text).map_err(|error| anyhow!("{}: {error}", catalog_path.display()))?;
     let Json::Object(catalog) = &raw else {
-        bail!("FAIL catalog.json: expected a JSON object keyed by card id, got {}", describe(Some(&raw)));
+        bail!(
+            "FAIL catalog.json: expected a JSON object keyed by card id, got {}",
+            describe(Some(&raw))
+        );
     };
     let report = check_catalog(catalog);
 
@@ -1206,7 +1528,11 @@ fn run_check() -> anyhow::Result<()> {
     );
     for expectation in sets() {
         let tokens = expectation.card_defined_tokens.len() + expectation.shared_tokens.len();
-        let rarities: Vec<String> = expectation.rarities.iter().map(|(r, n)| format!("{n} {r}")).collect();
+        let rarities: Vec<String> = expectation
+            .rarities
+            .iter()
+            .map(|(r, n)| format!("{n} {r}"))
+            .collect();
         println!(
             "  {}: {} cards + {tokens} tokens; rarities {}",
             expectation.set,
@@ -1214,7 +1540,10 @@ fn run_check() -> anyhow::Result<()> {
             rarities.join(", ")
         );
     }
-    let tags: Vec<String> = expected_tag_counts().iter().map(|(tag, n)| format!("{n} {tag}")).collect();
+    let tags: Vec<String> = expected_tag_counts()
+        .iter()
+        .map(|(tag, n)| format!("{n} {tag}"))
+        .collect();
     println!(
         "  tags {}; refs on {} entries, params on {}, loc on {}",
         tags.join(", "),
@@ -1227,7 +1556,9 @@ fn run_check() -> anyhow::Result<()> {
 
 /// `catalog-version`: the newest patch, with no newline, as `process.stdout.write` printed it.
 pub fn run_version(args: VersionArgs) -> anyhow::Result<()> {
-    let path = args.path.unwrap_or_else(|| repo_root().join("crates/cards/patches/patches.json"));
+    let path = args
+        .path
+        .unwrap_or_else(|| repo_root().join("crates/cards/patches/patches.json"));
     let newest = newest_version(&path)?;
     let mut stdout = std::io::stdout();
     stdout.write_all(newest.as_bytes())?;
@@ -1257,7 +1588,10 @@ mod tests {
     fn the_shipped_catalog_passes_every_check() {
         let report = check_catalog(&shipped_catalog());
         assert_eq!(report.failures, Vec::<String>::new());
-        assert_eq!((report.entries, report.non_token_count, report.token_count), (318, 268, 50));
+        assert_eq!(
+            (report.entries, report.non_token_count, report.token_count),
+            (318, 268, 50)
+        );
     }
 
     #[test]
@@ -1279,7 +1613,9 @@ mod tests {
         }
         entry.insert(
             "params".to_string(),
-            Json::Array(vec![Json::Object(parse_object(r#"{"key":"amount","base":1,"radiant":2,"better":"up"}"#))]),
+            Json::Array(vec![Json::Object(parse_object(
+                r#"{"key":"amount","base":1,"radiant":2,"better":"up"}"#,
+            ))]),
         );
         entry.insert("colour".to_string(), Json::from("red"));
         catalog.insert("core-001".to_string(), Json::Object(entry));

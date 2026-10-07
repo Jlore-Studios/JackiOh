@@ -30,8 +30,15 @@ fn playing(seed: &str) -> GameState {
     let decks = (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21));
     let mut state = begin_game(&new_game(&format!("turn-cap-{seed}"), Some(decks))).state;
     for player in [PlayerId::P1, PlayerId::P2] {
-        let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
-        state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": player }));
+        let keep: Vec<String> = state.players[player]
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
+        state = act(
+            &state,
+            json!({ "type": "mulligan", "keep": keep, "playerId": player }),
+        );
     }
     state
 }
@@ -55,8 +62,18 @@ mod r389_b4_3_the_turn_cap {
         assert_eq!(TURN_CAP_PLAYER_TURNS, 60);
         let mut state = playing("reserves");
         // #75 Infinite Reserves turns every empty-library draw into a card, so no hero ever fatigues.
-        put(&mut state, &infinite_reserves().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
-        put(&mut state, &infinite_reserves().id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &infinite_reserves().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        put(
+            &mut state,
+            &infinite_reserves().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let over = pass_until_over(state);
         assert_eq!(
             over.result,
@@ -73,7 +90,10 @@ mod r389_b4_3_the_turn_cap {
     #[test]
     fn r389_r3_two_do_nothing_20_card_decks_fatigue_out_before_the_cap_so_fatigue_ends_such_a_game_2_4() {
         let over = pass_until_over(playing("fatigue"));
-        assert_eq!(over.result.map(|result| result.reason), Some(GameOverReason::HeroDeath));
+        assert_eq!(
+            over.result.map(|result| result.reason),
+            Some(GameOverReason::HeroDeath)
+        );
         assert!(over.turn < TURN_CAP_PLAYER_TURNS);
         // B4.3's arithmetic: the second player's library empties first (four opening cards to three),
         // and their eighth fatigue draw kills them on their 24th turn, player-turn 48.

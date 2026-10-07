@@ -12,9 +12,9 @@
 //!
 //! Port of `packages/cards/test/fused-nested-resume.test.ts` (SURFACE §4.1, §8).
 
+use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::subsystems::fuse::FuseArgs;
 use jackioh_engine::testkit::*;
-use jackioh_engine::PlayerId::{P1, P2};
 
 const GAMBIT: &str = "classic-052"; // (2) Trap: a lethal hit is re-aimed; then heal {heal} 10 and draw {draw} 3 (resume step).
 const INCOME_TAX: &str = "classic-009"; // (2) Trap with a table of steps of its own, and no "heal".
@@ -32,7 +32,11 @@ fn craft(s: &mut Scenario, ingredients: [CardInstance; 2]) -> CardInstance {
     let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
     let fused = subsystems::fuse::fuse(
         &mut sink,
-        FuseArgs { ingredients: ingredients.to_vec(), to_hand: Some(P1), ..Default::default() },
+        FuseArgs {
+            ingredients: ingredients.to_vec(),
+            to_hand: Some(P1),
+            ..Default::default()
+        },
     );
     match fused {
         Some(card) => card,
@@ -62,10 +66,17 @@ mod r102_a_final_gambit_under_a_fusion_whose_other_ingredients_hold_no_table_of_
     use super::*;
 
     #[test]
-    fn r102_resumes_its_own_step_the_hit_is_re_aimed_the_hero_heals_10_and_draws_3_as_a_final_gambit_standing_alone_does() {
+    fn r102_resumes_its_own_step_the_hit_is_re_aimed_the_hero_heals_10_and_draws_3_as_a_final_gambit_standing_alone_does()
+     {
         let mut s = lethal_against_nested();
 
-        s.expect_events(json!(["attackDeclared", "trapFired", "redirected", "damage", "healed"]));
+        s.expect_events(json!([
+            "attackDeclared",
+            "trapFired",
+            "redirected",
+            "damage",
+            "healed"
+        ]));
         s.expect_health(P1, 14);
         s.expect_health(P2, 26);
         assert_eq!(s.hand(P1).len(), 4);

@@ -43,7 +43,10 @@ fn test_env(public_origins: &str, e2e: bool) -> Env {
         ("SUPABASE_URL", "https://project.supabase.test"),
         ("SUPABASE_SECRET_KEY", "secret"),
         ("DATABASE_URL", "postgres://localhost/jackioh"),
-        ("SUPABASE_JWKS_URL", "https://project.supabase.test/auth/v1/.well-known/jwks.json"),
+        (
+            "SUPABASE_JWKS_URL",
+            "https://project.supabase.test/auth/v1/.well-known/jwks.json",
+        ),
         ("CODE_PEPPER", "pepper-pepper-pepper-pepper-pepper-pepper"),
         ("PORT", "8787"),
         ("PUBLIC_ORIGINS", public_origins),
@@ -52,7 +55,10 @@ fn test_env(public_origins: &str, e2e: bool) -> Env {
     ] {
         source.insert(name.to_string(), value.to_string());
     }
-    source.insert("CATALOG_VERSION".to_string(), jackioh_cards::catalog_version().to_string());
+    source.insert(
+        "CATALOG_VERSION".to_string(),
+        jackioh_cards::catalog_version().to_string(),
+    );
     match load_env(&source) {
         Ok(env) => env,
         Err(problems) => panic!("the test environment loads: {problems}"),
@@ -79,7 +85,10 @@ struct Reply {
 
 impl Reply {
     fn header(&self, name: &str) -> Option<String> {
-        self.headers.get(name).and_then(|value| value.to_str().ok()).map(str::to_string)
+        self.headers
+            .get(name)
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_string)
     }
 }
 
@@ -103,7 +112,11 @@ impl Wrapped {
     }
 
     async fn send(&self, init: Init<'_>) -> Reply {
-        let method = if init.preflight { "OPTIONS" } else { init.method.unwrap_or("GET") };
+        let method = if init.preflight {
+            "OPTIONS"
+        } else {
+            init.method.unwrap_or("GET")
+        };
         let mut builder = Request::builder().method(method).uri(PATH);
         if let Some(origin) = init.origin {
             builder = builder.header("origin", origin);
@@ -112,11 +125,22 @@ impl Wrapped {
             builder = builder.header("access-control-request-method", "POST");
         }
         let request = builder.body(Body::empty()).expect("a well-formed request");
-        let response = self.service.clone().oneshot(request).await.expect("the router always answers");
+        let response = self
+            .service
+            .clone()
+            .oneshot(request)
+            .await
+            .expect("the router always answers");
         let status = response.status().as_u16();
         let headers = response.headers().clone();
-        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.expect("the body reads");
-        Reply { status, headers, text: String::from_utf8(bytes.to_vec()).expect("the body is UTF-8") }
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("the body reads");
+        Reply {
+            status,
+            headers,
+            text: String::from_utf8(bytes.to_vec()).expect("the body is UTF-8"),
+        }
     }
 }
 
@@ -132,12 +156,17 @@ fn wrapped(origins: &[&str]) -> Wrapped {
             ([(header::CONTENT_TYPE, "application/json")], BODY)
         }
     });
-    let options = Arc::new(CorsOptions { origins: origins.iter().map(|origin| origin.to_string()).collect() });
+    let options = Arc::new(CorsOptions {
+        origins: origins.iter().map(|origin| origin.to_string()).collect(),
+    });
     let service = axum::Router::new().fallback(move |request: axum::extract::Request| {
         let (options, handler) = (options.clone(), handler.clone());
         async move {
             with_cors(&options, request, |request| async move {
-                handler.oneshot(request).await.unwrap_or_else(|never| match never {})
+                handler
+                    .oneshot(request)
+                    .await
+                    .unwrap_or_else(|never| match never {})
             })
             .await
         }
@@ -156,8 +185,18 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
     async fn r162_echoes_the_one_origin_that_asked_never_star_and_never_allows_credentials() {
         let layer = wrapped(&ALLOWED);
 
-        let first = layer.send(Init { origin: Some(APP), ..Init::default() }).await;
-        let second = layer.send(Init { origin: Some(OTHER), ..Init::default() }).await;
+        let first = layer
+            .send(Init {
+                origin: Some(APP),
+                ..Init::default()
+            })
+            .await;
+        let second = layer
+            .send(Init {
+                origin: Some(OTHER),
+                ..Init::default()
+            })
+            .await;
 
         // The premise: the layer is awake and the handler's own answer came through untouched.
         assert_eq!(layer.calls(), 2);
@@ -166,10 +205,16 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
 
         // Echoed *as itself*: each request gets its own origin back, not the first in the list.
         assert_eq!(first.header("access-control-allow-origin").as_deref(), Some(APP));
-        assert_eq!(second.header("access-control-allow-origin").as_deref(), Some(OTHER));
+        assert_eq!(
+            second.header("access-control-allow-origin").as_deref(),
+            Some(OTHER)
+        );
         // Never the wildcard, whichever origin asked.
         for response in [&first, &second] {
-            assert_ne!(response.header("access-control-allow-origin").as_deref(), Some("*"));
+            assert_ne!(
+                response.header("access-control-allow-origin").as_deref(),
+                Some("*")
+            );
             // §9.1's bearer token is in a header, so no cookie is ever in play.
             assert_eq!(response.header("access-control-allow-credentials"), None);
             // The answer depends on the request's origin: a shared cache must key on it.
@@ -181,18 +226,38 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
     async fn r162_answers_an_allowed_preflight_itself_with_the_same_echo_and_no_credentials() {
         let layer = wrapped(&ALLOWED);
 
-        let preflight = layer.send(Init { origin: Some(APP), preflight: true, ..Init::default() }).await;
+        let preflight = layer
+            .send(Init {
+                origin: Some(APP),
+                preflight: true,
+                ..Init::default()
+            })
+            .await;
 
         // The preflight never reaches the router, which knows no OPTIONS route and would 404 it.
         assert_eq!(layer.calls(), 0);
         assert_eq!(preflight.status, 204);
-        assert_eq!(preflight.header("access-control-allow-origin").as_deref(), Some(APP));
-        assert_ne!(preflight.header("access-control-allow-origin").as_deref(), Some("*"));
+        assert_eq!(
+            preflight.header("access-control-allow-origin").as_deref(),
+            Some(APP)
+        );
+        assert_ne!(
+            preflight.header("access-control-allow-origin").as_deref(),
+            Some("*")
+        );
         assert_eq!(preflight.header("access-control-allow-credentials"), None);
         assert_eq!(preflight.header("vary").as_deref(), Some("Origin"));
         // The methods the router allows and the two headers `apps/web/src/net/api.ts` sends.
-        assert!(preflight.header("access-control-allow-methods").unwrap_or_default().contains("POST"));
-        assert_eq!(preflight.header("access-control-allow-headers").as_deref(), Some("authorization, content-type"));
+        assert!(
+            preflight
+                .header("access-control-allow-methods")
+                .unwrap_or_default()
+                .contains("POST")
+        );
+        assert_eq!(
+            preflight.header("access-control-allow-headers").as_deref(),
+            Some("authorization, content-type")
+        );
     }
 
     #[tokio::test]
@@ -201,11 +266,24 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
 
         // PREMISE FIRST. Without this the assertions below would pass against a layer that never ran,
         // a handler that always 403s, or an `origins` list this test misspelled.
-        let allowed = layer.send(Init { origin: Some(APP), ..Init::default() }).await;
+        let allowed = layer
+            .send(Init {
+                origin: Some(APP),
+                ..Init::default()
+            })
+            .await;
         assert_eq!(allowed.status, 200);
-        assert_eq!(allowed.header("access-control-allow-origin").as_deref(), Some(APP));
+        assert_eq!(
+            allowed.header("access-control-allow-origin").as_deref(),
+            Some(APP)
+        );
 
-        let unlisted = layer.send(Init { origin: Some(STRANGER), ..Init::default() }).await;
+        let unlisted = layer
+            .send(Init {
+                origin: Some(STRANGER),
+                ..Init::default()
+            })
+            .await;
 
         // The handler ran for the stranger too — the request was not refused by the CORS layer.
         assert_eq!(layer.calls(), 2);
@@ -213,7 +291,10 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
         assert_eq!(unlisted.status, 200);
         assert_ne!(unlisted.status, 403);
         assert_eq!(unlisted.text, BODY);
-        assert_eq!(unlisted.header("content-type").as_deref(), Some("application/json"));
+        assert_eq!(
+            unlisted.header("content-type").as_deref(),
+            Some("application/json")
+        );
         // …and no CORS headers at all, which is what the browser needs in order to refuse it.
         assert_eq!(unlisted.header("access-control-allow-origin"), None);
         assert_eq!(unlisted.header("access-control-allow-credentials"), None);
@@ -224,10 +305,25 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
         let layer = wrapped(&ALLOWED);
 
         // PREMISE: the allowed preflight really is decorated, so "no headers" below means something.
-        let allowed = layer.send(Init { origin: Some(APP), preflight: true, ..Init::default() }).await;
-        assert_eq!(allowed.header("access-control-allow-origin").as_deref(), Some(APP));
+        let allowed = layer
+            .send(Init {
+                origin: Some(APP),
+                preflight: true,
+                ..Init::default()
+            })
+            .await;
+        assert_eq!(
+            allowed.header("access-control-allow-origin").as_deref(),
+            Some(APP)
+        );
 
-        let unlisted = layer.send(Init { origin: Some(STRANGER), preflight: true, ..Init::default() }).await;
+        let unlisted = layer
+            .send(Init {
+                origin: Some(STRANGER),
+                preflight: true,
+                ..Init::default()
+            })
+            .await;
 
         assert_eq!(unlisted.status, 204);
         assert_ne!(unlisted.status, 403);
@@ -242,8 +338,16 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
         let layer = wrapped(&ALLOWED);
 
         // PREMISE: the same request *with* an allowed origin is decorated.
-        let decorated = layer.send(Init { origin: Some(APP), ..Init::default() }).await;
-        assert_eq!(decorated.header("access-control-allow-origin").as_deref(), Some(APP));
+        let decorated = layer
+            .send(Init {
+                origin: Some(APP),
+                ..Init::default()
+            })
+            .await;
+        assert_eq!(
+            decorated.header("access-control-allow-origin").as_deref(),
+            Some(APP)
+        );
 
         let curl = layer.send(Init::default()).await;
 
@@ -287,17 +391,33 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
         let layer = wrapped(&ALLOWED);
 
         // Premise: the allowed path really does set it, so a blanket failure cannot pass this test.
-        let allowed = layer.send(Init { origin: Some(APP), ..Init::default() }).await;
+        let allowed = layer
+            .send(Init {
+                origin: Some(APP),
+                ..Init::default()
+            })
+            .await;
         assert_eq!(allowed.header("vary").as_deref(), Some("Origin"));
 
         // A refused preflight: no CORS headers, but still an origin-dependent answer, so still varied.
-        let refused = layer.send(Init { origin: Some(STRANGER), preflight: true, ..Init::default() }).await;
+        let refused = layer
+            .send(Init {
+                origin: Some(STRANGER),
+                preflight: true,
+                ..Init::default()
+            })
+            .await;
         assert_eq!(refused.status, 204);
         assert_eq!(refused.header("access-control-allow-origin"), None);
         assert_eq!(refused.header("vary").as_deref(), Some("Origin"));
 
         // An unlisted origin gets the ordinary answer — body intact, no CORS headers, still varied.
-        let unlisted = layer.send(Init { origin: Some(STRANGER), ..Init::default() }).await;
+        let unlisted = layer
+            .send(Init {
+                origin: Some(STRANGER),
+                ..Init::default()
+            })
+            .await;
         assert_eq!(unlisted.status, 200);
         assert_eq!(unlisted.text, BODY);
         assert_eq!(unlisted.header("access-control-allow-origin"), None);

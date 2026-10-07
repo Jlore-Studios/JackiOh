@@ -63,7 +63,9 @@ const B: &str = "profile-b";
 macro_rules! store {
     ($app:expr, |$t:ident| $call:expr) => {{
         let mut $t = $app.db.begin(None).await.expect("a store transaction begins");
-        let out = $call.await.expect(concat!("the store answers ", stringify!($call)));
+        let out = $call
+            .await
+            .expect(concat!("the store answers ", stringify!($call)));
         $t.commit().await.expect("the store transaction commits");
         out
     }};
@@ -79,9 +81,9 @@ fn j<T: Serialize>(value: &T) -> Value {
 fn assert_match(actual: &Value, expected: &Value) {
     fn matches(actual: &Value, expected: &Value) -> bool {
         match (actual, expected) {
-            (Value::Object(have), Value::Object(want)) => {
-                want.iter().all(|(key, value)| have.get(key).is_some_and(|got| matches(got, value)))
-            }
+            (Value::Object(have), Value::Object(want)) => want
+                .iter()
+                .all(|(key, value)| have.get(key).is_some_and(|got| matches(got, value))),
             (Value::Array(have), Value::Array(want)) => {
                 have.len() == want.len() && have.iter().zip(want).all(|(got, value)| matches(got, value))
             }
@@ -93,7 +95,12 @@ fn assert_match(actual: &Value, expected: &Value) {
 
 /// TS's `array.map(f)` over a JSON array.
 fn map(array: &Value, f: impl Fn(&Value) -> Value) -> Value {
-    Value::Array(array.as_array().map(|items| items.iter().map(&f).collect()).unwrap_or_default())
+    Value::Array(
+        array
+            .as_array()
+            .map(|items| items.iter().map(&f).collect())
+            .unwrap_or_default(),
+    )
 }
 
 /// A slot in whatever integer type the series rules take (TS: `number`).
@@ -166,7 +173,8 @@ async fn started_seats(app: &App, match_id: &str) -> (MatchSeat, MatchSeat) {
 }
 
 fn seat_of(profile_id: Value, player: &str, deck: Value) -> MatchSeat {
-    serde_json::from_value(json!({ "profileId": profile_id, "player": player, "deck": deck })).expect("a MatchSeat")
+    serde_json::from_value(json!({ "profileId": profile_id, "player": player, "deck": deck }))
+        .expect("a MatchSeat")
 }
 
 /// TS's recording logger: every `tracing` line this thread writes (SURFACE §11.3: `Logger` →
@@ -199,7 +207,10 @@ impl Logs {
 
     fn lines(&self) -> Vec<String> {
         let bytes = self.0.lock().expect("the log buffer").clone();
-        String::from_utf8_lossy(&bytes).lines().map(str::to_owned).collect()
+        String::from_utf8_lossy(&bytes)
+            .lines()
+            .map(str::to_owned)
+            .collect()
     }
 
     /// TS's `log.entries.find((entry) => entry.event === event)`: the first line naming it.
@@ -219,7 +230,11 @@ fn seats() -> (MatchSeat, MatchSeat) {
     // two §2.5 endings that differ only in how many heroes the state check finds dead are reachable
     // from the same fixture and differ by nothing but which card is played.
     (
-        seat_of(json!(A), "p1", json!(fake_deck(&["test-lethal", "test-mutual-lethal"]))),
+        seat_of(
+            json!(A),
+            "p1",
+            json!(fake_deck(&["test-lethal", "test-mutual-lethal"])),
+        ),
         seat_of(json!(B), "p2", json!(fake_deck(&[]))),
     )
 }
@@ -270,7 +285,13 @@ fn play_from(turn: i32, inputs: &[Value]) -> (TerminalOutcome, i32) {
     let Some(result) = state.result else {
         panic!("the scripted game did not end");
     };
-    (TerminalOutcome { winner: result.winner, reason: result.reason }, state.turn)
+    (
+        TerminalOutcome {
+            winner: result.winner,
+            reason: result.reason,
+        },
+        state.turn,
+    )
 }
 
 /// R603: the Glicko-2 move one ranked game makes between two players new to it (each at a new
@@ -313,8 +334,16 @@ async fn scenario(options: ScenarioOptions) -> Arc<App> {
     let app = test_app().await;
     fresh_store(&app).await;
     let (rating_a, rating_b) = options.ratings.unwrap_or((1000.0, 1000.0));
-    seed_profile(&app, json!({ "id": A, "rating": rating_a, "inMatchId": MATCH_ID })).await;
-    seed_profile(&app, json!({ "id": B, "rating": rating_b, "inMatchId": MATCH_ID })).await;
+    seed_profile(
+        &app,
+        json!({ "id": A, "rating": rating_a, "inMatchId": MATCH_ID }),
+    )
+    .await;
+    seed_profile(
+        &app,
+        json!({ "id": B, "rating": rating_b, "inMatchId": MATCH_ID }),
+    )
+    .await;
     let (first, second) = seats();
     match options.started_offset_ms {
         Some(offset) => {
@@ -354,14 +383,17 @@ async fn scenario(options: ScenarioOptions) -> Arc<App> {
 
 async fn record(app: &Arc<App>, inputs: &[Value]) -> ResultRow {
     let (outcome, turns) = play(inputs);
-    record_result(app, RecordResultInput {
-        match_id: MATCH_ID.to_owned(),
-        seats: seats(),
-        outcome,
-        turns,
-        at: now_ms(),
-        last_boards: None,
-    })
+    record_result(
+        app,
+        RecordResultInput {
+            match_id: MATCH_ID.to_owned(),
+            seats: seats(),
+            outcome,
+            turns,
+            at: now_ms(),
+            last_boards: None,
+        },
+    )
     .await
     .expect("the result is written")
 }
@@ -383,7 +415,10 @@ async fn expect_one_ending(app: &App, expected: Ending) {
     assert_eq!(row["players"], json!([A, B]));
     assert_eq!(row["winnerProfileId"], json!(expected.winner));
     assert_eq!(row["reason"], expected.reason);
-    assert_eq!(row["ratingAfter"], json!([expected.rating_after.0, expected.rating_after.1]));
+    assert_eq!(
+        row["ratingAfter"],
+        json!([expected.rating_after.0, expected.rating_after.1])
+    );
 
     let (profile_a, profile_b) = (profile(app, A).await, profile(app, B).await);
     assert_eq!(
@@ -410,11 +445,23 @@ mod results_m7_t2 {
         install_test_cards();
         let (win, loss) = win_loss();
         let app = scenario(ScenarioOptions::default()).await;
-        let row = j(&record(&app, &[json!({ "type": "play", "card": "test-lethal", "playerId": "p1" })]).await);
+        let row = j(&record(
+            &app,
+            &[json!({ "type": "play", "card": "test-lethal", "playerId": "p1" })],
+        )
+        .await);
         assert_eq!(row["reason"], "hero-death");
         assert_eq!(row["turns"], json!(1));
         assert_eq!(row["ratingBefore"], json!([1000.0, 1000.0]));
-        expect_one_ending(&app, Ending { winner: Some(A), reason: "hero-death", rating_after: (win, loss) }).await;
+        expect_one_ending(
+            &app,
+            Ending {
+                winner: Some(A),
+                reason: "hero-death",
+                rating_after: (win, loss),
+            },
+        )
+        .await;
     }
 
     #[tokio::test]
@@ -425,8 +472,16 @@ mod results_m7_t2 {
         // that on `outcome.winner === "draw"` alone, and a writer that read the reason instead (or
         // that treated "somebody died" as a win) would name A here.
         install_test_cards();
-        let app = scenario(ScenarioOptions { ratings: Some((1200.0, 1000.0)), ..Default::default() }).await;
-        let row = j(&record(&app, &[json!({ "type": "play", "card": "test-mutual-lethal", "playerId": "p1" })]).await);
+        let app = scenario(ScenarioOptions {
+            ratings: Some((1200.0, 1000.0)),
+            ..Default::default()
+        })
+        .await;
+        let row = j(&record(
+            &app,
+            &[json!({ "type": "play", "card": "test-mutual-lethal", "playerId": "p1" })],
+        )
+        .await);
 
         // PREMISE: the scripted engine really produced this reason, so the assertions below are about
         // the writer and not about a string this file typed out.
@@ -438,7 +493,15 @@ mod results_m7_t2 {
         let expected = rating_move(1200.0, 1000.0, 0.5);
         assert!(expected.0 < 1200.0);
         assert!(expected.1 > 1000.0);
-        expect_one_ending(&app, Ending { winner: None, reason: "both-heroes-dead", rating_after: expected }).await;
+        expect_one_ending(
+            &app,
+            Ending {
+                winner: None,
+                reason: "both-heroes-dead",
+                rating_after: expected,
+            },
+        )
+        .await;
     }
 
     #[tokio::test]
@@ -447,13 +510,25 @@ mod results_m7_t2 {
         let (win, loss) = win_loss();
         let app = scenario(ScenarioOptions::default()).await;
         record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await;
-        expect_one_ending(&app, Ending { winner: Some(A), reason: "concede", rating_after: (win, loss) }).await;
+        expect_one_ending(
+            &app,
+            Ending {
+                winner: Some(A),
+                reason: "concede",
+                rating_after: (win, loss),
+            },
+        )
+        .await;
     }
 
     #[tokio::test]
     async fn draw_accepted_a_draw_moves_both_ratings_toward_each_other() {
         install_test_cards();
-        let app = scenario(ScenarioOptions { ratings: Some((1200.0, 1000.0)), ..Default::default() }).await;
+        let app = scenario(ScenarioOptions {
+            ratings: Some((1200.0, 1000.0)),
+            ..Default::default()
+        })
+        .await;
         let row = j(&record(
             &app,
             &[
@@ -467,7 +542,15 @@ mod results_m7_t2 {
         // The favourite gives points away on a draw; the underdog takes them.
         assert!(expected.0 < 1200.0);
         assert!(expected.1 > 1000.0);
-        expect_one_ending(&app, Ending { winner: None, reason: "draw-accepted", rating_after: expected }).await;
+        expect_one_ending(
+            &app,
+            Ending {
+                winner: None,
+                reason: "draw-accepted",
+                rating_after: expected,
+            },
+        )
+        .await;
     }
 
     /// TS: "turn-cap: the 30th player-turn is a draw" (its scripted engine's cap, `FAKE_TURN_CAP`).
@@ -476,18 +559,29 @@ mod results_m7_t2 {
         install_test_cards();
         let app = scenario(ScenarioOptions::default()).await;
         let (outcome, turns) = play_from(TURN_CAP_PLAYER_TURNS - 1, &to_the_turn_cap());
-        let row = j(&record_result(&app, RecordResultInput {
-            match_id: MATCH_ID.to_owned(),
-            seats: seats(),
-            outcome,
-            turns,
-            at: now_ms(),
-            last_boards: None,
-        })
+        let row = j(&record_result(
+            &app,
+            RecordResultInput {
+                match_id: MATCH_ID.to_owned(),
+                seats: seats(),
+                outcome,
+                turns,
+                at: now_ms(),
+                last_boards: None,
+            },
+        )
         .await
         .expect("the result is written"));
         assert!(row["turns"].as_i64().unwrap_or(0) >= i64::from(TURN_CAP_PLAYER_TURNS));
-        expect_one_ending(&app, Ending { winner: None, reason: "turn-cap", rating_after: (1000.0, 1000.0) }).await;
+        expect_one_ending(
+            &app,
+            Ending {
+                winner: None,
+                reason: "turn-cap",
+                rating_after: (1000.0, 1000.0),
+            },
+        )
+        .await;
     }
 
     #[tokio::test]
@@ -495,18 +589,42 @@ mod results_m7_t2 {
         install_test_cards();
         let (win, loss) = win_loss();
         let app = scenario(ScenarioOptions::default()).await;
-        record(&app, &[json!({ "type": "disconnectExpired", "player": "p1", "playerId": "p1" })]).await;
-        expect_one_ending(&app, Ending { winner: Some(B), reason: "disconnect", rating_after: (loss, win) }).await;
+        record(
+            &app,
+            &[json!({ "type": "disconnectExpired", "player": "p1", "playerId": "p1" })],
+        )
+        .await;
+        expect_one_ending(
+            &app,
+            Ending {
+                winner: Some(B),
+                reason: "disconnect",
+                rating_after: (loss, win),
+            },
+        )
+        .await;
     }
 
     #[tokio::test]
     async fn match_ceiling_an_actor_resolved_ceiling_is_a_draw_with_the_ordinary_rating_move_r112() {
         install_test_cards();
-        let app = scenario(ScenarioOptions { ratings: Some((1200.0, 1000.0)), ..Default::default() }).await;
+        let app = scenario(ScenarioOptions {
+            ratings: Some((1200.0, 1000.0)),
+            ..Default::default()
+        })
+        .await;
         let row = j(&record(&app, &[json!({ "type": "ceilingReached", "playerId": "p1" })]).await);
         let expected = rating_move(1200.0, 1000.0, 0.5);
         assert_eq!(row["turns"], json!(1));
-        expect_one_ending(&app, Ending { winner: None, reason: "match-ceiling", rating_after: expected }).await;
+        expect_one_ending(
+            &app,
+            Ending {
+                winner: None,
+                reason: "match-ceiling",
+                rating_after: expected,
+            },
+        )
+        .await;
     }
 
     #[tokio::test]
@@ -515,19 +633,33 @@ mod results_m7_t2 {
         let (win, loss) = win_loss();
         let app = scenario(ScenarioOptions::default()).await;
         let first = record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await;
-        let again = record_result(&app, RecordResultInput {
-            match_id: MATCH_ID.to_owned(),
-            seats: seats(),
-            // Even a different outcome cannot rewrite history: the row already written is returned.
-            outcome: TerminalOutcome { winner: Winner::P2, reason: GameOverReason::HeroDeath },
-            turns: 99,
-            at: now_ms() + 1,
-            last_boards: None,
-        })
+        let again = record_result(
+            &app,
+            RecordResultInput {
+                match_id: MATCH_ID.to_owned(),
+                seats: seats(),
+                // Even a different outcome cannot rewrite history: the row already written is returned.
+                outcome: TerminalOutcome {
+                    winner: Winner::P2,
+                    reason: GameOverReason::HeroDeath,
+                },
+                turns: 99,
+                at: now_ms() + 1,
+                last_boards: None,
+            },
+        )
         .await
         .expect("the result is written");
         assert_eq!(j(&again), j(&first));
-        expect_one_ending(&app, Ending { winner: Some(A), reason: "concede", rating_after: (win, loss) }).await;
+        expect_one_ending(
+            &app,
+            Ending {
+                winner: Some(A),
+                reason: "concede",
+                rating_after: (win, loss),
+            },
+        )
+        .await;
     }
 
     #[tokio::test]
@@ -579,21 +711,30 @@ mod results_m7_t2 {
             }));
         }
 
-        let row = record_result(&app, RecordResultInput {
-            match_id: MATCH_ID.to_owned(),
-            seats: seats(),
-            outcome: TerminalOutcome { winner: Winner::P1, reason: GameOverReason::HeroDeath },
-            turns: 12,
-            at: now_ms(),
-            last_boards: None,
-        })
+        let row = record_result(
+            &app,
+            RecordResultInput {
+                match_id: MATCH_ID.to_owned(),
+                seats: seats(),
+                outcome: TerminalOutcome {
+                    winner: Winner::P1,
+                    reason: GameOverReason::HeroDeath,
+                },
+                turns: 12,
+                at: now_ms(),
+                last_boards: None,
+            },
+        )
         .await
         .expect("the result is written");
         assert!(collided.load(Ordering::SeqCst), "the first insert collided");
         assert_eq!(j(&row), j(&winner_row));
         // One effective write: the winner's row, and the loser added nothing — no second row, no
         // rating move of its own, and the match still finished exactly once.
-        assert_eq!(table(&app, |data| json!(data.tables.results.len())).await, json!(1));
+        assert_eq!(
+            table(&app, |data| json!(data.tables.results.len())).await,
+            json!(1)
+        );
         assert_eq!(profile(&app, A).await["rating"].as_f64(), Some(1000.0));
         assert_eq!(profile(&app, B).await["rating"].as_f64(), Some(1000.0));
         assert_eq!(table(&app, |data| j(&data.tables.season_ranks)).await, json!([]));
@@ -639,12 +780,22 @@ mod results_m7_t2 {
                 &row,
                 &json!({ "winnerProfileId": A, "ratingBefore": [1200.0, 1000.0], "ratingAfter": [1200.0, 1000.0] }),
             );
-            expect_one_ending(&app, Ending { winner: Some(A), reason: "concede", rating_after: (1200.0, 1000.0) })
-                .await;
+            expect_one_ending(
+                &app,
+                Ending {
+                    winner: Some(A),
+                    reason: "concede",
+                    rating_after: (1200.0, 1000.0),
+                },
+            )
+            .await;
             assert_eq!(table(&app, |data| j(&data.tables.season_ranks)).await, json!([]));
             assert_eq!(table(&app, |data| j(&data.tables.rated_games)).await, json!([]));
             // Deviation and volatility do not move either.
-            assert_eq!(profile(&app, A).await["ratingDeviation"].as_f64(), Some(RATING_DEVIATION_START));
+            assert_eq!(
+                profile(&app, A).await["ratingDeviation"].as_f64(),
+                Some(RATING_DEVIATION_START)
+            );
         }
 
         #[tokio::test]
@@ -656,16 +807,30 @@ mod results_m7_t2 {
             assert!(profile_a["ratingDeviation"].as_f64().unwrap_or(f64::INFINITY) < RATING_DEVIATION_START);
             let ranks = table(&app, |data| j(&data.tables.season_ranks)).await;
             assert_eq!(
-                map(&ranks, |rank| json!([rank["profileId"], rank["games"], rank["wins"], rank["losses"]])),
+                map(&ranks, |rank| json!([
+                    rank["profileId"],
+                    rank["games"],
+                    rank["wins"],
+                    rank["losses"]
+                ])),
                 json!([[A, 1, 1, 0], [B, 1, 0, 1]]),
             );
         }
 
         #[tokio::test]
-        async fn r611_records_the_rated_game_version_pilots_result_and_both_ratings_and_ranks_before_and_after() {
+        async fn r611_records_the_rated_game_version_pilots_result_and_both_ratings_and_ranks_before_and_after()
+         {
             install_test_cards();
-            let app = scenario(ScenarioOptions { ratings: Some((1200.0, 1000.0)), ..Default::default() }).await;
-            record(&app, &[json!({ "type": "disconnectExpired", "player": "p1", "playerId": "p1" })]).await;
+            let app = scenario(ScenarioOptions {
+                ratings: Some((1200.0, 1000.0)),
+                ..Default::default()
+            })
+            .await;
+            record(
+                &app,
+                &[json!({ "type": "disconnectExpired", "player": "p1", "playerId": "p1" })],
+            )
+            .await;
             let expected = rating_move(1200.0, 1000.0, 0.0);
             let games = table(&app, |data| j(&data.tables.rated_games)).await;
             assert_eq!(games.as_array().map(Vec::len), Some(1));
@@ -687,14 +852,24 @@ mod results_m7_t2 {
                 }),
             );
             assert_eq!(
-                map(&game["sides"], |side| json!([side["profileId"], side["botId"], side["pilot"]])),
+                map(&game["sides"], |side| json!([
+                    side["profileId"],
+                    side["botId"],
+                    side["pilot"]
+                ])),
                 json!([[A, null, "human"], [B, null, "human"]]),
             );
             assert_eq!(
-                map(&game["sides"], |side| json!([side["before"]["rating"], side["after"]["rating"]])),
+                map(&game["sides"], |side| json!([
+                    side["before"]["rating"],
+                    side["after"]["rating"]
+                ])),
                 json!([[1200.0, expected.0], [1000.0, expected.1]]),
             );
-            assert_eq!(map(&game["sides"], |side| side["rankAfter"]["tier"].clone()), json!(["raisin", "raisin"]));
+            assert_eq!(
+                map(&game["sides"], |side| side["rankAfter"]["tier"].clone()),
+                json!(["raisin", "raisin"])
+            );
         }
     }
 
@@ -720,8 +895,15 @@ mod results_m7_t2 {
             // R112: "records `turns = 0` and leaves both ratings unchanged".
             assert_eq!(row["turns"], json!(0));
             assert_eq!(row["ratingBefore"], json!([1200.0, 1000.0]));
-            expect_one_ending(&app, Ending { winner: None, reason: "match-ceiling", rating_after: (1200.0, 1000.0) })
-                .await;
+            expect_one_ending(
+                &app,
+                Ending {
+                    winner: None,
+                    reason: "match-ceiling",
+                    rating_after: (1200.0, 1000.0),
+                },
+            )
+            .await;
             // The in-memory actor is dropped; the log stays.
             assert!(!app.matches.has(MATCH_ID));
         }
@@ -731,7 +913,10 @@ mod results_m7_t2 {
             install_test_cards();
             let app = scenario(ScenarioOptions::default()).await;
             assert_eq!(reap(&app).await, Vec::<String>::new());
-            assert_eq!(table(&app, |data| json!(data.tables.results.len())).await, json!(0));
+            assert_eq!(
+                table(&app, |data| json!(data.tables.results.len())).await,
+                json!(0)
+            );
             assert!(app.matches.has(MATCH_ID));
         }
 
@@ -739,10 +924,22 @@ mod results_m7_t2 {
         async fn is_a_no_op_once_the_actor_has_already_recorded_the_ending() {
             install_test_cards();
             let (win, loss) = win_loss();
-            let app = scenario(ScenarioOptions { started_offset_ms: Some(PAST_CEILING_MS), ..Default::default() }).await;
+            let app = scenario(ScenarioOptions {
+                started_offset_ms: Some(PAST_CEILING_MS),
+                ..Default::default()
+            })
+            .await;
             record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await;
             assert_eq!(reap(&app).await, Vec::<String>::new());
-            expect_one_ending(&app, Ending { winner: Some(A), reason: "concede", rating_after: (win, loss) }).await;
+            expect_one_ending(
+                &app,
+                Ending {
+                    winner: Some(A),
+                    reason: "concede",
+                    rating_after: (win, loss),
+                },
+            )
+            .await;
         }
 
         #[tokio::test]
@@ -757,8 +954,15 @@ mod results_m7_t2 {
             reap(&app).await;
             let late = j(&record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await);
             assert_eq!(late["reason"], "match-ceiling");
-            expect_one_ending(&app, Ending { winner: None, reason: "match-ceiling", rating_after: (1200.0, 1000.0) })
-                .await;
+            expect_one_ending(
+                &app,
+                Ending {
+                    winner: None,
+                    reason: "match-ceiling",
+                    rating_after: (1200.0, 1000.0),
+                },
+            )
+            .await;
         }
     }
 
@@ -805,7 +1009,10 @@ mod results_m7_t2 {
             let match_id = j(&series)["nextMatchId"].as_str().unwrap_or_default().to_owned();
             let started = started_seats(app, &match_id).await;
             let outcome = if winner == "draw" {
-                TerminalOutcome { winner: Winner::Draw, reason: GameOverReason::DrawAccepted }
+                TerminalOutcome {
+                    winner: Winner::Draw,
+                    reason: GameOverReason::DrawAccepted,
+                }
             } else {
                 let player = [&started.0, &started.1]
                     .into_iter()
@@ -814,16 +1021,22 @@ mod results_m7_t2 {
                     .map(|seat| seat["player"].clone())
                     .unwrap_or(json!("p1"));
                 let winner: Winner = serde_json::from_value(player).expect("a seat");
-                TerminalOutcome { winner, reason: GameOverReason::HeroDeath }
+                TerminalOutcome {
+                    winner,
+                    reason: GameOverReason::HeroDeath,
+                }
             };
-            record_result(app, RecordResultInput {
-                match_id,
-                seats: started,
-                outcome,
-                turns: 3,
-                at: now_ms(),
-                last_boards: None,
-            })
+            record_result(
+                app,
+                RecordResultInput {
+                    match_id,
+                    seats: started,
+                    outcome,
+                    turns: 3,
+                    at: now_ms(),
+                    last_boards: None,
+                },
+            )
             .await
             .expect("the result is written");
         }
@@ -850,7 +1063,9 @@ mod results_m7_t2 {
             }))
             .expect("a NewSeriesInput");
             let mut tx = app.db.begin(None).await.expect("store.tx");
-            start_series(&app, input, &mut tx).await.expect("the series starts");
+            start_series(&app, input, &mut tx)
+                .await
+                .expect("the series starts");
             tx.commit().await.expect("the series commits");
             play_next(&app, [0, 0]).await;
             app
@@ -861,7 +1076,8 @@ mod results_m7_t2 {
         }
 
         #[tokio::test]
-        async fn r262_a_series_games_row_leaves_both_ratings_unchanged_and_the_series_records_the_game_in_the_same_write() {
+        async fn r262_a_series_games_row_leaves_both_ratings_unchanged_and_the_series_records_the_game_in_the_same_write()
+         {
             install_test_cards();
             let (logs, _logging) = Logs::capture();
             let app = series_scenario().await;
@@ -880,7 +1096,10 @@ mod results_m7_t2 {
             assert_eq!(ratings(&app).await, json!([1200.0, 1000.0]));
             let series = j(&series_row(&app).await);
             assert_eq!(series["status"], "picking");
-            assert_match(&series["games"][0], &json!({ "matchId": MATCH_ID, "winner": "p1", "reason": "concede" }));
+            assert_match(
+                &series["games"][0],
+                &json!({ "matchId": MATCH_ID, "winner": "p1", "reason": "concede" }),
+            );
             assert_eq!(map(&series["sides"], |side| side["wins"].clone()), json!([1, 0]));
             // Everything else a result does, it still does.
             assert!(profile(&app, A).await["inMatchId"].is_null());
@@ -891,7 +1110,8 @@ mod results_m7_t2 {
         }
 
         #[tokio::test]
-        async fn r263_the_reapers_ceiling_draw_counts_for_neither_side_and_a_next_game_both_sides_last_decks_begin_is_started_r332() {
+        async fn r263_the_reapers_ceiling_draw_counts_for_neither_side_and_a_next_game_both_sides_last_decks_begin_is_started_r332()
+         {
             install_test_cards();
             let app = series_scenario().await;
             finish(&app, A).await;
@@ -936,9 +1156,15 @@ mod results_m7_t2 {
 
             let series = j(&series_row(&app).await);
             assert_eq!(map(&series["sides"], |side| side["wins"].clone()), json!([2, 2]));
-            assert_match(&series["games"][4], &json!({ "winner": "draw", "reason": "match-ceiling" }));
+            assert_match(
+                &series["games"][4],
+                &json!({ "winner": "draw", "reason": "match-ceiling" }),
+            );
             assert_eq!(series["status"], "playing");
-            assert_match(&series["games"][5], &json!({ "gameNo": 6, "slots": [2, 2], "first": "p2" }));
+            assert_match(
+                &series["games"][5],
+                &json!({ "gameNo": 6, "slots": [2, 2], "first": "p2" }),
+            );
             let game6_id = series["nextMatchId"].as_str().unwrap_or_default().to_owned();
             let game6 = match_row(&app, &game6_id).await;
             assert_match(&game6, &json!({ "seed": "seed:6" }));
@@ -948,7 +1174,8 @@ mod results_m7_t2 {
         }
 
         #[tokio::test]
-        async fn r262_the_game_that_ends_the_series_moves_both_ratings_once_from_the_ratings_at_the_time_it_ends() {
+        async fn r262_the_game_that_ends_the_series_moves_both_ratings_once_from_the_ratings_at_the_time_it_ends()
+         {
             install_test_cards();
             let app = series_scenario().await;
             record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await;

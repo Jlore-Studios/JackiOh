@@ -21,7 +21,7 @@ use anyhow::{anyhow, bail};
 use indexmap::IndexMap;
 use serde::Serialize;
 
-use jackioh_engine::wire::{parse_game_record_lines, GameSource, DEV_RECORD_ID_PREFIX};
+use jackioh_engine::wire::{DEV_RECORD_ID_PREFIX, GameSource, parse_game_record_lines};
 
 use crate::cli::card_stats::literal;
 use crate::db::store::Db;
@@ -75,7 +75,10 @@ pub async fn import_dev_records(db: &Db, contents: &str) -> anyhow::Result<Impor
         );
     }
     // A development id cannot take a live game's place: a match id never begins this way.
-    if let Some(misnamed) = records.iter().find(|record| !record.id.starts_with(DEV_RECORD_ID_PREFIX)) {
+    if let Some(misnamed) = records
+        .iter()
+        .find(|record| !record.id.starts_with(DEV_RECORD_ID_PREFIX))
+    {
         bail!(
             "record {} is a development record whose id does not begin \"{DEV_RECORD_ID_PREFIX}\" (R378)",
             misnamed.id
@@ -93,7 +96,11 @@ pub async fn import_dev_records(db: &Db, contents: &str) -> anyhow::Result<Impor
             written += 1;
         }
     }
-    Ok(ImportOutcome { read: records.len(), written, skipped: records.len() - written })
+    Ok(ImportOutcome {
+        read: records.len(),
+        written,
+        skipped: records.len() - written,
+    })
 }
 
 /// TS `main()`: `stats-import`'s arguments after the subcommand (`main.rs`).

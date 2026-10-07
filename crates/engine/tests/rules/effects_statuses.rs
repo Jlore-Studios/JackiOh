@@ -54,9 +54,15 @@ mod e35_go_berserk {
     use super::*;
 
     #[test]
-    fn sets_the_status_marks_it_in_both_views_and_a_berserk_bot_loser_attacks_its_own_hero_at_its_start_of_turn() {
+    fn sets_the_status_marks_it_in_both_views_and_a_berserk_bot_loser_attacks_its_own_hero_at_its_start_of_turn()
+     {
         let mut state = playing("dc-berserk");
-        let bot = put(&mut state, &bot_loser.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let bot = put(
+            &mut state,
+            &bot_loser.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut events = Vec::new();
         {
@@ -68,7 +74,9 @@ mod e35_go_berserk {
             assert!(is_berserk(live(&*sink.state, &bot.id)));
             assert_eq!(
                 of_type(&*sink.events, "marked"),
-                vec![json!({ "type": "marked", "instanceId": bot.id, "mark": "berserk", "color": "red", "added": true })]
+                vec![
+                    json!({ "type": "marked", "instanceId": bot.id, "mark": "berserk", "color": "red", "added": true })
+                ]
             );
             // A second call changes nothing and says nothing.
             {
@@ -79,7 +87,11 @@ mod e35_go_berserk {
         }
         for viewer in [PlayerId::P1, PlayerId::P2] {
             let view = serde_json::to_value(view_for(&state, viewer)).expect("a view serialises");
-            let side = if viewer == PlayerId::P1 { &view["you"] } else { &view["opponent"] };
+            let side = if viewer == PlayerId::P1 {
+                &view["you"]
+            } else {
+                &view["opponent"]
+            };
             assert_eq!(side["units"][1]["berserk"], json!(true));
         }
 
@@ -92,13 +104,16 @@ mod e35_go_berserk {
         assert_eq!(after.players.p1.hero.health, 25);
         assert_eq!(
             of_type(&back.events, "attackDeclared"),
-            vec![json!({ "type": "attackDeclared", "attackerId": bot.id, "targetId": "hero-p1", "forced": true })]
+            vec![
+                json!({ "type": "attackDeclared", "attackerId": bot.id, "targetId": "hero-p1", "forced": true })
+            ]
         );
         assert!(replays_to(&game.start, &game.log, &after));
     }
 
     #[test]
-    fn a_unit_that_cant_go_berserk_does_not_and_the_status_goes_when_the_unit_leaves_the_field_not_with_its_text() {
+    fn a_unit_that_cant_go_berserk_does_not_and_the_status_goes_when_the_unit_leaves_the_field_not_with_its_text()
+     {
         let mut state = playing("dc-berserk-never");
         let calm = put(
             &mut state,
@@ -106,7 +121,12 @@ mod e35_go_berserk {
             slot(PlayerId::P1, Row::Units, 1),
             json!({ "radiant": true }),
         );
-        let wild = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let wild = put(
+            &mut state,
+            &grunt.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut events = Vec::new();
         {
@@ -121,7 +141,10 @@ mod e35_go_berserk {
             // Leaving the field resets it (R78).
             apply_effects(&[bounce(json_as(on(&wild.id)))], &mut ctx);
         }
-        assert_eq!(find_instance(&state, &wild.id).and_then(|card| card.berserk), None);
+        assert_eq!(
+            find_instance(&state, &wild.id).and_then(|card| card.berserk),
+            None
+        );
     }
 }
 
@@ -138,12 +161,26 @@ mod e35_may_attack_again {
     #[test]
     fn a_unit_that_has_attacked_gets_a_fresh_exertion_one_that_entered_this_turn_is_no_longer_sick() {
         let mut state = playing("dc-again");
-        let striker = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let fresh = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let striker = put(
+            &mut state,
+            &grunt.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let fresh = put(
+            &mut state,
+            &grunt.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         let turn = state.turn;
-        find_instance_mut(&mut state, &fresh.id).expect("the fresh unit").summoned_turn = Some(turn);
+        find_instance_mut(&mut state, &fresh.id)
+            .expect("the fresh unit")
+            .summoned_turn = Some(turn);
         let mut game = recorder(&state);
-        game.play(json!({ "type": "attack", "attackerId": striker.id, "targetId": "hero-p2", "playerId": "p1" }));
+        game.play(
+            json!({ "type": "attack", "attackerId": striker.id, "targetId": "hero-p2", "playerId": "p1" }),
+        );
         let mut now = game.state().clone();
         assert!(!has_attack(&now, &striker.id));
         assert!(!has_attack(&now, &fresh.id));
@@ -174,15 +211,25 @@ mod e35_may_attack_again {
     #[test]
     fn it_lends_no_attack_a_unit_could_not_otherwise_make() {
         let mut state = playing("dc-again-def");
-        let guard = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        find_instance_mut(&mut state, &guard.id).expect("the guard").position = Some(Position::Def);
+        let guard = put(
+            &mut state,
+            &grunt.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        find_instance_mut(&mut state, &guard.id)
+            .expect("the guard")
+            .position = Some(Position::Def);
         let guard_now = live(&state, &guard.id).clone();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut events = Vec::new();
         {
             let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
             let mut ctx = make_context(&mut sink, Some(&guard_now), HookOptions::default());
-            apply_effects(&[may_attack_again(json_as(json!({ "target": { "of": "self" } })))], &mut ctx);
+            apply_effects(
+                &[may_attack_again(json_as(json!({ "target": { "of": "self" } })))],
+                &mut ctx,
+            );
         }
         assert!(!can_attack(&state, live(&state, &guard.id), &enemy_hero()));
     }

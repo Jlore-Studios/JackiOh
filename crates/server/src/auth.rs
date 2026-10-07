@@ -197,7 +197,10 @@ pub enum AdminDeletion {
 
 fn as_record(value: Option<&Value>) -> IndexMap<String, Value> {
     match value {
-        Some(Value::Object(map)) => map.iter().map(|(key, value)| (key.clone(), value.clone())).collect(),
+        Some(Value::Object(map)) => map
+            .iter()
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect(),
         _ => IndexMap::new(),
     }
 }
@@ -216,7 +219,10 @@ fn as_auth_api_user(value: &Value) -> Option<AuthApiUser> {
     Some(AuthApiUser {
         id: id.to_string(),
         email: record.get("email").and_then(Value::as_str).map(str::to_string),
-        email_confirmed_at: record.get("email_confirmed_at").and_then(Value::as_str).map(str::to_string),
+        email_confirmed_at: record
+            .get("email_confirmed_at")
+            .and_then(Value::as_str)
+            .map(str::to_string),
         app_metadata: as_record(record.get("app_metadata")),
         mfa_enrolled: has_verified_totp(record.get("factors")),
     })
@@ -224,7 +230,9 @@ fn as_auth_api_user(value: &Value) -> Option<AuthApiUser> {
 
 /// R665: GoTrue's `factors` list holds a verified TOTP factor.
 fn has_verified_totp(factors: Option<&Value>) -> bool {
-    let Some(Value::Array(factors)) = factors else { return false };
+    let Some(Value::Array(factors)) = factors else {
+        return false;
+    };
     factors.iter().any(|factor| {
         factor.get("factor_type").and_then(Value::as_str) == Some("totp")
             && factor.get("status").and_then(Value::as_str) == Some("verified")
@@ -281,7 +289,9 @@ pub struct AdminAuthClient {
 /// The secret key never reaches a log line, `{:?}` included.
 impl std::fmt::Debug for AdminAuthClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AdminAuthClient").field("auth_base", &self.auth_base).finish_non_exhaustive()
+        f.debug_struct("AdminAuthClient")
+            .field("auth_base", &self.auth_base)
+            .finish_non_exhaustive()
     }
 }
 
@@ -296,7 +306,9 @@ impl AdminAuthClient {
             .header("apikey", &self.secret_key)
             .header("authorization", format!("Bearer {}", self.secret_key))
             .header("accept", "application/json")
-            .timeout(Duration::from_millis(AUTH_PROVIDER_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64))
+            .timeout(Duration::from_millis(
+                AUTH_PROVIDER_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64,
+            ))
             .send()
             .await
         {
@@ -306,7 +318,11 @@ impl AdminAuthClient {
         let status = response.status().as_u16();
         if !response.status().is_success() {
             // 404 is the auth server stating the user does not exist; anything else is a fault.
-            return if status == 404 { AdminLookup::Missing } else { AdminLookup::Unavailable };
+            return if status == 404 {
+                AdminLookup::Missing
+            } else {
+                AdminLookup::Unavailable
+            };
         }
         let body: Value = match response.json().await {
             Ok(body) => body,
@@ -329,7 +345,9 @@ impl AdminAuthClient {
             .header("authorization", format!("Bearer {}", self.secret_key))
             .header("accept", "application/json")
             .json(&json!({ "should_soft_delete": false }))
-            .timeout(Duration::from_millis(AUTH_PROVIDER_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64))
+            .timeout(Duration::from_millis(
+                AUTH_PROVIDER_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64,
+            ))
             .send()
             .await
         {
@@ -481,14 +499,24 @@ impl SupabaseAuth {
     pub fn new(input: SupabaseAuthInput) -> SupabaseAuth {
         let base_url = trim_trailing_slash(&input.url);
         let auth_base = format!("{base_url}/auth/v1");
-        let jwks_url = input.jwks_url.clone().unwrap_or_else(|| format!("{auth_base}/.well-known/jwks.json"));
+        let jwks_url = input
+            .jwks_url
+            .clone()
+            .unwrap_or_else(|| format!("{auth_base}/.well-known/jwks.json"));
         let http = reqwest::Client::new();
         let clients = create_real_clients(
-            &SupabaseAuthClientInput { url: base_url.clone(), secret_key: input.secret_key.clone() },
+            &SupabaseAuthClientInput {
+                url: base_url.clone(),
+                secret_key: input.secret_key.clone(),
+            },
             &http,
         );
         let key_cache = match input.key_set {
-            Some(keys) => KeyCache { keys: Some(keys), fetched_at: 0, fixed: true },
+            Some(keys) => KeyCache {
+                keys: Some(keys),
+                fetched_at: 0,
+                fixed: true,
+            },
             None => KeyCache::default(),
         };
         SupabaseAuth {
@@ -507,7 +535,10 @@ impl SupabaseAuth {
     }
 
     fn learn_mfa(&self, user: &AuthApiUser) {
-        let mut enrolled = self.mfa_enrolled.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut enrolled = self
+            .mfa_enrolled
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         if user.mfa_enrolled {
             enrolled.insert(user.id.clone());
         } else {
@@ -517,12 +548,18 @@ impl SupabaseAuth {
 
     /// R665: the token's level is short of what the account needs.
     fn missing_second_factor(&self, user_id: &str, aal: Option<&str>) -> bool {
-        let enrolled = self.mfa_enrolled.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let enrolled = self
+            .mfa_enrolled
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         aal != Some(SECOND_FACTOR_LEVEL) && enrolled.contains(user_id)
     }
 
     fn remember_confirmed(&self, user_id: &str, at: i64, email: Option<String>) {
-        let mut confirmed = self.confirmed.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut confirmed = self
+            .confirmed
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         confirmed.insert(user_id.to_string(), Confirmed { at, email });
     }
 
@@ -545,7 +582,10 @@ impl SupabaseAuth {
         if sub.is_empty() {
             return None;
         }
-        let session_id = payload.get("session_id").and_then(Value::as_str).filter(|id| !id.is_empty());
+        let session_id = payload
+            .get("session_id")
+            .and_then(Value::as_str)
+            .filter(|id| !id.is_empty());
         Some(LocalClaims {
             sub: sub.to_string(),
             email: payload.get("email").and_then(Value::as_str).map(str::to_string),
@@ -584,7 +624,12 @@ impl SupabaseAuth {
                 Some(algorithm) => Algorithm::try_from(algorithm).ok() == Some(header.alg),
                 None => true,
             })
-            .filter(|jwk| !matches!(jwk.common.public_key_use, Some(PublicKeyUse::Encryption | PublicKeyUse::Other(_))))
+            .filter(|jwk| {
+                !matches!(
+                    jwk.common.public_key_use,
+                    Some(PublicKeyUse::Encryption | PublicKeyUse::Other(_))
+                )
+            })
             .filter(|jwk| {
                 matches!(
                     (&jwk.algorithm, header.alg.family()),
@@ -602,7 +647,11 @@ impl SupabaseAuth {
     async fn keys_for(&self, header: &Header) -> Vec<DecodingKey> {
         let mut cache = self.key_set.lock().await;
         if cache.fixed {
-            return cache.keys.as_ref().map(|keys| Self::candidates(keys, header)).unwrap_or_default();
+            return cache
+                .keys
+                .as_ref()
+                .map(|keys| Self::candidates(keys, header))
+                .unwrap_or_default();
         }
         let now = (self.now)();
         if cache.keys.is_none() || now - cache.fetched_at >= JWKS_CACHE_MAX_AGE_MS {
@@ -614,7 +663,11 @@ impl SupabaseAuth {
                 None => return Vec::new(),
             }
         }
-        let found = cache.keys.as_ref().map(|keys| Self::candidates(keys, header)).unwrap_or_default();
+        let found = cache
+            .keys
+            .as_ref()
+            .map(|keys| Self::candidates(keys, header))
+            .unwrap_or_default();
         if !found.is_empty() || now - cache.fetched_at < JWKS_COOLDOWN_MS {
             return found;
         }
@@ -666,7 +719,9 @@ impl SupabaseAuth {
             .header("accept", "application/json")
             // The session check (R194) sits in front of API requests: a provider that hangs must cost
             // them a bounded wait, after which the answer is "unavailable" and the identity stands.
-            .timeout(Duration::from_millis(AUTH_PROVIDER_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64))
+            .timeout(Duration::from_millis(
+                AUTH_PROVIDER_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64,
+            ))
             .send()
             .await
         {
@@ -693,14 +748,20 @@ impl SupabaseAuth {
     /// §9.4 step 1's input, taken from the auth server rather than from the token.
     async fn authoritative_user(&self, user_id: &str) -> AdminLookup {
         let cached = {
-            let confirmed = self.confirmed.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+            let confirmed = self
+                .confirmed
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             confirmed.get(user_id).cloned()
         };
         if let Some(cached) = cached
             && (self.now)() - cached.at < EMAIL_CONFIRMED_CACHE_TTL_MS
         {
             let mfa_enrolled = {
-                let enrolled = self.mfa_enrolled.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+                let enrolled = self
+                    .mfa_enrolled
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
                 enrolled.contains(user_id)
             };
             return AdminLookup::Ok(AuthApiUser {
@@ -714,7 +775,9 @@ impl SupabaseAuth {
             });
         }
 
-        let Some(admin) = self.clients.admin.as_ref() else { return AdminLookup::Unavailable };
+        let Some(admin) = self.clients.admin.as_ref() else {
+            return AdminLookup::Unavailable;
+        };
         let lookup = admin.get_user_by_id(user_id).await;
         if let AdminLookup::Ok(user) = &lookup {
             self.learn_mfa(user);
@@ -732,7 +795,10 @@ impl SupabaseAuth {
     async fn check_session(&self, session_id: &str, sub: &str, token: &str) -> SessionCheck {
         let live_session_ttl_ms = AUTH_SESSION_LIVE_CACHE_SECONDS * MS_PER_SECOND;
         let seen = {
-            let live = self.live_sessions.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+            let live = self
+                .live_sessions
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             live.get(session_id).copied()
         };
         if let Some(at) = seen
@@ -747,7 +813,10 @@ impl SupabaseAuth {
             // token is never honoured on someone else's answer.
             AdminLookup::Ok(user) if user.id == sub => user,
             AdminLookup::Ok(_) | AdminLookup::Missing => {
-                let mut live = self.live_sessions.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+                let mut live = self
+                    .live_sessions
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
                 live.shift_remove(session_id);
                 return SessionCheck::Ended;
             }
@@ -755,7 +824,10 @@ impl SupabaseAuth {
 
         let checked_at = (self.now)();
         {
-            let mut live = self.live_sessions.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+            let mut live = self
+                .live_sessions
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             // Forget sessions whose answer has lapsed, so the map holds only the recently active ones.
             live.retain(|_, seen| checked_at - *seen < live_session_ttl_ms);
             live.insert(session_id.to_string(), checked_at);
@@ -849,7 +921,9 @@ impl SupabaseAuth {
         if self.hs_key.is_some() || !signed_with_shared_secret(token) {
             return None;
         }
-        let AdminLookup::Ok(user) = self.fetch_user_by_token(token).await else { return None };
+        let AdminLookup::Ok(user) = self.fetch_user_by_token(token).await else {
+            return None;
+        };
         self.learn_mfa(&user);
         // R665. The provider has just accepted this token, so its payload is the provider's own.
         let payload: Value = jsonwebtoken::dangerous::insecure_decode_claims(token).ok()?;
@@ -873,16 +947,24 @@ impl SupabaseAuth {
     // provider, which answers "no such user" (see `verify_access_token`).
     pub async fn delete_user(&self, user_id: &str) -> Result<(), AuthError> {
         let Some(admin) = self.clients.admin.as_ref() else {
-            return Err(AuthError::Unavailable(ACCOUNT_DELETION_UNAVAILABLE_MESSAGE.to_string()));
+            return Err(AuthError::Unavailable(
+                ACCOUNT_DELETION_UNAVAILABLE_MESSAGE.to_string(),
+            ));
         };
         if admin.delete_user(user_id).await == AdminDeletion::Unavailable {
             return Err(AuthError::Unavailable(ACCOUNT_DELETION_RETRY_MESSAGE.to_string()));
         }
         {
-            let mut confirmed = self.confirmed.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+            let mut confirmed = self
+                .confirmed
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             confirmed.shift_remove(user_id);
         }
-        let mut enrolled = self.mfa_enrolled.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut enrolled = self
+            .mfa_enrolled
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         enrolled.shift_remove(user_id);
         Ok(())
     }
@@ -898,7 +980,12 @@ impl SupabaseAuth {
 const E2E_FIXTURE_ACCOUNTS: &[(&str, &str, &str, &str)] = &[
     ("e2e-p1", "e2e-p1@jackioh.test", "e2e-p1-password", "e2e-token-p1"),
     ("e2e-p2", "e2e-p2@jackioh.test", "e2e-p2-password", "e2e-token-p2"),
-    ("e2e-pending", "e2e-pending@jackioh.test", "e2e-pending-password", "e2e-token-pending"),
+    (
+        "e2e-pending",
+        "e2e-pending@jackioh.test",
+        "e2e-pending-password",
+        "e2e-token-pending",
+    ),
 ];
 
 /// The plain error a fixture sign-in fails with; `api::auth::call_provider` turns it into the one
@@ -972,7 +1059,14 @@ impl E2eAuth {
         self.state.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    fn register(&self, user_id: &str, email: &str, email_verified: bool, password: Option<&str>, token: &str) {
+    fn register(
+        &self,
+        user_id: &str,
+        email: &str,
+        email_verified: bool,
+        password: Option<&str>,
+        token: &str,
+    ) {
         let mut state = self.lock();
         state.users.insert(
             user_id.to_string(),
@@ -1026,7 +1120,9 @@ impl E2eAuth {
             entry.user.email.as_deref().map(str::to_lowercase).as_deref() == Some(wanted.as_str())
         });
         // A plain error, not an unavailable one: the route turns it into the one 401.
-        let Some(entry) = found else { return Err(AuthError::Rejected(INVALID_LOGIN_CREDENTIALS.to_string())) };
+        let Some(entry) = found else {
+            return Err(AuthError::Rejected(INVALID_LOGIN_CREDENTIALS.to_string()));
+        };
         if entry.password.as_deref() != Some(password) {
             return Err(AuthError::Rejected(INVALID_LOGIN_CREDENTIALS.to_string()));
         }
@@ -1036,16 +1132,21 @@ impl E2eAuth {
             .find(|(_, owner)| **owner == entry.user.user_id)
             .map(|(token, _)| token.clone())
             .unwrap_or_default();
-        Ok(Session { access_token: token, refresh_token: None, expires_at: None, user: entry.user.clone() })
+        Ok(Session {
+            access_token: token,
+            refresh_token: None,
+            expires_at: None,
+            user: entry.user.clone(),
+        })
     }
 
     // A deleted user's tokens stop verifying, as the real provider's session check makes them.
     pub fn delete_user(&self, user_id: &str) -> Result<(), AuthError> {
         let mut state = self.lock();
         match state.deletion.clone() {
-            E2eDeletion::Unsupported => {
-                Err(AuthError::Unavailable(ACCOUNT_DELETION_UNAVAILABLE_MESSAGE.to_string()))
-            }
+            E2eDeletion::Unsupported => Err(AuthError::Unavailable(
+                ACCOUNT_DELETION_UNAVAILABLE_MESSAGE.to_string(),
+            )),
             E2eDeletion::Fails(message) => Err(AuthError::Unavailable(message)),
             E2eDeletion::Deletes => {
                 state.users.shift_remove(user_id);

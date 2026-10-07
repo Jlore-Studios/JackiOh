@@ -146,7 +146,13 @@ fn both(script: Script) -> CardScripts {
 }
 
 fn mod_defs() -> Vec<CardDef> {
-    vec![delayed_bolt(), kpop_fanatic(), end_of_turn_drawer(), cost_five(), cheap_spell()]
+    vec![
+        delayed_bolt(),
+        kpop_fanatic(),
+        end_of_turn_drawer(),
+        cost_five(),
+        cheap_spell(),
+    ]
 }
 
 thread_local! {
@@ -181,7 +187,9 @@ fn mod_scripts() -> Vec<(String, CardScripts)> {
                 delayed: Some(hook(|ctx| {
                     record_self_at_resume(ctx.self_.as_ref().map(|card| card.id.clone()));
                     let amount = ctx.data.get("amount").and_then(Value::as_i64).unwrap_or(0) as i32;
-                    vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))]
+                    vec![damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": amount }),
+                    ))]
                 })),
                 ..Script::default()
             }),
@@ -190,7 +198,12 @@ fn mod_scripts() -> Vec<(String, CardScripts)> {
             kpop_fanatic().id,
             both(Script {
                 delayed: Some(hook(|ctx| {
-                    let target = ctx.data.get("target").and_then(Value::as_str).unwrap_or("").to_string();
+                    let target = ctx
+                        .data
+                        .get("target")
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_string();
                     vec![steal(json_as(json!({ "instanceId": target })))]
                 })),
                 ..Script::default()
@@ -254,9 +267,15 @@ fn playing(seed: &str) -> GameState {
     register_scripts(scripts);
     let mut state = begin_game(&fresh).state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|card| card.id.clone()).collect();
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+    );
     let keep: Vec<String> = state.players.p2.hand.iter().map(|card| card.id.clone()).collect();
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+    );
     state
 }
 
@@ -328,7 +347,13 @@ fn cost(state: &GameState, card: &CardInstance) -> i32 {
 }
 
 fn mod_ids(state: &GameState) -> Vec<String> {
-    state.players.p1.mods.iter().map(|modifier| modifier.id.clone()).collect()
+    state
+        .players
+        .p1
+        .mods
+        .iter()
+        .map(|modifier| modifier.id.clone())
+        .collect()
 }
 
 fn json_of<T: Serialize>(value: T) -> Value {
@@ -429,7 +454,8 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
     }
 
     #[test]
-    fn r48_a_next_turn_of_modifier_does_nothing_on_the_turn_it_was_made_and_applies_on_that_players_next_turn() {
+    fn r48_a_next_turn_of_modifier_does_nothing_on_the_turn_it_was_made_and_applies_on_that_players_next_turn()
+     {
         let mut state = playing("curvature-timing");
         let four = one(in_hand(&mut state, &indestructible.id, P1, 1));
 
@@ -438,7 +464,10 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
         let modifier = add_modifier(
             &mut sink_for(&mut state),
             P1,
-            ModifierExpiry::NextTurnOf { player: P1, from_turn },
+            ModifierExpiry::NextTurnOf {
+                player: P1,
+                from_turn,
+            },
             curvature(),
         );
 
@@ -463,7 +492,10 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
         let modifier = add_modifier(
             &mut sink_for(&mut state),
             P1,
-            ModifierExpiry::NextTurnOf { player: P1, from_turn },
+            ModifierExpiry::NextTurnOf {
+                player: P1,
+                from_turn,
+            },
             curvature(),
         );
 
@@ -532,14 +564,18 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
     }
 
     #[test]
-    fn r48_a_next_turn_of_modifier_expires_at_the_cleanup_of_that_players_next_turn_and_not_at_the_other_players() {
+    fn r48_a_next_turn_of_modifier_expires_at_the_cleanup_of_that_players_next_turn_and_not_at_the_other_players()
+     {
         let mut state = playing("next-turn-expiry");
         let from_turn = state.turn;
         let mut sink = sink_for(&mut state);
         let modifier = add_modifier(
             &mut sink,
             P1,
-            ModifierExpiry::NextTurnOf { player: P1, from_turn },
+            ModifierExpiry::NextTurnOf {
+                player: P1,
+                from_turn,
+            },
             curvature(),
         );
 
@@ -641,7 +677,12 @@ mod delayed_effects_10_1_r62_r68 {
     #[test]
     fn s10_1_due_delayed_hands_back_only_the_effects_due_for_that_phase_and_player_in_creation_order() {
         let mut state = playing("due-delayed");
-        let bolt = put(&mut state, &delayed_bolt().id, slot(P1, Row::Units, 1), Default::default());
+        let bolt = put(
+            &mut state,
+            &delayed_bolt().id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         let mut sink = sink_for(&mut state);
         let bolt_id = delayed_bolt().id;
 
@@ -686,18 +727,33 @@ mod delayed_effects_10_1_r62_r68 {
             ids(due_delayed(sink.state, Phase::Start, P1)),
             vec![start_a.id.clone(), start_d.id.clone()]
         );
-        assert_eq!(ids(due_delayed(sink.state, Phase::End, P1)), vec![end_b.id.clone()]);
-        assert_eq!(ids(due_delayed(sink.state, Phase::Start, P2)), vec![start_c.id.clone()]);
+        assert_eq!(
+            ids(due_delayed(sink.state, Phase::End, P1)),
+            vec![end_b.id.clone()]
+        );
+        assert_eq!(
+            ids(due_delayed(sink.state, Phase::Start, P2)),
+            vec![start_c.id.clone()]
+        );
         assert!(due_delayed(sink.state, Phase::End, P2).is_empty());
 
         drop_delayed(sink.state, &start_a.id);
-        assert_eq!(ids(due_delayed(sink.state, Phase::Start, P1)), vec![start_d.id.clone()]);
+        assert_eq!(
+            ids(due_delayed(sink.state, Phase::Start, P1)),
+            vec![start_d.id.clone()]
+        );
     }
 
     #[test]
-    fn r62_start_of_turn_delayed_effects_resolve_before_the_start_of_turn_triggers_and_the_draw_in_creation_order() {
+    fn r62_start_of_turn_delayed_effects_resolve_before_the_start_of_turn_triggers_and_the_draw_in_creation_order()
+     {
         let mut state = playing("delayed-start");
-        let bolt = put(&mut state, &delayed_bolt().id, slot(P1, Row::Units, 1), Default::default());
+        let bolt = put(
+            &mut state,
+            &delayed_bolt().id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         {
             let mut sink = sink_for(&mut state);
             schedule_delayed(
@@ -740,10 +796,21 @@ mod delayed_effects_10_1_r62_r68 {
     }
 
     #[test]
-    fn r62_end_of_turn_delayed_effects_resolve_after_the_end_of_turn_triggers_and_before_cleanup_in_creation_order() {
+    fn r62_end_of_turn_delayed_effects_resolve_after_the_end_of_turn_triggers_and_before_cleanup_in_creation_order()
+     {
         let mut state = playing("delayed-end");
-        put(&mut state, &end_of_turn_drawer().id, slot(P1, Row::Units, 1), Default::default());
-        let bolt = put(&mut state, &delayed_bolt().id, slot(P1, Row::Units, 2), Default::default());
+        put(
+            &mut state,
+            &end_of_turn_drawer().id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        let bolt = put(
+            &mut state,
+            &delayed_bolt().id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
         {
             let mut sink = sink_for(&mut state);
             schedule_delayed(
@@ -786,7 +853,12 @@ mod delayed_effects_10_1_r62_r68 {
     #[test]
     fn s8_50_k_pop_fanatics_steal_fires_at_the_next_start_of_turn_after_the_unit_has_died_r76() {
         let mut state = playing("kpop-fanatic");
-        let kpop = put(&mut state, &kpop_fanatic().id, slot(P1, Row::Units, 1), Default::default());
+        let kpop = put(
+            &mut state,
+            &kpop_fanatic().id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         let prize = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
 
         {
@@ -802,10 +874,19 @@ mod delayed_effects_10_1_r62_r68 {
             );
 
             // K-Pop Fanatic dies well before its own effect is due.
-            find_instance_mut(sink.state, &kpop.id).expect("K-Pop Fanatic").damage = 5;
+            find_instance_mut(sink.state, &kpop.id)
+                .expect("K-Pop Fanatic")
+                .damage = 5;
             state_check(&mut sink);
             assert!(sink.state.players.p1.units[0].is_none());
-            assert!(sink.state.players.p1.graveyard.iter().any(|card| card.id == kpop.id));
+            assert!(
+                sink.state
+                    .players
+                    .p1
+                    .graveyard
+                    .iter()
+                    .any(|card| card.id == kpop.id)
+            );
         }
 
         // R76: it fires at p1's next start of turn all the same.

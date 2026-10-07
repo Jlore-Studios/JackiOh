@@ -29,7 +29,10 @@ use serde_json::{Map, Value, json};
 
 use crate::app::{App, Handler, Route};
 use crate::auth::AuthUser;
-use crate::config::{API_MAX_BODY_BYTES, API_REQUESTS_PER_MINUTE, IPV6_RATE_LIMIT_PREFIX_BITS, MAX_TRUSTED_PROXY_HOPS, RATING_START};
+use crate::config::{
+    API_MAX_BODY_BYTES, API_REQUESTS_PER_MINUTE, IPV6_RATE_LIMIT_PREFIX_BITS, MAX_TRUSTED_PROXY_HOPS,
+    RATING_START,
+};
 use crate::db::store::{Profile, ProfileCreateInput, ProfileStatus, StoreError};
 
 // ---------------------------------------------------------------------------
@@ -131,11 +134,21 @@ pub struct ApiError {
 
 impl ApiError {
     pub fn new(code: ApiErrorCode, message: impl Into<String>) -> ApiError {
-        ApiError { code, message: message.into(), details: None, retry_after_ms: None }
+        ApiError {
+            code,
+            message: message.into(),
+            details: None,
+            retry_after_ms: None,
+        }
     }
 
     pub fn with_details(code: ApiErrorCode, message: impl Into<String>, details: Value) -> ApiError {
-        ApiError { code, message: message.into(), details: Some(details), retry_after_ms: None }
+        ApiError {
+            code,
+            message: message.into(),
+            details: Some(details),
+            retry_after_ms: None,
+        }
     }
 
     /// TS's `throw new Error(message)` inside a handler: the router turns it into a 500 whose body
@@ -173,8 +186,13 @@ impl ApiError {
         struct Envelope<'a> {
             error: Fields<'a>,
         }
-        let envelope =
-            Envelope { error: Fields { code: self.code.as_str(), message: &self.message, details: self.details.as_ref() } };
+        let envelope = Envelope {
+            error: Fields {
+                code: self.code.as_str(),
+                message: &self.message,
+                details: self.details.as_ref(),
+            },
+        };
         serde_json::to_string(&envelope).unwrap_or_else(|_| self.body().to_string())
     }
 }
@@ -228,10 +246,16 @@ fn retry_after_ms_of(error: &ApiError) -> Option<f64> {
         return None;
     }
     if let Some(wait) = error.retry_after_ms
-        && wait >= 0 {
-            return Some(wait as f64);
-        }
-    let wait = error.details.as_ref()?.as_object()?.get("retryAfterMs")?.as_f64()?;
+        && wait >= 0
+    {
+        return Some(wait as f64);
+    }
+    let wait = error
+        .details
+        .as_ref()?
+        .as_object()?
+        .get("retryAfterMs")?
+        .as_f64()?;
     if !wait.is_finite() || wait < 0.0 {
         return None;
     }
@@ -250,9 +274,10 @@ fn json_response(status: u16, text: String, cache_control: &str, retry_after: Op
         headers.insert(header::CACHE_CONTROL, value);
     }
     if let Some(wait) = retry_after
-        && let Ok(value) = HeaderValue::from_str(&wait) {
-            headers.insert(header::RETRY_AFTER, value);
-        }
+        && let Ok(value) = HeaderValue::from_str(&wait)
+    {
+        headers.insert(header::RETRY_AFTER, value);
+    }
     response
 }
 
@@ -284,7 +309,12 @@ pub fn error_response(error: &ApiError) -> Response {
         None => json_response(error.status(), text, NO_STORE, None),
         Some(wait) => {
             let seconds = (wait / 1000.0).ceil();
-            json_response(error.status(), text, NO_STORE, Some(format!("{}", seconds as i64)))
+            json_response(
+                error.status(),
+                text,
+                NO_STORE,
+                Some(format!("{}", seconds as i64)),
+            )
         }
     }
 }
@@ -329,9 +359,16 @@ pub const UNKNOWN_CLIENT_ADDRESS: &str = "unknown";
 /// A header's value as text (every value of a repeated header, joined as the Fetch API's
 /// `Headers.get` joins them), or none when the header is absent.
 fn header_text(headers: &HeaderMap, name: &str) -> Option<String> {
-    let values: Vec<String> =
-        headers.get_all(name).iter().map(|value| String::from_utf8_lossy(value.as_bytes()).into_owned()).collect();
-    if values.is_empty() { None } else { Some(values.join(", ")) }
+    let values: Vec<String> = headers
+        .get_all(name)
+        .iter()
+        .map(|value| String::from_utf8_lossy(value.as_bytes()).into_owned())
+        .collect();
+    if values.is_empty() {
+        None
+    } else {
+        Some(values.join(", "))
+    }
 }
 
 /// Every `X-Forwarded-For` entry, split on commas and trimmed, with empty entries dropped.
@@ -339,7 +376,10 @@ fn forwarded_entries(headers: &HeaderMap) -> Vec<String> {
     let Some(raw) = header_text(headers, "x-forwarded-for") else {
         return Vec::new();
     };
-    raw.split(',').map(|entry| entry.trim().to_string()).filter(|entry| !entry.is_empty()).collect()
+    raw.split(',')
+        .map(|entry| entry.trim().to_string())
+        .filter(|entry| !entry.is_empty())
+        .collect()
 }
 
 /// SPEC §11 R190: the address a per-IP limit counts (§9.4 step 3, R157).
@@ -357,12 +397,18 @@ fn forwarded_entries(headers: &HeaderMap) -> Vec<String> {
 /// address, or on `UNKNOWN_CLIENT_ADDRESS` when the host gave none.
 pub fn client_address(headers: &HeaderMap, peer_address: Option<&str>, trusted_proxy_hops: usize) -> String {
     let entries = forwarded_entries(headers);
-    if trusted_proxy_hops >= 1 && entries.len() >= trusted_proxy_hops
-        && let Some(entry) = entries.get(entries.len() - trusted_proxy_hops) {
-            return entry.clone();
-        }
+    if trusted_proxy_hops >= 1
+        && entries.len() >= trusted_proxy_hops
+        && let Some(entry) = entries.get(entries.len() - trusted_proxy_hops)
+    {
+        return entry.clone();
+    }
     let peer = peer_address.map(str::trim).unwrap_or("");
-    if peer.is_empty() { UNKNOWN_CLIENT_ADDRESS.to_string() } else { peer.to_string() }
+    if peer.is_empty() {
+        UNKNOWN_CLIENT_ADDRESS.to_string()
+    } else {
+        peer.to_string()
+    }
 }
 
 /// An IPv6 address as its eight 16-bit groups, or none when it is not one. A trailing dotted IPv4
@@ -400,13 +446,21 @@ fn bracketed_host(address: &str) -> Option<&str> {
         return Some(host);
     }
     let port = after.strip_prefix(':')?;
-    if is_digits(port, usize::MAX) { Some(host) } else { None }
+    if is_digits(port, usize::MAX) {
+        Some(host)
+    } else {
+        None
+    }
 }
 
 /// TS `/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/`: the IPv4 address without its port, when it has one.
 fn ipv4_without_port(address: &str) -> Option<&str> {
     let (host, port) = address.split_once(':')?;
-    if is_dotted_quad_shape(host) && is_digits(port, usize::MAX) { Some(host) } else { None }
+    if is_dotted_quad_shape(host) && is_digits(port, usize::MAX) {
+        Some(host)
+    } else {
+        None
+    }
 }
 
 /// SPEC §11 R190: the key a per-IP limit counts an address under, before it is hashed, with the
@@ -456,7 +510,11 @@ pub fn rate_limit_address_with_prefix(raw: &str, prefix_bits: i64) -> String {
         .enumerate()
         .map(|(index, group)| {
             let keep = (bits - index as i64 * 16).clamp(0, 16);
-            let value = if keep == 0 { 0 } else { u32::from(*group) & ((0xffff_u32 << (16 - keep)) & 0xffff) };
+            let value = if keep == 0 {
+                0
+            } else {
+                u32::from(*group) & ((0xffff_u32 << (16 - keep)) & 0xffff)
+            };
             format!("{value:x}")
         })
         .collect();
@@ -491,10 +549,13 @@ async fn read_body_text(headers: &HeaderMap, body: Body) -> Result<String, ApiEr
     let cap = API_MAX_BODY_BYTES;
     if let Some(declared) = header_text(headers, "content-length")
         && let Ok(length) = declared.trim().parse::<f64>()
-            && length > cap as f64 {
-                return Err(body_too_large());
-            }
-    let bytes = axum::body::to_bytes(body, cap).await.map_err(|_| body_too_large())?;
+        && length > cap as f64
+    {
+        return Err(body_too_large());
+    }
+    let bytes = axum::body::to_bytes(body, cap)
+        .await
+        .map_err(|_| body_too_large())?;
     let text = String::from_utf8_lossy(&bytes).into_owned();
     // TS's `TextDecoder` drops a leading byte-order mark.
     Ok(match text.strip_prefix('\u{feff}') {
@@ -511,7 +572,8 @@ async fn read_body(method: &Method, headers: &HeaderMap, body: Body) -> Result<V
     if text.trim().is_empty() {
         return Ok(Value::Object(Map::new()));
     }
-    let parsed: Value = serde_json::from_str(&text).map_err(|_| bad_request("the request body must be JSON"))?;
+    let parsed: Value =
+        serde_json::from_str(&text).map_err(|_| bad_request("the request body must be JSON"))?;
     if !parsed.is_object() {
         return Err(bad_request("the request body must be a JSON object"));
     }
@@ -543,7 +605,11 @@ pub fn bool(body: &Value, key: &str) -> Result<bool, ApiError> {
 }
 
 fn strings_of(value: &Value) -> Option<Vec<String>> {
-    value.as_array()?.iter().map(|entry| entry.as_str().map(str::to_string)).collect()
+    value
+        .as_array()?
+        .iter()
+        .map(|entry| entry.as_str().map(str::to_string))
+        .collect()
 }
 
 pub fn string_list(body: &Value, key: &str) -> Result<Vec<String>, ApiError> {
@@ -555,7 +621,10 @@ pub fn string_list(body: &Value, key: &str) -> Result<Vec<String>, ApiError> {
 pub fn deck_list(body: &Value, key: &str) -> Result<Vec<Vec<String>>, ApiError> {
     let bad = || bad_request(format!("\"{key}\" must be an array of arrays of card ids"));
     let decks = body.get(key).and_then(Value::as_array).ok_or_else(bad)?;
-    decks.iter().map(|deck| strings_of(deck).ok_or_else(bad)).collect()
+    decks
+        .iter()
+        .map(|deck| strings_of(deck).ok_or_else(bad))
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -689,7 +758,10 @@ pub async fn resolve_caller(app: &App, headers: &HeaderMap) -> Result<Caller, Ap
     let mut tx = app.db.begin(None).await?;
     if let Some(existing) = tx.profiles_get_by_user_id(&user.user_id).await? {
         tx.commit().await?;
-        return Ok(Caller { profile: existing, user });
+        return Ok(Caller {
+            profile: existing,
+            user,
+        });
     }
 
     let profile = tx
@@ -708,10 +780,16 @@ pub async fn resolve_caller(app: &App, headers: &HeaderMap) -> Result<Caller, Ap
 /// §9.4: the gate. Public so a non-HTTP caller (the WebSocket upgrade) uses the same rule.
 pub fn assert_active(profile: &Profile) -> Result<(), ApiError> {
     if matches!(profile.status, ProfileStatus::Banned) {
-        return Err(ApiError::new(ApiErrorCode::AccountBanned, "this account is banned"));
+        return Err(ApiError::new(
+            ApiErrorCode::AccountBanned,
+            "this account is banned",
+        ));
     }
     if matches!(profile.status, ProfileStatus::Pending) {
-        return Err(ApiError::new(ApiErrorCode::AccountPending, "redeem an invite code to activate this account"));
+        return Err(ApiError::new(
+            ApiErrorCode::AccountPending,
+            "redeem an invite code to activate this account",
+        ));
     }
     Ok(())
 }
@@ -784,7 +862,9 @@ impl RateLimiter {
         let mut state = lock(&self.state);
         if now - state.swept_at >= window {
             state.swept_at = now;
-            state.hits.retain(|_, times| times.back().copied().unwrap_or(0) > now - window);
+            state
+                .hits
+                .retain(|_, times| times.back().copied().unwrap_or(0) > now - window);
         }
 
         let times = state.hits.entry(key.to_string()).or_default();
@@ -887,7 +967,9 @@ pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Res
             parts
                 .extensions
                 .get::<ConnectInfo<SocketAddr>>()
-                .map(|info| RequestContext { peer_address: Some(info.0.ip().to_string()) })
+                .map(|info| RequestContext {
+                    peer_address: Some(info.0.ip().to_string()),
+                })
         })
         .unwrap_or_default();
     let trusted_proxy_hops = app.env.trusted_proxy_hops;
@@ -896,7 +978,10 @@ pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Res
         let entries = forwarded_entries(&parts.headers).len();
         let capped = entries.min(MAX_TRUSTED_PROXY_HOPS + 1);
         if app.limiter.note_forwarded(capped) {
-            log_info("api.forwarded_for", json!({ "fewestEntries": entries, "trustedProxyHops": trusted_proxy_hops }));
+            log_info(
+                "api.forwarded_for",
+                json!({ "fewestEntries": entries, "trustedProxyHops": trusted_proxy_hops }),
+            );
         }
     }
 
@@ -911,8 +996,18 @@ pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Res
             continue;
         }
         let body = body.take().unwrap_or_else(Body::empty);
-        let outcome =
-            run_route(app, *auth, *handler, params, &parts, body, &context, trusted_proxy_hops, &path).await;
+        let outcome = run_route(
+            app,
+            *auth,
+            *handler,
+            params,
+            &parts,
+            body,
+            &context,
+            trusted_proxy_hops,
+            &path,
+        )
+        .await;
         return match outcome {
             Ok(response) => response,
             Err(error) if error.code == ApiErrorCode::Internal => {
@@ -924,7 +1019,10 @@ pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Res
     }
 
     if path_matched {
-        return error_response(&ApiError::new(ApiErrorCode::NotFound, "method not allowed for this path"));
+        return error_response(&ApiError::new(
+            ApiErrorCode::NotFound,
+            "method not allowed for this path",
+        ));
     }
     error_response(&ApiError::new(ApiErrorCode::NotFound, "no such endpoint"))
 }
@@ -946,8 +1044,11 @@ async fn run_route(
     // the request alike, and read as R190 says: the rightmost trusted hop, then the peer, with an
     // IPv6 client counted by its /56.
     let hashes = crate::api::crypto::hashes_for_pepper(&app.env.code_pepper);
-    let address =
-        hashes.ip(&rate_limit_address(&client_address(&parts.headers, context.peer_address.as_deref(), trusted_proxy_hops)));
+    let address = hashes.ip(&rate_limit_address(&client_address(
+        &parts.headers,
+        context.peer_address.as_deref(),
+        trusted_proxy_hops,
+    )));
 
     // An address whose own budget is spent is refused BEFORE its token is resolved. Resolving a
     // token that does not verify locally can cost a round trip to the auth provider, and a flood of
@@ -988,16 +1089,20 @@ async fn run_route(
         // §9.8: "Every rejected action is logged with its reason."
         log_warn("api.rate_limited", json!({ "path": path, "key": key }));
         // R192: the refusal says how long until the oldest counted request leaves the window.
-        return Err(rate_limited("too many requests; slow down", app.limiter.retry_after_ms(&key, now)));
+        return Err(rate_limited(
+            "too many requests; slow down",
+            app.limiter.retry_after_ms(&key, now),
+        ));
     }
 
     if let Some(error) = auth_error {
         return Err(error);
     }
     if auth == AuthLevel::Active
-        && let Some(resolved) = &caller {
-            assert_active(&resolved.profile)?;
-        }
+        && let Some(resolved) = &caller
+    {
+        assert_active(&resolved.profile)?;
+    }
 
     let req = Req {
         caller,
@@ -1018,7 +1123,6 @@ async fn run_route(
 /// anchored once and advanced by tokio's, so a test's `tokio::time::pause()` and `advance()` move it;
 /// SURFACE §11.3: `Timers` → `tokio::time`). Re-exported so every API module reads the same clock.
 pub use crate::app::now_ms;
-
 
 // ---------------------------------------------------------------------------
 // Logging (TS `consoleLogger`, SURFACE §11.3: `tracing` JSON lines with the same event names)

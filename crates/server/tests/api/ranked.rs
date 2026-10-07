@@ -23,7 +23,9 @@ use jackioh_server::api::ranked::{
 };
 use jackioh_server::api::results::record_result;
 use jackioh_server::app::App;
-use jackioh_server::config::{JLORIOUS_SIZE, RANK_PLACEMENT_GAMES, RATING_DEVIATION_START, SEASON_RESET_STRENGTH};
+use jackioh_server::config::{
+    JLORIOUS_SIZE, RANK_PLACEMENT_GAMES, RATING_DEVIATION_START, SEASON_RESET_STRENGTH,
+};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{BotRating, Db, MatchRow, SeriesRow};
 use jackioh_server::ranked::glicko2::START_GLICKO;
@@ -83,7 +85,10 @@ fn assert_matches(actual: &Value, expected: &Value, at: &str) {
 
 /// Jest's `toBeCloseTo(expected, 9)`.
 fn assert_close(actual: f64, expected: f64) {
-    assert!((actual - expected).abs() < 0.5e-9, "{actual} is not close to {expected}");
+    assert!(
+        (actual - expected).abs() < 0.5e-9,
+        "{actual} is not close to {expected}"
+    );
 }
 
 /// The fake store behind the test app (TS `deps.store`).
@@ -117,8 +122,14 @@ fn season() -> String {
 fn next_minor(patch: &str) -> String {
     let digits = patch.trim_start_matches('v');
     let mut parts = digits.split(['.', '-']);
-    let major: u32 = parts.next().and_then(|part| part.parse().ok()).expect("a major version");
-    let minor: u32 = parts.next().and_then(|part| part.parse().ok()).expect("a minor version");
+    let major: u32 = parts
+        .next()
+        .and_then(|part| part.parse().ok())
+        .expect("a major version");
+    let minor: u32 = parts
+        .next()
+        .and_then(|part| part.parse().ok())
+        .expect("a minor version");
     format!("v{major}.{}.0", minor + 1)
 }
 
@@ -160,7 +171,9 @@ fn bot(bot_id: &str) -> Value {
 async fn rate(app: &App, input: Value) -> Value {
     let input: RankedGameInput = from(input);
     let mut t = app.db.begin(None).await.expect("begin");
-    let row = rate_ranked_game(&mut t, app, &input).await.expect("rateRankedGame");
+    let row = rate_ranked_game(&mut t, app, &input)
+        .await
+        .expect("rateRankedGame");
     t.commit().await.expect("commit");
     json_of(&row)
 }
@@ -238,13 +251,18 @@ mod r609_seasons_on_the_server {
             "first",
         );
         let again = open_season(&app).await.expect("openSeason");
-        assert_matches(&json_of(&again), &json!({ "opened": false, "reset": null }), "again");
+        assert_matches(
+            &json_of(&again),
+            &json!({ "opened": false, "reset": null }),
+            "again",
+        );
         assert_eq!(fake(&app).await.tables.seasons.len(), 1);
         assert_eq!(rating_of(&profile(&app, A).await), 1300.0);
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r609_a_new_minor_version_opens_the_next_season_with_a_soft_reset_of_every_rated_player_and_nobody_else() {
+    async fn r609_a_new_minor_version_opens_the_next_season_with_a_soft_reset_of_every_rated_player_and_nobody_else()
+     {
         let app = test_app().await;
         seed_profile(&app, json!({ "id": A, "rating": 1000 })).await;
         seed_profile(&app, json!({ "id": B, "rating": 1000 })).await;
@@ -256,11 +274,16 @@ mod r609_seasons_on_the_server {
         let a = profile(&app, A).await;
         let b = profile(&app, B).await;
         let bot_before = json_of(&store!(app, ranked_bot("ai-hard")));
-        assert!(!a.is_null() && !b.is_null() && !bot_before.is_null(), "premise: all three were rated");
+        assert!(
+            !a.is_null() && !b.is_null() && !bot_before.is_null(),
+            "premise: all three were rated"
+        );
         let mean = (rating_of(&a) + rating_of(&b)) / 2.0;
 
         let next_patch = next_minor(&patch());
-        let deps = SeasonDeps { patch_version: next_patch.clone() };
+        let deps = SeasonDeps {
+            patch_version: next_patch.clone(),
+        };
         let mut t = app.db.begin(None).await.expect("begin");
         let next = open_season_in_tx(&mut t, &deps).await.expect("openSeason");
         t.commit().await.expect("commit");
@@ -274,8 +297,14 @@ mod r609_seasons_on_the_server {
             "next",
         );
         let after = [profile(&app, A).await, profile(&app, B).await];
-        assert_close(rating_of(&after[0]), mean + (rating_of(&a) - mean) * (1.0 - SEASON_RESET_STRENGTH));
-        assert_close(rating_of(&after[1]), mean + (rating_of(&b) - mean) * (1.0 - SEASON_RESET_STRENGTH));
+        assert_close(
+            rating_of(&after[0]),
+            mean + (rating_of(&a) - mean) * (1.0 - SEASON_RESET_STRENGTH),
+        );
+        assert_close(
+            rating_of(&after[1]),
+            mean + (rating_of(&b) - mean) * (1.0 - SEASON_RESET_STRENGTH),
+        );
         assert!(
             after[0]["ratingDeviation"].as_f64() > a["ratingDeviation"].as_f64(),
             "the reset widens the deviation"
@@ -308,7 +337,13 @@ mod r609_seasons_on_the_server {
         seed_profile(&app, json!({ "id": B })).await;
         let row = rate(&app, game("m-1", [player(A), player(B)], None, 1)).await;
         assert_eq!(row["seasonId"], json!(season()));
-        let ids: Vec<String> = fake(&app).await.tables.seasons.iter().map(|season| season.id.clone()).collect();
+        let ids: Vec<String> = fake(&app)
+            .await
+            .tables
+            .seasons
+            .iter()
+            .map(|season| season.id.clone())
+            .collect();
         assert_eq!(ids, vec![season()]);
     }
 }
@@ -325,7 +360,14 @@ mod r605_placements_through_rated_games {
         let app = test_app().await;
         // A placed field to be read against, rated 700 to 1300.
         for n in 0..7 {
-            seed_placed(&app, &format!("field-{n}"), 700.0 + 100.0 * f64::from(n), tier_bottom(1), json!({})).await;
+            seed_placed(
+                &app,
+                &format!("field-{n}"),
+                700.0 + 100.0 * f64::from(n),
+                tier_bottom(1),
+                json!({}),
+            )
+            .await;
         }
         seed_profile(&app, json!({ "id": A })).await;
         seed_profile(&app, json!({ "id": B })).await;
@@ -357,7 +399,10 @@ mod r605_placements_through_rated_games {
         seed_profile(&app, json!({ "id": B })).await;
         let first = rate(&app, game("m-1", [player(A), player(B)], Some(0), 1)).await;
         let before = profile(&app, A).await;
-        assert_eq!(rate(&app, game("m-1", [player(A), player(B)], Some(1), 1)).await, first);
+        assert_eq!(
+            rate(&app, game("m-1", [player(A), player(B)], Some(1), 1)).await,
+            first
+        );
         assert_eq!(profile(&app, A).await, before);
         assert_eq!(fake(&app).await.tables.rated_games.len(), 1);
     }
@@ -371,7 +416,8 @@ mod r610_bots {
     use super::*;
 
     #[tokio::test(start_paused = true)]
-    async fn r610_a_bot_is_rated_like_a_player_from_its_own_rating_and_has_no_rank_no_season_row_and_no_place_on_the_leaderboard() {
+    async fn r610_a_bot_is_rated_like_a_player_from_its_own_rating_and_has_no_rank_no_season_row_and_no_place_on_the_leaderboard()
+     {
         let app = test_app().await;
         seed_profile(&app, json!({ "id": A })).await;
         let first = rate(&app, game("b-1", [player(A), bot("ai-easy")], Some(0), 1)).await;
@@ -397,8 +443,13 @@ mod r610_bots {
         assert_eq!(second["sides"][0]["before"], first["sides"][1]["after"]);
         assert_eq!(json_of(&store!(app, ranked_bot("ai-easy")))["games"], json!(2));
 
-        let ranked: Vec<String> =
-            fake(&app).await.tables.season_ranks.iter().map(|rank| rank.profile_id.clone()).collect();
+        let ranked: Vec<String> = fake(&app)
+            .await
+            .tables
+            .season_ranks
+            .iter()
+            .map(|rank| rank.profile_id.clone())
+            .collect();
         assert_eq!(ranked, vec![A.to_string()]);
         let listed = board(&app, A).await;
         assert!(!listed.to_string().contains("ai-easy"));
@@ -418,7 +469,11 @@ mod r610_bots {
         }));
         store!(app, ranked_put_bot(&hard));
         for n in 1..=(RANK_PLACEMENT_GAMES as i64) {
-            rate(&app, game(&format!("g-{n}"), [player(A), bot("ai-hard")], Some(0), n)).await;
+            rate(
+                &app,
+                game(&format!("g-{n}"), [player(A), bot("ai-hard")], Some(0), n),
+            )
+            .await;
         }
         // Rated below the one placed player, alone with them: the 25th percentile, in Normal Grape.
         assert_matches(&own(&app, A).await["rank"], &json!({ "tier": "normal" }), "rank");
@@ -461,10 +516,19 @@ mod r608_jlorious_through_the_server {
         );
         let peak = |rank: Value| rank["peakJlorious"].clone();
         assert_eq!(peak(json_of(&store!(app, ranked_rank(&season(), A)))), json!(2));
-        assert_eq!(own(&app, A).await["rank"], json!({ "tier": "jlorious", "position": 2 }));
-        assert_eq!(own(&app, A).await["badges"], json!([{ "seasonId": season(), "tier": "jlorious", "position": 2 }]));
+        assert_eq!(
+            own(&app, A).await["rank"],
+            json!({ "tier": "jlorious", "position": 2 })
+        );
+        assert_eq!(
+            own(&app, A).await["badges"],
+            json!([{ "seasonId": season(), "tier": "jlorious", "position": 2 }])
+        );
         // m-low fell to #3 and keeps the #2 it never held: no peak is invented for it.
-        assert_eq!(peak(json_of(&store!(app, ranked_rank(&season(), "m-low")))), json!(3));
+        assert_eq!(
+            peak(json_of(&store!(app, ranked_rank(&season(), "m-low")))),
+            json!(3)
+        );
         // Golden is rated highest of all and is not Jlorious: Jlorious is drawn from Mythic Grape.
         let golden: Vec<Value> = listed["tiers"]
             .as_array()
@@ -506,10 +570,22 @@ mod r612_what_the_client_reads {
         let token_a = add_user(&app, &format!("user-{A}"), "a@example.test", true);
         let _token_b = add_user(&app, &format!("user-{B}"), "b@example.test", true);
         let stranger = add_user(&app, "user-stranger", "s@example.test", true);
-        seed_profile(&app, json!({ "id": A, "userId": format!("user-{A}"), "rating": 1234.5678 })).await;
-        seed_profile(&app, json!({ "id": B, "userId": format!("user-{B}"), "rating": 987.654 })).await;
+        seed_profile(
+            &app,
+            json!({ "id": A, "userId": format!("user-{A}"), "rating": 1234.5678 }),
+        )
+        .await;
+        seed_profile(
+            &app,
+            json!({ "id": B, "userId": format!("user-{B}"), "rating": 987.654 }),
+        )
+        .await;
         seed_profile(&app, json!({ "id": "stranger", "userId": "user-stranger" })).await;
-        Routed { app, token_a, stranger }
+        Routed {
+            app,
+            token_a,
+            stranger,
+        }
     }
 
     async fn get(app: &Arc<App>, path: &str, token: &str) -> Got {
@@ -546,7 +622,14 @@ mod r612_what_the_client_reads {
     #[tokio::test(start_paused = true)]
     async fn r612_get_api_leaderboard_lists_tags_and_ranks_marks_the_caller_and_counts_the_raisins() {
         let Routed { app, token_a, .. } = routed().await;
-        put_rank(&app, merged(json_of(&fresh_rank(&season(), B, 0)), json!({ "games": 2, "wins": 2 }))).await;
+        put_rank(
+            &app,
+            merged(
+                json_of(&fresh_rank(&season(), B, 0)),
+                json!({ "games": 2, "wins": 2 }),
+            ),
+        )
+        .await;
         put_rank(
             &app,
             merged(
@@ -564,9 +647,22 @@ mod r612_what_the_client_reads {
         assert_eq!(got.status, 200);
         assert_eq!(got.body["jlorious"], json!([]));
         assert_eq!(got.body["raisins"], json!(1));
-        let tiers: Vec<Value> =
-            got.body["tiers"].as_array().expect("tiers").iter().map(|tier| tier["tier"].clone()).collect();
-        assert_eq!(tiers, vec![json!("mythic"), json!("golden"), json!("large"), json!("normal"), json!("rotten")]);
+        let tiers: Vec<Value> = got.body["tiers"]
+            .as_array()
+            .expect("tiers")
+            .iter()
+            .map(|tier| tier["tier"].clone())
+            .collect();
+        assert_eq!(
+            tiers,
+            vec![
+                json!("mythic"),
+                json!("golden"),
+                json!("large"),
+                json!("normal"),
+                json!("rotten")
+            ]
+        );
         let normal = got.body["tiers"]
             .as_array()
             .expect("tiers")
@@ -582,13 +678,22 @@ mod r612_what_the_client_reads {
                 "players": [{ "tag": player_tag(A), "division": 2, "pips": 1, "you": true }],
             })
         );
-        assert_matches(&got.body["you"], &json!({ "tier": "normal", "division": 2, "pips": 1 }), "you");
+        assert_matches(
+            &got.body["you"],
+            &json!({ "tier": "normal", "division": 2, "pips": 1 }),
+            "you",
+        );
         mentions_none(&got.text, &["1234", "987", "profile-", "rating"]);
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r612_get_api_matches_id_ranks_shows_both_seats_to_a_player_of_the_match_and_404s_for_anyone_else() {
-        let Routed { app, token_a, stranger } = routed().await;
+    async fn r612_get_api_matches_id_ranks_shows_both_seats_to_a_player_of_the_match_and_404s_for_anyone_else()
+     {
+        let Routed {
+            app,
+            token_a,
+            stranger,
+        } = routed().await;
         let row = live_match("match-1", "s", true);
         store!(app, matches_create(&row));
         let mine = get(&app, "/api/matches/match-1/ranks", &token_a).await;
@@ -604,8 +709,16 @@ mod r612_what_the_client_reads {
             })
         );
         mentions_none(&mine.text, &["rating", "profile-"]);
-        assert_eq!(get(&app, "/api/matches/match-1/ranks", &stranger).await.status, 404);
-        assert_eq!(get(&app, "/api/matches/no-such-match/ranks", &token_a).await.status, 404);
+        assert_eq!(
+            get(&app, "/api/matches/match-1/ranks", &stranger).await.status,
+            404
+        );
+        assert_eq!(
+            get(&app, "/api/matches/no-such-match/ranks", &token_a)
+                .await
+                .status,
+            404
+        );
     }
 }
 

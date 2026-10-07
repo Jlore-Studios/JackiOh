@@ -34,8 +34,8 @@ use indexmap::IndexSet;
 use serde_json::Value;
 
 use jackioh_ai::{
-    AI_GATE_BUDGET, AI_SWEEP, SHADOW_BAN, SHADOW_WATCH, SweepFlag, SweepOptions, SweepPass2, SweepResult, SweepStats,
-    at_risk_ids, pass2_keep_out, pass2_stats, sweep_at_risk, sweep_card, sweep_verdict,
+    AI_GATE_BUDGET, AI_SWEEP, SHADOW_BAN, SHADOW_WATCH, SweepFlag, SweepOptions, SweepPass2, SweepResult,
+    SweepStats, at_risk_ids, pass2_keep_out, pass2_stats, sweep_at_risk, sweep_card, sweep_verdict,
 };
 use jackioh_engine::catalog::{CatalogQueryArgs, query};
 
@@ -74,12 +74,17 @@ pub(crate) fn to_fixed(x: f64, digits: usize) -> String {
         return "NaN".to_string();
     }
     if x.is_infinite() {
-        return if x > 0.0 { "Infinity".to_string() } else { "-Infinity".to_string() };
+        return if x > 0.0 {
+            "Infinity".to_string()
+        } else {
+            "-Infinity".to_string()
+        };
     }
     let sign = if x < 0.0 { "-" } else { "" };
     let exact = format!("{:.*}", EXACT_DIGITS, x.abs());
     let (whole, frac) = exact.split_once('.').unwrap_or((exact.as_str(), ""));
-    let tie = frac.as_bytes().get(digits) == Some(&b'5') && frac[digits + 1..].bytes().all(|byte| byte == b'0');
+    let tie =
+        frac.as_bytes().get(digits) == Some(&b'5') && frac[digits + 1..].bytes().all(|byte| byte == b'0');
     if !tie {
         return format!("{sign}{:.*}", digits, x.abs());
     }
@@ -108,7 +113,9 @@ pub(crate) fn to_fixed(x: f64, digits: usize) -> String {
 }
 
 fn name_of(def_id: &str) -> String {
-    jackioh_cards::CATALOG.get(def_id).map_or_else(|| def_id.to_string(), |def| def.name.clone())
+    jackioh_cards::CATALOG
+        .get(def_id)
+        .map_or_else(|| def_id.to_string(), |def| def.name.clone())
 }
 
 /// A sweep flag's name, as TS wrote it (`neverPlayed` …).
@@ -167,7 +174,16 @@ fn pass1(ids: &[String], mut emit: impl FnMut(&SweepResult)) -> Vec<SweepResult>
         for tier in AI_SWEEP.tiers.iter().copied() {
             let result = timed(
                 &format!("pass 1 {}/{} {id} {} @{tier}", index + 1, ids.len(), name_of(id)),
-                || sweep_card(id, &SweepOptions { seeds: None, now: Some(&now), tier: Some(tier) }),
+                || {
+                    sweep_card(
+                        id,
+                        &SweepOptions {
+                            seeds: None,
+                            now: Some(&now),
+                            tier: Some(tier),
+                        },
+                    )
+                },
                 |r| {
                     if !r.flags.is_empty() {
                         flag_names(&r.flags)
@@ -185,15 +201,37 @@ fn pass1(ids: &[String], mut emit: impl FnMut(&SweepResult)) -> Vec<SweepResult>
     results
 }
 
-fn pass2(ids: &[String], at_risk: &[String], keep_out: &[String], mut emit: impl FnMut(&SweepPass2)) -> Vec<SweepPass2> {
+fn pass2(
+    ids: &[String],
+    at_risk: &[String],
+    keep_out: &[String],
+    mut emit: impl FnMut(&SweepPass2),
+) -> Vec<SweepPass2> {
     let now = milliseconds_since(Instant::now());
     let mut results: Vec<SweepPass2> = Vec::new();
     for (index, id) in ids.iter().enumerate() {
         for tier in AI_SWEEP.tiers.iter().copied() {
             let result = timed(
                 &format!("pass 2 {}/{} {id} {} @{tier}", index + 1, ids.len(), name_of(id)),
-                || sweep_at_risk(id, at_risk, keep_out, &SweepOptions { seeds: None, now: Some(&now), tier: Some(tier) }),
-                |r| format!("{} at-risk card(s) dealt, {} suspect line(s)", r.cards.len(), r.suspects.len()),
+                || {
+                    sweep_at_risk(
+                        id,
+                        at_risk,
+                        keep_out,
+                        &SweepOptions {
+                            seeds: None,
+                            now: Some(&now),
+                            tier: Some(tier),
+                        },
+                    )
+                },
+                |r| {
+                    format!(
+                        "{} at-risk card(s) dealt, {} suspect line(s)",
+                        r.cards.len(),
+                        r.suspects.len()
+                    )
+                },
             );
             emit(&result);
             results.push(result);
@@ -216,19 +254,34 @@ fn report(first: &[SweepResult], second: &[SweepPass2], elapsed: Option<i64>) ->
     let verdicts: Vec<_> = sorted_unique(ids.iter().chain(forced.iter()).cloned())
         .iter()
         .map(|id| {
-            let own: Vec<SweepResult> = first.iter().filter(|result| &result.stats.def_id == id).cloned().collect();
+            let own: Vec<SweepResult> = first
+                .iter()
+                .filter(|result| &result.stats.def_id == id)
+                .cloned()
+                .collect();
             sweep_verdict(&own, second)
         })
         .collect();
-    let banned: Vec<_> = verdicts.iter().filter(|verdict| verdict.reason.is_some()).collect();
-    let watched: Vec<_> = verdicts.iter().filter(|verdict| verdict.watch.is_some()).collect();
+    let banned: Vec<_> = verdicts
+        .iter()
+        .filter(|verdict| verdict.reason.is_some())
+        .collect();
+    let watched: Vec<_> = verdicts
+        .iter()
+        .filter(|verdict| verdict.watch.is_some())
+        .collect();
     let unswept: Vec<_> = verdicts.iter().filter(|verdict| verdict.unswept).collect();
     let suspects: Vec<_> = second.iter().flat_map(|result| result.suspects.iter()).collect();
 
     // The run's date for shadow_ban.rs's header.
     let date = utc_date();
     let budget = serde_json::to_string(&AI_GATE_BUDGET).unwrap_or_default();
-    let tiers = AI_SWEEP.tiers.iter().map(|tier| tier.as_str()).collect::<Vec<_>>().join(" and ");
+    let tiers = AI_SWEEP
+        .tiers
+        .iter()
+        .map(|tier| tier.as_str())
+        .collect::<Vec<_>>()
+        .join(" and ");
     let passes = format!(
         "pass 1 over {} card(s) at {tiers}, {} seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over {} at-risk card(s), {} seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×{}), budget AI_GATE_BUDGET {budget}",
         ids.len(),
@@ -257,22 +310,40 @@ fn report(first: &[SweepResult], second: &[SweepPass2], elapsed: Option<i64>) ->
         out.push("No card was flagged at any tier.".to_string());
     } else {
         out.extend(TABLE_HEAD.iter().map(|line| (*line).to_string()));
-        out.extend(flagged.iter().map(|result| row(&result.stats, result.tier.as_str(), &flag_names(&result.flags))));
+        out.extend(
+            flagged
+                .iter()
+                .map(|result| row(&result.stats, result.tier.as_str(), &flag_names(&result.flags))),
+        );
     }
     out.push(String::new());
-    out.push(format!("## At risk ({}): pass 1 at half strength, SHADOW_BAN and SHADOW_WATCH", at_risk.len()));
+    out.push(format!(
+        "## At risk ({}): pass 1 at half strength, SHADOW_BAN and SHADOW_WATCH",
+        at_risk.len()
+    ));
     out.push(String::new());
     out.push(if at_risk.is_empty() {
         "None.".to_string()
     } else {
-        at_risk.iter().map(|id| format!("{id} {}", name_of(id))).collect::<Vec<_>>().join(", ")
+        at_risk
+            .iter()
+            .map(|id| format!("{id} {}", name_of(id)))
+            .collect::<Vec<_>>()
+            .join(", ")
     });
-    let missing: Vec<&String> = at_risk.iter().filter(|id| ids.contains(id) && !forced.contains(id)).collect();
+    let missing: Vec<&String> = at_risk
+        .iter()
+        .filter(|id| ids.contains(id) && !forced.contains(id))
+        .collect();
     if !missing.is_empty() {
         out.push(String::new());
         out.push(format!(
             "Not swept in pass 2 (no evidence, no ban for neverPlayed or selfHarm): {}",
-            missing.iter().map(|id| id.as_str()).collect::<Vec<_>>().join(", ")
+            missing
+                .iter()
+                .map(|id| id.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
         ));
     }
     out.push(String::new());
@@ -282,7 +353,11 @@ fn report(first: &[SweepResult], second: &[SweepPass2], elapsed: Option<i64>) ->
         out.push("Pass 2 did not run.".to_string());
     } else {
         out.extend(TABLE_HEAD.iter().map(|line| (*line).to_string()));
-        let dealt = sorted_unique(second.iter().flat_map(|result| result.cards.iter().map(|card| card.def_id.clone())));
+        let dealt = sorted_unique(
+            second
+                .iter()
+                .flat_map(|result| result.cards.iter().map(|card| card.def_id.clone())),
+        );
         for id in &dealt {
             let verdict = verdicts.iter().find(|entry| &entry.def_id == id);
             for tier in AI_SWEEP.tiers.iter().copied() {
@@ -298,7 +373,10 @@ fn report(first: &[SweepResult], second: &[SweepPass2], elapsed: Option<i64>) ->
         }
     }
     out.push(String::new());
-    out.push("## Suspects (an error or timeout in a pass-2 game that also dealt this at-risk card as filler)".to_string());
+    out.push(
+        "## Suspects (an error or timeout in a pass-2 game that also dealt this at-risk card as filler)"
+            .to_string(),
+    );
     out.push(String::new());
     out.push(if suspects.is_empty() {
         "None.".to_string()
@@ -326,20 +404,30 @@ fn report(first: &[SweepResult], second: &[SweepPass2], elapsed: Option<i64>) ->
     out.push(if unswept.is_empty() {
         "None.".to_string()
     } else {
-        unswept.iter().map(|verdict| format!("- {} {}", verdict.def_id, name_of(&verdict.def_id))).collect::<Vec<_>>().join("\n")
+        unswept
+            .iter()
+            .map(|verdict| format!("- {} {}", verdict.def_id, name_of(&verdict.def_id)))
+            .collect::<Vec<_>>()
+            .join("\n")
     });
     out.push(String::new());
     out.push("## For crates/ai/src/shadow_ban.rs".to_string());
     out.push(String::new());
     out.push("Header line:".to_string());
     out.push(String::new());
-    out.push(format!("// Sweep of record: {date} (UTC), `cargo jackioh sweep`, {passes}."));
+    out.push(format!(
+        "// Sweep of record: {date} (UTC), `cargo jackioh sweep`, {passes}."
+    ));
     out.push(String::new());
     out.push("SHADOW_BAN entries:".to_string());
     out.push(String::new());
     out.push("```rust".to_string());
     for verdict in &banned {
-        out.push(format!("    ({}, {}),", json_string(&verdict.def_id), json_string(verdict.reason.as_deref().unwrap_or_default())));
+        out.push(format!(
+            "    ({}, {}),",
+            json_string(&verdict.def_id),
+            json_string(verdict.reason.as_deref().unwrap_or_default())
+        ));
     }
     out.push("```".to_string());
     out.push(String::new());
@@ -347,7 +435,11 @@ fn report(first: &[SweepResult], second: &[SweepPass2], elapsed: Option<i64>) ->
     out.push(String::new());
     out.push("```rust".to_string());
     for verdict in &watched {
-        out.push(format!("    ({}, {}),", json_string(&verdict.def_id), json_string(verdict.watch.as_deref().unwrap_or_default())));
+        out.push(format!(
+            "    ({}, {}),",
+            json_string(&verdict.def_id),
+            json_string(verdict.watch.as_deref().unwrap_or_default())
+        ));
     }
     out.push("```".to_string());
     format!("{}\n", out.join("\n"))
@@ -371,7 +463,8 @@ fn read_lines(files: &[String]) -> Result<Vec<Value>> {
 }
 
 fn is_pass2(line: &Value) -> bool {
-    line.as_object().is_some_and(|object| object.contains_key("forced"))
+    line.as_object()
+        .is_some_and(|object| object.contains_key("forced"))
 }
 
 /// The pass-1 results among `lines`.
@@ -410,27 +503,57 @@ pub fn run(args: Args) -> Result<()> {
         return Ok(());
     }
 
-    let pool: Vec<String> = query(&CatalogQueryArgs::default()).iter().map(|def| def.id.clone()).collect();
+    let pool: Vec<String> = query(&CatalogQueryArgs::default())
+        .iter()
+        .map(|def| def.id.clone())
+        .collect();
     let pick_ids = |requested: &[String]| -> Vec<String> {
-        let unknown: Vec<&str> = requested.iter().filter(|id| !pool.contains(id)).map(String::as_str).collect();
+        let unknown: Vec<&str> = requested
+            .iter()
+            .filter(|id| !pool.contains(id))
+            .map(String::as_str)
+            .collect();
         if !unknown.is_empty() {
-            eprintln!("[ai:sweep] not non-token card ids, skipped: {}", unknown.join(", "));
+            eprintln!(
+                "[ai:sweep] not non-token card ids, skipped: {}",
+                unknown.join(", ")
+            );
         }
-        if requested.is_empty() { pool.clone() } else { pool.iter().filter(|id| requested.contains(id)).cloned().collect() }
+        if requested.is_empty() {
+            pool.clone()
+        } else {
+            pool.iter().filter(|id| requested.contains(id)).cloned().collect()
+        }
     };
 
     if let Some(files) = &args.pass2 {
-        let files: Vec<String> = files.split(',').filter(|file| !file.is_empty()).map(str::to_string).collect();
+        let files: Vec<String> = files
+            .split(',')
+            .filter(|file| !file.is_empty())
+            .map(str::to_string)
+            .collect();
         let first = pass1_lines(&read_lines(&files)?)?;
         let at_risk = at_risk_ids(&first, SHADOW_BAN, SHADOW_WATCH);
-        let ids: Vec<String> = pick_ids(&args.ids).into_iter().filter(|id| at_risk.contains(id)).collect();
-        pass2(&ids, &at_risk, &pass2_keep_out(&first, SHADOW_BAN), emit_line::<SweepPass2>);
+        let ids: Vec<String> = pick_ids(&args.ids)
+            .into_iter()
+            .filter(|id| at_risk.contains(id))
+            .collect();
+        pass2(
+            &ids,
+            &at_risk,
+            &pass2_keep_out(&first, SHADOW_BAN),
+            emit_line::<SweepPass2>,
+        );
         return Ok(());
     }
 
     let ids = pick_ids(&args.ids);
     let started = Instant::now();
-    let first = if args.json { pass1(&ids, emit_line::<SweepResult>) } else { pass1(&ids, |_| ()) };
+    let first = if args.json {
+        pass1(&ids, emit_line::<SweepResult>)
+    } else {
+        pass1(&ids, |_| ())
+    };
     if args.json {
         return Ok(());
     }
@@ -472,7 +595,9 @@ mod tests {
 
     #[test]
     fn a_line_is_pass_2_when_it_names_its_forced_card() {
-        assert!(is_pass2(&serde_json::json!({ "forced": "core-011", "tier": "easy" })));
+        assert!(is_pass2(
+            &serde_json::json!({ "forced": "core-011", "tier": "easy" })
+        ));
         assert!(!is_pass2(&serde_json::json!({ "defId": "core-011" })));
         assert!(!is_pass2(&serde_json::json!([1, 2])));
     }

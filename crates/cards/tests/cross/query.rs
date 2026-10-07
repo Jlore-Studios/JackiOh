@@ -130,19 +130,30 @@ mod tokens_are_out_of_every_pool_unless_the_card_names_the_token_pool_5_1 {
     #[test]
     fn s5_1_query_tags_token_does_return_them_the_card_named_the_pool_itself() {
         register();
-        assert_eq!(sorted(ids(query(&q(json!({ "tags": ["Token"] }))))), sorted(token_ids()));
+        assert_eq!(
+            sorted(ids(query(&q(json!({ "tags": ["Token"] }))))),
+            sorted(token_ids())
+        );
     }
 
     #[test]
     fn s5_1_token_true_and_a_pool_named_by_id_reach_tokens_too_token_false_forbids_them() {
         register();
-        assert_eq!(sorted(ids(query(&q(json!({ "token": true }))))), sorted(token_ids()));
+        assert_eq!(
+            sorted(ids(query(&q(json!({ "token": true }))))),
+            sorted(token_ids())
+        );
         // A card that names its token by id (Rush Token, Sheep Token, …) names the pool itself.
         assert_eq!(
-            sorted(ids(query(&q(json!({ "defId": ["core-t-rush", "core-t-sheep"] }))))),
+            sorted(ids(query(&q(
+                json!({ "defId": ["core-t-rush", "core-t-sheep"] })
+            )))),
             strings(&["core-t-rush", "core-t-sheep"])
         );
-        assert_eq!(ids(query(&q(json!({ "token": false, "tags": ["Token"] })))), Vec::<String>::new());
+        assert_eq!(
+            ids(query(&q(json!({ "token": false, "tags": ["Token"] })))),
+            Vec::<String>::new()
+        );
     }
 
     #[test]
@@ -174,7 +185,10 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
     fn s5_1_exclude_def_id_removes_a_single_card() {
         register();
         // #57 Conjure KY carries the KY tag itself, so without excludeDefId it is in its own pool.
-        assert_eq!(core_indices(query(&q(json!({ "tags": ["KY"] })))), strings(&["31", "51", "57", "82"]));
+        assert_eq!(
+            core_indices(query(&q(json!({ "tags": ["KY"] })))),
+            strings(&["31", "51", "57", "82"])
+        );
         assert_eq!(
             core_indices(query(&q(json!({ "tags": ["KY"], "excludeDefId": "core-057" })))),
             strings(&["31", "51", "82"])
@@ -190,7 +204,9 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
     fn s5_1_exclude_def_id_removes_every_card_in_a_list() {
         register();
         assert_eq!(
-            core_indices(query(&q(json!({ "tags": ["KY"], "excludeDefId": ["core-057", "core-082"] })))),
+            core_indices(query(&q(
+                json!({ "tags": ["KY"], "excludeDefId": ["core-057", "core-082"] })
+            ))),
             strings(&["31", "51"])
         );
     }
@@ -199,15 +215,21 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
     fn s5_1_exclude_def_id_composes_with_the_type_rarity_and_cost_filters() {
         register();
         assert_eq!(
-            core_indices(query(&q(json!({ "type": TRAP_TYPES, "excludeDefId": "core-018" })))),
+            core_indices(query(&q(
+                json!({ "type": TRAP_TYPES, "excludeDefId": "core-018" })
+            ))),
             strings(&["41", "60", "71", "85", "96"])
         );
         assert!(
-            !ids(query(&q(json!({ "rarity": "Mythic", "excludeDefId": "core-096" }))))
-                .contains(&"core-096".to_string())
+            !ids(query(&q(
+                json!({ "rarity": "Mythic", "excludeDefId": "core-096" })
+            )))
+            .contains(&"core-096".to_string())
         );
         assert_eq!(
-            ids(query(&q(json!({ "cost": 1, "tags": ["KY"], "excludeDefId": "core-031" })))),
+            ids(query(&q(
+                json!({ "cost": 1, "tags": ["KY"], "excludeDefId": "core-031" })
+            ))),
             strings(&[
                 "core-051",
                 "core-082",
@@ -226,7 +248,10 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
             strings(&["31", "51", "82"])
         );
         assert_eq!(
-            core_indices(pool("core-082", &q(json!({ "tags": ["KY"], "excludeDefId": "core-057" })))),
+            core_indices(pool(
+                "core-082",
+                &q(json!({ "tags": ["KY"], "excludeDefId": "core-057" }))
+            )),
             strings(&["31", "51"])
         );
     }
@@ -258,13 +283,18 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_and_classic_plus_41_42_62_build_m4_t
             ids(catalog.query(&q(json!({ "tags": ["KY"], "excludeDefId": "core-057" })))),
             strings(KY_POOL)
         );
-        assert_eq!(ids(catalog.pool("core-057", &q(json!({ "tags": ["KY"] })))), strings(KY_POOL));
+        assert_eq!(
+            ids(catalog.pool("core-057", &q(json!({ "tags": ["KY"] })))),
+            strings(KY_POOL)
+        );
     }
 
     #[test]
-    fn build_row_51_1_the_ky_pool_excludes_the_ky_tagged_tokens_51_1_and_classic_plus_42_1_and_the_generator_57() {
+    fn build_row_51_1_the_ky_pool_excludes_the_ky_tagged_tokens_51_1_and_classic_plus_42_1_and_the_generator_57()
+     {
         register();
-        let names: Vec<String> = catalog.pool("core-057", &q(json!({ "tags": ["KY"] })))
+        let names: Vec<String> = catalog
+            .pool("core-057", &q(json!({ "tags": ["KY"] })))
             .iter()
             .map(|def| def.name.clone())
             .collect();
@@ -282,7 +312,11 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_and_classic_plus_41_42_62_build_m4_t
         );
         assert!(card_def_by_index(SetName::Core, "51.1").tags.contains(&Tag::Ky)); // it really is in the tag …
         assert!(card_def_by_index(SetName::Core, "51.1").token); // … and it really is a token
-        assert!(card_def_by_index(SetName::ClassicPlus, "42.1").tags.contains(&Tag::Ky));
+        assert!(
+            card_def_by_index(SetName::ClassicPlus, "42.1")
+                .tags
+                .contains(&Tag::Ky)
+        );
         let pool_ids = ids(catalog.pool("core-057", &q(json!({ "tags": ["KY"] }))));
         assert!(!pool_ids.contains(&"core-051-1".to_string()));
         assert!(!pool_ids.contains(&"classicplus-042-1".to_string()));
@@ -330,11 +364,15 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     fn build_row_67_the_query_a_card_script_writes_returns_exactly_those_defs() {
         register();
         assert_eq!(ids(trap_query()), strings(TRAP_POOL));
-        assert_eq!(ids(catalog.pool("core-067", &q(json!({ "type": TRAP_TYPES })))), strings(TRAP_POOL));
+        assert_eq!(
+            ids(catalog.pool("core-067", &q(json!({ "type": TRAP_TYPES })))),
+            strings(TRAP_POOL)
+        );
     }
 
     #[test]
-    fn s8_67_base_asks_for_a_1_cost_trap_every_core_trap_but_85_classic_10_exile_and_classic_plus_22_blood_moon() {
+    fn s8_67_base_asks_for_a_1_cost_trap_every_core_trap_but_85_classic_10_exile_and_classic_plus_22_blood_moon()
+     {
         register();
         assert_eq!(
             ids(catalog.query(&q(json!({ "type": TRAP_TYPES, "cost": 1 })))),
@@ -353,9 +391,8 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     #[test]
     fn s5_1_the_pool_mixes_both_types_core_18_71_classic_5_38_88_and_classic_plus_74_are_field_traps() {
         register();
-        let by_type = |kind: CardType| -> Vec<String> {
-            ids(trap_query().into_iter().filter(|def| def.type_ == kind))
-        };
+        let by_type =
+            |kind: CardType| -> Vec<String> { ids(trap_query().into_iter().filter(|def| def.type_ == kind)) };
 
         assert_eq!(
             by_type(CardType::FieldTrap),
@@ -463,7 +500,10 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
         // Core #85 and Classic #9 (Legendary since patch v0.2.9, issue #44) are the Legendary traps,
         // so a board trap — Trap or Field Trap — is replaced by one of them.
         assert_eq!(
-            ids(catalog.pool("core-083", &q(json!({ "rarity": "Legendary", "type": TRAP_TYPES })))),
+            ids(catalog.pool(
+                "core-083",
+                &q(json!({ "rarity": "Legendary", "type": TRAP_TYPES }))
+            )),
             strings(&["core-085", "classic-009"])
         );
         assert_eq!(
@@ -482,9 +522,17 @@ mod r65_pools_and_filters_read_a_definition_s_cost_out_of_play {
         // Core #24 Efficiency Dividend, #74 Adaptive UI, Classic #87 Plague Chalice, Classic+ #40
         // Appropriations and #69 Buff Billy are the catalog's X-cost cards (#98 Heroic Power costs (0)
         // since R752).
-        let x_cards = strings(&["core-024", "core-074", "classic-087", "classicplus-040", "classicplus-069"]);
+        let x_cards = strings(&[
+            "core-024",
+            "core-074",
+            "classic-087",
+            "classicplus-040",
+            "classicplus-069",
+        ]);
         assert_eq!(
-            ids(query(&q(json!({}))).into_iter().filter(|def| def.cost == CardCost::X)),
+            ids(query(&q(json!({})))
+                .into_iter()
+                .filter(|def| def.cost == CardCost::X)),
             x_cards
         );
         let cost0 = ids(query(&q(json!({ "cost": 0 }))));
@@ -503,8 +551,14 @@ mod r65_pools_and_filters_read_a_definition_s_cost_out_of_play {
             let def = &CATALOG[id];
             assert_eq!(def.cost, CardCost::Embiggen { base: 2, embiggen: 4 }, "{id}");
             assert_eq!(query_cost(def), 2, "{id}");
-            assert!(ids(query(&q(json!({ "cost": 2 })))).contains(&id.to_string()), "{id}");
-            assert!(!ids(query(&q(json!({ "cost": 4 })))).contains(&id.to_string()), "{id}");
+            assert!(
+                ids(query(&q(json!({ "cost": 2 })))).contains(&id.to_string()),
+                "{id}"
+            );
+            assert!(
+                !ids(query(&q(json!({ "cost": 4 })))).contains(&id.to_string()),
+                "{id}"
+            );
         }
     }
 
@@ -515,7 +569,9 @@ mod r65_pools_and_filters_read_a_definition_s_cost_out_of_play {
         let bracket0to1 = query(&q(json!({ "costRange": { "min": 0, "max": 1 } })));
         assert_eq!(
             ids(bracket0to1.iter().copied()),
-            ids(query(&q(json!({}))).into_iter().filter(|def| query_cost(def) <= 1))
+            ids(query(&q(json!({})))
+                .into_iter()
+                .filter(|def| query_cost(def) <= 1))
         );
         assert!(ids(bracket0to1.iter().copied()).contains(&"core-024".to_string())); // an X card reads as 0
         assert!(!ids(query(&q(json!({ "costRange": { "min": 4 } })))).contains(&"core-046".to_string())); // an embiggen card reads as 2
@@ -536,7 +592,8 @@ mod s9_3_r60_pool_order_is_deterministic_so_a_seeded_pick_replays {
     }
 
     #[test]
-    fn r60_a_multi_result_pool_comes_back_in_catalog_order_set_core_classic_classic_plus_then_5_index_ascending() {
+    fn r60_a_multi_result_pool_comes_back_in_catalog_order_set_core_classic_classic_plus_then_5_index_ascending()
+     {
         register();
         let units = query(&q(json!({ "type": "Unit" })));
         let set_rank = |set: SetName| -> f64 {
@@ -562,7 +619,9 @@ mod s9_3_r60_pool_order_is_deterministic_so_a_seeded_pick_replays {
         assert_eq!(keys, in_order);
         // Spot-checked against the catalog so "ascending" cannot be satisfied by an empty result:
         assert_eq!(
-            ids(query(&q(json!({ "rarity": "Legendary" })))).first().map(String::as_str),
+            ids(query(&q(json!({ "rarity": "Legendary" }))))
+                .first()
+                .map(String::as_str),
             Some("core-052")
         );
         let unit_ids = ids(units.iter().copied());
@@ -627,7 +686,10 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
             .map(|def| def.id.clone())
             .filter(|id| id != "classicplus-058")
             .collect();
-        assert_eq!(ids(pool("classicplus-058", &q(json!({ "tags": ["Fruit"] })))), expected);
+        assert_eq!(
+            ids(pool("classicplus-058", &q(json!({ "tags": ["Fruit"] })))),
+            expected
+        );
         let tokens: Vec<String> = expected
             .iter()
             .filter(|id| CATALOG.get(id.as_str()).is_some_and(|def| def.token))
@@ -648,7 +710,11 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
             json!({ "tags": ["KY"] }),
         ] {
             let got = ids(query(&q(args.clone())));
-            let reached: Vec<&str> = GRAPES.iter().copied().filter(|id| got.contains(&(*id).to_string())).collect();
+            let reached: Vec<&str> = GRAPES
+                .iter()
+                .copied()
+                .filter(|id| got.contains(&(*id).to_string()))
+                .collect();
             assert_eq!(reached, Vec::<&str>::new(), "{args}");
         }
     }
@@ -661,11 +727,12 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
         assert_eq!(every.len(), CATALOG.len() - 2);
         assert!(!every.contains(&"classicplus-023".to_string()));
         assert!(!every.contains(&GLITCH_DEF_ID.to_string()));
-        for id in GRAPES
-            .iter()
-            .copied()
-            .chain(["classicplus-019-3", "classicplus-t-ai-01", "core-t-coin", "core-051-1"])
-        {
+        for id in GRAPES.iter().copied().chain([
+            "classicplus-019-3",
+            "classicplus-t-ai-01",
+            "core-t-coin",
+            "core-051-1",
+        ]) {
             assert!(every.contains(&id.to_string()), "{id}");
         }
     }

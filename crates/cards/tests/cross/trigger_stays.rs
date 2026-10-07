@@ -52,7 +52,9 @@ const HINDER: &str = "core-021"; // cast on draw; its Radiant face asks nothing 
 const HONEYPOT: &str = "core-060";
 const BREAD_TOKEN: &str = "core-t-bread";
 const RUSH_TOKEN: &str = "core-t-rush";
-const LIBRARY: [&str; 8] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
+const LIBRARY: [&str; 8] = [
+    VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
+];
 
 use super::scenario;
 
@@ -222,7 +224,12 @@ mod r212_a_card_that_arrived_after_a_death_does_not_answer_it {
         answer_repeat_with_hero(&mut g);
 
         assert!(died(&g, &gary));
-        let Some(eater) = g.hand(PlayerId::P1).iter().find(|card| card.def_id == CORPSE_EATER).cloned() else {
+        let Some(eater) = g
+            .hand(PlayerId::P1)
+            .iter()
+            .find(|card| card.def_id == CORPSE_EATER)
+            .cloned()
+        else {
             panic!("Corpse Eater should have been drawn by the repeat");
         };
         // "While in your hand: whenever a unit ... dies" — it was still in the library when Gary died.
@@ -412,7 +419,11 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
         assert!(
             matches!(
                 &cast[0],
-                GameEvent::CardResolved { player: PlayerId::P1, cost_paid: 0, .. }
+                GameEvent::CardResolved {
+                    player: PlayerId::P1,
+                    cost_paid: 0,
+                    ..
+                }
             ),
             "{:?} should match {{ player: \"p1\", costPaid: 0 }}",
             cast[0]
@@ -425,8 +436,20 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
         // opponent play a card costing 1 or less, so it fires, and its tokens are p2's (R52's shape:
         // everything a trap does is its controller's, and that controller is the one the event met).
         assert_eq!(trap_fired_for(s.events(), &trap.id), 1);
-        assert_eq!(units_of(&s, PlayerId::P2).iter().filter(|unit| unit.def_id == RUSH_TOKEN).count(), 2);
-        assert_eq!(units_of(&s, PlayerId::P1).iter().filter(|unit| unit.def_id == RUSH_TOKEN).count(), 0);
+        assert_eq!(
+            units_of(&s, PlayerId::P2)
+                .iter()
+                .filter(|unit| unit.def_id == RUSH_TOKEN)
+                .count(),
+            2
+        );
+        assert_eq!(
+            units_of(&s, PlayerId::P1)
+                .iter()
+                .filter(|unit| unit.def_id == RUSH_TOKEN)
+                .count(),
+            0
+        );
     }
 
     #[test]
@@ -470,8 +493,20 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
         assert_eq!(s.card(&bread.id).controller, PlayerId::P1);
         // R212: the turn end is answered as the board stood when it happened, and the Bread and Butter
         // was p2's then, so its 4/4 is p2's (R52: "the trap's controller").
-        assert_eq!(units_of(&s, PlayerId::P2).iter().filter(|unit| unit.def_id == BREAD_TOKEN).count(), 1);
-        assert_eq!(units_of(&s, PlayerId::P1).iter().filter(|unit| unit.def_id == BREAD_TOKEN).count(), 0);
+        assert_eq!(
+            units_of(&s, PlayerId::P2)
+                .iter()
+                .filter(|unit| unit.def_id == BREAD_TOKEN)
+                .count(),
+            1
+        );
+        assert_eq!(
+            units_of(&s, PlayerId::P1)
+                .iter()
+                .filter(|unit| unit.def_id == BREAD_TOKEN)
+                .count(),
+            0
+        );
     }
 
     #[test]
@@ -527,7 +562,13 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
         // The only play costing 1 or less is Hinder's cast, which happened before the Honeypot was on
         // the field: a stay that did not see it, so it does not answer it and stays armed (R212, R99).
         assert_eq!(trap_fired_for(s.events(), &honeypot_id), 0);
-        assert_eq!(units_of(&s, PlayerId::P2).iter().filter(|unit| unit.def_id == RUSH_TOKEN).count(), 0);
+        assert_eq!(
+            units_of(&s, PlayerId::P2)
+                .iter()
+                .filter(|unit| unit.def_id == RUSH_TOKEN)
+                .count(),
+            0
+        );
         assert_eq!(
             s.backrow(PlayerId::P2, honeypot_lane).map(|card| card.id.clone()),
             Some(honeypot_id)
@@ -577,7 +618,9 @@ fn unit_on_field(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) ->
     ) {
         panic!("could not place {def_id}");
     }
-    find_instance(s.state(), &card.id).cloned().expect("the placed unit")
+    find_instance(s.state(), &card.id)
+        .cloned()
+        .expect("the placed unit")
 }
 
 /// The index of the first event `pick` matches, or -1 (TS `findIndex`).
@@ -641,17 +684,23 @@ mod r174_r212_a_late_dispatched_card_resolved_meets_the_played_card_s_stay {
         // The draw cast the Unit (a play, R70, cost paid 0), whose step 7 emitted `cardResolved` with the
         // Unit in play; then the Spell's own sweep destroyed it, and Reborn brought a new body back (§4.5
         // step 4, R83) before the Spell's loop dispatched that `cardResolved` to the traps.
-        let resolved_at = find_index(s.events(), |event| {
-            matches!(event, GameEvent::CardResolved { instance_id, .. } if *instance_id == cast.id)
-        });
-        let died_at = find_index(s.events(), |event| {
-            matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == cast.id)
-        });
+        let resolved_at = find_index(
+            s.events(),
+            |event| matches!(event, GameEvent::CardResolved { instance_id, .. } if *instance_id == cast.id),
+        );
+        let died_at = find_index(
+            s.events(),
+            |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == cast.id),
+        );
         assert!(resolved_at >= 0);
         assert!(died_at > resolved_at);
         // Bear Honeypot answers the cast (cost paid 0), but "it" is the stay the cast put on the field,
         // which has ended: the tokens attack nothing, and the Reborn body stands at 1 health.
-        assert!(s.events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. })));
+        assert!(
+            s.events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::TrapFired { .. }))
+        );
         assert!(
             !s.events().iter().any(|event| matches!(
                 event,
@@ -689,14 +738,16 @@ mod r174_a_queued_trigger_aimed_at_the_card_its_event_names_meets_that_card_s_st
             &mut s,
             "edge-r10-slayer",
             Script {
-                triggers: vec![TriggerDef::new("slay", &[GameEventType::CardPlayed], |ctx, event| {
-                    match opponents_play(ctx.controller, event) {
+                triggers: vec![TriggerDef::new(
+                    "slay",
+                    &[GameEventType::CardPlayed],
+                    |ctx, event| match opponents_play(ctx.controller, event) {
                         None => vec![],
                         Some(id) => vec![effects::destroy(json_as(json!({
                             "target": { "of": "instance", "instanceId": id },
                         })))],
-                    }
-                })],
+                    },
+                )],
                 ..Script::default()
             },
             UnitOpts::default(),
@@ -705,15 +756,17 @@ mod r174_a_queued_trigger_aimed_at_the_card_its_event_names_meets_that_card_s_st
             &mut s,
             "edge-r10-marker",
             Script {
-                triggers: vec![TriggerDef::new("mark", &[GameEventType::CardPlayed], |ctx, event| {
-                    match opponents_play(ctx.controller, event) {
+                triggers: vec![TriggerDef::new(
+                    "mark",
+                    &[GameEventType::CardPlayed],
+                    |ctx, event| match opponents_play(ctx.controller, event) {
                         None => vec![],
                         Some(id) => vec![effects::buff(json_as(json!({
                             "target": { "of": "instance", "instanceId": id },
                             "attack": 5,
                         })))],
-                    }
-                })],
+                    },
+                )],
                 ..Script::default()
             },
             UnitOpts::default(),
@@ -726,19 +779,15 @@ mod r174_a_queued_trigger_aimed_at_the_card_its_event_names_meets_that_card_s_st
 
         // The first trigger destroyed it, the check after that trigger collected it (R59), and Reborn
         // brought a new body back into its zone (§4.5 step 4): a new arrival, which nobody played (R83).
-        assert!(
-            s.events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == played.id))
-        );
+        assert!(s.events().iter().any(
+            |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == played.id)
+        ));
         s.expect_in_zone(&played.id, "field");
         assert_eq!(s.card(&played.id).reborn_spent, Some(true));
         // The second trigger was aimed at the unit p1 played; that stay is over, so the buff fizzles.
-        assert!(
-            !s.events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::Buffed { instance_id, .. } if *instance_id == played.id))
-        );
+        assert!(!s.events().iter().any(
+            |event| matches!(event, GameEvent::Buffed { instance_id, .. } if *instance_id == played.id)
+        ));
         assert_eq!(s.stats(&played.id).attack, 1);
     }
 }
@@ -798,16 +847,20 @@ mod r174_only_the_card_a_queued_trigger_s_event_names_is_judged_from_when_the_ev
             s,
             "edge-r11-striker",
             Script {
-                triggers: vec![TriggerDef::new("strike", &[GameEventType::Destroyed], move |ctx, event| {
-                    if enemy_died(ctx.controller, event) {
-                        vec![effects::damage(json_as(json!({
-                            "to": { "of": "instance", "instanceId": reborn_id },
-                            "amount": 5,
-                        })))]
-                    } else {
-                        vec![]
-                    }
-                })],
+                triggers: vec![TriggerDef::new(
+                    "strike",
+                    &[GameEventType::Destroyed],
+                    move |ctx, event| {
+                        if enemy_died(ctx.controller, event) {
+                            vec![effects::damage(json_as(json!({
+                                "to": { "of": "instance", "instanceId": reborn_id },
+                                "amount": 5,
+                            })))]
+                        } else {
+                            vec![]
+                        }
+                    },
+                )],
                 ..Script::default()
             },
             UnitOpts {
@@ -821,30 +874,36 @@ mod r174_only_the_card_a_queued_trigger_s_event_names_is_judged_from_when_the_ev
             s,
             &rally_id,
             Script {
-                triggers: vec![TriggerDef::new("rally", &[GameEventType::Destroyed], move |ctx, event| {
-                    if !enemy_died(ctx.controller, event) {
-                        return vec![];
-                    }
-                    match per_unit {
-                        PerUnit::OverTheBoard => {
-                            vec![effects::buff_all_units(json_as(json!({ "side": "self", "attack": 1 })))]
+                triggers: vec![TriggerDef::new(
+                    "rally",
+                    &[GameEventType::Destroyed],
+                    move |ctx, event| {
+                        if !enemy_died(ctx.controller, event) {
+                            return vec![];
                         }
-                        PerUnit::ById => vec![effects::for_each_card(effects::ForEachCardArgs {
-                            cards: Arc::new(|c: &mut EffectContext<'_>| {
-                                active_units_of(&*c.state, c.controller)
-                                    .iter()
-                                    .map(|card| card.id.clone())
-                                    .collect::<Vec<String>>()
-                            }),
-                            each: Arc::new(|id: &str| {
-                                effects::buff(json_as(json!({
-                                    "target": { "of": "instance", "instanceId": id },
-                                    "attack": 1,
-                                })))
-                            }),
-                        })],
-                    }
-                })],
+                        match per_unit {
+                            PerUnit::OverTheBoard => {
+                                vec![effects::buff_all_units(json_as(
+                                    json!({ "side": "self", "attack": 1 }),
+                                ))]
+                            }
+                            PerUnit::ById => vec![effects::for_each_card(effects::ForEachCardArgs {
+                                cards: Arc::new(|c: &mut EffectContext<'_>| {
+                                    active_units_of(&*c.state, c.controller)
+                                        .iter()
+                                        .map(|card| card.id.clone())
+                                        .collect::<Vec<String>>()
+                                }),
+                                each: Arc::new(|id: &str| {
+                                    effects::buff(json_as(json!({
+                                        "target": { "of": "instance", "instanceId": id },
+                                        "attack": 1,
+                                    })))
+                                }),
+                            })],
+                        }
+                    },
+                )],
                 ..Script::default()
             },
             UnitOpts {

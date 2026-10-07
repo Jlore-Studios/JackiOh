@@ -20,11 +20,11 @@ use std::sync::Arc;
 use axum::http::HeaderMap;
 use jackioh_server::app::App;
 use jackioh_server::config::{
-    CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_MIN_SAMPLE, PLAYER_STATS_BYTES_MAX, PLAYER_STATS_CACHE_TTL_SECONDS,
-    PUBLIC_STATS_MIN_LIVE_GAMES,
+    CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_MIN_SAMPLE, PLAYER_STATS_BYTES_MAX,
+    PLAYER_STATS_CACHE_TTL_SECONDS, PUBLIC_STATS_MIN_LIVE_GAMES,
 };
 use serde::de::DeserializeOwned;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::support::deps::{call, test_app};
 
@@ -86,13 +86,21 @@ fn make_game_record(id: &str, options: RecordOptions) -> Value {
     let source = options.source.unwrap_or("live");
     let patch = options.patch.unwrap_or_else(current_patch);
     let record_id = if source == "dev" {
-        if id.starts_with("dev:") { id.to_string() } else { format!("dev:{patch}:{id}") }
+        if id.starts_with("dev:") {
+            id.to_string()
+        } else {
+            format!("dev:{patch}:{id}")
+        }
     } else {
         id.to_string()
     };
 
-    let p1_played = options.p1_played.unwrap_or_else(|| p1_deck.iter().take(2).copied().collect());
-    let p2_played = options.p2_played.unwrap_or_else(|| p2_deck.iter().take(2).copied().collect());
+    let p1_played = options
+        .p1_played
+        .unwrap_or_else(|| p1_deck.iter().take(2).copied().collect());
+    let p2_played = options
+        .p2_played
+        .unwrap_or_else(|| p2_deck.iter().take(2).copied().collect());
     let pilot = if source == "dev" { "ai" } else { "human" };
 
     json!({
@@ -118,7 +126,9 @@ fn make_game_record(id: &str, options: RecordOptions) -> Value {
 async fn insert_records(app: &App, records: Vec<Value>) {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
     for record in records {
-        tx.game_records_insert(&from(record)).await.expect("gameRecords.insert");
+        tx.game_records_insert(&from(record))
+            .await
+            .expect("gameRecords.insert");
     }
     tx.commit().await.expect("commit");
 }
@@ -136,7 +146,9 @@ async fn seed_profile(app: &App, user_id: &str, display_name: &str) -> String {
         })))
         .await
         .expect("profiles.create");
-    tx.profiles_set_status(&profile.id, from(json!("active"))).await.expect("profiles.setStatus");
+    tx.profiles_set_status(&profile.id, from(json!("active")))
+        .await
+        .expect("profiles.setStatus");
     tx.commit().await.expect("commit");
     profile.id
 }
@@ -144,7 +156,9 @@ async fn seed_profile(app: &App, user_id: &str, display_name: &str) -> String {
 /// `playerStats.put(profileId, stats, isPrivate, at)`.
 async fn put_player_stats(app: &App, profile_id: &str, stats: Value, is_private: bool, at: i64) {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
-    tx.player_stats_put(profile_id, &from(stats), is_private, at).await.expect("playerStats.put");
+    tx.player_stats_put(profile_id, &from(stats), is_private, at)
+        .await
+        .expect("playerStats.put");
     tx.commit().await.expect("commit");
 }
 
@@ -170,7 +184,8 @@ fn cache_control(headers: &HeaderMap) -> Option<&str> {
 
 /// The entry of `list` whose `key` is `value`.
 fn find<'a>(list: &'a Value, key: &str, value: &Value) -> Option<&'a Value> {
-    list.as_array().and_then(|entries| entries.iter().find(|entry| &entry[key] == value))
+    list.as_array()
+        .and_then(|entries| entries.iter().find(|entry| &entry[key] == value))
 }
 
 /// The ids of a response's cards, sorted.
@@ -187,13 +202,21 @@ fn ids_of(data: &Value) -> Vec<String> {
 
 /// The catalog's deckable (non-token) cards, by id.
 fn deckable() -> Map<String, Value> {
-    let catalog: Map<String, Value> = serde_json::from_str(jackioh_cards::catalog_json()).expect("catalog.json");
-    catalog.into_iter().filter(|(_, def)| def["token"] != json!(true)).collect()
+    let catalog: Map<String, Value> =
+        serde_json::from_str(jackioh_cards::catalog_json()).expect("catalog.json");
+    catalog
+        .into_iter()
+        .filter(|(_, def)| def["token"] != json!(true))
+        .collect()
 }
 
 /// The deckable ids `keep` accepts, sorted.
 fn deckable_ids(keep: impl Fn(&Value) -> bool) -> Vec<String> {
-    let mut ids: Vec<String> = deckable().into_iter().filter(|(_, def)| keep(def)).map(|(id, _)| id).collect();
+    let mut ids: Vec<String> = deckable()
+        .into_iter()
+        .filter(|(_, def)| keep(def))
+        .map(|(id, _)| id)
+        .collect();
     ids.sort();
     ids
 }
@@ -242,7 +265,10 @@ mod r654_public_card_and_player_stats {
 
         let (status, headers, data) = get_public(&app, "/api/stats/cards").await;
         assert_eq!(status, 200);
-        assert_eq!(cache_control(&headers), Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str()));
+        assert_eq!(
+            cache_control(&headers),
+            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+        );
 
         assert_eq!(data["gate"]["cleared"], json!(false));
         assert_eq!(data["gate"]["liveGames"], json!(999));
@@ -347,7 +373,10 @@ mod r654_public_card_and_player_stats {
         // core-001 has 100% win rate (19/19) but is excluded because games < 20
         assert_eq!(data["summary"]["bestCard"]["id"], "core-002");
         assert_eq!(data["summary"]["bestCard"]["winRate"].as_f64(), Some(15.0 / 25.0));
-        assert_eq!(data["summary"]["worstCard"]["winRate"].as_f64(), Some(10.0 / 44.0));
+        assert_eq!(
+            data["summary"]["worstCard"]["winRate"].as_f64(),
+            Some(10.0 / 44.0)
+        );
     }
 
     #[tokio::test]
@@ -360,7 +389,10 @@ mod r654_public_card_and_player_stats {
         assert_eq!(ids_of(&set_cards), deckable_ids(|def| def["set"] == "Core"));
 
         let (_, _, rarity_cards) = get_public(&app, "/api/stats/cards?rarity=Legendary").await;
-        assert_eq!(ids_of(&rarity_cards), deckable_ids(|def| def["rarity"] == "Legendary"));
+        assert_eq!(
+            ids_of(&rarity_cards),
+            deckable_ids(|def| def["rarity"] == "Legendary")
+        );
 
         let (_, _, cost_cards) = get_public(&app, "/api/stats/cards?cost=3").await;
         assert_eq!(ids_of(&cost_cards), deckable_ids(|def| numeric_cost(def) == 3));
@@ -387,7 +419,10 @@ mod r654_public_card_and_player_stats {
 
         let (_, _, provisional_stats) = get_public(&app, "/api/stats/cards?source=provisional").await;
         assert_eq!(provisional_stats["source"], "provisional");
-        assert_eq!(provisional_stats["sourceLabel"], "AI games + live games (provisional)");
+        assert_eq!(
+            provisional_stats["sourceLabel"],
+            "AI games + live games (provisional)"
+        );
     }
 
     #[tokio::test]
@@ -400,7 +435,11 @@ mod r654_public_card_and_player_stats {
                     RecordOptions {
                         source: Some("live"),
                         p1_deck: Some(vec!["core-001", "core-002"]),
-                        p1_played: Some(if i % 2 == 0 { vec!["core-002", "core-001"] } else { vec!["core-001"] }),
+                        p1_played: Some(if i % 2 == 0 {
+                            vec!["core-002", "core-001"]
+                        } else {
+                            vec!["core-001"]
+                        }),
                         p1_played_turns: Some(if i % 2 == 0 { vec![2, 3] } else { vec![1] }),
                         turns: Some(4),
                         winner: Some(if i <= 20 { "p1" } else { "p2" }),
@@ -413,7 +452,10 @@ mod r654_public_card_and_player_stats {
 
         let (status, headers, drill) = get_public(&app, "/api/stats/cards/core-001").await;
         assert_eq!(status, 200);
-        assert_eq!(cache_control(&headers), Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str()));
+        assert_eq!(
+            cache_control(&headers),
+            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+        );
 
         assert_eq!(drill["card"]["id"], "core-001");
         assert_eq!(drill["card"]["name"], "Big D-fender");
@@ -439,7 +481,14 @@ mod r654_public_card_and_player_stats {
         // Unauthenticated requests
         let (unauth_get, _, _) = request(&app, "GET", "/api/stats/player", None, None).await;
         assert_eq!(unauth_get, 401);
-        let (unauth_put, _, _) = request(&app, "PUT", "/api/stats/player", None, Some(json!({ "stats": {} }))).await;
+        let (unauth_put, _, _) = request(
+            &app,
+            "PUT",
+            "/api/stats/player",
+            None,
+            Some(json!({ "stats": {} })),
+        )
+        .await;
         assert_eq!(unauth_put, 401);
 
         // Pending account
@@ -447,7 +496,8 @@ mod r654_public_card_and_player_stats {
         assert_eq!(pending_get, 403);
 
         // Active account initially empty
-        let (init_get, _, init_data) = request(&app, "GET", "/api/stats/player", Some(USER_TOKEN), None).await;
+        let (init_get, _, init_data) =
+            request(&app, "GET", "/api/stats/player", Some(USER_TOKEN), None).await;
         assert_eq!(init_get, 200);
         assert_eq!(init_data["stats"], json!({}));
         assert_eq!(init_data["isPrivate"], json!(false));
@@ -480,13 +530,20 @@ mod r654_public_card_and_player_stats {
 
         // Rejects body exceeding PLAYER_STATS_BYTES_MAX
         let huge_stats = json!({ "data": "x".repeat(count(PLAYER_STATS_BYTES_MAX) + 10) });
-        let (huge_status, _, _) =
-            request(&app, "PUT", "/api/stats/player", Some(USER_TOKEN), Some(json!({ "stats": huge_stats }))).await;
+        let (huge_status, _, _) = request(
+            &app,
+            "PUT",
+            "/api/stats/player",
+            Some(USER_TOKEN),
+            Some(json!({ "stats": huge_stats })),
+        )
+        .await;
         assert_eq!(huge_status, 400);
     }
 
     #[tokio::test]
-    async fn r654_get_api_stats_players_lists_public_player_summaries_respects_privacy_and_search_omits_elo() {
+    async fn r654_get_api_stats_players_lists_public_player_summaries_respects_privacy_and_search_omits_elo()
+    {
         let app = test_app().await;
         // Setup profiles
         let alice_id = seed_profile(&app, "u-alice", "Alice Wonder").await;
@@ -513,18 +570,38 @@ mod r654_public_card_and_player_stats {
         .await;
 
         // Bob: public, 100 games
-        put_player_stats(&app, &bob_id, json!({ "games": 100, "wins": 70, "losses": 30 }), false, 2000).await;
+        put_player_stats(
+            &app,
+            &bob_id,
+            json!({ "games": 100, "wins": 70, "losses": 30 }),
+            false,
+            2000,
+        )
+        .await;
 
         // Charlie: opted out (isPrivate: true), 200 games
-        put_player_stats(&app, &charlie_id, json!({ "games": 200, "wins": 150 }), true, 3000).await;
+        put_player_stats(
+            &app,
+            &charlie_id,
+            json!({ "games": 200, "wins": 150 }),
+            true,
+            3000,
+        )
+        .await;
 
         let (status, headers, data) = get_public(&app, "/api/stats/players").await;
         assert_eq!(status, 200);
-        assert_eq!(cache_control(&headers), Some(format!("public, max-age={PLAYER_STATS_CACHE_TTL_SECONDS}").as_str()));
+        assert_eq!(
+            cache_control(&headers),
+            Some(format!("public, max-age={PLAYER_STATS_CACHE_TTL_SECONDS}").as_str())
+        );
 
         // Charlie is private, so only Bob and Alice appear
         let players = data["players"].as_array().expect("players is a list");
-        let ids: Vec<&str> = players.iter().map(|player| player["profileId"].as_str().unwrap_or_default()).collect();
+        let ids: Vec<&str> = players
+            .iter()
+            .map(|player| player["profileId"].as_str().unwrap_or_default())
+            .collect();
         assert_eq!(ids, [bob_id.as_str(), alice_id.as_str()]);
         let (bob, alice) = (&players[0], &players[1]);
         assert_eq!(bob["displayName"], "Bob Builder");
@@ -535,7 +612,10 @@ mod r654_public_card_and_player_stats {
         assert!(alice.get("rating").is_none());
 
         // Alice's favourite cards and fun stats
-        assert_eq!(alice["favouriteCards"], json!([{ "id": "core-001", "count": 25 }, { "id": "core-002", "count": 15 }]));
+        assert_eq!(
+            alice["favouriteCards"],
+            json!([{ "id": "core-001", "count": 25 }, { "id": "core-002", "count": 15 }])
+        );
         assert_eq!(
             alice["funStats"],
             json!({ "nemesisCardId": "core-nemesis", "totalDestroyed": 2, "totalDefeated": 4 })

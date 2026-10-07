@@ -16,14 +16,14 @@
 use jackioh_engine::validator::TRIO_DECKS;
 use jackioh_engine::{GameOverReason, PlayerId, Winner};
 use jackioh_server::api::series_rules::{
-    RatingMove, SeriesRefusal, SeriesRefusalReason, already_picked, begin_game, both_picked, first_unwon,
-    forfeit_series, game_ended, game_seats, new_series, pick_deck, project_series, rate_series, series_score,
-    timeout_picks, unwon_slots, won_slots, NewSeriesInput,
+    NewSeriesInput, RatingMove, SeriesRefusal, SeriesRefusalReason, already_picked, begin_game, both_picked,
+    first_unwon, forfeit_series, game_ended, game_seats, new_series, pick_deck, project_series, rate_series,
+    series_score, timeout_picks, unwon_slots, won_slots,
 };
 use jackioh_server::config::{SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED};
 use jackioh_server::db::store::{FrozenTrio, SeriesRow};
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 const NOW: i64 = 1_700_000_000_000;
 const PICK_MS: i64 = SERIES_PICK_SECONDS * 1000;
@@ -42,17 +42,29 @@ fn j<T: Serialize>(value: &T) -> Value {
 
 /// TS's `array.at(-1)`: the last element, or null for an empty or missing array.
 fn last(array: &Value) -> Value {
-    array.as_array().and_then(|items| items.last()).cloned().unwrap_or(Value::Null)
+    array
+        .as_array()
+        .and_then(|items| items.last())
+        .cloned()
+        .unwrap_or(Value::Null)
 }
 
 /// TS's `array.map(f)` over a JSON array.
 fn map(array: &Value, f: impl Fn(&Value) -> Value) -> Value {
-    Value::Array(array.as_array().map(|items| items.iter().map(&f).collect()).unwrap_or_default())
+    Value::Array(
+        array
+            .as_array()
+            .map(|items| items.iter().map(&f).collect())
+            .unwrap_or_default(),
+    )
 }
 
 /// TS's `Object.keys(object).sort()`.
 fn keys(object: &Value) -> Vec<String> {
-    let mut keys: Vec<String> = object.as_object().map(|map| map.keys().cloned().collect()).unwrap_or_default();
+    let mut keys: Vec<String> = object
+        .as_object()
+        .map(|map| map.keys().cloned().collect())
+        .unwrap_or_default();
     keys.sort();
     keys
 }
@@ -67,9 +79,9 @@ fn has(set: &Value, x: &Value) -> bool {
 fn assert_match(actual: &Value, expected: &Value) {
     fn matches(actual: &Value, expected: &Value) -> bool {
         match (actual, expected) {
-            (Value::Object(have), Value::Object(want)) => {
-                want.iter().all(|(key, value)| have.get(key).is_some_and(|got| matches(got, value)))
-            }
+            (Value::Object(have), Value::Object(want)) => want
+                .iter()
+                .all(|(key, value)| have.get(key).is_some_and(|got| matches(got, value))),
             (Value::Array(have), Value::Array(want)) => {
                 have.len() == want.len() && have.iter().zip(want).all(|(got, value)| matches(got, value))
             }
@@ -148,7 +160,11 @@ fn play(series: &SeriesRow, slots: [i64; 2], winner: Winner, next_match_id: &str
             }
         }
     }
-    let reason = if winner == Winner::Draw { GameOverReason::TurnCap } else { GameOverReason::HeroDeath };
+    let reason = if winner == Winner::Draw {
+        GameOverReason::TurnCap
+    } else {
+        GameOverReason::HeroDeath
+    };
     game_ended(&row, winner, reason, now, next_match_id).expect("the game ends")
 }
 
@@ -193,10 +209,19 @@ mod r330_conquest_a_win_with_every_deck {
         let after_game1 = play(&fresh(), [0, 1], Winner::P1, "match-2");
         assert_eq!(j(&after_game1)["status"], "picking");
         assert_eq!(j(&won_slots(P1, &after_game1.games)), json!([0]));
-        assert_eq!(j(&unwon_slots(&after_game1, P1, &after_game1.games)), json!([1, 2]));
-        assert_eq!(refusal_of(pick_deck(&after_game1, P1, int(0), NOW, None)), Some(SeriesRefusalReason::SlotWon));
+        assert_eq!(
+            j(&unwon_slots(&after_game1, P1, &after_game1.games)),
+            json!([1, 2])
+        );
+        assert_eq!(
+            refusal_of(pick_deck(&after_game1, P1, int(0), NOW, None)),
+            Some(SeriesRefusalReason::SlotWon)
+        );
         // Bob lost with slot 1: it is his to pick again.
-        assert_eq!(j(&unwon_slots(&after_game1, P2, &after_game1.games)), json!([0, 1, 2]));
+        assert_eq!(
+            j(&unwon_slots(&after_game1, P2, &after_game1.games)),
+            json!([0, 1, 2])
+        );
         assert_eq!(refusal_of(pick_deck(&after_game1, P2, int(1), NOW, None)), None);
 
         let alice = view_of(&after_game1, ALICE);
@@ -217,12 +242,20 @@ mod r330_conquest_a_win_with_every_deck {
     #[test]
     fn r330_the_side_that_has_won_with_all_three_decks_takes_the_series_decided() {
         let sweep = play(
-            &play(&play(&fresh(), [0, 0], Winner::P1, "m2"), [1, 0], Winner::P1, "m3"),
+            &play(
+                &play(&fresh(), [0, 0], Winner::P1, "m2"),
+                [1, 0],
+                Winner::P1,
+                "m3",
+            ),
             [2, 0],
             Winner::P1,
             "unused",
         );
-        assert_match(&j(&sweep), &json!({ "status": "over", "winner": "p1", "endReason": "decided", "endedAt": NOW }));
+        assert_match(
+            &j(&sweep),
+            &json!({ "status": "over", "winner": "p1", "endReason": "decided", "endedAt": NOW }),
+        );
         assert_eq!(sweep.games.len(), SERIES_WINS_NEEDED as usize);
         assert_eq!(score(&sweep), Some(1.0));
 
@@ -237,7 +270,10 @@ mod r330_conquest_a_win_with_every_deck {
         assert_eq!(j(&row)["status"], "playing");
         assert_eq!(last(&j(&row)["games"])["slots"], json!([2, 1]));
         row = play(&row, [2, 1], Winner::P1, "unused");
-        assert_match(&j(&row), &json!({ "status": "over", "winner": "p1", "endReason": "decided" }));
+        assert_match(
+            &j(&row),
+            &json!({ "status": "over", "winner": "p1", "endReason": "decided" }),
+        );
         assert_eq!(row.games.len(), 2 * SERIES_WINS_NEEDED as usize - 1);
         assert_eq!(view_of(&row, BOB)["result"]["outcome"], "loss");
         assert_eq!(view_of(&row, ALICE)["result"]["outcome"], "win");
@@ -260,15 +296,23 @@ mod r330_conquest_a_win_with_every_deck {
                         let open = unwon_slots(&row, seat, &row.games);
                         let at = (random() * open.len() as f64).floor() as usize;
                         let slot = open.get(at).copied().unwrap_or(int(0));
-                        row = pick_deck(&row, seat, i32::try_from(slot).expect("a slot"), NOW, None).expect("the pick applies");
+                        row = pick_deck(&row, seat, i32::try_from(slot).expect("a slot"), NOW, None)
+                            .expect("the pick applies");
                     }
                 }
                 let game = last(&j(&row)["games"]);
                 assert!(game["winner"].is_null(), "a game is under way");
                 for (index, seat) in SEATS.into_iter().enumerate() {
                     let before = &row.games[..row.games.len().saturating_sub(1)];
-                    let slot = if game["slots"][index].is_null() { json!(-1) } else { game["slots"][index].clone() };
-                    assert!(!has(&j(&won_slots(seat, before)), &slot), "a locked deck is never played");
+                    let slot = if game["slots"][index].is_null() {
+                        json!(-1)
+                    } else {
+                        game["slots"][index].clone()
+                    };
+                    assert!(
+                        !has(&j(&won_slots(seat, before)), &slot),
+                        "a locked deck is never played"
+                    );
                 }
                 let roll = random();
                 let winner = if roll < 0.45 {
@@ -278,7 +322,11 @@ mod r330_conquest_a_win_with_every_deck {
                 } else {
                     Winner::Draw
                 };
-                let reason = if winner == Winner::Draw { GameOverReason::TurnCap } else { GameOverReason::HeroDeath };
+                let reason = if winner == Winner::Draw {
+                    GameOverReason::TurnCap
+                } else {
+                    GameOverReason::HeroDeath
+                };
                 let next_match_id = format!("m-{}", row.games.len() + 1);
                 row = game_ended(&row, winner, reason, NOW, &next_match_id).expect("the game ends");
                 for (index, seat) in SEATS.into_iter().enumerate() {
@@ -298,7 +346,13 @@ mod r330_conquest_a_win_with_every_deck {
             if j(&row)["endReason"] == "decided" {
                 let wins = j(&row)["sides"]
                     .as_array()
-                    .map(|sides| sides.iter().filter_map(|side| side["wins"].as_i64()).max().unwrap_or(0))
+                    .map(|sides| {
+                        sides
+                            .iter()
+                            .filter_map(|side| side["wins"].as_i64())
+                            .max()
+                            .unwrap_or(0)
+                    })
                     .unwrap_or(0);
                 assert_eq!(wins, SERIES_WINS_NEEDED as i64);
             }
@@ -334,8 +388,14 @@ mod r331_the_sealed_pick {
     #[test]
     fn r331_a_pick_is_final_a_second_pick_the_same_or_another_is_refused_as_sealed() {
         let first = pick_deck(&fresh(), P1, int(0), NOW, None).expect("the pick applies");
-        assert_eq!(refusal_of(pick_deck(&first, P1, int(1), NOW + 1, None)), Some(SeriesRefusalReason::PickSealed));
-        assert_eq!(refusal_of(pick_deck(&first, P1, int(0), NOW + 1, None)), Some(SeriesRefusalReason::PickSealed));
+        assert_eq!(
+            refusal_of(pick_deck(&first, P1, int(1), NOW + 1, None)),
+            Some(SeriesRefusalReason::PickSealed)
+        );
+        assert_eq!(
+            refusal_of(pick_deck(&first, P1, int(0), NOW + 1, None)),
+            Some(SeriesRefusalReason::PickSealed)
+        );
         // What a retried request finds, before and after the game began.
         assert!(already_picked(&first, P1, int(0), None));
         assert!(!already_picked(&first, P1, int(1), None));
@@ -344,7 +404,8 @@ mod r331_the_sealed_pick {
         assert!(already_picked(&playing, P1, int(0), None));
         assert!(already_picked(&playing, P2, int(2), None));
         assert!(!already_picked(&playing, P2, int(1), None));
-        let ended = game_ended(&playing, Winner::P1, GameOverReason::HeroDeath, NOW, "match-2").expect("the game ends");
+        let ended = game_ended(&playing, Winner::P1, GameOverReason::HeroDeath, NOW, "match-2")
+            .expect("the game ends");
         assert!(!already_picked(&ended, P1, int(0), None));
     }
 
@@ -355,7 +416,10 @@ mod r331_the_sealed_pick {
             refusal_of(pick_deck(&first, P1, int(0), NOW + PICK_MS, None)),
             Some(SeriesRefusalReason::PickSealed),
         );
-        assert_eq!(refusal_of(pick_deck(&first, P1, int(7), NOW, None)), Some(SeriesRefusalReason::PickSealed));
+        assert_eq!(
+            refusal_of(pick_deck(&first, P1, int(7), NOW, None)),
+            Some(SeriesRefusalReason::PickSealed)
+        );
     }
 
     #[test]
@@ -380,12 +444,21 @@ mod r331_the_sealed_pick {
 
     #[test]
     fn r331_the_pick_that_completes_both_begins_the_game_at_once_series_p1_first_in_game_1() {
-        let series = pick_deck(&pick_deck(&fresh(), P2, int(2), NOW, None).expect("p2 picks"), P1, int(1), NOW + 5, None)
-            .expect("p1 picks");
+        let series = pick_deck(
+            &pick_deck(&fresh(), P2, int(2), NOW, None).expect("p2 picks"),
+            P1,
+            int(1),
+            NOW + 5,
+            None,
+        )
+        .expect("p1 picks");
 
         assert_eq!(j(&series)["status"], "playing");
         assert!(j(&series)["pickDeadline"].is_null());
-        assert_eq!(map(&j(&series)["sides"], |side| side["pick"].clone()), json!([null, null]));
+        assert_eq!(
+            map(&j(&series)["sides"], |side| side["pick"].clone()),
+            json!([null, null])
+        );
         assert_eq!(
             j(&series)["games"],
             json!([{ "gameNo": 1, "matchId": "match-1", "slots": [1, 2], "first": "p1", "winner": null, "reason": null }]),
@@ -421,8 +494,14 @@ mod r331_the_sealed_pick {
     #[test]
     fn r331_a_pick_must_be_a_whole_slot_of_the_trio_whose_deck_has_not_won_made_while_picking_and_in_time() {
         let series = fresh();
-        assert_eq!(refusal_of(pick_deck(&series, P1, int(-1), NOW, None)), Some(SeriesRefusalReason::SlotOutOfRange));
-        assert_eq!(refusal_of(pick_deck(&series, P1, int(3), NOW, None)), Some(SeriesRefusalReason::SlotOutOfRange));
+        assert_eq!(
+            refusal_of(pick_deck(&series, P1, int(-1), NOW, None)),
+            Some(SeriesRefusalReason::SlotOutOfRange)
+        );
+        assert_eq!(
+            refusal_of(pick_deck(&series, P1, int(3), NOW, None)),
+            Some(SeriesRefusalReason::SlotOutOfRange)
+        );
         // TS also sent 1.5 and NaN. `pick_deck` takes an integer slot, so neither can reach it: the
         // pick route's body check (`slotOf` in series.ts) refuses a slot that is not a whole number
         // before any rule runs, which `tests/api/series.rs` asserts with 0.5 and "0".
@@ -432,22 +511,46 @@ mod r331_the_sealed_pick {
             refusal_of(pick_deck(&series, P1, int(0), NOW + PICK_MS, None)),
             Some(SeriesRefusalReason::PickClosed),
         );
-        assert_eq!(refusal_of(pick_deck(&series, P1, int(0), NOW + PICK_MS - 1, None)), None);
+        assert_eq!(
+            refusal_of(pick_deck(&series, P1, int(0), NOW + PICK_MS - 1, None)),
+            None
+        );
 
         let after_game1 = play(&series, [0, 1], Winner::P2, "match-2");
-        assert_eq!(refusal_of(pick_deck(&after_game1, P2, int(1), NOW, None)), Some(SeriesRefusalReason::SlotWon));
+        assert_eq!(
+            refusal_of(pick_deck(&after_game1, P2, int(1), NOW, None)),
+            Some(SeriesRefusalReason::SlotWon)
+        );
         // Alice lost with slot 0, and the other side's won slot is no business of this side's pick.
         assert_eq!(refusal_of(pick_deck(&after_game1, P1, int(0), NOW, None)), None);
         assert_eq!(refusal_of(pick_deck(&after_game1, P1, int(1), NOW, None)), None);
 
-        let playing = pick_deck(&pick_deck(&series, P1, int(0), NOW, None).expect("p1 picks"), P2, int(0), NOW, None)
-            .expect("p2 picks");
-        assert_eq!(refusal_of(pick_deck(&playing, P1, int(1), NOW, None)), Some(SeriesRefusalReason::NotPicking));
-        assert_eq!(refusal_of(begin_game(&playing, NOW)), Some(SeriesRefusalReason::NotPicking));
-        assert_eq!(refusal_of(begin_game(&series, NOW)), Some(SeriesRefusalReason::PicksMissing));
+        let playing = pick_deck(
+            &pick_deck(&series, P1, int(0), NOW, None).expect("p1 picks"),
+            P2,
+            int(0),
+            NOW,
+            None,
+        )
+        .expect("p2 picks");
+        assert_eq!(
+            refusal_of(pick_deck(&playing, P1, int(1), NOW, None)),
+            Some(SeriesRefusalReason::NotPicking)
+        );
+        assert_eq!(
+            refusal_of(begin_game(&playing, NOW)),
+            Some(SeriesRefusalReason::NotPicking)
+        );
+        assert_eq!(
+            refusal_of(begin_game(&series, NOW)),
+            Some(SeriesRefusalReason::PicksMissing)
+        );
 
         let over = forfeit_series(&series, P1, NOW).expect("the forfeit applies");
-        assert_eq!(refusal_of(pick_deck(&over, P1, int(0), NOW, None)), Some(SeriesRefusalReason::Over));
+        assert_eq!(
+            refusal_of(pick_deck(&over, P1, int(0), NOW, None)),
+            Some(SeriesRefusalReason::Over)
+        );
     }
 }
 
@@ -456,9 +559,17 @@ mod r332_the_last_deck_is_picked_for_you {
 
     #[test]
     fn r332_a_side_with_one_deck_left_that_has_not_won_has_it_picked_when_the_pick_phase_opens() {
-        let two_wins = play(&play(&fresh(), [0, 0], Winner::P1, "m2"), [1, 0], Winner::P1, "m3");
+        let two_wins = play(
+            &play(&fresh(), [0, 0], Winner::P1, "m2"),
+            [1, 0],
+            Winner::P1,
+            "m3",
+        );
         assert_eq!(j(&two_wins)["status"], "picking");
-        assert_eq!(map(&j(&two_wins)["sides"], |side| side["pick"].clone()), json!([2, null]));
+        assert_eq!(
+            map(&j(&two_wins)["sides"], |side| side["pick"].clone()),
+            json!([2, null])
+        );
         let alice = view_of(&two_wins, ALICE);
         assert_eq!(alice["you"]["pick"], json!(2));
         assert_eq!(alice["you"]["autoPick"], json!(true));
@@ -466,7 +577,10 @@ mod r332_the_last_deck_is_picked_for_you {
         assert_eq!(view_of(&two_wins, BOB)["opponent"]["picked"], json!(true));
         assert_eq!(view_of(&two_wins, BOB)["you"]["autoPick"], json!(false));
         // Alice cannot change it; the game begins when Bob picks.
-        assert_eq!(refusal_of(pick_deck(&two_wins, P1, int(2), NOW, None)), Some(SeriesRefusalReason::PickSealed));
+        assert_eq!(
+            refusal_of(pick_deck(&two_wins, P1, int(2), NOW, None)),
+            Some(SeriesRefusalReason::PickSealed)
+        );
         let game3 = pick_deck(&two_wins, P2, int(1), NOW, None).expect("the pick applies");
         assert_eq!(j(&game3)["status"], "playing");
         assert_eq!(j(&game3)["games"][2]["slots"], json!([2, 1]));
@@ -487,14 +601,20 @@ mod r332_the_last_deck_is_picked_for_you {
             json!({ "gameNo": 5, "matchId": "m5", "slots": [2, 2], "first": "p1", "winner": null, "reason": null }),
         );
         // One write, however much it did.
-        assert_eq!(j(&row)["version"].as_i64(), j(&before)["version"].as_i64().map(|version| version + 2));
+        assert_eq!(
+            j(&row)["version"].as_i64(),
+            j(&before)["version"].as_i64().map(|version| version + 2)
+        );
         assert_eq!(game_seats(&row).expect("a game is in play").seed, "seed-base:5");
     }
 
     #[test]
     fn r332_a_side_with_two_or_three_decks_left_still_picks_for_itself() {
         let after_game1 = play(&fresh(), [0, 0], Winner::P1, "m2");
-        assert_eq!(map(&j(&after_game1)["sides"], |side| side["pick"].clone()), json!([null, null]));
+        assert_eq!(
+            map(&j(&after_game1)["sides"], |side| side["pick"].clone()),
+            json!([null, null])
+        );
         assert_eq!(view_of(&after_game1, ALICE)["you"]["autoPick"], json!(false));
     }
 }
@@ -506,16 +626,27 @@ mod r333_the_pick_clock {
     fn r333_each_pick_phase_runs_series_pick_seconds_from_when_it_opens() {
         assert_eq!(j(&fresh())["pickDeadline"].as_i64(), Some(NOW + PICK_MS));
         // Game 1 was picked quickly and played for a long time: game 2's clock starts when it ended.
-        let playing = pick_deck(&pick_deck(&fresh(), P1, int(0), NOW, None).expect("p1 picks"), P2, int(0), NOW, None)
-            .expect("p2 picks");
+        let playing = pick_deck(
+            &pick_deck(&fresh(), P1, int(0), NOW, None).expect("p1 picks"),
+            P2,
+            int(0),
+            NOW,
+            None,
+        )
+        .expect("p2 picks");
         let later = NOW + 10 * PICK_MS;
-        let next = game_ended(&playing, Winner::P1, GameOverReason::HeroDeath, later, "match-2").expect("the game ends");
+        let next = game_ended(&playing, Winner::P1, GameOverReason::HeroDeath, later, "match-2")
+            .expect("the game ends");
         assert_eq!(j(&next)["pickDeadline"].as_i64(), Some(later + PICK_MS));
-        assert_eq!(view_of(&next, ALICE)["pickDeadline"].as_i64(), Some(later + PICK_MS));
+        assert_eq!(
+            view_of(&next, ALICE)["pickDeadline"].as_i64(),
+            Some(later + PICK_MS)
+        );
     }
 
     #[test]
-    fn r333_at_the_deadline_a_player_who_has_not_picked_gets_their_first_deck_that_has_not_won_and_the_game_starts() {
+    fn r333_at_the_deadline_a_player_who_has_not_picked_gets_their_first_deck_that_has_not_won_and_the_game_starts()
+     {
         let bob_picked = pick_deck(&fresh(), P2, int(2), NOW, None).expect("the pick applies");
         let started = timeout_picks(&bob_picked, NOW + PICK_MS).expect("the clock settles");
         assert_eq!(j(&started)["status"], "playing");
@@ -528,12 +659,20 @@ mod r333_the_pick_clock {
         let alice_picked = pick_deck(&after_game1, P1, int(2), NOW, None).expect("the pick applies");
         let game2 = timeout_picks(&alice_picked, NOW + PICK_MS).expect("the clock settles");
         assert_eq!(j(&game2)["games"][1]["slots"], json!([2, 0]));
-        assert_eq!(j(&game_seats(&game2).expect("a game is in play").seats)[0]["profileId"], BOB);
+        assert_eq!(
+            j(&game_seats(&game2).expect("a game is in play").seats)[0]["profileId"],
+            BOB
+        );
     }
 
     #[test]
     fn r333_a_pick_made_for_a_player_counts_the_other_is_given_a_deck_and_the_game_starts() {
-        let two_wins = play(&play(&fresh(), [0, 0], Winner::P1, "m2"), [1, 0], Winner::P1, "m3");
+        let two_wins = play(
+            &play(&fresh(), [0, 0], Winner::P1, "m2"),
+            [1, 0],
+            Winner::P1,
+            "m3",
+        );
         let deadline = j(&two_wins)["pickDeadline"].as_i64().unwrap_or(0);
         let game3 = timeout_picks(&two_wins, deadline + 1).expect("the clock settles");
         assert_eq!(j(&game3)["status"], "playing");
@@ -555,7 +694,10 @@ mod r333_the_pick_clock {
         );
         assert_eq!(score(&abandoned), None);
         assert_match(
-            &j(&rate_series(&abandoned, Some(rating_move((1200.0, 1000.0), (1210.0, 990.0))))),
+            &j(&rate_series(
+                &abandoned,
+                Some(rating_move((1200.0, 1000.0), (1210.0, 990.0))),
+            )),
             &json!({ "ratingBefore": null, "ratingAfter": null }),
         );
         assert_eq!(
@@ -566,14 +708,26 @@ mod r333_the_pick_clock {
         // After a played game it is still abandoned, not a result for the side that won game 1.
         let after_game1 = play(&fresh(), [0, 0], Winner::P1, "match-2");
         let later = timeout_picks(&after_game1, NOW + PICK_MS).expect("the clock settles");
-        assert_match(&j(&later), &json!({ "status": "over", "winner": null, "endReason": "abandoned" }));
+        assert_match(
+            &j(&later),
+            &json!({ "status": "over", "winner": null, "endReason": "abandoned" }),
+        );
     }
 
     #[test]
     fn r333_the_clock_is_not_settled_before_its_deadline_nor_outside_a_pick_phase() {
-        assert_eq!(refusal_of(timeout_picks(&fresh(), NOW + PICK_MS - 1)), Some(SeriesRefusalReason::PickOpen));
-        let playing = pick_deck(&pick_deck(&fresh(), P1, int(0), NOW, None).expect("p1 picks"), P2, int(0), NOW, None)
-            .expect("p2 picks");
+        assert_eq!(
+            refusal_of(timeout_picks(&fresh(), NOW + PICK_MS - 1)),
+            Some(SeriesRefusalReason::PickOpen)
+        );
+        let playing = pick_deck(
+            &pick_deck(&fresh(), P1, int(0), NOW, None).expect("p1 picks"),
+            P2,
+            int(0),
+            NOW,
+            None,
+        )
+        .expect("p2 picks");
         assert_eq!(
             refusal_of(timeout_picks(&playing, NOW + 10 * PICK_MS)),
             Some(SeriesRefusalReason::NotPicking),
@@ -588,14 +742,26 @@ mod r334_draws_the_game_cap_and_forfeits {
     fn r334_a_drawn_game_counts_for_neither_side_and_locks_neither_deck() {
         let series = play(&fresh(), [0, 1], Winner::Draw, "match-2");
         assert_eq!(j(&series)["status"], "picking");
-        assert_eq!(map(&j(&series)["sides"], |side| side["wins"].clone()), json!([0, 0]));
-        assert_match(&j(&series)["games"][0], &json!({ "winner": "draw", "reason": "turn-cap" }));
+        assert_eq!(
+            map(&j(&series)["sides"], |side| side["wins"].clone()),
+            json!([0, 0])
+        );
+        assert_match(
+            &j(&series)["games"][0],
+            &json!({ "winner": "draw", "reason": "turn-cap" }),
+        );
         assert_eq!(refusal_of(pick_deck(&series, P1, int(0), NOW, None)), None);
         assert_eq!(refusal_of(pick_deck(&series, P2, int(1), NOW, None)), None);
 
         let alice = view_of(&series, ALICE);
-        assert_eq!(map(&alice["you"]["decks"], |deck| deck["won"].clone()), json!([false, false, false]));
-        assert_eq!(map(&alice["you"]["decks"], |deck| deck["games"].clone()), json!([1, 0, 0]));
+        assert_eq!(
+            map(&alice["you"]["decks"], |deck| deck["won"].clone()),
+            json!([false, false, false])
+        );
+        assert_eq!(
+            map(&alice["you"]["decks"], |deck| deck["games"].clone()),
+            json!([1, 0, 0])
+        );
         assert_eq!(alice["games"][0]["result"], "draw");
     }
 
@@ -619,7 +785,10 @@ mod r334_draws_the_game_cap_and_forfeits {
         assert_eq!(j(&row)["status"], "picking");
         row = play(&row, [2, 2], Winner::Draw, "unused");
         assert_eq!(row.games.len(), SERIES_MAX_GAMES as usize);
-        assert_match(&j(&row), &json!({ "status": "over", "winner": "draw", "endReason": "exhausted" }));
+        assert_match(
+            &j(&row),
+            &json!({ "status": "over", "winner": "draw", "endReason": "exhausted" }),
+        );
         assert_eq!(score(&row), Some(0.5));
         assert_eq!(view_of(&row, ALICE)["result"]["outcome"], "draw");
         assert_eq!(view_of(&row, BOB)["result"]["outcome"], "draw");
@@ -632,7 +801,10 @@ mod r334_draws_the_game_cap_and_forfeits {
             row = play(&row, [0, 0], Winner::Draw, &format!("m{}", game + 1));
         }
         row = play(&row, [2, 1], Winner::P2, "unused");
-        assert_match(&j(&row), &json!({ "status": "over", "winner": "p2", "endReason": "exhausted" }));
+        assert_match(
+            &j(&row),
+            &json!({ "status": "over", "winner": "p2", "endReason": "exhausted" }),
+        );
         assert_eq!(map(&j(&row)["sides"], |side| side["wins"].clone()), json!([0, 1]));
         assert_eq!(score(&row), Some(0.0));
         assert_eq!(view_of(&row, BOB)["result"]["outcome"], "win");
@@ -640,23 +812,43 @@ mod r334_draws_the_game_cap_and_forfeits {
 
     #[test]
     fn r334_a_concede_or_a_disconnect_loses_the_game_not_the_series_r261() {
-        let playing = pick_deck(&pick_deck(&fresh(), P1, int(0), NOW, None).expect("p1 picks"), P2, int(0), NOW, None)
-            .expect("p2 picks");
-        let conceded = game_ended(&playing, Winner::P2, GameOverReason::Concede, NOW, "m2").expect("the game ends");
+        let playing = pick_deck(
+            &pick_deck(&fresh(), P1, int(0), NOW, None).expect("p1 picks"),
+            P2,
+            int(0),
+            NOW,
+            None,
+        )
+        .expect("p2 picks");
+        let conceded =
+            game_ended(&playing, Winner::P2, GameOverReason::Concede, NOW, "m2").expect("the game ends");
         assert_eq!(j(&conceded)["status"], "picking");
         assert!(j(&conceded)["winner"].is_null());
-        let playing = pick_deck(&pick_deck(&conceded, P1, int(1), NOW, None).expect("p1 picks"), P2, int(1), NOW, None)
-            .expect("p2 picks");
+        let playing = pick_deck(
+            &pick_deck(&conceded, P1, int(1), NOW, None).expect("p1 picks"),
+            P2,
+            int(1),
+            NOW,
+            None,
+        )
+        .expect("p2 picks");
         let disconnected =
             game_ended(&playing, Winner::P1, GameOverReason::Disconnect, NOW, "m3").expect("the game ends");
         assert_eq!(j(&disconnected)["status"], "picking");
-        assert_eq!(map(&j(&disconnected)["sides"], |side| side["wins"].clone()), json!([1, 1]));
+        assert_eq!(
+            map(&j(&disconnected)["sides"], |side| side["wins"].clone()),
+            json!([1, 1])
+        );
     }
 
     #[test]
     fn r334_between_games_a_player_may_forfeit_the_series_and_the_other_side_wins_it_r261() {
-        let before_any_game = forfeit_series(&pick_deck(&fresh(), P1, int(1), NOW, None).expect("p1 picks"), P2, NOW + 1)
-            .expect("the forfeit applies");
+        let before_any_game = forfeit_series(
+            &pick_deck(&fresh(), P1, int(1), NOW, None).expect("p1 picks"),
+            P2,
+            NOW + 1,
+        )
+        .expect("the forfeit applies");
         assert_match(
             &j(&before_any_game),
             &json!({
@@ -667,26 +859,54 @@ mod r334_draws_the_game_cap_and_forfeits {
                 "pickDeadline": null,
             }),
         );
-        assert_eq!(map(&j(&before_any_game)["sides"], |side| side["pick"].clone()), json!([null, null]));
+        assert_eq!(
+            map(&j(&before_any_game)["sides"], |side| side["pick"].clone()),
+            json!([null, null])
+        );
 
-        let after_game1 = forfeit_series(&play(&fresh(), [0, 0], Winner::P2, "match-2"), P2, NOW).expect("the forfeit applies");
-        assert_match(&j(&after_game1), &json!({ "status": "over", "winner": "p1", "endReason": "forfeit" }));
-        assert_match(&view_of(&after_game1, BOB)["result"], &json!({ "outcome": "loss", "endReason": "forfeit" }));
+        let after_game1 = forfeit_series(&play(&fresh(), [0, 0], Winner::P2, "match-2"), P2, NOW)
+            .expect("the forfeit applies");
+        assert_match(
+            &j(&after_game1),
+            &json!({ "status": "over", "winner": "p1", "endReason": "forfeit" }),
+        );
+        assert_match(
+            &view_of(&after_game1, BOB)["result"],
+            &json!({ "outcome": "loss", "endReason": "forfeit" }),
+        );
     }
 
     #[test]
     fn r334_a_forfeit_is_refused_while_a_game_is_being_played_and_after_the_series() {
-        let playing = pick_deck(&pick_deck(&fresh(), P1, int(0), NOW, None).expect("p1 picks"), P2, int(0), NOW, None)
-            .expect("p2 picks");
-        assert_eq!(refusal_of(forfeit_series(&playing, P1, NOW)), Some(SeriesRefusalReason::NotPicking));
+        let playing = pick_deck(
+            &pick_deck(&fresh(), P1, int(0), NOW, None).expect("p1 picks"),
+            P2,
+            int(0),
+            NOW,
+            None,
+        )
+        .expect("p2 picks");
+        assert_eq!(
+            refusal_of(forfeit_series(&playing, P1, NOW)),
+            Some(SeriesRefusalReason::NotPicking)
+        );
         let over = forfeit_series(&fresh(), P1, NOW).expect("the forfeit applies");
-        assert_eq!(refusal_of(forfeit_series(&over, P2, NOW)), Some(SeriesRefusalReason::Over));
+        assert_eq!(
+            refusal_of(forfeit_series(&over, P2, NOW)),
+            Some(SeriesRefusalReason::Over)
+        );
         assert_eq!(
             refusal_of(game_ended(&over, Winner::P1, GameOverReason::Concede, NOW, "x")),
             Some(SeriesRefusalReason::Over),
         );
         assert_eq!(
-            refusal_of(game_ended(&fresh(), Winner::P1, GameOverReason::Concede, NOW, "x")),
+            refusal_of(game_ended(
+                &fresh(),
+                Winner::P1,
+                GameOverReason::Concede,
+                NOW,
+                "x"
+            )),
             Some(SeriesRefusalReason::NotPlaying),
         );
     }
@@ -706,14 +926,22 @@ mod r335_seats_and_seeds {
                     let view = j(&row);
                     if view["status"] == "picking" && view["sides"][side]["pick"].is_null() {
                         let slot = first_unwon(&row, seat, &row.games).unwrap_or(int(0));
-                        row = pick_deck(&row, seat, i32::try_from(slot).expect("a slot"), NOW, None).expect("the pick applies");
+                        row = pick_deck(&row, seat, i32::try_from(slot).expect("a slot"), NOW, None)
+                            .expect("the pick applies");
                     }
                 }
             }
             let first = last(&j(&row)["games"])["first"].clone();
             firsts.push(if first.is_null() { json!("p1") } else { first });
-            assert_eq!(game_seats(&row).expect("a game is in play").seed, format!("seed-base:{}", index + 1));
-            let reason = if outcome == Winner::Draw { GameOverReason::TurnCap } else { GameOverReason::HeroDeath };
+            assert_eq!(
+                game_seats(&row).expect("a game is in play").seed,
+                format!("seed-base:{}", index + 1)
+            );
+            let reason = if outcome == Winner::Draw {
+                GameOverReason::TurnCap
+            } else {
+                GameOverReason::HeroDeath
+            };
             row = game_ended(&row, outcome, reason, NOW, &format!("m{}", index + 2)).expect("the game ends");
         }
         assert_eq!(Value::Array(firsts), json!(["p1", "p2", "p1", "p2", "p1"]));
@@ -722,10 +950,19 @@ mod r335_seats_and_seeds {
     #[test]
     fn r335_the_matchs_p1_is_whoever_goes_first_with_the_deck_they_picked_r259() {
         let after_game1 = play(&fresh(), [0, 0], Winner::P1, "match-2");
-        let game2 = pick_deck(&pick_deck(&after_game1, P1, int(1), NOW, None).expect("p1 picks"), P2, int(2), NOW, None)
-            .expect("p2 picks");
+        let game2 = pick_deck(
+            &pick_deck(&after_game1, P1, int(1), NOW, None).expect("p1 picks"),
+            P2,
+            int(2),
+            NOW,
+            None,
+        )
+        .expect("p2 picks");
 
-        assert_match(&j(&game2)["games"][1], &json!({ "gameNo": 2, "matchId": "match-2", "first": "p2" }));
+        assert_match(
+            &j(&game2)["games"][1],
+            &json!({ "gameNo": 2, "matchId": "match-2", "first": "p2" }),
+        );
         let seated = game_seats(&game2).expect("a game is in play");
         assert_eq!(seated.seed, "seed-base:2");
         assert_eq!(
@@ -752,7 +989,8 @@ mod r336_what_each_side_sees {
         states.push(row.clone());
         row = pick_deck(&row, P2, int(0), NOW, None).expect("p2 picks");
         states.push(row.clone());
-        row = game_ended(&row, Winner::Draw, GameOverReason::DrawAccepted, NOW, "match-2").expect("the game ends");
+        row = game_ended(&row, Winner::Draw, GameOverReason::DrawAccepted, NOW, "match-2")
+            .expect("the game ends");
         states.push(row.clone());
         row = pick_deck(&row, P2, int(1), NOW, None).expect("p2 picks");
         states.push(row.clone());
@@ -796,7 +1034,10 @@ mod r336_what_each_side_sees {
         row = play(&row, [1, 2], Winner::P2, "m3");
         let alice = view_of(&row, ALICE);
         assert_eq!(
-            map(&alice["you"]["decks"], |deck| json!({ "slot": deck["slot"], "name": deck["name"], "won": deck["won"] })),
+            map(
+                &alice["you"]["decks"],
+                |deck| json!({ "slot": deck["slot"], "name": deck["name"], "won": deck["won"] })
+            ),
             json!([
                 { "slot": 0, "name": "alice deck 0", "won": true },
                 { "slot": 1, "name": "alice deck 1", "won": false },
@@ -824,7 +1065,12 @@ mod r336_what_each_side_sees {
     #[test]
     fn r336_the_projection_has_exactly_the_fields_of_the_clients_series_view() {
         let over = play(
-            &play(&play(&fresh(), [0, 0], Winner::P1, "m2"), [1, 1], Winner::P1, "m3"),
+            &play(
+                &play(&fresh(), [0, 0], Winner::P1, "m2"),
+                [1, 1],
+                Winner::P1,
+                "m3",
+            ),
             [2, 2],
             Winner::P1,
             "unused",
@@ -847,10 +1093,24 @@ mod r336_what_each_side_sees {
         ];
         expected.sort_unstable();
         assert_eq!(keys(&view), expected);
-        assert_eq!(keys(&view["you"]), ["autoPick", "decks", "pick", "seat", "trioName", "wins"]);
-        assert_eq!(keys(&view["you"]["decks"][0]), ["cards", "games", "name", "slot", "won"]);
+        assert_eq!(
+            keys(&view["you"]),
+            ["autoPick", "decks", "pick", "seat", "trioName", "wins"]
+        );
+        assert_eq!(
+            keys(&view["you"]["decks"][0]),
+            ["cards", "games", "name", "slot", "won"]
+        );
         assert_eq!(keys(&view["opponent"]["decks"][0]), ["slot", "won"]);
-        let mut game_keys = vec!["gameNo", "matchId", "opponentSlot", "reason", "result", "youWentFirst", "yourSlot"];
+        let mut game_keys = vec![
+            "gameNo",
+            "matchId",
+            "opponentSlot",
+            "reason",
+            "result",
+            "youWentFirst",
+            "yourSlot",
+        ];
         game_keys.sort_unstable();
         assert_eq!(keys(&view["games"][0]), game_keys);
         let mut result_keys = vec!["endReason", "outcome", "ranked"];
@@ -892,13 +1152,24 @@ mod r337_a_series_begun_before_conquest {
             { "gameNo": 3, "matchId": "m3", "slots": [2, 2], "first": "p1", "winner": null, "reason": null },
         ]);
         let legacy: SeriesRow = serde_json::from_value(legacy).expect("a SeriesRow");
-        let after = game_ended(&legacy, Winner::P1, GameOverReason::HeroDeath, NOW, "m4").expect("the game ends");
+        let after =
+            game_ended(&legacy, Winner::P1, GameOverReason::HeroDeath, NOW, "m4").expect("the game ends");
         // Two wins no longer end it: Alice has won with decks 0 and 2 and must still win with deck 1.
         assert_eq!(j(&after)["status"], "picking");
-        assert_eq!(map(&j(&after)["sides"], |side| side["wins"].clone()), json!([2, 1]));
-        assert_eq!(map(&j(&after)["sides"], |side| side["pick"].clone()), json!([1, null]));
+        assert_eq!(
+            map(&j(&after)["sides"], |side| side["wins"].clone()),
+            json!([2, 1])
+        );
+        assert_eq!(
+            map(&j(&after)["sides"], |side| side["pick"].clone()),
+            json!([1, null])
+        );
         assert_eq!(j(&unwon_slots(&after, P2, &after.games)), json!([1, 2]));
-        assert_eq!(map(&view_of(&after, ALICE)["you"]["decks"], |deck| deck["won"].clone()), json!([true, false, true]));
+        assert_eq!(
+            map(&view_of(&after, ALICE)["you"]["decks"], |deck| deck["won"]
+                .clone()),
+            json!([true, false, true])
+        );
     }
 }
 
@@ -926,7 +1197,11 @@ mod r259_r260_r261_what_stands_of_the_best_of_3_rulings {
             }),
         );
         assert_eq!(
-            map(&j(&series)["sides"], |side| json!([side["profileId"], side["wins"], side["pick"]])),
+            map(&j(&series)["sides"], |side| json!([
+                side["profileId"],
+                side["wins"],
+                side["pick"]
+            ])),
             json!([[ALICE, 0, null], [BOB, 0, null]]),
         );
         assert_eq!(j(&series)["sides"][0]["trio"], j(&trio("alice")));
@@ -947,9 +1222,16 @@ mod r259_r260_r261_what_stands_of_the_best_of_3_rulings {
 
     #[test]
     fn r261_a_concede_loses_the_game_and_never_the_series_by_itself_now_r334() {
-        let playing = pick_deck(&pick_deck(&fresh(), P1, int(0), NOW, None).expect("p1 picks"), P2, int(0), NOW, None)
-            .expect("p2 picks");
-        let row = game_ended(&playing, Winner::P1, GameOverReason::Concede, NOW, "m2").expect("the game ends");
+        let playing = pick_deck(
+            &pick_deck(&fresh(), P1, int(0), NOW, None).expect("p1 picks"),
+            P2,
+            int(0),
+            NOW,
+            None,
+        )
+        .expect("p2 picks");
+        let row =
+            game_ended(&playing, Winner::P1, GameOverReason::Concede, NOW, "m2").expect("the game ends");
         assert_eq!(j(&row)["status"], "picking");
     }
 }
@@ -960,17 +1242,35 @@ mod r262_how_a_series_is_rated {
     #[test]
     fn r262_a_series_scores_once_for_series_p1_1_0_5_or_0_and_not_at_all_while_it_runs() {
         assert_eq!(score(&fresh()), None);
-        let playing = pick_deck(&pick_deck(&fresh(), P1, int(0), NOW, None).expect("p1 picks"), P2, int(0), NOW, None)
-            .expect("p2 picks");
+        let playing = pick_deck(
+            &pick_deck(&fresh(), P1, int(0), NOW, None).expect("p1 picks"),
+            P2,
+            int(0),
+            NOW,
+            None,
+        )
+        .expect("p2 picks");
         assert_eq!(score(&playing), None);
-        assert_eq!(score(&forfeit_series(&fresh(), P1, NOW).expect("the forfeit applies")), Some(0.0));
-        assert_eq!(score(&forfeit_series(&fresh(), P2, NOW).expect("the forfeit applies")), Some(1.0));
+        assert_eq!(
+            score(&forfeit_series(&fresh(), P1, NOW).expect("the forfeit applies")),
+            Some(0.0)
+        );
+        assert_eq!(
+            score(&forfeit_series(&fresh(), P2, NOW).expect("the forfeit applies")),
+            Some(1.0)
+        );
     }
 
     #[test]
-    fn r262_the_one_move_is_recorded_on_the_ending_row_without_a_second_write_and_its_rating_never_reaches_a_player_r612() {
+    fn r262_the_one_move_is_recorded_on_the_ending_row_without_a_second_write_and_its_rating_never_reaches_a_player_r612()
+     {
         let decided = play(
-            &play(&play(&fresh(), [0, 0], Winner::P2, "m2"), [1, 1], Winner::P2, "m3"),
+            &play(
+                &play(&fresh(), [0, 0], Winner::P2, "m2"),
+                [1, 1],
+                Winner::P2,
+                "m3",
+            ),
             [2, 2],
             Winner::P2,
             "unused",
@@ -981,15 +1281,27 @@ mod r262_how_a_series_is_rated {
         assert_eq!(j(&rated)["version"], j(&decided)["version"]);
         assert!(j(&decided)["ratingBefore"].is_null());
 
-        assert_eq!(view_of(&rated, BOB)["result"], json!({ "outcome": "win", "endReason": "decided", "ranked": true }));
-        assert_eq!(view_of(&rated, ALICE)["result"], json!({ "outcome": "loss", "endReason": "decided", "ranked": true }));
+        assert_eq!(
+            view_of(&rated, BOB)["result"],
+            json!({ "outcome": "win", "endReason": "decided", "ranked": true })
+        );
+        assert_eq!(
+            view_of(&rated, ALICE)["result"],
+            json!({ "outcome": "loss", "endReason": "decided", "ranked": true })
+        );
         let alice = view_of(&rated, ALICE).to_string();
-        assert!(!alice.contains("1180.5") && !alice.contains("1200") && !alice.contains("1019.5"), "{alice}");
+        assert!(
+            !alice.contains("1180.5") && !alice.contains("1200") && !alice.contains("1019.5"),
+            "{alice}"
+        );
         // R604: a room's series is unranked, and its row records no move.
         let mut room = j(&decided);
         room["ranked"] = json!(false);
         let room: SeriesRow = serde_json::from_value(room).expect("a SeriesRow");
-        assert_match(&view_of(&rate_series(&room, None), BOB)["result"], &json!({ "ranked": false }));
+        assert_match(
+            &view_of(&rate_series(&room, None), BOB)["result"],
+            &json!({ "ranked": false }),
+        );
         // The flag rides on the view from the start, not only in `result`, so a mid-series screen
         // can say whether a forfeit moves the rating.
         assert_eq!(view_of(&fresh(), BOB)["ranked"], json!(true));
@@ -1011,7 +1323,10 @@ mod r263_a_series_is_written_by_compare_and_set {
 
     /// TS's `step`: the transition moved the version by exactly one and stamped `updatedAt`.
     fn step(row: &mut SeriesRow, next: SeriesRow, at: i64) {
-        assert_eq!(j(&next)["version"].as_i64(), j(row)["version"].as_i64().map(|version| version + 1));
+        assert_eq!(
+            j(&next)["version"].as_i64(),
+            j(row)["version"].as_i64().map(|version| version + 1)
+        );
         assert_eq!(j(&next)["updatedAt"].as_i64(), Some(at));
         *row = next;
     }
@@ -1023,7 +1338,8 @@ mod r263_a_series_is_written_by_compare_and_set {
         step(&mut row, next, NOW + 1);
         let next = pick_deck(&row, P2, int(0), NOW + 2, None).expect("p2 picks");
         step(&mut row, next, NOW + 2);
-        let next = game_ended(&row, Winner::P1, GameOverReason::HeroDeath, NOW + 3, "match-2").expect("the game ends");
+        let next = game_ended(&row, Winner::P1, GameOverReason::HeroDeath, NOW + 3, "match-2")
+            .expect("the game ends");
         step(&mut row, next, NOW + 3);
         let next = pick_deck(&row, P2, int(1), NOW + 4, None).expect("p2 picks");
         step(&mut row, next, NOW + 4);
@@ -1031,7 +1347,8 @@ mod r263_a_series_is_written_by_compare_and_set {
         let next = timeout_picks(&row, deadline).expect("the clock settles");
         step(&mut row, next, deadline);
         let at = j(&row)["updatedAt"].as_i64().unwrap_or(0) + 1;
-        let next = game_ended(&row, Winner::P1, GameOverReason::Concede, at, "match-3").expect("the game ends");
+        let next =
+            game_ended(&row, Winner::P1, GameOverReason::Concede, at, "match-3").expect("the game ends");
         step(&mut row, next, at);
         let next = forfeit_series(&row, P2, at + 1).expect("the forfeit applies");
         step(&mut row, next, at + 1);
@@ -1040,8 +1357,14 @@ mod r263_a_series_is_written_by_compare_and_set {
             &j(&forfeit_series(&fresh(), P1, NOW + 9).expect("the forfeit applies")),
             &json!({ "version": 2, "updatedAt": NOW + 9 }),
         );
-        let picked = pick_deck(&pick_deck(&fresh(), P1, int(0), NOW, None).expect("p1 picks"), P2, int(0), NOW, None)
-            .expect("p2 picks");
+        let picked = pick_deck(
+            &pick_deck(&fresh(), P1, int(0), NOW, None).expect("p1 picks"),
+            P2,
+            int(0),
+            NOW,
+            None,
+        )
+        .expect("p2 picks");
         assert_eq!(j(&picked)["version"], json!(3));
     }
 
@@ -1050,8 +1373,14 @@ mod r263_a_series_is_written_by_compare_and_set {
         let next = play(&fresh(), [0, 0], Winner::P1, "match-2");
         assert_eq!(j(&next)["nextMatchId"], "match-2");
         assert!(view_of(&next, ALICE)["currentMatchId"].is_null());
-        let playing = pick_deck(&pick_deck(&next, P1, int(1), NOW, None).expect("p1 picks"), P2, int(1), NOW, None)
-            .expect("p2 picks");
+        let playing = pick_deck(
+            &pick_deck(&next, P1, int(1), NOW, None).expect("p1 picks"),
+            P2,
+            int(1),
+            NOW,
+            None,
+        )
+        .expect("p2 picks");
         assert_eq!(j(&playing)["games"][1]["matchId"], "match-2");
         assert_eq!(view_of(&playing, ALICE)["currentMatchId"], "match-2");
     }

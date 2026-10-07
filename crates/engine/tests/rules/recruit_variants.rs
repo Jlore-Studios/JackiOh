@@ -12,8 +12,8 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::effects::{forced_attacks, recruit, recruit_all};
 
 use crate::rules::fixtures::generation::{
-    Run, act, answer, asker, asker_answers, body, cheap_unit, clear_asker_answers, deck_spell, field_trap, frozen,
-    hand_card, pile_on, plain_trap, playing, pricy_unit, replayed, x_unit,
+    Run, act, answer, asker, asker_answers, body, cheap_unit, clear_asker_answers, deck_spell, field_trap,
+    frozen, hand_card, pile_on, plain_trap, playing, pricy_unit, replayed, x_unit,
 };
 use crate::rules::fixtures::harness::{events_of_type, put, set_library, sink_for, slot};
 
@@ -81,7 +81,11 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .iter()
             .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
         (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(got, want)| matches_object(got, want))
+            actual.len() == expected.len()
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(got, want)| matches_object(got, want))
         }
         _ => actual == expected,
     }
@@ -102,7 +106,8 @@ mod e25_recruit_from_the_opponent_s_exile_classic_c1_radiant {
     use super::*;
 
     #[test]
-    fn r12_the_newest_permanent_of_their_exile_is_summoned_on_your_side_under_your_control_its_owner_unchanged() {
+    fn r12_the_newest_permanent_of_their_exile_is_summoned_on_your_side_under_your_control_its_owner_unchanged()
+     {
         let mut start = playing("recruit-exile");
         let state = &mut start.state;
         let older = exiled(state, &pricy_unit.id, P2);
@@ -111,7 +116,10 @@ mod e25_recruit_from_the_opponent_s_exile_classic_c1_radiant {
         exiled(state, &deck_spell.id, P2); // a Spell exiled last is passed over
         let events = {
             let mut sink = sink_for(state);
-            run(&mut sink, vec![recruit(args(json!({ "from": "exile", "whose": "enemy" })))]);
+            run(
+                &mut sink,
+                vec![recruit(args(json!({ "from": "exile", "whose": "enemy" })))],
+            );
             sink.events.clone()
         };
 
@@ -121,7 +129,8 @@ mod e25_recruit_from_the_opponent_s_exile_classic_c1_radiant {
         assert_eq!(card.controller, P1);
         assert!(!ids(&state.players.p2.exile).contains(&newest.id));
         assert!(ids(&state.players.p2.exile).contains(&older.id));
-        let summoned = serde_json::to_value(events_of_type(&events, GameEventType::Summoned)).expect("serialises");
+        let summoned =
+            serde_json::to_value(events_of_type(&events, GameEventType::Summoned)).expect("serialises");
         assert!(
             matches_object(&summoned, &json!([{ "player": "p1", "instanceId": newest.id }])),
             "{summoned}"
@@ -157,7 +166,10 @@ mod e25_recruit_from_the_opponent_s_exile_classic_c1_radiant {
         let state = &mut start.state;
         exiled(state, &deck_spell.id, P2);
         let mut sink = sink_for(state);
-        run(&mut sink, vec![recruit(args(json!({ "from": "exile", "whose": "enemy" })))]);
+        run(
+            &mut sink,
+            vec![recruit(args(json!({ "from": "exile", "whose": "enemy" })))],
+        );
         assert_eq!(*sink.events, Vec::<GameEvent>::new());
     }
 }
@@ -184,11 +196,17 @@ mod e25_recruit_n_with_filters_classic_c31_c65 {
         ));
         run_on(
             state,
-            vec![recruit(args(json!({ "count": 3, "filter": { "type": "Unit", "costRange": { "max": 2 } } })))],
+            vec![recruit(args(
+                json!({ "count": 3, "filter": { "type": "Unit", "costRange": { "max": 2 } } }),
+            ))],
         );
         assert_eq!(
             unit_ids(&state.players.p1),
-            vec![Some(library[1].clone()), Some(library[3].clone()), Some(library[5].clone())]
+            vec![
+                Some(library[1].clone()),
+                Some(library[3].clone()),
+                Some(library[5].clone())
+            ]
         );
         assert_eq!(
             ids(&state.players.p1.library),
@@ -203,13 +221,20 @@ mod e25_recruit_n_with_filters_classic_c31_c65 {
         for lane in 1..=5 {
             put(state, &body.id, slot(P1, Row::Units, lane), json!({}));
         }
-        let library = ids(&set_library(state, P1, &[cheap_unit.id.clone(), plain_trap.id.clone()]));
+        let library = ids(&set_library(
+            state,
+            P1,
+            &[cheap_unit.id.clone(), plain_trap.id.clone()],
+        ));
         let events = {
             let mut sink = sink_for(state);
             run(&mut sink, vec![recruit(args(json!({ "count": 2 })))]);
             sink.events.clone()
         };
-        assert_eq!(events_of_type(&events, GameEventType::Summoned), Vec::<GameEvent>::new());
+        assert_eq!(
+            events_of_type(&events, GameEventType::Summoned),
+            Vec::<GameEvent>::new()
+        );
         assert_eq!(ids(&state.players.p1.library), library);
     }
 }
@@ -219,7 +244,8 @@ mod e25_recruit_your_entire_deck_classic_c60 {
     use super::*;
 
     #[test]
-    fn r64_top_down_each_permanent_while_its_row_has_room_units_to_units_the_rest_to_the_backrow_traps_face_down_spells_stay() {
+    fn r64_top_down_each_permanent_while_its_row_has_room_units_to_units_the_rest_to_the_backrow_traps_face_down_spells_stay()
+     {
         let mut start = playing("recruit-all");
         let state = &mut start.state;
         for lane in 1..=3 {
@@ -240,13 +266,19 @@ mod e25_recruit_your_entire_deck_classic_c60 {
         let spell = hand_card(state, &pile_on.id, P1);
         state.players.p1.mana.current = 5;
         let mut run1 = frozen(&start);
-        run1 = act(&run1, json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }));
+        run1 = act(
+            &run1,
+            json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
+        );
         let after = &run1.state.players.p1;
         assert_eq!(
             after
                 .units
                 .iter()
-                .map(|pile| pile.as_ref().and_then(|pile| pile.first()).map(|card| card.def_id.clone()))
+                .map(|pile| pile
+                    .as_ref()
+                    .and_then(|pile| pile.first())
+                    .map(|card| card.def_id.clone()))
                 .collect::<Vec<_>>(),
             vec![
                 Some(body.id.clone()),
@@ -277,19 +309,28 @@ mod e25_recruit_your_entire_deck_classic_c60 {
     }
 
     #[test]
-    fn r113_a_card_that_asks_a_question_as_it_arrives_pauses_the_rest_which_resumes_over_the_same_cards_after_the_answer() {
+    fn r113_a_card_that_asks_a_question_as_it_arrives_pauses_the_rest_which_resumes_over_the_same_cards_after_the_answer()
+     {
         let mut start = playing("recruit-all-pause");
         let state = &mut start.state;
         let library = ids(&set_library(
             state,
             P1,
-            &[asker.id.clone(), cheap_unit.id.clone(), deck_spell.id.clone(), body.id.clone()],
+            &[
+                asker.id.clone(),
+                cheap_unit.id.clone(),
+                deck_spell.id.clone(),
+                body.id.clone(),
+            ],
         ));
         let spell = hand_card(state, &pile_on.id, P1);
         state.players.p1.mana.current = 5;
         clear_asker_answers();
         let mut run1 = frozen(&start);
-        run1 = act(&run1, json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }));
+        run1 = act(
+            &run1,
+            json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
+        );
 
         // The Field Spell arrived and asked; the two Units behind it wait (R151, R113).
         let pending = must(run1.state.pending.clone(), "the arrival's question");
@@ -321,7 +362,13 @@ mod e25_recruit_your_entire_deck_classic_c60 {
         assert_eq!(ids(&live_run.state.players.p1.library), vec![library[2].clone()]);
         let asker_card = must(find_instance(&live_run.state, &library[0]), "the asker");
         assert!(
-            matches!(asker_card.zone, Zone::Field { row: Row::Backrow, .. }),
+            matches!(
+                asker_card.zone,
+                Zone::Field {
+                    row: Row::Backrow,
+                    ..
+                }
+            ),
             "{:?}",
             asker_card.zone
         );
@@ -336,7 +383,9 @@ mod e25_recruit_your_entire_deck_classic_c60 {
         exiled(state, &deck_spell.id, P2);
         run_on(
             state,
-            vec![recruit_all(args(json!({ "from": "exile", "whose": "enemy", "filter": { "costRange": { "max": 1 } } })))],
+            vec![recruit_all(args(
+                json!({ "from": "exile", "whose": "enemy", "filter": { "costRange": { "max": 1 } } }),
+            ))],
         );
         assert_eq!(top_of(state, P1, 0).map(|card| card.id), Some(second.id.clone()));
         assert!(state.players.p1.units[1].is_none());
@@ -352,7 +401,11 @@ mod r690_recruit_skips_x_cost_cards_unless_they_are_the_only_valid_targets {
     fn r690_a_scan_takes_the_first_non_x_match_past_an_x_cost_card_on_top_which_stays() {
         let mut start = playing("recruit-x-skip");
         let state = &mut start.state;
-        let library = ids(&set_library(state, P1, &[x_unit.id.clone(), cheap_unit.id.clone()]));
+        let library = ids(&set_library(
+            state,
+            P1,
+            &[x_unit.id.clone(), cheap_unit.id.clone()],
+        ));
         run_on(state, vec![recruit(args(json!({})))]);
         assert_eq!(top_of(state, P1, 0).map(|card| card.id), Some(library[1].clone()));
         assert_eq!(ids(&state.players.p1.library), vec![library[0].clone()]);
@@ -362,14 +415,19 @@ mod r690_recruit_skips_x_cost_cards_unless_they_are_the_only_valid_targets {
     fn r690_with_only_x_cost_matches_the_scan_takes_the_first_one() {
         let mut start = playing("recruit-x-only");
         let state = &mut start.state;
-        let library = ids(&set_library(state, P1, &[x_unit.id.clone(), deck_spell.id.clone()]));
+        let library = ids(&set_library(
+            state,
+            P1,
+            &[x_unit.id.clone(), deck_spell.id.clone()],
+        ));
         run_on(state, vec![recruit(args(json!({})))]);
         assert_eq!(top_of(state, P1, 0).map(|card| card.id), Some(library[0].clone()));
         assert_eq!(ids(&state.players.p1.library), vec![library[1].clone()]);
     }
 
     #[test]
-    fn r690_recruit_all_leaves_x_cost_cards_when_other_permanents_match_and_takes_them_when_nothing_else_does() {
+    fn r690_recruit_all_leaves_x_cost_cards_when_other_permanents_match_and_takes_them_when_nothing_else_does()
+     {
         let mut mixed = playing("recruit-all-x-mixed");
         let mixed_state = &mut mixed.state;
         let mixed_library = ids(&set_library(
@@ -378,7 +436,10 @@ mod r690_recruit_skips_x_cost_cards_unless_they_are_the_only_valid_targets {
             &[cheap_unit.id.clone(), x_unit.id.clone(), deck_spell.id.clone()],
         ));
         run_on(mixed_state, vec![recruit_all(args(json!({})))]);
-        assert_eq!(top_of(mixed_state, P1, 0).map(|card| card.id), Some(mixed_library[0].clone()));
+        assert_eq!(
+            top_of(mixed_state, P1, 0).map(|card| card.id),
+            Some(mixed_library[0].clone())
+        );
         assert_eq!(
             ids(&mixed_state.players.p1.library),
             vec![mixed_library[1].clone(), mixed_library[2].clone()]
@@ -386,9 +447,16 @@ mod r690_recruit_skips_x_cost_cards_unless_they_are_the_only_valid_targets {
 
         let mut only = playing("recruit-all-x-only");
         let only_state = &mut only.state;
-        let only_library = ids(&set_library(only_state, P1, &[x_unit.id.clone(), deck_spell.id.clone()]));
+        let only_library = ids(&set_library(
+            only_state,
+            P1,
+            &[x_unit.id.clone(), deck_spell.id.clone()],
+        ));
         run_on(only_state, vec![recruit_all(args(json!({})))]);
-        assert_eq!(top_of(only_state, P1, 0).map(|card| card.id), Some(only_library[0].clone()));
+        assert_eq!(
+            top_of(only_state, P1, 0).map(|card| card.id),
+            Some(only_library[0].clone())
+        );
         assert_eq!(ids(&only_state.players.p1.library), vec![only_library[1].clone()]);
     }
 }

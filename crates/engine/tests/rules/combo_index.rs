@@ -9,7 +9,8 @@
 use jackioh_engine::subsystems::combo_index::{
     GRADES, Grade, RaiseGradeArgs, StartGradeArgs, cascade_effects, combo_index_end_of_turn, grade_name,
     grade_name_of, grade_of, grade_rises, grade_step_effects, grade_value, is_terminal_grade,
-    played_cards_this_turn, plays_this_turn, raise_grade, start_grade, step_a, step_b, step_c, step_d, step_e,
+    played_cards_this_turn, plays_this_turn, raise_grade, start_grade, step_a, step_b, step_c, step_d,
+    step_e,
 };
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -41,7 +42,12 @@ fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
 
 /// #93 Combo-Index itself: a Field Spell whose end-of-turn hook is the subsystem (§8, R62).
 fn combo_index() -> CardDef {
-    def("combo-index", 931, "Field Spell", json!({ "cost": 2, "rarity": "Legendary" }))
+    def(
+        "combo-index",
+        931,
+        "Field Spell",
+        json!({ "cost": 2, "rarity": "Legendary" }),
+    )
 }
 /// Anything cheap to play and to hold: a Spell lands in the graveyard, so a copy can still be made.
 fn trick() -> CardDef {
@@ -105,7 +111,10 @@ fn game(seed: &str) -> GameState {
 fn on_field(state: &mut GameState, grade: Option<i32>) -> CardInstance {
     let card = put(state, &combo_index().id, slot(P1, Row::Backrow, 1), json!({}));
     if let Some(grade) = grade {
-        find_instance_mut(state, &card.id).expect("on the field").counters.grade = Some(grade);
+        find_instance_mut(state, &card.id)
+            .expect("on the field")
+            .counters
+            .grade = Some(grade);
     }
     find_instance(state, &card.id).expect("on the field").clone()
 }
@@ -123,7 +132,9 @@ fn play(sink: &mut EngineSink<'_>, def_id: &str, radiant: bool) -> CardInstance 
 }
 
 fn run(sink: &mut EngineSink<'_>, self_: &CardInstance, effects: Vec<Effect>) {
-    let current = find_instance(sink.state, &self_.id).cloned().unwrap_or_else(|| self_.clone());
+    let current = find_instance(sink.state, &self_.id)
+        .cloned()
+        .unwrap_or_else(|| self_.clone());
     let mut ctx = make_context(sink, Some(&current), HookOptions::default());
     apply_effects(&effects, &mut ctx);
 }
@@ -184,10 +195,16 @@ mod r27_combo_index_s8_93_m3_t7 {
                 json!(["E", "D", "C", "B", "A", "S"])
             );
             assert_eq!(
-                GRADES.iter().map(|grade| grade_value(*grade)).collect::<Vec<i32>>(),
+                GRADES
+                    .iter()
+                    .map(|grade| grade_value(*grade))
+                    .collect::<Vec<i32>>(),
                 vec![1, 2, 3, 4, 5, 6]
             );
-            assert_eq!([1, 2, 3, 4, 5].map(is_terminal_grade), [false, false, false, false, false]);
+            assert_eq!(
+                [1, 2, 3, 4, 5].map(is_terminal_grade),
+                [false, false, false, false, false]
+            );
             assert!(is_terminal_grade(6));
 
             // The counter is plain state, so the client sees it and a replay round-trips it (§10.1).
@@ -199,7 +216,10 @@ mod r27_combo_index_s8_93_m3_t7 {
             json_of(events_of_type(&events, GameEventType::CounterChanged)),
             json!([{ "type": "counterChanged", "instanceId": card_id, "counter": "grade", "value": 1 }])
         );
-        assert_eq!(serde_json::from_value::<GameState>(json_of(&state)).unwrap(), state);
+        assert_eq!(
+            serde_json::from_value::<GameState>(json_of(&state)).unwrap(),
+            state
+        );
 
         sink_events(&mut state, &mut events, |sink| {
             let card = card(sink.state, &card_id).clone();
@@ -273,11 +293,23 @@ mod r27_combo_index_s8_93_m3_t7 {
         });
 
         // The cascade of each grade on its own, so "E→new grade in order" is the whole list every time.
-        assert_eq!(kinds_of(&cascade_effects(grade_value(Grade::E))), STEP_KINDS[..1].to_vec());
-        assert_eq!(kinds_of(&cascade_effects(grade_value(Grade::B))), STEP_KINDS[..4].to_vec());
-        assert_eq!(kinds_of(&cascade_effects(grade_value(Grade::A))), STEP_KINDS.to_vec());
+        assert_eq!(
+            kinds_of(&cascade_effects(grade_value(Grade::E))),
+            STEP_KINDS[..1].to_vec()
+        );
+        assert_eq!(
+            kinds_of(&cascade_effects(grade_value(Grade::B))),
+            STEP_KINDS[..4].to_vec()
+        );
+        assert_eq!(
+            kinds_of(&cascade_effects(grade_value(Grade::A))),
+            STEP_KINDS.to_vec()
+        );
         // S is "run E–A again", so reaching S runs the five steps twice and never itself (R27).
-        assert_eq!(kinds_of(&grade_step_effects(grade_value(Grade::S))), STEP_KINDS.to_vec());
+        assert_eq!(
+            kinds_of(&grade_step_effects(grade_value(Grade::S))),
+            STEP_KINDS.to_vec()
+        );
         assert_eq!(
             kinds_of(&cascade_effects(grade_value(Grade::S))),
             [STEP_KINDS, STEP_KINDS].concat()
@@ -308,7 +340,10 @@ mod r27_combo_index_s8_93_m3_t7 {
         assert_eq!(grade_now(&state, &card_id), Some(6));
         assert_eq!(json_of(grade_name_of(card(&state, &card_id))), json!("S"));
         // Two full rounds of E, D, C, B, A, in order, after the counter moves (R27).
-        let types: Vec<Value> = events[from..].iter().map(|event| json_of(event)["type"].clone()).collect();
+        let types: Vec<Value> = events[from..]
+            .iter()
+            .map(|event| json_of(event)["type"].clone())
+            .collect();
         assert_eq!(
             Value::Array(types),
             json!([
@@ -334,7 +369,10 @@ mod r27_combo_index_s8_93_m3_t7 {
         assert_eq!(state.players.p1.hand.len(), hand_len + 2);
         assert_eq!(state.players.p2.hand.len(), 1);
         assert_eq!(state.players.p2.exile.len(), 2);
-        assert_eq!(state.players.p1.hand.iter().filter(|held| held.radiant).count(), 2);
+        assert_eq!(
+            state.players.p1.hand.iter().filter(|held| held.radiant).count(),
+            2
+        );
         assert_eq!(state.players.p2.hero.health, 30 - 16);
         assert_eq!(state.players.p1.hero.health, 20 + 16);
     }
@@ -401,7 +439,13 @@ mod r27_combo_index_s8_93_m3_t7 {
         assert_eq!(json_of(copy.counters), json!({}));
         // The card it copied is untouched, still in the graveyard where its cast left it.
         assert_eq!(
-            state.players.p1.graveyard.iter().map(|held| held.id.clone()).collect::<Vec<String>>(),
+            state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .map(|held| held.id.clone())
+                .collect::<Vec<String>>(),
             vec![played.id.clone()]
         );
         let added: Vec<Value> = events_of_type(&events, GameEventType::AddedToHand)
@@ -440,16 +484,26 @@ mod r27_combo_index_s8_93_m3_t7 {
             .collect();
         assert_eq!(discounted.len(), 2); // R60: N different cards
         assert_eq!(
-            discounted.iter().map(|held| held.id.clone()).collect::<IndexSet<String>>().len(),
+            discounted
+                .iter()
+                .map(|held| held.id.clone())
+                .collect::<IndexSet<String>>()
+                .len(),
             2
         );
         let trick_cost = match trick().cost {
             CardCost::Fixed(cost) => cost,
             other => panic!("trick costs {other:?}"),
         };
-        assert_eq!(effective_cost(&state, &discounted[0], CostOptions::default()), trick_cost - 1);
         assert_eq!(
-            hand_ids.iter().filter(|id| card(&state, id).cost_mod == 0).count(),
+            effective_cost(&state, &discounted[0], CostOptions::default()),
+            trick_cost - 1
+        );
+        assert_eq!(
+            hand_ids
+                .iter()
+                .filter(|id| card(&state, id).cost_mod == 0)
+                .count(),
             2
         );
 
@@ -501,7 +555,13 @@ mod r27_combo_index_s8_93_m3_t7 {
         assert_eq!(exiled, vec![json!(gone.id)]);
         // It is the opponent's hand, never the controller's.
         assert_eq!(
-            state.players.p1.hand.iter().map(|held| held.id.clone()).collect::<Vec<String>>(),
+            state
+                .players
+                .p1
+                .hand
+                .iter()
+                .map(|held| held.id.clone())
+                .collect::<Vec<String>>(),
             mine.iter().map(|held| held.id.clone()).collect::<Vec<String>>()
         );
 
@@ -530,7 +590,10 @@ mod r27_combo_index_s8_93_m3_t7 {
 
             // Only one non-Radiant card is eligible, so the random pick must land on it (R60).
             run(&mut sink, &card, vec![step_b()]);
-            (card.id, hand.into_iter().map(|held| held.id).collect::<Vec<String>>())
+            (
+                card.id,
+                hand.into_iter().map(|held| held.id).collect::<Vec<String>>(),
+            )
         };
         assert!(card(&state, &hand_ids[0]).radiant);
         assert!(hand_ids.iter().all(|id| card(&state, id).radiant));
@@ -547,7 +610,10 @@ mod r27_combo_index_s8_93_m3_t7 {
             assert_eq!(second_sink.rng.cursor(), cursor);
         }
         assert_eq!(
-            events_after.iter().map(|event| event.event_type()).collect::<Vec<GameEventType>>(),
+            events_after
+                .iter()
+                .map(|event| event.event_type())
+                .collect::<Vec<GameEventType>>(),
             vec![GameEventType::RadiantSet]
         );
 
@@ -607,7 +673,13 @@ mod r27_combo_index_s8_93_m3_t7 {
                 let card = on_field(sink.state, Some(grade_value(Grade::A)));
                 in_hand(sink.state, &trick().id, P1, 5);
                 in_hand(sink.state, &other_trick().id, P2, 4);
-                for def_id in [trick().id, other_trick().id, trick().id, other_trick().id, trick().id] {
+                for def_id in [
+                    trick().id,
+                    other_trick().id,
+                    trick().id,
+                    other_trick().id,
+                    trick().id,
+                ] {
                     play(sink, &def_id, false);
                 }
                 let effects = combo_index_end_of_turn(sink, &card);
@@ -646,7 +718,10 @@ mod r27_combo_index_s8_93_m3_t7 {
         end_turn(&mut sink);
 
         assert_eq!(grade_now(sink.state, &card.id), Some(2));
-        assert_eq!(json_of(grade_name_of(super::card(sink.state, &card.id))), json!("D"));
+        assert_eq!(
+            json_of(grade_name_of(super::card(sink.state, &card.id))),
+            json!("D")
+        );
         // E copied the played card and D discounted two hand cards, before the turn ended (§2.2).
         let added: Vec<Value> = events_of_type(sink.events, GameEventType::AddedToHand)
             .iter()
@@ -655,7 +730,16 @@ mod r27_combo_index_s8_93_m3_t7 {
             .collect();
         assert_eq!(added.len(), 1);
         assert_eq!(added[0]["defId"], json!(played.def_id));
-        assert_eq!(sink.state.players.p1.hand.iter().filter(|held| held.cost_mod == -1).count(), 2);
+        assert_eq!(
+            sink.state
+                .players
+                .p1
+                .hand
+                .iter()
+                .filter(|held| held.cost_mod == -1)
+                .count(),
+            2
+        );
 
         let order: Vec<GameEventType> = sink.events.iter().map(|event| event.event_type()).collect();
         let index_of = |kind: GameEventType| order.iter().position(|each| *each == kind);
@@ -693,7 +777,10 @@ mod r86_what_a_pool_of_cards_played_this_turn_holds {
 
         // Both are still findable, so both are in the pool: a card that moved zone is still a card.
         let pool = |state: &GameState| -> Vec<String> {
-            played_cards_this_turn(state, P1).iter().map(|held| held.id.clone()).collect()
+            played_cards_this_turn(state, P1)
+                .iter()
+                .map(|held| held.id.clone())
+                .collect()
         };
         assert_eq!(pool(&*sink.state), vec![spell.id.clone(), unit.id.clone()]);
 
@@ -707,7 +794,13 @@ mod r86_what_a_pool_of_cards_played_this_turn_holds {
         // And the E step picks from what is left rather than fizzling on the missing id.
         run(&mut sink, &card, vec![step_e()]);
         assert_eq!(
-            sink.state.players.p1.hand.iter().map(|held| held.def_id.clone()).collect::<Vec<String>>(),
+            sink.state
+                .players
+                .p1
+                .hand
+                .iter()
+                .map(|held| held.def_id.clone())
+                .collect::<Vec<String>>(),
             vec![trick().id]
         );
     }

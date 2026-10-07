@@ -19,9 +19,9 @@ use std::cell::Cell;
 use std::sync::LazyLock;
 
 use jackioh_engine::effects::{
-    choose_mode, chosen_options, damage, discover_from_catalog, fuse_cards, fuse_generated, fuse_onto_your_card,
-    fuse_random_into, place_plague, place_plague_each, place_plague_random, place_plague_tokens, recruit_all,
-    transform_beneath,
+    choose_mode, chosen_options, damage, discover_from_catalog, fuse_cards, fuse_generated,
+    fuse_onto_your_card, fuse_random_into, place_plague, place_plague_each, place_plague_random,
+    place_plague_tokens, recruit_all, transform_beneath,
 };
 use jackioh_engine::testkit::*;
 
@@ -134,8 +134,15 @@ pub static fuse_b: LazyLock<CardDef> =
     LazyLock::new(|| unit("fuse-b", 4613, 1, 1, json!({ "cost": 1, "loc": 7 })));
 /// An X-cost Unit and an embiggen Unit, for R470's printed forms.
 pub static x_unit: LazyLock<CardDef> = LazyLock::new(|| unit("x-unit", 4614, 1, 1, json!({ "cost": "X" })));
-pub static big_unit: LazyLock<CardDef> =
-    LazyLock::new(|| unit("embiggen-unit", 4615, 1, 1, json!({ "cost": { "base": 2, "embiggen": 4 } })));
+pub static big_unit: LazyLock<CardDef> = LazyLock::new(|| {
+    unit(
+        "embiggen-unit",
+        4615,
+        1,
+        1,
+        json!({ "cost": { "base": 2, "embiggen": 4 } }),
+    )
+});
 /// An Immutable Unit, which no Fuse keeps (R23).
 pub static immutable: LazyLock<CardDef> = LazyLock::new(|| {
     unit(
@@ -235,8 +242,10 @@ pub static pile_on: LazyLock<CardDef> = LazyLock::new(|| def("pile-on", 4633, "S
 /// A Field Spell that asks a question as it arrives anywhere (R151), so a Recruit can pause.
 pub static asker: LazyLock<CardDef> = LazyLock::new(|| def("asker", 4634, "Field Spell", json!({})));
 pub static deck_spell: LazyLock<CardDef> = LazyLock::new(|| def("deck-spell", 4635, "Spell", json!({})));
-pub static cheap_unit: LazyLock<CardDef> = LazyLock::new(|| unit("cheap-unit", 4636, 1, 1, json!({ "cost": 1 })));
-pub static pricy_unit: LazyLock<CardDef> = LazyLock::new(|| unit("pricy-unit", 4637, 4, 4, json!({ "cost": 4 })));
+pub static cheap_unit: LazyLock<CardDef> =
+    LazyLock::new(|| unit("cheap-unit", 4636, 1, 1, json!({ "cost": 1 })));
+pub static pricy_unit: LazyLock<CardDef> =
+    LazyLock::new(|| unit("pricy-unit", 4637, 4, 4, json!({ "cost": 4 })));
 
 thread_local! {
     /// TS's module `askerAnswers: string[]`.
@@ -299,7 +308,10 @@ fn fuser_script() -> Script {
     }
     fn picks_of(data: &IndexMap<String, Value>) -> Vec<String> {
         match data.get("picks").and_then(Value::as_array) {
-            Some(picks) => picks.iter().filter_map(|pick| pick.as_str().map(str::to_string)).collect(),
+            Some(picks) => picks
+                .iter()
+                .filter_map(|pick| pick.as_str().map(str::to_string))
+                .collect(),
             None => vec![],
         }
     }
@@ -321,7 +333,9 @@ fn fuser_script() -> Script {
                     picks.extend(chosen_options(&*ctx));
                     match ctx.self_.as_ref() {
                         None => vec![],
-                        Some(me) => vec![fuse_cards(json_as(json!({ "defIds": picks, "targetInstanceId": me.id })))],
+                        Some(me) => vec![fuse_cards(json_as(
+                            json!({ "defIds": picks, "targetInstanceId": me.id }),
+                        ))],
                     }
                 }),
             ),
@@ -369,9 +383,15 @@ fn plague_book_face(count: i32) -> Script {
 
 fn outbreak_face(amount: i32) -> Script {
     Script {
-        targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))],
+        targets: vec![TargetDecl::target(
+            1,
+            1,
+            json!({ "side": "any", "of": ["unit", "backrow"] }),
+        )],
         cry: Some(hook(move |_ctx| {
-            vec![place_plague(json_as(json!({ "target": { "of": "chosen" }, "amount": amount })))]
+            vec![place_plague(json_as(
+                json!({ "target": { "of": "chosen" }, "amount": amount }),
+            ))]
         })),
         ..Script::default()
     }
@@ -381,7 +401,8 @@ fn lab_face(radiant: bool) -> Script {
     Script {
         targets: vec![TargetDecl::hand(1, 1, Value::Null)],
         cry: Some(hook(move |_ctx| {
-            let mut args = json!({ "into": { "target": { "of": "chosen" } }, "query": { "defId": *LAB_POOL } });
+            let mut args =
+                json!({ "into": { "target": { "of": "chosen" } }, "query": { "defId": *LAB_POOL } });
             if radiant {
                 args["radiant"] = json!(true);
             }
@@ -429,14 +450,22 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         (
             crawler.id.clone(),
             both(Script {
-                triggers: vec![TriggerDef::new("placed-on-this", &[GameEventType::CounterChanged], |ctx, event| {
-                    if placed_on_self(event, ctx.self_.as_ref()) {
-                        vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
-                    } else {
-                        vec![]
-                    }
-                })
-                .with_when(|ctx, event| placed_on_self(event, ctx.self_.as_ref()))],
+                triggers: vec![
+                    TriggerDef::new(
+                        "placed-on-this",
+                        &[GameEventType::CounterChanged],
+                        |ctx, event| {
+                            if placed_on_self(event, ctx.self_.as_ref()) {
+                                vec![damage(json_as(
+                                    json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                                ))]
+                            } else {
+                                vec![]
+                            }
+                        },
+                    )
+                    .with_when(|ctx, event| placed_on_self(event, ctx.self_.as_ref())),
+                ],
                 ..Script::default()
             }),
         ),
@@ -475,7 +504,9 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         (
             scatter.id.clone(),
             both(Script {
-                cry: Some(hook(|_ctx| vec![place_plague_random(json_as(json!({ "count": 2, "amount": 1 })))])),
+                cry: Some(hook(|_ctx| {
+                    vec![place_plague_random(json_as(json!({ "count": 2, "amount": 1 })))]
+                })),
                 ..Script::default()
             }),
         ),
@@ -524,7 +555,11 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         (
             mutate.id.clone(),
             both(Script {
-                targets: vec![TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit", "backrow"] }))],
+                targets: vec![TargetDecl::target(
+                    1,
+                    1,
+                    json!({ "side": "enemy", "of": ["unit", "backrow"] }),
+                )],
                 cry: Some(hook(|_ctx| {
                     vec![
                         fuse_onto_your_card(json_as(json!({ "target": { "of": "chosen" } }))),
@@ -559,7 +594,9 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
             asker.id.clone(),
             both(Script {
                 start_of_game: Some(hook(|_ctx| {
-                    vec![choose_mode(json_as(json!({ "options": ["left", "right"], "step": "picked" })))]
+                    vec![choose_mode(json_as(
+                        json!({ "options": ["left", "right"], "step": "picked" }),
+                    ))]
                 })),
                 resume: IndexMap::from([(
                     "picked",
@@ -659,8 +696,16 @@ fn action_of(input: impl serde::Serialize, nonce: String) -> Action {
 pub fn playing(seed: &str) -> Run {
     let mut state = begin_game(&new_game(seed, None)).state;
     for player in [PlayerId::P1, PlayerId::P2] {
-        let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
-        let action = Action::new(ActionBody::Mulligan { keep }, player, format!("gen-mull-{seed}-{player}"));
+        let keep: Vec<String> = state.players[player]
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
+        let action = Action::new(
+            ActionBody::Mulligan { keep },
+            player,
+            format!("gen-mull-{seed}-{player}"),
+        );
         let result = reduce(&state, &action);
         if let Some(error) = result.error {
             panic!("{error}");

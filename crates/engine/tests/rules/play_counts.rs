@@ -20,7 +20,11 @@ static NONCE: AtomicU32 = AtomicU32::new(0);
 fn game(seed: &str) -> GameState {
     let mut ready = begin_game(&with_play_a(new_game(seed, None))).state;
     for player in PLAYER_IDS {
-        let keep: Vec<String> = ready.players[player].hand.iter().map(|card| card.id.clone()).collect();
+        let keep: Vec<String> = ready.players[player]
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
         ready = must(&ready, player, json!({ "type": "mulligan", "keep": keep })).state;
     }
     for player in PLAYER_IDS {
@@ -45,9 +49,16 @@ fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
 
 /// TS `hand`: a card put in `player`'s hand with the face asked for; answers its copy as it stands.
 fn hand(state: &mut GameState, player: PlayerId, def_id: &str, radiant: bool) -> CardInstance {
-    let card = in_hand(state, def_id, player, 1).into_iter().next().expect("no card");
-    find_instance_mut(state, &card.id).expect("the card is in the hand").radiant = radiant;
-    find_instance(state, &card.id).cloned().expect("the card is in the hand")
+    let card = in_hand(state, def_id, player, 1)
+        .into_iter()
+        .next()
+        .expect("no card");
+    find_instance_mut(state, &card.id)
+        .expect("the card is in the hand")
+        .radiant = radiant;
+    find_instance(state, &card.id)
+        .cloned()
+        .expect("the card is in the hand")
 }
 
 /// Play a card that needs no choices (a hero target for the bolts), and return the state after.
@@ -81,7 +92,10 @@ mod r451_plays_by_type_this_turn_classic_plus_c37 {
         state = play(&state, PlayerId::P1, &PA.hidden_field_trap.id, false);
         assert_eq!(of_type(&state, PlayerId::P1, &[CardType::Unit]), 1);
         assert_eq!(of_type(&state, PlayerId::P1, &[CardType::Trap]), 1);
-        assert_eq!(of_type(&state, PlayerId::P1, &[CardType::Trap, CardType::FieldTrap]), 2);
+        assert_eq!(
+            of_type(&state, PlayerId::P1, &[CardType::Trap, CardType::FieldTrap]),
+            2
+        );
         let mut non_unit = NON_UNIT.to_vec();
         non_unit.push(CardType::FieldTrap);
         assert_eq!(of_type(&state, PlayerId::P1, &non_unit), 4);
@@ -103,7 +117,12 @@ mod r451_plays_by_type_this_turn_classic_plus_c37 {
     #[test]
     fn r451_r70_a_cast_counts_on_the_turn_it_happens_whoevers_turn_that_is() {
         let mut state = game("r451-cast");
-        let ping = new_instance(&mut state, &PA.ping.id, PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
+        let ping = new_instance(
+            &mut state,
+            &PA.ping.id,
+            PlayerId::P2,
+            Zone::Hand { player: PlayerId::P2 },
+        );
         // TS `sinkFor(state)`: the rng from the state's cursor; nothing writes the cursor back.
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -114,7 +133,10 @@ mod r451_plays_by_type_this_turn_classic_plus_c37 {
         }
         assert_eq!(state.active, PlayerId::P1);
         assert_eq!(of_type(&state, PlayerId::P2, &[CardType::Spell]), 1);
-        assert_eq!(query::played_this_game_with_tag(&state, PlayerId::P2, Tag::Book), 0);
+        assert_eq!(
+            query::played_this_game_with_tag(&state, PlayerId::P2, Tag::Book),
+            0
+        );
         assert_eq!(
             query::last_spell_played(&state),
             Some(PlayRecord {
@@ -128,10 +150,18 @@ mod r451_plays_by_type_this_turn_classic_plus_c37 {
     #[test]
     fn r451_r448_a_countered_play_counts_nowhere() {
         let mut state = game("r451-countered");
-        put(&mut state, &PA.counter_trap.id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &PA.counter_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
         let after = play(&state, PlayerId::P1, &PA.apple.id, false);
         assert_eq!(of_type(&after, PlayerId::P1, &[CardType::Spell]), 0);
-        assert_eq!(query::played_this_game_with_tag(&after, PlayerId::P1, Tag::Fruit), 0);
+        assert_eq!(
+            query::played_this_game_with_tag(&after, PlayerId::P1, Tag::Fruit),
+            0
+        );
         assert_eq!(query::last_spell_played(&after), None);
         assert_eq!(query::last_face_up_played(&after, PlayerId::P1), None);
     }
@@ -147,14 +177,26 @@ mod r451_plays_by_tag_this_game_classic_plus_c64_ai_scaling_law {
         state = play(&state, PlayerId::P1, &PA.apple.id, false);
         state = play(&state, PlayerId::P1, &PA.pear.id, false);
         state = play(&state, PlayerId::P1, &PA.ai_card.id, false);
-        assert_eq!(query::played_this_game_with_tag(&state, PlayerId::P1, Tag::Fruit), 2);
+        assert_eq!(
+            query::played_this_game_with_tag(&state, PlayerId::P1, Tag::Fruit),
+            2
+        );
         assert_eq!(query::played_this_game_with_tag(&state, PlayerId::P1, Tag::Ai), 1);
-        assert_eq!(query::played_this_game_with_tag(&state, PlayerId::P1, Tag::Token), 1);
+        assert_eq!(
+            query::played_this_game_with_tag(&state, PlayerId::P1, Tag::Token),
+            1
+        );
         state = must(&state, PlayerId::P1, json!({ "type": "endTurn" })).state;
         state = must(&state, PlayerId::P2, json!({ "type": "endTurn" })).state;
         assert_eq!(state.active, PlayerId::P1);
-        assert_eq!(query::played_this_game_with_tag(&state, PlayerId::P1, Tag::Fruit), 2);
-        assert_eq!(query::played_this_game_with_tag(&state, PlayerId::P2, Tag::Fruit), 0);
+        assert_eq!(
+            query::played_this_game_with_tag(&state, PlayerId::P1, Tag::Fruit),
+            2
+        );
+        assert_eq!(
+            query::played_this_game_with_tag(&state, PlayerId::P2, Tag::Fruit),
+            0
+        );
     }
 }
 
@@ -264,13 +306,17 @@ mod r451_the_last_face_up_card_each_player_played_ai_autocomplete {
         let mut state = game("r451-json");
         state = play(&state, PlayerId::P1, &PA.apple.id, false);
         state = play(&state, PlayerId::P1, &PA.crier.id, false);
-        let round: GameState = serde_json::from_value(serde_json::to_value(&state).expect("the state serialises"))
-            .expect("the state parses back");
+        let round: GameState =
+            serde_json::from_value(serde_json::to_value(&state).expect("the state serialises"))
+                .expect("the state parses back");
         assert_eq!(round, state);
         assert_eq!(
             query::last_face_up_played(&round, PlayerId::P1),
             query::last_face_up_played(&state, PlayerId::P1)
         );
-        assert_eq!(query::played_this_game_with_tag(&round, PlayerId::P1, Tag::Fruit), 1);
+        assert_eq!(
+            query::played_this_game_with_tag(&round, PlayerId::P1, Tag::Fruit),
+            1
+        );
     }
 }

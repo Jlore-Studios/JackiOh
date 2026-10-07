@@ -77,7 +77,9 @@ fn register_fixture_script(id: &str, script: Script) {
 
 /// A fixture card: a transient def in the match state and its script in the registry.
 fn fixture(state: &mut GameState, id: &str, type_: CardType, script: Script) {
-    state.transient_defs.insert(id.to_string(), fixture_def(id, type_));
+    state
+        .transient_defs
+        .insert(id.to_string(), fixture_def(id, type_));
     register_fixture_script(id, script);
 }
 
@@ -94,7 +96,9 @@ fn asking_on_arrival(prompt: &str) -> Script {
             } else {
                 vec![
                     effects::remember(json_as(json!({ "key": "asked", "value": true }))),
-                    effects::choose_mode(json_as(json!({ "options": ["ok"], "step": "ok", "prompt": prompt }))),
+                    effects::choose_mode(json_as(
+                        json!({ "options": ["ok"], "step": "ok", "prompt": prompt }),
+                    )),
                 ]
             }
         })),
@@ -181,7 +185,11 @@ mod r224_setup_waits_for_a_question {
     fn r224_r9_r151_r158_r265_the_question_a_replacement_draw_s_arrival_clause_asks_p1_is_not_overwritten_by_p2_s_mulligan_10_1()
      {
         register_all();
-        let mut state = begin_game(&create_game(&game_args("edge-r7-l7-mulligan", (p1_deck(), p2_deck())))).state;
+        let mut state = begin_game(&create_game(&game_args(
+            "edge-r7-l7-mulligan",
+            (p1_deck(), p2_deck()),
+        )))
+        .state;
         assert_eq!(
             mulligan_prompt_for(&state, PlayerId::P1).map(|prompt| prompt.kind),
             Some(PromptKind::Mulligan)
@@ -189,7 +197,12 @@ mod r224_setup_waits_for_a_question {
         assert_eq!(mulligan_owed(&state), vec![PlayerId::P1, PlayerId::P2]);
 
         // A card whose start-of-game clause asks, on top of p1's library: the replacement draw reaches it.
-        fixture(&mut state, "edge-r7-l7-asks", CardType::Spell, asking_on_arrival("the clause's question"));
+        fixture(
+            &mut state,
+            "edge-r7-l7-asks",
+            CardType::Spell,
+            asking_on_arrival("the clause's question"),
+        );
         let asks = new_instance(
             &mut state,
             "edge-r7-l7-asks",
@@ -202,20 +215,28 @@ mod r224_setup_waits_for_a_question {
         // The answer is sealed until p2 answers too (R266); p2 returns one card as well.
         let hand = ids(&state.players.p1.hand);
         let returned = must(hand.first().cloned(), "a card to return");
-        state = act(&state, json!({ "type": "mulligan", "keep": &hand[1..], "playerId": "p1" })).state;
+        state = act(
+            &state,
+            json!({ "type": "mulligan", "keep": &hand[1..], "playerId": "p1" }),
+        )
+        .state;
         assert_eq!(ids(&state.players.p1.hand), hand);
         let p2_hand = ids(&state.players.p2.hand);
         let p2_returned = must(p2_hand.first().cloned(), "a card p2 returns");
-        let result = act(&state, json!({ "type": "mulligan", "keep": &p2_hand[1..], "playerId": "p2" }));
+        let result = act(
+            &state,
+            json!({ "type": "mulligan", "keep": &p2_hand[1..], "playerId": "p2" }),
+        );
         state = result.state;
         // Both are in, so both resolve in seat order (R265): p1's replacement arrived, and its clause
         // asked p1 (R151).
-        assert!(
-            result
-                .events
-                .iter()
-                .any(|event| matches!(event, GameEvent::PromptOpened { kind: PromptKind::Mode, .. }))
-        );
+        assert!(result.events.iter().any(|event| matches!(
+            event,
+            GameEvent::PromptOpened {
+                kind: PromptKind::Mode,
+                ..
+            }
+        )));
 
         // §9.3, §10.1: one prompt at a time, and the question is state until p1 answers it. p2's
         // resolution waits behind it: p2's hand is as it answered, and p1's returned card waits to go back.
@@ -243,7 +264,8 @@ mod r224_setup_waits_for_a_question {
     }
 
     #[test]
-    fn r224_r151_r158_a_question_from_the_opening_draw_s_arrival_clauses_is_not_written_over_by_the_mulligan_2_1() {
+    fn r224_r151_r158_a_question_from_the_opening_draw_s_arrival_clauses_is_not_written_over_by_the_mulligan_2_1()
+     {
         register_all();
         let deck: Vec<String> = catalog::query(&json_as(json!({})))
             .iter()
@@ -253,10 +275,22 @@ mod r224_setup_waits_for_a_question {
         let mut game = create_game(&game_args("edge-r7-setup", (deck.clone(), deck)));
         // A card whose start-of-game clause asks, as it arrives in a hand (R151).
         let id = "edge-r7-asking";
-        fixture(&mut game, id, CardType::Spell, asking_on_arrival("the clause's question"));
+        fixture(
+            &mut game,
+            id,
+            CardType::Spell,
+            asking_on_arrival("the clause's question"),
+        );
         let count = game.players.p1.library.len();
         let fresh: Vec<CardInstance> = (0..count)
-            .map(|_| new_instance(&mut game, id, PlayerId::P1, Zone::Library { player: PlayerId::P1 }))
+            .map(|_| {
+                new_instance(
+                    &mut game,
+                    id,
+                    PlayerId::P1,
+                    Zone::Library { player: PlayerId::P1 },
+                )
+            })
             .collect();
         game.players.p1.library = fresh;
 
@@ -269,7 +303,10 @@ mod r224_setup_waits_for_a_question {
             } => Some(choice_id.clone()),
             _ => None,
         });
-        assert!(asked.is_some(), "p1's opening draw reaches the card, whose clause asks");
+        assert!(
+            asked.is_some(),
+            "p1's opening draw reaches the card, whose clause asks"
+        );
 
         // R158: a draw a prompt interrupts stops there and owes the rest, and §2.1's mulligan follows
         // the opening draw. A second prompt never overwrites an unanswered one (R156), so the question
@@ -406,7 +443,8 @@ mod r225_a_quickdraw_card_is_counted_as_the_draw_it_replaces {
     }
 
     #[test]
-    fn r225_r55_p1_s_ceaseless_void_does_not_price_in_whether_p2_s_opening_hand_holds_a_quickdraw_card_2_1_9_1() {
+    fn r225_r55_p1_s_ceaseless_void_does_not_price_in_whether_p2_s_opening_hand_holds_a_quickdraw_card_2_1_9_1()
+     {
         register_all();
         let with_power = void_game(HEROIC_POWER);
         let without = void_game(CRAFT);
@@ -416,18 +454,31 @@ mod r225_a_quickdraw_card_is_counted_as_the_draw_it_replaces {
         for state in [&with_power, &without] {
             assert_eq!(state.turn, 1);
             assert_eq!(state.active, PlayerId::P1);
-            assert_eq!(view_for(state, PlayerId::P1).opponent.hand, HandView::Count { count: 5 });
+            assert_eq!(
+                view_for(state, PlayerId::P1).opponent.hand,
+                HandView::Count { count: 5 }
+            );
             let hand = view_for(state, PlayerId::P1).you.hand;
             assert!(matches!(&hand, HandView::Cards(cards) if cards.iter().any(|card| card.def_id == VOID)));
         }
         // The Heroic Power started in p2's hand "instead of a draw" (§6.2 Quickdraw).
-        assert!(with_power.players.p2.hand.iter().any(|card| card.def_id == HEROIC_POWER));
+        assert!(
+            with_power
+                .players
+                .p2
+                .hand
+                .iter()
+                .any(|card| card.def_id == HEROIC_POWER)
+        );
 
         // §2.1: p2's opening hand is 4 cards either way, and whether one of them is a Quickdraw card is
         // p2's hand (§9.1). The Void's cost counts draws (R55). Were a Quickdraw card no draw, the cost p1
         // reads off its own hand would tell p1 how many Quickdraw cards p2 started with; R225 counts it
         // as the draw it replaces, so the cost is the same in both games.
-        same_view(&view_for(&with_power, PlayerId::P1), &view_for(&without, PlayerId::P1));
+        same_view(
+            &view_for(&with_power, PlayerId::P1),
+            &view_for(&without, PlayerId::P1),
+        );
     }
 }
 
@@ -438,7 +489,9 @@ mod r225_a_quickdraw_card_is_counted_as_the_draw_it_replaces {
 const ASKING: &str = "r8-l10-asks";
 
 fn asking(state: &mut GameState) {
-    state.transient_defs.insert(ASKING.to_string(), fixture_def(ASKING, CardType::Spell));
+    state
+        .transient_defs
+        .insert(ASKING.to_string(), fixture_def(ASKING, CardType::Spell));
     let script = asking_on_arrival("the clause's question");
     register_fixture_script(ASKING, script);
 }
@@ -453,7 +506,12 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
     fn paused_deal(seed: &str, p2_twentieth: &str) -> GameState {
         let mut game = create_game(&game_args(seed, (owned(&QD_P1_DECK), p2_qd_deck(p2_twentieth))));
         asking(&mut game);
-        let card = new_instance(&mut game, ASKING, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+        let card = new_instance(
+            &mut game,
+            ASKING,
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
         game.players.p1.library[0] = card;
         begin_game(&game).state
     }
@@ -511,15 +569,28 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
         // Setup went on to the mulligans, and p2 holds its 4 opening cards in both games.
         for state in [&with_power, &without] {
             assert_eq!(mulligan_owed(state), vec![PlayerId::P1, PlayerId::P2]);
-            assert_eq!(view_for(state, PlayerId::P1).opponent.hand, HandView::Count { count: 4 });
+            assert_eq!(
+                view_for(state, PlayerId::P1).opponent.hand,
+                HandView::Count { count: 4 }
+            );
         }
-        assert!(with_power.players.p2.hand.iter().any(|card| card.def_id == HEROIC_POWER));
+        assert!(
+            with_power
+                .players
+                .p2
+                .hand
+                .iter()
+                .any(|card| card.def_id == HEROIC_POWER)
+        );
 
         // The deal's events reach p1's view (R168), redacted (R97). Were a Quickdraw card dealt with an
         // `addedToHand` alone, it would stand out among p2's `drawn` events and count p2's Quickdraw
         // cards, which are p2's hand (§9.1); R225 reports it as a draw, `drawn` then `addedToHand`.
         assert_eq!(types_of(&without), types_of(&with_power));
-        same_view(&view_for(&with_power, PlayerId::P1), &view_for(&without, PlayerId::P1));
+        same_view(
+            &view_for(&with_power, PlayerId::P1),
+            &view_for(&without, PlayerId::P1),
+        );
     }
 
     /// p1's deck is 19 cards plus #98 Heroic Power (Quickdraw) or #99; the asking card is p1's.
@@ -528,7 +599,12 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
         p1.push(p1_twentieth.to_string());
         let mut game = create_game(&game_args(seed, (p1, p2_qd_deck(CRAFT))));
         asking(&mut game);
-        let card = new_instance(&mut game, ASKING, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+        let card = new_instance(
+            &mut game,
+            ASKING,
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
         game.players.p1.library[0] = card;
         begin_game(&game).state
     }
@@ -544,8 +620,15 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
         while at < 400 && seed.is_none() {
             let candidate = format!("r8-l10-own-deal-{at}");
             let state = paused_own_deal(&candidate, CRAFT);
-            let hand: Vec<&str> = state.players.p1.hand.iter().map(|card| card.def_id.as_str()).collect();
-            if state.pending.as_ref().map(|pending| pending.kind) == Some(PromptKind::Mode) && hand.join(",") == ASKING
+            let hand: Vec<&str> = state
+                .players
+                .p1
+                .hand
+                .iter()
+                .map(|card| card.def_id.as_str())
+                .collect();
+            if state.pending.as_ref().map(|pending| pending.kind) == Some(PromptKind::Mode)
+                && hand.join(",") == ASKING
             {
                 seed = Some(candidate);
             }
@@ -557,23 +640,45 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
 
         // Both games wait on p1's question, the asking card in p1's hand, p2 not yet dealt.
         for state in [&with_power, &without] {
-            assert_eq!(state.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Mode));
-            assert_eq!(state.pending.as_ref().map(|pending| pending.player_id), Some(PlayerId::P1));
+            assert_eq!(
+                state.pending.as_ref().map(|pending| pending.kind),
+                Some(PromptKind::Mode)
+            );
+            assert_eq!(
+                state.pending.as_ref().map(|pending| pending.player_id),
+                Some(PlayerId::P1)
+            );
             assert_eq!(state.players.p2.hand.len(), 0);
         }
         // R225: the Heroic Power replaces the last of p1's opening draws, so it is still in the library
         // while the first draw's clause asks.
         assert_eq!(
-            with_power.players.p1.hand.iter().map(|card| card.def_id.clone()).collect::<Vec<_>>(),
+            with_power
+                .players
+                .p1
+                .hand
+                .iter()
+                .map(|card| card.def_id.clone())
+                .collect::<Vec<_>>(),
             vec![ASKING.to_string()]
         );
-        assert!(with_power.players.p1.library.iter().any(|card| card.def_id == HEROIC_POWER));
+        assert!(
+            with_power
+                .players
+                .p1
+                .library
+                .iter()
+                .any(|card| card.def_id == HEROIC_POWER)
+        );
 
         // p2 may count p1's hand and library (§10.8), but whether p1's deck holds a Quickdraw card is
         // p1's to keep (§9.1). Had the Heroic Power left the library for the hand before the other
         // draws, "instead of" a draw that has not happened yet, the counts would say so; it waits for
         // the last opening draw (R225), so both games count the same.
-        same_view(&view_for(&with_power, PlayerId::P2), &view_for(&without, PlayerId::P2));
+        same_view(
+            &view_for(&with_power, PlayerId::P2),
+            &view_for(&without, PlayerId::P2),
+        );
     }
 }
 
@@ -584,7 +689,11 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
 /// `player` returns its first opening card, so R9's replacement draw takes the top card (§2.1).
 fn mulligan_one(state: &GameState, player: PlayerId) -> GameState {
     let hand = ids(&state.players[player].hand);
-    act(state, json!({ "type": "mulligan", "keep": &hand[1..], "playerId": player })).state
+    act(
+        state,
+        json!({ "type": "mulligan", "keep": &hand[1..], "playerId": player }),
+    )
+    .state
 }
 
 fn keep_all(state: &GameState, player: PlayerId) -> GameState {
@@ -662,7 +771,12 @@ mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
             }
             // Both answers are in, so both resolved (R265): R9's replacement was cast during setup (§2.4,
             // R70) and landed in its caster's graveyard.
-            assert!(state.players[seat].graveyard.iter().any(|card| card.id == boomerang.id));
+            assert!(
+                state.players[seat]
+                    .graveyard
+                    .iter()
+                    .any(|card| card.id == boomerang.id)
+            );
             assert_eq!(state.turn, 1);
 
             // Through the caster's first turn end.
@@ -674,7 +788,10 @@ mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
             // it was not played on". Setup is turn 0 and nobody's turn (§2.1, §2.2): the turn-scoped
             // riders a setup cast makes are already dead on turn 1 (`thisTurn` of turn 0), and its return
             // is over too.
-            let in_hand = state.players[seat].hand.iter().any(|card| card.id == boomerang.id);
+            let in_hand = state.players[seat]
+                .hand
+                .iter()
+                .any(|card| card.id == boomerang.id);
             assert!(
                 !in_hand,
                 "{seat}'s Spell cast during its mulligan came back to hand at the end of its first turn"
@@ -683,9 +800,14 @@ mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
     }
 
     #[test]
-    fn r241_an_end_of_turn_clause_armed_by_a_spell_p1_s_mulligan_casts_does_not_exile_p1_s_hand_at_the_end_of_turn_1() {
+    fn r241_an_end_of_turn_clause_armed_by_a_spell_p1_s_mulligan_casts_does_not_exile_p1_s_hand_at_the_end_of_turn_1()
+     {
         register_all();
-        let mut state = begin_game(&create_game(&game_args("edge-r10-setup-exile", (p1_deck(), p2_deck())))).state;
+        let mut state = begin_game(&create_game(&game_args(
+            "edge-r10-setup-exile",
+            (p1_deck(), p2_deck()),
+        )))
+        .state;
         assert_eq!(mulligan_owed(&state), vec![PlayerId::P1, PlayerId::P2]);
 
         // /fullsend's end-of-turn clause, verbatim in shape, on a Spell setup casts.
@@ -709,7 +831,12 @@ mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
                 ..cast_on_setup_arrival()
             },
         );
-        let cod = new_instance(&mut state, id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+        let cod = new_instance(
+            &mut state,
+            id,
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
         state.players.p1.library.insert(0, cod.clone());
 
         // p1's answer is sealed until p2's is in (R265); then both resolve, p1's first.
@@ -746,10 +873,14 @@ mod r151_r113_a_start_of_game_clause_that_asks_at_2_1_step_4 {
     use super::*;
 
     #[test]
-    fn r151_r113_a_start_of_game_clause_that_asks_holds_the_rest_of_setup_and_turn_1_until_it_is_answered_2_1_9_3() {
+    fn r151_r113_a_start_of_game_clause_that_asks_holds_the_rest_of_setup_and_turn_1_until_it_is_answered_2_1_9_3()
+     {
         register_all();
-        let mut state =
-            begin_game(&create_game(&game_args("edge-r10-setup-start-asks", (p1_deck(), p2_deck())))).state;
+        let mut state = begin_game(&create_game(&game_args(
+            "edge-r10-setup-start-asks",
+            (p1_deck(), p2_deck()),
+        )))
+        .state;
         // "Start of game: choose one; then deal 3 damage to the enemy hero", at the bottom of p1's
         // library, where no opening draw reaches it: §2.1 step 4 runs it over the library too (R153).
         let id = "edge-r10-setup-start-asks";
@@ -772,7 +903,12 @@ mod r151_r113_a_start_of_game_clause_that_asks_at_2_1_step_4 {
                 ..Script::default()
             },
         );
-        let card = new_instance(&mut state, id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+        let card = new_instance(
+            &mut state,
+            id,
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
         state.players.p1.library.push(card);
 
         state = keep_all(&state, PlayerId::P1);

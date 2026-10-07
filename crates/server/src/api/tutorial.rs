@@ -36,7 +36,7 @@ use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::api::collection::caller_profile;
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json, bad_request};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json};
 use crate::app::{App, now_ms};
 use crate::config::{TUTORIAL_LESSON_ID_MAX_LENGTH, TUTORIAL_LESSONS_MAX};
 use crate::db::store::{TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow};
@@ -45,9 +45,9 @@ use crate::db::store::{TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOu
 /// `/^[a-z0-9]+(?:-[a-z0-9]+)*$/u`, checked by hand (the server carries no regex crate).
 fn is_lesson_id(entry: &str) -> bool {
     !entry.is_empty()
-        && entry
-            .split('-')
-            .all(|part| !part.is_empty() && part.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit()))
+        && entry.split('-').all(|part| {
+            !part.is_empty() && part.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+        })
 }
 
 /// What the client reads: `TutorialAccountProgress` in `apps/web/src/net/api.ts`.
@@ -60,13 +60,16 @@ pub struct TutorialProgressView {
 
 fn progress_view(row: Option<&TutorialProgressRow>) -> TutorialProgressView {
     match row {
-        None => TutorialProgressView { completed: Vec::new(), hidden_choice: None },
+        None => TutorialProgressView {
+            completed: Vec::new(),
+            hidden_choice: None,
+        },
         Some(row) => TutorialProgressView {
             completed: row.completed.clone(),
-            hidden_choice: row
-                .hidden_choice
-                .as_ref()
-                .map(|choice| TutorialHiddenChoice { hidden: choice.hidden, at: choice.at }),
+            hidden_choice: row.hidden_choice.as_ref().map(|choice| TutorialHiddenChoice {
+                hidden: choice.hidden,
+                at: choice.at,
+            }),
         },
     }
 }
@@ -94,9 +97,9 @@ pub fn read_completed(body: &Value) -> Result<Vec<String>, ApiError> {
     };
     let mut ids: IndexSet<String> = IndexSet::new();
     for entry in value {
-        let id = entry.as_str().filter(|id| {
-            id.encode_utf16().count() <= TUTORIAL_LESSON_ID_MAX_LENGTH && is_lesson_id(id)
-        });
+        let id = entry
+            .as_str()
+            .filter(|id| id.encode_utf16().count() <= TUTORIAL_LESSON_ID_MAX_LENGTH && is_lesson_id(id));
         let Some(id) = id else {
             return Err(bad_request(format!(
                 "every lesson id must be a lower-case slug of at most {TUTORIAL_LESSON_ID_MAX_LENGTH} characters"
@@ -105,7 +108,9 @@ pub fn read_completed(body: &Value) -> Result<Vec<String>, ApiError> {
         ids.insert(id.to_string());
     }
     if ids.len() > TUTORIAL_LESSONS_MAX {
-        return Err(bad_request(format!("at most {TUTORIAL_LESSONS_MAX} lessons can be recorded")));
+        return Err(bad_request(format!(
+            "at most {TUTORIAL_LESSONS_MAX} lessons can be recorded"
+        )));
     }
     Ok(ids.into_iter().collect())
 }
@@ -126,7 +131,10 @@ pub fn read_hidden_choice(body: &Value, now: i64) -> Result<Option<TutorialHidde
     let hidden = object.get("hidden").and_then(Value::as_bool);
     let at = object.get("at").and_then(safe_integer);
     match (hidden, at) {
-        (Some(hidden), Some(at)) if at >= 0 => Ok(Some(TutorialHiddenChoice { hidden, at: at.min(now) })),
+        (Some(hidden), Some(at)) if at >= 0 => Ok(Some(TutorialHiddenChoice {
+            hidden,
+            at: at.min(now),
+        })),
         _ => Err(bad()),
     }
 }
@@ -150,12 +158,14 @@ pub async fn put_tutorial(app: &Arc<App>, req: Req) -> ApiResult {
     let has_choice = hidden_choice.is_some();
     let sent = completed.len();
 
-    let input = TutorialMergeInput { profile_id: profile.id.clone(), completed, hidden_choice, at: now };
+    let input = TutorialMergeInput {
+        profile_id: profile.id.clone(),
+        completed,
+        hidden_choice,
+        at: now,
+    };
     let mut tx = app.db.begin(Some(profile.id.as_str())).await?;
-    let outcome = tx
-        .tutorial_merge(&input, TUTORIAL_LESSONS_MAX as i64)
-        .await
-        ?;
+    let outcome = tx.tutorial_merge(&input, TUTORIAL_LESSONS_MAX as i64).await?;
     tx.commit().await?;
 
     let progress = match outcome {

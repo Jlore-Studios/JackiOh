@@ -58,8 +58,12 @@ fn defs() -> Vec<CardDef> {
 
 /// A counter trigger on `cardAnnounced` that never fires: the warning reads its zone, not its run.
 fn announced() -> TriggerDef {
-    TriggerDef::new("cw-counter", &[GameEventType::CardAnnounced], |_ctx, _event| vec![])
-        .with_when(|_ctx, _event| false)
+    TriggerDef::new(
+        "cw-counter",
+        &[GameEventType::CardAnnounced],
+        |_ctx, _event| vec![],
+    )
+    .with_when(|_ctx, _event| false)
 }
 
 fn counter(opponent_only: bool) -> Script {
@@ -73,7 +77,10 @@ fn counter(opponent_only: bool) -> Script {
 }
 
 fn both(script: Script) -> CardScripts {
-    CardScripts { base: script.clone(), radiant: script }
+    CardScripts {
+        base: script.clone(),
+        radiant: script,
+    }
 }
 
 fn scripts() -> IndexMap<String, CardScripts> {
@@ -81,8 +88,20 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(counter_field().id, both(counter(false)));
     scripts.insert(counter_trap().id, both(counter(false)));
     scripts.insert(opponents_only().id, both(counter(true)));
-    scripts.insert(two().id, both(Script { cry: Some(hook(|_ctx| vec![])), ..Script::default() }));
-    scripts.insert(one().id, both(Script { cry: Some(hook(|_ctx| vec![])), ..Script::default() }));
+    scripts.insert(
+        two().id,
+        both(Script {
+            cry: Some(hook(|_ctx| vec![])),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        one().id,
+        both(Script {
+            cry: Some(hook(|_ctx| vec![])),
+            ..Script::default()
+        }),
+    );
     scripts
 }
 
@@ -99,9 +118,15 @@ fn act(state: &GameState, body: Value) -> GameState {
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|c| c.id.clone()).collect();
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+    );
     let keep: Vec<String> = state.players.p2.hand.iter().map(|c| c.id.clone()).collect();
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+    );
     let mut catalog = registered_catalog().clone();
     for card in defs() {
         catalog.insert(card.id.clone(), card);
@@ -135,7 +160,12 @@ mod r667_the_counter_warning_on_the_viewers_hand {
     #[test]
     fn r667_marks_each_seats_own_hand_cards_that_a_field_card_would_counter_at_every_price_and_no_others() {
         let mut state = playing("r658-field");
-        put(&mut state, &counter_field().id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &counter_field().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
 
         assert_eq!(warned(&view_for(&state, PlayerId::P1)), vec![two().id]);
         assert_eq!(warned(&view_for(&state, PlayerId::P2)), vec![two().id]);
@@ -143,18 +173,29 @@ mod r667_the_counter_warning_on_the_viewers_hand {
         let HandView::Cards(hand) = view_for(&state, PlayerId::P1).you.hand else {
             panic!("p1 reads its own hand");
         };
-        assert!(hand.iter().filter(|card| card.def_id != two().id).all(|card| card.countered_on_play.is_none()));
+        assert!(
+            hand.iter()
+                .filter(|card| card.def_id != two().id)
+                .all(|card| card.countered_on_play.is_none())
+        );
         // R97: the opponent's hand is a count, with nothing on it.
         assert_eq!(
             view_for(&state, PlayerId::P1).opponent.hand,
-            HandView::Count { count: state.players.p2.hand.len() as i32 }
+            HandView::Count {
+                count: state.players.p2.hand.len() as i32
+            }
         );
     }
 
     #[test]
     fn r667_a_counter_that_covers_only_its_controllers_opponent_warns_only_them() {
         let mut state = playing("r658-opponent");
-        put(&mut state, &opponents_only().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &opponents_only().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            Default::default(),
+        );
 
         assert_eq!(warned(&view_for(&state, PlayerId::P1)), Vec::<String>::new());
         assert_eq!(warned(&view_for(&state, PlayerId::P2)), vec![two().id]);
@@ -171,14 +212,24 @@ mod r667_the_counter_warning_on_the_viewers_hand {
 
         // A Trap answers through `traps.ts`, never the trigger dispatch, and face-down it is unreadable (R97).
         let mut trapped = playing("r658-trap");
-        put(&mut trapped, &counter_trap().id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut trapped,
+            &counter_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         assert_eq!(warned(&view_for(&trapped, PlayerId::P1)), Vec::<String>::new());
     }
 
     #[test]
     fn r667_the_warning_is_the_viewers_own_it_is_asked_for_one_hand_and_lists_that_hands_ids() {
         let mut state = playing("r658-ids");
-        put(&mut state, &counter_field().id, slot(PlayerId::P1, Row::Backrow, 2), Default::default());
+        put(
+            &mut state,
+            &counter_field().id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            Default::default(),
+        );
         let ids = |state: &GameState, player: PlayerId| -> Vec<String> {
             state.players[player]
                 .hand
@@ -189,11 +240,15 @@ mod r667_the_counter_warning_on_the_viewers_hand {
         };
 
         assert_eq!(
-            countered_hand_cards(&state, PlayerId::P1).into_iter().collect::<Vec<String>>(),
+            countered_hand_cards(&state, PlayerId::P1)
+                .into_iter()
+                .collect::<Vec<String>>(),
             ids(&state, PlayerId::P1)
         );
         assert_eq!(
-            countered_hand_cards(&state, PlayerId::P2).into_iter().collect::<Vec<String>>(),
+            countered_hand_cards(&state, PlayerId::P2)
+                .into_iter()
+                .collect::<Vec<String>>(),
             ids(&state, PlayerId::P2)
         );
     }

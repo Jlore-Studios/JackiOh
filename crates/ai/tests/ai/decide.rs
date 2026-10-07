@@ -10,12 +10,12 @@
 //! are dropped.
 
 use jackioh_ai::{
-    AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AiOptions, Decision, DecisionReason, MatchHooks, Matchup, SeatController,
-    ai_to_act, decide, game_config, mulligan_keep, play_match, unanswered_draw_offer,
+    AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AiOptions, Decision, DecisionReason, MatchHooks, Matchup,
+    SeatController, ai_to_act, decide, game_config, mulligan_keep, play_match, unanswered_draw_offer,
 };
 use jackioh_engine::testkit::{
-    Action, ActionBody, ActionType, GameEvent, GameState, PerPlayer, PlayerId, PromptKind, create_rng, def_of, json,
-    legal_actions, mulligan_prompt_for, query_cost, reduce, seat_to_act, subsystems,
+    Action, ActionBody, ActionType, GameEvent, GameState, PerPlayer, PlayerId, PromptKind, create_rng,
+    def_of, json, legal_actions, mulligan_prompt_for, query_cost, reduce, seat_to_act, subsystems,
 };
 
 use super::support::{AI, HUMAN, act, act_with_nonce, clone, dealt_game, is_legal, register_cards, scenario};
@@ -45,7 +45,11 @@ fn sorted(mut ids: Vec<String>) -> Vec<String> {
 }
 
 fn hand_ids(state: &GameState, seat: PlayerId) -> Vec<String> {
-    state.players[seat].hand.iter().map(|card| card.id.clone()).collect()
+    state.players[seat]
+        .hand
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 /// The ids of `player`'s cards `kind` (drawn or shuffled in) names in `events`.
@@ -96,7 +100,10 @@ mod forced_moves_and_nothing_to_do_b16 {
         let mut options = AiOptions::new(create_rng("decide-forced-prompt", 0));
         let decision = decide(&state, AI, &mut options);
         assert_eq!(decision.as_ref().map(|d| d.reason), Some(DecisionReason::Forced));
-        assert_eq!(decision.as_ref().map(|d| d.action.clone()), legal.first().cloned());
+        assert_eq!(
+            decision.as_ref().map(|d| d.action.clone()),
+            legal.first().cloned()
+        );
         assert_eq!(decision.as_ref().map(|d| d.stats.nodes), Some(0));
         assert_eq!(options.rng.cursor(), 0);
         // The engine takes it.
@@ -114,7 +121,10 @@ mod forced_moves_and_nothing_to_do_b16 {
         let mut options = AiOptions::new(create_rng("decide-forced-end", 0));
         let decision = decide(s.state(), AI, &mut options);
         assert_eq!(decision.as_ref().map(|d| d.reason), Some(DecisionReason::Forced));
-        assert_eq!(decision.as_ref().map(|d| d.action.clone()), Some(ActionBody::EndTurn));
+        assert_eq!(
+            decision.as_ref().map(|d| d.action.clone()),
+            Some(ActionBody::EndTurn)
+        );
         assert_eq!(decision.as_ref().map(|d| d.stats.nodes), Some(0));
         assert_eq!(options.rng.cursor(), 0);
     }
@@ -183,15 +193,25 @@ mod forced_moves_and_nothing_to_do_b16 {
             "p2": { "hand": ["core-072"], "graveyard": ["core-008", "core-044"], "library": ["core-011"] },
         }));
         s.play("core-072", json!({}));
-        assert_eq!(s.state().pending.as_ref().map(|pending| pending.player_id), Some(HUMAN));
+        assert_eq!(
+            s.state().pending.as_ref().map(|pending| pending.player_id),
+            Some(HUMAN)
+        );
         assert!(!ai_to_act(s.state(), AI));
         assert!(ai_to_act(s.state(), HUMAN));
-        assert!(decide(s.state(), AI, &mut AiOptions::new(create_rng("decide-null-prompt", 0))).is_none());
+        assert!(
+            decide(
+                s.state(),
+                AI,
+                &mut AiOptions::new(create_rng("decide-null-prompt", 0))
+            )
+            .is_none()
+        );
     }
 
     #[test]
     fn r265_b16_both_seats_owe_their_mulligan_at_once_and_a_seat_that_has_answered_owes_nothing_while_the_others_is_open()
-    {
+     {
         let dealt = dealt_game("decide-null-mulligan");
         assert!(dealt.pending.is_none());
         // Neither seat waits on the other: each is asked for its own mulligan straight away.
@@ -227,10 +247,20 @@ mod forced_moves_and_nothing_to_do_b16 {
             "p2": { "health": 3, "hand": ["core-005"] },
         }));
         s.attack("core-011", "hero");
-        assert_eq!(s.state().result.and_then(|result| result.winner.player()), Some(AI));
+        assert_eq!(
+            s.state().result.and_then(|result| result.winner.player()),
+            Some(AI)
+        );
         for seat in [AI, HUMAN] {
             assert!(!ai_to_act(s.state(), seat));
-            assert!(decide(s.state(), seat, &mut AiOptions::new(create_rng("decide-null-over", 0))).is_none());
+            assert!(
+                decide(
+                    s.state(),
+                    seat,
+                    &mut AiOptions::new(create_rng("decide-null-over", 0))
+                )
+                .is_none()
+            );
         }
     }
 }
@@ -243,7 +273,8 @@ mod the_mulligan_b20 {
     use super::*;
 
     #[test]
-    fn b20_the_ai_returns_exactly_the_cards_costing_more_than_keep_max_cost_with_reason_mulligan_and_reduce_takes_it() {
+    fn b20_the_ai_returns_exactly_the_cards_costing_more_than_keep_max_cost_with_reason_mulligan_and_reduce_takes_it()
+     {
         let mut returned_total = 0;
         let mut kept_total = 0;
         for n in 1..=8 {
@@ -253,13 +284,19 @@ mod the_mulligan_b20 {
             let mut events: Vec<GameEvent> = Vec::new();
             for seat in [PlayerId::P1, PlayerId::P2] {
                 let prompt = mulligan_prompt_for(&state, seat).cloned();
-                assert_eq!(prompt.as_ref().map(|p| p.kind), Some(PromptKind::Mulligan), "{seed} {seat}");
+                assert_eq!(
+                    prompt.as_ref().map(|p| p.kind),
+                    Some(PromptKind::Mulligan),
+                    "{seed} {seat}"
+                );
                 assert_eq!(prompt.as_ref().map(|p| p.player_id), Some(seat), "{seed} {seat}");
 
                 let hand = state.players[seat].hand.clone();
                 let keep = sorted(
                     hand.iter()
-                        .filter(|card| query_cost(def_of(Some(&state), &card.def_id)) <= AI_MULLIGAN.keep_max_cost)
+                        .filter(|card| {
+                            query_cost(def_of(Some(&state), &card.def_id)) <= AI_MULLIGAN.keep_max_cost
+                        })
                         .map(|card| card.id.clone())
                         .collect(),
                 );
@@ -271,7 +308,11 @@ mod the_mulligan_b20 {
 
                 let mut options = AiOptions::new(create_rng(&format!("{seed}:{seat}"), 0));
                 let decision = decide(&state, seat, &mut options);
-                assert_eq!(decision.as_ref().map(|d| d.reason), Some(DecisionReason::Mulligan), "{seed} {seat}");
+                assert_eq!(
+                    decision.as_ref().map(|d| d.reason),
+                    Some(DecisionReason::Mulligan),
+                    "{seed} {seat}"
+                );
                 let decision = decision.expect("a decision");
                 let action = decision.action.clone();
                 assert_eq!(action.action_type(), ActionType::Mulligan);
@@ -308,7 +349,11 @@ mod the_mulligan_b20 {
                 let drawn = ids_where(setup_events, seat, false);
                 let shuffled = ids_where(setup_events, seat, true);
                 assert_eq!(drawn.len(), returned_by[seat].len(), "{seed} {seat}");
-                assert_eq!(sorted(shuffled), sorted(returned_by[seat].clone()), "{seed} {seat}");
+                assert_eq!(
+                    sorted(shuffled),
+                    sorted(returned_by[seat].clone()),
+                    "{seed} {seat}"
+                );
                 for id in &returned_by[seat] {
                     assert!(!drawn.contains(id), "{seed} {seat} {id}");
                 }
@@ -398,7 +443,10 @@ mod draw_offers_b21 {
             decision.as_ref().map(|d| d.action.clone()),
             Some(ActionBody::AnswerDraw { accept: false })
         );
-        assert_eq!(decision.as_ref().map(|d| d.reason), Some(DecisionReason::DrawOffer));
+        assert_eq!(
+            decision.as_ref().map(|d| d.reason),
+            Some(DecisionReason::DrawOffer)
+        );
         assert_eq!(decision.as_ref().map(|d| d.stats.score), Some(0.0));
         assert_eq!(options.rng.cursor(), 0);
 
@@ -408,13 +456,24 @@ mod draw_offers_b21 {
         // Answered once: the AI owes nothing more, so it cannot loop on the same offer.
         assert!(!unanswered_draw_offer(&answered, AI));
         assert!(!ai_to_act(&answered, AI));
-        assert!(decide(&answered, AI, &mut AiOptions::new(create_rng("decide-offer-after", 0))).is_none());
+        assert!(
+            decide(
+                &answered,
+                AI,
+                &mut AiOptions::new(create_rng("decide-offer-after", 0))
+            )
+            .is_none()
+        );
     }
 
     #[test]
     fn r188_b21_once_declined_the_human_cannot_offer_again_at_once_r36_so_the_ai_is_not_asked_twice() {
         let offered = act(&humans_turn("decide-offer-block"), HUMAN, ActionBody::OfferDraw);
-        let declined = act(&offered, AI, &must_decide(&offered, AI, "decide-offer-block").action);
+        let declined = act(
+            &offered,
+            AI,
+            &must_decide(&offered, AI, "decide-offer-block").action,
+        );
         assert!(
             !legal_actions(&declined, HUMAN)
                 .iter()
@@ -451,10 +510,20 @@ mod draw_offers_b21 {
             .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == sixth_sense))
             .expect("the play is legal");
         let prompted = act(&offered, HUMAN, play);
-        assert_eq!(prompted.pending.as_ref().map(|pending| pending.player_id), Some(HUMAN));
+        assert_eq!(
+            prompted.pending.as_ref().map(|pending| pending.player_id),
+            Some(HUMAN)
+        );
         assert!(!unanswered_draw_offer(&prompted, AI));
         assert!(!ai_to_act(&prompted, AI));
-        assert!(decide(&prompted, AI, &mut AiOptions::new(create_rng("decide-offer-prompt", 0))).is_none());
+        assert!(
+            decide(
+                &prompted,
+                AI,
+                &mut AiOptions::new(create_rng("decide-offer-prompt", 0))
+            )
+            .is_none()
+        );
     }
 
     #[test]
@@ -478,7 +547,7 @@ mod draw_offers_b21 {
 
     #[test]
     fn r188_b21_across_a_game_against_a_player_who_offers_a_draw_at_every_chance_the_ai_declines_each_once_and_never_concedes_or_offers()
-    {
+     {
         let seed = "decide-offerer";
         let mut state = dealt_game(seed);
         let mut ai_options = AiOptions::with_budget(create_rng(&format!("{seed}:ai"), 0), AI_GATE_BUDGET);
@@ -542,7 +611,11 @@ mod draw_offers_b21 {
                 .find(|&seat| matches!(config.controllers[seat], SeatController::Ai { .. }))
                 .expect("gameConfig seated no AI");
             let record = play_match(&config, &mut MatchHooks::default());
-            let ai_actions: Vec<&Action> = record.log.iter().filter(|action| action.player_id == subject).collect();
+            let ai_actions: Vec<&Action> = record
+                .log
+                .iter()
+                .filter(|action| action.player_id == subject)
+                .collect();
             assert!(!ai_actions.is_empty(), "game {n}");
             for action in ai_actions {
                 assert_ne!(action.action_type(), ActionType::Concede, "game {n}");

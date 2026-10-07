@@ -26,8 +26,8 @@ use std::rc::Rc;
 
 use indexmap::IndexSet;
 use jackioh_engine::{
-    ActionBody, AttackTarget, CardInstance, ExertionKind, GameState, Phase, PlayerId, active_units_of, can_attack,
-    has_exertion, legal_actions, unit_view,
+    ActionBody, AttackTarget, CardInstance, ExertionKind, GameState, Phase, PlayerId, active_units_of,
+    can_attack, has_exertion, legal_actions, unit_view,
 };
 
 use crate::candidates::{action_key, candidate_actions};
@@ -77,7 +77,11 @@ fn push_moves(stack: &mut Vec<Frame>, state: Rc<GameState>, line: Rc<Vec<ActionB
     let moves = lethal_moves(&state, seat);
     // Reversed, so the first move in move order is the first one popped.
     for action in moves.into_iter().rev() {
-        stack.push(Frame { state: Rc::clone(&state), line: Rc::clone(&line), action });
+        stack.push(Frame {
+            state: Rc::clone(&state),
+            line: Rc::clone(&line),
+            action,
+        });
     }
 }
 
@@ -97,7 +101,10 @@ fn holds_everywhere(
                 break;
             }
             let key = action_key(action);
-            if !legal_actions(&state, seat).iter().any(|legal| action_key(legal) == key) {
+            if !legal_actions(&state, seat)
+                .iter()
+                .any(|legal| action_key(legal) == key)
+            {
                 return Some(false);
             }
             match simulate(&state, seat, action, counter) {
@@ -106,7 +113,10 @@ fn holds_everywhere(
                 Some(Ok(next)) => state = next,
             }
         }
-        if state.result.is_none_or(|result| result.winner.player() != Some(seat)) {
+        if state
+            .result
+            .is_none_or(|result| result.winner.player() != Some(seat))
+        {
             return Some(false);
         }
     }
@@ -126,9 +136,15 @@ fn has_attack(state: &GameState, unit: &CardInstance) -> bool {
     if can_attack(state, unit, &AttackTarget::Hero { player: enemy }) {
         return true;
     }
-    active_units_of(state, enemy)
-        .into_iter()
-        .any(|instance| can_attack(state, unit, &AttackTarget::Unit { instance: instance.clone() }))
+    active_units_of(state, enemy).into_iter().any(|instance| {
+        can_attack(
+            state,
+            unit,
+            &AttackTarget::Unit {
+                instance: instance.clone(),
+            },
+        )
+    })
 }
 
 /// How far the seat stands from lethal this turn: the enemy hero's health less what the units that
@@ -137,7 +153,11 @@ fn has_attack(state: &GameState, unit: &CardInstance) -> bool {
 /// only orders the search; a lethal is always proved by playing it through `reduce`.
 pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     if let Some(result) = &state.result {
-        return if result.winner.player() == Some(seat) { f64::NEG_INFINITY } else { f64::INFINITY };
+        return if result.winner.player() == Some(seat) {
+            f64::NEG_INFINITY
+        } else {
+            f64::INFINITY
+        };
     }
     let opp = seat.opponent();
     let health = state.players[opp].hero.health;
@@ -245,8 +265,12 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter) -> 
     };
     let mut visited: IndexSet<String> = IndexSet::new();
     visited.insert(search_signature(root, seat));
-    let mut open: Vec<Open> =
-        vec![Open { state: Rc::new(root.clone()), line: Vec::new(), gap: ready_gap(root, seat), order: 0 }];
+    let mut open: Vec<Open> = vec![Open {
+        state: Rc::new(root.clone()),
+        line: Vec::new(),
+        gap: ready_gap(root, seat),
+        order: 0,
+    }];
     let mut order: u32 = 1;
 
     while !open.is_empty() {
@@ -267,7 +291,12 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter) -> 
                 Verdict::Lethal => return Walk::Line(line),
                 Verdict::Deeper => {
                     let gap = ready_gap(&next, seat);
-                    open.push(Open { state: Rc::new(next), line, gap, order });
+                    open.push(Open {
+                        state: Rc::new(next),
+                        line,
+                        gap,
+                        order,
+                    });
                     order += 1;
                 }
                 Verdict::Dead => {}

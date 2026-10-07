@@ -13,8 +13,8 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
 use crate::rules::fixtures::twice_forward::{
-    CRIER_DAMAGE, TURNER_DAMAGE, caster, crier, forward, self_exiler, spell, trap, turner, twice_forward_catalog,
-    TWICE_FORWARD_SCRIPTS,
+    CRIER_DAMAGE, TURNER_DAMAGE, TWICE_FORWARD_SCRIPTS, caster, crier, forward, self_exiler, spell, trap,
+    turner, twice_forward_catalog,
 };
 
 /// TS's module-level `let nonce`.
@@ -42,7 +42,11 @@ fn act(state: &GameState, body: Value) -> Acted {
 }
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|card| card.id.clone()).collect()
+    state.players[player]
+        .hand
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 /// `opponentsTurn`'s answer.
@@ -154,7 +158,10 @@ fn plays_of(events: &[GameEvent]) -> Vec<(String, String)> {
 
 /// `types.indexOf(type)`: -1 when absent, as in TS.
 fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
-    types.iter().position(|each| *each == kind).map_or(-1, |index| index as i64)
+    types
+        .iter()
+        .position(|each| *each == kind)
+        .map_or(-1, |index| index as i64)
 }
 
 /// TS `JSON.parse(JSON.stringify(x))`.
@@ -208,9 +215,7 @@ mod c_plus_c74s_field_trap_r425 {
         assert_eq!(active_brittle_count(kept), Some(3));
         assert_eq!(kept.face_up, Some(true));
         let types: Vec<GameEventType> = second.events.iter().map(GameEvent::event_type).collect();
-        assert!(
-            index_of(&types, GameEventType::CardResolved) < index_of(&types, GameEventType::TrapFired)
-        );
+        assert!(index_of(&types, GameEventType::CardResolved) < index_of(&types, GameEventType::TrapFired));
         assert!(index_of(&types, GameEventType::TrapFired) < index_of(&types, GameEventType::Fused));
     }
 
@@ -256,7 +261,8 @@ mod c_plus_c74s_field_trap_r425 {
     }
 
     #[test]
-    fn r589_r425_r687_with_nothing_left_to_fuse_an_exiled_spell_it_reveals_and_still_gains_1_brittle_unfired() {
+    fn r589_r425_r687_with_nothing_left_to_fuse_an_exiled_spell_it_reveals_and_still_gains_1_brittle_unfired()
+    {
         let OpponentsTurn { state, trap_id } = opponents_turn("gone", false);
         let second = play(
             play(state, PlayerId::P2, &spell().id, None).state,
@@ -266,7 +272,15 @@ mod c_plus_c74s_field_trap_r425 {
         );
         let kept = trap_of(&second.state, &trap_id);
         assert!(!second.card.id.is_empty());
-        assert!(second.state.players.p2.exile.iter().any(|card| card.id == second.card.id));
+        assert!(
+            second
+                .state
+                .players
+                .p2
+                .exile
+                .iter()
+                .any(|card| card.id == second.card.id)
+        );
         assert!(events_of_type(&second.events, GameEventType::TrapFired).is_empty());
         // No Brittle sits on an unrevealed card: the gain reveals it first, then lands on the started 2.
         assert_eq!(kept.face_up, Some(true));
@@ -279,12 +293,16 @@ mod c_plus_c74s_field_trap_r425 {
     }
 
     #[test]
-    fn r70_r425_a_card_a_play_casts_is_the_later_play_the_cast_is_the_2nd_and_is_fused_not_the_card_that_cast_it() {
+    fn r70_r425_a_card_a_play_casts_is_the_later_play_the_cast_is_the_2nd_and_is_fused_not_the_card_that_cast_it()
+     {
         let OpponentsTurn { state, trap_id } = opponents_turn("nested", false);
         let first = play(state, PlayerId::P2, &caster().id, None);
         let played = plays_of(&first.events);
         assert_eq!(
-            played.iter().map(|(def_id, _)| def_id.clone()).collect::<Vec<_>>(),
+            played
+                .iter()
+                .map(|(def_id, _)| def_id.clone())
+                .collect::<Vec<_>>(),
             vec![caster().id, spell().id]
         );
         assert_eq!(
@@ -389,7 +407,8 @@ mod c_plus_c74s_field_trap_r425 {
     }
 
     #[test]
-    fn r179_its_count_and_fused_definition_survive_json_and_the_round_trip_plays_on_exactly_as_the_live_game() {
+    fn r179_its_count_and_fused_definition_survive_json_and_the_round_trip_plays_on_exactly_as_the_live_game()
+    {
         let OpponentsTurn { state, trap_id } = opponents_turn("json", false);
         let mut fused = play(
             play(state, PlayerId::P2, &spell().id, None).state,
@@ -404,8 +423,12 @@ mod c_plus_c74s_field_trap_r425 {
             trap_of(&round, &trap_id).memory.get(TWICE_FORWARD_PLAYS_KEY),
             Some(&json!(2))
         );
-        let a = in_hand(&mut fused, &spell().id, PlayerId::P2, 1).into_iter().next();
-        let b = in_hand(&mut round, &spell().id, PlayerId::P2, 1).into_iter().next();
+        let a = in_hand(&mut fused, &spell().id, PlayerId::P2, 1)
+            .into_iter()
+            .next();
+        let b = in_hand(&mut round, &spell().id, PlayerId::P2, 1)
+            .into_iter()
+            .next();
         let live = act(
             &fused,
             json!({
@@ -468,14 +491,27 @@ mod c_plus_c74s_field_trap_r425 {
             );
             assert_eq!(events_of_type(&second.events, GameEventType::Fused).len(), 1);
             assert_eq!(trap_of(&second.state, &trap_id).face_up, Some(true));
-            assert!(second.state.players.p2.exile.iter().any(|card| card.id == second.card.id));
+            assert!(
+                second
+                    .state
+                    .players
+                    .p2
+                    .exile
+                    .iter()
+                    .any(|card| card.id == second.card.id)
+            );
         }
     }
 
     #[test]
     fn put_places_it_face_down_too_a_set_trap_counts_from_when_it_arrived() {
         let OpponentsTurn { mut state, .. } = opponents_turn("placed", false);
-        let placed = put(&mut state, &forward().id, slot(PlayerId::P1, Row::Backrow, 4), json!({}));
+        let placed = put(
+            &mut state,
+            &forward().id,
+            slot(PlayerId::P1, Row::Backrow, 4),
+            json!({}),
+        );
         trap_of_mut(&mut state, &placed.id).face_up = Some(false);
         let next = play(state, PlayerId::P2, &spell().id, None).state;
         assert_eq!(twice_forward_plays(trap_of(&next, &placed.id)), 1);

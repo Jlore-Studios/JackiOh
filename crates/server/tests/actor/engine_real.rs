@@ -38,7 +38,14 @@ use serde_json::{Value, json};
 /// Actions that would end the game or that only the server may send (R79, R84). The walk below
 /// avoids them for the same reason SPEC §10.7's policy does: it is looking for the first card play,
 /// not for a way out of the match.
-const NEVER_CHOOSE: &[&str] = &["concede", "offerDraw", "answerDraw", "timeout", "disconnectExpired", "ceilingReached"];
+const NEVER_CHOOSE: &[&str] = &[
+    "concede",
+    "offerDraw",
+    "answerDraw",
+    "timeout",
+    "disconnectExpired",
+    "ceilingReached",
+];
 
 /// TS `catalog.isToken` (`src/api/catalog.ts`): a token by flag or by tag.
 fn is_token(def: &CardDef) -> bool {
@@ -49,11 +56,19 @@ fn is_token(def: &CardDef) -> bool {
 /// catalog is registered first, as `enginePort()` did.
 fn deckable_pool() -> Vec<String> {
     jackioh_cards::register_all();
-    jackioh_cards::CATALOG.iter().filter(|(_, def)| !is_token(def)).map(|(id, _)| id.clone()).collect()
+    jackioh_cards::CATALOG
+        .iter()
+        .filter(|(_, def)| !is_token(def))
+        .map(|(id, _)| id.clone())
+        .collect()
 }
 
 fn args(seed: &str, decks: &(Vec<String>, Vec<String>)) -> CreateGameArgs {
-    CreateGameArgs { seed: seed.to_string(), decks: decks.clone(), ..CreateGameArgs::default() }
+    CreateGameArgs {
+        seed: seed.to_string(),
+        decks: decks.clone(),
+        ..CreateGameArgs::default()
+    }
 }
 
 /// What a caught panic said: `create_game` panics with TS's refusal text (SURFACE §4.4.9).
@@ -96,7 +111,10 @@ fn decks_the_engine_accepts(pool: &[String], seed: &str) -> (GameState, (Vec<Str
         }
         size += 1;
     }
-    panic!("the real engine refused every deck size built from the catalog:\n  {}", refusals.join("\n  "));
+    panic!(
+        "the real engine refused every deck size built from the catalog:\n  {}",
+        refusals.join("\n  ")
+    );
 }
 
 /// The instance ids of a seat's hand, read through its own view (§10.8).
@@ -104,7 +122,12 @@ fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     let view = serde_json::to_value(view_for(state, player)).expect("PlayerView serialises");
     view["you"]["hand"]
         .as_array()
-        .map(|cards| cards.iter().filter_map(|card| card["instanceId"].as_str().map(str::to_string)).collect())
+        .map(|cards| {
+            cards
+                .iter()
+                .filter_map(|card| card["instanceId"].as_str().map(str::to_string))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -160,7 +183,10 @@ mod the_real_engine_port_src_match_engine_real_ts {
             let at = snapshot(&state);
             // With a prompt open only its holder may act (§9.3); while both mulligans are open (R265),
             // the first seat still owing one; otherwise it is the active player's.
-            let player = at.pending_for.or_else(|| at.mulligan_owed.first().copied()).unwrap_or(at.active);
+            let player = at
+                .pending_for
+                .or_else(|| at.mulligan_owed.first().copied())
+                .unwrap_or(at.active);
             let options: Vec<ActionBody> = legal_actions(&state, player)
                 .into_iter()
                 .filter(|body| !NEVER_CHOOSE.contains(&body.action_type().as_str()))
@@ -177,7 +203,12 @@ mod the_real_engine_port_src_match_engine_real_ts {
             let result = reduce(&state, &action);
 
             // `legalActions` and `reduce` are the same engine: anything offered must be accepted.
-            assert_eq!(result.error, None, "{} was offered but refused", choice.action_type().as_str());
+            assert_eq!(
+                result.error,
+                None,
+                "{} was offered but refused",
+                choice.action_type().as_str()
+            );
             state = result.state;
             if matches!(choice, ActionBody::Play { .. }) {
                 played = Some(choice);
@@ -251,7 +282,12 @@ mod a_finished_matchs_record_r376_src_match_engine_real_ts {
     fn act(state: &mut GameState, log: &mut Vec<Action>, player: PlayerId, body: ActionBody) {
         let action = Action::new(body, player, format!("r376-{}", log.len()));
         let result = reduce(state, &action);
-        assert_eq!(result.error, None, "{} refused", action.body.action_type().as_str());
+        assert_eq!(
+            result.error,
+            None,
+            "{} refused",
+            action.body.action_type().as_str()
+        );
         log.push(action);
         *state = result.state;
     }
@@ -272,16 +308,23 @@ mod a_finished_matchs_record_r376_src_match_engine_real_ts {
         act(&mut state, &mut log, PlayerId::P1, ActionBody::EndTurn);
         act(&mut state, &mut log, PlayerId::P2, ActionBody::Concede);
 
-        let summary = summarize_game(&fold_args("r376-real", &decks, &log)).expect("a finished game's summary");
+        let summary =
+            summarize_game(&fold_args("r376-real", &decks, &log)).expect("a finished game's summary");
         let summary: Value = serde_json::to_value(&summary).expect("GameSummary serialises");
         assert_eq!(summary["first"], json!("p1"));
         assert_eq!(summary["winner"], json!("p1"));
         assert_eq!(summary["reason"], json!("concede"));
         assert_eq!(summary["turns"], json!(2));
         assert_eq!(summary["seats"]["p1"]["deck"], json!(decks.0));
-        assert_eq!(summary["seats"]["p1"]["opening"].as_array().map(Vec::len), Some(3));
+        assert_eq!(
+            summary["seats"]["p1"]["opening"].as_array().map(Vec::len),
+            Some(3)
+        );
         // §2.1, R244: the seat going second opens with its four cards and The Coin.
-        assert_eq!(summary["seats"]["p2"]["opening"].as_array().map(Vec::len), Some(5));
+        assert_eq!(
+            summary["seats"]["p2"]["opening"].as_array().map(Vec::len),
+            Some(5)
+        );
         assert_eq!(summary["seats"]["p2"]["drawn"].as_array().map(Vec::len), Some(1));
     }
 }

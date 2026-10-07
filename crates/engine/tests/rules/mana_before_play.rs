@@ -38,8 +38,14 @@ fn asking_runner() -> CardDef {
 }
 
 fn hit(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    let amount = if ctx.mana_before_play.unwrap_or(0) >= 4 { 4 } else { 1 };
-    vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))]
+    let amount = if ctx.mana_before_play.unwrap_or(0) >= 4 {
+        4
+    } else {
+        1
+    };
+    vec![damage(json_as(
+        json!({ "to": { "of": "enemyHero" }, "amount": amount }),
+    ))]
 }
 
 fn scripts() -> IndexMap<String, CardScripts> {
@@ -47,8 +53,14 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         runner().id,
         CardScripts {
-            base: Script { cry: Some(hook(hit)), ..Script::default() },
-            radiant: Script { cry: Some(hook(hit)), ..Script::default() },
+            base: Script {
+                cry: Some(hook(hit)),
+                ..Script::default()
+            },
+            radiant: Script {
+                cry: Some(hook(hit)),
+                ..Script::default()
+            },
         },
     );
     let mut resume: IndexMap<&'static str, Hook> = IndexMap::new();
@@ -57,7 +69,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
         asking_runner().id,
         CardScripts {
             base: Script {
-                cry: Some(hook(|_ctx| vec![choose_mode(json_as(json!({ "options": ["go"], "step": "go" })))])),
+                cry: Some(hook(|_ctx| {
+                    vec![choose_mode(json_as(json!({ "options": ["go"], "step": "go" })))]
+                })),
                 resume,
                 ..Script::default()
             },
@@ -89,7 +103,10 @@ struct Bench {
 
 impl Bench {
     fn new(state: &GameState) -> Bench {
-        Bench { events: Vec::new(), rng: Rng::new(&state.seed, state.rng_cursor) }
+        Bench {
+            events: Vec::new(),
+            rng: Rng::new(&state.seed, state.rng_cursor),
+        }
     }
 
     fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
@@ -135,7 +152,10 @@ mod the_players_mana_as_the_play_began_classic_22 {
             &state,
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );
-        assert_eq!(paused.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Mode));
+        assert_eq!(
+            paused.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Mode)
+        );
         let round = round_trip(&paused);
         let answers: Vec<ActionBody> = legal_actions(&paused, PlayerId::P1)
             .into_iter()
@@ -151,7 +171,12 @@ mod the_players_mana_as_the_play_began_classic_22 {
     #[test]
     fn a_cast_records_its_casters_mana_as_the_cast_begins() {
         let mut state = playing("mana-before-cast", 5);
-        let card = new_instance(&mut state, &runner().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let card = new_instance(
+            &mut state,
+            &runner().id,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
         state.players.p1.hand.push(card.clone());
         let before = state.players.p2.hero.health;
         let mut bench = Bench::new(&state);

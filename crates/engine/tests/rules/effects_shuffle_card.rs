@@ -11,7 +11,7 @@ use jackioh_engine::config::LIBRARY_CAP;
 use jackioh_engine::effects::shuffle_card_into;
 use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
-use jackioh_engine::script::{EngineSink, Effect};
+use jackioh_engine::script::{Effect, EngineSink};
 use jackioh_engine::state::{CardInstance, GameState, find_instance_mut, new_instance};
 
 use super::fixtures::harness::{new_game, set_library};
@@ -66,14 +66,19 @@ mod s6_3_shuffle_card_into_c_c30_recycle {
         let mut state = new_game("shuffle-card-one", None);
         set_library(&mut state, PlayerId::P1, &["fx-1", "fx-2", "fx-3"]);
         let card = in_graveyard(&mut state, "fx-4", PlayerId::P1);
-        find_instance_mut(&mut state, &card.id).expect("the graveyard card").cost_mod = -1;
+        find_instance_mut(&mut state, &card.id)
+            .expect("the graveyard card")
+            .cost_mod = -1;
 
         let events = run(&mut state, shuffle_in(&card.id), PlayerId::P1);
 
         assert_eq!(state.players.p1.graveyard.len(), 0);
         assert_eq!(state.players.p1.library.len(), 4);
         let moved = state.players.p1.library.iter().find(|c| c.id == card.id);
-        assert_eq!(moved.map(|c| c.zone.clone()), Some(Zone::Library { player: PlayerId::P1 }));
+        assert_eq!(
+            moved.map(|c| c.zone.clone()),
+            Some(Zone::Library { player: PlayerId::P1 })
+        );
         assert_eq!(moved.map(|c| c.cost_mod), Some(-1));
         assert_eq!(
             of_type(&events, "shuffledIn")
@@ -99,7 +104,11 @@ mod s6_3_shuffle_card_into_c_c30_recycle {
     fn r60_the_position_is_the_match_rngs_the_same_seed_puts_it_in_the_same_place() {
         let at = |seed: &str| -> Option<usize> {
             let mut state = new_game(seed, None);
-            set_library(&mut state, PlayerId::P1, &["fx-1", "fx-2", "fx-3", "fx-5", "fx-6"]);
+            set_library(
+                &mut state,
+                PlayerId::P1,
+                &["fx-1", "fx-2", "fx-3", "fx-5", "fx-6"],
+            );
             let card = in_graveyard(&mut state, "fx-4", PlayerId::P1);
             run(&mut state, shuffle_in(&card.id), PlayerId::P1);
             state.players.p1.library.iter().position(|c| c.id == card.id)
@@ -118,7 +127,13 @@ mod s6_3_shuffle_card_into_c_c30_recycle {
 
         assert_eq!(state.players.p1.library.len(), LIBRARY_CAP as usize);
         assert_eq!(
-            state.players.p1.graveyard.iter().map(|c| c.id.clone()).collect::<Vec<_>>(),
+            state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .map(|c| c.id.clone())
+                .collect::<Vec<_>>(),
             vec![first.id.clone(), second.id.clone()]
         );
         assert_eq!(of_type(&events, "enteredGraveyard"), Vec::<Value>::new());
@@ -137,7 +152,9 @@ mod s6_3_shuffle_card_into_c_c30_recycle {
         let mut state = new_game("shuffle-card-full-radiant", None);
         set_library(&mut state, PlayerId::P1, &full_library());
         let card = in_graveyard(&mut state, "fx-4", PlayerId::P1);
-        find_instance_mut(&mut state, &card.id).expect("the graveyard card").radiant = true;
+        find_instance_mut(&mut state, &card.id)
+            .expect("the graveyard card")
+            .radiant = true;
 
         let events = run(&mut state, shuffle_in(&card.id), PlayerId::P1);
 

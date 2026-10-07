@@ -13,8 +13,9 @@ use std::any::Any;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
-    Action, ActionBody, ActionType, CreateGameOptions, GameResult, GameState, Handicap, PerPlayer, PerPlayerOpt,
-    PlayerId, Rng, begin_game, create_game, hash_state, legal_actions, reduce, seat_to_act, subsystems,
+    Action, ActionBody, ActionType, CreateGameOptions, GameResult, GameState, Handicap, PerPlayer,
+    PerPlayerOpt, PlayerId, Rng, begin_game, create_game, hash_state, legal_actions, reduce, seat_to_act,
+    subsystems,
 };
 use serde::{Deserialize, Serialize};
 
@@ -78,7 +79,8 @@ pub type AfterActionHook<'a> = Box<dyn FnMut(&GameState, &GameState, PlayerId, &
 pub type TimeDecisionHook<'a> = Box<dyn FnMut(PlayerId, &mut dyn FnMut()) + 'a>;
 
 /// Handed (the true state, the seat, the controller's answer); answers the action the controller plays.
-pub type OverrideChoiceHook<'a> = Box<dyn FnMut(&GameState, PlayerId, Option<ActionBody>) -> Option<ActionBody> + 'a>;
+pub type OverrideChoiceHook<'a> =
+    Box<dyn FnMut(&GameState, PlayerId, Option<ActionBody>) -> Option<ActionBody> + 'a>;
 
 #[derive(Default)]
 pub struct MatchHooks<'a> {
@@ -151,16 +153,34 @@ struct ControllerChoice {
     decision: Option<Decision>,
 }
 
-fn choose_for(controller: &SeatController, state: &GameState, seat: PlayerId, rng: &mut Rng) -> ControllerChoice {
+fn choose_for(
+    controller: &SeatController,
+    state: &GameState,
+    seat: PlayerId,
+    rng: &mut Rng,
+) -> ControllerChoice {
     match controller {
         SeatController::Ai { budget } => {
-            let mut options = AiOptions { rng: rng.clone(), budget: budget.unwrap_or(AI_BUDGET), should_stop: None };
+            let mut options = AiOptions {
+                rng: rng.clone(),
+                budget: budget.unwrap_or(AI_BUDGET),
+                should_stop: None,
+            };
             let decision = decide(state, seat, &mut options);
             *rng = options.rng;
-            ControllerChoice { action: decision.as_ref().map(|decision| decision.action.clone()), decision }
+            ControllerChoice {
+                action: decision.as_ref().map(|decision| decision.action.clone()),
+                decision,
+            }
         }
-        SeatController::Greedy => ControllerChoice { action: greedy_action(state, seat, rng), decision: None },
-        SeatController::Random => ControllerChoice { action: random_action(state, seat, rng), decision: None },
+        SeatController::Greedy => ControllerChoice {
+            action: greedy_action(state, seat, rng),
+            decision: None,
+        },
+        SeatController::Random => ControllerChoice {
+            action: random_action(state, seat, rng),
+            decision: None,
+        },
     }
 }
 
@@ -171,11 +191,22 @@ fn replacements_for(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
         .into_iter()
         .filter(|action| !subsystems::AI_SKIPPED_ACTIONS.contains(&action.action_type()))
         .collect();
-    let is_answer = |action: &ActionBody| matches!(action.action_type(), ActionType::Answer | ActionType::Mulligan);
+    let is_answer =
+        |action: &ActionBody| matches!(action.action_type(), ActionType::Answer | ActionType::Mulligan);
     let mut out: Vec<ActionBody> = Vec::new();
-    out.extend(legal.iter().filter(|action| matches!(action, ActionBody::EndTurn)).cloned());
+    out.extend(
+        legal
+            .iter()
+            .filter(|action| matches!(action, ActionBody::EndTurn))
+            .cloned(),
+    );
     out.extend(legal.iter().filter(|action| is_answer(action)).cloned());
-    out.extend(legal.iter().filter(|action| !matches!(action, ActionBody::EndTurn) && !is_answer(action)).cloned());
+    out.extend(
+        legal
+            .iter()
+            .filter(|action| !matches!(action, ActionBody::EndTurn) && !is_answer(action))
+            .cloned(),
+    );
     out
 }
 
@@ -185,7 +216,11 @@ fn played_def_id(state: &GameState, seat: PlayerId, action: &ActionBody) -> Opti
     let ActionBody::Play { instance_id, .. } = action else {
         return None;
     };
-    state.players[seat].hand.iter().find(|instance| instance.id == *instance_id).map(|card| card.def_id.clone())
+    state.players[seat]
+        .hand
+        .iter()
+        .find(|instance| instance.id == *instance_id)
+        .map(|card| card.def_id.clone())
 }
 
 /// An accepted action: what was chosen, as sent, and the state after it.
@@ -217,7 +252,10 @@ pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
     let mut log: Vec<Action> = Vec::new();
     let mut rejected: Vec<RejectedAction> = Vec::new();
     let mut thrown: Vec<ThrownError> = Vec::new();
-    let mut played: PerPlayer<Vec<String>> = PerPlayer { p1: Vec::new(), p2: Vec::new() };
+    let mut played: PerPlayer<Vec<String>> = PerPlayer {
+        p1: Vec::new(),
+        p2: Vec::new(),
+    };
     let mut fallbacks: i32 = 0;
     let mut decisions: i32 = 0;
     let mut nodes: usize = 0;
@@ -249,11 +287,18 @@ pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
         if let Err(error) = called {
             thrown.push(ThrownError {
                 seat,
-                message: format!("controller {} threw: {}", controller.kind(), message_of(error.as_ref())),
+                message: format!(
+                    "controller {} threw: {}",
+                    controller.kind(),
+                    message_of(error.as_ref())
+                ),
             });
             break;
         }
-        let choice = choice.unwrap_or(ControllerChoice { action: None, decision: None });
+        let choice = choice.unwrap_or(ControllerChoice {
+            action: None,
+            decision: None,
+        });
 
         if let Some(decision) = &choice.decision {
             decisions += 1;
@@ -289,14 +334,26 @@ pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
             let action = Action::new(chosen.clone(), seat, nonce.clone());
             let result = reduce(current, &action);
             match result.error {
-                None => Some(Accepted { body: chosen.clone(), action, next: result.state }),
+                None => Some(Accepted {
+                    body: chosen.clone(),
+                    action,
+                    next: result.state,
+                }),
                 Some(error) => {
-                    rejected.push(RejectedAction { seat, action: chosen.clone(), error });
+                    rejected.push(RejectedAction {
+                        seat,
+                        action: chosen.clone(),
+                        error,
+                    });
                     for replacement in replacements_for(current, seat) {
                         let alternative = Action::new(replacement.clone(), seat, nonce.clone());
                         let retry = reduce(current, &alternative);
                         if retry.error.is_none() {
-                            return Some(Accepted { body: replacement, action: alternative, next: retry.state });
+                            return Some(Accepted {
+                                body: replacement,
+                                action: alternative,
+                                next: retry.state,
+                            });
                         }
                     }
                     None
@@ -378,5 +435,9 @@ pub fn play_ai_turn(state: &GameState, seat: PlayerId, options: &mut AiOptions) 
         n += 1;
     }
 
-    AiTurnResult { state: current, actions, decisions }
+    AiTurnResult {
+        state: current,
+        actions,
+        decisions,
+    }
 }

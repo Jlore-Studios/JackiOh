@@ -37,11 +37,17 @@ pub fn spell() -> CardDef {
 }
 
 pub fn self_exiler() -> CardDef {
-    spell_def(962, json!({ "id": "fx-tf-exiler", "name": "Fixture Self-Exiling Spell" }))
+    spell_def(
+        962,
+        json!({ "id": "fx-tf-exiler", "name": "Fixture Self-Exiling Spell" }),
+    )
 }
 
 pub fn trap() -> CardDef {
-    spell_def(963, json!({ "id": "fx-tf-trap", "name": "Fixture Trap", "type": "Trap" }))
+    spell_def(
+        963,
+        json!({ "id": "fx-tf-trap", "name": "Fixture Trap", "type": "Trap" }),
+    )
 }
 
 /// A Unit whose end-of-turn line hits the enemy hero for 1, and one whose Cry hits it for 5.
@@ -53,12 +59,18 @@ pub fn turner() -> CardDef {
 }
 
 pub fn crier() -> CardDef {
-    unit_def(965, json!({ "id": "fx-tf-crier", "name": "Fixture Cry Unit", "attack": 1, "health": 1 }))
+    unit_def(
+        965,
+        json!({ "id": "fx-tf-crier", "name": "Fixture Cry Unit", "attack": 1, "health": 1 }),
+    )
 }
 
 /// A Spell whose resolution casts the plain Spell (R70): the cast is the later play, though it resolves first.
 pub fn caster() -> CardDef {
-    spell_def(966, json!({ "id": "fx-tf-caster", "name": "Fixture Casting Spell" }))
+    spell_def(
+        966,
+        json!({ "id": "fx-tf-caster", "name": "Fixture Casting Spell" }),
+    )
 }
 
 pub const TURNER_DAMAGE: i32 = 1;
@@ -66,7 +78,15 @@ pub const CRIER_DAMAGE: i32 = 5;
 
 pub fn twice_forward_catalog(base: CardDefs) -> CardDefs {
     let mut defs = base;
-    for def in [forward(), spell(), self_exiler(), trap(), turner(), crier(), caster()] {
+    for def in [
+        forward(),
+        spell(),
+        self_exiler(),
+        trap(),
+        turner(),
+        crier(),
+        caster(),
+    ] {
         defs.insert(def.id.clone(), def);
     }
     defs
@@ -106,7 +126,9 @@ pub static TWICE_FORWARD_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = Lazy
     table.insert(
         self_exiler().id,
         same(|| Script {
-            cry: Some(hook(|_ctx| vec![effects::exile(json_as(json!({ "target": { "of": "self" } })))])),
+            cry: Some(hook(|_ctx| {
+                vec![effects::exile(json_as(json!({ "target": { "of": "self" } })))]
+            })),
             ..Script::default()
         }),
     );

@@ -25,9 +25,9 @@
 //! spec checks (part 28), not to a rules test.
 
 use jackioh_engine::effects::{
-    add_random_from_graveyard, add_to_hand, damage, draw, gain_mana, lose_health, next_turn_mana, player_of,
-    refresh_mana as refresh_effect, remember, remember_random, resolve_target, shuffle_copies_of_self,
-    shuffle_into, switch_all_positions, switch_position_of, TargetSpec,
+    TargetSpec, add_random_from_graveyard, add_to_hand, damage, draw, gain_mana, lose_health, next_turn_mana,
+    player_of, refresh_mana as refresh_effect, remember, remember_random, resolve_target,
+    shuffle_copies_of_self, shuffle_into, switch_all_positions, switch_position_of,
 };
 use jackioh_engine::mana::{max_mana_for, refresh_mana};
 use jackioh_engine::testkit::*;
@@ -57,7 +57,11 @@ impl Bench<'_> {
 
 fn sink_for(state: &mut GameState) -> Bench<'_> {
     let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench { state, events: Vec::new(), rng }
+    Bench {
+        state,
+        events: Vec::new(),
+        rng,
+    }
 }
 
 /// TS `put(state, defId, ref, { radiant: true })`: the card is made Radiant before it is placed.
@@ -66,7 +70,10 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
     let mut card = new_instance(state, def_id, player, Zone::Hand { player });
     card.radiant = true;
     let id = card.id.clone();
-    assert!(place_on_field(state, &mut card, at, Default::default()), "could not place {def_id}");
+    assert!(
+        place_on_field(state, &mut card, at, Default::default()),
+        "could not place {def_id}"
+    );
     find_instance(state, &id).cloned().expect("the placed card")
 }
 
@@ -105,13 +112,25 @@ fn castable() -> CardDef {
 
 fn castable_script() -> Script {
     Script {
-        cry: Some(hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 })))])),
+        cry: Some(hook(|_ctx| {
+            vec![damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": 2 }),
+            ))]
+        })),
         ..Script::default()
     }
 }
 
 fn ec_scripts() -> IndexMap<String, CardScripts> {
-    [(castable().id, CardScripts { base: castable_script(), radiant: castable_script() })].into_iter().collect()
+    [(
+        castable().id,
+        CardScripts {
+            base: castable_script(),
+            radiant: castable_script(),
+        },
+    )]
+    .into_iter()
+    .collect()
 }
 
 fn game(seed: &str) -> GameState {
@@ -139,31 +158,62 @@ struct RunOptions {
 
 impl RunOptions {
     fn as_p(controller: PlayerId) -> RunOptions {
-        RunOptions { controller: Some(controller), ..Default::default() }
+        RunOptions {
+            controller: Some(controller),
+            ..Default::default()
+        }
     }
 }
 
 /// Builds the context TS's `makeContext(sinkFor(state), options.self ?? null, options)` builds over a
 /// fresh sink, and hands it to `f` (a context borrows the state, so it cannot be handed back). TS
 /// handed over the live card object; the card is looked up again by id.
-fn with_context<R>(state: &mut GameState, options: RunOptions, f: impl FnOnce(&mut EffectContext<'_>) -> R) -> R {
-    let RunOptions { controller, self_, targets } = options;
+fn with_context<R>(
+    state: &mut GameState,
+    options: RunOptions,
+    f: impl FnOnce(&mut EffectContext<'_>) -> R,
+) -> R {
+    let RunOptions {
+        controller,
+        self_,
+        targets,
+    } = options;
     let self_ = self_.map(|card| find_instance(state, &card.id).cloned().unwrap_or(card));
     let mut bench = sink_for(state);
     let mut sink = bench.sink();
-    let mut ctx = make_context(&mut sink, self_.as_ref(), HookOptions { controller, targets, ..Default::default() });
+    let mut ctx = make_context(
+        &mut sink,
+        self_.as_ref(),
+        HookOptions {
+            controller,
+            targets,
+            ..Default::default()
+        },
+    );
     f(&mut ctx)
 }
 
 /// Apply effects outside any card, as the resolver does, and hand back the events (§10.3). As in TS,
 /// the sink's rng is not written back to the state.
 fn run(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<GameEvent> {
-    let RunOptions { controller, self_, targets } = options;
+    let RunOptions {
+        controller,
+        self_,
+        targets,
+    } = options;
     let self_ = self_.map(|card| find_instance(state, &card.id).cloned().unwrap_or(card));
     let mut sink = sink_for(state);
     {
         let mut engine_sink = sink.sink();
-        let mut ctx = make_context(&mut engine_sink, self_.as_ref(), HookOptions { controller, targets, ..Default::default() });
+        let mut ctx = make_context(
+            &mut engine_sink,
+            self_.as_ref(),
+            HookOptions {
+                controller,
+                targets,
+                ..Default::default()
+            },
+        );
         apply_effects(&effects, &mut ctx);
     }
     std::mem::take(&mut sink.events)
@@ -194,7 +244,11 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .iter()
             .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
         (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(got, want)| matches_object(got, want))
+            actual.len() == expected.len()
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(got, want)| matches_object(got, want))
         }
         _ => actual == expected,
     }
@@ -219,12 +273,17 @@ fn def_ids(cards: &[CardInstance]) -> Vec<String> {
 }
 
 fn on_instance(card: &CardInstance) -> Option<Vec<Selection>> {
-    Some(vec![Selection::Instance { instance_id: card.id.clone() }])
+    Some(vec![Selection::Instance {
+        instance_id: card.id.clone(),
+    }])
 }
 
 /// One field of every event of a type, in order.
 fn field_of(events: &[GameEvent], of: GameEventType, key: &str) -> Vec<Value> {
-    events_of_type(events, of).iter().map(|event| json_of(event)[key].clone()).collect()
+    events_of_type(events, of)
+        .iter()
+        .map(|event| json_of(event)[key].clone())
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -238,7 +297,10 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
     fn r70_a_cast_counts_as_a_play_with_cost_paid_0_and_fires_the_cards_script() {
         let mut state = game("r70-cast");
         let mut sink = sink_for(&mut state);
-        let card = must(in_hand(sink.state, &castable().id, P1, 1).into_iter().next(), "a castable Spell"); // printed cost 3
+        let card = must(
+            in_hand(sink.state, &castable().id, P1, 1).into_iter().next(),
+            "a castable Spell",
+        ); // printed cost 3
         sink.state.players.p1.mana.current = 3;
         let played_before = sink.state.counters.played;
 
@@ -249,8 +311,12 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
         let played = events_of_type(&sink.events, GameEventType::CardPlayed);
         assert_eq!(played.len(), 1);
         let first = json_of(&played[0]);
-        let expected = json!({ "player": "p1", "instanceId": card.id, "defId": castable().id, "costPaid": 0 });
-        assert!(matches_object(&first, &expected), "{first} does not match {expected}");
+        let expected =
+            json!({ "player": "p1", "instanceId": card.id, "defId": castable().id, "costPaid": 0 });
+        assert!(
+            matches_object(&first, &expected),
+            "{first} does not match {expected}"
+        );
 
         // "Counts as a play for every rule that counts or reacts to plays": the Combo counter, the
         // played list and the game counter Ceaseless Void reads (R55).
@@ -260,7 +326,14 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
 
         // "It fires the card's Cry or spell script", and the Spell then goes to the graveyard (§10.5).
         assert_eq!(sink.state.players.p2.hero.health, 30 - 2);
-        let graveyard: Vec<String> = sink.state.players.p1.graveyard.iter().map(|entry| entry.id.clone()).collect();
+        let graveyard: Vec<String> = sink
+            .state
+            .players
+            .p1
+            .graveyard
+            .iter()
+            .map(|entry| entry.id.clone())
+            .collect();
         assert_eq!(graveyard, vec![card.id.clone()]);
         assert!(sink.state.players.p1.hand.is_empty());
     }
@@ -277,9 +350,16 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
             card.buffs = AttackHealth { attack: 3, health: 4 };
             card.granted_keywords = vec![Keyword::Taunt];
             card.vanilla = true;
-            card.counters = Counters { plague: Some(2), grade: Some(3) };
+            card.counters = Counters {
+                plague: Some(2),
+                grade: Some(3),
+            };
             card.memory = [("meal".to_string(), json!("felinor"))].into_iter().collect();
-            card.exertion = Exertion { attacked: true, switched: true, attacks: None };
+            card.exertion = Exertion {
+                attacked: true,
+                switched: true,
+                attacks: None,
+            };
             card.position = Some(Position::Def);
             card.summoned_turn = Some(turn);
             card.stats_override = Some(AttackHealth { attack: 9, health: 9 });
@@ -294,7 +374,12 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
 
         let mut moving = live(&state, &unit).clone();
         assert_eq!(
-            move_to_zone(&mut state, &mut moving, OffFieldZone::Graveyard, Default::default()),
+            move_to_zone(
+                &mut state,
+                &mut moving,
+                OffFieldZone::Graveyard,
+                Default::default()
+            ),
             MoveResult::Moved
         );
 
@@ -306,7 +391,14 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
         assert!(!after.vanilla);
         assert_eq!(json_of(&after.counters), json!({}));
         assert!(after.memory.is_empty());
-        assert_eq!(after.exertion, Exertion { attacked: false, switched: false, attacks: None });
+        assert_eq!(
+            after.exertion,
+            Exertion {
+                attacked: false,
+                switched: false,
+                attacks: None
+            }
+        );
         assert_eq!(after.position, None);
         assert_eq!(after.summoned_turn, None);
         assert_eq!(after.stats_override, None);
@@ -327,7 +419,10 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
     #[test]
     fn r78_a_card_that_never_was_on_the_field_keeps_what_it_carries() {
         let mut state = game("r78-off-field");
-        let card = must(in_hand(&mut state, &plain.id, P1, 1).into_iter().next(), "a hand card");
+        let card = must(
+            in_hand(&mut state, &plain.id, P1, 1).into_iter().next(),
+            "a hand card",
+        );
         {
             let held = live_mut(&mut state, &card);
             held.memory = [("note".to_string(), json!("kept"))].into_iter().collect();
@@ -357,7 +452,10 @@ mod s6_3_target_and_player_specs_targets_ts_m3_t1 {
         let mut state = game("targets-player");
         for controller in [P1, P2] {
             let (mine, theirs) = with_context(&mut state, RunOptions::as_p(controller), |ctx| {
-                (player_of(ctx, json_as(json!("self"))), player_of(ctx, json_as(json!("enemy"))))
+                (
+                    player_of(ctx, json_as(json!("self"))),
+                    player_of(ctx, json_as(json!("enemy"))),
+                )
             });
             assert_eq!(mine, controller);
             assert_eq!(theirs, if controller == P1 { P2 } else { P1 });
@@ -375,8 +473,12 @@ mod s6_3_target_and_player_specs_targets_ts_m3_t1 {
             controller: Some(P1),
             self_: Some(self_card.clone()),
             targets: Some(vec![
-                Selection::Instance { instance_id: first.id.clone() },
-                Selection::Instance { instance_id: second.id.clone() },
+                Selection::Instance {
+                    instance_id: first.id.clone(),
+                },
+                Selection::Instance {
+                    instance_id: second.id.clone(),
+                },
             ]),
         };
         with_context(&mut state, options, |ctx| {
@@ -404,7 +506,10 @@ mod s6_3_target_and_player_specs_targets_ts_m3_t1 {
                 target_json(resolve_target(ctx, &spec(json!({ "of": "chosen", "index": 1 })))),
                 json!({ "kind": "unit", "instance": second_now })
             );
-            assert_eq!(target_json(resolve_target(ctx, &spec(json!({ "of": "chosen", "index": 2 })))), Value::Null);
+            assert_eq!(
+                target_json(resolve_target(ctx, &spec(json!({ "of": "chosen", "index": 2 })))),
+                Value::Null
+            );
         });
     }
 
@@ -418,7 +523,11 @@ mod s6_3_target_and_player_specs_targets_ts_m3_t1 {
 
         let hero = with_context(
             &mut state,
-            RunOptions { controller: Some(P1), targets: Some(vec![Selection::Hero { player: P2 }]), ..Default::default() },
+            RunOptions {
+                controller: Some(P1),
+                targets: Some(vec![Selection::Hero { player: P2 }]),
+                ..Default::default()
+            },
             |ctx| target_json(resolve_target(ctx, &spec(json!({ "of": "chosen" })))),
         );
         assert_eq!(hero, json!({ "kind": "hero", "player": "p2" }));
@@ -427,7 +536,12 @@ mod s6_3_target_and_player_specs_targets_ts_m3_t1 {
             &mut state,
             RunOptions {
                 controller: Some(P1),
-                targets: Some(vec![Selection::Instance { instance_id: "c9999".into() }, Selection::None]),
+                targets: Some(vec![
+                    Selection::Instance {
+                        instance_id: "c9999".into(),
+                    },
+                    Selection::None,
+                ]),
                 ..Default::default()
             },
             |ctx| {
@@ -451,13 +565,27 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
     #[test]
     fn s6_3_draw_takes_the_top_cards_for_the_player_the_effect_names() {
         let mut state = game("draw-effect");
-        set_library(&mut state, P1, &[plain.id.clone(), taunter.id.clone(), plain.id.clone()]);
+        set_library(
+            &mut state,
+            P1,
+            &[plain.id.clone(), taunter.id.clone(), plain.id.clone()],
+        );
         set_library(&mut state, P2, &[taunter.id.clone(), plain.id.clone()]);
 
-        let mine = run(&mut state, vec![draw(json_as(json!({ "count": 2 })))], RunOptions::as_p(P1));
-        assert_eq!(def_ids(&state.players.p1.hand), vec![plain.id.clone(), taunter.id.clone()]);
+        let mine = run(
+            &mut state,
+            vec![draw(json_as(json!({ "count": 2 })))],
+            RunOptions::as_p(P1),
+        );
+        assert_eq!(
+            def_ids(&state.players.p1.hand),
+            vec![plain.id.clone(), taunter.id.clone()]
+        );
         assert_eq!(state.players.p1.library.len(), 1);
-        assert_eq!(field_of(&mine, GameEventType::Drawn, "player"), vec![json!("p1"), json!("p1")]);
+        assert_eq!(
+            field_of(&mine, GameEventType::Drawn, "player"),
+            vec![json!("p1"), json!("p1")]
+        );
 
         let theirs = run(
             &mut state,
@@ -465,11 +593,18 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
             RunOptions::as_p(P1),
         );
         assert_eq!(def_ids(&state.players.p2.hand), vec![taunter.id.clone()]);
-        assert_eq!(field_of(&theirs, GameEventType::Drawn, "player"), vec![json!("p2")]);
+        assert_eq!(
+            field_of(&theirs, GameEventType::Drawn, "player"),
+            vec![json!("p2")]
+        );
 
         // A count of 0 draws nothing.
         assert_eq!(
-            run(&mut state, vec![draw(json_as(json!({ "count": 0 })))], RunOptions::as_p(P1)),
+            run(
+                &mut state,
+                vec![draw(json_as(json!({ "count": 0 })))],
+                RunOptions::as_p(P1)
+            ),
             Vec::<GameEvent>::new()
         );
     }
@@ -482,12 +617,17 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
             vec![
                 add_to_hand(json_as(json!({ "defId": plain.id }))),
                 add_to_hand(json_as(json!({ "defId": taunter.id, "player": "enemy" }))),
-                add_to_hand(json_as(json!({ "defId": plain.id, "radiant": true, "costOverride": 0 }))),
+                add_to_hand(json_as(
+                    json!({ "defId": plain.id, "radiant": true, "costOverride": 0 }),
+                )),
             ],
             RunOptions::as_p(P1),
         );
 
-        assert_eq!(def_ids(&state.players.p1.hand), vec![plain.id.clone(), plain.id.clone()]);
+        assert_eq!(
+            def_ids(&state.players.p1.hand),
+            vec![plain.id.clone(), plain.id.clone()]
+        );
         assert_eq!(def_ids(&state.players.p2.hand), vec![taunter.id.clone()]);
         let created = must(state.players.p1.hand.get(1), "the third card");
         assert!(created.radiant);
@@ -505,7 +645,11 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
         let mut state = game("add-to-hand-full");
         in_hand(&mut state, &plain.id, P1, HAND_CAP);
 
-        let events = run(&mut state, vec![add_to_hand(json_as(json!({ "defId": taunter.id })))], RunOptions::as_p(P1));
+        let events = run(
+            &mut state,
+            vec![add_to_hand(json_as(json!({ "defId": taunter.id })))],
+            RunOptions::as_p(P1),
+        );
         assert_eq!(state.players.p1.hand.len(), HAND_CAP as usize);
         assert_eq!(events_of_type(&events, GameEventType::Burned).len(), 1);
         assert_eq!(def_ids(&state.players.p1.graveyard), vec![taunter.id.clone()]);
@@ -528,7 +672,11 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
         let mut state = game("add-random-graveyard");
         let buried = bury(&mut state);
 
-        run(&mut state, vec![add_random_from_graveyard(Default::default())], RunOptions::as_p(P1));
+        run(
+            &mut state,
+            vec![add_random_from_graveyard(Default::default())],
+            RunOptions::as_p(P1),
+        );
         assert_eq!(state.players.p1.hand.len(), 1);
         let moved = must(state.players.p1.hand.first(), "the returned card").clone();
         // The same instance moved, rather than a copy being created (§6.3 Add to hand).
@@ -538,8 +686,15 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
         // Seeded: the same state and seed return the same card.
         let mut again = game("add-random-graveyard");
         let buried_again = bury(&mut again);
-        run(&mut again, vec![add_random_from_graveyard(Default::default())], RunOptions::as_p(P1));
-        let index = buried.iter().position(|card| card.id == moved.id).expect("moved was buried");
+        run(
+            &mut again,
+            vec![add_random_from_graveyard(Default::default())],
+            RunOptions::as_p(P1),
+        );
+        let index = buried
+            .iter()
+            .position(|card| card.id == moved.id)
+            .expect("moved was buried");
         assert_eq!(
             must(again.players.p1.hand.first(), "the returned card").id,
             must(buried_again.get(index), "the same slot").id
@@ -548,7 +703,11 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
         // An empty graveyard gives nothing.
         let mut empty = game("add-random-empty");
         assert_eq!(
-            run(&mut empty, vec![add_random_from_graveyard(Default::default())], RunOptions::as_p(P1)),
+            run(
+                &mut empty,
+                vec![add_random_from_graveyard(Default::default())],
+                RunOptions::as_p(P1)
+            ),
             Vec::<GameEvent>::new()
         );
         assert!(empty.players.p1.hand.is_empty());
@@ -565,7 +724,16 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
             RunOptions::as_p(P1),
         );
         assert_eq!(state.players.p1.library.len(), 4);
-        assert_eq!(state.players.p1.library.iter().filter(|card| card.def_id == taunter.id).count(), 2);
+        assert_eq!(
+            state
+                .players
+                .p1
+                .library
+                .iter()
+                .filter(|card| card.def_id == taunter.id)
+                .count(),
+            2
+        );
         let shuffled = events_of_type(&events, GameEventType::ShuffledIn);
         assert_eq!(shuffled.len(), 2);
         for event in &shuffled {
@@ -581,11 +749,18 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
         // The enemy's library when the effect says so, and a Radiant copy when it asks for one (R57).
         run(
             &mut state,
-            vec![shuffle_into(json_as(json!({ "defId": taunter.id, "count": 1, "player": "enemy", "radiant": true })))],
+            vec![shuffle_into(json_as(
+                json!({ "defId": taunter.id, "count": 1, "player": "enemy", "radiant": true }),
+            ))],
             RunOptions::as_p(P1),
         );
         let theirs = must(
-            state.players.p2.library.iter().find(|card| card.def_id == taunter.id),
+            state
+                .players
+                .p2
+                .library
+                .iter()
+                .find(|card| card.def_id == taunter.id),
             "the shuffled copy",
         );
         assert!(theirs.radiant);
@@ -595,16 +770,28 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
     #[test]
     fn c90_1_shuffle_copies_of_self_copies_the_running_cards_definition_and_its_radiant_flag() {
         let mut state = game("shuffle-copies");
-        let self_card = must(in_hand(&mut state, &taunter.id, P1, 1).into_iter().next(), "the running card");
+        let self_card = must(
+            in_hand(&mut state, &taunter.id, P1, 1).into_iter().next(),
+            "the running card",
+        );
         live_mut(&mut state, &self_card).radiant = true;
 
         run(
             &mut state,
             vec![shuffle_copies_of_self(json_as(json!({ "count": 3 })))],
-            RunOptions { controller: Some(P1), self_: Some(self_card.clone()), ..Default::default() },
+            RunOptions {
+                controller: Some(P1),
+                self_: Some(self_card.clone()),
+                ..Default::default()
+            },
         );
-        let copies: Vec<&CardInstance> =
-            state.players.p1.library.iter().filter(|card| card.def_id == taunter.id).collect();
+        let copies: Vec<&CardInstance> = state
+            .players
+            .p1
+            .library
+            .iter()
+            .filter(|card| card.def_id == taunter.id)
+            .collect();
         assert_eq!(copies.len(), 3);
         assert!(copies.iter().all(|card| card.radiant));
         assert!(copies.iter().all(|card| card.id != self_card.id));
@@ -613,7 +800,11 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
         let mut bare = game("shuffle-copies-bare");
         set_library(&mut bare, P1, &[] as &[&str]);
         assert_eq!(
-            run(&mut bare, vec![shuffle_copies_of_self(json_as(json!({ "count": 2 })))], RunOptions::as_p(P1)),
+            run(
+                &mut bare,
+                vec![shuffle_copies_of_self(json_as(json!({ "count": 2 })))],
+                RunOptions::as_p(P1)
+            ),
             Vec::<GameEvent>::new()
         );
         assert!(bare.players.p1.library.is_empty());
@@ -646,10 +837,18 @@ mod s6_3_lose_health_r18_m3_t1 {
         assert!(events_of_type(&events, GameEventType::Damage).is_empty());
 
         // Your own hero when the effect names itself (#98's draw power), and 0 does nothing.
-        run(&mut state, vec![lose_health(json_as(json!({ "player": "self", "amount": 2 })))], RunOptions::as_p(P1));
+        run(
+            &mut state,
+            vec![lose_health(json_as(json!({ "player": "self", "amount": 2 })))],
+            RunOptions::as_p(P1),
+        );
         assert_eq!(state.players.p1.hero.health, 30 - 2);
         assert_eq!(
-            run(&mut state, vec![lose_health(json_as(json!({ "player": "self", "amount": 0 })))], RunOptions::as_p(P1)),
+            run(
+                &mut state,
+                vec![lose_health(json_as(json!({ "player": "self", "amount": 0 })))],
+                RunOptions::as_p(P1)
+            ),
             Vec::<GameEvent>::new()
         );
     }
@@ -661,9 +860,18 @@ mod s6_3_mana_and_next_turn_mana_s2_3_m3_t1 {
     #[test]
     fn s2_3_gain_mana_adds_to_current_mana_and_may_take_it_above_max() {
         let mut state = game("gain-mana");
-        state.players.p1.mana = ManaState { current: 1, max: 1, next_turn_mod: 0, perm_mod: 0 };
+        state.players.p1.mana = ManaState {
+            current: 1,
+            max: 1,
+            next_turn_mod: 0,
+            perm_mod: 0,
+        };
 
-        let events = run(&mut state, vec![gain_mana(json_as(json!({ "amount": 2 })))], RunOptions::as_p(P1));
+        let events = run(
+            &mut state,
+            vec![gain_mana(json_as(json!({ "amount": 2 })))],
+            RunOptions::as_p(P1),
+        );
         assert_eq!(state.players.p1.mana.current, 3);
         assert_eq!(state.players.p1.mana.max, 1); // above max is allowed (§2.3)
         assert_eq!(
@@ -672,19 +880,36 @@ mod s6_3_mana_and_next_turn_mana_s2_3_m3_t1 {
         );
 
         // The enemy's mana when the effect names it, and a drain floors at 0.
-        run(&mut state, vec![gain_mana(json_as(json!({ "amount": 1, "player": "enemy" })))], RunOptions::as_p(P1));
+        run(
+            &mut state,
+            vec![gain_mana(json_as(json!({ "amount": 1, "player": "enemy" })))],
+            RunOptions::as_p(P1),
+        );
         assert_eq!(state.players.p2.mana.current, 1);
-        run(&mut state, vec![gain_mana(json_as(json!({ "amount": -5 })))], RunOptions::as_p(P1));
+        run(
+            &mut state,
+            vec![gain_mana(json_as(json!({ "amount": -5 })))],
+            RunOptions::as_p(P1),
+        );
         assert_eq!(state.players.p1.mana.current, 0);
     }
 
     #[test]
     fn r364_refresh_gives_back_spent_mana_up_to_max_and_never_past_it_s6_3_refresh() {
         let mut state = game("refresh-mana");
-        state.players.p1.mana = ManaState { current: 0, max: 4, next_turn_mod: 0, perm_mod: 0 };
+        state.players.p1.mana = ManaState {
+            current: 0,
+            max: 4,
+            next_turn_mod: 0,
+            perm_mod: 0,
+        };
 
         // 0 of 4: three come back.
-        let events = run(&mut state, vec![refresh_effect(json_as(json!({ "amount": 3 })))], RunOptions::as_p(P1));
+        let events = run(
+            &mut state,
+            vec![refresh_effect(json_as(json!({ "amount": 3 })))],
+            RunOptions::as_p(P1),
+        );
         assert_eq!(state.players.p1.mana.current, 3);
         assert_eq!(
             json_of(&events_of_type(&events, GameEventType::ManaChanged)),
@@ -692,17 +917,30 @@ mod s6_3_mana_and_next_turn_mana_s2_3_m3_t1 {
         );
 
         // 3 of 4: only one is spent, so only one comes back — a Refresh never goes past max.
-        run(&mut state, vec![refresh_effect(json_as(json!({ "amount": 3 })))], RunOptions::as_p(P1));
+        run(
+            &mut state,
+            vec![refresh_effect(json_as(json!({ "amount": 3 })))],
+            RunOptions::as_p(P1),
+        );
         assert_eq!(state.players.p1.mana.current, 4);
 
         // Temporary mana above max is kept, and a Refresh there gives nothing and announces nothing.
         state.players.p1.mana.current = 6;
-        let over = run(&mut state, vec![refresh_effect(json_as(json!({ "amount": 3 })))], RunOptions::as_p(P1));
+        let over = run(
+            &mut state,
+            vec![refresh_effect(json_as(json!({ "amount": 3 })))],
+            RunOptions::as_p(P1),
+        );
         assert!(events_of_type(&over, GameEventType::ManaChanged).is_empty());
         assert_eq!(state.players.p1.mana.current, 6);
 
         // The enemy's pool when the effect names it.
-        state.players.p2.mana = ManaState { current: 1, max: 2, next_turn_mod: 0, perm_mod: 0 };
+        state.players.p2.mana = ManaState {
+            current: 1,
+            max: 2,
+            next_turn_mod: 0,
+            perm_mod: 0,
+        };
         run(
             &mut state,
             vec![refresh_effect(json_as(json!({ "amount": 3, "player": "enemy" })))],
@@ -715,11 +953,18 @@ mod s6_3_mana_and_next_turn_mana_s2_3_m3_t1 {
     fn c21_next_turn_mana_changes_the_next_refresh_only_and_the_refresh_floors_at_0_s2_3() {
         let mut state = game("next-turn-mana");
         state.players.p2.turns_started = 3;
-        state.players.p2.mana = ManaState { current: 3, max: 3, next_turn_mod: 0, perm_mod: 0 };
+        state.players.p2.mana = ManaState {
+            current: 3,
+            max: 3,
+            next_turn_mod: 0,
+            perm_mod: 0,
+        };
 
         let events = run(
             &mut state,
-            vec![next_turn_mana(json_as(json!({ "amount": -1, "player": "enemy" })))],
+            vec![next_turn_mana(json_as(
+                json!({ "amount": -1, "player": "enemy" }),
+            ))],
             RunOptions::as_p(P1),
         );
         assert_eq!(state.players.p2.mana.next_turn_mod, -1);
@@ -731,18 +976,26 @@ mod s6_3_mana_and_next_turn_mana_s2_3_m3_t1 {
         state.players.p2.turns_started = 4;
         assert_eq!(max_mana_for(&state.players.p2), MAX_MANA);
         refresh_mana(&mut state.players.p2);
-        assert_eq!((state.players.p2.mana.current, state.players.p2.mana.max), (MAX_MANA - 1, MAX_MANA));
+        assert_eq!(
+            (state.players.p2.mana.current, state.players.p2.mana.max),
+            (MAX_MANA - 1, MAX_MANA)
+        );
         // One refresh only: the modifier is spent.
         assert_eq!(state.players.p2.mana.next_turn_mod, 0);
 
         // A big penalty floors the refresh at 0 rather than going negative.
         run(
             &mut state,
-            vec![next_turn_mana(json_as(json!({ "amount": -9, "player": "enemy" })))],
+            vec![next_turn_mana(json_as(
+                json!({ "amount": -9, "player": "enemy" }),
+            ))],
             RunOptions::as_p(P1),
         );
         refresh_mana(&mut state.players.p2);
-        assert_eq!((state.players.p2.mana.current, state.players.p2.mana.max), (0, MAX_MANA));
+        assert_eq!(
+            (state.players.p2.mana.current, state.players.p2.mana.max),
+            (0, MAX_MANA)
+        );
     }
 }
 
@@ -753,14 +1006,23 @@ mod s10_1_memory_what_a_card_remembers_r43_m3_t1 {
     fn s10_1_remember_stores_a_value_on_the_card_that_is_running_under_the_key_it_names() {
         let mut state = game("remember");
         let self_card = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
-        let as_self = || RunOptions { controller: Some(P1), self_: Some(self_card.clone()), ..Default::default() };
+        let as_self = || RunOptions {
+            controller: Some(P1),
+            self_: Some(self_card.clone()),
+            ..Default::default()
+        };
 
         run(
             &mut state,
-            vec![remember(json_as(json!({ "key": "meal", "value": { "attack": 3, "health": 3 } })))],
+            vec![remember(json_as(
+                json!({ "key": "meal", "value": { "attack": 3, "health": 3 } }),
+            ))],
             as_self(),
         );
-        assert_eq!(live(&state, &self_card).memory.get("meal"), Some(&json!({ "attack": 3, "health": 3 })));
+        assert_eq!(
+            live(&state, &self_card).memory.get("meal"),
+            Some(&json!({ "attack": 3, "health": 3 }))
+        );
 
         // A second write replaces the first, and another key lives beside it.
         run(
@@ -780,7 +1042,11 @@ mod s10_1_memory_what_a_card_remembers_r43_m3_t1 {
 
         // With no card running there is nowhere to remember anything.
         assert_eq!(
-            run(&mut state, vec![remember(json_as(json!({ "key": "meal", "value": 1 })))], RunOptions::as_p(P1)),
+            run(
+                &mut state,
+                vec![remember(json_as(json!({ "key": "meal", "value": 1 })))],
+                RunOptions::as_p(P1)
+            ),
             Vec::<GameEvent>::new()
         );
     }
@@ -794,8 +1060,14 @@ mod s10_1_memory_what_a_card_remembers_r43_m3_t1 {
             let self_card = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
             run(
                 &mut state,
-                vec![remember_random(json_as(json!({ "key": "power", "options": options })))],
-                RunOptions { controller: Some(P1), self_: Some(self_card.clone()), ..Default::default() },
+                vec![remember_random(json_as(
+                    json!({ "key": "power", "options": options }),
+                ))],
+                RunOptions {
+                    controller: Some(P1),
+                    self_: Some(self_card.clone()),
+                    ..Default::default()
+                },
             );
             live(&state, &self_card).memory.get("power").cloned()
         };
@@ -810,13 +1082,19 @@ mod s10_1_memory_what_a_card_remembers_r43_m3_t1 {
         run(
             &mut state,
             vec![remember_random(json_as(json!({ "key": "power", "options": [] })))],
-            RunOptions { controller: Some(P1), self_: Some(self_card.clone()), ..Default::default() },
+            RunOptions {
+                controller: Some(P1),
+                self_: Some(self_card.clone()),
+                ..Default::default()
+            },
         );
         assert_eq!(live(&state, &self_card).memory.get("power"), None);
         assert_eq!(
             run(
                 &mut state,
-                vec![remember_random(json_as(json!({ "key": "power", "options": options })))],
+                vec![remember_random(json_as(
+                    json!({ "key": "power", "options": options })
+                ))],
                 RunOptions::as_p(P1),
             ),
             Vec::<GameEvent>::new()
@@ -831,16 +1109,29 @@ mod s6_3_switch_position_as_an_effect_r20_m3_t1 {
     fn r20_switching_a_named_unit_spends_no_exertion_and_flips_or_sets_the_position() {
         let mut state = game("switch-position");
         let unit = put(&mut state, &plain.id, slot(P2, Units, 1), json!({}));
-        let at_unit = || RunOptions { controller: Some(P1), targets: on_instance(&unit), ..Default::default() };
+        let at_unit = || RunOptions {
+            controller: Some(P1),
+            targets: on_instance(&unit),
+            ..Default::default()
+        };
 
         let events = run(
             &mut state,
-            vec![switch_position_of(json_as(json!({ "target": { "of": "chosen" } })))],
+            vec![switch_position_of(json_as(
+                json!({ "target": { "of": "chosen" } }),
+            ))],
             at_unit(),
         );
         assert_eq!(live(&state, &unit).position, Some(Position::Def));
         // R20: an effect's switch is free, so the unit can still act on its own turn (§4.1).
-        assert_eq!(live(&state, &unit).exertion, Exertion { attacked: false, switched: false, attacks: None });
+        assert_eq!(
+            live(&state, &unit).exertion,
+            Exertion {
+                attacked: false,
+                switched: false,
+                attacks: None
+            }
+        );
         assert_eq!(
             json_of(&events_of_type(&events, GameEventType::PositionSwitched)),
             json!([{ "type": "positionSwitched", "instanceId": unit.id, "position": "DEF" }])
@@ -849,14 +1140,18 @@ mod s6_3_switch_position_as_an_effect_r20_m3_t1 {
         // A named position rather than a flip, and naming the one it is already in changes nothing.
         run(
             &mut state,
-            vec![switch_position_of(json_as(json!({ "to": "ATK", "target": { "of": "chosen" } })))],
+            vec![switch_position_of(json_as(
+                json!({ "to": "ATK", "target": { "of": "chosen" } }),
+            ))],
             at_unit(),
         );
         assert_eq!(live(&state, &unit).position, Some(Position::Atk));
         assert_eq!(
             run(
                 &mut state,
-                vec![switch_position_of(json_as(json!({ "to": "ATK", "target": { "of": "chosen" } })))],
+                vec![switch_position_of(json_as(
+                    json!({ "to": "ATK", "target": { "of": "chosen" } })
+                ))],
                 at_unit(),
             ),
             Vec::<GameEvent>::new()
@@ -867,13 +1162,19 @@ mod s6_3_switch_position_as_an_effect_r20_m3_t1 {
         run(
             &mut state,
             vec![switch_position_of(json_as(json!({ "target": { "of": "self" } })))],
-            RunOptions { controller: Some(P1), self_: Some(self_card.clone()), ..Default::default() },
+            RunOptions {
+                controller: Some(P1),
+                self_: Some(self_card.clone()),
+                ..Default::default()
+            },
         );
         assert_eq!(live(&state, &self_card).position, Some(Position::Def));
         assert_eq!(
             run(
                 &mut state,
-                vec![switch_position_of(json_as(json!({ "target": { "of": "chosen" } })))],
+                vec![switch_position_of(json_as(
+                    json!({ "target": { "of": "chosen" } })
+                ))],
                 RunOptions {
                     controller: Some(P1),
                     targets: Some(vec![Selection::Hero { player: P2 }]),
@@ -893,21 +1194,37 @@ mod s6_3_switch_position_as_an_effect_r20_m3_t1 {
         let theirs = put(&mut state, &plain.id, slot(P2, Units, 1), json!({}));
         live_mut(&mut state, &also_mine).position = Some(Position::Def);
 
-        run(&mut state, vec![switch_all_positions(json_as(json!({ "side": "both" })))], RunOptions::as_p(P1));
+        run(
+            &mut state,
+            vec![switch_all_positions(json_as(json!({ "side": "both" })))],
+            RunOptions::as_p(P1),
+        );
         assert_eq!(live(&state, &mine).position, Some(Position::Def));
         assert_eq!(live(&state, &also_mine).position, Some(Position::Atk));
         assert_eq!(live(&state, &theirs).position, Some(Position::Def));
         // §4.1: Spikey Pillow cannot be switched to Defense, by an action or by an effect.
         assert_eq!(live(&state, &pillow).position, Some(Position::Atk));
         // R20 again: nothing spent anywhere.
-        assert!([&mine, &also_mine, &theirs].iter().all(|unit| !live(&state, unit).exertion.switched));
+        assert!(
+            [&mine, &also_mine, &theirs]
+                .iter()
+                .all(|unit| !live(&state, unit).exertion.switched)
+        );
 
         // One side only when the effect names it.
-        run(&mut state, vec![switch_all_positions(json_as(json!({ "side": "enemy" })))], RunOptions::as_p(P1));
+        run(
+            &mut state,
+            vec![switch_all_positions(json_as(json!({ "side": "enemy" })))],
+            RunOptions::as_p(P1),
+        );
         assert_eq!(live(&state, &theirs).position, Some(Position::Atk));
         assert_eq!(live(&state, &mine).position, Some(Position::Def));
 
-        run(&mut state, vec![switch_all_positions(json_as(json!({ "side": "self" })))], RunOptions::as_p(P1));
+        run(
+            &mut state,
+            vec![switch_all_positions(json_as(json!({ "side": "self" })))],
+            RunOptions::as_p(P1),
+        );
         assert_eq!(live(&state, &mine).position, Some(Position::Atk));
         assert_eq!(live(&state, &theirs).position, Some(Position::Atk));
     }
@@ -946,7 +1263,14 @@ mod s6_3_the_effects_barrel_m3_t1 {
             assert!(!effect.kind.is_empty());
         }
         // Each names itself, so an event log and a stack trace read as the verb list of §6.3.
-        assert_eq!(built.iter().map(|effect| effect.kind).collect::<IndexSet<_>>().len(), built.len());
+        assert_eq!(
+            built
+                .iter()
+                .map(|effect| effect.kind)
+                .collect::<IndexSet<_>>()
+                .len(),
+            built.len()
+        );
         // Building an effect changes nothing until it is applied (CLAUDE.md rule 5).
         assert_eq!(state.players.p2.hero.health, 30);
     }

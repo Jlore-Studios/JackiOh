@@ -146,7 +146,11 @@ pub(crate) fn matches_object(actual: &serde_json::Value, pattern: &serde_json::V
             .iter()
             .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
         (Value::Array(actual), Value::Array(pattern)) => {
-            actual.len() == pattern.len() && actual.iter().zip(pattern).all(|(got, want)| matches_object(got, want))
+            actual.len() == pattern.len()
+                && actual
+                    .iter()
+                    .zip(pattern)
+                    .all(|(got, want)| matches_object(got, want))
         }
         _ => actual == pattern,
     }

@@ -47,7 +47,14 @@ fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
 
 /// TS `unit(name, attack, health, keywords = [], radiantKeywords = keywords)`: the Radiant face
 /// doubles the stats. Pass `json!([])` for no keywords and the same list twice for TS's default.
-fn unit(name: &str, index: i32, attack: i32, health: i32, keywords: Value, radiant_keywords: Value) -> CardDef {
+fn unit(
+    name: &str,
+    index: i32,
+    attack: i32,
+    health: i32,
+    keywords: Value,
+    radiant_keywords: Value,
+) -> CardDef {
     def(
         name,
         index,
@@ -74,7 +81,10 @@ pub static log_card: LazyLock<CardDef> = LazyLock::new(|| def("log", 4701, "Fiel
 pub fn notes(state: &GameState) -> Vec<String> {
     match state.players.p1.backrow.get((LOG_LANE - 1) as usize) {
         Some(Some(log)) => match log.memory.get("steps").and_then(Value::as_array) {
-            Some(steps) => steps.iter().filter_map(|step| step.as_str().map(str::to_string)).collect(),
+            Some(steps) => steps
+                .iter()
+                .filter_map(|step| step.as_str().map(str::to_string))
+                .collect(),
             None => vec![],
         },
         _ => vec![],
@@ -127,7 +137,9 @@ fn js_bool(value: Option<bool>) -> String {
 /// R426: the units the attack destroyed, whether its attacker survived it, and the player the hook acts for.
 fn attack_facts(ctx: &EffectContext<'_>) -> String {
     let facts = after_attack_of(ctx);
-    let destroyed = facts.as_ref().map_or(String::new(), |facts| facts.destroyed_ids.join("+"));
+    let destroyed = facts
+        .as_ref()
+        .map_or(String::new(), |facts| facts.destroyed_ids.join("+"));
     let survived = js_bool(facts.as_ref().map(|facts| facts.survived));
     format!("after:{destroyed}:{survived}:{}", ctx.controller)
 }
@@ -151,13 +163,15 @@ fn both_of(base: Script, radiant: Script) -> CardScripts {
 /// Classic #52's shape: redirect a lethal hit on its hero to the enemy hero, then heal 10 and draw 3.
 pub static gambit: LazyLock<CardDef> = LazyLock::new(|| def("gambit", 4702, "Trap", json!({})));
 /// A Field Trap that redirects every lethal hit on its hero and stays: two of them could ping-pong for ever.
-pub static echo_gambit: LazyLock<CardDef> = LazyLock::new(|| def("echo-gambit", 4703, "Field Trap", json!({})));
+pub static echo_gambit: LazyLock<CardDef> =
+    LazyLock::new(|| def("echo-gambit", 4703, "Field Trap", json!({})));
 /// The same, whose follow-up asks its controller before it heals: a pause inside the follow-up.
 pub static gambit_asker: LazyLock<CardDef> = LazyLock::new(|| def("gambit-asker", 4704, "Trap", json!({})));
 /// Classic #50's shape: a Unit whose aura exiles every card that would go to a graveyard (Radiant: the enemy's).
 pub static voidwalker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("voidwalker", 4705, 6, 3));
 /// Classic #28's shape: a Field Spell exiling its controller's own cards on their way to a graveyard.
-pub static second_wind: LazyLock<CardDef> = LazyLock::new(|| def("second-wind", 4706, "Field Spell", json!({})));
+pub static second_wind: LazyLock<CardDef> =
+    LazyLock::new(|| def("second-wind", 4706, "Field Spell", json!({})));
 /// Classic #60's shape: a Spell that goes to the bottom of its owner's library instead of its graveyard.
 pub static pile_on: LazyLock<CardDef> = LazyLock::new(|| def("pile-on", 4707, "Spell", json!({})));
 /// Classic #14's Radiant shape: its controller's dying units flicker instead; the follow-up notes them.
@@ -292,11 +306,25 @@ pub static bauble: LazyLock<CardDef> = LazyLock::new(|| def("bauble", 4730, "Fie
 pub static rattle: LazyLock<CardDef> = LazyLock::new(|| plain_unit("rattle", 4731, 1, 1));
 /// A Unit with Reborn, to show R461: an exiled unit comes back from nothing.
 pub static phoenix: LazyLock<CardDef> = LazyLock::new(|| {
-    unit("phoenix", 4732, 2, 2, json!([{ "kind": "Reborn" }]), json!([{ "kind": "Reborn" }]))
+    unit(
+        "phoenix",
+        4732,
+        2,
+        2,
+        json!([{ "kind": "Reborn" }]),
+        json!([{ "kind": "Reborn" }]),
+    )
 });
 /// A Unit with Lifesteal, for E8's conversion of Lifesteal.
 pub static leech: LazyLock<CardDef> = LazyLock::new(|| {
-    unit("leech", 4733, 3, 5, json!([{ "kind": "Lifesteal" }]), json!([{ "kind": "Lifesteal" }]))
+    unit(
+        "leech",
+        4733,
+        3,
+        5,
+        json!([{ "kind": "Lifesteal" }]),
+        json!([{ "kind": "Lifesteal" }]),
+    )
 });
 /// A plain 2/2 and a plain 1/8, bodies to attack with and at.
 pub static grunt: LazyLock<CardDef> = LazyLock::new(|| plain_unit("grunt", 4734, 2, 2));
@@ -307,11 +335,25 @@ pub static watcher: LazyLock<CardDef> = LazyLock::new(|| def("watcher", 4736, "F
 pub static veteran: LazyLock<CardDef> = LazyLock::new(|| plain_unit("veteran", 4737, 2, 2));
 /// R426: "After this attacks" with Cleave: notes the units destroyed, whether it survived, and for whom it acts.
 pub static cleave_veteran: LazyLock<CardDef> = LazyLock::new(|| {
-    unit("cleave-veteran", 4738, 3, 6, json!([{ "kind": "Cleave" }]), json!([{ "kind": "Cleave" }]))
+    unit(
+        "cleave-veteran",
+        4738,
+        3,
+        6,
+        json!([{ "kind": "Cleave" }]),
+        json!([{ "kind": "Cleave" }]),
+    )
 });
 /// R426: the same with Reborn, 2/2, so a combat can kill it and bring a new body back.
 pub static reborn_veteran: LazyLock<CardDef> = LazyLock::new(|| {
-    unit("reborn-veteran", 4739, 2, 2, json!([{ "kind": "Reborn" }]), json!([{ "kind": "Reborn" }]))
+    unit(
+        "reborn-veteran",
+        4739,
+        2,
+        2,
+        json!([{ "kind": "Reborn" }]),
+        json!([{ "kind": "Reborn" }]),
+    )
 });
 /// #86 Mrow's shape: "Death: Take control of the Unit that destroyed this."
 pub static turncoat: LazyLock<CardDef> = LazyLock::new(|| plain_unit("turncoat", 4740, 1, 1));
@@ -399,7 +441,11 @@ fn gambit_script(amount: i32) -> Script {
     Script {
         replacements: vec![ReplacementDef {
             then: Some("after".to_string()),
-            ..replacement("gambit", ReplacementMoment::LethalHit, json!({ "redirect": "enemyHero" }))
+            ..replacement(
+                "gambit",
+                ReplacementMoment::LethalHit,
+                json!({ "redirect": "enemyHero" }),
+            )
         }],
         resume: IndexMap::from([(
             "after",
@@ -409,7 +455,9 @@ fn gambit_script(amount: i32) -> Script {
                     .map_or("?".to_string(), |player| player.to_string());
                 vec![
                     note(format!("gambit:after:{redirected}")),
-                    heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": amount }))),
+                    heal(json_as(
+                        json!({ "target": { "of": "selfHero" }, "amount": amount }),
+                    )),
                     draw(json_as(json!({ "count": 3 }))),
                 ]
             }),
@@ -438,7 +486,11 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         (
             echo_gambit.id.clone(),
             both(Script {
-                replacements: vec![replacement("echo", ReplacementMoment::LethalHit, json!({ "redirect": "enemyHero" }))],
+                replacements: vec![replacement(
+                    "echo",
+                    ReplacementMoment::LethalHit,
+                    json!({ "redirect": "enemyHero" }),
+                )],
                 ..Script::default()
             }),
         ),
@@ -447,12 +499,22 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             both(Script {
                 replacements: vec![ReplacementDef {
                     then: Some("after".to_string()),
-                    ..replacement("gambit", ReplacementMoment::LethalHit, json!({ "redirect": "enemyHero" }))
+                    ..replacement(
+                        "gambit",
+                        ReplacementMoment::LethalHit,
+                        json!({ "redirect": "enemyHero" }),
+                    )
                 }],
                 resume: IndexMap::from([
                     (
                         "after",
-                        hook(|_ctx| vec![note("asker:before"), ask_controller("answered"), note("asker:tail")]),
+                        hook(|_ctx| {
+                            vec![
+                                note("asker:before"),
+                                ask_controller("answered"),
+                                note("asker:tail"),
+                            ]
+                        }),
                     ),
                     (
                         "answered",
@@ -471,14 +533,18 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             voidwalker.id.clone(),
             both_of(
                 Script {
-                    replacements: vec![replacement("void", ReplacementMoment::ToGraveyard, json!({ "to": "exile" }))],
+                    replacements: vec![replacement(
+                        "void",
+                        ReplacementMoment::ToGraveyard,
+                        json!({ "to": "exile" }),
+                    )],
                     ..Script::default()
                 },
                 Script {
                     replacements: vec![ReplacementDef {
-                        when: Some(replacement_when(|c| {
-                            matches!(c.event, ReplacedEvent::ToGraveyard { owner, .. } if *owner != c.controller)
-                        })),
+                        when: Some(replacement_when(
+                            |c| matches!(c.event, ReplacedEvent::ToGraveyard { owner, .. } if *owner != c.controller),
+                        )),
                         ..replacement("void", ReplacementMoment::ToGraveyard, json!({ "to": "exile" }))
                     }],
                     ..Script::default()
@@ -489,9 +555,9 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             second_wind.id.clone(),
             both(Script {
                 replacements: vec![ReplacementDef {
-                    when: Some(replacement_when(|c| {
-                        matches!(c.event, ReplacedEvent::ToGraveyard { owner, .. } if *owner == c.controller)
-                    })),
+                    when: Some(replacement_when(
+                        |c| matches!(c.event, ReplacedEvent::ToGraveyard { owner, .. } if *owner == c.controller),
+                    )),
                     ..replacement("wind", ReplacementMoment::ToGraveyard, json!({ "to": "exile" }))
                 }],
                 ..Script::default()
@@ -504,7 +570,11 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                     cry: Some(hook(|_ctx| vec![note("pile-on:cry")])),
                     replacements: vec![ReplacementDef {
                         where_: Some(ReplacementWhere::SelfCard),
-                        ..replacement("pile", ReplacementMoment::ToGraveyard, json!({ "to": "bottomOfLibrary" }))
+                        ..replacement(
+                            "pile",
+                            ReplacementMoment::ToGraveyard,
+                            json!({ "to": "bottomOfLibrary" }),
+                        )
                     }],
                     ..Script::default()
                 },
@@ -552,7 +622,11 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                         heal_to_damage: Some(true),
                         ..StaticFlags::default()
                     }),
-                    replacements: vec![replacement("moon", ReplacementMoment::Healed, json!({ "damage": "pierce" }))],
+                    replacements: vec![replacement(
+                        "moon",
+                        ReplacementMoment::Healed,
+                        json!({ "damage": "pierce" }),
+                    )],
                     ..Script::default()
                 },
             ),
@@ -598,7 +672,9 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             bolt.id.clone(),
             both(Script {
                 targets: any_target(),
-                cry: Some(hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 3 })))])),
+                cry: Some(hook(|_ctx| {
+                    vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 3 })))]
+                })),
                 ..Script::default()
             }),
         ),
@@ -607,7 +683,9 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             both(Script {
                 targets: unit_target(),
                 cry: Some(hook(|_ctx| {
-                    vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 11, "trample": true })))]
+                    vec![damage(json_as(
+                        json!({ "to": { "of": "chosen" }, "amount": 11, "trample": true }),
+                    ))]
                 })),
                 ..Script::default()
             }),
@@ -616,7 +694,11 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             vital_kill.id.clone(),
             both(Script {
                 targets: hero_target(),
-                cry: Some(hook(|_ctx| vec![set_health(json_as(json!({ "to": { "of": "chosen" }, "value": 13 })))])),
+                cry: Some(hook(|_ctx| {
+                    vec![set_health(json_as(
+                        json!({ "to": { "of": "chosen" }, "value": 13 }),
+                    ))]
+                })),
                 ..Script::default()
             }),
         ),
@@ -624,21 +706,29 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             mend.id.clone(),
             both(Script {
                 targets: any_target(),
-                cry: Some(hook(|_ctx| vec![heal(json_as(json!({ "target": { "of": "chosen" }, "amount": 5 })))])),
+                cry: Some(hook(|_ctx| {
+                    vec![heal(json_as(
+                        json!({ "target": { "of": "chosen" }, "amount": 5 }),
+                    ))]
+                })),
                 ..Script::default()
             }),
         ),
         (
             sweep.id.clone(),
             both(Script {
-                start_of_turn: Some(hook(|_ctx| vec![damage_all(json_as(json!({ "amount": 4, "side": "any" })))])),
+                start_of_turn: Some(hook(|_ctx| {
+                    vec![damage_all(json_as(json!({ "amount": 4, "side": "any" })))]
+                })),
                 ..Script::default()
             }),
         ),
         (
             storm.id.clone(),
             both(Script {
-                cry: Some(hook(|_ctx| vec![damage_all(json_as(json!({ "amount": 2, "side": "any" })))])),
+                cry: Some(hook(|_ctx| {
+                    vec![damage_all(json_as(json!({ "amount": 2, "side": "any" })))]
+                })),
                 ..Script::default()
             }),
         ),
@@ -691,7 +781,9 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                 Script {
                     start_of_turn: Some(hook(|ctx| match ctx.self_.as_ref() {
                         Some(me) if is_berserk(me) => {
-                            vec![forced_attack_own_hero(json_as(json!({ "attacker": { "of": "self" } })))]
+                            vec![forced_attack_own_hero(json_as(
+                                json!({ "attacker": { "of": "self" } }),
+                            ))]
                         }
                         _ => vec![],
                     })),
@@ -711,8 +803,14 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             both(Script {
                 // A Death hook reads its card as it died (R89).
                 death: Some(hook(|ctx| {
-                    let amount = ctx.self_.as_ref().and_then(|card| card.counters.plague).unwrap_or(0);
-                    vec![damage_split(json_as(json!({ "amount": amount, "among": "enemies" })))]
+                    let amount = ctx
+                        .self_
+                        .as_ref()
+                        .and_then(|card| card.counters.plague)
+                        .unwrap_or(0);
+                    vec![damage_split(json_as(
+                        json!({ "amount": amount, "among": "enemies" }),
+                    ))]
                 })),
                 ..Script::default()
             }),
@@ -728,7 +826,10 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             rattle.id.clone(),
             both(Script {
                 death: Some(hook(|ctx| {
-                    let controller = ctx.self_.as_ref().map_or("?".to_string(), |card| card.controller.to_string());
+                    let controller = ctx
+                        .self_
+                        .as_ref()
+                        .map_or("?".to_string(), |card| card.controller.to_string());
                     vec![note(format!("rattle:death:{controller}"))]
                 })),
                 ..Script::default()
@@ -739,12 +840,18 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             both(Script {
                 after_attack: Some(hook(|ctx| {
                     let facts = after_attack_of(&*ctx);
-                    let target = facts.as_ref().map_or("?".to_string(), |facts| facts.target_id.clone());
-                    let destroyed = facts.as_ref().map_or(String::new(), |facts| facts.destroyed_ids.join("+"));
+                    let target = facts
+                        .as_ref()
+                        .map_or("?".to_string(), |facts| facts.target_id.clone());
+                    let destroyed = facts
+                        .as_ref()
+                        .map_or(String::new(), |facts| facts.destroyed_ids.join("+"));
                     let survived = js_bool(facts.as_ref().map(|facts| facts.survived));
                     let forced = js_bool(facts.as_ref().map(|facts| facts.forced));
                     let zone = ctx.self_.as_ref().map_or("none", |card| card.zone.z().as_str());
-                    vec![note(format!("after:{target}:{destroyed}:{survived}:{forced}:{zone}"))]
+                    vec![note(format!(
+                        "after:{target}:{destroyed}:{survived}:{forced}:{zone}"
+                    ))]
                 })),
                 ..Script::default()
             }),
@@ -765,7 +872,11 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             veteran_asker.id.clone(),
             both(Script {
                 after_attack: Some(hook(|_ctx| {
-                    vec![note("after:before"), ask_controller("answered"), note("after:tail")]
+                    vec![
+                        note("after:before"),
+                        ask_controller("answered"),
+                        note("after:tail"),
+                    ]
                 })),
                 resume: IndexMap::from([(
                     "answered",
@@ -788,10 +899,14 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         (
             pawn.id.clone(),
             both(Script {
-                triggers: vec![TriggerDef::new("pawn", &[GameEventType::AttackDeclared], |_ctx, _event| {
-                    vec![cancel_attack(Default::default())]
-                })
-                .with_when(|_ctx, event| matches!(event, GameEvent::AttackDeclared { forced: false, .. }))],
+                triggers: vec![
+                    TriggerDef::new("pawn", &[GameEventType::AttackDeclared], |_ctx, _event| {
+                        vec![cancel_attack(Default::default())]
+                    })
+                    .with_when(|_ctx, event| {
+                        matches!(event, GameEvent::AttackDeclared { forced: false, .. })
+                    }),
+                ],
                 ..Script::default()
             }),
         ),
@@ -803,7 +918,9 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                     &[GameEventType::AttackDeclared, GameEventType::Summoned],
                     |_ctx, event| {
                         let entry = match event {
-                            GameEvent::AttackDeclared { target_id, .. } => format!("watch:attack:{target_id}"),
+                            GameEvent::AttackDeclared { target_id, .. } => {
+                                format!("watch:attack:{target_id}")
+                            }
                             GameEvent::Summoned { instance_id, .. } => format!("watch:summon:{instance_id}"),
                             _ => "watch".to_string(),
                         };
@@ -870,10 +987,21 @@ pub fn playing(seed: &str) -> GameState {
     register();
     let mut state = begin_game(&created).state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|card| card.id.clone()).collect();
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+    );
     let keep: Vec<String> = state.players.p2.hand.iter().map(|card| card.id.clone()).collect();
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }));
-    put(&mut state, &log_card.id, slot(PlayerId::P1, Row::Backrow, LOG_LANE), json!({}));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+    );
+    put(
+        &mut state,
+        &log_card.id,
+        slot(PlayerId::P1, Row::Backrow, LOG_LANE),
+        json!({}),
+    );
     state
 }
 
@@ -899,7 +1027,8 @@ pub fn answer(state: &GameState) -> ReduceResult {
 
 /// TS `JSON.parse(JSON.stringify(state))`.
 pub fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(serde_json::to_value(state).expect("a state is JSON")).expect("a state's JSON is a state")
+    serde_json::from_value(serde_json::to_value(state).expect("a state is JSON"))
+        .expect("a state's JSON is a state")
 }
 
 /// §9.3: the live game and its replay agree. `start` is the state the log was played from; the log is
@@ -956,7 +1085,10 @@ pub fn recorder(start: &GameState) -> Recorder {
 
 /// Each event's `type`, in order.
 pub fn event_types(events: &[GameEvent]) -> Vec<String> {
-    events.iter().map(|event| event.event_type().as_str().to_string()).collect()
+    events
+        .iter()
+        .map(|event| event.event_type().as_str().to_string())
+        .collect()
 }
 
 /// Whether the card is in one of the player's piles. TS `pile: "hand" | "library" | "graveyard" |

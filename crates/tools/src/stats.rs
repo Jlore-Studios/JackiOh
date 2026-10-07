@@ -32,7 +32,9 @@ use anyhow::{Context, Result, anyhow};
 use serde_json::Value;
 
 use jackioh_ai::{AI_DEV_RUN, DevRunOptions, dev_game_record};
-use jackioh_engine::{CardStatsFilter, GameMode, GameRecord, PilotFilter, SourceFilter, Winner, card_stats, format_card_stats};
+use jackioh_engine::{
+    CardStatsFilter, GameMode, GameRecord, PilotFilter, SourceFilter, Winner, card_stats, format_card_stats,
+};
 
 /// Seconds print with this many decimals.
 const SECONDS_DECIMALS: usize = 1;
@@ -43,7 +45,10 @@ const PATCHES_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../cards/patche
 /// R388: the newest patch is the last one `patches.json` lists; the order of versions is the list's.
 fn newest_patch(list: &Value) -> Result<String> {
     let newest = list.as_array().and_then(|entries| entries.last());
-    match newest.and_then(|entry| entry.get("version")).and_then(Value::as_str) {
+    match newest
+        .and_then(|entry| entry.get("version"))
+        .and_then(Value::as_str)
+    {
         Some(version) if !version.is_empty() => Ok(version.to_string()),
         _ => Err(anyhow!("{PATCHES_PATH} names no newest patch (R388)")),
     }
@@ -93,13 +98,17 @@ pub struct Args {
 /// `cargo jackioh stats`.
 pub fn run(args: Args) -> Result<()> {
     let games = args.games.unwrap_or(AI_DEV_RUN.games);
-    let series = args.series.clone().unwrap_or_else(|| AI_DEV_RUN.series.to_string());
+    let series = args
+        .series
+        .clone()
+        .unwrap_or_else(|| AI_DEV_RUN.series.to_string());
     jackioh_cards::register_all();
 
     let patch = match args.patch.clone() {
         Some(patch) => patch,
         None => {
-            let text = std::fs::read_to_string(PATCHES_PATH).with_context(|| format!("reading {PATCHES_PATH}"))?;
+            let text =
+                std::fs::read_to_string(PATCHES_PATH).with_context(|| format!("reading {PATCHES_PATH}"))?;
             newest_patch(&serde_json::from_str(&text).with_context(|| format!("parsing {PATCHES_PATH}"))?)?
         }
     };
@@ -110,14 +119,23 @@ pub fn run(args: Args) -> Result<()> {
     };
     let mut file = match &out {
         None => None,
-        Some(path) => Some(std::fs::File::create(path).with_context(|| format!("creating {}", path.display()))?),
+        Some(path) => {
+            Some(std::fs::File::create(path).with_context(|| format!("creating {}", path.display()))?)
+        }
     };
 
     let mut records: Vec<GameRecord> = Vec::new();
     let started = Instant::now();
     for n in args.from..args.from + games {
         let game_started = Instant::now();
-        let record = dev_game_record(n, &DevRunOptions { series: series.clone(), patch: patch.clone(), budget: None });
+        let record = dev_game_record(
+            n,
+            &DevRunOptions {
+                series: series.clone(),
+                patch: patch.clone(),
+                budget: None,
+            },
+        );
         let seconds = format!("{:.*}", SECONDS_DECIMALS, game_started.elapsed().as_secs_f64());
         let Some(record) = record else {
             eprintln!("[ai:stats] {series}:{n} did not finish; no record ({seconds}s)");
@@ -131,7 +149,10 @@ pub fn run(args: Args) -> Result<()> {
             Winner::Draw => "draw".to_string(),
             winner => format!("{winner} won"),
         };
-        eprintln!("[ai:stats] {series}:{n} {outcome} by {} in {} turns ({seconds}s)", record.game.reason, record.game.turns);
+        eprintln!(
+            "[ai:stats] {series}:{n} {outcome} by {} in {} turns ({seconds}s)",
+            record.game.reason, record.game.turns
+        );
         records.push(record);
     }
 
@@ -140,7 +161,10 @@ pub fn run(args: Args) -> Result<()> {
         None => String::new(),
         Some(path) => format!(", written to {}", path.display()),
     };
-    eprintln!("[ai:stats] {} of {games} games recorded in {elapsed}s{written}", records.len());
+    eprintln!(
+        "[ai:stats] {} of {games} games recorded in {elapsed}s{written}",
+        records.len()
+    );
     let report = card_stats(
         &records,
         &CardStatsFilter {
@@ -150,7 +174,12 @@ pub fn run(args: Args) -> Result<()> {
             pilot: PilotFilter::Ai,
         },
     );
-    println!("{}", format_card_stats(&report, |card| jackioh_cards::CATALOG.get(card).map(|def| def.name.clone())));
+    println!(
+        "{}",
+        format_card_stats(&report, |card| jackioh_cards::CATALOG
+            .get(card)
+            .map(|def| def.name.clone()))
+    );
     Ok(())
 }
 
@@ -174,10 +203,23 @@ mod tests {
     fn reads_the_runs_options_and_refuses_one_it_does_not_know() {
         assert_eq!(
             parse(&[]).unwrap(),
-            Args { games: None, from: 1, patch: None, series: None, out: None }
+            Args {
+                games: None,
+                from: 1,
+                patch: None,
+                series: None,
+                out: None
+            }
         );
         assert_eq!(
-            parse(&["--games=50", "--from=51", "--patch=v0.2.5", "--series=a", "--out=run.jsonl"]).unwrap(),
+            parse(&[
+                "--games=50",
+                "--from=51",
+                "--patch=v0.2.5",
+                "--series=a",
+                "--out=run.jsonl"
+            ])
+            .unwrap(),
             Args {
                 games: Some(50),
                 from: 51,
@@ -187,8 +229,18 @@ mod tests {
             }
         );
         assert_eq!(parse(&["--games", "50"]).unwrap().games, Some(50));
-        assert!(parse(&["--games=0"]).unwrap_err().to_string().contains("--games must be a positive integer"));
-        assert!(parse(&["--from=1.5"]).unwrap_err().to_string().contains("--from must be a positive integer"));
+        assert!(
+            parse(&["--games=0"])
+                .unwrap_err()
+                .to_string()
+                .contains("--games must be a positive integer")
+        );
+        assert!(
+            parse(&["--from=1.5"])
+                .unwrap_err()
+                .to_string()
+                .contains("--from must be a positive integer")
+        );
         assert!(parse(&["--budget=9"]).is_err());
         assert!(parse(&["50"]).is_err());
     }
@@ -197,11 +249,19 @@ mod tests {
     fn r388_the_newest_patch_is_the_last_one_patches_json_lists() {
         let list = serde_json::json!([{ "version": "v0.1.0" }, { "version": "v0.2.0" }]);
         assert_eq!(newest_patch(&list).unwrap(), "v0.2.0");
-        assert!(newest_patch(&serde_json::json!([])).unwrap_err().to_string().contains("names no newest patch (R388)"));
+        assert!(
+            newest_patch(&serde_json::json!([]))
+                .unwrap_err()
+                .to_string()
+                .contains("names no newest patch (R388)")
+        );
         assert!(newest_patch(&serde_json::json!([{ "version": "" }])).is_err());
         assert!(newest_patch(&serde_json::json!({})).is_err());
         // The checkout's own history names one, the version the cards crate compiled in.
         let text = std::fs::read_to_string(PATCHES_PATH).unwrap();
-        assert_eq!(newest_patch(&serde_json::from_str(&text).unwrap()).unwrap(), jackioh_cards::catalog_version());
+        assert_eq!(
+            newest_patch(&serde_json::from_str(&text).unwrap()).unwrap(),
+            jackioh_cards::catalog_version()
+        );
     }
 }

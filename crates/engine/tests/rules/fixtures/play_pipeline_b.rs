@@ -157,7 +157,12 @@ pub fn ask_target() -> CardDef {
 }
 
 /// The pool the random casters below cast from, named card by card.
-pub const RANDOM_POOL: &[&str] = &["pb-target-spell", "pb-mode-spell", "pb-discover-spell", "pb-ask-target"];
+pub const RANDOM_POOL: &[&str] = &[
+    "pb-target-spell",
+    "pb-mode-spell",
+    "pb-discover-spell",
+    "pb-ask-target",
+];
 
 /// Classic+ #47 Jogg's Box's shape: cast 3 random Spells from `RANDOM_POOL` (itself excluded).
 pub fn jogg_box() -> CardDef {
@@ -238,7 +243,12 @@ pub fn x_unit() -> CardDef {
 }
 
 pub fn embiggen_field() -> CardDef {
-    def(4552, "embiggen-field", "Field Spell", json!({ "cost": { "base": 2, "embiggen": 4 } }))
+    def(
+        4552,
+        "embiggen-field",
+        "Field Spell",
+        json!({ "cost": { "base": 2, "embiggen": 4 } }),
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -262,12 +272,26 @@ pub fn tribute_field() -> CardDef {
 
 /// A body with Reborn: its zone is reserved for its return, so its Tribute frees nothing.
 pub fn reborn_body() -> CardDef {
-    unit(4556, "reborn-body", 1, 1, json!({ "cost": 1 }), json!([{ "kind": "Reborn" }]))
+    unit(
+        4556,
+        "reborn-body",
+        1,
+        1,
+        json!({ "cost": 1 }),
+        json!([{ "kind": "Reborn" }]),
+    )
 }
 
 /// A Stack body, so a pile of two can be built.
 pub fn stack_body() -> CardDef {
-    unit(4557, "stack-body", 1, 1, json!({ "cost": 1 }), json!([{ "kind": "Stack" }]))
+    unit(
+        4557,
+        "stack-body",
+        1,
+        1,
+        json!({ "cost": 1 }),
+        json!([{ "kind": "Stack" }]),
+    )
 }
 
 pub static PB_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
@@ -316,7 +340,14 @@ pub static PB_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
 pub const DISCOVER_POOL: &[&str] = &["fx-1", "fx-2", "fx-3"];
 
 /// `openPrompt(ctx, { player, kind, prompt, options, resume: resumeSelf(ctx, step) })`.
-fn ask(ctx: &mut EffectContext<'_>, player: PlayerId, kind: PromptKind, prompt: &str, options: Vec<PromptOption>, step: &str) {
+fn ask(
+    ctx: &mut EffectContext<'_>,
+    player: PlayerId,
+    kind: PromptKind,
+    prompt: &str,
+    options: Vec<PromptOption>,
+    step: &str,
+) {
     let resume = prompts::resume_self(ctx, step, IndexMap::new());
     let _ = prompts::open_prompt(
         ctx,
@@ -434,7 +465,9 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
     table.insert(
         plantation().id,
         both(Script {
-            cry: Some(hook(|_ctx| vec![effects::plague(json_as(json!({ "amount": 2 })))])),
+            cry: Some(hook(|_ctx| {
+                vec![effects::plague(json_as(json!({ "amount": 2 })))]
+            })),
             graveyard_play: Some(read_hook(|_args| {
                 vec![GraveyardPlayPermission {
                     units: Some(true),
@@ -462,7 +495,9 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         grave_unit().id,
         both(Script {
             cry: Some(hook(|_ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 2 }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -471,7 +506,9 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         grave_spell().id,
         both(Script {
             cry: Some(hook(|_ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -480,7 +517,9 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         zero_spell().id,
         both(Script {
             cry: Some(hook(|_ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -490,7 +529,9 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         both(Script {
             targets: vec![TargetDecl::target(1, 1, json!({ "of": ["unit", "hero"] }))],
             cry: Some(hook(|_ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 3 })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "chosen" }, "amount": 3 }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -498,10 +539,18 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
     table.insert(
         mode_spell().id,
         both(Script {
-            modes: vec![json_as::<ModeDecl>(json!({ "kind": "mode", "options": ["a", "b"] }))],
+            modes: vec![json_as::<ModeDecl>(
+                json!({ "kind": "mode", "options": ["a", "b"] }),
+            )],
             cry: Some(hook(|ctx| {
-                let amount = if ctx.modes.first().map(String::as_str) == Some("b") { 2 } else { 1 };
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))]
+                let amount = if ctx.modes.first().map(String::as_str) == Some("b") {
+                    2
+                } else {
+                    1
+                };
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": amount }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -529,7 +578,9 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         x_spell().id,
         both(Script {
             cry: Some(hook(|ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": ctx.x })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": ctx.x }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -539,7 +590,9 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         both(Script {
             targets: vec![TargetDecl::target(1, 1, json!({ "of": ["unit", "hero"] }))],
             cry: Some(hook(|ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": ctx.x })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "chosen" }, "amount": ctx.x }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -548,7 +601,9 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         cast_field().id,
         both(Script {
             cry: Some(hook(|_ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -564,7 +619,11 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             })),
             resume: IndexMap::from([(
                 "theirs",
-                hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "selfHero" }, "amount": 1 })))]),
+                hook(|_ctx| {
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "selfHero" }, "amount": 1 }),
+                    ))]
+                }),
             )]),
             ..Script::default()
         }),
@@ -579,7 +638,11 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                         let heroes = [PlayerId::P1, PlayerId::P2]
                             .into_iter()
                             .map(|player| {
-                                option(format!("hero:{player}"), player.as_str(), Selection::Hero { player })
+                                option(
+                                    format!("hero:{player}"),
+                                    player.as_str(),
+                                    Selection::Hero { player },
+                                )
                             })
                             .collect();
                         let controller = ctx.controller;
@@ -589,7 +652,11 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             })),
             resume: IndexMap::from([(
                 "hit",
-                hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 2 })))]),
+                hook(|_ctx| {
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "chosen" }, "amount": 2 }),
+                    ))]
+                }),
             )]),
             ..Script::default()
         }),
@@ -598,12 +665,16 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         jogg_box().id,
         CardScripts {
             base: Script {
-                cry: Some(hook(|_ctx| vec![cast_random_of(pool_with(&jogg_box().id), 3, None, json!({}))])),
+                cry: Some(hook(|_ctx| {
+                    vec![cast_random_of(pool_with(&jogg_box().id), 3, None, json!({}))]
+                })),
                 ..Script::default()
             },
             radiant: Script {
                 static_flags: static_flags(json!({ "echo": 1 })),
-                cry: Some(hook(|_ctx| vec![cast_random_of(pool_with(&jogg_box().id), 3, None, json!({}))])),
+                cry: Some(hook(|_ctx| {
+                    vec![cast_random_of(pool_with(&jogg_box().id), 3, None, json!({}))]
+                })),
                 ..Script::default()
             },
         },
@@ -621,7 +692,12 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             radiant: Script {
                 cry: Some(hook(|_ctx| {
                     let pool = RANDOM_POOL.iter().map(|id| id.to_string()).collect();
-                    vec![cast_random_of(pool, 2, Some(true), json!({ "targetEnemies": true }))]
+                    vec![cast_random_of(
+                        pool,
+                        2,
+                        Some(true),
+                        json!({ "targetEnemies": true }),
+                    )]
                 })),
                 ..Script::default()
             },
@@ -632,7 +708,12 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         both(Script {
             // Its pool is a copy of itself (excluded, B4.1) and Jogg's Box, whose casts can be chain casters.
             cry: Some(hook(|_ctx| {
-                vec![cast_random_of(vec![chain_caster().id, jogg_box().id], 2, None, json!({}))]
+                vec![cast_random_of(
+                    vec![chain_caster().id, jogg_box().id],
+                    2,
+                    None,
+                    json!({}),
+                )]
             })),
             ..Script::default()
         }),
@@ -751,7 +832,9 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         both(Script {
             static_flags: static_flags(json!({ "tribute": 1 })),
             cry: Some(hook(|_ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -826,9 +909,15 @@ pub fn pb_act(state: &GameState, body: impl Serialize) -> GameState {
 pub fn pb_playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|card| card.id.clone()).collect();
-    state = pb_act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }));
+    state = pb_act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+    );
     let keep: Vec<String> = state.players.p2.hand.iter().map(|card| card.id.clone()).collect();
-    state = pb_act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }));
+    state = pb_act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+    );
     register_pipeline_b();
     state.players.p1.mana = ManaState {
         current: 4,

@@ -20,7 +20,9 @@ const GRAVEDIGGER: &str = "core-037";
 const KPOP: &str = "core-050";
 const TWINSPELL: &str = "core-079";
 const MROW: &str = "core-086";
-const LIBRARY: [&str; 8] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
+const LIBRARY: [&str; 8] = [
+    VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
+];
 
 /// The harness with the real catalog and every card script registered (TS's `_harness.ts` import
 /// ran `registerAll()`; the engine's testkit cannot name the cards crate, so the cards test does).
@@ -60,7 +62,8 @@ mod r30_a_stolen_twinspells_grant_is_its_new_controllers {
     use super::*;
 
     #[test]
-    fn r30_r12_r171_a_stolen_twinspell_grants_its_echo_to_the_thiefs_next_spell_and_goes_to_its_owners_graveyard_s8_c79() {
+    fn r30_r12_r171_a_stolen_twinspell_grants_its_echo_to_the_thiefs_next_spell_and_goes_to_its_owners_graveyard_s8_c79()
+     {
         let mut g = setup(json!({
             "p1": { "hand": [TWINSPELL, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [KPOP, STOCKPILE, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },

@@ -96,7 +96,14 @@ fn defs() -> Defs {
         .map(|i| unit(&mut next_index, &format!("secret-hand-{}", pad(i)), json!({})))
         .collect();
     let secret_library = (0..12)
-        .map(|i| def(&mut next_index, &format!("secret-library-{}", pad(i)), "Spell", json!({})))
+        .map(|i| {
+            def(
+                &mut next_index,
+                &format!("secret-library-{}", pad(i)),
+                "Spell",
+                json!({}),
+            )
+        })
         .collect();
     let secret_trap = def(&mut next_index, "secret-trap", "Trap", json!({}));
     let secret_field_trap = def(&mut next_index, "secret-field-trap", "Field Trap", json!({}));
@@ -211,19 +218,28 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
         (Value::Array(actual), Value::Array(expected)) => {
             actual.len() == expected.len()
-                && actual.iter().zip(expected).all(|(found, value)| matches_object(found, value))
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(found, value)| matches_object(found, value))
         }
         _ => actual == expected,
     }
 }
 
 fn expect_match(actual: &Value, expected: Value) {
-    assert!(matches_object(actual, &expected), "expected {actual} to match {expected}");
+    assert!(
+        matches_object(actual, &expected),
+        "expected {actual} to match {expected}"
+    );
 }
 
 /// `Object.keys(value)` of a serialised object (absent fields are absent keys, as TS's `undefined`).
 fn keys_of(value: &Value) -> Vec<String> {
-    value.as_object().map(|object| object.keys().cloned().collect()).unwrap_or_default()
+    value
+        .as_object()
+        .map(|object| object.keys().cloned().collect())
+        .unwrap_or_default()
 }
 
 /// A TS event literal.
@@ -241,7 +257,11 @@ fn own_hand(view: &PlayerView) -> Vec<CardView> {
 
 /// The options of a prompt that belongs to this viewer (§10.6).
 fn own_options(view: &PlayerView) -> PendingPromptView {
-    match view.pending.as_ref().expect("expected an open prompt in the view") {
+    match view
+        .pending
+        .as_ref()
+        .expect("expected an open prompt in the view")
+    {
         PendingView::ForYou(pending) => pending.clone(),
         PendingView::Elsewhere(_) => panic!("that prompt belongs to the other player"),
     }
@@ -275,7 +295,9 @@ fn mode_option(option: &str) -> PromptOption {
     PromptOption {
         key: format!("mode:{option}"),
         label: option.to_string(),
-        selection: Selection::Mode { option: option.to_string() },
+        selection: Selection::Mode {
+            option: option.to_string(),
+        },
         cost: None,
         radiant: None,
     }
@@ -287,7 +309,8 @@ mod view_for_10_8_m3_t6 {
     use super::*;
 
     #[test]
-    fn section_10_8_names_nothing_in_the_opponents_hand_library_or_face_down_backrow_derived_from_the_state() {
+    fn section_10_8_names_nothing_in_the_opponents_hand_library_or_face_down_backrow_derived_from_the_state()
+    {
         let d = defs();
         let mut state = game("hidden-information");
 
@@ -299,14 +322,36 @@ mod view_for_10_8_m3_t6 {
             .collect();
         let library_ids: Vec<String> = d.secret_library.iter().map(|def| def.id.clone()).collect();
         let their_library = set_library(&mut state, PlayerId::P2, &library_ids);
-        let their_traps = [put(&mut state, &d.secret_trap.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default()),
-            put(&mut state, &d.secret_field_trap.id, slot(PlayerId::P2, Row::Backrow, 2), Default::default())];
+        let their_traps = [
+            put(
+                &mut state,
+                &d.secret_trap.id,
+                slot(PlayerId::P2, Row::Backrow, 1),
+                Default::default(),
+            ),
+            put(
+                &mut state,
+                &d.secret_field_trap.id,
+                slot(PlayerId::P2, Row::Backrow, 2),
+                Default::default(),
+            ),
+        ];
         assert_eq!(their_hand.len(), HAND_CAP as usize);
 
         // Public things on the same board, so the proof is not vacuous: an empty view hides everything.
         let my_hand = in_hand(&mut state, &plain.id, PlayerId::P1, 3);
-        let their_unit = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), Default::default());
-        let their_field = put(&mut state, &d.public_field.id, slot(PlayerId::P2, Row::Backrow, 3), Default::default());
+        let their_unit = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            Default::default(),
+        );
+        let their_field = put(
+            &mut state,
+            &d.public_field.id,
+            slot(PlayerId::P2, Row::Backrow, 3),
+            Default::default(),
+        );
 
         // §10.3's event stream is filtered like the zones it reports on: a `drawn` naming a card that is
         // now in p2's hand may not carry its identity to p1 either (§9.1, §10.8's "last N events").
@@ -320,7 +365,13 @@ mod view_for_10_8_m3_t6 {
 
         // The forbidden list comes out of the state, never out of a literal in this file.
         let mut forbidden: IndexSet<String> = IndexSet::new();
-        for card in state.players.p2.hand.iter().chain(state.players.p2.library.iter()) {
+        for card in state
+            .players
+            .p2
+            .hand
+            .iter()
+            .chain(state.players.p2.library.iter())
+        {
             forbidden.insert(card.id.clone());
             forbidden.insert(card.def_id.clone());
         }
@@ -333,7 +384,10 @@ mod view_for_10_8_m3_t6 {
             forbidden.insert(card.def_id.clone());
         }
         // Every hidden card contributed both of its ids, so the list cannot have gone quietly empty.
-        assert_eq!(forbidden.len(), 2 * (their_hand.len() + their_library.len() + their_traps.len()));
+        assert_eq!(
+            forbidden.len(),
+            2 * (their_hand.len() + their_library.len() + their_traps.len())
+        );
 
         let view = view_for(&state, PlayerId::P1);
         let text = serialized(&view);
@@ -343,7 +397,10 @@ mod view_for_10_8_m3_t6 {
 
         // The positive half of §10.8, on the same board.
         assert_eq!(
-            own_hand(&view).iter().map(|card| card.instance_id.clone()).collect::<Vec<_>>(),
+            own_hand(&view)
+                .iter()
+                .map(|card| card.instance_id.clone())
+                .collect::<Vec<_>>(),
             my_hand.iter().map(|card| card.id.clone()).collect::<Vec<_>>()
         );
         assert_eq!(view.opponent.hand, HandView::Count { count: HAND_CAP });
@@ -355,8 +412,14 @@ mod view_for_10_8_m3_t6 {
             &v["opponent"]["units"][0],
             json!({ "defId": their_unit.def_id, "attack": 3, "health": 3, "buried": 0 }),
         );
-        assert_eq!(v["opponent"]["backrow"][0], json!({ "faceDown": true, "cost": 1 }));
-        assert_eq!(v["opponent"]["backrow"][1], json!({ "faceDown": true, "cost": 1 }));
+        assert_eq!(
+            v["opponent"]["backrow"][0],
+            json!({ "faceDown": true, "cost": 1 })
+        );
+        assert_eq!(
+            v["opponent"]["backrow"][1],
+            json!({ "faceDown": true, "cost": 1 })
+        );
         expect_match(
             &v["opponent"]["backrow"][2],
             json!({
@@ -373,10 +436,21 @@ mod view_for_10_8_m3_t6 {
         // p2's own view is the mirror: p2 reads p2's hand, and p1's hand is the count there.
         let their_view = view_for(&state, PlayerId::P2);
         assert_eq!(
-            own_hand(&their_view).iter().map(|card| card.def_id.clone()).collect::<Vec<_>>(),
-            their_hand.iter().map(|card| card.def_id.clone()).collect::<Vec<_>>()
+            own_hand(&their_view)
+                .iter()
+                .map(|card| card.def_id.clone())
+                .collect::<Vec<_>>(),
+            their_hand
+                .iter()
+                .map(|card| card.def_id.clone())
+                .collect::<Vec<_>>()
         );
-        assert_eq!(their_view.opponent.hand, HandView::Count { count: my_hand.len() as i32 });
+        assert_eq!(
+            their_view.opponent.hand,
+            HandView::Count {
+                count: my_hand.len() as i32
+            }
+        );
         expect_match(
             &to_json(&their_view)["you"]["backrow"][0],
             json!({ "faceDown": false, "defId": d.secret_trap.id }),
@@ -401,12 +475,18 @@ mod view_for_10_8_m3_t6 {
         );
         assert_eq!(own_hand(&view).len(), mine.len());
         // A count and nothing else: no array, no ids, no defs (§10.8).
-        assert_eq!(view.opponent.hand, HandView::Count { count: theirs.len() as i32 });
+        assert_eq!(
+            view.opponent.hand,
+            HandView::Count {
+                count: theirs.len() as i32
+            }
+        );
         assert_eq!(keys_of(&to_json(&view.opponent.hand)), vec!["count".to_string()]);
     }
 
     #[test]
-    fn section_9_1_sends_both_libraries_as_a_count_and_no_library_cards_instance_reaches_either_players_view() {
+    fn section_9_1_sends_both_libraries_as_a_count_and_no_library_cards_instance_reaches_either_players_view()
+    {
         let d = defs();
         let mut state = game("libraries");
         let library_ids: Vec<String> = d.secret_library.iter().map(|def| def.id.clone()).collect();
@@ -417,8 +497,14 @@ mod view_for_10_8_m3_t6 {
         let mine = serialized(&view_for(&state, PlayerId::P1));
         let theirs = serialized(&view_for(&state, PlayerId::P2));
 
-        assert_eq!(view_for(&state, PlayerId::P1).you.library_count, my_library.len() as i32);
-        assert_eq!(view_for(&state, PlayerId::P1).opponent.library_count, their_library.len() as i32);
+        assert_eq!(
+            view_for(&state, PlayerId::P1).you.library_count,
+            my_library.len() as i32
+        );
+        assert_eq!(
+            view_for(&state, PlayerId::P1).opponent.library_count,
+            their_library.len() as i32
+        );
         // Library order is hidden from *both* players, the owner included: no instance id ships. The
         // owner's own library also travels as a list without order (R310, ownLibrary.test.ts), and the
         // opponent's contents never do.
@@ -437,9 +523,19 @@ mod view_for_10_8_m3_t6 {
     fn section_10_8_sends_both_graveyards_and_both_exile_piles_in_full() {
         let d = defs();
         let mut state = game("graveyards");
-        let my_grave = put_in_pile(&mut state, &d.secret_library[0].id, PlayerId::P1, ZoneName::Graveyard);
+        let my_grave = put_in_pile(
+            &mut state,
+            &d.secret_library[0].id,
+            PlayerId::P1,
+            ZoneName::Graveyard,
+        );
         let my_exile = put_in_pile(&mut state, &d.secret_library[1].id, PlayerId::P1, ZoneName::Exile);
-        let their_grave = put_in_pile(&mut state, &d.secret_library[2].id, PlayerId::P2, ZoneName::Graveyard);
+        let their_grave = put_in_pile(
+            &mut state,
+            &d.secret_library[2].id,
+            PlayerId::P2,
+            ZoneName::Graveyard,
+        );
         let their_exile = put_in_pile(&mut state, &d.secret_library[3].id, PlayerId::P2, ZoneName::Exile);
 
         for viewer in [PlayerId::P1, PlayerId::P2] {
@@ -459,11 +555,19 @@ mod view_for_10_8_m3_t6 {
             );
             // The opponent's piles too: nothing about a graveyard or an exile pile is hidden.
             assert_eq!(
-                other.graveyard.iter().map(|card| card.def_id.clone()).collect::<Vec<_>>(),
+                other
+                    .graveyard
+                    .iter()
+                    .map(|card| card.def_id.clone())
+                    .collect::<Vec<_>>(),
                 vec![their_grave.def_id.clone()]
             );
             assert_eq!(
-                other.exile.iter().map(|card| card.def_id.clone()).collect::<Vec<_>>(),
+                other
+                    .exile
+                    .iter()
+                    .map(|card| card.def_id.clone())
+                    .collect::<Vec<_>>(),
                 vec![their_exile.def_id.clone()]
             );
         }
@@ -473,16 +577,33 @@ mod view_for_10_8_m3_t6 {
     fn r351_a_face_down_trap_shows_its_cost_to_both_players_and_its_controllers_view_marks_it_unrevealed() {
         let d = defs();
         let mut state = game("face-down-cost");
-        let trap = put(&mut state, &d.secret_trap.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
-        let field_trap =
-            put(&mut state, &d.secret_field_trap.id, slot(PlayerId::P2, Row::Backrow, 2), Default::default());
-        let field = put(&mut state, &d.public_field.id, slot(PlayerId::P2, Row::Backrow, 3), Default::default());
+        let trap = put(
+            &mut state,
+            &d.secret_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
+        let field_trap = put(
+            &mut state,
+            &d.secret_field_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 2),
+            Default::default(),
+        );
+        let field = put(
+            &mut state,
+            &d.public_field.id,
+            slot(PlayerId::P2, Row::Backrow, 3),
+            Default::default(),
+        );
 
         let mine = to_json(view_for(&state, PlayerId::P1));
         let theirs = to_json(view_for(&state, PlayerId::P2));
         // The opponent reads the cost and nothing else; the controller reads the same number.
         let cost = effective_cost(&state, live(&state, &trap.id), Default::default());
-        assert_eq!(mine["opponent"]["backrow"][0], json!({ "faceDown": true, "cost": cost }));
+        assert_eq!(
+            mine["opponent"]["backrow"][0],
+            json!({ "faceDown": true, "cost": cost })
+        );
         expect_match(
             &theirs["you"]["backrow"][0],
             json!({ "faceDown": false, "cost": cost, "unrevealed": true }),
@@ -494,18 +615,29 @@ mod view_for_10_8_m3_t6 {
             to_json(view_for(&state, PlayerId::P1))["opponent"]["backrow"][0],
             json!({ "faceDown": true, "cost": cost })
         );
-        expect_match(&to_json(view_for(&state, PlayerId::P2))["you"]["backrow"][0], json!({ "cost": cost }));
+        expect_match(
+            &to_json(view_for(&state, PlayerId::P2))["you"]["backrow"][0],
+            json!({ "cost": cost }),
+        );
 
         // A Field Trap that has fired is public: no longer unrevealed, and read in full by both (R33).
         expect_match(&theirs["you"]["backrow"][1], json!({ "unrevealed": true }));
         live_mut(&mut state, &field_trap.id).face_up = Some(true);
-        assert!(to_json(view_for(&state, PlayerId::P2))["you"]["backrow"][1].get("unrevealed").is_none());
+        assert!(
+            to_json(view_for(&state, PlayerId::P2))["you"]["backrow"][1]
+                .get("unrevealed")
+                .is_none()
+        );
         expect_match(
             &to_json(view_for(&state, PlayerId::P1))["opponent"]["backrow"][1],
             json!({ "faceDown": false, "defId": d.secret_field_trap.id }),
         );
         // A Field Spell is public to both from the start, so it is never unrevealed.
-        assert!(to_json(view_for(&state, PlayerId::P2))["you"]["backrow"][2].get("unrevealed").is_none());
+        assert!(
+            to_json(view_for(&state, PlayerId::P2))["you"]["backrow"][2]
+                .get("unrevealed")
+                .is_none()
+        );
         assert!(!field.id.is_empty());
     }
 
@@ -513,10 +645,24 @@ mod view_for_10_8_m3_t6 {
     fn section_10_8_makes_a_backrow_field_spell_public_and_a_backrow_trap_unknown_to_the_opponent() {
         let d = defs();
         let mut state = game("backrow-types");
-        let field = put(&mut state, &d.public_field.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
-        let trap = put(&mut state, &d.secret_trap.id, slot(PlayerId::P2, Row::Backrow, 2), Default::default());
-        let field_trap =
-            put(&mut state, &d.secret_field_trap.id, slot(PlayerId::P2, Row::Backrow, 3), Default::default());
+        let field = put(
+            &mut state,
+            &d.public_field.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
+        let trap = put(
+            &mut state,
+            &d.secret_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 2),
+            Default::default(),
+        );
+        let field_trap = put(
+            &mut state,
+            &d.secret_field_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 3),
+            Default::default(),
+        );
         live_mut(&mut state, &trap.id).counters.grade = Some(2);
 
         let mine = view_for(&state, PlayerId::P1);
@@ -532,9 +678,18 @@ mod view_for_10_8_m3_t6 {
         );
         // Both trap types are "unknown", and the marker carries no identity at all: §10.8 grants the
         // non-controller that the zone is occupied and what it costs (R351), and nothing more.
-        assert_eq!(mine_json["opponent"]["backrow"][1], json!({ "faceDown": true, "cost": 1 }));
-        assert_eq!(mine_json["opponent"]["backrow"][2], json!({ "faceDown": true, "cost": 1 }));
-        for marker in [&mine_json["opponent"]["backrow"][1], &mine_json["opponent"]["backrow"][2]] {
+        assert_eq!(
+            mine_json["opponent"]["backrow"][1],
+            json!({ "faceDown": true, "cost": 1 })
+        );
+        assert_eq!(
+            mine_json["opponent"]["backrow"][2],
+            json!({ "faceDown": true, "cost": 1 })
+        );
+        for marker in [
+            &mine_json["opponent"]["backrow"][1],
+            &mine_json["opponent"]["backrow"][2],
+        ] {
             for field in ["instanceId", "defId", "type", "counters", "radiant"] {
                 assert!(!keys_of(marker).contains(&field.to_string()));
             }
@@ -565,10 +720,16 @@ mod view_for_10_8_m3_t6 {
     }
 
     #[test]
-    fn r33_a_stolen_trap_becomes_visible_to_its_thief_and_hidden_from_its_owner_though_ownership_is_unchanged() {
+    fn r33_a_stolen_trap_becomes_visible_to_its_thief_and_hidden_from_its_owner_though_ownership_is_unchanged()
+     {
         let d = defs();
         let mut state = game("r33-steal");
-        let hidden = put(&mut state, &d.secret_trap.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        let hidden = put(
+            &mut state,
+            &d.secret_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
 
         // Before the steal: p2 controls it and reads it; p1 sees a marker and the id never travels.
         expect_match(
@@ -584,7 +745,10 @@ mod view_for_10_8_m3_t6 {
         run(
             &mut state,
             &steal(json_as(json!({ "instanceId": hidden.id }))),
-            HookOptions { controller: Some(PlayerId::P1), ..Default::default() },
+            HookOptions {
+                controller: Some(PlayerId::P1),
+                ..Default::default()
+            },
         );
 
         // R33's point: control moved, ownership did not, and the view follows control.
@@ -609,8 +773,12 @@ mod view_for_10_8_m3_t6 {
     fn r33_a_field_trap_that_has_fired_is_face_up_to_both_players() {
         let d = defs();
         let mut state = game("r33-fired");
-        let fired =
-            put(&mut state, &d.secret_field_trap.id, slot(PlayerId::P2, Row::Backrow, 2), Default::default());
+        let fired = put(
+            &mut state,
+            &d.secret_field_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 2),
+            Default::default(),
+        );
         assert_eq!(
             to_json(view_for(&state, PlayerId::P1))["opponent"]["backrow"][1],
             json!({ "faceDown": true, "cost": 1 })
@@ -653,7 +821,9 @@ mod view_for_10_8_m3_t6 {
                     options: vec![PromptOption {
                         key: format!("instance:{}", revealed.id),
                         label: "a card".to_string(),
-                        selection: Selection::Instance { instance_id: revealed.id.clone() },
+                        selection: Selection::Instance {
+                            instance_id: revealed.id.clone(),
+                        },
                         cost: None,
                         radiant: None,
                     }],
@@ -690,7 +860,10 @@ mod view_for_10_8_m3_t6 {
 
         // The opponent learns that a prompt is open and whose, and nothing else (§10.6, R81).
         let theirs = view_for(&state, PlayerId::P2);
-        assert_eq!(to_json(&theirs.pending), json!({ "forYou": false, "pendingFor": "p1" }));
+        assert_eq!(
+            to_json(&theirs.pending),
+            json!({ "forYou": false, "pendingFor": "p1" })
+        );
         let text = serialized(&theirs);
         assert!(!text.contains(&quoted(&revealed.id)));
         assert!(!text.contains("a card"));
@@ -701,8 +874,18 @@ mod view_for_10_8_m3_t6 {
     fn r13_section_3_2_a_stack_pile_shows_its_top_card_and_a_count_never_a_buried_cards_identity() {
         let d = defs();
         let mut state = game("stack");
-        let buried = put(&mut state, &d.secret_buried.id, slot(PlayerId::P2, Row::Units, 1), Default::default());
-        let mut top = new_instance(&mut state, &d.stack_top.id, PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
+        let buried = put(
+            &mut state,
+            &d.secret_buried.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            Default::default(),
+        );
+        let mut top = new_instance(
+            &mut state,
+            &d.stack_top.id,
+            PlayerId::P2,
+            Zone::Hand { player: PlayerId::P2 },
+        );
         assert!(place_on_field(
             &mut state,
             &mut top,
@@ -712,7 +895,11 @@ mod view_for_10_8_m3_t6 {
 
         for viewer in [PlayerId::P1, PlayerId::P2] {
             let view = view_for(&state, viewer);
-            let side = if viewer == PlayerId::P2 { &view.you } else { &view.opponent };
+            let side = if viewer == PlayerId::P2 {
+                &view.you
+            } else {
+                &view.opponent
+            };
             expect_match(
                 &to_json(&side.units[0]),
                 json!({ "instanceId": top.id, "defId": d.stack_top.id, "buried": 1, "attack": 1 }),
@@ -728,7 +915,12 @@ mod view_for_10_8_m3_t6 {
     fn r79_section_10_8_carries_mana_health_armor_locks_the_phase_the_result_and_the_servers_clock() {
         let mut state = game("scalars");
         state.players.p1.hero = HeroState { health: 12, armor: 3 };
-        state.players.p1.mana = ManaState { current: 2, max: 4, next_turn_mod: -1, perm_mod: 1 };
+        state.players.p1.mana = ManaState {
+            current: 2,
+            max: 4,
+            next_turn_mod: -1,
+            perm_mod: 1,
+        };
         state.players.p2.hero = HeroState { health: 21, armor: 0 };
         state.players.p2.fatigue_count = 2;
         lock_zone(&mut state, slot(PlayerId::P2, Row::Backrow, 4));
@@ -748,7 +940,10 @@ mod view_for_10_8_m3_t6 {
         assert!(view.result.is_none());
 
         // R79: the engine holds no clock, so the caller passes the one the server is running.
-        assert_eq!(view_for_with_clock(&state, PlayerId::P1, Some(75_000)).clock_ms, Some(75_000));
+        assert_eq!(
+            view_for_with_clock(&state, PlayerId::P1, Some(75_000)).clock_ms,
+            Some(75_000)
+        );
         assert_eq!(view_for(&state, PlayerId::P1).clock_ms, None);
 
         state.result = Some(json_as(json!({ "winner": "p1", "reason": "hero-death" })));
@@ -765,7 +960,9 @@ mod view_for_10_8_m3_t6 {
         state.applied = (0..total)
             .map(|i| AppliedAction {
                 nonce: format!("n{i}"),
-                events: vec![event(json!({ "type": "manaChanged", "player": "p1", "current": i, "max": 4 }))],
+                events: vec![event(
+                    json!({ "type": "manaChanged", "player": "p1", "current": i, "max": 4 }),
+                )],
             })
             .collect();
 
@@ -781,7 +978,9 @@ mod view_for_10_8_m3_t6 {
         // The tail of the stream, in the order it happened.
         assert_eq!(
             current,
-            (0..VIEW_EVENT_LIMIT).map(|i| (total - VIEW_EVENT_LIMIT + i) as i32).collect::<Vec<_>>()
+            (0..VIEW_EVENT_LIMIT)
+                .map(|i| (total - VIEW_EVENT_LIMIT + i) as i32)
+                .collect::<Vec<_>>()
         );
 
         // A shorter history travels whole, and an empty one is an empty list rather than a missing field.
@@ -806,7 +1005,9 @@ mod view_for_10_8_m3_t6 {
         // it hands over is 38 events in one `reduce`, and `attackDeclared` / `trapFired` /
         // `attackCancelled` — the three the cancel is made of — are the first three of them.
         let head: Vec<GameEvent> = vec![
-            event(json!({ "type": "attackDeclared", "attackerId": "atk", "targetId": "hero-p2", "forced": false })),
+            event(
+                json!({ "type": "attackDeclared", "attackerId": "atk", "targetId": "hero-p2", "forced": false }),
+            ),
             event(json!({
                 "type": "attackCancelled", "attackerId": "atk", "targetId": "hero-p2", "byInstanceId": "trap",
             })),
@@ -815,7 +1016,10 @@ mod view_for_10_8_m3_t6 {
             .map(|i| event(json!({ "type": "manaChanged", "player": "p1", "current": i, "max": 4 })))
             .collect();
         let burst: Vec<GameEvent> = head.iter().chain(tail.iter()).cloned().collect();
-        state.applied = vec![AppliedAction { nonce: "burst".to_string(), events: burst.clone() }];
+        state.applied = vec![AppliedAction {
+            nonce: "burst".to_string(),
+            events: burst.clone(),
+        }];
 
         let events = view_for(&state, PlayerId::P1).events;
         assert_eq!(events.len(), head.len() + tail.len());
@@ -830,11 +1034,19 @@ mod view_for_10_8_m3_t6 {
                 nonce: "old".to_string(),
                 events: vec![event(json!({ "type": "turnStarted", "player": "p2", "turn": 1 }))],
             },
-            AppliedAction { nonce: "burst".to_string(), events: burst },
+            AppliedAction {
+                nonce: "burst".to_string(),
+                events: burst,
+            },
         ];
         let with_history = view_for(&state, PlayerId::P1).events;
         assert_eq!(with_history.len(), head.len() + tail.len());
-        assert!(!with_history.iter().map(GameEvent::event_type).any(|t| t == GameEventType::TurnStarted));
+        assert!(
+            !with_history
+                .iter()
+                .map(GameEvent::event_type)
+                .any(|t| t == GameEventType::TurnStarted)
+        );
     }
 
     /// `drawnFor`: the one `drawn` naming `player` in `viewer`'s events, serialised.
@@ -862,8 +1074,12 @@ mod view_for_10_8_m3_t6 {
         state.applied = vec![AppliedAction {
             nonce: "r97".to_string(),
             events: vec![
-                event(json!({ "type": "drawn", "player": "p2", "instanceId": theirs.id, "defId": theirs.def_id })),
-                event(json!({ "type": "drawn", "player": "p1", "instanceId": mine.id, "defId": mine.def_id })),
+                event(
+                    json!({ "type": "drawn", "player": "p2", "instanceId": theirs.id, "defId": theirs.def_id }),
+                ),
+                event(
+                    json!({ "type": "drawn", "player": "p1", "instanceId": mine.id, "defId": mine.def_id }),
+                ),
             ],
         }];
 
@@ -901,7 +1117,13 @@ mod view_for_10_8_m3_t6 {
         // The other direction: a unit bounced into the enemy hand stops reading the moment it lands.
         let mut bounced = state.players.p2.units[0]
             .take()
-            .and_then(|mut pile| if pile.is_empty() { None } else { Some(pile.remove(0)) })
+            .and_then(|mut pile| {
+                if pile.is_empty() {
+                    None
+                } else {
+                    Some(pile.remove(0))
+                }
+            })
             .expect("the unit p2 just placed");
         bounced.zone = Zone::Hand { player: PlayerId::P2 };
         state.players.p2.hand.push(bounced);
@@ -941,7 +1163,13 @@ mod view_for_10_8_m3_t6 {
         for viewer in [PlayerId::P1, PlayerId::P2] {
             let event = view_for(&state, viewer).events[0].clone();
             assert_eq!(event.event_type(), GameEventType::ShuffledIn);
-            let GameEvent::ShuffledIn { instance_id, def_id, position, .. } = event else {
+            let GameEvent::ShuffledIn {
+                instance_id,
+                def_id,
+                position,
+                ..
+            } = event
+            else {
                 continue;
             };
             assert_eq!(instance_id, HIDDEN_ID);
@@ -1049,22 +1277,38 @@ mod r169_view_for_player_modifiers_10_1_10_3_modifier_changed {
         let view = view_for(&state, PlayerId::P1);
 
         assert_eq!(
-            view.you.modifiers.iter().map(|modifier| modifier.id.clone()).collect::<Vec<_>>(),
+            view.you
+                .modifiers
+                .iter()
+                .map(|modifier| modifier.id.clone())
+                .collect::<Vec<_>>(),
             vec![curvature.id.clone(), discount.id.clone(), combo.id.clone()]
         );
         assert_eq!(
             view.you.modifiers,
             vec![
-                ModifierView { id: curvature.id.clone(), label: "(4)+ Cost cards cost (1) less".to_string() },
-                ModifierView { id: discount.id.clone(), label: "Your cards cost 1 less".to_string() },
-                ModifierView { id: combo.id.clone(), label: "Your cards gain \"Combo: draw 1\"".to_string() },
+                ModifierView {
+                    id: curvature.id.clone(),
+                    label: "(4)+ Cost cards cost (1) less".to_string()
+                },
+                ModifierView {
+                    id: discount.id.clone(),
+                    label: "Your cards cost 1 less".to_string()
+                },
+                ModifierView {
+                    id: combo.id.clone(),
+                    label: "Your cards gain \"Combo: draw 1\"".to_string()
+                },
             ]
         );
         // §10.8 gives a seat no privacy over its own badges, and `modifierChanged` is already public
         // in both directions, so the opponent's list travels too.
         assert_eq!(
             view.opponent.modifiers,
-            vec![ModifierView { id: echo.id.clone(), label: "Next Spell gains Echo +1".to_string() }]
+            vec![ModifierView {
+                id: echo.id.clone(),
+                label: "Next Spell gains Echo +1".to_string()
+            }]
         );
 
         // The mirror view agrees: each seat sees the same two lists, swapped.
@@ -1111,7 +1355,10 @@ mod r169_view_for_player_modifiers_10_1_10_3_modifier_changed {
 
         // p1's next turn: the discount bites, and the badge stops hedging.
         state.turn += 2;
-        assert_eq!(view_for(&state, PlayerId::P1).you.modifiers[0].label, "(4)+ Cost cards cost (2) less");
+        assert_eq!(
+            view_for(&state, PlayerId::P1).you.modifiers[0].label,
+            "(4)+ Cost cards cost (2) less"
+        );
     }
 
     #[test]
@@ -1134,7 +1381,11 @@ mod r169_view_for_player_modifiers_10_1_10_3_modifier_changed {
             PlayerId::P1,
             json!({ "kind": "radiantFirstCheapCard", "maxCost": 1, "expiry": { "until": "never" } }),
         );
-        install(&mut state, PlayerId::P1, json!({ "kind": "quickstrikerDamage", "expiry": { "until": "never" } }));
+        install(
+            &mut state,
+            PlayerId::P1,
+            json!({ "kind": "quickstrikerDamage", "expiry": { "until": "never" } }),
+        );
 
         assert_eq!(
             view_for(&state, PlayerId::P1)
@@ -1160,7 +1411,12 @@ mod r169_view_for_player_modifiers_10_1_10_3_modifier_changed {
         let mut state = game("modifiers-source");
         // #79 Twinspell keeps the instance that installed the rider (R30). Point it at a card p1 may
         // not read at all — a face-down trap in p2's backrow — so a leak would be unmistakable.
-        let trap = put(&mut state, &d.secret_trap.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        let trap = put(
+            &mut state,
+            &d.secret_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         install(
             &mut state,
             PlayerId::P2,

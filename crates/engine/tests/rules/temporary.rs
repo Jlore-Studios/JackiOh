@@ -32,7 +32,9 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
 
 /// The card as it stands in the state now (TS held the live object).
 fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id).cloned().expect("the card is in the state")
+    find_instance(state, id)
+        .cloned()
+        .expect("the card is in the state")
 }
 
 /// `eventsOfType(events, kind).map((event) => event[field])`, read through each event's JSON.
@@ -49,9 +51,17 @@ fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Value {
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep = ids(&state.players.p1.hand);
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" })).0;
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+    )
+    .0;
     let keep = ids(&state.players.p2.hand);
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" })).0;
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+    )
+    .0;
     state
 }
 
@@ -59,7 +69,8 @@ mod r637_temporary {
     use super::*;
 
     #[test]
-    fn r637_each_temporary_card_in_the_ending_players_hand_is_discarded_at_the_end_of_their_turn_in_hand_order() {
+    fn r637_each_temporary_card_in_the_ending_players_hand_is_discarded_at_the_end_of_their_turn_in_hand_order()
+     {
         let mut state = playing("temporary-end");
         let temporaries = in_hand(&mut state, &temporary_body.id, PlayerId::P1, 2);
         let (first, second) = (temporaries[0].clone(), temporaries[1].clone());
@@ -90,7 +101,10 @@ mod r637_temporary {
 
         let (after_theirs, events) = act(&after_mine, json!({ "type": "endTurn", "playerId": "p2" }));
         assert!(ids(&after_theirs.players.p2.graveyard).contains(&theirs.id));
-        assert_eq!(field_of(&events, GameEventType::Discarded, "instanceId"), json!([theirs.id]));
+        assert_eq!(
+            field_of(&events, GameEventType::Discarded, "instanceId"),
+            json!([theirs.id])
+        );
     }
 
     #[test]
@@ -104,7 +118,10 @@ mod r637_temporary {
         )
         .0;
         let top = |state: &GameState| {
-            state.players.p1.units[0].as_ref().and_then(|pile| pile.first()).map(|unit| unit.id.clone())
+            state.players.p1.units[0]
+                .as_ref()
+                .and_then(|pile| pile.first())
+                .map(|unit| unit.id.clone())
         };
         assert_eq!(top(&next), Some(card.id.clone()));
         next = act(&next, json!({ "type": "endTurn", "playerId": "p1" })).0;
@@ -116,7 +133,12 @@ mod r637_temporary {
     #[test]
     fn r637_it_does_nothing_in_a_deck_a_temporary_card_is_drawn_like_any_other() {
         let mut state = playing("temporary-deck");
-        let deck_card = set_library(&mut state, PlayerId::P1, &[temporary_body.id.clone(), plain.id.clone()])[0].clone();
+        let deck_card = set_library(
+            &mut state,
+            PlayerId::P1,
+            &[temporary_body.id.clone(), plain.id.clone()],
+        )[0]
+        .clone();
         assert!(is_temporary_card(&state, &live(&state, &deck_card.id)));
         let after = act(&state, json!({ "type": "endTurn", "playerId": "p1" })).0;
         assert!(ids(&after.players.p1.library).contains(&deck_card.id));
@@ -134,7 +156,9 @@ mod r637_temporary {
             .expect("granted")
             .granted_keywords
             .push(Keyword::Temporary);
-        find_instance_mut(&mut state, &printed_vanilla.id).expect("printed").vanilla = true;
+        find_instance_mut(&mut state, &printed_vanilla.id)
+            .expect("printed")
+            .vanilla = true;
         {
             let given = find_instance_mut(&mut state, &given_vanilla.id).expect("given");
             given.vanilla = true;

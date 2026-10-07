@@ -16,8 +16,8 @@
 use std::collections::BTreeSet;
 
 use jackioh_engine::effects::{
-    bounce_all, damage_all, destroy, destroy_adjacent_to, destroy_all, discard_hand, discard_random, exile_adjacent_to,
-    exile_all, exile_hand,
+    bounce_all, damage_all, destroy, destroy_adjacent_to, destroy_all, discard_hand, discard_random,
+    exile_adjacent_to, exile_all, exile_hand,
 };
 use jackioh_engine::testkit::*;
 
@@ -114,14 +114,27 @@ struct Runner {
 impl Runner {
     fn new(state: GameState) -> Runner {
         let rng = Rng::new(&state.seed, state.rng_cursor);
-        Runner { state, events: Vec::new(), rng }
+        Runner {
+            state,
+            events: Vec::new(),
+            rng,
+        }
     }
 
     fn context_apply(&mut self, effects: &[Effect], target: Option<&CardInstance>, options: RunOptions<'_>) {
-        let targets: Vec<Selection> =
-            target.map(|target| vec![Selection::Instance { instance_id: target.id.clone() }]).unwrap_or_default();
+        let targets: Vec<Selection> = target
+            .map(|target| {
+                vec![Selection::Instance {
+                    instance_id: target.id.clone(),
+                }]
+            })
+            .unwrap_or_default();
         // TS handed over the live object: read it back as it stands now.
-        let self_ = options.self_.map(|card| find_instance(&self.state, &card.id).cloned().unwrap_or_else(|| card.clone()));
+        let self_ = options.self_.map(|card| {
+            find_instance(&self.state, &card.id)
+                .cloned()
+                .unwrap_or_else(|| card.clone())
+        });
         {
             let mut sink = EngineSink::new(&mut self.state, &mut self.events, &mut self.rng);
             let mut ctx = make_context(
@@ -156,7 +169,9 @@ impl Runner {
     }
 
     fn card(&self, card: &CardInstance) -> CardInstance {
-        find_instance(&self.state, &card.id).expect("the card is in the state").clone()
+        find_instance(&self.state, &card.id)
+            .expect("the card is in the state")
+            .clone()
     }
 
     fn marked(&self, card: &CardInstance) -> Option<bool> {
@@ -201,7 +216,10 @@ fn defaults() -> RunOptions<'static> {
 }
 
 fn with_self(card: &CardInstance) -> RunOptions<'_> {
-    RunOptions { controller: None, self_: Some(card) }
+    RunOptions {
+        controller: None,
+        self_: Some(card),
+    }
 }
 
 /// The one card a single-card fixture call made, without an optional chain in the assertion.
@@ -209,7 +227,10 @@ fn only(cards: Vec<CardInstance>) -> CardInstance {
     if cards.len() != 1 {
         panic!("expected exactly one fixture card");
     }
-    cards.into_iter().next().expect("expected exactly one fixture card")
+    cards
+        .into_iter()
+        .next()
+        .expect("expected exactly one fixture card")
 }
 
 /// A card owned by one player but standing on the other's field, for R12's "owner's graveyard".
@@ -234,7 +255,13 @@ fn instance_ids_of(events: &[GameEvent], kind: GameEventType) -> Vec<String> {
     events
         .iter()
         .filter(|event| event.event_type() == kind)
-        .filter_map(|event| serde_json::to_value(event).ok()?.get("instanceId")?.as_str().map(str::to_string))
+        .filter_map(|event| {
+            serde_json::to_value(event)
+                .ok()?
+                .get("instanceId")?
+                .as_str()
+                .map(str::to_string)
+        })
         .collect()
 }
 
@@ -251,8 +278,8 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
     use super::*;
 
     #[test]
-    fn marks_every_matching_enemy_unit_leaves_allies_and_other_tags_standing_and_one_state_check_buries_them_in_their_owners_graveyards_r12_r59(
-    ) {
+    fn marks_every_matching_enemy_unit_leaves_allies_and_other_tags_standing_and_one_state_check_buries_them_in_their_owners_graveyards_r12_r59()
+     {
         // §6.3.
         let mut state = game("destroyAll-scope");
         let ally = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 1), json!({}));
@@ -266,7 +293,9 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
         let mut run = Runner::new(state);
 
         run.apply(
-            destroy_all(json_as(json!({ "side": "enemy", "rows": ["units"], "notTags": ["Human"] }))),
+            destroy_all(json_as(
+                json!({ "side": "enemy", "rows": ["units"], "notTags": ["Human"] }),
+            )),
             None,
             defaults(),
         );
@@ -290,11 +319,20 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
         assert_eq!(run.id_at(PlayerId::P2, Row::Units, 1), None);
         assert_eq!(run.id_at(PlayerId::P2, Row::Units, 3), None);
         assert_eq!(run.id_at(PlayerId::P2, Row::Units, 4), None);
-        assert_eq!(run.id_at(PlayerId::P2, Row::Units, 2), Some(enemy_human.id.clone()));
+        assert_eq!(
+            run.id_at(PlayerId::P2, Row::Units, 2),
+            Some(enemy_human.id.clone())
+        );
         assert_eq!(run.id_at(PlayerId::P1, Row::Units, 1), Some(ally.id.clone()));
-        assert_eq!(run.id_at(PlayerId::P1, Row::Units, 2), Some(ally_human.id.clone()));
+        assert_eq!(
+            run.id_at(PlayerId::P1, Row::Units, 2),
+            Some(ally_human.id.clone())
+        );
         // R12: the two p2-owned bodies to p2's graveyard, the stolen p1-owned one to p1's.
-        assert_eq!(sorted(run.graveyard(PlayerId::P2)), sorted(vec![enemy_one.id.clone(), enemy_two.id.clone()]));
+        assert_eq!(
+            sorted(run.graveyard(PlayerId::P2)),
+            sorted(vec![enemy_one.id.clone(), enemy_two.id.clone()])
+        );
         assert_eq!(run.graveyard(PlayerId::P1), vec![stolen.id.clone()]);
         // R59: one state check collected all three, so there are exactly three deaths from one pass.
         assert_eq!(events_of_type(&run.events, GameEventType::Destroyed).len(), 3);
@@ -305,12 +343,26 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
         // §6.3: rows ["units", "backrow"] (#88 Twisting Nether).
         let mut state = game("destroyAll-backrow");
         let ally_unit = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let ally_backrow = put(&mut state, FIELD_SPELL, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let ally_backrow = put(
+            &mut state,
+            FIELD_SPELL,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         let enemy_unit = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 2), json!({}));
-        let enemy_backrow = put(&mut state, FIELD_SPELL, slot(PlayerId::P2, Row::Backrow, 3), json!({}));
+        let enemy_backrow = put(
+            &mut state,
+            FIELD_SPELL,
+            slot(PlayerId::P2, Row::Backrow, 3),
+            json!({}),
+        );
         let mut run = Runner::new(state);
 
-        run.apply(destroy_all(json_as(json!({ "side": "any", "rows": ["units", "backrow"] }))), None, defaults());
+        run.apply(
+            destroy_all(json_as(json!({ "side": "any", "rows": ["units", "backrow"] }))),
+            None,
+            defaults(),
+        );
 
         assert_eq!(
             [&ally_unit, &ally_backrow, &enemy_unit, &enemy_backrow].map(|card| run.marked(card)),
@@ -321,8 +373,14 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
 
         assert_eq!(run.id_at(PlayerId::P1, Row::Backrow, 1), None);
         assert_eq!(run.id_at(PlayerId::P2, Row::Backrow, 3), None);
-        assert_eq!(sorted(run.graveyard(PlayerId::P1)), sorted(vec![ally_unit.id.clone(), ally_backrow.id.clone()]));
-        assert_eq!(sorted(run.graveyard(PlayerId::P2)), sorted(vec![enemy_unit.id.clone(), enemy_backrow.id.clone()]));
+        assert_eq!(
+            sorted(run.graveyard(PlayerId::P1)),
+            sorted(vec![ally_unit.id.clone(), ally_backrow.id.clone()])
+        );
+        assert_eq!(
+            sorted(run.graveyard(PlayerId::P2)),
+            sorted(vec![enemy_unit.id.clone(), enemy_backrow.id.clone()])
+        );
     }
 
     #[test]
@@ -330,7 +388,12 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
         // §3.2 (#2, #17, #43).
         let mut state = game("destroyAll-default-rows");
         let enemy_unit = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let enemy_backrow = put(&mut state, FIELD_SPELL, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let enemy_backrow = put(
+            &mut state,
+            FIELD_SPELL,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
         let mut run = Runner::new(state);
 
         run.apply(destroy_all(json_as(json!({ "side": "enemy" }))), None, defaults());
@@ -340,15 +403,25 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
 
         run.check();
 
-        assert_eq!(run.id_at(PlayerId::P2, Row::Backrow, 1), Some(enemy_backrow.id.clone()));
+        assert_eq!(
+            run.id_at(PlayerId::P2, Row::Backrow, 1),
+            Some(enemy_backrow.id.clone())
+        );
     }
 
     #[test]
-    fn r46_does_not_skip_an_indestructible_unit_the_mark_lands_and_s4_5_is_what_spares_it_flattens_it_to_attack_position_and_drops_its_taunt(
-    ) {
+    fn r46_does_not_skip_an_indestructible_unit_the_mark_lands_and_s4_5_is_what_spares_it_flattens_it_to_attack_position_and_drops_its_taunt()
+     {
         let mut state = game("destroyAll-indestructible");
-        let warded = put(&mut state, &indestructible.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        find_instance_mut(&mut state, &warded.id).expect("the warded unit").position = Some(Position::Def);
+        let warded = put(
+            &mut state,
+            &indestructible.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        find_instance_mut(&mut state, &warded.id)
+            .expect("the warded unit")
+            .position = Some(Position::Def);
         let mortal = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 2), json!({}));
         let mut run = Runner::new(state);
 
@@ -373,8 +446,18 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
         // §3.2.
         let mut state = game("destroyAll-stack");
         let dormant = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let mut top = new_instance(&mut state, BEAST, PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
-        assert!(place_on_field(&mut state, &mut top, slot(PlayerId::P2, Row::Units, 1), json_as(json!({ "stack": true }))));
+        let mut top = new_instance(
+            &mut state,
+            BEAST,
+            PlayerId::P2,
+            Zone::Hand { player: PlayerId::P2 },
+        );
+        assert!(place_on_field(
+            &mut state,
+            &mut top,
+            slot(PlayerId::P2, Row::Units, 1),
+            json_as(json!({ "stack": true }))
+        ));
         let mut run = Runner::new(state);
 
         run.apply(destroy_all(json_as(json!({ "side": "enemy" }))), None, defaults());
@@ -398,7 +481,8 @@ mod destroy_adjacent_to_s3_1_m3_t1 {
     use super::*;
 
     #[test]
-    fn marks_lanes_n_1_and_n_1_on_the_target_s_side_and_row_never_lane_n_never_across_sides_never_across_rows_c16_hit_job() {
+    fn marks_lanes_n_1_and_n_1_on_the_target_s_side_and_row_never_lane_n_never_across_sides_never_across_rows_c16_hit_job()
+     {
         // §3.1: lanes N-1 and N+1.
         let mut state = game("destroyAdjacent-scope");
         let left = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 2), json!({}));
@@ -406,10 +490,19 @@ mod destroy_adjacent_to_s3_1_m3_t1 {
         let right = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 4), json!({}));
         let across_side = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 2), json!({}));
         let same_lane_other_side = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 3), json!({}));
-        let across_row = put(&mut state, FIELD_SPELL, slot(PlayerId::P2, Row::Backrow, 2), json!({}));
+        let across_row = put(
+            &mut state,
+            FIELD_SPELL,
+            slot(PlayerId::P2, Row::Backrow, 2),
+            json!({}),
+        );
         let mut run = Runner::new(state);
 
-        run.apply(destroy_adjacent_to(json_as(json!({ "target": chosen() }))), Some(&target), defaults());
+        run.apply(
+            destroy_adjacent_to(json_as(json!({ "target": chosen() }))),
+            Some(&target),
+            defaults(),
+        );
 
         assert_eq!(run.marked(&left), Some(true));
         assert_eq!(run.marked(&right), Some(true));
@@ -439,12 +532,18 @@ mod destroy_adjacent_to_s3_1_m3_t1 {
             defaults(),
         );
 
-        assert_eq!([run.marked(&target), run.marked(&right)], [Some(true), Some(true)]);
+        assert_eq!(
+            [run.marked(&target), run.marked(&right)],
+            [Some(true), Some(true)]
+        );
         assert_eq!(run.marked(&far), None);
 
         run.check();
 
-        assert_eq!(sorted(run.graveyard(PlayerId::P2)), sorted(vec![target.id.clone(), right.id.clone()]));
+        assert_eq!(
+            sorted(run.graveyard(PlayerId::P2)),
+            sorted(vec![target.id.clone(), right.id.clone()])
+        );
         assert_eq!(events_of_type(&run.events, GameEventType::Destroyed).len(), 2);
         assert_eq!(run.id_at(PlayerId::P2, Row::Units, 3), Some(far.id.clone()));
     }
@@ -457,7 +556,11 @@ mod destroy_adjacent_to_s3_1_m3_t1 {
         let neighbour = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mut run = Runner::new(state);
 
-        run.apply(destroy_adjacent_to(json_as(json!({ "target": chosen() }))), Some(&in_hand_card), defaults());
+        run.apply(
+            destroy_adjacent_to(json_as(json!({ "target": chosen() }))),
+            Some(&in_hand_card),
+            defaults(),
+        );
 
         assert_eq!(run.marked(&neighbour), None);
         assert_eq!(run.events, Vec::<GameEvent>::new());
@@ -472,11 +575,16 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
     use super::*;
 
     #[test]
-    fn deals_one_instance_to_each_enemy_unit_and_with_heroes_to_the_enemy_hero_leaving_allies_untouched_c13_jlockeed_shredder_10(
-    ) {
+    fn deals_one_instance_to_each_enemy_unit_and_with_heroes_to_the_enemy_hero_leaving_allies_untouched_c13_jlockeed_shredder_10()
+     {
         // §4.4.
         let mut state = game("damageAll-enemies");
-        let self_card = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let self_card = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let ally = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 2), json!({}));
         let first = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let second = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 2), json!({}));
@@ -489,7 +597,10 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
             with_self(&self_card),
         );
 
-        assert_eq!([&first, &second, &third].map(|card| run.card(card).damage), [2, 2, 2]);
+        assert_eq!(
+            [&first, &second, &third].map(|card| run.card(card).damage),
+            [2, 2, 2]
+        );
         assert_eq!(run.card(&ally).damage, 0);
         assert_eq!(run.card(&self_card).damage, 0);
         assert_eq!(run.state.players[PlayerId::P2].hero.health, HERO_HEALTH - 2);
@@ -497,7 +608,12 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
         // Units in lane order first, then the hero of the scoped side.
         assert_eq!(
             run.damage_targets(),
-            vec![first.id.clone(), second.id.clone(), third.id.clone(), "hero-p2".to_string()]
+            vec![
+                first.id.clone(),
+                second.id.clone(),
+                third.id.clone(),
+                "hero-p2".to_string()
+            ]
         );
         assert!(run.events.iter().all(|event| match event {
             GameEvent::Damage { source_id, .. } => source_id.as_deref() == Some(self_card.id.as_str()),
@@ -506,59 +622,128 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
     }
 
     #[test]
-    fn snapshots_its_targets_before_the_first_hit_one_damage_event_per_unit_present_when_the_sweep_began_and_no_unit_hit_twice_r59(
-    ) {
+    fn snapshots_its_targets_before_the_first_hit_one_damage_event_per_unit_present_when_the_sweep_began_and_no_unit_hit_twice_r59()
+     {
         // §4.4.
         let mut state = game("damageAll-snapshot");
-        let self_card = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let present: Vec<CardInstance> =
-            [1, 2, 3].iter().map(|lane| put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, *lane), json!({}))).collect();
+        let self_card = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let present: Vec<CardInstance> = [1, 2, 3]
+            .iter()
+            .map(|lane| {
+                put(
+                    &mut state,
+                    BEAST,
+                    slot(PlayerId::P2, Row::Units, *lane),
+                    json!({}),
+                )
+            })
+            .collect();
         let mut run = Runner::new(state);
 
         // 2 damage on 2-health bodies: every one of them is at 0 health by the second hit, and §4.5
         // never runs between the hits of one effect (R59), so all three are still standing here.
-        run.apply(damage_all(json_as(json!({ "side": "enemy", "amount": 2 }))), None, with_self(&self_card));
+        run.apply(
+            damage_all(json_as(json!({ "side": "enemy", "amount": 2 }))),
+            None,
+            with_self(&self_card),
+        );
 
         let hits = run.damage_targets();
         assert_eq!(hits.len(), present.len());
-        assert_eq!(hits, present.iter().map(|card| card.id.clone()).collect::<Vec<_>>());
+        assert_eq!(
+            hits,
+            present.iter().map(|card| card.id.clone()).collect::<Vec<_>>()
+        );
         assert_eq!(hits.iter().collect::<BTreeSet<_>>().len(), present.len());
-        assert_eq!(present.iter().map(|card| run.card(card).damage).collect::<Vec<_>>(), vec![2, 2, 2]);
+        assert_eq!(
+            present
+                .iter()
+                .map(|card| run.card(card).damage)
+                .collect::<Vec<_>>(),
+            vec![2, 2, 2]
+        );
 
         // The list belongs to the apply that read it: a unit that joins the board afterwards took
         // nothing from the first sweep and is hit by the next one. No engine verb can move a card off
         // the field from inside `dealDamage`, so the snapshot's other half — a unit that dies mid-sweep
         // not changing who else is hit — is asserted above as "each target hit exactly once, in
         // `cardsInScope` order", which a per-hit re-read of the row could not promise.
-        let latecomer = put(&mut run.state, BEAST, slot(PlayerId::P2, Row::Units, 4), json!({}));
-        assert_eq!(events_of_type(&run.events, GameEventType::Damage).len(), present.len());
+        let latecomer = put(
+            &mut run.state,
+            BEAST,
+            slot(PlayerId::P2, Row::Units, 4),
+            json!({}),
+        );
+        assert_eq!(
+            events_of_type(&run.events, GameEventType::Damage).len(),
+            present.len()
+        );
 
-        run.apply(damage_all(json_as(json!({ "side": "enemy", "amount": 1 }))), None, with_self(&self_card));
+        run.apply(
+            damage_all(json_as(json!({ "side": "enemy", "amount": 1 }))),
+            None,
+            with_self(&self_card),
+        );
 
         assert_eq!(run.card(&latecomer).damage, 1);
-        assert_eq!(events_of_type(&run.events, GameEventType::Damage).len(), present.len() + present.len() + 1);
+        assert_eq!(
+            events_of_type(&run.events, GameEventType::Damage).len(),
+            present.len() + present.len() + 1
+        );
     }
 
     #[test]
-    fn puts_every_hit_through_the_whole_pipeline_divine_shield_eats_one_armor_soaks_one_indestructible_takes_none_and_the_sweep_carries_on(
-    ) {
+    fn puts_every_hit_through_the_whole_pipeline_divine_shield_eats_one_armor_soaks_one_indestructible_takes_none_and_the_sweep_carries_on()
+     {
         // §4.4.
         let mut state = game("damageAll-pipeline");
-        let self_card = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let shield = put(&mut state, &shielded.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let armor = put(&mut state, &armoured.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
-        let warded = put(&mut state, &indestructible.id, slot(PlayerId::P2, Row::Units, 3), json!({}));
+        let self_card = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let shield = put(
+            &mut state,
+            &shielded.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        let armor = put(
+            &mut state,
+            &armoured.id,
+            slot(PlayerId::P2, Row::Units, 2),
+            json!({}),
+        );
+        let warded = put(
+            &mut state,
+            &indestructible.id,
+            slot(PlayerId::P2, Row::Units, 3),
+            json!({}),
+        );
         let soft = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 4), json!({}));
         let mut run = Runner::new(state);
 
-        run.apply(damage_all(json_as(json!({ "side": "enemy", "amount": 3 }))), None, with_self(&self_card));
+        run.apply(
+            damage_all(json_as(json!({ "side": "enemy", "amount": 3 }))),
+            None,
+            with_self(&self_card),
+        );
 
         assert_eq!(run.card(&shield).damage, 0);
         assert_eq!(run.card(&shield).divine_shield_spent, Some(true));
         assert_eq!(run.card(&armor).damage, 0);
         assert_eq!(run.card(&warded).damage, 0);
         assert_eq!(run.card(&soft).damage, 3);
-        assert_eq!(instance_ids_of(&run.events, GameEventType::DivineShieldLost), vec![shield.id.clone()]);
+        assert_eq!(
+            instance_ids_of(&run.events, GameEventType::DivineShieldLost),
+            vec![shield.id.clone()]
+        );
         assert_eq!(run.damage_targets(), vec![soft.id.clone()]);
     }
 
@@ -566,12 +751,24 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
     fn ignore_armor_reaches_the_same_armor_7_body_the_plain_sweep_could_not_true_strike_s4_4_step_2() {
         // §4.4.
         let mut state = game("damageAll-true-strike");
-        let self_card = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let armor = put(&mut state, &armoured.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let self_card = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let armor = put(
+            &mut state,
+            &armoured.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let mut run = Runner::new(state);
 
         run.apply(
-            damage_all(json_as(json!({ "side": "enemy", "amount": 3, "ignoreArmor": true }))),
+            damage_all(json_as(
+                json!({ "side": "enemy", "amount": 3, "ignoreArmor": true }),
+            )),
             None,
             with_self(&self_card),
         );
@@ -583,7 +780,12 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
     #[test]
     fn r68_heroes_follows_the_scope_s_sides_side_any_hits_both_heroes_the_active_player_s_first() {
         let mut state = game("damageAll-both-heroes");
-        let self_card = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let self_card = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let mut run = Runner::new(state);
 
         run.apply(
@@ -606,7 +808,11 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
         let state = game("damageAll-empty-board");
         let mut run = Runner::new(state);
 
-        run.apply(damage_all(json_as(json!({ "side": "enemy", "amount": 4, "heroes": true }))), None, defaults());
+        run.apply(
+            damage_all(json_as(json!({ "side": "enemy", "amount": 4, "heroes": true }))),
+            None,
+            defaults(),
+        );
 
         assert_eq!(run.state.players[PlayerId::P2].hero.health, HERO_HEALTH - 4);
         assert_eq!(run.damage_targets(), vec!["hero-p2".to_string()]);
@@ -621,7 +827,8 @@ mod bounce_all_s6_3_s3_2_r11_r78_r747_m3_t1 {
     use super::*;
 
     #[test]
-    fn r747_returns_real_cards_to_their_controllers_hands_and_r11_makes_a_unit_token_cease_to_exist_c17_flood() {
+    fn r747_returns_real_cards_to_their_controllers_hands_and_r11_makes_a_unit_token_cease_to_exist_c17_flood()
+     {
         let mut state = game("bounceAll-owners");
         let mine = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 1), json!({}));
         {
@@ -629,7 +836,12 @@ mod bounce_all_s6_3_s3_2_r11_r78_r747_m3_t1 {
             card.damage = 1;
             card.buffs = AttackHealth { attack: 3, health: 3 };
         }
-        let token = put(&mut state, &rush_token(), slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let token = put(
+            &mut state,
+            &rush_token(),
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         let theirs = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 1), json!({}));
         // R747: p1 owns it, p2 is standing it up; a bounce sends it to its controller p2's hand,
         // not its owner's — bouncing an enemy permanent never fills your own hand.
@@ -653,7 +865,12 @@ mod bounce_all_s6_3_s3_2_r11_r78_r747_m3_t1 {
         assert_eq!(run.card(&mine).buffs, AttackHealth { attack: 0, health: 0 });
         assert_eq!(
             instance_ids_of(&run.events, GameEventType::Bounced),
-            vec![mine.id.clone(), token.id.clone(), theirs.id.clone(), stolen.id.clone()]
+            vec![
+                mine.id.clone(),
+                token.id.clone(),
+                theirs.id.clone(),
+                stolen.id.clone()
+            ]
         );
         for lane in [1, 2] {
             assert_eq!(run.id_at(PlayerId::P1, Row::Units, lane), None);
@@ -674,7 +891,10 @@ mod bounce_all_s6_3_s3_2_r11_r78_r747_m3_t1 {
         assert_eq!(run.state.players[PlayerId::P1].hand.len(), HAND_CAP as usize);
         assert!(!run.hand(PlayerId::P1).contains(&mine.id));
         assert_eq!(run.graveyard(PlayerId::P1), vec![mine.id.clone()]);
-        assert_eq!(instance_ids_of(&run.events, GameEventType::Burned), vec![mine.id.clone()]);
+        assert_eq!(
+            instance_ids_of(&run.events, GameEventType::Burned),
+            vec![mine.id.clone()]
+        );
     }
 
     #[test]
@@ -682,7 +902,12 @@ mod bounce_all_s6_3_s3_2_r11_r78_r747_m3_t1 {
         // §3.2.
         let mut state = game("bounceAll-default-rows");
         let unit = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let backrow = put(&mut state, FIELD_SPELL, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let backrow = put(
+            &mut state,
+            FIELD_SPELL,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
         let mut run = Runner::new(state);
 
         run.apply(bounce_all(json_as(json!({ "side": "enemy" }))), None, defaults());
@@ -700,28 +925,51 @@ mod exile_all_s6_3_r11_r55_m3_t1 {
     use super::*;
 
     #[test]
-    fn exiles_every_permanent_on_both_sides_but_the_running_card_and_bumps_counters_exiled_once_per_card_that_reached_the_pile_c100_ceaseless_void(
-    ) {
+    fn exiles_every_permanent_on_both_sides_but_the_running_card_and_bumps_counters_exiled_once_per_card_that_reached_the_pile_c100_ceaseless_void()
+     {
         // §6.3.
         let mut state = game("exileAll-void");
         let self_card = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let my_other = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 2), json!({}));
-        let my_token = put(&mut state, &rush_token(), slot(PlayerId::P1, Row::Units, 3), json!({}));
-        let my_backrow = put(&mut state, FIELD_SPELL, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let my_token = put(
+            &mut state,
+            &rush_token(),
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
+        let my_backrow = put(
+            &mut state,
+            FIELD_SPELL,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         let their_unit = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let their_backrow = put(&mut state, FIELD_SPELL, slot(PlayerId::P2, Row::Backrow, 2), json!({}));
+        let their_backrow = put(
+            &mut state,
+            FIELD_SPELL,
+            slot(PlayerId::P2, Row::Backrow, 2),
+            json!({}),
+        );
         let mut run = Runner::new(state);
 
         run.apply(
-            exile_all(json_as(json!({ "side": "any", "rows": ["units", "backrow"], "excludeSelf": true }))),
+            exile_all(json_as(
+                json!({ "side": "any", "rows": ["units", "backrow"], "excludeSelf": true }),
+            )),
             None,
             with_self(&self_card),
         );
 
         // excludeSelf: the Void is still standing after its own Cry.
         assert_eq!(run.id_at(PlayerId::P1, Row::Units, 1), Some(self_card.id.clone()));
-        assert_eq!(run.exile(PlayerId::P1), vec![my_other.id.clone(), my_backrow.id.clone()]);
-        assert_eq!(run.exile(PlayerId::P2), vec![their_unit.id.clone(), their_backrow.id.clone()]);
+        assert_eq!(
+            run.exile(PlayerId::P1),
+            vec![my_other.id.clone(), my_backrow.id.clone()]
+        );
+        assert_eq!(
+            run.exile(PlayerId::P2),
+            vec![their_unit.id.clone(), their_backrow.id.clone()]
+        );
         // R11: the token ceased to exist instead of reaching a pile, so it is not counted (R55)...
         assert!(run.gone(&my_token));
         assert_eq!(run.state.counters.exiled, 4);
@@ -746,7 +994,11 @@ mod exile_all_s6_3_r11_r55_m3_t1 {
         let self_card = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mut run = Runner::new(state);
 
-        run.apply(exile_all(json_as(json!({ "side": "self" }))), None, with_self(&self_card));
+        run.apply(
+            exile_all(json_as(json!({ "side": "self" }))),
+            None,
+            with_self(&self_card),
+        );
 
         assert_eq!(run.id_at(PlayerId::P1, Row::Units, 1), None);
         assert_eq!(run.exile(PlayerId::P1), vec![self_card.id.clone()]);
@@ -762,24 +1014,50 @@ mod exile_adjacent_to_s3_1_m3_t1 {
     use super::*;
 
     #[test]
-    fn exiles_the_neighbours_in_the_target_s_row_and_leaves_the_other_row_and_the_target_alone_c34_collateral_damage() {
+    fn exiles_the_neighbours_in_the_target_s_row_and_leaves_the_other_row_and_the_target_alone_c34_collateral_damage()
+     {
         // §3.1.
         let mut state = game("exileAdjacent-row");
-        let left = put(&mut state, FIELD_SPELL, slot(PlayerId::P2, Row::Backrow, 2), json!({}));
-        let target = put(&mut state, FIELD_SPELL, slot(PlayerId::P2, Row::Backrow, 3), json!({}));
-        let right = put(&mut state, FIELD_SPELL, slot(PlayerId::P2, Row::Backrow, 4), json!({}));
+        let left = put(
+            &mut state,
+            FIELD_SPELL,
+            slot(PlayerId::P2, Row::Backrow, 2),
+            json!({}),
+        );
+        let target = put(
+            &mut state,
+            FIELD_SPELL,
+            slot(PlayerId::P2, Row::Backrow, 3),
+            json!({}),
+        );
+        let right = put(
+            &mut state,
+            FIELD_SPELL,
+            slot(PlayerId::P2, Row::Backrow, 4),
+            json!({}),
+        );
         let unit_beside = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 2), json!({}));
         let unit_behind = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 3), json!({}));
         let mut run = Runner::new(state);
 
-        run.apply(exile_adjacent_to(json_as(json!({ "target": chosen() }))), Some(&target), defaults());
+        run.apply(
+            exile_adjacent_to(json_as(json!({ "target": chosen() }))),
+            Some(&target),
+            defaults(),
+        );
 
         assert_eq!(run.exile(PlayerId::P2), vec![left.id.clone(), right.id.clone()]);
         assert_eq!(run.state.counters.exiled, 2);
         // Adjacency never crosses rows, so "in its row" needs no argument of its own.
         assert_eq!(run.id_at(PlayerId::P2, Row::Backrow, 3), Some(target.id.clone()));
-        assert_eq!(run.id_at(PlayerId::P2, Row::Units, 2), Some(unit_beside.id.clone()));
-        assert_eq!(run.id_at(PlayerId::P2, Row::Units, 3), Some(unit_behind.id.clone()));
+        assert_eq!(
+            run.id_at(PlayerId::P2, Row::Units, 2),
+            Some(unit_beside.id.clone())
+        );
+        assert_eq!(
+            run.id_at(PlayerId::P2, Row::Units, 3),
+            Some(unit_behind.id.clone())
+        );
     }
 
     #[test]
@@ -790,7 +1068,11 @@ mod exile_adjacent_to_s3_1_m3_t1 {
         let right = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 4), json!({}));
         let mut run = Runner::new(state);
 
-        run.apply(exile_adjacent_to(json_as(json!({ "target": chosen() }))), Some(&target), defaults());
+        run.apply(
+            exile_adjacent_to(json_as(json!({ "target": chosen() }))),
+            Some(&target),
+            defaults(),
+        );
 
         assert_eq!(run.exile(PlayerId::P2), vec![right.id.clone()]);
         assert_eq!(run.id_at(PlayerId::P2, Row::Units, 3), Some(target.id.clone()));
@@ -810,7 +1092,11 @@ mod discard_hand_s6_3_r16_r31_s10_7_m3_t1 {
         let cards = in_hand(&mut state, BEAST, PlayerId::P1, 3);
         let mut run = Runner::new(state);
 
-        run.apply(discard_hand(json_as(json!({ "player": "self" }))), None, defaults());
+        run.apply(
+            discard_hand(json_as(json!({ "player": "self" }))),
+            None,
+            defaults(),
+        );
 
         let ids: Vec<String> = cards.iter().map(|card| card.id.clone()).collect();
         assert_eq!(run.state.players[PlayerId::P1].hand.len(), 0);
@@ -827,7 +1113,11 @@ mod discard_hand_s6_3_r16_r31_s10_7_m3_t1 {
         let mut run = Runner::new(state);
         let before = run.rng.cursor();
 
-        run.apply(discard_hand(json_as(json!({ "player": "self" }))), None, defaults());
+        run.apply(
+            discard_hand(json_as(json!({ "player": "self" }))),
+            None,
+            defaults(),
+        );
 
         assert_eq!(run.state.players[PlayerId::P1].hand.len(), 0);
         assert_eq!(run.rng.cursor(), before);
@@ -836,7 +1126,11 @@ mod discard_hand_s6_3_r16_r31_s10_7_m3_t1 {
         // Not a vacuous assertion: the random form of the same sweep does move the cursor, which is
         // exactly why a whole-hand discard must not be written as `discardRandom({ count: n })`.
         in_hand(&mut run.state, BEAST, PlayerId::P1, 3);
-        run.apply(discard_random(json_as(json!({ "count": 3, "player": "self" }))), None, defaults());
+        run.apply(
+            discard_random(json_as(json!({ "count": 3, "player": "self" }))),
+            None,
+            defaults(),
+        );
         assert!(run.rng.cursor() > before);
     }
 
@@ -847,13 +1141,20 @@ mod discard_hand_s6_3_r16_r31_s10_7_m3_t1 {
         let token = only(in_hand(&mut state, &rush_token(), PlayerId::P1, 1));
         let mut run = Runner::new(state);
 
-        run.apply(discard_hand(json_as(json!({ "player": "self" }))), None, defaults());
+        run.apply(
+            discard_hand(json_as(json!({ "player": "self" }))),
+            None,
+            defaults(),
+        );
 
         assert_eq!(run.state.players[PlayerId::P1].hand.len(), 0);
         assert_eq!(run.graveyard(PlayerId::P1), vec![real.id.clone()]);
         assert!(run.gone(&token));
         assert_eq!(events_of_type(&run.events, GameEventType::Discarded).len(), 2);
-        assert_eq!(instance_ids_of(&run.events, GameEventType::EnteredGraveyard), vec![real.id.clone()]);
+        assert_eq!(
+            instance_ids_of(&run.events, GameEventType::EnteredGraveyard),
+            vec![real.id.clone()]
+        );
     }
 
     #[test]
@@ -864,11 +1165,21 @@ mod discard_hand_s6_3_r16_r31_s10_7_m3_t1 {
         let theirs = in_hand(&mut state, BEAST, PlayerId::P2, 2);
         let mut run = Runner::new(state);
 
-        run.apply(discard_hand(json_as(json!({ "player": "enemy" }))), None, defaults());
+        run.apply(
+            discard_hand(json_as(json!({ "player": "enemy" }))),
+            None,
+            defaults(),
+        );
 
-        assert_eq!(run.hand(PlayerId::P1), mine.iter().map(|card| card.id.clone()).collect::<Vec<_>>());
+        assert_eq!(
+            run.hand(PlayerId::P1),
+            mine.iter().map(|card| card.id.clone()).collect::<Vec<_>>()
+        );
         assert_eq!(run.state.players[PlayerId::P2].hand.len(), 0);
-        assert_eq!(run.graveyard(PlayerId::P2), theirs.iter().map(|card| card.id.clone()).collect::<Vec<_>>());
+        assert_eq!(
+            run.graveyard(PlayerId::P2),
+            theirs.iter().map(|card| card.id.clone()).collect::<Vec<_>>()
+        );
     }
 }
 
@@ -880,7 +1191,8 @@ mod exile_hand_s6_3_r11_r55_s10_7_m3_t1 {
     use super::*;
 
     #[test]
-    fn empties_the_hand_into_the_exile_pile_and_bumps_counters_exiled_once_per_card_that_got_there_c78_fullsend() {
+    fn empties_the_hand_into_the_exile_pile_and_bumps_counters_exiled_once_per_card_that_got_there_c78_fullsend()
+     {
         // §6.3.
         let mut state = game("exileHand-sweep");
         let cards = in_hand(&mut state, BEAST, PlayerId::P1, 3);
@@ -891,7 +1203,10 @@ mod exile_hand_s6_3_r11_r55_s10_7_m3_t1 {
         run.apply(exile_hand(json_as(json!({ "player": "self" }))), None, defaults());
 
         assert_eq!(run.state.players[PlayerId::P1].hand.len(), 0);
-        assert_eq!(run.exile(PlayerId::P1), cards.iter().map(|card| card.id.clone()).collect::<Vec<_>>());
+        assert_eq!(
+            run.exile(PlayerId::P1),
+            cards.iter().map(|card| card.id.clone()).collect::<Vec<_>>()
+        );
         // R11: the unit-token card ceased to exist, so it is not in the pile and not counted (R55).
         assert!(run.gone(&token));
         assert_eq!(run.state.counters.exiled, 3);

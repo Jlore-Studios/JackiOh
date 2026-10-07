@@ -106,7 +106,10 @@ fn enrolled_user(user_id: &str) -> Value {
 
 /// `{ userId: count }`, for comparing with [`GoTrue::lookups`].
 fn counts(entries: &[(&str, u32)]) -> IndexMap<String, u32> {
-    entries.iter().map(|(user, count)| ((*user).to_string(), *count)).collect()
+    entries
+        .iter()
+        .map(|(user, count)| ((*user).to_string(), *count))
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -200,7 +203,11 @@ async fn admin_user(State(state): State<Arc<Mutex<GoTrueState>>>, Path(id): Path
     let reply = {
         let mut state = state.lock().expect("GoTrue state");
         *state.lookups.entry(id.clone()).or_insert(0) += 1;
-        if state.gone.contains(&id) { AdminReply::Missing } else { (state.admin.clone())(&id) }
+        if state.gone.contains(&id) {
+            AdminReply::Missing
+        } else {
+            (state.admin.clone())(&id)
+        }
     };
     match reply {
         AdminReply::Ok(user) => (StatusCode::OK, Json(user)).into_response(),
@@ -209,10 +216,11 @@ async fn admin_user(State(state): State<Arc<Mutex<GoTrueState>>>, Path(id): Path
             Json(json!({ "code": 404, "error_code": "user_not_found", "msg": "User not found" })),
         )
             .into_response(),
-        AdminReply::Unavailable => {
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "code": 500, "msg": "Internal Server Error" })))
-                .into_response()
-        }
+        AdminReply::Unavailable => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "code": 500, "msg": "Internal Server Error" })),
+        )
+            .into_response(),
     }
 }
 
@@ -233,10 +241,11 @@ async fn admin_delete(State(state): State<Arc<Mutex<GoTrueState>>>, Path(id): Pa
             Json(json!({ "code": 404, "error_code": "user_not_found", "msg": "User not found" })),
         )
             .into_response(),
-        DeletionReply::Unavailable => {
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "code": 500, "msg": "Internal Server Error" })))
-                .into_response()
-        }
+        DeletionReply::Unavailable => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "code": 500, "msg": "Internal Server Error" })),
+        )
+            .into_response(),
     }
 }
 
@@ -263,9 +272,11 @@ async fn user_by_token(State(state): State<Arc<Mutex<GoTrueState>>>, headers: He
             })),
         )
             .into_response(),
-        UserReply::Unreachable => {
-            (StatusCode::SERVICE_UNAVAILABLE, Json(json!({ "msg": "upstream unavailable" }))).into_response()
-        }
+        UserReply::Unreachable => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({ "msg": "upstream unavailable" })),
+        )
+            .into_response(),
         UserReply::Hang => std::future::pending::<Response>().await,
     }
 }
@@ -288,10 +299,14 @@ impl GoTrue {
             .route("/auth/v1/user", get(user_by_token))
             .route("/auth/v1/admin/users/{id}", get(admin_user).delete(admin_delete))
             .with_state(state.clone());
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("a free local port");
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("a free local port");
         let url = format!("http://{}", listener.local_addr().expect("the bound address"));
         tokio::spawn(async move {
-            axum::serve(listener, routes).await.expect("the scripted GoTrue serves");
+            axum::serve(listener, routes)
+                .await
+                .expect("the scripted GoTrue serves");
         });
         GoTrue { url, state }
     }
@@ -349,8 +364,12 @@ pub(crate) fn sign(gotrue: &GoTrue, user_id: &str, mut claims: Value) -> String 
     claims["iss"] = json!(gotrue.issuer());
     claims["aud"] = json!("authenticated");
     claims["exp"] = json!(FAR_FUTURE);
-    jsonwebtoken::encode(&Header::new(Algorithm::HS256), &claims, &EncodingKey::from_secret(JWT_SECRET.as_bytes()))
-        .expect("an HS256 token")
+    jsonwebtoken::encode(
+        &Header::new(Algorithm::HS256),
+        &claims,
+        &EncodingKey::from_secret(JWT_SECRET.as_bytes()),
+    )
+    .expect("an HS256 token")
 }
 
 /// The provider, its GoTrue and its clock, as TS's `providerWith` built them.
@@ -435,17 +454,24 @@ pub(crate) async fn raw(
         .uri(format!("https://server.test{path}"))
         .header("content-type", "application/json")
         .header("x-forwarded-for", "203.0.113.7")
-        .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 40_000))));
+        .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+            [127, 0, 0, 1],
+            40_000,
+        ))));
     if let Some(token) = token {
         request = request.header("authorization", format!("Bearer {token}"));
     }
-    let body = body.map_or_else(axum::body::Body::empty, |body| axum::body::Body::from(body.to_string()));
+    let body = body.map_or_else(axum::body::Body::empty, |body| {
+        axum::body::Body::from(body.to_string())
+    });
     let response = jackioh_server::app::router(app.clone())
         .oneshot(request.body(body).expect("a request"))
         .await
         .expect("the router answers");
     let status = response.status().as_u16();
-    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.expect("the body");
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("the body");
     (status, String::from_utf8(bytes.to_vec()).expect("a UTF-8 body"))
 }
 
@@ -465,7 +491,11 @@ pub(crate) fn fake_of(app: &App) -> &Arc<tokio::sync::Mutex<jackioh_server::db::
 /// The fixture profile a user id resolves to (`e2e-p1`, …).
 async fn profile_of(app: &Arc<App>, user_id: &str) -> Profile {
     let mut tx = app.db.begin(None).await.expect("a transaction");
-    let profile = tx.profiles_get_by_user_id(user_id).await.expect("a read").expect("the fixture profile");
+    let profile = tx
+        .profiles_get_by_user_id(user_id)
+        .await
+        .expect("a read")
+        .expect("the fixture profile");
     tx.commit().await.expect("a commit");
     profile
 }
@@ -496,7 +526,10 @@ impl Captured {
     /// test and every task it spawns on this one thread).
     pub(crate) fn install(&self) -> tracing::subscriber::DefaultGuard {
         let writer = self.clone();
-        let subscriber = tracing_subscriber::fmt().json().with_writer(move || writer.clone()).finish();
+        let subscriber = tracing_subscriber::fmt()
+            .json()
+            .with_writer(move || writer.clone())
+            .finish();
         crate::support::deps::set_log_default(subscriber)
     }
 }
@@ -524,7 +557,13 @@ mod r159_how_long_a_verified_email_stays_verified {
 
         // A second call inside the window is answered from the cache: no round trip in front of it.
         h.clock.charge(1).await;
-        assert!(h.auth.verify(&alice).await.expect("alice verifies").email_verified);
+        assert!(
+            h.auth
+                .verify(&alice)
+                .await
+                .expect("alice verifies")
+                .email_verified
+        );
         assert_eq!(h.gotrue.lookups(), counts(&[(ALICE, 1)]));
 
         // Per user id: Alice's yes says nothing about Bob, who is asked for on his own.
@@ -533,14 +572,21 @@ mod r159_how_long_a_verified_email_stays_verified {
 
         // …and the window ends. Ten times the constant is past any reading of "briefly".
         h.clock.charge(CACHE_TTL_MS * 10).await;
-        assert!(h.auth.verify(&alice).await.expect("alice verifies").email_verified);
+        assert!(
+            h.auth
+                .verify(&alice)
+                .await
+                .expect("alice verifies")
+                .email_verified
+        );
         assert_eq!(h.gotrue.lookups(), counts(&[(ALICE, 2), (BOB, 1)]));
     }
 
     #[tokio::test]
     async fn r159_never_caches_the_no_so_an_account_that_has_just_clicked_its_link_is_unlocked_at_once() {
         let h = Harness::new().await;
-        h.gotrue.answer_admin(|user_id| AdminReply::Ok(unconfirmed_user(user_id)));
+        h.gotrue
+            .answer_admin(|user_id| AdminReply::Ok(unconfirmed_user(user_id)));
         let alice = h.token_for(ALICE);
 
         let before = h.auth.verify(&alice).await.expect("alice verifies");
@@ -549,13 +595,26 @@ mod r159_how_long_a_verified_email_stays_verified {
         assert_eq!(h.gotrue.total(), 1);
 
         // Asked again immediately: a negative is never remembered, so the provider is consulted afresh.
-        assert!(!h.auth.verify(&alice).await.expect("alice verifies").email_verified);
+        assert!(
+            !h.auth
+                .verify(&alice)
+                .await
+                .expect("alice verifies")
+                .email_verified
+        );
         assert_eq!(h.gotrue.total(), 2);
 
         // The link is clicked. The clock does NOT move: R159's whole point is that the code screen
         // unlocks now rather than after a cache window.
-        h.gotrue.answer_admin(|user_id| AdminReply::Ok(confirmed_user(user_id)));
-        assert!(h.auth.verify(&alice).await.expect("alice verifies").email_verified);
+        h.gotrue
+            .answer_admin(|user_id| AdminReply::Ok(confirmed_user(user_id)));
+        assert!(
+            h.auth
+                .verify(&alice)
+                .await
+                .expect("alice verifies")
+                .email_verified
+        );
         assert_eq!(h.gotrue.total(), 3);
     }
 
@@ -568,16 +627,29 @@ mod r159_how_long_a_verified_email_stays_verified {
         let outage = h.auth.verify(&alice).await.expect("the identity stands");
         // The signature proved who this is, so the identity survives…
         assert_eq!(outage.user_id, ALICE);
-        assert_eq!(outage.email.as_deref(), Some(format!("{ALICE}@example.test").as_str()));
-        assert_eq!(serde_json::to_value(&outage.app_metadata).expect("JSON"), json!({ "provider": "email" }));
+        assert_eq!(
+            outage.email.as_deref(),
+            Some(format!("{ALICE}@example.test").as_str())
+        );
+        assert_eq!(
+            serde_json::to_value(&outage.app_metadata).expect("JSON"),
+            json!({ "provider": "email" })
+        );
         // …but nothing proved the email, so §9.4 step 1 must not pass.
         assert!(!outage.email_verified);
         assert_eq!(h.gotrue.total(), 1);
 
         // An outage caches nothing either, in either direction: the next call asks again and the
         // recovered provider is believed immediately, with no clock movement.
-        h.gotrue.answer_admin(|user_id| AdminReply::Ok(confirmed_user(user_id)));
-        assert!(h.auth.verify(&alice).await.expect("alice verifies").email_verified);
+        h.gotrue
+            .answer_admin(|user_id| AdminReply::Ok(confirmed_user(user_id)));
+        assert!(
+            h.auth
+                .verify(&alice)
+                .await
+                .expect("alice verifies")
+                .email_verified
+        );
         assert_eq!(h.gotrue.total(), 2);
     }
 
@@ -641,7 +713,10 @@ mod r194_an_ended_sessions_access_token_is_refused_here_too {
         // Signed out elsewhere. Inside the window the live answer still stands…
         h.gotrue.answer_user(|_| UserReply::Ended);
         h.clock.charge(1).await;
-        assert_eq!(h.auth.verify(&token).await.expect("still remembered").user_id, ALICE);
+        assert_eq!(
+            h.auth.verify(&token).await.expect("still remembered").user_id,
+            ALICE
+        );
         assert_eq!(h.gotrue.user_calls(), 1);
 
         // …and once it lapses the provider is asked again, and the token is refused.
@@ -659,7 +734,11 @@ mod r194_an_ended_sessions_access_token_is_refused_here_too {
         assert_eq!(h.auth.verify(&kept).await.expect("a live session").user_id, ALICE);
         let ended = other.clone();
         h.gotrue.answer_user(move |token| {
-            if token == ended { UserReply::Ended } else { UserReply::Live(confirmed_user(ALICE)) }
+            if token == ended {
+                UserReply::Ended
+            } else {
+                UserReply::Live(confirmed_user(ALICE))
+            }
         });
         // The same user, another session: asked on its own, and refused.
         assert!(h.auth.verify(&other).await.is_err());
@@ -709,7 +788,13 @@ mod r194_an_ended_sessions_access_token_is_refused_here_too {
         // Any call to `/auth/v1/user` is counted; a token with no `session_id` must not make one.
         let h = with_sessions(|_| UserReply::Ended).await;
         let token = h.token_for(ALICE);
-        assert!(h.auth.verify(&token).await.expect("alice verifies").email_verified);
+        assert!(
+            h.auth
+                .verify(&token)
+                .await
+                .expect("alice verifies")
+                .email_verified
+        );
         assert_eq!(h.gotrue.user_calls(), 0);
         assert_eq!(h.gotrue.total(), 1);
     }
@@ -729,15 +814,22 @@ mod r160_r145_the_identical_sign_up_and_sign_in_error {
     use super::*;
 
     async fn sign_in(app: &Arc<App>, email: &str, password: &str) -> (u16, String) {
-        raw(app, "POST", "/api/auth/signin", None, Some(json!({ "email": email, "password": password }))).await
+        raw(
+            app,
+            "POST",
+            "/api/auth/signin",
+            None,
+            Some(json!({ "email": email, "password": password })),
+        )
+        .await
     }
 
     #[tokio::test]
     async fn r160_answers_no_such_account_and_wrong_password_byte_identically_at_sign_in() {
         let app = test_app().await;
         let responses = [
-            sign_in(&app, "ghost@example.test", "hunter2").await,       // no such account
-            sign_in(&app, "e2e-p1@jackioh.test", "hunter2").await,      // wrong password
+            sign_in(&app, "ghost@example.test", "hunter2").await, // no such account
+            sign_in(&app, "e2e-p1@jackioh.test", "hunter2").await, // wrong password
             sign_in(&app, "e2e-pending@jackioh.test", "hunter2").await, // a pending account's, also wrong
         ];
 
@@ -758,8 +850,22 @@ mod r160_r145_the_identical_sign_up_and_sign_in_error {
         // Supabase Auth, §9.2), so every address gets the router's one "no such endpoint".
         let app = test_app().await;
         let body = |email: &str| json!({ "email": email, "password": "hunter2" });
-        let taken = raw(&app, "POST", "/api/auth/signup", None, Some(body("e2e-p1@jackioh.test"))).await;
-        let fresh = raw(&app, "POST", "/api/auth/signup", None, Some(body("fresh@example.test"))).await;
+        let taken = raw(
+            &app,
+            "POST",
+            "/api/auth/signup",
+            None,
+            Some(body("e2e-p1@jackioh.test")),
+        )
+        .await;
+        let fresh = raw(
+            &app,
+            "POST",
+            "/api/auth/signup",
+            None,
+            Some(body("fresh@example.test")),
+        )
+        .await;
         assert_eq!(taken.0, 404);
         assert_eq!(taken, fresh);
         assert!(!taken.1.contains("already registered"));
@@ -782,7 +888,14 @@ mod r160_r145_the_identical_sign_up_and_sign_in_error {
         assert_ne!(accepted.1, refused.1);
 
         // 3. A malformed body: 400.
-        let malformed = raw(&app, "POST", "/api/auth/signin", None, Some(json!({ "email": "x@y.test" }))).await;
+        let malformed = raw(
+            &app,
+            "POST",
+            "/api/auth/signin",
+            None,
+            Some(json!({ "email": "x@y.test" })),
+        )
+        .await;
         assert_eq!(malformed.0, 400);
         assert_ne!(malformed.1, refused.1);
 
@@ -795,8 +908,10 @@ mod r160_r145_the_identical_sign_up_and_sign_in_error {
 
         // Four distinct answers, so the identity above is a property of the account-existence cases
         // and not of the endpoint.
-        let distinct: IndexSet<&str> =
-            [&refused.1, &accepted.1, &malformed.1, &disabled.1].into_iter().map(String::as_str).collect();
+        let distinct: IndexSet<&str> = [&refused.1, &accepted.1, &malformed.1, &disabled.1]
+            .into_iter()
+            .map(String::as_str)
+            .collect();
         assert_eq!(distinct.len(), 4);
     }
 
@@ -858,22 +973,40 @@ mod api_auth_me_reports_the_callers_own_current_match {
     async fn names_the_match_once_the_player_is_in_one_which_is_what_the_waiting_player_reads() {
         let app = test_app().await;
         let profile = profile_of(&app, "e2e-p1").await;
-        let mut tx = app.db.begin(Some(profile.id.as_str())).await.expect("a transaction");
-        tx.profiles_set_in_match(&profile.id, Some("match-42")).await.expect("a write");
+        let mut tx = app
+            .db
+            .begin(Some(profile.id.as_str()))
+            .await
+            .expect("a transaction");
+        tx.profiles_set_in_match(&profile.id, Some("match-42"))
+            .await
+            .expect("a write");
         tx.commit().await.expect("a commit");
 
         let (status, _, body) = call(&app, "GET", "/api/auth/me", Some(TOKEN), Value::Null).await;
         assert_eq!(status, 200);
-        assert_eq!(body["currentMatchId"], json!("match-42"), "the id /play navigates to");
+        assert_eq!(
+            body["currentMatchId"],
+            json!("match-42"),
+            "the id /play navigates to"
+        );
     }
 
     #[tokio::test]
     async fn names_the_callers_own_series_while_it_is_not_over_and_only_then_r259_r264() {
         let app = test_app().await;
         let profile = profile_of(&app, "e2e-p1").await;
-        let read = || async { call(&app, "GET", "/api/auth/me", Some(TOKEN), Value::Null).await.2 };
+        let read = || async {
+            call(&app, "GET", "/api/auth/me", Some(TOKEN), Value::Null)
+                .await
+                .2
+        };
 
-        assert_eq!(read().await["currentSeriesId"], Value::Null, "premise: in no series");
+        assert_eq!(
+            read().await["currentSeriesId"],
+            Value::Null,
+            "premise: in no series"
+        );
 
         // Between the games of a series nobody is in a match, and this is how the player who waited
         // learns there is a deck to pick.
@@ -916,7 +1049,10 @@ mod api_auth_me_reports_the_callers_own_current_match {
         over["status"] = json!("over");
         over["version"] = json!(2);
         let mut tx = app.db.begin(None).await.expect("a transaction");
-        assert!(tx.series_update(&row(over)).await.expect("a write"), "the compare-and-set lands");
+        assert!(
+            tx.series_update(&row(over)).await.expect("a write"),
+            "the compare-and-set lands"
+        );
         tx.commit().await.expect("a commit");
         assert_eq!(read().await["currentSeriesId"], Value::Null);
     }
@@ -972,9 +1108,15 @@ mod api_profile_reports_identity_and_the_ladder_record {
             })
         };
         let mut tx = app.db.begin(None).await.expect("a transaction");
-        tx.results_insert(&row(result("m1", Some(profile.id.as_str())))).await.expect("a write");
-        tx.results_insert(&row(result("m2", Some(other.id.as_str())))).await.expect("a write");
-        tx.results_insert(&row(result("m3", None))).await.expect("a write");
+        tx.results_insert(&row(result("m1", Some(profile.id.as_str()))))
+            .await
+            .expect("a write");
+        tx.results_insert(&row(result("m2", Some(other.id.as_str()))))
+            .await
+            .expect("a write");
+        tx.results_insert(&row(result("m3", None)))
+            .await
+            .expect("a write");
         tx.commit().await.expect("a commit");
 
         let (_, _, body) = call(&app, "GET", "/api/profile", Some(TOKEN), Value::Null).await;
@@ -1007,12 +1149,17 @@ mod r665_two_step_sign_in_an_account_with_an_authenticator_app_needs_an_aal2_tok
     #[tokio::test]
     async fn r665_refuses_an_aal1_token_for_an_account_with_a_verified_factor_and_takes_its_aal2_token() {
         let h = Harness::new().await;
-        h.gotrue.answer_admin(|user_id| AdminReply::Ok(enrolled_user(user_id)));
+        h.gotrue
+            .answer_admin(|user_id| AdminReply::Ok(enrolled_user(user_id)));
 
         // A password alone (aal1) is not enough once the account has an authenticator app…
         assert!(h.auth.verify(&h.token_at(ALICE, "aal1", None)).await.is_err());
         // …the code's level is, and the identity and the verified email come through as ever.
-        let ok = h.auth.verify(&h.token_at(ALICE, "aal2", None)).await.expect("aal2 verifies");
+        let ok = h
+            .auth
+            .verify(&h.token_at(ALICE, "aal2", None))
+            .await
+            .expect("aal2 verifies");
         assert_eq!(ok.user_id, ALICE);
         assert!(ok.email_verified);
 
@@ -1026,33 +1173,78 @@ mod r665_two_step_sign_in_an_account_with_an_authenticator_app_needs_an_aal2_tok
     #[tokio::test]
     async fn r665_an_account_without_a_factor_is_unchanged_aal1_or_no_aal_claim_at_all_is_honoured() {
         let h = Harness::new().await;
-        assert_eq!(h.auth.verify(&h.token_at(ALICE, "aal1", None)).await.expect("aal1 verifies").user_id, ALICE);
-        assert_eq!(h.auth.verify(&h.token_for(BOB)).await.expect("no aal verifies").user_id, BOB);
+        assert_eq!(
+            h.auth
+                .verify(&h.token_at(ALICE, "aal1", None))
+                .await
+                .expect("aal1 verifies")
+                .user_id,
+            ALICE
+        );
+        assert_eq!(
+            h.auth
+                .verify(&h.token_for(BOB))
+                .await
+                .expect("no aal verifies")
+                .user_id,
+            BOB
+        );
     }
 
     #[tokio::test]
     async fn r665_reads_the_factor_from_the_providers_user_only_a_verified_totp_factor_counts() {
-        let unfinished = with_sessions(|_| UserReply::Live(user_with_factors(ALICE, &[("unverified", "totp")]))).await;
+        let unfinished =
+            with_sessions(|_| UserReply::Live(user_with_factors(ALICE, &[("unverified", "totp")]))).await;
         let token = unfinished.token_at(ALICE, "aal1", Some("s-1"));
-        assert_eq!(unfinished.auth.verify(&token).await.expect("aal1 verifies").user_id, ALICE);
+        assert_eq!(
+            unfinished
+                .auth
+                .verify(&token)
+                .await
+                .expect("aal1 verifies")
+                .user_id,
+            ALICE
+        );
 
-        let other_kind = with_sessions(|_| UserReply::Live(user_with_factors(ALICE, &[("verified", "phone")]))).await;
+        let other_kind =
+            with_sessions(|_| UserReply::Live(user_with_factors(ALICE, &[("verified", "phone")]))).await;
         let token = other_kind.token_at(ALICE, "aal1", Some("s-2"));
-        assert_eq!(other_kind.auth.verify(&token).await.expect("aal1 verifies").user_id, ALICE);
+        assert_eq!(
+            other_kind
+                .auth
+                .verify(&token)
+                .await
+                .expect("aal1 verifies")
+                .user_id,
+            ALICE
+        );
 
         let enrolled = with_sessions(|_| {
-            UserReply::Live(user_with_factors(ALICE, &[("unverified", "totp"), ("verified", "totp")]))
+            UserReply::Live(user_with_factors(
+                ALICE,
+                &[("unverified", "totp"), ("verified", "totp")],
+            ))
         })
         .await;
-        assert!(enrolled.auth.verify(&enrolled.token_at(ALICE, "aal1", Some("s-3"))).await.is_err());
+        assert!(
+            enrolled
+                .auth
+                .verify(&enrolled.token_at(ALICE, "aal1", Some("s-3")))
+                .await
+                .is_err()
+        );
         let token = enrolled.token_at(ALICE, "aal2", Some("s-4"));
-        assert_eq!(enrolled.auth.verify(&token).await.expect("aal2 verifies").user_id, ALICE);
+        assert_eq!(
+            enrolled.auth.verify(&token).await.expect("aal2 verifies").user_id,
+            ALICE
+        );
     }
 
     #[tokio::test]
     async fn r665_an_outage_cannot_lower_the_bar_the_last_answer_that_the_account_has_a_factor_stands() {
         let h = Harness::new().await;
-        h.gotrue.answer_admin(|user_id| AdminReply::Ok(enrolled_user(user_id)));
+        h.gotrue
+            .answer_admin(|user_id| AdminReply::Ok(enrolled_user(user_id)));
         assert!(h.auth.verify(&h.token_at(ALICE, "aal1", None)).await.is_err());
 
         // The provider goes away after the cached answer has lapsed: an aal1 token is still refused,
@@ -1060,17 +1252,33 @@ mod r665_two_step_sign_in_an_account_with_an_authenticator_app_needs_an_aal2_tok
         h.clock.charge(CACHE_TTL_MS * 10).await;
         h.gotrue.answer_admin(|_| AdminReply::Unavailable);
         assert!(h.auth.verify(&h.token_at(ALICE, "aal1", None)).await.is_err());
-        assert_eq!(h.auth.verify(&h.token_at(ALICE, "aal2", None)).await.expect("aal2 verifies").user_id, ALICE);
+        assert_eq!(
+            h.auth
+                .verify(&h.token_at(ALICE, "aal2", None))
+                .await
+                .expect("aal2 verifies")
+                .user_id,
+            ALICE
+        );
     }
 
     #[tokio::test]
     async fn r665_removing_the_factor_lowers_the_bar_again_once_the_provider_says_so() {
         let h = Harness::new().await;
-        h.gotrue.answer_admin(|user_id| AdminReply::Ok(enrolled_user(user_id)));
+        h.gotrue
+            .answer_admin(|user_id| AdminReply::Ok(enrolled_user(user_id)));
         assert!(h.auth.verify(&h.token_at(ALICE, "aal1", None)).await.is_err());
 
         h.clock.charge(CACHE_TTL_MS * 10).await;
-        h.gotrue.answer_admin(|user_id| AdminReply::Ok(confirmed_user(user_id)));
-        assert_eq!(h.auth.verify(&h.token_at(ALICE, "aal1", None)).await.expect("aal1 verifies").user_id, ALICE);
+        h.gotrue
+            .answer_admin(|user_id| AdminReply::Ok(confirmed_user(user_id)));
+        assert_eq!(
+            h.auth
+                .verify(&h.token_at(ALICE, "aal1", None))
+                .await
+                .expect("aal1 verifies")
+                .user_id,
+            ALICE
+        );
     }
 }

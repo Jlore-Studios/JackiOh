@@ -14,8 +14,8 @@
 //!
 //! Port of `packages/cards/test/echo-and-exile.test.ts` (SURFACE §4.1, §8).
 
-use jackioh_engine::testkit::*;
 use jackioh_engine::PlayerId::{P1, P2};
+use jackioh_engine::testkit::*;
 
 const TWINSPELL: &str = "core-079";
 const HIT_JOB: &str = "core-016";
@@ -82,7 +82,8 @@ mod section_4_5_the_state_check_between_an_echos_resolutions {
     use super::*;
 
     #[test]
-    fn r59_4_5_an_echo_repeats_prompt_is_asked_after_the_first_resolutions_deaths_so_a_destroyed_unit_is_not_offered_again() {
+    fn r59_4_5_an_echo_repeats_prompt_is_asked_after_the_first_resolutions_deaths_so_a_destroyed_unit_is_not_offered_again()
+     {
         // Twinspell gives Hit Job Echo +1. The first resolution destroys the enemy Mrow; by the time the
         // repeat asks its fresh target prompt Mrow has died, and its Death has run.
         let mut g = scenario(json!({
@@ -94,24 +95,34 @@ mod section_4_5_the_state_check_between_an_echos_resolutions {
         g.play(TWINSPELL, json!({}));
         g.play(HIT_JOB, json!({ "targets": at(&mrow) }));
 
-        assert_eq!(g.state().pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Target));
+        assert_eq!(
+            g.state().pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Target)
+        );
         assert!(!option_ids(&g).contains(&mrow.id));
         g.expect_in_zone(&mrow.id, "graveyard");
     }
 
     #[test]
-    fn section_4_5_a_hero_at_0_after_an_echos_first_resolution_ends_the_game_before_the_repeat_asks_anything_2_5() {
+    fn section_4_5_a_hero_at_0_after_an_echos_first_resolution_ends_the_game_before_the_repeat_asks_anything_2_5()
+     {
         let mut g = scenario(json!({
             "p1": { "hand": [TWINSPELL, LUNAR_ECLIPSE, RENO], "mana": 8, "library": LIBRARY },
             "p2": { "hand": [RENO], "health": 3, "field": [{ "def": VANILLA, "lane": 3 }], "library": LIBRARY },
         }));
 
         g.play(TWINSPELL, json!({}));
-        g.play(LUNAR_ECLIPSE, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+        g.play(
+            LUNAR_ECLIPSE,
+            json!({ "targets": [{ "pick": "hero", "player": "p2" }] }),
+        );
 
         assert_eq!(
             g.state().result,
-            Some(GameResult { winner: Winner::P1, reason: GameOverReason::HeroDeath })
+            Some(GameResult {
+                winner: Winner::P1,
+                reason: GameOverReason::HeroDeath
+            })
         );
         assert!(g.state().pending.is_none());
     }
@@ -132,7 +143,10 @@ mod r178_a_spells_exile_this_is_its_landing_and_its_echo_is_gained_as_it_is_play
         let strike = g.card(TRUE_STRIKE).clone();
 
         g.play(TWINSPELL, json!({}));
-        g.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+        g.play(
+            TRUE_STRIKE,
+            json!({ "targets": [{ "pick": "hero", "player": "p2" }] }),
+        );
         // Still resolving, and still itself, while its repeat asks (R98).
         assert_eq!(g.card(&strike.id).zone.z(), ZoneName::Resolving);
         g.expect_in_zone(&twin.id, "graveyard");
@@ -145,7 +159,8 @@ mod r178_a_spells_exile_this_is_its_landing_and_its_echo_is_gained_as_it_is_play
     }
 
     #[test]
-    fn r178_r30_twinspell_is_consumed_by_the_next_spell_played_even_when_that_spell_swaps_it_away_and_exiles_itself() {
+    fn r178_r30_twinspell_is_consumed_by_the_next_spell_played_even_when_that_spell_swaps_it_away_and_exiles_itself()
+     {
         // Pocket Chaos swaps the boards — Twinspell with them — and exiles itself. The Echo was already
         // gained as it was played, so Twinspell went to the graveyard first and the repeat still comes.
         let mut g = scenario(json!({
@@ -158,7 +173,10 @@ mod r178_a_spells_exile_this_is_its_landing_and_its_echo_is_gained_as_it_is_play
         g.play(TWINSPELL, json!({}));
         g.play(CHAOS, json!({ "modes": ["board"] }));
         // The repeat's fresh mode prompt (§10.6: an Echo repeat asks again).
-        assert_eq!(g.state().pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Mode));
+        assert_eq!(
+            g.state().pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Mode)
+        );
         answer_first_selections(&mut g);
 
         g.expect_in_zone(&twin.id, "graveyard");
@@ -188,14 +206,19 @@ const R119_SEED: &str = "r9-c2c-0";
 /// (`summonRandom`, R60), in that order.
 fn quickstriker_cursor() -> u32 {
     let pool = catalog::query(&json_as(json!({ "type": ["Field Spell", "Trap", "Field Trap"] })));
-    let backrow = subsystems::CHAOS_EFFECTS.iter().position(|effect| effect.name == "backrow");
+    let backrow = subsystems::CHAOS_EFFECTS
+        .iter()
+        .position(|effect| effect.name == "backrow");
     for cursor in 0..100_000u32 {
         let mut rng = Rng::new(R119_SEED, cursor);
         if Some(rng.int(subsystems::CHAOS_EFFECTS.len() as i32) as usize) != backrow {
             continue;
         }
         let picks: Vec<Option<String>> = (0..5)
-            .map(|_| pool.get(rng.int(pool.len() as i32) as usize).map(|def| def.id.clone()))
+            .map(|_| {
+                pool.get(rng.int(pool.len() as i32) as usize)
+                    .map(|def| def.id.clone())
+            })
             .collect();
         if picks.contains(&Some(QUICKSTRIKER.to_string())) {
             return cursor;
@@ -206,7 +229,10 @@ fn quickstriker_cursor() -> u32 {
 
 /// TS `ofType(events, "drawn")`.
 fn drawn_count(events: &[GameEvent]) -> usize {
-    events.iter().filter(|event| matches!(event, GameEvent::Drawn { .. })).count()
+    events
+        .iter()
+        .filter(|event| matches!(event, GameEvent::Drawn { .. }))
+        .count()
 }
 
 fn quickstrikers_of(s: &Scenario, player: PlayerId) -> Vec<String> {
@@ -223,7 +249,8 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
     use super::*;
 
     #[test]
-    fn r119_fullsend_echoed_by_twinspell_draws_nothing_from_the_combo_rider_its_own_first_resolution_installed_10_5_step_6() {
+    fn r119_fullsend_echoed_by_twinspell_draws_nothing_from_the_combo_rider_its_own_first_resolution_installed_10_5_step_6()
+     {
         let mut s = scenario(json!({
             // A unit that can still switch keeps §2.5's auto-end from passing the turn once the hand is empty.
             // The Radiant /fullsend: the face that grants "Combo: Draw 1" since patch v0.1.1.
@@ -259,7 +286,8 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
     }
 
     #[test]
-    fn r119_a_quickstriker_call_to_chaos_summons_in_its_first_resolution_deals_nothing_on_the_echo_repeat_of_that_same_play_10_5_step_6() {
+    fn r119_a_quickstriker_call_to_chaos_summons_in_its_first_resolution_deals_nothing_on_the_echo_repeat_of_that_same_play_10_5_step_6()
+     {
         // The roll is pinned (R423 left the base face's one roll as it was): the play's first rng draw is
         // #95's roll, and the five picks of "summon 5 random Field Spells or Traps" follow it, from the
         // pool of every set (R380). `quickstrikerCursor` finds a cursor at which the roll is that effect
@@ -286,7 +314,11 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
 
         // The setup did what it says: the Echo was taken (Twinspell reached the graveyard, two
         // resolutions), and a Quickstriker arrived in p1's backrow during this play.
-        let graveyard: Vec<String> = s.pile(P1, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+        let graveyard: Vec<String> = s
+            .pile(P1, "graveyard")
+            .iter()
+            .map(|card| card.def_id.clone())
+            .collect();
         assert!(graveyard.contains(&TWINSPELL.to_string()));
         let rolls = s
             .events()

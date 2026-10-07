@@ -63,17 +63,33 @@ struct Blow {
 fn blow(from: &Side, to: &Side) -> Blow {
     let amount = from.view.attack;
     if amount <= 0 {
-        return Blow { dealt: 0, kills: false, pops_shield: false };
+        return Blow {
+            dealt: 0,
+            kills: false,
+            pops_shield: false,
+        };
     }
     if to.shield {
-        return Blow { dealt: 0, kills: false, pops_shield: true };
+        return Blow {
+            dealt: 0,
+            kills: false,
+            pops_shield: true,
+        };
     }
     if to.indestructible {
-        return Blow { dealt: 0, kills: false, pops_shield: false };
+        return Blow {
+            dealt: 0,
+            kills: false,
+            pops_shield: false,
+        };
     }
     let dealt = (amount - to.view.armor).max(0);
     let kills = dealt >= to.view.health || (from.poisonous && dealt > 0);
-    Blow { dealt, kills, pops_shield: false }
+    Blow {
+        dealt,
+        kills,
+        pops_shield: false,
+    }
 }
 
 /// The opponent's static value of `attacker` hitting `target` (§4.3): the unit it kills, less its own
@@ -117,15 +133,24 @@ fn ranked_attacks(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
     let health = state.players[seat].hero.health;
     let mut ranked: Vec<(ActionBody, f64)> = Vec::new();
     for action in legal_actions(state, opp) {
-        let ActionBody::Attack { attacker_id, target_id } = &action else {
+        let ActionBody::Attack {
+            attacker_id,
+            target_id,
+        } = &action
+        else {
             continue;
         };
         let Some(attacker) = find_instance(state, attacker_id) else {
             continue;
         };
         let value = if *target_id == hero {
-            let damage = subsystems::projected_hero_damage(state, seat, unit_view(state, attacker).attack, false);
-            if damage >= health { AI_EVAL.win } else { AI_REPLY.face_per_damage * f64::from(damage) }
+            let damage =
+                subsystems::projected_hero_damage(state, seat, unit_view(state, attacker).attack, false);
+            if damage >= health {
+                AI_EVAL.win
+            } else {
+                AI_REPLY.face_per_damage * f64::from(damage)
+            }
         } else {
             trade_value(state, attacker, target_id)
         };
@@ -138,7 +163,12 @@ fn ranked_attacks(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
 }
 
 /// One opponent action through the reducer; `None` when it panics or is refused.
-fn reduce_for(state: &GameState, actor: PlayerId, action: &ActionBody, counter: &dyn NodeCounter) -> Option<GameState> {
+fn reduce_for(
+    state: &GameState,
+    actor: PlayerId,
+    action: &ActionBody,
+    counter: &dyn NodeCounter,
+) -> Option<GameState> {
     let action = Action::new(action.clone(), actor, format!("reply:{}", counter.used()));
     match catch_unwind(AssertUnwindSafe(|| reduce(state, &action))) {
         Ok(next) if next.error.is_none() => Some(next.state),
@@ -157,11 +187,18 @@ enum Known {
 
 /// Step 1: the best play of a card the opponent holds that is not in `hidden`, by the opponent's own
 /// evaluation, when it beats standing still.
-fn known_play(state: &GameState, seat: PlayerId, hidden: &IndexSet<String>, counter: &dyn NodeCounter) -> Known {
+fn known_play(
+    state: &GameState,
+    seat: PlayerId,
+    hidden: &IndexSet<String>,
+    counter: &dyn NodeCounter,
+) -> Known {
     let opp = seat.opponent();
     let plays: Vec<ActionBody> = candidate_actions(state, opp)
         .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if !hidden.contains(instance_id)))
+        .filter(
+            |action| matches!(action, ActionBody::Play { instance_id, .. } if !hidden.contains(instance_id)),
+        )
         .take(AI_REPLY.known_plays.max(0) as usize)
         .collect();
     if plays.is_empty() {
@@ -175,7 +212,10 @@ fn known_play(state: &GameState, seat: PlayerId, hidden: &IndexSet<String>, coun
             Some(Err(_)) => continue,
             Some(Ok(next)) => next,
         };
-        if next.result.is_some_and(|result| result.winner.player() == Some(opp)) {
+        if next
+            .result
+            .is_some_and(|result| result.winner.player() == Some(opp))
+        {
             return Known::Played(Box::new(next));
         }
         let value = evaluate(&next, opp, NextSwing::Enemy, &AI_EVAL);
@@ -194,7 +234,11 @@ fn known_play(state: &GameState, seat: PlayerId, hidden: &IndexSet<String>, coun
 /// The ids of the cards the opponent holds unseen: its hand and its library, as sampled.
 pub fn hidden_card_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
     let side = &state.players[seat.opponent()];
-    side.hand.iter().chain(side.library.iter()).map(|card| card.id.clone()).collect()
+    side.hand
+        .iter()
+        .chain(side.library.iter())
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 /// The opponent's reply to a line that handed it the turn: from `state` (the opponent's main phase,
@@ -284,8 +328,16 @@ pub fn reply_score(
     if status == LineStatus::Over || status == LineStatus::Open {
         return Some(static_score(end, seat, root_turn));
     }
-    let unspent = if status == LineStatus::Passed { end.players[seat].turn_log.unspent_at_end.unwrap_or(0) } else { 0 };
+    let unspent = if status == LineStatus::Passed {
+        end.players[seat].turn_log.unspent_at_end.unwrap_or(0)
+    } else {
+        0
+    };
     let after = simulate_reply(end, seat, counter, hidden)?;
-    let next = if after.active == seat { NextSwing::Seat } else { NextSwing::Enemy };
+    let next = if after.active == seat {
+        NextSwing::Seat
+    } else {
+        NextSwing::Enemy
+    };
     Some(evaluate(&after, seat, next, &AI_EVAL) - AI_EVAL.unspent_mana * f64::from(unspent))
 }

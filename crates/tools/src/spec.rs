@@ -199,7 +199,13 @@ fn unquote(value: &str) -> String {
 
 fn parse_note(path: String, stem: String, text: &str) -> Result<RulingNote, String> {
     let fields = front_matter(text)?;
-    let mut note = RulingNote { path, stem, id: None, title: None, proven_in: Vec::new() };
+    let mut note = RulingNote {
+        path,
+        stem,
+        id: None,
+        title: None,
+        proven_in: Vec::new(),
+    };
     for (key, field) in fields {
         match (key.as_str(), field) {
             ("id", Field::Scalar(value)) => note.id = Some(value),
@@ -224,9 +230,13 @@ fn read_notes(root: &Path) -> Result<Vec<RulingNote>> {
     let mut notes = Vec::with_capacity(files.len());
     for file in files {
         let text = fs::read_to_string(&file).with_context(|| format!("reading {}", file.display()))?;
-        let stem = file.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+        let stem = file
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
         let path = relative(root, &file);
-        let note = parse_note(path.clone(), stem, &text).map_err(|error| anyhow::anyhow!("{path}: {error}"))?;
+        let note =
+            parse_note(path.clone(), stem, &text).map_err(|error| anyhow::anyhow!("{path}: {error}"))?;
         notes.push(note);
     }
     Ok(notes)
@@ -388,7 +398,9 @@ fn string_end(chars: &[char], i: usize) -> usize {
 fn char_literal_end(chars: &[char], i: usize) -> Option<usize> {
     match chars.get(i + 1) {
         // '\n', '\'', '\\', '\u{1F600}': the escape's first character is never the closing quote.
-        Some('\\') => (i + 3..chars.len().min(i + 14)).find(|j| chars[*j] == '\'').map(|j| j + 1),
+        Some('\\') => (i + 3..chars.len().min(i + 14))
+            .find(|j| chars[*j] == '\'')
+            .map(|j| j + 1),
         Some(_) if chars.get(i + 2) == Some(&'\'') => Some(i + 3),
         _ => None,
     }
@@ -507,12 +519,19 @@ fn sql_headings(src: &str) -> Vec<String> {
     while let Some(at) = rest.find("\\echo") {
         rest = &rest[at + "\\echo".len()..];
         let after = rest.trim_start();
-        let Some(quoted) = after.strip_prefix('\'') else { continue };
+        let Some(quoted) = after.strip_prefix('\'') else {
+            continue;
+        };
         let quoted = quoted.trim_start();
-        let Some(body) = quoted.strip_prefix("###").or_else(|| quoted.strip_prefix("===")) else { continue };
+        let Some(body) = quoted.strip_prefix("###").or_else(|| quoted.strip_prefix("===")) else {
+            continue;
+        };
         let Some(close) = body.find('\'') else { continue };
         let heading = body[..close].trim();
-        let heading = heading.strip_suffix("###").or_else(|| heading.strip_suffix("===")).unwrap_or(heading);
+        let heading = heading
+            .strip_suffix("###")
+            .or_else(|| heading.strip_suffix("==="))
+            .unwrap_or(heading);
         headings.push(heading.trim().to_string());
     }
     headings
@@ -532,12 +551,19 @@ fn sql_heading_names(heading: &str, number: u64) -> bool {
 
 /// Whether a file holds a proof of ruling `number`, in its own idiom for a test name.
 fn proves(path: &str, src: &str, number: u64) -> Result<bool, String> {
-    let extension = Path::new(path).extension().map(|ext| ext.to_string_lossy().into_owned()).unwrap_or_default();
+    let extension = Path::new(path)
+        .extension()
+        .map(|ext| ext.to_string_lossy().into_owned())
+        .unwrap_or_default();
     if extension == "rs" {
-        return Ok(rust_item_names(src).iter().any(|(_, name)| name_tokens(name).contains(&number)));
+        return Ok(rust_item_names(src)
+            .iter()
+            .any(|(_, name)| name_tokens(name).contains(&number)));
     }
     if extension == "sql" {
-        return Ok(sql_headings(src).iter().any(|heading| sql_heading_names(heading, number)));
+        return Ok(sql_headings(src)
+            .iter()
+            .any(|heading| sql_heading_names(heading, number)));
     }
     if TS_EXTENSIONS.contains(&extension.as_str()) {
         return Ok(ts_test_titles(src)
@@ -550,16 +576,24 @@ fn proves(path: &str, src: &str, number: u64) -> Result<bool, String> {
 /* --------------------------------------------------------------------------------- the walk */
 
 fn relative(root: &Path, path: &Path) -> String {
-    path.strip_prefix(root).unwrap_or(path).to_string_lossy().replace('\\', "/")
+    path.strip_prefix(root)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .replace('\\', "/")
 }
 
 /// Every file under `dir`, recursively and in name order, skipping SKIPPED_DIRS.
 fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = fs::read_dir(dir) else { return };
-    let mut paths: Vec<PathBuf> = entries.filter_map(|entry| entry.ok().map(|entry| entry.path())).collect();
+    let mut paths: Vec<PathBuf> = entries
+        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+        .collect();
     paths.sort();
     for path in paths {
-        let name = path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
+        let name = path
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_default();
         if path.is_dir() {
             if !SKIPPED_DIRS.contains(&name.as_str()) {
                 walk(&path, out);
@@ -596,7 +630,14 @@ fn wiki_links(text: &str) -> Vec<(usize, String, String)> {
             let after = &rest[open + 2..];
             let Some(close) = after.find("]]") else { break };
             let inner = &after[..close];
-            let target = inner.split('|').next().unwrap_or("").split('#').next().unwrap_or("").trim();
+            let target = inner
+                .split('|')
+                .next()
+                .unwrap_or("")
+                .split('#')
+                .next()
+                .unwrap_or("")
+                .trim();
             links.push((index + 1, inner.to_string(), target.to_string()));
             rest = &after[close + 2..];
         }
@@ -630,7 +671,10 @@ fn section_ids(text: &str) -> Vec<String> {
     let mut ids = Vec::new();
     for line in text.lines() {
         if let Some(rest) = line.strip_prefix("### ") {
-            let id: String = rest.chars().take_while(|c| c.is_ascii_digit() || *c == '.').collect();
+            let id: String = rest
+                .chars()
+                .take_while(|c| c.is_ascii_digit() || *c == '.')
+                .collect();
             let id = id.trim_end_matches('.');
             if !id.is_empty() && rest[id.len()..].starts_with([' ', '.']) {
                 ids.push(id.to_string());
@@ -663,7 +707,11 @@ fn check(root: &Path) -> Result<()> {
             continue;
         };
         if note.stem != note_stem(number) {
-            problems.push(format!("{}: `id: {id}` belongs in {}.md", note.path, note_stem(number)));
+            problems.push(format!(
+                "{}: `id: {id}` belongs in {}.md",
+                note.path,
+                note_stem(number)
+            ));
         }
         if let Some(other) = ids.get(&number) {
             problems.push(format!("{}: R{number} is also the id of {other}", note.path));
@@ -676,7 +724,9 @@ fn check(root: &Path) -> Result<()> {
     let mut proofs = 0usize;
     let mut sources: BTreeMap<String, Option<String>> = BTreeMap::new();
     for note in &notes {
-        let Some(number) = note.id.as_deref().and_then(ruling_number) else { continue };
+        let Some(number) = note.id.as_deref().and_then(ruling_number) else {
+            continue;
+        };
         if note.proven_in.is_empty() {
             problems.push(format!("{}: R{number} lists no `proven_in` file", note.path));
         }
@@ -707,11 +757,16 @@ fn check(root: &Path) -> Result<()> {
     let mut cited = 0usize;
     let mut citing_files = 0usize;
     for file in &files {
-        let extension = file.extension().map(|ext| ext.to_string_lossy().into_owned()).unwrap_or_default();
+        let extension = file
+            .extension()
+            .map(|ext| ext.to_string_lossy().into_owned())
+            .unwrap_or_default();
         if !CODE_EXTENSIONS.contains(&extension.as_str()) {
             continue;
         }
-        let Ok(text) = fs::read_to_string(file) else { continue };
+        let Ok(text) = fs::read_to_string(file) else {
+            continue;
+        };
         let path = relative(root, file);
         let found = citations(&text);
         if !found.is_empty() {
@@ -720,14 +775,19 @@ fn check(root: &Path) -> Result<()> {
         for (offset, number) in found {
             cited += 1;
             if !ids.contains_key(&number) {
-                problems.push(format!("{path}:{}: R{number} has no note in spec/rulings/", line_of(&text, offset)));
+                problems.push(format!(
+                    "{path}:{}: R{number} has no note in spec/rulings/",
+                    line_of(&text, offset)
+                ));
             }
         }
         if extension == "rs" {
             for (line, name) in rust_item_names(&text) {
                 for number in name_tokens(&name) {
                     if !ids.contains_key(&number) {
-                        problems.push(format!("{path}:{line}: `{name}` names r{number}, which has no note in spec/rulings/"));
+                        problems.push(format!(
+                            "{path}:{line}: `{name}` names r{number}, which has no note in spec/rulings/"
+                        ));
                     }
                 }
             }
@@ -761,7 +821,9 @@ fn check(root: &Path) -> Result<()> {
                 stems.contains(&target)
             };
             if !resolves {
-                problems.push(format!("{path}:{line}: [[{inner}]] resolves to no note or section"));
+                problems.push(format!(
+                    "{path}:{line}: [[{inner}]] resolves to no note or section"
+                ));
             }
         }
     }
@@ -784,8 +846,12 @@ fn check(root: &Path) -> Result<()> {
 fn render_index(notes: &[RulingNote]) -> Result<String> {
     let mut rows: Vec<(u64, &RulingNote)> = Vec::with_capacity(notes.len());
     for note in notes {
-        let id = note.id.as_deref().with_context(|| format!("{}: no `id` in the front matter", note.path))?;
-        let number = ruling_number(id).with_context(|| format!("{}: `id: {id}` is not a ruling id", note.path))?;
+        let id = note
+            .id
+            .as_deref()
+            .with_context(|| format!("{}: no `id` in the front matter", note.path))?;
+        let number =
+            ruling_number(id).with_context(|| format!("{}: `id: {id}` is not a ruling id", note.path))?;
         rows.push((number, note));
     }
     rows.sort_by_key(|(number, _)| *number);
@@ -795,7 +861,11 @@ fn render_index(notes: &[RulingNote]) -> Result<String> {
         let title = note.title.as_deref().unwrap_or("").replace('|', "\\|");
         let stem = &note.stem;
         let proofs: Vec<String> = note.proven_in.iter().map(|path| format!("`{path}`")).collect();
-        writeln!(out, "| {id} | {title} | [{stem}](rulings/{stem}.md) | {} |", proofs.join(", "))?;
+        writeln!(
+            out,
+            "| {id} | {title} | [{stem}](rulings/{stem}.md) | {} |",
+            proofs.join(", ")
+        )?;
     }
     Ok(out)
 }
@@ -819,7 +889,10 @@ mod tests {
     fn reads_a_ruling_notes_front_matter() {
         let note = parse_note("spec/rulings/R0195.md".into(), "R0195".into(), NOTE).unwrap();
         assert_eq!(note.id.as_deref(), Some("R195"));
-        assert_eq!(note.title.as_deref(), Some("When a card glows yellow (`conditionActive`)"));
+        assert_eq!(
+            note.title.as_deref(),
+            Some("When a card glows yellow (`conditionActive`)")
+        );
         assert_eq!(
             note.proven_in,
             vec![
@@ -857,8 +930,10 @@ mod tests {
     #[test]
     fn finds_citations_as_words_only() {
         // Only ids with a note here: this file is itself in what `check` reads (rule 3).
-        let found: Vec<u64> =
-            citations("R1, (R113), R113's, R244–R245; XR5, R5a, R_6, R0195").into_iter().map(|(_, n)| n).collect();
+        let found: Vec<u64> = citations("R1, (R113), R113's, R244–R245; XR5, R5a, R_6, R0195")
+            .into_iter()
+            .map(|(_, n)| n)
+            .collect();
         assert_eq!(found, vec![1, 113, 113, 244, 245, 195]);
     }
 
@@ -866,7 +941,10 @@ mod tests {
     fn reads_ruling_tokens_from_rust_item_names() {
         let src = "#[test]\nfn r90_r81_no_legal_target() {}\nmod r195_glow {\n    fn plain() {}\n}\n// fn r999_commented() {}\nfn arr195_not() {}\nlet s = \"fn r998_in_a_string\";\n";
         let names: Vec<String> = rust_item_names(src).into_iter().map(|(_, name)| name).collect();
-        assert_eq!(names, vec!["r90_r81_no_legal_target", "r195_glow", "plain", "arr195_not"]);
+        assert_eq!(
+            names,
+            vec!["r90_r81_no_legal_target", "r195_glow", "plain", "arr195_not"]
+        );
         assert_eq!(name_tokens("r90_r81_no_legal_target"), vec![90, 81]);
         assert_eq!(name_tokens("arr195_not"), Vec::<u64>::new());
         assert_eq!(name_tokens("glows_r195"), vec![195]);
@@ -880,14 +958,25 @@ mod tests {
         let src = "/* a\nblock */\nfn r7_x() {}\n";
         assert_eq!(rust_item_names(src), vec![(3, "r7_x".to_string())]);
         let lifetimes = "fn r8_y<'a>(x: &'a str) -> char { '\"' }\nfn r9_z() {}\n";
-        let names: Vec<String> = rust_item_names(lifetimes).into_iter().map(|(_, name)| name).collect();
+        let names: Vec<String> = rust_item_names(lifetimes)
+            .into_iter()
+            .map(|(_, name)| name)
+            .collect();
         assert_eq!(names, vec!["r8_y", "r9_z"]);
     }
 
     #[test]
     fn reads_typescript_test_titles() {
         let src = "describe(\"R143 — the optional seed\", () => {\n  it(\"plays (R112)\", () => {});\n  it.skip('R5 skipped', () => {});\n  test(`R191 B5 ${row.name}`, () => {});\n  submit(\"R7 not a test\");\n});\n";
-        assert_eq!(ts_test_titles(src), vec!["R143 — the optional seed", "plays (R112)", "R5 skipped", "R191 B5 ${row.name}"]);
+        assert_eq!(
+            ts_test_titles(src),
+            vec![
+                "R143 — the optional seed",
+                "plays (R112)",
+                "R5 skipped",
+                "R191 B5 ${row.name}"
+            ]
+        );
         assert!(proves("a.test.ts", src, 112).unwrap());
         assert!(proves("a.test.tsx", src, 191).unwrap());
         assert!(!proves("a.test.ts", src, 7).unwrap());
@@ -913,7 +1002,10 @@ mod tests {
     #[test]
     fn finds_links_outside_code() {
         let text = "See [[R113]] and [[§10.3]], `[[R1]]` is code.\n```\n[[R2]]\n```\n[[INDEX|the index]] [[11-rulings#provenance]]\n";
-        let targets: Vec<String> = wiki_links(text).into_iter().map(|(_, _, target)| target).collect();
+        let targets: Vec<String> = wiki_links(text)
+            .into_iter()
+            .map(|(_, _, target)| target)
+            .collect();
         assert_eq!(targets, vec!["R113", "§10.3", "INDEX", "11-rulings"]);
         assert_eq!(wiki_links(text)[2].0, 5);
     }
@@ -927,8 +1019,18 @@ mod tests {
     #[test]
     fn renders_the_index_in_id_order() {
         let notes = vec![
-            parse_note("spec/rulings/R0010.md".into(), "R0010".into(), "---\nid: R10\ntitle: a | b\nproven_in: []\n---\n").unwrap(),
-            parse_note("spec/rulings/R0002.md".into(), "R0002".into(), "---\nid: R2\ntitle: Two\nproven_in:\n  - x.rs\n  - y.ts\n---\n").unwrap(),
+            parse_note(
+                "spec/rulings/R0010.md".into(),
+                "R0010".into(),
+                "---\nid: R10\ntitle: a | b\nproven_in: []\n---\n",
+            )
+            .unwrap(),
+            parse_note(
+                "spec/rulings/R0002.md".into(),
+                "R0002".into(),
+                "---\nid: R2\ntitle: Two\nproven_in:\n  - x.rs\n  - y.ts\n---\n",
+            )
+            .unwrap(),
         ];
         let out = render_index(&notes).unwrap();
         assert!(out.starts_with(INDEX_HEADER));

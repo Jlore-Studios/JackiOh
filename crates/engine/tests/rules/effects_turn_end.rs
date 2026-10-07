@@ -78,8 +78,16 @@ fn act(state: &GameState, body: Value) -> Acted {
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&game(seed)).state;
     for player in [PlayerId::P1, PlayerId::P2] {
-        let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
-        state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": player })).state;
+        let keep: Vec<String> = state.players[player]
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
+        state = act(
+            &state,
+            json!({ "type": "mulligan", "keep": keep, "playerId": player }),
+        )
+        .state;
     }
     put(
         &mut state,
@@ -103,7 +111,10 @@ struct Played {
 /// TS put the card in `state`'s hand (the object the caller holds) and played it from there.
 fn play(state: &mut GameState, player: PlayerId, def_id: &str) -> Played {
     let card = in_hand(state, def_id, player, 1).remove(0);
-    let Acted { state: after, events } = act(state, json!({ "type": "play", "instanceId": card.id, "playerId": player }));
+    let Acted { state: after, events } = act(
+        state,
+        json!({ "type": "play", "instanceId": card.id, "playerId": player }),
+    );
     Played {
         state: after,
         events,
@@ -130,12 +141,18 @@ fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
 
 /// TS `list.indexOf(x)`: the first position, or -1.
 fn index_of(types: &[GameEventType], type_: GameEventType) -> i64 {
-    types.iter().position(|entry| *entry == type_).map_or(-1, |at| at as i64)
+    types
+        .iter()
+        .position(|entry| *entry == type_)
+        .map_or(-1, |at| at as i64)
 }
 
 /// TS `list.lastIndexOf(x)`: the last position, or -1.
 fn last_index_of(types: &[GameEventType], type_: GameEventType) -> i64 {
-    types.iter().rposition(|entry| *entry == type_).map_or(-1, |at| at as i64)
+    types
+        .iter()
+        .rposition(|entry| *entry == type_)
+        .map_or(-1, |at| at as i64)
 }
 
 /// `state.players[player].mods.filter((mod) => mod.kind === "turnEnds")`.
@@ -184,7 +201,9 @@ fn owned(ids: &[&str]) -> Vec<String> {
 
 /// TS held the live instance; Rust reads the card again by id.
 fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id).cloned().unwrap_or_else(|| panic!("no card {id} in the state"))
+    find_instance(state, id)
+        .cloned()
+        .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 /// TS wrote through the live instance; Rust writes through the card found by id.
@@ -193,7 +212,11 @@ fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
 }
 
 fn first_cut_in(events: &[GameEvent]) -> Value {
-    to_json(events.iter().find(|event| event.event_type() == GameEventType::TurnCutShort))
+    to_json(
+        events
+            .iter()
+            .find(|event| event.event_type() == GameEventType::TurnCutShort),
+    )
 }
 
 fn to_json<T: Serialize>(value: T) -> Value {
@@ -209,7 +232,10 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
         (Value::Array(actual), Value::Array(expected)) => {
             actual.len() == expected.len()
-                && actual.iter().zip(expected).all(|(found, value)| matches_object(found, value))
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(found, value)| matches_object(found, value))
         }
         _ => actual == expected,
     }
@@ -219,9 +245,14 @@ mod b5_e10_end_your_turn_r456 {
     use super::*;
 
     #[test]
-    fn r456_the_rest_of_the_effect_list_and_of_the_action_resolve_then_the_turn_ends_as_if_end_turn_were_pressed() {
+    fn r456_the_rest_of_the_effect_list_and_of_the_action_resolve_then_the_turn_ends_as_if_end_turn_were_pressed()
+     {
         let mut state = playing("cut");
-        let Played { state: after, events, card } = play(&mut state, PlayerId::P1, &turn_fx::cutter().id);
+        let Played {
+            state: after,
+            events,
+            card,
+        } = play(&mut state, PlayerId::P1, &turn_fx::cutter().id);
 
         assert_eq!(turn_fx::notes(&after), vec!["after the cut"]);
         assert_eq!(after.active, PlayerId::P2);
@@ -232,19 +263,30 @@ mod b5_e10_end_your_turn_r456 {
         );
         let types = types_of(&events);
         // The play resolved whole, then the cut, then every end-of-turn step, then the next turn.
-        assert!(index_of(&types, GameEventType::CardResolved) < index_of(&types, GameEventType::TurnCutShort));
+        assert!(
+            index_of(&types, GameEventType::CardResolved) < index_of(&types, GameEventType::TurnCutShort)
+        );
         assert!(index_of(&types, GameEventType::TurnCutShort) < index_of(&types, GameEventType::TurnEnded));
-        assert!(index_of(&types, GameEventType::TurnEnded) < last_index_of(&types, GameEventType::TurnStarted));
+        assert!(
+            index_of(&types, GameEventType::TurnEnded) < last_index_of(&types, GameEventType::TurnStarted)
+        );
         // Cleanup ran: the turn log was closed and the rider went with the turn.
-        assert_eq!(after.players.p1.turn_log.unspent_at_end, Some(state.players.p1.mana.current));
+        assert_eq!(
+            after.players.p1.turn_log.unspent_at_end,
+            Some(state.players.p1.mana.current)
+        );
         assert!(turn_ends_mods(&after, PlayerId::P1).is_empty());
     }
 
     #[test]
-    fn r456_turn_cut_short_names_its_card_while_the_viewer_may_read_it_and_the_sentinel_once_it_is_in_a_hand_r97() {
+    fn r456_turn_cut_short_names_its_card_while_the_viewer_may_read_it_and_the_sentinel_once_it_is_in_a_hand_r97()
+     {
         let mut state = playing("cut-hidden");
-        let Played { state: after, card, .. } = play(&mut state, PlayerId::P1, &turn_fx::cutter().id);
-        let cut_for = |viewer: PlayerId, at: &GameState| -> Value { first_cut_in(&view_for(at, viewer).events) };
+        let Played {
+            state: after, card, ..
+        } = play(&mut state, PlayerId::P1, &turn_fx::cutter().id);
+        let cut_for =
+            |viewer: PlayerId, at: &GameState| -> Value { first_cut_in(&view_for(at, viewer).events) };
         assert!(matches_object(
             &cut_for(PlayerId::P2, &after),
             &json!({ "player": "p1", "byInstanceId": card.id }),
@@ -263,7 +305,10 @@ mod b5_e10_end_your_turn_r456 {
             &cut_for(PlayerId::P2, &moved),
             &json!({ "player": "p1", "byInstanceId": HIDDEN_ID }),
         ));
-        assert!(matches_object(&cut_for(PlayerId::P1, &moved), &json!({ "byInstanceId": card.id })));
+        assert!(matches_object(
+            &cut_for(PlayerId::P1, &moved),
+            &json!({ "byInstanceId": card.id })
+        ));
     }
 
     #[test]
@@ -299,8 +344,16 @@ mod b5_e10_end_your_turn_r456 {
             result.events
         }
         for player in [PlayerId::P1, PlayerId::P2] {
-            let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
-            step(&mut state, &mut log, json!({ "type": "mulligan", "keep": keep, "playerId": player }));
+            let keep: Vec<String> = state.players[player]
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect();
+            step(
+                &mut state,
+                &mut log,
+                json!({ "type": "mulligan", "keep": keep, "playerId": player }),
+            );
         }
         let held = state
             .players
@@ -310,10 +363,17 @@ mod b5_e10_end_your_turn_r456 {
             .find(|card| card.def_id == turn_fx::cut_asker().id)
             .cloned()
             .expect("the cut asker in p1's opening hand");
-        step(&mut state, &mut log, json!({ "type": "play", "instanceId": held.id, "playerId": "p1" }));
+        step(
+            &mut state,
+            &mut log,
+            json!({ "type": "play", "instanceId": held.id, "playerId": "p1" }),
+        );
 
         // Asked, so the turn has not ended: the rider waits with no actions left.
-        assert_eq!(state.pending.as_ref().map(|pending| pending.player_id), Some(PlayerId::P1));
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.player_id),
+            Some(PlayerId::P1)
+        );
         assert_eq!(state.active, PlayerId::P1);
         assert!(matches_object(
             &turn_ends_json(&state, PlayerId::P1),
@@ -333,7 +393,9 @@ mod b5_e10_end_your_turn_r456 {
         assert_eq!(state.active, PlayerId::P2);
 
         assert_eq!(hash_state(&answer(&copy).state), hash_state(&state));
-        let replayed = fold(&json_as::<FoldArgs>(json!({ "seed": seed, "decks": decks, "log": log })));
+        let replayed = fold(&json_as::<FoldArgs>(
+            json!({ "seed": seed, "decks": decks, "log": log }),
+        ));
         assert!(replayed.errors.is_empty());
         assert_eq!(hash_state(&replayed.state), hash_state(&state));
     }
@@ -348,7 +410,10 @@ mod b5_e10_end_your_turn_r456 {
             // "enemy" is the active player's turn, which exists.
             (end_turn(json_as(json!({ "player": "enemy" }))).apply)(ctx);
         });
-        assert!(matches_object(&turn_ends_json(&state, PlayerId::P1), &json!({ "actionsLeft": 0 })));
+        assert!(matches_object(
+            &turn_ends_json(&state, PlayerId::P1),
+            &json!({ "actionsLeft": 0 })
+        ));
     }
 
     #[test]
@@ -363,21 +428,27 @@ mod b5_e10_end_your_turn_r456 {
         assert_eq!(after.turn, state.turn + 2);
         assert_eq!(after.active, PlayerId::P1);
         let drawn_id = drawn.as_ref().map(|card| card.id.clone());
-        assert!(
-            after
-                .players
-                .p2
-                .units
-                .iter()
-                .any(|pile| pile.as_ref().and_then(|pile| pile.first()).map(|card| card.id.clone()) == drawn_id)
-        );
+        assert!(after.players.p2.units.iter().any(|pile| {
+            pile.as_ref()
+                .and_then(|pile| pile.first())
+                .map(|card| card.id.clone())
+                == drawn_id
+        }));
         assert_eq!(
             to_json(events_of_type(&events, GameEventType::TurnCutShort)),
             json!([{ "type": "turnCutShort", "player": "p2", "byInstanceId": drawn_id }])
         );
         let p2_ended = events
             .iter()
-            .position(|event| matches!(event, GameEvent::TurnEnded { player: PlayerId::P2, .. }))
+            .position(|event| {
+                matches!(
+                    event,
+                    GameEvent::TurnEnded {
+                        player: PlayerId::P2,
+                        ..
+                    }
+                )
+            })
             .map_or(-1, |at| at as i64);
         let cut = events
             .iter()
@@ -391,7 +462,8 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
     use super::*;
 
     #[test]
-    fn r456_radiant_drawn_at_the_start_of_the_turn_the_player_takes_one_action_and_the_turn_ends_once_it_resolves() {
+    fn r456_radiant_drawn_at_the_start_of_the_turn_the_player_takes_one_action_and_the_turn_ends_once_it_resolves()
+     {
         let mut state = playing("one-more-drawn");
         let tempo_id = turn_fx::tempo().id;
         set_library(&mut state, PlayerId::P2, &owned(&[tempo_id.as_str(), "fx-30"]));
@@ -418,7 +490,9 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
                 .is_some_and(|modifiers| modifiers.iter().any(|modifier| matches_object(modifier, &badge)))
         );
 
-        let Played { state: after, events, .. } = play(&mut started, PlayerId::P2, &turn_fx::marker().id);
+        let Played {
+            state: after, events, ..
+        } = play(&mut started, PlayerId::P2, &turn_fx::marker().id);
         assert_eq!(turn_fx::notes(&after), vec!["marker:p2"]);
         assert_eq!(after.active, PlayerId::P1);
         assert_eq!(
@@ -428,7 +502,8 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
     }
 
     #[test]
-    fn r456_the_action_that_sets_the_rider_is_not_counted_a_draw_offer_is_not_an_action_and_a_position_switch_is() {
+    fn r456_the_action_that_sets_the_rider_is_not_counted_a_draw_offer_is_not_an_action_and_a_position_switch_is()
+     {
         let mut state = playing("count");
         let unit = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1), json!({}));
         let turn = state.turn;
@@ -450,7 +525,8 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
     }
 
     #[test]
-    fn r456_the_last_action_ends_the_turn_once_it_has_resolved_its_prompt_included_and_an_answer_is_no_action_of_its_own() {
+    fn r456_the_last_action_ends_the_turn_once_it_has_resolved_its_prompt_included_and_an_answer_is_no_action_of_its_own()
+     {
         let mut state = playing("last-asks");
         let mut set = play(&mut state, PlayerId::P1, &turn_fx::two_more().id).state;
         assert_eq!(turn_ends_json(&set, PlayerId::P1)["actionsLeft"], json!(2));
@@ -459,7 +535,10 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
         assert_eq!(turn_ends_json(&first, PlayerId::P1)["actionsLeft"], json!(1));
 
         let asking = play(&mut first, PlayerId::P1, &turn_fx::questioner().id).state;
-        assert_eq!(asking.pending.as_ref().map(|pending| pending.player_id), Some(PlayerId::P1));
+        assert_eq!(
+            asking.pending.as_ref().map(|pending| pending.player_id),
+            Some(PlayerId::P1)
+        );
         assert_eq!(asking.active, PlayerId::P1);
         assert_eq!(turn_ends_json(&asking, PlayerId::P1)["actionsLeft"], json!(0));
 
@@ -473,12 +552,18 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
     fn r456_ending_the_turn_yourself_uses_the_actions_up_no_cut_and_the_rider_ends_with_the_turn() {
         let mut state = playing("self-end");
         let set = play(&mut state, PlayerId::P1, &turn_fx::one_more().id).state;
-        let Acted { state: mut after, events } = act(&set, json!({ "type": "endTurn", "playerId": "p1" }));
+        let Acted {
+            state: mut after,
+            events,
+        } = act(&set, json!({ "type": "endTurn", "playerId": "p1" }));
         assert!(events_of_type(&events, GameEventType::TurnCutShort).is_empty());
         assert_eq!(after.active, PlayerId::P2);
         assert!(turn_ends_mods(&after, PlayerId::P1).is_empty());
         // p2's own actions are p2's: nothing of p1's rider reaches them.
-        assert_eq!(play(&mut after, PlayerId::P2, &turn_fx::marker().id).state.active, PlayerId::P2);
+        assert_eq!(
+            play(&mut after, PlayerId::P2, &turn_fx::marker().id).state.active,
+            PlayerId::P2
+        );
     }
 
     #[test]
@@ -497,7 +582,11 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
                 Some(&first),
                 HookOptions::default(),
             ));
-            (end_turn(json_as(json!({}))).apply)(&mut make_context(&mut sink, Some(&second), HookOptions::default()));
+            (end_turn(json_as(json!({}))).apply)(&mut make_context(
+                &mut sink,
+                Some(&second),
+                HookOptions::default(),
+            ));
             assert!(matches_object(
                 &turn_ends_json(&*sink.state, PlayerId::P1),
                 &json!({ "actionsLeft": 0, "byInstanceId": second.id }),
@@ -522,8 +611,15 @@ mod b5_e10_the_opponents_trap_ends_the_turn_r456_the_ai_card_rate_limit {
     #[test]
     fn r456_the_play_that_set_it_off_resolves_first_then_the_active_players_turn_ends_named_by_the_trap() {
         let mut state = playing("rate-limit");
-        let trap = put(&mut state, &turn_fx::rate_limit().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
-        let Played { state: after, events, .. } = play(&mut state, PlayerId::P1, &turn_fx::marker().id);
+        let trap = put(
+            &mut state,
+            &turn_fx::rate_limit().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
+        let Played {
+            state: after, events, ..
+        } = play(&mut state, PlayerId::P1, &turn_fx::marker().id);
 
         assert_eq!(turn_fx::notes(&after), vec!["marker:p1"]);
         assert_eq!(after.active, PlayerId::P2);
@@ -532,7 +628,9 @@ mod b5_e10_the_opponents_trap_ends_the_turn_r456_the_ai_card_rate_limit {
             json!([{ "type": "turnCutShort", "player": "p1", "byInstanceId": trap.id }])
         );
         let types = types_of(&events);
-        assert!(index_of(&types, GameEventType::CardResolved) < index_of(&types, GameEventType::TurnCutShort));
+        assert!(
+            index_of(&types, GameEventType::CardResolved) < index_of(&types, GameEventType::TurnCutShort)
+        );
         // The trap fired face-up and went to its graveyard: both players may read what cut the turn.
         for viewer in [PlayerId::P1, PlayerId::P2] {
             assert!(matches_object(

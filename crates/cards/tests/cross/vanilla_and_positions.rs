@@ -54,11 +54,18 @@ fn offers_switch(s: &Scenario, card: &CardInstance) -> bool {
 
 /// `keywords.map((k) => k.kind)`, by the kind's printed name.
 fn kinds(keywords: &[Keyword]) -> Vec<String> {
-    keywords.iter().map(|keyword| keyword.kind().as_str().to_string()).collect()
+    keywords
+        .iter()
+        .map(|keyword| keyword.kind().as_str().to_string())
+        .collect()
 }
 
 fn last_of_type(s: &Scenario, kind: GameEventType) -> Vec<GameEvent> {
-    s.last_events().iter().filter(|event| event.event_type() == kind).cloned().collect()
+    s.last_events()
+        .iter()
+        .filter(|event| event.event_type() == kind)
+        .cloned()
+        .collect()
 }
 
 mod r115_a_vanilla_copy_keeps_none_of_the_cards_text {
@@ -204,9 +211,10 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
         s.play(HIT_JOB, json!({ "targets": at(&rock) }));
 
         assert_eq!(s.card(&rock).position, Some(Position::Atk));
-        assert!(s
-            .last_events()
-            .contains(&GameEvent::PositionSwitched { instance_id: rock.id.clone(), position: Position::Atk }));
+        assert!(s.last_events().contains(&GameEvent::PositionSwitched {
+            instance_id: rock.id.clone(),
+            position: Position::Atk
+        }));
     }
 
     // Found by the probe's silent-change check (a top unit's view changed in an action whose events
@@ -216,16 +224,22 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
     // v0.1.1) has since taken Taunt off every Indestructible unit, so such a unit never has a Taunt
     // for a knock-down to take: it shows none before the destroy and none after, and so reports none.
     #[test]
-    fn r46_r347_r91_an_indestructible_unit_given_taunt_shows_none_so_shrugging_off_a_destroy_changes_nothing_a_view_shows_s10_3() {
+    fn r46_r347_r91_an_indestructible_unit_given_taunt_shows_none_so_shrugging_off_a_destroy_changes_nothing_a_view_shows_s10_3()
+     {
         let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, HINDER], "library": LIBRARY },
             "p2": { "field": [{ "def": ROCK, "lane": 1, "position": "ATK" }], "library": LIBRARY },
         }));
         let rock = s.card(ROCK).clone();
         // A granted Taunt, as #63 Plastic Surgery's roll can give it: R347 holds it off.
-        find_instance_mut(s.state_mut(), &rock.id).expect("The Rock stands").granted_keywords.push(Keyword::Taunt);
+        find_instance_mut(s.state_mut(), &rock.id)
+            .expect("The Rock stands")
+            .granted_keywords
+            .push(Keyword::Taunt);
         assert!(!kinds(&s.stats(&rock).keywords).contains(&"Taunt".to_string()));
-        let shown = s.view(PlayerId::P1).opponent.units[0].clone().expect("p2's unit zone 1 holds The Rock");
+        let shown = s.view(PlayerId::P1).opponent.units[0]
+            .clone()
+            .expect("p2's unit zone 1 holds The Rock");
         assert!(!kinds(&shown.keywords).contains(&"Taunt".to_string()));
 
         // #16 Hit Job: "Destroy target unit". R46: an Indestructible unit that would be destroyed
@@ -234,12 +248,19 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
 
         s.expect_in_zone(&rock, "field");
         assert!(!kinds(&s.stats(&rock).keywords).contains(&"Taunt".to_string()));
-        assert_eq!(last_of_type(&s, GameEventType::PositionSwitched), Vec::<GameEvent>::new());
-        assert_eq!(last_of_type(&s, GameEventType::KeywordGranted), Vec::<GameEvent>::new());
+        assert_eq!(
+            last_of_type(&s, GameEventType::PositionSwitched),
+            Vec::<GameEvent>::new()
+        );
+        assert_eq!(
+            last_of_type(&s, GameEventType::KeywordGranted),
+            Vec::<GameEvent>::new()
+        );
     }
 
     #[test]
-    fn r46_r91_a_unit_with_no_taunt_to_lose_reports_none_the_rock_in_attack_position_is_knocked_down_in_silence() {
+    fn r46_r91_a_unit_with_no_taunt_to_lose_reports_none_the_rock_in_attack_position_is_knocked_down_in_silence()
+     {
         let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, HINDER], "library": LIBRARY },
             "p2": { "field": [{ "def": ROCK, "lane": 1, "position": "ATK" }], "library": LIBRARY },
@@ -247,7 +268,10 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
         let rock = s.card(ROCK).clone();
         assert!(!kinds(&s.stats(&rock).keywords).contains(&"Taunt".to_string()));
         s.play(HIT_JOB, json!({ "targets": at(&rock) }));
-        assert_eq!(last_of_type(&s, GameEventType::KeywordGranted), Vec::<GameEvent>::new());
+        assert_eq!(
+            last_of_type(&s, GameEventType::KeywordGranted),
+            Vec::<GameEvent>::new()
+        );
     }
 }
 
@@ -262,7 +286,8 @@ mod a_units_keywords_are_a_set_s6_1_s10_4_s10_8 {
     use super::*;
 
     #[test]
-    fn s6_1_the_view_lists_each_keyword_a_unit_has_once_however_many_sources_give_it_tempo_timmy_under_jlockeeds_weapons_a_taunt_unit_in_defense_position_s10_4_s10_8() {
+    fn s6_1_the_view_lists_each_keyword_a_unit_has_once_however_many_sources_give_it_tempo_timmy_under_jlockeeds_weapons_a_taunt_unit_in_defense_position_s10_4_s10_8()
+     {
         let s = scenario(json!({
             "p1": {
                 "hand": [HINDER],
@@ -281,7 +306,10 @@ mod a_units_keywords_are_a_set_s6_1_s10_4_s10_8 {
             let Some(Some(unit)) = units.get(lane - 1) else {
                 panic!("no unit in lane {lane}");
             };
-            let mut found: Vec<String> = kinds(&unit.keywords).into_iter().filter(|kind| kind != "Armor").collect();
+            let mut found: Vec<String> = kinds(&unit.keywords)
+                .into_iter()
+                .filter(|kind| kind != "Armor")
+                .collect();
             found.sort();
             found
         };
@@ -291,7 +319,9 @@ mod a_units_keywords_are_a_set_s6_1_s10_4_s10_8 {
         // Right-house defender prints Taunt and Defense Position grants it: one Taunt among its keywords.
         assert_eq!(
             kinds_in(2),
-            ["Divine Shield", "First Strike", "Reborn", "Rush", "Taunt"].map(str::to_string).to_vec()
+            ["Divine Shield", "First Strike", "Reborn", "Rush", "Taunt"]
+                .map(str::to_string)
+                .to_vec()
         );
     }
 }
@@ -317,7 +347,11 @@ mod r243_r115_a_vanilla_units_view_says_its_text_is_gone_s6_3_vanilla_s10_8 {
 
         for viewer in [PlayerId::P1, PlayerId::P2] {
             let view = s.view(viewer);
-            let side = if viewer == PlayerId::P1 { &view.you } else { &view.opponent };
+            let side = if viewer == PlayerId::P1 {
+                &view.you
+            } else {
+                &view.opponent
+            };
             let original = side.units.first().cloned().flatten();
             let vanilla_copy = side.units.get(2).cloned().flatten();
             // Same definition, same printed keywords (Rush) on the original and none on the copy — but

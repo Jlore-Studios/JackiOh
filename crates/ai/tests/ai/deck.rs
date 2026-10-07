@@ -15,10 +15,13 @@
 use std::panic::catch_unwind;
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_ai::{AI_DECK, AiDeckOptions, CostBucket, SHADOW_BAN_IDS, build_ai_deck, cost_bucket, curve_targets};
+use jackioh_ai::{
+    AI_DECK, AiDeckOptions, CostBucket, SHADOW_BAN_IDS, build_ai_deck, cost_bucket, curve_targets,
+};
 use jackioh_engine::testkit::{
-    AI_DIFFICULTY, CardDef, CardType, CatalogQueryArgs, CreateGameOptions, DECK_SIZE, Difficulty, MAX_MANA, PerPlayerOpt,
-    Tag, Value, create_game, create_rng, def_of, json, json_as, query, query_cost, registered_catalog, validate_deck,
+    AI_DIFFICULTY, CardDef, CardType, CatalogQueryArgs, CreateGameOptions, DECK_SIZE, Difficulty, MAX_MANA,
+    PerPlayerOpt, Tag, Value, create_game, create_rng, def_of, json, json_as, query, query_cost,
+    registered_catalog, validate_deck,
 };
 
 use super::support::{ai_pool, register_cards};
@@ -35,7 +38,13 @@ fn options(literal: Value) -> AiDeckOptions {
 fn decks(size: i32, options: &AiDeckOptions, label: &str) -> Vec<Vec<String>> {
     register_cards();
     (0..SEEDS)
-        .map(|i| build_ai_deck(&mut create_rng(&format!("deck-test:{label}:{size}:{}", i + 1), 0), size, options))
+        .map(|i| {
+            build_ai_deck(
+                &mut create_rng(&format!("deck-test:{label}:{size}:{}", i + 1), 0),
+                size,
+                options,
+            )
+        })
         .collect()
 }
 
@@ -100,9 +109,17 @@ mod build_ai_deck_b22 {
 
     fn deals_exactly(size: i32) {
         let pool: IndexSet<String> = ai_pool().into_iter().collect();
-        for (at, deck) in decks(size, &AiDeckOptions::default(), "default").iter().enumerate() {
+        for (at, deck) in decks(size, &AiDeckOptions::default(), "default")
+            .iter()
+            .enumerate()
+        {
             assert_eq!(deck.len(), size as usize, "seed {}", at + 1);
-            assert_eq!(deck.iter().collect::<IndexSet<_>>().len(), size as usize, "seed {}", at + 1);
+            assert_eq!(
+                deck.iter().collect::<IndexSet<_>>().len(),
+                size as usize,
+                "seed {}",
+                at + 1
+            );
             for id in deck {
                 assert!(pool.contains(id), "seed {}: {id}", at + 1);
                 assert!(!is_shadow_banned(id), "seed {}: {id} is shadow-banned", at + 1);
@@ -138,7 +155,8 @@ mod build_ai_deck_b22 {
     }
 
     #[test]
-    fn r390_b22_boost_multiplies_its_ids_weights_so_they_are_dealt_far_more_often_without_it_the_deal_is_unchanged() {
+    fn r390_b22_boost_multiplies_its_ids_weights_so_they_are_dealt_far_more_often_without_it_the_deal_is_unchanged()
+     {
         let ids: Vec<String> = ai_pool()
             .into_iter()
             .filter(|id| !is_shadow_banned(id))
@@ -153,15 +171,26 @@ mod build_ai_deck_b22 {
         let plain = decks(20, &options(json!({})), "boost");
         let boosted = decks(20, &options(json!({ "boost": { "ids": ids, "by": 4 } })), "boost");
         assert!(dealt_of(&boosted) > 2 * dealt_of(&plain));
-        assert_eq!(decks(20, &options(json!({ "boost": { "ids": ids, "by": 1 } })), "boost"), plain);
+        assert_eq!(
+            decks(20, &options(json!({ "boost": { "ids": ids, "by": 1 } })), "boost"),
+            plain
+        );
     }
 
     #[test]
     fn b22_the_same_seed_deals_the_same_deck_and_different_seeds_deal_different_decks() {
         register_cards();
         for size in SIZES {
-            let one = build_ai_deck(&mut create_rng("deck-test-same", 0), size, &AiDeckOptions::default());
-            let two = build_ai_deck(&mut create_rng("deck-test-same", 0), size, &AiDeckOptions::default());
+            let one = build_ai_deck(
+                &mut create_rng("deck-test-same", 0),
+                size,
+                &AiDeckOptions::default(),
+            );
+            let two = build_ai_deck(
+                &mut create_rng("deck-test-same", 0),
+                size,
+                &AiDeckOptions::default(),
+            );
             assert_eq!(two, one);
         }
         let distinct: IndexSet<String> = decks(20, &AiDeckOptions::default(), "default")
@@ -177,13 +206,18 @@ mod build_ai_deck_b22 {
     #[test]
     fn b22_every_include_id_is_dealt_over_200_seeds() {
         // Only unbanned ids may be forced in, so pick three the shadow ban leaves alone.
-        let include: Vec<&str> = ["core-019", "core-044", "core-072", "core-008", "core-011", "core-020", "core-025"]
-            .into_iter()
-            .filter(|id| !is_shadow_banned(id))
-            .take(3)
-            .collect();
+        let include: Vec<&str> = [
+            "core-019", "core-044", "core-072", "core-008", "core-011", "core-020", "core-025",
+        ]
+        .into_iter()
+        .filter(|id| !is_shadow_banned(id))
+        .take(3)
+        .collect();
         assert_eq!(include.len(), 3);
-        for (at, deck) in decks(25, &options(json!({ "include": include })), "include").iter().enumerate() {
+        for (at, deck) in decks(25, &options(json!({ "include": include })), "include")
+            .iter()
+            .enumerate()
+        {
             for id in &include {
                 assert!(deck.iter().any(|dealt| dealt == id), "seed {}", at + 1);
             }
@@ -194,7 +228,10 @@ mod build_ai_deck_b22 {
     #[test]
     fn b22_an_explicit_ban_list_is_honoured_instead_of_the_default() {
         let banned: Vec<String> = ai_pool().into_iter().take(15).collect();
-        for (at, deck) in decks(30, &options(json!({ "banned": banned })), "banned").iter().enumerate() {
+        for (at, deck) in decks(30, &options(json!({ "banned": banned })), "banned")
+            .iter()
+            .enumerate()
+        {
             for id in &banned {
                 assert!(!deck.contains(id), "seed {}", at + 1);
             }
@@ -353,7 +390,11 @@ mod the_curve_and_the_theme_b23 {
     }
 
     fn curve_within_tolerance(size: i32, mana_cap: i32) {
-        let all = decks(size, &options(json!({ "manaCap": mana_cap })), &format!("curve-{mana_cap}"));
+        let all = decks(
+            size,
+            &options(json!({ "manaCap": mana_cap })),
+            &format!("curve-{mana_cap}"),
+        );
         let shares = mean_shares(&all);
         let targets = per_bucket(targets_of(size, mana_cap));
         for bucket in BUCKETS {
@@ -444,7 +485,10 @@ mod the_curve_and_the_theme_b23 {
         let pool = query(&CatalogQueryArgs::default());
         let pool_share = pool.iter().filter(|def| is_human(def)).count() as f64 / pool.len() as f64;
         for size in SIZES {
-            let share = mean_share_where(&decks(size, &options(json!({ "theme": "Human" })), "human"), is_human);
+            let share = mean_share_where(
+                &decks(size, &options(json!({ "theme": "Human" })), "human"),
+                is_human,
+            );
             assert!(share >= AI_DECK.theme_min_share, "size {size}");
             assert!(share > pool_share, "size {size}");
         }
@@ -488,7 +532,10 @@ mod the_curve_and_the_theme_b23 {
 
     #[test]
     fn b23_theme_null_rolls_no_theme_so_the_human_share_stays_below_a_themed_decks() {
-        let themed = mean_share_where(&decks(20, &options(json!({ "theme": "Human" })), "themed"), is_human);
+        let themed = mean_share_where(
+            &decks(20, &options(json!({ "theme": "Human" })), "themed"),
+            is_human,
+        );
         // TS's `theme: null` (no theme), told apart from an absent theme (roll one): `Some(None)`.
         let no_theme = AiDeckOptions {
             theme: Some(None),

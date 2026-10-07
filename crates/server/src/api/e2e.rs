@@ -214,7 +214,10 @@ pub struct E2ESeedOptions {
 
 impl Default for E2ESeedOptions {
     fn default() -> E2ESeedOptions {
-        E2ESeedOptions { accounts: E2E_ACCOUNTS, codes: E2E_INVITE_CODES }
+        E2ESeedOptions {
+            accounts: E2E_ACCOUNTS,
+            codes: E2E_INVITE_CODES,
+        }
     }
 }
 
@@ -239,7 +242,9 @@ pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Resul
     assert_fixture_codes_are_redeemable(&codes)?;
 
     let Db::Fake(store) = &app.db else {
-        return Err(ApiError::internal("R144's reseed needs the in-memory store; this server holds Postgres"));
+        return Err(ApiError::internal(
+            "R144's reseed needs the in-memory store; this server holds Postgres",
+        ));
     };
     store.lock().await.reset();
 
@@ -267,7 +272,11 @@ pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Resul
     }
 
     let mut written: Vec<E2EInviteCodeKind> = Vec::new();
-    for kind in [E2EInviteCodeKind::Good, E2EInviteCodeKind::Expired, E2EInviteCodeKind::Exhausted] {
+    for kind in [
+        E2EInviteCodeKind::Good,
+        E2EInviteCodeKind::Expired,
+        E2EInviteCodeKind::Exhausted,
+    ] {
         let code = invite_code_for(app, kind, codes.of(kind), now);
         let mut tx = app.db.begin(None).await?;
         tx.codes_insert(&code).await?;
@@ -288,7 +297,11 @@ pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Resul
         }),
     );
 
-    Ok(E2ESeedSummary { profiles, granted_cards, codes: written })
+    Ok(E2ESeedSummary {
+        profiles,
+        granted_cards,
+        codes: written,
+    })
 }
 
 fn invite_code_for(app: &App, kind: E2EInviteCodeKind, plain: &str, now: i64) -> InviteCode {
@@ -305,8 +318,14 @@ fn invite_code_for(app: &App, kind: E2EInviteCodeKind, plain: &str, now: i64) ->
         created_at: now,
     };
     match kind {
-        E2EInviteCodeKind::Expired => InviteCode { expires_at: Some(now - EXPIRED_CODE_AGE_MS), ..base },
-        E2EInviteCodeKind::Exhausted => InviteCode { uses: FIXTURE_CODE_MAX_USES, ..base },
+        E2EInviteCodeKind::Expired => InviteCode {
+            expires_at: Some(now - EXPIRED_CODE_AGE_MS),
+            ..base
+        },
+        E2EInviteCodeKind::Exhausted => InviteCode {
+            uses: FIXTURE_CODE_MAX_USES,
+            ..base
+        },
         E2EInviteCodeKind::Good | E2EInviteCodeKind::Missing => base,
     }
 }

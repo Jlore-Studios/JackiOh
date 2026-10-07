@@ -7,8 +7,8 @@
 //! Port of `packages/engine/test/effects-tune.test.ts`.
 
 use jackioh_engine::effects::{
-    TuneDirection, applicable_changes, degrade, set_number, shuffle_copies_of_self, shuffle_into, summon_copy,
-    transform, tune_once, upgrade,
+    TuneDirection, applicable_changes, degrade, set_number, shuffle_copies_of_self, shuffle_into,
+    summon_copy, transform, tune_once, upgrade,
 };
 use jackioh_engine::testkit::*;
 use serde::Serialize;
@@ -139,7 +139,10 @@ fn tuned(events: &[GameEvent], type_: GameEventType) -> Vec<Tuned> {
 
 /// TS `card(state, defId, player = "p1")`: a fresh card of that definition in the player's hand.
 fn card(state: &mut GameState, def_id: &str) -> CardInstance {
-    in_hand(state, def_id, PlayerId::P1, 1).into_iter().next().expect("no card")
+    in_hand(state, def_id, PlayerId::P1, 1)
+        .into_iter()
+        .next()
+        .expect("no card")
 }
 
 /// TS `string[]` for the harness's `setLibrary`, from the ids as written.
@@ -149,7 +152,9 @@ fn owned(ids: &[&str]) -> Vec<String> {
 
 /// TS held the live instance and read it after an effect; Rust reads the card again by id.
 fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id).cloned().unwrap_or_else(|| panic!("no card {id} in the state"))
+    find_instance(state, id)
+        .cloned()
+        .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 /// TS wrote through the live instance; Rust writes through the card found by id.
@@ -164,7 +169,11 @@ fn rows(state: &GameState, id: &str, direction: TuneDirection) -> Value {
 
 /// `card.tuning?.x?.[key]`.
 fn x_tuning(card: &CardInstance, key: &str) -> Option<i32> {
-    card.tuning.as_ref().and_then(|tuning| tuning.x.as_ref()).and_then(|x| x.get(key)).copied()
+    card.tuning
+        .as_ref()
+        .and_then(|tuning| tuning.x.as_ref())
+        .and_then(|x| x.get(key))
+        .copied()
 }
 
 fn tuning(literal: Value) -> Option<Tuning> {
@@ -197,7 +206,10 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
         (Value::Array(actual), Value::Array(expected)) => {
             actual.len() == expected.len()
-                && actual.iter().zip(expected).all(|(found, value)| matches_object(found, value))
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(found, value)| matches_object(found, value))
         }
         _ => actual == expected,
     }
@@ -239,7 +251,10 @@ mod b3_4_the_menu_row_by_row_r386 {
             ])
         );
         assert_eq!(live(&state, &spell.id).cost_mod, 3);
-        assert_eq!(effective_cost(&state, &live(&state, &spell.id), Default::default()), TUNE_COST_CAP);
+        assert_eq!(
+            effective_cost(&state, &live(&state, &spell.id), Default::default()),
+            TUNE_COST_CAP
+        );
         assert_eq!(rows(&state, &spell.id, TuneDirection::Degrade), json!([]));
 
         let upgraded = run(
@@ -247,8 +262,14 @@ mod b3_4_the_menu_row_by_row_r386 {
             upgrade(json_as(json!({ "instanceId": spell.id, "times": 5 }))),
             RunOptions::default(),
         );
-        assert_eq!(change_kinds(&upgraded), vec!["cost", "cost", "cost", "cost", "none"]);
-        assert_eq!(effective_cost(&state, &live(&state, &spell.id), Default::default()), 0);
+        assert_eq!(
+            change_kinds(&upgraded),
+            vec!["cost", "cost", "cost", "cost", "none"]
+        );
+        assert_eq!(
+            effective_cost(&state, &live(&state, &spell.id), Default::default()),
+            0
+        );
     }
 
     #[test]
@@ -263,13 +284,24 @@ mod b3_4_the_menu_row_by_row_r386 {
     fn r386_stats_a_degrades_4_split_floors_attack_at_0_and_current_health_at_1_the_floors_share_lost() {
         for seed in 1..=25 {
             let mut state = game(&format!("stats-{seed}"));
-            let unit = put(&mut state, &instance_fx::dear_body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+            let unit = put(
+                &mut state,
+                &instance_fx::dear_body.id,
+                slot(PlayerId::P1, Row::Units, 1),
+                json!({}),
+            );
             live_mut(&mut state, &unit.id).damage = 1;
             // (4) already: the stats are the only row, so each application is one draw, the split.
             assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["stats"]));
             let before = unit_view(&state, &live(&state, &unit.id));
-            let change = changes(&once(&mut state, &unit.id, TuneDirection::Degrade)).into_iter().next();
-            let Some(TuningChange::Stats { attack: d_attack, health: d_health }) = change else {
+            let change = changes(&once(&mut state, &unit.id, TuneDirection::Degrade))
+                .into_iter()
+                .next();
+            let Some(TuningChange::Stats {
+                attack: d_attack,
+                health: d_health,
+            }) = change
+            else {
                 panic!("expected a stats change");
             };
             let after = unit_view(&state, &live(&state, &unit.id));
@@ -285,20 +317,41 @@ mod b3_4_the_menu_row_by_row_r386 {
     }
 
     #[test]
-    fn r386_stats_an_upgrades_4_split_moves_max_health_on_the_field_and_the_face_a_hand_card_will_enter_with() {
+    fn r386_stats_an_upgrades_4_split_moves_max_health_on_the_field_and_the_face_a_hand_card_will_enter_with()
+    {
         for seed in 1..=10 {
             let mut state = game(&format!("up-{seed}"));
-            let unit = put(&mut state, &instance_fx::dear_body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+            let unit = put(
+                &mut state,
+                &instance_fx::dear_body.id,
+                slot(PlayerId::P1, Row::Units, 1),
+                json!({}),
+            );
             live_mut(&mut state, &unit.id).damage = 1;
-            let change = changes(&once(&mut state, &unit.id, TuneDirection::Upgrade)).into_iter().next();
-            if let Some(TuningChange::Stats { attack: d_attack, health: d_health }) = change {
+            let change = changes(&once(&mut state, &unit.id, TuneDirection::Upgrade))
+                .into_iter()
+                .next();
+            if let Some(TuningChange::Stats {
+                attack: d_attack,
+                health: d_health,
+            }) = change
+            {
                 assert_eq!(d_attack + d_health, 4);
-                assert_eq!(unit_view(&state, &live(&state, &unit.id)).max_health, 2 + d_health);
+                assert_eq!(
+                    unit_view(&state, &live(&state, &unit.id)).max_health,
+                    2 + d_health
+                );
                 assert_eq!(unit_view(&state, &live(&state, &unit.id)).health, 1 + d_health);
             }
             let held = card(&mut state, &instance_fx::dear_body.id);
-            let in_hand_change = changes(&once(&mut state, &held.id, TuneDirection::Upgrade)).into_iter().next();
-            if let Some(TuningChange::Stats { attack: d_attack, health: d_health }) = in_hand_change {
+            let in_hand_change = changes(&once(&mut state, &held.id, TuneDirection::Upgrade))
+                .into_iter()
+                .next();
+            if let Some(TuningChange::Stats {
+                attack: d_attack,
+                health: d_health,
+            }) = in_hand_change
+            {
                 assert_eq!(
                     to_json(stats_with_buffs(&state, &live(&state, &held.id))),
                     json!({ "attack": 2 + d_attack, "maxHealth": 2 + d_health })
@@ -308,10 +361,16 @@ mod b3_4_the_menu_row_by_row_r386 {
     }
 
     #[test]
-    fn r386_keyword_a_degrade_takes_one_the_card_has_of_its_own_never_a_harmful_one_nor_one_its_position_lends() {
+    fn r386_keyword_a_degrade_takes_one_the_card_has_of_its_own_never_a_harmful_one_nor_one_its_position_lends()
+     {
         for seed in 1..=25 {
             let mut state = game(&format!("kw-{seed}"));
-            let unit = put(&mut state, &instance_fx::shackled.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+            let unit = put(
+                &mut state,
+                &instance_fx::shackled.id,
+                slot(PlayerId::P1, Row::Units, 1),
+                json!({}),
+            );
             {
                 let card = live_mut(&mut state, &unit.id);
                 card.position = Some(Position::Def);
@@ -320,7 +379,9 @@ mod b3_4_the_menu_row_by_row_r386 {
                 card.tuning = tuning(json!({ "attack": -2 })); // 0/1: no stats row either
             }
             assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["keyword"]));
-            let change = changes(&once(&mut state, &unit.id, TuneDirection::Degrade)).into_iter().next();
+            let change = changes(&once(&mut state, &unit.id, TuneDirection::Degrade))
+                .into_iter()
+                .next();
             assert_eq!(
                 to_json(change),
                 json!({ "kind": "keyword", "keyword": { "kind": "Rush" }, "added": false })
@@ -341,7 +402,12 @@ mod b3_4_the_menu_row_by_row_r386 {
     #[test]
     fn r386_keyword_a_removed_keyword_goes_whether_it_was_printed_added_by_an_upgrade_or_granted() {
         let mut state = game("tune");
-        let unit = put(&mut state, &instance_fx::shackled.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &instance_fx::shackled.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         {
             let card = live_mut(&mut state, &unit.id);
             card.granted_keywords = vec![Keyword::Rush, Keyword::Pierce];
@@ -390,9 +456,19 @@ mod b3_4_the_menu_row_by_row_r386 {
     fn r386_keyword_an_upgrade_adds_one_from_r21_pool_that_a_unit_lacks_never_to_a_spell_or_a_vanilla_unit() {
         for seed in 1..=15 {
             let mut state = game(&format!("add-{seed}"));
-            let unit = put(&mut state, &instance_fx::free_body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-            assert_eq!(rows(&state, &unit.id, TuneDirection::Upgrade), json!(["stats", "keyword"]));
-            let change = changes(&once(&mut state, &unit.id, TuneDirection::Upgrade)).into_iter().next();
+            let unit = put(
+                &mut state,
+                &instance_fx::free_body.id,
+                slot(PlayerId::P1, Row::Units, 1),
+                json!({}),
+            );
+            assert_eq!(
+                rows(&state, &unit.id, TuneDirection::Upgrade),
+                json!(["stats", "keyword"])
+            );
+            let change = changes(&once(&mut state, &unit.id, TuneDirection::Upgrade))
+                .into_iter()
+                .next();
             if let Some(TuningChange::Keyword { keyword, added }) = change {
                 assert!(added);
                 let now = live(&state, &unit.id);
@@ -405,10 +481,21 @@ mod b3_4_the_menu_row_by_row_r386 {
         }
         let mut state = game("tune");
         let constant = card(&mut state, &instance_fx::constant.id);
-        assert_eq!(rows(&state, &constant.id, TuneDirection::Upgrade), json!(["cost"]));
-        let silenced = put(&mut state, &instance_fx::free_body.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        assert_eq!(
+            rows(&state, &constant.id, TuneDirection::Upgrade),
+            json!(["cost"])
+        );
+        let silenced = put(
+            &mut state,
+            &instance_fx::free_body.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         live_mut(&mut state, &silenced.id).vanilla = true;
-        assert_eq!(rows(&state, &silenced.id, TuneDirection::Upgrade), json!(["stats"]));
+        assert_eq!(
+            rows(&state, &silenced.id, TuneDirection::Upgrade),
+            json!(["stats"])
+        );
     }
 
     #[test]
@@ -416,23 +503,40 @@ mod b3_4_the_menu_row_by_row_r386 {
         let mut state = game("tune");
         let unit = card(&mut state, &instance_fx::numbered_body.id);
         live_mut(&mut state, &unit.id).cost_mod = TUNE_COST_CAP - 1;
-        assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["stats", "keyword", "x"]));
+        assert_eq!(
+            rows(&state, &unit.id, TuneDirection::Degrade),
+            json!(["stats", "keyword", "x"])
+        );
         let keyword_numbers = |state: &GameState| -> Value {
             let mut out = serde_json::Map::new();
             for number in numbers(state, &unit.id) {
                 if number["ref"]["kind"] == "keyword" {
-                    out.insert(number["label"].as_str().unwrap_or_default().to_string(), number["value"].clone());
+                    out.insert(
+                        number["label"].as_str().unwrap_or_default().to_string(),
+                        number["value"].clone(),
+                    );
                 }
             }
             Value::Object(out)
         };
-        assert_eq!(keyword_numbers(&state), json!({ "Armor": 2, "Lucky": 1, "Spell Damage": 1 }));
+        assert_eq!(
+            keyword_numbers(&state),
+            json!({ "Armor": 2, "Lucky": 1, "Spell Damage": 1 })
+        );
         // The X row alone, by hand: Armor is the only one a Degrade can move.
         live_mut(&mut state, &unit.id).tuning = tuning(json!({ "x": { "Armor": -1 } }));
-        assert_eq!(keyword_numbers(&state), json!({ "Armor": 1, "Lucky": 1, "Spell Damage": 1 }));
-        assert!(stats_of_keywords(&state, &live(&state, &unit.id)).contains(&json!({ "kind": "Armor", "n": 1 })));
+        assert_eq!(
+            keyword_numbers(&state),
+            json!({ "Armor": 1, "Lucky": 1, "Spell Damage": 1 })
+        );
+        assert!(
+            stats_of_keywords(&state, &live(&state, &unit.id)).contains(&json!({ "kind": "Armor", "n": 1 }))
+        );
         live_mut(&mut state, &unit.id).tuning = tuning(json!({ "x": { "Lucky": 2, "Spell Damage": 1 } }));
-        assert_eq!(keyword_numbers(&state), json!({ "Armor": 2, "Lucky": 3, "Spell Damage": 2 }));
+        assert_eq!(
+            keyword_numbers(&state),
+            json!({ "Armor": 2, "Lucky": 3, "Spell Damage": 2 })
+        );
     }
 
     #[test]
@@ -442,7 +546,10 @@ mod b3_4_the_menu_row_by_row_r386 {
         let active = card(&mut state, &instance_fx::activator.id);
         let tribute = card(&mut state, &instance_fx::tributer.id);
         let value_of = |state: &GameState, id: &str, key: &str| -> Option<i64> {
-            numbers(state, id).iter().find(|number| number["label"] == key).and_then(|number| number["value"].as_i64())
+            numbers(state, id)
+                .iter()
+                .find(|number| number["label"] == key)
+                .and_then(|number| number["value"].as_i64())
         };
         assert_eq!(
             [
@@ -454,7 +561,11 @@ mod b3_4_the_menu_row_by_row_r386 {
         );
 
         // Upgrade's X row: one better each — Echo 2, Activate 3, Tribute 1.
-        for (id, key) in [(&echo.id, "Echo"), (&active.id, "Activate"), (&tribute.id, "Tribute")] {
+        for (id, key) in [
+            (&echo.id, "Echo"),
+            (&active.id, "Activate"),
+            (&tribute.id, "Tribute"),
+        ] {
             for _ in 0..60 {
                 if x_tuning(&live(&state, id), key).unwrap_or(0) != 0 {
                     break;
@@ -497,16 +608,28 @@ mod b3_4_the_menu_row_by_row_r386 {
         assert_eq!(x_of(&live(&state, &spell.id)), 3);
         // The context a resolution runs in reads it (`resolve.makeContext`).
         let spell = live(&state, &spell.id);
-        let x = with_sink(&mut state, |sink| make_context(sink, Some(&spell), HookOptions::default()).x);
+        let x = with_sink(&mut state, |sink| {
+            make_context(sink, Some(&spell), HookOptions::default()).x
+        });
         assert_eq!(x, 3);
     }
 
     #[test]
     fn r386_x_a_buff_billy_on_the_field_is_its_x_in_stats_and_an_upgrade_of_its_x_grows_it_b2_7() {
         let mut state = game("tune");
-        let mut unit = new_instance(&mut state, &instance_fx::billy.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let mut unit = new_instance(
+            &mut state,
+            &instance_fx::billy.id,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
         unit.x = Some(2);
-        place_on_field(&mut state, &mut unit, slot(PlayerId::P1, Row::Units, 1), PlaceOnFieldOptions::default());
+        place_on_field(
+            &mut state,
+            &mut unit,
+            slot(PlayerId::P1, Row::Units, 1),
+            PlaceOnFieldOptions::default(),
+        );
         assert!(matches_object(
             &to_json(unit_view(&state, &live(&state, &unit.id))),
             &json!({ "attack": 6, "maxHealth": 6 }),
@@ -523,25 +646,47 @@ mod b3_4_the_menu_row_by_row_r386 {
             card.tuning = None;
         }
         let x = json!("x");
-        assert!(!rows(&state, &unit.id, TuneDirection::Degrade).as_array().is_some_and(|rows| rows.contains(&x)));
-        assert!(!rows(&state, &unit.id, TuneDirection::Upgrade).as_array().is_some_and(|rows| rows.contains(&x)));
-        assert_eq!(rows(&state, &unit.id, TuneDirection::Upgrade), json!(["stats", "keyword"]));
+        assert!(
+            !rows(&state, &unit.id, TuneDirection::Degrade)
+                .as_array()
+                .is_some_and(|rows| rows.contains(&x))
+        );
+        assert!(
+            !rows(&state, &unit.id, TuneDirection::Upgrade)
+                .as_array()
+                .is_some_and(|rows| rows.contains(&x))
+        );
+        assert_eq!(
+            rows(&state, &unit.id, TuneDirection::Upgrade),
+            json!(["stats", "keyword"])
+        );
     }
 
     #[test]
     fn r386_x_a_brittle_count_in_force_moves_itself_never_below_1_a_printed_one_not_yet_started_moves_the_number_it_starts_at()
-    {
+     {
         let mut state = game("tune");
-        let unit = put(&mut state, &instance_fx::brittle_unit.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &instance_fx::brittle_unit.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         live_mut(&mut state, &unit.id).cost_mod = TUNE_COST_CAP - 1;
-        assert_eq!(live(&state, &unit.id).brittle.map(|brittle| brittle.count), Some(2));
+        assert_eq!(
+            live(&state, &unit.id).brittle.map(|brittle| brittle.count),
+            Some(2)
+        );
         for _ in 0..60 {
             if live(&state, &unit.id).brittle.map(|brittle| brittle.count) != Some(2) {
                 break;
             }
             once(&mut state, &unit.id, TuneDirection::Degrade);
         }
-        assert_eq!(live(&state, &unit.id).brittle.map(|brittle| brittle.count), Some(1));
+        assert_eq!(
+            live(&state, &unit.id).brittle.map(|brittle| brittle.count),
+            Some(1)
+        );
         let held = card(&mut state, &instance_fx::brittle_unit.id);
         for _ in 0..60 {
             if x_tuning(&live(&state, &held.id), "Brittle").is_some() {
@@ -575,7 +720,9 @@ mod b3_4_the_menu_row_by_row_r386 {
         let mut seen: IndexSet<String> = IndexSet::new();
         for _ in 0..40 {
             if let Some(TuningChange::Number { key, .. }) =
-                changes(&once(&mut state, &spell.id, TuneDirection::Upgrade)).into_iter().next()
+                changes(&once(&mut state, &spell.id, TuneDirection::Upgrade))
+                    .into_iter()
+                    .next()
             {
                 seen.insert(key);
             }
@@ -612,7 +759,12 @@ mod b3_4_rules_1_and_2_the_draw_immutable_n_times_r386_r442 {
     #[test]
     fn r386_an_immutable_card_is_never_changed_and_nothing_is_drawn_for_it() {
         let mut state = game("tune");
-        let unit = put(&mut state, &instance_fx::stoic.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &instance_fx::stoic.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let cursor = state.rng_cursor;
         let events = run(
             &mut state,
@@ -651,8 +803,16 @@ mod b3_4_rules_1_and_2_the_draw_immutable_n_times_r386_r442 {
         once(&mut state, &spell.id, TuneDirection::Degrade);
         assert_eq!(state.rng_cursor, cursor);
 
-        let unit = put(&mut state, &instance_fx::free_body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        assert_eq!(rows(&state, &unit.id, TuneDirection::Upgrade), json!(["stats", "keyword"]));
+        let unit = put(
+            &mut state,
+            &instance_fx::free_body.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        assert_eq!(
+            rows(&state, &unit.id, TuneDirection::Upgrade),
+            json!(["stats", "keyword"])
+        );
         let before = state.rng_cursor;
         once(&mut state, &unit.id, TuneDirection::Upgrade);
         // The row, then the split k or the keyword out of the pool: two draws either way.
@@ -662,7 +822,12 @@ mod b3_4_rules_1_and_2_the_draw_immutable_n_times_r386_r442 {
     #[test]
     fn r386_n_times_is_n_applications_each_reported() {
         let mut state = game("tune");
-        let unit = put(&mut state, &instance_fx::body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &instance_fx::body.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let events = run(
             &mut state,
             upgrade(json_as(json!({ "instanceId": unit.id, "times": 5 }))),
@@ -677,10 +842,14 @@ mod b3_4_rules_1_and_2_the_draw_immutable_n_times_r386_r442 {
     }
 
     #[test]
-    fn r386_a_named_target_reaches_a_card_on_the_field_in_a_hand_or_in_a_deck_one_that_has_ceased_to_exist_is_not_changed() {
+    fn r386_a_named_target_reaches_a_card_on_the_field_in_a_hand_or_in_a_deck_one_that_has_ceased_to_exist_is_not_changed()
+     {
         let mut state = game("tune");
         let constant_id = instance_fx::constant.id.clone();
-        let top = set_library(&mut state, PlayerId::P1, &owned(&[constant_id.as_str()])).into_iter().next().expect("no card");
+        let top = set_library(&mut state, PlayerId::P1, &owned(&[constant_id.as_str()]))
+            .into_iter()
+            .next()
+            .expect("no card");
         let events = run(
             &mut state,
             degrade(json_as(json!({ "target": { "of": "chosen" } }))),
@@ -693,7 +862,9 @@ mod b3_4_rules_1_and_2_the_draw_immutable_n_times_r386_r442 {
         );
         assert_eq!(live(&state, &top.id).cost_mod, 1);
         assert_eq!(
-            tuned(&events, GameEventType::Degraded).first().map(|event| event.hidden_from.clone()),
+            tuned(&events, GameEventType::Degraded)
+                .first()
+                .map(|event| event.hidden_from.clone()),
             Some(Some(vec![PlayerId::P1, PlayerId::P2]))
         );
         live_mut(&mut state, &top.id).zone = Zone::Gone { player: PlayerId::P1 };
@@ -718,24 +889,42 @@ mod b3_4_scopes_and_random_picks_r60_r129_r242_r440 {
     use super::*;
 
     #[test]
-    fn r440_a_random_pick_over_a_deck_picks_n_different_cards_cues_each_for_both_players_in_the_decks_order() {
+    fn r440_a_random_pick_over_a_deck_picks_n_different_cards_cues_each_for_both_players_in_the_decks_order()
+    {
         let mut state = game("tune");
         let constant_id = instance_fx::constant.id.clone();
         let deck = set_library(&mut state, PlayerId::P2, &owned(&[constant_id.as_str(); 10]));
         let events = tuned(
             &run(
                 &mut state,
-                degrade(json_as(json!({ "scope": { "side": "enemy", "zones": ["library"] }, "random": 4 }))),
+                degrade(json_as(
+                    json!({ "scope": { "side": "enemy", "zones": ["library"] }, "random": 4 }),
+                )),
                 RunOptions::default(),
             ),
             GameEventType::Degraded,
         );
         assert_eq!(events.len(), 4);
-        assert_eq!(events.iter().map(|event| &event.instance_id).collect::<IndexSet<_>>().len(), 4);
-        assert!(events.iter().all(|event| event.hidden_from == Some(vec![PlayerId::P1, PlayerId::P2])));
+        assert_eq!(
+            events
+                .iter()
+                .map(|event| &event.instance_id)
+                .collect::<IndexSet<_>>()
+                .len(),
+            4
+        );
+        assert!(
+            events
+                .iter()
+                .all(|event| event.hidden_from == Some(vec![PlayerId::P1, PlayerId::P2]))
+        );
         let order: Vec<i64> = events
             .iter()
-            .map(|event| deck.iter().position(|card| card.id == event.instance_id).map_or(-1, |at| at as i64))
+            .map(|event| {
+                deck.iter()
+                    .position(|card| card.id == event.instance_id)
+                    .map_or(-1, |at| at as i64)
+            })
             .collect();
         let mut sorted = order.clone();
         sorted.sort();
@@ -746,12 +935,18 @@ mod b3_4_scopes_and_random_picks_r60_r129_r242_r440 {
     fn r129_a_pick_of_at_least_as_many_cards_as_there_are_takes_them_all_and_draws_nothing_for_the_pick() {
         let mut state = game("tune");
         let constant_id = instance_fx::constant.id.clone();
-        set_library(&mut state, PlayerId::P2, &owned(&[constant_id.as_str(), constant_id.as_str()]));
+        set_library(
+            &mut state,
+            PlayerId::P2,
+            &owned(&[constant_id.as_str(), constant_id.as_str()]),
+        );
         let cursor = state.rng_cursor;
         let events = tuned(
             &run(
                 &mut state,
-                degrade(json_as(json!({ "scope": { "side": "enemy", "zones": ["library"] }, "random": 4 }))),
+                degrade(json_as(
+                    json!({ "scope": { "side": "enemy", "zones": ["library"] }, "random": 4 }),
+                )),
                 RunOptions::default(),
             ),
             GameEventType::Degraded,
@@ -762,14 +957,17 @@ mod b3_4_scopes_and_random_picks_r60_r129_r242_r440 {
     }
 
     #[test]
-    fn r440_a_scopes_filters_decide_which_hidden_cards_change_and_the_rest_are_cued_none_so_the_cues_number_the_pile() {
+    fn r440_a_scopes_filters_decide_which_hidden_cards_change_and_the_rest_are_cued_none_so_the_cues_number_the_pile()
+     {
         let mut state = game("tune");
         let units = in_hand(&mut state, &instance_fx::free_body.id, PlayerId::P1, 2);
         let spells = in_hand(&mut state, &instance_fx::constant.id, PlayerId::P1, 2);
         let events = tuned(
             &run(
                 &mut state,
-                upgrade(json_as(json!({ "scope": { "zones": ["hand"], "types": ["Unit"] } }))),
+                upgrade(json_as(
+                    json!({ "scope": { "zones": ["hand"], "types": ["Unit"] } }),
+                )),
                 RunOptions::default(),
             ),
             GameEventType::Upgraded,
@@ -777,14 +975,20 @@ mod b3_4_scopes_and_random_picks_r60_r129_r242_r440 {
         assert_eq!(events.len(), 4);
         for spell in &spells {
             assert_eq!(
-                events.iter().find(|event| event.instance_id == spell.id).map(|event| event.change.clone()),
+                events
+                    .iter()
+                    .find(|event| event.instance_id == spell.id)
+                    .map(|event| event.change.clone()),
                 Some(TuningChange::None)
             );
             assert_eq!(live(&state, &spell.id).cost_mod, 0);
         }
         for unit in &units {
             assert_ne!(
-                events.iter().find(|event| event.instance_id == unit.id).map(|event| event.change.clone()),
+                events
+                    .iter()
+                    .find(|event| event.instance_id == unit.id)
+                    .map(|event| event.change.clone()),
                 Some(TuningChange::None)
             );
         }
@@ -794,33 +998,59 @@ mod b3_4_scopes_and_random_picks_r60_r129_r242_r440 {
     fn r242_the_events_go_out_group_by_group_public_cards_then_the_owners_hidden_ones_then_the_decks() {
         let mut state = game("tune");
         let constant_id = instance_fx::constant.id.clone();
-        let deck_card = set_library(&mut state, PlayerId::P1, &owned(&[constant_id.as_str()])).into_iter().next();
-        let hand_card = in_hand(&mut state, &constant_id, PlayerId::P1, 1).into_iter().next();
-        let unit = put(&mut state, &instance_fx::body.id, slot(PlayerId::P1, Row::Units, 5), json!({}));
+        let deck_card = set_library(&mut state, PlayerId::P1, &owned(&[constant_id.as_str()]))
+            .into_iter()
+            .next();
+        let hand_card = in_hand(&mut state, &constant_id, PlayerId::P1, 1)
+            .into_iter()
+            .next();
+        let unit = put(
+            &mut state,
+            &instance_fx::body.id,
+            slot(PlayerId::P1, Row::Units, 5),
+            json!({}),
+        );
         let events = tuned(
             &run(
                 &mut state,
-                degrade(json_as(json!({ "scope": { "zones": ["library", "hand", "field"] } }))),
+                degrade(json_as(
+                    json!({ "scope": { "zones": ["library", "hand", "field"] } }),
+                )),
                 RunOptions::default(),
             ),
             GameEventType::Degraded,
         );
         assert_eq!(
-            events.iter().map(|event| Some(event.instance_id.clone())).collect::<Vec<_>>(),
-            vec![Some(unit.id), hand_card.map(|card| card.id), deck_card.map(|card| card.id)]
+            events
+                .iter()
+                .map(|event| Some(event.instance_id.clone()))
+                .collect::<Vec<_>>(),
+            vec![
+                Some(unit.id),
+                hand_card.map(|card| card.id),
+                deck_card.map(|card| card.id)
+            ]
         );
     }
 
     #[test]
-    fn r60_a_random_pick_over_a_hand_and_a_side_of_the_field_takes_public_and_hidden_cards_alike_by_their_counts_alone() {
+    fn r60_a_random_pick_over_a_hand_and_a_side_of_the_field_takes_public_and_hidden_cards_alike_by_their_counts_alone()
+     {
         let (mut field, mut hand) = (0, 0);
         for seed in 1..=40 {
             let mut state = game(&format!("mix-{seed}"));
-            let unit = put(&mut state, &instance_fx::body.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+            let unit = put(
+                &mut state,
+                &instance_fx::body.id,
+                slot(PlayerId::P2, Row::Units, 1),
+                json!({}),
+            );
             in_hand(&mut state, &instance_fx::stoic.id, PlayerId::P2, 1);
             let events = run(
                 &mut state,
-                degrade(json_as(json!({ "scope": { "side": "enemy", "zones": ["hand", "field"] }, "random": 1 }))),
+                degrade(json_as(
+                    json!({ "scope": { "side": "enemy", "zones": ["hand", "field"] }, "random": 1 }),
+                )),
                 RunOptions::default(),
             );
             let event = tuned(&events, GameEventType::Degraded).into_iter().next();
@@ -843,8 +1073,16 @@ mod b3_4_rule_7_what_the_views_show_r177_r311_r386 {
     fn r386_a_change_to_a_hand_card_reads_in_full_to_its_owner_and_as_a_bare_cue_to_the_other_player() {
         let mut state = game("tune");
         let held = card(&mut state, &instance_fx::constant.id);
-        run(&mut state, degrade(json_as(json!({ "instanceId": held.id }))), RunOptions::default());
-        let events = run(&mut state, degrade(json_as(json!({ "instanceId": held.id }))), RunOptions::default());
+        run(
+            &mut state,
+            degrade(json_as(json!({ "instanceId": held.id }))),
+            RunOptions::default(),
+        );
+        let events = run(
+            &mut state,
+            degrade(json_as(json!({ "instanceId": held.id }))),
+            RunOptions::default(),
+        );
         state.applied = vec![AppliedAction {
             nonce: "t".to_string(),
             events,
@@ -879,10 +1117,14 @@ mod b3_4_rule_7_what_the_views_show_r177_r311_r386 {
     }
 
     #[test]
-    fn r311_a_change_made_inside_a_deck_stays_unread_by_both_players_for_good_and_the_owners_list_shows_the_card_as_it_went_in() {
+    fn r311_a_change_made_inside_a_deck_stays_unread_by_both_players_for_good_and_the_owners_list_shows_the_card_as_it_went_in()
+     {
         let mut state = game("tune");
         let numbered_id = instance_fx::numbered.id.clone();
-        let top = set_library(&mut state, PlayerId::P1, &owned(&[numbered_id.as_str()])).into_iter().next().expect("no card");
+        let top = set_library(&mut state, PlayerId::P1, &owned(&[numbered_id.as_str()]))
+            .into_iter()
+            .next()
+            .expect("no card");
         let list_before = to_json(&view_for(&state, PlayerId::P1).you.own_library);
         let events = run(
             &mut state,
@@ -893,7 +1135,10 @@ mod b3_4_rule_7_what_the_views_show_r177_r311_r386 {
             nonce: "t".to_string(),
             events,
         }];
-        assert_eq!(to_json(&view_for(&state, PlayerId::P1).you.own_library), list_before);
+        assert_eq!(
+            to_json(&view_for(&state, PlayerId::P1).you.own_library),
+            list_before
+        );
         // Drawn, the card reads with its changes — and the events made inside the deck still do not.
         with_sink(&mut state, |sink| {
             jackioh_engine::draw::draw(sink, PlayerId::P1, 1);
@@ -901,19 +1146,34 @@ mod b3_4_rule_7_what_the_views_show_r177_r311_r386 {
         let view = view_for(&state, PlayerId::P1);
         let hand = own_hand(&view);
         assert_eq!(
-            hand.iter().find(|entry| entry["instanceId"] == top.id.as_str()).map(|entry| entry["tuning"].clone()),
+            hand.iter()
+                .find(|entry| entry["instanceId"] == top.id.as_str())
+                .map(|entry| entry["tuning"].clone()),
             Some(to_json(&live(&state, &top.id).tuning))
         );
-        for event in view.events.iter().filter(|event| event.event_type() == GameEventType::Upgraded) {
-            assert!(matches_object(&to_json(event), &json!({ "instanceId": HIDDEN_ID, "defId": HIDDEN_ID })));
+        for event in view
+            .events
+            .iter()
+            .filter(|event| event.event_type() == GameEventType::Upgraded)
+        {
+            assert!(matches_object(
+                &to_json(event),
+                &json!({ "instanceId": HIDDEN_ID, "defId": HIDDEN_ID })
+            ));
         }
     }
 
     #[test]
     fn r386_a_changed_cards_view_carries_its_tuning_and_its_declared_numbers_where_its_viewer_may_read_it() {
         let mut state = game("tune");
-        let unit = put(&mut state, &instance_fx::body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        live_mut(&mut state, &unit.id).tuning = tuning(json!({ "attack": 2, "addKeywords": [{ "kind": "Rush" }] }));
+        let unit = put(
+            &mut state,
+            &instance_fx::body.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        live_mut(&mut state, &unit.id).tuning =
+            tuning(json!({ "attack": 2, "addKeywords": [{ "kind": "Rush" }] }));
         let held = card(&mut state, &instance_fx::numbered.id);
         live_mut(&mut state, &held.id).tuning = tuning(json!({ "numbers": { "damage": 2 } }));
         let mine = view_for(&state, PlayerId::P1);
@@ -930,7 +1190,9 @@ mod b3_4_rule_7_what_the_views_show_r177_r311_r386 {
         assert_eq!(theirs_json["opponent"]["units"][0]["attack"], json!(5));
         let hand = own_hand(&mine);
         assert_eq!(
-            hand.iter().find(|entry| entry["instanceId"] == held.id.as_str()).map(|entry| entry["params"].clone()),
+            hand.iter()
+                .find(|entry| entry["instanceId"] == held.id.as_str())
+                .map(|entry| entry["params"].clone()),
             Some(json!({ "damage": 4, "threshold": 3, "big": 8, "huge": 20 }))
         );
         assert_eq!(theirs_json["opponent"]["hand"], json!({ "count": 1 }));
@@ -943,10 +1205,16 @@ mod b3_4_rule_4_the_changes_are_the_cards_r57_r78_r102_r386_r443 {
     #[test]
     fn r386_tuning_is_kept_through_leaving_the_field_and_in_every_zone_r78_a_spent_brittle_count_aside() {
         let mut state = game("tune");
-        let unit = put(&mut state, &instance_fx::body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &instance_fx::body.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         {
             let card = live_mut(&mut state, &unit.id);
-            card.tuning = tuning(json!({ "attack": -1, "removeKeywords": ["Rush"], "numbers": { "damage": 1 } }));
+            card.tuning =
+                tuning(json!({ "attack": -1, "removeKeywords": ["Rush"], "numbers": { "damage": 1 } }));
             card.buffs = AttackHealth { attack: 3, health: 0 };
         }
         let mut moving = live(&state, &unit.id);
@@ -955,9 +1223,17 @@ mod b3_4_rule_4_the_changes_are_the_cards_r57_r78_r102_r386_r443 {
             to_json(&live(&state, &unit.id).tuning),
             json!({ "attack": -1, "removeKeywords": ["Rush"], "numbers": { "damage": 1 } })
         );
-        assert_eq!(live(&state, &unit.id).buffs, AttackHealth { attack: 0, health: 0 });
+        assert_eq!(
+            live(&state, &unit.id).buffs,
+            AttackHealth { attack: 0, health: 0 }
+        );
         let mut moving = live(&state, &unit.id);
-        move_to_zone(&mut state, &mut moving, OffFieldZone::Graveyard, Default::default());
+        move_to_zone(
+            &mut state,
+            &mut moving,
+            OffFieldZone::Graveyard,
+            Default::default(),
+        );
         let mut moving = live(&state, &unit.id);
         move_to_zone(&mut state, &mut moving, OffFieldZone::Exile, Default::default());
         assert_eq!(
@@ -969,14 +1245,24 @@ mod b3_4_rule_4_the_changes_are_the_cards_r57_r78_r102_r386_r443 {
     #[test]
     fn r57_a_copy_on_the_field_keeps_the_sources_tuning_and_never_its_brittle_count() {
         let mut state = game("tune");
-        let unit = put(&mut state, &instance_fx::brittle_unit.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &instance_fx::brittle_unit.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         live_mut(&mut state, &unit.id).tuning = tuning(json!({ "health": 2 }));
         run(
             &mut state,
-            summon_copy(json_as(json!({ "of": { "of": "instance", "instanceId": unit.id } }))),
+            summon_copy(json_as(
+                json!({ "of": { "of": "instance", "instanceId": unit.id } }),
+            )),
             RunOptions::default(),
         );
-        let copy = state.players.p1.units[1].as_ref().and_then(|pile| pile.first()).cloned();
+        let copy = state.players.p1.units[1]
+            .as_ref()
+            .and_then(|pile| pile.first())
+            .cloned();
         assert_eq!(to_json(copy.and_then(|card| card.tuning)), json!({ "health": 2 }));
         // It entered the field, so its own printed Brittle starts; the source's count is not copied.
         live_mut(&mut state, &unit.id).brittle = Some(BrittleCounter {
@@ -986,10 +1272,15 @@ mod b3_4_rule_4_the_changes_are_the_cards_r57_r78_r102_r386_r443 {
         });
         run(
             &mut state,
-            summon_copy(json_as(json!({ "of": { "of": "instance", "instanceId": unit.id } }))),
+            summon_copy(json_as(
+                json!({ "of": { "of": "instance", "instanceId": unit.id } }),
+            )),
             RunOptions::default(),
         );
-        let second = state.players.p1.units[2].as_ref().and_then(|pile| pile.first()).cloned();
+        let second = state.players.p1.units[2]
+            .as_ref()
+            .and_then(|pile| pile.first())
+            .cloned();
         assert_eq!(
             second.and_then(|card| card.brittle),
             Some(BrittleCounter {
@@ -1004,11 +1295,23 @@ mod b3_4_rule_4_the_changes_are_the_cards_r57_r78_r102_r386_r443 {
     fn r57_a_copy_shuffled_into_a_deck_carries_the_sources_tuning() {
         let mut state = game("tune");
         let numbered_id = instance_fx::numbered.id.clone();
-        let mut spell = new_instance(&mut state, &numbered_id, PlayerId::P1, Zone::Resolving { player: PlayerId::P1 });
+        let mut spell = new_instance(
+            &mut state,
+            &numbered_id,
+            PlayerId::P1,
+            Zone::Resolving { player: PlayerId::P1 },
+        );
         spell.tuning = tuning(json!({ "numbers": { "damage": 1 } }));
         state.players.p1.resolving.push(spell.clone());
         let copies = |state: &GameState| -> Vec<CardInstance> {
-            state.players.p1.library.iter().filter(|card| card.def_id == numbered_id).cloned().collect()
+            state
+                .players
+                .p1
+                .library
+                .iter()
+                .filter(|card| card.def_id == numbered_id)
+                .cloned()
+                .collect()
         };
         run(
             &mut state,
@@ -1019,50 +1322,90 @@ mod b3_4_rule_4_the_changes_are_the_cards_r57_r78_r102_r386_r443 {
             },
         );
         assert_eq!(
-            to_json(copies(&state).iter().map(|card| card.tuning.clone()).collect::<Vec<_>>()),
+            to_json(
+                copies(&state)
+                    .iter()
+                    .map(|card| card.tuning.clone())
+                    .collect::<Vec<_>>()
+            ),
             json!([{ "numbers": { "damage": 1 } }, { "numbers": { "damage": 1 } }])
         );
         run(
             &mut state,
-            shuffle_into(json_as(json!({ "defId": numbered_id, "count": 1, "copyOf": spell.id }))),
+            shuffle_into(json_as(
+                json!({ "defId": numbered_id, "count": 1, "copyOf": spell.id }),
+            )),
             RunOptions::default(),
         );
-        assert_eq!(copies(&state).iter().filter(|card| card.tuning.is_some()).count(), 3);
+        assert_eq!(
+            copies(&state).iter().filter(|card| card.tuning.is_some()).count(),
+            3
+        );
         // A card the text names rather than copies is a fresh card with none.
         run(
             &mut state,
             shuffle_into(json_as(json!({ "defId": numbered_id, "count": 1 }))),
             RunOptions::default(),
         );
-        assert_eq!(copies(&state).iter().filter(|card| card.tuning.is_none()).count(), 1);
+        assert_eq!(
+            copies(&state).iter().filter(|card| card.tuning.is_none()).count(),
+            1
+        );
     }
 
     #[test]
     fn r386_a_transform_makes_a_card_without_the_old_ones_tuning() {
         let mut state = game("tune");
-        let unit = put(&mut state, &instance_fx::body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &instance_fx::body.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         live_mut(&mut state, &unit.id).tuning = tuning(json!({ "attack": 3 }));
         run(
             &mut state,
-            transform(json_as(json!({ "instanceId": unit.id, "defId": combat_fx::plain.id }))),
+            transform(json_as(
+                json!({ "instanceId": unit.id, "defId": combat_fx::plain.id }),
+            )),
             RunOptions::default(),
         );
-        let replacement = state.players.p1.units[0].as_ref().and_then(|pile| pile.first()).cloned();
-        assert_eq!(replacement.as_ref().map(|card| card.def_id.clone()), Some(combat_fx::plain.id.clone()));
+        let replacement = state.players.p1.units[0]
+            .as_ref()
+            .and_then(|pile| pile.first())
+            .cloned();
+        assert_eq!(
+            replacement.as_ref().map(|card| card.def_id.clone()),
+            Some(combat_fx::plain.id.clone())
+        );
         assert_eq!(replacement.and_then(|card| card.tuning), None);
     }
 
     #[test]
     fn r102_a_fuse_sums_its_ingredients_tuning_onto_the_card_it_keeps() {
         let mut state = game("tune");
-        let kept = put(&mut state, &instance_fx::body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let kept = put(
+            &mut state,
+            &instance_fx::body.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         live_mut(&mut state, &kept.id).tuning = tuning(json!({ "attack": 1, "x": { "Armor": 1 } }));
-        let other = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
-        live_mut(&mut state, &other.id).tuning =
-            tuning(json!({ "attack": 2, "health": -1, "x": { "Armor": 1 }, "addKeywords": [{ "kind": "Rush" }] }));
+        let other = put(
+            &mut state,
+            &combat_fx::plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        live_mut(&mut state, &other.id).tuning = tuning(
+            json!({ "attack": 2, "health": -1, "x": { "Armor": 1 }, "addKeywords": [{ "kind": "Rush" }] }),
+        );
         let (kept_now, other_now) = (live(&state, &kept.id), live(&state, &other.id));
         let fused = with_sink(&mut state, |sink| {
-            jackioh_engine::subsystems::fuse::fuse(sink, json_as(json!({ "ingredients": [other_now], "target": kept_now })))
+            jackioh_engine::subsystems::fuse::fuse(
+                sink,
+                json_as(json!({ "ingredients": [other_now], "target": kept_now })),
+            )
         });
         assert_eq!(fused.map(|card| card.id), Some(kept.id.clone()));
         assert_eq!(
@@ -1076,9 +1419,15 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
     use super::*;
 
     #[test]
-    fn r386_numbers_on_lists_the_cost_never_an_x_attack_health_numbered_keywords_and_declared_numbers_none_on_an_immutable_card() {
+    fn r386_numbers_on_lists_the_cost_never_an_x_attack_health_numbered_keywords_and_declared_numbers_none_on_an_immutable_card()
+     {
         let mut state = game("tune");
-        let unit = put(&mut state, &instance_fx::numbered_body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &instance_fx::numbered_body.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         live_mut(&mut state, &unit.id).damage = 1;
         assert_eq!(
             numbers(&state, &unit.id)
@@ -1098,7 +1447,10 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
         assert!(numbers(&state, &bolt.id).is_empty());
         let numbered = card(&mut state, &instance_fx::numbered.id);
         assert_eq!(
-            numbers(&state, &numbered.id).iter().map(|number| number["id"].clone()).collect::<Vec<_>>(),
+            numbers(&state, &numbered.id)
+                .iter()
+                .map(|number| number["id"].clone())
+                .collect::<Vec<_>>(),
             vec![
                 json!("cost"),
                 json!("param:damage"),
@@ -1114,17 +1466,27 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
     #[test]
     fn r386_each_number_is_set_to_the_value_and_stays_set_as_tuning_a_later_step_counts_from_it() {
         let mut state = game("tune");
-        let unit = put(&mut state, &instance_fx::numbered_body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &instance_fx::numbered_body.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         live_mut(&mut state, &unit.id).damage = 1;
         for which in ["cost", "attack", "health", "keyword:Armor", "keyword:Lucky"] {
             run(
                 &mut state,
-                set_number(json_as(json!({ "instanceId": unit.id, "which": which, "value": 3 }))),
+                set_number(json_as(
+                    json!({ "instanceId": unit.id, "which": which, "value": 3 }),
+                )),
                 RunOptions::default(),
             );
         }
         assert_eq!(
-            numbers(&state, &unit.id).iter().map(|number| number["value"].clone()).collect::<Vec<_>>(),
+            numbers(&state, &unit.id)
+                .iter()
+                .map(|number| number["value"].clone())
+                .collect::<Vec<_>>(),
             vec![json!(3), json!(3), json!(3), json!(3), json!(3), json!(1)]
         );
         assert!(matches_object(
@@ -1149,7 +1511,9 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
         let spell = card(&mut state, &instance_fx::numbered.id);
         let events = run(
             &mut state,
-            set_number(json_as(json!({ "instanceId": spell.id, "which": "param:huge", "value": 3 }))),
+            set_number(json_as(
+                json!({ "instanceId": spell.id, "which": "param:huge", "value": 3 }),
+            )),
             RunOptions::default(),
         );
         assert_eq!(param(&state, &spell.id, "huge"), 3);
@@ -1172,13 +1536,27 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
     fn r386_random_picks_among_the_numbers_that_are_not_the_value_already_and_does_nothing_with_none_left() {
         let mut state = game("tune");
         let spell = card(&mut state, &instance_fx::numbered.id);
-        let set_random = || set_number(json_as(json!({ "instanceId": spell.id, "which": "random", "value": 3 })));
+        let set_random = || {
+            set_number(json_as(
+                json!({ "instanceId": spell.id, "which": "random", "value": 3 }),
+            ))
+        };
         run(&mut state, set_random(), RunOptions::default());
-        assert!(numbers(&state, &spell.id).iter().filter(|number| number["value"] == 3).count() >= 2);
+        assert!(
+            numbers(&state, &spell.id)
+                .iter()
+                .filter(|number| number["value"] == 3)
+                .count()
+                >= 2
+        );
         for _ in 0..6 {
             run(&mut state, set_random(), RunOptions::default());
         }
-        assert!(numbers(&state, &spell.id).iter().all(|number| number["value"] == 3));
+        assert!(
+            numbers(&state, &spell.id)
+                .iter()
+                .all(|number| number["value"] == 3)
+        );
         let cursor = state.rng_cursor;
         assert!(run(&mut state, set_random(), RunOptions::default()).is_empty());
         assert_eq!(state.rng_cursor, cursor);
@@ -1191,7 +1569,9 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
         assert!(
             run(
                 &mut state,
-                set_number(json_as(json!({ "instanceId": spell.id, "which": "attack", "value": 3 }))),
+                set_number(json_as(
+                    json!({ "instanceId": spell.id, "which": "attack", "value": 3 })
+                )),
                 RunOptions::default(),
             )
             .is_empty()
@@ -1200,7 +1580,9 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
         assert!(
             run(
                 &mut state,
-                set_number(json_as(json!({ "instanceId": wall.id, "which": "cost", "value": 3 }))),
+                set_number(json_as(
+                    json!({ "instanceId": wall.id, "which": "cost", "value": 3 })
+                )),
                 RunOptions::default(),
             )
             .is_empty()
@@ -1213,7 +1595,9 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
         let spell = card(&mut state, &instance_fx::numbered.id);
         let events = run(
             &mut state,
-            set_number(json_as(json!({ "instanceId": spell.id, "which": "param:damage", "value": 3 }))),
+            set_number(json_as(
+                json!({ "instanceId": spell.id, "which": "param:damage", "value": 3 }),
+            )),
             RunOptions::default(),
         );
         state.applied = vec![AppliedAction {
@@ -1221,7 +1605,10 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
             events,
         }];
         assert_eq!(
-            to_json(first_event_of(&view_for(&state, PlayerId::P2).events, GameEventType::NumberChanged)),
+            to_json(first_event_of(
+                &view_for(&state, PlayerId::P2).events,
+                GameEventType::NumberChanged
+            )),
             json!({
                 "type": "numberChanged",
                 "instanceId": HIDDEN_ID,
@@ -1231,7 +1618,10 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
             })
         );
         assert!(matches_object(
-            &to_json(first_event_of(&view_for(&state, PlayerId::P1).events, GameEventType::NumberChanged)),
+            &to_json(first_event_of(
+                &view_for(&state, PlayerId::P1).events,
+                GameEventType::NumberChanged
+            )),
             &json!({ "key": "damage", "value": 3 }),
         ));
     }
@@ -1239,7 +1629,11 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
 
 /// The keywords a hand card will carry onto the field, for the X row test.
 fn stats_of_keywords(state: &GameState, c: &CardInstance) -> Vec<Value> {
-    if !numbers_on(state, c).is_empty() { unit_view_keywords(state, c) } else { vec![] }
+    if !numbers_on(state, c).is_empty() {
+        unit_view_keywords(state, c)
+    } else {
+        vec![]
+    }
 }
 
 fn unit_view_keywords(state: &GameState, c: &CardInstance) -> Vec<Value> {

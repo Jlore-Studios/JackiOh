@@ -34,7 +34,10 @@ fn with_ctx<R>(
 }
 
 fn as_player(player: PlayerId) -> HookOptions {
-    HookOptions { controller: Some(player), ..Default::default() }
+    HookOptions {
+        controller: Some(player),
+        ..Default::default()
+    }
 }
 
 fn first_id(cards: Vec<CardInstance>) -> String {
@@ -49,16 +52,42 @@ mod card_scopes_r242_r440 {
     use super::*;
 
     #[test]
-    fn r242_walks_public_cards_first_then_hands_and_face_down_traps_then_decks_the_active_side_first_in_each_group() {
+    fn r242_walks_public_cards_first_then_hands_and_face_down_traps_then_decks_the_active_side_first_in_each_group()
+     {
         let mut state = game(PlayerId::P2);
-        let deck1 = first_id(set_library(&mut state, PlayerId::P1, std::slice::from_ref(&plain.id)));
-        let deck2 = first_id(set_library(&mut state, PlayerId::P2, std::slice::from_ref(&plain.id)));
+        let deck1 = first_id(set_library(
+            &mut state,
+            PlayerId::P1,
+            std::slice::from_ref(&plain.id),
+        ));
+        let deck2 = first_id(set_library(
+            &mut state,
+            PlayerId::P2,
+            std::slice::from_ref(&plain.id),
+        ));
         let hand1 = first_id(in_hand(&mut state, &plain.id, PlayerId::P1, 1));
         let hand2 = first_id(in_hand(&mut state, &plain.id, PlayerId::P2, 1));
-        let unit1 = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
-        let trap1 = put(&mut state, &blood_moon.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        let field2 = put(&mut state, &tesla.id, slot(PlayerId::P2, Row::Backrow, 2), json!({}));
-        find_instance_mut(&mut state, &field2.id).expect("the field trap").face_up = Some(true);
+        let unit1 = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
+        let trap1 = put(
+            &mut state,
+            &blood_moon.id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let field2 = put(
+            &mut state,
+            &tesla.id,
+            slot(PlayerId::P2, Row::Backrow, 2),
+            json!({}),
+        );
+        find_instance_mut(&mut state, &field2.id)
+            .expect("the field trap")
+            .face_up = Some(true);
         let (ids, readers) = with_ctx(&mut state, None, as_player(PlayerId::P1), |ctx| {
             let walk = cards_in_card_scope(
                 ctx,
@@ -66,13 +95,29 @@ mod card_scopes_r242_r440 {
                 Default::default(),
             );
             let ids: Vec<String> = walk.iter().map(|entry| entry.card.id.clone()).collect();
-            let readers: Vec<Value> = walk.iter().map(|entry| serde_json::to_value(entry.readers).unwrap()).collect();
+            let readers: Vec<Value> = walk
+                .iter()
+                .map(|entry| serde_json::to_value(entry.readers).unwrap())
+                .collect();
             (ids, readers)
         });
-        assert_eq!(ids, vec![field2.id.clone(), unit1.id.clone(), hand2, trap1.id.clone(), hand1, deck2, deck1]);
+        assert_eq!(
+            ids,
+            vec![
+                field2.id.clone(),
+                unit1.id.clone(),
+                hand2,
+                trap1.id.clone(),
+                hand1,
+                deck2,
+                deck1
+            ]
+        );
         assert_eq!(
             Value::Array(readers),
-            json!(["everyone", "everyone", "owner", "owner", "owner", "nobody", "nobody"])
+            json!([
+                "everyone", "everyone", "owner", "owner", "owner", "nobody", "nobody"
+            ])
         );
     }
 
@@ -81,24 +126,40 @@ mod card_scopes_r242_r440 {
         let mut state = game(PlayerId::P1);
         let unit = first_id(in_hand(&mut state, &plain.id, PlayerId::P1, 1));
         let spell = first_id(in_hand(&mut state, &echo_bolt.id, PlayerId::P1, 1));
-        let field_spell = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let trap = put(&mut state, &blood_moon.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let field_spell = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let trap = put(
+            &mut state,
+            &blood_moon.id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         let the_scope = scope(json!({ "zones": ["field", "hand"], "types": ["Spell"] }));
         let (matching, whole) = with_ctx(&mut state, None, as_player(PlayerId::P1), |ctx| {
             let matching: Vec<String> = cards_in_card_scope(ctx, &the_scope, Default::default())
                 .iter()
                 .map(|entry| entry.card.id.clone())
                 .collect();
-            let whole: Vec<(String, bool)> =
-                cards_in_card_scope(ctx, &the_scope, Some(&json_as(json!({ "wholeHiddenPiles": true }))))
-                    .iter()
-                    .map(|entry| (entry.card.id.clone(), entry.matches))
-                    .collect();
+            let whole: Vec<(String, bool)> = cards_in_card_scope(
+                ctx,
+                &the_scope,
+                Some(&json_as(json!({ "wholeHiddenPiles": true }))),
+            )
+            .iter()
+            .map(|entry| (entry.card.id.clone(), entry.matches))
+            .collect();
             (matching, whole)
         });
         assert_eq!(matching, vec![spell.clone()]);
         // The unit on the field is public and left out; the face-down trap and the hand unit are kept, unmatched.
-        assert_eq!(whole, vec![(trap.id.clone(), false), (unit, false), (spell, true)]);
+        assert_eq!(
+            whole,
+            vec![(trap.id.clone(), false), (unit, false), (spell, true)]
+        );
         assert!(!whole.iter().any(|(id, _)| *id == field_spell.id));
     }
 
@@ -106,11 +167,36 @@ mod card_scopes_r242_r440 {
     fn a_card_dormant_under_a_stack_is_not_on_the_field_for_a_scope_the_side_and_rows_narrow_it() {
         // §3.2.
         let mut state = game(PlayerId::P1);
-        let under = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let mut top = new_instance(&mut state, &stacker.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
-        place_on_field(&mut state, &mut top, slot(PlayerId::P1, Row::Units, 1), json_as(json!({ "stack": true })));
-        let back = put(&mut state, &tesla.id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
-        let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let under = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let mut top = new_instance(
+            &mut state,
+            &stacker.id,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
+        place_on_field(
+            &mut state,
+            &mut top,
+            slot(PlayerId::P1, Row::Units, 1),
+            json_as(json!({ "stack": true })),
+        );
+        let back = put(
+            &mut state,
+            &tesla.id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
+        let theirs = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let me = find_instance(&state, &top.id).cloned();
         with_ctx(&mut state, me, as_player(PlayerId::P1), |ctx| {
             let ids = |side: &str, rows: Option<Vec<&str>>, exclude_self: bool| -> Vec<String> {
@@ -135,22 +221,43 @@ mod card_scopes_r242_r440 {
     }
 
     #[test]
-    fn r177_who_may_not_read_a_card_where_it_sits_both_for_a_deck_card_the_other_player_for_a_hand_card_or_a_face_down_trap(
-    ) {
+    fn r177_who_may_not_read_a_card_where_it_sits_both_for_a_deck_card_the_other_player_for_a_hand_card_or_a_face_down_trap()
+     {
         let mut state = game(PlayerId::P1);
-        let deck = set_library(&mut state, PlayerId::P1, std::slice::from_ref(&plain.id)).into_iter().next();
+        let deck = set_library(&mut state, PlayerId::P1, std::slice::from_ref(&plain.id))
+            .into_iter()
+            .next();
         let held = in_hand(&mut state, &plain.id, PlayerId::P2, 1).into_iter().next();
-        let trap = put(&mut state, &blood_moon.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let trap = put(
+            &mut state,
+            &blood_moon.id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let unit = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let (Some(deck), Some(held)) = (deck, held) else {
             panic!("no card");
         };
         let card = |state: &GameState, id: &str| find_instance(state, id).expect("the card").clone();
-        assert_eq!(unreadable_by(&state, &card(&state, &deck.id)), vec![PlayerId::P1, PlayerId::P2]);
+        assert_eq!(
+            unreadable_by(&state, &card(&state, &deck.id)),
+            vec![PlayerId::P1, PlayerId::P2]
+        );
         assert_eq!(unreadable_by(&state, &card(&state, &held.id)), vec![PlayerId::P1]);
         assert_eq!(unreadable_by(&state, &card(&state, &trap.id)), vec![PlayerId::P2]);
-        assert_eq!(unreadable_by(&state, &card(&state, &unit.id)), Vec::<PlayerId>::new());
+        assert_eq!(
+            unreadable_by(&state, &card(&state, &unit.id)),
+            Vec::<PlayerId>::new()
+        );
         find_instance_mut(&mut state, &trap.id).expect("the trap").face_up = Some(true);
-        assert_eq!(serde_json::to_value(readers_of(&state, &card(&state, &trap.id))).unwrap(), json!("everyone"));
+        assert_eq!(
+            serde_json::to_value(readers_of(&state, &card(&state, &trap.id))).unwrap(),
+            json!("everyone")
+        );
     }
 }

@@ -51,7 +51,14 @@ const COMBO_INDEX: &str = "core-093";
 const AUDITS: [&str; 2] = ["classicplus-044", "classicplus-045"];
 
 /// R280's six, in index order.
-const PREVIEWED: [&str; 6] = [BREAD_AND_BUTTER, MATH_EQUATION, QUICKSTRIKER, ECHOES, SPITEFUL_STAB, FED_FAUCI];
+const PREVIEWED: [&str; 6] = [
+    BREAD_AND_BUTTER,
+    MATH_EQUATION,
+    QUICKSTRIKER,
+    ECHOES,
+    SPITEFUL_STAB,
+    FED_FAUCI,
+];
 
 /// Patch v0.2.0's Classic cards that declare one (R280), each proved in its own block below.
 const CURSE: &str = "classic-001"; // C #1 Curse of the Forgotten Classic
@@ -60,7 +67,14 @@ const LIZARDS_BREATH: &str = "classic-019"; // C #19 Lizard's Breath
 const PLAGUE_DOCTOR: &str = "classic-059"; // C #59 Plague Doctor
 const SIPHON_SQUAD: &str = "classic-088"; // C #88 Siphon Squad
 const DIVINE_FAVOR: &str = "classic-046"; // C #46 Divine Favor
-const CLASSIC_PREVIEWED: [&str; 6] = [CURSE, LIZARDS_BREATH, PLAGUE_NUKE, DIVINE_FAVOR, PLAGUE_DOCTOR, SIPHON_SQUAD];
+const CLASSIC_PREVIEWED: [&str; 6] = [
+    CURSE,
+    LIZARDS_BREATH,
+    PLAGUE_NUKE,
+    DIVINE_FAVOR,
+    PLAGUE_DOCTOR,
+    SIPHON_SQUAD,
+];
 /// Patch v0.2.0's cards that declare preview, each proved in its own block below (R280).
 const DATACENTER_FIRE: &str = "classicplus-t-ai-06";
 const TWICE_FORWARD: &str = "classicplus-074";
@@ -91,7 +105,11 @@ fn radiant_of(face: FaceKind) -> bool {
 }
 
 fn face_of(radiant: bool) -> FaceKind {
-    if radiant { FaceKind::Radiant } else { FaceKind::Base }
+    if radiant {
+        FaceKind::Radiant
+    } else {
+        FaceKind::Base
+    }
 }
 
 /// `cardDef(id)[face].text`.
@@ -122,7 +140,10 @@ fn own_hand(view: &PlayerView) -> Vec<CardView> {
 }
 
 fn hand_card(view: &PlayerView, instance_id: &str) -> CardView {
-    match own_hand(view).into_iter().find(|card| card.instance_id == instance_id) {
+    match own_hand(view)
+        .into_iter()
+        .find(|card| card.instance_id == instance_id)
+    {
         Some(card) => card,
         None => panic!("{instance_id} is not in the viewer's hand"),
     }
@@ -158,7 +179,9 @@ fn hits_on(s: &Scenario, player: PlayerId) -> Vec<i32> {
     s.events()
         .iter()
         .filter_map(|event| match event {
-            GameEvent::Damage { target_id, amount, .. } if *target_id == hero => Some(*amount),
+            GameEvent::Damage {
+                target_id, amount, ..
+            } if *target_id == hero => Some(*amount),
             _ => None,
         })
         .collect()
@@ -232,7 +255,10 @@ fn fenced(
         .iter()
         .flat_map(|&player| {
             let side = &copy.players[player];
-            side.hand.iter().chain(side.units.iter().flatten().flatten()).chain(side.backrow.iter().flatten())
+            side.hand
+                .iter()
+                .chain(side.units.iter().flatten().flatten())
+                .chain(side.backrow.iter().flatten())
         })
         .find(|card| card.id == self_id)
         .cloned();
@@ -301,7 +327,9 @@ mod r280_the_core_cards_that_declare_preview {
         jackioh_cards::register_all();
         for id in PREVIEWED {
             for face in FACES {
-                let s = scenario(json!({ "p1": { "hand": [{ "def": id, "radiant": radiant_of(face) }, RAPID_REPLENISH] } }));
+                let s = scenario(
+                    json!({ "p1": { "hand": [{ "def": id, "radiant": radiant_of(face) }, RAPID_REPLENISH] } }),
+                );
                 let list = must(
                     shown_of(&hand_card(&s.view(PlayerId::P1), &s.card(id).id)),
                     &format!("{id} {face}'s preview in hand"),
@@ -318,25 +346,60 @@ mod r280_the_core_cards_that_declare_preview {
     fn r280_the_labels_are_the_formulas_each_face_prints() {
         jackioh_cards::register_all();
         let labels = |id: &str, face: FaceKind| -> Vec<String> {
-            let s = scenario(json!({ "p1": { "hand": [{ "def": id, "radiant": radiant_of(face) }, RAPID_REPLENISH] } }));
+            let s = scenario(
+                json!({ "p1": { "hand": [{ "def": id, "radiant": radiant_of(face) }, RAPID_REPLENISH] } }),
+            );
             shown_of(&hand_card(&s.view(PlayerId::P1), &s.card(id).id))
                 .unwrap_or_default()
                 .into_iter()
                 .map(|entry| entry.label)
                 .collect()
         };
-        assert_eq!(labels(BREAD_AND_BUTTER, FaceKind::Base), vec!["X = that player's unspent mana"]);
-        assert_eq!(labels(BREAD_AND_BUTTER, FaceKind::Radiant), vec!["X = 3 × that player's unspent mana"]);
-        assert_eq!(labels(MATH_EQUATION, FaceKind::Base), vec!["Fib(times played + 1)"]);
-        assert_eq!(labels(MATH_EQUATION, FaceKind::Radiant), vec!["Fib(times played + 3)"]);
-        assert_eq!(labels(QUICKSTRIKER, FaceKind::Base), vec!["X = cards you played earlier this turn"]);
-        assert_eq!(labels(QUICKSTRIKER, FaceKind::Radiant), vec!["X = cards you played earlier this turn"]);
+        assert_eq!(
+            labels(BREAD_AND_BUTTER, FaceKind::Base),
+            vec!["X = that player's unspent mana"]
+        );
+        assert_eq!(
+            labels(BREAD_AND_BUTTER, FaceKind::Radiant),
+            vec!["X = 3 × that player's unspent mana"]
+        );
+        assert_eq!(
+            labels(MATH_EQUATION, FaceKind::Base),
+            vec!["Fib(times played + 1)"]
+        );
+        assert_eq!(
+            labels(MATH_EQUATION, FaceKind::Radiant),
+            vec!["Fib(times played + 3)"]
+        );
+        assert_eq!(
+            labels(QUICKSTRIKER, FaceKind::Base),
+            vec!["X = cards you played earlier this turn"]
+        );
+        assert_eq!(
+            labels(QUICKSTRIKER, FaceKind::Radiant),
+            vec!["X = cards you played earlier this turn"]
+        );
         assert_eq!(labels(ECHOES, FaceKind::Base), vec!["the cards in your exile"]);
-        assert_eq!(labels(ECHOES, FaceKind::Radiant), vec!["twice the cards in your exile"]);
-        assert_eq!(labels(SPITEFUL_STAB, FaceKind::Base), vec![text_of(SPITEFUL_STAB, FaceKind::Base)]);
-        assert_eq!(labels(SPITEFUL_STAB, FaceKind::Radiant), vec![text_of(SPITEFUL_STAB, FaceKind::Radiant)]);
-        assert_eq!(labels(FED_FAUCI, FaceKind::Base), vec!["+1 mana per Plague Counter"]);
-        assert_eq!(labels(FED_FAUCI, FaceKind::Radiant), vec!["+2 mana per Plague Counter"]);
+        assert_eq!(
+            labels(ECHOES, FaceKind::Radiant),
+            vec!["twice the cards in your exile"]
+        );
+        assert_eq!(
+            labels(SPITEFUL_STAB, FaceKind::Base),
+            vec![text_of(SPITEFUL_STAB, FaceKind::Base)]
+        );
+        assert_eq!(
+            labels(SPITEFUL_STAB, FaceKind::Radiant),
+            vec![text_of(SPITEFUL_STAB, FaceKind::Radiant)]
+        );
+        assert_eq!(
+            labels(FED_FAUCI, FaceKind::Base),
+            vec!["+1 mana per Plague Counter"]
+        );
+        assert_eq!(
+            labels(FED_FAUCI, FaceKind::Radiant),
+            vec!["+2 mana per Plague Counter"]
+        );
     }
 }
 
@@ -347,7 +410,13 @@ mod r280_the_core_cards_that_declare_preview {
 mod c18_bread_and_butter_previews_the_bread_tokens_x_r280 {
     use super::*;
 
-    fn trap(face: FaceKind, active: PlayerId, p1_mana: Option<i32>, p2_mana: Option<i32>, face_up: bool) -> Scenario {
+    fn trap(
+        face: FaceKind,
+        active: PlayerId,
+        p1_mana: Option<i32>,
+        p2_mana: Option<i32>,
+        face_up: bool,
+    ) -> Scenario {
         let mut entry = json!({ "def": BREAD_AND_BUTTER, "radiant": radiant_of(face) });
         if face_up {
             entry["faceUp"] = json!(true);
@@ -384,7 +453,10 @@ mod c18_bread_and_butter_previews_the_bread_tokens_x_r280 {
 
         s.end_turn();
 
-        let token = must(s.unit(PlayerId::P1, 2).map(|card| card.id.clone()), "the Bread Token");
+        let token = must(
+            s.unit(PlayerId::P1, 2).map(|card| card.id.clone()),
+            "the Bread Token",
+        );
         s.expect_stats(token.as_str(), json!({ "attack": 6, "health": 6 }));
     }
 
@@ -397,7 +469,10 @@ mod c18_bread_and_butter_previews_the_bread_tokens_x_r280 {
         s.end_turn();
 
         // R52: p2 ended with 4, and the 4/4 is the trap's controller's.
-        let token = must(s.unit(PlayerId::P1, 2).map(|card| card.id.clone()), "the Bread Token");
+        let token = must(
+            s.unit(PlayerId::P1, 2).map(|card| card.id.clone()),
+            "the Bread Token",
+        );
         s.expect_stats(token.as_str(), json!({ "attack": 4, "health": 4 }));
     }
 
@@ -408,7 +483,10 @@ mod c18_bread_and_butter_previews_the_bread_tokens_x_r280 {
 
         assert_eq!(value_of(&s.view(PlayerId::P1).you.backrow[0]), 3);
         let theirs = s.view(PlayerId::P2);
-        assert_eq!(json_of(&theirs.opponent.backrow[0]), json!({ "faceDown": true, "cost": 1 }));
+        assert_eq!(
+            json_of(&theirs.opponent.backrow[0]),
+            json!({ "faceDown": true, "cost": 1 })
+        );
         assert!(!json_of(&theirs).to_string().contains("unspent mana"));
     }
 
@@ -485,13 +563,17 @@ mod c31_kys_math_equation_previews_its_damage_r280 {
         jackioh_cards::register_all();
         let mut s = equation(FaceKind::Base, 0, 0);
         let card = must(held(&s, PlayerId::P1, MATH_EQUATION), "p1's Equation").id;
-        s.state_mut().players.p1.mods.push(json_as::<PlayerModifier>(json!({
-            "id": "test-spell-discount",
-            "kind": "costDiscount",
-            "amount": 1,
-            "onlyType": "Spell",
-            "expiry": { "until": "never" },
-        })));
+        s.state_mut()
+            .players
+            .p1
+            .mods
+            .push(json_as::<PlayerModifier>(json!({
+                "id": "test-spell-discount",
+                "kind": "costDiscount",
+                "amount": 1,
+                "onlyType": "Spell",
+                "expiry": { "until": "never" },
+            })));
 
         assert_eq!(value_of(&hand_card(&s.view(PlayerId::P1), &card)), 1);
     }
@@ -506,7 +588,10 @@ mod c31_kys_math_equation_previews_its_damage_r280 {
         // p1's own Equation carries one; nothing else in p1's view does, least of all p2's hand card.
         assert_eq!(json_of(&p1_view).to_string().matches("\"preview\"").count(), 1);
 
-        let theirs = must(s.hand(PlayerId::P2).first().map(|card| card.id.clone()), "p2's Equation");
+        let theirs = must(
+            s.hand(PlayerId::P2).first().map(|card| card.id.clone()),
+            "p2's Equation",
+        );
         assert_eq!(value_of(&hand_card(&s.view(PlayerId::P2), &theirs)), 1);
     }
 }
@@ -560,7 +645,9 @@ mod c38_quickstriker_previews_x_the_count_the_next_play_reads_r280 {
     #[test]
     fn r280_in_hand_it_previews_the_x_the_plays_so_far_give() {
         jackioh_cards::register_all();
-        let mut s = scenario(json!({ "p1": { "hand": [RAPID_REPLENISH, QUICKSTRIKER, TEMPO_TIMMY], "library": [MENACE, MENACE] } }));
+        let mut s = scenario(
+            json!({ "p1": { "hand": [RAPID_REPLENISH, QUICKSTRIKER, TEMPO_TIMMY], "library": [MENACE, MENACE] } }),
+        );
         let card = s.card(QUICKSTRIKER).id.clone();
         assert_eq!(value_of(&hand_card(&s.view(PlayerId::P1), &card)), 0);
         s.play(RAPID_REPLENISH, json!({}));
@@ -626,7 +713,10 @@ mod c70_spiteful_stab_previews_its_damage_r280 {
     /// TS's `CASES` loop: one `it` per `[face, health, exiled, damage]`.
     fn previews_and_deals(face: FaceKind, health: i32, exiled: usize, damage: i32) {
         jackioh_cards::register_all();
-        let mut s = stab(face, json!({ "health": health, "exile": vec![STOCKPILE; exiled] }));
+        let mut s = stab(
+            face,
+            json!({ "health": health, "exile": vec![STOCKPILE; exiled] }),
+        );
         let card = s.card(SPITEFUL_STAB).id.clone();
         assert_eq!(value_of(&hand_card(&s.view(PlayerId::P1), &card)), damage);
 
@@ -708,7 +798,10 @@ mod c91_fed_fauci_previews_the_mana_its_next_start_of_turn_gives_r280 {
     fn r280_in_hand_it_holds_no_tokens_r78_so_it_previews_0() {
         jackioh_cards::register_all();
         let s = scenario(json!({ "p1": { "hand": [FED_FAUCI, RAPID_REPLENISH] } }));
-        assert_eq!(value_of(&hand_card(&s.view(PlayerId::P1), &s.card(FED_FAUCI).id)), 0);
+        assert_eq!(
+            value_of(&hand_card(&s.view(PlayerId::P1), &s.card(FED_FAUCI).id)),
+            0
+        );
     }
 }
 
@@ -755,11 +848,19 @@ mod t_ai_6_datacenter_fire_previews_the_damage_each_hero_would_take_r280 {
         s.play(DATACENTER_FIRE, json!({}));
 
         assert_eq!(hits_on(&s, PlayerId::P2), vec![value]);
-        assert_eq!(hits_on(&s, PlayerId::P1), if face == FaceKind::Base { vec![value] } else { vec![] });
+        assert_eq!(
+            hits_on(&s, PlayerId::P1),
+            if face == FaceKind::Base {
+                vec![value]
+            } else {
+                vec![]
+            }
+        );
     }
 
     #[test]
-    fn r280_base_deal_1_damage_to_each_hero_for_each_one_destroyed_previews_3_and_each_hit_then_deals_exactly_that() {
+    fn r280_base_deal_1_damage_to_each_hero_for_each_one_destroyed_previews_3_and_each_hit_then_deals_exactly_that()
+     {
         previews_each_hit(FaceKind::Base);
     }
 
@@ -776,7 +877,10 @@ mod t_ai_6_datacenter_fire_previews_the_damage_each_hero_would_take_r280 {
             "p1": { "hand": [DATACENTER_FIRE, RAPID_REPLENISH] },
             "p2": { "backrow": [up(HEROIC_POWER, 1)] },
         }));
-        assert_eq!(value_of(&hand_card(&s.view(PlayerId::P1), &s.card(DATACENTER_FIRE).id)), 0);
+        assert_eq!(
+            value_of(&hand_card(&s.view(PlayerId::P1), &s.card(DATACENTER_FIRE).id)),
+            0
+        );
         s.play(DATACENTER_FIRE, json!({}));
         assert_eq!(hits_on(&s, PlayerId::P2), Vec::<i32>::new());
     }
@@ -806,7 +910,10 @@ mod t_ai_6_datacenter_fire_previews_the_damage_each_hero_would_take_r280 {
                     zone: ConditionZone::Hand,
                     your_turn: active == PlayerId::P1,
                 });
-                assert_eq!(shown_of(&hand_card(&s.view(PlayerId::P1), &card.id)), Some(answer));
+                assert_eq!(
+                    shown_of(&hand_card(&s.view(PlayerId::P1), &card.id)),
+                    Some(answer)
+                );
             }
         }
     }
@@ -828,11 +935,21 @@ mod r280_a_fused_core_card_lists_its_ingredients_previews_in_order {
         }));
         let ingredients = vec![s.card(MATH_EQUATION).clone(), s.card(SPITEFUL_STAB).clone()];
         let fused = must(
-            fuse_on(&mut s, FuseArgs { ingredients, to_hand: Some(PlayerId::P1), ..FuseArgs::default() }),
+            fuse_on(
+                &mut s,
+                FuseArgs {
+                    ingredients,
+                    to_hand: Some(PlayerId::P1),
+                    ..FuseArgs::default()
+                },
+            ),
             "the crafted card",
         );
 
-        let list = must(shown_of(&hand_card(&s.view(PlayerId::P1), &fused.id)), "the fused card's preview");
+        let list = must(
+            shown_of(&hand_card(&s.view(PlayerId::P1), &fused.id)),
+            "the fused card's preview",
+        );
         // #31's half reads the fused card's own count of plays, none yet (R429): its 1st play, Fib(0 + 1 +
         // 1) = 1. #70's half reads 20 health (missing 10: +2) and one exiled card: 2 + 2 + 1 = 5.
         assert_eq!(
@@ -843,16 +960,25 @@ mod r280_a_fused_core_card_lists_its_ingredients_previews_in_order {
             ])
         );
         let text = must(
-            s.state().transient_defs.get(&fused.def_id).map(|def| def.base.text.clone()),
+            s.state()
+                .transient_defs
+                .get(&fused.def_id)
+                .map(|def| def.base.text.clone()),
             "the fused def",
         );
         for entry in &list {
             assert!(text.contains(&entry.label));
         }
 
-        s.play(fused.id.as_str(), json!({ "targets": [at_enemy_hero(), at_enemy_hero()] }));
+        s.play(
+            fused.id.as_str(),
+            json!({ "targets": [at_enemy_hero(), at_enemy_hero()] }),
+        );
 
-        assert_eq!(hits_on(&s, PlayerId::P2), list.iter().map(|entry| entry.value).collect::<Vec<i32>>());
+        assert_eq!(
+            hits_on(&s, PlayerId::P2),
+            list.iter().map(|entry| entry.value).collect::<Vec<i32>>()
+        );
     }
 }
 
@@ -882,18 +1008,27 @@ mod c_19_lizards_breath_previews_the_pile_or_piles_that_would_count_now_r280 {
     }
 
     fn draws(s: &Scenario) -> usize {
-        s.events().iter().filter(|event| matches!(event, GameEvent::Drawn { .. })).count()
+        s.events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Drawn { .. }))
+            .count()
     }
 
     fn displays(list: Option<Vec<PreviewValue>>) -> Vec<Option<String>> {
-        list.unwrap_or_default().into_iter().map(|entry| entry.display).collect()
+        list.unwrap_or_default()
+            .into_iter()
+            .map(|entry| entry.display)
+            .collect()
     }
 
     #[test]
     fn r280_base_the_deck_largest_names_the_deck_with_its_size_and_the_play_then_draws_1_after_a_hit_of_2() {
         jackioh_cards::register_all();
         let mut s = breath(FaceKind::Base, 5, 2, 1);
-        assert_eq!(json_of(&preview(&s)), json!([{ "label": "Your largest pile", "value": 5, "display": "Deck" }]));
+        assert_eq!(
+            json_of(&preview(&s)),
+            json!([{ "label": "Your largest pile", "value": 5, "display": "Deck" }])
+        );
 
         s.play(LIZARDS_BREATH, json!({ "targets": [at_enemy_hero()] }));
 
@@ -905,7 +1040,10 @@ mod c_19_lizards_breath_previews_the_pile_or_piles_that_would_count_now_r280 {
     fn r280_base_the_exile_largest_names_the_exile_and_the_play_then_hits_for_6() {
         jackioh_cards::register_all();
         let mut s = breath(FaceKind::Base, 1, 2, 3);
-        assert_eq!(json_of(&preview(&s)), json!([{ "label": "Your largest pile", "value": 3, "display": "Exile" }]));
+        assert_eq!(
+            json_of(&preview(&s)),
+            json!([{ "label": "Your largest pile", "value": 3, "display": "Exile" }])
+        );
 
         s.play(LIZARDS_BREATH, json!({ "targets": [at_enemy_hero()] }));
 
@@ -1001,11 +1139,16 @@ mod c_19_lizards_breath_previews_the_pile_or_piles_that_would_count_now_r280 {
         jackioh_cards::register_all();
         let s = breath(FaceKind::Base, 3, 1, 1);
 
-        assert!(!json_of(&s.view(PlayerId::P2)).to_string().contains("Your largest pile"));
+        assert!(
+            !json_of(&s.view(PlayerId::P2))
+                .to_string()
+                .contains("Your largest pile")
+        );
     }
 
     #[test]
-    fn r280_it_reads_only_pile_sizes_two_games_whose_decks_and_hands_differ_but_whose_sizes_match_show_the_same_preview() {
+    fn r280_it_reads_only_pile_sizes_two_games_whose_decks_and_hands_differ_but_whose_sizes_match_show_the_same_preview()
+     {
         jackioh_cards::register_all();
         let one = scenario(json!({
             "p1": { "hand": [LIZARDS_BREATH, STOCKPILE], "library": [X, X, X], "graveyard": [STOCKPILE], "exile": [STOCKPILE] },
@@ -1030,7 +1173,10 @@ mod c_19_lizards_breath_previews_the_pile_or_piles_that_would_count_now_r280 {
         for face in FACES {
             let s = breath(face, 3, 2, 1);
             let card = must(held(&s, PlayerId::P1, LIZARDS_BREATH), "p1's Breath");
-            let hook = must(preview_hook(LIZARDS_BREATH, face_of(card.radiant)), "the Breath's hook");
+            let hook = must(
+                preview_hook(LIZARDS_BREATH, face_of(card.radiant)),
+                "the Breath's hook",
+            );
             // A pile that answers its length and nothing else: the sizes are public, the cards are not.
             let (copy, self_) = fenced(s.state(), &card.id, Fence::SizeOnly, Fence::SizeOnly, true);
 
@@ -1043,7 +1189,10 @@ mod c_19_lizards_breath_previews_the_pile_or_piles_that_would_count_now_r280 {
                 your_turn: true,
             });
 
-            assert_eq!(shown_of(&hand_card(&s.view(PlayerId::P1), &card.id)), Some(answer.clone()));
+            assert_eq!(
+                shown_of(&hand_card(&s.view(PlayerId::P1), &card.id)),
+                Some(answer.clone())
+            );
             let expected: Vec<Option<String>> = if face == FaceKind::Base {
                 vec![Some("Deck".to_string())]
             } else {
@@ -1137,7 +1286,11 @@ mod r280_each_core_hook_is_a_pure_read_of_public_facts {
                 json_of(&hand_card(&view, &card.id))
             } else {
                 let backrow = json_of(&view.you.backrow[0]);
-                if backrow.is_null() { json_of(&view.you.units[0]) } else { backrow }
+                if backrow.is_null() {
+                    json_of(&view.you.units[0])
+                } else {
+                    backrow
+                }
             };
             assert_eq!(shown(&place), Some(answer), "{name}");
         }
@@ -1184,7 +1337,11 @@ mod r280_each_core_hook_is_a_pure_read_of_public_facts {
             out
         }
 
-        let one = board(&[MENACE, TEMPO_TIMMY, STOCKPILE], vec![json!({ "def": MATH_EQUATION, "costMod": 1 })], vec![json!(STOCKPILE)]);
+        let one = board(
+            &[MENACE, TEMPO_TIMMY, STOCKPILE],
+            vec![json!({ "def": MATH_EQUATION, "costMod": 1 })],
+            vec![json!(STOCKPILE)],
+        );
         // p1 may not read p2's hand or either library: change all three, and p1's view is the same.
         let for_p1 = board(
             &[BIG_D_FENDER, BIG_D_FENDER, RAPID_REPLENISH],
@@ -1202,8 +1359,20 @@ mod r280_each_core_hook_is_a_pure_read_of_public_facts {
         assert_eq!(previews(&for_p2, PlayerId::P2), previews(&one, PlayerId::P2));
 
         // Not vacuous: each seat sees previews, and p1's own changed: its hidden Equation is its own.
-        assert!(previews(&one, PlayerId::P1).iter().filter(|list| list.is_some()).count() >= 7);
-        assert!(previews(&one, PlayerId::P2).iter().filter(|list| list.is_some()).count() >= 5);
+        assert!(
+            previews(&one, PlayerId::P1)
+                .iter()
+                .filter(|list| list.is_some())
+                .count()
+                >= 7
+        );
+        assert!(
+            previews(&one, PlayerId::P2)
+                .iter()
+                .filter(|list| list.is_some())
+                .count()
+                >= 5
+        );
         assert_ne!(previews(&for_p2, PlayerId::P1), previews(&one, PlayerId::P1));
     }
 }
@@ -1226,8 +1395,16 @@ mod c_1_curse_of_the_forgotten_classic_previews_n_its_one_hit_r280 {
     fn label_is_the_formula(face: FaceKind) {
         jackioh_cards::register_all();
         let s = curse(face, 2);
-        let list = must(shown_of(&hand_card(&s.view(PlayerId::P1), &s.card(CURSE).id)), "the Curse's preview");
-        assert_eq!(list.iter().map(|entry| entry.label.clone()).collect::<Vec<String>>(), vec!["for each card in their exile"]);
+        let list = must(
+            shown_of(&hand_card(&s.view(PlayerId::P1), &s.card(CURSE).id)),
+            "the Curse's preview",
+        );
+        assert_eq!(
+            list.iter()
+                .map(|entry| entry.label.clone())
+                .collect::<Vec<String>>(),
+            vec!["for each card in their exile"]
+        );
         for entry in &list {
             assert!(text_of(CURSE, face).contains(&entry.label));
         }
@@ -1243,7 +1420,10 @@ mod c_1_curse_of_the_forgotten_classic_previews_n_its_one_hit_r280 {
         s.play(CURSE, json!({}));
 
         // R63: 0 is no hit at all. Your own exile is not counted.
-        assert_eq!(hits_on(&s, PlayerId::P2), if exiled == 0 { vec![] } else { vec![n] });
+        assert_eq!(
+            hits_on(&s, PlayerId::P2),
+            if exiled == 0 { vec![] } else { vec![n] }
+        );
     }
 
     #[test]
@@ -1310,8 +1490,14 @@ mod c_1_curse_of_the_forgotten_classic_previews_n_its_one_hit_r280 {
                 zone: ConditionZone::Hand,
                 your_turn: true,
             });
-            assert_eq!(shown_of(&hand_card(&s.view(PlayerId::P1), &card.id)), Some(answer.clone()));
-            assert_eq!(json_of(&answer), json!([{ "label": "for each card in their exile", "value": 4 }]));
+            assert_eq!(
+                shown_of(&hand_card(&s.view(PlayerId::P1), &card.id)),
+                Some(answer.clone())
+            );
+            assert_eq!(
+                json_of(&answer),
+                json!([{ "label": "for each card in their exile", "value": 4 }])
+            );
         }
     }
 }
@@ -1345,8 +1531,16 @@ mod c_43_plague_nuke_previews_the_mana_it_would_give_now_r280 {
     fn label_is_the_formulas_words(face: FaceKind) {
         jackioh_cards::register_all();
         let s = nuke(face, 1, 1);
-        let list = must(shown_of(&hand_card(&s.view(PlayerId::P1), &s.card(PLAGUE_NUKE).id)), "the Nuke's preview");
-        assert_eq!(list.iter().map(|entry| entry.label.clone()).collect::<Vec<String>>(), vec![LABEL]);
+        let list = must(
+            shown_of(&hand_card(&s.view(PlayerId::P1), &s.card(PLAGUE_NUKE).id)),
+            "the Nuke's preview",
+        );
+        assert_eq!(
+            list.iter()
+                .map(|entry| entry.label.clone())
+                .collect::<Vec<String>>(),
+            vec![LABEL]
+        );
         assert!(text_of(PLAGUE_NUKE, face).contains(LABEL));
         assert!(!LABEL.contains(['{', '}']));
     }
@@ -1355,7 +1549,10 @@ mod c_43_plague_nuke_previews_the_mana_it_would_give_now_r280 {
     fn tokens_preview_and_give(face: FaceKind) {
         jackioh_cards::register_all();
         let mut s = nuke(face, 2, 3);
-        assert_eq!(value_of(&hand_card(&s.view(PlayerId::P1), &s.card(PLAGUE_NUKE).id)), 5);
+        assert_eq!(
+            value_of(&hand_card(&s.view(PlayerId::P1), &s.card(PLAGUE_NUKE).id)),
+            5
+        );
 
         s.play(PLAGUE_NUKE, json!({}));
 
@@ -1386,7 +1583,10 @@ mod c_43_plague_nuke_previews_the_mana_it_would_give_now_r280 {
     fn r280_no_tokens_on_the_board_preview_0_and_the_spell_gives_nothing() {
         jackioh_cards::register_all();
         let mut s = nuke(FaceKind::Base, 0, 0);
-        assert_eq!(value_of(&hand_card(&s.view(PlayerId::P1), &s.card(PLAGUE_NUKE).id)), 0);
+        assert_eq!(
+            value_of(&hand_card(&s.view(PlayerId::P1), &s.card(PLAGUE_NUKE).id)),
+            0
+        );
 
         s.play(PLAGUE_NUKE, json!({}));
 
@@ -1419,7 +1619,10 @@ mod c_43_plague_nuke_previews_the_mana_it_would_give_now_r280 {
         for face in FACES {
             let s = nuke(face, 2, 2);
             let card = must(held(&s, PlayerId::P1, PLAGUE_NUKE), "p1's Nuke");
-            let hook = must(preview_hook(PLAGUE_NUKE, face_of(card.radiant)), "the Nuke's hook");
+            let hook = must(
+                preview_hook(PLAGUE_NUKE, face_of(card.radiant)),
+                "the Nuke's hook",
+            );
             let (state, self_) = guarded(s.state(), &card.id);
             let answer = hook(ConditionContext {
                 state: &state,
@@ -1429,7 +1632,10 @@ mod c_43_plague_nuke_previews_the_mana_it_would_give_now_r280 {
                 zone: ConditionZone::Hand,
                 your_turn: true,
             });
-            assert_eq!(shown_of(&hand_card(&s.view(PlayerId::P1), &card.id)), Some(answer.clone()));
+            assert_eq!(
+                shown_of(&hand_card(&s.view(PlayerId::P1), &card.id)),
+                Some(answer.clone())
+            );
             assert_eq!(json_of(&answer), json!([{ "label": LABEL, "value": 4 }]));
         }
     }
@@ -1453,7 +1659,8 @@ mod r280_r583_c_44_and_45_preview_the_permanents_they_would_exile {
     }
 
     #[test]
-    fn r280_r583_the_hook_reads_no_library_hand_or_state_active_and_answers_as_the_view_shows_on_either_turn() {
+    fn r280_r583_the_hook_reads_no_library_hand_or_state_active_and_answers_as_the_view_shows_on_either_turn()
+    {
         jackioh_cards::register_all();
         for audit in AUDITS {
             for active in PLAYER_IDS {
@@ -1475,13 +1682,19 @@ mod r280_r583_c_44_and_45_preview_the_permanents_they_would_exile {
                     "{audit} {active}"
                 );
                 assert_eq!(
-                    answer.iter().map(|entry| entry.label.clone()).collect::<Vec<String>>(),
+                    answer
+                        .iter()
+                        .map(|entry| entry.label.clone())
+                        .collect::<Vec<String>>(),
                     vec!["all permanents", "only your opponent's"]
                 );
                 // Each label sits in the Radiant text, and each value counts its ids.
                 for entry in &answer {
                     assert!(text_of(audit, FaceKind::Radiant).contains(&entry.label));
-                    assert_eq!(entry.ids.as_ref().map(|ids| ids.len()), Some(entry.value as usize));
+                    assert_eq!(
+                        entry.ids.as_ref().map(|ids| ids.len()),
+                        Some(entry.value as usize)
+                    );
                 }
             }
         }
@@ -1632,7 +1845,12 @@ mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
                 shown_of(&hand_card(&s.view(PlayerId::P1), &s.card(PLAGUE_DOCTOR).id)),
                 &format!("{face} preview"),
             );
-            assert_eq!(list.iter().map(|entry| entry.label.clone()).collect::<Vec<String>>(), vec![DOCTOR_LABEL]);
+            assert_eq!(
+                list.iter()
+                    .map(|entry| entry.label.clone())
+                    .collect::<Vec<String>>(),
+                vec![DOCTOR_LABEL]
+            );
             assert!(text_of(PLAGUE_DOCTOR, face).contains(DOCTOR_LABEL));
             assert!(!DOCTOR_LABEL.contains(['{', '}']));
         }
@@ -1691,8 +1909,13 @@ mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
     #[test]
     fn r280_an_empty_field_previews_0_on_the_base_face_and_the_cry_then_deals_nothing_r63() {
         jackioh_cards::register_all();
-        let mut s = scenario(json!({ "p1": { "hand": [PLAGUE_DOCTOR, RAPID_REPLENISH] }, "p2": { "hand": [STOCKPILE] } }));
-        assert_eq!(value_of(&hand_card(&s.view(PlayerId::P1), &s.card(PLAGUE_DOCTOR).id)), 0);
+        let mut s = scenario(
+            json!({ "p1": { "hand": [PLAGUE_DOCTOR, RAPID_REPLENISH] }, "p2": { "hand": [STOCKPILE] } }),
+        );
+        assert_eq!(
+            value_of(&hand_card(&s.view(PlayerId::P1), &s.card(PLAGUE_DOCTOR).id)),
+            0
+        );
 
         s.play(PLAGUE_DOCTOR, json!({ "targets": [at_enemy_hero()] }));
 
@@ -1730,7 +1953,10 @@ mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
                     zone: ConditionZone::Hand,
                     your_turn: active == PlayerId::P1,
                 });
-                assert_eq!(shown_of(&hand_card(&s.view(PlayerId::P1), &card.id)), Some(answer));
+                assert_eq!(
+                    shown_of(&hand_card(&s.view(PlayerId::P1), &card.id)),
+                    Some(answer)
+                );
             }
         }
     }
@@ -1754,7 +1980,9 @@ mod c_88_siphon_squad_previews_x_the_attack_its_aura_takes_off_each_enemy_unit_r
     const SIPHON_LABEL: &str = "−X Attack";
 
     fn siphon_board(face_up: Option<bool>, radiant: bool, enemies: i32) -> Scenario {
-        let enemies: Vec<Value> = (0..enemies).map(|at| json!({ "def": MENACE, "lane": at + 1 })).collect();
+        let enemies: Vec<Value> = (0..enemies)
+            .map(|at| json!({ "def": MENACE, "lane": at + 1 }))
+            .collect();
         let mut entry = json!({ "def": SIPHON_SQUAD, "radiant": radiant });
         if let Some(face_up) = face_up {
             entry["faceUp"] = json!(face_up);
@@ -1769,8 +1997,16 @@ mod c_88_siphon_squad_previews_x_the_attack_its_aura_takes_off_each_enemy_unit_r
     fn r280_the_label_is_in_the_base_faces_text_with_no_placeholder_in_it() {
         jackioh_cards::register_all();
         let s = siphon_board(Some(false), false, 2);
-        let list = must(shown_of(&s.view(PlayerId::P1).you.backrow[0]), "the controller's preview");
-        assert_eq!(list.iter().map(|entry| entry.label.clone()).collect::<Vec<String>>(), vec![SIPHON_LABEL]);
+        let list = must(
+            shown_of(&s.view(PlayerId::P1).you.backrow[0]),
+            "the controller's preview",
+        );
+        assert_eq!(
+            list.iter()
+                .map(|entry| entry.label.clone())
+                .collect::<Vec<String>>(),
+            vec![SIPHON_LABEL]
+        );
         assert!(text_of(SIPHON_SQUAD, FaceKind::Base).contains(SIPHON_LABEL));
         assert!(!SIPHON_LABEL.contains(['{', '}']));
     }
@@ -1809,15 +2045,23 @@ mod c_88_siphon_squad_previews_x_the_attack_its_aura_takes_off_each_enemy_unit_r
     #[test]
     fn r280_in_hand_it_previews_the_x_it_would_take_now() {
         jackioh_cards::register_all();
-        let s = scenario(json!({ "p1": { "hand": [SIPHON_SQUAD, RAPID_REPLENISH] }, "p2": { "field": [MENACE], "hand": [STOCKPILE] } }));
-        assert_eq!(value_of(&hand_card(&s.view(PlayerId::P1), &s.card(SIPHON_SQUAD).id)), 2);
+        let s = scenario(
+            json!({ "p1": { "hand": [SIPHON_SQUAD, RAPID_REPLENISH] }, "p2": { "field": [MENACE], "hand": [STOCKPILE] } }),
+        );
+        assert_eq!(
+            value_of(&hand_card(&s.view(PlayerId::P1), &s.card(SIPHON_SQUAD).id)),
+            2
+        );
     }
 
     #[test]
     fn r280_r386_an_upgrade_of_its_multiplier_moves_the_preview_with_the_aura() {
         jackioh_cards::register_all();
         let mut s = siphon_board(Some(false), false, 2);
-        let siphon = must(s.backrow(PlayerId::P1, 1).map(|card| card.id.clone()), "the Siphon");
+        let siphon = must(
+            s.backrow(PlayerId::P1, 1).map(|card| card.id.clone()),
+            "the Siphon",
+        );
         step_param(s.card_mut(&siphon), "multiplier", 1);
 
         let value = value_of(&s.view(PlayerId::P1).you.backrow[0]);
@@ -1875,7 +2119,15 @@ mod c_46_divine_favor_previews_how_many_cards_it_would_draw_now_r280 {
     fn drawn_by_p1(events: &[GameEvent]) -> usize {
         events
             .iter()
-            .filter(|event| matches!(event, GameEvent::Drawn { player: PlayerId::P1, .. }))
+            .filter(|event| {
+                matches!(
+                    event,
+                    GameEvent::Drawn {
+                        player: PlayerId::P1,
+                        ..
+                    }
+                )
+            })
             .count()
     }
 
@@ -1925,24 +2177,35 @@ mod c_46_divine_favor_previews_how_many_cards_it_would_draw_now_r280 {
         let card = s.card(DIVINE_FAVOR).id.clone();
         assert_eq!(value_of(&hand_card(&s.view(PlayerId::P1), &card)), 0);
         s.play(card.as_str(), json!({}));
-        assert!(!s.last_events().iter().any(|event| matches!(event, GameEvent::Drawn { .. })));
+        assert!(
+            !s.last_events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::Drawn { .. }))
+        );
     }
 
     #[test]
     fn r280_in_the_opponents_hand_it_is_hidden_p2s_view_carries_no_preview_of_it() {
         jackioh_cards::register_all();
-        let s = scenario(json!({ "p1": { "hand": [DIVINE_FAVOR] }, "p2": { "hand": [STOCKPILE, STOCKPILE] } }));
+        let s =
+            scenario(json!({ "p1": { "hand": [DIVINE_FAVOR] }, "p2": { "hand": [STOCKPILE, STOCKPILE] } }));
         assert_eq!(s.view(PlayerId::P2).opponent.hand, HandView::Count { count: 1 });
         assert_eq!(
-            json_of(&shown_of(&hand_card(&s.view(PlayerId::P1), &s.card(DIVINE_FAVOR).id))),
+            json_of(&shown_of(&hand_card(
+                &s.view(PlayerId::P1),
+                &s.card(DIVINE_FAVOR).id
+            ))),
             json!([{ "label": LABEL, "value": 2 }])
         );
     }
 
     #[test]
-    fn r280_its_hook_reads_the_hands_sizes_and_nothing_in_them_a_hand_whose_cards_throw_on_access_still_answers() {
+    fn r280_its_hook_reads_the_hands_sizes_and_nothing_in_them_a_hand_whose_cards_throw_on_access_still_answers()
+     {
         jackioh_cards::register_all();
-        let s = scenario(json!({ "p1": { "hand": [DIVINE_FAVOR, RAPID_REPLENISH] }, "p2": { "hand": [STOCKPILE, STOCKPILE, STOCKPILE] } }));
+        let s = scenario(
+            json!({ "p1": { "hand": [DIVINE_FAVOR, RAPID_REPLENISH] }, "p2": { "hand": [STOCKPILE, STOCKPILE, STOCKPILE] } }),
+        );
         let card = s.card(DIVINE_FAVOR).id.clone();
         // Each hand keeps its size and none of its cards; each library is walled off whole.
         let (copy, self_) = fenced(s.state(), &card, Fence::Whole, Fence::SizeOnly, false);
@@ -1961,7 +2224,9 @@ mod c_46_divine_favor_previews_how_many_cards_it_would_draw_now_r280 {
     #[test]
     fn r280_two_games_that_differ_only_in_the_cards_hidden_from_a_viewer_show_the_same_preview() {
         jackioh_cards::register_all();
-        let one = scenario(json!({ "p1": { "hand": [DIVINE_FAVOR, RAPID_REPLENISH] }, "p2": { "hand": [STOCKPILE, MENACE, MENACE] } }));
+        let one = scenario(
+            json!({ "p1": { "hand": [DIVINE_FAVOR, RAPID_REPLENISH] }, "p2": { "hand": [STOCKPILE, MENACE, MENACE] } }),
+        );
         let two = scenario(json!({
             "p1": { "hand": [DIVINE_FAVOR, RAPID_REPLENISH] },
             "p2": { "hand": [MATH_EQUATION, STOCKPILE, BIG_D_FENDER] },

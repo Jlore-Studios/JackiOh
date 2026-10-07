@@ -57,13 +57,16 @@ fn finished_match(id: &str, finished_at: Option<i64>) -> MatchRow {
 }
 
 fn action_row(match_id: &str) -> MatchActionRow {
-    from(json!({ "matchId": match_id, "seq": 1, "action": { "type": "endTurn", "playerId": "p1", "nonce": "n" }, "at": 0 }))
+    from(
+        json!({ "matchId": match_id, "seq": 1, "action": { "type": "endTurn", "playerId": "p1", "nonce": "n" }, "at": 0 }),
+    )
 }
 
 /// TS `deps.store.codes.logAttempt(...)`, in a transaction of its own.
 async fn log_attempt(app: &App, ip_hash: &str, at: i64) {
-    let attempt: CodeAttempt =
-        from(json!({ "profileId": null, "ipHash": ip_hash, "result": "rejected", "reason": "missing", "at": at }));
+    let attempt: CodeAttempt = from(
+        json!({ "profileId": null, "ipHash": ip_hash, "result": "rejected", "reason": "missing", "at": at }),
+    );
     let mut t = app.db.begin(None).await.expect("begin");
     t.codes_log_attempt(&attempt).await.expect("codes.logAttempt");
     t.commit().await.expect("commit");
@@ -91,8 +94,13 @@ mod the_retention_purge {
         log_attempt(&app, "past-cutoff", code_attempts_before - 1).await;
         {
             let mut data = fake(&app).await;
-            data.tables.matches.push(finished_match("m-at-cutoff", Some(match_actions_ended_before)));
-            data.tables.matches.push(finished_match("m-past-cutoff", Some(match_actions_ended_before - 1)));
+            data.tables
+                .matches
+                .push(finished_match("m-at-cutoff", Some(match_actions_ended_before)));
+            data.tables.matches.push(finished_match(
+                "m-past-cutoff",
+                Some(match_actions_ended_before - 1),
+            ));
             for match_id in ["m-at-cutoff", "m-past-cutoff"] {
                 data.tables.match_actions.push(action_row(match_id));
             }
@@ -101,9 +109,19 @@ mod the_retention_purge {
         let purged = purge_expired(&app).await.expect("purgeExpired");
         assert_eq!(json_of(&purged), json!({ "codeAttempts": 1, "matchActions": 1 }));
         let data = fake(&app).await;
-        let attempts: Vec<String> = data.tables.attempts.iter().map(|row| row.ip_hash.clone()).collect();
+        let attempts: Vec<String> = data
+            .tables
+            .attempts
+            .iter()
+            .map(|row| row.ip_hash.clone())
+            .collect();
         assert_eq!(attempts, vec!["at-cutoff".to_string()]);
-        let actions: Vec<String> = data.tables.match_actions.iter().map(|row| row.match_id.clone()).collect();
+        let actions: Vec<String> = data
+            .tables
+            .match_actions
+            .iter()
+            .map(|row| row.match_id.clone())
+            .collect();
         assert_eq!(actions, vec!["m-at-cutoff".to_string()]);
     }
 
@@ -119,8 +137,12 @@ mod the_retention_purge {
         }
         {
             let mut data = fake(&app).await;
-            data.tables.matches.push(finished_match("m-old", Some(at(match_days + 1))));
-            data.tables.matches.push(finished_match("m-recent", Some(at(match_days - 1))));
+            data.tables
+                .matches
+                .push(finished_match("m-old", Some(at(match_days + 1))));
+            data.tables
+                .matches
+                .push(finished_match("m-recent", Some(at(match_days - 1))));
             data.tables.matches.push(finished_match("m-live", None));
             for match_id in ["m-old", "m-recent", "m-live"] {
                 data.tables.match_actions.push(action_row(match_id));
@@ -130,9 +152,19 @@ mod the_retention_purge {
         let purged = purge_expired(&app).await.expect("purgeExpired");
         assert_eq!(json_of(&purged), json!({ "codeAttempts": 1, "matchActions": 1 }));
         let data = fake(&app).await;
-        let attempts: Vec<String> = data.tables.attempts.iter().map(|row| row.ip_hash.clone()).collect();
+        let attempts: Vec<String> = data
+            .tables
+            .attempts
+            .iter()
+            .map(|row| row.ip_hash.clone())
+            .collect();
         assert_eq!(attempts, vec!["recent".to_string()]);
-        let actions: Vec<String> = data.tables.match_actions.iter().map(|row| row.match_id.clone()).collect();
+        let actions: Vec<String> = data
+            .tables
+            .match_actions
+            .iter()
+            .map(|row| row.match_id.clone())
+            .collect();
         assert_eq!(actions, vec!["m-recent".to_string(), "m-live".to_string()]);
     }
 }

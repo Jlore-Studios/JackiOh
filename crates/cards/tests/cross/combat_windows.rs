@@ -58,7 +58,10 @@ fn setup(opts: Value) -> Scenario {
 }
 
 fn count(s: &Scenario, type_: GameEventType) -> usize {
-    s.events().iter().filter(|event| event.event_type() == type_).count()
+    s.events()
+        .iter()
+        .filter(|event| event.event_type() == type_)
+        .count()
 }
 
 fn aim(card: &CardInstance) -> Value {
@@ -73,7 +76,12 @@ fn keyword_kinds(s: &Scenario, card: &CardInstance) -> Vec<String> {
     s.stats(card)
         .keywords
         .iter()
-        .map(|k| serde_json::to_value(k).unwrap()["kind"].as_str().unwrap_or_default().to_string())
+        .map(|k| {
+            serde_json::to_value(k).unwrap()["kind"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string()
+        })
         .collect()
 }
 
@@ -82,7 +90,8 @@ mod r42_and_r89_the_unit_whose_damage_instance_was_lethal {
     use super::*;
 
     #[test]
-    fn r42_a_unit_prem_panther_damaged_earlier_and_a_hit_job_later_destroyed_was_not_destroyed_by_the_panther() {
+    fn r42_a_unit_prem_panther_damaged_earlier_and_a_hit_job_later_destroyed_was_not_destroyed_by_the_panther()
+     {
         let mut s = setup(json!({
             "seed": "hunt-cw-panther-stale",
             "p1": { "field": [PANTHER], "hand": [HIT_JOB, STOCKPILE], "library": [TIMMY, TIMMY, TIMMY] },
@@ -118,7 +127,8 @@ mod r176_my_pawns_projection_follows_the_combat {
     use super::*;
 
     #[test]
-    fn r176_r93_an_attacker_a_first_strike_defender_kills_first_never_lands_its_trample_hit_so_it_is_not_lethal_s4_3() {
+    fn r176_r93_an_attacker_a_first_strike_defender_kills_first_never_lands_its_trample_hit_so_it_is_not_lethal_s4_3()
+     {
         // p1's Twisted Sorcerer (5/5) with Trample swings at p2's Pointmaster (7/1, First Strike) with
         // p2 at 3. Pointmaster strikes first for 7 and the Sorcerer deals nothing.
         let mut s = setup(json!({
@@ -247,7 +257,10 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
         assert_eq!(s.state().turn, 11);
         assert_eq!(s.state().active, PlayerId::P1);
         assert!(!s.state().players.p1.ai_turn);
-        assert_eq!(exertion_json(&s, &sorcerer), json!({ "attacked": false, "switched": false }));
+        assert_eq!(
+            exertion_json(&s, &sorcerer),
+            json!({ "attacked": false, "switched": false })
+        );
     }
 
     #[test]
@@ -278,7 +291,15 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
         let draws = s
             .events()
             .iter()
-            .filter(|event| matches!(event, GameEvent::Drawn { player: PlayerId::P1, .. }))
+            .filter(|event| {
+                matches!(
+                    event,
+                    GameEvent::Drawn {
+                        player: PlayerId::P1,
+                        ..
+                    }
+                )
+            })
             .count();
         // The seed's AI does make the kill; without it this test proves nothing.
         assert_eq!(kills, 1);
@@ -317,7 +338,10 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
         assert_eq!(vanilla_plays, 1);
         s.expect_health("p2", 5);
         assert_eq!(
-            s.pile("p1", "library").iter().filter(|card| card.def_id == VANILLA).count(),
+            s.pile("p1", "library")
+                .iter()
+                .filter(|card| card.def_id == VANILLA)
+                .count(),
             3
         );
     }
@@ -371,7 +395,12 @@ fn set_trap(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) -> Card
     let row = Row::Backrow;
     let state = s.state_mut();
     let mut card = new_instance(state, def_id, player, Zone::Hand { player });
-    if !zones::place_on_field(state, &mut card, ZoneRef { player, row, lane }, Default::default()) {
+    if !zones::place_on_field(
+        state,
+        &mut card,
+        ZoneRef { player, row, lane },
+        Default::default(),
+    ) {
         panic!("could not place {def_id}");
     }
     let live = find_instance_mut(state, &card.id).unwrap_or_else(|| panic!("could not place {def_id}"));
@@ -396,12 +425,16 @@ fn unforced_declaration(event: &GameEvent) -> Option<(&String, &String)> {
 fn vaporize() -> Script {
     Script {
         triggers: vec![
-            TriggerDef::new("edge-r6-vaporize", &[GameEventType::AttackDeclared], |_ctx, event| match event {
-                GameEvent::AttackDeclared { attacker_id, .. } => vec![effects::destroy(json_as(json!({
-                    "target": { "of": "instance", "instanceId": attacker_id }
-                })))],
-                _ => vec![],
-            })
+            TriggerDef::new(
+                "edge-r6-vaporize",
+                &[GameEventType::AttackDeclared],
+                |_ctx, event| match event {
+                    GameEvent::AttackDeclared { attacker_id, .. } => vec![effects::destroy(json_as(json!({
+                        "target": { "of": "instance", "instanceId": attacker_id }
+                    })))],
+                    _ => vec![],
+                },
+            )
             .with_when(|_ctx, event| unforced_declaration(event).is_some()),
         ],
         ..Script::default()
@@ -412,12 +445,16 @@ fn vaporize() -> Script {
 fn shatter() -> Script {
     Script {
         triggers: vec![
-            TriggerDef::new("edge-r6-shatter", &[GameEventType::AttackDeclared], |_ctx, event| match event {
-                GameEvent::AttackDeclared { target_id, .. } => vec![effects::destroy(json_as(json!({
-                    "target": { "of": "instance", "instanceId": target_id }
-                })))],
-                _ => vec![],
-            })
+            TriggerDef::new(
+                "edge-r6-shatter",
+                &[GameEventType::AttackDeclared],
+                |_ctx, event| match event {
+                    GameEvent::AttackDeclared { target_id, .. } => vec![effects::destroy(json_as(json!({
+                        "target": { "of": "instance", "instanceId": target_id }
+                    })))],
+                    _ => vec![],
+                },
+            )
             .with_when(|_ctx, event| {
                 unforced_declaration(event).is_some_and(|(_, target_id)| !target_id.starts_with("hero-"))
             }),
@@ -430,12 +467,16 @@ fn shatter() -> Script {
 fn turncoat() -> Script {
     Script {
         triggers: vec![
-            TriggerDef::new("edge-r6-turncoat", &[GameEventType::AttackDeclared], |_ctx, event| match event {
-                GameEvent::AttackDeclared { attacker_id, .. } => {
-                    vec![effects::steal(json_as(json!({ "instanceId": attacker_id })))]
-                }
-                _ => vec![],
-            })
+            TriggerDef::new(
+                "edge-r6-turncoat",
+                &[GameEventType::AttackDeclared],
+                |_ctx, event| match event {
+                    GameEvent::AttackDeclared { attacker_id, .. } => {
+                        vec![effects::steal(json_as(json!({ "instanceId": attacker_id })))]
+                    }
+                    _ => vec![],
+                },
+            )
             .with_when(|_ctx, event| unforced_declaration(event).is_some()),
         ],
         ..Script::default()
@@ -446,12 +487,16 @@ fn turncoat() -> Script {
 fn defector() -> Script {
     Script {
         triggers: vec![
-            TriggerDef::new("edge-r6-defector", &[GameEventType::AttackDeclared], |_ctx, event| match event {
-                GameEvent::AttackDeclared { target_id, .. } => {
-                    vec![effects::steal(json_as(json!({ "instanceId": target_id })))]
-                }
-                _ => vec![],
-            })
+            TriggerDef::new(
+                "edge-r6-defector",
+                &[GameEventType::AttackDeclared],
+                |_ctx, event| match event {
+                    GameEvent::AttackDeclared { target_id, .. } => {
+                        vec![effects::steal(json_as(json!({ "instanceId": target_id })))]
+                    }
+                    _ => vec![],
+                },
+            )
             .with_when(|_ctx, event| {
                 unforced_declaration(event).is_some_and(|(_, target_id)| !target_id.starts_with("hero-"))
             }),
@@ -464,9 +509,11 @@ fn defector() -> Script {
 fn swapper() -> Script {
     Script {
         triggers: vec![
-            TriggerDef::new("edge-r6-swapper", &[GameEventType::AttackDeclared], |_ctx, _event| {
-                vec![effects::swap_board()]
-            })
+            TriggerDef::new(
+                "edge-r6-swapper",
+                &[GameEventType::AttackDeclared],
+                |_ctx, _event| vec![effects::swap_board()],
+            )
             .with_when(|_ctx, event| unforced_declaration(event).is_some()),
         ],
         ..Script::default()
@@ -493,19 +540,25 @@ fn asking_window_trap(s: &mut Scenario, id: &str, then: &'static str) {
         "Trap",
         Script {
             triggers: vec![
-                TriggerDef::new(format!("{id}:asks"), &[GameEventType::AttackDeclared], move |_ctx, event| {
-                    let attacker_id = match event {
-                        GameEvent::AttackDeclared { attacker_id, .. } => attacker_id.clone(),
-                        _ => String::new(),
-                    };
-                    vec![effects::choose_mode(json_as(json!({
-                        "options": ["ok"],
-                        "step": "answered",
-                        "prompt": prompt,
-                        "data": { "attackerId": attacker_id },
-                    })))]
-                })
-                .with_when(|ctx, event| unforced_declaration(event).is_some() && ctx.state.active != ctx.controller),
+                TriggerDef::new(
+                    format!("{id}:asks"),
+                    &[GameEventType::AttackDeclared],
+                    move |_ctx, event| {
+                        let attacker_id = match event {
+                            GameEvent::AttackDeclared { attacker_id, .. } => attacker_id.clone(),
+                            _ => String::new(),
+                        };
+                        vec![effects::choose_mode(json_as(json!({
+                            "options": ["ok"],
+                            "step": "answered",
+                            "prompt": prompt,
+                            "data": { "attackerId": attacker_id },
+                        })))]
+                    },
+                )
+                .with_when(|ctx, event| {
+                    unforced_declaration(event).is_some() && ctx.state.active != ctx.controller
+                }),
             ],
             resume: [(
                 "answered",
@@ -532,7 +585,8 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     use super::*;
 
     #[test]
-    fn r220_r174_r83_an_attacker_a_trap_in_the_window_destroyed_does_not_attack_with_the_reborn_body_that_came_back() {
+    fn r220_r174_r83_an_attacker_a_trap_in_the_window_destroyed_does_not_attack_with_the_reborn_body_that_came_back()
+     {
         let mut s = setup(json!({
             "seed": "edge-r6-vaporize-reborn",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -546,11 +600,9 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
         s.attack(&sorcerer, "hero");
 
         // The trap destroyed the declared attacker and Reborn put a new arrival in its zone (R83).
-        assert!(
-            s.events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == sorcerer.id))
-        );
+        assert!(s.events().iter().any(
+            |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == sorcerer.id)
+        ));
         let body = must(s.unit("p1", 1), "the Reborn body");
         assert_eq!(body.id, sorcerer.id);
         // The attack was the stay that died; the body declared nothing and deals nothing.
@@ -559,7 +611,8 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     }
 
     #[test]
-    fn r220_r174_r83_an_attack_whose_target_a_trap_in_the_window_destroyed_does_not_land_on_the_targets_reborn_body() {
+    fn r220_r174_r83_an_attack_whose_target_a_trap_in_the_window_destroyed_does_not_land_on_the_targets_reborn_body()
+     {
         let mut s = setup(json!({
             "seed": "edge-r6-shatter-reborn",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -572,11 +625,9 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
 
         s.attack(&sorcerer, &defender);
 
-        assert!(
-            s.events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == defender.id))
-        );
+        assert!(s.events().iter().any(
+            |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == defender.id)
+        ));
         let body = must(s.unit("p2", 2), "the Reborn body");
         assert_eq!(body.id, defender.id);
         // The body is a new arrival with a fresh Divine Shield; the attack that named the old stay is
@@ -587,7 +638,8 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     }
 
     #[test]
-    fn r220_r173_r171_an_attacker_a_trap_in_the_window_stole_does_not_go_on_to_hit_its_new_controllers_hero_s4_2_step_2() {
+    fn r220_r173_r171_an_attacker_a_trap_in_the_window_stole_does_not_go_on_to_hit_its_new_controllers_hero_s4_2_step_2()
+     {
         let mut s = setup(json!({
             "seed": "edge-r6-turncoat",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -604,11 +656,15 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
         s.expect_health("p2", 20);
         // The attack is over, but the attacker changed sides: R171 gives it a fresh exertion for p2,
         // and nothing spends it again as the attack ends.
-        assert_eq!(exertion_json(&s, &sorcerer), json!({ "attacked": false, "switched": false }));
+        assert_eq!(
+            exertion_json(&s, &sorcerer),
+            json!({ "attacked": false, "switched": false })
+        );
     }
 
     #[test]
-    fn r220_r173_r171_an_attack_whose_target_a_trap_in_the_window_moved_to_the_attackers_side_does_not_hit_it_s4_2_step_2() {
+    fn r220_r173_r171_an_attack_whose_target_a_trap_in_the_window_moved_to_the_attackers_side_does_not_hit_it_s4_2_step_2()
+     {
         let mut s = setup(json!({
             "seed": "edge-r6-defector",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -633,11 +689,15 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
         // The attacker stayed p1's, so its exertion stays spent (R44); the target that changed sides has
         // a fresh one (R171).
         assert!(s.card(&sorcerer).exertion.attacked);
-        assert_eq!(exertion_json(&s, &vanilla), json!({ "attacked": false, "switched": false }));
+        assert_eq!(
+            exertion_json(&s, &vanilla),
+            json!({ "attacked": false, "switched": false })
+        );
     }
 
     #[test]
-    fn r220_r73_r171_a_board_swap_in_the_window_leaves_the_declaring_players_attacker_on_the_other_side_no_combat() {
+    fn r220_r73_r171_a_board_swap_in_the_window_leaves_the_declaring_players_attacker_on_the_other_side_no_combat()
+     {
         let mut s = setup(json!({
             "seed": "edge-r6-swapper",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -662,12 +722,19 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
         assert_eq!(count(&s, GameEventType::Damage), 0);
         s.expect_in_zone(&vanilla, "field");
         // Both changed sides, so both have a fresh exertion for their new controller (R171).
-        assert_eq!(exertion_json(&s, &sorcerer), json!({ "attacked": false, "switched": false }));
-        assert_eq!(exertion_json(&s, &vanilla), json!({ "attacked": false, "switched": false }));
+        assert_eq!(
+            exertion_json(&s, &sorcerer),
+            json!({ "attacked": false, "switched": false })
+        );
+        assert_eq!(
+            exertion_json(&s, &vanilla),
+            json!({ "attacked": false, "switched": false })
+        );
     }
 
     #[test]
-    fn r220_r113_r173_an_attacker_the_windows_trap_stole_after_a_question_never_strikes_its_new_controllers_hero() {
+    fn r220_r113_r173_an_attacker_the_windows_trap_stole_after_a_question_never_strikes_its_new_controllers_hero()
+     {
         let mut s = setup(json!({
             "p1": { "field": [TIMMY], "hand": [RENO] },
             "p2": { "hand": [RENO] },
@@ -690,7 +757,8 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     }
 
     #[test]
-    fn r220_r174_r83_r113_an_attacker_the_windows_trap_killed_after_a_question_does_not_attack_with_its_reborn_body() {
+    fn r220_r174_r83_r113_an_attacker_the_windows_trap_killed_after_a_question_does_not_attack_with_its_reborn_body()
+     {
         let mut s = setup(json!({
             "p1": { "field": [RIGHT_HOUSE], "hand": [RENO] },
             "p2": { "hand": [RENO] },
@@ -709,7 +777,8 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     }
 
     #[test]
-    fn r220_r44_r99_my_pawn_does_not_fire_on_a_declaration_whose_attacker_an_earlier_trap_in_the_window_destroyed() {
+    fn r220_r44_r99_my_pawn_does_not_fire_on_a_declaration_whose_attacker_an_earlier_trap_in_the_window_destroyed()
+     {
         // p2's fixture trap in lane 1 destroys p1's attacking Twisted Sorcerer before My Pawn in lane 2
         // is offered the declaration (R68). The attacker is in its graveyard: no attack is left to be
         // lethal, so My Pawn stays armed and p1 keeps its turn.
@@ -746,7 +815,8 @@ mod r176_the_hero_my_pawn_projects_is_the_one_the_combat_leaves {
     use super::*;
 
     #[test]
-    fn r176_a_trample_swing_the_defenders_lifesteal_strike_back_outheals_in_the_same_combat_is_not_lethal_s4_3_s4_4_step_8() {
+    fn r176_a_trample_swing_the_defenders_lifesteal_strike_back_outheals_in_the_same_combat_is_not_lethal_s4_3_s4_4_step_8()
+     {
         // p1's 5/5 Twisted Sorcerer with Trample attacks p2's Jilliax (3/2, Lifesteal, Taunt; its Divine
         // Shield spent) with p2 at 3. Trample sends 3 through, and Jilliax's strike back heals p2 for 3
         // in the same combat, so the check after it finds p2 at 3: the attack would not be lethal.
@@ -810,9 +880,11 @@ fn place_unit(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) -> Ca
 fn watcher() -> Script {
     Script {
         triggers: vec![
-            TriggerDef::new("edge-r7-watcher", &[GameEventType::AttackDeclared], |_ctx, _event| {
-                vec![effects::draw(json_as(json!({ "count": 1 })))]
-            })
+            TriggerDef::new(
+                "edge-r7-watcher",
+                &[GameEventType::AttackDeclared],
+                |_ctx, _event| vec![effects::draw(json_as(json!({ "count": 1 })))],
+            )
             .with_when(|_ctx, event| unforced_declaration(event).is_some()),
         ],
         ..Script::default()
@@ -823,9 +895,11 @@ fn watcher() -> Script {
 fn caller() -> Script {
     Script {
         triggers: vec![
-            TriggerDef::new("edge-r7-caller", &[GameEventType::AttackDeclared], |_ctx, _event| {
-                vec![effects::summon(json_as(json!({ "defId": "edge-r7-watcher" })))]
-            })
+            TriggerDef::new(
+                "edge-r7-caller",
+                &[GameEventType::AttackDeclared],
+                |_ctx, _event| vec![effects::summon(json_as(json!({ "defId": "edge-r7-watcher" })))],
+            )
             .with_when(|_ctx, event| unforced_declaration(event).is_some()),
         ],
         ..Script::default()
@@ -837,7 +911,8 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
     use super::*;
 
     #[test]
-    fn r212_r171_a_unit_a_trap_in_the_window_stole_answers_the_declaration_for_the_player_who_controlled_it_then_s10_3() {
+    fn r212_r171_a_unit_a_trap_in_the_window_stole_answers_the_declaration_for_the_player_who_controlled_it_then_s10_3()
+     {
         // p1's Sorcerer attacks p2's Watcher. p1's own trap in the window steals the Watcher, so the
         // attack is over (R220). The Watcher's "whenever a unit attacks, you draw" answers a declaration
         // made while p2 controlled it: p2 draws, not p1 (R212's "a card whose controller has changed
@@ -847,7 +922,12 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
         }));
-        fixture_unit(&mut s, "edge-r7-watcher", watcher(), AttackHealth { attack: 2, health: 2 });
+        fixture_unit(
+            &mut s,
+            "edge-r7-watcher",
+            watcher(),
+            AttackHealth { attack: 2, health: 2 },
+        );
         fixture(&mut s, "edge-r6-defector", "Trap", defector());
         let watcher_card = place_unit(&mut s, "edge-r7-watcher", PlayerId::P2, 2);
         set_trap(&mut s, "edge-r6-defector", PlayerId::P1, 1);
@@ -872,7 +952,8 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
     }
 
     #[test]
-    fn r212_r174_a_unit_a_trap_in_the_window_summoned_does_not_answer_the_declaration_made_before_it_arrived_s10_3() {
+    fn r212_r174_a_unit_a_trap_in_the_window_summoned_does_not_answer_the_declaration_made_before_it_arrived_s10_3()
+     {
         // p1's Sorcerer attacks p2's hero. p2's trap in the window summons a Watcher for p2. The
         // Watcher was not on the field when the attack was declared, so it draws nothing for it.
         let mut s = setup(json!({
@@ -880,7 +961,12 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
         }));
-        fixture_unit(&mut s, "edge-r7-watcher", watcher(), AttackHealth { attack: 2, health: 2 });
+        fixture_unit(
+            &mut s,
+            "edge-r7-watcher",
+            watcher(),
+            AttackHealth { attack: 2, health: 2 },
+        );
         fixture(&mut s, "edge-r7-caller", "Trap", caller());
         set_trap(&mut s, "edge-r7-caller", PlayerId::P2, 1);
         let sorcerer = must(s.unit("p1", 1), "p1's Twisted Sorcerer");
@@ -888,7 +974,10 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
 
         s.attack(&sorcerer, "hero");
 
-        assert_eq!(s.unit("p2", 1).map(|c| c.def_id), Some("edge-r7-watcher".to_string()));
+        assert_eq!(
+            s.unit("p2", 1).map(|c| c.def_id),
+            Some("edge-r7-watcher".to_string())
+        );
         assert_eq!(count(&s, GameEventType::Drawn), 0);
         assert_eq!(s.hand("p2").len(), p2_hand);
         // The attack itself went through.
@@ -946,13 +1035,17 @@ mod r176_a_lifesteal_strike_back_that_tramples_heals_what_it_really_deals {
 fn prick() -> Script {
     Script {
         triggers: vec![
-            TriggerDef::new("cw8-prick", &[GameEventType::AttackDeclared], |_ctx, event| match event {
-                GameEvent::AttackDeclared { attacker_id, .. } => vec![effects::damage(json_as(json!({
-                    "to": { "of": "instance", "instanceId": attacker_id },
-                    "amount": 1,
-                })))],
-                _ => vec![],
-            })
+            TriggerDef::new(
+                "cw8-prick",
+                &[GameEventType::AttackDeclared],
+                |_ctx, event| match event {
+                    GameEvent::AttackDeclared { attacker_id, .. } => vec![effects::damage(json_as(json!({
+                        "to": { "of": "instance", "instanceId": attacker_id },
+                        "amount": 1,
+                    })))],
+                    _ => vec![],
+                },
+            )
             .with_when(|_ctx, event| unforced_declaration(event).is_some()),
         ],
         ..Script::default()
@@ -990,18 +1083,22 @@ fn snap() -> Script {
 fn ask_prick() -> Script {
     Script {
         triggers: vec![
-            TriggerDef::new("cw8-ask-prick", &[GameEventType::AttackDeclared], |_ctx, event| {
-                let attacker_id = match event {
-                    GameEvent::AttackDeclared { attacker_id, .. } => attacker_id.clone(),
-                    _ => String::new(),
-                };
-                vec![effects::choose_mode(json_as(json!({
-                    "options": ["ok"],
-                    "step": "answered",
-                    "prompt": "cw8-ask-prick: a question",
-                    "data": { "attackerId": attacker_id },
-                })))]
-            })
+            TriggerDef::new(
+                "cw8-ask-prick",
+                &[GameEventType::AttackDeclared],
+                |_ctx, event| {
+                    let attacker_id = match event {
+                        GameEvent::AttackDeclared { attacker_id, .. } => attacker_id.clone(),
+                        _ => String::new(),
+                    };
+                    vec![effects::choose_mode(json_as(json!({
+                        "options": ["ok"],
+                        "step": "answered",
+                        "prompt": "cw8-ask-prick: a question",
+                        "data": { "attackerId": attacker_id },
+                    })))]
+                },
+            )
             .with_when(|_ctx, event| unforced_declaration(event).is_some()),
         ],
         resume: [(
@@ -1049,7 +1146,8 @@ mod r220_s10_3_a_trap_answers_what_a_trap_in_the_attacks_window_did_before_the_c
     }
 
     #[test]
-    fn r220_r113_r122_after_a_window_traps_question_a_trap_answering_its_hit_on_the_attacker_still_fires_before_step_5_s10_3() {
+    fn r220_r113_r122_after_a_window_traps_question_a_trap_answering_its_hit_on_the_attacker_still_fires_before_step_5_s10_3()
+     {
         // The same two traps, but the first asks p2 a question before it deals the attacker 1 damage, so
         // the window pauses and step 5 is owed to the answer (R113). The answer finishes the window: the
         // second trap is a response to the hit and resolves before the combat the declaration still owes.

@@ -21,7 +21,7 @@ use jackioh_engine::plague::{
 use jackioh_engine::replay::hash_state;
 use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
-use jackioh_engine::script::{EngineSink, Effect};
+use jackioh_engine::script::{Effect, EngineSink};
 use jackioh_engine::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::triggers::settle;
@@ -29,8 +29,8 @@ use jackioh_engine::view_for::{HIDDEN_ID, HIDDEN_OPTION_LABEL, view_for};
 use jackioh_engine::zones::{PlaceOnFieldOptions, place_on_field};
 
 use super::fixtures::generation::{
-    Run, act, answer, big_body, body, charger, crawler, dusting, frozen, hand_card, outbreak, plague_book, playing,
-    quiet_trap, refusal, replayed, scatter, slime, toxins,
+    Run, act, answer, big_body, body, charger, crawler, dusting, frozen, hand_card, outbreak, plague_book,
+    playing, quiet_trap, refusal, replayed, scatter, slime, toxins,
 };
 use super::fixtures::harness::{put, slot};
 
@@ -88,9 +88,24 @@ struct Board {
 
 fn board(seed: &str) -> Board {
     let mut started = playing(seed);
-    let mine = put(&mut started.state, &body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-    let theirs = put(&mut started.state, &big_body.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
-    let trap = put(&mut started.state, &quiet_trap.id, slot(PlayerId::P2, Row::Backrow, 3), json!({}));
+    let mine = put(
+        &mut started.state,
+        &body.id,
+        slot(PlayerId::P1, Row::Units, 1),
+        json!({}),
+    );
+    let theirs = put(
+        &mut started.state,
+        &big_body.id,
+        slot(PlayerId::P2, Row::Units, 2),
+        json!({}),
+    );
+    let trap = put(
+        &mut started.state,
+        &quiet_trap.id,
+        slot(PlayerId::P2, Row::Backrow, 3),
+        json!({}),
+    );
     Board {
         run: started,
         mine,
@@ -106,12 +121,17 @@ fn hero_health(state: &GameState, player: PlayerId) -> i32 {
 /// The events of the last `n` applied actions, in order (TS `applied.slice(-n).flatMap(…)`).
 fn last_events(state: &GameState, n: usize) -> Vec<GameEvent> {
     let from = state.applied.len().saturating_sub(n);
-    state.applied[from..].iter().flat_map(|entry| entry.events.clone()).collect()
+    state.applied[from..]
+        .iter()
+        .flat_map(|entry| entry.events.clone())
+        .collect()
 }
 
 /// The top card of `player`'s unit lane `lane` (TS `units[lane - 1]?.[0]`).
 fn top_of(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardInstance> {
-    state.players[player].units[lane - 1].as_ref().and_then(|pile| pile.first())
+    state.players[player].units[lane - 1]
+        .as_ref()
+        .and_then(|pile| pile.first())
 }
 
 /// The card under `id` as it stands in the state now (TS read the live object).
@@ -135,7 +155,11 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .iter()
             .all(|(key, value)| have.get(key).is_some_and(|got| matches_object(got, value))),
         (Value::Array(have), Value::Array(want)) => {
-            have.len() == want.len() && have.iter().zip(want).all(|(got, value)| matches_object(got, value))
+            have.len() == want.len()
+                && have
+                    .iter()
+                    .zip(want)
+                    .all(|(got, value)| matches_object(got, value))
         }
         _ => actual == expected,
     }
@@ -172,7 +196,8 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
     use super::*;
 
     #[test]
-    fn r689_places_every_token_on_the_one_permanent_the_single_prompt_names_over_every_permanent_on_either_side_face_down_included() {
+    fn r689_places_every_token_on_the_one_permanent_the_single_prompt_names_over_every_permanent_on_either_side_face_down_included()
+     {
         let Board {
             run: mut start,
             mine,
@@ -189,7 +214,11 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         assert_eq!(first.as_ref().map(|p| p.kind), Some(PromptKind::Target));
         // R68's order, the placer's side first: p1's unit, then p2's unit, then p2's face-down trap.
         assert_eq!(
-            first.map(|p| p.options.into_iter().map(|option| option.selection).collect::<Vec<_>>()),
+            first.map(|p| p
+                .options
+                .into_iter()
+                .map(|option| option.selection)
+                .collect::<Vec<_>>()),
             Some(vec![pick(&mine), pick(&theirs), pick(&trap)])
         );
         // The rest of the Cry waits for the placements (R113).
@@ -211,12 +240,17 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
     }
 
     #[test]
-    fn r689_a_radiant_faces_larger_count_lands_on_the_one_pick_and_the_paused_prompt_survives_json_and_replays() {
+    fn r689_a_radiant_faces_larger_count_lands_on_the_one_pick_and_the_paused_prompt_survives_json_and_replays()
+     {
         let Board {
-            run: mut start, theirs, ..
+            run: mut start,
+            theirs,
+            ..
         } = board("plague-json");
         let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
-        find_instance_mut(&mut start.state, &book.id).expect("the book").radiant = true;
+        find_instance_mut(&mut start.state, &book.id)
+            .expect("the book")
+            .radiant = true;
         let mut run = frozen(&start);
         run = act(&run, play(&book));
 
@@ -224,8 +258,14 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         let paused = run.state.clone();
         let round = thaw(&paused);
         assert_eq!(round, paused);
-        let data = round.pending.as_ref().map(|p| serde_json::to_value(&p.resume.data).expect("data serialises"));
-        assert!(matches_object(&data.unwrap_or(Value::Null), &json!({ "count": 3, "amount": 1 })));
+        let data = round
+            .pending
+            .as_ref()
+            .map(|p| serde_json::to_value(&p.resume.data).expect("data serialises"));
+        assert!(matches_object(
+            &data.unwrap_or(Value::Null),
+            &json!({ "count": 3, "amount": 1 })
+        ));
 
         let live_run = answer(&run, pick(&theirs), None);
         let from_json = answer(
@@ -283,7 +323,8 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
     }
 
     #[test]
-    fn r471_the_other_player_sees_only_that_a_prompt_is_open_the_placer_sees_an_enemy_face_down_card_by_id_alone() {
+    fn r471_the_other_player_sees_only_that_a_prompt_is_open_the_placer_sees_an_enemy_face_down_card_by_id_alone()
+     {
         let Board {
             run: mut start, trap, ..
         } = board("plague-view");
@@ -299,11 +340,17 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         assert_eq!(mine["forYou"], json!(true), "expected p1's own prompt");
         let trap_option = mine["options"]
             .as_array()
-            .and_then(|options| options.iter().find(|option| option["instanceId"] == trap.id.as_str()))
+            .and_then(|options| {
+                options
+                    .iter()
+                    .find(|option| option["instanceId"] == trap.id.as_str())
+            })
             .cloned();
         assert_eq!(
             trap_option,
-            Some(json!({ "key": format!("instance:{}", trap.id), "label": HIDDEN_OPTION_LABEL, "instanceId": trap.id }))
+            Some(
+                json!({ "key": format!("instance:{}", trap.id), "label": HIDDEN_OPTION_LABEL, "instanceId": trap.id })
+            )
         );
         assert!(!mine.to_string().contains(&quiet_trap.id));
 
@@ -313,11 +360,23 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         // card's back is public to both (R471).
         let placer_events: Vec<Value> = view_json(&run.state, PlayerId::P1)["events"]
             .as_array()
-            .map(|events| events.iter().filter(|e| e["type"] == "counterChanged").cloned().collect())
+            .map(|events| {
+                events
+                    .iter()
+                    .filter(|e| e["type"] == "counterChanged")
+                    .cloned()
+                    .collect()
+            })
             .unwrap_or_default();
         let owner_events: Vec<Value> = view_json(&run.state, PlayerId::P2)["events"]
             .as_array()
-            .map(|events| events.iter().filter(|e| e["type"] == "counterChanged").cloned().collect())
+            .map(|events| {
+                events
+                    .iter()
+                    .filter(|e| e["type"] == "counterChanged")
+                    .cloned()
+                    .collect()
+            })
             .unwrap_or_default();
         assert!(matches_object(
             placer_events.last().unwrap_or(&Value::Null),
@@ -343,9 +402,12 @@ mod e19_a_placement_prompt_held_by_the_player_who_is_not_taking_the_turn {
     use super::*;
 
     #[test]
-    fn r471_the_placer_is_the_placing_cards_controller_whose_prompt_it_is_on_either_players_turn_c_90s_reward_d() {
+    fn r471_the_placer_is_the_placing_cards_controller_whose_prompt_it_is_on_either_players_turn_c_90s_reward_d()
+     {
         let Board {
-            run: mut start, theirs, ..
+            run: mut start,
+            theirs,
+            ..
         } = board("plague-off-turn");
         {
             // p2's card places on p1's turn: the prompt is p2's, and p1 cannot answer it.
@@ -361,7 +423,10 @@ mod e19_a_placement_prompt_held_by_the_player_who_is_not_taking_the_turn {
             (place_plague_tokens(json_as(json!({ "count": 1, "amount": 2 }))).apply)(&mut ctx);
         }
         assert_eq!(start.state.active, PlayerId::P1);
-        assert_eq!(start.state.pending.as_ref().map(|p| p.player_id), Some(PlayerId::P2));
+        assert_eq!(
+            start.state.pending.as_ref().map(|p| p.player_id),
+            Some(PlayerId::P2)
+        );
         let mut run1 = frozen(&start);
         let pending = run1.state.pending.clone().expect("a prompt");
         // TS: `answer(run1, pick(theirs), "p1")` throws the refusal; `refusal` is that reduce's error.
@@ -383,11 +448,15 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
     #[test]
     fn r471_place_n_on_x_is_one_placement_of_n_on_the_declared_card_radiant_2() {
         let Board {
-            run: mut start, theirs, ..
+            run: mut start,
+            theirs,
+            ..
         } = board("plague-outbreak");
         let spell = hand_card(&mut start.state, &outbreak.id, PlayerId::P1);
         let radiant = hand_card(&mut start.state, &outbreak.id, PlayerId::P1);
-        find_instance_mut(&mut start.state, &radiant.id).expect("the radiant spell").radiant = true;
+        find_instance_mut(&mut start.state, &radiant.id)
+            .expect("the radiant spell")
+            .radiant = true;
         let mut run = frozen(&start);
         run = act(&run, play_on(&spell, &theirs));
         run = act(&run, play_on(&radiant, &theirs));
@@ -395,7 +464,10 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
         let events = last_events(&run.state, 2);
         assert_eq!(
             placements(&events),
-            vec![placement(&theirs.id, 1, Some(1)), placement(&theirs.id, 3, Some(2))]
+            vec![
+                placement(&theirs.id, 1, Some(1)),
+                placement(&theirs.id, 3, Some(2))
+            ]
         );
     }
 
@@ -404,10 +476,21 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
         let Board { run: mut start, .. } = board("plague-slime");
         let state = &mut start.state;
         let base = put(state, &slime.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
-        let radiant = put(state, &slime.id, slot(PlayerId::P1, Row::Units, 4), json!({ "radiant": true }));
+        let radiant = put(
+            state,
+            &slime.id,
+            slot(PlayerId::P1, Row::Units, 4),
+            json!({ "radiant": true }),
+        );
         sink_for!(sink, *state);
-        assert_eq!(plague_multiplier_of(&*sink.state, live(&*sink.state, &base.id)), 2);
-        assert_eq!(plague_multiplier_of(&*sink.state, live(&*sink.state, &radiant.id)), 3);
+        assert_eq!(
+            plague_multiplier_of(&*sink.state, live(&*sink.state, &base.id)),
+            2
+        );
+        assert_eq!(
+            plague_multiplier_of(&*sink.state, live(&*sink.state, &radiant.id)),
+            3
+        );
 
         run(
             &mut sink,
@@ -415,17 +498,30 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
             None,
             &[&base],
         );
-        run(&mut sink, place_plague(json_as(json!({ "amount": 2 }))), Some(&radiant), &[]);
+        run(
+            &mut sink,
+            place_plague(json_as(json!({ "amount": 2 }))),
+            Some(&radiant),
+            &[],
+        );
         assert_eq!(plague_on(live(&*sink.state, &base.id)), 2);
         assert_eq!(plague_on(live(&*sink.state, &radiant.id)), 6);
         assert_eq!(
             placements(&*sink.events),
-            vec![placement(&base.id, 2, Some(2)), placement(&radiant.id, 6, Some(6))]
+            vec![
+                placement(&base.id, 2, Some(2)),
+                placement(&radiant.id, 6, Some(6))
+            ]
         );
 
         // A Vanilla slime carries no text, so nothing multiplies (§6.3 Vanilla).
-        find_instance_mut(&mut *sink.state, &base.id).expect("the slime").vanilla = true;
-        assert_eq!(plague_multiplier_of(&*sink.state, live(&*sink.state, &base.id)), 1);
+        find_instance_mut(&mut *sink.state, &base.id)
+            .expect("the slime")
+            .vanilla = true;
+        assert_eq!(
+            plague_multiplier_of(&*sink.state, live(&*sink.state, &base.id)),
+            1
+        );
     }
 
     #[test]
@@ -452,10 +548,17 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
     #[test]
     fn r471_whenever_plague_counters_are_placed_on_this_answers_once_per_placement_never_a_removal() {
         let Board { run: mut start, .. } = board("plague-crawler");
-        let worm = put(&mut start.state, &crawler.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let worm = put(
+            &mut start.state,
+            &crawler.id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
         let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
         let spell = hand_card(&mut start.state, &outbreak.id, PlayerId::P1);
-        find_instance_mut(&mut start.state, &spell.id).expect("the spell").radiant = true;
+        find_instance_mut(&mut start.state, &spell.id)
+            .expect("the spell")
+            .radiant = true;
         let mut run = frozen(&start);
         let before = hero_health(&run.state, PlayerId::P2);
 
@@ -478,29 +581,59 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
     }
 
     #[test]
-    fn r471_every_gain_is_a_placement_core_91s_plus_1_plague_counter_plague_reports_placed_and_is_multiplied() {
+    fn r471_every_gain_is_a_placement_core_91s_plus_1_plague_counter_plague_reports_placed_and_is_multiplied()
+    {
         let Board { run: mut start, .. } = board("plague-gain");
-        let on_slime = put(&mut start.state, &slime.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let on_slime = put(
+            &mut start.state,
+            &slime.id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
         sink_for!(sink, start.state);
-        run(&mut sink, counters::plague(json_as(json!({ "amount": 1 }))), Some(&on_slime), &[]);
-        run(&mut sink, counters::plague(json_as(json!({ "amount": -1 }))), Some(&on_slime), &[]);
+        run(
+            &mut sink,
+            counters::plague(json_as(json!({ "amount": 1 }))),
+            Some(&on_slime),
+            &[],
+        );
+        run(
+            &mut sink,
+            counters::plague(json_as(json!({ "amount": -1 }))),
+            Some(&on_slime),
+            &[],
+        );
         assert_eq!(
             placements(&*sink.events),
-            vec![placement(&on_slime.id, 2, Some(2)), placement(&on_slime.id, 1, None)]
+            vec![
+                placement(&on_slime.id, 2, Some(2)),
+                placement(&on_slime.id, 1, None)
+            ]
         );
     }
 
     #[test]
-    fn r471_r13_a_placement_lands_only_on_a_permanent_on_the_field_never_a_hand_card_or_one_dormant_under_a_stack() {
+    fn r471_r13_a_placement_lands_only_on_a_permanent_on_the_field_never_a_hand_card_or_one_dormant_under_a_stack()
+     {
         let Board {
             run: mut start, mine, ..
         } = board("plague-off-field");
         let state = &mut start.state;
         let in_hand = hand_card(state, &body.id, PlayerId::P1);
         // A Stack card played on p1's lane 1, so `mine` lies dormant under it.
-        let mut top = new_instance(state, &big_body.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let mut top = new_instance(
+            state,
+            &big_body.id,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
         assert!(
-            place_on_field(state, &mut top, slot(PlayerId::P1, Row::Units, 1), PlaceOnFieldOptions { stack: Some(true) }),
+            place_on_field(
+                state,
+                &mut top,
+                slot(PlayerId::P1, Row::Units, 1),
+                PlaceOnFieldOptions { stack: Some(true) }
+            ),
             "expected a pile"
         );
         let mine_now = live(state, &mine.id).clone();
@@ -509,7 +642,11 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
         assert_eq!(place_plague_on(&mut sink, &mine_now, 1), 0);
         assert_eq!(place_plague_on(&mut sink, &top, 0), 0);
         assert!(sink.events.is_empty());
-        assert!(!permanents_on_field(&*sink.state, None::<PlayerId>).iter().any(|card| card.id == mine.id));
+        assert!(
+            !permanents_on_field(&*sink.state, None::<PlayerId>)
+                .iter()
+                .any(|card| card.id == mine.id)
+        );
     }
 }
 
@@ -541,38 +678,70 @@ mod e19_placements_over_a_scope_at_random_and_removals {
     }
 
     #[test]
-    fn r60_a_random_placement_on_n_units_picks_n_different_ones_all_of_them_when_fewer_and_nothing_on_an_empty_board() {
+    fn r60_a_random_placement_on_n_units_picks_n_different_ones_all_of_them_when_fewer_and_nothing_on_an_empty_board()
+     {
         let Board {
             run: mut start,
             mine,
             theirs,
             ..
         } = board("plague-random");
-        let third = put(&mut start.state, &body.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
+        let third = put(
+            &mut start.state,
+            &body.id,
+            slot(PlayerId::P2, Row::Units, 4),
+            json!({}),
+        );
         {
             sink_for!(sink, start.state);
-            run(&mut sink, place_plague_random(json_as(json!({ "count": 2, "amount": 1 }))), None, &[]);
+            run(
+                &mut sink,
+                place_plague_random(json_as(json!({ "count": 2, "amount": 1 }))),
+                None,
+                &[],
+            );
             let hit: Vec<String> = placements(&*sink.events)
                 .iter()
                 .map(|entry| entry["id"].as_str().unwrap_or_default().to_string())
                 .collect();
             assert_eq!(hit.len(), 2);
             assert_eq!(hit.iter().collect::<BTreeSet<_>>().len(), 2);
-            assert!(hit.iter().all(|id| [&mine.id, &theirs.id, &third.id].contains(&id)));
+            assert!(
+                hit.iter()
+                    .all(|id| [&mine.id, &theirs.id, &third.id].contains(&id))
+            );
         }
 
         let mut lone = playing("plague-random-lone");
-        let only = put(&mut lone.state, &body.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let only = put(
+            &mut lone.state,
+            &body.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         {
             sink_for!(lone_sink, lone.state);
-            run(&mut lone_sink, place_plague_random(json_as(json!({ "count": 2, "amount": 1 }))), None, &[]);
-            assert_eq!(placements(&*lone_sink.events), vec![placement(&only.id, 1, Some(1))]);
+            run(
+                &mut lone_sink,
+                place_plague_random(json_as(json!({ "count": 2, "amount": 1 }))),
+                None,
+                &[],
+            );
+            assert_eq!(
+                placements(&*lone_sink.events),
+                vec![placement(&only.id, 1, Some(1))]
+            );
         }
 
         let mut empty = playing("plague-random-empty");
         sink_for!(empty_sink, empty.state);
         let cursor = empty_sink.rng.cursor();
-        run(&mut empty_sink, place_plague_random(json_as(json!({ "count": 2, "amount": 1 }))), None, &[]);
+        run(
+            &mut empty_sink,
+            place_plague_random(json_as(json!({ "count": 2, "amount": 1 }))),
+            None,
+            &[],
+        );
         assert_eq!(empty_sink.rng.cursor(), cursor);
         assert!(empty_sink.events.is_empty());
     }
@@ -580,7 +749,12 @@ mod e19_placements_over_a_scope_at_random_and_removals {
     #[test]
     fn r471_a_random_placement_played_as_a_spell_replays_the_same_picks() {
         let Board { run: mut start, .. } = board("plague-random-replay");
-        put(&mut start.state, &body.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
+        put(
+            &mut start.state,
+            &body.id,
+            slot(PlayerId::P2, Row::Units, 4),
+            json!({}),
+        );
         let spell = hand_card(&mut start.state, &scatter.id, PlayerId::P1);
         let mut run = frozen(&start);
         run = act(&run, play(&spell));
@@ -588,9 +762,12 @@ mod e19_placements_over_a_scope_at_random_and_removals {
     }
 
     #[test]
-    fn r471_consume_plague_takes_tokens_off_floors_at_0_and_reports_no_placement_the_payment_helper_says_how_many_came_off() {
+    fn r471_consume_plague_takes_tokens_off_floors_at_0_and_reports_no_placement_the_payment_helper_says_how_many_came_off()
+     {
         let Board {
-            run: mut start, theirs, ..
+            run: mut start,
+            theirs,
+            ..
         } = board("plague-consume");
         sink_for!(sink, start.state);
         place_plague_on(&mut sink, &theirs, 3);
@@ -621,15 +798,26 @@ mod e19_stats_per_token_auras_and_self_layers {
     use super::*;
 
     #[test]
-    fn r471_r689_an_aura_reading_each_units_tokens_buffs_its_side_and_shrinks_the_other_both_placements_land_on_the_one_pick() {
+    fn r471_r689_an_aura_reading_each_units_tokens_buffs_its_side_and_shrinks_the_other_both_placements_land_on_the_one_pick()
+     {
         let Board {
             run: mut start,
             mine,
             theirs,
             ..
         } = board("plague-aura");
-        put(&mut start.state, &toxins.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        put(&mut start.state, &body.id, slot(PlayerId::P2, Row::Units, 4), json!({})); // 1/1
+        put(
+            &mut start.state,
+            &toxins.id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        put(
+            &mut start.state,
+            &body.id,
+            slot(PlayerId::P2, Row::Units, 4),
+            json!({}),
+        ); // 1/1
         let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
         let mut run = frozen(&start);
 
@@ -648,8 +836,18 @@ mod e19_stats_per_token_auras_and_self_layers {
     #[test]
     fn r689_a_minus_x_minus_x_from_the_placements_kills_at_the_state_check_after_the_whole_effect() {
         let Board { run: mut start, .. } = board("plague-aura-death");
-        put(&mut start.state, &toxins.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        let frail = put(&mut start.state, &body.id, slot(PlayerId::P2, Row::Units, 4), json!({})); // 1/1
+        put(
+            &mut start.state,
+            &toxins.id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let frail = put(
+            &mut start.state,
+            &body.id,
+            slot(PlayerId::P2, Row::Units, 4),
+            json!({}),
+        ); // 1/1
         let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
         let mut run = frozen(&start);
 
@@ -670,7 +868,12 @@ mod e19_stats_per_token_auras_and_self_layers {
     #[test]
     fn r471_a_self_layer_reads_the_cards_own_tokens_classic_69_plus_2_attack_per_token() {
         let Board { run: mut start, .. } = board("plague-self-layer");
-        let unit = put(&mut start.state, &charger.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let unit = put(
+            &mut start.state,
+            &charger.id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
         assert_eq!(unit_view(&start.state, live(&start.state, &unit.id)).attack, 4);
         {
             sink_for!(sink, start.state);
@@ -686,11 +889,18 @@ mod e19_tokens_spent_as_mana_the_removal_the_play_pipeline_pays_with {
     #[test]
     fn r471_remove_plague_is_the_one_way_tokens_come_off_a_card_and_place_plague_on_the_one_way_they_go_on() {
         let Board { run: mut start, .. } = board("plague-payment");
-        let field = put(&mut start.state, &toxins.id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        let field = put(
+            &mut start.state,
+            &toxins.id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
         sink_for!(sink, start.state);
         run(
             &mut sink,
-            place_plague_each(json_as(json!({ "scope": { "side": "self", "rows": ["backrow"] }, "amount": 4 }))),
+            place_plague_each(json_as(
+                json!({ "scope": { "side": "self", "rows": ["backrow"] }, "amount": 4 }),
+            )),
             None,
             &[],
         );
@@ -704,7 +914,12 @@ mod e19_tokens_spent_as_mana_the_removal_the_play_pipeline_pays_with {
     fn r471_a_placement_prompt_effect_with_a_count_below_1_asks_nothing() {
         let Board { run: mut start, .. } = board("plague-zero");
         sink_for!(sink, start.state);
-        run(&mut sink, place_plague_tokens(json_as(json!({ "count": 0 }))), None, &[]);
+        run(
+            &mut sink,
+            place_plague_tokens(json_as(json!({ "count": 0 }))),
+            None,
+            &[],
+        );
         assert!(sink.state.pending.is_none());
         assert!(sink.events.is_empty());
     }
@@ -752,7 +967,10 @@ mod r452_e19_placements_under_a_random_cast_b5_e12 {
             run(&mut sink, random_cast_of_the_book(true), None, &[]);
             settle(&mut sink, Default::default());
             for placed in placements(&*sink.events) {
-                assert!([theirs.id.as_str(), trap.id.as_str()].contains(&placed["id"].as_str().unwrap_or_default()));
+                assert!(
+                    [theirs.id.as_str(), trap.id.as_str()]
+                        .contains(&placed["id"].as_str().unwrap_or_default())
+                );
             }
         }
     }

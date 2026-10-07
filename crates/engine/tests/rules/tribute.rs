@@ -232,7 +232,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
         hand_over_golem().id,
         CardScripts {
             base: Script {
-                static_flags: flags(json!({ "tribute": 3, "tributeEnemies": true, "enemyTributeHandsOver": true })),
+                static_flags: flags(
+                    json!({ "tribute": 3, "tributeEnemies": true, "enemyTributeHandsOver": true }),
+                ),
                 ..Script::default()
             },
             radiant: Script {
@@ -244,7 +246,11 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         death_pinger().id,
         both(Script {
-            death: Some(hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 3 })))])),
+            death: Some(hook(|_ctx| {
+                vec![damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 3 }),
+                ))]
+            })),
             ..Script::default()
         }),
     );
@@ -257,7 +263,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
                 1,
                 json!({ "side": "ally", "of": ["unit", "backrow"], "excludeSelf": true }),
             )],
-            cry: Some(hook(|_ctx| vec![sacrifice(json_as(json!({ "target": { "of": "chosen" } })))])),
+            cry: Some(hook(|_ctx| {
+                vec![sacrifice(json_as(json!({ "target": { "of": "chosen" } })))]
+            })),
             ..Script::default()
         }),
     );
@@ -292,9 +300,15 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep = ids(&state.players.p1.hand);
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+    );
     let keep = ids(&state.players.p2.hand);
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+    );
     let mut catalog = registered_catalog().clone();
     for card in defs() {
         catalog.insert(card.id.clone(), card);
@@ -321,17 +335,28 @@ fn hand_card(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInsta
 }
 
 fn unit_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    active_units_of(state, player).iter().map(|card| card.id.clone()).collect()
+    active_units_of(state, player)
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 /// The card as it stands in the state now (TS held the live object).
 fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id).cloned().expect("the card is in the state")
+    find_instance(state, &card.id)
+        .cloned()
+        .expect("the card is in the state")
 }
 
 /// `whyChoicesRefused(state, "p1", card, { type: "play", instanceId, zone: { row: "units", lane }, tributes, targets? })`
 /// as TS's `string | null`.
-fn refused(state: &GameState, card: &CardInstance, lane: i32, tributes: &[&str], targets: Option<Value>) -> Option<String> {
+fn refused(
+    state: &GameState,
+    card: &CardInstance,
+    lane: i32,
+    tributes: &[&str],
+    targets: Option<Value>,
+) -> Option<String> {
     let mut play = json!({
         "type": "play",
         "instanceId": card.id,
@@ -342,7 +367,9 @@ fn refused(state: &GameState, card: &CardInstance, lane: i32, tributes: &[&str],
         play["targets"] = targets;
     }
     let play: PlayAction = json_as(play);
-    why_choices_refused(state, PlayerId::P1, card, &play).err().map(|error| error.message)
+    why_choices_refused(state, PlayerId::P1, card, &play)
+        .err()
+        .map(|error| error.message)
 }
 
 /// `toMatch(/text/)` on a refusal that must be there.
@@ -374,7 +401,10 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
         (Value::Array(actual), Value::Array(expected)) => {
             actual.len() == expected.len()
-                && actual.iter().zip(expected).all(|(found, value)| matches_object(found, value))
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(found, value)| matches_object(found, value))
         }
         _ => actual == expected,
     }
@@ -390,7 +420,8 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
     use super::*;
 
     #[test]
-    fn section_6_3_refuses_a_play_whose_tributes_fall_short_of_its_tribute_x_and_refuses_a_board_that_cannot_pay() {
+    fn section_6_3_refuses_a_play_whose_tributes_fall_short_of_its_tribute_x_and_refuses_a_board_that_cannot_pay()
+     {
         let mut state = playing("tribute-short");
         let card = hand_card(&mut state, &tribute_two().id, PlayerId::P1);
         assert_eq!(tribute_cost_of(&state, &card), 2);
@@ -400,42 +431,93 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
 
         // One body pays 1 of the 2, so the board still cannot pay: that is the refusal, whatever the
         // play named.
-        let one = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let one = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         assert!(says(&refused(&state, &card, 3, &[], None), "needs Tribute 2"));
-        assert!(says(&refused(&state, &card, 3, &[&one.id], None), "needs Tribute 2"));
+        assert!(says(
+            &refused(&state, &card, 3, &[&one.id], None),
+            "needs Tribute 2"
+        ));
 
-        let two = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let two = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         assert_eq!(refused(&state, &card, 3, &[&one.id, &two.id], None), None);
-        assert!(says(&refused(&state, &card, 3, &[&one.id], None), "needs Tribute 2"));
+        assert!(says(
+            &refused(&state, &card, 3, &[&one.id], None),
+            "needs Tribute 2"
+        ));
         // Naming one unit twice is one unit, not two: a Tribute sacrifices X separate units (§6.3).
-        assert!(says(&refused(&state, &card, 3, &[&one.id, &one.id], None), "same unit twice"));
+        assert!(says(
+            &refused(&state, &card, 3, &[&one.id, &one.id], None),
+            "same unit twice"
+        ));
         // The cost is exact: a third unit is not "sacrifice X of your units".
-        let three = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 4), json!({}));
+        let three = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 4),
+            json!({}),
+        );
         assert!(says(
             &refused(&state, &card, 3, &[&one.id, &two.id, &three.id], None),
             "tributes 2, no more"
         ));
         // And a unit the chooser does not control is not theirs to tribute.
-        let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        assert!(says(&refused(&state, &card, 3, &[&one.id, &theirs.id], None), "cannot be tributed"));
+        let theirs = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        assert!(says(
+            &refused(&state, &card, 3, &[&one.id, &theirs.id], None),
+            "cannot be tributed"
+        ));
 
         // A card with no Tribute cost takes no tributes at all (R90's "declared nothing" reading).
         let free = hand_card(&mut state, &death_pinger().id, PlayerId::P1);
         assert_eq!(tribute_cost_of(&state, &free), 0);
-        assert!(says(&refused(&state, &free, 5, &[&one.id], None), "needs no Tribute"));
+        assert!(says(
+            &refused(&state, &free, 5, &[&one.id], None),
+            "needs no Tribute"
+        ));
     }
 
     #[test]
     fn r386_a_unit_that_declares_its_worth_is_worth_what_a_degrade_or_an_upgrade_left_it() {
         let mut state = playing("worth-tuned");
-        let base = put(&mut state, &worthy().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let shining = put(&mut state, &worthy().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
-        find_instance_mut(&mut state, &shining.id).expect("shining").radiant = true;
+        let base = put(
+            &mut state,
+            &worthy().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let shining = put(
+            &mut state,
+            &worthy().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        find_instance_mut(&mut state, &shining.id)
+            .expect("shining")
+            .radiant = true;
         assert_eq!(tribute_value_of(&state, &live(&state, &base)), 2);
         assert_eq!(tribute_value_of(&state, &live(&state, &shining)), 3);
 
         step_param(find_instance_mut(&mut state, &base.id).expect("base"), "worth", 1);
-        step_param(find_instance_mut(&mut state, &shining.id).expect("shining"), "worth", -1);
+        step_param(
+            find_instance_mut(&mut state, &shining.id).expect("shining"),
+            "worth",
+            -1,
+        );
         assert_eq!(tribute_value_of(&state, &live(&state, &base)), 3);
         assert_eq!(tribute_value_of(&state, &live(&state, &shining)), 2);
     }
@@ -443,8 +525,18 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
     #[test]
     fn section_3_2_a_sheep_token_counts_2_toward_a_tribute_cost_so_one_sheep_alone_pays_tribute_2() {
         let mut state = playing("sheep-counts-two");
-        let woolly = put(&mut state, &sheep().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let ordinary = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let woolly = put(
+            &mut state,
+            &sheep().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let ordinary = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
 
         assert_eq!(tribute_value_of(&state, &woolly), 2);
         assert_eq!(tribute_value_of(&state, &ordinary), 1);
@@ -453,7 +545,10 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
 
         // One Sheep is enough; the Sheep plus a body overpays, and an ordinary body alone underpays.
         assert_eq!(refused(&state, &card, 3, &[&woolly.id], None), None);
-        assert!(says(&refused(&state, &card, 3, &[&ordinary.id], None), "needs Tribute 2"));
+        assert!(says(
+            &refused(&state, &card, 3, &[&ordinary.id], None),
+            "needs Tribute 2"
+        ));
         assert!(says(
             &refused(&state, &card, 3, &[&woolly.id, &ordinary.id], None),
             "tributes 2, no more"
@@ -463,8 +558,16 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
         let sets = legal_tribute_sets(&state, PlayerId::P1, &card);
         assert!(sets.contains(&vec![woolly.id.clone()]));
         assert!(!sets.contains(&vec![ordinary.id.clone()]));
-        let third = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 4), json!({}));
-        assert!(legal_tribute_sets(&state, PlayerId::P1, &card).contains(&vec![ordinary.id.clone(), third.id.clone()]));
+        let third = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 4),
+            json!({}),
+        );
+        assert!(
+            legal_tribute_sets(&state, PlayerId::P1, &card)
+                .contains(&vec![ordinary.id.clone(), third.id.clone()])
+        );
 
         // Tribute 1 takes the Sheep too — 2 is worth "at least 1", and nothing smaller exists (§3.2).
         let cheap = hand_card(&mut state, &tribute_one().id, PlayerId::P1);
@@ -476,7 +579,12 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
         // The primitive first: §6.3's Tribute row pays with a Sacrifice, and Sacrifice "counts as a
         // death" — the destroyed counter, the `destroyed` event and the Death trigger (R78).
         let mut direct = playing("tribute-sacrifice-primitive");
-        let doomed = put(&mut direct, &death_pinger().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let doomed = put(
+            &mut direct,
+            &death_pinger().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let before = direct.counters.destroyed;
         let events = {
             let mut sink = sink_for(&mut direct);
@@ -491,19 +599,37 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
                     ..Default::default()
                 },
             );
-            apply_effects(&[sacrifice(json_as(json!({ "target": { "of": "chosen" } })))], &mut ctx);
+            apply_effects(
+                &[sacrifice(json_as(json!({ "target": { "of": "chosen" } })))],
+                &mut ctx,
+            );
             drop(ctx);
             sink.events.clone()
         };
         assert_eq!(direct.counters.destroyed, before + 1);
-        assert_eq!(field_of(&events, GameEventType::Destroyed, "instanceId"), vec![json!(doomed.id)]);
-        assert!(direct.players.p1.graveyard.iter().any(|card| card.id == doomed.id));
+        assert_eq!(
+            field_of(&events, GameEventType::Destroyed, "instanceId"),
+            vec![json!(doomed.id)]
+        );
+        assert!(
+            direct
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .any(|card| card.id == doomed.id)
+        );
         assert_eq!(direct.players.p2.hero.health, HERO_HEALTH - 3); // its Death hook fired
 
         // And the play pays the same way: the tributed unit is sacrificed at §10.5 step 2, not marked
         // destroyed for the next state check (§6.3 Destroy vs Sacrifice).
         let mut state = playing("tribute-sacrifice-play");
-        let food = put(&mut state, &death_pinger().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let food = put(
+            &mut state,
+            &death_pinger().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let card = hand_card(&mut state, &tribute_one().id, PlayerId::P1);
         let played = act_result(
             &state,
@@ -511,9 +637,20 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
         );
         assert_eq!(played.error, None);
         assert_eq!(unit_ids(&played.state, PlayerId::P1), vec![card.id.clone()]);
-        assert!(played.state.players.p1.graveyard.iter().any(|held| held.id == food.id));
+        assert!(
+            played
+                .state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .any(|held| held.id == food.id)
+        );
         assert_eq!(played.state.counters.destroyed, state.counters.destroyed + 1);
-        assert_eq!(field_of(&played.events, GameEventType::Destroyed, "instanceId"), vec![json!(food.id)]);
+        assert_eq!(
+            field_of(&played.events, GameEventType::Destroyed, "instanceId"),
+            vec![json!(food.id)]
+        );
         // A Sacrifice is immediate, so nothing is left marked for the state check to collect.
         assert!(
             !played
@@ -533,16 +670,31 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
     #[test]
     fn r81_carries_the_tribute_choice_in_the_play_actions_tributes_and_never_opens_a_prompt_for_it() {
         let mut state = playing("tribute-travels");
-        let a = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let b = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let a = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let b = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         let card = hand_card(&mut state, &tribute_two().id, PlayerId::P1);
 
         // Every way to pay is enumerable ahead of the play, which is what "travels in the action" needs.
-        assert_eq!(legal_tribute_sets(&state, PlayerId::P1, &card), vec![vec![a.id.clone(), b.id.clone()]]);
+        assert_eq!(
+            legal_tribute_sets(&state, PlayerId::P1, &card),
+            vec![vec![a.id.clone(), b.id.clone()]]
+        );
 
         let plays: Vec<ActionBody> = legal_actions(&state, PlayerId::P1)
             .into_iter()
-            .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
+            .filter(
+                |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id),
+            )
             .collect();
         assert!(!plays.is_empty());
         for play in &plays {
@@ -571,10 +723,21 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
     }
 
     #[test]
-    fn r41_section_6_3_treats_a_tribute_a_cards_script_writes_as_an_ordinary_sacrifice_where_the_sheeps_2_never_applies() {
+    fn r41_section_6_3_treats_a_tribute_a_cards_script_writes_as_an_ordinary_sacrifice_where_the_sheeps_2_never_applies()
+     {
         let mut state = playing("script-tribute");
-        let woolly = put(&mut state, &sheep().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let backrow = put(&mut state, &field_card().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let woolly = put(
+            &mut state,
+            &sheep().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let backrow = put(
+            &mut state,
+            &field_card().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         let card = hand_card(&mut state, &cube().id, PlayerId::P1);
 
         // #22 declares no Tribute cost: what it sacrifices is named by its own text, so the play carries
@@ -618,8 +781,18 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
         // And aimed at the Sheep it takes exactly one permanent: the Sheep's 2 is a Tribute value only,
         // so a script Sacrifice can never get two permanents' worth out of one Sheep (§6.3).
         let mut on_sheep = playing("script-tribute-sheep");
-        let woolly2 = put(&mut on_sheep, &sheep().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let other = put(&mut on_sheep, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let woolly2 = put(
+            &mut on_sheep,
+            &sheep().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let other = put(
+            &mut on_sheep,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         let cube2 = hand_card(&mut on_sheep, &cube().id, PlayerId::P1);
         let eaten = act_result(
             &on_sheep,
@@ -634,28 +807,71 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
         assert_eq!(eaten.error, None);
         assert_eq!(eaten.state.counters.destroyed, on_sheep.counters.destroyed + 1);
         // R11: a unit token ceases to exist instead of reaching a graveyard, and the other unit stays.
-        assert!(!eaten.state.players.p1.graveyard.iter().any(|held| held.id == woolly2.id));
-        assert_eq!(unit_ids(&eaten.state, PlayerId::P1), vec![other.id.clone(), cube2.id.clone()]);
+        assert!(
+            !eaten
+                .state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .any(|held| held.id == woolly2.id)
+        );
+        assert_eq!(
+            unit_ids(&eaten.state, PlayerId::P1),
+            vec![other.id.clone(), cube2.id.clone()]
+        );
     }
 
     #[test]
     fn section_8_55_counts_both_sides_for_a_tribute_that_may_pick_enemy_units_where_a_sheep_is_still_2() {
         let mut state = playing("lava-golem");
-        let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let their_sheep = put(&mut state, &sheep().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let their_body = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let mine = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let their_sheep = put(
+            &mut state,
+            &sheep().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        let their_body = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 2),
+            json!({}),
+        );
         let card = hand_card(&mut state, &lava_golem().id, PlayerId::P1);
         assert_eq!(tribute_cost_of(&state, &card), 3);
 
         // The validator counts both sides' units for #55, and the enemy Sheep is worth 2 there too.
-        let offered: Vec<String> =
-            legal_tribute_units(&state, PlayerId::P1, &card).iter().map(|unit| unit.id.clone()).collect();
-        assert_eq!(offered, vec![mine.id.clone(), their_sheep.id.clone(), their_body.id.clone()]);
+        let offered: Vec<String> = legal_tribute_units(&state, PlayerId::P1, &card)
+            .iter()
+            .map(|unit| unit.id.clone())
+            .collect();
+        assert_eq!(
+            offered,
+            vec![mine.id.clone(), their_sheep.id.clone(), their_body.id.clone()]
+        );
 
-        assert_eq!(refused(&state, &card, 2, &[&mine.id, &their_sheep.id], None), None); // 1 + 2 = 3
-        assert!(says(&refused(&state, &card, 2, &[&mine.id, &their_body.id], None), "needs Tribute 3")); // 1 + 1 = 2
-        assert_eq!(refused(&state, &card, 2, &[&their_sheep.id, &their_body.id], None), None); // 2 + 1 = 3, all enemy
-        assert!(legal_tribute_sets(&state, PlayerId::P1, &card).contains(&vec![mine.id.clone(), their_sheep.id.clone()]));
+        assert_eq!(
+            refused(&state, &card, 2, &[&mine.id, &their_sheep.id], None),
+            None
+        ); // 1 + 2 = 3
+        assert!(says(
+            &refused(&state, &card, 2, &[&mine.id, &their_body.id], None),
+            "needs Tribute 3"
+        )); // 1 + 1 = 2
+        assert_eq!(
+            refused(&state, &card, 2, &[&their_sheep.id, &their_body.id], None),
+            None
+        ); // 2 + 1 = 3, all enemy
+        assert!(
+            legal_tribute_sets(&state, PlayerId::P1, &card)
+                .contains(&vec![mine.id.clone(), their_sheep.id.clone()])
+        );
 
         // Every other Tribute card stays on its own side (§6.3: "X of *your* units").
         let ordinary = hand_card(&mut state, &tribute_two().id, PlayerId::P1);
@@ -673,11 +889,27 @@ mod r360_a_tribute_that_takes_an_opposing_unit_summons_55s_base_face_for_the_opp
     use super::*;
 
     #[test]
-    fn r360_lands_it_in_the_opponents_zone_in_the_lane_the_play_named_under_their_control_still_the_players_play_and_card() {
+    fn r360_lands_it_in_the_opponents_zone_in_the_lane_the_play_named_under_their_control_still_the_players_play_and_card()
+     {
         let mut state = playing("hand-over-same-lane");
-        let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let mine2 = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
-        let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let mine = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let mine2 = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        let theirs = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let card = hand_card(&mut state, &hand_over_golem().id, PlayerId::P1);
 
         let result = act_result(
@@ -711,10 +943,30 @@ mod r360_a_tribute_that_takes_an_opposing_unit_summons_55s_base_face_for_the_opp
     #[test]
     fn r360_r15_takes_the_opponents_leftmost_open_zone_when_that_lane_is_taken_there() {
         let mut state = playing("hand-over-leftmost");
-        let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let theirs2 = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
-        put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
+        let mine = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let theirs = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        let theirs2 = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 2),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 4),
+            json!({}),
+        );
         let card = hand_card(&mut state, &hand_over_golem().id, PlayerId::P1);
 
         let after = act(
@@ -728,8 +980,14 @@ mod r360_a_tribute_that_takes_an_opposing_unit_summons_55s_base_face_for_the_opp
             }),
         );
         // p2's lane 4 is taken, so it takes p2's leftmost open zone, lane 1 (freed by the Tribute).
-        assert_eq!(top(&after.players.p2.units[0]).map(|unit| unit.id.clone()), Some(card.id.clone()));
-        assert_eq!(top(&after.players.p2.units[0]).map(|unit| unit.controller), Some(PlayerId::P2));
+        assert_eq!(
+            top(&after.players.p2.units[0]).map(|unit| unit.id.clone()),
+            Some(card.id.clone())
+        );
+        assert_eq!(
+            top(&after.players.p2.units[0]).map(|unit| unit.controller),
+            Some(PlayerId::P2)
+        );
     }
 
     #[test]
@@ -737,9 +995,21 @@ mod r360_a_tribute_that_takes_an_opposing_unit_summons_55s_base_face_for_the_opp
         let mut state = playing("hand-over-own");
         let own: Vec<CardInstance> = [1, 2, 4]
             .into_iter()
-            .map(|lane| put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, lane), json!({})))
+            .map(|lane| {
+                put(
+                    &mut state,
+                    &plain.id,
+                    slot(PlayerId::P1, Row::Units, lane),
+                    json!({}),
+                )
+            })
             .collect();
-        put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 3), json!({}));
+        put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 3),
+            json!({}),
+        );
         let card = hand_card(&mut state, &hand_over_golem().id, PlayerId::P1);
 
         let after = act(
@@ -752,8 +1022,14 @@ mod r360_a_tribute_that_takes_an_opposing_unit_summons_55s_base_face_for_the_opp
                 "playerId": "p1",
             }),
         );
-        assert_eq!(top(&after.players.p1.units[2]).map(|unit| unit.id.clone()), Some(card.id.clone()));
-        assert_eq!(top(&after.players.p1.units[2]).map(|unit| unit.controller), Some(PlayerId::P1));
+        assert_eq!(
+            top(&after.players.p1.units[2]).map(|unit| unit.id.clone()),
+            Some(card.id.clone())
+        );
+        assert_eq!(
+            top(&after.players.p1.units[2]).map(|unit| unit.controller),
+            Some(PlayerId::P1)
+        );
     }
 
     #[test]
@@ -761,10 +1037,19 @@ mod r360_a_tribute_that_takes_an_opposing_unit_summons_55s_base_face_for_the_opp
         let mut state = playing("hand-over-radiant");
         let theirs: Vec<CardInstance> = [1, 2, 3]
             .into_iter()
-            .map(|lane| put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, lane), json!({})))
+            .map(|lane| {
+                put(
+                    &mut state,
+                    &plain.id,
+                    slot(PlayerId::P2, Row::Units, lane),
+                    json!({}),
+                )
+            })
             .collect();
         let card = hand_card(&mut state, &hand_over_golem().id, PlayerId::P1);
-        find_instance_mut(&mut state, &card.id).expect("the golem").radiant = true;
+        find_instance_mut(&mut state, &card.id)
+            .expect("the golem")
+            .radiant = true;
 
         let after = act(
             &state,
@@ -776,19 +1061,42 @@ mod r360_a_tribute_that_takes_an_opposing_unit_summons_55s_base_face_for_the_opp
                 "playerId": "p1",
             }),
         );
-        assert_eq!(top(&after.players.p1.units[2]).map(|unit| unit.id.clone()), Some(card.id.clone()));
+        assert_eq!(
+            top(&after.players.p1.units[2]).map(|unit| unit.id.clone()),
+            Some(card.id.clone())
+        );
         assert!(after.players.p2.units.iter().all(Option::is_none));
     }
 
     #[test]
     fn r360_stays_with_the_player_when_the_opponents_row_has_no_open_zone_once_the_tribute_is_paid() {
         let mut state = playing("hand-over-full");
-        let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let mine2 = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let mine = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let mine2 = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         // p2's row is full, and the one unit of theirs tributed comes back through Reborn into its zone.
-        let phoenix = put(&mut state, &reborn_body().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let phoenix = put(
+            &mut state,
+            &reborn_body().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         for lane in [2, 3, 4, 5] {
-            put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, lane), json!({}));
+            put(
+                &mut state,
+                &plain.id,
+                slot(PlayerId::P2, Row::Units, lane),
+                json!({}),
+            );
         }
         let card = hand_card(&mut state, &hand_over_golem().id, PlayerId::P1);
 
@@ -806,7 +1114,13 @@ mod r360_a_tribute_that_takes_an_opposing_unit_summons_55s_base_face_for_the_opp
             top(&after.players.p2.units[0]).map(|unit| unit.def_id.clone()),
             Some(reborn_body().id)
         );
-        assert_eq!(top(&after.players.p1.units[2]).map(|unit| unit.id.clone()), Some(card.id.clone()));
-        assert_eq!(top(&after.players.p1.units[2]).map(|unit| unit.controller), Some(PlayerId::P1));
+        assert_eq!(
+            top(&after.players.p1.units[2]).map(|unit| unit.id.clone()),
+            Some(card.id.clone())
+        );
+        assert_eq!(
+            top(&after.players.p1.units[2]).map(|unit| unit.controller),
+            Some(PlayerId::P1)
+        );
     }
 }

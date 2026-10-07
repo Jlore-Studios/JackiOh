@@ -48,7 +48,12 @@ fn quiet_stats() -> SearchStats {
 }
 
 fn immediate(action: ActionBody, reason: DecisionReason) -> Decision {
-    Decision { line: vec![action.clone()], action, reason, stats: quiet_stats() }
+    Decision {
+        line: vec![action.clone()],
+        action,
+        reason,
+        stats: quiet_stats(),
+    }
 }
 
 /// Step 7: endTurn when it is a candidate, else the first candidate, else endTurn regardless.
@@ -152,7 +157,10 @@ fn plan(
 
     // 2. R188.
     if unanswered_draw_offer(&public, seat) {
-        return Plan::Immediate(ActionBody::AnswerDraw { accept: false }, DecisionReason::DrawOffer);
+        return Plan::Immediate(
+            ActionBody::AnswerDraw { accept: false },
+            DecisionReason::DrawOffer,
+        );
     }
 
     // 3. The mulligan: its own, at once, whether or not the other seat has answered (R265).
@@ -162,7 +170,12 @@ fn plan(
     }
 
     // 4. Forced: a throwaway world lists the candidates without touching options.rng.
-    let probe = determinize(&public, seat, &mut Rng::new(AI_SEARCH.probe_seed, 0), DeterminizeOptions::default());
+    let probe = determinize(
+        &public,
+        seat,
+        &mut Rng::new(AI_SEARCH.probe_seed, 0),
+        DeterminizeOptions::default(),
+    );
     scratch.candidates = candidate_actions(&probe, seat);
     if scratch.candidates.len() == 1
         && let Some(only) = scratch.candidates.first()
@@ -195,7 +208,13 @@ fn plan(
     // opponent's reply on every determinization.
     let Some(det0) = dets.first() else {
         let action = fallback_action(&scratch.candidates);
-        return Plan::Searched { line: vec![action.clone()], action, reason: DecisionReason::Fallback, score: 0.0, stopped_by: None };
+        return Plan::Searched {
+            line: vec![action.clone()],
+            action,
+            reason: DecisionReason::Fallback,
+            score: 0.0,
+            stopped_by: None,
+        };
     };
     let root_turn = det0.turn;
     let remaining = budget.nodes.saturating_sub(counter.used());
@@ -214,8 +233,11 @@ fn plan(
 
     if found.is_empty() {
         let action = fallback_action(&scratch.candidates);
-        let stopped_by =
-            if counter.stopped_by() != StoppedBy::Exhausted { counter.stopped_by() } else { beam_stopped_by };
+        let stopped_by = if counter.stopped_by() != StoppedBy::Exhausted {
+            counter.stopped_by()
+        } else {
+            beam_stopped_by
+        };
         return Plan::Searched {
             line: vec![action.clone()],
             action,
@@ -238,9 +260,17 @@ fn plan(
         };
         replied.push(Scored { line, score });
     }
-    let unreplied: Vec<Scored<'_>> = found.iter().map(|line| Scored { line, score: line.score }).collect();
-    let finalists =
-        best_per_first_action(if !replied.is_empty() { &replied } else { &unreplied }, finalist_count);
+    let unreplied: Vec<Scored<'_>> = found
+        .iter()
+        .map(|line| Scored {
+            line,
+            score: line.score,
+        })
+        .collect();
+    let finalists = best_per_first_action(
+        if !replied.is_empty() { &replied } else { &unreplied },
+        finalist_count,
+    );
 
     let mut totals: Vec<f64> = finalists.iter().map(|entry| entry.score).collect();
     let mut scored_on: i32 = 1;
@@ -248,9 +278,14 @@ fn plan(
         let hidden = hidden_card_ids(world, seat);
         let mut row: Vec<f64> = Vec::new();
         for entry in &finalists {
-            let Some(score) =
-                score_line(world, seat, &entry.line.actions, counter, !replied.is_empty(), Some(&hidden))
-            else {
+            let Some(score) = score_line(
+                world,
+                seat,
+                &entry.line.actions,
+                counter,
+                !replied.is_empty(),
+                Some(&hidden),
+            ) else {
                 break;
             };
             row.push(score);
@@ -278,7 +313,8 @@ fn plan(
     }
 
     let chosen = finalists.get(best_index).map(|entry| entry.line);
-    let Some((chosen, action)) = chosen.and_then(|line| line.actions.first().map(|action| (line, action.clone())))
+    let Some((chosen, action)) =
+        chosen.and_then(|line| line.actions.first().map(|action| (line, action.clone())))
     else {
         let fallback = fallback_action(&scratch.candidates);
         return Plan::Searched {
@@ -289,13 +325,27 @@ fn plan(
             stopped_by: None,
         };
     };
-    let stopped_by = if counter.stopped_by() != StoppedBy::Exhausted { counter.stopped_by() } else { beam_stopped_by };
-    let reason = if public.pending.as_ref().is_some_and(|pending| pending.player_id == seat) {
+    let stopped_by = if counter.stopped_by() != StoppedBy::Exhausted {
+        counter.stopped_by()
+    } else {
+        beam_stopped_by
+    };
+    let reason = if public
+        .pending
+        .as_ref()
+        .is_some_and(|pending| pending.player_id == seat)
+    {
         DecisionReason::Prompt
     } else {
         DecisionReason::Search
     };
-    Plan::Searched { action, reason, line: chosen.actions.clone(), score: best_mean, stopped_by: Some(stopped_by) }
+    Plan::Searched {
+        action,
+        reason,
+        line: chosen.actions.clone(),
+        score: best_mean,
+        stopped_by: Some(stopped_by),
+    }
 }
 
 /// The AI's one entry point. `None` when !ai_to_act(state, seat). Never panics out.
@@ -307,25 +357,42 @@ pub fn decide(state: &GameState, seat: PlayerId, options: &mut AiOptions) -> Opt
 
     let budget = options.budget;
     let counter = create_node_counter(budget.nodes, options.should_stop);
-    let mut scratch = Scratch { candidates: Vec::new(), determinizations: 0, lines: 0 };
+    let mut scratch = Scratch {
+        candidates: Vec::new(),
+        determinizations: 0,
+        lines: 0,
+    };
     let rng = &mut options.rng;
 
-    let outcome = catch_unwind(AssertUnwindSafe(|| plan(state, seat, budget, rng, &counter, &mut scratch)));
+    let outcome = catch_unwind(AssertUnwindSafe(|| {
+        plan(state, seat, budget, rng, &counter, &mut scratch)
+    }));
 
-    let stats = |counter: &CountingNodeCounter, thrown: usize, score: f64, stopped_by: Option<StoppedBy>| SearchStats {
-        nodes: counter.used(),
-        determinizations: scratch.determinizations,
-        lines: scratch.lines,
-        sim_errors: counter.sim_errors() + thrown,
-        stopped_by: stopped_by.unwrap_or_else(|| counter.stopped_by()),
-        score,
+    let stats = |counter: &CountingNodeCounter, thrown: usize, score: f64, stopped_by: Option<StoppedBy>| {
+        SearchStats {
+            nodes: counter.used(),
+            determinizations: scratch.determinizations,
+            lines: scratch.lines,
+            sim_errors: counter.sim_errors() + thrown,
+            stopped_by: stopped_by.unwrap_or_else(|| counter.stopped_by()),
+            score,
+        }
     };
 
     match outcome {
         Ok(Plan::Immediate(action, reason)) => Some(immediate(action, reason)),
-        Ok(Plan::Searched { action, reason, line, score, stopped_by }) => {
-            Some(Decision { action, reason, line, stats: stats(&counter, 0, score, stopped_by) })
-        }
+        Ok(Plan::Searched {
+            action,
+            reason,
+            line,
+            score,
+            stopped_by,
+        }) => Some(Decision {
+            action,
+            reason,
+            line,
+            stats: stats(&counter, 0, score, stopped_by),
+        }),
         Err(_) => {
             let action = fallback_action(&scratch.candidates);
             Some(Decision {

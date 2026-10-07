@@ -56,11 +56,19 @@ fn put(state: &mut GameState, def_id: &str, at: ZoneSlot, stack: bool) -> CardIn
 }
 
 fn unit_slot(player: PlayerId, lane: i32) -> ZoneSlot {
-    ZoneSlot { player, row: Row::Units, lane }
+    ZoneSlot {
+        player,
+        row: Row::Units,
+        lane,
+    }
 }
 
 fn back_slot(player: PlayerId, lane: i32) -> ZoneSlot {
-    ZoneSlot { player, row: Row::Backrow, lane }
+    ZoneSlot {
+        player,
+        row: Row::Backrow,
+        lane,
+    }
 }
 
 fn lanes(slots: &[ZoneSlot]) -> Vec<i32> {
@@ -79,7 +87,11 @@ mod adjacency_m1_t4 {
         assert_eq!(lanes(&adjacent(unit_slot(PlayerId::P1, 1))), vec![2]);
         assert_eq!(lanes(&adjacent(unit_slot(PlayerId::P1, 3))), vec![2, 4]);
         assert_eq!(lanes(&adjacent(unit_slot(PlayerId::P1, 5))), vec![4]);
-        assert!(adjacent(unit_slot(PlayerId::P1, 3)).iter().all(|s| s.player == PlayerId::P1 && s.row == Row::Units));
+        assert!(
+            adjacent(unit_slot(PlayerId::P1, 3))
+                .iter()
+                .all(|s| s.player == PlayerId::P1 && s.row == Row::Units)
+        );
         assert_eq!(lanes(&adjacent(back_slot(PlayerId::P2, 2))), vec![1, 3]);
     }
 }
@@ -90,8 +102,13 @@ mod r14_rotation_rings_m1_t4 {
     #[test]
     fn runs_your_lanes_1_5_then_the_opponents_5_1() {
         assert_eq!(
-            ring_order(Row::Units, PlayerId::P1).iter().map(|s| format!("{}{}", s.player, s.lane)).collect::<Vec<_>>(),
-            vec!["p11", "p12", "p13", "p14", "p15", "p25", "p24", "p23", "p22", "p21"]
+            ring_order(Row::Units, PlayerId::P1)
+                .iter()
+                .map(|s| format!("{}{}", s.player, s.lane))
+                .collect::<Vec<_>>(),
+            vec![
+                "p11", "p12", "p13", "p14", "p15", "p25", "p24", "p23", "p22", "p21"
+            ]
         );
     }
 
@@ -125,7 +142,11 @@ mod r14_rotation_rings_m1_t4 {
             ring_neighbor(back_slot(PlayerId::P1, 5), RotationDirection::Right, PlayerId::P1),
             back_slot(PlayerId::P2, 5)
         );
-        assert!(ring_order(Row::Backrow, PlayerId::P1).iter().all(|s| s.row == Row::Backrow));
+        assert!(
+            ring_order(Row::Backrow, PlayerId::P1)
+                .iter()
+                .all(|s| s.row == Row::Backrow)
+        );
     }
 }
 
@@ -141,9 +162,19 @@ mod locks_and_free_zones_m1_t4 {
         assert_eq!(first_free_zone(&state, PlayerId::P1, Row::Units), None);
 
         let before = state.clone();
-        let mut extra = new_instance(&mut state, "fx-2", PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let mut extra = new_instance(
+            &mut state,
+            "fx-2",
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
         extra.id = "no-zone-probe".to_string();
-        assert!(!place_on_field(&mut state, &mut extra, unit_slot(PlayerId::P1, 3), Default::default()));
+        assert!(!place_on_field(
+            &mut state,
+            &mut extra,
+            unit_slot(PlayerId::P1, 3),
+            Default::default()
+        ));
         assert_eq!(active_units_of(&state, PlayerId::P1).len(), 5);
         assert_eq!(state.players.p1.units, before.players.p1.units);
     }
@@ -158,10 +189,26 @@ mod locks_and_free_zones_m1_t4 {
         assert!(card_at(&state, unit_slot(PlayerId::P1, 2)).is_none());
         assert!(!is_open(&state, unit_slot(PlayerId::P1, 2)));
         assert!(takes_move(&state, unit_slot(PlayerId::P1, 2)));
-        let mut third = new_instance(&mut state, "fx-3", PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
-        assert!(place_on_field(&mut state, &mut third, unit_slot(PlayerId::P1, 2), Default::default()));
-        assert_eq!(lanes(&open_zones(&state, PlayerId::P1, Row::Units)), vec![1, 3, 4, 5]);
-        assert_eq!(first_free_zone(&state, PlayerId::P1, Row::Units), Some(unit_slot(PlayerId::P1, 1)));
+        let mut third = new_instance(
+            &mut state,
+            "fx-3",
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
+        assert!(place_on_field(
+            &mut state,
+            &mut third,
+            unit_slot(PlayerId::P1, 2),
+            Default::default()
+        ));
+        assert_eq!(
+            lanes(&open_zones(&state, PlayerId::P1, Row::Units)),
+            vec![1, 3, 4, 5]
+        );
+        assert_eq!(
+            first_free_zone(&state, PlayerId::P1, Row::Units),
+            Some(unit_slot(PlayerId::P1, 1))
+        );
     }
 
     #[test]
@@ -169,7 +216,10 @@ mod locks_and_free_zones_m1_t4 {
         let mut state = game();
         reserve_zone(&mut state, unit_slot(PlayerId::P1, 1));
         assert!(!is_open(&state, unit_slot(PlayerId::P1, 1)));
-        assert_eq!(first_free_zone(&state, PlayerId::P1, Row::Units), Some(unit_slot(PlayerId::P1, 2)));
+        assert_eq!(
+            first_free_zone(&state, PlayerId::P1, Row::Units),
+            Some(unit_slot(PlayerId::P1, 2))
+        );
     }
 }
 
@@ -180,15 +230,26 @@ mod stack_piles_3_2_m1_t4 {
     fn makes_the_pushed_card_the_top_keeps_only_it_active_and_resumes_the_card_beneath_with_its_damage() {
         let mut state = game();
         let under = put(&mut state, "fx-1", unit_slot(PlayerId::P1, 1), false);
-        find_instance_mut(&mut state, &under.id).expect("the card beneath").damage = 3;
+        find_instance_mut(&mut state, &under.id)
+            .expect("the card beneath")
+            .damage = 3;
 
         let top = put(&mut state, &stack_unit().id, unit_slot(PlayerId::P1, 1), true);
-        assert_eq!(card_at(&state, unit_slot(PlayerId::P1, 1)).map(|c| c.id.clone()), Some(top.id.clone()));
+        assert_eq!(
+            card_at(&state, unit_slot(PlayerId::P1, 1)).map(|c| c.id.clone()),
+            Some(top.id.clone())
+        );
         assert_eq!(ids(active_units_of(&state, PlayerId::P1)), vec![top.id.clone()]);
-        assert_eq!(ids(dormant_units_of(&state, PlayerId::P1)), vec![under.id.clone()]);
+        assert_eq!(
+            ids(dormant_units_of(&state, PlayerId::P1)),
+            vec![under.id.clone()]
+        );
 
         let _ = remove_from_field(&mut state, &top, Default::default());
-        assert_eq!(card_at(&state, unit_slot(PlayerId::P1, 1)).map(|c| c.id.clone()), Some(under.id.clone()));
+        assert_eq!(
+            card_at(&state, unit_slot(PlayerId::P1, 1)).map(|c| c.id.clone()),
+            Some(under.id.clone())
+        );
         assert_eq!(live(&state, &under.id).damage, 3);
     }
 
@@ -196,8 +257,18 @@ mod stack_piles_3_2_m1_t4 {
     fn refuses_an_occupied_zone_without_stack() {
         let mut state = game();
         put(&mut state, "fx-1", unit_slot(PlayerId::P1, 1), false);
-        let mut other = new_instance(&mut state, "fx-2", PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
-        assert!(!place_on_field(&mut state, &mut other, unit_slot(PlayerId::P1, 1), Default::default()));
+        let mut other = new_instance(
+            &mut state,
+            "fx-2",
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
+        assert!(!place_on_field(
+            &mut state,
+            &mut other,
+            unit_slot(PlayerId::P1, 1),
+            Default::default()
+        ));
     }
 }
 
@@ -209,10 +280,18 @@ mod r11_tokens_leaving_a_zone_m1_t4 {
         for zone in [OffFieldZone::Hand, OffFieldZone::Exile, OffFieldZone::Graveyard] {
             let mut state = game();
             let mut token = put(&mut state, &rush_token().id, unit_slot(PlayerId::P1, 1), false);
-            assert_eq!(move_to_zone(&mut state, &mut token, zone, Default::default()), MoveResult::Vanished);
+            assert_eq!(
+                move_to_zone(&mut state, &mut token, zone, Default::default()),
+                MoveResult::Vanished
+            );
 
             let side = &state.players.p1;
-            let mut everywhere = side.hand.iter().chain(&side.library).chain(&side.graveyard).chain(&side.exile);
+            let mut everywhere = side
+                .hand
+                .iter()
+                .chain(&side.library)
+                .chain(&side.graveyard)
+                .chain(&side.exile);
             assert!(!everywhere.any(|c| c.id == token.id));
             assert_eq!(active_units_of(&state, PlayerId::P1).len(), 0);
         }
@@ -221,7 +300,12 @@ mod r11_tokens_leaving_a_zone_m1_t4 {
     #[test]
     fn a_spell_token_that_resolves_goes_to_the_graveyard() {
         let mut state = game();
-        let mut card = new_instance(&mut state, &spell_token().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let mut card = new_instance(
+            &mut state,
+            &spell_token().id,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
         state.players.p1.hand.push(card.clone());
         assert_eq!(
             move_to_zone(&mut state, &mut card, OffFieldZone::Graveyard, Default::default()),
@@ -241,7 +325,10 @@ mod r11_tokens_leaving_a_zone_m1_t4 {
             on_field.buffs = AttackHealth { attack: 3, health: 3 };
             on_field.radiant = true;
             on_field.cost_mod = -1;
-            on_field.counters = Counters { plague: Some(2), ..Default::default() };
+            on_field.counters = Counters {
+                plague: Some(2),
+                ..Default::default()
+            };
         }
 
         let mut moving = live(&state, &card.id).clone();
@@ -258,12 +345,27 @@ mod r11_tokens_leaving_a_zone_m1_t4 {
     #[test]
     fn r12_a_card_always_goes_to_its_owners_zone_even_under_another_controller() {
         let mut state = game();
-        let mut card = new_instance(&mut state, "fx-1", PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
-        let _ = place_on_field(&mut state, &mut card, unit_slot(PlayerId::P1, 1), Default::default());
+        let mut card = new_instance(
+            &mut state,
+            "fx-1",
+            PlayerId::P2,
+            Zone::Hand { player: PlayerId::P2 },
+        );
+        let _ = place_on_field(
+            &mut state,
+            &mut card,
+            unit_slot(PlayerId::P1, 1),
+            Default::default(),
+        );
         assert_eq!(live(&state, &card.id).controller, PlayerId::P1);
 
         let mut moving = live(&state, &card.id).clone();
-        let _ = move_to_zone(&mut state, &mut moving, OffFieldZone::Graveyard, Default::default());
+        let _ = move_to_zone(
+            &mut state,
+            &mut moving,
+            OffFieldZone::Graveyard,
+            Default::default(),
+        );
         assert_eq!(ids(&state.players.p2.graveyard), vec![card.id.clone()]);
         assert_eq!(state.players.p1.graveyard.len(), 0);
         assert_eq!(live(&state, &card.id).controller, PlayerId::P2);
@@ -272,15 +374,26 @@ mod r11_tokens_leaving_a_zone_m1_t4 {
     #[test]
     fn shuffles_into_a_library_at_a_chosen_position() {
         let mut state = game();
-        let mut card = new_instance(&mut state, "fx-1", PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let mut card = new_instance(
+            &mut state,
+            "fx-1",
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
         state.players.p1.hand.push(card.clone());
         let _ = move_to_zone(
             &mut state,
             &mut card,
             OffFieldZone::Library,
-            MoveToZoneOptions { position: Some(LibraryPosition::At(3)), ..Default::default() },
+            MoveToZoneOptions {
+                position: Some(LibraryPosition::At(3)),
+                ..Default::default()
+            },
         );
-        assert_eq!(state.players.p1.library.get(3).map(|c| c.id.clone()), Some(card.id.clone()));
+        assert_eq!(
+            state.players.p1.library.get(3).map(|c| c.id.clone()),
+            Some(card.id.clone())
+        );
         assert_eq!(state.players.p1.library.len(), (DECK_SIZE + 1) as usize);
     }
 }

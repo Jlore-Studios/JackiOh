@@ -19,14 +19,17 @@
 //! files the game once. The reaper's ceiling draws (R112) leave none: the reaper reaches a match
 //! whose actor stopped answering, and writes its result without a game to read.
 
-use jackioh_engine::{FoldArgs, GameMode, GameRecord, GameSource, Pilot, PerPlayer};
+use jackioh_engine::{FoldArgs, GameMode, GameRecord, GameSource, PerPlayer, Pilot};
 use serde_json::{Map, Value, json};
 
 use crate::app::App;
 use crate::db::store::{MatchRow, QueueMode};
 
 /// R376: both seats of a live match are players.
-const LIVE_PILOTS: PerPlayer<Pilot> = PerPlayer { p1: Pilot::Human, p2: Pilot::Human };
+const LIVE_PILOTS: PerPlayer<Pilot> = PerPlayer {
+    p1: Pilot::Human,
+    p2: Pilot::Human,
+};
 
 /// TS `messageOf(error)`: an error as the sentence a log line carries.
 fn message_of(error: impl std::fmt::Display) -> String {
@@ -90,7 +93,11 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
         (Some(row), Some(mode)) => (row, mode),
         (found, _) => {
             tx.commit().await.map_err(message_of)?;
-            let reason = if found.is_none() { "no match row" } else { "no series, room or queue ticket made the match" };
+            let reason = if found.is_none() {
+                "no match row"
+            } else {
+                "no series, room or queue ticket made the match"
+            };
             tracing::warn!(event = "game.record.skipped", matchId = %match_id, reason = %reason);
             return Ok(None);
         }
@@ -106,8 +113,10 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
     let args = fold_args_of(&row, entries).map_err(message_of)?;
     // TS's `createGame` threw on decks it refused, inside this function's `try`; the engine panics,
     // and the panic is that error (as `actor::registry` reads it at a start).
-    let summarized = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| jackioh_engine::summarize_game(&args)))
-        .map_err(crate::actor::registry::panic_text)?;
+    let summarized = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        jackioh_engine::summarize_game(&args)
+    }))
+    .map_err(crate::actor::registry::panic_text)?;
     let Some(game) = summarized else {
         // The result came from this log's own last action, so a fold that does not reach it is a
         // determinism break (§9.3), and says so as loudly as the registry's fold errors do.

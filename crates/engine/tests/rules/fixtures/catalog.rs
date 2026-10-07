@@ -27,9 +27,17 @@ fn take(overrides: &mut Value, key: &str) -> Option<Value> {
 /// doubles them), with `overrides`' `keywords` on both faces and every other key of `overrides` over
 /// the definition. TS `unitDef(index, overrides = {})`.
 pub fn unit_def(index: i32, overrides: Value) -> CardDef {
-    let mut rest = if overrides.is_object() { overrides } else { json!({}) };
-    let attack = take(&mut rest, "attack").and_then(|v| v.as_i64()).map_or(2, |n| n as i32);
-    let health = take(&mut rest, "health").and_then(|v| v.as_i64()).map_or(2, |n| n as i32);
+    let mut rest = if overrides.is_object() {
+        overrides
+    } else {
+        json!({})
+    };
+    let attack = take(&mut rest, "attack")
+        .and_then(|v| v.as_i64())
+        .map_or(2, |n| n as i32);
+    let health = take(&mut rest, "health")
+        .and_then(|v| v.as_i64())
+        .map_or(2, |n| n as i32);
     let keywords = take(&mut rest, "keywords").unwrap_or_else(|| json!([]));
     json_as(spread(
         json!({

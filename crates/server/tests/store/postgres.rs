@@ -151,7 +151,10 @@ async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
         if pending { Poll::Pending } else { Poll::Ready(()) }
     })
     .await;
-    outputs.into_iter().map(|output| output.expect("every future finished")).collect()
+    outputs
+        .into_iter()
+        .map(|output| output.expect("every future finished"))
+        .collect()
 }
 
 /// The probe that answers "what was the session, inside the store's own transaction?". A trigger on
@@ -202,11 +205,21 @@ async fn setup() -> Option<Ctx> {
     let admin = PgPool::connect(&url).await.expect("the admin connection");
     sqlx::raw_sql(TRUNCATE).execute(&admin).await.expect("truncate");
     seed_cards(&admin).await;
-    sqlx::raw_sql(PROBE_SETUP).execute(&admin).await.expect("the session probe");
-    sqlx::raw_sql("truncate probe.session_log").execute(&admin).await.expect("truncate the probe");
+    sqlx::raw_sql(PROBE_SETUP)
+        .execute(&admin)
+        .await
+        .expect("the session probe");
+    sqlx::raw_sql("truncate probe.session_log")
+        .execute(&admin)
+        .await
+        .expect("truncate the probe");
     // One pooled connection, so "the role and the claim do not leak" is measured on the SAME
     // physical connection rather than on a lucky second one.
-    let pool = PgPoolOptions::new().max_connections(1).connect(&url).await.expect("the store's pool");
+    let pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&url)
+        .await
+        .expect("the store's pool");
     let db = Db::Pg(pool.clone());
     Some(Ctx { url, admin, pool, db })
 }
@@ -215,13 +228,20 @@ impl Ctx {
     /// TS's `afterAll`.
     async fn finish(self) {
         self.pool.close().await;
-        sqlx::raw_sql(PROBE_TEARDOWN).execute(&self.admin).await.expect("drop the probe");
+        sqlx::raw_sql(PROBE_TEARDOWN)
+            .execute(&self.admin)
+            .await
+            .expect("drop the probe");
         self.admin.close().await;
     }
 
     /// A second store over its own pool of `max` connections, for calls that really run at once.
     async fn racing(&self, max: u32) -> PgPool {
-        PgPoolOptions::new().max_connections(max).connect(&self.url).await.expect("the racing pool")
+        PgPoolOptions::new()
+            .max_connections(max)
+            .connect(&self.url)
+            .await
+            .expect("the racing pool")
     }
 
     async fn probe_rows(&self) -> Vec<ProbeRow> {
@@ -247,11 +267,12 @@ impl Ctx {
     }
 
     async fn sign_up_as(&self, email: &str) -> String {
-        let rows = sqlx::query("insert into auth.users (email, email_confirmed_at) values ($1, now()) returning id")
-            .bind(email)
-            .fetch_all(&self.admin)
-            .await
-            .expect("insert the auth user");
+        let rows =
+            sqlx::query("insert into auth.users (email, email_confirmed_at) values ($1, now()) returning id")
+                .bind(email)
+                .fetch_all(&self.admin)
+                .await
+                .expect("insert the auth user");
         let id = must(rows.first(), "the new auth user id")
             .try_get::<uuid::Uuid, _>("id")
             .expect("the new auth user id");
@@ -260,8 +281,9 @@ impl Ctx {
 
     async fn active_profile(&self) -> String {
         let user_id = self.sign_up().await;
-        once!(self.db, Some(user_id.as_str()), |tx| tx.profiles_set_status(&user_id, de(json!("active"))))
-            .expect("profiles.setStatus");
+        once!(self.db, Some(user_id.as_str()), |tx| tx
+            .profiles_set_status(&user_id, de(json!("active"))))
+        .expect("profiles.setStatus");
         user_id
     }
 }
@@ -272,7 +294,9 @@ fn attempt(profile_id: Option<&str>, ip_hash: &str, result: &str, reason: &str, 
 
 async fn log_attempt(db: &Db, attempt: Value) {
     let profile = attempt["profileId"].as_str().map(str::to_string);
-    once!(db, profile.as_deref(), |tx| tx.codes_log_attempt(&de(attempt.clone()))).expect("codes.logAttempt");
+    once!(db, profile.as_deref(), |tx| tx
+        .codes_log_attempt(&de(attempt.clone())))
+    .expect("codes.logAttempt");
 }
 
 /// `store.redeemInviteCode` (`Store.redeem`): one of `app.redeem_invite_code`'s seven strings.
@@ -328,7 +352,11 @@ mod the_acting_role {
     async fn runs_its_statements_as_service_role_with_auth_uid_set_to_the_profile_in_hand() {
         let Some(ctx) = setup().await else { return };
         let user_id = ctx.sign_up().await;
-        log_attempt(&ctx.db, attempt(Some(user_id.as_str()), "ip-1", "rejected", "missing", now_ms())).await;
+        log_attempt(
+            &ctx.db,
+            attempt(Some(user_id.as_str()), "ip-1", "rejected", "missing", now_ms()),
+        )
+        .await;
 
         let rows = ctx.probe_rows().await;
         assert_eq!(rows.len(), 1);
@@ -345,7 +373,11 @@ mod the_acting_role {
         let Some(ctx) = setup().await else { return };
         let user_id = ctx.sign_up().await;
         let at = now_ms();
-        log_attempt(&ctx.db, attempt(Some(user_id.as_str()), "ip-1", "ok", "redeemed", at)).await;
+        log_attempt(
+            &ctx.db,
+            attempt(Some(user_id.as_str()), "ip-1", "ok", "redeemed", at),
+        )
+        .await;
         // Pool size is 1, so this is the same physical connection. `SET LOCAL` is undone at commit,
         // so the second transaction must start from nothing and set its own (null) subject — if the
         // GUC leaked, `uid` below would still be the first profile.
@@ -366,8 +398,12 @@ mod the_acting_role {
         let at = now_ms();
         {
             let mut tx = ctx.db.begin(None).await.expect("store.tx");
-            tx.codes_log_attempt(&de(attempt(Some(a.as_str()), "ip", "rejected", "x", at))).await.expect("logAttempt a");
-            tx.codes_log_attempt(&de(attempt(Some(b.as_str()), "ip", "rejected", "x", at))).await.expect("logAttempt b");
+            tx.codes_log_attempt(&de(attempt(Some(a.as_str()), "ip", "rejected", "x", at)))
+                .await
+                .expect("logAttempt a");
+            tx.codes_log_attempt(&de(attempt(Some(b.as_str()), "ip", "rejected", "x", at)))
+                .await
+                .expect("logAttempt b");
             tx.commit().await.expect("commit");
         }
         let rows = ctx.probe_rows().await;
@@ -388,7 +424,10 @@ mod the_acting_role {
         let missing = uuid();
         let refused = once!(ctx.db, Some(user_id.as_str()), |tx| tx
             .profiles_set_in_match(&user_id, Some(missing.as_str())));
-        assert!(refused.is_err(), "setInMatch to a match that does not exist must fail");
+        assert!(
+            refused.is_err(),
+            "setInMatch to a match that does not exist must fail"
+        );
         let rows = sqlx::query("select current_match_id from public.profiles where id = $1")
             .bind(uid(&user_id))
             .fetch_all(&ctx.admin)
@@ -400,7 +439,9 @@ mod the_acting_role {
         assert_eq!(current, None);
         // And the connection is still usable: the rollback happened, rather than the client being
         // left in a failed transaction.
-        let again = once!(ctx.db, Some(user_id.as_str()), |tx| tx.profiles_get_by_id(&user_id)).expect("getById");
+        let again = once!(ctx.db, Some(user_id.as_str()), |tx| tx
+            .profiles_get_by_id(&user_id))
+        .expect("getById");
         assert!(again.is_some());
         ctx.finish().await;
     }
@@ -417,8 +458,9 @@ mod triggers_the_application_never_sees {
     async fn provisions_a_pending_profile_for_a_new_auth_user_0001_on_auth_user_created() {
         let Some(ctx) = setup().await else { return };
         let user_id = ctx.sign_up().await;
-        let found = once!(ctx.db, Some(user_id.as_str()), |tx| tx.profiles_get_by_user_id(&user_id))
-            .expect("profiles.getByUserId");
+        let found = once!(ctx.db, Some(user_id.as_str()), |tx| tx
+            .profiles_get_by_user_id(&user_id))
+        .expect("profiles.getByUserId");
         let profile = js(&must(found, "the auto-provisioned profile"));
         assert_eq!(profile["status"], "pending");
         assert_eq!(profile["id"], user_id.as_str());
@@ -430,10 +472,12 @@ mod triggers_the_application_never_sees {
     async fn r111_the_launch_grant_writes_both_ledger_tables_through_app_grant_cards() {
         let Some(ctx) = setup().await else { return };
         let user_id = ctx.sign_up().await;
-        once!(ctx.db, Some(user_id.as_str()), |tx| tx.profiles_set_status(&user_id, de(json!("active"))))
-            .expect("profiles.setStatus");
+        once!(ctx.db, Some(user_id.as_str()), |tx| tx
+            .profiles_set_status(&user_id, de(json!("active"))))
+        .expect("profiles.setStatus");
 
-        let owned = once!(ctx.db, Some(user_id.as_str()), |tx| tx.collection_get(&user_id)).expect("collection.get");
+        let owned =
+            once!(ctx.db, Some(user_id.as_str()), |tx| tx.collection_get(&user_id)).expect("collection.get");
         assert_eq!(owned.len(), PLAYABLE_COUNT);
 
         let rows = sqlx::query(
@@ -485,12 +529,19 @@ mod app_redeem_invite_code {
         let user_id = ctx.sign_up().await;
         let code = mint(&ctx.db, 1, None, false).await;
 
-        assert_eq!(redeem(&ctx.db, &user_id, Some(hash_of(&code).as_str()), "ip").await, "ok");
+        assert_eq!(
+            redeem(&ctx.db, &user_id, Some(hash_of(&code).as_str()), "ip").await,
+            "ok"
+        );
 
         assert_eq!(profile(&ctx.db, &user_id).await["status"], "active");
-        assert_eq!(code_by_hash(&ctx.db, &hash_of(&code)).await["uses"].as_i64(), Some(1));
+        assert_eq!(
+            code_by_hash(&ctx.db, &hash_of(&code)).await["uses"].as_i64(),
+            Some(1)
+        );
         // §9.4 step 4, and R111's trigger on the way past: both ledgers were written too.
-        let owned = once!(ctx.db, Some(user_id.as_str()), |tx| tx.collection_get(&user_id)).expect("collection.get");
+        let owned =
+            once!(ctx.db, Some(user_id.as_str()), |tx| tx.collection_get(&user_id)).expect("collection.get");
         assert_eq!(owned.len(), PLAYABLE_COUNT);
         ctx.finish().await;
     }
@@ -504,9 +555,18 @@ mod app_redeem_invite_code {
         let exhausted_id = exhausted["id"].as_str().expect("an id").to_string();
         once!(ctx.db, None, |tx| tx.codes_claim(&exhausted_id, now_ms())).expect("codes.claim");
 
-        for code_hash in ["no-such-hash".to_string(), hash_of(&expired), hash_of(&revoked), hash_of(&exhausted)] {
+        for code_hash in [
+            "no-such-hash".to_string(),
+            hash_of(&expired),
+            hash_of(&revoked),
+            hash_of(&exhausted),
+        ] {
             let user_id = ctx.sign_up().await;
-            assert_eq!(redeem(&ctx.db, &user_id, Some(code_hash.as_str()), "ip").await, "invalid_code", "{code_hash}");
+            assert_eq!(
+                redeem(&ctx.db, &user_id, Some(code_hash.as_str()), "ip").await,
+                "invalid_code",
+                "{code_hash}"
+            );
             assert_eq!(profile(&ctx.db, &user_id).await["status"], "pending");
         }
         ctx.finish().await;
@@ -518,7 +578,10 @@ mod app_redeem_invite_code {
         let code = mint(&ctx.db, 5, None, false).await;
 
         let active = ctx.active_profile().await;
-        assert_eq!(redeem(&ctx.db, &active, Some(hash_of(&code).as_str()), "ip").await, "not_pending");
+        assert_eq!(
+            redeem(&ctx.db, &active, Some(hash_of(&code).as_str()), "ip").await,
+            "not_pending"
+        );
 
         let unverified = ctx.sign_up().await;
         sqlx::query("update auth.users set email_confirmed_at = null where id = $1")
@@ -526,7 +589,10 @@ mod app_redeem_invite_code {
             .execute(&ctx.admin)
             .await
             .expect("unverify the email");
-        assert_eq!(redeem(&ctx.db, &unverified, Some(hash_of(&code).as_str()), "ip").await, "email_unverified");
+        assert_eq!(
+            redeem(&ctx.db, &unverified, Some(hash_of(&code).as_str()), "ip").await,
+            "email_unverified"
+        );
         ctx.finish().await;
     }
 
@@ -537,9 +603,16 @@ mod app_redeem_invite_code {
         let user_id = ctx.sign_up().await;
         let code = mint(&ctx.db, 99, None, false).await;
         for _ in 0..6 {
-            log_attempt(&ctx.db, attempt(Some(user_id.as_str()), "ip", "rejected", "missing", now_ms())).await;
+            log_attempt(
+                &ctx.db,
+                attempt(Some(user_id.as_str()), "ip", "rejected", "missing", now_ms()),
+            )
+            .await;
         }
-        assert_eq!(redeem(&ctx.db, &user_id, Some(hash_of(&code).as_str()), "ip").await, "rate_limited_profile");
+        assert_eq!(
+            redeem(&ctx.db, &user_id, Some(hash_of(&code).as_str()), "ip").await,
+            "rate_limited_profile"
+        );
         ctx.finish().await;
     }
 
@@ -550,8 +623,9 @@ mod app_redeem_invite_code {
         let user_id = ctx.sign_up().await;
         redeem(&ctx.db, &user_id, Some("no-such-hash"), "ip-1").await;
         let since = now_ms() - 60_000;
-        let by_profile = once!(ctx.db, Some(user_id.as_str()), |tx| tx.codes_count_attempts_by_profile(&user_id, since))
-            .expect("codes.countAttemptsByProfile");
+        let by_profile = once!(ctx.db, Some(user_id.as_str()), |tx| tx
+            .codes_count_attempts_by_profile(&user_id, since))
+        .expect("codes.countAttemptsByProfile");
         assert_eq!(by_profile, 1);
         let failures = once!(ctx.db, None, |tx| tx.codes_count_failures(since)).expect("codes.countFailures");
         assert_eq!(failures, 1);
@@ -590,7 +664,9 @@ mod r250_r252_app_upsert_deck_and_app_upsert_trio {
     /// `decks.upsert`, in its own transaction: the outcome's JSON, or the refusal's text.
     async fn upsert(db: &Db, deck: Value, cap: i64) -> Result<Value, String> {
         let profile_id = deck["profileId"].as_str().unwrap_or_default().to_string();
-        once!(db, Some(profile_id.as_str()), |tx| tx.decks_upsert(&de(deck.clone()), cap)).map(|outcome| js(&outcome))
+        once!(db, Some(profile_id.as_str()), |tx| tx
+            .decks_upsert(&de(deck.clone()), cap))
+        .map(|outcome| js(&outcome))
     }
 
     async fn listed(db: &Db, profile_id: &str) -> Vec<Value> {
@@ -607,13 +683,28 @@ mod r250_r252_app_upsert_deck_and_app_upsert_trio {
         let profile_id = ctx.active_profile().await;
         let racing_pool = ctx.racing(6).await;
         let racing = Db::Pg(racing_pool.clone());
-        upsert(&racing, deck(&profile_id, json!({})), 3).await.expect("the first create");
-        upsert(&racing, deck(&profile_id, json!({})), 3).await.expect("the second create");
-        let outcomes = join_all((0..6).map(|_| upsert(&racing, deck(&profile_id, json!({})), 3)).collect()).await;
+        upsert(&racing, deck(&profile_id, json!({})), 3)
+            .await
+            .expect("the first create");
+        upsert(&racing, deck(&profile_id, json!({})), 3)
+            .await
+            .expect("the second create");
+        let outcomes = join_all(
+            (0..6)
+                .map(|_| upsert(&racing, deck(&profile_id, json!({})), 3))
+                .collect(),
+        )
+        .await;
         racing_pool.close().await;
 
-        let outcomes: Vec<Value> = outcomes.into_iter().map(|outcome| outcome.expect("decks.upsert")).collect();
-        assert_eq!(outcomes.iter().filter(|outcome| **outcome == "created").count(), 1);
+        let outcomes: Vec<Value> = outcomes
+            .into_iter()
+            .map(|outcome| outcome.expect("decks.upsert"))
+            .collect();
+        assert_eq!(
+            outcomes.iter().filter(|outcome| **outcome == "created").count(),
+            1
+        );
         assert_eq!(outcomes.iter().filter(|outcome| **outcome == "limit").count(), 5);
         assert_eq!(listed(&ctx.db, &profile_id).await.len(), 3);
         ctx.finish().await;
@@ -627,12 +718,23 @@ mod r250_r252_app_upsert_deck_and_app_upsert_trio {
         let racing_pool = ctx.racing(2).await;
         let racing = Db::Pg(racing_pool.clone());
         let draft = deck(&profile_id, json!({}));
-        let (first, second) = tokio::join!(upsert(&racing, draft.clone(), 10), upsert(&racing, draft.clone(), 10));
+        let (first, second) = tokio::join!(
+            upsert(&racing, draft.clone(), 10),
+            upsert(&racing, draft.clone(), 10)
+        );
         racing_pool.close().await;
 
         let mut outcomes = vec![
-            first.expect("decks.upsert").as_str().unwrap_or_default().to_string(),
-            second.expect("decks.upsert").as_str().unwrap_or_default().to_string(),
+            first
+                .expect("decks.upsert")
+                .as_str()
+                .unwrap_or_default()
+                .to_string(),
+            second
+                .expect("decks.upsert")
+                .as_str()
+                .unwrap_or_default()
+                .to_string(),
         ];
         outcomes.sort();
         assert_eq!(outcomes, vec!["created", "updated"]);
@@ -659,7 +761,10 @@ mod r250_r252_app_upsert_deck_and_app_upsert_trio {
             .await
             .expect("restore the cap");
 
-        let outcomes: Vec<Value> = outcomes.into_iter().map(|outcome| outcome.expect("decks.upsert")).collect();
+        let outcomes: Vec<Value> = outcomes
+            .into_iter()
+            .map(|outcome| outcome.expect("decks.upsert"))
+            .collect();
         assert_eq!(outcomes, vec![json!("created"), json!("created"), json!("limit")]);
         ctx.finish().await;
     }
@@ -671,12 +776,23 @@ mod r250_r252_app_upsert_deck_and_app_upsert_trio {
         let profile_id = ctx.active_profile().await;
         let mut oversized = deck_of(0);
         oversized.push("core-061".to_string());
-        assert_refused(upsert(&ctx.db, deck(&profile_id, json!({ "cards": oversized })), 10).await, "deck: D2");
         assert_refused(
-            upsert(&ctx.db, deck(&profile_id, json!({ "cards": ["core-001", "core-001"] })), 10).await,
+            upsert(&ctx.db, deck(&profile_id, json!({ "cards": oversized })), 10).await,
+            "deck: D2",
+        );
+        assert_refused(
+            upsert(
+                &ctx.db,
+                deck(&profile_id, json!({ "cards": ["core-001", "core-001"] })),
+                10,
+            )
+            .await,
             "deck: D4",
         );
-        assert_refused(upsert(&ctx.db, deck(&profile_id, json!({ "name": "   " })), 10).await, "needs a name");
+        assert_refused(
+            upsert(&ctx.db, deck(&profile_id, json!({ "name": "   " })), 10).await,
+            "needs a name",
+        );
         assert_refused(
             upsert(&ctx.db, deck(&profile_id, json!({ "name": "x".repeat(41) })), 10).await,
             "at most 40",
@@ -697,7 +813,9 @@ mod r250_r252_app_upsert_deck_and_app_upsert_trio {
             "createdAt": at, "updatedAt": at,
         });
         assert_refused(
-            once!(ctx.db, Some(pending.as_str()), |tx| tx.trios_upsert(&de(trio.clone()), 5)).map(|outcome| js(&outcome)),
+            once!(ctx.db, Some(pending.as_str()), |tx| tx
+                .trios_upsert(&de(trio.clone()), 5))
+            .map(|outcome| js(&outcome)),
             "not active",
         );
         ctx.finish().await;
@@ -710,13 +828,15 @@ mod r250_r252_app_upsert_deck_and_app_upsert_trio {
         let (owner, other) = (ctx.active_profile().await, ctx.active_profile().await);
         let theirs = deck(&other, json!({}));
         upsert(&ctx.db, theirs.clone(), 10).await.expect("their deck");
-        let raw = sqlx::query("insert into public.trios (id, profile_id, name, deck1_id) values ($1, $2, 'Stolen', $3)")
-            .bind(uid(&uuid()))
-            .bind(uid(&owner))
-            .bind(uid(theirs["id"].as_str().expect("a deck id")))
-            .execute(&ctx.admin)
-            .await
-            .map_err(|error| error.to_string());
+        let raw = sqlx::query(
+            "insert into public.trios (id, profile_id, name, deck1_id) values ($1, $2, 'Stolen', $3)",
+        )
+        .bind(uid(&uuid()))
+        .bind(uid(&owner))
+        .bind(uid(theirs["id"].as_str().expect("a deck id")))
+        .execute(&ctx.admin)
+        .await
+        .map_err(|error| error.to_string());
         assert_refused(raw, "trios_deck1_fk");
         ctx.finish().await;
     }
@@ -730,12 +850,15 @@ mod r250_r252_app_upsert_deck_and_app_upsert_trio {
             "id": uuid(), "profileId": profile_id, "name": "Ladder", "deckIds": ["not-a-uuid", null, null],
             "createdAt": at, "updatedAt": at,
         });
-        let outcome = once!(ctx.db, Some(profile_id.as_str()), |tx| tx.trios_upsert(&de(trio.clone()), 5)).expect("trios.upsert");
+        let outcome = once!(ctx.db, Some(profile_id.as_str()), |tx| tx
+            .trios_upsert(&de(trio.clone()), 5))
+        .expect("trios.upsert");
         assert_eq!(js(&outcome), "unknown_deck");
         let got = once!(ctx.db, None, |tx| tx.decks_get("not-a-uuid")).expect("decks.get");
         assert!(got.is_none());
-        let removed = once!(ctx.db, Some(profile_id.as_str()), |tx| tx.decks_remove(&profile_id, "not-a-uuid"))
-            .expect("decks.remove");
+        let removed = once!(ctx.db, Some(profile_id.as_str()), |tx| tx
+            .decks_remove(&profile_id, "not-a-uuid"))
+        .expect("decks.remove");
         assert!(!removed);
         ctx.finish().await;
     }
@@ -779,11 +902,20 @@ mod r263_matches_discard_open {
         let Some(ctx) = setup().await else { return };
         let (a, b) = (ctx.active_profile().await, ctx.active_profile().await);
         let (ta, tb) = (ticket(&a), ticket(&b));
-        let (ta_id, tb_id) = (ta["id"].as_str().unwrap_or_default().to_string(), tb["id"].as_str().unwrap_or_default().to_string());
+        let (ta_id, tb_id) = (
+            ta["id"].as_str().unwrap_or_default().to_string(),
+            tb["id"].as_str().unwrap_or_default().to_string(),
+        );
         once!(ctx.db, Some(a.as_str()), |tx| tx.tickets_insert(&de(ta.clone()))).expect("tickets.insert a");
         once!(ctx.db, Some(b.as_str()), |tx| tx.tickets_insert(&de(tb.clone()))).expect("tickets.insert b");
         let reserved = uuid();
-        let claimed = once!(ctx.db, None, |tx| tx.tickets_claim_pair(&ta_id, &tb_id, &reserved, now_ms())).expect("claimPair");
+        let claimed = once!(ctx.db, None, |tx| tx.tickets_claim_pair(
+            &ta_id,
+            &tb_id,
+            &reserved,
+            now_ms()
+        ))
+        .expect("claimPair");
         assert!(claimed);
         let before = once!(ctx.db, None, |tx| tx.tickets_get(&ta_id)).expect("tickets.get");
         assert_eq!(js(&must(before, "ticket a"))["matchId"], reserved.as_str());
@@ -797,7 +929,10 @@ mod r263_matches_discard_open {
             .expect("read the matches");
         assert_eq!(rows.len(), 0);
         // `tickets.match_id` is `on delete set null` (0004): the tickets stay matched and forget the id.
-        let after = js(&must(once!(ctx.db, None, |tx| tx.tickets_get(&ta_id)).expect("tickets.get"), "ticket a"));
+        let after = js(&must(
+            once!(ctx.db, None, |tx| tx.tickets_get(&ta_id)).expect("tickets.get"),
+            "ticket a",
+        ));
         assert_eq!(after["status"], "matched");
         assert_eq!(after["matchId"], Value::Null);
         ctx.finish().await;
@@ -807,7 +942,11 @@ mod r263_matches_discard_open {
     #[tokio::test]
     async fn r263_frees_a_claimed_rooms_code_for_the_next_room() {
         let Some(ctx) = setup().await else { return };
-        let (host, guest, next) = (ctx.active_profile().await, ctx.active_profile().await, ctx.active_profile().await);
+        let (host, guest, next) = (
+            ctx.active_profile().await,
+            ctx.active_profile().await,
+            ctx.active_profile().await,
+        );
         let now = now_ms();
         let room = json!({
             "code": "BCD345",
@@ -824,16 +963,34 @@ mod r263_matches_discard_open {
         let mut next_room = room.clone();
         next_room["hostProfileId"] = json!(next);
 
-        assert!(once!(ctx.db, Some(host.as_str()), |tx| tx.rooms_create(&de(room.clone()))).expect("rooms.create"));
+        assert!(
+            once!(ctx.db, Some(host.as_str()), |tx| tx
+                .rooms_create(&de(room.clone())))
+            .expect("rooms.create")
+        );
         let reserved = uuid();
-        let claimed = once!(ctx.db, Some(guest.as_str()), |tx| tx.rooms_claim("BCD345", &guest, &reserved, now)).expect("rooms.claim");
+        let claimed = once!(ctx.db, Some(guest.as_str()), |tx| tx
+            .rooms_claim("BCD345", &guest, &reserved, now))
+        .expect("rooms.claim");
         must(claimed, "the claim");
-        assert!(!once!(ctx.db, Some(next.as_str()), |tx| tx.rooms_create(&de(next_room.clone()))).expect("rooms.create"));
+        assert!(
+            !once!(ctx.db, Some(next.as_str()), |tx| tx
+                .rooms_create(&de(next_room.clone())))
+            .expect("rooms.create")
+        );
 
         once!(ctx.db, None, |tx| tx.matches_discard_open(&reserved)).expect("matches.discardOpen");
 
-        assert!(once!(ctx.db, None, |tx| tx.rooms_get("BCD345")).expect("rooms.get").is_none());
-        assert!(once!(ctx.db, Some(next.as_str()), |tx| tx.rooms_create(&de(next_room.clone()))).expect("rooms.create"));
+        assert!(
+            once!(ctx.db, None, |tx| tx.rooms_get("BCD345"))
+                .expect("rooms.get")
+                .is_none()
+        );
+        assert!(
+            once!(ctx.db, Some(next.as_str()), |tx| tx
+                .rooms_create(&de(next_room.clone())))
+            .expect("rooms.create")
+        );
         ctx.finish().await;
     }
 
@@ -864,16 +1021,24 @@ mod r672_profiles_current_match_id {
         // Flagging before the row exists violates the foreign key (0004): this is why a rematch
         // starts its game before it flags the seats (`src/api/rematch.rs`).
         assert_refused(
-            once!(ctx.db, Some(a.as_str()), |tx| tx.profiles_set_in_match(&a, Some(match_id.as_str()))),
+            once!(ctx.db, Some(a.as_str()), |tx| tx
+                .profiles_set_in_match(&a, Some(match_id.as_str()))),
             "current_match_id",
         );
         create_match(&ctx.db, match_row(&match_id, "seed-rematch", &a, &b, now)).await;
-        once!(ctx.db, Some(a.as_str()), |tx| tx.profiles_set_in_match(&a, Some(match_id.as_str()))).expect("setInMatch a");
-        once!(ctx.db, Some(b.as_str()), |tx| tx.profiles_set_in_match(&b, Some(match_id.as_str()))).expect("setInMatch b");
-        let both = once!(ctx.db, None, |tx| tx.profiles_get_many(&[a.clone(), b.clone()])).expect("profiles.getMany");
+        once!(ctx.db, Some(a.as_str()), |tx| tx
+            .profiles_set_in_match(&a, Some(match_id.as_str())))
+        .expect("setInMatch a");
+        once!(ctx.db, Some(b.as_str()), |tx| tx
+            .profiles_set_in_match(&b, Some(match_id.as_str())))
+        .expect("setInMatch b");
+        let both = once!(ctx.db, None, |tx| tx.profiles_get_many(&[a.clone(), b.clone()]))
+            .expect("profiles.getMany");
         let both: Vec<Value> = both.iter().map(js).collect();
         let in_match = |id: &str| {
-            both.iter().find(|profile| profile["id"] == id).map(|profile| profile["inMatchId"].clone())
+            both.iter()
+                .find(|profile| profile["id"] == id)
+                .map(|profile| profile["inMatchId"].clone())
         };
         assert_eq!(in_match(a.as_str()), Some(json!(match_id)));
         assert_eq!(in_match(b.as_str()), Some(json!(match_id)));
@@ -910,7 +1075,8 @@ mod app_append_match_action {
     }
 
     async fn append(db: &Db, row: MatchActionRow) -> Result<(), String> {
-        once!(db, None, |tx| tx.matches_append_actions(std::slice::from_ref(&row)))
+        once!(db, None, |tx| tx
+            .matches_append_actions(std::slice::from_ref(&row)))
     }
 
     #[tokio::test]
@@ -918,14 +1084,18 @@ mod app_append_match_action {
         let Some(ctx) = setup().await else { return };
         let live = live_match(&ctx).await;
         for seq in 1..=3 {
-            append(&ctx.db, action_row(&live.id, seq, "p1", &format!("n{seq}"))).await.expect("appendActions");
+            append(&ctx.db, action_row(&live.id, seq, "p1", &format!("n{seq}")))
+                .await
+                .expect("appendActions");
         }
         let rows = sqlx::query("select last_seq::text from public.matches where id = $1")
             .bind(uid(&live.id))
             .fetch_all(&ctx.admin)
             .await
             .expect("read the match");
-        let last: String = must(rows.first(), "the match row").try_get("last_seq").expect("last_seq");
+        let last: String = must(rows.first(), "the match row")
+            .try_get("last_seq")
+            .expect("last_seq");
         assert_eq!(last.parse::<i64>().expect("a seq"), 3);
         ctx.finish().await;
     }
@@ -934,7 +1104,9 @@ mod app_append_match_action {
     async fn records_the_seats_profile_id_alongside_the_action() {
         let Some(ctx) = setup().await else { return };
         let live = live_match(&ctx).await;
-        append(&ctx.db, action_row(&live.id, 1, "p2", "n1")).await.expect("appendActions");
+        append(&ctx.db, action_row(&live.id, 1, "p2", "n1"))
+            .await
+            .expect("appendActions");
         let rows = sqlx::query("select player_id, player_seat from public.match_actions where match_id = $1")
             .bind(uid(&live.id))
             .fetch_all(&ctx.admin)
@@ -952,8 +1124,13 @@ mod app_append_match_action {
     async fn raises_rather_than_double_writing_when_a_nonce_is_replayed() {
         let Some(ctx) = setup().await else { return };
         let live = live_match(&ctx).await;
-        append(&ctx.db, action_row(&live.id, 1, "p1", "same")).await.expect("appendActions");
-        assert_refused(append(&ctx.db, action_row(&live.id, 2, "p1", "same")).await, "append-only");
+        append(&ctx.db, action_row(&live.id, 1, "p1", "same"))
+            .await
+            .expect("appendActions");
+        assert_refused(
+            append(&ctx.db, action_row(&live.id, 2, "p1", "same")).await,
+            "append-only",
+        );
         let logged = once!(ctx.db, None, |tx| tx.matches_actions(&live.id)).expect("matches.actions");
         assert_eq!(logged.len(), 1);
         ctx.finish().await;
@@ -963,7 +1140,9 @@ mod app_append_match_action {
     async fn cannot_edit_or_delete_a_logged_action_app_deny_row_mutation() {
         let Some(ctx) = setup().await else { return };
         let live = live_match(&ctx).await;
-        append(&ctx.db, action_row(&live.id, 1, "p1", "n1")).await.expect("appendActions");
+        append(&ctx.db, action_row(&live.id, 1, "p1", "n1"))
+            .await
+            .expect("appendActions");
         let edited = sqlx::query("update public.match_actions set nonce = 'edited' where match_id = $1")
             .bind(uid(&live.id))
             .execute(&ctx.admin)
@@ -982,7 +1161,9 @@ mod concurrency {
     use super::*;
 
     async fn claim_room(db: &Db, code: &str, guest: &str, match_id: String, at: i64) -> bool {
-        once!(db, Some(guest), |tx| tx.rooms_claim(code, guest, &match_id, at)).expect("rooms.claim").is_some()
+        once!(db, Some(guest), |tx| tx.rooms_claim(code, guest, &match_id, at))
+            .expect("rooms.claim")
+            .is_some()
     }
 
     async fn claim_pair(db: &Db, a: &str, b: &str, match_id: String) -> bool {
@@ -1011,7 +1192,9 @@ mod concurrency {
             "guestProfileId": null,
             "matchId": null,
         });
-        once!(ctx.db, Some(host.as_str()), |tx| tx.rooms_create(&de(room.clone()))).expect("rooms.create");
+        once!(ctx.db, Some(host.as_str()), |tx| tx
+            .rooms_create(&de(room.clone())))
+        .expect("rooms.create");
 
         // Two connections, so the two claims really overlap.
         let racing_pool = ctx.racing(2).await;
@@ -1044,14 +1227,20 @@ mod concurrency {
                 "status": "open",
                 "matchId": null,
             });
-            once!(ctx.db, Some(profile_id.as_str()), |tx| tx.tickets_insert(&de(ticket.clone()))).expect("tickets.insert");
+            once!(ctx.db, Some(profile_id.as_str()), |tx| tx
+                .tickets_insert(&de(ticket.clone())))
+            .expect("tickets.insert");
             ids.push(ticket["id"].as_str().unwrap_or_default().to_string());
         }
         let (ta, tb) = (must(ids.first(), "ticket a"), must(ids.get(1), "ticket b"));
 
         let racing_pool = ctx.racing(2).await;
         let racing = Db::Pg(racing_pool.clone());
-        let won = join_all(vec![claim_pair(&racing, ta, tb, uuid()), claim_pair(&racing, ta, tb, uuid())]).await;
+        let won = join_all(vec![
+            claim_pair(&racing, ta, tb, uuid()),
+            claim_pair(&racing, ta, tb, uuid()),
+        ])
+        .await;
         racing_pool.close().await;
         assert_eq!(won.iter().filter(|claimed| **claimed).count(), 1);
         ctx.finish().await;
@@ -1100,14 +1289,30 @@ async fn app_live_matches_backs_matches_live_and_an_open_room_is_not_one() {
         "guestProfileId": null,
         "matchId": null,
     });
-    once!(ctx.db, Some(host.as_str()), |tx| tx.rooms_create(&de(room.clone()))).expect("rooms.create");
-    assert!(once!(ctx.db, None, |tx| tx.matches_live()).expect("matches.live").is_empty());
+    once!(ctx.db, Some(host.as_str()), |tx| tx
+        .rooms_create(&de(room.clone())))
+    .expect("rooms.create");
+    assert!(
+        once!(ctx.db, None, |tx| tx.matches_live())
+            .expect("matches.live")
+            .is_empty()
+    );
 
     let match_id = uuid();
-    once!(ctx.db, Some(guest.as_str()), |tx| tx.rooms_claim("ABC234", &guest, &match_id, now)).expect("rooms.claim");
+    once!(ctx.db, Some(guest.as_str()), |tx| tx
+        .rooms_claim("ABC234", &guest, &match_id, now))
+    .expect("rooms.claim");
     // Claimed but not yet created by the registry: still not a match anyone can fold.
-    assert!(once!(ctx.db, None, |tx| tx.matches_live()).expect("matches.live").is_empty());
-    assert!(once!(ctx.db, None, |tx| tx.matches_get(&match_id)).expect("matches.get").is_none());
+    assert!(
+        once!(ctx.db, None, |tx| tx.matches_live())
+            .expect("matches.live")
+            .is_empty()
+    );
+    assert!(
+        once!(ctx.db, None, |tx| tx.matches_get(&match_id))
+            .expect("matches.get")
+            .is_none()
+    );
 
     create_match(&ctx.db, match_row(&match_id, "seed-1", &host, &guest, now)).await;
     let live = once!(ctx.db, None, |tx| tx.matches_live()).expect("matches.live");

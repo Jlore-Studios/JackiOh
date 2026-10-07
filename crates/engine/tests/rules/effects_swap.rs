@@ -83,7 +83,9 @@ fn owned(ids: &[&str]) -> Vec<String> {
 
 /// TS held the live instance and read it after an effect; Rust reads the card again by id.
 fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id).cloned().unwrap_or_else(|| panic!("no card {id} in the state"))
+    find_instance(state, id)
+        .cloned()
+        .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 /// TS wrote through the live instance; Rust writes through the card found by id.
@@ -104,7 +106,10 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
         (Value::Array(actual), Value::Array(expected)) => {
             actual.len() == expected.len()
-                && actual.iter().zip(expected).all(|(found, value)| matches_object(found, value))
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(found, value)| matches_object(found, value))
         }
         _ => actual == expected,
     }
@@ -159,7 +164,12 @@ mod swap_s6_3_r73_m3_t1 {
     fn r73_swaps_board_contents_lane_by_lane_in_both_rows_with_control_moving_and_nothing_left_behind() {
         let mut state = game();
         let turn = state.turn;
-        let mine = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let mine = put(
+            &mut state,
+            &combat_fx::plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         {
             let card = live_mut(&mut state, &mine.id);
             card.damage = 1;
@@ -176,9 +186,24 @@ mod swap_s6_3_r73_m3_t1 {
                 attacks: None,
             };
         }
-        let my_back = put(&mut state, &trap().id, slot(PlayerId::P1, Row::Backrow, 4), json!({}));
-        let theirs = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P2, Row::Units, 5), json!({}));
-        let their_back = put(&mut state, &trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let my_back = put(
+            &mut state,
+            &trap().id,
+            slot(PlayerId::P1, Row::Backrow, 4),
+            json!({}),
+        );
+        let theirs = put(
+            &mut state,
+            &combat_fx::plain.id,
+            slot(PlayerId::P2, Row::Units, 5),
+            json!({}),
+        );
+        let their_back = put(
+            &mut state,
+            &trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
 
         let events = run(&mut state, swap_board(), HookOptions::default());
 
@@ -195,10 +220,21 @@ mod swap_s6_3_r73_m3_t1 {
         let theirs_now = live(&state, &theirs.id);
         let their_back_now = live(&state, &their_back.id);
         // Control changes, ownership does not (R12).
-        assert_eq!([mine_now.controller, my_back_now.controller], [PlayerId::P2, PlayerId::P2]);
-        assert_eq!([theirs_now.controller, their_back_now.controller], [PlayerId::P1, PlayerId::P1]);
         assert_eq!(
-            [mine_now.owner, my_back_now.owner, theirs_now.owner, their_back_now.owner],
+            [mine_now.controller, my_back_now.controller],
+            [PlayerId::P2, PlayerId::P2]
+        );
+        assert_eq!(
+            [theirs_now.controller, their_back_now.controller],
+            [PlayerId::P1, PlayerId::P1]
+        );
+        assert_eq!(
+            [
+                mine_now.owner,
+                my_back_now.owner,
+                theirs_now.owner,
+                their_back_now.owner
+            ],
             [PlayerId::P1, PlayerId::P1, PlayerId::P2, PlayerId::P2]
         );
 
@@ -248,7 +284,12 @@ mod swap_s6_3_r73_m3_t1 {
     #[test]
     fn r12_a_swapped_card_changes_controller_but_never_owner_so_it_still_leaves_to_its_owners_zones() {
         let mut state = game();
-        let card = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let card = put(
+            &mut state,
+            &combat_fx::plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
 
         run(&mut state, swap_board(), HookOptions::default());
         let mut now = live(&state, &card.id);
@@ -268,21 +309,38 @@ mod swap_s6_3_r73_m3_t1 {
         let units: Vec<CardInstance> = [1, 3, 4]
             .iter()
             .map(|lane| {
-                put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, *lane), json!({}))
+                put(
+                    &mut state,
+                    &combat_fx::plain.id,
+                    slot(PlayerId::P1, Row::Units, *lane),
+                    json!({}),
+                )
             })
             .collect();
-        let back = put(&mut state, &trap().id, slot(PlayerId::P1, Row::Backrow, 5), json!({}));
+        let back = put(
+            &mut state,
+            &trap().id,
+            slot(PlayerId::P1, Row::Backrow, 5),
+            json!({}),
+        );
 
         let events = run(&mut state, swap_board(), HookOptions::default());
 
         assert_eq!(
-            units.iter().map(|card| where_is(&state, card)).collect::<Vec<_>>(),
+            units
+                .iter()
+                .map(|card| where_is(&state, card))
+                .collect::<Vec<_>>(),
             vec!["p2 units 1", "p2 units 3", "p2 units 4"]
         );
         assert_eq!(where_is(&state, &back), "p2 backrow 5");
         assert!(state.players.p1.units.iter().all(|pile| pile.is_none()));
         assert!(state.players.p1.backrow.iter().all(|card| card.is_none()));
-        assert!(units.iter().all(|card| live(&state, &card.id).controller == PlayerId::P2));
+        assert!(
+            units
+                .iter()
+                .all(|card| live(&state, &card.id).controller == PlayerId::P2)
+        );
         // Nothing came back the other way, and nothing was bounced or lost.
         assert_eq!(events_of_type(&events, GameEventType::ControlChanged).len(), 4);
         assert!(events_of_type(&events, GameEventType::Bounced).is_empty());
@@ -292,7 +350,12 @@ mod swap_s6_3_r73_m3_t1 {
     #[test]
     fn r73_leaves_locks_with_their_zones_so_a_lock_never_travels_with_the_card_that_sat_under_it() {
         let mut state = game();
-        let card = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let card = put(
+            &mut state,
+            &combat_fx::plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         // §3.2: the current occupant is unaffected by the lock and the lock persists after it leaves.
         lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 1));
 
@@ -300,8 +363,14 @@ mod swap_s6_3_r73_m3_t1 {
 
         assert_eq!(where_is(&state, &card), "p2 units 1");
         // The lock stayed on the zone it was set on; the card's new zone did not become Locked (R73).
-        assert_eq!(state.players.p1.locks.units, vec![true, false, false, false, false]);
-        assert_eq!(state.players.p2.locks.units, vec![false, false, false, false, false]);
+        assert_eq!(
+            state.players.p1.locks.units,
+            vec![true, false, false, false, false]
+        );
+        assert_eq!(
+            state.players.p2.locks.units,
+            vec![false, false, false, false, false]
+        );
         assert!(state.players.p1.locks.backrow.iter().all(|locked| !*locked));
     }
 
@@ -311,13 +380,23 @@ mod swap_s6_3_r73_m3_t1 {
         // zone; §3.2's "accepts no summons" plus R14's answer for the other whole-board move is the
         // reading implemented here.
         let mut state = game();
-        let blocked = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let blocked = put(
+            &mut state,
+            &combat_fx::plain.id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
         {
             let card = live_mut(&mut state, &blocked.id);
             card.damage = 2;
             card.buffs = AttackHealth { attack: 1, health: 1 };
         }
-        let other = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let other = put(
+            &mut state,
+            &combat_fx::plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         lock_zone(&mut state, slot(PlayerId::P2, Row::Units, 3));
 
         let events = run(&mut state, swap_board(), HookOptions::default());
@@ -342,7 +421,12 @@ mod swap_s6_3_r73_m3_t1 {
     #[test]
     fn r33_a_swapped_face_down_trap_stays_face_down_and_is_readable_by_its_new_controller_only() {
         let mut state = game();
-        let hidden = put(&mut state, &trap().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        let hidden = put(
+            &mut state,
+            &trap().id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
         assert_eq!(live(&state, &hidden.id).face_up, None);
         // Before the swap only p1 may read it: p2 sees a face-down marker (§3, R33).
         assert!(matches_object(
@@ -386,7 +470,12 @@ mod swap_s6_3_r73_m3_t1 {
     #[test]
     fn s3_2_a_stack_pile_swaps_whole_and_keeps_the_same_card_on_top() {
         let mut state = game();
-        let under = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 5), json!({}));
+        let under = put(
+            &mut state,
+            &combat_fx::plain.id,
+            slot(PlayerId::P1, Row::Units, 5),
+            json!({}),
+        );
         live_mut(&mut state, &under.id).damage = 1;
         let top = stack_onto(&mut state, &combat_fx::stacker.id, PlayerId::P1, 5);
 
@@ -405,7 +494,10 @@ mod swap_s6_3_r73_m3_t1 {
         assert_eq!(live(&state, &under.id).damage, 1);
         assert_eq!(live(&state, &top.id).controller, PlayerId::P2);
         assert_eq!(live(&state, &under.id).controller, PlayerId::P2);
-        assert_eq!(control_changed_ids(&events), vec![top.id.clone(), under.id.clone()]);
+        assert_eq!(
+            control_changed_ids(&events),
+            vec![top.id.clone(), under.id.clone()]
+        );
         // Nothing beneath the top resumed, so no Stack note is kept against it (R212, `withPile`).
         assert!(
             state
@@ -438,7 +530,11 @@ mod swap_s6_3_r73_m3_t1 {
         let plain_id = combat_fx::plain.id.clone();
         let stacker_id = combat_fx::stacker.id.clone();
         let trap_id = trap().id;
-        let mine = set_library(&mut state, PlayerId::P1, &owned(&[plain_id.as_str(), stacker_id.as_str(), plain_id.as_str()]));
+        let mine = set_library(
+            &mut state,
+            PlayerId::P1,
+            &owned(&[plain_id.as_str(), stacker_id.as_str(), plain_id.as_str()]),
+        );
         let theirs = set_library(&mut state, PlayerId::P2, &owned(&[trap_id.as_str(), TOKEN_ID]));
         state.players.p1.fatigue_count = 2;
         state.players.p2.fatigue_count = 0;
@@ -452,10 +548,21 @@ mod swap_s6_3_r73_m3_t1 {
         // R12's one exception (R73): the owner becomes the player whose library now holds the card.
         let theirs_now: Vec<CardInstance> = theirs.iter().map(|card| live(&state, &card.id)).collect();
         let mine_now: Vec<CardInstance> = mine.iter().map(|card| live(&state, &card.id)).collect();
-        assert!(theirs_now.iter().all(|card| card.owner == PlayerId::P1 && card.controller == PlayerId::P1));
-        assert!(mine_now.iter().all(|card| card.owner == PlayerId::P2 && card.controller == PlayerId::P2));
+        assert!(
+            theirs_now
+                .iter()
+                .all(|card| card.owner == PlayerId::P1 && card.controller == PlayerId::P1)
+        );
+        assert!(
+            mine_now
+                .iter()
+                .all(|card| card.owner == PlayerId::P2 && card.controller == PlayerId::P2)
+        );
         assert_eq!(
-            theirs_now.iter().map(|card| card.zone.clone()).collect::<Vec<_>>(),
+            theirs_now
+                .iter()
+                .map(|card| card.zone.clone())
+                .collect::<Vec<_>>(),
             vec![Zone::Library { player: PlayerId::P1 }; theirs.len()]
         );
         assert_eq!(
@@ -473,7 +580,10 @@ mod swap_s6_3_r73_m3_t1 {
             Some(Zone::Library { player: PlayerId::P1 })
         );
 
-        assert_eq!(to_json(&events), json!([{ "type": "swapped", "what": "library" }]));
+        assert_eq!(
+            to_json(&events),
+            json!([{ "type": "swapped", "what": "library" }])
+        );
     }
 
     #[test]
@@ -507,7 +617,10 @@ mod swap_s6_3_r73_m3_t1 {
                 ..HookOptions::default()
             },
         );
-        assert_eq!(to_json(&answered), json!([{ "type": "swapped", "what": "health" }]));
+        assert_eq!(
+            to_json(&answered),
+            json!([{ "type": "swapped", "what": "health" }])
+        );
         assert_eq!(state.players.p1.hero.health, 10);
 
         // No answer, or one naming something else, fizzles: nothing swaps and nothing is emitted.
@@ -524,7 +637,11 @@ mod swap_s6_3_r73_m3_t1 {
             .is_empty()
         );
         assert_eq!(
-            to_json(run(&mut state, swap(json_as(json!({ "what": "board" }))), HookOptions::default())),
+            to_json(run(
+                &mut state,
+                swap(json_as(json!({ "what": "board" }))),
+                HookOptions::default()
+            )),
             json!([{ "type": "swapped", "what": "board" }])
         );
         assert_eq!(state.players.p1.hero.health, 10);

@@ -13,8 +13,8 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{in_hand, put, set_library, slot};
 use crate::rules::fixtures::instance_data::{
-    body, constant, instance_deck, instance_game, military, nerfer, numbered, register_instance_fixtures,
-    CONSTANT_STEP,
+    CONSTANT_STEP, body, constant, instance_deck, instance_game, military, nerfer, numbered,
+    register_instance_fixtures,
 };
 
 /// TS's module-level `let nonce`; an atomic so that tests running side by side never share a nonce.
@@ -31,7 +31,10 @@ fn act(state: &GameState, action: ActionInput, fixed: Option<&str>) -> GameState
 }
 
 fn input(player: PlayerId, action: ActionBody) -> ActionInput {
-    ActionInput { body: action, player_id: player }
+    ActionInput {
+        body: action,
+        player_id: player,
+    }
 }
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {
@@ -45,7 +48,11 @@ fn playing(seed: &str) -> GameState {
     state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }), None);
     let keep = ids(&state.players.p2.hand);
     state = act(&state, input(PlayerId::P2, ActionBody::Mulligan { keep }), None);
-    state.players.p1.mana = ManaState { current: 4, max: 4, ..state.players.p1.mana };
+    state.players.p1.mana = ManaState {
+        current: 4,
+        max: 4,
+        ..state.players.p1.mana
+    };
     state
 }
 
@@ -58,7 +65,10 @@ fn run(state: &mut GameState, effect: &Effect) -> Vec<GameEvent> {
         let mut ctx = resolve::make_context(
             &mut sink,
             None,
-            resolve::HookOptions { controller: Some(PlayerId::P1), ..Default::default() },
+            resolve::HookOptions {
+                controller: Some(PlayerId::P1),
+                ..Default::default()
+            },
         );
         (effect.apply)(&mut ctx);
     }
@@ -66,19 +76,27 @@ fn run(state: &mut GameState, effect: &Effect) -> Vec<GameEvent> {
     events
 }
 
-fn play_of(state: &GameState, card: &CardInstance, pick: Option<&dyn Fn(&ActionBody) -> bool>) -> ActionInput {
+fn play_of(
+    state: &GameState,
+    card: &CardInstance,
+    pick: Option<&dyn Fn(&ActionBody) -> bool>,
+) -> ActionInput {
     let play = legal_actions(state, PlayerId::P1).into_iter().find(|action| {
         matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id)
             && pick.is_none_or(|pick| pick(action))
     });
-    let Some(play) = play else { panic!("no play for {}", card.def_id) };
+    let Some(play) = play else {
+        panic!("no play for {}", card.def_id)
+    };
     input(PlayerId::P1, play)
 }
 
 /// `JSON.stringify(a.targets).includes(id)`.
 fn targets_name(action: &ActionBody, id: &str) -> bool {
     match action {
-        ActionBody::Play { targets, .. } => serde_json::to_string(targets).expect("targets serialise").contains(id),
+        ActionBody::Play { targets, .. } => serde_json::to_string(targets)
+            .expect("targets serialise")
+            .contains(id),
         _ => false,
     }
 }
@@ -111,12 +129,21 @@ fn first(cards: Vec<CardInstance>) -> CardInstance {
 
 /// Every event of the actions applied since `before` (`state.applied.slice(before)`).
 fn applied_since(state: &GameState, before: usize) -> Vec<GameEvent> {
-    state.applied.iter().skip(before).flat_map(|entry| entry.events.iter().cloned()).collect()
+    state
+        .applied
+        .iter()
+        .skip(before)
+        .flat_map(|entry| entry.events.iter().cloned())
+        .collect()
 }
 
 /// The last applied action's events (`state.applied.at(-1)?.events ?? []`).
 fn last_applied(state: &GameState) -> Vec<GameEvent> {
-    state.applied.last().map(|entry| entry.events.clone()).unwrap_or_default()
+    state
+        .applied
+        .last()
+        .map(|entry| entry.events.clone())
+        .unwrap_or_default()
 }
 
 mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
@@ -128,7 +155,9 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
         let card = first(in_hand(&mut state, &plain.id, PlayerId::P1, 1));
         run(
             &mut state,
-            &effects::buff(json_as(json!({ "target": { "of": "instance", "instanceId": card.id }, "attack": 2, "health": 1 }))),
+            &effects::buff(json_as(
+                json!({ "target": { "of": "instance", "instanceId": card.id }, "attack": 2, "health": 1 }),
+            )),
         );
         run(
             &mut state,
@@ -136,9 +165,14 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
                 json!({ "target": { "of": "instance", "instanceId": card.id }, "keyword": { "kind": "Rush" } }),
             )),
         );
-        let HandView::Cards(hand) = view_for(&state, PlayerId::P1).you.hand else { panic!("own hand is a list") };
+        let HandView::Cards(hand) = view_for(&state, PlayerId::P1).you.hand else {
+            panic!("own hand is a list")
+        };
         // R243: its owner sees what it is made of now.
-        let seen = hand.iter().find(|c| c.instance_id == card.id).expect("the card is in the hand");
+        let seen = hand
+            .iter()
+            .find(|c| c.instance_id == card.id)
+            .expect("the card is in the hand");
         assert_eq!(seen.attack, Some(5));
         assert_eq!(seen.health, Some(4));
         assert_eq!(seen.keywords, Some(vec![Keyword::Rush]));
@@ -157,10 +191,15 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
         let (Some(first), Some(second)) = (library.first().cloned(), library.get(1).cloned()) else {
             panic!("no card")
         };
-        let events = run(&mut state, &effects::buff_cards(json_as(json!({ "scope": { "zones": ["library"] }, "attack": 1 }))));
+        let events = run(
+            &mut state,
+            &effects::buff_cards(json_as(json!({ "scope": { "zones": ["library"] }, "attack": 1 }))),
+        );
         run(
             &mut state,
-            &effects::grant_keyword_cards(json_as(json!({ "scope": { "zones": ["library"] }, "keyword": { "kind": "Pierce" } }))),
+            &effects::grant_keyword_cards(json_as(
+                json!({ "scope": { "zones": ["library"] }, "keyword": { "kind": "Pierce" } }),
+            )),
         );
         // R440: the deck changed silently.
         assert!(events.is_empty());
@@ -178,16 +217,30 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
         run(&mut state, &effects::recruit(json_as(json!({}))));
         let recruited = on_field(&state, &second.id);
         assert_eq!(layers::unit_view(&state, &recruited).attack, 4);
-        assert!(layers::unit_view(&state, &recruited).keywords.contains(&Keyword::Pierce));
+        assert!(
+            layers::unit_view(&state, &recruited)
+                .keywords
+                .contains(&Keyword::Pierce)
+        );
     }
 
     #[test]
     fn e38_they_go_when_the_card_leaves_the_field_r78_and_when_a_hand_card_reaches_a_graveyard_r215() {
         let mut state = playing("e38-reset");
-        let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let held = first(in_hand(&mut state, &plain.id, PlayerId::P1, 1));
         for card in [&unit, &held] {
-            run(&mut state, &effects::buff(json_as(json!({ "target": { "of": "instance", "instanceId": card.id }, "attack": 2 }))));
+            run(
+                &mut state,
+                &effects::buff(json_as(
+                    json!({ "target": { "of": "instance", "instanceId": card.id }, "attack": 2 }),
+                )),
+            );
             run(
                 &mut state,
                 &effects::grant_keyword(json_as(
@@ -196,9 +249,19 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
             );
         }
         let mut moving = live(&state, &unit.id);
-        zones::move_to_zone(&mut state, &mut moving, zones::OffFieldZone::Hand, Default::default());
+        zones::move_to_zone(
+            &mut state,
+            &mut moving,
+            zones::OffFieldZone::Hand,
+            Default::default(),
+        );
         let mut moving = live(&state, &held.id);
-        zones::move_to_zone(&mut state, &mut moving, zones::OffFieldZone::Graveyard, Default::default());
+        zones::move_to_zone(
+            &mut state,
+            &mut moving,
+            zones::OffFieldZone::Graveyard,
+            Default::default(),
+        );
         for card in [&unit, &held] {
             let now = live(&state, &card.id);
             assert_eq!(now.buffs, AttackHealth { attack: 0, health: 0 });
@@ -209,7 +272,12 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
     #[test]
     fn r440_a_scope_over_the_field_a_hand_and_a_deck_reports_its_public_cards_only() {
         let mut state = playing("e38-military");
-        let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let hand_units = in_hand(&mut state, &body.id, PlayerId::P1, 2);
         let spell = first(in_hand(&mut state, &military.id, PlayerId::P1, 1));
         let before = state.applied.len();
@@ -235,10 +303,15 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
         for card in &hand_units {
             let held = state.players.p1.hand.iter().find(|c| c.id == card.id);
             assert_eq!(held.map(|c| c.buffs), Some(AttackHealth { attack: 2, health: 0 }));
-            assert_eq!(held.map(|c| c.granted_keywords.clone()), Some(vec![Keyword::Rush]));
+            assert_eq!(
+                held.map(|c| c.granted_keywords.clone()),
+                Some(vec![Keyword::Rush])
+            );
         }
         for card in &state.players.p1.library {
-            let is_unit = catalog::registered_catalog().get(&card.def_id).is_some_and(|def| def.type_ == CardType::Unit);
+            let is_unit = catalog::registered_catalog()
+                .get(&card.def_id)
+                .is_some_and(|def| def.type_ == CardType::Unit);
             assert_eq!(card.buffs.attack, if is_unit { 2 } else { 0 });
         }
     }
@@ -261,7 +334,13 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
             .filter(|e| matches!(e, GameEvent::NumberChanged { .. }))
             .collect();
         assert_eq!(changed.len(), 1);
-        let Some(GameEvent::NumberChanged { instance_id, value, hidden_from, .. }) = changed.first() else {
+        let Some(GameEvent::NumberChanged {
+            instance_id,
+            value,
+            hidden_from,
+            ..
+        }) = changed.first()
+        else {
             panic!("a numberChanged")
         };
         assert_eq!(*instance_id, target.id);
@@ -270,7 +349,8 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
     }
 
     #[test]
-    fn r386_the_radiant_faces_discover_pauses_survives_json_and_resumes_to_the_same_state_in_the_live_game_and_a_copy() {
+    fn r386_the_radiant_faces_discover_pauses_survives_json_and_resumes_to_the_same_state_in_the_live_game_and_a_copy()
+     {
         let mut state = playing("constant-radiant");
         let spell = first(in_hand(&mut state, &constant.id, PlayerId::P1, 1));
         let target = first(in_hand(&mut state, &numbered.id, PlayerId::P1, 1));
@@ -284,7 +364,11 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
         assert_eq!(pending.resume.step, CONSTANT_STEP);
         // Labels are words and numbers, never a raw `{key}` placeholder.
         for option in &pending.options {
-            assert!(!option.label.contains('{') && !option.label.contains('}'), "{}", option.label);
+            assert!(
+                !option.label.contains('{') && !option.label.contains('}'),
+                "{}",
+                option.label
+            );
         }
         let other = view_for(&state, PlayerId::P2);
         assert_eq!(
@@ -296,7 +380,10 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
         let option = pending.options.first().expect("no option");
         let answer = input(
             PlayerId::P1,
-            ActionBody::Answer { choice_id: pending.id.clone(), selection: vec![option.selection.clone()] },
+            ActionBody::Answer {
+                choice_id: pending.id.clone(),
+                selection: vec![option.selection.clone()],
+            },
         );
         let live_state = act(&state, answer.clone(), Some("a"));
         let resumed = act(&copy, answer, Some("a"));
@@ -326,24 +413,37 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
         let option = pending
             .options
             .iter()
-            .find(|o| matches!(&o.selection, Selection::Instance { instance_id } if *instance_id == victim.id))
+            .find(
+                |o| matches!(&o.selection, Selection::Instance { instance_id } if *instance_id == victim.id),
+            )
             .expect("expected the victim offered");
         let copy = round_trip(&state);
         let answer = input(
             PlayerId::P1,
-            ActionBody::Answer { choice_id: pending.id.clone(), selection: vec![option.selection.clone()] },
+            ActionBody::Answer {
+                choice_id: pending.id.clone(),
+                selection: vec![option.selection.clone()],
+            },
         );
         let live_state = act(&state, answer.clone(), Some("b"));
         assert_eq!(act(&copy, answer, Some("b")), live_state);
         let degraded: Vec<(String, Option<Vec<PlayerId>>)> = last_applied(&live_state)
             .iter()
             .filter_map(|e| match e {
-                GameEvent::Degraded { instance_id, hidden_from, .. } => Some((instance_id.clone(), hidden_from.clone())),
+                GameEvent::Degraded {
+                    instance_id,
+                    hidden_from,
+                    ..
+                } => Some((instance_id.clone(), hidden_from.clone())),
                 _ => None,
             })
             .collect();
         assert_eq!(degraded.len(), 3);
-        assert!(degraded.iter().all(|(id, hidden)| *id == victim.id && hidden.is_none()));
+        assert!(
+            degraded
+                .iter()
+                .all(|(id, hidden)| *id == victim.id && hidden.is_none())
+        );
     }
 }
 
@@ -360,7 +460,11 @@ struct PlayedOut {
 fn play_out(seed: &str) -> PlayedOut {
     register_instance_fixtures();
     let decks = (instance_deck(PlayerId::P1), instance_deck(PlayerId::P2));
-    let created = create_game(&CreateGameOptions { seed: seed.to_string(), decks: decks.clone(), ..Default::default() });
+    let created = create_game(&CreateGameOptions {
+        seed: seed.to_string(),
+        decks: decks.clone(),
+        ..Default::default()
+    });
     let mut state = begin_game(&created).state;
     let mut policy = Rng::new(&format!("policy-{seed}"), 0);
     let mut log: Vec<Action> = Vec::new();
@@ -374,11 +478,19 @@ fn play_out(seed: &str) -> PlayedOut {
         let actions: Vec<ActionBody> = legal_actions(&state, player)
             .into_iter()
             .filter(|action| {
-                !matches!(action, ActionBody::Concede | ActionBody::OfferDraw | ActionBody::AnswerDraw { .. })
+                !matches!(
+                    action,
+                    ActionBody::Concede | ActionBody::OfferDraw | ActionBody::AnswerDraw { .. }
+                )
             })
             .collect();
-        let others: Vec<&ActionBody> = actions.iter().filter(|action| !matches!(action, ActionBody::EndTurn)).collect();
-        let end_turn = actions.iter().find(|action| matches!(action, ActionBody::EndTurn));
+        let others: Vec<&ActionBody> = actions
+            .iter()
+            .filter(|action| !matches!(action, ActionBody::EndTurn))
+            .collect();
+        let end_turn = actions
+            .iter()
+            .find(|action| matches!(action, ActionBody::EndTurn));
         let chosen: ActionBody =
             if others.is_empty() || (end_turn.is_some() && policy.chance(AI_END_TURN_PROBABILITY)) {
                 match end_turn {
@@ -398,12 +510,20 @@ fn play_out(seed: &str) -> PlayedOut {
             .events
             .iter()
             .filter(|e| {
-                matches!(e, GameEvent::Degraded { .. } | GameEvent::Upgraded { .. } | GameEvent::NumberChanged { .. })
+                matches!(
+                    e,
+                    GameEvent::Degraded { .. } | GameEvent::Upgraded { .. } | GameEvent::NumberChanged { .. }
+                )
             })
             .count();
         state = result.state;
     }
-    PlayedOut { state, log, decks, tuned }
+    PlayedOut {
+        state,
+        log,
+        decks,
+        tuned,
+    }
 }
 
 mod s9_3_games_dealt_the_instance_data_fixtures_replay_exactly_r386_r385 {

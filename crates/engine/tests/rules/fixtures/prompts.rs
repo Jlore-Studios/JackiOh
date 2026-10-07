@@ -72,7 +72,9 @@ fn damage_chosen(amount: i32) -> Effect {
 }
 
 fn heal_self_hero(amount: i32) -> Effect {
-    effects::heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": amount })))
+    effects::heal(json_as(
+        json!({ "target": { "of": "selfHero" }, "amount": amount }),
+    ))
 }
 
 fn exile_chosen() -> Effect {
@@ -134,10 +136,15 @@ fn pickle_script() -> Script {
                             "data": { "n": n },
                         })))],
                         Some("exile") => then(
-                            vec![effects::exile_bottom_of_library(json_as(json!({ "player": "enemy" })))],
+                            vec![effects::exile_bottom_of_library(json_as(
+                                json!({ "player": "enemy" }),
+                            ))],
                             pickle_ask(n + 1),
                         ),
-                        _ => then(vec![effects::draw(json_as(json!({ "count": 1 })))], pickle_ask(n + 1)),
+                        _ => then(
+                            vec![effects::draw(json_as(json!({ "count": 1 })))],
+                            pickle_ask(n + 1),
+                        ),
                     }
                 }),
             ),
@@ -164,8 +171,12 @@ pub static GLITCH_OPTIONS: LazyLock<Vec<String>> = LazyLock::new(|| (0..11).map(
 
 fn glitch_script() -> Script {
     Script {
-        modes: vec![json_as::<ModeDecl>(json!({ "kind": "number", "options": &*GLITCH_OPTIONS }))],
-        cry: Some(hook(|ctx| vec![damage_enemy_hero(effects::chosen_number(ctx).unwrap_or(0))])),
+        modes: vec![json_as::<ModeDecl>(
+            json!({ "kind": "number", "options": &*GLITCH_OPTIONS }),
+        )],
+        cry: Some(hook(|ctx| {
+            vec![damage_enemy_hero(effects::chosen_number(ctx).unwrap_or(0))]
+        })),
         ..Script::default()
     }
 }
@@ -178,7 +189,9 @@ pub fn numberer() -> CardDef {
 fn numberer_script() -> Script {
     Script {
         cry: Some(hook(|_ctx| {
-            vec![effects::choose_number(json_as(json!({ "from": 1, "to": 3, "step": "n", "prompt": "Pick 1 to 3" })))]
+            vec![effects::choose_number(json_as(
+                json!({ "from": 1, "to": 3, "step": "n", "prompt": "Pick 1 to 3" }),
+            ))]
         })),
         resume: IndexMap::from([(
             "n",
@@ -254,13 +267,18 @@ fn cells_so_far(ctx: &EffectContext<'_>) -> Vec<ZoneRef> {
 fn papaya_script() -> Script {
     Script {
         cry: Some(hook(|_ctx| {
-            vec![effects::choose_cell(json_as(json!({ "step": "cell", "prompt": "Papaya: a point", "data": { "cells": [] } })))]
+            vec![effects::choose_cell(json_as(
+                json!({ "step": "cell", "prompt": "Papaya: a point", "data": { "cells": [] } }),
+            ))]
         })),
         resume: IndexMap::from([(
             "cell",
             hook(|ctx| {
                 let cells = cells_so_far(ctx);
-                let done = ctx.targets.iter().any(|selection| matches!(selection, Selection::None))
+                let done = ctx
+                    .targets
+                    .iter()
+                    .any(|selection| matches!(selection, Selection::None))
                     || cells.len() >= PAPAYA_CELLS;
                 if !done {
                     let lanes: Vec<i32> = cells.iter().map(|cell| cell.lane).collect();
@@ -278,12 +296,20 @@ fn papaya_script() -> Script {
                     .filter_map(|cell| {
                         let slot = ZoneRef {
                             player: cell.player,
-                            row: if cell.row == Row::Units { Row::Units } else { Row::Backrow },
+                            row: if cell.row == Row::Units {
+                                Row::Units
+                            } else {
+                                Row::Backrow
+                            },
                             lane: cell.lane,
                         };
                         zones::card_at(&*ctx.state, slot).map(|card| card.id.clone())
                     })
-                    .map(|id| effects::exile(json_as(json!({ "target": { "of": "instance", "instanceId": id } }))))
+                    .map(|id| {
+                        effects::exile(json_as(
+                            json!({ "target": { "of": "instance", "instanceId": id } }),
+                        ))
+                    })
                     .collect()
             }),
         )]),
@@ -412,7 +438,9 @@ fn back_script() -> Script {
             "picked",
             hook(|ctx| {
                 (0..ctx.targets.len())
-                    .map(|index| effects::summon(json_as(json!({ "instance": { "of": "chosen", "index": index } }))))
+                    .map(|index| {
+                        effects::summon(json_as(json!({ "instance": { "of": "chosen", "index": index } })))
+                    })
                     .collect()
             }),
         )]),
@@ -447,7 +475,9 @@ pub fn mind_melt_scripts() -> CardScripts {
         },
         radiant: Script {
             cry: Some(hook(|_ctx| {
-                vec![effects::choose_cost_in_hand(json_as(json!({ "step": "cost", "prompt": "Choose a cost" })))]
+                vec![effects::choose_cost_in_hand(json_as(
+                    json!({ "step": "cost", "prompt": "Choose a cost" }),
+                ))]
             })),
             resume: IndexMap::from([(
                 "cost",
@@ -576,7 +606,9 @@ fn crier_script() -> Script {
         cry: Some(hook(|_ctx| {
             vec![
                 damage_enemy_hero(2),
-                effects::buff(json_as(json!({ "target": { "of": "self" }, "attack": 1, "health": 1 }))),
+                effects::buff(json_as(
+                    json!({ "target": { "of": "self" }, "attack": 1, "health": 1 }),
+                )),
             ]
         })),
         ..Script::default()
@@ -590,7 +622,11 @@ pub fn aimer() -> CardDef {
 
 fn aimer_script() -> Script {
     Script {
-        targets: vec![TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit", "hero"] }))],
+        targets: vec![TargetDecl::target(
+            1,
+            1,
+            json!({ "side": "enemy", "of": ["unit", "hero"] }),
+        )],
         cry: Some(hook(|_ctx| vec![damage_chosen(3)])),
         ..Script::default()
     }
@@ -603,7 +639,9 @@ pub fn moder() -> CardDef {
 
 fn moder_script() -> Script {
     Script {
-        modes: vec![json_as::<ModeDecl>(json!({ "kind": "mode", "options": ["hit", "heal"] }))],
+        modes: vec![json_as::<ModeDecl>(
+            json!({ "kind": "mode", "options": ["hit", "heal"] }),
+        )],
         targets: vec![json_as::<TargetDecl>(json!({
             "kind": "target",
             "min": 1,
@@ -632,7 +670,9 @@ fn asker_script() -> Script {
         cry: Some(hook(|_ctx| {
             vec![
                 damage_enemy_hero(1),
-                effects::choose_mode(json_as(json!({ "options": ["left", "right"], "step": "after", "prompt": "asker" }))),
+                effects::choose_mode(json_as(
+                    json!({ "options": ["left", "right"], "step": "after", "prompt": "asker" }),
+                )),
                 damage_enemy_hero(2),
             ]
         })),
@@ -663,8 +703,14 @@ fn tribute_crier_script() -> Script {
             TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["hero"] })),
         ],
         cry: Some(hook(|ctx| {
-            let amount = if matches!(ctx.targets.first(), Some(Selection::None)) { 5 } else { 1 };
-            vec![effects::damage(json_as(json!({ "to": { "of": "chosen", "index": 1 }, "amount": amount })))]
+            let amount = if matches!(ctx.targets.first(), Some(Selection::None)) {
+                5
+            } else {
+                1
+            };
+            vec![effects::damage(json_as(
+                json!({ "to": { "of": "chosen", "index": 1 }, "amount": amount }),
+            ))]
         })),
         ..Script::default()
     }
@@ -684,13 +730,19 @@ fn trigger_cry_chosen() -> Effect {
 pub fn rewind_scripts() -> CardScripts {
     CardScripts {
         base: Script {
-            targets: vec![TargetDecl::target(1, 1, json!({ "side": "ally", "of": ["unit"] }))],
+            targets: vec![TargetDecl::target(
+                1,
+                1,
+                json!({ "side": "ally", "of": ["unit"] }),
+            )],
             cry: Some(hook(|_ctx| vec![trigger_cry_chosen(), heal_self_hero(1)])),
             ..Script::default()
         },
         radiant: Script {
             targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))],
-            cry: Some(hook(|_ctx| vec![trigger_cry_chosen(), trigger_cry_chosen(), heal_self_hero(1)])),
+            cry: Some(hook(|_ctx| {
+                vec![trigger_cry_chosen(), trigger_cry_chosen(), heal_self_hero(1)]
+            })),
             ..Script::default()
         },
     }
@@ -815,18 +867,24 @@ pub fn deck_asker() -> CardDef {
 
 fn deck_asker_script() -> Script {
     Script {
-        deck_triggers: vec![TriggerDef::new("deck-ask", &[GameEventType::CardResolved], |ctx, event| {
-            let Some(played) = played_event(event) else {
-                return vec![];
-            };
-            if played.player != ctx.controller || type_of(ctx, played.def_id) != CardType::Spell {
-                return vec![];
-            }
-            vec![
-                effects::choose_mode(json_as(json!({ "options": ["stay", "come"], "step": "decided", "prompt": "Deck asker" }))),
-                damage_enemy_hero(1),
-            ]
-        })],
+        deck_triggers: vec![TriggerDef::new(
+            "deck-ask",
+            &[GameEventType::CardResolved],
+            |ctx, event| {
+                let Some(played) = played_event(event) else {
+                    return vec![];
+                };
+                if played.player != ctx.controller || type_of(ctx, played.def_id) != CardType::Spell {
+                    return vec![];
+                }
+                vec![
+                    effects::choose_mode(json_as(
+                        json!({ "options": ["stay", "come"], "step": "decided", "prompt": "Deck asker" }),
+                    )),
+                    damage_enemy_hero(1),
+                ]
+            },
+        )],
         resume: IndexMap::from([(
             "decided",
             hook(|ctx| {
@@ -864,17 +922,22 @@ pub fn recurring() -> CardDef {
 
 fn recurring_script(radiant: bool) -> Script {
     Script {
-        graveyard_triggers: vec![TriggerDef::new("recur", &[GameEventType::TrapFired], move |ctx, event| {
-            // TS read `event.controller` off any event: one that is not a `trapFired` has none.
-            if !matches!(event, GameEvent::TrapFired { controller, .. } if *controller == ctx.controller) {
-                return vec![];
-            }
-            let mut args = json!({ "instance": { "of": "self" } });
-            if radiant {
-                args["costOverride"] = json!(0);
-            }
-            vec![effects::add_to_hand(json_as(args))]
-        })],
+        graveyard_triggers: vec![TriggerDef::new(
+            "recur",
+            &[GameEventType::TrapFired],
+            move |ctx, event| {
+                // TS read `event.controller` off any event: one that is not a `trapFired` has none.
+                if !matches!(event, GameEvent::TrapFired { controller, .. } if *controller == ctx.controller)
+                {
+                    return vec![];
+                }
+                let mut args = json!({ "instance": { "of": "self" } });
+                if radiant {
+                    args["costOverride"] = json!(0);
+                }
+                vec![effects::add_to_hand(json_as(args))]
+            },
+        )],
         ..Script::default()
     }
 }
@@ -945,10 +1008,19 @@ fn mill_script() -> Script {
         cry: Some(hook(|_ctx| {
             vec![Effect::new("fixture:mill", |ctx| {
                 let controller = ctx.controller;
-                let cards: Vec<CardInstance> =
-                    ctx.state.players[controller].library.iter().take(MILL_COUNT).cloned().collect();
+                let cards: Vec<CardInstance> = ctx.state.players[controller]
+                    .library
+                    .iter()
+                    .take(MILL_COUNT)
+                    .cloned()
+                    .collect();
                 for mut card in cards {
-                    let _ = zones::move_to_zone(&mut *ctx.state, &mut card, OffFieldZone::Graveyard, Default::default());
+                    let _ = zones::move_to_zone(
+                        &mut *ctx.state,
+                        &mut card,
+                        OffFieldZone::Graveyard,
+                        Default::default(),
+                    );
                 }
             })]
         })),
@@ -1112,7 +1184,10 @@ pub static PROMPT_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::n
     let base = base_scripts();
     let mut table = base.clone();
     for card in quickdraw_sources() {
-        let scripts = base.get(&card.id).cloned().unwrap_or_else(|| both(Script::default()));
+        let scripts = base
+            .get(&card.id)
+            .cloned()
+            .unwrap_or_else(|| both(Script::default()));
         table.insert(quickdraw_of(&card).id, quickdraw(&scripts));
     }
     table
@@ -1120,7 +1195,10 @@ pub static PROMPT_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::n
 
 /// This file's definitions, by id (the brief's `catalog()`).
 pub fn catalog() -> CardDefs {
-    PROMPT_DEFS.iter().map(|card| (card.id.clone(), card.clone())).collect()
+    PROMPT_DEFS
+        .iter()
+        .map(|card| (card.id.clone(), card.clone()))
+        .collect()
 }
 
 /// This file's scripts, by id (the brief's `scripts()`).

@@ -41,12 +41,18 @@ impl Bench<'_> {
 
 fn sink_for(state: &mut GameState) -> Bench<'_> {
     let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench { state, events: Vec::new(), rng }
+    Bench {
+        state,
+        events: Vec::new(),
+        rng,
+    }
 }
 
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
-    register_catalog(datacenter_catalog(combat_catalog(fixture_catalog(vanilla_catalog(40, 1)))));
+    register_catalog(datacenter_catalog(combat_catalog(fixture_catalog(
+        vanilla_catalog(40, 1),
+    ))));
     let mut scripts = registered_scripts().clone();
     scripts.extend(fixture_scripts());
     scripts.extend(combat_scripts());
@@ -72,7 +78,10 @@ fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameE
         let mut ctx = make_context(
             &mut engine_sink,
             Some(&me),
-            HookOptions { controller: Some(controller), ..Default::default() },
+            HookOptions {
+                controller: Some(controller),
+                ..Default::default()
+            },
         );
         (effect.apply)(&mut ctx);
     }
@@ -88,7 +97,9 @@ fn hero_hits(events: &[GameEvent], player: PlayerId) -> Vec<i32> {
     events_of_type(events, GameEventType::Damage)
         .iter()
         .filter_map(|event| match event {
-            GameEvent::Damage { target_id, amount, .. } if *target_id == hero => Some(*amount),
+            GameEvent::Damage {
+                target_id, amount, ..
+            } if *target_id == hero => Some(*amount),
             _ => None,
         })
         .collect()
@@ -96,11 +107,16 @@ fn hero_hits(events: &[GameEvent], player: PlayerId) -> Vec<i32> {
 
 /// `card.zone.z`, read off the card as it stands now (TS held the live object).
 fn zone_of(state: &GameState, card: &CardInstance) -> ZoneName {
-    find_instance(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id)).zone.z()
+    find_instance(state, &card.id)
+        .unwrap_or_else(|| panic!("{} is nowhere", card.id))
+        .zone
+        .z()
 }
 
 fn chain(max_cost: i32) -> Effect {
-    draw_while_cheap(json_as(json!({ "maxCost": max_cost, "repeats": CHAIN_OF_THOUGHT_REPEATS })))
+    draw_while_cheap(json_as(
+        json!({ "maxCost": max_cost, "repeats": CHAIN_OF_THOUGHT_REPEATS }),
+    ))
 }
 
 fn fire(side: &str, damage_per: i32) -> Effect {
@@ -116,7 +132,10 @@ mod draw_while_cheap_t_ai_4_chain_of_thought {
         let one_id = one.id.clone();
         let library = set_library(&mut state, P1, &vec![one_id; 7]);
         run(&mut state, chain(1), P1);
-        assert_eq!(state.players.p1.hand.len(), (CHAIN_OF_THOUGHT_REPEATS + 1) as usize);
+        assert_eq!(
+            state.players.p1.hand.len(),
+            (CHAIN_OF_THOUGHT_REPEATS + 1) as usize
+        );
         assert!(
             library[(CHAIN_OF_THOUGHT_REPEATS + 1) as usize..]
                 .iter()
@@ -153,7 +172,9 @@ mod draw_while_cheap_t_ai_4_chain_of_thought {
     fn r65_the_cards_current_cost_a_cost_mod_and_a_players_price_rule_both_count() {
         let mut state = game("chain-mod");
         let library = set_library(&mut state, P1, &[two.id.clone(), one.id.clone(), one.id.clone()]);
-        find_instance_mut(&mut state, &library[0].id).expect("library").cost_mod = -1;
+        find_instance_mut(&mut state, &library[0].id)
+            .expect("library")
+            .cost_mod = -1;
         run(&mut state, chain(1), P1);
         let zones: Vec<ZoneName> = library.iter().map(|card| zone_of(&state, card)).collect();
         assert_eq!(zones, vec![ZoneName::Hand, ZoneName::Hand, ZoneName::Hand]);
@@ -174,7 +195,11 @@ mod draw_while_cheap_t_ai_4_chain_of_thought {
     #[test]
     fn r596_a_card_cast_on_draw_ends_the_chain_even_though_its_casts_own_repeat_brings_a_card() {
         let mut state = game("chain-cod");
-        let library = set_library(&mut state, P1, &[cast_on_draw.id.clone(), one.id.clone(), one.id.clone()]);
+        let library = set_library(
+            &mut state,
+            P1,
+            &[cast_on_draw.id.clone(), one.id.clone(), one.id.clone()],
+        );
         run(&mut state, chain(1), P1);
         assert_eq!(zone_of(&state, &library[0]), ZoneName::Graveyard);
         assert_eq!(zone_of(&state, &library[1]), ZoneName::Hand);
@@ -305,20 +330,30 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
     }
 
     #[test]
-    fn r588_r383_an_animated_field_spell_standing_in_a_unit_zone_is_a_unit_there_neither_destroyed_nor_counted() {
+    fn r588_r383_an_animated_field_spell_standing_in_a_unit_zone_is_a_unit_there_neither_destroyed_nor_counted()
+     {
         let mut state = game("fire-animated");
         let animated = put(&mut state, &animated_field.id, slot(P2, Backrow, 1), json!({}));
-        assert!(animate_card(&mut sink_for(&mut state).sink(), &animated, Default::default()));
+        assert!(animate_card(
+            &mut sink_for(&mut state).sink(),
+            &animated,
+            Default::default()
+        ));
         let backrow = put(&mut state, &field.id, slot(P2, Backrow, 2), json!({}));
         let events = run(&mut state, fire("any", 1), P1);
         let standing = find_instance(&state, &animated.id).expect("the animated Field Spell");
-        assert!(matches!(standing.zone, Zone::Field { row: Row::Units, .. }), "{:?}", standing.zone);
+        assert!(
+            matches!(standing.zone, Zone::Field { row: Row::Units, .. }),
+            "{:?}",
+            standing.zone
+        );
         assert_eq!(zone_of(&state, &backrow), ZoneName::Graveyard);
         assert_eq!(hero_hits(&events, P2), vec![1]);
     }
 
     #[test]
-    fn r418_r446_a_carrier_field_spell_holding_a_unit_is_destroyed_and_counted_and_the_unit_it_holds_is_not() {
+    fn r418_r446_a_carrier_field_spell_holding_a_unit_is_destroyed_and_counted_and_the_unit_it_holds_is_not()
+    {
         let mut begun = playing("fire-tower");
         put(&mut begun, &tower.id, slot(P1, Backrow, 2), json!({}));
         let rider = in_hand(&mut begun, &plain.id, P1, 1).into_iter().next();
@@ -344,7 +379,16 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
             .collect();
         assert_eq!(destroyed, vec![tower.id.clone()]);
         assert_eq!(hero_hits(&events, P1), vec![1]);
-        assert!(state.players.p1.units.iter().flatten().flatten().any(|card| card.id == rider_id));
+        assert!(
+            state
+                .players
+                .p1
+                .units
+                .iter()
+                .flatten()
+                .flatten()
+                .any(|card| card.id == rider_id)
+        );
     }
 
     #[test]
@@ -354,7 +398,13 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
         put(&mut state, &hard_field.id, slot(P2, Backrow, 1), json!({}));
         put(&mut state, &field.id, slot(P2, Backrow, 2), json!({}));
         let me = resolving(&mut state, P1);
-        let reader = SweepReader { state: &state, self_: Some(&me), def_id: None, radiant: false, controller: P1 };
+        let reader = SweepReader {
+            state: &state,
+            self_: Some(&me),
+            def_id: None,
+            radiant: false,
+            controller: P1,
+        };
         let before = serde_json::to_string(&state).expect("serialises");
         assert_eq!(field_spells_doomed(reader, FieldSpellSide::Any).len(), 2);
         assert_eq!(field_spells_doomed(reader, FieldSpellSide::Enemy).len(), 1);

@@ -41,8 +41,8 @@ use jackioh_engine::reduce::{begin_game, reduce};
 use jackioh_engine::resolve::{CastOptions, cast_card};
 use jackioh_engine::state_check::{DEATHS_WORK, owed_deaths_of, state_check};
 use jackioh_engine::testkit::*;
-use jackioh_engine::work::owed_work;
 use jackioh_engine::wire::PlayerId::{P1, P2};
+use jackioh_engine::work::owed_work;
 use jackioh_engine::zones::card_at;
 
 use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
@@ -134,14 +134,24 @@ fn defs() -> Vec<CardDef> {
 const NOTE_LANE: usize = 5;
 
 fn log_of(state: &GameState) -> Option<&CardInstance> {
-    state.players.p1.backrow.get(NOTE_LANE - 1).and_then(|card| card.as_ref())
+    state
+        .players
+        .p1
+        .backrow
+        .get(NOTE_LANE - 1)
+        .and_then(|card| card.as_ref())
 }
 
 fn write(state: &mut GameState, entry: &str) {
     let Some(Some(log)) = state.players.p1.backrow.get_mut(NOTE_LANE - 1) else {
         return;
     };
-    let mut steps: Vec<Value> = log.memory.get("steps").and_then(Value::as_array).cloned().unwrap_or_default();
+    let mut steps: Vec<Value> = log
+        .memory
+        .get("steps")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
     steps.push(json!(entry));
     log.memory.insert("steps".to_string(), Value::Array(steps));
 }
@@ -150,7 +160,12 @@ fn notes(state: &GameState) -> Vec<String> {
     log_of(state)
         .and_then(|log| log.memory.get("steps"))
         .and_then(Value::as_array)
-        .map(|steps| steps.iter().filter_map(|step| step.as_str().map(str::to_string)).collect())
+        .map(|steps| {
+            steps
+                .iter()
+                .filter_map(|step| step.as_str().map(str::to_string))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -219,7 +234,11 @@ fn both(script: Script) -> CardScripts {
 fn asking(name: &'static str) -> CardScripts {
     both(Script {
         death: Some(hook(move |_ctx| {
-            vec![note(&format!("ask:{name}")), ask_controller(), note_buff(&format!("tail:{name}"))]
+            vec![
+                note(&format!("ask:{name}")),
+                ask_controller(),
+                note_buff(&format!("tail:{name}")),
+            ]
         })),
         resume: IndexMap::from([("asked", hook(move |_ctx| vec![note(&format!("answered:{name}"))]))]),
         ..Script::default()
@@ -241,7 +260,9 @@ fn scripts() -> Vec<(String, CardScripts)> {
         (
             cast_asker().id,
             both(Script {
-                cry: Some(hook(|_ctx| vec![note("cast:ask"), ask_controller(), note_buff("cast:tail")])),
+                cry: Some(hook(|_ctx| {
+                    vec![note("cast:ask"), ask_controller(), note_buff("cast:tail")]
+                })),
                 resume: IndexMap::from([("asked", hook(|_ctx| vec![note("cast:answered")]))]),
                 ..Script::default()
             }),
@@ -304,10 +325,21 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&game(seed)).state;
     let keep = ids(&state.players.p1.hand);
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+    );
     let keep = ids(&state.players.p2.hand);
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }));
-    put(&mut state, &log_card().id, slot(P1, Row::Backrow, NOTE_LANE as i32), json!({}));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+    );
+    put(
+        &mut state,
+        &log_card().id,
+        slot(P1, Row::Backrow, NOTE_LANE as i32),
+        json!({}),
+    );
     state
 }
 
@@ -360,7 +392,10 @@ fn doomed(state: &mut GameState, def_id: &str, player: PlayerId, lane: i32) -> C
 }
 
 fn in_graveyard(state: &GameState, card: &CardInstance) -> bool {
-    state.players[card.owner].graveyard.iter().any(|held| held.id == card.id)
+    state.players[card.owner]
+        .graveyard
+        .iter()
+        .any(|held| held.id == card.id)
 }
 
 /// TS `sinkFor(state, events)`: a sink whose rng starts at the state's cursor, as reduce does; the
@@ -428,8 +463,14 @@ mod a_prompt_inside_4_5_step_3s_death_hooks_r89_r113_r117_r122 {
 
         // The first answer finishes the first hook and runs straight into the second card's question.
         let once = answer(&round);
-        assert_eq!(notes(&once.state), vec!["ask:one", "answered:one", "tail:one:3", "ask:two"]);
-        assert_eq!(once.state.pending.as_ref().map(|pending| pending.player_id), Some(P1));
+        assert_eq!(
+            notes(&once.state),
+            vec!["ask:one", "answered:one", "tail:one:3", "ask:two"]
+        );
+        assert_eq!(
+            once.state.pending.as_ref().map(|pending| pending.player_id),
+            Some(P1)
+        );
         assert_eq!(
             owed_ids(&only_work(owed_work(&once.state, Some(DEATHS_WORK))).resume),
             Some(vec![second.id.clone(), far.id.clone()])
@@ -474,13 +515,21 @@ mod a_prompt_inside_4_5_step_3s_death_hooks_r89_r113_r117_r122 {
         with_sink(&mut state, state_check);
         // R78 has already reset the instance on the board, so the buff is gone from every zone.
         assert_eq!(
-            state.players.p1.graveyard.iter().find(|card| card.id == dying.id).map(|card| card.buffs),
+            state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .find(|card| card.id == dying.id)
+                .map(|card| card.buffs),
             Some(AttackHealth { attack: 0, health: 0 })
         );
         // And the parked pass carries the snapshot instead, which is where the tail's `ctx.self` comes
         // from: `findInstance` would hand back the reset card above (R89, R127).
         let parked = only_work(owed_work(&state, Some(DEATHS_WORK)));
-        let owed = owed_deaths_of(&parked.resume).map(|pass| pass.owed).unwrap_or_default();
+        let owed = owed_deaths_of(&parked.resume)
+            .map(|pass| pass.owed)
+            .unwrap_or_default();
         let snapshot = owed.first().cloned().expect("expected exactly one item");
         assert_eq!(snapshot.buffs, AttackHealth { attack: 3, health: 0 });
 
@@ -505,13 +554,19 @@ mod a_prompt_inside_4_5_step_3s_death_hooks_r89_r113_r117_r122 {
         }));
 
         let done = answer(&round_trip(&state)).state;
-        assert_eq!(notes(&done), vec!["ask:reborn", "answered:reborn", "tail:reborn:3"]);
+        assert_eq!(
+            notes(&done),
+            vec!["ask:reborn", "answered:reborn", "tail:reborn:3"]
+        );
 
         let back = card_at(&done, slot(P1, Row::Units, 3));
         assert_eq!(back.map(|card| card.id.clone()), Some(dying.id.clone()));
         // At 1 health, without Reborn, and summoning sick because it entered the field again (R83).
         assert_eq!(back.map(|card| card.damage), Some(1));
-        assert_eq!(back.map(|card| card.granted_keywords.clone()), Some(Vec::<Keyword>::new()));
+        assert_eq!(
+            back.map(|card| card.granted_keywords.clone()),
+            Some(Vec::<Keyword>::new())
+        );
         assert_eq!(back.and_then(|card| card.reborn_spent), Some(true));
         assert_eq!(back.and_then(|card| card.summoned_turn), Some(done.turn));
         assert!(done.reserved.is_empty());
@@ -568,7 +623,10 @@ mod a_prompt_inside_a_casts_cry_10_5_r70_r113_r122 {
         // R70: it counted as a play immediately, but §10.5 step 7 has not happened — the card is still
         // resolving and nothing has announced it resolved. Running the tail over the open prompt is the
         // bug this pins: it used to land the Spell in the graveyard while the caster was still asked.
-        assert_eq!(instance_ids(&events, GameEventType::CardPlayed), vec![card.id.clone()]);
+        assert_eq!(
+            instance_ids(&events, GameEventType::CardPlayed),
+            vec![card.id.clone()]
+        );
         assert!(events_of_type(&events, GameEventType::CardResolved).is_empty());
         assert!(!in_graveyard(&state, &card));
 
@@ -582,8 +640,14 @@ mod a_prompt_inside_a_casts_cry_10_5_r70_r113_r122 {
 
         let done = answer(&round_trip(&state));
         // The rest of the Cry runs first — still reading its own card — and only then step 7 (R113).
-        assert_eq!(notes(&done.state), vec!["cast:ask", "cast:answered", "cast:tail:0"]);
-        assert_eq!(instance_ids(&done.events, GameEventType::CardResolved), vec![card.id.clone()]);
+        assert_eq!(
+            notes(&done.state),
+            vec!["cast:ask", "cast:answered", "cast:tail:0"]
+        );
+        assert_eq!(
+            instance_ids(&done.events, GameEventType::CardResolved),
+            vec![card.id.clone()]
+        );
         assert!(in_graveyard(&done.state, &card));
         assert!(done.state.pending.is_none());
         assert!(done.state.work.is_empty());
@@ -599,7 +663,10 @@ mod a_prompt_inside_a_casts_cry_10_5_r70_r113_r122 {
         assert_eq!(notes(&state), vec!["cast:quiet"]);
         assert!(state.pending.is_none());
         assert!(state.work.is_empty());
-        assert_eq!(instance_ids(&events, GameEventType::CardResolved), vec![card.id.clone()]);
+        assert_eq!(
+            instance_ids(&events, GameEventType::CardResolved),
+            vec![card.id.clone()]
+        );
         assert!(in_graveyard(&state, &card));
     }
 }
@@ -644,7 +711,10 @@ mod a_state_check_that_begins_while_a_prompt_is_already_open_4_5_r113_r117_r156 
 
         // Steps 1 and 2 still run: those are the board settling, not a choice. The card really moved.
         assert!(in_graveyard(&state, &dying));
-        assert_eq!(instance_ids(&events, GameEventType::Destroyed), vec![dying.id.clone()]);
+        assert_eq!(
+            instance_ids(&events, GameEventType::Destroyed),
+            vec![dying.id.clone()]
+        );
 
         // Step 3 fired nothing. Without R156 the hook runs into the open prompt and whatever it asks is
         // discarded in silence, because `openPrompt` will not overwrite a question already standing.

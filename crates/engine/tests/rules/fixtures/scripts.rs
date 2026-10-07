@@ -23,7 +23,10 @@ fn spread(mut base: Value, extra: Value) -> Value {
 fn damage_all_enemies(amount: i32) -> Effect {
     Effect::new("fixture:damageAllEnemies", move |ctx| {
         let enemy = opponent_of(ctx.controller);
-        let units: Vec<CardInstance> = zones::active_units_of(&*ctx.state, enemy).into_iter().cloned().collect();
+        let units: Vec<CardInstance> = zones::active_units_of(&*ctx.state, enemy)
+            .into_iter()
+            .cloned()
+            .collect();
         for unit in units {
             let args = damage::DamageArgs {
                 source: ctx.self_.clone(),
@@ -73,14 +76,18 @@ fn hinder_scripts() -> CardScripts {
         base: Script {
             static_flags: flags(json!({ "castOnDraw": true })),
             cry: Some(hook(|_ctx| {
-                vec![effects::next_turn_mana(json_as(json!({ "player": "enemy", "amount": -1 })))]
+                vec![effects::next_turn_mana(json_as(
+                    json!({ "player": "enemy", "amount": -1 }),
+                ))]
             })),
             ..Script::default()
         },
         radiant: Script {
             static_flags: flags(json!({ "castOnDraw": true })),
             cry: Some(hook(|_ctx| {
-                vec![effects::next_turn_mana(json_as(json!({ "player": "enemy", "amount": -2 })))]
+                vec![effects::next_turn_mana(json_as(
+                    json!({ "player": "enemy", "amount": -2 }),
+                ))]
             })),
             ..Script::default()
         },
@@ -140,7 +147,9 @@ pub fn gravedigger() -> CardDef {
 
 fn gravedigger_scripts() -> CardScripts {
     let script = || Script {
-        start_of_turn: Some(hook(|_ctx| vec![effects::add_random_from_graveyard(Default::default())])),
+        start_of_turn: Some(hook(|_ctx| {
+            vec![effects::add_random_from_graveyard(Default::default())]
+        })),
         ..Script::default()
     };
     CardScripts {
@@ -225,11 +234,15 @@ pub fn mana_well() -> CardDef {
 fn mana_well_scripts() -> CardScripts {
     CardScripts {
         base: Script {
-            start_of_turn: Some(hook(|_ctx| vec![effects::gain_mana(json_as(json!({ "amount": 1 })))])),
+            start_of_turn: Some(hook(|_ctx| {
+                vec![effects::gain_mana(json_as(json!({ "amount": 1 })))]
+            })),
             ..Script::default()
         },
         radiant: Script {
-            start_of_turn: Some(hook(|_ctx| vec![effects::gain_mana(json_as(json!({ "amount": 2 })))])),
+            start_of_turn: Some(hook(|_ctx| {
+                vec![effects::gain_mana(json_as(json!({ "amount": 2 })))]
+            })),
             ..Script::default()
         },
     }
@@ -280,7 +293,9 @@ fn heroic_power_script(radiant: bool) -> Script {
     Script {
         static_flags: flags(json!({ "quickdraw": true })),
         start_of_game: Some(hook(|_ctx| {
-            vec![effects::remember_random(json_as(json!({ "key": "power", "options": HERO_POWERS })))]
+            vec![effects::remember_random(json_as(
+                json!({ "key": "power", "options": HERO_POWERS }),
+            ))]
         })),
         activations: power_abilities(radiant),
         resume: IndexMap::from([(POWER_RESUME, hook(hero_power))]),
@@ -304,13 +319,17 @@ fn x_bolt_scripts() -> CardScripts {
     CardScripts {
         base: Script {
             cry: Some(hook(|ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": ctx.x })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": ctx.x }),
+                ))]
             })),
             ..Script::default()
         },
         radiant: Script {
             cry: Some(hook(|ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": ctx.x * 2 })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": ctx.x * 2 }),
+                ))]
             })),
             ..Script::default()
         },

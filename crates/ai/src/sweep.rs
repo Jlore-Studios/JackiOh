@@ -30,8 +30,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::prelude::json_as;
 use jackioh_engine::{
-    AI_DIFFICULTY, ActionBody, CostOptions, Difficulty, GameState, OffFieldZone, PerPlayer, PerPlayerOpt, Phase,
-    PlayerId, create_rng, effective_cost, opponent_of, zone_cards,
+    AI_DIFFICULTY, ActionBody, CostOptions, Difficulty, GameState, OffFieldZone, PerPlayer, PerPlayerOpt,
+    Phase, PlayerId, create_rng, effective_cost, opponent_of, zone_cards,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -301,7 +301,9 @@ pub fn at_risk_ids(pass1: &[SweepResult], ban: &[(&str, &str)], watch: &[(&str, 
 ///
 /// TS's default: pass `SHADOW_BAN`.
 pub fn pass2_keep_out(pass1: &[SweepResult], ban: &[(&str, &str)]) -> Vec<String> {
-    let bug = |flags: &[SweepFlag]| -> bool { flags.contains(&SweepFlag::Error) || flags.contains(&SweepFlag::Timeout) };
+    let bug = |flags: &[SweepFlag]| -> bool {
+        flags.contains(&SweepFlag::Error) || flags.contains(&SweepFlag::Timeout)
+    };
     let mut ids: IndexSet<String> = ban
         .iter()
         .filter(|(_, reason)| bug(&ban_flags(reason)))
@@ -500,7 +502,8 @@ fn play_sweep_game(
                 |before: &GameState, after: &GameState, seat: PlayerId, action: &ActionBody| {
                     for stats in cards.iter_mut() {
                         if stats.drawn_games == 0
-                            && (holds_card(before, ai_seat, &stats.def_id) || holds_card(after, ai_seat, &stats.def_id))
+                            && (holds_card(before, ai_seat, &stats.def_id)
+                                || holds_card(after, ai_seat, &stats.def_id))
                         {
                             stats.drawn_games = 1;
                         }
@@ -517,7 +520,8 @@ fn play_sweep_game(
                         let hand = zone_cards(after, ai_seat, OffFieldZone::Hand);
                         for stats in cards.iter_mut() {
                             if hand.iter().any(|card| {
-                                card.def_id == stats.def_id && effective_cost(after, card, CostOptions::default()) <= mana
+                                card.def_id == stats.def_id
+                                    && effective_cost(after, card, CostOptions::default()) <= mana
                             }) {
                                 stats.affordable_turns += 1;
                             }
@@ -626,7 +630,12 @@ pub fn sweep_card(def_id: &str, options: &SweepOptions) -> SweepResult {
 /// Pass 2 (R390): `seeds` games (default seedsPerCardAtRisk) of `defId`, one of the `atRisk` cards, on
 /// seeds `sweep2:<tier>:<id>:<n>`. Every at-risk card's filler weight is multiplied by atRiskBoost,
 /// `keepOut` (`pass2_keep_out`) is never filler, and every at-risk card the AI was dealt is counted.
-pub fn sweep_at_risk(def_id: &str, at_risk: &[String], keep_out: &[String], options: &SweepOptions) -> SweepPass2 {
+pub fn sweep_at_risk(
+    def_id: &str,
+    at_risk: &[String],
+    keep_out: &[String],
+    options: &SweepOptions,
+) -> SweepPass2 {
     let seeds = options.seeds.unwrap_or(AI_SWEEP.seeds_per_card_at_risk);
     let tier = options.tier.unwrap_or(Difficulty::Easy);
     let filler = Filler {
@@ -704,12 +713,18 @@ fn flag_detail(stats: &SweepStats, flag: SweepFlag, pass2: bool) -> String {
         String::new()
     };
     match flag {
-        SweepFlag::Error => format!("{} engine or search error(s) over {} games", stats.errors, stats.games),
+        SweepFlag::Error => format!(
+            "{} engine or search error(s) over {} games",
+            stats.errors, stats.games
+        ),
         SweepFlag::Timeout => format!(
             "{} decision(s) over {} ms or game(s) past {} actions",
             stats.timeouts, AI_SWEEP.decision_ms, AI_SWEEP.max_actions
         ),
-        SweepFlag::NeverPlayed => format!("affordable in hand on {} turns{over}, never played", stats.affordable_turns),
+        SweepFlag::NeverPlayed => format!(
+            "affordable in hand on {} turns{over}, never played",
+            stats.affordable_turns
+        ),
         SweepFlag::SelfHarm => format!(
             "mean evaluate change {} over {} play(s){over}",
             to_fixed_1(mean(stats)),
@@ -818,7 +833,11 @@ pub fn sweep_verdict(pass1: &[SweepResult], pass2: &[SweepPass2]) -> SweepVerdic
     } else {
         Some(format!(
             "{}: {}",
-            flags.iter().map(|flag| flag.as_str()).collect::<Vec<_>>().join(", "),
+            flags
+                .iter()
+                .map(|flag| flag.as_str())
+                .collect::<Vec<_>>()
+                .join(", "),
             details.join("; ")
         ))
     };

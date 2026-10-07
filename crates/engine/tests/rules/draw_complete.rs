@@ -52,7 +52,10 @@ fn watcher() -> CardDef {
 }
 
 fn both(script: Script) -> CardScripts {
-    CardScripts { base: script.clone(), radiant: script }
+    CardScripts {
+        base: script.clone(),
+        radiant: script,
+    }
 }
 
 fn opponents_draw(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
@@ -77,16 +80,24 @@ fn scripts() -> IndexMap<String, CardScripts> {
         aimed().id,
         both(Script {
             static_flags: Some(json_as(json!({ "castOnDraw": true }))),
-            targets: vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "of": ["hero"] } }))],
-            cry: Some(hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 })))])),
+            targets: vec![json_as(
+                json!({ "kind": "target", "min": 1, "max": 1, "filter": { "of": ["hero"] } }),
+            )],
+            cry: Some(hook(|_ctx| {
+                vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 })))]
+            })),
             ..Script::default()
         }),
     );
     scripts.insert(
         tax_trap().id,
         both(Script {
-            triggers: vec![TriggerDef::new("tax", &[GameEventType::Drawn], |_ctx, _event| vec![hit_enemy_hero(2)])
-                .with_when(opponents_draw)],
+            triggers: vec![
+                TriggerDef::new("tax", &[GameEventType::Drawn], |_ctx, _event| {
+                    vec![hit_enemy_hero(2)]
+                })
+                .with_when(opponents_draw),
+            ],
             ..Script::default()
         }),
     );
@@ -94,7 +105,11 @@ fn scripts() -> IndexMap<String, CardScripts> {
         watcher().id,
         both(Script {
             triggers: vec![TriggerDef::new("watch", &[GameEventType::Drawn], |ctx, event| {
-                if opponents_draw(ctx, event) { vec![hit_enemy_hero(3)] } else { vec![] }
+                if opponents_draw(ctx, event) {
+                    vec![hit_enemy_hero(3)]
+                } else {
+                    vec![]
+                }
             })],
             ..Script::default()
         }),
@@ -118,7 +133,12 @@ fn game(seed: &str) -> GameState {
 }
 
 fn on_top(state: &mut GameState, def_id: &str) -> CardInstance {
-    let card = new_instance(state, def_id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+    let card = new_instance(
+        state,
+        def_id,
+        PlayerId::P1,
+        Zone::Library { player: PlayerId::P1 },
+    );
     state.players.p1.library.insert(0, card.clone());
     card
 }
@@ -152,7 +172,12 @@ mod r58_a_draw_that_casts_is_complete_once_its_cast_has_resolved {
     #[test]
     fn r58_a_trap_answering_a_cast_on_draw_draw_fires_after_the_cast_resolves_not_inside_it() {
         let mut state = game("r58-complete");
-        let trap = put(&mut state, &tax_trap().id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        let trap = put(
+            &mut state,
+            &tax_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let card = on_top(&mut state, &bolt().id);
 
         let events = draw_and_settle(&mut state);
@@ -170,25 +195,42 @@ mod r58_a_draw_that_casts_is_complete_once_its_cast_has_resolved {
     #[test]
     fn r58_an_ordinary_trigger_on_the_draw_waits_for_the_cast_too() {
         let mut state = game("r58-trigger");
-        put(&mut state, &watcher().id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &watcher().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let card = on_top(&mut state, &bolt().id);
 
         let events = draw_and_settle(&mut state);
 
         let resolved = index_of(&events, resolved_of(&card.id));
-        let hit = index_of(&events, |event| {
-            matches!(event, GameEvent::Damage { target_id, .. } if target_id == "hero-p1")
-        });
+        let hit = index_of(
+            &events,
+            |event| matches!(event, GameEvent::Damage { target_id, .. } if target_id == "hero-p1"),
+        );
         assert!(hit > resolved);
         // The draw repeats once the cast has resolved (R58), so the watcher answers both draws.
-        assert_eq!(events.iter().filter(|event| matches!(event, GameEvent::Drawn { .. })).count(), 2);
+        assert_eq!(
+            events
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Drawn { .. }))
+                .count(),
+            2
+        );
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH - 6);
     }
 
     #[test]
     fn r58_a_plain_draw_is_answered_at_once_as_before() {
         let mut state = game("r58-plain");
-        let trap = put(&mut state, &tax_trap().id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        let trap = put(
+            &mut state,
+            &tax_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         on_top(&mut state, "fx-1");
         let events = draw_and_settle(&mut state);
         assert!(events.iter().any(fired_of(&trap.id)));
@@ -198,16 +240,29 @@ mod r58_a_draw_that_casts_is_complete_once_its_cast_has_resolved {
     #[test]
     fn r58_a_cast_that_asks_keeps_its_draw_held_across_the_answer_json_round_trip_included() {
         let mut state = game("r58-pause");
-        let trap = put(&mut state, &tax_trap().id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        let trap = put(
+            &mut state,
+            &tax_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let card = on_top(&mut state, &aimed().id);
 
         let events = draw_and_settle(&mut state);
-        assert_eq!(state.pending.as_ref().map(|pending| pending.player_id), Some(PlayerId::P1));
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.player_id),
+            Some(PlayerId::P1)
+        );
         assert_eq!(state.held_draws, Some(vec![card.id.clone()]));
-        assert!(!events.iter().any(|event| matches!(event, GameEvent::TrapFired { .. })));
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, GameEvent::TrapFired { .. }))
+        );
 
         let round: GameState =
-            serde_json::from_value(serde_json::to_value(&state).expect("a state serialises")).expect("and parses");
+            serde_json::from_value(serde_json::to_value(&state).expect("a state serialises"))
+                .expect("and parses");
         assert_eq!(hash_state(&round), hash_state(&state));
         let answer: Action = json_as(json!({
             "type": "answer",

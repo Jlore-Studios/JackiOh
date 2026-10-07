@@ -20,10 +20,10 @@
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
-use serde::de::DeserializeOwned;
 use serde::Serialize;
-use serde_json::{json, Value};
-use tokio::sync::{mpsc, MutexGuard};
+use serde::de::DeserializeOwned;
+use serde_json::{Value, json};
+use tokio::sync::{MutexGuard, mpsc};
 
 use jackioh_engine::PlayerId;
 use jackioh_server::actor::ws_server::{Socket, SocketFrame};
@@ -108,7 +108,10 @@ impl LogLines {
 /// Captures this thread's log lines; every task of a `#[tokio::test]` runs on it.
 fn log_lines() -> (LogLines, tracing::subscriber::DefaultGuard) {
     let lines = LogLines::default();
-    let subscriber = tracing_subscriber::fmt().json().with_writer(lines.clone()).finish();
+    let subscriber = tracing_subscriber::fmt()
+        .json()
+        .with_writer(lines.clone())
+        .finish();
     let guard = crate::support::deps::set_log_default(subscriber);
     (lines, guard)
 }
@@ -117,8 +120,11 @@ fn log_lines() -> (LogLines, tracing::subscriber::DefaultGuard) {
 fn real_decks() -> (Vec<String>, Vec<String>) {
     jackioh_cards::register_all();
     let size = usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size");
-    let pool: Vec<String> =
-        jackioh_cards::CATALOG.values().filter(|def| !def.token).map(|def| def.id.clone()).collect();
+    let pool: Vec<String> = jackioh_cards::CATALOG
+        .values()
+        .filter(|def| !def.token)
+        .map(|def| def.id.clone())
+        .collect();
     (pool[..size].to_vec(), pool[size..size * 2].to_vec())
 }
 
@@ -138,7 +144,13 @@ struct Client {
 impl Client {
     fn new(seat: &'static str) -> Client {
         let (socket, frames) = Socket::channel();
-        Client { seat, socket, frames, view: None, sent: 0 }
+        Client {
+            seat,
+            socket,
+            frames,
+            view: None,
+            sent: 0,
+        }
     }
 
     fn absorb(&mut self, text: &str) -> Value {
@@ -178,7 +190,8 @@ impl Client {
         self.sent += 1;
         let nonce = format!("{}-n{}", self.seat, self.sent);
         action["nonce"] = json!(nonce);
-        self.socket.receive(json!({ "type": "action", "action": action }).to_string());
+        self.socket
+            .receive(json!({ "type": "action", "action": action }).to_string());
         loop {
             let frame = self.frame().await;
             let kind = frame["type"].as_str().unwrap_or("");
@@ -250,8 +263,18 @@ async fn live_match(mode: Option<&str>) -> Harness {
                 catalog_version: app.catalog.version.clone(),
                 ranked: false,
                 seats: (
-                    MatchSeat { profile_id: P1.to_string(), player: PlayerId::P1, deck: decks.0.clone(), portrait: None },
-                    MatchSeat { profile_id: P2.to_string(), player: PlayerId::P2, deck: decks.1.clone(), portrait: None },
+                    MatchSeat {
+                        profile_id: P1.to_string(),
+                        player: PlayerId::P1,
+                        deck: decks.0.clone(),
+                        portrait: None,
+                    },
+                    MatchSeat {
+                        profile_id: P2.to_string(),
+                        player: PlayerId::P2,
+                        deck: decks.1.clone(),
+                        portrait: None,
+                    },
                 ),
                 mode: None,
                 stake: None,
@@ -261,8 +284,14 @@ async fn live_match(mode: Option<&str>) -> Harness {
         .expect("the match starts");
     let p1 = Client::new("p1");
     let p2 = Client::new("p2");
-    app.matches.attach(&app, MATCH_ID, P1, p1.socket.clone()).await.expect("p1 attaches");
-    app.matches.attach(&app, MATCH_ID, P2, p2.socket.clone()).await.expect("p2 attaches");
+    app.matches
+        .attach(&app, MATCH_ID, P1, p1.socket.clone())
+        .await
+        .expect("p1 attaches");
+    app.matches
+        .attach(&app, MATCH_ID, P2, p2.socket.clone())
+        .await
+        .expect("p2 attaches");
     Harness { app, decks, p1, p2 }
 }
 
@@ -271,7 +300,11 @@ async fn live_match(mode: Option<&str>) -> Harness {
 async fn wait_finished(app: &App, match_id: &str) {
     for _ in 0..500 {
         let row = q!(app, matches_get(match_id));
-        if row.as_ref().map(to_json).is_some_and(|row| row["status"] == "finished") {
+        if row
+            .as_ref()
+            .map(to_json)
+            .is_some_and(|row| row["status"] == "finished")
+        {
             return;
         }
         tokio::time::sleep(Duration::from_millis(1)).await;
@@ -304,7 +337,8 @@ mod live_game_records {
     use super::*;
 
     #[tokio::test(start_paused = true)]
-    async fn r376_files_a_finished_match_once_its_result_is_in_its_mode_the_patch_two_human_pilots_and_the_game() {
+    async fn r376_files_a_finished_match_once_its_result_is_in_its_mode_the_patch_two_human_pilots_and_the_game()
+     {
         let (logs, _guard) = log_lines();
         let mut h = live_match(Some("random")).await;
         play_to_concession(&mut h).await;
@@ -322,7 +356,11 @@ mod live_game_records {
         let game = &record["game"];
         assert_eq!(game["winner"], "p1");
         assert_eq!(game["reason"], "concede");
-        assert!(game["first"] == "p1" || game["first"] == "p2", "first: {}", game["first"]);
+        assert!(
+            game["first"] == "p1" || game["first"] == "p2",
+            "first: {}",
+            game["first"]
+        );
         assert!(game["turns"].as_i64().is_some(), "turns: {}", game["turns"]);
         assert_eq!(game["seats"]["p1"]["deck"], json!(h.decks.0));
         assert_eq!(game["seats"]["p2"]["deck"], json!(h.decks.1));
@@ -413,7 +451,10 @@ mod live_game_records {
             serde_json::from_str(include_str!("../../../cards/patches/patches.json")).expect("patches.json");
         // The list's order is the order of versions, never a comparison of the strings (R388): the
         // newest patch is the last entry, whatever it says.
-        let newest = list.last().and_then(|entry| entry["version"].as_str()).expect("a newest version");
+        let newest = list
+            .last()
+            .and_then(|entry| entry["version"].as_str())
+            .expect("a newest version");
         assert_eq!(jackioh_cards::catalog_version(), newest);
     }
 }

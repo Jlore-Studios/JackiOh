@@ -26,9 +26,15 @@ fn act(state: &GameState, body: Value) -> GameState {
 fn playing(seed: &str, decks: Option<(Vec<String>, Vec<String>)>) -> GameState {
     let mut state = begin_game(&new_game(seed, decks)).state;
     let keep: Vec<String> = state.players[P1].hand.iter().map(|c| c.id.clone()).collect();
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+    );
     let keep: Vec<String> = state.players[P2].hand.iter().map(|c| c.id.clone()).collect();
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+    );
     state
 }
 
@@ -143,8 +149,18 @@ mod ending_the_game_m1_t8 {
         let mut state = playing("cap", None);
         // R389: do-nothing decks fatigue out at player-turn 48 (§2.4, R3); #75 Infinite Reserves on both
         // sides turns every empty-library draw into a card, so nothing but the cap ends this game.
-        put(&mut state, &infinite_reserves().id, slot(P1, Row::Backrow, 1), json!({}));
-        put(&mut state, &infinite_reserves().id, slot(P2, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &infinite_reserves().id,
+            slot(P1, Row::Backrow, 1),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &infinite_reserves().id,
+            slot(P2, Row::Backrow, 1),
+            json!({}),
+        );
         for _ in 0..TURN_CAP_PLAYER_TURNS - 1 {
             let active = state.active;
             state = act(&state, json!({ "type": "endTurn", "playerId": active }));
@@ -167,7 +183,10 @@ mod ending_the_game_m1_t8 {
     fn an_accepted_draw_offer_ends_the_game_as_a_draw() {
         let mut state = playing("offer-accept", None);
         state = act(&state, json!({ "type": "offerDraw", "playerId": "p1" }));
-        state = act(&state, json!({ "type": "answerDraw", "accept": true, "playerId": "p2" }));
+        state = act(
+            &state,
+            json!({ "type": "answerDraw", "accept": true, "playerId": "p2" }),
+        );
         assert_eq!(
             state.result,
             Some(GameResult {
@@ -181,8 +200,14 @@ mod ending_the_game_m1_t8 {
     fn r36_a_declined_offer_blocks_the_offering_player_for_three_of_their_turns_not_the_opponent() {
         let mut state = playing("offer-decline", None);
         state = act(&state, json!({ "type": "offerDraw", "playerId": "p1" }));
-        state = act(&state, json!({ "type": "answerDraw", "accept": false, "playerId": "p2" }));
-        assert_eq!(state.players[P1].draw_offer.blocked_until, Some(1 + DRAW_OFFER_BLOCK_TURNS + 1));
+        state = act(
+            &state,
+            json!({ "type": "answerDraw", "accept": false, "playerId": "p2" }),
+        );
+        assert_eq!(
+            state.players[P1].draw_offer.blocked_until,
+            Some(1 + DRAW_OFFER_BLOCK_TURNS + 1)
+        );
 
         state = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         // The opponent may still offer on their own turn.
@@ -216,7 +241,10 @@ mod ending_the_game_m1_t8 {
 
         // p1 ends; p2 plays their turn; p1's next turn has nothing to do, so it ends itself.
         state = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
-        let result = reduce(&state, &action(json!({ "type": "endTurn", "playerId": "p2", "nonce": "auto" })));
+        let result = reduce(
+            &state,
+            &action(json!({ "type": "endTurn", "playerId": "p2", "nonce": "auto" })),
+        );
         assert_eq!(result.error, None);
         let auto = events_of_type(&result.events, GameEventType::TurnAutoEnded);
         assert!(!auto.is_empty()); // toBeGreaterThanOrEqual(1)
@@ -247,14 +275,20 @@ mod ending_the_game_m1_t8 {
         let with_prompt = begin_game(&new_game("timeout", None)).state;
         assert_eq!(mulligan_owed(&with_prompt), vec![P1, P2]);
 
-        let answered = reduce(&with_prompt, &action(json!({ "type": "timeout", "playerId": "p1", "nonce": "to1" })));
+        let answered = reduce(
+            &with_prompt,
+            &action(json!({ "type": "timeout", "playerId": "p1", "nonce": "to1" })),
+        );
         assert_eq!(answered.error, None);
         // p1's mulligan is answered (R268), so p2's is all that is left rather than the turn ending.
         assert_eq!(mulligan_owed(&answered.state), vec![P2]);
         assert_eq!(answered.state.turn, 0);
 
         let main_phase = playing("timeout-main", None);
-        let ended = reduce(&main_phase, &action(json!({ "type": "timeout", "playerId": "p1", "nonce": "to2" })));
+        let ended = reduce(
+            &main_phase,
+            &action(json!({ "type": "timeout", "playerId": "p1", "nonce": "to2" })),
+        );
         assert_eq!(ended.error, None);
         assert_eq!(ended.state.active, P2);
     }
@@ -263,11 +297,19 @@ mod ending_the_game_m1_t8 {
     fn lets_a_prompt_blocked_game_still_be_conceded_or_timed_out_build_m1_t3() {
         let with_prompt = begin_game(&new_game("blocked", None)).state;
         assert_eq!(
-            reduce(&with_prompt, &action(json!({ "type": "concede", "playerId": "p2", "nonce": "b1" }))).error,
+            reduce(
+                &with_prompt,
+                &action(json!({ "type": "concede", "playerId": "p2", "nonce": "b1" }))
+            )
+            .error,
             None
         );
         assert_eq!(
-            reduce(&with_prompt, &action(json!({ "type": "timeout", "playerId": "p2", "nonce": "b3" }))).error,
+            reduce(
+                &with_prompt,
+                &action(json!({ "type": "timeout", "playerId": "p2", "nonce": "b3" }))
+            )
+            .error,
             None
         );
         let refused = reduce(
@@ -276,7 +318,9 @@ mod ending_the_game_m1_t8 {
         )
         .error;
         assert!(
-            refused.as_deref().is_some_and(|error| error.contains("the mulligan is open")),
+            refused
+                .as_deref()
+                .is_some_and(|error| error.contains("the mulligan is open")),
             "expected a refusal matching /the mulligan is open/, got {refused:?}"
         );
     }

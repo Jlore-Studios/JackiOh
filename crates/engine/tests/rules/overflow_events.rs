@@ -32,16 +32,28 @@ fn step(state: &GameState, body: Value) -> (GameState, Vec<GameEvent>) {
 }
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|card| card.id.clone()).collect()
+    state.players[player]
+        .hand
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 /// Both mulligans kept whole: turn 1, p1's main phase.
 fn started(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep = hand_ids(&state, PlayerId::P1);
-    state = step(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" })).0;
+    state = step(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+    )
+    .0;
     let keep = hand_ids(&state, PlayerId::P2);
-    state = step(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" })).0;
+    state = step(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+    )
+    .0;
     state
 }
 
@@ -56,7 +68,11 @@ fn values(events: &[GameEvent]) -> Vec<Value> {
 
 /// TS `eventsOfType`, over JSON.
 fn of_type(events: &[Value], kind: &str) -> Vec<Value> {
-    events.iter().filter(|event| event["type"] == kind).cloned().collect()
+    events
+        .iter()
+        .filter(|event| event["type"] == kind)
+        .cloned()
+        .collect()
 }
 
 /// `eventsOfType(events, kind)[0]?.[field]`: `Null` when there is no such event.
@@ -163,7 +179,11 @@ mod r315_fatigue {
             .collect();
         assert_eq!(
             Value::Array(pairs),
-            json!([[1, FATIGUE_DAMAGE(1)], [2, FATIGUE_DAMAGE(2)], [3, FATIGUE_DAMAGE(3)]])
+            json!([
+                [1, FATIGUE_DAMAGE(1)],
+                [2, FATIGUE_DAMAGE(2)],
+                [3, FATIGUE_DAMAGE(3)]
+            ])
         );
         // Each report is followed by its own hit.
         let order: Vec<Value> = events
@@ -200,13 +220,21 @@ mod r315_fatigue {
     fn r315_reports_no_fatigue_for_a_draw_c75_infinite_reserves_replaces_with_a_rush_token_card() {
         let mut state = new_game("r315-reserves", None);
         set_library(&mut state, PlayerId::P1, &[] as &[&str]);
-        put(&mut state, &infinite_reserves().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &infinite_reserves().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         let mut sink = Sink::for_state(&state);
         let outcome = sink.with(&mut state, |s| draw::draw_one(s, PlayerId::P1, None));
         assert!(matches!(outcome, DrawOutcome::Token));
         let events = values(&sink.events);
         assert_eq!(of_type(&events, "fatigue"), Vec::<Value>::new());
-        let drawn: Vec<Value> = of_type(&events, "drawn").iter().map(|event| event["defId"].clone()).collect();
+        let drawn: Vec<Value> = of_type(&events, "drawn")
+            .iter()
+            .map(|event| event["defId"].clone())
+            .collect();
         assert_eq!(drawn, vec![json!(TOKEN)]);
         assert_eq!(state.players.p1.fatigue_count, 0);
     }
@@ -217,7 +245,11 @@ mod r316_library_overflow {
 
     fn full_library(seed: &str) -> GameState {
         let mut state = new_game(seed, None);
-        set_library(&mut state, PlayerId::P1, &vec!["fx-1".to_string(); LIBRARY_CAP as usize]);
+        set_library(
+            &mut state,
+            PlayerId::P1,
+            &vec!["fx-1".to_string(); LIBRARY_CAP as usize],
+        );
         state
     }
 
@@ -227,8 +259,15 @@ mod r316_library_overflow {
     fn r316_reports_a_copy_a_full_library_refuses_as_library_overflow_not_created_public_to_both_seats() {
         let mut state = full_library("r316-new");
         let mut sink = Sink::for_state(&state);
-        let mut fresh = new_instance(&mut state, "fx-2", PlayerId::P1, Zone::Library { player: PlayerId::P1 });
-        let outcome = sink.with(&mut state, |s| draw::shuffle_into_library(s, &mut fresh, false, None));
+        let mut fresh = new_instance(
+            &mut state,
+            "fx-2",
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
+        let outcome = sink.with(&mut state, |s| {
+            draw::shuffle_into_library(s, &mut fresh, false, None)
+        });
         assert!(matches!(outcome, ShuffleInOutcome::Dropped));
 
         let refused = json!({
@@ -252,7 +291,9 @@ mod r316_library_overflow {
             .next()
             .expect("no card");
         let mut sink = Sink::for_state(&state);
-        let outcome = sink.with(&mut state, |s| draw::shuffle_into_library(s, &mut card, true, None));
+        let outcome = sink.with(&mut state, |s| {
+            draw::shuffle_into_library(s, &mut card, true, None)
+        });
         assert!(matches!(outcome, ShuffleInOutcome::Dropped));
 
         assert_eq!(
@@ -275,17 +316,24 @@ mod r316_library_overflow {
         let mut state = full_library("r316-token");
         let mut token = put(&mut state, TOKEN, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mut sink = Sink::for_state(&state);
-        let outcome = sink.with(&mut state, |s| draw::shuffle_into_library(s, &mut token, true, None));
+        let outcome = sink.with(&mut state, |s| {
+            draw::shuffle_into_library(s, &mut token, true, None)
+        });
         assert!(matches!(outcome, ShuffleInOutcome::Dropped));
 
         assert_eq!(
             values(&sink.events),
-            vec![json!({ "type": "libraryOverflow", "player": "p1", "instanceId": token.id, "defId": TOKEN, "outcome": "ceased" })]
+            vec![
+                json!({ "type": "libraryOverflow", "player": "p1", "instanceId": token.id, "defId": TOKEN, "outcome": "ceased" })
+            ]
         );
         // TS read the live object; here the copy the call was handed, which it leaves as it landed.
         assert_eq!(token.zone.z(), ZoneName::Gone);
         let theirs = seen(&mut state, &sink.events).p2;
-        assert_eq!(first_field(&theirs, "libraryOverflow", "instanceId"), json!(token.id));
+        assert_eq!(
+            first_field(&theirs, "libraryOverflow", "instanceId"),
+            json!(token.id)
+        );
     }
 
     /// "R316 judges a copy that was never made by the card it copies: a face-down trap's copy names
@@ -311,9 +359,15 @@ mod r316_library_overflow {
         let mut catalog = registered_catalog().clone();
         catalog.insert(trap.id.clone(), trap.clone());
         register_catalog(catalog);
-        let mut set = put(&mut state, &trap.id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        let mut set = put(
+            &mut state,
+            &trap.id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
         let mut sink = Sink::for_state(&state);
-        let effect = effects::shuffle_into(json_as(json!({ "defId": trap.id, "count": 1, "copyOf": set.id })));
+        let effect =
+            effects::shuffle_into(json_as(json!({ "defId": trap.id, "count": 1, "copyOf": set.id })));
         sink.with(&mut state, |s| {
             let mut ctx = make_context(
                 s,
@@ -337,7 +391,9 @@ mod r316_library_overflow {
         assert_eq!(first_field(&views.p1, "libraryOverflow", "defId"), json!(trap.id));
         assert_eq!(
             of_type(&views.p2, "libraryOverflow"),
-            vec![json!({ "type": "libraryOverflow", "player": "p1", "instanceId": HIDDEN_ID, "defId": HIDDEN_ID, "outcome": "notCreated" })]
+            vec![
+                json!({ "type": "libraryOverflow", "player": "p1", "instanceId": HIDDEN_ID, "defId": HIDDEN_ID, "outcome": "notCreated" })
+            ]
         );
         // `copyOf` is bookkeeping: it names the face-down card's id, so no view carries it.
         for viewer in PLAYER_IDS {
@@ -346,7 +402,12 @@ mod r316_library_overflow {
         }
 
         // Once the trap is public (fired into its graveyard), the copy it would have made is too.
-        zones::move_to_zone(&mut state, &mut set, OffFieldZone::Graveyard, MoveToZoneOptions::default());
+        zones::move_to_zone(
+            &mut state,
+            &mut set,
+            OffFieldZone::Graveyard,
+            MoveToZoneOptions::default(),
+        );
         let theirs = seen(&mut state, &sink.events).p2;
         assert_eq!(first_field(&theirs, "libraryOverflow", "defId"), json!(trap.id));
     }
@@ -356,10 +417,20 @@ mod r316_library_overflow {
     fn r316_carries_a_refused_radiant_copys_face_with_its_identity_and_hides_both_together() {
         let mut state = full_library("r316-radiant");
         let mut sink = Sink::for_state(&state);
-        let mut fresh = new_instance(&mut state, "fx-2", PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+        let mut fresh = new_instance(
+            &mut state,
+            "fx-2",
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
         fresh.radiant = true;
-        let _ = sink.with(&mut state, |s| draw::shuffle_into_library(s, &mut fresh, false, None));
-        assert_eq!(first_field(&values(&sink.events), "libraryOverflow", "radiant"), json!(true));
+        let _ = sink.with(&mut state, |s| {
+            draw::shuffle_into_library(s, &mut fresh, false, None)
+        });
+        assert_eq!(
+            first_field(&values(&sink.events), "libraryOverflow", "radiant"),
+            json!(true)
+        );
         let theirs = seen(&mut state, &sink.events).p2;
         assert_eq!(first_field(&theirs, "libraryOverflow", "radiant"), json!(true));
 
@@ -367,13 +438,28 @@ mod r316_library_overflow {
         let mut hidden = full_library("r316-radiant-hidden");
         let mut trap = put(&mut hidden, "fx-2", slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mut hidden_sink = Sink::for_state(&hidden);
-        let mut copy = new_instance(&mut hidden, "fx-2", PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+        let mut copy = new_instance(
+            &mut hidden,
+            "fx-2",
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
         copy.radiant = true;
-        zones::move_to_zone(&mut hidden, &mut trap, OffFieldZone::Hand, MoveToZoneOptions::default());
+        zones::move_to_zone(
+            &mut hidden,
+            &mut trap,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
         let trap_id = trap.id.clone();
-        let _ = hidden_sink.with(&mut hidden, |s| draw::shuffle_into_library(s, &mut copy, false, Some(&trap_id)));
+        let _ = hidden_sink.with(&mut hidden, |s| {
+            draw::shuffle_into_library(s, &mut copy, false, Some(&trap_id))
+        });
         let theirs = seen(&mut hidden, &hidden_sink.events).p2;
-        let theirs = of_type(&theirs, "libraryOverflow").first().cloned().unwrap_or(Value::Null);
+        let theirs = of_type(&theirs, "libraryOverflow")
+            .first()
+            .cloned()
+            .unwrap_or(Value::Null);
         assert_eq!(
             theirs,
             json!({ "type": "libraryOverflow", "player": "p1", "instanceId": HIDDEN_ID, "defId": HIDDEN_ID, "outcome": "notCreated" })
@@ -386,9 +472,19 @@ mod r316_library_overflow {
         let mut roomy = new_game("r316-roomy", None);
         set_library(&mut roomy, PlayerId::P1, &lib(&["fx-1"]));
         let mut roomy_sink = Sink::for_state(&roomy);
-        let mut fresh = new_instance(&mut roomy, "fx-2", PlayerId::P1, Zone::Library { player: PlayerId::P1 });
-        let _ = roomy_sink.with(&mut roomy, |s| draw::shuffle_into_library(s, &mut fresh, false, None));
-        assert_eq!(of_type(&values(&roomy_sink.events), "libraryOverflow"), Vec::<Value>::new());
+        let mut fresh = new_instance(
+            &mut roomy,
+            "fx-2",
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
+        let _ = roomy_sink.with(&mut roomy, |s| {
+            draw::shuffle_into_library(s, &mut fresh, false, None)
+        });
+        assert_eq!(
+            of_type(&values(&roomy_sink.events), "libraryOverflow"),
+            Vec::<Value>::new()
+        );
 
         // A full library with a CN-Virus on top: the draw takes it (59 left), the cast shuffles two
         // copies in, the first fills the library to 60 and the second is never created.
@@ -404,7 +500,10 @@ mod r316_library_overflow {
             .iter()
             .map(|event| json!([event["player"], event["defId"], event["outcome"]]))
             .collect();
-        assert_eq!(Value::Array(refused), json!([["p1", cn_virus().id, "notCreated"]]));
+        assert_eq!(
+            Value::Array(refused),
+            json!([["p1", cn_virus().id, "notCreated"]])
+        );
         assert!(state.players.p1.library.len() <= LIBRARY_CAP as usize);
     }
 }
@@ -420,7 +519,13 @@ mod r317_a_full_hand_burns {
         // p2's hand is full, so the draw at the start of p2's turn is burned.
         state.players.p2.hand.clear();
         in_hand(&mut state, "fx-30", PlayerId::P2, HAND_CAP);
-        let top = state.players.p2.library.first().cloned().expect("p2 has no library");
+        let top = state
+            .players
+            .p2
+            .library
+            .first()
+            .cloned()
+            .expect("p2 has no library");
         let (after, events) = step(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         state = after;
 
@@ -463,11 +568,22 @@ mod r317_a_full_hand_burns {
         let mut sink = Sink::for_state(&state);
         let outcome = sink.with(&mut state, |s| draw::draw_one(s, PlayerId::P1, None));
         assert!(matches!(outcome, DrawOutcome::Burned));
-        let mut card = state.players.p1.graveyard.first().cloned().expect("nothing burned");
+        let mut card = state
+            .players
+            .p1
+            .graveyard
+            .first()
+            .cloned()
+            .expect("nothing burned");
 
         // #72 Reminisce's move: graveyard to hand. R97 judges the card by where it is now.
         state.players.p1.hand.remove(0);
-        zones::move_to_zone(&mut state, &mut card, OffFieldZone::Hand, MoveToZoneOptions::default());
+        zones::move_to_zone(
+            &mut state,
+            &mut card,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
         let views = seen(&mut state, &sink.events);
         assert_eq!(first_field(&views.p1, "burned", "defId"), json!("fx-2"));
         assert_eq!(
@@ -481,13 +597,21 @@ mod r317_a_full_hand_burns {
     fn r317_burns_a_unit_token_card_out_of_existence_public_and_no_graveyard() {
         let mut state = new_game("r317-token", None);
         set_library(&mut state, PlayerId::P1, &[] as &[&str]);
-        put(&mut state, &infinite_reserves().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &infinite_reserves().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         in_hand(&mut state, "fx-30", PlayerId::P1, HAND_CAP);
         let mut sink = Sink::for_state(&state);
         let outcome = sink.with(&mut state, |s| draw::draw_one(s, PlayerId::P1, None));
         assert!(matches!(outcome, DrawOutcome::Token));
         let events = values(&sink.events);
-        let burned: Vec<Value> = of_type(&events, "burned").iter().map(|event| event["defId"].clone()).collect();
+        let burned: Vec<Value> = of_type(&events, "burned")
+            .iter()
+            .map(|event| event["defId"].clone())
+            .collect();
         assert_eq!(burned, vec![json!(TOKEN)]);
         assert_eq!(of_type(&events, "enteredGraveyard"), Vec::<Value>::new());
         let theirs = seen(&mut state, &sink.events).p2;

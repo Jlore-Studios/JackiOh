@@ -8,8 +8,8 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::generation::{
-    big_body, body, charger, crawler, deck_fusion, dusting, fuse_a, fuse_b, fuser, juhan, lab, mutate, outbreak,
-    pile_on, plague_book, quiet_trap, register_generation, scatter, slime, slop, toxins,
+    big_body, body, charger, crawler, deck_fusion, dusting, fuse_a, fuse_b, fuser, juhan, lab, mutate,
+    outbreak, pile_on, plague_book, quiet_trap, register_generation, scatter, slime, slop, toxins,
 };
 use crate::rules::fixtures::harness::setup_catalog;
 
@@ -89,12 +89,20 @@ fn play(seed: &str) -> Played {
         let actions: Vec<ActionBody> = legal_actions(&state, player)
             .into_iter()
             .filter(|action| {
-                !matches!(action, ActionBody::Concede | ActionBody::OfferDraw | ActionBody::AnswerDraw { .. })
+                !matches!(
+                    action,
+                    ActionBody::Concede | ActionBody::OfferDraw | ActionBody::AnswerDraw { .. }
+                )
             })
             .collect();
         assert!(!actions.is_empty(), "no legal action for {player} in game {seed}");
-        let others: Vec<&ActionBody> = actions.iter().filter(|action| !matches!(action, ActionBody::EndTurn)).collect();
-        let end_turn = actions.iter().find(|action| matches!(action, ActionBody::EndTurn));
+        let others: Vec<&ActionBody> = actions
+            .iter()
+            .filter(|action| !matches!(action, ActionBody::EndTurn))
+            .collect();
+        let end_turn = actions
+            .iter()
+            .find(|action| matches!(action, ActionBody::EndTurn));
         let chosen: ActionBody =
             if others.is_empty() || (end_turn.is_some() && policy.chance(AI_END_TURN_PROBABILITY)) {
                 match end_turn {

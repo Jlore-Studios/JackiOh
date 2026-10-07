@@ -16,8 +16,8 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{
-    armoured, big_body, big_dfender, indestructible, plain, poisonous, shielded, spikey_pillow, stacker, taunter,
-    zero_attack,
+    armoured, big_body, big_dfender, indestructible, plain, poisonous, shielded, spikey_pillow, stacker,
+    taunter, zero_attack,
 };
 use crate::rules::fixtures::harness::{new_game, put, slot};
 
@@ -212,7 +212,10 @@ fn felinor_set_stat() -> AuraHook {
             if unit.id == me.id {
                 return;
             }
-            if !catalog::def_of(Some(state), &unit.def_id).tags.contains(&Tag::Felinor) {
+            if !catalog::def_of(Some(state), &unit.def_id)
+                .tags
+                .contains(&Tag::Felinor)
+            {
                 return;
             }
             let face = layers::face_of(state, unit);
@@ -229,13 +232,20 @@ fn felinor_set_stat() -> AuraHook {
         // R39: "never below printed", so the contribution itself never goes negative.
         vec![AuraEntry {
             applies: Box::new(move |unit: &CardInstance| unit.id == id),
-            mod_: StatMod { attack: Some(attack.max(0)), max_health: Some(health.max(0)), ..StatMod::default() },
+            mod_: StatMod {
+                attack: Some(attack.max(0)),
+                max_health: Some(health.max(0)),
+                ..StatMod::default()
+            },
         }]
     })
 }
 
 fn both(script: Script) -> CardScripts {
-    CardScripts { base: script.clone(), radiant: script }
+    CardScripts {
+        base: script.clone(),
+        radiant: script,
+    }
 }
 
 /// R349: a token that prints no Radiant form (the Ghoul Token's shape): printed 0/0 for an X/X, so
@@ -293,7 +303,10 @@ fn layer_scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         suppressive_aura().id,
         CardScripts {
-            base: Script { aura: Some(units_aura(json!({ "attack": -2, "maxHealth": -2 }), Side::All)), ..Script::default() },
+            base: Script {
+                aura: Some(units_aura(json!({ "attack": -2, "maxHealth": -2 }), Side::All)),
+                ..Script::default()
+            },
             radiant: Script {
                 aura: Some(units_aura(json!({ "attack": -4, "maxHealth": -4 }), Side::Enemy)),
                 ..Script::default()
@@ -319,8 +332,20 @@ fn layer_scripts() -> IndexMap<String, CardScripts> {
             },
         },
     );
-    scripts.insert(felinor_fiender().id, both(Script { aura: Some(felinor_set_stat()), ..Script::default() }));
-    scripts.insert(fused_fiender().id, both(Script { aura: Some(felinor_set_stat()), ..Script::default() }));
+    scripts.insert(
+        felinor_fiender().id,
+        both(Script {
+            aura: Some(felinor_set_stat()),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        fused_fiender().id,
+        both(Script {
+            aura: Some(felinor_set_stat()),
+            ..Script::default()
+        }),
+    );
     scripts
 }
 
@@ -350,7 +375,12 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
 /// `put` refuses an occupied zone; §3.2's Stack pile needs the `stack` flag.
 fn stack_on(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     let mut card = state::new_instance(state, def_id, at.player, Zone::Hand { player: at.player });
-    let placed = zones::place_on_field(state, &mut card, at, zones::PlaceOnFieldOptions { stack: Some(true) });
+    let placed = zones::place_on_field(
+        state,
+        &mut card,
+        at,
+        zones::PlaceOnFieldOptions { stack: Some(true) },
+    );
     assert!(placed, "could not stack {def_id} on {} {}", at.row, at.lane);
     live(state, &card.id)
 }
@@ -375,7 +405,11 @@ fn has(state: &GameState, id: &str, kind: KeywordKind) -> bool {
 }
 
 fn kinds_of(id: &str, state: &GameState) -> Vec<String> {
-    let set: IndexSet<String> = view(state, id).keywords.iter().map(|k| k.kind().as_str().to_string()).collect();
+    let set: IndexSet<String> = view(state, id)
+        .keywords
+        .iter()
+        .map(|k| k.kind().as_str().to_string())
+        .collect();
     let mut kinds: Vec<String> = set.into_iter().collect();
     kinds.sort();
     kinds
@@ -391,11 +425,17 @@ fn run_state_check(state: &mut GameState) -> Vec<GameEvent> {
 }
 
 fn units(state: &GameState, player: PlayerId) -> Vec<String> {
-    zones::active_units_of(state, player).iter().map(|unit| unit.id.clone()).collect()
+    zones::active_units_of(state, player)
+        .iter()
+        .map(|unit| unit.id.clone())
+        .collect()
 }
 
 fn dormant(state: &GameState, player: PlayerId) -> Vec<String> {
-    zones::dormant_units_of(state, player).iter().map(|unit| unit.id.clone()).collect()
+    zones::dormant_units_of(state, player)
+        .iter()
+        .map(|unit| unit.id.clone())
+        .collect()
 }
 
 fn p1(row: Row, lane: i32) -> ZoneSlot {
@@ -412,7 +452,9 @@ mod s10_4_stat_layers {
         let radiant = put_radiant(&mut state, &plain.id, p1(Row::Units, 2));
         let token = put(&mut state, &plain.id, p1(Row::Units, 3), json!({}));
         // §10.4: "or `statsOverride` for tokens summoned with X/X" (Adaptive UI's Rush Token).
-        edit(&mut state, &token.id, |c| c.stats_override = Some(AttackHealth { attack: 7, health: 5 }));
+        edit(&mut state, &token.id, |c| {
+            c.stats_override = Some(AttackHealth { attack: 7, health: 5 })
+        });
 
         let v = view(&state, &base.id);
         assert_eq!((v.attack, v.max_health, v.health), (3, 3, 3));
@@ -431,7 +473,9 @@ mod s10_4_stat_layers {
 
         // One Felinor on the board: its layer-4 stats are its printed 2/3 plus its own +1/+1 buff.
         let ally = put(&mut state, &felinor().id, p1(Row::Units, 2), json!({}));
-        edit(&mut state, &ally.id, |c| c.buffs = AttackHealth { attack: 1, health: 1 });
+        edit(&mut state, &ally.id, |c| {
+            c.buffs = AttackHealth { attack: 1, health: 1 }
+        });
         let v = view(&state, &fiender.id);
         assert_eq!((v.attack, v.max_health), (8, 11));
 
@@ -444,7 +488,12 @@ mod s10_4_stat_layers {
         assert_eq!((v.attack, v.max_health), (10, 14));
 
         // "All *your* Felinors": the opponent's are not yours (§8 #92).
-        put(&mut state, &felinor().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        put(
+            &mut state,
+            &felinor().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         let v = view(&state, &fiender.id);
         assert_eq!((v.attack, v.max_health), (10, 14));
     }
@@ -461,7 +510,9 @@ mod s10_4_stat_layers {
 
         // It still counts every OTHER Felinor, the tag it now carries changing nothing about that.
         let ally = put(&mut state, &felinor().id, p1(Row::Units, 2), json!({}));
-        edit(&mut state, &ally.id, |c| c.buffs = AttackHealth { attack: 1, health: 1 });
+        edit(&mut state, &ally.id, |c| {
+            c.buffs = AttackHealth { attack: 1, health: 1 }
+        });
         let v = view(&state, &fused.id);
         assert_eq!((v.attack, v.max_health), (8, 11));
 
@@ -481,7 +532,9 @@ mod s10_4_stat_layers {
         let v = view(&state, &unit.id);
         assert_eq!((v.attack, v.max_health), (3, 3));
 
-        edit(&mut state, &unit.id, |c| c.buffs = AttackHealth { attack: 2, health: 4 });
+        edit(&mut state, &unit.id, |c| {
+            c.buffs = AttackHealth { attack: 2, health: 4 }
+        });
         let v = view(&state, &unit.id);
         assert_eq!((v.attack, v.max_health, v.health), (5, 7, 7));
     }
@@ -490,14 +543,22 @@ mod s10_4_stat_layers {
     fn s10_4_layer_5_auras_apply_while_their_source_is_in_play_and_stop_the_moment_it_leaves_14() {
         let mut state = board("layer-5");
         let unit = put(&mut state, &plain.id, p1(Row::Units, 1), json!({}));
-        let weapons = put(&mut state, &jlockeeds_weapons().id, p1(Row::Backrow, 1), json!({}));
+        let weapons = put(
+            &mut state,
+            &jlockeeds_weapons().id,
+            p1(Row::Backrow, 1),
+            json!({}),
+        );
         assert_eq!(view(&state, &unit.id).attack, 7);
 
         // §8 #14: "removed when it leaves". Nothing was stored on the unit, so nothing has to be undone.
         let weapons = live(&state, &weapons.id);
         zones::remove_from_field(&mut state, &weapons, Default::default());
         assert_eq!(view(&state, &unit.id).attack, 3);
-        assert_eq!(live(&state, &unit.id).buffs, AttackHealth { attack: 0, health: 0 });
+        assert_eq!(
+            live(&state, &unit.id).buffs,
+            AttackHealth { attack: 0, health: 0 }
+        );
     }
 
     #[test]
@@ -538,7 +599,9 @@ mod s10_4_stat_layers {
         assert_eq!((v.max_health, v.health), (3, 1));
 
         // The damage stays where it is; the health it leaves behind follows the new max.
-        edit(&mut state, &unit.id, |c| c.buffs = AttackHealth { attack: 0, health: 5 });
+        edit(&mut state, &unit.id, |c| {
+            c.buffs = AttackHealth { attack: 0, health: 5 }
+        });
         let v = view(&state, &unit.id);
         assert_eq!((v.max_health, v.health), (8, 6));
     }
@@ -553,12 +616,16 @@ mod s10_4_stat_layers {
 
         // 2: the set-stat, reading the Felinor's layer-4 stats (printed 2/3 plus its +1/+1).
         let ally = put(&mut state, &felinor().id, p1(Row::Units, 3), json!({}));
-        edit(&mut state, &ally.id, |c| c.buffs = AttackHealth { attack: 1, health: 1 });
+        edit(&mut state, &ally.id, |c| {
+            c.buffs = AttackHealth { attack: 1, health: 1 }
+        });
         let v = view(&state, &fiender.id);
         assert_eq!((v.attack, v.max_health), (8, 11));
 
         // 4: the Fiender's own buffs, on top of the set-stat.
-        edit(&mut state, &fiender.id, |c| c.buffs = AttackHealth { attack: 1, health: 2 });
+        edit(&mut state, &fiender.id, |c| {
+            c.buffs = AttackHealth { attack: 1, health: 2 }
+        });
         let v = view(&state, &fiender.id);
         assert_eq!((v.attack, v.max_health), (9, 13));
 
@@ -579,7 +646,9 @@ mod s10_4_stat_layers {
     fn s10_4_applies_layer_4s_buffs_before_layer_5s_auras_and_floors_attack_once_at_the_end() {
         let mut state = board("floor-once");
         let unit = put(&mut state, &zero_attack.id, p1(Row::Units, 2), json!({}));
-        edit(&mut state, &unit.id, |c| c.buffs = AttackHealth { attack: 3, health: 0 });
+        edit(&mut state, &unit.id, |c| {
+            c.buffs = AttackHealth { attack: 3, health: 0 }
+        });
         put(&mut state, &spikey_pillow.id, p1(Row::Units, 1), json!({}));
 
         // 0 + 3 − 2 = 1. A floor taken before the buff — max(0, 0 − 2) = 0, then +3 — would read 3,
@@ -619,7 +688,10 @@ mod s10_4_stat_layers {
         // 1 health is still above 0, so the state check leaves it alone (§4.5 step 1).
         run_state_check(&mut state);
         assert_eq!(
-            state.players.p1.units[0].as_ref().and_then(|pile| pile.first()).map(|c| c.id.clone()),
+            state.players.p1.units[0]
+                .as_ref()
+                .and_then(|pile| pile.first())
+                .map(|c| c.id.clone()),
             Some(unit.id.clone())
         );
 
@@ -633,7 +705,12 @@ mod s10_4_stat_layers {
     fn s10_4_layer_5_an_aura_picks_its_own_side_radiant_suppressive_aura_touches_enemy_units_only() {
         let mut state = board("suppressive-radiant");
         let mine = put(&mut state, &big_body.id, p1(Row::Units, 1), json!({}));
-        let theirs = put(&mut state, &big_body.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let theirs = put(
+            &mut state,
+            &big_body.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         put_radiant(&mut state, &suppressive_aura().id, p1(Row::Backrow, 1));
 
         let v = view(&state, &mine.id);
@@ -654,10 +731,18 @@ mod s10_4_keyword_set {
             c.granted_keywords = vec![Keyword::Lifesteal];
             c.position = Some(Position::Def);
         });
-        put(&mut state, &jlockeeds_weapons().id, p1(Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &jlockeeds_weapons().id,
+            p1(Row::Backrow, 1),
+            json!({}),
+        );
 
         // Printed Taunt, granted Lifesteal, the aura's Rush and First Strike, Defense Position's Armor.
-        assert_eq!(kinds_of(&unit.id, &state), ["Armor", "First Strike", "Lifesteal", "Rush", "Taunt"]);
+        assert_eq!(
+            kinds_of(&unit.id, &state),
+            ["Armor", "First Strike", "Lifesteal", "Rush", "Taunt"]
+        );
         assert_eq!(view(&state, &unit.id).armor, 1);
     }
 
@@ -674,12 +759,20 @@ mod s10_4_keyword_set {
 
         edit(&mut state, &unit.id, |c| c.vanilla = true);
         let v = view(&state, &unit.id);
-        assert_eq!(v.keywords.iter().map(|k| k.kind().as_str()).collect::<Vec<_>>(), ["Rush"]);
+        assert_eq!(
+            v.keywords.iter().map(|k| k.kind().as_str()).collect::<Vec<_>>(),
+            ["Rush"]
+        );
         // §6.1 Vanilla: "Clears printed keywords and scripts; keeps stats, buffs and damage".
         assert_eq!((v.attack, v.max_health, v.health), (3, 6, 4));
 
         // An aura is the board's text, not the unit's, so a Vanilla unit still takes aura grants.
-        put(&mut state, &jlockeeds_weapons().id, p1(Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &jlockeeds_weapons().id,
+            p1(Row::Backrow, 1),
+            json!({}),
+        );
         assert_eq!(kinds_of(&unit.id, &state), ["First Strike", "Rush"]);
         assert_eq!(view(&state, &unit.id).attack, 7);
     }
@@ -726,7 +819,9 @@ mod s10_4_keyword_set {
         let unit = put(&mut state, &armoured.id, p1(Row::Units, 2), json!({}));
         assert_eq!(view(&state, &unit.id).armor, 7);
 
-        edit(&mut state, &unit.id, |c| c.granted_keywords = vec![Keyword::Armor { n: 2 }]);
+        edit(&mut state, &unit.id, |c| {
+            c.granted_keywords = vec![Keyword::Armor { n: 2 }]
+        });
         assert_eq!(view(&state, &unit.id).armor, 9);
 
         edit(&mut state, &unit.id, |c| c.position = Some(Position::Def));
@@ -761,7 +856,8 @@ mod s10_4_keyword_set {
     }
 
     #[test]
-    fn r349_a_unit_with_no_radiant_form_of_its_own_doubles_its_base_stat_layer_when_radiant_a_summons_x_x_included() {
+    fn r349_a_unit_with_no_radiant_form_of_its_own_doubles_its_base_stat_layer_when_radiant_a_summons_x_x_included()
+     {
         let mut state = board("radiant-fallback");
         let ghoul = put(&mut state, &fallback_token().id, p1(Row::Units, 1), json!({}));
         edit(&mut state, &ghoul.id, |c| {
@@ -775,28 +871,39 @@ mod s10_4_keyword_set {
         // §5.2: the base-stat layer swaps, buffs and damage are kept — here the swap is R349's doubling.
         edit(&mut state, &ghoul.id, |c| c.radiant = true);
         assert_eq!(
-            serde_json::to_value(layers::face_of(&state, &live(&state, &ghoul.id))).expect("a face serialises"),
+            serde_json::to_value(layers::face_of(&state, &live(&state, &ghoul.id)))
+                .expect("a face serialises"),
             json!({ "attack": 6, "health": 6, "keywords": [{ "kind": "Pierce" }] })
         );
         let v = view(&state, &ghoul.id);
         assert_eq!((v.attack, v.max_health, v.health), (7, 7, 5));
         // The X on the instance is the base face's, never rewritten.
-        assert_eq!(live(&state, &ghoul.id).stats_override, Some(AttackHealth { attack: 3, health: 3 }));
+        assert_eq!(
+            live(&state, &ghoul.id).stats_override,
+            Some(AttackHealth { attack: 3, health: 3 })
+        );
 
         // A token that prints a Radiant form keeps its X on both faces, as §7's Bread Token does.
-        let bread = put(&mut state, &printed_radiant_token().id, p1(Row::Units, 2), json!({}));
+        let bread = put(
+            &mut state,
+            &printed_radiant_token().id,
+            p1(Row::Units, 2),
+            json!({}),
+        );
         edit(&mut state, &bread.id, |c| {
             c.stats_override = Some(AttackHealth { attack: 3, health: 3 });
             c.radiant = true;
         });
         assert_eq!(
-            serde_json::to_value(layers::face_of(&state, &live(&state, &bread.id))).expect("a face serialises"),
+            serde_json::to_value(layers::face_of(&state, &live(&state, &bread.id)))
+                .expect("a face serialises"),
             json!({ "attack": 3, "health": 3, "keywords": [{ "kind": "Rush" }] })
         );
     }
 
     #[test]
-    fn r46_r347_a_marked_indestructible_unit_stamps_the_turn_which_holds_its_taunt_off_that_turn_only_once_it_is_no_longer_indestructible() {
+    fn r46_r347_a_marked_indestructible_unit_stamps_the_turn_which_holds_its_taunt_off_that_turn_only_once_it_is_no_longer_indestructible()
+     {
         let mut state = board("taunt-suppression");
         state.turn = 4;
         let unit = put(&mut state, &indestructible.id, p1(Row::Units, 1), json!({}));
@@ -851,7 +958,9 @@ mod s10_4_keyword_set {
         assert!(has(&state, &shield.id, KeywordKind::DivineShield));
 
         let reborn = put(&mut state, &plain.id, p1(Row::Units, 2), json!({}));
-        edit(&mut state, &reborn.id, |c| c.granted_keywords = vec![Keyword::Reborn]);
+        edit(&mut state, &reborn.id, |c| {
+            c.granted_keywords = vec![Keyword::Reborn]
+        });
         assert!(has(&state, &reborn.id, KeywordKind::Reborn));
         // §4.5 step 4: a Reborn body comes back without Reborn.
         edit(&mut state, &reborn.id, |c| c.reborn_spent = Some(true));
@@ -873,7 +982,10 @@ mod s10_4_recomputation {
         let snapshot = serde_json::to_string(&state).expect("a state serialises");
         view(&state, &unit.id);
         view(&state, &unit.id);
-        assert_eq!(serde_json::to_string(&state).expect("a state serialises"), snapshot);
+        assert_eq!(
+            serde_json::to_string(&state).expect("a state serialises"),
+            snapshot
+        );
 
         // The instance carries the inputs, never the totals ("never store totals", §10.4).
         let fields = serde_json::to_value(live(&state, &unit.id)).expect("a card serialises");

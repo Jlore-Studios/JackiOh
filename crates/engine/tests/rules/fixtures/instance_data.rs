@@ -13,8 +13,8 @@
 use std::sync::LazyLock;
 
 use jackioh_engine::effects::{
-    buff_cards, choose_mode, choose_target, chosen_tuning_number, damage, degrade, discover_number, draw, enchant,
-    gain_brittle, give_brittle, grant_keyword_cards, set_number, upgrade,
+    buff_cards, choose_mode, choose_target, chosen_tuning_number, damage, degrade, discover_number, draw,
+    enchant, gain_brittle, give_brittle, grant_keyword_cards, set_number, upgrade,
 };
 use jackioh_engine::testkit::*;
 
@@ -427,8 +427,12 @@ fn constant_targets() -> Vec<TargetDecl> {
 fn chaos_turn() -> Hook {
     hook(|_ctx| {
         vec![
-            upgrade(json_as(json!({ "scope": { "side": "self", "zones": ["hand", "field"] }, "random": 1 }))),
-            degrade(json_as(json!({ "scope": { "side": "enemy", "zones": ["hand", "field"] }, "random": 1 }))),
+            upgrade(json_as(
+                json!({ "scope": { "side": "self", "zones": ["hand", "field"] }, "random": 1 }),
+            )),
+            degrade(json_as(
+                json!({ "scope": { "side": "enemy", "zones": ["hand", "field"] }, "random": 1 }),
+            )),
         ]
     })
 }
@@ -439,7 +443,9 @@ pub static INSTANCE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
             asker.id.clone(),
             both(Script {
                 death: Some(hook(|_ctx| {
-                    vec![choose_mode(json_as(json!({ "options": ["one", "two"], "step": ASKER_STEP })))]
+                    vec![choose_mode(json_as(
+                        json!({ "options": ["one", "two"], "step": ASKER_STEP }),
+                    ))]
                 })),
                 resume: IndexMap::from([(
                     ASKER_STEP,
@@ -463,13 +469,17 @@ pub static INSTANCE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
             CardScripts {
                 base: Script {
                     cry: Some(hook(|ctx| {
-                        vec![upgrade(json_as(json!({ "target": { "of": "self" }, "times": ctx.x })))]
+                        vec![upgrade(json_as(
+                            json!({ "target": { "of": "self" }, "times": ctx.x }),
+                        ))]
                     })),
                     ..Script::default()
                 },
                 radiant: Script {
                     cry: Some(hook(|ctx| {
-                        vec![upgrade(json_as(json!({ "target": { "of": "self" }, "times": 2 * ctx.x })))]
+                        vec![upgrade(json_as(
+                            json!({ "target": { "of": "self" }, "times": 2 * ctx.x }),
+                        ))]
                     })),
                     ..Script::default()
                 },
@@ -524,13 +534,17 @@ pub static INSTANCE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
             nerfer.id.clone(),
             both(Script {
                 cry: Some(hook(|_ctx| {
-                    vec![choose_target(json_as(json!({ "step": NERF_STEP, "scope": { "side": "any" } })))]
+                    vec![choose_target(json_as(
+                        json!({ "step": NERF_STEP, "scope": { "side": "any" } }),
+                    ))]
                 })),
                 resume: IndexMap::from([(
                     NERF_STEP,
                     hook(|ctx| {
                         let times = param(&*ctx, "times");
-                        vec![degrade(json_as(json!({ "target": { "of": "chosen" }, "times": times })))]
+                        vec![degrade(json_as(
+                            json!({ "target": { "of": "chosen" }, "times": times }),
+                        ))]
                     }),
                 )]),
                 ..Script::default()
@@ -542,7 +556,9 @@ pub static INSTANCE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
                 base: Script {
                     targets: constant_targets(),
                     cry: Some(hook(|_ctx| {
-                        vec![set_number(json_as(json!({ "target": { "of": "chosen" }, "which": "random", "value": 3 })))]
+                        vec![set_number(json_as(
+                            json!({ "target": { "of": "chosen" }, "which": "random", "value": 3 }),
+                        ))]
                     })),
                     ..Script::default()
                 },
@@ -578,7 +594,9 @@ pub static INSTANCE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
                     cry: Some(hook(|ctx| {
                         let cards = param(&*ctx, "cards");
                         vec![
-                            degrade(json_as(json!({ "scope": { "side": "enemy", "zones": ["library"] }, "random": cards }))),
+                            degrade(json_as(
+                                json!({ "scope": { "side": "enemy", "zones": ["library"] }, "random": cards }),
+                            )),
                             draw(json_as(json!({ "count": 1 }))),
                         ]
                     })),
@@ -587,7 +605,9 @@ pub static INSTANCE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
                 radiant: Script {
                     cry: Some(hook(|_ctx| {
                         vec![
-                            degrade(json_as(json!({ "scope": { "side": "enemy", "zones": ["library"] } }))),
+                            degrade(json_as(
+                                json!({ "scope": { "side": "enemy", "zones": ["library"] } }),
+                            )),
                             draw(json_as(json!({ "count": 1 }))),
                         ]
                     })),
@@ -638,7 +658,9 @@ pub static INSTANCE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
             educator.id.clone(),
             both(Script {
                 cry: Some(hook(|_ctx| {
-                    vec![enchant(json_as(json!({ "scope": { "zones": ["hand"] }, "enchantment": { "kind": "castOnDraw" } })))]
+                    vec![enchant(json_as(
+                        json!({ "scope": { "zones": ["hand"] }, "enchantment": { "kind": "castOnDraw" } }),
+                    ))]
                 })),
                 ..Script::default()
             }),

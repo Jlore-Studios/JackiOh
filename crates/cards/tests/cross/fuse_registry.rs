@@ -10,8 +10,8 @@
 //! scripts are built on lookup from the state (SURFACE §6.6), so this holds by construction; the test
 //! still proves it end to end.
 
-use jackioh_engine::testkit::*;
 use jackioh_engine::PlayerId::{P1, P2};
+use jackioh_engine::testkit::*;
 
 const SHREDDER: &str = "core-013";
 const MENACE: &str = "core-019";
@@ -55,7 +55,10 @@ fn through_json(state: &GameState) -> GameState {
 fn hero_after_p2_ends_turn(saved: &GameState) -> i32 {
     let mut state = through_json(saved);
     for player in [P1, P2] {
-        let result = reduce(&state, &Action::new(ActionBody::EndTurn, player, format!("fuse-{player}")));
+        let result = reduce(
+            &state,
+            &Action::new(ActionBody::EndTurn, player, format!("fuse-{player}")),
+        );
         assert_eq!(result.error, None);
         state = result.state;
     }

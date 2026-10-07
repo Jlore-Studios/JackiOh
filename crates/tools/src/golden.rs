@@ -35,8 +35,8 @@ use jackioh_engine::replay::{canonical, fnv1a32_utf16};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::subsystems::choose_action;
 use jackioh_engine::{
-    Action, CreateGameArgs, FoldArgs, GameEvent, GameOverReason, GameState, Handicap, PerPlayerOpt, PlayerId, Winner,
-    begin_game, create_game, fold, hash_state, legal_actions, reduce, view_for,
+    Action, CreateGameArgs, FoldArgs, GameEvent, GameOverReason, GameState, Handicap, PerPlayerOpt, PlayerId,
+    Winner, begin_game, create_game, fold, hash_state, legal_actions, reduce, view_for,
 };
 
 use crate::fuzz::{SeedHandicap, actor_of, decks_for_seed, handicap_decks_for_seed, handicap_for_seed};
@@ -137,8 +137,9 @@ fn hashed_state_text(state: &GameState) -> String {
 
 /// The canonical text of both seats' views, p1 first.
 fn view_texts(state: &GameState) -> [String; 2] {
-    [PlayerId::P1, PlayerId::P2]
-        .map(|player| canonical(&serde_json::to_value(view_for(state, player)).expect("a PlayerView serialises")))
+    [PlayerId::P1, PlayerId::P2].map(|player| {
+        canonical(&serde_json::to_value(view_for(state, player)).expect("a PlayerView serialises"))
+    })
 }
 
 fn events_text(events: &[GameEvent]) -> String {
@@ -225,7 +226,10 @@ fn write_diff(seed: &str, step: &str, which: &str, text: &str) -> String {
 
 /// The recorded hash at `key` (a string), or a description of what is there instead.
 fn recorded(snapshot: &Value, key: &str) -> String {
-    snapshot[key].as_str().map(str::to_string).unwrap_or_else(|| format!("<no `{key}` in the line>"))
+    snapshot[key]
+        .as_str()
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("<no `{key}` in the line>"))
 }
 
 /// Checks `s`, `v` and `e` of one snapshot (`begin`, or the state a step left with its events).
@@ -292,16 +296,33 @@ fn replay_game(seed: &str, game: &Value) -> Replayed {
         })
     };
     if game["v"].as_u64() != Some(u64::from(FORMAT_VERSION)) {
-        return Err(fail("begin", "line", format!("format version {FORMAT_VERSION}"), game["v"].to_string()));
+        return Err(fail(
+            "begin",
+            "line",
+            format!("format version {FORMAT_VERSION}"),
+            game["v"].to_string(),
+        ));
     }
     let args: CreateGameArgs = match serde_json::from_value(game["args"].clone()) {
         Ok(args) => args,
-        Err(error) => return Err(fail("begin", "line", "createGame's options".into(), error.to_string())),
+        Err(error) => {
+            return Err(fail(
+                "begin",
+                "line",
+                "createGame's options".into(),
+                error.to_string(),
+            ));
+        }
     };
 
     let begun = begin_game(&create_game(&args));
     if let Some(error) = begun.error {
-        return Err(fail("begin", "refused", "beginGame to set the game up".into(), format!("an error: {error}")));
+        return Err(fail(
+            "begin",
+            "refused",
+            "beginGame to set the game up".into(),
+            format!("an error: {error}"),
+        ));
     }
     let mut state = begun.state;
     check_snapshot(seed, "begin", None, &game["begin"], &state, &begun.events)?;
@@ -339,7 +360,12 @@ fn replay_game(seed: &str, game: &Value) -> Replayed {
             return Err(Box::new(Mismatch {
                 action: Some(action_json),
                 diff: Some(write_diff(seed, &label, "refused", &hashed_state_text(&state))),
-                ..*fail(&label, "refused", "reduce to apply the recorded action".into(), format!("a refusal: {error}"))
+                ..*fail(
+                    &label,
+                    "refused",
+                    "reduce to apply the recorded action".into(),
+                    format!("a refusal: {error}"),
+                )
             }));
         }
         state = result.state;
@@ -359,8 +385,8 @@ fn replay_game(seed: &str, game: &Value) -> Replayed {
 
 /// `hotseat-replay.test.ts`'s first assertion: the fixture folds with no refusal to its hash.
 fn check_hotseat() -> Result<String, String> {
-    let input: FoldArgs =
-        serde_json::from_str(HOTSEAT).map_err(|error| format!("the hotseat fixture is not a fold's input: {error}"))?;
+    let input: FoldArgs = serde_json::from_str(HOTSEAT)
+        .map_err(|error| format!("the hotseat fixture is not a fold's input: {error}"))?;
     let replayed = fold(&input);
     if let Some(first) = replayed.errors.first() {
         return Err(format!(
@@ -372,14 +398,20 @@ fn check_hotseat() -> Result<String, String> {
     }
     let hash = hash_state(&replayed.state);
     if hash != HOTSEAT_HASH {
-        return Err(format!("the hotseat fixture folds to {hash}, not {HOTSEAT_HASH} (SURFACE §5.2)"));
+        return Err(format!(
+            "the hotseat fixture folds to {hash}, not {HOTSEAT_HASH} (SURFACE §5.2)"
+        ));
     }
     Ok(hash)
 }
 
 fn run_check(args: &CheckArgs) -> Result<()> {
     let text = fs::read_to_string(&args.file).with_context(|| format!("reading {}", args.file.display()))?;
-    let lines: Vec<(usize, &str)> = text.lines().enumerate().filter(|(_, line)| !line.trim().is_empty()).collect();
+    let lines: Vec<(usize, &str)> = text
+        .lines()
+        .enumerate()
+        .filter(|(_, line)| !line.trim().is_empty())
+        .collect();
 
     // `None` for a game the --seed filter leaves out.
     let outcomes: Vec<Option<(String, Replayed)>> = lines
@@ -401,7 +433,10 @@ fn run_check(args: &CheckArgs) -> Result<()> {
                     return Some((seed, outcome));
                 }
             };
-            let seed = game["seed"].as_str().map(str::to_string).unwrap_or_else(|| format!("line-{}", index + 1));
+            let seed = game["seed"]
+                .as_str()
+                .map(str::to_string)
+                .unwrap_or_else(|| format!("line-{}", index + 1));
             if !args.seeds.is_empty() && !seed_number(&seed).is_some_and(|k| args.seeds.contains(&k)) {
                 return None;
             }
@@ -421,13 +456,21 @@ fn run_check(args: &CheckArgs) -> Result<()> {
         }
     }
     if games == 0 {
-        bail!("no golden game in {} matches --seed {:?}", args.file.display(), args.seeds);
+        bail!(
+            "no golden game in {} matches --seed {:?}",
+            args.file.display(),
+            args.seeds
+        );
     }
 
     for failure in &failures {
         println!("{}", failure.report());
     }
-    let hotseat = if args.seeds.is_empty() { Some(check_hotseat()) } else { None };
+    let hotseat = if args.seeds.is_empty() {
+        Some(check_hotseat())
+    } else {
+        None
+    };
     match &hotseat {
         Some(Ok(hash)) => println!("hotseat fixture: folds to {hash}"),
         Some(Err(message)) => println!("hotseat fixture: {message}"),
@@ -440,7 +483,10 @@ fn run_check(args: &CheckArgs) -> Result<()> {
     );
 
     if !failures.is_empty() {
-        bail!("{} of {games} golden games diverged from their TypeScript trace", failures.len());
+        bail!(
+            "{} of {games} golden games diverged from their TypeScript trace",
+            failures.len()
+        );
     }
     if let Some(Err(message)) = hotseat {
         bail!("{message}");
@@ -591,13 +637,23 @@ fn record_seed(k: u32) -> Result<GameLine> {
         }
         state = result.state;
         let Hashes { s, v, e } = hashes_of(&state, &result.events);
-        steps.push(StepLine { a: action, l, s, v, e });
+        steps.push(StepLine {
+            a: action,
+            l,
+            s,
+            v,
+            e,
+        });
     }
 
     Ok(GameLine {
         v: FORMAT_VERSION,
         seed: spec.seed.clone(),
-        args: LineArgs { seed: spec.seed, decks: spec.decks, handicaps: spec.handicaps },
+        args: LineArgs {
+            seed: spec.seed,
+            decks: spec.decks,
+            handicaps: spec.handicaps,
+        },
         begin,
         end: Ending {
             winner: state.result.as_ref().map(|result| result.winner),
@@ -613,10 +669,14 @@ fn run_bless(args: &BlessArgs) -> Result<()> {
         bail!("--seeds takes {PLAIN_FIRST}–{PLAIN_LAST}, not {}", args.seeds);
     }
     let handicapped = args.seeds / PLAIN_PER_HANDICAPPED;
-    let seeds: Vec<u32> =
-        (PLAIN_FIRST..=args.seeds).chain(HANDICAP_FIRST..HANDICAP_FIRST + handicapped).collect();
+    let seeds: Vec<u32> = (PLAIN_FIRST..=args.seeds)
+        .chain(HANDICAP_FIRST..HANDICAP_FIRST + handicapped)
+        .collect();
 
-    let games: Vec<GameLine> = seeds.par_iter().map(|&k| record_seed(k)).collect::<Result<Vec<_>>>()?;
+    let games: Vec<GameLine> = seeds
+        .par_iter()
+        .map(|&k| record_seed(k))
+        .collect::<Result<Vec<_>>>()?;
     let steps: usize = games.iter().map(|game| game.steps.len()).sum();
 
     let mut text = String::new();

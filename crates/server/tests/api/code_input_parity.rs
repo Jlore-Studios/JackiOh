@@ -33,8 +33,8 @@ use tower::ServiceExt;
 use jackioh_server::api::codes::DEFAULT_INVITE_CODE_MAX_USES;
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
-    API_MAX_BODY_BYTES, CODE_INPUT_MAX_LENGTH, INVITE_CODE_FORMAT, INVITE_CODE_GROUP_SIZE, INVITE_CODE_SEPARATOR,
-    REDEMPTION_IDENTICAL_ERROR, REDEMPTION_RESPONSE_FLOOR_MS,
+    API_MAX_BODY_BYTES, CODE_INPUT_MAX_LENGTH, INVITE_CODE_FORMAT, INVITE_CODE_GROUP_SIZE,
+    INVITE_CODE_SEPARATOR, REDEMPTION_IDENTICAL_ERROR, REDEMPTION_RESPONSE_FLOOR_MS,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::Db;
@@ -54,15 +54,22 @@ const PEPPER: &str = "code-input-parity-test-pepper-of-32-characters-or-more";
 
 /// The shared table (SURFACE §10.4): one row per typed or pasted input.
 fn code_input_cases() -> Vec<Value> {
-    let table: Value = serde_json::from_str(include_str!("../../../engine/tests/fixtures/code-input-cases.json"))
-        .expect("the shared table is JSON");
-    table.as_array().cloned().expect("the shared table is an array of rows")
+    let table: Value = serde_json::from_str(include_str!(
+        "../../../engine/tests/fixtures/code-input-cases.json"
+    ))
+    .expect("the shared table is JSON");
+    table
+        .as_array()
+        .cloned()
+        .expect("the shared table is an array of rows")
 }
 
 /// R145's refusal, exactly as it goes over the wire.
 fn identical_body() -> String {
-    serde_json::to_string(&json!({ "error": { "code": "invalid_code", "message": REDEMPTION_IDENTICAL_ERROR } }))
-        .expect("the body serialises")
+    serde_json::to_string(
+        &json!({ "error": { "code": "invalid_code", "message": REDEMPTION_IDENTICAL_ERROR } }),
+    )
+    .expect("the body serialises")
 }
 
 /// The environment `createTestDeps()` stood for: `E2E=1` (the fake store and fixture auth), the
@@ -70,10 +77,18 @@ fn identical_body() -> String {
 /// `json_request` writes.
 fn test_env() -> IndexMap<String, String> {
     let mut source = IndexMap::new();
-    for (name, value) in [("E2E", "1"), ("NODE_ENV", "test"), ("CODE_PEPPER", PEPPER), ("TRUSTED_PROXY_HOPS", "1")] {
+    for (name, value) in [
+        ("E2E", "1"),
+        ("NODE_ENV", "test"),
+        ("CODE_PEPPER", PEPPER),
+        ("TRUSTED_PROXY_HOPS", "1"),
+    ] {
         source.insert(name.to_string(), value.to_string());
     }
-    source.insert("CATALOG_VERSION".to_string(), jackioh_cards::catalog_version().to_string());
+    source.insert(
+        "CATALOG_VERSION".to_string(),
+        jackioh_cards::catalog_version().to_string(),
+    );
     source
 }
 
@@ -101,16 +116,30 @@ async fn fresh_server() -> Server {
     let env = app::load_server_env(&test_env()).expect("the test environment loads");
     let app = app::build(env).await.expect("the test app builds");
     store_of(&app).lock().await.reset();
-    Server { router: app::router(app.clone()), app }
+    Server {
+        router: app::router(app.clone()),
+        app,
+    }
 }
 
 impl Server {
     async fn send(&self, request: Request<Body>) -> Reply {
-        let response = self.router.clone().oneshot(request).await.expect("the router always answers");
+        let response = self
+            .router
+            .clone()
+            .oneshot(request)
+            .await
+            .expect("the router always answers");
         let status = response.status().as_u16();
         let headers = response.headers().clone();
-        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.expect("the body reads");
-        Reply { status, headers, text: String::from_utf8(bytes.to_vec()).expect("the body is UTF-8") }
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("the body reads");
+        Reply {
+            status,
+            headers,
+            text: String::from_utf8(bytes.to_vec()).expect("the body is UTF-8"),
+        }
     }
 }
 
@@ -126,7 +155,9 @@ fn from_json<T: DeserializeOwned>(value: Value) -> T {
 }
 
 fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
-    rows.iter().map(|row| serde_json::to_value(row).expect("a row serialises")).collect()
+    rows.iter()
+        .map(|row| serde_json::to_value(row).expect("a row serialises"))
+        .collect()
 }
 
 async fn attempts(server: &Server) -> Vec<Value> {
@@ -162,7 +193,11 @@ fn hmac_sha256_hex(key: &str, message: &str) -> String {
     let mut outer = Sha256::new();
     outer.update(&outer_pad);
     outer.update(&inner[..]);
-    outer.finalize().iter().map(|byte| format!("{byte:02x}")).collect()
+    outer
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 /// `formatCode(raw)`: groups of `INVITE_CODE_GROUP_SIZE` joined by `INVITE_CODE_SEPARATOR` (§9.4).
@@ -206,8 +241,14 @@ struct Seeded {
 async fn seed_caller(server: &Server, id: &str, status: &str) -> Seeded {
     let user_id = format!("user-{id}");
     let token = deps::add_user(&server.app, &user_id, &format!("{id}@example.test"), true);
-    let _ = store_of(&server.app).lock().await.seed_profile(json!({ "id": id, "userId": user_id, "status": status }));
-    Seeded { token, profile_id: id.to_string() }
+    let _ = store_of(&server.app)
+        .lock()
+        .await
+        .seed_profile(json!({ "id": id, "userId": user_id, "status": status }));
+    Seeded {
+        token,
+        profile_id: id.to_string(),
+    }
 }
 
 /// `jsonRequest("POST", "/api/codes/redeem", body, { token, ip })`.
@@ -223,7 +264,9 @@ fn redeem_request(body: Value, token: &str, ip: &str) -> Request<Body> {
 }
 
 async fn redeem(server: &Server, token: &str, code: &str, ip: &str) -> Reply {
-    server.send(redeem_request(json!({ "code": code }), token, ip)).await
+    server
+        .send(redeem_request(json!({ "code": code }), token, ip))
+        .await
 }
 
 /// `tables.profiles.find((row) => row.id === profileId)?.status`.
@@ -251,7 +294,9 @@ mod r191_b5_the_server_redeems_every_row_of_the_shared_table_as_the_client_reads
     async fn r191_b5_redeems_every_row_with_a_canonical_code() {
         let mut ran = 0;
         for (index, row) in code_input_cases().iter().enumerate() {
-            let Some(canonical) = row["canonical"].as_str() else { continue };
+            let Some(canonical) = row["canonical"].as_str() else {
+                continue;
+            };
             let name = row["name"].as_str().unwrap_or_default();
             let input = row["input"].as_str().expect("every row has an input");
             let ip = format!("198.51.100.{}", index + 1);
@@ -260,14 +305,26 @@ mod r191_b5_the_server_redeems_every_row_of_the_shared_table_as_the_client_reads
             let caller = seed_caller(&server, &format!("parity-{index}"), "pending").await;
             let minted = mint_exactly(&server, canonical).await;
             // PREMISE: the code on record is the row's canonical code.
-            assert_eq!(minted.split(INVITE_CODE_FORMAT.separator).collect::<String>(), canonical, "{name}");
+            assert_eq!(
+                minted.split(INVITE_CODE_FORMAT.separator).collect::<String>(),
+                canonical,
+                "{name}"
+            );
 
             let response = redeem(&server, &caller.token, input, &ip).await;
 
             assert_eq!(response.status, 200, "{name}: {}", response.text);
-            assert_eq!(status_of(&server, &caller.profile_id).await, json!("active"), "{name}");
+            assert_eq!(
+                status_of(&server, &caller.profile_id).await,
+                json!("active"),
+                "{name}"
+            );
             assert_eq!(codes(&server).await[0]["uses"], json!(1), "{name}");
-            let results: Vec<Value> = attempts(&server).await.iter().map(|attempt| attempt["result"].clone()).collect();
+            let results: Vec<Value> = attempts(&server)
+                .await
+                .iter()
+                .map(|attempt| attempt["result"].clone())
+                .collect();
             assert_eq!(results, vec![json!("ok")], "{name}");
             ran += 1;
         }
@@ -296,7 +353,11 @@ mod r191_b5_the_server_redeems_every_row_of_the_shared_table_as_the_client_reads
             assert_eq!(response.status, 400, "{name}");
             assert_eq!(response.text, identical_body(), "{name}");
             assert!(response.headers.get("retry-after").is_none(), "{name}");
-            assert_eq!(status_of(&server, &caller.profile_id).await, json!("pending"), "{name}");
+            assert_eq!(
+                status_of(&server, &caller.profile_id).await,
+                json!("pending"),
+                "{name}"
+            );
             assert_eq!(codes(&server).await[0]["uses"], json!(0), "{name}");
             // Past steps 2 and 3, so logged (step 4), under the operator-only reason.
             let logged = attempts(&server).await;
@@ -312,7 +373,8 @@ mod r191_an_empty_code_is_read_like_every_other_input_that_holds_no_code {
     use super::*;
 
     #[tokio::test(start_paused = true)]
-    async fn r191_empty_answers_exactly_as_dashes_and_a_space_do_the_account_s_own_refusal_included_never_bad_request() {
+    async fn r191_empty_answers_exactly_as_dashes_and_a_space_do_the_account_s_own_refusal_included_never_bad_request()
+     {
         let server = fresh_server().await;
         mint_exactly(&server, BASE_CODE).await;
         let active = seed_caller(&server, "empty-active", "active").await;
@@ -321,7 +383,13 @@ mod r191_an_empty_code_is_read_like_every_other_input_that_holds_no_code {
         // An active account is refused for its own state before any code is read (R145).
         let mut active_answers: Vec<String> = Vec::new();
         for (index, code) in ["", "----", " "].iter().enumerate() {
-            let response = redeem(&server, &active.token, code, &format!("198.51.100.{}", 220 + index)).await;
+            let response = redeem(
+                &server,
+                &active.token,
+                code,
+                &format!("198.51.100.{}", 220 + index),
+            )
+            .await;
             assert_eq!(response.status, 409, "{code:?}");
             active_answers.push(response.text);
         }
@@ -345,7 +413,13 @@ mod r191_an_empty_code_is_read_like_every_other_input_that_holds_no_code {
     async fn r191_a_code_that_is_not_a_string_at_all_is_still_a_malformed_request() {
         let server = fresh_server().await;
         let caller = seed_caller(&server, "number-code", "pending").await;
-        let response = server.send(redeem_request(json!({ "code": 42 }), &caller.token, "198.51.100.231")).await;
+        let response = server
+            .send(redeem_request(
+                json!({ "code": 42 }),
+                &caller.token,
+                "198.51.100.231",
+            ))
+            .await;
         assert_eq!(response.status, 400);
         assert_eq!(response.json()["error"]["code"], json!("bad_request"));
     }
@@ -407,10 +481,16 @@ mod r191_b6_a_code_longer_than_code_input_max_length {
 
         assert_eq!(huge_response.status, 400);
         assert_eq!(missing_response.status, 400);
-        assert_eq!(vec![huge_response.text, missing_response.text], vec![identical_body(), identical_body()]);
+        assert_eq!(
+            vec![huge_response.text, missing_response.text],
+            vec![identical_body(), identical_body()]
+        );
 
-        let huge_attempts: Vec<Value> =
-            attempts(&server).await.into_iter().filter(|row| row["profileId"] == json!(huge.profile_id)).collect();
+        let huge_attempts: Vec<Value> = attempts(&server)
+            .await
+            .into_iter()
+            .filter(|row| row["profileId"] == json!(huge.profile_id))
+            .collect();
         assert_eq!(huge_attempts.len(), 1);
         assert_eq!(huge_attempts[0]["result"], json!("rejected"));
         assert_eq!(huge_attempts[0]["reason"], json!("malformed"));
@@ -426,8 +506,13 @@ mod r191_b6_a_code_longer_than_code_input_max_length {
         let minted = mint_exactly(&server, BASE_CODE).await;
 
         let started_too_long = tokio::time::Instant::now();
-        let too_long_response =
-            redeem(&server, &too_long.token, &pad_end(&minted, CODE_INPUT_MAX_LENGTH + 1), "198.51.100.205").await;
+        let too_long_response = redeem(
+            &server,
+            &too_long.token,
+            &pad_end(&minted, CODE_INPUT_MAX_LENGTH + 1),
+            "198.51.100.205",
+        )
+        .await;
         let too_long_elapsed = started_too_long.elapsed().as_millis() as u64;
 
         let started_missing = tokio::time::Instant::now();
@@ -436,7 +521,13 @@ mod r191_b6_a_code_longer_than_code_input_max_length {
 
         assert_eq!(too_long_response.status, 400);
         assert_eq!(missing_response.status, 400);
-        assert!(too_long_elapsed >= REDEMPTION_RESPONSE_FLOOR_MS as u64, "{too_long_elapsed}");
-        assert!(missing_elapsed >= REDEMPTION_RESPONSE_FLOOR_MS as u64, "{missing_elapsed}");
+        assert!(
+            too_long_elapsed >= REDEMPTION_RESPONSE_FLOOR_MS as u64,
+            "{too_long_elapsed}"
+        );
+        assert!(
+            missing_elapsed >= REDEMPTION_RESPONSE_FLOOR_MS as u64,
+            "{missing_elapsed}"
+        );
     }
 }

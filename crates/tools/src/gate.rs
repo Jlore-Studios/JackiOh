@@ -52,13 +52,15 @@ use serde_json::{Value, json};
 
 use jackioh_ai::{
     AI_BUDGET, AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_TUNING_SERIES, AiDeckOptions, AiOptions, GREEDY_EVAL,
-    GateGame, GateReport, MatchConfig, MatchHooks, Matchup, SHADOW_BAN, SeatController, binomial_tail, build_ai_deck,
-    candidate_actions, decide, game_config, gate_needed, gate_shard_games, greedy_action, play_match,
-    run_gate_games,
+    GateGame, GateReport, MatchConfig, MatchHooks, Matchup, SHADOW_BAN, SeatController, binomial_tail,
+    build_ai_deck, candidate_actions, decide, game_config, gate_needed, gate_shard_games, greedy_action,
+    play_match, run_gate_games,
 };
 use jackioh_engine::config::{AI_DIFFICULTY, HUMAN_HANDICAP};
 use jackioh_engine::rng::Rng;
-use jackioh_engine::{ActionBody, GameOverReason, GameState, Handicap, PerPlayer, PlayerId, Winner, opponent_of};
+use jackioh_engine::{
+    ActionBody, GameOverReason, GameState, Handicap, PerPlayer, PlayerId, Winner, opponent_of,
+};
 
 /// `cargo jackioh gate …` (SURFACE §12).
 #[derive(clap::Args, Debug)]
@@ -125,8 +127,12 @@ pub(crate) fn matchup_name(matchup: Matchup) -> String {
 
 /// The matchup a literal names (`"ai-vs-greedy"` …), or an error listing the three.
 pub(crate) fn parse_matchup(text: &str) -> Result<Matchup> {
-    serde_json::from_value(Value::String(text.to_string()))
-        .map_err(|_| anyhow!("unknown matchup {text:?}: expected one of {}", MATCHUP_NAMES.join(", ")))
+    serde_json::from_value(Value::String(text.to_string())).map_err(|_| {
+        anyhow!(
+            "unknown matchup {text:?}: expected one of {}",
+            MATCHUP_NAMES.join(", ")
+        )
+    })
 }
 
 /// The three matchups, in TS's order.
@@ -184,14 +190,26 @@ fn deck_of(config: &MatchConfig, seat: PlayerId) -> &Vec<String> {
 
 /// `config.handicaps?.[seat] ?? HUMAN_HANDICAP`.
 fn handicap_of(config: &MatchConfig, seat: PlayerId) -> Handicap {
-    config.handicaps.as_ref().and_then(|handicaps| handicaps.get(seat)).copied().unwrap_or(HUMAN_HANDICAP)
+    config
+        .handicaps
+        .as_ref()
+        .and_then(|handicaps| handicaps.get(seat))
+        .copied()
+        .unwrap_or(HUMAN_HANDICAP)
 }
 
 /// Every seat's deck rule (R186 included): `buildAiDeck(createRng(`${seed}:deck:${seat}`),
 /// handicap.deckSize, { manaCap: handicap.manaCap })`.
 fn gate_deck(seed: &str, seat: PlayerId, handicap: &Handicap) -> Vec<String> {
     let mut rng = Rng::new(&format!("{seed}:deck:{seat}"), 0);
-    build_ai_deck(&mut rng, handicap.deck_size, &AiDeckOptions { mana_cap: Some(handicap.mana_cap), ..AiDeckOptions::default() })
+    build_ai_deck(
+        &mut rng,
+        handicap.deck_size,
+        &AiDeckOptions {
+            mana_cap: Some(handicap.mana_cap),
+            ..AiDeckOptions::default()
+        },
+    )
 }
 
 /// TS's `expect(…).toBe(…)` as a check: `Err` naming the label and both sides.
@@ -252,7 +270,9 @@ fn gate_shard(raw: Option<&str>) -> Result<Option<GateShard>> {
         }
     });
     match parsed {
-        Some((index, count)) if index >= 1 && count >= 1 && index <= count => Ok(Some(GateShard { index, count })),
+        Some((index, count)) if index >= 1 && count >= 1 && index <= count => {
+            Ok(Some(GateShard { index, count }))
+        }
         _ => bail!(
             "JACKIOH_AI_GATE_SHARD (--shard) must be \"k/K\" with 1 ≤ k ≤ K, not {}",
             serde_json::to_string(raw).unwrap_or_default()
@@ -293,7 +313,13 @@ struct ShardGame {
 
 /// Writes a shard's games to `dir` (`--out`, `JACKIOH_AI_GATE_OUT`, default `ai-gate-shards/` in the
 /// cwd) and answers the file's path.
-fn write_shard(run: &GateReport, total: i32, shard: GateShard, played: &[i32], dir: &Path) -> Result<PathBuf> {
+fn write_shard(
+    run: &GateReport,
+    total: i32,
+    shard: GateShard,
+    played: &[i32],
+    dir: &Path,
+) -> Result<PathBuf> {
     std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
     let file = ShardFile {
         matchup: matchup_name(run.matchup),
@@ -313,7 +339,12 @@ fn write_shard(run: &GateReport, total: i32, shard: GateShard, played: &[i32], d
             })
             .collect(),
     };
-    let path = dir.join(format!("{}-{}-of-{}.json", matchup_name(run.matchup), shard.index, shard.count));
+    let path = dir.join(format!(
+        "{}-{}-of-{}.json",
+        matchup_name(run.matchup),
+        shard.index,
+        shard.count
+    ));
     std::fs::write(&path, format!("{}\n", serde_json::to_string_pretty(&file)?))
         .with_context(|| format!("writing {}", path.display()))?;
     Ok(path)
@@ -354,7 +385,8 @@ fn merge(dir: &Path) -> Result<()> {
     let files = json_files(dir)?
         .iter()
         .map(|path| {
-            let text = std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+            let text =
+                std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
             serde_json::from_str::<ShardFile>(&text).with_context(|| format!("parsing {}", path.display()))
         })
         .collect::<Result<Vec<_>>>()?;
@@ -367,7 +399,11 @@ fn merge(dir: &Path) -> Result<()> {
         let mut games: Vec<&ShardGame> = Vec::new();
         for file in files.iter().filter(|file| file.matchup == name) {
             if file.total != total {
-                bail!("{name}: shard {} played a run of {}, not {total}", file.shard, file.total);
+                bail!(
+                    "{name}: shard {} played a run of {}, not {total}",
+                    file.shard,
+                    file.total
+                );
             }
             games.extend(file.games.iter());
         }
@@ -387,7 +423,11 @@ fn merge(dir: &Path) -> Result<()> {
                 doubled.push(n);
             }
         }
-        let strays: Vec<i32> = seen.keys().copied().filter(|n| !(*n >= 1 && *n <= total)).collect();
+        let strays: Vec<i32> = seen
+            .keys()
+            .copied()
+            .filter(|n| !(*n >= 1 && *n <= total))
+            .collect();
 
         let wins = games.iter().filter(|game| game.won).count();
         let draws = games.iter().filter(|game| game.turn_cap_draw).count();
@@ -412,7 +452,11 @@ fn merge(dir: &Path) -> Result<()> {
             problems.push(format!("{name}: {wins} wins, {needed} needed; not won: {lost}"));
         }
     }
-    if problems.is_empty() { Ok(()) } else { Err(anyhow!(problems.join("\n"))) }
+    if problems.is_empty() {
+        Ok(())
+    } else {
+        Err(anyhow!(problems.join("\n")))
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -423,13 +467,28 @@ fn merge(dir: &Path) -> Result<()> {
 /// handicaps by `runGateGames` to fill replayHash/replayErrors. One game per rayon task, collected in
 /// the listed order.
 fn play_gate(matchup: Matchup, played: &[i32]) -> GateReport {
-    let per_game: Vec<Vec<GateGame>> =
-        played.par_iter().map(|&n| run_gate_games(matchup, &[n], AI_GATE_BUDGET).games).collect();
+    let per_game: Vec<Vec<GateGame>> = played
+        .par_iter()
+        .map(|&n| run_gate_games(matchup, &[n], AI_GATE_BUDGET).games)
+        .collect();
     let games: Vec<GateGame> = per_game.into_iter().flatten().collect();
     let wins = games.iter().filter(|game| game.won).count() as i32;
-    let turn_cap_draws = games.iter().filter(|game| is_turn_cap_draw(&game.record.result)).count() as i32;
-    let rate = if games.is_empty() { 0.0 } else { f64::from(wins) / games.len() as f64 };
-    GateReport { matchup, games, wins, turn_cap_draws, rate }
+    let turn_cap_draws = games
+        .iter()
+        .filter(|game| is_turn_cap_draw(&game.record.result))
+        .count() as i32;
+    let rate = if games.is_empty() {
+        0.0
+    } else {
+        f64::from(wins) / games.len() as f64
+    };
+    GateReport {
+        matchup,
+        games,
+        wins,
+        turn_cap_draws,
+        rate,
+    }
 }
 
 /// The seeds the subject did not win, each with its seat and result.
@@ -437,7 +496,14 @@ fn losing_seeds(run: &GateReport) -> String {
     run.games
         .iter()
         .filter(|game| !game.won)
-        .map(|game| format!("{} ({}, {})", game.seed, game.subject_seat, result_json(&game.record.result)))
+        .map(|game| {
+            format!(
+                "{} ({}, {})",
+                game.seed,
+                game.subject_seat,
+                result_json(&game.record.result)
+            )
+        })
         .collect::<Vec<_>>()
         .join(", ")
 }
@@ -454,24 +520,44 @@ fn check_game_config(matchup: Matchup) -> Result<()> {
         let seed = gate_seed(matchup, n);
         let subject = subject_seat_of(n);
         let other = opponent_of(subject);
-        let subject_handicap = if hard_vs_easy { AI_DIFFICULTY.hard } else { AI_DIFFICULTY.easy };
+        let subject_handicap = if hard_vs_easy {
+            AI_DIFFICULTY.hard
+        } else {
+            AI_DIFFICULTY.easy
+        };
         let easy = AI_DIFFICULTY.easy;
         let label = format!("{name} game {n}");
 
         expect_eq(config.seed.as_str(), seed.as_str(), &format!("{label}: seed"))?;
         expect_eq(
             &config.controllers[subject],
-            &SeatController::Ai { budget: Some(AI_GATE_BUDGET) },
+            &SeatController::Ai {
+                budget: Some(AI_GATE_BUDGET),
+            },
             &format!("{label}: the subject's controller"),
         )?;
         let opponent = match name.as_str() {
             "ai-vs-random" => SeatController::Random,
             "ai-vs-greedy" => SeatController::Greedy,
-            _ => SeatController::Ai { budget: Some(AI_GATE_BUDGET) },
+            _ => SeatController::Ai {
+                budget: Some(AI_GATE_BUDGET),
+            },
         };
-        expect_eq(&config.controllers[other], &opponent, &format!("{label}: the opponent's controller"))?;
-        expect_eq(handicap_of(&config, subject), subject_handicap, &format!("{label}: the subject's handicap"))?;
-        expect_eq(handicap_of(&config, other), easy, &format!("{label}: the opponent's handicap"))?;
+        expect_eq(
+            &config.controllers[other],
+            &opponent,
+            &format!("{label}: the opponent's controller"),
+        )?;
+        expect_eq(
+            handicap_of(&config, subject),
+            subject_handicap,
+            &format!("{label}: the subject's handicap"),
+        )?;
+        expect_eq(
+            handicap_of(&config, other),
+            easy,
+            &format!("{label}: the opponent's handicap"),
+        )?;
 
         if hard_vs_easy {
             expect_eq(
@@ -479,14 +565,22 @@ fn check_game_config(matchup: Matchup) -> Result<()> {
                 subject_handicap.deck_size as usize,
                 &format!("{label}: the Hard deck's size"),
             )?;
-            expect_eq(deck_of(&config, other).len(), easy.deck_size as usize, &format!("{label}: the Easy deck's size"))?;
+            expect_eq(
+                deck_of(&config, other).len(),
+                easy.deck_size as usize,
+                &format!("{label}: the Easy deck's size"),
+            )?;
         }
         expect_eq(
             deck_of(&config, subject),
             &gate_deck(&seed, subject, &subject_handicap),
             &format!("{label}: the subject's deck"),
         )?;
-        expect_eq(deck_of(&config, other), &gate_deck(&seed, other, &easy), &format!("{label}: the opponent's deck"))?;
+        expect_eq(
+            deck_of(&config, other),
+            &gate_deck(&seed, other, &easy),
+            &format!("{label}: the opponent's deck"),
+        )?;
     }
     Ok(())
 }
@@ -518,11 +612,14 @@ fn check_gate_rule() -> Result<()> {
             let needed = needed(matchup, games);
             let label = format!("{}, {games} games: {needed}", matchup_name(matchup));
             // Never more than the brief asks for.
-            expect_that(needed <= brief_count(matchup, games), || format!("{label}: more than the brief asks for"))?;
-            // An AI exactly as strong as the one measured passes at least 1 - falseAlarm of the time...
-            expect_that(binomial_tail(games, measured, needed) >= 1.0 - false_alarm, || {
-                format!("{label}: an AI as strong as measured fails more often than falseAlarm")
+            expect_that(needed <= brief_count(matchup, games), || {
+                format!("{label}: more than the brief asks for")
             })?;
+            // An AI exactly as strong as the one measured passes at least 1 - falseAlarm of the time...
+            expect_that(
+                binomial_tail(games, measured, needed) >= 1.0 - false_alarm,
+                || format!("{label}: an AI as strong as measured fails more often than falseAlarm"),
+            )?;
             // ...and one more win would either break that or ask for more than the brief.
             let tighter = binomial_tail(games, measured, needed + 1) < 1.0 - false_alarm;
             expect_that(tighter || needed == brief_count(matchup, games), || {
@@ -537,7 +634,9 @@ fn check_gate_rule() -> Result<()> {
 /// by one deck rule.
 fn check_series(matchup: Matchup) -> Result<()> {
     expect_eq(AI_GATE.seed_series, "gate:v3", "AI_GATE.seedSeries")?;
-    expect_that(AI_TUNING_SERIES != AI_GATE.seed_series, || "AI_TUNING_SERIES is the gate's own series".to_string())?;
+    expect_that(AI_TUNING_SERIES != AI_GATE.seed_series, || {
+        "AI_TUNING_SERIES is the gate's own series".to_string()
+    })?;
     expect_eq(
         game_config(matchup, 1, AI_GATE_BUDGET, AI_GATE.seed_series).seed,
         gate_seed(matchup, 1),
@@ -574,19 +673,28 @@ fn check_greedy_frozen(matchup: Matchup) -> Result<()> {
     // Greedy plays both seats here, so the states come quickly.
     let config = game_config(matchup, GREEDY_PROBE_GAME, AI_GATE_BUDGET, AI_GATE.seed_series);
     let greedy_seat = PlayerId::P1;
-    expect_eq(&config.controllers[greedy_seat], &SeatController::Greedy, "game 2's p1 controller")?;
+    expect_eq(
+        &config.controllers[greedy_seat],
+        &SeatController::Greedy,
+        "game 2's p1 controller",
+    )?;
     let mut states: Vec<GameState> = Vec::new();
     {
         let mut hooks = MatchHooks {
-            after_action: Some(Box::new(|before: &GameState, _after: &GameState, seat: PlayerId, _action: &ActionBody| {
-                if seat == greedy_seat && before.pending.is_none() {
-                    states.push(before.clone());
-                }
-            })),
+            after_action: Some(Box::new(
+                |before: &GameState, _after: &GameState, seat: PlayerId, _action: &ActionBody| {
+                    if seat == greedy_seat && before.pending.is_none() {
+                        states.push(before.clone());
+                    }
+                },
+            )),
             ..MatchHooks::default()
         };
         let both_greedy = MatchConfig {
-            controllers: PerPlayer { p1: SeatController::Greedy, p2: SeatController::Greedy },
+            controllers: PerPlayer {
+                p1: SeatController::Greedy,
+                p2: SeatController::Greedy,
+            },
             max_actions: Some(GREEDY_PROBE_ACTIONS),
             ..config
         };
@@ -599,7 +707,9 @@ fn check_greedy_frozen(matchup: Matchup) -> Result<()> {
         states
             .iter()
             .enumerate()
-            .map(|(i, state)| greedy_action(state, greedy_seat, &mut Rng::new(&format!("greedy-probe:{i}"), 0)))
+            .map(|(i, state)| {
+                greedy_action(state, greedy_seat, &mut Rng::new(&format!("greedy-probe:{i}"), 0))
+            })
             .collect()
     };
     let before = decisions();
@@ -614,19 +724,37 @@ fn check_report(run: &GateReport, played: &[i32]) -> Result<()> {
     expect_eq(run.games.len(), played.len(), &format!("{name}: games played"))?;
     for (at, game) in run.games.iter().enumerate() {
         let n = played.get(at).copied().unwrap_or(0);
-        expect_eq(game.seed.as_str(), gate_seed(run.matchup, n).as_str(), &format!("{name} game {n}: seed"))?;
-        expect_eq(game.subject_seat, subject_seat_of(n), &format!("{name} game {n}: subject seat"))?;
-        let subject_won = game.record.result.as_ref().is_some_and(|result| result.winner == Winner::from(game.subject_seat));
+        expect_eq(
+            game.seed.as_str(),
+            gate_seed(run.matchup, n).as_str(),
+            &format!("{name} game {n}: seed"),
+        )?;
+        expect_eq(
+            game.subject_seat,
+            subject_seat_of(n),
+            &format!("{name} game {n}: subject seat"),
+        )?;
+        let subject_won = game
+            .record
+            .result
+            .as_ref()
+            .is_some_and(|result| result.winner == Winner::from(game.subject_seat));
         expect_eq(game.won, subject_won, &format!("{name} game {n}: won"))?;
     }
     // Only wins count: a draw at the turn cap is reported beside them and is a game the AI did not close.
     let wins = run.games.iter().filter(|game| game.won).count() as i32;
     expect_eq(run.wins, wins, &format!("{name}: wins"))?;
-    let capped = run.games.iter().filter(|game| is_turn_cap_draw(&game.record.result)).count() as i32;
+    let capped = run
+        .games
+        .iter()
+        .filter(|game| is_turn_cap_draw(&game.record.result))
+        .count() as i32;
     expect_eq(run.turn_cap_draws, capped, &format!("{name}: turn-cap draws"))?;
     if !played.is_empty() {
         let rate = f64::from(run.wins) / played.len() as f64;
-        expect_that((run.rate - rate).abs() < CLOSE_TO_10, || format!("{name}: rate {} is not {rate}", run.rate))?;
+        expect_that((run.rate - rate).abs() < CLOSE_TO_10, || {
+            format!("{name}: rate {} is not {rate}", run.rate)
+        })?;
     }
     Ok(())
 }
@@ -636,12 +764,20 @@ fn check_report(run: &GateReport, played: &[i32]) -> Result<()> {
 fn check_clean(run: &GateReport) -> Result<()> {
     for game in &run.games {
         let label = format!("{} ({})", game.seed, game.subject_seat);
-        expect_that(game.record.rejected.is_empty(), || format!("{label}: rejected {:?}", game.record.rejected))?;
-        expect_that(game.record.thrown.is_empty(), || format!("{label}: thrown {:?}", game.record.thrown))?;
+        expect_that(game.record.rejected.is_empty(), || {
+            format!("{label}: rejected {:?}", game.record.rejected)
+        })?;
+        expect_that(game.record.thrown.is_empty(), || {
+            format!("{label}: thrown {:?}", game.record.thrown)
+        })?;
         expect_eq(game.record.fallbacks as i64, 0, &format!("{label}: fallbacks"))?;
         expect_that(game.record.result.is_some(), || format!("{label}: no result"))?;
         expect_eq(game.replay_errors as i64, 0, &format!("{label}: replay errors"))?;
-        expect_eq(game.replay_hash.as_str(), game.record.hash.as_str(), &format!("{label}: replay hash"))?;
+        expect_eq(
+            game.replay_hash.as_str(),
+            game.record.hash.as_str(),
+            &format!("{label}: replay hash"),
+        )?;
     }
     Ok(())
 }
@@ -649,8 +785,16 @@ fn check_clean(run: &GateReport) -> Result<()> {
 /// The checks that read no game, per matchup, in the order its TS gate file ran them.
 fn config_checks(matchup: Matchup) -> Vec<Result<()>> {
     match matchup_name(matchup).as_str() {
-        "ai-vs-random" => vec![check_game_config(matchup), check_binomial_tail(), check_gate_rule()],
-        "ai-vs-greedy" => vec![check_game_config(matchup), check_series(matchup), check_greedy_frozen(matchup)],
+        "ai-vs-random" => vec![
+            check_game_config(matchup),
+            check_binomial_tail(),
+            check_gate_rule(),
+        ],
+        "ai-vs-greedy" => vec![
+            check_game_config(matchup),
+            check_series(matchup),
+            check_greedy_frozen(matchup),
+        ],
         _ => vec![check_game_config(matchup)],
     }
 }
@@ -667,7 +811,10 @@ fn gate_matchup(matchup: Matchup, full: bool, shard: Option<GateShard>, out: &Pa
         None => String::new(),
         Some(shard) => format!(", shard {}/{}: {} played", shard.index, shard.count, played.len()),
     };
-    println!("gate {name} ({}: {games} games{shard_label})", if full { "full" } else { "smoke" });
+    println!(
+        "gate {name} ({}: {games} games{shard_label})",
+        if full { "full" } else { "smoke" }
+    );
 
     let mut problems: Vec<String> = config_checks(matchup)
         .into_iter()
@@ -772,20 +919,27 @@ fn decision_states(played: &[i32]) -> Result<Vec<(i32, PlayerId, GameState)>> {
     for &n in played {
         let seat = subject_seat_of(n);
         let mut hooks = MatchHooks {
-            after_action: Some(Box::new(|before: &GameState, _after: &GameState, actor: PlayerId, _action: &ActionBody| {
-                if actor == seat {
-                    states.push((n, seat, before.clone()));
-                }
-            })),
+            after_action: Some(Box::new(
+                |before: &GameState, _after: &GameState, actor: PlayerId, _action: &ActionBody| {
+                    if actor == seat {
+                        states.push((n, seat, before.clone()));
+                    }
+                },
+            )),
             ..MatchHooks::default()
         };
-        play_match(&game_config(greedy, n, AI_BUDGET, AI_GATE.seed_series), &mut hooks);
+        play_match(
+            &game_config(greedy, n, AI_BUDGET, AI_GATE.seed_series),
+            &mut hooks,
+        );
     }
     Ok(states)
 }
 
 /// The wide boards: p1 (the AI) to act on turn 9, no lethal on the board, hundreds of candidates.
-const WIDE_HAND: [&str; 6] = ["core-055", "core-024", "core-074", "core-035", "core-031", "core-044"];
+const WIDE_HAND: [&str; 6] = [
+    "core-055", "core-024", "core-074", "core-035", "core-031", "core-044",
+];
 const WIDE_FIELD: [&str; 5] = ["core-020", "core-008", "core-011", "core-045", "core-030"];
 const WIDE_ENEMY: [&str; 5] = ["core-019", "core-025", "core-037", "core-032", "core-068"];
 /// The wide boards' turn, and their crystals at Hard and at Easy.
@@ -808,7 +962,10 @@ fn wide_boards() -> Vec<(&'static str, Value)> {
             "p2": { "field": WIDE_ENEMY, "health": WIDE_ENEMY_HEALTH },
         })
     };
-    vec![("wide-hard", board(WIDE_HARD_MANA)), ("wide-easy", board(WIDE_EASY_MANA))]
+    vec![
+        ("wide-hard", board(WIDE_HARD_MANA)),
+        ("wide-easy", board(WIDE_EASY_MANA)),
+    ]
 }
 
 /// The wide board `name`'s state: `scenario({ seed: `perf-${name}`, active: "p1", turn: 9, ...setup })`.
@@ -828,8 +985,13 @@ fn yardstick_ms() -> Result<f64> {
     let started = Instant::now();
     for n in 1..=AI_GATE.calibration_games {
         let config = game_config(random, n, AI_BUDGET, AI_GATE.seed_series);
-        let both_random =
-            MatchConfig { controllers: PerPlayer { p1: SeatController::Random, p2: SeatController::Random }, ..config };
+        let both_random = MatchConfig {
+            controllers: PerPlayer {
+                p1: SeatController::Random,
+                p2: SeatController::Random,
+            },
+            ..config
+        };
         play_match(&both_random, &mut MatchHooks::default());
     }
     Ok(started.elapsed().as_secs_f64() * MS_PER_SECOND)
@@ -848,18 +1010,31 @@ fn time_decision(state: &GameState, seat: PlayerId, rng_seed: &str) -> Result<Ti
     for _ in 0..AI_GATE.perf_repeats {
         let unit = yardstick_ms()?;
         let started = Instant::now();
-        let mut options = AiOptions { rng: Rng::new(rng_seed, 0), budget: AI_BUDGET, should_stop: None };
+        let mut options = AiOptions {
+            rng: Rng::new(rng_seed, 0),
+            budget: AI_BUDGET,
+            should_stop: None,
+        };
         let decision = decide(state, seat, &mut options);
         let ms = started.elapsed().as_secs_f64() * MS_PER_SECOND;
         ratio = ratio.min(ms / unit);
         raw_ms = raw_ms.min(ms);
-        nodes = decision.as_ref().map_or(0, |decision| decision.stats.nodes as i64);
-        reason = decision.as_ref().map_or_else(|| "none".to_string(), |decision| literal(&decision.reason));
+        nodes = decision
+            .as_ref()
+            .map_or(0, |decision| decision.stats.nodes as i64);
+        reason = decision
+            .as_ref()
+            .map_or_else(|| "none".to_string(), |decision| literal(&decision.reason));
         if ratio * reference < limit {
             break;
         }
     }
-    Ok(Timing { ms: ratio * reference, raw_ms, nodes, reason })
+    Ok(Timing {
+        ms: ratio * reference,
+        raw_ms,
+        nodes,
+        reason,
+    })
 }
 
 /// B42: every decision of the perf games this process times (all of them, or its shard's: every
@@ -868,7 +1043,11 @@ fn time_decision(state: &GameState, seat: PlayerId, rng_seed: &str) -> Result<Ti
 /// every shard). `judge_time` false checks the node budget and the boards' width but not the clock
 /// (the unit tests' unoptimised build). Answers the problems found.
 fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<String> {
-    let games = if full { AI_GATE.perf_full_games } else { AI_GATE.perf_smoke_games };
+    let games = if full {
+        AI_GATE.perf_full_games
+    } else {
+        AI_GATE.perf_smoke_games
+    };
     let played = games_to_play(games, shard);
     let limit = AI_GATE.max_decision_ms;
     let budget_nodes = AI_BUDGET.nodes as i64;
@@ -876,7 +1055,10 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
         None => String::new(),
         Some(shard) => format!(", shard {}/{}: {} timed", shard.index, shard.count, played.len()),
     };
-    println!("gate perf: one decision at AI_BUDGET ({}: {games} game(s){shard_label})", if full { "full" } else { "smoke" });
+    println!(
+        "gate perf: one decision at AI_BUDGET ({}: {games} game(s){shard_label})",
+        if full { "full" } else { "smoke" }
+    );
     let mut problems: Vec<String> = Vec::new();
 
     // The yardstick's first run warms the caches; it is no measurement.
@@ -892,7 +1074,11 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
             Ok(states) => {
                 for (game, seat, state) in states {
                     match time_decision(&state, seat, &format!("perf:{game}:{}", state.turn)) {
-                        Ok(timing) => timed.push(Timed { game, turn: state.turn, timing }),
+                        Ok(timing) => timed.push(Timed {
+                            game,
+                            turn: state.turn,
+                            timing,
+                        }),
                         Err(error) => problems.push(format!("perf: {error:#}")),
                     }
                 }
@@ -904,10 +1090,19 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
         }
         for entry in &timed {
             if entry.timing.nodes > budget_nodes {
-                problems.push(format!("perf: over the node budget: {}", serde_json::to_string(entry).unwrap_or_default()));
+                problems.push(format!(
+                    "perf: over the node budget: {}",
+                    serde_json::to_string(entry).unwrap_or_default()
+                ));
             }
         }
-        if let Some(slowest) = timed.iter().reduce(|worst, entry| if entry.timing.ms > worst.timing.ms { entry } else { worst }) {
+        if let Some(slowest) = timed.iter().reduce(|worst, entry| {
+            if entry.timing.ms > worst.timing.ms {
+                entry
+            } else {
+                worst
+            }
+        }) {
             let line = serde_json::to_string(slowest).unwrap_or_default();
             println!("[gate perf] {} decision(s); slowest: {line}", timed.len());
             if judge_time && slowest.timing.ms >= limit {
@@ -920,7 +1115,9 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
         let state = wide_state(name, &setup);
         let candidates = candidate_actions(&state, PlayerId::P1).len();
         if candidates <= WIDE_MIN_CANDIDATES {
-            problems.push(format!("perf: {name}: {candidates} candidates, not more than {WIDE_MIN_CANDIDATES}"));
+            problems.push(format!(
+                "perf: {name}: {candidates} candidates, not more than {WIDE_MIN_CANDIDATES}"
+            ));
         }
         match time_decision(&state, PlayerId::P1, &format!("perf:{name}")) {
             Ok(timing) => {
@@ -968,7 +1165,11 @@ pub fn run(args: Args) -> Result<()> {
     }
     problems.extend(perf_gate(full, shard, true));
 
-    if problems.is_empty() { Ok(()) } else { Err(anyhow!("the gate failed:\n{}", problems.join("\n"))) }
+    if problems.is_empty() {
+        Ok(())
+    } else {
+        Err(anyhow!("the gate failed:\n{}", problems.join("\n")))
+    }
 }
 
 #[cfg(test)]
@@ -1000,7 +1201,8 @@ mod tests {
     }
 
     #[test]
-    fn b28_game_config_seats_the_easy_ai_against_the_random_policy_alternating_seats_with_the_specified_decks() {
+    fn b28_game_config_seats_the_easy_ai_against_the_random_policy_alternating_seats_with_the_specified_decks()
+     {
         jackioh_cards::register_all();
         check_game_config(parse_matchup("ai-vs-random").unwrap()).unwrap();
     }
@@ -1068,8 +1270,14 @@ mod tests {
     fn the_shard_switch_reads_k_of_k_and_refuses_anything_else() {
         assert_eq!(gate_shard(None).unwrap(), None);
         assert_eq!(gate_shard(Some("  ")).unwrap(), None);
-        assert_eq!(gate_shard(Some("2/3")).unwrap(), Some(GateShard { index: 2, count: 3 }));
-        assert_eq!(gate_shard(Some(" 1/1 ")).unwrap(), Some(GateShard { index: 1, count: 1 }));
+        assert_eq!(
+            gate_shard(Some("2/3")).unwrap(),
+            Some(GateShard { index: 2, count: 3 })
+        );
+        assert_eq!(
+            gate_shard(Some(" 1/1 ")).unwrap(),
+            Some(GateShard { index: 1, count: 1 })
+        );
         for bad in ["0/3", "4/3", "1/0", "a/b", "1/", "/2", "1-2", "1/2/3", "-1/2"] {
             let error = gate_shard(Some(bad)).unwrap_err().to_string();
             assert!(error.contains("must be \"k/K\""), "{bad}: {error}");
@@ -1079,8 +1287,13 @@ mod tests {
     #[test]
     fn every_shard_plays_every_kth_game_and_the_shards_together_play_each_once() {
         assert_eq!(games_to_play(5, None), vec![1, 2, 3, 4, 5]);
-        assert_eq!(games_to_play(10, Some(GateShard { index: 2, count: 3 })), vec![2, 5, 8]);
-        let mut all: Vec<i32> = (1..=3).flat_map(|index| games_to_play(10, Some(GateShard { index, count: 3 }))).collect();
+        assert_eq!(
+            games_to_play(10, Some(GateShard { index: 2, count: 3 })),
+            vec![2, 5, 8]
+        );
+        let mut all: Vec<i32> = (1..=3)
+            .flat_map(|index| games_to_play(10, Some(GateShard { index, count: 3 })))
+            .collect();
         all.sort_unstable();
         assert_eq!(all, (1..=10).collect::<Vec<_>>());
         assert!(games_to_play(1, Some(GateShard { index: 2, count: 2 })).is_empty());
@@ -1107,21 +1320,32 @@ mod tests {
                 })
                 .collect(),
         };
-        let write = |path: PathBuf, file: &ShardFile| std::fs::write(path, serde_json::to_string_pretty(file).unwrap()).unwrap();
+        let write = |path: PathBuf, file: &ShardFile| {
+            std::fs::write(path, serde_json::to_string_pretty(file).unwrap()).unwrap()
+        };
         for matchup in matchups() {
             let name = matchup_name(matchup);
             let total = full_seeds(matchup);
             let all: Vec<i32> = (1..=total).collect();
             let (first, second) = all.split_at(all.len() / 2);
-            write(dir.join(format!("{name}-1-of-2.json")), &shard_of(&name, total, first, true));
-            write(dir.join("nested").join(format!("{name}-2-of-2.json")), &shard_of(&name, total, second, true));
+            write(
+                dir.join(format!("{name}-1-of-2.json")),
+                &shard_of(&name, total, first, true),
+            );
+            write(
+                dir.join("nested").join(format!("{name}-2-of-2.json")),
+                &shard_of(&name, total, second, true),
+            );
         }
         merge(&dir).unwrap();
 
         // A game played twice fails the merge and is named.
         let name = MATCHUP_NAMES[0];
         let total = full_seeds(parse_matchup(name).unwrap());
-        write(dir.join(format!("{name}-extra.json")), &shard_of(name, total, &[1], true));
+        write(
+            dir.join(format!("{name}-extra.json")),
+            &shard_of(name, total, &[1], true),
+        );
         let error = merge(&dir).unwrap_err().to_string();
         assert!(error.contains("played twice [1]"), "{error}");
         std::fs::remove_dir_all(&dir).unwrap();

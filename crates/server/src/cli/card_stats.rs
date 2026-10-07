@@ -20,12 +20,12 @@ use anyhow::{anyhow, bail};
 use serde::Serialize;
 
 use jackioh_engine::wire::{
-    card_stats, format_card_stats, CardStatsFilter, CardStatsReport, GameMode, PilotFilter, SourceFilter,
-    DEFAULT_CARD_STATS_FILTER, GAME_MODES, PILOT_FILTERS, SOURCE_FILTERS,
+    CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, GAME_MODES, GameMode, PILOT_FILTERS,
+    PilotFilter, SOURCE_FILTERS, SourceFilter, card_stats, format_card_stats,
 };
 
-use crate::env::quoted;
 use crate::db::store::{Db, GameRecordQuery, StoreError};
+use crate::env::quoted;
 
 const USAGE: &str = "Usage: jackioh-server stats-cards [options]
 
@@ -58,7 +58,11 @@ fn one_of<T: Copy + Serialize>(name: &str, raw: &str, allowed: &[T]) -> anyhow::
         return Ok(*found);
     }
     let names: Vec<String> = allowed.iter().map(literal).collect();
-    bail!("--{name} must be one of {} (got {}).\n\n{USAGE}", names.join(", "), quoted(raw))
+    bail!(
+        "--{name} must be one of {} (got {}).\n\n{USAGE}",
+        names.join(", "),
+        quoted(raw)
+    )
 }
 
 /// TS's `/^--(?<name>[a-z]+)=(?<value>.+)$/u`: the name, then the value, or `None` when the argument
@@ -70,7 +74,11 @@ fn flag(arg: &str) -> Option<(&str, &str)> {
     if name.is_empty() || !name.bytes().all(|byte| byte.is_ascii_lowercase()) {
         return None;
     }
-    if value.is_empty() || value.chars().any(|ch| matches!(ch, '\n' | '\r' | '\u{2028}' | '\u{2029}')) {
+    if value.is_empty()
+        || value
+            .chars()
+            .any(|ch| matches!(ch, '\n' | '\r' | '\u{2028}' | '\u{2029}'))
+    {
         return None;
     }
     Some((name, value))
@@ -131,9 +139,10 @@ pub fn render_card_stats(
     }
     let table = format_card_stats(report, name_of);
     if let Some(card) = &options.card
-        && report.cards.is_empty() {
-            return format!("{table}\nNo deck the filter counts held {card}.");
-        }
+        && report.cards.is_empty()
+    {
+        return format!("{table}\nNo deck the filter counts held {card}.");
+    }
     table
 }
 

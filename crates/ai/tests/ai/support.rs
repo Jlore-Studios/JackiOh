@@ -56,10 +56,12 @@ pub fn ai_pool() -> Vec<String> {
 /// Every Trap and Field Trap id of every set: the only defs a face-down sample may take.
 pub fn trap_pool() -> Vec<String> {
     register_cards();
-    let mut ids: Vec<String> = query(&json_as::<CatalogQueryArgs>(json!({ "type": ["Trap", "Field Trap"] })))
-        .iter()
-        .map(|def| def.id.clone())
-        .collect();
+    let mut ids: Vec<String> = query(&json_as::<CatalogQueryArgs>(
+        json!({ "type": ["Trap", "Field Trap"] }),
+    ))
+    .iter()
+    .map(|def| def.id.clone())
+    .collect();
     ids.sort();
     ids
 }
@@ -95,7 +97,10 @@ pub fn on_field(state: &GameState, player: PlayerId, def_id: &str) -> bool {
 }
 
 pub fn in_graveyard(state: &GameState, player: PlayerId, def_id: &str) -> bool {
-    state.players[player].graveyard.iter().any(|card| card.def_id == def_id)
+    state.players[player]
+        .graveyard
+        .iter()
+        .any(|card| card.def_id == def_id)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -105,7 +110,9 @@ pub fn in_graveyard(state: &GameState, player: PlayerId, def_id: &str) -> bool {
 /// Whether `action` is one of `legal_actions(state, seat)`, compared by `action_key`.
 pub fn is_legal(state: &GameState, seat: PlayerId, action: impl Borrow<ActionBody>) -> bool {
     let key = action_key(action.borrow());
-    legal_actions(state, seat).iter().any(|legal| action_key(legal) == key)
+    legal_actions(state, seat)
+        .iter()
+        .any(|legal| action_key(legal) == key)
 }
 
 thread_local! {
@@ -123,7 +130,12 @@ pub fn act(state: &GameState, player_id: PlayerId, body: impl Borrow<ActionBody>
 }
 
 /// `act` with TS's optional `nonce` given.
-pub fn act_with_nonce(state: &GameState, player_id: PlayerId, body: impl Borrow<ActionBody>, nonce: &str) -> GameState {
+pub fn act_with_nonce(
+    state: &GameState,
+    player_id: PlayerId,
+    body: impl Borrow<ActionBody>,
+    nonce: &str,
+) -> GameState {
     let body: &ActionBody = body.borrow();
     let result = reduce(state, &Action::new(body.clone(), player_id, nonce));
     if let Some(error) = result.error {
@@ -223,7 +235,9 @@ pub fn all_out_attack(start: &GameState, attacker: PlayerId) -> GameState {
             .collect();
         let pick = attacks
             .iter()
-            .find(|action| matches!(action, ActionBody::Attack { target_id, .. } if *target_id == hero_target))
+            .find(
+                |action| matches!(action, ActionBody::Attack { target_id, .. } if *target_id == hero_target),
+            )
             .or_else(|| attacks.first())
             .cloned();
         let Some(pick) = pick else {
@@ -256,7 +270,10 @@ pub fn random_decks_sized(seed: &str, sizes: (i32, i32)) -> (Vec<String>, Vec<St
     let shuffled = create_rng(&format!("ai-test-decks:{seed}"), 0).shuffle(&core);
     let first = sizes.0 as usize;
     let second = sizes.1 as usize;
-    (shuffled[..first].to_vec(), shuffled[first..first + second].to_vec())
+    (
+        shuffled[..first].to_vec(),
+        shuffled[first..first + second].to_vec(),
+    )
 }
 
 /// A freshly dealt game: `begin_game` done, p1's mulligan open.

@@ -166,7 +166,10 @@ mod r265_the_mulligans_are_open_at_once {
                 .iter()
                 .flat_map(|&seat| first.state.players[seat].graveyard.iter())
                 .collect();
-            if played.iter().any(|card| card.def_id == hinder().id || card.def_id == cn_virus().id) {
+            if played
+                .iter()
+                .any(|card| card.def_id == hinder().id || card.def_id == cn_virus().id)
+            {
                 casts += 1;
             }
         }
@@ -177,7 +180,10 @@ mod r265_the_mulligans_are_open_at_once {
     #[test]
     fn r265_a_state_waiting_on_one_answer_survives_a_json_round_trip_and_goes_on_exactly_as_the_live_one() {
         let begun = begin_game(&new_game("r265-json", None)).state;
-        let waiting = act(&begun, input(json!({ "type": "mulligan", "keep": [], "playerId": "p2" })));
+        let waiting = act(
+            &begun,
+            input(json!({ "type": "mulligan", "keep": [], "playerId": "p2" })),
+        );
         let copy: GameState =
             serde_json::from_str(&serde_json::to_string(&waiting).expect("serialises")).expect("parses");
         assert_eq!(copy, waiting);
@@ -203,10 +209,16 @@ mod r265_a_game_that_ends_while_the_mulligans_are_open {
     #[test]
     fn r265_r216_closes_both_mulligans_with_the_game_so_no_view_offers_one_no_one_can_answer() {
         let begun = begin_game(&new_game("r265-concede", None)).state;
-        let waiting = act(&begun, input(json!({ "type": "mulligan", "keep": [], "playerId": "p1" })));
+        let waiting = act(
+            &begun,
+            input(json!({ "type": "mulligan", "keep": [], "playerId": "p1" })),
+        );
         for (state, who) in [(&begun, P1), (&waiting, P2), (&waiting, P1)] {
             let over = act(state, input(json!({ "type": "concede", "playerId": who })));
-            assert_eq!(over.result.map(|result| result.reason), Some(GameOverReason::Concede));
+            assert_eq!(
+                over.result.map(|result| result.reason),
+                Some(GameOverReason::Concede)
+            );
             assert!(over.mulligan.is_none());
             assert_eq!(mulligan_owed(&over), Vec::<PlayerId>::new());
             for seat in SEATS {
@@ -232,8 +244,14 @@ mod r266_an_answer_is_sealed_until_both_are_in {
     fn r266_the_other_seat_sees_that_a_seat_is_ready_and_nothing_of_what_it_kept() {
         let begun = begin_game(&new_game("r266", None)).state;
         let hand: Vec<String> = ids(&begun.players.p1.hand);
-        let kept_all = act(&begun, input(json!({ "type": "mulligan", "keep": hand, "playerId": "p1" })));
-        let kept_none = act(&begun, input(json!({ "type": "mulligan", "keep": [], "playerId": "p1" })));
+        let kept_all = act(
+            &begun,
+            input(json!({ "type": "mulligan", "keep": hand, "playerId": "p1" })),
+        );
+        let kept_none = act(
+            &begun,
+            input(json!({ "type": "mulligan", "keep": [], "playerId": "p1" })),
+        );
 
         // Nothing moves until p2 answers: p1's hand is as it was dealt.
         assert_eq!(ids(&kept_none.players.p1.hand), hand);
@@ -257,7 +275,11 @@ mod r266_an_answer_is_sealed_until_both_are_in {
                 ..
             }))
         ));
-        assert!(!serde_json::to_string(&seen).expect("serialises").contains("\"kept\""));
+        assert!(
+            !serde_json::to_string(&seen)
+                .expect("serialises")
+                .contains("\"kept\"")
+        );
 
         // p1 sees its own answer and waits on p2's, whose options it is never shown.
         let own = view_for(&kept_none, P1);
@@ -276,16 +298,28 @@ mod r266_an_answer_is_sealed_until_both_are_in {
                 pending_for: P2
             }))
         );
-        assert_eq!(view_for(&kept_all, P1).mulligan.and_then(|view| view.kept), Some(hand.clone()));
+        assert_eq!(
+            view_for(&kept_all, P1).mulligan.and_then(|view| view.kept),
+            Some(hand.clone())
+        );
 
         // An answer is a set (R221): two spellings of one answer are one state.
         let two_cards: Vec<String> = hand[..2].to_vec();
         let mut reversed = two_cards.clone();
         reversed.reverse();
-        let forwards = act(&begun, input(json!({ "type": "mulligan", "keep": two_cards, "playerId": "p1" })));
-        let backwards = act(&begun, input(json!({ "type": "mulligan", "keep": reversed, "playerId": "p1" })));
+        let forwards = act(
+            &begun,
+            input(json!({ "type": "mulligan", "keep": two_cards, "playerId": "p1" })),
+        );
+        let backwards = act(
+            &begun,
+            input(json!({ "type": "mulligan", "keep": reversed, "playerId": "p1" })),
+        );
         assert_eq!(hash_state(&backwards), hash_state(&forwards));
-        assert_eq!(view_for(&backwards, P1).mulligan.and_then(|view| view.kept), Some(two_cards));
+        assert_eq!(
+            view_for(&backwards, P1).mulligan.and_then(|view| view.kept),
+            Some(two_cards)
+        );
 
         // Before anyone answers, each seat sees its own prompt; after, the window is gone from the view.
         assert_eq!(
@@ -296,7 +330,10 @@ mod r266_an_answer_is_sealed_until_both_are_in {
                 kept: None
             })
         );
-        let done = act(&kept_none, input(json!({ "type": "mulligan", "keep": [], "playerId": "p2" })));
+        let done = act(
+            &kept_none,
+            input(json!({ "type": "mulligan", "keep": [], "playerId": "p2" })),
+        );
         for seat in SEATS {
             assert!(view_for(&done, seat).mulligan.is_none());
         }
@@ -308,7 +345,8 @@ mod r267_a_sealed_answer_is_read_against_the_hand_at_resolution {
     use super::*;
 
     #[test]
-    fn r267_returns_only_the_offered_cards_it_did_not_keep_that_are_still_in_the_hand_a_card_that_arrived_since_stays() {
+    fn r267_returns_only_the_offered_cards_it_did_not_keep_that_are_still_in_the_hand_a_card_that_arrived_since_stays()
+     {
         setup_catalog();
         // A cast-on-draw card that reaches into the other seat's hand: it discards one of its cards at
         // random and gives it a new one. p1's replacement draw casts it before p2's answer resolves.
@@ -364,10 +402,16 @@ mod r267_a_sealed_answer_is_read_against_the_hand_at_resolution {
 
         let offered: Vec<String> = ids(&state.players.p2.hand);
         let kept = offered[0].clone();
-        state = act(&state, input(json!({ "type": "mulligan", "keep": [kept], "playerId": "p2" })));
+        state = act(
+            &state,
+            input(json!({ "type": "mulligan", "keep": [kept], "playerId": "p2" })),
+        );
         // p1 returns one card; its replacement is the meddler, cast as it is drawn (§2.4, R70).
         let p1_keep: Vec<String> = ids(&state.players.p1.hand[1..]);
-        state = act(&state, input(json!({ "type": "mulligan", "keep": p1_keep, "playerId": "p1" })));
+        state = act(
+            &state,
+            input(json!({ "type": "mulligan", "keep": p1_keep, "playerId": "p1" })),
+        );
 
         let side = &state.players.p2;
         let discarded: Vec<String> = side
@@ -381,7 +425,10 @@ mod r267_a_sealed_answer_is_read_against_the_hand_at_resolution {
             .hand
             .iter()
             .find(|card| card.def_id == gift && !offered.contains(&card.id));
-        assert!(arrived.is_some(), "the card the meddler gave p2 is still in its hand");
+        assert!(
+            arrived.is_some(),
+            "the card the meddler gave p2 is still in its hand"
+        );
         assert!(ids(&side.hand).contains(&kept));
         // Returned: the offered cards p2 did not keep, less the one the meddler discarded.
         let returned: Vec<String> = offered
@@ -404,7 +451,8 @@ mod r268_a_mulligan_whose_clock_runs_out {
     use super::*;
 
     #[test]
-    fn r268_keeps_the_timing_out_seat_s_whole_hand_draws_nothing_from_the_rng_and_never_answers_the_other_seat_s() {
+    fn r268_keeps_the_timing_out_seat_s_whole_hand_draws_nothing_from_the_rng_and_never_answers_the_other_seat_s()
+     {
         let begun = begin_game(&new_game("r268", None)).state;
         let hand: Vec<String> = ids(&begun.players.p2.hand);
 
@@ -412,14 +460,21 @@ mod r268_a_mulligan_whose_clock_runs_out {
         assert_eq!(timed.error, None);
         assert_eq!(mulligan_owed(&timed.state), vec![P1]);
         assert_eq!(
-            timed.state.mulligan.as_ref().and_then(|seats| seats.p2.keep.clone()),
+            timed
+                .state
+                .mulligan
+                .as_ref()
+                .and_then(|seats| seats.p2.keep.clone()),
             Some(hand.clone())
         );
         assert_eq!(timed.state.rng_cursor, begun.rng_cursor);
         assert_eq!(timed.state.turn, 0);
 
         // A second expiry for a seat that has answered does nothing at all.
-        let again = reduce(&timed.state, &Action::new(ActionBody::Timeout, P2, "r268-p2-again"));
+        let again = reduce(
+            &timed.state,
+            &Action::new(ActionBody::Timeout, P2, "r268-p2-again"),
+        );
         assert_eq!(again.error, None);
         assert_eq!(again.state.mulligan, timed.state.mulligan);
         assert_eq!(again.state.rng_cursor, timed.state.rng_cursor);
@@ -428,10 +483,12 @@ mod r268_a_mulligan_whose_clock_runs_out {
         let p1_hand: Vec<String> = ids(&begun.players.p1.hand);
         let started = reduce(&again.state, &Action::new(ActionBody::Timeout, P1, "r268-p1"));
         assert_eq!(started.error, None);
-        assert!(!started
-            .events
-            .iter()
-            .any(|event| event.event_type() == GameEventType::ShuffledIn));
+        assert!(
+            !started
+                .events
+                .iter()
+                .any(|event| event.event_type() == GameEventType::ShuffledIn)
+        );
         assert_eq!(started.state.turn, 1);
         assert_eq!(started.state.active, P1);
         assert_eq!(ids(&started.state.players.p1.hand[..p1_hand.len()]), p1_hand);
@@ -447,13 +504,17 @@ mod r269_a_draw_offer_s_lifetime {
         let mut state = begin_game(&new_game(seed, None)).state;
         for player in SEATS {
             let keep: Vec<String> = ids(&state.players[player].hand);
-            state = act(&state, input(json!({ "type": "mulligan", "keep": keep, "playerId": player })));
+            state = act(
+                &state,
+                input(json!({ "type": "mulligan", "keep": keep, "playerId": player })),
+            );
         }
         state
     }
 
     #[test]
-    fn r269_stands_on_both_views_until_answered_or_until_its_offerer_s_turn_ends_and_a_lapsed_offer_blocks_nothing() {
+    fn r269_stands_on_both_views_until_answered_or_until_its_offerer_s_turn_ends_and_a_lapsed_offer_blocks_nothing()
+     {
         let mut state = playing("r269");
         for seat in SEATS {
             assert!(view_for(&state, seat).draw_offer.is_none());
@@ -464,9 +525,11 @@ mod r269_a_draw_offer_s_lifetime {
             assert_eq!(view_for(&state, seat).draw_offer, Some(DrawOfferView { by: P1 }));
         }
         assert!(legal_actions(&state, P2).contains(&ActionBody::AnswerDraw { accept: true }));
-        assert!(!legal_actions(&state, P1)
-            .iter()
-            .any(|action| action.action_type() == ActionType::OfferDraw));
+        assert!(
+            !legal_actions(&state, P1)
+                .iter()
+                .any(|action| action.action_type() == ActionType::OfferDraw)
+        );
 
         // p1 plays on and ends the turn without an answer: the offer lapses.
         state = act(&state, input(json!({ "type": "endTurn", "playerId": "p1" })));
@@ -478,7 +541,9 @@ mod r269_a_draw_offer_s_lifetime {
             &Action::new(ActionBody::AnswerDraw { accept: true }, P2, "r269-late"),
         );
         assert!(
-            late.error.as_deref().is_some_and(|error| error.contains("no draw offer")),
+            late.error
+                .as_deref()
+                .is_some_and(|error| error.contains("no draw offer")),
             "{:?}",
             late.error
         );
@@ -491,18 +556,26 @@ mod r269_a_draw_offer_s_lifetime {
 
         // An answered offer is gone at once, from both views.
         state = act(&state, input(json!({ "type": "offerDraw", "playerId": "p1" })));
-        state = act(&state, input(json!({ "type": "answerDraw", "accept": false, "playerId": "p2" })));
+        state = act(
+            &state,
+            input(json!({ "type": "answerDraw", "accept": false, "playerId": "p2" })),
+        );
         for seat in SEATS {
             assert!(view_for(&state, seat).draw_offer.is_none());
         }
-        assert!(!legal_actions(&state, P1)
-            .iter()
-            .any(|action| action.action_type() == ActionType::OfferDraw));
+        assert!(
+            !legal_actions(&state, P1)
+                .iter()
+                .any(|action| action.action_type() == ActionType::OfferDraw)
+        );
     }
 
     #[test]
     fn r269_r216_is_gone_once_the_game_is_over_however_it_ended() {
-        let offered = act(&playing("r269-over"), input(json!({ "type": "offerDraw", "playerId": "p1" })));
+        let offered = act(
+            &playing("r269-over"),
+            input(json!({ "type": "offerDraw", "playerId": "p1" })),
+        );
         for (who, body) in [
             (P2, json!({ "type": "concede" })),
             (P1, json!({ "type": "concede" })),
@@ -520,10 +593,16 @@ mod r269_a_draw_offer_s_lifetime {
 
     #[test]
     fn r269_does_not_survive_into_a_copy_of_the_state_as_anything_but_the_same_offer() {
-        let state = act(&playing("r269-json"), input(json!({ "type": "offerDraw", "playerId": "p1" })));
+        let state = act(
+            &playing("r269-json"),
+            input(json!({ "type": "offerDraw", "playerId": "p1" })),
+        );
         let copy = clone_state(&state);
         assert_eq!(view_for(&copy, P2).draw_offer, Some(DrawOfferView { by: P1 }));
-        let accepted = act(&copy, input(json!({ "type": "answerDraw", "accept": true, "playerId": "p2" })));
+        let accepted = act(
+            &copy,
+            input(json!({ "type": "answerDraw", "accept": true, "playerId": "p2" })),
+        );
         assert_eq!(
             accepted.result,
             Some(GameResult {

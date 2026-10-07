@@ -186,9 +186,15 @@ fn steps(entries: Vec<(&'static str, Hook)>) -> IndexMap<&'static str, Hook> {
 
 fn ping(amount: i32) -> Script {
     Script {
-        triggers: vec![TriggerDef::new("ping", &[GameEventType::CardPlayed], move |_ctx, _event| {
-            vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))]
-        })],
+        triggers: vec![TriggerDef::new(
+            "ping",
+            &[GameEventType::CardPlayed],
+            move |_ctx, _event| {
+                vec![damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": amount }),
+                ))]
+            },
+        )],
         ..Script::default()
     }
 }
@@ -199,7 +205,9 @@ fn scripts() -> Vec<(String, CardScripts)> {
             closer().id,
             both(Script {
                 end_of_turn: Some(hook(|_ctx| {
-                    vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
+                    vec![damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                    ))]
                 })),
                 ..Script::default()
             }),
@@ -208,7 +216,9 @@ fn scripts() -> Vec<(String, CardScripts)> {
             deathrattle().id,
             both(Script {
                 death: Some(hook(|_ctx| {
-                    vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 })))]
+                    vec![damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 2 }),
+                    ))]
                 })),
                 ..Script::default()
             }),
@@ -243,7 +253,9 @@ fn scripts() -> Vec<(String, CardScripts)> {
                     vec![]
                 })),
                 delayed: Some(hook(|_ctx| {
-                    vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 })))]
+                    vec![damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 2 }),
+                    ))]
                 })),
                 ..Script::default()
             }),
@@ -252,13 +264,17 @@ fn scripts() -> Vec<(String, CardScripts)> {
             asker().id,
             both(Script {
                 cry: Some(hook(|_ctx| {
-                    vec![choose_mode(json_as(json!({ "options": ["burn", "keep"], "step": "answered" })))]
+                    vec![choose_mode(json_as(
+                        json!({ "options": ["burn", "keep"], "step": "answered" }),
+                    ))]
                 })),
                 resume: steps(vec![(
                     "answered",
                     hook(|ctx| match ctx.targets.first() {
                         Some(Selection::Mode { option }) if option == "burn" => {
-                            vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
+                            vec![damage(json_as(
+                                json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                            ))]
                         }
                         _ => vec![],
                     }),
@@ -271,11 +287,17 @@ fn scripts() -> Vec<(String, CardScripts)> {
             both(Script {
                 static_flags: Some(json_as(json!({ "echo": 2 }))),
                 cry: Some(hook(|_ctx| {
-                    vec![choose_mode(json_as(json!({ "options": ["left", "right"], "step": "answered" })))]
+                    vec![choose_mode(json_as(
+                        json!({ "options": ["left", "right"], "step": "answered" }),
+                    ))]
                 })),
                 resume: steps(vec![(
                     "answered",
-                    hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]),
+                    hook(|_ctx| {
+                        vec![damage(json_as(
+                            json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                        ))]
+                    }),
                 )]),
                 ..Script::default()
             }),
@@ -284,9 +306,15 @@ fn scripts() -> Vec<(String, CardScripts)> {
         (
             ask_watcher().id,
             both(Script {
-                triggers: vec![TriggerDef::new("ask", &[GameEventType::CardPlayed], |_ctx, _event| {
-                    vec![choose_mode(json_as(json!({ "options": ["yes", "no"], "step": "answered" })))]
-                })],
+                triggers: vec![TriggerDef::new(
+                    "ask",
+                    &[GameEventType::CardPlayed],
+                    |_ctx, _event| {
+                        vec![choose_mode(json_as(
+                            json!({ "options": ["yes", "no"], "step": "answered" }),
+                        ))]
+                    },
+                )],
                 resume: steps(vec![("answered", hook(|_ctx| vec![]))]),
                 ..Script::default()
             }),
@@ -294,27 +322,45 @@ fn scripts() -> Vec<(String, CardScripts)> {
         (
             snap_trap().id,
             both(Script {
-                triggers: vec![TriggerDef::new("snap", &[GameEventType::Summoned], |_ctx, _event| {
-                    vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 })))]
-                })],
+                triggers: vec![TriggerDef::new(
+                    "snap",
+                    &[GameEventType::Summoned],
+                    |_ctx, _event| {
+                        vec![damage(json_as(
+                            json!({ "to": { "of": "enemyHero" }, "amount": 2 }),
+                        ))]
+                    },
+                )],
                 ..Script::default()
             }),
         ),
         (
             end_trap().id,
             both(Script {
-                triggers: vec![TriggerDef::new("toll", &[GameEventType::TurnEnded], |_ctx, _event| {
-                    vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
-                })],
+                triggers: vec![TriggerDef::new(
+                    "toll",
+                    &[GameEventType::TurnEnded],
+                    |_ctx, _event| {
+                        vec![damage(json_as(
+                            json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                        ))]
+                    },
+                )],
                 ..Script::default()
             }),
         ),
         (
             corpse().id,
             both(Script {
-                hand_triggers: vec![TriggerDef::new("eat", &[GameEventType::Destroyed], |_ctx, _event| {
-                    vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
-                })],
+                hand_triggers: vec![TriggerDef::new(
+                    "eat",
+                    &[GameEventType::Destroyed],
+                    |_ctx, _event| {
+                        vec![damage(json_as(
+                            json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                        ))]
+                    },
+                )],
                 ..Script::default()
             }),
         ),
@@ -322,7 +368,9 @@ fn scripts() -> Vec<(String, CardScripts)> {
             bolt().id,
             both(Script {
                 cry: Some(hook(|_ctx| {
-                    vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 })))]
+                    vec![damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 2 }),
+                    ))]
                 })),
                 ..Script::default()
             }),
@@ -409,7 +457,11 @@ fn observe(peaks: &mut Peaks, state: &GameState, events: &[GameEvent]) {
     peaks.delayed = peaks.delayed.max(state.delayed.len());
     peaks.dispatch = peaks.dispatch.max(state.dispatch.len());
     peaks.work = peaks.work.max(state.work.len());
-    if state.pending.as_ref().is_some_and(|pending| pending.kind != PromptKind::Mulligan) {
+    if state
+        .pending
+        .as_ref()
+        .is_some_and(|pending| pending.kind != PromptKind::Mulligan)
+    {
         peaks.card_prompts += 1;
     }
     peaks.traps_fired += events
@@ -470,7 +522,12 @@ fn play_scripted_game(seed: &str) -> (Walk, Vec<Action>) {
         };
 
         let action = Action::new(chosen, player, format!("a{}", log.len()));
-        let ReduceResult { state: next, events, error, .. } = reduce(&state, &action);
+        let ReduceResult {
+            state: next,
+            events,
+            error,
+            ..
+        } = reduce(&state, &action);
         if let Some(error) = error {
             panic!("{} rejected in {seed}: {error}", action.action_type());
         }
@@ -495,7 +552,12 @@ fn refold_walking(seed: &str, log: &[Action]) -> Walk {
     observe(&mut peaks, &state, &[]);
 
     for action in log {
-        let ReduceResult { state: next, events, error, .. } = reduce(&state, action);
+        let ReduceResult {
+            state: next,
+            events,
+            error,
+            ..
+        } = reduce(&state, action);
         if let Some(error) = error {
             panic!("{} rejected refolding {seed}: {error}", action.action_type());
         }

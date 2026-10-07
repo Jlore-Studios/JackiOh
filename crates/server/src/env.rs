@@ -91,7 +91,10 @@ impl std::fmt::Debug for Env {
             .field("supabase_secret_key", &REDACTED)
             .field("database_url", &REDACTED)
             .field("supabase_jwks_url", &self.supabase_jwks_url)
-            .field("supabase_jwt_secret", &self.supabase_jwt_secret.as_ref().map(|_| REDACTED))
+            .field(
+                "supabase_jwt_secret",
+                &self.supabase_jwt_secret.as_ref().map(|_| REDACTED),
+            )
             .field("code_pepper", &REDACTED)
             .field("port", &self.port)
             .field("public_origins", &self.public_origins)
@@ -116,7 +119,11 @@ pub struct EnvError {
 
 impl std::fmt::Display for EnvError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let lines: Vec<String> = self.problems.iter().map(|problem| format!("  - {problem}")).collect();
+        let lines: Vec<String> = self
+            .problems
+            .iter()
+            .map(|problem| format!("  - {problem}"))
+            .collect();
         write!(
             f,
             "Invalid server environment — {} problem(s):\n{}",
@@ -185,10 +192,7 @@ fn js_trim(value: &str) -> &str {
                 | '\u{2028}'
                 | '\u{2029}'
                 | '\u{1680}'
-                | '\u{2000}'..='\u{200A}'
-                | '\u{202F}'
-                | '\u{205F}'
-                | '\u{3000}'
+                | '\u{2000}'..='\u{200A}' | '\u{202F}' | '\u{205F}' | '\u{3000}'
         )
     }
     value.trim_matches(is_js_space)
@@ -217,9 +221,9 @@ pub(crate) fn js_number(text: &str) -> f64 {
             if digits.is_empty() || !digits.chars().all(|c| c.is_digit(radix)) {
                 return f64::NAN;
             }
-            return digits
-                .chars()
-                .fold(0.0, |total, c| total * f64::from(radix) + f64::from(c.to_digit(radix).unwrap_or(0)));
+            return digits.chars().fold(0.0, |total, c| {
+                total * f64::from(radix) + f64::from(c.to_digit(radix).unwrap_or(0))
+            });
         }
     }
     match trimmed {
@@ -242,7 +246,9 @@ fn is_non_empty(value: Option<&str>) -> bool {
 
 /// TS `new URL(value)` with `protocol === "https:"` (the WHATWG parser, which `reqwest::Url` is).
 fn parse_https_url(value: &str) -> Option<reqwest::Url> {
-    reqwest::Url::parse(value).ok().filter(|url| url.scheme() == "https")
+    reqwest::Url::parse(value)
+        .ok()
+        .filter(|url| url.scheme() == "https")
 }
 
 fn parse_port(value: Option<&str>, problems: &mut Vec<String>) -> u16 {
@@ -320,7 +326,9 @@ fn parse_trusted_proxy_hops(value: Option<&str>, problems: &mut Vec<String>) -> 
 fn parse_deployed_commit(value: Option<&str>) -> Option<String> {
     let trimmed = js_trim(value?).to_lowercase();
     let length = trimmed.len();
-    let hex = trimmed.chars().all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
+    let hex = trimmed
+        .chars()
+        .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
     ((7..=64).contains(&length) && hex).then_some(trimmed)
 }
 
@@ -409,7 +417,9 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
     // verification path, which is discouraged in favor of the JWKS/RS256/ES256 path above:
     // a shared secret that leaks lets an attacker mint arbitrary profile ids, whereas the JWKS
     // path only ever needs to trust Supabase's published public keys.
-    let supabase_jwt_secret = jwt_secret_raw.filter(|raw| is_non_empty(Some(raw))).map(str::to_string);
+    let supabase_jwt_secret = jwt_secret_raw
+        .filter(|raw| is_non_empty(Some(raw)))
+        .map(str::to_string);
 
     let code_pepper_raw = read("CODE_PEPPER");
     let mut code_pepper = String::new();

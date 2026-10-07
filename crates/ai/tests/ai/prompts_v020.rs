@@ -40,7 +40,9 @@ fn e18_def() -> CardDef {
 
 fn damage_enemy(amount: i32) -> Vec<Effect> {
     if amount > 0 {
-        vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))]
+        vec![effects::damage(json_as(
+            json!({ "to": { "of": "enemyHero" }, "amount": amount }),
+        ))]
     } else {
         Vec::new()
     }
@@ -49,7 +51,10 @@ fn damage_enemy(amount: i32) -> Vec<Effect> {
 fn continuations() -> Script {
     let mut resume: IndexMap<&'static str, Hook> = IndexMap::new();
     // The number picked is damage to the enemy hero.
-    resume.insert("number", hook(|ctx| damage_enemy(effects::chosen_number(ctx).unwrap_or(0))));
+    resume.insert(
+        "number",
+        hook(|ctx| damage_enemy(effects::chosen_number(ctx).unwrap_or(0))),
+    );
     // The picked cards' costs, summed, are damage to the enemy hero.
     resume.insert(
         "pick",
@@ -71,10 +76,15 @@ fn continuations() -> Script {
         hook(|ctx| {
             let cells = effects::chosen_cells(ctx);
             let state: &GameState = &*ctx.state;
-            let unit = cells.first().and_then(|cell| card_at(state, cell)).map(|card| card.id.clone());
+            let unit = cells
+                .first()
+                .and_then(|cell| card_at(state, cell))
+                .map(|card| card.id.clone());
             match unit {
                 None => Vec::new(),
-                Some(id) => vec![effects::destroy(json_as(json!({ "target": { "of": "instance", "instanceId": id } })))],
+                Some(id) => vec![effects::destroy(json_as(
+                    json!({ "target": { "of": "instance", "instanceId": id } }),
+                ))],
             }
         }),
     );
@@ -85,7 +95,9 @@ fn continuations() -> Script {
             let picked = effects::chosen_options(ctx).first().cloned();
             match picked.as_deref() {
                 Some("hurt-enemy") => damage_enemy(5),
-                Some("hurt-self") => vec![effects::damage(json_as(json!({ "to": { "of": "selfHero" }, "amount": 5 })))],
+                Some("hurt-self") => vec![effects::damage(json_as(
+                    json!({ "to": { "of": "selfHero" }, "amount": 5 }),
+                ))],
                 _ => Vec::new(),
             }
         }),
@@ -97,13 +109,18 @@ fn continuations() -> Script {
         hook(|ctx| {
             let picked = effects::chosen_options(ctx).first().cloned();
             match picked.as_deref() {
-                Some("owner-hurt") => vec![effects::damage(json_as(json!({ "to": { "of": "selfHero" }, "amount": 5 })))],
+                Some("owner-hurt") => vec![effects::damage(json_as(
+                    json!({ "to": { "of": "selfHero" }, "amount": 5 }),
+                ))],
                 Some("chooser-hurt") => damage_enemy(5),
                 _ => Vec::new(),
             }
         }),
     );
-    Script { resume, ..Script::default() }
+    Script {
+        resume,
+        ..Script::default()
+    }
 }
 
 /// TS's module-level `registerCatalog(…)` and `registerScripts(…)`: the real catalog and scripts plus
@@ -115,13 +132,23 @@ fn install() {
     register_catalog_as(catalog, catalog_version());
     let mut scripts = registered_scripts().clone();
     let script = continuations();
-    scripts.insert(E18.to_string(), CardScripts { base: script.clone(), radiant: script });
+    scripts.insert(
+        E18.to_string(),
+        CardScripts {
+            base: script.clone(),
+            radiant: script,
+        },
+    );
     register_scripts(scripts);
 }
 
 /// TS's `{ rng: createRng(seed) }`: AI_BUDGET, no clock.
 fn ai_options(seed: &str) -> AiOptions<'static> {
-    AiOptions { rng: create_rng(seed, 0), budget: AI_BUDGET, should_stop: None }
+    AiOptions {
+        rng: create_rng(seed, 0),
+        budget: AI_BUDGET,
+        should_stop: None,
+    }
 }
 
 /// TS's `{ ...base, ...over }` on two JSON objects (an absent `over` changes nothing).
@@ -141,7 +168,14 @@ fn opened(mut state: GameState, controller: PlayerId, effect: Effect) -> GameSta
     let mut rng = create_rng(&state.seed, state.rng_cursor);
     {
         let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
-        let mut ctx = make_context(&mut sink, None, HookOptions { controller: Some(controller), ..Default::default() });
+        let mut ctx = make_context(
+            &mut sink,
+            None,
+            HookOptions {
+                controller: Some(controller),
+                ..Default::default()
+            },
+        );
         ctx.def_id = Some(E18.to_string());
         (effect.apply)(&mut ctx);
     }
@@ -154,7 +188,10 @@ fn asked(seed: &str, effect: Effect, setup: Value, controller: PlayerId) -> Game
     install();
     let mut options = spread(json!({ "seed": seed }), Some(&setup));
     options["p1"] = spread(json!({ "library": ["core-053", "core-030"] }), setup.get("p1"));
-    options["p2"] = spread(json!({ "hand": ["core-005"], "library": ["core-053", "core-030"] }), setup.get("p2"));
+    options["p2"] = spread(
+        json!({ "hand": ["core-005"], "library": ["core-053", "core-030"] }),
+        setup.get("p2"),
+    );
     let state = scenario(options).state().clone();
     opened(state, controller, effect)
 }
@@ -182,7 +219,9 @@ fn selection_of(action: &ActionBody) -> Vec<Selection> {
 }
 
 fn mode(option: &str) -> Selection {
-    Selection::Mode { option: option.to_string() }
+    Selection::Mode {
+        option: option.to_string(),
+    }
 }
 
 mod e18_the_ai_answers_the_new_prompt_kinds {
@@ -194,7 +233,10 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         install();
         let effect = effects::choose_number(json_as(json!({ "step": "number", "from": 0, "to": 5 })));
         let state = asked("e18-number", effect, json!({}), AI);
-        assert_eq!(state.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Number));
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Number)
+        );
         assert_eq!(selection_of(&answered(&state, "e18-number")), vec![mode("5")]);
     }
 
@@ -216,7 +258,10 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
             json!({ "p1": { "graveyard": ["core-019", "core-020", "core-030", "core-008"] } }),
             AI,
         );
-        assert_eq!(state.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Pick));
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Pick)
+        );
         assert_eq!(state.pending.as_ref().and_then(|pending| pending.budget), Some(4));
         let picked: Vec<i32> = selection_of(&answered(&state, "e18-pick"))
             .iter()
@@ -243,10 +288,17 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
             json!({ "p1": { "field": ["core-008"] }, "p2": { "field": [{ "def": "core-020", "lane": 3 }] } }),
             AI,
         );
-        assert_eq!(state.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Cell));
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Cell)
+        );
         assert_eq!(
             selection_of(&answered(&state, "e18-cell")),
-            vec![Selection::Zone { player: HUMAN, row: Row::Units, lane: 3 }]
+            vec![Selection::Zone {
+                player: HUMAN,
+                row: Row::Units,
+                lane: 3
+            }]
         );
     }
 
@@ -261,8 +313,14 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         ]);
         let effect = effects::choose_reward(json_as(json!({ "step": "reward", "rewards": rewards })));
         let state = asked("e18-reward", effect, json!({}), AI);
-        assert_eq!(state.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Reward));
-        assert_eq!(selection_of(&answered(&state, "e18-reward")), vec![mode("hurt-enemy")]);
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Reward)
+        );
+        assert_eq!(
+            selection_of(&answered(&state, "e18-reward")),
+            vec![mode("hurt-enemy")]
+        );
     }
 
     /// E18: an `answer` prompt gets one of its options
@@ -277,11 +335,20 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
             "shuffle": false,
         })));
         let state = asked("e18-answer", effect, json!({}), AI);
-        assert_eq!(state.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Answer));
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Answer)
+        );
         let options: Vec<Selection> = state
             .pending
             .as_ref()
-            .map(|pending| pending.options.iter().map(|option| option.selection.clone()).collect())
+            .map(|pending| {
+                pending
+                    .options
+                    .iter()
+                    .map(|option| option.selection.clone())
+                    .collect()
+            })
             .unwrap_or_default();
         let picked = selection_of(&answered(&state, "e18-answer"));
         assert!(picked.first().is_some_and(|first| options.contains(first)));
@@ -289,7 +356,8 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
 
     /// E18: a mode prompt the opponent's card hands the AI, on the opponent's turn, is answered against the card's owner
     #[test]
-    fn e18_a_mode_prompt_the_opponents_card_hands_the_ai_on_the_opponents_turn_is_answered_against_the_cards_owner() {
+    fn e18_a_mode_prompt_the_opponents_card_hands_the_ai_on_the_opponents_turn_is_answered_against_the_cards_owner()
+     {
         // p2 plays a card whose question p1 answers (`by: "enemy"`); the answer runs as p2's.
         install();
         let effect = effects::choose_mode(json_as(json!({
@@ -304,13 +372,20 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
             HUMAN,
         );
         assert_eq!(state.active, HUMAN);
-        assert_eq!(state.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Mode));
-        assert_eq!(selection_of(&answered(&state, "e18-their-mode")), vec![mode("owner-hurt")]);
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Mode)
+        );
+        assert_eq!(
+            selection_of(&answered(&state, "e18-their-mode")),
+            vec![mode("owner-hurt")]
+        );
     }
 
     /// E18: the AI's own play opens mode prompts the opponent holds; the search answers them in simulation and the turn completes
     #[test]
-    fn e18_the_ais_own_play_opens_mode_prompts_the_opponent_holds_the_search_answers_them_in_simulation_and_the_turn_completes() {
+    fn e18_the_ais_own_play_opens_mode_prompts_the_opponent_holds_the_search_answers_them_in_simulation_and_the_turn_completes()
+     {
         // Pickle is the AI's only card: the opponent chooses three times, discarding from their own hand.
         install();
         let mut state = scenario(json!({
@@ -323,14 +398,21 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         let start = state.turn;
 
         let first = decide(&clone(&state), AI, &mut ai_options("e18-pickle"));
-        assert_eq!(first.as_ref().map(|decision| decision.action.action_type()), Some(ActionType::Play));
+        assert_eq!(
+            first.as_ref().map(|decision| decision.action.action_type()),
+            Some(ActionType::Play)
+        );
         assert_eq!(first.as_ref().map(|decision| decision.stats.sim_errors), Some(0));
 
         let mut decisions: Vec<Decision> = Vec::new();
         let mut human_answers = 0;
         let mut step = 0;
         while step < 40 && state.result.is_none() && state.turn == start {
-            let human_kind = state.pending.as_ref().filter(|pending| pending.player_id == HUMAN).map(|pending| pending.kind);
+            let human_kind = state
+                .pending
+                .as_ref()
+                .filter(|pending| pending.player_id == HUMAN)
+                .map(|pending| pending.kind);
             if let Some(kind) = human_kind {
                 assert!(kind == PromptKind::Mode || kind == PromptKind::Hand);
                 let answer = legal_actions(&state, HUMAN)
@@ -364,24 +446,43 @@ mod e18_a_whole_game_with_the_new_prompts {
 
     /// E18: playMatch finishes a short AI-vs-greedy game in which E18 prompts open, with no refusal, throw or fallback
     #[test]
-    fn e18_play_match_finishes_a_short_ai_vs_greedy_game_in_which_e18_prompts_open_with_no_refusal_throw_or_fallback() {
+    fn e18_play_match_finishes_a_short_ai_vs_greedy_game_in_which_e18_prompts_open_with_no_refusal_throw_or_fallback()
+     {
         // Pickle (mode prompts the opponent holds), Back from the GY (a budgeted pick), Mind Melt (a pick
         // of the opponent's hand) and Ancient Acquisition (no prompt since R684: its returns are random),
         // beside cheap Units: eight cards and a hero of 20, so that the game is short and the prompt cards
         // are drawn. On this seed greedy's Pickle
         // hands the AI three mode prompts on greedy's turn, and the AI's Back from the GY asks a pick.
         install();
-        let deck: Vec<String> =
-            [PICKLE, "classic-011", "classic-034", "classic-044", "core-008", "core-020", "core-030", "core-011"]
-                .iter()
-                .map(|id| id.to_string())
-                .collect();
-        let handicap = Handicap { deck_size: deck.len() as i32, hero_health: AI_TUTORIAL.hero_health, ..HUMAN_HANDICAP };
+        let deck: Vec<String> = [
+            PICKLE,
+            "classic-011",
+            "classic-034",
+            "classic-044",
+            "core-008",
+            "core-020",
+            "core-030",
+            "core-011",
+        ]
+        .iter()
+        .map(|id| id.to_string())
+        .collect();
+        let handicap = Handicap {
+            deck_size: deck.len() as i32,
+            hero_health: AI_TUTORIAL.hero_health,
+            ..HUMAN_HANDICAP
+        };
         let config = MatchConfig {
             seed: "e18-match".to_string(),
             decks: (deck.clone(), deck),
-            handicaps: Some(PerPlayerOpt { p1: Some(handicap), p2: Some(handicap) }),
-            controllers: PerPlayer { p1: SeatController::Ai { budget: None }, p2: SeatController::Greedy },
+            handicaps: Some(PerPlayerOpt {
+                p1: Some(handicap),
+                p2: Some(handicap),
+            }),
+            controllers: PerPlayer {
+                p1: SeatController::Ai { budget: None },
+                p2: SeatController::Greedy,
+            },
             max_actions: None,
         };
         let mut opened: Vec<String> = Vec::new();
@@ -389,10 +490,18 @@ mod e18_a_whole_game_with_the_new_prompts {
             let mut hooks = MatchHooks {
                 after_action: Some(Box::new(
                     |_before: &GameState, after: &GameState, _seat: PlayerId, _action: &ActionBody| {
-                        let Some(pending) = after.pending.as_ref() else { return };
+                        let Some(pending) = after.pending.as_ref() else {
+                            return;
+                        };
                         let theirs = pending.kind == PromptKind::Mode && pending.player_id != after.active;
-                        let new_kind = [PromptKind::Number, PromptKind::Answer, PromptKind::Cell, PromptKind::Reward, PromptKind::Pick]
-                            .contains(&pending.kind);
+                        let new_kind = [
+                            PromptKind::Number,
+                            PromptKind::Answer,
+                            PromptKind::Cell,
+                            PromptKind::Reward,
+                            PromptKind::Pick,
+                        ]
+                        .contains(&pending.kind);
                         if theirs || new_kind {
                             opened.push(pending.kind.as_str().to_string());
                         }

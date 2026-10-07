@@ -11,8 +11,8 @@
 
 use jackioh_ai::{AI_EVAL, NextSwing, evaluate, face_threat, unit_worth};
 use jackioh_engine::testkit::{
-    AI_DIFFICULTY, CardInstance, GameOverReason, GameResult, GameState, HERO_HEALTH, Phase, PlayerId, Value, Winner,
-    json,
+    AI_DIFFICULTY, CardInstance, GameOverReason, GameResult, GameState, HERO_HEALTH, Phase, PlayerId, Value,
+    Winner, json,
 };
 
 use super::support::{AI, clone, register_cards, scenario};
@@ -159,7 +159,9 @@ mod evaluate_b13 {
         let p1 = base()["p1"].clone();
         let none = board(json!({ "p1": p1, "p2": { "field": ["core-008"] } }));
         let one = board(json!({ "p1": p1, "p2": { "field": ["core-008"], "hand": ["core-005"] } }));
-        let three = board(json!({ "p1": p1, "p2": { "field": ["core-008"], "hand": ["core-005", "core-044", "core-035"] } }));
+        let three = board(
+            json!({ "p1": p1, "p2": { "field": ["core-008"], "hand": ["core-005", "core-044", "core-035"] } }),
+        );
         assert!(eval(&one, AI) < eval(&none, AI));
         assert!(eval(&three, AI) < eval(&one, AI));
     }
@@ -218,7 +220,8 @@ mod evaluate_the_strength_passs_terms {
         assert_eq!(face_threat(&state, AI), 0);
         let threat = AI_EVAL.threat_per_damage * 4.0;
         assert_close(
-            evaluate(&state, AI, NextSwing::Seat, &AI_EVAL) - evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL),
+            evaluate(&state, AI, NextSwing::Seat, &AI_EVAL)
+                - evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL),
             (1.0 - AI_EVAL.answerable_threat) * threat,
             10,
         );
@@ -229,7 +232,10 @@ mod evaluate_the_strength_passs_terms {
         let attack = board(json!({ "p1": { "field": ["core-008"] } }));
         let defense = board(json!({ "p1": { "field": [{ "def": "core-008", "position": "DEF" }] } }));
         let unit_in = |state: &GameState| -> Option<CardInstance> {
-            state.players[AI].units[0].as_ref().and_then(|pile| pile.first()).cloned()
+            state.players[AI].units[0]
+                .as_ref()
+                .and_then(|pile| pile.first())
+                .cloned()
         };
         let (Some(atk), Some(def)) = (unit_in(&attack), unit_in(&defense)) else {
             panic!("Mr. Vanilla is not on p1's field");
@@ -255,46 +261,70 @@ mod face_threat_b13 {
 
     #[test]
     fn b13_sums_the_enemys_attackers_into_our_face_when_nothing_blocks() {
-        assert_eq!(face_threat(&board(json!({ "p1": {}, "p2": { "field": enemy() } })), PlayerId::P2), 10);
-        assert_eq!(face_threat(&board(json!({ "p1": {}, "p2": {} })), PlayerId::P2), 0);
+        assert_eq!(
+            face_threat(
+                &board(json!({ "p1": {}, "p2": { "field": enemy() } })),
+                PlayerId::P2
+            ),
+            10
+        );
+        assert_eq!(
+            face_threat(&board(json!({ "p1": {}, "p2": {} })), PlayerId::P2),
+            0
+        );
     }
 
     #[test]
     fn b13_hero_armor_is_subtracted_from_each_hit_not_from_the_total() {
         assert_eq!(
-            face_threat(&board(json!({ "p1": { "armor": 2 }, "p2": { "field": enemy() } })), PlayerId::P2),
+            face_threat(
+                &board(json!({ "p1": { "armor": 2 }, "p2": { "field": enemy() } })),
+                PlayerId::P2
+            ),
             6
         );
     }
 
     #[test]
     fn b13_a_unit_in_defense_position_is_not_an_attacker() {
-        let state = board(json!({ "p1": {}, "p2": { "field": ["core-011", { "def": "core-020", "position": "DEF" }] } }));
+        let state = board(
+            json!({ "p1": {}, "p2": { "field": ["core-011", { "def": "core-020", "position": "DEF" }] } }),
+        );
         assert_eq!(face_threat(&state, PlayerId::P2), 3);
     }
 
     #[test]
     fn b13_a_big_taunt_soaks_up_every_attacker_that_its_health_covers_smallest_first() {
         assert_eq!(
-            face_threat(&board(json!({ "p1": { "field": ["core-019"] }, "p2": { "field": enemy() } })), PlayerId::P2),
+            face_threat(
+                &board(json!({ "p1": { "field": ["core-019"] }, "p2": { "field": enemy() } })),
+                PlayerId::P2
+            ),
             0
         );
     }
 
     #[test]
-    fn b13_a_small_taunt_with_divine_shield_soaks_the_smallest_attacker_plus_one_more_and_the_rest_get_through() {
+    fn b13_a_small_taunt_with_divine_shield_soaks_the_smallest_attacker_plus_one_more_and_the_rest_get_through()
+     {
         // Jilliax (3/2 Taunt, Divine Shield) against 3, 3 and 7: the two 3s are spent on it, 7 reaches us.
-        let state = board(json!({ "p1": { "field": ["core-056"] }, "p2": { "field": ["core-011", "core-008", "core-020"] } }));
+        let state = board(
+            json!({ "p1": { "field": ["core-056"] }, "p2": { "field": ["core-011", "core-008", "core-020"] } }),
+        );
         assert_eq!(face_threat(&state, PlayerId::P2), 7);
     }
 
     #[test]
-    fn b13_attack_is_read_through_the_layers_a_0_attack_unit_threatens_nothing_and_its_aura_drains_the_rest() {
+    fn b13_attack_is_read_through_the_layers_a_0_attack_unit_threatens_nothing_and_its_aura_drains_the_rest()
+    {
         // #65.1 Spikey Pillow (0/2, "your units have −2 attack") beside Tempo Timmy (3): only 1 gets through.
         let state = board(json!({ "p1": {}, "p2": { "field": ["core-065-1", "core-011"] } }));
         assert_eq!(face_threat(&state, PlayerId::P2), 1);
         assert_eq!(
-            face_threat(&board(json!({ "p1": {}, "p2": { "field": ["core-065-1"] } })), PlayerId::P2),
+            face_threat(
+                &board(json!({ "p1": {}, "p2": { "field": ["core-065-1"] } })),
+                PlayerId::P2
+            ),
             0
         );
     }

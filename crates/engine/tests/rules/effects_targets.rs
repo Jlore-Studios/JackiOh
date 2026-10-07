@@ -26,11 +26,17 @@ use super::fixtures::harness::{new_game, put, slot};
 // ---------------------------------------------------------------------------
 
 fn human() -> CardDef {
-    catalog_fx::unit_def(760, json!({ "id": "tg-human", "name": "Human (fixture)", "tags": ["Human"] }))
+    catalog_fx::unit_def(
+        760,
+        json!({ "id": "tg-human", "name": "Human (fixture)", "tags": ["Human"] }),
+    )
 }
 
 fn felinor() -> CardDef {
-    catalog_fx::unit_def(761, json!({ "id": "tg-felinor", "name": "Felinor (fixture)", "tags": ["Felinor"] }))
+    catalog_fx::unit_def(
+        761,
+        json!({ "id": "tg-felinor", "name": "Felinor (fixture)", "tags": ["Felinor"] }),
+    )
 }
 
 fn untagged() -> CardDef {
@@ -38,7 +44,10 @@ fn untagged() -> CardDef {
 }
 
 fn stackable() -> CardDef {
-    catalog_fx::unit_def(763, json!({ "id": "tg-stackable", "name": "Stackable (fixture)" }))
+    catalog_fx::unit_def(
+        763,
+        json!({ "id": "tg-stackable", "name": "Stackable (fixture)" }),
+    )
 }
 
 /// TS `{ ...spellDef(764, { id: "tg-field", name: "Field Spell (fixture)" }), type: "Field Spell" }`.
@@ -61,7 +70,11 @@ fn game() -> GameState {
 
 /// TS `ctxOf(state, self = null)`: a context over `sinkFor(state)` with p1 as the controller. A
 /// Rust context borrows the state, so the test's reads run inside `f`.
-fn with_ctx<R>(state: &mut GameState, self_: Option<&CardInstance>, f: impl FnOnce(&mut EffectContext<'_>) -> R) -> R {
+fn with_ctx<R>(
+    state: &mut GameState,
+    self_: Option<&CardInstance>,
+    f: impl FnOnce(&mut EffectContext<'_>) -> R,
+) -> R {
     let self_ = self_.cloned();
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -94,7 +107,9 @@ fn scope(literal: Value) -> BoardScope {
 
 /// TS held the live instance; Rust reads the card again by id.
 fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id).cloned().unwrap_or_else(|| panic!("no card {id} in the state"))
+    find_instance(state, id)
+        .cloned()
+        .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 fn to_json<T: Serialize>(value: T) -> Value {
@@ -111,7 +126,12 @@ mod target_spec_of_instance {
     #[test]
     fn resolves_a_card_by_the_id_a_script_captured_wherever_it_is() {
         let mut state = game();
-        let on_field = put(&mut state, &human().id, slot(PlayerId::P2, Row::Units, 3), json!({}));
+        let on_field = put(
+            &mut state,
+            &human().id,
+            slot(PlayerId::P2, Row::Units, 3),
+            json!({}),
+        );
         let on_field = live(&state, &on_field.id);
 
         with_ctx(&mut state, None, |ctx| {
@@ -129,21 +149,32 @@ mod target_spec_of_instance {
     #[test]
     fn resolves_a_card_that_has_left_the_field_so_a_delayed_step_can_still_name_it_r76() {
         let mut state = game();
-        let card = put(&mut state, &human().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let card = put(
+            &mut state,
+            &human().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         // The card dies; the id a Resume captured must still find it in the graveyard.
         let mut dead = live(&state, &card.id);
         state.players.p1.units[0] = None;
         dead.zone = Zone::Graveyard { player: PlayerId::P1 };
         state.players.p1.graveyard.push(dead.clone());
 
-        let found = with_ctx(&mut state, None, |ctx| to_json(instance_of(ctx, &instance_spec(&card.id))));
+        let found = with_ctx(&mut state, None, |ctx| {
+            to_json(instance_of(ctx, &instance_spec(&card.id)))
+        });
         assert_eq!(found, to_json(Some(&dead)));
     }
 
     #[test]
     fn answers_null_for_an_id_nothing_holds_so_the_verb_fizzles_and_the_card_still_resolves() {
         let mut state = game();
-        assert!(with_ctx(&mut state, None, |ctx| resolve_target(ctx, &instance_spec("c9999")).is_none()));
+        assert!(with_ctx(&mut state, None, |ctx| resolve_target(
+            ctx,
+            &instance_spec("c9999")
+        )
+        .is_none()));
     }
 }
 
@@ -157,11 +188,28 @@ mod cards_in_scope {
     #[test]
     fn defaults_to_every_unit_on_both_sides_and_no_backrow_card() {
         let mut state = game();
-        let mine = put(&mut state, &human().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
-        let theirs = put(&mut state, &felinor().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let backrow = put(&mut state, &field_spell().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let mine = put(
+            &mut state,
+            &human().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        let theirs = put(
+            &mut state,
+            &felinor().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        let backrow = put(
+            &mut state,
+            &field_spell().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
 
-        let found = with_ctx(&mut state, None, |ctx| ids_of(&cards_in_scope(ctx, &BoardScope::default())));
+        let found = with_ctx(&mut state, None, |ctx| {
+            ids_of(&cards_in_scope(ctx, &BoardScope::default()))
+        });
         assert!(found.contains(&mine.id));
         assert!(found.contains(&theirs.id));
         assert!(!found.contains(&backrow.id));
@@ -171,14 +219,37 @@ mod cards_in_scope {
     fn walks_r68_order_the_active_players_side_first_then_the_opponents_lane_1_upward() {
         let mut state = game();
         state.active = PlayerId::P2;
-        let p1_lane1 = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let p1_lane4 = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 4), json!({}));
-        let p2_lane2 = put(&mut state, &untagged().id, slot(PlayerId::P2, Row::Units, 2), json!({}));
-        let p2_lane5 = put(&mut state, &untagged().id, slot(PlayerId::P2, Row::Units, 5), json!({}));
+        let p1_lane1 = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let p1_lane4 = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 4),
+            json!({}),
+        );
+        let p2_lane2 = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P2, Row::Units, 2),
+            json!({}),
+        );
+        let p2_lane5 = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P2, Row::Units, 5),
+            json!({}),
+        );
 
         // p2 is active, so its side comes first, and within each side the lanes ascend.
         assert_eq!(
-            with_ctx(&mut state, None, |ctx| ids_of(&cards_in_scope(ctx, &BoardScope::default()))),
+            with_ctx(&mut state, None, |ctx| ids_of(&cards_in_scope(
+                ctx,
+                &BoardScope::default()
+            ))),
             vec![p2_lane2.id, p2_lane5.id, p1_lane1.id, p1_lane4.id]
         );
     }
@@ -187,8 +258,18 @@ mod cards_in_scope {
     fn reads_side_relative_to_the_controller_not_to_the_active_player() {
         let mut state = game();
         state.active = PlayerId::P2;
-        let mine = put(&mut state, &human().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let theirs = put(&mut state, &human().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let mine = put(
+            &mut state,
+            &human().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let theirs = put(
+            &mut state,
+            &human().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
 
         // controller is p1
         let (own, enemy) = with_ctx(&mut state, None, |ctx| {
@@ -204,11 +285,24 @@ mod cards_in_scope {
     #[test]
     fn covers_the_named_rows_so_a_permanents_scope_reaches_the_backrow_s6_3() {
         let mut state = game();
-        let unit = put(&mut state, &human().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let backrow = put(&mut state, &field_spell().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        let unit = put(
+            &mut state,
+            &human().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let backrow = put(
+            &mut state,
+            &field_spell().id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
 
         let found = with_ctx(&mut state, None, |ctx| {
-            ids_of(&cards_in_scope(ctx, &scope(json!({ "side": "self", "rows": ["units", "backrow"] }))))
+            ids_of(&cards_in_scope(
+                ctx,
+                &scope(json!({ "side": "self", "rows": ["units", "backrow"] })),
+            ))
         });
         // Rows are walked in the order given: every unit lane, then every backrow lane.
         assert_eq!(found, vec![unit.id, backrow.id]);
@@ -217,14 +311,35 @@ mod cards_in_scope {
     #[test]
     fn keeps_tags_and_rejects_not_tags_by_the_definition() {
         let mut state = game();
-        let the_human = put(&mut state, &human().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        put(&mut state, &felinor().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
-        let the_untagged = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let the_human = put(
+            &mut state,
+            &human().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &felinor().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        let the_untagged = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
 
         let (tagged, not_felinor) = with_ctx(&mut state, None, |ctx| {
             (
-                ids_of(&cards_in_scope(ctx, &scope(json!({ "side": "self", "tags": ["Human"] })))),
-                ids_of(&cards_in_scope(ctx, &scope(json!({ "side": "self", "notTags": ["Felinor"] })))),
+                ids_of(&cards_in_scope(
+                    ctx,
+                    &scope(json!({ "side": "self", "tags": ["Human"] })),
+                )),
+                ids_of(&cards_in_scope(
+                    ctx,
+                    &scope(json!({ "side": "self", "notTags": ["Felinor"] })),
+                )),
             )
         });
         assert_eq!(tagged, vec![the_human.id.clone()]);
@@ -235,8 +350,18 @@ mod cards_in_scope {
     #[test]
     fn filters_by_card_type() {
         let mut state = game();
-        let unit = put(&mut state, &human().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        put(&mut state, &field_spell().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &human().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &field_spell().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
 
         let found = with_ctx(&mut state, None, |ctx| {
             ids_of(&cards_in_scope(
@@ -250,11 +375,24 @@ mod cards_in_scope {
     #[test]
     fn exclude_self_leaves_the_card_running_the_script_standing_100_all_other_permanents() {
         let mut state = game();
-        let self_ = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let other = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let self_ = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let other = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
 
         let found = with_ctx(&mut state, Some(&self_), |ctx| {
-            ids_of(&cards_in_scope(ctx, &scope(json!({ "side": "self", "excludeSelf": true }))))
+            ids_of(&cards_in_scope(
+                ctx,
+                &scope(json!({ "side": "self", "excludeSelf": true })),
+            ))
         });
         assert_eq!(found, vec![other.id]);
         assert!(!found.contains(&self_.id));
@@ -265,20 +403,35 @@ mod cards_in_scope {
         let mut state = game();
         let ref_ = slot(PlayerId::P1, Row::Units, 1);
         let bottom = put(&mut state, &untagged().id, ref_, json!({}));
-        let top = state.players.p1.units[0].as_ref().and_then(|pile| pile.first()).cloned();
+        let top = state.players.p1.units[0]
+            .as_ref()
+            .and_then(|pile| pile.first())
+            .cloned();
         assert_eq!(top, Some(live(&state, &bottom.id)));
 
         // A Stack card lands on the occupied zone and becomes the only active card there.
-        let mut stacked = put(&mut state, &stackable().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let mut stacked = put(
+            &mut state,
+            &stackable().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         state.players.p1.units[1] = None;
         stacked.zone = Zone::Field {
             player: PlayerId::P1,
             row: Row::Units,
             lane: 1,
         };
-        assert!(place_on_field(&mut state, &mut stacked, ref_, PlaceOnFieldOptions { stack: Some(true) }));
+        assert!(place_on_field(
+            &mut state,
+            &mut stacked,
+            ref_,
+            PlaceOnFieldOptions { stack: Some(true) }
+        ));
 
-        let found = with_ctx(&mut state, None, |ctx| ids_of(&cards_in_scope(ctx, &scope(json!({ "side": "self" })))));
+        let found = with_ctx(&mut state, None, |ctx| {
+            ids_of(&cards_in_scope(ctx, &scope(json!({ "side": "self" }))))
+        });
         assert_eq!(found, vec![stacked.id.clone()]);
         assert!(!found.contains(&bottom.id));
     }
@@ -286,7 +439,13 @@ mod cards_in_scope {
     #[test]
     fn returns_nothing_for_an_empty_board_rather_than_throwing() {
         let mut state = game();
-        assert!(with_ctx(&mut state, None, |ctx| ids_of(&cards_in_scope(ctx, &BoardScope::default()))).is_empty());
+        assert!(
+            with_ctx(&mut state, None, |ctx| ids_of(&cards_in_scope(
+                ctx,
+                &BoardScope::default()
+            )))
+            .is_empty()
+        );
     }
 }
 
@@ -300,13 +459,37 @@ mod adjacent_to {
     #[test]
     fn takes_lanes_n_1_and_n_1_on_the_targets_own_side_and_row_never_lane_n_s3_1() {
         let mut state = game();
-        let left = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
-        let middle = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
-        let right = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 4), json!({}));
-        let far = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 5), json!({}));
+        let left = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        let middle = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
+        let right = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 4),
+            json!({}),
+        );
+        let far = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 5),
+            json!({}),
+        );
 
         let found = with_ctx(&mut state, None, |ctx| {
-            ids_of(&adjacent_to(ctx, &instance_spec(&middle.id), &BoardScope::default()))
+            ids_of(&adjacent_to(
+                ctx,
+                &instance_spec(&middle.id),
+                &BoardScope::default(),
+            ))
         });
         assert_eq!(found, vec![left.id, right.id]);
         assert!(!found.contains(&middle.id));
@@ -316,12 +499,31 @@ mod adjacent_to {
     #[test]
     fn never_crosses_to_the_other_side_even_in_the_facing_lane_s3_1() {
         let mut state = game();
-        let middle = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
-        let facing = put(&mut state, &untagged().id, slot(PlayerId::P2, Row::Units, 3), json!({}));
-        let facing_neighbour = put(&mut state, &untagged().id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let middle = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
+        let facing = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P2, Row::Units, 3),
+            json!({}),
+        );
+        let facing_neighbour = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P2, Row::Units, 2),
+            json!({}),
+        );
 
         let found = with_ctx(&mut state, None, |ctx| {
-            ids_of(&adjacent_to(ctx, &instance_spec(&middle.id), &BoardScope::default()))
+            ids_of(&adjacent_to(
+                ctx,
+                &instance_spec(&middle.id),
+                &BoardScope::default(),
+            ))
         });
         assert!(!found.contains(&facing.id));
         assert!(!found.contains(&facing_neighbour.id));
@@ -330,12 +532,31 @@ mod adjacent_to {
     #[test]
     fn never_crosses_rows_so_adjacent_in_its_row_needs_no_extra_filter_34() {
         let mut state = game();
-        let middle = put(&mut state, &field_spell().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
-        let backrow_neighbour = put(&mut state, &field_spell().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        let unit_beside = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let middle = put(
+            &mut state,
+            &field_spell().id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
+        let backrow_neighbour = put(
+            &mut state,
+            &field_spell().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let unit_beside = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
 
         let found = with_ctx(&mut state, None, |ctx| {
-            ids_of(&adjacent_to(ctx, &instance_spec(&middle.id), &BoardScope::default()))
+            ids_of(&adjacent_to(
+                ctx,
+                &instance_spec(&middle.id),
+                &BoardScope::default(),
+            ))
         });
         assert_eq!(found, vec![backrow_neighbour.id]);
         assert!(!found.contains(&unit_beside.id));
@@ -344,12 +565,26 @@ mod adjacent_to {
     #[test]
     fn clamps_at_the_ends_of_a_row() {
         let mut state = game();
-        let first = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let second = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let first = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let second = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
 
         assert_eq!(
             with_ctx(&mut state, None, |ctx| {
-                ids_of(&adjacent_to(ctx, &instance_spec(&first.id), &BoardScope::default()))
+                ids_of(&adjacent_to(
+                    ctx,
+                    &instance_spec(&first.id),
+                    &BoardScope::default(),
+                ))
             }),
             vec![second.id]
         );
@@ -358,12 +593,31 @@ mod adjacent_to {
     #[test]
     fn skips_empty_neighbouring_zones_and_applies_the_scopes_filters() {
         let mut state = game();
-        put(&mut state, &felinor().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let middle = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
-        let the_human = put(&mut state, &human().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        put(
+            &mut state,
+            &felinor().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let middle = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        let the_human = put(
+            &mut state,
+            &human().id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
 
         let found = with_ctx(&mut state, None, |ctx| {
-            ids_of(&adjacent_to(ctx, &instance_spec(&middle.id), &scope(json!({ "notTags": ["Felinor"] }))))
+            ids_of(&adjacent_to(
+                ctx,
+                &instance_spec(&middle.id),
+                &scope(json!({ "notTags": ["Felinor"] })),
+            ))
         });
         assert_eq!(found, vec![the_human.id]);
     }
@@ -371,8 +625,18 @@ mod adjacent_to {
     #[test]
     fn gives_a_card_that_is_off_the_field_no_neighbours() {
         let mut state = game();
-        let card = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
-        put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let card = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let mut dead = live(&state, &card.id);
         state.players.p1.units[1] = None;
         dead.zone = Zone::Graveyard { player: PlayerId::P1 };
@@ -380,7 +644,11 @@ mod adjacent_to {
 
         assert!(
             with_ctx(&mut state, None, |ctx| {
-                ids_of(&adjacent_to(ctx, &instance_spec(&card.id), &BoardScope::default()))
+                ids_of(&adjacent_to(
+                    ctx,
+                    &instance_spec(&card.id),
+                    &BoardScope::default(),
+                ))
             })
             .is_empty()
         );
@@ -389,9 +657,21 @@ mod adjacent_to {
     #[test]
     fn gives_a_hero_spec_no_neighbours_rather_than_throwing() {
         let mut state = game();
-        put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let hero: TargetSpec = json_as(json!({ "of": "enemyHero" }));
-        assert!(with_ctx(&mut state, None, |ctx| ids_of(&adjacent_to(ctx, &hero, &BoardScope::default()))).is_empty());
+        assert!(
+            with_ctx(&mut state, None, |ctx| ids_of(&adjacent_to(
+                ctx,
+                &hero,
+                &BoardScope::default()
+            )))
+            .is_empty()
+        );
     }
 }
 
@@ -405,13 +685,22 @@ mod matches_scope {
     #[test]
     fn passes_a_card_no_filter_rejects_and_is_independent_of_where_the_card_sits() {
         let mut state = game();
-        let card = put(&mut state, &human().id, slot(PlayerId::P2, Row::Units, 5), json!({}));
+        let card = put(
+            &mut state,
+            &human().id,
+            slot(PlayerId::P2, Row::Units, 5),
+            json!({}),
+        );
         let card = live(&state, &card.id);
 
         with_ctx(&mut state, None, |ctx| {
             assert!(matches_scope(ctx, &card, &BoardScope::default()));
             assert!(matches_scope(ctx, &card, &scope(json!({ "tags": ["Human"] }))));
-            assert!(!matches_scope(ctx, &card, &scope(json!({ "notTags": ["Human"] }))));
+            assert!(!matches_scope(
+                ctx,
+                &card,
+                &scope(json!({ "notTags": ["Human"] }))
+            ));
             assert!(!matches_scope(ctx, &card, &scope(json!({ "types": ["Spell"] }))));
         });
     }
@@ -419,19 +708,33 @@ mod matches_scope {
     #[test]
     fn rejects_the_running_card_only_when_exclude_self_says_so() {
         let mut state = game();
-        let self_ = put(&mut state, &untagged().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let self_ = put(
+            &mut state,
+            &untagged().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let self_ = live(&state, &self_.id);
 
         with_ctx(&mut state, Some(&self_), |ctx| {
             assert!(matches_scope(ctx, &self_, &BoardScope::default()));
-            assert!(!matches_scope(ctx, &self_, &scope(json!({ "excludeSelf": true }))));
+            assert!(!matches_scope(
+                ctx,
+                &self_,
+                &scope(json!({ "excludeSelf": true }))
+            ));
         });
     }
 
     #[test]
     fn keeps_a_card_matching_any_one_of_several_tags() {
         let mut state = game();
-        let the_felinor = put(&mut state, &felinor().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let the_felinor = put(
+            &mut state,
+            &felinor().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let the_felinor = live(&state, &the_felinor.id);
         assert!(with_ctx(&mut state, None, |ctx| {
             matches_scope(ctx, &the_felinor, &scope(json!({ "tags": ["Human", "Felinor"] })))

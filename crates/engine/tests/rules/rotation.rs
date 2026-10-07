@@ -141,8 +141,18 @@ mod r14_rotation_m3_t7 {
     #[test]
     fn r14_rotates_the_unit_ring_one_step_right_so_your_lane_5_crosses_to_the_opponents_lane_5() {
         let mut state = game("rotate-right");
-        let lane1 = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
-        let lane5 = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 5), Default::default());
+        let lane1 = put(
+            &mut state,
+            &plain().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            Default::default(),
+        );
+        let lane5 = put(
+            &mut state,
+            &plain().id,
+            slot(PlayerId::P1, Row::Units, 5),
+            Default::default(),
+        );
 
         let (events, result) = rotate(&mut state, "right", json!({}));
 
@@ -164,7 +174,9 @@ mod r14_rotation_m3_t7 {
         );
         assert_eq!(
             of_type(&events, GameEventType::ControlChanged),
-            vec![json!({ "type": "controlChanged", "instanceId": lane5.id, "controller": "p2", "row": "units", "lane": 5 })]
+            vec![
+                json!({ "type": "controlChanged", "instanceId": lane5.id, "controller": "p2", "row": "units", "lane": 5 })
+            ]
         );
         assert!(of_type(&events, GameEventType::Bounced).is_empty());
     }
@@ -172,8 +184,18 @@ mod r14_rotation_m3_t7 {
     #[test]
     fn r14_rotates_left_as_the_mirror_of_right_so_your_lane_1_crosses_to_the_opponents_lane_1() {
         let mut state = game("rotate-left");
-        let lane1 = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
-        let lane3 = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 3), Default::default());
+        let lane1 = put(
+            &mut state,
+            &plain().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            Default::default(),
+        );
+        let lane3 = put(
+            &mut state,
+            &plain().id,
+            slot(PlayerId::P1, Row::Units, 3),
+            Default::default(),
+        );
 
         let (events, result) = rotate(&mut state, "left", json!({}));
 
@@ -194,9 +216,24 @@ mod r14_rotation_m3_t7 {
     #[test]
     fn r14_turns_the_backrow_ring_independently_of_the_unit_ring() {
         let mut state = game("rotate-both-rings");
-        let unit = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 3), Default::default());
-        let back = put(&mut state, &trap().id, slot(PlayerId::P1, Row::Backrow, 5), Default::default());
-        let enemy_back = put(&mut state, &trap().id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        let unit = put(
+            &mut state,
+            &plain().id,
+            slot(PlayerId::P1, Row::Units, 3),
+            Default::default(),
+        );
+        let back = put(
+            &mut state,
+            &trap().id,
+            slot(PlayerId::P1, Row::Backrow, 5),
+            Default::default(),
+        );
+        let enemy_back = put(
+            &mut state,
+            &trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
 
         let (events, result) = rotate(&mut state, "right", json!({}));
 
@@ -217,7 +254,12 @@ mod r14_rotation_m3_t7 {
     #[test]
     fn r12_a_rotated_card_changes_controller_but_never_owner_and_still_leaves_to_its_owners_zones() {
         let mut state = game("rotate-ownership");
-        let card = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 5), Default::default());
+        let card = put(
+            &mut state,
+            &plain().id,
+            slot(PlayerId::P1, Row::Units, 5),
+            Default::default(),
+        );
 
         rotate(&mut state, "right", json!({}));
         assert_eq!(live(&state, &card).controller, PlayerId::P2);
@@ -225,7 +267,12 @@ mod r14_rotation_m3_t7 {
 
         // Off the field a card always belongs to its owner (R12, §3.2).
         let mut moving = live(&state, &card).clone();
-        move_to_zone(&mut state, &mut moving, OffFieldZone::Graveyard, Default::default());
+        move_to_zone(
+            &mut state,
+            &mut moving,
+            OffFieldZone::Graveyard,
+            Default::default(),
+        );
         let graveyard: Vec<String> = state.players.p1.graveyard.iter().map(|c| c.id.clone()).collect();
         assert_eq!(graveyard, vec![card.id.clone()]);
         assert_eq!(state.players.p2.graveyard.len(), 0);
@@ -235,7 +282,12 @@ mod r14_rotation_m3_t7 {
     #[test]
     fn r14_damage_and_buffs_travel_with_a_rotated_card() {
         let mut state = game("rotate-keeps-state");
-        let card = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 5), Default::default());
+        let card = put(
+            &mut state,
+            &plain().id,
+            slot(PlayerId::P1, Row::Units, 5),
+            Default::default(),
+        );
         let turn = state.turn;
         {
             let it = live_mut(&mut state, &card);
@@ -278,13 +330,23 @@ mod r14_rotation_m3_t7 {
     #[test]
     fn r14_bounces_a_card_whose_destination_is_locked_to_its_owners_hand() {
         let mut state = game("rotate-locked");
-        let crossing = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 5), Default::default());
+        let crossing = put(
+            &mut state,
+            &plain().id,
+            slot(PlayerId::P1, Row::Units, 5),
+            Default::default(),
+        );
         {
             let it = live_mut(&mut state, &crossing);
             it.damage = 1;
             it.buffs = AttackHealth { attack: 2, health: 2 };
         }
-        let staying = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        let staying = put(
+            &mut state,
+            &plain().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            Default::default(),
+        );
         lock_zone(&mut state, slot(PlayerId::P2, Row::Units, 5));
 
         let (events, result) = rotate(&mut state, "right", json!({}));
@@ -313,9 +375,24 @@ mod r14_rotation_m3_t7 {
     fn r14_radiant_silly_silas_bounces_the_cards_that_would_cross_to_the_opponent_at_cost_0_and_takes_the_ones_crossing_to_its_side()
      {
         let mut state = game("rotate-radiant");
-        let mine = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 5), Default::default());
-        let theirs = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
-        let staying = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 2), Default::default());
+        let mine = put(
+            &mut state,
+            &plain().id,
+            slot(PlayerId::P1, Row::Units, 5),
+            Default::default(),
+        );
+        let theirs = put(
+            &mut state,
+            &plain().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            Default::default(),
+        );
+        let staying = put(
+            &mut state,
+            &plain().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            Default::default(),
+        );
 
         let (events, result) = rotate(&mut state, "right", json!({ "radiant": true }));
 
@@ -354,9 +431,24 @@ mod r14_rotation_m3_t7 {
     #[test]
     fn section_8_c52_silas_rotates_along_with_everything_else() {
         let mut state = game("rotate-silas");
-        let me = put(&mut state, &silas().id, slot(PlayerId::P1, Row::Units, 3), Default::default());
-        let ally = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 4), Default::default());
-        let back = put(&mut state, &trap().id, slot(PlayerId::P1, Row::Backrow, 3), Default::default());
+        let me = put(
+            &mut state,
+            &silas().id,
+            slot(PlayerId::P1, Row::Units, 3),
+            Default::default(),
+        );
+        let ally = put(
+            &mut state,
+            &plain().id,
+            slot(PlayerId::P1, Row::Units, 4),
+            Default::default(),
+        );
+        let back = put(
+            &mut state,
+            &trap().id,
+            slot(PlayerId::P1, Row::Backrow, 3),
+            Default::default(),
+        );
 
         let (_, result) = rotate(&mut state, "right", json!({}));
 
@@ -372,7 +464,12 @@ mod r14_rotation_m3_t7 {
         let mut placed: IndexMap<String, String> = IndexMap::new();
         for player in [PlayerId::P1, PlayerId::P2] {
             for lane in [1, 2, 3, 4, 5] {
-                let card = put(&mut state, &plain().id, slot(player, Row::Units, lane), Default::default());
+                let card = put(
+                    &mut state,
+                    &plain().id,
+                    slot(player, Row::Units, lane),
+                    Default::default(),
+                );
                 placed.insert(format!("{player} units {lane}"), card.id);
             }
         }
@@ -410,7 +507,12 @@ mod r14_rotation_m3_t7 {
     #[test]
     fn r33_a_face_down_trap_that_crosses_answers_to_its_new_controller_and_stays_face_down() {
         let mut state = game("rotate-trap-visibility");
-        let card = put(&mut state, &trap().id, slot(PlayerId::P1, Row::Backrow, 5), Default::default());
+        let card = put(
+            &mut state,
+            &trap().id,
+            slot(PlayerId::P1, Row::Backrow, 5),
+            Default::default(),
+        );
         assert!(live(&state, &card).face_up.is_none());
 
         let (events, _) = rotate(&mut state, "right", json!({}));
@@ -422,22 +524,29 @@ mod r14_rotation_m3_t7 {
         assert!(live(&state, &card).face_up.is_none());
         assert_eq!(
             of_type(&events, GameEventType::ControlChanged),
-            vec![json!({ "type": "controlChanged", "instanceId": card.id, "controller": "p2", "row": "backrow", "lane": 5 })]
+            vec![
+                json!({ "type": "controlChanged", "instanceId": card.id, "controller": "p2", "row": "backrow", "lane": 5 })
+            ]
         );
     }
 
     #[test]
     fn section_3_2_a_stack_pile_rotates_whole_keeping_the_same_card_on_top() {
         let mut state = game("rotate-stack");
-        let under = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 5), Default::default());
+        let under = put(
+            &mut state,
+            &plain().id,
+            slot(PlayerId::P1, Row::Units, 5),
+            Default::default(),
+        );
         live_mut(&mut state, &under).damage = 1;
         let top = stack_onto(&mut state, &stacker().id, PlayerId::P1, 5);
 
         let (_, result) = rotate(&mut state, "right", json!({}));
 
         assert!(pile_at(&state, slot(PlayerId::P1, Row::Units, 5)).is_none());
-        let pile: Option<Vec<String>> =
-            pile_at(&state, slot(PlayerId::P2, Row::Units, 5)).map(|pile| pile.iter().map(|c| c.id.clone()).collect());
+        let pile: Option<Vec<String>> = pile_at(&state, slot(PlayerId::P2, Row::Units, 5))
+            .map(|pile| pile.iter().map(|c| c.id.clone()).collect());
         assert_eq!(pile, Some(vec![top.id.clone(), under.id.clone()]));
         assert_eq!(
             card_at(&state, slot(PlayerId::P2, Row::Units, 5)).map(|c| c.id.clone()),
@@ -460,7 +569,12 @@ mod r14_rotation_m3_t7 {
     #[test]
     fn r11_a_unit_token_bounced_by_a_locked_destination_ceases_to_exist() {
         let mut state = game("rotate-token-bounce");
-        let token = put(&mut state, TOKEN_ID, slot(PlayerId::P1, Row::Units, 5), Default::default());
+        let token = put(
+            &mut state,
+            TOKEN_ID,
+            slot(PlayerId::P1, Row::Units, 5),
+            Default::default(),
+        );
         lock_zone(&mut state, slot(PlayerId::P2, Row::Units, 5));
 
         let (events, result) = rotate(&mut state, "right", json!({}));

@@ -29,9 +29,9 @@ use jackioh_engine::PlayerId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::api::queue::{new_uuid, new_seed};
 use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
+use crate::api::queue::{new_seed, new_uuid};
 use crate::app::{App, now_ms};
 use crate::config::REMATCH_OFFER_TTL_MS;
 use crate::db::store::{MatchRow, MatchSeat, MatchStatus, Profile, QueueMode, StartMatchInput};
@@ -79,7 +79,9 @@ static OFFERS_BY_MATCH: LazyLock<Mutex<IndexMap<String, OfferEntry>>> =
 static NEXT_GENERATION: AtomicU64 = AtomicU64::new(1);
 
 fn offers() -> MutexGuard<'static, IndexMap<String, OfferEntry>> {
-    OFFERS_BY_MATCH.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    OFFERS_BY_MATCH
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 /// For the tests; nothing in `src/` calls it.
@@ -101,7 +103,10 @@ fn no_such_match() -> ApiError {
 }
 
 fn series_game() -> ApiError {
-    ApiError::new(ApiErrorCode::SeriesGame, "series games continue from the series screen")
+    ApiError::new(
+        ApiErrorCode::SeriesGame,
+        "series games continue from the series screen",
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -116,7 +121,10 @@ fn stakes_of(body: &Value) -> Result<RematchStakes, ApiError> {
     if stakes == Some(STAKE_DOUBLE as f64) {
         return Ok(STAKE_DOUBLE);
     }
-    Err(ApiError::new(ApiErrorCode::BadRequest, "\"stakes\" must be 1 (rematch) or 2 (double-or-nothing)"))
+    Err(ApiError::new(
+        ApiErrorCode::BadRequest,
+        "\"stakes\" must be 1 (rematch) or 2 (double-or-nothing)",
+    ))
 }
 
 /// The live entry for a match, sweeping one whose offers went stale. An entry that already made a
@@ -161,7 +169,10 @@ async fn create_rematch(
     let seed = new_seed();
     let random = mode == QueueMode::Random;
     let portrait_of = |at: usize| -> Option<String> {
-        finished.portraits.as_ref().map(|portraits| (if at == 0 { &portraits.0 } else { &portraits.1 }).to_string())
+        finished
+            .portraits
+            .as_ref()
+            .map(|portraits| (if at == 0 { &portraits.0 } else { &portraits.1 }).to_string())
     };
     let dealt_portrait = |seat: &str| -> Option<String> {
         Some(jackioh_engine::wire::pick_portrait_from_seed(&format!("{seed}:portrait:{seat}")).to_string())
@@ -175,7 +186,11 @@ async fn create_rematch(
             } else {
                 finished.decks.0.clone()
             },
-            portrait: if random { dealt_portrait("p1") } else { portrait_of(0) },
+            portrait: if random {
+                dealt_portrait("p1")
+            } else {
+                portrait_of(0)
+            },
         },
         MatchSeat {
             profile_id: finished.players.1.clone(),
@@ -185,21 +200,37 @@ async fn create_rematch(
             } else {
                 finished.decks.1.clone()
             },
-            portrait: if random { dealt_portrait("p2") } else { portrait_of(1) },
+            portrait: if random {
+                dealt_portrait("p2")
+            } else {
+                portrait_of(1)
+            },
         },
     );
 
     // Refuse before minting anything: one of them found another game while the offers were coming
     // in, so the rematch loses and neither seat is stolen out of the game it is actually in.
     {
-        let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+        let mut tx = app
+            .db
+            .begin(None)
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
         for seat in [&seats.0, &seats.1] {
-            let found = tx.profiles_get_many(std::slice::from_ref(&seat.profile_id)).await.map_err(|error| ApiError::internal(error.to_string()))?;
+            let found = tx
+                .profiles_get_many(std::slice::from_ref(&seat.profile_id))
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
             if found.first().is_some_and(|profile| profile.in_match_id.is_some()) {
-                return Err(ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first"));
+                return Err(ApiError::new(
+                    ApiErrorCode::AlreadyInMatch,
+                    "finish your current match first",
+                ));
             }
         }
-        tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
     }
 
     // The start writes the row (`registry.rs`); a failed start leaves nothing behind, so there is
@@ -216,7 +247,11 @@ async fn create_rematch(
                 mode: Some(mode),
                 // Absent reads as 1 downstream; only a double writes its stakes, and only ranked games
                 // reach here with 2 (`double_requires_ranked` above).
-                stake: if stakes == STAKE_DOUBLE { Some(i64::from(stakes)) } else { None },
+                stake: if stakes == STAKE_DOUBLE {
+                    Some(i64::from(stakes))
+                } else {
+                    None
+                },
                 seats: seats.clone(),
             },
         )
@@ -257,9 +292,18 @@ async fn create_rematch(
 async fn rematch_mode(app: &App, finished: &MatchRow) -> Result<QueueMode, ApiError> {
     // A series game never reaches here (refused below), so `bo3` below is a store that lost a row,
     // not a player: refuse it like one.
-    let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
-    let mode = tx.matches_mode_of(&finished.id).await.map_err(|error| ApiError::internal(error.to_string()))?;
-    tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
+    let mut tx = app
+        .db
+        .begin(None)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let mode = tx
+        .matches_mode_of(&finished.id)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
     if mode == Some(QueueMode::Bo3) {
         return Err(series_game());
     }
@@ -272,9 +316,18 @@ async fn rematch_mode(app: &App, finished: &MatchRow) -> Result<QueueMode, ApiEr
 /// (§9.1): a missing match and another profile's match answer the same.
 async fn callers_match(app: &App, req: &Req, profile: &Profile) -> Result<(MatchRow, PlayerId), ApiError> {
     let match_id = req.params.get("matchId").map(String::as_str).unwrap_or("");
-    let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
-    let found = tx.matches_get(match_id).await.map_err(|error| ApiError::internal(error.to_string()))?;
-    tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
+    let mut tx = app
+        .db
+        .begin(None)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let found = tx
+        .matches_get(match_id)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
     let Some(match_row) = found else {
         return Err(no_such_match());
     };
@@ -286,9 +339,18 @@ async fn callers_match(app: &App, req: &Req, profile: &Profile) -> Result<(Match
 
 /// Whether the match was a game of a Conquest series (`series_with_game`).
 async fn is_series_game(app: &App, match_id: &str) -> Result<bool, ApiError> {
-    let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
-    let series = tx.series_with_game(match_id).await.map_err(|error| ApiError::internal(error.to_string()))?;
-    tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
+    let mut tx = app
+        .db
+        .begin(None)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let series = tx
+        .series_with_game(match_id)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
     Ok(series.is_some())
 }
 
@@ -312,10 +374,16 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
     let (match_row, seat) = callers_match(app, &req, &profile).await?;
     // R672: only a ranked match can spawn a double-or-nothing.
     if stakes == STAKE_DOUBLE && match_row.ranked != Some(true) {
-        return Err(ApiError::new(ApiErrorCode::DoubleRequiresRanked, "double-or-nothing needs a ranked match"));
+        return Err(ApiError::new(
+            ApiErrorCode::DoubleRequiresRanked,
+            "double-or-nothing needs a ranked match",
+        ));
     }
     if match_row.status != MatchStatus::Finished {
-        return Err(ApiError::new(ApiErrorCode::MatchNotFinished, "offer a rematch once the match is over"));
+        return Err(ApiError::new(
+            ApiErrorCode::MatchNotFinished,
+            "offer a rematch once the match is over",
+        ));
     }
     if is_series_game(app, &match_row.id).await? {
         return Err(series_game());
@@ -331,11 +399,18 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
             let generation = NEXT_GENERATION.fetch_add(1, Ordering::Relaxed);
             map.insert(
                 match_row.id.clone(),
-                OfferEntry { offers: IndexMap::new(), at: now, match_id: None, generation },
+                OfferEntry {
+                    offers: IndexMap::new(),
+                    at: now,
+                    match_id: None,
+                    generation,
+                },
             );
         }
         let Some(entry) = map.get_mut(&match_row.id) else {
-            return Err(ApiError::internal("the rematch offer vanished while it was being written"));
+            return Err(ApiError::internal(
+                "the rematch offer vanished while it was being written",
+            ));
         };
         entry.at = now;
         entry.offers.insert(seat, stakes);
@@ -359,16 +434,20 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
             if let Err(error) = created {
                 let mut map = offers();
                 if let Some(entry) = map.get_mut(&match_row.id)
-                    && entry.generation == generation {
-                        entry.match_id = None;
-                    }
+                    && entry.generation == generation
+                {
+                    entry.match_id = None;
+                }
                 return Err(error);
             }
             Some(new_id)
         }
     };
     let created = RematchOfferBody { match_id };
-    Ok(json(200, serde_json::to_value(created).map_err(|error| ApiError::internal(error.to_string()))?))
+    Ok(json(
+        200,
+        serde_json::to_value(created).map_err(|error| ApiError::internal(error.to_string()))?,
+    ))
 }
 
 /// `GET /api/matches/:matchId/rematch` (active): what each seat offered, whether the opponent is
@@ -407,5 +486,8 @@ async fn rematch_status_route(app: &App, req: Req) -> ApiResult {
         opponent_here: presence.is_some_and(|presence| presence[seat.opponent()]),
         match_id: created,
     };
-    Ok(json(200, serde_json::to_value(status).map_err(|error| ApiError::internal(error.to_string()))?))
+    Ok(json(
+        200,
+        serde_json::to_value(status).map_err(|error| ApiError::internal(error.to_string()))?,
+    ))
 }

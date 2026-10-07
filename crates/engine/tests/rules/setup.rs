@@ -19,7 +19,11 @@ fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
 }
 
 fn hand_defs(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|c| c.def_id.clone()).collect()
+    state.players[player]
+        .hand
+        .iter()
+        .map(|c| c.def_id.clone())
+        .collect()
 }
 
 fn is_hero_power(power: Option<&Value>) -> bool {
@@ -84,10 +88,7 @@ mod setup_m1_t5 {
     fn draws_no_random_cards_when_quickdraw_already_fills_the_opening_hand() {
         let mut quickdraw_deck = vec![going_long().id, heroic_power().id];
         quickdraw_deck.extend(vanilla_deck(DECK_SIZE - 2, 1));
-        let state = started(
-            "qd-full",
-            Some((vanilla_deck(DECK_SIZE, 21), quickdraw_deck)),
-        );
+        let state = started("qd-full", Some((vanilla_deck(DECK_SIZE, 21), quickdraw_deck)));
         assert_eq!(state.players.p2.hand.len() as i32, OPENING_DRAW[1]);
     }
 
@@ -100,11 +101,20 @@ mod setup_m1_t5 {
             // No cast asks during the deal: both mulligans open at once, on every seed.
             assert!(state.pending.is_none(), "{seed}");
             assert_eq!(mulligan_owed(&state), vec![PlayerId::P1, PlayerId::P2], "{seed}");
-            assert!(!state.players.p1.hand.iter().any(|c| c.def_id == hinder().id), "{seed}");
+            assert!(
+                !state.players.p1.hand.iter().any(|c| c.def_id == hinder().id),
+                "{seed}"
+            );
             assert_eq!(state.players.p1.hand.len() as i32, OPENING_DRAW[0], "{seed}");
             // It waits at the bottom of the library, behind every drawable card, to be shuffled in once
             // the mulligans are done (the all-cast-on-draw fallback lives in setup-aside.test.ts).
-            let library: Vec<String> = state.players.p1.library.iter().map(|c| c.def_id.clone()).collect();
+            let library: Vec<String> = state
+                .players
+                .p1
+                .library
+                .iter()
+                .map(|c| c.def_id.clone())
+                .collect();
             assert_eq!(library.last(), Some(&hinder().id), "{seed}");
         }
     }
@@ -151,8 +161,16 @@ mod setup_m1_t5 {
                 .iter()
                 .position(|kind| *kind == GameEventType::ShuffledIn)
                 .expect("a shuffle-back");
-            assert!(own[..first_shuffle].iter().all(|kind| *kind == GameEventType::Drawn));
-            assert!(own[first_shuffle..].iter().all(|kind| *kind == GameEventType::ShuffledIn));
+            assert!(
+                own[..first_shuffle]
+                    .iter()
+                    .all(|kind| *kind == GameEventType::Drawn)
+            );
+            assert!(
+                own[first_shuffle..]
+                    .iter()
+                    .all(|kind| *kind == GameEventType::ShuffledIn)
+            );
             assert_eq!(first_shuffle, returned.len());
         }
     }
@@ -160,14 +178,22 @@ mod setup_m1_t5 {
     #[test]
     fn r10_r265_waits_for_both_mulligans_then_starts_turn_1_with_a_draw() {
         let state = started("flow", None);
-        let first = reduce(&state, &mulligan(hand_ids(&state, PlayerId::P1), PlayerId::P1, "m1")).state;
+        let first = reduce(
+            &state,
+            &mulligan(hand_ids(&state, PlayerId::P1), PlayerId::P1, "m1"),
+        )
+        .state;
         // p1's answer is sealed: nothing moves until p2 has answered too (R266).
         assert!(first.pending.is_none());
         assert_eq!(first.phase, Phase::Mulligan);
         assert_eq!(mulligan_owed(&first), vec![PlayerId::P2]);
         assert_eq!(first.players.p1.hand, state.players.p1.hand);
 
-        let second = reduce(&first, &mulligan(hand_ids(&first, PlayerId::P2), PlayerId::P2, "m2")).state;
+        let second = reduce(
+            &first,
+            &mulligan(hand_ids(&first, PlayerId::P2), PlayerId::P2, "m2"),
+        )
+        .state;
 
         assert!(second.pending.is_none());
         assert_eq!(second.phase, Phase::Main);
@@ -186,9 +212,22 @@ mod setup_m1_t5 {
 
         let power = |seed: &str| -> Option<Value> {
             let mut state = started(seed, Some(decks.clone()));
-            state = reduce(&state, &mulligan(hand_ids(&state, PlayerId::P1), PlayerId::P1, "a")).state;
-            state = reduce(&state, &mulligan(hand_ids(&state, PlayerId::P2), PlayerId::P2, "b")).state;
-            let card = state.players.p1.hand.iter().find(|c| c.def_id == heroic_power().id);
+            state = reduce(
+                &state,
+                &mulligan(hand_ids(&state, PlayerId::P1), PlayerId::P1, "a"),
+            )
+            .state;
+            state = reduce(
+                &state,
+                &mulligan(hand_ids(&state, PlayerId::P2), PlayerId::P2, "b"),
+            )
+            .state;
+            let card = state
+                .players
+                .p1
+                .hand
+                .iter()
+                .find(|c| c.def_id == heroic_power().id);
             card.and_then(|c| c.memory.get("power").cloned())
         };
 
@@ -201,10 +240,7 @@ mod setup_m1_t5 {
     fn r43_rolls_a_power_for_a_heroic_power_the_mulligan_returned_to_the_library() {
         let mut deck = vec![heroic_power().id];
         deck.extend(vanilla_deck(DECK_SIZE - 1, 1));
-        let mut state = started(
-            "mulliganed-power",
-            Some((deck, vanilla_deck(DECK_SIZE, 21))),
-        );
+        let mut state = started("mulliganed-power", Some((deck, vanilla_deck(DECK_SIZE, 21))));
 
         // Quickdraw put it in the opening hand; return it, so it is in the library at start of game.
         let keep: Vec<String> = state
@@ -217,7 +253,11 @@ mod setup_m1_t5 {
             .collect();
         assert_eq!(keep.len(), state.players.p1.hand.len() - 1);
         state = reduce(&state, &mulligan(keep, PlayerId::P1, "mp1")).state;
-        state = reduce(&state, &mulligan(hand_ids(&state, PlayerId::P2), PlayerId::P2, "mp2")).state;
+        state = reduce(
+            &state,
+            &mulligan(hand_ids(&state, PlayerId::P2), PlayerId::P2, "mp2"),
+        )
+        .state;
 
         let side = &state.players.p1;
         let card = side
@@ -225,7 +265,10 @@ mod setup_m1_t5 {
             .iter()
             .chain(side.hand.iter())
             .find(|c| c.def_id == heroic_power().id);
-        assert!(card.is_some(), "the returned Heroic Power is in the library or back in hand");
+        assert!(
+            card.is_some(),
+            "the returned Heroic Power is in the library or back in hand"
+        );
         assert!(is_hero_power(card.and_then(|c| c.memory.get("power"))));
     }
 }
@@ -267,10 +310,7 @@ mod the_coin_r244 {
         register_catalog(catalog);
         let created = create_game(&CreateGameOptions {
             seed: "coin".into(),
-            decks: (
-                vanilla_deck(DECK_SIZE, 1),
-                vanilla_deck(DECK_SIZE, 21),
-            ),
+            decks: (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21)),
             ..Default::default()
         });
         let dealt = begin_game(&created).state;
@@ -283,7 +323,11 @@ mod the_coin_r244 {
 
         assert_eq!(state.turn, 1);
         for (seat, player) in [PlayerId::P1, PlayerId::P2].into_iter().enumerate() {
-            let coins = state.players[player].hand.iter().filter(|c| c.def_id == COIN_DEF_ID).count() as i32;
+            let coins = state.players[player]
+                .hand
+                .iter()
+                .filter(|c| c.def_id == COIN_DEF_ID)
+                .count() as i32;
             assert_eq!(coins, OPENING_COINS.get(seat).copied().unwrap_or(0));
         }
         let p2 = &state.players.p2.hand;

@@ -32,15 +32,24 @@ use crate::rules::fixtures::scripts::{going_long, heroic_power, hinder};
 type Handicaps = PerPlayerOpt<Handicap>;
 
 fn on_p1(handicap: Handicap) -> Handicaps {
-    PerPlayerOpt { p1: Some(handicap), p2: None }
+    PerPlayerOpt {
+        p1: Some(handicap),
+        p2: None,
+    }
 }
 
 fn on_p2(handicap: Handicap) -> Handicaps {
-    PerPlayerOpt { p1: None, p2: Some(handicap) }
+    PerPlayerOpt {
+        p1: None,
+        p2: Some(handicap),
+    }
 }
 
 fn on_both(p1: Handicap, p2: Handicap) -> Handicaps {
-    PerPlayerOpt { p1: Some(p1), p2: Some(p2) }
+    PerPlayerOpt {
+        p1: Some(p1),
+        p2: Some(p2),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -102,7 +111,10 @@ fn ask_controller() -> Effect {
 }
 
 fn both(script: Script) -> CardScripts {
-    CardScripts { base: script.clone(), radiant: script }
+    CardScripts {
+        base: script.clone(),
+        radiant: script,
+    }
 }
 
 fn local_scripts() -> IndexMap<String, CardScripts> {
@@ -146,18 +158,28 @@ fn register_all() {
 // ---------------------------------------------------------------------------
 
 fn size_for(handicaps: Option<&Handicaps>, player: PlayerId) -> i32 {
-    handicaps.and_then(|seats| seats.get(player)).map_or(DECK_SIZE, |handicap| handicap.deck_size)
+    handicaps
+        .and_then(|seats| seats.get(player))
+        .map_or(DECK_SIZE, |handicap| handicap.deck_size)
 }
 
 /// A legal deck pair for these handicaps: vanilla units, `fx-1` up, one per card id.
 fn decks_for(handicaps: Option<&Handicaps>) -> (Vec<String>, Vec<String>) {
-    (vanilla_deck(size_for(handicaps, PlayerId::P1), 1), vanilla_deck(size_for(handicaps, PlayerId::P2), 1))
+    (
+        vanilla_deck(size_for(handicaps, PlayerId::P1), 1),
+        vanilla_deck(size_for(handicaps, PlayerId::P2), 1),
+    )
 }
 
 fn game(seed: &str, handicaps: Option<Handicaps>, decks: Option<(Vec<String>, Vec<String>)>) -> GameState {
     register_all();
     let decks = decks.unwrap_or_else(|| decks_for(handicaps.as_ref()));
-    create_game(&CreateGameOptions { seed: seed.to_string(), decks, handicaps, ..Default::default() })
+    create_game(&CreateGameOptions {
+        seed: seed.to_string(),
+        decks,
+        handicaps,
+        ..Default::default()
+    })
 }
 
 /// TS's module-level `let nonce`; an atomic so that tests running side by side never share a nonce.
@@ -169,7 +191,10 @@ struct Stepped {
 }
 
 fn input(player: PlayerId, body: ActionBody) -> ActionInput {
-    ActionInput { body, player_id: player }
+    ActionInput {
+        body,
+        player_id: player,
+    }
 }
 
 fn step(state: &GameState, body: ActionInput) -> Stepped {
@@ -179,7 +204,10 @@ fn step(state: &GameState, body: ActionInput) -> Stepped {
     if let Some(error) = &result.error {
         panic!("{} refused: {error}", action.action_type());
     }
-    Stepped { state: result.state, events: result.events }
+    Stepped {
+        state: result.state,
+        events: result.events,
+    }
 }
 
 fn act(state: &GameState, body: ActionInput) -> GameState {
@@ -251,7 +279,11 @@ fn drawn_by(events: &[GameEvent], player: PlayerId) -> Vec<String> {
     events
         .iter()
         .filter_map(|event| match event {
-            GameEvent::Drawn { player: drawer, instance_id, .. } if *drawer == player => Some(instance_id.clone()),
+            GameEvent::Drawn {
+                player: drawer,
+                instance_id,
+                ..
+            } if *drawer == player => Some(instance_id.clone()),
             _ => None,
         })
         .collect()
@@ -262,7 +294,9 @@ fn hero_hits(events: &[GameEvent], target: &str) -> Vec<i32> {
     events
         .iter()
         .filter_map(|event| match event {
-            GameEvent::Damage { target_id, amount, .. } if target_id == target => Some(*amount),
+            GameEvent::Damage {
+                target_id, amount, ..
+            } if target_id == target => Some(*amount),
             _ => None,
         })
         .collect()
@@ -349,7 +383,12 @@ fn create_refusal_json(options: Value) -> Option<String> {
 }
 
 fn options(seed: &str, decks: (Vec<String>, Vec<String>), handicaps: Handicaps) -> CreateGameOptions {
-    CreateGameOptions { seed: seed.to_string(), decks, handicaps: Some(handicaps), ..Default::default() }
+    CreateGameOptions {
+        seed: seed.to_string(),
+        decks,
+        handicaps: Some(handicaps),
+        ..Default::default()
+    }
 }
 
 /// A handicap as JSON with one field replaced.
@@ -381,7 +420,10 @@ fn in_order(text: &str, pieces: &[&str]) -> bool {
 }
 
 fn keys_sorted(value: &Value) -> Vec<String> {
-    let mut keys: Vec<String> = value.as_object().map(|map| map.keys().cloned().collect()).unwrap_or_default();
+    let mut keys: Vec<String> = value
+        .as_object()
+        .map(|map| map.keys().cloned().collect())
+        .unwrap_or_default();
     keys.sort();
     keys
 }
@@ -394,7 +436,8 @@ mod r180_handicaps_the_table_the_default_and_replay {
     use super::*;
 
     #[test]
-    fn r180_b8_ai_difficulty_is_s9_9s_table_easy_is_human_handicap_and_human_handicap_is_this_specs_numbers() {
+    fn r180_b8_ai_difficulty_is_s9_9s_table_easy_is_human_handicap_and_human_handicap_is_this_specs_numbers()
+    {
         assert_eq!(
             HUMAN_HANDICAP,
             Handicap {
@@ -429,7 +472,10 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 hero_health: None,
             }
         );
-        assert_eq!(DIFFICULTIES.iter().map(|d| d.as_str()).collect::<Vec<_>>(), ["easy", "medium", "hard"]);
+        assert_eq!(
+            DIFFICULTIES.iter().map(|d| d.as_str()).collect::<Vec<_>>(),
+            ["easy", "medium", "hard"]
+        );
         assert_eq!(
             keys_sorted(&serde_json::to_value(AI_DIFFICULTY).expect("the table serialises")),
             ["easy", "hard", "medium"]
@@ -463,23 +509,42 @@ mod r180_handicaps_the_table_the_default_and_replay {
             let state = game("r180-b1", Some(handicaps), Some(decks.clone()));
             for player in PLAYER_IDS {
                 assert!(state.players[player].handicap.is_none(), "{label}: {player}");
-                assert_eq!(state::handicap_of(&state.players[player]), HUMAN_HANDICAP, "{label}: {player}");
+                assert_eq!(
+                    state::handicap_of(&state.players[player]),
+                    HUMAN_HANDICAP,
+                    "{label}: {player}"
+                );
             }
             assert_eq!(hash_state(&state), hash_state(&plain), "{label}");
-            assert_eq!(hash_state(&begin_game(&state).state), hash_state(&begin_game(&plain).state), "{label}");
+            assert_eq!(
+                hash_state(&begin_game(&state).state),
+                hash_state(&begin_game(&plain).state),
+                "{label}"
+            );
         }
     }
 
     #[test]
-    fn r180_b1_a_handicap_that_differs_from_human_handicap_in_one_field_is_stored_as_a_copy_on_that_seat_only() {
-        let bonus = Handicap { mana_bonus: 1, ..HUMAN_HANDICAP };
+    fn r180_b1_a_handicap_that_differs_from_human_handicap_in_one_field_is_stored_as_a_copy_on_that_seat_only()
+     {
+        let bonus = Handicap {
+            mana_bonus: 1,
+            ..HUMAN_HANDICAP
+        };
         let decks = decks_for(None);
         let plain = game("r180-b1-stored", None, Some(decks.clone()));
         let state = game("r180-b1-stored", Some(on_p2(bonus)), Some(decks));
 
         assert_eq!(state.players.p2.handicap, Some(bonus));
         // TS `not.toBe`: the stored handicap is a copy, never the caller's object.
-        assert!(state.players.p2.handicap.as_ref().is_some_and(|stored| !std::ptr::eq(stored, &bonus)));
+        assert!(
+            state
+                .players
+                .p2
+                .handicap
+                .as_ref()
+                .is_some_and(|stored| !std::ptr::eq(stored, &bonus))
+        );
         assert!(state.players.p1.handicap.is_none());
         assert_eq!(state::handicap_of(&state.players.p2), bonus);
         assert_ne!(hash_state(&state), hash_state(&plain));
@@ -491,7 +556,11 @@ mod r180_handicaps_the_table_the_default_and_replay {
 
     #[test]
     fn r180_b1_with_handicaps_for_both_seats_only_the_one_that_differs_from_human_handicap_is_stored() {
-        let state = game("r180-b1-both", Some(on_both(HUMAN_HANDICAP, AI_DIFFICULTY.medium)), None);
+        let state = game(
+            "r180-b1-both",
+            Some(on_both(HUMAN_HANDICAP, AI_DIFFICULTY.medium)),
+            None,
+        );
         assert!(state.players.p1.handicap.is_none());
         assert_eq!(state.players.p2.handicap, Some(AI_DIFFICULTY.medium));
     }
@@ -499,14 +568,24 @@ mod r180_handicaps_the_table_the_default_and_replay {
     #[test]
     fn r180_validate_handicap_refuses_a_handicap_with_a_missing_field_or_a_field_of_the_wrong_type() {
         let mut missing = serde_json::to_value(AI_DIFFICULTY.hard).expect("a handicap serialises");
-        missing.as_object_mut().expect("a handicap is an object").remove("manaCap");
+        missing
+            .as_object_mut()
+            .expect("a handicap is an object")
+            .remove("manaCap");
         assert!(handicap_refused(missing, "p2"));
-        assert!(handicap_refused(with_field(&AI_DIFFICULTY.hard, "manaBonus", json!("1")), "p2"));
-        assert!(handicap_refused(with_field(&AI_DIFFICULTY.hard, "deckSize", Value::Null), "p2"));
+        assert!(handicap_refused(
+            with_field(&AI_DIFFICULTY.hard, "manaBonus", json!("1")),
+            "p2"
+        ));
+        assert!(handicap_refused(
+            with_field(&AI_DIFFICULTY.hard, "deckSize", Value::Null),
+            "p2"
+        ));
     }
 
     #[test]
-    fn r180_validate_handicap_refuses_a_negative_fractional_or_non_finite_field_and_a_deck_size_outside_1_library_cap() {
+    fn r180_validate_handicap_refuses_a_negative_fractional_or_non_finite_field_and_a_deck_size_outside_1_library_cap()
+     {
         let bad: Vec<Value> = vec![
             with_field(&HUMAN_HANDICAP, "manaBonus", json!(-1)),
             with_field(&HUMAN_HANDICAP, "manaCap", json!(4.5)),
@@ -522,18 +601,55 @@ mod r180_handicaps_the_table_the_default_and_replay {
             let label = handicap.to_string();
             assert!(handicap_refused(handicap, "p2"), "{label}");
         }
-        assert!(state::validate_handicap(&Handicap { deck_size: 1, ..HUMAN_HANDICAP }, "p2").is_ok());
-        assert!(state::validate_handicap(&Handicap { deck_size: LIBRARY_CAP, ..HUMAN_HANDICAP }, "p2").is_ok());
-        assert!(state::validate_handicap(&Handicap { mana_cap: 0, mana_bonus: 0, ..HUMAN_HANDICAP }, "p2").is_ok());
+        assert!(
+            state::validate_handicap(
+                &Handicap {
+                    deck_size: 1,
+                    ..HUMAN_HANDICAP
+                },
+                "p2"
+            )
+            .is_ok()
+        );
+        assert!(
+            state::validate_handicap(
+                &Handicap {
+                    deck_size: LIBRARY_CAP,
+                    ..HUMAN_HANDICAP
+                },
+                "p2"
+            )
+            .is_ok()
+        );
+        assert!(
+            state::validate_handicap(
+                &Handicap {
+                    mana_cap: 0,
+                    mana_bonus: 0,
+                    ..HUMAN_HANDICAP
+                },
+                "p2"
+            )
+            .is_ok()
+        );
     }
 
     #[test]
     fn r180_every_field_is_checked_a_negative_or_fractional_value_in_any_one_field_is_refused() {
-        let fields = ["deckSize", "manaBonus", "manaCap", "extraOpeningCards", "extraDrawsPerTurn"];
+        let fields = [
+            "deckSize",
+            "manaBonus",
+            "manaCap",
+            "extraOpeningCards",
+            "extraDrawsPerTurn",
+        ];
         for field in fields {
             for bad in [json!(-1), json!(0.5)] {
                 let label = format!("{field} = {bad}");
-                assert!(handicap_refused(with_field(&AI_DIFFICULTY.medium, field, bad), "p2"), "{label}");
+                assert!(
+                    handicap_refused(with_field(&AI_DIFFICULTY.medium, field, bad), "p2"),
+                    "{label}"
+                );
             }
         }
     }
@@ -542,19 +658,36 @@ mod r180_handicaps_the_table_the_default_and_replay {
     fn r180_create_game_refuses_an_invalid_handicap_before_the_game_exists() {
         register_all();
         let decks = decks_for(None);
-        assert!(create_refusal(options("bad", decks.clone(), on_p2(Handicap { mana_bonus: -1, ..HUMAN_HANDICAP }))).is_some());
-        assert!(create_refusal_json(json!({
-            "seed": "bad",
-            "decks": [decks.0.clone(), decks.1.clone()],
-            "handicaps": { "p1": with_field(&HUMAN_HANDICAP, "manaCap", json!(1.5)) },
-        }))
-        .is_some());
-        assert!(create_refusal(options(
-            "bad",
-            decks.clone(),
-            on_p2(Handicap { deck_size: LIBRARY_CAP + 1, ..HUMAN_HANDICAP })
-        ))
-        .is_some());
+        assert!(
+            create_refusal(options(
+                "bad",
+                decks.clone(),
+                on_p2(Handicap {
+                    mana_bonus: -1,
+                    ..HUMAN_HANDICAP
+                })
+            ))
+            .is_some()
+        );
+        assert!(
+            create_refusal_json(json!({
+                "seed": "bad",
+                "decks": [decks.0.clone(), decks.1.clone()],
+                "handicaps": { "p1": with_field(&HUMAN_HANDICAP, "manaCap", json!(1.5)) },
+            }))
+            .is_some()
+        );
+        assert!(
+            create_refusal(options(
+                "bad",
+                decks.clone(),
+                on_p2(Handicap {
+                    deck_size: LIBRARY_CAP + 1,
+                    ..HUMAN_HANDICAP
+                })
+            ))
+            .is_some()
+        );
     }
 
     #[test]
@@ -592,11 +725,16 @@ mod r180_handicaps_the_table_the_default_and_replay {
     }
 
     #[test]
-    fn r180_b7_fold_given_human_handicap_explicitly_replays_an_unhandicapped_game_exactly_as_fold_without_it() {
+    fn r180_b7_fold_given_human_handicap_explicitly_replays_an_unhandicapped_game_exactly_as_fold_without_it()
+    {
         let live = play_random("r180-fold-human", PerPlayerOpt::default(), None);
         register_all();
         let bare = fold_with("r180-fold-human", &live, None);
-        let explicit = fold_with("r180-fold-human", &live, Some(on_both(HUMAN_HANDICAP, AI_DIFFICULTY.easy)));
+        let explicit = fold_with(
+            "r180-fold-human",
+            &live,
+            Some(on_both(HUMAN_HANDICAP, AI_DIFFICULTY.easy)),
+        );
         assert!(bare.errors.is_empty());
         assert!(explicit.errors.is_empty());
         assert_eq!(hash_state(&explicit.state), hash_state(&live.state));
@@ -607,7 +745,14 @@ mod r180_handicaps_the_table_the_default_and_replay {
     fn r180_b7_a_fold_given_different_handicaps_does_not_reproduce_the_game() {
         let live = play_random("r180-fold-wrong", on_p2(AI_DIFFICULTY.hard), None);
         register_all();
-        let wrong = fold_with("r180-fold-wrong", &live, Some(on_p2(Handicap { mana_bonus: 0, ..AI_DIFFICULTY.hard })));
+        let wrong = fold_with(
+            "r180-fold-wrong",
+            &live,
+            Some(on_p2(Handicap {
+                mana_bonus: 0,
+                ..AI_DIFFICULTY.hard
+            })),
+        );
         let same = wrong.errors.is_empty() && hash_state(&wrong.state) == hash_state(&live.state);
         assert!(!same);
     }
@@ -621,7 +766,8 @@ mod r181_max_mana_under_a_handicap {
     use super::*;
 
     #[test]
-    fn r181_b3_max_mana_for_is_min_turns_started_plus_mana_bonus_mana_cap_for_every_tier_and_s2_3_for_a_human() {
+    fn r181_b3_max_mana_for_is_min_turns_started_plus_mana_bonus_mana_cap_for_every_tier_and_s2_3_for_a_human()
+     {
         for &difficulty in DIFFICULTIES {
             let h = AI_DIFFICULTY[difficulty];
             let mut state = game(&format!("r181-unit-{difficulty}"), Some(on_p2(h)), None);
@@ -633,13 +779,18 @@ mod r181_max_mana_under_a_handicap {
                     (turns + h.mana_bonus).min(h.mana_cap),
                     "{difficulty} after {turns} turns"
                 );
-                assert_eq!(mana::max_mana_for(&state.players.p1), turns.min(MAX_MANA), "human after {turns} turns");
+                assert_eq!(
+                    mana::max_mana_for(&state.players.p1),
+                    turns.min(MAX_MANA),
+                    "human after {turns} turns"
+                );
             }
         }
     }
 
     #[test]
-    fn r181_b3_a_persistent_modifier_applies_after_the_cap_a_next_turn_one_moves_only_that_refresh_and_both_floor_at_0() {
+    fn r181_b3_a_persistent_modifier_applies_after_the_cap_a_next_turn_one_moves_only_that_refresh_and_both_floor_at_0()
+     {
         let mut state = game("r181-mods", Some(on_p2(AI_DIFFICULTY.medium)), None);
         let side = &mut state.players.p2;
         let cap = AI_DIFFICULTY.medium.mana_cap;
@@ -649,11 +800,17 @@ mod r181_max_mana_under_a_handicap {
         side.mana.next_turn_mod = 2;
         assert_eq!(mana::max_mana_for(side), cap);
         mana::refresh_mana(side);
-        assert_eq!((side.mana.max, side.mana.current, side.mana.next_turn_mod), (cap, cap + 2, 0));
+        assert_eq!(
+            (side.mana.max, side.mana.current, side.mana.next_turn_mod),
+            (cap, cap + 2, 0)
+        );
 
         side.mana.next_turn_mod = -1;
         mana::refresh_mana(side);
-        assert_eq!((side.mana.max, side.mana.current, side.mana.next_turn_mod), (cap, cap - 1, 0));
+        assert_eq!(
+            (side.mana.max, side.mana.current, side.mana.next_turn_mod),
+            (cap, cap - 1, 0)
+        );
 
         side.mana.perm_mod = 1;
         assert_eq!(mana::max_mana_for(side), cap + 1);
@@ -667,7 +824,8 @@ mod r181_max_mana_under_a_handicap {
     }
 
     #[test]
-    fn r181_b3_a_medium_seat_refreshes_to_2_on_its_first_turn_and_to_5_from_its_fourth_the_human_is_unchanged() {
+    fn r181_b3_a_medium_seat_refreshes_to_2_on_its_first_turn_and_to_5_from_its_fourth_the_human_is_unchanged()
+     {
         let seen = maxes_by_turn("r181-medium", Some(on_p2(AI_DIFFICULTY.medium)), 12);
         assert_eq!(seen.p2, [2, 3, 4, 5, 5, 5]);
         assert_eq!(seen.p1, [1, 2, 3, 4, 4, 4]);
@@ -709,8 +867,11 @@ mod r181_max_mana_under_a_handicap {
 
     #[test]
     fn r181_b3_hinder_at_the_cap_takes_the_medium_seat_below_its_cap_not_back_to_it() {
-        let mut state =
-            advance_to(started("r181-hinder-cap", Some(on_p2(AI_DIFFICULTY.medium)), None), PlayerId::P2, 4);
+        let mut state = advance_to(
+            started("r181-hinder-cap", Some(on_p2(AI_DIFFICULTY.medium)), None),
+            PlayerId::P2,
+            4,
+        );
         assert_eq!(state.players.p2.mana.max, 5);
 
         on_top_of_library(&mut state, PlayerId::P1, &[hinder().id]);
@@ -722,8 +883,13 @@ mod r181_max_mana_under_a_handicap {
     }
 
     #[test]
-    fn r181_b3_a_next_turn_gain_lifts_a_capped_hard_seats_refresh_above_its_cap_once_and_a_persistent_one_lifts_its_max_every_refresh() {
-        let mut state = advance_to(started("r181-gain", Some(on_p2(AI_DIFFICULTY.hard)), None), PlayerId::P2, 6);
+    fn r181_b3_a_next_turn_gain_lifts_a_capped_hard_seats_refresh_above_its_cap_once_and_a_persistent_one_lifts_its_max_every_refresh()
+     {
+        let mut state = advance_to(
+            started("r181-gain", Some(on_p2(AI_DIFFICULTY.hard)), None),
+            PlayerId::P2,
+            6,
+        );
         assert_eq!((state.players.p2.mana.max, state.players.p2.mana.current), (7, 7));
 
         state.players.p2.mana.next_turn_mod = 2;
@@ -760,12 +926,26 @@ mod r182_the_opening_hand_under_a_handicap {
     fn r182_b4_opening_hand_size_is_s2_1s_table_entry_plus_extra_opening_cards() {
         for &difficulty in DIFFICULTIES {
             let extra = AI_DIFFICULTY[difficulty].extra_opening_cards;
-            let as_p2 = game(&format!("r182-size-p2-{difficulty}"), Some(on_p2(AI_DIFFICULTY[difficulty])), None);
+            let as_p2 = game(
+                &format!("r182-size-p2-{difficulty}"),
+                Some(on_p2(AI_DIFFICULTY[difficulty])),
+                None,
+            );
             assert_eq!(setup::opening_hand_size(&as_p2, PlayerId::P1), OPENING_DRAW[0]);
-            assert_eq!(setup::opening_hand_size(&as_p2, PlayerId::P2), OPENING_DRAW[1] + extra);
+            assert_eq!(
+                setup::opening_hand_size(&as_p2, PlayerId::P2),
+                OPENING_DRAW[1] + extra
+            );
 
-            let as_p1 = game(&format!("r182-size-p1-{difficulty}"), Some(on_p1(AI_DIFFICULTY[difficulty])), None);
-            assert_eq!(setup::opening_hand_size(&as_p1, PlayerId::P1), OPENING_DRAW[0] + extra);
+            let as_p1 = game(
+                &format!("r182-size-p1-{difficulty}"),
+                Some(on_p1(AI_DIFFICULTY[difficulty])),
+                None,
+            );
+            assert_eq!(
+                setup::opening_hand_size(&as_p1, PlayerId::P1),
+                OPENING_DRAW[0] + extra
+            );
             assert_eq!(setup::opening_hand_size(&as_p1, PlayerId::P2), OPENING_DRAW[1]);
         }
     }
@@ -777,7 +957,11 @@ mod r182_the_opening_hand_under_a_handicap {
             let mut state = begin_game(&game(&format!("r182-p2-{difficulty}"), Some(on_p2(h)), None)).state;
 
             assert_eq!(prompt_kind(&state, PlayerId::P1), Some(PromptKind::Mulligan));
-            assert_eq!(prompt_options(&state, PlayerId::P1), Some(OPENING_DRAW[0] as usize), "{difficulty}");
+            assert_eq!(
+                prompt_options(&state, PlayerId::P1),
+                Some(OPENING_DRAW[0] as usize),
+                "{difficulty}"
+            );
             assert_eq!(state.players.p1.hand.len(), OPENING_DRAW[0] as usize);
 
             let keep = ids(&state.players.p1.hand);
@@ -801,19 +985,33 @@ mod r182_the_opening_hand_under_a_handicap {
 
             let keep = ids(&state.players.p1.hand);
             state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));
-            assert_eq!(prompt_options(&state, PlayerId::P2), Some(OPENING_DRAW[1] as usize), "{difficulty}");
+            assert_eq!(
+                prompt_options(&state, PlayerId::P2),
+                Some(OPENING_DRAW[1] as usize),
+                "{difficulty}"
+            );
             assert_eq!(state.players.p2.hand.len(), OPENING_DRAW[1] as usize);
         }
     }
 
     #[test]
     fn r182_b4_an_easy_seat_opens_exactly_as_a_human_does() {
-        let mut state =
-            begin_game(&game("r182-easy", Some(on_both(AI_DIFFICULTY.easy, AI_DIFFICULTY.easy)), None)).state;
-        assert_eq!(prompt_options(&state, PlayerId::P1), Some(OPENING_DRAW[0] as usize));
+        let mut state = begin_game(&game(
+            "r182-easy",
+            Some(on_both(AI_DIFFICULTY.easy, AI_DIFFICULTY.easy)),
+            None,
+        ))
+        .state;
+        assert_eq!(
+            prompt_options(&state, PlayerId::P1),
+            Some(OPENING_DRAW[0] as usize)
+        );
         let keep = ids(&state.players.p1.hand);
         state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));
-        assert_eq!(prompt_options(&state, PlayerId::P2), Some(OPENING_DRAW[1] as usize));
+        assert_eq!(
+            prompt_options(&state, PlayerId::P2),
+            Some(OPENING_DRAW[1] as usize)
+        );
     }
 
     #[test]
@@ -821,15 +1019,22 @@ mod r182_the_opening_hand_under_a_handicap {
         let h = AI_DIFFICULTY.medium;
         let mut p2_deck = vec![going_long().id];
         p2_deck.extend(vanilla_deck(h.deck_size - 1, 1));
-        let mut state =
-            begin_game(&game("r182-quickdraw", Some(on_p2(h)), Some((vanilla_deck(DECK_SIZE, 1), p2_deck)))).state;
+        let mut state = begin_game(&game(
+            "r182-quickdraw",
+            Some(on_p2(h)),
+            Some((vanilla_deck(DECK_SIZE, 1), p2_deck)),
+        ))
+        .state;
         let keep = ids(&state.players.p1.hand);
         state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));
 
         let hand = def_ids(&state.players.p2.hand);
         assert_eq!(hand.len(), 5);
         assert!(hand.contains(&going_long().id));
-        assert_eq!(hand.iter().filter(|def_id| **def_id != going_long().id).count(), 4);
+        assert_eq!(
+            hand.iter().filter(|def_id| **def_id != going_long().id).count(),
+            4
+        );
         assert_eq!(prompt_options(&state, PlayerId::P2), Some(5));
         assert_eq!(state.players.p2.library.len(), (h.deck_size - 5) as usize);
     }
@@ -839,9 +1044,12 @@ mod r182_the_opening_hand_under_a_handicap {
         let h = AI_DIFFICULTY.medium;
         let mut p2_deck = vec![going_long().id, heroic_power().id];
         p2_deck.extend(vanilla_deck(h.deck_size - 2, 1));
-        let mut state =
-            begin_game(&game("r182-quickdraw-two", Some(on_p2(h)), Some((vanilla_deck(DECK_SIZE, 1), p2_deck))))
-                .state;
+        let mut state = begin_game(&game(
+            "r182-quickdraw-two",
+            Some(on_p2(h)),
+            Some((vanilla_deck(DECK_SIZE, 1), p2_deck)),
+        ))
+        .state;
         let keep = ids(&state.players.p1.hand);
         state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));
 
@@ -863,7 +1071,10 @@ mod r182_the_opening_hand_under_a_handicap {
         let keep = vec![before[0].clone()];
         let returned = before[1..].to_vec();
 
-        state = act(&state, input(PlayerId::P2, ActionBody::Mulligan { keep: keep.clone() }));
+        state = act(
+            &state,
+            input(PlayerId::P2, ActionBody::Mulligan { keep: keep.clone() }),
+        );
         let after = ids(&state.players.p2.hand);
         // The turn has begun (p1's), so p2's hand is exactly its redrawn opening hand.
         assert_eq!(state.active, PlayerId::P1);
@@ -873,7 +1084,10 @@ mod r182_the_opening_hand_under_a_handicap {
             assert!(!after.contains(id));
             assert!(state.players.p2.library.iter().any(|c| c.id == *id));
         }
-        assert_eq!(state.players.p2.library.len(), (AI_DIFFICULTY.hard.deck_size - 5) as usize);
+        assert_eq!(
+            state.players.p2.library.len(),
+            (AI_DIFFICULTY.hard.deck_size - 5) as usize
+        );
     }
 }
 
@@ -892,13 +1106,19 @@ mod r183_extra_draws_per_turn {
 
         let p2_turn = pass_turn(&state);
         state = p2_turn.state;
-        assert_eq!(drawn_by(&p2_turn.events, PlayerId::P2).len(), (DRAWS_PER_TURN + 1) as usize);
+        assert_eq!(
+            drawn_by(&p2_turn.events, PlayerId::P2).len(),
+            (DRAWS_PER_TURN + 1) as usize
+        );
         assert_eq!(state.players.p2.hand.len(), hand_before + 2);
         assert_eq!(state.players.p2.library.len(), library_before - 2);
 
         let p1_hand_before = state.players.p1.hand.len();
         let p1_turn = pass_turn(&state);
-        assert_eq!(drawn_by(&p1_turn.events, PlayerId::P1).len(), DRAWS_PER_TURN as usize);
+        assert_eq!(
+            drawn_by(&p1_turn.events, PlayerId::P1).len(),
+            DRAWS_PER_TURN as usize
+        );
         assert_eq!(p1_turn.state.players.p1.hand.len(), p1_hand_before + 1);
     }
 
@@ -938,10 +1158,19 @@ mod r183_extra_draws_per_turn {
 
     #[test]
     fn r183_b5_easy_seats_draw_exactly_one_card_each_turn_on_both_sides() {
-        let mut state = started("r183-easy", Some(on_both(AI_DIFFICULTY.easy, AI_DIFFICULTY.easy)), None);
+        let mut state = started(
+            "r183-easy",
+            Some(on_both(AI_DIFFICULTY.easy, AI_DIFFICULTY.easy)),
+            None,
+        );
         for _ in 0..4 {
             let next = pass_turn(&state);
-            assert_eq!(drawn_by(&next.events, next.state.active).len(), 1, "turn {}", next.state.turn);
+            assert_eq!(
+                drawn_by(&next.events, next.state.active).len(),
+                1,
+                "turn {}",
+                next.state.turn
+            );
             state = next.state;
         }
     }
@@ -950,7 +1179,12 @@ mod r183_extra_draws_per_turn {
     fn r183_b5_each_of_the_hard_seats_draws_makes_its_own_hand_cap_check() {
         let mut state = started("r183-hand-cap", Some(on_p2(AI_DIFFICULTY.hard)), None);
         while state.players.p2.hand.len() < (HAND_CAP - 1) as usize {
-            let card = state::new_instance(&mut state, "fx-40", PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
+            let card = state::new_instance(
+                &mut state,
+                "fx-40",
+                PlayerId::P2,
+                Zone::Hand { player: PlayerId::P2 },
+            );
             state.players.p2.hand.push(card);
         }
 
@@ -962,7 +1196,13 @@ mod r183_extra_draws_per_turn {
             p2_turn
                 .events
                 .iter()
-                .filter(|e| matches!(e, GameEvent::Burned { owner: PlayerId::P2, .. }))
+                .filter(|e| matches!(
+                    e,
+                    GameEvent::Burned {
+                        owner: PlayerId::P2,
+                        ..
+                    }
+                ))
                 .count(),
             1
         );
@@ -985,14 +1225,25 @@ mod r183_extra_draws_per_turn {
             .events
             .iter()
             .filter_map(|event| match event {
-                GameEvent::Drawn { player: PlayerId::P2, instance_id, .. } => Some(format!("drawn:{instance_id}")),
-                GameEvent::CardPlayed { instance_id, .. } if *instance_id == quiet.id => Some("cast".to_string()),
+                GameEvent::Drawn {
+                    player: PlayerId::P2,
+                    instance_id,
+                    ..
+                } => Some(format!("drawn:{instance_id}")),
+                GameEvent::CardPlayed { instance_id, .. } if *instance_id == quiet.id => {
+                    Some("cast".to_string())
+                }
                 _ => None,
             })
             .collect();
         assert_eq!(
             order,
-            [format!("drawn:{}", quiet.id), "cast".to_string(), format!("drawn:{}", first.id), format!("drawn:{}", second.id)]
+            [
+                format!("drawn:{}", quiet.id),
+                "cast".to_string(),
+                format!("drawn:{}", first.id),
+                format!("drawn:{}", second.id)
+            ]
         );
         let hand = ids(&p2_turn.state.players.p2.hand);
         assert!(hand.contains(&first.id));
@@ -1016,9 +1267,15 @@ mod r183_extra_draws_per_turn {
 
         let paused = pass_turn(&state);
         // The first draw cast the asker and stopped: nothing further was drawn.
-        assert_eq!(paused.state.pending.as_ref().map(|p| p.player_id), Some(PlayerId::P2));
+        assert_eq!(
+            paused.state.pending.as_ref().map(|p| p.player_id),
+            Some(PlayerId::P2)
+        );
         assert_eq!(drawn_by(&paused.events, PlayerId::P2), vec![ask.id.clone()]);
-        assert_eq!(ids(&paused.state.players.p2.library[..2]), vec![first.id.clone(), second.id.clone()]);
+        assert_eq!(
+            ids(&paused.state.players.p2.library[..2]),
+            vec![first.id.clone(), second.id.clone()]
+        );
         assert_eq!(ids(&paused.state.players.p2.hand), hand_before);
         // R183 and R158: the second whole draw is owed on state.work, as plain data.
         let owed = work::owed_work(&paused.state, Some(draw::DRAW_COUNT_WORK));
@@ -1028,14 +1285,27 @@ mod r183_extra_draws_per_turn {
             Some((PlayerId::P2, 1))
         );
 
-        let pending = paused.state.pending.clone().expect("expected the cast-on-draw prompt");
+        let pending = paused
+            .state
+            .pending
+            .clone()
+            .expect("expected the cast-on-draw prompt");
         let answered = step(
             &round_trip(&paused.state),
-            input(PlayerId::P2, ActionBody::Answer { choice_id: pending.id.clone(), selection: vec![Selection::None] }),
+            input(
+                PlayerId::P2,
+                ActionBody::Answer {
+                    choice_id: pending.id.clone(),
+                    selection: vec![Selection::None],
+                },
+            ),
         );
 
         // The rest of the first draw's chain, then the second draw: both cards, once each.
-        assert_eq!(drawn_by(&answered.events, PlayerId::P2), vec![first.id.clone(), second.id.clone()]);
+        assert_eq!(
+            drawn_by(&answered.events, PlayerId::P2),
+            vec![first.id.clone(), second.id.clone()]
+        );
         let hand = ids(&answered.state.players.p2.hand);
         assert!(hand.contains(&first.id));
         assert!(hand.contains(&second.id));
@@ -1052,13 +1322,21 @@ mod r183_extra_draws_per_turn {
         on_top_of_library(
             &mut state,
             PlayerId::P2,
-            &[ask_on_draw().id, "fx-35".to_string(), "fx-36".to_string(), "fx-37".to_string()],
+            &[
+                ask_on_draw().id,
+                "fx-35".to_string(),
+                "fx-36".to_string(),
+                "fx-37".to_string(),
+            ],
         );
         let paused = pass_turn(&state).state;
         let pending = paused.pending.clone().expect("expected the cast-on-draw prompt");
 
         let answer = Action::new(
-            ActionBody::Answer { choice_id: pending.id.clone(), selection: vec![Selection::None] },
+            ActionBody::Answer {
+                choice_id: pending.id.clone(),
+                selection: vec![Selection::None],
+            },
             PlayerId::P2,
             "r183-once-answer",
         );
@@ -1074,7 +1352,13 @@ mod r183_extra_draws_per_turn {
         assert_eq!(ids(&repeated.state.players.p2.library), library);
 
         // A fresh answer to the closed prompt is refused, and draws nothing.
-        let second = reduce(&first.state, &Action { nonce: "r183-once-again".to_string(), ..answer.clone() });
+        let second = reduce(
+            &first.state,
+            &Action {
+                nonce: "r183-once-again".to_string(),
+                ..answer.clone()
+            },
+        );
         assert!(second.error.is_some());
         assert_eq!(ids(&second.state.players.p2.hand), hand);
         assert_eq!(ids(&second.state.players.p2.library), library);
@@ -1090,12 +1374,19 @@ mod r184_deck_size_for_a_handicapped_seat {
 
     #[test]
     fn r184_b2_a_hard_p2_takes_a_30_card_distinct_token_free_deck_a_medium_p2_a_25_card_one() {
-        let hard = game("r184-hard", Some(on_p2(AI_DIFFICULTY.hard)), Some((vanilla_deck(DECK_SIZE, 1), vanilla_deck(30, 1))));
+        let hard = game(
+            "r184-hard",
+            Some(on_p2(AI_DIFFICULTY.hard)),
+            Some((vanilla_deck(DECK_SIZE, 1), vanilla_deck(30, 1))),
+        );
         assert_eq!(hard.players.p2.library.len(), 30);
         assert_eq!(hard.players.p1.library.len(), DECK_SIZE as usize);
 
-        let medium =
-            game("r184-medium", Some(on_p2(AI_DIFFICULTY.medium)), Some((vanilla_deck(DECK_SIZE, 1), vanilla_deck(25, 1))));
+        let medium = game(
+            "r184-medium",
+            Some(on_p2(AI_DIFFICULTY.medium)),
+            Some((vanilla_deck(DECK_SIZE, 1), vanilla_deck(25, 1))),
+        );
         assert_eq!(medium.players.p2.library.len(), 25);
     }
 
@@ -1107,7 +1398,9 @@ mod r184_deck_size_for_a_handicapped_seat {
             (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 1)),
             on_p2(AI_DIFFICULTY.hard),
         ));
-        assert!(message.is_some_and(|m| m.contains("p2: deck must hold exactly 30 cards (its handicap, R184)")));
+        assert!(
+            message.is_some_and(|m| m.contains("p2: deck must hold exactly 30 cards (its handicap, R184)"))
+        );
     }
 
     #[test]
@@ -1119,7 +1412,10 @@ mod r184_deck_size_for_a_handicapped_seat {
                 (vanilla_deck(DECK_SIZE, 1), vanilla_deck(size, 1)),
                 on_p2(AI_DIFFICULTY.hard),
             ));
-            assert!(message.is_some_and(|m| m.contains("p2: deck must hold exactly 30 cards")), "{size} cards");
+            assert!(
+                message.is_some_and(|m| m.contains("p2: deck must hold exactly 30 cards")),
+                "{size} cards"
+            );
         }
     }
 
@@ -1128,8 +1424,11 @@ mod r184_deck_size_for_a_handicapped_seat {
         register_all();
         let mut with_ghost = vanilla_deck(29, 1);
         with_ghost.push("fx-does-not-exist".to_string());
-        let message =
-            create_refusal(options("r184-ghost", (vanilla_deck(DECK_SIZE, 1), with_ghost), on_p2(AI_DIFFICULTY.hard)));
+        let message = create_refusal(options(
+            "r184-ghost",
+            (vanilla_deck(DECK_SIZE, 1), with_ghost),
+            on_p2(AI_DIFFICULTY.hard),
+        ));
         assert!(message.is_some_and(|m| in_order(&m, &["p2", "not in the catalog (§9.4 L6)"])));
     }
 
@@ -1146,8 +1445,11 @@ mod r184_deck_size_for_a_handicapped_seat {
 
     #[test]
     fn r184_b2_a_medium_p1_takes_25_cards_while_the_human_p2_is_still_held_to_20() {
-        let state =
-            game("r184-medium-p1", Some(on_p1(AI_DIFFICULTY.medium)), Some((vanilla_deck(25, 1), vanilla_deck(DECK_SIZE, 1))));
+        let state = game(
+            "r184-medium-p1",
+            Some(on_p1(AI_DIFFICULTY.medium)),
+            Some((vanilla_deck(25, 1), vanilla_deck(DECK_SIZE, 1))),
+        );
         assert_eq!(state.players.p1.library.len(), 25);
         assert_eq!(state.players.p2.library.len(), DECK_SIZE as usize);
 
@@ -1174,8 +1476,11 @@ mod r184_deck_size_for_a_handicapped_seat {
     #[test]
     fn r184_b2_the_unhandicapped_p1_is_still_held_to_20_with_s2_6s_own_message() {
         register_all();
-        let message =
-            create_refusal(options("r184-p1", (vanilla_deck(30, 1), vanilla_deck(30, 1)), on_p2(AI_DIFFICULTY.hard)));
+        let message = create_refusal(options(
+            "r184-p1",
+            (vanilla_deck(30, 1), vanilla_deck(30, 1)),
+            on_p2(AI_DIFFICULTY.hard),
+        ));
         assert!(message.is_some_and(|m| m.contains("p1: deck must hold exactly 20 cards (§2.6 L2)")));
     }
 
@@ -1184,8 +1489,11 @@ mod r184_deck_size_for_a_handicapped_seat {
         register_all();
         let mut with_duplicate = vanilla_deck(29, 1);
         with_duplicate.push("fx-1".to_string());
-        let message =
-            create_refusal(options("r184-dup", (vanilla_deck(DECK_SIZE, 1), with_duplicate), on_p2(AI_DIFFICULTY.hard)));
+        let message = create_refusal(options(
+            "r184-dup",
+            (vanilla_deck(DECK_SIZE, 1), with_duplicate),
+            on_p2(AI_DIFFICULTY.hard),
+        ));
         assert!(message.is_some_and(|m| in_order(&m, &["p2", "appears twice", "§2.6 L3"])));
     }
 
@@ -1194,8 +1502,11 @@ mod r184_deck_size_for_a_handicapped_seat {
         register_all();
         let mut with_token = vanilla_deck(29, 1);
         with_token.push(token_def("rush", [Tag::Token]).id);
-        let message =
-            create_refusal(options("r184-token", (vanilla_deck(DECK_SIZE, 1), with_token), on_p2(AI_DIFFICULTY.hard)));
+        let message = create_refusal(options(
+            "r184-token",
+            (vanilla_deck(DECK_SIZE, 1), with_token),
+            on_p2(AI_DIFFICULTY.hard),
+        ));
         assert!(message.is_some_and(|m| in_order(&m, &["p2", "is a Token card", "§2.6 L3"])));
     }
 
@@ -1204,12 +1515,15 @@ mod r184_deck_size_for_a_handicapped_seat {
         let catalog = vanilla_catalog(40, 1);
         assert!(state::validate_deck(&["fx-1".to_string()], &catalog, "p2", 1).is_ok());
         assert!(state::validate_deck(&[], &catalog, "p2", 1).is_err_and(|e| e.message.contains("p2")));
-        assert!(state::validate_deck(&["fx-1".to_string(), "fx-2".to_string()], &catalog, "p2", 1)
-            .is_err_and(|e| e.message.contains("p2")));
+        assert!(
+            state::validate_deck(&["fx-1".to_string(), "fx-2".to_string()], &catalog, "p2", 1)
+                .is_err_and(|e| e.message.contains("p2"))
+        );
     }
 
     #[test]
-    fn r184_b2_validate_deck_keeps_s2_6s_message_byte_identical_at_deck_size_and_names_r184_at_any_other_size() {
+    fn r184_b2_validate_deck_keeps_s2_6s_message_byte_identical_at_deck_size_and_names_r184_at_any_other_size()
+     {
         let catalog = vanilla_catalog(40, 1);
         // TS's default `size` is DECK_SIZE; Rust passes it.
         assert!(state::validate_deck(&vanilla_deck(DECK_SIZE, 1), &catalog, "p1", DECK_SIZE).is_ok());
@@ -1231,10 +1545,15 @@ mod r184_deck_size_for_a_handicapped_seat {
         assert!(!via_validate.contains("R184"));
         assert_eq!(via_create, via_validate);
 
-        assert!(state::validate_deck(&vanilla_deck(25, 1), &catalog, "p2", 30)
-            .is_err_and(|e| e.message.contains("p2: deck must hold exactly 30 cards (its handicap, R184)")));
-        assert!(state::validate_deck(&vanilla_deck(30, 1), &catalog, "p2", DECK_SIZE)
-            .is_err_and(|e| e.message.contains("exactly 20 cards (§2.6 L2)")));
+        assert!(
+            state::validate_deck(&vanilla_deck(25, 1), &catalog, "p2", 30).is_err_and(|e| e
+                .message
+                .contains("p2: deck must hold exactly 30 cards (its handicap, R184)"))
+        );
+        assert!(
+            state::validate_deck(&vanilla_deck(30, 1), &catalog, "p2", DECK_SIZE)
+                .is_err_and(|e| e.message.contains("exactly 20 cards (§2.6 L2)"))
+        );
     }
 }
 
@@ -1243,7 +1562,13 @@ mod r184_deck_size_for_a_handicapped_seat {
 // ---------------------------------------------------------------------------
 
 /// The five fields every handicap has; `heroHealth` (R290) is the optional sixth.
-const FIVE_FIELDS: &[&str] = &["deckSize", "manaBonus", "manaCap", "extraOpeningCards", "extraDrawsPerTurn"];
+const FIVE_FIELDS: &[&str] = &[
+    "deckSize",
+    "manaBonus",
+    "manaCap",
+    "extraOpeningCards",
+    "extraDrawsPerTurn",
+];
 
 /// The tutorial hero's starting health, read through the engine's own rule.
 fn tutorial_health() -> i32 {
@@ -1252,11 +1577,16 @@ fn tutorial_health() -> i32 {
 
 /// AI_TUTORIAL without its heroHealth: what a fold that forgot the field would be given.
 fn without_hero_health(handicap: Handicap) -> Handicap {
-    Handicap { hero_health: None, ..handicap }
+    Handicap {
+        hero_health: None,
+        ..handicap
+    }
 }
 
 fn field_of(handicap: &Handicap, field: &str) -> i64 {
-    serde_json::to_value(handicap).expect("a handicap serialises")[field].as_i64().expect("a handicap field is a number")
+    serde_json::to_value(handicap).expect("a handicap serialises")[field]
+        .as_i64()
+        .expect("a handicap field is a number")
 }
 
 fn five_fields_sorted() -> Vec<String> {
@@ -1269,7 +1599,8 @@ mod r290_the_tutorial_handicap_ai_tutorial {
     use super::*;
 
     #[test]
-    fn r290_ai_tutorial_is_a_12_card_deck_at_most_3_mana_a_20_health_hero_and_nothing_extra_and_a_valid_handicap() {
+    fn r290_ai_tutorial_is_a_12_card_deck_at_most_3_mana_a_20_health_hero_and_nothing_extra_and_a_valid_handicap()
+     {
         assert_eq!(
             AI_TUTORIAL,
             Handicap {
@@ -1287,8 +1618,12 @@ mod r290_the_tutorial_handicap_ai_tutorial {
     }
 
     #[test]
-    fn r290_ai_tutorial_is_no_practice_tier_not_in_difficulties_not_a_key_of_ai_difficulty_equal_to_none_of_them() {
-        assert_eq!(DIFFICULTIES.iter().map(|d| d.as_str()).collect::<Vec<_>>(), ["easy", "medium", "hard"]);
+    fn r290_ai_tutorial_is_no_practice_tier_not_in_difficulties_not_a_key_of_ai_difficulty_equal_to_none_of_them()
+     {
+        assert_eq!(
+            DIFFICULTIES.iter().map(|d| d.as_str()).collect::<Vec<_>>(),
+            ["easy", "medium", "hard"]
+        );
         let keys = keys_sorted(&serde_json::to_value(AI_DIFFICULTY).expect("the table serialises"));
         assert_eq!(keys, ["easy", "hard", "medium"]);
         assert!(!keys.contains(&"tutorial".to_string()));
@@ -1297,7 +1632,11 @@ mod r290_the_tutorial_handicap_ai_tutorial {
             assert_ne!(AI_DIFFICULTY[difficulty], AI_TUTORIAL, "{difficulty}");
             // The three tiers never set the field, so they start at HERO_HEALTH (SPEC §9.9's table).
             assert!(AI_DIFFICULTY[difficulty].hero_health.is_none(), "{difficulty}");
-            assert_eq!(state::starting_hero_health(Some(&AI_DIFFICULTY[difficulty])), HERO_HEALTH, "{difficulty}");
+            assert_eq!(
+                state::starting_hero_health(Some(&AI_DIFFICULTY[difficulty])),
+                HERO_HEALTH,
+                "{difficulty}"
+            );
         }
         assert!(HUMAN_HANDICAP.hero_health.is_none());
         assert_eq!(state::starting_hero_health(Some(&HUMAN_HANDICAP)), HERO_HEALTH);
@@ -1305,7 +1644,8 @@ mod r290_the_tutorial_handicap_ai_tutorial {
     }
 
     #[test]
-    fn r290_ai_tutorial_is_below_a_humans_resources_every_field_at_or_under_easys_and_the_three_it_changes_strictly_under() {
+    fn r290_ai_tutorial_is_below_a_humans_resources_every_field_at_or_under_easys_and_the_three_it_changes_strictly_under()
+     {
         const { assert!(AI_TUTORIAL.deck_size < DECK_SIZE) };
         const { assert!(AI_TUTORIAL.mana_cap < MAX_MANA) };
         assert!(tutorial_health() < HERO_HEALTH);
@@ -1315,7 +1655,10 @@ mod r290_the_tutorial_handicap_ai_tutorial {
 
         let mut changed: Vec<&str> = Vec::new();
         for field in FIVE_FIELDS {
-            assert!(field_of(&AI_TUTORIAL, field) <= field_of(&HUMAN_HANDICAP, field), "{field}");
+            assert!(
+                field_of(&AI_TUTORIAL, field) <= field_of(&HUMAN_HANDICAP, field),
+                "{field}"
+            );
             if field_of(&AI_TUTORIAL, field) != field_of(&HUMAN_HANDICAP, field) {
                 changed.push(field);
             }
@@ -1330,16 +1673,36 @@ mod r290_the_tutorial_handicap_ai_tutorial {
     }
 
     #[test]
-    fn r290_create_game_a_tutorial_p2_takes_12_cards_and_its_hero_starts_at_20_stored_as_a_copy_p1_keeps_hero_health() {
+    fn r290_create_game_a_tutorial_p2_takes_12_cards_and_its_hero_starts_at_20_stored_as_a_copy_p1_keeps_hero_health()
+     {
         let state = game("r290-create", Some(on_p2(AI_TUTORIAL)), None);
         assert_eq!(state.players.p2.library.len(), AI_TUTORIAL.deck_size as usize);
         assert_eq!(state.players.p1.library.len(), DECK_SIZE as usize);
-        assert_eq!(state.players.p2.hero, HeroState { health: tutorial_health(), armor: 0 });
-        assert_eq!(state.players.p1.hero, HeroState { health: HERO_HEALTH, armor: 0 });
+        assert_eq!(
+            state.players.p2.hero,
+            HeroState {
+                health: tutorial_health(),
+                armor: 0
+            }
+        );
+        assert_eq!(
+            state.players.p1.hero,
+            HeroState {
+                health: HERO_HEALTH,
+                armor: 0
+            }
+        );
 
         assert_eq!(state.players.p2.handicap, Some(AI_TUTORIAL));
         // TS `not.toBe`: the stored handicap is a copy, never the constant itself.
-        assert!(state.players.p2.handicap.as_ref().is_some_and(|stored| !std::ptr::eq(stored, &AI_TUTORIAL)));
+        assert!(
+            state
+                .players
+                .p2
+                .handicap
+                .as_ref()
+                .is_some_and(|stored| !std::ptr::eq(stored, &AI_TUTORIAL))
+        );
         assert!(state.players.p1.handicap.is_none());
         assert_eq!(state::handicap_of(&state.players.p2), AI_TUTORIAL);
         assert_eq!(state::handicap_of(&state.players.p1), HUMAN_HANDICAP);
@@ -1351,7 +1714,10 @@ mod r290_the_tutorial_handicap_ai_tutorial {
         let begun = started("r290-create", Some(on_p2(AI_TUTORIAL)), None);
         assert_eq!(begun.players.p2.hero.health, tutorial_health());
         assert_eq!(begun.players.p1.hero.health, HERO_HEALTH);
-        assert_eq!(view_for(&begun, PlayerId::P1).opponent.hero.health, tutorial_health());
+        assert_eq!(
+            view_for(&begun, PlayerId::P1).opponent.hero.health,
+            tutorial_health()
+        );
         assert_eq!(view_for(&begun, PlayerId::P1).you.hero.health, HERO_HEALTH);
         assert_eq!(view_for(&begun, PlayerId::P2).you.hero.health, tutorial_health());
     }
@@ -1368,7 +1734,8 @@ mod r290_the_tutorial_handicap_ai_tutorial {
     }
 
     #[test]
-    fn r290_a_tutorial_seats_deck_is_held_to_exactly_12_r184_20_11_or_13_cards_are_refused_and_the_human_is_still_held_to_20() {
+    fn r290_a_tutorial_seats_deck_is_held_to_exactly_12_r184_20_11_or_13_cards_are_refused_and_the_human_is_still_held_to_20()
+     {
         register_all();
         for size in [DECK_SIZE, AI_TUTORIAL.deck_size - 1, AI_TUTORIAL.deck_size + 1] {
             let message = create_refusal(options(
@@ -1377,28 +1744,45 @@ mod r290_the_tutorial_handicap_ai_tutorial {
                 on_p2(AI_TUTORIAL),
             ));
             assert!(
-                message.is_some_and(|m| m.contains("p2: deck must hold exactly 12 cards (its handicap, R184)")),
+                message
+                    .is_some_and(|m| m.contains("p2: deck must hold exactly 12 cards (its handicap, R184)")),
                 "{size} cards"
             );
         }
         let message = create_refusal(options(
             "r290-deck-human",
-            (vanilla_deck(AI_TUTORIAL.deck_size, 1), vanilla_deck(AI_TUTORIAL.deck_size, 1)),
+            (
+                vanilla_deck(AI_TUTORIAL.deck_size, 1),
+                vanilla_deck(AI_TUTORIAL.deck_size, 1),
+            ),
             on_p2(AI_TUTORIAL),
         ));
         assert!(message.is_some_and(|m| m.contains("p1: deck must hold exactly 20 cards (§2.6 L2)")));
     }
 
     #[test]
-    fn r290_hero_health_absent_or_equal_to_hero_health_stores_nothing_a_humans_handicap_with_hero_health_30_hashes_like_the_plain_game() {
+    fn r290_hero_health_absent_or_equal_to_hero_health_stores_nothing_a_humans_handicap_with_hero_health_30_hashes_like_the_plain_game()
+     {
         let decks = decks_for(None);
         let plain = game("r290-human", None, Some(decks.clone()));
         let variants: Vec<Handicaps> = vec![
-            on_p2(Handicap { hero_health: Some(HERO_HEALTH), ..HUMAN_HANDICAP }),
-            on_p1(Handicap { hero_health: Some(HERO_HEALTH), ..HUMAN_HANDICAP }),
+            on_p2(Handicap {
+                hero_health: Some(HERO_HEALTH),
+                ..HUMAN_HANDICAP
+            }),
+            on_p1(Handicap {
+                hero_health: Some(HERO_HEALTH),
+                ..HUMAN_HANDICAP
+            }),
             on_both(
-                Handicap { hero_health: Some(HERO_HEALTH), ..AI_DIFFICULTY.easy },
-                Handicap { hero_health: Some(HERO_HEALTH), ..HUMAN_HANDICAP },
+                Handicap {
+                    hero_health: Some(HERO_HEALTH),
+                    ..AI_DIFFICULTY.easy
+                },
+                Handicap {
+                    hero_health: Some(HERO_HEALTH),
+                    ..HUMAN_HANDICAP
+                },
             ),
         ];
         for handicaps in variants {
@@ -1406,16 +1790,28 @@ mod r290_the_tutorial_handicap_ai_tutorial {
             let state = game("r290-human", Some(handicaps), Some(decks.clone()));
             for player in PLAYER_IDS {
                 assert!(state.players[player].handicap.is_none(), "{label}: {player}");
-                assert_eq!(state::handicap_of(&state.players[player]), HUMAN_HANDICAP, "{label}: {player}");
-                assert_eq!(state.players[player].hero.health, HERO_HEALTH, "{label}: {player}");
+                assert_eq!(
+                    state::handicap_of(&state.players[player]),
+                    HUMAN_HANDICAP,
+                    "{label}: {player}"
+                );
+                assert_eq!(
+                    state.players[player].hero.health, HERO_HEALTH,
+                    "{label}: {player}"
+                );
             }
             assert_eq!(hash_state(&state), hash_state(&plain), "{label}");
-            assert_eq!(hash_state(&begin_game(&state).state), hash_state(&begin_game(&plain).state), "{label}");
+            assert_eq!(
+                hash_state(&begin_game(&state).state),
+                hash_state(&begin_game(&plain).state),
+                "{label}"
+            );
         }
     }
 
     #[test]
-    fn r290_medium_and_hard_store_the_five_fields_and_no_hero_health_key_and_a_hero_health_of_30_added_to_them_changes_nothing() {
+    fn r290_medium_and_hard_store_the_five_fields_and_no_hero_health_key_and_a_hero_health_of_30_added_to_them_changes_nothing()
+     {
         for difficulty in [Difficulty::Medium, Difficulty::Hard] {
             let h = AI_DIFFICULTY[difficulty];
             let decks = decks_for(Some(&on_p2(h)));
@@ -1427,28 +1823,42 @@ mod r290_the_tutorial_handicap_ai_tutorial {
 
             let explicit = game(
                 &format!("r290-{difficulty}"),
-                Some(on_p2(Handicap { hero_health: Some(HERO_HEALTH), ..h })),
+                Some(on_p2(Handicap {
+                    hero_health: Some(HERO_HEALTH),
+                    ..h
+                })),
                 Some(decks),
             );
             let stored = serde_json::to_value(explicit.players.p2.handicap).expect("a handicap serialises");
             assert_eq!(keys_sorted(&stored), five_fields_sorted(), "{difficulty}");
             assert_eq!(explicit.players.p2.handicap, Some(h), "{difficulty}");
             assert_eq!(hash_state(&explicit), hash_state(&tier), "{difficulty}");
-            assert_eq!(hash_state(&begin_game(&explicit).state), hash_state(&begin_game(&tier).state), "{difficulty}");
+            assert_eq!(
+                hash_state(&begin_game(&explicit).state),
+                hash_state(&begin_game(&tier).state),
+                "{difficulty}"
+            );
         }
     }
 
     #[test]
-    fn r290_a_hero_health_other_than_30_is_stored_beside_the_other_fields_even_on_a_handicap_that_is_otherwise_a_humans() {
+    fn r290_a_hero_health_other_than_30_is_stored_beside_the_other_fields_even_on_a_handicap_that_is_otherwise_a_humans()
+     {
         let decks = decks_for(None);
         let plain = game("r290-only-health", None, Some(decks.clone()));
-        let only_health = Handicap { hero_health: Some(tutorial_health()), ..HUMAN_HANDICAP };
+        let only_health = Handicap {
+            hero_health: Some(tutorial_health()),
+            ..HUMAN_HANDICAP
+        };
         let state = game("r290-only-health", Some(on_p2(only_health)), Some(decks));
         assert_eq!(state.players.p2.handicap, Some(only_health));
         assert_eq!(state.players.p2.hero.health, tutorial_health());
         assert_ne!(hash_state(&state), hash_state(&plain));
 
-        let medium_at_25 = Handicap { hero_health: Some(25), ..AI_DIFFICULTY.medium };
+        let medium_at_25 = Handicap {
+            hero_health: Some(25),
+            ..AI_DIFFICULTY.medium
+        };
         let medium = game("r290-medium-25", Some(on_p2(medium_at_25)), None);
         assert_eq!(medium.players.p2.handicap, Some(medium_at_25));
         assert_eq!(medium.players.p2.hero.health, 25);
@@ -1458,9 +1868,17 @@ mod r290_the_tutorial_handicap_ai_tutorial {
     fn r290_validate_handicap_refuses_a_hero_health_that_is_not_a_positive_integer_and_accepts_1_and_20() {
         // 0 and -1 are integers the type holds: refused by validate_handicap, with TS's message.
         for hero_health in [0, -1] {
-            let result = state::validate_handicap(&Handicap { hero_health: Some(hero_health), ..AI_TUTORIAL }, "p2");
+            let result = state::validate_handicap(
+                &Handicap {
+                    hero_health: Some(hero_health),
+                    ..AI_TUTORIAL
+                },
+                "p2",
+            );
             assert!(
-                result.is_err_and(|e| e.message.contains("p2: handicap heroHealth must be a positive integer (R290)")),
+                result.is_err_and(|e| e
+                    .message
+                    .contains("p2: handicap heroHealth must be a positive integer (R290)")),
                 "{hero_health}"
             );
         }
@@ -1468,10 +1886,31 @@ mod r290_the_tutorial_handicap_ai_tutorial {
         // Infinity and null: see the spec-gaps file.)
         for hero_health in [json!(2.5), json!("20")] {
             let label = hero_health.to_string();
-            assert!(handicap_refused(with_field(&AI_TUTORIAL, "heroHealth", hero_health), "p2"), "{label}");
+            assert!(
+                handicap_refused(with_field(&AI_TUTORIAL, "heroHealth", hero_health), "p2"),
+                "{label}"
+            );
         }
-        assert!(state::validate_handicap(&Handicap { hero_health: Some(1), ..AI_TUTORIAL }, "p2").is_ok());
-        assert!(state::validate_handicap(&Handicap { hero_health: Some(20), ..AI_TUTORIAL }, "p2").is_ok());
+        assert!(
+            state::validate_handicap(
+                &Handicap {
+                    hero_health: Some(1),
+                    ..AI_TUTORIAL
+                },
+                "p2"
+            )
+            .is_ok()
+        );
+        assert!(
+            state::validate_handicap(
+                &Handicap {
+                    hero_health: Some(20),
+                    ..AI_TUTORIAL
+                },
+                "p2"
+            )
+            .is_ok()
+        );
         assert!(state::validate_handicap(&without_hero_health(AI_TUTORIAL), "p2").is_ok());
     }
 
@@ -1483,24 +1922,33 @@ mod r290_the_tutorial_handicap_ai_tutorial {
                 "r290-bad-health",
                 // A 20-card p2 deck is wrong for AI_TUTORIAL too; the handicap is named first (R180).
                 (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 1)),
-                on_p2(Handicap { hero_health: Some(hero_health), ..AI_TUTORIAL }),
+                on_p2(Handicap {
+                    hero_health: Some(hero_health),
+                    ..AI_TUTORIAL
+                }),
             ));
             assert!(
-                message.is_some_and(|m| m.contains("p2: handicap heroHealth must be a positive integer (R290)")),
+                message
+                    .is_some_and(|m| m.contains("p2: handicap heroHealth must be a positive integer (R290)")),
                 "{hero_health}"
             );
         }
         // 2.5: the typed options cannot hold it, so no game is made.
-        assert!(create_refusal_json(json!({
-            "seed": "r290-bad-health",
-            "decks": [vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 1)],
-            "handicaps": { "p2": with_field(&AI_TUTORIAL, "heroHealth", json!(2.5)) },
-        }))
-        .is_some());
+        assert!(
+            create_refusal_json(json!({
+                "seed": "r290-bad-health",
+                "decks": [vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 1)],
+                "handicaps": { "p2": with_field(&AI_TUTORIAL, "heroHealth", json!(2.5)) },
+            }))
+            .is_some()
+        );
         let message = create_refusal(options(
             "r290-bad-health-p1",
             (vanilla_deck(AI_TUTORIAL.deck_size, 1), vanilla_deck(DECK_SIZE, 1)),
-            on_p1(Handicap { hero_health: Some(0), ..AI_TUTORIAL }),
+            on_p1(Handicap {
+                hero_health: Some(0),
+                ..AI_TUTORIAL
+            }),
         ));
         assert!(message.is_some_and(|m| m.contains("p1: handicap heroHealth")));
     }
@@ -1511,14 +1959,26 @@ mod r290_the_tutorial_handicap_ai_tutorial {
         for turns in 0..=12 {
             state.players.p2.turns_started = turns;
             state.players.p1.turns_started = turns;
-            assert_eq!(mana::max_mana_for(&state.players.p2), turns.min(AI_TUTORIAL.mana_cap), "tutorial after {turns} turns");
-            assert!(mana::max_mana_for(&state.players.p2) <= AI_TUTORIAL.mana_cap, "tutorial after {turns} turns");
-            assert_eq!(mana::max_mana_for(&state.players.p1), turns.min(MAX_MANA), "human after {turns} turns");
+            assert_eq!(
+                mana::max_mana_for(&state.players.p2),
+                turns.min(AI_TUTORIAL.mana_cap),
+                "tutorial after {turns} turns"
+            );
+            assert!(
+                mana::max_mana_for(&state.players.p2) <= AI_TUTORIAL.mana_cap,
+                "tutorial after {turns} turns"
+            );
+            assert_eq!(
+                mana::max_mana_for(&state.players.p1),
+                turns.min(MAX_MANA),
+                "human after {turns} turns"
+            );
         }
     }
 
     #[test]
-    fn r290_a_tutorial_seat_refreshes_to_1_2_3_3_on_its_first_four_turns_as_p2_or_p1_while_the_human_reaches_4() {
+    fn r290_a_tutorial_seat_refreshes_to_1_2_3_3_on_its_first_four_turns_as_p2_or_p1_while_the_human_reaches_4()
+     {
         let as_p2 = maxes_by_turn("r290-mana", Some(on_p2(AI_TUTORIAL)), 12);
         assert_eq!(as_p2.p2, [1, 2, 3, 3, 3, 3]);
         assert_eq!(as_p2.p1, [1, 2, 3, 4, 4, 4]);
@@ -1527,12 +1987,20 @@ mod r290_the_tutorial_handicap_ai_tutorial {
         assert_eq!(as_p1.p1, [1, 2, 3, 3, 3, 3]);
         assert_eq!(as_p1.p2, [1, 2, 3, 4, 4, 4]);
 
-        let fourth = advance_to(started("r290-mana-current", Some(on_p2(AI_TUTORIAL)), None), PlayerId::P2, 4);
-        assert_eq!((fourth.players.p2.mana.max, fourth.players.p2.mana.current), (3, 3));
+        let fourth = advance_to(
+            started("r290-mana-current", Some(on_p2(AI_TUTORIAL)), None),
+            PlayerId::P2,
+            4,
+        );
+        assert_eq!(
+            (fourth.players.p2.mana.max, fourth.players.p2.mana.current),
+            (3, 3)
+        );
     }
 
     #[test]
-    fn r290_fold_with_ai_tutorial_reproduces_a_tutorial_random_policy_game_whose_tutorial_seat_never_had_more_than_3_max_mana() {
+    fn r290_fold_with_ai_tutorial_reproduces_a_tutorial_random_policy_game_whose_tutorial_seat_never_had_more_than_3_max_mana()
+     {
         let cases: Vec<(&str, Handicaps, PlayerId)> = vec![
             ("r290-fold-p2", on_p2(AI_TUTORIAL), PlayerId::P2),
             ("r290-fold-p1", on_p1(AI_TUTORIAL), PlayerId::P1),
@@ -1541,8 +2009,15 @@ mod r290_the_tutorial_handicap_ai_tutorial {
             let mut highest = 0;
             let mut observe = |state: &GameState| highest = highest.max(state.players[seat].mana.max);
             let live = play_random(seed, handicaps.clone(), Some(&mut observe));
-            assert_eq!(highest, AI_TUTORIAL.mana_cap, "{seed}: the tutorial seat reached its cap");
-            let seat_deck = if seat == PlayerId::P1 { &live.decks.0 } else { &live.decks.1 };
+            assert_eq!(
+                highest, AI_TUTORIAL.mana_cap,
+                "{seed}: the tutorial seat reached its cap"
+            );
+            let seat_deck = if seat == PlayerId::P1 {
+                &live.decks.0
+            } else {
+                &live.decks.1
+            };
             assert_eq!(seat_deck.len(), AI_TUTORIAL.deck_size as usize, "{seed}");
 
             register_all();
@@ -1554,7 +2029,8 @@ mod r290_the_tutorial_handicap_ai_tutorial {
     }
 
     #[test]
-    fn r290_the_same_fold_without_the_handicap_throws_on_the_12_card_deck_and_without_hero_health_it_does_not_reproduce_the_game() {
+    fn r290_the_same_fold_without_the_handicap_throws_on_the_12_card_deck_and_without_hero_health_it_does_not_reproduce_the_game()
+     {
         let seed = "r290-fold-missing";
         let live = play_random(seed, on_p2(AI_TUTORIAL), None);
         register_all();
@@ -1569,7 +2045,8 @@ mod r290_the_tutorial_handicap_ai_tutorial {
     }
 
     #[test]
-    fn r290_a_tutorial_hero_at_20_dies_at_0_like_any_hero_a_20_point_fatigue_hit_ends_the_game_a_19_point_one_leaves_it_at_1() {
+    fn r290_a_tutorial_hero_at_20_dies_at_0_like_any_hero_a_20_point_fatigue_hit_ends_the_game_a_19_point_one_leaves_it_at_1()
+     {
         // p2's library is empty, so its turn-start draw is a fatigue step of fatigueCount + 1 (R183's
         // fatigue test reads the same rule): fatigueCount 19 makes the hit 20.
         let mut lethal = started("r290-death", Some(on_p2(AI_TUTORIAL)), None);
@@ -1578,8 +2055,21 @@ mod r290_the_tutorial_handicap_ai_tutorial {
         let ended = step(&lethal, input(PlayerId::P1, ActionBody::EndTurn));
         assert_eq!(hero_hits(&ended.events, "hero-p2"), [tutorial_health()]);
         assert_eq!(ended.state.players.p2.hero.health, 0);
-        assert_eq!(ended.state.result, Some(GameResult { winner: Winner::P1, reason: GameOverReason::HeroDeath }));
-        assert_eq!(ended.events.iter().filter(|e| matches!(e, GameEvent::GameOver { .. })).count(), 1);
+        assert_eq!(
+            ended.state.result,
+            Some(GameResult {
+                winner: Winner::P1,
+                reason: GameOverReason::HeroDeath
+            })
+        );
+        assert_eq!(
+            ended
+                .events
+                .iter()
+                .filter(|e| matches!(e, GameEvent::GameOver { .. }))
+                .count(),
+            1
+        );
 
         let mut survives = started("r290-death", Some(on_p2(AI_TUTORIAL)), None);
         survives.players.p2.library = vec![];
@@ -1594,12 +2084,16 @@ mod r290_the_tutorial_handicap_ai_tutorial {
         human.players.p2.library = vec![];
         human.players.p2.fatigue_count = tutorial_health() - 1;
         let human_after = pass_turn(&human).state;
-        assert_eq!(human_after.players.p2.hero.health, HERO_HEALTH - tutorial_health());
+        assert_eq!(
+            human_after.players.p2.hero.health,
+            HERO_HEALTH - tutorial_health()
+        );
         assert!(human_after.result.is_none());
     }
 
     #[test]
-    fn r290_20_is_where_the_tutorial_hero_starts_not_a_cap_a_heal_takes_it_past_20_and_a_heal_up_to_30_lifts_it_to_30() {
+    fn r290_20_is_where_the_tutorial_hero_starts_not_a_cap_a_heal_takes_it_past_20_and_a_heal_up_to_30_lifts_it_to_30()
+     {
         let mut state = started("r290-heal", Some(on_p2(AI_TUTORIAL)), None);
         // TS's `{ state, events: [] }`; the Rust sink carries an rng too, which neither heal draws from.
         let mut events = Vec::new();
@@ -1609,7 +2103,10 @@ mod r290_the_tutorial_handicap_ai_tutorial {
         assert_eq!(damage::heal_hero(&mut sink, PlayerId::P2, 5), 5);
         assert_eq!(sink.state.players.p2.hero.health, tutorial_health() + 5);
         // "Heal up to N" (#53 Reno's 30) raises the hero to N whatever it started at.
-        assert_eq!(damage::heal_hero_up_to(&mut sink, PlayerId::P2, HERO_HEALTH), HERO_HEALTH - tutorial_health() - 5);
+        assert_eq!(
+            damage::heal_hero_up_to(&mut sink, PlayerId::P2, HERO_HEALTH),
+            HERO_HEALTH - tutorial_health() - 5
+        );
         assert_eq!(sink.state.players.p2.hero.health, HERO_HEALTH);
         // The stored handicap is untouched by either: its heroHealth records where the hero started.
         assert_eq!(sink.state.players.p2.handicap, Some(AI_TUTORIAL));

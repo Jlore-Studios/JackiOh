@@ -33,8 +33,8 @@ use jackioh_server::api::http::{create_rate_limiter, error_response, rate_limite
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{
     API_MAX_BODY_BYTES, API_REQUESTS_PER_MINUTE, CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_IP_PER_HOUR,
-    CODE_ATTEMPTS_PER_PROFILE_PER_HOUR, REDEMPTION_CIRCUIT_FAILURE_THRESHOLD, REDEMPTION_CIRCUIT_WINDOW_SECONDS,
-    REDEMPTION_IDENTICAL_ERROR,
+    CODE_ATTEMPTS_PER_PROFILE_PER_HOUR, REDEMPTION_CIRCUIT_FAILURE_THRESHOLD,
+    REDEMPTION_CIRCUIT_WINDOW_SECONDS, REDEMPTION_IDENTICAL_ERROR,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{CodeAttempt, Db};
@@ -114,12 +114,21 @@ impl Reply {
     }
 
     fn retry_after(&self) -> Option<&str> {
-        self.headers.get("retry-after").map(|value| value.to_str().expect("an ASCII header"))
+        self.headers
+            .get("retry-after")
+            .map(|value| value.to_str().expect("an ASCII header"))
     }
 }
 
 /// One request through the real router, its body sent exactly as given.
-async fn send(app: &Arc<App>, method: &str, path: &str, token: Option<&str>, ip: &str, body: Option<String>) -> Reply {
+async fn send(
+    app: &Arc<App>,
+    method: &str,
+    path: &str,
+    token: Option<&str>,
+    ip: &str,
+    body: Option<String>,
+) -> Reply {
     let mut request = Request::builder()
         .method(method)
         .uri(path)
@@ -129,18 +138,33 @@ async fn send(app: &Arc<App>, method: &str, path: &str, token: Option<&str>, ip:
         request = request.header("authorization", format!("Bearer {token}"));
     }
     let body = body.map_or_else(Body::empty, Body::from);
-    let response = app::router(app.clone()).oneshot(request.body(body).expect("request")).await.expect("answers");
+    let response = app::router(app.clone())
+        .oneshot(request.body(body).expect("request"))
+        .await
+        .expect("answers");
     let status = response.status().as_u16();
     let headers = response.headers().clone();
-    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.expect("body");
-    Reply { status, headers, text: String::from_utf8_lossy(&bytes).into_owned() }
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("body");
+    Reply {
+        status,
+        headers,
+        text: String::from_utf8_lossy(&bytes).into_owned(),
+    }
 }
 
 async fn read_response(response: axum::response::Response) -> Reply {
     let status = response.status().as_u16();
     let headers = response.headers().clone();
-    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.expect("body");
-    Reply { status, headers, text: String::from_utf8_lossy(&bytes).into_owned() }
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("body");
+    Reply {
+        status,
+        headers,
+        text: String::from_utf8_lossy(&bytes).into_owned(),
+    }
 }
 
 /// The fake store behind the test app (TS `deps.store`).
@@ -159,22 +183,34 @@ struct Hashes {
 
 impl Hashes {
     fn ip(&self, raw: &str) -> String {
-        let mut mac =
-            <Hmac<Sha256> as KeyInit>::new_from_slice(format!("{}:ip", self.pepper).as_bytes()).expect("any key length");
+        let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(format!("{}:ip", self.pepper).as_bytes())
+            .expect("any key length");
         mac.update(raw.trim().to_lowercase().as_bytes());
-        mac.finalize().into_bytes().iter().map(|byte| format!("{byte:02x}")).collect()
+        mac.finalize()
+            .into_bytes()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect()
     }
 }
 
 fn hashes(app: &App) -> Hashes {
-    Hashes { pepper: app.env.code_pepper.clone() }
+    Hashes {
+        pepper: app.env.code_pepper.clone(),
+    }
 }
 
 /// TS `mintInviteCode(deps, { maxUses, expiresAt })`: the new code's id and its formatted text.
 async fn mint(app: &App, max_uses: Option<i32>, expires_at: Option<i64>) -> (String, String) {
-    let minted = mint_invite_code(MintDeps { db: &app.db, code_pepper: &app.env.code_pepper }, MintInput { max_uses, expires_at })
-        .await
-        .expect("mintInviteCode");
+    let minted = mint_invite_code(
+        MintDeps {
+            db: &app.db,
+            code_pepper: &app.env.code_pepper,
+        },
+        MintInput { max_uses, expires_at },
+    )
+    .await
+    .expect("mintInviteCode");
     (minted.id, minted.formatted)
 }
 
@@ -192,12 +228,25 @@ struct Caller {
 async fn seed_caller(app: &App, id: &str) -> Caller {
     let user_id = format!("user-{id}");
     let token = add_user(app, &user_id, &format!("{id}@example.test"), true);
-    fake(app).await.seed_profile(json!({ "id": id, "userId": user_id, "status": "pending" }));
-    Caller { token, profile_id: id.to_string() }
+    fake(app)
+        .await
+        .seed_profile(json!({ "id": id, "userId": user_id, "status": "pending" }));
+    Caller {
+        token,
+        profile_id: id.to_string(),
+    }
 }
 
 async fn redeem(app: &Arc<App>, token: &str, code: &str, ip: &str) -> Reply {
-    send(app, "POST", "/api/codes/redeem", Some(token), ip, Some(json!({ "code": code }).to_string())).await
+    send(
+        app,
+        "POST",
+        "/api/codes/redeem",
+        Some(token),
+        ip,
+        Some(json!({ "code": code }).to_string()),
+    )
+    .await
 }
 
 async fn code_status(app: &Arc<App>, token: &str) -> Value {
@@ -212,8 +261,9 @@ fn remaining(status: &Value) -> i64 {
 
 /// TS `logAttempts`: `count` rejected attempts, as §9.4 step 4 writes them.
 async fn log_attempts(app: &App, count: i64, profile_id: Option<&str>, ip_hash: &str, at: i64) {
-    let attempt: CodeAttempt =
-        from(json!({ "profileId": profile_id, "ipHash": ip_hash, "result": "rejected", "reason": "missing", "at": at }));
+    let attempt: CodeAttempt = from(
+        json!({ "profileId": profile_id, "ipHash": ip_hash, "result": "rejected", "reason": "missing", "at": at }),
+    );
     for _ in 0..count {
         let mut t = app.db.begin(None).await.expect("begin");
         t.codes_log_attempt(&attempt).await.expect("codes.logAttempt");
@@ -249,7 +299,14 @@ mod r192_b7_get_api_codes_status_reports_the_tries_left_in_the_window {
         let app = code_app().await;
         let caller = seed_caller(&app, "counted").await;
         let made = 2;
-        log_attempts(&app, made, Some(&caller.profile_id), &hashes(&app).ip(DEFAULT_IP), now_ms()).await;
+        log_attempts(
+            &app,
+            made,
+            Some(&caller.profile_id),
+            &hashes(&app).ip(DEFAULT_IP),
+            now_ms(),
+        )
+        .await;
 
         let status = code_status(&app, &caller.token).await;
 
@@ -260,7 +317,14 @@ mod r192_b7_get_api_codes_status_reports_the_tries_left_in_the_window {
     async fn r192_b7_never_reports_fewer_than_zero_tries() {
         let app = code_app().await;
         let caller = seed_caller(&app, "overdrawn").await;
-        log_attempts(&app, per_profile() + 3, Some(&caller.profile_id), &hashes(&app).ip(DEFAULT_IP), now_ms()).await;
+        log_attempts(
+            &app,
+            per_profile() + 3,
+            Some(&caller.profile_id),
+            &hashes(&app).ip(DEFAULT_IP),
+            now_ms(),
+        )
+        .await;
 
         let status = code_status(&app, &caller.token).await;
 
@@ -272,7 +336,14 @@ mod r192_b7_get_api_codes_status_reports_the_tries_left_in_the_window {
         let app = code_app().await;
         let caller = seed_caller(&app, "bystander").await;
         let neighbour = seed_caller(&app, "neighbour").await;
-        log_attempts(&app, per_profile(), Some(&neighbour.profile_id), &hashes(&app).ip(DEFAULT_IP), now_ms()).await;
+        log_attempts(
+            &app,
+            per_profile(),
+            Some(&neighbour.profile_id),
+            &hashes(&app).ip(DEFAULT_IP),
+            now_ms(),
+        )
+        .await;
 
         let status = code_status(&app, &caller.token).await;
 
@@ -286,7 +357,14 @@ mod r192_b7_get_api_codes_status_reports_the_tries_left_in_the_window {
         let app = code_app().await;
         let caller = seed_caller(&app, "yesterday").await;
         let at = now_ms() - window_ms() - 1;
-        log_attempts(&app, per_profile() + 1, Some(&caller.profile_id), &hashes(&app).ip(DEFAULT_IP), at).await;
+        log_attempts(
+            &app,
+            per_profile() + 1,
+            Some(&caller.profile_id),
+            &hashes(&app).ip(DEFAULT_IP),
+            at,
+        )
+        .await;
 
         let status = code_status(&app, &caller.token).await;
 
@@ -307,7 +385,8 @@ mod r192_b7_get_api_codes_status_reports_the_tries_left_in_the_window {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r192_b7_says_when_an_account_with_no_tries_left_gets_one_back_its_oldest_attempt_leaving_the_window() {
+    async fn r192_b7_says_when_an_account_with_no_tries_left_gets_one_back_its_oldest_attempt_leaving_the_window()
+     {
         let app = code_app().await;
         let caller = seed_caller(&app, "waiting").await;
         let ip_hash = hashes(&app).ip(DEFAULT_IP);
@@ -320,7 +399,9 @@ mod r192_b7_get_api_codes_status_reports_the_tries_left_in_the_window {
 
         assert_eq!(remaining(&status), 0);
         let expected = window_ms() - age;
-        let wait = status["attemptsRetryAfterMs"].as_i64().expect("attemptsRetryAfterMs");
+        let wait = status["attemptsRetryAfterMs"]
+            .as_i64()
+            .expect("attemptsRetryAfterMs");
         assert!(wait <= expected, "{wait} > {expected}");
         // The request itself may take a moment on the server's clock.
         assert!(wait > expected - 5_000, "{wait} <= {expected} - 5000");
@@ -330,7 +411,14 @@ mod r192_b7_get_api_codes_status_reports_the_tries_left_in_the_window {
     async fn r192_b7_states_no_wait_while_the_account_has_tries_left() {
         let app = code_app().await;
         let caller = seed_caller(&app, "not-waiting").await;
-        log_attempts(&app, per_profile(), Some(&caller.profile_id), &hashes(&app).ip(DEFAULT_IP), now_ms()).await;
+        log_attempts(
+            &app,
+            per_profile(),
+            Some(&caller.profile_id),
+            &hashes(&app).ip(DEFAULT_IP),
+            now_ms(),
+        )
+        .await;
 
         let status = code_status(&app, &caller.token).await;
 
@@ -380,12 +468,22 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
     async fn r192_b8_step_2_answers_429_rate_limited_with_the_whole_attempt_window_as_its_wait() {
         let app = code_app().await;
         let caller = seed_caller(&app, "step-two").await;
-        log_attempts(&app, per_profile() + 1, Some(&caller.profile_id), &hashes(&app).ip(DEFAULT_IP), now_ms()).await;
+        log_attempts(
+            &app,
+            per_profile() + 1,
+            Some(&caller.profile_id),
+            &hashes(&app).ip(DEFAULT_IP),
+            now_ms(),
+        )
+        .await;
 
         let response = redeem(&app, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
 
         assert_eq!(response.status, 429);
-        assert_eq!(response.retry_after(), Some(retry_after_header_for(window_ms()).as_str()));
+        assert_eq!(
+            response.retry_after(),
+            Some(retry_after_header_for(window_ms()).as_str())
+        );
         let body = response.json();
         assert_eq!(body["error"]["code"], json!("rate_limited"));
         assert_eq!(body["error"]["details"], json!({ "retryAfterMs": window_ms() }));
@@ -399,12 +497,22 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
     async fn r192_b8_step_3_answers_the_same_way_for_a_flooded_address() {
         let app = code_app().await;
         let caller = seed_caller(&app, "step-three").await;
-        flood_address(&app, per_ip() + 1, "neighbour", &hashes(&app).ip(DEFAULT_IP), now_ms()).await;
+        flood_address(
+            &app,
+            per_ip() + 1,
+            "neighbour",
+            &hashes(&app).ip(DEFAULT_IP),
+            now_ms(),
+        )
+        .await;
 
         let response = redeem(&app, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
 
         assert_eq!(response.status, 429);
-        assert_eq!(response.retry_after(), Some(retry_after_header_for(window_ms()).as_str()));
+        assert_eq!(
+            response.retry_after(),
+            Some(retry_after_header_for(window_ms()).as_str())
+        );
         let body = response.json();
         assert_eq!(body["error"]["code"], json!("rate_limited"));
         assert_eq!(body["error"]["details"], json!({ "retryAfterMs": window_ms() }));
@@ -416,7 +524,14 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
         let app = code_app().await;
         let caller = seed_caller(&app, "pinned-at-zero").await;
         let seeded = per_profile() + 1;
-        log_attempts(&app, seeded, Some(&caller.profile_id), &hashes(&app).ip(DEFAULT_IP), now_ms()).await;
+        log_attempts(
+            &app,
+            seeded,
+            Some(&caller.profile_id),
+            &hashes(&app).ip(DEFAULT_IP),
+            now_ms(),
+        )
+        .await;
 
         let first = redeem(&app, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
         let second = redeem(&app, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
@@ -430,10 +545,20 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
     async fn r192_b8_step_3_can_refuse_a_profile_that_still_has_tries_left_and_says_so_as_a_rate_limit() {
         let app = code_app().await;
         let caller = seed_caller(&app, "shared-network").await;
-        flood_address(&app, per_ip() + 1, "stranger", &hashes(&app).ip(DEFAULT_IP), now_ms()).await;
+        flood_address(
+            &app,
+            per_ip() + 1,
+            "stranger",
+            &hashes(&app).ip(DEFAULT_IP),
+            now_ms(),
+        )
+        .await;
 
         // Advisory only: the profile's own window is untouched.
-        assert_eq!(remaining(&code_status(&app, &caller.token).await), per_profile() + 1);
+        assert_eq!(
+            remaining(&code_status(&app, &caller.token).await),
+            per_profile() + 1
+        );
         let response = redeem(&app, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
 
         assert_eq!(response.status, 429);
@@ -451,10 +576,20 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
         let (revoked_id, revoked) = mint(&app, None, None).await;
         {
             let mut data = fake(&app).await;
-            let row = data.tables.codes.iter_mut().find(|row| row.id == revoked_id).expect("the revoked code was stored");
+            let row = data
+                .tables
+                .codes
+                .iter_mut()
+                .find(|row| row.id == revoked_id)
+                .expect("the revoked code was stored");
             row.revoked = true;
         }
-        assert_eq!(redeem(&app, &consumer.token, &exhausted, "198.51.100.80").await.status, 200);
+        assert_eq!(
+            redeem(&app, &consumer.token, &exhausted, "198.51.100.80")
+                .await
+                .status,
+            200
+        );
 
         let kinds = [
             ("missing", UNMINTED_CODE.to_string()),
@@ -481,10 +616,21 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
         // and the caller's own miss is the one that crosses it.
         let app = code_app().await;
         let caller = seed_caller(&app, "trips-breaker").await;
-        flood_address(&app, REDEMPTION_CIRCUIT_FAILURE_THRESHOLD - 1, "earlier", "hash-elsewhere", now_ms())
-            .await;
+        flood_address(
+            &app,
+            REDEMPTION_CIRCUIT_FAILURE_THRESHOLD - 1,
+            "earlier",
+            "hash-elsewhere",
+            now_ms(),
+        )
+        .await;
 
-        assert_eq!(redeem(&app, &caller.token, UNMINTED_CODE, DEFAULT_IP).await.status, 400);
+        assert_eq!(
+            redeem(&app, &caller.token, UNMINTED_CODE, DEFAULT_IP)
+                .await
+                .status,
+            400
+        );
         let blocked = redeem(&app, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
 
         assert_eq!(blocked.status, 503);
@@ -492,7 +638,8 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r192_a_pause_the_database_answers_is_reported_by_the_status_too_and_the_next_press_costs_no_try() {
+    async fn r192_a_pause_the_database_answers_is_reported_by_the_status_too_and_the_next_press_costs_no_try()
+    {
         let app = code_app().await;
         // The operator paused redemption in the database (app.settings.redemption_enabled = false).
         fake(&app).await.redemption.enabled = Arc::new(|| false);
@@ -500,7 +647,10 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
         let (_, minted) = mint(&app, None, None).await;
 
         // Before any redemption this process cannot know about the database's switch.
-        assert_eq!(code_status(&app, &caller.token).await["redemptionEnabled"], json!(true));
+        assert_eq!(
+            code_status(&app, &caller.token).await["redemptionEnabled"],
+            json!(true)
+        );
         assert_eq!(redeem(&app, &caller.token, &minted, DEFAULT_IP).await.status, 503);
 
         // Now it does: the status says paused, with the breaker's cooldown as the wait…
@@ -512,7 +662,10 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
 
         // …and a second press is refused before the store logs another attempt.
         assert_eq!(redeem(&app, &caller.token, &minted, DEFAULT_IP).await.status, 503);
-        assert_eq!(remaining(&code_status(&app, &caller.token).await), remaining(&paused));
+        assert_eq!(
+            remaining(&code_status(&app, &caller.token).await),
+            remaining(&paused)
+        );
     }
 }
 
@@ -543,7 +696,10 @@ mod r192_b8_rate_limited_and_error_response {
         ];
         for (ms, header) in cases {
             let response = error_response(&rate_limited("wait", ms));
-            let found = response.headers().get("retry-after").map(|value| value.to_str().expect("ASCII"));
+            let found = response
+                .headers()
+                .get("retry-after")
+                .map(|value| value.to_str().expect("ASCII"));
             assert_eq!(found, Some(header.as_str()), "{ms}");
         }
     }
@@ -614,12 +770,16 @@ mod r192_b9_the_api_limiter_s_429_r109 {
     async fn sign_in(app: &App, id: &str) -> String {
         let user_id = format!("user-{id}");
         let token = add_user(app, &user_id, &format!("{id}@example.test"), true);
-        fake(app).await.seed_profile(json!({ "id": id, "userId": user_id, "status": "active" }));
+        fake(app)
+            .await
+            .seed_profile(json!({ "id": id, "userId": user_id, "status": "active" }));
         token
     }
 
     fn wait_of(reply: &Reply) -> i64 {
-        reply.json()["error"]["details"]["retryAfterMs"].as_i64().expect("the 429 carries details.retryAfterMs")
+        reply.json()["error"]["details"]["retryAfterMs"]
+            .as_i64()
+            .expect("the 429 carries details.retryAfterMs")
     }
 
     async fn advance(ms: i64) {
@@ -713,7 +873,13 @@ mod b13_a_request_body_larger_than_api_max_body_bytes {
         let app = code_app().await;
         let caller = seed_caller(&app, "big-body").await;
 
-        let response = raw_redeem(&app, &caller.token, code_body_of_bytes(cap() + 1), "198.51.100.91").await;
+        let response = raw_redeem(
+            &app,
+            &caller.token,
+            code_body_of_bytes(cap() + 1),
+            "198.51.100.91",
+        )
+        .await;
 
         assert_eq!(response.status, 400);
         let body = response.json();
@@ -722,7 +888,12 @@ mod b13_a_request_body_larger_than_api_max_body_bytes {
         // Not an attempt: the handler never saw a code.
         assert_eq!(attempts_logged(&app).await, 0);
         let data = fake(&app).await;
-        let row = data.tables.profiles.iter().find(|row| row.id == caller.profile_id).expect("the caller's row");
+        let row = data
+            .tables
+            .profiles
+            .iter()
+            .find(|row| row.id == caller.profile_id)
+            .expect("the caller's row");
         assert_eq!(json_of(&row.status), json!("pending"));
     }
 

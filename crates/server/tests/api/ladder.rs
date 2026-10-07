@@ -8,15 +8,15 @@
 use std::collections::BTreeMap;
 
 use jackioh_server::config::{
-    JLORIOUS_SIZE, RANK_CONVERGENCE_GAP_PIPS, RANK_DIVISIONS_PER_TIER, RANK_PIPS_PER_DIVISION, RANK_PLACEMENT_GAMES,
-    RANK_STREAK_LENGTH, RANK_TIER_PERCENTS,
+    JLORIOUS_SIZE, RANK_CONVERGENCE_GAP_PIPS, RANK_DIVISIONS_PER_TIER, RANK_PIPS_PER_DIVISION,
+    RANK_PLACEMENT_GAMES, RANK_STREAK_LENGTH, RANK_TIER_PERCENTS,
 };
 use jackioh_server::ranked::ladder::{
-    apply_ranked_game, fresh_rank, jlorious_order, peak_badge, percentile_of, pip_delta, place_of, target_ladder,
-    tier_bottom, tier_index_of, visible_rank, with_jlorious_peak, ApplyRankedGameInput, GameResult, Percentile,
-    PipDeltaInput, SeasonRank, Standing, GRAPE_TIERS, LADDER_TOP, PIPS_PER_TIER,
+    ApplyRankedGameInput, GRAPE_TIERS, GameResult, LADDER_TOP, PIPS_PER_TIER, Percentile, PipDeltaInput,
+    SeasonRank, Standing, apply_ranked_game, fresh_rank, jlorious_order, peak_badge, percentile_of,
+    pip_delta, place_of, target_ladder, tier_bottom, tier_index_of, visible_rank, with_jlorious_peak,
 };
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 const AT: i64 = 1_700_000_000_000;
 
@@ -41,7 +41,11 @@ fn is_match(actual: &Value, expected: &Value) -> bool {
             .iter()
             .all(|(key, value)| actual.get(key).is_some_and(|held| is_match(held, value))),
         (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(held, value)| is_match(held, value))
+            actual.len() == expected.len()
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(held, value)| is_match(held, value))
         }
         _ => actual == expected,
     }
@@ -59,7 +63,10 @@ fn place(ladder: i32) -> Value {
 
 /// The Grape tier a ladder position is in, by its name.
 fn tier_name(ladder: i32) -> String {
-    js(place_of(ladder).tier).as_str().expect("a tier serialises as its name").to_string()
+    js(place_of(ladder).tier)
+        .as_str()
+        .expect("a tier serialises as its name")
+        .to_string()
 }
 
 /// TS `targetLadder(percentile)`.
@@ -69,12 +76,24 @@ fn target(percentile: Percentile) -> i32 {
 
 /// TS `pipDelta({ result, ladder, target, streak })`.
 fn delta(result: GameResult, ladder: i32, target: i32, streak: i32) -> i32 {
-    pip_delta(&PipDeltaInput { result, ladder, target, streak })
+    pip_delta(&PipDeltaInput {
+        result,
+        ladder,
+        target,
+        streak,
+    })
 }
 
 /// TS `applyRankedGame(rank, { result, target, at: AT })`.
 fn apply(rank: &SeasonRank, result: GameResult, target: i32) -> SeasonRank {
-    apply_ranked_game(rank, &ApplyRankedGameInput { result, target, at: AT })
+    apply_ranked_game(
+        rank,
+        &ApplyRankedGameInput {
+            result,
+            target,
+            at: AT,
+        },
+    )
 }
 
 /// A placed player's row at `ladder`.
@@ -90,12 +109,18 @@ fn placed(ladder: i32) -> SeasonRank {
 
 /// Plays `results` on `rank`, each with the target `target`.
 fn play(rank: &SeasonRank, results: &[GameResult], target: i32) -> SeasonRank {
-    results.iter().fold(rank.clone(), |row, &result| apply(&row, result, target))
+    results
+        .iter()
+        .fold(rank.clone(), |row, &result| apply(&row, result, target))
 }
 
 /// A win on even games and a loss on odd ones.
 fn alternating(game: i32) -> GameResult {
-    if game % 2 == 0 { GameResult::Win } else { GameResult::Loss }
+    if game % 2 == 0 {
+        GameResult::Win
+    } else {
+        GameResult::Loss
+    }
 }
 
 mod r605_the_ladders_shape {
@@ -103,7 +128,10 @@ mod r605_the_ladders_shape {
 
     #[test]
     fn r605_has_five_grape_tiers_of_three_divisions_iii_up_to_i_each_of_rank_pips_per_division_pips() {
-        assert_eq!(js(GRAPE_TIERS), json!(["rotten", "normal", "large", "golden", "mythic"]));
+        assert_eq!(
+            js(GRAPE_TIERS),
+            json!(["rotten", "normal", "large", "golden", "mythic"])
+        );
         assert_eq!(RANK_DIVISIONS_PER_TIER, 3);
         assert_eq!(place(0), json!({ "tier": "rotten", "division": 3, "pips": 0 }));
         assert_eq!(
@@ -111,12 +139,18 @@ mod r605_the_ladders_shape {
             json!({ "tier": "rotten", "division": 3, "pips": RANK_PIPS_PER_DIVISION - 1 })
         );
         // A full division is the bottom of the next one.
-        assert_eq!(place(RANK_PIPS_PER_DIVISION), json!({ "tier": "rotten", "division": 2, "pips": 0 }));
+        assert_eq!(
+            place(RANK_PIPS_PER_DIVISION),
+            json!({ "tier": "rotten", "division": 2, "pips": 0 })
+        );
         assert_eq!(
             place(PIPS_PER_TIER - 1),
             json!({ "tier": "rotten", "division": 1, "pips": RANK_PIPS_PER_DIVISION - 1 })
         );
-        assert_eq!(place(PIPS_PER_TIER), json!({ "tier": "normal", "division": 3, "pips": 0 }));
+        assert_eq!(
+            place(PIPS_PER_TIER),
+            json!({ "tier": "normal", "division": 3, "pips": 0 })
+        );
         assert_eq!(
             place(LADDER_TOP),
             json!({ "tier": "mythic", "division": 1, "pips": RANK_PIPS_PER_DIVISION - 1 })
@@ -124,7 +158,8 @@ mod r605_the_ladders_shape {
     }
 
     #[test]
-    fn r605_a_player_is_a_raisin_until_the_seasons_placements_are_played_then_stands_where_the_rating_calls_for() {
+    fn r605_a_player_is_a_raisin_until_the_seasons_placements_are_played_then_stands_where_the_rating_calls_for()
+     {
         let target = tier_bottom(2) + 4; // Large Grape II, 1 pip
         let mut rank = fresh_rank("v0.1", "p", AT);
         for game in 1..RANK_PLACEMENT_GAMES {
@@ -159,7 +194,11 @@ mod r605_the_ladders_shape {
     #[test]
     fn r605_counts_every_rated_game_of_the_season_placements_included() {
         use jackioh_server::ranked::ladder::GameResult::{Draw, Loss, Win};
-        let rank = play(&fresh_rank("v0.1", "p", AT), &[Win, Loss, Draw, Win, Win, Win], 10);
+        let rank = play(
+            &fresh_rank("v0.1", "p", AT),
+            &[Win, Loss, Draw, Win, Win, Win],
+            10,
+        );
         assert_eq!((rank.games, rank.wins, rank.losses, rank.draws), (6, 4, 1, 1));
     }
 }
@@ -177,7 +216,8 @@ mod r606_the_rank_the_hidden_rating_calls_for {
     }
 
     #[test]
-    fn r606_spreads_a_population_over_the_tiers_in_rank_tier_percents_rotten_12_normal_60_large_20_golden_7_mythic_1() {
+    fn r606_spreads_a_population_over_the_tiers_in_rank_tier_percents_rotten_12_normal_60_large_20_golden_7_mythic_1()
+     {
         assert_eq!(
             (
                 RANK_TIER_PERCENTS.rotten,
@@ -195,28 +235,63 @@ mod r606_the_rank_the_hidden_rating_calls_for {
             let tier = tier_name(target(percentile_of(rating, &others)));
             *counts.entry(tier).or_insert(0) += 1;
         }
-        let expected: BTreeMap<String, i32> =
-            [("rotten", 120), ("normal", 600), ("large", 200), ("golden", 70), ("mythic", 10)]
-                .into_iter()
-                .map(|(tier, players)| (tier.to_string(), players))
-                .collect();
+        let expected: BTreeMap<String, i32> = [
+            ("rotten", 120),
+            ("normal", 600),
+            ("large", 200),
+            ("golden", 70),
+            ("mythic", 10),
+        ]
+        .into_iter()
+        .map(|(tier, players)| (tier.to_string(), players))
+        .collect();
         assert_eq!(counts, expected);
     }
 
     #[test]
     fn r606_compares_a_boundary_exactly_a_percentile_on_one_belonging_to_the_tier_above() {
         // 50 players: the best stands at exactly the 99th percentile, Mythic's lower edge.
-        assert_eq!(tier_name(target(Percentile { numerator: 99, denominator: 100 })), "mythic");
-        assert_eq!(tier_name(target(Percentile { numerator: 12, denominator: 100 })), "normal");
         assert_eq!(
-            place(target(Percentile { numerator: 11, denominator: 100 })),
+            tier_name(target(Percentile {
+                numerator: 99,
+                denominator: 100
+            })),
+            "mythic"
+        );
+        assert_eq!(
+            tier_name(target(Percentile {
+                numerator: 12,
+                denominator: 100
+            })),
+            "normal"
+        );
+        assert_eq!(
+            place(target(Percentile {
+                numerator: 11,
+                denominator: 100
+            })),
             json!({ "tier": "rotten", "division": 1, "pips": 2 })
         );
         // The very bottom and the very top.
-        assert_eq!(target(Percentile { numerator: 1, denominator: 10_000 }), 0);
-        assert_eq!(target(Percentile { numerator: 9_999, denominator: 10_000 }), LADDER_TOP);
+        assert_eq!(
+            target(Percentile {
+                numerator: 1,
+                denominator: 10_000
+            }),
+            0
+        );
+        assert_eq!(
+            target(Percentile {
+                numerator: 9_999,
+                denominator: 10_000
+            }),
+            LADDER_TOP
+        );
         // Alone in the season: the middle of Normal Grape.
-        assert_eq!(place(target(percentile_of(1000.0, &[]))), json!({ "tier": "normal", "division": 2, "pips": 2 }));
+        assert_eq!(
+            place(target(percentile_of(1000.0, &[]))),
+            json!({ "tier": "normal", "division": 2, "pips": 2 })
+        );
     }
 }
 
@@ -258,9 +333,10 @@ mod r606_how_one_game_moves_a_placed_player {
     #[test]
     fn r606_converges_a_player_who_wins_half_their_games_drifts_to_the_rank_the_rating_calls_for() {
         // Up across tiers, and down inside one (the floor, R607, stops a fall across a tier boundary).
-        for (start, target) in
-            [(tier_bottom(0), tier_bottom(3) + 4), (tier_bottom(1) + PIPS_PER_TIER - 2, tier_bottom(1))]
-        {
+        for (start, target) in [
+            (tier_bottom(0), tier_bottom(3) + 4),
+            (tier_bottom(1) + PIPS_PER_TIER - 2, tier_bottom(1)),
+        ] {
             let mut rank = placed(start);
             for game in 0..400 {
                 rank = apply(&rank, alternating(game), target);
@@ -279,16 +355,44 @@ mod r606_how_one_game_moves_a_placed_player {
         assert_eq!(rank.ladder, Some(mid + RANK_STREAK_LENGTH + 1));
         // A loss ends the streak; a draw neither ends nor extends it.
         assert_eq!(play(&rank, &[Loss], mid).streak, 0);
-        assert_eq!(play(&SeasonRank { streak: 2, ..placed(mid) }, &[Draw], mid).streak, 2);
-        assert_eq!(play(&SeasonRank { streak: 2, ..placed(mid) }, &[Draw, Win], mid).ladder, Some(mid + 2));
+        assert_eq!(
+            play(
+                &SeasonRank {
+                    streak: 2,
+                    ..placed(mid)
+                },
+                &[Draw],
+                mid
+            )
+            .streak,
+            2
+        );
+        assert_eq!(
+            play(
+                &SeasonRank {
+                    streak: 2,
+                    ..placed(mid)
+                },
+                &[Draw, Win],
+                mid
+            )
+            .ladder,
+            Some(mid + 2)
+        );
         // In Mythic Grape a streak earns nothing extra.
         let mythic = tier_bottom(4);
-        assert_eq!(play(&placed(mythic), &wins, mythic).ladder, Some(mythic + RANK_STREAK_LENGTH));
+        assert_eq!(
+            play(&placed(mythic), &wins, mythic).ladder,
+            Some(mythic + RANK_STREAK_LENGTH)
+        );
     }
 
     #[test]
     fn r606_holds_a_player_at_the_top_of_mythic_grape_i() {
-        assert_eq!(play(&placed(LADDER_TOP), &[Win, Win], LADDER_TOP).ladder, Some(LADDER_TOP));
+        assert_eq!(
+            play(&placed(LADDER_TOP), &[Win, Win], LADDER_TOP).ladder,
+            Some(LADDER_TOP)
+        );
     }
 }
 
@@ -297,7 +401,8 @@ mod r607_the_tier_floor_and_the_seasons_peak {
     use jackioh_server::ranked::ladder::GameResult::{Loss, Win};
 
     #[test]
-    fn r607_a_player_cannot_drop_below_the_grape_tier_they_have_reached_this_season_but_divisions_inside_it_can_drop() {
+    fn r607_a_player_cannot_drop_below_the_grape_tier_they_have_reached_this_season_but_divisions_inside_it_can_drop()
+     {
         let large = tier_bottom(2) + 4; // Large Grape II, 1 pip
         let fallen = play(&placed(large), &[Loss; 7], 0);
         assert_eq!(fallen.ladder, Some(tier_bottom(2)));
@@ -316,14 +421,24 @@ mod r607_the_tier_floor_and_the_seasons_peak {
     fn r607_keeps_the_seasons_best_position_as_the_profiles_badge() {
         // +1, +1, then +2 for the streak's third win; then two losses, the first leaning toward the
         // target four pips below.
-        let rank = play(&placed(tier_bottom(1)), &[Win, Win, Win, Loss, Loss], tier_bottom(1));
+        let rank = play(
+            &placed(tier_bottom(1)),
+            &[Win, Win, Win, Loss, Loss],
+            tier_bottom(1),
+        );
         assert_eq!(rank.ladder, Some(tier_bottom(1) + 1));
         assert_eq!(rank.peak_ladder, Some(tier_bottom(1) + 4));
-        assert_eq!(js(peak_badge(&rank)), json!({ "seasonId": "v0.1", "tier": "normal", "division": 2 }));
+        assert_eq!(
+            js(peak_badge(&rank)),
+            json!({ "seasonId": "v0.1", "tier": "normal", "division": 2 })
+        );
         assert!(peak_badge(&fresh_rank("v0.1", "p", AT)).is_none());
         let jlorious = with_jlorious_peak(&with_jlorious_peak(&placed(tier_bottom(4)), 12), 40);
         assert_eq!(jlorious.peak_jlorious, Some(12));
-        assert_eq!(js(peak_badge(&jlorious)), json!({ "seasonId": "v0.1", "tier": "jlorious", "position": 12 }));
+        assert_eq!(
+            js(peak_badge(&jlorious)),
+            json!({ "seasonId": "v0.1", "tier": "jlorious", "position": 12 })
+        );
     }
 }
 
@@ -335,29 +450,44 @@ mod r608_jlorious {
     }
 
     fn standing(profile_id: &str, ladder: Option<i32>, rating: f64) -> Standing {
-        Standing { profile_id: profile_id.to_string(), ladder, rating }
+        Standing {
+            profile_id: profile_id.to_string(),
+            ladder,
+            rating,
+        }
     }
 
     #[test]
     fn r608_is_the_top_jlorious_size_mythic_grape_players_by_hidden_rating_ties_on_profile_id() {
         assert_eq!(JLORIOUS_SIZE, 100);
         let mut standings: Vec<Standing> = (0..130_i32)
-            .map(|i| standing(&format!("m-{i:03}"), Some(mythic() + (i % 9)), 2000.0 - f64::from(i)))
+            .map(|i| {
+                standing(
+                    &format!("m-{i:03}"),
+                    Some(mythic() + (i % 9)),
+                    2000.0 - f64::from(i),
+                )
+            })
             .collect();
         standings.push(standing("tie-b", Some(mythic()), 1950.5));
         standings.push(standing("tie-a", Some(mythic()), 1950.5));
         let order = jlorious_order(&standings);
         assert_eq!(order.len(), count(JLORIOUS_SIZE));
         assert_eq!(order[0], "m-000");
-        let index_of =
-            |id: &str| order.iter().position(|entry| entry == id).unwrap_or_else(|| panic!("{id} is not Jlorious"));
+        let index_of = |id: &str| {
+            order
+                .iter()
+                .position(|entry| entry == id)
+                .unwrap_or_else(|| panic!("{id} is not Jlorious"))
+        };
         assert_eq!(index_of("tie-a"), index_of("tie-b") - 1);
         // The 101st by rating is out, and back in Mythic Grape.
         assert!(!order.iter().any(|entry| entry == "m-129"));
     }
 
     #[test]
-    fn r608_is_every_mythic_grape_player_when_fewer_than_jlorious_size_qualify_and_nobody_below_mythic_or_still_placing() {
+    fn r608_is_every_mythic_grape_player_when_fewer_than_jlorious_size_qualify_and_nobody_below_mythic_or_still_placing()
+     {
         let order = jlorious_order(&[
             standing("golden-but-rated-highest", Some(tier_bottom(3) + 8), 2600.0),
             standing("raisin-rated-high", None, 2500.0),
@@ -368,9 +498,13 @@ mod r608_jlorious {
     }
 
     #[test]
-    fn r608_is_shown_as_a_numbered_position_instead_of_a_division_and_a_player_who_falls_out_is_in_mythic_grape_again() {
+    fn r608_is_shown_as_a_numbered_position_instead_of_a_division_and_a_player_who_falls_out_is_in_mythic_grape_again()
+     {
         let rank = placed(mythic() + 2);
-        assert_eq!(js(visible_rank(Some(&rank), Some(7))), json!({ "tier": "jlorious", "position": 7 }));
+        assert_eq!(
+            js(visible_rank(Some(&rank), Some(7))),
+            json!({ "tier": "jlorious", "position": 7 })
+        );
         assert_match_object(
             js(visible_rank(Some(&rank), None)),
             json!({ "tier": "mythic", "division": 3, "pips": 2 }),

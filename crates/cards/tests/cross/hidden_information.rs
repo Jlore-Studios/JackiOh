@@ -143,12 +143,22 @@ mod r177_a_prompt_option_that_offers_a_face_down_card {
         let menace = must(s.unit("p2", 1), "p2's unit");
 
         s.play(TWINSPELL, json!({}));
-        s.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": menace.id }] }));
+        s.play(
+            MIND_CONTROL,
+            json!({ "targets": [{ "pick": "instance", "instanceId": menace.id }] }),
+        );
 
         // The Echo repeat asks again (§10.5 step 6, R81) and offers p2's two face-down traps.
         let view = s.view("p1");
-        assert_eq!(json_of(&view.opponent.backrow[0]), json!({ "faceDown": true, "cost": 1 }));
-        let pending = prompt_for_viewer(view.pending.clone(), "p1's Echo prompt", "the Echo prompt should be p1's");
+        assert_eq!(
+            json_of(&view.opponent.backrow[0]),
+            json!({ "faceDown": true, "cost": 1 })
+        );
+        let pending = prompt_for_viewer(
+            view.pending.clone(),
+            "p1's Echo prompt",
+            "the Echo prompt should be p1's",
+        );
         let trap_options: Vec<&PendingOption> = pending
             .options
             .iter()
@@ -189,7 +199,10 @@ mod r177_a_card_replaced_where_the_viewer_cannot_see_it {
 
         // p1's view: the three library replacements are hidden. p2's view: those three, the trap, and
         // the Stockpile in p1's hand, which Transmogulate replaces too (R365).
-        let expect_hidden = PerPlayer { p1: 3usize, p2: 5usize };
+        let expect_hidden = PerPlayer {
+            p1: 3usize,
+            p2: 5usize,
+        };
         for viewer in [PlayerId::P1, PlayerId::P2] {
             let into_hidden: Vec<(String, String)> = events_of(&s.view(viewer), GameEventType::Transformed)
                 .into_iter()
@@ -293,7 +306,10 @@ mod r177_identities_an_event_carries_outside_its_redacted_fields {
         );
 
         // Fib(1 + 1) = 1 damage kills the 1/1; at end of turn the Spell returns to p1's hand.
-        s.play(&math, json!({ "targets": [{ "pick": "instance", "instanceId": gary.id }] }));
+        s.play(
+            &math,
+            json!({ "targets": [{ "pick": "instance", "instanceId": gary.id }] }),
+        );
         s.expect_in_zone(&gary, "graveyard");
         s.end_turn();
         s.expect_in_zone(&math, "hand");
@@ -301,23 +317,29 @@ mod r177_identities_an_event_carries_outside_its_redacted_fields {
         let view = s.view("p2");
         // The damage event already hides the Spell, since it now sits in p1's hand (R97)...
         let hit = must(
-            events_of(&view, GameEventType::Damage).into_iter().find_map(|event| match event {
-                GameEvent::Damage {
-                    source_id, target_id, ..
-                } if target_id == gary.id => Some(source_id),
-                _ => None,
-            }),
+            events_of(&view, GameEventType::Damage)
+                .into_iter()
+                .find_map(|event| match event {
+                    GameEvent::Damage {
+                        source_id, target_id, ..
+                    } if target_id == gary.id => Some(source_id),
+                    _ => None,
+                }),
             "the damage event",
         );
         assert_eq!(hit.as_deref(), Some(HIDDEN));
         // ...so the destroyed event must not name it either.
         let death = must(
-            events_of(&view, GameEventType::Destroyed).into_iter().find_map(|event| match event {
-                GameEvent::Destroyed {
-                    instance_id, killer_id, ..
-                } if instance_id == gary.id => Some(killer_id),
-                _ => None,
-            }),
+            events_of(&view, GameEventType::Destroyed)
+                .into_iter()
+                .find_map(|event| match event {
+                    GameEvent::Destroyed {
+                        instance_id,
+                        killer_id,
+                        ..
+                    } if instance_id == gary.id => Some(killer_id),
+                    _ => None,
+                }),
             "Gary's destroyed event",
         );
         assert_eq!(death.as_deref(), Some(HIDDEN));
@@ -356,7 +378,15 @@ mod r177_a_card_that_ceased_to_exist_in_a_hidden_zone_stays_hidden_in_earlier_ev
         let view = s.view("p2");
         let played = events_of(&view, GameEventType::CardPlayed)
             .into_iter()
-            .filter(|event| matches!(event, GameEvent::CardPlayed { player: PlayerId::P1, .. }))
+            .filter(|event| {
+                matches!(
+                    event,
+                    GameEvent::CardPlayed {
+                        player: PlayerId::P1,
+                        ..
+                    }
+                )
+            })
             .count();
         assert!(played >= 2);
         assert!(!json_text(&view).contains(SHEEPISH));
@@ -376,7 +406,8 @@ mod r177_a_card_that_ceased_to_exist_in_a_hidden_zone_stays_hidden_in_earlier_ev
     }
 
     #[test]
-    fn r177_after_transmogulate_replaces_the_library_call_to_chaoss_cost_changes_still_do_not_spell_out_its_old_order() {
+    fn r177_after_transmogulate_replaces_the_library_call_to_chaoss_cost_changes_still_do_not_spell_out_its_old_order()
+     {
         jackioh_cards::register_all();
         let a = chaos_then_transmogulate(&["core-025", "core-002"]);
         let b = chaos_then_transmogulate(&["core-002", "core-025"]);
@@ -405,7 +436,10 @@ mod r177_a_hidden_hand_cards_buff {
             },
         }));
         let vanilla = must(s.unit("p2", 1), "p2's Mr. Vanilla");
-        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }));
+        s.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }),
+        );
         s.expect_in_zone(&vanilla, "graveyard");
         s
     }
@@ -450,7 +484,8 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
     use super::*;
 
     #[test]
-    fn r177_r33_r35_a_face_down_trap_transmogulate_replaced_stays_hidden_after_its_replacement_reaches_the_graveyard() {
+    fn r177_r33_r35_a_face_down_trap_transmogulate_replaced_stays_hidden_after_its_replacement_reaches_the_graveyard()
+     {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
             "seed": "hunt-r3-transmog-trap",
@@ -474,7 +509,10 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
         if s.state().active == PlayerId::P1 {
             s.end_turn();
         }
-        s.play(MAGIC_JAMMED, json!({ "targets": [{ "pick": "instance", "instanceId": replacement.id }] }));
+        s.play(
+            MAGIC_JAMMED,
+            json!({ "targets": [{ "pick": "instance", "instanceId": replacement.id }] }),
+        );
         s.expect_in_zone(&replacement, "graveyard");
 
         // Sheepish never fired and never reached a public pile, so p2 still reads nothing of it, while
@@ -509,7 +547,10 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
             s.end_turn();
         }
         let gary = must(s.unit("p2", 1), "p2's Gary");
-        s.play(COLLATERAL, json!({ "targets": [{ "pick": "instance", "instanceId": gary.id }] }));
+        s.play(
+            COLLATERAL,
+            json!({ "targets": [{ "pick": "instance", "instanceId": gary.id }] }),
+        );
         s
     }
 
@@ -574,9 +615,15 @@ mod r177_a_number_the_view_carries_is_never_taken_by_a_hidden_card {
             "p2": { "field": ["T-rush"], "hand": [p2_hand, STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
         }));
         let token = must(s.unit("p2", 1), "p2's Rush Token");
-        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": token.id }] }));
+        s.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": token.id }] }),
+        );
         s.expect_in_zone(&token, "gone");
-        s.play(LUNAR_ECLIPSE, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+        s.play(
+            LUNAR_ECLIPSE,
+            json!({ "targets": [{ "pick": "hero", "player": "p2" }] }),
+        );
         s
     }
 
@@ -597,7 +644,8 @@ mod r177_make_radiant_on_a_hidden_card_that_is_already_radiant {
     use super::*;
 
     #[test]
-    fn r177_r97_29_giga_and_26_glowy_jelly_bean_do_not_tell_the_opponent_which_hidden_hand_cards_were_already_radiant() {
+    fn r177_r97_29_giga_and_26_glowy_jelly_bean_do_not_tell_the_opponent_which_hidden_hand_cards_were_already_radiant()
+     {
         jackioh_cards::register_all();
         // #29: "Every card in your hand becomes Radiant". Afterwards both hands are wholly Radiant, so
         // the games differ only in the face p1's 4-mana 7/7 had while p2 could not read it.
@@ -628,7 +676,10 @@ mod r177_make_radiant_on_a_hidden_card_that_is_already_radiant {
                 s.hand("p1").into_iter().find(|card| card.def_id == SEVEN_SEVEN),
                 "p1's 7/7",
             );
-            s.play(GLOWY, json!({ "targets": [{ "pick": "instance", "instanceId": chosen.id }] }));
+            s.play(
+                GLOWY,
+                json!({ "targets": [{ "pick": "instance", "instanceId": chosen.id }] }),
+            );
             assert!(s.card(&chosen).radiant);
             s
         }
@@ -636,7 +687,8 @@ mod r177_make_radiant_on_a_hidden_card_that_is_already_radiant {
     }
 
     #[test]
-    fn r177_r33_r97_r213_64_gifted_program_does_not_tell_the_opponent_that_a_face_down_trap_was_already_radiant() {
+    fn r177_r33_r97_r213_64_gifted_program_does_not_tell_the_opponent_that_a_face_down_trap_was_already_radiant()
+     {
         jackioh_cards::register_all();
         // The trap is p1's first card costing 1 or less this turn, so §10.5 step 3 makes it Radiant
         // (R213). It lands face-down and Radiant in both games; only its face in hand differed.
@@ -693,11 +745,13 @@ mod r177_eugenics_radiant_roll_over_a_hidden_library {
         let radiant = eugenics_game(true);
 
         // The same seven cards went to the (public) exile pile in both games, all of them base-face.
-        let ids = |s: &Scenario| -> Vec<String> { s.pile("p1", "exile").into_iter().map(|card| card.id).collect() };
+        let ids =
+            |s: &Scenario| -> Vec<String> { s.pile("p1", "exile").into_iter().map(|card| card.id).collect() };
         assert_eq!(ids(&base), ids(&radiant));
         assert!(base.pile("p1", "exile").iter().all(|card| !card.radiant));
         // One card is left, and it ends Radiant in both games: rolled into it, or already there.
-        let faces = |s: &Scenario| -> Vec<bool> { s.pile("p1", "library").iter().map(|card| card.radiant).collect() };
+        let faces =
+            |s: &Scenario| -> Vec<bool> { s.pile("p1", "library").iter().map(|card| card.radiant).collect() };
         assert_eq!(faces(&base), vec![true]);
         assert_eq!(faces(&radiant), vec![true]);
 
@@ -734,7 +788,10 @@ mod r177_a_number_taken_by_a_face_down_trap_owed_an_event {
         }));
         s.attack(SORCERER, "hero");
         s.answer(json!("lose 3"));
-        s.play(LUNAR_ECLIPSE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
+        s.play(
+            LUNAR_ECLIPSE,
+            json!({ "targets": [{ "pick": "hero", "player": "p1" }] }),
+        );
         s
     }
 
@@ -842,7 +899,10 @@ mod r222_97_zephyrs_dry_run_and_hidden_information {
 
         // "The rest of the library stays hidden from both" (§10.8): an offer that moves with the order
         // of p1's library tells p1 what is on top of it.
-        assert_eq!(offered_to(&on_top, PlayerId::P1), offered_to(&at_bottom, PlayerId::P1));
+        assert_eq!(
+            offered_to(&on_top, PlayerId::P1),
+            offered_to(&at_bottom, PlayerId::P1)
+        );
         assert!(events_of(&on_top.view("p1"), GameEventType::Drawn).is_empty());
         indistinguishable(PlayerId::P1, &at_bottom, &on_top);
     }
@@ -894,7 +954,11 @@ mod r177_a_library_cards_place_in_a_library_wide_event_sequence {
         // field in both games, the two Hit Jobs still in the library.
         for s in [&on_top, &second] {
             assert!(events_of(&s.view("p2"), GameEventType::CostChanged).len() >= 5);
-            let library: Vec<String> = s.pile("p1", "library").into_iter().map(|card| card.def_id).collect();
+            let library: Vec<String> = s
+                .pile("p1", "library")
+                .into_iter()
+                .map(|card| card.def_id)
+                .collect();
             assert_eq!(library, vec![HIT_JOB.to_string(), HIT_JOB.to_string()]);
         }
 
@@ -932,9 +996,25 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
         "core-048", "core-050", "core-060", "core-062",
     ];
     const P2_SHARED: [&str; 19] = [
-        "core-003", "core-004", "core-005", "core-007", "core-008", "core-011", "core-015", "core-023",
-        "core-031", "core-035", "core-036", "core-044", "core-050", "core-062", "core-063", "core-081",
-        "core-082", "core-086", HEROIC_POWER,
+        "core-003",
+        "core-004",
+        "core-005",
+        "core-007",
+        "core-008",
+        "core-011",
+        "core-015",
+        "core-023",
+        "core-031",
+        "core-035",
+        "core-036",
+        "core-044",
+        "core-050",
+        "core-062",
+        "core-063",
+        "core-081",
+        "core-082",
+        "core-086",
+        HEROIC_POWER,
     ];
 
     /// The order the server's store returns a deck in: by card id.
@@ -975,9 +1055,19 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
         let mut state = begin_game(&create_game(&deck_options("r6-deck-order", hidden))).state;
         let mut nonce = 0;
         let keep: Vec<String> = state.players.p1.hand.iter().map(|card| card.id.clone()).collect();
-        act(&mut state, &mut nonce, PlayerId::P1, ActionBody::Mulligan { keep });
+        act(
+            &mut state,
+            &mut nonce,
+            PlayerId::P1,
+            ActionBody::Mulligan { keep },
+        );
         let keep: Vec<String> = state.players.p2.hand.iter().map(|card| card.id.clone()).collect();
-        act(&mut state, &mut nonce, PlayerId::P2, ActionBody::Mulligan { keep });
+        act(
+            &mut state,
+            &mut nonce,
+            PlayerId::P2,
+            ActionBody::Mulligan { keep },
+        );
         for _guard in 0..16 {
             if heroic_power_of(&state).is_some() {
                 break;
@@ -999,7 +1089,12 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
             let play = legal_actions(&state, PlayerId::P2).into_iter().find(|body| {
                 matches!(body, ActionBody::Play { instance_id, .. } if Some(instance_id) == power.as_ref())
             });
-            act(&mut state, &mut nonce, PlayerId::P2, play.unwrap_or(ActionBody::EndTurn));
+            act(
+                &mut state,
+                &mut nonce,
+                PlayerId::P2,
+                play.unwrap_or(ActionBody::EndTurn),
+            );
         }
         state
     }
@@ -1043,7 +1138,11 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
         // whatever id p1 reads, the other game shows it under some seed, and the id is not the rank.
         let seeds = seeds();
         for hidden in ["core-001", "core-100"] {
-            let other = if hidden == "core-001" { "core-100" } else { "core-001" };
+            let other = if hidden == "core-001" {
+                "core-100"
+            } else {
+                "core-001"
+            };
             let seen = power_id_at(seeds.first().map_or("", String::as_str), hidden);
             assert!(
                 seeds.iter().any(|seed| power_id_at(seed, other) == seen),
@@ -1097,11 +1196,9 @@ mod r177_a_random_make_radiant_over_a_hidden_hand {
 
         // The cast happened in both games (a public play), and p1's hand ends up the same size.
         for s in [&plain, &radiant] {
-            assert!(
-                events_of(&s.view("p2"), GameEventType::CardPlayed)
-                    .iter()
-                    .any(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == BLOOD_RIDDEN))
-            );
+            assert!(events_of(&s.view("p2"), GameEventType::CardPlayed).iter().any(
+                |event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == BLOOD_RIDDEN)
+            ));
         }
         assert_eq!(radiant.view("p2").opponent.hand, plain.view("p2").opponent.hand);
 
@@ -1134,7 +1231,12 @@ mod r223_instance_ids_transmogulate_gives_a_library {
         s.play(TRANSMOGULATE, json!({}));
         // The Tutor comes to hand only now: one held while Transmogulate resolved would have been
         // replaced with the rest of the hand (R365).
-        let tutor = new_instance(s.state_mut(), TUTOR, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let tutor = new_instance(
+            s.state_mut(),
+            TUTOR,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
         s.state_mut().players.p1.hand.push(tutor);
 
         // What p1 reads after the Replace: the graveyard card's replacement is public, and the library is
@@ -1145,7 +1247,9 @@ mod r223_instance_ids_transmogulate_gives_a_library {
             events_of(&after_replace, GameEventType::Transformed)
                 .into_iter()
                 .find_map(|event| match event {
-                    GameEvent::Transformed { new_instance_id, .. } if new_instance_id != HIDDEN => Some(new_instance_id),
+                    GameEvent::Transformed { new_instance_id, .. } if new_instance_id != HIDDEN => {
+                        Some(new_instance_id)
+                    }
                     _ => None,
                 }),
             "the graveyard card's public replacement",
@@ -1177,7 +1281,11 @@ mod r223_instance_ids_transmogulate_gives_a_library {
         });
         s.answer(json!(best_bracket));
 
-        let reveal = prompt_for_viewer(s.view("p1").pending, "p1's reveal prompt", "the reveal should be p1's");
+        let reveal = prompt_for_viewer(
+            s.view("p1").pending,
+            "p1's reveal prompt",
+            "the reveal should be p1's",
+        );
         let revealed: Vec<String> = reveal
             .options
             .iter()
@@ -1191,7 +1299,10 @@ mod r223_instance_ids_transmogulate_gives_a_library {
         // card's place. Reading each revealed card's place off its id must not give its real place — the
         // two cards p1 does not take stay in the library, where p1 would know when each comes up.
         let ids: Vec<String> = s.pile("p1", "library").into_iter().map(|card| card.id).collect();
-        let read_off_the_id: Vec<i64> = revealed.iter().map(|id| id_number(id) - first_library_id).collect();
+        let read_off_the_id: Vec<i64> = revealed
+            .iter()
+            .map(|id| id_number(id) - first_library_id)
+            .collect();
         let actual: Vec<i64> = revealed
             .iter()
             .map(|id| ids.iter().position(|at| at == id).map_or(-1, |at| at as i64))
@@ -1557,10 +1668,16 @@ mod r224_r97_a_card_the_mulligan_returned_while_setup_waits {
         let mut begun: Option<GameState> = None;
         for at in 0..300 {
             let candidate = format!("edge-r9-view-deal-{at}");
-            let mut game: GameState =
-                create_game(&json_as(json!({ "seed": candidate, "decks": [setup_p1_deck(), setup_p2_deck()] })));
+            let mut game: GameState = create_game(&json_as(
+                json!({ "seed": candidate, "decks": [setup_p1_deck(), setup_p2_deck()] }),
+            ));
             asking(&mut game);
-            let asker = new_instance(&mut game, ASKING, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+            let asker = new_instance(
+                &mut game,
+                ASKING,
+                PlayerId::P1,
+                Zone::Library { player: PlayerId::P1 },
+            );
             game.players.p1.library[0] = asker;
             let state = begin_game(&game).state;
             if state
@@ -1579,7 +1696,9 @@ mod r224_r97_a_card_the_mulligan_returned_while_setup_waits {
             PlayerId::P1,
             ActionBody::Answer {
                 choice_id: first.id.clone(),
-                selection: vec![Selection::Mode { option: "ok".to_string() }],
+                selection: vec![Selection::Mode {
+                    option: "ok".to_string(),
+                }],
             },
         );
         assert_eq!(mulligan_owed(&state), vec![PlayerId::P1, PlayerId::P2]);
@@ -1593,19 +1712,45 @@ mod r224_r97_a_card_the_mulligan_returned_while_setup_waits {
         // p2 returns one card, and its replacement draw is the asking card, so setup waits (R224) with
         // the returned card in no pile until it goes back.
         let returned = must(state.players.p2.hand.first().cloned(), "a card for p2 to return");
-        let cod = new_instance(&mut state, ASKING, PlayerId::P2, Zone::Library { player: PlayerId::P2 });
+        let cod = new_instance(
+            &mut state,
+            ASKING,
+            PlayerId::P2,
+            Zone::Library { player: PlayerId::P2 },
+        );
         state.players.p2.library.insert(0, cod);
-        let keep: Vec<String> = state.players.p2.hand.iter().skip(1).map(|card| card.id.clone()).collect();
+        let keep: Vec<String> = state
+            .players
+            .p2
+            .hand
+            .iter()
+            .skip(1)
+            .map(|card| card.id.clone())
+            .collect();
         state = act_as(&state, PlayerId::P2, ActionBody::Mulligan { keep });
-        assert_eq!(state.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Mode));
-        assert_eq!(state.pending.as_ref().map(|pending| pending.player_id), Some(PlayerId::P2));
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Mode)
+        );
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.player_id),
+            Some(PlayerId::P2)
+        );
 
         // The deal's event naming the returned card is still in p1's window.
         let view = view_for(&state, PlayerId::P1);
         let deal = view
             .events
             .iter()
-            .filter(|event| matches!(event, GameEvent::Drawn { player: PlayerId::P2, .. }))
+            .filter(|event| {
+                matches!(
+                    event,
+                    GameEvent::Drawn {
+                        player: PlayerId::P2,
+                        ..
+                    }
+                )
+            })
             .count();
         assert!(deal > 0);
 
@@ -1721,10 +1866,16 @@ mod r177_r60_28s_cues_keep_the_hidden_faces_hidden {
             let mut shape: Vec<String> = events
                 .iter()
                 .map(|event| match event {
-                    GameEvent::RadiantSet { instance_id, zone, .. } => format!(
+                    GameEvent::RadiantSet {
+                        instance_id, zone, ..
+                    } => format!(
                         "{}:{}",
                         zone.z(),
-                        if instance_id == HIDDEN_ID { "unread" } else { "read" }
+                        if instance_id == HIDDEN_ID {
+                            "unread"
+                        } else {
+                            "read"
+                        }
                     ),
                     _ => String::new(),
                 })
@@ -1775,11 +1926,16 @@ mod r242_28s_pick_over_public_and_hidden_cards {
 
     /// What p2 can see #28 did: whether p1's public unit turned Radiant, and the cues' shape.
     fn outcome(s: &Scenario) -> String {
-        let unit = must(s.view("p2").opponent.units.first().cloned().flatten(), "p1's unit");
+        let unit = must(
+            s.view("p2").opponent.units.first().cloned().flatten(),
+            "p1's unit",
+        );
         let cues: Vec<String> = events_of(&s.view("p2"), GameEventType::RadiantSet)
             .iter()
             .filter_map(|event| match event {
-                GameEvent::RadiantSet { instance_id, zone, .. } => Some(if instance_id == HIDDEN_ID {
+                GameEvent::RadiantSet {
+                    instance_id, zone, ..
+                } => Some(if instance_id == HIDDEN_ID {
                     format!("hidden@{}", zone.z())
                 } else {
                     "unit".to_string()
@@ -1791,10 +1947,14 @@ mod r242_28s_pick_over_public_and_hidden_cards {
     }
 
     #[test]
-    fn r242_r60_r177_28_picking_p1s_public_unit_or_not_does_not_tell_p2_whether_p1s_hidden_cards_were_radiant() {
+    fn r242_r60_r177_28_picking_p1s_public_unit_or_not_does_not_tell_p2_whether_p1s_hidden_cards_were_radiant()
+     {
         jackioh_cards::register_all();
         let seeds: Vec<String> = (0..24).map(|at| format!("r10-l10-knockoff-odds-{at}")).collect();
-        let world_a: IndexSet<String> = seeds.iter().map(|seed| outcome(&odds_game(seed, false))).collect();
+        let world_a: IndexSet<String> = seeds
+            .iter()
+            .map(|seed| outcome(&odds_game(seed, false)))
+            .collect();
         let world_b: IndexSet<String> = seeds.iter().map(|seed| outcome(&odds_game(seed, true))).collect();
         // R177's cues make an all-Radiant hidden pile look like a pile the pick changed: every outcome p2
         // can see in the base-face world must be one the all-Radiant world can produce too. Drawn from
@@ -1834,7 +1994,8 @@ mod r242_28s_pick_over_public_and_hidden_cards {
     }
 
     #[test]
-    fn r242_r33_r177_28s_event_order_does_not_tell_p2_whether_its_hidden_pick_was_p1s_hand_card_or_p1s_face_down_trap() {
+    fn r242_r33_r177_28s_event_order_does_not_tell_p2_whether_its_hidden_pick_was_p1s_hand_card_or_p1s_face_down_trap()
+     {
         jackioh_cards::register_all();
         let hand_pick = order_game(false);
         let trap_pick = order_game(true);
@@ -1895,7 +2056,8 @@ mod r243_what_the_view_carries_of_a_card_beyond_its_printed_face {
     }
 
     #[test]
-    fn r243_r43_r151_a_heroic_power_in_its_owners_hand_shows_the_power_it_rolled_which_its_cost_alone_does_not_name() {
+    fn r243_r43_r151_a_heroic_power_in_its_owners_hand_shows_the_power_it_rolled_which_its_cost_alone_does_not_name()
+     {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
             "p1": { "hand": ["core-021"], "library": [HEROIC_POWER, MR_VANILLA, MR_VANILLA] },
@@ -1995,7 +2157,13 @@ mod r227_r177_a_card_set_face_down_takes_a_fresh_id {
         s.play(REMINISCE, json!({}));
         s.answer(json!(SHEEPISH));
         let back = must(
-            s.state().players.p2.hand.iter().find(|card| card.id == old_id).cloned(),
+            s.state()
+                .players
+                .p2
+                .hand
+                .iter()
+                .find(|card| card.id == old_id)
+                .cloned(),
             "Sheepish back in p2's hand",
         );
         s.play(back, json!({}));

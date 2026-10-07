@@ -47,7 +47,12 @@ fn unit(name: &str, index: i32) -> CardDef {
 }
 
 fn cards() -> [CardDef; 4] {
-    [unit("alpha", 1701), unit("beta", 1702), unit("gamma", 1703), unit("delta", 1704)]
+    [
+        unit("alpha", 1701),
+        unit("beta", 1702),
+        unit("gamma", 1703),
+        unit("delta", 1704),
+    ]
 }
 
 thread_local! {
@@ -107,7 +112,12 @@ fn craft(state: &mut GameState, def_ids: &[String]) {
                 ..Default::default()
             },
         );
-        apply_effects(&[fuse_cards(json_as(json!({ "defIds": def_ids, "toHand": "self" })))], &mut ctx);
+        apply_effects(
+            &[fuse_cards(json_as(
+                json!({ "defIds": def_ids, "toHand": "self" }),
+            ))],
+            &mut ctx,
+        );
     }
     state.rng_cursor = rng.cursor();
 }
@@ -152,7 +162,8 @@ fn markers(state: &GameState, def_id: &str) -> Vec<String> {
     };
     SEEN.with(|seen| seen.set(Vec::new()));
     let mut copy: GameState =
-        serde_json::from_value(serde_json::to_value(state).expect("a state serialises")).expect("a state survives JSON");
+        serde_json::from_value(serde_json::to_value(state).expect("a state serialises"))
+            .expect("a state survives JSON");
     let mut events = Vec::new();
     let mut rng = Rng::new(&copy.seed, copy.rng_cursor);
     {
@@ -193,7 +204,8 @@ mod fused_scripts_belong_to_the_state_that_fused_them {
     use super::*;
 
     #[test]
-    fn r179_two_matches_in_one_process_that_fuse_different_pairs_into_the_same_slot_keep_two_ids_and_their_own_cry() {
+    fn r179_two_matches_in_one_process_that_fuse_different_pairs_into_the_same_slot_keep_two_ids_and_their_own_cry()
+     {
         let [alpha, beta, gamma, delta] = cards();
         let mut matches = games(&["fuse-registry-a", "fuse-registry-b"]);
         let mut second = matches.pop().expect("the second match");
@@ -233,7 +245,18 @@ mod fused_scripts_belong_to_the_state_that_fused_them {
             .unwrap_or_default();
         keys.sort();
         let mut expected: Vec<String> = [
-            "base", "cost", "id", "index", "ingredients", "name", "radiant", "rarity", "set", "tags", "token", "type",
+            "base",
+            "cost",
+            "id",
+            "index",
+            "ingredients",
+            "name",
+            "radiant",
+            "rarity",
+            "set",
+            "tags",
+            "token",
+            "type",
         ]
         .iter()
         .map(|key| key.to_string())
@@ -243,7 +266,10 @@ mod fused_scripts_belong_to_the_state_that_fused_them {
         if let Some(def) = copy.transient_defs.get_mut(&id) {
             def.ingredients = None;
         }
-        assert_eq!(fused_ingredients(&copy, &id), Some(vec![alpha.id.clone(), beta.id.clone()]));
+        assert_eq!(
+            fused_ingredients(&copy, &id),
+            Some(vec![alpha.id.clone(), beta.id.clone()])
+        );
 
         // A process that never ran this Fuse.
         drop_scripts(&[&id]);
@@ -276,7 +302,10 @@ mod fused_scripts_belong_to_the_state_that_fused_them {
             .cloned()
             .expect("the outer fusion");
         assert_eq!(outer, format!("t-2:({inner})+{}", gamma.id));
-        assert_eq!(fused_ingredients(&state, &outer), Some(vec![inner.clone(), gamma.id.clone()]));
+        assert_eq!(
+            fused_ingredients(&state, &outer),
+            Some(vec![inner.clone(), gamma.id.clone()])
+        );
         assert!(script_of(&state, outer.as_str()).base.cry.is_some());
 
         drop_scripts(&[&inner, &outer]);
@@ -292,8 +321,14 @@ mod fused_scripts_belong_to_the_state_that_fused_them {
         let state = new_game("fuse-registry-ids", None);
         let parts = |ids: &[&str]| Some(ids.iter().map(|id| id.to_string()).collect::<Vec<_>>());
         // `t-1:a+b` fused with c and d, and `t-1:a+b+c` fused with d, are two different cards.
-        assert_eq!(fused_ingredients(&state, "t-2:(t-1:a+b)+c+d"), parts(&["t-1:a+b", "c", "d"]));
-        assert_eq!(fused_ingredients(&state, "t-2:(t-1:a+b+c)+d"), parts(&["t-1:a+b+c", "d"]));
+        assert_eq!(
+            fused_ingredients(&state, "t-2:(t-1:a+b)+c+d"),
+            parts(&["t-1:a+b", "c", "d"])
+        );
+        assert_eq!(
+            fused_ingredients(&state, "t-2:(t-1:a+b+c)+d"),
+            parts(&["t-1:a+b+c", "d"])
+        );
         assert_eq!(
             fused_ingredients(&state, "t-3:(t-2:(t-1:a+b)+c)+(t-1:d+e)"),
             parts(&["t-2:(t-1:a+b)+c", "t-1:d+e"])

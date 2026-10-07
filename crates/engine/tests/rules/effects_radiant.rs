@@ -14,7 +14,7 @@ use jackioh_engine::effects::{damage, set_radiant, set_radiant_random};
 use jackioh_engine::layers::{unit_has, unit_view};
 use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
-use jackioh_engine::script::{CardScripts, EngineSink, Effect, Script, hook};
+use jackioh_engine::script::{CardScripts, Effect, EngineSink, Script, hook};
 use jackioh_engine::scripts::registered_scripts;
 use jackioh_engine::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use jackioh_engine::zones::{PlaceOnFieldOptions, place_on_field};
@@ -25,14 +25,22 @@ use super::fixtures::harness::{in_hand, new_game, put, set_library, slot};
 
 /// A Cry that would be loud if making a card Radiant ever re-fired one (R22).
 fn crier() -> CardDef {
-    unit_def(731, json!({ "id": "rd-crier", "name": "Crier (fixture)", "attack": 2, "health": 2 }))
+    unit_def(
+        731,
+        json!({ "id": "rd-crier", "name": "Crier (fixture)", "attack": 2, "health": 2 }),
+    )
 }
 
 /// A radiant face that adds Taunt to a base face with no keywords (§5.2).
 fn glow_up() -> CardDef {
     CardDef {
-        radiant: json_as(json!({ "attack": 4, "health": 4, "keywords": [{ "kind": "Taunt" }], "text": "radiant" })),
-        ..unit_def(732, json!({ "id": "rd-glow-up", "name": "Glow Up (fixture)", "attack": 2, "health": 2 }))
+        radiant: json_as(
+            json!({ "attack": 4, "health": 4, "keywords": [{ "kind": "Taunt" }], "text": "radiant" }),
+        ),
+        ..unit_def(
+            732,
+            json!({ "id": "rd-glow-up", "name": "Glow Up (fixture)", "attack": 2, "health": 2 }),
+        )
     }
 }
 
@@ -40,7 +48,10 @@ fn glow_up() -> CardDef {
 fn no_form() -> CardDef {
     CardDef {
         radiant: json_as(json!({ "attack": 3, "health": 3, "keywords": [], "text": "same" })),
-        ..unit_def(733, json!({ "id": "rd-no-form", "name": "No Radiant Form (fixture)", "attack": 3, "health": 3 }))
+        ..unit_def(
+            733,
+            json!({ "id": "rd-no-form", "name": "No Radiant Form (fixture)", "attack": 3, "health": 3 }),
+        )
     }
 }
 
@@ -50,11 +61,19 @@ fn scripts() -> IndexMap<String, CardScripts> {
         crier().id,
         CardScripts {
             base: Script {
-                cry: Some(hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 5 })))])),
+                cry: Some(hook(|_ctx| {
+                    vec![damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 5 }),
+                    ))]
+                })),
                 ..Script::default()
             },
             radiant: Script {
-                cry: Some(hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 9 })))])),
+                cry: Some(hook(|_ctx| {
+                    vec![damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 9 }),
+                    ))]
+                })),
                 ..Script::default()
             },
         },
@@ -77,7 +96,12 @@ fn game(seed: &str) -> GameState {
 
 /// Apply one effect the way `resolve.ts` does, and hand back the events it emitted. `self_` is TS's
 /// `options.self` (null by default); `hook` the rest of the options.
-fn run(state: &mut GameState, effect: Effect, self_: Option<&CardInstance>, hook: HookOptions) -> Vec<GameEvent> {
+fn run(
+    state: &mut GameState,
+    effect: Effect,
+    self_: Option<&CardInstance>,
+    hook: HookOptions,
+) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();
     {
@@ -132,7 +156,12 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
     fn r22_swaps_the_base_stat_layer_at_once_keeps_damage_and_buffs_and_re_fires_no_cry() {
         let mut state = game("radiant-test");
         // The fixture 2/2 has a 4/4 radiant face.
-        let unit = put(&mut state, &crier().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let unit = put(
+            &mut state,
+            &crier().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         {
             let card = find_instance_mut(&mut state, &unit.id).expect("the unit");
             card.damage = 1;
@@ -173,7 +202,12 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
     #[test]
     fn r22_applies_a_keyword_the_radiant_face_adds_at_once() {
         let mut state = game("radiant-test");
-        let unit = put(&mut state, &glow_up().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &glow_up().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         assert!(!unit_has(&state, live(&state, &unit.id), KeywordKind::Taunt));
 
         run(&mut state, named(&unit.id), None, as_p1());
@@ -185,7 +219,12 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
     #[test]
     fn r22_c81_targets_the_card_whose_script_is_running_so_radiant_saintess_includes_itself() {
         let mut state = game("radiant-test");
-        let saintess = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 4), json!({}));
+        let saintess = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 4),
+            json!({}),
+        );
 
         let events = run(
             &mut state,
@@ -209,14 +248,22 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
             json!({ "radiant": true }),
         );
 
-        assert_eq!(run(&mut state, named(&unit.id), None, as_p1()), Vec::<GameEvent>::new());
+        assert_eq!(
+            run(&mut state, named(&unit.id), None, as_p1()),
+            Vec::<GameEvent>::new()
+        );
         assert!(live(&state, &unit.id).radiant);
     }
 
     #[test]
     fn r74_sets_the_flag_on_a_card_whose_radiant_form_is_the_same_as_its_base() {
         let mut state = game("radiant-test");
-        let unit = put(&mut state, &no_form().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &no_form().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
 
         let events = run(&mut state, named(&unit.id), None, as_p1());
 
@@ -241,7 +288,10 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
         assert!(now.radiant);
         assert_eq!(now.zone, Zone::Hand { player: PlayerId::P1 });
         assert_eq!(unit_view(&state, now).attack, 6);
-        assert_eq!(of_type(&events, "radiantSet")[0]["zone"], json!({ "z": "hand", "player": "p1" }));
+        assert_eq!(
+            of_type(&events, "radiantSet")[0]["zone"],
+            json!({ "z": "hand", "player": "p1" })
+        );
     }
 
     #[test]
@@ -265,14 +315,25 @@ mod r60_make_radiant_at_random_m3_t1 {
     fn r60_chooses_only_among_non_radiant_cards() {
         let mut state = game("radiant-test");
         let hand = in_hand(&mut state, &plain.id, PlayerId::P1, 3);
-        find_instance_mut(&mut state, &hand[0].id).expect("hand card").radiant = true;
-        find_instance_mut(&mut state, &hand[2].id).expect("hand card").radiant = true;
+        find_instance_mut(&mut state, &hand[0].id)
+            .expect("hand card")
+            .radiant = true;
+        find_instance_mut(&mut state, &hand[2].id)
+            .expect("hand card")
+            .radiant = true;
 
-        let events = run(&mut state, at_random(json!({ "zones": "hand", "count": 3 })), None, as_p1());
+        let events = run(
+            &mut state,
+            at_random(json!({ "zones": "hand", "count": 3 })),
+            None,
+            as_p1(),
+        );
 
         // Only one card was eligible, so only it changes: a pick never lands on a Radiant card.
         assert_eq!(
-            hand.iter().map(|card| live(&state, &card.id).radiant).collect::<Vec<_>>(),
+            hand.iter()
+                .map(|card| live(&state, &card.id).radiant)
+                .collect::<Vec<_>>(),
             vec![true, true, true]
         );
         // R177: the two picks R60 could not make are cued on the hand's Radiant cards, so the other
@@ -282,15 +343,23 @@ mod r60_make_radiant_at_random_m3_t1 {
     }
 
     #[test]
-    fn r60_r177_r129_changes_no_card_and_draws_nothing_when_no_non_radiant_card_is_left_though_the_hidden_hand_is_cued() {
+    fn r60_r177_r129_changes_no_card_and_draws_nothing_when_no_non_radiant_card_is_left_though_the_hidden_hand_is_cued()
+     {
         let mut state = game("radiant-test");
         let hand = in_hand(&mut state, &plain.id, PlayerId::P1, 2);
         for card in &hand {
-            find_instance_mut(&mut state, &card.id).expect("hand card").radiant = true;
+            find_instance_mut(&mut state, &card.id)
+                .expect("hand card")
+                .radiant = true;
         }
         let cursor = state.rng_cursor;
 
-        let events = run(&mut state, at_random(json!({ "zones": "hand", "count": 2 })), None, as_p1());
+        let events = run(
+            &mut state,
+            at_random(json!({ "zones": "hand", "count": 2 })),
+            None,
+            as_p1(),
+        );
         // Nothing changes and no random number is drawn (R129)...
         assert_eq!(state.rng_cursor, cursor);
         assert!(hand.iter().all(|card| live(&state, &card.id).radiant));
@@ -302,9 +371,23 @@ mod r60_make_radiant_at_random_m3_t1 {
     fn r60_c28_picks_n_different_cards_from_the_union_of_hand_library_and_field() {
         let mut state = game("radiant-test");
         let hand = in_hand(&mut state, &plain.id, PlayerId::P1, 2);
-        let library = set_library(&mut state, PlayerId::P1, &[plain.id.as_str(), crier().id.as_str()]);
-        let on_field = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let pool: Vec<CardInstance> = hand.iter().chain(library.iter()).cloned().chain([on_field]).collect();
+        let library = set_library(
+            &mut state,
+            PlayerId::P1,
+            &[plain.id.as_str(), crier().id.as_str()],
+        );
+        let on_field = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let pool: Vec<CardInstance> = hand
+            .iter()
+            .chain(library.iter())
+            .cloned()
+            .chain([on_field])
+            .collect();
 
         let events = run(
             &mut state,
@@ -317,7 +400,10 @@ mod r60_make_radiant_at_random_m3_t1 {
         assert_eq!(picked.len(), 4);
         assert_eq!(picked.iter().collect::<BTreeSet<_>>().len(), 4);
         assert!(picked.iter().all(|id| pool.iter().any(|card| &card.id == id)));
-        assert_eq!(pool.iter().filter(|card| live(&state, &card.id).radiant).count(), 4);
+        assert_eq!(
+            pool.iter().filter(|card| live(&state, &card.id).radiant).count(),
+            4
+        );
 
         // More than the pool holds takes all of it (R60).
         let mut all = game("radiant-test");
@@ -329,15 +415,32 @@ mod r60_make_radiant_at_random_m3_t1 {
             None,
             as_p1(),
         );
-        let expected: BTreeSet<String> = all_hand.iter().chain([&all_field]).map(|card| card.id.clone()).collect();
-        assert_eq!(radiant_ids(&everything).into_iter().collect::<BTreeSet<_>>(), expected);
+        let expected: BTreeSet<String> = all_hand
+            .iter()
+            .chain([&all_field])
+            .map(|card| card.id.clone())
+            .collect();
+        assert_eq!(
+            radiant_ids(&everything).into_iter().collect::<BTreeSet<_>>(),
+            expected
+        );
     }
 
     #[test]
     fn r13_offers_only_the_top_of_a_stack_pile_never_the_dormant_card_beneath() {
         let mut state = game("radiant-test");
-        let beneath = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
-        let mut top = new_instance(&mut state, &stacker.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let beneath = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
+        let mut top = new_instance(
+            &mut state,
+            &stacker.id,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
         assert!(place_on_field(
             &mut state,
             &mut top,
@@ -345,7 +448,12 @@ mod r60_make_radiant_at_random_m3_t1 {
             PlaceOnFieldOptions { stack: Some(true) }
         ));
 
-        let events = run(&mut state, at_random(json!({ "zones": "field", "count": 5 })), None, as_p1());
+        let events = run(
+            &mut state,
+            at_random(json!({ "zones": "field", "count": 5 })),
+            None,
+            as_p1(),
+        );
 
         assert_eq!(radiant_ids(&events), vec![top.id.clone()]);
         assert!(!live(&state, &beneath.id).radiant);
@@ -379,7 +487,12 @@ mod r60_make_radiant_at_random_m3_t1 {
         let picks = |seed: &str| -> Vec<String> {
             let mut state = game(seed);
             in_hand(&mut state, &plain.id, PlayerId::P1, 6);
-            radiant_ids(&run(&mut state, at_random(json!({ "zones": "hand", "count": 2 })), None, as_p1()))
+            radiant_ids(&run(
+                &mut state,
+                at_random(json!({ "zones": "hand", "count": 2 })),
+                None,
+                as_p1(),
+            ))
         };
 
         assert_eq!(picks("radiant-seed-a"), picks("radiant-seed-a"));
@@ -388,7 +501,12 @@ mod r60_make_radiant_at_random_m3_t1 {
         let mut state = game("radiant-test");
         in_hand(&mut state, &plain.id, PlayerId::P1, 6);
         assert_eq!(state.rng_cursor, 0);
-        run(&mut state, at_random(json!({ "zones": "hand", "count": 2 })), None, as_p1());
+        run(
+            &mut state,
+            at_random(json!({ "zones": "hand", "count": 2 })),
+            None,
+            as_p1(),
+        );
         assert!(state.rng_cursor > 0);
     }
 }

@@ -66,17 +66,17 @@ use uuid::Uuid;
 use jackioh_engine::wire::{GameRecord, parse_game_record, portrait_or_default, sources_of};
 use jackioh_engine::{Action, LastBoardEntry};
 
-use crate::db::fake::to_public_player_summary;
 use crate::auth::is_uuid;
+use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
     BotRating, CodeAttempt, CollectionEntry, CollectionGrant, FrozenDeck, FrozenTrio, GameRecordQuery,
-    InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, PlayerSettingsGroup,
+    InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, PerMode, PlayerSettingsGroup,
     PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
-    PerMode, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow,
-    RatedSide, RedeemInviteCodeInput, RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult,
-    Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide, StoreError, Ticket,
-    TicketStatus, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome,
-    TutorialProgressRow, UpsertOutcome,
+    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord, ProfileStatus,
+    PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ResultRow,
+    RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
+    SeriesSide, StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialHiddenChoice,
+    TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -131,7 +131,8 @@ fn is_results_key_conflict(error: &sqlx::Error) -> bool {
 /// the result of anything here today; it is set anyway so that the day a policy, a trigger or a
 /// SECURITY INVOKER helper does consult the caller, it sees the profile the call is about rather
 /// than nobody.
-const SESSION_SQL: &str = "select set_config('role', $1, true), set_config('request.jwt.claim.sub', $2, true)";
+const SESSION_SQL: &str =
+    "select set_config('role', $1, true), set_config('request.jwt.claim.sub', $2, true)";
 
 // ---------------------------------------------------------------------------
 // Errors. Every failure leaves this file through these two, so the `StoreError` variants they
@@ -174,14 +175,23 @@ macro_rules! ts {
 /// is defined before its first use, hence here.
 macro_rules! nullable_ts {
     ($param:literal) => {
-        concat!("case when ", $param, "::double precision is null then null else ", ts!($param), " end")
+        concat!(
+            "case when ",
+            $param,
+            "::double precision is null then null else ",
+            ts!($param),
+            " end"
+        )
     };
 }
 
 /// An int8 that arrives as text (`seq::text`, the `::text` of `app.append_match_action`), because
 /// TS read it so: it does not fit a JS number in general.
 fn int_of(value: &str) -> Result<i64, StoreError> {
-    value.trim().parse::<i64>().map_err(|_| StoreError::from(format!("expected an integer, got {}", stringify(&value))))
+    value
+        .trim()
+        .parse::<i64>()
+        .map_err(|_| StoreError::from(format!("expected an integer, got {}", stringify(&value))))
 }
 
 /// JS's `typeof`, for the messages `text_of` and friends write: what a JSON value would have been.
@@ -237,7 +247,11 @@ fn frozen_trio_of(value: &Value) -> Result<FrozenTrio, StoreError> {
             Some(Value::Null) => Some(None),
             Some(other) => Some(Some(text_of(Some(other))?)),
         };
-        frozen.push(FrozenDeck { name, cards, portrait });
+        frozen.push(FrozenDeck {
+            name,
+            cards,
+            portrait,
+        });
     }
     let mut decks = frozen.into_iter();
     match (decks.next(), decks.next(), decks.next(), decks.next()) {
@@ -263,7 +277,10 @@ fn queue_mode_of(value: &str) -> Result<QueueMode, StoreError> {
     if QUEUE_MODES.contains(&value) {
         return from_literal(value);
     }
-    Err(StoreError::from(format!("expected a queue mode, got {}", stringify(&value))))
+    Err(StoreError::from(format!(
+        "expected a queue mode, got {}",
+        stringify(&value)
+    )))
 }
 
 /// The two stakes a rematch may carry: a normal game and double-or-nothing.
@@ -275,7 +292,10 @@ fn stake_of<T: DeserializeOwned>(value: i16) -> Result<T, StoreError> {
     if STAKES.contains(&value) {
         return from_json(json!(value));
     }
-    Err(StoreError::from(format!("expected rematch stakes of 1 or 2, got {}", stringify(&value))))
+    Err(StoreError::from(format!(
+        "expected rematch stakes of 1 or 2, got {}",
+        stringify(&value)
+    )))
 }
 
 /// TS's `json(value)`: `JSON.stringify`, the text a `$n::jsonb` parameter is bound as.
@@ -298,7 +318,9 @@ fn stringify<T: Serialize + ?Sized>(value: &T) -> String {
 fn literal<T: Serialize + ?Sized>(value: &T) -> Result<String, StoreError> {
     match serde_json::to_value(value) {
         Ok(Value::String(text)) => Ok(text),
-        Ok(other) => Err(StoreError::from(format!("expected a string literal, got {other}"))),
+        Ok(other) => Err(StoreError::from(format!(
+            "expected a string literal, got {other}"
+        ))),
         Err(error) => Err(StoreError::from(error.to_string())),
     }
 }
@@ -308,7 +330,9 @@ fn literal_or_null<T: Serialize + ?Sized>(value: &T) -> Result<Option<String>, S
     match serde_json::to_value(value) {
         Ok(Value::Null) => Ok(None),
         Ok(Value::String(text)) => Ok(Some(text)),
-        Ok(other) => Err(StoreError::from(format!("expected a string literal or null, got {other}"))),
+        Ok(other) => Err(StoreError::from(format!(
+            "expected a string literal or null, got {other}"
+        ))),
         Err(error) => Err(StoreError::from(error.to_string())),
     }
 }
@@ -329,10 +353,13 @@ fn from_json<T: DeserializeOwned>(value: Value) -> Result<T, StoreError> {
 fn int_or_null<T: Serialize + ?Sized>(value: &T) -> Result<Option<i64>, StoreError> {
     match serde_json::to_value(value) {
         Ok(Value::Null) => Ok(None),
-        Ok(Value::Number(number)) => {
-            number.as_i64().map(Some).ok_or_else(|| StoreError::from(format!("expected an integer, got {number}")))
-        }
-        Ok(other) => Err(StoreError::from(format!("expected an integer or null, got {other}"))),
+        Ok(Value::Number(number)) => number
+            .as_i64()
+            .map(Some)
+            .ok_or_else(|| StoreError::from(format!("expected an integer, got {number}"))),
+        Ok(other) => Err(StoreError::from(format!(
+            "expected an integer or null, got {other}"
+        ))),
         Err(error) => Err(StoreError::from(error.to_string())),
     }
 }
@@ -470,7 +497,9 @@ const PROFILE_STATUSES: &[&str] = &["pending", "active", "banned"];
 fn to_profile(row: ProfileRow) -> Result<Profile, StoreError> {
     let status = row.status;
     if !PROFILE_STATUSES.contains(&status.as_str()) {
-        return Err(StoreError::from(format!("profiles.status holds an unknown value: {status}")));
+        return Err(StoreError::from(format!(
+            "profiles.status holds an unknown value: {status}"
+        )));
     }
     let status: ProfileStatus = from_literal(&status)?;
     Ok(Profile {
@@ -567,12 +596,19 @@ macro_rules! match_columns {
 /// admits it. Each entry is taken as TS took it, field by field and unchecked.
 fn last_board_of(value: &Value) -> Result<Vec<LastBoardEntry>, StoreError> {
     let Some(entries) = value.as_array() else {
-        return Err(StoreError::from(format!("a last board is not an array: {}", stringify(value))));
+        return Err(StoreError::from(format!(
+            "a last board is not an array: {}",
+            stringify(value)
+        )));
     };
     Ok(entries
         .iter()
         .map(|entry| LastBoardEntry {
-            def_id: entry.get("defId").and_then(Value::as_str).unwrap_or_default().to_string(),
+            def_id: entry
+                .get("defId")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string(),
             radiant: entry.get("radiant").and_then(Value::as_bool).unwrap_or(false),
         })
         .collect())
@@ -582,16 +618,28 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
     let Some(p2) = row.p2_profile_id else {
         // Only an `open` room reaches this, and `matches_get`/`matches_live` filter those out
         // before here.
-        return Err(StoreError::from(format!("match {} has no second player; it is still an open room", row.id)));
+        return Err(StoreError::from(format!(
+            "match {} has no second player; it is still an open room",
+            row.id
+        )));
     };
     let status = from_literal(if row.status == "over" { "finished" } else { "live" })?;
-    let boards = (last_board_of(&row.p1_last_board)?, last_board_of(&row.p2_last_board)?);
-    let glitch = (last_board_of(&row.p1_glitch_board)?, last_board_of(&row.p2_glitch_board)?);
+    let boards = (
+        last_board_of(&row.p1_last_board)?,
+        last_board_of(&row.p2_last_board)?,
+    );
+    let glitch = (
+        last_board_of(&row.p1_glitch_board)?,
+        last_board_of(&row.p2_glitch_board)?,
+    );
     let p2_deck = row.p2_deck.unwrap_or(Value::Null);
     // R642: absent when neither seat carried a portrait (a match from before 0019); both then
     // read as `vanilla` wherever `MatchRow.portraits` is consumed.
     let portraits = if row.p1_portrait.is_some() || row.p2_portrait.is_some() {
-        Some((portrait_or_default(row.p1_portrait.as_deref()), portrait_or_default(row.p2_portrait.as_deref())))
+        Some((
+            portrait_or_default(row.p1_portrait.as_deref()),
+            portrait_or_default(row.p2_portrait.as_deref()),
+        ))
     } else {
         None
     };
@@ -616,9 +664,17 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
             ceiling_at: ms_of(row.ceiling_at),
         },
         // R417: absent when both are empty, as the registry writes it.
-        last_boards: if boards.0.len() + boards.1.len() > 0 { Some(boards) } else { None },
+        last_boards: if boards.0.len() + boards.1.len() > 0 {
+            Some(boards)
+        } else {
+            None
+        },
         // R678: absent when both are empty, as the registry writes it (migration 0024).
-        glitch_boards: if glitch.0.len() + glitch.1.len() > 0 { Some(glitch) } else { None },
+        glitch_boards: if glitch.0.len() + glitch.1.len() > 0 {
+            Some(glitch)
+        } else {
+            None
+        },
         // R604: the flag migration 0022 adds. Absent when false, exactly as `MatchRow` types it —
         // `results.rs` reads a missing flag the same way (unranked).
         ranked: if row.ranked { Some(true) } else { None },
@@ -637,7 +693,10 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
 /// 0004 documents as "the grace countdown ... so both clients show it" — carries the nearer of the
 /// two, so a SQL reader still finds the grace deadline where the migration says it is.
 fn nearest_grace(clocks: &MatchClocks) -> Option<i64> {
-    [clocks.grace_deadline.p1, clocks.grace_deadline.p2].into_iter().flatten().min()
+    [clocks.grace_deadline.p1, clocks.grace_deadline.p2]
+        .into_iter()
+        .flatten()
+        .min()
 }
 
 struct TicketRow {
@@ -686,7 +745,9 @@ fn to_ticket_status(value: &str) -> Result<TicketStatus, StoreError> {
         "queued" => from_literal("open"),
         "claimed" => from_literal("matched"),
         "cancelled" => from_literal("cancelled"),
-        _ => Err(StoreError::from(format!("tickets.status holds an unknown value: {value}"))),
+        _ => Err(StoreError::from(format!(
+            "tickets.status holds an unknown value: {value}"
+        ))),
     }
 }
 
@@ -742,7 +803,10 @@ fn to_result(row: ResultDbRow) -> Result<ResultRow, StoreError> {
     Ok(ResultRow {
         match_id: row.match_id,
         // See KNOWN DIVERGENCES (deleted accounts): a deleted seat reads back as an empty id.
-        players: (row.p1_profile_id.unwrap_or_default(), row.p2_profile_id.unwrap_or_default()),
+        players: (
+            row.p1_profile_id.unwrap_or_default(),
+            row.p2_profile_id.unwrap_or_default(),
+        ),
         winner_profile_id: row.winner_profile_id,
         // `results_reason_check` in migration 0004 pins this column to exactly the seven
         // `GameOverReason` strings of the engine's wire, so the parse restates a database constraint.
@@ -796,7 +860,11 @@ macro_rules! room_columns {
 
 fn to_room(row: RoomRow) -> Result<Room, StoreError> {
     // A room's match id IS the row id, and it is only meaningful once a guest has claimed it.
-    let match_id = if row.p2_profile_id.is_none() { None } else { Some(row.id.clone()) };
+    let match_id = if row.p2_profile_id.is_none() {
+        None
+    } else {
+        Some(row.id.clone())
+    };
     Ok(Room {
         code: row.room_code,
         host_profile_id: row.p1_profile_id,
@@ -983,7 +1051,10 @@ struct PlayerSettingsDbRow {
 
 impl PlayerSettingsDbRow {
     fn read(row: &PgRow) -> Result<PlayerSettingsDbRow, StoreError> {
-        Ok(PlayerSettingsDbRow { profile_id: uuid_text(row, "profile_id")?, groups: json_col(row, "groups")? })
+        Ok(PlayerSettingsDbRow {
+            profile_id: uuid_text(row, "profile_id")?,
+            groups: json_col(row, "groups")?,
+        })
     }
 }
 
@@ -995,7 +1066,10 @@ macro_rules! player_settings_columns {
 }
 
 fn to_player_settings(row: PlayerSettingsDbRow) -> PlayerSettingsRow {
-    PlayerSettingsRow { profile_id: row.profile_id, groups: row.groups }
+    PlayerSettingsRow {
+        profile_id: row.profile_id,
+        groups: row.groups,
+    }
 }
 
 /// `public.player_stats` (migration 0021, R654): player stats and privacy flag.
@@ -1010,7 +1084,9 @@ struct PlayerStatsDbRow {
 
 /// A `stats` column as an object, or `{}` when it is anything else (TS's typeof guard).
 fn stats_col(row: &PgRow, column: &str) -> IndexMap<String, Value> {
-    get::<Json<IndexMap<String, Value>>>(row, column).map(|stats| stats.0).unwrap_or_default()
+    get::<Json<IndexMap<String, Value>>>(row, column)
+        .map(|stats| stats.0)
+        .unwrap_or_default()
 }
 
 impl PlayerStatsDbRow {
@@ -1114,7 +1190,9 @@ fn series_status_of<T: DeserializeOwned>(value: &str) -> Result<T, StoreError> {
     if SERIES_STATUSES.contains(&value) {
         return from_literal(value);
     }
-    Err(StoreError::from(format!("series.status holds an unknown value: {value}")))
+    Err(StoreError::from(format!(
+        "series.status holds an unknown value: {value}"
+    )))
 }
 
 /// `series_winner_check` (0009).
@@ -1124,7 +1202,9 @@ fn series_winner_of<T: DeserializeOwned>(value: Option<&str>) -> Result<T, Store
     match value {
         None => from_json(Value::Null),
         Some(winner) if SERIES_WINNERS.contains(&winner) => from_literal(winner),
-        Some(winner) => Err(StoreError::from(format!("series.winner holds an unknown value: {winner}"))),
+        Some(winner) => Err(StoreError::from(format!(
+            "series.winner holds an unknown value: {winner}"
+        ))),
     }
 }
 
@@ -1135,10 +1215,21 @@ fn state_field<T: DeserializeOwned>(state: &Value, key: &str) -> Result<T, Store
 
 fn to_series(row: SeriesDbRow) -> Result<SeriesRow, StoreError> {
     let state = &row.state;
-    let sides = state.get("sides").and_then(Value::as_array).map(Vec::as_slice).unwrap_or(&[]);
+    let sides = state
+        .get("sides")
+        .and_then(Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or(&[]);
     let (first, second) = match sides {
-        [first, second] if !state.is_null() && state.get("games").is_some_and(Value::is_array) => (first, second),
-        _ => return Err(StoreError::from(format!("series {} has a state this store did not write", row.id))),
+        [first, second] if !state.is_null() && state.get("games").is_some_and(Value::is_array) => {
+            (first, second)
+        }
+        _ => {
+            return Err(StoreError::from(format!(
+                "series {} has a state this store did not write",
+                row.id
+            )));
+        }
     };
     let side = |profile_id: Option<String>, held: &Value| -> Result<SeriesSide, StoreError> {
         Ok(SeriesSide {
@@ -1193,7 +1284,11 @@ impl SeasonDbRow {
 }
 
 fn to_season(row: SeasonDbRow) -> Season {
-    Season { id: row.id, patch_version: row.patch_version, started_at: ms_of(row.started_at) }
+    Season {
+        id: row.id,
+        patch_version: row.patch_version,
+        started_at: ms_of(row.started_at),
+    }
 }
 
 struct SeasonRankDbRow {
@@ -1272,7 +1367,11 @@ impl BotRatingDbRow {
 fn to_bot_rating(row: BotRatingDbRow) -> BotRating {
     BotRating {
         bot_id: row.bot_id,
-        glicko: Glicko { rating: row.rating, deviation: row.deviation, volatility: row.volatility },
+        glicko: Glicko {
+            rating: row.rating,
+            deviation: row.deviation,
+            volatility: row.volatility,
+        },
         games: i64::from(row.games),
         updated_at: ms_of(row.updated_at),
     }
@@ -1352,8 +1451,15 @@ const SEASON_LOCK_ID: i64 = 0x7365_6173; // "seas"
 fn glicko_of(value: &Value) -> Result<Glicko, StoreError> {
     let number = |key: &str| value.get(key).and_then(Value::as_f64);
     match (number("rating"), number("deviation"), number("volatility")) {
-        (Some(rating), Some(deviation), Some(volatility)) => Ok(Glicko { rating, deviation, volatility }),
-        _ => Err(StoreError::from(format!("expected a Glicko triple, got {}", stringify(value)))),
+        (Some(rating), Some(deviation), Some(volatility)) => Ok(Glicko {
+            rating,
+            deviation,
+            volatility,
+        }),
+        _ => Err(StoreError::from(format!(
+            "expected a Glicko triple, got {}",
+            stringify(value)
+        ))),
     }
 }
 
@@ -1362,7 +1468,10 @@ fn visible_rank_of<T: DeserializeOwned>(value: Option<Value>) -> Result<T, Store
     match value {
         None | Some(Value::Null) => from_json(Value::Null),
         Some(rank) if rank.is_object() || rank.is_array() => from_json(rank),
-        Some(rank) => Err(StoreError::from(format!("expected a VisibleRank, got {}", stringify(&rank)))),
+        Some(rank) => Err(StoreError::from(format!(
+            "expected a VisibleRank, got {}",
+            stringify(&rank)
+        ))),
     }
 }
 
@@ -1401,13 +1510,18 @@ const RATED_GAME_KINDS: &[&str] = &["match", "series"];
 
 fn to_rated_game(row: RatedGameDbRow) -> Result<RatedGameRow, StoreError> {
     if !RATED_GAME_KINDS.contains(&row.kind.as_str()) {
-        return Err(StoreError::from(format!("rated_games.kind holds an unknown value: {}", row.kind)));
+        return Err(StoreError::from(format!(
+            "rated_games.kind holds an unknown value: {}",
+            row.kind
+        )));
     }
     if let Some(side) = row.winner_side
         && side != 0
         && side != 1
     {
-        return Err(StoreError::from(format!("rated_games.winner_side holds an unknown value: {side}")));
+        return Err(StoreError::from(format!(
+            "rated_games.winner_side holds an unknown value: {side}"
+        )));
     }
     Ok(RatedGameRow {
         id: row.id,
@@ -1628,24 +1742,38 @@ pub async fn purge_expired(
 
 pub async fn profiles_get_by_id(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<Profile>, StoreError> {
     run_as(t, Some(profile_id)).await?;
-    let row = sqlx::query(concat!("select ", profile_columns!(), " ", profile_from!(), " where p.id = $1::uuid"))
-        .bind(profile_id)
-        .fetch_optional(&mut **t)
-        .await
-        .map_err(db_error)?;
-    row.map(|row| ProfileRow::read(&row).and_then(to_profile)).transpose()
+    let row = sqlx::query(concat!(
+        "select ",
+        profile_columns!(),
+        " ",
+        profile_from!(),
+        " where p.id = $1::uuid"
+    ))
+    .bind(profile_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.map(|row| ProfileRow::read(&row).and_then(to_profile))
+        .transpose()
 }
 
 /// The same lookup as `profiles_get_by_id`: migration 0001 keys `profiles.id` to `auth.users(id)`,
 /// so the managed-auth user id and the profile id are one value (see `to_profile`).
 pub async fn profiles_get_by_user_id(t: &mut PgTx<'_>, user_id: &str) -> Result<Option<Profile>, StoreError> {
     run_as(t, Some(user_id)).await?;
-    let row = sqlx::query(concat!("select ", profile_columns!(), " ", profile_from!(), " where p.id = $1::uuid"))
-        .bind(user_id)
-        .fetch_optional(&mut **t)
-        .await
-        .map_err(db_error)?;
-    row.map(|row| ProfileRow::read(&row).and_then(to_profile)).transpose()
+    let row = sqlx::query(concat!(
+        "select ",
+        profile_columns!(),
+        " ",
+        profile_from!(),
+        " where p.id = $1::uuid"
+    ))
+    .bind(user_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.map(|row| ProfileRow::read(&row).and_then(to_profile))
+        .transpose()
 }
 
 pub async fn profiles_get_many(t: &mut PgTx<'_>, profile_ids: &[String]) -> Result<Vec<Profile>, StoreError> {
@@ -1664,7 +1792,9 @@ pub async fn profiles_get_many(t: &mut PgTx<'_>, profile_ids: &[String]) -> Resu
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
-    rows.iter().map(|row| ProfileRow::read(row).and_then(to_profile)).collect()
+    rows.iter()
+        .map(|row| ProfileRow::read(row).and_then(to_profile))
+        .collect()
 }
 
 /// §9.4: "the account exists the moment auth says so and stays pending until a code is
@@ -1696,13 +1826,21 @@ pub async fn profiles_create(t: &mut PgTx<'_>, input: &ProfileCreateInput) -> Re
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
-    let row = sqlx::query(concat!("select ", profile_columns!(), " ", profile_from!(), " where p.id = $1::uuid"))
-        .bind(user_id)
-        .fetch_optional(&mut **t)
-        .await
-        .map_err(db_error)?;
+    let row = sqlx::query(concat!(
+        "select ",
+        profile_columns!(),
+        " ",
+        profile_from!(),
+        " where p.id = $1::uuid"
+    ))
+    .bind(user_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
     let Some(row) = row else {
-        return Err(StoreError::from(format!("profiles.create wrote no row for {user_id}")));
+        return Err(StoreError::from(format!(
+            "profiles.create wrote no row for {user_id}"
+        )));
     };
     to_profile(ProfileRow::read(&row)?)
 }
@@ -1712,7 +1850,11 @@ pub async fn profiles_create(t: &mut PgTx<'_>, input: &ProfileCreateInput) -> Re
 /// in the current catalog version through `app.grant_cards` — both ledger tables, one
 /// transaction, idempotent. Nothing here grants anything: the trigger is the implementation,
 /// exactly as the fake says it is ("R111 IS A DATABASE TRIGGER").
-pub async fn profiles_set_status(t: &mut PgTx<'_>, profile_id: &str, status: ProfileStatus) -> Result<(), StoreError> {
+pub async fn profiles_set_status(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    status: ProfileStatus,
+) -> Result<(), StoreError> {
     run_as(t, Some(profile_id)).await?;
     let done = sqlx::query("update public.profiles set status = $2::text where id = $1::uuid")
         .bind(profile_id)
@@ -1749,7 +1891,11 @@ pub async fn profiles_set_display_name(
 // `profiles_set_glicko`.
 
 /// R603: a rated game's whole Glicko triple, one statement.
-pub async fn profiles_set_glicko(t: &mut PgTx<'_>, profile_id: &str, glicko: &Glicko) -> Result<(), StoreError> {
+pub async fn profiles_set_glicko(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    glicko: &Glicko,
+) -> Result<(), StoreError> {
     run_as(t, Some(profile_id)).await?;
     let done = sqlx::query(
         "update public.profiles
@@ -1949,7 +2095,11 @@ pub async fn codes_oldest_attempt_at_by_profile(
     }
 }
 
-pub async fn codes_count_attempts_by_ip(t: &mut PgTx<'_>, ip_hash: &str, since: i64) -> Result<i64, StoreError> {
+pub async fn codes_count_attempts_by_ip(
+    t: &mut PgTx<'_>,
+    ip_hash: &str,
+    since: i64,
+) -> Result<i64, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query(concat!(
         "select count(*)::int as n from public.code_attempts
@@ -1994,7 +2144,10 @@ pub async fn collection_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<Co
     rows.iter()
         .map(|row| -> Result<CollectionEntry, StoreError> {
             // `quantity` is an `int` (migration 0002), widened to the store's i64.
-            Ok(CollectionEntry { card_id: get(row, "card_id")?, quantity: i64::from(get::<i32>(row, "quantity")?) })
+            Ok(CollectionEntry {
+                card_id: get(row, "card_id")?,
+                quantity: i64::from(get::<i32>(row, "quantity")?),
+            })
         })
         .collect()
 }
@@ -2016,8 +2169,10 @@ pub async fn collection_upsert_quantities(
     if entries.is_empty() {
         return Ok(());
     }
-    let rows: Vec<Value> =
-        entries.iter().map(|entry| json!({ "card_id": entry.card_id, "quantity": entry.quantity })).collect();
+    let rows: Vec<Value> = entries
+        .iter()
+        .map(|entry| json!({ "card_id": entry.card_id, "quantity": entry.quantity }))
+        .collect();
     run_as(t, Some(profile_id)).await?;
     sqlx::query(
         "insert into public.collection (profile_id, card_id, quantity, updated_at)
@@ -2035,7 +2190,10 @@ pub async fn collection_upsert_quantities(
 }
 
 /// Append-only (§9.4); `collection_grants` carries `check (delta <> 0)` and a deny trigger.
-pub async fn collection_append_grants(t: &mut PgTx<'_>, grants: &[CollectionGrant]) -> Result<(), StoreError> {
+pub async fn collection_append_grants(
+    t: &mut PgTx<'_>,
+    grants: &[CollectionGrant],
+) -> Result<(), StoreError> {
     let Some(first) = grants.first() else {
         return Ok(());
     };
@@ -2086,7 +2244,9 @@ pub async fn decks_list(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<SavedD
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
-    rows.iter().map(|row| DeckRow::read(row).and_then(to_deck)).collect()
+    rows.iter()
+        .map(|row| DeckRow::read(row).and_then(to_deck))
+        .collect()
 }
 
 pub async fn decks_get(t: &mut PgTx<'_>, deck_id: &str) -> Result<Option<SavedDeck>, StoreError> {
@@ -2094,11 +2254,15 @@ pub async fn decks_get(t: &mut PgTx<'_>, deck_id: &str) -> Result<Option<SavedDe
         return Ok(None);
     }
     run_as(t, None).await?;
-    let row = sqlx::query(concat!("select ", deck_columns!(), " from public.decks where id = $1::uuid"))
-        .bind(deck_id)
-        .fetch_optional(&mut **t)
-        .await
-        .map_err(db_error)?;
+    let row = sqlx::query(concat!(
+        "select ",
+        deck_columns!(),
+        " from public.decks where id = $1::uuid"
+    ))
+    .bind(deck_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
     row.map(|row| DeckRow::read(&row).and_then(to_deck)).transpose()
 }
 
@@ -2110,7 +2274,11 @@ pub async fn decks_get(t: &mut PgTx<'_>, deck_id: &str) -> Result<Option<SavedDe
 /// new. It is handed `updated_at`, which is the save being made; see KNOWN DIVERGENCES (deck and
 /// trio timestamps). The cap passed is the caller's, and the function applies the smaller of it
 /// and `app.settings.max_saved_decks` (KNOWN DIVERGENCES, caps).
-pub async fn decks_upsert(t: &mut PgTx<'_>, deck: &SavedDeck, max_decks: i64) -> Result<UpsertOutcome, StoreError> {
+pub async fn decks_upsert(
+    t: &mut PgTx<'_>,
+    deck: &SavedDeck,
+    max_decks: i64,
+) -> Result<UpsertOutcome, StoreError> {
     let max_decks = i32::try_from(max_decks).unwrap_or(i32::MAX);
     run_as(t, Some(deck.profile_id.as_str())).await?;
     let row = sqlx::query(concat!(
@@ -2179,11 +2347,15 @@ pub async fn trios_get(t: &mut PgTx<'_>, trio_id: &str) -> Result<Option<SavedTr
         return Ok(None);
     }
     run_as(t, None).await?;
-    let row = sqlx::query(concat!("select ", trio_columns!(), " from public.trios where id = $1::uuid"))
-        .bind(trio_id)
-        .fetch_optional(&mut **t)
-        .await
-        .map_err(db_error)?;
+    let row = sqlx::query(concat!(
+        "select ",
+        trio_columns!(),
+        " from public.trios where id = $1::uuid"
+    ))
+    .bind(trio_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
     row.map(|row| TrioRow::read(&row).map(to_trio)).transpose()
 }
 
@@ -2201,7 +2373,11 @@ pub async fn trios_upsert(
 ) -> Result<TrioUpsertOutcome, StoreError> {
     let max_trios = i32::try_from(max_trios).unwrap_or(i32::MAX);
     let (deck1, deck2, deck3) = &trio.deck_ids;
-    if [deck1, deck2, deck3].into_iter().flatten().any(|deck_id| !is_uuid(deck_id)) {
+    if [deck1, deck2, deck3]
+        .into_iter()
+        .flatten()
+        .any(|deck_id| !is_uuid(deck_id))
+    {
         return from_literal("unknown_deck");
     }
     run_as(t, Some(trio.profile_id.as_str())).await?;
@@ -2354,7 +2530,11 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
     };
 
     let no_board: Vec<LastBoardEntry> = Vec::new();
-    let status_text = if literal(&m.status)? == "finished" { "over" } else { "live" };
+    let status_text = if literal(&m.status)? == "finished" {
+        "over"
+    } else {
+        "live"
+    };
     sqlx::query(statement)
         .bind(m.id.as_str())
         .bind(status_text)
@@ -2372,10 +2552,24 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
         .bind(m.clocks.ceiling_at)
         .bind(m.created_at)
         .bind(m.finished_at)
-        .bind(json(m.last_boards.as_ref().map_or(&no_board, |boards| &boards.0))?)
-        .bind(json(m.last_boards.as_ref().map_or(&no_board, |boards| &boards.1))?)
-        .bind(m.portraits.as_ref().map(|portraits| literal(&portraits.0)).transpose()?)
-        .bind(m.portraits.as_ref().map(|portraits| literal(&portraits.1)).transpose()?)
+        .bind(json(
+            m.last_boards.as_ref().map_or(&no_board, |boards| &boards.0),
+        )?)
+        .bind(json(
+            m.last_boards.as_ref().map_or(&no_board, |boards| &boards.1),
+        )?)
+        .bind(
+            m.portraits
+                .as_ref()
+                .map(|portraits| literal(&portraits.0))
+                .transpose()?,
+        )
+        .bind(
+            m.portraits
+                .as_ref()
+                .map(|portraits| literal(&portraits.1))
+                .transpose()?,
+        )
         // R604: false for a room and for the `open` skeletons this UPDATE turns live — a room
         // never calls this, and a queue skeleton's own write is what stamps the flag.
         .bind(m.ranked.unwrap_or(false))
@@ -2383,8 +2577,12 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
         .bind(m.mode.as_ref().map(literal).transpose()?)
         .bind(int_or_null(&m.stake)?)
         // R678: the Glitch boards sampled at creation (migration 0024), '[]' when absent.
-        .bind(json(m.glitch_boards.as_ref().map_or(&no_board, |boards| &boards.0))?)
-        .bind(json(m.glitch_boards.as_ref().map_or(&no_board, |boards| &boards.1))?)
+        .bind(json(
+            m.glitch_boards.as_ref().map_or(&no_board, |boards| &boards.0),
+        )?)
+        .bind(json(
+            m.glitch_boards.as_ref().map_or(&no_board, |boards| &boards.1),
+        )?)
         .execute(&mut **t)
         .await
         .map_err(db_error)?;
@@ -2403,7 +2601,8 @@ pub async fn matches_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<Matc
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    row.map(|row| MatchDbRow::read(&row).and_then(to_match)).transpose()
+    row.map(|row| MatchDbRow::read(&row).and_then(to_match))
+        .transpose()
 }
 
 /// §9.3's append-only log, written by `app.append_match_action` (migration 0004) and by nothing
@@ -2474,7 +2673,11 @@ pub async fn matches_actions(t: &mut PgTx<'_>, match_id: &str) -> Result<Vec<Mat
         .collect()
 }
 
-pub async fn matches_set_clocks(t: &mut PgTx<'_>, match_id: &str, clocks: &MatchClocks) -> Result<(), StoreError> {
+pub async fn matches_set_clocks(
+    t: &mut PgTx<'_>,
+    match_id: &str,
+    clocks: &MatchClocks,
+) -> Result<(), StoreError> {
     run_as(t, None).await?;
     let done = sqlx::query(concat!(
         "update public.matches set
@@ -2790,15 +2993,23 @@ pub async fn tickets_insert(t: &mut PgTx<'_>, ticket: &Ticket) -> Result<(), Sto
 
 pub async fn tickets_get(t: &mut PgTx<'_>, ticket_id: &str) -> Result<Option<Ticket>, StoreError> {
     run_as(t, None).await?;
-    let row = sqlx::query(concat!("select ", ticket_columns!(), " from public.tickets where id = $1::uuid"))
-        .bind(ticket_id)
-        .fetch_optional(&mut **t)
-        .await
-        .map_err(db_error)?;
-    row.map(|row| TicketRow::read(&row).and_then(to_ticket)).transpose()
+    let row = sqlx::query(concat!(
+        "select ",
+        ticket_columns!(),
+        " from public.tickets where id = $1::uuid"
+    ))
+    .bind(ticket_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.map(|row| TicketRow::read(&row).and_then(to_ticket))
+        .transpose()
 }
 
-pub async fn tickets_open_for_profile(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<Ticket>, StoreError> {
+pub async fn tickets_open_for_profile(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+) -> Result<Option<Ticket>, StoreError> {
     run_as(t, Some(profile_id)).await?;
     let row = sqlx::query(concat!(
         "select ",
@@ -2810,7 +3021,8 @@ pub async fn tickets_open_for_profile(t: &mut PgTx<'_>, profile_id: &str) -> Res
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    row.map(|row| TicketRow::read(&row).and_then(to_ticket)).transpose()
+    row.map(|row| TicketRow::read(&row).and_then(to_ticket))
+        .transpose()
 }
 
 pub async fn tickets_list_open(t: &mut PgTx<'_>) -> Result<Vec<Ticket>, StoreError> {
@@ -2823,7 +3035,9 @@ pub async fn tickets_list_open(t: &mut PgTx<'_>) -> Result<Vec<Ticket>, StoreErr
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
-    rows.iter().map(|row| TicketRow::read(row).and_then(to_ticket)).collect()
+    rows.iter()
+        .map(|row| TicketRow::read(row).and_then(to_ticket))
+        .collect()
 }
 
 pub async fn tickets_count_open(t: &mut PgTx<'_>) -> Result<i64, StoreError> {
@@ -2838,10 +3052,12 @@ pub async fn tickets_count_open(t: &mut PgTx<'_>) -> Result<i64, StoreError> {
 /// R257: "the queue population is reported per mode". Every mode is present, at 0 if empty.
 pub async fn tickets_count_open_by_mode(t: &mut PgTx<'_>) -> Result<PerMode<i64>, StoreError> {
     run_as(t, None).await?;
-    let rows = sqlx::query("select mode, count(*)::int as n from public.tickets where status = 'queued' group by mode")
-        .fetch_all(&mut **t)
-        .await
-        .map_err(db_error)?;
+    let rows = sqlx::query(
+        "select mode, count(*)::int as n from public.tickets where status = 'queued' group by mode",
+    )
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
     let mut counts: PerMode<i64> = PerMode::default();
     for row in &rows {
         let mode = queue_mode_of(&get::<String>(row, "mode")?)?;
@@ -2963,7 +3179,11 @@ pub async fn results_record_for(t: &mut PgTx<'_>, profile_id: &str) -> Result<Pr
             Some(row) => Ok(get::<Option<i64>>(row, column)?.unwrap_or(0)),
         }
     };
-    Ok(ProfileRecord { wins: count("wins")?, losses: count("losses")?, draws: count("draws")? })
+    Ok(ProfileRecord {
+        wins: count("wins")?,
+        losses: count("losses")?,
+        draws: count("draws")?,
+    })
 }
 
 /// One row per match: `results.match_id` is the primary key, so a second insert raises.
@@ -3013,7 +3233,8 @@ pub async fn results_get_by_match(t: &mut PgTx<'_>, match_id: &str) -> Result<Op
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    row.map(|row| ResultDbRow::read(&row).and_then(to_result)).transpose()
+    row.map(|row| ResultDbRow::read(&row).and_then(to_result))
+        .transpose()
 }
 
 // ---------------------------------------------------------------------------
@@ -3107,12 +3328,17 @@ pub async fn series_get(t: &mut PgTx<'_>, series_id: &str) -> Result<Option<Seri
         return Ok(None);
     }
     run_as(t, None).await?;
-    let row = sqlx::query(concat!("select ", series_columns!(), " from public.series where id = $1::uuid"))
-        .bind(series_id)
-        .fetch_optional(&mut **t)
-        .await
-        .map_err(db_error)?;
-    row.map(|row| SeriesDbRow::read(&row).and_then(to_series)).transpose()
+    let row = sqlx::query(concat!(
+        "select ",
+        series_columns!(),
+        " from public.series where id = $1::uuid"
+    ))
+    .bind(series_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.map(|row| SeriesDbRow::read(&row).and_then(to_series))
+        .transpose()
 }
 
 /// R263: "written only by compare-and-set on its version". The guard is the `where`: the row is
@@ -3175,7 +3401,8 @@ pub async fn series_by_match(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    row.map(|row| SeriesDbRow::read(&row).and_then(to_series)).transpose()
+    row.map(|row| SeriesDbRow::read(&row).and_then(to_series))
+        .transpose()
 }
 
 /// Any game of any series, whatever its status: a jsonb containment test over `state -> 'games'`,
@@ -3197,7 +3424,8 @@ pub async fn series_with_game(t: &mut PgTx<'_>, match_id: &str) -> Result<Option
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    row.map(|row| SeriesDbRow::read(&row).and_then(to_series)).transpose()
+    row.map(|row| SeriesDbRow::read(&row).and_then(to_series))
+        .transpose()
 }
 
 pub async fn series_active_for(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<SeriesRow>, StoreError> {
@@ -3214,7 +3442,8 @@ pub async fn series_active_for(t: &mut PgTx<'_>, profile_id: &str) -> Result<Opt
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    row.map(|row| SeriesDbRow::read(&row).and_then(to_series)).transpose()
+    row.map(|row| SeriesDbRow::read(&row).and_then(to_series))
+        .transpose()
 }
 
 /// The sweeper's input (R263), oldest first, over `series_active_idx`.
@@ -3228,14 +3457,19 @@ pub async fn series_active(t: &mut PgTx<'_>) -> Result<Vec<SeriesRow>, StoreErro
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
-    rows.iter().map(|row| SeriesDbRow::read(row).and_then(to_series)).collect()
+    rows.iter()
+        .map(|row| SeriesDbRow::read(row).and_then(to_series))
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
 // Tutorial progress on the account (SPEC §9.10, R320)
 // ---------------------------------------------------------------------------
 
-pub async fn tutorial_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<TutorialProgressRow>, StoreError> {
+pub async fn tutorial_get(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+) -> Result<Option<TutorialProgressRow>, StoreError> {
     if !is_uuid(profile_id) {
         return Ok(None);
     }
@@ -3249,7 +3483,8 @@ pub async fn tutorial_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<T
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    row.map(|row| TutorialDbRow::read(&row).map(to_tutorial)).transpose()
+    row.map(|row| TutorialDbRow::read(&row).map(to_tutorial))
+        .transpose()
 }
 
 /// R320: one call to `app.merge_tutorial_progress` (0011), which takes the profile row lock,
@@ -3304,16 +3539,23 @@ pub async fn tutorial_merge(
     .await
     .map_err(db_error)?;
     let Some(read) = read else {
-        return Err(StoreError::from("app.merge_tutorial_progress answered merged and wrote no row"));
+        return Err(StoreError::from(
+            "app.merge_tutorial_progress answered merged and wrote no row",
+        ));
     };
-    Ok(TutorialMergeOutcome::Merged { progress: to_tutorial(TutorialDbRow::read(&read)?) })
+    Ok(TutorialMergeOutcome::Merged {
+        progress: to_tutorial(TutorialDbRow::read(&read)?),
+    })
 }
 
 // ---------------------------------------------------------------------------
 // Player settings on the account (SPEC §9.1, R633, R634)
 // ---------------------------------------------------------------------------
 
-pub async fn player_settings_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<PlayerSettingsRow>, StoreError> {
+pub async fn player_settings_get(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+) -> Result<Option<PlayerSettingsRow>, StoreError> {
     if !is_uuid(profile_id) {
         return Ok(None);
     }
@@ -3327,7 +3569,8 @@ pub async fn player_settings_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<O
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    row.map(|row| PlayerSettingsDbRow::read(&row).map(to_player_settings)).transpose()
+    row.map(|row| PlayerSettingsDbRow::read(&row).map(to_player_settings))
+        .transpose()
 }
 
 /// R634: one call to `app.merge_player_settings` (0018), which takes the profile row lock,
@@ -3377,9 +3620,13 @@ pub async fn player_settings_merge(
     .await
     .map_err(db_error)?;
     let Some(read) = read else {
-        return Err(StoreError::from("app.merge_player_settings answered merged and wrote no row"));
+        return Err(StoreError::from(
+            "app.merge_player_settings answered merged and wrote no row",
+        ));
     };
-    Ok(PlayerSettingsMergeOutcome::Merged { settings: to_player_settings(PlayerSettingsDbRow::read(&read)?) })
+    Ok(PlayerSettingsMergeOutcome::Merged {
+        settings: to_player_settings(PlayerSettingsDbRow::read(&read)?),
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -3396,12 +3643,13 @@ pub async fn last_boards_get(
         return Ok(None);
     }
     run_as(t, Some(profile_id)).await?;
-    let row = sqlx::query("select board from public.last_boards where profile_id = $1::uuid and kind = $2::text")
-        .bind(profile_id)
-        .bind(literal(&kind)?)
-        .fetch_optional(&mut **t)
-        .await
-        .map_err(db_error)?;
+    let row =
+        sqlx::query("select board from public.last_boards where profile_id = $1::uuid and kind = $2::text")
+            .bind(profile_id)
+            .bind(literal(&kind)?)
+            .fetch_optional(&mut **t)
+            .await
+            .map_err(db_error)?;
     row.map(|row| -> Result<Vec<LastBoardEntry>, StoreError> { last_board_of(&get::<Value>(&row, "board")?) })
         .transpose()
 }
@@ -3443,7 +3691,11 @@ pub async fn last_boards_sample_others(
     if count <= 0 {
         return Ok(Vec::new());
     }
-    let excluded: Vec<String> = exclude_profile_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    let excluded: Vec<String> = exclude_profile_ids
+        .iter()
+        .filter(|id| is_uuid(id))
+        .cloned()
+        .collect();
     run_as(t, None).await?;
     let rows = sqlx::query(
         "select board from public.last_boards
@@ -3486,8 +3738,14 @@ pub async fn game_records_insert(t: &mut PgTx<'_>, record: &GameRecord) -> Resul
 }
 
 /// The filter on the indexed columns; each row read back through `parse_game_record`.
-pub async fn game_records_list(t: &mut PgTx<'_>, query: &GameRecordQuery) -> Result<Vec<GameRecord>, StoreError> {
-    let sources = sources_of(query.source).iter().map(literal).collect::<Result<Vec<String>, StoreError>>()?;
+pub async fn game_records_list(
+    t: &mut PgTx<'_>,
+    query: &GameRecordQuery,
+) -> Result<Vec<GameRecord>, StoreError> {
+    let sources = sources_of(query.source)
+        .iter()
+        .map(literal)
+        .collect::<Result<Vec<String>, StoreError>>()?;
     let mode = query.mode.as_ref().map(literal).transpose()?;
     run_as(t, None).await?;
     let rows = sqlx::query(
@@ -3536,11 +3794,14 @@ pub async fn ranked_lock_seasons(t: &mut PgTx<'_>) -> Result<(), StoreError> {
 /// Every season, oldest first, as the fake's ranked store answers it.
 pub async fn ranked_seasons(t: &mut PgTx<'_>) -> Result<Vec<Season>, StoreError> {
     run_as(t, None).await?;
-    let rows = sqlx::query("select id, patch_version, started_at from public.seasons order by started_at, id")
-        .fetch_all(&mut **t)
-        .await
-        .map_err(db_error)?;
-    rows.iter().map(|row| SeasonDbRow::read(row).map(to_season)).collect()
+    let rows =
+        sqlx::query("select id, patch_version, started_at from public.seasons order by started_at, id")
+            .fetch_all(&mut **t)
+            .await
+            .map_err(db_error)?;
+    rows.iter()
+        .map(|row| SeasonDbRow::read(row).map(to_season))
+        .collect()
 }
 
 /// `on conflict` answers a race to open the same season with `false`, nothing written.
@@ -3606,10 +3867,30 @@ pub async fn ranked_reset_ratings(t: &mut PgTx<'_>, changes: &[ResetChange]) -> 
              as c(id, rating, deviation, volatility)
           where p.id = c.id",
     )
-    .bind(changes.iter().map(|change| change.profile_id.clone()).collect::<Vec<String>>())
-    .bind(changes.iter().map(|change| change.after.rating).collect::<Vec<f64>>())
-    .bind(changes.iter().map(|change| change.after.deviation).collect::<Vec<f64>>())
-    .bind(changes.iter().map(|change| change.after.volatility).collect::<Vec<f64>>())
+    .bind(
+        changes
+            .iter()
+            .map(|change| change.profile_id.clone())
+            .collect::<Vec<String>>(),
+    )
+    .bind(
+        changes
+            .iter()
+            .map(|change| change.after.rating)
+            .collect::<Vec<f64>>(),
+    )
+    .bind(
+        changes
+            .iter()
+            .map(|change| change.after.deviation)
+            .collect::<Vec<f64>>(),
+    )
+    .bind(
+        changes
+            .iter()
+            .map(|change| change.after.volatility)
+            .collect::<Vec<f64>>(),
+    )
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
@@ -3637,7 +3918,8 @@ pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<S
         .map(|row| -> Result<SeasonStanding, StoreError> {
             let rank = to_season_rank(SeasonRankDbRow::read(row)?);
             let rating: f64 = get(row, "rating")?;
-            let mut standing = serde_json::to_value(&rank).map_err(|error| StoreError::from(error.to_string()))?;
+            let mut standing =
+                serde_json::to_value(&rank).map_err(|error| StoreError::from(error.to_string()))?;
             if let Value::Object(fields) = &mut standing {
                 fields.insert(String::from("rating"), json!(rating));
             }
@@ -3646,7 +3928,11 @@ pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<S
         .collect()
 }
 
-pub async fn ranked_rank(t: &mut PgTx<'_>, season_id: &str, profile_id: &str) -> Result<Option<SeasonRank>, StoreError> {
+pub async fn ranked_rank(
+    t: &mut PgTx<'_>,
+    season_id: &str,
+    profile_id: &str,
+) -> Result<Option<SeasonRank>, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query(
         "select season_id, profile_id, games, wins, losses, draws, ladder, floor, streak,
@@ -3659,7 +3945,8 @@ pub async fn ranked_rank(t: &mut PgTx<'_>, season_id: &str, profile_id: &str) ->
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    row.map(|row| SeasonRankDbRow::read(&row).map(to_season_rank)).transpose()
+    row.map(|row| SeasonRankDbRow::read(&row).map(to_season_rank))
+        .transpose()
 }
 
 /// A profile's badges (R607), oldest season first, the season itself ordering them.
@@ -3677,7 +3964,9 @@ pub async fn ranked_ranks_of(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<S
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
-    rows.iter().map(|row| SeasonRankDbRow::read(row).map(to_season_rank)).collect()
+    rows.iter()
+        .map(|row| SeasonRankDbRow::read(row).map(to_season_rank))
+        .collect()
 }
 
 /// Insert or replace: the primary key is what R262's rate-once bookkeeping is keyed on.
@@ -3752,7 +4041,8 @@ pub async fn ranked_bot(t: &mut PgTx<'_>, bot_id: &str) -> Result<Option<BotRati
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    row.map(|row| BotRatingDbRow::read(&row).map(to_bot_rating)).transpose()
+    row.map(|row| BotRatingDbRow::read(&row).map(to_bot_rating))
+        .transpose()
 }
 
 pub async fn ranked_put_bot(t: &mut PgTx<'_>, bot: &BotRating) -> Result<(), StoreError> {
@@ -3823,7 +4113,10 @@ pub async fn ranked_record_game(t: &mut PgTx<'_>, row: &RatedGameRow) -> Result<
     .await
     .map_err(db_error)?;
     if done.rows_affected() == 0 {
-        return Err(StoreError::from(format!("rated_games already holds a row for {}", row.id)));
+        return Err(StoreError::from(format!(
+            "rated_games already holds a row for {}",
+            row.id
+        )));
     }
     Ok(())
 }
@@ -3833,19 +4126,27 @@ pub async fn ranked_game(t: &mut PgTx<'_>, game_id: &str) -> Result<Option<Rated
         return Ok(None);
     }
     run_as(t, None).await?;
-    let row = sqlx::query(concat!("select ", rated_game_columns!(), " from public.rated_games where id = $1::uuid"))
-        .bind(game_id)
-        .fetch_optional(&mut **t)
-        .await
-        .map_err(db_error)?;
-    row.map(|row| RatedGameDbRow::read(&row).and_then(to_rated_game)).transpose()
+    let row = sqlx::query(concat!(
+        "select ",
+        rated_game_columns!(),
+        " from public.rated_games where id = $1::uuid"
+    ))
+    .bind(game_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.map(|row| RatedGameDbRow::read(&row).and_then(to_rated_game))
+        .transpose()
 }
 
 // ---------------------------------------------------------------------------
 // Player statistics on the account (SPEC §9.11, R639, R654)
 // ---------------------------------------------------------------------------
 
-pub async fn player_stats_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<PlayerStatsRow>, StoreError> {
+pub async fn player_stats_get(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+) -> Result<Option<PlayerStatsRow>, StoreError> {
     if !is_uuid(profile_id) {
         return Ok(None);
     }
@@ -3859,7 +4160,8 @@ pub async fn player_stats_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Opti
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    row.map(|row| PlayerStatsDbRow::read(&row).map(to_player_stats)).transpose()
+    row.map(|row| PlayerStatsDbRow::read(&row).map(to_player_stats))
+        .transpose()
 }
 
 pub async fn player_stats_put(
@@ -3896,7 +4198,11 @@ pub async fn player_stats_list_public(
     t: &mut PgTx<'_>,
     options: &PlayerStatsListOptions,
 ) -> Result<Vec<PublicPlayerSummary>, StoreError> {
-    let term = options.search.as_deref().map(str::trim).filter(|term| !term.is_empty());
+    let term = options
+        .search
+        .as_deref()
+        .map(str::trim)
+        .filter(|term| !term.is_empty());
     // The SQL keeps TS's `$2::int`/`$3::int`, so the binds are `int4`.
     let limit = i32::try_from(options.limit).unwrap_or(i32::MAX);
     let offset = i32::try_from(options.offset).unwrap_or(i32::MAX);

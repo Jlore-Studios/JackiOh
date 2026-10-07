@@ -104,9 +104,12 @@ pub fn answer_keys(state: &mut GameState, keys: &[&str]) -> AnswerResult {
     let selection: Vec<Selection> = keys
         .iter()
         .map(|key| {
-            must(pending.options.iter().find(|option| option.key == *key), &format!("option {key}"))
-                .selection
-                .clone()
+            must(
+                pending.options.iter().find(|option| option.key == *key),
+                &format!("option {key}"),
+            )
+            .selection
+            .clone()
         })
         .collect();
     let mut events: Vec<GameEvent> = Vec::new();
@@ -148,7 +151,10 @@ pub fn round_trip(state: &GameState) -> GameState {
 }
 
 pub fn event_types(events: &[GameEvent]) -> Vec<String> {
-    events.iter().map(|event| event.event_type().as_str().to_string()).collect()
+    events
+        .iter()
+        .map(|event| event.event_type().as_str().to_string())
+        .collect()
 }
 
 thread_local! {
@@ -221,7 +227,9 @@ pub fn replayable(seed: &str, p1_cards: &[String], p2_cards: &[String]) -> Repla
 
 /// §9.2: fold the log from scratch and compare hashes with the live state.
 pub fn expect_replays(seed: &str, decks: &(Vec<String>, Vec<String>), log: &[Action], live: &GameState) {
-    let folded = fold(&json_as::<FoldArgs>(json!({ "seed": seed, "decks": decks, "log": log })));
+    let folded = fold(&json_as::<FoldArgs>(
+        json!({ "seed": seed, "decks": decks, "log": log }),
+    ));
     assert!(folded.errors.is_empty(), "the fold refused nothing");
     assert_eq!(hash_state(&folded.state), hash_state(live));
 }
@@ -229,7 +237,10 @@ pub fn expect_replays(seed: &str, decks: &(Vec<String>, Vec<String>), log: &[Act
 /// The first card in `player`'s hand of this definition.
 pub fn hand_card(state: &GameState, player: PlayerId, def_id: &str) -> CardInstance {
     must(
-        state.players[player].hand.iter().find(|card| card.def_id == def_id),
+        state.players[player]
+            .hand
+            .iter()
+            .find(|card| card.def_id == def_id),
         &format!("{def_id} in {player}'s hand"),
     )
     .clone()

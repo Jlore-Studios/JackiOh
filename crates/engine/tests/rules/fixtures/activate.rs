@@ -22,7 +22,9 @@ use std::sync::LazyLock;
 
 use jackioh_engine::effects::{damage, destroy_at_next_turn_start, discard_random, draw, gain_mana};
 use jackioh_engine::subsystems::activate::activation_paid;
-use jackioh_engine::subsystems::hero_power::{POWER_RESUME, STEADY_SHOT_PARAM, hero_power, power_abilities, roll_power};
+use jackioh_engine::subsystems::hero_power::{
+    POWER_RESUME, STEADY_SHOT_PARAM, hero_power, power_abilities, roll_power,
+};
 use jackioh_engine::testkit::*;
 
 /// TS `def(name, type, extra = {})`: a Core Common at cost 0 named after `name`; a Unit is 2/2 unless
@@ -77,7 +79,10 @@ pub const LOG_LANE: i32 = 5;
 /// The log's steps, as stored (`memory.steps`), or none.
 fn steps_of(memory: &IndexMap<String, Value>) -> Vec<String> {
     match memory.get("steps").and_then(Value::as_array) {
-        Some(steps) => steps.iter().filter_map(|step| step.as_str().map(str::to_string)).collect(),
+        Some(steps) => steps
+            .iter()
+            .filter_map(|step| step.as_str().map(str::to_string))
+            .collect(),
         None => vec![],
     }
 }
@@ -182,7 +187,11 @@ fn ping(uses: i32, amount: i32) -> ActivationDecl {
             "ping",
             &format!("Deal {amount} damage"),
             ActivationUses::Count(uses),
-            hook(move |_ctx| vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]),
+            hook(move |_ctx| {
+                vec![damage(json_as(
+                    json!({ "to": { "of": "chosen" }, "amount": amount }),
+                ))]
+            }),
         )
     }
 }
@@ -196,15 +205,22 @@ pub static turtle: LazyLock<CardDef> =
     LazyLock::new(|| def("turtle", 4104, "Unit", json!({ "attack": 5, "health": 4 })));
 
 /// Classic #15's shape: "Activate: Discard a random card. …"
-pub static nose: LazyLock<CardDef> = LazyLock::new(|| def("nose", 4105, "Unit", json!({ "attack": 3, "health": 1 })));
+pub static nose: LazyLock<CardDef> =
+    LazyLock::new(|| def("nose", 4105, "Unit", json!({ "attack": 3, "health": 1 })));
 
 /// Classic #84's shape: Indestructible, "Activate: Tribute this."
 pub static lockdown: LazyLock<CardDef> = LazyLock::new(|| {
-    def("lockdown", 4106, "Field Spell", json!({ "keywords": [{ "kind": "Indestructible" }] }))
+    def(
+        "lockdown",
+        4106,
+        "Field Spell",
+        json!({ "keywords": [{ "kind": "Indestructible" }] }),
+    )
 });
 
 /// Classic #89's shape: to target this, a player must also discard 2 cards (B5 E5, R450).
-pub static ghost: LazyLock<CardDef> = LazyLock::new(|| def("ghost", 4107, "Unit", json!({ "attack": 5, "health": 6 })));
+pub static ghost: LazyLock<CardDef> =
+    LazyLock::new(|| def("ghost", 4107, "Unit", json!({ "attack": 5, "health": 6 })));
 
 /// A mana price, the Heroic Power patch's "Activate: Spend (2): Draw 1".
 pub static merchant: LazyLock<CardDef> = LazyLock::new(|| def("merchant", 4108, "Field Spell", json!({})));
@@ -246,9 +262,13 @@ fn punish(radiant: bool) -> Script {
                     Some("discard") => vec![discard_random(json_as(json!({ "player": "enemy" })))],
                     Some("doom") => {
                         if radiant {
-                            vec![destroy_at_next_turn_start(json_as(json!({ "scope": { "side": "enemy" } })))]
+                            vec![destroy_at_next_turn_start(json_as(
+                                json!({ "scope": { "side": "enemy" } }),
+                            ))]
                         } else {
-                            vec![destroy_at_next_turn_start(json_as(json!({ "target": { "of": "chosen" } })))]
+                            vec![destroy_at_next_turn_start(json_as(
+                                json!({ "target": { "of": "chosen" } }),
+                            ))]
                         }
                     }
                     _ => vec![],
@@ -354,7 +374,10 @@ fn teller() -> CardScripts {
             ActivationUses::Count(1),
             hook(|_ctx| vec![ask_controller("told")]),
         )],
-        resume: IndexMap::from([("told", hook(|ctx| vec![note(format!("told:{}", param(&*ctx, "tell")))]))]),
+        resume: IndexMap::from([(
+            "told",
+            hook(|ctx| vec![note(format!("told:{}", param(&*ctx, "tell")))]),
+        )]),
         ..Script::default()
     })
 }
@@ -451,8 +474,13 @@ pub static ACTIVATE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
                         "Tribute a Unit. Deal damage equal to its Attack to any target",
                         ActivationUses::Unlimited,
                         hook(|ctx| {
-                            let amount = activation_paid(&*ctx).tributed.first().map_or(0, |unit| unit.attack);
-                            vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
+                            let amount = activation_paid(&*ctx)
+                                .tributed
+                                .first()
+                                .map_or(0, |unit| unit.attack);
+                            vec![damage(json_as(
+                                json!({ "to": { "of": "chosen" }, "amount": amount }),
+                            ))]
                         }),
                     )
                 }],
@@ -467,7 +495,12 @@ pub static ACTIVATE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
                         discard_random: Some(1),
                         ..ActivationCost::default()
                     }),
-                    ..ability("sniff", "Discard a random card", ActivationUses::Count(1), notes_hook(&["sniff"]))
+                    ..ability(
+                        "sniff",
+                        "Discard a random card",
+                        ActivationUses::Count(1),
+                        notes_hook(&["sniff"]),
+                    )
                 }],
                 ..Script::default()
             }),
@@ -547,11 +580,15 @@ pub static ACTIVATE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
             faces(Script {
                 activations: vec![
                     ActivationDecl {
-                        has: Some(read_hook(|a| a.self_.memory.get(PICK_KEY).and_then(Value::as_str) == Some("alpha"))),
+                        has: Some(read_hook(|a| {
+                            a.self_.memory.get(PICK_KEY).and_then(Value::as_str) == Some("alpha")
+                        })),
                         ..ability("alpha", "Alpha", ActivationUses::Count(1), notes_hook(&["alpha"]))
                     },
                     ActivationDecl {
-                        has: Some(read_hook(|a| a.self_.memory.get(PICK_KEY).and_then(Value::as_str) == Some("beta"))),
+                        has: Some(read_hook(|a| {
+                            a.self_.memory.get(PICK_KEY).and_then(Value::as_str) == Some("beta")
+                        })),
                         ..ability("beta", "Beta", ActivationUses::Count(1), notes_hook(&["beta"]))
                     },
                     ability("gamma", "Gamma", ActivationUses::Count(1), notes_hook(&["gamma"])),
@@ -562,7 +599,9 @@ pub static ACTIVATE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
         (
             mourner.id.clone(),
             faces(Script {
-                death: Some(hook(|_ctx| vec![note("death"), ask_controller("mourned"), note("death:tail")])),
+                death: Some(hook(|_ctx| {
+                    vec![note("death"), ask_controller("mourned"), note("death:tail")]
+                })),
                 resume: IndexMap::from([("mourned", notes_hook(&["mourned"]))]),
                 ..Script::default()
             }),
@@ -570,14 +609,24 @@ pub static ACTIVATE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
         (
             trapper.id.clone(),
             faces(Script {
-                activations: vec![ability("spring", "Spring", ActivationUses::Count(1), notes_hook(&["spring"]))],
+                activations: vec![ability(
+                    "spring",
+                    "Spring",
+                    ActivationUses::Count(1),
+                    notes_hook(&["spring"]),
+                )],
                 ..Script::default()
             }),
         ),
         (
             endless.id.clone(),
             faces(Script {
-                activations: vec![ability("again", "Again", ActivationUses::Unlimited, notes_hook(&["again"]))],
+                activations: vec![ability(
+                    "again",
+                    "Again",
+                    ActivationUses::Unlimited,
+                    notes_hook(&["again"]),
+                )],
                 ..Script::default()
             }),
         ),
@@ -589,7 +638,9 @@ pub static ACTIVATE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
                     // TS `recalled({ self, data: {} }, KEEPER_KEY) !== undefined`: with no part path in the
                     // data, the key is the plain one (`work.partMemoryKey`).
                     can_activate: Some(condition_hook(|c| {
-                        c.self_.memory.contains_key(&part_memory_key(&IndexMap::new(), KEEPER_KEY))
+                        c.self_
+                            .memory
+                            .contains_key(&part_memory_key(&IndexMap::new(), KEEPER_KEY))
                     })),
                     ..ability(
                         "recall",
@@ -612,7 +663,9 @@ pub static ACTIVATE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
                         ActivationUses::Count(1),
                         hook(|ctx| {
                             let amount = param(&*ctx, "damage");
-                            vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
+                            vec![damage(json_as(
+                                json!({ "to": { "of": "chosen" }, "amount": amount }),
+                            ))]
                         }),
                     )
                 }],

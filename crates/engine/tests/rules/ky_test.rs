@@ -78,7 +78,11 @@ fn take(state: &mut GameState, difficulty: &str, right: bool) {
 }
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|card| card.def_id.clone()).collect()
+    state.players[player]
+        .hand
+        .iter()
+        .map(|card| card.def_id.clone())
+        .collect()
 }
 
 fn json_of<T: Serialize>(value: T) -> Value {
@@ -161,7 +165,8 @@ mod c_42_kys_test_the_two_prompts_r420 {
     use super::*;
 
     #[test]
-    fn r420_as_it_resolves_it_rolls_a_reward_per_difficulty_and_offers_the_three_each_labelled_with_its_reward() {
+    fn r420_as_it_resolves_it_rolls_a_reward_per_difficulty_and_offers_the_three_each_labelled_with_its_reward()
+     {
         let mut before = board("kt-offer");
         register_ky_test_fixtures();
         let cursor = before.rng_cursor;
@@ -187,25 +192,35 @@ mod c_42_kys_test_the_two_prompts_r420 {
         for difficulty in [Easy, Medium] {
             let mut seen: IndexSet<String> = IndexSet::new();
             for n in 0..80 {
-                seen.insert(label_of(&offered(&format!("kt-spread-{n}"), false), difficulty.as_str()));
+                seen.insert(label_of(
+                    &offered(&format!("kt-spread-{n}"), false),
+                    difficulty.as_str(),
+                ));
             }
             assert_eq!(seen.len(), KY_TEST_REWARDS.of(difficulty).len());
         }
     }
 
     #[test]
-    fn r420_a_medium_choice_asks_a_bank_problem_of_that_difficulty_its_options_shuffled_the_key_in_the_resume_data() {
+    fn r420_a_medium_choice_asks_a_bank_problem_of_that_difficulty_its_options_shuffled_the_key_in_the_resume_data()
+     {
         let mut state = offered("kt-medium", false);
         answer_keys(&mut state, &["mode:Medium"]);
         let pending = open_as(&state, PromptKind::Answer, P1);
         let problem = must(
-            FIXTURE_BANK.iter().find(|entry| entry.statement == pending.prompt),
+            FIXTURE_BANK
+                .iter()
+                .find(|entry| entry.statement == pending.prompt),
             "a bank problem",
         );
         assert_eq!(problem.difficulty, Medium);
         let keys: Vec<String> = pending.options.iter().map(|option| option.key.clone()).collect();
         assert_eq!(keys, vec!["mode:A", "mode:B", "mode:C", "mode:D"]);
-        let mut labels: Vec<String> = pending.options.iter().map(|option| option.label.clone()).collect();
+        let mut labels: Vec<String> = pending
+            .options
+            .iter()
+            .map(|option| option.label.clone())
+            .collect();
         labels.sort();
         let mut expected: Vec<String> = problem.options.iter().map(|option| option.to_string()).collect();
         expected.sort();
@@ -284,7 +299,11 @@ mod c_42_kys_test_the_two_prompts_r420 {
         assert!(mine.for_you);
         assert_eq!(mine.prompt, pending.prompt);
         let shown: Vec<String> = mine.options.iter().map(|option| option.label.clone()).collect();
-        let offered_labels: Vec<String> = pending.options.iter().map(|option| option.label.clone()).collect();
+        let offered_labels: Vec<String> = pending
+            .options
+            .iter()
+            .map(|option| option.label.clone())
+            .collect();
         assert_eq!(shown, offered_labels);
         assert_eq!(
             json_of(view_for(&state, P2).pending),
@@ -298,10 +317,15 @@ mod c_42_kys_test_the_two_prompts_r420 {
             .data
             .insert(ANSWER_KEY.to_string(), json!(if key == "A" { "B" } else { "A" }));
         for viewer in [P1, P2] {
-            assert_eq!(json_of(view_for(&twin, viewer)), json_of(view_for(&state, viewer)));
-            assert!(!serde_json::to_string(&view_for(&state, viewer))
-                .expect("a view serialises")
-                .contains(ANSWER_KEY));
+            assert_eq!(
+                json_of(view_for(&twin, viewer)),
+                json_of(view_for(&state, viewer))
+            );
+            assert!(
+                !serde_json::to_string(&view_for(&state, viewer))
+                    .expect("a view serialises")
+                    .contains(ANSWER_KEY)
+            );
         }
     }
 
@@ -322,7 +346,10 @@ mod c_42_kys_test_the_two_prompts_r420 {
         answer_keys(&mut state, &[&format!("mode:{key}")]);
         answer_keys(&mut second, &[&format!("mode:{key}")]);
         assert_eq!(hash_state(&second), hash_state(&state));
-        assert_eq!(hand_ids(&state, P1).iter().filter(|id| **id == book().id).count(), 5);
+        assert_eq!(
+            hand_ids(&state, P1).iter().filter(|id| **id == book().id).count(),
+            5
+        );
     }
 
     #[test]
@@ -341,7 +368,11 @@ mod c_42_kys_test_the_two_prompts_r420 {
         }))
         .state;
         for player in [P1, P2] {
-            let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
+            let keep: Vec<String> = state.players[player]
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect();
             state = act(
                 &state,
                 input(json!({ "type": "mulligan", "playerId": player, "keep": keep })),
@@ -349,7 +380,12 @@ mod c_42_kys_test_the_two_prompts_r420 {
             );
         }
         let card = must(
-            state.players.p1.hand.iter().find(|held| held.def_id == ky_test_qd().id),
+            state
+                .players
+                .p1
+                .hand
+                .iter()
+                .find(|held| held.def_id == ky_test_qd().id),
             "KY's Test in hand",
         )
         .clone();
@@ -415,7 +451,10 @@ mod c_42_kys_test_the_rewards_r420 {
         let mut state = rolled("kt-legend", Easy, "legendary", false);
         take(&mut state, "Easy", true);
         assert_eq!(hand_ids(&state, P1), vec![legend().id]);
-        assert_eq!(state.players.p1.hand.first().and_then(|card| card.cost_override), Some(0));
+        assert_eq!(
+            state.players.p1.hand.first().and_then(|card| card.cost_override),
+            Some(0)
+        );
     }
 
     #[test]
@@ -438,7 +477,13 @@ mod c_42_kys_test_the_rewards_r420 {
             .map(|card| query_cost(def_of(Some(&state), &card.def_id)))
             .collect();
         assert_eq!(costs, vec![4, 4]);
-        let overrides: Vec<Option<i32>> = state.players.p1.hand.iter().map(|card| card.cost_override).collect();
+        let overrides: Vec<Option<i32>> = state
+            .players
+            .p1
+            .hand
+            .iter()
+            .map(|card| card.cost_override)
+            .collect();
         assert_eq!(overrides, vec![Some(1), Some(1)]);
     }
 
@@ -474,7 +519,10 @@ mod c_42_kys_test_the_rewards_r420 {
         let mut state = offered("kt-gift", false);
         take(&mut state, "Hard", true);
         assert_eq!(hand_ids(&state, P1), vec![gift().id]);
-        assert_eq!(state.players.p1.hand.first().and_then(|card| card.cost_override), Some(0));
+        assert_eq!(
+            state.players.p1.hand.first().and_then(|card| card.cost_override),
+            Some(0)
+        );
     }
 
     #[test]

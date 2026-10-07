@@ -30,7 +30,10 @@ fn spell(id: &str, cost: i32) -> CardDef {
 
 /// TS `{ ...spell("limiter"), type: "Field Spell" }`.
 fn limiter() -> CardDef {
-    CardDef { type_: CardType::FieldSpell, ..spell("limiter", 1) }
+    CardDef {
+        type_: CardType::FieldSpell,
+        ..spell("limiter", 1)
+    }
 }
 
 fn cast() -> CardDef {
@@ -50,22 +53,40 @@ fn setup(seed: &str) -> GameState {
     scripts.insert(
         limiter().id,
         Script {
-            draw_limit: Some(read_hook(|_args| vec![DrawLimit { player: DrawLimitPlayer::Both, count: 1 }])),
+            draw_limit: Some(read_hook(|_args| {
+                vec![DrawLimit {
+                    player: DrawLimitPlayer::Both,
+                    count: 1,
+                }]
+            })),
             ..Script::default()
         },
     );
     scripts.insert(
         cast().id,
         Script {
-            static_flags: Some(StaticFlags { cast_on_draw: Some(true), ..StaticFlags::default() }),
-            cry: Some(hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))])),
+            static_flags: Some(StaticFlags {
+                cast_on_draw: Some(true),
+                ..StaticFlags::default()
+            }),
+            cry: Some(hook(|_ctx| {
+                vec![damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                ))]
+            })),
             ..Script::default()
         },
     );
     scripts.insert(PLAIN.to_string(), Script::default());
     let mut registry = registered_scripts().clone();
     for (id, script) in scripts {
-        registry.insert(id, CardScripts { base: script.clone(), radiant: script });
+        registry.insert(
+            id,
+            CardScripts {
+                base: script.clone(),
+                radiant: script,
+            },
+        );
     }
     register_scripts(registry);
     state.players[PlayerId::P1].hand = vec![];
@@ -84,13 +105,22 @@ fn below(mark: usize) -> impl Fn(&EffectContext<'_>) -> bool + Send + Sync + 'st
 
 /// Run `drawWhile` for p1 while `more` holds; returns the sink's events. Like TS's, the sink's rng
 /// starts at the state's cursor and is not written back.
-fn draw_to(state: &mut GameState, more: impl Fn(&EffectContext<'_>) -> bool + Send + Sync + 'static) -> Vec<GameEvent> {
+fn draw_to(
+    state: &mut GameState,
+    more: impl Fn(&EffectContext<'_>) -> bool + Send + Sync + 'static,
+) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     {
         let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx =
-            make_context(&mut sink, None, HookOptions { controller: Some(PlayerId::P1), ..Default::default() });
+        let mut ctx = make_context(
+            &mut sink,
+            None,
+            HookOptions {
+                controller: Some(PlayerId::P1),
+                ..Default::default()
+            },
+        );
         (draw_while(DrawWhileArgs {
             more: Arc::new(move |c: &mut EffectContext<'_>| more(c)),
             player: None,
@@ -123,7 +153,10 @@ mod draw_while_classic_46_divine_favor_s_draw_until {
         let mut state = setup("dw-none");
         set_library(&mut state, PlayerId::P1, &plains(1));
         in_hand(&mut state, PLAIN, PlayerId::P1, 3);
-        assert_eq!(events_of_type(&draw_to(&mut state, below(3)), GameEventType::Drawn).len(), 0);
+        assert_eq!(
+            events_of_type(&draw_to(&mut state, below(3)), GameEventType::Drawn).len(),
+            0
+        );
         assert_eq!(state.players[PlayerId::P1].library.len(), 1);
     }
 
@@ -151,7 +184,12 @@ mod draw_while_classic_46_divine_favor_s_draw_until {
     #[test]
     fn b5_e3_a_draw_a_draw_limit_stops_adds_no_card_and_ends_it() {
         let mut state = setup("dw-limit");
-        put(&mut state, &limiter().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &limiter().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
         set_library(&mut state, PlayerId::P1, &plains(3));
         let events = draw_to(&mut state, below(3));
         assert_eq!(events_of_type(&events, GameEventType::Drawn).len(), 1);

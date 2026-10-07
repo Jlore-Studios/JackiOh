@@ -36,7 +36,11 @@ impl Bench<'_> {
 
 fn sink_for(state: &mut GameState) -> Bench<'_> {
     let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench { state, events: Vec::new(), rng }
+    Bench {
+        state,
+        events: Vec::new(),
+        rng,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -109,7 +113,15 @@ const MOTHS: &str = "cb-moths";
 const RUSH_TOKEN: &str = "fx-token-rush";
 
 fn defs() -> Vec<CardDef> {
-    vec![frail(), ambush(), watcher(), canceller(), asker(), pawn(), meter()]
+    vec![
+        frail(),
+        ambush(),
+        watcher(),
+        canceller(),
+        asker(),
+        pawn(),
+        meter(),
+    ]
 }
 
 /// A resume nothing can service: answering the prompt just clears it (§10.6).
@@ -130,7 +142,9 @@ fn mode_options(options: &[&str]) -> Vec<PromptOption> {
         .map(|option| PromptOption {
             key: format!("mode:{option}"),
             label: option.to_string(),
-            selection: Selection::Mode { option: option.to_string() },
+            selection: Selection::Mode {
+                option: option.to_string(),
+            },
             cost: None,
             radiant: None,
         })
@@ -160,29 +174,48 @@ fn ask() -> Effect {
 /// answers every declaration it is offered (R99) — which is what makes a second offer visible.
 fn trap_script(on: GameEventType, run: fn() -> Vec<Effect>) -> CardScripts {
     let script = Script {
-        triggers: vec![TriggerDef::new(format!("fc-{on}"), &[on], move |_ctx, _event| run())],
+        triggers: vec![TriggerDef::new(format!("fc-{on}"), &[on], move |_ctx, _event| {
+            run()
+        })],
         ..Script::default()
     };
-    CardScripts { base: script.clone(), radiant: script }
+    CardScripts {
+        base: script.clone(),
+        radiant: script,
+    }
 }
 
 /// TS `SCRIPTS`.
 fn fc_scripts() -> IndexMap<String, CardScripts> {
     let mut scripts = IndexMap::new();
-    scripts.insert(watcher().id, trap_script(GameEventType::AttackDeclared, std::vec::Vec::new));
+    scripts.insert(
+        watcher().id,
+        trap_script(GameEventType::AttackDeclared, std::vec::Vec::new),
+    );
     scripts.insert(
         canceller().id,
-        trap_script(GameEventType::AttackDeclared, || vec![cancel_attack(Default::default())]),
+        trap_script(GameEventType::AttackDeclared, || {
+            vec![cancel_attack(Default::default())]
+        }),
     );
-    scripts.insert(asker().id, trap_script(GameEventType::AttackDeclared, || vec![ask()]));
+    scripts.insert(
+        asker().id,
+        trap_script(GameEventType::AttackDeclared, || vec![ask()]),
+    );
     // #96's own body, in its order (§8.5): cancel, then hand the rest of the turn to §10.7's policy.
     scripts.insert(
         pawn().id,
         trap_script(GameEventType::AttackDeclared, || {
-            vec![cancel_attack(Default::default()), ai_plays_out_turn(json_as(json!({ "player": "enemy" })))]
+            vec![
+                cancel_attack(Default::default()),
+                ai_plays_out_turn(json_as(json!({ "player": "enemy" }))),
+            ]
         }),
     );
-    scripts.insert(meter().id, trap_script(GameEventType::ManaChanged, std::vec::Vec::new));
+    scripts.insert(
+        meter().id,
+        trap_script(GameEventType::ManaChanged, std::vec::Vec::new),
+    );
     scripts
 }
 
@@ -211,7 +244,11 @@ struct RunOptions {
 
 /// Apply a whole effect list the way a hook's list is applied: one context, one rng, in order.
 fn run_all(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<GameEvent> {
-    let RunOptions { controller, self_, targets } = options;
+    let RunOptions {
+        controller,
+        self_,
+        targets,
+    } = options;
     let self_ = self_.map(|card| find_instance(state, &card.id).cloned().unwrap_or(card));
     let mut sink = sink_for(state);
     {
@@ -219,7 +256,11 @@ fn run_all(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> 
         let mut ctx = make_context(
             &mut inner,
             self_.as_ref(),
-            HookOptions { controller: Some(controller.unwrap_or(P1)), targets, ..Default::default() },
+            HookOptions {
+                controller: Some(controller.unwrap_or(P1)),
+                targets,
+                ..Default::default()
+            },
         );
         for effect in &effects {
             (effect.apply)(&mut ctx);
@@ -237,7 +278,14 @@ fn run(state: &mut GameState, effect: Effect, options: RunOptions) -> Vec<GameEv
 
 /// `effect.apply(makeContext(sink, null, { controller }))` on a sink of the caller's.
 fn apply_as(mut sink: EngineSink<'_>, effect: Effect, controller: PlayerId) {
-    let mut ctx = make_context(&mut sink, None, HookOptions { controller: Some(controller), ..Default::default() });
+    let mut ctx = make_context(
+        &mut sink,
+        None,
+        HookOptions {
+            controller: Some(controller),
+            ..Default::default()
+        },
+    );
     (effect.apply)(&mut ctx);
 }
 
@@ -245,7 +293,11 @@ fn declarations(events: &[GameEvent]) -> Vec<Value> {
     events_of_type(events, GameEventType::AttackDeclared)
         .iter()
         .map(|event| match event {
-            GameEvent::AttackDeclared { attacker_id, target_id, forced } => {
+            GameEvent::AttackDeclared {
+                attacker_id,
+                target_id,
+                forced,
+            } => {
                 json!({ "attackerId": attacker_id, "targetId": target_id, "forced": forced })
             }
             other => panic!("not an attackDeclared: {other:?}"),
@@ -274,12 +326,19 @@ fn json_of<T: serde::Serialize>(value: &T) -> Value {
 }
 
 fn unused() -> Exertion {
-    Exertion { attacked: false, switched: false, attacks: None }
+    Exertion {
+        attacked: false,
+        switched: false,
+        attacks: None,
+    }
 }
 
 /// One field of every event of a type, in order.
 fn field_of(events: &[GameEvent], of: GameEventType, key: &str) -> Vec<Value> {
-    events_of_type(events, of).iter().map(|event| json_of(event)[key].clone()).collect()
+    events_of_type(events, of)
+        .iter()
+        .map(|event| json_of(event)[key].clone())
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -306,8 +365,14 @@ mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
 
         let events = run(
             &mut state,
-            forced_attacks_on(json_as(json!({ "target": { "of": "self" }, "attackers": "enemy" }))),
-            RunOptions { self_: Some(target.clone()), controller: Some(P1), ..Default::default() },
+            forced_attacks_on(json_as(
+                json!({ "target": { "of": "self" }, "attackers": "enemy" }),
+            )),
+            RunOptions {
+                self_: Some(target.clone()),
+                controller: Some(P1),
+                ..Default::default()
+            },
         );
 
         // One declaration per attacker, in lane order, all marked forced and all aimed at Moths.
@@ -330,7 +395,11 @@ mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
         // Moths' 1 attack strikes it for 0 while the two Attack-Position units take 1 each (§4.1).
         assert_eq!(live(&state, &defending).position, Some(Position::Def));
         assert_eq!(
-            [live(&state, &defending).damage, live(&state, &sick).damage, live(&state, &ready).damage],
+            [
+                live(&state, &defending).damage,
+                live(&state, &sick).damage,
+                live(&state, &ready).damage
+            ],
             [0, 1, 1]
         );
     }
@@ -346,8 +415,14 @@ mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
 
         let events = run(
             &mut state,
-            forced_attacks_on(json_as(json!({ "target": { "of": "self" }, "attackers": "enemy" }))),
-            RunOptions { self_: Some(target.clone()), controller: Some(P1), ..Default::default() },
+            forced_attacks_on(json_as(
+                json!({ "target": { "of": "self" }, "attackers": "enemy" }),
+            )),
+            RunOptions {
+                self_: Some(target.clone()),
+                controller: Some(P1),
+                ..Default::default()
+            },
         );
 
         assert_eq!(attacker_ids(&events), vec![first.id.clone()]);
@@ -358,7 +433,10 @@ mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
             field_of(&events, GameEventType::Destroyed, "instanceId"),
             vec![json!(target.id)]
         );
-        assert_eq!([live(&state, &second).damage, live(&state, &third).damage], [0, 0]);
+        assert_eq!(
+            [live(&state, &second).damage, live(&state, &third).damage],
+            [0, 0]
+        );
         for attacker in [&first, &second, &third] {
             assert_eq!(live(&state, attacker).exertion, unused());
         }
@@ -373,7 +451,9 @@ mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
         assert_eq!(
             run(
                 &mut state,
-                forced_attacks_on(json_as(json!({ "target": { "of": "self" }, "attackers": "enemy" }))),
+                forced_attacks_on(json_as(
+                    json!({ "target": { "of": "self" }, "attackers": "enemy" })
+                )),
                 RunOptions::default(),
             ),
             Vec::<GameEvent>::new()
@@ -450,7 +530,9 @@ mod forced_attacks_s6_3_forced_attack_r53_c60 {
 
         let events = run(
             &mut state,
-            forced_attacks(json_as(json!({ "attackers": { "side": "self" }, "target": { "instanceId": "c-not-a-card" } }))),
+            forced_attacks(json_as(
+                json!({ "attackers": { "side": "self" }, "target": { "instanceId": "c-not-a-card" } }),
+            )),
             RunOptions::default(),
         );
 
@@ -488,7 +570,10 @@ fn marked_board(seed: &str) -> (GameState, Vec<GameEvent>, CardInstance) {
     let marked = card_at(&state, slot(P1, Units, 1)).expect("p1's unit").clone();
     live_mut(&mut state, &marked).marked_destroyed = Some(true);
     let mut sink = sink_for(&mut state);
-    open_prompt(&mut sink.sink(), inert_prompt(P2, "target", "not yours", &["x", "y"]));
+    open_prompt(
+        &mut sink.sink(),
+        inert_prompt(P2, "target", "not yours", &["x", "y"]),
+    );
     let events = std::mem::take(&mut sink.events);
     (state, events, marked)
 }
@@ -502,10 +587,17 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
         let mut sink = sink_for(&mut state);
         // §9.3: somebody else's open prompt blocks every action, so the playout stops at once and the
         // only thing left to observe is the lockout flag this verb sets before handing over.
-        open_prompt(&mut sink.sink(), inert_prompt(P2, "target", "not yours", &["x", "y"]));
+        open_prompt(
+            &mut sink.sink(),
+            inert_prompt(P2, "target", "not yours", &["x", "y"]),
+        );
 
         // The trap's controller is p2 (#96 is the defender's card), so "enemy" is the attacker, p1.
-        apply_as(sink.sink(), ai_plays_out_turn(json_as(json!({ "player": "enemy" }))), P2);
+        apply_as(
+            sink.sink(),
+            ai_plays_out_turn(json_as(json!({ "player": "enemy" }))),
+            P2,
+        );
 
         assert!(sink.state.players.p1.ai_turn);
         assert!(!sink.state.players.p2.ai_turn);
@@ -519,10 +611,17 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
         let address: *const GameState = &state;
         let mut sink = sink_for(&mut state);
 
-        apply_as(sink.sink(), ai_plays_out_turn(json_as(json!({ "player": "enemy" }))), P2);
+        apply_as(
+            sink.sink(),
+            ai_plays_out_turn(json_as(json!({ "player": "enemy" }))),
+            P2,
+        );
 
         // The turn really was played out and ended, on the caller's own state object.
-        assert_eq!(field_of(&sink.events, GameEventType::TurnEnded, "player"), vec![json!("p1")]);
+        assert_eq!(
+            field_of(&sink.events, GameEventType::TurnEnded, "player"),
+            vec![json!("p1")]
+        );
         assert!(std::ptr::eq(&*sink.state, address));
         assert_eq!(sink.state.active, P2);
         // R84: the policy never picks `concede`, so the game is still running.
@@ -544,7 +643,12 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
     #[test]
     fn s10_3_an_ai_turns_events_are_dispatched_once_not_again_by_the_callers_own_loop() {
         let (mut state, attacker, _defender, backrow) = swing("ai-redispatch", &[pawn().id, meter().id]);
-        state.players.p2.mana = ManaState { current: 4, max: 4, next_turn_mod: 0, perm_mod: 0 };
+        state.players.p2.mana = ManaState {
+            current: 4,
+            max: 4,
+            next_turn_mod: 0,
+            perm_mod: 0,
+        };
         let field = backrow[1].clone();
 
         let result = reduce(&state, &attack_action(&attacker.id, "hero-p1", "n1"));
@@ -565,10 +669,18 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
         let mut second = busy_board("ai-replay");
 
         let mut first_sink = sink_for(&mut first);
-        apply_as(first_sink.sink(), ai_plays_out_turn(json_as(json!({ "player": "self" }))), P1);
+        apply_as(
+            first_sink.sink(),
+            ai_plays_out_turn(json_as(json!({ "player": "self" }))),
+            P1,
+        );
         let first_events = std::mem::take(&mut first_sink.events);
         let mut second_sink = sink_for(&mut second);
-        apply_as(second_sink.sink(), ai_plays_out_turn(json_as(json!({ "player": "self" }))), P1);
+        apply_as(
+            second_sink.sink(),
+            ai_plays_out_turn(json_as(json!({ "player": "self" }))),
+            P1,
+        );
         let second_events = std::mem::take(&mut second_sink.events);
 
         assert_eq!(
@@ -582,7 +694,8 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
     }
 
     #[test]
-    fn r283_settle_first_collects_a_marked_unit_before_the_ais_first_action_the_default_leaves_it_for_that_action() {
+    fn r283_settle_first_collects_a_marked_unit_before_the_ais_first_action_the_default_leaves_it_for_that_action()
+     {
         let (mut settled, mut settled_events, marked) = marked_board("ai-settle-first");
         {
             let mut sink = sink_for(&mut settled);
@@ -596,7 +709,14 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
 
         assert!(settled.players.p1.ai_turn);
         assert!(card_at(&settled, slot(P1, Units, 1)).is_none());
-        assert!(settled.players.p1.graveyard.iter().any(|card| card.id == marked.id));
+        assert!(
+            settled
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .any(|card| card.id == marked.id)
+        );
         assert_eq!(
             field_of(&settled_events, GameEventType::Destroyed, "instanceId"),
             vec![json!(marked.id)]
@@ -606,7 +726,11 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
         let (mut plain_run, mut plain_events, plain_marked) = marked_board("ai-settle-first");
         {
             let mut sink = sink_for(&mut plain_run);
-            apply_as(sink.sink(), ai_plays_out_turn(json_as(json!({ "player": "enemy" }))), P2);
+            apply_as(
+                sink.sink(),
+                ai_plays_out_turn(json_as(json!({ "player": "enemy" }))),
+                P2,
+            );
             plain_events.extend(std::mem::take(&mut sink.events));
         }
 
@@ -633,14 +757,18 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
 
         assert_eq!(
             sink.state.result,
-            Some(GameResult { winner: Winner::P1, reason: GameOverReason::HeroDeath })
+            Some(GameResult {
+                winner: Winner::P1,
+                reason: GameOverReason::HeroDeath
+            })
         );
         assert!(events_of_type(&sink.events, GameEventType::CardPlayed).is_empty());
         assert!(events_of_type(&sink.events, GameEventType::TurnEnded).is_empty());
     }
 
     #[test]
-    fn r283_settle_first_false_is_the_default_and_a_board_with_nothing_to_collect_plays_out_the_same_either_way() {
+    fn r283_settle_first_false_is_the_default_and_a_board_with_nothing_to_collect_plays_out_the_same_either_way()
+     {
         let runs: Vec<(String, String)> = [None, Some(false), Some(true)]
             .into_iter()
             .map(|settle_first: Option<bool>| {
@@ -688,7 +816,9 @@ fn swing(seed: &str, traps: &[String]) -> (GameState, CardInstance, CardInstance
 }
 
 fn attack_action(attacker_id: &str, target_id: &str, nonce: &str) -> Action {
-    json_as(json!({ "type": "attack", "attackerId": attacker_id, "targetId": target_id, "playerId": "p2", "nonce": nonce }))
+    json_as(
+        json!({ "type": "attack", "attackerId": attacker_id, "targetId": target_id, "playerId": "p2", "nonce": nonce }),
+    )
 }
 
 fn types_of(events: &[GameEvent]) -> Vec<&'static str> {
@@ -701,7 +831,9 @@ fn index_of(types: &[&str], wanted: &str) -> i64 {
 }
 
 fn on_unit(card: &CardInstance) -> AttackTarget {
-    AttackTarget::Unit { instance: card.clone() }
+    AttackTarget::Unit {
+        instance: card.clone(),
+    }
 }
 
 mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
@@ -729,7 +861,10 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         assert!(sink.state.declared_attack.is_none());
         // §3.2: the trap is spent whatever its effects achieved (R61), and the attacker is untouched.
         assert_eq!(live(sink.state, &trap).zone.z(), ZoneName::Graveyard);
-        assert_eq!(card_at(sink.state, slot(P2, Units, 1)).map(|card| card.id.clone()), Some(attacker.id.clone()));
+        assert_eq!(
+            card_at(sink.state, slot(P2, Units, 1)).map(|card| card.id.clone()),
+            Some(attacker.id.clone())
+        );
     }
 
     #[test]
@@ -746,7 +881,10 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         // R61: the trap fired and did nothing, so the combat is the ordinary one — the 3/3 hits the
         // 5/10 for 3 and is struck back for 5, which kills it and takes it off the field (§4.5, R78).
         assert_eq!(live(sink.state, &defender).damage, 3);
-        assert_eq!(field_of(&sink.events, GameEventType::Damage, "amount"), vec![json!(3), json!(5)]);
+        assert_eq!(
+            field_of(&sink.events, GameEventType::Damage, "amount"),
+            vec![json!(3), json!(5)]
+        );
         assert!(card_at(sink.state, slot(P2, Units, 1)).is_none());
     }
 
@@ -760,7 +898,10 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         let result = reduce(&state, &attack_action(&attacker.id, &defender.id, "n1"));
 
         assert_eq!(result.error, None);
-        assert_eq!(field_of(&result.events, GameEventType::TrapFired, "instanceId"), vec![json!(field.id)]);
+        assert_eq!(
+            field_of(&result.events, GameEventType::TrapFired, "instanceId"),
+            vec![json!(field.id)]
+        );
         assert!(result.state.declared_attack.is_none());
     }
 
@@ -778,7 +919,11 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         // the combat is owed rather than resolved or dropped (§9.3, R113).
         let pending = paused.state.pending.clone();
         assert_eq!(pending.as_ref().map(|p| p.player_id), Some(P1));
-        let declared = paused.state.declared_attack.clone().expect("the declaration is still open");
+        let declared = paused
+            .state
+            .declared_attack
+            .clone()
+            .expect("the declaration is still open");
         assert_eq!(declared.attacker_id, attacker.id);
         assert_eq!(declared.target_id, defender.id);
         assert!(!declared.cancelled);
@@ -787,12 +932,20 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         assert!(declared.exits_from.is_some());
         // R113, §10.3: the asking trap's own end first — consumed, and its check, once the answer has
         // finished its list — then the traps the window still owes, then the combat.
-        let hooks: Vec<String> = paused.state.work.iter().map(|item| item.resume.hook.clone()).collect();
+        let hooks: Vec<String> = paused
+            .state
+            .work
+            .iter()
+            .map(|item| item.resume.hook.clone())
+            .collect();
         assert_eq!(hooks, vec!["@trapFiring", "@trapWindow", "@attackWindow"]);
         assert!(events_of_type(&paused.events, GameEventType::Damage).is_empty());
 
         // §10.1: everything owed is plain JSON, so the paused attack survives a clone round trip.
-        assert_eq!(clone_state(&paused.state).declared_attack, paused.state.declared_attack);
+        assert_eq!(
+            clone_state(&paused.state).declared_attack,
+            paused.state.declared_attack
+        );
         assert_eq!(clone_state(&paused.state).work, paused.state.work);
         let through_json: GameState =
             serde_json::from_value(json_of(&paused.state)).expect("a paused state is plain JSON");
@@ -818,7 +971,10 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
             vec![json!(cancelling.id)]
         );
         assert!(events_of_type(&answered.events, GameEventType::Damage).is_empty());
-        assert_eq!(card_at(&answered.state, slot(P1, Units, 1)).map(|card| card.damage), Some(0));
+        assert_eq!(
+            card_at(&answered.state, slot(P1, Units, 1)).map(|card| card.damage),
+            Some(0)
+        );
         assert!(answered.state.declared_attack.is_none());
         assert!(answered.state.work.is_empty());
     }
@@ -839,7 +995,10 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         // The forced declaration still reaches the traps, through §10.3's immediate check — it is only
         // the window that a forced attack skips — and `cancelAttack` there has nothing to mark.
         settle(&mut sink.sink(), Default::default());
-        assert_eq!(field_of(&sink.events, GameEventType::TrapFired, "instanceId"), vec![json!(trap.id)]);
+        assert_eq!(
+            field_of(&sink.events, GameEventType::TrapFired, "instanceId"),
+            vec![json!(trap.id)]
+        );
         assert!(events_of_type(&sink.events, GameEventType::AttackCancelled).is_empty());
     }
 
@@ -852,7 +1011,10 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
             run(
                 &mut state,
                 cancel_attack(Default::default()),
-                RunOptions { self_: Some(trap.clone()), ..Default::default() },
+                RunOptions {
+                    self_: Some(trap.clone()),
+                    ..Default::default()
+                },
             ),
             Vec::<GameEvent>::new()
         );

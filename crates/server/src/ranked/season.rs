@@ -44,7 +44,11 @@ fn minor_version(patch_version: &str) -> Option<(&str, &str)> {
 /// TS `String(Number(digits))` for a run of ASCII digits: the number without its leading zeros.
 fn number_text(digits: &str) -> String {
     let trimmed = digits.trim_start_matches('0');
-    if trimmed.is_empty() { "0".to_string() } else { trimmed.to_string() }
+    if trimmed.is_empty() {
+        "0".to_string()
+    } else {
+        trimmed.to_string()
+    }
 }
 
 /// R609: the season a patch version plays in, `v<major>.<minor>`. Panics (TS throws) on a version
@@ -110,7 +114,10 @@ fn mean(values: &[f64]) -> f64 {
 }
 
 fn spread(values: &[f64], centre: f64) -> f64 {
-    let squares: Vec<f64> = values.iter().map(|value| (value - centre) * (value - centre)).collect();
+    let squares: Vec<f64> = values
+        .iter()
+        .map(|value| (value - centre) * (value - centre))
+        .collect();
     mean(&squares).sqrt()
 }
 

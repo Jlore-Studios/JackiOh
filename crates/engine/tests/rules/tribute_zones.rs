@@ -10,8 +10,8 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{events_of_type, in_hand, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
-    DISCOVER_POOL, grave_trap, pb_act, pb_playing, pb_reduce, plays_of, reborn_body, stack_body, titan, titan_two,
-    tribute_field,
+    DISCOVER_POOL, grave_trap, pb_act, pb_playing, pb_reduce, plays_of, reborn_body, stack_body, titan,
+    titan_two, tribute_field,
 };
 
 fn unit_def(name: &str, index: i32) -> CardDef {
@@ -42,7 +42,9 @@ fn asker() -> CardDef {
 fn inline() -> IndexMap<String, CardScripts> {
     let mut scripts = IndexMap::new();
     let summons = || Script {
-        death: Some(hook(|_ctx| vec![summon(json_as(json!({ "defId": "fx-token-rush" })))])),
+        death: Some(hook(|_ctx| {
+            vec![summon(json_as(json!({ "defId": "fx-token-rush" })))]
+        })),
         ..Script::default()
     };
     scripts.insert(
@@ -98,7 +100,12 @@ fn fill_row(state: &mut GameState, defs: &[(i32, String)]) -> Vec<CardInstance> 
                 .iter()
                 .find(|(at, _)| *at == lane)
                 .map_or_else(|| format!("fx-{lane}"), |(_, def_id)| def_id.clone());
-            put(&mut *state, &def_id, slot(PlayerId::P1, Row::Units, lane), json!({}))
+            put(
+                &mut *state,
+                &def_id,
+                slot(PlayerId::P1, Row::Units, lane),
+                json!({}),
+            )
         })
         .collect()
 }
@@ -118,7 +125,10 @@ fn lanes(plays: &[Value]) -> Vec<Value> {
 }
 
 fn plays(state: &GameState, card: &CardInstance) -> Vec<Value> {
-    plays_of(state, &card.id, PlayerId::P1).iter().map(play_json).collect()
+    plays_of(state, &card.id, PlayerId::P1)
+        .iter()
+        .map(play_json)
+        .collect()
 }
 
 /// `whyChoicesRefused(state, "p1", card, { type: "play", instanceId, zone: { row: "units", lane }, tributes })`.
@@ -129,7 +139,9 @@ fn refused_at(state: &GameState, card: &CardInstance, lane: i32, tributes: &[&st
         "zone": { "row": "units", "lane": lane },
         "tributes": tributes,
     }));
-    why_choices_refused(state, PlayerId::P1, card, &play).err().map(|error| error.message)
+    why_choices_refused(state, PlayerId::P1, card, &play)
+        .err()
+        .map(|error| error.message)
 }
 
 /// `toMatch(/text/)` on an error that must be there.
@@ -138,14 +150,17 @@ fn says(error: &Option<String>, text: &str) -> bool {
 }
 
 fn top_id(state: &GameState, at: usize) -> Option<String> {
-    active_units_of(state, PlayerId::P1).get(at).map(|card| card.id.clone())
+    active_units_of(state, PlayerId::P1)
+        .get(at)
+        .map(|card| card.id.clone())
 }
 
 mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
     use super::*;
 
     #[test]
-    fn r391_with_a_full_row_each_zone_is_offered_with_the_paying_sets_that_empty_it_and_the_play_lands_there() {
+    fn r391_with_a_full_row_each_zone_is_offered_with_the_paying_sets_that_empty_it_and_the_play_lands_there()
+    {
         let mut state = playing("r391-full");
         let row = fill_row(&mut state, &[]);
         let card = only(&in_hand(&mut state, &titan().id, PlayerId::P1, 1));
@@ -157,7 +172,10 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
                 .iter()
                 .map(|play| json!([play["zone"]["lane"], play["tributes"]]))
                 .collect::<Vec<_>>(),
-            row.iter().enumerate().map(|(at, unit)| json!([at + 1, [unit.id]])).collect::<Vec<_>>()
+            row.iter()
+                .enumerate()
+                .map(|(at, unit)| json!([at + 1, [unit.id]]))
+                .collect::<Vec<_>>()
         );
         // The check reads the pair: lane 2 with lane 3's unit does not empty lane 2.
         assert!(says(&refused_at(&state, &card, 2, &[&row[2].id]), "not open"));
@@ -177,7 +195,8 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
     }
 
     #[test]
-    fn r391_a_play_that_names_no_zone_takes_the_leftmost_open_one_or_on_a_full_row_the_leftmost_its_tribute_empties() {
+    fn r391_a_play_that_names_no_zone_takes_the_leftmost_open_one_or_on_a_full_row_the_leftmost_its_tribute_empties()
+     {
         let mut state = playing("r391-default");
         let row = fill_row(&mut state, &[]);
         let card = only(&in_hand(&mut state, &titan().id, PlayerId::P1, 1));
@@ -189,11 +208,17 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
     }
 
     #[test]
-    fn r391_r13_r64_a_pile_of_two_frees_nothing_a_unit_with_reborn_frees_nothing_and_a_locked_zone_stays_shut() {
+    fn r391_r13_r64_a_pile_of_two_frees_nothing_a_unit_with_reborn_frees_nothing_and_a_locked_zone_stays_shut()
+     {
         let mut state = playing("r391-not-freed");
         let row = fill_row(&mut state, &[(2, reborn_body().id.clone())]);
         // Lane 1: a Stack pile of two.
-        let mut top = new_instance(&mut state, &stack_body().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let mut top = new_instance(
+            &mut state,
+            &stack_body().id,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
         assert!(place_on_field(
             &mut state,
             &mut top,
@@ -201,16 +226,34 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
             json_as(json!({ "stack": true }))
         ));
         assert_eq!(
-            state.players.p1.units[0].as_ref().map(|pile| pile.iter().map(|card| card.id.clone()).collect::<Vec<_>>()),
+            state.players.p1.units[0]
+                .as_ref()
+                .map(|pile| pile.iter().map(|card| card.id.clone()).collect::<Vec<_>>()),
             Some(vec![top.id.clone(), row[0].id.clone()])
         );
         // Lane 3: Locked under its unit.
         lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 3));
 
-        assert!(!freed_by_tribute(&state, &slot(PlayerId::P1, Row::Units, 1), &[top.id.clone()]));
-        assert!(!freed_by_tribute(&state, &slot(PlayerId::P1, Row::Units, 2), &[row[1].id.clone()]));
-        assert!(!freed_by_tribute(&state, &slot(PlayerId::P1, Row::Units, 3), &[row[2].id.clone()]));
-        assert!(freed_by_tribute(&state, &slot(PlayerId::P1, Row::Units, 4), &[row[3].id.clone()]));
+        assert!(!freed_by_tribute(
+            &state,
+            &slot(PlayerId::P1, Row::Units, 1),
+            &[top.id.clone()]
+        ));
+        assert!(!freed_by_tribute(
+            &state,
+            &slot(PlayerId::P1, Row::Units, 2),
+            &[row[1].id.clone()]
+        ));
+        assert!(!freed_by_tribute(
+            &state,
+            &slot(PlayerId::P1, Row::Units, 3),
+            &[row[2].id.clone()]
+        ));
+        assert!(freed_by_tribute(
+            &state,
+            &slot(PlayerId::P1, Row::Units, 4),
+            &[row[3].id.clone()]
+        ));
 
         let card = only(&in_hand(&mut state, &titan().id, PlayerId::P1, 1));
         assert_eq!(lanes(&plays(&state, &card)), vec![json!(4), json!(5)]);
@@ -223,26 +266,50 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
     fn r391_a_tribute_2_pairs_each_zone_with_the_sets_that_hold_its_unit_and_an_open_zone_with_every_set() {
         let mut state = playing("r391-two");
         let row: Vec<CardInstance> = (1..=4)
-            .map(|lane| put(&mut state, &format!("fx-{lane}"), slot(PlayerId::P1, Row::Units, lane), json!({})))
+            .map(|lane| {
+                put(
+                    &mut state,
+                    &format!("fx-{lane}"),
+                    slot(PlayerId::P1, Row::Units, lane),
+                    json!({}),
+                )
+            })
             .collect();
         let card = only(&in_hand(&mut state, &titan_two().id, PlayerId::P1, 1));
         let offered = plays(&state, &card);
         // Six sets of two out of four; lane 5 is open for all six, and each full lane for the three
         // sets that hold its unit.
-        assert_eq!(offered.iter().filter(|play| play["zone"]["lane"] == json!(5)).count(), 6);
+        assert_eq!(
+            offered
+                .iter()
+                .filter(|play| play["zone"]["lane"] == json!(5))
+                .count(),
+            6
+        );
         for (at, unit) in row.iter().enumerate() {
-            let here: Vec<&Value> =
-                offered.iter().filter(|play| play["zone"]["lane"] == json!(at + 1)).collect();
+            let here: Vec<&Value> = offered
+                .iter()
+                .filter(|play| play["zone"]["lane"] == json!(at + 1))
+                .collect();
             assert_eq!(here.len(), 3);
             for play in here {
-                assert!(play["tributes"].as_array().is_some_and(|tributes| tributes.contains(&json!(unit.id))));
+                assert!(
+                    play["tributes"]
+                        .as_array()
+                        .is_some_and(|tributes| tributes.contains(&json!(unit.id)))
+                );
             }
         }
         assert_eq!(
-            legal_zones_for(&state, PlayerId::P1, &card, &[row[0].id.clone(), row[1].id.clone()])
-                .iter()
-                .map(|zone| zone.lane)
-                .collect::<Vec<_>>(),
+            legal_zones_for(
+                &state,
+                PlayerId::P1,
+                &card,
+                &[row[0].id.clone(), row[1].id.clone()]
+            )
+            .iter()
+            .map(|zone| zone.lane)
+            .collect::<Vec<_>>(),
             vec![1, 2, 5]
         );
     }
@@ -267,7 +334,8 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
     }
 
     #[test]
-    fn r391_a_death_that_asks_at_step_2_pauses_the_play_with_its_emptied_zone_still_held_across_json_and_the_play_lands_there() {
+    fn r391_a_death_that_asks_at_step_2_pauses_the_play_with_its_emptied_zone_still_held_across_json_and_the_play_lands_there()
+     {
         let mut state = playing("r391-pause");
         let row = fill_row(&mut state, &[(5, asker().id)]);
         let card = only(&in_hand(&mut state, &titan().id, PlayerId::P1, 1));
@@ -275,7 +343,10 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
             &state,
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 5 }, "tributes": [row[4].id], "playerId": "p1" }),
         );
-        assert_eq!(paused.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Discover));
+        assert_eq!(
+            paused.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Discover)
+        );
         assert!(is_reserved(&paused, slot(PlayerId::P1, Row::Units, 5)));
         let round: GameState =
             serde_json::from_value(serde_json::to_value(&paused).expect("serialises")).expect("deserialises");
@@ -305,11 +376,17 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
     }
 
     #[test]
-    fn r391_a_backrow_card_with_a_tribute_cost_reads_the_rule_the_same_way_a_tribute_of_units_empties_no_backrow_zone() {
+    fn r391_a_backrow_card_with_a_tribute_cost_reads_the_rule_the_same_way_a_tribute_of_units_empties_no_backrow_zone()
+     {
         let mut state = playing("r391-backrow");
         put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, &grave_trap().id, slot(PlayerId::P1, Row::Backrow, lane), json!({}));
+            put(
+                &mut state,
+                &grave_trap().id,
+                slot(PlayerId::P1, Row::Backrow, lane),
+                json!({}),
+            );
         }
         let card = only(&in_hand(&mut state, &tribute_field().id, PlayerId::P1, 1));
         assert!(plays(&state, &card).is_empty());

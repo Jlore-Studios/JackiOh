@@ -27,20 +27,22 @@ use std::any::Any;
 use std::sync::Arc;
 use std::time::Duration;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use jackioh_engine::wire::{Phase, PlayerId};
 use jackioh_engine::CreateGameArgs;
+use jackioh_engine::wire::{Phase, PlayerId};
 use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::api::results::reap_stuck_matches;
 use jackioh_server::app::App;
-use jackioh_server::config::{DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, PROMPT_CLOCK_SECONDS, TURN_CLOCK_SECONDS};
+use jackioh_server::config::{
+    DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, PROMPT_CLOCK_SECONDS, TURN_CLOCK_SECONDS,
+};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::Db;
 
 use crate::support::deps::empty_test_app;
 use crate::support::engine::{fake_deck, install_test_cards};
-use crate::support::socket::{create_fake_socket, FakeSocket};
+use crate::support::socket::{FakeSocket, create_fake_socket};
 
 const MATCH_ID: &str = "match-recovery";
 
@@ -50,7 +52,11 @@ const SEED_SEARCH: usize = 5_000;
 /// One store call in its own transaction, as TS's `deps.store.<sub>.<method>(…)` was.
 macro_rules! store {
     ($app:expr, $t:ident => $call:expr) => {{
-        let mut $t = $app.db.begin(None).await.expect("the fake store opens a transaction");
+        let mut $t = $app
+            .db
+            .begin(None)
+            .await
+            .expect("the fake store opens a transaction");
         let out = $call;
         $t.commit().await.expect("the fake store commits");
         out
@@ -103,7 +109,10 @@ impl Clock {
 
 /// TS's `deps.timers.advance(ms)`: every timer due fires, and the woken actor gets to run.
 async fn advance(ms: i64) {
-    tokio::time::advance(Duration::from_millis(u64::try_from(ms).expect("time moves forward"))).await;
+    tokio::time::advance(Duration::from_millis(
+        u64::try_from(ms).expect("time moves forward"),
+    ))
+    .await;
     tokio::task::yield_now().await;
 }
 
@@ -148,7 +157,10 @@ impl Logs {
 
     fn entries(&self) -> Vec<Value> {
         let bytes = self.0.lock().expect("the log buffer").clone();
-        String::from_utf8_lossy(&bytes).lines().filter_map(|line| serde_json::from_str(line).ok()).collect()
+        String::from_utf8_lossy(&bytes)
+            .lines()
+            .filter_map(|line| serde_json::from_str(line).ok())
+            .collect()
     }
 
     /// Whether any line names `event` (SURFACE §11.3 keeps TS's event names).
@@ -157,13 +169,19 @@ impl Logs {
     }
 
     fn count(&self, event: &str) -> usize {
-        self.entries().iter().filter(|entry| event_of(entry) == Some(event)).count()
+        self.entries()
+            .iter()
+            .filter(|entry| event_of(entry) == Some(event))
+            .count()
     }
 }
 
 fn event_of(entry: &Value) -> Option<&str> {
     ["event", "message"].iter().find_map(|key| {
-        entry.get(*key).or_else(|| entry.get("fields").and_then(|fields| fields.get(*key))).and_then(Value::as_str)
+        entry
+            .get(*key)
+            .or_else(|| entry.get("fields").and_then(|fields| fields.get(*key)))
+            .and_then(Value::as_str)
     })
 }
 
@@ -172,11 +190,17 @@ fn event_of(entry: &Value) -> Option<&str> {
 // ---------------------------------------------------------------------------------------------
 
 fn views(socket: &FakeSocket) -> Vec<Value> {
-    socket.of_type("view").into_iter().map(|frame| frame["view"].clone()).collect()
+    socket
+        .of_type("view")
+        .into_iter()
+        .map(|frame| frame["view"].clone())
+        .collect()
 }
 
 fn last_view(socket: &FakeSocket) -> Value {
-    views(socket).pop().unwrap_or_else(|| panic!("no view frame was sent"))
+    views(socket)
+        .pop()
+        .unwrap_or_else(|| panic!("no view frame was sent"))
 }
 
 fn acks(socket: &FakeSocket) -> Vec<Value> {
@@ -217,7 +241,12 @@ fn open_choice(socket: &FakeSocket) -> String {
 fn hand_of(view: &Value) -> Vec<String> {
     view["you"]["hand"]
         .as_array()
-        .map(|cards| cards.iter().filter_map(|card| card["instanceId"].as_str().map(str::to_string)).collect())
+        .map(|cards| {
+            cards
+                .iter()
+                .filter_map(|card| card["instanceId"].as_str().map(str::to_string))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -262,7 +291,9 @@ struct StartOptions {
 }
 
 fn hand_holds(view: &Value, def_id: &str) -> bool {
-    view["you"]["hand"].as_array().is_some_and(|cards| cards.iter().any(|card| card["defId"] == def_id))
+    view["you"]["hand"]
+        .as_array()
+        .is_some_and(|cards| cards.iter().any(|card| card["defId"] == def_id))
 }
 
 /// The first seed `<prefix>-<k>` whose opening deal puts each `(seat, card)` in that seat's hand.
@@ -272,7 +303,10 @@ fn seed_dealing(prefix: &str, decks: &(Vec<String>, Vec<String>), wanted: &[(Pla
         let seed = format!("{prefix}-{k}");
         let args: CreateGameArgs = from(json!({ "seed": seed, "decks": [first, second] }));
         let state = jackioh_engine::begin_game(&jackioh_engine::create_game(&args)).state;
-        if wanted.iter().all(|(seat, def_id)| hand_holds(&to_json(&jackioh_engine::view_for(&state, *seat)), def_id)) {
+        if wanted
+            .iter()
+            .all(|(seat, def_id)| hand_holds(&to_json(&jackioh_engine::view_for(&state, *seat)), def_id))
+        {
             return seed;
         }
     }
@@ -284,7 +318,15 @@ async fn open_turn_one(actor: &MatchActor) -> usize {
     let owed = actor.snapshot().mulligan_owed;
     for seat in &owed {
         let keep = hand_of(&view_of(actor, *seat).await);
-        let reply = to_json(&actor.submit(*seat, format!("keep-{seat}"), from(json!({ "type": "mulligan", "keep": keep }))).await);
+        let reply = to_json(
+            &actor
+                .submit(
+                    *seat,
+                    format!("keep-{seat}"),
+                    from(json!({ "type": "mulligan", "keep": keep })),
+                )
+                .await,
+        );
         assert_eq!(reply["type"], "ack", "the opening mulligan was refused: {reply}");
     }
     owed.len()
@@ -304,9 +346,21 @@ async fn start_match(options: StartOptions) -> Harness {
         data.seed_profile(json!({ "id": "profile-2", "rating": 1000 }));
     }
 
-    let decks = options.real.unwrap_or_else(|| (fake_deck(&["test-prompt-self"]), fake_deck(&["test-prompt-enemy"])));
+    let decks = options.real.unwrap_or_else(|| {
+        (
+            fake_deck(&["test-prompt-self"]),
+            fake_deck(&["test-prompt-enemy"]),
+        )
+    });
     let seed = if scripted {
-        seed_dealing("seed-recovery", &decks, &[(PlayerId::P1, "test-prompt-self"), (PlayerId::P2, "test-prompt-enemy")])
+        seed_dealing(
+            "seed-recovery",
+            &decks,
+            &[
+                (PlayerId::P1, "test-prompt-self"),
+                (PlayerId::P2, "test-prompt-enemy"),
+            ],
+        )
     } else {
         "seed-recovery".to_string()
     };
@@ -328,22 +382,42 @@ async fn start_match(options: StartOptions) -> Harness {
         .await
         .expect("the registry starts the match");
     let row = match_row(&app).await;
-    let clock = Clock { base_ms: row["createdAt"].as_i64().expect("the row's start"), at: started_at };
+    let clock = Clock {
+        base_ms: row["createdAt"].as_i64().expect("the row's start"),
+        at: started_at,
+    };
     let opening = if scripted {
-        let actor = app.matches.actor_for(&app, MATCH_ID).await.expect("the match's actor");
+        let actor = app
+            .matches
+            .actor_for(&app, MATCH_ID)
+            .await
+            .expect("the match's actor");
         open_turn_one(&actor).await
     } else {
         0
     };
-    Harness { app, clock, opening, _engine: engine }
+    Harness {
+        app,
+        clock,
+        opening,
+        _engine: engine,
+    }
 }
 
 async fn match_row(app: &App) -> Value {
-    table(app, |data| json!(data.tables.matches)).await.into_iter().next().expect("the match row")
+    table(app, |data| json!(data.tables.matches))
+        .await
+        .into_iter()
+        .next()
+        .expect("the match row")
 }
 
 async fn actor_of(h: &Harness) -> MatchActor {
-    h.app.matches.actor_for(&h.app, MATCH_ID).await.expect("the match's actor")
+    h.app
+        .matches
+        .actor_for(&h.app, MATCH_ID)
+        .await
+        .expect("the match's actor")
 }
 
 async fn results(h: &Harness) -> Vec<Value> {
@@ -379,8 +453,14 @@ mod m6_t4_crash_recovery {
             )
             .await
             .expect_err("the engine refuses the decks");
-        assert!(format!("{refused:?}").contains("deck must hold exactly"), "{refused:?}");
-        assert_eq!(table(&app, |data| json!(data.tables.matches)).await, Vec::<Value>::new());
+        assert!(
+            format!("{refused:?}").contains("deck must hold exactly"),
+            "{refused:?}"
+        );
+        assert_eq!(
+            table(&app, |data| json!(data.tables.matches)).await,
+            Vec::<Value>::new()
+        );
         assert_eq!(app.matches.live(), Vec::<String>::new());
         assert!(!logs.has("match.started"));
     }
@@ -399,10 +479,22 @@ mod m6_t4_crash_recovery {
         // Mid-game, and deliberately mid-*prompt*: p1 plays and answers its own prompt, ends the turn,
         // and p2 then opens a prompt p1 still owes an answer to (a trap firing on your turn, R79). A
         // rebuild has to bring back the open choice, not just the board (§10.6, e2e `05`).
-        send(&actor, &p1, "n1", json!({ "type": "play", "instanceId": in_hand(&p1, "test-prompt-self") })).await;
+        send(
+            &actor,
+            &p1,
+            "n1",
+            json!({ "type": "play", "instanceId": in_hand(&p1, "test-prompt-self") }),
+        )
+        .await;
         send(&actor, &p1, "n2", answer_of(&p1)).await;
         send(&actor, &p1, "n3", json!({ "type": "endTurn" })).await;
-        send(&actor, &p2, "n4", json!({ "type": "play", "instanceId": in_hand(&p2, "test-prompt-enemy") })).await;
+        send(
+            &actor,
+            &p2,
+            "n4",
+            json!({ "type": "play", "instanceId": in_hand(&p2, "test-prompt-enemy") }),
+        )
+        .await;
 
         let before_p1 = view_of(&actor, PlayerId::P1).await;
         let before_p2 = view_of(&actor, PlayerId::P2).await;
@@ -425,7 +517,11 @@ mod m6_t4_crash_recovery {
             .into_iter()
             .filter(|row| row["matchId"] == MATCH_ID)
             .collect();
-        let nonces: Vec<Value> = log.iter().skip(h.opening).map(|row| row["action"]["nonce"].clone()).collect();
+        let nonces: Vec<Value> = log
+            .iter()
+            .skip(h.opening)
+            .map(|row| row["action"]["nonce"].clone())
+            .collect();
         assert_eq!(nonces, vec![json!("n1"), json!("n2"), json!("n3"), json!("n4")]);
         assert_eq!(match_row(&h.app).await["status"], "live");
 
@@ -455,12 +551,21 @@ mod m6_t4_crash_recovery {
         // §9.3: the nonce map is rebuilt from the log, so a client retrying an action it sent before
         // the crash gets its original ack and appends no second row.
         send(&revived, &back_p1, "n3", json!({ "type": "endTurn" })).await;
-        assert_eq!(acks(&back_p1), vec![json!({ "type": "ack", "nonce": "n3", "seq": 3 + h.opening })]);
-        assert_eq!(table(&h.app, |data| json!(data.tables.match_actions)).await.len(), 4 + h.opening);
+        assert_eq!(
+            acks(&back_p1),
+            vec![json!({ "type": "ack", "nonce": "n3", "seq": 3 + h.opening })]
+        );
+        assert_eq!(
+            table(&h.app, |data| json!(data.tables.match_actions)).await.len(),
+            4 + h.opening
+        );
 
         // And the rebuilt actor carries the match on at the next gapless seq.
         send(&revived, &back_p1, "n5", answer_of(&back_p1)).await;
-        assert_eq!(acks(&back_p1).last(), Some(&json!({ "type": "ack", "nonce": "n5", "seq": 5 + h.opening })));
+        assert_eq!(
+            acks(&back_p1).last(),
+            Some(&json!({ "type": "ack", "nonce": "n5", "seq": 5 + h.opening }))
+        );
         assert_eq!(revived.snapshot().pending_for, None);
         assert_eq!(results(&h).await, Vec::<Value>::new());
     }
@@ -474,17 +579,29 @@ mod m6_t4_crash_recovery {
         // The upgrade path (`ws_server.rs`) only ever calls `attach`; folding is the registry's job.
         // TS: the attach resolves with the seat, "p2" (SURFACE §11.2 answers `()`; the view names it).
         let socket = create_fake_socket();
-        h.app.matches.attach(&h.app, MATCH_ID, "profile-2", socket.socket()).await.expect("profile-2 attaches");
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-2", socket.socket())
+            .await
+            .expect("profile-2 attaches");
         let actor = actor_of(&h).await;
         actor.idle().await;
         assert_eq!(last_view(&socket)["viewer"], "p2");
 
         // §9.1: a profile that is not in this match learns only that there is no such match.
         let stranger = create_fake_socket();
-        let refused = h.app.matches.attach(&h.app, MATCH_ID, "profile-99", stranger.socket()).await.expect_err("not a player");
+        let refused = h
+            .app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-99", stranger.socket())
+            .await
+            .expect_err("not a player");
         assert!(format!("{refused:?}").contains("no such match"), "{refused:?}");
         // Nothing but the opening was logged.
-        assert_eq!(table(&h.app, |data| json!(data.tables.match_actions)).await.len(), h.opening);
+        assert_eq!(
+            table(&h.app, |data| json!(data.tables.match_actions)).await.len(),
+            h.opening
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -494,8 +611,10 @@ mod m6_t4_crash_recovery {
         h.app.matches.stop(MATCH_ID).await;
         let rebuilt_before = logs.count("match.rebuilt");
 
-        let (first, second) =
-            tokio::join!(h.app.matches.actor_for(&h.app, MATCH_ID), h.app.matches.actor_for(&h.app, MATCH_ID));
+        let (first, second) = tokio::join!(
+            h.app.matches.actor_for(&h.app, MATCH_ID),
+            h.app.matches.actor_for(&h.app, MATCH_ID)
+        );
         // TS: the same actor object (`toBe`); here both calls answer, off one fold.
         first.expect("the first caller's actor");
         second.expect("the second caller's actor");
@@ -525,7 +644,9 @@ mod m6_t4_crash_recovery_with_the_real_engine {
         let decks = (pool[..size].to_vec(), pool[size..size * 2].to_vec());
         let catalog = jackioh_engine::registered_catalog();
         for (label, deck) in [("p1", &decks.0), ("p2", &decks.1)] {
-            if let Err(error) = jackioh_engine::validate_deck(deck, catalog, label, jackioh_engine::config::DECK_SIZE) {
+            if let Err(error) =
+                jackioh_engine::validate_deck(deck, catalog, label, jackioh_engine::config::DECK_SIZE)
+            {
                 panic!("the real engine refused the deck built from the catalog: {error}");
             }
         }
@@ -544,7 +665,12 @@ mod m6_t4_crash_recovery_with_the_real_engine {
         jackioh_cards::register_all();
         let pool: Vec<String> = jackioh_cards::CATALOG
             .iter()
-            .filter(|(_, def)| !def.token && !to_json(&def.tags).as_array().is_some_and(|tags| tags.contains(&json!("Token"))))
+            .filter(|(_, def)| {
+                !def.token
+                    && !to_json(&def.tags)
+                        .as_array()
+                        .is_some_and(|tags| tags.contains(&json!("Token")))
+            })
             .map(|(id, _)| id.clone())
             .collect();
         let decks = decks_the_engine_accepts(&pool);
@@ -556,16 +682,31 @@ mod m6_t4_crash_recovery_with_the_real_engine {
         actor.attach(PlayerId::P1, p1.socket());
         actor.attach(PlayerId::P2, p2.socket());
         actor.idle().await;
-        RealMatch { h, actor, p1, p2, pool }
+        RealMatch {
+            h,
+            actor,
+            p1,
+            p2,
+            pool,
+        }
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r265_folding_seed_decks_log_through_the_real_engine_yields_the_same_view_for_whichever_seat_mulliganed_first() {
+    async fn r265_folding_seed_decks_log_through_the_real_engine_yields_the_same_view_for_whichever_seat_mulliganed_first()
+     {
         let (logs, _recording) = Logs::record();
         for first in [PlayerId::P1, PlayerId::P2] {
             let RealMatch { h, actor, p1, p2, .. } = real_match().await;
-            let (mine, theirs) = if first == PlayerId::P1 { (&p1, &p2) } else { (&p2, &p1) };
-            let second = if first == PlayerId::P1 { PlayerId::P2 } else { PlayerId::P1 };
+            let (mine, theirs) = if first == PlayerId::P1 {
+                (&p1, &p2)
+            } else {
+                (&p2, &p1)
+            };
+            let second = if first == PlayerId::P1 {
+                PlayerId::P2
+            } else {
+                PlayerId::P1
+            };
 
             // §2.1, R265: both mulligans open at once; `first` keeps everything and `second` keeps
             // nothing, so the fold has to replay R9's "draw the replacements, then shuffle the returned
@@ -578,8 +719,20 @@ mod m6_t4_crash_recovery_with_the_real_engine {
             let keep = hand_ids(mine);
             assert!(!keep.is_empty());
             assert!(!hand_ids(theirs).is_empty());
-            send(&actor, mine, &format!("m-{first}"), json!({ "type": "mulligan", "keep": keep })).await;
-            send(&actor, theirs, &format!("m-{second}"), json!({ "type": "mulligan", "keep": [] })).await;
+            send(
+                &actor,
+                mine,
+                &format!("m-{first}"),
+                json!({ "type": "mulligan", "keep": keep }),
+            )
+            .await;
+            send(
+                &actor,
+                theirs,
+                &format!("m-{second}"),
+                json!({ "type": "mulligan", "keep": [] }),
+            )
+            .await;
             assert_eq!(actor.snapshot().phase, Phase::Main);
 
             let before_p1 = view_of(&actor, PlayerId::P1).await;
@@ -602,12 +755,24 @@ mod m6_t4_crash_recovery_with_the_real_engine {
 
         // p2 answers first and p1 has not: the answer is sealed, in the log, and in no hand yet.
         let p2_hand = hand_ids(&p2);
-        send(&actor, &p2, "sealed", json!({ "type": "mulligan", "keep": p2_hand[1..] })).await;
+        send(
+            &actor,
+            &p2,
+            "sealed",
+            json!({ "type": "mulligan", "keep": p2_hand[1..] }),
+        )
+        .await;
         assert_eq!(actor.snapshot().mulligan_owed, vec![PlayerId::P1]);
         let before_p1 = view_of(&actor, PlayerId::P1).await;
         let before_p2 = view_of(&actor, PlayerId::P2).await;
-        assert_eq!(before_p2["mulligan"], json!({ "youReady": true, "opponentReady": false, "kept": p2_hand[1..] }));
-        assert_eq!(before_p1["mulligan"], json!({ "youReady": false, "opponentReady": true }));
+        assert_eq!(
+            before_p2["mulligan"],
+            json!({ "youReady": true, "opponentReady": false, "kept": p2_hand[1..] })
+        );
+        assert_eq!(
+            before_p1["mulligan"],
+            json!({ "youReady": false, "opponentReady": true })
+        );
         let before_hash = jackioh_engine::hash_state(&actor.engine_state());
 
         h.app.matches.stop(MATCH_ID).await;
@@ -626,8 +791,17 @@ mod m6_t4_crash_recovery_with_the_real_engine {
         assert_eq!(last_view(&back_p2), before_p2);
 
         // p1 answers on the rebuilt actor, and the sealed answer resolves with it at the next seq.
-        send(&revived, &back_p1, "after-crash", json!({ "type": "mulligan", "keep": hand_ids(&back_p1) })).await;
-        assert_eq!(acks(&back_p1).last(), Some(&json!({ "type": "ack", "nonce": "after-crash", "seq": 2 })));
+        send(
+            &revived,
+            &back_p1,
+            "after-crash",
+            json!({ "type": "mulligan", "keep": hand_ids(&back_p1) }),
+        )
+        .await;
+        assert_eq!(
+            acks(&back_p1).last(),
+            Some(&json!({ "type": "ack", "nonce": "after-crash", "seq": 2 }))
+        );
         let snapshot = revived.snapshot();
         assert_eq!(snapshot.phase, Phase::Main);
         assert_eq!(snapshot.mulligan_owed, Vec::<PlayerId>::new());
@@ -639,7 +813,13 @@ mod m6_t4_crash_recovery_with_the_real_engine {
     #[tokio::test(start_paused = true)]
     async fn folding_seed_decks_log_through_the_real_engine_yields_the_same_view_for_for_both_players() {
         let (logs, _recording) = Logs::record();
-        let RealMatch { h, actor, p1, p2, pool } = real_match().await;
+        let RealMatch {
+            h,
+            actor,
+            p1,
+            p2,
+            pool,
+        } = real_match().await;
 
         // §2.1, R265: both mulligans open at once. p1 keeps everything and p2 keeps nothing, so the
         // fold replays R9's replacement draws and shuffle-back (see the test above for either order).
@@ -660,14 +840,24 @@ mod m6_t4_crash_recovery_with_the_real_engine {
         // PREMISE: the views really carry the real game — hands of real ids and a redacted count for
         // the other side — so the deep-equals below are comparing something. p1 holds what it kept plus
         // the card §2.1's first turn drew for it (R10).
-        let p1_cards = before_p1["you"]["hand"].as_array().cloned().unwrap_or_else(|| panic!("p1's own hand came back as a count"));
+        let p1_cards = before_p1["you"]["hand"]
+            .as_array()
+            .cloned()
+            .unwrap_or_else(|| panic!("p1's own hand came back as a count"));
         assert_eq!(p1_cards.len(), p1_keep.len() + 1);
         assert_eq!(before_p2["opponent"]["hand"], json!({ "count": p1_cards.len() }));
         for card in &p1_cards {
-            assert!(pool.iter().any(|id| card["defId"] == id.as_str()), "{card} is not a catalog card");
+            assert!(
+                pool.iter().any(|id| card["defId"] == id.as_str()),
+                "{card} is not a catalog card"
+            );
         }
         // p2 mulliganed its whole hand away, so its cards are ones the fold had to redraw in R9's order.
-        assert!(before_p2["you"]["hand"].as_array().is_some_and(|hand| !hand.is_empty()));
+        assert!(
+            before_p2["you"]["hand"]
+                .as_array()
+                .is_some_and(|hand| !hand.is_empty())
+        );
 
         // The crash: the actor leaves memory, the log stays.
         h.app.matches.stop(MATCH_ID).await;
@@ -759,10 +949,17 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
 
         // p2 comes back, p1 never does.
         let back = create_fake_socket();
-        h.app.matches.attach(&h.app, MATCH_ID, "profile-2", back.socket()).await.expect("profile-2 attaches");
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-2", back.socket())
+            .await
+            .expect("profile-2 attaches");
         let revived = actor_of(&h).await;
         revived.idle().await;
-        assert_eq!(to_json(&revived.clocks())["graceDeadline"], json!({ "p1": h.clock.now() + grace_ms, "p2": null }));
+        assert_eq!(
+            to_json(&revived.clocks())["graceDeadline"],
+            json!({ "p1": h.clock.now() + grace_ms, "p2": null })
+        );
         assert_eq!(grace_deadline(&h).await["p1"], json!(h.clock.now() + grace_ms));
 
         advance(grace_ms - 1).await;
@@ -781,7 +978,8 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r744_a_grace_deadline_stored_before_the_restart_fires_at_that_deadline_not_a_fresh_window_later() {
+    async fn r744_a_grace_deadline_stored_before_the_restart_fires_at_that_deadline_not_a_fresh_window_later()
+    {
         let h = start_match(StartOptions::default()).await;
         let grace_ms = grace_of();
         let actor = actor_of(&h).await;
@@ -807,7 +1005,11 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         assert_eq!(grace_deadline(&h).await["p1"], stored);
 
         let back = create_fake_socket();
-        h.app.matches.attach(&h.app, MATCH_ID, "profile-2", back.socket()).await.expect("profile-2 attaches");
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-2", back.socket())
+            .await
+            .expect("profile-2 attaches");
         revived.idle().await;
         assert_eq!(to_json(&revived.clocks())["graceDeadline"]["p1"], stored);
 
@@ -826,7 +1028,11 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         let grace_ms = grace_of();
 
         let back_p2 = create_fake_socket();
-        h.app.matches.attach(&h.app, MATCH_ID, "profile-2", back_p2.socket()).await.expect("profile-2 attaches");
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-2", back_p2.socket())
+            .await
+            .expect("profile-2 attaches");
         let revived = actor_of(&h).await;
         revived.idle().await;
         assert!(!to_json(&revived.clocks())["graceDeadline"]["p1"].is_null());
@@ -834,9 +1040,16 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         advance(grace_ms - 1).await;
         revived.idle().await;
         let back_p1 = create_fake_socket();
-        h.app.matches.attach(&h.app, MATCH_ID, "profile-1", back_p1.socket()).await.expect("profile-1 attaches");
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-1", back_p1.socket())
+            .await
+            .expect("profile-1 attaches");
         revived.idle().await;
-        assert_eq!(to_json(&revived.clocks())["graceDeadline"], json!({ "p1": null, "p2": null }));
+        assert_eq!(
+            to_json(&revived.clocks())["graceDeadline"],
+            json!({ "p1": null, "p2": null })
+        );
         assert_eq!(grace_deadline(&h).await, json!({ "p1": null, "p2": null }));
 
         advance(1).await;
@@ -852,10 +1065,17 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         let grace_ms = grace_of();
 
         let socket = create_fake_socket();
-        h.app.matches.attach(&h.app, MATCH_ID, "profile-1", socket.socket()).await.expect("profile-1 attaches");
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-1", socket.socket())
+            .await
+            .expect("profile-1 attaches");
         let actor = actor_of(&h).await;
         actor.idle().await;
-        assert_eq!(to_json(&actor.clocks())["graceDeadline"], json!({ "p1": null, "p2": h.clock.now() + grace_ms }));
+        assert_eq!(
+            to_json(&actor.clocks())["graceDeadline"],
+            json!({ "p1": null, "p2": h.clock.now() + grace_ms })
+        );
 
         advance(grace_ms).await;
         actor.idle().await;
@@ -873,7 +1093,11 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         let grace_ms = grace_of();
 
         let first = create_fake_socket();
-        h.app.matches.attach(&h.app, MATCH_ID, "profile-1", first.socket()).await.expect("profile-1 attaches");
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-1", first.socket())
+            .await
+            .expect("profile-1 attaches");
         let actor = actor_of(&h).await;
         actor.idle().await;
         // The second client is still loading, and its seat is already counted away.
@@ -881,9 +1105,16 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
 
         advance(grace_ms / 10).await;
         let second = create_fake_socket();
-        h.app.matches.attach(&h.app, MATCH_ID, "profile-2", second.socket()).await.expect("profile-2 attaches");
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-2", second.socket())
+            .await
+            .expect("profile-2 attaches");
         actor.idle().await;
-        assert_eq!(to_json(&actor.clocks())["graceDeadline"], json!({ "p1": null, "p2": null }));
+        assert_eq!(
+            to_json(&actor.clocks())["graceDeadline"],
+            json!({ "p1": null, "p2": null })
+        );
 
         advance(grace_ms).await;
         actor.idle().await;
@@ -909,7 +1140,10 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
 
         // Nobody comes back: no actor is rebuilt, so no grace runs and nobody loses by it.
         advance(MATCH_CEILING_MINUTES * 60_000).await;
-        assert_eq!(reap_stuck_matches(&h.app).await.expect("the reaper runs"), vec![MATCH_ID.to_string()]);
+        assert_eq!(
+            reap_stuck_matches(&h.app).await.expect("the reaper runs"),
+            vec![MATCH_ID.to_string()]
+        );
         let rows = results(&h).await;
         assert_eq!(rows[0]["matchId"], MATCH_ID);
         assert_eq!(rows[0]["reason"], "match-ceiling");

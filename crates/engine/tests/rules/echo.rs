@@ -110,16 +110,28 @@ fn grant_echo(amount: i32) -> Effect {
     Effect::new("ec:grantEcho", move |ctx| {
         let source_id = ctx.self_.as_ref().map(|card| card.id.clone());
         let controller = ctx.controller;
-        add_modifier(ctx, controller, ModifierExpiry::Used, ModifierKind::EchoNextSpell { amount, source_id });
+        add_modifier(
+            ctx,
+            controller,
+            ModifierExpiry::Used,
+            ModifierKind::EchoNextSpell { amount, source_id },
+        );
     })
 }
 
 fn both(script: Script) -> CardScripts {
-    CardScripts { base: script.clone(), radiant: script }
+    CardScripts {
+        base: script.clone(),
+        radiant: script,
+    }
 }
 
 fn hit_two() -> Hook {
-    hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 })))])
+    hook(|_ctx| {
+        vec![damage(json_as(
+            json!({ "to": { "of": "enemyHero" }, "amount": 2 }),
+        ))]
+    })
 }
 
 fn scripts() -> IndexMap<String, CardScripts> {
@@ -127,12 +139,30 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         twinspell().id,
         CardScripts {
-            base: Script { cry: Some(hook(|_ctx| vec![grant_echo(1)])), ..Script::default() },
-            radiant: Script { cry: Some(hook(|_ctx| vec![grant_echo(2)])), ..Script::default() },
+            base: Script {
+                cry: Some(hook(|_ctx| vec![grant_echo(1)])),
+                ..Script::default()
+            },
+            radiant: Script {
+                cry: Some(hook(|_ctx| vec![grant_echo(2)])),
+                ..Script::default()
+            },
         },
     );
-    scripts.insert(pinger().id, both(Script { cry: Some(hit_two()), ..Script::default() }));
-    scripts.insert(cast_unit().id, both(Script { cry: Some(hit_two()), ..Script::default() }));
+    scripts.insert(
+        pinger().id,
+        both(Script {
+            cry: Some(hit_two()),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        cast_unit().id,
+        both(Script {
+            cry: Some(hit_two()),
+            ..Script::default()
+        }),
+    );
     scripts.insert(
         echo_unit().id,
         both(Script {
@@ -153,7 +183,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
         ask_spell().id,
         both(Script {
             cry: Some(hook(|_ctx| {
-                vec![discover_from_catalog(json_as(json!({ "step": "picked", "query": { "type": "Unit" } })))]
+                vec![discover_from_catalog(json_as(
+                    json!({ "step": "picked", "query": { "type": "Unit" } }),
+                ))]
             })),
             resume,
             ..Script::default()
@@ -184,16 +216,27 @@ fn act(state: &GameState, body: Value) -> GameState {
 }
 
 fn four_mana() -> ManaState {
-    ManaState { current: 4, max: 4, next_turn_mod: 0, perm_mod: 0 }
+    ManaState {
+        current: 4,
+        max: 4,
+        next_turn_mod: 0,
+        perm_mod: 0,
+    }
 }
 
 /// Past the mulligans, in p1's main phase, with this file's fixtures registered and 4 mana.
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|c| c.id.clone()).collect();
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+    );
     let keep: Vec<String> = state.players.p2.hand.iter().map(|c| c.id.clone()).collect();
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+    );
     let mut catalog = registered_catalog().clone();
     for card in defs() {
         catalog.insert(card.id.clone(), card);
@@ -242,7 +285,10 @@ struct Bench {
 
 impl Bench {
     fn new(state: &GameState) -> Bench {
-        Bench { events: Vec::new(), rng: Rng::new(&state.seed, state.rng_cursor) }
+        Bench {
+            events: Vec::new(),
+            rng: Rng::new(&state.seed, state.rng_cursor),
+        }
     }
 
     fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
@@ -257,7 +303,10 @@ fn pending_echo(state: &mut GameState, player: PlayerId, amount: i32) {
         &mut bench.sink(state),
         player,
         ModifierExpiry::Used,
-        ModifierKind::EchoNextSpell { amount, source_id: None },
+        ModifierKind::EchoNextSpell {
+            amount,
+            source_id: None,
+        },
     );
 }
 
@@ -295,7 +344,10 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         assert_eq!(*amount, 1);
         assert_eq!(granted.expiry, ModifierExpiry::Used);
         assert_eq!(source_id.as_deref(), Some(card.id.as_str()));
-        assert_eq!(state.players.p1.backrow[0].as_ref().map(|held| held.id.clone()), Some(card.id.clone()));
+        assert_eq!(
+            state.players.p1.backrow[0].as_ref().map(|held| held.id.clone()),
+            Some(card.id.clone())
+        );
 
         // §2.2: "Twinspell's pending Echo is not turn-scoped and survives cleanup" — two turns of it.
         state = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
@@ -308,7 +360,10 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         // DISCREPANCY: nothing in packages/engine/src reads `echoNextSpell`, so the modifier is never
         // consumed and #79 never leaves the backrow. SPEC R30 and §8 #79 both say it must.
         let spell = hand_card(&mut state, &pinger().id, PlayerId::P1);
-        state = act(&state, json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }));
+        state = act(
+            &state,
+            json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
+        );
         assert_eq!(echo_mods(&state, PlayerId::P1), Vec::<PlayerModifier>::new());
         assert!(in_pile(&state.players.p1.graveyard, &card.id));
         assert!(state.players.p1.backrow[0].is_none());
@@ -322,7 +377,10 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         let mut once = playing("echo-1");
         pending_echo(&mut once, PlayerId::P1, 1);
         let card = hand_card(&mut once, &pinger().id, PlayerId::P1);
-        let first = act_result(&once, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }));
+        let first = act_result(
+            &once,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        );
         assert_eq!(first.error, None);
         // Play resolves, then the same instance re-resolves 1 more time: 2 damage twice.
         assert_eq!(first.state.players.p2.hero.health, HERO_HEALTH - 4);
@@ -332,7 +390,10 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         let mut twice = playing("echo-2");
         pending_echo(&mut twice, PlayerId::P1, 2);
         let card = hand_card(&mut twice, &pinger().id, PlayerId::P1);
-        let second = act_result(&twice, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }));
+        let second = act_result(
+            &twice,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        );
         assert_eq!(second.error, None);
         assert_eq!(second.state.players.p2.hero.health, HERO_HEALTH - 6);
     }
@@ -359,12 +420,16 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
 
         pending_echo(&mut state, PlayerId::P1, 2);
         let card = hand_card(&mut state, &pinger().id, PlayerId::P1);
-        let played = act_result(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }));
+        let played = act_result(
+            &state,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        );
         assert_eq!(played.error, None);
 
         // The repeats are state, not a loop variable, so they survive a JSON round trip (§9.3, §10.1).
         let round: GameState =
-            serde_json::from_value(serde_json::to_value(&played.state).expect("a state serialises")).expect("and parses");
+            serde_json::from_value(serde_json::to_value(&played.state).expect("a state serialises"))
+                .expect("and parses");
         assert_eq!(echo_queue(&round), echo_queue(&played.state));
         // And by the time the action returns the loop has drained them (§10.3).
         assert_eq!(echo_queue(&played.state), Vec::<EchoItem>::new());
@@ -379,7 +444,10 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         let mut state = playing("echo-prompt");
         pending_echo(&mut state, PlayerId::P1, 2);
         let card = hand_card(&mut state, &ask_spell().id, PlayerId::P1);
-        let played = act_result(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }));
+        let played = act_result(
+            &state,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        );
         assert_eq!(played.error, None);
 
         // Answer the open Discover with its first option, and say what opened next.
@@ -401,17 +469,26 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
 
         // Resolution 1's prompt is open, and both repeats are still owed behind it.
         let first_id = played.state.pending.as_ref().map(|open| open.id.clone());
-        assert_eq!(played.state.pending.as_ref().map(|open| open.kind), Some(PromptKind::Discover));
+        assert_eq!(
+            played.state.pending.as_ref().map(|open| open.kind),
+            Some(PromptKind::Discover)
+        );
 
         // Repeat 1 asks its own fresh prompt, with the last repeat still waiting in the queue (§6.3).
         let after_first = answer(&played.state);
-        assert_eq!(after_first.pending.as_ref().map(|open| open.kind), Some(PromptKind::Discover));
+        assert_eq!(
+            after_first.pending.as_ref().map(|open| open.kind),
+            Some(PromptKind::Discover)
+        );
         assert_ne!(after_first.pending.as_ref().map(|open| open.id.clone()), first_id);
         assert_eq!(echo_queue(&after_first).len(), 1);
 
         // Repeat 2 asks the last one, and once it is answered nothing is owed and nothing is pending.
         let after_second = answer(&after_first);
-        assert_eq!(after_second.pending.as_ref().map(|open| open.kind), Some(PromptKind::Discover));
+        assert_eq!(
+            after_second.pending.as_ref().map(|open| open.kind),
+            Some(PromptKind::Discover)
+        );
         assert_eq!(echo_queue(&after_second), Vec::<EchoItem>::new());
         let done = answer(&after_second);
         assert_eq!(done.pending, None);
@@ -432,7 +509,10 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         settle(&mut bench.sink(&mut state), Default::default());
 
         // Free, counted as a play, and repeated once: 2 damage twice.
-        assert_eq!(pluck(&bench.events, GameEventType::CardPlayed, "costPaid"), vec![json!(0)]);
+        assert_eq!(
+            pluck(&bench.events, GameEventType::CardPlayed, "costPaid"),
+            vec![json!(0)]
+        );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 4);
         assert_eq!(echo_mods(&state, PlayerId::P1), Vec::<PlayerModifier>::new());
         assert!(in_pile(&state.players.p1.graveyard, &card.id));
@@ -452,20 +532,33 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         settle(&mut bench.sink(&mut state), Default::default());
 
         assert_eq!(
-            state.players.p1.units[0].as_ref().and_then(|pile| pile.first()).map(|held| held.id.clone()),
+            state.players.p1.units[0]
+                .as_ref()
+                .and_then(|pile| pile.first())
+                .map(|held| held.id.clone()),
             Some(card.id.clone())
         );
         assert_eq!(
             find_instance(&state, &card.id).map(|held| held.zone.clone()),
-            Some(Zone::Field { player: PlayerId::P1, row: Row::Units, lane: 1 })
+            Some(Zone::Field {
+                player: PlayerId::P1,
+                row: Row::Units,
+                lane: 1
+            })
         );
         assert!(!in_pile(&state.players.p1.graveyard, &card.id));
         assert!(!in_pile(&state.players.p1.hand, &card.id));
         assert_eq!(state.players.p1.resolving, Vec::<CardInstance>::new());
 
         // A cast is a play: free, counted, `cardPlayed` and the `summoned` of a card entering the field.
-        assert_eq!(pluck(&bench.events, GameEventType::CardPlayed, "costPaid"), vec![json!(0)]);
-        assert_eq!(pluck(&bench.events, GameEventType::Summoned, "instanceId"), vec![json!(card.id)]);
+        assert_eq!(
+            pluck(&bench.events, GameEventType::CardPlayed, "costPaid"),
+            vec![json!(0)]
+        );
+        assert_eq!(
+            pluck(&bench.events, GameEventType::Summoned, "instanceId"),
+            vec![json!(card.id)]
+        );
         assert_eq!(state.counters.played, before + 1);
         // Once, not twice: the Cry has one owner (R1, R117).
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 2);
@@ -489,7 +582,10 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 4);
         assert_eq!(events_of_type(&bench.events, GameEventType::CardPlayed).len(), 1);
         assert_eq!(
-            state.players.p1.units[0].as_ref().and_then(|pile| pile.first()).map(|held| held.id.clone()),
+            state.players.p1.units[0]
+                .as_ref()
+                .and_then(|pile| pile.first())
+                .map(|held| held.id.clone()),
             Some(card.id.clone())
         );
         assert!(!in_pile(&state.players.p1.graveyard, &card.id));
@@ -521,7 +617,12 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         // §11 does not rule on this corner — it is reported with this milestone, not decided here.
         let mut state = playing("r70-cast-permanent-full");
         for lane in 1..=UNIT_ZONES {
-            put(&mut state, &cast_unit().id, slot(PlayerId::P1, Row::Units, lane), Default::default());
+            put(
+                &mut state,
+                &cast_unit().id,
+                slot(PlayerId::P1, Row::Units, lane),
+                Default::default(),
+            );
         }
         let card = hand_card(&mut state, &cast_unit().id, PlayerId::P1);
 

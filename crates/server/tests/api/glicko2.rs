@@ -10,14 +10,20 @@
 //! Port of `apps/server/test/ranked/glicko2.test.ts` (part 18).
 
 use jackioh_server::config::{GLICKO_TAU, RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
-use jackioh_server::ranked::glicko2::{glicko2_period, rate_game, Glicko, RatedOpponent, Score, START_GLICKO};
+use jackioh_server::ranked::glicko2::{
+    Glicko, RatedOpponent, START_GLICKO, Score, glicko2_period, rate_game,
+};
 
 fn glicko(rating: f64, deviation: f64) -> Glicko {
     glicko_with(rating, deviation, 0.06)
 }
 
 fn glicko_with(rating: f64, deviation: f64, volatility: f64) -> Glicko {
-    Glicko { rating, deviation, volatility }
+    Glicko {
+        rating,
+        deviation,
+        volatility,
+    }
 }
 
 /// One game of a rating period: the opponent's rating before it, and the score against them.
@@ -72,10 +78,15 @@ mod r603_glicko_2_matches_glickmans_worked_example {
     use super::*;
 
     #[test]
-    fn r603_rates_1500_200_0_06_after_beating_1400_30_and_losing_to_1550_100_and_1700_300_as_the_paper_does() {
+    fn r603_rates_1500_200_0_06_after_beating_1400_30_and_losing_to_1550_100_and_1700_300_as_the_paper_does()
+    {
         let after = period(
             glicko(1500.0, 200.0),
-            &[game(glicko(1400.0, 30.0), 1.0), game(glicko(1550.0, 100.0), 0.0), game(glicko(1700.0, 300.0), 0.0)],
+            &[
+                game(glicko(1400.0, 30.0), 1.0),
+                game(glicko(1550.0, 100.0), 0.0),
+                game(glicko(1700.0, 300.0), 0.0),
+            ],
         );
         // The paper's printed results: r' = 1464.06, RD' = 151.52, σ' = 0.05999 (each rounded from
         // rounded intermediates, so compared at the paper's own last digit).
@@ -83,7 +94,10 @@ mod r603_glicko_2_matches_glickmans_worked_example {
         assert!((after.deviation - 151.52).abs() < 0.01);
         assert!((after.volatility - 0.05999).abs() < 0.00001);
         // REFERENCE, unrounded.
-        expect_reference(after, glicko_with(1464.050670819481, 151.516521926373, 0.05999598440084));
+        expect_reference(
+            after,
+            glicko_with(1464.050670819481, 151.516521926373, 0.05999598440084),
+        );
     }
 
     #[test]
@@ -111,9 +125,16 @@ mod r603_draws_count_as_half_a_win {
     fn r603_the_papers_player_drawing_all_three_games_reference() {
         let after = period(
             glicko(1500.0, 200.0),
-            &[game(glicko(1400.0, 30.0), 0.5), game(glicko(1550.0, 100.0), 0.5), game(glicko(1700.0, 300.0), 0.5)],
+            &[
+                game(glicko(1400.0, 30.0), 0.5),
+                game(glicko(1550.0, 100.0), 0.5),
+                game(glicko(1700.0, 300.0), 0.5),
+            ],
         );
-        expect_reference(after, glicko_with(1509.107200047628, 151.516520727744, 0.05999567822515));
+        expect_reference(
+            after,
+            glicko_with(1509.107200047628, 151.516520727744, 0.05999567822515),
+        );
     }
 
     #[test]
@@ -122,7 +143,10 @@ mod r603_draws_count_as_half_a_win {
         for side in [a, b] {
             assert_eq!(side.rating, float(RATING_START));
             expect_reference(
-                Glicko { rating: 1500.0, ..side },
+                Glicko {
+                    rating: 1500.0,
+                    ..side
+                },
                 glicko_with(1500.0, 290.318959913803, 0.05999896145086),
             );
         }
@@ -131,8 +155,14 @@ mod r603_draws_count_as_half_a_win {
     #[test]
     fn r603_a_draw_pulls_an_underdog_up_and_a_favourite_down_reference() {
         let (under, over) = rate(glicko(1400.0, 80.0), glicko(1600.0, 120.0), 0.5);
-        expect_reference(under, glicko_with(1408.306768783764, 79.272855907714, 0.05999850515082));
-        expect_reference(over, glicko_with(1581.089049161912, 115.693290645246, 0.05999851743814));
+        expect_reference(
+            under,
+            glicko_with(1408.306768783764, 79.272855907714, 0.05999850515082),
+        );
+        expect_reference(
+            over,
+            glicko_with(1581.089049161912, 115.693290645246, 0.05999851743814),
+        );
     }
 }
 
@@ -143,11 +173,17 @@ mod r603_one_rated_game_is_one_rating_period {
     fn r603_a_win_and_a_loss_between_new_players_are_mirror_images_reference() {
         let (winner, loser) = rate(START_GLICKO, START_GLICKO, 1.0);
         expect_reference(
-            Glicko { rating: winner.rating + 500.0, ..winner },
+            Glicko {
+                rating: winner.rating + 500.0,
+                ..winner
+            },
             glicko_with(1662.310895033019, 290.318962017920, 0.0599996753731),
         );
         expect_reference(
-            Glicko { rating: loser.rating + 500.0, ..loser },
+            Glicko {
+                rating: loser.rating + 500.0,
+                ..loser
+            },
             glicko_with(1337.689104966981, 290.318962017920, 0.0599996753731),
         );
     }
@@ -155,15 +191,24 @@ mod r603_one_rated_game_is_one_rating_period {
     #[test]
     fn r603_an_upset_moves_both_sides_by_their_own_deviations_each_from_the_others_rating_before_reference() {
         let (underdog, favourite) = rate(glicko(1350.0, 60.0), glicko(1720.0, 45.0), 1.0);
-        expect_reference(underdog, glicko_with(1368.629463000698, 60.547858911524, 0.06000902052519));
-        expect_reference(favourite, glicko_with(1709.330958947476, 46.03837643654, 0.06000892422778));
+        expect_reference(
+            underdog,
+            glicko_with(1368.629463000698, 60.547858911524, 0.06000902052519),
+        );
+        expect_reference(
+            favourite,
+            glicko_with(1709.330958947476, 46.03837643654, 0.06000892422778),
+        );
     }
 
     #[test]
     fn r603_a_result_far_from_the_expected_one_takes_the_other_branch_of_the_volatility_bracket_reference() {
         // Δ² > φ² + v here, so step 5 starts B at ln(Δ² − φ² − v) rather than stepping down from a.
         let after = period(glicko(1500.0, 50.0), &[game(glicko(2400.0, 30.0), 1.0)]);
-        expect_reference(after, glicko_with(1514.856410184712, 51.062871777297, 0.06001314423775));
+        expect_reference(
+            after,
+            glicko_with(1514.856410184712, 51.062871777297, 0.06001314423775),
+        );
     }
 
     #[test]
@@ -188,7 +233,11 @@ mod r603_one_rated_game_is_one_rating_period {
             }
         );
         assert_eq!(
-            [float(RATING_START), float(RATING_DEVIATION_START), RATING_VOLATILITY_START],
+            [
+                float(RATING_START),
+                float(RATING_DEVIATION_START),
+                RATING_VOLATILITY_START
+            ],
             [1000.0, 350.0, 0.06]
         );
     }

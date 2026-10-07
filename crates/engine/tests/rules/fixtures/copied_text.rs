@@ -122,7 +122,12 @@ pub static CT: LazyLock<CtDefs> = LazyLock::new(|| CtDefs {
     caster: def("caster", 5910, "Spell", json!({})),
     glow: def("glow", 5911, "Spell", json!({ "params": damage_params() })),
     counter: def("counter", 5912, "Trap", json!({})),
-    bigger: def("bigger", 5913, "Spell", json!({ "cost": { "base": 1, "embiggen": 3 } })),
+    bigger: def(
+        "bigger",
+        5913,
+        "Spell",
+        json!({ "cost": { "base": 1, "embiggen": 3 } }),
+    ),
     dummy: def(
         "dummy",
         5914,
@@ -194,7 +199,9 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
             CT.asker.id.clone(),
             both(Script {
                 cry: Some(hook(|_ctx| {
-                    vec![choose_target(json_as(json!({ "step": "hit", "scope": { "side": "enemy", "of": ["unit"] } })))]
+                    vec![choose_target(json_as(
+                        json!({ "step": "hit", "scope": { "side": "enemy", "of": ["unit"] } }),
+                    ))]
                 })),
                 resume: IndexMap::from([("hit", hook(|ctx| vec![to_chosen(param(&*ctx, "damage"))]))]),
                 ..Script::default()
@@ -216,7 +223,9 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
                 }],
                 cry: Some(hook(|ctx| {
                     if ctx.modes.first().map(String::as_str) == Some("heal") {
-                        vec![heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": 2 })))]
+                        vec![heal(json_as(
+                            json!({ "target": { "of": "selfHero" }, "amount": 2 }),
+                        ))]
                     } else {
                         vec![to_enemy_hero(2)]
                     }
@@ -262,7 +271,9 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
                 cry: Some(hook(|ctx| vec![to_chosen(param(&*ctx, "damage"))])),
                 condition_met: Some(condition_hook(|c| param(&c, "damage") >= 4)),
                 preview: Some(condition_hook(|c| {
-                    vec![json_as::<PreviewValue>(json!({ "label": "damage", "value": param(&c, "damage") }))]
+                    vec![json_as::<PreviewValue>(
+                        json!({ "label": "damage", "value": param(&c, "damage") }),
+                    )]
                 })),
                 ..Script::default()
             }),
@@ -287,7 +298,9 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         (
             CT.bigger.id.clone(),
             both(Script {
-                cry: Some(hook(|ctx| vec![to_enemy_hero(if ctx.embiggened { 5 } else { 1 })])),
+                cry: Some(hook(|ctx| {
+                    vec![to_enemy_hero(if ctx.embiggened { 5 } else { 1 })]
+                })),
                 ..Script::default()
             }),
         ),

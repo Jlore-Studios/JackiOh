@@ -5,7 +5,9 @@
 use indexmap::IndexMap;
 use jackioh_server::config::{RATING_DEVIATION_START, SEASON_RESET_DEVIATION_BOOST, SEASON_RESET_STRENGTH};
 use jackioh_server::ranked::glicko2::Glicko;
-use jackioh_server::ranked::season::{reset_glicko, season_id_of, soft_reset, ResetChange, ResetPlayer, ResetReport};
+use jackioh_server::ranked::season::{
+    ResetChange, ResetPlayer, ResetReport, reset_glicko, season_id_of, soft_reset,
+};
 
 /// A config number as `f64`, whichever numeric type `config.rs` gives it.
 fn float<T: Into<f64>>(value: T) -> f64 {
@@ -52,7 +54,10 @@ mod r609_a_season_per_minor_version {
     fn r609_refuses_a_version_it_cannot_read_rather_than_guessing_a_season() {
         for bad in ["core-1", "0.2.6", "v0", "", "v0.x.1"] {
             let refusal = refusal_of(bad);
-            assert!(refusal.contains("patch version"), "{bad:?} was refused with {refusal:?}");
+            assert!(
+                refusal.contains("patch version"),
+                "{bad:?} was refused with {refusal:?}"
+            );
         }
     }
 }
@@ -64,15 +69,27 @@ mod r609_the_soft_reset {
         vec![
             ResetPlayer {
                 profile_id: "c".to_string(),
-                glicko: Glicko { rating: 1400.0, deviation: 60.0, volatility: 0.059 },
+                glicko: Glicko {
+                    rating: 1400.0,
+                    deviation: 60.0,
+                    volatility: 0.059,
+                },
             },
             ResetPlayer {
                 profile_id: "a".to_string(),
-                glicko: Glicko { rating: 800.0, deviation: 200.0, volatility: 0.06 },
+                glicko: Glicko {
+                    rating: 800.0,
+                    deviation: 200.0,
+                    volatility: 0.06,
+                },
             },
             ResetPlayer {
                 profile_id: "b".to_string(),
-                glicko: Glicko { rating: 1100.0, deviation: 340.0, volatility: 0.061 },
+                glicko: Glicko {
+                    rating: 1100.0,
+                    deviation: 340.0,
+                    volatility: 0.061,
+                },
             },
         ]
     }
@@ -83,12 +100,24 @@ mod r609_the_soft_reset {
         let (changes, report) = reset(&players());
         assert!(close_to(report.mean, 1100.0, 9));
         assert_eq!(
-            changes.iter().map(|change| (change.profile_id.as_str(), change.after.rating)).collect::<Vec<_>>(),
+            changes
+                .iter()
+                .map(|change| (change.profile_id.as_str(), change.after.rating))
+                .collect::<Vec<_>>(),
             vec![("a", 950.0), ("b", 1100.0), ("c", 1250.0)]
         );
-        assert!(close_to(report.spread_after, report.spread_before * (1.0 - float(SEASON_RESET_STRENGTH)), 9));
+        assert!(close_to(
+            report.spread_after,
+            report.spread_before * (1.0 - float(SEASON_RESET_STRENGTH)),
+            9
+        ));
         assert_eq!(
-            [report.lowest_before, report.highest_before, report.lowest_after, report.highest_after],
+            [
+                report.lowest_before,
+                report.highest_before,
+                report.lowest_after,
+                report.highest_after
+            ],
             [800.0, 1400.0, 950.0, 1250.0]
         );
     }
@@ -96,11 +125,21 @@ mod r609_the_soft_reset {
     #[test]
     fn r609_widens_every_deviation_in_quadrature_never_past_a_new_players_and_keeps_volatility() {
         let (changes, report) = reset(&players());
-        let by_id: IndexMap<&str, &Glicko> =
-            changes.iter().map(|change| (change.profile_id.as_str(), &change.after)).collect();
+        let by_id: IndexMap<&str, &Glicko> = changes
+            .iter()
+            .map(|change| (change.profile_id.as_str(), &change.after))
+            .collect();
         let boost = float(SEASON_RESET_DEVIATION_BOOST);
-        assert!(close_to(by_id["c"].deviation, (60.0f64 * 60.0 + boost * boost).sqrt(), 9));
-        assert!(close_to(by_id["a"].deviation, (200.0f64 * 200.0 + boost * boost).sqrt(), 9));
+        assert!(close_to(
+            by_id["c"].deviation,
+            (60.0f64 * 60.0 + boost * boost).sqrt(),
+            9
+        ));
+        assert!(close_to(
+            by_id["a"].deviation,
+            (200.0f64 * 200.0 + boost * boost).sqrt(),
+            9
+        ));
         assert_eq!(by_id["b"].deviation, float(RATING_DEVIATION_START));
         for change in &changes {
             assert!(change.after.deviation >= change.before.deviation);

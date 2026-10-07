@@ -50,9 +50,15 @@ fn act(state: &GameState, body: ActionInput) -> GameState {
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|c| c.id.clone()).collect();
-    state = act(&state, input(json!({ "type": "mulligan", "keep": keep, "playerId": "p1" })));
+    state = act(
+        &state,
+        input(json!({ "type": "mulligan", "keep": keep, "playerId": "p1" })),
+    );
     let keep: Vec<String> = state.players.p2.hand.iter().map(|c| c.id.clone()).collect();
-    state = act(&state, input(json!({ "type": "mulligan", "keep": keep, "playerId": "p2" })));
+    state = act(
+        &state,
+        input(json!({ "type": "mulligan", "keep": keep, "playerId": "p2" })),
+    );
     // Turn 1 refreshes 1 mana (§2.3) and these tests play two 1-cost fixtures; §2.3 lets current mana
     // sit above max, which is the same thing #6 Mana Well does.
     state.players.p1.mana.current = 4;
@@ -73,7 +79,9 @@ fn live(state: &GameState, card: &CardInstance) -> CardInstance {
 fn play_into(state: &GameState, card: &CardInstance, lane: i32) -> GameState {
     act(
         state,
-        input(json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": lane }, "playerId": "p1" })),
+        input(
+            json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": lane }, "playerId": "p1" }),
+        ),
     )
 }
 
@@ -154,14 +162,26 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         let mut state = board("zone-order");
         set_library(&mut state, P1, &["fx-1", "fx-2", "fx-3"]);
 
-        assert_eq!(def_ids(&zone_cards(&state, P1, OffFieldZone::Library)), vec!["fx-1", "fx-2", "fx-3"]);
+        assert_eq!(
+            def_ids(&zone_cards(&state, P1, OffFieldZone::Library)),
+            vec!["fx-1", "fx-2", "fx-3"]
+        );
 
         // "Top" is whatever `drawOne` takes, which is what #30's top-down scan and #51's reveal mean.
-        let top = must(zone_cards(&state, P1, OffFieldZone::Library).first().cloned(), "a library card");
+        let top = must(
+            zone_cards(&state, P1, OffFieldZone::Library).first().cloned(),
+            "a library card",
+        );
         draw_one(&mut sink_for(&mut state), P1, None);
 
-        assert_eq!(ids(&zone_cards(&state, P1, OffFieldZone::Hand)), vec![top.id.clone()]);
-        assert_eq!(def_ids(&zone_cards(&state, P1, OffFieldZone::Library)), vec!["fx-2", "fx-3"]);
+        assert_eq!(
+            ids(&zone_cards(&state, P1, OffFieldZone::Hand)),
+            vec![top.id.clone()]
+        );
+        assert_eq!(
+            def_ids(&zone_cards(&state, P1, OffFieldZone::Library)),
+            vec!["fx-2", "fx-3"]
+        );
     }
 
     #[test]
@@ -183,7 +203,10 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         let mut now = live(&state, &unit);
         move_to_zone(&mut state, &mut now, OffFieldZone::Graveyard, Default::default());
         assert_eq!(zone_count(&state, P1, OffFieldZone::Graveyard), 1);
-        assert_eq!(ids(&zone_cards(&state, P1, OffFieldZone::Graveyard)), vec![unit.id.clone()]);
+        assert_eq!(
+            ids(&zone_cards(&state, P1, OffFieldZone::Graveyard)),
+            vec![unit.id.clone()]
+        );
 
         let mut now = live(&state, &unit);
         move_to_zone(&mut state, &mut now, OffFieldZone::Exile, Default::default());
@@ -199,14 +222,20 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
 
         assert_eq!(zone_count(&state, P1, OffFieldZone::Library), 3);
         assert_eq!(zone_count(&state, P2, OffFieldZone::Library), 1);
-        assert_eq!(def_ids(&zone_cards(&state, P2, OffFieldZone::Library)), vec!["fx-4"]);
+        assert_eq!(
+            def_ids(&zone_cards(&state, P2, OffFieldZone::Library)),
+            vec!["fx-4"]
+        );
     }
 
     #[test]
     fn zone_cards_hands_back_a_copy_so_a_script_cannot_push_into_or_empty_a_zone_through_it() {
         let mut state = board("zone-copy");
         let library = set_library(&mut state, P1, &["fx-1", "fx-2"]);
-        let stray = must(in_hand(&mut state, "fx-3", P1, 1).into_iter().next(), "a hand card");
+        let stray = must(
+            in_hand(&mut state, "fx-3", P1, 1).into_iter().next(),
+            "a hand card",
+        );
 
         let mut cards = zone_cards(&state, P1, OffFieldZone::Library);
         cards.push(stray.clone());
@@ -227,9 +256,18 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         assert_eq!(cards_played_this_turn(&state, P1), 0);
         assert_eq!(played_ids_this_turn(&state, P1), Vec::<String>::new());
 
-        let first = must(in_hand(&mut state, "fx-1", P1, 1).into_iter().next(), "a first card");
-        let second = must(in_hand(&mut state, "fx-2", P1, 1).into_iter().next(), "a second card");
-        let unplayed = must(in_hand(&mut state, "fx-3", P1, 1).into_iter().next(), "a third card");
+        let first = must(
+            in_hand(&mut state, "fx-1", P1, 1).into_iter().next(),
+            "a first card",
+        );
+        let second = must(
+            in_hand(&mut state, "fx-2", P1, 1).into_iter().next(),
+            "a second card",
+        );
+        let unplayed = must(
+            in_hand(&mut state, "fx-3", P1, 1).into_iter().next(),
+            "a third card",
+        );
 
         state = play_into(&state, &first, 1);
         // §10.5 step 4 counts the card as it is played, which is the fact #38 subtracts 1 from.
@@ -237,7 +275,10 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
 
         state = play_into(&state, &second, 2);
         assert_eq!(cards_played_this_turn(&state, P1), 2);
-        assert_eq!(played_ids_this_turn(&state, P1), vec![first.id.clone(), second.id.clone()]);
+        assert_eq!(
+            played_ids_this_turn(&state, P1),
+            vec![first.id.clone(), second.id.clone()]
+        );
 
         assert!(was_played_this_turn(&state, P1, CardOrId::Card(&first)));
         assert!(was_played_this_turn(&state, P1, CardOrId::Id(&second.id)));
@@ -270,12 +311,24 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
     #[test]
     fn played_earlier_counts_a_played_card_s_own_place_in_the_log_and_every_play_so_far_for_a_card_in_hand() {
         let mut state = playing("played-earlier");
-        let first = must(in_hand(&mut state, "fx-1", P1, 1).into_iter().next(), "a first card");
-        let second = must(in_hand(&mut state, "fx-2", P1, 1).into_iter().next(), "a second card");
-        let held = must(in_hand(&mut state, "fx-3", P1, 1).into_iter().next(), "a card kept in hand");
+        let first = must(
+            in_hand(&mut state, "fx-1", P1, 1).into_iter().next(),
+            "a first card",
+        );
+        let second = must(
+            in_hand(&mut state, "fx-2", P1, 1).into_iter().next(),
+            "a second card",
+        );
+        let held = must(
+            in_hand(&mut state, "fx-3", P1, 1).into_iter().next(),
+            "a card kept in hand",
+        );
 
         // Nothing played yet: a card in hand would be the first play.
-        assert_eq!(played_earlier(&state, P1, CardOrId::Card(&live(&state, &held))), 0);
+        assert_eq!(
+            played_earlier(&state, P1, CardOrId::Card(&live(&state, &held))),
+            0
+        );
 
         state = play_into(&state, &first, 1);
         state = play_into(&state, &second, 2);
@@ -295,8 +348,14 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
     #[test]
     fn played_earlier_counts_a_card_played_twice_this_turn_from_its_latest_play() {
         let mut state = playing("played-earlier-twice");
-        let twice = must(in_hand(&mut state, "fx-1", P1, 1).into_iter().next(), "the card played twice");
-        let other = must(in_hand(&mut state, "fx-2", P1, 1).into_iter().next(), "another card");
+        let twice = must(
+            in_hand(&mut state, "fx-1", P1, 1).into_iter().next(),
+            "the card played twice",
+        );
+        let other = must(
+            in_hand(&mut state, "fx-2", P1, 1).into_iter().next(),
+            "another card",
+        );
 
         state = play_into(&state, &twice, 1);
         state = play_into(&state, &other, 2);
@@ -318,7 +377,10 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         let mut state = playing("played-earlier-cast");
         // Stockpile draws 2, and the top of p1's library is Hinder, which casts on draw (§2.4).
         set_library(&mut state, P1, &["fx-hinder", "fx-5", "fx-6"]);
-        let stockpile = must(in_hand(&mut state, "fx-stockpile", P1, 1).into_iter().next(), "Stockpile");
+        let stockpile = must(
+            in_hand(&mut state, "fx-stockpile", P1, 1).into_iter().next(),
+            "Stockpile",
+        );
 
         state = act(
             &state,
@@ -340,8 +402,14 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
     fn r127_played_earlier_with_no_card_takes_the_latest_play_as_the_running_script_s_own() {
         let mut state = playing("played-earlier-null");
         assert_eq!(played_earlier(&state, P1, CardOrId::Nothing), 0);
-        let first = must(in_hand(&mut state, "fx-1", P1, 1).into_iter().next(), "a first card");
-        let second = must(in_hand(&mut state, "fx-2", P1, 1).into_iter().next(), "a second card");
+        let first = must(
+            in_hand(&mut state, "fx-1", P1, 1).into_iter().next(),
+            "a first card",
+        );
+        let second = must(
+            in_hand(&mut state, "fx-2", P1, 1).into_iter().next(),
+            "a second card",
+        );
         state = play_into(&state, &first, 1);
         assert_eq!(played_earlier(&state, P1, CardOrId::Nothing), 0);
         state = play_into(&state, &second, 2);
@@ -352,7 +420,10 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
     fn played_ids_this_turn_hands_back_a_copy_so_a_script_cannot_forge_a_play() {
         let mut state = playing("played-copy");
         let card = must(in_hand(&mut state, "fx-1", P1, 1).into_iter().next(), "a card");
-        let other = must(in_hand(&mut state, "fx-2", P1, 1).into_iter().next(), "another card");
+        let other = must(
+            in_hand(&mut state, "fx-2", P1, 1).into_iter().next(),
+            "another card",
+        );
         state = play_into(&state, &card, 1);
 
         let mut ids = played_ids_this_turn(&state, P1);
@@ -397,7 +468,10 @@ mod r361_r42_killer_of_the_unit_that_destroyed_a_card_as_its_death_hook_reads_it
         let dying = snapshot_of(&state, &victim);
         state_check(&mut sink_for(&mut state));
         assert_eq!(live(&state, &victim).zone.z(), ZoneName::Graveyard);
-        assert_eq!(killer_of(&state, Some(&dying)).map(|card| card.id.clone()), Some(killer.id.clone()));
+        assert_eq!(
+            killer_of(&state, Some(&dying)).map(|card| card.id.clone()),
+            Some(killer.id.clone())
+        );
     }
 
     #[test]
@@ -427,7 +501,12 @@ mod r361_r42_killer_of_the_unit_that_destroyed_a_card_as_its_death_hook_reads_it
 
         // Buried under a Stack pile, it is no longer acting on the field.
         let mut top = new_instance(&mut state, &plain.id, P2, Zone::Hand { player: P2 });
-        assert!(place_on_field(&mut state, &mut top, slot(P2, Row::Units, 2), json_as(json!({ "stack": true }))));
+        assert!(place_on_field(
+            &mut state,
+            &mut top,
+            slot(P2, Row::Units, 2),
+            json_as(json!({ "stack": true }))
+        ));
         assert!(killer_of(&state, Some(&dying)).is_none());
 
         // And in a graveyard it is gone for good.

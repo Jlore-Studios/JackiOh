@@ -13,11 +13,14 @@
 
 use jackioh_ai::{AiOptions, DecisionReason, action_key, candidate_actions, decide};
 use jackioh_engine::testkit::{
-    ActionBody, ActionType, ActivationCost, ActivationDecl, ActivationUses, CardDef, CardScripts, GameState, Script,
-    create_rng, effects, find_instance_mut, hook, json, json_as, register_catalog_as, register_scripts, subsystems,
+    ActionBody, ActionType, ActivationCost, ActivationDecl, ActivationUses, CardDef, CardScripts, GameState,
+    Script, create_rng, effects, find_instance_mut, hook, json, json_as, register_catalog_as,
+    register_scripts, subsystems,
 };
 
-use super::support::{AI, HUMAN, in_graveyard, is_legal, on_field, register_cards, run_puzzle, scenario, trace};
+use super::support::{
+    AI, HUMAN, in_graveyard, is_legal, on_field, register_cards, run_puzzle, scenario, trace,
+};
 
 const PUNISH: &str = "classic-020"; // Field Spell; Activate: deal 2 damage, or a discard, or a delayed destroy
 const TURTINATOR: &str = "classic-021"; // Unit 5/4; Activate ♾️: Tribute a Unit, deal its Attack to any target
@@ -56,7 +59,11 @@ fn pricey() -> Script {
             modes: vec![],
             can_activate: None,
             has: None,
-            run: hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]),
+            run: hook(|_ctx| {
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                ))]
+            }),
         }],
         ..Script::default()
     }
@@ -98,7 +105,7 @@ mod b3_2_activations_are_first_class_candidates {
 
     #[test]
     fn b3_2_candidate_actions_lists_activations_with_the_plays_round_robin_by_source_before_other_attacks_and_switches()
-    {
+     {
         install_pricey();
         // p1: Mr. Vanilla (1) in hand, Tempo Timmy on the field, The Power to Punish (free ability) in the
         // backrow. p2's Midrange Menace (9/9 Taunt) makes Timmy's only attack a losing one (the late tier).
@@ -110,19 +117,28 @@ mod b3_2_activations_are_first_class_candidates {
         let state = s.state();
         let candidates = candidate_actions(state, AI);
         for action in &candidates {
-            assert!(is_legal(state, AI, action), "{}", serde_json::to_string(action).unwrap());
+            assert!(
+                is_legal(state, AI, action),
+                "{}",
+                serde_json::to_string(action).unwrap()
+            );
         }
 
         let first_activate = index_where(&candidates, |action| action.action_type() == ActionType::Activate);
         let first_attack = index_where(&candidates, |action| action.action_type() == ActionType::Attack);
-        let first_switch = index_where(&candidates, |action| action.action_type() == ActionType::SwitchPosition);
+        let first_switch = index_where(&candidates, |action| {
+            action.action_type() == ActionType::SwitchPosition
+        });
         assert!(first_activate >= 0);
         assert!(first_attack > first_activate);
         assert!(first_switch > first_activate);
 
         // Round-robin: Mr. Vanilla's first lane, Punish's first choice, Mr. Vanilla's second lane, …
         let types: Vec<ActionType> = candidates.iter().take(3).map(ActionBody::action_type).collect();
-        assert_eq!(types, vec![ActionType::Play, ActionType::Activate, ActionType::Play]);
+        assert_eq!(
+            types,
+            vec![ActionType::Play, ActionType::Activate, ActionType::Play]
+        );
         // Every activation sits in the plays' tier: none after the first attack or switch.
         let last_activate = candidates
             .iter()
@@ -152,7 +168,14 @@ mod b3_2_activations_are_first_class_candidates {
 
         let candidates = candidate_actions(s.state(), AI);
         let sources: Vec<Option<String>> = (0..3).map(|at| source_of(candidates.get(at))).collect();
-        assert_eq!(sources, vec![Some(pricey.id.clone()), Some(vanilla.id.clone()), Some(punish.id.clone())]);
+        assert_eq!(
+            sources,
+            vec![
+                Some(pricey.id.clone()),
+                Some(vanilla.id.clone()),
+                Some(punish.id.clone())
+            ]
+        );
     }
 
     #[test]
@@ -192,16 +215,21 @@ mod b3_2_activations_are_first_class_candidates {
             "p1": { "field": [TURTINATOR, TURTINATOR] },
             "p2": { "field": ["core-019"], "health": 5, "hand": ["core-005"] },
         }));
-        let decision = decide(s.state(), AI, &mut AiOptions::new(create_rng("activate-lethal", 0)));
+        let decision = decide(
+            s.state(),
+            AI,
+            &mut AiOptions::new(create_rng("activate-lethal", 0)),
+        );
         assert_eq!(decision.as_ref().map(|d| d.reason), Some(DecisionReason::Lethal));
         assert_eq!(
             decision.as_ref().map(|d| d.action.action_type()),
             Some(ActionType::Activate)
         );
         assert_eq!(
-            decision
-                .as_ref()
-                .map(|d| d.line.iter().any(|action| action.action_type() == ActionType::Attack)),
+            decision.as_ref().map(|d| d
+                .line
+                .iter()
+                .any(|action| action.action_type() == ActionType::Attack)),
             Some(false)
         );
 
@@ -222,7 +250,7 @@ mod b3_2_activations_are_first_class_candidates {
 
     #[test]
     fn b3_2_an_activate_infinite_ability_is_used_again_in_the_same_turn_while_each_use_is_good_and_the_turn_still_ends()
-    {
+     {
         install_pricey();
         // Two Pointmasters (7/1, First Strike) face Turtinator, Gary the Gambler and Jewelosco Scarab
         // (both 1/1). A 1/1 attacking a Pointmaster dies to First Strike first; tributing it to
@@ -305,7 +333,11 @@ mod b3_2_rule_10_heroic_powers_power_is_an_activate_the_ai_decides_like_any_othe
         let sources: Vec<Option<String>> = (0..3).map(|at| source_of(candidates.get(at))).collect();
         assert_eq!(
             sources,
-            vec![Some(reno.id.clone()), Some(power.id.clone()), Some(reno.id.clone())]
+            vec![
+                Some(reno.id.clone()),
+                Some(power.id.clone()),
+                Some(reno.id.clone())
+            ]
         );
         assert_eq!(action_key(&candidates[1]), action_key(&shot));
         // R752: the alias is no longer listed; the power is the card's Activate ability.

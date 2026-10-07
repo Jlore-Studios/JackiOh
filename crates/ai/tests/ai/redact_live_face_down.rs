@@ -18,12 +18,21 @@ fn det(public: &GameState, seat: PlayerId, rng: &mut Rng) -> GameState {
 
 /// TS's `{ rng: createRng(seed) }`: the AI's own stream at AI_BUDGET, with no clock.
 fn ai_options(seed: &str) -> AiOptions<'static> {
-    AiOptions { rng: create_rng(seed, 0), budget: AI_BUDGET, should_stop: None }
+    AiOptions {
+        rng: create_rng(seed, 0),
+        budget: AI_BUDGET,
+        should_stop: None,
+    }
 }
 
 /// The card at the bottom of every unit pile of `player`'s (TS `pile[pile.length - 1]`).
 fn pile_bottoms(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
-    state.players[player].units.iter().flatten().filter_map(|pile| pile.last().cloned()).collect()
+    state.players[player]
+        .units
+        .iter()
+        .flatten()
+        .filter_map(|pile| pile.last().cloned())
+        .collect()
 }
 
 /// p1 (the AI) swings into p2, whose face-down Siphon Squad sets p1's units' Attack to 0 (Radiant).
@@ -48,9 +57,18 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
     fn r602_r403_redact_keeps_each_units_shown_attack_and_health_and_still_hides_the_card() {
         for radiant in [false, true] {
             let state = siphoned(radiant);
-            let trap = state.players[HUMAN].backrow.iter().flatten().next().cloned().expect("a face-down trap");
+            let trap = state.players[HUMAN]
+                .backrow
+                .iter()
+                .flatten()
+                .next()
+                .cloned()
+                .expect("a face-down trap");
             let seen = redact(&state, AI);
-            assert_eq!(card_by_id(&seen, &trap.id).map(|card| card.def_id.clone()), Some(HIDDEN_DEF_ID.to_string()));
+            assert_eq!(
+                card_by_id(&seen, &trap.id).map(|card| card.def_id.clone()),
+                Some(HIDDEN_DEF_ID.to_string())
+            );
             for unit in pile_bottoms(&state, AI) {
                 let truth = unit_view(&state, &unit);
                 let seen_unit = card_by_id(&seen, &unit.id).cloned().expect("the unit is public");
@@ -79,7 +97,11 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
         assert!(!legal.iter().any(|key| key.contains("\"attack\"")));
         let seen = redact(&state, AI);
         for k in 0..8 {
-            let world = det(&seen, AI, &mut create_rng(&format!("redact-live-face-down:{k}"), 0));
+            let world = det(
+                &seen,
+                AI,
+                &mut create_rng(&format!("redact-live-face-down:{k}"), 0),
+            );
             for candidate in candidate_actions(&world, AI) {
                 let key = action_key(&candidate);
                 assert!(legal.contains(&key), "{key}");
@@ -127,16 +149,33 @@ mod r602_a_determinization_agrees_with_the_board_it_was_dealt_from {
         let scripts = registered_scripts();
         let auras: Vec<String> = trap_pool()
             .into_iter()
-            .filter(|id| scripts.get(id).is_some_and(|card| card.base.aura.is_some() || card.radiant.aura.is_some()))
+            .filter(|id| {
+                scripts
+                    .get(id)
+                    .is_some_and(|card| card.base.aura.is_some() || card.radiant.aura.is_some())
+            })
             .collect();
-        assert!(auras.contains(&"classic-088".to_string()), "the pool has a live-aura trap to rule out");
+        assert!(
+            auras.contains(&"classic-088".to_string()),
+            "the pool has a live-aura trap to rule out"
+        );
 
         let seen = redact(&state, AI);
         let truth = shown_by(&state);
         let mut picked: IndexSet<String> = IndexSet::new();
         for k in 0..300 {
-            let world = det(&seen, AI, &mut create_rng(&format!("determinize-live-face-down:{k}"), 0));
-            let hidden = world.players[HUMAN].backrow.iter().flatten().next().cloned().expect("the hidden trap");
+            let world = det(
+                &seen,
+                AI,
+                &mut create_rng(&format!("determinize-live-face-down:{k}"), 0),
+            );
+            let hidden = world.players[HUMAN]
+                .backrow
+                .iter()
+                .flatten()
+                .next()
+                .cloned()
+                .expect("the hidden trap");
             picked.insert(hidden.def_id.clone());
             assert_eq!(shown_by(&world), truth, "seed {k}, {}", hidden.def_id);
         }

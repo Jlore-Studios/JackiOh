@@ -37,13 +37,32 @@ fn buried_def(state: &GameState, player: PlayerId) -> Option<String> {
 /// p2 sets `trap_def` in backrow lane 1 and tops it with a public Field Spell (a Stack card would).
 fn pile_game(seed: &str, trap_def: &str) -> (GameState, String, String) {
     let mut state = dealt_game(seed);
-    let slot = ZoneSlot { player: PlayerId::P2, row: Row::Backrow, lane: 1 };
-    let mut trap = new_instance(&mut state, trap_def, PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
+    let slot = ZoneSlot {
+        player: PlayerId::P2,
+        row: Row::Backrow,
+        lane: 1,
+    };
+    let mut trap = new_instance(
+        &mut state,
+        trap_def,
+        PlayerId::P2,
+        Zone::Hand { player: PlayerId::P2 },
+    );
     if !place_on_field(&mut state, &mut trap, slot, PlaceOnFieldOptions::default()) {
         panic!("no zone");
     }
-    let mut top = new_instance(&mut state, &field_spell(), PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
-    if !place_on_field(&mut state, &mut top, slot, PlaceOnFieldOptions { stack: Some(true) }) {
+    let mut top = new_instance(
+        &mut state,
+        &field_spell(),
+        PlayerId::P2,
+        Zone::Hand { player: PlayerId::P2 },
+    );
+    if !place_on_field(
+        &mut state,
+        &mut top,
+        slot,
+        PlaceOnFieldOptions { stack: Some(true) },
+    ) {
         panic!("no stack");
     }
     (state, trap.id.clone(), top.id.clone())
@@ -54,7 +73,8 @@ mod r447_the_ais_seat_and_a_backrow_pile {
 
     /// R447 a face-down trap under the opponent's pile is hidden, placeholdered and resampled from the trap pool
     #[test]
-    fn r447_a_face_down_trap_under_the_opponents_pile_is_hidden_placeholdered_and_resampled_from_the_trap_pool() {
+    fn r447_a_face_down_trap_under_the_opponents_pile_is_hidden_placeholdered_and_resampled_from_the_trap_pool()
+     {
         let traps = trap_pool();
         let first = traps.first().cloned().unwrap_or_default();
         let (state, trap, top) = pile_game("ai-backrow-pile", &first);
@@ -65,7 +85,11 @@ mod r447_the_ais_seat_and_a_backrow_pile {
         let seen = redact(&state, PlayerId::P1);
         assert_eq!(buried_def(&seen, PlayerId::P2), Some(HIDDEN_DEF_ID.to_string()));
         assert_eq!(
-            seen.players[PlayerId::P2].backrow.first().and_then(|card| card.as_ref()).map(|card| card.def_id.clone()),
+            seen.players[PlayerId::P2]
+                .backrow
+                .first()
+                .and_then(|card| card.as_ref())
+                .map(|card| card.def_id.clone()),
             Some(field_spell())
         );
 
@@ -84,6 +108,9 @@ mod r447_the_ais_seat_and_a_backrow_pile {
         let first = trap_pool().first().cloned().unwrap_or_default();
         let (state, trap, _) = pile_game("ai-backrow-pile-own", &first);
         assert!(!hidden_instance_ids(&state, PlayerId::P2).contains(&trap));
-        assert_eq!(buried_def(&redact(&state, PlayerId::P2), PlayerId::P2), trap_pool().first().cloned());
+        assert_eq!(
+            buried_def(&redact(&state, PlayerId::P2), PlayerId::P2),
+            trap_pool().first().cloned()
+        );
     }
 }

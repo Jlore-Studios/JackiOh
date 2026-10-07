@@ -23,9 +23,9 @@
 //! owned copies here, read back from the state by id after every step and written through
 //! `find_instance_mut`.
 
+use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::effects::bounce;
 use jackioh_engine::testkit::*;
-use jackioh_engine::PlayerId::{P1, P2};
 
 const VANILLA: &str = "core-008";
 const STOCKPILE: &str = "core-005";
@@ -66,7 +66,10 @@ fn at_p2() -> Value {
 
 /// `[...head, ...fillers]` for a setup's hand.
 fn with_fillers(head: &[&'static str], count: usize) -> Vec<&'static str> {
-    head.iter().copied().chain(std::iter::repeat_n(VANILLA, count)).collect()
+    head.iter()
+        .copied()
+        .chain(std::iter::repeat_n(VANILLA, count))
+        .collect()
 }
 
 mod r4_a_card_a_full_hand_burns_keeps_its_cost_without_the_price_of_a_return_it_never_made {
@@ -94,7 +97,8 @@ mod r4_a_card_a_full_hand_burns_keeps_its_cost_without_the_price_of_a_return_it_
     }
 
     #[test]
-    fn r4_r62_r78_radiant_gravediggers_start_of_turn_pick_that_a_full_hand_burns_stays_at_its_cost_without_the_1_less_8_37() {
+    fn r4_r62_r78_radiant_gravediggers_start_of_turn_pick_that_a_full_hand_burns_stays_at_its_cost_without_the_1_less_8_37()
+     {
         let fillers: Vec<&str> = vec![VANILLA; 10];
         let mut g = scenario(json!({
             "p1": {
@@ -110,7 +114,10 @@ mod r4_a_card_a_full_hand_burns_keeps_its_cost_without_the_price_of_a_return_it_
 
         g.end_turn(); // p2's turn
         g.end_turn(); // p1's start of turn: the Discover opens before the draw (R62)
-        assert_eq!(g.state().pending.as_ref().map(|pending| pending.player_id), Some(P1));
+        assert_eq!(
+            g.state().pending.as_ref().map(|pending| pending.player_id),
+            Some(P1)
+        );
         g.answer(json!(seven.id));
 
         g.expect_in_zone(&seven.id, "graveyard");
@@ -122,7 +129,8 @@ mod r155_the_end_of_turn_return_belongs_to_the_landing_the_spells_own_play_made 
     use super::*;
 
     #[test]
-    fn r155_r153_reoccurring_dream_played_taken_back_to_hand_and_then_discarded_into_the_graveyard_the_same_turn_does_not_return_at_end_of_turn_5_1() {
+    fn r155_r153_reoccurring_dream_played_taken_back_to_hand_and_then_discarded_into_the_graveyard_the_same_turn_does_not_return_at_end_of_turn_5_1()
+     {
         let mut g = scenario(json!({
             "p1": {
                 "hand": [DREAM, REMINISCE, FIELD_OF_DREAMS, VANILLA],
@@ -153,7 +161,8 @@ mod r215_a_hand_card_that_reaches_a_graveyard_is_the_printed_card_again {
     use super::*;
 
     #[test]
-    fn r215_r78_a_corpse_eater_that_fed_in_hand_was_discarded_by_zao_gao_and_came_back_by_reminisce_is_a_fresh_2_2_8_89() {
+    fn r215_r78_a_corpse_eater_that_fed_in_hand_was_discarded_by_zao_gao_and_came_back_by_reminisce_is_a_fresh_2_2_8_89()
+     {
         let mut g = scenario(json!({
             "p1": {
                 // Zao Gao's discard is random (R354), so the hand it discards from is the Eater and one
@@ -208,7 +217,11 @@ mod r215_a_hand_card_that_reaches_a_graveyard_is_the_printed_card_again {
             let Some(pending) = g.state().pending.as_ref() else {
                 break;
             };
-            let key = pending.options.first().map(|option| option.key.clone()).unwrap_or_default();
+            let key = pending
+                .options
+                .first()
+                .map(|option| option.key.clone())
+                .unwrap_or_default();
             g.answer(json!(key));
             i += 1;
         }
@@ -231,7 +244,8 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
     use super::*;
 
     #[test]
-    fn r215_r28_r87_a_call_to_chaos_cast_at_the_end_of_a_chain_taken_back_from_the_graveyard_and_played_starts_a_chain_of_its_own() {
+    fn r215_r28_r87_a_call_to_chaos_cast_at_the_end_of_a_chain_taken_back_from_the_graveyard_and_played_starts_a_chain_of_its_own()
+     {
         // The played #95 stands in for the 19th link of a chain, which is how 095's own tests pin R28's
         // counter. Its roll casts the 20th link, which R87 sends to the graveyard as it resolves, and
         // #72 Reminisce takes that card back. Played from hand, it is a new play, so a new chain from
@@ -239,11 +253,14 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
         // nothing. Hearthstone likewise returns a card from the graveyard without what its last trip
         // left on it.
         let seed = "inv-r5-chaos-chain";
-        let mut s = scenario(json!({ "seed": seed, "p1": { "hand": [CHAOS, REMINISCE, MENACE], "mana": 20 }, "p2": { "hand": [MENACE] } }));
+        let mut s = scenario(
+            json!({ "seed": seed, "p1": { "hand": [CHAOS, REMINISCE, MENACE], "mana": 20 }, "p2": { "hand": [MENACE] } }),
+        );
         let chaos = s.card(CHAOS).id.clone();
-        s.card_mut(&chaos)
-            .memory
-            .insert(subsystems::CHAOS_CHAIN_KEY.to_string(), json!(CALL_TO_CHAOS_CHAIN_CAP - 1));
+        s.card_mut(&chaos).memory.insert(
+            subsystems::CHAOS_CHAIN_KEY.to_string(),
+            json!(CALL_TO_CHAOS_CHAIN_CAP - 1),
+        );
         s.state_mut().rng_cursor = chaos_cursor(seed, "recast");
         s.play(CHAOS, json!({}));
 
@@ -251,7 +268,9 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
             .events()
             .iter()
             .filter_map(|event| match event {
-                GameEvent::CardPlayed { instance_id, def_id, .. } if def_id == CHAOS => Some(instance_id.clone()),
+                GameEvent::CardPlayed {
+                    instance_id, def_id, ..
+                } if def_id == CHAOS => Some(instance_id.clone()),
                 _ => None,
             })
             .collect();
@@ -262,7 +281,12 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
         };
         s.expect_in_zone(&last_link, "graveyard");
         // It landed as the printed card: the chain's count stayed with the chain.
-        assert!(s.card(&last_link).memory.get(subsystems::CHAOS_CHAIN_KEY).is_none());
+        assert!(
+            s.card(&last_link)
+                .memory
+                .get(subsystems::CHAOS_CHAIN_KEY)
+                .is_none()
+        );
 
         s.play(REMINISCE, json!({}));
         s.answer(json!(last_link));
@@ -311,7 +335,13 @@ fn fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script, stats: O
     }));
     s.state_mut().transient_defs.insert(id.to_string(), def);
     let mut scripts = registered_scripts().clone();
-    scripts.insert(id.to_string(), CardScripts { base: script.clone(), radiant: script });
+    scripts.insert(
+        id.to_string(),
+        CardScripts {
+            base: script.clone(),
+            radiant: script,
+        },
+    );
     register_scripts(scripts);
 }
 
@@ -319,7 +349,8 @@ mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {
     use super::*;
 
     #[test]
-    fn r155_r70_a_return_spell_cast_on_the_opponents_turn_does_not_come_back_at_the_end_of_its_casters_next_turn_5_1_6_2() {
+    fn r155_r70_a_return_spell_cast_on_the_opponents_turn_does_not_come_back_at_the_end_of_its_casters_next_turn_5_1_6_2()
+     {
         // At p2's start of turn p2's #9 Moths to the Flame (worn to 4 health) makes p1's Prem Panther
         // (5/4) attack it: the Panther kills it and survives, so p1 draws 2 on p2's turn (R426). The top
         // card is a cast-on-draw Spell carrying #23 Reoccurring Dream's "End of turn: returns from the GY
@@ -337,7 +368,11 @@ mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {
                 static_flags: Some(json_as(json!({ "castOnDraw": true }))),
                 cry: Some(hook(|_ctx| vec![])),
                 end_of_turn: Some(hook(|ctx| {
-                    if ctx.self_.as_ref().is_some_and(|me| me.return_to_hand_at_end_of_turn == Some(true)) {
+                    if ctx
+                        .self_
+                        .as_ref()
+                        .is_some_and(|me| me.return_to_hand_at_end_of_turn == Some(true))
+                    {
                         vec![bounce(json_as(json!({ "target": { "of": "self" } })))]
                     } else {
                         vec![]
@@ -347,16 +382,20 @@ mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {
             },
             None,
         );
-        let cod = new_instance(s.state_mut(), "edge-r7-dream-cod", P1, Zone::Library { player: P1 });
+        let cod = new_instance(
+            s.state_mut(),
+            "edge-r7-dream-cod",
+            P1,
+            Zone::Library { player: P1 },
+        );
         s.state_mut().players.p1.library.insert(0, cod.clone());
 
         s.end_turn();
         assert_eq!(s.state().active, P2);
         // The cast happened on p2's turn, and the Spell landed in p1's graveyard (§10.5 step 7).
-        assert!(s
-            .events()
-            .iter()
-            .any(|event| matches!(event, GameEvent::CardPlayed { instance_id, .. } if *instance_id == cod.id)));
+        assert!(s.events().iter().any(
+            |event| matches!(event, GameEvent::CardPlayed { instance_id, .. } if *instance_id == cod.id)
+        ));
         s.expect_in_zone(&cod.id, "graveyard");
 
         // p2's turn ends. §5.1: the Spell returns "at the end of that turn", and R155's cleanup clears
@@ -376,10 +415,15 @@ mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {
         // p1's own next turn ends: a Spell p1 did not play on this turn does not come back now.
         s.end_turn();
         let returned = s.last_events().iter().any(|event| match event {
-            GameEvent::Bounced { instance_id, .. } | GameEvent::AddedToHand { instance_id, .. } => *instance_id == cod.id,
+            GameEvent::Bounced { instance_id, .. } | GameEvent::AddedToHand { instance_id, .. } => {
+                *instance_id == cod.id
+            }
             _ => false,
         });
-        assert!(!returned, "the Spell came back at the end of a turn it was not played on");
+        assert!(
+            !returned,
+            "the Spell came back at the end of a turn it was not played on"
+        );
     }
 }
 
@@ -387,7 +431,8 @@ mod r215_10_3_a_price_given_as_a_card_reaches_a_hand_is_announced {
     use super::*;
 
     #[test]
-    fn r215_radiant_52s_bounce_at_cost_0_emits_costchanged_for_the_card_it_prices_as_31s_1_and_72rs_0_do_10_3() {
+    fn r215_radiant_52s_bounce_at_cost_0_emits_costchanged_for_the_card_it_prices_as_31s_1_and_72rs_0_do_10_3()
+     {
         let silas = "core-052";
         let mut s = scenario(json!({
             "p1": { "hand": [silas], "field": [{ "def": RENO, "lane": 5 }] },
@@ -406,14 +451,17 @@ mod r215_10_3_a_price_given_as_a_card_reaches_a_hand_is_announced {
         assert_eq!(s.card(&reno).cost_override, Some(0));
         // Reno's price in its owner's hand went from its printed 3 to 0, a visible change (§10.3), which
         // is announced once the card has landed, as #31's +1 and #72r's 0 are.
-        let bounced = s
-            .last_events()
-            .iter()
-            .position(|event| matches!(event, GameEvent::Bounced { instance_id, .. } if *instance_id == reno));
+        let bounced = s.last_events().iter().position(
+            |event| matches!(event, GameEvent::Bounced { instance_id, .. } if *instance_id == reno),
+        );
         let Some(bounced) = bounced else {
             panic!("no bounced event for {reno}");
         };
-        let announced = GameEvent::CostChanged { instance_id: reno.clone(), cost: 0, hidden_from: None };
+        let announced = GameEvent::CostChanged {
+            instance_id: reno.clone(),
+            cost: 0,
+            hidden_from: None,
+        };
         assert!(s.last_events()[bounced..].contains(&announced));
     }
 }

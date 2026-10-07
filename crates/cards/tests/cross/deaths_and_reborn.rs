@@ -21,9 +21,9 @@
 //! are owned copies here, read back from the state by id (`g.card(&id)`) after every step and written
 //! through `find_instance_mut`.
 
+use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::effects::{damage, destroy, draw, exile_matching};
 use jackioh_engine::testkit::*;
-use jackioh_engine::PlayerId::{P1, P2};
 
 const BIG_D: &str = "core-001";
 const STOCKPILE: &str = "core-005";
@@ -78,7 +78,12 @@ struct Died {
 
 fn destroyed_of(g: &Scenario, card: &CardInstance) -> Died {
     let found = g.events().iter().find_map(|event| match event {
-        GameEvent::Destroyed { instance_id, attack, max_health, .. } if *instance_id == card.id => Some(Died {
+        GameEvent::Destroyed {
+            instance_id,
+            attack,
+            max_health,
+            ..
+        } if *instance_id == card.id => Some(Died {
             attack: *attack,
             max_health: *max_health,
         }),
@@ -126,7 +131,8 @@ mod r89_4_5_step_1_collects_at_once_so_every_unit_dies_as_it_stood {
     }
 
     #[test]
-    fn r89_r38_felinor_fiender_dying_with_a_felinor_beside_it_dies_with_that_felinors_stats_in_its_own_10_4_layer_2() {
+    fn r89_r38_felinor_fiender_dying_with_a_felinor_beside_it_dies_with_that_felinors_stats_in_its_own_10_4_layer_2()
+     {
         let mut g = scenario(json!({
             "p1": { "hand": [{ "def": HIT_JOB, "radiant": true }, CORPSE_EATER, HINDER], "library": LIBRARY },
             "p2": { "hand": [HINDER], "field": [{ "def": BIG_FELINOR, "lane": 1 }, { "def": FIENDER, "lane": 2 }], "library": LIBRARY },
@@ -146,7 +152,13 @@ mod r89_4_5_step_1_collects_at_once_so_every_unit_dies_as_it_stood {
         assert_eq!(died.attack, 8);
         assert_eq!(died.max_health, 17);
         // Big Felinor's 3/10 plus the Fiender's 8/17.
-        assert_eq!(g.card(CORPSE_EATER).buffs, AttackHealth { attack: 11, health: 27 });
+        assert_eq!(
+            g.card(CORPSE_EATER).buffs,
+            AttackHealth {
+                attack: 11,
+                health: 27
+            }
+        );
     }
 }
 
@@ -173,7 +185,11 @@ mod r42_the_killer_is_the_hit_that_took_the_unit_to_0 {
 
         s.expect_in_zone(&dfender.id, "graveyard");
         let destroyed = s.last_events().iter().find_map(|event| match event {
-            GameEvent::Destroyed { instance_id, killer_id, .. } if *instance_id == dfender.id => Some(killer_id.clone()),
+            GameEvent::Destroyed {
+                instance_id,
+                killer_id,
+                ..
+            } if *instance_id == dfender.id => Some(killer_id.clone()),
             _ => None,
         });
         // toMatchObject({ killerId: null }): the event is there, and names no killer.
@@ -211,7 +227,8 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
     }
 
     #[test]
-    fn r174_r83_a_gravedigger_that_dies_to_cleave_during_moths_run_and_comes_back_takes_no_card_from_its_start_of_turn_hook() {
+    fn r174_r83_a_gravedigger_that_dies_to_cleave_during_moths_run_and_comes_back_takes_no_card_from_its_start_of_turn_hook()
+     {
         let mut g = scenario(json!({
             "seed": REBORN_SEED_DIGGER,
             "p1": {
@@ -235,7 +252,11 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
         g.expect_in_zone(&digger.id, "field");
         // The body entered after the turn started (R83), so the start of turn was not its to answer:
         // nothing leaves p1's graveyard.
-        let mut left: Vec<String> = g.pile(P1, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+        let mut left: Vec<String> = g
+            .pile(P1, "graveyard")
+            .iter()
+            .map(|card| card.def_id.clone())
+            .collect();
         left.sort();
         let mut expected = vec![SURGERY.to_string(), VANILLA.to_string()];
         expected.sort();
@@ -243,7 +264,8 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
     }
 
     #[test]
-    fn r174_r76_a_delayed_steal_whose_target_died_and_came_back_through_reborn_during_an_earlier_delayed_effect_fizzles() {
+    fn r174_r76_a_delayed_steal_whose_target_died_and_came_back_through_reborn_during_an_earlier_delayed_effect_fizzles()
+     {
         // p1 plays two K-Pop Fanatics on turn 9: A on p2's Big Felinor, then B on p2's Felinor Fiender,
         // which has Reborn and 10 damage and stands at 8/17 only because Big Felinor feeds its stats
         // (§8 #92, R116). At p1's next start of turn A steals Big Felinor first (R68's creation order),
@@ -262,17 +284,31 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
         }));
         let fiender = unit_at(&g, P2, 1);
         let felinor = unit_at(&g, P2, 2);
-        if let Some(card) = g.state_mut().players.p2.units[0].as_mut().and_then(|pile| pile.first_mut()) {
+        if let Some(card) = g.state_mut().players.p2.units[0]
+            .as_mut()
+            .and_then(|pile| pile.first_mut())
+        {
             card.granted_keywords.push(Keyword::Reborn);
         }
         assert_eq!(g.stats(&fiender.id).health, 7);
 
-        let kpops: Vec<CardInstance> = g.hand(P1).iter().filter(|card| card.def_id == KPOP).cloned().collect();
+        let kpops: Vec<CardInstance> = g
+            .hand(P1)
+            .iter()
+            .filter(|card| card.def_id == KPOP)
+            .cloned()
+            .collect();
         let (Some(kpop_a), Some(kpop_b)) = (kpops.first(), kpops.get(1)) else {
             panic!("setup: two K-Pop Fanatics in hand");
         };
-        g.play(&kpop_a.id, json!({ "targets": [{ "pick": "instance", "instanceId": felinor.id }] }));
-        g.play(&kpop_b.id, json!({ "targets": [{ "pick": "instance", "instanceId": fiender.id }] }));
+        g.play(
+            &kpop_a.id,
+            json!({ "targets": [{ "pick": "instance", "instanceId": felinor.id }] }),
+        );
+        g.play(
+            &kpop_b.id,
+            json!({ "targets": [{ "pick": "instance", "instanceId": fiender.id }] }),
+        );
         g.end_turn();
         assert_eq!(g.state().active, P2);
         g.end_turn();
@@ -324,13 +360,24 @@ fn fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script, stats: O
     }));
     s.state_mut().transient_defs.insert(id.to_string(), def);
     let mut scripts = registered_scripts().clone();
-    scripts.insert(id.to_string(), CardScripts { base: script.clone(), radiant: script });
+    scripts.insert(
+        id.to_string(),
+        CardScripts {
+            base: script.clone(),
+            radiant: script,
+        },
+    );
     register_scripts(scripts);
 }
 
 fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lane: i32) -> CardInstance {
     let mut card = new_instance(s.state_mut(), def_id, player, Zone::Hand { player });
-    if !place_on_field(s.state_mut(), &mut card, ZoneSlot { player, row, lane }, Default::default()) {
+    if !place_on_field(
+        s.state_mut(),
+        &mut card,
+        ZoneSlot { player, row, lane },
+        Default::default(),
+    ) {
         panic!("could not place {def_id}");
     }
     let turn = s.state().turn;
@@ -356,7 +403,10 @@ fn piles_holding(state: &GameState, id: &str) -> Vec<String> {
             }
         }
         for (at, pile) in side.units.iter().enumerate() {
-            if pile.as_ref().is_some_and(|pile| pile.iter().any(|card| card.id == id)) {
+            if pile
+                .as_ref()
+                .is_some_and(|pile| pile.iter().any(|card| card.id == id))
+            {
                 out.push(format!("{player}.units.{}", at + 1));
             }
         }
@@ -373,7 +423,8 @@ mod section_4_5_step_4_10_1_reborn_never_leaves_one_card_in_two_zones {
     use super::*;
 
     #[test]
-    fn r78_r127_4_5_a_reborn_unit_a_death_hook_exiled_out_of_the_graveyard_is_not_also_put_back_on_the_field() {
+    fn r78_r127_4_5_a_reborn_unit_a_death_hook_exiled_out_of_the_graveyard_is_not_also_put_back_on_the_field()
+    {
         let mut g = scenario(json!({
             "p1": { "hand": [TWISTING_NETHER, STOCKPILE], "field": [{ "def": RADIANT_SAINTESS, "lane": 1 }] },
             "p2": { "hand": [STOCKPILE], "field": [{ "def": RENO, "lane": 1 }] },
@@ -384,7 +435,9 @@ mod section_4_5_step_4_10_1_reborn_never_leaves_one_card_in_two_zones {
             "edge-r6-grave-robber",
             CardType::Unit,
             Script {
-                death: Some(hook(|_ctx| vec![exile_matching(json_as(json!({ "zones": ["graveyard"] })))])),
+                death: Some(hook(|_ctx| {
+                    vec![exile_matching(json_as(json!({ "zones": ["graveyard"] })))]
+                })),
                 ..Script::default()
             },
             None,
@@ -431,7 +484,13 @@ fn fixture_unit(s: &mut Scenario, id: &str, script: Script, stats: AttackHealth,
     }));
     s.state_mut().transient_defs.insert(id.to_string(), def);
     let mut scripts = registered_scripts().clone();
-    scripts.insert(id.to_string(), CardScripts { base: script.clone(), radiant: script });
+    scripts.insert(
+        id.to_string(),
+        CardScripts {
+            base: script.clone(),
+            radiant: script,
+        },
+    );
     register_scripts(scripts);
 }
 
@@ -443,7 +502,16 @@ fn in_hand(s: &mut Scenario, def_id: &str, player: PlayerId) -> CardInstance {
 
 fn place_unit(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) -> CardInstance {
     let mut card = new_instance(s.state_mut(), def_id, player, Zone::Hand { player });
-    if !place_on_field(s.state_mut(), &mut card, ZoneSlot { player, row: Row::Units, lane }, Default::default()) {
+    if !place_on_field(
+        s.state_mut(),
+        &mut card,
+        ZoneSlot {
+            player,
+            row: Row::Units,
+            lane,
+        },
+        Default::default(),
+    ) {
         panic!("could not place {def_id}");
     }
     let live = s.card_mut(&card.id);
@@ -454,7 +522,11 @@ fn place_unit(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) -> Ca
 /// TS `killerOf`: `None` when the unit has no `destroyed` event (TS `undefined`), else its killer.
 fn killer_of(s: &Scenario, card: &CardInstance) -> Option<Option<String>> {
     s.events().iter().find_map(|event| match event {
-        GameEvent::Destroyed { instance_id, killer_id, .. } if *instance_id == card.id => Some(killer_id.clone()),
+        GameEvent::Destroyed {
+            instance_id,
+            killer_id,
+            ..
+        } if *instance_id == card.id => Some(killer_id.clone()),
         _ => None,
     })
 }
@@ -480,7 +552,9 @@ fn hits_vanilla(vanilla: &CardInstance, amount: i32) -> Script {
     let id = vanilla.id.clone();
     Script {
         death: Some(hook(move |_ctx| {
-            vec![damage(json_as(json!({ "to": { "of": "instance", "instanceId": id }, "amount": amount })))]
+            vec![damage(json_as(
+                json!({ "to": { "of": "instance", "instanceId": id }, "amount": amount }),
+            ))]
         })),
         ..Script::default()
     }
@@ -497,7 +571,8 @@ mod r42_r89_a_unit_already_killed_is_not_killed_again {
     use super::*;
 
     #[test]
-    fn r42_r89_a_destroy_that_lands_after_this_units_lethal_hit_leaves_the_kill_with_this_unit_so_its_destroys_a_unit_text_draws_2() {
+    fn r42_r89_a_destroy_that_lands_after_this_units_lethal_hit_leaves_the_kill_with_this_unit_so_its_destroys_a_unit_text_draws_2()
+     {
         let mut s = scenario(json!({
             "p1": { "hand": [RENO], "library": LIBRARY },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }], "hand": [RENO], "library": LIBRARY },
@@ -505,17 +580,23 @@ mod r42_r89_a_unit_already_killed_is_not_killed_again {
         // "Cry: deal 5 damage to a target unit; destroy it", carrying a "whenever this destroys a Unit,
         // draw 2" text that reads R42's killer off the death — what #32's text was before R426 tied it to
         // the Panther's own attacks.
-        let kill_draws = TriggerDef::new("edge-r9-maul-kill-draws", &[GameEventType::Destroyed], |ctx, event| {
-            let Some(me) = ctx.self_.as_ref() else {
-                return vec![];
-            };
-            match event {
-                GameEvent::Destroyed { killer_id, .. } if killer_id.as_deref() == Some(me.id.as_str()) => {
-                    vec![draw(json_as(json!({ "count": 2 })))]
+        let kill_draws = TriggerDef::new(
+            "edge-r9-maul-kill-draws",
+            &[GameEventType::Destroyed],
+            |ctx, event| {
+                let Some(me) = ctx.self_.as_ref() else {
+                    return vec![];
+                };
+                match event {
+                    GameEvent::Destroyed { killer_id, .. }
+                        if killer_id.as_deref() == Some(me.id.as_str()) =>
+                    {
+                        vec![draw(json_as(json!({ "count": 2 })))]
+                    }
+                    _ => vec![],
                 }
-                _ => vec![],
-            }
-        });
+            },
+        );
         fixture_unit(
             &mut s,
             "edge-r9-maul",
@@ -537,7 +618,10 @@ mod r42_r89_a_unit_already_killed_is_not_killed_again {
         let vanilla = must(s.unit(P2, 1), "p2's Mr. Vanilla");
         let hand = s.hand(P1).len();
 
-        s.play(&maul.id, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }));
+        s.play(
+            &maul.id,
+            json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }),
+        );
 
         // The 5 took the 3/3 to -2: that hit was the lethal damage instance, and the destroy that
         // followed it found a unit already dead (§4.5 step 1 collects it on either count).
@@ -548,11 +632,18 @@ mod r42_r89_a_unit_already_killed_is_not_killed_again {
     }
 
     #[test]
-    fn r42_r89_a_poisonous_hit_on_a_unit_an_earlier_hit_already_took_to_0_does_not_take_the_kill_from_that_hit_4_4_step_7() {
+    fn r42_r89_a_poisonous_hit_on_a_unit_an_earlier_hit_already_took_to_0_does_not_take_the_kill_from_that_hit_4_4_step_7()
+     {
         let (mut s, vanilla) = death_pass_board();
         // Two p2 units whose Deaths hit p1's 3/3: lane 1's Death deals 5, then (R68 order) lane 2's,
         // a Poisonous unit's, deals 1 — both in the one Death pass, with no check between (§4.5 step 3).
-        fixture_unit(&mut s, "edge-r9-hammer", hits_vanilla(&vanilla, 5), AttackHealth { attack: 1, health: 1 }, vec![]);
+        fixture_unit(
+            &mut s,
+            "edge-r9-hammer",
+            hits_vanilla(&vanilla, 5),
+            AttackHealth { attack: 1, health: 1 },
+            vec![],
+        );
         fixture_unit(
             &mut s,
             "edge-r9-sting",
@@ -564,7 +655,10 @@ mod r42_r89_a_unit_already_killed_is_not_killed_again {
         let sting = place_unit(&mut s, "edge-r9-sting", P2, 2);
 
         // Radiant Hit Job destroys the hammer and the sting beside it.
-        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": hammer.id }] }));
+        s.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": hammer.id }] }),
+        );
 
         assert!(hit_landed(&s, &hammer, &vanilla, 5));
         assert!(hit_landed(&s, &sting, &vanilla, 1));
@@ -586,11 +680,20 @@ mod r42_r89_a_unit_already_killed_is_not_killed_again {
             AttackHealth { attack: 1, health: 1 },
             vec![Keyword::Poisonous],
         );
-        fixture_unit(&mut s, "edge-r9-hammer", hits_vanilla(&vanilla, 5), AttackHealth { attack: 1, health: 1 }, vec![]);
+        fixture_unit(
+            &mut s,
+            "edge-r9-hammer",
+            hits_vanilla(&vanilla, 5),
+            AttackHealth { attack: 1, health: 1 },
+            vec![],
+        );
         let sting = place_unit(&mut s, "edge-r9-sting", P2, 1);
         let hammer = place_unit(&mut s, "edge-r9-hammer", P2, 2);
 
-        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": sting.id }] }));
+        s.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": sting.id }] }),
+        );
 
         assert!(hit_landed(&s, &sting, &vanilla, 1));
         assert!(hit_landed(&s, &hammer, &vanilla, 5));

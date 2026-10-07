@@ -101,9 +101,15 @@ fn playing(seed: &str) -> GameState {
     register_scripts(scripts);
     let mut state = begin_game(&fresh).state;
     let keep: Vec<String> = state.players[P1].hand.iter().map(|c| c.id.clone()).collect();
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+    );
     let keep: Vec<String> = state.players[P2].hand.iter().map(|c| c.id.clone()).collect();
-    state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }));
+    state = act(
+        &state,
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+    );
     assert_eq!(state.phase, Phase::Main);
     assert_eq!(state.active, P1);
     assert_eq!(state.pending, None);
@@ -270,7 +276,12 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
             Some("that unit is summoning sick")
         );
         assert_eq!(
-            refusal(why_cannot_attack(&state, &victim, &unit(&live(&state, &bystander)))).as_deref(),
+            refusal(why_cannot_attack(
+                &state,
+                &victim,
+                &unit(&live(&state, &bystander))
+            ))
+            .as_deref(),
             Some("that unit is summoning sick")
         );
         assert!(attack_targets(&state, &victim).is_empty());
@@ -295,7 +306,10 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
 
         let rush = live(&state, &rush);
         let charge = live(&state, &charge);
-        assert_eq!([rush.summoned_turn, charge.summoned_turn], [Some(turn), Some(turn)]);
+        assert_eq!(
+            [rush.summoned_turn, charge.summoned_turn],
+            [Some(turn), Some(turn)]
+        );
         assert_eq!(
             refusal(why_cannot_attack(&state, &rush, &hero(P2))).as_deref(),
             Some("Rush cannot hit the hero on its summon turn")
@@ -317,7 +331,11 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let switcher = exhausted(&mut state, switcher, turn - 1);
 
         run(&mut state, steal(json_as(json!({ "instanceId": charge.id }))), P1);
-        run(&mut state, steal(json_as(json!({ "instanceId": switcher.id }))), P1);
+        run(
+            &mut state,
+            steal(json_as(json!({ "instanceId": switcher.id }))),
+            P1,
+        );
 
         let charge = live(&state, &charge);
         let switcher = live(&state, &switcher);
@@ -368,7 +386,8 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     }
 
     #[test]
-    fn r171_the_board_swap_c87_marks_every_card_that_changes_sides_dormant_stack_cards_and_backrow_cards_included() {
+    fn r171_the_board_swap_c87_marks_every_card_that_changes_sides_dormant_stack_cards_and_backrow_cards_included()
+     {
         let mut state = playing("cc-swap-marks");
         let turn = state.turn;
         let mine = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
@@ -386,11 +405,15 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let top = live_by_id(&state, &top_id);
         let top = exhausted(&mut state, top, turn - 1);
         let my_trap = put(&mut state, &trap().id, slot(P1, Row::Backrow, 3), json!({}));
-        find_instance_mut(&mut state, &my_trap.id).expect("in the backrow").summoned_turn = Some(turn - 1);
+        find_instance_mut(&mut state, &my_trap.id)
+            .expect("in the backrow")
+            .summoned_turn = Some(turn - 1);
         let theirs = put(&mut state, &plain.id, slot(P2, Row::Units, 4), json!({}));
         let theirs = exhausted(&mut state, theirs, turn - 1);
         let their_trap = put(&mut state, &trap().id, slot(P2, Row::Backrow, 5), json!({}));
-        find_instance_mut(&mut state, &their_trap.id).expect("in the backrow").summoned_turn = Some(turn - 1);
+        find_instance_mut(&mut state, &their_trap.id)
+            .expect("in the backrow")
+            .summoned_turn = Some(turn - 1);
 
         let events = run(&mut state, swap_board(), P1);
 
@@ -410,7 +433,8 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     }
 
     #[test]
-    fn r171_the_board_swap_units_the_caster_receives_are_sick_units_the_opponent_receives_attack_on_its_next_turn() {
+    fn r171_the_board_swap_units_the_caster_receives_are_sick_units_the_opponent_receives_attack_on_its_next_turn()
+     {
         let mut state = playing("cc-swap-turns");
         let turn = state.turn;
         let own = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
@@ -441,7 +465,8 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     }
 
     #[test]
-    fn r171_a_rotation_marks_the_cards_that_cross_the_centre_line_and_nothing_that_moves_along_its_own_side() {
+    fn r171_a_rotation_marks_the_cards_that_cross_the_centre_line_and_nothing_that_moves_along_its_own_side()
+    {
         let mut state = playing("cc-rotate");
         let turn = state.turn;
         // Rotating right from p1's seat: p1 lane n → n+1, p1 lane 5 → p2 lane 5, p2 lane 1 → p1 lane 1.
@@ -466,7 +491,9 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
 
         assert_eq!(
             control_changed(&events).into_iter().collect::<BTreeSet<_>>(),
-            [outbound.id.clone(), inbound.id.clone()].into_iter().collect::<BTreeSet<_>>()
+            [outbound.id.clone(), inbound.id.clone()]
+                .into_iter()
+                .collect::<BTreeSet<_>>()
         );
         for card in [&outbound, &inbound] {
             let now = live(&state, card);
@@ -500,8 +527,8 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     }
 
     #[test]
-    fn r171_a_radiant_rotation_bounces_what_it_would_lose_marks_what_crosses_onto_its_side_and_nothing_that_moves_along_a_side(
-    ) {
+    fn r171_a_radiant_rotation_bounces_what_it_would_lose_marks_what_crosses_onto_its_side_and_nothing_that_moves_along_a_side()
+     {
         let mut state = playing("cc-rotate-radiant");
         let turn = state.turn;
         // Rotating right from p1's seat: p1 lane 5 would cross to p2 and is bounced instead (R14);
@@ -534,7 +561,8 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     }
 
     #[test]
-    fn r171_a_round_trip_in_one_turn_is_two_entries_so_a_ready_unit_that_crosses_away_and_back_is_sick_again() {
+    fn r171_a_round_trip_in_one_turn_is_two_entries_so_a_ready_unit_that_crosses_away_and_back_is_sick_again()
+    {
         let mut state = playing("cc-round-trip");
         let turn = state.turn;
         // Right then left from p1's seat: p1 lane 5 → p2 lane 5 → p1 lane 5.
@@ -548,7 +576,10 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
 
         let now = live(&state, &traveller);
         assert_eq!(now.controller, P1);
-        assert_eq!(card_id_at(&state, slot(P1, Row::Units, 5)), Some(traveller.id.clone()));
+        assert_eq!(
+            card_id_at(&state, slot(P1, Row::Units, 5)),
+            Some(traveller.id.clone())
+        );
         assert_eq!(now.summoned_turn, Some(turn));
         assert!(attack_targets(&state, &now).is_empty());
     }
@@ -568,7 +599,10 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
                 attacks: None,
             };
         }
-        assert_eq!(offered_attacks(&state, &live(&state, &charge)), Vec::<String>::new());
+        assert_eq!(
+            offered_attacks(&state, &live(&state, &charge)),
+            Vec::<String>::new()
+        );
 
         rotate(&mut state, RotationDirection::Left, false);
         assert_eq!(live(&state, &charge).controller, P2);
@@ -594,8 +628,14 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let theirs = exhausted(&mut state, theirs, turn - 1);
 
         // R76: already yours. R15: no free zone on the thief's side.
-        assert_eq!(run(&mut state, steal(json_as(json!({ "instanceId": mine.id }))), P1), vec![]);
-        assert_eq!(run(&mut state, steal(json_as(json!({ "instanceId": theirs.id }))), P1), vec![]);
+        assert_eq!(
+            run(&mut state, steal(json_as(json!({ "instanceId": mine.id }))), P1),
+            vec![]
+        );
+        assert_eq!(
+            run(&mut state, steal(json_as(json!({ "instanceId": theirs.id }))), P1),
+            vec![]
+        );
 
         for card in [&mine, &theirs] {
             let now = live(&state, card);
@@ -606,7 +646,8 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     }
 
     #[test]
-    fn r171_a_change_of_control_on_the_opponent_s_turn_leaves_the_unit_ready_on_its_new_controller_s_next_turn() {
+    fn r171_a_change_of_control_on_the_opponent_s_turn_leaves_the_unit_ready_on_its_new_controller_s_next_turn()
+     {
         let mut state = playing("cc-opponents-turn");
         let turn = state.turn;
         let first = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
@@ -637,10 +678,20 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let turn = state.turn;
         let victim = put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
         let victim = ready(&mut state, victim, turn - 1);
-        find_instance_mut(&mut state, &victim.id).expect("on the field").buffs = AttackHealth { attack: 0, health: 10 };
+        find_instance_mut(&mut state, &victim.id)
+            .expect("on the field")
+            .buffs = AttackHealth {
+            attack: 0,
+            health: 10,
+        };
         let target = put(&mut state, &plain.id, slot(P2, Row::Units, 4), json!({}));
         let target = ready(&mut state, target, turn - 1);
-        find_instance_mut(&mut state, &target.id).expect("on the field").buffs = AttackHealth { attack: 0, health: 10 };
+        find_instance_mut(&mut state, &target.id)
+            .expect("on the field")
+            .buffs = AttackHealth {
+            attack: 0,
+            health: 10,
+        };
         run(&mut state, steal(json_as(json!({ "instanceId": victim.id }))), P1);
         assert!(is_sick(&state, &live(&state, &victim)));
 
@@ -664,7 +715,9 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
 }
 
 fn live_by_id(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id).cloned().unwrap_or_else(|| panic!("{id} is gone"))
+    find_instance(state, id)
+        .cloned()
+        .unwrap_or_else(|| panic!("{id} is gone"))
 }
 
 // ---------------------------------------------------------------------------
@@ -676,7 +729,8 @@ mod r172_a_stolen_unit_dies_as_its_controller_s {
     use super::*;
 
     #[test]
-    fn r172_a_stolen_reborn_unit_returns_to_the_zone_it_reserved_on_the_thief_s_side_owned_by_its_owner_and_sick() {
+    fn r172_a_stolen_reborn_unit_returns_to_the_zone_it_reserved_on_the_thief_s_side_owned_by_its_owner_and_sick()
+     {
         let mut state = playing("cc-reborn");
         let turn = state.turn;
         let first = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
@@ -689,7 +743,9 @@ mod r172_a_stolen_unit_dies_as_its_controller_s {
         assert_eq!(card_id_at(&state, slot(P1, Row::Units, 3)), Some(body.id.clone()));
 
         let max_health = unit_view(&state, &live(&state, &body)).max_health;
-        find_instance_mut(&mut state, &body.id).expect("on the field").damage = max_health;
+        find_instance_mut(&mut state, &body.id)
+            .expect("on the field")
+            .damage = max_health;
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         state_check(&mut EngineSink::new(&mut state, &mut events, &mut rng));
@@ -698,7 +754,9 @@ mod r172_a_stolen_unit_dies_as_its_controller_s {
         let destroyed: Vec<(String, PlayerId)> = events_of_type(&events, GameEventType::Destroyed)
             .iter()
             .map(|event| match event {
-                GameEvent::Destroyed { instance_id, owner, .. } => (instance_id.clone(), *owner),
+                GameEvent::Destroyed {
+                    instance_id, owner, ..
+                } => (instance_id.clone(), *owner),
                 other => panic!("not a destroyed event: {other:?}"),
             })
             .collect();
@@ -725,7 +783,9 @@ mod r172_a_stolen_unit_dies_as_its_controller_s {
         run(&mut state, steal(json_as(json!({ "instanceId": body.id }))), P1);
 
         let max_health = unit_view(&state, &live(&state, &body)).max_health;
-        find_instance_mut(&mut state, &body.id).expect("on the field").damage = max_health;
+        find_instance_mut(&mut state, &body.id)
+            .expect("on the field")
+            .damage = max_health;
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         state_check(&mut EngineSink::new(&mut state, &mut events, &mut rng));
@@ -735,7 +795,9 @@ mod r172_a_stolen_unit_dies_as_its_controller_s {
         let summoned: Vec<(PlayerId, i32)> = events_of_type(&events, GameEventType::Summoned)
             .iter()
             .filter_map(|event| match event {
-                GameEvent::Summoned { def_id, player, lane, .. } if *def_id == token => Some((*player, *lane)),
+                GameEvent::Summoned {
+                    def_id, player, lane, ..
+                } if *def_id == token => Some((*player, *lane)),
                 _ => None,
             })
             .collect();

@@ -33,16 +33,46 @@
 /// R186: defId → why the AI never deals it to itself. Each reason starts "<SweepFlag>: <tier>: ".
 /// Sorted by id.
 pub const SHADOW_BAN: &[(&str, &str)] = &[
-    ("core-042", "neverPlayed: hard: affordable in hand on 21 turns, never played"),
-    ("core-051", "neverPlayed: hard: affordable in hand on 20 turns, never played"),
-    ("core-055", "neverPlayed: hard: affordable in hand on 22 turns, never played"),
-    ("core-057", "neverPlayed: hard: affordable in hand on 4 turns, never played"),
-    ("core-076", "neverPlayed: hard: affordable in hand on 15 turns, never played"),
-    ("core-078", "neverPlayed: easy: affordable in hand on 31 turns, never played"),
-    ("core-082", "neverPlayed: hard: affordable in hand on 6 turns, never played"),
-    ("core-091", "neverPlayed: hard: affordable in hand on 19 turns, never played"),
-    ("core-093", "neverPlayed: hard: affordable in hand on 25 turns, never played"),
-    ("core-094", "neverPlayed: hard: affordable in hand on 13 turns, never played"),
+    (
+        "core-042",
+        "neverPlayed: hard: affordable in hand on 21 turns, never played",
+    ),
+    (
+        "core-051",
+        "neverPlayed: hard: affordable in hand on 20 turns, never played",
+    ),
+    (
+        "core-055",
+        "neverPlayed: hard: affordable in hand on 22 turns, never played",
+    ),
+    (
+        "core-057",
+        "neverPlayed: hard: affordable in hand on 4 turns, never played",
+    ),
+    (
+        "core-076",
+        "neverPlayed: hard: affordable in hand on 15 turns, never played",
+    ),
+    (
+        "core-078",
+        "neverPlayed: easy: affordable in hand on 31 turns, never played",
+    ),
+    (
+        "core-082",
+        "neverPlayed: hard: affordable in hand on 6 turns, never played",
+    ),
+    (
+        "core-091",
+        "neverPlayed: hard: affordable in hand on 19 turns, never played",
+    ),
+    (
+        "core-093",
+        "neverPlayed: hard: affordable in hand on 25 turns, never played",
+    ),
+    (
+        "core-094",
+        "neverPlayed: hard: affordable in hand on 13 turns, never played",
+    ),
     (
         "core-099",
         "neverPlayed: easy: affordable in hand on 21 turns, never played; hard: affordable in hand on 13 turns, never played",

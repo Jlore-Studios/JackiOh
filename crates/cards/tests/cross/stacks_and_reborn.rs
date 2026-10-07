@@ -105,7 +105,12 @@ fn fixture_def(id: &str, type_: CardType, face: Value) -> CardDef {
 /// A fixture unit placed on p1's side in `lane`, not summoning sick (TS sets `summonedTurn = 0` on the
 /// live object, which this writes into the state).
 fn place_on_p1_side(g: &mut Scenario, id: &str, lane: i32) -> CardInstance {
-    let mut card = new_instance(g.state_mut(), id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+    let mut card = new_instance(
+        g.state_mut(),
+        id,
+        PlayerId::P1,
+        Zone::Hand { player: PlayerId::P1 },
+    );
     if !place_on_field(
         g.state_mut(),
         &mut card,
@@ -266,7 +271,9 @@ mod r175_a_token_summoned_x_x_comes_back_through_reborn_as_that_x_x {
 fn place_watcher(g: &mut Scenario, id: &str, lane: i32, on: GameEventType) -> CardInstance {
     let script = Script {
         triggers: vec![TriggerDef::new(format!("{id}:on-{on}"), &[on], |_ctx, _event| {
-            vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
+            vec![effects::damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+            ))]
         })],
         ..Script::default()
     };
@@ -328,7 +335,12 @@ mod r212_r119_a_card_that_resumes_on_top_of_its_pile_did_not_see_what_uncovered_
             "p2": { "field": ["core-011"], "health": 20 },
         }));
         // "Whenever a card finishes resolving, deal 1 damage to the enemy hero", in p1's lane 1.
-        let watcher = place_watcher(&mut g, "fixture:r10-resolve-watcher", 1, GameEventType::CardResolved);
+        let watcher = place_watcher(
+            &mut g,
+            "fixture:r10-resolve-watcher",
+            1,
+            GameEventType::CardResolved,
+        );
         let fiender = g.card(FIENDER).clone();
         g.play(&fiender.id, json!({ "zone": 1 }));
         // Step 4 buried the watcher before the Fiender's own play reached step 7, so it answered nothing.
@@ -363,7 +375,9 @@ fn place_hit_watcher(g: &mut Scenario, id: &str, lane: i32) -> CardInstance {
                     _ => false,
                 };
                 if another {
-                    vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                    ))]
                 } else {
                     vec![]
                 }
@@ -396,7 +410,12 @@ fn spell_in_hand(g: &mut Scenario, id: &str, cry: Option<Hook>) -> CardInstance 
         },
     };
     register_fixture_script(id, script);
-    let card = new_instance(g.state_mut(), id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+    let card = new_instance(
+        g.state_mut(),
+        id,
+        PlayerId::P1,
+        Zone::Hand { player: PlayerId::P1 },
+    );
     g.state_mut().players.p1.hand.push(card.clone());
     card
 }
@@ -437,11 +456,9 @@ mod r212_a_resume_is_kept_against_the_removal_that_caused_it_and_no_later_move_3
             })),
         );
         g.play(&spell.id, json!({}));
-        assert!(
-            g.last_events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == fiender.id))
-        );
+        assert!(g.last_events().iter().any(
+            |event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == fiender.id)
+        ));
         let hits = hits_from(g.last_events(), &watcher.id);
         assert_eq!(hits.len(), 1, "{}", events_json(g.last_events()));
         assert_eq!(g.state().players.p2.hero.health, 18);
@@ -468,18 +485,18 @@ mod r212_a_resume_is_kept_against_the_removal_that_caused_it_and_no_later_move_3
             Some(hook(move |_ctx| {
                 vec![
                     effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 }))),
-                    effects::sacrifice(json_as(json!({ "target": { "of": "instance", "instanceId": fiender_id } }))),
+                    effects::sacrifice(json_as(
+                        json!({ "target": { "of": "instance", "instanceId": fiender_id } }),
+                    )),
                     effects::exile_matching(json_as(json!({ "zones": ["graveyard"] }))),
                 ]
             })),
         );
         g.play(&spell.id, json!({}));
         assert_eq!(unit_id(&g, PlayerId::P1, 1), Some(watcher.id.clone()));
-        assert!(
-            g.last_events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == fiender.id))
-        );
+        assert!(g.last_events().iter().any(
+            |event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == fiender.id)
+        ));
         let hits = hits_from(g.last_events(), &watcher.id);
         assert_eq!(hits, Vec::<GameEvent>::new(), "{}", events_json(g.last_events()));
         assert_eq!(g.state().players.p2.hero.health, 19);

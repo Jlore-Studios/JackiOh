@@ -36,12 +36,14 @@ fn faces_of(cards: &[&'static CardDef]) -> Vec<Face> {
         .iter()
         .copied()
         .flat_map(|card| {
-            [FaceKind::Base, FaceKind::Radiant].into_iter().map(move |face| Face {
-                card,
-                face,
-                text: fill_params(card, face, None),
-                keywords: card.face(face).keywords.clone(),
-            })
+            [FaceKind::Base, FaceKind::Radiant]
+                .into_iter()
+                .map(move |face| Face {
+                    card,
+                    face,
+                    text: fill_params(card, face, None),
+                    keywords: card.face(face).keywords.clone(),
+                })
         })
         .collect()
 }
@@ -117,7 +119,11 @@ fn boundary(text: &[u8], at: usize) -> bool {
 
 /// The text as the pattern reads it: lowered for `/i`, as is otherwise.
 fn folded(text: &str, insensitive: bool) -> String {
-    if insensitive { text.to_ascii_lowercase() } else { text.to_string() }
+    if insensitive {
+        text.to_ascii_lowercase()
+    } else {
+        text.to_string()
+    }
 }
 
 /// Every byte offset at which `needle` starts in `text`, overlapping matches included (a regex scans
@@ -148,7 +154,9 @@ fn has_word_start(text: &str, phrase: &str, insensitive: bool) -> bool {
     let hay = folded(text, insensitive);
     let needle = folded(phrase, insensitive);
     let bytes = hay.as_bytes();
-    every_start(&hay, &needle).into_iter().any(|at| boundary(bytes, at))
+    every_start(&hay, &needle)
+        .into_iter()
+        .any(|at| boundary(bytes, at))
 }
 
 /// `/<phrase>/i` anywhere.
@@ -259,7 +267,9 @@ fn return_word_end(bytes: &[u8], at: usize) -> Option<usize> {
 
 /// The first byte at or after `from` that `stop` takes, or the end.
 fn segment_end(bytes: &[u8], from: usize, stop: impl Fn(u8) -> bool) -> usize {
-    (from..bytes.len()).find(|at| stop(bytes[*at])).unwrap_or(bytes.len())
+    (from..bytes.len())
+        .find(|at| stop(bytes[*at]))
+        .unwrap_or(bytes.len())
 }
 
 /// `/\breturns?\b[^.\n]*\bto\b[^.\n]*\bhand\b/i`.
@@ -294,9 +304,9 @@ fn return_to_your_hand(text: &str) -> bool {
         }
         let stop = segment_end(bytes, end, |b| b == b'.' || b == b'\n');
         let segment = &hay[..stop];
-        every_start(segment, "to your hand").into_iter().any(|to| {
-            to >= end && boundary(bytes, to) && boundary(bytes, to + "to your hand".len())
-        })
+        every_start(segment, "to your hand")
+            .into_iter()
+            .any(|to| to >= end && boundary(bytes, to) && boundary(bytes, to + "to your hand".len()))
     })
 }
 
@@ -339,7 +349,11 @@ fn says_bounce_or_bounced(text: &str) -> bool {
             return false;
         }
         let end = at + "Bounce".len();
-        if bytes.get(end) == Some(&b'd') { boundary(bytes, end + 1) } else { boundary(bytes, end) }
+        if bytes.get(end) == Some(&b'd') {
+            boundary(bytes, end + 1)
+        } else {
+            boundary(bytes, end)
+        }
     })
 }
 
@@ -424,7 +438,9 @@ fn failures(face: &Face) -> Vec<String> {
         out.push("writes \"Once per Turn\", not \"Once per turn\"".to_string());
     }
     if has_words(text, "Cannot be in Defense Position", true) {
-        out.push("writes \"Cannot be in Defense Position\", not \"Can't be in Defense Position\"".to_string());
+        out.push(
+            "writes \"Cannot be in Defense Position\", not \"Can't be in Defense Position\"".to_string(),
+        );
     }
     if has_words(text, "Trigger the Cry", true) {
         out.push("writes \"Trigger the Cry\", not \"Trigger a Cry\"".to_string());
@@ -439,7 +455,11 @@ fn failures(face: &Face) -> Vec<String> {
     if return_to_your_hand(text) {
         out.push("writes \"to your hand\", not \"to hand\"".to_string());
     }
-    let lines: Vec<&str> = if text.is_empty() { Vec::new() } else { text.split('\n').collect() };
+    let lines: Vec<&str> = if text.is_empty() {
+        Vec::new()
+    } else {
+        text.split('\n').collect()
+    };
     // The keyword list: the first line, when every item on it is a printed keyword or a Tribute cost,
     // which the list carries too (#55, #66). A face with keywords must lead with them.
     let labels: Vec<String> = keywords.iter().map(keyword_label).collect();
@@ -633,7 +653,11 @@ fn face_text(catalog: &Catalog, id: &str, face: &str) -> String {
 /// (R646) is the current catalog until then, its snapshot after.
 fn after_patch(version: &str) -> (bool, Catalog) {
     let shipped = shipped_versions().iter().any(|shipped| shipped == version);
-    let after = if shipped { read_snapshot(version) } else { current_catalog() };
+    let after = if shipped {
+        read_snapshot(version)
+    } else {
+        current_catalog()
+    };
     (shipped, after)
 }
 
@@ -655,7 +679,8 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
     }
 
     #[test]
-    fn r432_writes_a_specific_cost_as_the_noun_n_cost_a_price_as_the_verb_costs_n_and_an_embiggen_price_as_paid_n() {
+    fn r432_writes_a_specific_cost_as_the_noun_n_cost_a_price_as_the_verb_costs_n_and_an_embiggen_price_as_paid_n()
+     {
         let wrong: Vec<String> = swept()
             .iter()
             .filter(|face| {
@@ -684,13 +709,16 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
     }
 
     #[test]
-    fn r692_prints_bounce_for_a_permanent_s_return_to_hand_from_the_field_and_no_other_face_says_return_to_hand() {
+    fn r692_prints_bounce_for_a_permanent_s_return_to_hand_from_the_field_and_no_other_face_says_return_to_hand()
+     {
         let faces = faces_of(&entries());
         let stale: Vec<String> = faces
             .iter()
             .filter(|f| {
-                returns_then_to(&f.text, &["its owner's hand", "their owner's hand", "your hand", "hand"])
-                    && !RETURNS_OFF_THE_FIELD.contains(&format!("{} {}", f.card.id, f.face).as_str())
+                returns_then_to(
+                    &f.text,
+                    &["its owner's hand", "their owner's hand", "your hand", "hand"],
+                ) && !RETURNS_OFF_THE_FIELD.contains(&format!("{} {}", f.card.id, f.face).as_str())
             })
             .map(described)
             .collect();
@@ -716,7 +744,8 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
     }
 
     #[test]
-    fn r746_says_return_to_hand_never_bounce_where_a_card_returns_from_the_graveyard_exile_or_a_resolved_spell_issue_354() {
+    fn r746_says_return_to_hand_never_bounce_where_a_card_returns_from_the_graveyard_exile_or_a_resolved_spell_issue_354()
+     {
         let faces = faces_of(&entries());
         let returning: Vec<String> = faces
             .iter()
@@ -910,8 +939,14 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
 
             if animated.contains(id.as_str()) {
                 for face in ["base", "radiant"] {
-                    assert!(face_field(prior_card, face, "attack").is_none(), "{id} {face} had no stats before v0.2.3");
-                    assert!(face_field(prior_card, face, "health").is_none(), "{id} {face} had no stats before v0.2.3");
+                    assert!(
+                        face_field(prior_card, face, "attack").is_none(),
+                        "{id} {face} had no stats before v0.2.3"
+                    );
+                    assert!(
+                        face_field(prior_card, face, "health").is_none(),
+                        "{id} {face} had no stats before v0.2.3"
+                    );
                     assert_eq!(
                         face_field(prior_card, face, "keywords"),
                         Some(&json!([])),
@@ -922,9 +957,17 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                         Some(&json!([{ "kind": "Animated" }])),
                         "{id} {face} gains Animated"
                     );
-                    assert!(is_number(face_field(current_card, face, "attack")), "{id} {face} gains attack");
-                    assert!(is_number(face_field(current_card, face, "health")), "{id} {face} gains health");
-                    let prior_text = face_field(prior_card, face, "text").and_then(Value::as_str).unwrap_or_default();
+                    assert!(
+                        is_number(face_field(current_card, face, "attack")),
+                        "{id} {face} gains attack"
+                    );
+                    assert!(
+                        is_number(face_field(current_card, face, "health")),
+                        "{id} {face} gains health"
+                    );
+                    let prior_text = face_field(prior_card, face, "text")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default();
                     assert_eq!(
                         face_field(current_card, face, "text").and_then(Value::as_str),
                         Some(format!("Animated\n{prior_text}").as_str()),
@@ -933,7 +976,11 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                 }
                 // Nothing else on the card moves: normalizing the eight Animated fields restores the prior card.
                 assert_eq!(
-                    restore_face_fields(current_card, prior_card, &["attack", "health", "keywords", "text"]),
+                    restore_face_fields(
+                        current_card,
+                        prior_card,
+                        &["attack", "health", "keywords", "text"]
+                    ),
                     *prior_card,
                     "only Animated fields differ on {id}"
                 );
@@ -945,8 +992,14 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                         Some(&json!([])),
                         "{id} {face} gains no keywords"
                     );
-                    assert!(face_field(current_card, face, "attack").is_none(), "{id} {face} gains no stats");
-                    assert!(face_field(current_card, face, "health").is_none(), "{id} {face} gains no stats");
+                    assert!(
+                        face_field(current_card, face, "attack").is_none(),
+                        "{id} {face} gains no stats"
+                    );
+                    assert!(
+                        face_field(current_card, face, "health").is_none(),
+                        "{id} {face} gains no stats"
+                    );
                 }
                 assert_eq!(
                     face_field(current_card, "base", "text").and_then(Value::as_str),
@@ -980,9 +1033,15 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
         let before = read_snapshot("v0.2.3");
         // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
         let (_, after) = after_patch("v0.2.4");
-        let five: IndexSet<&str> = ["classic-003", "classicplus-010", "classicplus-038-1", "classicplus-040", "core-045"]
-            .into_iter()
-            .collect();
+        let five: IndexSet<&str> = [
+            "classic-003",
+            "classicplus-010",
+            "classicplus-038-1",
+            "classicplus-040",
+            "core-045",
+        ]
+        .into_iter()
+        .collect();
         let mut changed: Vec<String> = Vec::new();
         for (id, current_card) in &after {
             let prior_card = before.get(id);
@@ -994,8 +1053,14 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
         }
         // Another pending fragment's cards legitimately differ beside these five (R646), so the diff is
         // read on this patch's claims.
-        let claimed: Vec<String> = changed.into_iter().filter(|id| five.contains(id.as_str())).collect();
-        assert_eq!(sorted(claimed), sorted(five.iter().map(|id| (*id).to_string()).collect()));
+        let claimed: Vec<String> = changed
+            .into_iter()
+            .filter(|id| five.contains(id.as_str()))
+            .collect();
+        assert_eq!(
+            sorted(claimed),
+            sorted(five.iter().map(|id| (*id).to_string()).collect())
+        );
         // Deft Duelist prints the Deft keyword on both faces (R49).
         assert_eq!(face_text(&after, "core-045", "base"), "Charge, Deft");
         assert_eq!(face_text(&after, "core-045", "radiant"), "Charge, Armor 1, Deft");
@@ -1031,7 +1096,11 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
             Some(at) => versions[at - 1].clone(),
         };
         let before = read_snapshot(&baseline);
-        let after = if at.is_none() { current_catalog() } else { read_snapshot("v0.2.10") };
+        let after = if at.is_none() {
+            current_catalog()
+        } else {
+            read_snapshot("v0.2.10")
+        };
         // The top-level fields each balance card may move (balance patch 1, issue #88); every other
         // field restores the baseline card, so no card smuggles an unlisted change.
         let allowed_fields: &[(&str, &[&str])] = &[
@@ -1142,17 +1211,35 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
             }
 
             for face in ["base", "radiant"] {
-                assert!(face_field(current_card, face, "attack").is_none(), "{id} {face} loses its stats");
-                assert!(face_field(current_card, face, "health").is_none(), "{id} {face} loses its stats");
-                assert_eq!(face_field(current_card, face, "keywords"), Some(&json!([])), "{id} {face} loses Animated");
+                assert!(
+                    face_field(current_card, face, "attack").is_none(),
+                    "{id} {face} loses its stats"
+                );
+                assert!(
+                    face_field(current_card, face, "health").is_none(),
+                    "{id} {face} loses its stats"
+                );
+                assert_eq!(
+                    face_field(current_card, face, "keywords"),
+                    Some(&json!([])),
+                    "{id} {face} loses Animated"
+                );
                 assert_eq!(
                     face_field(prior_card, face, "keywords"),
                     Some(&json!([{ "kind": "Animated" }])),
                     "{id} {face} printed Animated"
                 );
-                assert!(is_number(face_field(prior_card, face, "attack")), "{id} {face} printed attack");
-                assert!(is_number(face_field(prior_card, face, "health")), "{id} {face} printed health");
-                let current_text = face_field(current_card, face, "text").and_then(Value::as_str).unwrap_or_default();
+                assert!(
+                    is_number(face_field(prior_card, face, "attack")),
+                    "{id} {face} printed attack"
+                );
+                assert!(
+                    is_number(face_field(prior_card, face, "health")),
+                    "{id} {face} printed health"
+                );
+                let current_text = face_field(current_card, face, "text")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
                 assert_eq!(
                     face_field(prior_card, face, "text").and_then(Value::as_str),
                     Some(format!("Animated\n{current_text}").as_str()),
@@ -1161,19 +1248,27 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
             }
             // Nothing else on the card moves: restoring the eight Animated fields restores the snapshot.
             assert_eq!(
-                restore_face_fields(current_card, prior_card, &["attack", "health", "keywords", "text"]),
+                restore_face_fields(
+                    current_card,
+                    prior_card,
+                    &["attack", "health", "keywords", "text"]
+                ),
                 *prior_card,
                 "only Animated fields differ on {id}"
             );
         }
         // Another pending fragment's cards legitimately differ beside these eighteen (R646), so the
         // diff is read on this patch's claims.
-        let claimed: Vec<String> = changed.into_iter().filter(|id| unanimated.contains(id.as_str())).collect();
+        let claimed: Vec<String> = changed
+            .into_iter()
+            .filter(|id| unanimated.contains(id.as_str()))
+            .collect();
         assert_eq!(sorted(claimed), sorted(strings(ANIMATED_IN_V0_2_3)));
     }
 
     #[test]
-    fn r366_patch_v0_2_7_takes_craft_a_card_s_radiant_draw_off_and_moves_plague_chalice_s_loc_between_v0_2_6_and_v0_2_7() {
+    fn r366_patch_v0_2_7_takes_craft_a_card_s_radiant_draw_off_and_moves_plague_chalice_s_loc_between_v0_2_6_and_v0_2_7()
+     {
         let before = read_snapshot("v0.2.6");
         // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
         let (shipped, after) = after_patch("v0.2.7");
@@ -1244,28 +1339,67 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
         };
         let has = |found: Vec<String>, why: &str| found.iter().any(|reason| reason == why);
         let turn = "writes turn trigger as (Start|End) of your turn, not (Start|End) of turn:";
-        assert!(has(check("Return a target Unit to hand."), "says \"Return … to hand\", not Bounce"));
+        assert!(has(
+            check("Return a target Unit to hand."),
+            "says \"Return … to hand\", not Bounce"
+        ));
         assert_eq!(check("Bounce a target Unit."), Vec::<String>::new());
-        assert!(has(check("Destroy a backrow zone."), "says backrow zone, not backrow"));
+        assert!(has(
+            check("Destroy a backrow zone."),
+            "says backrow zone, not backrow"
+        ));
         assert!(has(check("Start of your turn: Draw 1."), turn));
         assert!(has(check("End of your turn: Deal 1 damage."), turn));
         assert!(has(check("At the start of your turn, Draw 1."), turn));
         assert!(has(check("At the end of your turn, Draw 1."), turn));
-        assert!(has(check("At the start and end of your turn, this attacks."), turn));
-        assert!(has(check("Discover a Spell that costs (1)."), "writes \"that costs (N)\", not \"(N) Cost\""));
-        assert!(has(check("Start of Game: Draw 1."), "writes \"Start of Game\", not \"Start of game\""));
-        assert!(has(check("Once per Turn: Gain 1 mana."), "writes \"Once per Turn\", not \"Once per turn\""));
+        assert!(has(
+            check("At the start and end of your turn, this attacks."),
+            turn
+        ));
+        assert!(has(
+            check("Discover a Spell that costs (1)."),
+            "writes \"that costs (N)\", not \"(N) Cost\""
+        ));
+        assert!(has(
+            check("Start of Game: Draw 1."),
+            "writes \"Start of Game\", not \"Start of game\""
+        ));
+        assert!(has(
+            check("Once per Turn: Gain 1 mana."),
+            "writes \"Once per Turn\", not \"Once per turn\""
+        ));
         assert!(has(
             check("Cannot be in Defense Position."),
             "writes \"Cannot be in Defense Position\", not \"Can't be in Defense Position\""
         ));
-        assert!(has(check("Trigger the Cry of a Unit."), "writes \"Trigger the Cry\", not \"Trigger a Cry\""));
-        assert!(has(check("Set a hero's health to 13."), "writes \"Set a hero's health\", not \"Set health\""));
-        assert!(has(check("Cast on draw: End your turn."), "writes \"End your turn\", not \"End the turn\""));
-        assert!(has(check("End of turn: Return this to your hand."), "writes \"to your hand\", not \"to hand\""));
-        assert!(!has(check("End of turn: Return this to hand."), "writes \"to your hand\", not \"to hand\""));
-        assert!(!has(check("Add a card to your hand."), "writes \"to your hand\", not \"to hand\""));
-        assert_eq!(check("Cry: Add 2 random Units to your hand. They cost (1)."), Vec::<String>::new());
+        assert!(has(
+            check("Trigger the Cry of a Unit."),
+            "writes \"Trigger the Cry\", not \"Trigger a Cry\""
+        ));
+        assert!(has(
+            check("Set a hero's health to 13."),
+            "writes \"Set a hero's health\", not \"Set health\""
+        ));
+        assert!(has(
+            check("Cast on draw: End your turn."),
+            "writes \"End your turn\", not \"End the turn\""
+        ));
+        assert!(has(
+            check("End of turn: Return this to your hand."),
+            "writes \"to your hand\", not \"to hand\""
+        ));
+        assert!(!has(
+            check("End of turn: Return this to hand."),
+            "writes \"to your hand\", not \"to hand\""
+        ));
+        assert!(!has(
+            check("Add a card to your hand."),
+            "writes \"to your hand\", not \"to hand\""
+        ));
+        assert_eq!(
+            check("Cry: Add 2 random Units to your hand. They cost (1)."),
+            Vec::<String>::new()
+        );
     }
 }
 
@@ -1291,9 +1425,15 @@ mod patch_v0_2_9_wording_issue_44 {
         let wrong: Vec<String> = swept()
             .iter()
             .filter(|face| {
-                ["activate when", "activates when", "this activates", "has activated", "Traps activates"]
-                    .iter()
-                    .any(|phrase| has_text(&face.text, phrase))
+                [
+                    "activate when",
+                    "activates when",
+                    "this activates",
+                    "has activated",
+                    "Traps activates",
+                ]
+                .iter()
+                .any(|phrase| has_text(&face.text, phrase))
             })
             .map(described)
             .collect();
@@ -1362,7 +1502,10 @@ mod the_hand_written_patterns_read_as_their_regular_expressions {
         assert!(!return_to_your_hand("Returns this to your hand."));
         assert!(returns_then_to("Returns it\nto hand.", &["hand"]));
         assert!(!returns_then_to("Return it. To hand.", &["hand"]));
-        assert!(returns_then_to("Return it to their owner's hand.", &["their owner's hand", "hand"]));
+        assert!(returns_then_to(
+            "Return it to their owner's hand.",
+            &["their owner's hand", "hand"]
+        ));
         assert!(says_bounce_or_bounced("Bounced units"));
         assert!(!says_bounce_or_bounced("Bouncer"));
     }
@@ -1374,7 +1517,9 @@ mod the_hand_written_patterns_read_as_their_regular_expressions {
         assert!(ends_with_a_full_stop("He said \"go.\""));
         assert!(ends_with_a_full_stop("He said \u{201c}go.\u{201d}"));
         assert!(!ends_with_a_full_stop("Draw 1"));
-        assert!(your_turn_trigger("At the start and end of your turn, this attacks."));
+        assert!(your_turn_trigger(
+            "At the start and end of your turn, this attacks."
+        ));
         assert!(!your_turn_trigger("Start of turn: draw."));
     }
 }

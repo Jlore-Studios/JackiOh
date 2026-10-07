@@ -18,13 +18,14 @@ use indexmap::IndexSet;
 use jackioh_engine::config::{DECK_SIZE, MAX_COPIES};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::validator::{
-    CardId, LOADOUT_DECKS, LoadoutDeck, LoadoutError, LoadoutInput, LoadoutResult, LoadoutRule, validate_loadout,
+    CardId, LOADOUT_DECKS, LoadoutDeck, LoadoutError, LoadoutInput, LoadoutResult, LoadoutRule,
+    validate_loadout,
 };
 
 use super::fixtures::validator_loadouts::{
-    ARCHIVIST, CATALOG_VERSION, CEASELESS_VOID, HIT_JOB, INJECTIONS, JELLY_BEAN, NOT_IN_CATALOG, POOL_IDS, add_deck,
-    add_spare_card, banned_card, catalog, collection, cross_deck, drop_card, drop_deck, duplicate_in_deck,
-    insert_token, legal_loadout, unknown_card, unown_card,
+    ARCHIVIST, CATALOG_VERSION, CEASELESS_VOID, HIT_JOB, INJECTIONS, JELLY_BEAN, NOT_IN_CATALOG, POOL_IDS,
+    add_deck, add_spare_card, banned_card, catalog, collection, cross_deck, drop_card, drop_deck,
+    duplicate_in_deck, insert_token, legal_loadout, unknown_card, unown_card,
 };
 
 /// A fixed seed and run count: the property tests must fail the same way twice.
@@ -55,7 +56,11 @@ fn sole_error(result: &LoadoutResult) -> LoadoutError {
     let errors = errors_of(result);
     if errors.len() != 1 {
         let messages: Vec<&str> = errors.iter().map(|error| error.message.as_str()).collect();
-        panic!("expected exactly one error, got {}: {}", errors.len(), messages.join(" | "));
+        panic!(
+            "expected exactly one error, got {}: {}",
+            errors.len(),
+            messages.join(" | ")
+        );
     }
     errors[0].clone()
 }
@@ -111,7 +116,10 @@ mod loadout_rules_l1_l6_s9_4_m6_t3 {
         assert_eq!(error.rule, LoadoutRule::L2);
         assert_eq!(
             error.message,
-            format!("Deck 1 has {} cards; every deck needs exactly {DECK_SIZE}.", DECK_SIZE - 1)
+            format!(
+                "Deck 1 has {} cards; every deck needs exactly {DECK_SIZE}.",
+                DECK_SIZE - 1
+            )
         );
         assert_eq!(error.deck, Some(1));
         assert_eq!(error.card_id, None);
@@ -123,7 +131,10 @@ mod loadout_rules_l1_l6_s9_4_m6_t3 {
         assert_eq!(error.rule, LoadoutRule::L2);
         assert_eq!(
             error.message,
-            format!("Deck 1 has {} cards; every deck needs exactly {DECK_SIZE}.", DECK_SIZE + 1)
+            format!(
+                "Deck 1 has {} cards; every deck needs exactly {DECK_SIZE}.",
+                DECK_SIZE + 1
+            )
         );
         assert_eq!(error.deck, Some(1));
     }
@@ -157,7 +168,10 @@ mod loadout_rules_l1_l6_s9_4_m6_t3 {
         let error = sole_error(&validate_loadout(&drop_card(&named)));
         assert_eq!(
             error.message,
-            format!("Aggro has {} cards; every deck needs exactly {DECK_SIZE}.", DECK_SIZE - 1)
+            format!(
+                "Aggro has {} cards; every deck needs exactly {DECK_SIZE}.",
+                DECK_SIZE - 1
+            )
         );
     }
 
@@ -335,7 +349,11 @@ fn random_name(rng: &mut Rng) -> Option<String> {
         return None;
     }
     let length = 1 + rng.int(12) as usize;
-    Some((0..length).map(|_| char::from(b' ' + rng.int(95) as u8)).collect())
+    Some(
+        (0..length)
+            .map(|_| char::from(b' ' + rng.int(95) as u8))
+            .collect(),
+    )
 }
 
 /// A legal loadout with a random split: which owned ids land in which deck, in which order, under

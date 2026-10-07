@@ -28,11 +28,12 @@ use std::time::Duration;
 
 use jackioh_engine::{PLAYER_IDS, PerPlayer, PlayerId};
 
-use crate::api::http::lock;
 use crate::actor::contracts::{ClockExpiry, ClockView, CreateMatchClockInput, ExpiryHandler};
+use crate::api::http::lock;
 use crate::app::now_ms;
 use crate::config::{
-    DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MULLIGAN_CLOCK_SECONDS, PROMPT_CLOCK_SECONDS, TURN_CLOCK_SECONDS,
+    DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MULLIGAN_CLOCK_SECONDS, PROMPT_CLOCK_SECONDS,
+    TURN_CLOCK_SECONDS,
 };
 use crate::db::store::MatchClocks;
 
@@ -434,7 +435,11 @@ impl ClockState {
             // R268: during the window the mulligan deadline is the prompt deadline both clients render —
             // it is a prompt deadline, held by both seats at once. The two never run together, so the
             // stored `MatchClocks` keeps its shape.
-            prompt_deadline: if self.mulligan_open { self.mulligan.deadline } else { self.prompt.deadline },
+            prompt_deadline: if self.mulligan_open {
+                self.mulligan.deadline
+            } else {
+                self.prompt.deadline
+            },
             grace_deadline: PerPlayer::new(self.grace.p1.deadline, self.grace.p2.deadline),
             ceiling_at: self.ceiling_at,
         }
@@ -453,13 +458,15 @@ impl ClockState {
         let now = now_ms();
         // R268: one clock for both seats, the one that has answered included — it is waiting on it.
         if self.mulligan_open
-            && let Some(deadline) = self.mulligan.deadline {
-                return Some((deadline - now).max(0));
-            }
+            && let Some(deadline) = self.mulligan.deadline
+        {
+            return Some((deadline - now).max(0));
+        }
         if self.holder == Some(player)
-            && let Some(deadline) = self.prompt.deadline {
-                return Some((deadline - now).max(0));
-            }
+            && let Some(deadline) = self.prompt.deadline
+        {
+            return Some((deadline - now).max(0));
+        }
         if self.owner != Some(player) {
             return None;
         }
@@ -479,7 +486,9 @@ pub struct MatchClock {
 
 impl std::fmt::Debug for MatchClock {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("MatchClock").field("clocks", &self.snapshot()).finish()
+        f.debug_struct("MatchClock")
+            .field("clocks", &self.snapshot())
+            .finish()
     }
 }
 
@@ -517,7 +526,10 @@ impl MatchClock {
 
 /// TS `createMatchClock`. Must be called inside a tokio runtime (it arms the ceiling at once).
 pub fn create_match_clock(input: CreateMatchClockInput) -> MatchClock {
-    let CreateMatchClockInput { started_at, on_expire } = input;
+    let CreateMatchClockInput {
+        started_at,
+        on_expire,
+    } = input;
     let state = Arc::new_cyclic(|me| {
         Mutex::new(ClockState {
             me: me.clone(),

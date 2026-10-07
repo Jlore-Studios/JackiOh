@@ -12,7 +12,8 @@ use std::cell::Cell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
-    Action, ActionBody, GameState, PLAYER_IDS, Phase, PlayerId, active_units_of, legal_actions, opponent_of, reduce,
+    Action, ActionBody, GameState, PLAYER_IDS, Phase, PlayerId, active_units_of, legal_actions, opponent_of,
+    reduce,
 };
 use serde::{Deserialize, Serialize};
 
@@ -167,7 +168,10 @@ impl NodeCounter for CountingNodeCounter<'_> {
     }
 }
 
-pub fn create_node_counter<'a>(limit: usize, should_stop: Option<&'a dyn Fn() -> bool>) -> CountingNodeCounter<'a> {
+pub fn create_node_counter<'a>(
+    limit: usize,
+    should_stop: Option<&'a dyn Fn() -> bool>,
+) -> CountingNodeCounter<'a> {
     CountingNodeCounter {
         kind: CounterKind::Root {
             used: Cell::new(0),
@@ -232,7 +236,12 @@ pub type SimStep = Result<GameState, String>;
 /// of the other seat is open, answer it with the first entry of legalActions (each answer one more
 /// node, at most AI_SEARCH.maxAutoAnswers). A throw or a refusal is `{ ok: false }`. Returns null
 /// without touching anything when the counter refuses a node.
-pub fn simulate(state: &GameState, seat: PlayerId, action: &ActionBody, counter: &dyn NodeCounter) -> Option<SimStep> {
+pub fn simulate(
+    state: &GameState,
+    seat: PlayerId,
+    action: &ActionBody,
+    counter: &dyn NodeCounter,
+) -> Option<SimStep> {
     if !counter.take() {
         return None;
     }
@@ -263,7 +272,10 @@ pub fn simulate(state: &GameState, seat: PlayerId, action: &ActionBody, counter:
             if !counter.take() {
                 return None;
             }
-            let next = reduce(&current, &Action::new(reply, other, format!("sim:{}", counter.used())));
+            let next = reduce(
+                &current,
+                &Action::new(reply, other, format!("sim:{}", counter.used())),
+            );
             if let Some(error) = next.error {
                 note_sim_error(counter);
                 return Some(Err(error));
@@ -290,7 +302,12 @@ fn passed_score(state: &GameState, seat: PlayerId) -> f64 {
 
 /// `closeLine`'s step: the line's turn ended here, or `None` where TS handed `state` back itself
 /// (which `terminalScore` tells apart by identity).
-fn close_line_step(state: &GameState, seat: PlayerId, root_turn: i32, counter: &dyn NodeCounter) -> Option<GameState> {
+fn close_line_step(
+    state: &GameState,
+    seat: PlayerId,
+    root_turn: i32,
+    counter: &dyn NodeCounter,
+) -> Option<GameState> {
     if line_status(state, seat, root_turn) == LineStatus::Open
         && state.pending.is_none()
         && state.active == seat
@@ -337,11 +354,20 @@ pub fn terminal_score(state: &GameState, seat: PlayerId, root_turn: i32, counter
 pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
     let opp = opponent_of(seat);
     let mut parts: Vec<String> = vec![
-        format!("h{}/{}", state.players[opp].hero.health, state.players[opp].hero.armor),
-        format!("m{}/{}", state.players[seat].hero.health, state.players[seat].hero.armor),
+        format!(
+            "h{}/{}",
+            state.players[opp].hero.health, state.players[opp].hero.armor
+        ),
+        format!(
+            "m{}/{}",
+            state.players[seat].hero.health, state.players[seat].hero.armor
+        ),
         format!("${}", state.players[seat].mana.current),
         format!("n{}", state.players[opp].hand.len()),
-        format!("q{}", state.pending.as_ref().map_or("-", |pending| pending.id.as_str())),
+        format!(
+            "q{}",
+            state.pending.as_ref().map_or("-", |pending| pending.id.as_str())
+        ),
     ];
     for player in PLAYER_IDS {
         for unit in active_units_of(state, player) {

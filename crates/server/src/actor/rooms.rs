@@ -27,21 +27,23 @@ use std::cell::RefCell;
 use std::sync::{Arc, LazyLock, Mutex};
 
 use indexmap::IndexMap;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use jackioh_engine::{pick_portrait_from_seed, PlayerId};
+use jackioh_engine::{PlayerId, pick_portrait_from_seed};
 
 use crate::actor::engine::deal_random_deck;
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
-use crate::api::decks::{assert_not_in_series, freeze_choice, read_mode_choice, FrozenChoice, ModeChoiceInput};
-use crate::api::http::{json as json_response, ApiError, ApiErrorCode, ApiResult, Req};
-use crate::api::queue::{seed_override_of, new_uuid, new_seed};
+use crate::api::decks::{
+    FrozenChoice, ModeChoiceInput, assert_not_in_series, freeze_choice, read_mode_choice,
+};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json as json_response};
+use crate::api::queue::{new_seed, new_uuid, seed_override_of};
 use crate::api::series::start_series;
 use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
 // `now_ms`: the server's one clock in epoch milliseconds (TS `deps.timers.now()`; SURFACE §11.3:
 // `Timers` → `tokio::time`), read through tokio's clock so a test that pauses and advances it moves
 // every module's "now" together.
-use crate::app::{now_ms, App};
+use crate::app::{App, now_ms};
 use crate::config::{ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use crate::db::store::{MatchSeat, QueueMode, Room, SeriesRow, StartMatchInput};
 
@@ -94,7 +96,13 @@ pub fn e2e_room_seed_count() -> usize {
 fn remember_seed(code: &str, seed: &str, expires_at: i64, now: i64) {
     let mut held = seeds();
     held.retain(|_, entry| entry.expires_at > now);
-    held.insert(code.to_string(), HeldSeed { seed: seed.to_string(), expires_at });
+    held.insert(
+        code.to_string(),
+        HeldSeed {
+            seed: seed.to_string(),
+            expires_at,
+        },
+    );
 }
 
 /// The seed for this room, consumed. The host's seed wins over a seed the joiner sent: the room was
@@ -199,9 +207,15 @@ fn wiring_fault(message: String) -> ApiError {
 
 /// §9.5: "Enqueue asserts the account is active and not in a match."
 fn assert_not_in_match(req: &Req) -> Result<(), ApiError> {
-    let in_match = req.caller.as_ref().and_then(|caller| caller.profile.in_match_id.as_ref());
+    let in_match = req
+        .caller
+        .as_ref()
+        .and_then(|caller| caller.profile.in_match_id.as_ref());
     if in_match.is_some() {
-        return Err(ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first"));
+        return Err(ApiError::new(
+            ApiErrorCode::AlreadyInMatch,
+            "finish your current match first",
+        ));
     }
     Ok(())
 }
@@ -234,7 +248,10 @@ async fn joinable_room(app: &App, typed: &str) -> Result<Room, ApiError> {
         return Err(miss());
     }
     if room.guest_profile_id.is_some() {
-        return Err(ApiError::new(ApiErrorCode::Conflict, "someone already joined that room"));
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            "someone already joined that room",
+        ));
     }
     // §9.4: a stale catalog is rejected at every door into a match.
     if room.catalog_version != app.catalog.version {
@@ -253,9 +270,15 @@ async fn assert_host_free(app: &App, host_profile_id: &str) -> Result<(), ApiErr
     let host = tx.profiles_get_by_id(host_profile_id).await?;
     let series = tx.series_active_for(host_profile_id).await?;
     tx.commit().await?;
-    let host_in_match = host.as_ref().and_then(|profile| profile.in_match_id.as_ref()).is_some();
+    let host_in_match = host
+        .as_ref()
+        .and_then(|profile| profile.in_match_id.as_ref())
+        .is_some();
     if host_in_match || series.is_some() {
-        return Err(ApiError::new(ApiErrorCode::Conflict, "The host of that room is playing another game right now."));
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            "The host of that room is playing another game right now.",
+        ));
     }
     Ok(())
 }
@@ -275,13 +298,21 @@ fn room_seats(
                 profile_id: room.host_profile_id.clone(),
                 player: PlayerId::P1,
                 deck: deal_random_deck(&format!("{seed}:p1-deck")),
-                portrait: Some(pick_portrait_from_seed(&format!("{seed}:portrait:p1")).as_str().to_string()),
+                portrait: Some(
+                    pick_portrait_from_seed(&format!("{seed}:portrait:p1"))
+                        .as_str()
+                        .to_string(),
+                ),
             },
             MatchSeat {
                 profile_id: joiner_id.to_string(),
                 player: PlayerId::P2,
                 deck: deal_random_deck(&format!("{seed}:p2-deck")),
-                portrait: Some(pick_portrait_from_seed(&format!("{seed}:portrait:p2")).as_str().to_string()),
+                portrait: Some(
+                    pick_portrait_from_seed(&format!("{seed}:portrait:p2"))
+                        .as_str()
+                        .to_string(),
+                ),
             },
         ));
     }
@@ -364,11 +395,17 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
             remember_seed(&code, seed, expires_at, now);
         }
         tracing::info!(event = "room.created", code = %code, hostProfileId = %profile_id, mode = mode.as_str());
-        return Ok(json_response(200, json!({ "code": code, "expiresAt": expires_at, "mode": mode })));
+        return Ok(json_response(
+            200,
+            json!({ "code": code, "expiresAt": expires_at, "mode": mode }),
+        ));
     }
 
     tracing::error!(event = "room.code.exhausted", attempts = CODE_ATTEMPTS);
-    Err(ApiError::new(ApiErrorCode::Unavailable, "could not allocate a room code; try again"))
+    Err(ApiError::new(
+        ApiErrorCode::Unavailable,
+        "could not allocate a room code; try again",
+    ))
 }
 
 /// POST /api/rooms/:code/join — claim the room and start its game (§9.5, R264): the match for
@@ -388,12 +425,19 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let typed = req.params.get("code").cloned().unwrap_or_default();
     let room = joinable_room(app, &typed).await?;
     if room.host_profile_id == profile_id {
-        return Err(ApiError::new(ApiErrorCode::Conflict, "you created that room; wait for someone to join"));
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            "you created that room; wait for someone to join",
+        ));
     }
     // R264: the room's mode, or a refusal naming it — before the joiner's deck is looked at, so the
     // answer is the useful one.
     if choice_mode(&choice) != room.mode {
-        return Err(ApiError::with_details(ApiErrorCode::Conflict, mode_refusal(room.mode), json!({ "mode": room.mode })));
+        return Err(ApiError::with_details(
+            ApiErrorCode::Conflict,
+            mode_refusal(room.mode),
+            json!({ "mode": room.mode }),
+        ));
     }
 
     let frozen = freeze_choice(app, &profile_id, &choice).await?;
@@ -408,7 +452,10 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let claimed = tx.rooms_claim(&room.code, &profile_id, &match_id, now).await?;
     tx.commit().await?;
     let Some(claimed) = claimed else {
-        return Err(ApiError::new(ApiErrorCode::Conflict, "someone already joined that room"));
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            "someone already joined that room",
+        ));
     };
     // R143: the server mints the seed, unless an end-to-end room asked for one.
     let seed = match take_seed_for_room(&claimed.code, joiner_seed) {
@@ -420,14 +467,23 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         // R259, R263: the series, with the host as series p1 and the id the claim reserved as game
         // 1's. Nobody is in a match yet: the series opens on its pick phase.
         let Some(host_trio) = claimed.host_trio.clone() else {
-            return Err(wiring_fault(format!("Conquest room {} holds no trio", claimed.code)));
+            return Err(wiring_fault(format!(
+                "Conquest room {} holds no trio",
+                claimed.code
+            )));
         };
         let input = NewSeriesInput {
             series_id: new_uuid(),
             first_match_id: match_id.clone(),
             sides: (
-                NewSeriesSide { profile_id: claimed.host_profile_id.clone(), trio: host_trio },
-                NewSeriesSide { profile_id: profile_id.clone(), trio: trio.clone() },
+                NewSeriesSide {
+                    profile_id: claimed.host_profile_id.clone(),
+                    trio: host_trio,
+                },
+                NewSeriesSide {
+                    profile_id: profile_id.clone(),
+                    trio: trio.clone(),
+                },
             ),
             seed_base: seed.clone(),
             catalog_version: app.catalog.version.clone(),

@@ -104,7 +104,9 @@ mod r44_lethal_projection_m3_t7 {
         assert_eq!(projected(&state, &attacker, &on_wall), 5);
         // Without Pierce the wall's Armor leaves 5 of the 12, which its 7 health holds, and the hero's
         // Armor 3 takes 3 off a direct swing.
-        edit(&mut state, &attacker, |card| card.granted_keywords = vec![Keyword::Trample]);
+        edit(&mut state, &attacker, |card| {
+            card.granted_keywords = vec![Keyword::Trample]
+        });
         assert_eq!(projected(&state, &attacker, &on_wall), 0);
         assert_eq!(projected(&state, &attacker, &on_hero()), 9);
     }
@@ -131,8 +133,18 @@ mod r44_lethal_projection_m3_t7 {
     #[test]
     fn r44_clamps_the_projection_with_anti_oneshot_armor_base_5_and_radiant_3_s4_4_step_3() {
         let mut state = board("cap-base");
-        let attacker = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), json!({ "radiant": true })); // 10/20
-        put(&mut state, &anti_oneshot().id, slot(P2, Row::Backrow, 1), json!({}));
+        let attacker = put(
+            &mut state,
+            &big_body.id,
+            slot(P1, Row::Units, 1),
+            json!({ "radiant": true }),
+        ); // 10/20
+        put(
+            &mut state,
+            &anti_oneshot().id,
+            slot(P2, Row::Backrow, 1),
+            json!({}),
+        );
 
         assert_eq!(unit_view(&state, &live(&state, &attacker)).attack, 10);
         assert_eq!(projected(&state, &attacker, &on_hero()), ANTI_ONESHOT_CAP.base);
@@ -143,8 +155,18 @@ mod r44_lethal_projection_m3_t7 {
 
         // Radiant Anti-oneshot Armor clamps to 3, so the same 10 attack needs a hero on 3.
         let mut radiant = board("cap-radiant");
-        let bigger = put(&mut radiant, &big_body.id, slot(P1, Row::Units, 1), json!({ "radiant": true }));
-        put(&mut radiant, &anti_oneshot().id, slot(P2, Row::Backrow, 1), json!({ "radiant": true }));
+        let bigger = put(
+            &mut radiant,
+            &big_body.id,
+            slot(P1, Row::Units, 1),
+            json!({ "radiant": true }),
+        );
+        put(
+            &mut radiant,
+            &anti_oneshot().id,
+            slot(P2, Row::Backrow, 1),
+            json!({ "radiant": true }),
+        );
 
         assert_eq!(projected(&radiant, &bigger, &on_hero()), ANTI_ONESHOT_CAP.radiant);
         radiant.players.p2.hero.health = 4;
@@ -177,10 +199,23 @@ mod r44_lethal_projection_m3_t7 {
         state.players.p2.hero.armor = 0;
 
         let mut capped = board("trample-capped");
-        let big = put(&mut capped, &trampler.id, slot(P1, Row::Units, 1), json!({ "radiant": true })); // 12/8 Trample
+        let big = put(
+            &mut capped,
+            &trampler.id,
+            slot(P1, Row::Units, 1),
+            json!({ "radiant": true }),
+        ); // 12/8 Trample
         let small = put(&mut capped, &plain.id, slot(P2, Row::Units, 1), json!({})); // 3/3
-        put(&mut capped, &anti_oneshot().id, slot(P2, Row::Backrow, 1), json!({}));
-        assert_eq!(projected(&capped, &big, &unit_now(&capped, &small)), ANTI_ONESHOT_CAP.base);
+        put(
+            &mut capped,
+            &anti_oneshot().id,
+            slot(P2, Row::Backrow, 1),
+            json!({}),
+        );
+        assert_eq!(
+            projected(&capped, &big, &unit_now(&capped, &small)),
+            ANTI_ONESHOT_CAP.base
+        );
     }
 
     #[test]
@@ -225,12 +260,18 @@ mod r44_lethal_projection_m3_t7 {
         let attacker = put(&mut state, &trampler.id, slot(P1, Row::Units, 1), json!({}));
         let blocker = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
         let shield = put(&mut state, &shielded.id, slot(P2, Row::Units, 2), json!({}));
-        put(&mut state, &anti_oneshot().id, slot(P2, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &anti_oneshot().id,
+            slot(P2, Row::Backrow, 1),
+            json!({}),
+        );
         state.players.p2.hero.armor = 1;
         state.players.p2.hero.health = 3;
 
         let before = serde_json::to_string(&state).expect("serialises");
-        let targets: Vec<AttackTarget> = vec![on_hero(), unit_now(&state, &blocker), unit_now(&state, &shield)];
+        let targets: Vec<AttackTarget> =
+            vec![on_hero(), unit_now(&state, &blocker), unit_now(&state, &shield)];
         let now = live(&state, &attacker);
         for target in &targets {
             projected_damage(&state, &now, target);

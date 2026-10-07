@@ -85,12 +85,19 @@ fn defs() -> Vec<CardDef> {
 }
 
 fn both(script: Script) -> CardScripts {
-    CardScripts { base: script.clone(), radiant: script }
+    CardScripts {
+        base: script.clone(),
+        radiant: script,
+    }
 }
 
 fn ping_enemy_hero() -> Script {
     Script {
-        death: Some(hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 3 })))])),
+        death: Some(hook(|_ctx| {
+            vec![damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": 3 }),
+            ))]
+        })),
         ..Script::default()
     }
 }
@@ -104,9 +111,15 @@ fn scripts() -> IndexMap<String, CardScripts> {
         rememberer().id,
         both(Script {
             death: Some(hook(|ctx| {
-                let amount = ctx.self_.as_ref().and_then(|card| card.memory.get("meal")).and_then(Value::as_i64);
+                let amount = ctx
+                    .self_
+                    .as_ref()
+                    .and_then(|card| card.memory.get("meal"))
+                    .and_then(Value::as_i64);
                 match amount {
-                    Some(amount) => vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))],
+                    Some(amount) => vec![damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": amount }),
+                    ))],
                     None => vec![],
                 }
             })),
@@ -152,14 +165,25 @@ struct Runner {
 
 /// TS `runner(state)`: a sink whose rng starts at the state's cursor, as reduce does.
 fn runner(state: &GameState) -> Runner {
-    Runner { events: Vec::new(), rng: Rng::new(&state.seed, state.rng_cursor) }
+    Runner {
+        events: Vec::new(),
+        rng: Rng::new(&state.seed, state.rng_cursor),
+    }
 }
 
 impl Runner {
-    fn apply(&mut self, state: &mut GameState, effect: Effect, target: Option<&CardInstance>, options: RunOptions) {
+    fn apply(
+        &mut self,
+        state: &mut GameState,
+        effect: Effect,
+        target: Option<&CardInstance>,
+        options: RunOptions,
+    ) {
         let targets: Vec<Selection> = match target {
             None => vec![],
-            Some(target) => vec![Selection::Instance { instance_id: target.id.clone() }],
+            Some(target) => vec![Selection::Instance {
+                instance_id: target.id.clone(),
+            }],
         };
         {
             let mut sink = EngineSink::new(state, &mut self.events, &mut self.rng);
@@ -208,7 +232,10 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
 /// One field of each event, as TS's `.map((e) => e.<key>)` read it.
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
     match serde_json::to_value(events).expect("events serialise") {
-        Value::Array(items) => items.into_iter().map(|item| item.get(key).cloned().unwrap_or(Value::Null)).collect(),
+        Value::Array(items) => items
+            .into_iter()
+            .map(|item| item.get(key).cloned().unwrap_or(Value::Null))
+            .collect(),
         other => panic!("expected a list of events, got {other}"),
     }
 }
@@ -224,22 +251,47 @@ mod destroy_m3_t1 {
     #[test]
     fn marks_the_card_and_leaves_it_on_the_field_until_the_state_check_moves_it() {
         let mut state = default_game();
-        let victim = put(&mut state, &dier().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let victim = put(
+            &mut state,
+            &dier().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         let mut run = runner(&state);
 
-        run.apply(&mut state, destroy(json_as(json!({ "target": chosen() }))), Some(&victim), RunOptions::default());
+        run.apply(
+            &mut state,
+            destroy(json_as(json!({ "target": chosen() }))),
+            Some(&victim),
+            RunOptions::default(),
+        );
 
         assert_eq!(live(&state, &victim.id).marked_destroyed, Some(true));
-        assert_eq!(id_at(&state, slot(PlayerId::P1, Row::Units, 2)), Some(victim.id.clone()));
+        assert_eq!(
+            id_at(&state, slot(PlayerId::P1, Row::Units, 2)),
+            Some(victim.id.clone())
+        );
         assert_eq!(run.events, Vec::<GameEvent>::new());
 
         run.check(&mut state);
 
         assert_eq!(id_at(&state, slot(PlayerId::P1, Row::Units, 2)), None);
-        assert_eq!(ids(&state.players[PlayerId::P1].graveyard), vec![victim.id.clone()]);
-        assert_eq!(pluck(&events_of_type(&run.events, GameEventType::Destroyed), "instanceId"), vec![json!(victim.id)]);
         assert_eq!(
-            pluck(&events_of_type(&run.events, GameEventType::EnteredGraveyard), "instanceId"),
+            ids(&state.players[PlayerId::P1].graveyard),
+            vec![victim.id.clone()]
+        );
+        assert_eq!(
+            pluck(
+                &events_of_type(&run.events, GameEventType::Destroyed),
+                "instanceId"
+            ),
+            vec![json!(victim.id)]
+        );
+        assert_eq!(
+            pluck(
+                &events_of_type(&run.events, GameEventType::EnteredGraveyard),
+                "instanceId"
+            ),
             vec![json!(victim.id)]
         );
     }
@@ -252,12 +304,25 @@ mod destroy_m3_t1 {
         let second = put(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 1), json!({}));
         let mut run = runner(&state);
 
-        run.apply(&mut state, destroy(json_as(json!({ "target": chosen() }))), Some(&first), RunOptions::default());
-        run.apply(&mut state, destroy(json_as(json!({ "target": chosen() }))), Some(&second), RunOptions::default());
+        run.apply(
+            &mut state,
+            destroy(json_as(json!({ "target": chosen() }))),
+            Some(&first),
+            RunOptions::default(),
+        );
+        run.apply(
+            &mut state,
+            destroy(json_as(json!({ "target": chosen() }))),
+            Some(&second),
+            RunOptions::default(),
+        );
         run.check(&mut state);
 
         assert_eq!(
-            pluck(&events_of_type(&run.events, GameEventType::Destroyed), "instanceId"),
+            pluck(
+                &events_of_type(&run.events, GameEventType::Destroyed),
+                "instanceId"
+            ),
             vec![json!(first.id), json!(second.id)]
         );
         assert_eq!(state.players[PlayerId::P1].graveyard.len(), 1);
@@ -267,14 +332,27 @@ mod destroy_m3_t1 {
     #[test]
     fn r46_an_indestructible_unit_ignores_a_destroy_mark_and_stays_on_the_field() {
         let mut state = default_game();
-        let warded = put(&mut state, &indestructible.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let warded = put(
+            &mut state,
+            &indestructible.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         live_mut(&mut state, &warded.id).position = Some(Position::Def);
         let mut run = runner(&state);
 
-        run.apply(&mut state, destroy(json_as(json!({ "target": chosen() }))), Some(&warded), RunOptions::default());
+        run.apply(
+            &mut state,
+            destroy(json_as(json!({ "target": chosen() }))),
+            Some(&warded),
+            RunOptions::default(),
+        );
         run.check(&mut state);
 
-        assert_eq!(id_at(&state, slot(PlayerId::P1, Row::Units, 1)), Some(warded.id.clone()));
+        assert_eq!(
+            id_at(&state, slot(PlayerId::P1, Row::Units, 1)),
+            Some(warded.id.clone())
+        );
         assert_eq!(live(&state, &warded.id).marked_destroyed, Some(false));
         assert_eq!(live(&state, &warded.id).position, Some(Position::Atk));
         assert_eq!(state.players[PlayerId::P1].graveyard.len(), 0);
@@ -284,10 +362,20 @@ mod destroy_m3_t1 {
     #[test]
     fn marks_a_backrow_card_which_the_state_check_collects_too() {
         let mut state = default_game();
-        let card = put(&mut state, &field_spell().id, slot(PlayerId::P1, Row::Backrow, 3), json!({}));
+        let card = put(
+            &mut state,
+            &field_spell().id,
+            slot(PlayerId::P1, Row::Backrow, 3),
+            json!({}),
+        );
         let mut run = runner(&state);
 
-        run.apply(&mut state, destroy(json_as(json!({ "target": chosen() }))), Some(&card), RunOptions::default());
+        run.apply(
+            &mut state,
+            destroy(json_as(json!({ "target": chosen() }))),
+            Some(&card),
+            RunOptions::default(),
+        );
         run.check(&mut state);
 
         assert_eq!(id_at(&state, slot(PlayerId::P1, Row::Backrow, 3)), None);
@@ -297,25 +385,53 @@ mod destroy_m3_t1 {
     #[test]
     fn r12_a_stolen_unit_destroyed_goes_to_its_owner_s_graveyard() {
         let mut state = default_game();
-        let mut theirs = new_instance(&mut state, "fx-4", PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
-        assert!(place_on_field(&mut state, &mut theirs, slot(PlayerId::P1, Row::Units, 1), Default::default()));
+        let mut theirs = new_instance(
+            &mut state,
+            "fx-4",
+            PlayerId::P2,
+            Zone::Hand { player: PlayerId::P2 },
+        );
+        assert!(place_on_field(
+            &mut state,
+            &mut theirs,
+            slot(PlayerId::P1, Row::Units, 1),
+            Default::default()
+        ));
         let theirs = live(&state, &theirs.id).clone();
         let mut run = runner(&state);
 
-        run.apply(&mut state, destroy(json_as(json!({ "target": chosen() }))), Some(&theirs), RunOptions::default());
+        run.apply(
+            &mut state,
+            destroy(json_as(json!({ "target": chosen() }))),
+            Some(&theirs),
+            RunOptions::default(),
+        );
         run.check(&mut state);
 
-        assert_eq!(ids(&state.players[PlayerId::P2].graveyard), vec![theirs.id.clone()]);
+        assert_eq!(
+            ids(&state.players[PlayerId::P2].graveyard),
+            vec![theirs.id.clone()]
+        );
         assert_eq!(state.players[PlayerId::P1].graveyard.len(), 0);
     }
 
     #[test]
     fn r11_a_destroyed_unit_token_vanishes_and_reaches_no_graveyard() {
         let mut state = default_game();
-        let token = put(&mut state, &rush_token().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let token = put(
+            &mut state,
+            &rush_token().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let mut run = runner(&state);
 
-        run.apply(&mut state, destroy(json_as(json!({ "target": chosen() }))), Some(&token), RunOptions::default());
+        run.apply(
+            &mut state,
+            destroy(json_as(json!({ "target": chosen() }))),
+            Some(&token),
+            RunOptions::default(),
+        );
         run.check(&mut state);
 
         assert_eq!(id_at(&state, slot(PlayerId::P1, Row::Units, 1)), None);
@@ -327,11 +443,21 @@ mod destroy_m3_t1 {
     #[test]
     fn marks_nothing_for_a_card_that_is_not_on_the_field() {
         let mut state = default_game();
-        let card = new_instance(&mut state, "fx-1", PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let card = new_instance(
+            &mut state,
+            "fx-1",
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
         state.players[PlayerId::P1].hand.push(card.clone());
         let mut run = runner(&state);
 
-        run.apply(&mut state, destroy(json_as(json!({ "target": chosen() }))), Some(&card), RunOptions::default());
+        run.apply(
+            &mut state,
+            destroy(json_as(json!({ "target": chosen() }))),
+            Some(&card),
+            RunOptions::default(),
+        );
         run.check(&mut state);
 
         assert_eq!(live(&state, &card.id).marked_destroyed, None);
@@ -353,13 +479,30 @@ mod sacrifice_m3_t1 {
         let victim = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2), json!({}));
         let mut run = runner(&state);
 
-        run.apply(&mut state, sacrifice(json_as(json!({ "target": chosen() }))), Some(&victim), RunOptions::default());
+        run.apply(
+            &mut state,
+            sacrifice(json_as(json!({ "target": chosen() }))),
+            Some(&victim),
+            RunOptions::default(),
+        );
 
         assert_eq!(id_at(&state, slot(PlayerId::P1, Row::Units, 2)), None);
-        assert_eq!(ids(&state.players[PlayerId::P1].graveyard), vec![victim.id.clone()]);
-        assert_eq!(pluck(&events_of_type(&run.events, GameEventType::Destroyed), "instanceId"), vec![json!(victim.id)]);
         assert_eq!(
-            pluck(&events_of_type(&run.events, GameEventType::EnteredGraveyard), "instanceId"),
+            ids(&state.players[PlayerId::P1].graveyard),
+            vec![victim.id.clone()]
+        );
+        assert_eq!(
+            pluck(
+                &events_of_type(&run.events, GameEventType::Destroyed),
+                "instanceId"
+            ),
+            vec![json!(victim.id)]
+        );
+        assert_eq!(
+            pluck(
+                &events_of_type(&run.events, GameEventType::EnteredGraveyard),
+                "instanceId"
+            ),
             vec![json!(victim.id)]
         );
     }
@@ -368,39 +511,77 @@ mod sacrifice_m3_t1 {
     #[test]
     fn counts_as_a_death_the_destroyed_counter_rises_and_the_death_trigger_fires() {
         let mut state = default_game();
-        let victim = put(&mut state, &dier().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let victim = put(
+            &mut state,
+            &dier().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let mut run = runner(&state);
 
-        run.apply(&mut state, sacrifice(json_as(json!({ "target": chosen() }))), Some(&victim), RunOptions::default());
+        run.apply(
+            &mut state,
+            sacrifice(json_as(json!({ "target": chosen() }))),
+            Some(&victim),
+            RunOptions::default(),
+        );
 
         assert_eq!(state.counters.destroyed, 1);
         assert_eq!(state.players[PlayerId::P2].hero.health, HERO_HEALTH - 3);
-        assert_eq!(pluck(&events_of_type(&run.events, GameEventType::Damage), "amount"), vec![json!(3)]);
+        assert_eq!(
+            pluck(&events_of_type(&run.events, GameEventType::Damage), "amount"),
+            vec![json!(3)]
+        );
     }
 
     /// TS: "§6.3 bypasses Indestructible, which a destroy mark cannot".
     #[test]
     fn bypasses_indestructible_which_a_destroy_mark_cannot() {
         let mut state = default_game();
-        let warded = put(&mut state, &warded_dier().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let warded = put(
+            &mut state,
+            &warded_dier().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let mut run = runner(&state);
 
-        run.apply(&mut state, sacrifice(json_as(json!({ "target": chosen() }))), Some(&warded), RunOptions::default());
+        run.apply(
+            &mut state,
+            sacrifice(json_as(json!({ "target": chosen() }))),
+            Some(&warded),
+            RunOptions::default(),
+        );
 
         assert_eq!(id_at(&state, slot(PlayerId::P1, Row::Units, 1)), None);
-        assert_eq!(ids(&state.players[PlayerId::P1].graveyard), vec![warded.id.clone()]);
+        assert_eq!(
+            ids(&state.players[PlayerId::P1].graveyard),
+            vec![warded.id.clone()]
+        );
         assert_eq!(state.players[PlayerId::P2].hero.health, HERO_HEALTH - 3);
     }
 
     #[test]
     fn r78_the_death_hook_reads_the_card_as_it_was_just_before_it_left_the_field() {
         let mut state = default_game();
-        let victim = put(&mut state, &rememberer().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        live_mut(&mut state, &victim.id).memory.insert("meal".to_string(), json!(7));
+        let victim = put(
+            &mut state,
+            &rememberer().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        live_mut(&mut state, &victim.id)
+            .memory
+            .insert("meal".to_string(), json!(7));
         let victim = live(&state, &victim.id).clone();
         let mut run = runner(&state);
 
-        run.apply(&mut state, sacrifice(json_as(json!({ "target": chosen() }))), Some(&victim), RunOptions::default());
+        run.apply(
+            &mut state,
+            sacrifice(json_as(json!({ "target": chosen() }))),
+            Some(&victim),
+            RunOptions::default(),
+        );
 
         assert_eq!(state.players[PlayerId::P2].hero.health, HERO_HEALTH - 7);
         // R78: the instance itself is wiped on the way out, so the hook read a snapshot.
@@ -410,15 +591,31 @@ mod sacrifice_m3_t1 {
     #[test]
     fn r11_a_sacrificed_unit_token_vanishes_and_enters_no_graveyard() {
         let mut state = default_game();
-        let token = put(&mut state, &rush_token().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let token = put(
+            &mut state,
+            &rush_token().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let mut run = runner(&state);
 
-        run.apply(&mut state, sacrifice(json_as(json!({ "target": chosen() }))), Some(&token), RunOptions::default());
+        run.apply(
+            &mut state,
+            sacrifice(json_as(json!({ "target": chosen() }))),
+            Some(&token),
+            RunOptions::default(),
+        );
 
         assert_eq!(id_at(&state, slot(PlayerId::P1, Row::Units, 1)), None);
         assert_eq!(state.players[PlayerId::P1].graveyard.len(), 0);
         assert_eq!(state.players[PlayerId::P1].exile.len(), 0);
-        assert_eq!(pluck(&events_of_type(&run.events, GameEventType::Destroyed), "instanceId"), vec![json!(token.id)]);
+        assert_eq!(
+            pluck(
+                &events_of_type(&run.events, GameEventType::Destroyed),
+                "instanceId"
+            ),
+            vec![json!(token.id)]
+        );
         assert!(events_of_type(&run.events, GameEventType::EnteredGraveyard).is_empty());
     }
 
@@ -433,10 +630,16 @@ mod sacrifice_m3_t1 {
             &mut state,
             sacrifice(json_as(json!({ "target": chosen() }))),
             Some(&theirs),
-            RunOptions { controller: Some(PlayerId::P1), ..Default::default() },
+            RunOptions {
+                controller: Some(PlayerId::P1),
+                ..Default::default()
+            },
         );
 
-        assert_eq!(id_at(&state, slot(PlayerId::P2, Row::Units, 1)), Some(theirs.id.clone()));
+        assert_eq!(
+            id_at(&state, slot(PlayerId::P2, Row::Units, 1)),
+            Some(theirs.id.clone())
+        );
         assert_eq!(run.events, Vec::<GameEvent>::new());
 
         let theirs = live(&state, &theirs.id).clone();
@@ -444,18 +647,34 @@ mod sacrifice_m3_t1 {
             &mut state,
             sacrifice(json_as(json!({ "target": chosen(), "allowEnemy": true }))),
             Some(&theirs),
-            RunOptions { controller: Some(PlayerId::P1), ..Default::default() },
+            RunOptions {
+                controller: Some(PlayerId::P1),
+                ..Default::default()
+            },
         );
 
         assert_eq!(id_at(&state, slot(PlayerId::P2, Row::Units, 1)), None);
-        assert_eq!(ids(&state.players[PlayerId::P2].graveyard), vec![theirs.id.clone()]);
+        assert_eq!(
+            ids(&state.players[PlayerId::P2].graveyard),
+            vec![theirs.id.clone()]
+        );
     }
 
     #[test]
     fn r12_a_sacrificed_stolen_unit_goes_to_its_owner_s_graveyard() {
         let mut state = default_game();
-        let mut theirs = new_instance(&mut state, "fx-4", PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
-        assert!(place_on_field(&mut state, &mut theirs, slot(PlayerId::P1, Row::Units, 1), Default::default()));
+        let mut theirs = new_instance(
+            &mut state,
+            "fx-4",
+            PlayerId::P2,
+            Zone::Hand { player: PlayerId::P2 },
+        );
+        assert!(place_on_field(
+            &mut state,
+            &mut theirs,
+            slot(PlayerId::P1, Row::Units, 1),
+            Default::default()
+        ));
         let theirs = live(&state, &theirs.id).clone();
         let mut run = runner(&state);
 
@@ -463,10 +682,16 @@ mod sacrifice_m3_t1 {
             &mut state,
             sacrifice(json_as(json!({ "target": chosen() }))),
             Some(&theirs),
-            RunOptions { controller: Some(PlayerId::P1), ..Default::default() },
+            RunOptions {
+                controller: Some(PlayerId::P1),
+                ..Default::default()
+            },
         );
 
-        assert_eq!(ids(&state.players[PlayerId::P2].graveyard), vec![theirs.id.clone()]);
+        assert_eq!(
+            ids(&state.players[PlayerId::P2].graveyard),
+            vec![theirs.id.clone()]
+        );
         assert_eq!(state.players[PlayerId::P1].graveyard.len(), 0);
     }
 
@@ -474,11 +699,21 @@ mod sacrifice_m3_t1 {
     #[test]
     fn does_nothing_for_a_card_that_is_not_on_the_field() {
         let mut state = default_game();
-        let card = new_instance(&mut state, &dier().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let card = new_instance(
+            &mut state,
+            &dier().id,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
         state.players[PlayerId::P1].hand.push(card.clone());
         let mut run = runner(&state);
 
-        run.apply(&mut state, sacrifice(json_as(json!({ "target": chosen() }))), Some(&card), RunOptions::default());
+        run.apply(
+            &mut state,
+            sacrifice(json_as(json!({ "target": chosen() }))),
+            Some(&card),
+            RunOptions::default(),
+        );
 
         assert_eq!(ids(&state.players[PlayerId::P1].hand), vec![card.id.clone()]);
         assert_eq!(state.counters.destroyed, 0);

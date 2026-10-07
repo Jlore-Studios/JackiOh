@@ -91,7 +91,9 @@ mod determinize_at_the_shown_cost_r762 {
                 DeterminizeOptions::default(),
             );
             for (at, lane) in lanes.iter().enumerate() {
-                let def_id = card_by_id(&world, &lane.id).map(|card| card.def_id.clone()).unwrap_or_default();
+                let def_id = card_by_id(&world, &lane.id)
+                    .map(|card| card.def_id.clone())
+                    .unwrap_or_default();
                 assert_eq!(
                     def_of(Some(&world), &def_id).cost,
                     CardCost::Fixed(shown[at]),

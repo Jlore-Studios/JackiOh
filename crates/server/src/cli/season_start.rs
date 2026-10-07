@@ -25,8 +25,8 @@ use anyhow::{anyhow, bail};
 use indexmap::IndexMap;
 use serde_json::json;
 
-use crate::db::pg::assert_postgres_url;
 use crate::api::ranked::{OpenedSeason, SeasonDeps, open_season_in_tx};
+use crate::db::pg::assert_postgres_url;
 use crate::db::store::Db;
 
 /// The one flag (TS `SeasonStartOptions`).
@@ -65,7 +65,9 @@ pub async fn start_season(
     options: SeasonStartOptions,
 ) -> anyhow::Result<OpenedSeason> {
     let mut t = store.begin(None).await.map_err(|e| anyhow!("{e}"))?;
-    let opened = open_season_in_tx(&mut t, deps).await.map_err(|e| anyhow!("{e}"))?;
+    let opened = open_season_in_tx(&mut t, deps)
+        .await
+        .map_err(|e| anyhow!("{e}"))?;
     if options.dry_run {
         // ROLL_BACK: nothing this transaction wrote survives it.
         drop(t);
@@ -97,7 +99,9 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
 
     // TS `loadPatchVersion()`: the newest patch's version, which the binary carries compiled in
     // (SURFACE §11.3); the clock and the log are the server's own (`tokio::time`, `tracing`).
-    let deps = SeasonDeps { patch_version: jackioh_cards::catalog_version().to_string() };
+    let deps = SeasonDeps {
+        patch_version: jackioh_cards::catalog_version().to_string(),
+    };
     let result = start_season(&store, &deps, options).await;
 
     // TS `finally { await store.close() }`.

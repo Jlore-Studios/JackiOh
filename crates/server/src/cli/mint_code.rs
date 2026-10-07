@@ -20,7 +20,7 @@ use sqlx::postgres::PgPoolOptions;
 use crate::api::codes::{MintDeps, MintInput, mint_invite_code};
 use crate::app::now_ms;
 use crate::db::store::Db;
-use crate::env::{Env, load_env, js_number, quoted};
+use crate::env::{Env, js_number, load_env, quoted};
 
 const MS_PER_DAY: i64 = 24 * 60 * 60 * 1000;
 
@@ -82,7 +82,10 @@ pub async fn run(args: Vec<String>) -> Result<()> {
     let env = load_env(&source).map_err(|error| anyhow!("{error}"))?;
 
     // One connection: this process runs a single insert and exits.
-    let pool = PgPoolOptions::new().max_connections(1).connect(&env.database_url).await?;
+    let pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&env.database_url)
+        .await?;
     let db = Db::Pg(pool.clone());
     let minted = mint(&db, &env, &options).await;
     pool.close().await;
@@ -95,7 +98,9 @@ async fn mint(db: &Db, env: &Env, options: &MintOptions) -> Result<()> {
         Some(days) => Some(
             days.checked_mul(MS_PER_DAY)
                 .and_then(|span| span.checked_add(now_ms()))
-                .ok_or_else(|| anyhow!("--expires-in-days={days} is further away than a timestamp can hold"))?,
+                .ok_or_else(|| {
+                    anyhow!("--expires-in-days={days} is further away than a timestamp can hold")
+                })?,
         ),
     };
 
@@ -103,10 +108,18 @@ async fn mint(db: &Db, env: &Env, options: &MintOptions) -> Result<()> {
     // hashes to what redemption will look up. TS `MintDeps` was the store, ids, hashes and timers; ids
     // and the clock are the server's own functions now (SURFACE §11.3), so minting takes the store and
     // the pepper (`api::codes::MintDeps`).
-    let max_uses = options.max_uses.map(|uses| i32::try_from(uses).unwrap_or(i32::MAX));
-    let minted = mint_invite_code(MintDeps { db, code_pepper: &env.code_pepper }, MintInput { max_uses, expires_at })
-        .await
-        .map_err(|error| anyhow!("{error}"))?;
+    let max_uses = options
+        .max_uses
+        .map(|uses| i32::try_from(uses).unwrap_or(i32::MAX));
+    let minted = mint_invite_code(
+        MintDeps {
+            db,
+            code_pepper: &env.code_pepper,
+        },
+        MintInput { max_uses, expires_at },
+    )
+    .await
+    .map_err(|error| anyhow!("{error}"))?;
 
     // The plaintext goes to stdout and the metadata to stderr, so `mint-code > code.txt`
     // captures the code alone.
@@ -133,7 +146,10 @@ fn flag_of(arg: &str) -> Option<(&str, &str)> {
     if name.is_empty() || !name.chars().all(|c| c.is_ascii_lowercase() || c == '-') {
         return None;
     }
-    if value.chars().any(|c| matches!(c, '\n' | '\r' | '\u{2028}' | '\u{2029}')) {
+    if value
+        .chars()
+        .any(|c| matches!(c, '\n' | '\r' | '\u{2028}' | '\u{2029}'))
+    {
         return None;
     }
     Some((name, value))

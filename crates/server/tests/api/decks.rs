@@ -41,7 +41,9 @@ use jackioh_engine::wire::emotes::{PORTRAIT_IDS, is_portrait_id};
 use jackioh_server::api::decks::{assert_not_in_series, freeze_choice, read_mode_choice};
 use jackioh_server::api::http::{ApiError, ApiErrorCode, AuthLevel};
 use jackioh_server::app::{self, App, now_ms};
-use jackioh_server::config::{DECK_NAME_MAX_LENGTH, DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
+use jackioh_server::config::{
+    DECK_NAME_MAX_LENGTH, DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS,
+};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{CollectionEntry, Db, SavedDeck, SavedTrio, SeriesRow, StoreError};
 
@@ -122,12 +124,22 @@ fn is_token(card_id: &str) -> bool {
 
 /// Distinct playable ids of the catalog, from `start` (TS `cards(target, count, start)`).
 fn cards(count: usize, start: usize) -> Vec<String> {
-    jackioh_cards::CATALOG_IDS.iter().filter(|id| !is_token(id)).skip(start).take(count).cloned().collect()
+    jackioh_cards::CATALOG_IDS
+        .iter()
+        .filter(|id| !is_token(id))
+        .skip(start)
+        .take(count)
+        .cloned()
+        .collect()
 }
 
 /// One Token of the catalog (TS's `"token-sheep"`).
 fn a_token() -> String {
-    jackioh_cards::CATALOG_IDS.iter().find(|id| is_token(id)).cloned().expect("the catalog has a Token")
+    jackioh_cards::CATALOG_IDS
+        .iter()
+        .find(|id| is_token(id))
+        .cloned()
+        .expect("the catalog has a Token")
 }
 
 /// R250 D3, R251: a deckable card is one the current catalog has and that is not a Token.
@@ -170,7 +182,9 @@ struct Ctx {
 
 async fn active_profile(app: &App, id: &str) -> String {
     let user_id = format!("user-{id}");
-    fake(app).await.seed_profile(json!({ "id": id, "userId": user_id, "status": "active" }));
+    fake(app)
+        .await
+        .seed_profile(json!({ "id": id, "userId": user_id, "status": "active" }));
     add_user(app, &user_id, &format!("{id}@example.test"), true)
 }
 
@@ -178,11 +192,18 @@ async fn setup() -> Ctx {
     let app = test_app().await;
     let token = active_profile(&app, PROFILE).await;
     let other_token = active_profile(&app, OTHER).await;
-    Ctx { app, token, other_token }
+    Ctx {
+        app,
+        token,
+        other_token,
+    }
 }
 
 fn deck_body(overrides: Value) -> Value {
-    merged(json!({ "name": "Aggro", "cards": cards(4, 0), "catalogVersion": catalog_version() }), overrides)
+    merged(
+        json!({ "name": "Aggro", "cards": cards(4, 0), "catalogVersion": catalog_version() }),
+        overrides,
+    )
 }
 
 /// A trio import's body (R341): three decks of disjoint cards, ids from `base`, and the trio.
@@ -201,20 +222,24 @@ fn import_body(base: usize, overrides: Value) -> Value {
 impl Ctx {
     /// `support::deps::call`, whose body `Value::Null` sends none.
     async fn request(&self, method: &str, path: &str, body: Option<Value>, bearer: &str) -> (u16, Value) {
-        let (status, _headers, answer) = call(&self.app, method, path, Some(bearer), body.unwrap_or(Value::Null)).await;
+        let (status, _headers, answer) =
+            call(&self.app, method, path, Some(bearer), body.unwrap_or(Value::Null)).await;
         (status, answer)
     }
 
     async fn put_deck(&self, body: Value, id: &str, bearer: &str) -> (u16, Value) {
-        self.request("PUT", &format!("/api/decks/{id}"), Some(body), bearer).await
+        self.request("PUT", &format!("/api/decks/{id}"), Some(body), bearer)
+            .await
     }
 
     async fn put_trio(&self, body: Value, id: &str, bearer: &str) -> (u16, Value) {
-        self.request("PUT", &format!("/api/trios/{id}"), Some(body), bearer).await
+        self.request("PUT", &format!("/api/trios/{id}"), Some(body), bearer)
+            .await
     }
 
     async fn post_import(&self, body: Value, bearer: &str) -> (u16, Value) {
-        self.request("POST", "/api/trios/import", Some(body), bearer).await
+        self.request("POST", "/api/trios/import", Some(body), bearer)
+            .await
     }
 
     async fn delete(&self, path: &str, bearer: &str) -> (u16, Value) {
@@ -237,7 +262,12 @@ impl Ctx {
 }
 
 fn names(listed: &Value, list: &str, key: &str) -> Vec<Value> {
-    listed[list].as_array().expect("a list").iter().map(|row| row[key].clone()).collect()
+    listed[list]
+        .as_array()
+        .expect("a list")
+        .iter()
+        .map(|row| row[key].clone())
+        .collect()
 }
 
 fn error_code(body: &Value) -> &Value {
@@ -275,8 +305,13 @@ mod saved_decks_9_4_r250_r256 {
         assert!(first.get("profileId").is_none());
 
         tokio::time::advance(Duration::from_millis(5_000)).await;
-        let (status, renamed) =
-            ctx.put_deck(deck_body(json!({ "name": "  Aggro   v2 ", "cards": cards(2, 10) })), &uuid(1), &ctx.token).await;
+        let (status, renamed) = ctx
+            .put_deck(
+                deck_body(json!({ "name": "  Aggro   v2 ", "cards": cards(2, 10) })),
+                &uuid(1),
+                &ctx.token,
+            )
+            .await;
         assert_eq!(status, 200);
         let second = renamed["deck"].clone();
         // Stored as `normalize_name` leaves it; the same row, made when it was made, changed now.
@@ -300,7 +335,9 @@ mod saved_decks_9_4_r250_r256 {
         let ctx = setup().await;
         // Nothing is granted to this profile, and one card is far short of a legal deck: the save
         // judges neither (L2, L5 are the queue's), only D1–D4.
-        let (status, _) = ctx.put_deck(deck_body(json!({ "cards": cards(1, 0) })), &uuid(1), &ctx.token).await;
+        let (status, _) = ctx
+            .put_deck(deck_body(json!({ "cards": cards(1, 0) })), &uuid(1), &ctx.token)
+            .await;
         assert_eq!(status, 200);
         assert_eq!(json_of(&store!(ctx.app, collection_get(PROFILE))), json!([]));
         assert_eq!(ctx.decks_table().await.len(), 1);
@@ -316,7 +353,10 @@ mod saved_decks_9_4_r250_r256 {
         assert_eq!(status, 200);
         assert_eq!(again["deck"], once["deck"]);
         assert_eq!(ctx.decks_table().await.len(), 1);
-        assert_eq!(ctx.get_decks(&ctx.token).await["decks"].as_array().map(Vec::len), Some(1));
+        assert_eq!(
+            ctx.get_decks(&ctx.token).await["decks"].as_array().map(Vec::len),
+            Some(1)
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -334,26 +374,43 @@ mod saved_decks_9_4_r250_r256 {
     #[tokio::test(start_paused = true)]
     async fn r256_lists_decks_oldest_first_the_order_a_legacy_deck_index_counts_in() {
         let ctx = setup().await;
-        ctx.put_deck(deck_body(json!({ "name": "First" })), &uuid(9), &ctx.token).await;
+        ctx.put_deck(deck_body(json!({ "name": "First" })), &uuid(9), &ctx.token)
+            .await;
         tokio::time::advance(Duration::from_millis(1_000)).await;
-        ctx.put_deck(deck_body(json!({ "name": "Second" })), &uuid(3), &ctx.token).await;
+        ctx.put_deck(deck_body(json!({ "name": "Second" })), &uuid(3), &ctx.token)
+            .await;
         tokio::time::advance(Duration::from_millis(1_000)).await;
         // Updating the first does not move it: the order is by creation.
-        ctx.put_deck(deck_body(json!({ "name": "First again" })), &uuid(9), &ctx.token).await;
+        ctx.put_deck(deck_body(json!({ "name": "First again" })), &uuid(9), &ctx.token)
+            .await;
 
         let listed = ctx.get_decks(&ctx.token).await;
-        assert_eq!(names(&listed, "decks", "name"), vec![json!("First again"), json!("Second")]);
+        assert_eq!(
+            names(&listed, "decks", "name"),
+            vec![json!("First again"), json!("Second")]
+        );
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r250_lists_at_most_draft_issues_reported_max_issues_so_a_body_of_junk_cannot_buy_a_huge_answer() {
+    async fn r250_lists_at_most_draft_issues_reported_max_issues_so_a_body_of_junk_cannot_buy_a_huge_answer()
+    {
         let ctx = setup().await;
-        let junk: Vec<String> = (0..DRAFT_ISSUES_REPORTED_MAX * 4).map(|i| format!("junk-{i}")).collect();
-        let (status, body) = ctx.put_deck(deck_body(json!({ "cards": junk })), &uuid(1), &ctx.token).await;
+        let junk: Vec<String> = (0..DRAFT_ISSUES_REPORTED_MAX * 4)
+            .map(|i| format!("junk-{i}"))
+            .collect();
+        let (status, body) = ctx
+            .put_deck(deck_body(json!({ "cards": junk })), &uuid(1), &ctx.token)
+            .await;
         assert_eq!(status, 400);
-        assert_eq!(body["error"]["details"].as_array().map(Vec::len), Some(DRAFT_ISSUES_REPORTED_MAX));
+        assert_eq!(
+            body["error"]["details"].as_array().map(Vec::len),
+            Some(DRAFT_ISSUES_REPORTED_MAX)
+        );
         // The first issue is still the message: the one a player reads.
-        assert_eq!(body["error"]["message"], first_message(&draft_issues("Aggro", &junk)));
+        assert_eq!(
+            body["error"]["message"],
+            first_message(&draft_issues("Aggro", &junk))
+        );
         assert!(ctx.decks_table().await.is_empty());
     }
 
@@ -379,11 +436,22 @@ mod saved_decks_9_4_r250_r256 {
     async fn r250_refuses_a_deck_past_max_saved_decks_with_a_409_naming_the_limit() {
         let ctx = setup().await;
         for n in 1..=MAX_SAVED_DECKS {
-            let (status, _) = ctx.put_deck(deck_body(json!({ "name": format!("Deck {n}") })), &uuid(n), &ctx.token).await;
+            let (status, _) = ctx
+                .put_deck(
+                    deck_body(json!({ "name": format!("Deck {n}") })),
+                    &uuid(n),
+                    &ctx.token,
+                )
+                .await;
             assert_eq!(status, 200);
         }
-        let (status, body) =
-            ctx.put_deck(deck_body(json!({ "name": "One too many" })), &uuid(MAX_SAVED_DECKS + 1), &ctx.token).await;
+        let (status, body) = ctx
+            .put_deck(
+                deck_body(json!({ "name": "One too many" })),
+                &uuid(MAX_SAVED_DECKS + 1),
+                &ctx.token,
+            )
+            .await;
 
         assert_eq!(status, 409);
         assert_eq!(*error_code(&body), json!("conflict"));
@@ -391,19 +459,31 @@ mod saved_decks_9_4_r250_r256 {
         assert_eq!(ctx.decks_table().await.len(), MAX_SAVED_DECKS);
 
         // The control: at the cap, an existing deck can still be saved — the cap is on creating.
-        let (status, _) = ctx.put_deck(deck_body(json!({ "name": "Renamed" })), &uuid(1), &ctx.token).await;
+        let (status, _) = ctx
+            .put_deck(deck_body(json!({ "name": "Renamed" })), &uuid(1), &ctx.token)
+            .await;
         assert_eq!(status, 200);
     }
 
     #[tokio::test(start_paused = true)]
     async fn answers_another_profile_s_deck_id_as_404_and_leaves_that_deck_alone() {
         let ctx = setup().await;
-        assert_eq!(ctx.put_deck(deck_body(json!({ "name": "Mine" })), &uuid(1), &ctx.other_token).await.0, 200);
+        assert_eq!(
+            ctx.put_deck(deck_body(json!({ "name": "Mine" })), &uuid(1), &ctx.other_token)
+                .await
+                .0,
+            200
+        );
 
-        let (status, body) = ctx.put_deck(deck_body(json!({ "name": "Hijacked" })), &uuid(1), &ctx.token).await;
+        let (status, body) = ctx
+            .put_deck(deck_body(json!({ "name": "Hijacked" })), &uuid(1), &ctx.token)
+            .await;
         assert_eq!(status, 404);
         assert_eq!(*error_code(&body), json!("not_found"));
-        assert_eq!(json_of(&store!(ctx.app, decks_get(&uuid(1))))["name"], json!("Mine"));
+        assert_eq!(
+            json_of(&store!(ctx.app, decks_get(&uuid(1))))["name"],
+            json!("Mine")
+        );
 
         // DELETE of it is "nothing to delete", exactly as for an id nobody has.
         let (_, removed) = ctx.delete(&format!("/api/decks/{}", uuid(1)), &ctx.token).await;
@@ -437,9 +517,21 @@ mod saved_decks_9_4_r250_r256 {
             }
             Ok(())
         }));
-        for id in ["not-a-uuid".to_string(), "1234".to_string(), format!("{}x", uuid(1))] {
-            assert_eq!(ctx.put_deck(deck_body(json!({})), &id, &ctx.token).await.0, 400, "{id}");
-            assert_eq!(ctx.delete(&format!("/api/decks/{id}"), &ctx.token).await.0, 400, "{id}");
+        for id in [
+            "not-a-uuid".to_string(),
+            "1234".to_string(),
+            format!("{}x", uuid(1)),
+        ] {
+            assert_eq!(
+                ctx.put_deck(deck_body(json!({})), &id, &ctx.token).await.0,
+                400,
+                "{id}"
+            );
+            assert_eq!(
+                ctx.delete(&format!("/api/decks/{id}"), &ctx.token).await.0,
+                400,
+                "{id}"
+            );
         }
         for body in [
             json!({ "cards": [], "catalogVersion": catalog_version() }),
@@ -448,7 +540,11 @@ mod saved_decks_9_4_r250_r256 {
             json!({ "name": "A", "cards": [1, 2], "catalogVersion": catalog_version() }),
             json!({ "name": "A", "cards": [] }),
         ] {
-            assert_eq!(ctx.put_deck(body.clone(), &uuid(1), &ctx.token).await.0, 400, "{body}");
+            assert_eq!(
+                ctx.put_deck(body.clone(), &uuid(1), &ctx.token).await.0,
+                400,
+                "{body}"
+            );
         }
         assert_eq!(touched.load(Ordering::SeqCst), 0);
     }
@@ -457,7 +553,10 @@ mod saved_decks_9_4_r250_r256 {
     async fn accepts_an_upper_case_uuid_as_the_same_id_postgres_would_print() {
         let ctx = setup().await;
         let upper = uuid(5).to_uppercase();
-        assert_eq!(ctx.put_deck(deck_body(json!({})), &upper, &ctx.token).await.0, 200);
+        assert_eq!(
+            ctx.put_deck(deck_body(json!({})), &upper, &ctx.token).await.0,
+            200
+        );
         assert_eq!(ctx.decks_table().await[0]["id"], json!(uuid(5)));
     }
 }
@@ -471,10 +570,21 @@ mod r250_refuses_a_draft_that_breaks_d1_d4_with_the_shared_module_s_own_issues {
         let ctx = setup().await;
         let expected = draft_issues(name, &deck);
         // PREMISE: the shared module really refuses this draft, and for the rule named.
-        let rules: Vec<Value> = expected.as_array().expect("issues").iter().map(|issue| issue["rule"].clone()).collect();
+        let rules: Vec<Value> = expected
+            .as_array()
+            .expect("issues")
+            .iter()
+            .map(|issue| issue["rule"].clone())
+            .collect();
         assert!(rules.contains(&json!(rule)), "{rule} is among {rules:?}");
 
-        let (status, body) = ctx.put_deck(deck_body(json!({ "name": name, "cards": deck })), &uuid(1), &ctx.token).await;
+        let (status, body) = ctx
+            .put_deck(
+                deck_body(json!({ "name": name, "cards": deck })),
+                &uuid(1),
+                &ctx.token,
+            )
+            .await;
 
         assert_eq!(status, 400);
         assert_eq!(*error_code(&body), json!("bad_request"));
@@ -528,7 +638,12 @@ mod r250_refuses_a_draft_that_breaks_d1_d4_with_the_shared_module_s_own_issues {
 
     #[tokio::test(start_paused = true)]
     async fn r250_d3_case_8_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D3", "Unknown", with(cards(2, 0), &["core-does-not-exist".to_string()])).await;
+        refuses(
+            "D3",
+            "Unknown",
+            with(cards(2, 0), &["core-does-not-exist".to_string()]),
+        )
+        .await;
     }
 
     #[tokio::test(start_paused = true)]
@@ -546,12 +661,18 @@ mod the_deck_s_portrait_r641_d5 {
     async fn d5_saves_every_portrait_id_and_echoes_it_on_the_deck() {
         let ctx = setup().await;
         for (index, portrait) in PORTRAIT_IDS.iter().enumerate() {
-            let body = merged(deck_body(json!({})), json!({ "name": format!("Portrait {portrait}"), "portrait": portrait }));
+            let body = merged(
+                deck_body(json!({})),
+                json!({ "name": format!("Portrait {portrait}"), "portrait": portrait }),
+            );
             let (status, saved) = ctx.put_deck(body, &uuid(10 + index), &ctx.token).await;
             assert_eq!(status, 200);
             assert_eq!(saved["deck"]["portrait"], json!(portrait));
             // The row keeps what was saved, so a later read back — or a freeze — meets it.
-            assert_eq!(ctx.decks_table().await.last().map(|row| row["portrait"].clone()), Some(json!(portrait)));
+            assert_eq!(
+                ctx.decks_table().await.last().map(|row| row["portrait"].clone()),
+                Some(json!(portrait))
+            );
         }
         assert_eq!(ctx.decks_table().await.len(), PORTRAIT_IDS.len());
     }
@@ -559,16 +680,24 @@ mod the_deck_s_portrait_r641_d5 {
     #[tokio::test(start_paused = true)]
     async fn r641_accepts_portrait_null_and_absent_alike_both_read_back_null() {
         let ctx = setup().await;
-        for (index, body) in [merged(deck_body(json!({})), json!({ "portrait": null })), deck_body(json!({}))]
-            .into_iter()
-            .enumerate()
+        for (index, body) in [
+            merged(deck_body(json!({})), json!({ "portrait": null })),
+            deck_body(json!({})),
+        ]
+        .into_iter()
+        .enumerate()
         {
             let (status, saved) = ctx.put_deck(body, &uuid(20 + index), &ctx.token).await;
             assert_eq!(status, 200);
             assert!(saved["deck"]["portrait"].is_null());
         }
         // Both wrote `null` to the row; `null` is what a pre-portrait row reads as too.
-        let portraits: Vec<Value> = ctx.decks_table().await.iter().map(|row| row["portrait"].clone()).collect();
+        let portraits: Vec<Value> = ctx
+            .decks_table()
+            .await
+            .iter()
+            .map(|row| row["portrait"].clone())
+            .collect();
         assert_eq!(portraits, vec![Value::Null, Value::Null]);
     }
 
@@ -587,9 +716,14 @@ mod the_deck_s_portrait_r641_d5 {
             portrait: Some("ulfric".to_string()),
             is_portrait: Some(&portrait),
         }));
-        assert_eq!(expected, json!([{ "rule": "D5", "message": "\"portrait\" is not a known portrait id." }]));
+        assert_eq!(
+            expected,
+            json!([{ "rule": "D5", "message": "\"portrait\" is not a known portrait id." }])
+        );
 
-        let (status, body) = ctx.put_deck(deck_body(json!({ "portrait": "ulfric" })), &uuid(1), &ctx.token).await;
+        let (status, body) = ctx
+            .put_deck(deck_body(json!({ "portrait": "ulfric" })), &uuid(1), &ctx.token)
+            .await;
         assert_eq!(status, 400);
         assert_eq!(*error_code(&body), json!("bad_request"));
         assert_eq!(body["error"]["details"], expected);
@@ -600,16 +734,23 @@ mod the_deck_s_portrait_r641_d5 {
     #[tokio::test(start_paused = true)]
     async fn r641_refuses_a_portrait_that_is_not_a_string_and_keeps_a_saved_one_on_re_save() {
         let ctx = setup().await;
-        let (status, body) = ctx.put_deck(deck_body(json!({ "portrait": 42 })), &uuid(1), &ctx.token).await;
+        let (status, body) = ctx
+            .put_deck(deck_body(json!({ "portrait": 42 })), &uuid(1), &ctx.token)
+            .await;
         assert_eq!(status, 400);
         assert_eq!(*error_code(&body), json!("bad_request"));
         assert_eq!(body["error"]["message"], json!("\"portrait\" must be a string"));
         assert!(ctx.decks_table().await.is_empty());
 
         // A re-save names the new portrait; it lands on the same row.
-        let (_, first) = ctx.put_deck(deck_body(json!({ "portrait": "gary" })), &uuid(1), &ctx.token).await;
+        let (_, first) = ctx
+            .put_deck(deck_body(json!({ "portrait": "gary" })), &uuid(1), &ctx.token)
+            .await;
         let id = first["deck"]["id"].as_str().expect("an id").to_string();
-        let body = merged(deck_body(json!({})), json!({ "name": "Re-saved", "portrait": "felinors" }));
+        let body = merged(
+            deck_body(json!({})),
+            json!({ "name": "Re-saved", "portrait": "felinors" }),
+        );
         let (status, again) = ctx.put_deck(body, &id, &ctx.token).await;
         assert_eq!(status, 200);
         assert_eq!(again["deck"]["portrait"], json!("felinors"));
@@ -627,7 +768,13 @@ mod saved_trios_9_4_r252 {
     async fn three_decks(ctx: &Ctx, bearer: &str, base: usize) -> [String; 3] {
         let ids = [uuid(base), uuid(base + 1), uuid(base + 2)];
         for (index, id) in ids.iter().enumerate() {
-            let (status, _) = ctx.put_deck(deck_body(json!({ "name": format!("Deck {}", index + 1) })), id, bearer).await;
+            let (status, _) = ctx
+                .put_deck(
+                    deck_body(json!({ "name": format!("Deck {}", index + 1) })),
+                    id,
+                    bearer,
+                )
+                .await;
             assert_eq!(status, 200);
         }
         ids
@@ -637,8 +784,13 @@ mod saved_trios_9_4_r252 {
     async fn r252_saves_a_trio_of_three_slots_any_of_them_empty_and_reads_it_back() {
         let ctx = setup().await;
         let [a, _, c] = three_decks(&ctx, &ctx.token, 1).await;
-        let (status, body) =
-            ctx.put_trio(json!({ "name": " Main  trio ", "deckIds": [a, null, c] }), &uuid(101), &ctx.token).await;
+        let (status, body) = ctx
+            .put_trio(
+                json!({ "name": " Main  trio ", "deckIds": [a, null, c] }),
+                &uuid(101),
+                &ctx.token,
+            )
+            .await;
         assert_eq!(status, 200);
         let saved = body["trio"].clone();
         let now = now_ms();
@@ -654,7 +806,12 @@ mod saved_trios_9_4_r252 {
         let ctx = setup().await;
         // `deck_body` gives every deck the same four cards, so all three decks overlap completely.
         let ids = three_decks(&ctx, &ctx.token, 1).await;
-        assert_eq!(ctx.put_trio(json!({ "name": "Loose", "deckIds": ids }), &uuid(101), &ctx.token).await.0, 200);
+        assert_eq!(
+            ctx.put_trio(json!({ "name": "Loose", "deckIds": ids }), &uuid(101), &ctx.token)
+                .await
+                .0,
+            200
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -681,7 +838,13 @@ mod saved_trios_9_4_r252 {
         for (name, deck_ids) in drafts {
             let expected = trio_issues(name, deck_ids.clone());
             assert_ne!(expected, json!([]));
-            let (status, body) = ctx.put_trio(json!({ "name": name, "deckIds": deck_ids }), &uuid(101), &ctx.token).await;
+            let (status, body) = ctx
+                .put_trio(
+                    json!({ "name": name, "deckIds": deck_ids }),
+                    &uuid(101),
+                    &ctx.token,
+                )
+                .await;
             assert_eq!(status, 400);
             assert_eq!(*error_code(&body), json!("bad_request"));
             assert_eq!(body["error"]["details"], expected);
@@ -698,7 +861,13 @@ mod saved_trios_9_4_r252 {
             let body = json!({ "name": format!("Trio {n}"), "deckIds": ids });
             assert_eq!(ctx.put_trio(body, &uuid(200 + n), &ctx.token).await.0, 200);
         }
-        let (status, body) = ctx.put_trio(json!({ "name": "Too many", "deckIds": ids }), &uuid(300), &ctx.token).await;
+        let (status, body) = ctx
+            .put_trio(
+                json!({ "name": "Too many", "deckIds": ids }),
+                &uuid(300),
+                &ctx.token,
+            )
+            .await;
         assert_eq!(status, 409);
         assert_eq!(*error_code(&body), json!("conflict"));
         assert_eq!(body["error"]["details"], json!({ "limit": MAX_SAVED_TRIOS }));
@@ -712,8 +881,13 @@ mod saved_trios_9_4_r252 {
         let [foreign, _, _] = three_decks(&ctx, &ctx.other_token, 50).await;
 
         for stranger in [uuid(999), foreign] {
-            let (status, body) =
-                ctx.put_trio(json!({ "name": "Trio", "deckIds": [a, b, stranger] }), &uuid(101), &ctx.token).await;
+            let (status, body) = ctx
+                .put_trio(
+                    json!({ "name": "Trio", "deckIds": [a, b, stranger] }),
+                    &uuid(101),
+                    &ctx.token,
+                )
+                .await;
             assert_eq!(status, 409);
             assert_eq!(*error_code(&body), json!("conflict"));
             assert_eq!(body["error"]["details"], json!({ "unknownDeck": true }));
@@ -729,9 +903,18 @@ mod saved_trios_9_4_r252 {
         assert_eq!(ctx.put_trio(body, &uuid(101), &ctx.other_token).await.0, 200);
         let mine = three_decks(&ctx, &ctx.token, 1).await;
 
-        let (status, _) = ctx.put_trio(json!({ "name": "Mine now", "deckIds": mine }), &uuid(101), &ctx.token).await;
+        let (status, _) = ctx
+            .put_trio(
+                json!({ "name": "Mine now", "deckIds": mine }),
+                &uuid(101),
+                &ctx.token,
+            )
+            .await;
         assert_eq!(status, 404);
-        assert_eq!(json_of(&store!(ctx.app, trios_get(&uuid(101))))["name"], json!("Theirs"));
+        assert_eq!(
+            json_of(&store!(ctx.app, trios_get(&uuid(101))))["name"],
+            json!("Theirs")
+        );
         let (_, removed) = ctx.delete(&format!("/api/trios/{}", uuid(101)), &ctx.token).await;
         assert_eq!(removed, json!({ "deleted": false }));
     }
@@ -740,33 +923,60 @@ mod saved_trios_9_4_r252 {
     async fn r252_empties_every_slot_that_named_a_deleted_deck_and_keeps_the_trio() {
         let ctx = setup().await;
         let [a, b, c] = three_decks(&ctx, &ctx.token, 1).await;
-        ctx.put_trio(json!({ "name": "Keeps", "deckIds": [a, b, c] }), &uuid(101), &ctx.token).await;
-        ctx.put_trio(json!({ "name": "Also", "deckIds": [b, null, a] }), &uuid(102), &ctx.token).await;
+        ctx.put_trio(
+            json!({ "name": "Keeps", "deckIds": [a, b, c] }),
+            &uuid(101),
+            &ctx.token,
+        )
+        .await;
+        ctx.put_trio(
+            json!({ "name": "Also", "deckIds": [b, null, a] }),
+            &uuid(102),
+            &ctx.token,
+        )
+        .await;
 
         let (_, removed) = ctx.delete(&format!("/api/decks/{a}"), &ctx.token).await;
         assert_eq!(removed, json!({ "deleted": true }));
 
         let listed = ctx.get_decks(&ctx.token).await;
-        assert_eq!(names(&listed, "trios", "deckIds"), vec![json!([null, b, c]), json!([b, null, null])]);
+        assert_eq!(
+            names(&listed, "trios", "deckIds"),
+            vec![json!([null, b, c]), json!([b, null, null])]
+        );
     }
 
     #[tokio::test(start_paused = true)]
     async fn deletes_a_trio_idempotently_and_leaves_its_decks() {
         let ctx = setup().await;
         let ids = three_decks(&ctx, &ctx.token, 1).await;
-        ctx.put_trio(json!({ "name": "Gone", "deckIds": ids }), &uuid(101), &ctx.token).await;
+        ctx.put_trio(json!({ "name": "Gone", "deckIds": ids }), &uuid(101), &ctx.token)
+            .await;
         let (_, first) = ctx.delete(&format!("/api/trios/{}", uuid(101)), &ctx.token).await;
         assert_eq!(first, json!({ "deleted": true }));
         let (_, second) = ctx.delete(&format!("/api/trios/{}", uuid(101)), &ctx.token).await;
         assert_eq!(second, json!({ "deleted": false }));
-        assert_eq!(ctx.get_decks(&ctx.token).await["decks"].as_array().map(Vec::len), Some(3));
+        assert_eq!(
+            ctx.get_decks(&ctx.token).await["decks"].as_array().map(Vec::len),
+            Some(3)
+        );
     }
 
     #[tokio::test(start_paused = true)]
     async fn refuses_slots_that_are_not_deck_ids_or_null() {
         let ctx = setup().await;
-        for deck_ids in [json!("nope"), json!([1, null, null]), json!(["not-a-uuid", null, null])] {
-            let (status, _) = ctx.put_trio(json!({ "name": "Bad", "deckIds": deck_ids }), &uuid(101), &ctx.token).await;
+        for deck_ids in [
+            json!("nope"),
+            json!([1, null, null]),
+            json!(["not-a-uuid", null, null]),
+        ] {
+            let (status, _) = ctx
+                .put_trio(
+                    json!({ "name": "Bad", "deckIds": deck_ids }),
+                    &uuid(101),
+                    &ctx.token,
+                )
+                .await;
             assert_eq!(status, 400, "{deck_ids}");
         }
     }
@@ -804,14 +1014,23 @@ mod a_trio_import_9_4_r340_r341 {
             "trio",
         );
         let listed = ctx.get_decks(&ctx.token).await;
-        assert_eq!(names(&listed, "decks", "id"), vec![json!(uuid(501)), json!(uuid(502)), json!(uuid(503))]);
+        assert_eq!(
+            names(&listed, "decks", "id"),
+            vec![json!(uuid(501)), json!(uuid(502)), json!(uuid(503))]
+        );
         assert_eq!(names(&listed, "trios", "id"), vec![json!(uuid(500))]);
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r341_lists_the_imported_decks_in_their_slots_order_whatever_their_ids_and_after_the_decks_already_saved() {
+    async fn r341_lists_the_imported_decks_in_their_slots_order_whatever_their_ids_and_after_the_decks_already_saved()
+     {
         let ctx = setup().await;
-        assert_eq!(ctx.put_deck(deck_body(json!({ "name": "Older" })), &uuid(999), &ctx.token).await.0, 200);
+        assert_eq!(
+            ctx.put_deck(deck_body(json!({ "name": "Older" })), &uuid(999), &ctx.token)
+                .await
+                .0,
+            200
+        );
         tokio::time::advance(Duration::from_millis(1)).await;
         // Descending ids: a tie on the instant would list them backwards.
         let body = import_body(
@@ -830,7 +1049,10 @@ mod a_trio_import_9_4_r340_r341 {
             names(&listed, "decks", "name"),
             vec![json!("Older"), json!("First"), json!("Second"), json!("Third")]
         );
-        assert_eq!(listed["trios"][0]["deckIds"], json!([uuid(803), uuid(802), uuid(801)]));
+        assert_eq!(
+            listed["trios"][0]["deckIds"],
+            json!([uuid(803), uuid(802), uuid(801)])
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -850,19 +1072,34 @@ mod a_trio_import_9_4_r340_r341 {
         let (status, saved) = ctx.post_import(body, &ctx.token).await;
         assert_eq!(status, 200);
         assert_eq!(saved["trio"]["deckIds"], json!([uuid(601), null, uuid(603)]));
-        assert_eq!(names(&saved, "decks", "cards"), vec![json!(shared), json!(shared)]);
+        assert_eq!(
+            names(&saved, "decks", "cards"),
+            vec![json!(shared), json!(shared)]
+        );
     }
 
     #[tokio::test(start_paused = true)]
     async fn r341_is_idempotent_the_same_ids_again_update_what_the_first_attempt_made_and_take_no_new_slot() {
         let ctx = setup().await;
-        assert_eq!(ctx.post_import(import_body(500, json!({})), &ctx.token).await.0, 200);
+        assert_eq!(
+            ctx.post_import(import_body(500, json!({})), &ctx.token).await.0,
+            200
+        );
         for n in 0..MAX_SAVED_DECKS - 3 {
-            let (status, _) = ctx.put_deck(deck_body(json!({ "name": format!("Filler {n}") })), &uuid(700 + n), &ctx.token).await;
+            let (status, _) = ctx
+                .put_deck(
+                    deck_body(json!({ "name": format!("Filler {n}") })),
+                    &uuid(700 + n),
+                    &ctx.token,
+                )
+                .await;
             assert_eq!(status, 200);
         }
         // At the deck cap now, and the retry still lands: its decks are already this profile's.
-        assert_eq!(ctx.post_import(import_body(500, json!({})), &ctx.token).await.0, 200);
+        assert_eq!(
+            ctx.post_import(import_body(500, json!({})), &ctx.token).await.0,
+            200
+        );
         let listed = ctx.get_decks(&ctx.token).await;
         assert_eq!(listed["decks"].as_array().map(Vec::len), Some(MAX_SAVED_DECKS));
         assert_eq!(listed["trios"].as_array().map(Vec::len), Some(1));
@@ -872,7 +1109,13 @@ mod a_trio_import_9_4_r340_r341 {
     async fn r340_refuses_an_import_past_the_deck_cap_with_exactly_the_slots_it_needs_and_writes_nothing() {
         let ctx = setup().await;
         for n in 0..MAX_SAVED_DECKS - 1 {
-            let (status, _) = ctx.put_deck(deck_body(json!({ "name": format!("Deck {n}") })), &uuid(700 + n), &ctx.token).await;
+            let (status, _) = ctx
+                .put_deck(
+                    deck_body(json!({ "name": format!("Deck {n}") })),
+                    &uuid(700 + n),
+                    &ctx.token,
+                )
+                .await;
             assert_eq!(status, 200);
         }
         let (status, body) = ctx.post_import(import_body(500, json!({})), &ctx.token).await;
@@ -896,7 +1139,10 @@ mod a_trio_import_9_4_r340_r341 {
             })
         );
         let listed = ctx.get_decks(&ctx.token).await;
-        assert_eq!(listed["decks"].as_array().map(Vec::len), Some(MAX_SAVED_DECKS - 1));
+        assert_eq!(
+            listed["decks"].as_array().map(Vec::len),
+            Some(MAX_SAVED_DECKS - 1)
+        );
         assert_eq!(listed["trios"], json!([]));
     }
 
@@ -909,7 +1155,11 @@ mod a_trio_import_9_4_r340_r341 {
         }
         let (status, body) = ctx.post_import(import_body(500, json!({})), &ctx.token).await;
         assert_eq!(status, 409);
-        assert_matches(&body["error"]["details"], &json!({ "decksShort": 0, "triosShort": 1 }), "details");
+        assert_matches(
+            &body["error"]["details"],
+            &json!({ "decksShort": 0, "triosShort": 1 }),
+            "details",
+        );
         assert!(ctx.decks_table().await.is_empty());
     }
 
@@ -936,7 +1186,8 @@ mod a_trio_import_9_4_r340_r341 {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r341_checks_what_the_client_sends_like_any_save_d1_d4_per_deck_t1_for_the_trio_the_catalog_the_shape() {
+    async fn r341_checks_what_the_client_sends_like_any_save_d1_d4_per_deck_t1_for_the_trio_the_catalog_the_shape()
+     {
         let ctx = setup().await;
         let (status, unknown_card) = ctx
             .post_import(
@@ -957,16 +1208,25 @@ mod a_trio_import_9_4_r340_r341 {
         let issue = draft_issues("Bad", &["core-999".to_string()]);
         assert_eq!(
             unknown_card["error"]["message"],
-            json!(format!("Deck 2 (“Bad”): {}", issue[0]["message"].as_str().unwrap_or("")))
+            json!(format!(
+                "Deck 2 (“Bad”): {}",
+                issue[0]["message"].as_str().unwrap_or("")
+            ))
         );
 
-        let (status, no_name) =
-            ctx.post_import(import_body(500, json!({ "trio": { "id": uuid(500), "name": "   " } })), &ctx.token).await;
+        let (status, no_name) = ctx
+            .post_import(
+                import_body(500, json!({ "trio": { "id": uuid(500), "name": "   " } })),
+                &ctx.token,
+            )
+            .await;
         assert_eq!(status, 400);
         let trio_issue = trio_issues("", json!([null, null, null]));
         assert_eq!(no_name["error"]["message"], first_message(&trio_issue));
 
-        let (status, stale) = ctx.post_import(import_body(500, json!({ "catalogVersion": "stale" })), &ctx.token).await;
+        let (status, stale) = ctx
+            .post_import(import_body(500, json!({ "catalogVersion": "stale" })), &ctx.token)
+            .await;
         assert_eq!(status, 409);
         assert_eq!(*error_code(&stale), json!("update_required"));
 
@@ -986,15 +1246,24 @@ mod a_trio_import_9_4_r340_r341 {
             )
             .await;
         assert_eq!(status, 400);
-        assert_eq!(twice["error"]["message"], first_message(&trio_issues("T", json!([uuid(501), uuid(501), null]))));
+        assert_eq!(
+            twice["error"]["message"],
+            first_message(&trio_issues("T", json!([uuid(501), uuid(501), null])))
+        );
 
         for bad in [
             import_body(500, json!({ "slots": [null, null] })),
             import_body(500, json!({ "slots": "three" })),
             import_body(500, json!({ "trio": { "id": "not-a-uuid", "name": "T" } })),
             import_body(500, json!({ "trio": null })),
-            import_body(500, json!({ "slots": [{ "id": uuid(1), "name": 5, "cards": [] }, null, null] })),
-            import_body(500, json!({ "slots": [{ "id": uuid(1), "name": "N", "cards": [7] }, null, null] })),
+            import_body(
+                500,
+                json!({ "slots": [{ "id": uuid(1), "name": 5, "cards": [] }, null, null] }),
+            ),
+            import_body(
+                500,
+                json!({ "slots": [{ "id": uuid(1), "name": "N", "cards": [7] }, null, null] }),
+            ),
         ] {
             let (status, _) = ctx.post_import(bad.clone(), &ctx.token).await;
             assert_eq!(status, 400, "{bad}");
@@ -1006,10 +1275,20 @@ mod a_trio_import_9_4_r340_r341 {
     #[tokio::test(start_paused = true)]
     async fn r341_answers_ids_another_profile_owns_as_missing_and_writes_nothing_of_the_import() {
         let ctx = setup().await;
-        assert_eq!(ctx.put_deck(deck_body(json!({})), &uuid(502), &ctx.other_token).await.0, 200);
+        assert_eq!(
+            ctx.put_deck(deck_body(json!({})), &uuid(502), &ctx.other_token)
+                .await
+                .0,
+            200
+        );
         let (status, _) = ctx.post_import(import_body(500, json!({})), &ctx.token).await;
         assert_eq!(status, 404);
-        let ids: Vec<Value> = ctx.decks_table().await.iter().map(|row| row["id"].clone()).collect();
+        let ids: Vec<Value> = ctx
+            .decks_table()
+            .await
+            .iter()
+            .map(|row| row["id"].clone())
+            .collect();
         assert_eq!(ids, vec![json!(uuid(502))]);
         assert!(ctx.trios_table().await.is_empty());
     }
@@ -1031,7 +1310,10 @@ mod the_routes_9_4_a_pending_account_sees_no_decks {
             .iter()
             .filter(|route| route.1.starts_with("/api/decks") || route.1.starts_with("/api/trios"))
             .collect();
-        let listed: Vec<String> = routes.iter().map(|route| format!("{} {}", route.0, route.1)).collect();
+        let listed: Vec<String> = routes
+            .iter()
+            .map(|route| format!("{} {}", route.0, route.1))
+            .collect();
         assert_eq!(
             listed,
             vec![
@@ -1049,14 +1331,21 @@ mod the_routes_9_4_a_pending_account_sees_no_decks {
     #[tokio::test(start_paused = true)]
     async fn a_pending_account_gets_403_from_each_and_nothing_is_written() {
         let ctx = setup().await;
-        fake(&ctx.app).await.seed_profile(json!({ "id": "pending", "userId": "user-pending", "status": "pending" }));
+        fake(&ctx.app)
+            .await
+            .seed_profile(json!({ "id": "pending", "userId": "user-pending", "status": "pending" }));
         let pending = add_user(&ctx.app, "user-pending", "pending@example.test", true);
 
         let responses = [
             ctx.request("GET", "/api/decks", None, &pending).await,
             ctx.put_deck(deck_body(json!({})), &uuid(1), &pending).await,
             ctx.delete(&format!("/api/decks/{}", uuid(1)), &pending).await,
-            ctx.put_trio(json!({ "name": "T", "deckIds": [null, null, null] }), &uuid(101), &pending).await,
+            ctx.put_trio(
+                json!({ "name": "T", "deckIds": [null, null, null] }),
+                &uuid(101),
+                &pending,
+            )
+            .await,
             ctx.delete(&format!("/api/trios/{}", uuid(101)), &pending).await,
             ctx.post_import(import_body(500, json!({})), &pending).await,
         ];
@@ -1082,18 +1371,35 @@ mod read_mode_choice_r257 {
 
     #[test]
     fn reads_the_three_modes() {
-        assert_eq!(read(json!({ "mode": "bo1", "deckId": uuid(1) })).ok(), Some(json!({ "mode": "bo1", "deckId": uuid(1) })));
-        assert_eq!(read(json!({ "mode": "bo3", "trioId": uuid(2) })).ok(), Some(json!({ "mode": "bo3", "trioId": uuid(2) })));
-        assert_eq!(read(json!({ "mode": "random" })).ok(), Some(json!({ "mode": "random" })));
+        assert_eq!(
+            read(json!({ "mode": "bo1", "deckId": uuid(1) })).ok(),
+            Some(json!({ "mode": "bo1", "deckId": uuid(1) }))
+        );
+        assert_eq!(
+            read(json!({ "mode": "bo3", "trioId": uuid(2) })).ok(),
+            Some(json!({ "mode": "bo3", "trioId": uuid(2) }))
+        );
+        assert_eq!(
+            read(json!({ "mode": "random" })).ok(),
+            Some(json!({ "mode": "random" }))
+        );
         // Fields another mode would need are not read, so a lobby that sends them does no harm.
-        assert_eq!(read(json!({ "mode": "random", "deckId": "whatever" })).ok(), Some(json!({ "mode": "random" })));
+        assert_eq!(
+            read(json!({ "mode": "random", "deckId": "whatever" })).ok(),
+            Some(json!({ "mode": "random" }))
+        );
     }
 
     #[test]
-    fn r257_s_legacy_body_is_gone_no_mode_and_a_deck_index_are_refused_and_a_deck_index_beside_a_deck_id_is_not_read() {
+    fn r257_s_legacy_body_is_gone_no_mode_and_a_deck_index_are_refused_and_a_deck_index_beside_a_deck_id_is_not_read()
+     {
         // TS read `{ deckId }` as Best of 1 and took a `deckIndex` in place of `deckId`. SURFACE
         // §11.3 drops both forms: the mode is always named and the deck always by id.
-        for body in [json!({ "deckId": uuid(1) }), json!({ "deckIndex": 0 }), json!({ "mode": "bo1", "deckIndex": 4 })] {
+        for body in [
+            json!({ "deckId": uuid(1) }),
+            json!({ "deckIndex": 0 }),
+            json!({ "mode": "bo1", "deckIndex": 4 }),
+        ] {
             let refused = read(body.clone()).expect_err("a legacy body");
             assert!(matches!(refused.code, ApiErrorCode::BadRequest), "{body}");
         }
@@ -1153,8 +1459,11 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
 
     /// L5: the profile owns one copy of each card.
     async fn own(app: &App, profile_id: &str, deck: &[String]) {
-        let entries: Vec<CollectionEntry> =
-            from(json!(deck.iter().map(|card| json!({ "cardId": card, "quantity": 1 })).collect::<Vec<_>>()));
+        let entries: Vec<CollectionEntry> = from(json!(
+            deck.iter()
+                .map(|card| json!({ "cardId": card, "quantity": 1 }))
+                .collect::<Vec<_>>()
+        ));
         store!(app, collection_upsert_quantities(profile_id, &entries));
     }
 
@@ -1164,7 +1473,9 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
 
     async fn freeze(app: &App, profile_id: &str, choice: Value) -> Result<Value, ApiError> {
         let choice = read_mode_choice(&choice).expect("a well-formed choice");
-        freeze_choice(app, profile_id, &choice).await.map(|frozen| json_of(&frozen))
+        freeze_choice(app, profile_id, &choice)
+            .await
+            .map(|frozen| json_of(&frozen))
     }
 
     fn rules_of(error: &ApiError) -> Vec<Value> {
@@ -1183,21 +1494,31 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
         own(&ctx.app, PROFILE, &deck).await;
         save(&ctx.app, saved_deck(&uuid(1), "Aggro", &deck, PROFILE, 0)).await;
 
-        let frozen = freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(1) })).await.expect("frozen");
+        let frozen = freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(1) }))
+            .await
+            .expect("frozen");
 
         // R642: the deck's portrait freezes with it (R641's `null` here — `vanilla` when dealt). The
         // deck was saved under "old-0": the CURRENT catalog judges it, whatever it was saved under.
-        assert_eq!(frozen, json!({ "mode": "bo1", "deck": { "name": "Aggro", "cards": deck, "portrait": null } }));
+        assert_eq!(
+            frozen,
+            json!({ "mode": "bo1", "deck": { "name": "Aggro", "cards": deck, "portrait": null } })
+        );
 
         // One deck, by its own name: a short one is refused by L2 in a sentence naming "Short", and
         // never by L1, which only a trio answers to.
         let short = cards(3, 0);
         save(&ctx.app, saved_deck(&uuid(2), "Short", &short, PROFILE, 0)).await;
-        let refused = freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(2) })).await.expect_err("short");
+        let refused = freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(2) }))
+            .await
+            .expect_err("short");
         assert!(matches!(refused.code, ApiErrorCode::LoadoutInvalid));
         assert!(refused.message.contains("Short"), "{}", refused.message);
         let rules = rules_of(&refused);
-        assert!(rules.contains(&json!("L2")) && !rules.contains(&json!("L1")), "{rules:?}");
+        assert!(
+            rules.contains(&json!("L2")) && !rules.contains(&json!("L1")),
+            "{rules:?}"
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -1206,9 +1527,18 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
         let deck = legal(0);
         own(&ctx.app, PROFILE, &deck).await;
         save(&ctx.app, saved_deck(&uuid(1), "Aggro", &deck, PROFILE, 0)).await;
-        let frozen = freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(1) })).await.expect("frozen");
-        save(&ctx.app, saved_deck(&uuid(1), "Changed", &cards(3, 10), PROFILE, 0)).await;
-        assert_eq!(frozen, json!({ "mode": "bo1", "deck": { "name": "Aggro", "cards": deck, "portrait": null } }));
+        let frozen = freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(1) }))
+            .await
+            .expect("frozen");
+        save(
+            &ctx.app,
+            saved_deck(&uuid(1), "Changed", &cards(3, 10), PROFILE, 0),
+        )
+        .await;
+        assert_eq!(
+            frozen,
+            json!({ "mode": "bo1", "deck": { "name": "Aggro", "cards": deck, "portrait": null } })
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -1216,13 +1546,21 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
         let ctx = setup().await;
         let deck = legal(0);
         own(&ctx.app, PROFILE, &deck).await;
-        let gary_deck = merged(json_of(&saved_deck(&uuid(1), "Gary's", &deck, PROFILE, 0)), json!({ "portrait": "gary" }));
+        let gary_deck = merged(
+            json_of(&saved_deck(&uuid(1), "Gary's", &deck, PROFILE, 0)),
+            json!({ "portrait": "gary" }),
+        );
         save(&ctx.app, from(gary_deck.clone())).await;
 
-        let frozen = freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(1) })).await.expect("frozen");
+        let frozen = freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(1) }))
+            .await
+            .expect("frozen");
         // The saved deck's portrait changes afterwards; the frozen one does not.
         save(&ctx.app, from(merged(gary_deck, json!({ "portrait": "timmy" })))).await;
-        assert_eq!(frozen, json!({ "mode": "bo1", "deck": { "name": "Gary's", "cards": deck, "portrait": "gary" } }));
+        assert_eq!(
+            frozen,
+            json!({ "mode": "bo1", "deck": { "name": "Gary's", "cards": deck, "portrait": "gary" } })
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -1230,7 +1568,9 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
         // TS asked for `deckIndex: 0` of an empty list; the Rust choice names a deck by id, and with
         // nothing saved that id names nothing, which is the same refusal.
         let ctx = setup().await;
-        let error = freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(1) })).await.expect_err("refused");
+        let error = freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(1) }))
+            .await
+            .expect_err("refused");
         assert!(matches!(error.code, ApiErrorCode::LoadoutInvalid));
         assert!(!matches!(error.code, ApiErrorCode::NotFound));
         assert!(error.message.to_lowercase().contains("deck"), "{}", error.message);
@@ -1247,7 +1587,9 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
             json!({ "mode": "bo1", "deckId": uuid(2) }),
             json!({ "mode": "bo3", "trioId": uuid(3) }),
         ] {
-            let error = freeze(&ctx.app, PROFILE, choice.clone()).await.expect_err("refused");
+            let error = freeze(&ctx.app, PROFILE, choice.clone())
+                .await
+                .expect_err("refused");
             assert!(matches!(error.code, ApiErrorCode::LoadoutInvalid), "{choice}");
         }
     }
@@ -1269,12 +1611,17 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
         }))));
         let issues = verdict["errors"].clone();
 
-        let error = freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(1) })).await.expect_err("refused");
+        let error = freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(1) }))
+            .await
+            .expect_err("refused");
         assert!(matches!(error.code, ApiErrorCode::LoadoutInvalid));
         assert_eq!(json!(error.message), issues[0]["message"]);
         assert_eq!(error.details, Some(issues.clone()));
         let rules = rules_of(&error);
-        assert!(rules.contains(&json!("L2")) && rules.contains(&json!("L5")), "{rules:?}");
+        assert!(
+            rules.contains(&json!("L2")) && rules.contains(&json!("L5")),
+            "{rules:?}"
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -1297,7 +1644,9 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
         }));
         store!(ctx.app, trios_upsert(&trio, MAX_SAVED_TRIOS as i64));
 
-        let frozen = freeze(&ctx.app, PROFILE, json!({ "mode": "bo3", "trioId": uuid(9) })).await.expect("frozen");
+        let frozen = freeze(&ctx.app, PROFILE, json!({ "mode": "bo3", "trioId": uuid(9) }))
+            .await
+            .expect("frozen");
 
         assert_eq!(
             frozen,
@@ -1317,7 +1666,9 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
         // Checked together, each by its own name: cut "Three" short and the trio is refused in a
         // sentence that names it.
         save(&ctx.app, saved_deck(&uuid(3), "Three", &three[..3], PROFILE, 0)).await;
-        let refused = freeze(&ctx.app, PROFILE, json!({ "mode": "bo3", "trioId": uuid(9) })).await.expect_err("short");
+        let refused = freeze(&ctx.app, PROFILE, json!({ "mode": "bo3", "trioId": uuid(9) }))
+            .await
+            .expect_err("short");
         assert!(matches!(refused.code, ApiErrorCode::LoadoutInvalid));
         assert!(refused.message.contains("Three"), "{}", refused.message);
     }
@@ -1339,16 +1690,27 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
         store!(ctx.app, trios_upsert(&trio, MAX_SAVED_TRIOS as i64));
         // A frozen trio with a hole in it is never the answer: the one filled deck goes to the
         // validator alone, and L1 refuses a trio of one.
-        let refused = freeze(&ctx.app, PROFILE, json!({ "mode": "bo3", "trioId": uuid(9) })).await.expect_err("gappy");
+        let refused = freeze(&ctx.app, PROFILE, json!({ "mode": "bo3", "trioId": uuid(9) }))
+            .await
+            .expect_err("gappy");
         assert!(matches!(refused.code, ApiErrorCode::LoadoutInvalid));
-        assert!(rules_of(&refused).contains(&json!("L1")), "{:?}", rules_of(&refused));
+        assert!(
+            rules_of(&refused).contains(&json!("L1")),
+            "{:?}",
+            rules_of(&refused)
+        );
     }
 
     #[tokio::test(start_paused = true)]
     async fn r258_freezes_nothing_for_all_random_and_asks_the_validator_nothing() {
         let ctx = setup().await;
         // Nothing is saved or owned: All Random needs neither.
-        assert_eq!(freeze(&ctx.app, PROFILE, json!({ "mode": "random" })).await.expect("frozen"), json!({ "mode": "random" }));
+        assert_eq!(
+            freeze(&ctx.app, PROFILE, json!({ "mode": "random" }))
+                .await
+                .expect("frozen"),
+            json!({ "mode": "random" })
+        );
     }
 }
 
@@ -1385,7 +1747,9 @@ mod assert_not_in_series_r264 {
     async fn r264_refuses_a_profile_in_a_series_that_is_not_over_naming_the_series() {
         let ctx = setup().await;
         store!(ctx.app, series_create(&series("picking")));
-        let error = assert_not_in_series(&ctx.app, PROFILE).await.expect_err("in a series");
+        let error = assert_not_in_series(&ctx.app, PROFILE)
+            .await
+            .expect_err("in a series");
         assert!(matches!(error.code, ApiErrorCode::AlreadyInMatch));
         assert_eq!(error.message, "Finish your Conquest series first.");
         assert_eq!(error.details, Some(json!({ "seriesId": "series-picking" })));

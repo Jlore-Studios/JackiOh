@@ -74,7 +74,10 @@ fn ids_without_script() -> Vec<String> {
 
 /// Any real card, for the error-path tests. #1 Big D-fender is index 1 (SPEC §8).
 fn some_id() -> String {
-    CATALOG_IDS.first().cloned().unwrap_or_else(|| "core-001".to_string())
+    CATALOG_IDS
+        .first()
+        .cloned()
+        .unwrap_or_else(|| "core-001".to_string())
 }
 
 /// `CARDS[id]`: the card file's scripts, for an id the test already knows is present.
@@ -196,7 +199,11 @@ mod registry_build_m4_t2 {
         let registered = jackioh_engine::catalog::registered_catalog();
         assert_eq!(registered.len(), catalog_size());
         for id in CATALOG_IDS.iter() {
-            assert_eq!(registered.get(id.as_str()), Some(&card_def(id)), "\"{id}\" reached the engine");
+            assert_eq!(
+                registered.get(id.as_str()),
+                Some(&card_def(id)),
+                "\"{id}\" reached the engine"
+            );
         }
         assert_eq!(jackioh_engine::catalog::catalog_version(), CATALOG_VERSION);
     }
@@ -208,9 +215,15 @@ mod registry_build_m4_t2 {
         let scripts_after_first: Vec<String> = scripts_of().keys().cloned().collect();
         register_all();
         register_all();
-        assert!(std::ptr::eq(jackioh_engine::catalog::registered_catalog(), catalog_after_first));
+        assert!(std::ptr::eq(
+            jackioh_engine::catalog::registered_catalog(),
+            catalog_after_first
+        ));
         assert_eq!(jackioh_engine::catalog::registered_catalog(), &*CATALOG);
-        assert_eq!(scripts_of().keys().cloned().collect::<Vec<_>>(), scripts_after_first);
+        assert_eq!(
+            scripts_of().keys().cloned().collect::<Vec<_>>(),
+            scripts_after_first
+        );
         assert_eq!(jackioh_engine::catalog::catalog_version(), CATALOG_VERSION);
     }
 
@@ -239,8 +252,16 @@ mod registry_build_m4_t2 {
         for id in scripted_ids() {
             let module = module_for(&id);
             let entry = jackioh_engine::scripts::scripts_for(game.state(), &id);
-            assert_eq!(fingerprint(&entry.base), fingerprint(&module.base), "{id}: base script");
-            assert_eq!(fingerprint(&entry.radiant), fingerprint(&module.radiant), "{id}: radiant script");
+            assert_eq!(
+                fingerprint(&entry.base),
+                fingerprint(&module.base),
+                "{id}: base script"
+            );
+            assert_eq!(
+                fingerprint(&entry.radiant),
+                fingerprint(&module.radiant),
+                "{id}: radiant script"
+            );
         }
     }
 
@@ -311,8 +332,14 @@ mod naming_build_m4_t2_m4_t3 {
         assert_eq!(folder_of("core-043"), "");
         assert_eq!(folder_of("classic-043"), "classic");
         assert_eq!(folder_of("classicplus-012-1"), "classic-plus");
-        assert_eq!(expected_rel_path("core-043", &name_of("core-043")), "043-big-felinor");
-        assert_eq!(expected_rel_path("classic-043", &name_of("classic-043")), "classic/043-plague-nuke");
+        assert_eq!(
+            expected_rel_path("core-043", &name_of("core-043")),
+            "043-big-felinor"
+        );
+        assert_eq!(
+            expected_rel_path("classic-043", &name_of("classic-043")),
+            "classic/043-plague-nuke"
+        );
         assert_eq!(
             expected_rel_path("classicplus-012-1", &name_of("classicplus-012-1")),
             "classic-plus/012-1-devour"
@@ -323,18 +350,36 @@ mod naming_build_m4_t2_m4_t3 {
             expected_rel_path("classicplus-t-ai-01", &name_of("classicplus-t-ai-01")),
             "classic-plus/t-ai-01-helpful-assistant"
         );
-        assert_eq!(expected_rel_path("core-t-rush", &name_of("core-t-rush")), "t-rush");
+        assert_eq!(
+            expected_rel_path("core-t-rush", &name_of("core-t-rush")),
+            "t-rush"
+        );
     }
 
     #[test]
     fn resolves_a_file_by_its_folder_s_set_since_an_index_repeats_across_sets() {
         let ids = ids();
-        assert_eq!(resolve_rel_path("043-big-felinor", &ids).as_deref(), Some("core-043"));
-        assert_eq!(resolve_rel_path("classic/043-plague-nuke", &ids).as_deref(), Some("classic-043"));
-        assert_eq!(resolve_rel_path("classic-plus/043-ai-slop", &ids).as_deref(), Some("classicplus-043"));
+        assert_eq!(
+            resolve_rel_path("043-big-felinor", &ids).as_deref(),
+            Some("core-043")
+        );
+        assert_eq!(
+            resolve_rel_path("classic/043-plague-nuke", &ids).as_deref(),
+            Some("classic-043")
+        );
+        assert_eq!(
+            resolve_rel_path("classic-plus/043-ai-slop", &ids).as_deref(),
+            Some("classicplus-043")
+        );
         // A misspelled slug still lands on its card, in its own set only.
-        assert_eq!(resolve_rel_path("classic/043-plague-nuk", &ids).as_deref(), Some("classic-043"));
-        assert_eq!(resolve_rel_path("classic-plus/012-1-devour", &ids).as_deref(), Some("classicplus-012-1"));
+        assert_eq!(
+            resolve_rel_path("classic/043-plague-nuk", &ids).as_deref(),
+            Some("classic-043")
+        );
+        assert_eq!(
+            resolve_rel_path("classic-plus/012-1-devour", &ids).as_deref(),
+            Some("classicplus-012-1")
+        );
         assert_eq!(
             resolve_rel_path("classic-plus/012-the-mother-pancake", &ids).as_deref(),
             Some("classicplus-012")
@@ -345,7 +390,10 @@ mod naming_build_m4_t2_m4_t3 {
         );
         assert_eq!(resolve_rel_path("classic/091-no-such-card", &ids), None);
         assert_eq!(resolve_rel_path("legacy/043-big-felinor", &ids), None);
-        assert_eq!(resolve_basename("043-plague-nuke", &ids, "classic").as_deref(), Some("classic-043"));
+        assert_eq!(
+            resolve_basename("043-plague-nuke", &ids, "classic").as_deref(),
+            Some("classic-043")
+        );
     }
 
     #[test]
@@ -354,20 +402,41 @@ mod naming_build_m4_t2_m4_t3 {
         assert_eq!(slugify("KY's Empty Notebook"), "kys-empty-notebook"); // apostrophe drops out
         assert_eq!(slugify("CN-Virus"), "cn-virus");
         assert_eq!(slugify("/fullsend"), "fullsend");
-        assert_eq!(slugify("Call to Chaos (Core Edition)"), "call-to-chaos-core-edition");
+        assert_eq!(
+            slugify("Call to Chaos (Core Edition)"),
+            "call-to-chaos-core-edition"
+        );
         assert_eq!(slugify("\"Miss\" Mrow"), "miss-mrow");
         assert_eq!(slugify("4-mana 7/7"), "4-mana-7-7");
     }
 
     #[test]
     fn names_the_file_each_card_expects() {
-        assert_eq!(expected_basename("core-001", &name_of("core-001")), "001-big-d-fender");
-        assert_eq!(expected_basename("core-043", &name_of("core-043")), "043-big-felinor");
-        assert_eq!(expected_basename("core-051-1", &name_of("core-051-1")), "051-1-kys-empty-notebook");
-        assert_eq!(expected_basename("core-090-1", &name_of("core-090-1")), "090-1-cn-virus");
+        assert_eq!(
+            expected_basename("core-001", &name_of("core-001")),
+            "001-big-d-fender"
+        );
+        assert_eq!(
+            expected_basename("core-043", &name_of("core-043")),
+            "043-big-felinor"
+        );
+        assert_eq!(
+            expected_basename("core-051-1", &name_of("core-051-1")),
+            "051-1-kys-empty-notebook"
+        );
+        assert_eq!(
+            expected_basename("core-090-1", &name_of("core-090-1")),
+            "090-1-cn-virus"
+        );
         // SPEC §7's shared tokens are filed under the bare prefix.
-        assert_eq!(expected_basename("core-t-rush", &name_of("core-t-rush")), "t-rush");
-        assert_eq!(expected_basename("core-t-bread", &name_of("core-t-bread")), "t-bread");
+        assert_eq!(
+            expected_basename("core-t-rush", &name_of("core-t-rush")),
+            "t-rush"
+        );
+        assert_eq!(
+            expected_basename("core-t-bread", &name_of("core-t-bread")),
+            "t-bread"
+        );
     }
 
     #[test]
@@ -379,8 +448,16 @@ mod naming_build_m4_t2_m4_t3 {
         assert!(matches_card("051-kys-private-tutor", "core-051", None));
         assert!(!matches_card("051-kys-private-tutor", "core-051-1", None));
         // Same shape, same answers, with the exact catalog-aware resolution.
-        assert!(matches_card("051-1-kys-empty-notebook", "core-051-1", Some(ids.as_slice())));
-        assert!(!matches_card("051-1-kys-empty-notebook", "core-051", Some(ids.as_slice())));
+        assert!(matches_card(
+            "051-1-kys-empty-notebook",
+            "core-051-1",
+            Some(ids.as_slice())
+        ));
+        assert!(!matches_card(
+            "051-1-kys-empty-notebook",
+            "core-051",
+            Some(ids.as_slice())
+        ));
     }
 
     #[test]
@@ -400,7 +477,10 @@ mod naming_build_m4_t2_m4_t3 {
         // script in this package resolves against the id list.
         assert!(!matches_card("025-4-mana-7-7", "core-025", None));
         assert!(matches_card("025-4-mana-7-7", "core-025", Some(ids.as_slice())));
-        assert_eq!(resolve_basename("025-4-mana-7-7", &ids, "").as_deref(), Some("core-025"));
+        assert_eq!(
+            resolve_basename("025-4-mana-7-7", &ids, "").as_deref(),
+            Some("core-025")
+        );
     }
 
     #[test]
@@ -415,8 +495,16 @@ mod naming_build_m4_t2_m4_t3 {
             let owner = seen.get(&path).cloned();
             assert_eq!(owner, None, "{path}.ts is claimed by both {owner:?} and {id}");
             seen.insert(path.clone(), id.clone());
-            assert_eq!(resolve_rel_path(&path, &ids).as_deref(), Some(id.as_str()), "{path} -> {id}");
-            assert!(matches_card(&expected_basename(id, &name_of(id)), id, Some(ids.as_slice())));
+            assert_eq!(
+                resolve_rel_path(&path, &ids).as_deref(),
+                Some(id.as_str()),
+                "{path} -> {id}"
+            );
+            assert!(matches_card(
+                &expected_basename(id, &name_of(id)),
+                id,
+                Some(ids.as_slice())
+            ));
         }
         assert_eq!(seen.len(), catalog_size());
     }
@@ -458,7 +546,9 @@ mod naming_build_m4_t2_m4_t3 {
         assert_eq!(index_of("100-ceaseless-void"), Some(111 - 7));
         assert_eq!(
             ordered[105..111].to_vec(),
-            ["t-bread", "t-coin", "t-felinor", "t-ghoul", "t-rush", "t-sheep"].map(String::from).to_vec()
+            ["t-bread", "t-coin", "t-felinor", "t-ghoul", "t-rush", "t-sheep"]
+                .map(String::from)
+                .to_vec()
         );
         assert_eq!(ordered[111], "classic/001-curse-of-the-forgotten-classic");
         // Classic's 90 cards, then its one shared token, Glitch (R674).
@@ -468,8 +558,14 @@ mod naming_build_m4_t2_m4_t3 {
             index_of("classic-plus/012-8-frostspatula"),
             index_of("classic-plus/012-the-mother-pancake").map(|at| at + 8)
         );
-        assert_eq!(ordered[ordered.len() - 10], "classic-plus/t-ai-01-helpful-assistant");
-        assert_eq!(ordered.last().map(String::as_str), Some("classic-plus/t-ai-10-fine-tuning"));
+        assert_eq!(
+            ordered[ordered.len() - 10],
+            "classic-plus/t-ai-01-helpful-assistant"
+        );
+        assert_eq!(
+            ordered.last().map(String::as_str),
+            Some("classic-plus/t-ai-10-fine-tuning")
+        );
         // Catalog.json's own order, but for the shared tokens, which the files sort by name.
         let shared = |path: &str| path.starts_with("t-") || path.contains("/t-");
         let catalog_order: Vec<String> = CATALOG_IDS
@@ -481,7 +577,10 @@ mod naming_build_m4_t2_m4_t3 {
         assert_eq!(catalog_order, file_order);
         // Unrecognised filenames sort after everything, so the barrel stays deterministic.
         assert_eq!(
-            compare_sort_keys(&sort_key("t-rush", Some("core-t-rush")), &sort_key("mystery", None)),
+            compare_sort_keys(
+                &sort_key("t-rush", Some("core-t-rush")),
+                &sort_key("mystery", None)
+            ),
             std::cmp::Ordering::Less
         );
     }
@@ -489,10 +588,19 @@ mod naming_build_m4_t2_m4_t3 {
     #[test]
     fn makes_a_legal_unique_module_alias_for_each_filename() {
         assert_eq!(module_alias_of("001-big-d-fender"), "m001_big_d_fender");
-        assert_eq!(module_alias_of("051-1-kys-empty-notebook"), "m051_1_kys_empty_notebook");
+        assert_eq!(
+            module_alias_of("051-1-kys-empty-notebook"),
+            "m051_1_kys_empty_notebook"
+        );
         assert_eq!(module_alias_of("t-rush"), "mt_rush");
-        assert_eq!(module_alias_of("classic/043-plague-nuke"), "mclassic_043_plague_nuke");
-        assert_eq!(module_alias_of("classic-plus/043-ai-slop"), "mclassic_plus_043_ai_slop");
+        assert_eq!(
+            module_alias_of("classic/043-plague-nuke"),
+            "mclassic_043_plague_nuke"
+        );
+        assert_eq!(
+            module_alias_of("classic-plus/043-ai-slop"),
+            "mclassic_plus_043_ai_slop"
+        );
         let aliases: IndexSet<String> = CATALOG_IDS
             .iter()
             .map(|id| module_alias_of(&expected_rel_path(id, &name_of(id))))
@@ -525,7 +633,11 @@ mod naming {
 
     /// The shipped sets' id segments and the folder each one's scripts and tests live in, in catalog
     /// order: Core at the top of `src/scripts/` and `test/`, the others in a folder of their own.
-    const SET_FOLDERS: &[(&str, &str)] = &[("core", ""), ("classic", "classic"), ("classicplus", "classic-plus")];
+    const SET_FOLDERS: &[(&str, &str)] = &[
+        ("core", ""),
+        ("classic", "classic"),
+        ("classicplus", "classic-plus"),
+    ];
 
     /// `classic-043` -> `classic`; `None` for an id whose set segment names no shipped set.
     pub fn set_segment_of(id: &str) -> Option<&'static str> {
@@ -659,7 +771,11 @@ mod naming {
     pub fn expected_rel_path(id: &str, name: &str) -> String {
         let folder = folder_of(id);
         let basename = expected_basename(id, name);
-        if folder.is_empty() { basename } else { format!("{folder}/{basename}") }
+        if folder.is_empty() {
+            basename
+        } else {
+            format!("{folder}/{basename}")
+        }
     }
 
     /// Whether `basename` (no extension) is the file of catalog id `id`, in that id's own set folder.
@@ -781,7 +897,11 @@ mod naming {
         }
         if a.2 != b.2 {
             // Infinity - Infinity is NaN, so compare, don't subtract
-            return if a.2 < b.2 { Ordering::Less } else { Ordering::Greater };
+            return if a.2 < b.2 {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            };
         }
         a.3.cmp(&b.3)
     }

@@ -54,7 +54,15 @@ fn holder() -> CardDef {
 /// Append `name` to the watcher's log (p1's backrow lane 1), whoever's hook it is.
 fn note(name: &'static str) -> Effect {
     Effect::new("sot:note", move |ctx| {
-        let Some(log) = ctx.sink.state.players.p1.backrow.get_mut(0).and_then(|slot| slot.as_mut()) else {
+        let Some(log) = ctx
+            .sink
+            .state
+            .players
+            .p1
+            .backrow
+            .get_mut(0)
+            .and_then(|slot| slot.as_mut())
+        else {
             return;
         };
         let mut steps: Vec<Value> = log
@@ -116,7 +124,12 @@ fn steps(state: &GameState) -> Vec<String> {
         .as_ref()
         .and_then(|log| log.memory.get("steps"))
         .and_then(|steps| steps.as_array())
-        .map(|steps| steps.iter().filter_map(|step| step.as_str().map(str::to_string)).collect())
+        .map(|steps| {
+            steps
+                .iter()
+                .filter_map(|step| step.as_str().map(str::to_string))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -124,7 +137,8 @@ mod at_the_start_of_your_opponents_turn_c_62_r400_r68 {
     use super::*;
 
     #[test]
-    fn r68_it_fires_on_the_opponents_turn_after_their_own_start_of_turn_hooks_and_never_on_its_controllers_turn() {
+    fn r68_it_fires_on_the_opponents_turn_after_their_own_start_of_turn_hooks_and_never_on_its_controllers_turn()
+     {
         let fresh = new_game("start-of-opponent-turn", None);
         let mut catalog = catalog::registered_catalog().clone();
         catalog.insert(WATCHER.to_string(), watcher());
@@ -135,7 +149,11 @@ mod at_the_start_of_your_opponents_turn_c_62_r400_r68 {
         register_scripts(all);
         let mut state = reduce::begin_game(&fresh).state;
         for player_id in [P1, P2] {
-            let keep = state.players[player_id].hand.iter().map(|card| card.id.clone()).collect();
+            let keep = state.players[player_id]
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect();
             state = act(&state, player_id, ActionBody::Mulligan { keep });
         }
         put(&mut state, WATCHER, slot(P1, Row::Backrow, 1));
@@ -147,6 +165,9 @@ mod at_the_start_of_your_opponents_turn_c_62_r400_r68 {
 
         state = act(&state, P2, ActionBody::EndTurn);
         assert_eq!(state.active, P1);
-        assert_eq!(steps(&state), vec!["holder:own", "watcher:opponent's", "watcher:own"]);
+        assert_eq!(
+            steps(&state),
+            vec!["holder:own", "watcher:opponent's", "watcher:own"]
+        );
     }
 }

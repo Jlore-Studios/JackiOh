@@ -109,7 +109,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
         crier().id,
         both(Script {
             cry: Some(hook(|_ctx| {
-                vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 3 })))]
+                vec![damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 3 }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -187,7 +189,9 @@ fn owned(ids: &[&str]) -> Vec<String> {
 
 /// TS held the live instance and read it after an effect; Rust reads the card again by id.
 fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id).cloned().unwrap_or_else(|| panic!("no card {id} in the state"))
+    find_instance(state, id)
+        .cloned()
+        .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 fn to_json<T: Serialize>(value: T) -> Value {
@@ -245,9 +249,16 @@ mod summon_s6_3_m3_t1 {
         put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
         put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 3), json!({}));
 
-        run(&mut state, summon(json_as(json!({ "defId": "fx-5" }))), RunOptions::default());
+        run(
+            &mut state,
+            summon(json_as(json!({ "defId": "fx-5" }))),
+            RunOptions::default(),
+        );
 
-        assert_eq!(lanes_of(&state, PlayerId::P1, Row::Units), json!(["fx-1", "fx-5", "fx-2", null, null]));
+        assert_eq!(
+            lanes_of(&state, PlayerId::P1, Row::Units),
+            json!(["fx-1", "fx-5", "fx-2", null, null])
+        );
     }
 
     #[test]
@@ -256,24 +267,43 @@ mod summon_s6_3_m3_t1 {
         lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 1));
         reserve_zone(&mut state, slot(PlayerId::P1, Row::Units, 2));
 
-        run(&mut state, summon(json_as(json!({ "defId": "fx-5" }))), RunOptions::default());
+        run(
+            &mut state,
+            summon(json_as(json!({ "defId": "fx-5" }))),
+            RunOptions::default(),
+        );
 
-        assert_eq!(lanes_of(&state, PlayerId::P1, Row::Units), json!([null, null, "fx-5", null, null]));
+        assert_eq!(
+            lanes_of(&state, PlayerId::P1, Row::Units),
+            json!([null, null, "fx-5", null, null])
+        );
     }
 
     #[test]
     fn s3_2_a_summon_into_a_full_row_fails_silently_and_creates_nothing() {
         let mut state = game();
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, lane), json!({}));
+            put(
+                &mut state,
+                "fx-1",
+                slot(PlayerId::P1, Row::Units, lane),
+                json!({}),
+            );
         }
         let ids = state.next_id;
 
-        let events = run(&mut state, summon(json_as(json!({ "defId": "fx-5" }))), RunOptions::default());
+        let events = run(
+            &mut state,
+            summon(json_as(json!({ "defId": "fx-5" }))),
+            RunOptions::default(),
+        );
 
         assert!(events_of_type(&events, GameEventType::Summoned).is_empty());
         assert_eq!(state.next_id, ids);
-        assert_eq!(lanes_of(&state, PlayerId::P1, Row::Units), json!(["fx-1", "fx-1", "fx-1", "fx-1", "fx-1"]));
+        assert_eq!(
+            lanes_of(&state, PlayerId::P1, Row::Units),
+            json!(["fx-1", "fx-1", "fx-1", "fx-1", "fx-1"])
+        );
     }
 
     #[test]
@@ -281,11 +311,22 @@ mod summon_s6_3_m3_t1 {
         let mut state = game();
         put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2), json!({}));
 
-        let on_occupied = run(&mut state, summon(json_as(json!({ "defId": "fx-5", "lane": 2 }))), RunOptions::default());
+        let on_occupied = run(
+            &mut state,
+            summon(json_as(json!({ "defId": "fx-5", "lane": 2 }))),
+            RunOptions::default(),
+        );
         assert!(events_of_type(&on_occupied, GameEventType::Summoned).is_empty());
-        let on_empty = run(&mut state, summon(json_as(json!({ "defId": "fx-5", "lane": 5 }))), RunOptions::default());
+        let on_empty = run(
+            &mut state,
+            summon(json_as(json!({ "defId": "fx-5", "lane": 5 }))),
+            RunOptions::default(),
+        );
         assert_eq!(events_of_type(&on_empty, GameEventType::Summoned).len(), 1);
-        assert_eq!(lanes_of(&state, PlayerId::P1, Row::Units), json!([null, "fx-1", null, null, "fx-5"]));
+        assert_eq!(
+            lanes_of(&state, PlayerId::P1, Row::Units),
+            json!([null, "fx-1", null, null, "fx-5"])
+        );
     }
 
     #[test]
@@ -293,16 +334,27 @@ mod summon_s6_3_m3_t1 {
         let mut state = game();
         lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 4));
 
-        let events = run(&mut state, summon(json_as(json!({ "defId": "fx-5", "lane": 4 }))), RunOptions::default());
+        let events = run(
+            &mut state,
+            summon(json_as(json!({ "defId": "fx-5", "lane": 4 }))),
+            RunOptions::default(),
+        );
         assert_eq!(events_of_type(&events, GameEventType::Summoned).len(), 1);
-        assert_eq!(lanes_of(&state, PlayerId::P1, Row::Units), json!([null, null, null, "fx-5", null]));
+        assert_eq!(
+            lanes_of(&state, PlayerId::P1, Row::Units),
+            json!([null, null, null, "fx-5", null])
+        );
     }
 
     #[test]
     fn emits_summoned_with_the_zone_it_landed_in_and_gives_the_card_summoning_sickness() {
         let mut state = game();
 
-        let events = run(&mut state, summon(json_as(json!({ "defId": "fx-7", "lane": 4 }))), RunOptions::default());
+        let events = run(
+            &mut state,
+            summon(json_as(json!({ "defId": "fx-7", "lane": 4 }))),
+            RunOptions::default(),
+        );
         let card = card_at(&state, slot(PlayerId::P1, Row::Units, 4)).cloned();
 
         assert!(card.is_some());
@@ -322,7 +374,9 @@ mod summon_s6_3_m3_t1 {
 
         run(
             &mut state,
-            summon(json_as(json!({ "defId": RUSH_TOKEN, "statsOverride": { "attack": 5, "health": 5 } }))),
+            summon(json_as(
+                json!({ "defId": RUSH_TOKEN, "statsOverride": { "attack": 5, "health": 5 } }),
+            )),
             RunOptions::default(),
         );
         let token = card_at(&state, slot(PlayerId::P1, Row::Units, 1)).cloned();
@@ -341,7 +395,11 @@ mod summon_s6_3_m3_t1 {
     fn r1_fires_no_cry() {
         let mut state = game();
 
-        let events = run(&mut state, summon(json_as(json!({ "defId": crier().id }))), RunOptions::default());
+        let events = run(
+            &mut state,
+            summon(json_as(json!({ "defId": crier().id }))),
+            RunOptions::default(),
+        );
 
         assert_eq!(
             card_at(&state, slot(PlayerId::P1, Row::Units, 1)).map(|card| card.def_id.clone()),
@@ -355,25 +413,46 @@ mod summon_s6_3_m3_t1 {
     fn s5_1_refuses_to_summon_a_spell() {
         let mut state = game();
 
-        let events = run(&mut state, summon(json_as(json!({ "defId": spell().id }))), RunOptions::default());
+        let events = run(
+            &mut state,
+            summon(json_as(json!({ "defId": spell().id }))),
+            RunOptions::default(),
+        );
 
         assert!(events_of_type(&events, GameEventType::Summoned).is_empty());
-        assert_eq!(lanes_of(&state, PlayerId::P1, Row::Units), json!([null, null, null, null, null]));
-        assert_eq!(lanes_of(&state, PlayerId::P1, Row::Backrow), json!([null, null, null, null, null]));
+        assert_eq!(
+            lanes_of(&state, PlayerId::P1, Row::Units),
+            json!([null, null, null, null, null])
+        );
+        assert_eq!(
+            lanes_of(&state, PlayerId::P1, Row::Backrow),
+            json!([null, null, null, null, null])
+        );
     }
 
     #[test]
     fn r33_a_summoned_trap_enters_the_backrow_face_down_while_a_field_spell_is_public() {
         let mut state = game();
 
-        run(&mut state, summon(json_as(json!({ "defId": trap().id }))), RunOptions::default());
-        run(&mut state, summon(json_as(json!({ "defId": field_spell().id }))), RunOptions::default());
+        run(
+            &mut state,
+            summon(json_as(json!({ "defId": trap().id }))),
+            RunOptions::default(),
+        );
+        run(
+            &mut state,
+            summon(json_as(json!({ "defId": field_spell().id }))),
+            RunOptions::default(),
+        );
 
         assert_eq!(
             lanes_of(&state, PlayerId::P1, Row::Backrow),
             json!([trap().id, field_spell().id, null, null, null])
         );
-        assert_eq!(card_at(&state, slot(PlayerId::P1, Row::Backrow, 1)).and_then(|card| card.face_up), None);
+        assert_eq!(
+            card_at(&state, slot(PlayerId::P1, Row::Backrow, 1)).and_then(|card| card.face_up),
+            None
+        );
         assert_eq!(
             card_at(&state, slot(PlayerId::P1, Row::Backrow, 2)).and_then(|card| card.face_up),
             Some(true)
@@ -474,7 +553,11 @@ mod recruit_s6_3_m3_t1 {
     fn s6_3_takes_the_first_permanent_from_the_top_and_leaves_the_rest_of_the_library_in_order() {
         let mut state = game();
         // setLibrary hands back the library array itself, so the ids are snapshotted before the move.
-        let ids = ids_of(&set_library(&mut state, PlayerId::P1, &owned(&["fx-1", "fx-2", "fx-3"])));
+        let ids = ids_of(&set_library(
+            &mut state,
+            PlayerId::P1,
+            &owned(&["fx-1", "fx-2", "fx-3"]),
+        ));
 
         let events = run(&mut state, recruit(json_as(json!({}))), RunOptions::default());
 
@@ -482,7 +565,10 @@ mod recruit_s6_3_m3_t1 {
             card_at(&state, slot(PlayerId::P1, Row::Units, 1)).map(|card| card.id.clone()),
             Some(ids[0].clone())
         );
-        assert_eq!(ids_of(&state.players.p1.library), vec![ids[1].clone(), ids[2].clone()]);
+        assert_eq!(
+            ids_of(&state.players.p1.library),
+            vec![ids[1].clone(), ids[2].clone()]
+        );
         assert_eq!(summoned_def_ids(&events), vec!["fx-1".to_string()]);
     }
 
@@ -491,9 +577,17 @@ mod recruit_s6_3_m3_t1 {
         let mut state = game();
         let spell_id = spell().id;
         let felinor_id = felinor().id;
-        let ids = ids_of(&set_library(&mut state, PlayerId::P1, &owned(&[spell_id.as_str(), "fx-1", felinor_id.as_str(), "fx-2"])));
+        let ids = ids_of(&set_library(
+            &mut state,
+            PlayerId::P1,
+            &owned(&[spell_id.as_str(), "fx-1", felinor_id.as_str(), "fx-2"]),
+        ));
 
-        run(&mut state, recruit(json_as(json!({ "filter": { "tags": ["Felinor"] } }))), RunOptions::default());
+        run(
+            &mut state,
+            recruit(json_as(json!({ "filter": { "tags": ["Felinor"] } }))),
+            RunOptions::default(),
+        );
 
         assert_eq!(
             card_at(&state, slot(PlayerId::P1, Row::Units, 1)).map(|card| card.def_id.clone()),
@@ -509,9 +603,17 @@ mod recruit_s6_3_m3_t1 {
     fn r65_filters_on_the_printed_cost_and_stops_at_the_first_match() {
         let mut state = game();
         let pricey_id = pricey().id;
-        set_library(&mut state, PlayerId::P1, &owned(&["fx-1", pricey_id.as_str(), "fx-2"]));
+        set_library(
+            &mut state,
+            PlayerId::P1,
+            &owned(&["fx-1", pricey_id.as_str(), "fx-2"]),
+        );
 
-        run(&mut state, recruit(json_as(json!({ "filter": { "cost": 4 } }))), RunOptions::default());
+        run(
+            &mut state,
+            recruit(json_as(json!({ "filter": { "cost": 4 } }))),
+            RunOptions::default(),
+        );
 
         assert_eq!(
             card_at(&state, slot(PlayerId::P1, Row::Units, 1)).map(|card| card.def_id.clone()),
@@ -529,27 +631,47 @@ mod recruit_s6_3_m3_t1 {
         let trap_id = trap().id;
         set_library(&mut state, PlayerId::P1, &owned(&["fx-1", trap_id.as_str()]));
 
-        run(&mut state, recruit(json_as(json!({ "filter": { "type": "Trap" } }))), RunOptions::default());
+        run(
+            &mut state,
+            recruit(json_as(json!({ "filter": { "type": "Trap" } }))),
+            RunOptions::default(),
+        );
 
         assert_eq!(
             card_at(&state, slot(PlayerId::P1, Row::Backrow, 1)).map(|card| card.def_id.clone()),
             Some(trap_id)
         );
-        assert_eq!(card_at(&state, slot(PlayerId::P1, Row::Backrow, 1)).and_then(|card| card.face_up), None);
+        assert_eq!(
+            card_at(&state, slot(PlayerId::P1, Row::Backrow, 1)).and_then(|card| card.face_up),
+            None
+        );
         assert_eq!(def_ids_of(&state.players.p1.library), vec!["fx-1".to_string()]);
     }
 
     #[test]
-    fn r227_a_recruited_trap_takes_a_fresh_id_as_it_goes_face_down_and_its_summoned_event_names_the_old_one() {
+    fn r227_a_recruited_trap_takes_a_fresh_id_as_it_goes_face_down_and_its_summoned_event_names_the_old_one()
+    {
         let mut state = game();
         let trap_id = trap().id;
-        let held = ids_of(&set_library(&mut state, PlayerId::P1, &owned(&["fx-1", trap_id.as_str()])))[1].clone();
+        let held = ids_of(&set_library(
+            &mut state,
+            PlayerId::P1,
+            &owned(&["fx-1", trap_id.as_str()]),
+        ))[1]
+            .clone();
         let next = format!("c{}", state.next_id);
 
-        let events = run(&mut state, recruit(json_as(json!({ "filter": { "type": "Trap" } }))), RunOptions::default());
+        let events = run(
+            &mut state,
+            recruit(json_as(json!({ "filter": { "type": "Trap" } }))),
+            RunOptions::default(),
+        );
 
         let set = card_at(&state, slot(PlayerId::P1, Row::Backrow, 1)).cloned();
-        assert_eq!(set.as_ref().map(|card| card.def_id.clone()), Some(trap_id.clone()));
+        assert_eq!(
+            set.as_ref().map(|card| card.def_id.clone()),
+            Some(trap_id.clone())
+        );
         assert_eq!(set.as_ref().map(|card| card.id.clone()), Some(next.clone()));
         assert_ne!(set.as_ref().map(|card| card.id.clone()), Some(held.clone()));
         assert_eq!(
@@ -572,7 +694,11 @@ mod recruit_s6_3_m3_t1 {
     fn r227_a_recruited_unit_or_field_spell_keeps_its_id_only_a_card_going_face_down_takes_a_fresh_one() {
         let mut state = game();
         let field_id = field_spell().id;
-        let ids = ids_of(&set_library(&mut state, PlayerId::P1, &owned(&["fx-1", field_id.as_str()])));
+        let ids = ids_of(&set_library(
+            &mut state,
+            PlayerId::P1,
+            &owned(&["fx-1", field_id.as_str()]),
+        ));
         let (unit_id, field_card_id) = (ids[0].clone(), ids[1].clone());
 
         let mut events = run(&mut state, recruit(json_as(json!({}))), RunOptions::default());
@@ -590,18 +716,24 @@ mod recruit_s6_3_m3_t1 {
             card_at(&state, slot(PlayerId::P1, Row::Backrow, 1)).map(|card| card.id.clone()),
             Some(field_card_id)
         );
-        assert!(
-            !events
-                .iter()
-                .any(|event| matches!(event, GameEvent::Summoned { former_id: Some(_), .. }))
-        );
+        assert!(!events.iter().any(|event| matches!(
+            event,
+            GameEvent::Summoned {
+                former_id: Some(_),
+                ..
+            }
+        )));
     }
 
     #[test]
     fn s3_2_summons_nothing_when_no_permanent_matches_and_nothing_leaves_the_library() {
         let mut state = game();
         let spell_id = spell().id;
-        set_library(&mut state, PlayerId::P1, &owned(&[spell_id.as_str(), spell_id.as_str()]));
+        set_library(
+            &mut state,
+            PlayerId::P1,
+            &owned(&[spell_id.as_str(), spell_id.as_str()]),
+        );
 
         let events = run(&mut state, recruit(json_as(json!({}))), RunOptions::default());
 
@@ -613,7 +745,12 @@ mod recruit_s6_3_m3_t1 {
     fn s3_2_a_recruit_into_a_full_row_fizzles_and_the_card_stays_in_the_library() {
         let mut state = game();
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, "fx-20", slot(PlayerId::P1, Row::Units, lane), json!({}));
+            put(
+                &mut state,
+                "fx-20",
+                slot(PlayerId::P1, Row::Units, lane),
+                json!({}),
+            );
         }
         set_library(&mut state, PlayerId::P1, &owned(&["fx-1"]));
 
@@ -637,7 +774,11 @@ mod fill_your_board_r64_s7_m3_t1 {
         put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2), json!({}));
         lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 4));
 
-        let events = run(&mut state, fill_board(json_as(json!({ "defId": RUSH_TOKEN }))), RunOptions::default());
+        let events = run(
+            &mut state,
+            fill_board(json_as(json!({ "defId": RUSH_TOKEN }))),
+            RunOptions::default(),
+        );
 
         assert_eq!(
             lanes_of(&state, PlayerId::P1, Row::Units),
@@ -652,7 +793,9 @@ mod fill_your_board_r64_s7_m3_t1 {
 
         run(
             &mut state,
-            fill_board(json_as(json!({ "defId": RUSH_TOKEN, "statsOverride": { "attack": 5, "health": 5 } }))),
+            fill_board(json_as(
+                json!({ "defId": RUSH_TOKEN, "statsOverride": { "attack": 5, "health": 5 } }),
+            )),
             RunOptions::default(),
         );
 
@@ -662,7 +805,10 @@ mod fill_your_board_r64_s7_m3_t1 {
                 let card = card_at(&state, slot(PlayerId::P1, Row::Units, *lane))
                     .cloned()
                     .expect("a token in every lane");
-                (unit_view(&state, &card).attack, unit_view(&state, &card).max_health)
+                (
+                    unit_view(&state, &card).attack,
+                    unit_view(&state, &card).max_health,
+                )
             })
             .collect();
         assert_eq!(stats, vec![(5, 5), (5, 5), (5, 5), (5, 5), (5, 5)]);
@@ -672,11 +818,20 @@ mod fill_your_board_r64_s7_m3_t1 {
     fn r64_fills_nothing_when_the_unit_row_is_full() {
         let mut state = game();
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, lane), json!({}));
+            put(
+                &mut state,
+                "fx-1",
+                slot(PlayerId::P1, Row::Units, lane),
+                json!({}),
+            );
         }
         let ids = state.next_id;
 
-        let events = run(&mut state, fill_board(json_as(json!({ "defId": RUSH_TOKEN }))), RunOptions::default());
+        let events = run(
+            &mut state,
+            fill_board(json_as(json!({ "defId": RUSH_TOKEN }))),
+            RunOptions::default(),
+        );
 
         assert!(events_of_type(&events, GameEventType::Summoned).is_empty());
         assert_eq!(state.next_id, ids);
@@ -699,6 +854,9 @@ mod fill_your_board_r64_s7_m3_t1 {
             lanes_of(&state, PlayerId::P2, Row::Units),
             json!([RUSH_TOKEN, RUSH_TOKEN, RUSH_TOKEN, RUSH_TOKEN, RUSH_TOKEN])
         );
-        assert_eq!(lanes_of(&state, PlayerId::P1, Row::Units), json!([null, null, null, null, null]));
+        assert_eq!(
+            lanes_of(&state, PlayerId::P1, Row::Units),
+            json!([null, null, null, null, null])
+        );
     }
 }

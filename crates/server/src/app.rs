@@ -112,9 +112,15 @@ pub fn now_ms() -> i64 {
 fn e2e_env_defaults() -> Vec<(&'static str, String)> {
     vec![
         ("SUPABASE_URL", "https://e2e-fixture-auth.invalid".to_string()),
-        ("SUPABASE_SECRET_KEY", "e2e-fixture-auth-has-no-supabase".to_string()),
+        (
+            "SUPABASE_SECRET_KEY",
+            "e2e-fixture-auth-has-no-supabase".to_string(),
+        ),
         ("DATABASE_URL", "memory://e2e-fixture-store".to_string()),
-        ("CODE_PEPPER", "e2e-fixture-code-pepper-not-a-secret-abcdefgh".to_string()),
+        (
+            "CODE_PEPPER",
+            "e2e-fixture-code-pepper-not-a-secret-abcdefgh".to_string(),
+        ),
         ("PUBLIC_ORIGINS", VITE_DEV_ORIGINS.join(",")),
         ("CATALOG_VERSION", jackioh_cards::catalog_version().to_string()),
     ]
@@ -145,7 +151,11 @@ pub fn load_server_env(source: &IndexMap<String, String>) -> anyhow::Result<Env>
 /// The browser origins this deployment trusts: `PUBLIC_ORIGINS` for CORS and the WebSocket `Origin`
 /// check (`env.rs`), plus Vite's dev origins in end-to-end mode.
 pub fn browser_origins(env: &Env) -> Vec<String> {
-    let configured: Vec<String> = env.public_origins.iter().map(|origin| origin.to_string()).collect();
+    let configured: Vec<String> = env
+        .public_origins
+        .iter()
+        .map(|origin| origin.to_string())
+        .collect();
     if !env.e2e {
         return configured;
     }
@@ -193,55 +203,215 @@ macro_rules! h {
 /// code screen); `Active` also needs `status = 'active'`.
 pub static ROUTES: &[Route] = &[
     // api/auth.rs
-    ("POST", "/api/auth/signin", AuthLevel::None, h!(api::auth::sign_in)),
-    ("GET", "/api/profile", AuthLevel::Active, h!(api::auth::get_profile)),
-    ("DELETE", "/api/account", AuthLevel::User, h!(api::auth::delete_account)),
+    (
+        "POST",
+        "/api/auth/signin",
+        AuthLevel::None,
+        h!(api::auth::sign_in),
+    ),
+    (
+        "GET",
+        "/api/profile",
+        AuthLevel::Active,
+        h!(api::auth::get_profile),
+    ),
+    (
+        "DELETE",
+        "/api/account",
+        AuthLevel::User,
+        h!(api::auth::delete_account),
+    ),
     ("GET", "/api/auth/me", AuthLevel::User, h!(api::auth::get_me)),
     // api/catalog.rs
-    ("GET", "/api/catalog", AuthLevel::None, h!(api::catalog::get_catalog)),
+    (
+        "GET",
+        "/api/catalog",
+        AuthLevel::None,
+        h!(api::catalog::get_catalog),
+    ),
     // api/codes.rs
-    ("POST", "/api/codes/redeem", AuthLevel::User, h!(api::codes::redeem)),
-    ("GET", "/api/codes/status", AuthLevel::User, h!(api::codes::get_status)),
+    (
+        "POST",
+        "/api/codes/redeem",
+        AuthLevel::User,
+        h!(api::codes::redeem),
+    ),
+    (
+        "GET",
+        "/api/codes/status",
+        AuthLevel::User,
+        h!(api::codes::get_status),
+    ),
     // api/collection.rs
-    ("GET", "/api/collection", AuthLevel::Active, h!(api::collection::get_collection)),
+    (
+        "GET",
+        "/api/collection",
+        AuthLevel::Active,
+        h!(api::collection::get_collection),
+    ),
     // api/decks.rs
     ("GET", "/api/decks", AuthLevel::Active, h!(api::decks::list_decks)),
-    ("PUT", "/api/decks/:id", AuthLevel::Active, h!(api::decks::put_deck)),
-    ("DELETE", "/api/decks/:id", AuthLevel::Active, h!(api::decks::delete_deck)),
-    ("PUT", "/api/trios/:id", AuthLevel::Active, h!(api::decks::put_trio)),
-    ("POST", "/api/trios/import", AuthLevel::Active, h!(api::decks::import_trio)),
-    ("DELETE", "/api/trios/:id", AuthLevel::Active, h!(api::decks::delete_trio)),
+    (
+        "PUT",
+        "/api/decks/:id",
+        AuthLevel::Active,
+        h!(api::decks::put_deck),
+    ),
+    (
+        "DELETE",
+        "/api/decks/:id",
+        AuthLevel::Active,
+        h!(api::decks::delete_deck),
+    ),
+    (
+        "PUT",
+        "/api/trios/:id",
+        AuthLevel::Active,
+        h!(api::decks::put_trio),
+    ),
+    (
+        "POST",
+        "/api/trios/import",
+        AuthLevel::Active,
+        h!(api::decks::import_trio),
+    ),
+    (
+        "DELETE",
+        "/api/trios/:id",
+        AuthLevel::Active,
+        h!(api::decks::delete_trio),
+    ),
     // api/queue.rs
     ("POST", "/api/queue", AuthLevel::Active, h!(api::queue::enqueue)),
     ("DELETE", "/api/queue", AuthLevel::Active, h!(api::queue::dequeue)),
-    ("GET", "/api/queue/population", AuthLevel::User, h!(api::queue::population)),
+    (
+        "GET",
+        "/api/queue/population",
+        AuthLevel::User,
+        h!(api::queue::population),
+    ),
     // actor/rooms.rs (TS `match/rooms.ts`'s `create` and `join`)
     ("POST", "/api/rooms", AuthLevel::Active, h!(actor::rooms::create)),
-    ("POST", "/api/rooms/:code/join", AuthLevel::Active, h!(actor::rooms::join)),
+    (
+        "POST",
+        "/api/rooms/:code/join",
+        AuthLevel::Active,
+        h!(actor::rooms::join),
+    ),
     // api/series.rs
-    ("GET", "/api/series/:id", AuthLevel::Active, h!(api::series::get_series)),
-    ("POST", "/api/series/:id/pick", AuthLevel::Active, h!(api::series::pick)),
-    ("POST", "/api/series/:id/forfeit", AuthLevel::Active, h!(api::series::forfeit)),
-    ("GET", "/api/matches/:matchId/series", AuthLevel::Active, h!(api::series::match_series)),
+    (
+        "GET",
+        "/api/series/:id",
+        AuthLevel::Active,
+        h!(api::series::get_series),
+    ),
+    (
+        "POST",
+        "/api/series/:id/pick",
+        AuthLevel::Active,
+        h!(api::series::pick),
+    ),
+    (
+        "POST",
+        "/api/series/:id/forfeit",
+        AuthLevel::Active,
+        h!(api::series::forfeit),
+    ),
+    (
+        "GET",
+        "/api/matches/:matchId/series",
+        AuthLevel::Active,
+        h!(api::series::match_series),
+    ),
     // api/tutorial.rs
-    ("GET", "/api/tutorial", AuthLevel::Active, h!(api::tutorial::get_tutorial)),
-    ("PUT", "/api/tutorial", AuthLevel::Active, h!(api::tutorial::put_tutorial)),
+    (
+        "GET",
+        "/api/tutorial",
+        AuthLevel::Active,
+        h!(api::tutorial::get_tutorial),
+    ),
+    (
+        "PUT",
+        "/api/tutorial",
+        AuthLevel::Active,
+        h!(api::tutorial::put_tutorial),
+    ),
     // api/ranked.rs
-    ("GET", "/api/ranked", AuthLevel::Active, h!(api::ranked::get_ranked)),
-    ("GET", "/api/leaderboard", AuthLevel::Active, h!(api::ranked::get_leaderboard)),
-    ("GET", "/api/matches/:matchId/ranks", AuthLevel::Active, h!(api::ranked::get_match_ranks)),
+    (
+        "GET",
+        "/api/ranked",
+        AuthLevel::Active,
+        h!(api::ranked::get_ranked),
+    ),
+    (
+        "GET",
+        "/api/leaderboard",
+        AuthLevel::Active,
+        h!(api::ranked::get_leaderboard),
+    ),
+    (
+        "GET",
+        "/api/matches/:matchId/ranks",
+        AuthLevel::Active,
+        h!(api::ranked::get_match_ranks),
+    ),
     // api/rematch.rs
-    ("POST", "/api/matches/:matchId/rematch", AuthLevel::Active, h!(api::rematch::offer_rematch)),
-    ("GET", "/api/matches/:matchId/rematch", AuthLevel::Active, h!(api::rematch::rematch_status)),
+    (
+        "POST",
+        "/api/matches/:matchId/rematch",
+        AuthLevel::Active,
+        h!(api::rematch::offer_rematch),
+    ),
+    (
+        "GET",
+        "/api/matches/:matchId/rematch",
+        AuthLevel::Active,
+        h!(api::rematch::rematch_status),
+    ),
     // api/settings.rs
-    ("GET", "/api/settings", AuthLevel::Active, h!(api::settings::get_settings)),
-    ("PUT", "/api/settings", AuthLevel::Active, h!(api::settings::put_settings)),
+    (
+        "GET",
+        "/api/settings",
+        AuthLevel::Active,
+        h!(api::settings::get_settings),
+    ),
+    (
+        "PUT",
+        "/api/settings",
+        AuthLevel::Active,
+        h!(api::settings::put_settings),
+    ),
     // api/stats.rs
-    ("GET", "/api/stats/cards", AuthLevel::None, h!(api::stats::get_cards)),
-    ("GET", "/api/stats/cards/:id", AuthLevel::None, h!(api::stats::get_card)),
-    ("GET", "/api/stats/player", AuthLevel::Active, h!(api::stats::get_player)),
-    ("PUT", "/api/stats/player", AuthLevel::Active, h!(api::stats::put_player)),
-    ("GET", "/api/stats/players", AuthLevel::None, h!(api::stats::get_players)),
+    (
+        "GET",
+        "/api/stats/cards",
+        AuthLevel::None,
+        h!(api::stats::get_cards),
+    ),
+    (
+        "GET",
+        "/api/stats/cards/:id",
+        AuthLevel::None,
+        h!(api::stats::get_card),
+    ),
+    (
+        "GET",
+        "/api/stats/player",
+        AuthLevel::Active,
+        h!(api::stats::get_player),
+    ),
+    (
+        "PUT",
+        "/api/stats/player",
+        AuthLevel::Active,
+        h!(api::stats::put_player),
+    ),
+    (
+        "GET",
+        "/api/stats/players",
+        AuthLevel::None,
+        h!(api::stats::get_players),
+    ),
 ];
 
 /// TS `allRoutes()`.
@@ -303,7 +473,10 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         db,
         auth,
         matches: actor::registry::Registry::new(),
-        limiter: api::http::create_rate_limiter(crate::config::API_REQUESTS_PER_MINUTE as _, API_RATE_WINDOW_MS as _),
+        limiter: api::http::create_rate_limiter(
+            crate::config::API_REQUESTS_PER_MINUTE as _,
+            API_RATE_WINDOW_MS as _,
+        ),
         catalog,
         breaker: Mutex::new(api::codes::create_breaker_state()),
     });
@@ -319,7 +492,9 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         );
         // R144: reseeded on every start, before the port opens, so no request can land on half a
         // fixture set and so spec 10 is repeatable run after run.
-        api::e2e::seed_e2e_fixtures(&app).await.map_err(|error| anyhow!("{error:?}"))?;
+        api::e2e::seed_e2e_fixtures(&app)
+            .await
+            .map_err(|error| anyhow!("{error:?}"))?;
     }
     Ok(app)
 }
@@ -355,7 +530,9 @@ async fn serve_api(app: Arc<App>, cors: Arc<CorsOptions>, request: Request) -> R
 /// `serve` installs), because a request that did not come through the trusted proxy chain is keyed
 /// on it rather than on anything the caller wrote.
 pub fn router(app: Arc<App>) -> Router {
-    let cors = Arc::new(CorsOptions { origins: browser_origins(&app.env) });
+    let cors = Arc::new(CorsOptions {
+        origins: browser_origins(&app.env),
+    });
 
     let ws_app = app.clone();
     let ws_cors = cors.clone();
@@ -377,7 +554,9 @@ pub fn router(app: Arc<App>) -> Router {
         async move { serve_api(app, cors, request).await }
     };
 
-    Router::new().route(WS_PATH, axum::routing::any(socket)).fallback(fallback)
+    Router::new()
+        .route(WS_PATH, axum::routing::any(socket))
+        .fallback(fallback)
 }
 
 /// One line of JSON per event on stdout (TS `consoleLogger`): enough for a hosted log drain,
@@ -434,6 +613,10 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
     tokio::spawn(api::results::run_reaper(app.clone()));
     tokio::spawn(api::retention::run_purge(app.clone()));
 
-    axum::serve(listener, router(app).into_make_service_with_connect_info::<SocketAddr>()).await?;
+    axum::serve(
+        listener,
+        router(app).into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
     Ok(())
 }

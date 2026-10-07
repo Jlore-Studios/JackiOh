@@ -109,7 +109,11 @@ fn calls_of(hook: HookId) -> Vec<Asked> {
 /// TS `hook.mockClear()` for each of `hooks`.
 fn clear(hooks: &[HookId]) {
     CALLS.with(|cell| {
-        let calls: Vec<Asked> = cell.take().into_iter().filter(|call| !hooks.contains(&call.hook)).collect();
+        let calls: Vec<Asked> = cell
+            .take()
+            .into_iter()
+            .filter(|call| !hooks.contains(&call.hook))
+            .collect();
         cell.set(calls);
     });
 }
@@ -237,11 +241,19 @@ fn pv_field_spell() -> CardDef {
 }
 /// A hooked Stack unit, to sit on top of a pile.
 fn pv_stack() -> CardDef {
-    unit_def("stack", 2806, json!({ "base": stack_face(1, 1), "radiant": stack_face(2, 2) }))
+    unit_def(
+        "stack",
+        2806,
+        json!({ "base": stack_face(1, 1), "radiant": stack_face(2, 2) }),
+    )
 }
 /// A Stack unit with no hook, to bury a hooked card under.
 fn plain_stack() -> CardDef {
-    unit_def("plain-stack", 2807, json!({ "base": stack_face(1, 1), "radiant": stack_face(2, 2) }))
+    unit_def(
+        "plain-stack",
+        2807,
+        json!({ "base": stack_face(1, 1), "radiant": stack_face(2, 2) }),
+    )
 }
 /// A registered script that declares no `preview`.
 fn quiet_unit() -> CardDef {
@@ -395,7 +407,10 @@ fn asked() -> Vec<Asked> {
 }
 
 fn asked_about(instance_id: &str) -> Vec<Asked> {
-    asked().into_iter().filter(|ctx| ctx.self_id == instance_id).collect()
+    asked()
+        .into_iter()
+        .filter(|ctx| ctx.self_id == instance_id)
+        .collect()
 }
 
 fn clear_hooks() {
@@ -476,7 +491,8 @@ mod r280_preview_in_the_viewer_s_own_hand {
     }
 
     #[test]
-    fn r280_unlike_the_glow_a_hand_card_carries_it_on_the_opponent_s_turn_outside_the_main_phase_and_with_a_prompt_open() {
+    fn r280_unlike_the_glow_a_hand_card_carries_it_on_the_opponent_s_turn_outside_the_main_phase_and_with_a_prompt_open()
+     {
         let mut state = game("r280-hand-any-phase");
         let spell = one(in_hand(&mut state, &pv_spell().id, P1, 1));
 
@@ -490,7 +506,10 @@ mod r280_preview_in_the_viewer_s_own_hand {
         state.active = P1;
         for phase in [Phase::Mulligan, Phase::Start, Phase::End] {
             state.phase = phase;
-            assert!(shown_card(&hand_card(&view_for(&state, P1), &spell.id)).is_some(), "{phase}");
+            assert!(
+                shown_card(&hand_card(&view_for(&state, P1), &spell.id)).is_some(),
+                "{phase}"
+            );
         }
         state.phase = Phase::Main;
         open_mode_prompt(&mut state, P1);
@@ -498,7 +517,8 @@ mod r280_preview_in_the_viewer_s_own_hand {
     }
 
     #[test]
-    fn r280_each_seat_s_own_hand_carries_it_in_its_own_view_and_the_other_seat_s_view_carries_nothing_of_it() {
+    fn r280_each_seat_s_own_hand_carries_it_in_its_own_view_and_the_other_seat_s_view_carries_nothing_of_it()
+    {
         let mut state = game("r280-hand-both-seats");
         let mine = one(in_hand(&mut state, &pv_spell().id, P1, 1));
         let theirs = one(in_hand(&mut state, &pv_spell().id, P2, 1));
@@ -538,11 +558,17 @@ mod r280_preview_in_the_viewer_s_own_hand {
             Some(vec![value(&format!("n({})", plain.id), 11)])
         );
         assert_eq!(
-            calls_of(HookId::Radiant).into_iter().map(|ctx| ctx.self_id).collect::<Vec<_>>(),
+            calls_of(HookId::Radiant)
+                .into_iter()
+                .map(|ctx| ctx.self_id)
+                .collect::<Vec<_>>(),
             vec![shiny.id.clone()]
         );
         assert_eq!(
-            calls_of(HookId::Base).into_iter().map(|ctx| ctx.self_id).collect::<Vec<_>>(),
+            calls_of(HookId::Base)
+                .into_iter()
+                .map(|ctx| ctx.self_id)
+                .collect::<Vec<_>>(),
             vec![plain.id.clone()]
         );
     }
@@ -592,8 +618,18 @@ mod r280_preview_on_the_field {
     #[test]
     fn r280_a_field_spell_and_a_fired_field_trap_carry_it_in_both_seats_views() {
         let mut state = game("r280-backrow-public");
-        let field_spell = put(&mut state, &pv_field_spell().id, slot(P1, Row::Backrow, 1), json!({}));
-        let fired_field_trap = put(&mut state, &pv_field_trap().id, slot(P1, Row::Backrow, 2), json!({}));
+        let field_spell = put(
+            &mut state,
+            &pv_field_spell().id,
+            slot(P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let fired_field_trap = put(
+            &mut state,
+            &pv_field_trap().id,
+            slot(P1, Row::Backrow, 2),
+            json!({}),
+        );
         live_mut(&mut state, &fired_field_trap).face_up = Some(true);
 
         for viewer in [P1, P2] {
@@ -621,10 +657,16 @@ mod r280_preview_on_the_field {
     }
 
     #[test]
-    fn r280_a_face_down_trap_or_field_trap_carries_it_for_its_controller_alone_and_is_not_asked_for_the_other_seat() {
+    fn r280_a_face_down_trap_or_field_trap_carries_it_for_its_controller_alone_and_is_not_asked_for_the_other_seat()
+     {
         let mut state = game("r280-backrow-face-down");
         let trap = put(&mut state, &pv_trap().id, slot(P1, Row::Backrow, 1), json!({}));
-        let field_trap = put(&mut state, &pv_field_trap().id, slot(P1, Row::Backrow, 2), json!({}));
+        let field_trap = put(
+            &mut state,
+            &pv_field_trap().id,
+            slot(P1, Row::Backrow, 2),
+            json!({}),
+        );
 
         let own = view_for(&state, P1);
         assert_eq!(
@@ -681,7 +723,12 @@ mod r280_preview_on_the_field {
         let mut state = game("r280-buried");
         let buried = put(&mut state, &pv_unit().id, slot(P1, Row::Units, 3), json!({}));
         let mut top = new_instance(&mut state, &plain_stack().id, P1, Zone::Hand { player: P1 });
-        assert!(place_on_field(&mut state, &mut top, slot(P1, Row::Units, 3), json_as(json!({ "stack": true }))));
+        assert!(place_on_field(
+            &mut state,
+            &mut top,
+            slot(P1, Row::Units, 3),
+            json_as(json!({ "stack": true }))
+        ));
 
         for viewer in [P1, P2] {
             let view = view_for(&state, viewer);
@@ -692,7 +739,10 @@ mod r280_preview_on_the_field {
             assert_eq!(shown_unit(&side.units[2]), None, "{viewer}");
         }
         assert!(asked_about(&buried.id).is_empty());
-        assert_eq!(preview_of(&state, &live(&state, &buried), P1, ConditionZone::Field), None);
+        assert_eq!(
+            preview_of(&state, &live(&state, &buried), P1, ConditionZone::Field),
+            None
+        );
         assert!(asked_about(&buried.id).is_empty());
 
         // A hooked top of a pile does carry its own, still without asking about the card under it.
@@ -735,8 +785,17 @@ mod r280_preview_is_nowhere_else {
         for viewer in [P1, P2] {
             let view = view_for(&state, viewer);
             let side = side(&view, viewer);
-            for card in side.graveyard.iter().chain(side.exile.iter()).chain(side.resolving.iter()) {
-                assert!(!has_key(card, "preview"), "{} in {viewer}'s view", card.instance_id);
+            for card in side
+                .graveyard
+                .iter()
+                .chain(side.exile.iter())
+                .chain(side.resolving.iter())
+            {
+                assert!(
+                    !has_key(card, "preview"),
+                    "{} in {viewer}'s view",
+                    card.instance_id
+                );
             }
             assert!(side.graveyard.iter().any(|card| card.instance_id == in_grave.id));
             assert!(side.exile.iter().any(|card| card.instance_id == in_exile.id));
@@ -760,8 +819,14 @@ mod r280_preview_is_nowhere_else {
         let library = library.expect("the library card was not made");
 
         let at = |card: &CardInstance| live(&state, card);
-        assert_eq!(preview_of(&state, &at(&their_hand), P1, ConditionZone::Hand), None);
-        assert_eq!(preview_of(&state, &at(&their_trap), P1, ConditionZone::Field), None);
+        assert_eq!(
+            preview_of(&state, &at(&their_hand), P1, ConditionZone::Hand),
+            None
+        );
+        assert_eq!(
+            preview_of(&state, &at(&their_trap), P1, ConditionZone::Field),
+            None
+        );
         assert_eq!(preview_of(&state, &at(&library), P1, ConditionZone::Hand), None);
         assert_eq!(preview_of(&state, &at(&library), P1, ConditionZone::Field), None);
         // A card asked about as where it is not: a field unit as a hand card, a hand card as a field one.
@@ -793,11 +858,24 @@ mod r280_preview_is_nowhere_else {
         }
         put(&mut state, &empty_unit().id, slot(P1, Row::Units, 1), json!({}));
         put(&mut state, &quiet_unit().id, slot(P1, Row::Units, 2), json!({}));
-        put(&mut state, &unscripted_unit().id, slot(P2, Row::Units, 1), json!({}));
-        put(&mut state, &transient_unit().id, slot(P2, Row::Units, 2), json!({}));
+        put(
+            &mut state,
+            &unscripted_unit().id,
+            slot(P2, Row::Units, 1),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &transient_unit().id,
+            slot(P2, Row::Units, 2),
+            json!({}),
+        );
 
         for viewer in [P1, P2] {
-            assert!(!to_json(&view_for(&state, viewer)).contains("\"preview\""), "{viewer}");
+            assert!(
+                !to_json(&view_for(&state, viewer)).contains("\"preview\""),
+                "{viewer}"
+            );
         }
         // The empty answer was asked for, and it is the answer that made the key absent.
         assert!(!calls_of(HookId::Empty).is_empty());
@@ -833,7 +911,10 @@ mod r280_the_hook_is_a_pure_read {
         let calls = asked();
         assert!(!calls.is_empty());
         for ctx in calls {
-            assert_eq!(ctx.keys, vec!["controller", "radiant", "self", "state", "yourTurn", "zone"]);
+            assert_eq!(
+                ctx.keys,
+                vec!["controller", "radiant", "self", "state", "yourTurn", "zone"]
+            );
         }
     }
 
@@ -873,8 +954,10 @@ mod r280_r102_a_fusion_s_preview_is_its_ingredients_lists_in_ingredient_order {
 
     /// Craft a fusion of `def_ids` into p1's hand through the real R77 `fuse`, the path #99 takes.
     fn craft(state: &mut GameState, def_ids: &[String]) -> CardInstance {
-        let ingredients: Vec<CardInstance> =
-            def_ids.iter().map(|def_id| one(in_hand(state, def_id, P1, 1))).collect();
+        let ingredients: Vec<CardInstance> = def_ids
+            .iter()
+            .map(|def_id| one(in_hand(state, def_id, P1, 1)))
+            .collect();
         let mut sink = sink_for(state);
         fuse(
             &mut sink,
@@ -923,7 +1006,10 @@ mod r280_r102_a_fusion_s_preview_is_its_ingredients_lists_in_ingredient_order {
         let without_hook = craft(&mut state, &[quiet_unit().id, plain_stack().id]);
 
         let view = view_for(&state, P1);
-        assert_eq!(shown_card(&hand_card(&view, &with_hook.id)), Some(vec![value("A", 1)]));
+        assert_eq!(
+            shown_card(&hand_card(&view, &with_hook.id)),
+            Some(vec![value("A", 1)])
+        );
         assert_eq!(shown_card(&hand_card(&view, &without_hook.id)), None);
     }
 
@@ -947,10 +1033,19 @@ mod r280_r102_a_fusion_s_preview_is_its_ingredients_lists_in_ingredient_order {
 
         // The played ingredients come first and the target last (`fuse`), as the fused name says.
         let target_def = live(&state, &target).def_id;
-        assert_eq!(state.transient_defs.get(&target_def).map(|def| def.name.as_str()), Some("b + a"));
+        assert_eq!(
+            state.transient_defs.get(&target_def).map(|def| def.name.as_str()),
+            Some("b + a")
+        );
         let labels_shown = Some(vec!["B1".to_string(), "B2".to_string(), "A".to_string()]);
-        assert_eq!(labels(shown_unit(&view_for(&state, P1).you.units[1])), labels_shown);
-        assert_eq!(labels(shown_unit(&view_for(&state, P2).opponent.units[1])), labels_shown);
+        assert_eq!(
+            labels(shown_unit(&view_for(&state, P1).you.units[1])),
+            labels_shown
+        );
+        assert_eq!(
+            labels(shown_unit(&view_for(&state, P2).opponent.units[1])),
+            labels_shown
+        );
     }
 
     #[test]
@@ -961,11 +1056,21 @@ mod r280_r102_a_fusion_s_preview_is_its_ingredients_lists_in_ingredient_order {
         let none = craft(&mut state, &[quiet_unit().id, plain_stack().id]);
 
         assert_eq!(
-            state.transient_defs.get(&both.def_id).and_then(|def| def.refs.clone()),
-            Some(vec!["core-t-rush".to_string(), "core-t-sheep".to_string(), "core-t-bread".to_string()])
+            state
+                .transient_defs
+                .get(&both.def_id)
+                .and_then(|def| def.refs.clone()),
+            Some(vec![
+                "core-t-rush".to_string(),
+                "core-t-sheep".to_string(),
+                "core-t-bread".to_string()
+            ])
         );
         assert_eq!(
-            state.transient_defs.get(&one_.def_id).and_then(|def| def.refs.clone()),
+            state
+                .transient_defs
+                .get(&one_.def_id)
+                .and_then(|def| def.refs.clone()),
             Some(vec!["core-t-sheep".to_string(), "core-t-bread".to_string()])
         );
         let none_def = state.transient_defs.get(&none.def_id);

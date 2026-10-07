@@ -17,8 +17,8 @@ use std::time::Duration;
 
 use jackioh_engine::PlayerId::{self, P1, P2};
 use jackioh_server::actor::clock::{create_match_clock, initial_clocks, match_ceiling_at};
-use jackioh_server::app::now_ms;
 use jackioh_server::actor::contracts::{ClockExpiry, ClockView, CreateMatchClockInput, MatchClock};
+use jackioh_server::app::now_ms;
 use jackioh_server::config::{
     DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MULLIGAN_CLOCK_SECONDS, PROMPT_CLOCK_SECONDS,
     TURN_CLOCK_SECONDS,
@@ -113,12 +113,23 @@ fn harness(started_offset_ms: i64) -> Harness {
 }
 
 fn view() -> ClockView {
-    ClockView { turn: 1, active: P1, pending_for: None, mulligan_owed: vec![], over: false }
+    ClockView {
+        turn: 1,
+        active: P1,
+        pending_for: None,
+        mulligan_owed: vec![],
+        over: false,
+    }
 }
 
 /// R265: setup, turn 0 with p1 as its placeholder active seat, and these seats still owing.
 fn mulligan_window(owed: &[PlayerId]) -> ClockView {
-    ClockView { turn: 0, active: P1, mulligan_owed: owed.to_vec(), ..view() }
+    ClockView {
+        turn: 0,
+        active: P1,
+        mulligan_owed: owed.to_vec(),
+        ..view()
+    }
 }
 
 mod match_clock {
@@ -144,7 +155,11 @@ mod match_clock {
         assert_eq!(h.expiries(), vec![]);
 
         // R79: "The turn clock belongs to the active player" — the new turn starts from full.
-        h.clock.sync(&ClockView { turn: 2, active: P2, ..view() });
+        h.clock.sync(&ClockView {
+            turn: 2,
+            active: P2,
+            ..view()
+        });
         assert_eq!(h.clock.remaining_for(P2), Some(h.turn_ms));
         assert_eq!(h.clock.remaining_for(P1), None);
 
@@ -155,7 +170,8 @@ mod match_clock {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r79_a_prompt_held_by_the_non_active_player_pauses_the_turn_clock_and_only_its_own_clock_expires() {
+    async fn r79_a_prompt_held_by_the_non_active_player_pauses_the_turn_clock_and_only_its_own_clock_expires()
+    {
         let h = harness(0);
         h.clock.sync(&view());
 
@@ -164,7 +180,10 @@ mod match_clock {
         advance(spent).await;
         assert_eq!(h.clock.remaining_for(P1), Some(h.turn_ms - spent));
 
-        h.clock.sync(&ClockView { pending_for: Some(P2), ..view() });
+        h.clock.sync(&ClockView {
+            pending_for: Some(P2),
+            ..view()
+        });
         assert_eq!(h.deadline("turnDeadline"), None);
         assert_eq!(h.deadline("promptDeadline"), Some(now() + h.prompt_ms));
 
@@ -182,7 +201,10 @@ mod match_clock {
         advance(1).await;
         assert_eq!(
             h.expiries(),
-            vec![ClockExpiry::Prompt { player: P2 }, ClockExpiry::Turn { player: P1 }]
+            vec![
+                ClockExpiry::Prompt { player: P2 },
+                ClockExpiry::Turn { player: P1 }
+            ]
         );
     }
 
@@ -191,7 +213,10 @@ mod match_clock {
         let h = harness(0);
         // §2.5: "When the active player's turn clock runs out, their open prompts are answered by the
         // AI policy and the turn ends" — their own prompt gets no second, shorter deadline.
-        h.clock.sync(&ClockView { pending_for: Some(P1), ..view() });
+        h.clock.sync(&ClockView {
+            pending_for: Some(P1),
+            ..view()
+        });
         assert_eq!(h.deadline("turnDeadline"), Some(now() + h.turn_ms));
         assert_eq!(h.deadline("promptDeadline"), None);
 
@@ -206,7 +231,10 @@ mod match_clock {
     async fn counts_disconnect_grace_per_player_and_reports_whose_it_was() {
         let h = harness(0);
         h.clock.start_grace(P2, None);
-        assert_eq!(h.snapshot()["graceDeadline"], json!({ "p1": null, "p2": now() + h.grace_ms }));
+        assert_eq!(
+            h.snapshot()["graceDeadline"],
+            json!({ "p1": null, "p2": now() + h.grace_ms })
+        );
 
         advance(h.grace_ms - 1).await;
         assert_eq!(h.expiries(), vec![]);
@@ -216,7 +244,8 @@ mod match_clock {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r147_keeps_the_first_deadline_when_a_second_grace_starts_so_a_flapping_socket_cannot_extend_it() {
+    async fn r147_keeps_the_first_deadline_when_a_second_grace_starts_so_a_flapping_socket_cannot_extend_it()
+    {
         let h = harness(0);
         h.clock.start_grace(P1, None);
         let deadline = h.grace(P1);
@@ -241,7 +270,8 @@ mod match_clock {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r744_starts_a_grace_at_a_stored_deadline_holds_it_to_a_fresh_window_and_fires_one_already_past_at_once() {
+    async fn r744_starts_a_grace_at_a_stored_deadline_holds_it_to_a_fresh_window_and_fires_one_already_past_at_once()
+     {
         let h = harness(0);
 
         // A deadline the restart left stored is kept, not replaced by a fresh window.
@@ -263,7 +293,10 @@ mod match_clock {
         advance(0).await;
         assert_eq!(h.expiries().last(), Some(&ClockExpiry::Grace { player: P1 }));
         assert_eq!(
-            h.expiries().iter().filter(|expiry| matches!(expiry, ClockExpiry::Grace { .. })).count(),
+            h.expiries()
+                .iter()
+                .filter(|expiry| matches!(expiry, ClockExpiry::Grace { .. }))
+                .count(),
             2
         );
     }
@@ -278,7 +311,10 @@ mod match_clock {
 
         advance(h.grace_ms * 2).await;
         assert_eq!(
-            h.expiries().iter().filter(|expiry| matches!(expiry, ClockExpiry::Grace { .. })).count(),
+            h.expiries()
+                .iter()
+                .filter(|expiry| matches!(expiry, ClockExpiry::Grace { .. }))
+                .count(),
             0
         );
     }
@@ -296,7 +332,10 @@ mod match_clock {
         advance(h.turn_ms).await;
         assert_eq!(
             h.expiries(),
-            vec![ClockExpiry::Grace { player: P2 }, ClockExpiry::Turn { player: P1 }]
+            vec![
+                ClockExpiry::Grace { player: P2 },
+                ClockExpiry::Turn { player: P1 }
+            ]
         );
         assert!(h.grace_ms < h.turn_ms);
     }
@@ -305,8 +344,14 @@ mod match_clock {
     async fn r79_fires_the_ceiling_once_measured_from_started_at() {
         let elapsed = 10 * MINUTE;
         let h = harness(elapsed);
-        assert_eq!(h.snapshot()["ceilingAt"].as_i64(), Some(match_ceiling_at(h.started_at)));
-        assert_eq!(h.snapshot()["ceilingAt"].as_i64(), Some(h.started_at + h.ceiling_ms));
+        assert_eq!(
+            h.snapshot()["ceilingAt"].as_i64(),
+            Some(match_ceiling_at(h.started_at))
+        );
+        assert_eq!(
+            h.snapshot()["ceilingAt"].as_i64(),
+            Some(h.started_at + h.ceiling_ms)
+        );
 
         advance(h.ceiling_ms - elapsed - 1).await;
         assert_eq!(h.expiries(), vec![]);
@@ -340,7 +385,10 @@ mod match_clock {
         assert_eq!(h.clock.remaining_for(P2), None);
 
         h.clock.start_grace(P1, None);
-        h.clock.sync(&ClockView { pending_for: Some(P2), ..view() });
+        h.clock.sync(&ClockView {
+            pending_for: Some(P2),
+            ..view()
+        });
         assert_eq!(
             h.snapshot(),
             json!({
@@ -376,7 +424,11 @@ mod match_clock {
         assert_eq!(h.clock.remaining_for(P1), None);
 
         // A late sync must never re-arm a deadline on a finished match.
-        h.clock.sync(&ClockView { turn: 2, active: P2, ..view() });
+        h.clock.sync(&ClockView {
+            turn: 2,
+            active: P2,
+            ..view()
+        });
         assert_eq!(h.deadline("turnDeadline"), None);
         advance(60 * MINUTE).await;
         assert_eq!(h.expiries(), vec![]);
@@ -385,7 +437,10 @@ mod match_clock {
     #[tokio::test(start_paused = true)]
     async fn stop_cancels_every_timer_and_is_idempotent() {
         let h = harness(0);
-        h.clock.sync(&ClockView { pending_for: Some(P2), ..view() });
+        h.clock.sync(&ClockView {
+            pending_for: Some(P2),
+            ..view()
+        });
         h.clock.start_grace(P1, None);
         assert!(h.deadline("promptDeadline").is_some());
         assert!(h.grace(P1).is_some());
@@ -400,7 +455,8 @@ mod match_clock {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r268_the_mulligan_clock_runs_one_deadline_for_both_seats_at_once_and_no_turn_clock_runs_under_it() {
+    async fn r268_the_mulligan_clock_runs_one_deadline_for_both_seats_at_once_and_no_turn_clock_runs_under_it()
+     {
         let h = harness(0);
         h.clock.sync(&mulligan_window(&[P1, P2]));
 
@@ -454,7 +510,11 @@ mod match_clock {
 
         // The second answer resolves both and starts turn 1 (R265, §2.1).
         advance(5 * SECOND).await;
-        h.clock.sync(&ClockView { turn: 1, active: P1, ..view() });
+        h.clock.sync(&ClockView {
+            turn: 1,
+            active: P1,
+            ..view()
+        });
         assert_eq!(h.deadline("promptDeadline"), None);
         assert_eq!(h.deadline("turnDeadline"), Some(now() + h.turn_ms));
         assert_eq!(h.clock.remaining_for(P1), Some(h.turn_ms));
@@ -473,7 +533,12 @@ mod match_clock {
 
         // A cast-on-draw card in p2's opening deal asks p2 something before the mulligans open (§2.4):
         // the non-active holder's prompt clock, as R79 has it.
-        h.clock.sync(&ClockView { turn: 0, active: P1, pending_for: Some(P2), ..view() });
+        h.clock.sync(&ClockView {
+            turn: 0,
+            active: P1,
+            pending_for: Some(P2),
+            ..view()
+        });
         assert_eq!(h.deadline("promptDeadline"), Some(now() + h.prompt_ms));
 
         // Answered, and the window opens: the prompt clock goes and the one mulligan deadline takes over.
@@ -485,7 +550,12 @@ mod match_clock {
 
         // Both answered, and a replacement draw's cast asks p2 during the resolution (phase still
         // mulligan, turn 0, nobody owing): R79's prompt clock again, and the mulligan clock is gone.
-        h.clock.sync(&ClockView { turn: 0, active: P1, pending_for: Some(P2), ..view() });
+        h.clock.sync(&ClockView {
+            turn: 0,
+            active: P1,
+            pending_for: Some(P2),
+            ..view()
+        });
         assert_eq!(h.deadline("promptDeadline"), Some(now() + h.prompt_ms));
         advance(h.prompt_ms).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Prompt { player: P2 }]);
@@ -495,7 +565,10 @@ mod match_clock {
     async fn r268_stop_cancels_a_running_mulligan_clock() {
         let h = harness(0);
         h.clock.sync(&mulligan_window(&[P1, P2]));
-        h.clock.sync(&ClockView { over: true, ..mulligan_window(&[P1]) });
+        h.clock.sync(&ClockView {
+            over: true,
+            ..mulligan_window(&[P1])
+        });
         // TS: `timers.pending` is 0. The armed deadline is what the count was counting.
         assert_eq!(h.deadline("promptDeadline"), None);
         assert_eq!(h.clock.remaining_for(P1), None);
@@ -543,6 +616,9 @@ mod r389_the_match_ceiling_doubled_with_the_turn_cap_patch_v0_2_0_b4_3 {
     #[test]
     fn r389_the_clock_arms_the_ceiling_at_the_configured_minutes_from_the_matchs_start() {
         let started_at = 5 * SECOND;
-        assert_eq!(match_ceiling_at(started_at), started_at + int(MATCH_CEILING_MINUTES) * MINUTE);
+        assert_eq!(
+            match_ceiling_at(started_at),
+            started_at + int(MATCH_CEILING_MINUTES) * MINUTE
+        );
     }
 }

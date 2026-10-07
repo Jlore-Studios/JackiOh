@@ -8,7 +8,9 @@
 use jackioh_engine::testkit::*;
 
 use jackioh_engine::catalog::registered_catalog;
-use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random, place_plague_tokens};
+use jackioh_engine::effects::{
+    CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random, place_plague_tokens,
+};
 use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::script::{CardScripts, EngineSink, Script, hook};
@@ -51,7 +53,9 @@ fn game(seed: &str) -> GameState {
     }
     register_catalog(catalog);
     let placing = Script {
-        cry: Some(hook(|_ctx| vec![place_plague_tokens(json_as(json!({ "count": TOKENS })))])),
+        cry: Some(hook(|_ctx| {
+            vec![place_plague_tokens(json_as(json!({ "count": TOKENS })))]
+        })),
         ..Script::default()
     };
     let mut scripts = registered_scripts().clone();
@@ -73,7 +77,12 @@ fn game(seed: &str) -> GameState {
 fn cast_from_box(state: &mut GameState) {
     // TS built the sink first and the casting card second; the sink touches no id, so the order of
     // the two is the same game.
-    let self_ = new_instance(state, &box_().id, PlayerId::P1, Zone::Resolving { player: PlayerId::P1 });
+    let self_ = new_instance(
+        state,
+        &box_().id,
+        PlayerId::P1,
+        Zone::Resolving { player: PlayerId::P1 },
+    );
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();
     {
@@ -151,8 +160,14 @@ mod r452_r471_placements_inside_a_random_cast {
                     ..Default::default()
                 },
             );
-            apply_effects(&[place_plague_tokens(json_as(json!({ "count": TOKENS })))], &mut ctx);
+            apply_effects(
+                &[place_plague_tokens(json_as(json!({ "count": TOKENS })))],
+                &mut ctx,
+            );
         }
-        assert_eq!(state.pending.as_ref().map(|pending| pending.player_id), Some(PlayerId::P1));
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.player_id),
+            Some(PlayerId::P1)
+        );
     }
 }

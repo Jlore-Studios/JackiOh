@@ -33,7 +33,7 @@ use jackioh_engine::zones::{MoveToZoneOptions, OffFieldZone, move_to_zone};
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::combat::{big_body, plain};
 use crate::rules::fixtures::core_patches::{
-    core_patch_catalog, CORE_PATCH_SCRIPTS, counted, marker, quiet_trap, TEST_MARK, uncounted,
+    CORE_PATCH_SCRIPTS, TEST_MARK, core_patch_catalog, counted, marker, quiet_trap, uncounted,
 };
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
 
@@ -137,7 +137,13 @@ fn instance_ids(events: &[GameEvent], ty: GameEventType) -> Vec<Value> {
 fn view_events_of(view: &Value, ty: &str) -> Vec<Value> {
     view["events"]
         .as_array()
-        .map(|events| events.iter().filter(|event| event["type"] == json!(ty)).cloned().collect())
+        .map(|events| {
+            events
+                .iter()
+                .filter(|event| event["type"] == json!(ty))
+                .cloned()
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -164,7 +170,11 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
         let card = first_in_hand(&mut state, &counted.id, P1, "the counted Spell");
         state.players.p1.mana.current = 4;
 
-        let played = act(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" })).state;
+        let played = act(
+            &state,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        )
+        .state;
         let landed = played
             .players
             .p1
@@ -179,7 +189,11 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
         let mut back = again.players.p1.graveyard.pop().expect("expected the Spell");
         back.zone = Zone::Hand { player: P1 };
         again.players.p1.hand.push(back.clone());
-        let twice = act(&again, json!({ "type": "play", "instanceId": back.id, "playerId": "p1" })).state;
+        let twice = act(
+            &again,
+            json!({ "type": "play", "instanceId": back.id, "playerId": "p1" }),
+        )
+        .state;
         assert_eq!(
             times_played_of(
                 twice
@@ -201,7 +215,11 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
         let card = first_in_hand(&mut state, &uncounted.id, P1, "the plain Spell");
         state.players.p1.mana.current = 4;
 
-        let played = act(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" })).state;
+        let played = act(
+            &state,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        )
+        .state;
         let landed = played
             .players
             .p1
@@ -222,8 +240,14 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
         cast_card(&mut sink.on(&mut state), &card, CastOptions::default());
 
         // TS read the live instance the cast changed; Rust reads it back from the state by its id.
-        assert_eq!(times_played_of(find_instance(&state, &card.id).expect("the cast card")), 1);
-        assert_eq!(instance_ids(&sink.events, GameEventType::CardPlayed), vec![json!(card.id)]);
+        assert_eq!(
+            times_played_of(find_instance(&state, &card.id).expect("the cast card")),
+            1
+        );
+        assert_eq!(
+            instance_ids(&sink.events, GameEventType::CardPlayed),
+            vec![json!(card.id)]
+        );
     }
 
     #[test]
@@ -263,7 +287,12 @@ mod r427_r174_a_resolved_plays_card_that_something_answering_the_play_has_since_
 
         // Taken off after the play resolved — what a trap answering the play does (R174).
         let mut leaving = unit.clone();
-        move_to_zone(&mut state, &mut leaving, OffFieldZone::Graveyard, MoveToZoneOptions::default());
+        move_to_zone(
+            &mut state,
+            &mut leaving,
+            OffFieldZone::Graveyard,
+            MoveToZoneOptions::default(),
+        );
         assert!(left_field_since_resolved(&state, &event));
 
         // A play whose card had already left as it resolved (its own resolution took it, R427): its
@@ -320,26 +349,45 @@ mod r433_a_dealt_deck_lists_only_the_cards_its_owner_has_been_shown {
     fn r433_a_dealt_seats_starting_library_is_every_card_unknown_a_built_seats_is_listed_in_full_r310() {
         new_game("r433-setup", None);
         let state = create("r433", Some(vec![P1]));
-        assert_eq!(json_of(own_library_view(&state, P1)), json!({ "cards": [], "unknown": DECK_SIZE }));
+        assert_eq!(
+            json_of(own_library_view(&state, P1)),
+            json!({ "cards": [], "unknown": DECK_SIZE })
+        );
         assert_eq!(json_of(own_library_view(&state, P2))["unknown"], json!(0));
-        assert_eq!(listed(&json_of(own_library_view(&state, P2))), i64::from(DECK_SIZE));
+        assert_eq!(
+            listed(&json_of(own_library_view(&state, P2))),
+            i64::from(DECK_SIZE)
+        );
         // The view carries it so: the list, and nothing else of the library (§9.1).
         assert_eq!(
             json_of(view_for(&state, P1))["you"]["ownLibrary"],
             json!({ "cards": [], "unknown": DECK_SIZE })
         );
-        assert!(json_of(view_for(&state, P1))["opponent"].get("ownLibrary").is_none());
+        assert!(
+            json_of(view_for(&state, P1))["opponent"]
+                .get("ownLibrary")
+                .is_none()
+        );
     }
 
     #[test]
-    fn r433_r311_what_goes_in_openly_afterwards_is_listed_a_mulligans_returns_are_known_the_rest_stays_unknown() {
+    fn r433_r311_what_goes_in_openly_afterwards_is_listed_a_mulligans_returns_are_known_the_rest_stays_unknown()
+     {
         new_game("r433-setup", None);
         let mut state = begin_game(&create("r433-mulligan", Some(vec![P1]))).state;
         let hand = ids(&state.players.p1.hand);
         let returned = hand.first().cloned().expect("expected a card to return");
-        state = act(&state, json!({ "type": "mulligan", "keep": hand[1..], "playerId": "p1" })).state;
+        state = act(
+            &state,
+            json!({ "type": "mulligan", "keep": hand[1..], "playerId": "p1" }),
+        )
+        .state;
         let keep = ids(&state.players.p2.hand);
-        state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" })).state;
+        state = act(
+            &state,
+            json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+        )
+        .state;
 
         // The one returned card went in openly (R311) and is listed while it is there; every other card
         // of the library, the dealt ones, stays unknown.
@@ -347,7 +395,10 @@ mod r433_a_dealt_deck_lists_only_the_cards_its_owner_has_been_shown {
         let known = listed(&list);
         let still_there = state.players.p1.library.iter().any(|card| card.id == returned);
         assert_eq!(known, if still_there { 1 } else { 0 });
-        assert_eq!(list["unknown"].as_i64(), Some(state.players.p1.library.len() as i64 - known));
+        assert_eq!(
+            list["unknown"].as_i64(),
+            Some(state.players.p1.library.len() as i64 - known)
+        );
         assert!(list["unknown"].as_i64().unwrap_or(0) > 0);
     }
 
@@ -357,14 +408,20 @@ mod r433_a_dealt_deck_lists_only_the_cards_its_owner_has_been_shown {
         let plain_game = create("r433-same", None);
         let none_dealt = create("r433-same", Some(vec![]));
         assert_eq!(hash_state(&none_dealt), hash_state(&plain_game));
-        assert_ne!(hash_state(&create("r433-same", Some(vec![P2]))), hash_state(&plain_game));
+        assert_ne!(
+            hash_state(&create("r433-same", Some(vec![P2]))),
+            hash_state(&plain_game)
+        );
     }
 
     #[test]
     fn r433_9_3_a_fold_given_the_same_dealt_seats_reproduces_the_game_one_without_them_does_not() {
         new_game("r433-setup", None);
         let mut log: Vec<Action> = Vec::new();
-        let live = keep_all(begin_game(&create("r433-fold", Some(vec![P1, P2]))).state, &mut log);
+        let live = keep_all(
+            begin_game(&create("r433-fold", Some(vec![P1, P2]))).state,
+            &mut log,
+        );
 
         let replayed = fold(&json_as(json!({
             "seed": "r433-fold",
@@ -374,9 +431,14 @@ mod r433_a_dealt_deck_lists_only_the_cards_its_owner_has_been_shown {
         })));
         assert!(replayed.errors.is_empty());
         assert_eq!(hash_state(&replayed.state), hash_state(&live));
-        assert_eq!(json_of(view_for(&replayed.state, P1)), json_of(view_for(&live, P1)));
+        assert_eq!(
+            json_of(view_for(&replayed.state, P1)),
+            json_of(view_for(&live, P1))
+        );
 
-        let forgotten = fold(&json_as(json!({ "seed": "r433-fold", "decks": decks(), "log": log })));
+        let forgotten = fold(&json_as(
+            json!({ "seed": "r433-fold", "decks": decks(), "log": log }),
+        ));
         assert_ne!(hash_state(&forgotten.state), hash_state(&live));
     }
 }
@@ -397,7 +459,10 @@ mod r434_once_the_game_is_over_each_view_carries_the_other_players_hand {
         put(&mut state, &big_body.id, slot(P1, Row::Units, 1), json!({}));
         put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
 
-        assert_eq!(json_of(view_for(&state, P1))["opponent"]["hand"], json!({ "count": 2 }));
+        assert_eq!(
+            json_of(view_for(&state, P1))["opponent"]["hand"],
+            json!({ "count": 2 })
+        );
 
         // p2 concedes: the game is decided (§2.5).
         let over = act(&state, json!({ "type": "concede", "playerId": "p2" })).state;
@@ -410,9 +475,15 @@ mod r434_once_the_game_is_over_each_view_carries_the_other_players_hand {
             .as_array()
             .map(|cards| cards.iter().map(|card| card["instanceId"].clone()).collect())
             .unwrap_or_default();
-        assert_eq!(hand_ids, theirs.iter().map(|card| json!(card.id)).collect::<Vec<_>>());
+        assert_eq!(
+            hand_ids,
+            theirs.iter().map(|card| json!(card.id)).collect::<Vec<_>>()
+        );
         // As the owner sees them: a Unit's stats ride with it (R243).
-        assert!(matches_object(&hand[0], &json!({ "defId": plain.id, "attack": 3, "health": 3 })));
+        assert!(matches_object(
+            &hand[0],
+            &json!({ "defId": plain.id, "attack": 3, "health": 3 })
+        ));
         // And for the other seat, symmetrically.
         let other: Vec<Value> = json_of(view_for(&over, P2))["opponent"]["hand"]
             .as_array()
@@ -420,7 +491,10 @@ mod r434_once_the_game_is_over_each_view_carries_the_other_players_hand {
             .unwrap_or_default();
         assert_eq!(other, vec![json!(uncounted.id.clone())]);
         // The libraries stay a count, and the opponent's list is never sent (§9.1).
-        assert_eq!(p1_view["opponent"]["libraryCount"], json!(over.players.p2.library.len()));
+        assert_eq!(
+            p1_view["opponent"]["libraryCount"],
+            json!(over.players.p2.library.len())
+        );
         assert!(p1_view["opponent"].get("ownLibrary").is_none());
     }
 
@@ -513,7 +587,11 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
 
     #[test]
     fn r437_the_play_marks_its_target_with_a_marked_event_and_both_seats_views_carry_the_mark() {
-        let Marked { state, target, events } = marked("r437-mark");
+        let Marked {
+            state,
+            target,
+            events,
+        } = marked("r437-mark");
         assert_eq!(
             json_of(events_of_type(&events, GameEventType::Marked)),
             json!([marked_event(&target.id, true)])
@@ -540,7 +618,9 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
 
         let mut state = act(&thawed, json!({ "type": "endTurn", "playerId": "p1" })).state;
         assert_eq!(unit_view_of(&state, P1, "opponent", 1)["marks"], json!([mark()]));
-        let ReduceResult { state: back, events, .. } = act(&state, json!({ "type": "endTurn", "playerId": "p2" }));
+        let ReduceResult {
+            state: back, events, ..
+        } = act(&state, json!({ "type": "endTurn", "playerId": "p2" }));
         state = back;
 
         // The hit landed at p1's start of turn, and the mark is gone from both views.
@@ -560,7 +640,9 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
 
     #[test]
     fn r437_r174_the_mark_goes_the_moment_its_card_leaves_the_field_and_the_effect_with_it() {
-        let Marked { mut state, target, .. } = marked("r437-leave");
+        let Marked {
+            mut state, target, ..
+        } = marked("r437-leave");
         let mut sink = Sink::for_state(&state);
         {
             let mut engine = sink.on(&mut state);
@@ -572,9 +654,10 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
                     ..Default::default()
                 },
             );
-            (damage(json_as(json!({ "to": { "of": "instance", "instanceId": target.id }, "amount": 20 }))).apply)(
-                &mut ctx,
-            );
+            (damage(json_as(
+                json!({ "to": { "of": "instance", "instanceId": target.id }, "amount": 20 }),
+            ))
+            .apply)(&mut ctx);
         }
         state_check(&mut sink.on(&mut state));
         // The next time the loop collects events, the removal is said.
@@ -614,7 +697,10 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
 
         // p1 may not read the trap (R33): its back carries the mark, and nothing names it.
         let p1_view = json_of(view_for(&played, P1));
-        assert_eq!(p1_view["opponent"]["backrow"][0], json!({ "faceDown": true, "cost": 1, "marks": [mark()] }));
+        assert_eq!(
+            p1_view["opponent"]["backrow"][0],
+            json!({ "faceDown": true, "cost": 1, "marks": [mark()] })
+        );
         let p1_event = view_events_of(&p1_view, "marked")
             .into_iter()
             .next()
@@ -630,7 +716,10 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
             &json!({ "instanceId": trap.id, "marks": [mark()] })
         ));
         assert!(matches_object(
-            &view_events_of(&p2_view, "marked").into_iter().next().unwrap_or(Value::Null),
+            &view_events_of(&p2_view, "marked")
+                .into_iter()
+                .next()
+                .unwrap_or(Value::Null),
             &json!({ "instanceId": trap.id })
         ));
     }

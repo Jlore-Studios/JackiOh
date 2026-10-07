@@ -9,12 +9,12 @@
 //! link the tools crate (it depends on this one), so that case belongs with the CLI's tests.
 
 use jackioh_ai::{
-    AI_BUDGET, AI_DEV_RUN, AiDeckOptions, DevRunOptions, MatchHooks, SearchBudget, SeatController, build_ai_deck,
-    dev_game_config, dev_game_record, dev_record_id, play_match,
+    AI_BUDGET, AI_DEV_RUN, AiDeckOptions, DevRunOptions, MatchHooks, SearchBudget, SeatController,
+    build_ai_deck, dev_game_config, dev_game_record, dev_record_id, play_match,
 };
 use jackioh_engine::testkit::{
-    CardStatsFilter, DECK_SIZE, DEFAULT_CARD_STATS_FILTER, FoldArgs, GameRecord, PerPlayer, PilotFilter, SourceFilter,
-    card_stats, create_rng, json, json_as, summarize_game,
+    CardStatsFilter, DECK_SIZE, DEFAULT_CARD_STATS_FILTER, FoldArgs, GameRecord, PerPlayer, PilotFilter,
+    SourceFilter, card_stats, create_rng, json, json_as, summarize_game,
 };
 
 use super::support::register_cards;
@@ -51,8 +51,16 @@ mod the_ais_development_run_9_11 {
         assert_eq!(
             config.decks,
             (
-                build_ai_deck(&mut create_rng(&format!("{}:p1-deck", config.seed), 0), DECK_SIZE, &unbanned),
-                build_ai_deck(&mut create_rng(&format!("{}:p2-deck", config.seed), 0), DECK_SIZE, &unbanned),
+                build_ai_deck(
+                    &mut create_rng(&format!("{}:p1-deck", config.seed), 0),
+                    DECK_SIZE,
+                    &unbanned
+                ),
+                build_ai_deck(
+                    &mut create_rng(&format!("{}:p2-deck", config.seed), 0),
+                    DECK_SIZE,
+                    &unbanned
+                ),
             )
         );
         assert!(config.handicaps.is_none());
@@ -78,7 +86,8 @@ mod the_ais_development_run_9_11 {
             patch: "v0.2.5".to_string(),
             budget: Some(QUICK),
         };
-        let records: Vec<Option<GameRecord>> = [1, 2].into_iter().map(|n| dev_game_record(n, &options)).collect();
+        let records: Vec<Option<GameRecord>> =
+            [1, 2].into_iter().map(|n| dev_game_record(n, &options)).collect();
 
         for (at, record) in records.iter().enumerate() {
             let n = at as i32 + 1;
@@ -104,7 +113,10 @@ mod the_ais_development_run_9_11 {
                 "log": played.log,
             })));
             assert_eq!(Some(record.game.clone()), summary);
-            assert_eq!(Some(record.game.winner), played.result.map(|result| result.winner));
+            assert_eq!(
+                Some(record.game.winner),
+                played.result.map(|result| result.winner)
+            );
             assert_eq!(record.game.seats.p1.deck, config.decks.0);
         }
         // Seeded: the same game is the same record.

@@ -102,7 +102,13 @@ fn delayed_card() -> CardDef {
 }
 
 fn defs() -> Vec<CardDef> {
-    vec![log_card(), ask_trap(), second_trap(), third_trap(), delayed_card()]
+    vec![
+        log_card(),
+        ask_trap(),
+        second_trap(),
+        third_trap(),
+        delayed_card(),
+    ]
 }
 
 // ---------------------------------------------------------------------------
@@ -112,11 +118,21 @@ fn defs() -> Vec<CardDef> {
 const NOTE_LANE: usize = 5;
 
 fn log_of(state: &GameState) -> Option<&CardInstance> {
-    state.players.p1.backrow.get(NOTE_LANE - 1).and_then(Option::as_ref)
+    state
+        .players
+        .p1
+        .backrow
+        .get(NOTE_LANE - 1)
+        .and_then(Option::as_ref)
 }
 
 fn log_of_mut(state: &mut GameState) -> Option<&mut CardInstance> {
-    state.players.p1.backrow.get_mut(NOTE_LANE - 1).and_then(Option::as_mut)
+    state
+        .players
+        .p1
+        .backrow
+        .get_mut(NOTE_LANE - 1)
+        .and_then(Option::as_mut)
 }
 
 fn note(name: &str) -> Effect {
@@ -140,7 +156,12 @@ fn notes(state: &GameState) -> Vec<String> {
     log_of(state)
         .and_then(|log| log.memory.get("steps"))
         .and_then(Value::as_array)
-        .map(|steps| steps.iter().filter_map(|step| step.as_str().map(str::to_string)).collect())
+        .map(|steps| {
+            steps
+                .iter()
+                .filter_map(|step| step.as_str().map(str::to_string))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -194,7 +215,9 @@ fn scripts() -> Vec<(String, CardScripts)> {
                     &[GameEventType::TurnEnded],
                     |_ctx, _event| vec![note("window1"), ask_controller()],
                 )],
-                resume: [("asked", hook(|_ctx| vec![note("answered")]))].into_iter().collect(),
+                resume: [("asked", hook(|_ctx| vec![note("answered")]))]
+                    .into_iter()
+                    .collect(),
                 ..Script::default()
             }),
         ),
@@ -269,7 +292,11 @@ fn act(state: &GameState, body: Value) -> GameState {
 }
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|card| card.id.clone()).collect()
+    state.players[player]
+        .hand
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 /// Past the mulligans, in p1's main phase, with the note log parked in p1's backrow lane 5.
@@ -283,7 +310,12 @@ fn playing(seed: &str) -> GameState {
         &state,
         json!({ "type": "mulligan", "keep": hand_ids(&state, PlayerId::P2), "playerId": "p2" }),
     );
-    put(&mut state, &log_card().id, slot(PlayerId::P1, Row::Backrow, NOTE_LANE as i32), json!({}));
+    put(
+        &mut state,
+        &log_card().id,
+        slot(PlayerId::P1, Row::Backrow, NOTE_LANE as i32),
+        json!({}),
+    );
     state
 }
 
@@ -333,11 +365,27 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
     use super::*;
 
     #[test]
-    fn r113_owes_the_rest_of_the_window_when_a_trap_prompts_and_the_answer_fires_the_traps_it_had_not_reached() {
+    fn r113_owes_the_rest_of_the_window_when_a_trap_prompts_and_the_answer_fires_the_traps_it_had_not_reached()
+     {
         let mut state = playing("window-owes-remainder");
-        let asking = put(&mut state, &ask_trap().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        let second = put(&mut state, &second_trap().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
-        let third = put(&mut state, &third_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let asking = put(
+            &mut state,
+            &ask_trap().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let second = put(
+            &mut state,
+            &second_trap().id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
+        let third = put(
+            &mut state,
+            &third_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
 
         let ended = act_result(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(ended.error, None);
@@ -402,8 +450,18 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
     #[test]
     fn r100_re_offers_the_event_to_nobody_who_has_already_seen_it_so_one_turn_end_is_one_firing() {
         let mut state = playing("window-no-refire");
-        let asking = put(&mut state, &ask_trap().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        let second = put(&mut state, &second_trap().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        let asking = put(
+            &mut state,
+            &ask_trap().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let second = put(
+            &mut state,
+            &second_trap().id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
 
         let paused = act_result(&state, json!({ "type": "endTurn", "playerId": "p1" })).state;
         assert!(paused.pending.is_some());
@@ -414,7 +472,8 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
             Some(asking.id.clone())
         );
         assert_eq!(
-            owed_window_of(&only(owed_work(&paused, Some(TRAP_WINDOW_WORK))).resume).map(|window| window.owed),
+            owed_window_of(&only(owed_work(&paused, Some(TRAP_WINDOW_WORK))).resume)
+                .map(|window| window.owed),
             Some(vec![second.id.clone()])
         );
 
@@ -429,8 +488,18 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
     #[test]
     fn r113_owes_the_whole_window_when_a_prompt_is_already_open_at_its_scheduled_point() {
         let mut state = playing("window-already-paused");
-        let first = put(&mut state, &second_trap().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        let second = put(&mut state, &third_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let first = put(
+            &mut state,
+            &second_trap().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let second = put(
+            &mut state,
+            &third_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
 
         // A prompt an end-of-turn trigger left open: the window has delivered its event to nobody.
         let mut sink = sink_for(&state);
@@ -484,9 +553,24 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
     #[test]
     fn r62_finishes_the_window_before_the_end_of_turn_delayed_effects_and_before_cleanup() {
         let mut state = playing("window-before-delayed");
-        put(&mut state, &ask_trap().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        put(&mut state, &second_trap().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
-        let scheduler = put(&mut state, &delayed_card().id, slot(PlayerId::P1, Row::Backrow, 3), json!({}));
+        put(
+            &mut state,
+            &ask_trap().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &second_trap().id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
+        let scheduler = put(
+            &mut state,
+            &delayed_card().id,
+            slot(PlayerId::P1, Row::Backrow, 3),
+            json!({}),
+        );
 
         // §2.2's order for the end of a turn: triggers, window, delayed effects, cleanup (R62).
         let mut sink = sink_for(&state);
@@ -516,7 +600,11 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
         // still due and cleanup has not closed p1's turn log.
         assert_eq!(notes(&paused), strings(&["window1"]));
         assert_eq!(
-            paused.delayed.iter().map(|effect| effect.id.clone()).collect::<Vec<_>>(),
+            paused
+                .delayed
+                .iter()
+                .map(|effect| effect.id.clone())
+                .collect::<Vec<_>>(),
             vec![scheduled.id.clone()]
         );
         assert_eq!(paused.players.p1.turn_log.unspent_at_end, None);

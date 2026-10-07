@@ -73,7 +73,11 @@ pub fn in_hand(state: &mut GameState, def_id: &str, player: PlayerId, count: i32
 }
 
 /// The player's library, top first, as their own deck: each card known to its owner (R311).
-pub fn set_library(state: &mut GameState, player: PlayerId, def_ids: &[impl AsRef<str>]) -> Vec<CardInstance> {
+pub fn set_library(
+    state: &mut GameState,
+    player: PlayerId,
+    def_ids: &[impl AsRef<str>],
+) -> Vec<CardInstance> {
     let mut cards: Vec<CardInstance> = def_ids
         .iter()
         .map(|def_id| new_instance(state, def_id.as_ref(), player, Zone::Library { player }))
@@ -137,7 +141,9 @@ pub fn play_random_game(seed: &str, deck_pair: Option<(Vec<String>, Vec<String>)
             .iter()
             .filter(|action| action.action_type() != ActionType::EndTurn)
             .collect();
-        let end_turn = actions.iter().find(|action| action.action_type() == ActionType::EndTurn);
+        let end_turn = actions
+            .iter()
+            .find(|action| action.action_type() == ActionType::EndTurn);
         // `others.length === 0 || (endTurn !== undefined && policy.chance(…))`: the chance is drawn
         // only when there is something besides ending the turn and ending it is offered.
         let take_end = others.is_empty() || (end_turn.is_some() && policy.chance(AI_END_TURN_PROBABILITY));

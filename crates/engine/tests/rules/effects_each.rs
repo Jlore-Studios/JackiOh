@@ -50,13 +50,17 @@ fn script(asks_after: AsksAfter) -> Script {
             let asks_after = asks_after.clone();
             vec![for_each_card(ForEachCardArgs {
                 cards: Arc::new(|ctx: &mut EffectContext<'_>| {
-                    zone_cards(ctx.state, ctx.controller, OffFieldZone::Library).into_iter().map(|card| card.id.clone()).collect()
+                    zone_cards(ctx.state, ctx.controller, OffFieldZone::Library)
+                        .into_iter()
+                        .map(|card| card.id.clone())
+                        .collect()
                 }),
                 each: Arc::new(move |instance_id: &str| {
                     let asks_after = asks_after.clone();
                     let instance_id = instance_id.to_string();
                     lazy_part("each-draw", move |_ctx, _memo| {
-                        let mut effects = vec![draw_from_library(json_as(json!({ "instanceId": instance_id })))];
+                        let mut effects =
+                            vec![draw_from_library(json_as(json!({ "instanceId": instance_id })))];
                         if asks_after.get().map(String::as_str) == Some(instance_id.as_str()) {
                             effects.push(choose_mode(json_as(
                                 json!({ "options": ["ok"], "step": "ok", "prompt": "a question" }),
@@ -80,13 +84,20 @@ fn board(seed: &str, asks_after: AsksAfter) -> (GameState, Vec<CardInstance>) {
     let mut registry = registered_scripts().clone();
     registry.insert(
         DRAWER.to_string(),
-        CardScripts { base: script(asks_after.clone()), radiant: script(asks_after) },
+        CardScripts {
+            base: script(asks_after.clone()),
+            radiant: script(asks_after),
+        },
     );
     register_scripts(registry);
     state.active = PlayerId::P1;
     state.phase = Phase::Main;
     // A copy: the library array itself empties as the cards are drawn.
-    let library = set_library(&mut state, PlayerId::P1, &[plain.id.clone(), plain.id.clone(), plain.id.clone()]);
+    let library = set_library(
+        &mut state,
+        PlayerId::P1,
+        &[plain.id.clone(), plain.id.clone(), plain.id.clone()],
+    );
     state.players[PlayerId::P1].hand = vec![];
     (state, library)
 }
@@ -99,7 +110,10 @@ struct Sink {
 }
 
 fn sink_for(state: &GameState) -> Sink {
-    Sink { events: Vec::new(), rng: Rng::new(&state.seed, state.rng_cursor) }
+    Sink {
+        events: Vec::new(),
+        rng: Rng::new(&state.seed, state.rng_cursor),
+    }
 }
 
 impl Sink {
@@ -118,7 +132,12 @@ mod for_each_card_r113_r66 {
     #[test]
     fn r113_applies_its_effect_to_every_card_of_the_set_in_the_set_s_order() {
         let (mut state, library) = board("each-plain", Arc::new(OnceLock::new()));
-        let card = new_instance(&mut state, DRAWER, PlayerId::P1, Zone::Resolving { player: PlayerId::P1 });
+        let card = new_instance(
+            &mut state,
+            DRAWER,
+            PlayerId::P1,
+            Zone::Resolving { player: PlayerId::P1 },
+        );
         let mut sink = sink_for(&state);
         run_hook_resumable(&mut sink.on(&mut state), &card, "cry", Default::default());
 
@@ -128,12 +147,18 @@ mod for_each_card_r113_r66 {
     }
 
     #[test]
-    fn r113_resumes_after_a_question_over_the_set_it_began_with_though_the_board_it_was_read_from_has_moved() {
+    fn r113_resumes_after_a_question_over_the_set_it_began_with_though_the_board_it_was_read_from_has_moved()
+    {
         let asks: AsksAfter = Arc::new(OnceLock::new());
         let (mut state, library) = board("each-paused", asks.clone());
         let first = library[0].id.clone();
         asks.set(first.clone()).expect("set once");
-        let card = new_instance(&mut state, DRAWER, PlayerId::P1, Zone::Resolving { player: PlayerId::P1 });
+        let card = new_instance(
+            &mut state,
+            DRAWER,
+            PlayerId::P1,
+            Zone::Resolving { player: PlayerId::P1 },
+        );
         let mut sink = sink_for(&state);
         run_hook_resumable(&mut sink.on(&mut state), &card, "cry", Default::default());
 
@@ -145,14 +170,17 @@ mod for_each_card_r113_r66 {
 
         // The continuation is data, so it survives the round trip a stored game makes (§9.3).
         let mut stored: GameState =
-            serde_json::from_value(serde_json::to_value(&state).expect("the state serialises")).expect("and parses");
+            serde_json::from_value(serde_json::to_value(&state).expect("the state serialises"))
+                .expect("and parses");
         let mut answered = sink_for(&stored);
         let refused = answer_prompt(
             &mut answered.on(&mut stored),
             &AnswerInput {
                 player_id: PlayerId::P1,
                 choice_id: pending.id.clone(),
-                selection: vec![Selection::Mode { option: "ok".to_string() }],
+                selection: vec![Selection::Mode {
+                    option: "ok".to_string(),
+                }],
             },
         );
         assert!(refused.is_ok());

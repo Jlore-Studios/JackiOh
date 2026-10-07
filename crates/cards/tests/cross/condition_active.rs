@@ -67,7 +67,10 @@ fn glows<T: Serialize>(card: Option<&T>) -> bool {
 
 /// Every copy of a def in p1's hand, in hand order.
 fn copies_in_hand(s: &Scenario, def_id: &str) -> Vec<Instance> {
-    s.hand("p1").into_iter().filter(|card| card.def_id == def_id).collect()
+    s.hand("p1")
+        .into_iter()
+        .filter(|card| card.def_id == def_id)
+        .collect()
 }
 
 fn nth<T: Clone>(list: &[T], index: usize) -> T {
@@ -106,7 +109,8 @@ mod c10_rapid_replenish_lights_up_at_combo_3_r195_b5 {
     ];
 
     #[test]
-    fn r195_b5_after_two_plays_it_carries_no_flag_and_draws_nothing_the_copy_that_then_finds_three_plays_glows_and_draws_3() {
+    fn r195_b5_after_two_plays_it_carries_no_flag_and_draws_nothing_the_copy_that_then_finds_three_plays_glows_and_draws_3()
+     {
         let mut s = setup(json!({
             "seed": "r195-010-boundary",
             "p1": { "hand": ["core-011", "core-011", "core-010", "core-010"], "mana": 10, "library": LIBRARY },
@@ -202,8 +206,15 @@ mod c10_rapid_replenish_lights_up_at_combo_3_r195_b5 {
 
         assert!(hand_glows(&s, &nth(&copies_in_hand(&s, "core-010"), 0)));
         let theirs = s.view("p2");
-        assert_eq!(serde_json::to_value(&theirs.opponent.hand).unwrap(), json!({ "count": 1 }));
-        assert!(!serde_json::to_string(&theirs).unwrap().contains("conditionActive"));
+        assert_eq!(
+            serde_json::to_value(&theirs.opponent.hand).unwrap(),
+            json!({ "count": 1 })
+        );
+        assert!(
+            !serde_json::to_string(&theirs)
+                .unwrap()
+                .contains("conditionActive")
+        );
     }
 }
 
@@ -218,7 +229,9 @@ mod c53_reno_lights_up_below_its_floor_r195_b6 {
     #[test]
     fn r195_b6_below_30_it_glows_in_hand_and_its_cry_then_sets_the_hero_to_30() {
         for health in [29, 12, 1] {
-            let mut s = setup(json!({ "seed": format!("r195-053-low-{health}"), "p1": { "hand": ["core-053"], "health": health } }));
+            let mut s = setup(
+                json!({ "seed": format!("r195-053-low-{health}"), "p1": { "hand": ["core-053"], "health": health } }),
+            );
 
             let reno = s.card("core-053").clone();
             assert!(hand_glows(&s, &reno), "hero at {health}");
@@ -229,7 +242,9 @@ mod c53_reno_lights_up_below_its_floor_r195_b6 {
     #[test]
     fn r195_b6_at_30_or_above_it_does_not_glow_and_its_cry_heals_nothing() {
         for health in [30, 35] {
-            let mut s = setup(json!({ "seed": format!("r195-053-high-{health}"), "p1": { "hand": ["core-053"], "health": health } }));
+            let mut s = setup(
+                json!({ "seed": format!("r195-053-high-{health}"), "p1": { "hand": ["core-053"], "health": health } }),
+            );
 
             let reno = s.card("core-053").clone();
             assert!(!hand_glows(&s, &reno), "hero at {health}");
@@ -279,11 +294,15 @@ mod c53_reno_lights_up_below_its_floor_r195_b6 {
 
     #[test]
     fn r195_b6_a_low_opponent_does_not_light_it_your_hero_is_the_controllers() {
-        let mut s = setup(json!({ "seed": "r195-053-their-hero", "p1": { "hand": ["core-053"], "health": 30 }, "p2": { "health": 5 } }));
+        let mut s = setup(
+            json!({ "seed": "r195-053-their-hero", "p1": { "hand": ["core-053"], "health": 30 }, "p2": { "health": 5 } }),
+        );
 
         let reno = s.card("core-053").clone();
         assert!(!hand_glows(&s, &reno));
-        s.play("core-053", json!({})).expect_health("p1", 30).expect_health("p2", 5);
+        s.play("core-053", json!({}))
+            .expect_health("p1", 30)
+            .expect_health("p2", 5);
     }
 
     #[test]
@@ -329,12 +348,16 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
             .expect("p1 is an object")
             .entry("hand")
             .or_insert_with(|| json!([]));
-        hand.as_array_mut().expect("p1.hand is a list").push(json!(ANCHOR));
+        hand.as_array_mut()
+            .expect("p1.hand is a list")
+            .push(json!(ANCHOR));
         setup(opts)
     }
 
     fn at_sponge(s: &Scenario) -> Value {
-        let unit = s.unit("p2", 1).unwrap_or_else(|| panic!("no sponge in p2's lane 1"));
+        let unit = s
+            .unit("p2", 1)
+            .unwrap_or_else(|| panic!("no sponge in p2's lane 1"));
         json!([{ "pick": "instance", "instanceId": unit.id }])
     }
 
@@ -344,7 +367,9 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
 
     #[test]
     fn r195_b7_below_10_it_glows_in_hand_and_its_cry_then_deals_8() {
-        let mut s = board(json!({ "seed": "r195-068-low", "p1": { "hand": [SORCERER], "health": 9 }, "p2": { "field": [SPONGE] } }));
+        let mut s = board(
+            json!({ "seed": "r195-068-low", "p1": { "hand": [SORCERER], "health": 9 }, "p2": { "field": [SPONGE] } }),
+        );
 
         assert!(hand_glows(&s, &sorcerer(&s)));
         let targets = at_sponge(&s);
@@ -354,7 +379,9 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
 
     #[test]
     fn r195_b7_at_exactly_10_it_does_not_glow_and_its_cry_deals_4() {
-        let mut s = board(json!({ "seed": "r195-068-ten", "p1": { "hand": [SORCERER], "health": 10 }, "p2": { "field": [SPONGE] } }));
+        let mut s = board(
+            json!({ "seed": "r195-068-ten", "p1": { "hand": [SORCERER], "health": 10 }, "p2": { "field": [SPONGE] } }),
+        );
 
         assert!(!hand_glows(&s, &sorcerer(&s)));
         let targets = at_sponge(&s);
@@ -392,7 +419,9 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
 
     #[test]
     fn r195_b7_a_low_opponent_does_not_light_it_and_the_cry_deals_4() {
-        let mut s = board(json!({ "seed": "r195-068-their-hero", "p1": { "hand": [SORCERER], "health": 30 }, "p2": { "field": [SPONGE], "health": 3 } }));
+        let mut s = board(
+            json!({ "seed": "r195-068-their-hero", "p1": { "hand": [SORCERER], "health": 30 }, "p2": { "field": [SPONGE], "health": 3 } }),
+        );
 
         assert!(!hand_glows(&s, &sorcerer(&s)));
         let targets = at_sponge(&s);
@@ -471,7 +500,8 @@ mod c71_intern_stimmy_lights_up_while_its_controllers_library_is_larger_r195_b8 
     }
 
     #[test]
-    fn r195_b8_on_the_opponents_turn_the_backrow_copy_still_glows_for_its_controller_and_fires_at_that_turns_end() {
+    fn r195_b8_on_the_opponents_turn_the_backrow_copy_still_glows_for_its_controller_and_fires_at_that_turns_end()
+     {
         let mut s = setup(json!({
             "seed": "r195-071-their-turn",
             "active": "p2",
@@ -594,7 +624,10 @@ mod c93_combo_index_lights_up_when_its_grade_will_rise_r195_b9 {
 
     #[test]
     fn r195_b9_below_its_grade_it_does_not_glow_and_the_grade_does_not_rise() {
-        let mut s = board("r195-093-d-short", json!({ "def": COMBO_INDEX, "counters": { "grade": 2 } }));
+        let mut s = board(
+            "r195-093-d-short",
+            json!({ "def": COMBO_INDEX, "counters": { "grade": 2 } }),
+        );
 
         s.play(FODDER[0], json!({}));
         assert!(!index_glows(&s));
@@ -605,7 +638,10 @@ mod c93_combo_index_lights_up_when_its_grade_will_rise_r195_b9 {
 
     #[test]
     fn r195_b9_reaching_its_grade_lights_it_and_the_grade_then_rises() {
-        let mut s = board("r195-093-d-reached", json!({ "def": COMBO_INDEX, "counters": { "grade": 2 } }));
+        let mut s = board(
+            "r195-093-d-reached",
+            json!({ "def": COMBO_INDEX, "counters": { "grade": 2 } }),
+        );
 
         s.play(FODDER[0], json!({}));
         assert!(!index_glows(&s));
@@ -618,7 +654,10 @@ mod c93_combo_index_lights_up_when_its_grade_will_rise_r195_b9 {
 
     #[test]
     fn r195_b9_at_s_it_never_glows_however_many_cards_were_played_and_the_grade_stays_s() {
-        let mut s = board("r195-093-s", json!({ "def": COMBO_INDEX, "counters": { "grade": 6 } }));
+        let mut s = board(
+            "r195-093-s",
+            json!({ "def": COMBO_INDEX, "counters": { "grade": 6 } }),
+        );
 
         s.play(FODDER[0], json!({}));
         s.play(FODDER[1], json!({}));
@@ -718,12 +757,18 @@ mod r196_a_crafted_c53_reno_c68_twisted_sorcerer_glows_when_either_printed_condi
     }
 
     fn play_at_sponge(s: &mut Scenario, fused: &CardInstance) {
-        let sponge = s.unit("p2", 1).unwrap_or_else(|| panic!("no sponge in p2's lane 1"));
-        s.play(fused, json!({ "targets": [{ "pick": "instance", "instanceId": sponge.id }] }));
+        let sponge = s
+            .unit("p2", 1)
+            .unwrap_or_else(|| panic!("no sponge in p2's lane 1"));
+        s.play(
+            fused,
+            json!({ "targets": [{ "pick": "instance", "instanceId": sponge.id }] }),
+        );
     }
 
     #[test]
-    fn r196_with_the_hero_at_5_both_conditions_hold_it_glows_heals_to_30_and_the_sorcerer_half_then_reads_30_and_deals_4() {
+    fn r196_with_the_hero_at_5_both_conditions_hold_it_glows_heals_to_30_and_the_sorcerer_half_then_reads_30_and_deals_4()
+     {
         let (mut s, fused) = crafted("r196-both", 5);
 
         assert!(hand_glows(&s, &fused));
@@ -782,7 +827,9 @@ mod classic_c22_mid_runner_lights_up_in_hand_while_your_mana_reaches_its_thresho
 
     fn glows_at_4_mana_and_bounces(radiant: bool) {
         let count = if radiant { 3 } else { 2 };
-        let mut s = setup(json!({ "p1": { "hand": [{ "def": RUNNER, "radiant": radiant }, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": TARGETS } }));
+        let mut s = setup(
+            json!({ "p1": { "hand": [{ "def": RUNNER, "radiant": radiant }, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": TARGETS } }),
+        );
 
         assert!(hand_glows(&s, &nth(&copies_in_hand(&s, RUNNER), 0)));
         s.play(RUNNER, json!({ "zone": 1 }));
@@ -790,7 +837,9 @@ mod classic_c22_mid_runner_lights_up_in_hand_while_your_mana_reaches_its_thresho
     }
 
     fn dark_at_3_mana_and_bounces_nothing(radiant: bool) {
-        let mut s = setup(json!({ "p1": { "hand": [{ "def": RUNNER, "radiant": radiant }, ANCHOR], "mana": 3 }, "p2": { "hand": [ANCHOR], "field": TARGETS } }));
+        let mut s = setup(
+            json!({ "p1": { "hand": [{ "def": RUNNER, "radiant": radiant }, ANCHOR], "mana": 3 }, "p2": { "hand": [ANCHOR], "field": TARGETS } }),
+        );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, RUNNER), 0)));
         s.play(RUNNER, json!({ "zone": 1 }));
@@ -819,7 +868,9 @@ mod classic_c22_mid_runner_lights_up_in_hand_while_your_mana_reaches_its_thresho
 
     #[test]
     fn r195_r386_a_degrade_of_the_threshold_to_5_4_mana_neither_glows_nor_bounces() {
-        let mut s = setup(json!({ "p1": { "hand": [RUNNER, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": TARGETS } }));
+        let mut s = setup(
+            json!({ "p1": { "hand": [RUNNER, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": TARGETS } }),
+        );
         // TS stepped the live hand instance; here it is found again by id and stepped in place.
         let runner_id = nth(&copies_in_hand(&s, RUNNER), 0).id;
         let live = find_instance_mut(s.state_mut(), &runner_id).expect("the Runner in p1's hand");
@@ -832,15 +883,23 @@ mod classic_c22_mid_runner_lights_up_in_hand_while_your_mana_reaches_its_thresho
 
     #[test]
     fn r195_on_the_field_it_never_glows_and_the_opponents_view_never_carries_the_flag() {
-        let s = setup(json!({ "p1": { "hand": [RUNNER, ANCHOR], "field": [RUNNER] }, "p2": { "hand": [ANCHOR] } }));
+        let s = setup(
+            json!({ "p1": { "hand": [RUNNER, ANCHOR], "field": [RUNNER] }, "p2": { "hand": [ANCHOR] } }),
+        );
 
         assert!(!glows(s.view("p1").you.units[0].as_ref()));
-        assert!(!serde_json::to_string(&s.view("p2")).unwrap().contains("conditionActive"));
+        assert!(
+            !serde_json::to_string(&s.view("p2"))
+                .unwrap()
+                .contains("conditionActive")
+        );
     }
 
     #[test]
     fn r195_on_the_opponents_turn_it_never_glows_whatever_its_owners_mana() {
-        let s = setup(json!({ "active": "p2", "p1": { "hand": [RUNNER, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": TARGETS } }));
+        let s = setup(
+            json!({ "active": "p2", "p1": { "hand": [RUNNER, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": TARGETS } }),
+        );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, RUNNER), 0)));
     }
@@ -869,7 +928,9 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
 
     #[test]
     fn r195_base_a_0_burn_with_4_mana_glows_and_played_now_it_draws() {
-        let mut s = setup(json!({ "p1": { "hand": [BURN, ANCHOR], "library": LIBRARY }, "p2": { "hand": [ANCHOR] } }));
+        let mut s = setup(
+            json!({ "p1": { "hand": [BURN, ANCHOR], "library": LIBRARY }, "p2": { "hand": [ANCHOR] } }),
+        );
 
         assert!(hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
         s.play(BURN, json!({ "targets": at_hero() }));
@@ -878,7 +939,9 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
 
     #[test]
     fn r195_base_with_3_mana_it_does_not_glow_and_played_now_it_draws_nothing() {
-        let mut s = setup(json!({ "p1": { "hand": [BURN, ANCHOR], "library": LIBRARY, "mana": 3 }, "p2": { "hand": [ANCHOR] } }));
+        let mut s = setup(
+            json!({ "p1": { "hand": [BURN, ANCHOR], "library": LIBRARY, "mana": 3 }, "p2": { "hand": [ANCHOR] } }),
+        );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
         s.play(BURN, json!({ "targets": at_hero() }));
@@ -888,7 +951,9 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
     #[test]
     fn r195_r65_base_it_reads_the_mana_left_after_paying_its_price_now_a_burn_made_to_cost_1_with_4_mana_does_not_glow_and_draws_nothing()
      {
-        let mut s = setup(json!({ "p1": { "hand": [{ "def": BURN, "costMod": 1 }, ANCHOR], "library": LIBRARY }, "p2": { "hand": [ANCHOR] } }));
+        let mut s = setup(
+            json!({ "p1": { "hand": [{ "def": BURN, "costMod": 1 }, ANCHOR], "library": LIBRARY }, "p2": { "hand": [ANCHOR] } }),
+        );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
         s.play(BURN, json!({ "targets": at_hero() }));
@@ -896,8 +961,11 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
     }
 
     #[test]
-    fn r195_r65_base_a_surcharge_moves_it_under_c_c77_anti_magic_monkey_a_burn_costs_1_and_4_mana_neither_glows_nor_draws() {
-        let mut s = setup(json!({ "p1": { "hand": [BURN, ANCHOR], "library": LIBRARY }, "p2": { "hand": [ANCHOR], "field": [MONKEY] } }));
+    fn r195_r65_base_a_surcharge_moves_it_under_c_c77_anti_magic_monkey_a_burn_costs_1_and_4_mana_neither_glows_nor_draws()
+     {
+        let mut s = setup(
+            json!({ "p1": { "hand": [BURN, ANCHOR], "library": LIBRARY }, "p2": { "hand": [ANCHOR], "field": [MONKEY] } }),
+        );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
         s.play(BURN, json!({ "targets": at_hero() }));
@@ -907,7 +975,9 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
 
     #[test]
     fn r195_radiant_max_mana_4_glows_with_no_mana_left_and_played_now_it_draws() {
-        let mut s = setup(json!({ "p1": { "hand": [{ "def": BURN, "radiant": true }, ANCHOR], "library": LIBRARY, "mana": 0 }, "p2": { "hand": [ANCHOR] } }));
+        let mut s = setup(
+            json!({ "p1": { "hand": [{ "def": BURN, "radiant": true }, ANCHOR], "library": LIBRARY, "mana": 0 }, "p2": { "hand": [ANCHOR] } }),
+        );
 
         assert!(hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
         s.play(BURN, json!({ "targets": at_hero() }));
@@ -916,7 +986,9 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
 
     #[test]
     fn r195_radiant_max_mana_3_does_not_glow_however_much_mana_is_left_and_draws_nothing() {
-        let mut s = setup(json!({ "turn": 5, "p1": { "hand": [{ "def": BURN, "radiant": true }, ANCHOR], "library": LIBRARY, "mana": 9 }, "p2": { "hand": [ANCHOR] } }));
+        let mut s = setup(
+            json!({ "turn": 5, "p1": { "hand": [{ "def": BURN, "radiant": true }, ANCHOR], "library": LIBRARY, "mana": 9 }, "p2": { "hand": [ANCHOR] } }),
+        );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
         s.play(BURN, json!({ "targets": at_hero() }));
@@ -925,7 +997,9 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
 
     #[test]
     fn r195_on_the_opponents_turn_it_never_glows() {
-        let s = setup(json!({ "active": "p2", "p1": { "hand": [BURN, ANCHOR], "library": LIBRARY }, "p2": { "hand": [ANCHOR] } }));
+        let s = setup(
+            json!({ "active": "p2", "p1": { "hand": [BURN, ANCHOR], "library": LIBRARY }, "p2": { "hand": [ANCHOR] } }),
+        );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
     }
@@ -948,7 +1022,9 @@ mod classic_c40_mc_tech_lights_up_in_hand_while_the_opponent_controls_enough_per
 
     #[test]
     fn r195_base_4_enemy_permanents_glow_and_played_now_it_steals_one() {
-        let mut s = setup(json!({ "p1": { "hand": [TECH, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011"], "backrow": ["core-073"] } }));
+        let mut s = setup(
+            json!({ "p1": { "hand": [TECH, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011"], "backrow": ["core-073"] } }),
+        );
 
         assert!(hand_glows(&s, &nth(&copies_in_hand(&s, TECH), 0)));
         s.play(TECH, json!({ "zone": 5 }));
@@ -957,7 +1033,9 @@ mod classic_c40_mc_tech_lights_up_in_hand_while_the_opponent_controls_enough_per
 
     #[test]
     fn r195_base_3_enemy_permanents_do_not_glow_and_played_now_it_steals_nothing() {
-        let mut s = setup(json!({ "p1": { "hand": [TECH, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011"] } }));
+        let mut s = setup(
+            json!({ "p1": { "hand": [TECH, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011"] } }),
+        );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, TECH), 0)));
         s.play(TECH, json!({ "zone": 5 }));
@@ -983,19 +1061,26 @@ mod classic_c40_mc_tech_lights_up_in_hand_while_the_opponent_controls_enough_per
 
         assert!(hand_glows(&s, &nth(&copies_in_hand(&s, TECH), 0)));
         s.play(TECH, json!({ "zone": 5 }));
-        assert_eq!(s.state().pending.as_ref().map(|pending| pending.options.len()), Some(4));
+        assert_eq!(
+            s.state().pending.as_ref().map(|pending| pending.options.len()),
+            Some(4)
+        );
     }
 
     #[test]
     fn r195_on_the_field_it_never_glows() {
-        let s = setup(json!({ "p1": { "hand": [ANCHOR], "field": [TECH] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011", "core-001"] } }));
+        let s = setup(
+            json!({ "p1": { "hand": [ANCHOR], "field": [TECH] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011", "core-001"] } }),
+        );
 
         assert!(!glows(s.view("p1").you.units[0].as_ref()));
     }
 
     #[test]
     fn r195_on_the_opponents_turn_it_never_glows_however_many_permanents_they_control() {
-        let s = setup(json!({ "active": "p2", "p1": { "hand": [TECH, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011", "core-001"] } }));
+        let s = setup(
+            json!({ "active": "p2", "p1": { "hand": [TECH, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011", "core-001"] } }),
+        );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, TECH), 0)));
     }
@@ -1014,7 +1099,11 @@ mod classic_plus_c50_adaptive_growth_lights_up_while_you_control_fewer_units_r19
 
     /// TS `growth(mine, theirs, radiant = false)`; the default is passed explicitly.
     fn growth(mine: usize, theirs: usize, radiant: bool) -> Scenario {
-        let card = if radiant { json!({ "def": GROWTH, "radiant": true }) } else { json!(GROWTH) };
+        let card = if radiant {
+            json!({ "def": GROWTH, "radiant": true })
+        } else {
+            json!(GROWTH)
+        };
         setup(json!({
             "seed": format!("r195-cp050-{mine}-{theirs}-{radiant}"),
             "p1": { "hand": [card, "core-005"], "field": vec![VANILLA; mine] },
@@ -1134,8 +1223,14 @@ mod r195_the_cards_that_declare_condition_met {
 
         for id in &hooked {
             let card = cards.get(id);
-            assert!(card.is_some_and(|card| card.base.condition_met.is_some()), "{id} base");
-            assert!(card.is_some_and(|card| card.radiant.condition_met.is_some()), "{id} radiant");
+            assert!(
+                card.is_some_and(|card| card.base.condition_met.is_some()),
+                "{id} base"
+            );
+            assert!(
+                card.is_some_and(|card| card.radiant.condition_met.is_some()),
+                "{id} radiant"
+            );
         }
     }
 }
@@ -1193,7 +1288,8 @@ mod classic_c69_plague_charger_lights_up_while_it_has_a_plague_counter_r195 {
     }
 
     #[test]
-    fn r195_base_with_a_token_it_glows_on_the_field_and_it_then_strikes_first_a_4_4_dies_before_striking_back() {
+    fn r195_base_with_a_token_it_glows_on_the_field_and_it_then_strikes_first_a_4_4_dies_before_striking_back()
+     {
         with_a_token_it_glows_and_strikes_first(false);
     }
 
@@ -1203,7 +1299,8 @@ mod classic_c69_plague_charger_lights_up_while_it_has_a_plague_counter_r195 {
     }
 
     #[test]
-    fn r195_radiant_with_a_token_it_glows_on_the_field_and_it_then_strikes_first_a_4_4_dies_before_striking_back() {
+    fn r195_radiant_with_a_token_it_glows_on_the_field_and_it_then_strikes_first_a_4_4_dies_before_striking_back()
+     {
         with_a_token_it_glows_and_strikes_first(true);
     }
 
@@ -1221,7 +1318,9 @@ mod classic_c69_plague_charger_lights_up_while_it_has_a_plague_counter_r195 {
 
     #[test]
     fn r195_the_opponents_plagued_charger_carries_no_flag_in_your_view() {
-        let s = setup(json!({ "seed": "r195-c069-theirs", "p1": { "hand": [FILLER] }, "p2": { "hand": [FILLER], "field": [{ "def": CHARGER, "counters": { "plague": 2 } }] } }));
+        let s = setup(
+            json!({ "seed": "r195-c069-theirs", "p1": { "hand": [FILLER] }, "p2": { "hand": [FILLER], "field": [{ "def": CHARGER, "counters": { "plague": 2 } }] } }),
+        );
         assert!(!glows(s.view("p1").opponent.units[0].as_ref()));
         assert!(glows(s.view("p2").you.units[0].as_ref()));
     }

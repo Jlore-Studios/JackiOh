@@ -34,12 +34,21 @@ pub fn greedy_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option
         return Some(ActionBody::AnswerDraw { accept: false });
     }
     if public.pending.is_none() && mulligan_prompt_for(&public, seat).is_some() {
-        return Some(ActionBody::Mulligan { keep: mulligan_keep(&public, seat, GREEDY_MULLIGAN.keep_max_cost) });
+        return Some(ActionBody::Mulligan {
+            keep: mulligan_keep(&public, seat, GREEDY_MULLIGAN.keep_max_cost),
+        });
     }
 
     // The only draws greedy takes from its rng: one determinization per decision. R762's shown-cost match
     // stays off: the gates were fixed on this sampler, as on GREEDY_EVAL, so the yardstick does not move.
-    let det = determinize(&public, seat, rng, DeterminizeOptions { match_shown_cost: Some(false) });
+    let det = determinize(
+        &public,
+        seat,
+        rng,
+        DeterminizeOptions {
+            match_shown_cost: Some(false),
+        },
+    );
     let candidates = candidate_actions(&det, seat);
     if candidates.is_empty() {
         return None;
@@ -48,7 +57,10 @@ pub fn greedy_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option
         return candidates.into_iter().next();
     }
 
-    let answering = det.pending.as_ref().is_some_and(|pending| pending.player_id == seat);
+    let answering = det
+        .pending
+        .as_ref()
+        .is_some_and(|pending| pending.player_id == seat);
     // Every candidate gets its one simulation, auto-answers of the other seat's prompts included.
     let counter = create_node_counter(candidates.len() * (1 + AI_SEARCH.max_auto_answers as usize), None);
 
@@ -73,7 +85,11 @@ pub fn greedy_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option
         return best.or_else(|| candidates.first().cloned());
     }
 
-    let Some(end_turn) = candidates.iter().find(|action| matches!(action, ActionBody::EndTurn)).cloned() else {
+    let Some(end_turn) = candidates
+        .iter()
+        .find(|action| matches!(action, ActionBody::EndTurn))
+        .cloned()
+    else {
         return best.or_else(|| candidates.first().cloned());
     };
     if best.is_some() && best_score > evaluate(&det, seat, NextSwing::Enemy, &GREEDY_EVAL) {

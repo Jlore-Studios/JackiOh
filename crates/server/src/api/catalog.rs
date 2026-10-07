@@ -44,7 +44,10 @@ pub struct CatalogUnavailableError {
 
 impl CatalogUnavailableError {
     pub fn new(location: &str, cause: impl std::fmt::Display) -> CatalogUnavailableError {
-        CatalogUnavailableError { location: location.to_string(), cause: cause.to_string() }
+        CatalogUnavailableError {
+            location: location.to_string(),
+            cause: cause.to_string(),
+        }
     }
 }
 
@@ -98,7 +101,9 @@ impl Catalog {
 }
 
 fn is_card_def(value: &Value) -> bool {
-    let Some(def) = value.as_object() else { return false };
+    let Some(def) = value.as_object() else {
+        return false;
+    };
     def.get("id").is_some_and(Value::is_string)
         && def.get("name").is_some_and(Value::is_string)
         && def.get("tags").is_some_and(Value::is_array)
@@ -126,8 +131,16 @@ pub fn catalog_from(defs: CardDefs, version: &str) -> Catalog {
     let card_ids = defs.keys().cloned().collect();
     // CardDef's serde shape is the catalog's own (field order and absences included), so this is
     // TS's `JSON.stringify` of the parsed file.
-    let defs_json = serde_json::to_string(&defs).unwrap_or_else(|error| panic!("CardDefs serialise: {error}"));
-    Catalog { version: version.to_string(), defs, card_ids, commit: None, banned: Vec::new(), defs_json }
+    let defs_json =
+        serde_json::to_string(&defs).unwrap_or_else(|error| panic!("CardDefs serialise: {error}"));
+    Catalog {
+        version: version.to_string(),
+        defs,
+        card_ids,
+        commit: None,
+        banned: Vec::new(),
+        defs_json,
+    }
 }
 
 /// TS `loadCatalog`'s options. `json` stands where TS's `url` stood: the catalog text to read
@@ -140,27 +153,39 @@ pub struct LoadCatalogOptions {
 
 /// TS `loadCatalog`: the catalog, refused loudly when it is not one.
 pub async fn load_catalog(options: LoadCatalogOptions) -> Result<Catalog, CatalogUnavailableError> {
-    let json = options.json.unwrap_or_else(|| jackioh_cards::catalog_json().to_string());
+    let json = options
+        .json
+        .unwrap_or_else(|| jackioh_cards::catalog_json().to_string());
 
     // Read as an ordered map first, so a bad entry is named (TS's `isCardDef` pass) and the
     // catalog's own order survives.
     let parsed: Value =
         serde_json::from_str(&json).map_err(|cause| CatalogUnavailableError::new(CATALOG_SOURCE, cause))?;
     if !parsed.is_object() {
-        return Err(CatalogUnavailableError::new(CATALOG_SOURCE, "expected a defId -> CardDef object"));
+        return Err(CatalogUnavailableError::new(
+            CATALOG_SOURCE,
+            "expected a defId -> CardDef object",
+        ));
     }
     let entries: indexmap::IndexMap<String, Value> =
         serde_json::from_str(&json).map_err(|cause| CatalogUnavailableError::new(CATALOG_SOURCE, cause))?;
     if entries.is_empty() {
-        return Err(CatalogUnavailableError::new(CATALOG_SOURCE, "the catalog is empty"));
+        return Err(CatalogUnavailableError::new(
+            CATALOG_SOURCE,
+            "the catalog is empty",
+        ));
     }
     let mut defs = CardDefs::new();
     for (key, value) in entries {
         if !is_card_def(&value) {
-            return Err(CatalogUnavailableError::new(CATALOG_SOURCE, format!("\"{key}\" is not a CardDef")));
+            return Err(CatalogUnavailableError::new(
+                CATALOG_SOURCE,
+                format!("\"{key}\" is not a CardDef"),
+            ));
         }
-        let def: CardDef = serde_json::from_value(value)
-            .map_err(|_| CatalogUnavailableError::new(CATALOG_SOURCE, format!("\"{key}\" is not a CardDef")))?;
+        let def: CardDef = serde_json::from_value(value).map_err(|_| {
+            CatalogUnavailableError::new(CATALOG_SOURCE, format!("\"{key}\" is not a CardDef"))
+        })?;
         defs.insert(key, def);
     }
 
@@ -173,7 +198,8 @@ pub async fn load_catalog(options: LoadCatalogOptions) -> Result<Catalog, Catalo
 // ---------------------------------------------------------------------------
 
 fn patch_list() -> Result<Value, String> {
-    serde_json::from_str(PATCHES_JSON).map_err(|cause| format!("the patch list could not be read from patches.json: {cause}"))
+    serde_json::from_str(PATCHES_JSON)
+        .map_err(|cause| format!("the patch list could not be read from patches.json: {cause}"))
 }
 
 /// R376: the version every live game record is filed under — the newest patch of R388's list, which
@@ -195,7 +221,9 @@ pub async fn load_current_patch() -> Result<String, String> {
 
 /// All patch versions from patches.json in release order.
 pub async fn load_patch_versions() -> Vec<String> {
-    let Ok(Value::Array(list)) = patch_list() else { return Vec::new() };
+    let Ok(Value::Array(list)) = patch_list() else {
+        return Vec::new();
+    };
     list.iter()
         .filter_map(|entry| entry.get("version").and_then(Value::as_str))
         .filter(|version| !version.is_empty())
@@ -247,5 +275,7 @@ pub async fn get_catalog(app: &Arc<App>, _req: Req) -> ApiResult {
     if let Some(commit) = &catalog.commit {
         builder = builder.header(DEPLOYED_COMMIT_HEADER, commit.as_str());
     }
-    Ok(builder.body(Body::from(body)).unwrap_or_else(|error| panic!("a catalog response: {error}")))
+    Ok(builder
+        .body(Body::from(body))
+        .unwrap_or_else(|error| panic!("a catalog response: {error}")))
 }

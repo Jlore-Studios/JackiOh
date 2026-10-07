@@ -11,9 +11,9 @@
 //! Port of `packages/cards/test/fused-target-checks.test.ts` (SURFACE §4.1, §8). TS's
 //! `expect(() => legalActions(…)).not.toThrow()` is the call itself: a panic fails the test.
 
+use jackioh_engine::PlayerId::P1;
 use jackioh_engine::subsystems::fuse::FuseArgs;
 use jackioh_engine::testkit::*;
-use jackioh_engine::PlayerId::P1;
 
 const KYS_CONSTANT: &str = "classicplus-041"; // (1) Spell: Cry, pick a hand card (check: "number").
 const REWIND: &str = "classic-054"; // (1) Spell: Cry, pick an ally Unit or graveyard card with a Cry (check: "hasCry").
@@ -31,7 +31,11 @@ fn craft(s: &mut Scenario, ingredients: [CardInstance; 2]) -> CardInstance {
     let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
     let fused = subsystems::fuse::fuse(
         &mut sink,
-        FuseArgs { ingredients: ingredients.to_vec(), to_hand: Some(P1), ..Default::default() },
+        FuseArgs {
+            ingredients: ingredients.to_vec(),
+            to_hand: Some(P1),
+            ..Default::default()
+        },
     );
     match fused {
         Some(card) => card,
@@ -51,7 +55,8 @@ mod r102_a_fused_cards_declared_targets_keep_working_when_two_ingredients_define
     use super::*;
 
     #[test]
-    fn r102_a_crafted_rewind_kys_constant_offers_plays_that_pick_for_both_declarations_instead_of_throwing_from_legalactions() {
+    fn r102_a_crafted_rewind_kys_constant_offers_plays_that_pick_for_both_declarations_instead_of_throwing_from_legalactions()
+     {
         let mut s = scenario(json!({
             "seed": "fused-target-checks",
             "p1": { "hand": [REWIND, KYS_CONSTANT, HIT_JOB, ANCHOR], "field": [{ "def": SHRIMP, "lane": 1 }], "mana": 10 },
@@ -63,18 +68,24 @@ mod r102_a_fused_cards_declared_targets_keep_working_when_two_ingredients_define
         // not.toThrow(): listing the legal actions must not panic.
         let _listed = legal_actions(s.state(), P1);
         // Rewind's pick (an ally with a Cry) and KY's Constant's (a hand card), in ingredient order.
-        assert!(plays_of(&s, &fused)
-            .iter()
-            .any(|play| matches!(play, ActionBody::Play { targets: Some(targets), .. } if targets.len() == 2)));
+        assert!(plays_of(&s, &fused).iter().any(
+            |play| matches!(play, ActionBody::Play { targets: Some(targets), .. } if targets.len() == 2)
+        ));
     }
 
     #[test]
-    fn r102_ingredients_that_name_the_same_predicate_must_each_admit_the_candidate_a_crafted_kys_constant_kys_constant() {
+    fn r102_ingredients_that_name_the_same_predicate_must_each_admit_the_candidate_a_crafted_kys_constant_kys_constant()
+     {
         let mut s = scenario(json!({
             "seed": "fused-target-checks",
             "p1": { "hand": [KYS_CONSTANT, KYS_CONSTANT, HIT_JOB, ANCHOR], "mana": 10 },
         }));
-        let constants: Vec<CardInstance> = s.hand(P1).iter().filter(|card| card.def_id == KYS_CONSTANT).cloned().collect();
+        let constants: Vec<CardInstance> = s
+            .hand(P1)
+            .iter()
+            .filter(|card| card.def_id == KYS_CONSTANT)
+            .cloned()
+            .collect();
         let (Some(first), Some(second)) = (constants.first().cloned(), constants.get(1).cloned()) else {
             panic!("setup: two KY's Constant in hand");
         };

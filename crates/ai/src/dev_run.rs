@@ -37,7 +37,10 @@ pub struct AiDevRun {
     pub series: &'static str,
 }
 
-pub const AI_DEV_RUN: AiDevRun = AiDevRun { games: 200, series: "dev" };
+pub const AI_DEV_RUN: AiDevRun = AiDevRun {
+    games: 200,
+    series: "dev",
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -61,7 +64,10 @@ pub fn dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>) -> Ma
         build_ai_deck(
             &mut Rng::new(&format!("{seed}:{seat}-deck"), 0),
             DECK_SIZE,
-            &AiDeckOptions { banned: Some(Vec::new()), ..AiDeckOptions::default() },
+            &AiDeckOptions {
+                banned: Some(Vec::new()),
+                ..AiDeckOptions::default()
+            },
         )
     };
     let decks = (deal("p1"), deal("p2"));
@@ -101,7 +107,10 @@ pub fn dev_game_record(n: i32, options: &DevRunOptions) -> Option<GameRecord> {
         source: GameSource::Dev,
         mode: GameMode::Random,
         patch: options.patch.clone(),
-        pilots: PerPlayer { p1: Pilot::Ai, p2: Pilot::Ai },
+        pilots: PerPlayer {
+            p1: Pilot::Ai,
+            p2: Pilot::Ai,
+        },
         game,
     })
 }

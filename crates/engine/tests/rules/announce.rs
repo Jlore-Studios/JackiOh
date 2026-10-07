@@ -20,7 +20,7 @@ use jackioh_engine::zones::card_at;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, setup_catalog, slot};
-use crate::rules::fixtures::play_pipeline_a::{register_play_a, with_play_a, PA};
+use crate::rules::fixtures::play_pipeline_a::{PA, register_play_a, with_play_a};
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
@@ -28,7 +28,11 @@ static NONCE: AtomicU32 = AtomicU32::new(0);
 fn game(seed: &str) -> GameState {
     let mut ready = begin_game(&with_play_a(new_game(seed, None))).state;
     for player in [PlayerId::P1, PlayerId::P2] {
-        let keep: Vec<String> = ready.players[player].hand.iter().map(|card| card.id.clone()).collect();
+        let keep: Vec<String> = ready.players[player]
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
         ready = must(&ready, player, json!({ "type": "mulligan", "keep": keep })).state;
     }
     for player in [PlayerId::P1, PlayerId::P2] {
@@ -52,16 +56,25 @@ fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
 }
 
 fn types_of(events: &[GameEvent]) -> Vec<String> {
-    events.iter().map(|event| event.event_type().as_str().to_string()).collect()
+    events
+        .iter()
+        .map(|event| event.event_type().as_str().to_string())
+        .collect()
 }
 
 /// TS `order.indexOf(type)`: -1 when absent.
 fn index_in(order: &[String], kind: &str) -> i64 {
-    order.iter().position(|seen| seen == kind).map_or(-1, |at| at as i64)
+    order
+        .iter()
+        .position(|seen| seen == kind)
+        .map_or(-1, |at| at as i64)
 }
 
 fn hand(state: &mut GameState, player: PlayerId, def_id: &str) -> CardInstance {
-    in_hand(state, def_id, player, 1).into_iter().next().expect("no card")
+    in_hand(state, def_id, player, 1)
+        .into_iter()
+        .next()
+        .expect("no card")
 }
 
 /// `eventsOfType(events, type)`, each event as its JSON, so TS's `toEqual` literals compare key for key.
@@ -74,7 +87,10 @@ fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
 
 /// `eventsOfType(events, type).map((event) => event[key])`.
 fn pluck(events: &[GameEvent], kind: GameEventType, key: &str) -> Vec<Value> {
-    of_type(events, kind).iter().map(|event| event[key].clone()).collect()
+    of_type(events, kind)
+        .iter()
+        .map(|event| event[key].clone())
+        .collect()
 }
 
 /// `eventsOfType(events, type)[0]?.[key]`.
@@ -95,7 +111,10 @@ struct Bench {
 
 impl Bench {
     fn new(state: &GameState) -> Bench {
-        Bench { events: Vec::new(), rng: Rng::new(&state.seed, state.rng_cursor) }
+        Bench {
+            events: Vec::new(),
+            rng: Rng::new(&state.seed, state.rng_cursor),
+        }
     }
 
     fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
@@ -141,7 +160,10 @@ mod r448_the_announce_between_s10_5_steps_3_and_4 {
         );
         // The Cry resolved, the card stands where it was played, and no window is left open.
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 3);
-        assert_eq!(card_id_at(after, slot(PlayerId::P1, Row::Units, 2)), Some(crier.id.clone()));
+        assert_eq!(
+            card_id_at(after, slot(PlayerId::P1, Row::Units, 2)),
+            Some(crier.id.clone())
+        );
         assert!(open_announces(after).is_empty());
         assert_eq!(after.announcing, None);
     }
@@ -150,14 +172,22 @@ mod r448_the_announce_between_s10_5_steps_3_and_4 {
     fn r448_names_the_declared_targets_a_hero_as_hero_player() {
         let mut state = game("r448-targets");
         let bolt = hand(&mut state, PlayerId::P1, &PA.bolt.id);
-        let unit = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1), Default::default());
+        let unit = put(
+            &mut state,
+            "fx-3",
+            slot(PlayerId::P2, Row::Units, 1),
+            Default::default(),
+        );
 
         let first = must(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": bolt.id, "targets": [{ "pick": "hero", "player": "p2" }] }),
         );
-        assert_eq!(first_field(&first.events, GameEventType::CardAnnounced, "targets"), Some(json!(["hero-p2"])));
+        assert_eq!(
+            first_field(&first.events, GameEventType::CardAnnounced, "targets"),
+            Some(json!(["hero-p2"]))
+        );
 
         let mut first_state = first.state.clone();
         let second = hand(&mut first_state, PlayerId::P1, &PA.bolt.id);
@@ -170,8 +200,14 @@ mod r448_the_announce_between_s10_5_steps_3_and_4 {
                 "targets": [{ "pick": "instance", "instanceId": unit.id }],
             }),
         );
-        assert_eq!(first_field(&next.events, GameEventType::CardAnnounced, "targets"), Some(json!([unit.id])));
-        assert_eq!(first_field(&next.events, GameEventType::CardAnnounced, "cardType"), Some(json!("Spell")));
+        assert_eq!(
+            first_field(&next.events, GameEventType::CardAnnounced, "targets"),
+            Some(json!([unit.id]))
+        );
+        assert_eq!(
+            first_field(&next.events, GameEventType::CardAnnounced, "cardType"),
+            Some(json!("Spell"))
+        );
     }
 }
 
@@ -179,13 +215,23 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
     use super::*;
 
     #[test]
-    fn r448_a_counter_trap_cancels_the_play_no_cry_no_card_played_no_card_resolved_mana_spent_nothing_counted() {
+    fn r448_a_counter_trap_cancels_the_play_no_cry_no_card_played_no_card_resolved_mana_spent_nothing_counted()
+     {
         let mut state = game("r448-counter");
-        let trap = put(&mut state, &PA.counter_trap.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        let trap = put(
+            &mut state,
+            &PA.counter_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let crier = hand(&mut state, PlayerId::P1, &PA.crier.id);
         let mana = state.players.p1.mana.current;
 
-        let result = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": crier.id }));
+        let result = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": crier.id }),
+        );
         let (after, events) = (&result.state, &result.events);
 
         assert_eq!(
@@ -199,7 +245,11 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
                 "to": "graveyard",
             })]
         );
-        for absent in [GameEventType::CardPlayed, GameEventType::Summoned, GameEventType::CardResolved] {
+        for absent in [
+            GameEventType::CardPlayed,
+            GameEventType::Summoned,
+            GameEventType::CardResolved,
+        ] {
             assert_eq!(of_type(events, absent), Vec::<Value>::new());
         }
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH);
@@ -219,14 +269,31 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
     #[test]
     fn r448_the_first_counter_cancels_the_play_and_a_second_finds_no_card_and_stays_set() {
         let mut state = game("r448-second");
-        let first = put(&mut state, &PA.counter_trap.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
-        let second = put(&mut state, &PA.counter_trap2.id, slot(PlayerId::P2, Row::Backrow, 2), Default::default());
+        let first = put(
+            &mut state,
+            &PA.counter_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
+        let second = put(
+            &mut state,
+            &PA.counter_trap2.id,
+            slot(PlayerId::P2, Row::Backrow, 2),
+            Default::default(),
+        );
         let ping = hand(&mut state, PlayerId::P1, &PA.ping.id);
 
-        let result = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": ping.id }));
+        let result = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": ping.id }),
+        );
         let (after, events) = (&result.state, &result.events);
 
-        assert_eq!(pluck(events, GameEventType::TrapFired, "instanceId"), vec![json!(first.id)]);
+        assert_eq!(
+            pluck(events, GameEventType::TrapFired, "instanceId"),
+            vec![json!(first.id)]
+        );
         assert_eq!(of_type(events, GameEventType::Countered).len(), 1);
         let standing = card_at(after, slot(PlayerId::P2, Row::Backrow, 2));
         assert_eq!(standing.map(|card| card.id.clone()), Some(second.id.clone()));
@@ -236,8 +303,18 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
     #[test]
     fn r448_a_countered_spells_echo_repeats_never_happen() {
         let mut state = game("r448-echo");
-        put(&mut state, &PA.counter_trap.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
-        let target = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1), Default::default());
+        put(
+            &mut state,
+            &PA.counter_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
+        let target = put(
+            &mut state,
+            "fx-3",
+            slot(PlayerId::P2, Row::Units, 1),
+            Default::default(),
+        );
         let echo = hand(&mut state, PlayerId::P1, &PA.echo_bolt.id);
 
         let result = must(
@@ -259,44 +336,92 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
     #[test]
     fn r448_a_counter_that_is_not_a_trap_answers_in_the_window_after_the_traps_classic_87s_shape() {
         let mut state = game("r448-chalice");
-        put(&mut state, &PA.chalice.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &PA.chalice.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let crier = hand(&mut state, PlayerId::P1, &PA.crier.id);
 
-        let result = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": crier.id }));
+        let result = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": crier.id }),
+        );
         let (after, events) = (&result.state, &result.events);
 
-        assert_eq!(pluck(events, GameEventType::Countered, "instanceId"), vec![json!(crier.id)]);
+        assert_eq!(
+            pluck(events, GameEventType::Countered, "instanceId"),
+            vec![json!(crier.id)]
+        );
         assert_eq!(of_type(events, GameEventType::CardPlayed), Vec::<Value>::new());
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH);
 
         // A play that paid 0 is not the chalice's: it resolves.
         let mut after = after.clone();
         let field = hand(&mut after, PlayerId::P1, &PA.field.id);
-        let next = must(&after, PlayerId::P1, json!({ "type": "play", "instanceId": field.id }));
-        assert_eq!(of_type(&next.events, GameEventType::Countered), Vec::<Value>::new());
-        assert_eq!(pluck(&next.events, GameEventType::CardPlayed, "instanceId"), vec![json!(field.id)]);
+        let next = must(
+            &after,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": field.id }),
+        );
+        assert_eq!(
+            of_type(&next.events, GameEventType::Countered),
+            Vec::<Value>::new()
+        );
+        assert_eq!(
+            pluck(&next.events, GameEventType::CardPlayed, "instanceId"),
+            vec![json!(field.id)]
+        );
     }
 
     #[test]
     fn r448_r55_a_countered_card_goes_to_exile_when_the_counter_says_so_classic_10_and_exile_counts_it() {
         let mut state = game("r448-exile");
-        put(&mut state, &PA.exile_trap.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &PA.exile_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let ping = hand(&mut state, PlayerId::P1, &PA.ping.id);
 
-        let result = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": ping.id }));
+        let result = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": ping.id }),
+        );
         let (after, events) = (&result.state, &result.events);
 
-        assert_eq!(first_field(events, GameEventType::Countered, "to"), Some(json!("exile")));
+        assert_eq!(
+            first_field(events, GameEventType::Countered, "to"),
+            Some(json!("exile"))
+        );
         assert_eq!(ids(&after.players.p1.exile), vec![ping.id.clone()]);
         assert_eq!(after.counters.exiled, 1);
-        assert_eq!(pluck(events, GameEventType::Exiled, "instanceId"), vec![json!(ping.id)]);
+        assert_eq!(
+            pluck(events, GameEventType::Exiled, "instanceId"),
+            vec![json!(ping.id)]
+        );
     }
 
     #[test]
-    fn r448_a_response_that_counters_a_spell_by_its_declared_targets_reads_them_off_the_announce_ai_refusal() {
+    fn r448_a_response_that_counters_a_spell_by_its_declared_targets_reads_them_off_the_announce_ai_refusal()
+    {
         let mut state = game("r448-refusal");
-        put(&mut state, &PA.refusal.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
-        let mine = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1), Default::default());
+        put(
+            &mut state,
+            &PA.refusal.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
+        let mine = put(
+            &mut state,
+            "fx-3",
+            slot(PlayerId::P2, Row::Units, 1),
+            Default::default(),
+        );
         let bolt = hand(&mut state, PlayerId::P1, &PA.bolt.id);
         let other = hand(&mut state, PlayerId::P1, &PA.bolt.id);
 
@@ -306,7 +431,10 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
             PlayerId::P1,
             json!({ "type": "play", "instanceId": bolt.id, "targets": [{ "pick": "hero", "player": "p2" }] }),
         );
-        assert_eq!(of_type(&first.events, GameEventType::Countered), Vec::<Value>::new());
+        assert_eq!(
+            of_type(&first.events, GameEventType::Countered),
+            Vec::<Value>::new()
+        );
         let second = must(
             &first.state,
             PlayerId::P1,
@@ -316,9 +444,15 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
                 "targets": [{ "pick": "instance", "instanceId": mine.id }],
             }),
         );
-        assert_eq!(pluck(&second.events, GameEventType::Countered, "instanceId"), vec![json!(other.id)]);
         assert_eq!(
-            second.state.players.p2.units[0].as_ref().and_then(|pile| pile.first()).map_or(0, |card| card.damage),
+            pluck(&second.events, GameEventType::Countered, "instanceId"),
+            vec![json!(other.id)]
+        );
+        assert_eq!(
+            second.state.players.p2.units[0]
+                .as_ref()
+                .and_then(|pile| pile.first())
+                .map_or(0, |card| card.damage),
             0
         );
     }
@@ -330,12 +464,27 @@ mod r448_where_the_card_waits_the_resolving_zone_out_of_every_hands_reach {
     #[test]
     fn r448_a_discard_of_the_players_hand_in_the_window_does_not_reach_the_card_being_played() {
         let mut state = game("r448-shred");
-        put(&mut state, &PA.shredder.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &PA.shredder.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let crier = hand(&mut state, PlayerId::P1, &PA.crier.id);
-        let others: Vec<String> =
-            state.players.p1.hand.iter().filter(|card| card.id != crier.id).map(|card| card.id.clone()).collect();
+        let others: Vec<String> = state
+            .players
+            .p1
+            .hand
+            .iter()
+            .filter(|card| card.id != crier.id)
+            .map(|card| card.id.clone())
+            .collect();
 
-        let result = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": crier.id }));
+        let result = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": crier.id }),
+        );
         let (after, events) = (&result.state, &result.events);
 
         let mut discarded: Vec<String> = pluck(events, GameEventType::Discarded, "instanceId")
@@ -348,7 +497,10 @@ mod r448_where_the_card_waits_the_resolving_zone_out_of_every_hands_reach {
         expected.sort();
         assert_eq!(discarded, expected);
         assert_eq!(after.players.p1.hand, Vec::<CardInstance>::new());
-        assert_eq!(card_id_at(after, slot(PlayerId::P1, Row::Units, 1)), Some(crier.id.clone()));
+        assert_eq!(
+            card_id_at(after, slot(PlayerId::P1, Row::Units, 1)),
+            Some(crier.id.clone())
+        );
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 3);
     }
 }
@@ -359,8 +511,18 @@ mod r448_r70_a_cast_is_announced_and_can_be_countered {
     #[test]
     fn r448_a_card_an_effect_casts_is_announced_from_the_resolving_zone_and_a_counter_cancels_it() {
         let mut state = game("r448-cast");
-        let trap = put(&mut state, &PA.counter_trap.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
-        let ping = new_instance(&mut state, &PA.ping.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let trap = put(
+            &mut state,
+            &PA.counter_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
+        let ping = new_instance(
+            &mut state,
+            &PA.ping.id,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
 
         let mut bench = Bench::new(&state);
         cast_card(&mut bench.sink(&mut state), &ping, Default::default());
@@ -371,8 +533,14 @@ mod r448_r70_a_cast_is_announced_and_can_be_countered {
             .map(|event| json!([event["instanceId"], event["costPaid"]]))
             .collect();
         assert_eq!(announced, vec![json!([ping.id, 0])]);
-        assert_eq!(pluck(&bench.events, GameEventType::Countered, "byInstanceId"), vec![json!(trap.id)]);
-        assert_eq!(of_type(&bench.events, GameEventType::CardPlayed), Vec::<Value>::new());
+        assert_eq!(
+            pluck(&bench.events, GameEventType::Countered, "byInstanceId"),
+            vec![json!(trap.id)]
+        );
+        assert_eq!(
+            of_type(&bench.events, GameEventType::CardPlayed),
+            Vec::<Value>::new()
+        );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
         assert!(ids(&state.players.p1.graveyard).contains(&ping.id));
         assert_eq!(state.players.p1.turn_log.cards_played, 0);
@@ -382,7 +550,12 @@ mod r448_r70_a_cast_is_announced_and_can_be_countered {
     #[test]
     fn r448_an_uncountered_cast_is_announced_and_then_played_as_before() {
         let mut state = game("r448-cast-plain");
-        let ping = new_instance(&mut state, &PA.ping.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let ping = new_instance(
+            &mut state,
+            &PA.ping.id,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
 
         let mut bench = Bench::new(&state);
         cast_card(&mut bench.sink(&mut state), &ping, Default::default());
@@ -404,13 +577,25 @@ mod e2_a_counter_that_steals_the_card_goes_to_the_thiefs_hand_and_the_thief_owns
     #[test]
     fn r448_the_stolen_card_is_the_thiefs_own_in_their_hand_classic_72_radiant() {
         let mut state = game("r448-steal");
-        put(&mut state, &PA.steal_trap.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &PA.steal_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let crier = hand(&mut state, PlayerId::P1, &PA.crier.id);
 
-        let result = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": crier.id }));
+        let result = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": crier.id }),
+        );
         let (after, events) = (&result.state, &result.events);
 
-        assert_eq!(first_field(events, GameEventType::Countered, "to"), Some(json!("hand")));
+        assert_eq!(
+            first_field(events, GameEventType::Countered, "to"),
+            Some(json!("hand"))
+        );
         assert_eq!(
             of_type(events, GameEventType::Stolen),
             vec![json!({
@@ -431,7 +616,11 @@ mod e2_a_counter_that_steals_the_card_goes_to_the_thiefs_hand_and_the_thief_owns
         // R97: the thief reads its own hand card. (What the victim reads of a card taken off the stack
         // is the `stolen` redaction's own rule, which the prompts workstream settles.)
         assert_eq!(
-            first_field(&view_for(after, PlayerId::P2).events, GameEventType::Stolen, "instanceId"),
+            first_field(
+                &view_for(after, PlayerId::P2).events,
+                GameEventType::Stolen,
+                "instanceId"
+            ),
             Some(json!(crier.id))
         );
     }
@@ -439,19 +628,40 @@ mod e2_a_counter_that_steals_the_card_goes_to_the_thiefs_hand_and_the_thief_owns
     #[test]
     fn r448_a_thief_with_a_full_hand_burns_the_stolen_card_into_their_own_graveyard_s2_4() {
         let mut state = game("r448-steal-burn");
-        put(&mut state, &PA.steal_trap.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &PA.steal_trap.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         while (state.players.p2.hand.len() as i32) < HAND_CAP {
             in_hand(&mut state, "fx-5", PlayerId::P2, 1);
         }
         let crier = hand(&mut state, PlayerId::P1, &PA.crier.id);
 
-        let result = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": crier.id }));
+        let result = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": crier.id }),
+        );
         let (after, events) = (&result.state, &result.events);
 
-        assert_eq!(first_field(events, GameEventType::Countered, "to"), Some(json!("graveyard")));
-        assert_eq!(pluck(events, GameEventType::Burned, "instanceId"), vec![json!(crier.id)]);
         assert_eq!(
-            after.players.p2.graveyard.iter().find(|card| card.id == crier.id).map(|card| card.owner),
+            first_field(events, GameEventType::Countered, "to"),
+            Some(json!("graveyard"))
+        );
+        assert_eq!(
+            pluck(events, GameEventType::Burned, "instanceId"),
+            vec![json!(crier.id)]
+        );
+        assert_eq!(
+            after
+                .players
+                .p2
+                .graveyard
+                .iter()
+                .find(|card| card.id == crier.id)
+                .map(|card| card.owner),
             Some(PlayerId::P2)
         );
         assert!(!after.players.p1.graveyard.iter().any(|card| card.id == crier.id));
@@ -464,7 +674,12 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
     /// TS `paused(seed)`: `{ state, bolt, palantir }`.
     fn paused(seed: &str) -> (GameState, CardInstance, CardInstance) {
         let mut state = game(seed);
-        let palantir = put(&mut state, &PA.palantir.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        let palantir = put(
+            &mut state,
+            &PA.palantir.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let bolt = hand(&mut state, PlayerId::P1, &PA.bolt.id);
         let waiting = must(
             &state,
@@ -476,21 +691,36 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
     }
 
     fn choice_id(state: &GameState) -> String {
-        state.pending.as_ref().map(|pending| pending.id.clone()).unwrap_or_default()
+        state
+            .pending
+            .as_ref()
+            .map(|pending| pending.id.clone())
+            .unwrap_or_default()
     }
 
     #[test]
     fn r448_pauses_the_play_with_its_card_in_the_resolving_zone_and_the_rest_of_the_play_owed() {
         let (state, bolt, _) = paused("r448-pause");
-        assert_eq!(state.pending.as_ref().map(|pending| pending.player_id), Some(PlayerId::P2));
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.player_id),
+            Some(PlayerId::P2)
+        );
         assert_eq!(ids(&state.players.p1.resolving), vec![bolt.id.clone()]);
         assert_eq!(
             serde_json::to_value(&state.announcing).expect("the announces serialise"),
             json!([{ "instanceId": bolt.id, "player": "p1" }])
         );
-        assert!(state.work.iter().any(|item| item.resume.hook == "play" && item.resume.step == "announce"));
+        assert!(
+            state
+                .work
+                .iter()
+                .any(|item| item.resume.hook == "play" && item.resume.step == "announce")
+        );
         // p1 may only wait; p2 answers.
-        let kinds: Vec<ActionType> = legal_actions(&state, PlayerId::P1).iter().map(|action| action.action_type()).collect();
+        let kinds: Vec<ActionType> = legal_actions(&state, PlayerId::P1)
+            .iter()
+            .map(|action| action.action_type())
+            .collect();
         assert_eq!(kinds, vec![ActionType::Concede]);
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
     }
@@ -507,7 +737,13 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
         assert_eq!(after.pending, None);
         assert!(ids(&after.players.p2.graveyard).contains(&palantir.id));
         assert_eq!(
-            after.players.p2.hand.iter().find(|card| card.id == bolt.id).map(|card| card.owner),
+            after
+                .players
+                .p2
+                .hand
+                .iter()
+                .find(|card| card.id == bolt.id)
+                .map(|card| card.owner),
             Some(PlayerId::P2)
         );
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH);
@@ -525,7 +761,10 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
             json!({ "type": "answer", "choiceId": choice_id(&state), "selection": [{ "pick": "mode", "option": "pass" }] }),
         );
         let (after, events) = (&result.state, &result.events);
-        assert_eq!(pluck(events, GameEventType::CardPlayed, "instanceId"), vec![json!(bolt.id)]);
+        assert_eq!(
+            pluck(events, GameEventType::CardPlayed, "instanceId"),
+            vec![json!(bolt.id)]
+        );
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 2);
         assert!(ids(&after.players.p1.graveyard).contains(&bolt.id));
         assert_eq!(after.players.p1.turn_log.cards_played, 1);
@@ -535,7 +774,8 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
     fn r448_the_paused_window_survives_json_parse_json_stringify_state_and_answers_the_same_way() {
         let (state, _, _) = paused("r448-json");
         let round: GameState =
-            serde_json::from_value(serde_json::to_value(&state).expect("a state serialises")).expect("and parses");
+            serde_json::from_value(serde_json::to_value(&state).expect("a state serialises"))
+                .expect("and parses");
         assert_eq!(round, state);
         assert_eq!(hash_state(&round), hash_state(&state));
         let answer: Action = json_as(json!({
@@ -555,9 +795,12 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
     #[test]
     fn r448_a_game_with_a_question_in_a_window_replays_from_its_log_to_the_same_hash() {
         let seed = "r448-fold";
-        let deck_one: Vec<String> = std::iter::once(PA.q_bolt.id.clone()).chain(vanilla_deck(DECK_SIZE - 1, 1)).collect();
-        let deck_two: Vec<String> =
-            std::iter::once(PA.q_palantir.id.clone()).chain(vanilla_deck(DECK_SIZE - 1, 21)).collect();
+        let deck_one: Vec<String> = std::iter::once(PA.q_bolt.id.clone())
+            .chain(vanilla_deck(DECK_SIZE - 1, 1))
+            .collect();
+        let deck_two: Vec<String> = std::iter::once(PA.q_palantir.id.clone())
+            .chain(vanilla_deck(DECK_SIZE - 1, 21))
+            .collect();
         setup_catalog();
         register_play_a();
         let start = create_game(&CreateGameOptions {
@@ -581,16 +824,42 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
             *state = result.state;
         };
         for player in [PlayerId::P1, PlayerId::P2] {
-            let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
-            step(&mut state, &mut log, player, json!({ "type": "mulligan", "keep": keep }));
+            let keep: Vec<String> = state.players[player]
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect();
+            step(
+                &mut state,
+                &mut log,
+                player,
+                json!({ "type": "mulligan", "keep": keep }),
+            );
         }
         // p1's first turn passes; p2 sets down its Palantir; p1 plays the Bolt into its question.
         step(&mut state, &mut log, PlayerId::P1, json!({ "type": "endTurn" }));
-        let palantir = state.players.p2.hand.iter().find(|card| card.def_id == PA.q_palantir.id).cloned();
+        let palantir = state
+            .players
+            .p2
+            .hand
+            .iter()
+            .find(|card| card.def_id == PA.q_palantir.id)
+            .cloned();
         let palantir_id = palantir.map(|card| card.id).unwrap_or_default();
-        step(&mut state, &mut log, PlayerId::P2, json!({ "type": "play", "instanceId": palantir_id }));
+        step(
+            &mut state,
+            &mut log,
+            PlayerId::P2,
+            json!({ "type": "play", "instanceId": palantir_id }),
+        );
         step(&mut state, &mut log, PlayerId::P2, json!({ "type": "endTurn" }));
-        let bolt = state.players.p1.hand.iter().find(|card| card.def_id == PA.q_bolt.id).cloned();
+        let bolt = state
+            .players
+            .p1
+            .hand
+            .iter()
+            .find(|card| card.def_id == PA.q_bolt.id)
+            .cloned();
         let bolt_id = bolt.as_ref().map(|card| card.id.clone()).unwrap_or_default();
         step(
             &mut state,
@@ -598,7 +867,10 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
             PlayerId::P1,
             json!({ "type": "play", "instanceId": bolt_id, "targets": [{ "pick": "hero", "player": "p2" }] }),
         );
-        assert_eq!(state.pending.as_ref().map(|pending| pending.player_id), Some(PlayerId::P2));
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.player_id),
+            Some(PlayerId::P2)
+        );
         let paused_hash = hash_state(&state);
         let choice = choice_id(&state);
         step(
@@ -607,12 +879,23 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
             PlayerId::P2,
             json!({ "type": "answer", "choiceId": choice, "selection": [{ "pick": "mode", "option": "steal" }] }),
         );
-        assert!(state.players.p2.hand.iter().any(|card| Some(&card.id) == bolt.as_ref().map(|held| &held.id)));
+        assert!(
+            state
+                .players
+                .p2
+                .hand
+                .iter()
+                .any(|card| Some(&card.id) == bolt.as_ref().map(|held| &held.id))
+        );
 
-        let replayed = fold(&json_as(json!({ "seed": seed, "decks": [deck_one, deck_two], "log": log })));
+        let replayed = fold(&json_as(
+            json!({ "seed": seed, "decks": [deck_one, deck_two], "log": log }),
+        ));
         assert!(replayed.errors.is_empty());
         assert_eq!(hash_state(&replayed.state), hash_state(&state));
-        let partial = fold(&json_as(json!({ "seed": seed, "decks": [deck_one, deck_two], "log": &log[..log.len() - 1] })));
+        let partial = fold(&json_as(
+            json!({ "seed": seed, "decks": [deck_one, deck_two], "log": &log[..log.len() - 1] }),
+        ));
         assert_eq!(hash_state(&partial.state), paused_hash);
     }
 }
@@ -623,7 +906,12 @@ mod r448_r97_r227_a_card_being_set_face_down_is_its_players_alone_while_it_waits
     /// TS `setting(seed, trapDef)`: `{ state, trap }`.
     fn setting(seed: &str, trap_def: &str) -> (GameState, CardInstance) {
         let mut state = game(seed);
-        put(&mut state, &PA.watcher.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &PA.watcher.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let trap = hand(&mut state, PlayerId::P1, trap_def);
         let waiting = must(
             &state,
@@ -635,9 +923,13 @@ mod r448_r97_r227_a_card_being_set_face_down_is_its_players_alone_while_it_waits
     }
 
     #[test]
-    fn r448_the_other_player_reads_only_the_zone_of_the_announce_a_card_back_in_the_resolving_zone_and_no_type() {
+    fn r448_the_other_player_reads_only_the_zone_of_the_announce_a_card_back_in_the_resolving_zone_and_no_type()
+     {
         let (state, trap) = setting("r448-hidden", &PA.hidden_field_trap.id);
-        assert_eq!(state.pending.as_ref().map(|pending| pending.player_id), Some(PlayerId::P2));
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.player_id),
+            Some(PlayerId::P2)
+        );
 
         let theirs = view_for(&state, PlayerId::P2);
         assert_eq!(
@@ -664,16 +956,31 @@ mod r448_r97_r227_a_card_being_set_face_down_is_its_players_alone_while_it_waits
         assert!(!shown.contains(&PA.hidden_field_trap.id));
 
         let own = view_for(&state, PlayerId::P1);
-        assert_eq!(first_field(&own.events, GameEventType::CardAnnounced, "defId"), Some(json!(PA.hidden_field_trap.id)));
-        assert_eq!(first_field(&own.events, GameEventType::CardAnnounced, "cardType"), Some(json!("Field Trap")));
-        let resolving: Vec<String> = own.you.resolving.iter().map(|card| card.instance_id.clone()).collect();
+        assert_eq!(
+            first_field(&own.events, GameEventType::CardAnnounced, "defId"),
+            Some(json!(PA.hidden_field_trap.id))
+        );
+        assert_eq!(
+            first_field(&own.events, GameEventType::CardAnnounced, "cardType"),
+            Some(json!("Field Trap"))
+        );
+        let resolving: Vec<String> = own
+            .you
+            .resolving
+            .iter()
+            .map(|card| card.instance_id.clone())
+            .collect();
         assert_eq!(resolving, vec![trap.id.clone()]);
     }
 
     #[test]
     fn r448_once_set_the_trap_is_face_down_under_a_fresh_id_and_the_announce_stays_unread() {
         let (state, trap) = setting("r448-hidden-set", &PA.hidden_trap.id);
-        let choice = state.pending.as_ref().map(|pending| pending.id.clone()).unwrap_or_default();
+        let choice = state
+            .pending
+            .as_ref()
+            .map(|pending| pending.id.clone())
+            .unwrap_or_default();
         let after = must(
             &state,
             PlayerId::P2,
@@ -681,23 +988,51 @@ mod r448_r97_r227_a_card_being_set_face_down_is_its_players_alone_while_it_waits
         )
         .state;
         let set = card_at(&after, slot(PlayerId::P1, Row::Backrow, 3));
-        assert_eq!(set.map(|card| card.def_id.clone()), Some(PA.hidden_trap.id.clone()));
+        assert_eq!(
+            set.map(|card| card.def_id.clone()),
+            Some(PA.hidden_trap.id.clone())
+        );
         assert_ne!(set.map(|card| card.id.clone()), Some(trap.id.clone()));
         let theirs = view_for(&after, PlayerId::P2);
-        assert_eq!(first_field(&theirs.events, GameEventType::CardAnnounced, "instanceId"), Some(json!(HIDDEN_ID)));
-        assert!(!serde_json::to_string(&theirs.events).expect("events serialise").contains(&PA.hidden_trap.id));
+        assert_eq!(
+            first_field(&theirs.events, GameEventType::CardAnnounced, "instanceId"),
+            Some(json!(HIDDEN_ID))
+        );
+        assert!(
+            !serde_json::to_string(&theirs.events)
+                .expect("events serialise")
+                .contains(&PA.hidden_trap.id)
+        );
         assert_eq!(theirs.opponent.resolving, Vec::<CardView>::new());
     }
 
     #[test]
     fn r448_a_face_up_play_waiting_in_the_window_is_public_to_both_players() {
         let mut state = game("r448-public");
-        put(&mut state, &PA.watcher.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &PA.watcher.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            Default::default(),
+        );
         let crier = hand(&mut state, PlayerId::P1, &PA.crier.id);
-        let waiting = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": crier.id })).state;
+        let waiting = must(
+            &state,
+            PlayerId::P1,
+            json!({ "type": "play", "instanceId": crier.id }),
+        )
+        .state;
         let theirs = view_for(&waiting, PlayerId::P2);
-        let resolving: Vec<String> = theirs.opponent.resolving.iter().map(|card| card.def_id.clone()).collect();
+        let resolving: Vec<String> = theirs
+            .opponent
+            .resolving
+            .iter()
+            .map(|card| card.def_id.clone())
+            .collect();
         assert_eq!(resolving, vec![PA.crier.id.clone()]);
-        assert_eq!(first_field(&theirs.events, GameEventType::CardAnnounced, "defId"), Some(json!(PA.crier.id)));
+        assert_eq!(
+            first_field(&theirs.events, GameEventType::CardAnnounced, "defId"),
+            Some(json!(PA.crier.id))
+        );
     }
 }

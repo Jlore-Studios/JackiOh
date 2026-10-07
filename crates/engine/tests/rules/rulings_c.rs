@@ -95,8 +95,14 @@ fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
 /// whole `CardFace` and demand a `text` at every call site.
 fn unit(name: &str, index: u32, attack: i32, health: i32, extra: Value) -> CardDef {
     let mut rest = extra;
-    let base_extra = rest.as_object_mut().and_then(|extra| extra.remove("base")).unwrap_or(json!({}));
-    let radiant_extra = rest.as_object_mut().and_then(|extra| extra.remove("radiant")).unwrap_or(json!({}));
+    let base_extra = rest
+        .as_object_mut()
+        .and_then(|extra| extra.remove("base"))
+        .unwrap_or(json!({}));
+    let radiant_extra = rest
+        .as_object_mut()
+        .and_then(|extra| extra.remove("radiant"))
+        .unwrap_or(json!({}));
     let mut base = json!({ "attack": attack, "health": health, "keywords": [], "text": name });
     spread(&mut base, base_extra);
     let mut radiant = json!({ "attack": attack, "health": health, "keywords": [], "text": name });
@@ -468,12 +474,19 @@ fn defs() -> Vec<CardDef> {
 // ---------------------------------------------------------------------------
 
 fn both(script: Script) -> CardScripts {
-    CardScripts { base: script.clone(), radiant: script }
+    CardScripts {
+        base: script.clone(),
+        radiant: script,
+    }
 }
 
 /// Deal `amount` to the enemy hero: the one visible thing a fixture script needs to do.
 fn hit(amount: i32) -> Hook {
-    hook(move |_| vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))])
+    hook(move |_| {
+        vec![effects::damage(json_as(
+            json!({ "to": { "of": "enemyHero" }, "amount": amount }),
+        ))]
+    })
 }
 
 /// R115: what `projector`'s set-stat hook adds, chosen so a total and a delta read differently.
@@ -483,19 +496,34 @@ const PROJECTOR_SETS: i32 = 5;
 const NOTE_LANE: i32 = 5;
 
 fn log_of(state: &GameState) -> Option<&CardInstance> {
-    state.players.p1.backrow.get((NOTE_LANE - 1) as usize).and_then(|slot| slot.as_ref())
+    state
+        .players
+        .p1
+        .backrow
+        .get((NOTE_LANE - 1) as usize)
+        .and_then(|slot| slot.as_ref())
 }
 
 fn note(name: impl Into<String>) -> Effect {
     let name: String = name.into();
     Effect::new("rc:note", move |ctx| {
-        let Some(log) =
-            ctx.sink.state.players.p1.backrow.get_mut((NOTE_LANE - 1) as usize).and_then(|slot| slot.as_mut())
+        let Some(log) = ctx
+            .sink
+            .state
+            .players
+            .p1
+            .backrow
+            .get_mut((NOTE_LANE - 1) as usize)
+            .and_then(|slot| slot.as_mut())
         else {
             return;
         };
-        let mut steps: Vec<Value> =
-            log.memory.get("steps").and_then(|steps| steps.as_array()).cloned().unwrap_or_default();
+        let mut steps: Vec<Value> = log
+            .memory
+            .get("steps")
+            .and_then(|steps| steps.as_array())
+            .cloned()
+            .unwrap_or_default();
         steps.push(json!(name));
         log.memory.insert("steps".to_string(), Value::Array(steps));
     })
@@ -505,7 +533,12 @@ fn notes(state: &GameState) -> Vec<String> {
     log_of(state)
         .and_then(|log| log.memory.get("steps"))
         .and_then(|steps| steps.as_array())
-        .map(|steps| steps.iter().filter_map(|step| step.as_str().map(str::to_string)).collect())
+        .map(|steps| {
+            steps
+                .iter()
+                .filter_map(|step| step.as_str().map(str::to_string))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -542,7 +575,10 @@ fn heroic_script() -> Script {
     let mut resume: IndexMap<&'static str, Hook> = IndexMap::new();
     resume.insert(POWER_RESUME, hook(hero_power));
     Script {
-        static_flags: Some(StaticFlags { quickdraw: Some(true), ..StaticFlags::default() }),
+        static_flags: Some(StaticFlags {
+            quickdraw: Some(true),
+            ..StaticFlags::default()
+        }),
         start_of_game: Some(hook(|_| vec![roll_power()])),
         activations: power_abilities(false),
         resume,
@@ -582,7 +618,10 @@ fn scripts() -> IndexMap<String, CardScripts> {
             aura: Some(aura_hook(|_| {
                 vec![AuraEntry {
                     applies: Box::new(|unit: &CardInstance| unit.damage > 0),
-                    mod_: StatMod { attack: Some(-WEAKEN_BY), ..StatMod::default() },
+                    mod_: StatMod {
+                        attack: Some(-WEAKEN_BY),
+                        ..StatMod::default()
+                    },
                 }]
             })),
             ..Script::default()
@@ -591,7 +630,10 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         TRIBUTE_TWO.to_string(),
         both(Script {
-            static_flags: Some(StaticFlags { tribute: Some(2), ..StaticFlags::default() }),
+            static_flags: Some(StaticFlags {
+                tribute: Some(2),
+                ..StaticFlags::default()
+            }),
             ..Script::default()
         }),
     );
@@ -626,41 +668,67 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         EMPTY_TRAP.to_string(),
         both(Script {
-            triggers: vec![TriggerDef::new("always", &[GameEventType::CardPlayed], |_, _| vec![]).with_when(|_, _| true)],
+            triggers: vec![
+                TriggerDef::new("always", &[GameEventType::CardPlayed], |_, _| vec![]).with_when(|_, _| true),
+            ],
             ..Script::default()
         }),
     );
     scripts.insert(
         BARE_TRAP.to_string(),
         both(Script {
-            triggers: vec![TriggerDef::new("no-predicate", &[GameEventType::CardPlayed], |_, _| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 })))]
-            })],
+            triggers: vec![TriggerDef::new(
+                "no-predicate",
+                &[GameEventType::CardPlayed],
+                |_, _| {
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 2 }),
+                    ))]
+                },
+            )],
             ..Script::default()
         }),
     );
     scripts.insert(
         WINDOW_TRAP.to_string(),
         both(Script {
-            triggers: vec![TriggerDef::new("turn-end", &[GameEventType::TurnEnded], |_, _| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
-            })],
+            triggers: vec![TriggerDef::new(
+                "turn-end",
+                &[GameEventType::TurnEnded],
+                |_, _| {
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                    ))]
+                },
+            )],
             ..Script::default()
         }),
     );
     // R102: the hook answers 1 where the printed cost is 3.
-    scripts.insert(FUSE_HOOKED.to_string(), both(Script { cost: Some(cost_hook(|_| 1)), ..Script::default() }));
+    scripts.insert(
+        FUSE_HOOKED.to_string(),
+        both(Script {
+            cost: Some(cost_hook(|_| 1)),
+            ..Script::default()
+        }),
+    );
     scripts.insert(
         FUSE_TRIBUTE_TWO.to_string(),
         both(Script {
-            static_flags: Some(StaticFlags { tribute: Some(2), ..StaticFlags::default() }),
+            static_flags: Some(StaticFlags {
+                tribute: Some(2),
+                ..StaticFlags::default()
+            }),
             ..Script::default()
         }),
     );
     scripts.insert(
         FUSE_TRIBUTE_THREE.to_string(),
         both(Script {
-            static_flags: Some(StaticFlags { tribute: Some(3), ..StaticFlags::default() }),
+            static_flags: Some(StaticFlags {
+                tribute: Some(3),
+                ..StaticFlags::default()
+            }),
             ..Script::default()
         }),
     );
@@ -694,8 +762,20 @@ fn scripts() -> IndexMap<String, CardScripts> {
             ..Script::default()
         }),
     );
-    scripts.insert(FUSE_DYING.to_string(), both(Script { death: Some(hit(7)), ..Script::default() }));
-    scripts.insert(HEROIC.to_string(), CardScripts { base: heroic_script(), radiant: heroic_script() });
+    scripts.insert(
+        FUSE_DYING.to_string(),
+        both(Script {
+            death: Some(hit(7)),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        HEROIC.to_string(),
+        CardScripts {
+            base: heroic_script(),
+            radiant: heroic_script(),
+        },
+    );
     // R115: one card doing both of the things Vanilla has to silence — projecting an aura at layer 5
     // and setting its own stats at layer 2 — plus the printed face Vanilla must leave alone.
     scripts.insert(
@@ -704,11 +784,20 @@ fn scripts() -> IndexMap<String, CardScripts> {
             aura: Some(aura_hook(|args| {
                 let me = args.self_;
                 vec![AuraEntry {
-                    applies: Box::new(move |unit: &CardInstance| unit.controller == me.controller && unit.id != me.id),
-                    mod_: StatMod { attack: Some(2), max_health: Some(2), ..StatMod::default() },
+                    applies: Box::new(move |unit: &CardInstance| {
+                        unit.controller == me.controller && unit.id != me.id
+                    }),
+                    mod_: StatMod {
+                        attack: Some(2),
+                        max_health: Some(2),
+                        ..StatMod::default()
+                    },
                 }]
             })),
-            set_stat: Some(read_hook(|_| SetStat { attack: Some(PROJECTOR_SETS), max_health: Some(PROJECTOR_SETS) })),
+            set_stat: Some(read_hook(|_| SetStat {
+                attack: Some(PROJECTOR_SETS),
+                max_health: Some(PROJECTOR_SETS),
+            })),
             ..Script::default()
         }),
     );
@@ -721,8 +810,13 @@ fn scripts() -> IndexMap<String, CardScripts> {
                 let other = zones::active_units_of(args.state, args.self_.controller)
                     .into_iter()
                     .find(|unit| unit.id != args.self_.id && unit.def_id == OTHER_SETTER);
-                let seen = other.map(|other| layers::stats_with_buffs(args.state, other).attack).unwrap_or(0);
-                SetStat { attack: Some(seen), max_health: Some(seen) }
+                let seen = other
+                    .map(|other| layers::stats_with_buffs(args.state, other).attack)
+                    .unwrap_or(0);
+                SetStat {
+                    attack: Some(seen),
+                    max_health: Some(seen),
+                }
             })),
             ..Script::default()
         }),
@@ -734,19 +828,34 @@ fn scripts() -> IndexMap<String, CardScripts> {
                 let other = zones::active_units_of(args.state, args.self_.controller)
                     .into_iter()
                     .find(|unit| unit.id != args.self_.id && unit.def_id == SETTER);
-                let seen = other.map(|other| layers::stats_with_buffs(args.state, other).attack).unwrap_or(0);
-                SetStat { attack: Some(seen), max_health: Some(seen) }
+                let seen = other
+                    .map(|other| layers::stats_with_buffs(args.state, other).attack)
+                    .unwrap_or(0);
+                SetStat {
+                    attack: Some(seen),
+                    max_health: Some(seen),
+                }
             })),
             ..Script::default()
         }),
     );
-    scripts.insert(CRIER.to_string(), both(Script { cry: Some(hook(|_| vec![note("cry")])), ..Script::default() }));
+    scripts.insert(
+        CRIER.to_string(),
+        both(Script {
+            cry: Some(hook(|_| vec![note("cry")])),
+            ..Script::default()
+        }),
+    );
     // R117 and R118: the trap's answer is a prompt for its own controller, which pauses the play that
     // emitted the `summoned` event partway through §10.5.
     scripts.insert(
         ASK_TRAP.to_string(),
         both(Script {
-            triggers: vec![TriggerDef::new("ask-summon", &[GameEventType::Summoned], |_, _| vec![ask_controller()])],
+            triggers: vec![TriggerDef::new(
+                "ask-summon",
+                &[GameEventType::Summoned],
+                |_, _| vec![ask_controller()],
+            )],
             resume: step_table(vec![("asked", hook(|_| vec![note("answered")]))]),
             ..Script::default()
         }),
@@ -756,26 +865,37 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         EAT_TRAP.to_string(),
         both(Script {
-            triggers: vec![TriggerDef::new("eat-summon", &[GameEventType::Summoned], |_, event| {
-                let mut list = vec![note("eaten")];
-                if let GameEvent::Summoned { instance_id, .. } = event {
-                    list.push(effects::exile(json_as(
-                        json!({ "target": { "of": "instance", "instanceId": instance_id } }),
-                    )));
-                }
-                list
-            })],
+            triggers: vec![TriggerDef::new(
+                "eat-summon",
+                &[GameEventType::Summoned],
+                |_, event| {
+                    let mut list = vec![note("eaten")];
+                    if let GameEvent::Summoned { instance_id, .. } = event {
+                        list.push(effects::exile(json_as(
+                            json!({ "target": { "of": "instance", "instanceId": instance_id } }),
+                        )));
+                    }
+                    list
+                },
+            )],
             ..Script::default()
         }),
     );
     scripts.insert(
         SPELL_CRIER.to_string(),
-        both(Script { cry: Some(hook(|_| vec![note("spell")])), ..Script::default() }),
+        both(Script {
+            cry: Some(hook(|_| vec![note("spell")])),
+            ..Script::default()
+        }),
     );
     scripts.insert(
         ASK_ON_PLAY.to_string(),
         both(Script {
-            triggers: vec![TriggerDef::new("ask-play", &[GameEventType::CardPlayed], |_, _| vec![ask_controller()])],
+            triggers: vec![TriggerDef::new(
+                "ask-play",
+                &[GameEventType::CardPlayed],
+                |_, _| vec![ask_controller()],
+            )],
             resume: step_table(vec![("asked", hook(|_| vec![note("answered")]))]),
             ..Script::default()
         }),
@@ -785,17 +905,26 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         GUARD.to_string(),
         both(Script {
-            static_flags: Some(StaticFlags { anti_oneshot: Some(true), ..StaticFlags::default() }),
+            static_flags: Some(StaticFlags {
+                anti_oneshot: Some(true),
+                ..StaticFlags::default()
+            }),
             ..Script::default()
         }),
     );
     scripts.insert(
         RETURN_SPELL.to_string(),
-        both(Script { end_of_turn: Some(hook(|_| vec![note("returned")])), ..Script::default() }),
+        both(Script {
+            end_of_turn: Some(hook(|_| vec![note("returned")])),
+            ..Script::default()
+        }),
     );
     scripts.insert(
         DYING_UNIT.to_string(),
-        both(Script { end_of_turn: Some(hook(|_| vec![note("unit-end")])), ..Script::default() }),
+        both(Script {
+            end_of_turn: Some(hook(|_| vec![note("unit-end")])),
+            ..Script::default()
+        }),
     );
     // R153: a card with all three of the hooks whose zones the ruling narrows.
     scripts.insert(
@@ -810,7 +939,10 @@ fn scripts() -> IndexMap<String, CardScripts> {
     // R126: the two shapes a delayed continuation may take. Both must be re-entered by one reader.
     scripts.insert(
         DELAYED_HOOK_CARD.to_string(),
-        both(Script { delayed: Some(hook(|_| vec![note("delayed:hook")])), ..Script::default() }),
+        both(Script {
+            delayed: Some(hook(|_| vec![note("delayed:hook")])),
+            ..Script::default()
+        }),
     );
     scripts.insert(
         DELAYED_STEP_CARD.to_string(),
@@ -851,14 +983,20 @@ fn scripts() -> IndexMap<String, CardScripts> {
                     if other.id == args.self_.id {
                         continue;
                     }
-                    if !catalog::def_of(Some(args.state), &other.def_id).tags.contains(&Tag::Felinor) {
+                    if !catalog::def_of(Some(args.state), &other.def_id)
+                        .tags
+                        .contains(&Tag::Felinor)
+                    {
                         continue;
                     }
                     let stats = layers::stats_with_buffs(args.state, other);
                     attack += stats.attack;
                     max_health += stats.max_health;
                 }
-                SetStat { attack: Some(attack.max(0)), max_health: Some(max_health.max(0)) }
+                SetStat {
+                    attack: Some(attack.max(0)),
+                    max_health: Some(max_health.max(0)),
+                }
             })),
             ..Script::default()
         }),
@@ -866,7 +1004,10 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         CUBE.to_string(),
         both(Script {
-            targets: vec![TargetDecl { amount: Some(2), ..TargetDecl::tribute(1, 1, Value::Null) }],
+            targets: vec![TargetDecl {
+                amount: Some(2),
+                ..TargetDecl::tribute(1, 1, Value::Null)
+            }],
             cry: Some(hook(|ctx| {
                 let text = match ctx.targets.first() {
                     Some(Selection::Instance { instance_id }) => format!("ate:{instance_id}"),
@@ -896,7 +1037,9 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
 
 /// The card as it stands now in `state`, by id (TS read the live object).
 fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id).cloned().unwrap_or_else(|| panic!("{} is in no zone", card.id))
+    find_instance(state, &card.id)
+        .cloned()
+        .unwrap_or_else(|| panic!("{} is in no zone", card.id))
 }
 
 /// The card in `state`, by id, to write through (TS wrote the live object).
@@ -915,7 +1058,10 @@ struct SinkFor {
 
 impl SinkFor {
     fn new(state: &GameState) -> SinkFor {
-        SinkFor { events: Vec::new(), rng: Rng::new(&state.seed, state.rng_cursor) }
+        SinkFor {
+            events: Vec::new(),
+            rng: Rng::new(&state.seed, state.rng_cursor),
+        }
     }
 
     fn run<T>(&mut self, state: &mut GameState, call: impl FnOnce(&mut EngineSink<'_>) -> T) -> T {
@@ -932,7 +1078,10 @@ fn with_sink<T>(state: &mut GameState, call: impl FnOnce(&mut EngineSink<'_>) ->
 
 /// `{ controller }`, the `HookOptions` most contexts below are made with.
 fn as_controller(controller: PlayerId) -> HookOptions {
-    HookOptions { controller: Some(controller), ..HookOptions::default() }
+    HookOptions {
+        controller: Some(controller),
+        ..HookOptions::default()
+    }
 }
 
 /// `applyEffects(effects, makeContext(sink, null, { controller }))`.
@@ -974,7 +1123,12 @@ fn game(seed: &str) -> GameState {
     state.turn = 4;
     state.active = P1;
     state.phase = Phase::Main;
-    state.players.p1.mana = ManaState { current: 4, max: 4, next_turn_mod: 0, perm_mod: 0 };
+    state.players.p1.mana = ManaState {
+        current: 4,
+        max: 4,
+        next_turn_mod: 0,
+        perm_mod: 0,
+    };
     state
 }
 
@@ -1040,7 +1194,9 @@ fn must<T>(value: Option<T>, what: &str) -> T {
 }
 
 fn on_unit(instance: &CardInstance) -> AttackTarget {
-    AttackTarget::Unit { instance: instance.clone() }
+    AttackTarget::Unit {
+        instance: instance.clone(),
+    }
 }
 
 fn on_hero(player: PlayerId) -> AttackTarget {
@@ -1057,7 +1213,11 @@ struct Hit {
 
 impl Hit {
     fn new(from: &str, to: &str, amount: i32) -> Hit {
-        Hit { from: from.to_string(), to: to.to_string(), amount }
+        Hit {
+            from: from.to_string(),
+            to: to.to_string(),
+            amount,
+        }
     }
 }
 
@@ -1066,7 +1226,12 @@ fn hits(events: &[GameEvent]) -> Vec<Hit> {
     events
         .iter()
         .filter_map(|event| match event {
-            GameEvent::Damage { source_id, target_id, amount, .. } => Some(Hit {
+            GameEvent::Damage {
+                source_id,
+                target_id,
+                amount,
+                ..
+            } => Some(Hit {
                 from: source_id.clone().unwrap_or_default(),
                 to: target_id.clone(),
                 amount: *amount,
@@ -1109,12 +1274,17 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
 
 /// The ids of a player's active units.
 fn unit_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    zones::active_units_of(state, player).iter().map(|card| card.id.clone()).collect()
+    zones::active_units_of(state, player)
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 /// A `cardPlayed` event, the one every trap fixture below watches.
 fn played(player: PlayerId) -> GameEvent {
-    json_as(json!({ "type": "cardPlayed", "player": player, "instanceId": "c9001", "defId": BODY, "costPaid": 1 }))
+    json_as(
+        json!({ "type": "cardPlayed", "player": player, "instanceId": "c9001", "defId": BODY, "costPaid": 1 }),
+    )
 }
 
 /// A wire value as JSON, so a name compares the same whatever enum or string carries it.
@@ -1130,7 +1300,10 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
     use super::*;
 
     fn to(position: Position) -> SwitchPositionOptions {
-        SwitchPositionOptions { to: Some(position), ..SwitchPositionOptions::default() }
+        SwitchPositionOptions {
+            to: Some(position),
+            ..SwitchPositionOptions::default()
+        }
     }
 
     #[test]
@@ -1143,29 +1316,56 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let mut attack_events = SinkFor::new(&state);
         let current = live(&state, &unit);
         assert_eq!(
-            refusal(attack_events.run(&mut state, |sink| combat::switch_position(sink, &current, to(Position::Atk)))),
+            refusal(attack_events.run(&mut state, |sink| combat::switch_position(
+                sink,
+                &current,
+                to(Position::Atk)
+            ))),
             None
         );
         assert!(attack_events.events.is_empty());
         assert_eq!(live(&state, &unit).position, Some(Position::Atk));
-        assert_eq!(live(&state, &unit).exertion, Exertion { attacked: false, switched: false, attacks: None });
-        assert!(combat::has_exertion(&state, &live(&state, &unit), ExertionKind::Switch));
+        assert_eq!(
+            live(&state, &unit).exertion,
+            Exertion {
+                attacked: false,
+                switched: false,
+                attacks: None
+            }
+        );
+        assert!(combat::has_exertion(
+            &state,
+            &live(&state, &unit),
+            ExertionKind::Switch
+        ));
 
         // The same on the other face: a real flip spends the exertion and emits, a repeat does neither.
         let mut flip_events = SinkFor::new(&state);
         let current = live(&state, &unit);
         assert_eq!(
-            refusal(flip_events.run(&mut state, |sink| combat::switch_position(sink, &current, to(Position::Def)))),
+            refusal(flip_events.run(&mut state, |sink| combat::switch_position(
+                sink,
+                &current,
+                to(Position::Def)
+            ))),
             None
         );
         assert_eq!(count_of(&flip_events.events, GameEventType::PositionSwitched), 1);
         assert!(live(&state, &unit).exertion.switched);
 
-        live_mut(&mut state, &unit).exertion = Exertion { attacked: false, switched: false, attacks: None };
+        live_mut(&mut state, &unit).exertion = Exertion {
+            attacked: false,
+            switched: false,
+            attacks: None,
+        };
         let mut repeat_events = SinkFor::new(&state);
         let current = live(&state, &unit);
         assert_eq!(
-            refusal(repeat_events.run(&mut state, |sink| combat::switch_position(sink, &current, to(Position::Def)))),
+            refusal(repeat_events.run(&mut state, |sink| combat::switch_position(
+                sink,
+                &current,
+                to(Position::Def)
+            ))),
             None
         );
         assert!(repeat_events.events.is_empty());
@@ -1204,12 +1404,23 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let mut events = SinkFor::new(&state);
         let current = live(&state, &unit);
         assert_eq!(
-            refusal(events.run(&mut state, |sink| combat::switch_position(sink, &current, to(Position::Atk)))),
+            refusal(events.run(&mut state, |sink| combat::switch_position(
+                sink,
+                &current,
+                to(Position::Atk)
+            ))),
             None
         );
         assert!(events.events.is_empty());
         assert_eq!(live(&state, &unit).position, Some(Position::Atk));
-        assert_eq!(live(&state, &unit).exertion, Exertion { attacked: true, switched: false, attacks: None });
+        assert_eq!(
+            live(&state, &unit).exertion,
+            Exertion {
+                attacked: true,
+                switched: false,
+                attacks: None
+            }
+        );
     }
 
     #[test]
@@ -1217,7 +1428,10 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let mut state = game("r92-field-only");
 
         // In hand: no position at all, and the switch is refused rather than inventing one.
-        let held = must(in_hand(&mut state, BODY, P1, 1).into_iter().next(), "a unit in hand");
+        let held = must(
+            in_hand(&mut state, BODY, P1, 1).into_iter().next(),
+            "a unit in hand",
+        );
         assert_eq!(held.position, None);
         assert_eq!(
             refusal(with_sink(&mut state, |sink| {
@@ -1239,7 +1453,11 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
 
         // Dormant under a Stack: in the lane, but not on the field for anything (§3.2, R13). The same
         // refusal R13 gives an attack, and the position it had is left exactly where it was.
-        live_mut(&mut state, &under).exertion = Exertion { attacked: false, switched: false, attacks: None }; // a fresh turn's worth, so a spend shows
+        live_mut(&mut state, &under).exertion = Exertion {
+            attacked: false,
+            switched: false,
+            attacks: None,
+        }; // a fresh turn's worth, so a spend shows
         let mut top = new_instance(&mut state, &stacker.id, P1, Zone::Hand { player: P1 });
         assert!(zones::place_on_field(
             &mut state,
@@ -1292,12 +1510,19 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let defender = put(&mut state, BODY, slot(P2, Row::Units, 1)); // 4/20
         let mut events = SinkFor::new(&state);
         assert_eq!(
-            refusal(events.run(&mut state, |sink| combat::declare_attack(sink, &attacker, &on_unit(&defender)))),
+            refusal(events.run(&mut state, |sink| combat::declare_attack(
+                sink,
+                &attacker,
+                &on_unit(&defender)
+            ))),
             None
         );
         assert_eq!(
             hits(&events.events),
-            vec![Hit::new(&attacker.id, &defender.id, 2), Hit::new(&defender.id, &attacker.id, 4)]
+            vec![
+                Hit::new(&attacker.id, &defender.id, 2),
+                Hit::new(&defender.id, &attacker.id, 4)
+            ]
         );
         assert_eq!(live(&state, &defender).damage, 2);
         assert_eq!(live(&state, &attacker).damage, 4);
@@ -1315,7 +1540,10 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         );
         assert_eq!(
             hits(&other_events.events),
-            vec![Hit::new(&quick_defender.id, &plain_attacker.id, 2), Hit::new(&plain_attacker.id, &quick_defender.id, 4)]
+            vec![
+                Hit::new(&quick_defender.id, &plain_attacker.id, 2),
+                Hit::new(&plain_attacker.id, &quick_defender.id, 4)
+            ]
         );
 
         // The half §4.3 used to leave unstated, and the reason R93 needed rewording: a First Strike
@@ -1328,10 +1556,17 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let point = put(&mut lethal, POINTMASTER, slot(P2, Row::Units, 1));
         let mut lethal_events = SinkFor::new(&lethal);
         assert_eq!(
-            refusal(lethal_events.run(&mut lethal, |sink| combat::declare_attack(sink, &attacking, &on_unit(&point)))),
+            refusal(lethal_events.run(&mut lethal, |sink| combat::declare_attack(
+                sink,
+                &attacking,
+                &on_unit(&point)
+            ))),
             None
         );
-        assert_eq!(hits(&lethal_events.events), vec![Hit::new(&point.id, &attacking.id, 7)]);
+        assert_eq!(
+            hits(&lethal_events.events),
+            vec![Hit::new(&point.id, &attacking.id, 7)]
+        );
         assert_eq!(ids(&lethal.players.p1.graveyard), vec![attacking.id.clone()]);
         assert_eq!(live(&lethal, &point).damage, 0);
 
@@ -1341,7 +1576,11 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let right = put(&mut trade, QUICK, slot(P2, Row::Units, 1));
         let mut trade_events = SinkFor::new(&trade);
         assert_eq!(
-            refusal(trade_events.run(&mut trade, |sink| combat::declare_attack(sink, &left, &on_unit(&right)))),
+            refusal(trade_events.run(&mut trade, |sink| combat::declare_attack(
+                sink,
+                &left,
+                &on_unit(&right)
+            ))),
             None
         );
         assert_eq!(
@@ -1360,18 +1599,28 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
 
         let mut events = SinkFor::new(&state);
         assert_eq!(
-            refusal(events.run(&mut state, |sink| combat::declare_attack(sink, &attacker, &on_unit(&defender)))),
+            refusal(events.run(&mut state, |sink| combat::declare_attack(
+                sink,
+                &attacker,
+                &on_unit(&defender)
+            ))),
             None
         );
 
         // The defender strikes in step 1, the attacker is damaged by it, and the aura drops its
         // *current* attack to 1 — so "read once, at the start" and "read now" are different numbers.
         assert_eq!(live(&state, &attacker).damage, 2);
-        assert_eq!(layers::unit_view(&state, &live(&state, &attacker)).attack, 4 - WEAKEN_BY);
+        assert_eq!(
+            layers::unit_view(&state, &live(&state, &attacker)).attack,
+            4 - WEAKEN_BY
+        );
         // R94: the attack was read at the start of the combat, so the attacker still struck for 4.
         assert_eq!(
             hits(&events.events),
-            vec![Hit::new(&defender.id, &attacker.id, 2), Hit::new(&attacker.id, &defender.id, 4)]
+            vec![
+                Hit::new(&defender.id, &attacker.id, 2),
+                Hit::new(&attacker.id, &defender.id, 4)
+            ]
         );
     }
 
@@ -1386,19 +1635,29 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
 
         let mut events = SinkFor::new(&state);
         assert_eq!(
-            refusal(events.run(&mut state, |sink| combat::declare_attack(sink, &attacker, &on_unit(&defender)))),
+            refusal(events.run(&mut state, |sink| combat::declare_attack(
+                sink,
+                &attacker,
+                &on_unit(&defender)
+            ))),
             None
         );
 
         // The attacker's step-1 hit damages the defender, and the aura drops its *current* attack to 1,
         // so the two readings are different numbers rather than the same one twice.
         assert_eq!(live(&state, &defender).damage, 2);
-        assert_eq!(layers::unit_view(&state, &live(&state, &defender)).attack, 4 - WEAKEN_BY);
+        assert_eq!(
+            layers::unit_view(&state, &live(&state, &defender)).attack,
+            4 - WEAKEN_BY
+        );
         // R94: "A First Strike survivor is struck back with the attack the defender had before the hit
         // landed" — 4, not the 1 the aura leaves it on.
         assert_eq!(
             hits(&events.events),
-            vec![Hit::new(&attacker.id, &defender.id, 2), Hit::new(&defender.id, &attacker.id, 4)]
+            vec![
+                Hit::new(&attacker.id, &defender.id, 2),
+                Hit::new(&defender.id, &attacker.id, 4)
+            ]
         );
     }
 
@@ -1411,14 +1670,21 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let mut state = game("r95-cleave");
         let attacker = put(&mut state, CLEAVER, slot(P1, Row::Units, 3)); // 3/20 Cleave
         // The attacker's own neighbours, which adjacency never crosses sides to reach (§3.1).
-        let mine = [put(&mut state, BODY, slot(P1, Row::Units, 2)), put(&mut state, BODY, slot(P1, Row::Units, 4))];
+        let mine = [
+            put(&mut state, BODY, slot(P1, Row::Units, 2)),
+            put(&mut state, BODY, slot(P1, Row::Units, 4)),
+        ];
         let left = put(&mut state, BODY, slot(P2, Row::Units, 1));
         let defender = put(&mut state, BODY, slot(P2, Row::Units, 2));
         let right = put(&mut state, BODY, slot(P2, Row::Units, 3));
 
         let mut events = SinkFor::new(&state);
         assert_eq!(
-            refusal(events.run(&mut state, |sink| combat::declare_attack(sink, &attacker, &on_unit(&defender)))),
+            refusal(events.run(&mut state, |sink| combat::declare_attack(
+                sink,
+                &attacker,
+                &on_unit(&defender)
+            ))),
             None
         );
 
@@ -1432,13 +1698,20 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
                 Hit::new(&defender.id, &attacker.id, 4),
             ]
         );
-        assert_eq!(mine.iter().map(|unit| live(&state, unit).damage).collect::<Vec<_>>(), vec![0, 0]);
+        assert_eq!(
+            mine.iter()
+                .map(|unit| live(&state, unit).damage)
+                .collect::<Vec<_>>(),
+            vec![0, 0]
+        );
 
         // A Cleave *defender* cleaves nothing: Cleave rides the attacker's hit, not the strike-back.
         let mut back = game("r95-strike-back");
         let plain_attacker = put(&mut back, BODY, slot(P1, Row::Units, 2));
-        let my_neighbours =
-            [put(&mut back, BODY, slot(P1, Row::Units, 1)), put(&mut back, BODY, slot(P1, Row::Units, 3))];
+        let my_neighbours = [
+            put(&mut back, BODY, slot(P1, Row::Units, 1)),
+            put(&mut back, BODY, slot(P1, Row::Units, 3)),
+        ];
         let cleave_defender = put(&mut back, CLEAVER, slot(P2, Row::Units, 2));
         let mut back_events = SinkFor::new(&back);
         assert_eq!(
@@ -1449,22 +1722,46 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         );
         assert_eq!(
             hits(&back_events.events),
-            vec![Hit::new(&plain_attacker.id, &cleave_defender.id, 4), Hit::new(&cleave_defender.id, &plain_attacker.id, 3)]
+            vec![
+                Hit::new(&plain_attacker.id, &cleave_defender.id, 4),
+                Hit::new(&cleave_defender.id, &plain_attacker.id, 3)
+            ]
         );
-        assert_eq!(my_neighbours.iter().map(|unit| live(&back, unit).damage).collect::<Vec<_>>(), vec![0, 0]);
+        assert_eq!(
+            my_neighbours
+                .iter()
+                .map(|unit| live(&back, unit).damage)
+                .collect::<Vec<_>>(),
+            vec![0, 0]
+        );
 
         // A hero target cleaves nothing, since no unit is adjacent to a hero (§4.4 step 10, R63).
         let mut hero = game("r95-hero");
         let hero_cleaver = put(&mut hero, CLEAVER, slot(P1, Row::Units, 1));
-        let bystanders =
-            [put(&mut hero, BODY, slot(P2, Row::Units, 1)), put(&mut hero, BODY, slot(P2, Row::Units, 2))];
+        let bystanders = [
+            put(&mut hero, BODY, slot(P2, Row::Units, 1)),
+            put(&mut hero, BODY, slot(P2, Row::Units, 2)),
+        ];
         let mut hero_events = SinkFor::new(&hero);
         assert_eq!(
-            refusal(hero_events.run(&mut hero, |sink| combat::declare_attack(sink, &hero_cleaver, &on_hero(P2)))),
+            refusal(hero_events.run(&mut hero, |sink| combat::declare_attack(
+                sink,
+                &hero_cleaver,
+                &on_hero(P2)
+            ))),
             None
         );
-        assert_eq!(hits(&hero_events.events), vec![Hit::new(&hero_cleaver.id, "hero-p2", 3)]);
-        assert_eq!(bystanders.iter().map(|unit| live(&hero, unit).damage).collect::<Vec<_>>(), vec![0, 0]);
+        assert_eq!(
+            hits(&hero_events.events),
+            vec![Hit::new(&hero_cleaver.id, "hero-p2", 3)]
+        );
+        assert_eq!(
+            bystanders
+                .iter()
+                .map(|unit| live(&hero, unit).damage)
+                .collect::<Vec<_>>(),
+            vec![0, 0]
+        );
     }
 
     #[test]
@@ -1486,10 +1783,18 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
 
         // No `attackDeclared` for the missing attacker, and nothing else names it either.
         assert_eq!(attackers_declared(&events.events), vec![present.id.clone()]);
-        assert!(!events.events.iter().any(|event| serde_json::to_string(event).expect("an event").contains(&gone.id)));
+        assert!(
+            !events
+                .events
+                .iter()
+                .any(|event| serde_json::to_string(event).expect("an event").contains(&gone.id))
+        );
         assert_eq!(
             hits(&events.events),
-            vec![Hit::new(&present.id, &victim.id, 4), Hit::new(&victim.id, &present.id, 4)]
+            vec![
+                Hit::new(&present.id, &victim.id, 4),
+                Hit::new(&victim.id, &present.id, 4)
+            ]
         );
 
         // And the sequence stops once the game has a result, before the first attacker declares.
@@ -1497,14 +1802,21 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let first = put(&mut over, BODY, slot(P1, Row::Units, 1));
         let second = put(&mut over, BODY, slot(P1, Row::Units, 2));
         let target = put(&mut over, BODY, slot(P2, Row::Units, 1));
-        over.result = Some(GameResult { winner: Winner::Draw, reason: GameOverReason::TurnCap });
+        over.result = Some(GameResult {
+            winner: Winner::Draw,
+            reason: GameOverReason::TurnCap,
+        });
         let mut over_events = SinkFor::new(&over);
         over_events.run(&mut over, |sink| {
             combat::force_attacks_on(sink, &[first.clone(), second.clone()], &on_unit(&target), None);
         });
         assert!(over_events.events.is_empty());
         assert_eq!(
-            vec![live(&over, &first).damage, live(&over, &second).damage, live(&over, &target).damage],
+            vec![
+                live(&over, &first).damage,
+                live(&over, &second).damage,
+                live(&over, &target).damage
+            ],
             vec![0, 0, 0]
         );
     }
@@ -1526,20 +1838,33 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         // The trigger's `on` matches an event p1 caused, but the predicate refuses it: the trap is not
         // fired, not consumed and not turned face up, because R61 leaves `run` no way to say so.
         assert_eq!(
-            traps::traps_watching(&state, &played(P1)).iter().map(|found| found.trap.id.clone()).collect::<Vec<_>>(),
+            traps::traps_watching(&state, &played(P1))
+                .iter()
+                .map(|found| found.trap.id.clone())
+                .collect::<Vec<_>>(),
             vec![trap.id.clone()]
         );
         let mut mine_sink = SinkFor::new(&state);
-        assert!(mine_sink.run(&mut state, |sink| traps::fire_traps_for(sink, &played(P1))).fired.is_empty());
+        assert!(
+            mine_sink
+                .run(&mut state, |sink| traps::fire_traps_for(sink, &played(P1)))
+                .fired
+                .is_empty()
+        );
         assert!(trap_fired_ids(&mine_sink.events).is_empty());
-        assert_eq!(zones::card_at(&state, slot(P1, Row::Backrow, 1)).map(|card| card.id.clone()), Some(trap.id.clone()));
+        assert_eq!(
+            zones::card_at(&state, slot(P1, Row::Backrow, 1)).map(|card| card.id.clone()),
+            Some(trap.id.clone())
+        );
         assert_ne!(live(&state, &trap).face_up, Some(true));
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
 
         // The same event from the other side satisfies the predicate, so the trap fires and is spent.
         let mut theirs_sink = SinkFor::new(&state);
         assert_eq!(
-            theirs_sink.run(&mut state, |sink| traps::fire_traps_for(sink, &played(P2))).fired,
+            theirs_sink
+                .run(&mut state, |sink| traps::fire_traps_for(sink, &played(P2)))
+                .fired,
             vec![trap.id.clone()]
         );
         assert_eq!(trap_fired_ids(&theirs_sink.events), vec![trap.id.clone()]);
@@ -1552,7 +1877,9 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         let spent = put(&mut empty, EMPTY_TRAP, slot(P1, Row::Backrow, 2));
         let mut empty_sink = SinkFor::new(&empty);
         assert_eq!(
-            empty_sink.run(&mut empty, |sink| traps::fire_traps_for(sink, &played(P2))).fired,
+            empty_sink
+                .run(&mut empty, |sink| traps::fire_traps_for(sink, &played(P2)))
+                .fired,
             vec![spent.id.clone()]
         );
         assert_eq!(trap_fired_ids(&empty_sink.events), vec![spent.id.clone()]);
@@ -1573,12 +1900,19 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
     fn r100_gives_the_end_of_turn_window_its_own_events_so_a_turnended_trap_fires_once_per_turn_end() {
         let mut state = game("r100-window");
         let trap = put(&mut state, WINDOW_TRAP, slot(P1, Row::Backrow, 1));
-        let turn_ended = GameEvent::TurnEnded { player: P1, turn: state.turn, unspent_mana: 0 };
+        let turn_ended = GameEvent::TurnEnded {
+            player: P1,
+            turn: state.turn,
+            unspent_mana: 0,
+        };
 
         assert!(traps::is_trap_window_event(&turn_ended));
         // The trap is watching, so this is the withholding and not a failure to match.
         assert_eq!(
-            traps::traps_watching(&state, &turn_ended).iter().map(|found| found.trap.id.clone()).collect::<Vec<_>>(),
+            traps::traps_watching(&state, &turn_ended)
+                .iter()
+                .map(|found| found.trap.id.clone())
+                .collect::<Vec<_>>(),
             vec![trap.id.clone()]
         );
 
@@ -1593,22 +1927,34 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         // The window delivers it, once.
         let mut window = SinkFor::new(&state);
         assert_eq!(
-            window.run(&mut state, |sink| traps::run_trap_window(sink, &turn_ended)).fired,
+            window
+                .run(&mut state, |sink| traps::run_trap_window(sink, &turn_ended))
+                .fired,
             vec![trap.id.clone()]
         );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
 
         // It is a Field Trap, so it is still armed; offering the same event to the immediate check
         // again still fires nothing, which is what "once per turn end rather than twice" means.
-        assert_eq!(zones::card_at(&state, slot(P1, Row::Backrow, 1)).map(|card| card.id.clone()), Some(trap.id.clone()));
-        assert!(with_sink(&mut state, |sink| traps::fire_traps_for(sink, &turn_ended)).fired.is_empty());
+        assert_eq!(
+            zones::card_at(&state, slot(P1, Row::Backrow, 1)).map(|card| card.id.clone()),
+            Some(trap.id.clone())
+        );
+        assert!(
+            with_sink(&mut state, |sink| traps::fire_traps_for(sink, &turn_ended))
+                .fired
+                .is_empty()
+        );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
 
         // Every other event still goes to the immediate check, so this is not a blanket withholding.
         let mut other = game("r100-immediate");
         let bare = put(&mut other, BARE_TRAP, slot(P1, Row::Backrow, 1));
         assert!(!traps::is_trap_window_event(&played(P2)));
-        assert_eq!(with_sink(&mut other, |sink| traps::fire_traps_for(sink, &played(P2))).fired, vec![bare.id.clone()]);
+        assert_eq!(
+            with_sink(&mut other, |sink| traps::fire_traps_for(sink, &played(P2))).fired,
+            vec![bare.id.clone()]
+        );
     }
 
     // ---------------------------------------------------------------------------
@@ -1616,9 +1962,13 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
     // ---------------------------------------------------------------------------
 
     #[test]
-    fn r101_pays_a_tribute_with_a_minimal_set_counts_a_sheep_token_2_and_refuses_the_play_when_the_board_cannot_pay() {
+    fn r101_pays_a_tribute_with_a_minimal_set_counts_a_sheep_token_2_and_refuses_the_play_when_the_board_cannot_pay()
+     {
         let mut state = game("r101-tribute");
-        let card = must(in_hand(&mut state, TRIBUTE_TWO, P1, 1).into_iter().next(), "a Tribute 2 card in hand");
+        let card = must(
+            in_hand(&mut state, TRIBUTE_TWO, P1, 1).into_iter().next(),
+            "a Tribute 2 card in hand",
+        );
         assert_eq!(play_choices::tribute_cost_of(&state, &card), 2);
         let play = |state: &GameState, tributes: Vec<String>| -> Option<String> {
             refusal(play_choices::why_choices_refused(
@@ -1635,7 +1985,10 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
 
         // An unpayable Tribute makes the play illegal rather than fizzling on resolution (#66), and the
         // message names the card and the number: "<name> needs Tribute N".
-        let needs = format!("{} needs Tribute 2", catalog::def_of(Some(&state), &card.def_id).name);
+        let needs = format!(
+            "{} needs Tribute 2",
+            catalog::def_of(Some(&state), &card.def_id).name
+        );
         assert_eq!(play(&state, vec![]), Some(needs.clone()));
         let one = put(&mut state, BODY, slot(P1, Row::Units, 1));
         assert_eq!(play(&state, vec![one.id.clone()]), Some(needs.clone()));
@@ -1648,8 +2001,11 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         // the set of three is refused even though it pays.
         let three = put(&mut state, BODY, slot(P1, Row::Units, 4));
         assert!(
-            must(play(&state, vec![one.id.clone(), two.id.clone(), three.id.clone()]), "a refusal")
-                .contains("tributes 2, no more")
+            must(
+                play(&state, vec![one.id.clone(), two.id.clone(), three.id.clone()]),
+                "a refusal"
+            )
+            .contains("tributes 2, no more")
         );
 
         // The Sheep Token counts 2, which is what makes overshooting unavoidable: it pays Tribute 2 on
@@ -1658,7 +2014,10 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         assert_eq!(play_choices::tribute_value_of(&state, &woolly), 2);
         assert_eq!(play_choices::tribute_value_of(&state, &one), 1);
         assert_eq!(play(&state, vec![woolly.id.clone()]), None);
-        assert!(must(play(&state, vec![woolly.id.clone(), one.id.clone()]), "a refusal").contains("tributes 2, no more"));
+        assert!(
+            must(play(&state, vec![woolly.id.clone(), one.id.clone()]), "a refusal")
+                .contains("tributes 2, no more")
+        );
 
         // The enumeration says the same: the Sheep alone, or two bodies, and never three of anything.
         let sets = play_choices::legal_tribute_sets(&state, P1, &card);
@@ -1673,7 +2032,10 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         let mut state = game("r101-enemies");
         // Two of p1's own, so its board can pay Tribute 2 on its own and the refusal below is about
         // *whose* units were named rather than about a board that cannot pay at all.
-        let mine = vec![put(&mut state, BODY, slot(P1, Row::Units, 1)), put(&mut state, BODY, slot(P1, Row::Units, 2))];
+        let mine = vec![
+            put(&mut state, BODY, slot(P1, Row::Units, 1)),
+            put(&mut state, BODY, slot(P1, Row::Units, 2)),
+        ];
         let theirs = vec![
             put(&mut state, BODY, slot(P2, Row::Units, 1)),
             put(&mut state, BODY, slot(P2, Row::Units, 2)),
@@ -1681,10 +2043,16 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         ];
 
         // An ordinary Tribute reaches only its controller's units.
-        let ordinary = must(in_hand(&mut state, TRIBUTE_TWO, P1, 1).into_iter().next(), "a Tribute 2 card");
+        let ordinary = must(
+            in_hand(&mut state, TRIBUTE_TWO, P1, 1).into_iter().next(),
+            "a Tribute 2 card",
+        );
         assert!(!play_choices::may_tribute_enemy_units(&state, &ordinary));
         assert_eq!(
-            play_choices::legal_tribute_units(&state, P1, &ordinary).iter().map(|unit| unit.id.clone()).collect::<Vec<_>>(),
+            play_choices::legal_tribute_units(&state, P1, &ordinary)
+                .iter()
+                .map(|unit| unit.id.clone())
+                .collect::<Vec<_>>(),
             ids(&mine)
         );
         assert!(
@@ -1706,12 +2074,16 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
 
         // #55 says so, so both sides are fodder — and an enemy Sheep is still worth 2 (§3.2 names no
         // side), which is how three of Tribute 3 can be paid by two enemy units.
-        let golem =
-            must(in_hand(&mut state, TRIBUTE_ENEMIES, P1, 1).into_iter().next(), "a Tribute 3 card that may take enemies");
+        let golem = must(
+            in_hand(&mut state, TRIBUTE_ENEMIES, P1, 1).into_iter().next(),
+            "a Tribute 3 card that may take enemies",
+        );
         assert!(play_choices::may_tribute_enemy_units(&state, &golem));
         assert_eq!(play_choices::tribute_cost_of(&state, &golem), 3);
-        let mut reachable: Vec<String> =
-            play_choices::legal_tribute_units(&state, P1, &golem).iter().map(|unit| unit.id.clone()).collect();
+        let mut reachable: Vec<String> = play_choices::legal_tribute_units(&state, P1, &golem)
+            .iter()
+            .map(|unit| unit.id.clone())
+            .collect();
         reachable.sort();
         let mut everyone: Vec<String> = ids(&mine).into_iter().chain(ids(&theirs)).collect();
         everyone.sort();
@@ -1742,28 +2114,58 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
     use super::*;
 
     #[test]
-    fn r102_caps_the_fused_cost_and_drops_every_ingredients_cost_hook_so_the_cap_wins_over_a_cost_rewriting_hook() {
+    fn r102_caps_the_fused_cost_and_drops_every_ingredients_cost_hook_so_the_cap_wins_over_a_cost_rewriting_hook()
+     {
         // The cap: two printed costs that sum past it.
         let mut capped = game("r102-cost-cap");
         let target = put(&mut capped, FUSE_PRICEY, slot(P1, Row::Units, 1)); // cost 4
-        let food = must(in_hand(&mut capped, FUSE_DEAR, P1, 1).into_iter().next(), "a second ingredient"); // cost 3
-        let result = must(with_sink(&mut capped, |sink| fuse(sink, fuse_args(&[&target, &food], &target))), "a fusion");
-        assert_eq!(catalog::def_of(Some(&capped), &result.def_id).cost, CardCost::Fixed(FUSE_COST_CAP));
+        let food = must(
+            in_hand(&mut capped, FUSE_DEAR, P1, 1).into_iter().next(),
+            "a second ingredient",
+        ); // cost 3
+        let result = must(
+            with_sink(&mut capped, |sink| {
+                fuse(sink, fuse_args(&[&target, &food], &target))
+            }),
+            "a fusion",
+        );
+        assert_eq!(
+            catalog::def_of(Some(&capped), &result.def_id).cost,
+            CardCost::Fixed(FUSE_COST_CAP)
+        );
 
         // The hook: its printed cost is 3 and its hook answers 1, so the fused sum is 1 + 1 = 2. The
         // hook is dropped, so the result reports 2; a surviving hook would still report 1.
         let mut hooked = game("r102-cost-hook");
         let hook_target = put(&mut hooked, FUSE_HOOKED, slot(P1, Row::Units, 1));
         assert_eq!(mana::printed_cost(&hooked, &live(&hooked, &hook_target)), 1); // the hook, not the printed 3
-        let cheap = must(in_hand(&mut hooked, FUSE_CHEAP, P1, 1).into_iter().next(), "a 1-cost ingredient");
+        let cheap = must(
+            in_hand(&mut hooked, FUSE_CHEAP, P1, 1).into_iter().next(),
+            "a 1-cost ingredient",
+        );
         let hook_result = must(
-            with_sink(&mut hooked, |sink| fuse(sink, fuse_args(&[&hook_target, &cheap], &hook_target))),
+            with_sink(&mut hooked, |sink| {
+                fuse(sink, fuse_args(&[&hook_target, &cheap], &hook_target))
+            }),
             "a fusion",
         );
 
-        assert!(scripts::scripts_for(&hooked, &hook_result.def_id).base.cost.is_none());
-        assert!(scripts::scripts_for(&hooked, &hook_result.def_id).radiant.cost.is_none());
-        assert_eq!(catalog::def_of(Some(&hooked), &hook_result.def_id).cost, CardCost::Fixed(2));
+        assert!(
+            scripts::scripts_for(&hooked, &hook_result.def_id)
+                .base
+                .cost
+                .is_none()
+        );
+        assert!(
+            scripts::scripts_for(&hooked, &hook_result.def_id)
+                .radiant
+                .cost
+                .is_none()
+        );
+        assert_eq!(
+            catalog::def_of(Some(&hooked), &hook_result.def_id).cost,
+            CardCost::Fixed(2)
+        );
         assert_eq!(mana::printed_cost(&hooked, &live(&hooked, &hook_result)), 2);
     }
 
@@ -1771,14 +2173,26 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
     fn r102_takes_the_max_of_the_ingredients_staticflags_tribute_rather_than_the_sum() {
         let mut state = game("r102-tribute-max");
         let target = put(&mut state, FUSE_TRIBUTE_TWO, slot(P1, Row::Units, 1)); // Tribute 2
-        let food = must(in_hand(&mut state, FUSE_TRIBUTE_THREE, P1, 1).into_iter().next(), "a Tribute 3 ingredient");
+        let food = must(
+            in_hand(&mut state, FUSE_TRIBUTE_THREE, P1, 1).into_iter().next(),
+            "a Tribute 3 ingredient",
+        );
         assert_eq!(play_choices::tribute_cost_of(&state, &target), 2);
         assert_eq!(play_choices::tribute_cost_of(&state, &food), 3);
 
-        let result = must(with_sink(&mut state, |sink| fuse(sink, fuse_args(&[&target, &food], &target))), "a fusion");
+        let result = must(
+            with_sink(&mut state, |sink| {
+                fuse(sink, fuse_args(&[&target, &food], &target))
+            }),
+            "a fusion",
+        );
         // The stricter of the two requirements, not a doubled one: 3, never 5.
         assert_eq!(
-            scripts::scripts_for(&state, &result.def_id).base.static_flags.as_ref().and_then(|flags| flags.tribute),
+            scripts::scripts_for(&state, &result.def_id)
+                .base
+                .static_flags
+                .as_ref()
+                .and_then(|flags| flags.tribute),
             Some(3)
         );
         assert_eq!(play_choices::tribute_cost_of(&state, &live(&state, &result)), 3);
@@ -1788,26 +2202,53 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
     fn r102_namespaces_trigger_ids_by_ingredient_so_two_ingredients_that_share_an_id_stay_two_conditions() {
         let mut state = game("r102-trigger-ids");
         let target = put(&mut state, FUSE_TRAP_MINE, slot(P1, Row::Backrow, 1));
-        let food = must(in_hand(&mut state, FUSE_TRAP_THEIRS, P1, 1).into_iter().next(), "a second trap");
+        let food = must(
+            in_hand(&mut state, FUSE_TRAP_THEIRS, P1, 1).into_iter().next(),
+            "a second trap",
+        );
         // Both ingredients call their trigger "fire" and both watch `cardPlayed`.
         assert_eq!(
-            scripts::scripts_for(&state, FUSE_TRAP_MINE).base.triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<_>>(),
+            scripts::scripts_for(&state, FUSE_TRAP_MINE)
+                .base
+                .triggers
+                .iter()
+                .map(|trigger| trigger.id.clone())
+                .collect::<Vec<_>>(),
             vec!["fire"]
         );
         assert_eq!(
-            scripts::scripts_for(&state, FUSE_TRAP_THEIRS).base.triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<_>>(),
+            scripts::scripts_for(&state, FUSE_TRAP_THEIRS)
+                .base
+                .triggers
+                .iter()
+                .map(|trigger| trigger.id.clone())
+                .collect::<Vec<_>>(),
             vec!["fire"]
         );
 
         let mut sink = SinkFor::new(&state);
-        let result = must(sink.run(&mut state, |engine| fuse(engine, fuse_args(&[&target, &food], &target))), "a fused trap");
+        let result = must(
+            sink.run(&mut state, |engine| {
+                fuse(engine, fuse_args(&[&target, &food], &target))
+            }),
+            "a fused trap",
+        );
         let triggers = scripts::scripts_for(&state, &result.def_id).base.triggers.clone();
         assert_eq!(
-            triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<_>>(),
-            vec![format!("{FUSE_TRAP_MINE}:fire"), format!("{FUSE_TRAP_THEIRS}:fire")]
+            triggers
+                .iter()
+                .map(|trigger| trigger.id.clone())
+                .collect::<Vec<_>>(),
+            vec![
+                format!("{FUSE_TRAP_MINE}:fire"),
+                format!("{FUSE_TRAP_THEIRS}:fire")
+            ]
         );
         assert_eq!(
-            triggers.iter().map(|trigger| trigger.on.clone()).collect::<Vec<_>>(),
+            triggers
+                .iter()
+                .map(|trigger| trigger.on.clone())
+                .collect::<Vec<_>>(),
             vec![vec![GameEventType::CardPlayed], vec![GameEventType::CardPlayed]]
         );
         // Each kept its own R99 predicate, so only the one whose condition was met runs: p2's play
@@ -1820,7 +2261,8 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
     }
 
     #[test]
-    fn r102_resolves_a_multi_target_fuses_ingredients_once_and_reuses_them_since_a_consumed_one_cannot_be_re_found() {
+    fn r102_resolves_a_multi_target_fuses_ingredients_once_and_reuses_them_since_a_consumed_one_cannot_be_re_found()
+     {
         let mut state = game("r102-multi-target");
         let host_a = put(&mut state, FUSE_HOST_A, slot(P1, Row::Units, 1)); // 1/1
         let host_b = put(&mut state, FUSE_HOST_B, slot(P1, Row::Units, 2)); // 2/2
@@ -1828,8 +2270,12 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
         let mut sink = SinkFor::new(&state);
 
         // The first fusion consumes the shared ingredient: 1/1 plus 7/3 is 8/4.
-        let first =
-            must(sink.run(&mut state, |engine| fuse(engine, fuse_args(&[&host_a, &shared], &host_a))), "the first fusion");
+        let first = must(
+            sink.run(&mut state, |engine| {
+                fuse(engine, fuse_args(&[&host_a, &shared], &host_a))
+            }),
+            "the first fusion",
+        );
         assert_eq!(first.id, host_a.id);
         let first_base = catalog::def_of(Some(&state), &first.def_id).base.clone();
         assert_eq!((first_base.attack, first_base.health), (Some(8), Some(4)));
@@ -1844,12 +2290,19 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
         // what lets radiant #85 fuse one played permanent onto every matching target, one at a time.
         // TS handed the second fusion the same object, which the first had marked gone (R86).
         shared.zone = Zone::Gone { player: P1 };
-        let second =
-            must(sink.run(&mut state, |engine| fuse(engine, fuse_args(&[&host_b, &shared], &host_b))), "the second fusion");
+        let second = must(
+            sink.run(&mut state, |engine| {
+                fuse(engine, fuse_args(&[&host_b, &shared], &host_b))
+            }),
+            "the second fusion",
+        );
         assert_eq!(second.id, host_b.id);
         // 2/2 plus the same 7/3 is 9/5: it contributed its definition a second time.
         let second_def = catalog::def_of(Some(&state), &second.def_id).clone();
-        assert_eq!((second_def.base.attack, second_def.base.health), (Some(9), Some(5)));
+        assert_eq!(
+            (second_def.base.attack, second_def.base.health),
+            (Some(9), Some(5))
+        );
         assert!(second_def.name.contains("fuse-shared"));
 
         // Two fusions, two transient definitions, and the first host is untouched by the second.
@@ -1859,7 +2312,8 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
     }
 
     #[test]
-    fn r102_makes_every_consumed_ingredient_cease_to_exist_no_graveyard_no_death_trigger_no_destroyed_counter() {
+    fn r102_makes_every_consumed_ingredient_cease_to_exist_no_graveyard_no_death_trigger_no_destroyed_counter()
+     {
         let mut state = game("r102-consumed");
         let target = put(&mut state, FUSE_TRIBUTE_TWO, slot(P1, Row::Units, 1));
         let eaten = put(&mut state, FUSE_DYING, slot(P1, Row::Units, 2)); // a Death hook worth 7 to the hero
@@ -1893,7 +2347,8 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
     // ---------------------------------------------------------------------------
 
     #[test]
-    fn r103_stores_the_thirteen_power_names_each_its_activate_abilitys_id_a_card_that_has_not_rolled_has_none() {
+    fn r103_stores_the_thirteen_power_names_each_its_activate_abilitys_id_a_card_that_has_not_rolled_has_none()
+     {
         // §11 R103 writes them out, and they are state, so they stay stable across versions: R352 added
         // `stitching` and R752 the five after it, each at the end, and the reworked powers kept theirs.
         let names = json!([
@@ -1912,9 +2367,17 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
             "tricks",
         ]);
         assert_eq!(as_json(&HERO_POWER_NAMES), names);
-        assert_eq!(Value::Array(HERO_POWERS.iter().map(|power| as_json(&power.name)).collect()), names);
+        assert_eq!(
+            Value::Array(HERO_POWERS.iter().map(|power| as_json(&power.name)).collect()),
+            names
+        );
         // Ping reaches any unit or hero on either side, declared with the activation (R81).
-        let ping = must(HERO_POWERS.iter().find(|power| as_json(&power.name) == json!("ping")), "the ping power");
+        let ping = must(
+            HERO_POWERS
+                .iter()
+                .find(|power| as_json(&power.name) == json!("ping")),
+            "the ping power",
+        );
         assert_eq!(ping.x, 1);
         let ping_targets = ping.targets.map(|targets| targets()).unwrap_or_default();
         assert_eq!(
@@ -1933,10 +2396,21 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
         );
 
         // Once it has rolled, the card has that power's ability, by its stored name.
-        live_mut(&mut state, &card).memory.insert(POWER_KEY.to_string(), json!("recruit"));
+        live_mut(&mut state, &card)
+            .memory
+            .insert(POWER_KEY.to_string(), json!("recruit"));
         let ability = power_ability_of(&state, &live(&state, &card));
-        assert_eq!(ability.as_ref().map(|decl| decl.id.clone()), Some("recruit".to_string()));
-        assert_eq!(ability.as_ref().and_then(|decl| decl.cost).and_then(|cost| cost.mana), Some(3));
+        assert_eq!(
+            ability.as_ref().map(|decl| decl.id.clone()),
+            Some("recruit".to_string())
+        );
+        assert_eq!(
+            ability
+                .as_ref()
+                .and_then(|decl| decl.cost)
+                .and_then(|cost| cost.mana),
+            Some(3)
+        );
         assert_eq!(mana::printed_cost(&state, &live(&state, &card)), 0);
     }
 
@@ -1944,14 +2418,22 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
     fn r103_refuses_as_activate_does_the_turn_and_the_phase_before_the_uses_then_the_price() {
         let mut state = game("r103-order");
         let card = put(&mut state, HEROIC, slot(P1, Row::Backrow, 1));
-        live_mut(&mut state, &card).memory.insert(POWER_KEY.to_string(), json!("recruit")); // X 3
+        live_mut(&mut state, &card)
+            .memory
+            .insert(POWER_KEY.to_string(), json!("recruit")); // X 3
 
         state.players.p1.mana.current = 0;
         state.active = P2;
         state.phase = Phase::End;
         let turn = state.turn;
-        live_mut(&mut state, &card).memory.insert(ACTIVATIONS_MEMORY_KEY.to_string(), json!({ "turn": turn, "count": 1 }));
-        assert_eq!(refusal(why_cannot_activate_ability(&state, P1, &card.id, None)), Some("it is not your turn".to_string()));
+        live_mut(&mut state, &card).memory.insert(
+            ACTIVATIONS_MEMORY_KEY.to_string(),
+            json!({ "turn": turn, "count": 1 }),
+        );
+        assert_eq!(
+            refusal(why_cannot_activate_ability(&state, P1, &card.id, None)),
+            Some("it is not your turn".to_string())
+        );
         state.active = P1;
         assert_eq!(
             refusal(why_cannot_activate_ability(&state, P1, &card.id, None)),
@@ -1962,24 +2444,42 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
             refusal(why_cannot_activate_ability(&state, P1, &card.id, None)),
             Some("that ability has already been used this turn".to_string())
         );
-        live_mut(&mut state, &card).memory.shift_remove(ACTIVATIONS_MEMORY_KEY);
+        live_mut(&mut state, &card)
+            .memory
+            .shift_remove(ACTIVATIONS_MEMORY_KEY);
         assert_eq!(
             refusal(why_cannot_activate_ability(&state, P1, &card.id, None)),
             Some("that ability costs 3, more than your mana".to_string())
         );
         state.players.p1.mana.current = 3;
-        assert_eq!(refusal(why_cannot_activate_ability(&state, P1, &card.id, None)), None);
+        assert_eq!(
+            refusal(why_cannot_activate_ability(&state, P1, &card.id, None)),
+            None
+        );
     }
 
     #[test]
-    fn r103_counts_the_use_before_the_effects_run_and_fizzles_a_token_power_in_silence_when_the_token_is_absent() {
+    fn r103_counts_the_use_before_the_effects_run_and_fizzles_a_token_power_in_silence_when_the_token_is_absent()
+     {
         // A power that pauses on a prompt has already spent the turn's activation.
         let mut state = game("r103-marked");
         let mut sink = SinkFor::new(&state);
         let card = put(&mut state, HEROIC, slot(P1, Row::Backrow, 1));
-        live_mut(&mut state, &card).memory.insert(POWER_KEY.to_string(), json!("discover"));
-        assert_eq!(refusal(sink.run(&mut state, |engine| activate_ability(engine, P1, &activate(&card.id)))), None);
-        assert_eq!(must(state.pending.as_ref(), "the Discover").kind, PromptKind::Discover);
+        live_mut(&mut state, &card)
+            .memory
+            .insert(POWER_KEY.to_string(), json!("discover"));
+        assert_eq!(
+            refusal(sink.run(&mut state, |engine| activate_ability(
+                engine,
+                P1,
+                &activate(&card.id)
+            ))),
+            None
+        );
+        assert_eq!(
+            must(state.pending.as_ref(), "the Discover").kind,
+            PromptKind::Discover
+        );
         assert!(used_this_turn(&state, &live(&state, &card)));
         state.pending = None;
         assert_eq!(
@@ -2000,8 +2500,17 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
 
         let mut token_sink = SinkFor::new(&missing);
         let rusher = put(&mut missing, HEROIC, slot(P1, Row::Backrow, 1));
-        live_mut(&mut missing, &rusher).memory.insert(POWER_KEY.to_string(), json!("rush"));
-        assert_eq!(refusal(token_sink.run(&mut missing, |engine| activate_ability(engine, P1, &activate(&rusher.id)))), None);
+        live_mut(&mut missing, &rusher)
+            .memory
+            .insert(POWER_KEY.to_string(), json!("rush"));
+        assert_eq!(
+            refusal(token_sink.run(&mut missing, |engine| activate_ability(
+                engine,
+                P1,
+                &activate(&rusher.id)
+            ))),
+            None
+        );
         assert_eq!(count_of(&token_sink.events, GameEventType::Summoned), 0);
         assert!(missing.pending.is_none());
         // The use is still spent: it was counted before the effects that found nothing to do.
@@ -2032,7 +2541,8 @@ mod spec_11_r113_the_work_cursor_m3_gate {
     }
 
     #[test]
-    fn r113_parks_one_cascades_sequences_innermost_first_and_a_pause_during_a_resumption_ahead_of_everything_owed() {
+    fn r113_parks_one_cascades_sequences_innermost_first_and_a_pause_during_a_resumption_ahead_of_everything_owed()
+     {
         let mut state = game("r113-cursor");
         let mut sink = SinkFor::new(&state);
         assert!(state.work.is_empty());
@@ -2055,14 +2565,28 @@ mod spec_11_r113_the_work_cursor_m3_gate {
 
         // "Taking an item resets the cursor to 0, so a pause that happens during a resumption is
         // inserted ahead of everything still owed": the Cry's tail resumes and opens a second prompt.
-        assert_eq!(work::take_work(&mut state).map(|item| item.id), Some(cry_tail.id.clone()));
+        assert_eq!(
+            work::take_work(&mut state).map(|item| item.id),
+            Some(cry_tail.id.clone())
+        );
         assert_eq!(state.work_cursor, 0);
-        let inner_tail = sink.run(&mut state, |engine| work::push_work(engine, resume_of("cry-tail-after-second-prompt"), None));
+        let inner_tail = sink.run(&mut state, |engine| {
+            work::push_work(engine, resume_of("cry-tail-after-second-prompt"), None)
+        });
 
         // Still inside step 5, so it precedes the play steps. A plain queue would run step 6 too early.
-        assert_eq!(steps(&state), vec!["cry-tail-after-second-prompt", "play-steps-6-8"]);
-        assert_eq!(work::take_work(&mut state).map(|item| item.id), Some(inner_tail.id.clone()));
-        assert_eq!(work::take_work(&mut state).map(|item| item.id), Some(play_tail.id.clone()));
+        assert_eq!(
+            steps(&state),
+            vec!["cry-tail-after-second-prompt", "play-steps-6-8"]
+        );
+        assert_eq!(
+            work::take_work(&mut state).map(|item| item.id),
+            Some(inner_tail.id.clone())
+        );
+        assert_eq!(
+            work::take_work(&mut state).map(|item| item.id),
+            Some(play_tail.id.clone())
+        );
         assert!(work::take_work(&mut state).is_none());
     }
 
@@ -2073,7 +2597,14 @@ mod spec_11_r113_the_work_cursor_m3_gate {
         // No engine sequence registered this hook and `body`'s script has no step by that name, so
         // nothing can resume it: a lost sequence must never be dropped in silence.
         let orphan = sink.run(&mut state, |engine| {
-            work::push_work(engine, Resume { hook: "rc:no-such-sequence".to_string(), ..resume_of("never-registered") }, None)
+            work::push_work(
+                engine,
+                Resume {
+                    hook: "rc:no-such-sequence".to_string(),
+                    ..resume_of("never-registered")
+                },
+                None,
+            )
         });
 
         let raised = panic_text(|| sink.run(&mut state, |engine| work::run_work_item(engine, &orphan)));
@@ -2081,7 +2612,10 @@ mod spec_11_r113_the_work_cursor_m3_gate {
         let raised = panic_text(|| sink.run(&mut state, |engine| work::run_work_item(engine, &orphan)));
         assert!(raised.contains("rc:no-such-sequence"));
         // It is still owed rather than quietly gone.
-        assert_eq!(state.work.iter().map(|item| item.id.clone()).collect::<Vec<_>>(), vec![orphan.id.clone()]);
+        assert_eq!(
+            state.work.iter().map(|item| item.id.clone()).collect::<Vec<_>>(),
+            vec![orphan.id.clone()]
+        );
     }
 }
 
@@ -2099,9 +2633,21 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
         let victim = put(&mut state, FRAIL, slot(P2, Row::Units, 1)); // 1/3
 
         // The fixture really does carry all three keywords, or the three negatives below are decoration.
-        assert!(layers::unit_has(&state, &live(&state, &source), KeywordKind::Trample));
-        assert!(layers::unit_has(&state, &live(&state, &source), KeywordKind::Lifesteal));
-        assert!(layers::unit_has(&state, &live(&state, &source), KeywordKind::Poisonous));
+        assert!(layers::unit_has(
+            &state,
+            &live(&state, &source),
+            KeywordKind::Trample
+        ));
+        assert!(layers::unit_has(
+            &state,
+            &live(&state, &source),
+            KeywordKind::Lifesteal
+        ));
+        assert!(layers::unit_has(
+            &state,
+            &live(&state, &source),
+            KeywordKind::Poisonous
+        ));
 
         // The control: the same source into a *healthy* unit deals, marks and heals. Without this the
         // negatives below could pass on an inert fixture.
@@ -2117,7 +2663,9 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
                     sink,
                     DamageArgs {
                         source: Some(control_source.clone()),
-                        target: DamageTarget::Unit { instance: control_victim.clone() },
+                        target: DamageTarget::Unit {
+                            instance: control_victim.clone(),
+                        },
                         amount: 5,
                         flags: None,
                     },
@@ -2127,10 +2675,16 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
         );
         assert_eq!(
             hits(&control_events.events),
-            vec![Hit::new(&control_source.id, &control_victim.id, 3), Hit::new(&control_source.id, "hero-p2", 2)]
+            vec![
+                Hit::new(&control_source.id, &control_victim.id, 3),
+                Hit::new(&control_source.id, "hero-p2", 2)
+            ]
         );
         assert_eq!(live(&control, &control_victim).marked_destroyed, Some(true));
-        assert_eq!(live(&control, &control_victim).last_damaged_by, Some(control_source.id.clone()));
+        assert_eq!(
+            live(&control, &control_victim).last_damaged_by,
+            Some(control_source.id.clone())
+        );
         // 3 off the unit plus 2 off the hero: the total healed is 5.
         assert_eq!(control.players.p1.hero.health - control_before, 5);
 
@@ -2142,7 +2696,9 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
                 sink,
                 DamageArgs {
                     source: None,
-                    target: DamageTarget::Unit { instance: victim.clone() },
+                    target: DamageTarget::Unit {
+                        instance: victim.clone(),
+                    },
                     amount: 3,
                     flags: None,
                 },
@@ -2150,7 +2706,10 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
         });
         assert_eq!(live(&state, &victim).damage, 3);
         assert_eq!(layers::unit_view(&state, &live(&state, &victim)).health, 0);
-        assert_eq!(zones::card_at(&state, slot(P2, Row::Units, 1)).map(|card| card.id.clone()), Some(victim.id.clone()));
+        assert_eq!(
+            zones::card_at(&state, slot(P2, Row::Units, 1)).map(|card| card.id.clone()),
+            Some(victim.id.clone())
+        );
         assert_ne!(live(&state, &victim).marked_destroyed, Some(true));
         assert!(live(&state, &victim).last_damaged_by.is_none());
 
@@ -2163,7 +2722,9 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
                 sink,
                 DamageArgs {
                     source: Some(source.clone()),
-                    target: DamageTarget::Unit { instance: at_zero.clone() },
+                    target: DamageTarget::Unit {
+                        instance: at_zero.clone(),
+                    },
                     amount: 5,
                     flags: None,
                 },
@@ -2180,7 +2741,9 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
             events
                 .events
                 .iter()
-                .filter(|event| serde_json::to_string(event).expect("an event").contains(&victim.id))
+                .filter(|event| serde_json::to_string(event)
+                    .expect("an event")
+                    .contains(&victim.id))
                 .collect::<Vec<_>>()
                 .is_empty()
         );
@@ -2246,7 +2809,8 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
      {
         let mut state = game("r116-delta");
         let view = |state: &GameState, card: &CardInstance| layers::unit_view(state, &live(state, card));
-        let buffed = |state: &GameState, card: &CardInstance| layers::stats_with_buffs(state, &live(state, card));
+        let buffed =
+            |state: &GameState, card: &CardInstance| layers::stats_with_buffs(state, &live(state, card));
         let one = put(&mut state, SETTER, slot(P1, Row::Units, 1)); // printed 2/6
         assert_eq!(view(&state, &one).attack, 2); // nothing to measure yet
         assert_eq!(view(&state, &one).max_health, 6);
@@ -2275,7 +2839,10 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
         all.insert(
             PROJECTOR.to_string(),
             both(Script {
-                set_stat: Some(read_hook(|_| SetStat { attack: Some(-99), max_health: Some(-99) })),
+                set_stat: Some(read_hook(|_| SetStat {
+                    attack: Some(-99),
+                    max_health: Some(-99),
+                })),
                 ..Script::default()
             }),
         );
@@ -2294,7 +2861,11 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
 
     fn answer(state: &GameState) -> ActionBody {
         ActionBody::Answer {
-            choice_id: state.pending.as_ref().map(|pending| pending.id.clone()).unwrap_or_default(),
+            choice_id: state
+                .pending
+                .as_ref()
+                .map(|pending| pending.id.clone())
+                .unwrap_or_default(),
             selection: vec![Selection::None],
         }
     }
@@ -2304,7 +2875,10 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
         // The control first: a play that never pauses owes nothing at all, and its Cry fires once. If
         // the pipeline parked itself in advance this queue would not be empty.
         let mut clean = playing("r117-no-pause");
-        let clean_card = must(in_hand(&mut clean, CRIER, P1, 1).into_iter().next(), "a Cry unit in hand");
+        let clean_card = must(
+            in_hand(&mut clean, CRIER, P1, 1).into_iter().next(),
+            "a Cry unit in hand",
+        );
         let straight = act_result(
             &clean,
             P1,
@@ -2318,20 +2892,38 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
         // once: one item for one play, belonging to the player whose pipeline it is.
         let mut state = playing("r117-pause");
         put(&mut state, ASK_TRAP, slot(P2, Row::Backrow, 1));
-        let card = must(in_hand(&mut state, CRIER, P1, 1).into_iter().next(), "a Cry unit in hand");
-        let paused =
-            act_result(&state, P1, play_body(json!({ "instanceId": card.id, "zone": { "row": "units", "lane": 1 } })));
+        let card = must(
+            in_hand(&mut state, CRIER, P1, 1).into_iter().next(),
+            "a Cry unit in hand",
+        );
+        let paused = act_result(
+            &state,
+            P1,
+            play_body(json!({ "instanceId": card.id, "zone": { "row": "units", "lane": 1 } })),
+        );
         assert!(paused.error.is_none());
-        assert_eq!(paused.state.pending.as_ref().map(|pending| pending.player_id), Some(P2));
+        assert_eq!(
+            paused.state.pending.as_ref().map(|pending| pending.player_id),
+            Some(P2)
+        );
 
-        let owed: Vec<&WorkItem> =
-            paused.state.work.iter().filter(|item| item.resume.hook == play_steps::PLAY_WORK_KIND).collect();
+        let owed: Vec<&WorkItem> = paused
+            .state
+            .work
+            .iter()
+            .filter(|item| item.resume.hook == play_steps::PLAY_WORK_KIND)
+            .collect();
         assert_eq!(owed.len(), 1);
         assert_eq!(owed.iter().map(|item| item.owner).collect::<Vec<_>>(), vec![P1]);
         // Ahead of it, the trap's own end (§10.3: it resolves to completion before the play goes on,
         // R113), owed at the same pause and no sooner.
         assert_eq!(
-            paused.state.work.iter().map(|item| item.resume.hook.clone()).collect::<Vec<_>>(),
+            paused
+                .state
+                .work
+                .iter()
+                .map(|item| item.resume.hook.clone())
+                .collect::<Vec<_>>(),
             vec![traps::TRAP_FIRING_WORK, play_steps::PLAY_WORK_KIND]
         );
 
@@ -2343,7 +2935,13 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
         // The answer runs the trap's continuation and then the owed remainder, once each.
         let answered = act(&paused.state, P2, answer(&paused.state));
         assert_eq!(notes(&answered), vec!["answered", "cry"]);
-        assert_eq!(notes(&answered).iter().filter(|step| step.as_str() == "cry").count(), 1);
+        assert_eq!(
+            notes(&answered)
+                .iter()
+                .filter(|step| step.as_str() == "cry")
+                .count(),
+            1
+        );
         assert!(answered.work.is_empty());
         assert!(answered.pending.is_none());
     }
@@ -2352,13 +2950,22 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
     fn r118_lets_a_traps_prompt_interrupt_a_play_without_eating_its_cry_which_still_fires_exactly_once() {
         let mut state = playing("r118-cry-survives");
         put(&mut state, ASK_TRAP, slot(P2, Row::Backrow, 1));
-        let card = must(in_hand(&mut state, CRIER, P1, 1).into_iter().next(), "a Cry unit in hand");
+        let card = must(
+            in_hand(&mut state, CRIER, P1, 1).into_iter().next(),
+            "a Cry unit in hand",
+        );
 
-        let paused =
-            act_result(&state, P1, play_body(json!({ "instanceId": card.id, "zone": { "row": "units", "lane": 1 } })));
+        let paused = act_result(
+            &state,
+            P1,
+            play_body(json!({ "instanceId": card.id, "zone": { "row": "units", "lane": 1 } })),
+        );
         assert!(paused.error.is_none());
         // The trap holds the play between step 4's `summoned` and step 5's Cry (§10.3, R17).
-        assert_eq!(paused.state.pending.as_ref().map(|pending| pending.player_id), Some(P2));
+        assert_eq!(
+            paused.state.pending.as_ref().map(|pending| pending.player_id),
+            Some(P2)
+        );
         assert!(notes(&paused.state).is_empty());
 
         let answered = act(&paused.state, P2, answer(&paused.state));
@@ -2377,9 +2984,15 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
         // the field leaves nothing to resolve, so the Cry never fires.
         let mut eaten = playing("r118-cry-lost");
         put(&mut eaten, EAT_TRAP, slot(P2, Row::Backrow, 1));
-        let doomed = must(in_hand(&mut eaten, CRIER, P1, 1).into_iter().next(), "a Cry unit in hand");
-        let after =
-            act_result(&eaten, P1, play_body(json!({ "instanceId": doomed.id, "zone": { "row": "units", "lane": 1 } })));
+        let doomed = must(
+            in_hand(&mut eaten, CRIER, P1, 1).into_iter().next(),
+            "a Cry unit in hand",
+        );
+        let after = act_result(
+            &eaten,
+            P1,
+            play_body(json!({ "instanceId": doomed.id, "zone": { "row": "units", "lane": 1 } })),
+        );
         assert!(after.error.is_none());
         assert!(after.state.pending.is_none());
         assert_eq!(notes(&after.state), vec!["eaten"]);
@@ -2399,7 +3012,10 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
     fn r122_has_the_answering_action_finish_what_the_prompt_interrupted_even_driven_without_the_reducer() {
         let mut state = playing("r122-answer-drains");
         put(&mut state, ASK_ON_PLAY, slot(P2, Row::Backrow, 1));
-        let spell = must(in_hand(&mut state, SPELL_CRIER, P1, 1).into_iter().next(), "a Spell in hand");
+        let spell = must(
+            in_hand(&mut state, SPELL_CRIER, P1, 1).into_iter().next(),
+            "a Spell in hand",
+        );
 
         // p1 plays a Spell; p2's trap answers the `cardPlayed` and prompts, so the play stops between
         // step 4 and step 5 with its remainder owed (R117).
@@ -2415,10 +3031,21 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
 
         // Answer it through `answerPrompt` directly rather than through `reduce`: R122 puts the drain in
         // the answering action itself, so a caller driving the engine does not lose the remainder.
-        let choice_id = held.pending.as_ref().map(|pending| pending.id.clone()).unwrap_or_default();
+        let choice_id = held
+            .pending
+            .as_ref()
+            .map(|pending| pending.id.clone())
+            .unwrap_or_default();
         assert_eq!(
             refusal(with_sink(&mut held, |sink| {
-                prompts::answer_prompt(sink, &AnswerInput { player_id: P2, choice_id, selection: vec![Selection::None] })
+                prompts::answer_prompt(
+                    sink,
+                    &AnswerInput {
+                        player_id: P2,
+                        choice_id,
+                        selection: vec![Selection::None],
+                    },
+                )
             })),
             None
         );
@@ -2435,12 +3062,25 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
     #[test]
     fn r123_carries_a_declared_tributes_picks_in_targets_and_its_amount_as_the_plays_tribute_cost() {
         let mut state = game("r123-tribute-travels");
-        let card = must(in_hand(&mut state, CUBE, P1, 1).into_iter().next(), "a card with a tribute declaration");
+        let card = must(
+            in_hand(&mut state, CUBE, P1, 1).into_iter().next(),
+            "a card with a tribute declaration",
+        );
 
         // The `amount` on the declaration is the Tribute cost, not a `staticFlags.tribute`.
-        assert!(scripts::scripts_for(&state, CUBE).base.static_flags.as_ref().and_then(|flags| flags.tribute).is_none());
+        assert!(
+            scripts::scripts_for(&state, CUBE)
+                .base
+                .static_flags
+                .as_ref()
+                .and_then(|flags| flags.tribute)
+                .is_none()
+        );
         assert_eq!(
-            play_choices::declared_targets(&state, &card).iter().map(|decl| (decl.kind, decl.amount)).collect::<Vec<_>>(),
+            play_choices::declared_targets(&state, &card)
+                .iter()
+                .map(|decl| (decl.kind, decl.amount))
+                .collect::<Vec<_>>(),
             vec![(PromptKind::Tribute, Some(2))]
         );
         assert_eq!(play_choices::tribute_cost_of(&state, &card), 2);
@@ -2449,9 +3089,17 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
         let play = |state: &GameState, extra: Value| -> Option<String> {
             let mut fields = json!({ "instanceId": card.id, "zone": { "row": "units", "lane": 5 } });
             spread(&mut fields, extra);
-            refusal(play_choices::why_choices_refused(state, P1, &card, &play_action(fields)))
+            refusal(play_choices::why_choices_refused(
+                state,
+                P1,
+                &card,
+                &play_action(fields),
+            ))
         };
-        let needs = format!("{} needs Tribute 2", catalog::def_of(Some(&state), &card.def_id).name);
+        let needs = format!(
+            "{} needs Tribute 2",
+            catalog::def_of(Some(&state), &card.def_id).name
+        );
         assert_eq!(play(&state, json!({})), Some(needs.clone()));
 
         let one = put(&mut state, BODY, slot(P1, Row::Units, 1));
@@ -2470,13 +3118,18 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
         assert!(play(&state, json!({ "tributes": [one.id, two.id] })).is_some());
         // And the pick alone does not pay the cost.
         assert_eq!(
-            play(&state, json!({ "targets": [{ "pick": "instance", "instanceId": one.id }] })),
+            play(
+                &state,
+                json!({ "targets": [{ "pick": "instance", "instanceId": one.id }] })
+            ),
             Some(needs.clone())
         );
 
         // `legalActions` enumerates them that way: every offered play carries both lists.
-        let offered: Vec<Value> =
-            play_choices::play_actions_for(&state, P1, &card).iter().map(as_json).collect();
+        let offered: Vec<Value> = play_choices::play_actions_for(&state, P1, &card)
+            .iter()
+            .map(as_json)
+            .collect();
         assert!(!offered.is_empty());
         for action in &offered {
             assert_ne!(action.get("tributes").cloned().unwrap_or(json!([])), json!([]));
@@ -2485,7 +3138,13 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
         // The declared pick is offered over the same permanents the cost may take (§6.3's "your units").
         let offered_picks: BTreeSet<String> = offered
             .iter()
-            .flat_map(|action| action.get("targets").and_then(|targets| targets.as_array()).cloned().unwrap_or_default())
+            .flat_map(|action| {
+                action
+                    .get("targets")
+                    .and_then(|targets| targets.as_array())
+                    .cloned()
+                    .unwrap_or_default()
+            })
             .map(|pick| pick.to_string())
             .collect();
         let expected_picks: BTreeSet<String> = [&one, &two]
@@ -2499,7 +3158,10 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
         assert_eq!(play_choices::tribute_value_of(&state, &woolly), 2);
         assert!(play_choices::legal_tribute_sets(&state, P1, &card).contains(&vec![woolly.id.clone()]));
         assert_eq!(
-            play(&state, json!({ "tributes": [woolly.id], "targets": [{ "pick": "instance", "instanceId": woolly.id }] })),
+            play(
+                &state,
+                json!({ "tributes": [woolly.id], "targets": [{ "pick": "instance", "instanceId": woolly.id }] })
+            ),
             None
         );
 
@@ -2515,7 +3177,9 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
                 Some(&eater),
                 HookOptions {
                     controller: Some(P1),
-                    targets: Some(vec![Selection::Instance { instance_id: eaten.id.clone() }]),
+                    targets: Some(vec![Selection::Instance {
+                        instance_id: eaten.id.clone(),
+                    }]),
                     ..HookOptions::default()
                 },
             );
@@ -2539,7 +3203,12 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         let dealt = sink.run(state, |engine| {
             damage::deal_damage(
                 engine,
-                DamageArgs { source: None, target: DamageTarget::Hero { player: P2 }, amount, flags: None },
+                DamageArgs {
+                    source: None,
+                    target: DamageTarget::Hero { player: P2 },
+                    amount,
+                    flags: None,
+                },
             )
         });
         (dealt, sink.events)
@@ -2577,7 +3246,10 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         put(&mut capped, GUARD, slot(P2, Row::Backrow, 1)); // base: cap 5
         assert_eq!(damage::hero_damage_cap(&capped, P2), Some(ANTI_ONESHOT_CAP.base));
         put_radiant(&mut capped, GUARD, slot(P2, Row::Backrow, 2)); // radiant: cap 3
-        assert_eq!(damage::hero_damage_cap(&capped, P2), Some(ANTI_ONESHOT_CAP.radiant));
+        assert_eq!(
+            damage::hero_damage_cap(&capped, P2),
+            Some(ANTI_ONESHOT_CAP.radiant)
+        );
         const { assert!(ANTI_ONESHOT_CAP.radiant < ANTI_ONESHOT_CAP.base) };
         // Two cards, and a 10 is clamped to the smaller of the two — not to 8, and not to 5.
         assert_eq!(hit_hero(&mut capped, 10).0, ANTI_ONESHOT_CAP.radiant);
@@ -2592,7 +3264,10 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         let mut bare_sink = SinkFor::new(&bare);
         for n in [1, 2, 3, 4] {
             let before = bare.players.p1.hero.health;
-            assert!(matches!(bare_sink.run(&mut bare, |sink| draw::draw_one(sink, P1, None)), DrawOutcome::Fatigue));
+            assert!(matches!(
+                bare_sink.run(&mut bare, |sink| draw::draw_one(sink, P1, None)),
+                DrawOutcome::Fatigue
+            ));
             assert_eq!(before - bare.players.p1.hero.health, n);
         }
         assert_eq!(bare.players.p1.fatigue_count, 4);
@@ -2607,21 +3282,39 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         let full = HERO_HEALTH;
 
         for n in [1, 2, 3] {
-            assert!(matches!(sink.run(&mut armoured, |engine| draw::draw_one(engine, P1, None)), DrawOutcome::Fatigue));
+            assert!(matches!(
+                sink.run(&mut armoured, |engine| draw::draw_one(engine, P1, None)),
+                DrawOutcome::Fatigue
+            ));
             assert_eq!(armoured.players.p1.fatigue_count, n);
             assert_eq!(armoured.players.p1.hero.health, full);
         }
-        assert_eq!(hits(&sink.events), [0, 0, 0].iter().map(|amount| Hit::new("", "hero-p1", *amount)).collect::<Vec<_>>());
+        assert_eq!(
+            hits(&sink.events),
+            [0, 0, 0]
+                .iter()
+                .map(|amount| Hit::new("", "hero-p1", *amount))
+                .collect::<Vec<_>>()
+        );
 
         // The escalating Nth-draw damage is what eventually beats the Armor: the 4th draw is 4, so 1
         // gets through, and the 5th lets 2 through.
-        assert!(matches!(sink.run(&mut armoured, |engine| draw::draw_one(engine, P1, None)), DrawOutcome::Fatigue));
+        assert!(matches!(
+            sink.run(&mut armoured, |engine| draw::draw_one(engine, P1, None)),
+            DrawOutcome::Fatigue
+        ));
         assert_eq!(armoured.players.p1.hero.health, full - 1);
-        assert!(matches!(sink.run(&mut armoured, |engine| draw::draw_one(engine, P1, None)), DrawOutcome::Fatigue));
+        assert!(matches!(
+            sink.run(&mut armoured, |engine| draw::draw_one(engine, P1, None)),
+            DrawOutcome::Fatigue
+        ));
         assert_eq!(armoured.players.p1.hero.health, full - 1 - 2);
         assert_eq!(
             hits(&sink.events),
-            [0, 0, 0, 1, 2].iter().map(|amount| Hit::new("", "hero-p1", *amount)).collect::<Vec<_>>()
+            [0, 0, 0, 1, 2]
+                .iter()
+                .map(|amount| Hit::new("", "hero-p1", *amount))
+                .collect::<Vec<_>>()
         );
 
         // Step 3's cap rides along too, since it is the same pipeline: a fatigue above the cap is
@@ -2632,16 +3325,25 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         let mut capped_sink = SinkFor::new(&capped);
         capped.players.p1.fatigue_count = 8; // the next empty draw is the 9th
         let before_cap = capped.players.p1.hero.health;
-        assert!(matches!(capped_sink.run(&mut capped, |engine| draw::draw_one(engine, P1, None)), DrawOutcome::Fatigue));
+        assert!(matches!(
+            capped_sink.run(&mut capped, |engine| draw::draw_one(engine, P1, None)),
+            DrawOutcome::Fatigue
+        ));
         assert_eq!(FATIGUE_DAMAGE(9), 9);
-        assert_eq!(before_cap - capped.players.p1.hero.health, ANTI_ONESHOT_CAP.radiant);
+        assert_eq!(
+            before_cap - capped.players.p1.hero.health,
+            ANTI_ONESHOT_CAP.radiant
+        );
 
         // Only "lose health" escapes the pipeline (R18), which is what makes the contrast above a rule
         // about fatigue rather than about heroes.
         let mut losing = game("r125-lose-health");
         losing.players.p1.hero.armor = 3;
         let mut losing_sink = SinkFor::new(&losing);
-        assert_eq!(losing_sink.run(&mut losing, |engine| damage::lose_health(engine, P1, 2)), 2);
+        assert_eq!(
+            losing_sink.run(&mut losing, |engine| damage::lose_health(engine, P1, 2)),
+            2
+        );
         assert_eq!(losing.players.p1.hero.health, HERO_HEALTH - 2);
         assert_eq!(count_of(&losing_sink.events, GameEventType::Damage), 0);
     }
@@ -2660,7 +3362,17 @@ mod spec_11_r126_r127_delayed_continuations_m3_gate {
         put(&mut state, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
         let mut sink = SinkFor::new(&state);
         sink.run(&mut state, |engine| {
-            modifiers::schedule_delayed(engine, P1, DelayedAt { phase: Phase::Start, player: P1 }, resume, None, None);
+            modifiers::schedule_delayed(
+                engine,
+                P1,
+                DelayedAt {
+                    phase: Phase::Start,
+                    player: P1,
+                },
+                resume,
+                None,
+                None,
+            );
         });
         (state, sink)
     }
@@ -2678,7 +3390,13 @@ mod spec_11_r126_r127_delayed_continuations_m3_gate {
         let (mut state, mut sink) = scheduled("r126-hook", card.clone());
         let holder = put(&mut state, DELAYED_HOOK_CARD, slot(P1, Row::Units, 1));
         let delay = must(state.delayed.first().cloned(), "the delay");
-        state.delayed[0] = DelayedEffect { resume: Resume { instance_id: Some(holder.id.clone()), ..card.clone() }, ..delay };
+        state.delayed[0] = DelayedEffect {
+            resume: Resume {
+                instance_id: Some(holder.id.clone()),
+                ..card.clone()
+            },
+            ..delay
+        };
 
         sink.run(&mut state, |engine| turn::start_turn(engine, P1));
         assert_eq!(notes(&state), vec!["delayed:hook"]);
@@ -2701,10 +3419,21 @@ mod spec_11_r126_r127_delayed_continuations_m3_gate {
         let (mut state, mut sink) = scheduled("r126-step", card.clone());
         let holder = put(&mut state, DELAYED_STEP_CARD, slot(P1, Row::Units, 1));
         let delay = must(state.delayed.first().cloned(), "the delay");
-        state.delayed[0] = DelayedEffect { resume: Resume { instance_id: Some(holder.id.clone()), ..card.clone() }, ..delay };
+        state.delayed[0] = DelayedEffect {
+            resume: Resume {
+                instance_id: Some(holder.id.clone()),
+                ..card.clone()
+            },
+            ..delay
+        };
 
         // The step table really is where the continuation lives, so this is not a missing fixture.
-        assert!(scripts::scripts_for(&state, DELAYED_STEP_CARD).base.resume.contains_key("later"));
+        assert!(
+            scripts::scripts_for(&state, DELAYED_STEP_CARD)
+                .base
+                .resume
+                .contains_key("later")
+        );
 
         // `expect(() => startTurn(sink, "p1")).not.toThrow()`: a panic fails the test.
         sink.run(&mut state, |engine| turn::start_turn(engine, P1));
@@ -2740,7 +3469,14 @@ mod spec_11_r126_r127_delayed_continuations_m3_gate {
         put(&mut other, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
         let mut work_sink = SinkFor::new(&other);
         assert!(work_sink.run(&mut other, |engine| {
-            prompts::run_resume(engine, &resume, ResumeOptions { controller: Some(P1), ..ResumeOptions::default() })
+            prompts::run_resume(
+                engine,
+                &resume,
+                ResumeOptions {
+                    controller: Some(P1),
+                    ..ResumeOptions::default()
+                },
+            )
         }));
         assert_eq!(notes(&other), vec!["orphan:no-self:payload"]);
     }
@@ -2762,7 +3498,17 @@ mod spec_11_r126_r127_delayed_continuations_m3_gate {
             data,
         };
         sink.run(&mut state, |engine| {
-            modifiers::schedule_delayed(engine, P1, DelayedAt { phase: Phase::Start, player: P1 }, resume, None, None);
+            modifiers::schedule_delayed(
+                engine,
+                P1,
+                DelayedAt {
+                    phase: Phase::Start,
+                    player: P1,
+                },
+                resume,
+                None,
+                None,
+            );
         });
         // It ceases to exist before the delay comes due, which is the premise of the row.
         zones::remove_from_any_zone(&mut state, &mut scheduler);
@@ -2788,17 +3534,26 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
     }
 
     #[test]
-    fn r128_resolves_a_two_sided_sweep_as_units_in_r68_order_then_one_instance_per_scoped_hero_in_that_order() {
+    fn r128_resolves_a_two_sided_sweep_as_units_in_r68_order_then_one_instance_per_scoped_hero_in_that_order()
+    {
         let mut state = game("r128-sweep");
-        let mine = vec![put(&mut state, BODY, slot(P1, Row::Units, 1)), put(&mut state, BODY, slot(P1, Row::Units, 3))];
-        let theirs = vec![put(&mut state, BODY, slot(P2, Row::Units, 2)), put(&mut state, BODY, slot(P2, Row::Units, 4))];
+        let mine = vec![
+            put(&mut state, BODY, slot(P1, Row::Units, 1)),
+            put(&mut state, BODY, slot(P1, Row::Units, 3)),
+        ];
+        let theirs = vec![
+            put(&mut state, BODY, slot(P2, Row::Units, 2)),
+            put(&mut state, BODY, slot(P2, Row::Units, 4)),
+        ];
 
         let mut sink = SinkFor::new(&state);
         apply_as(
             &mut sink,
             &mut state,
             P1,
-            vec![effects::damage_all(json_as(json!({ "amount": 2, "heroes": true, "side": "any" })))],
+            vec![effects::damage_all(json_as(
+                json!({ "amount": 2, "heroes": true, "side": "any" }),
+            ))],
         );
 
         // p1 is active: its units in lane order, then p2's, then the two heroes in the same side order.
@@ -2817,7 +3572,9 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
             &mut flipped_sink,
             &mut flipped,
             P1,
-            vec![effects::damage_all(json_as(json!({ "amount": 2, "heroes": true, "side": "any" })))],
+            vec![effects::damage_all(json_as(
+                json!({ "amount": 2, "heroes": true, "side": "any" }),
+            ))],
         );
         let mut expected = ids(&flipped_theirs);
         expected.extend(ids(&flipped_mine));
@@ -2835,11 +3592,19 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
             &mut lethal_sink,
             &mut lethal,
             P1,
-            vec![effects::damage_all(json_as(json!({ "amount": 5, "side": "self" })))],
+            vec![effects::damage_all(json_as(
+                json!({ "amount": 5, "side": "self" }),
+            ))],
         );
-        assert_eq!(targets_hit(&lethal_sink.events), vec![doomed.id.clone(), after.id.clone()]);
+        assert_eq!(
+            targets_hit(&lethal_sink.events),
+            vec![doomed.id.clone(), after.id.clone()]
+        );
         assert!(layers::unit_view(&lethal, &live(&lethal, &doomed)).health <= 0);
-        assert_eq!(zones::card_at(&lethal, slot(P1, Row::Units, 1)).map(|card| card.id.clone()), Some(doomed.id.clone())); // still there: no state check yet
+        assert_eq!(
+            zones::card_at(&lethal, slot(P1, Row::Units, 1)).map(|card| card.id.clone()),
+            Some(doomed.id.clone())
+        ); // still there: no state check yet
     }
 
     #[test]
@@ -2850,7 +3615,12 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
         in_hand(&mut random, BODY, P1, 5);
         let mut random_sink = SinkFor::new(&random);
         let started_at = random_sink.rng.cursor();
-        apply_as(&mut random_sink, &mut random, P1, vec![effects::discard_random(json_as(json!({ "count": 5 })))]);
+        apply_as(
+            &mut random_sink,
+            &mut random,
+            P1,
+            vec![effects::discard_random(json_as(json!({ "count": 5 })))],
+        );
         assert!(random.players.p1.hand.is_empty());
         assert_eq!(random_sink.rng.cursor() - started_at, 5);
 
@@ -2859,7 +3629,12 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
         in_hand(&mut whole, BODY, P1, 5);
         let mut whole_sink = SinkFor::new(&whole);
         let before = whole_sink.rng.cursor();
-        apply_as(&mut whole_sink, &mut whole, P1, vec![effects::discard_hand(json_as(json!({})))]);
+        apply_as(
+            &mut whole_sink,
+            &mut whole,
+            P1,
+            vec![effects::discard_hand(json_as(json!({})))],
+        );
         assert!(whole.players.p1.hand.is_empty());
         assert_eq!(whole.players.p1.graveyard.len(), 5);
         assert_eq!(whole_sink.rng.cursor() - before, 0);
@@ -2869,7 +3644,12 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
         let mut empty = game("r129-fizzle");
         let mut empty_sink = SinkFor::new(&empty);
         let empty_before = empty_sink.rng.cursor();
-        apply_as(&mut empty_sink, &mut empty, P1, vec![effects::discard_random(json_as(json!({ "count": 3 })))]);
+        apply_as(
+            &mut empty_sink,
+            &mut empty,
+            P1,
+            vec![effects::discard_random(json_as(json!({ "count": 3 })))],
+        );
         assert_eq!(empty_sink.rng.cursor() - empty_before, 0);
     }
 
@@ -2929,7 +3709,11 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         let me = put(&mut state, FIENDER, slot(P1, Row::Units, 1)); // 5/7, tagged Felinor
 
         // The premise: its own def really does carry the tag, so a tag-only match would count it.
-        assert!(catalog::def_of(Some(&state), &me.def_id).tags.contains(&Tag::Felinor));
+        assert!(
+            catalog::def_of(Some(&state), &me.def_id)
+                .tags
+                .contains(&Tag::Felinor)
+        );
         // Alone it is exactly its printed face: "all your Felinors" is every OTHER one (R39's floor).
         assert_eq!(view(&state, &me).attack, 5);
         assert_eq!(view(&state, &me).max_health, 7);
@@ -2955,7 +3739,10 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         let plus = put(&mut state, FELINOR, slot(P1, Row::Units, 2)); // 3/10
         let minus = put(&mut state, FELINOR, slot(P1, Row::Units, 3)); // 3/10
         live_mut(&mut state, &plus).buffs = AttackHealth { attack: 4, health: 0 };
-        live_mut(&mut state, &minus).buffs = AttackHealth { attack: -5, health: 0 };
+        live_mut(&mut state, &minus).buffs = AttackHealth {
+            attack: -5,
+            health: 0,
+        };
 
         // The control: the helper really does read permanent buffs, so a positive one lands in full.
         // Without this the negative case below could fail on buffs that were never applied.
@@ -2975,7 +3762,10 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
 
         // And neither sum goes below 0: enough negative attack floors the attack contribution at 0
         // without dragging the health contribution down with it.
-        live_mut(&mut state, &minus).buffs = AttackHealth { attack: -99, health: 0 };
+        live_mut(&mut state, &minus).buffs = AttackHealth {
+            attack: -99,
+            health: 0,
+        };
         assert_eq!(view(&state, &me).attack, 5);
         assert_eq!(view(&state, &me).max_health, 7 + 10 + 10);
     }
@@ -2998,19 +3788,26 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         // R133: the pool a random pick draws from is the SET of cards played, so the replayed card is
         // one candidate and not two.
         let pool = played_cards_this_turn(&state, P1);
-        assert_eq!(pool.iter().map(|entry| entry.id.clone()).collect::<Vec<_>>(), vec![card.id.clone(), other.id.clone()]);
+        assert_eq!(
+            pool.iter().map(|entry| entry.id.clone()).collect::<Vec<_>>(),
+            vec![card.id.clone(), other.id.clone()]
+        );
 
         // R86's half of the same line still holds: an id whose card has ceased to exist drops out.
         zones::remove_from_any_zone(&mut state, &mut other);
         other.zone = Zone::Gone { player: P1 };
         assert_eq!(
-            played_cards_this_turn(&state, P1).iter().map(|entry| entry.id.clone()).collect::<Vec<_>>(),
+            played_cards_this_turn(&state, P1)
+                .iter()
+                .map(|entry| entry.id.clone())
+                .collect::<Vec<_>>(),
             vec![card.id.clone()]
         );
     }
 
     #[test]
-    fn r134_keeps_a_grade_counter_on_the_instance_through_a_change_of_control_and_reads_the_new_controllers_turn_log() {
+    fn r134_keeps_a_grade_counter_on_the_instance_through_a_change_of_control_and_reads_the_new_controllers_turn_log()
+     {
         let mut state = game("r134-grade");
         let index = put(&mut state, LOG_CARD, slot(P1, Row::Backrow, 1));
         live_mut(&mut state, &index).counters.grade = Some(2); // grade D: it needs 2 plays to rise
@@ -3023,7 +3820,12 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
 
         // Control changes. The counter is the card's, so it travels with the instance.
         let mut sink = SinkFor::new(&state);
-        apply_as(&mut sink, &mut state, P2, vec![effects::steal(json_as(json!({ "instanceId": index.id })))]);
+        apply_as(
+            &mut sink,
+            &mut state,
+            P2,
+            vec![effects::steal(json_as(json!({ "instanceId": index.id })))],
+        );
         assert_eq!(live(&state, &index).controller, P2);
         assert_eq!(grade_of(&live(&state, &index)), 2);
 
@@ -3045,7 +3847,12 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         let hand = in_hand(&mut state, BODY, P1, 3);
         let mut sink = SinkFor::new(&state);
         let before = state.counters.exiled;
-        apply_as(&mut sink, &mut state, P1, vec![effects::exile_hand(json_as(json!({})))]);
+        apply_as(
+            &mut sink,
+            &mut state,
+            P1,
+            vec![effects::exile_hand(json_as(json!({})))],
+        );
 
         assert!(state.players.p1.hand.is_empty());
         assert_eq!(state.counters.exiled - before, 3);
@@ -3132,7 +3939,9 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
         view.events
             .iter()
             .find_map(|entry| match entry {
-                GameEvent::TrapFired { instance_id, def_id, .. } => Some((instance_id.clone(), def_id.clone())),
+                GameEvent::TrapFired {
+                    instance_id, def_id, ..
+                } => Some((instance_id.clone(), def_id.clone())),
                 _ => None,
             })
             .unwrap_or_else(|| panic!("no trapFired in view"))
@@ -3148,20 +3957,32 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
         // The control: the layer-4 reading really does see permanent buffs, so the negative case below
         // is about the floor and not about a buff that never applied.
         live_mut(&mut state, &donor).buffs = AttackHealth { attack: 4, health: 0 };
-        assert_eq!(layers::stats_with_buffs(&state, &live(&state, &donor)).attack, 3 + 4);
+        assert_eq!(
+            layers::stats_with_buffs(&state, &live(&state, &donor)).attack,
+            3 + 4
+        );
         assert_eq!(view(&state, &summer).attack, 5 + 7);
 
         // R150: the layer-4 reading has no per-unit floor, so a contributor with a negative buff pulls
         // the total down rather than contributing nothing.
-        live_mut(&mut state, &donor).buffs = AttackHealth { attack: -5, health: 0 };
-        assert_eq!(layers::stats_with_buffs(&state, &live(&state, &donor)).attack, 3 - 5);
+        live_mut(&mut state, &donor).buffs = AttackHealth {
+            attack: -5,
+            health: 0,
+        };
+        assert_eq!(
+            layers::stats_with_buffs(&state, &live(&state, &donor)).attack,
+            3 - 5
+        );
 
         // The floor belongs where the value is finally used — on the combined total (R132), per stat.
         assert_eq!(view(&state, &summer).attack, 5);
         assert_eq!(view(&state, &summer).max_health, 7 + 10);
 
         // And on a card's own stats, at the point of display.
-        live_mut(&mut state, &donor).buffs = AttackHealth { attack: -99, health: 0 };
+        live_mut(&mut state, &donor).buffs = AttackHealth {
+            attack: -99,
+            health: 0,
+        };
         assert_eq!(view(&state, &donor).attack, 0);
         assert_eq!(view(&state, &summer).attack, 5);
     }
@@ -3171,10 +3992,17 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
         let mut state = game("r154-trap-lane");
         let trap = put(&mut state, BARE_TRAP, slot(P1, Row::Backrow, 3));
         let mut sink = SinkFor::new(&state);
-        assert_eq!(sink.run(&mut state, |engine| traps::fire_traps_for(engine, &played(P2))).fired, vec![trap.id.clone()]);
+        assert_eq!(
+            sink.run(&mut state, |engine| traps::fire_traps_for(engine, &played(P2)))
+                .fired,
+            vec![trap.id.clone()]
+        );
 
         let fired = must(
-            sink.events.iter().find(|event| matches!(event, GameEvent::TrapFired { .. })).cloned(),
+            sink.events
+                .iter()
+                .find(|event| matches!(event, GameEvent::TrapFired { .. }))
+                .cloned(),
             "a trapFired event",
         );
         match &fired {
@@ -3191,7 +4019,10 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
         // `viewFor` reads its event stream off `state.applied`, which only a completed `reduce` writes
         // (`rememberNonce`). This fixture drives the sink directly, so the action has to be recorded
         // the way `reduce` would before any view can see it.
-        state.applied = vec![AppliedAction { nonce: "r154".to_string(), events: sink.events.clone() }];
+        state.applied = vec![AppliedAction {
+            nonce: "r154".to_string(),
+            events: sink.events.clone(),
+        }];
 
         // Its identity follows §10.8's redaction: the controller reads it, the other player reads the
         // sentinel — keyed to the controller and NOT to the card's current zone, because firing the
@@ -3199,7 +4030,10 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
         let owner = view_for::view_for(&state, P1);
         let other = view_for::view_for(&state, P2);
         assert_eq!(seen_by(&owner), (trap.id.clone(), trap.def_id.clone()));
-        assert_eq!(seen_by(&other), (view_for::HIDDEN_ID.to_string(), view_for::HIDDEN_ID.to_string()));
+        assert_eq!(
+            seen_by(&other),
+            (view_for::HIDDEN_ID.to_string(), view_for::HIDDEN_ID.to_string())
+        );
     }
 
     #[test]
@@ -3207,16 +4041,31 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
         let mut state = game("r763-trap-to-library");
         let trap = put(&mut state, BARE_TRAP, slot(P1, Row::Backrow, 3));
         let mut sink = SinkFor::new(&state);
-        assert_eq!(sink.run(&mut state, |engine| traps::fire_traps_for(engine, &played(P2))).fired, vec![trap.id.clone()]);
-        state.applied = vec![AppliedAction { nonce: "r763".to_string(), events: sink.events.clone() }];
+        assert_eq!(
+            sink.run(&mut state, |engine| traps::fire_traps_for(engine, &played(P2)))
+                .fired,
+            vec![trap.id.clone()]
+        );
+        state.applied = vec![AppliedAction {
+            nonce: "r763".to_string(),
+            events: sink.events.clone(),
+        }];
 
         // The control: the fired trap sits in a public pile, where R154 lets its controller read it.
-        assert_eq!(seen_by(&view_for::view_for(&state, P1)), (trap.id.clone(), trap.def_id.clone()));
+        assert_eq!(
+            seen_by(&view_for::view_for(&state, P1)),
+            (trap.id.clone(), trap.def_id.clone())
+        );
 
         // C #17 Counterspell Trap shuffled back into its owner's deck: §10.8 and R310 never send the id
         // of a library card, so the event that announced the flip reads as the sentinel to both seats.
         let mut fired_trap = must(find_instance(&state, &trap.id).cloned(), "the fired trap");
-        zones::move_to_zone(&mut state, &mut fired_trap, OffFieldZone::Library, MoveToZoneOptions::default());
+        zones::move_to_zone(
+            &mut state,
+            &mut fired_trap,
+            OffFieldZone::Library,
+            MoveToZoneOptions::default(),
+        );
         let hidden = (view_for::HIDDEN_ID.to_string(), view_for::HIDDEN_ID.to_string());
         assert_eq!(seen_by(&view_for::view_for(&state, P1)), hidden);
         assert_eq!(seen_by(&view_for::view_for(&state, P2)), hidden);
@@ -3238,8 +4087,13 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         put(&mut roomy, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
         let mut roomy_sink = SinkFor::new(&roomy);
         // Cast it straight out of the hand: `castCard` takes it out of whatever pile holds it.
-        let lands = must(in_hand(&mut roomy, CRIER, P1, 1).into_iter().next(), "a permanent to cast");
-        roomy_sink.run(&mut roomy, |sink| resolve::cast_card(sink, &lands, CastOptions::default()));
+        let lands = must(
+            in_hand(&mut roomy, CRIER, P1, 1).into_iter().next(),
+            "a permanent to cast",
+        );
+        roomy_sink.run(&mut roomy, |sink| {
+            resolve::cast_card(sink, &lands, CastOptions::default())
+        });
         assert!(unit_ids(&roomy, P1).contains(&lands.id));
         assert_eq!(notes(&roomy), vec!["cry"]);
 
@@ -3252,9 +4106,14 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         assert_eq!(zones::active_units_of(&state, P1).len(), 5);
 
         let mut sink = SinkFor::new(&state);
-        let cast = must(in_hand(&mut state, CRIER, P1, 1).into_iter().next(), "a permanent to cast");
+        let cast = must(
+            in_hand(&mut state, CRIER, P1, 1).into_iter().next(),
+            "a permanent to cast",
+        );
         let played_before = state.players.p1.turn_log.cards_played;
-        sink.run(&mut state, |engine| resolve::cast_card(engine, &cast, CastOptions::default()));
+        sink.run(&mut state, |engine| {
+            resolve::cast_card(engine, &cast, CastOptions::default())
+        });
 
         // A cast cannot be refused the way a play can (R70): it still counts as played...
         assert_eq!(state.players.p1.turn_log.cards_played, played_before + 1);
@@ -3271,14 +4130,17 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
     fn r139_lapses_a_once_per_turn_limit_at_the_turn_boundary_so_a_later_turn_is_told_whose_turn_it_is() {
         let mut state = game("r139-lapse");
         let card = put(&mut state, HEROIC, slot(P1, Row::Backrow, 1));
-        live_mut(&mut state, &card).memory.insert(POWER_KEY.to_string(), json!("burn")); // X 1
+        live_mut(&mut state, &card)
+            .memory
+            .insert(POWER_KEY.to_string(), json!("burn")); // X 1
         state.players.p1.mana.current = 0; // unaffordable, so the order of the checks is observable
 
         // Used this turn: the uses are counted against the turn they were made on (R384).
         let used_on = state.turn;
-        live_mut(&mut state, &card)
-            .memory
-            .insert(ACTIVATIONS_MEMORY_KEY.to_string(), json!({ "turn": used_on, "count": 1 }));
+        live_mut(&mut state, &card).memory.insert(
+            ACTIVATIONS_MEMORY_KEY.to_string(),
+            json!({ "turn": used_on, "count": 1 }),
+        );
         assert!(used_this_turn(&state, &live(&state, &card)));
         assert_eq!(
             refusal(why_cannot_activate_ability(&state, P1, &card.id, None)),
@@ -3296,7 +4158,10 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         assert!(!used_this_turn(&state, &live(&state, &card)));
 
         // So the player is told whose turn it is, not that the ability is spent.
-        assert_eq!(refusal(why_cannot_activate_ability(&state, P1, &card.id, None)), Some("it is not your turn".to_string()));
+        assert_eq!(
+            refusal(why_cannot_activate_ability(&state, P1, &card.id, None)),
+            Some("it is not your turn".to_string())
+        );
         // And on their own turn it is the mana, the check after the uses.
         state.active = P1;
         assert_eq!(
@@ -3308,13 +4173,21 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
     #[test]
     fn r140_gives_a_zone_less_stack_play_the_leftmost_empty_zone_and_lifts_occupancy_only_when_named() {
         let mut state = game("r140-stack-zone");
-        let card = must(in_hand(&mut state, &stacker.id, P1, 1).into_iter().next(), "a Stack card in hand");
+        let card = must(
+            in_hand(&mut state, &stacker.id, P1, 1).into_iter().next(),
+            "a Stack card in hand",
+        );
         let play = |state: &GameState, lane: Option<i32>| -> Option<String> {
             let fields = match lane {
                 None => json!({ "instanceId": card.id }),
                 Some(lane) => json!({ "instanceId": card.id, "zone": { "row": "units", "lane": lane } }),
             };
-            refusal(play_choices::why_choices_refused(state, P1, &card, &play_action(fields)))
+            refusal(play_choices::why_choices_refused(
+                state,
+                P1,
+                &card,
+                &play_action(fields),
+            ))
         };
 
         // The control: on an empty row the convenience path is fine, and a named zone is too.
@@ -3323,12 +4196,17 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
 
         // Fill every unit zone. A named occupied zone is still legal — that is exactly the refusal
         // Stack lifts (§3.2, R64).
-        let occupants: Vec<CardInstance> =
-            [1, 2, 3, 4, 5].into_iter().map(|lane| put(&mut state, BODY, slot(P1, Row::Units, lane))).collect();
+        let occupants: Vec<CardInstance> = [1, 2, 3, 4, 5]
+            .into_iter()
+            .map(|lane| put(&mut state, BODY, slot(P1, Row::Units, lane)))
+            .collect();
         assert_eq!(occupants.len(), 5);
         assert_eq!(play(&state, Some(2)), None);
         assert_eq!(
-            play_choices::legal_zones_for(&state, P1, &card, &[]).iter().map(|zone| zone.lane).collect::<Vec<_>>(),
+            play_choices::legal_zones_for(&state, P1, &card, &[])
+                .iter()
+                .map(|zone| zone.lane)
+                .collect::<Vec<_>>(),
             vec![1, 2, 3, 4, 5]
         );
 
@@ -3344,8 +4222,14 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         assert_eq!(play(&state, None), None);
         // "The leftmost empty, unlocked zone" is lane 4, not lane 1: lane 1 would accept a *named*
         // Stack play, and the convenience path deliberately does not take it.
-        assert_eq!(zones::first_free_zone(&state, P1, Row::Units), Some(slot(P1, Row::Units, 4)));
-        assert_eq!(zones::card_at(&state, slot(P1, Row::Units, 1)).map(|card| card.def_id.clone()), Some(BODY.to_string()));
+        assert_eq!(
+            zones::first_free_zone(&state, P1, Row::Units),
+            Some(slot(P1, Row::Units, 4))
+        );
+        assert_eq!(
+            zones::card_at(&state, slot(P1, Row::Units, 1)).map(|card| card.def_id.clone()),
+            Some(BODY.to_string())
+        );
     }
 
     #[test]
@@ -3392,33 +4276,50 @@ mod spec_11_r151_and_r153_arrivals_and_zone_gated_hooks_m3_gate {
 
         // It arrives somewhere a card can be looked at.
         let mut arriving = card.clone();
-        assert!(matches!(sink.run(&mut state, |engine| draw::add_to_hand(engine, &mut arriving)), AddToHandOutcome::Hand));
+        assert!(matches!(
+            sink.run(&mut state, |engine| draw::add_to_hand(engine, &mut arriving)),
+            AddToHandOutcome::Hand
+        ));
 
         // R151: it rolls on arrival, so it has a power again (R43, R78).
-        let rolled = must(live(&state, &card).memory.get(POWER_KEY).cloned(), "a rolled power");
+        let rolled = must(
+            live(&state, &card).memory.get(POWER_KEY).cloned(),
+            "a rolled power",
+        );
         assert!(rolled.is_string());
-        assert!(as_json(&HERO_POWER_NAMES).as_array().is_some_and(|names| names.contains(&rolled)));
+        assert!(
+            as_json(&HERO_POWER_NAMES)
+                .as_array()
+                .is_some_and(|names| names.contains(&rolled))
+        );
         assert!(must(power_of(&live(&state, &card)), "the rolled power").x > 0);
 
         // And the roll is idempotent: a card that already has one keeps it when it arrives again.
         let kept = must(power_of(&live(&state, &card)), "the rolled power");
         let mut again = live(&state, &card);
         state.players.p1.hand.retain(|entry| entry.id != card.id);
-        assert!(matches!(sink.run(&mut state, |engine| draw::add_to_hand(engine, &mut again)), AddToHandOutcome::Hand));
+        assert!(matches!(
+            sink.run(&mut state, |engine| draw::add_to_hand(engine, &mut again)),
+            AddToHandOutcome::Hand
+        ));
         let now = must(power_of(&live(&state, &card)), "the kept power");
         assert_eq!(as_json(&now.name), as_json(&kept.name));
         assert_eq!(now.x, kept.x);
     }
 
     #[test]
-    fn r153_registers_only_the_hooks_a_cards_zone_allows_so_a_hand_or_a_graveyard_answers_no_start_or_end_of_turn_hook() {
+    fn r153_registers_only_the_hooks_a_cards_zone_allows_so_a_hand_or_a_graveyard_answers_no_start_or_end_of_turn_hook()
+     {
         let mut state = game("r153-zone-hooks");
 
         // The control: on the field the card IS a holder for all three hooks, so the enumerator is live
         // and the negatives below are about the zone rather than about a hook that never registered.
         let on_field = put(&mut state, ZONE_HOOKS, slot(P1, Row::Backrow, 1));
         let holders = |state: &GameState, hook: HookName| -> Vec<String> {
-            triggers::trigger_holders_with_hook(state, hook, None).iter().map(|holder| holder.card.id.clone()).collect()
+            triggers::trigger_holders_with_hook(state, hook, None)
+                .iter()
+                .map(|holder| holder.card.id.clone())
+                .collect()
         };
         assert_eq!(holders(&state, HookName::StartOfTurn), vec![on_field.id.clone()]);
         assert_eq!(holders(&state, HookName::EndOfTurn), vec![on_field.id.clone()]);
@@ -3427,7 +4328,10 @@ mod spec_11_r151_and_r153_arrivals_and_zone_gated_hooks_m3_gate {
         // In a hand a card answers only its `handTriggers` (#89 Corpse Eater). A Field Spell held in
         // hand must not summon its token every turn, and a Gifted Program in hand must not make a play
         // Radiant — which is what an unfiltered enumeration lets both of them do.
-        let held = must(in_hand(&mut state, ZONE_HOOKS, P1, 1).into_iter().next(), "a copy in hand");
+        let held = must(
+            in_hand(&mut state, ZONE_HOOKS, P1, 1).into_iter().next(),
+            "a copy in hand",
+        );
         assert!(!holders(&state, HookName::StartOfTurn).contains(&held.id));
         assert!(!holders(&state, HookName::EndOfTurn).contains(&held.id));
         assert!(!holders(&state, HookName::OnPlayHook).contains(&held.id));
@@ -3459,7 +4363,13 @@ mod spec_11_r155_the_return_to_hand_flag_m3_gate {
     /// without taking it out of the first, so a flag written to it showed in both.
     fn copies(state: &GameState, id: &str) -> Vec<CardInstance> {
         let side = &state.players.p1;
-        side.hand.iter().chain(side.graveyard.iter()).chain(side.exile.iter()).filter(|card| card.id == id).cloned().collect()
+        side.hand
+            .iter()
+            .chain(side.graveyard.iter())
+            .chain(side.exile.iter())
+            .filter(|card| card.id == id)
+            .cloned()
+            .collect()
     }
 
     #[test]
@@ -3470,8 +4380,13 @@ mod spec_11_r155_the_return_to_hand_flag_m3_gate {
 
         // The real call site: a cast goes through the same landing a play does (R70), so this is §10.5
         // step 7 doing the flagging rather than the setter being poked directly.
-        let spell = must(in_hand(&mut state, RETURN_SPELL, P1, 1).into_iter().next(), "a returning Spell");
-        sink.run(&mut state, |engine| resolve::cast_card(engine, &spell, CastOptions::default()));
+        let spell = must(
+            in_hand(&mut state, RETURN_SPELL, P1, 1).into_iter().next(),
+            "a returning Spell",
+        );
+        sink.run(&mut state, |engine| {
+            resolve::cast_card(engine, &spell, CastOptions::default())
+        });
         assert!(ids(&state.players.p1.graveyard).contains(&spell.id));
         assert_eq!(live(&state, &spell).return_to_hand_at_end_of_turn, Some(true));
 
@@ -3480,33 +4395,58 @@ mod spec_11_r155_the_return_to_hand_flag_m3_gate {
         //
         // Not a Spell: #13's shape, a Unit with an end-of-turn hook that died the turn it was played.
         // It is in the play log AND in the graveyard, which is why the log cannot stand in for this.
-        let mut unit = must(in_hand(&mut state, DYING_UNIT, P1, 1).into_iter().next(), "a Unit with an end-of-turn hook");
+        let mut unit = must(
+            in_hand(&mut state, DYING_UNIT, P1, 1).into_iter().next(),
+            "a Unit with an end-of-turn hook",
+        );
         unit.zone = Zone::Graveyard { player: P1 };
         state.players.p1.hand.retain(|card| card.id != unit.id);
         state.players.p1.graveyard.push(unit.clone());
         state.players.p1.turn_log.played_ids.push(unit.id.clone());
-        assert!(scripts::scripts_for(&state, &unit.def_id).base.end_of_turn.is_some());
+        assert!(
+            scripts::scripts_for(&state, &unit.def_id)
+                .base
+                .end_of_turn
+                .is_some()
+        );
         resolve::flag_return_to_hand_at_end_of_turn(&mut state, &unit.id);
         assert_ne!(live(&state, &unit).return_to_hand_at_end_of_turn, Some(true));
 
         // A Spell whose face declares no end-of-turn return.
-        let plain = must(in_hand(&mut state, SPELL_CRIER, P1, 1).into_iter().next(), "a Spell with no end-of-turn hook");
+        let plain = must(
+            in_hand(&mut state, SPELL_CRIER, P1, 1).into_iter().next(),
+            "a Spell with no end-of-turn hook",
+        );
         live_mut(&mut state, &plain).zone = Zone::Graveyard { player: P1 };
         state.players.p1.graveyard.push(live(&state, &plain));
         resolve::flag_return_to_hand_at_end_of_turn(&mut state, &plain.id);
-        assert!(copies(&state, &plain.id).iter().all(|copy| copy.return_to_hand_at_end_of_turn != Some(true)));
+        assert!(
+            copies(&state, &plain.id)
+                .iter()
+                .all(|copy| copy.return_to_hand_at_end_of_turn != Some(true))
+        );
 
         // And #39's shape: a Spell that exiled itself is not in the graveyard when step 7 runs.
-        let exiled = must(in_hand(&mut state, RETURN_SPELL, P1, 1).into_iter().next(), "a second returning Spell");
+        let exiled = must(
+            in_hand(&mut state, RETURN_SPELL, P1, 1).into_iter().next(),
+            "a second returning Spell",
+        );
         live_mut(&mut state, &exiled).zone = Zone::Exile { player: P1 };
         state.players.p1.exile.push(live(&state, &exiled));
         resolve::flag_return_to_hand_at_end_of_turn(&mut state, &exiled.id);
-        assert!(copies(&state, &exiled.id).iter().all(|copy| copy.return_to_hand_at_end_of_turn != Some(true)));
+        assert!(
+            copies(&state, &exiled.id)
+                .iter()
+                .all(|copy| copy.return_to_hand_at_end_of_turn != Some(true))
+        );
 
         // The flag means "this turn": cleanup clears it at the end of the turn that set it.
         assert_eq!(state.active, P1);
         sink.run(&mut state, turn::end_turn);
-        assert_ne!(find_instance(&state, &spell.id).and_then(|card| card.return_to_hand_at_end_of_turn), Some(true));
+        assert_ne!(
+            find_instance(&state, &spell.id).and_then(|card| card.return_to_hand_at_end_of_turn),
+            Some(true)
+        );
     }
 
     #[test]
@@ -3520,7 +4460,10 @@ mod spec_11_r155_the_return_to_hand_flag_m3_gate {
         };
 
         // A flagged Spell in the graveyard answers its end-of-turn return (R153's one graveyard hook).
-        let mut flagged = must(in_hand(&mut state, RETURN_SPELL, P1, 1).into_iter().next(), "a returning Spell");
+        let mut flagged = must(
+            in_hand(&mut state, RETURN_SPELL, P1, 1).into_iter().next(),
+            "a returning Spell",
+        );
         flagged.zone = Zone::Graveyard { player: P1 };
         state.players.p1.hand = vec![];
         state.players.p1.graveyard.push(flagged.clone());
@@ -3538,6 +4481,9 @@ mod spec_11_r155_the_return_to_hand_flag_m3_gate {
 
         // Flagging it is what admits it, so the gate is the flag and nothing else.
         live_mut(&mut state, &unflagged).return_to_hand_at_end_of_turn = Some(true);
-        assert_eq!(end_of_turn_holders(&state), vec![flagged.id.clone(), unflagged.id.clone()]);
+        assert_eq!(
+            end_of_turn_holders(&state),
+            vec![flagged.id.clone(), unflagged.id.clone()]
+        );
     }
 }

@@ -21,34 +21,106 @@ use sqlx::{Connection, PgConnection, Postgres, Transaction};
 /// here and its checksum to `tests/store/migrations_pinned.rs`; that test fails on a file in the
 /// directory that this list does not name.
 pub const MIGRATIONS: &[(&str, &str)] = &[
-    ("0001_profiles_and_invites.sql", include_str!("../../migrations/0001_profiles_and_invites.sql")),
-    ("0002_collection.sql", include_str!("../../migrations/0002_collection.sql")),
-    ("0003_loadouts.sql", include_str!("../../migrations/0003_loadouts.sql")),
-    ("0004_matches.sql", include_str!("../../migrations/0004_matches.sql")),
+    (
+        "0001_profiles_and_invites.sql",
+        include_str!("../../migrations/0001_profiles_and_invites.sql"),
+    ),
+    (
+        "0002_collection.sql",
+        include_str!("../../migrations/0002_collection.sql"),
+    ),
+    (
+        "0003_loadouts.sql",
+        include_str!("../../migrations/0003_loadouts.sql"),
+    ),
+    (
+        "0004_matches.sql",
+        include_str!("../../migrations/0004_matches.sql"),
+    ),
     (
         "0005_service_role_reads_auth_users.sql",
         include_str!("../../migrations/0005_service_role_reads_auth_users.sql"),
     ),
-    ("0006_redeem_ip_lock.sql", include_str!("../../migrations/0006_redeem_ip_lock.sql")),
-    ("0007_decks_and_trios.sql", include_str!("../../migrations/0007_decks_and_trios.sql")),
-    ("0008_queue_modes.sql", include_str!("../../migrations/0008_queue_modes.sql")),
-    ("0009_series.sql", include_str!("../../migrations/0009_series.sql")),
-    ("0010_jlockeed_tag.sql", include_str!("../../migrations/0010_jlockeed_tag.sql")),
-    ("0011_tutorial_progress.sql", include_str!("../../migrations/0011_tutorial_progress.sql")),
-    ("0012_account_deletion.sql", include_str!("../../migrations/0012_account_deletion.sql")),
-    ("0013_retention_purge.sql", include_str!("../../migrations/0013_retention_purge.sql")),
-    ("0014_game_records.sql", include_str!("../../migrations/0014_game_records.sql")),
-    ("0015_classic_sets_tags.sql", include_str!("../../migrations/0015_classic_sets_tags.sql")),
-    ("0016_catalog_growth_grants.sql", include_str!("../../migrations/0016_catalog_growth_grants.sql")),
-    ("0017_last_boards.sql", include_str!("../../migrations/0017_last_boards.sql")),
-    ("0018_player_settings.sql", include_str!("../../migrations/0018_player_settings.sql")),
-    ("0019_hero_portraits.sql", include_str!("../../migrations/0019_hero_portraits.sql")),
-    ("0020_plague_tag.sql", include_str!("../../migrations/0020_plague_tag.sql")),
-    ("0021_player_stats.sql", include_str!("../../migrations/0021_player_stats.sql")),
-    ("0022_ranked_ladder.sql", include_str!("../../migrations/0022_ranked_ladder.sql")),
-    ("0023_rematch.sql", include_str!("../../migrations/0023_rematch.sql")),
-    ("0024_glitch_boards.sql", include_str!("../../migrations/0024_glitch_boards.sql")),
-    ("0025_patch_retcon.sql", include_str!("../../migrations/0025_patch_retcon.sql")),
+    (
+        "0006_redeem_ip_lock.sql",
+        include_str!("../../migrations/0006_redeem_ip_lock.sql"),
+    ),
+    (
+        "0007_decks_and_trios.sql",
+        include_str!("../../migrations/0007_decks_and_trios.sql"),
+    ),
+    (
+        "0008_queue_modes.sql",
+        include_str!("../../migrations/0008_queue_modes.sql"),
+    ),
+    (
+        "0009_series.sql",
+        include_str!("../../migrations/0009_series.sql"),
+    ),
+    (
+        "0010_jlockeed_tag.sql",
+        include_str!("../../migrations/0010_jlockeed_tag.sql"),
+    ),
+    (
+        "0011_tutorial_progress.sql",
+        include_str!("../../migrations/0011_tutorial_progress.sql"),
+    ),
+    (
+        "0012_account_deletion.sql",
+        include_str!("../../migrations/0012_account_deletion.sql"),
+    ),
+    (
+        "0013_retention_purge.sql",
+        include_str!("../../migrations/0013_retention_purge.sql"),
+    ),
+    (
+        "0014_game_records.sql",
+        include_str!("../../migrations/0014_game_records.sql"),
+    ),
+    (
+        "0015_classic_sets_tags.sql",
+        include_str!("../../migrations/0015_classic_sets_tags.sql"),
+    ),
+    (
+        "0016_catalog_growth_grants.sql",
+        include_str!("../../migrations/0016_catalog_growth_grants.sql"),
+    ),
+    (
+        "0017_last_boards.sql",
+        include_str!("../../migrations/0017_last_boards.sql"),
+    ),
+    (
+        "0018_player_settings.sql",
+        include_str!("../../migrations/0018_player_settings.sql"),
+    ),
+    (
+        "0019_hero_portraits.sql",
+        include_str!("../../migrations/0019_hero_portraits.sql"),
+    ),
+    (
+        "0020_plague_tag.sql",
+        include_str!("../../migrations/0020_plague_tag.sql"),
+    ),
+    (
+        "0021_player_stats.sql",
+        include_str!("../../migrations/0021_player_stats.sql"),
+    ),
+    (
+        "0022_ranked_ladder.sql",
+        include_str!("../../migrations/0022_ranked_ladder.sql"),
+    ),
+    (
+        "0023_rematch.sql",
+        include_str!("../../migrations/0023_rematch.sql"),
+    ),
+    (
+        "0024_glitch_boards.sql",
+        include_str!("../../migrations/0024_glitch_boards.sql"),
+    ),
+    (
+        "0025_patch_retcon.sql",
+        include_str!("../../migrations/0025_patch_retcon.sql"),
+    ),
     (
         "0026_catalyst_prime_acclaimed_tags.sql",
         include_str!("../../migrations/0026_catalyst_prime_acclaimed_tags.sql"),
@@ -88,7 +160,11 @@ pub const REWRITTEN: &[(&str, &[&str])] = &[("0013_retention_purge.sql", &["16b9
 
 /// `REWRITTEN[filename] ?? []`: the earlier checksums a database may hold for `filename`.
 pub fn rewritten(filename: &str) -> &'static [&'static str] {
-    REWRITTEN.iter().find(|(name, _)| *name == filename).map(|(_, earlier)| *earlier).unwrap_or(&[])
+    REWRITTEN
+        .iter()
+        .find(|(name, _)| *name == filename)
+        .map(|(_, earlier)| *earlier)
+        .unwrap_or(&[])
 }
 
 /// FNV-1a, so a changed file that was already applied is reported instead of silently skipped.
@@ -101,8 +177,11 @@ pub fn checksum(text: &str) -> String {
 /// TS `listMigrations()`: the `.sql` files, sorted by name (`a < b`, UTF-16 order; every name is
 /// ASCII, so `str::cmp` equals it). The list is embedded, so this only filters and sorts it.
 fn list_migrations() -> Vec<(&'static str, &'static str)> {
-    let mut entries: Vec<(&'static str, &'static str)> =
-        MIGRATIONS.iter().copied().filter(|(name, _)| name.ends_with(".sql")).collect();
+    let mut entries: Vec<(&'static str, &'static str)> = MIGRATIONS
+        .iter()
+        .copied()
+        .filter(|(name, _)| name.ends_with(".sql"))
+        .collect();
     entries.sort_by(|a, b| a.0.cmp(b.0));
     entries
 }
@@ -148,7 +227,10 @@ pub async fn migrate(connection_string: &str) -> anyhow::Result<Vec<String>> {
 async fn run_migrations(client: &mut PgConnection, applied: &mut Vec<String>) -> anyhow::Result<()> {
     {
         let mut tx = locked(client).await?;
-        sqlx::raw_sql(LEDGER).execute(&mut *tx).await.map_err(|e| anyhow!(error_message(&e)))?;
+        sqlx::raw_sql(LEDGER)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| anyhow!(error_message(&e)))?;
         tx.commit().await.map_err(|e| anyhow!(error_message(&e)))?;
     }
 

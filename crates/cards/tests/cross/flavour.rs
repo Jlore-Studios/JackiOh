@@ -65,7 +65,12 @@ mod r660_the_flavour_sidecar {
         let sidecar = flavour();
         let without: Vec<String> = CATALOG
             .keys()
-            .filter(|id| sidecar.get(id.as_str()).and_then(|entry| entry.get("flavour")).is_none())
+            .filter(|id| {
+                sidecar
+                    .get(id.as_str())
+                    .and_then(|entry| entry.get("flavour"))
+                    .is_none()
+            })
             .cloned()
             .collect();
         assert_eq!(without, Vec::<String>::new());

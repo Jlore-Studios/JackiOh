@@ -43,11 +43,11 @@ use sqlx::postgres::PgPoolOptions;
 use jackioh_engine::{Action, GameRecord, LastBoardEntry};
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
-    BotRating, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio, GameRecordQuery,
-    InviteCode, LastBoardKind, PlayerStatsListOptions, MatchActionRow, MatchClocks, MatchRow, PlayerSettingsLimits,
-    PlayerSettingsMergeInput, PlayerSettingsRow, Profile, ProfileCreateInput, ProfileStatus, RatedGameRow,
+    BotRating, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio, GameRecordQuery, InviteCode,
+    LastBoardKind, MatchActionRow, MatchClocks, MatchRow, PlayerSettingsLimits, PlayerSettingsMergeInput,
+    PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput, ProfileStatus, RatedGameRow,
     RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow,
-    StoreError, Ticket, Tx, TutorialMergeInput, TutorialProgressRow,
+    StoreError, Ticket, TutorialMergeInput, TutorialProgressRow, Tx,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank};
@@ -200,7 +200,10 @@ impl StoreHarness {
             email_verified: {
                 let unverified = Arc::clone(&unverified);
                 Arc::new(move |profile_id: &str| {
-                    !unverified.lock().expect("the unverified profiles").contains(profile_id)
+                    !unverified
+                        .lock()
+                        .expect("the unverified profiles")
+                        .contains(profile_id)
                 })
             },
             enabled: {
@@ -241,7 +244,10 @@ impl StoreHarness {
     pub async fn postgres() -> Option<StoreHarness> {
         let url = database_url()?;
         let admin = admin_client(&url).await;
-        sqlx::raw_sql(TRUNCATE).execute(&admin).await.expect("truncate every table");
+        sqlx::raw_sql(TRUNCATE)
+            .execute(&admin)
+            .await
+            .expect("truncate every table");
         seed_cards(&admin).await;
         let pool = PgPoolOptions::new()
             .connect(&url)
@@ -272,7 +278,10 @@ impl StoreHarness {
                 next_user.store(1, Ordering::SeqCst);
             }
             Ends::Postgres { admin } => {
-                sqlx::raw_sql(TRUNCATE).execute(admin).await.expect("truncate every table");
+                sqlx::raw_sql(TRUNCATE)
+                    .execute(admin)
+                    .await
+                    .expect("truncate every table");
                 // `app.settings` is not truncated (migration 0001 seeds it once), so the redemption
                 // switch is put back by hand rather than left flipped for whatever test runs next.
                 sqlx::query(REDEMPTION_ENABLED_SQL)
@@ -347,7 +356,9 @@ impl StoreHarness {
     /// `RedemptionSettings.enabled` hook in memory. `reset()` puts it back to true.
     pub async fn set_redemption_enabled(&self, enabled: bool) {
         match &self.ends {
-            Ends::Memory { redemption_enabled, .. } => redemption_enabled.store(enabled, Ordering::SeqCst),
+            Ends::Memory {
+                redemption_enabled, ..
+            } => redemption_enabled.store(enabled, Ordering::SeqCst),
             Ends::Postgres { admin } => {
                 sqlx::query(REDEMPTION_ENABLED_SQL)
                     .bind(enabled)
@@ -428,7 +439,9 @@ pub async fn seed_cards(admin: &PgPool) {
 
 /// `Date.now()`.
 fn now_ms() -> i64 {
-    let since = SystemTime::now().duration_since(UNIX_EPOCH).expect("the clock is after 1970");
+    let since = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("the clock is after 1970");
     i64::try_from(since.as_millis()).expect("epoch milliseconds fit an i64")
 }
 
@@ -490,7 +503,9 @@ fn absent(value: &Value, key: &str) -> bool {
 }
 
 fn ids_of<T: Serialize>(rows: &[T]) -> Vec<String> {
-    rows.iter().map(|row| must(j(row)["id"].as_str().map(str::to_string), "an id")).collect()
+    rows.iter()
+        .map(|row| must(j(row)["id"].as_str().map(str::to_string), "an id"))
+        .collect()
 }
 
 fn status(literal: &str) -> ProfileStatus {
@@ -556,7 +571,9 @@ fn id() -> String {
 
 /// §9.4: the account exists the moment auth says so, and stays pending until a code is redeemed.
 async fn pending_profile(harness: &StoreHarness, email: Option<&str>) -> Profile {
-    let email = email.map(str::to_string).unwrap_or_else(|| format!("{}@example.test", id()));
+    let email = email
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("{}@example.test", id()));
     let user_id = harness.new_user_id(&email).await;
     // Exactly what `resolveCaller` (src/api/http.ts) does.
     if let Some(existing) = q!(harness, t => t.profiles_get_by_user_id(&user_id)) {
@@ -570,7 +587,10 @@ async fn pending_profile(harness: &StoreHarness, email: Option<&str>) -> Profile
 async fn active_profile(harness: &StoreHarness, email: Option<&str>) -> Profile {
     let profile = pending_profile(harness, email).await;
     q!(harness, t => t.profiles_set_status(&profile.id, status("active")));
-    must(q!(harness, t => t.profiles_get_by_id(&profile.id)), "the profile after activation")
+    must(
+        q!(harness, t => t.profiles_get_by_id(&profile.id)),
+        "the profile after activation",
+    )
 }
 
 fn saved_deck(harness: &StoreHarness, profile_id: &str, over: Value) -> SavedDeck {
@@ -626,8 +646,14 @@ mod profiles {
         assert_eq!(shown["email"], email);
         assert_eq!(shown["userId"], user_id.as_str());
 
-        assert_eq!(q!(harness, t => t.profiles_get_by_id(&created.id)), Some(created.clone()));
-        assert_eq!(q!(harness, t => t.profiles_get_by_user_id(&user_id)), Some(created));
+        assert_eq!(
+            q!(harness, t => t.profiles_get_by_id(&created.id)),
+            Some(created.clone())
+        );
+        assert_eq!(
+            q!(harness, t => t.profiles_get_by_user_id(&user_id)),
+            Some(created)
+        );
     }
 
     async fn returns_null_for_an_unknown_profile(harness: &StoreHarness) {
@@ -653,26 +679,41 @@ mod profiles {
         let rating: Glicko = from(json!({ "rating": 1032, "deviation": 350, "volatility": 0.06 }));
         q!(harness, t => t.profiles_set_glicko(&profile.id, &rating));
         q!(harness, t => t.profiles_set_in_match(&profile.id, Some(match_id.as_str())));
-        let rated = j(&must(q!(harness, t => t.profiles_get_by_id(&profile.id)), "the rated profile"));
+        let rated = j(&must(
+            q!(harness, t => t.profiles_get_by_id(&profile.id)),
+            "the rated profile",
+        ));
         assert_eq!(rated["rating"].as_f64(), Some(1032.0));
         assert_eq!(rated["inMatchId"], match_id.as_str());
 
         // §9.5: "Every ending ... clears both players' in-match state."
         q!(harness, t => t.profiles_set_in_match(&profile.id, None));
-        assert!(j(&must(q!(harness, t => t.profiles_get_by_id(&profile.id)), "profile"))["inMatchId"].is_null());
+        assert!(
+            j(&must(
+                q!(harness, t => t.profiles_get_by_id(&profile.id)),
+                "profile"
+            ))["inMatchId"]
+                .is_null()
+        );
     }
 
     /// R603: a new profile starts at Glickman's deviation and volatility, and both move with it.
     async fn r603_round_trips_the_whole_glicko_triple(harness: &StoreHarness) {
         let profile = active_profile(harness, None).await;
-        let created = j(&must(q!(harness, t => t.profiles_get_by_id(&profile.id)), "the new profile"));
+        let created = j(&must(
+            q!(harness, t => t.profiles_get_by_id(&profile.id)),
+            "the new profile",
+        ));
         assert_eq!(created["rating"].as_f64(), Some(1000.0));
         assert_eq!(created["ratingDeviation"].as_f64(), Some(350.0));
         assert_eq!(created["ratingVolatility"].as_f64(), Some(0.06));
 
         let after: Glicko = from(json!({ "rating": 1016.25, "deviation": 330.5, "volatility": 0.059995 }));
         q!(harness, t => t.profiles_set_glicko(&profile.id, &after));
-        let moved = j(&must(q!(harness, t => t.profiles_get_by_id(&profile.id)), "the rated profile"));
+        let moved = j(&must(
+            q!(harness, t => t.profiles_get_by_id(&profile.id)),
+            "the rated profile",
+        ));
         assert_eq!(moved["rating"].as_f64(), Some(1016.25));
         assert_eq!(moved["ratingDeviation"].as_f64(), Some(330.5));
         assert_eq!(moved["ratingVolatility"].as_f64(), Some(0.059995));
@@ -741,7 +782,10 @@ mod codes {
     async fn round_trips_a_code_by_its_hash(harness: &StoreHarness) {
         let row = code(harness, json!({}));
         q!(harness, t => t.codes_insert(&row));
-        assert_eq!(q!(harness, t => t.codes_find_by_hash(&row.code_hash)), Some(row.clone()));
+        assert_eq!(
+            q!(harness, t => t.codes_find_by_hash(&row.code_hash)),
+            Some(row.clone())
+        );
         assert!(q!(harness, t => t.codes_find_by_hash("no-such-hash")).is_none());
     }
 
@@ -751,7 +795,10 @@ mod codes {
         q!(harness, t => t.codes_insert(&row));
         assert!(q!(harness, t => t.codes_claim(&row.id, harness.now())));
         assert!(!q!(harness, t => t.codes_claim(&row.id, harness.now())));
-        assert_eq!(must(q!(harness, t => t.codes_find_by_hash(&row.code_hash)), "the code").uses, 1);
+        assert_eq!(
+            must(q!(harness, t => t.codes_find_by_hash(&row.code_hash)), "the code").uses,
+            1
+        );
     }
 
     async fn refuses_a_revoked_or_expired_code(harness: &StoreHarness) {
@@ -769,21 +816,45 @@ mod codes {
         let now = harness.now();
         let ip_hash = format!("ip-{}", id());
         let attempts: [CodeAttempt; 3] = [
-            from(json!({ "profileId": profile.id, "ipHash": ip_hash, "result": "rejected", "reason": "missing", "at": now - 10 })),
-            from(json!({ "profileId": profile.id, "ipHash": ip_hash, "result": "ok", "reason": "redeemed", "at": now })),
-            from(json!({ "profileId": null, "ipHash": "other", "result": "rejected", "reason": "missing", "at": now })),
+            from(
+                json!({ "profileId": profile.id, "ipHash": ip_hash, "result": "rejected", "reason": "missing", "at": now - 10 }),
+            ),
+            from(
+                json!({ "profileId": profile.id, "ipHash": ip_hash, "result": "ok", "reason": "redeemed", "at": now }),
+            ),
+            from(
+                json!({ "profileId": null, "ipHash": "other", "result": "rejected", "reason": "missing", "at": now }),
+            ),
         ];
         for attempt in &attempts {
             q!(harness, t => t.codes_log_attempt(attempt));
         }
 
-        assert_eq!(q!(harness, t => t.codes_count_attempts_by_profile(&profile.id, now - 60_000)), 2);
-        assert_eq!(q!(harness, t => t.codes_count_attempts_by_profile(&profile.id, now + 1)), 0);
+        assert_eq!(
+            q!(harness, t => t.codes_count_attempts_by_profile(&profile.id, now - 60_000)),
+            2
+        );
+        assert_eq!(
+            q!(harness, t => t.codes_count_attempts_by_profile(&profile.id, now + 1)),
+            0
+        );
         // R192: when the oldest counted attempt was made, so the status can say when it lapses.
-        assert_eq!(q!(harness, t => t.codes_oldest_attempt_at_by_profile(&profile.id, now - 60_000)), Some(now - 10));
-        assert_eq!(q!(harness, t => t.codes_oldest_attempt_at_by_profile(&profile.id, now - 5)), Some(now));
-        assert_eq!(q!(harness, t => t.codes_oldest_attempt_at_by_profile(&profile.id, now + 1)), None);
-        assert_eq!(q!(harness, t => t.codes_count_attempts_by_ip(&ip_hash, now - 60_000)), 2);
+        assert_eq!(
+            q!(harness, t => t.codes_oldest_attempt_at_by_profile(&profile.id, now - 60_000)),
+            Some(now - 10)
+        );
+        assert_eq!(
+            q!(harness, t => t.codes_oldest_attempt_at_by_profile(&profile.id, now - 5)),
+            Some(now)
+        );
+        assert_eq!(
+            q!(harness, t => t.codes_oldest_attempt_at_by_profile(&profile.id, now + 1)),
+            None
+        );
+        assert_eq!(
+            q!(harness, t => t.codes_count_attempts_by_ip(&ip_hash, now - 60_000)),
+            2
+        );
         assert_eq!(q!(harness, t => t.codes_count_failures(now - 60_000)), 2);
     }
 
@@ -851,7 +922,12 @@ mod redeem {
         lit(&must(q!(harness, t => t.profiles_get_by_id(profile_id)), "the profile").status)
     }
 
-    async fn redeem_with(harness: &StoreHarness, profile_id: &str, code_hash: Option<&str>, ip_hash: &str) -> String {
+    async fn redeem_with(
+        harness: &StoreHarness,
+        profile_id: &str,
+        code_hash: Option<&str>,
+        ip_hash: &str,
+    ) -> String {
         let input: RedeemInviteCodeInput =
             from(json!({ "profileId": profile_id, "codeHash": code_hash, "ipHash": ip_hash }));
         lit(&q!(harness, t => t.redeem(&input)))
@@ -862,13 +938,19 @@ mod redeem {
         let profile = pending_profile(harness, None).await;
         let code = mint(harness, json!({})).await;
 
-        assert_eq!(redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip-ok").await, "ok");
+        assert_eq!(
+            redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip-ok").await,
+            "ok"
+        );
 
         assert_eq!(status_of(harness, &profile.id).await, "active");
         assert_eq!(uses_of(harness, &code.code_hash).await, 1);
         assert_eq!(attempts(harness, &profile.id).await, 1);
         // R111's launch grant rides the pending → active transition, wherever it is made.
-        assert_eq!(q!(harness, t => t.collection_get(&profile.id)).len(), harness.playable_ids.len());
+        assert_eq!(
+            q!(harness, t => t.collection_get(&profile.id)).len(),
+            harness.playable_ids.len()
+        );
     }
 
     /// §9.4: "Missing, expired and exhausted codes return an identical error." Revoked joins them
@@ -912,7 +994,10 @@ mod redeem {
         let profile = active_profile(harness, None).await;
         let code = mint(harness, json!({ "maxUses": 5 })).await;
 
-        assert_eq!(redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip").await, "not_pending");
+        assert_eq!(
+            redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip").await,
+            "not_pending"
+        );
         assert_eq!(uses_of(harness, &code.code_hash).await, 0);
         assert_eq!(attempts(harness, &profile.id).await, 0);
     }
@@ -923,14 +1008,20 @@ mod redeem {
         let code = mint(harness, json!({ "maxUses": 5 })).await;
         harness.set_email_verified(&profile.id, false).await;
 
-        assert_eq!(redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip").await, "email_unverified");
+        assert_eq!(
+            redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip").await,
+            "email_unverified"
+        );
         assert_eq!(status_of(harness, &profile.id).await, "pending");
         assert_eq!(uses_of(harness, &code.code_hash).await, 0);
         assert_eq!(attempts(harness, &profile.id).await, 0);
 
         // And verifying it is all that stood in the way.
         harness.set_email_verified(&profile.id, true).await;
-        assert_eq!(redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip").await, "ok");
+        assert_eq!(
+            redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip").await,
+            "ok"
+        );
     }
 
     /// §9.4 step 2: "reject if this profile made more than 5 attempts in the last hour" — and step 2
@@ -979,7 +1070,10 @@ mod redeem {
         }
 
         assert_eq!(attempts(harness, &profile.id).await, 0);
-        assert_eq!(redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), &ip_hash).await, "rate_limited_ip");
+        assert_eq!(
+            redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), &ip_hash).await,
+            "rate_limited_ip"
+        );
         assert_eq!(status_of(harness, &profile.id).await, "pending");
     }
 
@@ -991,14 +1085,20 @@ mod redeem {
         let code = mint(harness, json!({})).await;
         harness.set_redemption_enabled(false).await;
 
-        assert_eq!(redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip").await, "circuit_open");
+        assert_eq!(
+            redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip").await,
+            "circuit_open"
+        );
         // A good code is refused too, unspent, and the attempt still costs the caller a row.
         assert_eq!(status_of(harness, &profile.id).await, "pending");
         assert_eq!(uses_of(harness, &code.code_hash).await, 0);
         assert_eq!(attempts(harness, &profile.id).await, 1);
 
         harness.set_redemption_enabled(true).await;
-        assert_eq!(redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip").await, "ok");
+        assert_eq!(
+            redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip").await,
+            "ok"
+        );
     }
 
     /// §9.4 step 6 again, from the other side: "Two concurrent callers cannot both win the last
@@ -1008,8 +1108,14 @@ mod redeem {
         let second = pending_profile(harness, None).await;
         let code = mint(harness, json!({ "maxUses": 1 })).await;
 
-        assert_eq!(redeem_with(harness, &first.id, Some(code.code_hash.as_str()), "ip-a").await, "ok");
-        assert_eq!(redeem_with(harness, &second.id, Some(code.code_hash.as_str()), "ip-b").await, "invalid_code");
+        assert_eq!(
+            redeem_with(harness, &first.id, Some(code.code_hash.as_str()), "ip-a").await,
+            "ok"
+        );
+        assert_eq!(
+            redeem_with(harness, &second.id, Some(code.code_hash.as_str()), "ip-b").await,
+            "invalid_code"
+        );
 
         assert_eq!(status_of(harness, &first.id).await, "active");
         assert_eq!(status_of(harness, &second.id).await, "pending");
@@ -1058,7 +1164,9 @@ mod collection {
     }
 
     fn grant(profile_id: &str, card_id: &str, delta: i64, at: i64) -> CollectionGrant {
-        from(json!({ "profileId": profile_id, "cardId": card_id, "delta": delta, "reason": "admin", "at": at }))
+        from(
+            json!({ "profileId": profile_id, "cardId": card_id, "delta": delta, "reason": "admin", "at": at }),
+        )
     }
 
     async fn sets_absolute_quantities_and_appends_grants(harness: &StoreHarness) {
@@ -1075,12 +1183,26 @@ mod collection {
         let owned = q!(harness, t => t.collection_get(&profile.id));
         let card_ids: Vec<String> = owned.iter().map(|entry| entry.card_id.clone()).collect();
         assert_eq!(sorted(&card_ids), sorted(&[first.clone(), second.clone()]));
-        assert_eq!(must(owned.iter().find(|entry| entry.card_id == first), "the first card").quantity, 2);
+        assert_eq!(
+            must(
+                owned.iter().find(|entry| entry.card_id == first),
+                "the first card"
+            )
+            .quantity,
+            2
+        );
 
         // "SETS each card's quantity to the absolute value given; it does not add to it" (ports.ts).
         q!(harness, t => t.collection_upsert_quantities(&profile.id, &[entry(&first, 5)]));
         let after = q!(harness, t => t.collection_get(&profile.id));
-        assert_eq!(must(after.iter().find(|entry| entry.card_id == first), "the first card").quantity, 5);
+        assert_eq!(
+            must(
+                after.iter().find(|entry| entry.card_id == first),
+                "the first card"
+            )
+            .quantity,
+            5
+        );
     }
 
     /// §9.4: "Every collection change writes `collection` and `collection_grants` in one transaction."
@@ -1110,10 +1232,15 @@ mod collection {
         let profile = active_profile(harness, None).await;
         let card_id = must(harness.playable_ids.first().cloned(), "a card");
         let mut t = harness.db.begin(None).await.expect("begin");
-        t.collection_upsert_quantities(&profile.id, &[entry(&card_id, 3)]).await.expect("upsert");
+        t.collection_upsert_quantities(&profile.id, &[entry(&card_id, 3)])
+            .await
+            .expect("upsert");
         t.commit().await.expect("commit");
         let owned = q!(harness, t => t.collection_get(&profile.id));
-        assert_eq!(must(owned.iter().find(|entry| entry.card_id == card_id), "the card").quantity, 3);
+        assert_eq!(
+            must(owned.iter().find(|entry| entry.card_id == card_id), "the card").quantity,
+            3
+        );
     }
 
     both_stores!(
@@ -1146,7 +1273,9 @@ mod decks {
         assert_eq!(q!(harness, t => t.decks_list(&profile.id)), vec![deck]);
     }
 
-    async fn r641_round_trips_the_portrait_null_and_a_known_id_and_re_saves_it_in_place(harness: &StoreHarness) {
+    async fn r641_round_trips_the_portrait_null_and_a_known_id_and_re_saves_it_in_place(
+        harness: &StoreHarness,
+    ) {
         let profile = active_profile(harness, None).await;
         let portraitless = saved_deck(harness, &profile.id, json!({}));
         // One tick later, so "oldest first" below asks a real ordering question, not a tie.
@@ -1163,19 +1292,35 @@ mod decks {
         assert!(j(&portraitless)["portrait"].is_null());
         assert_ne!(portraitless, pictured);
 
-        assert_eq!(lit(&q!(harness, t => t.decks_upsert(&portraitless, 10))), "created");
+        assert_eq!(
+            lit(&q!(harness, t => t.decks_upsert(&portraitless, 10))),
+            "created"
+        );
         assert_eq!(lit(&q!(harness, t => t.decks_upsert(&pictured, 10))), "created");
-        assert_eq!(q!(harness, t => t.decks_get(&portraitless.id)), Some(portraitless.clone()));
-        assert_eq!(q!(harness, t => t.decks_get(&pictured.id)), Some(pictured.clone()));
-        let portraits: Vec<Value> =
-            q!(harness, t => t.decks_list(&profile.id)).iter().map(|deck| j(deck)["portrait"].clone()).collect();
+        assert_eq!(
+            q!(harness, t => t.decks_get(&portraitless.id)),
+            Some(portraitless.clone())
+        );
+        assert_eq!(
+            q!(harness, t => t.decks_get(&pictured.id)),
+            Some(pictured.clone())
+        );
+        let portraits: Vec<Value> = q!(harness, t => t.decks_list(&profile.id))
+            .iter()
+            .map(|deck| j(deck)["portrait"].clone())
+            .collect();
         assert_eq!(portraits, vec![Value::Null, json!("gary")]);
 
         // An update swaps the field like any other: `null` back to a choice and back again.
-        let changed: SavedDeck =
-            from(spread(j(&pictured), json!({ "portrait": null, "updatedAt": harness.now() + 1_000 })));
+        let changed: SavedDeck = from(spread(
+            j(&pictured),
+            json!({ "portrait": null, "updatedAt": harness.now() + 1_000 }),
+        ));
         assert_eq!(lit(&q!(harness, t => t.decks_upsert(&changed, 10))), "updated");
-        let expected: SavedDeck = from(spread(j(&changed), json!({ "createdAt": j(&pictured)["createdAt"] })));
+        let expected: SavedDeck = from(spread(
+            j(&changed),
+            json!({ "createdAt": j(&pictured)["createdAt"] }),
+        ));
         assert_eq!(q!(harness, t => t.decks_get(&pictured.id)), Some(expected));
     }
 
@@ -1204,22 +1349,39 @@ mod decks {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
         let now = harness.now();
-        let second = saved_deck(harness, &a.id, json!({ "name": "Second", "createdAt": now + 2, "updatedAt": now + 2 }));
-        let first = saved_deck(harness, &a.id, json!({ "name": "First", "createdAt": now + 1, "updatedAt": now + 1 }));
+        let second = saved_deck(
+            harness,
+            &a.id,
+            json!({ "name": "Second", "createdAt": now + 2, "updatedAt": now + 2 }),
+        );
+        let first = saved_deck(
+            harness,
+            &a.id,
+            json!({ "name": "First", "createdAt": now + 1, "updatedAt": now + 1 }),
+        );
         q!(harness, t => t.decks_upsert(&second, 10));
         q!(harness, t => t.decks_upsert(&first, 10));
         q!(harness, t => t.decks_upsert(&saved_deck(harness, &b.id, json!({})), 10));
-        let names: Vec<Value> = q!(harness, t => t.decks_list(&a.id)).iter().map(|deck| j(deck)["name"].clone()).collect();
+        let names: Vec<Value> = q!(harness, t => t.decks_list(&a.id))
+            .iter()
+            .map(|deck| j(deck)["name"].clone())
+            .collect();
         assert_eq!(names, vec![json!("First"), json!("Second")]);
     }
 
     async fn r250_refuses_a_create_past_the_cap_and_still_updates_at_the_cap(harness: &StoreHarness) {
         let profile = active_profile(harness, None).await;
-        let decks = [saved_deck(harness, &profile.id, json!({})), saved_deck(harness, &profile.id, json!({}))];
+        let decks = [
+            saved_deck(harness, &profile.id, json!({})),
+            saved_deck(harness, &profile.id, json!({})),
+        ];
         for deck in &decks {
             assert_eq!(lit(&q!(harness, t => t.decks_upsert(deck, 2))), "created");
         }
-        assert_eq!(lit(&q!(harness, t => t.decks_upsert(&saved_deck(harness, &profile.id, json!({})), 2))), "limit");
+        assert_eq!(
+            lit(&q!(harness, t => t.decks_upsert(&saved_deck(harness, &profile.id, json!({})), 2))),
+            "limit"
+        );
         assert_eq!(q!(harness, t => t.decks_list(&profile.id)).len(), 2);
         let renamed: SavedDeck = from(spread(j(&decks[0]), json!({ "name": "Renamed" })));
         assert_eq!(lit(&q!(harness, t => t.decks_upsert(&renamed, 2))), "updated");
@@ -1230,9 +1392,15 @@ mod decks {
         let other = active_profile(harness, None).await;
         let deck = saved_deck(harness, &owner.id, json!({}));
         q!(harness, t => t.decks_upsert(&deck, 10));
-        let theirs: SavedDeck = from(spread(j(&deck), json!({ "profileId": other.id, "name": "Mine now" })));
+        let theirs: SavedDeck = from(spread(
+            j(&deck),
+            json!({ "profileId": other.id, "name": "Mine now" }),
+        ));
         assert_eq!(lit(&q!(harness, t => t.decks_upsert(&theirs, 10))), "not_owner");
-        assert_eq!(j(&must(q!(harness, t => t.decks_get(&deck.id)), "the deck"))["name"], "Aggro");
+        assert_eq!(
+            j(&must(q!(harness, t => t.decks_get(&deck.id)), "the deck"))["name"],
+            "Aggro"
+        );
         assert!(!q!(harness, t => t.decks_remove(&other.id, &deck.id)));
     }
 
@@ -1295,8 +1463,10 @@ mod trios {
         let trio = saved_trio(harness, &profile.id, json!([ids[0], null, null]), json!({}));
         q!(harness, t => t.trios_upsert(&trio, 5));
         let updated_at = must(j(&trio)["updatedAt"].as_i64(), "updatedAt");
-        let edited: SavedTrio =
-            from(spread(j(&trio), json!({ "name": "Full", "deckIds": ids, "updatedAt": updated_at + 1 })));
+        let edited: SavedTrio = from(spread(
+            j(&trio),
+            json!({ "name": "Full", "deckIds": ids, "updatedAt": updated_at + 1 }),
+        ));
         assert_eq!(lit(&q!(harness, t => t.trios_upsert(&edited, 5))), "updated");
         assert_eq!(q!(harness, t => t.trios_get(&trio.id)), Some(edited));
     }
@@ -1306,9 +1476,15 @@ mod trios {
         let b = active_profile(harness, None).await;
         let [theirs, _, _] = three_decks(harness, &b.id).await;
         let borrowed = saved_trio(harness, &a.id, json!([theirs, null, null]), json!({}));
-        assert_eq!(lit(&q!(harness, t => t.trios_upsert(&borrowed, 5))), "unknown_deck");
+        assert_eq!(
+            lit(&q!(harness, t => t.trios_upsert(&borrowed, 5))),
+            "unknown_deck"
+        );
         let invented = saved_trio(harness, &a.id, json!([id(), null, null]), json!({}));
-        assert_eq!(lit(&q!(harness, t => t.trios_upsert(&invented, 5))), "unknown_deck");
+        assert_eq!(
+            lit(&q!(harness, t => t.trios_upsert(&invented, 5))),
+            "unknown_deck"
+        );
         assert!(q!(harness, t => t.trios_list(&a.id)).is_empty());
     }
 
@@ -1407,11 +1583,23 @@ mod tutorial {
 
         merged(write(json!(["basics", "spells"])).await);
         // A stale device that has won only lesson 1, or nothing at all, takes nothing away.
-        assert_eq!(completed(merged(write(json!(["basics"])).await)), json!(["basics", "spells"]));
-        assert_eq!(completed(merged(write(json!([])).await)), json!(["basics", "spells"]));
+        assert_eq!(
+            completed(merged(write(json!(["basics"])).await)),
+            json!(["basics", "spells"])
+        );
+        assert_eq!(
+            completed(merged(write(json!([])).await)),
+            json!(["basics", "spells"])
+        );
         // Another device's lesson joins them; a repeat of it is the same row.
-        assert_eq!(completed(merged(write(json!(["traps"])).await)), json!(["basics", "spells", "traps"]));
-        assert_eq!(completed(merged(write(json!(["traps", "traps"])).await)), json!(["basics", "spells", "traps"]));
+        assert_eq!(
+            completed(merged(write(json!(["traps"])).await)),
+            json!(["basics", "spells", "traps"])
+        );
+        assert_eq!(
+            completed(merged(write(json!(["traps", "traps"])).await)),
+            json!(["basics", "spells", "traps"])
+        );
         // An id no lesson of this client has is kept all the same: the server does not know the lessons.
         assert_eq!(
             completed(merged(write(json!(["lesson-from-a-newer-client"])).await)),
@@ -1435,13 +1623,25 @@ mod tutorial {
         };
         let choice = |row: TutorialProgressRow| j(&row)["hiddenChoice"].clone();
 
-        assert_eq!(choice(merged(choose(true, t0).await)), json!({ "hidden": true, "at": t0 }));
+        assert_eq!(
+            choice(merged(choose(true, t0).await)),
+            json!({ "hidden": true, "at": t0 })
+        );
         // "Show" made later, on another device, wins.
-        assert_eq!(choice(merged(choose(false, t0 + 5_000).await)), json!({ "hidden": false, "at": t0 + 5_000 }));
+        assert_eq!(
+            choice(merged(choose(false, t0 + 5_000).await)),
+            json!({ "hidden": false, "at": t0 + 5_000 })
+        );
         // An older "Hide" arriving afterwards does not undo it.
-        assert_eq!(choice(merged(choose(true, t0 + 1_000).await)), json!({ "hidden": false, "at": t0 + 5_000 }));
+        assert_eq!(
+            choice(merged(choose(true, t0 + 1_000).await)),
+            json!({ "hidden": false, "at": t0 + 5_000 })
+        );
         // The same instant is not newer: the stored choice stays.
-        assert_eq!(choice(merged(choose(true, t0 + 5_000).await)), json!({ "hidden": false, "at": t0 + 5_000 }));
+        assert_eq!(
+            choice(merged(choose(true, t0 + 5_000).await)),
+            json!({ "hidden": false, "at": t0 + 5_000 })
+        );
         // A write with no choice leaves the choice alone, and lessons alone move nothing else.
         let lessons_only = merged(
             merge(
@@ -1473,11 +1673,18 @@ mod tutorial {
                 3,
             )
         };
-        let completed_of = |row: Option<TutorialProgressRow>| j(&must(row, "the owner's row"))["completed"].clone();
+        let completed_of =
+            |row: Option<TutorialProgressRow>| j(&must(row, "the owner's row"))["completed"].clone();
 
         merged(write(owner.id.clone(), json!(["basics", "spells"])).await);
-        assert_eq!(write(owner.id.clone(), json!(["traps", "advanced"])).await, json!({ "kind": "limit" }));
-        assert_eq!(completed_of(q!(harness, t => t.tutorial_get(&owner.id))), json!(["basics", "spells"]));
+        assert_eq!(
+            write(owner.id.clone(), json!(["traps", "advanced"])).await,
+            json!({ "kind": "limit" })
+        );
+        assert_eq!(
+            completed_of(q!(harness, t => t.tutorial_get(&owner.id))),
+            json!(["basics", "spells"])
+        );
         // At the cap exactly is fine.
         assert_eq!(
             j(&merged(write(owner.id.clone(), json!(["traps"])).await))["completed"],
@@ -1485,8 +1692,14 @@ mod tutorial {
         );
 
         assert!(q!(harness, t => t.tutorial_get(&other.id)).is_none());
-        assert_eq!(j(&merged(write(other.id.clone(), json!(["advanced"])).await))["completed"], json!(["advanced"]));
-        assert_eq!(completed_of(q!(harness, t => t.tutorial_get(&owner.id))), json!(["basics", "spells", "traps"]));
+        assert_eq!(
+            j(&merged(write(other.id.clone(), json!(["advanced"])).await))["completed"],
+            json!(["advanced"])
+        );
+        assert_eq!(
+            completed_of(q!(harness, t => t.tutorial_get(&owner.id))),
+            json!(["basics", "spells", "traps"])
+        );
     }
 
     both_stores!(
@@ -1529,7 +1742,12 @@ mod player_settings {
     }
 
     fn group_ids(row: &PlayerSettingsRow) -> Vec<String> {
-        must(j(row)["groups"].as_object().map(|groups| groups.keys().cloned().collect()), "the groups")
+        must(
+            j(row)["groups"]
+                .as_object()
+                .map(|groups| groups.keys().cloned().collect()),
+            "the groups",
+        )
     }
 
     async fn r633_holds_no_row_before_the_first_write_and_the_first_write_makes_one(harness: &StoreHarness) {
@@ -1565,19 +1783,71 @@ mod player_settings {
         harness: &StoreHarness,
     ) {
         let profile = active_profile(harness, None).await;
-        merged(write(harness, &profile.id, json!({ "audio": { "at": 2_000, "values": { "master": 0.5, "muted": true } } }), limits()).await);
+        merged(
+            write(
+                harness,
+                &profile.id,
+                json!({ "audio": { "at": 2_000, "values": { "master": 0.5, "muted": true } } }),
+                limits(),
+            )
+            .await,
+        );
 
         // Later: replaced whole, so a key the new group lacks is gone.
-        let later = merged(write(harness, &profile.id, json!({ "audio": { "at": 3_000, "values": { "master": 0.9 } } }), limits()).await);
-        assert_eq!(group_of(&later, "audio"), json!({ "at": 3_000, "values": { "master": 0.9 } }));
+        let later = merged(
+            write(
+                harness,
+                &profile.id,
+                json!({ "audio": { "at": 3_000, "values": { "master": 0.9 } } }),
+                limits(),
+            )
+            .await,
+        );
+        assert_eq!(
+            group_of(&later, "audio"),
+            json!({ "at": 3_000, "values": { "master": 0.9 } })
+        );
         // Older, and tied: the stored group stays.
-        let older = merged(write(harness, &profile.id, json!({ "audio": { "at": 2_500, "values": { "master": 0.1 } } }), limits()).await);
-        assert_eq!(group_of(&older, "audio"), json!({ "at": 3_000, "values": { "master": 0.9 } }));
-        let tied = merged(write(harness, &profile.id, json!({ "audio": { "at": 3_000, "values": { "master": 0.2 } } }), limits()).await);
-        assert_eq!(group_of(&tied, "audio"), json!({ "at": 3_000, "values": { "master": 0.9 } }));
+        let older = merged(
+            write(
+                harness,
+                &profile.id,
+                json!({ "audio": { "at": 2_500, "values": { "master": 0.1 } } }),
+                limits(),
+            )
+            .await,
+        );
+        assert_eq!(
+            group_of(&older, "audio"),
+            json!({ "at": 3_000, "values": { "master": 0.9 } })
+        );
+        let tied = merged(
+            write(
+                harness,
+                &profile.id,
+                json!({ "audio": { "at": 3_000, "values": { "master": 0.2 } } }),
+                limits(),
+            )
+            .await,
+        );
+        assert_eq!(
+            group_of(&tied, "audio"),
+            json!({ "at": 3_000, "values": { "master": 0.9 } })
+        );
         // Zero is a time like any other.
-        let zero = merged(write(harness, &profile.id, json!({ "fx": { "at": 0, "values": { "speed": 1 } } }), limits()).await);
-        assert_eq!(group_of(&zero, "fx"), json!({ "at": 0, "values": { "speed": 1 } }));
+        let zero = merged(
+            write(
+                harness,
+                &profile.id,
+                json!({ "fx": { "at": 0, "values": { "speed": 1 } } }),
+                limits(),
+            )
+            .await,
+        );
+        assert_eq!(
+            group_of(&zero, "fx"),
+            json!({ "at": 0, "values": { "speed": 1 } })
+        );
     }
 
     async fn r634_a_group_a_write_does_not_name_stays_and_one_write_can_win_one_group_and_lose_another(
@@ -1619,7 +1889,10 @@ mod player_settings {
             })
         );
         // A write naming nothing is the row as it stands.
-        assert_eq!(merged(write(harness, &profile.id, json!({}), limits()).await), row);
+        assert_eq!(
+            merged(write(harness, &profile.id, json!({}), limits()).await),
+            row
+        );
     }
 
     async fn r633_refuses_a_result_past_either_cap_and_writes_nothing_and_keeps_each_profile_s_row_apart(
@@ -1639,18 +1912,39 @@ mod player_settings {
             .await,
         );
         assert_eq!(
-            write(harness, &owner.id, json!({ "c": { "at": 9, "values": { "x": true } } }), small.clone()).await,
+            write(
+                harness,
+                &owner.id,
+                json!({ "c": { "at": 9, "values": { "x": true } } }),
+                small.clone()
+            )
+            .await,
             json!({ "kind": "limit" })
         );
-        let owners = must(q!(harness, t => t.player_settings_get(&owner.id)), "the owner's row");
+        let owners = must(
+            q!(harness, t => t.player_settings_get(&owner.id)),
+            "the owner's row",
+        );
         assert_eq!(group_ids(&owners), ["a", "b"]);
         // A group already held may still be replaced at the cap.
-        let replaced = merged(write(harness, &owner.id, json!({ "a": { "at": 9, "values": { "x": false } } }), small).await);
-        assert_eq!(group_of(&replaced, "a"), json!({ "at": 9, "values": { "x": false } }));
+        let replaced = merged(
+            write(
+                harness,
+                &owner.id,
+                json!({ "a": { "at": 9, "values": { "x": false } } }),
+                small,
+            )
+            .await,
+        );
+        assert_eq!(
+            group_of(&replaced, "a"),
+            json!({ "at": 9, "values": { "x": false } })
+        );
 
         // The byte cap counts the text the stored groups come to; keep well clear of the boundary.
         let text = "x".repeat(40);
-        let wide: serde_json::Map<String, Value> = (0..12).map(|at| (format!("key{at}"), json!(text))).collect();
+        let wide: serde_json::Map<String, Value> =
+            (0..12).map(|at| (format!("key{at}"), json!(text))).collect();
         assert_eq!(
             write(
                 harness,
@@ -1672,7 +1966,10 @@ mod player_settings {
             .await,
         );
         assert_eq!(group_of(&big, "big"), json!({ "at": 1, "values": wide }));
-        let owners = must(q!(harness, t => t.player_settings_get(&owner.id)), "the owner's row");
+        let owners = must(
+            q!(harness, t => t.player_settings_get(&owner.id)),
+            "the owner's row",
+        );
         assert_eq!(group_ids(&owners), ["a", "b"]);
     }
 
@@ -1698,21 +1995,35 @@ mod last_boards {
         ]))
     }
 
-    async fn r565_holds_no_board_before_a_profile_s_first_finished_game_then_the_one_written(harness: &StoreHarness) {
+    async fn r565_holds_no_board_before_a_profile_s_first_finished_game_then_the_one_written(
+        harness: &StoreHarness,
+    ) {
         let profile = active_profile(harness, None).await;
         assert!(q!(harness, t => t.last_boards_get(&profile.id, board_kind("server"))).is_none());
         q!(harness, t => t.last_boards_put(&profile.id, board_kind("server"), &board(), harness.now()));
-        assert_eq!(q!(harness, t => t.last_boards_get(&profile.id, board_kind("server"))), Some(board()));
+        assert_eq!(
+            q!(harness, t => t.last_boards_get(&profile.id, board_kind("server"))),
+            Some(board())
+        );
     }
 
     async fn r565_a_later_game_s_board_replaces_it_and_each_kind_is_its_own(harness: &StoreHarness) {
         let profile = active_profile(harness, None).await;
         q!(harness, t => t.last_boards_put(&profile.id, board_kind("server"), &board(), harness.now()));
         q!(harness, t => t.last_boards_put(&profile.id, board_kind("server"), &[], harness.now()));
-        assert_eq!(q!(harness, t => t.last_boards_get(&profile.id, board_kind("server"))), Some(Vec::new()));
+        assert_eq!(
+            q!(harness, t => t.last_boards_get(&profile.id, board_kind("server"))),
+            Some(Vec::new())
+        );
         q!(harness, t => t.last_boards_put(&profile.id, board_kind("practice"), &board(), harness.now()));
-        assert_eq!(q!(harness, t => t.last_boards_get(&profile.id, board_kind("server"))), Some(Vec::new()));
-        assert_eq!(q!(harness, t => t.last_boards_get(&profile.id, board_kind("practice"))), Some(board()));
+        assert_eq!(
+            q!(harness, t => t.last_boards_get(&profile.id, board_kind("server"))),
+            Some(Vec::new())
+        );
+        assert_eq!(
+            q!(harness, t => t.last_boards_get(&profile.id, board_kind("practice"))),
+            Some(board())
+        );
         let other = active_profile(harness, None).await;
         assert!(q!(harness, t => t.last_boards_get(&other.id, board_kind("practice"))).is_none());
     }
@@ -1734,11 +2045,16 @@ mod last_boards {
         q!(harness, t => t.matches_create(&row));
         assert_eq!(q!(harness, t => t.matches_get(&row.id)), Some(row.clone()));
         let live = q!(harness, t => t.matches_live());
-        let found = must(live.iter().find(|candidate| candidate.id == row.id), "the live match");
+        let found = must(
+            live.iter().find(|candidate| candidate.id == row.id),
+            "the live match",
+        );
         assert_eq!(j(found)["lastBoards"], json!([j(&board()), []]));
     }
 
-    async fn r678_samples_other_profiles_non_empty_server_boards_never_an_excluded_one(harness: &StoreHarness) {
+    async fn r678_samples_other_profiles_non_empty_server_boards_never_an_excluded_one(
+        harness: &StoreHarness,
+    ) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
         let c = active_profile(harness, None).await;
@@ -1758,8 +2074,14 @@ mod last_boards {
         let two = q!(harness, t => t.last_boards_sample_others(&excluded, 2));
         assert_eq!(two.len(), 2);
         assert!(two.contains(&board_c) && two.contains(&board_f));
-        assert_eq!(q!(harness, t => t.last_boards_sample_others(&excluded, 5)).len(), 2);
-        assert_eq!(q!(harness, t => t.last_boards_sample_others(&excluded, 1)).len(), 1);
+        assert_eq!(
+            q!(harness, t => t.last_boards_sample_others(&excluded, 5)).len(),
+            2
+        );
+        assert_eq!(
+            q!(harness, t => t.last_boards_sample_others(&excluded, 1)).len(),
+            1
+        );
         let all_four = [a.id.clone(), b.id.clone(), c.id.clone(), f.id.clone()];
         assert!(q!(harness, t => t.last_boards_sample_others(&all_four, 2)).is_empty());
         assert!(q!(harness, t => t.last_boards_sample_others(&excluded, 0)).is_empty());
@@ -1775,12 +2097,21 @@ mod last_boards {
         q!(harness, t => t.matches_create(&row));
         assert_eq!(q!(harness, t => t.matches_get(&row.id)), Some(row.clone()));
         let live = q!(harness, t => t.matches_live());
-        let found = must(live.iter().find(|candidate| candidate.id == row.id), "the live match");
+        let found = must(
+            live.iter().find(|candidate| candidate.id == row.id),
+            "the live match",
+        );
         assert_eq!(j(found)["glitchBoards"], json!([j(&board()), []]));
         // A row written without them reads none.
         let plain = match_row(&id(), &p1.id, &p2.id, harness, harness.now());
         q!(harness, t => t.matches_create(&plain));
-        assert!(absent(&j(&must(q!(harness, t => t.matches_get(&plain.id)), "the plain match")), "glitchBoards"));
+        assert!(absent(
+            &j(&must(
+                q!(harness, t => t.matches_get(&plain.id)),
+                "the plain match"
+            )),
+            "glitchBoards"
+        ));
     }
 
     both_stores!(
@@ -1805,7 +2136,9 @@ mod player_stats {
         from(value)
     }
 
-    async fn r654_holds_no_row_before_the_first_write_and_put_creates_or_updates_a_row(harness: &StoreHarness) {
+    async fn r654_holds_no_row_before_the_first_write_and_put_creates_or_updates_a_row(
+        harness: &StoreHarness,
+    ) {
         let profile = active_profile(harness, None).await;
         assert!(q!(harness, t => t.player_stats_get(&profile.id)).is_none());
 
@@ -1867,12 +2200,14 @@ mod player_stats {
         let stats_3 = bag(json!({ "games": 200, "wins": 150, "losses": 50, "draws": 0 }));
         q!(harness, t => t.player_stats_put(&p3.id, &stats_3, true, now + 1000));
 
-        let profile_ids = |rows: &[Value]| -> Vec<Value> { rows.iter().map(|row| row["profileId"].clone()).collect() };
+        let profile_ids =
+            |rows: &[Value]| -> Vec<Value> { rows.iter().map(|row| row["profileId"].clone()).collect() };
 
-        let public_all: Vec<Value> = q!(harness, t => t.player_stats_list_public(&list_options(json!({ "limit": 10, "offset": 0 }))))
-            .iter()
-            .map(j)
-            .collect();
+        let public_all: Vec<Value> =
+            q!(harness, t => t.player_stats_list_public(&list_options(json!({ "limit": 10, "offset": 0 }))))
+                .iter()
+                .map(j)
+                .collect();
         assert_eq!(profile_ids(&public_all), vec![json!(p2.id), json!(p1.id)]);
         assert_eq!(public_all[0]["displayName"], "Bob Builder");
         assert_eq!(public_all[1]["displayName"], "Alice Wonderland");
@@ -1892,15 +2227,17 @@ mod player_stats {
                 .collect();
         assert_eq!(profile_ids(&search_alice), vec![json!(p1.id)]);
 
-        let page_1: Vec<Value> = q!(harness, t => t.player_stats_list_public(&list_options(json!({ "limit": 1, "offset": 0 }))))
-            .iter()
-            .map(j)
-            .collect();
+        let page_1: Vec<Value> =
+            q!(harness, t => t.player_stats_list_public(&list_options(json!({ "limit": 1, "offset": 0 }))))
+                .iter()
+                .map(j)
+                .collect();
         assert_eq!(profile_ids(&page_1), vec![json!(p2.id)]);
-        let page_2: Vec<Value> = q!(harness, t => t.player_stats_list_public(&list_options(json!({ "limit": 1, "offset": 1 }))))
-            .iter()
-            .map(j)
-            .collect();
+        let page_2: Vec<Value> =
+            q!(harness, t => t.player_stats_list_public(&list_options(json!({ "limit": 1, "offset": 1 }))))
+                .iter()
+                .map(j)
+                .collect();
         assert_eq!(profile_ids(&page_2), vec![json!(p1.id)]);
     }
 
@@ -1966,7 +2303,10 @@ mod series {
         let picked: SeriesRow = from(picked);
         assert!(q!(harness, t => t.series_update(&picked)));
         // A second writer that read the same version loses.
-        let stale: SeriesRow = from(spread(j(&row), json!({ "status": "over", "version": version_of(&row) + 1 })));
+        let stale: SeriesRow = from(spread(
+            j(&row),
+            json!({ "status": "over", "version": version_of(&row) + 1 }),
+        ));
         assert!(!q!(harness, t => t.series_update(&stale)));
         assert_eq!(q!(harness, t => t.series_get(&row.id)), Some(picked));
     }
@@ -1978,17 +2318,28 @@ mod series {
         let row = series_row(harness, &a.id, &b.id, json!({ "ranked": true }));
         q!(harness, t => t.series_create(&row));
         assert_eq!(q!(harness, t => t.series_get(&row.id)), Some(row.clone()));
-        let moved: SeriesRow = from(without(spread(j(&row), json!({ "version": version_of(&row) + 1 })), "ranked"));
+        let moved: SeriesRow = from(without(
+            spread(j(&row), json!({ "version": version_of(&row) + 1 })),
+            "ranked",
+        ));
         assert!(q!(harness, t => t.series_update(&moved)));
-        assert!(absent(&j(&must(q!(harness, t => t.series_get(&row.id)), "the series")), "ranked"));
+        assert!(absent(
+            &j(&must(q!(harness, t => t.series_get(&row.id)), "the series")),
+            "ranked"
+        ));
     }
 
-    async fn r263_finds_a_series_by_the_match_it_is_playing_and_only_while_it_is_playing_it(harness: &StoreHarness) {
+    async fn r263_finds_a_series_by_the_match_it_is_playing_and_only_while_it_is_playing_it(
+        harness: &StoreHarness,
+    ) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
         let row = series_row(harness, &a.id, &b.id, json!({}));
         q!(harness, t => t.series_create(&row));
-        let next_match_id = must(j(&row)["nextMatchId"].as_str().map(str::to_string), "the next match id");
+        let next_match_id = must(
+            j(&row)["nextMatchId"].as_str().map(str::to_string),
+            "the next match id",
+        );
         assert!(q!(harness, t => t.series_by_match(&next_match_id)).is_none());
 
         let playing: SeriesRow = from(spread(
@@ -2003,9 +2354,15 @@ mod series {
             }),
         ));
         assert!(q!(harness, t => t.series_update(&playing)));
-        assert_eq!(q!(harness, t => t.series_by_match(&next_match_id)), Some(playing.clone()));
+        assert_eq!(
+            q!(harness, t => t.series_by_match(&next_match_id)),
+            Some(playing.clone())
+        );
         assert!(q!(harness, t => t.series_by_match(&id())).is_none());
-        assert_eq!(q!(harness, t => t.series_with_game(&next_match_id)), Some(playing.clone()));
+        assert_eq!(
+            q!(harness, t => t.series_with_game(&next_match_id)),
+            Some(playing.clone())
+        );
 
         // Once the game is over and the series has moved on, only `withGame` still finds it.
         let next_id = id();
@@ -2028,7 +2385,10 @@ mod series {
         ));
         assert!(q!(harness, t => t.series_update(&picking)));
         assert!(q!(harness, t => t.series_by_match(&next_match_id)).is_none());
-        assert_eq!(q!(harness, t => t.series_with_game(&next_match_id)), Some(picking));
+        assert_eq!(
+            q!(harness, t => t.series_with_game(&next_match_id)),
+            Some(picking)
+        );
         assert!(q!(harness, t => t.series_with_game(&next_id)).is_none());
     }
 
@@ -2045,8 +2405,14 @@ mod series {
         );
         q!(harness, t => t.series_create(&live));
         q!(harness, t => t.series_create(&done));
-        assert_eq!(ids_of(&q!(harness, t => t.series_active())), vec![live.id.clone()]);
-        assert_eq!(q!(harness, t => t.series_active_for(&b.id)).map(|row| row.id), Some(live.id.clone()));
+        assert_eq!(
+            ids_of(&q!(harness, t => t.series_active())),
+            vec![live.id.clone()]
+        );
+        assert_eq!(
+            q!(harness, t => t.series_active_for(&b.id)).map(|row| row.id),
+            Some(live.id.clone())
+        );
         assert!(q!(harness, t => t.series_active_for(&c.id)).is_none());
     }
 
@@ -2099,13 +2465,20 @@ mod matches {
             action_row(&row.id, 3, "p1", "n3", harness.now()),
         ]));
 
-        let log: Vec<Value> = q!(harness, t => t.matches_actions(&row.id)).iter().map(j).collect();
+        let log: Vec<Value> = q!(harness, t => t.matches_actions(&row.id))
+            .iter()
+            .map(j)
+            .collect();
         let seqs: Vec<Value> = log.iter().map(|entry| entry["seq"].clone()).collect();
         assert_eq!(seqs, vec![json!(1), json!(2), json!(3)]);
         let actions: Vec<Value> = log.iter().map(|entry| entry["action"].clone()).collect();
         assert_eq!(
             actions,
-            vec![j(&action("p1", "n1")), j(&action("p2", "n2")), j(&action("p1", "n3"))]
+            vec![
+                j(&action("p1", "n1")),
+                j(&action("p2", "n2")),
+                j(&action("p1", "n3"))
+            ]
         );
         // `at` is the database's clock in Postgres (`match_actions` is append-only, so the caller
         // cannot stamp it) — see KNOWN DIVERGENCES (action timestamps).
@@ -2132,20 +2505,37 @@ mod matches {
             "ceilingAt": now + 4_000,
         }));
         q!(harness, t => t.matches_set_clocks(&row.id, &next));
-        assert_eq!(j(&must(q!(harness, t => t.matches_get(&row.id)), "the match"))["clocks"], j(&next));
+        assert_eq!(
+            j(&must(q!(harness, t => t.matches_get(&row.id)), "the match"))["clocks"],
+            j(&next)
+        );
     }
 
     /// R604: the queue's ranked flag survives the round trip; a room's absence reads unranked.
     async fn r604_round_trips_the_ranked_flag(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
-        let ranked: MatchRow =
-            from(spread(j(&match_row(&id(), &a.id, &b.id, harness, harness.now())), json!({ "ranked": true })));
+        let ranked: MatchRow = from(spread(
+            j(&match_row(&id(), &a.id, &b.id, harness, harness.now())),
+            json!({ "ranked": true }),
+        ));
         let unranked = match_row(&id(), &a.id, &b.id, harness, harness.now());
         q!(harness, t => t.matches_create(&ranked));
         q!(harness, t => t.matches_create(&unranked));
-        assert_eq!(j(&must(q!(harness, t => t.matches_get(&ranked.id)), "the ranked match"))["ranked"], true);
-        assert!(absent(&j(&must(q!(harness, t => t.matches_get(&unranked.id)), "the unranked match")), "ranked"));
+        assert_eq!(
+            j(&must(
+                q!(harness, t => t.matches_get(&ranked.id)),
+                "the ranked match"
+            ))["ranked"],
+            true
+        );
+        assert!(absent(
+            &j(&must(
+                q!(harness, t => t.matches_get(&unranked.id)),
+                "the unranked match"
+            )),
+            "ranked"
+        ));
     }
 
     /// §9.5: a rematch's mode and stakes survive the round trip; their absence reads as "derive it"
@@ -2163,10 +2553,16 @@ mod matches {
         let got = j(&must(q!(harness, t => t.matches_get(&rematch.id)), "the rematch"));
         assert_eq!(got["mode"], "random");
         assert_eq!(got["stake"], 2);
-        let got_plain = j(&must(q!(harness, t => t.matches_get(&plain.id)), "the plain match"));
+        let got_plain = j(&must(
+            q!(harness, t => t.matches_get(&plain.id)),
+            "the plain match",
+        ));
         assert!(absent(&got_plain, "mode"));
         assert!(absent(&got_plain, "stake"));
-        assert_eq!(j(&q!(harness, t => t.matches_mode_of(&rematch.id))), json!("random"));
+        assert_eq!(
+            j(&q!(harness, t => t.matches_mode_of(&rematch.id))),
+            json!("random")
+        );
     }
 
     async fn r263_discards_a_reserved_match_id_without_touching_a_live_match(harness: &StoreHarness) {
@@ -2179,7 +2575,9 @@ mod matches {
         assert_eq!(q!(harness, t => t.matches_get(&row.id)), Some(row));
     }
 
-    async fn r679_forgets_a_voided_live_match_its_row_its_log_and_both_players_in_match_flags(harness: &StoreHarness) {
+    async fn r679_forgets_a_voided_live_match_its_row_its_log_and_both_players_in_match_flags(
+        harness: &StoreHarness,
+    ) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
         let row = match_row(&id(), &a.id, &b.id, harness, harness.now());
@@ -2212,7 +2610,10 @@ mod matches {
         q!(harness, t => t.matches_finish(&finished.id, harness.now()));
         q!(harness, t => t.matches_forget_voided(&finished.id));
         assert_eq!(
-            j(&must(q!(harness, t => t.matches_get(&finished.id)), "the finished match"))["status"],
+            j(&must(
+                q!(harness, t => t.matches_get(&finished.id)),
+                "the finished match"
+            ))["status"],
             "finished"
         );
 
@@ -2239,7 +2640,10 @@ mod matches {
 
         let at = harness.now();
         q!(harness, t => t.matches_finish(&row.id, at));
-        let finished = j(&must(q!(harness, t => t.matches_get(&row.id)), "the finished match"));
+        let finished = j(&must(
+            q!(harness, t => t.matches_get(&row.id)),
+            "the finished match",
+        ));
         assert_eq!(finished["status"], "finished");
         assert_eq!(finished["finishedAt"].as_i64(), Some(at));
         assert!(!live_ids(&q!(harness, t => t.matches_live())).contains(&row.id));
@@ -2317,9 +2721,17 @@ mod rooms {
         assert_eq!(found["hostDeck"], json!([]));
         assert_eq!(found["hostTrio"], j(&frozen_trio(harness, None)));
 
-        let random = room(harness, "CDE456", &host.id, json!({ "mode": "random", "hostDeck": [] }));
+        let random = room(
+            harness,
+            "CDE456",
+            &host.id,
+            json!({ "mode": "random", "hostDeck": [] }),
+        );
         q!(harness, t => t.rooms_create(&random));
-        let claimed = j(&must(q!(harness, t => t.rooms_claim("CDE456", &guest.id, &id(), harness.now())), "the claim"));
+        let claimed = j(&must(
+            q!(harness, t => t.rooms_claim("CDE456", &guest.id, &id(), harness.now())),
+            "the claim",
+        ));
         assert_eq!(claimed["mode"], "random");
         assert!(claimed["hostTrio"].is_null());
     }
@@ -2339,7 +2751,10 @@ mod rooms {
         q!(harness, t => t.rooms_create(&room(harness, "ABC234", &host.id, json!({}))));
 
         let match_id = id();
-        let claimed = j(&must(q!(harness, t => t.rooms_claim("ABC234", &guest.id, &match_id, harness.now())), "the claim"));
+        let claimed = j(&must(
+            q!(harness, t => t.rooms_claim("ABC234", &guest.id, &match_id, harness.now())),
+            "the claim",
+        ));
         assert_eq!(claimed["guestProfileId"], guest.id.as_str());
         assert_eq!(claimed["matchId"], match_id.as_str());
         assert_eq!(claimed["hostDeck"], json!(deck_of(harness, 0)));
@@ -2366,12 +2781,19 @@ mod rooms {
         q!(harness, t => t.rooms_create(&room(harness, "ABC234", &host.id, json!({}))));
 
         let match_id = id();
-        must(q!(harness, t => t.rooms_claim("ABC234", &guest.id, &match_id, harness.now())), "the claim");
+        must(
+            q!(harness, t => t.rooms_claim("ABC234", &guest.id, &match_id, harness.now())),
+            "the claim",
+        );
         let row = match_row(&match_id, &host.id, &guest.id, harness, harness.now());
         q!(harness, t => t.matches_create(&row));
 
         assert_eq!(q!(harness, t => t.matches_get(&match_id)), Some(row));
-        assert!(q!(harness, t => t.matches_live()).iter().any(|live| live.id == match_id));
+        assert!(
+            q!(harness, t => t.matches_live())
+                .iter()
+                .any(|live| live.id == match_id)
+        );
     }
 
     both_stores!(
@@ -2417,9 +2839,15 @@ mod tickets {
         q!(harness, t => t.tickets_insert(&row));
 
         assert_eq!(q!(harness, t => t.tickets_get(&row.id)), Some(row.clone()));
-        assert_eq!(q!(harness, t => t.tickets_open_for_profile(&profile.id)), Some(row.clone()));
+        assert_eq!(
+            q!(harness, t => t.tickets_open_for_profile(&profile.id)),
+            Some(row.clone())
+        );
         assert_eq!(q!(harness, t => t.tickets_count_open()), 1);
-        assert_eq!(ids_of(&q!(harness, t => t.tickets_list_open())), vec![row.id.clone()]);
+        assert_eq!(
+            ids_of(&q!(harness, t => t.tickets_list_open())),
+            vec![row.id.clone()]
+        );
     }
 
     async fn r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_open_tickets_per_mode(
@@ -2428,7 +2856,11 @@ mod tickets {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
         let c = active_profile(harness, None).await;
-        let bo3 = ticket(harness, &a.id, json!({ "mode": "bo3", "deck": [], "trio": j(&frozen_trio(harness, None)) }));
+        let bo3 = ticket(
+            harness,
+            &a.id,
+            json!({ "mode": "bo3", "deck": [], "trio": j(&frozen_trio(harness, None)) }),
+        );
         let random = ticket(harness, &b.id, json!({ "mode": "random", "deck": [] }));
         q!(harness, t => t.tickets_insert(&bo3));
         q!(harness, t => t.tickets_insert(&random));
@@ -2436,18 +2868,30 @@ mod tickets {
 
         assert_eq!(q!(harness, t => t.tickets_get(&bo3.id)), Some(bo3.clone()));
         assert_eq!(q!(harness, t => t.tickets_get(&random.id)), Some(random.clone()));
-        assert_eq!(j(&q!(harness, t => t.tickets_count_open_by_mode())), json!({ "bo1": 1, "bo3": 1, "random": 1 }));
+        assert_eq!(
+            j(&q!(harness, t => t.tickets_count_open_by_mode())),
+            json!({ "bo1": 1, "bo3": 1, "random": 1 })
+        );
         q!(harness, t => t.tickets_cancel(&random.id, harness.now()));
-        assert_eq!(j(&q!(harness, t => t.tickets_count_open_by_mode())), json!({ "bo1": 1, "bo3": 1, "random": 0 }));
+        assert_eq!(
+            j(&q!(harness, t => t.tickets_count_open_by_mode())),
+            json!({ "bo1": 1, "bo3": 1, "random": 0 })
+        );
     }
 
-    async fn r642_keeps_a_best_of_3_ticket_s_per_deck_portraits_and_absence_stays_absent(harness: &StoreHarness) {
+    async fn r642_keeps_a_best_of_3_ticket_s_per_deck_portraits_and_absence_stays_absent(
+        harness: &StoreHarness,
+    ) {
         let profile = active_profile(harness, None).await;
         let mut trio = j(&frozen_trio(harness, None));
         trio["decks"][0]["portrait"] = json!("gary");
         trio["decks"][1]["portrait"] = Value::Null;
         trio["decks"][2]["portrait"] = json!("timmy");
-        let bo3 = ticket(harness, &profile.id, json!({ "mode": "bo3", "deck": [], "trio": trio }));
+        let bo3 = ticket(
+            harness,
+            &profile.id,
+            json!({ "mode": "bo3", "deck": [], "trio": trio }),
+        );
         q!(harness, t => t.tickets_insert(&bo3));
         assert_eq!(q!(harness, t => t.tickets_get(&bo3.id)), Some(bo3.clone()));
 
@@ -2456,7 +2900,11 @@ mod tickets {
             deck.remove("portrait");
         }
         let owner = active_profile(harness, None).await;
-        let old = ticket(harness, &owner.id, json!({ "mode": "bo3", "deck": [], "trio": legacy }));
+        let old = ticket(
+            harness,
+            &owner.id,
+            json!({ "mode": "bo3", "deck": [], "trio": legacy }),
+        );
         q!(harness, t => t.tickets_insert(&old));
         assert_eq!(q!(harness, t => t.tickets_get(&old.id)), Some(old.clone()));
     }
@@ -2475,7 +2923,10 @@ mod tickets {
         q!(harness, t => t.tickets_insert(&row));
 
         q!(harness, t => t.tickets_cancel(&row.id, harness.now()));
-        assert_eq!(j(&must(q!(harness, t => t.tickets_get(&row.id)), "the ticket"))["status"], "cancelled");
+        assert_eq!(
+            j(&must(q!(harness, t => t.tickets_get(&row.id)), "the ticket"))["status"],
+            "cancelled"
+        );
         assert!(q!(harness, t => t.tickets_open_for_profile(&profile.id)).is_none());
         q!(harness, t => t.tickets_cancel(&row.id, harness.now()));
         assert_eq!(q!(harness, t => t.tickets_count_open()), 0);
@@ -2591,7 +3042,10 @@ mod game_records {
             }));
             q!(harness, t => t.rooms_create(&room));
             let room_match = id();
-            must(q!(harness, t => t.rooms_claim(code, &b.id, &room_match, now)), "the claim");
+            must(
+                q!(harness, t => t.rooms_claim(code, &b.id, &room_match, now)),
+                "the claim",
+            );
             q!(harness, t => t.matches_create(&match_row(&room_match, &a.id, &b.id, harness, now)));
             assert_eq!(j(&q!(harness, t => t.matches_mode_of(&room_match))), json!(mode));
             q!(harness, t => t.matches_finish(&room_match, now));
@@ -2621,7 +3075,10 @@ mod game_records {
         let queue_match = id();
         assert!(q!(harness, t => t.tickets_claim_pair(&tickets[0].id, &tickets[1].id, &queue_match, now)));
         q!(harness, t => t.matches_create(&match_row(&queue_match, &a.id, &b.id, harness, now)));
-        assert_eq!(j(&q!(harness, t => t.matches_mode_of(&queue_match))), json!("random"));
+        assert_eq!(
+            j(&q!(harness, t => t.matches_mode_of(&queue_match))),
+            json!("random")
+        );
 
         // A game of a Conquest series: bo3, whatever made the series.
         let series_game = id();
@@ -2648,7 +3105,10 @@ mod game_records {
         }));
         q!(harness, t => t.series_create(&series));
         q!(harness, t => t.matches_create(&match_row(&series_game, &b.id, &a.id, harness, now)));
-        assert_eq!(j(&q!(harness, t => t.matches_mode_of(&series_game))), json!("bo3"));
+        assert_eq!(
+            j(&q!(harness, t => t.matches_mode_of(&series_game))),
+            json!("bo3")
+        );
 
         // Nothing made this one.
         assert!(q!(harness, t => t.matches_mode_of(&id())).is_none());
@@ -2665,12 +3125,20 @@ mod game_records {
         );
     }
 
-    async fn r378_reads_development_records_only_when_asked_and_filters_by_mode_and_patch(harness: &StoreHarness) {
+    async fn r378_reads_development_records_only_when_asked_and_filters_by_mode_and_patch(
+        harness: &StoreHarness,
+    ) {
         let records = [
             game_record("a-live", json!({ "mode": "bo1", "patch": "v0.1.1" })),
             game_record("b-live", json!({ "mode": "random", "patch": "v0.2.5" })),
-            game_record("dev:c", json!({ "source": "dev", "mode": "random", "patch": "v0.2.5", "pilots": { "p1": "ai", "p2": "ai" } })),
-            game_record("dev:d", json!({ "source": "dev", "mode": "random", "patch": "v0.1.1", "pilots": { "p1": "ai", "p2": "ai" } })),
+            game_record(
+                "dev:c",
+                json!({ "source": "dev", "mode": "random", "patch": "v0.2.5", "pilots": { "p1": "ai", "p2": "ai" } }),
+            ),
+            game_record(
+                "dev:d",
+                json!({ "source": "dev", "mode": "random", "patch": "v0.1.1", "pilots": { "p1": "ai", "p2": "ai" } }),
+            ),
         ];
         // Written out of order: a read comes back in id order.
         for record in records.iter().rev() {
@@ -2681,19 +3149,47 @@ mod game_records {
             ids_of(&q!(harness, t => t.game_records_list(&filter)))
         }
 
-        assert_eq!(ids(harness, json!({ "source": "live", "mode": null, "patch": null })).await, ["a-live", "b-live"]);
-        assert_eq!(ids(harness, json!({ "source": "dev", "mode": null, "patch": null })).await, ["dev:c", "dev:d"]);
+        assert_eq!(
+            ids(harness, json!({ "source": "live", "mode": null, "patch": null })).await,
+            ["a-live", "b-live"]
+        );
+        assert_eq!(
+            ids(harness, json!({ "source": "dev", "mode": null, "patch": null })).await,
+            ["dev:c", "dev:d"]
+        );
         assert_eq!(
             ids(harness, json!({ "source": "all", "mode": null, "patch": null })).await,
             ["a-live", "b-live", "dev:c", "dev:d"]
         );
         assert_eq!(
-            ids(harness, json!({ "source": "all", "mode": "random", "patch": null })).await,
+            ids(
+                harness,
+                json!({ "source": "all", "mode": "random", "patch": null })
+            )
+            .await,
             ["b-live", "dev:c", "dev:d"]
         );
-        assert_eq!(ids(harness, json!({ "source": "all", "mode": null, "patch": "v0.2.5" })).await, ["b-live", "dev:c"]);
-        assert_eq!(ids(harness, json!({ "source": "dev", "mode": "random", "patch": "v0.1.1" })).await, ["dev:d"]);
-        assert!(ids(harness, json!({ "source": "live", "mode": "bo3", "patch": null })).await.is_empty());
+        assert_eq!(
+            ids(
+                harness,
+                json!({ "source": "all", "mode": null, "patch": "v0.2.5" })
+            )
+            .await,
+            ["b-live", "dev:c"]
+        );
+        assert_eq!(
+            ids(
+                harness,
+                json!({ "source": "dev", "mode": "random", "patch": "v0.1.1" })
+            )
+            .await,
+            ["dev:d"]
+        );
+        assert!(
+            ids(harness, json!({ "source": "live", "mode": "bo3", "patch": null }))
+                .await
+                .is_empty()
+        );
         assert_eq!(
             q!(harness, t => t.game_records_list(&query(json!({ "source": "dev", "mode": null, "patch": "v0.2.5" })))),
             vec![records[2].clone()]
@@ -2744,9 +3240,15 @@ mod results {
             "ratingAfter": [1016, 984],
         }));
         q!(harness, t => t.results_insert(&row));
-        assert_eq!(q!(harness, t => t.results_get_by_match(&match_id)), Some(row.clone()));
+        assert_eq!(
+            q!(harness, t => t.results_get_by_match(&match_id)),
+            Some(row.clone())
+        );
         // The port's own refusal — `api/results.rs` retries on it, so it must not arrive untyped.
-        let refused = must(call!(harness, t => t.results_insert(&row)).err(), "the second result's refusal");
+        let refused = must(
+            call!(harness, t => t.results_insert(&row)).err(),
+            "the second result's refusal",
+        );
         assert!(matches!(refused, StoreError::Duplicate { .. }), "{refused}");
     }
 
@@ -2766,7 +3268,13 @@ mod results {
             "ratingAfter": [1000, 1000],
         }));
         q!(harness, t => t.results_insert(&row));
-        assert!(j(&must(q!(harness, t => t.results_get_by_match(&match_id)), "the result"))["winnerProfileId"].is_null());
+        assert!(
+            j(&must(
+                q!(harness, t => t.results_get_by_match(&match_id)),
+                "the result"
+            ))["winnerProfileId"]
+                .is_null()
+        );
     }
 
     async fn returns_null_for_a_match_that_has_not_ended(harness: &StoreHarness) {
@@ -2877,7 +3385,10 @@ mod ranked {
         q!(harness, t => t.ranked_put_rank(&first));
         q!(harness, t => t.ranked_put_rank(&other));
 
-        assert_eq!(q!(harness, t => t.ranked_rank("v0.1", &a.id)), Some(first.clone()));
+        assert_eq!(
+            q!(harness, t => t.ranked_rank("v0.1", &a.id)),
+            Some(first.clone())
+        );
         assert_eq!(q!(harness, t => t.ranked_rank("v0.1", &b.id)), Some(other));
         assert!(q!(harness, t => t.ranked_rank("v0.2", &a.id)).is_none());
         assert!(q!(harness, t => t.ranked_rank("v0.1", &id())).is_none());
@@ -2898,18 +3409,38 @@ mod ranked {
         let b = active_profile(harness, None).await;
         let now = harness.now();
         q!(harness, t => t.ranked_create_season(&season("v0.1", now)));
-        let rank_a = rank_row(harness, "v0.1", &a.id, json!({ "games": 3, "wins": 3, "ladder": 45 }));
-        let rank_b = rank_row(harness, "v0.1", &b.id, json!({ "games": 3, "losses": 3, "ladder": 30 }));
+        let rank_a = rank_row(
+            harness,
+            "v0.1",
+            &a.id,
+            json!({ "games": 3, "wins": 3, "ladder": 45 }),
+        );
+        let rank_b = rank_row(
+            harness,
+            "v0.1",
+            &b.id,
+            json!({ "games": 3, "losses": 3, "ladder": 30 }),
+        );
         q!(harness, t => t.ranked_put_rank(&rank_a));
         q!(harness, t => t.ranked_put_rank(&rank_b));
         q!(harness, t => t.profiles_set_glicko(&a.id, &glicko(1123.5)));
         q!(harness, t => t.profiles_set_glicko(&b.id, &glicko(877.25)));
 
-        let standings: Vec<Value> = q!(harness, t => t.ranked_standings("v0.1")).iter().map(j).collect();
-        let profile_ids: Vec<String> =
-            standings.iter().map(|standing| must(standing["profileId"].as_str().map(str::to_string), "a profile id")).collect();
+        let standings: Vec<Value> = q!(harness, t => t.ranked_standings("v0.1"))
+            .iter()
+            .map(j)
+            .collect();
+        let profile_ids: Vec<String> = standings
+            .iter()
+            .map(|standing| must(standing["profileId"].as_str().map(str::to_string), "a profile id"))
+            .collect();
         assert_eq!(profile_ids, sorted(&[a.id.clone(), b.id.clone()]));
-        let of = |profile_id: &str| standings.iter().find(|standing| standing["profileId"] == profile_id).cloned();
+        let of = |profile_id: &str| {
+            standings
+                .iter()
+                .find(|standing| standing["profileId"] == profile_id)
+                .cloned()
+        };
         assert_eq!(of(&a.id), Some(spread(j(&rank_a), json!({ "rating": 1123.5 }))));
         assert_eq!(of(&b.id), Some(spread(j(&rank_b), json!({ "rating": 877.25 }))));
         assert!(q!(harness, t => t.ranked_standings("v0.2")).is_empty());
@@ -2922,8 +3453,10 @@ mod ranked {
         q!(harness, t => t.ranked_create_season(&season("v0.2", now + 1_000)));
         q!(harness, t => t.ranked_put_rank(&rank_row(harness, "v0.2", &a.id, json!({ "games": 2 }))));
         q!(harness, t => t.ranked_put_rank(&rank_row(harness, "v0.1", &a.id, json!({ "games": 9, "peakLadder": 55 }))));
-        let seasons: Vec<Value> =
-            q!(harness, t => t.ranked_ranks_of(&a.id)).iter().map(|row| j(row)["seasonId"].clone()).collect();
+        let seasons: Vec<Value> = q!(harness, t => t.ranked_ranks_of(&a.id))
+            .iter()
+            .map(|row| j(row)["seasonId"].clone())
+            .collect();
         assert_eq!(seasons, vec![json!("v0.1"), json!("v0.2")]);
         assert!(q!(harness, t => t.ranked_ranks_of(&id())).is_empty());
     }
@@ -2936,7 +3469,10 @@ mod ranked {
         q!(harness, t => t.ranked_note_peak_jlorious("v0.1", &a.id, 17));
         q!(harness, t => t.ranked_note_peak_jlorious("v0.1", &a.id, 80));
         q!(harness, t => t.ranked_note_peak_jlorious("v0.1", &a.id, 4));
-        assert_eq!(peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id))), Some(4));
+        assert_eq!(
+            peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id))),
+            Some(4)
+        );
         // A player with no season row is noted nowhere — the write is a no-op.
         q!(harness, t => t.ranked_note_peak_jlorious("v0.1", &id(), 1));
         q!(harness, t => t.ranked_note_peak_jlorious("v0.2", &a.id, 1));
@@ -2947,13 +3483,22 @@ mod ranked {
         let row = j(&must(q!(harness, t => t.ranked_rank("v0.1", &a.id)), "the rank"));
         let worse: SeasonRank = from(spread(row.clone(), json!({ "peakJlorious": 90 })));
         q!(harness, t => t.ranked_put_rank(&worse));
-        assert_eq!(peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id))), Some(4));
+        assert_eq!(
+            peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id))),
+            Some(4)
+        );
         let unknown: SeasonRank = from(spread(row.clone(), json!({ "peakJlorious": null })));
         q!(harness, t => t.ranked_put_rank(&unknown));
-        assert_eq!(peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id))), Some(4));
+        assert_eq!(
+            peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id))),
+            Some(4)
+        );
         let better: SeasonRank = from(spread(row, json!({ "peakJlorious": 2 })));
         q!(harness, t => t.ranked_put_rank(&better));
-        assert_eq!(peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id))), Some(2));
+        assert_eq!(
+            peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id))),
+            Some(2)
+        );
     }
 
     async fn r610_keeps_each_bot_s_own_rating_upserted(harness: &StoreHarness) {
@@ -2987,9 +3532,14 @@ mod ranked {
         assert_eq!(q!(harness, t => t.ranked_game(&row.id)), Some(row.clone()));
         assert!(q!(harness, t => t.ranked_game(&id())).is_none());
         // R262's rate-once guard is the row's own id.
-        let refused = must(call!(harness, t => t.ranked_record_game(&row)).err(), "the second record's refusal");
+        let refused = must(
+            call!(harness, t => t.ranked_record_game(&row)).err(),
+            "the second record's refusal",
+        );
         assert!(
-            refused.to_string().contains(&format!("rated_games already holds a row for {}", row.id)),
+            refused
+                .to_string()
+                .contains(&format!("rated_games already holds a row for {}", row.id)),
             "{refused}"
         );
     }
@@ -3034,7 +3584,9 @@ mod ranked {
         assert_eq!(q!(harness, t => t.ranked_game(&row.id)), Some(row));
     }
 
-    async fn r609_reset_input_is_everyone_a_rated_game_touched_and_reset_ratings_writes_it(harness: &StoreHarness) {
+    async fn r609_reset_input_is_everyone_a_rated_game_touched_and_reset_ratings_writes_it(
+        harness: &StoreHarness,
+    ) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
         let c = active_profile(harness, None).await;
@@ -3043,8 +3595,10 @@ mod ranked {
         q!(harness, t => t.ranked_record_game(&rated_game(harness, &id(), "v0.1", &a, &b, json!({}))));
 
         let players: Vec<Value> = q!(harness, t => t.ranked_rated_players()).iter().map(j).collect();
-        let profile_ids: Vec<String> =
-            players.iter().map(|player| must(player["profileId"].as_str().map(str::to_string), "a profile id")).collect();
+        let profile_ids: Vec<String> = players
+            .iter()
+            .map(|player| must(player["profileId"].as_str().map(str::to_string), "a profile id"))
+            .collect();
         assert_eq!(profile_ids, sorted(&[a.id.clone(), b.id.clone()]));
         let ratings: Vec<Value> = players.iter().map(|player| player["glicko"].clone()).collect();
         assert_eq!(ratings, vec![j(&glicko(1000.0)), j(&glicko(1000.0))]);
@@ -3060,9 +3614,15 @@ mod ranked {
         let rated_a = j(&must(q!(harness, t => t.profiles_get_by_id(&a.id)), "a"));
         assert_eq!(rated_a["rating"].as_f64(), Some(1075.5));
         assert_eq!(rated_a["ratingDeviation"].as_f64(), Some(350.0));
-        assert_eq!(j(&must(q!(harness, t => t.profiles_get_by_id(&b.id)), "b"))["rating"].as_f64(), Some(1037.75));
+        assert_eq!(
+            j(&must(q!(harness, t => t.profiles_get_by_id(&b.id)), "b"))["rating"].as_f64(),
+            Some(1037.75)
+        );
         // A player no rated game touched is untouched.
-        assert_eq!(j(&must(q!(harness, t => t.profiles_get_by_id(&c.id)), "c"))["rating"].as_f64(), Some(1000.0));
+        assert_eq!(
+            j(&must(q!(harness, t => t.profiles_get_by_id(&c.id)), "c"))["rating"].as_f64(),
+            Some(1000.0)
+        );
         // And an empty reset is legal (the first season's input can be empty).
         q!(harness, t => t.ranked_reset_ratings(&[]));
     }
@@ -3155,7 +3715,8 @@ mod profiles_remove {
         q!(harness, t => t.matches_finish(&match_id, now));
 
         // R611's record of the same match (R611 keeps it for good, like `results`).
-        let first_season: Season = from(json!({ "id": "v0.1", "patchVersion": "v0.1.1", "startedAt": now - 1 }));
+        let first_season: Season =
+            from(json!({ "id": "v0.1", "patchVersion": "v0.1.1", "startedAt": now - 1 }));
         q!(harness, t => t.ranked_create_season(&first_season));
         let rated: RatedGameRow = from(json!({
             "id": match_id,
@@ -3184,9 +3745,15 @@ mod profiles_remove {
         assert!(q!(harness, t => t.collection_get(&gone.id)).is_empty());
         assert!(q!(harness, t => t.tickets_open_for_profile(&gone.id)).is_none());
         assert!(q!(harness, t => t.rooms_get("QWERTZ")).is_none());
-        assert_eq!(q!(harness, t => t.codes_count_attempts_by_profile(&gone.id, now - 60_000)), 0);
+        assert_eq!(
+            q!(harness, t => t.codes_count_attempts_by_profile(&gone.id, now - 60_000)),
+            0
+        );
         // The attempt itself stays for the per-IP limit.
-        assert_eq!(q!(harness, t => t.codes_count_attempts_by_ip("ip-gone", now - 60_000)), 1);
+        assert_eq!(
+            q!(harness, t => t.codes_count_attempts_by_ip("ip-gone", now - 60_000)),
+            1
+        );
 
         // The other player keeps the log and the result, and the match they lost is still a loss.
         assert_eq!(q!(harness, t => t.matches_actions(&match_id)).len(), 1);
@@ -3200,7 +3767,10 @@ mod profiles_remove {
         // The rated-game record stays whole too (R611): Postgres empties the deleted side's seat
         // (`on delete set null`) while the memory store keeps the id — KNOWN DIVERGENCES — so only
         // the record's survival and the other side are asserted across both.
-        let kept = j(&must(q!(harness, t => t.ranked_game(&match_id)), "the rated-game record"));
+        let kept = j(&must(
+            q!(harness, t => t.ranked_game(&match_id)),
+            "the rated-game record",
+        ));
         assert_eq!(kept["sides"][1]["profileId"], other.id.as_str());
     }
 
@@ -3211,7 +3781,9 @@ mod purge_expired {
     use super::*;
 
     /// Retention.
-    async fn deletes_attempts_and_finished_logs_older_than_the_cutoffs_and_nothing_newer(harness: &StoreHarness) {
+    async fn deletes_attempts_and_finished_logs_older_than_the_cutoffs_and_nothing_newer(
+        harness: &StoreHarness,
+    ) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
         let now = harness.now();
@@ -3258,7 +3830,9 @@ mod tx {
     async fn inner(t: &mut Tx<'_>, profile_id: &str) -> Result<(), String> {
         // TS wrote `setRating(profile.id, 1234)`; `setRating` is not ported (SURFACE §11.2).
         let rating: Glicko = from(json!({ "rating": 1234, "deviation": 350, "volatility": 0.06 }));
-        t.profiles_set_glicko(profile_id, &rating).await.map_err(|error| error.to_string())
+        t.profiles_set_glicko(profile_id, &rating)
+            .await
+            .map_err(|error| error.to_string())
     }
 
     async fn joins_a_nested_transaction_rather_than_opening_a_second_one(harness: &StoreHarness) {
@@ -3273,7 +3847,10 @@ mod tx {
         assert!(must(failed.err(), "the outer failure").contains("outer fails"));
 
         // The inner `tx` must not have committed on its own.
-        let after = j(&must(q!(harness, t => t.profiles_get_by_id(&profile.id)), "the profile"));
+        let after = j(&must(
+            q!(harness, t => t.profiles_get_by_id(&profile.id)),
+            "the profile",
+        ));
         assert_eq!(after["rating"].as_f64(), Some(1000.0));
     }
 

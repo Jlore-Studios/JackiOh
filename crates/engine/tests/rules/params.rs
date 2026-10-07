@@ -211,7 +211,8 @@ mod r386_b3_4_rule_5_declared_numbers {
     }
 
     #[test]
-    fn r386_param_ctx_key_reads_the_running_card_on_the_face_that_runs_a_card_that_has_ceased_to_exist_reads_its_printed_value() {
+    fn r386_param_ctx_key_reads_the_running_card_on_the_face_that_runs_a_card_that_has_ceased_to_exist_reads_its_printed_value()
+     {
         let mut state = game();
         let card = one(in_hand(&mut state, &numbered.id, P1, 1));
         step_param(live_mut(&mut state, &card), "damage", 2);
@@ -239,7 +240,8 @@ mod r386_b3_4_rule_5_declared_numbers {
     }
 
     #[test]
-    fn r102_on_a_fused_card_each_ingredient_s_text_reads_its_own_declaration_and_the_card_declares_the_union() {
+    fn r102_on_a_fused_card_each_ingredient_s_text_reads_its_own_declaration_and_the_card_declares_the_union()
+    {
         let mut state = game();
         let kept = put(&mut state, &body.id, slot(P1, Row::Units, 1), json!({}));
         let a = one(in_hand(&mut state, &numbered.id, P1, 1));
@@ -276,7 +278,13 @@ mod r386_b3_4_rule_5_declared_numbers {
             assert!(message.contains("declares no number"), "{message}");
         }
         let mut expected = IndexMap::new();
-        for (key, number) in [("damage", 2), ("threshold", 3), ("big", 8), ("huge", 20), ("times", 3)] {
+        for (key, number) in [
+            ("damage", 2),
+            ("threshold", 3),
+            ("big", 8),
+            ("huge", 20),
+            ("times", 3),
+        ] {
             expected.insert(key.to_string(), number);
         }
         assert_eq!(view, Some(expected));
@@ -308,7 +316,10 @@ mod r386_b3_4_rule_5_declared_numbers {
         assert!(past.contains("no ingredient 3 on the part path 3"), "{past}");
         ctx.data = part(&[0, 0]);
         let nested = panic_text(|| param(&ctx, "damage"));
-        assert!(nested.contains("no ingredient 0 on the part path 0.0"), "{nested}");
+        assert!(
+            nested.contains("no ingredient 0 on the part path 0.0"),
+            "{nested}"
+        );
     }
 
     #[test]
@@ -317,7 +328,10 @@ mod r386_b3_4_rule_5_declared_numbers {
         put(&mut state, &body.id, slot(P1, Row::Units, 1), json!({}));
         let card = one(in_hand(&mut state, &numbered.id, P1, 1));
         let view = view_for(&state, P1);
-        assert_eq!(view.you.units[0].as_ref().and_then(|unit| unit.params.clone()), None);
+        assert_eq!(
+            view.you.units[0].as_ref().and_then(|unit| unit.params.clone()),
+            None
+        );
         let HandView::Cards(hand) = &view.you.hand else {
             panic!("own hand is a list");
         };

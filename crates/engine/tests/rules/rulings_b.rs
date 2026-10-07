@@ -94,7 +94,14 @@ fn spread(def: &mut Value, overrides: Value) {
 }
 
 /// TS `unitDefOf`: a Core unit fixture whose index is the next of this file's (1201 on).
-fn unit_def_of(next: &mut i32, name: &str, attack: i32, health: i32, keywords: Value, overrides: Value) -> CardDef {
+fn unit_def_of(
+    next: &mut i32,
+    name: &str,
+    attack: i32,
+    health: i32,
+    keywords: Value,
+    overrides: Value,
+) -> CardDef {
     *next += 1;
     let index = *next;
     let mut def = json!({
@@ -145,13 +152,34 @@ fn defs() -> Vec<CardDef> {
         unit_def_of(n, "plain", 3, 3, none(), no()),
         unit_def_of(n, "big-body", 5, 5, none(), no()),
         unit_def_of(n, "small", 1, 2, none(), no()),
-        unit_def_of(n, "warded-taunt", 4, 4, json!([{ "kind": "Indestructible" }, { "kind": "Taunt" }]), no()),
-        unit_def_of(n, "warded-pinger", 4, 4, json!([{ "kind": "Indestructible" }]), no()),
+        unit_def_of(
+            n,
+            "warded-taunt",
+            4,
+            4,
+            json!([{ "kind": "Indestructible" }, { "kind": "Taunt" }]),
+            no(),
+        ),
+        unit_def_of(
+            n,
+            "warded-pinger",
+            4,
+            4,
+            json!([{ "kind": "Indestructible" }]),
+            no(),
+        ),
         unit_def_of(n, "reborn", 2, 2, json!([{ "kind": "Reborn" }]), no()),
         unit_def_of(n, "duelist", 4, 3, json!([{ "kind": "Deft" }]), no()),
         unit_def_of(n, "immutable", 2, 2, json!([{ "kind": "Immutable" }]), no()),
         unit_def_of(n, "trampler", 6, 4, json!([{ "kind": "Trample" }]), no()),
-        unit_def_of(n, "trample-leech", 6, 4, json!([{ "kind": "Trample" }, { "kind": "Lifesteal" }]), no()),
+        unit_def_of(
+            n,
+            "trample-leech",
+            6,
+            4,
+            json!([{ "kind": "Trample" }, { "kind": "Lifesteal" }]),
+            no(),
+        ),
         unit_def_of(n, "cleaver", 3, 6, json!([{ "kind": "Cleave" }]), no()),
         unit_def_of(n, "shielded", 2, 2, json!([{ "kind": "Divine Shield" }]), no()),
         unit_def_of(n, "armoured", 1, 6, json!([{ "kind": "Armor", "n": 5 }]), no()),
@@ -168,8 +196,22 @@ fn defs() -> Vec<CardDef> {
         unit_def_of(n, "rememberer", 2, 2, none(), no()),
         unit_def_of(n, "kpop", 2, 2, none(), no()),
         unit_def_of(n, "clock", 1, 1, none(), no()),
-        unit_def_of(n, "fuse-a", 2, 3, json!([{ "kind": "Taunt" }]), json!({ "cost": 2, "tags": ["Human"] })),
-        unit_def_of(n, "fuse-b", 1, 1, json!([{ "kind": "Rush" }]), json!({ "cost": 3, "tags": ["Felinor"] })),
+        unit_def_of(
+            n,
+            "fuse-a",
+            2,
+            3,
+            json!([{ "kind": "Taunt" }]),
+            json!({ "cost": 2, "tags": ["Human"] }),
+        ),
+        unit_def_of(
+            n,
+            "fuse-b",
+            1,
+            1,
+            json!([{ "kind": "Rush" }]),
+            json!({ "cost": 3, "tags": ["Felinor"] }),
+        ),
         unit_def_of(
             n,
             "token",
@@ -183,9 +225,19 @@ fn defs() -> Vec<CardDef> {
         card_def_of(n, "equation", "Spell", json!({ "cost": 1 })),
         card_def_of(n, "giga", "Spell", json!({ "cost": 6 })),
         card_def_of(n, "x-card", "Spell", json!({ "cost": "X" })),
-        card_def_of(n, "embiggen", "Spell", json!({ "cost": { "base": 2, "embiggen": 4 } })),
+        card_def_of(
+            n,
+            "embiggen",
+            "Spell",
+            json!({ "cost": { "base": 2, "embiggen": 4 } }),
+        ),
         card_def_of(n, "dotted", "Spell", json!({ "index": "51.1" })),
-        card_def_of(n, "spell-token", "Spell", json!({ "token": true, "rarity": "Token", "tags": ["Token"] })),
+        card_def_of(
+            n,
+            "spell-token",
+            "Spell",
+            json!({ "token": true, "rarity": "Token", "tags": ["Token"] }),
+        ),
         card_def_of(n, "caster", "Spell", no()),
         card_def_of(n, "splitter", "Spell", no()),
         card_def_of(n, "all-enemies", "Spell", no()),
@@ -263,7 +315,12 @@ fn rb_note(name: String) -> Effect {
         let Some(Some(log)) = ctx.sink.state.players.p1.backrow.get_mut(4) else {
             return;
         };
-        let mut steps: Vec<Value> = log.memory.get("steps").and_then(Value::as_array).cloned().unwrap_or_default();
+        let mut steps: Vec<Value> = log
+            .memory
+            .get("steps")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
         steps.push(json!(name));
         log.memory.insert("steps".to_string(), Value::Array(steps));
     })
@@ -278,7 +335,13 @@ fn rb_steps(state: &GameState) -> Vec<String> {
         .and_then(Option::as_ref)
         .and_then(|log| log.memory.get("steps"))
         .and_then(Value::as_array)
-        .map(|steps| steps.iter().filter_map(Value::as_str).map(str::to_string).collect())
+        .map(|steps| {
+            steps
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -296,7 +359,9 @@ fn both(script: Script) -> CardScripts {
 fn ping_enemy_hero(amount: i32) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
-            vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))]
+            vec![effects::damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": amount }),
+            ))]
         })),
         ..Script::default()
     }
@@ -362,7 +427,10 @@ fn scripts() -> IndexMap<String, CardScripts> {
         CLOCK.into(),
         both(Script {
             start_of_turn: Some(hook(|ctx| {
-                vec![rb_note(format!("start:lib{}", ctx.state.players.p1.library.len()))]
+                vec![rb_note(format!(
+                    "start:lib{}",
+                    ctx.state.players.p1.library.len()
+                ))]
             })),
             end_of_turn: Some(hook(|_ctx| vec![rb_note("end".to_string())])),
             delayed: Some(hook(|_ctx| vec![rb_note("delayed".to_string())])),
@@ -372,9 +440,11 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         WINDOW_TRAP.into(),
         both(Script {
-            triggers: vec![TriggerDef::new("turn-end", &[GameEventType::TurnEnded], |ctx, _event| {
-                vec![rb_note(format!("trap:{}", ctx.controller))]
-            })],
+            triggers: vec![TriggerDef::new(
+                "turn-end",
+                &[GameEventType::TurnEnded],
+                |ctx, _event| vec![rb_note(format!("trap:{}", ctx.controller))],
+            )],
             ..Script::default()
         }),
     );
@@ -382,14 +452,16 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         BREAD_TRAP.into(),
         both(Script {
-            triggers: vec![TriggerDef::new("turn-end", &[GameEventType::TurnEnded], |_ctx, event| {
-                match event {
+            triggers: vec![TriggerDef::new(
+                "turn-end",
+                &[GameEventType::TurnEnded],
+                |_ctx, event| match event {
                     GameEvent::TurnEnded { unspent_mana, .. } if *unspent_mana > 0 => {
                         vec![effects::summon(json_as(json!({ "defId": UNIT_TOKEN })))]
                     }
                     _ => vec![],
-                }
-            })],
+                },
+            )],
             ..Script::default()
         }),
     );
@@ -397,7 +469,11 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         EMPTY_TRAP.into(),
         both(Script {
-            triggers: vec![TriggerDef::new("no-target", &[GameEventType::CardPlayed], |_ctx, _event| vec![])],
+            triggers: vec![TriggerDef::new(
+                "no-target",
+                &[GameEventType::CardPlayed],
+                |_ctx, _event| vec![],
+            )],
             ..Script::default()
         }),
     );
@@ -425,7 +501,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
                     .and_then(|card| card.memory.get("note"))
                     .is_some_and(Value::is_string);
                 if noted {
-                    vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 4 })))]
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 4 }),
+                    ))]
                 } else {
                     vec![]
                 }
@@ -437,7 +515,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
         WARDED_PINGER.into(),
         both(Script {
             death: Some(hook(|_ctx| {
-                vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -447,10 +527,18 @@ fn scripts() -> IndexMap<String, CardScripts> {
         MODE_SPELL.into(),
         both(Script {
             targets: vec![json_as(json!({ "kind": "target", "min": 1, "max": 1 }))],
-            modes: vec![json_as(json!({ "kind": "direction", "options": ["left", "right"] }))],
+            modes: vec![json_as(
+                json!({ "kind": "direction", "options": ["left", "right"] }),
+            )],
             cry: Some(hook(|ctx| {
-                let amount = if ctx.modes.first().map(String::as_str) == Some("left") { 1 } else { 5 };
-                vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
+                let amount = if ctx.modes.first().map(String::as_str) == Some("left") {
+                    1
+                } else {
+                    5
+                };
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "chosen" }, "amount": amount }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -460,7 +548,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
         DISCOVER_SPELL.into(),
         both(Script {
             cry: Some(hook(|_ctx| {
-                vec![effects::discover_from_catalog(json_as(json!({ "step": "pick", "query": { "type": "Unit" } })))]
+                vec![effects::discover_from_catalog(json_as(
+                    json!({ "step": "pick", "query": { "type": "Unit" } }),
+                ))]
             })),
             resume: IndexMap::from([(
                 "pick",
@@ -556,13 +646,19 @@ fn instance_in(state: &GameState, id: &str) -> CardInstance {
 
 /// TS wrote through the live instance (`card.costMod = -2`): here, the card under that id in the state.
 fn edit(state: &mut GameState, card: &CardInstance, change: impl FnOnce(&mut CardInstance)) {
-    change(must(find_instance_mut(state, &card.id), &format!("instance {}", card.id)));
+    change(must(
+        find_instance_mut(state, &card.id),
+        &format!("instance {}", card.id),
+    ));
 }
 
 /// TS handed the engine the live instance, so what the engine wrote to it was in the state: the
 /// copy it wrote to goes back under its id.
 fn put_back(state: &mut GameState, card: &CardInstance) {
-    *must(find_instance_mut(state, &card.id), &format!("instance {}", card.id)) = card.clone();
+    *must(
+        find_instance_mut(state, &card.id),
+        &format!("instance {}", card.id),
+    ) = card.clone();
 }
 
 fn controlled(controller: PlayerId) -> HookOptions {
@@ -595,11 +691,15 @@ fn hero(player: PlayerId) -> AttackTarget {
 }
 
 fn unit_target(card: &CardInstance) -> AttackTarget {
-    AttackTarget::Unit { instance: card.clone() }
+    AttackTarget::Unit {
+        instance: card.clone(),
+    }
 }
 
 fn unit_hit(card: &CardInstance) -> DamageTarget {
-    DamageTarget::Unit { instance: card.clone() }
+    DamageTarget::Unit {
+        instance: card.clone(),
+    }
 }
 
 /// `dealDamage`'s `{ source, target, amount }`.
@@ -654,7 +754,10 @@ fn ids<C: Borrow<CardInstance>>(cards: impl IntoIterator<Item = C>) -> Vec<Strin
 }
 
 fn def_ids<C: Borrow<CardInstance>>(cards: impl IntoIterator<Item = C>) -> Vec<String> {
-    cards.into_iter().map(|card| card.borrow().def_id.clone()).collect()
+    cards
+        .into_iter()
+        .map(|card| card.borrow().def_id.clone())
+        .collect()
 }
 
 fn owned<C: Borrow<CardInstance>>(cards: impl IntoIterator<Item = C>) -> Vec<CardInstance> {
@@ -708,7 +811,10 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
 }
 
 fn assert_matches(actual: Value, expected: Value) {
-    assert!(matches_object(&actual, &expected), "{actual} does not match {expected}");
+    assert!(
+        matches_object(&actual, &expected),
+        "{actual} does not match {expected}"
+    );
 }
 
 // R79: the server owns these, in apps/server/src/config.ts (BUILD §2, M7) — the match lifecycle,
@@ -720,8 +826,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     use super::*;
 
     #[test]
-    fn r43_stores_heroic_power_s_power_on_the_instance_pays_its_x_as_it_is_used_once_a_turn_and_recruits_a_permanent(
-    ) {
+    fn r43_stores_heroic_power_s_power_on_the_instance_pays_its_x_as_it_is_used_once_a_turn_and_recruits_a_permanent()
+     {
         let mut state = game("r43");
         let card = put(&mut state, HEROIC, slot(P1, BACKROW, 1), json!({}));
         let mut sink = sink_for(&mut state);
@@ -736,7 +842,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         put_back(sink.state, &live);
         assert!(rolled.is_some());
         let rolled_name = rolled.as_ref().map(|power| to_json(&power.name));
-        assert_eq!(instance_in(sink.state, &card.id).memory.get("power").cloned(), rolled_name);
+        assert_eq!(
+            instance_in(sink.state, &card.id).memory.get("power").cloned(),
+            rolled_name
+        );
         let mut live = instance_in(sink.state, &card.id);
         let again = ensure_power(&mut sink, &mut live);
         put_back(sink.state, &live);
@@ -797,7 +906,11 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         // The cancellation itself is My Pawn's, and rides the `attackCancelled` event (§10.3).
         // M4: cards/test/96-my-pawn.test.ts proves the card half.
-        assert!(GameEventType::ALL.iter().any(|event_type| event_type.as_str() == "attackCancelled"));
+        assert!(
+            GameEventType::ALL
+                .iter()
+                .any(|event_type| event_type.as_str() == "attackCancelled")
+        );
     }
 
     #[test]
@@ -814,14 +927,19 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         // The opening draw is a table indexed by seat (§2.1), not two constants.
         assert_eq!(
-            PLAYER_IDS.iter().map(|&player| opening_draw_for(player)).collect::<Vec<_>>(),
+            PLAYER_IDS
+                .iter()
+                .map(|&player| opening_draw_for(player))
+                .collect::<Vec<_>>(),
             OPENING_DRAW.to_vec()
         );
 
         // "Each opposing hero" is derived from the acting player, so p2 acting reaches p1.
         let mut sink = sink_for(&mut state);
         apply_effects(
-            &[effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 3 })))],
+            &[effects::damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": 3 }),
+            ))],
             &mut make_context(&mut sink, None, controlled(P2)),
         );
         assert_eq!(sink.state.players.p1.hero.health, HERO_HEALTH - 3);
@@ -842,8 +960,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r46_turns_a_would_destroy_indestructible_unit_to_attack_position_without_taunt_and_leaves_a_field_spell_alone(
-    ) {
+    fn r46_turns_a_would_destroy_indestructible_unit_to_attack_position_without_taunt_and_leaves_a_field_spell_alone()
+     {
         let mut state = game("r46");
         let warded = put(&mut state, WARDED_TAUNTER, slot(P1, UNITS, 1), json!({}));
         edit(&mut state, &warded, |card| {
@@ -872,7 +990,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(warded_now.marked_destroyed, Some(false));
         assert_eq!(warded_now.position, Some(Position::Atk));
         assert_eq!(warded_now.taunt_suppressed_turn, Some(state.turn));
-        assert!(!has_keyword(&unit_view(&state, &warded_now).keywords, KeywordKind::Taunt));
+        assert!(!has_keyword(
+            &unit_view(&state, &warded_now).keywords,
+            KeywordKind::Taunt
+        ));
 
         // The Indestructible Field Spell simply stays and the mark is dropped.
         assert_eq!(id_at(&state, slot(P1, BACKROW, 1)), Some(field.id.clone()));
@@ -880,8 +1001,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r47_a_lane_targeted_summon_fizzles_on_an_occupied_zone_but_lands_on_a_locked_one_r688_and_holds_a_reborn_unit_s_zone(
-    ) {
+    fn r47_a_lane_targeted_summon_fizzles_on_an_occupied_zone_but_lands_on_a_locked_one_r688_and_holds_a_reborn_unit_s_zone()
+     {
         let mut state = game("r47");
         let mut sink = sink_for(&mut state);
         let mut ctx = make_context(&mut sink, None, controlled(P1));
@@ -894,10 +1015,16 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(def_ids(active_units_of(ctx.sink.state, P1)), vec![PLAIN]);
 
         apply_effects(&[summon_in(3)], &mut ctx); // Locked: lands (R688)
-        assert_eq!(def_at(ctx.sink.state, slot(P1, UNITS, 3)), Some(SMALL.to_string()));
+        assert_eq!(
+            def_at(ctx.sink.state, slot(P1, UNITS, 3)),
+            Some(SMALL.to_string())
+        );
 
         apply_effects(&[summon_in(4)], &mut ctx);
-        assert_eq!(def_at(ctx.sink.state, slot(P1, UNITS, 4)), Some(SMALL.to_string()));
+        assert_eq!(
+            def_at(ctx.sink.state, slot(P1, UNITS, 4)),
+            Some(SMALL.to_string())
+        );
 
         // A zone reserved for a dying Reborn unit counts as occupied for everything else (R64).
         reserve_zone(ctx.sink.state, slot(P1, UNITS, 1));
@@ -943,11 +1070,17 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let victim = put(&mut state, SMALL, slot(P2, UNITS, 1), json!({}));
         let mut sink = sink_for(&mut state);
 
-        assert_eq!(refusal(declare_attack(&mut sink, &duel, &unit_target(&victim))), None);
+        assert_eq!(
+            refusal(declare_attack(&mut sink, &duel, &unit_target(&victim))),
+            None
+        );
         let duel_now = instance_in(sink.state, &duel.id);
         assert!(duel_now.exertion.attacked);
         assert!(has_exertion(sink.state, &duel_now, ExertionKind::Switch));
-        assert_eq!(refusal(switch_position(&mut sink, &duel_now, Default::default())), None);
+        assert_eq!(
+            refusal(switch_position(&mut sink, &duel_now, Default::default())),
+            None
+        );
         assert_eq!(instance_in(sink.state, &duel.id).position, Some(Position::Def));
 
         let ordinary = put(sink.state, PLAIN, slot(P1, UNITS, 2), json!({}));
@@ -961,12 +1094,17 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         // R49 reads the keyword through the layers, so a granted Deft works like a printed one.
         let gifted = put(sink.state, PLAIN, slot(P1, UNITS, 3), json!({}));
-        edit(sink.state, &gifted, |card| card.granted_keywords.push(json_as(json!({ "kind": "Deft" }))));
+        edit(sink.state, &gifted, |card| {
+            card.granted_keywords.push(json_as(json!({ "kind": "Deft" })))
+        });
         let gifted_now = instance_in(sink.state, &gifted.id);
         assert_eq!(refusal(declare_attack(&mut sink, &gifted_now, &hero(P2))), None);
         let gifted_now = instance_in(sink.state, &gifted.id);
         assert!(has_exertion(sink.state, &gifted_now, ExertionKind::Switch));
-        assert_eq!(refusal(switch_position(&mut sink, &gifted_now, Default::default())), None);
+        assert_eq!(
+            refusal(switch_position(&mut sink, &gifted_now, Default::default())),
+            None
+        );
     }
 
     #[test]
@@ -977,14 +1115,25 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         let mut sink = sink_for(&mut state);
         apply_effects(
-            &[effects::discover_from_graveyard(json_as(json!({ "step": "pick" })))],
+            &[effects::discover_from_graveyard(json_as(
+                json!({ "step": "pick" }),
+            ))],
             &mut make_context(&mut sink, None, controlled(P1)),
         );
 
         let pending = sink.state.pending.clone();
-        assert_eq!(pending.as_ref().map(|prompt| prompt.kind), Some(PromptKind::Discover));
+        assert_eq!(
+            pending.as_ref().map(|prompt| prompt.kind),
+            Some(PromptKind::Discover)
+        );
         let selections: Vec<Selection> = pending
-            .map(|prompt| prompt.options.iter().map(|option| option.selection.clone()).collect())
+            .map(|prompt| {
+                prompt
+                    .options
+                    .iter()
+                    .map(|option| option.selection.clone())
+                    .collect()
+            })
             .unwrap_or_default();
         assert!(selections.contains(&sel(&token)));
         // M4: cards/test/72-reminisce.test.ts proves the card half.
@@ -1046,13 +1195,21 @@ mod spec_11_rulings_r43_r84_m3_gate {
         // The target still struck back, through the Armor 1 that Defense Position grants (§4.1).
         let struck = instance_in(sink.state, &attacker.id);
         assert_eq!(struck.damage, 2);
-        assert_eq!(to_json(&struck.exertion), json!({ "attacked": false, "switched": false }));
+        assert_eq!(
+            to_json(&struck.exertion),
+            json!({ "attacked": false, "switched": false })
+        );
 
         // Each forced attack is its own combat and its own state check, so the next one is skipped.
         let second = put(sink.state, PLAIN, slot(P1, UNITS, 2), json!({}));
         let third = put(sink.state, PLAIN, slot(P1, UNITS, 3), json!({}));
         let victim = put(sink.state, SMALL, slot(P2, UNITS, 2), json!({})); // 1/2
-        force_attacks_on(&mut sink, &[second.clone(), third.clone()], &unit_target(&victim), None);
+        force_attacks_on(
+            &mut sink,
+            &[second.clone(), third.clone()],
+            &unit_target(&victim),
+            None,
+        );
 
         assert_ne!(instance_in(sink.state, &victim.id).zone.z(), ZoneName::Field);
         assert_eq!(instance_in(sink.state, &second.id).damage, 1);
@@ -1063,24 +1220,35 @@ mod spec_11_rulings_r43_r84_m3_gate {
     fn r54_never_offers_a_token_index_or_the_generating_card_s_own_index_in_a_random_pool() {
         let mut state = game("r54");
         // §5.1: tokens are out unless the query asks for the Token tag.
-        assert!(!query(&json_as(json!({ "set": "Core" })))
-            .iter()
-            .any(|def| def.token || def.tags.contains(&Tag::Token)));
+        assert!(
+            !query(&json_as(json!({ "set": "Core" })))
+                .iter()
+                .any(|def| def.token || def.tags.contains(&Tag::Token))
+        );
         assert!(!query(&json_as(json!({ "tags": ["Token"] }))).is_empty());
 
         // And a pool never offers the card that generated it: KY's Trial rerolls its own index.
         let me = put(&mut state, PLAIN, slot(P1, UNITS, 1), json!({}));
         let mut sink = sink_for(&mut state);
         apply_effects(
-            &[effects::discover_from_catalog(json_as(json!({ "step": "pick", "query": { "type": "Unit" } })))],
+            &[effects::discover_from_catalog(json_as(
+                json!({ "step": "pick", "query": { "type": "Unit" } }),
+            ))],
             &mut make_context(&mut sink, Some(&me), controlled(P1)),
         );
 
-        let options: Vec<PromptOption> = sink.state.pending.as_ref().map(|prompt| prompt.options.clone()).unwrap_or_default();
+        let options: Vec<PromptOption> = sink
+            .state
+            .pending
+            .as_ref()
+            .map(|prompt| prompt.options.clone())
+            .unwrap_or_default();
         assert_eq!(options.len(), 3);
-        assert!(!options
-            .iter()
-            .any(|option| matches!(&option.selection, Selection::Mode { option } if option == PLAIN)));
+        assert!(
+            !options
+                .iter()
+                .any(|option| matches!(&option.selection, Selection::Mode { option } if option == PLAIN))
+        );
         // M4: cards/test/82-kys-trial.test.ts proves the 1–100 index roll.
     }
 
@@ -1127,15 +1295,21 @@ mod spec_11_rulings_r43_r84_m3_gate {
         edit(&mut state, &card, |live| live.cost_mod = -2);
         assert_eq!(price_now(&state, &card), 1);
 
-        let result = act_result(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }));
+        let result = act_result(
+            &state,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        );
         assert_eq!(result.error, None);
-        assert_eq!(only(&of_type(&result.events, GameEventType::CardPlayed))["costPaid"], json!(1));
+        assert_eq!(
+            only(&of_type(&result.events, GameEventType::CardPlayed))["costPaid"],
+            json!(1)
+        );
         assert_eq!(result.state.players.p1.mana.current, 0);
     }
 
     #[test]
-    fn r57_makes_a_shuffled_in_copy_a_fresh_instance_carrying_the_radiant_flag_and_a_field_copy_keep_statsoverride(
-    ) {
+    fn r57_makes_a_shuffled_in_copy_a_fresh_instance_carrying_the_radiant_flag_and_a_field_copy_keep_statsoverride()
+     {
         let mut state = game("r57");
         state.players.p1.library = vec![];
 
@@ -1155,7 +1329,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         let mut sink = sink_for(&mut state);
         let mut ctx = make_context(&mut sink, Some(&me), controlled(P1));
-        apply_effects(&[effects::shuffle_copies_of_self(json_as(json!({ "count": 1 })))], &mut ctx);
+        apply_effects(
+            &[effects::shuffle_copies_of_self(json_as(json!({ "count": 1 })))],
+            &mut ctx,
+        );
 
         let copy = only(&ctx.sink.state.players.p1.library);
         assert_eq!(copy.def_id, PLAIN);
@@ -1164,7 +1341,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(copy.damage, 0);
         assert_eq!(to_json(&copy.counters), json!({}));
         assert!(copy.granted_keywords.is_empty());
-        assert_eq!(to_json(&copy.exertion), json!({ "attacked": false, "switched": false }));
+        assert_eq!(
+            to_json(&copy.exertion),
+            json!({ "attacked": false, "switched": false })
+        );
 
         // A copy that arrives on the field keeps the radiant flag and the §7 stats override, reset.
         apply_effects(
@@ -1191,8 +1371,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r58_casts_at_most_cast_on_draw_chain_cap_cards_in_one_draw_casts_on_a_full_hand_and_draws_n_times_for_draw_n(
-    ) {
+    fn r58_casts_at_most_cast_on_draw_chain_cap_cards_in_one_draw_casts_on_a_full_hand_and_draws_n_times_for_draw_n()
+     {
         let mut state = game("r58");
         let mut sink = sink_for(&mut state);
         sink.state.players.p1.hand = vec![];
@@ -1227,7 +1407,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r59_runs_the_state_check_after_a_whole_effect_never_between_its_hits_and_calls_two_dead_heroes_a_draw() {
+    fn r59_runs_the_state_check_after_a_whole_effect_never_between_its_hits_and_calls_two_dead_heroes_a_draw()
+    {
         let mut state = game("r59");
         let mut sink = sink_for(&mut state);
         let first = put(sink.state, SMALL, slot(P2, UNITS, 1), json!({}));
@@ -1257,8 +1438,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r60_picks_different_cards_among_the_non_radiant_ones_all_of_them_when_fewer_exist_and_none_when_none_are_left(
-    ) {
+    fn r60_picks_different_cards_among_the_non_radiant_ones_all_of_them_when_fewer_exist_and_none_when_none_are_left()
+     {
         let mut state = game("r60");
         state.players.p1.hand = vec![];
         let cards = in_hand(&mut state, NOOP, P1, 3);
@@ -1269,13 +1450,22 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let mut sink = sink_for(&mut state);
         let mut ctx = make_context(&mut sink, None, controlled(P1));
         let cursor = ctx.sink.rng.cursor();
-        apply_effects(&[effects::set_radiant_random(json_as(json!({ "zones": "hand", "count": 2 })))], &mut ctx);
+        apply_effects(
+            &[effects::set_radiant_random(json_as(
+                json!({ "zones": "hand", "count": 2 }),
+            ))],
+            &mut ctx,
+        );
         // None left: nothing changes and nothing is drawn (R129); the hidden hand is still cued as a
         // pick of two would cue it, on its Radiant cards (R177).
         assert_eq!(ctx.sink.rng.cursor(), cursor);
         assert_eq!(
             pluck(&of_type(ctx.sink.events, GameEventType::RadiantSet), "instanceId"),
-            cards.iter().take(2).map(|card| json!(card.id)).collect::<Vec<_>>()
+            cards
+                .iter()
+                .take(2)
+                .map(|card| json!(card.id))
+                .collect::<Vec<_>>()
         );
 
         let first = must(cards.first().cloned(), "fixture");
@@ -1284,9 +1474,16 @@ mod spec_11_rulings_r43_r84_m3_gate {
         edit(ctx.sink.state, &second, |live| live.radiant = false);
 
         let from = ctx.sink.events.len();
-        apply_effects(&[effects::set_radiant_random(json_as(json!({ "zones": "hand", "count": 5 })))], &mut ctx);
+        apply_effects(
+            &[effects::set_radiant_random(json_as(
+                json!({ "zones": "hand", "count": 5 }),
+            ))],
+            &mut ctx,
+        );
         // Fewer non-Radiant cards than the pick: both change, and they are different cards.
-        assert!(instance_in(ctx.sink.state, &first.id).radiant && instance_in(ctx.sink.state, &second.id).radiant);
+        assert!(
+            instance_in(ctx.sink.state, &first.id).radiant && instance_in(ctx.sink.state, &second.id).radiant
+        );
         let set = of_type(&ctx.sink.events[from..], GameEventType::RadiantSet);
         let picked: BTreeSet<String> = set
             .iter()
@@ -1299,7 +1496,9 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         // Discover options are always different.
         apply_effects(
-            &[effects::discover_from_catalog(json_as(json!({ "step": "pick", "query": { "type": "Unit" } })))],
+            &[effects::discover_from_catalog(json_as(
+                json!({ "step": "pick", "query": { "type": "Unit" } }),
+            ))],
             &mut ctx,
         );
         let keys: Vec<String> = ctx
@@ -1314,8 +1513,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r61_emits_cardplayed_only_for_a_play_or_a_cast_refuses_an_immutable_fuse_target_and_consumes_a_trap_that_does_nothing(
-    ) {
+    fn r61_emits_cardplayed_only_for_a_play_or_a_cast_refuses_an_immutable_fuse_target_and_consumes_a_trap_that_does_nothing()
+     {
         let mut state = playing("r61");
         let mut sink = sink_for(&mut state);
         let mut ctx = make_context(&mut sink, None, controlled(P1));
@@ -1328,7 +1527,9 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert!(summoned.is_some());
         let summoned_id = summoned.map(|card| card.id).unwrap_or_default();
         apply_effects(
-            &[effects::transform(json_as(json!({ "instanceId": summoned_id, "defId": BIG_BODY })))],
+            &[effects::transform(json_as(
+                json!({ "instanceId": summoned_id, "defId": BIG_BODY }),
+            ))],
             &mut ctx,
         );
         assert!(!of_type(ctx.sink.events, GameEventType::Summoned).is_empty());
@@ -1344,7 +1545,13 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let warded = put(ctx.sink.state, IMMUTABLE, slot(P2, UNITS, 1), json!({}));
         let food = put(ctx.sink.state, PLAIN, slot(P2, UNITS, 2), json!({}));
         drop(ctx);
-        assert!(fuse(&mut sink, json_as(json!({ "ingredients": [warded, food], "target": warded }))).is_none());
+        assert!(
+            fuse(
+                &mut sink,
+                json_as(json!({ "ingredients": [warded, food], "target": warded }))
+            )
+            .is_none()
+        );
 
         // With no legal target the trap fires, is consumed and does nothing; the permanent stays.
         let mut live = playing("r61-trap");
@@ -1363,7 +1570,13 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(result.error, None);
         assert_eq!(of_type(&result.events, GameEventType::TrapFired).len(), 1);
         let live = result.state;
-        assert!(live.players.p2.graveyard.iter().any(|card| card.def_id == EMPTY_TRAP));
+        assert!(
+            live.players
+                .p2
+                .graveyard
+                .iter()
+                .any(|card| card.def_id == EMPTY_TRAP)
+        );
         assert_eq!(def_at(&live, slot(P1, UNITS, 1)), Some(PLAIN.to_string()));
         // M4: cards/test/85-unlicensed-experimentation.test.ts proves the card half.
     }
@@ -1390,7 +1603,12 @@ mod spec_11_rulings_r43_r84_m3_gate {
                 None,
             );
             let turn = sink.state.turn;
-            add_modifier(&mut sink, P1, ModifierExpiry::ThisTurn { turn }, cost_discount(1, None));
+            add_modifier(
+                &mut sink,
+                P1,
+                ModifierExpiry::ThisTurn { turn },
+                cost_discount(1, None),
+            );
         }
 
         state = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
@@ -1416,7 +1634,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r63_tramples_only_the_excess_cleaves_past_a_stopped_hit_ignores_zero_hits_and_lifesteals_the_total_once() {
+    fn r63_tramples_only_the_excess_cleaves_past_a_stopped_hit_ignores_zero_hits_and_lifesteals_the_total_once()
+     {
         let mut state = game("r63");
         let mut sink = sink_for(&mut state);
 
@@ -1446,7 +1665,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let left = put(cleave_sink.state, PLAIN, slot(P2, UNITS, 1), json!({}));
         let right = put(cleave_sink.state, PLAIN, slot(P2, UNITS, 3), json!({}));
         force_attack(&mut cleave_sink, &cleaver_unit, &unit_target(&defender));
-        assert_eq!(instance_in(cleave_sink.state, &defender.id).divine_shield_spent, Some(true));
+        assert_eq!(
+            instance_in(cleave_sink.state, &defender.id).divine_shield_spent,
+            Some(true)
+        );
         let cleaves: Vec<Value> = of_type(cleave_sink.events, GameEventType::Damage)
             .into_iter()
             .filter(|event| event["targetId"] == left.id.as_str() || event["targetId"] == right.id.as_str())
@@ -1460,7 +1682,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let striker = put(zero_sink.state, SHIELDED, slot(P1, UNITS, 1), json!({}));
         let dummy = put(zero_sink.state, ZERO_ATTACK, slot(P2, UNITS, 1), json!({}));
         force_attack(&mut zero_sink, &striker, &unit_target(&dummy));
-        assert_eq!(instance_in(zero_sink.state, &striker.id).divine_shield_spent, None);
+        assert_eq!(
+            instance_in(zero_sink.state, &striker.id).divine_shield_spent,
+            None
+        );
         assert_eq!(instance_in(zero_sink.state, &dummy.id).damage, 2);
 
         // Lifesteal heals the total of a Trample hit once, not the unit's share twice.
@@ -1477,14 +1702,21 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let poison = put(poison_sink.state, POISONER, slot(P1, UNITS, 1), json!({}));
         let victim = put(poison_sink.state, BIG_BODY, slot(P2, UNITS, 1), json!({}));
         deal_damage(&mut poison_sink, hit(Some(poison.clone()), unit_hit(&victim), 1));
-        assert_eq!(instance_in(poison_sink.state, &victim.id).marked_destroyed, Some(true));
-        deal_damage(&mut poison_sink, hit(Some(poison.clone()), DamageTarget::Hero { player: P2 }, 1));
+        assert_eq!(
+            instance_in(poison_sink.state, &victim.id).marked_destroyed,
+            Some(true)
+        );
+        deal_damage(
+            &mut poison_sink,
+            hit(Some(poison.clone()), DamageTarget::Hero { player: P2 }, 1),
+        );
         assert_eq!(poison_sink.state.players.p2.hero.health, HERO_HEALTH - 1);
         assert!(poison_sink.state.result.is_none());
     }
 
     #[test]
-    fn r64_summons_into_the_leftmost_open_zone_fills_the_board_left_to_right_and_reserves_a_reborn_unit_s_zone() {
+    fn r64_summons_into_the_leftmost_open_zone_fills_the_board_left_to_right_and_reserves_a_reborn_unit_s_zone()
+     {
         let mut state = game("r64");
         let mut sink = sink_for(&mut state);
         let mut ctx = make_context(&mut sink, None, controlled(P1));
@@ -1492,9 +1724,15 @@ mod spec_11_rulings_r43_r84_m3_gate {
         put(ctx.sink.state, PLAIN, slot(P1, UNITS, 1), json!({}));
         lock_zone(ctx.sink.state, slot(P1, UNITS, 2));
         apply_effects(&[effects::summon(json_as(json!({ "defId": SMALL })))], &mut ctx);
-        assert_eq!(def_at(ctx.sink.state, slot(P1, UNITS, 3)), Some(SMALL.to_string()));
+        assert_eq!(
+            def_at(ctx.sink.state, slot(P1, UNITS, 3)),
+            Some(SMALL.to_string())
+        );
 
-        apply_effects(&[effects::fill_board(json_as(json!({ "defId": UNIT_TOKEN })))], &mut ctx);
+        apply_effects(
+            &[effects::fill_board(json_as(json!({ "defId": UNIT_TOKEN })))],
+            &mut ctx,
+        );
         assert_eq!(
             slots_of(P1, UNITS)
                 .into_iter()
@@ -1571,8 +1809,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r67_r429_takes_ky_s_math_equation_s_fib_index_from_the_times_it_has_been_played_this_play_included_and_never_from_its_cost(
-    ) {
+    fn r67_r429_takes_ky_s_math_equation_s_fib_index_from_the_times_it_has_been_played_this_play_included_and_never_from_its_cost()
+     {
         let mut state = game("r67");
         state.turn = 3;
         state.active = P1;
@@ -1597,7 +1835,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r68_orders_triggers_active_side_first_units_by_lane_then_backrow_hand_and_graveyard_delayed_by_creation() {
+    fn r68_orders_triggers_active_side_first_units_by_lane_then_backrow_hand_and_graveyard_delayed_by_creation()
+     {
         let mut state = game("r68");
         state.active = P2;
 
@@ -1610,7 +1849,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         state.players.p1.graveyard.push(buried.clone());
 
         assert_eq!(
-            cards_in_trigger_order(&state).iter().map(|holder| holder.card.id.clone()).collect::<Vec<_>>(),
+            cards_in_trigger_order(&state)
+                .iter()
+                .map(|holder| holder.card.id.clone())
+                .collect::<Vec<_>>(),
             vec![
                 theirs.id.clone(),
                 lane1.id.clone(),
@@ -1631,7 +1873,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let second = schedule_delayed(&mut sink, P1, at_start(), stub.clone(), None, None);
         sink.state.delayed.reverse(); // the order in the array is not the order they resolve in
         assert_eq!(
-            due_delayed(sink.state, Phase::Start, P1).iter().map(|effect| effect.id.clone()).collect::<Vec<_>>(),
+            due_delayed(sink.state, Phase::Start, P1)
+                .iter()
+                .map(|effect| effect.id.clone())
+                .collect::<Vec<_>>(),
             vec![first.id.clone(), second.id.clone()]
         );
     }
@@ -1674,7 +1919,14 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert!(sink.state.players.p1.turn_log.played_ids.contains(&spell.id));
         assert_eq!(sink.state.counters.played, 1);
         assert_eq!(sink.state.players.p2.hero.health, HERO_HEALTH - 1); // the Cry resolved
-        assert!(sink.state.players.p1.graveyard.iter().any(|card| card.id == spell.id));
+        assert!(
+            sink.state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .any(|card| card.id == spell.id)
+        );
         // M4: cards/test/79-twinspell.test.ts proves that a cast Spell still uses Echo.
     }
 
@@ -1696,7 +1948,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
                 "zone": { "row": "backrow", "lane": 1 },
             }),
         );
-        state = act(&state, json!({ "type": "play", "instanceId": later.id, "playerId": "p1" }));
+        state = act(
+            &state,
+            json!({ "type": "play", "instanceId": later.id, "playerId": "p1" }),
+        );
         state = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
 
         // The card played after it is copied; the recycler never copies itself.
@@ -1705,7 +1960,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r72_keeps_exile_piles_with_their_owners_and_lets_a_hero_climb_above_the_30_that_missing_health_counts_from() {
+    fn r72_keeps_exile_piles_with_their_owners_and_lets_a_hero_climb_above_the_30_that_missing_health_counts_from()
+     {
         let mut state = game("r72");
         let mut sink = sink_for(&mut state);
         assert_eq!(HERO_HEALTH, 30);
@@ -1735,12 +1991,16 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r73_gives_pocket_chaos_its_three_swaps_armor_apart_from_health_locks_with_the_zone_a_trap_read_by_its_controller_and_owner_routed_libraries(
-    ) {
+    fn r73_gives_pocket_chaos_its_three_swaps_armor_apart_from_health_locks_with_the_zone_a_trap_read_by_its_controller_and_owner_routed_libraries()
+     {
         let mut state = game("r73");
 
         // The three swaps each have their own event (§10.3).
-        assert!(GameEventType::ALL.iter().any(|event_type| event_type.as_str() == "swapped"));
+        assert!(
+            GameEventType::ALL
+                .iter()
+                .any(|event_type| event_type.as_str() == "swapped")
+        );
         let swaps: Vec<GameEvent> = vec![
             json_as(json!({ "type": "swapped", "what": "health" })),
             json_as(json!({ "type": "swapped", "what": "board" })),
@@ -1763,7 +2023,12 @@ mod spec_11_rulings_r43_r84_m3_gate {
         // Locks stay with their zones, not with the card that occupied them (§3.2).
         let mut occupant = put(&mut state, PLAIN, slot(P1, UNITS, 1), json!({}));
         lock_zone(&mut state, slot(P1, UNITS, 1));
-        move_to_zone(&mut state, &mut occupant, OffFieldZone::Graveyard, Default::default());
+        move_to_zone(
+            &mut state,
+            &mut occupant,
+            OffFieldZone::Graveyard,
+            Default::default(),
+        );
         assert!(card_at(&state, slot(P1, UNITS, 1)).is_none());
         assert!(!is_open(&state, slot(P1, UNITS, 1)));
 
@@ -1801,11 +2066,13 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r74_models_radiant_as_a_flag_that_never_unsets_swaps_the_layer_in_place_and_rides_copies_and_formless_cards() {
+    fn r74_models_radiant_as_a_flag_that_never_unsets_swaps_the_layer_in_place_and_rides_copies_and_formless_cards()
+     {
         let mut state = game("r74");
         let mut sink = sink_for(&mut state);
         let mut ctx = make_context(&mut sink, None, controlled(P1));
-        let set_radiant = |card: &CardInstance| effects::set_radiant(json_as(json!({ "instanceId": card.id })));
+        let set_radiant =
+            |card: &CardInstance| effects::set_radiant(json_as(json!({ "instanceId": card.id })));
 
         // In hand: the flag is the whole model, and setting it twice changes nothing — though the cue
         // is repeated, since the hand card is hidden from the opponent (R177).
@@ -1823,18 +2090,34 @@ mod spec_11_rulings_r43_r84_m3_gate {
             card.damage = 1;
             card.buffs = AttackHealth { attack: 1, health: 0 };
         });
-        assert_eq!(unit_view(ctx.sink.state, &instance_in(ctx.sink.state, &unit.id)).attack, 3);
+        assert_eq!(
+            unit_view(ctx.sink.state, &instance_in(ctx.sink.state, &unit.id)).attack,
+            3
+        );
         apply_effects(&[set_radiant(&unit)], &mut ctx);
-        assert_eq!(unit_view(ctx.sink.state, &instance_in(ctx.sink.state, &unit.id)).attack, 5); // 4 printed radiant + 1 buff
+        assert_eq!(
+            unit_view(ctx.sink.state, &instance_in(ctx.sink.state, &unit.id)).attack,
+            5
+        ); // 4 printed radiant + 1 buff
         assert_eq!(instance_in(ctx.sink.state, &unit.id).damage, 1);
         assert_eq!(ctx.sink.state.players.p2.hero.health, HERO_HEALTH);
 
         // A card an effect generates "Radiant" is Radiant.
         apply_effects(
-            &[effects::add_to_hand(json_as(json!({ "defId": PLAIN, "radiant": true })))],
+            &[effects::add_to_hand(json_as(
+                json!({ "defId": PLAIN, "radiant": true }),
+            ))],
             &mut ctx,
         );
-        let generated = ctx.sink.state.players.p1.hand.iter().find(|card| card.id != held.id).cloned();
+        let generated = ctx
+            .sink
+            .state
+            .players
+            .p1
+            .hand
+            .iter()
+            .find(|card| card.id != held.id)
+            .cloned();
         assert_eq!(generated.map(|card| card.radiant), Some(true));
 
         // A definition whose radiant face is its base face is unchanged, but the flag still sets. No
@@ -1847,11 +2130,17 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r75_keeps_the_5_3_corrections_in_the_catalog_shape_a_set_and_type_on_every_def_the_felinor_tag_n_1_indexes_and_cost_6(
-    ) {
+    fn r75_keeps_the_5_3_corrections_in_the_catalog_shape_a_set_and_type_on_every_def_the_felinor_tag_n_1_indexes_and_cost_6()
+     {
         let state = game("r75");
         let catalog = registered_catalog();
-        let types = [CardType::Unit, CardType::Spell, CardType::FieldSpell, CardType::Trap, CardType::FieldTrap];
+        let types = [
+            CardType::Unit,
+            CardType::Spell,
+            CardType::FieldSpell,
+            CardType::Trap,
+            CardType::FieldTrap,
+        ];
 
         // Every def carries the set and the type the source left out.
         assert!(catalog.values().all(|def| !def.set.as_str().is_empty()));
@@ -1874,14 +2163,22 @@ mod spec_11_rulings_r43_r84_m3_gate {
         live.players.p1.hand = vec![];
         let six = hand_card(&mut live, GIGA, P1);
         assert_eq!(price_now(&live, &six), 6);
-        assert!(!legal_actions(&live, P1).iter().any(|action| plays_card(action, &six.id)));
+        assert!(
+            !legal_actions(&live, P1)
+                .iter()
+                .any(|action| plays_card(action, &six.id))
+        );
         live.players.p1.mana.current = 6;
-        assert!(legal_actions(&live, P1).iter().any(|action| plays_card(action, &six.id)));
+        assert!(
+            legal_actions(&live, P1)
+                .iter()
+                .any(|action| plays_card(action, &six.id))
+        );
     }
 
     #[test]
-    fn r76_fires_the_delayed_steal_at_your_next_start_of_turn_even_though_the_unit_died_and_fizzles_on_a_card_already_yours(
-    ) {
+    fn r76_fires_the_delayed_steal_at_your_next_start_of_turn_even_though_the_unit_died_and_fizzles_on_a_card_already_yours()
+     {
         let mut state = playing("r76");
         let fanatic = put(&mut state, KPOP, slot(P1, UNITS, 1), json!({}));
         let prize = put(&mut state, PLAIN, slot(P2, UNITS, 1), json!({}));
@@ -1935,7 +2232,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r77_fuses_the_base_forms_keeps_the_target_s_instance_sums_buffs_and_crafts_a_free_non_radiant_hand_card() {
+    fn r77_fuses_the_base_forms_keeps_the_target_s_instance_sums_buffs_and_crafts_a_free_non_radiant_hand_card()
+     {
         let mut state = game("r77");
         let mut sink = sink_for(&mut state);
         let target = put(sink.state, FUSE_A, slot(P1, UNITS, 1), json!({})); // 2/3 Taunt, cost 2, Human
@@ -1945,7 +2243,9 @@ mod spec_11_rulings_r43_r84_m3_gate {
             card.buffs = AttackHealth { attack: 1, health: 0 };
             card.granted_keywords = vec![json_as(json!({ "kind": "Lifesteal" }))];
         });
-        edit(sink.state, &food, |card| card.buffs = AttackHealth { attack: 0, health: 2 });
+        edit(sink.state, &food, |card| {
+            card.buffs = AttackHealth { attack: 0, health: 2 }
+        });
 
         let target_now = instance_in(sink.state, &target.id);
         let food_now = instance_in(sink.state, &food.id);
@@ -1953,7 +2253,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
             &mut sink,
             json_as(json!({ "ingredients": [target_now, food_now], "target": target_now })),
         );
-        assert_eq!(result.as_ref().map(|card| card.id.clone()), Some(target.id.clone()));
+        assert_eq!(
+            result.as_ref().map(|card| card.id.clone()),
+            Some(target.id.clone())
+        );
 
         let kept = instance_in(sink.state, &target.id);
         let def = def_of(Some(&*sink.state), &kept.def_id).clone();
@@ -1965,7 +2268,12 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let mut tags: Vec<&str> = def.tags.iter().map(|tag| tag.as_str()).collect();
         tags.sort();
         assert_eq!(tags, vec!["Felinor", "Human"]);
-        let mut kinds: Vec<&str> = def.base.keywords.iter().map(|keyword| keyword.kind().as_str()).collect();
+        let mut kinds: Vec<&str> = def
+            .base
+            .keywords
+            .iter()
+            .map(|keyword| keyword.kind().as_str())
+            .collect();
         kinds.sort();
         assert_eq!(kinds, vec!["Rush", "Taunt"]);
 
@@ -1973,7 +2281,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(kept.damage, 1);
         assert_eq!(kept.buffs, AttackHealth { attack: 1, health: 2 });
         assert_eq!(
-            kept.granted_keywords.iter().map(|keyword| keyword.kind().as_str()).collect::<Vec<_>>(),
+            kept.granted_keywords
+                .iter()
+                .map(|keyword| keyword.kind().as_str())
+                .collect::<Vec<_>>(),
             vec!["Lifesteal"]
         );
         assert!(card_at(sink.state, slot(P1, UNITS, 2)).is_none());
@@ -1987,7 +2298,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         // Craft a Card: no target on the field, a fresh non-Radiant hand card at cost 0.
         let a = hand_card(sink.state, FUSE_A, P1);
         let b = hand_card(sink.state, FUSE_B, P1);
-        let crafted = fuse(&mut sink, json_as(json!({ "ingredients": [a, b], "toHand": "p1" })));
+        let crafted = fuse(
+            &mut sink,
+            json_as(json!({ "ingredients": [a, b], "toHand": "p1" })),
+        );
         assert!(crafted.is_some());
         assert_eq!(crafted.as_ref().map(|card| card.radiant), Some(false));
         assert_eq!(crafted.as_ref().and_then(|card| card.cost_override), Some(0));
@@ -2068,8 +2382,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r79_answers_only_the_timed_out_player_s_prompt_loses_on_a_disconnect_draws_at_the_ceiling_and_leaves_the_clocks_to_the_server(
-    ) {
+    fn r79_answers_only_the_timed_out_player_s_prompt_loses_on_a_disconnect_draws_at_the_ceiling_and_leaves_the_clocks_to_the_server()
+     {
         // A prompt held by the non-active player: their own clock answers it and the turn stays open.
         let mut prompted = playing("r79-prompt");
         {
@@ -2090,7 +2404,9 @@ mod spec_11_rulings_r43_r84_m3_gate {
                     max: None,
                     budget: None,
                     owner: None,
-                    resume: json_as(json!({ "defId": "", "hook": "resume", "step": "none", "radiant": false, "data": {} })),
+                    resume: json_as(
+                        json!({ "defId": "", "hook": "resume", "step": "none", "radiant": false, "data": {} }),
+                    ),
                 },
             );
         }
@@ -2109,16 +2425,21 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         // A disconnect is a loss; the hard ceiling is a draw.
         assert_eq!(
-            act_result(&clean, json!({ "type": "disconnectExpired", "player": "p1", "playerId": "p1" }))
-                .state
-                .result,
+            act_result(
+                &clean,
+                json!({ "type": "disconnectExpired", "player": "p1", "playerId": "p1" })
+            )
+            .state
+            .result,
             Some(GameResult {
                 winner: Winner::P2,
                 reason: GameOverReason::Disconnect,
             })
         );
         assert_eq!(
-            act_result(&clean, json!({ "type": "ceilingReached", "playerId": "p1" })).state.result,
+            act_result(&clean, json!({ "type": "ceilingReached", "playerId": "p1" }))
+                .state
+                .result,
             Some(GameResult {
                 winner: Winner::Draw,
                 reason: GameOverReason::MatchCeiling,
@@ -2126,7 +2447,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         );
 
         // The engine carries the clock the server runs, and none of R79's numbers.
-        assert_eq!(view_for_with_clock(&clean, P1, Some(75_000)).clock_ms, Some(75_000));
+        assert_eq!(
+            view_for_with_clock(&clean, P1, Some(75_000)).clock_ms,
+            Some(75_000)
+        );
         assert_eq!(view_for(&clean, P1).clock_ms, None);
         // TS also asserted that `config.ts` exports none of the server's constant names (its
         // `Object.keys(engineConfig)` over SERVER_CONSTANTS); Rust has no run-time list of a module's
@@ -2135,7 +2459,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r80_caps_a_library_at_library_cap_a_new_card_is_never_created_and_an_existing_one_lands_in_the_graveyard() {
+    fn r80_caps_a_library_at_library_cap_a_new_card_is_never_created_and_an_existing_one_lands_in_the_graveyard()
+     {
         let mut state = game("r80");
         let library: Vec<CardInstance> = (0..LIBRARY_CAP)
             .map(|_| new_instance(&mut state, PLAIN, P1, Zone::Library { player: P1 }))
@@ -2169,7 +2494,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
     }
 
     #[test]
-    fn r81_carries_zone_x_targets_and_modes_in_the_play_action_and_opens_a_pendingchoice_only_during_resolution() {
+    fn r81_carries_zone_x_targets_and_modes_in_the_play_action_and_opens_a_pendingchoice_only_during_resolution()
+     {
         let mut state = playing("r81");
         state.players.p1.hand = vec![];
         let unit = hand_card(&mut state, PLAIN, P1);
@@ -2188,7 +2514,11 @@ mod spec_11_rulings_r43_r84_m3_gate {
             plays
                 .iter()
                 .filter_map(|action| match action {
-                    ActionBody::Play { instance_id, x: chosen, .. } if *instance_id == x.id => Some(*chosen),
+                    ActionBody::Play {
+                        instance_id,
+                        x: chosen,
+                        ..
+                    } if *instance_id == x.id => Some(*chosen),
                     _ => None,
                 })
                 .collect::<Vec<_>>(),
@@ -2225,9 +2555,15 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         // A choice made during resolution opens a PendingChoice instead.
         let discover = hand_card(&mut state, DISCOVER_SPELL, P1);
-        let paused = act_result(&state, json!({ "type": "play", "instanceId": discover.id, "playerId": "p1" }));
+        let paused = act_result(
+            &state,
+            json!({ "type": "play", "instanceId": discover.id, "playerId": "p1" }),
+        );
         assert_eq!(paused.error, None);
-        assert_eq!(paused.state.pending.map(|prompt| prompt.kind), Some(PromptKind::Discover));
+        assert_eq!(
+            paused.state.pending.map(|prompt| prompt.kind),
+            Some(PromptKind::Discover)
+        );
     }
 
     #[test]
@@ -2235,9 +2571,16 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let mut state = playing("r82");
         state.players.p1.hand = vec![];
         let card = hand_card(&mut state, NOOP, P1);
-        assert!(legal_actions(&state, P1).iter().any(|action| action.action_type() == ActionType::OfferDraw));
+        assert!(
+            legal_actions(&state, P1)
+                .iter()
+                .any(|action| action.action_type() == ActionType::OfferDraw)
+        );
 
-        let result = act_result(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }));
+        let result = act_result(
+            &state,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        );
         assert_eq!(result.error, None);
         // The draw offer was still on the table and did not hold the turn open (R36).
         assert_eq!(of_type(&result.events, GameEventType::TurnAutoEnded).len(), 1);
@@ -2269,19 +2612,26 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         // R78 cleared its exertion, so it may switch position, as any unit summoned this turn may.
         assert!(has_exertion(sink.state, &back, ExertionKind::Switch));
-        assert_eq!(refusal(switch_position(&mut sink, &back, Default::default())), None);
+        assert_eq!(
+            refusal(switch_position(&mut sink, &back, Default::default())),
+            None
+        );
         assert_eq!(instance_in(sink.state, &rb.id).position, Some(Position::Def));
     }
 
     #[test]
-    fn r84_keeps_concede_offerdraw_and_answerdraw_out_of_the_policy_so_a_random_game_ends_by_death_or_the_cap() {
+    fn r84_keeps_concede_offerdraw_and_answerdraw_out_of_the_policy_so_a_random_game_ends_by_death_or_the_cap()
+     {
         let state = playing("r84");
         assert_eq!(
             AI_SKIPPED_ACTIONS.to_vec(),
             vec![ActionType::Concede, ActionType::OfferDraw, ActionType::AnswerDraw]
         );
 
-        let offered: Vec<ActionType> = legal_actions(&state, P1).iter().map(ActionBody::action_type).collect();
+        let offered: Vec<ActionType> = legal_actions(&state, P1)
+            .iter()
+            .map(ActionBody::action_type)
+            .collect();
         assert!(offered.contains(&ActionType::Concede));
         assert!(offered.contains(&ActionType::OfferDraw));
         let policy: Vec<ActionType> = policy_actions(&state, P1, PolicyOptions::default())
@@ -2302,8 +2652,14 @@ mod spec_11_rulings_r43_r84_m3_gate {
         // The random-game harness filters the same set, so a fuzz game never resigns itself.
         let finished = play_random_game("rb-r84", None).state;
         let reason = finished.result.as_ref().map(|result| result.reason);
-        assert!([GameOverReason::HeroDeath, GameOverReason::BothHeroesDead, GameOverReason::TurnCap]
+        assert!(
+            [
+                GameOverReason::HeroDeath,
+                GameOverReason::BothHeroesDead,
+                GameOverReason::TurnCap
+            ]
             .iter()
-            .any(|ended| reason == Some(*ended)));
+            .any(|ended| reason == Some(*ended))
+        );
     }
 }

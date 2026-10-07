@@ -13,9 +13,9 @@
 
 use jackioh_engine::config::{HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::{
-    CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView, active_brittle_count,
-    active_units_of, animated_kind_of, cannot_attack, find_def, has_keyword, hero_armor_of, own_cost, query_cost,
-    subsystems, unit_view,
+    CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
+    active_brittle_count, active_units_of, animated_kind_of, cannot_attack, find_def, has_keyword,
+    hero_armor_of, own_cost, query_cost, subsystems, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -65,7 +65,11 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f6
     if can_swing(state, unit, &view) {
         // §4.1: a Defense-Position unit cannot attack until it spends a turn's exertion switching back,
         // though it still strikes back in full, so only part of its attack counts.
-        let share = if view.position == Position::Def { w.defense_attack_share } else { 1.0 };
+        let share = if view.position == Position::Def {
+            w.defense_attack_share
+        } else {
+            1.0
+        };
         value += w.attack * f64::from(view.attack) * share;
     }
     for keyword in &view.keywords {
@@ -105,7 +109,11 @@ fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f
         Some(def) => f64::from(query_cost(def)),
     };
     let radiant = if card.radiant { w.radiant_in_hand } else { 0.0 };
-    let shift = if def.is_none() { 0.0 } else { w.hand_cost_delta * f64::from(cost_shift(state, card)) };
+    let shift = if def.is_none() {
+        0.0
+    } else {
+        w.hand_cost_delta * f64::from(cost_shift(state, card))
+    };
     (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant - shift) * brittle_share(card, w)
 }
 
@@ -126,7 +134,8 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
         let def = find_def(Some(state), &card.def_id);
         match def {
             Some(def) if readable_by(state, card, seat) => {
-                value += brittle_share(card, w) * (w.backrow_base + w.backrow_per_cost * f64::from(query_cost(def)));
+                value += brittle_share(card, w)
+                    * (w.backrow_base + w.backrow_per_cost * f64::from(query_cost(def)));
                 // B3.1: a Unit in waiting (`unit_worth` brings its own Brittle share).
                 if w.animated_share != 0.0 && animated_kind_of(state, card).is_some() {
                     value += w.animated_share * unit_worth(state, card, w);
@@ -246,7 +255,11 @@ pub fn evaluate(state: &GameState, seat: PlayerId, next: NextSwing, w: &EvalWeig
             w.threat_per_damage * f64::from(enemy_damage)
         });
     let pressure = if our_damage >= state.players[opp].hero.health {
-        if seat_first { w.lethal_on_board } else { w.lethal_pressure }
+        if seat_first {
+            w.lethal_on_board
+        } else {
+            w.lethal_pressure
+        }
     } else {
         w.pressure_per_damage * f64::from(our_damage)
     };

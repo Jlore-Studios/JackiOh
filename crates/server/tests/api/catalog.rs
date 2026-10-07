@@ -45,7 +45,10 @@ fn test_env() -> IndexMap<String, String> {
     for (name, value) in [("E2E", "1"), ("NODE_ENV", "test"), ("TRUSTED_PROXY_HOPS", "1")] {
         source.insert(name.to_string(), value.to_string());
     }
-    source.insert("CATALOG_VERSION".to_string(), jackioh_cards::catalog_version().to_string());
+    source.insert(
+        "CATALOG_VERSION".to_string(),
+        jackioh_cards::catalog_version().to_string(),
+    );
     source
 }
 
@@ -90,11 +93,20 @@ async fn get(app: &Arc<App>, path: &str, token: Option<&str>) -> Reply {
         builder = builder.header("authorization", format!("Bearer {token}"));
     }
     let request = builder.body(Body::empty()).expect("a well-formed request");
-    let response = app::router(app.clone()).oneshot(request).await.expect("the router always answers");
+    let response = app::router(app.clone())
+        .oneshot(request)
+        .await
+        .expect("the router always answers");
     let status = response.status().as_u16();
     let headers = response.headers().clone();
-    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.expect("the body reads");
-    Reply { status, headers, text: String::from_utf8(bytes.to_vec()).expect("the body is UTF-8") }
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("the body reads");
+    Reply {
+        status,
+        headers,
+        text: String::from_utf8(bytes.to_vec()).expect("the body is UTF-8"),
+    }
 }
 
 fn from_json<T: DeserializeOwned>(value: Value) -> T {
@@ -107,14 +119,23 @@ fn catalog_file() -> Value {
 }
 
 fn sorted_keys(object: &Value) -> Vec<String> {
-    let mut keys: Vec<String> = object.as_object().map(|map| map.keys().cloned().collect()).unwrap_or_default();
+    let mut keys: Vec<String> = object
+        .as_object()
+        .map(|map| map.keys().cloned().collect())
+        .unwrap_or_default();
     keys.sort();
     keys
 }
 
 /// The first `count` ids of the catalog that are not tokens, in catalog order.
 fn legal(catalog: &Catalog, count: usize) -> Vec<String> {
-    catalog.card_ids.iter().filter(|id| !catalog.is_token(id)).take(count).cloned().collect()
+    catalog
+        .card_ids
+        .iter()
+        .filter(|id| !catalog.is_token(id))
+        .take(count)
+        .cloned()
+        .collect()
 }
 
 /// `new Map(ids.map((cardId) => [cardId, 1]))`: one copy of each, as the validator's collection.
@@ -126,7 +147,12 @@ fn one_of_each(ids: &[String]) -> Value {
 /// `sharedLoadoutValidator` adapter built): its version, every definition, and the ids the handle
 /// bans. Bannedness is read through the handle and nowhere else (R164).
 fn snapshot(catalog: &Catalog) -> Value {
-    let banned: Vec<String> = catalog.card_ids.iter().filter(|id| catalog.is_banned(id)).cloned().collect();
+    let banned: Vec<String> = catalog
+        .card_ids
+        .iter()
+        .filter(|id| catalog.is_banned(id))
+        .cloned()
+        .collect();
     json!({ "version": catalog.version, "cards": catalog_file(), "banned": banned })
 }
 
@@ -168,7 +194,10 @@ fn decks(lists: &[Vec<String>]) -> Value {
 }
 
 fn rules(found: &[Value]) -> Vec<String> {
-    found.iter().map(|issue| issue["rule"].as_str().unwrap_or_default().to_string()).collect()
+    found
+        .iter()
+        .map(|issue| issue["rule"].as_str().unwrap_or_default().to_string())
+        .collect()
 }
 
 /// A complete environment, so `load_env` is asked only about the one variable a test changes.
@@ -176,15 +205,24 @@ fn valid_env() -> IndexMap<String, String> {
     let mut source = IndexMap::new();
     for (name, value) in [
         ("SUPABASE_URL", "https://project.supabase.test"),
-        ("SUPABASE_SECRET_KEY", "sb_secret_0123456789abcdefghijklmnopqrstuv"),
-        ("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/jackioh"),
+        (
+            "SUPABASE_SECRET_KEY",
+            "sb_secret_0123456789abcdefghijklmnopqrstuv",
+        ),
+        (
+            "DATABASE_URL",
+            "postgres://postgres:postgres@localhost:5432/jackioh",
+        ),
         ("CODE_PEPPER", "a-pepper-of-at-least-thirty-two-characters"),
         ("PUBLIC_ORIGINS", "https://play.jackioh.test"),
         ("NODE_ENV", "test"),
     ] {
         source.insert(name.to_string(), value.to_string());
     }
-    source.insert("CATALOG_VERSION".to_string(), jackioh_cards::catalog_version().to_string());
+    source.insert(
+        "CATALOG_VERSION".to_string(),
+        jackioh_cards::catalog_version().to_string(),
+    );
     source
 }
 
@@ -203,7 +241,12 @@ mod loaded_catalog {
         ids.sort();
         assert_eq!(ids, sorted_keys(&catalog_file()));
         let served = get(&app, "/api/catalog", None).await.json();
-        assert!(!served["defs"]["core-001"]["name"].as_str().unwrap_or_default().is_empty());
+        assert!(
+            !served["defs"]["core-001"]["name"]
+                .as_str()
+                .unwrap_or_default()
+                .is_empty()
+        );
     }
 
     #[test]
@@ -212,7 +255,11 @@ mod loaded_catalog {
         // /^c1-[0-9a-f]{12}$/
         let hex = version.strip_prefix("c1-").expect("the c1- prefix");
         assert_eq!(hex.len(), 12, "{version}");
-        assert!(hex.chars().all(|ch| ch.is_ascii_digit() || ('a'..='f').contains(&ch)), "{version}");
+        assert!(
+            hex.chars()
+                .all(|ch| ch.is_ascii_digit() || ('a'..='f').contains(&ch)),
+            "{version}"
+        );
         assert_eq!(catalog_api::version_of("{}"), catalog_api::version_of("{}"));
         assert_ne!(catalog_api::version_of("{}"), catalog_api::version_of("{ }"));
     }
@@ -220,7 +267,8 @@ mod loaded_catalog {
     /// TS let `loadCatalog({ version })` stamp any version. The compiled-in catalog has one version,
     /// and §9.4's "both halves must agree" is now the boot refusal of SURFACE §11.3.
     #[tokio::test]
-    async fn lets_the_environment_pin_the_version_only_to_the_compiled_in_one_section_9_4_both_halves_must_agree() {
+    async fn lets_the_environment_pin_the_version_only_to_the_compiled_in_one_section_9_4_both_halves_must_agree()
+     {
         let app = test_app().await;
         assert_eq!(app.catalog.version, jackioh_cards::catalog_version());
 
@@ -236,8 +284,13 @@ mod loaded_catalog {
     async fn marks_tokens_as_tokens_section_9_4_l3_no_token_tagged_cards_in_a_deck() {
         let app = test_app().await;
         let raw = catalog_file();
-        let mut tokens: Vec<String> =
-            app.catalog.card_ids.iter().filter(|id| app.catalog.is_token(id)).cloned().collect();
+        let mut tokens: Vec<String> = app
+            .catalog
+            .card_ids
+            .iter()
+            .filter(|id| app.catalog.is_token(id))
+            .cloned()
+            .collect();
         tokens.sort();
         let mut flagged: Vec<String> = sorted_keys(&raw)
             .into_iter()
@@ -269,7 +322,11 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
         let owned = one_of_each(&legal);
 
         let found = validate_trio(
-            decks(&[legal[0..20].to_vec(), legal[20..40].to_vec(), legal[40..60].to_vec()]),
+            decks(&[
+                legal[0..20].to_vec(),
+                legal[20..40].to_vec(),
+                legal[40..60].to_vec(),
+            ]),
             &app.catalog,
             owned.clone(),
         );
@@ -277,7 +334,11 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
 
         // One deck short of DECK_SIZE: the shared module names the rule, the deck and the card.
         let short = validate_trio(
-            decks(&[legal[0..19].to_vec(), legal[20..40].to_vec(), legal[40..60].to_vec()]),
+            decks(&[
+                legal[0..19].to_vec(),
+                legal[20..40].to_vec(),
+                legal[40..60].to_vec(),
+            ]),
             &app.catalog,
             owned,
         );
@@ -292,14 +353,33 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
         let owned = one_of_each(&legal);
 
         // One legal deck: as a trio it fails L1 (one deck, not three); as a deck it passes.
-        assert_eq!(rules(&validate_trio(decks(std::slice::from_ref(&legal)), &app.catalog, owned.clone())), vec!["L1"]);
-        assert_eq!(validate_one(json!({ "cards": legal }), &app.catalog, owned.clone()), Vec::<Value>::new());
+        assert_eq!(
+            rules(&validate_trio(
+                decks(std::slice::from_ref(&legal)),
+                &app.catalog,
+                owned.clone()
+            )),
+            vec!["L1"]
+        );
+        assert_eq!(
+            validate_one(json!({ "cards": legal }), &app.catalog, owned.clone()),
+            Vec::<Value>::new()
+        );
 
         // One card short: L2, naming the deck by the name the player gave it.
-        let short = validate_one(json!({ "name": "Midrange", "cards": legal[0..19] }), &app.catalog, owned);
+        let short = validate_one(
+            json!({ "name": "Midrange", "cards": legal[0..19] }),
+            &app.catalog,
+            owned,
+        );
         assert_eq!(rules(&short), vec!["L2"]);
         assert_eq!(short[0]["deck"], json!(1));
-        assert!(short[0]["message"].as_str().unwrap_or_default().contains("Midrange"));
+        assert!(
+            short[0]["message"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("Midrange")
+        );
     }
 
     #[tokio::test]
@@ -319,7 +399,10 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
             &app.catalog,
             owned,
         );
-        let l4 = found.iter().find(|issue| issue["rule"] == json!("L4")).expect("an L4");
+        let l4 = found
+            .iter()
+            .find(|issue| issue["rule"] == json!("L4"))
+            .expect("an L4");
         assert_eq!(l4["cardId"], json!(shared));
         let message = l4["message"].as_str().unwrap_or_default();
         assert!(message.contains("Aggro"), "{message}");
@@ -332,7 +415,11 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
         let app = test_app().await;
         let legal = legal(&app.catalog, 60);
         let found = validate_trio(
-            decks(&[legal[0..20].to_vec(), legal[20..40].to_vec(), legal[40..60].to_vec()]),
+            decks(&[
+                legal[0..20].to_vec(),
+                legal[20..40].to_vec(),
+                legal[40..60].to_vec(),
+            ]),
             &app.catalog,
             json!({}),
         );
@@ -347,9 +434,19 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
         // R111's launch grant, exactly: one copy of every non-token card, which is what every active
         // profile owns. The test above owns *nothing*, which R111 makes impossible — so L5 on its own
         // is only reachable there, never in a real collection.
-        let every: Vec<String> = catalog.card_ids.iter().filter(|id| !catalog.is_token(id)).cloned().collect();
+        let every: Vec<String> = catalog
+            .card_ids
+            .iter()
+            .filter(|id| !catalog.is_token(id))
+            .cloned()
+            .collect();
         let owned = one_of_each(&every);
-        let token = catalog.card_ids.iter().find(|id| catalog.is_token(id)).cloned().unwrap_or_default();
+        let token = catalog
+            .card_ids
+            .iter()
+            .find(|id| catalog.is_token(id))
+            .cloned()
+            .unwrap_or_default();
         let with_first = |first: Vec<String>| decks(&[first, legal[20..40].to_vec(), legal[40..60].to_vec()]);
         let nineteen_and = |last: &str| {
             let mut first = legal[0..19].to_vec();
@@ -363,7 +460,10 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
             // A second copy of a card: L3 (MAX_COPIES) is broken before L5 can be.
             ("a repeated card", with_first(nineteen_and(legal[0].as_str()))),
             // The same card in two decks: L4.
-            ("a card in two decks", decks(&[legal[0..20].to_vec(), in_two, legal[40..60].to_vec()])),
+            (
+                "a card in two decks",
+                decks(&[legal[0..20].to_vec(), in_two, legal[40..60].to_vec()]),
+            ),
             // A Token, and an id the catalog does not have: L3 and L6.
             ("a token", with_first(nineteen_and(token.as_str()))),
             ("an unknown id", with_first(nineteen_and("core-does-not-exist"))),
@@ -378,7 +478,10 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
             // reachable fired too. Change R111's quantity or MAX_COPIES and this is the test that goes red.
             if found.contains(&"L5".to_string()) {
                 saw_l5 = true;
-                assert!(found.iter().any(|rule| rule != "L5"), "{name}: L5 was the only rule");
+                assert!(
+                    found.iter().any(|rule| rule != "L5"),
+                    "{name}: L5 was the only rule"
+                );
             }
         }
         // Otherwise the loop above would prove the claim by never reaching L5 at all.
@@ -419,7 +522,11 @@ mod r163_the_catalog_endpoint_section_9_1_section_9_4_r105 {
         // second, weaker copy of the catalog, and the deckbuilder's verdict (UX) would stop being the
         // verdict the save runs (law).
         for card_id in sorted_keys(&file) {
-            assert_eq!(sorted_keys(&body["defs"][card_id.as_str()]), sorted_keys(&file[card_id.as_str()]), "{card_id}");
+            assert_eq!(
+                sorted_keys(&body["defs"][card_id.as_str()]),
+                sorted_keys(&file[card_id.as_str()]),
+                "{card_id}"
+            );
         }
     }
 
@@ -431,7 +538,10 @@ mod r163_the_catalog_endpoint_section_9_1_section_9_4_r105 {
             .map(|(method, path, auth, _)| (format!("{method} {path}"), matches!(auth, AuthLevel::None)))
             .collect();
         // `GET /api/catalog/:version` is not served (SURFACE §11.3).
-        assert_eq!(routes.iter().map(|(route, _)| route.as_str()).collect::<Vec<_>>(), vec!["GET /api/catalog"]);
+        assert_eq!(
+            routes.iter().map(|(route, _)| route.as_str()).collect::<Vec<_>>(),
+            vec!["GET /api/catalog"]
+        );
         // "The same bytes for everybody, naming no profile": §9.4's gate is about collection, loadout,
         // queue and match, and card data is none of those.
         assert!(routes.iter().all(|(_, open)| *open));
@@ -480,7 +590,10 @@ mod r388_get_api_catalog_version_serves_the_catalog_as_each_patch_left_it_b4_2 {
 
 /// A ban held as server state: the catalog data is untouched, only the handle answers differently.
 fn with_ban(catalog: &Catalog, banned_id: &str) -> Catalog {
-    Catalog { banned: [banned_id.to_string()].into_iter().collect(), ..catalog.clone() }
+    Catalog {
+        banned: [banned_id.to_string()].into_iter().collect(),
+        ..catalog.clone()
+    }
 }
 
 mod r164_where_l6_s_ban_list_lives_section_9_4_r105 {
@@ -493,17 +606,27 @@ mod r164_where_l6_s_ban_list_lives_section_9_4_r105 {
         let playable = legal(catalog, 60);
         let victim = playable[0].clone();
         let owned = one_of_each(&playable);
-        let loadout = decks(&[playable[0..20].to_vec(), playable[20..40].to_vec(), playable[40..60].to_vec()]);
+        let loadout = decks(&[
+            playable[0..20].to_vec(),
+            playable[20..40].to_vec(),
+            playable[40..60].to_vec(),
+        ]);
 
         // PREMISE: the loadout is legal today, so the L6 below comes from the ban and nothing else.
-        assert_eq!(validate_trio(loadout.clone(), catalog, owned.clone()), Vec::<Value>::new());
+        assert_eq!(
+            validate_trio(loadout.clone(), catalog, owned.clone()),
+            Vec::<Value>::new()
+        );
 
         let banned = with_ban(catalog, &victim);
         let found = validate_trio(loadout, &banned, owned);
 
         // L6: "every card exists in the current catalog version and is not banned".
         assert!(rules(&found).contains(&"L6".to_string()));
-        let l6 = found.iter().find(|issue| issue["rule"] == json!("L6")).expect("an L6");
+        let l6 = found
+            .iter()
+            .find(|issue| issue["rule"] == json!("L6"))
+            .expect("an L6");
         assert_eq!(l6["cardId"], json!(victim));
     }
 
@@ -537,7 +660,12 @@ mod r164_where_l6_s_ban_list_lives_section_9_4_r105 {
 
         // R163's route carries the catalog both sides ship; R164 keeps the ban list out of it, so the
         // client has no copy of a list it has no business being able to disagree with.
-        let with = get(&app_holding(with_ban(&app.catalog, &victim)).await, "/api/catalog", None).await;
+        let with = get(
+            &app_holding(with_ban(&app.catalog, &victim)).await,
+            "/api/catalog",
+            None,
+        )
+        .await;
         let without = get(&app_holding(app.catalog.clone()).await, "/api/catalog", None).await;
         assert_eq!(with.text, without.text);
     }
@@ -546,7 +674,12 @@ mod r164_where_l6_s_ban_list_lives_section_9_4_r105 {
     async fn r164_bans_nothing_in_section_8_at_launch_and_holds_the_hook_open_for_when_something_is() {
         let app = test_app().await;
         // "Nothing in §8 is banned at launch" — every card, not just a sample.
-        let banned: Vec<&String> = app.catalog.card_ids.iter().filter(|id| app.catalog.is_banned(id)).collect();
+        let banned: Vec<&String> = app
+            .catalog
+            .card_ids
+            .iter()
+            .filter(|id| app.catalog.is_banned(id))
+            .collect();
         assert!(banned.is_empty(), "{banned:?}");
         // The single hook, which reads the db agent's `cards` table once there is something to ban.
         assert!(!catalog_api::catalog_from(CardDefs::default(), "v0").is_banned("core-001"));
@@ -565,7 +698,13 @@ mod r164_where_l6_s_ban_list_lives_section_9_4_r105 {
 
         // deploy-watch.yml compares this header with the commit that was pushed.
         assert_eq!(DEPLOYED_COMMIT_HEADER, "x-deployed-commit");
-        assert_eq!(known.headers.get(DEPLOYED_COMMIT_HEADER).and_then(|value| value.to_str().ok()), Some(commit));
+        assert_eq!(
+            known
+                .headers
+                .get(DEPLOYED_COMMIT_HEADER)
+                .and_then(|value| value.to_str().ok()),
+            Some(commit)
+        );
         // No commit (a local server, anything but Render): no header, rather than an empty one.
         assert!(unknown.headers.get(DEPLOYED_COMMIT_HEADER).is_none());
         // The header is not the body: the bytes stay the same for everybody.

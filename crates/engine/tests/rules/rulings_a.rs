@@ -181,8 +181,22 @@ fn defs() -> Vec<CardDef> {
     let two_next = ra_unit(n, "two-next", 2, 2, json!([]), json!({ "cost": 2 }));
     let one_cost = ra_unit(n, "one", 1, 1, json!([]), json!({ "cost": 1 }));
     let x_unit = ra_unit(n, "x-unit", 1, 1, json!([]), json!({ "cost": "X" }));
-    let embiggen_unit = ra_unit(n, "embiggen", 1, 1, json!([]), json!({ "cost": { "base": 2, "embiggen": 5 } }));
-    let unit_token = ra_unit(n, "unit-token", 3, 3, json!([]), token_fields(json!({ "cost": 1 })));
+    let embiggen_unit = ra_unit(
+        n,
+        "embiggen",
+        1,
+        1,
+        json!([]),
+        json!({ "cost": { "base": 2, "embiggen": 5 } }),
+    );
+    let unit_token = ra_unit(
+        n,
+        "unit-token",
+        3,
+        3,
+        json!([]),
+        token_fields(json!({ "cost": 1 })),
+    );
     let sheep = ra_unit(n, "sheep", 1, 1, json!([]), token_fields(json!({ "cost": 1 })));
     let bread = ra_unit(
         n,
@@ -202,7 +216,12 @@ fn defs() -> Vec<CardDef> {
     let plain_spell = ra_card(n, "plain-spell", "Spell", json!({}));
     let spell_token = ra_card(n, "spell-token", "Spell", token_fields(json!({})));
     let reminisce = ra_card(n, "reminisce", "Spell", json!({}));
-    let zephyrs = ra_card(n, "zephyrs", "Spell", json!({ "index": ZEPHYRS_INDEX, "rarity": "Mythic" }));
+    let zephyrs = ra_card(
+        n,
+        "zephyrs",
+        "Spell",
+        json!({ "index": ZEPHYRS_INDEX, "rarity": "Mythic" }),
+    );
     let sheepish = ra_card(n, "sheepish", "Trap", json!({}));
     let trap = ra_card(n, "trap", "Trap", json!({}));
     let field_trap = ra_card(n, "field-trap", "Field Trap", json!({}));
@@ -270,7 +289,9 @@ fn coin_stats(count: i32) -> Effect {
             }
         }
         apply_effects(
-            &[effects::buff(json_as(json!({ "target": { "of": "self" }, "attack": attack, "health": health })))],
+            &[effects::buff(json_as(
+                json!({ "target": { "of": "self" }, "attack": attack, "health": health }),
+            ))],
             ctx,
         );
     })
@@ -284,7 +305,11 @@ fn both(script: Script) -> CardScripts {
 }
 
 fn ping_enemy_hero(amount: i32) -> Hook {
-    hook(move |_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))])
+    hook(move |_ctx| {
+        vec![effects::damage(json_as(
+            json!({ "to": { "of": "enemyHero" }, "amount": amount }),
+        ))]
+    })
 }
 
 fn scripts() -> IndexMap<String, CardScripts> {
@@ -341,7 +366,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         DISCARDER.into(),
         both(Script {
-            cry: Some(hook(|_ctx| vec![effects::choose_from_hand(json_as(json!({ "step": "discard" })))])),
+            cry: Some(hook(|_ctx| {
+                vec![effects::choose_from_hand(json_as(json!({ "step": "discard" })))]
+            })),
             resume: IndexMap::from([("discard", hook(|_ctx| vec![effects::discard(json_as(json!({})))]))]),
             ..Script::default()
         }),
@@ -361,7 +388,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
                     else {
                         return vec![];
                     };
-                    vec![effects::transform(json_as(json!({ "instanceId": instance_id, "defId": SHEEP })))]
+                    vec![effects::transform(json_as(
+                        json!({ "instanceId": instance_id, "defId": SHEEP }),
+                    ))]
                 })
                 .with_when(|ctx, event| match event {
                     GameEvent::CardResolved { player, def_id, .. } => {
@@ -377,20 +406,24 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         EATER.into(),
         both(Script {
-            hand_triggers: vec![TriggerDef::new("eat", &[GameEventType::EnteredGraveyard], |ctx, event| {
-                let GameEvent::EnteredGraveyard { def_id, .. } = event else {
-                    return vec![];
-                };
-                let def = def_of(Some(&*ctx.state), def_id);
-                if def.type_ != CardType::Unit {
-                    return vec![];
-                }
-                vec![effects::buff(json_as(json!({
-                    "target": { "of": "self" },
-                    "attack": def.base.attack.unwrap_or(0),
-                    "health": def.base.health.unwrap_or(0),
-                })))]
-            })],
+            hand_triggers: vec![TriggerDef::new(
+                "eat",
+                &[GameEventType::EnteredGraveyard],
+                |ctx, event| {
+                    let GameEvent::EnteredGraveyard { def_id, .. } = event else {
+                        return vec![];
+                    };
+                    let def = def_of(Some(&*ctx.state), def_id);
+                    if def.type_ != CardType::Unit {
+                        return vec![];
+                    }
+                    vec![effects::buff(json_as(json!({
+                        "target": { "of": "self" },
+                        "attack": def.base.attack.unwrap_or(0),
+                        "health": def.base.health.unwrap_or(0),
+                    })))]
+                },
+            )],
             ..Script::default()
         }),
     );
@@ -426,10 +459,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
                     attack: Some(0),
                     max_health: Some(0),
                 };
-                for unit in units
-                    .iter()
-                    .filter(|unit| unit.id != me.id && def_of(Some(state), &unit.def_id).tags.contains(&Tag::Felinor))
-                {
+                for unit in units.iter().filter(|unit| {
+                    unit.id != me.id && def_of(Some(state), &unit.def_id).tags.contains(&Tag::Felinor)
+                }) {
                     let stats = stats_with_buffs(state, unit);
                     sum = SetStat {
                         attack: Some(sum.attack.unwrap_or(0) + stats.attack),
@@ -503,7 +535,10 @@ fn instance_in(state: &GameState, id: &str) -> CardInstance {
 
 /// TS wrote through the live instance (`unit.damage = 2`): here, the card under that id in the state.
 fn edit(state: &mut GameState, card: &CardInstance, change: impl FnOnce(&mut CardInstance)) {
-    change(must(find_instance_mut(state, &card.id), &format!("instance {}", card.id)));
+    change(must(
+        find_instance_mut(state, &card.id),
+        &format!("instance {}", card.id),
+    ));
 }
 
 /// TS `RunOptions = HookOptions & { self?: CardInstance | null }`.
@@ -578,7 +613,9 @@ fn action(body: Value) -> Action {
 fn play(state: &GameState, instance_id: &str, nonce: &str) -> ReduceResult {
     reduce(
         state,
-        &action(json!({ "type": "play", "instanceId": instance_id, "playerId": state.active, "nonce": nonce })),
+        &action(
+            json!({ "type": "play", "instanceId": instance_id, "playerId": state.active, "nonce": nonce }),
+        ),
     )
 }
 
@@ -599,7 +636,9 @@ fn hero(player: PlayerId) -> AttackTarget {
 }
 
 fn unit_target(card: &CardInstance) -> AttackTarget {
-    AttackTarget::Unit { instance: card.clone() }
+    AttackTarget::Unit {
+        instance: card.clone(),
+    }
 }
 
 /// `dealDamage`'s `{ source, target, amount }`.
@@ -626,7 +665,10 @@ fn ids<C: Borrow<CardInstance>>(cards: impl IntoIterator<Item = C>) -> Vec<Strin
 }
 
 fn def_ids<C: Borrow<CardInstance>>(cards: impl IntoIterator<Item = C>) -> Vec<String> {
-    cards.into_iter().map(|card| card.borrow().def_id.clone()).collect()
+    cards
+        .into_iter()
+        .map(|card| card.borrow().def_id.clone())
+        .collect()
 }
 
 fn owned<C: Borrow<CardInstance>>(cards: impl IntoIterator<Item = C>) -> Vec<CardInstance> {
@@ -677,7 +719,10 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
 }
 
 fn assert_matches(actual: Value, expected: Value) {
-    assert!(matches_object(&actual, &expected), "{actual} does not match {expected}");
+    assert!(
+        matches_object(&actual, &expected),
+        "{actual} does not match {expected}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -701,13 +746,23 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         // Summon, Recruit and Transform never fire it.
         let mut state = game("r1b");
-        run(&mut state, effects::summon(json_as(json!({ "defId": CRIER }))), by(P1));
-        assert_eq!(must(card_at(&state, slot(P1, UNITS, 1)), "summoned crier").def_id, CRIER);
+        run(
+            &mut state,
+            effects::summon(json_as(json!({ "defId": CRIER }))),
+            by(P1),
+        );
+        assert_eq!(
+            must(card_at(&state, slot(P1, UNITS, 1)), "summoned crier").def_id,
+            CRIER
+        );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
 
         set_library(&mut state, P1, &[CRIER]);
         run(&mut state, effects::recruit(json_as(json!({}))), by(P1));
-        assert_eq!(must(card_at(&state, slot(P1, UNITS, 2)), "recruited crier").def_id, CRIER);
+        assert_eq!(
+            must(card_at(&state, slot(P1, UNITS, 2)), "recruited crier").def_id,
+            CRIER
+        );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
 
         let victim = put(&mut state, BODY, slot(P1, UNITS, 3), json!({}));
@@ -716,7 +771,10 @@ mod spec_11_rulings_r1_r42_m3_gate {
             effects::transform(json_as(json!({ "instanceId": victim.id, "defId": CRIER }))),
             by(P1),
         );
-        assert_eq!(must(card_at(&state, slot(P1, UNITS, 3)), "transformed crier").def_id, CRIER);
+        assert_eq!(
+            must(card_at(&state, slot(P1, UNITS, 3)), "transformed crier").def_id,
+            CRIER
+        );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
 
         // A cast fires it (R70).
@@ -743,7 +801,9 @@ mod spec_11_rulings_r1_r42_m3_gate {
             }
             let result = reduce(
                 &state,
-                &action(json!({ "type": "endTurn", "playerId": state.active, "nonce": format!("r2-{step}") })),
+                &action(
+                    json!({ "type": "endTurn", "playerId": state.active, "nonce": format!("r2-{step}") }),
+                ),
             );
             assert_eq!(result.error, None);
             state = result.state;
@@ -770,7 +830,10 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let mut sink = sink_for(&mut state);
         let outcomes = draw::draw(&mut sink, P1, 3);
 
-        assert_eq!(outcomes, vec![DrawOutcome::Fatigue, DrawOutcome::Fatigue, DrawOutcome::Fatigue]);
+        assert_eq!(
+            outcomes,
+            vec![DrawOutcome::Fatigue, DrawOutcome::Fatigue, DrawOutcome::Fatigue]
+        );
         assert_eq!(sink.state.players.p1.fatigue_count, 3);
         assert_eq!(sink.state.players.p1.hero.health, HERO_HEALTH - (1 + 2 + 3));
         // No card was drawn, so the damage instance is the whole of what happened (§2.4).
@@ -784,7 +847,10 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         let mut state = game("r4");
         in_hand(&mut state, BODY, P1, HAND_CAP);
-        let extra = must(set_library(&mut state, P1, &[OTHER_BODY]).into_iter().next(), "burned card");
+        let extra = must(
+            set_library(&mut state, P1, &[OTHER_BODY]).into_iter().next(),
+            "burned card",
+        );
         let mut sink = sink_for(&mut state);
 
         assert_eq!(draw::draw(&mut sink, P1, 1), vec![DrawOutcome::Burned]);
@@ -801,7 +867,10 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let attacker = put(&mut state, BODY, slot(P1, UNITS, 1), json!({}));
         let far = put(&mut state, BODY, slot(P2, UNITS, 5), json!({}));
 
-        assert_eq!(refusal(why_cannot_attack(&state, &attacker, &unit_target(&far))), None);
+        assert_eq!(
+            refusal(why_cannot_attack(&state, &attacker, &unit_target(&far))),
+            None
+        );
         assert_eq!(refusal(why_cannot_attack(&state, &attacker, &hero(P2))), None);
         assert_eq!(attack_targets(&state, &attacker).len(), 2);
     }
@@ -820,13 +889,18 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         let result = reduce(
             &state,
-            &action(json!({ "type": "switchPosition", "instanceId": unit.id, "playerId": "p1", "nonce": "r6-switch" })),
+            &action(
+                json!({ "type": "switchPosition", "instanceId": unit.id, "playerId": "p1", "nonce": "r6-switch" }),
+            ),
         );
         assert_eq!(result.error, None);
 
         let switched = instance_in(&result.state, &unit.id);
         assert_eq!(switched.position, Some(Position::Atk));
-        assert_eq!(to_json(&switched.exertion), json!({ "attacked": false, "switched": true }));
+        assert_eq!(
+            to_json(&switched.exertion),
+            json!({ "attacked": false, "switched": true })
+        );
         assert_eq!(
             refusal(why_cannot_attack(&result.state, &switched, &hero(P2))),
             says("that unit has already acted this turn")
@@ -898,7 +972,15 @@ mod spec_11_rulings_r1_r42_m3_gate {
         // The replacement came off the top, before the returned card went back, so it cannot be redrawn.
         assert!(new_hand.contains(&replacement.id));
         assert!(!new_hand.contains(&returned.id));
-        assert!(result.state.players.p2.library.iter().any(|card| card.id == returned.id));
+        assert!(
+            result
+                .state
+                .players
+                .p2
+                .library
+                .iter()
+                .any(|card| card.id == returned.id)
+        );
     }
 
     #[test]
@@ -927,13 +1009,18 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let started = find_index(&opened.events, |_, e| {
             e["type"] == "turnStarted" && e["player"] == "p1" && e["turn"] == 1
         });
-        let drawn = find_index(&opened.events, |i, e| i > started && e["type"] == "drawn" && e["player"] == "p1");
+        let drawn = find_index(&opened.events, |i, e| {
+            i > started && e["type"] == "drawn" && e["player"] == "p1"
+        });
         assert!(started >= 0);
         assert!(drawn > started);
 
         assert_eq!(opened.state.turn, 1);
         assert_eq!(opened.state.active, P1);
-        assert_eq!(opened.state.players.p1.hand.len(), (at(OPENING_DRAW, 0) + 1) as usize);
+        assert_eq!(
+            opened.state.players.p1.hand.len(),
+            (at(OPENING_DRAW, 0) + 1) as usize
+        );
     }
 
     #[test]
@@ -943,7 +1030,12 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let mut on_field = put(&mut state, UNIT_TOKEN, slot(P1, UNITS, 1), json!({}));
         assert!(is_unit_token(&state, &on_field));
         assert_eq!(
-            move_to_zone(&mut state, &mut on_field, OffFieldZone::Graveyard, Default::default()),
+            move_to_zone(
+                &mut state,
+                &mut on_field,
+                OffFieldZone::Graveyard,
+                Default::default()
+            ),
             MoveResult::Vanished
         );
         assert!(state.players.p1.graveyard.is_empty());
@@ -967,7 +1059,12 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         let mut spell_card = at(&in_hand(&mut state, SPELL_TOKEN, P1, 1), 0);
         assert_eq!(
-            move_to_zone(&mut state, &mut spell_card, OffFieldZone::Graveyard, Default::default()),
+            move_to_zone(
+                &mut state,
+                &mut spell_card,
+                OffFieldZone::Graveyard,
+                Default::default()
+            ),
             MoveResult::Moved
         );
         assert_eq!(ids(&state.players.p1.graveyard), vec![spell_card.id.clone()]);
@@ -978,7 +1075,11 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let mut state = game("r12");
         let victim = put(&mut state, BODY, slot(P2, UNITS, 2), json!({}));
 
-        run(&mut state, effects::steal(json_as(json!({ "instanceId": victim.id }))), by(P1));
+        run(
+            &mut state,
+            effects::steal(json_as(json!({ "instanceId": victim.id }))),
+            by(P1),
+        );
         let stolen = instance_in(&state, &victim.id);
         assert_eq!(stolen.controller, P1);
         assert_eq!(stolen.owner, P2);
@@ -1004,7 +1105,10 @@ mod spec_11_rulings_r1_r42_m3_gate {
             PlaceOnFieldOptions { stack: Some(true) }
         ));
 
-        assert_eq!(must(card_at(&state, slot(P1, UNITS, 1)), "top of pile").id, top.id);
+        assert_eq!(
+            must(card_at(&state, slot(P1, UNITS, 1)), "top of pile").id,
+            top.id
+        );
         let buried = instance_in(&state, &buried.id);
         assert!(!is_active_on_field(&state, &buried));
         assert_eq!(ids(active_units_of(&state, P1)), vec![top.id.clone()]);
@@ -1033,7 +1137,9 @@ mod spec_11_rulings_r1_r42_m3_gate {
             .collect();
         assert_eq!(
             ring,
-            ["p1-1", "p1-2", "p1-3", "p1-4", "p1-5", "p2-5", "p2-4", "p2-3", "p2-2", "p2-1"]
+            [
+                "p1-1", "p1-2", "p1-3", "p1-4", "p1-5", "p2-5", "p2-4", "p2-3", "p2-2", "p2-1"
+            ]
         );
 
         let mut state = game("r14");
@@ -1046,9 +1152,15 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         let result = {
             let mut sink = sink_for(&mut state);
-            rotate_rings(&mut sink, &json_as(json!({ "direction": "right", "perspective": "p1" })))
+            rotate_rings(
+                &mut sink,
+                &json_as(json!({ "direction": "right", "perspective": "p1" })),
+            )
         };
-        assert_eq!(must(card_at(&state, slot(P2, UNITS, 5)), "crossed unit").id, crosser.id);
+        assert_eq!(
+            must(card_at(&state, slot(P2, UNITS, 5)), "crossed unit").id,
+            crosser.id
+        );
         let crossed = instance_in(&state, &crosser.id);
         assert_eq!(crossed.controller, P2);
         assert_eq!(crossed.owner, P1);
@@ -1067,7 +1179,10 @@ mod spec_11_rulings_r1_r42_m3_gate {
         lock_zone(&mut locked, slot(P1, UNITS, 3));
         let locked_result = {
             let mut sink = sink_for(&mut locked);
-            rotate_rings(&mut sink, &json_as(json!({ "direction": "right", "perspective": "p1" })))
+            rotate_rings(
+                &mut sink,
+                &json_as(json!({ "direction": "right", "perspective": "p1" })),
+            )
         };
         assert_eq!(locked_result.bounced, vec![blocked.id.clone()]);
         assert!(ids(&locked.players.p1.hand).contains(&blocked.id));
@@ -1092,20 +1207,41 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let mut state = game("r15");
 
         let same_lane = put(&mut state, BODY, slot(P2, UNITS, 3), json!({}));
-        run(&mut state, effects::steal(json_as(json!({ "instanceId": same_lane.id }))), by(P1));
-        assert_eq!(must(card_at(&state, slot(P1, UNITS, 3)), "same-lane steal").id, same_lane.id);
+        run(
+            &mut state,
+            effects::steal(json_as(json!({ "instanceId": same_lane.id }))),
+            by(P1),
+        );
+        assert_eq!(
+            must(card_at(&state, slot(P1, UNITS, 3)), "same-lane steal").id,
+            same_lane.id
+        );
 
         put(&mut state, BODY, slot(P1, UNITS, 1), json!({}));
         let displaced = put(&mut state, BODY, slot(P2, UNITS, 1), json!({}));
-        run(&mut state, effects::steal(json_as(json!({ "instanceId": displaced.id }))), by(P1));
-        assert_eq!(must(card_at(&state, slot(P1, UNITS, 2)), "first free steal").id, displaced.id);
+        run(
+            &mut state,
+            effects::steal(json_as(json!({ "instanceId": displaced.id }))),
+            by(P1),
+        );
+        assert_eq!(
+            must(card_at(&state, slot(P1, UNITS, 2)), "first free steal").id,
+            displaced.id
+        );
 
         // With no free zone left the card stays with its opponent.
         put(&mut state, BODY, slot(P1, UNITS, 4), json!({}));
         put(&mut state, BODY, slot(P1, UNITS, 5), json!({}));
         let stays = put(&mut state, BODY, slot(P2, UNITS, 2), json!({}));
-        run(&mut state, effects::steal(json_as(json!({ "instanceId": stays.id }))), by(P1));
-        assert_eq!(must(card_at(&state, slot(P2, UNITS, 2)), "unstolen unit").id, stays.id);
+        run(
+            &mut state,
+            effects::steal(json_as(json!({ "instanceId": stays.id }))),
+            by(P1),
+        );
+        assert_eq!(
+            must(card_at(&state, slot(P2, UNITS, 2)), "unstolen unit").id,
+            stays.id
+        );
         assert_eq!(instance_in(&state, &stays.id).controller, P2);
     }
 
@@ -1121,8 +1257,15 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(prompt.kind, PromptKind::Hand);
         assert_eq!(prompt.player_id, P1);
         assert_eq!(
-            prompt.options.iter().map(|option| option.key.clone()).collect::<Vec<_>>(),
-            hand_before.iter().map(|id| format!("instance:{id}")).collect::<Vec<_>>()
+            prompt
+                .options
+                .iter()
+                .map(|option| option.key.clone())
+                .collect::<Vec<_>>(),
+            hand_before
+                .iter()
+                .map(|id| format!("instance:{id}"))
+                .collect::<Vec<_>>()
         );
 
         let chosen = at(&prompt.options, 1);
@@ -1138,13 +1281,33 @@ mod spec_11_rulings_r1_r42_m3_gate {
         );
         assert_eq!(answered.error, None);
         let chosen_id = at(&hand_before, 1);
-        assert!(!answered.state.players.p1.hand.iter().any(|card| card.id == chosen_id));
-        assert!(answered.state.players.p1.graveyard.iter().any(|card| card.id == chosen_id));
+        assert!(
+            !answered
+                .state
+                .players
+                .p1
+                .hand
+                .iter()
+                .any(|card| card.id == chosen_id)
+        );
+        assert!(
+            answered
+                .state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .any(|card| card.id == chosen_id)
+        );
 
         // "Random" takes no prompt: the match rng picks and the discard resolves at once.
         let mut random = game("r16b");
         let cards = in_hand(&mut random, BODY, P1, 3);
-        run(&mut random, effects::discard_random(json_as(json!({ "count": 1 }))), by(P1));
+        run(
+            &mut random,
+            effects::discard_random(json_as(json!({ "count": 1 }))),
+            by(P1),
+        );
         assert!(random.pending.is_none());
         assert_eq!(random.players.p1.hand.len(), 2);
         assert_eq!(random.players.p1.graveyard.len(), 1);
@@ -1152,8 +1315,8 @@ mod spec_11_rulings_r1_r42_m3_gate {
     }
 
     #[test]
-    fn r17_r427_fires_a_trap_after_the_played_card_resolves_its_cry_included_and_an_immutable_target_still_consumes_it(
-    ) {
+    fn r17_r427_fires_a_trap_after_the_played_card_resolves_its_cry_included_and_an_immutable_target_still_consumes_it()
+     {
         let mut state = playing("r17");
         let armed = put(&mut state, SHEEPISH, slot(P2, BACKROW, 1), json!({}));
         let card = at(&in_hand(&mut state, CRIER, P1, 1), 0);
@@ -1164,9 +1327,14 @@ mod spec_11_rulings_r1_r42_m3_gate {
         // The Cry ran first — the crier's 3 reached p2's hero — and then the trap answered the play's
         // resolution: the played unit is a Sheep.
         assert_eq!(result.state.players.p2.hero.health, health - 3);
-        assert_eq!(must(card_at(&result.state, slot(P1, UNITS, 1)), "sheep").def_id, SHEEP);
+        assert_eq!(
+            must(card_at(&result.state, slot(P1, UNITS, 1)), "sheep").def_id,
+            SHEEP
+        );
         assert!(find_instance(&result.state, &card.id).is_none());
-        let cried = find_index(&result.events, |_, e| e["type"] == "damage" && e["targetId"] == "hero-p2");
+        let cried = find_index(&result.events, |_, e| {
+            e["type"] == "damage" && e["targetId"] == "hero-p2"
+        });
         let resolved = find_index(&result.events, |_, e| {
             e["type"] == "cardResolved" && e["instanceId"] == card.id.as_str()
         });
@@ -1195,7 +1363,15 @@ mod spec_11_rulings_r1_r42_m3_gate {
             pluck(&of_type(&second.events, GameEventType::TrapFired), "instanceId"),
             vec![json!(armed_again.id)]
         );
-        assert!(second.state.players.p2.graveyard.iter().any(|c| c.id == armed_again.id));
+        assert!(
+            second
+                .state
+                .players
+                .p2
+                .graveyard
+                .iter()
+                .any(|c| c.id == armed_again.id)
+        );
         // M4: cards/test/41-sheepish.test.ts proves the card half.
     }
 
@@ -1234,7 +1410,10 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let scope = {
             let mut sink = sink_for(&mut state);
             let ctx = make_context(&mut sink, None, controlled(P1));
-            effects::targets_in_scope(&ctx, Some(&json_as(json!({ "side": "any", "of": ["unit", "hero"] }))))
+            effects::targets_in_scope(
+                &ctx,
+                Some(&json_as(json!({ "side": "any", "of": ["unit", "hero"] }))),
+            )
         };
         assert!(scope.contains(&sel(&ally)));
         assert!(scope.contains(&sel(&foe)));
@@ -1246,7 +1425,11 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(instance_in(&state, &foe.id).damage, 0);
         run(&mut state, heal(), targeting(P1, pick(&ally)));
         assert_eq!(instance_in(&state, &ally.id).damage, 0);
-        run(&mut state, heal(), targeting(P1, vec![Selection::Hero { player: P2 }]));
+        run(
+            &mut state,
+            heal(),
+            targeting(P1, vec![Selection::Hero { player: P2 }]),
+        );
         // A hero has no maximum health, so the heal is not capped (§3, §6.3).
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH + 20);
     }
@@ -1263,7 +1446,10 @@ mod spec_11_rulings_r1_r42_m3_gate {
         );
         let switched = instance_in(&state, &unit.id);
         assert_eq!(switched.position, Some(Position::Def));
-        assert_eq!(to_json(&switched.exertion), json!({ "attacked": false, "switched": false }));
+        assert_eq!(
+            to_json(&switched.exertion),
+            json!({ "attacked": false, "switched": false })
+        );
 
         run(
             &mut state,
@@ -1272,7 +1458,10 @@ mod spec_11_rulings_r1_r42_m3_gate {
         );
         let back = instance_in(&state, &unit.id);
         assert_eq!(back.position, Some(Position::Atk));
-        assert_eq!(to_json(&back.exertion), json!({ "attacked": false, "switched": false }));
+        assert_eq!(
+            to_json(&back.exertion),
+            json!({ "attacked": false, "switched": false })
+        );
         assert_eq!(refusal(why_cannot_attack(&state, &back, &hero(P2))), None);
     }
 
@@ -1370,12 +1559,14 @@ mod spec_11_rulings_r1_r42_m3_gate {
         );
         assert!(instance_in(&state, &saintess.id).radiant);
         // The flag is never unset, so a second call changes nothing (§5.2).
-        assert!(run(
-            &mut state,
-            effects::set_radiant(json_as(json!({ "instanceId": saintess.id }))),
-            by(P1)
-        )
-        .is_empty());
+        assert!(
+            run(
+                &mut state,
+                effects::set_radiant(json_as(json!({ "instanceId": saintess.id }))),
+                by(P1)
+            )
+            .is_empty()
+        );
     }
 
     #[test]
@@ -1384,7 +1575,11 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let warded = put(&mut state, IMMUTABLE, slot(P1, UNITS, 1), json!({}));
         let ingredient = put(&mut state, BODY, slot(P1, UNITS, 2), json!({}));
 
-        run(&mut state, effects::vanilla(json_as(json!({ "instanceId": warded.id }))), by(P1));
+        run(
+            &mut state,
+            effects::vanilla(json_as(json!({ "instanceId": warded.id }))),
+            by(P1),
+        );
         assert!(!instance_in(&state, &warded.id).vanilla);
 
         run(
@@ -1392,7 +1587,10 @@ mod spec_11_rulings_r1_r42_m3_gate {
             effects::transform(json_as(json!({ "instanceId": warded.id, "defId": BODY }))),
             by(P1),
         );
-        assert_eq!(must(card_at(&state, slot(P1, UNITS, 1)), "immutable unit").def_id, IMMUTABLE);
+        assert_eq!(
+            must(card_at(&state, slot(P1, UNITS, 1)), "immutable unit").def_id,
+            IMMUTABLE
+        );
 
         let warded_now = instance_in(&state, &warded.id);
         let ingredient_now = instance_in(&state, &ingredient.id);
@@ -1405,9 +1603,16 @@ mod spec_11_rulings_r1_r42_m3_gate {
         };
         assert!(fused.is_none());
         assert_eq!(instance_in(&state, &warded.id).def_id, IMMUTABLE);
-        assert_eq!(must(card_at(&state, slot(P1, UNITS, 2)), "ingredient").id, ingredient.id);
+        assert_eq!(
+            must(card_at(&state, slot(P1, UNITS, 2)), "ingredient").id,
+            ingredient.id
+        );
 
-        run(&mut state, effects::set_radiant(json_as(json!({ "instanceId": warded.id }))), by(P1));
+        run(
+            &mut state,
+            effects::set_radiant(json_as(json!({ "instanceId": warded.id }))),
+            by(P1),
+        );
         assert!(instance_in(&state, &warded.id).radiant);
     }
 
@@ -1419,16 +1624,37 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(query_cost(&def(TWO_TOP)), 2);
 
         let mut tie = game("r24");
-        let near_top = must(set_library(&mut tie, P1, &[TWO_TOP, TWO_NEXT]).into_iter().next(), "top card");
-        run(&mut tie, effects::recruit(json_as(json!({ "filter": { "cost": 2 } }))), by(P1));
+        let near_top = must(
+            set_library(&mut tie, P1, &[TWO_TOP, TWO_NEXT]).into_iter().next(),
+            "top card",
+        );
+        run(
+            &mut tie,
+            effects::recruit(json_as(json!({ "filter": { "cost": 2 } }))),
+            by(P1),
+        );
         // The library is scanned top down, so the tie goes to the card nearest the top.
-        assert_eq!(must(card_at(&tie, slot(P1, UNITS, 1)), "recruited card").id, near_top.id);
+        assert_eq!(
+            must(card_at(&tie, slot(P1, UNITS, 1)), "recruited card").id,
+            near_top.id
+        );
 
         let mut costs = game("r24b");
         set_library(&mut costs, P1, &[X_UNIT, EMBIGGEN_UNIT]);
-        run(&mut costs, effects::recruit(json_as(json!({ "filter": { "cost": 0 } }))), by(P1));
-        assert_eq!(must(card_at(&costs, slot(P1, UNITS, 1)), "x-cost card").def_id, X_UNIT);
-        run(&mut costs, effects::recruit(json_as(json!({ "filter": { "cost": 2 } }))), by(P1));
+        run(
+            &mut costs,
+            effects::recruit(json_as(json!({ "filter": { "cost": 0 } }))),
+            by(P1),
+        );
+        assert_eq!(
+            must(card_at(&costs, slot(P1, UNITS, 1)), "x-cost card").def_id,
+            X_UNIT
+        );
+        run(
+            &mut costs,
+            effects::recruit(json_as(json!({ "filter": { "cost": 2 } }))),
+            by(P1),
+        );
         assert_eq!(
             must(card_at(&costs, slot(P1, UNITS, 2)), "embiggen card").def_id,
             EMBIGGEN_UNIT
@@ -1473,7 +1699,10 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         assert_eq!(ids(&state.players.p1.exile), vec![odd.id.clone()]);
         // The X-cost card reads as 0 outside play, so the odd filter leaves it alone (R65).
-        assert_eq!(ids(&state.players.p1.hand), vec![even.id.clone(), x_card.id.clone()]);
+        assert_eq!(
+            ids(&state.players.p1.hand),
+            vec![even.id.clone(), x_card.id.clone()]
+        );
         assert_eq!(state.counters.exiled, 1);
         // M4: cards/test/94-genns-greed.test.ts proves the card half.
     }
@@ -1552,7 +1781,15 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert!(after_spell.state.players.p1.mods.is_empty());
         assert_eq!(after_spell.state.players.p2.hero.health, HERO_HEALTH - 4);
         assert!(card_at(&after_spell.state, slot(P1, BACKROW, 1)).is_none());
-        assert!(after_spell.state.players.p1.graveyard.iter().any(|card| card.id == source.id));
+        assert!(
+            after_spell
+                .state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .any(|card| card.id == source.id)
+        );
         // M4: cards/test/79-twinspell.test.ts proves the card half.
     }
 
@@ -1573,9 +1810,16 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert!(state.players.p1.exile.is_empty());
 
         for _ in 0..hand.len() {
-            run(&mut state, effects::add_to_hand(json_as(json!({ "defId": REMINISCE }))), by(P1));
+            run(
+                &mut state,
+                effects::add_to_hand(json_as(json!({ "defId": REMINISCE }))),
+                by(P1),
+            );
         }
-        assert_eq!(def_ids(&state.players.p1.hand), vec![REMINISCE, REMINISCE, REMINISCE]);
+        assert_eq!(
+            def_ids(&state.players.p1.hand),
+            vec![REMINISCE, REMINISCE, REMINISCE]
+        );
         // M4: cards/test/76-field-of-dreams.test.ts proves the card half.
     }
 
@@ -1586,10 +1830,16 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let lucky = put(&mut state, GAMBLER, slot(P1, UNITS, 2), json!({}));
         run(
             &mut state,
-            effects::grant_keyword(json_as(json!({ "target": { "of": "chosen" }, "keyword": { "kind": "Lucky", "n": 3 } }))),
+            effects::grant_keyword(json_as(
+                json!({ "target": { "of": "chosen" }, "keyword": { "kind": "Lucky", "n": 3 } }),
+            )),
             targeting(P1, pick(&lucky)),
         );
-        assert!(unit_has(&state, &instance_in(&state, &lucky.id), KeywordKind::Lucky));
+        assert!(unit_has(
+            &state,
+            &instance_in(&state, &lucky.id),
+            KeywordKind::Lucky
+        ));
 
         // Both Cries start from the same (seed, cursor), so identical outcomes mean Lucky did nothing.
         let start = state.rng_cursor;
@@ -1630,7 +1880,11 @@ mod spec_11_rulings_r1_r42_m3_gate {
             json!({ "faceDown": true, "cost": 0 })
         );
 
-        run(&mut state, effects::steal(json_as(json!({ "instanceId": hidden.id }))), by(P1));
+        run(
+            &mut state,
+            effects::steal(json_as(json!({ "instanceId": hidden.id }))),
+            by(P1),
+        );
         let stolen = instance_in(&state, &hidden.id);
         assert_eq!(stolen.controller, P1);
         assert_eq!(stolen.owner, P2);
@@ -1672,7 +1926,9 @@ mod spec_11_rulings_r1_r42_m3_gate {
         );
         run(
             &mut state,
-            effects::shuffle_into(json_as(json!({ "defId": SPELL_TOKEN, "count": 1, "radiant": true }))),
+            effects::shuffle_into(json_as(
+                json!({ "defId": SPELL_TOKEN, "count": 1, "radiant": true }),
+            )),
             by(P1),
         );
 
@@ -1680,7 +1936,10 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(library.len(), before + 4);
         assert_eq!(library.iter().filter(|card| card.def_id == UNIT_TOKEN).count(), 3);
         assert_eq!(
-            library.iter().filter(|card| card.def_id == SPELL_TOKEN && card.radiant).count(),
+            library
+                .iter()
+                .filter(|card| card.def_id == SPELL_TOKEN && card.radiant)
+                .count(),
             1
         );
         // M4: cards/test/33-unstable-clone-machine.test.ts proves the card half.
@@ -1709,7 +1968,9 @@ mod spec_11_rulings_r1_r42_m3_gate {
         // A Spell can never take a permanent's zone, so a same-type replacement is the only one.
         run(
             &mut state,
-            effects::transform(json_as(json!({ "instanceId": replacement.id, "defId": PLAIN_SPELL }))),
+            effects::transform(json_as(
+                json!({ "instanceId": replacement.id, "defId": PLAIN_SPELL }),
+            )),
             by(P1),
         );
         assert_eq!(
@@ -1733,7 +1994,9 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let hand_card = at(&in_hand(&mut state, BODY, P1, 1), 0);
         run(
             &mut state,
-            effects::transform(json_as(json!({ "instanceId": hand_card.id, "defId": OTHER_BODY }))),
+            effects::transform(json_as(
+                json!({ "instanceId": hand_card.id, "defId": OTHER_BODY }),
+            )),
             by(P1),
         );
         assert_eq!(def_ids(&state.players.p1.hand), vec![OTHER_BODY]);
@@ -1783,7 +2046,9 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let mut state = game("r37");
         run(
             &mut state,
-            effects::summon(json_as(json!({ "defId": BREAD, "statsOverride": { "attack": 4, "health": 4 } }))),
+            effects::summon(json_as(
+                json!({ "defId": BREAD, "statsOverride": { "attack": 4, "health": 4 } }),
+            )),
             by(P1),
         );
 
@@ -1794,7 +2059,11 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(view.max_health, 4);
         // It counts as a Token for every filter and vanishes off the field (R11).
         assert!(is_unit_token(&state, &token));
-        assert!(!query(&CatalogQueryArgs::default()).iter().any(|def| def.id == BREAD));
+        assert!(
+            !query(&CatalogQueryArgs::default())
+                .iter()
+                .any(|def| def.id == BREAD)
+        );
         // M4: cards/test/18-bread-and-butter.test.ts proves the card half.
     }
 
@@ -1867,7 +2136,9 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r40_counts_a_cast_on_draw_cast_as_a_card_played_this_turn_at_cost_0() {
         let mut state = playing("r40");
-        let castable = set_library(&mut state, P1, &[CAST_ON_DRAW_SPELL, BODY]).into_iter().next();
+        let castable = set_library(&mut state, P1, &[CAST_ON_DRAW_SPELL, BODY])
+            .into_iter()
+            .next();
         let spell = must(castable, "cast-on-draw card");
         let played_before = state.players.p1.turn_log.cards_played;
         let counter_before = state.counters.played;
@@ -1893,7 +2164,8 @@ mod spec_11_rulings_r1_r42_m3_gate {
     }
 
     #[test]
-    fn r41_r428_gives_carnivorous_cube_a_unit_meal_it_never_takes_from_itself_and_a_death_that_can_do_nothing() {
+    fn r41_r428_gives_carnivorous_cube_a_unit_meal_it_never_takes_from_itself_and_a_death_that_can_do_nothing()
+     {
         let mut state = game("r41");
         let hungry = put(&mut state, CUBE, slot(P1, UNITS, 1), json!({}));
         let other = put(&mut state, BODY, slot(P1, UNITS, 2), json!({}));
@@ -1906,7 +2178,9 @@ mod spec_11_rulings_r1_r42_m3_gate {
             let ctx = make_context(&mut sink, Some(&hungry), controlled(P1));
             effects::targets_in_scope(
                 &ctx,
-                Some(&json_as(json!({ "side": "ally", "of": ["unit"], "excludeSelf": true }))),
+                Some(&json_as(
+                    json!({ "side": "ally", "of": ["unit"], "excludeSelf": true }),
+                )),
             )
         };
         assert!(options.contains(&sel(&other)));
@@ -1920,12 +2194,21 @@ mod spec_11_rulings_r1_r42_m3_gate {
             effects::remember(json_as(json!({ "key": "eaten", "value": TRAP }))),
             as_self(&hungry),
         );
-        assert_eq!(instance_in(&state, &hungry.id).memory.get("eaten"), Some(&json!(TRAP)));
+        assert_eq!(
+            instance_in(&state, &hungry.id).memory.get("eaten"),
+            Some(&json!(TRAP))
+        );
         let death = kill_and_check(&mut state, &hungry);
-        assert_eq!(pluck(&of_type(&death, GameEventType::Summoned), "defId"), vec![json!(TRAP)]);
+        assert_eq!(
+            pluck(&of_type(&death, GameEventType::Summoned), "defId"),
+            vec![json!(TRAP)]
+        );
         // R41: a copy is summoned as the card it copies, into that card's own row — an animated card's
         // copies (a Unit when it was eaten, R383) go to the backrow, not the unit row.
-        assert_eq!(must(card_at(&state, slot(P1, BACKROW, 1)), "backrow copy").def_id, TRAP);
+        assert_eq!(
+            must(card_at(&state, slot(P1, BACKROW, 1)), "backrow copy").def_id,
+            TRAP
+        );
 
         // A copy keeps the eaten card's radiant flag and its `statsOverride`.
         let mut copies = game("r41c");
@@ -1937,11 +2220,16 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert!(must(card_at(&copies, slot(P1, BACKROW, 1)), "radiant copy").radiant);
         run(
             &mut copies,
-            effects::summon(json_as(json!({ "defId": BODY, "statsOverride": { "attack": 7, "health": 7 } }))),
+            effects::summon(json_as(
+                json!({ "defId": BODY, "statsOverride": { "attack": 7, "health": 7 } }),
+            )),
             by(P1),
         );
         let stat_copy = must(card_at(&copies, slot(P1, UNITS, 1)), "stat copy").clone();
-        assert_eq!(stat_copy.stats_override, Some(AttackHealth { attack: 7, health: 7 }));
+        assert_eq!(
+            stat_copy.stats_override,
+            Some(AttackHealth { attack: 7, health: 7 })
+        );
         assert_eq!(unit_view(&copies, &stat_copy).attack, 7);
 
         // Nothing eaten: the Death hook returns no effects at all.
@@ -1976,7 +2264,13 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let bystander_now = instance_in(sink.state, &bystander.id);
         deal_damage(
             &mut sink,
-            hit(None, DamageTarget::Unit { instance: bystander_now }, 99),
+            hit(
+                None,
+                DamageTarget::Unit {
+                    instance: bystander_now,
+                },
+                99,
+            ),
         );
         assert_eq!(instance_in(sink.state, &bystander.id).last_damaged_by, None);
         // M4: cards/test/32-prem-panther.test.ts proves the card half.

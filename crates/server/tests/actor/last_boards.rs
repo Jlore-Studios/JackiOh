@@ -13,10 +13,10 @@
 
 use std::sync::Arc;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use jackioh_engine::wire::PlayerId;
 use jackioh_engine::LastBoardEntry;
+use jackioh_engine::wire::PlayerId;
 use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::api::results::{reap_stuck_matches, record_result};
 use jackioh_server::app::App;
@@ -35,7 +35,11 @@ const AT: i64 = 1_700_000_000_000;
 /// One store call in its own transaction, as TS's `deps.store.<sub>.<method>(…)` was.
 macro_rules! store {
     ($app:expr, $t:ident => $call:expr) => {{
-        let mut $t = $app.db.begin(None).await.expect("the fake store opens a transaction");
+        let mut $t = $app
+            .db
+            .begin(None)
+            .await
+            .expect("the fake store opens a transaction");
         let out = $call;
         $t.commit().await.expect("the fake store commits");
         out
@@ -61,7 +65,11 @@ fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
 /// TS's `store.onCall`: every store method named `method` fails with `message` until cleared.
 async fn fail_on(app: &App, method: &'static str, message: &'static str) {
     fake(app).lock().await.on_call = Some(Arc::new(move |called: &str| {
-        if called == method { Err(StoreError::Other(message.to_string())) } else { Ok(()) }
+        if called == method {
+            Err(StoreError::Other(message.to_string()))
+        } else {
+            Ok(())
+        }
     }));
 }
 
@@ -71,7 +79,10 @@ async fn stop_failing(app: &App) {
 
 /// A seat's own hand, as its view lists it.
 fn hand_of(view: &Value) -> Vec<Value> {
-    view["you"]["hand"].as_array().cloned().unwrap_or_else(|| panic!("a seat's own hand is a list"))
+    view["you"]["hand"]
+        .as_array()
+        .cloned()
+        .unwrap_or_else(|| panic!("a seat's own hand is a list"))
 }
 
 /// What a seat's own view shows of the field, p1's side then p2's, in board order (R417).
@@ -141,7 +152,12 @@ struct Submitter {
 impl Submitter {
     async fn submit(&mut self, player: PlayerId, body: Value) {
         self.n += 1;
-        let reply = to_json(&self.actor.submit(player, format!("lb-{}", self.n), from(body.clone())).await);
+        let reply = to_json(
+            &self
+                .actor
+                .submit(player, format!("lb-{}", self.n), from(body.clone()))
+                .await,
+        );
         if reply["type"] == "error" {
             panic!("{} by {player}: {reply}", body["type"]);
         }
@@ -150,7 +166,13 @@ impl Submitter {
 
 /// Cheap Traps that fire only on what the walk below never does — a lethal attack, a death of p1's
 /// Unit, a hit to 0, a heal, a Spell — so the one p1 sets stays face-down to the end.
-const QUIET_TRAPS: [&str; 5] = ["core-096", "classic-014", "classic-052", "classicplus-022", "classic-017"];
+const QUIET_TRAPS: [&str; 5] = [
+    "core-096",
+    "classic-014",
+    "classic-052",
+    "classicplus-022",
+    "classic-017",
+];
 
 mod r417_r565_last_boards_through_a_real_match {
     use super::*;
@@ -164,7 +186,9 @@ mod r417_r565_last_boards_through_a_real_match {
             .iter()
             .filter(|(_, def)| {
                 !def.token
-                    && !to_json(&def.tags).as_array().is_some_and(|tags| tags.contains(&json!("Token")))
+                    && !to_json(&def.tags)
+                        .as_array()
+                        .is_some_and(|tags| tags.contains(&json!("Token")))
                     && to_json(&def.set) == "Core"
             })
             .map(|(id, _)| id.clone())
@@ -174,18 +198,31 @@ mod r417_r565_last_boards_through_a_real_match {
         let decks = (first, core[15..35].to_vec());
         let app = world().await;
         start(&app, "m-last-1", "last-boards-real", &decks).await;
-        let actor = app.matches.actor_for(&app, "m-last-1").await.expect("the match's actor");
+        let actor = app
+            .matches
+            .actor_for(&app, "m-last-1")
+            .await
+            .expect("the match's actor");
 
-        let mut walk = Submitter { actor: actor.clone(), n: 0 };
+        let mut walk = Submitter {
+            actor: actor.clone(),
+            n: 0,
+        };
         let type_of = |view: &Value, instance_id: &Value| -> Option<String> {
-            let card = hand_of(view).into_iter().find(|entry| &entry["instanceId"] == instance_id)?;
+            let card = hand_of(view)
+                .into_iter()
+                .find(|entry| &entry["instanceId"] == instance_id)?;
             let def = catalog.get(card["defId"].as_str()?)?;
             to_json(&def.type_).as_str().map(str::to_string)
         };
 
         for player in [PlayerId::P1, PlayerId::P2] {
-            let keep: Vec<Value> = hand_of(&view_of(&actor, player).await).iter().map(|card| card["instanceId"].clone()).collect();
-            walk.submit(player, json!({ "type": "mulligan", "keep": keep })).await;
+            let keep: Vec<Value> = hand_of(&view_of(&actor, player).await)
+                .iter()
+                .map(|card| card["instanceId"].clone())
+                .collect();
+            walk.submit(player, json!({ "type": "mulligan", "keep": keep }))
+                .await;
         }
         // p1 sets a quiet Trap, p2 plays a Unit; everything else ends the turn or answers the prompt.
         let mut step = 0;
@@ -195,22 +232,30 @@ mod r417_r565_last_boards_through_a_real_match {
             }
             step += 1;
             let seen = view_of(&actor, PlayerId::P2).await;
-            let face_down = seen["opponent"]["backrow"].as_array().is_some_and(|row| row.iter().any(|card| card["faceDown"] == json!(true)));
-            let unit = seen["you"]["units"].as_array().is_some_and(|row| row.iter().any(|pile| !pile.is_null()));
+            let face_down = seen["opponent"]["backrow"]
+                .as_array()
+                .is_some_and(|row| row.iter().any(|card| card["faceDown"] == json!(true)));
+            let unit = seen["you"]["units"]
+                .as_array()
+                .is_some_and(|row| row.iter().any(|pile| !pile.is_null()));
             if face_down && unit {
                 break;
             }
             let snapshot = actor.snapshot();
             assert!(snapshot.result.is_none());
             let who = snapshot.pending_for.unwrap_or(snapshot.active);
-            let legal: Vec<Value> = jackioh_engine::legal_actions(&actor.engine_state(), who).iter().map(to_json).collect();
+            let legal: Vec<Value> = jackioh_engine::legal_actions(&actor.engine_state(), who)
+                .iter()
+                .map(to_json)
+                .collect();
             let own_view = view_of(&actor, who).await;
             let wanted = |want: &[&str]| -> Option<Value> {
                 legal
                     .iter()
                     .find(|action| {
                         action["type"] == "play"
-                            && type_of(&own_view, &action["instanceId"]).is_some_and(|kind| want.contains(&kind.as_str()))
+                            && type_of(&own_view, &action["instanceId"])
+                                .is_some_and(|kind| want.contains(&kind.as_str()))
                     })
                     .cloned()
             };
@@ -218,8 +263,20 @@ mod r417_r565_last_boards_through_a_real_match {
                 .iter()
                 .find(|action| action["type"] == "answer")
                 .cloned()
-                .or_else(|| if who == PlayerId::P1 && !face_down { wanted(&["Trap", "Field Trap"]) } else { None })
-                .or_else(|| if who == PlayerId::P2 && !unit { wanted(&["Unit"]) } else { None })
+                .or_else(|| {
+                    if who == PlayerId::P1 && !face_down {
+                        wanted(&["Trap", "Field Trap"])
+                    } else {
+                        None
+                    }
+                })
+                .or_else(|| {
+                    if who == PlayerId::P2 && !unit {
+                        wanted(&["Unit"])
+                    } else {
+                        None
+                    }
+                })
                 .or_else(|| legal.iter().find(|action| action["type"] == "endTurn").cloned())
                 .unwrap_or_else(|| panic!("{who} has nothing to do"));
             walk.submit(who, body).await;
@@ -227,8 +284,12 @@ mod r417_r565_last_boards_through_a_real_match {
         walk.submit(PlayerId::P2, json!({ "type": "concede" })).await;
         actor.idle().await;
 
-        let own = to_json(&must(store!(app, t => t.last_boards_get(P1, from(json!("server"))).await.expect("lastBoards.get"))));
-        let theirs = to_json(&must(store!(app, t => t.last_boards_get(P2, from(json!("server"))).await.expect("lastBoards.get"))));
+        let own = to_json(&must(
+            store!(app, t => t.last_boards_get(P1, from(json!("server"))).await.expect("lastBoards.get")),
+        ));
+        let theirs = to_json(&must(
+            store!(app, t => t.last_boards_get(P2, from(json!("server"))).await.expect("lastBoards.get")),
+        ));
         let p1_view = view_of(&actor, PlayerId::P1).await;
         assert_eq!(own, json!(shown_field(&p1_view)));
         assert_eq!(theirs, json!(shown_field(&view_of(&actor, PlayerId::P2).await)));
@@ -236,11 +297,18 @@ mod r417_r565_last_boards_through_a_real_match {
             .as_array()
             .into_iter()
             .flatten()
-            .find(|card| !card.is_null() && card["faceDown"] == json!(false) && card["unrevealed"] == json!(true))
+            .find(|card| {
+                !card.is_null() && card["faceDown"] == json!(false) && card["unrevealed"] == json!(true)
+            })
             .cloned()
             .unwrap_or_else(|| panic!("p1 holds no face-down card"));
         let ids = |board: &Value| -> Vec<Value> {
-            board.as_array().into_iter().flatten().map(|entry| entry["defId"].clone()).collect()
+            board
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|entry| entry["defId"].clone())
+                .collect()
         };
         assert!(ids(&own).contains(&trap["defId"]));
         assert!(!ids(&theirs).contains(&trap["defId"]));
@@ -248,20 +316,37 @@ mod r417_r565_last_boards_through_a_real_match {
 
         // The next match between them starts from those boards, frozen on its row (R417).
         start(&app, "m-last-2", "last-boards-next", &decks).await;
-        let row = store!(app, t => t.matches_get("m-last-2").await.expect("matches.get")).expect("the next match's row");
+        let row = store!(app, t => t.matches_get("m-last-2").await.expect("matches.get"))
+            .expect("the next match's row");
         assert_eq!(to_json(&row)["lastBoards"], json!([own, theirs]));
-        let next = app.matches.actor_for(&app, "m-last-2").await.expect("the next match's actor");
-        let mut next_walk = Submitter { actor: next.clone(), n: walk.n };
+        let next = app
+            .matches
+            .actor_for(&app, "m-last-2")
+            .await
+            .expect("the next match's actor");
+        let mut next_walk = Submitter {
+            actor: next.clone(),
+            n: walk.n,
+        };
         for player in [PlayerId::P1, PlayerId::P2] {
-            let keep: Vec<Value> = hand_of(&view_of(&next, player).await).iter().map(|card| card["instanceId"].clone()).collect();
-            next_walk.submit(player, json!({ "type": "mulligan", "keep": keep })).await;
+            let keep: Vec<Value> = hand_of(&view_of(&next, player).await)
+                .iter()
+                .map(|card| card["instanceId"].clone())
+                .collect();
+            next_walk
+                .submit(player, json!({ "type": "mulligan", "keep": keep }))
+                .await;
         }
         let live = jackioh_engine::hash_state(&next.engine_state());
         // A newer board stored meanwhile changes nothing: a rebuilt actor folds the match's own inputs.
         let empty: Vec<LastBoardEntry> = Vec::new();
         store!(app, t => t.last_boards_put(P1, from(json!("server")), &empty, AT as _).await.expect("lastBoards.put"));
         app.matches.stop("m-last-2").await;
-        let rebuilt = app.matches.actor_for(&app, "m-last-2").await.expect("the rebuilt actor");
+        let rebuilt = app
+            .matches
+            .actor_for(&app, "m-last-2")
+            .await
+            .expect("the rebuilt actor");
         assert_eq!(jackioh_engine::hash_state(&rebuilt.engine_state()), live);
     }
 }
@@ -312,38 +397,54 @@ mod r565_the_results_writer_and_the_boards {
     }
 
     async fn board_of(app: &Arc<App>, profile: &str) -> Option<Value> {
-        store!(app, t => t.last_boards_get(profile, from(json!("server"))).await.expect("lastBoards.get")).map(|board| to_json(&board))
+        store!(app, t => t.last_boards_get(profile, from(json!("server"))).await.expect("lastBoards.get"))
+            .map(|board| to_json(&board))
     }
 
     #[tokio::test]
-    async fn r565_writes_each_seats_board_once_in_the_results_transaction_a_failed_board_write_leaves_no_result() {
+    async fn r565_writes_each_seats_board_once_in_the_results_transaction_a_failed_board_write_leaves_no_result()
+     {
         let app = world().await;
         live_match(&app, "m-tx", AT + 60_000).await;
         fail_on(&app, "lastBoards.put", "injected").await;
-        let failed = record_result(&app, from(input("m-tx", AT))).await.expect_err("the board write fails the result");
+        let failed = record_result(&app, from(input("m-tx", AT)))
+            .await
+            .expect_err("the board write fails the result");
         assert!(format!("{failed:?}").contains("injected"), "{failed:?}");
-        assert!(store!(app, t => t.results_get_by_match("m-tx").await.expect("results.getByMatch")).is_none());
+        assert!(
+            store!(app, t => t.results_get_by_match("m-tx").await.expect("results.getByMatch")).is_none()
+        );
         stop_failing(&app).await;
 
-        record_result(&app, from(input("m-tx", AT))).await.expect("the result lands");
+        record_result(&app, from(input("m-tx", AT)))
+            .await
+            .expect("the result lands");
         assert_eq!(board_of(&app, P1).await, Some(board_1()));
         assert_eq!(board_of(&app, P2).await, Some(board_2()));
         // A second write of the same ending is the first one's row and touches no board.
         let empty: Vec<LastBoardEntry> = Vec::new();
         store!(app, t => t.last_boards_put(P1, from(json!("server")), &empty, AT as _).await.expect("lastBoards.put"));
-        record_result(&app, from(input("m-tx", AT))).await.expect("the repeat is the first row");
+        record_result(&app, from(input("m-tx", AT)))
+            .await
+            .expect("the repeat is the first row");
         assert_eq!(board_of(&app, P1).await, Some(json!([])));
     }
 
     #[tokio::test]
-    async fn r565_r112_the_reaper_reads_no_state_so_a_reaped_ceiling_draw_writes_no_board_and_the_last_one_stays() {
+    async fn r565_r112_the_reaper_reads_no_state_so_a_reaped_ceiling_draw_writes_no_board_and_the_last_one_stays()
+     {
         let app = world().await;
         let first: Vec<LastBoardEntry> = from(board_1());
         store!(app, t => t.last_boards_put(P1, from(json!("server")), &first, AT as _).await.expect("lastBoards.put"));
         // A ceiling long past (TS: one millisecond ago).
         live_match(&app, "m-reaped", 0).await;
-        assert_eq!(reap_stuck_matches(&app).await.expect("the reaper runs"), vec!["m-reaped".to_string()]);
-        assert!(store!(app, t => t.results_get_by_match("m-reaped").await.expect("results.getByMatch")).is_some());
+        assert_eq!(
+            reap_stuck_matches(&app).await.expect("the reaper runs"),
+            vec!["m-reaped".to_string()]
+        );
+        assert!(
+            store!(app, t => t.results_get_by_match("m-reaped").await.expect("results.getByMatch")).is_some()
+        );
         assert_eq!(board_of(&app, P1).await, Some(board_1()));
         assert_eq!(board_of(&app, P2).await, None);
     }

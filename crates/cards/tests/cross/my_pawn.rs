@@ -34,7 +34,10 @@ const SORCERER: &str = "core-068";
 const MY_PAWN: &str = "core-096";
 
 fn count(s: &Scenario, type_: GameEventType) -> usize {
-    s.events().iter().filter(|event| event.event_type() == type_).count()
+    s.events()
+        .iter()
+        .filter(|event| event.event_type() == type_)
+        .count()
 }
 
 fn backrow_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
@@ -87,7 +90,8 @@ mod section_4_2_step_4_the_window_after_a_cancel {
     }
 
     #[test]
-    fn r152_r44_a_second_my_pawn_does_not_hand_the_players_next_turn_to_the_ai_after_the_first_ones_turn_is_over() {
+    fn r152_r44_a_second_my_pawn_does_not_hand_the_players_next_turn_to_the_ai_after_the_first_ones_turn_is_over()
+     {
         jackioh_cards::register_all();
         // p2 has nothing to do on turn 10, so R82 ends it inside the first My Pawn's AI turn and p1's
         // turn 11 begins. That turn is p1's own: nothing may play it for them.
@@ -119,7 +123,8 @@ mod section_3_2_section_5_1_where_a_fired_my_pawn_ends_up {
     use super::*;
 
     #[test]
-    fn section_6_3_a_my_pawn_exiled_during_its_own_ai_turn_stays_in_exile_it_is_not_pulled_into_the_graveyard() {
+    fn section_6_3_a_my_pawn_exiled_during_its_own_ai_turn_stays_in_exile_it_is_not_pulled_into_the_graveyard()
+     {
         jackioh_cards::register_all();
         // On this seed the AI turn My Pawn hands over plays p1's Collateral Damage on the face-up My
         // Pawn itself, which is still in the backrow while its effects run: it goes to p2's exile.
@@ -139,9 +144,9 @@ mod section_3_2_section_5_1_where_a_fired_my_pawn_ends_up {
 
         // The seed's AI does exile it; without that this test proves nothing.
         assert!(
-            s.events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == pawn.id))
+            s.events().iter().any(
+                |event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == pawn.id)
+            )
         );
         s.expect_in_zone(&pawn, "exile");
         assert!(
@@ -152,7 +157,8 @@ mod section_3_2_section_5_1_where_a_fired_my_pawn_ends_up {
     }
 
     #[test]
-    fn r152_my_pawn_is_in_its_owners_graveyard_once_the_ai_turn_it_gave_has_ended_before_the_next_turn_starts() {
+    fn r152_my_pawn_is_in_its_owners_graveyard_once_the_ai_turn_it_gave_has_ended_before_the_next_turn_starts()
+     {
         jackioh_cards::register_all();
         // My Pawn "fires … then goes to the graveyard" (§5.1), and its effect is the rest of p1's turn,
         // which ends at p1's cleanup (R152). So by p2's start of turn it is in p2's graveyard, and p2's
@@ -182,7 +188,8 @@ mod r168_section_10_8_my_pawns_ai_turn_reaches_the_view_once_in_order {
     use super::*;
 
     #[test]
-    fn r168_r44_the_views_events_after_my_pawns_ai_turn_are_that_actions_events_once_each_in_the_order_they_happened() {
+    fn r168_r44_the_views_events_after_my_pawns_ai_turn_are_that_actions_events_once_each_in_the_order_they_happened()
+     {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
             "seed": "hunt-cw2-two-pawns",
@@ -287,14 +294,20 @@ fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lan
 fn asking_trap(s: &mut Scenario, id: &str, after: Option<Hook>) {
     let after = after.unwrap_or_else(|| hook(|_ctx| vec![]));
     let prompt = format!("{id}: asked");
-    let asks = TriggerDef::new(format!("{id}-asks"), &[GameEventType::CardPlayed], move |_ctx, _event| {
-        vec![choose_mode(json_as(json!({
-            "options": ["ok"],
-            "step": "asked",
-            "prompt": prompt.as_str(),
-        })))]
-    })
-    .with_when(|ctx, event| matches!(event, GameEvent::CardPlayed { player, .. } if *player != ctx.controller));
+    let asks = TriggerDef::new(
+        format!("{id}-asks"),
+        &[GameEventType::CardPlayed],
+        move |_ctx, _event| {
+            vec![choose_mode(json_as(json!({
+                "options": ["ok"],
+                "step": "asked",
+                "prompt": prompt.as_str(),
+            })))]
+        },
+    )
+    .with_when(
+        |ctx, event| matches!(event, GameEvent::CardPlayed { player, .. } if *player != ctx.controller),
+    );
     fixture(
         s,
         id,
@@ -358,7 +371,10 @@ mod r44_section_8_96_the_ai_answers_every_question_of_the_turn_it_plays {
         });
         let ended = find_index(events, |event| event.event_type() == GameEventType::TurnEnded);
         assert!(discover >= 0, "the Scarab's Discover opens once p2 has answered");
-        assert!(ended == -1 || discover < ended, "the Scarab's Cry resolves before p1's turn ends");
+        assert!(
+            ended == -1 || discover < ended,
+            "the Scarab's Cry resolves before p1's turn ends"
+        );
         // And p1 is never left holding a question of its own turn while it is p2's turn.
         let p1_holds_one_on_p2s_turn = s
             .state()
@@ -429,8 +445,8 @@ mod r44_section_8_96_the_ai_answers_every_question_of_the_turn_it_plays {
         // end of the turn. So a question p1's card asks during that turn is the AI's to answer; it is
         // never left open for the locked-out player, whose client does not act while `aiTurn` is set.
         let held = s.state().pending.clone();
-        let locked_out_holds_it = held.as_ref().is_some_and(|held| held.player_id == PlayerId::P1)
-            && s.state().players.p1.ai_turn;
+        let locked_out_holds_it =
+            held.as_ref().is_some_and(|held| held.player_id == PlayerId::P1) && s.state().players.p1.ai_turn;
         assert!(
             !locked_out_holds_it,
             "p1 is locked out but holds \"{}\"",
@@ -539,8 +555,7 @@ mod r212_my_pawns_ai_turn_happened_after_the_window_it_was_handed_over_in {
 
         s.attack(SORCERER, "hero");
 
-        let is_victims_death =
-            |event: &GameEvent| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == victim.id);
+        let is_victims_death = |event: &GameEvent| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == victim.id);
         assert!(s.events().iter().any(is_victims_death));
         assert_eq!(
             s.events()
@@ -552,14 +567,17 @@ mod r212_my_pawns_ai_turn_happened_after_the_window_it_was_handed_over_in {
         let eater = s.card(CORPSE_EATER).clone();
         s.expect_in_zone(&eater, "hand");
         let died_at = find_index(s.events(), is_victims_death);
-        let drawn_at = find_index(s.events(), |event| {
-            matches!(event, GameEvent::Drawn { instance_id, .. } if *instance_id == eater.id)
-        });
+        let drawn_at = find_index(
+            s.events(),
+            |event| matches!(event, GameEvent::Drawn { instance_id, .. } if *instance_id == eater.id),
+        );
         assert!(drawn_at > died_at);
         let fed: Vec<&GameEvent> = s
             .events()
             .iter()
-            .filter(|event| matches!(event, GameEvent::Buffed { instance_id, .. } if *instance_id == eater.id))
+            .filter(
+                |event| matches!(event, GameEvent::Buffed { instance_id, .. } if *instance_id == eater.id),
+            )
             .collect();
         assert!(fed.is_empty(), "{fed:?}");
     }

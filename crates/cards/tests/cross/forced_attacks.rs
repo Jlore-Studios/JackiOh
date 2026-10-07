@@ -12,8 +12,8 @@
 //!
 //! Port of `packages/cards/test/forced-attacks.test.ts` (SURFACE §4.1, §8).
 
-use jackioh_engine::testkit::*;
 use jackioh_engine::PlayerId::{P1, P2};
+use jackioh_engine::testkit::*;
 
 const VANILLA: &str = "core-008";
 const MOTHS: &str = "core-009";
@@ -51,7 +51,11 @@ fn declared(events: &[GameEvent]) -> Vec<Declared> {
     events
         .iter()
         .filter_map(|event| match event {
-            GameEvent::AttackDeclared { attacker_id, target_id, forced } => Some(Declared {
+            GameEvent::AttackDeclared {
+                attacker_id,
+                target_id,
+                forced,
+            } => Some(Declared {
                 attacker_id: attacker_id.clone(),
                 target_id: target_id.clone(),
                 forced: *forced,
@@ -65,7 +69,8 @@ mod r173_a_forced_attack_is_made_on_an_enemy {
     use super::*;
 
     #[test]
-    fn r173_once_moths_to_the_flame_is_stolen_by_the_attackers_side_mid_run_the_rest_of_the_run_does_not_attack_it_8_9_86() {
+    fn r173_once_moths_to_the_flame_is_stolen_by_the_attackers_side_mid_run_the_rest_of_the_run_does_not_attack_it_8_9_86()
+     {
         let mut g = scenario(json!({
             "seed": "hunt-cw-moths-mrow",
             "p1": { "hand": [VANILLA], "field": [{ "def": MOTHS, "lane": 3 }], "library": [TIMMY, TIMMY] },
@@ -82,14 +87,18 @@ mod r173_a_forced_attack_is_made_on_an_enemy {
         assert_eq!(g.card(&moths.id).controller, P2);
 
         // Moths is p2's own unit now, so p2's Mr. Vanilla is passed over in silence (R96's way).
-        let attackers: Vec<String> = declared(g.events()).into_iter().map(|event| event.attacker_id).collect();
+        let attackers: Vec<String> = declared(g.events())
+            .into_iter()
+            .map(|event| event.attacker_id)
+            .collect();
         assert_eq!(attackers, vec![mrow.id.clone()]);
         assert_eq!(g.card(&vanilla.id).damage, 0);
         g.expect_stats(&moths.id, json!({ "health": 13 }));
     }
 
     #[test]
-    fn r173_radiant_bear_honeypots_tokens_do_not_attack_a_played_unit_that_has_crossed_to_their_own_side_8_60_52() {
+    fn r173_radiant_bear_honeypots_tokens_do_not_attack_a_played_unit_that_has_crossed_to_their_own_side_8_60_52()
+     {
         let mut g = scenario(json!({
             "p1": { "hand": [SILAS, VANILLA] },
             "p2": { "hand": [VANILLA], "backrow": [{ "def": HONEYPOT, "radiant": true, "lane": 3, "faceUp": false }] },
@@ -108,8 +117,15 @@ mod r173_a_forced_attack_is_made_on_an_enemy {
 
         // p2's trap answers p1's play (radiant: any card) and fills p2's board with Rush Tokens. "If it
         // was a Unit, they attack it" — but the unit is on their own side now.
-        assert!(g.events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. })));
-        let at_silas: Vec<Declared> = declared(g.events()).into_iter().filter(|event| event.target_id == silas.id).collect();
+        assert!(
+            g.events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::TrapFired { .. }))
+        );
+        let at_silas: Vec<Declared> = declared(g.events())
+            .into_iter()
+            .filter(|event| event.target_id == silas.id)
+            .collect();
         assert_eq!(at_silas, Vec::<Declared>::new());
         g.expect_in_zone(&silas.id, "field");
         assert_eq!(g.card(&silas.id).damage, 0);
@@ -120,7 +136,8 @@ mod r174_a_forced_run_and_a_target_that_left_the_field {
     use super::*;
 
     #[test]
-    fn r174_r53_r83_a_forced_run_stops_once_its_target_has_left_the_field_even_though_reborn_brings_it_back() {
+    fn r174_r53_r83_a_forced_run_stops_once_its_target_has_left_the_field_even_though_reborn_brings_it_back()
+    {
         // p1's Radiant Bear Honeypot answers p2's 1-cost Right-house defender (1/1, Taunt, Divine
         // Shield, Reborn): five Rush Tokens attack it. The first spends its shield, the second kills
         // it; Reborn returns it at 1 health, and the other three tokens do not attack the body that
@@ -134,9 +151,15 @@ mod r174_a_forced_run_and_a_target_that_left_the_field {
 
         g.play(RIGHT_HOUSE, json!({ "zone": 1 }));
 
-        assert_eq!(declared(g.events()).iter().filter(|event| event.forced).count(), 2);
         assert_eq!(
-            g.events().iter().filter(|event| matches!(event, GameEvent::Destroyed { .. })).count(),
+            declared(g.events()).iter().filter(|event| event.forced).count(),
+            2
+        );
+        assert_eq!(
+            g.events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Destroyed { .. }))
+                .count(),
             1
         );
         let defender = unit_at(&g, P2, 1);
@@ -145,7 +168,8 @@ mod r174_a_forced_run_and_a_target_that_left_the_field {
     }
 
     #[test]
-    fn r174_r96_r83_a_felinor_fiender_that_dies_mid_run_to_moths_to_the_flame_and_comes_back_through_reborn_does_not_attack_in_that_run() {
+    fn r174_r96_r83_a_felinor_fiender_that_dies_mid_run_to_moths_to_the_flame_and_comes_back_through_reborn_does_not_attack_in_that_run()
+     {
         // On this seed Plastic Surgery's random keyword for the Fiender is Reborn (§6.1's pool, R21).
         let mut g = scenario(json!({
             "seed": "r4-fiender-reborn-33", // R346's Pierce moved the roll off "-7", R49's Deft off "-8"
@@ -164,17 +188,19 @@ mod r174_a_forced_run_and_a_target_that_left_the_field {
             },
         }));
         let fiender = unit_at(&g, P2, 2);
-        g.play(SURGERY, json!({ "targets": [{ "pick": "instance", "instanceId": fiender.id }] }));
+        g.play(
+            SURGERY,
+            json!({ "targets": [{ "pick": "instance", "instanceId": fiender.id }] }),
+        );
         let kinds: Vec<KeywordKind> = g.stats(&fiender.id).keywords.iter().map(Keyword::kind).collect();
         assert!(kinds.contains(&KeywordKind::Reborn));
 
         // p1's start of turn: every p2 unit attacks Moths, in lane order (R53). Big Felinor dies in
         // its combat, the Fiender dies in the check after it and comes back at 1 health (§4.5 step 4).
         g.end_turn();
-        let back = g
-            .events()
-            .iter()
-            .position(|event| matches!(event, GameEvent::Summoned { instance_id, .. } if *instance_id == fiender.id));
+        let back = g.events().iter().position(
+            |event| matches!(event, GameEvent::Summoned { instance_id, .. } if *instance_id == fiender.id),
+        );
         let Some(back) = back else {
             panic!("the Fiender should come back through Reborn (a summoned event)");
         };

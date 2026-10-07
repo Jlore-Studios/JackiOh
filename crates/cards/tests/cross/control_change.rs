@@ -78,7 +78,11 @@ fn offered_attacks(g: &Scenario, card: &CardInstance) -> Vec<String> {
     legal_actions(g.state(), live.controller)
         .into_iter()
         .filter_map(|action| match action {
-            ActionBody::Attack { attacker_id, target_id, .. } if attacker_id == live.id => Some(target_id),
+            ActionBody::Attack {
+                attacker_id,
+                target_id,
+                ..
+            } if attacker_id == live.id => Some(target_id),
             _ => None,
         })
         .collect()
@@ -86,9 +90,9 @@ fn offered_attacks(g: &Scenario, card: &CardInstance) -> Vec<String> {
 
 fn offers_switch(g: &Scenario, card: &CardInstance) -> bool {
     let live = g.card(card).clone();
-    legal_actions(g.state(), live.controller)
-        .iter()
-        .any(|action| matches!(action, ActionBody::SwitchPosition { instance_id, .. } if *instance_id == live.id))
+    legal_actions(g.state(), live.controller).iter().any(
+        |action| matches!(action, ActionBody::SwitchPosition { instance_id, .. } if *instance_id == live.id),
+    )
 }
 
 /// R171's bookkeeping: entered on this turn, with a fresh exertion.
@@ -118,7 +122,12 @@ fn keyword_kinds(g: &Scenario, card: &CardInstance) -> Vec<String> {
     g.stats(card)
         .keywords
         .iter()
-        .map(|k| serde_json::to_value(k).unwrap()["kind"].as_str().unwrap_or_default().to_string())
+        .map(|k| {
+            serde_json::to_value(k).unwrap()["kind"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string()
+        })
         .collect()
 }
 
@@ -127,7 +136,8 @@ mod r171_with_the_cards_that_change_control {
     use super::*;
 
     #[test]
-    fn r171_c49_a_stolen_unit_with_neither_rush_nor_charge_cannot_attack_that_turn_and_attacks_on_the_thiefs_next_turn() {
+    fn r171_c49_a_stolen_unit_with_neither_rush_nor_charge_cannot_attack_that_turn_and_attacks_on_the_thiefs_next_turn()
+     {
         let mut g = setup(json!({
             "p1": { "hand": [MIND_CONTROL, VANILLA], "library": LIBRARY },
             "p2": {
@@ -190,7 +200,8 @@ mod r171_with_the_cards_that_change_control {
     }
 
     #[test]
-    fn r171_c45_a_stolen_charge_unit_that_attacked_for_its_owner_the_turn_before_may_attack_the_hero_at_once() {
+    fn r171_c45_a_stolen_charge_unit_that_attacked_for_its_owner_the_turn_before_may_attack_the_hero_at_once()
+    {
         let mut g = setup(json!({
             "active": "p2",
             "turn": 8,
@@ -214,7 +225,8 @@ mod r171_with_the_cards_that_change_control {
     }
 
     #[test]
-    fn r171_c49_a_stolen_unit_that_switched_position_for_its_owner_may_switch_again_on_the_turn_it_is_stolen() {
+    fn r171_c49_a_stolen_unit_that_switched_position_for_its_owner_may_switch_again_on_the_turn_it_is_stolen()
+    {
         let mut g = setup(json!({
             "active": "p2",
             "turn": 8,
@@ -238,7 +250,8 @@ mod r171_with_the_cards_that_change_control {
     }
 
     #[test]
-    fn r171_c50_k_pop_fanatics_delayed_steal_leaves_the_unit_sick_for_that_whole_turn_and_it_attacks_on_the_next() {
+    fn r171_c50_k_pop_fanatics_delayed_steal_leaves_the_unit_sick_for_that_whole_turn_and_it_attacks_on_the_next()
+     {
         let mut g = setup(json!({
             "p1": { "hand": [KPOP, VANILLA], "library": LIBRARY },
             "p2": {
@@ -290,7 +303,8 @@ mod r171_with_the_cards_that_change_control {
     }
 
     #[test]
-    fn r171_r361_c86_mrow_dying_on_the_opponents_turn_takes_a_killer_that_attacks_freely_on_the_thiefs_next_turn() {
+    fn r171_r361_c86_mrow_dying_on_the_opponents_turn_takes_a_killer_that_attacks_freely_on_the_thiefs_next_turn()
+     {
         let mut g = setup(json!({
             "active": "p2",
             "turn": 8,
@@ -322,7 +336,8 @@ mod r171_with_the_cards_that_change_control {
     }
 
     #[test]
-    fn r171_c87_every_card_the_board_swap_moves_enters_its_new_side_the_casters_are_sick_the_opponents_are_not() {
+    fn r171_c87_every_card_the_board_swap_moves_enters_its_new_side_the_casters_are_sick_the_opponents_are_not()
+     {
         let mut g = setup(json!({
             "p1": { "hand": [CHAOS, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
             "p2": {
@@ -452,7 +467,8 @@ mod r171_with_the_cards_that_change_control {
     }
 
     #[test]
-    fn r171_c14_rush_from_the_aura_lapses_when_the_aura_leaves_so_a_stolen_unit_and_one_played_this_turn_are_sick_again() {
+    fn r171_c14_rush_from_the_aura_lapses_when_the_aura_leaves_so_a_stolen_unit_and_one_played_this_turn_are_sick_again()
+     {
         let mut g = setup(json!({
             "p1": { "hand": [VANILLA, MIND_CONTROL, MAGIC_JAMMED], "mana": 10, "backrow": [{ "def": WEAPONS, "lane": 1 }] },
             "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }, { "def": VANILLA, "lane": 5 }] },
@@ -545,7 +561,8 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
     use super::*;
 
     #[test]
-    fn r172_c81_a_stolen_saintess_dies_for_the_thief_radiating_the_thiefs_units_and_goes_to_her_owners_graveyard() {
+    fn r172_c81_a_stolen_saintess_dies_for_the_thief_radiating_the_thiefs_units_and_goes_to_her_owners_graveyard()
+     {
         let mut g = setup(json!({
             "p1": { "hand": [MIND_CONTROL, SORCERER], "mana": 10, "field": [{ "def": POINTMASTER, "lane": 5 }] },
             "p2": { "hand": [VANILLA], "field": [{ "def": SAINTESS, "lane": 2 }, { "def": POINTMASTER, "lane": 4 }] },
@@ -564,7 +581,13 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
             .collect();
         assert_eq!(died.len(), 1);
         assert!(
-            matches!(died[0], GameEvent::Destroyed { owner: PlayerId::P2, .. }),
+            matches!(
+                died[0],
+                GameEvent::Destroyed {
+                    owner: PlayerId::P2,
+                    ..
+                }
+            ),
             "{:?} should match {{ owner: \"p2\" }}",
             died[0]
         );
@@ -573,7 +596,11 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
         assert!(!g.card(&theirs).radiant);
         // No Reborn since patch v0.1.1: off the field she is her owner's again (R12).
         assert!(g.unit("p1", 2).is_none());
-        assert!(g.pile("p2", "graveyard").iter().any(|card| card.id == saintess.id));
+        assert!(
+            g.pile("p2", "graveyard")
+                .iter()
+                .any(|card| card.id == saintess.id)
+        );
     }
 
     #[test]
@@ -601,7 +628,10 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
         g.attack(&second, &defender);
 
         let copy = g.unit("p1", 1);
-        assert_eq!(copy.as_ref().map(|c| c.def_id.clone()), Some(RIGHT_HOUSE.to_string()));
+        assert_eq!(
+            copy.as_ref().map(|c| c.def_id.clone()),
+            Some(RIGHT_HOUSE.to_string())
+        );
         assert_eq!(copy.as_ref().map(|c| c.radiant), Some(false));
         assert_eq!(copy.as_ref().map(|c| c.controller), Some(PlayerId::P1));
         assert_eq!(g.unit("p1", 2).map(|c| c.id), Some(defender.id.clone()));
@@ -643,7 +673,11 @@ mod r61_a_played_permanent_rotated_onto_the_traps_side_is_not_its_own_fuse_targe
         // p2's trap answers p1's played Unit (R17): "Fuse it onto a random permanent of yours of that
         // type". "It" is the played card, so the permanent it is fused onto is another one: the only
         // candidate is Pointmaster, and the fusion happens.
-        assert!(g.events().iter().any(|event| event.event_type() == GameEventType::TrapFired));
+        assert!(
+            g.events()
+                .iter()
+                .any(|event| event.event_type() == GameEventType::TrapFired)
+        );
         let fused: Vec<&GameEvent> = g
             .events()
             .iter()

@@ -18,7 +18,14 @@ fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     {
         let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(&mut sink, None, HookOptions { controller: Some(PlayerId::P1), ..Default::default() });
+        let mut ctx = make_context(
+            &mut sink,
+            None,
+            HookOptions {
+                controller: Some(PlayerId::P1),
+                ..Default::default()
+            },
+        );
         (effect.apply)(&mut ctx);
     }
     events
@@ -53,36 +60,68 @@ mod s10_6_choose_target_where_c_32_felinor_feelings {
 
         let events = run(
             &mut state,
-            choose_where(json!({ "side": "enemy", "of": ["unit"] }), |_ctx, card| {
-                matches!(card.map(|card| &card.zone), Some(Zone::Field { lane, .. }) if *lane != 2)
-            }),
+            choose_where(
+                json!({ "side": "enemy", "of": ["unit"] }),
+                |_ctx, card| matches!(card.map(|card| &card.zone), Some(Zone::Field { lane, .. }) if *lane != 2),
+            ),
         );
 
         assert_eq!(pending_of(&state).player_id, PlayerId::P1);
         assert_eq!(pending_of(&state).kind, PromptKind::Target);
         assert_eq!(
-            pending_of(&state).options.iter().map(|option| option.selection.clone()).collect::<Vec<_>>(),
-            vec![Selection::Instance { instance_id: a.id.clone() }, Selection::Instance { instance_id: c.id.clone() }]
+            pending_of(&state)
+                .options
+                .iter()
+                .map(|option| option.selection.clone())
+                .collect::<Vec<_>>(),
+            vec![
+                Selection::Instance {
+                    instance_id: a.id.clone()
+                },
+                Selection::Instance {
+                    instance_id: c.id.clone()
+                }
+            ]
         );
         assert_eq!(
-            pending_of(&state).options.iter().map(|option| option.key.clone()).collect::<Vec<_>>(),
+            pending_of(&state)
+                .options
+                .iter()
+                .map(|option| option.key.clone())
+                .collect::<Vec<_>>(),
             vec![format!("instance:{}", a.id), format!("instance:{}", c.id)]
         );
-        assert_eq!(events.iter().map(|event| event.event_type()).collect::<Vec<_>>(), vec![GameEventType::PromptOpened]);
+        assert_eq!(
+            events.iter().map(|event| event.event_type()).collect::<Vec<_>>(),
+            vec![GameEventType::PromptOpened]
+        );
     }
 
     #[test]
     fn names_each_hero_to_the_controller_as_your_hero_or_enemy_hero_keyed_by_seat() {
         let mut state = new_game("choose-where-heroes", None);
 
-        run(&mut state, choose_where(json!({ "side": "any", "of": ["hero"] }), |_ctx, card| card.is_none()));
+        run(
+            &mut state,
+            choose_where(json!({ "side": "any", "of": ["hero"] }), |_ctx, card| {
+                card.is_none()
+            }),
+        );
 
         assert_eq!(
-            pending_of(&state).options.iter().map(|option| option.label.clone()).collect::<Vec<_>>(),
+            pending_of(&state)
+                .options
+                .iter()
+                .map(|option| option.label.clone())
+                .collect::<Vec<_>>(),
             vec!["Your hero".to_string(), "Enemy hero".to_string()]
         );
         assert_eq!(
-            pending_of(&state).options.iter().map(|option| option.key.clone()).collect::<Vec<_>>(),
+            pending_of(&state)
+                .options
+                .iter()
+                .map(|option| option.key.clone())
+                .collect::<Vec<_>>(),
             vec!["hero:p1".to_string(), "hero:p2".to_string()]
         );
     }
@@ -92,7 +131,10 @@ mod s10_6_choose_target_where_c_32_felinor_feelings {
         let mut state = new_game("choose-where-none", None);
         put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
 
-        let events = run(&mut state, choose_where(json!({ "side": "enemy" }), |_ctx, _card| false));
+        let events = run(
+            &mut state,
+            choose_where(json!({ "side": "enemy" }), |_ctx, _card| false),
+        );
 
         assert!(state.pending.is_none());
         assert_eq!(events, Vec::<GameEvent>::new());
@@ -104,7 +146,10 @@ mod s10_6_choose_target_where_c_32_felinor_feelings {
         let mut state = new_game("choose-where-json", None);
         put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
 
-        run(&mut state, choose_where(json!({ "side": "enemy" }), |_ctx, _card| true));
+        run(
+            &mut state,
+            choose_where(json!({ "side": "enemy" }), |_ctx, _card| true),
+        );
 
         let revived: GameState = serde_json::from_value(serde_json::to_value(&state).unwrap()).unwrap();
         assert_eq!(revived, state);

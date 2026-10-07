@@ -78,7 +78,8 @@ mod s5_1_a_random_pool_never_offers_the_card_that_generated_it {
             let rolled = chaos_roll(SEED, cursor);
             if rolled.as_deref() == Some("add") {
                 plays += 1;
-                let mut s = scenario(json!({ "seed": SEED, "p1": { "hand": [CALL_TO_CHAOS, MENACE], "mana": 8 } }));
+                let mut s =
+                    scenario(json!({ "seed": SEED, "p1": { "hand": [CALL_TO_CHAOS, MENACE], "mana": 8 } }));
                 s.state_mut().rng_cursor = cursor;
                 s.play(CALL_TO_CHAOS, json!({}));
                 added.extend(last_added(&s));
@@ -91,7 +92,8 @@ mod s5_1_a_random_pool_never_offers_the_card_that_generated_it {
     }
 
     #[test]
-    fn s5_1_a_crafted_card_carrying_54_straaza_s_text_still_never_adds_a_straaza_8_54_pool_excluding_54_r102() {
+    fn s5_1_a_crafted_card_carrying_54_straaza_s_text_still_never_adds_a_straaza_8_54_pool_excluding_54_r102()
+    {
         register_all();
         // Craft a Card at this cursor Discovers #54 Straaza and then #56 Jilliax (a keyword-only body).
         const SEED: &str = "craft-straaza";
@@ -156,7 +158,8 @@ mod r129_an_effect_that_finds_nothing_to_do_draws_no_random_numbers {
     }
 
     #[test]
-    fn r129_zoomerbin_oomen_whose_lane_s_backrow_zone_is_occupied_draws_no_randomness_for_the_trap_it_cannot_summon_r47() {
+    fn r129_zoomerbin_oomen_whose_lane_s_backrow_zone_is_occupied_draws_no_randomness_for_the_trap_it_cannot_summon_r47()
+     {
         register_all();
         for radiant in [false, true] {
             let mut s = scenario(json!({
@@ -185,7 +188,8 @@ mod r129_an_effect_that_finds_nothing_to_do_draws_no_random_numbers {
     }
 
     #[test]
-    fn r129_call_to_chaos_s_summon_3_random_3_cost_units_into_a_full_unit_row_draws_no_randomness_past_the_roll_r64() {
+    fn r129_call_to_chaos_s_summon_3_random_3_cost_units_into_a_full_unit_row_draws_no_randomness_past_the_roll_r64()
+     {
         register_all();
         const SEED: &str = "chaos-full-row";
         let mut cursor: u32 = 0;
@@ -224,7 +228,14 @@ mod s10_7_the_zephyrs_scorer_s_lethal_available {
             "p2": { "field": [MENACE], "health": 3 },
         }));
         assert_ne!(
-            subsystems::score_def(s.state(), PlayerId::P1, &card_def(DUELIST), &subsystems::ScorerOptions::default(), None).priority,
+            subsystems::score_def(
+                s.state(),
+                PlayerId::P1,
+                &card_def(DUELIST),
+                &subsystems::ScorerOptions::default(),
+                None
+            )
+            .priority,
             subsystems::ScorePriority::Lethal
         );
 
@@ -235,14 +246,28 @@ mod s10_7_the_zephyrs_scorer_s_lethal_available {
             "p2": { "health": 3 },
         }));
         assert_ne!(
-            subsystems::score_def(full.state(), PlayerId::P1, &card_def(DUELIST), &subsystems::ScorerOptions::default(), None).priority,
+            subsystems::score_def(
+                full.state(),
+                PlayerId::P1,
+                &card_def(DUELIST),
+                &subsystems::ScorerOptions::default(),
+                None
+            )
+            .priority,
             subsystems::ScorePriority::Lethal
         );
 
         // And on an open board with room it is lethal, which is what the priority is for.
         let open = scenario(json!({ "p1": { "hand": [ZEPHYRS], "mana": 4 }, "p2": { "health": 3 } }));
         assert_eq!(
-            subsystems::score_def(open.state(), PlayerId::P1, &card_def(DUELIST), &subsystems::ScorerOptions::default(), None).priority,
+            subsystems::score_def(
+                open.state(),
+                PlayerId::P1,
+                &card_def(DUELIST),
+                &subsystems::ScorerOptions::default(),
+                None
+            )
+            .priority,
             subsystems::ScorePriority::Lethal
         );
     }

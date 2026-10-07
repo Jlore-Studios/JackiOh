@@ -30,7 +30,10 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
         (Value::Array(actual), Value::Array(expected)) => {
             actual.len() == expected.len()
-                && actual.iter().zip(expected).all(|(got, want)| matches_object(got, want))
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(got, want)| matches_object(got, want))
         }
         _ => actual == expected,
     }
@@ -38,7 +41,10 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
 
 fn expect_match(actual: impl Serialize, expected: Value) {
     let actual = json_of(actual);
-    assert!(matches_object(&actual, &expected), "{actual} does not match {expected}");
+    assert!(
+        matches_object(&actual, &expected),
+        "{actual} does not match {expected}"
+    );
 }
 
 /// The refusal a check gives, or `None` when it allows (TS `{ error?: string }`).
@@ -89,8 +95,15 @@ fn act(state: &GameState, body: ActionInput) -> GameState {
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     for player in [P1, P2] {
-        let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
-        state = act(&state, input(json!({ "type": "mulligan", "keep": keep, "playerId": player })));
+        let keep: Vec<String> = state.players[player]
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
+        state = act(
+            &state,
+            input(json!({ "type": "mulligan", "keep": keep, "playerId": player })),
+        );
     }
     state
 }
@@ -122,7 +135,11 @@ fn hand_card(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInsta
 
 /// The spell path of R20: a switch that is an effect, not the player's action. The events it
 /// emitted, and its refusal.
-fn switch_by_effect(state: &mut GameState, unit: &CardInstance, to: Option<Position>) -> (Vec<GameEvent>, Option<String>) {
+fn switch_by_effect(
+    state: &mut GameState,
+    unit: &CardInstance,
+    to: Option<Position>,
+) -> (Vec<GameEvent>, Option<String>) {
     let now = live(state, &unit.id);
     let mut sink = sink_for(state);
     let result = switch_position(
@@ -163,7 +180,12 @@ mod positions_and_exertion_m2_t1 {
         assert_eq!(view.armor, 0);
 
         // A unit put on the field by anything else enters the same way.
-        let summoned = put(&mut played, &plain.id, slot(P1, Row::Units, 4), Default::default());
+        let summoned = put(
+            &mut played,
+            &plain.id,
+            slot(P1, Row::Units, 4),
+            Default::default(),
+        );
         assert_eq!(view_of(&played, &summoned.id).position, Position::Atk);
     }
 
@@ -173,7 +195,10 @@ mod positions_and_exertion_m2_t1 {
         put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
 
         let first = unit_at(&state, P1, 1).id;
-        state = act(&state, input(json!({ "type": "switchPosition", "instanceId": first, "playerId": "p1" })));
+        state = act(
+            &state,
+            input(json!({ "type": "switchPosition", "instanceId": first, "playerId": "p1" })),
+        );
         let mut unit = unit_at(&state, P1, 1);
         assert_eq!(unit_view(&state, &unit).position, Position::Def);
         assert!(!has_exertion(&state, &unit, ExertionKind::Attack));
@@ -193,7 +218,10 @@ mod positions_and_exertion_m2_t1 {
         unit = unit_at(&state, P1, 1);
         assert_eq!(unit_view(&state, &unit).position, Position::Def);
 
-        state = act(&state, input(json!({ "type": "switchPosition", "instanceId": unit.id, "playerId": "p1" })));
+        state = act(
+            &state,
+            input(json!({ "type": "switchPosition", "instanceId": unit.id, "playerId": "p1" })),
+        );
         unit = unit_at(&state, P1, 1);
         assert_eq!(unit_view(&state, &unit).position, Position::Atk);
         assert!(!has_exertion(&state, &unit, ExertionKind::Attack));
@@ -218,7 +246,9 @@ mod positions_and_exertion_m2_t1 {
         let attacker = unit_at(&state, P1, 1).id;
         state = act(
             &state,
-            input(json!({ "type": "attack", "attackerId": attacker, "targetId": "hero-p2", "playerId": "p1" })),
+            input(
+                json!({ "type": "attack", "attackerId": attacker, "targetId": "hero-p2", "playerId": "p1" }),
+            ),
         );
         assert_eq!(state.players.p2.hero.health, 27);
 
@@ -227,10 +257,13 @@ mod positions_and_exertion_m2_t1 {
         assert!(!has_exertion(&state, &unit, ExertionKind::Switch));
         assert!(!has_switch_for(&state, P1, None));
         assert!(
-            attempt(&state, input(json!({ "type": "switchPosition", "instanceId": unit.id, "playerId": "p1" })))
-                .error
-                .unwrap_or_default()
-                .contains("already acted")
+            attempt(
+                &state,
+                input(json!({ "type": "switchPosition", "instanceId": unit.id, "playerId": "p1" }))
+            )
+            .error
+            .unwrap_or_default()
+            .contains("already acted")
         );
         assert_eq!(unit_view(&state, &unit).position, Position::Atk);
     }
@@ -247,14 +280,25 @@ mod positions_and_exertion_m2_t1 {
             input(json!({ "type": "attack", "attackerId": first, "targetId": "hero-p2", "playerId": "p1" })),
         );
         let second = unit_at(&state, P1, 2).id;
-        state = act(&state, input(json!({ "type": "switchPosition", "instanceId": second, "playerId": "p1" })));
+        state = act(
+            &state,
+            input(json!({ "type": "switchPosition", "instanceId": second, "playerId": "p1" })),
+        );
         assert_eq!(unit_at(&state, P1, 1).exertion, exertion(true, false));
         assert_eq!(unit_at(&state, P1, 2).exertion, exertion(false, true));
 
         state = end_turns(&state, 1); // the opponent's turn: p1's units stay spent
         assert_eq!(state.active, P2);
-        assert!(!has_exertion(&state, &unit_at(&state, P1, 1), ExertionKind::Switch));
-        assert!(!has_exertion(&state, &unit_at(&state, P1, 2), ExertionKind::Attack));
+        assert!(!has_exertion(
+            &state,
+            &unit_at(&state, P1, 1),
+            ExertionKind::Switch
+        ));
+        assert!(!has_exertion(
+            &state,
+            &unit_at(&state, P1, 2),
+            ExertionKind::Attack
+        ));
 
         state = end_turns(&state, 1); // p1's own turn start resets both
         assert_eq!(state.active, P1);
@@ -270,18 +314,28 @@ mod positions_and_exertion_m2_t1 {
         );
         state = act(
             &state,
-            input(json!({ "type": "attack", "attackerId": attacker.id, "targetId": "hero-p2", "playerId": "p1" })),
+            input(
+                json!({ "type": "attack", "attackerId": attacker.id, "targetId": "hero-p2", "playerId": "p1" }),
+            ),
         );
         assert_eq!(state.players.p2.hero.health, 24);
         let second = unit_at(&state, P1, 2).id;
-        state = act(&state, input(json!({ "type": "switchPosition", "instanceId": second, "playerId": "p1" })));
+        state = act(
+            &state,
+            input(json!({ "type": "switchPosition", "instanceId": second, "playerId": "p1" })),
+        );
         assert_eq!(unit_view(&state, &unit_at(&state, P1, 2)).position, Position::Atk);
     }
 
     #[test]
     fn r49_deft_duelist_attacks_and_switches_in_one_turn() {
         let mut state = playing("deft-duelist");
-        put(&mut state, &deft_duelist.id, slot(P1, Row::Units, 1), Default::default());
+        put(
+            &mut state,
+            &deft_duelist.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
 
         // The plain unit gets one exertion only; the Duelist gets both.
@@ -296,7 +350,10 @@ mod positions_and_exertion_m2_t1 {
         assert!(has_exertion(&state, &duelist, ExertionKind::Switch));
         assert!(!has_exertion(&state, &duelist, ExertionKind::Attack));
 
-        state = act(&state, input(json!({ "type": "switchPosition", "instanceId": duelist.id, "playerId": "p1" })));
+        state = act(
+            &state,
+            input(json!({ "type": "switchPosition", "instanceId": duelist.id, "playerId": "p1" })),
+        );
         duelist = unit_at(&state, P1, 1);
         assert_eq!(unit_view(&state, &duelist).position, Position::Def);
         assert_eq!(duelist.exertion, exertion(true, true));
@@ -304,10 +361,13 @@ mod positions_and_exertion_m2_t1 {
         // Two of the same kind is still refused: one attack and one switch, not two switches.
         assert!(!has_exertion(&state, &duelist, ExertionKind::Switch));
         assert!(
-            attempt(&state, input(json!({ "type": "switchPosition", "instanceId": duelist.id, "playerId": "p1" })))
-                .error
-                .unwrap_or_default()
-                .contains("already acted")
+            attempt(
+                &state,
+                input(json!({ "type": "switchPosition", "instanceId": duelist.id, "playerId": "p1" }))
+            )
+            .error
+            .unwrap_or_default()
+            .contains("already acted")
         );
         assert!(
             attempt(
@@ -324,12 +384,17 @@ mod positions_and_exertion_m2_t1 {
         state = end_turns(&state, 2);
         duelist = unit_at(&state, P1, 1);
         assert_eq!(unit_view(&state, &duelist).position, Position::Def);
-        state = act(&state, input(json!({ "type": "switchPosition", "instanceId": duelist.id, "playerId": "p1" })));
+        state = act(
+            &state,
+            input(json!({ "type": "switchPosition", "instanceId": duelist.id, "playerId": "p1" })),
+        );
         duelist = unit_at(&state, P1, 1);
         assert_eq!(unit_view(&state, &duelist).position, Position::Atk);
         state = act(
             &state,
-            input(json!({ "type": "attack", "attackerId": duelist.id, "targetId": "hero-p2", "playerId": "p1" })),
+            input(
+                json!({ "type": "attack", "attackerId": duelist.id, "targetId": "hero-p2", "playerId": "p1" }),
+            ),
         );
         assert_eq!(state.players.p2.hero.health, 22);
     }
@@ -344,21 +409,37 @@ mod positions_and_exertion_m2_t1 {
         assert_eq!(view_of(&state, &unit.id).position, Position::Def);
         assert_eq!(by_id(&state, &unit.id).exertion, exertion(false, false));
         expect_match(
-            json_of(events_of_type(&to_defense_events, GameEventType::PositionSwitched))[0].clone(),
+            json_of(events_of_type(
+                &to_defense_events,
+                GameEventType::PositionSwitched,
+            ))[0]
+                .clone(),
             json!({ "instanceId": unit.id, "position": "DEF" }),
         );
 
         // Switched back by a second effect, it can still take its own exertion this turn.
         assert_eq!(switch_by_effect(&mut state, &unit, Some(Position::Atk)).1, None);
         assert_eq!(view_of(&state, &unit.id).position, Position::Atk);
-        assert!(has_exertion(&state, by_id(&state, &unit.id), ExertionKind::Attack));
-        assert!(has_exertion(&state, by_id(&state, &unit.id), ExertionKind::Switch));
+        assert!(has_exertion(
+            &state,
+            by_id(&state, &unit.id),
+            ExertionKind::Attack
+        ));
+        assert!(has_exertion(
+            &state,
+            by_id(&state, &unit.id),
+            ExertionKind::Switch
+        ));
 
         let now = live(&state, &unit.id);
         {
             let mut sink = sink_for(&mut state);
             assert_eq!(
-                refusal(declare_attack(&mut sink, &now, &AttackTarget::Hero { player: P2 })),
+                refusal(declare_attack(
+                    &mut sink,
+                    &now,
+                    &AttackTarget::Hero { player: P2 }
+                )),
                 None
             );
         }
@@ -394,20 +475,41 @@ mod positions_and_exertion_m2_t1 {
             _ => None,
         };
         assert_eq!(first, Some(defender.id.clone()));
-        assert!(!has_keyword(&view_of(&state, &open.id).keywords, KeywordKind::Taunt));
+        assert!(!has_keyword(
+            &view_of(&state, &open.id).keywords,
+            KeywordKind::Taunt
+        ));
 
         // Back in Attack Position the Taunt is gone again.
         switch_by_effect(&mut state, &defender, Some(Position::Atk));
-        assert!(!has_keyword(&view_of(&state, &defender.id).keywords, KeywordKind::Taunt));
+        assert!(!has_keyword(
+            &view_of(&state, &defender.id).keywords,
+            KeywordKind::Taunt
+        ));
         assert_eq!(attack_targets(&state, by_id(&state, &attacker.id)).len(), 3);
     }
 
     #[test]
     fn defense_armor_1_stacks_with_printed_armor_and_big_d_fenders_aura_4_1() {
         let mut state = playing("defense-armor");
-        let armour = put(&mut state, &armoured.id, slot(P1, Row::Units, 1), Default::default());
-        let dfender = put(&mut state, &big_dfender.id, slot(P1, Row::Units, 2), Default::default());
-        let enemy = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), Default::default());
+        let armour = put(
+            &mut state,
+            &armoured.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        let dfender = put(
+            &mut state,
+            &big_dfender.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
+        let enemy = put(
+            &mut state,
+            &armoured.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
 
         // In Attack Position neither the position bonus nor the aura applies.
         assert_eq!(view_of(&state, &armour.id).armor, 7);
@@ -434,7 +536,12 @@ mod positions_and_exertion_m2_t1 {
 
         // Radiant Big D-fender gives +4 instead.
         let mut radiant_state = playing("defense-armor-radiant");
-        let radiant_armour = put(&mut radiant_state, &armoured.id, slot(P1, Row::Units, 1), Default::default());
+        let radiant_armour = put(
+            &mut radiant_state,
+            &armoured.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         put(
             &mut radiant_state,
             &big_dfender.id,
@@ -448,21 +555,46 @@ mod positions_and_exertion_m2_t1 {
     #[test]
     fn spikey_pillow_cannot_be_switched_to_defense_position_4_1() {
         let mut state = playing("spikey-pillow");
-        put(&mut state, &spikey_pillow.id, slot(P1, Row::Units, 1), Default::default());
-        put(&mut state, &taunter.id, slot(P1, Row::Units, 2), Default::default());
+        put(
+            &mut state,
+            &spikey_pillow.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        put(
+            &mut state,
+            &taunter.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
 
         let pillow = unit_at(&state, P1, 1);
         assert_eq!(unit_view(&state, &pillow).position, Position::Atk);
         assert!(!has_switch_for(&state, P1, Some(&pillow.id)));
         assert!(has_switch_for(&state, P1, None)); // the other unit may
 
-        let refused = attempt(&state, input(json!({ "type": "switchPosition", "instanceId": pillow.id, "playerId": "p1" })));
-        assert!(refused.error.unwrap_or_default().contains("cannot be in Defense Position"));
+        let refused = attempt(
+            &state,
+            input(json!({ "type": "switchPosition", "instanceId": pillow.id, "playerId": "p1" })),
+        );
+        assert!(
+            refused
+                .error
+                .unwrap_or_default()
+                .contains("cannot be in Defense Position")
+        );
 
         // The spell path (R20) cannot sneak it into Defense either.
         let (by_effect_events, by_effect_error) = switch_by_effect(&mut state, &pillow, Some(Position::Def));
-        assert!(by_effect_error.unwrap_or_default().contains("cannot be in Defense Position"));
-        assert_eq!(events_of_type(&by_effect_events, GameEventType::PositionSwitched).len(), 0);
+        assert!(
+            by_effect_error
+                .unwrap_or_default()
+                .contains("cannot be in Defense Position")
+        );
+        assert_eq!(
+            events_of_type(&by_effect_events, GameEventType::PositionSwitched).len(),
+            0
+        );
 
         let after = view_of(&state, &pillow.id);
         assert_eq!(after.position, Position::Atk);
@@ -472,7 +604,10 @@ mod positions_and_exertion_m2_t1 {
 
         // The refusal costs nothing, so the unit's exertion is still there next action.
         let other = unit_at(&state, P1, 2).id;
-        state = act(&state, input(json!({ "type": "switchPosition", "instanceId": other, "playerId": "p1" })));
+        state = act(
+            &state,
+            input(json!({ "type": "switchPosition", "instanceId": other, "playerId": "p1" })),
+        );
         assert_eq!(unit_view(&state, &unit_at(&state, P1, 2)).position, Position::Def);
     }
 
@@ -501,7 +636,10 @@ mod positions_and_exertion_m2_t1 {
         );
 
         assert!(has_switch_for(&state, P1, Some(&unit.id)));
-        state = act(&state, input(json!({ "type": "switchPosition", "instanceId": unit.id, "playerId": "p1" })));
+        state = act(
+            &state,
+            input(json!({ "type": "switchPosition", "instanceId": unit.id, "playerId": "p1" })),
+        );
         unit = unit_at(&state, P1, 1);
         let view = unit_view(&state, &unit);
         assert_eq!(view.position, Position::Def);

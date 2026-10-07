@@ -24,7 +24,10 @@ fn defs() -> Vec<CardDef> {
     vec![
         spell_def(9701, json!({ "id": PORTAL, "name": "LB Portal" })),
         spell_def(9702, json!({ "id": TRAP, "name": "LB Trap", "type": "Trap" })),
-        spell_def(9703, json!({ "id": FIELD_TRAP, "name": "LB Field Trap", "type": "Field Trap" })),
+        spell_def(
+            9703,
+            json!({ "id": FIELD_TRAP, "name": "LB Field Trap", "type": "Field Trap" }),
+        ),
     ]
 }
 
@@ -35,7 +38,9 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
         CardScripts {
             base: Script {
                 cry: Some(hook(|_ctx| {
-                    vec![effects::discover_from_last_board(json_as(json!({ "step": "picked" })))]
+                    vec![effects::discover_from_last_board(json_as(
+                        json!({ "step": "picked" }),
+                    ))]
                 })),
                 resume: IndexMap::from([(
                     "picked",
@@ -100,7 +105,11 @@ pub fn act(state: &GameState, log: &mut Vec<Action>, body: Value) -> GameState {
         n.set(n.get() + 1);
         n.get()
     });
-    let kind = body.get("type").and_then(Value::as_str).unwrap_or_default().to_string();
+    let kind = body
+        .get("type")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
     let mut fields = body;
     if let Some(object) = fields.as_object_mut() {
         object.insert("nonce".to_string(), json!(format!("lb{nonce}")));
@@ -139,7 +148,11 @@ pub fn portal_game(seed_base: &str, last_boards: Option<LastBoardInput>) -> Port
         }
         let mut log: Vec<Action> = Vec::new();
         for player in [PlayerId::P1, PlayerId::P2] {
-            let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
+            let keep: Vec<String> = state.players[player]
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect();
             state = act(
                 &state,
                 &mut log,

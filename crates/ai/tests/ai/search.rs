@@ -17,11 +17,20 @@ use jackioh_engine::testkit::*;
 
 use super::support::{AI, act, dealt_game, is_legal};
 
-const SKIPPED: &[ActionType] = &[ActionType::Concede, ActionType::OfferDraw, ActionType::AnswerDraw, ActionType::Mulligan];
+const SKIPPED: &[ActionType] = &[
+    ActionType::Concede,
+    ActionType::OfferDraw,
+    ActionType::AnswerDraw,
+    ActionType::Mulligan,
+];
 
 /// TS's `{ rng: createRng(seed), budget }`, with no clock.
 fn ai_options(seed: &str, budget: SearchBudget) -> AiOptions<'static> {
-    AiOptions { rng: create_rng(seed, 0), budget, should_stop: None }
+    AiOptions {
+        rng: create_rng(seed, 0),
+        budget,
+        should_stop: None,
+    }
 }
 
 /// A value as its JSON: `SearchStats.stoppedBy` is compared by its literal, whatever its Rust name.
@@ -88,22 +97,35 @@ mod candidate_actions_b14 {
     #[test]
     fn b14_action_key_is_canonical_key_order_does_not_matter_and_different_actions_differ() {
         assert_eq!(
-            action_key(&body(json!({ "type": "attack", "attackerId": "c1", "targetId": "hero-p2" }))),
-            action_key(&body(json!({ "targetId": "hero-p2", "attackerId": "c1", "type": "attack" }))),
+            action_key(&body(
+                json!({ "type": "attack", "attackerId": "c1", "targetId": "hero-p2" })
+            )),
+            action_key(&body(
+                json!({ "targetId": "hero-p2", "attackerId": "c1", "type": "attack" })
+            )),
         );
         assert_ne!(
-            action_key(&body(json!({ "type": "attack", "attackerId": "c1", "targetId": "hero-p2" }))),
-            action_key(&body(json!({ "type": "attack", "attackerId": "c1", "targetId": "c9" }))),
+            action_key(&body(
+                json!({ "type": "attack", "attackerId": "c1", "targetId": "hero-p2" })
+            )),
+            action_key(&body(
+                json!({ "type": "attack", "attackerId": "c1", "targetId": "c9" })
+            )),
         );
         assert_ne!(
-            action_key(&body(json!({ "type": "play", "instanceId": "c1", "zone": { "row": "units", "lane": 2 } }))),
-            action_key(&body(json!({ "type": "play", "instanceId": "c1", "zone": { "row": "units", "lane": 3 } }))),
+            action_key(&body(
+                json!({ "type": "play", "instanceId": "c1", "zone": { "row": "units", "lane": 2 } })
+            )),
+            action_key(&body(
+                json!({ "type": "play", "instanceId": "c1", "zone": { "row": "units", "lane": 3 } })
+            )),
         );
     }
 
     /// B14: is legalActions minus concede, offerDraw, answerDraw and mulligan, zones collapsed, endTurn last
     #[test]
-    fn b14_is_legal_actions_minus_concede_offer_draw_answer_draw_and_mulligan_zones_collapsed_end_turn_last() {
+    fn b14_is_legal_actions_minus_concede_offer_draw_answer_draw_and_mulligan_zones_collapsed_end_turn_last()
+    {
         let state = mid_game();
         let legal = legal_actions(&state, AI);
         let candidates = candidate_actions(&state, AI);
@@ -123,7 +145,11 @@ mod candidate_actions_b14 {
             if is_play(action) || SKIPPED.contains(&action.action_type()) {
                 continue;
             }
-            assert!(candidate_keys.contains(&action_key(action)), "{}", action_key(action));
+            assert!(
+                candidate_keys.contains(&action_key(action)),
+                "{}",
+                action_key(action)
+            );
         }
 
         // Plays: per otherwise-identical play, exactly the lowest and the highest lane legal offers.
@@ -132,12 +158,20 @@ mod candidate_actions_b14 {
             if !is_play(action) {
                 continue;
             }
-            groups.entry(without_zone(action)).or_default().push(action.clone());
+            groups
+                .entry(without_zone(action))
+                .or_default()
+                .push(action.clone());
         }
-        assert!(groups.values().any(|group| group.len() > 2), "some play is offered in 3+ lanes");
+        assert!(
+            groups.values().any(|group| group.len() > 2),
+            "some play is offered in 3+ lanes"
+        );
         for (key, group) in &groups {
-            let offered: Vec<&ActionBody> =
-                candidates.iter().filter(|action| is_play(action) && without_zone(action) == *key).collect();
+            let offered: Vec<&ActionBody> = candidates
+                .iter()
+                .filter(|action| is_play(action) && without_zone(action) == *key)
+                .collect();
             let lanes: Vec<i32> = group.iter().filter_map(lane_of).collect();
             if lanes.is_empty() {
                 let offered_keys: Vec<String> = offered.iter().map(|action| action_key(action)).collect();
@@ -147,8 +181,12 @@ mod candidate_actions_b14 {
             }
             let low = lanes.iter().copied().min().unwrap_or(0);
             let high = lanes.iter().copied().max().unwrap_or(0);
-            let mut expected: Vec<Option<i32>> =
-                [low, high].into_iter().collect::<IndexSet<i32>>().into_iter().map(Some).collect();
+            let mut expected: Vec<Option<i32>> = [low, high]
+                .into_iter()
+                .collect::<IndexSet<i32>>()
+                .into_iter()
+                .map(Some)
+                .collect();
             expected.sort_by_key(|lane| lane.unwrap_or(0));
             let mut offered_lanes: Vec<Option<i32>> = offered.iter().map(|action| lane_of(action)).collect();
             offered_lanes.sort_by_key(|lane| lane.unwrap_or(0));
@@ -156,7 +194,13 @@ mod candidate_actions_b14 {
         }
 
         // endTurn is last, once.
-        assert_eq!(candidates.iter().filter(|action| **action == ActionBody::EndTurn).count(), 1);
+        assert_eq!(
+            candidates
+                .iter()
+                .filter(|action| **action == ActionBody::EndTurn)
+                .count(),
+            1
+        );
         assert_eq!(candidates.last(), Some(&ActionBody::EndTurn));
     }
 
@@ -171,8 +215,11 @@ mod candidate_actions_b14 {
         }))
         .state()
         .clone();
-        let one_lanes: Vec<Option<i32>> =
-            candidate_actions(&one, AI).iter().filter(|action| is_play(action)).map(lane_of).collect();
+        let one_lanes: Vec<Option<i32>> = candidate_actions(&one, AI)
+            .iter()
+            .filter(|action| is_play(action))
+            .map(lane_of)
+            .collect();
         assert_eq!(one_lanes, vec![Some(5)]);
 
         let two = scenario(json!({
@@ -182,8 +229,11 @@ mod candidate_actions_b14 {
         }))
         .state()
         .clone();
-        let mut two_lanes: Vec<Option<i32>> =
-            candidate_actions(&two, AI).iter().filter(|action| is_play(action)).map(lane_of).collect();
+        let mut two_lanes: Vec<Option<i32>> = candidate_actions(&two, AI)
+            .iter()
+            .filter(|action| is_play(action))
+            .map(lane_of)
+            .collect();
         two_lanes.sort_by_key(|lane| lane.unwrap_or(0));
         assert_eq!(two_lanes, vec![Some(4), Some(5)]);
     }
@@ -201,15 +251,23 @@ mod candidate_actions_b14 {
         };
         assert_eq!(target, Some("hero-p2"));
 
-        let last_play = candidates.iter().enumerate().filter(|(_, action)| is_play(action)).map(|(at, _)| at).max();
-        let first_switch =
-            candidates.iter().position(|action| matches!(action, ActionBody::SwitchPosition { .. }));
+        let last_play = candidates
+            .iter()
+            .enumerate()
+            .filter(|(_, action)| is_play(action))
+            .map(|(at, _)| at)
+            .max();
+        let first_switch = candidates
+            .iter()
+            .position(|action| matches!(action, ActionBody::SwitchPosition { .. }));
         if let Some(first_switch) = first_switch {
             // TS's `Math.max(...[])` is -Infinity, so with no play any switch comes after.
             assert!(last_play.is_none_or(|last_play| first_switch > last_play));
         }
         assert_eq!(
-            candidates.iter().position(|action| *action == ActionBody::EndTurn),
+            candidates
+                .iter()
+                .position(|action| *action == ActionBody::EndTurn),
             Some(candidates.len() - 1)
         );
     }
@@ -229,14 +287,20 @@ mod candidate_actions_b14 {
 
         let candidates = candidate_actions(&state, AI);
         // R211 offers concede beside the prompt's answers, and the AI never takes it (R84, R188).
-        let answers: Vec<ActionBody> =
-            legal_actions(&state, AI).into_iter().filter(|action| *action != ActionBody::Concede).collect();
+        let answers: Vec<ActionBody> = legal_actions(&state, AI)
+            .into_iter()
+            .filter(|action| *action != ActionBody::Concede)
+            .collect();
         let mut candidate_keys: Vec<String> = candidates.iter().map(action_key).collect();
         candidate_keys.sort();
         let mut answer_keys: Vec<String> = answers.iter().map(action_key).collect();
         answer_keys.sort();
         assert_eq!(candidate_keys, answer_keys);
-        assert!(candidates.iter().all(|action| matches!(action, ActionBody::Answer { .. })));
+        assert!(
+            candidates
+                .iter()
+                .all(|action| matches!(action, ActionBody::Answer { .. }))
+        );
         assert_eq!(candidates.len(), 3);
     }
 
@@ -244,7 +308,10 @@ mod candidate_actions_b14 {
     #[test]
     fn b14_during_the_mulligan_there_is_no_candidate_since_the_mulligan_is_not_searched() {
         let state = dealt_game("search-mulligan");
-        assert_eq!(mulligan_prompt_for(&state, AI).map(|prompt| prompt.kind), Some(PromptKind::Mulligan));
+        assert_eq!(
+            mulligan_prompt_for(&state, AI).map(|prompt| prompt.kind),
+            Some(PromptKind::Mulligan)
+        );
         assert!(!legal_actions(&state, AI).is_empty());
         assert_eq!(candidate_actions(&state, AI), Vec::<ActionBody>::new());
     }
@@ -261,7 +328,11 @@ mod candidate_actions_b14 {
             "p2": { "hand": ["core-011"] },
         }));
         let offered = act(s.state(), PlayerId::P2, &ActionBody::OfferDraw);
-        assert!(legal_actions(&offered, AI).iter().any(|action| matches!(action, ActionBody::AnswerDraw { .. })));
+        assert!(
+            legal_actions(&offered, AI)
+                .iter()
+                .any(|action| matches!(action, ActionBody::AnswerDraw { .. }))
+        );
         assert_eq!(candidate_actions(&offered, AI), Vec::<ActionBody>::new());
     }
 
@@ -277,16 +348,21 @@ mod candidate_actions_b14 {
         s.attack("core-011", "hero");
         assert!(s.state().result.is_some());
         assert_eq!(candidate_actions(s.state(), AI), Vec::<ActionBody>::new());
-        assert_eq!(candidate_actions(s.state(), PlayerId::P2), Vec::<ActionBody>::new());
+        assert_eq!(
+            candidate_actions(s.state(), PlayerId::P2),
+            Vec::<ActionBody>::new()
+        );
     }
 
     /// B14: on the opponent's turn with nothing to answer there is no candidate
     #[test]
     fn b14_on_the_opponents_turn_with_nothing_to_answer_there_is_no_candidate() {
         jackioh_cards::register_all();
-        let state = scenario(json!({ "seed": "search-idle", "active": "p2", "turn": 10, "p1": { "hand": ["core-008"] } }))
-            .state()
-            .clone();
+        let state = scenario(
+            json!({ "seed": "search-idle", "active": "p2", "turn": 10, "p1": { "hand": ["core-008"] } }),
+        )
+        .state()
+        .clone();
         assert_eq!(candidate_actions(&state, AI), Vec::<ActionBody>::new());
     }
 }
@@ -320,7 +396,8 @@ mod decides_determinism_and_budget_b15 {
 
     /// B15: at AI_GATE_BUDGET the same state, seat, rng seed and budget give a deep-equal, legal, in-budget decision
     #[test]
-    fn b15_at_ai_gate_budget_the_same_state_seat_rng_seed_and_budget_give_a_deep_equal_legal_in_budget_decision() {
+    fn b15_at_ai_gate_budget_the_same_state_seat_rng_seed_and_budget_give_a_deep_equal_legal_in_budget_decision()
+     {
         same_inputs_same_decision(AI_GATE_BUDGET);
     }
 
@@ -338,14 +415,23 @@ mod decides_determinism_and_budget_b15 {
     #[test]
     fn b15_omitting_the_budget_is_ai_budget() {
         let state = mid_game();
-        let implicit = decide(&state, AI, &mut AiOptions { rng: create_rng("search-default", 0), budget: AI_BUDGET, should_stop: None });
+        let implicit = decide(
+            &state,
+            AI,
+            &mut AiOptions {
+                rng: create_rng("search-default", 0),
+                budget: AI_BUDGET,
+                should_stop: None,
+            },
+        );
         let explicit = decide(&state, AI, &mut ai_options("search-default", AI_BUDGET));
         assert_eq!(implicit, explicit);
     }
 
     /// B15: a clock that says stop at the first poll still gives a legal action, stopped by the clock, with no node spent
     #[test]
-    fn b15_a_clock_that_says_stop_at_the_first_poll_still_gives_a_legal_action_stopped_by_the_clock_with_no_node_spent() {
+    fn b15_a_clock_that_says_stop_at_the_first_poll_still_gives_a_legal_action_stopped_by_the_clock_with_no_node_spent()
+     {
         let state = mid_game();
         let polls = Cell::new(0);
         let stop = || {
@@ -355,7 +441,11 @@ mod decides_determinism_and_budget_b15 {
         let decision = decide(
             &state,
             AI,
-            &mut AiOptions { rng: create_rng("search-clock", 0), budget: AI_GATE_BUDGET, should_stop: Some(&stop) },
+            &mut AiOptions {
+                rng: create_rng("search-clock", 0),
+                budget: AI_GATE_BUDGET,
+                should_stop: Some(&stop),
+            },
         );
         assert!(decision.is_some());
         assert!(polls.get() > 0);
@@ -378,7 +468,11 @@ mod decides_determinism_and_budget_b15 {
         let decision = decide(
             &state,
             AI,
-            &mut AiOptions { rng: create_rng("search-clock-n", 0), budget: AI_BUDGET, should_stop: Some(&stop) },
+            &mut AiOptions {
+                rng: create_rng("search-clock-n", 0),
+                budget: AI_BUDGET,
+                should_stop: Some(&stop),
+            },
         )
         .expect("a decision");
         assert_eq!(js(decision.stats.stopped_by), json!("clock"));
@@ -390,7 +484,11 @@ mod decides_determinism_and_budget_b15 {
     #[test]
     fn b15_a_budget_of_zero_nodes_falls_back_to_end_turn_stopped_by_the_budget() {
         let state = mid_game();
-        let empty = SearchBudget { nodes: 0, lethal_nodes: 0, ..AI_GATE_BUDGET };
+        let empty = SearchBudget {
+            nodes: 0,
+            lethal_nodes: 0,
+            ..AI_GATE_BUDGET
+        };
         let decision = decide(&state, AI, &mut ai_options("search-empty", empty)).expect("a decision");
         assert_eq!(decision.reason, DecisionReason::Fallback);
         assert_eq!(decision.action, ActionBody::EndTurn);
@@ -400,7 +498,8 @@ mod decides_determinism_and_budget_b15 {
 
     /// B15: the smallest search (one world, a beam of one, one step deep) still gives a legal, in-budget decision
     #[test]
-    fn b15_the_smallest_search_one_world_a_beam_of_one_one_step_deep_still_gives_a_legal_in_budget_decision() {
+    fn b15_the_smallest_search_one_world_a_beam_of_one_one_step_deep_still_gives_a_legal_in_budget_decision()
+    {
         let state = mid_game();
         let tiny = SearchBudget {
             nodes: 12,
@@ -430,7 +529,10 @@ mod decides_determinism_and_budget_b15 {
         }))
         .state()
         .clone();
-        let budget = SearchBudget { lethal_nodes: 0, ..AI_GATE_BUDGET };
+        let budget = SearchBudget {
+            lethal_nodes: 0,
+            ..AI_GATE_BUDGET
+        };
         let decision = decide(&state, AI, &mut ai_options("search-no-lethal", budget)).expect("a decision");
         assert_ne!(decision.reason, DecisionReason::Lethal);
         assert!(decision.stats.nodes <= budget.nodes);
@@ -442,7 +544,11 @@ mod decides_determinism_and_budget_b15 {
     fn b15_decide_never_throws_on_a_state_whose_hidden_cards_it_cannot_know_across_many_rng_seeds() {
         let state = mid_game();
         for k in 0..6 {
-            let decision = decide(&state, AI, &mut ai_options(&format!("search-many:{k}"), AI_GATE_BUDGET));
+            let decision = decide(
+                &state,
+                AI,
+                &mut ai_options(&format!("search-many:{k}"), AI_GATE_BUDGET),
+            );
             assert!(decision.is_some(), "seed {k}");
             let decision = decision.expect("a decision");
             assert!(is_legal(&state, AI, &decision.action), "seed {k}");
@@ -454,7 +560,10 @@ mod decides_determinism_and_budget_b15 {
     #[test]
     fn b15_the_node_counter_grants_exactly_its_limit_then_reports_the_budget() {
         let counter = create_node_counter(3, None);
-        assert_eq!([counter.take(), counter.take(), counter.take()], [true, true, true]);
+        assert_eq!(
+            [counter.take(), counter.take(), counter.take()],
+            [true, true, true]
+        );
         assert!(!counter.take());
         assert_eq!(counter.used(), 3);
         assert_eq!(counter.limit(), 3);

@@ -40,7 +40,7 @@ use jackioh_engine::validator::TRIO_DECKS;
 
 use crate::cli::mint_code::is_integer;
 use crate::config::{AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
-use crate::env::{load_env, js_number, quoted};
+use crate::env::{js_number, load_env, quoted};
 
 const DEFAULT_COUNT: i64 = 2;
 const EMAIL_DOMAIN: &str = "example.com";
@@ -89,7 +89,10 @@ pub fn seed_accounts_settings(
     let url = reqwest::Url::parse(supabase_url)
         .map_err(|error| anyhow!("SUPABASE_URL is not a URL ({error}): {}", quoted(supabase_url)))?;
     let host = url.host_str().unwrap_or_default().to_string();
-    let opt_in = source.get(SEED_PROJECT_VAR).map(|value| value.trim()).unwrap_or_default();
+    let opt_in = source
+        .get(SEED_PROJECT_VAR)
+        .map(|value| value.trim())
+        .unwrap_or_default();
     if opt_in != host {
         problems.push(format!(
             "{SEED_PROJECT_VAR} must equal SUPABASE_URL's host ({host}) to seed this project{} \
@@ -112,7 +115,9 @@ pub fn seed_accounts_settings(
             if units == 0 { " (it is not set)." } else { "." },
         ));
     } else if secret.len() > AUTH_PASSWORD_MAX_LENGTH {
-        problems.push(format!("{SEED_PASSWORD_VAR} must be at most {AUTH_PASSWORD_MAX_LENGTH} bytes."));
+        problems.push(format!(
+            "{SEED_PASSWORD_VAR} must be at most {AUTH_PASSWORD_MAX_LENGTH} bytes."
+        ));
     }
 
     if !problems.is_empty() {
@@ -168,15 +173,19 @@ async fn create_or_find_user(
     .send()
     .await?;
     let users: Value = listed.json().await.unwrap_or_else(|_| json!({}));
-    let found = users
-        .get("users")
-        .and_then(Value::as_array)
-        .and_then(|users| users.iter().find(|user| user.get("email").and_then(Value::as_str) == Some(email)));
+    let found = users.get("users").and_then(Value::as_array).and_then(|users| {
+        users
+            .iter()
+            .find(|user| user.get("email").and_then(Value::as_str) == Some(email))
+    });
     if let Some(id) = found.and_then(|user| user.get("id")).and_then(Value::as_str) {
         return Ok((id.to_string(), false));
     }
 
-    Err(anyhow!("could not create or find {email}: {} {body}", status.as_u16()))
+    Err(anyhow!(
+        "could not create or find {email}: {} {body}",
+        status.as_u16()
+    ))
 }
 
 /// A profile id as the `uuid` it is in Postgres. `pg` sent every parameter untyped and let the
@@ -207,7 +216,11 @@ fn text_at(row: &PgRow, column: &str) -> Result<Option<String>> {
 ///
 /// Re-runnable: a profile that already holds a deck or a trio is left alone, so a second run neither
 /// piles up starters nor touches decks a tester has built since.
-async fn save_starter_decks(client: &mut PgConnection, profile_id: &str, catalog_version: &str) -> Result<()> {
+async fn save_starter_decks(
+    client: &mut PgConnection,
+    profile_id: &str,
+    catalog_version: &str,
+) -> Result<()> {
     let held = sqlx::query(
         "select ((select count(*) from public.decks where profile_id = $1)
            + (select count(*) from public.trios where profile_id = $1))::text as n",
@@ -223,10 +236,11 @@ async fn save_starter_decks(client: &mut PgConnection, profile_id: &str, catalog
         return Ok(());
     }
 
-    let rows = sqlx::query("select id from public.cards where not token and catalog_version = $1 order by id")
-        .bind(catalog_version)
-        .fetch_all(&mut *client)
-        .await?;
+    let rows =
+        sqlx::query("select id from public.cards where not token and catalog_version = $1 order by id")
+            .bind(catalog_version)
+            .fetch_all(&mut *client)
+            .await?;
     let mut ids: Vec<String> = Vec::with_capacity(rows.len());
     for row in &rows {
         ids.push(row.try_get::<String, _>("id")?);
@@ -243,7 +257,9 @@ async fn save_starter_decks(client: &mut PgConnection, profile_id: &str, catalog
         None => None,
     };
     let Some(deck_size) = deck_size else {
-        return Err(anyhow!("app.settings has no deck_size: is migration 0003 applied?"));
+        return Err(anyhow!(
+            "app.settings has no deck_size: is migration 0003 applied?"
+        ));
     };
     let deck_size = deck_size as usize;
     let trio_decks = TRIO_DECKS;
@@ -356,7 +372,9 @@ async fn seed_with(
             attempt += 1;
         }
         if !profile_exists {
-            return Err(anyhow!("no profiles row appeared for {email} ({id}) — is migration 0001 applied?"));
+            return Err(anyhow!(
+                "no profiles row appeared for {email} ({id}) — is migration 0001 applied?"
+            ));
         }
 
         // The real activation: this UPDATE is what `profiles_grant_launch_collection` watches.
@@ -369,7 +387,11 @@ async fn seed_with(
         .await?;
 
         save_starter_decks(client, &id, env.catalog_version.as_str()).await?;
-        out.push(SeededAccount { email, user_id: id, created });
+        out.push(SeededAccount {
+            email,
+            user_id: id,
+            created,
+        });
     }
 
     Ok(out)
@@ -392,8 +414,15 @@ pub async fn run(args: Vec<String>) -> Result<()> {
     let accounts = seed_accounts(count as i64).await?;
     eprintln!("seed-accounts: {} account(s), all active", accounts.len());
     for account in &accounts {
-        println!("{}  {}", account.email, if account.created { "created" } else { "already existed" });
+        println!(
+            "{}  {}",
+            account.email,
+            if account.created {
+                "created"
+            } else {
+                "already existed"
+            }
+        );
     }
     Ok(())
 }
-

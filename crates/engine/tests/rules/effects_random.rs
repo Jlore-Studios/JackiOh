@@ -31,7 +31,7 @@ use jackioh_engine::layers::unit_view;
 use jackioh_engine::mana::effective_cost;
 use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
 use jackioh_engine::rng::Rng;
-use jackioh_engine::script::{EngineSink, Effect};
+use jackioh_engine::script::{Effect, EngineSink};
 use jackioh_engine::state::{CardInstance, GameState, find_instance, find_instance_mut};
 use jackioh_engine::zones::{card_at, lock_zone};
 
@@ -242,7 +242,12 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
     #[test]
     fn s8_1_takes_exactly_coins_draws_and_buffs_plus_1_attack_per_heads_plus_1_max_health_per_tails() {
         let mut state = game("coins-known");
-        let unit = put(&mut state, &gary().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         assert_eq!(stats_of(&state, &unit), (1, 1));
 
         let ran = run(
@@ -289,7 +294,13 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
 
         // "coins-known" at cursor 0 flips T H H H H H T: five heads, two tails.
         assert_eq!(draws(&ran), 7);
-        assert_eq!(live(&state, &unit.id).buffs, AttackHealth { attack: 10, health: 4 });
+        assert_eq!(
+            live(&state, &unit.id).buffs,
+            AttackHealth {
+                attack: 10,
+                health: 4
+            }
+        );
         // On the 2/2 radiant face (§5.2), read through the layers.
         assert_eq!(stats_of(&state, &unit), (12, 6));
     }
@@ -302,7 +313,9 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
         // `{ of: "self" }` with no self, and `{ of: "chosen" }` with nothing chosen: both fizzle.
         let no_self = run(
             &mut state,
-            &[coins(json!({ "target": { "of": "self" }, "coins": 5, "perHeads": { "attack": 1 } }))],
+            &[coins(
+                json!({ "target": { "of": "self" }, "coins": 5, "perHeads": { "attack": 1 } }),
+            )],
             as_p1(),
         );
         assert_eq!(draws(&no_self), 0);
@@ -310,14 +323,21 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
 
         let no_pick = run(
             &mut state,
-            &[coins(json!({ "target": { "of": "chosen" }, "coins": 7, "perTails": { "health": 2 } }))],
+            &[coins(
+                json!({ "target": { "of": "chosen" }, "coins": 7, "perTails": { "health": 2 } }),
+            )],
             as_p1(),
         );
         assert_eq!(draws(&no_pick), 0);
         assert_eq!(state.rng_cursor, 0);
 
         // And a fizzle really is total: a unit that arrives afterwards gets the draws that were saved.
-        let unit = put(&mut state, &gary().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         run(
             &mut state,
             &[coins(json!({
@@ -325,7 +345,10 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
             }))],
             with_self(&unit),
         );
-        assert_eq!(live(&state, &unit.id).buffs, AttackHealth { attack: 4, health: 1 });
+        assert_eq!(
+            live(&state, &unit.id).buffs,
+            AttackHealth { attack: 4, health: 1 }
+        );
     }
 
     #[test]
@@ -333,7 +356,12 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
         let flips = |seed: &str, cursor: u32| -> AttackHealth {
             let mut state = game(seed);
             state.rng_cursor = cursor;
-            let unit = put(&mut state, &gary().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+            let unit = put(
+                &mut state,
+                &gary().id,
+                slot(PlayerId::P1, Row::Units, 1),
+                json!({}),
+            );
             run(
                 &mut state,
                 &[coins(json!({
@@ -355,17 +383,27 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
     #[test]
     fn s6_3_a_card_that_pays_nothing_for_a_side_of_the_coin_still_flips_it() {
         let mut state = game("coins-a");
-        let unit = put(&mut state, &gary().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
 
         // Heads only: "coins-a" flips H H T T T, so two heads and three ignored tails.
         let ran = run(
             &mut state,
-            &[coins(json!({ "target": { "of": "self" }, "coins": 5, "perHeads": { "attack": 1 } }))],
+            &[coins(
+                json!({ "target": { "of": "self" }, "coins": 5, "perHeads": { "attack": 1 } }),
+            )],
             with_self(&unit),
         );
 
         assert_eq!(draws(&ran), 5);
-        assert_eq!(live(&state, &unit.id).buffs, AttackHealth { attack: 2, health: 0 });
+        assert_eq!(
+            live(&state, &unit.id).buffs,
+            AttackHealth { attack: 2, health: 0 }
+        );
     }
 }
 
@@ -387,7 +425,12 @@ mod r32_r130_flip_coin_keyword_s8_1_c4_s10_4_s10_7 {
     #[test]
     fn s8_1_takes_exactly_one_draw_tails_at_cursor_0_grants_rush() {
         let mut state = game("coins-known");
-        let unit = put(&mut state, &gary().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
 
         let ran = run(&mut state, &[rider()], with_self(&unit));
 
@@ -405,14 +448,22 @@ mod r32_r130_flip_coin_keyword_s8_1_c4_s10_4_s10_7 {
     fn s8_1_heads_at_cursor_1_grants_divine_shield() {
         let mut state = game("coins-known");
         state.rng_cursor = 1;
-        let unit = put(&mut state, &gary().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
 
         let ran = run(&mut state, &[rider()], with_self(&unit));
 
         // The second flip of the "coins-known" stream is heads. The sink cursor is absolute, so
         // one draw from cursor 1 leaves it at 2.
         assert_eq!(draws(&ran) - 1, 1);
-        assert_eq!(live(&state, &unit.id).granted_keywords, vec![Keyword::DivineShield]);
+        assert_eq!(
+            live(&state, &unit.id).granted_keywords,
+            vec![Keyword::DivineShield]
+        );
     }
 
     #[test]
@@ -432,7 +483,12 @@ mod r32_r130_flip_coin_keyword_s8_1_c4_s10_4_s10_7 {
     fn s9_3_the_same_seed_and_cursor_grant_the_same_keyword_twice() {
         let granted = |seed: &str| -> Vec<Keyword> {
             let mut state = game(seed);
-            let unit = put(&mut state, &gary().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+            let unit = put(
+                &mut state,
+                &gary().id,
+                slot(PlayerId::P1, Row::Units, 1),
+                json!({}),
+            );
             run(&mut state, &[rider()], with_self(&unit));
             live(&state, &unit.id).granted_keywords.clone()
         };
@@ -468,7 +524,11 @@ mod r32_r60_radiant_chance_s8_2_c42_s6_1_lucky_x_s10_7 {
         let mut state = game("eug-b");
         let library = set_library(&mut state, PlayerId::P1, &bodies(6));
 
-        let ran = run(&mut state, &[chance(json!({ "zone": "library", "chance": 0.3 }))], as_p1());
+        let ran = run(
+            &mut state,
+            &[chance(json!({ "zone": "library", "chance": 0.3 }))],
+            as_p1(),
+        );
 
         // One independent roll per card in the pool: six cards, six draws (§10.7).
         assert_eq!(draws(&ran), 6);
@@ -476,7 +536,10 @@ mod r32_r60_radiant_chance_s8_2_c42_s6_1_lucky_x_s10_7 {
         assert_eq!(radiant_at(&state, &library), vec![1, 3, 4]);
         assert_eq!(
             ids_of_type(&ran.events, "radiantSet"),
-            [1usize, 3, 4].iter().map(|&at| library[at].id.clone()).collect::<Vec<_>>()
+            [1usize, 3, 4]
+                .iter()
+                .map(|&at| library[at].id.clone())
+                .collect::<Vec<_>>()
         );
     }
 
@@ -488,11 +551,17 @@ mod r32_r60_radiant_chance_s8_2_c42_s6_1_lucky_x_s10_7 {
         let already_radiant: [usize; 2] = [0, 2];
         for at in already_radiant {
             if let Some(card) = library.get(at) {
-                find_instance_mut(&mut state, &card.id).expect("a library card").radiant = true;
+                find_instance_mut(&mut state, &card.id)
+                    .expect("a library card")
+                    .radiant = true;
             }
         }
 
-        let ran = run(&mut state, &[chance(json!({ "zone": "library", "chance": 1 }))], as_p1());
+        let ran = run(
+            &mut state,
+            &[chance(json!({ "zone": "library", "chance": 1 }))],
+            as_p1(),
+        );
 
         // Six rolls for the six cards: how many draws the effect takes does not hang on how many of a
         // library nobody may read were Radiant already (§9.1).
@@ -511,7 +580,11 @@ mod r32_r60_radiant_chance_s8_2_c42_s6_1_lucky_x_s10_7 {
         let plain = || -> (Ran, GameState, Vec<CardInstance>) {
             let mut state = game("eug-b");
             let library = set_library(&mut state, PlayerId::P1, &bodies(6));
-            let ran = run(&mut state, &[chance(json!({ "zone": "library", "chance": 0.3 }))], as_p1());
+            let ran = run(
+                &mut state,
+                &[chance(json!({ "zone": "library", "chance": 0.3 }))],
+                as_p1(),
+            );
             (ran, state, library)
         };
         let lucky = || -> (Ran, GameState, Vec<CardInstance>) {
@@ -568,7 +641,9 @@ mod r32_r60_radiant_chance_s8_2_c42_s6_1_lucky_x_s10_7 {
         let ran = run(
             &mut state,
             &[
-                exile(json_as(json!({ "target": { "of": "instance", "instanceId": doomed.id } }))),
+                exile(json_as(
+                    json!({ "target": { "of": "instance", "instanceId": doomed.id } }),
+                )),
                 chance(json!({ "zone": "library", "chance": 1 })),
             ],
             as_p1(),
@@ -606,7 +681,9 @@ mod r32_r60_radiant_chance_s8_2_c42_s6_1_lucky_x_s10_7 {
 
         run(
             &mut state,
-            &[chance(json!({ "zone": "library", "chance": 1, "player": "enemy" }))],
+            &[chance(
+                json!({ "zone": "library", "chance": 1, "player": "enemy" }),
+            )],
             as_p1(),
         );
 
@@ -641,13 +718,30 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
     fn r77_c85_radiant_fuses_one_ingredient_onto_every_target_one_fusion_at_a_time() {
         let mut state = game("fuse-each");
         // #85's played permanent, plus two of the controller's matching permanents.
-        let played = put(&mut state, &alpha().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let first = put(&mut state, &beta().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
-        let second = put(&mut state, &beta().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let played = put(
+            &mut state,
+            &alpha().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let first = put(
+            &mut state,
+            &beta().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        let second = put(
+            &mut state,
+            &beta().id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
 
         run(
             &mut state,
-            &[fusing(json!({ "instanceIds": [played.id], "targetInstanceIds": [first.id, second.id] }))],
+            &[fusing(
+                json!({ "instanceIds": [played.id], "targetInstanceIds": [first.id, second.id] }),
+            )],
             as_p1(),
         );
 
@@ -663,7 +757,10 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
         let kept_first = card_at(&state, slot(PlayerId::P1, Row::Units, 2)).cloned();
         let kept_second = card_at(&state, slot(PlayerId::P1, Row::Units, 3)).cloned();
         assert_eq!(kept_first.as_ref().map(|c| c.id.clone()), Some(first.id.clone()));
-        assert_eq!(kept_second.as_ref().map(|c| c.id.clone()), Some(second.id.clone()));
+        assert_eq!(
+            kept_second.as_ref().map(|c| c.id.clone()),
+            Some(second.id.clone())
+        );
         // Each kept card now IS a fused card, and the two fusions are distinct definitions.
         assert_ne!(kept_first.as_ref().map(|c| c.def_id.clone()), Some(beta().id));
         assert_ne!(kept_second.as_ref().map(|c| c.def_id.clone()), Some(beta().id));
@@ -688,9 +785,24 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
     #[test]
     fn s8_4_c85_base_picks_one_target_at_random_taking_exactly_one_draw_inside_apply() {
         let mut state = game("fuse-random");
-        let played = put(&mut state, &alpha().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let first = put(&mut state, &beta().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
-        let second = put(&mut state, &beta().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let played = put(
+            &mut state,
+            &alpha().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let first = put(
+            &mut state,
+            &beta().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        let second = put(
+            &mut state,
+            &beta().id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
 
         // Building the effect must take no draw: the pick belongs inside apply (§9.3, §10.7).
         let effect = fusing(json!({
@@ -715,8 +827,18 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
     #[test]
     fn s6_3_takes_no_draw_and_fuses_nothing_when_every_named_target_has_left_the_field() {
         let mut state = game("fuse-none");
-        let played = put(&mut state, &alpha().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let victim = put(&mut state, &beta().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let played = put(
+            &mut state,
+            &alpha().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let victim = put(
+            &mut state,
+            &beta().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         let gone_id = victim.id.clone();
         // The target leaves before the fusion resolves (R61: the trap fired and did nothing). TS also
         // set the detached object's zone to `{ z: "gone" }`, which no pile holds; the state is the same.
@@ -724,14 +846,19 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
 
         let ran = run(
             &mut state,
-            &[fusing(json!({ "instanceIds": [played.id], "targetInstanceIds": [gone_id], "pick": "random" }))],
+            &[fusing(
+                json!({ "instanceIds": [played.id], "targetInstanceIds": [gone_id], "pick": "random" }),
+            )],
             as_p1(),
         );
 
         assert_eq!(draws(&ran), 0);
         assert!(state.transient_defs.is_empty());
         // The ingredient is untouched: nothing was consumed for a fusion that never happened.
-        assert_eq!(find_instance(&state, &played.id).map(|c| c.def_id.clone()), Some(alpha().id));
+        assert_eq!(
+            find_instance(&state, &played.id).map(|c| c.def_id.clone()),
+            Some(alpha().id)
+        );
     }
 
     #[test]
@@ -740,7 +867,9 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
 
         let ran = run(
             &mut state,
-            &[fusing(json!({ "defIds": [alpha().id, beta().id], "toHand": "self" }))],
+            &[fusing(
+                json!({ "defIds": [alpha().id, beta().id], "toHand": "self" }),
+            )],
             as_p1(),
         );
 
@@ -762,12 +891,21 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
         tags.sort();
         assert_eq!(tags, vec!["Felinor", "Human"]);
         // R77's cap: 3 + 2 is 5, which is more than FUSE_COST_CAP, so the definition costs 4.
-        assert_eq!(serde_json::to_value(fused.cost).expect("a cost serialises"), json!(FUSE_COST_CAP));
+        assert_eq!(
+            serde_json::to_value(fused.cost).expect("a cost serialises"),
+            json!(FUSE_COST_CAP)
+        );
 
         // "the result costs 0 and goes to your hand": a fresh, non-Radiant instance with an override,
         // so the printed 4 stands on the definition and R65 reads 0 off the card.
         assert_eq!(state.players.p1.hand.len(), 1);
-        let result = state.players.p1.hand.first().cloned().expect("expected the crafted card in hand");
+        let result = state
+            .players
+            .p1
+            .hand
+            .first()
+            .cloned()
+            .expect("expected the crafted card in hand");
         assert_eq!(result.def_id, "t-1:rn-alpha+rn-beta");
         assert!(!result.radiant);
         assert_eq!(result.cost_override, Some(0));
@@ -795,11 +933,16 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
 
         let ran = run(
             &mut state,
-            &[fusing(json!({ "defIds": [alpha().id, beta().id], "toHand": "self" }))],
+            &[fusing(
+                json!({ "defIds": [alpha().id, beta().id], "toHand": "self" }),
+            )],
             as_p1(),
         );
 
-        let fused_event = of_type(&ran.events, "fused").into_iter().next().expect("expected a fused event");
+        let fused_event = of_type(&ran.events, "fused")
+            .into_iter()
+            .next()
+            .expect("expected a fused event");
         let result = state.players.p1.hand.first().cloned();
         let result_id = result.as_ref().map(|card| card.id.clone());
         let phantoms: Vec<String> = fused_event["instanceIds"]
@@ -841,13 +984,27 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
     #[test]
     fn r77_c85_keeps_the_targets_instance_when_the_ingredients_are_cards_on_the_field() {
         let mut state = game("fuse-onto");
-        let victim = put(&mut state, &alpha().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let played = put(&mut state, &beta().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
-        find_instance_mut(&mut state, &victim.id).expect("the victim").damage = 1;
+        let victim = put(
+            &mut state,
+            &alpha().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let played = put(
+            &mut state,
+            &beta().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        find_instance_mut(&mut state, &victim.id)
+            .expect("the victim")
+            .damage = 1;
 
         run(
             &mut state,
-            &[fusing(json!({ "instanceIds": [played.id], "targetInstanceId": victim.id }))],
+            &[fusing(
+                json!({ "instanceIds": [played.id], "targetInstanceId": victim.id }),
+            )],
             as_p1(),
         );
 
@@ -881,7 +1038,11 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
             &[fusing(json!({ "defIds": [alpha().id], "toHand": "self" }))],
             as_p1(),
         );
-        let nowhere = run(&mut state, &[fusing(json!({ "defIds": [alpha().id, beta().id] }))], as_p1());
+        let nowhere = run(
+            &mut state,
+            &[fusing(json!({ "defIds": [alpha().id, beta().id] }))],
+            as_p1(),
+        );
 
         assert!(state.transient_defs.is_empty());
         assert!(state.players.p1.hand.is_empty());
@@ -913,9 +1074,24 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
     #[test]
     fn s3_1_moves_every_card_one_step_around_its_ring_control_changing_on_the_crossing() {
         let mut state = game("rotate-verb");
-        let lane1 = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let lane5 = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 5), json!({}));
-        let trap = put(&mut state, &backdrop().id, slot(PlayerId::P1, Row::Backrow, 5), json!({}));
+        let lane1 = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let lane5 = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 5),
+            json!({}),
+        );
+        let trap = put(
+            &mut state,
+            &backdrop().id,
+            slot(PlayerId::P1, Row::Backrow, 5),
+            json!({}),
+        );
 
         let ran = run(&mut state, &[turning("right")], as_p1());
 
@@ -941,7 +1117,12 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
     #[test]
     fn s3_1_reads_left_and_right_from_the_rotating_players_seat_which_is_the_controller() {
         let mut state = game("rotate-seat");
-        let mine = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let mine = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
 
         // p1 rotating right sends lane 1 to lane 2; p2 rotating right sends p1's lane 1 the other way,
         // because the ring is written from the rotating player's seat.
@@ -962,7 +1143,12 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
     #[test]
     fn r14_r88_delegates_the_locked_destination_bounce_rather_than_walking_the_ring_itself() {
         let mut state = game("rotate-locked");
-        let blocked = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let blocked = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 2));
 
         let ran = run(&mut state, &[turning("right")], as_p1());
@@ -970,7 +1156,13 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
         // A rule only `subsystems/rotation.ts` implements: the card goes to its OWNER's hand (R12).
         assert_eq!(where_is(&state, &blocked), "hand");
         assert_eq!(
-            state.players.p1.hand.iter().map(|card| card.id.clone()).collect::<Vec<_>>(),
+            state
+                .players
+                .p1
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect::<Vec<_>>(),
             vec![blocked.id.clone()]
         );
         assert_eq!(ids_of_type(&ran.events, "bounced"), vec![blocked.id.clone()]);
@@ -979,8 +1171,18 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
     #[test]
     fn s8_3_c52_picks_the_radiant_bounce_up_from_the_running_face_with_nothing_passed_for_it() {
         let mut state = game("rotate-radiant");
-        let crosser = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 5), json!({}));
-        let stayer = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let crosser = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 5),
+            json!({}),
+        );
+        let stayer = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
 
         // The card's two faces share one hook and pass only the direction, so the radiant behaviour
         // has to come from `ctx.radiant`.

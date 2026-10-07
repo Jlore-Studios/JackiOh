@@ -24,7 +24,6 @@ use jackioh_engine::wire::stats::{
 use jackioh_engine::{CardCost, CardDef, PLAYER_IDS, Winner};
 
 use crate::api::catalog::load_patch_versions;
-use crate::env::js_number;
 use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, now_ms, ok_of, to_json};
 use crate::app::App;
@@ -33,6 +32,7 @@ use crate::config::{
     PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT, PUBLIC_STATS_MIN_LIVE_GAMES,
 };
 use crate::db::store::{GameRecordQuery, PlayerStatsListOptions};
+use crate::env::js_number;
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -151,7 +151,10 @@ fn cached_ok(body: Value, max_age_seconds: i64) -> Response {
     let mut response = Response::new(Body::from(body.to_string()));
     *response.status_mut() = StatusCode::OK;
     let headers = response.headers_mut();
-    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json; charset=utf-8"));
+    headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/json; charset=utf-8"),
+    );
     if let Ok(value) = HeaderValue::from_str(&format!("public, max-age={max_age_seconds}")) {
         headers.insert(header::CACHE_CONTROL, value);
     }
@@ -160,7 +163,11 @@ fn cached_ok(body: Value, max_age_seconds: i64) -> Response {
 
 /// R654: tutorial games are never counted. No game mode is `tutorial` today; the guard is TS's.
 fn is_tutorial(record: &GameRecord) -> bool {
-    serde_json::to_value(record.mode).ok().as_ref().and_then(Value::as_str) == Some("tutorial")
+    serde_json::to_value(record.mode)
+        .ok()
+        .as_ref()
+        .and_then(Value::as_str)
+        == Some("tutorial")
 }
 
 /// A card's cost as a number: its printed cost, the base of an embiggen cost, 0 for X.
@@ -185,14 +192,21 @@ fn tally_of(tally: &Tally) -> (i64, i64) {
 
 /// A query parameter, trimmed, when it is present and not empty after trimming.
 fn query_trimmed(req: &Req, name: &str) -> Option<String> {
-    req.query.get(name).map(|value| value.trim().to_string()).filter(|value| !value.is_empty())
+    req.query
+        .get(name)
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
 }
 
 /// The game records of one patch that `source` reads (`SourceFilter::All` for both sources).
 async fn records_for(app: &App, source: SourceFilter, patch: &str) -> Result<Vec<GameRecord>, ApiError> {
     let mut tx = app.db.begin(None).await?;
     let records = tx
-        .game_records_list(&GameRecordQuery { source, mode: None::<GameMode>, patch: Some(patch.to_string()) })
+        .game_records_list(&GameRecordQuery {
+            source,
+            mode: None::<GameMode>,
+            patch: Some(patch.to_string()),
+        })
         .await?;
     tx.commit().await?;
     Ok(records)
@@ -247,8 +261,16 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             .collect();
         (PublicStatsSource::Dev, "AI development games", dev)
     } else {
-        let all: Vec<GameRecord> = patch_records.iter().filter(|record| !is_tutorial(record)).cloned().collect();
-        (PublicStatsSource::Provisional, "AI games + live games (provisional)", all)
+        let all: Vec<GameRecord> = patch_records
+            .iter()
+            .filter(|record| !is_tutorial(record))
+            .cloned()
+            .collect();
+        (
+            PublicStatsSource::Provisional,
+            "AI games + live games (provisional)",
+            all,
+        )
     };
 
     let report = card_stats(
@@ -265,11 +287,23 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         },
     );
 
-    let stats_map: IndexMap<&str, _> = report.cards.iter().map(|stat| (stat.card.as_str(), stat)).collect();
+    let stats_map: IndexMap<&str, _> = report
+        .cards
+        .iter()
+        .map(|stat| (stat.card.as_str(), stat))
+        .collect();
     let total_decks = report.decks as i64;
 
-    let set_param = req.query.get("set").map(|value| value.trim().to_lowercase()).filter(|value| !value.is_empty());
-    let rarity_param = req.query.get("rarity").map(|value| value.trim().to_lowercase()).filter(|value| !value.is_empty());
+    let set_param = req
+        .query
+        .get("set")
+        .map(|value| value.trim().to_lowercase())
+        .filter(|value| !value.is_empty());
+    let rarity_param = req
+        .query
+        .get("rarity")
+        .map(|value| value.trim().to_lowercase())
+        .filter(|value| !value.is_empty());
     let cost_param = req.query.get("cost").cloned();
     let card_param = query_trimmed(&req, "card");
 
@@ -282,35 +316,50 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             continue;
         }
         if let Some(set) = &set_param
-            && def.set.as_str().to_lowercase() != *set && !id.to_lowercase().starts_with(set.as_str()) {
-                continue;
-            }
+            && def.set.as_str().to_lowercase() != *set
+            && !id.to_lowercase().starts_with(set.as_str())
+        {
+            continue;
+        }
         if let Some(rarity) = &rarity_param
-            && def.rarity.as_str().to_lowercase() != *rarity {
-                continue;
-            }
+            && def.rarity.as_str().to_lowercase() != *rarity
+        {
+            continue;
+        }
         let cost = numeric_cost(def);
         if let Some(cost_text) = cost_param.as_deref().filter(|text| !text.is_empty())
-            && let Some(parsed_cost) = Some(js_number(&cost_text.replacen('+', "", 1))).filter(|number| !number.is_nan()) {
-                if parsed_cost >= CARD_STATS_CURVE_TOP as f64 {
-                    if (cost as f64) < CARD_STATS_CURVE_TOP as f64 {
-                        continue;
-                    }
-                } else if cost as f64 != parsed_cost {
+            && let Some(parsed_cost) =
+                Some(js_number(&cost_text.replacen('+', "", 1))).filter(|number| !number.is_nan())
+        {
+            if parsed_cost >= CARD_STATS_CURVE_TOP as f64 {
+                if (cost as f64) < CARD_STATS_CURVE_TOP as f64 {
                     continue;
                 }
+            } else if cost as f64 != parsed_cost {
+                continue;
             }
+        }
 
         let stat = stats_map.get(id.as_str()).copied();
         let (in_deck_games, _) = stat.map(|stat| tally_of(&stat.in_deck)).unwrap_or((0, 0));
         let rate = stat.and_then(|stat| win_rate(&stat.in_deck));
         let (played_games, played_wins) = stat.map(|stat| tally_of(&stat.played)).unwrap_or((0, 0));
-        let (unplayed_games, unplayed_wins) = stat.map(|stat| tally_of(&stat.drawn_not_played)).unwrap_or((0, 0));
+        let (unplayed_games, unplayed_wins) = stat
+            .map(|stat| tally_of(&stat.drawn_not_played))
+            .unwrap_or((0, 0));
         let drawn_games = played_games + unplayed_games;
         let drawn_wins = played_wins + unplayed_wins;
-        let drawn_rate = if drawn_games > 0 { Some(drawn_wins as f64 / drawn_games as f64) } else { None };
+        let drawn_rate = if drawn_games > 0 {
+            Some(drawn_wins as f64 / drawn_games as f64)
+        } else {
+            None
+        };
         let played_rate = stat.and_then(|stat| win_rate(&stat.played));
-        let play_rate = if total_decks > 0 { in_deck_games as f64 / total_decks as f64 } else { 0.0 };
+        let play_rate = if total_decks > 0 {
+            in_deck_games as f64 / total_decks as f64
+        } else {
+            0.0
+        };
         let has_enough_games = in_deck_games >= CARD_STATS_MIN_SAMPLE;
 
         cards.push(PublicCardStat {
@@ -339,15 +388,20 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             return Ordering::Greater;
         }
         if let (Some(a_rate), Some(b_rate)) = (a.win_rate, b.win_rate)
-            && a_rate != b_rate {
-                return b_rate.partial_cmp(&a_rate).unwrap_or(Ordering::Equal);
-            }
-        b.games.cmp(&a.games).then_with(|| locale_compare(&a.name, &b.name))
+            && a_rate != b_rate
+        {
+            return b_rate.partial_cmp(&a_rate).unwrap_or(Ordering::Equal);
+        }
+        b.games
+            .cmp(&a.games)
+            .then_with(|| locale_compare(&a.name, &b.name))
     });
 
     // Best and worst card above sample threshold
-    let qualifying: Vec<&PublicCardStat> =
-        cards.iter().filter(|card| card.has_enough_games && card.win_rate.is_some()).collect();
+    let qualifying: Vec<&PublicCardStat> = cards
+        .iter()
+        .filter(|card| card.has_enough_games && card.win_rate.is_some())
+        .collect();
     let extreme = |card: &PublicCardStat| PublicStatsExtreme {
         id: card.id.clone(),
         name: card.name.clone(),
@@ -397,17 +451,27 @@ struct Count {
 /// - Co-played synergy cards.
 pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     let card_id = req.params.get("id").cloned().unwrap_or_default();
-    let def = if card_id.is_empty() { None } else { app.catalog.defs.get(&card_id) };
+    let def = if card_id.is_empty() {
+        None
+    } else {
+        app.catalog.defs.get(&card_id)
+    };
     let Some(def) = def else {
-        return Err(ApiError::new(ApiErrorCode::NotFound, format!("Card {card_id} not found")));
+        return Err(ApiError::new(
+            ApiErrorCode::NotFound,
+            format!("Card {card_id} not found"),
+        ));
     };
 
     let versions = load_patch_versions().await;
     let mut patch_history: Vec<PatchRate> = Vec::new();
 
     for version in &versions {
-        let records: Vec<GameRecord> =
-            records_for(app, SourceFilter::Live, version).await?.into_iter().filter(|record| !is_tutorial(record)).collect();
+        let records: Vec<GameRecord> = records_for(app, SourceFilter::Live, version)
+            .await?
+            .into_iter()
+            .filter(|record| !is_tutorial(record))
+            .collect();
         if records.len() as i64 >= PUBLIC_STATS_MIN_LIVE_GAMES {
             let report = card_stats(
                 &records,
@@ -430,8 +494,10 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     // Use active patch or all records for turn and co-play metrics
     let current_patch = app.catalog.version.clone();
     let all_records = records_for(app, SourceFilter::All, &current_patch).await?;
-    let live_records: Vec<&GameRecord> =
-        all_records.iter().filter(|record| record.source == GameSource::Live && !is_tutorial(record)).collect();
+    let live_records: Vec<&GameRecord> = all_records
+        .iter()
+        .filter(|record| record.source == GameSource::Live && !is_tutorial(record))
+        .collect();
     let records_to_count: Vec<&GameRecord> = if live_records.len() as i64 >= PUBLIC_STATS_MIN_LIVE_GAMES {
         live_records
     } else {
@@ -454,13 +520,18 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
 
             // Check turns on which this card was played (from recorded playedTurns)
             let mut turns_played_in_game: IndexSet<i32> = IndexSet::new();
-            if let Some(played_turns) = summary.played_turns.as_ref().filter(|turns| turns.len() == summary.played.len()) {
+            if let Some(played_turns) = summary
+                .played_turns
+                .as_ref()
+                .filter(|turns| turns.len() == summary.played.len())
+            {
                 for (index, played) in summary.played.iter().enumerate() {
                     if *played == card_id
                         && let Some(turn) = played_turns.get(index).copied()
-                            && turn > 0 {
-                                turns_played_in_game.insert(turn);
-                            }
+                        && turn > 0
+                    {
+                        turns_played_in_game.insert(turn);
+                    }
                 }
             }
             for turn in turns_played_in_game {
@@ -491,7 +562,11 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         .map(|(turn, tally)| TurnRate {
             turn: *turn,
             games: tally.games,
-            win_rate: if tally.games > 0 { Some(tally.wins as f64 / tally.games as f64) } else { None },
+            win_rate: if tally.games > 0 {
+                Some(tally.wins as f64 / tally.games as f64)
+            } else {
+                None
+            },
         })
         .collect();
     by_turn.sort_by_key(|a| a.turn);
@@ -500,9 +575,18 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         .iter()
         .map(|(id, tally)| CoPlayedRate {
             id: id.clone(),
-            name: app.catalog.defs.get(id).map(|def| def.name.clone()).unwrap_or_else(|| id.clone()),
+            name: app
+                .catalog
+                .defs
+                .get(id)
+                .map(|def| def.name.clone())
+                .unwrap_or_else(|| id.clone()),
             games: tally.games,
-            win_rate: if tally.games > 0 { Some(tally.wins as f64 / tally.games as f64) } else { None },
+            win_rate: if tally.games > 0 {
+                Some(tally.wins as f64 / tally.games as f64)
+            } else {
+                None
+            },
         })
         .collect();
     co_played.sort_by_key(|rate| std::cmp::Reverse(rate.games));
@@ -530,7 +614,9 @@ pub async fn get_player(app: &Arc<App>, req: Req) -> ApiResult {
     let row = tx.player_stats_get(&profile.id).await?;
     tx.commit().await?;
     let body = match row {
-        Some(row) => json!({ "stats": to_json(&row.stats)?, "isPrivate": row.is_private, "updatedAt": row.updated_at }),
+        Some(row) => {
+            json!({ "stats": to_json(&row.stats)?, "isPrivate": row.is_private, "updatedAt": row.updated_at })
+        }
         None => json!({ "stats": {}, "isPrivate": false, "updatedAt": null }),
     };
     ok_of(&body)
@@ -560,7 +646,10 @@ pub async fn put_player(app: &Arc<App>, req: Req) -> ApiResult {
     };
 
     let stats: IndexMap<String, Value> = match req.body.get("stats") {
-        Some(Value::Object(map)) => map.iter().map(|(key, value)| (key.clone(), value.clone())).collect(),
+        Some(Value::Object(map)) => map
+            .iter()
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect(),
         _ => existing.as_ref().map(|row| row.stats.clone()).unwrap_or_default(),
     };
 

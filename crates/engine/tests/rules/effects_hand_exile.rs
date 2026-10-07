@@ -17,7 +17,14 @@ fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameE
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     {
         let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(&mut sink, None, HookOptions { controller: Some(controller), ..Default::default() });
+        let mut ctx = make_context(
+            &mut sink,
+            None,
+            HookOptions {
+                controller: Some(controller),
+                ..Default::default()
+            },
+        );
         (effect.apply)(&mut ctx);
     }
     state.rng_cursor = rng.cursor();
@@ -25,12 +32,19 @@ fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameE
 }
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|card| card.id.clone()).collect()
+    state.players[player]
+        .hand
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
     match serde_json::to_value(events).expect("events serialise") {
-        Value::Array(items) => items.into_iter().map(|item| item.get(key).cloned().unwrap_or(Value::Null)).collect(),
+        Value::Array(items) => items
+            .into_iter()
+            .map(|item| item.get(key).cloned().unwrap_or(Value::Null))
+            .collect(),
         other => panic!("expected a list of events, got {other}"),
     }
 }
@@ -41,13 +55,23 @@ mod exile_random_from_hand_c_15_nose_hunter {
     #[test]
     fn r60_r55_exiles_one_random_card_of_the_named_player_s_hand_to_its_owner_s_exile_and_counts_it() {
         let mut state = new_game("hand-exile-one", None);
-        let before: Vec<String> =
-            in_hand(&mut state, "fx-1", PlayerId::P2, 3).into_iter().map(|card| card.id).collect();
+        let before: Vec<String> = in_hand(&mut state, "fx-1", PlayerId::P2, 3)
+            .into_iter()
+            .map(|card| card.id)
+            .collect();
         in_hand(&mut state, "fx-2", PlayerId::P1, 2);
 
-        let events = run(&mut state, exile_random_from_hand(json_as(json!({ "player": "enemy" }))), PlayerId::P1);
+        let events = run(
+            &mut state,
+            exile_random_from_hand(json_as(json!({ "player": "enemy" }))),
+            PlayerId::P1,
+        );
 
-        let exiled: Vec<String> = state.players[PlayerId::P2].exile.iter().map(|card| card.id.clone()).collect();
+        let exiled: Vec<String> = state.players[PlayerId::P2]
+            .exile
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
         assert_eq!(exiled.len(), 1);
         assert!(before.contains(&exiled[0]));
         assert_eq!(hand_ids(&state, PlayerId::P2).len(), 2);
@@ -65,11 +89,19 @@ mod exile_random_from_hand_c_15_nose_hunter {
         let mut state = new_game("hand-exile-many", None);
         in_hand(&mut state, "fx-1", PlayerId::P1, 2);
 
-        run(&mut state, exile_random_from_hand(json_as(json!({ "count": 5 }))), PlayerId::P1);
+        run(
+            &mut state,
+            exile_random_from_hand(json_as(json!({ "count": 5 }))),
+            PlayerId::P1,
+        );
 
         assert_eq!(state.players[PlayerId::P1].hand.len(), 0);
         assert_eq!(state.players[PlayerId::P1].exile.len(), 2);
-        let distinct: IndexSet<String> = state.players[PlayerId::P1].exile.iter().map(|card| card.id.clone()).collect();
+        let distinct: IndexSet<String> = state.players[PlayerId::P1]
+            .exile
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
         assert_eq!(distinct.len(), 2);
     }
 
@@ -79,7 +111,11 @@ mod exile_random_from_hand_c_15_nose_hunter {
         state.players[PlayerId::P2].hand = vec![];
         let cursor = state.rng_cursor;
 
-        let events = run(&mut state, exile_random_from_hand(json_as(json!({ "player": "enemy" }))), PlayerId::P1);
+        let events = run(
+            &mut state,
+            exile_random_from_hand(json_as(json!({ "player": "enemy" }))),
+            PlayerId::P1,
+        );
 
         assert_eq!(events, Vec::<GameEvent>::new());
         assert_eq!(state.players[PlayerId::P2].exile.len(), 0);
@@ -91,11 +127,17 @@ mod exile_random_from_hand_c_15_nose_hunter {
         let pick = |seed: &str| -> String {
             let mut state = new_game(seed, None);
             let cards = in_hand(&mut state, "fx-1", PlayerId::P2, 4);
-            run(&mut state, exile_random_from_hand(json_as(json!({ "player": "enemy" }))), PlayerId::P1);
+            run(
+                &mut state,
+                exile_random_from_hand(json_as(json!({ "player": "enemy" }))),
+                PlayerId::P1,
+            );
             // TS `String(cards.findIndex((card) => card.zone.z === "exile"))`: -1 when none is.
             let index = cards
                 .iter()
-                .position(|card| find_instance(&state, &card.id).is_some_and(|now| now.zone.z() == ZoneName::Exile))
+                .position(|card| {
+                    find_instance(&state, &card.id).is_some_and(|now| now.zone.z() == ZoneName::Exile)
+                })
                 .map_or(-1, |index| index as i64);
             index.to_string()
         };
@@ -105,9 +147,15 @@ mod exile_random_from_hand_c_15_nose_hunter {
     #[test]
     fn r11_a_unit_token_card_in_a_hand_ceases_to_exist_rather_than_reaching_the_exile_and_is_not_counted() {
         let mut state = new_game("hand-exile-token", None);
-        let token = in_hand(&mut state, "fx-token-rush", PlayerId::P2, 1).into_iter().next();
+        let token = in_hand(&mut state, "fx-token-rush", PlayerId::P2, 1)
+            .into_iter()
+            .next();
 
-        let events = run(&mut state, exile_random_from_hand(json_as(json!({ "player": "enemy" }))), PlayerId::P1);
+        let events = run(
+            &mut state,
+            exile_random_from_hand(json_as(json!({ "player": "enemy" }))),
+            PlayerId::P1,
+        );
 
         assert_eq!(state.players[PlayerId::P2].hand.len(), 0);
         assert_eq!(state.players[PlayerId::P2].exile.len(), 0);

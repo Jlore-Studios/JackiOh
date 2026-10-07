@@ -34,7 +34,11 @@ mod r185_the_ais_seat_and_the_board_history_r419 {
             PlayerId::P2,
             Zone::Hand { player: PlayerId::P2 },
         );
-        let slot = ZoneSlot { player: PlayerId::P2, row: Row::Backrow, lane: 2 };
+        let slot = ZoneSlot {
+            player: PlayerId::P2,
+            row: Row::Backrow,
+            lane: 2,
+        };
         if !place_on_field(&mut state, &mut trap, slot, PlaceOnFieldOptions::default()) {
             panic!("no zone");
         }

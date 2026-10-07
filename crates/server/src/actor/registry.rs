@@ -24,9 +24,9 @@ use tokio::sync::OnceCell;
 use jackioh_engine::{PLAYER_IDS, PerPlayer, PlayerId, portrait_or_default};
 
 use crate::actor::contracts::one_tx;
-use crate::actor::ws_server::Socket;
 use crate::actor::engine;
 use crate::actor::match_actor::{MatchActor, MatchActorInput, create_match_actor, last_boards_of};
+use crate::actor::ws_server::Socket;
 use crate::api::http::{ApiError, ApiErrorCode, lock};
 use crate::app::{App, now_ms};
 use crate::config::{GLITCH_BOARDS_SAMPLED, MATCH_CEILING_MINUTES};
@@ -62,7 +62,9 @@ enum RebuildError {
 impl From<RebuildError> for AttachError {
     fn from(error: RebuildError) -> AttachError {
         match error {
-            RebuildError::NotFound => AttachError::Api(ApiError::new(ApiErrorCode::NotFound, "no such match")),
+            RebuildError::NotFound => {
+                AttachError::Api(ApiError::new(ApiErrorCode::NotFound, "no such match"))
+            }
             RebuildError::Internal(message) => AttachError::Internal(message),
         }
     }
@@ -110,7 +112,11 @@ fn initial_clocks(now: i64, ceiling_minutes: i64) -> MatchClocks {
 /// match (`matches_mode_of`, as `api/game_records.rs` files a record): the same answer at the start
 /// and at every rebuild, so a rebuilt actor folds the same game. Every other mode's decks were built.
 fn dealt_for(mode: Option<QueueMode>) -> Option<Vec<PlayerId>> {
-    if matches!(mode, Some(QueueMode::Random)) { Some(PLAYER_IDS.to_vec()) } else { None }
+    if matches!(mode, Some(QueueMode::Random)) {
+        Some(PLAYER_IDS.to_vec())
+    } else {
+        None
+    }
 }
 
 impl Registry {
@@ -144,13 +150,19 @@ impl Registry {
         let (boards, sampled, derived_mode) = one_tx!(app.db, |t| {
             // R417: each seat's last server-match board, frozen on the match as it starts.
             let boards = (
-                t.last_boards_get(&first.profile_id, LastBoardKind::Server).await?.unwrap_or_default(),
-                t.last_boards_get(&second.profile_id, LastBoardKind::Server).await?.unwrap_or_default(),
+                t.last_boards_get(&first.profile_id, LastBoardKind::Server)
+                    .await?
+                    .unwrap_or_default(),
+                t.last_boards_get(&second.profile_id, LastBoardKind::Server)
+                    .await?
+                    .unwrap_or_default(),
             );
             // R678: two other players' last server boards — never either seat's own — sampled once,
             // here, and frozen on the row beside the decks, so every rebuild folds the same Glitch. A
             // seat with no board to sample gets the empty one; with none at all the field is left off.
-            let sampled = t.last_boards_sample_others(&profile_ids, GLITCH_BOARDS_SAMPLED as i64).await?;
+            let sampled = t
+                .last_boards_sample_others(&profile_ids, GLITCH_BOARDS_SAMPLED as i64)
+                .await?;
             // R433: the mode is read off what made the match — its tickets, its room or its series,
             // which the reserved `open` skeleton already links — so it reads the same before the row
             // is written as `rebuild` reads it after, and both fold the same setup. R672: a rematch
@@ -163,7 +175,10 @@ impl Registry {
         })
         .map_err(|error| ApiError::internal(error.to_string()))?;
 
-        let glitch_boards = (sampled.first().cloned().unwrap_or_default(), sampled.get(1).cloned().unwrap_or_default());
+        let glitch_boards = (
+            sampled.first().cloned().unwrap_or_default(),
+            sampled.get(1).cloned().unwrap_or_default(),
+        );
         let match_row = MatchRow {
             id: input.match_id.clone(),
             seed: input.seed.clone(),
@@ -179,8 +194,16 @@ impl Registry {
             created_at: now,
             finished_at: None,
             clocks: initial_clocks(now, MATCH_CEILING_MINUTES),
-            last_boards: if boards.0.len() + boards.1.len() > 0 { Some(boards) } else { None },
-            glitch_boards: if sampled.is_empty() { None } else { Some(glitch_boards) },
+            last_boards: if boards.0.len() + boards.1.len() > 0 {
+                Some(boards)
+            } else {
+                None
+            },
+            glitch_boards: if sampled.is_empty() {
+                None
+            } else {
+                Some(glitch_boards)
+            },
             // R642: the portraits the seats were dealt, frozen on the row so a rebuilt actor (and a
             // reconnected client) reads the same pair.
             portraits: Some((
@@ -199,10 +222,13 @@ impl Registry {
         // it refused; the engine panics, and the panic is that error.)
         let (last_boards, glitch) = last_boards_of(&match_row);
         let args = engine::create_game_args(&match_row.seed, &match_row.decks, last_boards, glitch, dealt);
-        let state = std::panic::catch_unwind(AssertUnwindSafe(|| engine::begin_game(&engine::create_game(&args)).state))
-            .map_err(|payload| ApiError::internal(panic_text(payload)))?;
+        let state = std::panic::catch_unwind(AssertUnwindSafe(|| {
+            engine::begin_game(&engine::create_game(&args)).state
+        }))
+        .map_err(|payload| ApiError::internal(panic_text(payload)))?;
 
-        one_tx!(app.db, |t| t.matches_create(&match_row).await?).map_err(|error| ApiError::internal(error.to_string()))?;
+        one_tx!(app.db, |t| t.matches_create(&match_row).await?)
+            .map_err(|error| ApiError::internal(error.to_string()))?;
         let match_id = match_row.id.clone();
         let players = match_row.players.clone();
         let actor = create_match_actor(
@@ -228,7 +254,9 @@ impl Registry {
             (match_row, log, mode)
         })
         .map_err(store)?;
-        let Some(match_row) = match_row else { return Err(RebuildError::NotFound) };
+        let Some(match_row) = match_row else {
+            return Err(RebuildError::NotFound);
+        };
 
         let dealt = dealt_for(mode);
         let (last_boards, glitch_boards) = last_boards_of(&match_row);
@@ -284,7 +312,10 @@ impl Registry {
         let outcome = cell.get_or_init(|| self.rebuild(app, match_id)).await.clone();
         if mine {
             let mut rebuilding = lock(&self.rebuilding);
-            if rebuilding.get(match_id).is_some_and(|current| Arc::ptr_eq(current, &cell)) {
+            if rebuilding
+                .get(match_id)
+                .is_some_and(|current| Arc::ptr_eq(current, &cell))
+            {
                 rebuilding.shift_remove(match_id);
             }
         }
@@ -313,12 +344,21 @@ impl Registry {
     /// Hands a socket to the seat this profile holds, rebuilding the actor first if it is not in
     /// memory. The socket itself is never told anything but its own `view_for` (§10.8). (TS resolved
     /// with the seat for the caller's log; SURFACE §11.2 answers `()`, and the actor logs the seat.)
-    pub async fn attach(&self, app: &Arc<App>, match_id: &str, profile_id: &str, socket: Socket) -> Result<(), AttachError> {
+    pub async fn attach(
+        &self,
+        app: &Arc<App>,
+        match_id: &str,
+        profile_id: &str,
+        socket: Socket,
+    ) -> Result<(), AttachError> {
         let actor = self.actor_for(app, match_id).await?;
         // Identical to a missing match on purpose: a socket learns nothing about matches it is not a
         // player in (§9.1).
         let Some(seat) = actor.seat_of(profile_id) else {
-            return Err(AttachError::Api(ApiError::new(ApiErrorCode::NotFound, "no such match")));
+            return Err(AttachError::Api(ApiError::new(
+                ApiErrorCode::NotFound,
+                "no such match",
+            )));
         };
         actor.attach(seat, socket);
         Ok(())

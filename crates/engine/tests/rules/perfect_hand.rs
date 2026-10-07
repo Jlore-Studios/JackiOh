@@ -59,7 +59,15 @@ fn def(name: &str, type_: &str, set: &str, index: u32, extra: Value) -> CardDef 
 }
 
 /// TS `unit(name, set, attack, health, extra)`: `extra.keywords` goes on both faces, the rest on the def.
-fn unit(name: &str, set: &str, index: u32, attack: i32, health: i32, keywords: Value, rest: Value) -> CardDef {
+fn unit(
+    name: &str,
+    set: &str,
+    index: u32,
+    attack: i32,
+    health: i32,
+    keywords: Value,
+    rest: Value,
+) -> CardDef {
     def(
         name,
         "Unit",
@@ -82,7 +90,15 @@ fn zealot() -> CardDef {
 
 /// A 4/4 Charge for 1: the one card that enables lethal.
 fn charger() -> CardDef {
-    unit("charger", "Classic+", 4902, 4, 4, json!([{ "kind": "Charge" }]), json!({}))
+    unit(
+        "charger",
+        "Classic+",
+        4902,
+        4,
+        4,
+        json!([{ "kind": "Charge" }]),
+        json!({}),
+    )
 }
 
 /// The best stats per mana in the pool, 9/9 for 2.
@@ -92,7 +108,15 @@ fn big_body() -> CardDef {
 
 /// Always tied; "ph-tie-a" sorts first by id but sits at a later index than "ph-tie-b" (index 1).
 fn tie_a() -> CardDef {
-    unit("tie-a", "Classic+", 4904, 3, 3, json!([]), json!({ "index": "4999" }))
+    unit(
+        "tie-a",
+        "Classic+",
+        4904,
+        3,
+        3,
+        json!([]),
+        json!({ "index": "4999" }),
+    )
 }
 
 fn tie_b() -> CardDef {
@@ -139,7 +163,15 @@ fn plus_token() -> CardDef {
 }
 
 fn pool() -> Vec<CardDef> {
-    vec![charger(), big_body(), tie_a(), tie_b(), sleeper(), quiet_spell(), quiet_trap()]
+    vec![
+        charger(),
+        big_body(),
+        tie_a(),
+        tie_b(),
+        sleeper(),
+        quiet_spell(),
+        quiet_trap(),
+    ]
 }
 
 fn defs() -> Vec<CardDef> {
@@ -195,7 +227,11 @@ fn act(state: &GameState, body: Value) -> ReduceResult {
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     for player in [P1, P2] {
-        let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
+        let keep: Vec<String> = state.players[player]
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
         state = act(
             &state,
             json!({ "type": "mulligan", "keep": keep, "playerId": player }),
@@ -234,7 +270,9 @@ fn holding(seed: &str, others: &[String], radiant: bool, mana: Option<i32>) -> H
         .into_iter()
         .next()
         .expect("the zealot");
-    find_instance_mut(&mut state, &card.id).expect("the zealot in hand").radiant = radiant;
+    find_instance_mut(&mut state, &card.id)
+        .expect("the zealot in hand")
+        .radiant = radiant;
     let held: Vec<CardInstance> = others
         .iter()
         .flat_map(|def_id| in_hand(&mut state, def_id, P1, 1))
@@ -257,7 +295,13 @@ fn cast(state: &GameState, instance_id: &str) -> ReduceResult {
 }
 
 fn hand_ids(state: &GameState) -> Vec<String> {
-    state.players.p1.hand.iter().map(|card| card.def_id.clone()).collect()
+    state
+        .players
+        .p1
+        .hand
+        .iter()
+        .map(|card| card.def_id.clone())
+        .collect()
 }
 
 fn rank_ids(state: &GameState, radiant: bool) -> Vec<String> {
@@ -287,7 +331,9 @@ fn sorted(mut ids: Vec<String>) -> Vec<String> {
 
 /// TS `list.indexOf(id)`: -1 when absent.
 fn index_of(list: &[String], id: &str) -> i64 {
-    list.iter().position(|entry| entry == id).map_or(-1, |at| at as i64)
+    list.iter()
+        .position(|entry| entry == id)
+        .map_or(-1, |at| at as i64)
 }
 
 /// `expect(list).toEqual(expect.arrayContaining(expected))`.
@@ -315,9 +361,11 @@ mod e34_the_perfect_hand_ranking_r29_r387_r416 {
             sorted(pool().into_iter().map(|entry| entry.id).collect())
         );
         // Asked by nobody in particular, the zealot is a Classic+ card like any other.
-        assert!(rank_perfect_hand(&state, P1, json_as(json!({})))
-            .iter()
-            .any(|scored| scored.def.id == zealot().id));
+        assert!(
+            rank_perfect_hand(&state, P1, json_as(json!({})))
+                .iter()
+                .any(|scored| scored.def.id == zealot().id)
+        );
     }
 
     #[test]
@@ -356,12 +404,25 @@ mod e34_the_perfect_hand_ranking_r29_r387_r416 {
         let Holding { mut state, .. } = holding("ph-lethal", &[], false, None);
         state.players.p2.hero.health = 4;
         let lethal = rank_perfect_hand(&state, P1, json_as(json!({ "selfDefId": zealot().id })));
-        assert_eq!(lethal.first().map(|scored| scored.def.id.clone()), Some(charger().id));
-        assert_eq!(lethal.first().map(|scored| json_of(scored.priority)), Some(json!("lethal")));
+        assert_eq!(
+            lethal.first().map(|scored| scored.def.id.clone()),
+            Some(charger().id)
+        );
+        assert_eq!(
+            lethal.first().map(|scored| json_of(scored.priority)),
+            Some(json!("lethal"))
+        );
         state.players.p2.hero.health = 30;
         let value = rank_perfect_hand(&state, P1, json_as(json!({ "selfDefId": zealot().id })));
-        assert_eq!(value.first().map(|scored| scored.def.id.clone()), Some(big_body().id));
-        assert!(value.iter().all(|scored| json_of(scored.priority) != json!("lethal")));
+        assert_eq!(
+            value.first().map(|scored| scored.def.id.clone()),
+            Some(big_body().id)
+        );
+        assert!(
+            value
+                .iter()
+                .all(|scored| json_of(scored.priority) != json!("lethal"))
+        );
     }
 
     #[test]
@@ -385,8 +446,13 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
     use super::*;
 
     #[test]
-    fn r416_the_hand_keeps_its_size_each_card_goes_to_the_graveyard_not_a_discard_and_the_top_n_arrive_in_rank_order() {
-        let Holding { state, zealot_id, held } = holding(
+    fn r416_the_hand_keeps_its_size_each_card_goes_to_the_graveyard_not_a_discard_and_the_top_n_arrive_in_rank_order()
+     {
+        let Holding {
+            state,
+            zealot_id,
+            held,
+        } = holding(
             "ph-replace",
             &[core_giant().id, core_giant().id, quiet_spell().id],
             false,
@@ -401,10 +467,12 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
                 Some(Zone::Graveyard { player: P1 })
             );
         }
-        assert!(!after
-            .events
-            .iter()
-            .any(|event| event.event_type() == GameEventType::Discarded));
+        assert!(
+            !after
+                .events
+                .iter()
+                .any(|event| event.event_type() == GameEventType::Discarded)
+        );
         assert!(contains_all(
             &def_ids_of(&after.events, GameEventType::EnteredGraveyard),
             &[core_giant().id, quiet_spell().id]
@@ -427,8 +495,11 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
 
     #[test]
     fn r11_a_unit_token_card_in_the_replaced_hand_ceases_to_exist_instead_of_reaching_the_graveyard() {
-        let Holding { state, zealot_id, held } =
-            holding("ph-token", &[plus_token().id, quiet_spell().id], false, None);
+        let Holding {
+            state,
+            zealot_id,
+            held,
+        } = holding("ph-token", &[plus_token().id, quiet_spell().id], false, None);
         let after = cast(&state, &zealot_id).state;
         let token = held.first();
         let spell = held.get(1);
@@ -439,7 +510,9 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
 
     #[test]
     fn r29_with_lethal_on_the_board_the_lethal_enabling_card_arrives_first() {
-        let Holding { mut state, zealot_id, .. } = holding(
+        let Holding {
+            mut state, zealot_id, ..
+        } = holding(
             "ph-lethal-hand",
             &[quiet_spell().id, quiet_spell().id],
             false,

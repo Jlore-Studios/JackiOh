@@ -201,14 +201,20 @@ fn both(script: Script) -> CardScripts {
 
 /// Deal `amount` to the enemy hero, the one visible thing a concatenated script list can do.
 fn hit(amount: i32) -> Option<Hook> {
-    Some(hook(move |_ctx| vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))]))
+    Some(hook(move |_ctx| {
+        vec![damage(json_as(
+            json!({ "to": { "of": "enemyHero" }, "amount": amount }),
+        ))]
+    }))
 }
 
 /// A trap whose one trigger, on `on`, deals `amount` to the enemy hero.
 fn trap(id: &str, on: GameEventType, amount: i32) -> CardScripts {
     both(Script {
         triggers: vec![TriggerDef::new(id, &[on], move |_ctx, _event| {
-            vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))]
+            vec![damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": amount }),
+            ))]
         })],
         ..Script::default()
     })
@@ -221,20 +227,42 @@ fn scripts() -> Vec<(String, CardScripts)> {
         (
             ingredient_a().id,
             CardScripts {
-                base: Script { cry: hit(1), death: hit(3), ..Script::default() },
-                radiant: Script { cry: hit(10), death: hit(30), ..Script::default() },
+                base: Script {
+                    cry: hit(1),
+                    death: hit(3),
+                    ..Script::default()
+                },
+                radiant: Script {
+                    cry: hit(10),
+                    death: hit(30),
+                    ..Script::default()
+                },
             },
         ),
         (
             ingredient_b().id,
             CardScripts {
-                base: Script { cry: hit(2), death: hit(4), ..Script::default() },
-                radiant: Script { cry: hit(20), death: hit(40), ..Script::default() },
+                base: Script {
+                    cry: hit(2),
+                    death: hit(4),
+                    ..Script::default()
+                },
+                radiant: Script {
+                    cry: hit(20),
+                    death: hit(40),
+                    ..Script::default()
+                },
             },
         ),
         (trap_played().id, trap("on-play", GameEventType::CardPlayed, 1)),
-        (trap_attack().id, trap("on-attack", GameEventType::AttackDeclared, 2)),
-        (field_trap_played().id, trap("on-play", GameEventType::CardPlayed, 5)),
+        (
+            trap_attack().id,
+            trap("on-attack", GameEventType::AttackDeclared, 2),
+        ),
+        (
+            field_trap_played().id,
+            trap("on-play", GameEventType::CardPlayed, 5),
+        ),
     ]
 }
 
@@ -321,7 +349,9 @@ fn fuse_fresh(state: &mut GameState, args: Value) -> Option<CardInstance> {
 
 /// The card under `id` as the state holds it now (TS's live object).
 fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id).cloned().unwrap_or_else(|| panic!("no card {id}"))
+    find_instance(state, id)
+        .cloned()
+        .unwrap_or_else(|| panic!("no card {id}"))
 }
 
 fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
@@ -384,7 +414,10 @@ mod fuse_the_transient_definition_r77_m3_t7 {
 
         assert!(state.transient_defs.is_empty());
         let result = must(
-            fuse_fresh(&mut state, json!({ "ingredients": [target, food], "target": target })),
+            fuse_fresh(
+                &mut state,
+                json!({ "ingredients": [target, food], "target": target }),
+            ),
             "a fusion",
         );
 
@@ -404,7 +437,10 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         let other = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 3), json!({}));
         let other_food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 4), json!({}));
         let second = must(
-            fuse_fresh(&mut state, json!({ "ingredients": [other, other_food], "target": other })),
+            fuse_fresh(
+                &mut state,
+                json!({ "ingredients": [other, other_food], "target": other }),
+            ),
             "a second fusion",
         );
         assert_ne!(second.def_id, result.def_id);
@@ -421,7 +457,10 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({})); // base 1/1, radiant 5/2
 
         let result = must(
-            fuse_fresh(&mut state, json!({ "ingredients": [target, food], "target": target })),
+            fuse_fresh(
+                &mut state,
+                json!({ "ingredients": [target, food], "target": target }),
+            ),
             "a fusion",
         );
         let fused = def_of(Some(&state), &result.def_id).clone();
@@ -444,7 +483,10 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({})); // Rush / Rush + Cleave
 
         let result = must(
-            fuse_fresh(&mut state, json!({ "ingredients": [target, food], "target": target })),
+            fuse_fresh(
+                &mut state,
+                json!({ "ingredients": [target, food], "target": target }),
+            ),
             "a fusion",
         );
         let fused = def_of(Some(&state), &result.def_id).clone();
@@ -455,10 +497,20 @@ mod fuse_the_transient_definition_r77_m3_t7 {
             vec!["Cleave", "Divine Shield", "Rush", "Taunt"]
         );
         // A union, so the keyword both ingredients share appears once.
-        assert_eq!(keyword_kinds(&fused.base.keywords).iter().filter(|kind| *kind == "Taunt").count(), 1);
+        assert_eq!(
+            keyword_kinds(&fused.base.keywords)
+                .iter()
+                .filter(|kind| *kind == "Taunt")
+                .count(),
+            1
+        );
         let mut tags: Vec<String> = json_of(&fused.tags)
             .as_array()
-            .map(|tags| tags.iter().filter_map(|tag| tag.as_str().map(str::to_string)).collect())
+            .map(|tags| {
+                tags.iter()
+                    .filter_map(|tag| tag.as_str().map(str::to_string))
+                    .collect()
+            })
             .unwrap_or_default();
         tags.sort();
         assert_eq!(tags, vec!["Felinor", "Human"]);
@@ -472,7 +524,11 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({})); // Cry 2, Death 4
 
         let result = must(
-            fuse_in(&mut state, &mut sink, json!({ "ingredients": [target, food], "target": target })),
+            fuse_in(
+                &mut state,
+                &mut sink,
+                json!({ "ingredients": [target, food], "target": target }),
+            ),
             "a fusion",
         );
         let fused_scripts = script_of(&state, result.def_id.as_str());
@@ -480,11 +536,21 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         assert!(fused_scripts.base.death.is_some());
 
         let card = live(&state, &result.id);
-        run_hook(&mut sink.on(&mut state), &card, HookName::Cry, HookOptions::default());
+        run_hook(
+            &mut sink.on(&mut state),
+            &card,
+            HookName::Cry,
+            HookOptions::default(),
+        );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 3); // 1 + 2
 
         let card = live(&state, &result.id);
-        run_hook(&mut sink.on(&mut state), &card, HookName::Death, HookOptions::default());
+        run_hook(
+            &mut sink.on(&mut state),
+            &card,
+            HookName::Death,
+            HookOptions::default(),
+        );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 3 - 7); // 3 + 4
     }
 
@@ -496,20 +562,34 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({})); // radiant Cry 20
 
         let result = must(
-            fuse_in(&mut state, &mut sink, json!({ "ingredients": [target, food], "target": target })),
+            fuse_in(
+                &mut state,
+                &mut sink,
+                json!({ "ingredients": [target, food], "target": target }),
+            ),
             "a fusion",
         );
         assert!(result.radiant);
 
         // The running face is the radiant one (§5.2), and it is the radiant texts that were fused.
         let card = live(&state, &result.id);
-        run_hook(&mut sink.on(&mut state), &card, HookName::Cry, HookOptions::default());
+        run_hook(
+            &mut sink.on(&mut state),
+            &card,
+            HookName::Cry,
+            HookOptions::default(),
+        );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 30); // 10 + 20
 
         // The base face of the same definition still holds the base pair.
         live_mut(&mut state, &result.id).radiant = false;
         let card = live(&state, &result.id);
-        run_hook(&mut sink.on(&mut state), &card, HookName::Cry, HookOptions::default());
+        run_hook(
+            &mut sink.on(&mut state),
+            &card,
+            HookName::Cry,
+            HookOptions::default(),
+        );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 30 - 3); // 1 + 2
     }
 
@@ -519,7 +599,10 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         let target_a = put(&mut under, &ingredient_a().id, slot(P1, Row::Units, 1), json!({})); // cost 2
         let food_a = put(&mut under, &ingredient_b().id, slot(P1, Row::Units, 2), json!({})); // cost 1
         let cheap = must(
-            fuse_fresh(&mut under, json!({ "ingredients": [target_a, food_a], "target": target_a })),
+            fuse_fresh(
+                &mut under,
+                json!({ "ingredients": [target_a, food_a], "target": target_a }),
+            ),
             "a fusion",
         );
         assert_eq!(json_of(def_of(Some(&under), &cheap.def_id).cost), json!(3));
@@ -529,11 +612,20 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         let target_b = put(&mut over, &ingredient_a().id, slot(P1, Row::Units, 1), json!({})); // cost 2
         let food_b = put(&mut over, &pricey().id, slot(P1, Row::Units, 2), json!({})); // cost 4
         let capped = must(
-            fuse_fresh(&mut over, json!({ "ingredients": [target_b, food_b], "target": target_b })),
+            fuse_fresh(
+                &mut over,
+                json!({ "ingredients": [target_b, food_b], "target": target_b }),
+            ),
             "a fusion",
         );
-        assert_eq!(json_of(def_of(Some(&over), &capped.def_id).cost), json!(std::cmp::min(2 + 4, FUSE_COST_CAP)));
-        assert_eq!(json_of(def_of(Some(&over), &capped.def_id).cost), json!(FUSE_COST_CAP));
+        assert_eq!(
+            json_of(def_of(Some(&over), &capped.def_id).cost),
+            json!(std::cmp::min(2 + 4, FUSE_COST_CAP))
+        );
+        assert_eq!(
+            json_of(def_of(Some(&over), &capped.def_id).cost),
+            json!(FUSE_COST_CAP)
+        );
     }
 
     #[test]
@@ -547,7 +639,10 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         assert_eq!(printed_cost(&state, &target), 1);
         assert_eq!(printed_cost(&state, &embiggen), 2);
         let base = must(
-            fuse_fresh(&mut state, json!({ "ingredients": [target, embiggen], "target": target })),
+            fuse_fresh(
+                &mut state,
+                json!({ "ingredients": [target, embiggen], "target": target }),
+            ),
             "a fusion",
         );
         assert_eq!(json_of(def_of(Some(&state), &base.def_id).cost), json!(3));
@@ -562,10 +657,16 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         let bigger = live(&other, &bigger.id);
         assert_eq!(printed_cost(&other, &bigger), 4);
         let capped = must(
-            fuse_fresh(&mut other, json!({ "ingredients": [target2, bigger], "target": target2 })),
+            fuse_fresh(
+                &mut other,
+                json!({ "ingredients": [target2, bigger], "target": target2 }),
+            ),
             "a fusion",
         );
-        assert_eq!(json_of(def_of(Some(&other), &capped.def_id).cost), json!(std::cmp::min(1 + 4, FUSE_COST_CAP)));
+        assert_eq!(
+            json_of(def_of(Some(&other), &capped.def_id).cost),
+            json!(std::cmp::min(1 + 4, FUSE_COST_CAP))
+        );
     }
 
     #[test]
@@ -575,7 +676,10 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         let food = first_in_hand(&mut state, &fieldy().id, "a Field Spell ingredient"); // Field Spell
 
         let result = must(
-            fuse_fresh(&mut state, json!({ "ingredients": [target, food], "target": target })),
+            fuse_fresh(
+                &mut state,
+                json!({ "ingredients": [target, food], "target": target }),
+            ),
             "a fusion",
         );
         assert_eq!(json_of(def_of(Some(&state), &result.def_id).type_), json!("Unit"));
@@ -587,8 +691,14 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         let a = first_in_hand(&mut state, &spell_a().id, "a Spell");
         let b = first_in_hand(&mut state, &spell_b().id, "another Spell");
 
-        let crafted = must(fuse_fresh(&mut state, json!({ "ingredients": [a, b], "toHand": "p1" })), "a crafted card");
-        assert_eq!(json_of(def_of(Some(&state), &crafted.def_id).type_), json!("Spell"));
+        let crafted = must(
+            fuse_fresh(&mut state, json!({ "ingredients": [a, b], "toHand": "p1" })),
+            "a crafted card",
+        );
+        assert_eq!(
+            json_of(def_of(Some(&state), &crafted.def_id).type_),
+            json!("Spell")
+        );
     }
 
     #[test]
@@ -598,20 +708,32 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         let field = first_in_hand(&mut state, &field_trap_played().id, "a Field Trap");
 
         let crafted = must(
-            fuse_fresh(&mut state, json!({ "ingredients": [plain_trap, field], "toHand": "p1" })),
+            fuse_fresh(
+                &mut state,
+                json!({ "ingredients": [plain_trap, field], "toHand": "p1" }),
+            ),
             "a crafted card",
         );
-        assert_eq!(json_of(def_of(Some(&state), &crafted.def_id).type_), json!("Field Trap"));
+        assert_eq!(
+            json_of(def_of(Some(&state), &crafted.def_id).type_),
+            json!("Field Trap")
+        );
 
         // Two plain Traps share their type and stay one (§5.1).
         let mut two = game("fuse-type-two-traps");
         let first = first_in_hand(&mut two, &trap_played().id, "a Trap");
         let second = first_in_hand(&mut two, &trap_attack().id, "another Trap");
         let plain_result = must(
-            fuse_fresh(&mut two, json!({ "ingredients": [first, second], "toHand": "p1" })),
+            fuse_fresh(
+                &mut two,
+                json!({ "ingredients": [first, second], "toHand": "p1" }),
+            ),
             "a crafted card",
         );
-        assert_eq!(json_of(def_of(Some(&two), &plain_result.def_id).type_), json!("Trap"));
+        assert_eq!(
+            json_of(def_of(Some(&two), &plain_result.def_id).type_),
+            json!("Trap")
+        );
     }
 }
 
@@ -645,7 +767,10 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         let target = live(&state, &target.id);
 
         let result = must(
-            fuse_fresh(&mut state, json!({ "ingredients": [target, food], "target": target })),
+            fuse_fresh(
+                &mut state,
+                json!({ "ingredients": [target, food], "target": target }),
+            ),
             "a fusion",
         );
 
@@ -692,19 +817,28 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         }
         {
             let card = live_mut(&mut state, &food.id);
-            card.buffs = AttackHealth { attack: 3, health: -1 };
+            card.buffs = AttackHealth {
+                attack: 3,
+                health: -1,
+            };
             card.granted_keywords = json_as(json!([{ "kind": "Taunt" }, { "kind": "Charge" }]));
         }
         let target = live(&state, &target.id);
         let food = live(&state, &food.id);
 
         let result = must(
-            fuse_fresh(&mut state, json!({ "ingredients": [target, food], "target": target })),
+            fuse_fresh(
+                &mut state,
+                json!({ "ingredients": [target, food], "target": target }),
+            ),
             "a fusion",
         );
 
         assert_eq!(result.buffs, AttackHealth { attack: 4, health: 1 });
-        assert_eq!(keyword_kinds(&result.granted_keywords), vec!["Charge", "Lifesteal", "Taunt"]);
+        assert_eq!(
+            keyword_kinds(&result.granted_keywords),
+            vec!["Charge", "Lifesteal", "Taunt"]
+        );
         // Layer 4 sits on top of the fused printed stats (§10.4): 3/4 printed plus +4/+1.
         assert_eq!(stats(&state, &live(&state, &result.id)), (7, 5));
     }
@@ -731,7 +865,10 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         let target = live(&state, &target.id);
 
         let result = must(
-            fuse_fresh(&mut state, json!({ "ingredients": [target, food], "target": target })),
+            fuse_fresh(
+                &mut state,
+                json!({ "ingredients": [target, food], "target": target }),
+            ),
             "a fusion",
         );
 
@@ -773,7 +910,11 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         let before = state.counters.destroyed;
         let mut sink = Sink::for_state(&state);
         let result = must(
-            fuse_in(&mut state, &mut sink, json!({ "ingredients": [target, food], "target": target })),
+            fuse_in(
+                &mut state,
+                &mut sink,
+                json!({ "ingredients": [target, food], "target": target }),
+            ),
             "a fusion",
         );
         let events = sink.events;
@@ -804,7 +945,8 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
     }
 
     #[test]
-    fn r77_radiant_unlicensed_experimentation_fuses_onto_each_matching_permanent_separately_one_fusion_at_a_time() {
+    fn r77_radiant_unlicensed_experimentation_fuses_onto_each_matching_permanent_separately_one_fusion_at_a_time()
+     {
         // #85r's loop is the card's (M4); what the engine promises is that each fusion is its own,
         // with its own transient definition and its own kept instance, rather than one fusion of
         // everything at once.
@@ -815,7 +957,11 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         let played = put(&mut state, &ingredient_b().id, slot(P2, Row::Units, 1), json!({}));
 
         let one = must(
-            fuse_in(&mut state, &mut sink, json!({ "ingredients": [played], "target": first })),
+            fuse_in(
+                &mut state,
+                &mut sink,
+                json!({ "ingredients": [played], "target": first }),
+            ),
             "the first fusion",
         );
         assert_eq!(one.id, first.id);
@@ -825,7 +971,11 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         // leaves the first fusion's card and definition alone.
         let again = put(&mut state, &ingredient_b().id, slot(P2, Row::Units, 2), json!({}));
         let two = must(
-            fuse_in(&mut state, &mut sink, json!({ "ingredients": [again], "target": second })),
+            fuse_in(
+                &mut state,
+                &mut sink,
+                json!({ "ingredients": [again], "target": second }),
+            ),
             "the second fusion",
         );
         assert_eq!(two.id, second.id);
@@ -847,14 +997,24 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
     use super::*;
 
     #[test]
-    fn r77_a_fused_trap_has_every_ingredients_trigger_condition_and_runs_only_the_script_whose_condition_was_met() {
+    fn r77_a_fused_trap_has_every_ingredients_trigger_condition_and_runs_only_the_script_whose_condition_was_met()
+     {
         let mut state = game("fuse-trap-conditions");
         let mut sink = Sink::for_state(&state);
-        let target = put(&mut state, &trap_played().id, slot(P1, Row::Backrow, 1), json!({})); // fires on cardPlayed, for 1
+        let target = put(
+            &mut state,
+            &trap_played().id,
+            slot(P1, Row::Backrow, 1),
+            json!({}),
+        ); // fires on cardPlayed, for 1
         let food = first_in_hand(&mut state, &trap_attack().id, "a second trap"); // fires on attackDeclared, for 2
 
         let result = must(
-            fuse_in(&mut state, &mut sink, json!({ "ingredients": [target, food], "target": target })),
+            fuse_in(
+                &mut state,
+                &mut sink,
+                json!({ "ingredients": [target, food], "target": target }),
+            ),
             "a fused trap",
         );
         let triggers = script_of(&state, result.def_id.as_str()).base.triggers.clone();
@@ -877,7 +1037,12 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
     fn r77_a_fused_trap_is_consumed_unless_it_is_a_field_trap() {
         let mut consumed = game("fuse-trap-consumed");
         let mut consumed_sink = Sink::for_state(&consumed);
-        let plain_target = put(&mut consumed, &trap_played().id, slot(P1, Row::Backrow, 1), json!({}));
+        let plain_target = put(
+            &mut consumed,
+            &trap_played().id,
+            slot(P1, Row::Backrow, 1),
+            json!({}),
+        );
         let extra = first_in_hand(&mut consumed, &trap_attack().id, "a second trap");
         let plain_result = must(
             fuse_in(
@@ -887,19 +1052,33 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
             ),
             "a fused Trap",
         );
-        assert_eq!(json_of(def_of(Some(&consumed), &plain_result.def_id).type_), json!("Trap"));
+        assert_eq!(
+            json_of(def_of(Some(&consumed), &plain_result.def_id).type_),
+            json!("Trap")
+        );
 
         fire_traps_for(&mut consumed_sink.on(&mut consumed), &played_by_p2());
         assert!(card_at(&consumed, slot(P1, Row::Backrow, 1)).is_none());
         assert_eq!(
-            consumed.players.p1.graveyard.iter().map(|card| card.id.clone()).collect::<Vec<_>>(),
+            consumed
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .map(|card| card.id.clone())
+                .collect::<Vec<_>>(),
             vec![plain_result.id.clone()]
         );
 
         // A Field Trap target keeps the type, so the fused trap stays and can fire again (§5.1).
         let mut stays = game("fuse-field-trap-stays");
         let mut stays_sink = Sink::for_state(&stays);
-        let field_target = put(&mut stays, &field_trap_played().id, slot(P1, Row::Backrow, 1), json!({}));
+        let field_target = put(
+            &mut stays,
+            &field_trap_played().id,
+            slot(P1, Row::Backrow, 1),
+            json!({}),
+        );
         let other = first_in_hand(&mut stays, &trap_attack().id, "a second trap");
         let field_result = must(
             fuse_in(
@@ -909,7 +1088,10 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
             ),
             "a fused Field Trap",
         );
-        assert_eq!(json_of(def_of(Some(&stays), &field_result.def_id).type_), json!("Field Trap"));
+        assert_eq!(
+            json_of(def_of(Some(&stays), &field_result.def_id).type_),
+            json!("Field Trap")
+        );
 
         let played = played_by_p2();
         fire_traps_for(&mut stays_sink.on(&mut stays), &played);
@@ -933,7 +1115,11 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
         let a = live(&state, &a.id);
 
         let two = must(
-            fuse_in(&mut state, &mut sink, json!({ "ingredients": [a, b], "toHand": "p1" })),
+            fuse_in(
+                &mut state,
+                &mut sink,
+                json!({ "ingredients": [a, b], "toHand": "p1" }),
+            ),
             "a crafted card",
         );
         assert_ne!(two.id, a.id);
@@ -943,7 +1129,13 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
         assert_eq!(effective_cost(&state, &two, Default::default()), 0);
         assert_eq!(two.zone, Zone::Hand { player: P1 });
         assert_eq!(
-            state.players.p1.hand.iter().map(|card| card.id.clone()).collect::<Vec<_>>(),
+            state
+                .players
+                .p1
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect::<Vec<_>>(),
             vec![two.id.clone()]
         );
         assert!(find_instance(&state, &a.id).is_none());
@@ -958,10 +1150,19 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
             fuse_fresh(&mut three, json!({ "ingredients": [x, y, z], "toHand": "p1" })),
             "a crafted card",
         );
-        assert_eq!(json_of(def_of(Some(&three), &crafted.def_id).cost), json!(std::cmp::min(3, FUSE_COST_CAP)));
+        assert_eq!(
+            json_of(def_of(Some(&three), &crafted.def_id).cost),
+            json!(std::cmp::min(3, FUSE_COST_CAP))
+        );
         assert_eq!(crafted.cost_override, Some(0));
         assert_eq!(
-            three.players.p1.hand.iter().map(|card| card.id.clone()).collect::<Vec<_>>(),
+            three
+                .players
+                .p1
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect::<Vec<_>>(),
             vec![crafted.id.clone()]
         );
 

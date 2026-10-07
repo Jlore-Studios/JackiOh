@@ -41,14 +41,20 @@ impl Bench<'_> {
 
 fn sink_for(state: &mut GameState) -> Bench<'_> {
     let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench { state, events: Vec::new(), rng }
+    Bench {
+        state,
+        events: Vec::new(),
+        rng,
+    }
 }
 
 /// Rewind resolving with its declared target (R81), as the play pipeline hands it over.
 fn rewind_on(state: &mut GameState, target: &CardInstance, player: PlayerId, radiant: bool) -> Vec<String> {
     let mut sink = sink_for(state);
     let card = resolving_card(sink.state, &rewind().id, player, radiant);
-    let targets = vec![Selection::Instance { instance_id: target.id.clone() }];
+    let targets = vec![Selection::Instance {
+        instance_id: target.id.clone(),
+    }];
     run_hook_resumable(
         &mut sink.sink(),
         &card,
@@ -134,7 +140,11 @@ mod e13_trigger_a_cry {
         rewind_on(&mut state, &unit, P1, false);
         let pending = open_as(&state, PromptKind::Target, P1);
         assert_eq!(pending.resume.hook, TRIGGER_CRY_HOOK);
-        let selections: Vec<Selection> = pending.options.iter().map(|option| option.selection.clone()).collect();
+        let selections: Vec<Selection> = pending
+            .options
+            .iter()
+            .map(|option| option.selection.clone())
+            .collect();
         assert_eq!(
             json_of(&selections),
             json!([
@@ -142,11 +152,21 @@ mod e13_trigger_a_cry {
                 { "pick": "hero", "player": "p2" },
             ])
         );
-        let labels: Vec<String> = pending.options.iter().map(|option| option.label.clone()).collect();
+        let labels: Vec<String> = pending
+            .options
+            .iter()
+            .map(|option| option.label.clone())
+            .collect();
         assert_eq!(labels, vec![plain.name.clone(), "Enemy hero".to_string()]);
         let keys: Vec<String> = pending.options.iter().map(|option| option.key.clone()).collect();
-        assert_eq!(keys, vec![format!("instance:{}", enemy.id), "hero:p2".to_string()]);
-        assert_eq!(json_of(&view_for(&state, P2).pending), json!({ "forYou": false, "pendingFor": "p1" }));
+        assert_eq!(
+            keys,
+            vec![format!("instance:{}", enemy.id), "hero:p2".to_string()]
+        );
+        assert_eq!(
+            json_of(&view_for(&state, P2).pending),
+            json!({ "forYou": false, "pendingFor": "p1" })
+        );
         // Rewind's heal waits behind the Cry.
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH);
 
@@ -216,7 +236,10 @@ mod e13_trigger_a_cry {
                 _ => None,
             })
             .collect();
-        assert_eq!(order, vec!["damage 4".to_string(), "damage 2".to_string(), "heal".to_string()]);
+        assert_eq!(
+            order,
+            vec!["damage 4".to_string(), "damage 2".to_string(), "heal".to_string()]
+        );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 7);
     }
 
@@ -227,12 +250,19 @@ mod e13_trigger_a_cry {
         let mine = put(&mut state, &plain.id, slot(P1, Units, 2), json!({}));
         rewind_on(&mut state, &unit, P1, false);
         let pending = open_as(&state, PromptKind::Target, P1);
-        let selections: Vec<Selection> = pending.options.iter().map(|option| option.selection.clone()).collect();
+        let selections: Vec<Selection> = pending
+            .options
+            .iter()
+            .map(|option| option.selection.clone())
+            .collect();
         assert_eq!(json_of(&selections), json!([{ "pick": "hero", "player": "p2" }]));
         answer_keys(&mut state, &["hero:p2"]);
         // The empty slot is what the script reads as "nothing tributed": 5, and the unit is untouched.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 5);
-        let lane_two = state.players.p1.units[1].as_ref().and_then(|pile| pile.first()).map(|card| card.id.clone());
+        let lane_two = state.players.p1.units[1]
+            .as_ref()
+            .and_then(|pile| pile.first())
+            .map(|card| card.id.clone());
         assert_eq!(lane_two, Some(mine.id.clone()));
     }
 
@@ -243,7 +273,12 @@ mod e13_trigger_a_cry {
         rewind_on(&mut state, &unit, P1, false);
         open_as(&state, PromptKind::Target, P1);
         let mut moving = live(&state, &unit).clone();
-        move_to_zone(&mut state, &mut moving, OffFieldZone::Graveyard, Default::default());
+        move_to_zone(
+            &mut state,
+            &mut moving,
+            OffFieldZone::Graveyard,
+            Default::default(),
+        );
         answer_keys(&mut state, &["hero:p2"]);
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
         // The triggering list goes on.
@@ -255,7 +290,12 @@ mod e13_trigger_a_cry {
         let mut state = board("cry-none");
         let buried = put(&mut state, &crier().id, slot(P1, Units, 1), json!({}));
         let mut top = new_instance(&mut state, &plain.id, P1, Zone::Hand { player: P1 });
-        assert!(place_on_field(&mut state, &mut top, slot(P1, Units, 1), json_as(json!({ "stack": true }))));
+        assert!(place_on_field(
+            &mut state,
+            &mut top,
+            slot(P1, Units, 1),
+            json_as(json!({ "stack": true }))
+        ));
         let plain_unit = put(&mut state, &plain.id, slot(P1, Units, 2), json!({}));
         let spell = grave_unit(&mut state, P1, &spark().id);
         let dead = grave_unit(&mut state, P1, &crier().id);
@@ -270,7 +310,10 @@ mod e13_trigger_a_cry {
                 let mut ctx = make_context(
                     &mut inner,
                     None,
-                    HookOptions { controller: Some(P1), ..Default::default() },
+                    HookOptions {
+                        controller: Some(P1),
+                        ..Default::default()
+                    },
                 );
                 (trigger_cry(json_as(json!({ "instanceId": card.id }))).apply)(&mut ctx);
             }
@@ -317,7 +360,11 @@ mod e13_trigger_a_cry {
             Some(&mut log),
         );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 6);
-        let last_events = state.applied.last().map(|applied| applied.events.clone()).unwrap_or_default();
+        let last_events = state
+            .applied
+            .last()
+            .map(|applied| applied.events.clone())
+            .unwrap_or_default();
         assert!(events_of_type(&last_events, GameEventType::CardPlayed).is_empty());
         expect_replays("cry-replay", &decks, &log, &state);
         let pile = must(state.players.p1.units[0].clone(), "the aimer's pile");

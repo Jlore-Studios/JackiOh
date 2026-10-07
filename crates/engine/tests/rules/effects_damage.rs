@@ -32,7 +32,11 @@ impl Bench<'_> {
 
 fn sink_for(state: &mut GameState) -> Bench<'_> {
     let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench { state, events: Vec::new(), rng }
+    Bench {
+        state,
+        events: Vec::new(),
+        rng,
+    }
 }
 
 /// A Spell, so a damage effect can run with the resolving card as its source.
@@ -68,12 +72,19 @@ fn game(seed: &str) -> GameState {
 /// spread `extra` (here only ever `targets`) over the context `makeContext` built.
 /// `make_context` reborrows its sink, and the context outlives this function, so the sink is leaked
 /// for the test's length (as `fixtures::harness::sink_for` leaks its rng and events).
-fn ctx_for<'a>(sink: EngineSink<'a>, self_: Option<&CardInstance>, targets: Option<Vec<Selection>>) -> EffectContext<'a> {
+fn ctx_for<'a>(
+    sink: EngineSink<'a>,
+    self_: Option<&CardInstance>,
+    targets: Option<Vec<Selection>>,
+) -> EffectContext<'a> {
     let sink: &'a mut EngineSink<'a> = Box::leak(Box::new(sink));
     let mut ctx = make_context(
         sink,
         self_,
-        HookOptions { controller: Some(P1), ..Default::default() },
+        HookOptions {
+            controller: Some(P1),
+            ..Default::default()
+        },
     );
     if let Some(targets) = targets {
         ctx.targets = targets;
@@ -95,7 +106,9 @@ fn resolving_bolt(state: &mut GameState) -> CardInstance {
 }
 
 fn on_instance(instance: &CardInstance) -> Option<Vec<Selection>> {
-    Some(vec![Selection::Instance { instance_id: instance.id.clone() }])
+    Some(vec![Selection::Instance {
+        instance_id: instance.id.clone(),
+    }])
 }
 
 /// The card as it stands in the state now (TS held the live object).
@@ -109,7 +122,10 @@ fn json_of<T: serde::Serialize>(value: &T) -> Value {
 
 /// One field of every `damage` event, in order (TS `eventsOfType(events, "damage").map((e) => e.<key>)`).
 fn damage_field(events: &[GameEvent], key: &str) -> Vec<Value> {
-    events_of_type(events, GameEventType::Damage).iter().map(|event| json_of(event)[key].clone()).collect()
+    events_of_type(events, GameEventType::Damage)
+        .iter()
+        .map(|event| json_of(event)[key].clone())
+        .collect()
 }
 
 mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
@@ -128,7 +144,10 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         let mut ctx = ctx_for(sink.sink(), Some(&self_card), on_instance(&enemy));
         run(&mut ctx, vec![effect]);
         assert_eq!(live(ctx.state, &enemy).damage, 3);
-        assert_eq!(live(ctx.state, &enemy).last_damaged_by, Some(self_card.id.clone()));
+        assert_eq!(
+            live(ctx.state, &enemy).last_damaged_by,
+            Some(self_card.id.clone())
+        );
         assert_eq!(
             json_of(&events_of_type(ctx.events, GameEventType::Damage)),
             json!([{ "type": "damage", "sourceId": self_card.id, "targetId": enemy.id, "amount": 3, "combat": false }])
@@ -142,13 +161,26 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         let mut sink = sink_for(&mut state);
         let mut ctx = ctx_for(sink.sink(), Some(&self_card), None);
 
-        run(&mut ctx, vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 4 })))]);
+        run(
+            &mut ctx,
+            vec![damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": 4 }),
+            ))],
+        );
         assert_eq!(ctx.state.players.p2.hero.health, 26);
 
-        run(&mut ctx, vec![damage(json_as(json!({ "to": { "of": "selfHero" }, "amount": 2 })))]);
+        run(
+            &mut ctx,
+            vec![damage(json_as(
+                json!({ "to": { "of": "selfHero" }, "amount": 2 }),
+            ))],
+        );
         assert_eq!(ctx.state.players.p1.hero.health, 28);
 
-        run(&mut ctx, vec![damage(json_as(json!({ "to": { "of": "self" }, "amount": 1 })))]);
+        run(
+            &mut ctx,
+            vec![damage(json_as(json!({ "to": { "of": "self" }, "amount": 1 })))],
+        );
         assert_eq!(live(ctx.state, &self_card).damage, 1);
 
         assert_eq!(
@@ -168,7 +200,10 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         {
             let mut sink = sink_for(&mut state);
             let mut blocked = ctx_for(sink.sink(), Some(&self_card), on_instance(&armoured_unit));
-            run(&mut blocked, vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 4 })))]);
+            run(
+                &mut blocked,
+                vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 4 })))],
+            );
             assert_eq!(live(blocked.state, &armoured_unit).damage, 0);
             assert_eq!(events_of_type(blocked.events, GameEventType::Damage).len(), 0);
         }
@@ -178,18 +213,27 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
             let mut through = ctx_for(sink.sink(), Some(&self_card), on_instance(&armoured_unit));
             run(
                 &mut through,
-                vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 4, "ignoreArmor": true })))],
+                vec![damage(json_as(
+                    json!({ "to": { "of": "chosen" }, "amount": 4, "ignoreArmor": true }),
+                ))],
             );
             assert_eq!(live(through.state, &armoured_unit).damage, 4);
         }
 
         let mut sink = sink_for(&mut state);
         let mut hero = ctx_for(sink.sink(), Some(&self_card), None);
-        run(&mut hero, vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 5 })))]);
+        run(
+            &mut hero,
+            vec![damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": 5 }),
+            ))],
+        );
         assert_eq!(hero.state.players.p2.hero.health, 28); // 5 less the hero's 3 Armor
         run(
             &mut hero,
-            vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 5, "ignoreArmor": true })))],
+            vec![damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": 5, "ignoreArmor": true }),
+            ))],
         );
         assert_eq!(hero.state.players.p2.hero.health, 23);
     }
@@ -206,10 +250,15 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
             &mut ctx,
             vec![
                 damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 }))),
-                damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1, "combat": true }))),
+                damage(json_as(
+                    json!({ "to": { "of": "chosen" }, "amount": 1, "combat": true }),
+                )),
             ],
         );
-        assert_eq!(damage_field(ctx.events, "combat"), vec![json!(false), json!(true)]);
+        assert_eq!(
+            damage_field(ctx.events, "combat"),
+            vec![json!(false), json!(true)]
+        );
     }
 
     #[test]
@@ -221,7 +270,12 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         {
             let mut sink = sink_for(&mut state);
             let mut plain_hit = ctx_for(sink.sink(), Some(&self_card), None);
-            run(&mut plain_hit, vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 3 })))]);
+            run(
+                &mut plain_hit,
+                vec![damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 3 }),
+                ))],
+            );
             assert_eq!(plain_hit.state.players.p1.hero.health, 20);
             assert_eq!(events_of_type(plain_hit.events, GameEventType::Healed).len(), 0);
         }
@@ -230,7 +284,9 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         let mut stealing = ctx_for(sink.sink(), Some(&self_card), None);
         run(
             &mut stealing,
-            vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 3, "lifesteal": true })))],
+            vec![damage(json_as(
+                json!({ "to": { "of": "enemyHero" }, "amount": 3, "lifesteal": true }),
+            ))],
         );
         assert_eq!(stealing.state.players.p1.hero.health, 23);
         assert_eq!(
@@ -252,7 +308,9 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
             let mut capped = ctx_for(sink.sink(), Some(&self_card), None);
             run(
                 &mut capped,
-                vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 6, "lifesteal": true })))],
+                vec![damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 6, "lifesteal": true }),
+                ))],
             );
             assert_eq!(capped.state.players.p2.hero.health, 28);
             assert_eq!(capped.state.players.p1.hero.health, 22);
@@ -265,7 +323,9 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
             let mut negated = ctx_for(sink.sink(), Some(&self_card), on_instance(&shielded_unit));
             run(
                 &mut negated,
-                vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 5, "lifesteal": true })))],
+                vec![damage(json_as(
+                    json!({ "to": { "of": "chosen" }, "amount": 5, "lifesteal": true }),
+                ))],
             );
             assert_eq!(live(negated.state, &shielded_unit).damage, 0);
             assert_eq!(negated.state.players.p1.hero.health, 22);
@@ -283,7 +343,10 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         );
         assert_eq!(sourceless.state.players.p2.hero.health, 26);
         assert_eq!(sourceless.state.players.p1.hero.health, 22);
-        assert_eq!(damage_field(sourceless.events, "sourceId").first(), Some(&Value::Null));
+        assert_eq!(
+            damage_field(sourceless.events, "sourceId").first(),
+            Some(&Value::Null)
+        );
     }
 
     #[test]
@@ -296,7 +359,10 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         {
             let mut sink = sink_for(&mut state);
             let mut empty = ctx_for(sink.sink(), None, None);
-            run(&mut empty, vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 5 })))]);
+            run(
+                &mut empty,
+                vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 5 })))],
+            );
             seen.push(empty.events.clone());
         }
         {
@@ -304,22 +370,39 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
             let mut gone = ctx_for(
                 sink.sink(),
                 None,
-                Some(vec![Selection::Instance { instance_id: "no-such-card".into() }]),
+                Some(vec![Selection::Instance {
+                    instance_id: "no-such-card".into(),
+                }]),
             );
-            run(&mut gone, vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 5 })))]);
+            run(
+                &mut gone,
+                vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 5 })))],
+            );
             seen.push(gone.events.clone());
         }
         {
             let mut sink = sink_for(&mut state);
-            let mut mode = ctx_for(sink.sink(), None, Some(vec![Selection::Mode { option: "burn".into() }]));
-            run(&mut mode, vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 5 })))]);
+            let mut mode = ctx_for(
+                sink.sink(),
+                None,
+                Some(vec![Selection::Mode {
+                    option: "burn".into(),
+                }]),
+            );
+            run(
+                &mut mode,
+                vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 5 })))],
+            );
             seen.push(mode.events.clone());
         }
         // And "itself" while no instance is resolving (a Spell's own script).
         {
             let mut sink = sink_for(&mut state);
             let mut no_self = ctx_for(sink.sink(), None, None);
-            run(&mut no_self, vec![damage(json_as(json!({ "to": { "of": "self" }, "amount": 5 })))]);
+            run(
+                &mut no_self,
+                vec![damage(json_as(json!({ "to": { "of": "self" }, "amount": 5 })))],
+            );
             seen.push(no_self.events.clone());
         }
 

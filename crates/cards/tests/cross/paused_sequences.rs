@@ -130,14 +130,27 @@ fn register_fixture_scripts(id: &str, scripts: CardScripts) {
 fn fixture(s: &mut Scenario, id: &str, ty: &str, script: Script, stats: Option<Value>) {
     let stats = stats.unwrap_or_else(|| json!({ "attack": 2, "health": 2 }));
     let face = fixture_face(id, ty, &stats, &json!([]));
-    s.state_mut().transient_defs.insert(id.to_string(), fixture_def(id, ty, 0, &face));
-    register_fixture_scripts(id, CardScripts { base: script.clone(), radiant: script });
+    s.state_mut()
+        .transient_defs
+        .insert(id.to_string(), fixture_def(id, ty, 0, &face));
+    register_fixture_scripts(
+        id,
+        CardScripts {
+            base: script.clone(),
+            radiant: script,
+        },
+    );
 }
 
 fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lane: i32) -> CardInstance {
     let card = new_instance(s.state_mut(), def_id, player, Zone::Hand { player });
     assert!(
-        place_on_field(s.state_mut(), &mut card.clone(), ZoneSlot { player, row, lane }, Default::default()),
+        place_on_field(
+            s.state_mut(),
+            &mut card.clone(),
+            ZoneSlot { player, row, lane },
+            Default::default()
+        ),
         "could not place {def_id}"
     );
     s.card(&card.id).clone()
@@ -154,7 +167,17 @@ fn delay_armed(s: &mut Scenario, card: &CardInstance) {
         data: IndexMap::new(),
     };
     with_sink(s, |sink| {
-        schedule_delayed(sink, P1, DelayedAt { phase: Phase::Start, player: P1 }, resume, None, None);
+        schedule_delayed(
+            sink,
+            P1,
+            DelayedAt {
+                phase: Phase::Start,
+                player: P1,
+            },
+            resume,
+            None,
+            None,
+        );
     });
 }
 
@@ -199,7 +222,10 @@ fn find_index(events: &[GameEvent], matches: impl Fn(&GameEvent) -> bool) -> i64
 
 /// TS `types.indexOf(type)`: the first index of the event type, or -1.
 fn type_index(types: &[&str], ty: &str) -> i64 {
-    types.iter().position(|seen| *seen == ty).map_or(-1, |at| at as i64)
+    types
+        .iter()
+        .position(|seen| *seen == ty)
+        .map_or(-1, |at| at as i64)
 }
 
 /// The event types, in order (TS `events.map((event) => event.type)`).
@@ -261,11 +287,19 @@ mod r174_r59_a_delayed_effect_that_asks_is_still_followed_by_the_check_before_th
                 resume: IndexMap::from([
                     (
                         "armed",
-                        hook(|_ctx| vec![effects::choose_target(json_as(json!({ "step": "picked", "scope": any_unit() })))]),
+                        hook(|_ctx| {
+                            vec![effects::choose_target(json_as(
+                                json!({ "step": "picked", "scope": any_unit() }),
+                            ))]
+                        }),
                     ),
                     (
                         "picked",
-                        hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 3 })))]),
+                        hook(|_ctx| {
+                            vec![effects::damage(json_as(
+                                json!({ "to": { "of": "chosen" }, "amount": 3 }),
+                            ))]
+                        }),
                     ),
                 ]),
                 ..Script::default()
@@ -277,7 +311,10 @@ mod r174_r59_a_delayed_effect_that_asks_is_still_followed_by_the_check_before_th
 
         // D2: #50's steal of the 3/3 Tempo Timmy, due at the same point and created after D1 (R68).
         let timmy = must(s.unit(P2, 1), "p2's Tempo Timmy");
-        s.play(KPOP_FANATIC, json!({ "targets": [{ "pick": "instance", "instanceId": timmy.id }] }));
+        s.play(
+            KPOP_FANATIC,
+            json!({ "targets": [{ "pick": "instance", "instanceId": timmy.id }] }),
+        );
         s.start_turn();
         assert_eq!(pending_kind(&s), Some(PromptKind::Target));
 
@@ -285,10 +322,9 @@ mod r174_r59_a_delayed_effect_that_asks_is_still_followed_by_the_check_before_th
         // has died as p2's by the time the steal fires, and the steal fizzles (R76, R174).
         s.answer(json!(timmy.id));
 
-        assert!(!s
-            .events()
-            .iter()
-            .any(|event| matches!(event, GameEvent::ControlChanged { instance_id, .. } if *instance_id == timmy.id)));
+        assert!(!s.events().iter().any(
+            |event| matches!(event, GameEvent::ControlChanged { instance_id, .. } if *instance_id == timmy.id)
+        ));
         s.expect_in_zone(&timmy.id, "graveyard");
     }
 }
@@ -297,7 +333,8 @@ mod r59_no_state_check_between_the_halves_of_one_delayed_effect_or_one_cast {
     use super::*;
 
     #[test]
-    fn r59_a_unit_a_delayed_effect_brought_to_0_before_its_prompt_is_still_standing_to_be_saved_by_the_answer_r156() {
+    fn r59_a_unit_a_delayed_effect_brought_to_0_before_its_prompt_is_still_standing_to_be_saved_by_the_answer_r156()
+     {
         register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [RENO], "library": [RENO, RENO] },
@@ -316,14 +353,22 @@ mod r59_no_state_check_between_the_halves_of_one_delayed_effect_or_one_cast {
                         "armed",
                         hook(move |_ctx| {
                             vec![
-                                effects::damage(json_as(json!({ "to": { "of": "instance", "instanceId": timmy_id }, "amount": 5 }))),
-                                effects::choose_target(json_as(json!({ "step": "save", "scope": any_unit() }))),
+                                effects::damage(json_as(
+                                    json!({ "to": { "of": "instance", "instanceId": timmy_id }, "amount": 5 }),
+                                )),
+                                effects::choose_target(json_as(
+                                    json!({ "step": "save", "scope": any_unit() }),
+                                )),
                             ]
                         }),
                     ),
                     (
                         "save",
-                        hook(|_ctx| vec![effects::buff(json_as(json!({ "target": { "of": "chosen" }, "health": 10 })))]),
+                        hook(|_ctx| {
+                            vec![effects::buff(json_as(
+                                json!({ "target": { "of": "chosen" }, "health": 10 }),
+                            ))]
+                        }),
                     ),
                 ]),
                 ..Script::default()
@@ -367,13 +412,19 @@ mod r59_no_state_check_between_the_halves_of_one_delayed_effect_or_one_cast {
                 static_flags: flags(json!({ "castOnDraw": true })),
                 cry: Some(hook(move |_ctx| {
                     vec![
-                        effects::damage(json_as(json!({ "to": { "of": "instance", "instanceId": timmy_id }, "amount": 5 }))),
+                        effects::damage(json_as(
+                            json!({ "to": { "of": "instance", "instanceId": timmy_id }, "amount": 5 }),
+                        )),
                         effects::choose_target(json_as(json!({ "step": "save", "scope": any_unit() }))),
                     ]
                 })),
                 resume: IndexMap::from([(
                     "save",
-                    hook(|_ctx| vec![effects::buff(json_as(json!({ "target": { "of": "chosen" }, "health": 10 })))]),
+                    hook(|_ctx| {
+                        vec![effects::buff(json_as(
+                            json!({ "target": { "of": "chosen" }, "health": 10 }),
+                        ))]
+                    }),
                 )]),
                 ..Script::default()
             },
@@ -397,7 +448,8 @@ mod r127_a_continuation_with_no_instance_keeps_its_script_across_its_own_prompt 
     use super::*;
 
     #[test]
-    fn r127_a_delayed_effect_whose_card_has_ceased_to_exist_still_resolves_the_step_its_prompt_asked_for_r113() {
+    fn r127_a_delayed_effect_whose_card_has_ceased_to_exist_still_resolves_the_step_its_prompt_asked_for_r113()
+     {
         register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [RENO], "backrow": [MANA_WELL], "library": [RENO, RENO] },
@@ -411,11 +463,19 @@ mod r127_a_continuation_with_no_instance_keeps_its_script_across_its_own_prompt 
                 resume: IndexMap::from([
                     (
                         "armed",
-                        hook(|_ctx| vec![effects::choose_target(json_as(json!({ "step": "picked", "scope": any_unit() })))]),
+                        hook(|_ctx| {
+                            vec![effects::choose_target(json_as(
+                                json!({ "step": "picked", "scope": any_unit() }),
+                            ))]
+                        }),
                     ),
                     (
                         "picked",
-                        hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 3 })))]),
+                        hook(|_ctx| {
+                            vec![effects::damage(json_as(
+                                json!({ "to": { "of": "chosen" }, "amount": 3 }),
+                            ))]
+                        }),
                     ),
                 ]),
                 ..Script::default()
@@ -437,7 +497,10 @@ mod r127_a_continuation_with_no_instance_keeps_its_script_across_its_own_prompt 
 
         let timmy = must(s.unit(P2, 1), "p2's Tempo Timmy");
         s.start_turn();
-        must(s.state().pending.clone(), "the orphaned delayed effect's target prompt");
+        must(
+            s.state().pending.clone(),
+            "the orphaned delayed effect's target prompt",
+        );
         s.answer(json!(timmy.id));
 
         // The answer re-enters the step the prompt named, so Timmy takes the 3 and dies.
@@ -500,7 +563,10 @@ mod s10_3_r113_a_trap_s_list_is_resumable_like_any_other {
         // Its list is done: the trap reaches the graveyard, and the play has gone on to its end.
         assert_eq!(def_ids(&s.pile(P2, "graveyard")), vec!["edge-r5-asking-trap"]);
         assert!(s.state().pending.is_none());
-        assert_eq!(s.unit(P1, 1).map(|card| card.def_id.clone()), Some(RENO.to_string()));
+        assert_eq!(
+            s.unit(P1, 1).map(|card| card.def_id.clone()),
+            Some(RENO.to_string())
+        );
     }
 }
 
@@ -522,7 +588,11 @@ mod r53_r113_a_forced_run_waits_for_a_death_hook_s_question_before_its_next_comb
             "edge-r5-last-word",
             "Unit",
             Script {
-                death: Some(hook(|_ctx| vec![effects::choose_target(json_as(json!({ "step": "said", "scope": any_unit() })))])),
+                death: Some(hook(|_ctx| {
+                    vec![effects::choose_target(json_as(
+                        json!({ "step": "said", "scope": any_unit() }),
+                    ))]
+                })),
                 resume: IndexMap::from([("said", hook(|_ctx| vec![]))]),
                 ..Script::default()
             },
@@ -536,7 +606,10 @@ mod r53_r113_a_forced_run_waits_for_a_death_hook_s_question_before_its_next_comb
         // back and it dies in that combat's check, whose Death hook asks p1 something.
         s.start_turn();
         s.expect_in_zone(&last_word.id, "graveyard");
-        assert_eq!(must(s.state().pending.clone(), "the Death hook's question").player_id, P1);
+        assert_eq!(
+            must(s.state().pending.clone(), "the Death hook's question").player_id,
+            P1
+        );
         // §4.5 step 3 is part of the first combat's check (R59), and the run is a sequence spanning the
         // question (R113): Timmy's combat comes after the answer, not over the open prompt.
         assert_eq!(s.card(&moths.id).damage, 1);
@@ -574,7 +647,9 @@ mod r89_a_death_hook_s_answered_step_reads_the_unit_as_it_died {
                     "revenge",
                     hook(|ctx| {
                         let buffs = ctx.self_.as_ref().map_or(0, |card| card.buffs.attack);
-                        vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 + buffs })))]
+                        vec![effects::damage(json_as(
+                            json!({ "to": { "of": "chosen" }, "amount": 1 + buffs }),
+                        ))]
                     }),
                 )]),
                 ..Script::default()
@@ -582,7 +657,12 @@ mod r89_a_death_hook_s_answered_step_reads_the_unit_as_it_died {
             Some(json!({ "attack": 2, "health": 2 })),
         );
         let grudge = place_fixture(&mut s, "edge-r5-grudge", P2, Row::Units, 1);
-        must(find_instance_mut(s.state_mut(), &grudge.id), "the grudge on the field").buffs.attack += 3;
+        must(
+            find_instance_mut(s.state_mut(), &grudge.id),
+            "the grudge on the field",
+        )
+        .buffs
+        .attack += 3;
         assert_eq!(unit_view(s.state(), s.card(&grudge.id)).attack, 5);
 
         // First Strike: Timmy kills it without being struck back.
@@ -605,9 +685,15 @@ fn asking_trap_on_play(s: &mut Scenario, id: &str) {
         "Trap",
         Script {
             triggers: vec![
-                TriggerDef::new(format!("{id}:asks"), &[GameEventType::CardPlayed], move |_ctx, _event| {
-                    vec![effects::choose_mode(json_as(json!({ "options": ["ok"], "step": "answered", "prompt": prompt })))]
-                })
+                TriggerDef::new(
+                    format!("{id}:asks"),
+                    &[GameEventType::CardPlayed],
+                    move |_ctx, _event| {
+                        vec![effects::choose_mode(json_as(
+                            json!({ "options": ["ok"], "step": "answered", "prompt": prompt }),
+                        ))]
+                    },
+                )
                 .with_when(played_by_opponent),
             ],
             resume: IndexMap::from([("answered", hook(|_ctx| vec![]))]),
@@ -632,7 +718,10 @@ mod r17_r118_r427_the_traps_an_event_is_still_owed_answer_it_before_the_interrup
         place_fixture(&mut s, "edge-r6-l7-asks-on-play", P2, Row::Backrow, 1);
 
         s.play(ME_AND_MR_TOKEN, json!({}));
-        assert_eq!(must(s.state().pending.clone(), "the first trap's question").player_id, P2);
+        assert_eq!(
+            must(s.state().pending.clone(), "the first trap's question").player_id,
+            P2
+        );
         // §10.3, R118: the trap answering `cardPlayed` resolves before the play goes on, so the Cry waits.
         let rush_tokens = |s: &Scenario| {
             [1, 2, 3, 4, 5]
@@ -646,7 +735,10 @@ mod r17_r118_r427_the_traps_an_event_is_still_owed_answer_it_before_the_interrup
         // The play went on: the Cry summoned its Rush Token, the play resolved, and only then did
         // Sheepish answer it (R427): Me and Mr Token is a Sheep, and the token its Cry made stands.
         assert!(s.state().pending.is_none());
-        assert_eq!(s.unit(P1, 1).map(|card| card.def_id.clone()), Some(SHEEP_TOKEN.to_string()));
+        assert_eq!(
+            s.unit(P1, 1).map(|card| card.def_id.clone()),
+            Some(SHEEP_TOKEN.to_string())
+        );
         assert_eq!(
             rush_tokens(&s),
             1,
@@ -681,13 +773,19 @@ mod r59_activating_a_power_whose_draw_s_cast_is_still_asking_runs_no_state_check
                 static_flags: flags(json!({ "castOnDraw": true })),
                 cry: Some(hook(move |_ctx| {
                     vec![
-                        effects::damage(json_as(json!({ "to": { "of": "instance", "instanceId": timmy_id }, "amount": 5 }))),
+                        effects::damage(json_as(
+                            json!({ "to": { "of": "instance", "instanceId": timmy_id }, "amount": 5 }),
+                        )),
                         effects::choose_target(json_as(json!({ "step": "save", "scope": any_unit() }))),
                     ]
                 })),
                 resume: IndexMap::from([(
                     "save",
-                    hook(|_ctx| vec![effects::buff(json_as(json!({ "target": { "of": "chosen" }, "health": 10 })))]),
+                    hook(|_ctx| {
+                        vec![effects::buff(json_as(
+                            json!({ "target": { "of": "chosen" }, "health": 10 }),
+                        ))]
+                    }),
                 )]),
                 ..Script::default()
             },
@@ -734,7 +832,10 @@ mod r44_r113_my_pawn_s_ai_turn_is_a_sequence_and_the_other_player_s_prompt_only_
         // R44: the AI plays out the rest of the turn while p1 is locked out, so once p2 has answered it
         // goes on until the turn ends; the turn is not left to a player the lockout keeps out of it.
         assert!(s.state().pending.is_none());
-        assert!(s.state().turn > turn, "the AI turn should have played on to its end");
+        assert!(
+            s.state().turn > turn,
+            "the AI turn should have played on to its end"
+        );
         assert!(!s.state().players.p1.ai_turn);
     }
 }
@@ -750,8 +851,9 @@ mod r70_r81_a_cast_asks_for_the_choices_its_card_declares {
             "p2": { "field": [TEMPO_TIMMY], "hand": [RENO] },
         }));
         let timmy = must(s.unit(P2, 1), "p2's Tempo Timmy");
-        let declared: Vec<TargetDecl> =
-            vec![decl(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit"] } }))];
+        let declared: Vec<TargetDecl> = vec![decl(
+            json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit"] } }),
+        )];
         fixture(
             &mut s,
             "edge-r6-l7-targeted-cod",
@@ -759,7 +861,11 @@ mod r70_r81_a_cast_asks_for_the_choices_its_card_declares {
             Script {
                 static_flags: flags(json!({ "castOnDraw": true })),
                 targets: declared,
-                cry: Some(hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 5 })))])),
+                cry: Some(hook(|_ctx| {
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "chosen" }, "amount": 5 }),
+                    ))]
+                })),
                 ..Script::default()
             },
             None,
@@ -813,18 +919,24 @@ mod r87_r113_r423_call_to_chaos_s_play_waits_for_the_cast_its_recursion_is_still
 
         s.play(CALL_TO_CHAOS, json!({}));
         // The play's own step 3 asks first.
-        must(s.state().pending.clone(), "the hook's question for the play of Call to Chaos");
+        must(
+            s.state().pending.clone(),
+            "the hook's question for the play of Call to Chaos",
+        );
         // R423: pin the roll the answer's Cry makes to three that include the recursion (its first rng
         // draw is the roll).
         let seed = s.state().seed.clone();
         let mut cursor: Option<u32> = None;
         let mut at: u32 = 0;
         while at < 5000 && cursor.is_none() {
-            let names: Vec<String> =
-                subsystems::roll_chaos_effects(&mut Rng::new(&seed, at), true, Some(subsystems::CHAOS_EFFECTS))
-                    .iter()
-                    .map(|effect| effect.name.to_string())
-                    .collect();
+            let names: Vec<String> = subsystems::roll_chaos_effects(
+                &mut Rng::new(&seed, at),
+                true,
+                Some(subsystems::CHAOS_EFFECTS),
+            )
+            .iter()
+            .map(|effect| effect.name.to_string())
+            .collect();
             if names.iter().any(|name| name == "recast") && !names.iter().any(|name| name == "draw") {
                 cursor = Some(at);
             }
@@ -832,12 +944,18 @@ mod r87_r113_r423_call_to_chaos_s_play_waits_for_the_cast_its_recursion_is_still
         }
         // TS `expect(cursor).toBeGreaterThanOrEqual(0)`: a cursor was found.
         assert!(cursor.is_some());
-        s.state_mut().rng_cursor = must(cursor, "a cursor whose radiant roll includes the recursion and not the draw");
+        s.state_mut().rng_cursor = must(
+            cursor,
+            "a cursor whose radiant roll includes the recursion and not the draw",
+        );
         s.answer(json!("ok"));
 
         // The Cry rolled three; the recursion is the list's last, so it resolved last, and its cast's
         // step 3 asks.
-        must(s.state().pending.clone(), "the hook's question for the cast Call to Chaos");
+        must(
+            s.state().pending.clone(),
+            "the hook's question for the cast Call to Chaos",
+        );
         let events: Vec<GameEvent> = s.last_events().to_vec();
         let opened = events
             .iter()
@@ -851,15 +969,14 @@ mod r87_r113_r423_call_to_chaos_s_play_waits_for_the_cast_its_recursion_is_still
             "events after the cast's prompt opened: {}",
             after.join(", ")
         );
-        assert!(!events
-            .iter()
-            .any(|event| matches!(event, GameEvent::CardResolved { instance_id, .. } if *instance_id == played.id)));
+        assert!(!events.iter().any(
+            |event| matches!(event, GameEvent::CardResolved { instance_id, .. } if *instance_id == played.id)
+        ));
 
         s.answer(json!("ok"));
-        assert!(s
-            .events()
-            .iter()
-            .any(|event| matches!(event, GameEvent::CardResolved { instance_id, .. } if *instance_id == played.id)));
+        assert!(s.events().iter().any(
+            |event| matches!(event, GameEvent::CardResolved { instance_id, .. } if *instance_id == played.id)
+        ));
     }
 }
 
@@ -882,14 +999,18 @@ mod r174_a_trap_owed_an_event_behind_another_trap_s_question_meets_the_event_as_
             "Trap",
             Script {
                 triggers: vec![
-                    TriggerDef::new("edge-r6-l7-asks-then-kills:asks", &[GameEventType::CardResolved], |_ctx, event| {
-                        vec![effects::choose_mode(json_as(json!({
-                            "options": ["ok"],
-                            "step": "answered",
-                            "prompt": "a question",
-                            "data": { "played": resolved_id(event) },
-                        })))]
-                    })
+                    TriggerDef::new(
+                        "edge-r6-l7-asks-then-kills:asks",
+                        &[GameEventType::CardResolved],
+                        |_ctx, event| {
+                            vec![effects::choose_mode(json_as(json!({
+                                "options": ["ok"],
+                                "step": "answered",
+                                "prompt": "a question",
+                                "data": { "played": resolved_id(event) },
+                            })))]
+                        },
+                    )
                     .with_when(permanent_resolved_by_opponent),
                 ],
                 resume: IndexMap::from([(
@@ -914,7 +1035,10 @@ mod r174_a_trap_owed_an_event_behind_another_trap_s_question_meets_the_event_as_
         // The played Timmy died before #85 was offered the event, so the play is no longer in play:
         // #85 is not set off (R61, R99), and Timmy stays in p1's graveyard rather than being fused away.
         let timmy = must(
-            s.pile(P1, "graveyard").iter().find(|card| card.def_id == TEMPO_TIMMY).cloned(),
+            s.pile(P1, "graveyard")
+                .iter()
+                .find(|card| card.def_id == TEMPO_TIMMY)
+                .cloned(),
             "Timmy in p1's graveyard",
         );
         s.expect_in_zone(&timmy.id, "graveyard");
@@ -944,11 +1068,15 @@ mod r174_r113_a_list_s_tail_after_a_prompt_still_meets_the_stay_the_play_chose {
             "edge-r6-l7-sac-ask-hit",
             "Spell",
             Script {
-                targets: vec![decl(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "ally", "of": ["unit"] } }))],
+                targets: vec![decl(
+                    json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "ally", "of": ["unit"] } }),
+                )],
                 cry: Some(hook(|_ctx| {
                     vec![
                         effects::sacrifice(json_as(json!({ "target": { "of": "chosen" } }))),
-                        effects::choose_mode(json_as(json!({ "options": ["ok"], "step": "answered", "prompt": "a question" }))),
+                        effects::choose_mode(json_as(
+                            json!({ "options": ["ok"], "step": "answered", "prompt": "a question" }),
+                        )),
                         effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 5 }))),
                     ]
                 })),
@@ -957,10 +1085,18 @@ mod r174_r113_a_list_s_tail_after_a_prompt_still_meets_the_stay_the_play_chose {
             },
             None,
         );
-        let spell = new_instance(s.state_mut(), "edge-r6-l7-sac-ask-hit", P1, Zone::Hand { player: P1 });
+        let spell = new_instance(
+            s.state_mut(),
+            "edge-r6-l7-sac-ask-hit",
+            P1,
+            Zone::Hand { player: P1 },
+        );
         s.state_mut().players.p1.hand.push(spell.clone());
 
-        s.play(&spell.id, json!({ "targets": [{ "pick": "instance", "instanceId": saintess.id }] }));
+        s.play(
+            &spell.id,
+            json!({ "targets": [{ "pick": "instance", "instanceId": saintess.id }] }),
+        );
         must(s.state().pending.clone(), "the Spell's question");
         // The sacrifice is a death in full: Reborn has already brought the Saintess back, a new arrival.
         assert_eq!(s.card(&saintess.id).reborn_spent, Some(true));
@@ -992,7 +1128,9 @@ mod r156_r113_a_death_pass_whose_hook_ends_in_a_nested_death_that_asks_still_owe
             "Unit",
             Script {
                 death: Some(hook(|_ctx| {
-                    vec![effects::choose_mode(json_as(json!({ "options": ["ok"], "step": "answered", "prompt": "a last word" })))]
+                    vec![effects::choose_mode(json_as(
+                        json!({ "options": ["ok"], "step": "answered", "prompt": "a last word" }),
+                    ))]
                 })),
                 resume: IndexMap::from([("answered", hook(|_ctx| vec![]))]),
                 ..Script::default()
@@ -1008,7 +1146,9 @@ mod r156_r113_a_death_pass_whose_hook_ends_in_a_nested_death_that_asks_still_owe
             "Unit",
             Script {
                 death: Some(hook(move |_ctx| {
-                    vec![effects::sacrifice(json_as(json!({ "target": { "of": "instance", "instanceId": asker_id } })))]
+                    vec![effects::sacrifice(json_as(
+                        json!({ "target": { "of": "instance", "instanceId": asker_id } }),
+                    ))]
                 })),
                 ..Script::default()
             },
@@ -1018,7 +1158,10 @@ mod r156_r113_a_death_pass_whose_hook_ends_in_a_nested_death_that_asks_still_owe
         let defender = must(s.unit(P1, 2), "p1's Right-house defender");
 
         // Radiant Hit Job on the defender destroys it and the unit beside it in lane 1 (lane 3 is empty).
-        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": defender.id }] }));
+        s.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": defender.id }] }),
+        );
         s.expect_in_zone(&sacrificer.id, "graveyard");
         s.expect_in_zone(&asker.id, "graveyard");
         must(s.state().pending.clone(), "the sacrificed unit's Death question");
@@ -1054,7 +1197,9 @@ mod r68_r62_a_delayed_effect_made_while_its_point_is_resolving_waits_for_the_nex
                     (
                         "armed",
                         hook(|_ctx| {
-                            vec![effects::choose_mode(json_as(json!({ "options": ["ok"], "step": "answered", "prompt": "a question" })))]
+                            vec![effects::choose_mode(json_as(
+                                json!({ "options": ["ok"], "step": "answered", "prompt": "a question" }),
+                            ))]
                         }),
                     ),
                     (
@@ -1067,7 +1212,11 @@ mod r68_r62_a_delayed_effect_made_while_its_point_is_resolving_waits_for_the_nex
                     ),
                     (
                         "later",
-                        hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 5 })))]),
+                        hook(|_ctx| {
+                            vec![effects::damage(json_as(
+                                json!({ "to": { "of": "enemyHero" }, "amount": 5 }),
+                            ))]
+                        }),
                     ),
                 ]),
                 ..Script::default()
@@ -1084,7 +1233,17 @@ mod r68_r62_a_delayed_effect_made_while_its_point_is_resolving_waits_for_the_nex
             data: IndexMap::new(),
         };
         with_sink(&mut s, |sink| {
-            schedule_delayed(sink, P1, DelayedAt { phase: Phase::Start, player: P1 }, resume, None, None);
+            schedule_delayed(
+                sink,
+                P1,
+                DelayedAt {
+                    phase: Phase::Start,
+                    player: P1,
+                },
+                resume,
+                None,
+                None,
+            );
         });
 
         s.start_turn();
@@ -1124,7 +1283,9 @@ mod s10_5_step_3_r113_step_3_s_hooks_resume_where_they_stopped_whatever_the_answ
             "Field Spell",
             Script {
                 on_play_hook: Some(hook(|_ctx| {
-                    vec![effects::choose_mode(json_as(json!({ "options": ["ok"], "step": "answered", "prompt": "a question" })))]
+                    vec![effects::choose_mode(json_as(
+                        json!({ "options": ["ok"], "step": "answered", "prompt": "a question" }),
+                    ))]
                 })),
                 resume: IndexMap::from([(
                     "answered",
@@ -1142,7 +1303,9 @@ mod s10_5_step_3_r113_step_3_s_hooks_resume_where_they_stopped_whatever_the_answ
             "Field Spell",
             Script {
                 on_play_hook: Some(hook(|_ctx| {
-                    vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                    ))]
                 })),
                 ..Script::default()
             },
@@ -1169,10 +1332,15 @@ mod s10_5_step_3_r113_step_3_s_hooks_resume_where_they_stopped_whatever_the_answ
 /// `options` is the TS literal `{ stats?: { attack, health }; keywords?: Keyword[] }` (`json!({})`
 /// for none).
 fn fixture_faces(state: &mut GameState, id: &str, ty: &str, scripts: CardScripts, options: Value) {
-    let stats = options.get("stats").cloned().unwrap_or_else(|| json!({ "attack": 2, "health": 2 }));
+    let stats = options
+        .get("stats")
+        .cloned()
+        .unwrap_or_else(|| json!({ "attack": 2, "health": 2 }));
     let keywords = options.get("keywords").cloned().unwrap_or_else(|| json!([]));
     let face = fixture_face(id, ty, &stats, &keywords);
-    state.transient_defs.insert(id.to_string(), fixture_def(id, ty, 0, &face));
+    state
+        .transient_defs
+        .insert(id.to_string(), fixture_def(id, ty, 0, &face));
     register_fixture_scripts(id, scripts);
 }
 
@@ -1191,13 +1359,21 @@ mod s5_2_r113_a_queued_trigger_s_parked_tail_runs_the_face_its_head_ran {
         // (radiant 20). The same trigger id on both faces, as a card's radiant face keeps its triggers.
         let asking = |first: i32, second: i32| -> Script {
             Script {
-                triggers: vec![TriggerDef::new("edge-r7-l7-face", &[GameEventType::CardPlayed], move |_ctx, _event| {
-                    vec![
-                        effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": first }))),
-                        effects::choose_mode(json_as(json!({ "options": ["ok"], "step": "ok", "prompt": "a question" }))),
-                        effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": second }))),
-                    ]
-                })],
+                triggers: vec![TriggerDef::new(
+                    "edge-r7-l7-face",
+                    &[GameEventType::CardPlayed],
+                    move |_ctx, _event| {
+                        vec![
+                            effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": first }))),
+                            effects::choose_mode(json_as(
+                                json!({ "options": ["ok"], "step": "ok", "prompt": "a question" }),
+                            )),
+                            effects::damage(json_as(
+                                json!({ "to": { "of": "enemyHero" }, "amount": second }),
+                            )),
+                        ]
+                    },
+                )],
                 resume: IndexMap::from([("ok", hook(|_ctx| vec![]))]),
                 ..Script::default()
             }
@@ -1206,7 +1382,10 @@ mod s5_2_r113_a_queued_trigger_s_parked_tail_runs_the_face_its_head_ran {
             s.state_mut(),
             "edge-r7-l7-face",
             "Unit",
-            CardScripts { base: asking(1, 10), radiant: asking(2, 20) },
+            CardScripts {
+                base: asking(1, 10),
+                radiant: asking(2, 20),
+            },
             json!({}),
         );
         let faced = place_fixture(&mut s, "edge-r7-l7-face", P1, Row::Units, 2);
@@ -1214,16 +1393,21 @@ mod s5_2_r113_a_queued_trigger_s_parked_tail_runs_the_face_its_head_ran {
 
         // Lane 1, ahead of it in R68's order: on any play, make the lane-2 unit Radiant.
         let radiates = Script {
-            triggers: vec![TriggerDef::new("edge-r7-l7-radiates", &[GameEventType::CardPlayed], move |_ctx, _event| {
-                vec![effects::set_radiant(json_as(json!({ "instanceId": faced_id })))]
-            })],
+            triggers: vec![TriggerDef::new(
+                "edge-r7-l7-radiates",
+                &[GameEventType::CardPlayed],
+                move |_ctx, _event| vec![effects::set_radiant(json_as(json!({ "instanceId": faced_id })))],
+            )],
             ..Script::default()
         };
         fixture_faces(
             s.state_mut(),
             "edge-r7-l7-radiates",
             "Unit",
-            CardScripts { base: radiates.clone(), radiant: radiates },
+            CardScripts {
+                base: radiates.clone(),
+                radiant: radiates,
+            },
             json!({}),
         );
         place_fixture(&mut s, "edge-r7-l7-radiates", P1, Row::Units, 1);
@@ -1257,14 +1441,21 @@ mod r174_10_5_step_3_step_3_s_hooks_are_the_stays_the_step_began_with {
         }));
         // Lane 2: a Reborn unit whose onPlayHook deals the enemy hero 5.
         let pings = Script {
-            on_play_hook: Some(hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 5 })))])),
+            on_play_hook: Some(hook(|_ctx| {
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 5 }),
+                ))]
+            })),
             ..Script::default()
         };
         fixture_faces(
             s.state_mut(),
             "edge-r7-l7-pinger",
             "Unit",
-            CardScripts { base: pings.clone(), radiant: pings },
+            CardScripts {
+                base: pings.clone(),
+                radiant: pings,
+            },
             json!({ "keywords": [{ "kind": "Reborn" }] }),
         );
         let pinger = place_fixture(&mut s, "edge-r7-l7-pinger", P1, Row::Units, 2);
@@ -1273,12 +1464,16 @@ mod r174_10_5_step_3_step_3_s_hooks_are_the_stays_the_step_began_with {
         // Lane 1, ahead of it in R68's order: its onPlayHook asks, and the answer sacrifices the pinger.
         let asks = Script {
             on_play_hook: Some(hook(|_ctx| {
-                vec![effects::choose_mode(json_as(json!({ "options": ["ok"], "step": "ok", "prompt": "a question" })))]
+                vec![effects::choose_mode(json_as(
+                    json!({ "options": ["ok"], "step": "ok", "prompt": "a question" }),
+                ))]
             })),
             resume: IndexMap::from([(
                 "ok",
                 hook(move |_ctx| {
-                    vec![effects::sacrifice(json_as(json!({ "target": { "of": "instance", "instanceId": pinger_id } })))]
+                    vec![effects::sacrifice(json_as(
+                        json!({ "target": { "of": "instance", "instanceId": pinger_id } }),
+                    ))]
                 }),
             )]),
             ..Script::default()
@@ -1287,7 +1482,10 @@ mod r174_10_5_step_3_step_3_s_hooks_are_the_stays_the_step_began_with {
             s.state_mut(),
             "edge-r7-l7-asker",
             "Unit",
-            CardScripts { base: asks.clone(), radiant: asks },
+            CardScripts {
+                base: asks.clone(),
+                radiant: asks,
+            },
             json!({}),
         );
         place_fixture(&mut s, "edge-r7-l7-asker", P1, Row::Units, 1);
@@ -1319,14 +1517,21 @@ mod r1_r118_r174_a_played_unit_a_trap_killed_at_step_4_does_not_cry_with_its_reb
         }));
         // p1's 0-cost Reborn unit whose Cry deals the enemy hero 5.
         let cries = Script {
-            cry: Some(hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 5 })))])),
+            cry: Some(hook(|_ctx| {
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 5 }),
+                ))]
+            })),
             ..Script::default()
         };
         fixture_faces(
             s.state_mut(),
             "edge-r7-l7-crier",
             "Unit",
-            CardScripts { base: cries.clone(), radiant: cries },
+            CardScripts {
+                base: cries.clone(),
+                radiant: cries,
+            },
             json!({ "keywords": [{ "kind": "Reborn" }] }),
         );
         let crier = new_instance(s.state_mut(), "edge-r7-l7-crier", P1, Zone::Hand { player: P1 });
@@ -1335,14 +1540,18 @@ mod r1_r118_r174_a_played_unit_a_trap_killed_at_step_4_does_not_cry_with_its_reb
         // p2's trap: when the opponent plays a card, ask p2 something, then destroy the played card.
         let trap = Script {
             triggers: vec![
-                TriggerDef::new("edge-r7-l7-kill-on-play", &[GameEventType::CardPlayed], |_ctx, event| {
-                    vec![effects::choose_mode(json_as(json!({
-                        "options": ["ok"],
-                        "step": "ok",
-                        "prompt": "a question",
-                        "data": { "played": played_id(event) },
-                    })))]
-                })
+                TriggerDef::new(
+                    "edge-r7-l7-kill-on-play",
+                    &[GameEventType::CardPlayed],
+                    |_ctx, event| {
+                        vec![effects::choose_mode(json_as(json!({
+                            "options": ["ok"],
+                            "step": "ok",
+                            "prompt": "a question",
+                            "data": { "played": played_id(event) },
+                        })))]
+                    },
+                )
                 .with_when(played_by_opponent),
             ],
             resume: IndexMap::from([(
@@ -1359,13 +1568,19 @@ mod r1_r118_r174_a_played_unit_a_trap_killed_at_step_4_does_not_cry_with_its_reb
             s.state_mut(),
             "edge-r7-l7-kill-on-play",
             "Trap",
-            CardScripts { base: trap.clone(), radiant: trap },
+            CardScripts {
+                base: trap.clone(),
+                radiant: trap,
+            },
             json!({}),
         );
         place_fixture(&mut s, "edge-r7-l7-kill-on-play", P2, Row::Backrow, 1);
 
         s.play(&crier.id, json!({ "zone": 1 }));
-        assert_eq!(must(s.state().pending.clone(), "the trap's question").player_id, P2);
+        assert_eq!(
+            must(s.state().pending.clone(), "the trap's question").player_id,
+            P2
+        );
         s.answer(json!("ok"));
 
         // The trap resolved to completion before the play went on (§10.3): the unit died and Reborn put a
@@ -1395,7 +1610,16 @@ fn ask_then_on_played(s: &mut Scenario, id: &str, after: impl Fn(String) -> Effe
         resume: IndexMap::from([("ok", hook(move |ctx| vec![after(data_string(ctx, "played"))]))]),
         ..Script::default()
     };
-    fixture_faces(s.state_mut(), id, "Trap", CardScripts { base: trap.clone(), radiant: trap }, json!({}));
+    fixture_faces(
+        s.state_mut(),
+        id,
+        "Trap",
+        CardScripts {
+            base: trap.clone(),
+            radiant: trap,
+        },
+        json!({}),
+    );
     place_fixture(s, id, P2, Row::Backrow, 1);
 }
 
@@ -1411,12 +1635,17 @@ mod r174_r17_sheepish_owed_the_play_behind_a_trap_that_took_the_unit_off_the_fie
             "p2": { "backrow": [{ "def": SHEEPISH, "lane": 2 }], "hand": [RENO] },
         }));
         ask_then_on_played(&mut s, "edge-r7-l7-bounce-on-play", |played| {
-            effects::bounce(json_as(json!({ "target": { "of": "instance", "instanceId": played } })))
+            effects::bounce(json_as(
+                json!({ "target": { "of": "instance", "instanceId": played } }),
+            ))
         });
         let timmy = s.card(TEMPO_TIMMY).clone();
 
         s.play(TEMPO_TIMMY, json!({ "zone": 1 }));
-        assert_eq!(must(s.state().pending.clone(), "the first trap's question").player_id, P2);
+        assert_eq!(
+            must(s.state().pending.clone(), "the first trap's question").player_id,
+            P2
+        );
         s.answer(json!("ok"));
 
         // The first trap resolved to completion (§10.3): Timmy is back in p1's hand.
@@ -1444,13 +1673,23 @@ mod r174_r17_sheepish_owed_the_play_behind_a_trap_that_took_the_unit_off_the_fie
             s.state_mut(),
             "edge-r7-l7-reborn-unit",
             "Unit",
-            CardScripts { base: plain.clone(), radiant: plain },
+            CardScripts {
+                base: plain.clone(),
+                radiant: plain,
+            },
             json!({ "keywords": [{ "kind": "Reborn" }] }),
         );
-        let unit = new_instance(s.state_mut(), "edge-r7-l7-reborn-unit", P1, Zone::Hand { player: P1 });
+        let unit = new_instance(
+            s.state_mut(),
+            "edge-r7-l7-reborn-unit",
+            P1,
+            Zone::Hand { player: P1 },
+        );
         s.state_mut().players.p1.hand.push(unit.clone());
         ask_then_on_played(&mut s, "edge-r7-l7-destroy-on-play", |played| {
-            effects::destroy(json_as(json!({ "target": { "of": "instance", "instanceId": played } })))
+            effects::destroy(json_as(
+                json!({ "target": { "of": "instance", "instanceId": played } }),
+            ))
         });
 
         s.play(&unit.id, json!({ "zone": 1 }));
@@ -1458,10 +1697,9 @@ mod r174_r17_sheepish_owed_the_play_behind_a_trap_that_took_the_unit_off_the_fie
         s.answer(json!("ok"));
 
         // The unit died and its Reborn body stands in lane 1: a new arrival nobody played (R83).
-        assert!(s
-            .events()
-            .iter()
-            .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == unit.id)));
+        assert!(s.events().iter().any(
+            |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == unit.id)
+        ));
         // R174: the play Sheepish answers is no longer in play, so the body is not transformed.
         let lane1 = s.unit(P1, 1);
         assert_eq!(
@@ -1490,32 +1728,58 @@ mod r122_2_4_the_answer_to_a_cast_s_own_choice_goes_on_with_the_draw_chain_not_t
         // Top card: a cast-on-draw Spell that declares a target, so its cast asks for it (R70, R81).
         let targeted = Script {
             static_flags: flags(json!({ "castOnDraw": true })),
-            targets: vec![decl(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit", "hero"] } }))],
-            cry: Some(hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 })))])),
+            targets: vec![decl(
+                json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit", "hero"] } }),
+            )],
+            cry: Some(hook(|_ctx| {
+                vec![effects::damage(json_as(
+                    json!({ "to": { "of": "chosen" }, "amount": 1 }),
+                ))]
+            })),
             ..Script::default()
         };
         fixture_faces(
             s.state_mut(),
             "edge-r7-l7-cod-targeted",
             "Spell",
-            CardScripts { base: targeted.clone(), radiant: targeted },
+            CardScripts {
+                base: targeted.clone(),
+                radiant: targeted,
+            },
             json!({}),
         );
         // Under it: a cast-on-draw Spell that deals 1 damage to each enemy unit.
         let sweep = Script {
             static_flags: flags(json!({ "castOnDraw": true })),
-            cry: Some(hook(|_ctx| vec![effects::damage_all(json_as(json!({ "amount": 1, "side": "enemy" })))])),
+            cry: Some(hook(|_ctx| {
+                vec![effects::damage_all(json_as(
+                    json!({ "amount": 1, "side": "enemy" }),
+                ))]
+            })),
             ..Script::default()
         };
         fixture_faces(
             s.state_mut(),
             "edge-r7-l7-cod-sweep",
             "Spell",
-            CardScripts { base: sweep.clone(), radiant: sweep },
+            CardScripts {
+                base: sweep.clone(),
+                radiant: sweep,
+            },
             json!({}),
         );
-        let first = new_instance(s.state_mut(), "edge-r7-l7-cod-targeted", P1, Zone::Library { player: P1 });
-        let second = new_instance(s.state_mut(), "edge-r7-l7-cod-sweep", P1, Zone::Library { player: P1 });
+        let first = new_instance(
+            s.state_mut(),
+            "edge-r7-l7-cod-targeted",
+            P1,
+            Zone::Library { player: P1 },
+        );
+        let second = new_instance(
+            s.state_mut(),
+            "edge-r7-l7-cod-sweep",
+            P1,
+            Zone::Library { player: P1 },
+        );
         // TS `library.unshift(first, second)`: both on top, `first` above `second`.
         for (at, card) in [first.clone(), second.clone()].into_iter().enumerate() {
             s.state_mut().players.p1.library.insert(at, card);
@@ -1523,7 +1787,10 @@ mod r122_2_4_the_answer_to_a_cast_s_own_choice_goes_on_with_the_draw_chain_not_t
 
         // p1's turn draw casts the first; its cast asks p1 for a target (R70, R81).
         s.start_turn();
-        assert_eq!(must(s.state().pending.clone(), "the cast's target prompt").player_id, P1);
+        assert_eq!(
+            must(s.state().pending.clone(), "the cast's target prompt").player_id,
+            P1
+        );
         s.answer(json!([{ "pick": "hero", "player": "p2" }]));
 
         // §2.4: the draw repeats as soon as the cast has resolved, so the sweep is drawn and cast inside
@@ -1597,7 +1864,10 @@ mod r136_r113_a_list_a_prompt_split_still_reads_the_events_its_own_head_emitted 
             s.state_mut(),
             "edge-r7-l7-honeypot-asks",
             "Trap",
-            CardScripts { base: trap.clone(), radiant: trap },
+            CardScripts {
+                base: trap.clone(),
+                radiant: trap,
+            },
             json!({}),
         );
         place_fixture(&mut s, "edge-r7-l7-honeypot-asks", P2, Row::Backrow, 1);
@@ -1633,8 +1903,12 @@ mod r174_r113_this_unit_later_in_a_list_a_prompt_split_is_the_stay_the_list_bega
             cry: Some(hook(|_ctx| {
                 vec![
                     effects::sacrifice(json_as(json!({ "target": { "of": "self" } }))),
-                    effects::choose_mode(json_as(json!({ "options": ["ok"], "step": "ok", "prompt": "a question" }))),
-                    effects::buff(json_as(json!({ "target": { "of": "self" }, "attack": 5, "health": 5 }))),
+                    effects::choose_mode(json_as(
+                        json!({ "options": ["ok"], "step": "ok", "prompt": "a question" }),
+                    )),
+                    effects::buff(json_as(
+                        json!({ "target": { "of": "self" }, "attack": 5, "health": 5 }),
+                    )),
                 ]
             })),
             resume: IndexMap::from([("ok", hook(|_ctx| vec![]))]),
@@ -1644,10 +1918,18 @@ mod r174_r113_this_unit_later_in_a_list_a_prompt_split_is_the_stay_the_list_bega
             s.state_mut(),
             "edge-r7-l7-self-sac",
             "Unit",
-            CardScripts { base: cry.clone(), radiant: cry },
+            CardScripts {
+                base: cry.clone(),
+                radiant: cry,
+            },
             json!({ "keywords": [{ "kind": "Reborn" }] }),
         );
-        let unit = new_instance(s.state_mut(), "edge-r7-l7-self-sac", P1, Zone::Hand { player: P1 });
+        let unit = new_instance(
+            s.state_mut(),
+            "edge-r7-l7-self-sac",
+            P1,
+            Zone::Hand { player: P1 },
+        );
         s.state_mut().players.p1.hand.push(unit.clone());
 
         s.play(&unit.id, json!({ "zone": 1 }));
@@ -1680,7 +1962,10 @@ mod r174_r113_the_step_a_prompt_s_answer_re_enters_reads_the_stays_the_resolutio
             s.state_mut(),
             "edge-r7-l7-enemy-reborn",
             "Unit",
-            CardScripts { base: plain.clone(), radiant: plain },
+            CardScripts {
+                base: plain.clone(),
+                radiant: plain,
+            },
             json!({ "keywords": [{ "kind": "Reborn" }] }),
         );
         let victim = place_fixture(&mut s, "edge-r7-l7-enemy-reborn", P2, Row::Units, 1);
@@ -1688,14 +1973,18 @@ mod r174_r113_the_step_a_prompt_s_answer_re_enters_reads_the_stays_the_resolutio
         // A 0-cost Spell: sacrifice the chosen enemy unit, ask something, and on the answer schedule
         // "at the start of your next turn, steal it", watching it (#50 K-Pop Fanatic's steal, R76).
         let spell = Script {
-            targets: vec![decl(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit"] } }))],
+            targets: vec![decl(
+                json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit"] } }),
+            )],
             cry: Some(hook(|ctx| {
                 let id = match ctx.targets.first() {
                     Some(Selection::Instance { instance_id }) => instance_id.clone(),
                     _ => String::new(),
                 };
                 vec![
-                    effects::sacrifice(json_as(json!({ "target": { "of": "chosen" }, "allowEnemy": true }))),
+                    effects::sacrifice(json_as(
+                        json!({ "target": { "of": "chosen" }, "allowEnemy": true }),
+                    )),
                     effects::choose_mode(json_as(
                         json!({ "options": ["ok"], "step": "ok", "prompt": "a question", "data": { "victim": id } }),
                     )),
@@ -1716,7 +2005,11 @@ mod r174_r113_the_step_a_prompt_s_answer_re_enters_reads_the_stays_the_resolutio
                 ),
                 (
                     "steal",
-                    hook(|ctx| vec![effects::steal(json_as(json!({ "instanceId": data_string(ctx, "victim") })))]),
+                    hook(|ctx| {
+                        vec![effects::steal(json_as(
+                            json!({ "instanceId": data_string(ctx, "victim") }),
+                        ))]
+                    }),
                 ),
             ]),
             ..Script::default()
@@ -1725,13 +2018,24 @@ mod r174_r113_the_step_a_prompt_s_answer_re_enters_reads_the_stays_the_resolutio
             s.state_mut(),
             "edge-r7-l7-sac-then-steal",
             "Spell",
-            CardScripts { base: spell.clone(), radiant: spell },
+            CardScripts {
+                base: spell.clone(),
+                radiant: spell,
+            },
             json!({}),
         );
-        let card = new_instance(s.state_mut(), "edge-r7-l7-sac-then-steal", P1, Zone::Hand { player: P1 });
+        let card = new_instance(
+            s.state_mut(),
+            "edge-r7-l7-sac-then-steal",
+            P1,
+            Zone::Hand { player: P1 },
+        );
         s.state_mut().players.p1.hand.push(card.clone());
 
-        s.play(&card.id, json!({ "targets": [{ "pick": "instance", "instanceId": victim.id }] }));
+        s.play(
+            &card.id,
+            json!({ "targets": [{ "pick": "instance", "instanceId": victim.id }] }),
+        );
         must(s.state().pending.clone(), "the Spell's question");
         // The sacrifice is a death in full: the victim's Reborn body already stands in p2's lane 1.
         assert_eq!(s.card(&victim.id).reborn_spent, Some(true));
@@ -1760,7 +2064,10 @@ mod r174_r113_the_step_a_prompt_s_answer_re_enters_reads_the_stays_the_resolutio
 const FULLSEND: &str = "core-078";
 
 fn same(script: Script) -> CardScripts {
-    CardScripts { base: script.clone(), radiant: script }
+    CardScripts {
+        base: script.clone(),
+        radiant: script,
+    }
 }
 
 fn in_hand(s: &mut Scenario, def_id: &str, player: PlayerId) -> CardInstance {
@@ -1810,8 +2117,14 @@ mod r174_10_5_step_6_an_echo_repeat_s_fresh_target_is_aimed_at_the_stay_it_was_c
             "Spell",
             same(Script {
                 static_flags: flags(json!({ "echo": echo })),
-                targets: vec![decl(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit"] } }))],
-                cry: Some(hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 })))])),
+                targets: vec![decl(
+                    json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit"] } }),
+                )],
+                cry: Some(hook(|_ctx| {
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "chosen" }, "amount": 1 }),
+                    ))]
+                })),
                 ..Script::default()
             }),
             json!({}),
@@ -1826,7 +2139,9 @@ mod r174_10_5_step_6_an_echo_repeat_s_fresh_target_is_aimed_at_the_stay_it_was_c
             same(Script {
                 static_flags: flags(json!({ "castOnDraw": true })),
                 cry: Some(hook(move |_ctx| {
-                    vec![effects::destroy(json_as(json!({ "target": { "of": "instance", "instanceId": victim_id } })))]
+                    vec![effects::destroy(json_as(
+                        json!({ "target": { "of": "instance", "instanceId": victim_id } }),
+                    ))]
                 })),
                 ..Script::default()
             }),
@@ -1857,7 +2172,10 @@ mod r174_10_5_step_6_an_echo_repeat_s_fresh_target_is_aimed_at_the_stay_it_was_c
         on_library_top(&mut s, &[RENO, "edge-r8-cod-destroyer"], P1);
         // /fullsend: "this turn your cards gain 'Combo: draw 1'", and it is the card played earlier.
         s.play(FULLSEND, json!({}));
-        s.play(&spell.id, json!({ "targets": [{ "pick": "instance", "instanceId": victim.id }] }));
+        s.play(
+            &spell.id,
+            json!({ "targets": [{ "pick": "instance", "instanceId": victim.id }] }),
+        );
         // The first resolution hit the 5/5 for 1; the repeat asks for a fresh target (R81).
         assert_eq!(s.card(&victim.id).damage, 1);
         let pending = must(s.state().pending.clone(), "the Echo repeat's target prompt");
@@ -1871,7 +2189,10 @@ mod r174_10_5_step_6_an_echo_repeat_s_fresh_target_is_aimed_at_the_stay_it_was_c
             &events,
             |event| matches!(event, GameEvent::Summoned { instance_id, .. } if *instance_id == victim.id),
         );
-        assert!(reborn >= 0, "the victim's Reborn body came back during the repeat");
+        assert!(
+            reborn >= 0,
+            "the victim's Reborn body came back during the repeat"
+        );
         // R174: the repeat's damage was aimed at the stay chosen at its prompt, which the cast ended, as
         // the control's was aimed at step 1's. The body is a new arrival and stands at 1 health; before
         // the fix the repeat's damage landed on it and it died a second time.
@@ -1892,10 +2213,18 @@ fn conditional_trap(s: &mut Scenario, id: &str, lane: i32) -> CardInstance {
         "Trap",
         same(Script {
             triggers: vec![
-                TriggerDef::new(format!("{id}:hits"), &[GameEventType::CardPlayed], |_ctx, _event| {
-                    vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 5 })))]
-                })
-                .with_when(|ctx, event| played_by_opponent(ctx, event) && ctx.state.players.p1.hero.health < 30),
+                TriggerDef::new(
+                    format!("{id}:hits"),
+                    &[GameEventType::CardPlayed],
+                    |_ctx, _event| {
+                        vec![effects::damage(json_as(
+                            json!({ "to": { "of": "enemyHero" }, "amount": 5 }),
+                        ))]
+                    },
+                )
+                .with_when(|ctx, event| {
+                    played_by_opponent(ctx, event) && ctx.state.players.p1.hero.health < 30
+                }),
             ],
             ..Script::default()
         }),
@@ -1913,7 +2242,8 @@ mod s10_3_r99_a_trap_that_declined_an_event_is_not_offered_it_again_because_a_la
         register_all();
         // Control: the lane-2 trap pings p1 at once. The lane-1 trap met the play first, with p1 at 30,
         // declined it, and is not offered it again after the ping.
-        let mut control = scenario(json!({ "p1": { "hand": [TEMPO_TIMMY], "mana": 4 }, "p2": { "hand": [RENO] } }));
+        let mut control =
+            scenario(json!({ "p1": { "hand": [TEMPO_TIMMY], "mana": 4 }, "p2": { "hand": [RENO] } }));
         let control_guard = conditional_trap(&mut control, "edge-r8-guard-control", 1);
         fixture_faces(
             control.state_mut(),
@@ -1921,9 +2251,15 @@ mod s10_3_r99_a_trap_that_declined_an_event_is_not_offered_it_again_because_a_la
             "Trap",
             same(Script {
                 triggers: vec![
-                    TriggerDef::new("edge-r8-pinger-now:pings", &[GameEventType::CardPlayed], |_ctx, _event| {
-                        vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
-                    })
+                    TriggerDef::new(
+                        "edge-r8-pinger-now:pings",
+                        &[GameEventType::CardPlayed],
+                        |_ctx, _event| {
+                            vec![effects::damage(json_as(
+                                json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                            ))]
+                        },
+                    )
                     .with_when(played_by_opponent),
                 ],
                 ..Script::default()
@@ -1944,14 +2280,24 @@ mod s10_3_r99_a_trap_that_declined_an_event_is_not_offered_it_again_because_a_la
             "Trap",
             same(Script {
                 triggers: vec![
-                    TriggerDef::new("edge-r8-pinger-asks:asks", &[GameEventType::CardPlayed], |_ctx, _event| {
-                        vec![effects::choose_mode(json_as(json!({ "options": ["ok"], "step": "ok", "prompt": "a question" })))]
-                    })
+                    TriggerDef::new(
+                        "edge-r8-pinger-asks:asks",
+                        &[GameEventType::CardPlayed],
+                        |_ctx, _event| {
+                            vec![effects::choose_mode(json_as(
+                                json!({ "options": ["ok"], "step": "ok", "prompt": "a question" }),
+                            ))]
+                        },
+                    )
                     .with_when(played_by_opponent),
                 ],
                 resume: IndexMap::from([(
                     "ok",
-                    hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]),
+                    hook(|_ctx| {
+                        vec![effects::damage(json_as(
+                            json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                        ))]
+                    }),
                 )]),
                 ..Script::default()
             }),
@@ -1959,7 +2305,10 @@ mod s10_3_r99_a_trap_that_declined_an_event_is_not_offered_it_again_because_a_la
         );
         place_fixture(&mut s, "edge-r8-pinger-asks", P2, Row::Backrow, 2);
         s.play(TEMPO_TIMMY, json!({ "zone": 1 }));
-        assert_eq!(must(s.state().pending.clone(), "the lane-2 trap's question").player_id, P2);
+        assert_eq!(
+            must(s.state().pending.clone(), "the lane-2 trap's question").player_id,
+            P2
+        );
         s.answer(json!("ok"));
 
         // §10.3: the traps check the event as it is dispatched, each once. The lane-1 trap was offered
@@ -1981,9 +2330,11 @@ mod s10_3_r113_the_traps_still_owed_an_event_after_a_question_meet_it_in_the_ord
             id,
             "Trap",
             same(Script {
-                triggers: vec![TriggerDef::new(format!("{id}:fires"), &[GameEventType::CardPlayed], |_ctx, _event| {
-                    vec![]
-                })],
+                triggers: vec![TriggerDef::new(
+                    format!("{id}:fires"),
+                    &[GameEventType::CardPlayed],
+                    |_ctx, _event| vec![],
+                )],
                 ..Script::default()
             }),
             json!({}),
@@ -1995,18 +2346,28 @@ mod s10_3_r113_the_traps_still_owed_an_event_after_a_question_meet_it_in_the_ord
     fn rotating_trap(s: &mut Scenario, asks: bool) {
         let turn = effects::rotate(json_as(json!({ "direction": "left" })));
         let at_once = turn.clone();
-        let id = if asks { "edge-r8-rotor-asks" } else { "edge-r8-rotor-now" };
+        let id = if asks {
+            "edge-r8-rotor-asks"
+        } else {
+            "edge-r8-rotor-now"
+        };
         fixture_faces(
             s.state_mut(),
             id,
             "Trap",
             same(Script {
                 triggers: vec![TriggerDef::new(
-                    if asks { "edge-r8-rotor-asks:fires" } else { "edge-r8-rotor-now:fires" },
+                    if asks {
+                        "edge-r8-rotor-asks:fires"
+                    } else {
+                        "edge-r8-rotor-now:fires"
+                    },
                     &[GameEventType::CardPlayed],
                     move |_ctx, _event| {
                         if asks {
-                            vec![effects::choose_mode(json_as(json!({ "options": ["ok"], "step": "ok", "prompt": "a question" })))]
+                            vec![effects::choose_mode(json_as(
+                                json!({ "options": ["ok"], "step": "ok", "prompt": "a question" }),
+                            ))]
                         } else {
                             vec![at_once.clone()]
                         }
@@ -2030,7 +2391,9 @@ mod s10_3_r113_the_traps_still_owed_an_event_after_a_question_meet_it_in_the_ord
         s.events()
             .iter()
             .filter_map(|event| match event {
-                GameEvent::TrapFired { instance_id, .. } if ids.contains(&instance_id.as_str()) => Some(instance_id.clone()),
+                GameEvent::TrapFired { instance_id, .. } if ids.contains(&instance_id.as_str()) => {
+                    Some(instance_id.clone())
+                }
                 _ => None,
             })
             .collect()
@@ -2043,13 +2406,20 @@ mod s10_3_r113_the_traps_still_owed_an_event_after_a_question_meet_it_in_the_ord
         // Control: the rotation happens at once. The dispatch offers the play to p1's rotor, then to
         // p2's lane-4 and lane-5 traps in the order it read as it began (R68), whichever side the
         // rotation has put them on by then.
-        let mut control = scenario(json!({ "p1": { "hand": [TEMPO_TIMMY], "mana": 4 }, "p2": { "hand": [RENO] } }));
+        let mut control =
+            scenario(json!({ "p1": { "hand": [TEMPO_TIMMY], "mana": 4 }, "p2": { "hand": [RENO] } }));
         rotating_trap(&mut control, false);
         let a0 = silent_trap(&mut control, "edge-r8-silent-a0", P2, 4);
         let b0 = silent_trap(&mut control, "edge-r8-silent-b0", P2, 5);
         control.play(TEMPO_TIMMY, json!({ "zone": 2 }));
-        assert!(crossed_to_p1(&control, &b0.id), "the rotation carried the lane-5 trap across to p1");
-        assert_eq!(fired_order(&control, &[a0.id.as_str(), b0.id.as_str()]), vec![a0.id.clone(), b0.id.clone()]);
+        assert!(
+            crossed_to_p1(&control, &b0.id),
+            "the rotation carried the lane-5 trap across to p1"
+        );
+        assert_eq!(
+            fired_order(&control, &[a0.id.as_str(), b0.id.as_str()]),
+            vec![a0.id.clone(), b0.id.clone()]
+        );
 
         // The same, with the rotor asking p1 first and rotating on the answer.
         let mut s = scenario(json!({ "p1": { "hand": [TEMPO_TIMMY], "mana": 4 }, "p2": { "hand": [RENO] } }));
@@ -2065,7 +2435,10 @@ mod s10_3_r113_the_traps_still_owed_an_event_after_a_question_meet_it_in_the_ord
         // the order it had (as the end-of-turn window's remainder keeps its owed list's order). Before
         // the fix the remainder was re-read from a fresh scan in which p1's side comes first, so the
         // lane-5 trap the rotation moved fired ahead of the lane-4 one.
-        assert_eq!(fired_order(&s, &[a.id.as_str(), b.id.as_str()]), vec![a.id.clone(), b.id.clone()]);
+        assert_eq!(
+            fired_order(&s, &[a.id.as_str(), b.id.as_str()]),
+            vec![a.id.clone(), b.id.clone()]
+        );
     }
 }
 
@@ -2186,14 +2559,18 @@ mod r174_r113_an_effect_naming_a_card_by_id_after_a_prompt_meets_the_stay_the_ru
             "edge-r8-sac-ask-hit-by-id",
             "Spell",
             same(Script {
-                targets: vec![decl(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit"] } }))],
+                targets: vec![decl(
+                    json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit"] } }),
+                )],
                 cry: Some(hook(|ctx| {
                     let id = match ctx.targets.first() {
                         Some(Selection::Instance { instance_id }) => instance_id.clone(),
                         _ => String::new(),
                     };
                     vec![
-                        effects::sacrifice(json_as(json!({ "target": { "of": "chosen" }, "allowEnemy": true }))),
+                        effects::sacrifice(json_as(
+                            json!({ "target": { "of": "chosen" }, "allowEnemy": true }),
+                        )),
                         effects::choose_mode(json_as(
                             json!({ "options": ["ok"], "step": "ok", "prompt": "a question", "data": { "victim": id } }),
                         )),
@@ -2213,7 +2590,10 @@ mod r174_r113_an_effect_naming_a_card_by_id_after_a_prompt_meets_the_stay_the_ru
         );
         let spell = in_hand(&mut s, "edge-r8-sac-ask-hit-by-id", P1);
 
-        s.play(&spell.id, json!({ "targets": [{ "pick": "instance", "instanceId": victim.id }] }));
+        s.play(
+            &spell.id,
+            json!({ "targets": [{ "pick": "instance", "instanceId": victim.id }] }),
+        );
         must(s.state().pending.clone(), "the Spell's question");
         assert_eq!(s.card(&victim.id).reborn_spent, Some(true));
         s.answer(json!("ok"));
@@ -2253,10 +2633,14 @@ mod r174_10_6_a_card_picked_at_a_prompt_is_aimed_at_the_stay_the_prompt_offered 
             "edge-r8-sac-then-pick",
             "Spell",
             same(Script {
-                targets: vec![decl(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit"] } }))],
+                targets: vec![decl(
+                    json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit"] } }),
+                )],
                 cry: Some(hook(|_ctx| {
                     vec![
-                        effects::sacrifice(json_as(json!({ "target": { "of": "chosen" }, "allowEnemy": true }))),
+                        effects::sacrifice(json_as(
+                            json!({ "target": { "of": "chosen" }, "allowEnemy": true }),
+                        )),
                         effects::choose_target(json_as(json!({
                             "step": "hit",
                             "scope": { "side": "enemy", "of": ["unit"] },
@@ -2266,7 +2650,11 @@ mod r174_10_6_a_card_picked_at_a_prompt_is_aimed_at_the_stay_the_prompt_offered 
                 })),
                 resume: IndexMap::from([(
                     "hit",
-                    hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 5 })))]),
+                    hook(|_ctx| {
+                        vec![effects::damage(json_as(
+                            json!({ "to": { "of": "chosen" }, "amount": 5 }),
+                        ))]
+                    }),
                 )]),
                 ..Script::default()
             }),
@@ -2291,7 +2679,10 @@ mod r174_10_6_a_card_picked_at_a_prompt_is_aimed_at_the_stay_the_prompt_offered 
         control.expect_in_zone(&timmy.id, "graveyard");
 
         let (mut s, victim, spell) = board();
-        s.play(&spell.id, json!({ "targets": [{ "pick": "instance", "instanceId": victim.id }] }));
+        s.play(
+            &spell.id,
+            json!({ "targets": [{ "pick": "instance", "instanceId": victim.id }] }),
+        );
         // The sacrifice is a death in full, and Reborn has put the body back before the prompt opened:
         // the prompt offers it, a unit on the field now (R83).
         assert_eq!(s.card(&victim.id).reborn_spent, Some(true));
@@ -2333,7 +2724,10 @@ fn piles_holding(state: &GameState, id: &str) -> Vec<String> {
             ("exile", side.exile.iter().collect()),
             ("resolving", side.resolving.iter().collect()),
             ("backrow", side.backrow.iter().flatten().collect()),
-            ("units", side.units.iter().flat_map(|pile| pile.iter().flatten()).collect()),
+            (
+                "units",
+                side.units.iter().flat_map(|pile| pile.iter().flatten()).collect(),
+            ),
         ];
         for (name, cards) in piles {
             if cards.iter().any(|card| card.id == id) {
@@ -2362,7 +2756,9 @@ mod r226_10_1_a_card_being_played_is_never_left_in_two_zones_by_a_question_its_t
             "Unit",
             same(Script {
                 death: Some(hook(|_ctx| {
-                    vec![effects::choose_from_hand(json_as(json!({ "step": "gone", "prompt": "discard a card" })))]
+                    vec![effects::choose_from_hand(json_as(
+                        json!({ "step": "gone", "prompt": "discard a card" }),
+                    ))]
                 })),
                 resume: IndexMap::from([(
                     "gone",
@@ -2378,7 +2774,10 @@ mod r226_10_1_a_card_being_played_is_never_left_in_two_zones_by_a_question_its_t
             s.state_mut(),
             "edge-r8-tribute-one",
             "Unit",
-            same(Script { static_flags: flags(json!({ "tribute": 1 })), ..Script::default() }),
+            same(Script {
+                static_flags: flags(json!({ "tribute": 1 })),
+                ..Script::default()
+            }),
             json!({ "stats": { "attack": 3, "health": 3 } }),
         );
         let played = in_hand(&mut s, "edge-r8-tribute-one", P1);
@@ -2392,7 +2791,9 @@ mod r226_10_1_a_card_being_played_is_never_left_in_two_zones_by_a_question_its_t
         if offers_played {
             s.answer(json!(played.id));
         } else {
-            let key = must(pending.options.first(), "a hand card to discard").key.clone();
+            let key = must(pending.options.first(), "a hand card to discard")
+                .key
+                .clone();
             s.answer(json!(key));
         }
 
@@ -2425,7 +2826,9 @@ mod r59_10_5_step_4_a_trigger_that_answered_the_play_and_asked_is_followed_by_th
             same(Script {
                 cry: Some(hook(|ctx| {
                     let enemies = active_units_of(ctx.state, P2).len();
-                    vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": enemies })))]
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": enemies }),
+                    ))]
                 })),
                 ..Script::default()
             }),
@@ -2436,30 +2839,45 @@ mod r59_10_5_step_4_a_trigger_that_answered_the_play_and_asked_is_followed_by_th
 
     /// p1's lane-1 unit: whenever its controller plays another card, deal 5 to `victim` — at once, or on the answer to a question.
     fn striker(s: &mut Scenario, victim_id: &str, asks: bool) {
-        let id = if asks { "edge-r8-striker-asks" } else { "edge-r8-striker-now" };
-        let hit = effects::damage(json_as(json!({ "to": { "of": "instance", "instanceId": victim_id }, "amount": 5 })));
+        let id = if asks {
+            "edge-r8-striker-asks"
+        } else {
+            "edge-r8-striker-now"
+        };
+        let hit = effects::damage(json_as(
+            json!({ "to": { "of": "instance", "instanceId": victim_id }, "amount": 5 }),
+        ));
         let on_answer = hit.clone();
         fixture_faces(
             s.state_mut(),
             id,
             "Unit",
             same(Script {
-                triggers: vec![TriggerDef::new(format!("{id}:fires"), &[GameEventType::CardPlayed], move |ctx, event| {
-                    let another_of_mine = match event {
-                        GameEvent::CardPlayed { player, instance_id, .. } => {
-                            *player == ctx.controller
-                                && Some(instance_id.as_str()) != ctx.self_.as_ref().map(|card| card.id.as_str())
+                triggers: vec![TriggerDef::new(
+                    format!("{id}:fires"),
+                    &[GameEventType::CardPlayed],
+                    move |ctx, event| {
+                        let another_of_mine = match event {
+                            GameEvent::CardPlayed {
+                                player, instance_id, ..
+                            } => {
+                                *player == ctx.controller
+                                    && Some(instance_id.as_str())
+                                        != ctx.self_.as_ref().map(|card| card.id.as_str())
+                            }
+                            _ => false,
+                        };
+                        if !another_of_mine {
+                            vec![]
+                        } else if asks {
+                            vec![effects::choose_mode(json_as(
+                                json!({ "options": ["ok"], "step": "ok", "prompt": "a question" }),
+                            ))]
+                        } else {
+                            vec![hit.clone()]
                         }
-                        _ => false,
-                    };
-                    if !another_of_mine {
-                        vec![]
-                    } else if asks {
-                        vec![effects::choose_mode(json_as(json!({ "options": ["ok"], "step": "ok", "prompt": "a question" })))]
-                    } else {
-                        vec![hit.clone()]
-                    }
-                })],
+                    },
+                )],
                 resume: IndexMap::from([("ok", hook(move |_ctx| vec![on_answer.clone()]))]),
                 ..Script::default()
             }),
@@ -2474,7 +2892,9 @@ mod r59_10_5_step_4_a_trigger_that_answered_the_play_and_asked_is_followed_by_th
         register_all();
         // Control: the trigger deals its 5 at once. §10.5 step 4's loop runs it, then the check (R59),
         // and Tempo Timmy has died before the Cry counts the enemy's units: 0 damage.
-        let mut control = scenario(json!({ "p1": { "hand": [RENO], "mana": 4 }, "p2": { "field": [TEMPO_TIMMY], "hand": [RENO] } }));
+        let mut control = scenario(
+            json!({ "p1": { "hand": [RENO], "mana": 4 }, "p2": { "field": [TEMPO_TIMMY], "hand": [RENO] } }),
+        );
         let timmy0 = must(control.unit(P2, 1), "p2's Tempo Timmy");
         striker(&mut control, &timmy0.id, false);
         let counting = counter(&mut control);
@@ -2483,7 +2903,9 @@ mod r59_10_5_step_4_a_trigger_that_answered_the_play_and_asked_is_followed_by_th
         control.expect_health(P2, 30);
 
         // The same trigger, asking p1 first and dealing its 5 on the answer.
-        let mut s = scenario(json!({ "p1": { "hand": [RENO], "mana": 4 }, "p2": { "field": [TEMPO_TIMMY], "hand": [RENO] } }));
+        let mut s = scenario(
+            json!({ "p1": { "hand": [RENO], "mana": 4 }, "p2": { "field": [TEMPO_TIMMY], "hand": [RENO] } }),
+        );
         let timmy = must(s.unit(P2, 1), "p2's Tempo Timmy");
         striker(&mut s, &timmy.id, true);
         let counting = counter(&mut s);
@@ -2514,8 +2936,16 @@ const SEVEN_SEVEN: &str = "core-025"; // Unit, 4
 /// `cost = 0` (every call names it).
 fn fixture_card(s: &mut Scenario, id: &str, ty: &str, script: Script, cost: i32) {
     let face = fixture_face(id, ty, &json!({ "attack": 2, "health": 2 }), &json!([]));
-    s.state_mut().transient_defs.insert(id.to_string(), fixture_def(id, ty, cost, &face));
-    register_fixture_scripts(id, CardScripts { base: script.clone(), radiant: script });
+    s.state_mut()
+        .transient_defs
+        .insert(id.to_string(), fixture_def(id, ty, cost, &face));
+    register_fixture_scripts(
+        id,
+        CardScripts {
+            base: script.clone(),
+            radiant: script,
+        },
+    );
 }
 
 /// Put a fresh instance of `defId` into p1's library at `at` (0 is the top).
@@ -2544,7 +2974,13 @@ mod r102_r43_a_fused_heroic_power_s_prompted_power {
             },
         }));
         let played = must(
-            g.state().players.p1.hand.iter().find(|card| card.def_id == HEROIC_POWER).cloned(),
+            g.state()
+                .players
+                .p1
+                .hand
+                .iter()
+                .find(|card| card.def_id == HEROIC_POWER)
+                .cloned(),
             "p1's Heroic Power",
         );
         must(find_instance_mut(g.state_mut(), &played.id), "p1's Heroic Power")
@@ -2560,12 +2996,16 @@ mod r102_r43_a_fused_heroic_power_s_prompted_power {
         let fused = g.card(&kept.id).clone();
         assert!(fused.def_id.starts_with("t-"));
         assert_eq!(
-            subsystems::power_of(&fused).map(|power| power.name.to_string()).as_deref(),
+            subsystems::power_of(&fused)
+                .map(|power| power.name.to_string())
+                .as_deref(),
             Some("discover")
         );
         // Each ingredient's text has the rolled power (R102): the alias names the first ingredient's.
         assert_eq!(
-            subsystems::power_ability_of(g.state(), &fused).map(|decl| decl.id.clone()).as_deref(),
+            subsystems::power_ability_of(g.state(), &fused)
+                .map(|decl| decl.id.clone())
+                .as_deref(),
             Some("discover")
         );
 
@@ -2579,7 +3019,11 @@ mod r102_r43_a_fused_heroic_power_s_prompted_power {
         g.activate(&fused.id, json!({}));
         assert_eq!(pending_kind(&g), Some(PromptKind::Discover));
         let picked = must(
-            g.state().pending.as_ref().and_then(|pending| pending.options.first()).cloned(),
+            g.state()
+                .pending
+                .as_ref()
+                .and_then(|pending| pending.options.first())
+                .cloned(),
             "an offered Unit",
         );
         g.answer(json!(picked.key));
@@ -2596,7 +3040,9 @@ mod r66_r113_a_card_s_list_resumed_after_a_prompt_keeps_the_effects_it_built {
     #[test]
     fn r66_genn_s_greed_still_draws_every_2_cost_card_after_one_it_drew_was_cast_and_asked_r113_8_94_r135() {
         register_all();
-        let mut g = scenario(json!({ "p1": { "hand": [GENNS_GREED], "library": [SEVEN_SEVEN, BIGOT, BIGOT, SEVEN_SEVEN] } }));
+        let mut g = scenario(
+            json!({ "p1": { "hand": [GENNS_GREED], "library": [SEVEN_SEVEN, BIGOT, BIGOT, SEVEN_SEVEN] } }),
+        );
         // A 2-cost cast-on-draw Spell whose cast asks its caster something (R70, R81).
         fixture_card(
             &mut g,
@@ -2605,7 +3051,9 @@ mod r66_r113_a_card_s_list_resumed_after_a_prompt_keeps_the_effects_it_built {
             Script {
                 static_flags: flags(json!({ "castOnDraw": true })),
                 cry: Some(hook(|_ctx| {
-                    vec![effects::choose_mode(json_as(json!({ "options": ["a", "b"], "step": "picked", "prompt": "pick one" })))]
+                    vec![effects::choose_mode(json_as(
+                        json!({ "options": ["a", "b"], "step": "picked", "prompt": "pick one" }),
+                    ))]
                 })),
                 resume: IndexMap::from([("picked", hook(|_ctx| vec![]))]),
                 ..Script::default()
@@ -2669,7 +3117,11 @@ mod r70_r17_r427_a_cast_unit_and_sheepish {
             "Unit",
             Script {
                 static_flags: flags(json!({ "castOnDraw": true })),
-                cry: Some(hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 5 })))])),
+                cry: Some(hook(|_ctx| {
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 5 }),
+                    ))]
+                })),
                 ..Script::default()
             },
             1,
@@ -2677,13 +3129,19 @@ mod r70_r17_r427_a_cast_unit_and_sheepish {
         let cod = into_library(&mut g, "edge-r9-cod-unit", 0);
 
         g.start_turn();
-        assert!(g.events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. })));
+        assert!(
+            g.events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::TrapFired { .. }))
+        );
         // Sheepish answered the cast Unit: a Sheep Token stands where it was.
-        assert_eq!(g.unit(P1, 1).map(|card| card.def_id.clone()), Some("core-t-sheep".to_string()));
-        assert!(g
-            .events()
-            .iter()
-            .any(|event| matches!(event, GameEvent::Transformed { instance_id, .. } if *instance_id == cod.id)));
+        assert_eq!(
+            g.unit(P1, 1).map(|card| card.def_id.clone()),
+            Some("core-t-sheep".to_string())
+        );
+        assert!(g.events().iter().any(
+            |event| matches!(event, GameEvent::Transformed { instance_id, .. } if *instance_id == cod.id)
+        ));
         // R427: a cast is a play (R70), and Sheepish answers its resolution, after the Cry: the 5 landed.
         g.expect_health(P2, 25);
         let types = types_of(g.events());
@@ -2720,8 +3178,14 @@ mod r70_r90_a_cast_unit_s_own_choices {
             "Unit",
             Script {
                 static_flags: flags(json!({ "castOnDraw": true })),
-                targets: vec![decl(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }))],
-                cry: Some(hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 })))])),
+                targets: vec![decl(
+                    json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }),
+                )],
+                cry: Some(hook(|_ctx| {
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "chosen" }, "amount": 1 }),
+                    ))]
+                })),
                 ..Script::default()
             },
             1,
@@ -2781,7 +3245,10 @@ mod r70_10_3_a_cast_s_step_4_window_inside_an_effect_offers_each_event_once {
             &mut g,
             "edge-r9-cod-plain",
             "Unit",
-            Script { static_flags: flags(json!({ "castOnDraw": true })), ..Script::default() },
+            Script {
+                static_flags: flags(json!({ "castOnDraw": true })),
+                ..Script::default()
+            },
             1,
         );
         let cod = into_library(&mut g, "edge-r9-cod-plain", 0);
@@ -2822,12 +3289,18 @@ mod r98_a_card_that_left_the_resolving_zone_before_its_question_is_answered {
                 cry: Some(hook(|_ctx| {
                     vec![
                         effects::add_to_hand(json_as(json!({ "instance": { "of": "self" } }))),
-                        effects::choose_mode(json_as(json!({ "options": ["a", "b"], "step": "picked", "prompt": "pick one" }))),
+                        effects::choose_mode(json_as(
+                            json!({ "options": ["a", "b"], "step": "picked", "prompt": "pick one" }),
+                        )),
                     ]
                 })),
                 resume: IndexMap::from([(
                     "picked",
-                    hook(|_ctx| vec![effects::set_cost_mod(json_as(json!({ "target": { "of": "self" }, "amount": 2 })))]),
+                    hook(|_ctx| {
+                        vec![effects::set_cost_mod(json_as(
+                            json!({ "target": { "of": "self" }, "amount": 2 }),
+                        ))]
+                    }),
                 )]),
                 ..Script::default()
             },
@@ -2873,7 +3346,13 @@ mod r59_a_sacrifice_whose_death_asks_inside_a_list {
             },
             None,
         );
-        fixture(&mut s, "edge-r10-plain", "Unit", Script::default(), Some(json!({ "attack": 1, "health": 5 })));
+        fixture(
+            &mut s,
+            "edge-r10-plain",
+            "Unit",
+            Script::default(),
+            Some(json!({ "attack": 1, "health": 5 })),
+        );
         let dying = place_fixture(&mut s, "edge-r10-dying", P1, Row::Units, 1);
         let plain = place_fixture(&mut s, "edge-r10-plain", P1, Row::Units, 2);
         let (plain_id, dying_id) = (plain.id.clone(), dying.id.clone());
@@ -2884,9 +3363,15 @@ mod r59_a_sacrifice_whose_death_asks_inside_a_list {
             Script {
                 cry: Some(hook(move |_ctx| {
                     vec![
-                        effects::damage(json_as(json!({ "to": { "of": "instance", "instanceId": plain_id }, "amount": 5 }))),
-                        effects::sacrifice(json_as(json!({ "target": { "of": "instance", "instanceId": dying_id } }))),
-                        effects::heal(json_as(json!({ "target": { "of": "instance", "instanceId": plain_id }, "amount": 5 }))),
+                        effects::damage(json_as(
+                            json!({ "to": { "of": "instance", "instanceId": plain_id }, "amount": 5 }),
+                        )),
+                        effects::sacrifice(json_as(
+                            json!({ "target": { "of": "instance", "instanceId": dying_id } }),
+                        )),
+                        effects::heal(json_as(
+                            json!({ "target": { "of": "instance", "instanceId": plain_id }, "amount": 5 }),
+                        )),
                     ]
                 })),
                 ..Script::default()
@@ -2924,7 +3409,8 @@ mod r151_r113_a_start_of_game_clause_that_asks_run_as_its_card_arrives_in_a_hand
     use super::*;
 
     #[test]
-    fn r151_the_rest_of_an_arriving_card_s_start_of_game_list_waits_for_the_answer_to_its_question_r113_9_3() {
+    fn r151_the_rest_of_an_arriving_card_s_start_of_game_list_waits_for_the_answer_to_its_question_r113_9_3()
+    {
         register_all();
         let mut s = scenario(json!({ "p1": { "hand": [RENO] }, "p2": { "hand": [RENO] } }));
         // "Start of game: choose one; then deal 3 damage to the enemy hero." R151 runs it when the card
@@ -2936,7 +3422,9 @@ mod r151_r113_a_start_of_game_clause_that_asks_run_as_its_card_arrives_in_a_hand
             Script {
                 start_of_game: Some(hook(|_ctx| {
                     vec![
-                        effects::choose_mode(json_as(json!({ "options": ["a", "b"], "step": "picked", "prompt": "pick one" }))),
+                        effects::choose_mode(json_as(
+                            json!({ "options": ["a", "b"], "step": "picked", "prompt": "pick one" }),
+                        )),
                         effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 3 }))),
                     ]
                 })),
@@ -2950,7 +3438,11 @@ mod r151_r113_a_start_of_game_clause_that_asks_run_as_its_card_arrives_in_a_hand
             "edge-r10-gift",
             "Spell",
             Script {
-                cry: Some(hook(|_ctx| vec![effects::add_to_hand(json_as(json!({ "defId": "edge-r10-asks-at-start" })))])),
+                cry: Some(hook(|_ctx| {
+                    vec![effects::add_to_hand(json_as(
+                        json!({ "defId": "edge-r10-asks-at-start" }),
+                    ))]
+                })),
                 ..Script::default()
             },
             None,
@@ -2980,7 +3472,10 @@ mod r226_r70_a_cast_card_an_onplayhook_s_answer_moved_before_step_4 {
             &mut s,
             "edge-r10-cod",
             "Unit",
-            Script { static_flags: flags(json!({ "castOnDraw": true })), ..Script::default() },
+            Script {
+                static_flags: flags(json!({ "castOnDraw": true })),
+                ..Script::default()
+            },
             Some(json!({ "attack": 3, "health": 3 })),
         );
         let cod = on_top_of_library(&mut s, "edge-r10-cod", P1);
@@ -2993,7 +3488,9 @@ mod r226_r70_a_cast_card_an_onplayhook_s_answer_moved_before_step_4 {
             Script {
                 on_play_hook: Some(hook(move |ctx| {
                     if ctx.data.get("playedId").and_then(Value::as_str) == Some(asked_about.as_str()) {
-                        vec![effects::choose_mode(json_as(json!({ "options": ["exile it", "keep it"], "step": "picked" })))]
+                        vec![effects::choose_mode(json_as(
+                            json!({ "options": ["exile it", "keep it"], "step": "picked" }),
+                        ))]
                     } else {
                         vec![]
                     }
@@ -3001,8 +3498,13 @@ mod r226_r70_a_cast_card_an_onplayhook_s_answer_moved_before_step_4 {
                 resume: IndexMap::from([(
                     "picked",
                     hook(move |ctx| {
-                        if effects::chosen_options(ctx).first().is_some_and(|option| option == "exile it") {
-                            vec![effects::exile(json_as(json!({ "target": { "of": "instance", "instanceId": exiled } })))]
+                        if effects::chosen_options(ctx)
+                            .first()
+                            .is_some_and(|option| option == "exile it")
+                        {
+                            vec![effects::exile(json_as(
+                                json!({ "target": { "of": "instance", "instanceId": exiled } }),
+                            ))]
                         } else {
                             vec![]
                         }
@@ -3017,7 +3519,10 @@ mod r226_r70_a_cast_card_an_onplayhook_s_answer_moved_before_step_4 {
             &mut s,
             "edge-r10-draw-one",
             "Spell",
-            Script { cry: Some(hook(|_ctx| vec![effects::draw(json_as(json!({ "count": 1 })))])), ..Script::default() },
+            Script {
+                cry: Some(hook(|_ctx| vec![effects::draw(json_as(json!({ "count": 1 })))])),
+                ..Script::default()
+            },
             None,
         );
         let spell = in_hand(&mut s, "edge-r10-draw-one", P1);
@@ -3031,10 +3536,9 @@ mod r226_r70_a_cast_card_an_onplayhook_s_answer_moved_before_step_4 {
         // R226's rule for a card taken away before §10.5 step 4 can place it: it stays where that move put
         // it and is not played. Exile is a pile nothing takes a card back out of (§6.3).
         s.expect_in_zone(&cod.id, "exile");
-        assert!(!s
-            .events()
-            .iter()
-            .any(|event| matches!(event, GameEvent::CardPlayed { instance_id, .. } if *instance_id == cod.id)));
+        assert!(!s.events().iter().any(
+            |event| matches!(event, GameEvent::CardPlayed { instance_id, .. } if *instance_id == cod.id)
+        ));
     }
 }
 
@@ -3042,10 +3546,17 @@ mod r174_a_card_picked_at_a_prompt_watched_by_a_delayed_effect_the_answered_step
     use super::*;
 
     #[test]
-    fn r174_the_answered_step_s_delayed_effect_watching_the_reborn_body_it_just_picked_is_scheduled_r76_10_6() {
+    fn r174_the_answered_step_s_delayed_effect_watching_the_reborn_body_it_just_picked_is_scheduled_r76_10_6()
+    {
         register_all();
         let mut s = scenario(json!({ "p1": { "hand": [RENO] }, "p2": { "hand": [RENO] } }));
-        fixture(&mut s, "edge-r10-reborn", "Unit", Script::default(), Some(json!({ "attack": 1, "health": 3 })));
+        fixture(
+            &mut s,
+            "edge-r10-reborn",
+            "Unit",
+            Script::default(),
+            Some(json!({ "attack": 1, "health": 3 })),
+        );
         let reborn = place_fixture(&mut s, "edge-r10-reborn", P1, Row::Units, 1);
         must(find_instance_mut(s.state_mut(), &reborn.id), "the Reborn unit")
             .granted_keywords
@@ -3059,8 +3570,12 @@ mod r174_a_card_picked_at_a_prompt_watched_by_a_delayed_effect_the_answered_step
             Script {
                 cry: Some(hook(move |_ctx| {
                     vec![
-                        effects::sacrifice(json_as(json!({ "target": { "of": "instance", "instanceId": reborn_id } }))),
-                        effects::choose_target(json_as(json!({ "step": "picked", "scope": { "side": "ally", "of": ["unit"] } }))),
+                        effects::sacrifice(json_as(
+                            json!({ "target": { "of": "instance", "instanceId": reborn_id } }),
+                        )),
+                        effects::choose_target(json_as(
+                            json!({ "step": "picked", "scope": { "side": "ally", "of": ["unit"] } }),
+                        )),
                     ]
                 })),
                 resume: IndexMap::from([
@@ -3129,9 +3644,15 @@ mod r122_r113_the_engine_s_answer_called_directly_on_the_prompt_an_echo_repeat_o
             "edge-r10-echo-ping",
             "Spell",
             Script {
-                targets: vec![decl(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }))],
+                targets: vec![decl(
+                    json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }),
+                )],
                 static_flags: flags(json!({ "echo": 1 })),
-                cry: Some(hook(|_ctx| vec![effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 })))])),
+                cry: Some(hook(|_ctx| {
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "chosen" }, "amount": 1 }),
+                    ))]
+                })),
                 ..Script::default()
             },
             None,
@@ -3139,7 +3660,10 @@ mod r122_r113_the_engine_s_answer_called_directly_on_the_prompt_an_echo_repeat_o
         let spell = in_hand(&mut s, "edge-r10-echo-ping", P1);
         let before = s.state().players.p2.hero.health;
 
-        s.play(&spell.id, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+        s.play(
+            &spell.id,
+            json!({ "targets": [{ "pick": "hero", "player": "p2" }] }),
+        );
         let pending = must(s.state().pending.clone(), "the repeat's fresh pick");
         assert_eq!(pending.kind, PromptKind::Target);
         assert_eq!(s.state().players.p2.hero.health, before - 1);

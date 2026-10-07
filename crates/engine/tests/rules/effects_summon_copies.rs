@@ -98,7 +98,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
         crier().id,
         both(Script {
             cry: Some(hook(|_ctx| {
-                vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 3 })))]
+                vec![damage(json_as(
+                    json!({ "to": { "of": "enemyHero" }, "amount": 3 }),
+                ))]
             })),
             ..Script::default()
         }),
@@ -186,7 +188,9 @@ fn keyword_kinds_at(state: &GameState, lane: i32) -> Vec<KeywordKind> {
 
 /// TS held the live instance and read it after an effect; Rust reads the card again by id.
 fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id).cloned().unwrap_or_else(|| panic!("no card {id} in the state"))
+    find_instance(state, id)
+        .cloned()
+        .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 /// TS wrote through the live instance; Rust writes through the card found by id.
@@ -244,7 +248,11 @@ mod summon_with_random_keywords_r21_s7_80 {
         assert_eq!(kinds.iter().collect::<IndexSet<_>>().len(), 2);
         // R21's pool, and never Rush, which the Rush Token already has.
         for kind in &kinds {
-            assert!(RANDOM_KEYWORD_POOL.iter().any(|entry| entry.starts_with(kind.as_str())));
+            assert!(
+                RANDOM_KEYWORD_POOL
+                    .iter()
+                    .any(|entry| entry.starts_with(kind.as_str()))
+            );
             assert_ne!(*kind, KeywordKind::Rush);
         }
         // The layers really see them (§10.4), so the grant landed on the summoned instance.
@@ -282,7 +290,12 @@ mod summon_with_random_keywords_r21_s7_80 {
     fn r21_grants_nothing_when_the_summon_fizzled_and_takes_no_draw_for_it() {
         let mut state = game("kw-fizzle");
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, lane), json!({}));
+            put(
+                &mut state,
+                &body().id,
+                slot(PlayerId::P1, Row::Units, lane),
+                json!({}),
+            );
         }
         let cursor_before = state.rng_cursor;
 
@@ -319,7 +332,9 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
 
         let events = run(
             &mut state,
-            summon_copy(json_as(json!({ "of": { "of": "instance", "instanceId": source.id } }))),
+            summon_copy(json_as(
+                json!({ "of": { "of": "instance", "instanceId": source.id } }),
+            )),
             RunOptions::default(),
         );
 
@@ -334,7 +349,10 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
         assert!(copy.vanilla);
         assert_eq!(copy.buffs, AttackHealth { attack: 2, health: 3 });
         assert_eq!(copy.stats_override, Some(AttackHealth { attack: 7, health: 9 }));
-        assert_eq!(kinds_of(&copy.granted_keywords), vec![KeywordKind::Taunt, KeywordKind::Armor]);
+        assert_eq!(
+            kinds_of(&copy.granted_keywords),
+            vec![KeywordKind::Taunt, KeywordKind::Armor]
+        );
 
         // §10.4 reads the copy through the same layers: the override is the base face, buffs on top.
         let view = unit_view(&state, &copy);
@@ -351,7 +369,10 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
         }
         let copy_after = live(&state, &copy.id);
         assert_eq!(copy_after.buffs, AttackHealth { attack: 2, health: 3 });
-        assert_eq!(copy_after.stats_override, Some(AttackHealth { attack: 7, health: 9 }));
+        assert_eq!(
+            copy_after.stats_override,
+            Some(AttackHealth { attack: 7, health: 9 })
+        );
         assert_eq!(
             kinds_of(&copy_after.granted_keywords),
             vec![KeywordKind::Taunt, KeywordKind::Armor]
@@ -361,7 +382,12 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
     #[test]
     fn r57_resets_damage_exertion_counters_and_summoned_turn_on_the_copy() {
         let mut state = game("copy-resets");
-        let source = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let source = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         {
             let card = live_mut(&mut state, &source.id);
             card.damage = 4;
@@ -381,7 +407,9 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
 
         run(
             &mut state,
-            summon_copy(json_as(json!({ "of": { "of": "instance", "instanceId": source.id } }))),
+            summon_copy(json_as(
+                json!({ "of": { "of": "instance", "instanceId": source.id } }),
+            )),
             RunOptions::default(),
         );
 
@@ -425,7 +453,9 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
 
         run(
             &mut state,
-            summon_copy(json_as(json!({ "of": { "of": "chosen" }, "vanilla": true, "grantedKeywords": false }))),
+            summon_copy(json_as(
+                json!({ "of": { "of": "chosen" }, "vanilla": true, "grantedKeywords": false }),
+            )),
             RunOptions {
                 targets: Some(vec![Selection::Instance {
                     instance_id: source.id.clone(),
@@ -449,7 +479,12 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
     #[test]
     fn s6_2_the_copy_fires_no_cry_where_the_sources_own_cry_is_observable() {
         let mut state = game("copy-no-cry");
-        let source = put(&mut state, &crier().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let source = put(
+            &mut state,
+            &crier().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         let before = state.players.p2.hero.health;
 
         let events = run(
@@ -461,7 +496,10 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
             },
         );
 
-        assert_eq!(unit_at(&state, 2, PlayerId::P1).map(|card| card.def_id), Some(crier().id));
+        assert_eq!(
+            unit_at(&state, 2, PlayerId::P1).map(|card| card.def_id),
+            Some(crier().id)
+        );
         assert!(events_of_type(&events, GameEventType::Damage).is_empty());
         assert_eq!(state.players.p2.hero.health, before);
 
@@ -488,15 +526,27 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
     #[test]
     fn r64_fizzles_silently_with_a_full_row_creating_nothing() {
         let mut state = game("copy-full");
-        let source = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let source = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         for lane in [2, 3, 4, 5] {
-            put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, lane), json!({}));
+            put(
+                &mut state,
+                &body().id,
+                slot(PlayerId::P1, Row::Units, lane),
+                json!({}),
+            );
         }
         let ids_before = state.next_id;
 
         let events = run(
             &mut state,
-            summon_copy(json_as(json!({ "of": { "of": "instance", "instanceId": source.id } }))),
+            summon_copy(json_as(
+                json!({ "of": { "of": "instance", "instanceId": source.id } }),
+            )),
             RunOptions::default(),
         );
 
@@ -570,7 +620,12 @@ mod summon_random_s5_1_s10_7_r60_67 {
     fn s5_1_never_summons_the_requesting_cards_own_definition() {
         for seed in 0..12 {
             let mut state = game(&format!("random-exclude-{seed}"));
-            let self_ = put(&mut state, &pool_a().id, slot(PlayerId::P1, Row::Units, 5), json!({}));
+            let self_ = put(
+                &mut state,
+                &pool_a().id,
+                slot(PlayerId::P1, Row::Units, 5),
+                json!({}),
+            );
 
             run(
                 &mut state,
@@ -581,7 +636,10 @@ mod summon_random_s5_1_s10_7_r60_67 {
                 },
             );
 
-            assert_eq!(unit_at(&state, 1, PlayerId::P1).map(|card| card.def_id), Some(pool_b().id));
+            assert_eq!(
+                unit_at(&state, 1, PlayerId::P1).map(|card| card.def_id),
+                Some(pool_b().id)
+            );
         }
     }
 
@@ -591,25 +649,37 @@ mod summon_random_s5_1_s10_7_r60_67 {
 
         let events = run(
             &mut state,
-            summon_random(json_as(json!({ "query": { "defId": [pool_trap().id] }, "lane": 2 }))),
+            summon_random(json_as(
+                json!({ "query": { "defId": [pool_trap().id] }, "lane": 2 }),
+            )),
             RunOptions::default(),
         );
 
         assert_eq!(summoned_rows_and_lanes(&events), vec![(Row::Backrow, 2)]);
         let trap = card_at(&state, slot(PlayerId::P1, Row::Backrow, 2)).cloned();
-        assert_eq!(trap.as_ref().map(|card| card.def_id.clone()), Some(pool_trap().id));
+        assert_eq!(
+            trap.as_ref().map(|card| card.def_id.clone()),
+            Some(pool_trap().id)
+        );
         assert_eq!(trap.as_ref().and_then(|card| card.face_up), None);
     }
 
     #[test]
     fn r47_fizzles_on_an_occupied_backrow_lane_but_a_locked_one_takes_the_summon_r688() {
         let mut occupied = game("random-occupied");
-        put(&mut occupied, &pool_trap().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        put(
+            &mut occupied,
+            &pool_trap().id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
         let before = occupied.next_id;
         assert!(
             run(
                 &mut occupied,
-                summon_random(json_as(json!({ "query": { "defId": [pool_trap().id] }, "lane": 2 }))),
+                summon_random(json_as(
+                    json!({ "query": { "defId": [pool_trap().id] }, "lane": 2 })
+                )),
                 RunOptions::default(),
             )
             .is_empty()
@@ -622,7 +692,9 @@ mod summon_random_s5_1_s10_7_r60_67 {
         assert!(
             !run(
                 &mut locked,
-                summon_random(json_as(json!({ "query": { "defId": [pool_trap().id] }, "lane": 2 }))),
+                summon_random(json_as(
+                    json!({ "query": { "defId": [pool_trap().id] }, "lane": 2 })
+                )),
                 RunOptions::default(),
             )
             .is_empty()
@@ -661,8 +733,16 @@ mod summon_random_s5_1_s10_7_r60_67 {
         // Two contexts built at the same (seed, cursor) draw the same def (§9.3, R60).
         let mut first = game("random-same");
         let mut second = game("random-same");
-        run(&mut first, summon_random(json_as(json!({ "query": pool() }))), RunOptions::default());
-        run(&mut second, summon_random(json_as(json!({ "query": pool() }))), RunOptions::default());
+        run(
+            &mut first,
+            summon_random(json_as(json!({ "query": pool() }))),
+            RunOptions::default(),
+        );
+        run(
+            &mut second,
+            summon_random(json_as(json!({ "query": pool() }))),
+            RunOptions::default(),
+        );
         assert_eq!(
             unit_at(&second, 1, PlayerId::P1).map(|card| card.def_id),
             unit_at(&first, 1, PlayerId::P1).map(|card| card.def_id)

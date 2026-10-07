@@ -34,9 +34,9 @@
 //! owned copies here, read back from the state by id after every step and written through
 //! `find_instance_mut`; a regular expression on a fused id is the hand check `is_fused_id`.
 
+use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::subsystems::fuse::FuseArgs;
 use jackioh_engine::testkit::*;
-use jackioh_engine::PlayerId::{P1, P2};
 
 const JEWELOSCO_SCARAB: &str = "core-007";
 const MR_VANILLA: &str = "core-008";
@@ -78,7 +78,14 @@ fn craft(s: &mut Scenario, def_ids: &[&str]) -> CardInstance {
         })
         .collect();
     must(
-        fuse_in(s, FuseArgs { ingredients, to_hand: Some(P1), ..Default::default() }),
+        fuse_in(
+            s,
+            FuseArgs {
+                ingredients,
+                to_hand: Some(P1),
+                ..Default::default()
+            },
+        ),
         "the crafted card",
     )
 }
@@ -97,7 +104,8 @@ mod r113_a_fused_cry_that_pauses_resumes_the_rest_of_every_ingredients_list {
     use super::*;
 
     #[test]
-    fn r113_r77_r102_a_crafted_cube_scarab_sorcerer_still_deals_the_sorcerers_damage_after_the_scarabs_discover() {
+    fn r113_r77_r102_a_crafted_cube_scarab_sorcerer_still_deals_the_sorcerers_damage_after_the_scarabs_discover()
+     {
         // The fused Cry is [Cube: remember, sacrifice] + [Scarab: Discover] + [Sorcerer: 4 damage]. The
         // Discover pauses it at its third effect and the fourth is owed. Rebuilt on the answer, the
         // Cube's half is empty — its meal has left the field — so the resume must go by ingredient.
@@ -133,7 +141,8 @@ mod r90_r102_a_fused_cards_choices_are_split_as_the_play_declared_them {
     use super::*;
 
     #[test]
-    fn r90_r102_a_crafted_postdoc_sorcerer_played_with_no_human_on_the_field_deals_the_sorcerers_4_to_its_target() {
+    fn r90_r102_a_crafted_postdoc_sorcerer_played_with_no_human_on_the_field_deals_the_sorcerers_4_to_its_target()
+     {
         // Step 1 validates the play against the board with the crafted card in hand: no Human unit is on
         // the field, so the Postdoc's declaration takes nothing (R90) and the one target is the
         // Sorcerer's. The crafted card is a Human (R102 unions the tags), and by step 5 it stands on the
@@ -143,11 +152,12 @@ mod r90_r102_a_fused_cards_choices_are_split_as_the_play_declared_them {
             "p2": { "hand": [RENO], "field": [MIDRANGE_MENACE] },
         }));
         let crafted = craft(&mut s, &[PREJUDICED_POSTDOC, TWISTED_SORCERER]);
-        assert!(s
-            .state()
-            .transient_defs
-            .get(&crafted.def_id)
-            .is_some_and(|def| def.tags.contains(&Tag::Human)));
+        assert!(
+            s.state()
+                .transient_defs
+                .get(&crafted.def_id)
+                .is_some_and(|def| def.tags.contains(&Tag::Human))
+        );
         let hero_only: Vec<Selection> = vec![Selection::Hero { player: P2 }];
         let offered = legal_actions(s.state(), P1).iter().any(|action| {
             matches!(action, ActionBody::Play { instance_id, targets, .. }
@@ -165,7 +175,8 @@ mod r113_r122_a_pause_inside_an_answered_step_is_owed_ahead_of_what_was_already_
     use super::*;
 
     #[test]
-    fn r113_r122_r102_a_fused_radiant_mask_mask_finishes_the_answered_first_picks_second_question_before_the_other_masks_first() {
+    fn r113_r122_r102_a_fused_radiant_mask_mask_finishes_the_answered_first_picks_second_question_before_the_other_masks_first()
+     {
         // #85 Unlicensed Experimentation fuses the Mask p2 plays onto p1's own (R77): built directly here.
         // The fused start-of-turn hook is [ask A's first, ask B's first], and R102 brings each answer back
         // to the Mask that asked, so an answered first pick is [A's pick, ask A's second] — never B's
@@ -182,11 +193,21 @@ mod r113_r122_a_pause_inside_an_answered_step_is_owed_ahead_of_what_was_already_
         }));
         let kept = must(s.backrow(P1, 1), "p1's radiant Mask");
         let ingredient = must(
-            s.hand(P1).iter().find(|card| card.def_id == MASOCHISM_MASK).cloned(),
+            s.hand(P1)
+                .iter()
+                .find(|card| card.def_id == MASOCHISM_MASK)
+                .cloned(),
             "the Mask in hand",
         );
         must(
-            fuse_in(&mut s, FuseArgs { ingredients: vec![ingredient], target: Some(kept), ..Default::default() }),
+            fuse_in(
+                &mut s,
+                FuseArgs {
+                    ingredients: vec![ingredient],
+                    target: Some(kept),
+                    ..Default::default()
+                },
+            ),
             "the fused Mask",
         );
 
@@ -196,7 +217,11 @@ mod r113_r122_a_pause_inside_an_answered_step_is_owed_ahead_of_what_was_already_
             let Some(pending) = s.state().pending.as_ref() else {
                 break;
             };
-            asked.push(if pending.prompt.contains("(1 of 2)") { "first" } else { "second" });
+            asked.push(if pending.prompt.contains("(1 of 2)") {
+                "first"
+            } else {
+                "second"
+            });
             s.answer(json!("nothing"));
         }
 
@@ -228,14 +253,20 @@ fn kinds(g: &Scenario, card: &CardInstance) -> Vec<KeywordKind> {
 
 /// The keyword kinds a definition's base face prints.
 fn printed_kinds(g: &Scenario, def_id: &str) -> Vec<KeywordKind> {
-    def_of(Some(g.state()), def_id).base.keywords.iter().map(Keyword::kind).collect()
+    def_of(Some(g.state()), def_id)
+        .base
+        .keywords
+        .iter()
+        .map(Keyword::kind)
+        .collect()
 }
 
 mod r41_r77_a_fused_crys_later_part_reads_the_board_its_earlier_parts_left {
     use super::*;
 
     #[test]
-    fn r41_r102_r174_a_crafted_ceaseless_void_carnivorous_cube_whose_void_exiled_the_meal_has_eaten_nothing_so_its_death_summons_nothing() {
+    fn r41_r102_r174_a_crafted_ceaseless_void_carnivorous_cube_whose_void_exiled_the_meal_has_eaten_nothing_so_its_death_summons_nothing()
+     {
         let mut g = scenario(json!({
             "seed": "r6cube-2131", // Craft a Card's Discovers offer Ceaseless Void, then Carnivorous Cube (every set's Units, R380)
             "p1": { "hand": [CRAFT_A_CARD, HIT_JOB, STOCKPILE], "mana": 10, "field": [{ "def": GARY, "lane": 1 }] },
@@ -245,26 +276,42 @@ mod r41_r77_a_fused_crys_later_part_reads_the_board_its_earlier_parts_left {
         g.answer(json!(CEASELESS_VOID));
         g.answer(json!(CARNIVOROUS_CUBE));
         let card = must(
-            g.hand(P1).iter().find(|held| held.def_id.starts_with("t-")).cloned(),
+            g.hand(P1)
+                .iter()
+                .find(|held| held.def_id.starts_with("t-"))
+                .cloned(),
             "the crafted card",
         );
         let gary = must(g.unit(P1, 1), "Gary");
 
         // The Void's part exiles every other permanent, Gary included (§8 #100), so the Cube's part has
         // nothing to tribute: the sacrifice fizzles (R174) and nothing is eaten (R41).
-        g.play(&card.id, json!({ "zone": 3, "targets": [{ "pick": "instance", "instanceId": gary.id }] }));
+        g.play(
+            &card.id,
+            json!({ "zone": 3, "targets": [{ "pick": "instance", "instanceId": gary.id }] }),
+        );
         g.expect_in_zone(&gary.id, "exile");
         let crafted = must(g.unit(P1, 3), "the crafted unit");
         let before = g.events().len();
 
         // R41: "nothing eaten → Death does nothing". The crafted card dies, and no Gary comes back.
-        g.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": crafted.id }] }));
+        g.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": crafted.id }] }),
+        );
         g.expect_in_zone(&crafted.id, "graveyard");
         let copies = g.events()[before..]
             .iter()
             .filter(|event| matches!(event, GameEvent::Summoned { def_id, .. } if def_id == GARY))
             .count();
-        let units = g.state().players.p1.units.iter().filter(|pile| pile.is_some()).count();
+        let units = g
+            .state()
+            .players
+            .p1
+            .units
+            .iter()
+            .filter(|pile| pile.is_some())
+            .count();
         assert_eq!((copies, units), (0, 0));
     }
 }
@@ -273,7 +320,8 @@ mod r77_8_68_a_fused_crys_later_part_reads_the_board_its_earlier_parts_left {
     use super::*;
 
     #[test]
-    fn r102_8_68_a_crafted_reno_twisted_sorcerer_reads_the_hero_reno_has_just_set_to_30_so_it_deals_4_not_8() {
+    fn r102_8_68_a_crafted_reno_twisted_sorcerer_reads_the_hero_reno_has_just_set_to_30_so_it_deals_4_not_8()
+    {
         let mut g = scenario(json!({
             "seed": "r6reno-266", // Craft a Card's Discovers offer Reno, then Twisted Sorcerer (every set's Units, R380)
             "p1": { "hand": [CRAFT_A_CARD, STOCKPILE], "mana": 10, "health": 5 },
@@ -283,7 +331,10 @@ mod r77_8_68_a_fused_crys_later_part_reads_the_board_its_earlier_parts_left {
         g.answer(json!(RENO));
         g.answer(json!(TWISTED_SORCERER));
         let card = must(
-            g.hand(P1).iter().find(|held| held.def_id.starts_with("t-")).cloned(),
+            g.hand(P1)
+                .iter()
+                .find(|held| held.def_id.starts_with("t-"))
+                .cloned(),
             "the crafted card",
         );
         let before = g.events().len();
@@ -291,12 +342,17 @@ mod r77_8_68_a_fused_crys_later_part_reads_the_board_its_earlier_parts_left {
         // Reno's part sets the hero to 30 (§8 #53), and then the Sorcerer's part resolves: "8 if your
         // hero is below 10", with the threshold "read at resolution" (§8 #68's Engine cell). The hero is
         // at 30 by then, so the enemy hero takes 4.
-        g.play(&card.id, json!({ "zone": 1, "targets": [{ "pick": "hero", "player": "p2" }] }));
+        g.play(
+            &card.id,
+            json!({ "zone": 1, "targets": [{ "pick": "hero", "player": "p2" }] }),
+        );
         g.expect_health(P1, 30);
         let hits: Vec<i32> = g.events()[before..]
             .iter()
             .filter_map(|event| match event {
-                GameEvent::Damage { target_id, amount, .. } if target_id == "hero-p2" => Some(*amount),
+                GameEvent::Damage {
+                    target_id, amount, ..
+                } if target_id == "hero-p2" => Some(*amount),
                 _ => None,
             })
             .collect();
@@ -309,7 +365,8 @@ mod r77_5_2_a_keyword_a_fuse_newly_prints_applies_at_once {
     use super::*;
 
     #[test]
-    fn r77_a_fuse_that_adds_a_printed_divine_shield_gives_a_unit_whose_granted_shield_was_spent_a_shield_again_5_2_10_1() {
+    fn r77_a_fuse_that_adds_a_printed_divine_shield_gives_a_unit_whose_granted_shield_was_spent_a_shield_again_5_2_10_1()
+     {
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 10,
@@ -408,7 +465,11 @@ fn fuse_seven_seven_onto(target: Value) -> (Scenario, CardInstance) {
     let kept = unit_at(&g, P1, 1);
     g.play(SEVEN_SEVEN, json!({ "zone": 1 }));
     // The fusion happened: the target instance stands, carrying the summed stats (R77).
-    assert!(g.events().iter().any(|event| matches!(event, GameEvent::Fused { .. })));
+    assert!(
+        g.events()
+            .iter()
+            .any(|event| matches!(event, GameEvent::Fused { .. }))
+    );
     assert!(g.unit(P2, 1).is_none());
     (g, kept)
 }
@@ -417,7 +478,8 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
     use super::*;
 
     #[test]
-    fn r102_r77_a_fuse_of_two_armor_7_units_prints_armor_14_as_armor_7_and_armor_1_print_armor_8_6_1_armor_stacks() {
+    fn r102_r77_a_fuse_of_two_armor_7_units_prints_armor_14_as_armor_7_and_armor_1_print_armor_8_6_1_armor_stacks()
+     {
         // Two different Armors already add up on the fused face: the kept Duelist is Radiant, so the
         // fused card runs its Radiant face, the two Radiant faces summed (R77) — 8 + 14 attack.
         let (duelist_g, duelist_kept) = fuse_seven_seven_onto(radiant_duelist());
@@ -433,7 +495,8 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
     }
 
     #[test]
-    fn r102_r77_a_masochism_mask_fused_onto_a_masochism_mask_applies_each_start_of_turn_pick_once_not_once_per_ingredient_8_65() {
+    fn r102_r77_a_masochism_mask_fused_onto_a_masochism_mask_applies_each_start_of_turn_pick_once_not_once_per_ingredient_8_65()
+     {
         // p2 plays a Masochism Mask; p1's Unlicensed Experimentation fuses it onto p1's own Mask, the
         // only Field Spell p1 controls (R61, R77). The fused card carries both Masks' text: "Start of
         // turn: choose one …" twice, so p1 is asked twice and each answer is one pick.
@@ -450,20 +513,31 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
         }));
         s.play(MASOCHISM_MASK, json!({ "zone": 1 }));
         let fused = s.backrow(P1, 1).map(|card| card.def_id.clone());
-        assert!(fused.as_deref().is_some_and(|id| is_fused_id(id, "core-065+core-065")));
+        assert!(
+            fused
+                .as_deref()
+                .is_some_and(|id| is_fused_id(id, "core-065+core-065"))
+        );
 
         s.end_turn();
-        assert_eq!(s.state().pending.as_ref().map(|pending| pending.player_id), Some(P1));
+        assert_eq!(
+            s.state().pending.as_ref().map(|pending| pending.player_id),
+            Some(P1)
+        );
         s.answer(json!(["lose 3"]));
         // One Mask's pick: 3 health, not 3 for each ingredient that shares the step name.
         s.expect_health(P1, 27);
-        assert_eq!(s.state().pending.as_ref().map(|pending| pending.player_id), Some(P1));
+        assert_eq!(
+            s.state().pending.as_ref().map(|pending| pending.player_id),
+            Some(P1)
+        );
         s.answer(json!(["lose 3"]));
         s.expect_health(P1, 24);
     }
 
     #[test]
-    fn r102_r41_r77_a_crafted_carnivorous_cube_carnivorous_cube_remembers_both_meals_so_its_death_copies_each_8_22() {
+    fn r102_r41_r77_a_crafted_carnivorous_cube_carnivorous_cube_remembers_both_meals_so_its_death_copies_each_8_22()
+     {
         let mut s = scenario(json!({
             "seed": "r7-cube-cube",
             "p1": {
@@ -476,10 +550,22 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
             "p2": { "hand": [STOCKPILE], "field": [MIDRANGE_MENACE], "library": KEYWORD_LIBRARY },
         }));
         // Craft a Card's result, built directly from the two Cubes in hand (R77).
-        let cubes: Vec<CardInstance> = s.hand(P1).iter().filter(|card| card.def_id == CARNIVOROUS_CUBE).cloned().collect();
+        let cubes: Vec<CardInstance> = s
+            .hand(P1)
+            .iter()
+            .filter(|card| card.def_id == CARNIVOROUS_CUBE)
+            .cloned()
+            .collect();
         assert_eq!(cubes.len(), 2);
         let crafted = must(
-            fuse_in(&mut s, FuseArgs { ingredients: cubes, to_hand: Some(P1), ..Default::default() }),
+            fuse_in(
+                &mut s,
+                FuseArgs {
+                    ingredients: cubes,
+                    to_hand: Some(P1),
+                    ..Default::default()
+                },
+            ),
             "the crafted card",
         );
         assert!(crafted.def_id.ends_with("core-022+core-022"));
@@ -501,13 +587,33 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
         s.expect_in_zone(&pointmaster.id, "graveyard");
         s.expect_in_zone(&menace.id, "graveyard");
         // The Mana Well beside them is no meal (R428): it stays where it is.
-        assert_eq!(s.backrow(P1, 1).map(|card| card.def_id.clone()), Some(MANA_WELL.to_string()));
+        assert_eq!(
+            s.backrow(P1, 1).map(|card| card.def_id.clone()),
+            Some(MANA_WELL.to_string())
+        );
 
         // Hit Job destroys the crafted card: each Cube's Death summons 2 copies of ITS remembered card.
-        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": crafted.id }] }));
-        let units: Vec<Option<String>> = (1..=5).map(|lane| s.unit(P1, lane).map(|card| card.def_id.clone())).collect();
-        assert_eq!(units.iter().filter(|id| id.as_deref() == Some(POINTMASTER)).count(), 2);
-        assert_eq!(units.iter().filter(|id| id.as_deref() == Some(MIDRANGE_MENACE)).count(), 2);
+        s.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": crafted.id }] }),
+        );
+        let units: Vec<Option<String>> = (1..=5)
+            .map(|lane| s.unit(P1, lane).map(|card| card.def_id.clone()))
+            .collect();
+        assert_eq!(
+            units
+                .iter()
+                .filter(|id| id.as_deref() == Some(POINTMASTER))
+                .count(),
+            2
+        );
+        assert_eq!(
+            units
+                .iter()
+                .filter(|id| id.as_deref() == Some(MIDRANGE_MENACE))
+                .count(),
+            2
+        );
     }
 
     #[test]
@@ -523,14 +629,21 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
         }));
         s.play(TWINSPELL, json!({ "zone": 1 }));
         let fused = s.backrow(P1, 1).map(|card| card.def_id.clone());
-        assert!(fused.as_deref().is_some_and(|id| is_fused_id(id, "core-079+core-079")));
+        assert!(
+            fused
+                .as_deref()
+                .is_some_and(|id| is_fused_id(id, "core-079+core-079"))
+        );
         s.end_turn();
 
         // Two Twinspells standing apart make the next Spell resolve three times; the one card that
         // carries both texts does the same. Stockpile draws 2 per resolution.
         let from = s.events().len();
         s.play(STOCKPILE, json!({}));
-        let draws = s.events()[from..].iter().filter(|event| matches!(event, GameEvent::Drawn { .. })).count();
+        let draws = s.events()[from..]
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Drawn { .. }))
+            .count();
         assert_eq!(draws, 6);
     }
 }
@@ -539,7 +652,8 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
     use super::*;
 
     #[test]
-    fn r151_r43_r77_unlicensed_experimentation_fusing_a_played_heroic_power_onto_a_mana_well_leaves_a_card_whose_power_can_be_activated() {
+    fn r151_r43_r77_unlicensed_experimentation_fusing_a_played_heroic_power_onto_a_mana_well_leaves_a_card_whose_power_can_be_activated()
+     {
         let mut g = scenario(json!({
             "p1": { "hand": [HEROIC_POWER, STOCKPILE] },
             "p2": {
@@ -553,10 +667,18 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
         // The power the Heroic Power rolled in hand (R43): "deal 2 damage to each opposing hero", which
         // asks nothing.
         let power = must(
-            g.state().players.p1.hand.iter().find(|card| card.def_id == HEROIC_POWER).cloned(),
+            g.state()
+                .players
+                .p1
+                .hand
+                .iter()
+                .find(|card| card.def_id == HEROIC_POWER)
+                .cloned(),
             "the live Heroic Power",
         );
-        g.card_mut(&power.id).memory.insert(subsystems::POWER_KEY.to_string(), json!("burn"));
+        g.card_mut(&power.id)
+            .memory
+            .insert(subsystems::POWER_KEY.to_string(), json!("burn"));
         let well = must(g.backrow(P2, 2), "p2's Mana Well");
 
         // p1 plays it (which uses nothing, R752), and after it resolves p2's #85 fuses it onto the Mana Well
@@ -573,8 +695,15 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
         assert!(subsystems::power_of(&fused).is_some());
         g.end_turn();
         assert_eq!(g.state().active, P2);
-        let ability = must(subsystems::power_ability_of(g.state(), &fused), "the fused card's power").id.clone();
-        assert!(subsystems::why_cannot_activate_ability(g.state(), P2, &fused.id, Some(ability.as_str())).is_ok());
+        let ability = must(
+            subsystems::power_ability_of(g.state(), &fused),
+            "the fused card's power",
+        )
+        .id
+        .clone();
+        assert!(
+            subsystems::why_cannot_activate_ability(g.state(), P2, &fused.id, Some(ability.as_str())).is_ok()
+        );
     }
 }
 
@@ -600,7 +729,8 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
     use super::*;
 
     #[test]
-    fn r102_r124_a_going_long_fused_onto_a_going_long_gives_its_hero_armor_4_as_two_going_longs_standing_apart_do() {
+    fn r102_r124_a_going_long_fused_onto_a_going_long_gives_its_hero_armor_4_as_two_going_longs_standing_apart_do()
+     {
         // p2 plays Going Long for 2; p1's Unlicensed Experimentation fuses it onto p1's own Going Long,
         // the only Field Spell p1 controls (R61, R77). The fused card carries both texts, "Your hero has
         // Armor 2" twice: hero Armor from several sources adds up (R124), and a static flag that is an
@@ -617,7 +747,11 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
         assert_eq!(hero_armor_of(g.state(), P1), 2);
 
         g.play(GOING_LONG, json!({ "zone": 1, "embiggen": false }));
-        assert!(g.events().iter().any(|event| matches!(event, GameEvent::Fused { .. })));
+        assert!(
+            g.events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::Fused { .. }))
+        );
         assert!(g.backrow(P2, 1).is_none());
         assert!(is_fused_id(&backrow_at(&g, P1, 1).def_id, "core-084+core-084"));
 
@@ -625,7 +759,8 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
     }
 
     #[test]
-    fn r102_r124_a_going_long_paid_4_fused_onto_a_going_long_paid_2_gives_armor_4_and_2_each_at_its_own_cards_price_6_3_embiggen() {
+    fn r102_r124_a_going_long_paid_4_fused_onto_a_going_long_paid_2_gives_armor_4_and_2_each_at_its_own_cards_price_6_3_embiggen()
+     {
         let mut g = scenario(json!({
             "active": "p2",
             "p1": {
@@ -659,7 +794,11 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
         let felinor = unit_at(&g, P1, 1);
 
         g.play(SUPPRESSIVE_AURA, json!({ "zone": 1, "embiggen": true }));
-        assert!(g.events().iter().any(|event| matches!(event, GameEvent::Fused { .. })));
+        assert!(
+            g.events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::Fused { .. }))
+        );
         assert!(is_fused_id(&backrow_at(&g, P1, 1).def_id, "core-046+core-006"));
 
         // Big Felinor is 3/10: under −2/−2 it is 1/8, under the base price's −1/−1 it would be 2/9.
@@ -667,7 +806,8 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
     }
 
     #[test]
-    fn r102_a_radiant_spikey_pillow_fused_with_another_card_still_spares_every_spikey_pillow_its_aura_names_7_8_65_1() {
+    fn r102_a_radiant_spikey_pillow_fused_with_another_card_still_spares_every_spikey_pillow_its_aura_names_7_8_65_1()
+     {
         // p1's radiant Spikey Pillow prints "Aura: your non-Spikey-Pillow units have −2 attack". p2
         // plays Tempo Timmy, and p1's Unlicensed Experimentation fuses it onto the Pillow, p1's only
         // Unit (R61, R77). The fused card carries the Pillow's text in full. On p1's turn its Masochism
@@ -693,7 +833,10 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
         assert!(is_fused_id(&fused, "core-011+core-065-1") || is_fused_id(&fused, "core-065-1+core-011"));
 
         g.end_turn();
-        assert_eq!(g.state().pending.as_ref().map(|pending| pending.player_id), Some(P1));
+        assert_eq!(
+            g.state().pending.as_ref().map(|pending| pending.player_id),
+            Some(P1)
+        );
         g.answer(json!(["summon Spikey Pillow"]));
         let pillow = unit_at(&g, P1, 2);
         assert_eq!(pillow.def_id, PILLOW);
@@ -721,7 +864,9 @@ mod r77_r102_a_fuse_leaves_the_kept_cards_memory_as_it_was_but_for_the_prices_it
         // Something the kept card remembers from before the Fuse, which R77 keeps where it is: no text
         // of the card wrote it through `remember`, so it is none of what moves with the card's texts
         // (re-entry.test.ts's R77 case has a Cube's meal move).
-        g.card_mut(&kept.id).memory.insert("r77-before".to_string(), json!("kept"));
+        g.card_mut(&kept.id)
+            .memory
+            .insert("r77-before".to_string(), json!("kept"));
         let before = g.card(&kept.id).memory.clone();
         g.play(GOING_LONG, json!({ "zone": 1, "embiggen": embiggen }));
         assert!(is_fused_id(&g.card(&kept.id).def_id, "core-084+core-084"));
@@ -736,7 +881,8 @@ mod r77_r102_a_fuse_leaves_the_kept_cards_memory_as_it_was_but_for_the_prices_it
     }
 
     #[test]
-    fn r77_r102_a_fuse_whose_ingredients_were_played_at_different_prices_adds_only_their_prices_to_the_kept_cards_memory_6_3_embiggen() {
+    fn r77_r102_a_fuse_whose_ingredients_were_played_at_different_prices_adds_only_their_prices_to_the_kept_cards_memory_6_3_embiggen()
+     {
         let (_g, kept, before) = fused_going_longs(true);
         let mut rest = kept.memory.clone();
         let prices = rest.shift_remove(INGREDIENTS_KEY);
@@ -744,7 +890,11 @@ mod r77_r102_a_fuse_leaves_the_kept_cards_memory_as_it_was_but_for_the_prices_it
         // price each ingredient was played for: the kept Going Long's 2, and p2's 4.
         assert_eq!(rest, before);
         assert!(prices.is_some());
-        let mut paid: Vec<bool> = ingredients_of(&kept).unwrap_or_default().iter().map(|record| record.embiggened).collect();
+        let mut paid: Vec<bool> = ingredients_of(&kept)
+            .unwrap_or_default()
+            .iter()
+            .map(|record| record.embiggened)
+            .collect();
         paid.sort();
         assert_eq!(paid, vec![false, true]);
     }

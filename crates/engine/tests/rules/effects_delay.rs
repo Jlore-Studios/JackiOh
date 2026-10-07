@@ -49,7 +49,11 @@ impl Bench<'_> {
 
 fn sink_for(state: &mut GameState) -> Bench<'_> {
     let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench { state, events: Vec::new(), rng }
+    Bench {
+        state,
+        events: Vec::new(),
+        rng,
+    }
 }
 
 /// TS `put(state, defId, ref, { radiant: true })`: the card is made Radiant before it is placed.
@@ -58,7 +62,10 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
     let mut card = new_instance(state, def_id, player, Zone::Hand { player });
     card.radiant = true;
     let id = card.id.clone();
-    assert!(place_on_field(state, &mut card, at, Default::default()), "could not place {def_id}");
+    assert!(
+        place_on_field(state, &mut card, at, Default::default()),
+        "could not place {def_id}"
+    );
     find_instance(state, &id).cloned().expect("the placed card")
 }
 
@@ -91,7 +98,9 @@ const BOLT_STEP: &str = "bolt";
 fn bolt_hook() -> Hook {
     hook(|ctx| {
         let amount = ctx.data.get("amount").and_then(Value::as_i64).unwrap_or(0) as i32;
-        vec![damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))]
+        vec![damage(json_as(
+            json!({ "to": { "of": "enemyHero" }, "amount": amount }),
+        ))]
     })
 }
 
@@ -116,7 +125,15 @@ fn dl_defs() -> Vec<CardDef> {
 }
 
 fn dl_scripts() -> IndexMap<String, CardScripts> {
-    [(bolt().id, CardScripts { base: bolt_script(), radiant: bolt_script() })].into_iter().collect()
+    [(
+        bolt().id,
+        CardScripts {
+            base: bolt_script(),
+            radiant: bolt_script(),
+        },
+    )]
+    .into_iter()
+    .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -162,9 +179,15 @@ fn playing(seed: &str) -> GameState {
     register_scripts(scripts);
     let mut state = begin_game(&fresh).state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|c| c.id.clone()).collect();
-    state = act(&state, json_as(json!({ "type": "mulligan", "keep": keep, "playerId": "p1" })));
+    state = act(
+        &state,
+        json_as(json!({ "type": "mulligan", "keep": keep, "playerId": "p1" })),
+    );
     let keep: Vec<String> = state.players.p2.hand.iter().map(|c| c.id.clone()).collect();
-    state = act(&state, json_as(json!({ "type": "mulligan", "keep": keep, "playerId": "p2" })));
+    state = act(
+        &state,
+        json_as(json!({ "type": "mulligan", "keep": keep, "playerId": "p2" })),
+    );
     state
 }
 
@@ -183,7 +206,14 @@ fn run(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<
     let mut sink = sink_for(state);
     {
         let mut inner = sink.sink();
-        let mut ctx = make_context(&mut inner, self_.as_ref(), HookOptions { controller, ..Default::default() });
+        let mut ctx = make_context(
+            &mut inner,
+            self_.as_ref(),
+            HookOptions {
+                controller,
+                ..Default::default()
+            },
+        );
         apply_effects(&effects, &mut ctx);
     }
     let cursor = sink.rng.cursor();
@@ -213,7 +243,11 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
             .iter()
             .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
         (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(got, want)| matches_object(got, want))
+            actual.len() == expected.len()
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(got, want)| matches_object(got, want))
         }
         _ => actual == expected,
     }
@@ -221,11 +255,17 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
 
 fn assert_matches_object<T: serde::Serialize>(actual: &T, expected: Value) {
     let actual = json_of(actual);
-    assert!(matches_object(&actual, &expected), "{actual} does not match {expected}");
+    assert!(
+        matches_object(&actual, &expected),
+        "{actual} does not match {expected}"
+    );
 }
 
 fn as_scribe(scribe: &CardInstance) -> RunOptions {
-    RunOptions { self_: Some(scribe.clone()), controller: Some(P1) }
+    RunOptions {
+        self_: Some(scribe.clone()),
+        controller: Some(P1),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -236,13 +276,16 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
     use super::*;
 
     #[test]
-    fn r62_stores_one_entry_at_the_named_phase_and_player_owned_by_the_controller_carrying_the_captured_data() {
+    fn r62_stores_one_entry_at_the_named_phase_and_player_owned_by_the_controller_carrying_the_captured_data()
+    {
         let mut state = playing("delay-schedule");
         let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
 
         run(
             &mut state,
-            vec![delay(json_as(json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 3 } })))],
+            vec![delay(json_as(
+                json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 3 } }),
+            ))],
             as_scribe(&scribe),
         );
 
@@ -275,18 +318,24 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
 
         run(
             &mut state,
-            vec![delay(json_as(json!({ "at": { "phase": "start", "player": "enemy" }, "step": BOLT_STEP })))],
+            vec![delay(json_as(
+                json!({ "at": { "phase": "start", "player": "enemy" }, "step": BOLT_STEP }),
+            ))],
             as_scribe(&scribe),
         );
 
         // The owner is still the scheduler — it is whose sequence resolves — but the boundary is p2's.
-        assert_matches_object(only(&state.delayed), json!({ "owner": "p1", "at": { "phase": "start", "player": "p2" } }));
+        assert_matches_object(
+            only(&state.delayed),
+            json!({ "owner": "p1", "at": { "phase": "start", "player": "p2" } }),
+        );
         assert!(due_delayed(&state, Phase::Start, P1).is_empty());
         assert_eq!(due_delayed(&state, Phase::Start, P2).len(), 1);
     }
 
     #[test]
-    fn r350_this_turn_waits_for_the_end_of_the_turn_that_is_running_whoever_s_it_is_and_r241_does_not_drop_it() {
+    fn r350_this_turn_waits_for_the_end_of_the_turn_that_is_running_whoever_s_it_is_and_r241_does_not_drop_it()
+     {
         let mut state = playing("delay-this-turn");
         let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
         assert_eq!(state.active, P1);
@@ -296,20 +345,30 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
         state.active = P2;
         run(
             &mut state,
-            vec![delay(json_as(json!({ "at": { "phase": "end", "player": THIS_TURN }, "step": BOLT_STEP, "data": { "amount": 2 } })))],
+            vec![delay(json_as(
+                json!({ "at": { "phase": "end", "player": THIS_TURN }, "step": BOLT_STEP, "data": { "amount": 2 } }),
+            ))],
             as_scribe(&scribe),
         );
-        assert_matches_object(only(&state.delayed), json!({ "owner": "p1", "at": { "phase": "end", "player": "p2" } }));
+        assert_matches_object(
+            only(&state.delayed),
+            json!({ "owner": "p1", "at": { "phase": "end", "player": "p2" } }),
+        );
 
         // Made by p1 on its own turn, it is p1's turn end.
         state.delayed = vec![];
         state.active = P1;
         run(
             &mut state,
-            vec![delay(json_as(json!({ "at": { "phase": "end", "player": THIS_TURN }, "step": BOLT_STEP, "data": { "amount": 2 } })))],
+            vec![delay(json_as(
+                json!({ "at": { "phase": "end", "player": THIS_TURN }, "step": BOLT_STEP, "data": { "amount": 2 } }),
+            ))],
             as_scribe(&scribe),
         );
-        assert_matches_object(only(&state.delayed), json!({ "owner": "p1", "at": { "phase": "end", "player": "p1" } }));
+        assert_matches_object(
+            only(&state.delayed),
+            json!({ "owner": "p1", "at": { "phase": "end", "player": "p1" } }),
+        );
 
         // And it comes due at that turn's end: 2 to p2's hero, as the turn ends.
         let after = end_turns(&state, 1);
@@ -324,7 +383,9 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
 
         run(
             &mut state,
-            vec![delay(json_as(json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP })))],
+            vec![delay(json_as(
+                json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP }),
+            ))],
             as_scribe(&scribe),
         );
 
@@ -339,8 +400,12 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
         run(
             &mut state,
             vec![
-                delay(json_as(json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 1 } }))),
-                delay(json_as(json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 4 } }))),
+                delay(json_as(
+                    json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 1 } }),
+                )),
+                delay(json_as(
+                    json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 4 } }),
+                )),
             ],
             as_scribe(&scribe),
         );
@@ -369,7 +434,9 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
         let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
         run(
             &mut state,
-            vec![delay(json_as(json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 3 } })))],
+            vec![delay(json_as(
+                json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 3 } }),
+            ))],
             as_scribe(&scribe),
         );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
@@ -420,7 +487,9 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
         let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
         run(
             &mut state,
-            vec![delay(json_as(json!({ "at": { "phase": "start", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 2 } })))],
+            vec![delay(json_as(
+                json!({ "at": { "phase": "start", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 2 } }),
+            ))],
             as_scribe(&scribe),
         );
 
@@ -442,13 +511,20 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
         let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
         run(
             &mut state,
-            vec![delay(json_as(json!({ "at": { "phase": "start", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 5 } })))],
+            vec![delay(json_as(
+                json!({ "at": { "phase": "start", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 5 } }),
+            ))],
             as_scribe(&scribe),
         );
 
         // "Fires even if K-Pop Fanatic died" (§8.2 #50, R76).
         let mut moving = find_instance(&state, &scribe.id).expect("the scribe").clone();
-        move_to_zone(&mut state, &mut moving, OffFieldZone::Graveyard, Default::default());
+        move_to_zone(
+            &mut state,
+            &mut moving,
+            OffFieldZone::Graveyard,
+            Default::default(),
+        );
         assert!(state.players.p1.graveyard.iter().any(|card| card.id == scribe.id));
 
         let back_to_p1 = end_turns(&state, 2);
@@ -462,7 +538,9 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
         let scribe = put(&mut state, &bolt().id, slot(P1, Units, 3), json!({}));
         run(
             &mut state,
-            vec![delay(json_as(json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 6 } })))],
+            vec![delay(json_as(
+                json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 6 } }),
+            ))],
             as_scribe(&scribe),
         );
 
@@ -483,8 +561,13 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
 
         run(
             &mut state,
-            vec![delay(json_as(json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 7 } })))],
-            RunOptions { self_: None, controller: Some(P1) },
+            vec![delay(json_as(
+                json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 7 } }),
+            ))],
+            RunOptions {
+                self_: None,
+                controller: Some(P1),
+            },
         );
 
         // §10.6: `resumeSelf` leaves `instanceId` out when there is no instance, which is the shape
@@ -526,8 +609,13 @@ mod delay_the_remaining_gap_in_effects_delay_ts_not_part_of_this_work {
         let mut state = playing("delay-no-self-fires");
         run(
             &mut state,
-            vec![delay(json_as(json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 7 } })))],
-            RunOptions { self_: None, controller: Some(P1) },
+            vec![delay(json_as(
+                json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 7 } }),
+            ))],
+            RunOptions {
+                self_: None,
+                controller: Some(P1),
+            },
         );
 
         let ended = end_turns(&state, 1);
@@ -582,17 +670,28 @@ fn five_real_shapes(turn: i32) -> Vec<Effect> {
 
 /// `mod.kind`: the modifier's tag, as TS wrote it.
 fn kind_of(modifier: &PlayerModifier) -> String {
-    json_of(modifier)["kind"].as_str().expect("a modifier kind").to_string()
+    json_of(modifier)["kind"]
+        .as_str()
+        .expect("a modifier kind")
+        .to_string()
 }
 
 mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
     use super::*;
 
     #[test]
-    fn s10_1_puts_each_of_the_five_real_card_shapes_on_the_named_player_with_an_id_and_a_modifier_changed_event() {
+    fn s10_1_puts_each_of_the_five_real_card_shapes_on_the_named_player_with_an_id_and_a_modifier_changed_event()
+     {
         let mut state = playing("player-mods");
         let turn = state.turn;
-        let events = run(&mut state, five_real_shapes(turn), RunOptions { controller: Some(P1), ..Default::default() });
+        let events = run(
+            &mut state,
+            five_real_shapes(turn),
+            RunOptions {
+                controller: Some(P1),
+                ..Default::default()
+            },
+        );
 
         let mods = state.players.p1.mods.clone();
         assert_eq!(mods.len(), 5);
@@ -610,11 +709,23 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
             .iter()
             .map(|id| json!({ "type": "modifierChanged", "player": "p1", "modifierId": id, "added": true }))
             .collect();
-        assert_eq!(json_of(&events_of_type(&events, GameEventType::ModifierChanged)), Value::Array(expected));
+        assert_eq!(
+            json_of(&events_of_type(&events, GameEventType::ModifierChanged)),
+            Value::Array(expected)
+        );
 
         // The shapes survive as written, `id` apart, so `mana.ts` reads back what the card meant.
         let kinds: Vec<String> = mods.iter().map(kind_of).collect();
-        assert_eq!(kinds, vec!["costDiscount", "costDiscount", "costDiscount", "comboDraw", "echoNextSpell"]);
+        assert_eq!(
+            kinds,
+            vec![
+                "costDiscount",
+                "costDiscount",
+                "costDiscount",
+                "comboDraw",
+                "echoNextSpell"
+            ]
+        );
         // R48: every shape is live now except Curvature's, which covers the controller's NEXT turn.
         let live: Vec<bool> = mods.iter().map(|m| modifier_is_live(&state, m)).collect();
         assert_eq!(live, vec![true, false, true, true, true]);
@@ -626,7 +737,11 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
         let mine = one(in_hand(&mut state, &indestructible.id, P1, 1));
         let theirs = one(in_hand(&mut state, &indestructible.id, P2, 1));
         let cost = |state: &GameState, card: &CardInstance| {
-            effective_cost(state, find_instance(state, &card.id).expect("a hand card"), CostOptions::default())
+            effective_cost(
+                state,
+                find_instance(state, &card.id).expect("a hand card"),
+                CostOptions::default(),
+            )
         };
         assert_eq!(cost(&state, &mine), 4);
 
@@ -637,7 +752,10 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
                 "player": "self",
                 "mod": { "kind": "costDiscount", "amount": 1, "expiry": { "until": "thisTurn", "turn": turn } },
             })))],
-            RunOptions { controller: Some(P1), ..Default::default() },
+            RunOptions {
+                controller: Some(P1),
+                ..Default::default()
+            },
         );
 
         // R65: a player discount is part of `effectiveCost`, which is the only place cost is computed.
@@ -650,7 +768,10 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
                 "player": "enemy",
                 "mod": { "kind": "costDiscount", "amount": 2, "expiry": { "until": "thisTurn", "turn": turn } },
             })))],
-            RunOptions { controller: Some(P1), ..Default::default() },
+            RunOptions {
+                controller: Some(P1),
+                ..Default::default()
+            },
         );
 
         assert_eq!(state.players.p2.mods.len(), 1);
@@ -659,10 +780,18 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
     }
 
     #[test]
-    fn s2_2_cleanup_takes_the_this_turn_modifiers_at_that_players_own_turn_end_and_leaves_until_used_standing() {
+    fn s2_2_cleanup_takes_the_this_turn_modifiers_at_that_players_own_turn_end_and_leaves_until_used_standing()
+     {
         let mut state = playing("player-mods-expiry");
         let turn = state.turn;
-        let mut events = run(&mut state, five_real_shapes(turn), RunOptions { controller: Some(P1), ..Default::default() });
+        let mut events = run(
+            &mut state,
+            five_real_shapes(turn),
+            RunOptions {
+                controller: Some(P1),
+                ..Default::default()
+            },
+        );
         let before: Vec<PlayerModifier> = state.players.p1.mods.clone();
 
         // §2.2's cleanup, which `turn.ts` runs at the end of this player's turn. TS ran it on the same
@@ -677,14 +806,28 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
         // The three `thisTurn` modifiers are gone: two costDiscounts and the comboDraw.
         assert_eq!(kinds, vec!["costDiscount", "echoNextSpell"]);
         // R48: the next-turn discount survives the turn it was created on.
-        let survivor = state.players.p1.mods.iter().find(|m| kind_of(m) == "costDiscount");
+        let survivor = state
+            .players
+            .p1
+            .mods
+            .iter()
+            .find(|m| kind_of(m) == "costDiscount");
         assert_eq!(
             survivor.map(|m| m.expiry.clone()),
-            Some(ModifierExpiry::NextTurnOf { player: P1, from_turn: state.turn })
+            Some(ModifierExpiry::NextTurnOf {
+                player: P1,
+                from_turn: state.turn
+            })
         );
         // §2.2: "Twinspell's pending Echo is not turn-scoped and survives cleanup."
         assert_eq!(
-            state.players.p1.mods.iter().find(|m| kind_of(m) == "echoNextSpell").map(|m| m.expiry.clone()),
+            state
+                .players
+                .p1
+                .mods
+                .iter()
+                .find(|m| kind_of(m) == "echoNextSpell")
+                .map(|m| m.expiry.clone()),
             Some(ModifierExpiry::Used)
         );
 
@@ -692,7 +835,11 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
         let removed: Vec<String> = events_of_type(&events, GameEventType::ModifierChanged)
             .iter()
             .filter_map(|event| match event {
-                GameEvent::ModifierChanged { added: false, modifier_id, .. } => Some(modifier_id.clone()),
+                GameEvent::ModifierChanged {
+                    added: false,
+                    modifier_id,
+                    ..
+                } => Some(modifier_id.clone()),
                 _ => None,
             })
             .collect();

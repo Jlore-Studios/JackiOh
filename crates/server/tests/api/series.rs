@@ -70,7 +70,9 @@ const STRANGER_ACCOUNT: (&str, &str) = ("e2e-pending", "e2e-token-pending");
 macro_rules! store {
     ($app:expr, |$t:ident| $call:expr) => {{
         let mut $t = $app.db.begin(None).await.expect("a store transaction begins");
-        let out = $call.await.expect(concat!("the store answers ", stringify!($call)));
+        let out = $call
+            .await
+            .expect(concat!("the store answers ", stringify!($call)));
         $t.commit().await.expect("the store transaction commits");
         out
     }};
@@ -86,9 +88,9 @@ fn j<T: Serialize>(value: &T) -> Value {
 fn assert_match(actual: &Value, expected: &Value) {
     fn matches(actual: &Value, expected: &Value) -> bool {
         match (actual, expected) {
-            (Value::Object(have), Value::Object(want)) => {
-                want.iter().all(|(key, value)| have.get(key).is_some_and(|got| matches(got, value)))
-            }
+            (Value::Object(have), Value::Object(want)) => want
+                .iter()
+                .all(|(key, value)| have.get(key).is_some_and(|got| matches(got, value))),
             (Value::Array(have), Value::Array(want)) => {
                 have.len() == want.len() && have.iter().zip(want).all(|(got, value)| matches(got, value))
             }
@@ -100,7 +102,12 @@ fn assert_match(actual: &Value, expected: &Value) {
 
 /// TS's `array.map(f)` over a JSON array.
 fn map(array: &Value, f: impl Fn(&Value) -> Value) -> Value {
-    Value::Array(array.as_array().map(|items| items.iter().map(&f).collect()).unwrap_or_default())
+    Value::Array(
+        array
+            .as_array()
+            .map(|items| items.iter().map(&f).collect())
+            .unwrap_or_default(),
+    )
 }
 
 /// The fake store behind `test_app()`.
@@ -165,7 +172,10 @@ fn assert_hides_alice(view: &Value) {
     assert!(!text.contains("alice"), "{text}");
     for slot in 0..3 {
         for card in cards("alice", slot) {
-            assert!(!text.contains(&format!("\"{card}\"")), "alice's {card} is in {text}");
+            assert!(
+                !text.contains(&format!("\"{card}\"")),
+                "alice's {card} is in {text}"
+            );
         }
     }
 }
@@ -202,7 +212,9 @@ impl Logs {
     fn has(&self, event: &str) -> bool {
         let bytes = self.0.lock().expect("the log buffer").clone();
         let quoted = format!("\"{event}\"");
-        String::from_utf8_lossy(&bytes).lines().any(|line| line.contains(&quoted))
+        String::from_utf8_lossy(&bytes)
+            .lines()
+            .any(|line| line.contains(&quoted))
     }
 }
 
@@ -266,7 +278,12 @@ fn rating_move(rating_a: f64, rating_b: f64, score_a: f64) -> (f64, f64) {
 }
 
 /// An active profile signed in as one of the E2E fixture accounts; answers its token.
-async fn active_profile(app: &App, id: &str, account: (&'static str, &'static str), rating: f64) -> &'static str {
+async fn active_profile(
+    app: &App,
+    id: &str,
+    account: (&'static str, &'static str),
+    rating: f64,
+) -> &'static str {
     let (user_id, token) = account;
     let _ = fake(app).lock().await.seed_profile(json!({
         "id": id,
@@ -317,9 +334,18 @@ async fn harness(ratings: (f64, f64)) -> Harness {
     }))
     .expect("a NewSeriesInput");
     let mut tx = app.db.begin(None).await.expect("store.tx");
-    start_series(&app, input, &mut tx).await.expect("the series starts");
+    start_series(&app, input, &mut tx)
+        .await
+        .expect("the series starts");
     tx.commit().await.expect("the series commits");
-    Harness { app, tokens, discarded, fault, logs, _logging: logging }
+    Harness {
+        app,
+        tokens,
+        discarded,
+        fault,
+        logs,
+        _logging: logging,
+    }
 }
 
 /// TS's `harness()`: both players at 1000.
@@ -343,11 +369,25 @@ async fn get_series_at(h: &Harness, token: &str, id: &str) -> (u16, Value) {
 }
 
 async fn pick(h: &Harness, token: &str, slot: Value) -> (u16, Value) {
-    request(h, "POST", &format!("/api/series/{SERIES_ID}/pick"), token, Some(json!({ "slot": slot }))).await
+    request(
+        h,
+        "POST",
+        &format!("/api/series/{SERIES_ID}/pick"),
+        token,
+        Some(json!({ "slot": slot })),
+    )
+    .await
 }
 
 async fn forfeit(h: &Harness, token: &str) -> (u16, Value) {
-    request(h, "POST", &format!("/api/series/{SERIES_ID}/forfeit"), token, None).await
+    request(
+        h,
+        "POST",
+        &format!("/api/series/{SERIES_ID}/forfeit"),
+        token,
+        None,
+    )
+    .await
 }
 
 async fn pick_both(h: &Harness, slots: [i64; 2]) -> Value {
@@ -370,7 +410,9 @@ async fn row(h: &Harness) -> Value {
 /// asked for (`StartMatchInput`). The registry writes each one's row as it starts it, so the rows say it.
 async fn started(h: &Harness) -> Vec<Value> {
     let rows = table(&h.app, |data| j(&data.tables.matches)).await;
-    rows.as_array().map(|rows| rows.iter().map(start_input_of).collect()).unwrap_or_default()
+    rows.as_array()
+        .map(|rows| rows.iter().map(start_input_of).collect())
+        .unwrap_or_default()
 }
 
 /// A match row read back as the `StartMatchInput` that made it: index 0 of `players` and `decks` is p1.
@@ -388,7 +430,11 @@ fn start_input_of(row: &Value) -> Value {
 }
 
 async fn seats_of(h: &Harness, match_id: &str) -> (MatchSeat, MatchSeat) {
-    let Some(started) = started(h).await.into_iter().find(|input| input["matchId"] == match_id) else {
+    let Some(started) = started(h)
+        .await
+        .into_iter()
+        .find(|input| input["matchId"] == match_id)
+    else {
         panic!("{match_id} was never started");
     };
     let seat = |at: usize| -> MatchSeat {
@@ -400,7 +446,11 @@ async fn seats_of(h: &Harness, match_id: &str) -> (MatchSeat, MatchSeat) {
 /// Ends the game in play the way the actor does: `record_result`, with the match's own seats.
 /// `reason` defaults as TS's did: `draw-accepted` for a draw, `hero-death` otherwise.
 async fn finish_game(h: &Harness, winner: &str, reason: Option<GameOverReason>) {
-    let reason = reason.unwrap_or(if winner == "draw" { GameOverReason::DrawAccepted } else { GameOverReason::HeroDeath });
+    let reason = reason.unwrap_or(if winner == "draw" {
+        GameOverReason::DrawAccepted
+    } else {
+        GameOverReason::HeroDeath
+    });
     let series = row(h).await;
     assert_eq!(series["status"], "playing");
     let match_id = series["nextMatchId"].as_str().unwrap_or_default().to_owned();
@@ -415,24 +465,33 @@ async fn finish_game(h: &Harness, winner: &str, reason: Option<GameOverReason>) 
             .unwrap_or(json!("p1"));
         serde_json::from_value(player).expect("a seat")
     };
-    record_result(&h.app, RecordResultInput {
-        match_id,
-        seats,
-        outcome: TerminalOutcome { winner, reason },
-        turns: 9,
-        at: now_ms(),
-        last_boards: None,
-    })
+    record_result(
+        &h.app,
+        RecordResultInput {
+            match_id,
+            seats,
+            outcome: TerminalOutcome { winner, reason },
+            turns: 9,
+            at: now_ms(),
+            last_boards: None,
+        },
+    )
     .await
     .expect("the result is written");
 }
 
 async fn ratings(h: &Harness) -> Value {
-    json!([profile(&h.app, ALICE).await["rating"], profile(&h.app, BOB).await["rating"]])
+    json!([
+        profile(&h.app, ALICE).await["rating"],
+        profile(&h.app, BOB).await["rating"]
+    ])
 }
 
 async fn in_match(h: &Harness) -> Value {
-    json!([profile(&h.app, ALICE).await["inMatchId"], profile(&h.app, BOB).await["inMatchId"]])
+    json!([
+        profile(&h.app, ALICE).await["inMatchId"],
+        profile(&h.app, BOB).await["inMatchId"]
+    ])
 }
 
 /// Lets the sweeper's task run to its next wait: the fake store never waits on anything else.
@@ -470,8 +529,14 @@ mod r259_the_series_through_the_api {
         let h = harness_at_1000().await;
 
         let (_, alice) = get_series(&h, h.tokens.alice).await;
-        assert_match(&alice, &json!({ "id": SERIES_ID, "status": "picking", "gameNo": 1, "currentMatchId": null }));
-        assert_match(&alice["you"], &json!({ "seat": "p1", "trioName": "alice's trio", "pick": null }));
+        assert_match(
+            &alice,
+            &json!({ "id": SERIES_ID, "status": "picking", "gameNo": 1, "currentMatchId": null }),
+        );
+        assert_match(
+            &alice["you"],
+            &json!({ "seat": "p1", "trioName": "alice's trio", "pick": null }),
+        );
         let (_, bob) = get_series(&h, h.tokens.bob).await;
         assert_eq!(bob["you"]["seat"], "p2");
         assert_hides_alice(&bob);
@@ -490,11 +555,15 @@ mod r259_the_series_through_the_api {
     }
 
     #[tokio::test]
-    async fn r259_a_pick_stays_hidden_until_both_are_in_then_game_1_starts_with_the_right_seats_decks_and_seed() {
+    async fn r259_a_pick_stays_hidden_until_both_are_in_then_game_1_starts_with_the_right_seats_decks_and_seed()
+     {
         let h = harness_at_1000().await;
 
         let (_, after_alice) = pick(&h, h.tokens.alice, json!(1)).await;
-        assert_match(&after_alice, &json!({ "status": "picking", "you": { "pick": 1 } }));
+        assert_match(
+            &after_alice,
+            &json!({ "status": "picking", "you": { "pick": 1 } }),
+        );
         assert!(started(&h).await.is_empty());
 
         let (_, bob_sees) = get_series(&h, h.tokens.bob).await;
@@ -512,7 +581,10 @@ mod r259_the_series_through_the_api {
         );
 
         let (_, after_bob) = pick(&h, h.tokens.bob, json!(2)).await;
-        assert_match(&after_bob, &json!({ "status": "playing", "currentMatchId": FIRST_MATCH, "gameNo": 1 }));
+        assert_match(
+            &after_bob,
+            &json!({ "status": "playing", "currentMatchId": FIRST_MATCH, "gameNo": 1 }),
+        );
         assert_eq!(
             started(&h).await,
             vec![json!({
@@ -531,7 +603,8 @@ mod r259_the_series_through_the_api {
     }
 
     #[tokio::test]
-    async fn r330_a_pick_is_refused_400_for_a_slot_out_of_range_or_a_deck_that_has_won_409_while_a_game_is_played() {
+    async fn r330_a_pick_is_refused_400_for_a_slot_out_of_range_or_a_deck_that_has_won_409_while_a_game_is_played()
+     {
         let h = harness_at_1000().await;
 
         for slot in [json!("0"), json!(3), json!(-1), json!(0.5), Value::Null] {
@@ -551,20 +624,30 @@ mod r259_the_series_through_the_api {
         // TS: `toMatch(/already won .* locked/u)`.
         let message = locked["error"]["message"].as_str().unwrap_or_default();
         let won = message.find("already won ");
-        assert!(won.is_some_and(|at| message[at..].contains(" locked")), "{message}");
+        assert!(
+            won.is_some_and(|at| message[at..].contains(" locked")),
+            "{message}"
+        );
         // Bob lost with deck 0, and may play it again.
         assert_eq!(pick(&h, h.tokens.bob, json!(0)).await.0, 200);
         assert_eq!(pick(&h, h.tokens.alice, json!(1)).await.0, 200);
     }
 
     #[tokio::test]
-    async fn r331_a_pick_is_sealed_another_slot_is_refused_with_409_and_the_same_slot_again_answers_as_the_success_it_was() {
+    async fn r331_a_pick_is_sealed_another_slot_is_refused_with_409_and_the_same_slot_again_answers_as_the_success_it_was()
+     {
         let h = harness_at_1000().await;
         assert_eq!(pick(&h, h.tokens.alice, json!(1)).await.0, 200);
 
         let (status, other) = pick(&h, h.tokens.alice, json!(2)).await;
         assert_eq!(status, 409);
-        assert!(other["error"]["message"].as_str().unwrap_or_default().contains("final"), "{other}");
+        assert!(
+            other["error"]["message"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("final"),
+            "{other}"
+        );
         assert_eq!(row(&h).await["sides"][0]["pick"], json!(1));
 
         // A retry of the same pick, its first answer lost: 200, and nothing is written twice.
@@ -578,7 +661,10 @@ mod r259_the_series_through_the_api {
         pick(&h, h.tokens.bob, json!(0)).await;
         let (status, late) = pick(&h, h.tokens.bob, json!(0)).await;
         assert_eq!(status, 200);
-        assert_match(&late, &json!({ "status": "playing", "currentMatchId": FIRST_MATCH }));
+        assert_match(
+            &late,
+            &json!({ "status": "playing", "currentMatchId": FIRST_MATCH }),
+        );
         assert_eq!(pick(&h, h.tokens.bob, json!(2)).await.0, 409);
     }
 
@@ -589,7 +675,16 @@ mod r259_the_series_through_the_api {
         let pick_for = |token: &'static str, slot: i64, game_no: i64| {
             let path = path.clone();
             let h = &h;
-            async move { request(h, "POST", &path, token, Some(json!({ "slot": slot, "gameNo": game_no }))).await }
+            async move {
+                request(
+                    h,
+                    "POST",
+                    &path,
+                    token,
+                    Some(json!({ "slot": slot, "gameNo": game_no })),
+                )
+                .await
+            }
         };
         assert_eq!(pick_for(h.tokens.alice, 0, 1).await.0, 200);
         assert_eq!(pick_for(h.tokens.bob, 1, 1).await.0, 200);
@@ -598,12 +693,21 @@ mod r259_the_series_through_the_api {
 
         let (status, _) = pick_for(h.tokens.alice, 0, 1).await;
         assert_eq!(status, 200);
-        assert!(row(&h).await["sides"][0]["pick"].is_null(), "game 2's pick is still Alice's to make");
+        assert!(
+            row(&h).await["sides"][0]["pick"].is_null(),
+            "game 2's pick is still Alice's to make"
+        );
         assert_eq!(pick_for(h.tokens.alice, 2, 1).await.0, 409);
         assert_eq!(pick_for(h.tokens.alice, 2, 2).await.0, 200);
         for game_no in [json!(0), json!("2"), json!(1.5)] {
-            let (status, _) =
-                request(&h, "POST", &path, h.tokens.bob, Some(json!({ "slot": 1, "gameNo": game_no }))).await;
+            let (status, _) = request(
+                &h,
+                "POST",
+                &path,
+                h.tokens.bob,
+                Some(json!({ "slot": 1, "gameNo": game_no })),
+            )
+            .await;
             assert_eq!(status, 400);
         }
     }
@@ -618,7 +722,8 @@ mod r259_the_series_through_the_api {
     }
 
     #[tokio::test]
-    async fn r331_a_pick_is_in_the_database_before_it_is_acknowledged_and_the_opponent_learns_only_that_it_is_in() {
+    async fn r331_a_pick_is_in_the_database_before_it_is_acknowledged_and_the_opponent_learns_only_that_it_is_in()
+     {
         let h = harness_at_1000().await;
         // The store fails the write: the pick is refused, and nothing says it was made.
         h.fail_on(|method| {
@@ -631,7 +736,10 @@ mod r259_the_series_through_the_api {
         assert_eq!(pick(&h, h.tokens.alice, json!(2)).await.0, 500);
         h.heal();
         assert!(row(&h).await["sides"][0]["pick"].is_null());
-        assert_eq!(get_series(&h, h.tokens.bob).await.1["opponent"]["picked"], json!(false));
+        assert_eq!(
+            get_series(&h, h.tokens.bob).await.1["opponent"]["picked"],
+            json!(false)
+        );
 
         assert_eq!(pick(&h, h.tokens.alice, json!(2)).await.0, 200);
         assert_eq!(row(&h).await["sides"][0]["pick"], json!(2));
@@ -651,7 +759,10 @@ mod r259_the_series_through_the_api {
         assert_ne!(game2_id, FIRST_MATCH);
         // R376: a game of the series is filed as Conquest's, whatever made the series.
         assert_eq!(j(&store!(h.app, |t| t.matches_mode_of(&game2_id))), json!("bo3"));
-        assert_eq!(j(&store!(h.app, |t| t.matches_mode_of(FIRST_MATCH))), json!("bo3"));
+        assert_eq!(
+            j(&store!(h.app, |t| t.matches_mode_of(FIRST_MATCH))),
+            json!("bo3")
+        );
         assert_eq!(
             started(&h).await.get(1).cloned().unwrap_or(Value::Null),
             json!({
@@ -667,15 +778,24 @@ mod r259_the_series_through_the_api {
         );
         finish_game(&h, BOB, None).await;
         let (_, view) = get_series(&h, h.tokens.bob).await;
-        assert_match(&view, &json!({ "status": "picking", "gameNo": 3, "currentMatchId": null }));
+        assert_match(
+            &view,
+            &json!({ "status": "picking", "gameNo": 3, "currentMatchId": null }),
+        );
         assert_eq!(
-            map(&view["games"], |game| json!([game["yourSlot"], game["opponentSlot"], game["youWentFirst"], game["result"]])),
+            map(&view["games"], |game| json!([
+                game["yourSlot"],
+                game["opponentSlot"],
+                game["youWentFirst"],
+                game["result"]
+            ])),
             json!([[1, 0, false, "loss"], [0, 2, true, "win"]]),
         );
     }
 
     #[tokio::test]
-    async fn r332_a_players_last_deck_is_picked_for_them_and_when_both_are_down_to_one_the_game_starts_by_itself() {
+    async fn r332_a_players_last_deck_is_picked_for_them_and_when_both_are_down_to_one_the_game_starts_by_itself()
+     {
         let h = harness_at_1000().await;
         pick_both(&h, [0, 0]).await;
         finish_game(&h, ALICE, None).await;
@@ -685,7 +805,10 @@ mod r259_the_series_through_the_api {
         // Alice has won with decks 0 and 1: deck 2 is hers, picked for her; Bob picks.
         let (_, alice) = get_series(&h, h.tokens.alice).await;
         assert_match(&alice["you"], &json!({ "pick": 2, "autoPick": true }));
-        assert_eq!(get_series(&h, h.tokens.bob).await.1["opponent"]["picked"], json!(true));
+        assert_eq!(
+            get_series(&h, h.tokens.bob).await.1["opponent"]["picked"],
+            json!(true)
+        );
         assert_eq!(pick(&h, h.tokens.bob, json!(0)).await.0, 200);
         finish_game(&h, BOB, None).await;
         pick_both(&h, [2, 1]).await;
@@ -695,7 +818,10 @@ mod r259_the_series_through_the_api {
         let series = row(&h).await;
         assert_eq!(map(&series["sides"], |side| side["wins"].clone()), json!([2, 2]));
         assert_eq!(series["status"], "playing");
-        assert_match(&series["games"][4], &json!({ "gameNo": 5, "slots": [2, 2], "first": "p1" }));
+        assert_match(
+            &series["games"][4],
+            &json!({ "gameNo": 5, "slots": [2, 2], "first": "p1" }),
+        );
         assert_eq!(
             started(&h).await.get(4).cloned().unwrap_or(Value::Null),
             json!({
@@ -709,14 +835,18 @@ mod r259_the_series_through_the_api {
                 ],
             }),
         );
-        assert_eq!(in_match(&h).await, json!([series["nextMatchId"], series["nextMatchId"]]));
+        assert_eq!(
+            in_match(&h).await,
+            json!([series["nextMatchId"], series["nextMatchId"]])
+        );
     }
 
     #[tokio::test]
     async fn r259_get_api_matches_match_id_series_names_the_series_a_game_belongs_to_for_its_players_only() {
         let h = harness_at_1000().await;
         async fn read(h: &Harness, token: &str, match_id: &str) -> Value {
-            let (status, answer) = request(h, "GET", &format!("/api/matches/{match_id}/series"), token, None).await;
+            let (status, answer) =
+                request(h, "GET", &format!("/api/matches/{match_id}/series"), token, None).await;
             assert_eq!(status, 200);
             answer
         }
@@ -727,15 +857,32 @@ mod r259_the_series_through_the_api {
         pick_both(&h, [0, 0]).await;
         finish_game(&h, BOB, None).await;
         let after_game1 = read(&h, h.tokens.alice, FIRST_MATCH).await;
-        assert_match(&after_game1["series"], &json!({ "id": SERIES_ID, "status": "picking", "gameNo": 2 }));
-        assert_match(&after_game1["series"]["games"][0], &json!({ "matchId": FIRST_MATCH, "result": "loss" }));
+        assert_match(
+            &after_game1["series"],
+            &json!({ "id": SERIES_ID, "status": "picking", "gameNo": 2 }),
+        );
+        assert_match(
+            &after_game1["series"]["games"][0],
+            &json!({ "matchId": FIRST_MATCH, "result": "loss" }),
+        );
 
         assert!(read(&h, h.tokens.stranger, FIRST_MATCH).await["series"].is_null());
         assert!(read(&h, h.tokens.alice, "some-other-match").await["series"].is_null());
         // An id that is not even valid percent-encoding names nothing either: never a 500.
         assert!(read(&h, h.tokens.alice, "%E0%A4%A").await["series"].is_null());
         assert_eq!(get_series_at(&h, h.tokens.alice, "%ZZ").await.0, 404);
-        assert_eq!(request(&h, "POST", "/api/series/%/pick", h.tokens.alice, Some(json!({ "slot": 0 }))).await.0, 404);
+        assert_eq!(
+            request(
+                &h,
+                "POST",
+                "/api/series/%/pick",
+                h.tokens.alice,
+                Some(json!({ "slot": 0 }))
+            )
+            .await
+            .0,
+            404
+        );
     }
 }
 
@@ -753,15 +900,22 @@ mod r334_endings_inside_a_series {
         let series = row(&h).await;
         assert_eq!(series["status"], "picking");
         assert_eq!(map(&series["sides"], |side| side["wins"].clone()), json!([1, 1]));
-        assert_eq!(map(&series["games"], |game| game["reason"].clone()), json!(["concede", "disconnect"]));
+        assert_eq!(
+            map(&series["games"], |game| game["reason"].clone()),
+            json!(["concede", "disconnect"])
+        );
     }
 
     #[tokio::test]
-    async fn r334_a_drawn_game_counts_for_neither_side_at_the_game_cap_equal_wins_is_a_series_draw_rated_once() {
+    async fn r334_a_drawn_game_counts_for_neither_side_at_the_game_cap_equal_wins_is_a_series_draw_rated_once()
+     {
         let h = harness((1200.0, 1000.0)).await;
         pick_both(&h, [0, 0]).await;
         finish_game(&h, "draw", None).await;
-        assert_eq!(map(&row(&h).await["sides"], |side| side["wins"].clone()), json!([0, 0]));
+        assert_eq!(
+            map(&row(&h).await["sides"], |side| side["wins"].clone()),
+            json!([0, 0])
+        );
         for _game in 2..=SERIES_MAX_GAMES as i64 - 2 {
             pick_both(&h, [0, 0]).await;
             finish_game(&h, "draw", None).await;
@@ -770,21 +924,31 @@ mod r334_endings_inside_a_series {
         finish_game(&h, ALICE, None).await;
         pick_both(&h, [2, 1]).await;
         finish_game(&h, BOB, None).await;
-        assert_eq!(row(&h).await["games"].as_array().map(Vec::len), Some(SERIES_MAX_GAMES as usize));
+        assert_eq!(
+            row(&h).await["games"].as_array().map(Vec::len),
+            Some(SERIES_MAX_GAMES as usize)
+        );
 
         let series = row(&h).await;
-        assert_match(&series, &json!({ "status": "over", "winner": "draw", "endReason": "exhausted" }));
+        assert_match(
+            &series,
+            &json!({ "status": "over", "winner": "draw", "endReason": "exhausted" }),
+        );
         let expected = rating_move(1200.0, 1000.0, 0.5);
         assert_eq!(ratings(&h).await, json!([expected.0, expected.1]));
         assert_eq!(series["ratingBefore"], json!([1200.0, 1000.0]));
         assert_eq!(series["ratingAfter"], json!([expected.0, expected.1]));
         let (_, view) = get_series(&h, h.tokens.bob).await;
-        assert_eq!(view["result"], json!({ "outcome": "draw", "endReason": "exhausted", "ranked": true }));
+        assert_eq!(
+            view["result"],
+            json!({ "outcome": "draw", "endReason": "exhausted", "ranked": true })
+        );
         assert_eq!(in_match(&h).await, json!([null, null]));
     }
 
     #[tokio::test]
-    async fn r334_between_games_a_player_may_forfeit_the_other_side_wins_and_the_series_is_rated_once_r261_r262() {
+    async fn r334_between_games_a_player_may_forfeit_the_other_side_wins_and_the_series_is_rated_once_r261_r262()
+     {
         let h = harness_at_1000().await;
         pick_both(&h, [0, 0]).await;
         finish_game(&h, BOB, None).await;
@@ -792,8 +956,14 @@ mod r334_endings_inside_a_series {
         let (status, view) = forfeit(&h, h.tokens.bob).await;
         assert_eq!(status, 200);
         let expected = rating_move(1000.0, 1000.0, 1.0);
-        assert_match(&view, &json!({ "status": "over", "currentMatchId": null, "pickDeadline": null }));
-        assert_eq!(view["result"], json!({ "outcome": "loss", "endReason": "forfeit", "ranked": true }));
+        assert_match(
+            &view,
+            &json!({ "status": "over", "currentMatchId": null, "pickDeadline": null }),
+        );
+        assert_eq!(
+            view["result"],
+            json!({ "outcome": "loss", "endReason": "forfeit", "ranked": true })
+        );
         assert_eq!(ratings(&h).await, json!([expected.0, expected.1]));
         // A game was played, so no reserved id is released.
         assert_eq!(h.discarded(), 0);
@@ -809,7 +979,10 @@ mod r334_endings_inside_a_series {
         // TS: `discarded` is `[FIRST_MATCH]`; the one id a series with no game played releases.
         assert_eq!(h.discarded(), 1);
         assert!(started(&h).await.is_empty());
-        assert_match(&row(&h).await, &json!({ "status": "over", "winner": "p2", "endReason": "forfeit", "games": [] }));
+        assert_match(
+            &row(&h).await,
+            &json!({ "status": "over", "winner": "p2", "endReason": "forfeit", "games": [] }),
+        );
     }
 
     #[tokio::test]
@@ -819,7 +992,13 @@ mod r334_endings_inside_a_series {
         let (status, body) = forfeit(&h, h.tokens.alice).await;
         assert_eq!(status, 409);
         assert_eq!(body["error"]["code"], "conflict");
-        assert!(body["error"]["message"].as_str().unwrap_or_default().contains("concede"), "{body}");
+        assert!(
+            body["error"]["message"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("concede"),
+            "{body}"
+        );
         assert_eq!(row(&h).await["status"], "playing");
     }
 }
@@ -828,7 +1007,8 @@ mod r262_how_a_series_is_rated {
     use super::*;
 
     #[tokio::test]
-    async fn r262_a_series_decided_at_three_wins_moves_the_rating_once_from_the_ratings_before_game_1_its_games_are_unrated() {
+    async fn r262_a_series_decided_at_three_wins_moves_the_rating_once_from_the_ratings_before_game_1_its_games_are_unrated()
+     {
         let h = harness((1200.0, 1000.0)).await;
         pick_both(&h, [0, 0]).await;
         finish_game(&h, BOB, None).await;
@@ -866,7 +1046,10 @@ mod r262_how_a_series_is_rated {
         // Game 3: Bob's last deck is picked for him (R332); Alice's pick starts it, and Bob wins.
         assert_eq!(pick(&h, h.tokens.alice, json!(2)).await.0, 200);
         finish_game(&h, BOB, None).await;
-        assert_eq!(table(&h.app, |data| json!(data.tables.results.len())).await, json!(3));
+        assert_eq!(
+            table(&h.app, |data| json!(data.tables.results.len())).await,
+            json!(3)
+        );
 
         // The series: one move, scored as one match that bob won.
         let expected = rating_move(1200.0, 1000.0, 0.0);
@@ -885,20 +1068,32 @@ mod r262_how_a_series_is_rated {
         assert_eq!(started(&h).await.len(), 3);
 
         let (_, alice) = get_series(&h, h.tokens.alice).await;
-        assert_eq!(alice["result"], json!({ "outcome": "loss", "endReason": "decided", "ranked": true }));
+        assert_eq!(
+            alice["result"],
+            json!({ "outcome": "loss", "endReason": "decided", "ranked": true })
+        );
         assert_eq!(alice["gameNo"], json!(3));
 
         // A late second report of the deciding game changes nothing.
-        let deciding = series["games"][2]["matchId"].as_str().unwrap_or_default().to_owned();
+        let deciding = series["games"][2]["matchId"]
+            .as_str()
+            .unwrap_or_default()
+            .to_owned();
         let seats = seats_of(&h, &deciding).await;
-        record_result(&h.app, RecordResultInput {
-            match_id: deciding,
-            seats,
-            outcome: TerminalOutcome { winner: Winner::P2, reason: GameOverReason::Concede },
-            turns: 1,
-            at: now_ms(),
-            last_boards: None,
-        })
+        record_result(
+            &h.app,
+            RecordResultInput {
+                match_id: deciding,
+                seats,
+                outcome: TerminalOutcome {
+                    winner: Winner::P2,
+                    reason: GameOverReason::Concede,
+                },
+                turns: 1,
+                at: now_ms(),
+                last_boards: None,
+            },
+        )
         .await
         .expect("the result is written");
         assert_eq!(ratings(&h).await, json!([expected.0, expected.1]));
@@ -910,18 +1105,29 @@ mod r333_the_pick_clock {
     use super::*;
 
     #[tokio::test(start_paused = true)]
-    async fn r333_at_the_deadline_the_sweeper_gives_a_player_who_has_not_picked_their_first_deck_that_has_not_won_and_the_game_starts() {
+    async fn r333_at_the_deadline_the_sweeper_gives_a_player_who_has_not_picked_their_first_deck_that_has_not_won_and_the_game_starts()
+     {
         let h = harness_at_1000().await;
         assert_eq!(pick(&h, h.tokens.alice, json!(2)).await.0, 200);
 
         advance(PICK_MS - 1).await;
-        assert_eq!(sweep(&h).await, json!({ "timedOut": [], "started": [], "abandoned": [] }));
+        assert_eq!(
+            sweep(&h).await,
+            json!({ "timedOut": [], "started": [], "abandoned": [] })
+        );
         assert!(started(&h).await.is_empty());
 
         advance(1).await;
-        assert_eq!(sweep(&h).await, json!({ "timedOut": [SERIES_ID], "started": [], "abandoned": [] }));
         assert_eq!(
-            started(&h).await.first().map(|input| input["seats"].clone()).unwrap_or(Value::Null),
+            sweep(&h).await,
+            json!({ "timedOut": [SERIES_ID], "started": [], "abandoned": [] })
+        );
+        assert_eq!(
+            started(&h)
+                .await
+                .first()
+                .map(|input| input["seats"].clone())
+                .unwrap_or(Value::Null),
             json!([
                 { "profileId": ALICE, "player": "p1", "deck": cards("alice", 2) },
                 { "profileId": BOB, "player": "p2", "deck": cards("bob", 0) },
@@ -940,7 +1146,8 @@ mod r333_the_pick_clock {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r333_with_no_pick_at_all_by_the_deadline_the_series_is_abandoned_no_winner_unrated_game_1s_id_released_r260() {
+    async fn r333_with_no_pick_at_all_by_the_deadline_the_series_is_abandoned_no_winner_unrated_game_1s_id_released_r260()
+     {
         let h = harness((1200.0, 1000.0)).await;
         advance(PICK_MS).await;
         sweep(&h).await;
@@ -959,13 +1166,17 @@ mod r333_the_pick_clock {
         assert_eq!(h.discarded(), 1);
         assert!(started(&h).await.is_empty());
         let (_, view) = get_series(&h, h.tokens.alice).await;
-        assert_eq!(view["result"], json!({ "outcome": "abandoned", "endReason": "abandoned", "ranked": false }));
+        assert_eq!(
+            view["result"],
+            json!({ "outcome": "abandoned", "endReason": "abandoned", "ranked": false })
+        );
         // Not active any more: the sweeper leaves it alone from now on.
         assert_eq!(j(&store!(h.app, |t| t.series_active())), json!([]));
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r333_the_sweeper_runs_every_series_sweep_interval_seconds_on_its_own_and_a_failed_sweep_does_not_stop_it() {
+    async fn r333_the_sweeper_runs_every_series_sweep_interval_seconds_on_its_own_and_a_failed_sweep_does_not_stop_it()
+     {
         let h = harness_at_1000().await;
         let sweeper = tokio::spawn(run_sweeper(h.app.clone()));
         // The task's first wait is armed before the clock moves (TS armed it in `startSeriesSweeper`).
@@ -987,7 +1198,11 @@ mod r333_the_pick_clock {
         // The pick clock ran out between two sweeps; the next one settled it.
         assert_eq!(row(&h).await["status"], "playing");
         assert_eq!(
-            started(&h).await.first().map(|input| map(&input["seats"], |seat| seat["deck"][0].clone())).unwrap_or(Value::Null),
+            started(&h)
+                .await
+                .first()
+                .map(|input| map(&input["seats"], |seat| seat["deck"][0].clone()))
+                .unwrap_or(Value::Null),
             json!([cards("alice", 0)[0], cards("bob", 1)[0]]),
         );
 

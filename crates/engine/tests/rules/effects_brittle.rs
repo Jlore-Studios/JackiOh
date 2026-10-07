@@ -21,13 +21,25 @@ fn game() -> GameState {
 
 /// TS `run(state, effect, { self, ...hook })`: the effect applied for p1 (unless `hook` names another
 /// controller) on a sink over `state`, the rng cursor written back; its events.
-fn run(state: &mut GameState, effect: Effect, self_: Option<CardInstance>, hook: HookOptions) -> Vec<GameEvent> {
+fn run(
+    state: &mut GameState,
+    effect: Effect,
+    self_: Option<CardInstance>,
+    hook: HookOptions,
+) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     {
         let mut sink = EngineSink::new(state, &mut events, &mut rng);
         let controller = hook.controller.unwrap_or(PlayerId::P1);
-        let mut ctx = make_context(&mut sink, self_.as_ref(), HookOptions { controller: Some(controller), ..hook });
+        let mut ctx = make_context(
+            &mut sink,
+            self_.as_ref(),
+            HookOptions {
+                controller: Some(controller),
+                ..hook
+            },
+        );
         (effect.apply)(&mut ctx);
     }
     state.rng_cursor = rng.cursor();
@@ -35,11 +47,18 @@ fn run(state: &mut GameState, effect: Effect, self_: Option<CardInstance>, hook:
 }
 
 fn chosen(id: &str) -> HookOptions {
-    HookOptions { targets: Some(vec![Selection::Instance { instance_id: id.to_string() }]), ..Default::default() }
+    HookOptions {
+        targets: Some(vec![Selection::Instance {
+            instance_id: id.to_string(),
+        }]),
+        ..Default::default()
+    }
 }
 
 fn brittle_of(state: &GameState, id: &str) -> Option<BrittleCounter> {
-    find_instance(state, id).expect("the card is in the state").brittle
+    find_instance(state, id)
+        .expect("the card is in the state")
+        .brittle
 }
 
 fn as_json(events: &[GameEvent]) -> Value {
@@ -52,8 +71,20 @@ mod b3_3_rule_4_give_and_gain_r385 {
     #[test]
     fn r385_give_brittle_n_sets_the_count_to_n_from_now_whatever_the_card_had() {
         let mut state = game();
-        let unit = put(&mut state, &brittle_unit.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        assert_eq!(brittle_of(&state, &unit.id), Some(BrittleCounter { count: 2, since: 5, printed: Some(true) }));
+        let unit = put(
+            &mut state,
+            &brittle_unit.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        assert_eq!(
+            brittle_of(&state, &unit.id),
+            Some(BrittleCounter {
+                count: 2,
+                since: 5,
+                printed: Some(true)
+            })
+        );
         state.turn = 7;
         let events = run(
             &mut state,
@@ -61,7 +92,14 @@ mod b3_3_rule_4_give_and_gain_r385 {
             None,
             HookOptions::default(),
         );
-        assert_eq!(brittle_of(&state, &unit.id), Some(BrittleCounter { count: 5, since: 7, printed: None }));
+        assert_eq!(
+            brittle_of(&state, &unit.id),
+            Some(BrittleCounter {
+                count: 5,
+                since: 7,
+                printed: None
+            })
+        );
         assert_eq!(
             as_json(&events),
             json!([{ "type": "counterChanged", "instanceId": unit.id, "counter": "brittle", "value": 5 }])
@@ -71,7 +109,12 @@ mod b3_3_rule_4_give_and_gain_r385 {
     #[test]
     fn r385_gain_n_adds_to_the_count_in_force_and_keeps_when_it_started() {
         let mut state = game();
-        let unit = put(&mut state, &brittle_unit.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &brittle_unit.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         state.turn = 8;
         let self_ = find_instance(&state, &unit.id).cloned();
         run(
@@ -80,7 +123,14 @@ mod b3_3_rule_4_give_and_gain_r385 {
             self_,
             HookOptions::default(),
         );
-        assert_eq!(brittle_of(&state, &unit.id), Some(BrittleCounter { count: 3, since: 5, printed: Some(true) }));
+        assert_eq!(
+            brittle_of(&state, &unit.id),
+            Some(BrittleCounter {
+                count: 3,
+                since: 5,
+                printed: Some(true)
+            })
+        );
     }
 
     #[test]
@@ -89,7 +139,10 @@ mod b3_3_rule_4_give_and_gain_r385 {
         let Some(held) = in_hand(&mut state, &plain.id, PlayerId::P1, 1).into_iter().next() else {
             panic!("no card");
         };
-        let Some(deck) = set_library(&mut state, PlayerId::P1, std::slice::from_ref(&plain.id)).into_iter().next() else {
+        let Some(deck) = set_library(&mut state, PlayerId::P1, std::slice::from_ref(&plain.id))
+            .into_iter()
+            .next()
+        else {
             panic!("no card");
         };
         let events = run(
@@ -104,9 +157,26 @@ mod b3_3_rule_4_give_and_gain_r385 {
             None,
             HookOptions::default(),
         );
-        assert_eq!(brittle_of(&state, &held.id), Some(BrittleCounter { count: 2, since: 5, printed: None }));
-        assert_eq!(brittle_of(&state, &deck.id), Some(BrittleCounter { count: 2, since: 5, printed: None }));
-        state.applied = vec![AppliedAction { nonce: "t".to_string(), events }];
+        assert_eq!(
+            brittle_of(&state, &held.id),
+            Some(BrittleCounter {
+                count: 2,
+                since: 5,
+                printed: None
+            })
+        );
+        assert_eq!(
+            brittle_of(&state, &deck.id),
+            Some(BrittleCounter {
+                count: 2,
+                since: 5,
+                printed: None
+            })
+        );
+        state.applied = vec![AppliedAction {
+            nonce: "t".to_string(),
+            events,
+        }];
         assert_eq!(
             as_json(&view_for(&state, PlayerId::P1).events),
             json!([{ "type": "counterChanged", "instanceId": held.id, "counter": "brittle", "value": 2 }])
@@ -121,19 +191,38 @@ mod b3_3_rule_4_give_and_gain_r385 {
     #[test]
     fn r440_over_a_scope_a_card_of_a_hidden_pile_takes_its_count_silently_a_public_one_is_reported() {
         let mut state = game();
-        let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let trap = put(&mut state, &brittle_trap.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let trap = put(
+            &mut state,
+            &brittle_trap.id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
         let hand = in_hand(&mut state, &plain.id, PlayerId::P1, 3);
         let events = run(
             &mut state,
-            give_brittle(json_as(json!({ "scope": { "zones": ["field", "hand"] }, "n": 2 }))),
+            give_brittle(json_as(
+                json!({ "scope": { "zones": ["field", "hand"] }, "n": 2 }),
+            )),
             None,
             HookOptions::default(),
         );
         let mut cards = vec![unit.clone(), trap.clone()];
         cards.extend(hand);
         for card in &cards {
-            assert_eq!(brittle_of(&state, &card.id), Some(BrittleCounter { count: 2, since: 5, printed: None }));
+            assert_eq!(
+                brittle_of(&state, &card.id),
+                Some(BrittleCounter {
+                    count: 2,
+                    since: 5,
+                    printed: None
+                })
+            );
         }
         assert_eq!(
             as_json(&events),
@@ -150,7 +239,12 @@ mod b3_3_rule_4_give_and_gain_r385 {
         state.players[PlayerId::P1].hand = vec![];
         held.zone = Zone::Gone { player: PlayerId::P1 };
         assert_eq!(
-            run(&mut state, give_brittle(json_as(json!({ "target": { "of": "chosen" }, "n": 2 }))), None, chosen(&held.id)),
+            run(
+                &mut state,
+                give_brittle(json_as(json!({ "target": { "of": "chosen" }, "n": 2 }))),
+                None,
+                chosen(&held.id)
+            ),
             Vec::<GameEvent>::new()
         );
         // TS read the detached object, which nothing can reach: it is in no zone of the state.

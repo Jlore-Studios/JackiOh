@@ -39,7 +39,9 @@ const FULLSEND: &str = "core-078";
 const TWINSPELL: &str = "core-079";
 const UNLICENSED: &str = "core-085";
 const RUSH_TOKEN: &str = "core-t-rush";
-const LIBRARY: [&str; 8] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
+const LIBRARY: [&str; 8] = [
+    VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
+];
 
 /// The harness with the real catalog and every card script registered (TS's `_harness.ts` import
 /// ran `registerAll()`; the engine's testkit cannot name the cards crate, so the cards test does).
@@ -106,7 +108,15 @@ mod s10_5_step_6_an_echo_repeat_is_step_5_again_granted_combo_parts_included {
         let drawn = g
             .last_events()
             .iter()
-            .filter(|event| matches!(event, GameEvent::Drawn { player: PlayerId::P1, .. }))
+            .filter(|event| {
+                matches!(
+                    event,
+                    GameEvent::Drawn {
+                        player: PlayerId::P1,
+                        ..
+                    }
+                )
+            })
             .count();
         assert_eq!(drawn, 6);
         assert_eq!(g.hand("p1").len(), before - 1 + 6);
@@ -145,7 +155,8 @@ mod s4_5_the_check_after_a_cards_whole_cry_or_spell_before_step_7s_traps {
     }
 
     #[test]
-    fn r61_r99_s4_5_unlicensed_experimentation_does_not_fuse_big_felinor_onto_a_unit_its_cry_has_already_destroyed() {
+    fn r61_r99_s4_5_unlicensed_experimentation_does_not_fuse_big_felinor_onto_a_unit_its_cry_has_already_destroyed()
+     {
         let mut g = setup(json!({
             "p1": { "hand": [BIG_FELINOR, STOCKPILE], "library": LIBRARY },
             "p2": {
@@ -214,12 +225,17 @@ mod r174_a_trap_after_bear_honeypots_run_meets_the_played_unit_the_run_killed_as
         // asked, the play it would fuse onto p2's side is in p1's graveyard.
         g.play(MR_TOKEN, json!({ "zone": 1 }));
 
-        assert!(g.pile("p1", "graveyard").iter().any(|card| card.def_id == MR_TOKEN));
+        assert!(
+            g.pile("p1", "graveyard")
+                .iter()
+                .any(|card| card.def_id == MR_TOKEN)
+        );
         assert_eq!(count(g.events(), GameEventType::Fused), 0);
     }
 
     #[test]
-    fn r174_r83_a_second_bear_honeypots_tokens_do_not_attack_the_reborn_body_of_the_unit_the_first_ones_run_killed() {
+    fn r174_r83_a_second_bear_honeypots_tokens_do_not_attack_the_reborn_body_of_the_unit_the_first_ones_run_killed()
+     {
         let mut g = setup(json!({
             "active": "p1",
             "p1": { "hand": [RIGHT_HOUSE, STOCKPILE], "library": LIBRARY },
@@ -386,7 +402,9 @@ mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_
             "Unit",
             Script {
                 cry: Some(hook(|_ctx| {
-                    vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 3 })))]
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 3 }),
+                    ))]
                 })),
                 ..Script::default()
             },
@@ -408,13 +426,16 @@ mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_
                 "{}:{}:{}",
                 body.zone.z().as_str(),
                 body.def_id,
-                if body.reborn_spent == Some(true) { "reborn" } else { "first" }
+                if body.reborn_spent == Some(true) {
+                    "reborn"
+                } else {
+                    "first"
+                }
             )
         });
-        let died = g
-            .events()
-            .iter()
-            .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == unit.id));
+        let died = g.events().iter().any(
+            |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == unit.id),
+        );
         assert_eq!(
             json!({
                 "died": died,
@@ -444,7 +465,9 @@ mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_
             "Unit",
             Script {
                 cry: Some(hook(|_ctx| {
-                    vec![effects::damage(json_as(json!({ "to": { "of": "self" }, "amount": 9 })))]
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "self" }, "amount": 9 }),
+                    ))]
                 })),
                 ..Script::default()
             },
@@ -455,11 +478,9 @@ mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_
         s.play(&martyr, json!({ "zone": 3 }));
 
         // The play died and came back: the Reborn body stands in lane 3.
-        assert!(
-            s.events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == martyr.id))
-        );
+        assert!(s.events().iter().any(
+            |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == martyr.id)
+        ));
         assert!(
             s.events()
                 .iter()
@@ -488,18 +509,22 @@ mod r174_a_target_a_trap_answering_the_play_took_off_the_field_is_gone_for_the_p
             "p1": { "hand": [PLASTIC_SURGERY], "mana": 4 },
             "p2": { "field": [POINTMASTER] },
         }));
-        fixture_card(s.state_mut(), "edge-r7-wipe", "Field Trap", wipe_on_play(), json!({}));
+        fixture_card(
+            s.state_mut(),
+            "edge-r7-wipe",
+            "Field Trap",
+            wipe_on_play(),
+            json!({}),
+        );
         face_down_trap(s.state_mut(), "edge-r7-wipe", PlayerId::P2, 5);
         let target = unit_at(&s, "p2", 1);
 
         s.play(PLASTIC_SURGERY, json!({ "targets": at(&target) }));
 
         // The trap fired at step 4 and its check collected the Pointmaster (§4.5, R17).
-        assert!(
-            s.last_events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == target.id))
-        );
+        assert!(s.last_events().iter().any(
+            |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == target.id)
+        ));
         assert!(s.pile("p2", "graveyard").iter().any(|card| card.id == target.id));
         // §8 Conventions: the spell's target is gone, so its text fizzles on it; R78: a card in a
         // graveyard is the printed card, with no buffs and no granted keywords.
@@ -516,7 +541,10 @@ mod r174_a_target_a_trap_answering_the_play_took_off_the_field_is_gone_for_the_p
                 _ => false,
             })
             .collect();
-        assert!(touched.is_empty(), "buffs or grants on the dead target: {touched:?}");
+        assert!(
+            touched.is_empty(),
+            "buffs or grants on the dead target: {touched:?}"
+        );
     }
 
     #[test]
@@ -527,7 +555,13 @@ mod r174_a_target_a_trap_answering_the_play_took_off_the_field_is_gone_for_the_p
             "p1": { "hand": [COLLATERAL_DAMAGE], "mana": 4 },
             "p2": { "field": [POINTMASTER], "library": [TIMMY, TIMMY] },
         }));
-        fixture_card(s.state_mut(), "edge-r7-wipe", "Field Trap", wipe_on_play(), json!({}));
+        fixture_card(
+            s.state_mut(),
+            "edge-r7-wipe",
+            "Field Trap",
+            wipe_on_play(),
+            json!({}),
+        );
         face_down_trap(s.state_mut(), "edge-r7-wipe", PlayerId::P2, 5);
         let target = unit_at(&s, "p2", 1);
 
@@ -535,11 +569,9 @@ mod r174_a_target_a_trap_answering_the_play_took_off_the_field_is_gone_for_the_p
 
         // The trap's wipe put the Pointmaster in its owner's graveyard (§4.5, R17), and there it stays:
         // the permanent the spell named is gone, so only the library half of its text resolves.
-        assert!(
-            s.last_events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == target.id))
-        );
+        assert!(s.last_events().iter().any(
+            |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == target.id)
+        ));
         assert!(!s.pile("p2", "exile").iter().any(|card| card.id == target.id));
         assert!(s.pile("p2", "graveyard").iter().any(|card| card.id == target.id));
     }

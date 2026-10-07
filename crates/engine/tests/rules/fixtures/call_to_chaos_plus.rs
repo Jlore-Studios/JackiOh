@@ -119,7 +119,10 @@ pub static immutable: LazyLock<CardDef> = LazyLock::new(|| {
 
 /// A backrow Trap and an Indestructible Field Spell for the destroy entry.
 pub static trap: LazyLock<CardDef> = LazyLock::new(|| {
-    spell_def(979, json!({ "id": "fx-cp-trap", "name": "Fixture Trap", "type": "Trap" }))
+    spell_def(
+        979,
+        json!({ "id": "fx-cp-trap", "name": "Fixture Trap", "type": "Trap" }),
+    )
 });
 pub static hard_field: LazyLock<CardDef> = LazyLock::new(|| {
     spell_def(

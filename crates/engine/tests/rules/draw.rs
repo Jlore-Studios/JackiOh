@@ -1,6 +1,6 @@
 //! Port of `packages/engine/test/draw.test.ts`.
 
-use jackioh_engine::draw::{draw, draw_one, shuffle_into_library, DrawOutcome, ShuffleInOutcome};
+use jackioh_engine::draw::{DrawOutcome, ShuffleInOutcome, draw, draw_one, shuffle_into_library};
 use jackioh_engine::effects::draw as draw_effect;
 use jackioh_engine::testkit::*;
 
@@ -16,7 +16,10 @@ struct Bench {
 
 impl Bench {
     fn new(state: &GameState) -> Bench {
-        Bench { events: Vec::new(), rng: Rng::new(&state.seed, state.rng_cursor) }
+        Bench {
+            events: Vec::new(),
+            rng: Rng::new(&state.seed, state.rng_cursor),
+        }
     }
 
     fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
@@ -73,7 +76,9 @@ mod draw_m1_t7 {
         assert_eq!(state.counters.played, 1);
         assert_eq!(state.counters.drawn, 2);
         assert_eq!(
-            of_type(&events, GameEventType::CardPlayed).first().map(|event| event["costPaid"].clone()),
+            of_type(&events, GameEventType::CardPlayed)
+                .first()
+                .map(|event| event["costPaid"].clone()),
             Some(json!(0))
         );
     }
@@ -84,8 +89,10 @@ mod draw_m1_t7 {
         let events = draw_from(&mut state, &[], 3);
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH - 6);
         assert_eq!(state.players.p1.fatigue_count, 3);
-        let amounts: Vec<Value> =
-            of_type(&events, GameEventType::Damage).iter().map(|event| event["amount"].clone()).collect();
+        let amounts: Vec<Value> = of_type(&events, GameEventType::Damage)
+            .iter()
+            .map(|event| event["amount"].clone())
+            .collect();
         assert_eq!(amounts, vec![json!(1), json!(2), json!(3)]);
     }
 
@@ -96,7 +103,10 @@ mod draw_m1_t7 {
         let events = draw_from(&mut state, &library, HAND_CAP + 1);
 
         assert_eq!(state.players.p1.hand.len(), HAND_CAP as usize);
-        assert_eq!(def_ids(&state.players.p1.graveyard), vec![format!("fx-{}", HAND_CAP + 1)]);
+        assert_eq!(
+            def_ids(&state.players.p1.graveyard),
+            vec![format!("fx-{}", HAND_CAP + 1)]
+        );
         assert_eq!(state.counters.drawn, HAND_CAP + 1);
         assert_eq!(of_type(&events, GameEventType::Burned).len(), 1);
     }
@@ -107,7 +117,16 @@ mod draw_m1_t7 {
         let events = draw_from(&mut state, &[cn_virus().id, "fx-2".to_string()], 1);
 
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH - 1);
-        assert_eq!(state.players.p1.library.iter().filter(|c| c.def_id == cn_virus().id).count(), 2);
+        assert_eq!(
+            state
+                .players
+                .p1
+                .library
+                .iter()
+                .filter(|c| c.def_id == cn_virus().id)
+                .count(),
+            2
+        );
         assert_eq!(def_ids(&state.players.p1.hand), strings(&["fx-2"]));
         assert_eq!(of_type(&events, GameEventType::ShuffledIn).len(), 2);
         assert_eq!(def_ids(&state.players.p1.graveyard), vec![cn_virus().id]);
@@ -116,13 +135,27 @@ mod draw_m1_t7 {
     #[test]
     fn r63_anti_oneshot_armor_caps_the_heros_damage_and_armor_can_reduce_a_virus_to_nothing() {
         let mut state = new_game("engine-test", None);
-        put(&mut state, &anti_oneshot().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &anti_oneshot().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            Default::default(),
+        );
         state.players.p1.hero.armor = 2;
         let events = draw_from(&mut state, &[cn_virus().id, "fx-2".to_string()], 1);
 
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH);
         assert_eq!(of_type(&events, GameEventType::Damage).len(), 0);
-        assert_eq!(state.players.p1.library.iter().filter(|c| c.def_id == cn_virus().id).count(), 2);
+        assert_eq!(
+            state
+                .players
+                .p1
+                .library
+                .iter()
+                .filter(|c| c.def_id == cn_virus().id)
+                .count(),
+            2
+        );
     }
 
     #[test]
@@ -132,7 +165,10 @@ mod draw_m1_t7 {
         let library: Vec<String> = (0..40).map(|_| cn_virus().id).collect();
         let events = draw_from(&mut state, &library, 1);
 
-        assert_eq!(of_type(&events, GameEventType::CardPlayed).len(), CAST_ON_DRAW_CHAIN_CAP as usize);
+        assert_eq!(
+            of_type(&events, GameEventType::CardPlayed).len(),
+            CAST_ON_DRAW_CHAIN_CAP as usize
+        );
         assert_eq!(def_ids(&state.players.p1.hand), vec![cn_virus().id]);
     }
 
@@ -163,14 +199,23 @@ mod draw_m1_t7 {
             ..Script::default()
         };
         let mut scripts = registered_scripts().clone();
-        scripts.insert(drawer.id.clone(), CardScripts { base: script.clone(), radiant: script });
+        scripts.insert(
+            drawer.id.clone(),
+            CardScripts {
+                base: script.clone(),
+                radiant: script,
+            },
+        );
         register_scripts(scripts);
         let library: Vec<String> = (0..40).map(|_| drawer.id.clone()).collect();
         let events = draw_from(&mut state, &library, 1);
 
         // One draw set all of it off, so it is one chain: 20 casts, however deeply they nested, and the
         // cast-on-draw card each open draw then met went to the hand uncast (R58).
-        assert_eq!(of_type(&events, GameEventType::CardPlayed).len(), CAST_ON_DRAW_CHAIN_CAP as usize);
+        assert_eq!(
+            of_type(&events, GameEventType::CardPlayed).len(),
+            CAST_ON_DRAW_CHAIN_CAP as usize
+        );
         assert!(state.players.p1.hand.iter().all(|card| card.def_id == drawer.id));
         // The draw that began the chain closed it (R217).
         assert_eq!(state.cast_chain, None);
@@ -179,7 +224,12 @@ mod draw_m1_t7 {
     #[test]
     fn infinite_reserves_turns_an_empty_library_draw_into_a_rush_token_card_with_no_fatigue_c75() {
         let mut state = new_game("engine-test", None);
-        put(&mut state, &infinite_reserves().id, slot(PlayerId::P1, Row::Backrow, 2), Default::default());
+        put(
+            &mut state,
+            &infinite_reserves().id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            Default::default(),
+        );
         let events = draw_from(&mut state, &[], 1);
 
         assert_eq!(state.players.p1.fatigue_count, 0);
@@ -193,7 +243,12 @@ mod draw_m1_t7 {
         let mut state = new_game("engine-test", None);
         // Fill the hand to the cap, then draw Hinder with one more card behind it.
         for _ in 0..HAND_CAP {
-            let filler = new_instance(&mut state, "fx-1", PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+            let filler = new_instance(
+                &mut state,
+                "fx-1",
+                PlayerId::P1,
+                Zone::Hand { player: PlayerId::P1 },
+            );
             state.players.p1.hand.push(filler);
         }
         let events = draw_from(&mut state, &[hinder().id, "fx-2".to_string()], 1);
@@ -211,8 +266,14 @@ mod draw_m1_t7 {
         let mut state = new_game("engine-test", None);
         set_library(&mut state, PlayerId::P1, &[hinder().id, "fx-2".to_string()]);
         let mut bench = Bench::new(&state);
-        assert_eq!(draw_one(&mut bench.sink(&mut state), PlayerId::P1, None), DrawOutcome::Cast);
-        assert_eq!(draw_one(&mut bench.sink(&mut state), PlayerId::P1, None), DrawOutcome::Fatigue);
+        assert_eq!(
+            draw_one(&mut bench.sink(&mut state), PlayerId::P1, None),
+            DrawOutcome::Cast
+        );
+        assert_eq!(
+            draw_one(&mut bench.sink(&mut state), PlayerId::P1, None),
+            DrawOutcome::Fatigue
+        );
     }
 }
 
@@ -225,7 +286,12 @@ mod r80_library_cap_m1_t7 {
         let full: Vec<String> = (0..LIBRARY_CAP).map(|_| "fx-1".to_string()).collect();
         set_library(&mut state, PlayerId::P1, &full);
         let mut bench = Bench::new(&state);
-        let mut fresh = new_instance(&mut state, "fx-2", PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+        let mut fresh = new_instance(
+            &mut state,
+            "fx-2",
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
 
         let outcome = shuffle_into_library(&mut bench.sink(&mut state), &mut fresh, false, None);
         assert!(matches!(outcome, ShuffleInOutcome::Dropped));
@@ -239,7 +305,12 @@ mod r80_library_cap_m1_t7 {
         let full: Vec<String> = (0..LIBRARY_CAP).map(|_| "fx-1".to_string()).collect();
         set_library(&mut state, PlayerId::P1, &full);
         let mut bench = Bench::new(&state);
-        let mut card = new_instance(&mut state, "fx-2", PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let mut card = new_instance(
+            &mut state,
+            "fx-2",
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
         state.players.p1.hand.push(card.clone());
 
         let outcome = shuffle_into_library(&mut bench.sink(&mut state), &mut card, true, None);
@@ -253,7 +324,12 @@ mod r80_library_cap_m1_t7 {
         let mut state = new_game("engine-test", None);
         set_library(&mut state, PlayerId::P1, &strings(&["fx-1", "fx-2", "fx-3"]));
         let mut bench = Bench::new(&state);
-        let mut card = new_instance(&mut state, "fx-4", PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+        let mut card = new_instance(
+            &mut state,
+            "fx-4",
+            PlayerId::P1,
+            Zone::Library { player: PlayerId::P1 },
+        );
 
         let outcome = shuffle_into_library(&mut bench.sink(&mut state), &mut card, false, None);
         assert!(matches!(outcome, ShuffleInOutcome::Library));

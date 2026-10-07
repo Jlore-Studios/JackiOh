@@ -48,7 +48,10 @@ static NONCE: AtomicU32 = AtomicU32::new(0);
 /// An action through `reduce` with a fresh nonce; the result as `reduce` gives it, a refusal included.
 fn act(state: &GameState, body: Value) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    reduce(state, &json_as::<ActionInput>(body).with_nonce(format!("turn-clock-{nonce}")))
+    reduce(
+        state,
+        &json_as::<ActionInput>(body).with_nonce(format!("turn-clock-{nonce}")),
+    )
 }
 
 fn must<T>(value: Option<T>, what: &str) -> T {
@@ -77,7 +80,8 @@ mod r79_a_timeout_acts_only_for_the_player_whose_clock_ran_out {
     use super::*;
 
     #[test]
-    fn r79_the_non_active_player_s_timeout_with_nothing_of_theirs_open_does_not_end_the_active_player_s_turn() {
+    fn r79_the_non_active_player_s_timeout_with_nothing_of_theirs_open_does_not_end_the_active_player_s_turn()
+    {
         let g = scenario(json!({
             "p1": { "hand": [VANILLA], "field": [VANILLA], "library": LIBRARY },
             "p2": { "hand": [VANILLA], "field": [VANILLA], "library": LIBRARY },
@@ -94,7 +98,8 @@ mod r79_a_timeout_acts_only_for_the_player_whose_clock_ran_out {
 
     #[test]
     fn r79_the_non_active_player_s_timeout_does_not_answer_the_active_player_s_prompt_or_end_their_turn() {
-        let mut g = scenario(json!({ "p1": { "hand": [SCARAB, RENO], "mana": 4 }, "p2": { "hand": [RENO] } }));
+        let mut g =
+            scenario(json!({ "p1": { "hand": [SCARAB, RENO], "mana": 4 }, "p2": { "hand": [RENO] } }));
         g.play(SCARAB, json!({}));
         let pending = must(g.state().pending.clone(), "the Scarab's Discover");
         assert_eq!(pending.player_id, PlayerId::P1);
@@ -119,9 +124,14 @@ mod r79_a_timeout_acts_only_for_the_player_whose_clock_ran_out {
             (CRAFT, LIBRARY.to_vec()),
         ];
         for (card, library) in cases {
-            let mut g = scenario(json!({ "p1": { "hand": [card, RENO], "mana": 4, "library": library }, "p2": { "hand": [RENO] } }));
+            let mut g = scenario(
+                json!({ "p1": { "hand": [card, RENO], "mana": 4, "library": library }, "p2": { "hand": [RENO] } }),
+            );
             g.play(card, json!({}));
-            assert_eq!(must(g.state().pending.clone(), "the first prompt").player_id, PlayerId::P1);
+            assert_eq!(
+                must(g.state().pending.clone(), "the first prompt").player_id,
+                PlayerId::P1
+            );
             let turn = g.state().turn;
 
             let result = act(g.state(), json!({ "type": "timeout", "playerId": "p1" }));
@@ -155,11 +165,20 @@ mod r36_a_draw_offer_is_answered_once {
         assert_eq!(offered.error, None);
         assert_eq!(answer_draws(&offered.state, PlayerId::P2).len(), 2);
 
-        let declined = act(&offered.state, json!({ "type": "answerDraw", "playerId": "p2", "accept": false }));
+        let declined = act(
+            &offered.state,
+            json!({ "type": "answerDraw", "playerId": "p2", "accept": false }),
+        );
         assert_eq!(declined.error, None);
-        assert_eq!(answer_draws(&declined.state, PlayerId::P2), Vec::<ActionBody>::new());
+        assert_eq!(
+            answer_draws(&declined.state, PlayerId::P2),
+            Vec::<ActionBody>::new()
+        );
 
-        let accepted = act(&declined.state, json!({ "type": "answerDraw", "playerId": "p2", "accept": true }));
+        let accepted = act(
+            &declined.state,
+            json!({ "type": "answerDraw", "playerId": "p2", "accept": true }),
+        );
         assert!(accepted.error.is_some());
         assert_eq!(accepted.state.result, None);
         // And the offerer is blocked, so the offer cannot simply be made again this turn.
@@ -175,7 +194,8 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
     use super::*;
 
     #[test]
-    fn r103_r13_activate_power_refuses_a_ping_target_the_power_cannot_reach_a_dormant_card_a_hand_card_a_backrow_card() {
+    fn r103_r13_activate_power_refuses_a_ping_target_the_power_cannot_reach_a_dormant_card_a_hand_card_a_backrow_card()
+     {
         let mut g = scenario(json!({
             "p1": { "hand": [RENO], "mana": 8, "backrow": [HEROIC] },
             "p2": {
@@ -187,8 +207,14 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
         let heroic = must(g.backrow(PlayerId::P1, 1), "the Heroic Power");
         let power = with_power(&mut g, &heroic, "ping");
         let pile = must(g.state().players.p2.units[0].clone(), "p2's lane-1 pile");
-        let dormant = must(pile.iter().find(|card| card.def_id == BIG_FELINOR).cloned(), "the dormant Big Felinor");
-        let top = must(pile.iter().find(|card| card.def_id == FIENDER).cloned(), "the Fiender on top");
+        let dormant = must(
+            pile.iter().find(|card| card.def_id == BIG_FELINOR).cloned(),
+            "the dormant Big Felinor",
+        );
+        let top = must(
+            pile.iter().find(|card| card.def_id == FIENDER).cloned(),
+            "the Fiender on top",
+        );
         let in_hand = must(g.state().players.p2.hand.first().cloned(), "p2's hand card");
         let trap = must(g.backrow(PlayerId::P2, 1), "p2's face-down trap");
 
@@ -222,17 +248,29 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
         );
         assert_eq!(on_top.error, None);
         assert_eq!(
-            on_top.events.iter().filter(|event| matches!(event, GameEvent::Damage { .. })).count(),
+            on_top
+                .events
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Damage { .. }))
+                .count(),
             1
         );
     }
 
     #[test]
-    fn r103_activate_power_cannot_carry_the_discover_s_answer_so_no_card_of_the_client_s_naming_reaches_the_hand_6_3_5_1() {
+    fn r103_activate_power_cannot_carry_the_discover_s_answer_so_no_card_of_the_client_s_naming_reaches_the_hand_6_3_5_1()
+     {
         let mut g = scenario(json!({ "p1": { "hand": [RENO], "mana": 8, "backrow": [HEROIC] } }));
         let heroic = must(g.backrow(PlayerId::P1, 1), "the Heroic Power");
         let power = with_power(&mut g, &heroic, "discover");
-        let hand_before: Vec<String> = g.state().players.p1.hand.iter().map(|card| card.def_id.clone()).collect();
+        let hand_before: Vec<String> = g
+            .state()
+            .players
+            .p1
+            .hand
+            .iter()
+            .map(|card| card.def_id.clone())
+            .collect();
 
         let result = act(
             g.state(),
@@ -246,7 +284,14 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
 
         assert!(result.error.is_some());
         assert_eq!(
-            result.state.players.p1.hand.iter().map(|card| card.def_id.clone()).collect::<Vec<_>>(),
+            result
+                .state
+                .players
+                .p1
+                .hand
+                .iter()
+                .map(|card| card.def_id.clone())
+                .collect::<Vec<_>>(),
             hand_before
         );
     }
@@ -255,12 +300,17 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
     fn r752_r65_heroic_power_costs_0_legal_actions_offers_no_x_choice_a_play_naming_one_is_refused_and_a_play_pays_0_2_3()
      {
         let mut g = scenario(json!({ "p1": { "hand": [HEROIC, RENO], "mana": 4 } }));
-        let first = must(g.state().players.p1.hand.first().cloned(), "the Heroic Power in hand");
+        let first = must(
+            g.state().players.p1.hand.first().cloned(),
+            "the Heroic Power in hand",
+        );
         let card = with_power(&mut g, &first, "ping");
 
         let plays: Vec<ActionBody> = legal_actions(g.state(), PlayerId::P1)
             .into_iter()
-            .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
+            .filter(
+                |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id),
+            )
             .collect();
         let per_zone: IndexSet<String> = plays
             .iter()
@@ -302,7 +352,8 @@ mod s6_2_this_turn_on_the_opponent_s_turn {
     use super::*;
 
     #[test]
-    fn r40_r70_s6_2_a_card_cast_on_the_opponent_s_turn_counts_only_the_plays_of_that_turn_so_quickstriker_s_x_is_0() {
+    fn r40_r70_s6_2_a_card_cast_on_the_opponent_s_turn_counts_only_the_plays_of_that_turn_so_quickstriker_s_x_is_0()
+     {
         let mut g = scenario(json!({
             "seed": "hunt-l8-stale-log",
             "p1": {
@@ -337,7 +388,8 @@ mod s10_6_a_prompt_s_options_can_each_be_picked_through_the_view {
     use super::*;
 
     #[test]
-    fn r81_s10_6_a_target_prompt_s_options_have_distinct_keys_so_each_of_two_same_named_units_can_be_picked_10_8() {
+    fn r81_s10_6_a_target_prompt_s_options_have_distinct_keys_so_each_of_two_same_named_units_can_be_picked_10_8()
+     {
         // Two Duplicating Felinors — #12's own copy makes this an ordinary board — among the four
         // permanents Classic #40 MC Tech's Radiant face picks from in a prompt its Cry opens (§10.6).
         let mut s = scenario(json!({
@@ -377,7 +429,8 @@ mod s9_1_legal_actions_and_a_face_down_trap_s_instance_id {
     // a player who saw the id while the card was public (here, in p2's graveyard) finds it nowhere
     // once the card is set again: not in the actions, not in the view, not in the events.
     #[test]
-    fn r227_r177_legal_actions_never_names_a_face_down_trap_by_an_id_its_viewer_saw_while_the_card_was_public() {
+    fn r227_r177_legal_actions_never_names_a_face_down_trap_by_an_id_its_viewer_saw_while_the_card_was_public()
+     {
         let mut g = scenario(json!({
             "active": "p2",
             "p1": { "hand": [MAGIC_JAMMED, RENO], "mana": 4 },
@@ -392,7 +445,13 @@ mod s9_1_legal_actions_and_a_face_down_trap_s_instance_id {
         g.play(REMINISCE, json!({}));
         g.answer(json!(SHEEPISH));
         let back = must(
-            g.state().players.p2.hand.iter().find(|card| card.def_id == SHEEPISH).cloned(),
+            g.state()
+                .players
+                .p2
+                .hand
+                .iter()
+                .find(|card| card.def_id == SHEEPISH)
+                .cloned(),
             "Sheepish back in hand",
         );
         assert_eq!(back.id, trap_id);
@@ -415,7 +474,11 @@ mod s9_1_legal_actions_and_a_face_down_trap_s_instance_id {
                 .collect::<Vec<_>>(),
             Vec::<ActionBody>::new()
         );
-        assert!(actions.iter().any(|action| to_json(action).contains(&format!("\"{}\"", set.id))));
+        assert!(
+            actions
+                .iter()
+                .any(|action| to_json(action).contains(&format!("\"{}\"", set.id)))
+        );
     }
 }
 
@@ -423,18 +486,27 @@ mod s3_2_9_3_a_play_s_zone_is_one_of_the_row_s_lanes {
     use super::*;
 
     #[test]
-    fn s9_3_a_play_naming_a_zone_between_two_lanes_is_refused_not_accepted_with_the_card_lost_and_its_mana_spent() {
+    fn s9_3_a_play_naming_a_zone_between_two_lanes_is_refused_not_accepted_with_the_card_lost_and_its_mana_spent()
+     {
         let s = scenario(json!({ "p1": { "hand": [GARY, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
-        let gary = must(s.hand(PlayerId::P1).iter().find(|card| card.def_id == GARY).cloned(), "Gary in hand");
+        let gary = must(
+            s.hand(PlayerId::P1)
+                .iter()
+                .find(|card| card.def_id == GARY)
+                .cloned(),
+            "Gary in hand",
+        );
         let mana = s.state().players.p1.mana.current;
 
         // `legalActions` offers lanes 1 to 5 only…
-        let offered = legal_actions(s.state(), PlayerId::P1).iter().any(|action| match action {
-            ActionBody::Play { instance_id, zone, .. } => {
-                *instance_id == gary.id && zone.map(|zone| f64::from(zone.lane) == 2.5).unwrap_or(false)
-            }
-            _ => false,
-        });
+        let offered = legal_actions(s.state(), PlayerId::P1)
+            .iter()
+            .any(|action| match action {
+                ActionBody::Play {
+                    instance_id, zone, ..
+                } => *instance_id == gary.id && zone.map(|zone| f64::from(zone.lane) == 2.5).unwrap_or(false),
+                _ => false,
+            });
         assert!(!offered);
 
         // …and §9.3 has `reduce` refuse what is illegal itself. Lane 2.5 passed the range check and read
@@ -481,7 +553,10 @@ mod r221_10_2_10_6_every_answer_reduce_accepts_is_one_legal_actions_offers {
             .collect();
         s.play(JELLY_BEAN, json!({ "targets": picks }));
         let state = s.state().clone();
-        assert_eq!(state.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Hand));
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Hand)
+        );
         assert_eq!(state.pending.as_ref().map(|pending| pending.max), Some(2));
 
         let offered: Vec<ActionBody> = legal_actions(&state, PlayerId::P1)
@@ -490,7 +565,10 @@ mod r221_10_2_10_6_every_answer_reduce_accepts_is_one_legal_actions_offers {
             .collect();
         let mut meanings: IndexMap<String, String> = IndexMap::new();
         for answer in &offered {
-            let result = reduce(&state, &Action::new(answer.clone(), PlayerId::P1, "edge-r6-offered"));
+            let result = reduce(
+                &state,
+                &Action::new(answer.clone(), PlayerId::P1, "edge-r6-offered"),
+            );
             assert_eq!(result.error, None);
             meanings.insert(hash_state(&result.state), graveyard_ids(&result.state));
         }
@@ -622,7 +700,9 @@ mod r123_a_declared_tribute_names_the_same_units_in_targets_and_tributes {
             "edge-r8-devourer",
             CardType::Unit,
             Script {
-                targets: vec![json_as::<TargetDecl>(json!({ "kind": "tribute", "amount": 1, "min": 1, "max": 1 }))],
+                targets: vec![json_as::<TargetDecl>(
+                    json!({ "kind": "tribute", "amount": 1, "min": 1, "max": 1 }),
+                )],
                 ..Script::default()
             },
         );
@@ -744,7 +824,12 @@ mod r221_r90_10_2_a_play_s_picks_for_one_declaration_are_a_set {
         );
 
         let offered = play(&s, &spell, &[a.id.clone(), b.id.clone()], "edge-r8-order-offered");
-        let reversed = play(&s, &spell, &[b.id.clone(), a.id.clone()], "edge-r8-order-reversed");
+        let reversed = play(
+            &s,
+            &spell,
+            &[b.id.clone(), a.id.clone()],
+            "edge-r8-order-reversed",
+        );
         assert_eq!(offered.error, None);
 
         // `reduce` may refuse the unoffered listing, or accept it as it accepts an answer's (R221) —
@@ -753,7 +838,13 @@ mod r221_r90_10_2_a_play_s_picks_for_one_declaration_are_a_set {
             return;
         }
         let exile_ids = |state: &GameState| -> Vec<String> {
-            state.players.p2.exile.iter().map(|card| card.id.clone()).collect()
+            state
+                .players
+                .p2
+                .exile
+                .iter()
+                .map(|card| card.id.clone())
+                .collect()
         };
         assert_eq!(
             exile_ids(&reversed.state),

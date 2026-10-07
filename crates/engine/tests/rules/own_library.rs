@@ -18,7 +18,10 @@ use crate::rules::fixtures::harness::{new_game, set_library};
 
 // Three cards that sort by cost, then name, then id, whatever order they lie in (R310).
 fn cheap() -> CardDef {
-    unit_def(801, json!({ "id": "lib-cheap", "name": "Zed the Cheap", "cost": 0 }))
+    unit_def(
+        801,
+        json!({ "id": "lib-cheap", "name": "Zed the Cheap", "cost": 0 }),
+    )
 }
 fn alpha() -> CardDef {
     unit_def(802, json!({ "id": "lib-alpha", "name": "Alpha", "cost": 2 }))
@@ -35,7 +38,10 @@ fn x_spell() -> CardDef {
     spell_def(805, json!({ "id": "lib-x", "name": "X Marks", "cost": "X" }))
 }
 fn big_spell() -> CardDef {
-    spell_def(806, json!({ "id": "lib-embiggen", "name": "Embiggen", "cost": { "base": 3, "embiggen": 5 } }))
+    spell_def(
+        806,
+        json!({ "id": "lib-embiggen", "name": "Embiggen", "cost": { "base": 3, "embiggen": 5 } }),
+    )
 }
 /// What the opponent's CN-Viral Injection names (#90): a card shuffled in by a play both saw.
 fn virus() -> CardDef {
@@ -45,11 +51,23 @@ fn virus() -> CardDef {
     )
 }
 fn legendary() -> CardDef {
-    unit_def(808, json!({ "id": "lib-legend", "name": "Legend (fixture)", "cost": 4, "rarity": "Legendary" }))
+    unit_def(
+        808,
+        json!({ "id": "lib-legend", "name": "Legend (fixture)", "cost": 4, "rarity": "Legendary" }),
+    )
 }
 
 fn defs() -> Vec<CardDef> {
-    vec![cheap(), alpha(), beta(), beta_twin(), x_spell(), big_spell(), virus(), legendary()]
+    vec![
+        cheap(),
+        alpha(),
+        beta(),
+        beta_twin(),
+        x_spell(),
+        big_spell(),
+        virus(),
+        legendary(),
+    ]
 }
 
 fn game(seed: &str) -> GameState {
@@ -123,7 +141,15 @@ mod r310_the_viewer_s_own_library_without_its_order {
         set_library(
             &mut state,
             P1,
-            &[beta().id, cheap().id, alpha().id, beta().id, x_spell().id, big_spell().id, beta_twin().id],
+            &[
+                beta().id,
+                cheap().id,
+                alpha().id,
+                beta().id,
+                x_spell().id,
+                big_spell().id,
+                beta_twin().id,
+            ],
         );
         let theirs = set_library(&mut state, P2, &[legendary().id, alpha().id]);
         let view = view_for(&state, P1);
@@ -149,7 +175,12 @@ mod r310_the_viewer_s_own_library_without_its_order {
         // The opponent's library is a count and nothing else (§9.1, §10.8).
         assert!(view.opponent.own_library.is_none());
         let opponent = serde_json::to_value(&view.opponent).expect("serialises");
-        assert!(!opponent.as_object().expect("an object").contains_key("ownLibrary"));
+        assert!(
+            !opponent
+                .as_object()
+                .expect("an object")
+                .contains_key("ownLibrary")
+        );
         let serialized = to_json(&view);
         assert!(!serialized.contains(&format!("\"{}\"", legendary().id)));
         for id in ids_of(&theirs) {
@@ -217,7 +248,12 @@ mod r310_the_viewer_s_own_library_without_its_order {
         }
 
         let view = view_for(&a, P1);
-        let cards: Vec<LibraryEntryView> = view.you.own_library.as_ref().map(|list| list.cards.clone()).unwrap_or_default();
+        let cards: Vec<LibraryEntryView> = view
+            .you
+            .own_library
+            .as_ref()
+            .map(|list| list.cards.clone())
+            .unwrap_or_default();
         assert!(cards.contains(&entry(&beta().id, false, 1)));
         assert!(cards.contains(&entry(&beta().id, true, 1)));
         // Base before Radiant within one definition.
@@ -253,7 +289,11 @@ mod r311_what_the_owner_was_shown_going_in {
         // Before either mulligan: the deck minus the opening hand, every card known.
         for viewer in [P1, P2] {
             let list = list_of(&state, viewer);
-            let hand: Vec<String> = state.players[viewer].hand.iter().map(|card| card.def_id.clone()).collect();
+            let hand: Vec<String> = state.players[viewer]
+                .hand
+                .iter()
+                .map(|card| card.def_id.clone())
+                .collect();
             let deck = if viewer == P1 { &decks.0 } else { &decks.1 };
             assert_eq!(list.unknown, 0);
             let mut listed: Vec<String> = list.cards.iter().map(|entry| entry.def_id.clone()).collect();
@@ -269,7 +309,11 @@ mod r311_what_the_owner_was_shown_going_in {
             assert!(prompt.is_some());
             let result = reduce(
                 &state,
-                &Action::new(ActionBody::Mulligan { keep: Vec::new() }, player, format!("own-{player}")),
+                &Action::new(
+                    ActionBody::Mulligan { keep: Vec::new() },
+                    player,
+                    format!("own-{player}"),
+                ),
             );
             assert_eq!(result.error, None);
             state = result.state;
@@ -278,8 +322,11 @@ mod r311_what_the_owner_was_shown_going_in {
             let list = list_of(&state, viewer);
             assert_eq!(list.unknown, 0);
             assert_eq!(total(&list), state.players[viewer].library.len() as i32);
-            let mut in_library: Vec<String> =
-                state.players[viewer].library.iter().map(|card| card.def_id.clone()).collect();
+            let mut in_library: Vec<String> = state.players[viewer]
+                .library
+                .iter()
+                .map(|card| card.def_id.clone())
+                .collect();
             in_library.sort();
             let mut listed: Vec<String> = list
                 .cards
@@ -298,18 +345,27 @@ mod r311_what_the_owner_was_shown_going_in {
         // p2 resolves #90's effect: a Radiant virus into p1's library (the Radiant face of the Injection).
         let events = run(
             &mut state,
-            shuffle_into(json_as(json!({ "defId": virus().id, "count": 1, "player": "enemy", "radiant": true }))),
+            shuffle_into(json_as(
+                json!({ "defId": virus().id, "count": 1, "player": "enemy", "radiant": true }),
+            )),
             P2,
         );
         assert_eq!(
-            events.iter().map(|event| event.event_type().as_str()).collect::<Vec<_>>(),
+            events
+                .iter()
+                .map(|event| event.event_type().as_str())
+                .collect::<Vec<_>>(),
             vec!["shuffledIn"]
         );
 
         assert_eq!(
             list_of(&state, P1),
             LibraryView {
-                cards: vec![entry(&virus().id, true, 1), entry(&alpha().id, false, 1), entry(&beta().id, false, 1)],
+                cards: vec![
+                    entry(&virus().id, true, 1),
+                    entry(&alpha().id, false, 1),
+                    entry(&beta().id, false, 1)
+                ],
                 unknown: 0,
             }
         );
@@ -331,7 +387,8 @@ mod r311_what_the_owner_was_shown_going_in {
     }
 
     #[test]
-    fn r311_keeps_the_face_a_card_went_in_with_when_it_turns_radiant_inside_the_library_where_nobody_sees_it() {
+    fn r311_keeps_the_face_a_card_went_in_with_when_it_turns_radiant_inside_the_library_where_nobody_sees_it()
+    {
         let mut state = game("own-library-radiant");
         let library = set_library(&mut state, P1, &[alpha().id, beta().id]);
         let (first, _second) = match library.as_slice() {
@@ -341,8 +398,16 @@ mod r311_what_the_owner_was_shown_going_in {
         let before = list_of(&state, P1);
 
         // #28's pick and #42's roll, as the verbs the cards use.
-        run(&mut state, set_radiant(json_as(json!({ "instanceId": first.id }))), P1);
-        run(&mut state, radiant_chance(json_as(json!({ "zone": "library", "chance": 1 }))), P1);
+        run(
+            &mut state,
+            set_radiant(json_as(json!({ "instanceId": first.id }))),
+            P1,
+        );
+        run(
+            &mut state,
+            radiant_chance(json_as(json!({ "zone": "library", "chance": 1 }))),
+            P1,
+        );
         assert!(state.players.p1.library.iter().all(|card| card.radiant));
 
         // The list is what p1 was shown, so it has not moved.
@@ -362,8 +427,20 @@ mod r312_cards_the_owner_was_never_shown {
         set_library(&mut state, P2, &[legendary().id, virus().id]);
         run(&mut state, swap_library(), P1);
 
-        assert_eq!(list_of(&state, P1), LibraryView { cards: vec![], unknown: 2 });
-        assert_eq!(list_of(&state, P2), LibraryView { cards: vec![], unknown: 3 });
+        assert_eq!(
+            list_of(&state, P1),
+            LibraryView {
+                cards: vec![],
+                unknown: 2
+            }
+        );
+        assert_eq!(
+            list_of(&state, P2),
+            LibraryView {
+                cards: vec![],
+                unknown: 3
+            }
+        );
         // p1 learns nothing of what p2 held, and p2 nothing of p1's old library.
         let mine = to_json(&view_for(&state, P1));
         assert!(!mine.contains(&format!("\"{}\"", legendary().id)));
@@ -374,7 +451,11 @@ mod r312_cards_the_owner_was_never_shown {
         }
 
         // A card that goes in openly afterwards is known again; the swapped ones stay unknown.
-        run(&mut state, shuffle_into(json_as(json!({ "defId": alpha().id, "count": 1 }))), P1);
+        run(
+            &mut state,
+            shuffle_into(json_as(json!({ "defId": alpha().id, "count": 1 }))),
+            P1,
+        );
         assert_eq!(
             list_of(&state, P1),
             LibraryView {
@@ -384,7 +465,13 @@ mod r312_cards_the_owner_was_never_shown {
         );
         // Swapped back, a library is not known again: what its first owner was shown went with it.
         run(&mut state, swap_library(), P1);
-        assert_eq!(list_of(&state, P1), LibraryView { cards: vec![], unknown: 3 });
+        assert_eq!(
+            list_of(&state, P1),
+            LibraryView {
+                cards: vec![],
+                unknown: 3
+            }
+        );
     }
 
     #[test]
@@ -396,7 +483,9 @@ mod r312_cards_the_owner_was_never_shown {
             .expect("library");
         run(
             &mut state,
-            transform(json_as(json!({ "instanceId": first.id, "defId": legendary().id, "radiant": true }))),
+            transform(json_as(
+                json!({ "instanceId": first.id, "defId": legendary().id, "radiant": true }),
+            )),
             P1,
         );
 
@@ -426,7 +515,13 @@ mod r312_cards_the_owner_was_never_shown {
         for card in state.players.p1.library.iter_mut() {
             card.known_as = None;
         }
-        assert_eq!(own_library_view(&state, P1), LibraryView { cards: vec![], unknown: 2 });
+        assert_eq!(
+            own_library_view(&state, P1),
+            LibraryView {
+                cards: vec![],
+                unknown: 2
+            }
+        );
         assert!(!to_json(&view_for(&state, P1)).contains(&format!("\"{}\"", alpha().id)));
     }
 }

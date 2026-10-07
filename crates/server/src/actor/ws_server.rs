@@ -37,10 +37,10 @@ use indexmap::IndexMap;
 use tokio::sync::mpsc;
 
 use crate::actor::contracts::SocketHandlers;
-use crate::actor::protocol::{encode, error_message, SocketErrorCode, MAX_FRAME_BYTES};
+use crate::actor::protocol::{MAX_FRAME_BYTES, SocketErrorCode, encode, error_message};
 use crate::actor::registry::AttachError;
-use crate::api::http::{assert_active, client_address, rate_limit_address, ApiError, ApiErrorCode, lock};
-use crate::app::{browser_origins, App};
+use crate::api::http::{ApiError, ApiErrorCode, assert_active, client_address, lock, rate_limit_address};
+use crate::app::{App, browser_origins};
 use crate::config::{DEFAULT_TRUSTED_PROXY_HOPS, WS_MAX_CONNECTIONS_PER_ADDRESS};
 
 /// SPEC §9.2: one WebSocket per player, upgraded on the same listener the API serves.
@@ -65,7 +65,12 @@ pub struct WsClose {
 /// table." R148 also fixes what the socket may learn: every refusal answers with the same error
 /// code and only the close code varies, so a socket learns that it may not have this match and
 /// never which check said so (§9.1).
-pub const WS_CLOSE: WsClose = WsClose { unauthorized: 4401, forbidden: 4403, not_found: 4404, internal: 1011 };
+pub const WS_CLOSE: WsClose = WsClose {
+    unauthorized: 4401,
+    forbidden: 4403,
+    not_found: 4404,
+    internal: 1011,
+};
 
 /// RFC 6455's "message too big": what `ws` closes with when a frame passes `maxPayload`.
 const CLOSE_MESSAGE_TOO_BIG: u16 = 1009;
@@ -220,7 +225,9 @@ impl Eq for Socket {}
 
 impl std::fmt::Debug for Socket {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Socket").field("open", &self.is_open()).finish_non_exhaustive()
+        f.debug_struct("Socket")
+            .field("open", &self.is_open())
+            .finish_non_exhaustive()
     }
 }
 
@@ -311,13 +318,23 @@ enum UpgradeFailure {
 
 impl UpgradeFailure {
     fn refused(code: u16, message: &str) -> UpgradeFailure {
-        UpgradeFailure::Refused { code, message: message.to_string() }
+        UpgradeFailure::Refused {
+            code,
+            message: message.to_string(),
+        }
     }
 
     /// An `ApiError` refuses with 4404 when it is a 404 and 4403 otherwise.
     fn api(error: &ApiError) -> UpgradeFailure {
-        let code = if error.code == ApiErrorCode::NotFound { WS_CLOSE.not_found } else { WS_CLOSE.forbidden };
-        UpgradeFailure::Refused { code, message: error.message.clone() }
+        let code = if error.code == ApiErrorCode::NotFound {
+            WS_CLOSE.not_found
+        } else {
+            WS_CLOSE.forbidden
+        };
+        UpgradeFailure::Refused {
+            code,
+            message: error.message.clone(),
+        }
     }
 }
 
@@ -329,7 +346,10 @@ impl From<crate::db::store::StoreError> for UpgradeFailure {
 
 /// The first value of a query parameter, URL-decoded (`url.searchParams.get(name)`).
 fn query_param(query: &[(String, String)], name: &str) -> Option<String> {
-    query.iter().find(|(key, _)| key == name).map(|(_, value)| value.clone())
+    query
+        .iter()
+        .find(|(key, _)| key == name)
+        .map(|(_, value)| value.clone())
 }
 
 /// The query string's pairs, in order. A query that does not parse reads as empty, as a URL with
@@ -347,7 +367,11 @@ fn token_from(query: &[(String, String)]) -> Option<String> {
 }
 
 /// The authentication and the attach, in TS's order; any failure is reported to `refuse`.
-async fn upgrade_socket(app: &Arc<App>, socket: &Socket, query: &[(String, String)]) -> Result<(), UpgradeFailure> {
+async fn upgrade_socket(
+    app: &Arc<App>,
+    socket: &Socket,
+    query: &[(String, String)],
+) -> Result<(), UpgradeFailure> {
     let Some(token) = token_from(query) else {
         return Err(UpgradeFailure::refused(WS_CLOSE.unauthorized, "sign in first"));
     };
@@ -368,14 +392,24 @@ async fn upgrade_socket(app: &Arc<App>, socket: &Socket, query: &[(String, Strin
 
     let asked = query_param(query, "matchId");
     let Some(match_id) = asked.or_else(|| profile.in_match_id.clone()) else {
-        return Err(UpgradeFailure::refused(WS_CLOSE.not_found, "you are not in a match"));
+        return Err(UpgradeFailure::refused(
+            WS_CLOSE.not_found,
+            "you are not in a match",
+        ));
     };
     // §9.1: a socket is only ever opened onto a match this profile is playing.
     if profile.in_match_id.as_deref() != Some(match_id.as_str()) {
-        return Err(UpgradeFailure::refused(WS_CLOSE.forbidden, "you are not in that match"));
+        return Err(UpgradeFailure::refused(
+            WS_CLOSE.forbidden,
+            "you are not in that match",
+        ));
     }
 
-    match app.matches.attach(app, &match_id, &profile.id, socket.clone()).await {
+    match app
+        .matches
+        .attach(app, &match_id, &profile.id, socket.clone())
+        .await
+    {
         Ok(()) => Ok(()),
         Err(AttachError::Api(error)) => Err(UpgradeFailure::api(&error)),
         Err(other) => Err(UpgradeFailure::Threw(other.to_string())),
@@ -432,13 +466,17 @@ impl AttachOptions {
 
 /// The `X-Forwarded-For` of an upgrade, as the headers that `client_address` reads.
 fn forwarded_headers(headers: &HeaderMap) -> HeaderMap {
-    let joined: Vec<&str> =
-        headers.get_all("x-forwarded-for").iter().filter_map(|value| value.to_str().ok()).collect();
+    let joined: Vec<&str> = headers
+        .get_all("x-forwarded-for")
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .collect();
     let mut forwarded = HeaderMap::new();
     if !joined.is_empty()
-        && let Ok(value) = HeaderValue::from_str(&joined.join(",")) {
-            forwarded.insert("x-forwarded-for", value);
-        }
+        && let Ok(value) = HeaderValue::from_str(&joined.join(","))
+    {
+        forwarded.insert("x-forwarded-for", value);
+    }
     forwarded
 }
 
@@ -458,7 +496,9 @@ fn origin_allowed(allowed: &[String], headers: &HeaderMap) -> bool {
         return true;
     }
     // No Origin header at all is a non-browser client, which the CSRF concern does not reach.
-    let Some(origin) = headers.get("origin").map(|value| String::from_utf8_lossy(value.as_bytes()).into_owned())
+    let Some(origin) = headers
+        .get("origin")
+        .map(|value| String::from_utf8_lossy(value.as_bytes()).into_owned())
     else {
         return true;
     };
@@ -508,7 +548,12 @@ impl Drop for AddressSlot {
     fn drop(&mut self) {
         let mut upgrades = lock(&UPGRADES);
         if let Some(entry) = upgrades.get_mut(&self.app) {
-            let left = entry.per_address.get(&self.address).copied().unwrap_or(1).saturating_sub(1);
+            let left = entry
+                .per_address
+                .get(&self.address)
+                .copied()
+                .unwrap_or(1)
+                .saturating_sub(1);
             if left == 0 {
                 entry.per_address.shift_remove(&self.address);
             } else {
@@ -519,7 +564,11 @@ impl Drop for AddressSlot {
 }
 
 fn register_client(app: usize, socket: &Socket) {
-    lock(&UPGRADES).entry(app).or_default().clients.push(socket.clone());
+    lock(&UPGRADES)
+        .entry(app)
+        .or_default()
+        .clients
+        .push(socket.clone());
 }
 
 fn unregister_client(app: usize, socket: &Socket) {
@@ -531,8 +580,10 @@ fn unregister_client(app: usize, socket: &Socket) {
 /// TS `AttachedSockets.close`: shuts every live socket of this server with 1001, so a server that is
 /// closing really does release its connections.
 pub fn close_all(app: &App) {
-    let clients: Vec<Socket> =
-        lock(&UPGRADES).get(&app_key(app)).map(|entry| entry.clients.clone()).unwrap_or_default();
+    let clients: Vec<Socket> = lock(&UPGRADES)
+        .get(&app_key(app))
+        .map(|entry| entry.clients.clone())
+        .unwrap_or_default();
     for client in clients {
         client.close(Some(CLOSE_GOING_AWAY), Some("server closing"));
     }
@@ -540,7 +591,11 @@ pub fn close_all(app: &App) {
 
 /// The address an upgrade is counted against: the peer, or R190's forwarded entry.
 fn upgrade_address(headers: &HeaderMap, peer: Option<&str>, trusted_proxy_hops: usize) -> String {
-    rate_limit_address(&client_address(&forwarded_headers(headers), peer, trusted_proxy_hops))
+    rate_limit_address(&client_address(
+        &forwarded_headers(headers),
+        peer,
+        trusted_proxy_hops,
+    ))
 }
 
 /// The `/ws/match` upgrade (SURFACE §11.2), with `index.ts`'s options.
@@ -555,18 +610,26 @@ pub async fn handle(app: Arc<App>, req: Request) -> Response {
 pub async fn handle_with(app: Arc<App>, req: Request, options: &AttachOptions) -> Response {
     let allowed = options.allowed_origins.clone().unwrap_or_default();
     let trusted_proxy_hops = options.trusted_proxy_hops.unwrap_or(DEFAULT_TRUSTED_PROXY_HOPS);
-    let max_per_address = options.max_connections_per_address.unwrap_or(WS_MAX_CONNECTIONS_PER_ADDRESS);
+    let max_per_address = options
+        .max_connections_per_address
+        .unwrap_or(WS_MAX_CONNECTIONS_PER_ADDRESS);
 
     let (mut parts, _body) = req.into_parts();
 
     if !origin_allowed(&allowed, &parts.headers) {
-        let origin = parts.headers.get("origin").map(|value| String::from_utf8_lossy(value.as_bytes()).into_owned());
+        let origin = parts
+            .headers
+            .get("origin")
+            .map(|value| String::from_utf8_lossy(value.as_bytes()).into_owned());
         tracing::warn!(event = "ws.upgrade.origin_refused", origin = %origin.unwrap_or_else(|| "undefined".to_string()));
         // TS wrote a bare `HTTP/1.1 403 Forbidden` and destroyed the socket: a status, no body.
         return StatusCode::FORBIDDEN.into_response();
     }
 
-    let peer = parts.extensions.get::<ConnectInfo<SocketAddr>>().map(|ConnectInfo(addr)| addr.ip().to_string());
+    let peer = parts
+        .extensions
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|ConnectInfo(addr)| addr.ip().to_string());
     let address = upgrade_address(&parts.headers, peer.as_deref(), trusted_proxy_hops);
     let key = app_key(&app);
     let Some(slot) = AddressSlot::claim(key, address, max_per_address) else {
