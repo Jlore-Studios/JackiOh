@@ -135,10 +135,7 @@ mod tests {
     const MANA_WELL: &str = "core-006"; // (3) Field Spell.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// The selection naming one instance, by its id.
     fn at(card: &str) -> Value {

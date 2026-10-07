@@ -100,10 +100,7 @@ mod tests {
     const EXPERIMENT: &str = "core-085"; // Unlicensed Experimentation: fuses an enemy's played permanent onto yours
     const FILLER: &str = "core-005";
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     fn loc(id: &str) -> i32 {
         match crate::card_def(id).loc {

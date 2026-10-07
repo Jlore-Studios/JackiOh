@@ -247,10 +247,7 @@ mod tests {
     const THEIR_HAND: [&str; 3] = ["core-008", "core-011", "core-015"];
     const THEIR_DECK: [&str; 4] = ["core-006", "core-035", "core-048", "core-039"];
 
-    /// An engine value as the JSON TS compares it by.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// TS `JSON.parse(JSON.stringify(state))`.
     fn round_trip(state: &GameState) -> GameState {

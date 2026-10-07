@@ -93,10 +93,7 @@ mod tests {
         json!([{ "pick": "hero", "player": "p2" }])
     }
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// TS `JSON.parse(JSON.stringify(state))`: written and read back field by field, in field order.
     fn round_trip(state: &GameState) -> GameState {

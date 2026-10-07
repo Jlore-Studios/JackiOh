@@ -124,9 +124,7 @@ mod tests {
     /// #19 Midrange Menace, a second hand card, so no play empties the hand (R82).
     const MENACE_FILLER: &str = "core-019";
 
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     fn open(state: &GameState) -> Value {
         match &state.pending {

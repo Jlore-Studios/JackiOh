@@ -103,9 +103,7 @@ mod tests {
         added.or(burned)
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     #[test]
     fn is_a_0_3_jlockeed_unit_0_6_radiant_whose_base_face_alone_carries_the_defense_ban() {

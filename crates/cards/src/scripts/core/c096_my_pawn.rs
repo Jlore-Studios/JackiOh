@@ -195,9 +195,7 @@ mod tests {
     /// A 1/1 body to be attacked, so Trample excess has something to spill past (§4.4 step 9).
     const SMALL: &str = "core-t-felinor";
 
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     fn events_json(s: &Scenario) -> Vec<Value> {
         s.events().iter().map(|event| js(event)).collect()

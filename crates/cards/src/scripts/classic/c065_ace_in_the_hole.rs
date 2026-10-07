@@ -109,10 +109,7 @@ mod tests {
         }
     }
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// The coin the match rng gives next: the one the trap flips as the active player's turn ends.
     fn next_coin(state: &GameState) -> Coin {

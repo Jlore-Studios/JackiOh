@@ -85,10 +85,7 @@ mod tests {
     const CN_VIRUS: &str = "core-090-1"; // Cast on draw
     const HINDER: &str = "core-021"; // Cast on draw: … Discard 1 at random (R682: no prompt).
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// The TS default for `player` is `"p1"`; every caller passes it.
     fn drawn(events: &[GameEvent], player: PlayerId) -> Vec<Value> {

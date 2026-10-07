@@ -110,6 +110,27 @@ pub(crate) fn scenario(opts: serde_json::Value) -> jackioh_engine::testkit::Scen
     jackioh_engine::testkit::scenario(opts)
 }
 
+/// An engine value as its JSON, for the card tests' comparisons with TS's object literals.
+#[cfg(test)]
+pub(crate) fn js<T: serde::Serialize + ?Sized>(value: &T) -> serde_json::Value {
+    serde_json::to_value(value).expect("an engine value serialises")
+}
+
+/// TS `toMatchObject`: every key the pattern names holds a matching value; arrays match item by item.
+#[cfg(test)]
+pub(crate) fn matches_object(actual: &serde_json::Value, pattern: &serde_json::Value) -> bool {
+    use serde_json::Value;
+    match (actual, pattern) {
+        (Value::Object(actual), Value::Object(pattern)) => pattern
+            .iter()
+            .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
+        (Value::Array(actual), Value::Array(pattern)) => {
+            actual.len() == pattern.len() && actual.iter().zip(pattern).all(|(got, want)| matches_object(got, want))
+        }
+        _ => actual == pattern,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

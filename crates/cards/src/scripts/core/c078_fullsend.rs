@@ -150,25 +150,9 @@ mod tests {
 
     const LIBRARY: [&str; 4] = ["core-008", "core-008", "core-008", "core-008"];
 
-    /// A value as the JSON TS compares it as.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
-    /// TS `toMatchObject`: every key the pattern names, recursively, holds the same value; an array
-    /// matches element for element and must be as long.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(actual), Value::Object(pattern)) => pattern
-                .iter()
-                .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
-            (Value::Array(actual), Value::Array(pattern)) => {
-                actual.len() == pattern.len()
-                    && actual.iter().zip(pattern).all(|(got, want)| matches_object(got, want))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     /// TS `indexOf`/`findIndex`: the position, or -1 when there is none.
     fn index_of(found: Option<usize>) -> i64 {

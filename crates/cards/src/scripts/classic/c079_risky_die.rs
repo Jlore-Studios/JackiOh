@@ -127,9 +127,7 @@ mod tests {
         crate::card_def(ID)
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     /// TS `drawnIds(events, player = "p1")`.
     fn drawn_ids(events: &[GameEvent], player: PlayerId) -> Vec<String> {

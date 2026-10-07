@@ -47,9 +47,7 @@ mod tests {
 
     use crate::scenario;
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     /// TS `PANCAKE_TOKENS`: C+ #12.1 to #12.8.
     fn pancake_tokens() -> Vec<String> {

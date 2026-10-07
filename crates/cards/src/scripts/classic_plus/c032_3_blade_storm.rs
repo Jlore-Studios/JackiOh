@@ -153,9 +153,7 @@ mod tests {
         ids
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).unwrap()
-    }
+    use crate::js;
 
     mod c_n32_3_blade_storm {
         use super::*;

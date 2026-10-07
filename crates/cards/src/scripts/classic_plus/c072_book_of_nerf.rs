@@ -49,10 +49,7 @@ mod tests {
     const TRAP: &str = "core-041";
     const FILLER: &str = "core-005";
 
-    /// An engine value as the JSON TS compares it with.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     /// The `degraded` events, as their JSON (`instanceId`, `defId`, `change`).
     fn degrades(events: &[GameEvent]) -> Vec<Value> {

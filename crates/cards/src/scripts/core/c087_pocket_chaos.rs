@@ -145,10 +145,7 @@ mod tests {
 
     const SEED: &str = "chaos-87";
 
-    /// An engine value as the JSON the TS test compares it with.
-    fn js<T: serde::Serialize>(v: &T) -> Value {
-        serde_json::to_value(v).expect("serialises")
-    }
+    use crate::js;
 
     fn defs(cards: Vec<CardInstance>) -> Vec<String> {
         cards.into_iter().map(|card| card.def_id).collect()

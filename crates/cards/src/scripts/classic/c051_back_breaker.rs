@@ -64,10 +64,7 @@ mod tests {
     const TESLA: &str = "classic-005"; // Field Trap, Animated
     const STOCKPILE: &str = "core-005";
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// TS `SPARE: SideSetup = { hand: [STOCKPILE], library: [VANILLA, VANILLA] }`.
     fn spare() -> Value {

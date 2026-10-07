@@ -136,24 +136,9 @@ mod tests {
         json!([{ "pick": "instance", "instanceId": instance_id }])
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).unwrap()
-    }
+    use crate::js;
 
-    /// TS `expect(actual).toMatchObject(pattern)`: every key of the pattern, recursively; arrays
-    /// element by element and of the same length.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(actual), Value::Object(pattern)) => pattern
-                .iter()
-                .all(|(key, want)| actual.get(key).is_some_and(|have| matches_object(have, want))),
-            (Value::Array(actual), Value::Array(pattern)) => {
-                actual.len() == pattern.len()
-                    && actual.iter().zip(pattern).all(|(have, want)| matches_object(have, want))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     fn unit(s: &Scenario, seat: PlayerId, lane: i32) -> CardInstance {
         s.unit(seat, lane).unwrap_or_else(|| panic!("no unit in {seat} lane {lane}"))

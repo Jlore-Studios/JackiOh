@@ -100,22 +100,9 @@ mod tests {
     /// #93.1 Combo-Fodder, a 0-cost Spell token: a card p2 can always play, so its turn never auto-ends.
     const FREE: &str = "core-093-1";
 
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
-    /// TS `toMatchObject`: every key the pattern names matches, recursively; arrays match item by item.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(have), Value::Object(want)) => want
-                .iter()
-                .all(|(key, value)| have.get(key).is_some_and(|got| matches_object(got, value))),
-            (Value::Array(have), Value::Array(want)) => {
-                have.len() == want.len() && have.iter().zip(want).all(|(got, value)| matches_object(got, value))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     /// The keys TS's `Object.keys(script)` would list: every member the face sets.
     fn members(script: &Script) -> Vec<&'static str> {

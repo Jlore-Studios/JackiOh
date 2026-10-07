@@ -122,24 +122,9 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
-    /// TS `expect(actual).toMatchObject(pattern)`: every key the pattern names matches, recursively;
-    /// arrays match element for element and in length.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(have), Value::Object(want)) => want
-                .iter()
-                .all(|(key, value)| have.get(key).is_some_and(|got| matches_object(got, value))),
-            (Value::Array(have), Value::Array(want)) => {
-                have.len() == want.len() && have.iter().zip(want).all(|(got, value)| matches_object(got, value))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     /// `{ ...base, ...over }`: the TS object spread, the override's keys winning.
     fn spread(mut base: Value, over: Value) -> Value {

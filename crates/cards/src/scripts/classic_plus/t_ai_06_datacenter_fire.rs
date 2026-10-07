@@ -117,9 +117,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     /// TS's `{ ...base, ...extra }` on a side setup.
     fn spread(base: Value, extra: &Value) -> Value {

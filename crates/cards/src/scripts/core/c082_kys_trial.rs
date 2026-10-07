@@ -117,10 +117,7 @@ mod tests {
 
     const TRIAL: &str = "core-082";
 
-    /// An engine value as the JSON the TS test compares it with.
-    fn js<T: serde::Serialize>(v: &T) -> Value {
-        serde_json::to_value(v).expect("serialises")
-    }
+    use crate::js;
 
     /// The ten token indices are the ten non-integer ones; R54 forbids every one of them.
     fn is_numbered_one_to_hundred(index: &str) -> bool {

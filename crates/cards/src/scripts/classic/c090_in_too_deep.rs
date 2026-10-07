@@ -503,20 +503,7 @@ mod tests {
         }
     }
 
-    /// TS `toMatchObject`: every key of `pattern` is in `actual` with a matching value (objects match
-    /// recursively and may hold more keys; arrays match element by element and are as long).
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(actual), Value::Object(pattern)) => pattern
-                .iter()
-                .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
-            (Value::Array(actual), Value::Array(pattern)) => {
-                actual.len() == pattern.len()
-                    && actual.iter().zip(pattern).all(|(got, want)| matches_object(got, want))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     /// TS `expect(line(s)).toMatchObject(pattern)`.
     fn expect_line_matches(s: &Scenario, pattern: Value) {

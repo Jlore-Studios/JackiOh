@@ -61,23 +61,9 @@ mod tests {
         json!({ "kind": "Pierce" })
     }
 
-    /// Any serialisable engine value as the JSON the TypeScript engine wrote for it (SURFACE §5.1).
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("engine values serialise")
-    }
+    use crate::js;
 
-    /// `toMatchObject`: every key of `pattern` is in `actual` with a matching value.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(a), Value::Object(p)) => {
-                p.iter().all(|(key, want)| a.get(key).is_some_and(|got| matches_object(got, want)))
-            }
-            (Value::Array(a), Value::Array(p)) => {
-                a.len() == p.len() && a.iter().zip(p).all(|(got, want)| matches_object(got, want))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     /// TS `Object.keys(script)`: the TS names of the fields a script sets.
     fn set_fields(script: &Script) -> Vec<&'static str> {

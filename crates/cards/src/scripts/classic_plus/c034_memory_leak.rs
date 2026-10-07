@@ -138,19 +138,9 @@ mod tests {
         events.iter().filter(|event| matches!(event, GameEvent::Locked { .. })).collect()
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).unwrap()
-    }
+    use crate::js;
 
-    /// TS `toMatchObject` on a flat object.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(actual), Value::Object(pattern)) => pattern
-                .iter()
-                .all(|(key, want)| actual.get(key).is_some_and(|have| matches_object(have, want))),
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     mod c_n34_memory_leak {
         use super::*;

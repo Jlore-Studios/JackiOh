@@ -58,10 +58,7 @@ mod tests {
     const DECK_B: &str = "core-025"; // (4) Unit
     const BILLY: &str = "classicplus-069"; // Buff Billy, an (X) Unit
 
-    /// An engine value as the JSON TS compares it with.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     fn unit_at(s: &Scenario, player: PlayerId) -> Value {
         let Some(unit) = s.unit(player, 1) else {

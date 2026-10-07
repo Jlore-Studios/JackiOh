@@ -197,9 +197,7 @@ mod tests {
         s.hand(player).into_iter().map(|card| card.def_id).collect()
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).unwrap()
-    }
+    use crate::js;
 
     fn backrow_def(s: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
         s.backrow(player, lane).map(|card| card.def_id)

@@ -113,10 +113,7 @@ mod tests {
     const BILLY: &str = "classicplus-069"; // (X) Unit, "This is a 3X/3X."
     const RUSH_TOKEN: &str = "core-t-rush";
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     fn must<T>(value: Option<T>, what: &str) -> T {
         match value {

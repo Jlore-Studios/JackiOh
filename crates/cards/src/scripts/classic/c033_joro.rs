@@ -94,10 +94,7 @@ mod tests {
     const PUNISH: &str = "classic-020"; // (2) Field Spell: "Activate: Choose one: Deal 2 damage; ..."
     const TESLA: &str = "classic-005"; // (2) Field Trap: "Activates when your opponent summons a Unit: Deal 4 damage to it."
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     fn redirects(s: &Scenario) -> Vec<Value> {
         s.events().iter().map(js).filter(|event| event["type"] == "redirected").collect()

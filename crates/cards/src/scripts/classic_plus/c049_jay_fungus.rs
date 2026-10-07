@@ -92,9 +92,7 @@ mod tests {
             .collect()
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     #[test]
     fn is_a_3_6_taunt_6_12_radiant_whose_two_faces_run_one_script() {

@@ -171,9 +171,7 @@ mod tests {
         events.iter().filter(|event| event.event_type() == kind).count()
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).unwrap()
-    }
+    use crate::js;
 
     fn defs(cards: &[CardInstance]) -> Vec<String> {
         cards.iter().map(|card| card.def_id.clone()).collect()

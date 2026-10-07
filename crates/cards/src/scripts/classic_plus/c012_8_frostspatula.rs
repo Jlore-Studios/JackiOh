@@ -142,9 +142,7 @@ mod tests {
 
     use crate::scenario;
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     /// TS `{ ...base, ...over }` on two object literals.
     fn merged(mut base: Value, over: Value) -> Value {
@@ -156,18 +154,7 @@ mod tests {
         base
     }
 
-    /// TS `toMatchObject`: every key the pattern names matches, arrays element for element.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(actual), Value::Object(pattern)) => pattern
-                .iter()
-                .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
-            (Value::Array(actual), Value::Array(pattern)) => {
-                actual.len() == pattern.len() && actual.iter().zip(pattern).all(|(got, want)| matches_object(got, want))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     fn played(radiant: bool, lane: i32, p1: Value, p2: Value) -> Scenario {
         let mut s = scenario(json!({

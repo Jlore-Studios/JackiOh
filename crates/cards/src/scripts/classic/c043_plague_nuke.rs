@@ -134,10 +134,7 @@ mod tests {
     const FIENDER: &str = "core-092"; // Felinor Fiender: Stack.
     const ANCHOR: &str = "core-010";
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// TS `plagued(defId, n, extra = {})`: `{ def, counters: { plague: n }, ...extra }`.
     fn plagued_with(def_id: &str, n: i32, extra: Value) -> Value {

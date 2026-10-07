@@ -55,9 +55,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     fn target(s: &Scenario, card: &str) -> Value {
         json!([{ "pick": "instance", "instanceId": s.card(card).id }])

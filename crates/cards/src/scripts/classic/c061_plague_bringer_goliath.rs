@@ -76,10 +76,7 @@ mod tests {
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
     const X: &str = "core-020"; // library filler.
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// TS `JSON.parse(JSON.stringify(state))`: written and read back field by field, in field order.
     fn round_trip(state: &GameState) -> GameState {

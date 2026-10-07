@@ -124,18 +124,7 @@ mod tests {
         })
     }
 
-    /// TS `toMatchObject`: every key of `pattern` is in `actual` with a matching value.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(have), Value::Object(want)) => want
-                .iter()
-                .all(|(key, value)| have.get(key).is_some_and(|got| matches_object(got, value))),
-            (Value::Array(have), Value::Array(want)) => {
-                have.len() == want.len() && have.iter().zip(want).all(|(got, value)| matches_object(got, value))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     mod c_n23_dropshipping {
         use super::*;

@@ -63,10 +63,7 @@ mod tests {
     const ECLIPSE: &str = "core-035"; // (1) Spell
     const MANA_WELL: &str = "core-006"; // (3) Field Spell
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// `opts[key]`, or `fallback` where the TS default (`??`) applies.
     fn or(opts: &Value, key: &str, fallback: Value) -> Value {

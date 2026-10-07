@@ -99,10 +99,7 @@ mod tests {
     const FILLER: &str = "core-005"; // (1) Spell, a card to keep a turn from auto-ending (§2.5).
     const X: &str = "core-020"; // library filler.
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     fn lib(n: usize) -> Vec<&'static str> {
         vec![X; n]

@@ -63,9 +63,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     fn chain(library: Value, radiant_face: bool, hand: Option<Vec<Value>>) -> Scenario {
         crate::register_all();

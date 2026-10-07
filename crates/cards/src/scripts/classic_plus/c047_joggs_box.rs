@@ -223,9 +223,7 @@ mod tests {
         }))
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     #[test]
     fn is_a_4_legendary_spell_the_radiant_face_adds_echo_1() {

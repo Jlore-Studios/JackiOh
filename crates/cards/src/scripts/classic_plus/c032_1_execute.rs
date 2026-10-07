@@ -84,9 +84,7 @@ mod tests {
             .collect()
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).unwrap()
-    }
+    use crate::js;
 
     mod c_n32_1_execute {
         use super::*;

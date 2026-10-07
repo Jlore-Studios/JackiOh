@@ -118,9 +118,7 @@ mod tests {
             .collect()
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).unwrap()
-    }
+    use crate::js;
 
     fn hand_id_of(s: &Scenario, def_id: &str) -> String {
         s.hand(P1).into_iter().find(|card| card.def_id == def_id).map(|card| card.id).unwrap_or_default()

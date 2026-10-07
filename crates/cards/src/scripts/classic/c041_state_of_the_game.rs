@@ -52,10 +52,7 @@ mod tests {
     const FILLER: &str = "core-005"; // (1) Spell, a card to keep a hand from auto-ending the turn (§2.5).
     const FLAME: &str = "classic-016"; // (1) Spell, Book: Deal 4 damage.
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     fn keyword_kinds(s: &Scenario, player: PlayerId, lane: i32) -> Vec<String> {
         let unit = s.unit(player, lane).unwrap_or_else(|| panic!("no unit in {} lane {}", js(&player), lane));

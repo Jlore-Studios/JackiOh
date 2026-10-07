@@ -73,9 +73,7 @@ mod tests {
         scenario(opts)
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     fn damage_to(s: &Scenario, target_id: &str) -> Vec<i64> {
         s.events()

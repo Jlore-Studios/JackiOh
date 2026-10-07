@@ -203,9 +203,7 @@ mod tests {
         }
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     fn def_at(s: &Scenario, seat: PlayerId, lane: i32) -> Option<String> {
         s.unit(seat, lane).map(|unit| unit.def_id)

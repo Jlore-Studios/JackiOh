@@ -119,9 +119,7 @@ mod tests {
         scenario(opts)
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     /// The X values `legal_actions` offers for p1's Adaptive UI, in order (R348).
     fn offered_x(s: &Scenario) -> Vec<i64> {

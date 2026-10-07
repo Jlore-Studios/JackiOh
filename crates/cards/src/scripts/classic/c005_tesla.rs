@@ -118,23 +118,9 @@ mod tests {
     const FEELINGS: &str = "classic-032"; // (0) Steal an enemy permanent in a lane where you control a (1) Cost Unit.
     const FILLER: &str = "core-010";
 
-    /// An engine value as the JSON TS compares it by.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
-    /// TS `toMatchObject`: every key the pattern names holds a matching value; arrays match item by item.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(actual), Value::Object(pattern)) => pattern
-                .iter()
-                .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
-            (Value::Array(actual), Value::Array(pattern)) => {
-                actual.len() == pattern.len() && actual.iter().zip(pattern).all(|(got, want)| matches_object(got, want))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     /// TS `{ ...defaults, ...over }` on a side's setup.
     fn merged(mut defaults: Value, over: Value) -> Value {

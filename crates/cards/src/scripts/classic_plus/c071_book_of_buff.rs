@@ -46,10 +46,7 @@ mod tests {
     const FIELD: &str = "core-006"; // Mana Well.
     const FILLER: &str = "core-005";
 
-    /// An engine value as the JSON TS compares it with.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     /// The `upgraded` events, as their JSON (`instanceId`, `defId`, `change`).
     fn upgrades(events: &[GameEvent]) -> Vec<Value> {

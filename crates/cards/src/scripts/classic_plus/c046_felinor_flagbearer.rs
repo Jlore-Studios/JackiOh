@@ -118,9 +118,7 @@ mod tests {
         s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": id }] }));
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     #[test]
     fn is_a_2_felinor_catalyst_unit_4_4_rush_8_8_radiant_no_cleave_naming_its_prime() {

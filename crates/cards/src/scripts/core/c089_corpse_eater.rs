@@ -128,24 +128,9 @@ mod tests {
 
     const SEED: &str = "eater-89";
 
-    /// An engine value as the JSON the TS test compares it with.
-    fn js<T: serde::Serialize>(v: &T) -> Value {
-        serde_json::to_value(v).expect("serialises")
-    }
+    use crate::js;
 
-    /// TS `expect(actual).toMatchObject(pattern)`: every key the pattern names, recursively.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(actual), Value::Object(pattern)) => pattern
-                .iter()
-                .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
-            (Value::Array(actual), Value::Array(pattern)) => {
-                actual.len() == pattern.len()
-                    && actual.iter().zip(pattern).all(|(got, want)| matches_object(got, want))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     fn count_of(s: &Scenario, type_: GameEventType) -> usize {
         s.events().iter().filter(|event| event.event_type() == type_).count()

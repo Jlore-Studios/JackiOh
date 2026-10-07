@@ -159,24 +159,13 @@ mod tests {
         (1..=5).map(|lane| s.backrow(P1, lane).map(|card| card.def_id)).collect()
     }
 
-    /// An engine value as the JSON TS compared (`toEqual` on an object literal).
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     fn in_pool(pool: &[&str], def_id: Option<&str>) -> bool {
         def_id.is_some_and(|id| pool.contains(&id))
     }
 
-    /// TS `toMatchObject`: every key of `pattern` is in `actual` with a matching value.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(have), Value::Object(want)) => want
-                .iter()
-                .all(|(key, value)| have.get(key).is_some_and(|got| matches_object(got, value))),
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     mod zoomerbin_oomen {
         use super::*;

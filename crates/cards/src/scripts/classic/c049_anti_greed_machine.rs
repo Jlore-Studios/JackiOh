@@ -78,10 +78,7 @@ mod tests {
     const FILLER: &str = "core-010"; // (0) Spell, Combo 3 — a card to keep in hand
     const PALANTIR: &str = "classic-004"; // Aura: your opponent can't draw more than 1 card each turn.
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     fn of_type(s: &Scenario, kind: &str, player: PlayerId) -> Vec<Value> {
         s.last_events()

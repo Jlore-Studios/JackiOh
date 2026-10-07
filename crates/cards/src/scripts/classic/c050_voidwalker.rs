@@ -89,10 +89,7 @@ mod tests {
     const RUSH_TOKEN: &str = "core-t-rush";
     const FILLER: &str = "core-005";
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// `zone` is "graveyard" or "exile".
     fn def_ids(s: &Scenario, player: PlayerId, zone: &str) -> Vec<String> {

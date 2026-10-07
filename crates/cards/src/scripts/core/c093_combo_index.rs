@@ -270,10 +270,7 @@ mod tests {
             .collect()
     }
 
-    /// The JSON of an engine value, for TS's comparisons against object literals.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     /// An event's `instanceId`, read off its JSON (TS `event.instanceId`).
     fn instance_id_of(event: &GameEvent) -> Option<String> {

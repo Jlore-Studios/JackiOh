@@ -67,10 +67,7 @@ mod tests {
         grape_ids().iter().position(|grape| *grape == id).map_or(-1, |at| at as i64)
     }
 
-    /// An engine value as the JSON TS compares it with.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     /// One `addedToHand` event of p1's, as TS's `Extract<GameEvent, { type: "addedToHand" }>` reads it.
     struct Added {

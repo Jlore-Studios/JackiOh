@@ -95,10 +95,7 @@ mod tests {
     const A: &str = "core-020";
     const B: &str = "core-001";
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// TS `AT_HERO: Selection[]`.
     fn at_hero() -> Value {

@@ -46,10 +46,7 @@ mod tests {
     const BILLY: &str = "classicplus-069";
     const FILLER: &str = "core-005";
 
-    /// An engine value as the JSON TS compares it with.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     /// TS `run(s, effects)`: the effects applied through a context of p1's, then a state check.
     fn run(s: &mut Scenario, effects: Vec<Effect>) {

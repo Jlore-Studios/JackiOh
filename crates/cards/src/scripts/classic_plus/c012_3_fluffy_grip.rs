@@ -65,15 +65,7 @@ mod tests {
         out
     }
 
-    /// TS `toMatchObject`: every key the pattern names holds the pattern's value (objects recursively).
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(actual), Value::Object(pattern)) => pattern
-                .iter()
-                .all(|(key, want)| actual.get(key).is_some_and(|have| matches_object(have, want))),
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     fn grip(radiant: bool, p2_library: Value, p1: Value, seed: Option<&str>) -> Scenario {
         crate::register_all();

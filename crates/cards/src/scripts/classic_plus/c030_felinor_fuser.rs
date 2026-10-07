@@ -135,9 +135,7 @@ mod tests {
             .collect()
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).unwrap()
-    }
+    use crate::js;
 
     fn is_felinor_unit(id: &str) -> bool {
         FELINOR_UNITS.contains(&id)

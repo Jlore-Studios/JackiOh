@@ -41,9 +41,7 @@ mod tests {
         crate::card_def(ID)
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     /// TS `const SPARE: SideSetup = { hand: [STOCKPILE], library: [VANILLA, VANILLA] }`.
     fn spare() -> Value {

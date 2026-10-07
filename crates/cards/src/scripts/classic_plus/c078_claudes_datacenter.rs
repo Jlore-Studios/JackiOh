@@ -59,9 +59,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     fn ai_ids() -> Vec<String> {
         (1..=10).map(|at| format!("classicplus-t-ai-{at:02}")).collect()

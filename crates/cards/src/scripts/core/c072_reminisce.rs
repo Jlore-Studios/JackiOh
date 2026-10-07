@@ -101,9 +101,7 @@ mod tests {
         scenario(opts)
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     /// Every `costChanged` event, as TS's object literal compares it.
     fn costs_changed(s: &Scenario) -> Vec<Value> {

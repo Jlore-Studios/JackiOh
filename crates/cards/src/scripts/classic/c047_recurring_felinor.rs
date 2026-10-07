@@ -97,10 +97,7 @@ mod tests {
     const LUNAR: &str = "core-035";
     const FILLER: &str = "core-005";
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// p2 plays Mr. Vanilla into p1's face-down Sheepish, with p1's Recurring Felinor in its graveyard.
     /// TS defaults: `felinor` `{ def: FELINOR }`, `p1Hand` `[FILLER]`; every caller passes both.

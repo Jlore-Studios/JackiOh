@@ -87,10 +87,7 @@ mod tests {
     const SEED: &str = "chaos-plus";
     const CURSOR_SEARCH: u32 = 800;
 
-    /// An engine value as the JSON TS compares it with.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     /// The names of the entries `rollChaosEffects` rolls at `cursor` of `seed`, with this card's table.
     fn rolled_names(seed: &str, cursor: u32, radiant: bool) -> Vec<&'static str> {

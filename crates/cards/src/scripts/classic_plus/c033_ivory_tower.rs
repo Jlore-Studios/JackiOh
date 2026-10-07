@@ -162,9 +162,7 @@ mod tests {
         ZoneRef { player: P1, row: Row::Backrow, lane: 2 }
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).unwrap()
-    }
+    use crate::js;
 
     fn costs_of_hand(s: &Scenario) -> Vec<i32> {
         s.hand(P1).iter().map(|card| effective_cost(s.state(), card, Default::default())).collect()

@@ -64,10 +64,7 @@ mod tests {
     const ANCHOR: &str = "core-010"; // (0) Spell, Combo 3 — a free play that keeps a turn open.
     const MENACE: &str = "core-019";
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// Every `cardPlayed` so far, as `{ defId, costPaid }`.
     fn spells_paid(s: &Scenario) -> Vec<Value> {

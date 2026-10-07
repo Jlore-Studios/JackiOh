@@ -54,9 +54,7 @@ mod tests {
 
     use crate::scenario;
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     fn tokens(s: &Scenario) -> Vec<CardInstance> {
         (1..=5)

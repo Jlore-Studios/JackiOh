@@ -58,10 +58,7 @@ mod tests {
     const FILLER: &str = "core-005";
     const NETHER: &str = "core-088"; // Twisting Nether: a (4) Spell with no keywords and no declared numbers.
 
-    /// An engine value as the JSON TS compares it with.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     /// TS `Tune[]`: the `upgraded` or `degraded` events, as their JSON (`instanceId`, `defId`, `change`).
     fn tunes(events: &[GameEvent], kind: &str) -> Vec<Value> {

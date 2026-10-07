@@ -59,10 +59,7 @@ mod tests {
     const TIMMY: &str = "core-011";
     const RUSH: &str = "core-t-rush"; // a unit-token card
 
-    /// An engine value as the JSON TS compares it with.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     fn has_event(events: &[GameEvent], kind: &str) -> bool {
         events.iter().any(|event| event.event_type().as_str() == kind)

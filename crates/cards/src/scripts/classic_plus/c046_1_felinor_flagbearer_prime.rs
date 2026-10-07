@@ -99,9 +99,7 @@ mod tests {
         (1..=5).map(|lane| s.unit(P1, lane).map(|unit| unit.def_id)).collect()
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     #[test]
     fn is_a_2_felinor_prime_unit_token_card_printed_legendary_5_5_rush_both_faces_run_one_script() {

@@ -116,10 +116,7 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
     const LOCKDOWN: &str = "classic-084"; // After a permanent is played, Lock its zone.
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     fn summoned(s: &Scenario, id: &str) -> Vec<GameEvent> {
         s.last_events()

@@ -107,15 +107,7 @@ mod tests {
             .collect()
     }
 
-    /// TS `toMatchObject`: every key of `pattern` is in `actual` with a matching value, recursively.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(have), Value::Object(want)) => want
-                .iter()
-                .all(|(key, value)| have.get(key).is_some_and(|got| matches_object(got, value))),
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     /// p1's first player modifier, as JSON.
     fn first_mod(s: &Scenario) -> Value {

@@ -91,25 +91,9 @@ mod tests {
     const FILLER: &str = "core-010"; // (0) Spell
     const SECOND_WIND: &str = "classic-028"; // Radiant Aura: you may play cards from your graveyard that cost (1) or more.
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
-    /// TS `expect(actual).toMatchObject(pattern)`: every key of `pattern` is in `actual` with a matching
-    /// value, objects compared the same way all the way down.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(actual), Value::Object(pattern)) => pattern
-                .iter()
-                .all(|(key, expected)| actual.get(key).is_some_and(|value| matches_object(value, expected))),
-            (Value::Array(actual), Value::Array(pattern)) => {
-                actual.len() == pattern.len()
-                    && actual.iter().zip(pattern).all(|(value, expected)| matches_object(value, expected))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     fn hand_cost(s: &Scenario, player: PlayerId, def_id: &str) -> Option<i64> {
         let view = js(&s.view(player));

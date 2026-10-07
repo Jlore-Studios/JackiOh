@@ -98,9 +98,7 @@ mod tests {
 
     use crate::scenario;
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     fn kinds(s: &Scenario, card: &str) -> Vec<String> {
         s.stats(card)

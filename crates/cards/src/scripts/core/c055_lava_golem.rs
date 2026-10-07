@@ -106,18 +106,7 @@ mod tests {
         Value::Array(all)
     }
 
-    /// TS `toMatchObject`: every key the pattern names is in `actual`, with a matching value.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(have), Value::Object(want)) => want
-                .iter()
-                .all(|(key, value)| have.get(key).is_some_and(|got| matches_object(got, value))),
-            (Value::Array(have), Value::Array(want)) => {
-                have.len() == want.len() && have.iter().zip(want).all(|(got, value)| matches_object(got, value))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     /// The keyword kinds a unit has now (§10.4), in layer order.
     fn keyword_kinds(s: &Scenario, card: &str) -> Vec<KeywordKind> {

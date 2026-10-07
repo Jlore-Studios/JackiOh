@@ -61,10 +61,7 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt; Radiant 18/18.
     const FILLER: &str = "core-005"; // a card that keeps a hand from auto-ending the turn (§2.5).
 
-    /// An engine value as the JSON TS compares it by.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// The unit in that lane, as the play's `targets` (`Selection[]`).
     fn at(s: &Scenario, player: PlayerId, lane: i32) -> Value {

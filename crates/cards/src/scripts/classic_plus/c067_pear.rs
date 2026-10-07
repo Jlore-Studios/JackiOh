@@ -59,10 +59,7 @@ mod tests {
     const MENACE: &str = "core-019";
     const ME_AND_MR_TOKEN: &str = "core-015"; // (1) Common Unit, "Cry: Summon a Rush Token."
 
-    /// An engine value as the JSON TS compares it with.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     fn summoned(s: &Scenario) -> Vec<String> {
         s.last_events()

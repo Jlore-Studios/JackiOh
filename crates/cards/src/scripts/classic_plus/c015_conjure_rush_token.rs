@@ -54,9 +54,7 @@ mod tests {
 
     use crate::scenario;
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     /// The Rush Tokens on p1's side, lane order.
     fn tokens(s: &Scenario) -> Vec<CardInstance> {

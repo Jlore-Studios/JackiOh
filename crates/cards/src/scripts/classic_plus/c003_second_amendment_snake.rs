@@ -133,15 +133,7 @@ mod tests {
         side.units.into_iter().flatten().find(|unit| unit.def_id == SNAKE).and_then(|unit| unit.preview)
     }
 
-    /// TS `toMatchObject`: every key the pattern names holds the pattern's value (objects recursively).
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(actual), Value::Object(pattern)) => pattern
-                .iter()
-                .all(|(key, want)| actual.get(key).is_some_and(|have| matches_object(have, want))),
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     fn preview_json(shown: &Option<Vec<PreviewValue>>) -> Value {
         serde_json::to_value(shown).unwrap()

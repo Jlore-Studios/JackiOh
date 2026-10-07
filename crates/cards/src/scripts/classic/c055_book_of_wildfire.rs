@@ -80,10 +80,7 @@ mod tests {
     const VITAL_KILL: &str = "classic-029"; // Radiant: … Add a Book of Flame to your hand.
     const BOOK_OF_FLAME: &str = "classic-016";
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     /// TS `JSON.parse(JSON.stringify(state))`: written and read back field by field, in field order.
     fn round_trip(state: &GameState) -> GameState {
@@ -91,19 +88,7 @@ mod tests {
         serde_json::from_str(&text).expect("the state parses back")
     }
 
-    /// TS `toMatchObject`: every key the pattern names matches, recursively; arrays element by element.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(actual), Value::Object(pattern)) => pattern
-                .iter()
-                .all(|(key, expected)| actual.get(key).is_some_and(|value| matches_object(value, expected))),
-            (Value::Array(actual), Value::Array(pattern)) => {
-                actual.len() == pattern.len()
-                    && actual.iter().zip(pattern).all(|(value, expected)| matches_object(value, expected))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     fn hero(player: &str) -> Value {
         json!({ "pick": "hero", "player": player })

@@ -139,10 +139,7 @@ mod tests {
         defs.into_iter().map(|card| card.id.clone()).collect()
     }
 
-    /// Any serialisable engine value as the JSON the TypeScript engine wrote for it (SURFACE §5.1).
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("engine values serialise")
-    }
+    use crate::js;
 
     /// TS's `step`: stamp the body with its player and the next nonce, reduce, and log it.
     fn step(state: &mut GameState, log: &mut Vec<Action>, player_id: PlayerId, action: ActionBody) {

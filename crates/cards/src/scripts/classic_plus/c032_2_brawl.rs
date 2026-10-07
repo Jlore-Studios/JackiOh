@@ -118,9 +118,7 @@ mod tests {
         ids.iter().map(|id| s.card(id).def_id.clone()).collect()
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).unwrap()
-    }
+    use crate::js;
 
     fn brawl(seed: &str, radiant_face: bool, targets: Option<fn(&Scenario) -> Value>) -> (Scenario, Vec<String>) {
         let mut s = scenario(json!({

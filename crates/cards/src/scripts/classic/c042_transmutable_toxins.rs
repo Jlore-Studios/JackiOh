@@ -109,10 +109,7 @@ mod tests {
     const TIMMY: &str = "core-011"; // (1) Unit 3/3
     const STOCKPILE: &str = "core-005"; // (1) Spell, a spare card (§2.5)
 
-    /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     fn tokens_on(s: &Scenario, player: PlayerId, lane: i32) -> i32 {
         s.unit(player, lane).and_then(|unit| unit.counters.plague).unwrap_or(0)

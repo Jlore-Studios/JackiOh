@@ -106,9 +106,7 @@ mod tests {
         must(s.state().pending.clone(), "open prompt")
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).unwrap()
-    }
+    use crate::js;
 
     /// TS `melt(radiantFace, theirHand = THEIR_HAND)`: each hand entry a def id or `{ def, costMod }`.
     fn melt(radiant_face: bool, their_hand: Value) -> Scenario {

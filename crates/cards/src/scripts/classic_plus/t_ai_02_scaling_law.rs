@@ -52,9 +52,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     /// TS's `sinkOf(s)`: a direct engine call on the scenario's live state, its rng rebuilt from
     /// (seed, cursor) and the cursor written back afterwards (`s.state.rngCursor = sink.rng.cursor`).

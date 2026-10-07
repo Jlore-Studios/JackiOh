@@ -80,22 +80,9 @@ mod tests {
         crate::card_def(ID)
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
-    /// Jest's `toMatchObject`: every key the pattern names, recursively; arrays element by element.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(have), Value::Object(want)) => want
-                .iter()
-                .all(|(key, value)| have.get(key).is_some_and(|found| matches_object(found, value))),
-            (Value::Array(have), Value::Array(want)) => {
-                have.len() == want.len() && have.iter().zip(want).all(|(found, value)| matches_object(found, value))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     fn must<T>(value: Option<T>, what: &str) -> T {
         match value {

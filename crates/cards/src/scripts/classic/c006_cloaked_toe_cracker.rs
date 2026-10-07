@@ -98,10 +98,7 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: destroy target Unit
     const WARDRUM: &str = "classicplus-037"; // (5) Unit: "End of turn: Cast a copy of a random Spell, Field Spell or Trap you played this turn."
 
-    /// An engine value as the JSON TS compares it by.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("an engine value serialises")
-    }
+    use crate::js;
 
     fn cost_of(s: &Scenario, card: &str) -> i32 {
         effective_cost(s.state(), s.card(card), Default::default())

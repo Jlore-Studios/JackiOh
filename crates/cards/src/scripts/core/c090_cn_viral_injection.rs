@@ -151,23 +151,9 @@ mod tests {
         event.event_type().to_string()
     }
 
-    /// The JSON of an engine value, for TS's comparisons against object literals.
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
-    /// TS `toMatchObject` / `expect.objectContaining`: every key of `pattern` matches in `actual`.
-    fn matches_object(actual: &Value, pattern: &Value) -> bool {
-        match (actual, pattern) {
-            (Value::Object(have), Value::Object(want)) => want
-                .iter()
-                .all(|(key, value)| have.get(key).is_some_and(|got| matches_object(got, value))),
-            (Value::Array(have), Value::Array(want)) => {
-                have.len() == want.len() && have.iter().zip(want).all(|(got, value)| matches_object(got, value))
-            }
-            _ => actual == pattern,
-        }
-    }
+    use crate::matches_object;
 
     fn library_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
         s.state().players[player].library.clone()

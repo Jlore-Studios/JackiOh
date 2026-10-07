@@ -284,10 +284,7 @@ mod tests {
     const INTERN: &str = "core-071"; // Field Trap, 1
     const MENACE: &str = "core-019";
 
-    /// An engine value as the JSON the TS test compares it with.
-    fn js<T: serde::Serialize>(v: &T) -> Value {
-        serde_json::to_value(v).expect("serialises")
-    }
+    use crate::js;
 
     /// The trap as it sits in play: face-down in lane 3, so lanes 1 and 2 are free for the board.
     fn armed(radiant: bool) -> Value {

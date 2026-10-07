@@ -146,9 +146,7 @@ mod tests {
         must(s.state().pending.clone(), "open prompt")
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).unwrap()
-    }
+    use crate::js;
 
     /// TS `taxBoard(opts)`: the options object's keys as TS named them (`radiantFace`, `p1Hand`,
     /// `p1Library`, `p2Hand`, `p2Backrow`), each defaulting as TS did.

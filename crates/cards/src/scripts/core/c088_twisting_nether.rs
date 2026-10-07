@@ -111,10 +111,7 @@ mod tests {
 
     const SEED: &str = "nether-88";
 
-    /// An engine value as the JSON the TS test compares it with.
-    fn js<T: serde::Serialize>(v: &T) -> Value {
-        serde_json::to_value(v).expect("serialises")
-    }
+    use crate::js;
 
     fn destroyed_in(events: &[GameEvent]) -> usize {
         events

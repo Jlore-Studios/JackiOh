@@ -122,9 +122,7 @@ mod tests {
         crate::card_def(ID)
     }
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialisable")
-    }
+    use crate::js;
 
     fn lib(n: usize) -> Vec<&'static str> {
         vec![X; n]

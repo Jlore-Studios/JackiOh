@@ -69,9 +69,7 @@ mod tests {
 
     use crate::scenario;
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     fn hero_hits(s: &Scenario, player: PlayerId) -> Vec<i32> {
         let hero = format!("hero-{player}");

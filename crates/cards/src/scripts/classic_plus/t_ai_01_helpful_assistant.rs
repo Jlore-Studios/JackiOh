@@ -60,9 +60,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    fn js<T: serde::Serialize>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     fn assistant(radiant: bool, library: Option<&[&str]>, hand: Option<&[&str]>) -> Scenario {
         crate::register_all();

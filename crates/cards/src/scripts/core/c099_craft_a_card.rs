@@ -168,9 +168,7 @@ mod tests {
     /// #26 Glowy Jelly Bean: "Choose a card in your hand; it becomes Radiant" — a real Make Radiant.
     const GLOWY: &str = "core-026";
 
-    fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-        serde_json::to_value(value).expect("serialises")
-    }
+    use crate::js;
 
     /// The keys TS's `Object.keys(script)` would list: every member the face sets.
     fn members(script: &Script) -> Vec<&'static str> {
