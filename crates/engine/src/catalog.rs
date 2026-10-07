@@ -359,12 +359,12 @@ pub fn fused_id_specs(state: Option<&GameState>, def_id: &str) -> Option<Vec<Fus
     let mut depth: i32 = 0;
     let mut start = head;
     for at in start..=bytes.len() {
-        let char = bytes.get(at).copied();
-        if char == Some(b'(') {
+        let ch = bytes.get(at).copied();
+        if ch == Some(b'(') {
             depth += 1;
-        } else if char == Some(b')') {
+        } else if ch == Some(b')') {
             depth -= 1;
-        } else if (char == Some(b'+') && depth == 0) || at == bytes.len() {
+        } else if (ch == Some(b'+') && depth == 0) || at == bytes.len() {
             let mut part = &def_id[start..at];
             let radiant = part.ends_with(RADIANT_INGREDIENT_MARK);
             if radiant {
