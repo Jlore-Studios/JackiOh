@@ -22,7 +22,6 @@
 //! `{"action":null,…}` means the AI had no move. A request the agent cannot read, or a decision that
 //! panicked, is answered `{"error":"…"}`, which the referee records as a thrown controller.
 
-use std::any::Any;
 use std::io::{BufRead, Write};
 
 use anyhow::Context;
@@ -170,20 +169,13 @@ pub(crate) fn own_info() -> AgentInfo {
 }
 
 /// match.ts's `messageOf`: a panic's message, as TS read a thrown error's.
-pub(crate) fn panic_message(panic: &(dyn Any + Send)) -> String {
-    if let Some(text) = panic.downcast_ref::<&str>() {
-        (*text).to_string()
-    } else if let Some(text) = panic.downcast_ref::<String>() {
-        text.clone()
-    } else {
-        "a panic without a message".to_string()
-    }
-}
+pub(crate) use jackioh_ai::panic_message;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use jackioh_ai::SHADOW_BAN;
+    use std::any::Any;
 
     #[test]
     fn info_reports_the_compiled_generation_and_the_sorted_shadow_ban() {

@@ -44,8 +44,8 @@
 //! body. Their tests (`test/patches-ship.test.ts`, `test/patches.test.ts`, `test/versions.test.ts`)
 //! are at the bottom. `js` comes first: what the TypeScript took from the JavaScript runtime.
 //!
-//! Several functions here are kept for the port's completeness and have no caller in the binary
-//! (`naming`'s convention, `order_entry`, `rewrite_index`, `versions_at_sites` outside the tests).
+//! Some functions here have no caller in the binary, only in the tests at the bottom (`naming`'s
+//! convention, `versions_at_sites` and the paths `patches_io` names).
 #![allow(dead_code)]
 
 use std::fmt;
@@ -118,13 +118,6 @@ pub(crate) mod js {
         pub fn as_f64(&self) -> Option<f64> {
             match self {
                 Json::Number(n) => Some(*n),
-                _ => None,
-            }
-        }
-
-        pub fn as_bool(&self) -> Option<bool> {
-            match self {
-                Json::Bool(b) => Some(*b),
                 _ => None,
             }
         }
@@ -338,15 +331,6 @@ pub(crate) mod js {
             })
             .collect::<Vec<_>>()
             .join(separator)
-    }
-
-    /// JavaScript's `\s`: the white space and line terminators a regular expression's `\s` matches.
-    pub fn is_js_space(c: char) -> bool {
-        matches!(
-            c,
-            '\t' | '\n' | '\u{000B}' | '\u{000C}' | '\r' | ' ' | '\u{00A0}' | '\u{1680}' | '\u{2000}'
-                ..='\u{200A}' | '\u{2028}' | '\u{2029}' | '\u{202F}' | '\u{205F}' | '\u{3000}' | '\u{FEFF}'
-        )
     }
 
     /// A JavaScript line terminator: what `.` never matches and what `^` and `$` stand next to under
@@ -835,7 +819,8 @@ pub mod patch {
 
     use anyhow::{Context as _, bail};
 
-    use super::js::{is_js_space, is_line_terminator};
+    use super::js::is_line_terminator;
+    use jackioh_engine::wire::is_js_space;
 
     /// How a site's pattern finds the version, as TS's regular expressions did.
     #[derive(Clone, Copy, Debug)]
@@ -1230,41 +1215,6 @@ pub mod patches_io {
         fs::rename(&temp, path).with_context(|| format!("{} cannot be written", path.display()))
     }
 
-    /// The catalog's key order for one entry (catalog.json's own), unknown keys kept at the end.
-    const ENTRY_KEYS: &[&str] = &[
-        "id",
-        "index",
-        "name",
-        "set",
-        "type",
-        "tags",
-        "rarity",
-        "printedRarity",
-        "token",
-        "cost",
-        "refs",
-        "params",
-        "loc",
-        "radiantFallback",
-        "base",
-        "radiant",
-    ];
-
-    pub fn order_entry(def: &Object) -> Object {
-        let mut out = Object::new();
-        for key in ENTRY_KEYS {
-            if let Some(value) = def.get(*key) {
-                out.insert((*key).to_string(), value.clone());
-            }
-        }
-        for (key, value) in def {
-            if !out.contains_key(key) {
-                out.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     /// `JSON.stringify(a) === JSON.stringify(b)`, a missing value (`undefined`) equal only to another.
     fn same(a: Option<&Json>, b: Option<&Json>) -> bool {
         a.map(js::stringify) == b.map(js::stringify)
@@ -1415,11 +1365,6 @@ pub mod patches_io {
         Ok(next)
     }
 
-    /// `rebuild_derived`, under the name gen-loc read.
-    pub fn rewrite_index() -> anyhow::Result<()> {
-        rebuild_derived(&patches_dir()).map(|_| ())
-    }
-
     // Pending fragments and the shipped list (R646): several card patches are built on separate
     // branches at once, so branches never edit `patches.json`, the snapshots or the shipped list.
     // A branch changes `catalog.json` and adds one fragment, `pending/<version>.json`, claiming the
@@ -1456,11 +1401,7 @@ pub mod patches_io {
 
     /// A fragment's version is a bare patch number or a micro `vA.B.Y` (R646, R650): "v0.2.5" or
     /// "v0.2.Y", never a revision ("v0.2.0b") or a placeholder ("v0.2.X": the designer picks the X
-    /// before the patch is made). The TS regular expression, kept as text for the record;
-    /// `is_fragment_version` matches exactly what it matches.
-    pub const FRAGMENT_VERSION: &str = r"^v\d+\.\d+\.(\d+|Y)$";
-
-    /// `FRAGMENT_VERSION.test(version)`.
+    /// before the patch is made). TS's `/^v\d+\.\d+\.(\d+|Y)$/`.
     pub fn is_fragment_version(version: &str) -> bool {
         super::versions::split_version(version).is_some_and(|(_, _, tail)| tail == "Y" || js::is_digits(tail))
     }
