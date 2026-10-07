@@ -35,7 +35,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use crate::config::{DECK_SIZE, MAX_COPIES};
-use crate::wire::{CardDef, CardDefs, Tag, string_union};
+use crate::wire::{CardDef, CardDefs, Tag, is_js_space, string_union};
 
 /// §9.4: exactly 3 decks per loadout. Not in engine config, so it lives here.
 pub const LOADOUT_DECKS: usize = 3;
@@ -888,26 +888,6 @@ fn in_ranges(ranges: &[(u32, u32)], character: char) -> bool {
         })
         .is_ok()
 }
-
-/// JS's `\s` and the set `String.prototype.trim` strips: WhiteSpace (TAB, VT, FF, SP, NBSP, ZWNBSP
-/// and every `Zs`) and LineTerminator (LF, CR, LS, PS). Not Rust's `char::is_whitespace`, which takes
-/// U+0085 and leaves out U+FEFF.
-fn is_js_space(character: char) -> bool {
-    in_ranges(JS_SPACE, character)
-}
-
-const JS_SPACE: &[(u32, u32)] = &[
-    (0x9, 0xd),
-    (0x20, 0x20),
-    (0xa0, 0xa0),
-    (0x1680, 0x1680),
-    (0x2000, 0x200a),
-    (0x2028, 0x2029),
-    (0x202f, 0x202f),
-    (0x205f, 0x205f),
-    (0x3000, 0x3000),
-    (0xfeff, 0xfeff),
-];
 
 /// `\p{Cc}`.
 const CC: &[(u32, u32)] = &[(0x0, 0x1f), (0x7f, 0x9f)];

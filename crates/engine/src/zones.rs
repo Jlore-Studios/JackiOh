@@ -419,16 +419,6 @@ pub fn zone_contents(state: &GameState, slot: impl Into<ZoneSlot>) -> Vec<CardIn
     out
 }
 
-/// B5 E21: every dormant card beneath this player's backrow tops, lane by lane.
-pub fn dormant_backrow_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
-    state.players[player]
-        .backrow_piles
-        .iter()
-        .flatten()
-        .flatten()
-        .collect()
-}
-
 fn set_beneath(side: &mut PlayerState, lane: i32, cards: Vec<CardInstance>) {
     let Some(index) = lane_index(lane) else {
         return;

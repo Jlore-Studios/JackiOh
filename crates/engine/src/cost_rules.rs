@@ -350,16 +350,6 @@ pub fn cost_rule_text(rule: &CostRule, next: bool) -> String {
     format!("{subject} {verb} ({amount}) more")
 }
 
-/// A `costRule` modifier's badge caption: "next" while it waits to be used, else every card. (TS takes
-/// `{ rule, expiry }`, the narrowed modifier; a modifier of another kind reads as an empty rule.)
-pub fn cost_rule_modifier_label(modifier: &PlayerModifier) -> String {
-    let rule = match &modifier.kind {
-        ModifierKind::CostRule { rule } => rule.clone(),
-        _ => CostRule::default(),
-    };
-    cost_rule_text(&rule, modifier.expiry == ModifierExpiry::Used)
-}
-
 /// An `enchantNextSpell` modifier's badge caption.
 pub fn enchant_next_spell_label(enchantment: &Enchantment) -> String {
     match enchantment {

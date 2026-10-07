@@ -12,9 +12,10 @@
 //! and every death happens together once the hook has finished. `end_turn` in `engine/src/turn.rs`
 //! runs `state_check` after each end-of-turn hook, which is exactly that point.
 //!
-//! "The controller's end of turn" is not this card's business either: `trigger_order(sink,
-//! "endOfTurn", player)` narrows the scan to the player whose turn is ending, so the hook simply
-//! never runs on the opponent's end of turn (the comment there cites this card).
+//! "The controller's end of turn" is not this card's business either:
+//! `run_hooks_in_trigger_order(sink, "endOfTurn", player)` narrows the scan to the player whose turn
+//! is ending, so the hook simply never runs on the opponent's end of turn (the comment there cites
+//! this card).
 //!
 //! The hits are `damage_all` (engine/src/effects/damage.rs): one `deal_damage` per enemy unit in lane
 //! order and then, with `heroes`, one to the enemy hero — all inside ONE effect, so no state check

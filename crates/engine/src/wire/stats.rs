@@ -274,20 +274,6 @@ pub struct CardStats {
     pub drawn_not_played: Tally,
 }
 
-impl CardStats {
-    /// `stats[breakdown]`, to write.
-    pub fn tally_mut(&mut self, breakdown: Breakdown) -> &mut Tally {
-        match breakdown {
-            Breakdown::InDeck => &mut self.in_deck,
-            Breakdown::OpeningHand => &mut self.opening_hand,
-            Breakdown::GoingFirst => &mut self.going_first,
-            Breakdown::GoingSecond => &mut self.going_second,
-            Breakdown::Played => &mut self.played,
-            Breakdown::DrawnNotPlayed => &mut self.drawn_not_played,
-        }
-    }
-}
-
 /// `stats[breakdown]`.
 impl Index<Breakdown> for CardStats {
     type Output = Tally;

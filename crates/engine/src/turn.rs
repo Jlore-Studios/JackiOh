@@ -34,60 +34,10 @@ use crate::game_over::end_game;
 use crate::resolve::HookName;
 use crate::script::EngineSink;
 use crate::state::{
-    CardInstance, DelayedEffect, Exertion, GameState, ModifierKind, Resume, TurnLog, WorkItem,
-    find_instance_mut, handicap_of,
+    DelayedEffect, Exertion, GameState, ModifierKind, Resume, TurnLog, WorkItem, find_instance_mut,
+    handicap_of,
 };
 use crate::wire::{GameEvent, GameOverReason, PLAYER_IDS, Phase, PlayerId, Winner, opponent_of};
-
-/// R68: the active player's cards first, then the opponent's; units by lane, then the backrow.
-/// `only` narrows it to one controller, which is what start-of-turn and end-of-turn hooks need:
-/// they fire on their controller's turn alone (§6.2, and #13 "not on the opponent's end").
-///
-/// This is the field-and-backrow scan only, so it misses R68's hand and graveyard trigger holders;
-/// the turn loop below therefore asks `triggers::queue_hooks_in_trigger_order`, which covers all four
-/// zones. Kept as the exported board-order helper the card files' comments point at.
-pub fn trigger_order(sink: &EngineSink, hook: HookName, only: Option<PlayerId>) -> Vec<CardInstance> {
-    let state: &GameState = &*sink.state;
-    let sides: [PlayerId; 2] = if state.active == PlayerId::P1 {
-        [PlayerId::P1, PlayerId::P2]
-    } else {
-        [PlayerId::P2, PlayerId::P1]
-    };
-    let order: Vec<PlayerId> = match only {
-        None => sides.to_vec(),
-        Some(player) => vec![player],
-    };
-    order
-        .into_iter()
-        .flat_map(|player| {
-            let mut cards: Vec<CardInstance> = crate::zones::active_units_of(state, player)
-                .into_iter()
-                .cloned()
-                .collect();
-            // `slotsOf(player, "backrow")` read through `cardAt`: the backrow's cards by lane.
-            cards.extend(state.players[player].backrow.iter().flatten().cloned());
-            cards
-                .into_iter()
-                .filter(|card| has_hook(state, card, hook))
-                .collect::<Vec<CardInstance>>()
-        })
-        .collect()
-}
-
-/// `scriptOf(card)[hook] !== undefined`: a Vanilla card runs the empty script (§6.3 Vanilla), any
-/// other its running face's.
-fn has_hook(state: &GameState, card: &CardInstance, hook: HookName) -> bool {
-    if card.vanilla {
-        return false;
-    }
-    let scripts = crate::scripts::scripts_ref(state, &card.def_id);
-    let script = if card.radiant {
-        &scripts.radiant
-    } else {
-        &scripts.base
-    };
-    script.hook_named(hook.as_str()).is_some()
-}
 
 /// `prompts.runResume(sink, resume, { controller })`.
 fn run_resume_for(sink: &mut EngineSink, resume: &Resume, controller: PlayerId) {

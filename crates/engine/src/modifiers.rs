@@ -356,19 +356,3 @@ pub fn add_start_of_turn_effect(
         },
     )
 }
-
-/// B5 E28, R458: `player`'s rest-of-game effects that have not run this turn, in creation order.
-pub fn due_start_of_turn_effects(state: &GameState, player: PlayerId) -> Vec<StartOfTurnEffectModifier> {
-    let mut due: Vec<(u32, StartOfTurnEffectModifier)> = state.players[player]
-        .mods
-        .iter()
-        .filter_map(|modifier| match &modifier.kind {
-            ModifierKind::StartOfTurnEffect { seq, ran_turn, .. } if *ran_turn != Some(state.turn) => {
-                Some((*seq, modifier.clone()))
-            }
-            _ => None,
-        })
-        .collect();
-    due.sort_by_key(|a| a.0);
-    due.into_iter().map(|(_, modifier)| modifier).collect()
-}

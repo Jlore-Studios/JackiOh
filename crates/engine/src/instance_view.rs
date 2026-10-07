@@ -17,11 +17,11 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::state::{CardInstance, GameState};
-use crate::wire::{CardType, CardView, Enchantment, Keyword, Tuning, keyword_key};
+use crate::wire::{CardType, Enchantment, Keyword, Tuning, keyword_key};
 
 /// TS `Pick<CardView, "type" | "brittle" | "params" | "tuning" | "enchantments">`: the instance-data
 /// keys of a card view, each `None` when it has nothing to say. Serialises as those keys of
-/// `CardView` do, so it can be merged into one key for key (`apply_to`).
+/// `CardView` do.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct InstanceData {
@@ -35,28 +35,6 @@ pub struct InstanceData {
     pub tuning: Option<Tuning>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enchantments: Option<Vec<Enchantment>>,
-}
-
-impl InstanceData {
-    /// TS `{ ...view, ...instanceDataView(state, card) }`: every key this holds overwrites the view's,
-    /// and a key it does not hold leaves the view's as it was (a spread copies only present keys).
-    pub fn apply_to(self, view: &mut CardView) {
-        if let Some(type_) = self.type_ {
-            view.type_ = Some(type_);
-        }
-        if let Some(brittle) = self.brittle {
-            view.brittle = Some(brittle);
-        }
-        if let Some(params) = self.params {
-            view.params = Some(params);
-        }
-        if let Some(tuning) = self.tuning {
-            view.tuning = Some(tuning);
-        }
-        if let Some(enchantments) = self.enchantments {
-            view.enchantments = Some(enchantments);
-        }
-    }
 }
 
 /// The instance-data keys of a card view (this file's header), each only when it has something to say.

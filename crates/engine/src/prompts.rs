@@ -36,8 +36,8 @@
 //! module scope to break import cycles go (SURFACE §6.6): the answerer map (`registerPromptAnswerer`)
 //! is one `match` on the prompt's `resume.hook` (`answer_owned`), the targeting point's hooks
 //! (`registerTargetingHooks`) are direct calls into `targeting_point.rs`, and the default work handler
-//! (`registerDefaultWorkHandler`) is `default_work_handler`, which `work.rs`'s dispatcher calls for every
-//! hook no engine sequence owns. The resumable runners take the context alone: TS passed the sink
+//! (`registerDefaultWorkHandler`) is `work.rs`'s dispatcher calling `run_resume` for every hook no
+//! engine sequence owns. The resumable runners take the context alone: TS passed the sink
 //! beside it, and the context *is* that sink (it derefs to it), so Rust's borrow of it is the one.
 
 use indexmap::{IndexMap, IndexSet};
@@ -48,7 +48,7 @@ use crate::config::MAX_PROMPT_ANSWERS;
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{Effect, EffectContext, EffectPart, EngineSink, Hook, Memo, Script};
 use crate::state::{
-    CardInstance, EngineError, GameState, PendingChoice, PromptOption, Resume, WorkItem, find_instance,
+    CardInstance, EngineError, GameState, PendingChoice, PromptOption, Resume, find_instance,
 };
 use crate::wire::{ActionBody, GameEvent, PlayerId, PromptKind, Row, Selection, TargetAim, ZoneName};
 use crate::work::{
@@ -1199,28 +1199,6 @@ pub fn run_start_of_game(sink: &mut EngineSink<'_>, card: &CardInstance, control
             ..HookResumableOptions::default()
         },
     )
-}
-
-/// A card's own continuation, registered at module scope the way a card registers a script and the
-/// way `playSteps` registers the `"play"` sequence: `work.ts` sends it every owed item no engine
-/// sequence claims, and the step it names is re-entered with the data the pause captured.
-///
-/// Without this, `applyResumable`'s parked tail — whose `hook` is the card's own (`cry`, `death`, a
-/// trigger's), which no engine sequence ever claims — has nobody to run it, and R113's "must never
-/// be dropped in silence" turns every such pause into a raise. So the registration is not a
-/// convenience: it is the other half of `work.ts`'s refusal to drop a sequence.
-///
-/// TS registered this closure with `registerDefaultWorkHandler`; `work.rs`'s dispatcher calls it for
-/// every hook no engine sequence owns (SURFACE §6.6).
-pub fn default_work_handler(sink: &mut EngineSink<'_>, item: &WorkItem) {
-    run_resume(
-        sink,
-        &item.resume,
-        ResumeOptions {
-            controller: Some(item.owner),
-            ..ResumeOptions::default()
-        },
-    );
 }
 
 // ---------------------------------------------------------------------------

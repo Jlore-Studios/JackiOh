@@ -82,7 +82,7 @@ pub struct CodeInputReading {
 }
 
 /// TS `string.length`: the UTF-16 code units of `text`.
-fn utf16_len(text: &str) -> usize {
+pub fn utf16_len(text: &str) -> usize {
     text.encode_utf16().count()
 }
 
@@ -108,8 +108,9 @@ fn is_separator_char(character: char) -> bool {
 }
 
 /// JS's `\s`: its WhiteSpace (TAB, VT, FF, SP, NBSP, ZWNBSP and every `Zs`) and LineTerminator (LF,
-/// CR, LS, PS). Not Rust's `char::is_whitespace`, which takes U+0085 and leaves out U+FEFF.
-fn is_js_space(character: char) -> bool {
+/// CR, LS, PS). Not Rust's `char::is_whitespace`, which takes U+0085 and leaves out U+FEFF. The one
+/// copy: the validator, the server's environment parser and the patch tool call it.
+pub fn is_js_space(character: char) -> bool {
     matches!(
         character,
         '\u{9}'..='\u{D}'

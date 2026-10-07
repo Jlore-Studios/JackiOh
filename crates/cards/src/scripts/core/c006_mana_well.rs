@@ -9,10 +9,10 @@
 //!   - it is temporary because nothing stores it: `refresh_mana` sets `current = max` at every start
 //!     of turn (§2.3), so the gain never accumulates across turns — the Well grants it again.
 //!   - `start_of_turn` fires for the controller only, on their own turn, because `turn::start_turn`
-//!     asks `trigger_order(sink, "startOfTurn", player)` for that one player (§2.2, §6.2, R68), and
-//!     it fires before the draw, which is the same §2.2 ordering.
-//!   - a Field Spell that has left the field is not in `trigger_order`'s scan (units then backrow),
-//!     so "leaves → back to 4" needs nothing here either.
+//!     asks `run_hooks_in_trigger_order(sink, "startOfTurn", player)` for that one player (§2.2,
+//!     §6.2, R68), and it fires before the draw, which is the same §2.2 ordering.
+//!   - a Field Spell that has left the field answers no start-of-turn hook (R153's filter in
+//!     `triggers::trigger_holders_with_hook`), so "leaves → back to 4" needs nothing here either.
 //!
 //! The gain lands on the controller because `gain_mana` defaults its `player` to "self" (§6.3).
 
